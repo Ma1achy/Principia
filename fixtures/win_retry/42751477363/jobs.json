@@ -1,0 +1,115 @@
+[
+ {
+  "id": 129615866444,
+  "name": "win-vulkan",
+  "status": "completed",
+  "conclusion": "cancelled",
+  "runner_name": "",
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 129615867437,
+  "name": "wsl-cpu",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 129615867922,
+  "name": "wsl-parity",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "ubuntu-24.04"
+  ],
+  "steps": []
+ },
+ {
+  "id": 129615868151,
+  "name": "win-self-check",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 129615868236,
+  "name": "wsl-register",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 129615868601,
+  "name": "wsl-proofs",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 129615869024,
+  "name": "win-contain",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 129615898578,
+  "name": "win-tests",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 129615899948,
+  "name": "wsl-image",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "ubuntu-24.04"
+  ],
+  "steps": []
+ }
+]

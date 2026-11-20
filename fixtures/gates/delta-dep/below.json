@@ -1,0 +1,5 @@
+{
+  "description": "δ_dep at the gap's lower edge, the largest first-return chord itself: a return there is not below the departure sample's chord, so the control must fail.",
+  "delta": "below",
+  "expected": "fail"
+}

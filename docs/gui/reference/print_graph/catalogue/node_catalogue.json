@@ -1,0 +1,3044 @@
+{
+ "categories": {
+  "source": "Source",
+  "analyse": "Analyse",
+  "gen": "Generate",
+  "op": "Adjust & combine",
+  "paint": "Paint",
+  "print": "Print",
+  "screen": "Screen",
+  "out": "Output",
+  "craft": "Craft",
+  "photo": "Photographic",
+  "machine": "Machines"
+ },
+ "nodes": {
+  "image": {
+   "category": "source",
+   "category_label": "Source",
+   "label": "Render",
+   "inputs": [],
+   "doc": "The render, as computed. Pick which one in the bar above.",
+   "params": {},
+   "passes": 0
+  },
+  "output": {
+   "category": "out",
+   "category_label": "Output",
+   "label": "Output",
+   "inputs": [
+    "in"
+   ],
+   "doc": "What the canvas shows.",
+   "params": {},
+   "passes": 1
+  },
+  "brightness": {
+   "category": "analyse",
+   "category_label": "Analyse",
+   "label": "Brightness",
+   "inputs": [
+    "in"
+   ],
+   "doc": "How bright each point is, as a grey field: a mix of luminance and the brightest channel (so a pure colour counts as bright), stretched and curved.",
+   "params": {
+    "mix": [
+     0.5,
+     0,
+     1,
+     0.01
+    ],
+    "lo": [
+     0.02,
+     0,
+     1,
+     0.01
+    ],
+    "hi": [
+     0.98,
+     0,
+     1,
+     0.01
+    ],
+    "gamma": [
+     1,
+     0.2,
+     4,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "flow": {
+   "category": "analyse",
+   "category_label": "Analyse",
+   "label": "Flow",
+   "inputs": [
+    "in"
+   ],
+   "doc": "The direction the picture's contours run (structure tensor): strokes, smears and trails follow it. Output is a direction field.",
+   "params": {
+    "sigma": [
+     5,
+     1,
+     14,
+     0.5
+    ]
+   },
+   "passes": 4
+  },
+  "edges": {
+   "category": "analyse",
+   "category_label": "Analyse",
+   "label": "Fringe density",
+   "inputs": [
+    "in"
+   ],
+   "doc": "How fast the picture changes here: dense fine fringes read bright. A stand-in for sensitivity until the data exists.",
+   "params": {
+    "sigma": [
+     6,
+     1,
+     16,
+     0.5
+    ],
+    "gain": [
+     3,
+     0.2,
+     12,
+     0.1
+    ]
+   },
+   "passes": 4
+  },
+  "noise": {
+   "category": "gen",
+   "category_label": "Generate",
+   "label": "Noise",
+   "inputs": [],
+   "doc": "Fractal value noise.",
+   "params": {
+    "scale": [
+     12,
+     1,
+     200,
+     1
+    ],
+    "octaves": [
+     4,
+     1,
+     8,
+     1
+    ],
+    "contrast": [
+     1,
+     0.1,
+     4,
+     0.05
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "paper": {
+   "category": "gen",
+   "category_label": "Generate",
+   "label": "Paper",
+   "inputs": [],
+   "doc": "A sheet of paper: colour, tooth and a few fibres.",
+   "params": {
+    "colour": [
+     "#efe9dc"
+    ],
+    "tooth": [
+     0.035,
+     0,
+     0.15,
+     0.005
+    ],
+    "fibres": [
+     0.02,
+     0,
+     0.1,
+     0.005
+    ]
+   },
+   "passes": 1
+  },
+  "blur": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Blur",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Gaussian blur.",
+   "params": {
+    "sigma": [
+     2,
+     0.3,
+     24,
+     0.1
+    ]
+   },
+   "passes": 2
+  },
+  "smear": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Smear along flow",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "Drag the image along the flow, both ways, fading with distance (line-integral convolution).",
+   "params": {
+    "length": [
+     10,
+     1,
+     40,
+     1
+    ],
+    "step": [
+     1,
+     0.5,
+     3,
+     0.1
+    ]
+   },
+   "passes": 1
+  },
+  "strokes": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Strokes",
+   "inputs": [
+    "flow",
+    "density"
+   ],
+   "doc": "A field of tapered strokes laid along the flow: sparse dabs, dragged each way. Wire a grey field into density to put more strokes where it is bright.",
+   "params": {
+    "width": [
+     2.5,
+     0.6,
+     10,
+     0.1
+    ],
+    "amount": [
+     0.35,
+     0.01,
+     1,
+     0.01
+    ],
+    "length": [
+     18,
+     2,
+     40,
+     1
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "kuwahara": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Kuwahara",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Flatten colour into painterly passages: each point takes the calmest of the four squares around it.",
+   "params": {
+    "radius": [
+     4,
+     1,
+     9,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "relief": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Relief light",
+   "inputs": [
+    "colour",
+    "height"
+   ],
+   "doc": "Treat a grey field as the thickness of the paint and light it low from one side: shading, highlights, cast shadows and occlusion in the dips. Bright = thick.",
+   "params": {
+    "depth": [
+     22,
+     0,
+     80,
+     0.5
+    ],
+    "angle": [
+     -128,
+     -180,
+     180,
+     1
+    ],
+    "elevation": [
+     32,
+     5,
+     85,
+     1
+    ],
+    "ambient": [
+     0.4,
+     0,
+     1,
+     0.01
+    ],
+    "specular": [
+     0.15,
+     0,
+     1,
+     0.01
+    ],
+    "shine": [
+     24,
+     2,
+     80,
+     1
+    ],
+    "shadow": [
+     0.6,
+     0,
+     1,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "levels": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Colour",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Exposure, contrast, saturation, warmth and lifted blacks.",
+   "params": {
+    "exposure": [
+     1,
+     0,
+     3,
+     0.01
+    ],
+    "contrast": [
+     1,
+     0,
+     3,
+     0.01
+    ],
+    "saturation": [
+     1,
+     0,
+     3,
+     0.01
+    ],
+    "warmth": [
+     0,
+     -0.2,
+     0.2,
+     0.005
+    ],
+    "lift": [
+     0,
+     0,
+     0.3,
+     0.005
+    ]
+   },
+   "passes": 1
+  },
+  "neon": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Neon",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Light, not pigment: each colour pushed to full brightness, same hue, more saturated.",
+   "params": {
+    "saturation": [
+     1.7,
+     1,
+     3,
+     0.05
+    ],
+    "floor": [
+     0.05,
+     0,
+     0.3,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "palette": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Palette",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Snap every colour to a limited palette (nearest in OKLab, hue counted more than lightness).",
+   "params": {
+    "palette": [
+     0,
+     [
+      "Poster pigments",
+      "Earth",
+      "Nocturne",
+      "Fluoro",
+      "Game Boy",
+      "Riso"
+     ]
+    ],
+    "hue": [
+     1.6,
+     0.5,
+     4,
+     0.05
+    ]
+   },
+   "passes": 1
+  },
+  "duotone": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Duotone",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Two inks: lightness laid between a dark and a light colour.",
+   "params": {
+    "dark": [
+     "#1c284a"
+    ],
+    "light": [
+     "#f0e2c4"
+    ],
+    "contrast": [
+     1,
+     0.3,
+     3,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "mix": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Mix",
+   "inputs": [
+    "a",
+    "b",
+    "mask"
+   ],
+   "doc": "Combine two images: normal, multiply, screen, add or overlay; optionally only where a mask is bright.",
+   "params": {
+    "mode": [
+     0,
+     [
+      "Normal",
+      "Multiply",
+      "Screen",
+      "Add",
+      "Overlay"
+     ]
+    ],
+    "amount": [
+     1,
+     0,
+     1,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "glow": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Film glow",
+   "inputs": [
+    "in"
+   ],
+   "doc": "What film does to bright light: bloom round its source, a red-orange halation halo, then exposure. Turn exposure and bloom up for a blown-out long exposure; threshold sets how bright light has to be before it blooms.",
+   "params": {
+    "threshold": [
+     0.45,
+     0,
+     1,
+     0.01
+    ],
+    "bloom": [
+     1,
+     0,
+     4,
+     0.05
+    ],
+    "halation": [
+     1,
+     0,
+     4,
+     0.05
+    ],
+    "radius": [
+     6,
+     1,
+     24,
+     0.5
+    ],
+    "exposure": [
+     1.6,
+     0.2,
+     6,
+     0.05
+    ]
+   },
+   "passes": 4
+  },
+  "grain": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Grain",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Film grain, strongest in the mid-tones.",
+   "params": {
+    "amount": [
+     0.04,
+     0,
+     0.2,
+     0.005
+    ],
+    "size": [
+     1.2,
+     0.5,
+     4,
+     0.1
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "vignette": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Vignette",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Darken towards the corners.",
+   "params": {
+    "amount": [
+     0.3,
+     0,
+     1,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "offset": {
+   "category": "print",
+   "category_label": "Print",
+   "label": "Offset press",
+   "inputs": [
+    "in",
+    "paper"
+   ],
+   "doc": "Four plates — cyan, magenta, yellow and a rich black — each slipping out of register, ink feathering into the stock (the 1978 NASA Facts poster).",
+   "params": {
+    "slip": [
+     1,
+     0,
+     4,
+     0.05
+    ],
+    "bleed": [
+     1,
+     0,
+     3,
+     0.05
+    ],
+    "rich": [
+     0.55,
+     0,
+     1,
+     0.01
+    ],
+    "drift": [
+     0.05,
+     0,
+     0.2,
+     0.005
+    ]
+   },
+   "passes": 1
+  },
+  "halftone": {
+   "category": "print",
+   "category_label": "Print",
+   "label": "Halftone",
+   "inputs": [
+    "in",
+    "paper"
+   ],
+   "doc": "AM halftone: each plate a screen of dots at its own angle (C 15°, M 75°, Y 0°, K 45°), dot size carrying the tone, rosettes where they meet.",
+   "params": {
+    "cell": [
+     6,
+     2,
+     24,
+     0.1
+    ],
+    "gain": [
+     1.08,
+     0.8,
+     1.4,
+     0.01
+    ],
+    "slip": [
+     1,
+     0,
+     4,
+     0.05
+    ],
+    "mono": [
+     0,
+     [
+      "CMYK",
+      "Black only"
+     ]
+    ]
+   },
+   "passes": 1
+  },
+  "riso": {
+   "category": "print",
+   "category_label": "Print",
+   "label": "Risograph",
+   "inputs": [
+    "in",
+    "paper"
+   ],
+   "doc": "Four drums — fluoro pink, blue, yellow, black — each a grainy screen, slightly out of register, inks multiplying.",
+   "params": {
+    "grain": [
+     0.16,
+     0,
+     0.4,
+     0.01
+    ],
+    "slip": [
+     1,
+     0,
+     4,
+     0.05
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "dither": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "Dither",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Ordered or random dithering on a coarse pixel grid: Bayer 2×2, 4×4, 8×8, random, or interleaved gradient noise; two or three colours, or each channel in its own colours.",
+   "params": {
+    "pattern": [
+     3,
+     [
+      "Bayer 2×2",
+      "Bayer 4×4",
+      "Bayer 8×8",
+      "Random",
+      "Gradient noise"
+     ]
+    ],
+    "size": [
+     3,
+     1,
+     16,
+     1
+    ],
+    "steps": [
+     2,
+     2,
+     8,
+     1
+    ],
+    "colours": [
+     0,
+     [
+      "Two colours",
+      "Three colours",
+      "Original colours"
+     ]
+    ],
+    "back": [
+     "#000c38"
+    ],
+    "front": [
+     "#94ffaf"
+    ],
+    "highlight": [
+     "#eaff94"
+    ],
+    "invert": [
+     0,
+     [
+      "Off",
+      "On"
+     ]
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "dotmatrix": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "Dot matrix",
+   "inputs": [
+    "in"
+   ],
+   "doc": "An impact printer: bands of dots per pass, tone by ordered dither, the ribbon wearing down each band. Colour prints a four-colour ribbon (cyan, magenta, yellow, black) one band at a time, slightly out of register. Bands sets how strongly the passes show.",
+   "params": {
+    "pitch": [
+     3.2,
+     1.5,
+     10,
+     0.1
+    ],
+    "bands": [
+     1,
+     0,
+     1,
+     0.01
+    ],
+    "colour": [
+     0,
+     [
+      "Black ribbon",
+      "Colour ribbon"
+     ]
+    ],
+    "dot": [
+     0.62,
+     0.3,
+     1,
+     0.01
+    ],
+    "ribbon": [
+     "#1a1521"
+    ],
+    "paperc": [
+     "#f2efe6"
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "crt": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "CRT",
+   "inputs": [
+    "in"
+   ],
+   "doc": "An old CRT television: scanlines whose width follows brightness, an aperture grille of RGB phosphor stripes, misconvergence, glow, snow.",
+   "params": {
+    "lines": [
+     200,
+     60,
+     480,
+     1
+    ],
+    "grille": [
+     0.65,
+     0,
+     1,
+     0.01
+    ],
+    "converge": [
+     1.2,
+     0,
+     4,
+     0.05
+    ],
+    "glow": [
+     0.35,
+     0,
+     1.5,
+     0.01
+    ],
+    "snow": [
+     0.025,
+     0,
+     0.15,
+     0.005
+    ]
+   },
+   "passes": 1
+  },
+  "lcd": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "Old LCD",
+   "inputs": [
+    "in"
+   ],
+   "doc": "A coarse LCD panel: RGB sub-pixels with the screen door between them, few colour bits dithered, backlight bleed at the edges.",
+   "params": {
+    "cell": [
+     6,
+     3,
+     16,
+     1
+    ],
+    "bits": [
+     5,
+     1,
+     8,
+     1
+    ],
+    "door": [
+     1,
+     0,
+     1,
+     0.01
+    ],
+    "bleed": [
+     0.05,
+     0,
+     0.2,
+     0.005
+    ]
+   },
+   "passes": 1
+  },
+  "gameboy": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "Game Boy",
+   "inputs": [
+    "in"
+   ],
+   "doc": "The original Game Boy screen: a few rows of pixels in four greens, dithered, a faint grid, each pixel's shadow on the backing.",
+   "params": {
+    "rows": [
+     144,
+     48,
+     288,
+     1
+    ],
+    "grid": [
+     1,
+     0,
+     1,
+     0.01
+    ],
+    "shadow": [
+     0.18,
+     0,
+     0.5,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "mcmap": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "Block-game map",
+   "inputs": [
+    "in"
+   ],
+   "doc": "As if drawn on a block-game map: a coarse grid of map pixels, each snapped to the map palette (61 base colours, each in up to three shades), optionally with ordered dither.",
+   "params": {
+    "pixels": [
+     128,
+     32,
+     256,
+     1
+    ],
+    "shades": [
+     1,
+     [
+      "One shade",
+      "Three shades"
+     ]
+    ],
+    "dither": [
+     0.5,
+     0,
+     1,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "mcblocks": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Blocks",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Each cell replaced by the block-game block whose average colour is nearest: concrete, wool, terracotta, planks, ores, stone. The 16×16 textures are drawn procedurally, and tile the same way for every block of a kind.",
+   "params": {
+    "blocks": [
+     48,
+     12,
+     160,
+     1
+    ],
+    "texture": [
+     1,
+     0,
+     1,
+     0.01
+    ],
+    "seams": [
+     0.15,
+     0,
+     0.6,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "ascii": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "ASCII",
+   "inputs": [
+    "in"
+   ],
+   "doc": "The picture set in characters: each cell's brightness picks a glyph, from a ten-step character ramp ( .:-=+*#%@) in a 5×7 bitmap font, or from shade blocks. Mono terminal colours, the picture's own colours (optionally behind the glyphs too, like ANSI art), or ink on paper; own colours can be cut to a lower colour depth.",
+   "params": {
+    "cell": [
+     10,
+     5,
+     40,
+     1
+    ],
+    "ramp": [
+     0,
+     [
+      "Characters",
+      "Shade blocks"
+     ]
+    ],
+    "mode": [
+     0,
+     [
+      "Green terminal",
+      "Amber terminal",
+      "White terminal",
+      "Own colours",
+      "Own colours, own background",
+      "Ink on paper"
+     ]
+    ],
+    "depth": [
+     0,
+     [
+      "24-bit",
+      "8-bit (3-3-2)",
+      "16 colours (ANSI)",
+      "8 colours",
+      "1-bit"
+     ]
+    ],
+    "contrast": [
+     1.2,
+     0.3,
+     3,
+     0.05
+    ],
+    "glow": [
+     0.35,
+     0,
+     1,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "stipple": {
+   "category": "print",
+   "category_label": "Print",
+   "label": "Stipple",
+   "inputs": [
+    "in"
+   ],
+   "doc": "After Luminet's 1979 black hole: brightness drawn by hand as dots of ink, denser where brighter, printed as a negative (or as a positive).",
+   "params": {
+    "spacing": [
+     2.6,
+     1.5,
+     10,
+     0.1
+    ],
+    "gamma": [
+     1.6,
+     0.5,
+     4,
+     0.05
+    ],
+    "size": [
+     1,
+     0.3,
+     2,
+     0.01
+    ],
+    "negative": [
+     1,
+     [
+      "Positive",
+      "Negative"
+     ]
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "pigment": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Pigment wheel",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Electric screen colours pulled towards real watercolour pigments of the same hue; dark stays dark, greys stay grey.",
+   "params": {
+    "amount": [
+     0.7,
+     0,
+     1,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "invert": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Invert lightness",
+   "inputs": [
+    "in"
+   ],
+   "doc": "A night print: lightness turned over, hue kept.",
+   "params": {},
+   "passes": 1
+  },
+  "posterize": {
+   "category": "op",
+   "category_label": "Adjust & combine",
+   "label": "Flat colour",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Cut colour into flat passages with a few levels per channel, a slightly ragged cut edge and a darker rim where each passage dried (gouache).",
+   "params": {
+    "levels": [
+     4,
+     2,
+     10,
+     1
+    ],
+    "rag": [
+     1.6,
+     0,
+     5,
+     0.1
+    ],
+    "rim": [
+     0.12,
+     0,
+     0.5,
+     0.01
+    ],
+    "lighter": [
+     0.09,
+     0,
+     0.3,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "watercolour": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Watercolour wash",
+   "inputs": [
+    "in",
+    "paper"
+   ],
+   "doc": "Transparent washes on paper: colour absorbed into the sheet, pigment pooling darker where one wash meets another, granulation, a soft bleed.",
+   "params": {
+    "pool": [
+     0.4,
+     0,
+     1.2,
+     0.01
+    ],
+    "reach": [
+     3,
+     1,
+     8,
+     0.5
+    ],
+    "granulation": [
+     0.1,
+     0,
+     0.4,
+     0.01
+    ],
+    "bleed": [
+     1.2,
+     0,
+     4,
+     0.1
+    ],
+    "saturation": [
+     0.95,
+     0,
+     1.5,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "pencil": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Pencil lines",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Lu, Xu & Jia's pencil: each edge drawn as a short line along its own direction, plus tonal hatching in the darks. Outputs a grey layer to multiply over a wash.",
+   "params": {
+    "line": [
+     0.7,
+     0,
+     3,
+     0.01
+    ],
+    "length": [
+     6,
+     2,
+     12,
+     1
+    ],
+    "hatch": [
+     0.3,
+     0,
+     1,
+     0.01
+    ],
+    "angle": [
+     45,
+     -90,
+     90,
+     1
+    ],
+    "floor": [
+     0.25,
+     0,
+     0.6,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "hatching": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Graphite hatching",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "Hatching that follows the forms, crossed in the darks, broken by the paper's tooth, burnished to a silver sheen where it is heaviest, a firmer contour where tone turns. Wide, dense strokes in black make it charcoal.",
+   "params": {
+    "paper": [
+     "#f2f0e8"
+    ],
+    "lead": [
+     "#2b2b30"
+    ],
+    "width": [
+     0.7,
+     0.3,
+     4,
+     0.05
+    ],
+    "amount": [
+     0.3,
+     0.02,
+     1,
+     0.01
+    ],
+    "length": [
+     18,
+     4,
+     40,
+     1
+    ],
+    "tone": [
+     1.1,
+     0.5,
+     2.5,
+     0.05
+    ],
+    "tooth": [
+     0.2,
+     0,
+     0.6,
+     0.01
+    ],
+    "contour": [
+     0.45,
+     0,
+     1.5,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "pastel": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Chalk pastel",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "Soft pastel on dark laid paper: colour laid with the side of the stick along the forms, catching only on the tooth unless pressed hard.",
+   "params": {
+    "ground": [
+     "#212226"
+    ],
+    "width": [
+     4,
+     1,
+     10,
+     0.1
+    ],
+    "amount": [
+     0.25,
+     0.02,
+     1,
+     0.01
+    ],
+    "pressure": [
+     1,
+     0.3,
+     2,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "inkwash": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Ink wash",
+   "inputs": [
+    "in",
+    "flow",
+    "paper"
+   ],
+   "doc": "Sumi-e: one ink at four dilutions, bleeding into the paper's fibres, pooling at each wash's edge, dry-brush breaks in the darkest strokes.",
+   "params": {
+    "ink": [
+     "#0f0f14"
+    ],
+    "bleed": [
+     3.5,
+     0,
+     8,
+     0.1
+    ],
+    "pool": [
+     0.35,
+     0,
+     1,
+     0.01
+    ],
+    "dry": [
+     0.45,
+     0,
+     1,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "tempera": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Egg tempera",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "Thousands of tiny hatched strokes over white gesso, pale layers first and each closer to the true colour, then a glaze and fine craquelure.",
+   "params": {
+    "gesso": [
+     "#f5f2e8"
+    ],
+    "glaze": [
+     0.45,
+     0,
+     1,
+     0.01
+    ],
+    "cracks": [
+     0.12,
+     0,
+     0.4,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "engrave": {
+   "category": "print",
+   "category_label": "Print",
+   "label": "Engraving",
+   "inputs": [
+    "in",
+    "paper"
+   ],
+   "doc": "Banknote line engraving: parallel lines that bend with the forms and swell where it is dark, crossed in the shadows, dots in the deepest blacks and a wiped plate tone.",
+   "params": {
+    "ink": [
+     "#141214"
+    ],
+    "pitch": [
+     5.2,
+     2.5,
+     12,
+     0.1
+    ],
+    "angle": [
+     28,
+     -90,
+     90,
+     1
+    ],
+    "bend": [
+     22,
+     0,
+     60,
+     0.5
+    ]
+   },
+   "passes": 1
+  },
+  "mezzotint": {
+   "category": "print",
+   "category_label": "Print",
+   "label": "Mezzotint",
+   "inputs": [
+    "in",
+    "paper"
+   ],
+   "doc": "A plate rocked all over so it prints a velvet black, with the lights scraped and burnished out; the grain is the rocker's short dashes in many directions.",
+   "params": {
+    "ink": [
+     "#1a1414"
+    ],
+    "grain": [
+     3,
+     1,
+     8,
+     0.5
+    ],
+    "softness": [
+     9,
+     2,
+     20,
+     0.5
+    ]
+   },
+   "passes": 1
+  },
+  "linocut": {
+   "category": "print",
+   "category_label": "Print",
+   "label": "Linocut",
+   "inputs": [
+    "in",
+    "flow",
+    "paper"
+   ],
+   "doc": "A relief print: white gouges that follow the forms, more and wider where it is light, solid inked lands in the dark, a hand-burnished mottle.",
+   "params": {
+    "ink": [
+     "#171414"
+    ],
+    "gouge": [
+     1.1,
+     0.5,
+     4,
+     0.05
+    ],
+    "amount": [
+     0.4,
+     0.05,
+     1,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "cyanotype": {
+   "category": "print",
+   "category_label": "Print",
+   "label": "Cyanotype",
+   "inputs": [
+    "in",
+    "paper"
+   ],
+   "doc": "Prussian blue and paper white, the sensitiser brushed on by hand so the coating streaks.",
+   "params": {
+    "blue": [
+     "#0a2b61"
+    ],
+    "streaks": [
+     0.06,
+     0,
+     0.3,
+     0.01
+    ],
+    "haze": [
+     0.07,
+     0,
+     0.3,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "plotter": {
+   "category": "print",
+   "category_label": "Print",
+   "label": "Pen plotter",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "Fineliner lines that follow the forms, closer where darker, crossed in the shadows; each line in the pen nearest the colour under it.",
+   "params": {
+    "paper": [
+     "#f7f5ee"
+    ],
+    "spacing": [
+     4.5,
+     2,
+     12,
+     0.1
+    ],
+    "density": [
+     0.5,
+     0.1,
+     1,
+     0.01
+    ],
+    "colour": [
+     1,
+     [
+      "One black pen",
+      "Box of pens"
+     ]
+    ]
+   },
+   "passes": 1
+  },
+  "marbling": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Marbling",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Inks floated on size and combed through, then laid on paper: clean bands of colour with a pale dispersant ring at each edge, and a scatter of stones.",
+   "params": {
+    "levels": [
+     3,
+     2,
+     6,
+     1
+    ],
+    "comb": [
+     9,
+     0,
+     30,
+     0.5
+    ],
+    "combscale": [
+     64,
+     10,
+     200,
+     1
+    ],
+    "stones": [
+     0.5,
+     0,
+     1,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "mosaic": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Mosaic",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Smalti set in grout: each tile one colour, slightly tilted, bevelled and glossy.",
+   "params": {
+    "tile": [
+     11,
+     4,
+     30,
+     0.5
+    ],
+    "grout": [
+     0.13,
+     0,
+     0.4,
+     0.01
+    ],
+    "groutc": [
+     "#bdb8ab"
+    ],
+    "gloss": [
+     0.25,
+     0,
+     1,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "glass": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Stained glass",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Panes of streaky cathedral glass, cut along the picture's colour boundaries and a grid of cuts, leaded together and lit from behind.",
+   "params": {
+    "pane": [
+     60,
+     16,
+     160,
+     1
+    ],
+    "levels": [
+     3,
+     2,
+     6,
+     1
+    ],
+    "lead": [
+     2.2,
+     0.5,
+     6,
+     0.1
+    ],
+    "saturation": [
+     1.45,
+     0.5,
+     2.5,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "kintsugi": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Kintsugi",
+   "inputs": [
+    "in"
+   ],
+   "doc": "The render as glazed ceramic, broken along its boundaries and mended with gold; crazing in the glaze and a window's reflection in its gloss.",
+   "params": {
+    "gold": [
+     "#cc9e3d"
+    ],
+    "levels": [
+     3,
+     2,
+     6,
+     1
+    ],
+    "seam": [
+     1.6,
+     0.5,
+     5,
+     0.1
+    ],
+    "crazing": [
+     0.1,
+     0,
+     0.4,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "cutpaper": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Cut paper",
+   "inputs": [
+    "in"
+   ],
+   "doc": "One sheet per tone, stacked by lightness, blade-cut, each sheet's lit edge catching the light and its shadow falling on the sheets beneath.",
+   "params": {
+    "sheets": [
+     6,
+     2,
+     10,
+     1
+    ],
+    "shadow": [
+     0.38,
+     0,
+     0.8,
+     0.01
+    ],
+    "soften": [
+     4,
+     0,
+     10,
+     0.5
+    ]
+   },
+   "passes": 1
+  },
+  "thread": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Thread painting",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "Satin stitches along the forms on linen, each a raised twist of floss whose sheen changes with its direction.",
+   "params": {
+    "linen": [
+     "#d6ccb8"
+    ],
+    "spacing": [
+     3.2,
+     2,
+     8,
+     0.1
+    ],
+    "length": [
+     7,
+     3,
+     14,
+     0.5
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "polaroid": {
+   "category": "photo",
+   "category_label": "Photographic",
+   "label": "Polaroid",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Instant film colour: lifted blacks, cyan-green shadows, warm highlights, softness, a light leak, grain. Full bleed.",
+   "params": {
+    "leak": [
+     1,
+     0,
+     2,
+     0.01
+    ],
+    "grain": [
+     0.03,
+     0,
+     0.1,
+     0.002
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "thinfilm": {
+   "category": "photo",
+   "category_label": "Photographic",
+   "label": "Thin film",
+   "inputs": [
+    "in"
+   ],
+   "doc": "The colours of oil on water: the picture sets the film's thickness, and each wavelength reflects from its two faces in or out of step.",
+   "params": {
+    "thick": [
+     380,
+     100,
+     1200,
+     5
+    ],
+    "base": [
+     90,
+     0,
+     400,
+     5
+    ],
+    "index": [
+     1.38,
+     1.1,
+     2,
+     0.01
+    ],
+    "wobble": [
+     8,
+     0,
+     60,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "negative": {
+   "category": "photo",
+   "category_label": "Photographic",
+   "label": "Film negative",
+   "inputs": [
+    "in"
+   ],
+   "doc": "A colour negative on the orange C-41 base, with grain, dust and fine scratches along the strip.",
+   "params": {
+    "grain": [
+     0.06,
+     0,
+     0.2,
+     0.005
+    ],
+    "dust": [
+     1,
+     0,
+     3,
+     0.05
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "film35": {
+   "category": "photo",
+   "category_label": "Photographic",
+   "label": "35mm film",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Developed 35mm colour film, printed: an S-curve with soft lifted blacks, warm highlights and cool shadows, mid-tone grain, a vignette.",
+   "params": {
+    "contrast": [
+     5.2,
+     2,
+     10,
+     0.1
+    ],
+    "grain": [
+     0.022,
+     0,
+     0.1,
+     0.002
+    ],
+    "vignette": [
+     0.28,
+     0,
+     1,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "cracks": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Craquelure",
+   "inputs": [
+    "in",
+    "mask"
+   ],
+   "doc": "An old painting's crack network, fine where the mask is strongest and coarser where it is moderate, with cupped edges catching the light. Wire fringe density (or real sensitivity data) into mask.",
+   "params": {
+    "fine": [
+     14,
+     5,
+     40,
+     0.5
+    ],
+    "coarse": [
+     38,
+     12,
+     100,
+     1
+    ],
+    "depth": [
+     0.75,
+     0,
+     1,
+     0.01
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "stereogram": {
+   "category": "machine",
+   "category_label": "Machines",
+   "label": "Stereogram",
+   "inputs": [
+    "in"
+   ],
+   "doc": "A single-image random-dot stereogram (a Magic Eye picture): brightness becomes depth, brighter nearer. Each pixel is linked to the pixel one eye-separation to its left, less a little where the picture is near, and takes the colour at the end of its chain in the first strip; so every link holds exactly and the picture appears in depth when you look through the page (wall-eyed). The pattern is random dots, dots drawn in the picture's own colours, or the picture itself tiled as wallpaper. Smooth the depth to keep the fused surface clean.",
+   "params": {
+    "eye": [
+     72,
+     32,
+     160,
+     1
+    ],
+    "depth": [
+     0.6,
+     0,
+     1,
+     0.01
+    ],
+    "smooth": [
+     2.5,
+     0.3,
+     12,
+     0.1
+    ],
+    "invert": [
+     0,
+     [
+      "Bright is near",
+      "Bright is far"
+     ]
+    ],
+    "pattern": [
+     0,
+     [
+      "Random dots",
+      "Dots in the picture's colours",
+      "Picture as wallpaper"
+     ]
+    ],
+    "dot": [
+     2,
+     1,
+     6,
+     1
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 4
+  },
+  "teletext": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "Teletext",
+   "inputs": [
+    "in"
+   ],
+   "doc": "A teletext page: a grid of character cells (40 by 25 by default), each a block-graphics character of 2×3 sextants, lit in one of the seven teletext colours on black, with one foreground colour per cell, chosen to fit the cell best. Contiguous or separated graphics; optional ordered dither between sextants.",
+   "params": {
+    "cells": [
+     40,
+     16,
+     80,
+     1
+    ],
+    "gain": [
+     1.2,
+     0.5,
+     4,
+     0.05
+    ],
+    "dither": [
+     0.35,
+     0,
+     1,
+     0.01
+    ],
+    "graphics": [
+     0,
+     [
+      "Contiguous",
+      "Separated"
+     ]
+    ]
+   },
+   "passes": 1
+  },
+  "crossstitch": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Cross-stitch",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Counted cross-stitch on cream aida: each cell one X of stranded cotton, the lower leg laid first and the upper leg crossing it, each leg a twisted, rounded strand going down into the holes of the weave. Colours are matched to a 32-colour box of threads, or to the picture's own colours cut to a few levels; dark cells can be left as bare cloth.",
+   "params": {
+    "stitches": [
+     44,
+     16,
+     128,
+     1
+    ],
+    "threads": [
+     0,
+     [
+      "Thread box (32)",
+      "Own colours, posterised"
+     ]
+    ],
+    "levels": [
+     4,
+     2,
+     8,
+     1
+    ],
+    "bare": [
+     0,
+     0,
+     0.5,
+     0.01
+    ],
+    "cloth": [
+     "#eee6d2"
+    ]
+   },
+   "passes": 1
+  },
+  "bricks": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Brick mosaic",
+   "inputs": [
+    "in"
+   ],
+   "doc": "A mosaic of 1×1 toy-brick plates, seen from above: each plate snapped to the nearest of 24 stock brick colours, with its round stud lit from the top left, a highlight on the stud's rim and its shadow falling to the bottom right.",
+   "params": {
+    "studs": [
+     48,
+     12,
+     128,
+     1
+    ],
+    "dither": [
+     0,
+     0,
+     1,
+     0.01
+    ],
+    "gloss": [
+     0.6,
+     0,
+     1,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "eink": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "E-ink",
+   "inputs": [
+    "in"
+   ],
+   "doc": "An e-reader's electrophoretic screen: sixteen greys from ink to a paper-grey white, reached by ordered dither, a faint inverted ghost of the page before (the panel never quite clears), and the slight grain of the microcapsules.",
+   "params": {
+    "levels": [
+     16,
+     2,
+     16,
+     1
+    ],
+    "dither": [
+     1,
+     [
+      "None",
+      "Bayer 4×4",
+      "Bayer 8×8"
+     ]
+    ],
+    "pixel": [
+     1,
+     1,
+     4,
+     1
+    ],
+    "contrast": [
+     1.1,
+     0.5,
+     2,
+     0.05
+    ],
+    "ghost": [
+     0.08,
+     0,
+     0.3,
+     0.005
+    ],
+    "grain": [
+     0.03,
+     0,
+     0.12,
+     0.002
+    ]
+   },
+   "passes": 1
+  },
+  "ledmatrix": {
+   "category": "screen",
+   "category_label": "Screen",
+   "label": "LED matrix",
+   "inputs": [
+    "in"
+   ],
+   "doc": "A board of round LEDs on black, one per cell of the picture: full colour, or a single colour (amber, red, green) driven by brightness. Unlit LEDs show as dark lenses, lit ones burn white-hot at the centre and bloom into their neighbours.",
+   "params": {
+    "pitch": [
+     8,
+     4,
+     24,
+     1
+    ],
+    "size": [
+     0.72,
+     0.3,
+     0.95,
+     0.01
+    ],
+    "colour": [
+     0,
+     [
+      "Full colour",
+      "Amber",
+      "Red",
+      "Green"
+     ]
+    ],
+    "gain": [
+     1,
+     0.5,
+     3,
+     0.05
+    ],
+    "glow": [
+     0.4,
+     0,
+     1.2,
+     0.01
+    ],
+    "levels": [
+     16,
+     2,
+     64,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "knit": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Knit (Fair Isle)",
+   "inputs": [
+    "in"
+   ],
+   "doc": "Stocking-stitch knitting, as in a Fair Isle jumper: each stitch a V of two rounded, plied legs of wool, one yarn per stitch, the colours drawn from a handful of Shetland shades, two colours by tone, or the picture's own colours cut to a few levels.",
+   "params": {
+    "stitches": [
+     44,
+     16,
+     100,
+     1
+    ],
+    "yarns": [
+     0,
+     [
+      "Shetland shades (9)",
+      "Two colours",
+      "Own colours, few"
+     ]
+    ],
+    "fuzz": [
+     0.5,
+     0,
+     1,
+     0.01
+    ],
+    "back": [
+     "#1d2340"
+    ],
+    "front": [
+     "#efe6d0"
+    ]
+   },
+   "passes": 1
+  },
+  "scope": {
+   "category": "machine",
+   "category_label": "Machines",
+   "label": "Oscilloscope",
+   "inputs": [
+    "in"
+   ],
+   "doc": "The picture traced by a vector display's beam: contour lines of brightness at even steps, drawn in green phosphor on a dark tube, dimmer where the beam has to move fast across steep slopes, with the phosphor's glow around each trace.",
+   "params": {
+    "levels": [
+     10,
+     3,
+     32,
+     1
+    ],
+    "smooth": [
+     2,
+     0.3,
+     8,
+     0.1
+    ],
+    "width": [
+     1.1,
+     0.4,
+     3,
+     0.05
+    ],
+    "glow": [
+     5,
+     1,
+     16,
+     0.5
+    ],
+    "bloom": [
+     0.8,
+     0,
+     2,
+     0.01
+    ],
+    "colour": [
+     "#46ff7a"
+    ]
+   },
+   "passes": 7
+  },
+  "crosshatch": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Cross-hatching",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "Pen and ink tone built from hatching: one set of parallel lines in the half-tones, crossed by a second, then a third and fourth on the diagonals as it darkens. The lines can be ruled straight or swept round the forms, each with a little wobble of the hand. Detail lifts local contrast so the forms still read where the picture is all mid-tones.",
+   "params": {
+    "ink": [
+     "#17161c"
+    ],
+    "paper": [
+     "#f5f2e9"
+    ],
+    "spacing": [
+     5,
+     2.5,
+     14,
+     0.1
+    ],
+    "angle": [
+     40,
+     -90,
+     90,
+     1
+    ],
+    "layers": [
+     4,
+     1,
+     4,
+     1
+    ],
+    "weight": [
+     1,
+     0.4,
+     3,
+     0.05
+    ],
+    "wobble": [
+     0.7,
+     0,
+     4,
+     0.05
+    ],
+    "lines": [
+     0,
+     [
+      "Ruled straight",
+      "Following the forms"
+     ]
+    ],
+    "tone": [
+     1.1,
+     0.5,
+     2.5,
+     0.05
+    ],
+    "detail": [
+     0.8,
+     0,
+     3,
+     0.05
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "graphitepencil": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Pencil",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "A graphite pencil on cartridge paper: soft grey strokes laid along the forms, the lead catching only the tops of the paper's tooth in the lights, rubbed and smudged into an even grey in the darks, with the silvery sheen of burnished graphite where it is heaviest. Grade runs from a hard, pale 2H to a soft, black 6B; detail lifts local contrast so the forms still read in the mid-tones.",
+   "params": {
+    "grade": [
+     2,
+     [
+      "2H",
+      "HB",
+      "2B",
+      "4B",
+      "6B"
+     ]
+    ],
+    "paper": [
+     "#f2efe7"
+    ],
+    "spacing": [
+     3,
+     1.5,
+     8,
+     0.1
+    ],
+    "width": [
+     1.6,
+     0.5,
+     5,
+     0.05
+    ],
+    "length": [
+     70,
+     8,
+     160,
+     1
+    ],
+    "lines": [
+     1,
+     [
+      "Fixed angle",
+      "Following the forms"
+     ]
+    ],
+    "angle": [
+     50,
+     -90,
+     90,
+     1
+    ],
+    "tooth": [
+     0.55,
+     0,
+     1,
+     0.01
+    ],
+    "smudge": [
+     0.5,
+     0,
+     1,
+     0.01
+    ],
+    "sheen": [
+     0.5,
+     0,
+     1,
+     0.01
+    ],
+    "contour": [
+     0.5,
+     0,
+     1.5,
+     0.01
+    ],
+    "detail": [
+     0.8,
+     0,
+     3,
+     0.05
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "fineliner": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Fineliner",
+   "inputs": [
+    "in"
+   ],
+   "doc": "A technical pen: one even line weight, no pressure in it at all. The forms are drawn as contour lines of equal brightness, like a map's, and the tone is put in with stippled dots or short hatched dashes.",
+   "params": {
+    "ink": [
+     "#121216"
+    ],
+    "paper": [
+     "#f8f6f0"
+    ],
+    "pen": [
+     0.9,
+     0.4,
+     2.5,
+     0.05
+    ],
+    "levels": [
+     9,
+     2,
+     24,
+     1
+    ],
+    "smooth": [
+     2,
+     0,
+     6,
+     0.1
+    ],
+    "shading": [
+     2,
+     [
+      "Stipple",
+      "Short hatching",
+      "Stipple and hatching"
+     ]
+    ],
+    "spacing": [
+     3.2,
+     1.6,
+     8,
+     0.1
+    ],
+    "density": [
+     1,
+     0.2,
+     2,
+     0.01
+    ],
+    "angle": [
+     45,
+     -90,
+     90,
+     1
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "marker": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Marker",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "Alcohol markers: broad, see-through strokes laid side by side along the forms, each in whichever pen of the set is nearest the colour beneath it. The ink pools darker at a stroke's edges and ends, streaks along the nib, and bleeds a little into the paper; where strokes overlap the colours multiply, and a second, crossing layer goes over the darker passages.",
+   "params": {
+    "paper": [
+     "#fbfaf5"
+    ],
+    "nib": [
+     14,
+     4,
+     40,
+     0.5
+    ],
+    "length": [
+     130,
+     20,
+     300,
+     1
+    ],
+    "opacity": [
+     0.72,
+     0.3,
+     1,
+     0.01
+    ],
+    "cover": [
+     1,
+     0.5,
+     1,
+     0.01
+    ],
+    "streak": [
+     0.6,
+     0,
+     1.5,
+     0.01
+    ],
+    "bleed": [
+     0.6,
+     0,
+     2,
+     0.01
+    ],
+    "lines": [
+     1,
+     [
+      "Ruled straight",
+      "Following the forms"
+     ]
+    ],
+    "angle": [
+     30,
+     -90,
+     90,
+     1
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 3
+  },
+  "biro": {
+   "category": "paint",
+   "category_label": "Paint",
+   "label": "Ballpoint",
+   "inputs": [
+    "in",
+    "flow"
+   ],
+   "doc": "A blue biro: fine scribbled hatching, layer over layer at shifting angles, until the darks build to a dense blue-black with the oily shine of ballpoint ink. The ball skips here and there and leaves the odd blob. On plain, feint-ruled or squared paper; detail lifts local contrast so the forms still read in the mid-tones.",
+   "params": {
+    "ink": [
+     "#1c2a8a"
+    ],
+    "paper": [
+     "#f7f6f1"
+    ],
+    "ruling": [
+     0,
+     [
+      "Plain",
+      "Feint ruled",
+      "Squared"
+     ]
+    ],
+    "spacing": [
+     2.6,
+     1.2,
+     7,
+     0.1
+    ],
+    "scribble": [
+     1,
+     0,
+     3,
+     0.05
+    ],
+    "layers": [
+     4,
+     1,
+     5,
+     1
+    ],
+    "angle": [
+     35,
+     -90,
+     90,
+     1
+    ],
+    "lines": [
+     1,
+     [
+      "Fixed angle",
+      "Following the forms"
+     ]
+    ],
+    "skips": [
+     0.4,
+     0,
+     1,
+     0.01
+    ],
+    "blobs": [
+     0.5,
+     0,
+     1,
+     0.01
+    ],
+    "sheen": [
+     0.5,
+     0,
+     1,
+     0.01
+    ],
+    "tone": [
+     1.15,
+     0.5,
+     2.5,
+     0.05
+    ],
+    "detail": [
+     0.8,
+     0,
+     3,
+     0.05
+    ],
+    "seed": [
+     0,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "tetris": {
+   "category": "craft",
+   "category_label": "Craft",
+   "label": "Tetris",
+   "inputs": [
+    "in"
+   ],
+   "doc": "The picture rebuilt from falling blocks: a repeating patch of 25 interlocking tetrominoes (I, O, T, S, Z, J and L) tiles the whole frame, each piece coloured by whichever of the seven classic piece colours is nearest the picture under it, or by the picture's own colour, and each block bevelled with a light top edge and a shaded lower one.",
+   "params": {
+    "cells": [
+     40,
+     10,
+     120,
+     1
+    ],
+    "colour": [
+     0,
+     [
+      "Seven classic colours",
+      "Picture's own colours"
+     ]
+    ],
+    "shade": [
+     0.6,
+     0,
+     1,
+     0.01
+    ],
+    "bevel": [
+     0.16,
+     0,
+     0.35,
+     0.01
+    ],
+    "seam": [
+     1,
+     0,
+     3,
+     0.05
+    ]
+   },
+   "passes": 1
+  },
+  "shatter": {
+   "category": "photo",
+   "category_label": "Photographic",
+   "label": "Shattered glass",
+   "inputs": [
+    "in"
+   ],
+   "doc": "The picture seen through broken glass: radial cracks running out from an impact with irregular rings between them, or a pane fallen into shards. Each shard sits at its own slight angle, so the picture behind it slips and splits into colour at the edges; the cracks catch the light; the glass is crushed white at the point of impact.",
+   "params": {
+    "mode": [
+     0,
+     [
+      "Impact",
+      "Shattered pane"
+     ]
+    ],
+    "cx": [
+     0.56,
+     0,
+     1,
+     0.01
+    ],
+    "cy": [
+     0.46,
+     0,
+     1,
+     0.01
+    ],
+    "spokes": [
+     15,
+     4,
+     40,
+     1
+    ],
+    "rings": [
+     3,
+     0.5,
+     10,
+     0.1
+    ],
+    "shards": [
+     5,
+     1,
+     20,
+     0.5
+    ],
+    "shift": [
+     7,
+     0,
+     40,
+     0.5
+    ],
+    "split": [
+     0.35,
+     0,
+     1,
+     0.01
+    ],
+    "tint": [
+     0.14,
+     0,
+     0.6,
+     0.01
+    ],
+    "width": [
+     1.3,
+     0.3,
+     5,
+     0.05
+    ],
+    "glint": [
+     0.75,
+     0,
+     1.5,
+     0.01
+    ],
+    "crush": [
+     0.045,
+     0,
+     0.2,
+     0.005
+    ],
+    "seed": [
+     3,
+     0,
+     99,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "palslot": {
+   "category": "slot",
+   "category_label": "slot",
+   "label": "Palette",
+   "inputs": [
+    "in"
+   ],
+   "doc": "The palette slot: colours mapped nearest, by lightness or by class.",
+   "params": {
+    "mode": [
+     0,
+     0,
+     3,
+     1
+    ],
+    "amount": [
+     1,
+     0,
+     1,
+     0.01
+    ],
+    "wheel": [
+     0,
+     0,
+     1,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "ground": {
+   "category": "slot",
+   "category_label": "slot",
+   "label": "Ground",
+   "inputs": [],
+   "doc": "The surface: colour, with the tooth's height in alpha.",
+   "params": {
+    "type": [
+     0,
+     0,
+     30,
+     1
+    ],
+    "tooth": [
+     1,
+     0,
+     2,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "onground": {
+   "category": "slot",
+   "category_label": "slot",
+   "label": "On the ground",
+   "inputs": [
+    "in",
+    "ground"
+   ],
+   "doc": "Lays the medium onto the chosen surface: absorbency, tooth, and how each surface takes ink, paint or light.",
+   "params": {
+    "type": [
+     0,
+     0,
+     30,
+     1
+    ],
+    "absorb": [
+     0.5,
+     0,
+     4,
+     0.05
+    ],
+    "tooth": [
+     1,
+     0,
+     2,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "unfinished": {
+   "category": "slot",
+   "category_label": "slot",
+   "label": "Unfinished",
+   "inputs": [
+    "in",
+    "render",
+    "ground",
+    "field"
+   ],
+   "doc": "How far into the picture the artist got: past that, only the pencil underdrawing.",
+   "params": {
+    "progress": [
+     1,
+     0,
+     1,
+     0.01
+    ],
+    "from": [
+     0,
+     0,
+     3,
+     1
+    ],
+    "rag": [
+     0.08,
+     0,
+     0.3,
+     0.01
+    ]
+   },
+   "passes": 1
+  },
+  "age": {
+   "category": "slot",
+   "category_label": "slot",
+   "label": "Age",
+   "inputs": [
+    "in",
+    "field"
+   ],
+   "doc": "What happened to it after: fading, yellowing, foxing, a fold, tape, stains, varnish, scratches, burn-in.",
+   "params": {
+    "years": [
+     0,
+     0,
+     100,
+     1
+    ],
+    "fading": [
+     1,
+     0,
+     2,
+     0.01
+    ],
+    "yellow": [
+     1,
+     0,
+     2,
+     0.01
+    ],
+    "foxing": [
+     1,
+     0,
+     3,
+     0.01
+    ],
+    "fold": [
+     0,
+     0,
+     3,
+     1
+    ],
+    "tape": [
+     0,
+     0,
+     1,
+     0.01
+    ],
+    "stains": [
+     0,
+     0,
+     1,
+     0.01
+    ],
+    "varnish": [
+     0,
+     0,
+     1.5,
+     0.01
+    ],
+    "scratches": [
+     0,
+     0,
+     2,
+     0.01
+    ],
+    "burnin": [
+     0,
+     0,
+     1.5,
+     0.01
+    ],
+    "drive": [
+     0,
+     0,
+     1,
+     1
+    ]
+   },
+   "passes": 1
+  },
+  "view": {
+   "category": "slot",
+   "category_label": "slot",
+   "label": "Viewing",
+   "inputs": [
+    "in",
+    "ground"
+   ],
+   "doc": "How the light falls on it. Every mode keeps the picture full-frame: no borders, no perspective, nothing added around it.",
+   "params": {
+    "mode": [
+     0,
+     0,
+     3,
+     1
+    ],
+    "light": [
+     135,
+     0,
+     360,
+     1
+    ],
+    "elevation": [
+     20,
+     5,
+     70,
+     1
+    ],
+    "strength": [
+     1,
+     0,
+     2,
+     0.01
+    ]
+   },
+   "passes": 1
+  }
+ }
+}

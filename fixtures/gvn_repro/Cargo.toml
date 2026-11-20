@@ -1,0 +1,11 @@
+# RQ-299's standalone reproducer of the pinned nightly's MIR GVN miscompile (R-547; transcribed into
+# `plan/tasks/M2/TASK-M2-49.md` § "Notes"), a package of its own, outside the workspace: kernel's `canon` tests build
+# and run it under cargo from this directory, so the workspace's `.cargo/config.toml` and `rust-toolchain.toml` apply
+# (REQ-TOOL-188).
+[package]
+name = "gvn_repro"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]

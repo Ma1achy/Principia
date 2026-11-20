@@ -1,0 +1,13 @@
+{
+  "description": "The (L_z, K) chart, as lz_e.json: its E_0 = U + K* is the same axis-aligned gradient.",
+  "chart": "lz_k",
+  "frozen": [
+    { "z_cfg": [0.0, 0.0], "z_mass": [0.0, 0.0] },
+    { "z_cfg": [0.3, -0.5], "z_mass": [0.7, -0.4] },
+    { "z_cfg": [1.8, 0.4], "z_mass": [-1.0, 1.2] },
+    { "z_cfg": [-1.5, 1.0], "z_mass": [0.2, 0.9] },
+    { "z_cfg": [-0.25, -1.75], "z_mass": [1.5, 1.5] }
+  ],
+  "grid": 64,
+  "expected": "pass"
+}

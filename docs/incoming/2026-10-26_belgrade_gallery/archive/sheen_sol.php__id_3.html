@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html>
+<head><title>3body</title>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<link rel="stylesheet" href="style.css" type="text/css" />
+
+<script type='text/javascript'>
+var index = 0;
+var text = 'NAME: Hand-in-hand-in-oval \n DISCOVERED: 2016 by Matthew Sheen\n FREE GROUP ELEMENT: aaaa \n PERIOD: 6.868156 \nX1: 0.906009977921 Y1: 0.347143444587\nX2: -0.263245299491 Y2: 0.140120037700\nX3: -0.252150695248 Y3: -0.661320078799\nVX1: 0.242474965162 VY1: 1.045019736387\nVX2: -0.360704684300 VY2: -0.807167979922\nVX3: 0.118229719138 VY3: -0.237851756465\n';
+
+
+
+
+
+// Here you can put in the text you want to make it type.
+function type()
+{
+if(text.charAt(index)=='\n') document.getElementById('screen').innerHTML += '<br><br>';
+else if(text.charAt(index)=='@') document.getElementById('screen').innerHTML += '<br>';
+else if(text.charAt(index)=='%') document.getElementById('screen').innerHTML += '<a href="ref.php.html">[4]</a>'
+
+//else if(text.charAt(index)=='h') document.getElementById('screen').innerHTML += 'g<sub>2</sub><sup>-1</sup>';
+//else if(text.charAt(index)=='c') document.getElementById('screen').innerHTML += 'a<sup>-1</sup>';
+//else if(text.charAt(index)=='d') document.getElementById('screen').innerHTML += 'b<sup>-1</sup>';
+else document.getElementById('screen').innerHTML += text.charAt(index);
+index += 1;
+var t;
+if(index<text.length) t = setTimeout('type()',1);
+
+}
+</script>
+
+</head>
+
+<body onload="type()">
+<center>
+<table>
+<tr>
+<td class=beli width=300px>
+<center>
+<br>
+<center> <b>SHAPE SPHERE:</b> </center>
+<img border=0 src="img/sheen_sphere_4.gif" />
+<center> <b>REAL SPACE:</b> </center>
+<img border=0 width=300 src="img/sheen_4.gif" />
+</center>
+</td>
+<td width=700px>
+<div id="screen"></div>
+</td>
+
+</table>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try{
+var pageTracker = _gat._getTracker("UA-2441426-1");
+pageTracker._trackPageview();
+} catch(err) {}
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "render": { "harness": "decode-preset-invariant_lk", "width": 24, "height": 12 },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass"
+}

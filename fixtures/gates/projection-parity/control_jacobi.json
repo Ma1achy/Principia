@@ -1,0 +1,7 @@
+{
+  "description": "Control: a particle to Jacobi to particle round trip between the STEP and the projection, which must fail the written-order check.",
+  "fuzz": { "seed": 3, "states": 256 },
+  "dt": 0.001,
+  "control": "jacobi",
+  "expected": "fail"
+}

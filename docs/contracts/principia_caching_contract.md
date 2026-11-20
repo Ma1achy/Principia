@@ -1,0 +1,200 @@
+# Principia — caching & display continuity contract
+
+*Eighth doc. Two halves that must be designed together: what the cache keys, keeps, and invalidates; and what the screen shows while the cache is catching up. The governing guarantee for the second half: **the canvas is never blank and never lies** — something always shows, and anything not current is visibly marked as such.*
+
+---
+
+## Part 1 — Two-level keying: identity vs validity
+
+<!-- retired-terms -->
+A quad has an address `QuadID (z, tx, ty)` — `(level, i, j)` in the slice plane's own frame, relative to the plane anchor (`z₀`'s value at the last re-integrating event), so in-plane pan and zoom change which addresses are requested, never the addresses (R-97) — (the old name `TileID` is retired — 'tile' now means a sample's screen footprint, memory-tiers §1) and, separately, every cached payload carries a compact compatibility signature that is stricter than the quad key, because it governs whether a payload can be reused without recomputation. The relationship between the two needs nailing down. The model:
+<!-- /retired-terms -->
+
+- **Identity — *which region of which chart*.** `QuadID` alone is incomplete: `(z, tx, ty)` doesn't say which chart or which plane. Full identity is `(chart id + params, slice plane) + QuadID`, the slice plane being `z₀`'s out-of-plane part, span{q₁, q₂} and the in-plane orientation — the sim key's navigation part (R-92). Two quads on different slice planes are different identities even at the same `(z,tx,ty)` — an agent that keys on `QuadID` alone will cache-collide across charts and across tilt positions.
+- **Validity — *computed under which physics config*.** The payload compatibility signature: chart/decode version, link ids, integrator occupant + config, the kernel variant (physics, or colour_composition Appendix A's bring-up mode, "the only sim-key item" of colour_composition §0; RQ-221), the compute shaders' fast-math setting (R-297), horizon `T`, enabled metrics (tier flags), event thresholds, `copy_index` for an ensemble copy (the nominal's signature excludes `E`, R-89), payload schema version (a content hash of the ledger, R-36). Same identity, different signature → different payload (e.g. recomputed after a threshold change; preview vs refined).
+- **Time — *the state's clock*.** Under lockstep a cached `SimState` additionally carries the `t` it had reached. It is directly presentable only at that `t`; for any later playhead it is a **resume point** — march `t_cached → playhead`, which is strictly cheaper than a `0 → playhead` re-boot. (Fixed-`dt` determinism makes resuming exact: the resumed state equals the never-evicted state.)
+  *12 Nov 2026 (R-985, the owner's direction on the chart audit's F8):* on a view tilted toward time the target time is per sample, so each cached sample's `t` is its own resume point: when the playhead moves, only the record's `k_stop` word is rewritten, from the pixel and the playhead on the host; a sample behind its new target resumes from its own `t`, and one ahead of it re-boots from `t = 0` (R-935 under RQ-761; R-565). *Was:* the bullet stands as written for views not tilted toward time.
+
+> **The word buffer is part of the payload.** The free-group word lives in a separate buffer (ledger §3.3a) but is logically one payload with its `SimState` — same identity, same signature, same `t`. Everywhere this contract says "sim buffers," it means **both** the `SimState` buffer and the parallel word buffer: they evict together, recompute together, resume together, and share the compatibility signature (the word depends on the same `IC, sim key` — notably event thresholds, since encounter detection drives symbol append). A `SimState` at index `i` and a word at index `i` must always describe the same trajectory at the same playhead; the two physical buffers never desynchronise.
+
+Cache lookup = identity match **and** signature match (+ the entry's `t` as resume metadata). Identity says "the quad you're asking about"; validity says "computed the way you're currently asking"; `t` says "how far along it already is."
+
+---
+
+## Part 2 — What invalidates what (the dependency graph)
+
+Every knob has a blast radius. Consolidated from the render, integrator, and scheduler contracts:
+
+| Change | Blast radius |
+|---|---|
+| Render mode, palette, brightness binding, combiner, post, overlays | **Nothing.** Render key only — recolour existing buffers |
+| Colour occupant params (κ, C, swatches…) | Re-bake the equirect texture (~ms). Sim buffers intact |
+| In-plane pan, zoom, lock | **Nothing.** Pan and zoom re-address which quads are asked for on the same slice plane; the lock changes neither key (R-92) |
+| Slice out of the plane, tilt, rotate, chart-mode switch | **Nothing invalidated** — but the slice plane (and chart) is on the sim key (R-92), so these request *new identities*, whose quads integrate fresh. Old-identity quads stay cached and valid — navigate back and they're still there |
+| `T`, `dt_macro`, thresholds, `eps` floors | **All sim buffers** (signature change; the march re-boots from `t = 0`). *7 Nov 2026 (R-842, RQ-727 (a)):* on a time-axis chart, raising `T` is a continuation of the march, for a regularised occupant always and for an unregularised one while `dt_macro` is unchanged, up to R-610's cap; the time window `(t_lo, t_hi, warp, rows)` is a view, off the sim key |
+| Integrator occupant | All sim buffers (signature) |
+| Kernel variant (physics ↔ the bring-up mode, colour_composition Appendix A) | All sim buffers (signature — the bring-up mode writes a known pattern instead of physics, so it changes what the kernel computes, colour_composition §0 and Appendix A; RQ-221) |
+| Compute fast-math setting | All sim buffers (signature — it is on the sim key; off by default, R-297) |
+| Link function selection, chart/decode version | All sim buffers (signature — the ICs themselves change) |
+| Quality tier | Sim buffers for the affected **sim-key** components only (FTLE, word, N — signature: tier flags; and `T` if preview). The tier's `E` invalidates nothing — copies are cached per `copy_index` and the nominal's key excludes `E` (R-89); nor does its `render_scale` component (row below) |
+| Transport (play / pause / speed / loop) | **Nothing.** `ViewUI` state — not on the sim key, not undoable (R-96) |
+| `MAX_REL_DEPTH`, frame budget, in-flight limit | **Nothing.** Scheduler knobs — change what gets *scheduled*, never what anything computed *to* |
+| `render_scale`, lock-to-native | **Nothing.** Not sim-key (payload purity — render resolution is not in the sim key): it moves the *refinement target* (screen floor at render-pixel size). Lowering leaves existing deep quads valid-but-deeper-than-needed; raising computes new deeper quads, masked by blur (quality/device note) |
+
+`r_pole` (integrator contract Part 3, "2. Wrapper config"; R-433) is one of the row's thresholds: it shapes the stored `θ̃`, `_reserved`, `orbit_count` and `retrograde`, so changing it invalidates all sim buffers, and payloads computed under an earlier value are never served (applied per R-369, PR #210).
+
+The navigation rows are the subtle ones and follow from Part 4 of the chart contract and R-92: **in-plane pan and zoom re-address; slicing out of the plane, tilting and rotating re-integrate — and neither invalidates.** A tilt gesture is a stream of new slice planes, each a new identity integrated fresh; the cache grows, nothing in it becomes wrong.
+
+**The bake cache is a different animal entirely.** The equirect texture keys on `(colour occupant + params)` only — chart-independent, IC-independent, quad-independent. One texture serves every quad of every chart. It does not participate in the quad cache or its eviction; it has its own trivial lifecycle (rebake on param change, debounced).
+
+---
+
+## Part 3 — Cross-chart sharing: permitted, deferred
+
+The same IC is reachable from many charts, and by the firewall (scheduler Part 1) its `SimState` is a pure function of `(IC, sim key, t)` — so payloads computed under one chart are, in principle, *correct* for any other chart that lands on the same IC. **IC-keyed (rather than chart+quad-keyed) caching is therefore permitted by the architecture.** It is deferred to v2 because the addressing is genuinely hard: floating-point `z` as a key, point-granularity vs quad-granularity mismatch, near-miss tolerance. v1 keys on `(identity, signature)` as above. The upgrade path stays open precisely because the firewall guarantees payload purity — nothing in v1 needs to change for v2 sharing to be sound, only the lookup.
+
+---
+
+## Part 4 — Baseline-first: an absolute tier, not a priority weight
+
+**Refinement starts from the coarsest cover of the current viewport and works down. Always.** The earlier scheduling loop had this as emergent behaviour (an `ensure_baseline_tiles` pass before candidate selection, ancestor fallback, priority weights) — this contract hardens it into an invariant, because a weight can be starved:
+
+> **Never dispatch a refinement job while the current view's baseline cover is missing.** Baseline dispatch is a hard tier above the priority queue, not a large weight inside it.
+
+- **The baseline cover** = the coarsest quad(s) spanning the viewport at useful resolution near the camera depth. At deep zoom this is *not* the depth-0 domain root (uselessly coarse) — it's the viewport-covering quads a few levels above camera depth. Something low-resolution appears in one or two dispatches; refinement then proceeds beneath it. Until the first baseline cover lands (launch, a chart switch with no backdrop, or a cold cache with no snapshot) the canvas background is drawn; R-537 EX4's no-gaps check applies from then on (R-552, RQ-419 (a)). **Past the chart's
+  `[0,1]²` (R-537, EX4)** it is the coarsest cover of the whole viewport, extension included: every cell the view
+  touches has a root of the root lattice (EX7), so every visible point has an ancestor, and the cover's ancestor chain is
+  evict-exempt there as everywhere. Until a quad is computed it shows its nearest computed ancestor; the only blank
+  pixels are those that are not a system.
+- **The fallback chain is evict-exempt.** Cost-weighted LRU gets one hard exemption class: the baseline cover and its ancestor chain for the visible region, **plus the backdrop identity's leaf cover (Part 5)**, are pinned; **while a Sequence preview runs, so is the user's view's baseline cover**, a third pinned identity (Part 5; fix round 13 of PR #286, perf review 5634346116, P3'; applied per R-369). Everywhere else eviction is free (recompute is safe, by payload purity); breaking the visible fallback chain is the one eviction that visibly hurts — it's the difference between "blurry for a moment" and "blank."
+- **Where the chain stops past the root (R-570).** With levels `L < 0` coarser than the root
+  (`principia_scheduler_contract.md` Part 3, "Infinite zoom-out: levels coarser than the root") a quad's parent chain
+  has no top, so the pinned chain stops at the first level at which the viewport lies within at most 2 × 2 ancestor
+  squares, the cover's smallest common ancestor where one exists; nothing above it is pinned or walked
+  (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369).
+- **The 2 × 2 rule is the only stop (perf review 5625031178 of PR #279, P7; applied per R-369).** The line above's
+  "the cover's smallest common ancestor where one exists" is superseded: the chain stops at the first level at which
+  the viewport lies within at most 2 × 2 ancestor squares, about `⌈log2(cover quads per axis)⌉` levels above the cover,
+  wherever the view sits, so its length is set by the screen, independent of the zoom and the pan; a smallest common
+  ancestor can sit far higher for a view straddling a dyadic line off the origin (`principia_scheduler_contract.md`
+  Part 3).
+- **One definition of the stop (perf review 5625066551 of PR #279, P8; applied per R-369).** The level is the first at
+  which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level below the first level whose
+  square side is at least the viewport's extent, depending on where the view sits; it is not defined as that second
+  level (`principia_scheduler_contract.md` Part 3).
+
+---
+
+## Part 5 — The stale backdrop: blur means loading
+
+When navigation changes identity (tilt, rotation, slicing out of the plane, chart switch), the previously displayed content is not *wrong* — it is correct data for an epsilon-nearby plane, and for a continuous gesture consecutive identities are close enough that the stale image is a genuinely good visual approximation. It should therefore **stay on screen, blurred**, until new-identity quads replace it.
+
+**Mechanism: a two-tier backdrop — live stale layer first, snapshot as fallback.**
+
+*Primary — the live stale layer.* The stale quads render through the normal pipeline from their cached `SimState`s — but under lockstep those states are **frozen at whatever `t` each had reached** when it left the live set (stale quads do not march; only the live set does — scheduler Part 7). So the backdrop is the last coherent identity's leaf cover, re-rendered every frame at the **current render config** but at each quad's **frozen time**, blurred, composited under the fresh-identity quads (painter's algorithm unchanged). This *strengthens* the blur semantics rather than weakening them: a blurred region is honestly not-current in space *and* time — sharp = live-and-in-time, blurred = stale-and-frozen, one signal.
+
+- **It does NOT animate — and that is the semantics.** Stale quads are frozen at whatever `t` each had reached when it left the live set (they do not march; only the live set does — temporal note). The backdrop is a *still* of the old identity, breathing only in colour (next bullet). This reinforces the blur grammar rather than weakening it: blurred = stale-and-frozen in space *and* time. *(An earlier draft claimed the backdrop animates via per-pixel `t_end` replay — that was eager-model vocabulary; under lockstep there is no stored future to replay, and the frozen still is the honest display.)*
+- **It re-colours.** Palette/mode changes mid-gesture apply to the backdrop too — colour stays *current data semantics* on slightly-old geometry. A snapshot would show a dead palette, colliding with colour-is-data.
+- **Blur is a compositor pass, not a quad effect.** Blur is a neighbourhood operation, so it cannot run inside a quad's own fragment shader: the stale layer renders to a texture through the ordinary stain pipeline, a **separable blur** (two cheap passes) runs on that texture, then composite. This pins the placement: **the compositor sits above the stain pipeline** and owns layers (backdrop, fresh cover, overlays); each layer is produced by the stain graph (a free, typed node graph, R-64). Blur is linear and quads composite opaquely, so per-layer processing commutes with composition — no correctness wrinkle. Colour-vision simulation is not a per-layer pass: it runs last, after the display scale and gamut clamp, on the final in-gamut colours (R-67).
+- **Coherence rule, sharpened:** the backdrop *reference* updates **only on an at-rest baseline (refined, non-preview)**. Mid-gesture coarse covers never become the backdrop — otherwise a long drag degrades the backdrop into a near-duplicate of the fresh coarse layer and the "blurred old detail → coarse live glimpses" staircase collapses. One stable backdrop identity per gesture; it swaps on gesture-end refinement.
+- **Pinning & cost:** the backdrop identity's leaf cover joins the Part 4 evict-exempt class — exactly two identities pinned (current + backdrop), swapping atomically on at-rest update. The backdrop's cost is one extra leaf-cover's fragment work plus the blur passes — bounded, trivial next to sim compute (*was:* "Cost is one extra leaf-cover's fragment work …"; fix round 14 of PR #286, perf review 5634410814, P9: the sentence now names the backdrop and precedes the preview's addition). **One addition, while a Sequence preview runs** (`principia_sequence.md` §3.6; fix round 12 of PR #286, perf review 5632950982, P3; applied per R-369): the user's view's baseline cover is a **third pinned identity**, evict-exempt beside the preview's current and backdrop, so returning from the preview shows it at once, never blank, with no recompute; it is released to the ordinary rules when the preview ends. **Its cost is memory, not fragment work** (fix round 13 of PR #286, perf review 5634346116, P3'; applied per R-369): one more viewport-bounded baseline cover, held under the hard cap (Part 7; `principia_memory_tiers.md` §3) like the other pins, which reserve it, so pinned bytes during a preview are at most three baseline covers; when the cap binds, the preview's own non-pinned work is evicted first, never the user's cover.
+
+*Fallback — the snapshot.* When there are **no payloads behind the picture** — the spotlight-reel handoff (a video frame has nothing to live-render) or a cold cache — the original screen-texture snapshot applies, blurred, under the same coherence discipline. The snapshot is the degenerate backdrop, not the primary one.
+
+**Blur only. No desaturation, no tinting.** Colour is data in this system: several modes carry information partly or wholly in chroma (greyscale-readable LUTs, monochrome debug views, spread/metric fields mapped to chroma). A desaturated backdrop would *collide with those encodings* — it would read as a false data statement under any chroma-carrying mode — and on monochrome views it does nothing, so it can't even mark staleness reliably. Blur is the one operation orthogonal to every colour encoding: it degrades spatial frequency, which no render mode uses as a data channel, and it universally reads as "loading." One marker, one meaning, zero collisions.
+
+**Continuous gestures: the two-regime scheduler policy.** Dragging a tilt/slice/zoom/pan produces (for tilt and slice) a new identity per frame; no quadtree fills at 60 fps. The scheduler therefore has **two regimes, and the switch is a mode change, not a priority adjustment**:
+
+- **In-motion (gesture active).** The goal flips entirely from *depth* to *coverage*. The only thing dispatched is the **full-canvas coarse cover** of the current identity — one or two dispatches' worth of quads, `PREVIEW_MODE`, a few levels above camera depth. **Complexity scoring is suspended, not down-weighted**: `P_complexity` is actively harmful mid-gesture — it would spend the tiny per-frame budget sharpening one interesting boundary quad instead of covering the canvas. The user's question mid-gesture is "what does this new slice roughly look like?"; the answer is a complete coarse picture, never a sharp fragment. Priority collapses to visibility × coverage. **Must-split above the screen floor (R-88) is the at-rest target (R-108):** during a gesture the frame budget governs — ancestors show, so there are never blanks.
+- **At-rest (debounce fired).** The full machinery resumes: full `T`, complexity-driven refinement, baseline-first tier, normal priority weights — and completeness resumes: every in-view quad above the screen floor splits (R-88, R-108).
+
+Supporting mechanics:
+
+- **Identity sampling, not tracking.** The in-motion regime samples the identity stream — coarse cover for the identity as of *now*; when that lands, for the identity as of *then* — while the blurred backdrop carries continuity between samples. The user sees: blurred old detail → coarse live glimpses updating every few frames → sharp refinement blooming on stop. That staircase *is* the "get the gist" experience.
+- **Preview flotsam evicts first.** Intermediate coarse covers for identities the gesture sailed past go straight to the bottom of the LRU — below even smooth interior quads. Valid but preview-quality and for abandoned identities; without this rule the cache fills with drag debris.
+- **Epochs do the cancellation.** Coarse-cover jobs for identity-at-frame-N that complete after the gesture has moved on are dropped (or filed as flotsam), never painted. Already in the scheduler contract; no mid-flight cancellation needed.
+- **Zoom is the gentle case.** Zoom doesn't change identity (same slice plane — it scales `q` within it, R-92), so ancestor fallback already shows the right content upscaled and the coarse cover mostly *exists in cache*. The regime applies uniformly, but zoom usually satisfies it for free; tilt and slice, which change identity per frame, are what genuinely need it.
+
+**No contamination path — and nothing can create one.** The backdrop must never be readable as data, and structurally nothing reads it: the lock computes `z` from `(s,t)` via the *current* chart on the CPU (never from the screen), exports read payloads, the inspector integrates fresh. The backdrop — live layer reference or snapshot — is pure display state, cleanly on the "what we look at" side of the firewall. The hover trace obeys the same rule from the other side: it draws only from current-identity payloads — no payload under the cursor (backdrop showing through) means no trace.
+
+**v2 polish, noted:** under a *locked* tilt, the anchor pixel's stale value is exactly correct (the lock is the fixed point of a basis edit) and staleness grows with distance from centre — so the honest stale rendering is a radially graded blur. v1 uniform blur is fine; recorded because it's a case of the navigation contract predicting display behaviour.
+
+---
+
+## Part 6 — The responsiveness invariant: the main thread never waits
+
+A perfect two-regime scheduler is worthless if the main thread hitches for 40 ms mid-tilt. The invariant, in the same form as the others:
+
+> **The main thread never waits on the GPU, on a readback, or on any scheduler work. Input → view-state update → uniform write → draw is the only synchronous path, and it is O(1). Everything else is asynchronous and yields.** *(This invariant is now realised structurally by the worker split in Part 6a — the main thread doesn't wait on scheduler work because it doesn't run scheduler work. The traps below are the ones that apply inside the loop wherever it runs.)*
+
+WebGPU makes this mostly free *if not fought*: `queue.submit()` doesn't block, dispatches land whenever, `mapAsync` is promise-based. A gesture frame — **in the worker** (Part 6a) — is: read the input SAB, update `(z₀, q₁, q₂)`, write one uniform, draw the current leaf cover + blurred backdrop — microseconds; the main thread's entire contribution is having written the input delta. All compute is already decoupled: results land whenever they land, the painter's-algorithm compositor picks them up next frame. The contract's job is naming the five ways an agent will accidentally fight it:
+
+1. **Synchronous readback.** Never `await onSubmittedWorkDone()` in the frame loop; never block on `mapAsync` before drawing. The `QuadReduction` readback (the sole *automatic* GPU→CPU crossing) is fire-and-forget: request the map, continue, consume in whatever later frame it resolves. The hover-trace sample readback (render contract Part 7) follows the identical discipline — one in flight, latest wins, never awaited.
+2. **Pipeline compilation on the gesture path.** Module/pipeline creation can cost tens of ms (the driver turning SPIR-V into a native pipeline; and custom *fragment* WGSL additionally compiling from source), and a chart switch creates a different compute pipeline from its **pre-built SPIR-V** variant (lowering Part 4 — no runtime *source* compile on the compute side) on first use mid-gesture, hitching exactly when responsiveness matters most. Rule: `createComputePipelineAsync`/`createRenderPipelineAsync` always, and **precompile the variant set at startup** (the lowering table is finite: every chart type's compute variant, the stain graphs in use). Custom shader edits already have the async-compile + last-valid-pipeline fallback from the hot-reload design; that discipline is global.
+3. **Unbounded CPU scheduler work per frame.** Collect-visible → score → top_k is fine at normal quad counts, but the f64 work — per-quad centre/half-width and especially the **linearised-decoder Jacobians** (two f64 decodes per axis per deep quad) — piles up when a gesture lands deep and dozens of quads need `x₀ + J_D`. Time-budgeting this on the main thread was tried and **failed under real load — the scheduler hitched the gesture and the DOM GUI froze.** The architecture answers it structurally (Part 6a): the scheduler runs in the worker, not on the main thread, so it *cannot* touch main-thread responsiveness. Within the worker it is still time-budgeted per frame (N quads, remainder deferred — per-quad independent, trivially incremental) so it never stalls the loop's own frame either.
+4. **The snapshot copy.** The last-coherent-frame snapshot is a GPU-side texture-to-texture copy, cheap. Never implement it as readback-and-reupload — the snapshot never leaves the GPU.
+5. **Bake uploads mid-gesture.** The equirect bake is debounced JS + `copyExternalImageToTexture` — already off the gesture path by the 120 ms debounce. Just never let a bake land synchronously inside the frame callback.
+
+The structural point: the two regimes govern *what the GPU computes*; this invariant governs *what the CPU waits for*. They compose — and the reason a frame never has to wait is that **the compositor always has something legal to draw** (Part 5). The display-continuity guarantee is precisely what makes the non-blocking guarantee achievable; they are two faces of one design.
+
+### Part 6a — The threading model: the render loop lives in a worker (and that worker is the wasm engine)
+
+Non-blocking-on-one-thread is not enough. Under real load the CPU scheduler still stalls the gesture, and — the sharper failure — **the DOM GUI freezes**, because it shares the main thread with the scheduler and gets starved when scheduling spikes. The fix is structural, and under the substrate decision (`principia_spike_brief.md`) it is *doubly* structural: **the entire frame loop — WebGPU device, scheduler, cache, quadtree, all compute and render — is the wasm engine, running in a Web Worker via `OffscreenCanvas`. The main thread is a thin TS shell: an input pump and a DOM-GUI host, a *different binary*, and it owns no simulation state.** This is the wasm↔JS membrane (systems-architecture §3); the firewall is now enforced by the linker, not merely by discipline.
+
+**v1 web (R-571).** The browser build is v1 web, the whole native app compiled to run in the browser: its GUI is the native app's egui GUI, not a DOM GUI, and a TS DOM GUI is v2 web's, if there is one. In v1 web egui runs on the main thread in a wasm context of its own, the gui crate against the engine surface, and this worker stays the engine's: the frame loop, the scheduler, the cache and the GPU work never run on the thread that takes input and draws the GUI, R-113's split holding as natively (R-620, closing RQ-551, option (b)). The main thread holds the GUI's context, a small loader and the input pump, and no engine state; where the split below says "TS shell" or "DOM-GUI host", v1 web reads the egui GUI's own wasm context. The figure is drawn on this worker's OffscreenCanvas and the GUI on a main-thread canvas above it (applied per R-369). What v1 web crosses is two lists, the three engine-state crossings (here messages between the GUI's context and this worker) and the platform list, both enforced in CI (R-619, closing RQ-550; systems-architecture §3). *Was:* "Where egui runs in v1 web (in this worker, or on the main thread in a wasm context of its own) and what the main thread then holds is queued, RQ-551, and what v1 web crosses between wasm and the browser, RQ-550 (systems-architecture §3). The split below stands as written until they are ruled."
+
+**The native build (R-113).** The worker is the browser's form of this split. In the native build the frame loop runs on a **dedicated render thread**, off the input/GUI thread; the invariant is the same — the thread that takes input and draws the GUI never runs the scheduler, the cache or the GPU work.
+
+```
+MAIN THREAD (TS shell)                   WORKER (wasm engine)
+── owns the real <canvas>                ── owns the WebGPU device (drives wgpu directly)
+   → transferControlToOffscreen() ─────▶ ── owns the OffscreenCanvas surface (transferred once)
+── captures pointer/wheel/key/resize      ── runs the rAF frame loop
+── runs the DOM GUI (was freezing)        ── integrates input → view state (z₀,q₁,q₂,zoom)
+── owns NO sim state (cannot — diff binary)── the whole scheduler (collect/score/top-k, f64 Jacobians)
+                                          ── all compute dispatches + render pass
+        two channels ↓                    ── the cache, quadtree, ALL state
+   INPUT/edits → SharedArrayBuffer / set_field (hot, low-latency, always-fresh)
+   SNAPSHOT    ↔ postMessage (cold: GUI-sized state echo, click results)
+```
+
+Why the wasm engine owns **everything** rather than offloading just the scheduler piece: it avoids both traps that make WebGPU-in-worker painful, and the substrate makes both airtight. **(1) No GPU-command marshaling** — the engine owns the device, so dispatches never cross a boundary. **(2) No state mirroring** — all state (view, quadtree, cache, payload) lives in the wasm engine; the TS shell holds none of it, so there is nothing to keep in sync — and *cannot* hold it, being a separate binary (the boundary is a **data** boundary, not an object one: no wasm handles cross — GUI contract §1). The main thread is **provably** incapable of hitching on physics because it does not have — cannot have — the physics.
+
+**Two channels, two rhythms:**
+
+- **Input / field edits → `SharedArrayBuffer` (hot path).** The live pointer position and accumulated zoom/pan/tilt deltas live in a SAB both sides see; the TS shell writes the latest via `Atomics`, the engine reads it at the top of every frame. Discrete settings arrive as `set_field(path, value)` (GUI contract §1). **Zero message-queue latency and old input cannot pile up** — the engine always sees the freshest state, which is what makes the camera feel instant. (Coalesce pointer events into the SAB; do not post one message per `pointermove`.)
+- **State snapshot ↔ `postMessage` (cold path).** The engine posts a **GUI-sized** snapshot for display — current auto-tier, fps, quad count, "loading" state, the read-only Custom fields showing what auto chose — **throttled to ~10 Hz, never per-frame**, and **never engine-sized** (the payload / quad tree / reductions stay wasm-side, summarised only — the big-data-never-crosses law). Click-to-inspect: the shell sends cursor coords, the engine does the fire-and-forget f64 re-integration (in the inspector worker — a second wasm context) and posts the result back.
+
+**Input transport is one path with a boot-selected backend, not two architectures.** The worker/OffscreenCanvas split (and the wasm engine inside it) is unconditional. The *only* thing that varies is how input deltas reach the engine, decided once by a capability check at startup: **SharedArrayBuffer if cross-origin-isolated, postMessage-per-frame otherwise.** Both write into the same engine-side view-state integrator through the same interface — the scheduler and loop never know which backend is live. SAB is strictly the lower-latency option; the postMessage fallback coalesces input into one message per main-thread rAF tick (marginally higher latency, correct everywhere). Ordinary feature detection, not a forked codebase.
+
+**Deployment for SAB.** SharedArrayBuffer needs COOP + COEP cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`/`credentialless`), and GitHub Pages serves no custom headers. **`coi-serviceworker`** (gzuidhof) supplies them: one self-hosted script beside `index.html`, same-origin (not a CDN), HTTPS (GH Pages is), registering a service worker that synthesises the headers with a single first-load reload. When it's active, the boot check selects SAB; when it isn't (service-worker failure, restrictive embedding, old browser), the same check selects the postMessage backend. No configuration, no second build.
+
+**Measured on Pages first (R-627).** Before v1 web is built, the v1 web skeleton (TASK-M8-86; the egui app and the mock engine in wasm, deployed to the GitHub Pages site by hand) is used to test this deployment on Pages itself (TASK-M8-96): whether the self-hosted `coi-serviceworker` makes the page cross-origin isolated there, and whether SharedArrayBuffer and wasm threads then actually work, in each browser of R-110's pair. Its numbers are recorded in `principia_systems_architecture.md` §3, beside v1 web's crossings; the split above stands as R-619 and R-620 ruled it, and the measurements reopen neither (merged with PR #293, which ruled both (R-619, R-620), applied per R-369; *was:* "the split above stands as written until RQ-550 and RQ-551 are ruled").
+
+**Browser support & debugging.** OffscreenCanvas + WebGPU-in-worker is solid in Chromium and improving in Firefox/Safari; worker contexts are fully debuggable (devtools attaches to the worker, breakpoints and `console` work). Resize is main-side (`ResizeObserver` on the element) → one message to the worker → swapchain reconfigure; never hot.
+
+---
+
+## Part 7 — The current-state cache (resume points, hard-capped)
+
+What is cached under lockstep is **current state only — one timestep per quad, never trajectory, never a time-series.** The cache's job changes from "hold completed answers" to "hold resume points": a revisited quad resumes `t_cached → playhead` instead of re-booting `0 → playhead`.
+
+- **Hard budget cap, not a smoothness dial.** The cache has a fixed memory ceiling, **sized by the device-characterisation phase** (`principia_quality_device_note.md`): a fraction of a detected VRAM budget (from `adapter.limits` + the boot probe), never a fixed constant — so it scales down on weak devices along with the compute settings. One characterisation sets the compute knobs *and* this cap together. The temptation to "cache a bit of history for smoothness" is exactly the eager-in-time siren that produced the V2 memory problem — the invariant is *one state per entry, bounded entry count*, and any growth pressure is answered by eviction, never by relaxing either.
+- **Eviction stays cost-weighted LRU** and stays *safe* (fixed-`dt` purity: re-booting reproduces the state exactly; for a regularised occupant, the fixed sync grid, its march stopping only on a boundary, R-565) — but the cost model now includes `t_cached` (a deep-`t` resume point saves more recompute than a shallow one, so it resists eviction more).
+- **The pinned classes survive unchanged**: baseline cover + visible ancestor chain + backdrop identity's leaf cover (Part 4/5), and, while a Sequence preview runs, the user's view's baseline cover (Part 5; fix round 13 of PR #286, perf review 5634346116, P3') — pinned as *frozen states*, which is all the backdrop needs.
+- **Refinement latches never pin memory.** The per-footprint latch (scheduler Part 8) lives with the resident quad: when the cache evicts or merges the quad, the latch goes too (R-99). It adds nothing to the pinned classes above.
+
+## Part 8 — The composed guarantee
+
+The four invariants interlock:
+
+1. **Baseline-first** (Part 4) → something *current* appears within a dispatch or two of any navigation.
+2. **Stale backdrop, blurred + two-regime scheduling** (Part 5) → something *approximately right and honestly marked* shows from the first frame, and a complete coarse picture of the new identity arrives before any sharp fragment.
+3. **Purity + keyed caching** (Parts 1–3) → navigating back re-serves old quads instantly, eviction is safe everywhere except the pinned visible chain, and nothing stale can leak into any data path.
+4. **The main thread never waits** (Part 6, realised structurally by the worker split in Part 6a) → the gesture itself never hitches, regardless of what the GPU is chewing on.
+
+Net: **the canvas is never blank, never lies, and never freezes.** Blur is the single vocabulary item for "not current"; everything sharp is real, current data; and the hand on the slider always gets its frame.
+
+---
+
+*Identity says which quad; validity says computed how. In-plane navigation re-addresses; a new slice plane re-integrates; neither invalidates. Baseline is a tier, not a weight; the visible fallback chain is pinned. Stale content stays up, blurred — blur means loading, and it is the only thing blur means. Sharp means true.*

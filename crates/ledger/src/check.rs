@@ -1,0 +1,249 @@
+//! The static layout check (dd_generation_root §5 test 1): within each packed word no two fields overlap, every
+//! declared bit is covered by a field or explicitly reserved, and every field's width fits its range, under R-242's
+//! width rules as R-247 and R-248 amend them (§3.8). An `f16-pair` field's range, wherever it sits, lies within
+//! f16's finite range (R-248). An `f16` field is one binary16 value at a packed location of exactly 16 bits, never at a
+//! scalar index, derived, or a vector's component, and its range follows the same rule (R-312).
+
+use std::fmt;
+
+use crate::schema::{Bound, Entry, FieldType, Location, Range, Word};
+
+/// f16's greatest finite value (§3.8 `overflow`, R-248), read from the constants register.
+pub const F16_MAX: f64 = crate::constants::F16_FINITE_MAX.number();
+
+/// One finding of the layout check: what breaks §5 test 1 or §3.8's width rules, naming the word or entry, the field
+/// and the bits (the inclusive run `lo–hi`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LayoutError(pub String);
+
+impl fmt::Display for LayoutError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+/// Checks every packed word of `words` against the fields `entries` place in it, every `f16` and `f16-pair` field's
+/// range, and where each `f16` field sits; every finding (empty when the layout passes).
+pub fn check(words: &[Word], entries: &[Entry]) -> Vec<LayoutError> {
+    let mut found = Vec::new();
+    for entry in entries {
+        if let Location::Packed { word, .. } = entry.location {
+            if !words.iter().any(|w| w.name == word) {
+                found.push(format!(
+                    "field `{}` is placed in undeclared word `{word}`",
+                    entry.name
+                ));
+            }
+        }
+        check_f16(entry, &mut found);
+        check_f16_place(entry, &mut found);
+    }
+    for word in words {
+        check_word(word, entries, &mut found);
+    }
+    found.into_iter().map(LayoutError).collect()
+}
+
+fn check_word(word: &Word, entries: &[Entry], found: &mut Vec<String>) {
+    let name = word.name;
+    let mut occupants: Vec<(&str, u32, u32)> = word
+        .reserved
+        .iter()
+        .map(|s| ("reserved", s.offset, s.width))
+        .collect();
+    for entry in entries {
+        if let Location::Packed {
+            word: w,
+            offset,
+            width,
+        } = entry.location
+        {
+            if w == name {
+                occupants.push((entry.name, offset, width));
+                check_width(name, entry, offset, width, found);
+            }
+        }
+    }
+    // Each declared bit's first occupant; a bit claimed twice is an overlap, reported per contiguous run.
+    let mut owner: Vec<Option<&str>> = vec![None; word.bits as usize];
+    let mut overlaps: Vec<(&str, &str, u32, u32)> = Vec::new();
+    for &(field, offset, width) in &occupants {
+        if u64::from(offset) + u64::from(width) > u64::from(word.bits) {
+            found.push(format!(
+                "word `{name}`: `{field}` at bits {} reaches past the word's {} declared bits",
+                run(offset, width),
+                word.bits
+            ));
+        }
+        for bit in offset..offset.saturating_add(width).min(word.bits) {
+            match owner[bit as usize] {
+                None => owner[bit as usize] = Some(field),
+                Some(first) => match overlaps
+                    .iter_mut()
+                    .find(|o| (o.0, o.1) == (first, field) && o.3 + 1 == bit)
+                {
+                    Some(o) => o.3 = bit,
+                    None => overlaps.push((first, field, bit, bit)),
+                },
+            }
+        }
+    }
+    for (first, second, lo, hi) in overlaps {
+        found.push(format!(
+            "word `{name}`: `{first}` and `{second}` overlap at bits {lo}–{hi}"
+        ));
+    }
+    let mut bit = 0;
+    while bit < word.bits {
+        if owner[bit as usize].is_some() {
+            bit += 1;
+            continue;
+        }
+        let lo = bit;
+        while bit < word.bits && owner[bit as usize].is_none() {
+            bit += 1;
+        }
+        found.push(format!(
+            "word `{name}`: bits {lo}–{} are neither covered by a field nor reserved",
+            bit - 1
+        ));
+    }
+}
+
+/// The width rule for `entry` at bits `offset .. offset + width` of `word` (R-242, R-248, R-312): a u-bits field holds
+/// its range, and an unbounded end fits no width; `f16`, `f16-pair` and `fixed16` take exactly 16 bits and `f32` exactly
+/// 32; any other type there, a vector included, fails.
+fn check_width(word: &str, entry: &Entry, offset: u32, width: u32, found: &mut Vec<String>) {
+    let at = format!(
+        "word `{word}`: `{}` at bits {}",
+        entry.name,
+        run(offset, width)
+    );
+    let ty = type_name(&entry.ty);
+    let needs = match entry.ty {
+        FieldType::UBits if !fits(width, &entry.range) => {
+            let range = show(&entry.range);
+            found.push(format!(
+                "{at} is {width} bit(s) wide, too narrow for its range {range}"
+            ));
+            return;
+        }
+        FieldType::UBits => return,
+        FieldType::F16 | FieldType::F16Pair | FieldType::Fixed16 => 16,
+        FieldType::F32 => 32,
+        _ => {
+            found.push(format!(
+                "{at} has type {ty}, which the width check does not accept at a packed location"
+            ));
+            return;
+        }
+    };
+    if width != needs {
+        found.push(format!(
+            "{at} is {ty}, which takes exactly {needs} bits, not {width}"
+        ));
+    }
+}
+
+/// The f16 range rule (R-248, R-312) for an `f16` or `f16-pair` field, or a vector of `f16-pair` components (the
+/// range applies per component, §3.8), wherever it sits: each end lies within ±65504, and an unbounded end needs
+/// `overflow`.
+fn check_f16(entry: &Entry, found: &mut Vec<String>) {
+    let kind = match &entry.ty {
+        FieldType::F16 => "f16",
+        FieldType::F16Pair => "f16-pair",
+        FieldType::Vector { component, .. } if **component == FieldType::F16Pair => "f16-pair",
+        _ => return,
+    };
+    let at = match entry.location {
+        Location::Packed {
+            word,
+            offset,
+            width,
+        } => format!("word `{word}`, bits {}", run(offset, width)),
+        _ => format!("entry `{}`", entry.name),
+    };
+    let (field, range) = (entry.name, show(&entry.range));
+    let ends = [entry.range.lo, entry.range.hi];
+    if ends.contains(&Bound::Unbounded) && entry.overflow.is_none() {
+        found.push(format!(
+            "{at}: {kind} field `{field}` has an unbounded end in its range {range} and states no `overflow` (saturate or inf)"
+        ));
+    }
+    let beyond = ends.iter().any(|end| match end {
+        Bound::Closed(x) | Bound::Open(x) => x.abs() > F16_MAX,
+        Bound::Unbounded => false,
+    });
+    if beyond {
+        found.push(format!(
+            "{at}: {kind} field `{field}` has range {range}, beyond f16's finite range ±65504"
+        ));
+    }
+}
+
+/// Where an `f16` field sits (R-312, R-317): `f16` is one binary16 value at a packed location only, so an `f16` field
+/// at a scalar index or derived fails, and so does a vector with `f16` components (a vector of halves is
+/// `vector(f16-pair, k)`), each naming the field.
+fn check_f16_place(entry: &Entry, found: &mut Vec<String>) {
+    let field = entry.name;
+    match (&entry.ty, &entry.location) {
+        (FieldType::F16, Location::Packed { .. }) => {}
+        (FieldType::F16, _) => found.push(format!(
+            "entry `{field}`: f16 field `{field}` is not at a packed location; f16 is one binary16 value at a packed \
+             16-bit location only (R-312)"
+        )),
+        (FieldType::Vector { component, .. }, _) if **component == FieldType::F16 => found.push(format!(
+            "entry `{field}`: vector field `{field}` has f16 components; f16 is not a vector component type, a vector \
+             of halves is vector(f16-pair, k) (R-312)"
+        )),
+        _ => {}
+    }
+}
+
+/// Whether an unsigned `width`-bit field holds every integer of `range`: its least is ≥ 0 and its greatest ≤ 2^width − 1.
+/// An unbounded end fits no width.
+fn fits(width: u32, range: &Range) -> bool {
+    let least = match range.lo {
+        Bound::Closed(x) => x.ceil(),
+        Bound::Open(x) => x.floor() + 1.0,
+        Bound::Unbounded => return false,
+    };
+    let greatest = match range.hi {
+        Bound::Closed(x) => x.floor(),
+        Bound::Open(x) => x.ceil() - 1.0,
+        Bound::Unbounded => return false,
+    };
+    least >= 0.0 && greatest <= 2f64.powi(width.min(64) as i32) - 1.0
+}
+
+/// Bits `offset .. offset + width` as the inclusive run `lo–hi`.
+fn run(offset: u32, width: u32) -> String {
+    let hi = offset.saturating_add(width).saturating_sub(1);
+    format!("{offset}–{hi}")
+}
+
+/// A type as §3.8 writes it: `u-bits`, `f32`, `f16-pair`, `fixed16`, `vector(type, k)`.
+fn type_name(ty: &FieldType) -> String {
+    match ty {
+        FieldType::UBits => "u-bits".to_owned(),
+        FieldType::F32 => "f32".to_owned(),
+        FieldType::F16 => "f16".to_owned(),
+        FieldType::F16Pair => "f16-pair".to_owned(),
+        FieldType::Fixed16 => "fixed16".to_owned(),
+        FieldType::Vector { component, k } => format!("vector({}, {k})", type_name(component)),
+    }
+}
+
+fn show(range: &Range) -> String {
+    let lo = match range.lo {
+        Bound::Closed(x) => format!("[{x}"),
+        Bound::Open(x) => format!("({x}"),
+        Bound::Unbounded => "(-inf".to_owned(),
+    };
+    let hi = match range.hi {
+        Bound::Closed(x) => format!("{x}]"),
+        Bound::Open(x) => format!("{x})"),
+        Bound::Unbounded => "inf)".to_owned(),
+    };
+    format!("{lo}, {hi}")
+}

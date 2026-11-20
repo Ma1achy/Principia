@@ -1,0 +1,5 @@
+x0 and delta, Kapela & Zgliczynski 2003, p. 1906 (PDF p. 9), prose, read twice from the page image:
+  eye:  x0 = (0.347116768716, 0.532724944657), delta = 10^-6
+  OCR:  "(0.347 116 768 716, 0.532 724 944 657) and 8 = 10-°" (x0_ocr_raw.txt)
+x0: both readings agree, 24 of 24 digits.
+delta: the OCR lost the superscript ("8 = 10-°" for "delta = 10^-6"); resolved against the page: 10^-6.

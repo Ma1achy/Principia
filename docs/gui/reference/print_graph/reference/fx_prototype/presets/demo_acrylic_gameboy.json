@@ -1,0 +1,28 @@
+{
+ "name": "Acrylic on a Game Boy",
+ "doc": "acrylic → gameboy",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "s0": {
+   "op": "preset:acrylic",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "s1": {
+   "op": "preset:gameboy",
+   "in": {
+    "src": "s0"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  }
+ },
+ "out": "s1"
+}

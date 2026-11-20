@@ -1,0 +1,8 @@
+{
+  "gate": "delta-dep",
+  "inputs": ["register.json", "below.json", "above.json"],
+  "measurement": {
+    "requirement": "REQ-VAL-055",
+    "ruling": "R-37"
+  }
+}

@@ -1,0 +1,12 @@
+row ('p2R', '0.1661365', '1') col y: eye='0.1885872' ocr='7489880|0.1885872'
+row ('p7L', '0.2200528', '1') col alpha2: eye='-0.06' ocr='-0.06|90:0-'
+row ('p7L', '0.2241737', '1') col beta1: eye='-0.02' ocr="-0.02|20'0-"
+row ('p7R', '0.2293342', '1') col beta1: eye='0.076' ocr='0.076|940°0'
+row ('p7R', '0.2355441', '1') col beta1: eye='0.0775' ocr='94200|0.0775'
+row ('p7R', '0.2355741', '1') col beta1: eye='0.0774' ocr='TL400|0.0774'
+row ('p2R', '0900', '1') only in ocr
+row ('p2R', '064680', '1') only in ocr
+row ('p4L', '89800', '1') only in ocr
+row ('p5R', '09990', '1') only in ocr
+row ('p8L', '0.0661514.', '1') only in ocr
+rows eye=432 ocr=437; cells compared 3888; disagreements 11

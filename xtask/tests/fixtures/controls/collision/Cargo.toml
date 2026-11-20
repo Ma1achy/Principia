@@ -1,0 +1,14 @@
+[package]
+name = "controls_collision"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Its own workspace: never a member of Principia's (R-176 fixture; `cargo xtask controls` runs on a copy).
+[workspace]
+
+[features]
+controls = []
+
+[dev-dependencies]
+validation = { path = "../../../../../crates/validation" }

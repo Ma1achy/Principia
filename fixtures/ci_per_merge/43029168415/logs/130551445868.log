@@ -1,0 +1,49 @@
+﻿2026-11-11T13:51:22.4340128Z Current runner version: '2.338.2'
+2026-11-11T13:54:51.3862226Z ##[group]Run bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
+2026-11-11T13:54:51.3864231Z [36;1mbounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60[0m
+2026-11-11T13:54:51.3883219Z shell: /usr/bin/bash -e {0}
+2026-11-11T13:54:51.3883486Z env:
+2026-11-11T13:54:51.3883698Z   CARGO_TERM_COLOR: always
+2026-11-11T13:54:51.3883989Z   CARGO_PROFILE_DEV_DEBUG: line-tables-only
+2026-11-11T13:54:51.3884320Z   CARGO_PROFILE_TEST_DEBUG: line-tables-only
+2026-11-11T13:54:51.3884620Z   CARGO_INCREMENTAL: 0
+2026-11-11T13:54:51.3884908Z   PRIN_GPU_BACKEND: vulkan
+2026-11-11T13:54:51.3885152Z   CACHE_ON_FAILURE: false
+2026-11-11T13:54:51.3885387Z ##[endgroup]
+2026-11-11T13:54:51.5496577Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-11-11T13:54:51.7822825Z Get:6 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
+2026-11-11T13:54:51.8665562Z Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [12.6 kB]
+2026-11-11T13:54:51.8773949Z Get:8 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [760 kB]
+2026-11-11T13:54:51.8865418Z Get:9 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [690 kB]
+2026-11-11T13:55:09.7152323Z Ign:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+2026-11-11T13:55:25.2383041Z Ign:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease
+2026-11-11T13:55:39.8836302Z Ign:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease
+2026-11-11T13:55:58.0126453Z Ign:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease
+2026-11-11T13:56:10.8295197Z Ign:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+2026-11-11T13:56:20.5872704Z Ign:2 https://archive.ubuntu.com/ubuntu noble InRelease
+2026-11-11T13:56:21.4853349Z attempt 1 of 3 failed or ran past 90 s, apt-get update
+2026-11-11T13:56:21.5564768Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-11-11T13:56:21.5801439Z Get:6 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
+2026-11-11T13:56:21.6579050Z Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [12.6 kB]
+2026-11-11T13:56:21.6713113Z Get:8 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [690 kB]
+2026-11-11T13:56:21.6715546Z Get:9 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [760 kB]
+2026-11-11T13:56:36.2298161Z Ign:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+2026-11-11T13:56:50.3934959Z Ign:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease
+2026-11-11T13:57:07.6239494Z Ign:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease
+2026-11-11T13:57:24.2735153Z Ign:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease
+2026-11-11T13:57:38.6049639Z Ign:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+2026-11-11T13:57:49.5734017Z Ign:2 https://archive.ubuntu.com/ubuntu noble InRelease
+2026-11-11T13:57:51.4957831Z attempt 2 of 3 failed or ran past 90 s, apt-get update
+2026-11-11T13:57:51.5602056Z Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
+2026-11-11T13:57:51.5846875Z Get:6 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
+2026-11-11T13:57:51.6618212Z Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble/main armhf Packages [12.6 kB]
+2026-11-11T13:57:51.6727012Z Get:8 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [690 kB]
+2026-11-11T13:57:51.6740779Z Get:9 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [760 kB]
+2026-11-11T13:58:07.9318028Z Ign:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+2026-11-11T13:58:23.1438332Z Ign:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease
+2026-11-11T13:58:38.0951728Z Ign:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease
+2026-11-11T13:58:54.0283898Z Ign:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease
+2026-11-11T13:59:06.1044283Z Ign:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+2026-11-11T13:59:21.4883100Z Ign:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease
+2026-11-11T13:59:21.5056303Z attempt 3 of 3 failed or ran past 90 s, apt-get update
+2026-11-11T13:59:21.5076181Z ##[error]Process completed with exit code 1.

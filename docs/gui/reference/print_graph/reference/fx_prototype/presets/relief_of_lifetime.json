@@ -1,0 +1,125 @@
+{
+ "name": "Relief of lifetime",
+ "doc": "Paint stands up where beginnings survive longest. Binds data.lifetime; lightness stands in until it exists.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "proxy": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "stretch(blur(lum(I), 2.0))"
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 6
+   }
+  },
+  "st": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 2.2,
+    "density": 0.005,
+    "length": 16,
+    "seed": "$seed"
+   }
+  },
+  "hgt": {
+   "op": "expr",
+   "in": {
+    "life": "data.lifetime|proxy",
+    "st": "st"
+   },
+   "p": {
+    "f": "14*gaussian(life, 2.0) + 1.2*st"
+   }
+  },
+  "li": {
+   "op": "light",
+   "in": {
+    "height": "hgt"
+   },
+   "p": {
+    "strength": 1.0,
+    "L": [
+     -0.8,
+     -0.5,
+     0.35
+    ],
+    "shin": 20
+   }
+  },
+  "h6": {
+   "op": "expr",
+   "in": {
+    "h": "hgt"
+   },
+   "p": {
+    "f": "h/6"
+   }
+  },
+  "sh": {
+   "op": "cast_shadow",
+   "in": {
+    "height": "h6"
+   },
+   "p": {
+    "L": [
+     -0.8,
+     -0.5
+    ],
+    "reach": 14,
+    "k": 0.8
+   }
+  },
+  "b": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "blur(I, 0.8)"
+   }
+  },
+  "C": {
+   "op": "kuwahara",
+   "in": {
+    "image": "b"
+   },
+   "p": {
+    "r": 4
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "C": "C",
+    "diff": "li.diff",
+    "spec": "li.spec",
+    "sh": "sh"
+   },
+   "p": {
+    "f": "C*(0.35+0.65*clip(diff, 0, 1.6))[..., None]*sh[..., None] + 0.1*spec[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

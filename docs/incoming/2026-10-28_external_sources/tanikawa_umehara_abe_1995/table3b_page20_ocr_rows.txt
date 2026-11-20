@@ -1,0 +1,38 @@
+354 KIYOTAKA TANIKAWA ET AL.
+TABLE IIIb
+Positions of several binary collision points of type 3 for different
+Nmin
+Time v/h
+3 0.4500000 0.3023168 0.6671 0.6439 V -+
+3 0.4000000 0.2812764 0.6239 0.6141 V -+
+3 0.3500000 0.2461233 0.5599 0.5784 V -+
+3 0.3073905 0.2000000 0.4671 0.5436 h +-
+3 0.2767155 0.1500000 0.3582 0.5160 h +-
+3 0.2568950 0.1000000 0.2426 0.4968 h
+3 0.2456624 0.0500000 0.1225 0.4855 h +-
+3 0.2421603 0.0100000 0.0246 0.4819 h +-
+4 0.4500000 0.2356965 0.6142 0.6338 -+
+4 0.4000000 0.2113482 0.5556 0.6025 V -+
+4 0.3361021 0.1500000 0.4029 0.5551 +-
+4 0.3082707 0.1000000 0.2718 0.5318 h
+4 0.2931699 0.0500000 0.1369 0.5184 h +-
+4 0.2885410 0.0100000 0.0271 0.5142 h
+5 0.4500000 0.1956425 0.5821 0.6284
+0.4000000 0.1680804 0.5017 0.5967 V -+
+0.3425173 0.1000000 0.3012 0.5541 h +-
+5 0.3237457 0.0500000 0.1513 0.5388 h +-
+5 0.3181079 0.0100000 0.0303 0.5340 h
+6 0.4800000 0.1772825 0.5966 0.6417 -+
+6 0.4500000 0.1683652 0.5578 0.6252 V -+
+6 0.4000000 0.1373689 0.4538 0.5932 V
+6 0.3679738 0.1000000 0.3303 0.5702 h
+6 0.3455532 0.0500000 0.1652 0.5530
+0.3389791 0.0100000 0.0331 0.5477 +-
+shown in Table IV. In the table, the first column represents wmin, the second and
+third columns represent the (x, y) coordinates of triple collision points, and the
+fourth column represents the vertex angle a (in radians) of the starting isosceles
+triangle.
+Figure 13 shows the log-log plot of a versus nmin without the first trivial
+triple collision at (x, y) = (0, V3/2). The figure suggests the following analytical
+relation
+loga(n) = c1+ (c2+3) 1ogn. (4)

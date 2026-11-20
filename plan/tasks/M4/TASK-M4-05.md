@@ -1,0 +1,61 @@
+# TASK-M4-05 — Flat-grid compute: in-kernel decode from chart uniforms, one workgroup per quad, an in-place march
+
+- **Milestone:** M4
+- **Closes:** REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008, REQ-INT-116
+- **Depends on:** TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66, TASK-M2-87
+- **Needs (earlier milestones):** REQ-SCHED-001, REQ-SYS-012, REQ-CHART-003, REQ-INT-026, REQ-PAY-025, REQ-PAY-038, REQ-PAY-037, REQ-PAY-014, REQ-SYS-003, REQ-SCHED-003, REQ-DEC-007
+- **Reviewers:** code, qa, physics, perf
+- **Pitfalls:** none
+- **Size:** ~480 lines
+
+## Goal
+deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, each dispatched as one workgroup of N² threads (64 at N = 8), one thread per texel. The kernel takes the chart description (z₀, basis vectors, chart id + params) and `SimUniforms` as uniforms and, per sample, maps → z → decode → (m, r, p) → integrate in-kernel; there is no IC buffer and per-frame CPU work is a uniform write and a dispatch. The march updates each `SimState` in place, re-dispatch is gated on `is_finished`, the word buffer is a separable allocation, and dispatch hard-asserts the `total_substeps` bound.
+
+## References
+- `docs/design/principia_core_design.md` § "3. Kernel eats chart params, decodes in-kernel"
+- `docs/design/principia_systems_architecture.md` § "5.5 THE DISPATCH SHAPE — one thread per texel, one dispatch per ensemble copy"
+- `docs/design/principia_systems_architecture.md` § "The shape"
+- `docs/design/principia_systems_architecture.md` § "Not doing: worker tiles"
+- `docs/design/principia_dd_simstate_payload.md` § "7. Memory"
+- `docs/contracts/principia_lowering_contract.md` § "Part 1 — What lowering is"
+- `docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set"
+- `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
+- `docs/design/principia_dd_simstate_payload.md` § "8. Build-time settles (measure / specify once running)"
+- `docs/design/principia_dd_simstate_payload.md` § "6. Accessors (illustrative of generated output; source is the Rust layout definition — emitted as Rust for the kernel/host and WGSL for the fragment side)"
+- `docs/contracts/principia_render_contract.md` § "Unpack layer (generated, one accessor per named field)"
+- `docs/design/principia_dd_generation_root.md` § "3.3a The word buffer — a parallel cold buffer"
+- `docs/design/principia_deep_zoom.md` § "3. Three-layer quadtree"
+- `decisions.md` § "R-102 — The ensemble isn't a baked variant *(closes RQ-62)*"
+- `decisions.md` § "R-124 — Apply the R-25, R-50 and R-102 follow-ups now *(closes RQ-92)*"
+
+## Deliverables
+- `crates/engine/src/flat_grid.rs`: the layer-0 grid (quad list at one depth, per-quad uniforms `c, h`), `SimState` / word buffer allocation, dispatch of one workgroup per quad.
+- `crates/kernel`: the survey entry point — workgroup size N², per-thread map → z → decode → wrapper; workgroup shared memory holds reduction accumulators only.
+- Dispatch guards: `horizon_steps × N_max ≤ 2³²−1` hard assert; re-dispatch gated on `sd_is_finished`.
+- Word buffer as its own allocation, bound only when symbolic features are on.
+- *13 Nov 2026 (R-928; TASK-M3-70, applied per R-369):* when this march writes the references `E_0` and `Lz_0` (GPU-computed), the drift views' and field ramps' neutral band switches to R-928's GPU-reference `k'`, 22 for the energy and 6 for `L_z` (`drift.wgsl`'s `DBG_DRIFT_BAND_E` and `DBG_DRIFT_BAND_LZ`, `render::present::{DRIFT_BAND_E, DRIFT_BAND_LZ}`; render contract Part 5, "The neutral band"), with a test that a fresh sample on a GPU-written reference reads exactly neutral in the three drift views and through a field ramp on each drift. TASK-M3-70 built the CPU reference's `k'`, 15 and 5.
+
+## Acceptance tests
+- `cargo test -p engine dispatch_shape` — shader reflection: workgroup size N²; shared-memory size independent of E; the kernel has no loop over ensemble copies — each copy is the same kernel dispatched again with `copy_index` a uniform (R-102); the resolve pass is dispatched after the E+1 copy dispatches and is the only writer of the footprint resolve and QuadReduction (R-135) (REQ-PERF-012).
+- Perf reviewer: no `k` (texels-per-thread) parameter exists in the dispatch configuration (REQ-PERF-013).
+- *Was, retired 11 Nov 2026 with REQ-INT-070 (R-926 item 5: the integrator entry reads records, never decodes; REQ-INT-115, closed by TASK-M2-87, replaces it):* `cargo test -p engine per_frame_uniform_write` plus code review — no IC buffer exists; per-frame CPU work is a uniform write and dispatch, independent of grid size (REQ-INT-070).
+- *11 Nov 2026:* `cargo test -p kernel discipline_lint` (extended) plus code review — the integrator entry's source, and everything it calls, contains no chart map, no link and no decode call, and its starting states are read from the record buffer of REQ-INT-115's contract; control: an integrator entry that calls the decode fails the lint (REQ-INT-116).
+- Code reviewer: no ping-pong `SimState` copy exists; the march writes each sample's own slot in place (REQ-SCHED-012).
+- `cargo test -p kernel discipline_lint` (extended) plus physics review — kernel source has no runtime switch on axis-kind / link / occupant enums, except the workgroup-uniform decode-mode branch (REQ-SYS-022).
+- `cargo test -p engine horizon_substep_bound` — a config violating `horizon_steps × N_max ≤ 2³²−1` fails the assertion at dispatch (REQ-SCHED-010).
+- `cargo test -p engine finished_gate` — a `sim_failed` sample is not re-dispatched; the predicate truth table for codes 0–7 (`is_resolved_outcome` ≤ 2, `is_running` = 3, `is_failed` ≥ 4 incl. reserved 6–7) (REQ-SCHED-011).
+- `cargo test -p engine word_buffer_separable` — symbolic features disabled: word buffer freed, `SimState` allocation and contents unchanged (REQ-PERF-008).
+
+## Notes
+- With the word buffer bound, the survey entry runs the wrapper through `integrate_word` (TASK-M3-16), so detection runs at every accepted substep; with symbolic features off, through `integrate`.
+- RQ-92 ruled: R-124 — systems_architecture §5.5 is conformed to R-102 (applied in step 7; the heading above is the new one): each ensemble copy is the same kernel dispatched again with `copy_index` a uniform. This task builds the per-copy dispatch shape; the copy offsets and the (E+1) dispatches are TASK-M4-06's. This settles the gap.
+- R-135 settles where the across-copy reduction lives: its own resolve pass, dispatched after all E+1 copy dispatches for a quad complete, reading their SimState slices and writing the footprint resolve and the QuadReduction fields (REQ-PERF-012). This task dispatches that pass; the reductions it computes are M5's (TASK-M5-17, TASK-M5-18).
+- **The fresh-sample check on a GPU-computed reference (R-652; render contract Part 5, "The neutral band"; PR #360's physics review 5723029285, C1, and code review 5723219417, C3):** `drift_view_neutral_fresh_sample_renders_exactly_neutral` takes its references from the CPU read side, as no GPU kernel writes real samples before this task. This task's PR repeats the check on samples this march wrote, with the band's GPU-reference domain: `k_E = 34·K/|E_0| + 22` and `k_L = 6·S/|Lz_0|` at most 128, so `K/|E_0|` up to 3.1 and `S/|Lz_0|` up to 21.3.
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M4-01, TASK-M3-06, TASK-M3-15".
+- *11 Nov 2026 (R-926 item 5; the chart re-plan § A.1, CHANGE, and § B.6 item 21):* the integrator entry reads records and never decodes; a per-sample stop (R-935, under RQ-761 (a)). REQ-INT-070 (decode in the kernel, never an IC buffer) is retired and replaced by REQ-INT-115 (the record contract), which TASK-M2-87 closes; this task reads TASK-M2-87's records and depends on it. The lines above that have the kernel decode are kept as their *Was* until this task's file is rewritten from TASK-M2-87's contract. *Was (Closes):* "REQ-INT-070, REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008"; *was (Depends on):* "TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66".
+- *11 Nov 2026 (the code re-check of PR #482, review 5853463481, N1; R-926 item 5):* the retired line above (REQ-INT-070) had nothing in its place, and REQ-INT-115, which replaced that requirement, is contract text closed by TASK-M2-87 with no code, so no acceptance checked that the entry this task builds holds no chart code and never decodes. REQ-INT-116 is that check, and this task closes it (applied per R-369: task scoping); REQ-SYS-022 (no interpreter on the GPU) stands beside it. *Was (Closes):* "REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008".
+- *12 Nov 2026 (the chart audit's F9; record):* the 11 Nov note says the lines that have the kernel decode "are kept as their *Was*"; they are: the title's "in-kernel decode from chart uniforms", the Goal's "maps → z → decode → (m, r, p) → integrate in-kernel; there is no IC buffer", the Deliverables' "map → z → decode → wrapper", the Acceptance's "except the workgroup-uniform decode-mode branch" (whether any such branch remains is RQ-797's), and References :15 and :20. REQ-INT-116 (:41) binds.
+- *13 Nov 2026 (R-989, RQ-797 Q1 (a)):* the CPU expands the one-cell patch, each sample's `x₀ + J_D·δ` formed in f64 and narrowed once into its record; the GPU reads only records, and no `x₀` or `J_D` is uploaded for the integrator.
+- *17 Nov 2026 (R-1023, RQ-783 (a)):* R-926 item 5 gains a named exception: recreating a record written before the
+  switch decodes through today's f32 decode, on the CPU, so the switch to records keeps that decode as product code for
+  recreation (TASK-M7-45); the GPU still only integrates records.

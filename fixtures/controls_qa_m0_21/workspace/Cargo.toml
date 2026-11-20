@@ -1,0 +1,6 @@
+# QA fixture (TASK-M0-21, REQ-VAL-147): a workspace of three crates, each checked on its own targets only.
+# `controlled` has a test and its control; `bare` declares the feature and has a test of the same name with no
+# control; `plain` declares no `controls` feature. Its own workspace: never a member of Principia's; run on a copy.
+[workspace]
+resolver = "2"
+members = ["controlled", "bare", "plain"]

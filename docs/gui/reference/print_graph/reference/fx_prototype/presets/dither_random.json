@@ -1,0 +1,61 @@
+{
+ "name": "Dither, random",
+ "doc": "Ordered or random dithering on a coarse pixel grid (after paper.design Image Dithering).",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "pd": {
+   "op": "pixelate_down",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "size": 2,
+    "rounding": "ceil"
+   }
+  },
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "thr": {
+   "op": "threshold_map",
+   "in": {
+    "like": "pd.out",
+    "rng": "r"
+   },
+   "p": {
+    "kind": "random"
+   }
+  },
+  "small": {
+   "op": "expr",
+   "in": {
+    "small": "pd.out",
+    "thr": "thr.out"
+   },
+   "p": {
+    "f": "steps = 2\ndef q(v):\n    x = v*(steps-1); lo = floor(x); return clip((lo + (x-lo > thr)) / max(steps-1, 1), 0, 1)\nL = small @ array([0.299, 0.587, 0.114])\nt = q(L)[..., None]\nB, F, Hc = hexc(\"#1d1b19\"), hexc(\"#efe9dc\"), hexc(\"#efe9dc\")\nlvl = rint(t*(steps-1))\ng = clip((lvl-1)/max(steps-2, 1), 0, 1)\nout = where(lvl == 0, B, F + (Hc-F)*g)"
+   }
+  },
+  "big": {
+   "op": "pixelate_up",
+   "in": {
+    "small": "small"
+   },
+   "p": {
+    "size": 2
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "big"
+   }
+  }
+ },
+ "out": "out"
+}

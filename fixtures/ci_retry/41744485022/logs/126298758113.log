@@ -1,0 +1,49 @@
+﻿2026-11-04T00:19:17.6221536Z Current runner version: '2.338.2'
+2026-11-04T00:19:17.6241994Z Version: 20261015.610
+2026-11-04T00:19:17.6248628Z Image: ubuntu-24.04
+2026-11-04T00:19:17.6249159Z Version: 20261018.96.1
+2026-11-04T00:19:22.9243696Z Complete job name: ci (4)
+2026-11-04T00:19:22.9954674Z ##[group]Run actions/checkout@v4
+2026-11-04T00:19:40.0849570Z ##[group]Run df -h /
+2026-11-04T00:19:40.0853431Z [36;1msudo docker image prune --all --force > /dev/null[0m
+2026-11-04T00:19:40.0887689Z shell: /usr/bin/bash -e {0}
+2026-11-04T00:19:40.0961433Z Filesystem            Size  Used Avail Use% Mounted on
+2026-11-04T00:19:40.0962107Z /dev/mapper/cow-root   72G   60G   12G  84% /
+2026-11-04T00:24:07.4855813Z Filesystem            Size  Used Avail Use% Mounted on
+2026-11-04T00:24:07.4857138Z /dev/mapper/cow-root   72G   21G   51G  30% /
+2026-11-04T00:24:07.4890306Z ##[group]Run rustup toolchain install
+2026-11-04T00:24:07.4915169Z shell: /usr/bin/bash -e {0}
+2026-11-04T00:24:25.4182704Z ##[group]Run Swatinem/rust-cache@v2
+2026-11-04T00:24:33.0720699Z ##[group]Run actions/cache/restore@v4
+2026-11-04T00:26:02.2041672Z ##[group]Run actions/setup-python@v5
+2026-11-04T00:26:02.5392482Z ##[group]Run python3 -m pip install pyyaml
+2026-11-04T00:26:02.6213988Z shell: /usr/bin/bash -e {0}
+2026-11-04T00:26:08.0310848Z ##[group]Run sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+2026-11-04T00:26:08.0344496Z shell: /usr/bin/bash -e {0}
+2026-11-04T00:26:39.6378543Z ##[group]Run taiki-e/install-action@v2
+2026-11-04T00:26:39.6456186Z ##[group]Run bail() {
+2026-11-04T00:26:39.6459119Z [36;1mif ! command -v bash >/dev/null; then[0m
+2026-11-04T00:26:39.6460266Z [36;1m    if command -v sudo >/dev/null; then[0m
+2026-11-04T00:26:39.6460740Z [36;1m    elif command -v doas >/dev/null; then[0m
+2026-11-04T00:26:39.6465072Z shell: /usr/bin/env -u ENV -u BASH_ENV -u CDPATH -u SHELLOPTS -u BASHOPTS /bin/sh -eu {0}
+2026-11-04T00:26:40.1325968Z ##[group]Run actions/download-artifact@v4
+2026-11-04T00:31:12.4047349Z ##[group]Run archive="$RUNNER_TEMP/nextest-ci.tar.zst"
+2026-11-04T00:31:12.4048487Z [36;1mgot=$(stat -c %s "$archive" 2>/dev/null || echo 0)[0m
+2026-11-04T00:31:12.4050525Z [36;1m  got=$(stat -c %s "$archive" 2>/dev/null || echo 0)[0m
+2026-11-04T00:31:12.4088180Z shell: /usr/bin/bash -e {0}
+2026-11-04T00:31:12.4207242Z ##[group]Run cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite --partition hash:4/4
+2026-11-04T00:31:12.4230162Z shell: /usr/bin/bash .github/scripts/disk_sampler.sh {0}
+2026-11-04T00:31:12.4897001Z == sample 1, +0 s, avail_kb=32404508, 00:31:12
+2026-11-04T00:31:12.4897326Z Filesystem            Size  Used Avail Use% Mounted on
+2026-11-04T00:31:12.4897923Z /dev/mapper/cow-root   72G   41G   31G  57% /
+2026-11-04T00:36:12.9808388Z == sample 6, +300 s, avail_kb=21398956, 00:36:12
+2026-11-04T00:36:12.9809390Z Filesystem            Size  Used Avail Use% Mounted on
+2026-11-04T00:36:12.9837886Z /dev/mapper/cow-root   72G   52G   21G  72% /
+2026-11-04T00:41:13.5282689Z == sample 11, +601 s, avail_kb=1956588, 00:41:13
+2026-11-04T00:41:13.5288454Z Filesystem            Size  Used Avail Use% Mounted on
+2026-11-04T00:41:13.5324660Z /dev/mapper/cow-root   72G   70G  1.9G  98% /
+2026-11-04T00:41:30.1062444Z     test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 76.55s
+2026-11-04T00:41:30.1063905Z     [0m[31;1mthread 'qa_m0_24_every_registered_control_makes_its_test_fail' (22759) panicked at crates/validation/tests/qa_TASK-M0-24.rs:232:9:[0m
+2026-11-04T00:41:30.1064726Z     [31;1mvalidation: `cargo xtask controls` pairs no control with `compute_fast_math_defaults_off`, so `cargo xtask ci` does not judge it[0m
+2026-11-04T00:41:30.3446546Z ##[notice]lowest free 1910 MiB over 11 samples
+2026-11-04T00:41:30.3574347Z ##[error]Process completed with exit code 100.

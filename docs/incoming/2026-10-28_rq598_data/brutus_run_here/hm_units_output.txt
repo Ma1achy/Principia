@@ -1,0 +1,71 @@
+== The conversion factor T_HM / T_ours = sqrt(3 lam^3), lam = (4/9) sum 1/r_ij, over the 1212 grid points
+min 2.719  median 5.049  max 166.791
+check: equilateral triangle of side 1 at rest collapses at T = 0.6413 (ours) = 1.7101 HM
+
+== The escape radius and the T cap, ours against the paper's (Appendix A: 10 distance units; runs to 10^4)
+our R_esc = 10 (our units) = 13.51 to 210.09 HM units (median 20.41); the paper's 10 HM units = 0.48 to 7.40 of ours
+our T cap = 1000 (our units) = 2719 to 166791 HM units; the paper's 10^4 HM = 60 to 3678 of ours; its black class (T > 1000 HM) = T_ours > 6.0 to 368
+
+== GG-1, eps = 1e-6, L_w = 1024, p_max = 4: ours converted to HM units against Fig. 1 (route 2)
+(i, j)   factor  T_ours    T_HM     log10 T_HM  Fig.1 left  Fig.1 right  ours_HM - left (dex)
+(1, 1)     5.74   69.4152   398.520      2.600       1.271       1.424       +1.33
+(1, 23)    4.50   15.3321    68.918      1.838       2.291       1.857       -0.45
+(1, 54)    2.72    0.6329     1.721      0.236       0.521       0.521       -0.29
+(2, 34)    3.72   45.3869   168.639      2.227       1.928       1.975       +0.30
+(3, 43)    3.20    0.5706     1.826      0.262       2.713       2.713       -2.45
+(4, 13)    5.30    6.9958    37.112      1.570       2.068       2.209       -0.50
+(8, 37)    3.54   31.0851   110.137      2.042          >3       2.139    censored
+(9, 3)     6.29   13.4758    84.767      1.928          >3       1.564    censored
+(12, 30)   4.07   14.7265    59.937      1.778       2.607       2.010       -0.83
+(14, 20)   5.15    1.3393     6.902      0.839       0.686       0.686       +0.15
+(15, 6)    7.36   95.6408   703.556      2.847       1.670       1.471       +1.18
+(17, 41)   3.31   19.7692    65.514      1.816       1.248       2.127       +0.57
+(23, 29)   4.32   15.8784    68.569      1.836       2.115       1.752       -0.28
+(27, 24)   5.09    4.1349    21.041      1.323          >3       1.564    censored
+(28, 1)   37.86    1.5548    58.860      1.770       1.037       0.463       +0.73
+(29, 17)   7.02   14.3092   100.410      2.002       1.576       1.412       +0.43
+(points where the two panels share a LUT index, black included, over all 1212: 242)
+
+== The three points where the panels agree in the 16-point sample, ours over eps = 1e-4 .. 1e-6 (L_w = 128), HM units
+(1, 54): T_HM 1.7210-1.7210, log10 0.236; Fig. 1 (both panels) 0.521; difference -0.29 dex
+(14, 20): T_HM 6.8931-6.9020, log10 0.838; Fig. 1 (both panels) 0.686; difference +0.15 dex
+(3, 43): T_HM 1.8263-1.8264, log10 0.262; Fig. 1 (both panels) 2.713; difference -2.45 dex
+
+== (3, 43) and its neighbours in Fig. 1 (route 2), log10 T in HM units: left / right; and our factor there
+(3, 42)    1.881 /  1.893   factor 3.25
+(3, 44)    1.107 /  1.107   factor 3.15
+(2, 43)    0.896 /  0.896   factor 3.20
+(4, 43)    1.775 /  1.740   factor 3.20
+(2, 42)    0.920 /  0.920   factor 3.25
+(2, 44)    0.873 /  0.873   factor 3.15
+(4, 42)    1.518 /  1.318   factor 3.25
+(4, 44)    1.307 /  1.307   factor 3.15
+(3, 43)    2.713 /  2.713   factor 3.20
+
+== Weights for the projections: sum of Fig. 1 left lifetimes, in our time units (each T_HM / factor)
+black at 1000 HM (#334's count)           : sum T read as our units     85690;  converted from HM    18974  (ratio 4.52)
+black at 10^4 HM (the paper's run length) : sum T read as our units    319690;  converted from HM    70211  (ratio 4.55)
+
+== eps = 1e-6 panel, forward leg (ESTIMATE): rate median 1.70 / mean 2.66 s per our unit; integrated / T median 1.31; reverse / forward 0.82
+as #334 (Fig. 1 read as our units, black 1000)  : forward   40.4-  82.9 core-hours; with reversal   73.6- 150.9
+HM-converted, black at 1000 HM                  : forward    9.0-  18.4 core-hours; with reversal   16.3-  33.4
+HM-converted, black at 10^4 HM                  : forward   33.1-  67.9 core-hours; with reversal   60.3- 123.7
+
+== eps = 1e-70 (ESTIMATE): ms per step at p_max 8 and 16 from the same two measured points, point (1, 54)
+p_max 8: 7.46 ms (1e-8), 10.35 ms (1e-10); +1.44 ms per decade, x1.386 per two decades
+   at 1e-70: linear 97 ms per step;  geometric 186 s per step (x1.80e+04 the 1e-10 cost)
+   steps x 1 (1e-10's)                              linear   :      39.5 s per our unit; panel forward core-hours: #334 weights 1.2e+03; HM black 1000 2.7e+02; HM black 1e4 1e+03
+   steps x 1 (1e-10's)                              geometric:  7.59e+04 s per our unit; panel forward core-hours: #334 weights 2.4e+06; HM black 1000 5.2e+05; HM black 1e4 1.9e+06
+   steps x 11.5 (#334's get_eta factor, unverified) linear   :       455 s per our unit; panel forward core-hours: #334 weights 1.4e+04; HM black 1000 3.1e+03; HM black 1e4 1.2e+04
+   steps x 11.5 (#334's get_eta factor, unverified) geometric:  8.73e+05 s per our unit; panel forward core-hours: #334 weights 2.7e+07; HM black 1000 6e+06; HM black 1e4 2.2e+07
+p_max 16: 7.17 ms (1e-8), 10.14 ms (1e-10); +1.49 ms per decade, x1.414 per two decades
+   at 1e-70: linear 99 ms per step;  geometric 333 s per step (x3.28e+04 the 1e-10 cost)
+   steps x 1 (1e-10's)                              linear   :      40.5 s per our unit; panel forward core-hours: #334 weights 1.3e+03; HM black 1000 2.8e+02; HM black 1e4 1e+03
+   steps x 1 (1e-10's)                              geometric:  1.36e+05 s per our unit; panel forward core-hours: #334 weights 4.2e+06; HM black 1000 9.4e+05; HM black 1e4 3.5e+06
+   steps x 11.5 (#334's get_eta factor, unverified) linear   :       465 s per our unit; panel forward core-hours: #334 weights 1.4e+04; HM black 1000 3.2e+03; HM black 1e4 1.2e+04
+   steps x 11.5 (#334's get_eta factor, unverified) geometric:  1.56e+06 s per our unit; panel forward core-hours: #334 weights 4.9e+07; HM black 1000 1.1e+07; HM black 1e4 4e+07
+
+== p_max = 4 at point (1, 54): local slope of forward wall against 1/eps (MEASURED, three points)
+wall 6.16 s (1e-6, one of its two loads), 27.19 s (1e-8), 147.30 s (1e-10): x4.41 then x5.42; d log10(wall) / d log10(1/eps) = 0.32 then 0.37
+wall 8.08 s (1e-6, one of its two loads), 27.19 s (1e-8), 147.30 s (1e-10): x3.37 then x5.42; d log10(wall) / d log10(1/eps) = 0.26 then 0.37
+steps 877, 1290, 3448: x1.47 then x2.67

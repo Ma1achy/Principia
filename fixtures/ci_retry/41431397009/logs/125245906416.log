@@ -1,0 +1,33 @@
+﻿2026-11-02T12:20:37.1844485Z Current runner version: '2.338.2'
+2026-11-02T12:20:37.1873021Z Version: 20261015.610
+2026-11-02T12:20:37.1882463Z Image: ubuntu-24.04
+2026-11-02T12:20:37.1883099Z Version: 20261018.96.1
+2026-11-02T12:20:40.4888508Z Complete job name: ci-workspace
+2026-11-02T12:20:40.5465258Z ##[group]Run actions/checkout@v4
+2026-11-02T12:20:52.5499229Z ##[group]Run df -h /
+2026-11-02T12:20:52.5500794Z [36;1msudo docker image prune --all --force > /dev/null[0m
+2026-11-02T12:20:52.5533543Z shell: /usr/bin/bash -e {0}
+2026-11-02T12:20:52.5603877Z Filesystem            Size  Used Avail Use% Mounted on
+2026-11-02T12:20:52.5604425Z /dev/mapper/cow-root   72G   60G   12G  84% /
+2026-11-02T12:22:40.5941418Z Filesystem            Size  Used Avail Use% Mounted on
+2026-11-02T12:22:40.5942084Z /dev/mapper/cow-root   72G   36G   36G  51% /
+2026-11-02T12:22:40.5978788Z ##[group]Run rustup toolchain install
+2026-11-02T12:22:40.6005279Z shell: /usr/bin/bash -e {0}
+2026-11-02T12:22:58.3801816Z ##[group]Run Swatinem/rust-cache@v2
+2026-11-02T12:23:01.7714832Z ##[group]Run actions/setup-python@v5
+2026-11-02T12:23:02.0025868Z ##[group]Run python3 -m pip install pyyaml
+2026-11-02T12:23:02.0071677Z shell: /usr/bin/bash -e {0}
+2026-11-02T12:23:06.0355214Z ##[group]Run sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+2026-11-02T12:23:06.0382443Z shell: /usr/bin/bash -e {0}
+2026-11-02T12:23:32.3187233Z ##[group]Run taiki-e/install-action@v2
+2026-11-02T12:23:32.3284625Z ##[group]Run bail() {
+2026-11-02T12:23:32.3288279Z [36;1mif ! command -v bash >/dev/null; then[0m
+2026-11-02T12:23:32.3289783Z [36;1m    if command -v sudo >/dev/null; then[0m
+2026-11-02T12:23:32.3290689Z [36;1m    elif command -v doas >/dev/null; then[0m
+2026-11-02T12:23:32.3295719Z shell: /usr/bin/env -u ENV -u BASH_ENV -u CDPATH -u SHELLOPTS -u BASHOPTS /bin/sh -eu {0}
+2026-11-02T12:23:32.7055990Z ##[group]Run cargo nextest run -p xtask
+2026-11-02T12:23:32.7081477Z shell: /usr/bin/bash -e {0}
+2026-11-02T12:34:53.0152322Z     test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 19 filtered out; finished in 600.11s
+2026-11-02T12:34:53.0156209Z     [0m[31;1mthread 'controls_on_this_workspace_skips_gui' (8360) panicked at xtask/tests/controls.rs:192:10:[0m
+2026-11-02T12:34:53.0160823Z     [31;1mrun xtask: Custom { kind: TimedOut, error: "child `/home/runner/work/Principia/Principia/target/debug/xtask controls --list` (pid 8361) was killed: it outlived the 600 s timeout (R-214; the 600 s default is confirmed, REQ-VAL-156, R-376)" }[0m
+2026-11-02T12:34:53.2359814Z ##[error]Process completed with exit code 100.

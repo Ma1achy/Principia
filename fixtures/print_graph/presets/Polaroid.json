@@ -1,0 +1,1 @@
+{"format":"principia.print/1","name":"Polaroid","nodes":{"img":{"type":"render"},"out":{"in":{"in":"pol"},"type":"output"},"pol":{"in":{"in":"img"},"params":{"seed":"$seed"},"type":"polaroid"}},"out":"out","settings":{"seed":0}}

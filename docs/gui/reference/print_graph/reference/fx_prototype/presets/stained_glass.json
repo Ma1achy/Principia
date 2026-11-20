@@ -1,0 +1,205 @@
+{
+ "name": "Stained glass",
+ "doc": "Fate regions cut into panes of streaky cathedral glass, leaded along the boundaries, lit from behind.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "rg": {
+   "op": "regions",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "K": 9,
+    "b": 2.0,
+    "mode": 9
+   }
+  },
+  "jp": {
+   "op": "jitter_points",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "spacing": 64,
+    "jitter": 0.45
+   }
+  },
+  "vor": {
+   "op": "voronoi",
+   "in": {
+    "points": "jp.points"
+   }
+  },
+  "pc": {
+   "op": "expr",
+   "in": {
+    "lab": "rg.labels",
+    "vor": "vor"
+   },
+   "p": {
+    "f": "lab*10000 + vor"
+   }
+  },
+  "piece": {
+   "op": "relabel",
+   "in": {
+    "labels": "pc"
+   }
+  },
+  "mc": {
+   "op": "mean_by_label",
+   "in": {
+    "image": "src",
+    "labels": "piece.labels"
+   },
+   "p": {
+    "n": "@piece.n"
+   }
+  },
+  "cn": {
+   "op": "draw",
+   "in": {
+    "rng": "jp.rng",
+    "n": "mc"
+   },
+   "p": {
+    "kind": "normal",
+    "shape": "N1"
+   }
+  },
+  "n1": {
+   "op": "noise",
+   "p": {
+    "scale": 150,
+    "octaves": 2,
+    "seed": "$seed+1"
+   }
+  },
+  "sx": {
+   "op": "expr",
+   "in": {
+    "n": "n1"
+   },
+   "p": {
+    "f": "cos(pi*n)"
+   }
+  },
+  "sy": {
+   "op": "expr",
+   "in": {
+    "n": "n1"
+   },
+   "p": {
+    "f": "sin(pi*n)"
+   }
+  },
+  "sn": {
+   "op": "draw",
+   "in": {
+    "rng": "cn.rng"
+   },
+   "p": {
+    "kind": "normal"
+   }
+  },
+  "ss": {
+   "op": "smear",
+   "in": {
+    "x": "sn.out",
+    "tx": "sx",
+    "ty": "sy"
+   },
+   "p": {
+    "length": 14
+   }
+  },
+  "n2": {
+   "op": "noise",
+   "p": {
+    "scale": 35,
+    "octaves": 3,
+    "seed": "$seed+2"
+   }
+  },
+  "sd": {
+   "op": "draw",
+   "in": {
+    "rng": "sn.rng"
+   },
+   "p": {
+    "kind": "random"
+   }
+  },
+  "bd": {
+   "op": "boundary",
+   "in": {
+    "labels": "piece.labels"
+   }
+  },
+  "lead": {
+   "op": "morph",
+   "in": {
+    "mask": "bd"
+   },
+   "p": {
+    "iterations": 2
+   }
+  },
+  "lh": {
+   "op": "expr",
+   "in": {
+    "l": "lead"
+   },
+   "p": {
+    "f": "gaussian(l.astype(float), 1.2)*4"
+   }
+  },
+  "li": {
+   "op": "light",
+   "in": {
+    "height": "lh"
+   },
+   "p": {
+    "strength": 1.0,
+    "shin": 30,
+    "L": [
+     -0.55,
+     -0.75,
+     0.9
+    ]
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "col": "mc",
+    "cn": "cn.out",
+    "piece": "piece.labels",
+    "ss": "ss",
+    "n2": "n2",
+    "sd": "sd.out",
+    "lead": "lead",
+    "diff": "li.diff",
+    "spec": "li.spec"
+   },
+   "p": {
+    "f": "g = col @ array([0.299, 0.587, 0.114]); col = g[:, None] + (col-g[:, None])*1.45\ncol = clip(col, 0.05, 0.92)*(1+0.08*cn)\nG = clip(col[piece], 0, 1)\nstreak = z(ss)\nG = G*(1 + 0.12*streak + 0.10*n2)[..., None]\nseeds = gaussian((sd < 0.0005).astype(float), 1.0)*8\nG = G + clip(seeds, 0, 1)[..., None]*0.5\nG = G + 0.25*blur(clip(G-0.6, 0, 1), 7)\nleadcol = array([0.10, 0.10, 0.11])[None, None]*(0.6+0.5*diff[..., None]) + 0.25*spec[..., None]\nout = where(lead[..., None], leadcol, G)"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

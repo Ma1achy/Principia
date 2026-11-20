@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Traces on the line system</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#7fb6e0}a:hover{color:#a9cff0}
+button,input,select{font:inherit}
+</style>
+</helmet>
+<div style="width: 1360px; height: 1080px; box-sizing: border-box; background: #1b1c1e; color: #e4e2dc; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13px; padding: 26px 28px; display: grid; grid-template-columns: 776px minmax(0, 1fr); gap: 28px;">
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <h1 style="margin: 0; font-size: 22px; font-weight: 500;">Traces use the same lines</h1>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 8px;">
+        <img src="/_blob/1e6cc05e3f223b58b3deea7322131bb6" alt="The trace drawn whole, with arrowheads every 150 pixels showing which way it runs, fading where it leaves the slice" style="width: 380px; height: 380px; display: block; image-rendering: pixelated;">
+        <figcaption style="display: flex; flex-direction: column; gap: 3px;"><span style="font-weight: 500;">Static, with direction arrows</span><span style="color: #b9b6ad; line-height: 1.45;">The whole path to the end of the run, an arrowhead every 150 px of path. Arrows fade with the line.</span></figcaption>
+      </figure>
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 8px;">
+        <img src="/_blob/cb357e8fa15df4bf826d397fe7ab776a" alt="One animation frame: the full path faint, the last stretch bright behind a head marker labelled t 1.9" style="width: 380px; height: 380px; display: block; image-rendering: pixelated;">
+        <figcaption style="display: flex; flex-direction: column; gap: 3px;"><span style="font-weight: 500;">Animated: one frame, in step with the playhead at t 1.9</span><span style="color: #b9b6ad; line-height: 1.45;">A head marker at the playhead, a bright tail of Δt 1.0 behind it, the rest of the path as a faint ghost.</span></figcaption>
+      </figure>
+    </div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #9b998f;">one IC at rest, z (−0.31, −0.14), integrated to t = 6; its shape mapped back onto (z_α, z_β). Most of its path lies outside this window, so the line breaks and resumes.</div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-top: 12px; border-top: 1px solid #34363a;">
+      <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; color: #fff27a;">in step with the playhead</span><span style="color: #b9b6ad; line-height: 1.45;">The head sits at the playhead. Scrub or play time and the trace moves with the figure.</span></div>
+      <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; color: #fff27a;">own clock</span><span style="color: #b9b6ad; line-height: 1.45;">The trace plays at its own speed over its own window while the figure stays put: once, loop, or back and forth.</span></div>
+      <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; color: #fff27a;">static</span><span style="color: #b9b6ad; line-height: 1.45;">The whole path at once, as now, optionally with arrows.</span></div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0; padding-top: 38px;">
+    <div style="display: flex; flex-direction: column; gap: 11px; padding: 18px; background: #232427; border: 1px solid #34363a; border-radius: 4px;">
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">Trace settings</div>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <label for="tstyle" style="color: #b9b6ad;">Style</label>
+        <select id="tstyle" style="background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 5px 8px;"><option>Trace</option><option>Screen contour</option><option>Print</option></select>
+        <span style="color: #9b998f; font-size: 12px;">the same library as contours</span>
+      </div>
+      <label style="display: flex; gap: 8px; align-items: center; color: #b9b6ad;"><input type="checkbox" id="fade" checked style="margin: 0;"> Fade by distance from the slice <span style="font-family: 'IBM Plex Mono', monospace; color: #e4e2dc;">· floor 0.18</span></label>
+      <label style="display: flex; gap: 8px; align-items: center; color: #b9b6ad;"><input type="checkbox" id="ticks" style="margin: 0;"> Time ticks every <span style="font-family: 'IBM Plex Mono', monospace; color: #e4e2dc;">1.0</span>, labelled</label>
+      <label style="display: flex; gap: 8px; align-items: center; color: #b9b6ad;"><input type="checkbox" id="mark" checked style="margin: 0;"> Markers: start ●, collision ×, escape →, horizon ▪</label>
+      <label style="display: flex; gap: 8px; align-items: center; color: #b9b6ad;"><input type="checkbox" id="grad" style="margin: 0;"> Colour along time instead of one colour</label>
+      <label style="display: flex; gap: 8px; align-items: center; color: #b9b6ad;"><input type="checkbox" id="exit" checked style="margin: 0;"> Break the line where it leaves the chart</label>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 11px; padding: 18px; background: #232427; border: 1px solid #34363a; border-radius: 4px;">
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">Direction</div>
+      <label style="display: flex; gap: 8px; align-items: center; color: #b9b6ad;"><input type="checkbox" id="arr" checked style="margin: 0;"> Arrows along the path</label>
+      <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: #b9b6ad;">
+        <span style="margin-right: 4px;">Shape</span>
+        <button type="button" aria-label="Filled triangle" aria-pressed="true" style="background: #0e5a8a; border: 0; border-radius: 3px; padding: 6px 8px;"><svg width="22" height="14" aria-hidden="true"><line x1="1" y1="7" x2="20" y2="7" stroke="#fff27a" stroke-width="2"></line><polygon points="19,7 10,2 10,12" fill="#fff27a" stroke="#0b0b0e" stroke-width="1"></polygon></svg></button>
+        <button type="button" aria-label="Open chevron" aria-pressed="false" style="background: #2a2b2f; border: 0; border-radius: 3px; padding: 6px 8px;"><svg width="22" height="14" aria-hidden="true"><line x1="1" y1="7" x2="20" y2="7" stroke="#fff27a" stroke-width="2"></line><polyline points="11,2 19,7 11,12" fill="none" stroke="#fff27a" stroke-width="2" stroke-linejoin="round"></polyline></svg></button>
+        <button type="button" aria-label="Half barb" aria-pressed="false" style="background: #2a2b2f; border: 0; border-radius: 3px; padding: 6px 8px;"><svg width="22" height="14" aria-hidden="true"><line x1="1" y1="7" x2="20" y2="7" stroke="#fff27a" stroke-width="2"></line><polyline points="11,1 19,7" fill="none" stroke="#fff27a" stroke-width="2" stroke-linecap="round"></polyline></svg></button>
+        <button type="button" aria-label="Notched" aria-pressed="false" style="background: #2a2b2f; border: 0; border-radius: 3px; padding: 6px 8px;"><svg width="22" height="14" aria-hidden="true"><line x1="1" y1="7" x2="20" y2="7" stroke="#fff27a" stroke-width="2"></line><polygon points="20,7 9,1 12,7 9,13" fill="#fff27a" stroke="#0b0b0e" stroke-width="1"></polygon></svg></button>
+        <button type="button" aria-label="Dot" aria-pressed="false" style="background: #2a2b2f; border: 0; border-radius: 3px; padding: 6px 8px;"><svg width="22" height="14" aria-hidden="true"><line x1="1" y1="7" x2="20" y2="7" stroke="#fff27a" stroke-width="2"></line><circle cx="13" cy="7" r="3.5" fill="#fff27a" stroke="#0b0b0e" stroke-width="1"></circle></svg></button>
+      </div>
+      <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; color: #b9b6ad;">
+        <label style="display: flex; gap: 6px; align-items: center;">Size <input type="range" id="asz" min="4" max="24" value="12" style="width: 110px;"> <span style="font-family: 'IBM Plex Mono', monospace; color: #e4e2dc;">12 px</span></label>
+        <label style="display: flex; gap: 6px; align-items: center;"><input type="checkbox" id="aout" checked style="margin: 0;"> Outline, as the line's</label>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: #b9b6ad;">
+        <span>Frequency</span>
+        <span style="display: inline-flex; border: 1px solid #3a3c41; border-radius: 3px; overflow: hidden;">
+          <button type="button" aria-pressed="true" style="background: #0e5a8a; color: #fff; border: 0; padding: 5px 10px;">Every 150 px</button>
+          <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 10px;">Every Δt 0.5</button>
+          <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 10px;">8 per trace</button>
+        </span>
+      </div>
+      <div style="color: #9b998f; font-size: 12px; line-height: 1.4;">Every Δt spaces arrows in time, so they bunch where the motion is slow: speed read off the line.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 11px; padding: 18px; background: #232427; border: 1px solid #34363a; border-radius: 4px;">
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">Colours</div>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: #b9b6ad;">
+        <span style="display: inline-flex; border: 1px solid #3a3c41; border-radius: 3px; overflow: hidden;">
+          <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 10px;">One colour</button>
+          <button type="button" aria-pressed="true" style="background: #0e5a8a; color: #fff; border: 0; padding: 5px 10px;">Auto, one per trace</button>
+        </span>
+        <span style="display: inline-flex; gap: 4px;" aria-label="Trace palette">
+          <span style="width: 16px; height: 16px; border-radius: 2px; background: #fff27a;"></span>
+          <span style="width: 16px; height: 16px; border-radius: 2px; background: #7fd1ff;"></span>
+          <span style="width: 16px; height: 16px; border-radius: 2px; background: #ffa7d6;"></span>
+          <span style="width: 16px; height: 16px; border-radius: 2px; background: #b6f28a;"></span>
+          <span style="width: 16px; height: 16px; border-radius: 2px; background: #f7b267;"></span>
+        </span>
+      </div>
+      <div style="color: #9b998f; font-size: 12px; line-height: 1.4;">Each new pinned or kept trace takes the next colour; any one can be set by hand.</div>
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f; margin-top: 6px;">Animation</div>
+      <span style="display: inline-flex; align-self: flex-start; border: 1px solid #3a3c41; border-radius: 3px; overflow: hidden;">
+        <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 10px;">Static</button>
+        <button type="button" aria-pressed="true" style="background: #0e5a8a; color: #fff; border: 0; padding: 5px 10px;">With the playhead</button>
+        <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 10px;">Own clock</button>
+      </span>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: #b9b6ad;">
+        <span>Repeat</span>
+        <span style="display: inline-flex; border: 1px solid #3a3c41; border-radius: 3px; overflow: hidden;">
+          <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 10px;">Once</button>
+          <button type="button" aria-pressed="true" style="background: #0e5a8a; color: #fff; border: 0; padding: 5px 10px;">Loop</button>
+          <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 10px;">Back and forth</button>
+        </span>
+        <span>Speed <span style="font-family: 'IBM Plex Mono', monospace; color: #e4e2dc;">× 1.0</span></span>
+      </div>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap; color: #b9b6ad;">
+        <span>Tail <span style="font-family: 'IBM Plex Mono', monospace; color: #e4e2dc;">Δt 1.0</span></span>
+        <label style="display: flex; gap: 6px; align-items: center;"><input type="checkbox" id="ghost" checked style="margin: 0;"> Show the rest faintly</label>
+        <label style="display: flex; gap: 6px; align-items: center;"><input type="checkbox" id="head" checked style="margin: 0;"> Head marker with time</label>
+      </div>
+      <div style="color: #9b998f; font-size: 12px; line-height: 1.4;">Repeat and speed apply to the own clock. With the playhead, the trace follows the Time panel's own play and loop.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

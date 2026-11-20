@@ -1,0 +1,7 @@
+{
+  "description": "The healthy survey with V_0 stored as -inf's bits at three samples, the collision pole as the decode stage writes it: those samples draw the hatch and drop out of the comparison (R-436); the rest agree.",
+  "side": [16, 16],
+  "depth": 4,
+  "poison": [0, 17, 255],
+  "expected": "pass"
+}

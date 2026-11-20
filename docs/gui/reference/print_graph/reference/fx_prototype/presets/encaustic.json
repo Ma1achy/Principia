@@ -1,0 +1,127 @@
+{
+ "name": "Encaustic",
+ "doc": "Translucent wax layers, scraped back with a blade, fused with melted ripples and a waxy sheen.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "under": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "blur(I,5)"
+   }
+  },
+  "top": {
+   "op": "kuwahara",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "r": 4
+   }
+  },
+  "n0": {
+   "op": "noise",
+   "p": {
+    "scale": 40,
+    "octaves": 3,
+    "seed": "$seed"
+   }
+  },
+  "n2": {
+   "op": "noise",
+   "p": {
+    "scale": 25,
+    "octaves": 3,
+    "seed": "$seed+2"
+   }
+  },
+  "n3": {
+   "op": "noise",
+   "p": {
+    "scale": 18,
+    "octaves": 2,
+    "seed": "$seed+3"
+   }
+  },
+  "dx": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), cos(deg2rad(-12)))"
+   }
+  },
+  "dy": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "np.full((H, W), sin(deg2rad(-12)))"
+   }
+  },
+  "scr0": {
+   "op": "strokes",
+   "in": {
+    "tx": "dx",
+    "ty": "dy"
+   },
+   "p": {
+    "width": 1.0,
+    "density": 0.0009,
+    "length": 70,
+    "seed": "$seed+1",
+    "amp_var": 0.3
+   }
+  },
+  "pre": {
+   "op": "expr",
+   "in": {
+    "n0": "n0",
+    "scr0": "scr0",
+    "n2": "n2",
+    "n3": "n3"
+   },
+   "p": {
+    "f": "thick = sig(n0*2.2+0.8)\nscr = clip(scr0*1.5, 0, 1)\nout = gaussian(0.5*n2 + 0.35*thick - 0.6*scr + 0.08*sin(6*n3), 1.5)"
+   }
+  },
+  "li": {
+   "op": "light",
+   "in": {
+    "height": "pre"
+   },
+   "p": {
+    "strength": 2.2,
+    "shin": 7,
+    "L": [
+     -0.55,
+     -0.75,
+     0.9
+    ]
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "under": "under",
+    "top": "top",
+    "n0": "n0",
+    "scr0": "scr0",
+    "diff": "li.diff",
+    "spec": "li.spec"
+   },
+   "p": {
+    "f": "thick = sig(n0*2.2+0.8)\nout = under*(1-0.85*thick[..., None]) + top*(0.85*thick[..., None])\nout = out*0.9 + array([0.95, 0.92, 0.82])*0.1\nscr = clip(scr0*1.5, 0, 1)\nout = out*(1-0.6*scr[..., None]) + under*0.6*scr[..., None]\nout = out*(0.86+0.14*diff[..., None]) + 0.10*spec[..., None]\nout = out*array([1.0, 0.98, 0.92])"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

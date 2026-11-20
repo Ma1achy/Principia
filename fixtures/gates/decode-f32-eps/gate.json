@@ -1,0 +1,6 @@
+{
+  "gate": "decode-f32-eps",
+  "inputs": ["golden.json", "interior.json", "perturbed.json"],
+  "threshold": { "value": 256, "requirement": "REQ-DEC-043", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-DEC-043" }
+}

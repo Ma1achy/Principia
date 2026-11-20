@@ -1,0 +1,11 @@
+path	url	sha256
+sofia_3bodyfree/sol_80.txt	https://db2.fmi.uni-sofia.bg/3bodyfree/sol_80.txt	81dc1b70828fd5960dec57f64ac88f7945fa5c8eddf1cfb6ea33b3475c55373c
+sofia_3bodyfree/sd_80.txt	https://db2.fmi.uni-sofia.bg/3bodyfree/sd_80.txt	e37786b8a09432c519c07230cd03059651cfcfe3895435c85ba84c6471e7fd8e
+sofia_3bodysym4860/free_100_4860.txt	https://db2.fmi.uni-sofia.bg/3bodysym4860/free_100_4860.txt	74a23a8392a4ec75b3e855973a6d4cfcacc90de84784688f516a366d6185dccb
+sofia_3bodysym4860/euler_100_4860.txt	https://db2.fmi.uni-sofia.bg/3bodysym4860/euler_100_4860.txt	e93d789a7c1dff2931ff2772754d4072d464704ec35cb9f466274bfc5d2977d3
+sofia_3bodyeuler/100_12431.txt	https://db2.fmi.uni-sofia.bg/3bodyeuler/100_12431.txt	a9aecab26fd24b2e0d4ef6b892430a25c698edf0b0783665c4c6a0ad77b278fa
+sofia_3bodyeuler/add_332_100.txt	https://db2.fmi.uni-sofia.bg/3bodyeuler/add_332_100.txt	492e8a3a546cdd1103667257f2f6eb56bf8b9e1f0618972c9467b76e9eb9d744
+sofia_3bodyeuler/100_free.txt	https://db2.fmi.uni-sofia.bg/3bodyeuler/100_free.txt	37e0234cc3ffd784aeaf95f7890dc936d4dfa34be3f119fdc3cf6d28e767cd12
+sofia_3bodyeuler/100_stable.txt	https://db2.fmi.uni-sofia.bg/3bodyeuler/100_stable.txt	9cf585bb35c6237a0ac9be9753f8aaf650c4d25f372d06e65b0738281e37f88c
+liliao_github/free-fall-3b-pictures.md	https://raw.githubusercontent.com/sjtu-liao/three-body/b96b0193579a9952299d710ed616f529bb7cf898/free-fall-3b-pictures.md	7fc7b577d609589d0c82ce35cb46964030639d53e8f494a427d66c838d179c81
+liliao_github/free-fall-3b-free-group-word.md	https://raw.githubusercontent.com/sjtu-liao/three-body/b96b0193579a9952299d710ed616f529bb7cf898/free-fall-3b-free-group-word.md	074da671c0cfe57273f0d4dc9361ce21e140ef0c95891075b1a027ab5ec69139

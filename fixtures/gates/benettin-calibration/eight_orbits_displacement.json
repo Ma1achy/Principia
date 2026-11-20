@@ -1,0 +1,6 @@
+{
+  "expected": "pass",
+  "kind": "eight-orbits",
+  "description": "R-976's re-run in the displacement form TASK-M3-72's measurement chose, (a1): the same grid, meter, selection and tolerance rules on the same eight starting conditions, the shadow marched by the joint step",
+  "form": "plain"
+}

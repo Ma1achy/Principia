@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trace icons</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0a0a0a}
+a{color:#5ab4ff}a:hover{color:#8cc8ff}
+.eg{font-family:Ubuntu,system-ui,sans-serif;font-weight:300;font-size:12.5px;color:#a8a8a8}
+.mono{font-family:"Ubuntu Mono",ui-monospace,monospace;font-size:12.5px}
+.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.btn{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:2px 8px;font:inherit;font-weight:300;cursor:pointer}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#ffffff}
+.weak{color:#6f6f6f}
+.win{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.wint{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #2a2a2a;color:#dcdcdc;font-weight:400}
+.ic{display:flex;justify-content:center;align-items:center;height:30px;border-left:1px solid #2a2a2a}
+.nm{color:#dcdcdc;font-size:12px}
+</style>
+</helmet>
+<div class="eg" style="width: 760px; height: 700px; background: #0a0a0a; position: relative">
+<div class="win" style="position: absolute; left: 20px; top: 20px; width: 720px">
+<div class="wint"><span>Trace icons</span><span class="row" style="gap: 4px; min-height: 0"><button class="btn on">Principia</button><button class="btn">Arrows</button><button class="btn">Pictures</button><button class="btn">Orbits</button><span class="weak mono" style="margin-left: 8px">✕</span></span></div>
+<div style="display: grid; grid-template-columns: 170px repeat(4, minmax(0, 1fr)) 210px; align-items: center; padding: 6px 12px">
+<span class="weak mono" style="font-size: 11px">event</span><span class="weak mono ic" style="font-size: 11px">Principia</span><span class="weak mono ic" style="font-size: 11px">Arrows</span><span class="weak mono ic" style="font-size: 11px">Pictures</span><span class="weak mono ic" style="font-size: 11px">Orbits</span><span class="weak mono" style="font-size: 11px; padding-left: 10px">colour carries</span>
+
+<span class="nm">start</span>
+<span class="ic"><svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><polygon points="0,-8 2.4,-2.5 8,-2.5 3.5,1.3 5,7.5 0,4 -5,7.5 -3.5,1.3 -8,-2.5 -2.4,-2.5" fill="#F0DE32"></polygon></svg></span>
+<span class="ic"><svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><polygon points="0,-8 2.4,-2.5 8,-2.5 3.5,1.3 5,7.5 0,4 -5,7.5 -3.5,1.3 -8,-2.5 -2.4,-2.5" fill="#F0DE32"></polygon></svg></span>
+<span class="ic"><svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><circle cx="-5" cy="4" r="2.5" fill="#F0DE32"></circle><circle cx="5" cy="4" r="2.5" fill="#E034C6"></circle><circle cx="0" cy="-5" r="2.5" fill="#30C8DC"></circle></svg></span>
+<span class="ic"><svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><polygon points="0,-8 2.4,-2.5 8,-2.5 3.5,1.3 5,7.5 0,4 -5,7.5 -3.5,1.3 -8,-2.5 -2.4,-2.5" fill="#F0DE32"></polygon></svg></span>
+<span class="weak" style="padding-left: 10px">the hovered pixel</span>
+
+<span class="nm">leaves / re-enters chart</span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="-7" cy="0" r="4" fill="none" stroke="#dcdcdc" stroke-dasharray="2 2"></circle><circle cx="7" cy="0" r="4" fill="none" stroke="#dcdcdc"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><path d="M-12 0 H-4 M-7 -3 L-4 0 L-7 3 M-3 -5 V5" stroke="#dcdcdc" fill="none"></path><path d="M3 -5 V5 M4 0 H12 M9 -3 L12 0 L9 3" stroke="#dcdcdc" fill="none"></path></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="-7" cy="0" r="4" fill="none" stroke="#dcdcdc"></circle><circle cx="7" cy="0" r="4" fill="#dcdcdc"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="-7" cy="0" r="4" fill="none" stroke="#dcdcdc" stroke-dasharray="2 2"></circle><circle cx="7" cy="0" r="4" fill="none" stroke="#dcdcdc"></circle></svg></span>
+<span class="weak" style="padding-left: 10px">a shown coordinate has no value</span>
+
+<span class="nm">syzygy</span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><line x1="-11" y1="0" x2="11" y2="0" stroke="#6f6f6f"></line><circle cx="-10" cy="0" r="2.5" fill="#F0DE32"></circle><circle cx="0" cy="0" r="3.5" fill="#E034C6"></circle><circle cx="10" cy="0" r="2.5" fill="#30C8DC"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><line x1="-11" y1="0" x2="11" y2="0" stroke="#6f6f6f"></line><circle cx="-10" cy="0" r="2.5" fill="#F0DE32"></circle><circle cx="0" cy="0" r="3.5" fill="#E034C6"></circle><circle cx="10" cy="0" r="2.5" fill="#30C8DC"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="-8" cy="0" r="2" fill="#dcdcdc"></circle><circle cx="0" cy="0" r="3.5" fill="#E034C6"></circle><circle cx="8" cy="0" r="2" fill="#dcdcdc"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="0" cy="0" r="6" fill="#E034C6"></circle><circle cx="3" cy="-2" r="3.5" fill="#1b1b1b"></circle></svg></span>
+<span class="weak" style="padding-left: 10px">middle body: 1 yellow, 2 magenta, 3 cyan</span>
+
+<span class="nm">collision</span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><path d="M-12 0 H-6 M-9 -3 L-6 0 L-9 3 M12 0 H6 M9 -3 L6 0 L9 3" stroke="#3462E0" stroke-width="1.6" fill="none"></path><circle r="3.5" fill="#3462E0"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><path d="M-12 0 H-6 M-9 -3 L-6 0 L-9 3 M12 0 H6 M9 -3 L6 0 L9 3" stroke="#3462E0" stroke-width="1.6" fill="none"></path><circle r="3.5" fill="#3462E0"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="-3" cy="0" r="3.5" fill="#3462E0"></circle><circle cx="3" cy="0" r="3.5" fill="#3462E0" stroke="#1b1b1b"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle r="7" fill="none" stroke="#3462E0" stroke-width="1.5"></circle><circle r="3" fill="#3462E0"></circle></svg></span>
+<span class="weak" style="padding-left: 10px">pair: 1–2 red, 1–3 green, 2–3 blue</span>
+
+<span class="nm">triple collision</span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><path d="M0 -9 V-4 M-9 7 L-4 3 M9 7 L4 3" stroke="#dcdcdc" fill="none"></path><circle r="3.5" fill="#F29620"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><path d="M0 -9 V-4 M-9 7 L-4 3 M9 7 L4 3" stroke="#dcdcdc" fill="none"></path><circle r="3.5" fill="#F29620"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="0" cy="-3" r="3" fill="#F29620"></circle><circle cx="-3" cy="2" r="3" fill="#F29620"></circle><circle cx="3" cy="2" r="3" fill="#F29620"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle r="7" fill="none" stroke="#F29620" stroke-width="1.5"></circle><circle r="3" fill="#F29620"></circle></svg></span>
+<span class="weak" style="padding-left: 10px">two or more pairs inside r_coll</span>
+
+<span class="nm">escape</span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="-7" r="3" fill="#30C8DC"></circle><path d="M-3 0 H11 M8 -3 L11 0 L8 3" stroke="#30C8DC" stroke-width="1.6" fill="none"></path></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="-7" r="3" fill="#30C8DC"></circle><path d="M-3 0 H11 M8 -3 L11 0 L8 3" stroke="#30C8DC" stroke-width="1.6" fill="none"></path></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><path d="M-11 -3 H-3 M-11 0 H-3 M-11 3 H-3" stroke="#30C8DC"></path><circle cx="4" r="4" fill="#30C8DC"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><ellipse cx="-4" rx="6" ry="3.5" fill="none" stroke="#dcdcdc"></ellipse><circle cx="9" r="3" fill="#30C8DC"></circle></svg></span>
+<span class="weak" style="padding-left: 10px">the escaping body</span>
+
+<span class="nm">triple ejection</span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><path d="M0 -3 V-9 M-3 2 L-9 7 M3 2 L9 7" stroke="#dcdcdc" fill="none"></path><circle r="3.5" fill="#611597"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><path d="M0 -3 V-9 M-3 2 L-9 7 M3 2 L9 7" stroke="#dcdcdc" fill="none"></path><circle r="3.5" fill="#611597"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><circle cx="0" cy="-6" r="2.5" fill="#611597"></circle><circle cx="-6" cy="5" r="2.5" fill="#611597"></circle><circle cx="6" cy="5" r="2.5" fill="#611597"></circle></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><path d="M0 -3 V-9 M-3 2 L-9 7 M3 2 L9 7" stroke="#611597" fill="none"></path><circle r="2.5" fill="#611597"></circle></svg></span>
+<span class="weak" style="padding-left: 10px">all three unbound · key only</span>
+
+<span class="nm">horizon</span>
+<span class="ic"><svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><path d="M-5 -7 H5 L-5 7 H5 Z" fill="none" stroke="#dcdcdc"></path></svg></span>
+<span class="ic"><svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><path d="M-5 -7 H5 L-5 7 H5 Z" fill="none" stroke="#dcdcdc"></path></svg></span>
+<span class="ic"><svg width="20" height="20" viewBox="-10 -10 20 20" aria-hidden="true"><path d="M-5 -7 H5 L-5 7 H5 Z" fill="#dcdcdc"></path></svg></span>
+<span class="ic"><svg width="24" height="20" viewBox="-12 -10 24 20" aria-hidden="true"><ellipse rx="9" ry="5" fill="none" stroke="#dcdcdc" transform="rotate(-20)"></ellipse></svg></span>
+<span class="weak" style="padding-left: 10px">nothing happened by the horizon</span>
+
+<span class="nm">incomplete</span>
+<span class="ic mono" style="color: #dcdcdc">?</span><span class="ic mono" style="color: #dcdcdc">?</span><span class="ic mono" style="color: #dcdcdc">?</span><span class="ic mono" style="color: #dcdcdc">?</span>
+<span class="weak" style="padding-left: 10px">the step budget ran out</span>
+
+<span class="nm">off-screen</span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><g opacity="0.55"><circle cx="-3" r="3.5" fill="#3462E0"></circle><path d="M5 -6 L11 0 L5 6" fill="none" stroke="#dcdcdc" stroke-width="1.5"></path></g></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><g opacity="0.55"><circle cx="-3" r="3.5" fill="#3462E0"></circle><path d="M5 -6 L11 0 L5 6" fill="none" stroke="#dcdcdc" stroke-width="1.5"></path></g></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><g opacity="0.55"><circle cx="-3" r="3.5" fill="#3462E0"></circle><path d="M5 -6 L11 0 L5 6" fill="none" stroke="#dcdcdc" stroke-width="1.5"></path></g></svg></span>
+<span class="ic"><svg width="30" height="20" viewBox="-15 -10 30 20" aria-hidden="true"><g opacity="0.55"><circle cx="-3" r="3.5" fill="#3462E0"></circle><path d="M5 -6 L11 0 L5 6" fill="none" stroke="#dcdcdc" stroke-width="1.5"></path></g></svg></span>
+<span class="weak" style="padding-left: 10px">faint, pinned, chevron points to it</span>
+</div>
+<div style="height: 1px; background: #2a2a2a; margin: 4px 0"></div>
+<div class="row" style="padding: 4px 12px 8px"><span class="weak" style="font-size: 11px">bodies are labelled 1-based throughout · forbidden start: a red ✕ where clicked, nothing integrated</span><span style="flex: 1"></span><svg width="16" height="16" viewBox="-8 -8 16 16" aria-hidden="true"><path d="M-5 -5 L5 5 M5 -5 L-5 5" stroke="#DE2D2D" stroke-width="2.4"></path></svg></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":760,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

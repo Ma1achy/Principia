@@ -1,0 +1,6 @@
+{
+  "gate": "shape-roundtrip",
+  "inputs": ["random.json", "negative_cross.json"],
+  "threshold": { "value": 1e-13, "requirement": "REQ-CHART-053", "status": "provisional", "ruling": "R-181" },
+  "min_regions": { "value": null, "requirement": "REQ-CHART-053" }
+}

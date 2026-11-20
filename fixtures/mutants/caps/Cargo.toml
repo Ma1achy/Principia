@@ -1,0 +1,8 @@
+[package]
+name = "mutants_caps"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Its own workspace: never a member of Principia's (the mutants caps' fixture, TASK-M0-49).
+[workspace]

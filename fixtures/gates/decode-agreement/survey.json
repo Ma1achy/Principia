@@ -1,0 +1,6 @@
+{
+  "description": "The measurement survey (REQ-COL-060): every M2 chart at its fixed parameters, a 128 x 128 lattice of one-pixel samples at depth 7's cells, each sample's descriptor written by the kernel decode stage at its own point; the fragment compiled as the backend compiles it, the decode stage with compute fast-math off.",
+  "side": [128, 128],
+  "depth": 7,
+  "expected": "pass"
+}

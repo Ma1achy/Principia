@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Trajectory panel — three states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0a0a0a}
+a{color:#5ab4ff}a:hover{color:#8cc8ff}
+.eg{font-family:Ubuntu,system-ui,sans-serif;font-weight:300;font-size:12.5px;color:#a8a8a8}
+.mono{font-family:"Ubuntu Mono",ui-monospace,monospace;font-size:12.5px}
+.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.lab{width:78px;flex:none;color:#a8a8a8}
+.btn{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:2px 8px;font:inherit;font-weight:300;cursor:pointer}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#ffffff}
+.btn.off{color:#6f6f6f}
+.combo{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:1px 6px;display:flex;justify-content:space-between;min-width:80px}
+.combo::after{content:"⏷";color:#8c8c8c;margin-left:8px;font-size:10px}
+.combo.dim{color:#6f6f6f}
+.sl{flex:1;height:4px;background:#303030;border-radius:2px;position:relative}
+.sl i{position:absolute;top:-4px;width:12px;height:12px;border-radius:50%;background:#dcdcdc}
+.sl s{position:absolute;left:0;top:0;bottom:0;background:#005c80;border-radius:2px}
+.val{background:#0a0a0a;border:1px solid #3c3c3c;border-radius:2px;padding:0 5px;min-width:44px;text-align:right;color:#dcdcdc}
+.cb{display:inline-flex;align-items:center;gap:6px}.cb i{width:12px;height:12px;background:#3c3c3c;border:1px solid #4a4a4a;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;color:#dcdcdc;font-style:normal;font-size:10px}
+.weak{color:#6f6f6f}
+.pt{color:#dcdcdc;font-weight:400;font-size:14px;margin:0}
+.col{width:360px;height:860px;box-sizing:border-box;background:#1b1b1b;border:1px solid #2a2a2a;padding:6px 12px;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.state{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5ab4ff;margin-bottom:2px}
+.sec{display:flex;align-items:center;gap:6px;min-height:24px;border-top:1px solid #2a2a2a;padding-top:4px;margin-top:2px}
+.tw{color:#8c8c8c;font-size:10px;width:10px}
+.secn{color:#dcdcdc;font-weight:400}
+.sub{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#6f6f6f;margin-top:4px}
+.tg{display:inline-flex;align-items:center;justify-content:center;width:28px;height:22px;background:#3c3c3c;border:1px solid #4a4a4a;border-radius:2px}
+.tg.on{background:#005c80;border-color:#1a7ca3}
+</style>
+</helmet>
+<div class="eg" style="width: 1160px; height: 900px; background: #0a0a0a; box-sizing: border-box; padding: 20px; display: flex; gap: 20px">
+
+<div class="col">
+<div class="state">A · at rest — hovering, sound off</div>
+<div class="row" style="justify-content: space-between"><span class="pt">Trajectory</span><span class="row" style="gap: 4px"><button class="btn on">under cursor</button><button class="btn">#1</button><button class="btn">#2</button><button class="btn">+ keep</button></span></div>
+<div class="weak mono" style="font-size: 11.5px">collision 1–2 at t 13.2 · |ΔE/E| 9.8e−10</div>
+<div style="display: flex; gap: 6px">
+<svg width="164" height="164" style="background: #0a0a0a; border: 1px solid #2a2a2a; flex: none" role="img" aria-label="Real space"><polyline points="40,120 55,100 72,88 92,84 110,90 122,104 126,122 118,136" fill="none" stroke="#F0DE32" stroke-width="1.1"></polyline><polyline points="130,40 112,52 98,68 90,86 92,104 102,118 116,126 128,124" fill="none" stroke="#E034C6" stroke-width="1.1"></polyline><polyline points="80,140 84,120 82,100 74,82 62,70 52,62 44,58" fill="none" stroke="#30C8DC" stroke-width="1.1"></polyline><circle cx="118" cy="136" r="3.5" fill="#F0DE32"></circle><circle cx="128" cy="124" r="3.5" fill="#E034C6"></circle><circle cx="44" cy="58" r="3.5" fill="#30C8DC"></circle><text x="6" y="157" fill="#6f6f6f" font-family="Ubuntu Mono" font-size="10">real space · COM</text></svg>
+<svg width="164" height="164" style="background: #0a0a0a; border: 1px solid #2a2a2a; flex: none" role="img" aria-label="Shape sphere"><circle cx="82" cy="80" r="58" fill="#151515" stroke="#3c3c3c"></circle><ellipse cx="82" cy="80" rx="58" ry="15" fill="none" stroke="#2c2c2c"></ellipse><polyline points="128,80 126,90 120,99 111,106 100,111 88,113 78,111 72,105 72,96 78,88 88,80 96,72 101,64 100,56 94,50 84,47 72,47 60,50 50,56 44,64 42,72" fill="none" stroke="#9ad1a4" stroke-width="1.2"></polyline><text x="6" y="157" fill="#6f6f6f" font-family="Ubuntu Mono" font-size="10">shape sphere</text></svg>
+</div>
+<div class="row" style="gap: 4px"><button class="btn on">sphere</button><button class="btn">unwrapped</button><span class="cb"><i>✓</i>turn</span></div>
+<div class="sec"><span class="tw">⏵</span><span class="secn">Trace</span><span class="cb" style="margin-left: 4px"><i>✓</i></span><span style="width: 22px; height: 4px; background: #fff27a"></span><span class="mono weak" style="flex: 1; font-size: 11px">whole run · ticks 2 · left 0×</span><button class="btn" aria-label="Open the Trace window">⋯</button></div>
+<div class="sec"><span class="tw">⏵</span><span class="secn">Listen</span><button class="btn off" style="margin-left: 4px">♪ off</button><span class="combo dim" style="flex: 1">Warm sine</span><button class="btn" aria-label="Open the Listen window">⋯</button></div>
+<div class="sec"><span class="tw">⏵</span><span class="secn">Numbers</span><span class="mono weak" style="flex: 1; font-size: 11px">F₂ word · substeps · min sep</span></div>
+<div class="row" style="margin-top: 4px"><button class="btn">Open full viewer…</button><button class="btn">IC Inspector…</button></div>
+<div style="flex: 1"></div>
+<div class="weak" style="font-size: 11px; line-height: 1.45">Collapsed, each section is one row: its switch, what it is showing, and ⋯ for its full window. Nothing about the trajectory lives anywhere else on screen except the view and the Time strip.</div>
+</div>
+
+<div class="col">
+<div class="state">B · Trace expanded — pinned, paused</div>
+<div class="row" style="justify-content: space-between"><span class="pt">Trajectory</span><span class="row" style="gap: 4px"><button class="btn">under cursor</button><button class="btn on">#1</button><button class="btn">#2</button><button class="btn">+ keep</button></span></div>
+<div class="weak mono" style="font-size: 11.5px">#1 pinned · collision 1–2 at t 13.2</div>
+<div style="display: flex; gap: 6px">
+<svg width="164" height="100" style="background: #0a0a0a; border: 1px solid #2a2a2a; flex: none" role="img" aria-label="Real space, compact"><polyline points="30,70 45,55 62,48 82,46 100,50 112,60 116,72" fill="none" stroke="#F0DE32" stroke-width="1.1"></polyline><polyline points="130,20 112,30 98,42 92,56 96,70 110,80" fill="none" stroke="#E034C6" stroke-width="1.1"></polyline><polyline points="70,92 72,76 66,60 56,46 44,36" fill="none" stroke="#30C8DC" stroke-width="1.1"></polyline></svg>
+<svg width="164" height="100" style="background: #0a0a0a; border: 1px solid #2a2a2a; flex: none" role="img" aria-label="Shape sphere, compact"><circle cx="82" cy="50" r="40" fill="#151515" stroke="#3c3c3c"></circle><polyline points="114,50 110,62 100,70 86,72 76,66 76,56 86,48 94,40 92,32 82,28 68,30 56,38 50,48" fill="none" stroke="#9ad1a4" stroke-width="1.2"></polyline></svg>
+</div>
+<div class="sec"><span class="tw">⏷</span><span class="secn">Trace</span><span class="cb" style="margin-left: 4px"><i>✓</i></span><span style="flex: 1"></span><button class="btn">Trace…</button></div>
+<div class="row"><span class="lab">show</span><span class="combo" style="flex: 1">everything up to the head</span></div>
+<div class="row"><span class="lab"></span><span class="cb"><i></i>tail only</span><span style="flex: 1"></span><span class="weak">Δt</span><span class="val mono">3.0</span></div>
+<div class="row"><span class="lab">colour</span><span class="combo" style="flex: 1">fixed</span><span style="width: 22px; height: 14px; background: #fff27a; border: 1px solid #4a4a4a"></span></div>
+<div class="row"><span class="lab">ramp</span><span class="combo" style="flex: 1">Sunset</span><span style="width: 70px; height: 10px; background: linear-gradient(90deg, #2b1a5c, #b5367a, #f08a4b, #fbe38e); border: 1px solid #4a4a4a; opacity: 0.45"></span></div>
+<div class="row"><span class="lab">width</span><div class="sl"><s style="width: 45%"></s><i style="left: calc(45% - 6px)"></i></div><span class="val mono">2.2</span></div>
+<div class="row"><span class="lab">time ticks</span><span class="combo" style="flex: 1">every 2</span><span class="cb"><i>✓</i>lbl</span></div>
+<div class="row"><span class="lab">arrows</span><span class="combo" style="flex: 1">filled triangle</span><span class="val mono">Δt 1.0</span></div>
+<div class="sub">On the trace</div>
+<div class="row" style="gap: 4px"><span class="tg on" title="end event"><svg width="18" height="14" viewBox="-9 -7 18 14" aria-label="End event icon"><path d="M-8 0 H-4 M8 0 H4" stroke="#fff" stroke-width="1.5"></path><circle r="3" fill="#DE2D2D"></circle></svg></span><span class="tg" title="syzygies"><svg width="18" height="14" viewBox="-9 -7 18 14" aria-label="Syzygies"><line x1="-8" y1="0" x2="8" y2="0" stroke="#8c8c8c"></line><circle cx="-6" r="2" fill="#F0DE32"></circle><circle r="2.8" fill="#E034C6"></circle><circle cx="6" r="2" fill="#30C8DC"></circle></svg></span><span class="tg on" title="leaving the chart"><svg width="18" height="14" viewBox="-9 -7 18 14" aria-label="Leaving and re-entering the chart"><circle cx="-4" r="3" fill="none" stroke="#fff" stroke-dasharray="1.5 1.5"></circle><circle cx="4" r="3" fill="none" stroke="#fff"></circle></svg></span><span class="tg on" title="off-screen pins"><svg width="18" height="14" viewBox="-9 -7 18 14" aria-label="Off-screen pins"><circle cx="-3" r="3" fill="#5ab4ff" opacity="0.6"></circle><path d="M3 -5 L8 0 L3 5" fill="none" stroke="#fff"></path></svg></span><span class="tg on" title="wrapped copies"><svg width="18" height="14" viewBox="-9 -7 18 14" aria-label="Repeat in wrapped copies"><rect x="-8" y="-5" width="7" height="10" fill="none" stroke="#fff"></rect><rect x="1" y="-5" width="7" height="10" fill="none" stroke="#fff" stroke-dasharray="1.5 1.5"></rect></svg></span><span class="tg" title="head marker"><svg width="18" height="14" viewBox="-9 -7 18 14" aria-label="Head marker"><circle r="3.5" fill="#fff"></circle></svg></span><span style="flex: 1"></span><span class="combo" style="min-width: 70px">Principia</span></div>
+<div class="weak mono" style="font-size: 10.5px">end · syzygy · leaves · pins · copies · head · icon set</div>
+<div class="sec"><span class="tw">⏵</span><span class="secn">Listen</span><button class="btn off" style="margin-left: 4px">♪ off</button><span class="combo dim" style="flex: 1">Warm sine</span><button class="btn" aria-label="Open the Listen window">⋯</button></div>
+<div class="sec"><span class="tw">⏵</span><span class="secn">Numbers</span></div>
+<div style="flex: 1"></div>
+<div class="weak" style="font-size: 11px; line-height: 1.45">Paused, the whole trace to the horizon is drawn. The expanded section holds only what is changed often; markers are toggle chips with the icon they draw. Everything else is in Trace….</div>
+</div>
+
+<div class="col">
+<div class="state">C · Listen expanded — playing, sound on</div>
+<div class="row" style="justify-content: space-between"><span class="pt">Trajectory</span><span class="row" style="gap: 4px"><button class="btn on">under cursor</button><button class="btn">#1</button><button class="btn">#2</button><button class="btn">+ keep</button></span></div>
+<div class="weak mono" style="font-size: 11.5px">running · t 8.0 · collision 1–2 at 13.2</div>
+<div style="display: flex; gap: 6px">
+<svg width="164" height="100" style="background: #0a0a0a; border: 1px solid #2a2a2a; flex: none" role="img" aria-label="Real space, compact"><polyline points="30,70 45,55 62,48 82,46 100,50" fill="none" stroke="#F0DE32" stroke-width="1.1"></polyline><polyline points="130,20 112,30 98,42 92,56" fill="none" stroke="#E034C6" stroke-width="1.1"></polyline><polyline points="70,92 72,76 66,60 56,46" fill="none" stroke="#30C8DC" stroke-width="1.1"></polyline><circle cx="100" cy="50" r="3" fill="#F0DE32"></circle><circle cx="92" cy="56" r="3" fill="#E034C6"></circle><circle cx="56" cy="46" r="3" fill="#30C8DC"></circle></svg>
+<svg width="164" height="100" style="background: #0a0a0a; border: 1px solid #2a2a2a; flex: none" role="img" aria-label="Shape sphere with the stretch inside the sound's analysis window highlighted in blue"><circle cx="82" cy="50" r="40" fill="#151515" stroke="#3c3c3c"></circle><polyline points="114,50 110,62 100,70 86,72 76,66 76,56 86,48 94,40 92,32 82,28 68,30" fill="none" stroke="#9ad1a4" stroke-opacity="0.4" stroke-width="1.2"></polyline><polyline points="76,56 86,48 94,40 92,32 82,28 68,30" fill="none" stroke="#5ab4ff" stroke-width="2.4"></polyline><circle cx="68" cy="30" r="3" fill="#fff"></circle><text x="6" y="94" fill="#5ab4ff" font-family="Ubuntu Mono" font-size="10">♪ window</text></svg>
+</div>
+<div class="sec"><span class="tw">⏵</span><span class="secn">Trace</span><span class="cb" style="margin-left: 4px"><i>✓</i></span><span style="width: 22px; height: 4px; background: #fff27a"></span><span class="mono weak" style="flex: 1; font-size: 11px">to the head · ticks 2</span><button class="btn" aria-label="Open the Trace window">⋯</button></div>
+<div class="sec"><span class="tw">⏷</span><span class="secn">Listen</span><button class="btn on" style="margin-left: 4px">♪ on</button><span style="flex: 1"></span><button class="btn">Listen…</button></div>
+<div class="row"><span class="lab">instrument</span><span class="combo" style="flex: 1">Warm sine</span></div>
+<div class="row"><span class="lab">volume</span><div class="sl"><s style="width: 60%"></s><i style="left: calc(60% - 6px)"></i></div><span class="val mono">60%</span></div>
+<div class="row"><span class="lab">listen</span><span class="combo" style="flex: 1">follow the head</span></div>
+<div class="row"><span class="lab">loudness</span><span class="combo" style="flex: 1">follows the motion</span></div>
+<div class="sub">Events · effects</div>
+<div class="row" style="gap: 4px"><span class="tg on mono" style="font-size: 11px; color: #fff" title="close approach">≈</span><span class="tg on mono" style="font-size: 11px; color: #fff" title="collision">✶</span><span class="tg on mono" style="font-size: 11px; color: #fff" title="escape">↗</span><span class="tg mono" style="font-size: 11px; color: #dcdcdc" title="syzygy tick">⋮</span><span style="width: 10px"></span><span class="tg on mono" style="font-size: 11px; color: #fff" title="reverb">rv</span><span class="tg mono" style="font-size: 11px; color: #dcdcdc" title="Doppler">dp</span><span class="tg mono" style="font-size: 11px; color: #dcdcdc" title="bit-crush">bc</span><span class="tg on mono" style="font-size: 11px; color: #fff" title="stereo width">wd</span></div>
+<div class="weak mono" style="font-size: 10.5px">close · collision · escape · syzygy   reverb · Doppler · crush · width</div>
+<svg width="334" height="56" style="background: #0a0a0a; border: 1px solid #2a2a2a; display: block; margin-top: 4px" role="img" aria-label="Small spectrum at the head: anticlockwise in blue, clockwise in amber, the fit band shaded, the strongest peak marked"><rect x="96" y="2" width="100" height="52" fill="rgba(26,124,163,0.10)"></rect><polyline points="0,8 30,9 60,12 90,18 110,22 130,14 140,26 160,22 175,32 200,36 230,40 260,44 290,48 334,52" fill="none" stroke="#5ab4ff" stroke-width="1.4"></polyline><polyline points="0,9 30,10 60,13 90,16 110,20 135,16 150,10 170,26 200,30 230,34 260,38 290,42 334,46" fill="none" stroke="#e0a030" stroke-width="1.4"></polyline><circle cx="150" cy="10" r="3" fill="#ffffff"></circle><text x="100" y="51" fill="#1a7ca3" font-family="Ubuntu Mono" font-size="9">110–880</text></svg>
+<div class="row mono" style="gap: 8px; font-size: 11.5px"><span style="color: #5ab4ff">◀ G♯4+12¢ 418</span><span style="color: #e0a030">D5−1¢ 587 ▶</span><span class="weak">7:5 · entropy 0.36</span></div>
+<div class="sec"><span class="tw">⏵</span><span class="secn">Numbers</span></div>
+<div style="flex: 1"></div>
+<div class="weak" style="font-size: 11px; line-height: 1.45">The bright stretch on the shape sphere is what the sound is analysing right now: the path inside the window around the head. The spectrogram itself is docked in the Time panel.</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1160,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "citation": "X. Li and S. Liao, \"Collisionless periodic orbits in the free-fall three-body problem\", arXiv:1805.07980 (2018), §2: region D at exact rest, G = 1; and Agekyan & Anosova, Astrophysics 4(1), 11-16 (1968), p. 11: the same 100 configurations started at exact rest. dd_validation_orbits §1.6, item 3 (R-592)",
+  "g": 1.0,
+  "v": [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+  "configurations": "every row of fixtures/anosova/table1.csv, at its eta_used"
+}

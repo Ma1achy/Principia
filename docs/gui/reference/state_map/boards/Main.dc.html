@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Stain editor — Chart position</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5ab4ff}a:hover{color:#8fd0ff}
+.mono{font-family:'Ubuntu Mono',ui-monospace,monospace}
+.hd{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#a8a8a8}
+.btn{background:#262626;border:1px solid #3c3c3c;color:#dcdcdc;border-radius:3px;padding:3px 10px;font:inherit;font-size:12px}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#fff}
+.combo{background:#141414;border:1px solid #3c3c3c;border-radius:3px;padding:3px 8px;font-size:12px;color:#dcdcdc;display:flex;justify-content:space-between;gap:8px}
+.win{position:absolute;background:#1b1b1b;border:1px solid #3c3c3c;border-radius:4px;font-size:12px}
+.win.sel{border-color:#1a7ca3;box-shadow:0 0 0 1px #1a7ca3}
+.wint{padding:5px 8px;border-bottom:1px solid #2a2a2a;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.wb{padding:6px 8px;display:flex;flex-direction:column;gap:4px;color:#a8a8a8}
+.kind{font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.pin{position:absolute;width:10px;height:10px;border-radius:50%;border:2px solid #0a0a0a}
+.pl{position:absolute;font-size:11px;color:#a8a8a8;white-space:nowrap}
+.row{display:flex;justify-content:space-between;gap:8px}
+.lib div{padding:3px 6px;border-radius:3px;font-size:12px}
+.lib .new{color:#dcdcdc;background:#10303d}
+.prob{display:grid;grid-template-columns:22px 1fr auto;gap:8px;padding:6px 10px;border-bottom:1px solid #2a2a2a;font-size:12px;align-items:start}
+.lay{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:6px;align-items:center;background:#141414;border:1px solid #3c3c3c;border-radius:3px;padding:4px 6px}
+.grip{color:#8a8a8a;font-size:11px}
+</style>
+</helmet>
+<div style="width:1600px;height:1000px;box-sizing:border-box;background:#0a0a0a;color:#dcdcdc;font-family:Ubuntu,system-ui,sans-serif;font-weight:300;display:flex;flex-direction:column">
+
+<div style="height:38px;flex:none;display:flex;align-items:center;gap:14px;padding:0 12px;background:#1b1b1b;border-bottom:1px solid #3c3c3c;font-size:13px">
+<b style="font-weight:500">Principia</b>
+<span style="color:#a8a8a8">Stain</span><span style="color:#a8a8a8">Edit</span><span style="color:#a8a8a8">View</span>
+<div style="width:1px;height:20px;background:#3c3c3c"></div>
+<div style="display:flex;gap:4px"><button class="btn on" type="button">Graph</button><button class="btn" type="button">Pipeline WGSL</button><button class="btn" type="button">Node WGSL</button></div>
+<div class="combo" style="width:260px"><span>where_now · graph paper + displacement</span><span style="color:#a8a8a8">▾</span></div>
+<span style="flex:1"></span>
+<span style="font-size:12px;color:#a8a8a8">compiled · 1 warning</span>
+<button class="btn" type="button">Compile</button><button class="btn on" type="button">Apply to view</button>
+</div>
+
+<div style="flex:1;display:grid;grid-template-columns:240px minmax(0,1fr) 380px;min-height:0">
+
+<div style="background:#1b1b1b;border-right:1px solid #3c3c3c;padding:10px;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+<div class="combo"><span style="color:#a8a8a8">Search nodes…</span><span></span></div>
+<div class="lib" style="display:flex;flex-direction:column;gap:2px">
+<div class="hd" style="padding:4px 0">Sources</div>
+<div class="new">Chart position ⟨chart⟩</div>
+<div>Shape n̂ <span style="color:#a8a8a8">a different node, unchanged</span></div>
+<div>Outcome class · scalar fields…</div>
+<div class="hd" style="padding:8px 0 4px">Colour · base</div>
+<div>Gradient</div>
+<div>Site blend</div>
+<div>Palette <span style="color:#a8a8a8">purely tiled</span></div>
+<div>Picture</div>
+<div class="hd" style="padding:8px 0 4px">Colour · layers</div>
+<div>Grid lines</div><div>Checkerboard</div><div>Tile edges</div><div>Stripes · Rings</div><div>Site dots</div>
+<div class="hd" style="padding:8px 0 4px">Brightness</div>
+<div class="new">Displacement</div>
+<div class="new">Left its starting tile</div>
+<div>Scalar → L</div>
+<div class="hd" style="padding:8px 0 4px">Combine · post</div>
+<div>Replace-L · Multiply · Post… · OUT</div>
+</div>
+<span style="flex:1"></span>
+<div style="font-size:11px;color:#a8a8a8;line-height:1.45">New: the Chart position node (one node; a second copy reads t = 0) and two brightness fields. Bases and layers are the colour slot's own occupants. Chart position works on every chart, the shape sphere included.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;min-width:0">
+<div style="position:relative;flex:1;background:#0a0a0a;background-image:radial-gradient(#1f1f1f 1px,transparent 1px);background-size:20px 20px;overflow:hidden">
+
+<svg width="980" height="640" style="position:absolute;left:0;top:0" aria-hidden="true">
+<path d="M250 86 C275 86 275 86 300 86" stroke="#9a9a9a" stroke-width="2" fill="none"></path>
+<path d="M250 86 C380 86 380 30 470 30 C500 30 500 110 520 110" stroke="#9a9a9a" stroke-width="2" fill="none"></path>
+<path d="M250 86 C275 86 275 316 300 316" stroke="#9a9a9a" stroke-width="2" fill="none"></path>
+<path d="M250 346 C275 346 275 340 300 340" stroke="#9a9a9a" stroke-width="2" fill="none"></path>
+<path d="M470 86 C495 86 495 86 520 86" stroke="#e27a6e" stroke-width="2" fill="none"></path>
+<path d="M690 86 C730 86 720 196 760 196" stroke="#e27a6e" stroke-width="2" fill="none"></path>
+<path d="M470 316 C620 316 620 220 760 220" stroke="#7cc3c8" stroke-width="2" fill="none"></path>
+<path d="M890 196 C905 196 905 184 920 184" stroke="#e27a6e" stroke-width="2" fill="none"></path>
+</svg>
+
+<div class="win sel" style="left:20px;top:40px;width:230px">
+<div class="wint"><span><span class="kind" style="color:#9a9a9a">source</span>  Chart position ⟨plane⟩</span></div>
+<div class="wb" style="padding-top:22px">
+<div class="row"><span>chart</span><span style="color:#dcdcdc">this chart</span></div>
+<div class="row"><span>at</span><span style="color:#dcdcdc">playhead</span></div>
+<div class="row"><span>leaves chart</span><span style="color:#dcdcdc">clamp to edge</span></div>
+</div>
+<span class="pin" style="right:-7px;top:40px;background:#9a9a9a"></span>
+<span class="pl" style="right:10px;top:35px">point⟨plane⟩</span>
+</div>
+
+<div class="win" style="left:20px;top:300px;width:230px">
+<div class="wint"><span><span class="kind" style="color:#9a9a9a">source</span>  Chart position ⟨plane⟩</span></div>
+<div class="wb" style="padding-top:22px"><div class="row"><span>at</span><span style="color:#dcdcdc">t = 0</span></div><div style="font-size:11px">the pixel's own coordinate — no march</div></div>
+<span class="pin" style="right:-7px;top:40px;background:#9a9a9a"></span>
+<span class="pl" style="right:10px;top:35px">point⟨plane⟩</span>
+</div>
+
+<div class="win" style="left:300px;top:40px;width:170px">
+<div class="wint"><span><span class="kind" style="color:#e27a6e">base</span>  Gradient</span></div>
+<div class="wb" style="padding-top:22px"><div class="mono" style="font-size:11px">2D · x → a, y → b</div><div class="mono" style="font-size:11px">L 0.75 fixed</div></div>
+<span class="pin" style="left:-7px;top:40px;background:#9a9a9a"></span>
+<span class="pin" style="right:-7px;top:40px;background:#e27a6e"></span>
+</div>
+
+<div class="win" style="left:520px;top:40px;width:170px">
+<div class="wint"><span><span class="kind" style="color:#e27a6e">layers</span>  2 on top</span></div>
+<div class="wb" style="padding-top:76px;gap:3px">
+<div class="mono" style="font-size:11px">1 checkerboard ×6 · white 25%</div>
+<div class="mono" style="font-size:11px">2 grid lines ×6 · dark 75%</div>
+</div>
+<span class="pin" style="left:-7px;top:40px;background:#e27a6e"></span>
+<span class="pl" style="left:10px;top:35px">base</span>
+<span class="pin" style="left:-7px;top:64px;background:#9a9a9a"></span>
+<span class="pl" style="left:10px;top:59px">point</span>
+<span class="pin" style="right:-7px;top:40px;background:#e27a6e"></span>
+<span class="pl" style="right:10px;top:35px">colour</span>
+</div>
+
+<div class="win" style="left:300px;top:270px;width:170px">
+<div class="wint"><span><span class="kind" style="color:#7cc3c8">brightness</span>  Displacement</span></div>
+<div class="wb" style="padding-top:72px"><div class="mono" style="font-size:11px">L 0.18 … 0.84</div></div>
+<span class="pin" style="left:-7px;top:40px;background:#9a9a9a"></span>
+<span class="pl" style="left:10px;top:35px">now</span>
+<span class="pin" style="left:-7px;top:64px;background:#9a9a9a"></span>
+<span class="pl" style="left:10px;top:59px">t = 0</span>
+<span class="pin" style="right:-7px;top:40px;background:#7cc3c8"></span>
+</div>
+
+<div class="win" style="left:760px;top:150px;width:130px;border-color:#8a6a1a">
+<div class="wint"><span><span class="kind" style="color:#a8a8a8">combine</span>  Replace-L</span><span style="color:#e0c070" title="warning">⚠</span></div>
+<div class="wb" style="padding-top:52px"><div style="font-size:11px">or Multiply</div></div>
+<span class="pin" style="left:-7px;top:40px;background:#e27a6e"></span>
+<span class="pl" style="left:10px;top:35px">colour</span>
+<span class="pin" style="left:-7px;top:64px;background:#7cc3c8"></span>
+<span class="pl" style="left:10px;top:59px">L</span>
+<span class="pin" style="right:-7px;top:40px;background:#e27a6e"></span>
+</div>
+
+<div class="win" style="left:920px;top:170px;width:52px">
+<div class="wint"><span style="font-weight:500">OUT</span></div>
+<span class="pin" style="left:-7px;top:9px;background:#e27a6e"></span>
+</div>
+
+<div style="position:absolute;left:300px;top:140px;width:190px;font-size:11px;color:#a8a8a8;line-height:1.45">The colour slot: one base, then its layers in order. Layers read the point too, for their spacing.</div>
+
+<div style="position:absolute;left:20px;bottom:16px;display:flex;gap:16px;font-size:11px;color:#a8a8a8;background:#1b1b1b;border:1px solid #3c3c3c;border-radius:3px;padding:5px 10px">
+<span><span style="display:inline-block;width:18px;height:2px;background:#9a9a9a;vertical-align:3px"></span> field · point⟨…⟩</span>
+<span><span style="display:inline-block;width:18px;height:2px;background:#e27a6e;vertical-align:3px"></span> colour vec3</span>
+<span><span style="display:inline-block;width:18px;height:2px;background:#7cc3c8;vertical-align:3px"></span> brightness f32</span>
+</div>
+<div style="position:absolute;right:16px;bottom:16px;font-size:11px;color:#a8a8a8">backbone unchanged: colour? / brightness? → combine → post* → OUT</div>
+</div>
+
+<div style="height:290px;flex:none;background:#1b1b1b;border-top:1px solid #3c3c3c;display:flex;flex-direction:column">
+<div style="display:flex;gap:14px;align-items:center;padding:6px 10px;border-bottom:1px solid #2a2a2a">
+<span class="hd" style="color:#dcdcdc">Problems</span><span class="hd">WGSL</span><span style="flex:1"></span>
+<span style="font-size:11px;color:#a8a8a8">last compile · Latent z_α × z_β · 64 × 64 · t = 8.00</span>
+</div>
+<div class="prob"><span style="color:#e0c070">⚠</span><span><b style="font-weight:500">Replace-L: Displacement replaces the lightness the grid and checkerboard layers are drawn in, so they fade.</b><br><span style="color:#a8a8a8">The base keeps its position (its L is fixed); only the layers lose contrast. Multiply keeps both.</span></span><span class="btn">Use Multiply</span></div>
+<div class="prob"><span style="color:#5ab4ff">ℹ</span><span>Chart position: <b style="font-weight:500">1432 of 4096</b> systems left the chart — drawn at the edge they crossed (clamped).</span><span class="btn">Show as grey</span></div>
+<div class="prob"><span style="color:#5ab4ff">ℹ</span><span><b style="font-weight:500">3242</b> runs have ended (collision or escape) — holding the end state.</span><span class="btn">Use outcome colour</span></div>
+<div class="prob"><span style="color:#a8a8a8">·</span><span>Past a bounded edge 0 · undetermined 0</span><span></span></div>
+<div class="prob" style="border-bottom:0"><span style="color:#6fbf73">✓</span><span>Reads r, p at the playhead and encodes with the existing ROUNDTRIP path. No SimState, payload or descriptor change.</span><span></span></div>
+</div>
+</div>
+
+<div style="background:#1b1b1b;border-left:1px solid #3c3c3c;display:flex;flex-direction:column;min-width:0">
+<div style="padding:10px;border-bottom:1px solid #2a2a2a;display:flex;flex-direction:column;gap:8px">
+<div class="row"><span class="hd">Preview</span><span style="font-size:11px;color:#a8a8a8">current view · t = 8 · brightness off</span></div>
+<div style="height:250px;display:flex;align-items:center;justify-content:center;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:3px"><img src="/_blob/57c086ad5c53f07f49a5592226f6952e" alt="Graph paper stain on Latent z_α × z_β at t = 8, prototype render" style="width:246px;height:246px;image-rendering:pixelated"></div>
+</div>
+<div style="padding:10px;display:flex;flex-direction:column;gap:9px;font-size:12px">
+<div class="row"><span style="font-weight:500;font-size:13px">Colour slot</span><span class="hd">plane</span></div>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="color:#a8a8a8">Base</span><div class="combo"><span>Gradient — 2D: x → a, y → b</span><span style="color:#a8a8a8">▾</span></div></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="color:#a8a8a8">Layers on top, in order</span>
+<div class="lay"><span class="grip">⋮⋮</span><span>Checkerboard · 6 · white · 25%</span><span style="color:#a8a8a8">✕</span></div>
+<div class="lay"><span class="grip">⋮⋮</span><span>Grid lines · 6 · dark · 75%</span><span style="color:#a8a8a8">✕</span></div>
+<button class="btn" type="button" style="align-self:flex-start">+ Add layer</button></div>
+<div class="row"><span style="color:#a8a8a8">Spacing in</span><span>chart units</span></div>
+<div style="border-top:1px solid #2a2a2a;padding-top:8px;color:#a8a8a8;font-size:11px;line-height:1.45">Bases: Gradient · Site blend · Palette · Picture. Layers: grid lines, checkerboard, hexagon / triangle / brick edges, stripes, rings, site dots. From the Shape n̂ node this panel is that node's own, unchanged; on the sphere Chart position offers the sphere's bases and layers.</div>
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":1000}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

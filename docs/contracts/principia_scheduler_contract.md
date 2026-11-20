@@ -1,0 +1,275 @@
+# Principia — scheduler contract
+
+*Seventh doc. The CPU brain: which quads exist, in what order they refine, what's cached, what's evicted. The *policy* — priority formula, split/keep/merge, eviction, the frame loop — is recorded in Part 6 and Part 7 and treated as settled (the refinement criterion itself is `principia_dd_refinement_policy.md`; see the note at the head of Part 6). This doc contracts the seams that make that policy safe against everything else: the non-determinism firewall, the density-is-not-probability rule, preview/refine caching, the depth model for infinite zoom, and terminal-vs-refinable tied to the two floors.*
+
+---
+
+## Part 1 — The firewall: the scheduler is arbitrary about *what* it looks at, never about *what* it sees
+
+Every prior doc held one invariant: the physics is deterministic; only precision differs. **The scheduler is the first component that is legitimately, deeply non-deterministic — and that is fine, provided it is walled off.** Which quads exist, their refinement order, cache contents, eviction history all depend on camera path, frame budget, idle timing. **Two users exploring the same region get different quadtrees.** That must stay cosmetic, never scientific.
+
+**The load-bearing rule:**
+
+> A quad's `SimState` is a pure function of `(IC, sim key, playhead t)` — the march is fixed-`dt` deterministic (frame loop, Part 7), so the state at any `t` is identical whether reached by continuous marching, catch-up after reveal, or re-boot after eviction; at frame 3 or frame 300; on any device. The scheduler decides *which* ICs get computed and *when*. It must never influence what any given IC computes *to*.
+
+This is the CPU-brain twin of the CPU/GPU divergence rule. It makes the non-determinism a matter of *the map filling in differently on screen*, never *different answers*. The violations an agent will reach for, all forbidden:
+
+- **No seeding integration from a cached nearby state.** Every IC integrates from its own decoded `(m,r,p)`, never from a neighbour's endpoint or a parent quad's trajectory. Warm-starting would make the result depend on visit order.
+- **No reusing a neighbour's `SimState`** as a stand-in for an unfinished quad. Ancestor *fallback* is a display trick (draw the parent upscaled) — it never writes a child's payload.
+- **No carrying scheduler state into the payload** — not cache age, not compute order, not priority, not which frame it landed on. The payload compatibility signature (integrator/render docs) contains sim-key fields only; scheduler state is categorically excluded.
+
+If a payload's contents could differ between two sessions that scheduled differently, the firewall is broken.
+
+---
+
+## Part 2 — Refinement density is not probability density (enforced here, because this is where it would break)
+
+The chart-decoder contract states it ("Links carry a measure"); the render contract echoes it. **The scheduler is where the violation would actually happen**, because the entire priority system *deliberately* over-samples boundaries.
+
+> The quadtree is a rendering / compute-allocation structure. Its leaf density is `1 − coherence`-driven — high where boundaries are filamentary, low in smooth basins. This is **not** physical probability density, and it must never feed a quantitative claim.
+
+There are three distinct notions of density, and they are not the same thing. *Exploration density* is what makes interaction smooth and useful. *Refinement density* is where the renderer spends compute because the image or the dynamics are complicated. *Physical/statistical density* is what a statement like "fraction of IC space showing X" needs. The quadtree concentrates compute at basin boundaries because they are visually and dynamically interesting, not because those ICs are more probable. Unless stated otherwise, the default goal is smooth, controllable exploration, not uniform sampling.
+
+Two instruments, kept separate:
+
+- **Adaptive quadtree — for *looking*.** Concentrates compute where the picture is interesting. Leaf density reflects visual/dynamical complexity, not how probable those ICs are.
+- **Uniform re-sampling — for *measuring*.** Basin fractions, island prevalence, fractal dimension come from a **flat grid at fixed resolution** (the offline/export path: `SAMPLES_PER_QUAD_AXIS` over a uniform dispatch, no adaptive subdivision), or from a known measure with the link/warp Jacobian correction (chart contract Part 2.5).
+
+This is the scheduler-side member of the same family as the link-measure honesty rule and the chart `system_image` descriptor: **adaptive structure for viewing, uniform sampling for statistics.** Counting quadtree leaves to estimate "fraction of IC space doing X" is the canonical error, and it is the scheduler's job not to make that count look meaningful.
+
+---
+
+## Part 3 — Depth: infinite zoom by default
+
+**Mandelbrot-style infinite zoom is the default.** Absolute reachable depth is **emergent from physics and precision, not imposed by a constant.** Three orthogonal concerns that an earlier single `MAX_DEPTH` constant conflated:
+
+| Concern | Governed by | Nature |
+|---|---|---|
+| How much detail *below the current view* | `MAX_REL_DEPTH` | performance toggle, slides with the camera |
+| How deep you *can* zoom | decode floor + integration floor | physics/precision, emergent |
+| Whether to split *this* quad | `Policy::Tolerance` (`principia_dd_refinement_policy.md`, R-15) | scientific — the adaptive part |
+
+### Infinite zoom-out: levels coarser than the root
+
+*Decided per R-369 by the orchestrator (22 Oct 2026; RQ-535, option (a)), not a human ruling, so that R-570's "cost
+per frame is set by the screen, not by the view's extent" holds on R-537 EX7(a)'s root lattice. ⚑ Physics review is
+required on the addressing, as for EX7; perf reviews the cost.*
+
+- **Levels below 0.** The quadtree that covers the extended parameter plane (R-537 EX7(a)) has levels `L < 0` on an
+  affine chart, with no lower bound. A level-`L` quad with `L < 0` spans `2^(−L) × 2^(−L)` level-0 roots: the quad
+  `(L, i, j)` holds the four quads `(L + 1, 2i + a, 2j + b)`, `a, b ∈ {0, 1}`, the same indexing as at every level
+  `L ≥ 0`, with negative indices allowed (EX7(a)). Its address keeps
+  R-97's frame, the slice plane's own, relative to the plane anchor: a zoom-out changes which addresses are requested,
+  never the addresses themselves. Levels `L ≥ 0`, the roots, and EX7(b)'s canonical maps are unchanged.
+- **Scope.** "An affine chart" above is a chart whose axes are all affine (R-570's latent and flat charts); a chart
+  with a bounded, periodic or pole-crossing axis gains no level `L < 0`, a coarse quad straddling its period or edge
+  being undefined (physics review 5624655553 of PR #279, an observation; applied per R-369).
+- **The baseline cover** of a viewport (`principia_caching_contract.md` Part 4) is taken at the level whose quads are the
+  smallest that are still at least the cover's on-screen size, the coarsest cover of the viewport at that size, so the
+  number of quads in it is set by the screen, not by the view's extent: at every zoom and pan at most
+  `⌈extent / quad size⌉ + 1` per axis. Where the view is aligned so that two covers tile the viewport identically, the
+  cover at 10⁶ × the home view counts the same quads as at home zoom (REQ-SCHED-104).
+- **Which frames it bounds.** The frame that lands a zoom-out, the in-motion `PREVIEW_MODE` cover dispatch, computes no
+  more quads than the cover. At rest, refinement resumes to the screen floor (R-108; `principia_caching_contract.md`
+  Part 5), and the quads computed and resident in view stay within the bound that holds at home zoom, the leaves at the
+  screen floor plus their ancestors (`principia_memory_tiers.md` §3 and §4), never an enumeration of the level-0 roots
+  under the view (REQ-SCHED-104; perf review 5624936602 of PR #279, P1 and P4; applied per R-369). *Was (the cover
+  bullet):* "**The baseline cover** of a viewport (`principia_caching_contract.md` Part 4) is taken at the level whose quads are the smallest that are still at least the cover's on-screen size, the coarsest cover of the viewport at that size, so the number of quads in it depends on the screen, not on the view's extent: at 10⁶ × the home view it is the same count as at home zoom (REQ-SCHED-104)."
+- **Overflow.** `L` has no lower bound, and past about `2^1023` level-0 roots the f64 per-quad centre and half-width
+  (`principia_deep_zoom.md` §1) overflow. What the addressing does there is a definition requirement (R-72), written by
+  the task that builds `L < 0`: no `inf` or `NaN` reaches a quad's centre, half-width or key (REQ-SCHED-105).
+- **Where the ancestor chain stops.** The pinned ancestor chain of the cover (`principia_caching_contract.md` Part 4)
+  stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares, which is at or one level
+  below the first level whose square side is at least the viewport's extent, depending on where the view sits, about
+  `⌈log2(cover quads per axis)⌉` levels above the cover. That is
+  the only stop, wherever the view sits: it is not the cover's smallest common ancestor, which for a viewport
+  straddling a dyadic line such as `x = 2^m` roots sits about `m` levels higher, and which a viewport straddling a line
+  through the lattice origin never has. Nothing above that level is pinned or walked, so the pinned set and the at-rest
+  count of ancestors are set by the screen, independent of the zoom and the pan (REQ-SCHED-104; perf reviews
+  5624992732, P6, and 5625031178, P7, of PR #279; perf review 5625066551, P8; applied per R-369). *Was (fix round 8):*
+  "stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares, the first level whose
+  square side is at least the viewport's extent". *Was:* "**Where the ancestor chain stops.** The pinned ancestor chain of the cover (`principia_caching_contract.md` Part 4) stops at the first level at which the viewport lies within at most 2 × 2 ancestor squares: the cover's smallest common ancestor, whose square contains the whole viewport, where one exists. Where the viewport straddles a line through the lattice origin (index 0), which every level shares, no single ancestor contains it, and the chain stops at the 2 × 2 block of ancestors there. Nothing above that level is pinned or walked, so the pinned set and the at-rest count of ancestors are finite and grow with the logarithm of the zoom-out (REQ-SCHED-104; perf review 5624992732 of PR #279, P6; applied per R-369)."
+- **Coarser quads are ordinary.** They are scheduled, cached and refined like any other, refinement running down
+  through `L = 0` as the user zooms in; a coarse quad's samples are systems of the plane at its own sample positions,
+  computed as any quad's are. `MAX_REL_DEPTH` and the screen floor stay view-relative.
+- **Rejected:** re-basing the plane's frame on a far zoom-out (against R-97), and a cover outside the quadtree (a second
+  scheduler).
+
+### `MAX_REL_DEPTH` (renamed from `MAX_DEPTH`)
+
+A **view-relative performance/quality window**: refine at most N levels below the current camera depth. It *follows the camera down*, so infinite zoom works — descend, the window slides with you, always a bounded amount of work below the view. Sensible relative budget is small (≈ 4–8 below the view; the earlier defaults of 8 / 10 / 12–14 were written as *absolute* and conflated "how deep total" with "how much detail below the view").
+
+**This rewrites the split predicate — the critical correctness point.** The earlier absolute form was:
+
+```
+split(C) ⟺ S_quad > τ(ℓ)  ∧  ℓ < MAX_DEPTH        # absolute — caps infinite zoom at ~14
+```
+
+Under the sliding interpretation it becomes:
+
+```
+split(C) ⟺ in_view(C) ∧ tile_size(C) > pixel_size                       # must split above the screen floor (policy §0.1, R-88) — the at-rest target (R-108)
+         ∨ policy_splits(C)  ∧  ℓ < camera_depth + MAX_REL_DEPTH           # policy_splits: Policy::Tolerance (R-15); the cap binds in view below the floor and off screen (R-98)
+```
+
+These are **different gates**. An agent working from the old absolute form will silently cap the zoom. The rename forces the predicate to be rewritten.
+
+**`MAX_REL_DEPTH` is not on the sim key.** It is view-relative scheduler state, exactly like `frame_budget` and the in-flight-job limit. Lowering it while zoomed invalidates *no payload* — it just stops *scheduling* deeper quads; already-computed quads stay valid and cached. It sits cleanly on the "what we look at" side of the Part 1 firewall, never the "what we compute" side. It belongs with the scheduler knobs, never with `T` / `dt_macro` / thresholds.
+
+### The absolute floor is emergent
+
+How deep you *can* go is answered by the two floors (integrator + deep-zoom docs), not a magic number: the **decode floor** (`AT_F32_FLOOR`; on the f32 GPU path the linearised decoder's floor is the measured value, quoted with the coordinate magnitude `|x₀|`, deep-zoom note §1 and §2, REQ-DEC-051; a floor near ~50 needs the sum and the integration in f64, R-632; *was:* "(`AT_F32_FLOOR`, pushed to ~depth 50 by the linearised decoder)") and the **integration floor** (following the occupant, R-563: substep-saturation-dominated with regularisation off; under a regularised occupant, the step budget and its counted signals — a confidence gradient, non-terminal). *Was:* "(substep-saturation-dominated, the v1 KS-less limit — a confidence gradient, non-terminal)"; regularisation is v1 (R-562). The cap on absolute depth *emerges* from these; it is not a policy constant.
+
+---
+
+## Part 4 — Terminal vs refinable, tied to the two floors
+
+The `ReadyRefinable` lifecycle state is the whole slippy-map trick: it distinguishes **"done enough to display"** from **"done forever."** The scheduler revisits refinable quads when budget allows; it never revisits terminal ones. So "done forever" needs a precise definition — but first, the thing that governs refinement in *normal* use is not a floor at all:
+
+**Whether a quad splits is `Policy::Tolerance`'s decision (R-15; `principia_dd_refinement_policy.md` §0.1, §1).** Split iff any footprint in the quad is unresolved against the single tolerance `eps`. In view, the camera decides depth (a quad may stop only once its texel is at or below one screen pixel) and the criterion decides the *order* the complete tree arrives in. Off screen, the criterion decides depth. This Part defines the floors that decision runs inside.
+
+**The everyday boundary is the screen-space floor (view-relative, not a terminal):**
+
+- **Screen-space floor — `tile_size(quad, zoom) ≤ pixel_size`.** Above it, every in-view quad **must split** (policy §0.1, R-88): the camera decides depth. **This is the at-rest target (R-108):** during a gesture the frame budget governs — ancestors show, so there are never blanks — and completeness resumes at rest (caching Part 6's two regimes). At and below it, splitting produces *sub-pixel* samples that cannot be displayed distinctly, and the criterion may **supersample** there where a footprint is unresolved (§0.1; R-88). This is the **everyday** refinement boundary: in normal exploration you hit it far shallower than any precision floor. **It is view-relative, evaluated live against the current zoom — NOT cached as a quad fact and NOT terminal:** zoom in and the same IC-space patch covers more screen, its tiles regrow above pixel size, and refinement *resumes* (real new samples). So a screen-floored quad is "done *at this zoom*," not "done forever." (`MAX_REL_DEPTH` caps **every split beyond the screen floor** — in-view supersampling below it and off-screen policy splits alike (R-98) — a budget lever, never a stop above it in view: `MAX_REL_DEPTH ≥ screen floor` always, R-88.)
+
+The **true terminal floors** (done forever — genuinely no more information extractable, cached as quad facts) apply only when someone zooms *past* pixel-matching into extreme zoom:
+
+- **Decode switchover, NOT a stop — `DECODE_SWITCHOVER`.** When the *full nonlinear decoder's* adjacent samples collapse to bitwise-identical ICs (~depth 20–23, or shallower with tiny `q₁,q₂`), that is **not** the floor — it is the trigger to **switch to the linearised decoder** (deep-zoom note §2, "Switchover"), with depth `ℓ_switch = 20` as an upper bound, whichever comes first (R-90; lowering's `SWITCH` = `ℓ_switch`), which anchors the precision-critical part in f64 on the CPU and restores the distinction. Refinement **continues** on the linear path, to its measured floor on the f32 GPU path, quoted with `|x₀|` (REQ-DEC-051; R-632). *Was:* "Refinement **continues** on the linear path (depth ~23 → ~50)." The sample-collapse symptom on the *full* decoder means *switch decoders*, never *stop*. (This is the fix that the old single "AT_F32_FLOOR = stop" reading would have strangled — it fired the stop exactly where the linear decoder should engage.) *4 Nov 2026 (R-686):* the bitwise agreement this trigger reads must be tested on NVIDIA specifically. No CI job runs NVIDIA, so a result on Metal or lavapipe does not show it. The NVIDIA run is a named measurement, and bitwise switchover on CI backends stays blocking (R-686, the owner's acceptance).
+- **Decode floor proper — `AT_F32_FLOOR` (linear-decoder only).** Only when the *linearised* decoder's samples collapse to bitwise-identical ICs (on the f32 GPU path at the measured floor, quoted with the coordinate magnitude `|x₀|`, REQ-DEC-051) is f32 genuinely exhausted — `x₀ + J_D·δ` is an absolute f32 number of order `|x₀|`, and adjacent ICs closer than f32's ulp there are one IC to the f32 integrator that starts from them — and no fix exists short of higher precision: an f64 sum and integration, on the CPU, or the precision ladder under RQ-577, ruled after M3 (R-630, R-632). *Was:* "Only when the *linearised* decoder's samples collapse to bitwise-identical ICs (~depth 50+) is f32 genuinely exhausted — the quad-local offsets `δ` are too small for f32 to represent distinct neighbours, and no fix exists short of higher precision (deferred KS/arbitrary-precision route)." **This** is the true decode floor: stop, terminal. It is a deep-zoom *backstop*, not an everyday mechanism — most sessions never reach it (the screen floor stopped them long before). The same visible symptom (sample collapse) means *switch* on the full decoder and *stop* on the linear decoder — the response keys off **which decoder is active**. *13 Nov 2026 (R-989, RQ-797 Q1 (a); R-990; R-997):* the patch is expanded on the CPU, each sample's `x₀ + J_D·δ` formed in f64 and narrowed once into its record, so `AT_F32_FLOOR` is a patched quad's adjacent narrowed records bitwise identical, read on the CPU from the records it wrote, with nothing read back (R-142); the patch is taken only where R-990's check admits it, a quad it refuses staying exact per sample; R-90's strict bitwise test stands, and the first depth at which a component shows stepping by REQ-TOOL-152's criterion is reported beside it (R-997, REQ-DEC-052).
+- **Integration floor:** substep-saturation-dominated — the samples are *distinct* but their outcomes are f32-integration-limited, under-resolved (integrator doc Part 6). Orthogonal to decode precision: a quad whose `suspect_fraction` stays high and whose samples are **substep-saturated** (the confidence flag, not a sample-terminal — the trajectories *did* reach outcomes, just under-resolved) is at the integration floor — **stop refining** (further splitting won't resolve what the integrator can't), flag it floor-limited, don't re-queue as refinable. A *refinement-stop*, not a *sample-terminal*: samples have real outcomes with low confidence, the quad is done subdividing. **The floor follows the occupant (R-563).** The substep saturation above is the floor with regularisation off, unchanged. Under a regularised occupant (the default, Heggie × RK4) the samples' under-resolved markers are the separation floor and the entry-cap hits, counted and non-terminal, and a copy that runs out of its step budget is undetermined, never discarded (integrator contract Part 6). **The stop reads `saturated` and `suspect_fraction` for every occupant** (R-603, closing RQ-526): under a regularised occupant the sticky `saturated` bit is set when either counted signal fires, the two counts kept in a payload word, and budget exhaustion sets its own sticky `budget_exhausted` flag (REQ-PAY-110). A footprint undetermined by its budget is never discarded and never treated as resolved; it takes the refinement policy's `Undetermined` decision, never a split, halving the cell not helping it, and its remedy is finer steps, as an explicit re-run, never an automatic one. *Was:* "how they are stored and which of them stops a quad here is RQ-526".
+
+So the stop hierarchy, by how often it fires: **screen-space floor** (everyday, view-relative — in view, quads above it must split; below it the criterion may supersample) → **`MAX_REL_DEPTH`** (caps every split beyond the screen floor — that supersampling and off-screen policy splits, R-88, R-98) → **`DECODE_SWITCHOVER`** (extreme zoom — switches decoders, not a stop) → **`AT_F32_FLOOR`** on the linear path + **integration floor** (extreme/deep — true terminals). In view above the screen floor a quad splits (the at-rest target; during a gesture the frame budget governs, R-108); otherwise refinement happens iff the policy splits **AND** no cap or terminal floor has fired (R-88).
+
+Everything else that is `Ready` but kept by the policy, or screen-floored at the current zoom, is **refinable**: displayable now, revisited if budget frees up (or on zoom-in, for screen-floored quads). Only the true precision/integration floors are **terminal** (done forever); refinable quads are paused.
+
+---
+
+## Part 5 — Preview vs refine is a second sim key
+
+`PREVIEW_MODE` (`QuadRequest.flags` bit 3, table below) = reduced horizon + coarse integration during interaction; full quality on idle. Reduced horizon is a **different `T`**, and `T` is **on the sim key** (integrator doc). Therefore:
+
+- **A preview payload and its refined payload are different payloads of the same quad.** The payload compatibility signature already covers horizon, so the cache distinguishes them correctly — but the contract must state it: **preview and refined are distinct cache entries.**
+- **"Sharpen on idle" is a recompute, not an in-place upgrade.** The refined quad is a fresh integration at full `T`; it *replaces* the preview in what's displayed, it does not edit it.
+- **The cache must never serve a preview payload where full quality was asked** (or vice versa) — and a quantitative export must never read a preview quad. Preview is for interaction responsiveness only; it is scientifically inert.
+
+This is preview/refine living correctly on the *compute* side of the firewall: they are genuinely different computations (different `T`), so they are different payloads — not two views of one payload.
+
+### `QuadRequest.flags`
+
+The per-quad dispatch request carries a bit-packed `flags` word:
+
+| Bit(s) | Name | Meaning |
+|---|---|---|
+| 0 | `DECODE_MODE` | full (0) or linearised (1) decoder (deep-zoom note §2). Linearised once `quad.collapsed` — the per-quad flag set when the full decoder's adjacent samples give bitwise-identical ICs — or past `ℓ_switch`, whichever first (R-90) |
+| 1 | `ENSEMBLE_ENABLED` | dispatch `E` jittered copies per grid position |
+| 2 | `FTLE_ENABLED` | compute the full Benettin FTLE (tier-gated) |
+| 3 | `PREVIEW_MODE` | reduced horizon, coarse integration (this Part) |
+| 4 | `FULL_RETENTION` | skip reduction and keep every per-sample result. **Owner: the measurement path** (R-39) — the Measure tool and matched N / 2N renders, a uniform grid with every sample retained (`principia_render_gui_spec.md` §G10) |
+| 5 | `COMPUTE_IC_DESCRIPTOR` | write the `ICDescriptor` buffer alongside the results (dd_decoder §3.6) |
+| 6–7 | reserved | not `DEBUG_MODE`, which is a baked kernel variant (R-41) |
+
+When `DECODE_MODE` is set, the reference IC `x₀` and the Jacobian `J_D` travel in a **separate uniform buffer**, bound only for linear-path quads, not inside the request. They are about 45 floats and unused at shallow zoom. The request also carries the quad's centre and half-width, computed on the CPU in f64 and passed as f32. The GPU computes sample positions from them as `u = centre + half·(2t − 1)` (deep-zoom note §1), never from the min/max bounds, which are kept for CPU-side scheduling, culling and debugging.
+
+*10 Nov 2026 (R-926).* The CPU evaluates the chart in f64 and each quad is dispatched with its forward table, built on the CPU; the compute side decodes nothing and only integrates records (R-926, items 5 and 6). A small quad's table is one cell, a centre and its slopes, and that one cell is the linearised decoder (item 11): `x₀` and the slopes travel with the quad as its table. `DECODE_MODE` and the separate uniform above are kept as written until the plan's tasks rewrite this Part; R-90's switch trigger stands. The slopes' tier and the table's resolution for a large quad are open questions of the plan (`plan/charts/m2-chart-system-replan.md`).
+
+*15 Nov 2026 (TASK-M2-87; REQ-INT-115; R-935, R-989, R-995).* For the integrator, the quad is dispatched with its records, the record and table contract of `principia_lowering_contract.md` Part 3 ("The record and table contract (CPU to GPU)"): each record formed on the CPU in f64 and narrowed once, a patched sample's from its `x₀ + J_D·δ` expanded in f64, so no `x₀` or `J_D` is uploaded for the integrator and no separate uniform is bound for it (R-989, RQ-797 Q1 (a)), and the GPU computes no sample position for the integrator, each sample's chart input being formed on the CPU in f64. The integrator reads no `DECODE_MODE`: which route formed a sample is the record's route word (R-995), and the switch is decided on the CPU, on the narrowed records (R-935 under RQ-766), past `ℓ_switch` the patch taken only where R-990's check admits it (Part 4). The two questions the note above leaves open are answered: the slopes are a tier-1 or tier-2 map's `J_D`, a tier-3 map taking no patch (R-935 under RQ-758, R-989 Q2 (i)), and a large quad's table has one exact node per sample (R-935 under RQ-766). The table above and the paragraph before the note stand as written for what the CPU does. *Was (the note above, its clauses):* "`x₀` and the slopes travel with the quad as its table" and "The slopes' tier and the table's resolution for a large quad are open questions of the plan (`plan/charts/m2-chart-system-replan.md`)." *Was (the paragraph before the note, for the integrator):* "When `DECODE_MODE` is set, the reference IC `x₀` and the Jacobian `J_D` travel in a **separate uniform buffer**, bound only for linear-path quads, not inside the request." and "The GPU computes sample positions from them as `u = centre + half·(2t − 1)` (deep-zoom note §1)".
+
+---
+
+## Part 6 — The settled policy
+
+Recorded so the contract is self-contained. **The split decision is `Policy::Tolerance`'s** (R-15, `principia_dd_refinement_policy.md`); this Part keeps the scheduling mechanics around it.
+
+**Priority.** `P_tile = w_v·P_visible + w_z·P_zoom + w_c·P_complexity + w_f·P_focus`, defaults `w_v=10, w_z=2, w_c=3, w_f=1`. Visibility dominates (never compute off-screen); complexity (`1 − coherence`) drives adaptive refinement; zoom-match is a tiebreaker; focus (inverse distance to the **pointer** while it is in view, to the viewport centre otherwise — cursor bias, R-55; its weight and decay are still to be written) is subtle. Weights exposed in research mode.
+
+**Rank on the visible part (R-257).** `P_visible` ranks a quad on its visible part, not the whole quad: a quad half off-screen has structure the user cannot see, and ranking on all of it spends budget on nothing. So the ranking shifts as the camera pans while no physics changes. `P_visible`'s formula is written here by the task that needs it (R-72).
+
+**The persistent frontier (R-257).** Each frame refines the top of the frontier by priority, so the frontier is an ordered structure kept across frames and maintained incrementally, not re-sorted from scratch every frame. Its failure mode is staleness, and staleness is invisible: a quad sitting high in the queue on a priority it no longer has looks exactly like a wrong criterion. So every N frames the frontier is rebuilt from scratch and the incremental frontier is asserted to match it. That is a correctness check, not a benchmark: an independent path to the same answer, so a silent divergence cannot survive. The from-scratch path is kept permanently as the reference implementation, never deleted once the incremental one works. N, the frames between cross-checks, is a calibration (R-71).
+
+**Reprioritising a queued entry (R-112).** A plain binary heap will not do the update the frontier needs. Reprioritising an entry already inside the queue needs either a `quad_id → heap_position` map, so a changed entry can be sifted, or **priority bucketing**, re-bucketing only when an entry crosses a band boundary. Bucketing suits a rank-based scheme, which needs the top slice rather than a total order. Which of the two is built is the choice of the task that builds the frontier.
+
+**Split/keep/merge.** Decided by `Policy::Tolerance` (R-15): split iff any footprint is unresolved (`spread_shape > eps`, the copies disagree on event class, or the footprint is undetermined — policy §1); the stop rule is `alpha_area` (§2); merging is the split rule read backwards (§3); the decision variants are in §6. The scheduler applies it **and** `ℓ < camera_depth + MAX_REL_DEPTH`; in view above the screen floor the quad splits regardless (R-88). Guards checked first: terminal (Part 4) or offscreen → stop.
+*Superseded (R-15), kept for the record: split if any spread/impurity threshold was exceeded (`outcome impurity`, `S_n`, `S_t`, `S_L`, `S_f` when `FTLE_VALID`, `S_D`, low ensemble agreement — now `spread_event`, R-18 — persistent parent-child disagreement); tiebreakers `retrograde_fraction ≈ 0.5`, high `mean_orbit_count` spread, near the locked pixel; keep coarse if dominant purity high, all spreads low, summary visually stable, already finer than screen demand; merge/deprioritise if offscreen, overresolved, indistinguishable from ancestor, or under cache pressure; default keep.*
+
+**Eviction.** Cost-weighted LRU: eviction resistance ∝ `computeCostMs`. Expensive (deep, close-encounter, high-substep) quads resist eviction; high-coherence smooth quads are cheap to recompute and evicted first. This directly serves the firewall — evicting and recomputing is *safe* precisely because the payload is pure (Part 1), so LRU can be aggressive without scientific consequence.
+
+**Zoom-out is nearly free (R-257).** Zooming in reveals deeper quads that may not exist yet; zooming out reveals shallower quads that the tree already holds with valid reductions. A benchmark asserts that the count of newly computed quads after a zoom-out is ≈ 0, within a tolerance that is a calibration (R-71). A larger count means something is recomputing what the tree already holds.
+
+**Cancellation.** WebGPU dispatches can't be cancelled mid-flight; the scheduler skips *subsequent* passes for quads no longer visible. In-flight limit 2–4 jobs; an epoch counter discards stale results (a result for a quad the camera has left is dropped, not written — consistent with Part 1: dropping a computation changes nothing about any payload).
+
+**Resolution controls (quality = sample density, NOT viewport):** `SAMPLES_PER_QUAD_AXIS` (`N` — the sample grid inside a quad; each sample is a full simulation, so this is *the* quality/memory/compute driver — too low misclassifies a quad as coherent by undersampling itself) and `MAX_REL_DEPTH` (view-relative refinement window — how deep the quadtree subdivides below the camera). **Both are tier-gated with a Custom override.** Per-tier values in the memory-tiers table (`N` ranges 8–32 across the six tiers; rel-depth budget likewise per tier). **There is no sample↔pixel interpolation knob** — a sample rasterises directly to its screen-space footprint (a *tile*); **one sample, one tile, no interpolation**. (`render_scale` — memory-tiers §2 — is a different thing: it sets how many *render pixels exist* (internal raster scale, upscaled to display); the screen floor then pins one sample per *render* pixel exactly as stated here. A raster-scale knob, not a sample-density or interpolation one.) (sharpness comes from subdividing quads — real new samples — not from interpolating a sparse sample grid to more pixels, which would fabricate/smooth over the filamentary structure). The only sample↔pixel combining is the honest direction: SSAA ensemble resolve (many sub-pixel samples → one pixel colour, Part 9). The quality tier also gates the resident co-computations (ensemble copies + per-sample Benettin shadows).
+
+**`N` is a power of two (R-398)** at every tier and in the Custom override, and on the uniform flat grid of the
+offline/export path, which takes the same `N`: the sample coordinates are then dyadic, as the quadtree's are. The
+tiers' `N` is 8 or 16 (R-132 caps Ultra and Extreme at 16; memory-tiers §4).
+
+---
+
+## Part 7 — The frame loop (lockstep presentation)
+
+*The one genuinely new object of the temporal-architecture reversal (ratified). Replaces the pull-based/on-demand loop: a first-class fixed-timestep loop with a global playhead. Same shape as networked-game lockstep and the standard fixed-timestep game loop.*
+
+**The principle: never present mixed time.** Every temporal glitch (frozen rectangle in a live field, region snapping forward, children popping in behind the playhead) is one sin — presenting pixels from different moments as one moment. The barrier makes it unrepresentable. *(The one deliberate, bounded exception is checkerboard motion acceleration — a uniform one-`dt` half-frame skew only while the playhead advances, self-erasing at every rest/pause/endpoint, off in export — `principia_checkerboard_contract.md` §6.)*
+
+*12 Nov 2026 (R-985, the owner's direction on the chart audit's F8):* on a view tilted toward time each pixel shows its own time by design, so "never present mixed time" there means each sample at its own target time, never a sample presented at a time other than its own. The stop index `k_stop` stays in the record (R-935 under RQ-761), and with the playhead running only that word is rewritten each frame, from the pixel and the playhead on the host; the record's other words are unchanged. A sample behind its new target resumes, and one ahead of it re-boots from `t = 0` (R-935: "a target below the current state re-boots from `t = 0` (R-565, bitwise)"). Any other fallback for backward play is not decided here. *Was:* the principle stands as written for views not tilted toward time.
+
+**Two tiers — barrier over the LIVE SET, catch-up OFF-LOOP** (a hard barrier over everything would let one slow reveal freeze the loop):
+
+```
+LIVE SET     quads at the playhead. March together, barrier-synced,
+             presented coherently every frame. Cheap — one dt/frame each.
+CATCHING-UP  newly-revealed / newly-split quads marching 0→playhead (or
+             resume-point→playhead, caching Part 7) in the BACKGROUND.
+             Shown via the moving fallback (blurred live ancestor, animating).
+             On reaching the playhead → PROMOTED at the next barrier, atomically.
+
+frame loop (fixed timestep):
+  advance every LIVE-SET quad one fixed dt        // cheap, uniform
+  BARRIER over the live set only                   // coherence
+  promote catching-up quads with quad.t == playhead // atomic, synced
+  present                                           // one shared t
+  advance playhead                                  // written by the GUI's clock: a SetField marked "no history" (R-101)
+```
+
+- **Fixed `dt` per sim-step, decoupled from render frames** (accumulate wall-clock, take fixed steps, render when ready). **Under a regularised occupant the quantum is the sync grid `Δ_sync` (R-565):** each frame advances the live set to the latest sync boundary at or before the playhead, zero or more whole quanta, never to a point between boundaries (a terminal event still latches at the step it fires on and ends that copy's march there, as Part 4 and integrator contract Part 7 have it; the rule governs where the advance returns for a copy still marching, applied per R-369, physics review 5605806092 of PR #277, F8); the playhead shows that boundary's state; catch-up marches to the same boundary, and promotion's `quad.t == playhead` reads as the quad standing on the playhead's boundary. So the live march, catch-up and a re-boot reach the same state bitwise (integrator contract Part 2a). Playback speed is a `dt`-per-second setting (`ViewUI` transport, read by the GUI's clock, R-101) — never device frame rate — so two runs reproduce and the parity determinism firewall holds.
+- **Promotion is gated on time-sync (`quad.t == playhead` at a barrier), never on completion** — the playhead is momentarily stationary at the barrier, so the child-chasing-a-moving-target race cannot occur.
+- **Transport controls are free from statelessness:** pause freezes the *playhead*, not the compute (reveals still catch up to the frozen `t` and promote); restart = playhead→0 + discard state; loop = auto-restart at `t_end`. Pausing at `t_end` = the full integration = equal-or-cheaper than the old eager system, at every earlier frame strictly cheaper.
+- **Three failure modes, three owners:** *glitch* → the barrier; *stall* → off-loop catch-up; *lie* → blur. This unifies the blur grammar: spatially stale, temporally behind, and being-refined are all one honest signal — **sharp is real, fuzzy is arriving.**
+- **Export runs this same loop in BLOCKING mode** (hard barrier over *all* visible quads per captured frame — no fallback in exported pixels); interactive runs progressive. Same loop, two barrier policies (export contract).
+- **Two-regime amendment retained:** during an active gesture the in-motion regime dispatches only the coarse cover (priority scoring bypassed, `PREVIEW_MODE`); catch-up compute is what's being scheduled. At-rest resumes on debounce. The loop never awaits GPU work (responsiveness invariant), and the loop itself runs in the render-loop worker (caching Part 6a).
+
+## Part 8 — Continuous refinement & the live-to-live handoff
+
+*Refinement now runs during playback against evolving state, not once against final outcomes — strictly richer signal (end-state impurity misses trajectories that diverge mid-flight and reconverge).*
+
+**Split is `Policy::Tolerance`'s one test (R-15), fed by two orthogonal signals under the same `eps`:** a footprint is unresolved if its spread exceeds `eps` now, or its latched running maximum ever did (R-91).
+
+- **Spatial coherence (instantaneous, two-way):** at the playhead, the quad's samples disagree — different classes (incl. `RUNNING` vs terminal) or `spread_shape > eps`. The existing Part 6 predicate, evaluated live. **Symbolic spread (`S_word`) is a diagnostic, not a split input (R-99)** — a footprint reduction over the E+1 copies' free-group words (derived at resolve, sampling/SSAA note; the words are fetched from the **separate word buffer**, not `SimState` — they're the cold field that lives apart, ledger §3.3a), which fires *earlier* than outcome-impurity because words branch before fates differ; it is shown and measured, never read by the split.
+- **Temporal accumulators (fixed-size, latching — NEVER a time-series):** the **running max divergence** is the latch, and it is **per footprint** (largest bundle spread the footprint has shown so far — catches diverge-then-reconverge; the one accumulator that feeds "unresolved", against `eps`, R-91; a quad is unresolved if any of its footprints is, R-99). The **running mean divergence** and the **first-divergence time** (write-once) are diagnostics, not split inputs (R-99). The divergence trend and the separate thresholds `θ_s`, `θ_max`, `θ_trend` are dropped (R-91). O(1), updated in place on the GPU each step, reduce-before-evaporate — the CPU sees scalars, never history.
+
+**The temporal signal latches:** running-max only grows; a quad proven interesting *stays* refined even if currently calm — correct for crystallisation (boundary structure accumulates, doesn't flicker). **The latch lives with the resident quad (R-99):** when the cache evicts or merges the quad, its footprints' latches go too, so the latch never pins memory; a region revisited after eviction re-discovers its structure. **The latch is evaluated on the GPU, in the resolve pass (R-135), and its state stays in GPU-resident per-quad memory; `QuadReduction` carries only the verdict — the count of unresolved footprints, latched ones included — and stays the sole automatic return (R-142).**
+
+**The live-to-live handoff (refinement must never interrupt a region's animation):**
+1. Quad flagged at playhead `t`. **The parent keeps marching and rendering** — no freeze (the moving fallback).
+2. Children spawn and catch up off-loop, chasing the advancing playhead.
+3. Swap parent→children **atomically at a barrier, gated on time-sync** — both at the same `t`, seamless, at higher resolution.
+
+Transiently both parent and children integrate (bounded by the mid-split count) — a small compute bump, never a memory one. The failure this prevents: frozen rectangles clustering exactly where structure is (you only split where the user is looking).
+
+---
+
+## Part 9 — Ensemble / SSAA sampling (dispatch rules)
+
+*The scheduler-side of the sampling/SSAA model (full rationale in `principia_sampling_msaa_note.md`). The data/render treatment is uniform; the dispatch treatment has two rules.*
+
+**Ensembles only on nominal samples — the no-recursion rule.** A nominal grid sample (`SAMPLES_PER_QUAD_AXIS²` per quad) spawns E ensemble copies when `ENSEMBLE_ENABLED`. **A copy is a full uniform `SimState` (identical to the render graph) but a scheduler *leaf* — it never spawns its own ensemble.** `ENSEMBLE_ENABLED` is checked only for nominal samples; copies dispatch ensembles-off, by construction. This is *structural uniformity ≠ role uniformity*: a copy is a normal pixel at the data/render level (where they're identical) and a leaf at the dispatch level. One flag-check bounds `E → E`, never `E² → E³`. (Same pattern as the FTLE shadow one level down: a trajectory, not a sample.)
+
+**Offsets are a fixed low-discrepancy prefix.** A footprint has E+1 samples, `copy_index` 0..E: copy 0 is the un-jittered centre, and copies 1..E take points 1..E of a **Halton (2,3) sequence**, centred (minus ½) and scaled to the footprint (R-80) — *not* live-stochastic, *not* a naive grid. Fixed because lockstep marches the scene (no cross-frame Monte-Carlo accumulation; a new sample costs O(t) not O(1)), so Principia lives in the low-sample-count regime where a fixed well-distributed set wins; low-discrepancy for best coverage at low E. Deterministic ⇒ parity-clean (no shared RNG), reproducible spread, no shimmer (time excluded). No per-cell rotation: copy positions are fixed by the pixel alone, which keeps recreate-from-image exact (R-100).
+
+**The copies serve two consumers (double duty).** Same E+1 samples feed (a) the **render-side SSAA resolve** (their colours → the pixel's anti-aliased colour) and (b) the **data-side spread reduction** (their classified outcomes → the footprint spread scalar). Both are per-footprint reductions at the **resolve stage**, twins of each other (colours vs outcomes). Two firewalls: colours resolve terminally on the render side (never read as data); outcomes reduce on the data side. The footprint spread is **derived at resolve, not stored per-sample** — consumed live for display and **aggregated into `QuadReduction`** (the quad-level `ensemble_spread` / agreement the scheduler reads for splitting, Part 6). So spread is a split signal *and* a live-colourable footprint quantity, but it lives at the footprint/quad level, never as a `SimState` field.
+
+**Motion tier-gating (set by the quality controller).** Copies are full sims that march every frame, so live playback costs ~`2(E+1)` marching trajectories/pixel (base + shadow, ×(E+1)). The **quality/device controller** (`principia_quality_device_note.md`) sets `e_motion_gating` from its cost model: **E reduced/off (→0/1) during an active live march, full E at rest and in export** (where the blocking barrier already accepts cost). The boot probe answers "can this device afford `2(E+1)`/pixel at interactive resolution within the frame budget?" — the previously-open question (temporal note item 3) is resolved by the characterisation phase, which is exactly where the frame-loop cost first becomes measurable. E is one knob on the quality ladder; the motion offset drops it during gestures/catch-up.
+
+---
+
+*The scheduler is arbitrary about what it looks at and exact about what it sees: states are pure functions of `(IC, sim key, t)` under a fixed-`dt` march, so eviction, re-order, catch-up, and re-boot are all free. Adaptive density is for viewing; uniform sampling is for measuring. Infinite zoom is the default; `MAX_REL_DEPTH` is a view-relative window that rewrites the split gate; absolute depth is emergent from the two floors. The frame loop presents only the barrier-synced live set; catch-up and refinement run off-loop and promote in atomically; refinement splits where a footprint is unresolved — its spread over `eps` now, or its latched running maximum ever (R-91) — and hands off live-to-live — the screen is never mixed-time, never frozen, never lying.*

@@ -1,0 +1,116 @@
+{
+ "name": "Gouache",
+ "doc": "Flat, opaque, matte colour a shade lighter, ragged cut edges, dried rims, the ghost of the brush.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "rg": {
+   "op": "regions",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "K": 14,
+    "b": 1.2,
+    "mode": 5
+   }
+  },
+  "n1": {
+   "op": "noise",
+   "p": {
+    "scale": 6,
+    "octaves": 2,
+    "seed": "$seed"
+   }
+  },
+  "n2": {
+   "op": "noise",
+   "p": {
+    "scale": 6,
+    "octaves": 2,
+    "seed": "$seed+1"
+   }
+  },
+  "dy": {
+   "op": "expr",
+   "in": {
+    "n": "n1"
+   },
+   "p": {
+    "f": "1.6*n"
+   }
+  },
+  "dx": {
+   "op": "expr",
+   "in": {
+    "n": "n2"
+   },
+   "p": {
+    "f": "1.6*n"
+   }
+  },
+  "lab": {
+   "op": "warp",
+   "in": {
+    "x": "rg.labels",
+    "dy": "dy",
+    "dx": "dx"
+   },
+   "p": {
+    "order": 0
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 6
+   }
+  },
+  "st": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 3.0,
+    "density": 0.004,
+    "length": 18,
+    "seed": "$seed+2"
+   }
+  },
+  "bd": {
+   "op": "boundary",
+   "in": {
+    "labels": "lab"
+   }
+  },
+  "pt": {
+   "op": "paper_tooth"
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "pal": "rg.palette",
+    "lab": "lab",
+    "st": "st",
+    "bd": "bd",
+    "pt": "pt"
+   },
+   "p": {
+    "f": "C = pal[lab]; g = lum(C)[..., None]; C = g+(C-g)*0.95; C = C*0.88+0.09\nC = C*(1+0.035*z(st))[..., None]\nrim = gaussian(bd.astype(float), 0.7)\nC = C*(1-0.12*rim)[..., None]\nout = C*(1+0.018*z(pt))[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

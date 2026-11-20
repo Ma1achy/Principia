@@ -1,0 +1,100 @@
+{
+ "name": "Stipple (after Luminet, 1979)",
+ "doc": "Hand-drawn ink dots, denser where brighter, printed as a negative.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "L": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "stretch(blur(lum(I), 1.0))"
+   }
+  },
+  "p": {
+   "op": "expr",
+   "in": {
+    "L": "L"
+   },
+   "p": {
+    "f": "0.05 + 0.95*L**2.2"
+   }
+  },
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "pts": {
+   "op": "jitter_points",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "spacing": 3.4,
+    "jitter": 0.5
+   }
+  },
+  "kept": {
+   "op": "keep_points",
+   "in": {
+    "points": "pts.points",
+    "rng": "pts.rng",
+    "p": "p"
+   }
+  },
+  "dots": {
+   "op": "stamp_dots",
+   "in": {
+    "points": "kept.points",
+    "rng": "kept.rng"
+   },
+   "p": {
+    "SS": 3,
+    "rad": [
+     0.6,
+     1.05
+    ],
+    "ecc": [
+     0.85,
+     1.15
+    ],
+    "ink": [
+     0.75,
+     1.0
+    ]
+   }
+  },
+  "gr": {
+   "op": "draw",
+   "in": {
+    "rng": "dots.rng"
+   },
+   "p": {
+    "kind": "normal",
+    "shape": "HW1"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "d": "dots.out",
+    "gr": "gr.out"
+   },
+   "p": {
+    "f": "d = clip(gaussian(d, 0.35)*1.25, 0, 1)\nout = array([0.07, 0.065, 0.055])*(1-d[..., None]) + array([0.93, 0.90, 0.78])*d[..., None]\nout = out + 0.012*gr"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

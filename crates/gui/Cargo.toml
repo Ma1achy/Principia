@@ -1,0 +1,60 @@
+[package]
+name = "gui"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+engine = { path = "../engine" }
+# The app's window: eframe 0.36, matching egui 0.36.2, on its wgpu renderer (RQ-251). egui-wgpu is built from the
+# device and queue the engine side provides (`engine::contract::canvas`, RQ-247). x11: winit builds on Linux only with
+# a windowing backend, and x11's loads its system libraries at run time, so CI's Linux runners build it as they are.
+eframe = { version = "0.36", default-features = false, features = ["wgpu", "accesskit", "default_fonts", "x11"] }
+# wgpu at engine's version and backends, for the mock's canvas and the headless capture (R-274).
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
+pollster = "1"
+# The capture mode writes its PNG and its names file (R-274; RQ-253), as xtask's runner reads them.
+png = "0.18"
+serde_json = "1"
+
+[dev-dependencies]
+# wgpu 30's naga, to read the noise's IR in `lattice_source_is_integer` (REQ-GUI-412).
+naga = { version = "30", default-features = false, features = ["wgsl-in"] }
+
+# `--features mock` runs the app on the mock engine (R-390); the mock is always compiled, and the feature only chooses
+# the engine `main` runs (RQ-252).
+[features]
+mock = []
+# DX12, opt-in and off by default (R-862): local testing only, untested in CI. It adds wgpu's DX12 backend, which
+# builds on Windows only; with it, `PRIN_GPU_BACKEND=dx12` selects DX12 for the mock's canvas, and without it `dx12`
+# is refused. No required or hosted CI job builds it.
+dx12 = ["wgpu/dx12", "engine/dx12"]
+# The v1 web skeleton's wasm entry (TASK-M8-86, R-627): `gui::web`, built for wasm32-unknown-unknown only. The native
+# build compiles none of it.
+web = ["dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys"]
+
+# The browser's clock: `std::time::Instant` and `SystemTime` panic on wasm32-unknown-unknown, and web-time, already in
+# the lock through eframe, is their stand-in (`crate::clock::time`). wasm-bindgen, its futures, js-sys and web-sys bind
+# the wasm entry to the page and the worker; eframe re-exports only the features of web-sys it uses itself.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-time = "1"
+wasm-bindgen = { version = "=0.2.129", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3", optional = true, features = [
+  "console",
+  "DedicatedWorkerGlobalScope",
+  "Document",
+  "Element",
+  "HtmlCanvasElement",
+  "MessageEvent",
+  "OffscreenCanvas",
+  "Window",
+  "WorkerGlobalScope",
+] }
+
+# cargo-machete's `--with-metadata` mode reports `wasm-bindgen-futures` unused: no source names it, but
+# `#[wasm_bindgen]` on `web.rs`'s async exports expands to `wasm_bindgen_futures` calls, and without it the wasm `web`
+# build fails (E0433; TASK-M0-79).
+[package.metadata.cargo-machete]
+ignored = ["wasm-bindgen-futures"]

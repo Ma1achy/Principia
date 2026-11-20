@@ -1,0 +1,11 @@
+{
+  "description": "R-176, the shape bounds bind: the same draws, fewer of them, judged with each shape bound one ulp below its own measurement, so the pole's |w − 1| and the equator's |w| must both fail.",
+  "seed": 1,
+  "samples": 2000,
+  "radius": 4.0,
+  "encode": "defaults",
+  "shift": 0.0,
+  "shapes": 2000,
+  "bounds": "below_measurement",
+  "expected": "fail"
+}

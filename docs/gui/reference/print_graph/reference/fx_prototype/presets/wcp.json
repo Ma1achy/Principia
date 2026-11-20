@@ -1,0 +1,36 @@
+{
+ "name": "Watercolour pencil",
+ "doc": "The wheel palette, then watercolour pencil.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "pal": {
+   "op": "palette_mode",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "mode": "wheel"
+   }
+  },
+  "paint": {
+   "op": "preset:watercolour_pencil_core",
+   "in": {
+    "src": "pal"
+   },
+   "p": {
+    "seed": "$seed+3",
+    "pigments": false,
+    "sat": 0.85
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "paint"
+   }
+  }
+ },
+ "out": "out"
+}

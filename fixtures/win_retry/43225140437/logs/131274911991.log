@@ -1,0 +1,25 @@
+﻿2026-11-12T18:19:27.0714848Z Current runner version: '2.338.2'
+2026-11-12T18:19:27.0720036Z Runner name: 'malachys-pc-rtx2080s'
+2026-11-12T18:19:31.2637274Z ##[group]Run 'E:\runner-tools\checks\job-started.js'
+2026-11-12T18:20:47.7347998Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+2026-11-12T18:20:59.0491975Z ##[group]Run $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+2026-11-12T18:21:06.5192093Z ##[group]Run Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+2026-11-12T18:21:06.7696626Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+2026-11-12T18:22:18.5388208Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+2026-11-12T18:22:20.0718278Z ##[group]Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+2026-11-12T18:22:20.8766713Z Starting download of artifact to: E:\actions-runner\_work\_temp\wsl-image
+2026-11-12T18:22:21.3197233Z (node:3244) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-11-12T18:47:19.8570444Z ##[error]The action 'This run's image' has timed out after 25 minutes.
+2026-11-12T18:47:19.8912501Z ##[group]Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+2026-11-12T18:47:20.7957440Z Starting download of artifact to: E:\actions-runner\_work\_temp\wsl-image
+2026-11-12T18:47:21.2323084Z (node:28792) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-11-12T19:12:19.9175362Z ##[error]The action 'This run's image, again if the first download didn't finish whole' has timed out after 25 minutes.
+2026-11-12T19:12:19.9476411Z ##[group]Run Write-Output '::error::download-artifact failed, hung or ended short twice (the image): neither attempt gave an image of the length and SHA-256 built'
+2026-11-12T19:12:19.9524401Z   CARGO_INCREMENTAL: 0
+2026-11-12T19:12:19.9524655Z   WSL_PARITY_COMMIT: 2a69136e3a45caafa494857200693ccb01abc4b9
+2026-11-12T19:12:19.9524938Z ##[endgroup]
+2026-11-12T19:12:20.1848948Z ##[error]download-artifact failed, hung or ended short twice (the image): neither attempt gave an image of the length and SHA-256 built
+2026-11-12T19:12:20.1965434Z ##[error]Process completed with exit code 1.
+2026-11-12T19:12:20.2252713Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+2026-11-12T19:12:20.7002656Z ##[group]Run actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+2026-11-12T19:12:24.5040546Z ##[group]Run 'E:\runner-tools\checks\job-completed.js'

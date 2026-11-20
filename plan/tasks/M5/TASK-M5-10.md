@@ -1,0 +1,54 @@
+# TASK-M5-10 — Memory estimator: payload, word buffer and render targets
+
+- **Milestone:** M5
+- **Closes:** REQ-PERF-015, REQ-PERF-018, REQ-PERF-025, REQ-PERF-031, REQ-PERF-093
+- **Depends on:** TASK-M5-02, TASK-M4-11, TASK-M3-41
+- **Needs (earlier milestones):** REQ-PAY-003, REQ-PAY-008, REQ-PERF-005, REQ-PERF-008, REQ-PAY-110, REQ-PAY-111
+- **Reviewers:** code, perf
+- **Pitfalls:** none
+- **Size:** ~280 lines
+
+## Goal
+One memory estimator reproduces payload §7's table and memory_tiers §4's recomputed table: payload
+`(E+1) × bytes × render_px` at the ledger's current widths (160 B FTLE-on / 112 B FTLE-off from TASK-M3-41 on, which this task follows, with REQ-PAY-110's and REQ-PAY-111's two u32s; 152 / 104 B as generated before it, with the collision floor's 8 B, R-973; *was* "152 B FTLE-on / 104 B FTLE-off from TASK-M3-41 on" before the collision floor's 8 B, code review 5912669217 of PR #531, C1, applied per R-369; and 144 B / 96 B before that, perf review 5661999637 of PR #293, P1), the word buffer
+`16 B × (E+1) × live_pixels` when symbolic features are on, render targets `k_d × display_px × 4 + k_r × render_px × 4`
+(k_d ≈ 3, k_r ≈ 3), and the process estimate with margin (bake texture, staging, transients, overhead) used by the fit
+check.
+
+## References
+- `decisions.md` § "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
+- `docs/contracts/principia_canonical_spec.md` § "6. Memory & deployment model *(authoritative: `memory_tiers`, `caching_contract`, `deep_zoom`, `systems_architecture`)*"
+- `docs/design/principia_dd_simstate_payload.md` § "7. Memory"
+- `docs/design/principia_dd_generation_root.md` § "3.3a The word buffer — a parallel cold buffer"
+- `docs/design/principia_memory_tiers.md` § "3. Memory model — payload + render targets"
+- `docs/design/principia_memory_tiers.md` § "Total GB (payload + render targets) by tier × display resolution"
+- `docs/design/principia_memory_tiers.md` § "Principia — quality tiers & memory model (auto-mode reference)"
+- `docs/design/principia_memory_tiers.md` § "8. Caveats"
+- `docs/design/principia_memory_tiers.md` § "6. Auto-mode tier selection"
+- `decisions.md` § "R-40 — Memory tiers and the quality device key off `eps` *(PL-5)*"
+- `decisions.md` § "R-59 — Fix D1 to D6 as listed *(sheet §8)*"
+- `decisions.md` § "R-73 — Apply the whole ruling-follow-up checklist now *(closes RQ-56)*"
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+
+## Deliverables
+- `crates/engine/src/memory/estimate.rs`: payload, per-quad `QuadReduction` (R-422), word, render-target and process
+  terms; the fit check sums every term and applies the margin.
+- memory_tiers §4's totals recomputed with the reduction term and written in, with the commit's "Removed lines" note
+  (R-422).
+- Unit tests `crates/engine/tests/memory_estimate.rs` against the two doc tables.
+- `cargo xtask bench memory-fit-margin`: estimator figures against measured process memory across tiers and resolutions, and the proposed margin.
+
+## Acceptance tests
+- `cargo test -p engine render_target_bytes` — the allocator's render-target bytes match the formula at several display sizes and render_scale values (REQ-PERF-015).
+- `cargo test -p engine payload_estimate_table` — estimator at 1080p E=3 FTLE-on returns 1.327 + 0.133 = 1.460 GB; 4K E=3 FTLE-on 5.308 + 0.531 = 5.839 GB (payload §7 at 160 / 112 B, the widths from TASK-M3-41 on; *was* "1.261 + 0.133 = 1.393 GB; 4K E=3 FTLE-on 5.043 + 0.531 = 5.574 GB (payload §7 at 152 / 104 B", the generated widths with the collision floor's 8 B, code review 5912669217 of PR #531, C1, applied per R-369; *was* before that "1.194 + 0.133 = 1.327 GB; 4K E=3 FTLE-on 5.308 GB", perf review 5662126729 of PR #293, P5); the estimator's figure is unchanged with checkerboard on and off (R-113) (REQ-PERF-018).
+- `cargo test -p engine memory_tiers_table` — estimator output for each tier × {1080p, 1440p, 4K} equals the formula at 160/112 B, the widths from TASK-M3-41 on, whose recheck recomputes memory_tiers §4 at them (*was* 152/104 B, the generated widths with the collision floor's 8 B, code review 5912669217 of PR #531, C1, applied per R-369; *was* 144/96 B before that, perf review 5661999637 of PR #293, P1) with the reduction term `size_of(QuadReduction) × quads`, counted at every `N`, Custom's included, and a control omitting it differs at small `N` (R-422); the Ultra and Extreme rows and the totals that depend on them are provisional and are recomputed when REQ-PERF-086 lands (R-137) (REQ-PERF-025).
+- Review checklist (perf) — the fit check sums every term and applies the margin (REQ-PERF-031).
+- `cargo xtask bench memory-fit-margin` — the proposal records the margin with its method: estimator figures against measured process memory across tiers and resolutions; reviewer-checked, confirmed by the human at the M5 gate and recorded in decisions.md (REQ-PERF-093).
+
+## Notes
+- RQ-98 ruled: R-113 — REQ-PERF-005's "the estimator must credit checkerboard with no memory saving" joins REQ-PERF-018 here.
+- RQ-100 ruled: R-113 — REQ-PERF-074's margin half is REQ-PERF-093, an M5 calibration closed here (memory_tiers §8 gives no number); the fps thresholds stay in M8 (TASK-M8-25).
+- Calibrations proposed here (R-71; human confirmation at the M5 gate, then recorded in decisions.md): REQ-PERF-093.
+- R-422 (11 Oct 2026, closing RQ-269): the estimate counts one `QuadReduction` per quad, leaves and ancestors, at
+  every `N` (memory_tiers §3); §4's totals predate the term, so this task recomputes them with it.
+- *19 Nov 2026 (R-1034, applied by TASK-M0-76; logged in `plan/DECISIONS-LOG.md`):* qa's independent tests are asked only of physics-critical tasks, those naming physics among their reviewers, and this task's list names no physics, so qa no longer reviews it. *Was (Reviewers):* "code, qa, perf".

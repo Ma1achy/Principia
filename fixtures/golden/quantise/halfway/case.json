@@ -1,0 +1,15 @@
+{
+  "render": {
+    "shader": "halfway.wgsl",
+    "fragment": "fs_main",
+    "width": 256,
+    "height": 256
+  },
+  "reference": { "metal": "metal.png", "vulkan": "vulkan.png" },
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass",
+  "lines": { "row_0": { "from": [0, 0], "to": [255, 0] } },
+  "symptoms": [
+    { "name": "red_mean", "kind": "mean", "channel": "r" }
+  ]
+}

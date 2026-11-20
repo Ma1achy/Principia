@@ -1,0 +1,6 @@
+{
+  "gate": "oklab-roundtrip",
+  "inputs": ["full_gamut.json", "lattice.json", "perturbed_m1.json"],
+  "threshold": { "value": 1e-4, "requirement": "REQ-COL-049", "status": "provisional", "ruling": "R-182" },
+  "min_regions": { "value": null, "requirement": "REQ-COL-049" }
+}

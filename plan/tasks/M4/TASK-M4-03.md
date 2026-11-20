@@ -1,0 +1,65 @@
+# TASK-M4-03 — Tier L: branch decisions bit-identical on identical inputs, at the enumerated branch inputs
+
+- **Milestone:** M4
+- **Closes:** REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-066, REQ-EVT-021, REQ-VAL-059, REQ-VAL-078, REQ-INT-113
+- **Depends on:** TASK-M4-02, TASK-M4-29
+- **Needs (earlier milestones):** REQ-INT-028, REQ-INT-029, REQ-EVT-003, REQ-EVT-004, REQ-EVT-005, REQ-EVT-020, REQ-DEC-017, REQ-ENC-016, REQ-DEC-022, REQ-DEC-008, REQ-DEC-007, REQ-PAY-018
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** PIT-9, PIT-10
+- **Size:** ~450 lines
+
+## Goal
+The determinism pin, held and tested. Every branch input of the kernel is enumerated in the source (R-34): `d²` for the substep bucket and collision, the windowed `|Δn̂|` and `E_rel` for escape, the cap and horizon decisions, and the rest. Each multi-op branch input is built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal, in a fixed written form this task writes and proves (R-547; REQ-INT-064), and `d²` is position-quantised. *Was:* "Each multi-op branch input is written with explicit `fma` in a fixed form" (R-547 corrected it). The stateless no-fork suite then feeds identical inputs to CPU-f64, CPU-f32 and the native GPU and asserts every Tier L decision equal, against a control that must fork. Descriptor determinism is audited at the inputs that feed it, not at the packing expression.
+
+## References
+- `docs/contracts/principia_canonical_spec.md` § "2. The determinism law (the other defining decision)"
+- `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the walls — the primary comparison checklist)"
+- `docs/design/principia_systems_architecture.md` § "1. The rings — cross-cutting services"
+- `docs/design/principia_systems_architecture.md` § "2. Component inventory, by rung"
+- `docs/design/principia_systems_architecture.md` § "5. The seam catalogue"
+- `docs/design/principia_systems_architecture.md` § "6. Cross-cutting invariants (the load-bearing walls)"
+- `docs/design/principia_core_design.md` § "Principle: divergence is the observable"
+- `docs/contracts/principia_integrator_contract.md` § "Part 4 — Determinism, and the substep as the subtle seam"
+- `docs/contracts/principia_integrator_contract.md` § "Part 2 — Occupants and the capability profile"
+- `docs/design/principia_dd_integrator.md` § "2. Consolidated contract"
+- `docs/notes/principia_gpu_determinism_note.md` § "Why branches are special (continuous divergence is fine; branch divergence is not)"
+- `docs/contracts/principia_parity_contract.md` § "Tier L — exact, no tolerance (the bulk of the suite)"
+- `decisions.md` § "R-84 — Branch decisions across precisions *(closes RQ-35)*"
+- `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
+- `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made concrete"
+- `docs/notes/principia_gpu_determinism_note.md` § "The one-line law"
+- `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"
+- `docs/contracts/principia_parity_contract.md` § "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
+- `docs/contracts/principia_integrator_contract.md` § "And FMA contraction is a live question"
+- `decisions.md` § "R-34 — FMA: explicit fma at every branch input, enumerated *(IE-6)*"
+- `docs/read_first/principia_INDEX.md` § "Known open items"
+- `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
+- `docs/contracts/principia_parity_contract.md` § "2. The three tiers"
+- `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*"
+- `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+- `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+
+## Deliverables
+- `crates/kernel/src/branch_inputs.rs`: the enumerated list of branch inputs (name, formula, the written form built to R-547's rule, the decisions it feeds, the descriptor fields downstream of it), referenced from each use site. *Was:* "the explicit-`fma` written form" (R-547 corrected it).
+- The ionisation gate's stored `E_0` sign in `branch_inputs.rs` as the one enumerated exception, with the decision it feeds and REQ-INT-113's width (R-710).
+- Kernel edits: `d²` as f32 positions → one subtraction per axis → each square by the `IeeeBits::product` split form with its floor → one addition (R-547); collision as `d² < r_coll²`; `|Δn̂|` and `E_rel` in fixed written forms built to R-547's rule; no runtime `pow`/`sqrt`/`div` feeding a decision (the spike control `ceil((r_sub/√d²)^1.5)` absent from the kernel). *Was:* "`d²` as f32 positions → lone subtract → lone multiply → `fma(dy, dy, dx*dx)`", the form R-547 retired; and "`|Δn̂|` and `E_rel` in their fixed `fma` forms" (R-547 corrected it).
+- `crates/validation/tests/tier_l.rs`: property tests over fuzzed and synthetic boundary states; the boundary-state fixture set (`fixtures/gates/tier_l_boundary_states`); a control kernel variant built only in the test with the runtime-transcendental `N_sub`, which must fork.
+- `crates/validation/tests/descriptor_inputs.rs`: for each descriptor field, fork-tests at its branch inputs (per the enumerated list), plus a packing-level control that must read 0 forks where the input-level test finds them (pitfalls §9's 0 vs 83).
+
+## Acceptance tests
+- `cargo test -p validation tier_l_d2` — `d²` computed on every backend is bit-identical for fuzzed position pairs, separations whose squares fall below f32's smallest normal included; control: the superseded lone-multiply-and-fma form, evaluated on the CPU under an unfused or flush-to-zero emulation, gives a different `d²` or bucket on at least one pair (REQ-INT-066).
+- `cargo test -p validation tier_l_collision` — fuzzed pairs near `r_coll` on CPU and GPU: the collision decision is bit-identical; control: the superseded explicit-fma `d²` under an unfused or flush-to-zero CPU emulation decides at least one pair differently (REQ-EVT-021).
+- `cargo test -p validation tier_l_branches` — identical per-step inputs (fuzzed states) dispatched on GPU-f32, with the compute shaders' fast-math off (the default, R-297), and CPU-f64: `N_sub`, cap, collision, escape, horizon, `SIM_FAILED` and terminal decisions bit-exact; no code adjusts continuous values toward agreement; no test asserts label equality along a chaotic trajectory (REQ-INT-057).
+- `cargo test -p validation tier_l_boundary_states` — stateless test over boundary states: `N_sub`, terminal label and precedence, `state`, escaper identity, collision pair, feasibility and degenerate branch + reason, mirror-tie choice, coincident-pair rejection, decode-mode selection and loop iteration structure identical, but for the ionisation gate's `E_0` sign, which `tier_l_e0_sign` reports (R-710), across CPU-f64, CPU-f32 and native GPU (GitHub-hosted `macos-15` for Metal, and lavapipe as the second native backend, R-110, R-186); spike baseline 705 states, 0 forks; the runtime-`pow` control forks on the same inputs (REQ-VAL-059).
+- `cargo test -p validation tier_l_e0_sign` — boundary states either side of `E_0 = 0` on CPU-f64, CPU-f32, gpu-metal and gpu-lavapipe: a differing ionisation decision is reported with its distance from 0 in ulps of the larger of `|K_0|` and `|V_0|`, and no code reconciles it; the proposal for REQ-INT-113 comes from this measurement; control: a stored `E_0` perturbed past the width on one backend is reported as past it (REQ-INT-057, REQ-INT-113).
+- Physics reviewer, against `branch_inputs.rs`: an enumerated list of branch inputs exists; each multi-op input's form is built to R-547's rule, written and proved by this task, `E_rel`'s and `|Δn̂|`'s by TASK-M4-29 (R-694); nothing relies on per-backend FP-contraction settings or on `fma` being fused (REQ-INT-064), *was* "each multi-op input is written with explicit `fma`" (R-547 corrected it); every branch input is enumerated and none is fed by runtime `pow`/`sqrt`/`div`, the spike control absent, `E_0`'s sign the only exception, so marked (REQ-INT-061, R-710).
+- `cargo test -p validation descriptor_input_forks` — the parity audit enumerates the branch inputs feeding each descriptor field (per R-34's list) and fork-tests those; the packing-level control reads 0 forks against the input-level 83 (REQ-VAL-078).
+
+## Notes
+- Waits on RQ-697: what `branch_inputs.rs` and REQ-INT-061 hold of the ionisation gate's total `E > 0` follows that ruling, and the task starts only once it is ruled (applied per R-369; physics review 5771573790 of PR #408, F8).
+- Domain statement required in the test output: fixed inputs, per step (pitfalls §10).
+- RQ-97 ruled: R-113 — REQ-VAL-059 is the native half (Metal and lavapipe); its browser-GPU leg is REQ-VAL-144, closed with REQ-VAL-116 at M8 (TASK-M8-40). This task also carries the native-GPU legs dropped from M3: REQ-INT-028's `N_sub` and REQ-INT-029's capped step.
+- R-297: REQ-INT-057's bit-identity holds with the compute shaders' fast-math off, the default; with it on, parity is measured, not exact, and TASK-M4-20 reports the differences.
+- *4 Nov 2026 (R-694, RQ-685):* `|Δn̂|`'s and `E_rel`'s fixed forms are TASK-M4-29's (REQ-INT-112), so this task depends on it; REQ-INT-057's decisions and the Tier B fields are what R-297's bit-identity means with the setting off.
+- *4 Nov 2026 (R-710, closing RQ-697 (b)):* the wait on RQ-697 ends. Calibration proposed here (R-71; human confirmation, then recorded in decisions.md): REQ-INT-113. Where this file says explicit `fma` for `|Δn̂|` and `E_rel`, read R-547's rule and R-694's forms (TASK-M4-29): operations every IEEE backend rounds alike, no reliance on fusion.

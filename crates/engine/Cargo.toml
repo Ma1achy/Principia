@@ -1,0 +1,44 @@
+[package]
+name = "engine"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+ledger = { path = "../ledger" }
+kernel = { path = "../kernel" }
+render = { path = "../render" }
+# Profiler schema v1 is typed Rust with serde, written and read as JSON (R-56, TASK-M0-17).
+serde = { version = "1", features = ["derive"] }
+# `float_roundtrip` reads every float exactly, so a JCS number reads back to the same double; `raw_value` lets the
+# profiler header carry `config` as its canonical text (gui_state_contract §2, R-309, R-318; TASK-M0-18).
+serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }
+# The shortest round-trip digits of an f64, for JCS's number format (RFC 8785 §3.2.2.3 names Ryu; REQ-TOOL-145).
+ryu = "1"
+# The compute-pipeline entry point (R-297, TASK-M0-44): wgpu, at validation's version and backends; naga, wgpu's own
+# translator at its version, for the MSL it compiles with fast-math off and loads through wgpu's passthrough on Metal;
+# pollster to read wgpu's error scope.
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
+naga = { version = "30", features = ["wgsl-in", "msl-out"] }
+pollster = "1"
+# The trajectory fixtures' closed forms (TASK-M2-82) evaluate sin and cos through the pinned pure-software libm the
+# ledger already uses, documented below one ulp, so their rounding bounds are derived and their bits the same on every
+# platform.
+libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
+
+# The profiler tests validate written traces against the checked-in JSON Schema (TASK-M0-17); no remote references,
+# so no HTTP resolver. Controls reach engine's tests through a dev-dependency on validation (R-176).
+[dev-dependencies]
+jsonschema = { version = "0.58", default-features = false }
+validation = { path = "../validation" }
+# The shared proptest configuration's runner (validation::prop), for the lock's anchor-invariance property
+# (REQ-GUI-005, a property test; applied per R-369, code review 5640435439 of PR #290, C1).
+proptest = "1.11"
+
+# Under `controls`, each `negative_control!` in engine's tests compiles as a test (R-176).
+[features]
+controls = []
+# DX12, opt-in and off by default (R-862): local testing only, untested in CI. It adds wgpu's DX12 backend, which
+# builds on Windows only, at the version and backends above. engine selects no backend: `validation`'s and `gui`'s
+# features of the same name turn this one on. No required or hosted CI job builds it.
+dx12 = ["wgpu/dx12"]

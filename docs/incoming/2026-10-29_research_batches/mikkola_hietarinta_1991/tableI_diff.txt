@@ -1,0 +1,11 @@
+Mikkola & Hietarinta 1991 Table I: reading B (eye) vs OCR (parsed by scripts/mh1991_ocr_parse.py).
+row ('80', '0') col k_t: B_eye='0.988320' OCR='-0.988320'
+row ('-49', '0') col k_t: B_eye='2.2e3' OCR='2.2 x 10°'
+row ('-49', '74') col k_t: B_eye='1.5e3' OCR='1.5 × 10°'
+rows B_eye=15 OCR=15; cells compared 165; disagreements 3
+Resolution against the page (400 dpi crop):
+- (80, 0) k_t: the page prints 0.988320 with a speck of ink at the top left of the first digit, not a minus
+  sign (the rule height and position differ from the minus signs in the k_l row); kept 0.988320.
+- (-49, 0) and (-49, 74) k_t: printed '2.2 x 10^3' and '1.5 x 10^3'; the OCR read the superscript 3 as a
+  degree sign. Kept 2.2e3 and 1.5e3.
+Reconciled = reading B.

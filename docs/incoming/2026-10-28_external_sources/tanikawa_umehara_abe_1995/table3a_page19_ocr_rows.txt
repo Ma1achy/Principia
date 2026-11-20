@@ -1,0 +1,39 @@
+COLLISION ORBITS IN THE FREE-FALL THREE-BODY PROBLEM 353
+TABLE IIla
+Positions of several binary collision points of type 1 for different nmin
+N min Time v/h
+3 0.4500000 0.3020860 2.7956 0.6437 V -+
+0.4000000 0.2768580 2.9095 0.6145
+3 0.3500000 0.2367548 2.9795 0.5819 -+
+3 0.3182720 0.2000000 3.0197 0.5593 h
+3 0.2879061 0.1500000 3.0597 0.5359
+3 0.2713757 0.1100000 3.0851 0.5224 h +-
+4 0.4700000 0.2413480 2.7484 0.6444 -+
+4 0.4500000 0.2346858 2.8296 0.6336 -+
+4 0.4000000 0.2076712 2.9303 0.6043 V -+
+4 0.3423215 0.1500000 3.0212 0.5663 h +-
+4 0.3189724 0.1000000 3.0608 0.5494 +-
+0.4750000 0.2028287 2.7578 0.6420 V -+
+5 0.4500000 0.1946147 2.8446 0.6285 V -+
+0.3832896 0.1500000 2.9793 0.5887 h +-
+5 0.3465919 0.1000000 3.0493 0.5640 h
+0.4700000 0.1746141 2.7944 0.6364
+0.4000000 0.1347965 2.9674 0.5962 -+
+0.3708624 0.1000000 3.0286 0.5774 h +-
+0.3596987 0.0800000 3.0557 0.5699 h
+also reach the x-axis. However, more and more accuracy is needed to get collision
+points as initial positions approach the x-axis. This was observed for the collision
+curve of this type for nmin = 1 in Section 3, indicating that this type of orbits
+becomes extremely unstable in the vicinity of the x-axis. This seems to be related
+to a 'bifurcation'. It seems that, as the x-axis is approached, triple collision points
+appear along these curves with increasing frequency, and at these points collision
+curves of types 2 and 3 emerge in a manner that is suggestive of bifurcation. These
+phenomena will be studied in detail in the succeeding paper.
+Collision curves of types 1 and 3 also meet on I3 for each nmin ≥ 3. This
+seems to continue indefinitely. In fact, in analogy to the case of triple collision for
+nmin = 2, there should be initial conditions such that particle m2 arrives just in
+time when m1 and m3 make nmin-th binary collision for nmin = 3,4,.... Thus we
+have an infinite sequence of triple collision points on I3. We have obtained the
+coordinates of these points by interpolation. That is, we obtained binary collision
+points of types 1 and 3 inside and outside region D and interpolated the crossing
+points of the expected collision curves of types 1 and 3 with I3. The results are

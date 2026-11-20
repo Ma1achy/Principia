@@ -1,0 +1,501 @@
+use std::path::{Path, PathBuf};
+use std::process::ExitCode;
+
+use xtask::controls::{Mode, Partition};
+use xtask::deps::{self, CompileCheck, Metadata};
+use xtask::workspace_manifest;
+
+const USAGE: &str = "\
+Usage: cargo xtask <command>
+
+Commands:
+  web-skeleton [--out <dir>]      build the v1 web skeleton's site into <dir> (target/web-skeleton by default): the gui
+                                  crate for wasm32-unknown-unknown, its bindings by wasm-bindgen at the pinned version,
+                                  and web/skeleton's files; deployed by hand only, through pages.yml (R-627)
+  bench (<bench> | --all) [--bless]
+                                  run a fixed benchmark headless on the GPU (or every registered one), write its
+                                  profiler schema v1 trace to target/bench/<bench>.jsonl and compare it with
+                                  fixtures/bench/<bench>/baseline.json through `prin profile diff`, every rise in a
+                                  scope's p95 listed (telemetry §1.1); --bless writes the trace as the baseline first.
+                                  Not in `ci` nor any hosted workflow: run on the human's Mac (R-186)
+  build-kernel [--bless]          compile crates/kernel to SPIR-V with rust-gpu (target/spirv/kernel.spv) and
+                                  translate it to WGSL with naga (target/spirv/kernel.wgsl, and the read-back's
+                                  entries apart in target/spirv/branch_read.wgsl); refuses when
+                                  rust-gpu's backend needs another nightly than rust-toolchain.toml pins
+                                  (canonical_spec §1 item 2); fails when a fragment snippet lifted from the
+                                  translation (crates/render/wgsl/decode.wgsl, encode.wgsl,
+                                  crates/ledger/wgsl/shape.wgsl) differs from the checked-in file; --bless writes
+                                  them (R-116)
+  build-kernel --cache-dir <dir>  the same, but taking the three outputs from <dir>/<kernel source hash>/ when that
+                                  entry is whole (the fragment snippets still checked against its SPIR-V), and
+                                  storing them there after a build; plain build-kernel does the same with
+                                  PRIN_KERNEL_CACHE=<dir> set, as CI sets it (TASK-M0-77)
+  kernel-src-hash                 print the kernel's source hash, the key of the compiled kernel's cache in CI and on
+                                  the Windows runner (TASK-M0-77)
+  ci-cache-trim --root <dir> --target-cap-gb <n> --keep-kernels <n> [--keep <dir>]
+                                  trim the Windows runner's compile cache: <dir>/target's folders, oldest first, to
+                                  the cap, <dir>/kernel's entries to the newest n, never <dir> --keep names (TASK-M0-77)
+  ci [--list | --partition <k>/<n>]
+                                  run every registered per-push runner, in order (R-177); --list runs each
+                                  runner's listing-only form, which runs no control (R-235); --partition runs
+                                  shard k of n: controls on its slice, build-kernel, and the other runners in
+                                  shard 1 only (R-360)
+  codegen                         regenerate the checked-in generated files from the layout table; refuses when
+                                  an entry lacks a §3.8 key, naming the field and the key (dd_generation_root §3.8)
+  controls [--list] [--partition <k>/<n>] [--manifest-path <Cargo.toml>]
+                                  check that every test of each crate declaring the `controls` feature has a
+                                  negative control that makes it fail (REQ-VAL-147, R-199, R-201); on this
+                                  workspace or on <Cargo.toml>'s; a crate without the feature is skipped (R-176);
+                                  --list lists each test's controls and checks the listing, running none (R-226);
+                                  --partition runs, or lists, only the k-th of n slices of the controls, by a
+                                  stable hash of the control name (R-360)
+  deps [--metadata <file> | --manifest-path <Cargo.toml>]
+                                  check the workspace crate graph against systems_architecture §7.1, and
+                                  that no unit test of kernel or ledger uses validation, by compiling them
+                                  without it (R-187, R-191); reads `cargo metadata --format-version 1` on
+                                  this workspace or on <Cargo.toml>'s, or reads <file>, a metadata fixture
+                                  (the compile check is then skipped)
+  gate (<gate> [<flags>] | --all | --list)
+                                  run the numerical gate <gate>, or every registered gate, on its inputs in
+                                  fixtures/gates/<gate>/, against the threshold its gate.json names by requirement
+                                  id, writing each report under target/gates/; fails naming each input whose outcome
+                                  is not its expected one (TASK-M0-05); --list lists the gates and runs none; what
+                                  follows a measurement gate's name is its flags, cross-backend-branches' --write-inputs,
+                                  --record <file> [--cpu-f32] [--hardware-label <label>] and --compare <records>
+  golden (<suite> | --all | --list)
+                                  render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
+                                  offscreen, compare it with its reference to the tolerance its requirement id
+                                  gives, and write the difference image and summary under target/golden/ (R-110);
+                                  --list loads and checks every case and lists it, opening no device
+  golden repro <suite>/<case> --vary <field>=<a>,<b>
+                                  render two arms differing in exactly one field (a pair differing in more is
+                                  refused), and report the RGB values along the case's lines and one column per
+                                  symptom per arm (philosophy §4.3a; pitfalls §8)
+  lint constants                  fail on a numeric const or static in crates/{kernel,ledger,engine} not read
+                                  from the constants register, naming file and line (dd_generation_root §3.8)
+  lint vocab                      fail on a retired term (canonical_spec §8) or an identifier outside the locked
+                                  taxonomy (memory_tiers §1) in crates/, xtask/, fixtures/, web/ or docs/ (.md,
+                                  .html; not archive/ or reference/, nor passages in `retired-terms` markers),
+                                  naming file, line and term (R-111, R-259)
+  lint wgsl                       parse the generated WGSL with naga and fail, naming the rule, on an extractBits
+                                  argument not u32, any f64, `enable f16`, r/p/r_sh/p_sh not array<vec2<f32>, 3>,
+                                  a word buffer not bound on its own and indexed per copy (REQ-RENDER-001), a
+                                  buffer off the ledger's binding table (simstate_buffer @group(1) @binding(0),
+                                  word_buffer @group(1) @binding(1)), a generated SIMSTATE_/WORD_GROUP or _BINDING
+                                  constant unequal to its attribute, a binding in group 0 (bindings, R-343), or
+                                  either buffer used outside the read side's sample_read (sample-only, R-343,
+                                  R-378), a whole stored struct loaded from simstate_buffer, or the two buffers
+                                  read at different indices (per-member, R-378); and,
+                                  in every WGSL file under crates/render/frag/ and crates/render/shaders/ (the
+                                  shared library, linted after the prelude), naming file, line and rule and a
+                                  bit-pattern test as the fix: isinf or isnan, a comparison against an inf or NaN
+                                  constant, a float compared with itself, or a comparison against a finite-max
+                                  stand-in, ±65504 or ±3.40282347e38 (REQ-RENDER-083, R-351, R-352)
+  lint compute-pipelines          fail on a compute pipeline created, or wgpu's passthrough used, outside the
+                                  compute entry point (crates/engine/src/compute.rs), or a vertex or fragment
+                                  pipeline beside its passthrough, naming file, line and identifier (R-297)
+  lint no-alloc                   fail on `Vec`, `Box` or `dyn`, `std::` or `alloc::`, or `extern crate std` or
+                                  `extern crate alloc`, in the kernel's physics and driver layers
+                                  (crates/kernel/src/{physics,driver}), naming file, line and token
+                                  (integrator_contract Part 2c rule 5; REQ-PERF-002)
+  measure libm-pin [--wasm] [--against <run>...]
+                                  the libm-pin measurement (R-991, REQ-CHART-212): the harness xtask/libm_pin/ decodes
+                                  the first slice's three charts over their grids in f64 on this machine, on the pinned
+                                  path, the std path (kernel's measure-std-maths) and the control (measure-perturb-sin),
+                                  each run written under <target>/measure/libm-pin/; --wasm runs the pinned and std
+                                  paths built for wasm32-unknown-unknown under node too; --against compares another
+                                  machine's run with this one's of the same arm. Prints the records differing at f64
+                                  and after narrowing, per chart and zoom, and the outcome: PASS, INCOMPLETE,
+                                  UNEXPLAINED or void
+  measure libm-pin --write <file> [--std]
+                                  write this machine's pinned run (or std run) to <file>, for --against elsewhere
+  screenshot (<suite> | --all)    run the GUI screenshot suite fixtures/screenshot/<suite>/, or every suite: a layout
+                                  case renders its surface headless (native wgpu offscreen) and writes the capture
+                                  beside a copy of its artboard under target/screenshot/, for layout comparison only
+                                  (R-68); a presence-only case fails naming each listed control its surface lacks
+                                  (R-129). Not in `ci`: GUI PRs and the gates run it (R-110, R-177)";
+
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let args: Vec<&str> = args.iter().map(String::as_str).collect();
+    let result = match args.as_slice() {
+        ["bench", "--all", bless @ ..] if bless.is_empty() || bless == ["--bless"] => {
+            xtask::bench::run(
+                &workspace_manifest(),
+                xtask::bench::Which::All,
+                !bless.is_empty(),
+            )
+        }
+        ["bench", name, bless @ ..]
+            if !name.starts_with('-') && (bless.is_empty() || bless == ["--bless"]) =>
+        {
+            xtask::bench::run(
+                &workspace_manifest(),
+                xtask::bench::Which::One(name),
+                !bless.is_empty(),
+            )
+        }
+        #[cfg(unix)]
+        ["job", rest @ ..] => return xtask::jobq::cli(rest),
+        ["build-kernel"] => match std::env::var(xtask::build_kernel::CACHE_ENV) {
+            Ok(cache) if !cache.is_empty() => {
+                xtask::build_kernel::run_cached(&workspace_manifest(), Path::new(&cache))
+            }
+            _ => xtask::build_kernel::run(&workspace_manifest()),
+        },
+        ["build-kernel", "--bless"] => xtask::build_kernel::run_with(&workspace_manifest(), true),
+        ["build-kernel", "--cache-dir", cache] => {
+            xtask::build_kernel::run_cached(&workspace_manifest(), Path::new(cache))
+        }
+        ["kernel-src-hash"] => {
+            xtask::kernel_cache::source_hash(&workspace_root()).map(|hash| println!("{hash}"))
+        }
+        ["ci-cache-trim", rest @ ..] => xtask::kernel_cache::trim_cli(rest),
+        ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
+        ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),
+        ["ci", "--partition", slice] => Partition::parse(slice)
+            .and_then(|slice| xtask::ci::run_partition(xtask::ci::RUNNERS, slice)),
+        ["codegen"] => xtask::codegen::run(&workspace_manifest()),
+        ["controls"] => xtask::controls::run(&workspace_manifest(), Mode::Run),
+        ["controls", "--list"] => xtask::controls::run(&workspace_manifest(), Mode::List),
+        ["controls", "--manifest-path", path] => xtask::controls::run(Path::new(path), Mode::Run),
+        ["controls", "--list", "--manifest-path", path] => {
+            xtask::controls::run(Path::new(path), Mode::List)
+        }
+        ["controls", rest @ ..] if rest.contains(&"--partition") => controls_partition(rest),
+        ["gate", "--all"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::All),
+        ["gate", "--list"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::List),
+        ["gate", name, flags @ ..] if !name.starts_with('-') => {
+            xtask::gate::run(&workspace_manifest(), xtask::gate::Which::One(name, flags))
+        }
+        ["golden", rest @ ..] => xtask::golden::cli(&workspace_root(), rest),
+        ["lint", "constants"] => xtask::lint_constants::run(&workspace_manifest()),
+        ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),
+        ["lint", "wgsl"] => xtask::lint_wgsl::run(&workspace_manifest()),
+        ["lint", "compute-pipelines"] => xtask::lint_compute::run(&workspace_manifest()),
+        ["lint", "no-alloc"] => xtask::lint_no_alloc::run(&workspace_manifest()),
+        ["measure", "libm-pin", rest @ ..] => measure_libm_pin(rest),
+        ["web-skeleton"] => {
+            xtask::web_skeleton::build("wasm-bindgen", &xtask::web_skeleton::default_out())
+        }
+        ["web-skeleton", "--out", out] => {
+            xtask::web_skeleton::build("wasm-bindgen", Path::new(out))
+        }
+        ["screenshot", "--all"] => {
+            xtask::screenshot::run(&workspace_root(), xtask::screenshot::Which::All)
+        }
+        ["screenshot", suite] if !suite.starts_with('-') => {
+            xtask::screenshot::run(&workspace_root(), xtask::screenshot::Which::One(suite))
+        }
+        ["deps"] => run_deps(Source::Workspace(None)),
+        ["deps", "--manifest-path", path] => run_deps(Source::Workspace(Some(Path::new(path)))),
+        ["deps", "--metadata", path] => run_deps(Source::Fixture(PathBuf::from(path))),
+        ["--help"] | ["-h"] => {
+            println!("{USAGE}");
+            #[cfg(unix)]
+            println!("{}", xtask::jobq::USAGE);
+            return ExitCode::SUCCESS;
+        }
+        _ => {
+            eprintln!(
+                "xtask: unrecognised arguments: {}\n\n{USAGE}",
+                args.join(" ")
+            );
+            return ExitCode::from(2);
+        }
+    };
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(message) => {
+            eprintln!("xtask: {message}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// `cargo xtask controls` with `--partition <k>/<n>` among `args`, and optionally `--list` and `--manifest-path
+/// <Cargo.toml>`, in any order (R-360).
+fn controls_partition(args: &[&str]) -> Result<(), String> {
+    let (mut mode, mut partition, mut manifest) = (Mode::Run, None, workspace_manifest());
+    let mut args = args.iter();
+    while let Some(arg) = args.next() {
+        match *arg {
+            "--list" => mode = Mode::List,
+            "--partition" => {
+                let slice = args.next().ok_or("controls: --partition takes k/n")?;
+                partition = Some(Partition::parse(slice)?);
+            }
+            "--manifest-path" => {
+                let path = args
+                    .next()
+                    .ok_or("controls: --manifest-path takes a path")?;
+                manifest = PathBuf::from(path);
+            }
+            other => return Err(format!("controls: unrecognised argument `{other}`")),
+        }
+    }
+    let partition = partition.ok_or("controls: --partition takes k/n")?;
+    xtask::controls::run_partition(&manifest, mode, partition)
+}
+
+/// The libm-pin harness's arms on this machine: each one's name, which names its run's file and its own target directory,
+/// and the harness features it is built with.
+const LIBM_PIN_ARMS: [(&str, &str); 3] = [
+    ("pinned", ""),
+    ("std", "std-maths"),
+    ("control", "perturb-sin"),
+];
+
+/// The directory the libm-pin harness builds and writes under: `$CARGO_TARGET_DIR`, or the workspace's `target/`.
+fn libm_pin_base() -> PathBuf {
+    std::env::var_os("CARGO_TARGET_DIR")
+        .map_or_else(|| workspace_root().join("target"), PathBuf::from)
+}
+
+/// The cargo that runs xtask, as `deps` takes it.
+fn libm_pin_cargo() -> String {
+    std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
+}
+
+/// Runs a cargo or node command, `what` naming it in an error.
+fn libm_pin_spawn(command: &mut std::process::Command, what: &str) -> Result<(), String> {
+    let status = command
+        .status()
+        .map_err(|e| format!("measure libm-pin: cannot run {what}: {e}"))?;
+    status
+        .success()
+        .then_some(())
+        .ok_or_else(|| format!("measure libm-pin: {what} failed ({status})"))
+}
+
+/// The harness built with `features` and run natively, its run written to `file`.
+fn libm_pin_native(name: &str, features: &str, file: &Path) -> Result<(), String> {
+    let mut command = std::process::Command::new(libm_pin_cargo());
+    command
+        .args(["run", "--release", "--quiet", "--manifest-path"])
+        .arg(workspace_root().join("xtask/libm_pin/Cargo.toml"))
+        .arg("--target-dir")
+        .arg(libm_pin_base().join("libm-pin").join(name));
+    if !features.is_empty() {
+        command.args(["--features", features]);
+    }
+    libm_pin_spawn(
+        command.args(["--", "write"]).arg(file),
+        &format!("the {name} arm"),
+    )
+}
+
+/// The harness built for wasm32-unknown-unknown with `features` and run under node (`xtask/libm_pin/run.mjs`), its run,
+/// the arm `name`, written to `file`.
+fn libm_pin_wasm(name: &str, features: &str, file: &Path) -> Result<(), String> {
+    let target = libm_pin_base()
+        .join("libm-pin")
+        .join(format!("wasm-{name}"));
+    let mut build = std::process::Command::new(libm_pin_cargo());
+    build
+        .args([
+            "build",
+            "--release",
+            "--quiet",
+            "--lib",
+            "--target",
+            "wasm32-unknown-unknown",
+            "--manifest-path",
+        ])
+        .arg(workspace_root().join("xtask/libm_pin/Cargo.toml"))
+        .arg("--target-dir")
+        .arg(&target);
+    if !features.is_empty() {
+        build.args(["--features", features]);
+    }
+    libm_pin_spawn(&mut build, &format!("the wasm {name} build"))?;
+    let wasm = target.join("wasm32-unknown-unknown/release/libm_pin.wasm");
+    let mut node = std::process::Command::new("node");
+    node.arg(workspace_root().join("xtask/libm_pin/run.mjs"))
+        .arg(&wasm)
+        .arg(file)
+        .arg(name);
+    libm_pin_spawn(&mut node, &format!("the wasm {name} arm under node"))
+}
+
+/// Reads a run's file.
+fn libm_pin_read(file: &Path) -> Result<xtask::libm_pin::Run, String> {
+    let bytes = std::fs::read(file)
+        .map_err(|e| format!("measure libm-pin: cannot read {}: {e}", file.display()))?;
+    xtask::libm_pin::parse(&bytes)
+}
+
+/// `cargo xtask measure libm-pin`, its flags `rest` (the usage's two forms).
+fn measure_libm_pin(rest: &[&str]) -> Result<(), String> {
+    use xtask::libm_pin::{compare, outcome, table, Outcome};
+    match rest {
+        ["--write", file] => return libm_pin_native("pinned", "", Path::new(file)),
+        ["--write", file, "--std"] => return libm_pin_native("std", "std-maths", Path::new(file)),
+        _ => {}
+    }
+    let (mut wasm, mut against) = (false, Vec::new());
+    let mut words = rest.iter();
+    while let Some(word) = words.next() {
+        match *word {
+            "--wasm" => wasm = true,
+            "--against" => against.push(PathBuf::from(
+                words.next().ok_or("measure libm-pin: --against <run>")?,
+            )),
+            other => return Err(format!("measure libm-pin: unrecognised argument `{other}`")),
+        }
+    }
+    let out = libm_pin_base().join("measure/libm-pin");
+    std::fs::create_dir_all(&out)
+        .map_err(|e| format!("measure libm-pin: {}: {e}", out.display()))?;
+    let mut runs = Vec::new();
+    for (name, features) in LIBM_PIN_ARMS {
+        let file = out.join(format!("{name}.bin"));
+        libm_pin_native(name, features, &file)?;
+        runs.push(libm_pin_read(&file)?);
+    }
+    if wasm {
+        for (name, features) in &LIBM_PIN_ARMS[..2] {
+            let file = out.join(format!("wasm-{name}.bin"));
+            libm_pin_wasm(name, features, &file)?;
+            against.push(file);
+        }
+    }
+    let [pinned, std_path, control] =
+        <[_; 3]>::try_from(runs).map_err(|_| "measure libm-pin: three arms")?;
+    let here = &pinned.header.host;
+    let mut report = table(
+        &format!("std against pinned, {here}"),
+        &compare(&pinned, &std_path)?,
+    );
+    let control_counts = compare(&pinned, &control)?;
+    report += &table(
+        &format!("control (sin one ulp up) against pinned, {here}"),
+        &control_counts,
+    );
+    let mut pinned_elsewhere = Vec::new();
+    for file in &against {
+        let other = libm_pin_read(file)?;
+        let base = match other.header.arm.as_str() {
+            "pinned" => &pinned,
+            "std" => &std_path,
+            arm => {
+                return Err(format!(
+                    "measure libm-pin: {} is a `{arm}` run",
+                    file.display()
+                ))
+            }
+        };
+        let counts = compare(base, &other)?;
+        report += &table(
+            &format!("{} {} against {here}", other.header.arm, other.header.host),
+            &counts,
+        );
+        if other.header.arm == "pinned" {
+            pinned_elsewhere.push((other.header.host.clone(), counts));
+        }
+    }
+    print!("{report}");
+    let ran: Vec<&str> = pinned_elsewhere
+        .iter()
+        .map(|(host, _)| host.as_str())
+        .collect();
+    match outcome(&control_counts, &pinned_elsewhere) {
+        Outcome::Pass => {
+            println!("libm-pin: PASS ({})", ran.join(", "));
+            Ok(())
+        }
+        Outcome::Incomplete(missing) => {
+            println!(
+                "libm-pin: INCOMPLETE, pinned arms not run: {}; 0 records differ on the arms that ran: {}",
+                missing.join(", "),
+                if ran.is_empty() { "none".to_owned() } else { ran.join(", ") }
+            );
+            Ok(())
+        }
+        Outcome::Unexplained(hosts) => Err(format!(
+            "libm-pin: UNEXPLAINED, pinned records differ on {}",
+            hosts.join(", ")
+        )),
+        Outcome::Void => {
+            Err("libm-pin: void, the control's one-ulp sin changed no record at f64".to_owned())
+        }
+    }
+}
+
+/// This workspace's root directory.
+fn workspace_root() -> PathBuf {
+    workspace_manifest()
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_default()
+}
+
+enum Source<'a> {
+    /// A workspace on disk: this one, or the one of the given `Cargo.toml`.
+    Workspace(Option<&'a Path>),
+    /// A metadata fixture, with no sources behind it.
+    Fixture(PathBuf),
+}
+
+fn run_deps(source: Source<'_>) -> Result<(), String> {
+    let (metadata, fixture) = match &source {
+        Source::Workspace(None) => (Metadata::from_cargo()?, None),
+        Source::Workspace(Some(manifest)) => (Metadata::from_cargo_at(manifest)?, None),
+        Source::Fixture(path) => (Metadata::from_file(path)?, Some(path)),
+    };
+    let edges = metadata.edges()?;
+    let violations = deps::check(&edges);
+    for violation in &violations {
+        eprintln!("xtask deps: {violation}");
+    }
+    // A fixture may describe a graph with no sources behind it; the workspace must have them.
+    metadata.check_targets(fixture.is_none())?;
+    let compiled = match fixture {
+        Some(path) => {
+            println!(
+                "xtask deps: compile check skipped: {} is a metadata fixture, with no sources to compile \
+                 (R-187, R-191)",
+                path.display()
+            );
+            Ok(())
+        }
+        None => match deps::compile_check(&metadata) {
+            Ok(CompileCheck::NotNeeded) => {
+                println!(
+                    "xtask deps: compile check not needed: neither kernel nor ledger takes validation as a \
+                     dev-dependency (R-187, R-191)"
+                );
+                Ok(())
+            }
+            Ok(CompileCheck::Passed(crates)) => {
+                let verb = if crates.len() == 1 {
+                    "compiles"
+                } else {
+                    "compile"
+                };
+                println!(
+                    "xtask deps: compile check passed: {} {verb} without the validation dev-dependency, so no \
+                     unit test uses it (R-187, R-191)",
+                    crates.join(" and ")
+                );
+                Ok(())
+            }
+            Err(message) => Err(message),
+        },
+    };
+    if violations.is_empty() {
+        compiled?;
+        println!(
+            "xtask deps: {} workspace edge(s), all in the allowed-edge table (systems_architecture §7.1)",
+            edges.len()
+        );
+        return Ok(());
+    }
+    if let Err(message) = compiled {
+        eprintln!("xtask deps: {message}");
+    }
+    Err(format!(
+        "{} forbidden workspace edge(s) (REQ-SYS-004)",
+        violations.len()
+    ))
+}

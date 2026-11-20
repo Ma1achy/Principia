@@ -1,0 +1,45 @@
+//! The three-body force, dd_integrator §3.1, with `G = 1` (REQ-INT-036):
+//!
+//! ```text
+//! aᵢ = Σ_{j≠i} mⱼ (rⱼ − rᵢ) / ‖rⱼ − rᵢ‖³        (3 pairs; ‖·‖³ shared with r_min)
+//! ```
+//!
+//! read from a [`PairGeom`]. Pair `k = (i, j)` (R-22: `(1, 2), (2, 0), (0, 1)`) contributes `uₖ = dₖ/‖dₖ‖³` once:
+//! `+mⱼuₖ` to `aᵢ` and `−mᵢuₖ` to `aⱼ`, since `rᵢ − rⱼ = −dₖ`. So `a₀ = m₁u₂ − m₂u₁`, `a₁ = m₂u₀ − m₀u₂` and
+//! `a₂ = m₀u₁ − m₁u₀`.
+
+use super::PairGeom;
+use crate::Real;
+
+/// The accelerations `aᵢ` of the three bodies of masses `m`, from their pairwise geometry `g`.
+#[inline]
+pub fn force<R: Real>(m: &[R; 3], g: &PairGeom<R>) -> [[R; 2]; 3] {
+    let (sep, cube) = (g.sep(), g.cube());
+    let u = [
+        [sep[0][0] / cube[0], sep[0][1] / cube[0]],
+        [sep[1][0] / cube[1], sep[1][1] / cube[1]],
+        [sep[2][0] / cube[2], sep[2][1] / cube[2]],
+    ];
+    combine(m, &u)
+}
+
+/// The accelerations from the three pairs' terms `uₖ` (the module's note): `a₀ = m₁u₂ − m₂u₁`, `a₁ = m₂u₀ − m₀u₂`,
+/// `a₂ = m₀u₁ − m₁u₀`. Linear in `u`, so a difference of terms gives the difference of accelerations
+/// ([`super::difference`]).
+#[inline]
+pub fn combine<R: Real>(m: &[R; 3], u: &[[R; 2]; 3]) -> [[R; 2]; 3] {
+    [
+        [
+            m[1] * u[2][0] - m[2] * u[1][0],
+            m[1] * u[2][1] - m[2] * u[1][1],
+        ],
+        [
+            m[2] * u[0][0] - m[0] * u[2][0],
+            m[2] * u[0][1] - m[0] * u[2][1],
+        ],
+        [
+            m[0] * u[1][0] - m[1] * u[0][0],
+            m[0] * u[1][1] - m[1] * u[0][1],
+        ],
+    ]
+}

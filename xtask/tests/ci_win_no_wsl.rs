@@ -1,0 +1,1383 @@
+//! No test the Windows runner runs may start a bare `bash` or `wsl` (the owner, 14 Nov 2026: "The PC runs the GPU suites
+//! only. Tests that fail there for lack of Unix tools ... are excluded on Windows with a stated reason (they run on
+//! hosted Linux already), not fixed"; TASK-M0-71).
+//!
+//! On the PC, `Command::new("bash")` finds C:\Windows\System32\bash.exe, WSL's launcher, before any bash on PATH, and so
+//! runs in the account's default WSL distro, whose files it can change: the nightly `win-tests` job's xtask tests did,
+//! appending to `ci`'s `~/.cargo/config.toml` in `principia-wsl` (run 43593938536). `wsl` goes there by name.
+//!
+//! - `win_runner_tests_start_no_bare_bash_or_wsl`: every cargo command of every job of `win-gpu.yml` on the runner is
+//!   read, with the nextest profile its step names, and each test file it can reach is found: a `--test` target, a
+//!   profile's `binary_id(=…)` list, every test file holding a name filter's text (a superset of the tests the filter
+//!   selects), or every test of a package that it runs whole; and the modules each of those files includes. Those
+//!   files, and every library source of the workspace, which any test binary may link, must hold no `Command::new`
+//!   of `bash`, `wsl` or System32's copy of either, in any string literal form (plain, raw, raw with hashes), unless
+//!   the file is left out on Windows by an unindented inner `#![cfg(unix)]` or `#![cfg(not(windows))]` among the
+//!   comments and inner attributes that open it, before any item, with its reason in the comment on the line above;
+//!   a `cfg` inside a module leaves out that module, not the file. A module included by `#[path]` is resolved through
+//!   `.` and `..`, whatever other attributes stand beside it, and one that can't be found fails the check. A command
+//!   the check can't read fails it, so a new kind of step can't pass by being skipped.
+//!
+//! - `win_runner_scripts_start_wsl_only_naming_the_distro`: the runner's own scripts, every `.ps1` under
+//!   `.github/scripts`, and the lines of its jobs' steps start WSL only naming the distro (`-d $Distro`), or list or
+//!   manage the named one, never `bash` or `wsl` bare, nor System32's copy by its path. The one exception is
+//!   `.github/scripts/wsl_route.ps1`, the check that the route those take is closed (TASK-M0-72): it starts them
+//!   naming no distro on purpose, each start one that must fail, and fails its job if one doesn't.
+//!
+//! It starts no process: it reads files only, so that it holds wherever it runs. Its negative controls (R-176) put
+//! back a whole-workspace run on the runner; plant a bare `bash` in a reached test, in a module it includes (by a
+//! `#[path]` through `..`, under another attribute, or on the `mod` line), in a library source, or as a raw string;
+//! give a `#[path]` module that isn't there; put a file's Windows exclusion inside a module, after an item, or with no
+//! reason; and give the check a command it can't read.
+
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
+
+use validation::negative_control;
+use yaml_rust2::{Yaml, YamlLoader};
+
+const WORKFLOW: &str = ".github/workflows/win-gpu.yml";
+const NEXTEST: &str = ".config/nextest.toml";
+/// The programs that reach WSL on the PC, by bare name or as System32 holds them.
+const WSL_PROGRAMS: [&str; 4] = ["bash", "bash.exe", "wsl", "wsl.exe"];
+/// The inner attributes that leave a file out of a Windows build.
+const NOT_ON_WINDOWS: [&str; 4] = [
+    "#![cfg(unix)]",
+    "#![cfg(not(windows))]",
+    "#![cfg(not(target_os=\"windows\"))]",
+    "#![cfg(target_family=\"unix\")]",
+];
+
+fn root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("the workspace root")
+        .to_path_buf()
+}
+
+fn read(rel: &str) -> String {
+    std::fs::read_to_string(root().join(rel))
+        .unwrap_or_else(|e| panic!("ci_win_no_wsl: {rel}: {e}"))
+}
+
+/// The workspace's sources: each package by name, its directory, and every `.rs` file under its `src/` and `tests/`,
+/// by path from the workspace root with `/` separators.
+#[derive(Clone)]
+struct Tree {
+    packages: BTreeMap<String, String>,
+    files: BTreeMap<String, String>,
+}
+
+fn walk(dir: &Path, rel: &str, out: &mut BTreeMap<String, String>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries {
+        let entry = entry.expect("a directory entry");
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let path = entry.path();
+        let rel = format!("{rel}/{name}");
+        if path.is_dir() {
+            walk(&path, &rel, out);
+        } else if name.ends_with(".rs") {
+            let text = std::fs::read_to_string(&path)
+                .unwrap_or_else(|e| panic!("ci_win_no_wsl: {rel}: {e}"));
+            out.insert(rel, text);
+        }
+    }
+}
+
+fn tree() -> Tree {
+    let root = root();
+    let mut dirs = vec!["xtask".to_owned()];
+    for entry in std::fs::read_dir(root.join("crates")).expect("crates/") {
+        let name = entry
+            .expect("an entry")
+            .file_name()
+            .to_string_lossy()
+            .into_owned();
+        dirs.push(format!("crates/{name}"));
+    }
+    let mut packages = BTreeMap::new();
+    let mut files = BTreeMap::new();
+    for dir in dirs {
+        let Ok(manifest) = std::fs::read_to_string(root.join(&dir).join("Cargo.toml")) else {
+            continue;
+        };
+        let name = manifest
+            .lines()
+            .find_map(|l| l.strip_prefix("name = \""))
+            .and_then(|l| l.strip_suffix('"'))
+            .unwrap_or_else(|| panic!("ci_win_no_wsl: {dir}/Cargo.toml names no package"));
+        packages.insert(name.to_owned(), dir.clone());
+        for sub in ["src", "tests"] {
+            walk(
+                &root.join(&dir).join(sub),
+                &format!("{dir}/{sub}"),
+                &mut files,
+            );
+        }
+    }
+    Tree { packages, files }
+}
+
+/// A command line's words, as a shell splits them: quotes group and are dropped.
+fn words(line: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut word = String::new();
+    let mut quote = None;
+    let mut started = false;
+    for c in line.chars() {
+        match (quote, c) {
+            (Some(q), c) if c == q => quote = None,
+            (Some(_), c) => word.push(c),
+            (None, '\'' | '"') => {
+                quote = Some(c);
+                started = true;
+            }
+            (None, c) if c.is_whitespace() => {
+                if started {
+                    out.push(std::mem::take(&mut word));
+                    started = false;
+                }
+            }
+            (None, c) => {
+                word.push(c);
+                started = true;
+            }
+        }
+    }
+    assert!(
+        quote.is_none(),
+        "ci_win_no_wsl: an unclosed quote in {line:?}"
+    );
+    if started {
+        out.push(word);
+    }
+    out
+}
+
+/// The `binary_id(=<package>::<target>)` list a profile's `default-filter` is, and nothing else; `None` when the profile
+/// has no `default-filter`.
+fn profile_binaries(nextest: &str, profile: &str) -> Option<Vec<(String, String)>> {
+    let head = format!("[profile.{profile}]\n");
+    let body = nextest.split(head.as_str()).nth(1)?;
+    let body = body.split("\n[").next().unwrap_or(body);
+    let filter = body
+        .split("default-filter = \"\"\"")
+        .nth(1)?
+        .split("\"\"\"")
+        .next()?;
+    let mut out = Vec::new();
+    for item in filter.split('|') {
+        let item = item.trim();
+        let target = item
+            .strip_prefix("binary_id(=")
+            .and_then(|i| i.strip_suffix(')'))
+            .unwrap_or_else(|| {
+                panic!("ci_win_no_wsl: the profile {profile}'s filter holds {item:?}, which the check can't read")
+            });
+        let (package, binary) = target
+            .split_once("::")
+            .unwrap_or_else(|| panic!("ci_win_no_wsl: {target:?} names no package"));
+        out.push((package.to_owned(), binary.to_owned()));
+    }
+    Some(out)
+}
+
+/// The modules a test file includes, by `mod <name>;`. A `#[path = "…"]` is looked for among the attributes on the
+/// `mod` line and on every attribute or comment line above it, and resolved through `.` and `..` from the file's
+/// folder; a `#[path]` module that can't be found fails the check. With no `#[path]`, a test target's modules sit
+/// beside it, as a `main.rs`'s or `mod.rs`'s do, and another module's in a folder of its name; only such a module
+/// whose default file is missing is left out: it wouldn't compile, so it runs nothing.
+fn modules(path: &str, text: &str, tree: &Tree) -> Vec<String> {
+    let (dir, file) = path.rsplit_once('/').unwrap_or(("", path));
+    let target = dir.ends_with("/tests") || matches!(file, "mod.rs" | "main.rs");
+    let base = if target {
+        dir.to_owned()
+    } else {
+        format!("{dir}/{}", file.trim_end_matches(".rs"))
+    };
+    let lines: Vec<&str> = text.lines().map(str::trim).collect();
+    let mut out = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        // The attributes written on the `mod` line itself, then the item's, on the lines above it.
+        let (mut attrs, item) = split_attributes(line);
+        let item = strip_visibility(item);
+        let Some(name) = item
+            .strip_prefix("mod ")
+            .and_then(|l| l.strip_suffix(';'))
+            .map(str::trim)
+        else {
+            continue;
+        };
+        for above in lines[..i].iter().rev() {
+            if above.starts_with("#[") {
+                attrs.extend(split_attributes(above).0);
+            } else if !above.starts_with("//") {
+                break;
+            }
+        }
+        let explicit = attrs.iter().find_map(|a| {
+            let squeezed: String = a.chars().filter(|c| !c.is_whitespace()).collect();
+            squeezed
+                .strip_prefix("#[path=\"")
+                .and_then(|p| p.strip_suffix("\"]"))
+                .map(str::to_owned)
+        });
+        match explicit {
+            Some(p) => {
+                let found = normalise(&format!("{dir}/{p}"));
+                assert!(
+                    tree.files.contains_key(found.as_str()),
+                    "ci_win_no_wsl: {path}'s `#[path = \"{p}\"] mod {name};` is {found}, which isn't there"
+                );
+                out.push(found);
+            }
+            None => out.extend(
+                [format!("{base}/{name}.rs"), format!("{base}/{name}/mod.rs")]
+                    .into_iter()
+                    .find(|c| tree.files.contains_key(c.as_str())),
+            ),
+        }
+    }
+    out
+}
+
+/// A line's leading outer attributes, `#[…]` each, and the rest of it.
+fn split_attributes(line: &str) -> (Vec<String>, &str) {
+    let mut attrs = Vec::new();
+    let mut rest = line.trim_start();
+    while rest.starts_with("#[") {
+        let mut depth = 0usize;
+        let mut end = None;
+        for (i, c) in rest.char_indices() {
+            match c {
+                '[' => depth += 1,
+                ']' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = Some(i);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let Some(end) = end else {
+            // An attribute running on past the line: the line holds nothing else.
+            attrs.push(rest.to_owned());
+            return (attrs, "");
+        };
+        attrs.push(rest[..=end].to_owned());
+        rest = rest[end + 1..].trim_start();
+    }
+    (attrs, rest)
+}
+
+/// An item with its `pub`, `pub(crate)` or `pub(in …)` taken off.
+fn strip_visibility(item: &str) -> &str {
+    let Some(rest) = item.strip_prefix("pub") else {
+        return item;
+    };
+    let rest = rest.trim_start();
+    let rest = match rest.strip_prefix('(') {
+        Some(inner) => inner.split_once(')').map_or(rest, |(_, r)| r),
+        None if item.starts_with("pub ") => rest,
+        None => return item,
+    };
+    rest.trim_start()
+}
+
+/// A `/`-separated path with its `.` and `..` resolved.
+fn normalise(path: &str) -> String {
+    let mut parts: Vec<&str> = Vec::new();
+    for part in path.split(['/', '\\']) {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            p => parts.push(p),
+        }
+    }
+    parts.join("/")
+}
+
+/// Each test target file of `dir`: `tests/<name>.rs` and `tests/<name>/main.rs`.
+fn targets(tree: &Tree, dir: &str) -> Vec<String> {
+    let tests = format!("{dir}/tests/");
+    tree.files
+        .keys()
+        .filter(|f| {
+            f.strip_prefix(tests.as_str()).is_some_and(|rest| {
+                !rest.contains('/') || rest.matches('/').count() == 1 && rest.ends_with("/main.rs")
+            })
+        })
+        .cloned()
+        .collect()
+}
+
+/// The test files one cargo command on the runner can reach, before their modules; `what` names it in a failure.
+fn reached(
+    command: &[String],
+    profile: &str,
+    nextest: &str,
+    tree: &Tree,
+    what: &str,
+) -> Vec<String> {
+    let tests = match command.get(1).map(String::as_str) {
+        Some("nextest") if command.get(2).map(String::as_str) == Some("run") => 3,
+        Some("test") => 2,
+        // `cargo xtask …`, `cargo build …`: what they run is the workspace's library code, which is read whole.
+        Some(_) => return Vec::new(),
+        None => panic!("ci_win_no_wsl: {what}: a bare `cargo`"),
+    };
+    let (mut packages, mut targets_named, mut names) = (Vec::new(), Vec::new(), Vec::new());
+    let (mut doc, mut profile) = (false, profile.to_owned());
+    let mut args = command[tests..].iter();
+    while let Some(arg) = args.next() {
+        let mut value = || {
+            args.next()
+                .unwrap_or_else(|| panic!("ci_win_no_wsl: {what}: {arg} has no value"))
+                .clone()
+        };
+        match arg.as_str() {
+            "-p" | "--package" => packages.push(value()),
+            "--test" => targets_named.push(value()),
+            "--profile" => profile = value(),
+            "-E" | "--filter-expr" => {
+                let expr = value();
+                let name = expr
+                    .strip_prefix("test(=")
+                    .and_then(|e| e.strip_suffix(')'))
+                    .unwrap_or_else(|| {
+                        panic!("ci_win_no_wsl: {what}: the filter {expr:?}, which the check can't read")
+                    });
+                names.push(name.rsplit("::").next().unwrap_or(name).to_owned());
+            }
+            "--features" | "--retries" | "--partition" => {
+                value();
+            }
+            "--workspace" => packages.extend(tree.packages.keys().cloned()),
+            "--doc" => doc = true,
+            "--no-capture" | "--no-fail-fast" | "--release" => {}
+            other if other.starts_with('-') => {
+                panic!("ci_win_no_wsl: {what}: the argument {other}, which the check can't read")
+            }
+            name => names.push(name.to_owned()),
+        }
+    }
+    assert!(
+        !packages.is_empty(),
+        "ci_win_no_wsl: {what}: no package named"
+    );
+    if doc {
+        // Doctests are the libraries' own, read whole.
+        return Vec::new();
+    }
+    let dir = |package: &str| {
+        tree.packages
+            .get(package)
+            .unwrap_or_else(|| panic!("ci_win_no_wsl: {what}: no package {package}"))
+            .clone()
+    };
+    let mut out = Vec::new();
+    for package in &packages {
+        let dir = dir(package);
+        let all = targets(tree, &dir);
+        if !targets_named.is_empty() {
+            for name in &targets_named {
+                let target = all
+                    .iter()
+                    .find(|t| {
+                        **t == format!("{dir}/tests/{name}.rs")
+                            || **t == format!("{dir}/tests/{name}/main.rs")
+                    })
+                    .unwrap_or_else(|| {
+                        panic!("ci_win_no_wsl: {what}: no test target {package}::{name}")
+                    });
+                out.push(target.clone());
+            }
+        } else if !names.is_empty() {
+            // A name filter selects by a test's whole path, its modules' names among it: a file holding the text
+            // anywhere stands for every test it might select.
+            let prefix = format!("{dir}/tests/");
+            out.extend(
+                tree.files
+                    .iter()
+                    .filter(|(f, text)| {
+                        f.starts_with(prefix.as_str())
+                            && names.iter().any(|n| text.contains(n.as_str()))
+                    })
+                    .map(|(f, _)| f.clone()),
+            );
+        } else if let Some(binaries) = profile_binaries(nextest, &profile) {
+            for (p, binary) in binaries.iter().filter(|(p, _)| p == package) {
+                let target = all
+                    .iter()
+                    .find(|t| **t == format!("{dir}/tests/{binary}.rs") || **t == format!("{dir}/tests/{binary}/main.rs"))
+                    .unwrap_or_else(|| panic!("ci_win_no_wsl: the profile {profile} names {p}::{binary}, which isn't there"));
+                out.push(target.clone());
+            }
+        } else {
+            out.extend(all);
+        }
+    }
+    out
+}
+
+/// The text a file compiles from, its plain `//` comments left out; doc comments stay, as doctests run them.
+fn code(text: &str) -> String {
+    text.lines()
+        .filter(|l| {
+            let l = l.trim_start();
+            !l.starts_with("//") || l.starts_with("///") || l.starts_with("//!")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The value of the string literal `rest` starts with, plain, raw or raw with hashes; `None` if it starts with none.
+fn literal(rest: &str) -> Option<String> {
+    if let Some(raw) = rest.strip_prefix('r') {
+        let hashes = raw.len() - raw.trim_start_matches('#').len();
+        let body = raw[hashes..].strip_prefix('"')?;
+        let close = format!("\"{}", "#".repeat(hashes));
+        return Some(body.split(close.as_str()).next()?.to_owned());
+    }
+    let body = rest.strip_prefix('"')?;
+    let mut value = String::new();
+    let mut chars = body.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => return Some(value),
+            '\\' => value.push(chars.next()?),
+            c => value.push(c),
+        }
+    }
+    None
+}
+
+/// Each program a file starts with `Command::new` and a string literal that reaches WSL on the PC, written as a plain
+/// literal would spell it.
+fn wsl_spawns(text: &str) -> Vec<String> {
+    let code = code(text);
+    let mut out = Vec::new();
+    for (i, _) in code.match_indices("Command::new(") {
+        let rest = code[i + "Command::new(".len()..].trim_start();
+        let Some(value) = literal(rest) else {
+            continue;
+        };
+        let lower = value.to_lowercase();
+        let base = lower.rsplit(['/', '\\']).next().unwrap_or(&lower);
+        let bare = !lower.contains(['/', '\\']);
+        if WSL_PROGRAMS.contains(&base) && (bare || lower.contains("system32")) {
+            out.push(value.replace('\\', "\\\\"));
+        }
+    }
+    out
+}
+
+/// Whether the file is left out on Windows: an unindented inner `cfg` in the run of comments and inner attributes
+/// that opens the file, before any item, with its reason in the comment on the line above. A `cfg` inside a module
+/// leaves out that module, not the file.
+fn excluded_on_windows(text: &str) -> bool {
+    let mut previous: Option<&str> = None;
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            previous = None;
+            continue;
+        }
+        if line.starts_with("//") {
+            previous = Some(line);
+            continue;
+        }
+        if !line.starts_with("#![") {
+            return false;
+        }
+        let squeezed: String = line.chars().filter(|c| !c.is_whitespace()).collect();
+        if NOT_ON_WINDOWS.contains(&squeezed.as_str())
+            && previous.is_some_and(|p| p.trim_start_matches('/').trim().len() > 1)
+        {
+            return true;
+        }
+        previous = None;
+    }
+    false
+}
+
+/// Whether a job runs on one of GitHub's hosted images, named plainly; any other runs on the PC.
+fn hosted(job: &Yaml) -> bool {
+    job["runs-on"].as_str().is_some_and(|l| {
+        !l.contains("${{")
+            && ["ubuntu-", "macos-", "windows-"]
+                .iter()
+                .any(|i| l.starts_with(i))
+    })
+}
+
+/// The runner's jobs' cargo commands, each with its nextest profile and a name for failures.
+fn runner_commands(workflow: &str) -> Vec<(Vec<String>, String, String)> {
+    let doc = YamlLoader::load_from_str(workflow)
+        .expect("ci_win_no_wsl: win-gpu.yml parses")
+        .remove(0);
+    let jobs = doc["jobs"]
+        .as_hash()
+        .expect("ci_win_no_wsl: win-gpu.yml has jobs");
+    let profile_of = |env: &Yaml| env["NEXTEST_PROFILE"].as_str().map(str::to_owned);
+    let mut out = Vec::new();
+    for (id, job) in jobs {
+        let id = id.as_str().expect("a job id");
+        if hosted(job) {
+            continue;
+        }
+        for step in job["steps"].as_vec().into_iter().flatten() {
+            let Some(run) = step["run"].as_str() else {
+                continue;
+            };
+            let profile = profile_of(&step["env"])
+                .or_else(|| profile_of(&job["env"]))
+                .or_else(|| profile_of(&doc["env"]))
+                .unwrap_or_else(|| "default".to_owned());
+            let name = step["name"].as_str().unwrap_or("?");
+            for line in run.lines() {
+                let all = words(line);
+                if let Some(at) = all.iter().position(|w| w == "cargo") {
+                    out.push((all[at..].to_vec(), profile.clone(), format!("{id}/{name}")));
+                }
+            }
+        }
+    }
+    out
+}
+
+fn check(workflow: &str, nextest: &str, tree: &Tree) {
+    let commands = runner_commands(workflow);
+    assert!(
+        commands
+            .iter()
+            .any(|(c, _, _)| c.get(1).is_some_and(|s| s == "nextest" || s == "test")),
+        "ci_win_no_wsl: no test command read from the runner's jobs"
+    );
+    let mut reach: BTreeMap<String, String> = BTreeMap::new();
+    let mut queue: Vec<(String, String)> = Vec::new();
+    for (command, profile, what) in &commands {
+        for file in reached(command, profile, nextest, tree, what) {
+            queue.push((file, what.clone()));
+        }
+    }
+    while let Some((file, what)) = queue.pop() {
+        if reach.contains_key(&file) {
+            continue;
+        }
+        for module in modules(&file, &tree.files[&file], tree) {
+            queue.push((module, what.clone()));
+        }
+        reach.insert(file, what);
+    }
+    assert!(
+        !reach.is_empty(),
+        "ci_win_no_wsl: no test file reached from the runner's jobs"
+    );
+    for file in tree.files.keys().filter(|f| f.contains("/src/")) {
+        reach
+            .entry(file.clone())
+            .or_insert_with(|| "any test binary, as library code".to_owned());
+    }
+    let mut found = BTreeSet::new();
+    for (file, what) in &reach {
+        let text = &tree.files[file];
+        if excluded_on_windows(text) {
+            continue;
+        }
+        for program in wsl_spawns(text) {
+            found.insert(format!("{file} starts \"{program}\" (reached by {what})"));
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "ci_win_no_wsl: a test the Windows runner runs starts bash or wsl, which on the PC is WSL's launcher:\n{}",
+        found.into_iter().collect::<Vec<_>>().join("\n")
+    );
+}
+
+#[test]
+fn win_runner_tests_start_no_bare_bash_or_wsl() {
+    check(&read(WORKFLOW), &read(NEXTEST), &tree());
+}
+
+/// The tree with one file's text edited, or a file added; the edit must find its text.
+#[cfg(feature = "controls")]
+fn planted(path: &str, from: &str, to: &str) -> Tree {
+    let mut tree = tree();
+    let text = tree.files.entry(path.to_owned()).or_default();
+    assert!(
+        text.contains(from),
+        "ci_win_no_wsl: a control's edit is gone from {path}"
+    );
+    *text = text.replacen(from, to, 1);
+    tree
+}
+
+#[cfg(feature = "controls")]
+fn edited(text: &str, from: &str, to: &str) -> String {
+    assert!(
+        text.contains(from),
+        "ci_win_no_wsl: a control's edit is gone"
+    );
+    text.replacen(from, to, 1)
+}
+
+negative_control!(
+    win_runner_tests_start_no_bare_bash_or_wsl,
+    "The nightly whole-workspace run put back on the runner, which reaches xtask's tests that start bash.",
+    expected = "a test the Windows runner runs starts bash or wsl",
+    check(
+        &edited(
+            &read(WORKFLOW),
+            "      - name: The guard on this workflow\n",
+            "      - name: The workspace\n        run: |\n          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\\scripts\\win_measure.ps1 run workspace cargo nextest run --workspace --no-fail-fast --retries 0\n          exit $LASTEXITCODE\n      - name: The guard on this workflow\n"
+        ),
+        &read(NEXTEST),
+        &tree()
+    )
+);
+
+mod in_a_reached_test {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "The guard test win-self-check runs, starting a bare bash.",
+        expected = "xtask/tests/runner_security.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "xtask/tests/runner_security.rs",
+                "use std::path::{Path, PathBuf};\n",
+                "use std::path::{Path, PathBuf};\nfn _bash() { let _ = std::process::Command::new(\"bash\"); }\n"
+            )
+        )
+    );
+}
+
+mod system32 {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A GPU test target of the gpu-kernel profile starting System32's wsl.exe by its path.",
+        expected = "starts \"C:\\\\Windows\\\\System32\\\\wsl.exe\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "fn _wsl() { let _ = std::process::Command::new(\"C:\\\\Windows\\\\System32\\\\wsl.exe\"); }\n"
+            )
+        )
+    );
+}
+
+mod by_name_filter {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A new test file in engine whose tests a name filter of win-vulkan selects, starting wsl.",
+        expected = "crates/engine/tests/planted.rs starts \"wsl\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/planted.rs",
+                "",
+                "#[test]\nfn canonicaliser_planted() { let _ = std::process::Command::new(\"wsl\"); }\n"
+            )
+        )
+    );
+}
+
+mod in_a_module {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A module a reached test target includes, starting bash.",
+        expected = "crates/engine/tests/planted_helper.rs starts \"bash\"",
+        check(&read(WORKFLOW), &read(NEXTEST), &{
+            let mut tree = planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "#[path = \"planted_helper.rs\"]\nmod helper;\n",
+            );
+            tree.files.insert(
+                "crates/engine/tests/planted_helper.rs".to_owned(),
+                "pub fn run() { let _ = std::process::Command::new(\"bash\"); }\n".to_owned(),
+            );
+            tree
+        })
+    );
+}
+
+mod in_library_code {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A library source of the workspace, which any test binary may link, starting bash.",
+        expected = "crates/validation/src/spawn.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/validation/src/spawn.rs",
+                "",
+                "fn _bash() { let _ = std::process::Command::new(\"bash\"); }\n"
+            )
+        )
+    );
+}
+
+/// A tree with `canon_gpu.rs` including `planted_helper.rs` by the `mod` text given, and the helper starting bash.
+#[cfg(feature = "controls")]
+fn with_helper(include: &str) -> Tree {
+    let mut tree = planted("crates/engine/tests/canon_gpu.rs", "", include);
+    tree.files.insert(
+        "crates/engine/tests/planted_helper.rs".to_owned(),
+        "pub fn run() { let _ = std::process::Command::new(\"bash\"); }\n".to_owned(),
+    );
+    tree
+}
+
+mod path_with_dot_dot {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A module included by a `#[path]` through `..` and `.`, starting bash.",
+        expected = "crates/engine/tests/planted_helper.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &with_helper("#[path = \"../tests/./planted_helper.rs\"]\nmod helper;\n")
+        )
+    );
+}
+
+mod path_not_found {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A `#[path]` module the check can't find fails loudly, not skipped.",
+        expected = "isn't there",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "#[path = \"../nowhere/helper.rs\"]\nmod helper;\n"
+            )
+        )
+    );
+}
+
+mod path_under_another_attribute {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A `#[path]` with another attribute between it and its `mod`, the module starting bash.",
+        expected = "crates/engine/tests/planted_helper.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &with_helper(
+                "#[path = \"planted_helper.rs\"]\n#[allow(dead_code)]\n// a note\npub(crate) mod helper;\n"
+            )
+        )
+    );
+}
+
+mod path_on_the_mod_line {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A `#[path]` on the `mod` line itself, the module starting bash.",
+        expected = "crates/engine/tests/planted_helper.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &with_helper("#[allow(unused)] #[path = \"planted_helper.rs\"] mod helper;\n")
+        )
+    );
+}
+
+mod nested_module_cfg {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "An inner cfg(unix) with its reason inside a nested module, while the file itself starts bash.",
+        expected = "crates/engine/tests/canon_gpu.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "fn _bash() { let _ = std::process::Command::new(\"bash\"); }\nmod unix_only {\n    // Needs a Unix shell; hosted Linux runs it.\n    #![cfg(unix)]\n}\n"
+            )
+        )
+    );
+}
+
+mod cfg_after_an_item {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A cfg(unix) with its reason, unindented but after the file's first item.",
+        expected = "crates/engine/tests/canon_gpu.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "fn _bash() { let _ = std::process::Command::new(\"bash\"); }\n// Needs a Unix shell.\n#![cfg(unix)]\n"
+            )
+        )
+    );
+}
+
+mod raw_string {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "System32's wsl.exe as a raw string in a GPU target.",
+        expected =
+            "crates/engine/tests/canon_gpu.rs starts \"C:\\\\Windows\\\\System32\\\\wsl.exe\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                r##"fn _wsl() { let _ = std::process::Command::new(r"C:\Windows\System32\wsl.exe"); }
+"##
+            )
+        )
+    );
+}
+
+mod raw_string_with_hashes {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A bare bash as a raw string with hashes in a GPU target.",
+        expected = "crates/engine/tests/canon_gpu.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "fn _bash() { let _ = std::process::Command::new(r#\"bash\"#); }\n"
+            )
+        )
+    );
+}
+
+mod exclusion_without_reason {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A reached file left out on Windows with no reason given above its cfg.",
+        expected = "crates/engine/tests/canon_gpu.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "#![cfg(unix)]\nfn _bash() { let _ = std::process::Command::new(\"bash\"); }\n"
+            )
+        )
+    );
+}
+
+mod unread_command {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A test command on the runner with an argument the check can't read.",
+        expected = "the argument --ignored, which the check can't read",
+        check(
+            &edited(
+                &read(WORKFLOW),
+                "--test runner_security --no-fail-fast",
+                "--test runner_security --ignored --no-fail-fast"
+            ),
+            &read(NEXTEST),
+            &tree()
+        )
+    );
+}
+
+/// A file left out on Windows with its reason is not read: the exclusion the owner's words allow.
+#[test]
+fn a_file_excluded_on_windows_with_its_reason_is_allowed() {
+    let mut tree = tree();
+    tree.files
+        .get_mut("crates/engine/tests/canon_gpu.rs")
+        .expect("canon_gpu.rs")
+        .insert_str(
+            0,
+            "// Needs bash, which Windows' runner lacks; hosted Linux runs it.\n#![cfg(not(windows))]\nfn _bash() { let _ = std::process::Command::new(\"bash\"); }\n",
+        );
+    check(&read(WORKFLOW), &read(NEXTEST), &tree);
+}
+
+negative_control!(
+    a_file_excluded_on_windows_with_its_reason_is_allowed,
+    "The same file with no exclusion is refused.",
+    expected = "crates/engine/tests/canon_gpu.rs starts \"bash\"",
+    check(
+        &read(WORKFLOW),
+        &read(NEXTEST),
+        &planted(
+            "crates/engine/tests/canon_gpu.rs",
+            "",
+            "fn _bash() { let _ = std::process::Command::new(\"bash\"); }\n"
+        )
+    )
+);
+
+/// The test files the runner's jobs reach include the GPU suites' and the guard's, so that the check can't pass by
+/// reaching nothing it should.
+#[test]
+fn the_runner_reaches_the_gpu_suites_and_the_guard() {
+    check_reach(&read(WORKFLOW), &read(NEXTEST), &tree());
+}
+
+fn check_reach(workflow: &str, nextest: &str, tree: &Tree) {
+    let files: BTreeSet<String> = runner_commands(workflow)
+        .iter()
+        .flat_map(|(c, p, w)| reached(c, p, nextest, tree, w))
+        .collect();
+    for want in [
+        "xtask/tests/runner_security.rs",
+        "crates/engine/tests/canon_gpu.rs",
+        "crates/validation/tests/codegen_selftest.rs",
+        "xtask/tests/build_kernel.rs",
+    ] {
+        assert!(
+            files.contains(want),
+            "ci_win_no_wsl: the runner's jobs don't reach {want}: {files:#?}"
+        );
+    }
+    for unwanted in ["xtask/tests/jobq.rs", "xtask/tests/ci_debug_info.rs"] {
+        assert!(
+            !files.contains(unwanted),
+            "ci_win_no_wsl: the runner's jobs reach {unwanted}"
+        );
+    }
+}
+
+negative_control!(
+    the_runner_reaches_the_gpu_suites_and_the_guard,
+    "win-self-check's guard step gone: the guard test is no longer reached.",
+    expected = "the runner's jobs don't reach xtask/tests/runner_security.rs",
+    check_reach(
+        &edited(
+            &read(WORKFLOW),
+            "--test runner_security",
+            "--test build_kernel"
+        ),
+        &read(NEXTEST),
+        &tree()
+    )
+);
+
+mod reaches_too_much {
+    use super::*;
+    negative_control!(
+        the_runner_reaches_the_gpu_suites_and_the_guard,
+        "A whole-package run of xtask on the runner reaches the job queue's tests.",
+        expected = "the runner's jobs reach xtask/tests/jobq.rs",
+        check_reach(
+            &edited(&read(WORKFLOW), "--test runner_security", ""),
+            &read(NEXTEST),
+            &tree()
+        )
+    );
+}
+
+// ---- The runner's scripts start WSL by the distro's name, but for the one deliberate check --------------------------
+
+/// Where the runner's jobs' scripts are: each job starts its scripts from here (`.github\scripts\…`); the PC's own,
+/// under E:\runner-tools, are not the repository's.
+const SCRIPTS: &str = ".github/scripts";
+/// The one script on the runner that starts WSL's launchers naming no distro, on purpose: the check that the route a
+/// bare `bash` or `wsl` takes is closed (the PC's ask on #390, 14 Nov 2026; TASK-M0-72). Each start there is one that
+/// must fail, and the check fails its job if one doesn't, so it is the one exception allowed.
+const DELIBERATE: &str = ".github/scripts/wsl_route.ps1";
+/// `& wsl.exe` and what may follow it: listing the distros, or managing the one named; none starts a default distro.
+const WSL_MANAGES: [&str; 4] = [
+    "& wsl.exe --list ",
+    "& wsl.exe --terminate $Distro",
+    "& wsl.exe --unregister $Distro",
+    "& wsl.exe --import $Distro ",
+];
+/// How the arguments of a call that starts `wsl.exe` (`Start-Wsl`, `Invoke-Wsl`) may open: naming the distro.
+const WSL_NAMED: [&str; 2] = ["@('-d', $Distro, ", "(@('-d', $Distro, "];
+
+/// Every `.ps1` under [`SCRIPTS`], by path from the root, with its text.
+fn scripts() -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = std::fs::read_dir(root().join(SCRIPTS))
+        .expect("ci_win_no_wsl: .github/scripts")
+        .map(|e| {
+            e.expect("an entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .filter(|n| n.ends_with(".ps1"))
+        .map(|n| {
+            let rel = format!("{SCRIPTS}/{n}");
+            let text = read(&rel);
+            (rel, text)
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+/// The function each line of a script is in, by name, if any: from `function <name>` at the start of a line to the
+/// first `}` that starts one.
+fn functions(lines: &[&str]) -> Vec<Option<String>> {
+    let mut out = Vec::with_capacity(lines.len());
+    let mut current = None;
+    for line in lines {
+        if let Some(rest) = line.strip_prefix("function ") {
+            current = Some(rest.split(['(', ' ', '{']).next().unwrap_or("").to_owned());
+        }
+        out.push(current.clone());
+        if *line == "}" {
+            current = None;
+        }
+    }
+    out
+}
+
+/// The program a token names, as a launcher would find it: its quotes dropped, lowercased, its folder dropped.
+fn program(token: &str) -> String {
+    let lower = token.trim_matches(['\'', '"']).to_lowercase();
+    lower
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(&lower)
+        .to_owned()
+}
+
+/// Each place a script starts `bash` or `wsl` other than naming the distro: System32's `bash.exe` or `wsl.exe` by its
+/// path; `& bash` or `& wsl`, but for `& wsl.exe` listing or managing the named distro ([`WSL_MANAGES`]); a
+/// `Start-Process` of either; `'wsl.exe'` but as `Start-Wsl`'s program; and a `Start-Wsl` or `Invoke-Wsl` whose
+/// arguments don't name the distro ([`WSL_NAMED`]), but for `Invoke-Wsl` handing its own on. Comments are not read.
+fn script_wsl_starts(path: &str, text: &str) -> Vec<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let within = functions(&lines);
+    let mut out = Vec::new();
+    for (n, raw) in lines.iter().enumerate() {
+        let line = raw.trim();
+        if line.starts_with('#') {
+            continue;
+        }
+        let lower = line.to_lowercase();
+        let inside = within[n].as_deref();
+        let mut found = |why: &str| out.push(format!("{path}:{}: {why}: {line}", n + 1));
+        if lower.contains("bash.exe") || lower.contains("system32\\wsl") {
+            found("System32's launcher by its path");
+        }
+        for (at, _) in line.match_indices("& ") {
+            let token = line[at + 2..].split_whitespace().next().unwrap_or("");
+            if WSL_PROGRAMS.contains(&program(token).as_str())
+                && !WSL_MANAGES.iter().any(|m| line[at..].starts_with(m))
+            {
+                found("`&` starts bash or wsl naming no distro");
+            }
+        }
+        if lower.contains("start-process") && (lower.contains("bash") || lower.contains("wsl")) {
+            found("Start-Process of bash or wsl");
+        }
+        if (line.contains("'wsl.exe'") || line.contains("\"wsl.exe\""))
+            && !(inside == Some("Start-Wsl") && line == "$psi.FileName = 'wsl.exe'")
+        {
+            found("wsl.exe started other than through Start-Wsl");
+        }
+        for call in ["Start-Wsl ", "Invoke-Wsl "] {
+            for (at, _) in line.match_indices(call) {
+                if line[..at].ends_with("function ") {
+                    continue;
+                }
+                let rest = &line[at + call.len()..];
+                let forwards = call == "Start-Wsl "
+                    && inside == Some("Invoke-Wsl")
+                    && rest.starts_with("$Arguments");
+                if !forwards && !WSL_NAMED.iter().any(|w| rest.starts_with(w)) {
+                    found("wsl.exe started naming no distro");
+                }
+            }
+        }
+    }
+    out
+}
+
+/// No script a job on the runner starts but [`DELIBERATE`], and no line of those jobs' steps, starts `bash` or `wsl`
+/// naming no distro; and [`DELIBERATE`] is there, so that the exception names something.
+fn check_scripts(scripts: &[(String, String)], workflow: &str) {
+    assert!(
+        scripts.iter().any(|(p, _)| p == DELIBERATE),
+        "ci_win_no_wsl: there is no {DELIBERATE}: the exception names nothing"
+    );
+    let mut found: Vec<String> = scripts
+        .iter()
+        .filter(|(p, _)| p != DELIBERATE)
+        .flat_map(|(p, t)| script_wsl_starts(p, t))
+        .collect();
+    let doc = YamlLoader::load_from_str(workflow)
+        .expect("ci_win_no_wsl: win-gpu.yml parses")
+        .remove(0);
+    for (id, job) in doc["jobs"].as_hash().expect("jobs") {
+        let id = id.as_str().expect("a job id");
+        if hosted(job) {
+            continue;
+        }
+        for step in job["steps"].as_vec().into_iter().flatten() {
+            for line in step["run"].as_str().unwrap_or("").lines() {
+                if words(line)
+                    .iter()
+                    .any(|w| WSL_PROGRAMS.contains(&program(w).as_str()))
+                {
+                    found.push(format!(
+                        "{WORKFLOW}/{id}: starts bash or wsl: {}",
+                        line.trim()
+                    ));
+                }
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "ci_win_no_wsl: the runner starts bash or wsl naming no distro outside {DELIBERATE}:\n{}",
+        found.join("\n")
+    );
+}
+
+#[test]
+fn win_runner_scripts_start_wsl_only_naming_the_distro() {
+    check_scripts(&scripts(), &read(WORKFLOW));
+}
+
+/// The scripts with `from` replaced by `to` in `path`; the edit must find its text.
+#[cfg(feature = "controls")]
+fn scripts_edited(path: &str, from: &str, to: &str) -> Vec<(String, String)> {
+    let mut all = scripts();
+    let (_, text) = all
+        .iter_mut()
+        .find(|(p, _)| p == path)
+        .unwrap_or_else(|| panic!("ci_win_no_wsl: no {path}"));
+    *text = edited(text, from, to);
+    all
+}
+
+/// The scripts with `path` added, holding `text`.
+#[cfg(feature = "controls")]
+fn scripts_with(path: &str, text: &str) -> Vec<(String, String)> {
+    let mut all = scripts();
+    all.push((path.to_owned(), text.to_owned()));
+    all
+}
+
+/// The script the controls edit most.
+#[cfg(feature = "controls")]
+const WSL_PS: &str = ".github/scripts/wsl.ps1";
+
+negative_control!(
+    win_runner_scripts_start_wsl_only_naming_the_distro,
+    "System32's bash.exe named in the proofs.",
+    expected = "System32's launcher by its path",
+    check_scripts(
+        &scripts_edited(
+            WSL_PS,
+            "    'proofs' {\n",
+            "    'proofs' {\n        $b = Join-Path $env:SystemRoot 'System32\\bash.exe'\n"
+        ),
+        &read(WORKFLOW)
+    )
+);
+
+mod bare_wsl_call {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "`& wsl.exe -e true` in register, which goes to the default distro.",
+        expected = "`&` starts bash or wsl naming no distro",
+        check_scripts(
+            &scripts_edited(
+                WSL_PS,
+                "        Close-DefaultRoute\n",
+                "        & wsl.exe -e true\n        Close-DefaultRoute\n"
+            ),
+            &read(WORKFLOW)
+        )
+    );
+}
+
+mod bare_bash_call {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "`& bash` in win_measure.ps1.",
+        expected = "`&` starts bash or wsl naming no distro",
+        check_scripts(
+            &scripts_edited(
+                ".github/scripts/win_measure.ps1",
+                "& $command @commandArgs 2>&1",
+                "& bash -c true; & $command @commandArgs 2>&1"
+            ),
+            &read(WORKFLOW)
+        )
+    );
+}
+
+mod managed_without_name {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "`& wsl.exe --terminate` with no distro named: not one of the managing forms.",
+        expected = "`&` starts bash or wsl naming no distro",
+        check_scripts(
+            &scripts_edited(
+                WSL_PS,
+                "& wsl.exe --terminate $Distro 2>&1",
+                "& wsl.exe --terminate 2>&1"
+            ),
+            &read(WORKFLOW)
+        )
+    );
+}
+
+mod start_process {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "Start-Process of wsl in win_contain.ps1.",
+        expected = "Start-Process of bash or wsl",
+        check_scripts(
+            &scripts_edited(
+                ".github/scripts/win_contain.ps1",
+                "$script:Outer = Start-Process -FilePath (Join-Path $env:SystemRoot 'System32\\PING.EXE')",
+                "$script:Outer = Start-Process -FilePath 'wsl'"
+            ),
+            &read(WORKFLOW)
+        )
+    );
+}
+
+mod own_starter {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "A second starter of wsl.exe beside Start-Wsl.",
+        expected = "wsl.exe started other than through Start-Wsl",
+        check_scripts(
+            &scripts_edited(
+                WSL_PS,
+                "    'proofs' {\n",
+                "    'proofs' {\n        $psi.FileName = 'wsl.exe'\n"
+            ),
+            &read(WORKFLOW)
+        )
+    );
+}
+
+mod unnamed_invoke {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "Invoke-Wsl with no distro, as proof 1's default-user run would be without `-d`.",
+        expected = "wsl.exe started naming no distro",
+        check_scripts(
+            &scripts_edited(
+                WSL_PS,
+                "$default = Invoke-Wsl @('-d', $Distro, '--cd', '/', '--', 'whoami')",
+                "$default = Invoke-Wsl @('--cd', '/', '--', 'whoami')"
+            ),
+            &read(WORKFLOW)
+        )
+    );
+}
+
+mod forwarding_elsewhere {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "Start-Wsl handed arguments it doesn't name, outside Invoke-Wsl.",
+        expected = "wsl.exe started naming no distro",
+        check_scripts(
+            &scripts_edited(
+                WSL_PS,
+                "$sentinel = Start-Wsl @('-d', $Distro, ",
+                "$sentinel = Start-Wsl $Arguments; $x = Start-Wsl @('-d', $Distro, "
+            ),
+            &read(WORKFLOW)
+        )
+    );
+}
+
+mod new_script {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "A new script on the runner that starts System32's wsl.exe by its path.",
+        expected = ".github/scripts/new.ps1:1: System32's launcher by its path",
+        check_scripts(
+            &scripts_with(
+                ".github/scripts/new.ps1",
+                "$w = Join-Path $env:SystemRoot 'System32\\wsl.exe'\n"
+            ),
+            &read(WORKFLOW)
+        )
+    );
+}
+
+mod in_a_step {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "A runner step that starts wsl itself.",
+        expected = "win-gpu.yml/win-self-check: starts bash or wsl",
+        check_scripts(
+            &scripts(),
+            &edited(
+                &read(WORKFLOW),
+                "-File .github\\scripts\\wsl_route.ps1\n",
+                "-File .github\\scripts\\wsl_route.ps1\n          wsl -e true\n"
+            )
+        )
+    );
+}
+
+mod check_gone {
+    use super::*;
+    negative_control!(
+        win_runner_scripts_start_wsl_only_naming_the_distro,
+        "The deliberate check gone: the exception names nothing.",
+        expected = "there is no .github/scripts/wsl_route.ps1: the exception names nothing",
+        check_scripts(
+            &scripts()
+                .into_iter()
+                .filter(|(p, _)| p != DELIBERATE)
+                .collect::<Vec<_>>(),
+            &read(WORKFLOW)
+        )
+    );
+}

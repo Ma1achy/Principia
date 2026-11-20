@@ -1,0 +1,6 @@
+{
+  "description": "The control: the unstable form, u₀ = √((r + x)/2) and u₁ = y/(2u₀), at the same 179.9°, which loses precision catastrophically there (the reference's 2.2e-2 at f32 and 4.0e-12 at f64; R-927), so the gate must fail it.",
+  "form": "unstable",
+  "angle": 179.9,
+  "expected": "fail"
+}

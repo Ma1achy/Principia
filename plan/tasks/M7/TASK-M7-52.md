@@ -1,0 +1,51 @@
+# TASK-M7-52 — The one projection: each target chart's projection, the leaving rule on main's clamped encode and a curve axis's nearest point, one Rust source for Chart position and the trace (R-542 H11, H12) ⚑
+
+- **Milestone:** M7
+- **Closes:** REQ-COL-134
+- **Depends on:** TASK-M2-25, TASK-M2-26, TASK-M2-99
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** none
+- **Size:** ~500 lines, the tests included
+
+## Goal
+One Rust source for SM1's `P_T`, "the target chart's projection, the one the trace uses": each target chart's projection of an encoded state, the leaving rule defined on main's clamped encode (a shown coordinate clamped by its link; R-72, REQ-COL-133), and a curve axis's nearest point. Its four consumers call it: Chart position (TASK-M7-47, generated to WGSL, R-116), the hover trace's `z(t)` (TASK-M8-10), the line system's trace (TASK-M8-49) and the follow-up's leaving and curve projection (TASK-M8-58). It proposes the one calibration value it needs, REQ-COL-129's native–WGSL agreement tolerance. It reads no chart from a colour occupant, so it does not wait on RQ-489. **SM2 is a hard constraint** (the human's message, R-542): no change to `SimState`, the payload, the `ICDescriptor` or any layout; a need for a stored field is queued in `REVIEW_QUEUE.md`, never added.
+
+## References
+- `decisions.md` § "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+- `docs/design/principia_state_map.md` § "SM1. Definition"
+- `docs/design/principia_state_map.md` § "SM5. The four results of a projection"
+- `docs/design/principia_lines.md` § "8. Traces"
+- `docs/contracts/principia_inverse_encode_contract.md` § "Part 3 — Block inverses (closed forms, with their forward mates)"
+- `docs/design/principia_dd_encode.md` § "2. Consolidated contract"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+- `decisions.md` § "R-793 — The state map's targets are the app's own charts: the `θ × dilation` and `ν × dilation` rows leave the targets and stay in the prototype's record *(closes RQ-680)*"
+
+## Deliverables
+- The projection module in `crates/kernel` beside the encode (the only crate rust-gpu compiles), its leaving rule and curve nearest point; its WGSL snippet emitted to `crates/render/wgsl/` by `cargo xtask build-kernel`, as TASK-M2-25's decode and encode are (R-116); the host trace calls the kernel function. *Was:* "The projection module (`crates/render/`), …, generated to WGSL from the same source (R-116)." (code re-review C2 of PR #270).
+- The leave definition, written into `docs/design/principia_state_map.md` SM5 with the porting rule's "Removed lines" note (REQ-COL-133).
+- Test `one_projection_agreement`.
+- The proposal of REQ-COL-129's projection agreement tolerance (R-71, in R-297's form): the native-against-WGSL agreement measured over the seeded states, the value written in the PR for the human to confirm at the M7 gate, stated in the clamped coordinate's units so that it also bounds the status margin band (or the band's measured width named beside it), and recorded as a fixed constant in the code; until then `one_projection_agreement` and REQ-COL-135's fragment arm use the measured value, as TASK-M2-25 uses REQ-DEC-043's factor.
+
+## Acceptance tests
+- *Was, moved 11 Nov 2026 to TASK-M2-99 with REQ-COL-133 (the physics review of PR #482, review 5852979675, P2):* Review checklist — REQ-COL-133's verify (the definition in SM5, checked by the physics reviewer).
+- `cargo test -p render one_projection_agreement` — REQ-COL-134's verify (native against generated WGSL; code re-review C3, option (a), applied per R-369). Each consumer's call is REQ-COL-135's, checked in its own task.
+- *Was, moved 11 Nov 2026 to TASK-M2-99 with REQ-COL-163 (the physics review of PR #482, review 5852979675, P2):* `cargo test -p engine signed_later_states` — REQ-COL-163's arms and control.
+
+## Notes
+- **⚑ Physics review is required** (SM1, SM5): this task does not merge on the code reviewer's word alone.
+- **Cut by PR #270's code review, 1 (applied per R-369, R-542 H11):** split from TASK-M7-47 so that TASK-M8-58's trace does not wait on RQ-489 through it.
+- **Each link's margin (physics re-review note of PR #270):** since R-481 the links clamp at different margins (`tanh_q` and `softsign_q` at `q_max(1 − ε_q)`); this task writes each link's margin into SM5, per REQ-COL-133.
+- **Its consumers:** TASK-M7-47 (Chart position), TASK-M8-10 (the hover trace's `z(t)`), TASK-M8-49 (the line system's trace projection and breaks) and TASK-M8-58 (the follow-up's leaving and curve projection), each depending on this task (R-542 H11).
+- **REQ-COL-129's agreement entry (PR #270 code re-review, C5, applied per R-369, accepted by R-559):** this task proposes that one value and uses its measured value until the M7 gate. It does not close REQ-COL-129 (TASK-M7-48 does), so it does not wait on RQ-487, which concerns the tiling defaults and the other constants.
+- **References (C5):** REQ-COL-129 is named through its rulings, R-71 and R-297, above; check_plan takes only file sections there.
+- **The margin band (PR #270's physics re-review, P1, applied per R-369; R-542 H16):** under R-297's fast-math a state within the tolerance of a link margin can change status on the GPU, as R-296 measured on Metal; `one_projection_agreement` holds the statuses equal outside that band, accepts either inside it (the point still held to the tolerance), reports the band's count, and seeds states just inside and just outside it. The host consumers stay bitwise, statuses included.
+- **The measured tolerance is a fixed constant (PR #270's qa advisory, applied per R-369):** it is recorded in the code, never re-measured on a test run, so the test never checks a build against its own measurement.
+- **Goal reworded (C5):** *Was:* "Chart position (TASK-M7-47, generated to WGSL, R-116) and the trace (TASK-M8-58) both call it."
+- **Ruled by R-558 as applied meanwhile:** RQ-498 (a), the shape-sphere target from the signed n̂; RQ-503 (a), main's `α_min = 0`.
+- *5 Nov 2026 (R-793, closing RQ-680 (a)):* the targets are the app's own charts, through `encode_into` and `curve::nearest`; SM1's two dilation rows are the prototype's record, and the wait on RQ-680 ends.
+- *7 Nov 2026 (R-853, R-854):* the one projection reads a state at `t > 0` signed and unfolded on every target, so Chart position and the trace are continuous through syzygies; a mirror-identified reading only as a declared optional view, labelled, off by default (REQ-COL-163). How a lower-half state reads on a latent target's coordinates is a definition (R-72) this task writes under physics review before building it.
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-947):* this task narrows to the fragment's generated half of TASK-M2-99 (the one placement function): the WGSL generation and the native-against-WGSL test. **Its CPU half moves into M2, as TASK-M2-99**, which it now depends on; R-542 H11's "never a second implementation" is kept. REQ-COL-133 (the leaving rule's definition), REQ-COL-134 (the one projection) and REQ-COL-163 (later states read signed) stay here: the sources do not move them (applied per R-369). The deliverables above that build the CPU source read as TASK-M2-99's. *Was (Depends on):* "TASK-M2-25, TASK-M2-26".
+- *11 Nov 2026 (the physics review of PR #482, review 5852979675, P2):* REQ-COL-133 (the leaving rule's definition) and REQ-COL-163 (later states read signed) move to TASK-M2-99 (the one placement function), which builds the source both define before this task runs; the note of the same day above, that they stay here, is withdrawn. The leave definition in SM5, each link's margin and the lower-half reading are TASK-M2-99's; this task keeps REQ-COL-134, the generated WGSL and the native-against-WGSL test. *Was (Closes):* "REQ-COL-133, REQ-COL-134, REQ-COL-163".
+- *11 Nov 2026 (the code re-check of PR #482, review 5853463481, N2):* the check that the mirror-identified view is labelled, which this task's `signed_later_states` line carried before REQ-COL-163 moved to TASK-M2-99, is with the tasks that draw it: REQ-GUI-279 on TASK-M8-58 (the trace) and REQ-COL-113 on TASK-M7-47 (Chart position). This task generates the option's WGSL and draws no label.

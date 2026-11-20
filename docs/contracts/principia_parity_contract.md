@@ -1,0 +1,233 @@
+# Principia — parity & determinism test contract
+
+*The capstone of the test hierarchy. Not a component — the rule under which the two *instantiations* of the one shared kernel (CPU-f64 reference, GPU-f32 survey — `principia_spike_brief.md`) are held equivalent, and the per-stage assignment of that rule. (Since the substrate move to a single Rust kernel compiled to both, logic equality is definitional; what remains to test is precision divergence, branch determinism, and backend miscompilation — see §6.) References the five drill-down suites; does not repeat them. Where a drill-down says "test X", this doc says "and here is the tier X is asserted at, and why."*
+
+---
+
+## 1. The principle
+
+The two instantiations are **identical in logic and algorithm — one shared Rust source, compiled twice, so logic equality is structural, not tested. They differ only in arithmetic precision (and in what each backend's shader compiler does with that source). Precision produces bounded, checkable error only where the computation is non-amplifying.**
+
+Chaos is not an exception to this — it is the case where the identical logic *correctly* amplifies a tiny arithmetic difference into a large one. Same code, same decisions, precision as the only input variable; whether outputs stay close is physics, not correctness. A parity suite that ignores this either misses real bugs (tolerance too loose to catch a logic error) or cries wolf (tolerance applied where chaos guarantees divergence). The three-tier rule below is what keeps it a rock.
+
+**The dual instantiation is a feature, not test scaffolding.** The CPU-f64 build ships — it is the Precision ring: the hover dwell-tier, the click inspector, the offline uniform-survey certifier. (The *same* kernel run at f64 is the **precision** reference — f64 removes the numerical ambiguity that would muddy a ground-truth check — but it shares source, so it is *not* independent; the deliberately-**independent** convergence reference, shared-bug-immune, is a *separate* Brutus-style CPU arbitrary-precision integrator with convergence gating — raise the precision and tighten the tolerance until the result stops changing; double-double is a fast screen only (R-33) — validation-ground-truth §correctness-factoring, systems-architecture §1 — spike criterion 4.) Its public surface:
+
+<!-- retired-terms -->
+```
+computeIC(chart, uv, simKey)      → SimState              // one IC, full f64
+computeICState(state, simKey)     → SimState              // one IC given as its state, full f64 (R-586)
+computeQuad(chart, quadID, simKey) → SimState[]           // a quad's samples, full f64  (was computeTile — 'tile' is retired for quadtree nodes, memory-tiers §1)
+stepOnce(state, dt, params)        → state'                // one STEP, either occupant  (parity workhorse)
+decodeOnly(chart, uv, simKey)      → (m, r, p, ICDescriptor)
+```
+<!-- /retired-terms -->
+
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (`decodeOnly(chart, uv, simKey) → (m, r, p, ICDescriptor)` as a compute entry the kernel is diffed against) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
+The parity suite is this subsystem diffed against the headless WGSL kernel. It was going to exist regardless; the tests are therefore nearly free.
+
+---
+
+## 2. The three tiers
+
+| Tier | Applies to | Assertion | Tolerance |
+|---|---|---|---|
+| **L — Logic / algorithm** | the **rules**, and decisions **given identical inputs** | one source + no fork on fixed inputs | none (see corrected scope below) |
+| **N — Numerical, non-amplifying** | decode, ICs, one step, pre-divergence stretches | elementwise close | tight (§4) |
+| **S — Structural, under amplification** | accumulated chaotic trajectories | distributional / categorical match | windowed / statistical |
+
+### Tier L — exact, no tolerance (the bulk of the suite)
+
+These are the determinism-pin quantities. A mismatch is a bug, full stop, every time:
+
+- substep count `N_sub` (the frozen-threshold bucket lookup — integrator dd §3.3; achieved by the comparison-only rule, §2 Tier B)
+- terminal label, and its priority resolution when several could fire (integrator dd §3.6)
+- event classification: the `state` enum (the old separate `class` is merged into it — payload §2), escaper identity, collision pair (`detail`)
+- feasibility branch taken (invariant charts), degenerate branch + reason
+- coincident-pair rejection (encode dd §3.2); no mirror-tie choice, `C` having no mirror step (R-865). *14 Nov 2026 (R-865; TASK-M2-107; applied per R-369, a mechanical consequence of R-865, after physics review 5907871580 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder on `main`:* *Was:* "mirror-tie choice at the deadband, coincident-pair rejection (encode dd §3.2)"
+- decode-mode selection, loop iteration structure
+
+*4 Nov 2026 (R-710):* the one enumerated exception is what the ionisation gate's stored `E_0` sign decides, the terminal label, `detail` and escaper identity of `escape` with `detail = 3`: it may differ between backends only within REQ-INT-113's width of `E_0 = 0`, measured and reported, never reconciled.
+
+**CORRECTED SCOPE — Tier L is about the RULE, not the OUTCOME.**
+
+The previous wording said *"branch decisions must be identical across precisions"*. **That is false and
+cannot be made true.** A branch on a float comparison forks whenever the value straddles the
+threshold: `d² < r_coll²` with `d²` at `0.9999999999` lands on opposite sides in f32 and f64, same rule,
+different answer. **The inputs differ, so the decision differs. That is precision, it is expected, and
+suppressing it would defeat the point of running on the GPU at all.**
+
+What Tier L actually guarantees, in two parts:
+
+1. **STRUCTURAL IDENTITY — there is ONE implementation, not two.** The kernel is generic over `Real`
+   and monomorphised; the GPU build and the CPU build are **the same source**. So *"the logic is
+   identical"* is not something to verify by comparing outputs — **it is true by construction, because
+   there is one copy of it.** There is no GPU regularisation and a separate CPU one; there is one,
+   instantiated twice. Verified by **inspection of the source**, never by agreement of results.
+
+2. **STATELESS DETERMINISM — given IDENTICAL inputs, the same decision.** This is what the
+   comparison-only rule buys, and it is genuinely testable: the spike measured **705 boundary states,
+   0 forks** across f64, f32, Metal (naga→MSL) and lavapipe (naga→SPIR-V), against a control —
+   runtime `ceil((r_sub/√d²)^1.5)` — that forked **105 times on Metal and 82 on lavapipe** on the same
+   inputs.
+
+**The distinction that matters:** a decision that differs *because the inputs differed* is chaos and is
+reported. A decision that differs *on identical inputs* means the operation itself disagreed — two
+backends computing `pow` to 1–3 ulp apart and crossing an integer boundary. **Only the second is a
+bug**, and the comparison-only rule is what excludes it.
+
+**And no backend certifies another.** The spike's control forked on **crossing sets that do not nest** —
+26 shared, 57 Metal-only, 34 lavapipe-only. Every backend gets states right that the other gets wrong,
+so a suite pinned to one passes while a second disagrees on inputs it never sampled. **The rule must
+hold by construction; it cannot be established by testing.**
+
+### Tier B — integer-exact *given the same branch decisions* (integer & packed fields)
+
+> **The name was misleading and the claim was too strong.** "Binary-exact" invited the reading that
+> these fields match CPU↔GPU on a real trajectory. **They do not and cannot** — they are functions of
+> the trajectory, and trajectories diverge by precision (see Tier L above). What is exact is the
+> **integer arithmetic given its inputs**: no rounding, no tolerance, so a mismatch *on the same
+> inputs* is a logic bug rather than permitted error.
+
+Distinct from the numerical tiers: certain payload fields are **integer or integer-packed** and must match **bit-for-bit** CPU↔GPU (they have no floating-point tolerance — they either match or there is a logic bug). Per the SimState payload spec:
+- **integer step indices** `t_end_step`, `t_dmin_step`; the exact `total_substeps` u32;
+- **all packed descriptor fields** (`state`, `detail`, `saturated`, `dmin_pair`, `last_symbol`) and their bit offsets, except the departed bit (bit 15, R-545), which is Tier N/S (below); the bit offsets themselves, the departed bit's included, are fixed by the ledger;
+- the **free-group word arithmetic** — the mixed-radix `W` is an *integer* computed by integer multiply-add/div-mod, so the word (and `fgw_length_raw` — incl. the 127 truncation sentinel; `fgw_retained_prefix_length` derives from it) must be bit-exact **given bit-exact crossing-detection decisions** (which are Tier-L branch decisions). Note: word *content* is only as deterministic as the crossing-detection branches feeding it — the simultaneous-both-cut tie-break must be deterministic (integrator contract) or the word can diverge on FP test order.
+
+Tier B is exact **conditionally**: given the same branch decisions and the same integer inputs, the
+result is exact — integer logic has no permitted error. **It is not a claim that the fields match
+across a full trajectory**, which they will not. The f16-packed *display* scalars (`d_min`, `dE_max`, `dLz_max`) are **not** Tier B — they derive from floating-point maxima and belong to Tier N/S with the underlying quantity. Likewise `_reserved`, `θ̃`'s frozen pole reference (R-397; payload §2), is **not** Tier B: its code is rounded from the float longitude `atan2(n_v, n_u)`, so it belongs to Tier N/S with `θ̃`: given the same entry state, backends may differ by one code (cyclically, mod 65535), and along a full trajectory the code follows `θ̃`'s Tier N/S envelope and may differ by more. Whether it holds the sentinel 0xFFFF or a code follows from the comparison-only disc test `ρ² < r_pole²·I²`, whose input is formed at the kernel's `Real` (not position-quantised to f32), so it is Tier B across backends on identical stored state **at the same `Real`** and must match exactly there; across precisions (CPU-f64 against GPU-f32) it is a branch decision at the disc edge that may differ, like a label on a real trajectory. The one-code allowance needs REQ-INT-086's `r_pole` above about 2e-3 (the longitude's backend error at the disc edge grows as 1/`r_pole`); the proposed 1e-2 satisfies it. R-433 confirmed 1e-2 at the M1 gate, a constants-register entry provisional until M3. Likewise the **departed bit** (`sample_descriptor` bit 15, R-545) and **`closure_step`** are **not** Tier B: departure is decided on the float squared chord `|n̂(t) − n̂(0)|² > δ_dep²`, and the minimum's step on the float comparison `d² < closure_min²`, whose inputs are formed from the shape map (a division by `I`) and a multi-op sum a backend may contract, not by the comparison-only rule. They belong to Tier N/S with `closure_min`: given the same stored state, backends may differ in which sample first departs and which step holds the minimum where a chord lies within round-off of `δ_dep` or of the stored minimum, and along a full trajectory they follow `closure_min`'s envelope. No `√` decides either (decided 17 Nov 2026 under the owner's rule of that day, `plan/DECISIONS-LOG.md`; TASK-M3-11).
+
+**How Tier B is *achieved* — the comparison-only rule (spike-established, supersedes the old "compute the branch in f32 on both sides" pin).** A branch decision derived from a runtime transcendental **cannot** be made bit-exact across backends: a GPU's `pow`/`sqrt`/`div` and libm's differ by 1–3 ulp *in every math mode* (not a fast-math artefact — controlled test, `principia_spike_brief.md`), so a `ceil` at an integer boundary forks. Tier B therefore holds **only because branch inputs are reduced to comparisons against compile-time constants, or against values every backend receives bit-identically, and single-rounded arithmetic** — `N_sub` is a bucket lookup over the sim key's threshold table, generated on the host and shipped bit-exact (R-502; *was:* "against compile-time constants and single-rounded arithmetic** — `N_sub` is a frozen-threshold bucket lookup"), collision is `d² < r_coll²`, horizon is an integer counter, the crossing tie-break is a fixed rule (integrator dd §3.3, `principia_gpu_determinism_note.md`). Without that rule these fields are *not* bit-exact and Tier B is a false assertion; with it, the spike measured 0 forks across five instantiations (CPU-f64, CPU-f32, native-GPU, browser-GPU-via-WGSL, double-double). **The scope line, stated once and corrected.** The rule applies to the **decision given its inputs**,
+not to the decision at `t = 50`:
+
+| | guarantee | verified by |
+|---|---|---|
+| the **rules** — bucket table, `d² < r_coll²`, tie-breaks, packing | one source, instantiated | **inspection**, not comparison |
+| a **decision given identical inputs** | no fork | the stateless test (705 states, 0 forks) |
+| a **label on a real trajectory** | **none — it will differ** | reported by the inspector, not suppressed |
+| everything **continuous** | Tier N/S envelope | loose tolerance, **not to be tightened** |
+
+**A `state` that differs at the horizon is chaos**, the same as a position that differs — it is what
+the pixel inspector exists to show. **A `state` that differs on identical inputs is a logic bug.** The
+first is the design working; only the second is excluded.
+
+### Tier N — tight numerical (checkable because nothing amplifies)
+
+- **decode → `(m, r, p)`, `ICDescriptor`, `E₀`**: the whole Matter rung (decoder dd §5).
+- **one `STEP` from a shared state**: the parity workhorse. Feed both occupants the identical state, compare one step. Chaos cannot enter — it is a property of *iteration*, not of a step — so this is always tight and always meaningful, for regular and chaotic pixels alike (integrator dd §5.1–5.3).
+- **short pre-divergence trajectory**: up to the divergence-onset time, accumulated error is bounded; compare to a growing-but-bounded envelope.
+- **encode round-trip in physical units**: T2 (encode dd §5.1).
+
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (Tier N's decode row, compared against a GPU decode) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
+### Tier S — structural only (asserting the pointwise gap would assert a falsehood)
+
+A chaotic trajectory integrated to `t_end` **cannot** match pointwise across precisions, and it is not a bug — positive Lyapunov exponent means a 1-ulp difference is uncorrelated by `t_end`. So:
+
+- **never** assert `‖state_cpu − state_gpu‖ < ε` at `t_end` on a chaotic pixel.
+- **do** assert: same **outcome class** (Tier L, exact) **on non-chaotic fixtures only** — on a chaotic trajectory the label may differ across precisions (Tier B table, R-84); `t_end` within a window; **divergence-onset time** consistent between the two runs; and the **aggregate survey** agrees (§5).
+
+The pointwise gap here *is* the reversibility/chaos signal the whole instrument exists to show. Tier S is the divergence principle stated as a test strategy.
+
+---
+
+## 3. The load-bearing discipline: never accumulate before comparing
+
+**For any per-step or per-decode comparison, feed both pipelines the same input and compare immediately.** This is what makes the suite robust:
+
+- `stepOnce` comparisons take a **shared state**, not a shared IC — so the harness feeds states, including *synthetic* ones (deep near-collision, high-substep, near-feasibility-edge) that a real trajectory reaches rarely. Synthetic states are legitimate and give better coverage; the f64 side need not have produced them.
+- Trajectory-level agreement is then **only ever Tier S** — because the only place accumulation happens is a full trajectory, and full trajectories are compared structurally.
+
+The rule in one line: *tight and elementwise up to and including a single step; structural-only beyond it.*
+
+---
+
+## 4. Tolerance — and the cross-backend reality
+
+Tier-N tolerance absorbs **two** sources of difference, not one:
+
+1. **f32 vs f64** — the intended comparison.
+2. **cross-backend f32 variance** — the kernel run through native `wgpu` vs the user's browser/driver can produce slightly different f32 results for the same kernel; shader translation and driver math differ across backends.
+
+Therefore Tier-N tolerances are **pinned empirically, not guessed**: **native in-process `wgpu` sets them** (R-85) — run the kernel there, measure the spread on the decode/step quantities, set the tolerance to comfortably cover it. Dawn CI is dropped. Real browsers are checked against those tolerances with the browser build (M8). A tolerance validated only against f64 will flake across drivers. (For a solo web artefact the browser matrix is small — Chrome stable and Safari (R-110) — but it is not zero.)
+
+Relative tolerance, per quantity class: IC/decode ~1e-5; one-step state ~1e-5 scaled by force magnitude; monitored `E₀`/`L_z` at t=0 ~1e-6. These are starting points to be replaced by measured values.
+
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (the IC/decode tolerance class, `~1e-5`, for a GPU decode) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
+**Golden images are byte-exact across backends at exact ties, by construction (R-287), but not near one (R-296).** Fragment output quantises explicitly in the shader — round half to even, then store — not through a backend's automatic float-to-unorm conversion, which breaks exact half-way ties differently (Metal rounds up, lavapipe to even; R-269's measurement). Every backend then writes identical bytes for an exact tie, and a golden case keeps one reference across backends; a case whose bytes still differ keeps one reference per backend (R-269). **Explicit quantisation makes exact ties identical, but a value within an ulp of a tie can differ on a backend whose display shaders compile with fast-math (Metal via wgpu), so goldens near a tie use per-backend references (R-296).** Quantising removes the conversion's tie-break difference, not a difference in the fragment's own arithmetic before it: on Metal, R-269's `(x + 0.5) / 255.0` matched multiplication by f32(1/255), and on 94 columns it landed one ulp from lavapipe's correctly rounded division, on the other side of the tie, so the rounded level differed by one (R-296's Result). R-269's half-way fixture is such a case: its evidence is that lavapipe's quantised bytes equal its automatic ones, and that both backends round exact ties to even.
+
+*4 Nov 2026 (R-695, closing RQ-686):* "goldens near a tie use per-backend references" above holds on the backends CI renders on, Metal and Vulkan on lavapipe. On any other driver a near-tie case's result is reported, not compared to pass (REQ-VAL-349).
+
+**Pixel comparisons across backends go on raw pre-colour values, with the outlier tail reported (R-686).** A comparison of what two backends drew reads the values before colouring back raw, and reports the tail as a count of pixels beyond a threshold it states; it is never 8-bit frame equality. A stated threshold is fixed before the run and is not moved after it (R-649). The clean-backend baseline is Metal against lavapipe: **161,394 of 1,274,316 pixels differ, 221 of them by more than 32 of 255** (observed: 160,570 by 1, 603 by 2 to 8, largest 196; issue #390, comment 6633374835, gives the total, the 221 and the largest, and the two smaller buckets, from the same frames, are recorded here), at centre 0/0, ×0.77, tilts 0, on wgpu and naga 30.0.1, Apple M3 Pro against llvmpipe (Mesa 26.0.8), of the mock's `fs_main` in a scratch program at 1236×1031, not a GUI capture. Those are 8-bit figures, the kind of comparison this rule retires, kept because they are what exists: **a raw pre-colour baseline is still to be measured** (TASK-M6-53). They hold for the mock's noise pattern as it stood on 4 Nov 2026, and option A's new pattern needs its own (R-689). **This rule is for cross-backend investigation only (R-691):** goldens stay as they are on CI backends, as the paragraph above says.
+
+**The driver condition (R-690).** R-547's "operations every IEEE backend rounds alike" is a condition on the driver: agreement of a branch input across backends holds on a driver that keeps its additions and multiplications as written: correctly rounded, not reassociated and not distributed. It is not enforceable, since the toolchain emits no `NoContraction`, so it is tested, per driver, by TASK-M4-27 and TASK-M4-28. **A driver that fails is recorded unverified, not supported.** The test reads a branch input at the expression's own operands, and its kind on what a driver can round. Kind `+ and ×` is floating `+`, `−` and `×`, with what rounds nothing and a rewrite can't move: negation and `abs`, exact power-of-two scalings, bit reads and masks, integer operations, selects and comparisons. The kernel's `Wide` forms are this kind, and a `Wide`'s bits are its mantissa and its exponent, both. Kind `other operation` holds an operation with an ulp bound rather than correct rounding (division, `√`, `sin`, `cos`, `atan2`, a rounding builtin), or `fma`, which one driver fuses and another rounds as two operations (R-547). On the first kind: operands that differ across backends are an upstream difference, no evidence on the driver (level 1); bit-identical operands with differing bits fail the driver, with or without a fork (level 2); identical operands and bits with a different outcome are a comparison fork, which fails it too (level 3). An input of the second kind is reported as that kind. Levels are judged on operands, bits and outcome from one named compiled entry, so the read-back emits the outcome as well; a difference seen in a production entry that doesn't show in the read-back is reported under its own name, a production-only difference, which is no level and earns no word. The arbiter is the written form evaluated on the CPU at f32, each operation correctly rounded, at CPU f32's operands: those of its own run or, where two GPUs share operands that run didn't produce, those shared operands, which the host evaluates. At level 2 the driver whose bits differ from it fails; at level 3, the driver whose outcome differs from CPU f32's. A driver measured with no failure reads "no failure in N", N shown, never "verified" or "supported"; one with no record reads "not run". N counts only evaluations, one input's one branch on one driver, of the first kind with operands bit-identical to CPU f32's, and each driver's line shows, per branch input and entry, N and its level 1 count, with its `other operation` count beside them. "Driver unverified", a word for a driver not measured, is a different state from "unverified, not supported". A standing holds for the compute stage, setting off, on that adapter and driver version, through the compiled entry each row names, and under NVIDIA's hardware label; no failure through a read-back entry says nothing of the production pipeline's compile. The recording blocks nothing (R-649).
+
+**Fast-math, per shader stage (R-297).**
+- **Compute shaders (the simulation):** fast-math is an explicit, recorded setting, **off by default** and on only as an opt-in optimisation; the project never inherits a backend's default silently. **Off:** bit-identity and identical branch decisions hold as this contract states them (R-84; Tier B), with branch inputs still comparison-only, whatever the math mode (`principia_gpu_determinism_note.md` § "The mechanism (measured, not inferred — the attribution was overturned by a controlled test)"). On Metal, off means compiling the project's own MSL with fast-math off and loading it through wgpu's passthrough, for the compute pipelines only. **On:** allowed for speed; parity is then **measured, not exact** — the differences between on and off are measured and reported, not asserted to be zero. The compute setting is part of the sim key (render contract Part 3), recorded in the embedded record (pxpack, `principia_dd_image_embedding.md` §6), and shown in the Profiler and the Run window (`principia_render_gui_spec.md` §G5).
+  *4 Nov 2026 (R-694, closing RQ-685):* with the setting off, "bit-identity" here is the branch decisions of REQ-INT-057 and the Tier B fields only. Continuous values are free across drivers, so `SimState = f(IC, sim key)` holds per driver for them. Neither input is fed by a driver's division or `√`: `E_rel` and `|Δn̂|` take written forms that use neither (REQ-INT-112). The ionisation gate's total `E > 0` reads the stored `E_0`, whose sign is the one enumerated exception: it may differ between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled (R-710; *was:* "is RQ-697's"). *Was:* "A driver's division or `√` feeds no decision:", which presumed that ruling. The header records "Off" only for drivers measured, otherwise wgpu's path with "driver unverified" (REQ-TOOL-221). Such a driver is not measured, R-690's "not run"; "unverified, not supported" is earned only by a measured failure. *Was:* "such a driver is unverified, not supported".
+- **Vertex and fragment shaders (display):** fast-math may stay on.
+- **The exception:** fragment paths that recompute physics to check agreement — the DECODE and ROUNDTRIP presets (R-116; `principia_colour_composition.md` §6) — compare within a stated tolerance, a calibration requirement (R-71), not bit-exactly: the DECODE view's agreement presets, fragment against compute, within a tolerance calibrated for them; ROUNDTRIP, computed wholly in the fragment, within ε_phys (`principia_inverse_encode_contract.md` Part 4).
+  *12 Nov 2026 (R-935 under RQ-765; the chart audit's F14):* "fragment against compute, within a tolerance calibrated for them" reads as the fragment's generated code against the CPU's narrowed record; the compute side decodes nothing (R-926 item 5). *Was:* the line stands as written.
+- The telemetry header records the compute setting asked for and each stage's mode as compiled — compute, vertex and fragment (`principia_dd_telemetry_and_tiers.md` §5).
+- **In the browser build (R-303):** WebGPU offers no fast-math control, so off can't be guaranteed there: each stage's compiled mode is recorded as "unknown", the Run window's control is disabled, and browser runs are held to the Tier-N tolerances native wgpu sets (R-85), measured, not bit-exact, whatever the setting. The setting itself stays on the sim key and in pxpack.
+
+---
+
+## 5. The aggregate-survey agreement test (what certifies "the picture is the same")
+
+Per-pixel Tier-S is weak on its own; the test that actually certifies the two pipelines produce the same *science* is aggregate:
+
+- Over a **uniform grid** at fixed resolution — **not** quadtree leaves (measure honesty; scheduler contract Part 2) — compute the same region on both pipelines.
+- Assert agreement on: **outcome-class fractions** (fraction escaping / bounded / collision), **boundary location** (the class-boundary set matches within a pixel or two), and where computed, **island prevalence** and **decay-time distribution shape**.
+- Threshold is **sampling-noise-bounded**: the two surveys are two finite samplings of the same underlying map, so they agree to within the statistical noise of the grid resolution, not exactly.
+
+This is the validation-scratchpad's "CPU proves the method" reframed as "CPU and GPU agree on the survey" — and it is the test that matters for a shareable artefact, because it certifies the shipped GPU picture is the true one. (The exact statistic and threshold — Q3 in the working note — is pinned in the validation phase, alongside literature reproduction.)
+
+*31 Oct 2026, R-661:* that f32 and f64 surveys agree statistically is a hypothesis this test measures: no paper establishes it. The test stands as REQ-VAL-065 states it; "certifies" holds only of a survey the test has measured, at the sensitivity its grid gives.
+
+---
+
+## 6. The harness
+
+**What shared source changed, and what it did *not*.** Under the Rust-kernel substrate (`principia_spike_brief.md` findings → rust-gpu) the CPU and GPU physics are **one source** compiled twice, so **transcription drift — the historical reason Tier-L existed — is structurally impossible**: there is no second implementation to fall out of sync. That retires Tier-L's "did someone update one side and not the other" burden entirely. It does **not** retire the parity suite, and the spike proved why: the *same source* still passes through a GPU shader compiler **entitled to silently miscompile** — a triangular nested loop translated through naga→MSL summed one body-pair of three, a **wrong answer with no error and no crash**. So the suite's job is *re-aimed*, not removed: it no longer guards transcription drift (gone), it guards **backend miscompilation and branch-determinism**. This is load-bearing in CI **permanently**.
+
+| Suite | Runner | Mechanism | Frequency |
+|---|---|---|---|
+| Sim parity (Tier B branch words; Tier N/S continuous) | **native `#[test]`, in-process** | instantiate the one kernel CPU-f64 and dispatch the GPU build via `wgpu` (native), read the `SimState` buffer back, diff in the same process — Tier B bit-exact, Tier N/S within envelope | every commit / CI |
+| Codegen (pack/unpack/catalogue) | native `#[test]` + a **GPU self-test dispatch** | pack∘unpack round-trip on host and on-device — generation-root dd §5 | every commit |
+| Aggregate survey (§5) | native, headless (no canvas) | uniform-grid region on both instantiations, statistic compared | nightly and before release (heavier; R-134) |
+| Colour / visual | **native `wgpu` offscreen** from M1; at M8 the **Playwright** browser suite, on Chromium and WebKit (Playwright's Safari engine; R-149), checks against the same baselines within tolerance (R-110) | golden-image diff of the fragment output (colour side stays hand-WGSL — no parity stakes); no re-baselining without a gate decision | every commit (native goldens, R-110); from M8 the Playwright suite nightly, on GUI and colour PRs, and at each gate (R-134) (out of parity scope — Q2) |
+
+**The other suites, and the CI hardware (R-110).** Unit, property, numerical-gate and native golden suites run on every commit; benchmarks run on the human's own Mac via `prin profile`, at milestone gates and on demand, never on hosted runners (R-186); GUI screenshots run on GUI PRs and at the gates. GPU CI runs on GitHub-hosted runners (R-186): **lavapipe** on `ubuntu-24.04`, pinned (R-375), and Metal on `macos-15` (Apple silicon, paravirtual Metal) for the Metal correctness suites only, both on every commit. "Every commit" in this section is every push to `main` and every pull-request head, but for R-656's skips as R-662 and R-677 scope them: a head that changes none of Principia's code runs only the cheap checks, a head that changes only the plan's task data or the GUI's artboards and references runs the cheap checks and the tests that read what it changed, and a head that changes no GPU-path file skips the GPU suites; each skipped suite runs again on `main` once the head merges (R-656, R-662, R-677). The one self-hosted runner, R-711's on the owner's PC, may run from the anchor move, as named measurements and never as required checks, the GPU suites nightly and on pushes to `main` (Vulkan now, DX12 from Phase 2), gpu-idle, the weekly proof and the heavy-work comparison against hosted runners; benchmarks of record stay on the Mac, and Windows benchmark numbers are a separate named series, never mixed with the Mac's; moving required or heavy work to it is not approved (R-859). DX12 is an opt-in, behind a cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default and documented "local testing only, untested in CI": no required or hosted job builds or selects it, and its run on that runner from Phase 2 is a named measurement (R-862, R-711, R-859).
+
+Native in-process parity is *simpler* than the old Dawn-in-Node harness (one process, one language, no buffer marshalling across a runtime boundary) and *more* necessary (it is the only thing that catches a silent shader miscompile). **Run the gate on more than one GPU backend once available** — the spike's evidence is Metal-only (both the native and browser legs funnelled to the same MSL compiler, which is *why* even continuous words matched); branch-word bit-identity across a *different* naga backend + driver (Vulkan/D3D12) is the one thing the spike could not witness on an M-series machine. lavapipe on every commit is the second backend and satisfies M4's two-backend check; a run on a **real non-Metal GPU** is the standing pre-Paper-2 action item and gates Paper 2 (R-58, R-110). Parity never touches the canvas; the canvas-bound colour path is the only thing needing a real browser, and it is not a parity test.
+
+---
+
+## 7. What this contract does *not* cover
+
+- **Physics correctness (self-consistency ≠ correctness).** Parity proves the two pipelines *agree* — it does **not** prove they agree with *reality*. A consistently-wrong pipeline (a sign error, a transposed Jacobi coordinate) passes every tier: both precisions compute the same wrong value. Correctness against external truth (analytic solutions, published orbits, Burrau/Lehto benchmarks) is the **ground-truth validation suite** (`principia_validation_ground_truth_note.md`), a *separate* suite. **The two compose:** the ground-truth suite validates the *physics* on the trustworthy **f64 CPU reference** (where precision removes numerical ambiguity), and this parity contract proves **GPU == CPU** — so *correct-CPU × GPU==CPU ⇒ correct-GPU*. Physics-correctness and precision-fidelity are separate properties, separate suites, multiplied; the GPU inherits correctness through parity rather than being independently validated against theory. (The chaotic ground-truth case — Burrau — is compared at **tier-S structural features**, the same discipline this contract uses under chaos.)
+- **Colour correctness** — validated by golden images + the colouring-dd property tests; no f32/f64 stakes; explicitly out of scope (§6, Q2).
+- **The aggregate statistic's exact form** — deferred to validation (Q3).
+- **Per-component internal logic** — lives in the five drill-down suites; this doc assigns their *tier*, it does not restate their *content*.
+- **Performance** — a separate concern; parity is about correctness only.
+
+---
+
+## 8. Test index (drill-down suite → tier)
+
+| Source suite | Its tests land at |
+|---|---|
+| decoder dd §5 | N (identities, ranges, round-trip), L (degenerate branch, canonical no-op branch) |
+| generation-root dd §5 | L (disjointness, pack∘unpack exact), plus codegen harness |
+| integrator dd §5 | L (substep integer, detector labels, priority), N (order-scaling, one-step, drift), S (Burrau smoke, divergence structure) |
+| encode dd §5 | N (T2, scale table), L (coincident rejection, feasibility branch; no mirror tie, R-865. *14 Nov 2026 (R-865; TASK-M2-107; applied per R-369, a mechanical consequence of R-865, after physics review 5907871580 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder on `main`:* *Was:* "L (mirror tie, coincident rejection, feasibility branch)") |
+| colouring dd §5 | *(none — out of parity; own golden/property suite)* |
+
+The seam catalogue (architecture §5) remains the **integration**-test index; this contract is the **parity/unit** discipline layered under it. Every seam row is still at least one integration test; every drill-down test now also carries a tier.
+
+---
+
+*Identical logic, precision the only variable, checkable error only where nothing amplifies. Branches are exact on identical inputs; steps are tight; trajectories are structural; the survey agrees within sampling noise. Compare before you accumulate. The gap under chaos is the signal, not the bug — and the second pipeline was always a feature.*

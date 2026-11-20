@@ -1,0 +1,17 @@
+{
+  "render": {
+    "shader": "gradient.wgsl",
+    "fragment": "fs_main",
+    "width": 256,
+    "height": 256,
+    "constants": { "step": 0 }
+  },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass",
+  "lines": { "row_128": { "from": [0, 128], "to": [255, 128] } },
+  "symptoms": [
+    { "name": "red_mean", "kind": "mean", "channel": "r" },
+    { "name": "green_mean", "kind": "mean", "channel": "g" }
+  ]
+}

@@ -1,0 +1,30 @@
+﻿2026-11-02T13:08:40.0898118Z Current runner version: '2.338.2'
+2026-11-02T13:08:40.0927328Z Version: 20261021.618
+2026-11-02T13:08:40.0938873Z Image: ubuntu-24.04
+2026-11-02T13:08:40.0939511Z Version: 20261025.353.1
+2026-11-02T13:08:41.1180475Z Complete job name: ci-release (1)
+2026-11-02T13:08:41.2332193Z ##[group]Run actions/checkout@v4
+2026-11-02T13:08:53.5525969Z ##[group]Run rustup toolchain install
+2026-11-02T13:08:53.5550571Z shell: /usr/bin/bash -e {0}
+2026-11-02T13:09:13.0957022Z ##[group]Run actions/setup-python@v5
+2026-11-02T13:09:13.2595297Z ##[group]Run python3 -m pip install pyyaml
+2026-11-02T13:09:13.2628828Z shell: /usr/bin/bash -e {0}
+2026-11-02T13:09:14.3502811Z ##[group]Run sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+2026-11-02T13:09:14.3523710Z shell: /usr/bin/bash -e {0}
+2026-11-02T13:09:23.8447780Z ##[group]Run taiki-e/install-action@v2
+2026-11-02T13:09:23.8551731Z ##[group]Run bail() {
+2026-11-02T13:09:23.8555364Z [36;1mif ! command -v bash >/dev/null; then[0m
+2026-11-02T13:09:23.8556890Z [36;1m    if command -v sudo >/dev/null; then[0m
+2026-11-02T13:09:23.8557502Z [36;1m    elif command -v doas >/dev/null; then[0m
+2026-11-02T13:09:23.8562856Z shell: /usr/bin/env -u ENV -u BASH_ENV -u CDPATH -u SHELLOPTS -u BASHOPTS /bin/sh -eu {0}
+2026-11-02T13:09:24.3246562Z ##[group]Run actions/download-artifact@v4
+2026-11-02T13:09:35.3826335Z ##[group]Run archive="$RUNNER_TEMP/nextest-release.tar.zst"
+2026-11-02T13:09:35.3827204Z [36;1mgot=$(stat -c %s "$archive" 2>/dev/null || echo 0)[0m
+2026-11-02T13:09:35.3829725Z [36;1m  got=$(stat -c %s "$archive" 2>/dev/null || echo 0)[0m
+2026-11-02T13:09:35.3851853Z shell: /usr/bin/bash -e {0}
+2026-11-02T13:09:35.3959919Z ##[group]Run cargo nextest run --archive-file $RUNNER_TEMP/nextest-release.tar.zst --extract-to . --extract-overwrite --no-fail-fast --partition hash:1/2
+2026-11-02T13:09:35.3981424Z shell: /usr/bin/bash -e {0}
+2026-11-02T13:24:29.6959562Z     test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 10.02s
+2026-11-02T13:24:29.7290201Z     [0m[31;1mthread 'ci_disk_sampler_does_not_outlive_the_step' (26150) panicked at xtask/tests/ci_disk_sampler.rs:152:10:[0m
+2026-11-02T13:24:29.7332449Z     [31;1mthe sampler outlived the step's script: Custom { kind: TimedOut, error: "child `bash sampler.sh step.sh` (pid 26152) was killed: it outlived the 10 s timeout (R-214; the 600 s default is confirmed, REQ-VAL-156, R-376)" }[0m
+2026-11-02T13:46:01.1777069Z ##[error]Process completed with exit code 100.

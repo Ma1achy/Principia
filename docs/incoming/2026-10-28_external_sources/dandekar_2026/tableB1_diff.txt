@@ -1,0 +1,1 @@
+tableB1: rows A=24 B=24; cells=288; disagreements=0; equal as numbers but not as printed strings (A lost a trailing zero or a '.0')=17

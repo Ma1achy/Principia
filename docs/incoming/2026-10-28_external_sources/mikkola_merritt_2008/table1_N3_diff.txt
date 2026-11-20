@@ -1,0 +1,1 @@
+rows A=3 B=3; cells compared=24; disagreements=0; equal only as numbers=8

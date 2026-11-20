@@ -1,0 +1,61 @@
+[package]
+name = "xtask"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+# `cargo xtask` runs xtask, the package's other binary being the tests' stand-in cargo (below).
+default-run = "xtask"
+
+[dependencies]
+# `cargo xtask codegen` runs the generator (R-241; systems_architecture §7.1).
+ledger = { path = "../crates/ledger" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# R-191's compile check edits kernel's and ledger's manifests in its copy of the workspace (`deps::compile_check`).
+toml_edit = "0.25.15"
+# `cargo xtask golden` renders its cases with native wgpu offscreen (parity_contract §6; R-110), reads and writes PNG
+# baselines, and hashes each reference for BASELINES.md (R-110). wgpu is an external crate, not a workspace edge
+# (systems_architecture §7.1 admits xtask → validation only as a dev-dependency).
+# `cargo xtask screenshot` renders an egui surface on a headless wgpu device and writes the capture as PNG (R-110,
+# TASK-M0-20). wgpu's version and backends are validation's; egui-wgpu 0.36 is the release built on wgpu 30.
+# Both runners share one png version, main's 0.18.
+egui = "0.36.2"
+egui-wgpu = { version = "0.36.2", default-features = false }
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
+pollster = "1"
+png = "0.18"
+# `cargo xtask lint wgsl` parses and validates the generated WGSL with naga, wgpu's own front end, at wgpu 30's version
+# (REQ-RENDER-001). Its one entry is below, with build-kernel's features.
+sha2 = "0.10"
+# `cargo xtask build-kernel` compiles `crates/kernel` to SPIR-V with rust-gpu, through cargo-gpu's installer, which builds
+# the `rustc_codegen_spirv` backend on the pinned nightly (rust-toolchain.toml), and translates it to WGSL with naga,
+# wgpu's own version (canonical_spec §1 item 2; lowering Part 2). Exact: rust-gpu 0.10.0-alpha.1 is the release whose
+# backend builds on the pinned nightly-2026-04-11 (R-169); a caret requirement also admits 0.10.0, which needs another
+# nightly. The backend's own dependencies are pinned by `rust-gpu-backend.lock` (`build_kernel::BACKEND_LOCK`).
+cargo-gpu-install = "=0.10.0-alpha.1"
+naga = { version = "30", features = ["spv-in", "wgsl-in", "wgsl-out"] }
+
+# `cargo xtask job` (R-658) signals a job's process group and tests whether a pid is alive. rustix is already in the
+# build, as validation's dependency for the same (R-217).
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["process", "std"] }
+
+# Controls reach xtask's tests through a dev-dependency on validation (R-176).
+[dev-dependencies]
+validation = { path = "../crates/validation" }
+# `tests/ci_self_hosted.rs` parses the workflows on the self-hosted runner, where PyYAML, the other workflow tests' parser,
+# isn't known to exist (R-711).
+yaml-rust2 = { version = "0.13", default-features = false }
+# `tests/wsl_mask.rs` runs wsl.ps1's two masking patterns, as the script holds them, on made-up addresses; off Windows
+# there is no PowerShell to run them. regex is already in the build, through the workspace's other dependencies.
+regex = "1"
+
+# The stand-in `cargo` xtask's tests copy beside their scratch files, in place of a shell script, which Windows won't run
+# as an executable (REQ-TOOL-238). Not xtask's: `cargo xtask` runs `xtask` (`default-run`).
+[[bin]]
+name = "stand_in"
+test = false
+
+# Under `controls`, each `negative_control!` in xtask's tests compiles as a test (REQ-VAL-152, R-176).
+[features]
+controls = []

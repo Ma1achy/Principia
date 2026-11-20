@@ -1,0 +1,291 @@
+# Drill-down — Colouring (Meaning rung)
+
+*Fifth drill-down. This drill-down holds the spherical colour-map maths, consolidated with the render contract's slot rules, and pins the exact forms (colour-space matrices, compaction functions, the mixed-pixel colour-per-sample → SSAA resolve). Colour is data: every equation here is a measurement display, not decoration.*
+
+---
+
+## 1. What it is
+
+The **Meaning rung**: `payload → colour, per pixel, at the playhead`. A free, typed stain graph on a fixed backbone `… → combine → (post)* → OUT` (R-64); occupants are data (built-in / debug / custom); everything below the waist, governed by the render key — **no equation in this document can ever trigger a re-integration**.
+
+---
+
+## 2. Consolidated contract
+
+From the **render contract**: the stain graph's node kinds and their signatures (R-64); **L-ownership** (a bound brightness metric owns L; the colour occupant contributes hue/chroma; monotone-L LUTs × Replace-L is a semantic conflict the combiner choice resolves, surfaced in UI); **averaging** (colour-per-sample → render-side SSAA resolve, so category-averaging is structurally impossible; continuous S² occupants may consume means of current shape vectors — the reason `n` is handled Cartesian); bake tier for pure-`f(n̂)` occupants (the GUI preview canvas *is* the uploaded texture — zero drift by construction); composite order baked base → combine → overlays → `OUT`, then the display stage (R-67): style → display scale (when `render_scale ≠ 1`) → gamut clamp → colour-vision simulation → screen.
+
+From the **chart contract (Part 2.5)**: colour **compaction** is the third compactification role — render-key, free, never re-integrates; per-field scale comes from the **ledger metadata** (lin | log | cyclic | diverging | categorical | flag).
+
+From the **GUI design doc**: the **two-rotations rule** — `sph_uv` eats the config-space normal; view orbit is display-only; pattern auto-rotate is a UV offset inside the colour function.
+
+From the **generation root**: unpack accessors and the debug catalogue are generated; the `detail` union field switches legend by `state` (the three-colours-bug guard).
+
+---
+
+## 3. The maths
+
+### 3.1 Colour spaces (exact transforms — transcription-check against Ottosson before entering the shared source)
+
+**sRGB transfer** (per channel): `c_lin = c/12.92` if `c ≤ 0.04045` else `((c+0.055)/1.055)^2.4`; inverse threshold `0.0031308`.
+
+**Linear sRGB → OKLab**: `lms = M₁·rgb`, cube-root each, `Lab = M₂·lms^{1/3}`:
+
+```
+M₁ = [ 0.4122214708  0.5363325363  0.0514459929
+       0.2119034982  0.6806995451  0.1073969566
+       0.0883024619  0.2817188376  0.6299787005 ]
+
+M₂ = [ 0.2104542553  0.7936177850 −0.0040720468
+       1.9779984951 −2.4285922050  0.4505937099
+       0.0259040371  0.7827717662 −0.8086757660 ]
+```
+
+**Inverse**: `lms' = M₂⁻¹·Lab` (closed coefficients: `l' = L + 0.3963377774a + 0.2158037573b`; `m' = L − 0.1055613458a − 0.0638541728b`; `s' = L − 0.0894841775a − 1.2914855480b`), cube, then
+
+```
+M₁⁻¹ = [ 4.0767416621 −3.3077115913  0.2309699292
+        −1.2684380046  2.6097574011 −0.3413193965
+        −0.0041960863 −0.7034186147  1.7076147010 ]
+```
+
+OKLCH is the polar form: `C = √(a²+b²)`, `h = atan2(b, a)`.
+
+### 3.2 The vMF engine
+
+The von Mises–Fisher density on $S^2$ is the spherical analogue of a Gaussian,
+$f(\hat{\mathbf n}; \hat{\mathbf p}, \kappa) \propto \exp(\kappa\, \hat{\mathbf n}\cdot\hat{\mathbf p})$: largest at $\hat{\mathbf n} = \hat{\mathbf p}$, decaying with geodesic
+distance, with spread set by the concentration $\kappa$. The colour at $\hat{\mathbf n}$ is a vMF-weighted mean of the pole
+hues in OKLab:
+
+$$a(\hat{\mathbf n}) = C\,\frac{\sum_{i=1}^{6} w_i\cos\theta_i}{\sum_{i=1}^{6} w_i}, \qquad
+b(\hat{\mathbf n}) = C\,\frac{\sum_{i=1}^{6} w_i\sin\theta_i}{\sum_{i=1}^{6} w_i}, \qquad
+w_i = \exp(\kappa\,\hat{\mathbf n}\cdot\hat{\mathbf p}_i).$$
+
+| pole | direction | full OKLab | $\theta_i$ | Okabe–Ito $\theta_i$ |
+|---|---|---|---|---|
+| $\hat{\mathbf p}_1$ | $+\hat x$ | red | 0° | 250° (blue) |
+| $\hat{\mathbf p}_2$ | $-\hat x$ | cyan | 180° | 70° (orange) |
+| $\hat{\mathbf p}_3$ | $+\hat y$ | green | 120° | 30° (vermillion) |
+| $\hat{\mathbf p}_4$ | $-\hat y$ | magenta | 300° | 210° (sky blue) |
+| $\hat{\mathbf p}_5$ | $+\hat z$ | blue | 240° | 170° (bluish green) |
+| $\hat{\mathbf p}_6$ | $-\hat z$ | yellow | 60° | 350° (reddish purple) |
+
+The same, in the code form:
+
+```
+wᵢ = exp( κ · n̂ · p̂ᵢ )
+a(n̂) = C · Σwᵢcosθᵢ / Σwᵢ        b(n̂) = C · Σwᵢsinθᵢ / Σwᵢ
+```
+
+Six poles at `{±x̂, ±ŷ, ±ẑ}`, opposing poles complementary. Hue tables: **Full OKLAB** (0° 180° 120° 300° 240° 60° for +x −x +y −y +z −z) and **Okabe–Ito CB-safe** (250° 70° 30° 210° 170° 350°). Properties (all tests, §5): seamless (no `atan2` anywhere in the blend), opposing poles cancel to neutral grey at midpoints, linear in OKLab, fully parameterised by `(L, C, κ)`.
+
+**Seamless LUT sphere**: `N_e = 16` colours sampled uniformly from the LUT placed as equatorial poles `p̂ᵢ = (cos 2πi/N_e, sin 2πi/N_e, 0)`, LUT endpoints at the N/S poles; the identical blend evaluated in RGB. Cyclic LUTs (Twilight) close exactly by construction.
+
+**Not one-to-one (R-542; RQ-483).** At a fixed L no continuous colouring of the sphere is one-to-one (invariance of
+domain): this blend gives the antipodal shapes `±(1,1,1)/√3` one colour at κ = 1, 3 and 6 (`principia_state_map.md`
+SM6). It stays the hue carrier it is, and nothing in it changes; the state map's one-to-one sphere map is Chart
+position's 3D gradient, a separate node. Colour composition §4.1 states this, and the alternative is not offered
+(R-558, RQ-483 (a)). *Was:* "Whether colour composition §4.1 states this, or offers the alternative, is RQ-483."
+
+### 3.3 Sphere sampling conventions
+
+Widget projection: `s_x = (p_x−c_x)/R`, `s_y = −(p_y−c_y)/R`, `s_z = √max(0, 1−s_x²−s_y²)`, `R = W/2−4`. Equirect mapping is **(θ, φ)** ∈ [0, 2π]×[0, π] (R-14): θ the azimuth in the (u, v) plane on the horizontal axis, φ the polar angle from +w on the vertical axis, L⁺ (w = +1) at the top. `sph_uv` input is always the **config-space** normal (two-rotations rule).
+
+### 3.4 Physics overlay (blob blend) and the house encoding (stability × hue)
+
+> **Superseded (R-76, 25 Sep 2026):** Stability × Hue is deleted — `principia_colour_composition.md` §4.1's n̂ × ⟨field⟩ family replaces it; the blob blend here stands.
+
+Special configurations are computed from the shape map with the current masses, not hard-coded (R-14, `principia_dd_integrator.md` §3.7). With equal masses: `b̂₀₁ = (−1, 0, 0)`, `b̂₁₂ = (½, √3/2, 0)`, `b̂₂₀ = (½, −√3/2, 0)`; Euler `êⱼ = −b̂ⱼ` (the antipodes of `b̂ⱼ`); Lagrange `l̂± = (0,0,±1)`. With unequal masses the overlay uses the mass-weighted positions (R-50). The Euler landmarks are the **Euler central configurations** — the collinear relative equilibria, roots of Euler's quintic in the mass ratios — mapped through the shape map; equal masses reduce to the antipodes of `b̂ⱼ` above. The quintic is transcribed with citation by the task that builds the landmarks, physics-reviewed and confirmed at the gate (R-126).
+
+The blob weight and the blend follow the golden oracle (R-122): `principia_colour_explorer.html` :188–189 — a
+sequential clamped mix over the sites in order (the three BC, the three Euler, the two Lagrange), with `mix` the linear
+interpolation at :100.
+
+```
+Blob blend:   c ← c_base;  for each site j in order:
+                wⱼ = max(0, exp(κⱼ(n̂·p̂ⱼ − 1)) + 0.005) · s · 4      κ = 11 (BC), 9 (Euler/Lagrange)
+                c  ← mix(c, cⱼ, min(1, wⱼ))                        mix(a, b, t) = a + (b − a)·t
+              c_out = c
+
+Stability×Hue:  L = 0.25 + 0.55 · ½(1 − maxⱼ n̂·b̂ⱼ)
+```
+
+— hue identifies basin/position; darkness marks proximity to binary-collision directions (L = 0.25 at a BC point, 0.80 antipodal).
+
+### 3.5 Combiners
+
+**Replace-L (Principia default)**: base RGB → OKLab; `L ← L_min + (L_max − L_min)·b`, with defaults `L_min = 0`, `L_max = 1` — so the default is `L = b`, as `principia_colour_composition.md` §4.1's truth table has it; the range form is the general case (R-77); `(a, b_ab)` untouched; → RGB. Preserves hue and chroma exactly. Its option **keep in gamut** (R-558, RQ-496; `principia_state_map.md` SM15), off by default, also scales `(a, b_ab)` by `min(1, L/0.75, (1 − L)/0.35)` with the replaced L; at the default nothing here changes. **Multiply**: `rgb·b` in linear space — preserves the base's own L structure (the escape hatch for monotone-L LUTs).
+
+### 3.6 Compaction (payload scalar → b ∈ [0,1]; forms per ledger `scale`)
+
+```
+lin        b = clamp( (x − lo)/(hi − lo) )
+log        b = 1 − 1/(1 + ln(1 + |x|/ε_f)),  x < 0 → 0 with sentinel styling   (R-411)
+cyclic     b = frac( x / period )                          (phase, ρ_angle)
+diverging  b = ½ + ½·sign(x)·(1 − 1/(1 + ln(1+|x|/x₀)))     ★ symlog — confirmed (R-411)
+flag       b ∈ {0, 1}
+```
+
+★ The signed drifts (`energy_drift`, `Lz_drift`) need *some* symmetric compression around 0 with the ε floor as `x₀`; symlog is the pin this drill-down introduces.
+
+**Range-free forms (R-411).** `log` and `diverging` need no range: one form per scale serves the user-facing
+compaction and the debug views alike, and neither has an `x_max` or a `lo`, `hi`. `log` is the debug views' `dbg_log`
+placement (render contract, presentation layer; render_gui_spec §10.1), with each field's own `ε_f`: its ledger
+`floor` where it has one (R-263), otherwise its per-field display floor (R-401). `0` maps to `b = 0` and `|x| → ∞` to
+`b → 1`. `diverging` is the drift views' `symlog` (R-381), `s = sign(x)·ln(1 + |x|/x₀)` placed at `½ + ½·s/(1 + |s|)`,
+which is the row above, with `x₀` the field's floor: `eps_E` or `eps_L` for the drifts (R-263); `E_0` and `Lz_0`,
+which carry no floor, take theirs by REQ-COL-065's rule, its number REQ-COL-066's. The drift views and their goldens are unchanged. An explicit range for a stain
+may come later as an optional parameter, not as a second built-in map.
+
+**How `x₀` is chosen for each `diverging` field (definition, R-72; REQ-COL-065).** `x₀` is the magnitude where the
+symlog's compression sets in, in the field's own units: for `|x| ≪ x₀` the placement is linear, `b ≈ ½ + ½·x/x₀`, so
+the zero crossing is drawn at full resolution; for `|x| ≫ x₀` it is logarithmic, each decade a shrinking step toward
+`b = 0` or `1`. It is a property of the field, fixed for every sample of it, never a range of the draw, and no field
+takes an `x_max` (R-411). The `diverging` fields are `energy_drift`, `Lz_drift`, `E_0` and `Lz_0` (R-403), and each
+chooses its `x₀` in one of two ways:
+- **A field with a ledger `floor` (R-263) takes that sim-key parameter as `x₀`**, its value the sample's sim key's:
+  `energy_drift` takes `eps_E`, an energy, and `Lz_drift` takes `eps_L`, an angular momentum, each absolute and in the
+  stored field's normalised units, the drifts' own (R-401's note, R-403). R-401 leaves both unchanged. A drift at the
+  integrator's own tolerance then sits where compression sets in, and a drift many decades above it still has a
+  place.
+- **A `diverging` field with no `floor` takes an `x₀` of its own**, a presentation constant in its field's units,
+  `G = M = I = 1`: the magnitude, on the field's own distribution, below which its values keep linear resolution
+  around zero. `E_0`'s is an energy and `Lz_0`'s an angular momentum. Each is a value (R-71): proposed with its
+  evidence (where the field's values fall on the fixtures, and why `x₀` sits there) by REQ-COL-066 and confirmed by
+  the human at the M7 gate, as R-401's display floors are for the `log` fields.
+  Each is held in the constants register, marked `provisional` until the M7 gate (dd_generation_root §3.8,
+  R-427): `diverging_x0_E_0` and `diverging_x0_Lz_0`.
+
+A `diverging` field with neither a `floor` nor an `x₀` of its own has no compaction, and its ramp is refused, naming the
+field, as a `log` field with no floor is (R-401).
+
+### 3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)
+
+The outcome `state` takes `principia_colour_composition.md` §1.4's canonical nine-class palette (R-77) — the outcome palette (`state ⊕ detail`) only; the raw `state` debug view keeps its six-colour `dbg_cat` palette (R-115). Other categorical fields → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 2π·frac(i·φ_g)`, `φ_g = (√5−1)/2` — adjacent indices ≈ 137.5° apart). `detail` is a **union field**: legend and palette segment switch on `state` (escape → body id; collision → pair id; ids per payload §2, R-22).
+
+**The Chazy final-motion fields** (`chazy_final`, `chazy_status`, `chazy_structure`) take the default palettes R-442 gives them, not a generated index palette (`principia_dd_chazy_final_motion.md` §10; colour_composition §1.4). Each sample, and each ensemble copy, is classified on its own, so the class anti-aliases like any point quantity.
+`chazy_escaper` and the one-body views' palettes are the drill-down's too (§10.11, R-443).
+
+**The mixed-pixel question is anti-aliasing, not semantics** (sampling/SSAA note, ratified). Samples ≠ pixels: at a fractal boundary several disagreeing samples fall under one display pixel. Resolution: **each sample is coloured independently through the full pipeline, then a render-side resolve pass averages the sample *colours* into the pixel colour** (`post(combine(colour, brightness))` runs per sample; only then are colours averaged). Consequences:
+
+- **Category-averaging is structurally impossible** — classification → colour happens per-sample *before* any averaging, so a boundary pixel that's 75% escape-samples / 25% bounded-samples renders 75/25 blended sRGB (honest spatial AA of the footprint), never an invented "class 2" from a colormap position.
+- **The ensemble copies ARE the SSAA samples** — the same E copies computed for the spread metric feed the colour resolve; AA is free wherever ensemble is enabled and scales with tier. Their offsets are **fixed**: copy 0 is the un-jittered centre and copies 1…E are Halton (2,3) points 1…E, centred and scaled to the footprint (R-80) (fixed because lockstep marches the scene → no Monte-Carlo accumulation; low-discrepancy for best coverage at low E).
+- **Point vs footprint quantities** — a *point* quantity every copy computes (class, shape `n`, FTLE) **anti-aliases** (copies differ, colours blend at edges); a *footprint* quantity defined over the copies collectively (ensemble spread) is one value per nominal sample, **shared by its copies, so it does not sharp-edge AA** — correct, because there is nothing sub-footprint to resolve.
+- **The resolve is render-side and terminal** — it averages colours only, never reads back as data; the spread/impurity statistics are computed on the *data* side from the copies' classified outcomes (two firewalls, sampling note). 
+
+**Deleted (was a pin, now vetoed):** the `C' = C·(1 − H/ln k)` majority-class-plus-entropy-desaturation. It baked a display choice into a data occupant and solved a problem the SSAA resolve doesn't have. If a user *wants* an explicit uncertainty marker, that's an **optional independent slot binding** reading the exposed `ensemble_spread`/entropy field (a post occupant, the fuzziness overlay) — swappable and off-able, never welded into the class colour.
+
+### 3.8 Palettes and CVD
+
+**Cubehelix** (analytic, CB-tolerant by monotone L; this form is the reference, matplotlib's cubehelix function with the same parameters a cross-check only, R-151): `φ = 2π(s/3 − λt)`, `a = h·t(1−t)/2`, `s = 0.5, λ = 1.5, h = 1`; `R = t + a(−0.14861cosφ + 1.78277sinφ)`, `G = t + a(−0.29227cosφ − 0.90649sinφ)`, `B = t + a(1.97294cosφ)`.
+
+**CVD simulation** — a display-stage setting, **linear sRGB**, after all pixel computation; order **pixel function → physics overlay → `OUT` → style → display scale → gamut clamp → CVD → screen** (R-67; the simulation sees the final in-gamut colours; the scale stage is a no-op at native; render contract Part 4).
+
+**The method (R-78):** real **Viénot** simulation for protan and deutan, and real **Brettel** simulation for tritan, both
+through LMS space from linear sRGB. The matrices and golden values come from a published reference implementation, named
+with its version below (R-78, R-383). Achromatopsia — offered in the Display window as a fifth mode (R-123) — is neither, and multiplies the linear $(R_\ell, G_\ell, B_\ell)$
+triplet:
+
+$$M_{\mathrm{achrom}} = \begin{pmatrix} 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \\ 0.299 & 0.587 & 0.114 \end{pmatrix}.$$
+
+**The reference implementation (R-383):** DaltonLens-Python, `https://github.com/DaltonLens/DaltonLens-Python`, at
+commit `3cba5e6a7c8f0e8199c8f83f1afb58eb6dab7a3d` (version 0.1.6 in its `setup.cfg`): its `Simulator_Vienot1999` for
+protan and deutan and its `Simulator_Brettel1997` for tritan, both on its `LMSModel_sRGB_SmithPokorny75` (Viénot et
+al.'s Judd–Vos-corrected XYZ from linear sRGB, then Smith & Pokorny 1975's LMS). The method's sources are Viénot,
+Brettel & Mollon 1999 and Brettel, Viénot & Mollon 1997. TASK-M7-20 transcribes its matrices here and generates the
+golden values from it, in linear sRGB.
+
+**The matrices, transcribed from the reference at `3cba5e6` (TASK-M7-20; R-383).** Every matrix acts on a column vector.
+The reference's file and lines are DaltonLens-Python's, at that commit.
+- **The LMS model.** $M_{\mathrm{LMS}} = M_{\mathrm{SP}}\,M_{\mathrm{JV}}$, from linear sRGB to LMS, with Viénot et al.'s
+  matrix to Judd–Vos-corrected XYZ (`convert.py:186–190`)
+  $M_{\mathrm{JV}} = 10^{-2}\begin{pmatrix} 40.9568 & 35.5041 & 17.9167 \\ 21.3389 & 70.6743 & 7.98680 \\ 1.86297 & 11.4620 & 91.2367 \end{pmatrix}$
+  and Smith & Pokorny 1975's cone fundamentals (`convert.py:160–164`)
+  $M_{\mathrm{SP}} = \begin{pmatrix} 0.15514 & 0.54312 & -0.03286 \\ -0.15514 & 0.45684 & 0.03286 \\ 0 & 0 & 0.01608 \end{pmatrix}$.
+  To six decimals, $M_{\mathrm{LMS}}$ is [[0.178824, 0.435161, 0.041193], [0.034556, 0.271554, 0.038671],
+  [0.000300, 0.001843, 0.014671]]; its inverse, taken in f64, is [[8.094436, −13.050431, 11.672058],
+  [−1.024851, 5.401931, −11.361471], [−0.036530, −0.412163, 69.351324]].
+- **Viénot (protan, deutan; `simulate.py:150–158`, `:167`).** The plane through black and the LMS images of blue
+  (0, 0, 1) and yellow (1, 1, 0) has normal $n = M_{\mathrm{LMS}}(1,1,0)^{\mathsf T} \times M_{\mathrm{LMS}}(0,0,1)^{\mathsf T}$.
+  The projection along the missing cone's axis onto it (`plane_projection_matrix`, `simulate.py:95–125`) replaces that
+  cone's response, $L' = -(n_M M + n_S S)/n_L$ for protan, $M' = -(n_L L + n_S S)/n_M$ for deutan, and keeps the other two.
+  The transform on linear sRGB is $M_{\mathrm{LMS}}^{-1}\,P\,M_{\mathrm{LMS}}$: to six decimals, protan
+  [[0.112383, 0.887617, 0], [0.112383, 0.887617, 0], [0.004006, −0.004006, 1]] and deutan
+  [[0.292750, 0.707250, 0], [0.292750, 0.707250, 0], [−0.022337, 0.022337, 1]]. The zeros are zero in exact arithmetic,
+  blue being on the plane; the reference's f64 holds them as roundoff below $2\cdot10^{-16}$.
+- **Brettel (tritan; `simulate.py:235–240`, `:252–271`, `:279–294`).** The neutral axis is white's LMS image,
+  $w = M_{\mathrm{LMS}}(1,1,1)^{\mathsf T}$. The anchors are the Judd–Vos XYZ of 485 nm, (0.05699, 0.16987, 0.5864), and of
+  660 nm, (0.16161, 0.061, 0.00001) (`simulate.py:239–240`), each taken to LMS by $M_{\mathrm{SP}}$. The separating plane
+  has normal $n_{\mathrm{sep}} = w \times (0, 0, 1)$; each half-plane passes through $w$ and one anchor, normal
+  $w \times a$, and the anchor on $n_{\mathrm{sep}}$'s positive side, 660 nm, is the first. $H_k$ projects along the S axis
+  onto half-plane $k$, $S' = -(n_L L + n_M M)/n_S$. A colour takes $H_2$ where $n_{\mathrm{sep}} \cdot \mathrm{LMS} < 0$,
+  else $H_1$. On linear sRGB, to six decimals: $T_1 = M_{\mathrm{LMS}}^{-1} H_1 M_{\mathrm{LMS}}$ =
+  [[1.012773, 0.135485, −0.148257], [−0.012433, 0.868121, 0.144312], [0.075891, 0.805002, 0.119107]];
+  $T_2$ = [[0.936781, 0.189790, −0.126571], [0.061537, 0.815260, 0.123203], [−0.375624, 1.127665, 0.247958]]; and the
+  separating normal carried to linear sRGB, $n_{\mathrm{sep}}^{\mathsf T} M_{\mathrm{LMS}}$ = (0.039015, −0.027881, −0.011134).
+- **Severity 1** (full dichromacy, `simulate.py:84–89`). The CVD stage's code derives every matrix in f64 from
+  $M_{\mathrm{JV}}$, $M_{\mathrm{SP}}$ and the two anchors, and its shader holds them rounded to f32; the golden values in
+  `fixtures/cvd/goldens.json`, generated from the reference, check both.
+
+Under deuteranopia the full-OKLab map loses the red–green distinction (two poles collapse to near-identical
+orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the red–green axis.
+
+**The invalid hatch under the simulations (R-429; REQ-COL-061, R-386).** Under each simulation (deuteranopia,
+protanopia, tritanopia, achromatopsia) the hatch (render contract Part 5; violet `#9B00FF` and cyan `#48FFFF`, 4 px
+stripes, R-428) stays distinguishable from every palette entry REQ-COL-055 measures against. τ is the OKLab distance
+from `#FF00FF` to `#E034C6`, 0.101, the distance R-132 ruled a collision; the hatch passes by colour, each stripe
+colour farther than τ from every palette entry, both simulated, or by the pattern, when the two simulated stripes are
+more than τ apart. The pattern argument holds at 1:1 device pixels only; a downscaled export blends the stripes to a
+flat colour, which under achromatopsia sits on the grey ramp.
+
+**The "not yet" stipple and τ (R-434; REQ-COL-064).** The stipple (render contract Part 5) is held to the same τ,
+unsimulated: no flat colour of any palette comes within τ of every pixel of a 4 × 4 block of it. Its two colours are
+neutral greys, `#4E4E4E` and `#909090` dots, 0.229 apart in OKLab lightness, so it keeps its dots without colour
+vision.
+
+---
+
+## 4. Seams (obligations → integration tests)
+
+| Seam | Obligation | Test |
+|---|---|---|
+| **5** payload → colour | read fields only through generated accessors + ledger metadata | field views sane; a ledger scale change re-styles the view with **zero** recompute |
+| **6** meets compute at the payload only | no colour equation references chart, integrator, or scheduler state | grep-level + the render-key isolation test (below) |
+| **7** compositor above the slots | occupants emit layer content; blur/CVD-final are compositor business | per-layer CVD ≡ post-composite CVD for opaque quads (linearity check) |
+| **render key** | nothing here re-integrates | change every slot, uniform, palette, playhead → sim-buffer hash unchanged; dispatch counter static across render-mode changes at a paused playhead |
+| **13 / Observation** | debug views are ordinary occupants; catalogue generated | new ledger field → view appears (or generation fails); union-legend switching live |
+
+*Note (R-72; REQ-COL-005; TASK-M1-15):* seams 5 and 6 are checked by `cargo xtask lint wgsl` over every colour
+occupant. The render contract's Part 4 ("The occupant rules `cargo xtask lint wgsl` checks") defines a colour
+occupant, a non-accessor payload read and the chart, integrator and scheduler identifiers, and names the debug views
+Part 6 lets read them.
+
+---
+
+## 5. Unit tests
+
+1. **Transform round trips:** sRGB↔linear↔OKLab↔back within tolerance across a gamut lattice; anchors — white → `(L,a,b) = (1,0,0)`, primaries against Ottosson's published test values.
+2. **Seam-free guarantee, automated:** for every mode declared continuous, sample dense pairs straddling the antimeridian and both poles → colour difference → 0. **Continuous:** all vMF modes (smooth weights, smooth weighted mean); the seamless LUT sphere (the same argument in RGB); latitude stripes, $\cos(f\arccos n_z)$; longitude stripes, $\sin(f\,\mathrm{atan2}(n_y, n_x))$, continuous at the antimeridian for integer $f$; 3-D Cartesian Perlin noise. **Intentionally discontinuous**, *excluded by name*, not by failure: Octant, Voronoi 6, Hemispheres, Icosahedral, Fibonacci (hard), Checkerboard, Truchet.
+3. **vMF properties:** opposing-pole midpoints → `a = b = 0` (grey); `κ → large` → nearest-pole colour; **rotation equivariance** — `blend(Rn̂, R·poles) = blend(n̂, poles)`.
+4. **LUT sphere:** an equator longitude sweep reproduces the 1-D LUT within blend tolerance; Twilight closes exactly at the wrap.
+5. **Physics overlay:** blob maxima exactly at `b̂/ê/l̂`; strength `s = 0` is the identity.
+6. **Combiner:** Replace-L leaves `(a, b_ab)` bit-stable at its default, keep in gamut off (R-558); Multiply preserves channel ratios; the monotone-L-LUT × Replace-L pairing raises the UI conflict flag (a wiring test, not a colour test).
+7. **Compaction:** each form monotone on its domain; log handles the −1.0 sentinel via styling, never via the ramp; symlog symmetric (`b(x) + b(−x) = 1`) with `b(0) = ½` exactly.
+8. **Categorical discipline:** a synthetic mixed quad renders the **per-sample colour-then-SSAA-resolve blend** per §3.7 (e.g. 75% escape / 25% bounded → 75/25 blended sRGB) — **never an RGB average of class *indices*, and never the vetoed majority+desaturation**; the `detail` legend switches per `state` (the regression test the three-colours bug earns).
+9. **Golden-angle adjacency:** consecutive palette indices exceed a minimum OKLab hue separation for n up to the Fibonacci-lattice counts.
+10. **CVD stage:** protan, deutan and tritan match the reference implementation's golden values (R-78); achrom output has `R = G = B` exactly; applying any simulation pre-linearisation produces a detectable difference — asserting the *stage*, not just the matrix.
+11. **Bake equivalence:** for every pure-`f(n̂)` occupant, texture-sampled vs directly-evaluated colour agree within texture quantisation over a sphere lattice — the preview-is-the-texture guarantee, executable.
+12. **Render freedom at a paused playhead:** with the frame loop paused, cycling every render mode issues zero compute dispatches and leaves the sim-buffer hash unchanged (the playhead is a live clock, not a render uniform; temporal note, R-66).
+
+---
+
+## 6. Deferred / flagged
+
+- **Symlog pin (§3.6)** — ratified (standard for signed wide-range data), and confirmed in its range-free form (R-411). **Entropy-desaturation (§3.7) — VETOED**: replaced by colour-per-sample SSAA resolve; uncertainty marking, if wanted, is an optional independent slot binding on the exposed spread/entropy field.
+- **Equirect axes** — θ horizontal (azimuth), φ vertical (polar angle from +w), per R-14's one shape-sphere convention.
+- **OKLab coefficients** — transcription-check against Ottosson's reference implementation before entering the shared source (same discipline as the Yoshida-6 w's).
+- **Custom-occupant safety rails** — schema-driven uniforms, async compile, last-valid fallback: already fully specified in the render/lowering contracts; owned there, not re-stated here.
+
+---
+
+*No atan2 in a blend, no average of a category, no L that two owners claim. The sentinel is styled, never scaled. The preview is the texture. And nothing on this rung can ever cost an integration.*

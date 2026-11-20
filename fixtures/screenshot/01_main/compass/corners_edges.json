@@ -1,0 +1,6 @@
+{
+ "made": "Compared in geometry and labelling, not colour (R-451 B8). The reference records and renders under reference/ were made by make_reference.py: docs/gui/reference/principia_nav_cube.html run headless in Google Chrome at the compass's 172-point square, its state set to the run's parameters, one draw() recorded (each record carries its own `made`). Positions are in points from the square's top left, within `tolerance`; an edge's opacity within `opacity_tolerance`, as the reference's canvas keeps it to 8 bits and writes it to 3 decimals. The re-captured cases (mock_compass_slice, mock_compass_tilt, mock_locked): the corners and the edges' order, opacity and width against the reference's, which no plane changes; and no cream.",
+ "tolerance": 0.01,
+ "opacity_tolerance": 0.003,
+ "reference": "reference/slice_0.json"
+}

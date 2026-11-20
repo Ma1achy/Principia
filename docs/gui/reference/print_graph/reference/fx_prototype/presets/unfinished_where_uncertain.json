@@ -1,0 +1,88 @@
+{
+ "name": "Unfinished where uncertain",
+ "doc": "Painted only where the result can be trusted; elsewhere it stops at the pencil underdrawing. Binds data.uncertainty.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "proxy": {
+   "op": "edge_density",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "s": 6
+   }
+  },
+  "done": {
+   "op": "preset:watercolour_pencil_core",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed+3",
+    "pigments": true,
+    "sat": 0.95
+   }
+  },
+  "sk": {
+   "op": "preset:graphite",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 6
+   }
+  },
+  "st": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 3.0,
+    "density": 0.004,
+    "length": 18,
+    "seed": "$seed+3"
+   }
+  },
+  "n4": {
+   "op": "noise",
+   "p": {
+    "scale": 20,
+    "octaves": 2,
+    "seed": "$seed+4"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "done": "done",
+    "sk": "sk",
+    "st": "st",
+    "n4": "n4",
+    "U": "data.uncertainty|proxy"
+   },
+   "p": {
+    "f": "paper = array([0.95, 0.94, 0.91])\nsketch = paper + 0.55*(sk - paper)\nrag = 0.25*clip(st, 0, 1.5) + 0.1*n4\nm = sig((U - 0.62 + rag)*14)[..., None]\nout = done*(1-m) + sketch*m"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

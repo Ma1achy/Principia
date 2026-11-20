@@ -1,0 +1,169 @@
+//! The `N_sub` emitter (dd_integrator §3.3; R-502; REQ-INT-028, REQ-INT-092): writes the kernel's
+//! `generated/nsub_thresholds.rs`, the substep law's comparison tree over the threshold table's maximum length and the
+//! default sim key's table, from the constants register ([`crate::constants::NSUB_TABLE_MAX`], the defaults
+//! [`crate::constants::R_SUB`], [`crate::constants::GAMMA_SUB`] and [`crate::constants::N_MAX`]).
+//!
+//! **The table.** `THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)` for `n = 1 … L_max`, evaluated here on codegen's own
+//! path, not by calling the kernel's host generator (`kernel::driver::nsub_table`), whose output REQ-INT-092's test
+//! compares with this one bit for bit. The evaluation order is the formula's one, which the host generator follows too:
+//! `e = −1/γ_sub`, `p = pow(n, e)`, `s = r_sub·p`, `s·s`, each rounded once in f64, the `pow` the pinned pure-software
+//! libm's ([`libm::pow`], `force-soft-floats`), then one rounding to f32. Only the f32 bit patterns are written.
+//!
+//! **The tree.** `bucket_tree(d2, thresholds)` is `1 + k`, `k` the number of thresholds `d²` is strictly below: the
+//! table is non-increasing, so they are a prefix `THR[1] … THR[k]`, and `d² < THR[n]` is `⌈(r_sub/r_min)^{γ_sub}⌉ > n`.
+//! It is a balanced binary search over `k ∈ [0, L_max]`, each node one comparison against one threshold read by a
+//! constant index (row `(n − 1)/4`, lane `(n − 1) mod 4`), each leaf a constant: no loop, no dynamic index, no float
+//! to integer cast. The file is as rustfmt writes it: each `else` that holds a node is an `else if`, and the threshold
+//! is read through a parameter named `thresholds`, so no leaf's `if … else` fits rustfmt's 50-column single line.
+
+use std::fmt::Write as _;
+use std::path::PathBuf;
+
+use crate::constants::{GAMMA_SUB, NSUB_TABLE_MAX, NSUB_THRESHOLD_LEAST, N_MAX, R_SUB};
+use crate::gen::Generated;
+use crate::schema::{Entry, Word};
+
+/// Where the `N_sub` file is written, relative to the workspace root.
+pub const NSUB_PATH: &str = "crates/kernel/src/generated/nsub_thresholds.rs";
+
+/// The emitter [`crate::gen::EMITTERS`] runs: the one file.
+pub fn emit(_words: &[Word], _entries: &[Entry]) -> Vec<Generated> {
+    vec![Generated {
+        path: PathBuf::from(NSUB_PATH),
+        contents: nsub_file(),
+    }]
+}
+
+/// The table's maximum length, `L_max`, from the register.
+pub fn table_max() -> u32 {
+    NSUB_TABLE_MAX.number() as u32
+}
+
+/// The rows of four the table takes: `⌈L_max/4⌉`.
+pub fn rows() -> u32 {
+    table_max().div_ceil(4)
+}
+
+/// `THR[n]` for `r_sub` and `gamma_sub` in f64, before its rounding to f32, in the order the module's note gives.
+pub fn threshold_f64(r_sub: f64, gamma_sub: f64, n: u32) -> f64 {
+    let e = -1.0 / gamma_sub;
+    let s = r_sub * libm::pow(f64::from(n), e);
+    s * s
+}
+
+/// The default sim key's table, `THR[1] … THR[L_max]`, as f32 bit patterns.
+pub fn default_bits() -> Vec<u32> {
+    let (r_sub, gamma_sub) = (R_SUB.number(), GAMMA_SUB.number());
+    (1..=table_max())
+        .map(|n| (threshold_f64(r_sub, gamma_sub, n) as f32).to_bits())
+        .collect()
+}
+
+/// `THR[n]`'s read in the tree: its row and lane, by constant index.
+fn read(n: u32) -> String {
+    let lane = ["x", "y", "z", "w"][((n - 1) % 4) as usize];
+    format!("f32::from_bits(thresholds[{}].{lane})", (n - 1) / 4)
+}
+
+/// The tree's lines for `k ∈ [lo, hi]`, at `indent` spaces: the leaf `k + 1` where `lo == hi`, else an `if` chain.
+fn body(out: &mut String, lo: u32, hi: u32, indent: usize) {
+    if lo == hi {
+        let _ = writeln!(out, "{:indent$}{}", "", lo + 1);
+    } else {
+        chain(out, lo, hi, indent, "if");
+    }
+}
+
+/// The `if` chain for `k ∈ [lo, hi]`, `lo < hi`, opened by `head` (`if`, or `} else if` within a chain): the middle
+/// `m = ⌈(lo + hi)/2⌉`, `d² < THR[m]` taking `[m, hi]`, else `[lo, m − 1]`, which is the chain's next `else if`, or its
+/// closing `else` where it is the one leaf `lo`. Recursive, so the chain's length is the stack's, never a loop's.
+fn chain(out: &mut String, lo: u32, hi: u32, indent: usize, head: &str) {
+    let m = (lo + hi).div_ceil(2);
+    let _ = writeln!(out, "{:indent$}{head} d2 < {} {{", "", read(m));
+    body(out, m, hi, indent + 4);
+    if lo + 1 == m {
+        let _ = writeln!(out, "{:indent$}}} else {{", "");
+        let _ = writeln!(out, "{:indent$}    {}", "", lo + 1);
+        let _ = writeln!(out, "{:indent$}}}", "");
+    } else {
+        chain(out, lo, m - 1, indent, "} else if");
+    }
+}
+
+/// The tree's function body, the `if` chain over `k ∈ [0, L_max]` at four spaces.
+pub fn tree() -> String {
+    let mut out = String::new();
+    chain(&mut out, 0, table_max(), 4, "if");
+    out
+}
+
+/// The `N_sub` file: the table's sizes, the defaults, the default table's bits and the tree.
+pub fn nsub_file() -> String {
+    let l_max = table_max();
+    let mut s = String::from(
+        "//! Generated by `cargo xtask codegen` from the constants register's substep law\n\
+         //! (`crates/ledger/src/constants.rs`; `crates/ledger/src/gen/nsub.rs`); do not edit.\n\
+         //!\n\
+         //! The `N_sub` bucket's comparison tree over the threshold table's maximum length and the default sim key's\n\
+         //! table (dd_integrator §3.3; R-502). The default table is evaluated on codegen's own path, in f64 through the\n\
+         //! pinned pure-software libm and rounded once to f32; the host generator\n\
+         //! (`crate::driver::nsub_table`) must reproduce it bit for bit (REQ-INT-092).\n\n\
+         use spirv_std::glam::UVec4;\n\n",
+    );
+    let _ = writeln!(
+        s,
+        "/// `L_max`, the threshold table's maximum length, the largest `N_max` the host generator accepts (the register's\n\
+         /// `nsub_table_max`, provisional until the M3 gate; REQ-INT-094).\n\
+         pub const NSUB_TABLE_MAX: usize = {l_max};\n"
+    );
+    let _ = writeln!(
+        s,
+        "/// The table's rows of four thresholds in `SimUniforms`, `⌈L_max/4⌉`: `THR[n]` is row `(n − 1)/4`, lane\n\
+         /// `(n − 1) mod 4` (`x`, `y`, `z`, `w`).\n\
+         pub const NSUB_TABLE_ROWS: usize = {};\n",
+        rows()
+    );
+    let _ = writeln!(
+        s,
+        "/// `r_sub`'s default (the register's `r_sub`; integrator_contract Part 3).\n\
+         pub const R_SUB_DEFAULT: f64 = {:?};\n",
+        R_SUB.number()
+    );
+    let _ = writeln!(
+        s,
+        "/// `gamma_sub`'s default (the register's `gamma_sub`; integrator_contract Part 3).\n\
+         pub const GAMMA_SUB_DEFAULT: f64 = {:?};\n",
+        GAMMA_SUB.number()
+    );
+    let _ = writeln!(
+        s,
+        "/// `N_max`'s default (the register's `n_max`; integrator_contract Part 3, R-68).\n\
+         pub const N_MAX_DEFAULT: u32 = {};\n",
+        N_MAX.number() as u32
+    );
+    let _ = writeln!(
+        s,
+        "/// The least threshold the host generator accepts where it decides `N_sub`, `2⁻⁵⁵` (the register's\n\
+         /// `nsub_threshold_least`; R-502): below it the square's floor could decide `N_sub`.\n\
+         pub const NSUB_THRESHOLD_LEAST: f32 = {:?};\n",
+        NSUB_THRESHOLD_LEAST.number() as f32
+    );
+    s.push_str(
+        "/// The default sim key's thresholds, `THR[1] … THR[L_max]` at `r_sub`, `gamma_sub` and `N_max`'s defaults, as\n\
+         /// f32 bit patterns: the build-time table (R-502).\n\
+         pub const DEFAULT_THRESHOLD_BITS: [u32; NSUB_TABLE_MAX] = [\n",
+    );
+    for bits in default_bits() {
+        let _ = writeln!(s, "    0x{:04X}_{:04X},", bits >> 16, bits & 0xFFFF);
+    }
+    s.push_str("];\n\n");
+    s.push_str(
+        "/// The bucket of `d2`, `1 + k`, `k` the number of thresholds `d2` is strictly below, read from `thresholds` by\n\
+         /// constant index: a balanced comparison tree, no loop, no dynamic index, no float to integer cast. A NaN\n\
+         /// `d2` is below none, so its bucket is 1.\n\
+         pub fn bucket_tree(d2: f32, thresholds: &[UVec4; NSUB_TABLE_ROWS]) -> u32 {\n",
+    );
+    s.push_str(&tree());
+    s.push_str("}\n");
+    s
+}

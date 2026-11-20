@@ -1,0 +1,9 @@
+Yasko & Orlov 2015 table: reading B (eye) vs OCR (Cyrillic look-alikes В/А and the misread Л mapped to B/A; row 8's missed row number restored from position; row 3's dash remark not recognised by OCR).
+row ('3',) col remarks: B_eye='-' OCR=''
+row ('22',) col symbolic_sequence: B_eye='BBBBBBBBB' OCR='BBBBBBBBBB'
+rows B_eye=22 OCR=22; cells compared 132; disagreements 2
+Resolution against the page:
+- row 3 remarks: the page prints a dash; kept '-'.
+- row 22 sequence: the eye reading counted 9 B; the 600 dpi crop's column projection gives 20 dark runs, and the
+  same projection gives 8 runs for row 20's 'BBBB' and 10 for row 21's 'BBBBB' (2 runs per B), so row 22 has 10 B.
+  Resolved to BBBBBBBBBB (the eye reading was wrong).

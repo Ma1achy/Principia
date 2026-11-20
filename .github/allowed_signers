@@ -1,0 +1,5 @@
+# The owner's public commit-signing key, the one GitHub lists as Ma1achy's signing key ("Principia Mac signing", id
+# 1305828) and whose signatures the PC's signed-commit gate accepts (R-711 item 6). `scripts/wsl/inside.sh trust` checks
+# every commit `wsl-cpu` would build against it, read from the clone at the job's own commit, which that gate checked.
+# The format is ssh-keygen's allowed signers (ssh-keygen(1), ALLOWED SIGNERS), limited to git's namespace.
+principia-commit-signing namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMj+yb+Tf/QlClWSAZSMmHJu53+1E9Q+IU+Rvr9L46Er

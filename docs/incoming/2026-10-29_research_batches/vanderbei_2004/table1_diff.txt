@@ -1,0 +1,2 @@
+Vanderbei 2004 Table 1: reading B (eye) vs OCR of the page image.
+rows B_eye=7 OCR=7; cells compared 21; disagreements 0

@@ -1,0 +1,18 @@
+# The M01_TINY ε calibration's evidence (REQ-DEC-039; R-71): the M₀₁ range reachable at μ_max = 5.
+# Measured by crates/kernel/tests/decode_blocks.rs, decode_m01_tiny_measurement; regenerate with
+# PRIN_WRITE_M01_MEASUREMENT=1. Compared at a relative 1e-6. Each value is analytic, a saturated floor, or an
+# onset where M₀₁ still changes with z at f32 resolution (ε sits in the gap above stick_breaking's floor), so
+# a few ulps of a platform's exp or tanh move it by far less than that; at ε = ε_μ the f32 onset would not be
+# (a 1-ulp tanhf moves it by 1.7%).
+eps = 1e-5  # the proposed ε: ε_M01
+softmax_tanh_floor_exact = 6.737643157825641e-3  # (1 + e^−μ_max)/(1 + e^−μ_max + e^μ_max)
+softmax_tanh_floor_f64 = 6.737643157825641e-3  # M₀₁ at z_μ = (−40, 40), f64
+softmax_tanh_floor_f32 = 6.7376429215073586e-3  # M₀₁ at z_μ = (−40, 40), f32
+stick_breaking_floor_exact = 9.9999975e-7  # ε_μ − ε_μ²/4
+stick_breaking_floor_f64 = 9.9999975e-7  # M₀₁ at z_μ = (40, 40), f64
+stick_breaking_floor_f32 = 9.999997701015673e-7  # M₀₁ at z_μ = (40, 40), f32
+eps_over_stick_breaking_floor = 1.0000002298984857e1  # ε's margin above the corner's pile-up
+ternary_floor_over_eps = 2e1  # the ternary floor's margin above ε
+stick_breaking_onset_f64 = 6.155712604522705e0  # first firing z on the diagonal, f64
+stick_breaking_onset_f32 = 6.155712604522705e0  # first firing z on the diagonal, f32
+ternary_floor = 2e-4  # 2ε_m, ε_m = 1e-4: the buffered vertex m₂ = 1

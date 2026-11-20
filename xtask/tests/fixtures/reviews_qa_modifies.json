@@ -1,0 +1,50 @@
+{
+  "number": 37,
+  "title": "TASK-M0-37: `reviews-check`: qa's test commits keep an approval",
+  "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "reviews": [
+    {
+      "user": {
+        "login": "Ma1achy"
+      },
+      "body": "VERDICT: APPROVE code",
+      "state": "COMMENTED",
+      "commit_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "submitted_at": "2026-09-29T10:00:00Z"
+    },
+    {
+      "user": {
+        "login": "Ma1achy"
+      },
+      "body": "VERDICT: APPROVE qa",
+      "state": "COMMENTED",
+      "commit_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "submitted_at": "2026-09-29T11:00:00Z"
+    }
+  ],
+  "commits": [
+    {
+      "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "commit": {
+        "message": "TASK-M0-37: the change\n\nbody"
+      },
+      "files": []
+    },
+    {
+      "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "commit": {
+        "message": "qa: tests for TASK-M0-37\n\nCo-Authored-By: someone"
+      },
+      "files": [
+        {
+          "filename": "xtask/tests/qa_TASK-M0-37.rs",
+          "status": "added"
+        },
+        {
+          "filename": "xtask/tests/reviews_check.rs",
+          "status": "modified"
+        }
+      ]
+    }
+  ]
+}

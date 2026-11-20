@@ -1,0 +1,1559 @@
+//! The native in-process `wgpu` harness (parity_contract §6): a headless device, a WGSL compute dispatch over storage
+//! buffers, and the result read back in the same process. The backend comes from `PRIN_GPU_BACKEND` (R-169), or by
+//! platform when it is unset (R-206); CI sets it, and runs on GitHub-hosted `macos-15` (Metal) and on lavapipe (R-110,
+//! R-186).
+//!
+//! `PRIN_GPU_BACKEND`'s values: `metal`, `vulkan`, and `dx12` in a build with the `dx12` cargo feature only, off by
+//! default (R-862). DX12 is local testing only, untested in CI: no required or hosted CI job builds the feature or sets
+//! `dx12`. Without the feature, `dx12` is refused, naming the variable and the feature. Unset never selects DX12.
+
+use std::fmt;
+
+use engine::compute::{self, ComputeKernel, ComputeShader};
+use engine::contract::fast_math::{FastMath, StageMode};
+use engine::contract::profile::Api;
+use engine::telemetry::session;
+
+/// The environment variable naming the backend (R-169).
+pub const BACKEND_VAR: &str = "PRIN_GPU_BACKEND";
+
+/// The workgroup size every kernel run through [`GpuHarness::run_wgsl`] declares: `@workgroup_size(64)`.
+pub const WORKGROUP_SIZE: u32 = 64;
+
+/// A harness failure: the backend variable, the adapter or the device.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GpuError(pub String);
+
+impl fmt::Display for GpuError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for GpuError {}
+
+/// The backend an unset `PRIN_GPU_BACKEND` selects, as the variable names it (R-206): metal on macOS, vulkan
+/// elsewhere.
+pub fn default_backend() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "metal"
+    } else {
+        "vulkan"
+    }
+}
+
+/// Whether this build has the `dx12` cargo feature, R-862's opt-in: local testing only, untested in CI.
+pub const DX12_FEATURE: bool = cfg!(feature = "dx12");
+
+/// Maps a value of `PRIN_GPU_BACKEND` to the one backend it selects, and the line [`GpuHarness::new`] logs for it,
+/// which says whether the backend came from the variable or the platform default (R-206). Unset selects
+/// [`default_backend`]; `dx12` selects DX12 in a build with the `dx12` feature ([`DX12_FEATURE`]) and is refused in
+/// one without it (R-862); any other value is an error naming the variable.
+pub fn backend_choice(value: Option<&str>) -> Result<(wgpu::Backends, String), GpuError> {
+    backend_choice_in(value, DX12_FEATURE)
+}
+
+/// [`backend_choice`] in a build with the `dx12` feature (`dx12` true) or without it, so that both are tested in
+/// every build. Without the feature, `dx12` is an error naming the variable and the feature, never another backend.
+pub fn backend_choice_in(
+    value: Option<&str>,
+    dx12: bool,
+) -> Result<(wgpu::Backends, String), GpuError> {
+    let (name, source) = match value {
+        Some(name) => (name, format!("from {BACKEND_VAR}")),
+        None => (
+            default_backend(),
+            format!("platform default, {BACKEND_VAR} unset"),
+        ),
+    };
+    let backends = match name {
+        "metal" => wgpu::Backends::METAL,
+        "vulkan" => wgpu::Backends::VULKAN,
+        "dx12" if dx12 => wgpu::Backends::DX12,
+        "dx12" => return Err(GpuError(dx12_refused())),
+        other => {
+            return Err(GpuError(format!(
+                "{BACKEND_VAR}={other:?} is not a backend; set it to metal or vulkan"
+            )))
+        }
+    };
+    Ok((backends, format!("gpu backend: {name} ({source})")))
+}
+
+/// The refusal of `PRIN_GPU_BACKEND=dx12` in a build without the `dx12` feature (R-862): it names the variable and the
+/// feature.
+pub fn dx12_refused() -> String {
+    format!(
+        "{BACKEND_VAR}=\"dx12\" is not a backend in this build: DX12 needs the cargo feature `dx12` (R-862; local \
+         testing only, untested in CI); set it to metal or vulkan"
+    )
+}
+
+/// The backend [`backend_choice`] selects for `value`.
+pub fn backend_from(value: Option<&str>) -> Result<wgpu::Backends, GpuError> {
+    backend_choice(value).map(|(backends, _)| backends)
+}
+
+/// The adapter the harness opened, for the session header (TASK-M0-19).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AdapterInfo {
+    pub name: String,
+    pub backend: wgpu::Backend,
+    pub driver: String,
+    pub driver_info: String,
+}
+
+impl fmt::Display for AdapterInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "adapter: {} | backend: {:?} | driver: {} {}",
+            self.name, self.backend, self.driver, self.driver_info
+        )
+    }
+}
+
+/// A headless device (no surface) with no optional features but those the compute entry point needs on its backend
+/// (`engine::compute::required_features`: wgpu's passthrough on Metal).
+pub struct GpuHarness {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    info: AdapterInfo,
+    session: Result<session::Adapter, GpuError>,
+}
+
+impl GpuHarness {
+    /// Opens a device on the backend `PRIN_GPU_BACKEND` names, or the platform default when it is unset, and logs
+    /// the choice to stderr (R-206).
+    pub fn new() -> Result<Self, GpuError> {
+        let (backends, log) = backend_choice(std::env::var(BACKEND_VAR).ok().as_deref())?;
+        eprintln!("{log}");
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends,
+            ..wgpu::InstanceDescriptor::new_without_display_handle()
+        });
+        let options = wgpu::RequestAdapterOptions {
+            compatible_surface: None,
+            ..Default::default()
+        };
+        let adapter = pollster::block_on(instance.request_adapter(&options))
+            .map_err(|e| GpuError(format!("no {backends:?} adapter ({BACKEND_VAR}): {e}")))?;
+        let required = compute::required_features(adapter.get_info().backend);
+        if !adapter.features().contains(required) {
+            return Err(GpuError(format!(
+                "the adapter lacks {required:?}, which the compute entry point needs (R-297)"
+            )));
+        }
+        let descriptor = wgpu::DeviceDescriptor {
+            label: Some("validation::gpu"),
+            required_features: required,
+            required_limits: wgpu::Limits::default(),
+            ..Default::default()
+        };
+        let (device, queue) = pollster::block_on(adapter.request_device(&descriptor))
+            .map_err(|e| GpuError(format!("request_device failed: {e}")))?;
+        let raw = adapter.get_info();
+        let session = session_adapter(&raw, adapter.features());
+        let info = AdapterInfo {
+            name: raw.name,
+            backend: raw.backend,
+            driver: raw.driver,
+            driver_info: raw.driver_info,
+        };
+        Ok(Self {
+            device,
+            queue,
+            info,
+            session,
+        })
+    }
+
+    /// The device, for a caller that builds its own dispatch through the compute entry point.
+    pub fn device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    /// The device's queue.
+    pub fn queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
+
+    pub fn adapter_info(&self) -> &AdapterInfo {
+        &self.info
+    }
+
+    /// The opened adapter as the session header records it (telemetry §2, §5; TASK-M0-19); `Err` where the adapter
+    /// doesn't report what the header needs.
+    pub fn session_adapter(&self) -> Result<&session::Adapter, &GpuError> {
+        self.session.as_ref()
+    }
+
+    /// The features the device was opened with: those [`GpuHarness::new`] requested, only the compute entry point's,
+    /// so no `SHADER_F16` (payload §1, REQ-PAY-011).
+    pub fn features(&self) -> wgpu::Features {
+        self.device.features()
+    }
+
+    /// Compiles `module` and dispatches `entry` once per word of `inputs[0]`, under the default fast-math setting, off.
+    /// Input `k` is bound read-only at `@group(0) @binding(k)`; the output, as long as `inputs[0]`, is bound read-write
+    /// at the next binding and returned. A WGSL or validation error panics (wgpu's uncaptured-error handler), and so
+    /// does a pipeline the compute entry point refuses.
+    pub fn run_wgsl(&self, module: &str, entry: &str, inputs: &[&[u32]]) -> Vec<u32> {
+        self.prepare(module, entry, inputs).run()
+    }
+
+    /// [`run_wgsl`](Self::run_wgsl) under the fast-math `setting` (R-297).
+    pub fn run_wgsl_with(
+        &self,
+        module: &str,
+        entry: &str,
+        inputs: &[&[u32]],
+        setting: FastMath,
+    ) -> Vec<u32> {
+        self.prepare_with(module, entry, inputs, setting).run()
+    }
+
+    /// [`run_wgsl`](Self::run_wgsl)'s pipeline and buffers, built once, so that [`Prepared::run`] times the dispatch
+    /// and readback alone (the benchmark runner, TASK-M0-19), and so that [`Prepared::load`] can give the same
+    /// pipeline new inputs of the same lengths without compiling it again.
+    pub fn prepare(&self, module: &str, entry: &str, inputs: &[&[u32]]) -> Prepared<'_> {
+        self.prepare_with(module, entry, inputs, FastMath::default())
+    }
+
+    /// [`prepare`](Self::prepare) under the fast-math `setting`: the pipeline is created through the compute entry
+    /// point (`engine::compute::pipeline`, R-297).
+    pub fn prepare_with(
+        &self,
+        module: &str,
+        entry: &str,
+        inputs: &[&[u32]],
+        setting: FastMath,
+    ) -> Prepared<'_> {
+        use wgpu::util::DeviceExt;
+        let len = inputs.first().map_or(0, |i| i.len());
+        assert!(len > 0, "run_wgsl needs a non-empty first input");
+        let size = (len * 4) as u64;
+        let shader = ComputeShader {
+            label: entry,
+            wgsl: module,
+            entry,
+        };
+        let kernel =
+            compute::pipeline(&self.device, &shader, setting).unwrap_or_else(|e| panic!("{e}"));
+        let storage = |contents: &[u32], usage| {
+            let bytes = le_bytes(contents);
+            let desc = wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: &bytes,
+                usage,
+            };
+            self.device.create_buffer_init(&desc)
+        };
+        let writable = wgpu::BufferUsages::STORAGE.union(wgpu::BufferUsages::COPY_DST);
+        let mut buffers: Vec<_> = inputs.iter().map(|i| storage(i, writable)).collect();
+        buffers.push(storage(
+            &vec![0; len],
+            writable.union(wgpu::BufferUsages::COPY_SRC),
+        ));
+        let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("readback"),
+            size,
+            usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
+            mapped_at_creation: false,
+        });
+        let group: Vec<&wgpu::Buffer> = buffers.iter().collect();
+        let bindings = kernel
+            .bind(&self.device, &[&group])
+            .unwrap_or_else(|e| panic!("{e}"));
+        let output = buffers.pop().expect("the output buffer");
+        Prepared {
+            harness: self,
+            kernel,
+            bindings,
+            inputs: buffers,
+            output,
+            readback,
+            len,
+        }
+    }
+}
+
+/// `words` as the little-endian bytes a storage buffer holds.
+fn le_bytes(words: &[u32]) -> Vec<u8> {
+    words.iter().flat_map(|w| w.to_le_bytes()).collect()
+}
+
+/// A compiled dispatch and its buffers, from [`GpuHarness::prepare`].
+pub struct Prepared<'h> {
+    harness: &'h GpuHarness,
+    kernel: ComputeKernel,
+    bindings: compute::Bindings,
+    inputs: Vec<wgpu::Buffer>,
+    output: wgpu::Buffer,
+    readback: wgpu::Buffer,
+    len: usize,
+}
+
+impl Prepared<'_> {
+    /// The compute stage's fast-math mode as compiled (R-297).
+    pub fn mode(&self) -> StageMode {
+        self.kernel.mode()
+    }
+
+    /// Writes `inputs` over the inputs [`GpuHarness::prepare`] bound, each as long as the one it replaces, and fills
+    /// the output with `sentinel`, so that a dispatch that writes nothing reads back `sentinel`, never an earlier
+    /// run's output. The pipeline and its bindings are kept: the next [`run`](Self::run) compiles nothing.
+    pub fn load(&self, inputs: &[&[u32]], sentinel: u32) {
+        assert_eq!(
+            inputs.len(),
+            self.inputs.len(),
+            "load needs as many inputs as prepare bound"
+        );
+        let queue = &self.harness.queue;
+        for (k, (buffer, words)) in self.inputs.iter().zip(inputs).enumerate() {
+            assert_eq!(
+                (words.len() * 4) as u64,
+                buffer.size(),
+                "input {k}'s length differs from the one prepare bound"
+            );
+            queue.write_buffer(buffer, 0, &le_bytes(words));
+        }
+        queue.write_buffer(&self.output, 0, &le_bytes(&vec![sentinel; self.len]));
+    }
+
+    /// Dispatches once per word of the first input, copies the output back and returns it, waiting for the GPU.
+    pub fn run(&self) -> Vec<u32> {
+        self.submit(true)
+    }
+
+    /// The output as it stands, copied back with no dispatch: what a run whose dispatch was skipped reads, for a
+    /// control that shows a check rejects it.
+    pub fn read(&self) -> Vec<u32> {
+        self.submit(false)
+    }
+
+    /// Dispatches if `dispatch`, then copies the output back and returns it, waiting for the GPU.
+    fn submit(&self, dispatch: bool) -> Vec<u32> {
+        let size = (self.len * 4) as u64;
+        let (device, queue) = (&self.harness.device, &self.harness.queue);
+        let mut encoder = device.create_command_encoder(&Default::default());
+        if dispatch {
+            let mut pass = encoder.begin_compute_pass(&Default::default());
+            self.kernel.set(&mut pass, &self.bindings);
+            pass.dispatch_workgroups((self.len as u32).div_ceil(WORKGROUP_SIZE), 1, 1);
+        }
+        encoder.copy_buffer_to_buffer(&self.output, 0, &self.readback, 0, size);
+        queue.submit([encoder.finish()]);
+        let slice = self.readback.slice(..);
+        slice.map_async(wgpu::MapMode::Read, |r| r.expect("readback map failed"));
+        device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .expect("device poll failed");
+        let view = slice.get_mapped_range().expect("readback range");
+        let words = view
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|b| u32::from_le_bytes(*b))
+            .collect();
+        drop(view);
+        self.readback.unmap();
+        words
+    }
+}
+
+/// What a fragment draw binds at one binding: a uniform or a read-only storage buffer of u32 words.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BindingKind {
+    Uniform,
+    Storage,
+}
+
+/// The vertex stage of every [`GpuHarness::fragment`] draw: one triangle covering the target, so each pixel runs the
+/// fragment entry once, at its centre (`@builtin(position).xy` = the pixel's `(x + 0.5, y + 0.5)`).
+pub const FULL_TARGET_VS: &str = r"
+@vertex
+fn full_target(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+    let x = f32((i << 1u) & 2u);
+    let y = f32(i & 2u);
+    return vec4<f32>(x * 2.0 - 1.0, 1.0 - y * 2.0, 0.0, 1.0);
+}
+";
+
+/// The bytes a texture-to-buffer copy pads each row to (WebGPU's `COPY_BYTES_PER_ROW_ALIGNMENT`).
+const ROW_ALIGN: u32 = 256;
+
+/// A compiled fragment draw, from [`GpuHarness::fragment`]: its pipeline, the layout of its bind groups and the
+/// target's size. [`FragmentKernel::draw`] runs it on given buffer contents, so one pipeline serves several draws.
+pub struct FragmentKernel<'h> {
+    harness: &'h GpuHarness,
+    pipeline: wgpu::RenderPipeline,
+    layouts: Vec<wgpu::BindGroupLayout>,
+    kinds: Vec<Vec<BindingKind>>,
+    width: u32,
+    height: u32,
+}
+
+impl GpuHarness {
+    /// Compiles `module`'s fragment entry `entry` into a draw over a `width` × `height` `Rgba32Uint` target, the vertex
+    /// stage [`FULL_TARGET_VS`]. The entry returns `@location(0) vec4<u32>`. `kinds[g][b]` is the kind of
+    /// `@group(g) @binding(b)`, visible to the fragment stage; a group may be empty. The display stages take wgpu's own
+    /// path, never the compute entry point's passthrough (R-297). A WGSL, validation or pipeline error is returned.
+    pub fn fragment(
+        &self,
+        module: &str,
+        entry: &str,
+        kinds: &[&[BindingKind]],
+        width: u32,
+        height: u32,
+    ) -> Result<FragmentKernel<'_>, GpuError> {
+        if width == 0 || height == 0 {
+            return Err(GpuError(format!(
+                "a {width} × {height} target has no pixel"
+            )));
+        }
+        let device = &self.device;
+        let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let fs = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some(entry),
+            source: wgpu::ShaderSource::Wgsl(module.into()),
+        });
+        let vs = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("full_target"),
+            source: wgpu::ShaderSource::Wgsl(FULL_TARGET_VS.into()),
+        });
+        let layouts: Vec<wgpu::BindGroupLayout> = kinds
+            .iter()
+            .map(|group| {
+                let entries: Vec<_> = (0u32..)
+                    .zip(group.iter())
+                    .map(|(binding, kind)| wgpu::BindGroupLayoutEntry {
+                        binding,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: match kind {
+                                BindingKind::Uniform => wgpu::BufferBindingType::Uniform,
+                                BindingKind::Storage => {
+                                    wgpu::BufferBindingType::Storage { read_only: true }
+                                }
+                            },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    })
+                    .collect();
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some(entry),
+                    entries: &entries,
+                })
+            })
+            .collect();
+        let refs: Vec<Option<&wgpu::BindGroupLayout>> = layouts.iter().map(Some).collect();
+        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some(entry),
+            bind_group_layouts: &refs,
+            immediate_size: 0,
+        });
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some(entry),
+            layout: Some(&layout),
+            vertex: wgpu::VertexState {
+                module: &vs,
+                entry_point: Some("full_target"),
+                compilation_options: Default::default(),
+                buffers: &[],
+            },
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &fs,
+                entry_point: Some(entry),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: wgpu::TextureFormat::Rgba32Uint,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+        if let Some(e) = pollster::block_on(scope.pop()) {
+            return Err(GpuError(format!("fragment shader `{entry}`: {e}")));
+        }
+        Ok(FragmentKernel {
+            harness: self,
+            pipeline,
+            layouts,
+            kinds: kinds.iter().map(|g| g.to_vec()).collect(),
+            width,
+            height,
+        })
+    }
+}
+
+impl FragmentKernel<'_> {
+    /// Draws once with `groups[g][b]` as the contents of `@group(g) @binding(b)`, one slice per group and one buffer
+    /// per binding, as [`GpuHarness::fragment`]'s `kinds` gave them, and returns the target's pixels, row by row from
+    /// the top, each its four words. A shape that differs from `kinds` is an error naming the group.
+    pub fn draw(&self, groups: &[&[&[u32]]]) -> Result<Vec<[u32; 4]>, GpuError> {
+        use wgpu::util::DeviceExt;
+        if groups.len() != self.kinds.len() {
+            return Err(GpuError(format!(
+                "{} bind groups given; the draw has {}",
+                groups.len(),
+                self.kinds.len()
+            )));
+        }
+        let (device, queue) = (&self.harness.device, &self.harness.queue);
+        let mut buffers = Vec::new();
+        for (g, (given, kinds)) in groups.iter().zip(&self.kinds).enumerate() {
+            if given.len() != kinds.len() {
+                return Err(GpuError(format!(
+                    "group {g}: {} buffers given; the draw binds {}",
+                    given.len(),
+                    kinds.len()
+                )));
+            }
+            let group: Vec<wgpu::Buffer> = given
+                .iter()
+                .zip(kinds)
+                .map(|(words, kind)| {
+                    let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: None,
+                        contents: &bytes,
+                        usage: match kind {
+                            BindingKind::Uniform => wgpu::BufferUsages::UNIFORM,
+                            BindingKind::Storage => wgpu::BufferUsages::STORAGE,
+                        },
+                    })
+                })
+                .collect();
+            buffers.push(group);
+        }
+        let scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+        let bind_groups: Vec<wgpu::BindGroup> = buffers
+            .iter()
+            .zip(&self.layouts)
+            .map(|(group, layout)| {
+                let entries: Vec<_> = (0u32..)
+                    .zip(group)
+                    .map(|(binding, buffer)| wgpu::BindGroupEntry {
+                        binding,
+                        resource: buffer.as_entire_binding(),
+                    })
+                    .collect();
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: None,
+                    layout,
+                    entries: &entries,
+                })
+            })
+            .collect();
+        let extent = wgpu::Extent3d {
+            width: self.width,
+            height: self.height,
+            depth_or_array_layers: 1,
+        };
+        let target = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("fragment target"),
+            size: extent,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba32Uint,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT.union(wgpu::TextureUsages::COPY_SRC),
+            view_formats: &[],
+        });
+        let row = (self.width * 16).div_ceil(ROW_ALIGN) * ROW_ALIGN;
+        let readback = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("fragment readback"),
+            size: u64::from(row) * u64::from(self.height),
+            usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
+            mapped_at_creation: false,
+        });
+        let view = target.create_view(&Default::default());
+        let mut encoder = device.create_command_encoder(&Default::default());
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("fragment draw"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            for (g, bind_group) in (0u32..).zip(&bind_groups) {
+                pass.set_bind_group(g, bind_group, &[]);
+            }
+            pass.draw(0..3, 0..1);
+        }
+        encoder.copy_texture_to_buffer(
+            target.as_image_copy(),
+            wgpu::TexelCopyBufferInfo {
+                buffer: &readback,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(row),
+                    rows_per_image: Some(self.height),
+                },
+            },
+            extent,
+        );
+        queue.submit([encoder.finish()]);
+        if let Some(e) = pollster::block_on(scope.pop()) {
+            return Err(GpuError(format!("fragment draw: {e}")));
+        }
+        let slice = readback.slice(..);
+        slice.map_async(wgpu::MapMode::Read, |r| r.expect("readback map failed"));
+        device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|e| GpuError(format!("device poll failed: {e}")))?;
+        let mapped = slice
+            .get_mapped_range()
+            .map_err(|e| GpuError(format!("readback range: {e}")))?;
+        let mut pixels = Vec::with_capacity((self.width * self.height) as usize);
+        for y in 0..self.height as usize {
+            let start = y * row as usize;
+            let line = &mapped[start..start + self.width as usize * 16];
+            for texel in line.as_chunks::<16>().0 {
+                let word = |k: usize| {
+                    u32::from_le_bytes([texel[k], texel[k + 1], texel[k + 2], texel[k + 3]])
+                };
+                pixels.push([word(0), word(4), word(8), word(12)]);
+            }
+        }
+        drop(mapped);
+        readback.unmap();
+        Ok(pixels)
+    }
+}
+
+/// macOS's `sw_vers`, by its full path, so the probe never depends on the run's PATH. Elsewhere it doesn't exist.
+const SW_VERS: &str = "/usr/bin/sw_vers";
+
+/// Metal's driver ships with macOS, and wgpu reports no version for it, so its version is the system's:
+/// `macOS <ProductVersion> (<BuildVersion>)`, from `sw_vers` (`program`: [`SW_VERS`], a test's stand-in in the tests);
+/// empty where it gives nothing.
+fn metal_driver(program: &str) -> String {
+    let field = |flag: &str| {
+        std::process::Command::new(program)
+            .arg(flag)
+            .output()
+            .ok()
+            .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_owned())
+            .filter(|v| !v.is_empty())
+    };
+    match (field("-productVersion"), field("-buildVersion")) {
+        (Some(version), Some(build)) => format!("macOS {version} ({build})"),
+        _ => String::new(),
+    }
+}
+
+/// An adapter's report, as the session header records it (telemetry §2, §5): its name, API and driver; unified memory
+/// for an adapter that shares the machine's RAM (an integrated GPU, Apple silicon's included, or a CPU rasteriser such as
+/// lavapipe); f64 support from `SHADER_F64`; on Metal, which reports no driver, the system's version
+/// (`macOS <ProductVersion> (<BuildVersion>)`, from `sw_vers`). wgpu reports no VRAM size, so a discrete or virtual
+/// adapter is refused rather than given one it doesn't know (RQ-201, decided per R-369).
+pub fn session_adapter(
+    info: &wgpu::AdapterInfo,
+    features: wgpu::Features,
+) -> Result<session::Adapter, GpuError> {
+    adapter_with(info, features, SW_VERS)
+}
+
+/// The API the session header records for `backend`; `None` for a backend it doesn't record. Read from the opened
+/// adapter's backend, it holds for any adapter, a discrete one too, which [`session_adapter`] refuses.
+pub fn header_api(backend: wgpu::Backend) -> Option<Api> {
+    match backend {
+        wgpu::Backend::Metal => Some(Api::Metal),
+        wgpu::Backend::Vulkan => Some(Api::Vulkan),
+        wgpu::Backend::Dx12 => Some(Api::Dx12),
+        wgpu::Backend::BrowserWebGpu => Some(Api::Webgpu),
+        _ => None,
+    }
+}
+
+/// [`session_adapter`], Metal's version read from `sw_vers`, the program named.
+fn adapter_with(
+    info: &wgpu::AdapterInfo,
+    features: wgpu::Features,
+    sw_vers: &str,
+) -> Result<session::Adapter, GpuError> {
+    let api = header_api(info.backend).ok_or_else(|| {
+        GpuError(format!(
+            "{:?} is not an API the header records",
+            info.backend
+        ))
+    })?;
+    let memory = match info.device_type {
+        wgpu::DeviceType::IntegratedGpu | wgpu::DeviceType::Cpu => session::AdapterMemory::Unified,
+        other => {
+            return Err(GpuError(format!(
+                "{other:?} adapter {}: wgpu reports no VRAM size for the session header",
+                info.name
+            )))
+        }
+    };
+    Ok(session::Adapter {
+        name: info.name.clone(),
+        api,
+        driver: match format!("{} {}", info.driver, info.driver_info).trim() {
+            "" if api == Api::Metal => metal_driver(sw_vers),
+            driver => driver.to_owned(),
+        },
+        memory,
+        f64: features.contains(wgpu::Features::SHADER_F64),
+    })
+}
+
+/// The identity kernel: `output[i] = input[i]`. The harness's M0 fixture (R-186's placement note).
+pub const IDENTITY_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<u32>;
+@group(0) @binding(1) var<storage, read_write> output: array<u32>;
+@compute @workgroup_size(64)
+fn identity(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&input)) { output[id.x] = input[id.x]; }
+}
+";
+
+/// The fast-math probe's first kernel (R-297; REQ-SYS-074): `(x + 0.5) / 255.0` for each word `x`, the fragment
+/// arithmetic R-296's Result measured, its f32 result's bits written out.
+pub const HALFWAY_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> x: array<u32>;
+@group(0) @binding(1) var<storage, read_write> output: array<u32>;
+@compute @workgroup_size(64)
+fn halfway(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&x)) { output[id.x] = bitcast<u32>((f32(x[id.x]) + 0.5) / 255.0); }
+}
+";
+
+/// The fast-math probe's second kernel: `a / b`, for the bits of each pair of f32 words.
+pub const DIVIDE_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> a: array<u32>;
+@group(0) @binding(1) var<storage, read> b: array<u32>;
+@group(0) @binding(2) var<storage, read_write> output: array<u32>;
+@compute @workgroup_size(64)
+fn divide(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&a)) { output[id.x] = bitcast<u32>(bitcast<f32>(a[id.x]) / bitcast<f32>(b[id.x])); }
+}
+";
+
+/// The number of fuzzed divisions the probe runs.
+pub const FUZZED_DIVISIONS: usize = 1 << 16;
+
+/// The probe's fuzzed divisions, as the bits of each dividend and divisor: [`FUZZED_DIVISIONS`] pairs from a fixed
+/// seed (splitmix64), each operand of either sign with a random significand and an exponent within 2^±60, so every
+/// quotient is a normal f32 and no subnormal handling enters the comparison.
+pub fn fuzzed_divisions() -> (Vec<u32>, Vec<u32>) {
+    let mut state = 0x5EED_F00D_u64;
+    let mut next = move || {
+        state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    };
+    let mut operand = move || {
+        let r = next();
+        let sign = (r >> 63) as u32;
+        let exponent = 127 - 60 + (r >> 32) as u32 % 121;
+        // The three fields occupy disjoint bits, so their sum is their bitwise or; a sum, unlike an or, changes the
+        // word under a `^` in its place, so the fingerprint check sees every operator here.
+        (sign << 31) + (exponent << 23) + (r as u32 & 0x7F_FFFF)
+    };
+    (0..FUZZED_DIVISIONS)
+        .map(|_| (operand(), operand()))
+        .unzip()
+}
+
+/// The M0 fixture's input: 2^16 distinct words (the index times an odd constant, a bijection on u32), so every bit
+/// position, bit 31 included, carries both values.
+pub fn identity_fixture() -> Vec<u32> {
+    (0..1u32 << 16)
+        .map(|i| i.wrapping_mul(0x9E37_79B9))
+        .collect()
+}
+
+/// The first index where two readbacks differ, or `None` if they agree bit for bit (lengths included).
+pub fn first_mismatch(expected: &[u32], got: &[u32]) -> Option<usize> {
+    if expected.len() != got.len() {
+        return Some(expected.len().min(got.len()));
+    }
+    expected.iter().zip(got).position(|(a, b)| a != b)
+}
+
+/// The checks of `gpu::tests`, and the inputs they share with their controls, which `tests/controls.rs` calls so that
+/// each control runs its test's own check, not a copy of it (REQ-VAL-158, REQ-VAL-159; R-215, R-218).
+#[cfg(any(test, feature = "controls"))]
+pub mod checks {
+    use super::*;
+
+    /// A harness on the configured backend, its adapter printed; a harness failure panics.
+    pub fn harness() -> GpuHarness {
+        let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+        eprintln!("{}", h.adapter_info());
+        h
+    }
+
+    /// The two `extractBits` overloads, which differ only on words with bit 31 set.
+    pub const EXTRACT_WGSL: &str = r"
+@group(0) @binding(0) var<storage, read> input: array<u32>;
+@group(0) @binding(1) var<storage, read_write> output: array<u32>;
+@compute @workgroup_size(64)
+fn as_i32(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&input)) { output[id.x] = bitcast<u32>(extractBits(bitcast<i32>(input[id.x]), 28u, 4u)); }
+}
+@compute @workgroup_size(64)
+fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
+    if (id.x < arrayLength(&input)) { output[id.x] = extractBits(input[id.x], 28u, 4u); }
+}
+";
+
+    /// What [`check_reload`] fills the output with before each dispatch.
+    pub const SENTINEL: u32 = 0xdead_beef;
+
+    /// `gpu_harness_prepared_reload`'s check: the identity kernel, prepared on the M0 fixture, given its complement by
+    /// [`Prepared::load`] and run, returns the complement; given it again and run by `dispatch`, returns it again, bit
+    /// for bit. The output already holds the complement when the second load fills it with [`SENTINEL`], so only a
+    /// dispatch makes it the complement again: a skipped one reads back the sentinel.
+    pub fn check_reload(h: &GpuHarness, dispatch: fn(&Prepared<'_>) -> Vec<u32>) {
+        let first = identity_fixture();
+        let second: Vec<u32> = first.iter().map(|w| !w).collect();
+        assert!(
+            first.iter().zip(&second).all(|(a, b)| a != b),
+            "the reloaded input does not differ from the first at every word"
+        );
+        let prepared = h.prepare(IDENTITY_WGSL, "identity", &[&first]);
+        check_bit_exact(&first, &prepared.run());
+        prepared.load(&[&second], SENTINEL);
+        check_bit_exact(&second, &prepared.run());
+        prepared.load(&[&second], SENTINEL);
+        check_bit_exact(&second, &dispatch(&prepared));
+    }
+
+    /// `gpu_harness_identity_round_trip`'s check: `output` is `expected`, bit for bit.
+    pub fn check_bit_exact(expected: &[u32], output: &[u32]) {
+        assert_eq!(
+            first_mismatch(expected, output),
+            None,
+            "identity dispatch is not bit-exact"
+        );
+    }
+
+    /// `gpu_harness_can_fire`'s check: the two overloads of [`EXTRACT_WGSL`], run on `words`, differ on every word.
+    /// Returns their outputs, signed then unsigned.
+    pub fn check_overloads_differ(h: &GpuHarness, words: &[u32]) -> (Vec<u32>, Vec<u32>) {
+        let signed = h.run_wgsl(EXTRACT_WGSL, "as_i32", &[words]);
+        let unsigned = h.run_wgsl(EXTRACT_WGSL, "as_u32", &[words]);
+        assert!(
+            signed.iter().zip(&unsigned).all(|(s, u)| s != u),
+            "i32 and u32 overloads agree on bit-31 words"
+        );
+        (signed, unsigned)
+    }
+
+    /// A division as the CPU computes it, or a control's stand-in.
+    pub type Divide = fn(f32, f32) -> f32;
+
+    /// The CPU's correctly rounded f32 division.
+    pub fn divide(a: f32, b: f32) -> f32 {
+        a / b
+    }
+
+    /// The fast-math probe under `setting`: the compute stage's mode as compiled, and the inputs on which the GPU's
+    /// `(x + 0.5) / 255.0`, for every x in 0..256, and its fuzzed divisions differ from `reference`, bit for bit. Prints
+    /// the counts, for the PR (REQ-SYS-074).
+    pub fn probe(
+        h: &GpuHarness,
+        setting: FastMath,
+        reference: Divide,
+    ) -> (StageMode, Vec<u32>, Vec<usize>) {
+        let xs: Vec<u32> = (0..256).collect();
+        let halfway = h.prepare_with(HALFWAY_WGSL, "halfway", &[&xs], setting);
+        let mode = halfway.mode();
+        let differ = |got: &[u32], want: &mut dyn Iterator<Item = f32>| -> Vec<usize> {
+            got.iter()
+                .zip(want)
+                .enumerate()
+                .filter(|(_, (g, w))| **g != w.to_bits())
+                .map(|(i, _)| i)
+                .collect()
+        };
+        let halfway_got = halfway.run();
+        assert_eq!(
+            halfway_got.len(),
+            xs.len(),
+            "the probe read back the wrong length"
+        );
+        let halfway_differ: Vec<u32> = differ(
+            &halfway_got,
+            &mut xs.iter().map(|&x| reference(x as f32 + 0.5, 255.0)),
+        )
+        .into_iter()
+        .map(|i| i as u32)
+        .collect();
+        let (a, b) = fuzzed_divisions();
+        let got = h.run_wgsl_with(DIVIDE_WGSL, "divide", &[&a, &b], setting);
+        assert_eq!(got.len(), a.len(), "the probe read back the wrong length");
+        let fuzzed_differ = differ(
+            &got,
+            &mut a
+                .iter()
+                .zip(&b)
+                .map(|(&a, &b)| reference(f32::from_bits(a), f32::from_bits(b))),
+        );
+        eprintln!(
+            "compute_fast_math: {:?}, setting {setting:?}, compute compiled {mode:?}: {} of 256 (x + 0.5) / 255.0 and \
+             {} of {FUZZED_DIVISIONS} fuzzed divisions differ from the CPU's",
+            h.adapter_info().backend,
+            halfway_differ.len(),
+            fuzzed_differ.len()
+        );
+        (mode, halfway_differ, fuzzed_differ)
+    }
+
+    /// `compute_fast_math_off_is_correctly_rounded`'s check: with the setting off, the probe's every division matches
+    /// `reference`, the CPU's correctly rounded f32 division, bit for bit.
+    pub fn check_off_exact(h: &GpuHarness, reference: Divide) {
+        let (_, halfway, fuzzed) = probe(h, FastMath::Off, reference);
+        assert_eq!(
+            (halfway.len(), fuzzed.len()),
+            (0, 0),
+            "with compute fast-math off, some of 256 (x + 0.5) / 255.0 (x = {halfway:?}) and of {FUZZED_DIVISIONS} \
+             fuzzed divisions differ from the CPU's correctly rounded f32 division"
+        );
+    }
+
+    /// `compute_fast_math_switch_acts`'s check: under `setting`, the compute stage is compiled `expect`, and the probe
+    /// shows it: some `(x + 0.5) / 255.0` differs from the CPU's correctly rounded division when compiled on (R-296's
+    /// Result), none when compiled off.
+    pub fn check_switch(h: &GpuHarness, setting: FastMath, expect: StageMode) {
+        let (mode, halfway, _) = probe(h, setting, divide);
+        let shown = |what: &str| {
+            format!(
+                "the divisions do not show the compute stage compiled {expect:?} under setting {setting:?}: {what}"
+            )
+        };
+        assert_eq!(mode, expect, "{}", shown("its mode"));
+        assert_eq!(
+            !halfway.is_empty(),
+            expect == StageMode::On,
+            "{}",
+            shown(&format!("{} of 256 differ", halfway.len()))
+        );
+    }
+
+    /// `compute_fast_math_defaults_off`'s check: `setting`, the default, is off, and the harness's default dispatch
+    /// compiles the compute stage as off compiles on its backend, the opened adapter's (REQ-TOOL-238).
+    pub fn check_defaults_off(h: &GpuHarness, setting: FastMath) {
+        let api = header_api(h.adapter_info().backend).unwrap_or(Api::None);
+        let off = compute::compiled_modes(api, FastMath::Off).map(|m| m.compute);
+        let mode = h.prepare(IDENTITY_WGSL, "identity", &[&[0]]).mode();
+        let wrong = "the compute fast-math setting does not default to off";
+        assert_eq!(setting, FastMath::Off, "{wrong}");
+        assert_eq!(Some(mode), off, "{wrong}: compiled {mode:?}");
+    }
+
+    /// `compute_fast_math_harness_features`'s check: the harness's device was opened with exactly `want`, the compute
+    /// entry point's required features on its backend (the passthrough's on Metal, none elsewhere).
+    pub fn check_features(h: &GpuHarness, want: wgpu::Features) {
+        assert_eq!(
+            h.features(),
+            want,
+            "the harness's device does not have exactly the compute entry point's features"
+        );
+    }
+
+    /// `compute_fast_math_fuzzed_set`'s check: `a` and `b` are the probe's fuzzed divisions, fixed by their seed (an
+    /// FNV-1a fingerprint of every word), and their exponents span exactly 2^-60 to 2^60, so every quotient is a normal
+    /// f32 (its exponent within ±121, inside f32's normal range).
+    pub fn check_fuzzed(a: &[u32], b: &[u32]) {
+        let wrong = "the fuzzed divisions are not the fixed set";
+        assert_eq!(
+            (a.len(), b.len()),
+            (FUZZED_DIVISIONS, FUZZED_DIVISIONS),
+            "{wrong}"
+        );
+        let exponents: Vec<i32> = a
+            .iter()
+            .chain(b)
+            .map(|w| ((w >> 23) & 0xFF) as i32 - 127)
+            .collect();
+        let span = (exponents.iter().min(), exponents.iter().max());
+        assert_eq!(span, (Some(&-60), Some(&60)), "{wrong}: exponents {span:?}");
+        let fingerprint = a.iter().chain(b).fold(0xCBF2_9CE4_8422_2325_u64, |h, w| {
+            (h ^ u64::from(*w)).wrapping_mul(0x0000_0100_0000_01B3)
+        });
+        assert_eq!(
+            fingerprint, FUZZED_FINGERPRINT,
+            "{wrong}: fingerprint {fingerprint:#018x}"
+        );
+    }
+
+    /// The fuzzed divisions' FNV-1a fingerprint, pinned so the set the PR reports is the set every run divides.
+    pub const FUZZED_FINGERPRINT: u64 = 0x2e5b_e827_84ee_37a4;
+
+    /// `metal_hosted_probe`'s check: the harness opened an adapter on `want`.
+    pub fn check_backend(info: &AdapterInfo, want: wgpu::Backend) {
+        assert_eq!(
+            info.backend, want,
+            "{BACKEND_VAR} did not give a {want:?} adapter"
+        );
+    }
+
+    /// `gpu_backend_env_selects_backend`'s check: `value` selects `want`.
+    pub fn check_selects(value: &str, want: wgpu::Backends) {
+        assert_eq!(
+            backend_from(Some(value)),
+            Ok(want),
+            "{BACKEND_VAR}={value} did not select {want:?}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::checks::*;
+    use super::*;
+
+    #[test]
+    fn gpu_harness_identity_round_trip() {
+        let input = identity_fixture();
+        check_bit_exact(
+            &input,
+            &harness().run_wgsl(IDENTITY_WGSL, "identity", &[&input]),
+        );
+    }
+
+    /// A prepared dispatch takes new inputs of the lengths it was prepared with, and only those, and runs them on its
+    /// own pipeline; a reloaded run whose dispatch is skipped reads back the sentinel and fails.
+    #[test]
+    fn gpu_harness_prepared_reload() {
+        let h = harness();
+        check_reload(&h, |p| p.run());
+        fires(
+            || check_reload(&h, |p| p.read()),
+            "the check passed a reloaded run whose dispatch was skipped",
+        );
+        let input = identity_fixture();
+        let prepared = h.prepare(IDENTITY_WGSL, "identity", &[&input]);
+        let (short, long) = (&input[1..], [input.as_slice(), &[0]].concat());
+        for inputs in [&[short][..], &[&long], &[], &[&input, &input]] {
+            fires(
+                || prepared.load(inputs, SENTINEL),
+                "load took inputs of other lengths than prepare bound",
+            );
+        }
+        prepared.load(&[&input], SENTINEL);
+        assert_eq!(
+            prepared.read(),
+            vec![SENTINEL; input.len()],
+            "a load did not fill the output with the sentinel"
+        );
+        check_bit_exact(&input, &prepared.run());
+    }
+
+    /// Pitfalls §9: a check whose reachable output excludes the failure it guards cannot fail. On words with bit 31
+    /// set, the i32 `extractBits` overload sign-extends and the u32 one does not; the harness must see the difference.
+    #[test]
+    fn gpu_harness_can_fire() {
+        let high: Vec<u32> = (0..4096u32)
+            .map(|i| 0x8000_0000 | i.wrapping_mul(0x0001_0F31))
+            .collect();
+        let (signed, unsigned) = check_overloads_differ(&harness(), &high);
+        let want_signed: Vec<u32> = high.iter().map(|&w| ((w as i32) >> 28) as u32).collect();
+        let want_unsigned: Vec<u32> = high.iter().map(|&w| w >> 28).collect();
+        assert_eq!(
+            first_mismatch(&want_signed, &signed),
+            None,
+            "i32 extractBits did not sign-extend"
+        );
+        assert_eq!(
+            first_mismatch(&want_unsigned, &unsigned),
+            None,
+            "u32 extractBits did not zero-extend"
+        );
+    }
+
+    /// R-186's first check on `macos-15`: a Metal adapter, and the M0 fixture round-trips bit-exact.
+    #[test]
+    #[cfg_attr(not(target_os = "macos"), ignore = "Metal is macOS-only")]
+    fn metal_hosted_probe() {
+        let h = harness();
+        check_backend(h.adapter_info(), wgpu::Backend::Metal);
+        let input = identity_fixture();
+        check_bit_exact(&input, &h.run_wgsl(IDENTITY_WGSL, "identity", &[&input]));
+    }
+
+    /// REQ-SYS-074: with the compute setting off, the probe's divisions are the CPU's correctly rounded ones, bit for
+    /// bit, on every backend; a mismatch is a REVIEW_QUEUE entry, not a looser check (R-296's Result).
+    #[test]
+    fn compute_fast_math_off_is_correctly_rounded() {
+        let h = harness();
+        check_off_exact(&h, divide);
+        fires(
+            || check_off_exact(&h, |a, b| a * (1.0 / b)),
+            "the check passed the reciprocal reference",
+        );
+    }
+
+    /// `check` panics: the check this test made fires on a contaminated input, so a check reduced to nothing fails
+    /// the test, not only its control (R-196).
+    fn fires(check: impl FnOnce(), passed: &str) {
+        let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(check));
+        assert!(caught.is_err(), "{passed}");
+    }
+
+    /// REQ-SYS-074: the setting acts as the header records it: on Metal, on compiles the compute stage with fast-math
+    /// and the probe differs on at least one input (R-296's Result's 94 columns); on Vulkan, on compiles as off, and
+    /// the probe shows none.
+    #[test]
+    fn compute_fast_math_switch_acts() {
+        let h = harness();
+        // The opened adapter's backend, not the session header's adapter, which a discrete GPU doesn't give
+        // (REQ-TOOL-238).
+        let api = header_api(h.adapter_info().backend).unwrap_or(Api::None);
+        for setting in [FastMath::Off, FastMath::On] {
+            let expect =
+                compute::compiled_modes(api, setting).map_or(StageMode::Unknown, |m| m.compute);
+            check_switch(&h, setting, expect);
+            let other = if expect == StageMode::On {
+                StageMode::Off
+            } else {
+                StageMode::On
+            };
+            fires(
+                || check_switch(&h, setting, other),
+                "the check passed the other compiled mode",
+            );
+        }
+    }
+
+    /// The probe's fuzzed divisions are a fixed set, of normal operands and quotients only (REQ-SYS-074).
+    #[test]
+    fn compute_fast_math_fuzzed_set() {
+        let (a, b) = fuzzed_divisions();
+        check_fuzzed(&a, &b);
+        let mut flipped = b.clone();
+        flipped[9] ^= 1 << 31;
+        fires(
+            || check_fuzzed(&a, &flipped),
+            "the check passed a divisor with its sign flipped",
+        );
+    }
+
+    crate::negative_control!(
+        compute_fast_math_fuzzed_set,
+        "the set with one divisor's sign flipped",
+        expected = "the fuzzed divisions are not the fixed set",
+        {
+            let (a, mut b) = fuzzed_divisions();
+            b[9] ^= 1 << 31;
+            check_fuzzed(&a, &b);
+        }
+    );
+
+    /// REQ-SYS-074: the setting defaults to off, and the harness's dispatches compile under it.
+    #[test]
+    fn compute_fast_math_defaults_off() {
+        let h = harness();
+        check_defaults_off(&h, FastMath::default());
+        fires(
+            || check_defaults_off(&h, FastMath::On),
+            "the check passed setting on as the default",
+        );
+    }
+
+    /// The harness opens its device with exactly the entry point's features, so the passthrough is there on Metal.
+    #[test]
+    fn compute_fast_math_harness_features() {
+        let h = harness();
+        let want = compute::required_features(h.adapter_info().backend);
+        check_features(&h, want);
+        fires(
+            || check_features(&h, want | wgpu::Features::SHADER_F16),
+            "the check passed a feature the device was not opened with",
+        );
+    }
+
+    fn rejects_naming_the_variable(value: &str) {
+        let err = backend_from(Some(value)).expect_err("an unknown backend was accepted");
+        assert!(
+            err.0.contains(BACKEND_VAR),
+            "error does not name {BACKEND_VAR}: {err}"
+        );
+    }
+
+    /// An unknown value is refused naming the variable; `dx12` is one in a build without the `dx12` feature (R-862).
+    #[test]
+    fn gpu_backend_env_rejects_unknown() {
+        rejects_naming_the_variable("gl");
+        if !DX12_FEATURE {
+            rejects_naming_the_variable("dx12");
+        }
+    }
+
+    crate::negative_control!(
+        gpu_backend_env_rejects_unknown,
+        "a known backend is not rejected",
+        expected = "an unknown backend was accepted",
+        rejects_naming_the_variable("metal")
+    );
+
+    /// The platform's backend for an unset variable (R-206), and the log line that says so.
+    fn unset_selects(want: wgpu::Backends, name: &str) {
+        let (backends, log) = backend_choice(None).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(backends, want, "unset {BACKEND_VAR} selected {backends:?}");
+        assert_eq!(
+            log,
+            format!("gpu backend: {name} (platform default, {BACKEND_VAR} unset)")
+        );
+    }
+
+    #[test]
+    fn gpu_backend_env_unset_defaults_by_platform() {
+        if cfg!(target_os = "macos") {
+            unset_selects(wgpu::Backends::METAL, "metal");
+        } else {
+            unset_selects(wgpu::Backends::VULKAN, "vulkan");
+        }
+        // Control: an explicit value overrides the default and is logged as coming from the variable.
+        for (value, want) in [
+            ("metal", wgpu::Backends::METAL),
+            ("vulkan", wgpu::Backends::VULKAN),
+        ] {
+            assert_eq!(
+                backend_choice(Some(value)),
+                Ok((want, format!("gpu backend: {value} (from {BACKEND_VAR})")))
+            );
+        }
+    }
+
+    crate::negative_control!(
+        gpu_backend_env_unset_defaults_by_platform,
+        "the other platform's backend is not the default",
+        expected = "unset PRIN_GPU_BACKEND selected",
+        if cfg!(target_os = "macos") {
+            unset_selects(wgpu::Backends::VULKAN, "vulkan")
+        } else {
+            unset_selects(wgpu::Backends::METAL, "metal")
+        }
+    );
+
+    #[test]
+    fn gpu_backend_env_selects_backend() {
+        check_selects("metal", wgpu::Backends::METAL);
+        check_selects("vulkan", wgpu::Backends::VULKAN);
+    }
+
+    /// A selection: a value of `PRIN_GPU_BACKEND`, or none, mapped to its backend and log line.
+    type Choice = Result<(wgpu::Backends, String), GpuError>;
+
+    /// What every build selects, the `dx12` feature on (`feature`) or off, through `choice`: unset is the platform's
+    /// backend, never DX12 (R-206); `metal` and `vulkan` as before; any other value but `dx12` refused.
+    fn check_unchanged(choice: &dyn Fn(Option<&str>) -> Choice, feature: bool) {
+        let platform = if cfg!(target_os = "macos") {
+            (wgpu::Backends::METAL, "metal")
+        } else {
+            (wgpu::Backends::VULKAN, "vulkan")
+        };
+        assert_eq!(
+            choice(None),
+            Ok((
+                platform.0,
+                format!(
+                    "gpu backend: {} (platform default, {BACKEND_VAR} unset)",
+                    platform.1
+                )
+            )),
+            "unset {BACKEND_VAR} with the feature {feature} did not select the platform's backend"
+        );
+        for (value, want) in [
+            ("metal", wgpu::Backends::METAL),
+            ("vulkan", wgpu::Backends::VULKAN),
+        ] {
+            assert_eq!(
+                choice(Some(value)),
+                Ok((want, format!("gpu backend: {value} (from {BACKEND_VAR})"))),
+                "{BACKEND_VAR}={value} with the feature {feature} did not select {want:?}"
+            );
+        }
+        for value in ["gl", "DX12", "", "metal,dx12"] {
+            assert!(
+                choice(Some(value)).is_err(),
+                "{BACKEND_VAR}={value:?} with the feature {feature} was accepted"
+            );
+        }
+    }
+
+    /// `dx12` as `choice` maps it in a build with the `dx12` feature (`feature`) or without it (R-862): with it, DX12,
+    /// logged as from the variable; without it, an error naming the variable and the feature. Every other value as
+    /// [`check_unchanged`] has it.
+    fn check_dx12(choice: &dyn Fn(Option<&str>) -> Choice, feature: bool) {
+        if feature {
+            assert_eq!(
+                choice(Some("dx12")),
+                Ok((
+                    wgpu::Backends::DX12,
+                    format!("gpu backend: dx12 (from {BACKEND_VAR})")
+                )),
+                "{BACKEND_VAR}=dx12 did not select DX12 with the feature"
+            );
+        } else {
+            let refused = choice(Some("dx12"))
+                .expect_err("dx12 was accepted without the feature")
+                .0;
+            let variable = format!("{BACKEND_VAR}=\"dx12\"");
+            for name in [variable.as_str(), "the cargo feature `dx12`"] {
+                assert!(
+                    refused.contains(name),
+                    "the refusal of dx12 without the feature does not name {name}: {refused}"
+                );
+            }
+        }
+        check_unchanged(choice, feature);
+    }
+
+    /// R-862's selection, with and without the feature, tested in every build.
+    #[test]
+    fn gpu_backend_env_dx12_by_the_feature() {
+        for feature in [false, true] {
+            check_dx12(&|v| backend_choice_in(v, feature), feature);
+        }
+    }
+
+    #[cfg(feature = "controls")]
+    mod dx12_selection_removed {
+        use super::*;
+        crate::negative_control!(
+            gpu_backend_env_dx12_by_the_feature,
+            "the feature's selection removed: dx12 refused with the feature too",
+            expected = "PRIN_GPU_BACKEND=dx12 did not select DX12 with the feature",
+            check_dx12(&|v| backend_choice_in(v, false), true)
+        );
+    }
+
+    #[cfg(feature = "controls")]
+    mod dx12_without_the_feature {
+        use super::*;
+        crate::negative_control!(
+            gpu_backend_env_dx12_by_the_feature,
+            "dx12 accepted without the feature",
+            expected = "dx12 was accepted without the feature",
+            check_dx12(&|v| backend_choice_in(v, true), false)
+        );
+    }
+
+    #[cfg(feature = "controls")]
+    mod dx12_refusal_unnamed {
+        use super::*;
+        crate::negative_control!(
+            gpu_backend_env_dx12_by_the_feature,
+            "a refusal of dx12 that names the variable and not the feature",
+            expected = "does not name the cargo feature `dx12`",
+            check_dx12(
+                &|v| match v {
+                    Some("dx12") => Err(GpuError(format!(
+                        "{BACKEND_VAR}=\"dx12\" is not a backend; set it to metal or vulkan"
+                    ))),
+                    v => backend_choice_in(v, false),
+                },
+                false
+            )
+        );
+    }
+
+    #[cfg(feature = "controls")]
+    mod dx12_by_default {
+        use super::*;
+        crate::negative_control!(
+            gpu_backend_env_dx12_by_the_feature,
+            "unset selecting DX12 in a build with the feature",
+            expected = "unset PRIN_GPU_BACKEND with the feature true did not select the platform's backend",
+            check_dx12(
+                &|v| match v {
+                    None => Ok((wgpu::Backends::DX12, "gpu backend: dx12".to_owned())),
+                    v => backend_choice_in(v, true),
+                },
+                true
+            )
+        );
+    }
+
+    #[cfg(feature = "controls")]
+    mod dx12_as_another_backend {
+        use super::*;
+        crate::negative_control!(
+            gpu_backend_env_dx12_by_the_feature,
+            "dx12 quietly read as Vulkan in a build with the feature",
+            expected = "PRIN_GPU_BACKEND=dx12 did not select DX12 with the feature",
+            check_dx12(
+                &|v| backend_choice_in(v.map(|v| if v == "dx12" { "vulkan" } else { v }), true),
+                true
+            )
+        );
+    }
+
+    /// This build's own selection, through [`backend_choice`] and [`GpuHarness::new`]'s reading of it: `dx12` selects
+    /// DX12 with the `dx12` feature and is refused without it; unset, `metal` and `vulkan` as before (R-862, R-206).
+    #[test]
+    fn gpu_backend_env_dx12_in_this_build() {
+        check_dx12(&backend_choice, DX12_FEATURE);
+    }
+
+    /// This build, without the feature, read as one with it.
+    #[cfg(all(feature = "controls", not(feature = "dx12")))]
+    mod dx12_not_in_this_build {
+        use super::*;
+        crate::negative_control!(
+            gpu_backend_env_dx12_in_this_build,
+            "a build without the feature read as one with it",
+            expected = "PRIN_GPU_BACKEND=dx12 did not select DX12 with the feature",
+            check_dx12(&backend_choice, true)
+        );
+    }
+
+    /// This build, with the feature, read as one without it.
+    #[cfg(all(feature = "controls", feature = "dx12"))]
+    mod dx12_in_this_build {
+        use super::*;
+        crate::negative_control!(
+            gpu_backend_env_dx12_in_this_build,
+            "a build with the feature read as one without it",
+            expected = "dx12 was accepted without the feature",
+            check_dx12(&backend_choice, false)
+        );
+    }
+
+    /// `/bin/echo` stands in for `sw_vers`: it prints the flag it is given, so the version it reports names the flags
+    /// asked for.
+    const ECHO_VERSION: &str = "macOS -productVersion (-buildVersion)";
+
+    /// `driver` reads `macOS <ProductVersion> (<BuildVersion>)` from the program named, and nothing from one that prints
+    /// nothing (`/usr/bin/true`) or doesn't exist.
+    fn check_metal_driver(driver: fn(&str) -> String) {
+        for (program, want) in [
+            ("/bin/echo", ECHO_VERSION),
+            ("/usr/bin/true", ""),
+            ("/nonexistent/sw_vers", ""),
+        ] {
+            assert_eq!(
+                driver(program),
+                want,
+                "Metal's driver is not the version `{program}` reports"
+            );
+        }
+    }
+
+    #[test]
+    fn metal_driver_reads_sw_vers() {
+        check_metal_driver(metal_driver);
+    }
+
+    crate::negative_control!(
+        metal_driver_reads_sw_vers,
+        "a probe that reports no version must fail the check",
+        expected = "Metal's driver is not the version",
+        check_metal_driver(|_| String::new())
+    );
+
+    /// `header_api_reads_each_backend`'s check: `api` gives the header's API for each backend it records, and none for
+    /// another.
+    fn check_header_api(api: fn(wgpu::Backend) -> Option<Api>) {
+        for (backend, want) in [
+            (wgpu::Backend::Metal, Some(Api::Metal)),
+            (wgpu::Backend::Vulkan, Some(Api::Vulkan)),
+            (wgpu::Backend::Dx12, Some(Api::Dx12)),
+            (wgpu::Backend::BrowserWebGpu, Some(Api::Webgpu)),
+            (wgpu::Backend::Gl, None),
+            (wgpu::Backend::Noop, None),
+        ] {
+            assert_eq!(
+                api(backend),
+                want,
+                "the header's API for {backend:?} is misread"
+            );
+        }
+    }
+
+    /// The fast-math checks read the API from the opened adapter's backend through `header_api` (REQ-TOOL-238).
+    #[test]
+    fn header_api_reads_each_backend() {
+        check_header_api(header_api);
+    }
+
+    crate::negative_control!(
+        header_api_reads_each_backend,
+        "Vulkan read as Metal",
+        expected = "the header's API for Vulkan is misread",
+        check_header_api(|backend| match backend {
+            wgpu::Backend::Vulkan => Some(Api::Metal),
+            other => header_api(other),
+        })
+    );
+
+    /// An integrated adapter on `backend` reporting `driver` and `driver_info`.
+    fn reported(backend: wgpu::Backend, driver: &str, driver_info: &str) -> wgpu::AdapterInfo {
+        let mut info = wgpu::AdapterInfo::new(wgpu::DeviceType::IntegratedGpu, backend);
+        info.driver = driver.to_owned();
+        info.driver_info = driver_info.to_owned();
+        info
+    }
+
+    /// The adapter mapping under test, `sw_vers`'s stand-in named, or a control's broken one.
+    type Mapping =
+        fn(&wgpu::AdapterInfo, wgpu::Features, &str) -> Result<session::Adapter, GpuError>;
+
+    /// Only a Metal adapter that reports no driver takes the system's version, read from the `sw_vers` named (here
+    /// `/bin/echo`); an adapter on another API, or one that reports a driver, records what it reported.
+    fn check_driver_source(map: Mapping) {
+        for (backend, driver, driver_info, want) in [
+            (wgpu::Backend::Metal, "", "", ECHO_VERSION),
+            (wgpu::Backend::Vulkan, "", "", ""),
+            (wgpu::Backend::Dx12, "", "", ""),
+            (wgpu::Backend::Metal, "Apple", "3", "Apple 3"),
+            (
+                wgpu::Backend::Vulkan,
+                "llvmpipe",
+                "Mesa 24",
+                "llvmpipe Mesa 24",
+            ),
+        ] {
+            let got = map(
+                &reported(backend, driver, driver_info),
+                wgpu::Features::empty(),
+                "/bin/echo",
+            )
+            .unwrap_or_else(|e| panic!("{e}"));
+            assert_eq!(
+                got.driver, want,
+                "the driver of a {backend:?} adapter reporting {driver:?} {driver_info:?} is misread"
+            );
+        }
+    }
+
+    #[test]
+    fn session_adapter_driver_source() {
+        check_driver_source(adapter_with);
+    }
+
+    crate::negative_control!(
+        session_adapter_driver_source,
+        "a mapping that never reads the system's version for Metal must fail the check",
+        expected = "the driver of a Metal adapter reporting",
+        check_driver_source(|i, f, _| adapter_with(i, f, "/nonexistent/sw_vers"))
+    );
+}

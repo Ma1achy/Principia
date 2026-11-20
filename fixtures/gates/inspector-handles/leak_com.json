@@ -1,0 +1,10 @@
+{
+  "description": "PIT-3, the measurement can fire: the same draws, fewer of them, with C's step 0's I taken about the origin, not in the CoM frame, so translate-all must move z and the gate must fail it.",
+  "seed": 1,
+  "ics": 2000,
+  "radius": 4.0,
+  "span": 1.0,
+  "octaves": 4.0,
+  "leak": "com",
+  "expected": "fail"
+}

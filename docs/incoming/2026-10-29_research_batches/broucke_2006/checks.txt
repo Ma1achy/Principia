@@ -1,0 +1,7 @@
+Broucke 2006 Table 3 self-consistency: f1 = a2 + 2 a1 + 2 and f3 = a2 - a1^2/4 - 2 (caption)
+  t16_a: f1 computed 1.696e-02 printed 1.70E-02; f3 computed -5.901e-01 printed -5.90E-01
+  t16_b: f1 computed -5.410e-03 printed -5.40E-03; f3 computed -6.281e-01 printed -6.28E-01
+  t21_a: f1 computed 3.383e-01 printed 3.38E-01; f3 computed 1.013e-02 printed 1.01E-02
+  t21_b: f1 computed 3.200e-01 printed 3.20E-01; f3 computed -2.821e-02 printed -2.82E-02
+  Table 1 y (r = 1) 2.3482448860 vs Table 2 y/r = 2.3482448849
+  Table 1 y (r = 1) 2.4538034560 vs Table 2 y/r = 2.4538034450

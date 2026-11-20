@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Explore with lines</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#7fb6e0}a:hover{color:#a9cff0}
+button{font:inherit}
+</style>
+</helmet>
+<div style="width: 1440px; height: 860px; box-sizing: border-box; background: #1b1c1e; color: #e4e2dc; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13px; display: flex; flex-direction: column;">
+  <div style="height: 40px; flex-shrink: 0; display: flex; align-items: center; gap: 18px; padding: 0 16px; border-bottom: 1px solid #34363a; background: #202124;">
+    <span style="font-weight: 600;">principia · dev</span>
+    <span style="color: #b9b6ad;">File</span><span style="color: #b9b6ad;">View</span><span style="color: #b9b6ad;">Windows</span>
+    <span style="padding: 3px 8px; background: #2c2d31; border-radius: 3px;">Overlays ▾ 2</span>
+    <span style="padding: 3px 8px; background: #2c2d31; border-radius: 3px; border: 1px solid #3d8fca;">Lines ▾ 3</span>
+    <span style="padding: 3px 8px; background: #0e5a8a; border-radius: 3px;">Explore</span>
+    <span style="color: #b9b6ad;">Stain</span>
+    <span style="flex-grow: 1;"></span>
+    <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #b9b6ad;">t 20.00 · preset_shape_h1 · 384² · outcome</span>
+  </div>
+  <div style="flex-grow: 1; display: flex; gap: 24px; padding: 20px 24px; min-height: 0;">
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b998f; width: 768px;">
+        <span>z_β +1.00</span><span>Figure · lines drawn over the stain</span>
+      </div>
+      <div style="position: relative; width: 768px; height: 768px;">
+        <img src="/_blob/f61f8a299c09c5a1ca83e66f8ffe2ad8" alt="Outcome map of the shape chart with white energy contours labelled E, dashed triangle-area contours and a yellow hover trace" style="width: 768px; height: 768px; display: block; image-rendering: pixelated;">
+        <div style="position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; background: rgba(20,20,24,0.86); border: 1px solid #3a3c41; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px;">
+          <div style="display: flex; align-items: center; gap: 8px;"><svg width="36" height="8" aria-hidden="true"><line x1="2" y1="4" x2="34" y2="4" stroke="#0b0b0e" stroke-width="4" stroke-linecap="round"></line><line x1="2" y1="4" x2="34" y2="4" stroke="#ffffff" stroke-width="2" stroke-linecap="round"></line></svg>E, starting energy · 5 levels</div>
+          <div style="display: flex; align-items: center; gap: 8px;"><svg width="36" height="8" aria-hidden="true"><line x1="2" y1="4" x2="34" y2="4" stroke="#0b0b0e" stroke-width="3" stroke-dasharray="4 3"></line><line x1="2" y1="4" x2="34" y2="4" stroke="#ffffff" stroke-width="1.4" stroke-dasharray="4 3"></line></svg>triangle area · 4 levels</div>
+          <div style="display: flex; align-items: center; gap: 8px;"><svg width="36" height="8" aria-hidden="true"><line x1="2" y1="4" x2="34" y2="4" stroke="#0b0b0e" stroke-width="5" stroke-linecap="round"></line><line x1="2" y1="4" x2="34" y2="4" stroke="#fff27a" stroke-width="2.6" stroke-linecap="round"></line></svg>hover trace · t 0 → 6</div>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9b998f; width: 768px;">
+        <span>−1.00</span><span>z_α →</span><span>+1.00</span>
+      </div>
+    </div>
+    <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; background: #232427; border: 1px solid #34363a; border-radius: 4px; padding: 18px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between;">
+        <h1 style="margin: 0; font-size: 20px; font-weight: 500;">Lines</h1>
+        <span style="color: #9b998f; font-size: 12px;">drawn over the figure · display only, nothing re-integrates</span>
+      </div>
+
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">Contours</div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: grid; grid-template-columns: 22px 64px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; background: #2a2b2f; border: 1px solid #3d8fca; border-radius: 4px;">
+          <input type="checkbox" id="c1" checked aria-label="Show energy contours" style="margin: 0;">
+          <svg width="60" height="10" aria-hidden="true"><line x1="2" y1="5" x2="58" y2="5" stroke="#0b0b0e" stroke-width="4" stroke-linecap="round"></line><line x1="2" y1="5" x2="58" y2="5" stroke="#ffffff" stroke-width="2" stroke-linecap="round"></line></svg>
+          <div style="min-width: 0;">
+            <div style="font-weight: 500;">Energy E</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad;">E · −0.235 to −0.198, 5 levels · labels on</div>
+          </div>
+          <button type="button" style="background: #34363a; color: #e4e2dc; border: 0; border-radius: 3px; padding: 5px 10px;">Edit</button>
+        </div>
+        <div style="display: grid; grid-template-columns: 22px 64px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; background: #2a2b2f; border: 1px solid #34363a; border-radius: 4px;">
+          <input type="checkbox" id="c2" checked aria-label="Show triangle area contours" style="margin: 0;">
+          <svg width="60" height="10" aria-hidden="true"><line x1="2" y1="5" x2="58" y2="5" stroke="#0b0b0e" stroke-width="3" stroke-dasharray="4 3"></line><line x1="2" y1="5" x2="58" y2="5" stroke="#ffffff" stroke-width="1.4" stroke-dasharray="4 3"></line></svg>
+          <div style="min-width: 0;">
+            <div style="font-weight: 500;">Triangle area</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad;">area · 0.70, 0.80, 0.90, 0.97 · no labels</div>
+          </div>
+          <button type="button" style="background: #34363a; color: #e4e2dc; border: 0; border-radius: 3px; padding: 5px 10px;">Edit</button>
+        </div>
+        <button type="button" style="align-self: flex-start; background: transparent; color: #7fb6e0; border: 1px dashed #4a5563; border-radius: 3px; padding: 6px 12px;">+ Add contour set</button>
+      </div>
+
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f; margin-top: 6px;">Traces</div>
+      <div style="display: grid; grid-template-columns: 22px 64px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; background: #2a2b2f; border: 1px solid #34363a; border-radius: 4px;">
+        <input type="checkbox" id="c3" checked aria-label="Show hover trace" style="margin: 0;">
+        <svg width="60" height="10" aria-hidden="true"><line x1="2" y1="5" x2="58" y2="5" stroke="#0b0b0e" stroke-width="5" stroke-linecap="round"></line><line x1="2" y1="5" x2="58" y2="5" stroke="#fff27a" stroke-width="2.6" stroke-linecap="round"></line></svg>
+        <div style="min-width: 0;">
+          <div style="font-weight: 500;">Hover trace</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad;">style “Trace” · fades off the plane · ticks every 1.0</div>
+        </div>
+        <button type="button" style="background: #34363a; color: #e4e2dc; border: 0; border-radius: 3px; padding: 5px 10px;">Edit</button>
+      </div>
+
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f; margin-top: 6px;">Style library</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <span style="padding: 4px 10px; border: 1px solid #3d8fca; border-radius: 12px;">Screen contour</span>
+        <span style="padding: 4px 10px; border: 1px solid #4a4c52; border-radius: 12px;">Dashed secondary</span>
+        <span style="padding: 4px 10px; border: 1px solid #4a4c52; border-radius: 12px;">Trace</span>
+        <span style="padding: 4px 10px; border: 1px solid #4a4c52; border-radius: 12px;">Print</span>
+        <span style="padding: 4px 10px; border: 1px solid #4a4c52; border-radius: 12px;">Grid</span>
+      </div>
+      <p style="margin: 0; color: #b9b6ad; line-height: 1.5; max-width: 60ch;">A style is shared: contours and traces point at a named style, so changing “Trace” changes every trace. Any line can override one field without forking the style.</p>
+
+      <div style="flex-grow: 1;"></div>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #9b998f;">
+        <span>Alt+L show/hide all lines</span><span>·</span><span>saved with the view, so prints reproduce them</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+table1 0-45      sum = 100.0
+table1 45-90     sum = 100.0
+table1 90-135    sum = 100.1
+table1 135-180   sum = 100.0
+table2 T=0       sum = 100.2
+table2 T=random  sum = 100.0
+table2 all       sum = 99.8
+table2 'all' vs case-weighted mean of T=0 and T=random: max |diff| = 0.10 (percentage points)
+table4 'true' == table3 one-directional t1..t7: True
+T_e = 456.04 (from k=4), T_1/2 = 324.00 (from k=4)
+   k=1  Te*ln(8/(8-k)) =    60.9 (printed 60.9)   T1/2*tan(k pi/16) =    64.4 (printed 64.4)
+   k=2  Te*ln(8/(8-k)) =   131.2 (printed 131.2)   T1/2*tan(k pi/16) =   134.2 (printed 134.2)
+   k=3  Te*ln(8/(8-k)) =   214.3 (printed 214.3)   T1/2*tan(k pi/16) =   216.5 (printed 216.5)
+   k=4  Te*ln(8/(8-k)) =   316.1 (printed 316.1)   T1/2*tan(k pi/16) =   324.0 (printed 324.0)
+   k=5  Te*ln(8/(8-k)) =   447.3 (printed 447.3)   T1/2*tan(k pi/16) =   484.9 (printed 484.9)
+   k=6  Te*ln(8/(8-k)) =   632.2 (printed 632.2)   T1/2*tan(k pi/16) =   782.2 (printed 784.2)
+   k=7  Te*ln(8/(8-k)) =   948.3 (printed 948.2)   T1/2*tan(k pi/16) =  1628.9 (printed 1628.8)

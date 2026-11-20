@@ -1,0 +1,1 @@
+rows A=6 B=6; cells compared=36; disagreements=0; equal only as numbers=2

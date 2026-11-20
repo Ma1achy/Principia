@@ -1,0 +1,1 @@
+rows A=16 B=16; cells compared=128; disagreements=0

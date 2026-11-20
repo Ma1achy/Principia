@@ -1,0 +1,927 @@
+//! The payload ledger (dd_simstate_payload §0–§3; dd_generation_root §3.1, §3.3–§3.7): the hot `SimState` in its two
+//! variants, the word buffer and its `.w` word, `ICDescriptor`, the packed words of `SimState`, §3.4's scalars with
+//! their presentation metadata, payload §3's frozen continuation table, and §3.7's `QuadReduction` member list. Where the payload doc and generation-root §3 could drift, the payload doc is canonical
+//! (R-70, R-86): §3.4's `delta_E_max_abs` and `delta_Lz_max_abs` are the payload's `dE_max` and `dLz_max`, and §3.8's
+//! `shadow` is the payload's `r_sh` and `p_sh`.
+//!
+//! Where §3 gives a field no scale, the entry is `lin`; where it gives no range, the entry writes (−∞, ∞), which
+//! declares nothing: the range is a gap (R-426), unless the ledger declares it with its citation or marks it
+//! provisional, below. §3.6's log fields are ≥ 0, 0 at the collision pole (dd_decoder §3.6). Consumers are render,
+//! export and debug, as §3.8's worked entries have them. `n`, the shape-sphere point, is §3.8's worked entry:
+//! `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`, `lin` over [−1, 1] in each component (TASK-M1-12; RQ-235).
+//!
+//! **Declared lower bounds (R-400; TASK-M1-17).** A numeric view whose field's declared range spans zero is drawn on
+//! the diverging ramp, so a field the corpus gives a non-negative domain must not read as signed: each such field
+//! declares its lower bound, citing the line that gives it ([`NON_NEGATIVE`]). `K_0` is `[0, ∞)` and `V_0` `(−∞, 0]`,
+//! both `lin` (R-403).
+//!
+//! **Range states (R-426; dd_generation_root §3.8).** Each field's range is one of §3.8's three states
+//! ([`Entry::range_state`], each entry marked by `declared`): `declared(lo, hi, citation)`, with its citation in
+//! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, drawn as (−∞, ∞) on `ramp_coolwarm`
+//! until its requirement declares it, which no field is now ([`PROVISIONAL`]: `q_mass`'s range was declared [0, 1] by
+//! REQ-PAY-097, `mean_y`'s [0, 4] by REQ-PAY-098); or `gap`, a (−∞, ∞) written and never cited, which never spans
+//! zero. The gaps, each with the requirement that
+//! fills it, are [`GAPS`]; a `lin` or `diverging` scalar field whose range is a gap fails generation
+//! ([`crate::gen::numeric::undeclared`]).
+
+use crate::constants::{
+    FGW_CAPACITY, FGW_LENGTH_SENTINEL, FLOOR_CODE_BIAS, FLOOR_EXP_MAX, HORIZON_STEPS_MAX,
+};
+use crate::schema::{
+    Bound, Consumer, Entry, EntryBuilder, FieldType, Indexed, Ledger, Location, Member, Overflow,
+    Provenance, Range, RangeState, Scale, Span, Storage, Struct, Word,
+};
+
+const SHOWN: &[Consumer] = &[Consumer::Render, Consumer::Export, Consumer::Debug];
+
+/// An entry over (−∞, ∞): a gap until the ledger declares the range, with its citation, or marks it provisional
+/// ([`declared`]; R-426).
+fn entry(name: &'static str, location: Location, ty: FieldType, scale: Scale) -> EntryBuilder {
+    EntryBuilder::new(name)
+        .location(location)
+        .ty(ty)
+        .scale(scale)
+        .range(Range::UNBOUNDED)
+        .provenance(Provenance::Kernel)
+        .consumers(SHOWN)
+}
+
+/// An f32 at scalar index `slot`.
+fn f32_at(name: &'static str, slot: u32, scale: Scale) -> EntryBuilder {
+    entry(name, Location::Scalar(slot), FieldType::F32, scale)
+}
+
+/// Three CoM-frame particle vectors, `vector(f32, 6)` stored as `array<vec2<f32>, 3>` (§3.8, R-86): slot `j` is
+/// body `j`'s (payload §1), so the field is body-indexed, its components `2j` and `2j + 1` body `j`'s (R-449).
+fn vec6_at(name: &'static str, slot: u32) -> EntryBuilder {
+    let ty = FieldType::Vector {
+        component: Box::new(FieldType::F32),
+        k: 6,
+    };
+    entry(name, Location::Scalar(slot), ty, Scale::Lin).index_base(
+        Indexed::Body,
+        "body index, 0-based: components 2j and 2j + 1 are body j's",
+    )
+}
+
+fn packed(word: &'static str, offset: u32, width: u32) -> Location {
+    Location::Packed {
+        word,
+        offset,
+        width,
+    }
+}
+
+/// A u-bits field of `packed_a`'s descriptor (§3.1).
+fn descriptor(name: &'static str, offset: u32, width: u32, scale: Scale, hi: i64) -> EntryBuilder {
+    let location = packed("packed_a", offset, width);
+    entry(name, location, FieldType::UBits, scale).range(Range::int(0, hi))
+}
+
+/// An exact macro-step index, at most `horizon_steps_max` (§3.1, R-86).
+fn step(name: &'static str, location: Location) -> EntryBuilder {
+    let max = HORIZON_STEPS_MAX.number() as i64;
+    entry(name, location, FieldType::UBits, Scale::Lin).range(Range::int(0, max))
+}
+
+/// An `f16-pair` latch ≥ 0 (or > 0), clamped to ±65504 before packing (payload §1).
+fn latch(name: &'static str, location: Location, lo: Bound) -> EntryBuilder {
+    let range = Range {
+        lo,
+        hi: Bound::Unbounded,
+    };
+    let f16 = entry(name, location, FieldType::F16Pair, Scale::Log).range(range);
+    f16.overflow(Overflow::Saturate)
+}
+
+fn derived(name: &'static str, from: &[&'static str], scale: Scale) -> EntryBuilder {
+    let from = from.to_vec();
+    entry(name, Location::Derived { from }, FieldType::F32, scale)
+}
+
+/// `n`, the current shape-sphere point (§3.8's worked entry; integrator dd §3.7): `derived(from: [r, m0, m1, m2])`,
+/// `vector(f32, 3)`, `lin` over [−1, 1] in each component. Ledger data, the entry §3.8 gives; not a register
+/// constant (REQ-SYS-082).
+fn shape_point() -> EntryBuilder {
+    let ty = FieldType::Vector {
+        component: Box::new(FieldType::F32),
+        k: 3,
+    };
+    let from = vec!["r", "m0", "m1", "m2"];
+    entry("n", Location::Derived { from }, ty, Scale::Lin).range(Range {
+        lo: Bound::Closed(-1.0),
+        hi: Bound::Closed(1.0),
+    })
+}
+
+/// The fields the corpus or their own definition make non-negative, other than the unsigned bit fields, each with the
+/// line that does (R-400; TASK-M1-17): each declares a lower bound of 0, closed or open, and nothing else declares
+/// one. The physics reviewer checks each citation.
+pub const NON_NEGATIVE: [(&str, &str); 15] = [
+    (
+        "closure_min",
+        "dd_generation_root §3.4: `closure_min` | log | ≥ 0",
+    ),
+    (
+        "d_min",
+        "dd_generation_root §3.4: `d_min` | log | > 0; R-271: stored values never reach 0.0",
+    ),
+    (
+        "dE_max",
+        "dd_generation_root §3.4: `delta_E_max_abs` | log | ≥ 0",
+    ),
+    (
+        "dLz_max",
+        "dd_generation_root §3.4: `delta_Lz_max_abs` | log | ≥ 0",
+    ),
+    (
+        "m0",
+        "render_gui_spec §10.1: mass fraction `mᵢ ∈ [0,1]`; dd_decoder §3.1: `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`",
+    ),
+    (
+        "m1",
+        "render_gui_spec §10.1: mass fraction `mᵢ ∈ [0,1]`; dd_decoder §3.1: `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`",
+    ),
+    (
+        "m2",
+        "render_gui_spec §10.1: mass fraction `mᵢ ∈ [0,1]`; dd_decoder §3.1: `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`",
+    ),
+    (
+        "mean_y",
+        "dd_simstate_payload §4: `y_k = ‖n̂(r_k, m) − n̂(r_0, m)‖²`, the squared chord between two shape-sphere unit \
+         vectors, in [0, 4], and `mean_y` its running mean, so in [0, 4] (REQ-PAY-073); declared from `y`'s \
+         definition by REQ-PAY-098 (R-426)",
+    ),
+    (
+        "q_mass",
+        "dd_decoder §3.6: `q_mass = min(m₀, m₁)/max(m₀, m₁)`, the inner pair's mass ratio, in [0, 1] (REQ-PAY-088); \
+         declared from its formula by REQ-PAY-097 (R-426)",
+    ),
+    (
+        "rho_mag",
+        "dd_decoder §3.6: `rho_mag = ‖ρ̃‖` ∈ [0, 1], the mass-weighted norm, `rho_mag² + lambda_mag² = I = 1` \
+         (REQ-PAY-088)",
+    ),
+    (
+        "lambda_mag",
+        "dd_decoder §3.6: `lambda_mag = ‖λ̃‖` ∈ [0, 1], the mass-weighted norm, `rho_mag² + lambda_mag² = I = 1` \
+         (REQ-PAY-088)",
+    ),
+    (
+        "rho_ratio",
+        "dd_decoder §3.6: `rho_ratio = ‖ρ̃‖/‖λ̃‖` ∈ [0, ∞], 0 at the collision pole (REQ-PAY-088); dd_generation_root \
+         §3.6: `rho_ratio` (log); R-401: \"a ratio\"",
+    ),
+    (
+        "K_0",
+        "dd_decoder §3.6: `K₀ = Σᵢ ‖pᵢ‖² / 2mᵢ`; dd_generation_root §3.6: `K_0` (lin, [0, ∞)) (R-403)",
+    ),
+    (
+        "virial_ratio",
+        "dd_decoder §3.6: `virial_ratio = 2K₀ / |V₀|`, `K₀ ≥ 0`",
+    ),
+    (
+        "r_min_pair_0",
+        "dd_decoder §3.6: `r_min_pair_0 = min_{i<j} ‖rᵢ − rⱼ‖` ∈ [0, ∞), 0 at the collision pole (REQ-PAY-088); \
+         dd_generation_root §3.6: `r_min_pair_0` (log); R-401: \"a distance for the distances\"",
+    ),
+];
+
+/// The fields declared signed over (−∞, ∞), each with its citation (R-426; dd_generation_root §3.8): §3 gives none of
+/// them a range, so without its citation each would be a gap. The physics reviewer checks each citation.
+pub const SIGNED: [(&str, &str); 8] = [
+    (
+        "S",
+        "R-423: physics review 5484757609 found `S` signed at finite time, with zero a meaningful centre (R-426)",
+    ),
+    (
+        "ftle",
+        "R-423: physics review 5484757609 found `ftle` signed at finite time, with zero a meaningful centre (R-426)",
+    ),
+    (
+        "diffusion",
+        "R-423: physics review 5484757609 found `diffusion` signed at finite time, with zero a meaningful centre \
+         (R-426)",
+    ),
+    (
+        "C_ty",
+        "R-423's check of `diffusion`, and `C_ty = diffusion · C_tt(n)`, `C_tt(n) = h²·n(n²−1)/12 > 0` for `n ≥ 2` \
+         (dd_generation_root §3.4), so `C_ty` has `diffusion`'s sign (RQ-277, decided per R-369; R-426)",
+    ),
+    (
+        "E_0",
+        "dd_generation_root §3.4: `E_0` | diverging; §3.6: `E₀ = K_0 + V_0` keeps its `diverging` scale, which agrees \
+         only with a range spanning zero (R-403, R-426)",
+    ),
+    (
+        "Lz_0",
+        "dd_generation_root §3.4: `Lz_0` | diverging, a scale that agrees only with a range spanning zero (R-403, \
+         R-426)",
+    ),
+    (
+        "energy_drift",
+        "dd_generation_root §3.8's worked entry: `energy_drift`, (−∞, ∞), signed; §3.4: `energy_drift` | diverging \
+         (signed) (R-426)",
+    ),
+    (
+        "Lz_drift",
+        "dd_generation_root §3.8's worked entry: `Lz_drift`, (−∞, ∞), signed; §3.4: `Lz_drift` | diverging (signed) \
+         (R-426)",
+    ),
+];
+
+/// The fields whose range is provisional, each with the requirement that declares it (R-426): each stays on
+/// `ramp_coolwarm`, drawn as (−∞, ∞), until its requirement declares it, and the physics reviewer re-checks the ramp
+/// then. None is now. `q_mass`'s was declared [0, 1] by TASK-M2-03 from its formula (REQ-PAY-088, REQ-PAY-097), and
+/// `mean_y`'s [0, 4] by TASK-M3-13 from `y`'s definition (REQ-PAY-073, REQ-PAY-098), each in [`NON_NEGATIVE`], so
+/// each is on `ramp_viridis`.
+pub const PROVISIONAL: [(&str, &str); 0] = [];
+
+/// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0`,
+/// `rho_angle` and `n`.
+pub const DECLARED: [(&str, &str); 16] = [
+    (
+        "V_0",
+        "dd_generation_root §3.6: `V_0` (lin, (−∞, 0]); dd_decoder §3.6: `V₀ = −Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖` (R-403)",
+    ),
+    (
+        "rho_angle",
+        "dd_decoder §3.6: `rho_angle = atan2(ρ × λ, ρ · λ)` ∈ (−π, π], the signed angle from `ρ` to `λ`, π on the \
+         antiparallel axis and 0 at the pole (REQ-PAY-088); cyclic, its view on the fixed [0, 1] (render_gui_spec \
+         §10.1)",
+    ),
+    (
+        "n",
+        "dd_generation_root §3.8's worked entry: `n`, `lin` over [−1, 1] in each component",
+    ),
+    (
+        "total_substeps",
+        "its type's full range, [0, 2³² − 1]: unsigned bits in a u32 (dd_simstate_payload §1)",
+    ),
+    (
+        "closure_step",
+        "dd_generation_root §3.4: `closure_step`, an exact u16 step index, as `t_dmin_step`; at most \
+         `horizon_steps_max` (§3.1, R-86)",
+    ),
+    (
+        "t_end_step",
+        "dd_generation_root §3.4: `t_end_step`, [0, T] via `/horizon_steps`, an exact u16; at most \
+         `horizon_steps_max` (§3.1, R-86)",
+    ),
+    (
+        "t_dmin_step",
+        "an exact u16 step index, at most `horizon_steps_max` (dd_generation_root §3.1, R-86)",
+    ),
+    (
+        "state",
+        "dd_simstate_payload §2: `state`'s codes 0–5, 6 and 7 reserved",
+    ),
+    ("detail", "dd_simstate_payload §2: `detail`'s codes 0–3"),
+    ("saturated", "dd_simstate_payload §2: `saturated`, a flag, 0 or 1"),
+    (
+        "departed",
+        "dd_simstate_payload §2: `departed`, R-37's departed bit, bit 15, a sticky flag, 0 or 1 (R-545)",
+    ),
+    (
+        "dmin_pair",
+        "R-22; dd_simstate_payload §2: pair ids 0–2, the code 3 \"unset/invalid\" its sentinel",
+    ),
+    (
+        "last_symbol",
+        "dd_simstate_payload §3: the symbol codes `a = 0, A = 1, b = 2, B = 3`",
+    ),
+    (
+        "coll_floor",
+        "dd_simstate_payload §2, `coll_floor_bits`: the codes 1–145, the floor `2^(code − 41)`, and 0 \"not \
+         recorded\"; integrator contract Part 7 (R-973)",
+    ),
+    (
+        "payload",
+        "dd_simstate_payload §3's `.w` bit map: the high 25 bits of the mixed-radix `W`, [0, 2²⁵ − 1]",
+    ),
+    (
+        "length",
+        "dd_simstate_payload §3's `.w` bit map: 0…76 valid (`fgw_capacity`), 127 the truncation sentinel \
+         (`fgw_length_sentinel`)",
+    ),
+];
+
+/// The payload's ledger gaps for the gate report, in ledger order (R-426; dd_generation_root §3.8): each field whose
+/// range no line declares, with the requirement that fills it (`None`: none does) and why no ramp reads it. None is a
+/// `lin` or `diverging` scalar, so each generates.
+pub const GAPS: [(&str, Option<&str>, &str); 5] = [
+    (
+        "r",
+        None,
+        "a vector: the template draws none, and its `‖·‖` and direction-cosine views read no range",
+    ),
+    (
+        "p",
+        None,
+        "a vector: the template draws none, and its `‖·‖` and direction-cosine views read no range",
+    ),
+    (
+        "r_sh",
+        None,
+        "a vector: the template draws none, and its `‖·‖` and direction-cosine views read no range",
+    ),
+    (
+        "p_sh",
+        None,
+        "a vector: the template draws none, and its `‖·‖` and direction-cosine views read no range",
+    ),
+    (
+        "theta",
+        None,
+        "cyclic, an angle (R-423): its view places `fract(θ̃ / 2π)` on the fixed [0, 1]; the unwrapped `θ̃` has no \
+         bound",
+    ),
+];
+
+/// The state of `e`'s range (dd_generation_root §3.8; R-426): the entry's own, [`Entry::range_state`], which reads
+/// the mark the ledger gives it. Always `Some`.
+pub fn range_state(e: &Entry) -> Option<RangeState> {
+    Some(e.range_state())
+}
+
+/// Whether `e`'s range spans zero by its state (R-400, R-426; [`RangeState::spans_zero`]): a gap never does.
+pub fn spans_zero(e: &Entry) -> bool {
+    e.range_state().spans_zero()
+}
+
+/// `b` with its range's mark from the tables (R-426): provisional where [`PROVISIONAL`] names it, else cited where
+/// [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`] does, else unmarked.
+fn declared(b: EntryBuilder) -> EntryBuilder {
+    let Some(name) = b.name else { return b };
+    let cited = |table: &[(&'static str, &'static str)]| {
+        table
+            .iter()
+            .find(|(field, _)| *field == name)
+            .map(|&(_, citation)| citation)
+    };
+    if let Some(requirement) = cited(&PROVISIONAL) {
+        return b.provisional(requirement);
+    }
+    match cited(&SIGNED)
+        .or_else(|| cited(&NON_NEGATIVE))
+        .or_else(|| cited(&DECLARED))
+    {
+        Some(citation) => b.cited(citation),
+        None => b,
+    }
+}
+
+/// `[lo, ∞)`.
+fn from(lo: Bound) -> Range {
+    Range {
+        lo,
+        hi: Bound::Unbounded,
+    }
+}
+
+/// `ICDescriptor`'s field at slot `slot` (§3.6); provenance decode. A log field declares its lower bound only, written
+/// `[0, ∞)`: no upper bound is declared, `+∞` is not excluded. dd_decoder §3.6's two are `rho_ratio` ∈ `[0, ∞]`, which
+/// reaches `+∞` at the `α = 0` pole, and `r_min_pair_0` ∈ `[0, ∞)`; each is > 0 but at the collision pole, where it
+/// reads 0.
+fn ic(name: &'static str, slot: u32, scale: Scale) -> EntryBuilder {
+    let e = f32_at(name, slot, scale).provenance(Provenance::Decode);
+    match scale {
+        Scale::Log => e.range(from(Bound::Closed(0.0))),
+        _ => e,
+    }
+}
+
+/// The packed words of `SimState` (payload §1; §3.1), and `fgw_w`, the `.w` of the word buffer's `vec4<u32>` (payload
+/// §3's `.w` bit map), whose fields tile it with nothing reserved. Ledger data, the layout table's words; not register
+/// constants (REQ-SYS-082).
+fn words() -> Vec<Word> {
+    let word = |name, reserved| Word {
+        name,
+        bits: 32,
+        reserved,
+    };
+    vec![
+        word(
+            "packed_a",
+            // Bits 10–14 are `I_max`'s, reserved until TASK-M7-35 spends them; bit 15 is R-37's departed bit (R-545).
+            vec![Span {
+                offset: 10,
+                width: 5,
+            }],
+        ),
+        word("packed_b", vec![]),
+        word("times", vec![]),
+        // Bits 0–7 `coll_floor`, 8–31 reserved (payload §2; R-973).
+        word(
+            "coll_floor_bits",
+            vec![Span {
+                offset: 8,
+                width: 24,
+            }],
+        ),
+        word("fgw_w", vec![]),
+    ]
+}
+
+/// Every entry: `SimState`'s stored fields at their `SimStateFTLE` slots, the packed words' fields, §3.4's derived
+/// scalars, and `ICDescriptor`'s twelve fields, each with its range's mark ([`declared`]). Ledger data, the layout
+/// table's entries, their offsets, widths and ranges the payload doc's and §3's; not register constants (REQ-SYS-082).
+fn entries() -> Vec<EntryBuilder> {
+    let from_zero = from(Bound::Closed(0.0));
+    let fraction = Range {
+        lo: Bound::Closed(0.0),
+        hi: Bound::Closed(1.0),
+    };
+    let u32s = Range::int(0, u32::MAX.into());
+    let ubits = |name, slot| entry(name, Location::Scalar(slot), FieldType::UBits, Scale::Lin);
+    vec![
+        vec6_at("r", 0),
+        vec6_at("p", 6),
+        vec6_at("r_sh", 12),
+        vec6_at("p_sh", 18),
+        f32_at("S", 24, Scale::Lin),
+        // R-423: `θ̃`, the unwrapped longitude in radians (dd_integrator §3.7), is an angle, so cyclic.
+        f32_at("theta", 25, Scale::Cyclic),
+        // dd_simstate_payload §4: the mean of `y`, a squared shape-sphere chord, declared [0, 4] from `y`'s
+        // definition (REQ-PAY-073, REQ-PAY-098; R-426).
+        f32_at("mean_y", 26, Scale::Lin).range(Range {
+            lo: Bound::Closed(0.0),
+            hi: Bound::Closed(4.0),
+        }),
+        f32_at("C_ty", 27, Scale::Lin),
+        f32_at("E_0", 28, Scale::Diverging),
+        f32_at("Lz_0", 29, Scale::Diverging),
+        ubits("total_substeps", 33).range(u32s),
+        // Unset before departure, the minimum of an empty set, is +∞, with `closure_step` 0 and the departed bit clear
+        // (RQ-835 (a); payload §1, §2): a view draws it "not yet", as `d_min`'s (R-271).
+        f32_at("closure_min", 34, Scale::Log)
+            .range(from_zero)
+            .sentinel(f64::INFINITY),
+        step("closure_step", Location::Scalar(35)),
+        descriptor("state", 0, 3, Scale::Categorical(6), 5),
+        // A body index under escape and a pair id under collision (payload §2; R-449).
+        descriptor("detail", 3, 2, Scale::Categorical(4), 3).index_base(
+            Indexed::BodyOrPair,
+            "under escape, body index, 0-based; under collision, pair id, 0-based; pair k is the side opposite \
+             body k; 3 all three under either; under sim_failed and decode_failed, the failure category",
+        ),
+        descriptor("saturated", 5, 1, Scale::Flag, 1),
+        // Pair ids 0–2 (R-22); the stored code 3 is "unset/invalid" (payload §2), so it is the sentinel.
+        descriptor("dmin_pair", 6, 2, Scale::Categorical(3), 2)
+            .sentinel(3.0)
+            .index_base(
+                Indexed::Pair,
+                "pair id, 0-based; pair k is the side opposite body k; 3 unset",
+            ),
+        descriptor("last_symbol", 8, 2, Scale::Categorical(4), 3),
+        // R-37's departed bit (R-545, RQ-310): sticky, set at the first macro-step whose `|n̂(t) − n̂(0)|` exceeds
+        // `δ_dep`; `closure_min` and `closure_step` are a minimum only where it is set (payload §1, §2).
+        descriptor("departed", 15, 1, Scale::Flag, 1),
+        // Unset, the minimum of an empty set, is f16 +∞: a failed sample's, and any sample's before its first step
+        // (R-271, payload §1). A stored value is never 0.0: one below f16's smallest positive subnormal is stored as it.
+        latch("d_min", packed("packed_a", 16, 16), Bound::Open(0.0)).sentinel(f64::INFINITY),
+        latch("dE_max", packed("packed_b", 0, 16), Bound::Closed(0.0)),
+        latch("dLz_max", packed("packed_b", 16, 16), Bound::Closed(0.0)),
+        step("t_end_step", packed("times", 0, 16)),
+        step("t_dmin_step", packed("times", 16, 16)),
+        // The collision test's floor, `2^(code − 41)`, 1 to 145; 0 "not recorded" (payload §2; integrator contract
+        // Part 7; R-973). The range's end is the register's `floor_exp_max + floor_code_bias`, the greatest code.
+        entry(
+            "coll_floor",
+            packed("coll_floor_bits", 0, 8),
+            FieldType::UBits,
+            Scale::Lin,
+        )
+        .range(Range::int(
+            0,
+            (FLOOR_EXP_MAX.number() + FLOOR_CODE_BIAS.number()) as i64,
+        ))
+        .sentinel(0.0),
+        // No sentinel: `ftle` reads NaN whenever `ftle_valid` is false (R-253, R-254).
+        derived(
+            "ftle",
+            &["S", "r_sh", "p_sh", "r", "p", "t_end_step"],
+            Scale::Lin,
+        )
+        .tier_gate("ftle_valid"),
+        // The drifts' log-magnitude views floor at the sim-key parameters `eps_E` and `eps_L` (§3.4, §3.8, R-263).
+        derived(
+            "energy_drift",
+            &["r", "p", "m0", "m1", "m2", "E_0"],
+            Scale::Diverging,
+        )
+        .floor("eps_E"),
+        derived("Lz_drift", &["r", "p", "Lz_0"], Scale::Diverging).floor("eps_L"),
+        derived("diffusion", &["C_ty", "t_end_step"], Scale::Lin),
+        // The Montgomery map, never stored (integrator dd §3.7; §3.8's worked entry): `lin` and [−1, 1] are per
+        // component; `‖n‖ = 1` is a check on the vector, not its range.
+        shape_point(),
+        // The masses are mass fractions in [0, 1], the magnitudes in [0, 1], and `K_0` and the virial ratio ≥ 0
+        // ([`NON_NEGATIVE`]'s citations; R-400, R-403).
+        // `m0` is body 0's mass (R-449).
+        ic("m0", 0, Scale::Lin)
+            .range(fraction)
+            .index_base(Indexed::Body, "body index, 0-based: body 0's mass"),
+        ic("m1", 1, Scale::Lin)
+            .range(fraction)
+            .index_base(Indexed::Body, "body index, 0-based: body 1's mass"),
+        ic("m2", 2, Scale::Lin)
+            .range(fraction)
+            .index_base(Indexed::Body, "body index, 0-based: body 2's mass"),
+        // dd_decoder §3.6: `q_mass = min(m₀, m₁)/max(m₀, m₁)`, declared [0, 1] from its formula (REQ-PAY-097; R-426).
+        ic("q_mass", 3, Scale::Lin).range(fraction),
+        // dd_decoder §3.6: the mass-weighted magnitudes, `rho_mag² + lambda_mag² = I = 1`, each in [0, 1].
+        ic("rho_mag", 4, Scale::Lin).range(fraction),
+        ic("lambda_mag", 5, Scale::Lin).range(fraction),
+        ic("rho_ratio", 6, Scale::Log),
+        // dd_decoder §3.6: the signed angle from `ρ` to `λ`, on (−π, π].
+        ic("rho_angle", 7, Scale::Cyclic).range(Range {
+            lo: Bound::Open(-core::f64::consts::PI),
+            hi: Bound::Closed(core::f64::consts::PI),
+        }),
+        ic("K_0", 8, Scale::Lin).range(from_zero),
+        // dd_decoder §3.6: `V₀ = − Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖`, never positive (R-403).
+        ic("V_0", 9, Scale::Lin).range(Range {
+            lo: Bound::Unbounded,
+            hi: Bound::Closed(0.0),
+        }),
+        ic("virial_ratio", 10, Scale::Lin).range(from_zero),
+        ic("r_min_pair_0", 11, Scale::Log),
+        // Payload §3's `.w` bit map: the high 25 bits of the mixed-radix `W` (its low 96 bits fill `x`, `y`, `z`), then
+        // `length`, 0…76 valid (the register's `fgw_capacity`) with 127 the truncation sentinel (`fgw_length_sentinel`).
+        entry(
+            "payload",
+            packed("fgw_w", 0, 25),
+            FieldType::UBits,
+            Scale::Lin,
+        )
+        .range(Range::int(0, (1 << 25) - 1)),
+        entry(
+            "length",
+            packed("fgw_w", 25, 7),
+            FieldType::UBits,
+            Scale::Lin,
+        )
+        .range(Range::int(0, FGW_CAPACITY.number() as i64))
+        .sentinel(FGW_LENGTH_SENTINEL.number()),
+    ]
+    .into_iter()
+    .map(declared)
+    .collect()
+}
+
+/// The payload ledger's words and entries.
+pub fn ledger() -> Ledger {
+    Ledger {
+        words: words(),
+        entries: entries(),
+    }
+}
+
+/// `SimStateFTLE`, or `SimStateBase` (the same without `r_sh` and `p_sh`), as payload §1 orders them. Ledger data, the
+/// struct's layout; not a register constant (REQ-SYS-082).
+fn simstate(ftle: bool) -> Struct {
+    let m = |name, storage| Member { name, storage };
+    let mut members = vec![m("r", Storage::Vec2x3), m("p", Storage::Vec2x3)];
+    if ftle {
+        members.extend([m("r_sh", Storage::Vec2x3), m("p_sh", Storage::Vec2x3)]);
+    }
+    for name in ["S", "theta", "mean_y", "C_ty", "E_0", "Lz_0"] {
+        members.push(m(name, Storage::F32));
+    }
+    for name in ["packed_a", "packed_b", "times", "total_substeps"] {
+        members.push(m(name, Storage::U32));
+    }
+    // `_reserved` is `θ̃`'s frozen pole reference (R-397; payload §2): the longitude stored on entering the pole disc,
+    // a u16 code in steps of `2π/theta_ref_steps`, `theta_ref_none` (0xFFFF) for "no reference". March state, read
+    // only by the kernel: as a `_`-named member it has no ledger entry, read-side field or view.
+    members.extend([
+        m("closure_min", Storage::F32),
+        m("closure_step", Storage::U16),
+        m("_reserved", Storage::U16),
+        // The collision test's floor (integrator contract Part 7; R-954, R-973): its own 8 B after the u16s, so no
+        // row has a hole (payload §1, the recheck on the collision floor's record; R-86).
+        m("coll_floor_bits", Storage::U32),
+        m("_pad", Storage::Pad(1)),
+    ]);
+    Struct {
+        name: if ftle { "SimStateFTLE" } else { "SimStateBase" },
+        align: 8,
+        buffer: Some("SimState"),
+        indexed: ftle,
+        members,
+    }
+}
+
+/// Struct members with no ledger entry or word of their own, which the struct check ([`crate::gen::rust::check`])
+/// exempts: `free_group_word`, the word buffer's one `vec4<u32>`. Its `.w` is the word `fgw_w`, but its `x`, `y` and `z`
+/// hold the low 96 bits of one mixed-radix integer spanning all four (payload §3), which no §3.8 location addresses.
+pub const PENDING: &[&str] = &["free_group_word"];
+
+/// The structs the Rust emitter writes: `SimState`'s two variants, the word buffer's element (one `vec4<u32>`, whose
+/// `.w` is the word `fgw_w`, payload §3) and `ICDescriptor` (twelve f32s and 16 B of declared padding, 64 B: its f32
+/// instantiation, R-86; its f32s widen with the `Real`, R-313). Ledger data, the structs' layout; not register
+/// constants (REQ-SYS-082).
+pub fn structs() -> Vec<Struct> {
+    let ic = [
+        "m0",
+        "m1",
+        "m2",
+        "q_mass",
+        "rho_mag",
+        "lambda_mag",
+        "rho_ratio",
+        "rho_angle",
+        "K_0",
+        "V_0",
+        "virial_ratio",
+        "r_min_pair_0",
+    ];
+    let mut ic: Vec<Member> = ic
+        .map(|name| Member {
+            name,
+            storage: Storage::F32,
+        })
+        .to_vec();
+    ic.push(Member {
+        name: "_pad",
+        storage: Storage::Pad(4),
+    });
+    let word = Member {
+        name: "free_group_word",
+        storage: Storage::U32x4,
+    };
+    vec![
+        simstate(true),
+        simstate(false),
+        Struct {
+            name: "FreeGroupWord",
+            align: 16,
+            buffer: Some("word"),
+            indexed: false,
+            members: vec![word],
+        },
+        Struct {
+            name: "ICDescriptor",
+            align: 4,
+            buffer: None,
+            indexed: true,
+            members: ic,
+        },
+    ]
+}
+
+/// One stored buffer's binding in the fragment's group 1 (R-343).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Binding {
+    /// The WGSL global the buffer is bound to.
+    pub buffer: &'static str,
+    /// What its elements are: the [`Struct::buffer`] whose elements it holds (`SimState`, `word`, `quad`), or, for
+    /// `ICDescriptor`, which names no buffer, the struct's name.
+    pub holds: &'static str,
+    /// The generated reader of the buffer, by its element index, which loads one stored member or word component at a
+    /// time, never the whole stored struct (R-343, R-378): the read side's `sample_read` for the two payload buffers;
+    /// for the others, the prefix of their per-member readers, `<reader>_<member>(i)`.
+    pub reader: &'static str,
+    /// The prefix of its generated constants, `<prefix>_GROUP` and `<prefix>_BINDING`.
+    pub constant: &'static str,
+    pub group: u32,
+    pub binding: u32,
+}
+
+/// The one table of the stored buffers' bindings (R-343), the source of the numbers the emitters write, as the
+/// constants `<prefix>_GROUP` and `<prefix>_BINDING` and as the WGSL `@group`/`@binding` attributes. First the two
+/// payload buffers the fragment-side unpack layer binds ([`unpack_bindings`]): `SimStateFTLE` at group 1, binding 0,
+/// the word buffer at group 1, binding 1 (R-343). Then the buffers the render side binds beside them, which the corpus
+/// gives no number (applied per R-369, TASK-M1-06): `ICDescriptor`, one per sample, at group 1, binding 2, and
+/// `RenderQuad`, one per quad (dd_generation_root §3.7a), at group 1, binding 3. Group 0 is the assembler's per-frame
+/// uniforms. A binding number decides no stored bit's meaning, so the table is not hashed into the schema version
+/// (R-343's applied note; dd_generation_root §3.8 "The hash"). Interface data between the emitters and the host that
+/// binds the buffers; not register constants (REQ-SYS-082).
+pub const fn bindings() -> [Binding; 4] {
+    [
+        Binding {
+            buffer: "simstate_buffer",
+            holds: "SimState",
+            reader: "sample_read",
+            constant: "SIMSTATE",
+            group: 1,
+            binding: 0,
+        },
+        Binding {
+            buffer: "word_buffer",
+            holds: "word",
+            reader: "sample_read",
+            constant: "WORD",
+            group: 1,
+            binding: 1,
+        },
+        Binding {
+            buffer: "ic_buffer",
+            holds: "ICDescriptor",
+            reader: "ic_read",
+            constant: "IC",
+            group: 1,
+            binding: 2,
+        },
+        Binding {
+            buffer: "quad_buffer",
+            holds: "quad",
+            reader: "quad_read",
+            constant: "QUAD",
+            group: 1,
+            binding: 3,
+        },
+    ]
+}
+
+/// The [`bindings`] rows of the two payload buffers (payload §0) that the fragment-side unpack layer binds and only
+/// the read side's `sample_read` reads (R-343, R-378): `SimStateFTLE` and the word buffer.
+pub const fn unpack_bindings() -> [Binding; 2] {
+    let [simstate, word, _, _] = bindings();
+    [simstate, word]
+}
+
+/// Payload §3's frozen `inverse`, each symbol's code to its inverse's, the symbol codes `a = 0, A = 1, b = 2, B = 3`.
+/// The table is ledger data written in function bodies, as the words' bits are: it is part of the binary format, not
+/// a register constant (REQ-SYS-001).
+pub const fn inverse() -> [u32; 4] {
+    [1, 0, 3, 2]
+}
+
+/// Payload §3's frozen `cont_symbol`: `next = cont_symbol()[digit][prev]`. Each digit's map is a permutation of the
+/// symbols that never gives `inverse(prev)`, and is its own inverse. Ledger data, as [`inverse`] is (REQ-SYS-082).
+pub const fn cont_symbol() -> [[u32; 4]; 3] {
+    [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2, 1, 0]]
+}
+
+/// `continuation_index`'s value where no digit continues `prev`, at `next = inverse(prev)`: 3, "invalid", as
+/// `dmin_pair`'s 3 is (R-307, payload §3). Ledger data, a code of the frozen table, as [`inverse`] is (REQ-SYS-082).
+pub const fn continuation_invalid() -> u32 {
+    3
+}
+
+/// `predecessor_symbol`, derived from [`cont_symbol`] by inverting each digit's permutation:
+/// `prev = predecessor_symbol()[digit][next]`, the `prev` with `cont_symbol()[digit][prev] == next` (payload §3). Each
+/// map is an involution, so this equals `cont_symbol()`.
+pub const fn predecessor_symbol() -> [[u32; 4]; 3] {
+    let cont = cont_symbol();
+    let mut out = [[0; 4]; 3];
+    let mut e = 0;
+    while e < 3 {
+        let mut prev = 0;
+        while prev < 4 {
+            out[e][cont[e][prev] as usize] = prev as u32;
+            prev += 1;
+        }
+        e += 1;
+    }
+    out
+}
+
+/// `continuation_index`, derived from [`cont_symbol`]: `continuation_index()[prev][next]` is the digit `e` with
+/// `cont_symbol()[e][prev] == next`, and [`continuation_invalid`] in the four cells where no digit gives `next`, those
+/// with `next = inverse(prev)` (R-307, payload §3).
+pub const fn continuation_index() -> [[u32; 4]; 4] {
+    let cont = cont_symbol();
+    let mut out = [[continuation_invalid(); 4]; 4];
+    let mut e = 0;
+    while e < 3 {
+        let mut prev = 0;
+        while prev < 4 {
+            out[prev][cont[e][prev] as usize] = e as u32;
+            prev += 1;
+        }
+        e += 1;
+    }
+    out
+}
+
+/// The canonical quiet NaN's f32 bits, `0x7fc0_0000`: sign 0, exponent all ones, the quiet bit (bit 22) alone in the
+/// significand (lowering Part 3a; R-72, R-79; REQ-RENDER-077). A tier-absent derived scalar reads exactly these bits at
+/// unpack, as does an invalid read (`ftle`, R-254; `diffusion`, R-245), and the bitcast absence test compares against
+/// them. Interface data written into the read side, as the continuation table is; not a register constant.
+pub const fn canonical_qnan_bits() -> u32 {
+    0x7fc0_0000
+}
+
+/// The bits of `S`'s failed-state value, `S_FAILED`, `f32::MAX`'s, `0x7f7f_ffff`: the mark a sample's `S` stores once
+/// its Benettin shadow's finalised sum has gone non-finite, never NaN (R-79), so that payload §6's `ftle_valid` is
+/// false from then on (R-972; the owner's words of 12 Nov 2026 on RQ-791, option (a)). A
+/// real `S` is bounded far below it (`|S| ≤ 65535 · 103 ≈ 6.8e6`, `kernel::driver::benettin`'s note). Interface data
+/// written into the read side, as the canonical quiet NaN is; not a register constant. *Applied per R-369: the
+/// smallest mark that changes no other field.*
+pub const fn s_failed_bits() -> u32 {
+    f32::MAX.to_bits()
+}
+
+/// Payload §3's frozen symbol codes, each symbol at its code: `a = 0, A = 1, b = 2, B = 3` ("part of the binary
+/// format"). `inverse` and the digit maps are over these codes; `last_symbol` stores one (payload §2).
+pub const fn symbols() -> [&'static str; 4] {
+    ["a", "A", "b", "B"]
+}
+
+/// Payload §2's `state` codes, each state at its code: 0 escape · 1 bounded · 2 collision · 3 running ·
+/// 4 sim_failed · 5 decode_failed. Codes 6–7 are reserved and read as finished and untrusted.
+pub const fn states() -> [&'static str; 6] {
+    [
+        "escape",
+        "bounded",
+        "collision",
+        "running",
+        "sim_failed",
+        "decode_failed",
+    ]
+}
+
+/// The pair-id map (R-22; payload §2): pair `k` names the side opposite body `k`, `pair_bodies()[k]` its two bodies,
+/// pair 0 = (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). `detail` under collision and `dmin_pair` use it. Ledger data,
+/// a code assignment hashed into the schema version; not a register constant (REQ-SYS-082).
+pub const fn pair_bodies() -> [[u32; 2]; 3] {
+    [[1, 2], [2, 0], [0, 1]]
+}
+
+/// `detail`'s meaning in each state it is meaningful in, each code's at its code (payload §2): escape a body id and
+/// collision a pair id, `3` all three; sim_failed and decode_failed their failure enums.
+pub const fn detail_meanings() -> [(&'static str, [&'static str; 4]); 4] {
+    [
+        (
+            "escape",
+            ["body 0", "body 1", "body 2", "all three: triple ejection"],
+        ),
+        (
+            "collision",
+            ["pair 0", "pair 1", "pair 2", "all three: triple collision"],
+        ),
+        (
+            "sim_failed",
+            [
+                "NaN in state",
+                "Inf/overflow in state",
+                "non-finite derived quantity",
+                "reserved",
+            ],
+        ),
+        (
+            "decode_failed",
+            [
+                "non-finite decode output",
+                "degenerate configuration",
+                "invalid mass construction",
+                "other/reserved",
+            ],
+        ),
+    ]
+}
+
+/// One member of generation-root §3.7's `QuadReduction`: its name, its §3.7 type as written there, and the §3.7
+/// subsection that gives it. Ledger data, not a §3.8 entry, and not emitted: the struct, its members' §3.8 entries and
+/// their placement are [`crate::reduction`]'s (R-306, R-113).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReductionMember {
+    pub name: &'static str,
+    /// The type column of §3.7, verbatim; `None` where §3.7 gives the member no type.
+    pub ty: Option<&'static str>,
+    pub section: &'static str,
+}
+
+/// Generation-root §3.7's `QuadReduction` members, in its order (R-306). `spread_event` is the stored f16 agreement
+/// value; `ensemble_outcome_agreement` is a retired name and no member (R-18). Not members: `id` (omitted, identity is
+/// positional), the latch `running_max_divergence` (per footprint, R-99) and the conditional `spread_t_end` ("not yet
+/// included"). §3.7's one row `` `escape_time_min` / `_max` ``, typed `f16 × 2`, is its two members, each f16.
+/// `n_unresolved`, the count of the quad's unresolved footprints, latched ones included (the latch's verdict, R-142),
+/// is u16 like `valid_sample_count` (R-315). `class_histogram`'s bins are u32 (R-410).
+pub const QUAD_REDUCTION: &[ReductionMember] = &[
+    reduction("level", "u8", "Identity"),
+    reduction("class_histogram[N]", "u32 × N", "Outcome"),
+    reduction("dominant_outcome", "packed", "Outcome"),
+    reduction("outcome_impurity", "f16", "Outcome"),
+    reduction("terminated_fraction", "f16", "Outcome"),
+    reduction("spread_shape", "f16", "Ensemble spread"),
+    reduction("spread_event", "f16", "Ensemble spread"),
+    reduction("error_ratio", "f16", "Ensemble spread"),
+    reduction("roundtrip_error", "f16", "Ensemble spread"),
+    reduction("spread_winner", "2 bits", "Ensemble spread"),
+    reduction("alpha_area", "f16", "Refinement"),
+    reduction("alpha_energy", "f16", "Refinement"),
+    reduction("worst_energy_drift", "f16", "Refinement"),
+    reduction("running_mean_divergence", "f32", "Temporal accumulators"),
+    reduction("first_divergence_t", "f32", "Temporal accumulators"),
+    reduction("n_unresolved", "u16", "Temporal accumulators"),
+    reduction("suspect_fraction", "f16", "Validity and diagnostics"),
+    reduction("saturated_fraction", "f16", "Validity and diagnostics"),
+    reduction("valid_sample_count", "u16", "Validity and diagnostics"),
+    reduction("coherence", "f32", "Validity and diagnostics"),
+    reduction("escape_time_min", "f16", "Validity and diagnostics"),
+    reduction("escape_time_max", "f16", "Validity and diagnostics"),
+    reduction("retrograde_fraction", "f16", "Validity and diagnostics"),
+    reduction("mean_orbit_count_spread", "f16", "Validity and diagnostics"),
+];
+
+const fn reduction(name: &'static str, ty: &'static str, section: &'static str) -> ReductionMember {
+    ReductionMember {
+        name,
+        ty: Some(ty),
+        section,
+    }
+}

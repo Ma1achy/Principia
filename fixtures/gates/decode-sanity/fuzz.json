@@ -1,0 +1,9 @@
+{
+  "description": "Lookup's layer 3 (inverse-encode § \"Chart-aware validation\"): the CoM residual ‖Σmᵢrᵢ‖/R_x and the total-momentum residual ‖Σpᵢ‖/P_x of the decode, at 65 536 points (u, v) uniform on [0, 1]² on each registered chart and 1 048 576 latent z with every component on [−16, 16], past every control's saturation, at f64 and at f32.",
+  "seed": 19,
+  "per_chart": 65536,
+  "fuzz": 1048576,
+  "span": 16.0,
+  "shift": 0.0,
+  "expected": "pass"
+}

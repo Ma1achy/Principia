@@ -1,0 +1,2 @@
+row ('IT-1',) col symbol_sequence: eye='1' ocr=''
+rows eye=5 ocr=5; cells compared 20; disagreements 1

@@ -1,0 +1,5 @@
+body 1: Z - X = 0.0, r.n = 0.0
+body 2: Z - X = 0.0, r.n = 0.0
+body 3: Z - X = 0.0, r.n = 0.0
+largest change in a pairwise distance: 1.34e-51; E (all at rest) 3D = -0.001144058896597681292539408, planar = -0.001144058896597681292539408
+largest |ours - ChatGPT| in planar (x, y): 4.44e-17 (ChatGPT's are binary64 values)

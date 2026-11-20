@@ -1,0 +1,22 @@
+1./2. per orbit:
+   (  80,   0) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 61.2 / 298.8 printed 61.2
+   (  80,  10) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 61.0 / 299.0 printed 61.0
+   (  80,  19) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 60.6 / 299.4 printed 60.6
+   (  40,   0) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 121.0 / 239.0 printed 121.0
+   (  40,  30) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 121.6 / 238.4 printed 121.6
+   (  40,  59) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 123.4 / 236.6 printed 123.4
+   (   0,   0) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 174.0 / 186.0 printed 186.0
+   (   0,  50) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = |k_l|>1 (unstable, no lambda printed) printed -
+   (   0,  99) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = |k_l|>1 (unstable, no lambda printed) printed -
+   ( -25,   0) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 118.0 / 242.0 printed 242.0
+   ( -25,  62) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 137.6 / 222.4 printed 222.4
+   ( -25, 124) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = |k_l|>1 (unstable, no lambda printed) printed -
+   ( -49,   0) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 19.3 / 340.7 printed 340.7
+   ( -49,  74) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = 22.3 / 337.7 printed 337.7
+   ( -49, 148) masses from (a,b) match printed to 0.000 (sum 3.00); arccos(k_l) = |k_l|>1 (unstable, no lambda printed) printed -
+3. Ib = 0 rows against Henon Table IV:
+   m=(0.20,2.60,0.20) Henon interpolated: R 0.88257 (MH 0.88258); T_MH 1.4188; T_MH/R^1.5 1.7112 (MH P 1.7112); Henon k1/2 0.482117 (MH k_l 0.481952); k2/2 0.988200 (MH k_t 0.988320)
+   m=(0.60,1.80,0.60) Henon interpolated: R 1.91920 (MH 1.91933); T_MH 4.7190; T_MH/R^1.5 1.7749 (MH P 1.7750); Henon k1/2 -0.513333 (MH k_l -0.514480); k2/2 0.824357 (MH k_t 0.825430)
+   m=(1.00,1.00,1.00) Henon row: R 1.98502 (MH 1.98502); T_MH 4.9831; T_MH/R^1.5 1.7818 (MH P 1.7818); Henon k1/2 -0.994488 (MH k_l -0.994488); k2/2 0.031301 (MH k_t 0.031303)
+   m=(1.25,0.50,1.25) Henon interpolated: R 1.52533 (MH 1.52530); T_MH 3.0953; T_MH/R^1.5 1.6431 (MH P 1.6431); Henon k1/2 -0.469279 (MH k_l -0.469279); k2/2 -0.980948 (MH k_t -0.970242)
+   m=(1.49,0.02,1.49) Henon interpolated: R 0.64540 (MH 0.63595); T_MH 0.2840; T_MH/R^1.5 0.5477 (MH P 0.5095); Henon k1/2 0.951002 (MH k_l 0.943933); k2/2 1456.389067 (MH k_t 2.2e3)

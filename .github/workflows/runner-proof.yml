@@ -1,0 +1,83 @@
+# The weekly proof of the sandbox on the owner's Windows PC, `malachys-pc-rtx2080s` (the owner, 5 Nov 2026; #390): the
+# PC's own `03-sandbox-proof.ps1` runs again as `gh-runner`, through the service, an hour after the PC's 04:00 update
+# task. It prints counts only, the detail staying on the PC, and its exit code is the failure count. Beside it, gpu-idle:
+# the PC's read-only GPU sample, `06-gpu-sample.ps1`, taken while nobody is signed in to the PC, by `workflow_dispatch`
+# alone, naming it (`gh workflow run runner-proof.yml --ref main -f only=gpu-idle`), from the Mac when the owner says
+# they are signing out of the PC, on an idle runner with nothing alongside it; a dispatch naming it runs it alone, and
+# the weekly proof runs on the schedule and on a dispatch that doesn't. Each is a named measurement reporting under its
+# own name, never a required check (R-649, R-711 item 1, R-859: from the anchor move the runner may run "gpu-idle and the
+# weekly proof"): the PC is sometimes off, and nothing on `main` waits for it. No job here is gathered or read by any
+# gate, and a red one is not main red. A job here that stops on a runner-level fault is re-run once, automatically, by
+# the hosted job `win-retry` (`win-retry.yml`, R-988), the one reader of this workflow, which logs every such stop and
+# every hang; nothing else retries it. Its limit is R-988's, 1.5 times its slowest completed run on the PC, rounded up
+# to a whole minute (`.github/win-times.md`); at it, the job is a hang, ended and logged, never re-run.
+# `xtask/tests/ci_self_hosted.rs` fails if that ever stops holding, if a rule below is broken, or if a self-hosted job
+# anywhere is not one of the runner's ruled list (R-859, R-860).
+#
+# The rules are `win-gpu.yml`'s, the conditions for having this runner at all on a public repository (R-711 items 1 and
+# 5, the owner's job rules of 5 Nov 2026), unchanged by R-859. Never add a `pull_request` or `pull_request_target`
+# trigger. Each job carries the repository and actor guard. No credential reaches either: `contents: read` and no
+# repository secret. They use no action and no checkout, so they need neither the `.git` guard nor a record: the PC keeps
+# the detail. With no push trigger there is no push for a paths filter to skip. The PC's hook runs the self-check before
+# any step, here as in every job. Each job is its one step, starting its script fail closed.
+#
+# What `github.actor` is on a `schedule` run is still to be read from a real run (R-711 item 6: the commit signature is
+# the primary gate there, the actor check secondary). The guard is `win-gpu.yml`'s, so if it isn't Ma1achy the job is
+# skipped, and the first Sunday's run shows it.
+name: runner-proof
+
+on:
+  schedule:
+    - cron: "0 5 * * 0"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: Run one job of this workflow
+        type: choice
+        default: runner-proof
+        options:
+          - runner-proof
+          - gpu-idle
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # As in `win-gpu.yml`: plain `shell: powershell` is refused here, and with -File a step's result comes from its
+    # own exit. The script starts as a child `powershell -File`, which sets $LASTEXITCODE even if it can't load or
+    # parse.
+    shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+
+env:
+  # R-374 and the owner's CI setting (PR #394), as in every workflow. Nothing here runs cargo.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  runner-proof:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && inputs.only != 'gpu-idle'
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 2
+    concurrency:
+      group: runner-proof
+      cancel-in-progress: false
+    steps:
+      - name: Sandbox proof
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\setup\03-sandbox-proof.ps1 -Job
+          exit $LASTEXITCODE
+
+  gpu-idle:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'gpu-idle'
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 14
+    concurrency:
+      group: gpu-idle
+      cancel-in-progress: false
+    steps:
+      - name: Sample the GPU, read-only
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\setup\06-gpu-sample.ps1 -Minutes 8 -Label service-job
+          exit $LASTEXITCODE

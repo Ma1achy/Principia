@@ -1,0 +1,8 @@
+{
+  "description": "The control under Aarseth–Zare: the same passage with the gate's reader pointed at the Cartesian read-out after the passage. The two read-outs differ on this passage (measured by the gate: 4.179e-14 regularised, 4.190e-14 Cartesian), so the value read is not the occupant's regularised drift and the reader check fails it: the Aarseth–Zare arm can fail by the reader check, which binds under both occupants (REQ-VAL-045; physics review 5895439304 of PR #522).",
+  "occupant": "aarseth-zare",
+  "reader": "cartesian",
+  "eta": 0.01,
+  "ladder": [0.01, 0.005, 0.0025, 0.00125],
+  "expected": "fail"
+}

@@ -1,0 +1,128 @@
+{
+ "name": "Ink wash",
+ "doc": "Sumi-e: one ink at four dilutions bleeding into rice-paper fibres, blooms, dry-brush breaks.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "fr": {
+   "op": "draw",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "kind": "random"
+   }
+  },
+  "n1": {
+   "op": "noise",
+   "p": {
+    "scale": 120,
+    "octaves": 2,
+    "seed": "$seed+1"
+   }
+  },
+  "fx": {
+   "op": "expr",
+   "in": {
+    "n": "n1"
+   },
+   "p": {
+    "f": "cos(pi*n)"
+   }
+  },
+  "fy": {
+   "op": "expr",
+   "in": {
+    "n": "n1"
+   },
+   "p": {
+    "f": "sin(pi*n)"
+   }
+  },
+  "fd": {
+   "op": "expr",
+   "in": {
+    "fr": "fr.out"
+   },
+   "p": {
+    "f": "(fr < 0.02).astype(float)"
+   }
+  },
+  "fs": {
+   "op": "smear",
+   "in": {
+    "x": "fd",
+    "tx": "fx",
+    "ty": "fy"
+   },
+   "p": {
+    "length": 9
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 6
+   }
+  },
+  "dry": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 2.0,
+    "density": 0.006,
+    "length": 22,
+    "seed": "$seed+4"
+   }
+  },
+  "n2": {
+   "op": "noise",
+   "p": {
+    "scale": 30,
+    "octaves": 3,
+    "seed": "$seed+2"
+   }
+  },
+  "n3": {
+   "op": "noise",
+   "p": {
+    "scale": 7,
+    "octaves": 2,
+    "seed": "$seed+3"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "fs": "fs",
+    "n2": "n2",
+    "n3": "n3",
+    "dry": "dry"
+   },
+   "p": {
+    "f": "L = stretch(blur(lum(I), 1.2)); D = (1-L)**1.1\nfibre = z(fs)\nDq = floor(clip(D*4 + 0.25*n2, 0, 3.999))/3.0\nDq = gaussian(Dq, 0.8)\nbleed = gaussian(Dq, 3.5)*(1+0.18*fibre)\nDw = maximum(Dq, bleed*0.92)\nedge = abs(Dq - gaussian(Dq, 2.5))\nDw = Dw + 0.35*clip(edge*3, 0, 1)*(Dq > 0.2)\nbloom = clip(n3-1.1, 0, 1)*(abs(Dq-0.5) < 0.3)\nDw = Dw - 0.15*gaussian(bloom, 1.0)\ndr = clip(dry*1.4, 0, 1)\nDw = where(D > 0.8, Dw*(0.55+0.45*dr), Dw)\nDw = clip(Dw*(1+0.06*fibre), 0, 1)\nout = array([0.94, 0.92, 0.86])*(1-Dw[..., None]) + array([0.06, 0.06, 0.08])*Dw[..., None]\nout = out*(1 + 0.025*fibre)[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

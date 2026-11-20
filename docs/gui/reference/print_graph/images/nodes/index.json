@@ -1,0 +1,458 @@
+[
+ {
+  "type": "brightness",
+  "category": "analyse",
+  "label": "Brightness",
+  "image": "images/nodes/analyse__brightness.jpg"
+ },
+ {
+  "type": "flow",
+  "category": "analyse",
+  "label": "Flow",
+  "image": "images/nodes/analyse__flow.jpg"
+ },
+ {
+  "type": "edges",
+  "category": "analyse",
+  "label": "Fringe density",
+  "image": "images/nodes/analyse__edges.jpg"
+ },
+ {
+  "type": "noise",
+  "category": "gen",
+  "label": "Noise",
+  "image": "images/nodes/gen__noise.jpg"
+ },
+ {
+  "type": "paper",
+  "category": "gen",
+  "label": "Paper",
+  "image": "images/nodes/gen__paper.jpg"
+ },
+ {
+  "type": "blur",
+  "category": "op",
+  "label": "Blur",
+  "image": "images/nodes/op__blur.jpg"
+ },
+ {
+  "type": "smear",
+  "category": "op",
+  "label": "Smear along flow",
+  "image": "images/nodes/op__smear.jpg"
+ },
+ {
+  "type": "strokes",
+  "category": "paint",
+  "label": "Strokes",
+  "image": "images/nodes/paint__strokes.jpg"
+ },
+ {
+  "type": "kuwahara",
+  "category": "paint",
+  "label": "Kuwahara",
+  "image": "images/nodes/paint__kuwahara.jpg"
+ },
+ {
+  "type": "relief",
+  "category": "paint",
+  "label": "Relief light",
+  "image": "images/nodes/paint__relief.jpg"
+ },
+ {
+  "type": "levels",
+  "category": "op",
+  "label": "Colour",
+  "image": "images/nodes/op__levels.jpg"
+ },
+ {
+  "type": "neon",
+  "category": "op",
+  "label": "Neon",
+  "image": "images/nodes/op__neon.jpg"
+ },
+ {
+  "type": "palette",
+  "category": "op",
+  "label": "Palette",
+  "image": "images/nodes/op__palette.jpg"
+ },
+ {
+  "type": "duotone",
+  "category": "op",
+  "label": "Duotone",
+  "image": "images/nodes/op__duotone.jpg"
+ },
+ {
+  "type": "mix",
+  "category": "op",
+  "label": "Mix",
+  "image": "images/nodes/op__mix.jpg"
+ },
+ {
+  "type": "glow",
+  "category": "op",
+  "label": "Film glow",
+  "image": "images/nodes/op__glow.jpg"
+ },
+ {
+  "type": "grain",
+  "category": "op",
+  "label": "Grain",
+  "image": "images/nodes/op__grain.jpg"
+ },
+ {
+  "type": "vignette",
+  "category": "op",
+  "label": "Vignette",
+  "image": "images/nodes/op__vignette.jpg"
+ },
+ {
+  "type": "offset",
+  "category": "print",
+  "label": "Offset press",
+  "image": "images/nodes/print__offset.jpg"
+ },
+ {
+  "type": "halftone",
+  "category": "print",
+  "label": "Halftone",
+  "image": "images/nodes/print__halftone.jpg"
+ },
+ {
+  "type": "riso",
+  "category": "print",
+  "label": "Risograph",
+  "image": "images/nodes/print__riso.jpg"
+ },
+ {
+  "type": "dither",
+  "category": "screen",
+  "label": "Dither",
+  "image": "images/nodes/screen__dither.jpg"
+ },
+ {
+  "type": "dotmatrix",
+  "category": "screen",
+  "label": "Dot matrix",
+  "image": "images/nodes/screen__dotmatrix.jpg"
+ },
+ {
+  "type": "crt",
+  "category": "screen",
+  "label": "CRT",
+  "image": "images/nodes/screen__crt.jpg"
+ },
+ {
+  "type": "lcd",
+  "category": "screen",
+  "label": "Old LCD",
+  "image": "images/nodes/screen__lcd.jpg"
+ },
+ {
+  "type": "gameboy",
+  "category": "screen",
+  "label": "Game Boy",
+  "image": "images/nodes/screen__gameboy.jpg"
+ },
+ {
+  "type": "mcmap",
+  "category": "screen",
+  "label": "Block-game map",
+  "image": "images/nodes/screen__mcmap.jpg"
+ },
+ {
+  "type": "mcblocks",
+  "category": "craft",
+  "label": "Blocks",
+  "image": "images/nodes/craft__mcblocks.jpg"
+ },
+ {
+  "type": "ascii",
+  "category": "screen",
+  "label": "ASCII",
+  "image": "images/nodes/screen__ascii.jpg"
+ },
+ {
+  "type": "stipple",
+  "category": "print",
+  "label": "Stipple",
+  "image": "images/nodes/print__stipple.jpg"
+ },
+ {
+  "type": "pigment",
+  "category": "op",
+  "label": "Pigment wheel",
+  "image": "images/nodes/op__pigment.jpg"
+ },
+ {
+  "type": "invert",
+  "category": "op",
+  "label": "Invert lightness",
+  "image": "images/nodes/op__invert.jpg"
+ },
+ {
+  "type": "posterize",
+  "category": "op",
+  "label": "Flat colour",
+  "image": "images/nodes/op__posterize.jpg"
+ },
+ {
+  "type": "watercolour",
+  "category": "paint",
+  "label": "Watercolour wash",
+  "image": "images/nodes/paint__watercolour.jpg"
+ },
+ {
+  "type": "pencil",
+  "category": "paint",
+  "label": "Pencil lines",
+  "image": "images/nodes/paint__pencil.jpg"
+ },
+ {
+  "type": "hatching",
+  "category": "paint",
+  "label": "Graphite hatching",
+  "image": "images/nodes/paint__hatching.jpg"
+ },
+ {
+  "type": "pastel",
+  "category": "paint",
+  "label": "Chalk pastel",
+  "image": "images/nodes/paint__pastel.jpg"
+ },
+ {
+  "type": "inkwash",
+  "category": "paint",
+  "label": "Ink wash",
+  "image": "images/nodes/paint__inkwash.jpg"
+ },
+ {
+  "type": "tempera",
+  "category": "paint",
+  "label": "Egg tempera",
+  "image": "images/nodes/paint__tempera.jpg"
+ },
+ {
+  "type": "engrave",
+  "category": "print",
+  "label": "Engraving",
+  "image": "images/nodes/print__engrave.jpg"
+ },
+ {
+  "type": "mezzotint",
+  "category": "print",
+  "label": "Mezzotint",
+  "image": "images/nodes/print__mezzotint.jpg"
+ },
+ {
+  "type": "linocut",
+  "category": "print",
+  "label": "Linocut",
+  "image": "images/nodes/print__linocut.jpg"
+ },
+ {
+  "type": "cyanotype",
+  "category": "print",
+  "label": "Cyanotype",
+  "image": "images/nodes/print__cyanotype.jpg"
+ },
+ {
+  "type": "plotter",
+  "category": "print",
+  "label": "Pen plotter",
+  "image": "images/nodes/print__plotter.jpg"
+ },
+ {
+  "type": "marbling",
+  "category": "craft",
+  "label": "Marbling",
+  "image": "images/nodes/craft__marbling.jpg"
+ },
+ {
+  "type": "mosaic",
+  "category": "craft",
+  "label": "Mosaic",
+  "image": "images/nodes/craft__mosaic.jpg"
+ },
+ {
+  "type": "glass",
+  "category": "craft",
+  "label": "Stained glass",
+  "image": "images/nodes/craft__glass.jpg"
+ },
+ {
+  "type": "kintsugi",
+  "category": "craft",
+  "label": "Kintsugi",
+  "image": "images/nodes/craft__kintsugi.jpg"
+ },
+ {
+  "type": "cutpaper",
+  "category": "craft",
+  "label": "Cut paper",
+  "image": "images/nodes/craft__cutpaper.jpg"
+ },
+ {
+  "type": "thread",
+  "category": "craft",
+  "label": "Thread painting",
+  "image": "images/nodes/craft__thread.jpg"
+ },
+ {
+  "type": "polaroid",
+  "category": "photo",
+  "label": "Polaroid",
+  "image": "images/nodes/photo__polaroid.jpg"
+ },
+ {
+  "type": "thinfilm",
+  "category": "photo",
+  "label": "Thin film",
+  "image": "images/nodes/photo__thinfilm.jpg"
+ },
+ {
+  "type": "negative",
+  "category": "photo",
+  "label": "Film negative",
+  "image": "images/nodes/photo__negative.jpg"
+ },
+ {
+  "type": "film35",
+  "category": "photo",
+  "label": "35mm film",
+  "image": "images/nodes/photo__film35.jpg"
+ },
+ {
+  "type": "cracks",
+  "category": "paint",
+  "label": "Craquelure",
+  "image": "images/nodes/paint__cracks.jpg"
+ },
+ {
+  "type": "stereogram",
+  "category": "machine",
+  "label": "Stereogram",
+  "image": "images/nodes/machine__stereogram.jpg"
+ },
+ {
+  "type": "teletext",
+  "category": "screen",
+  "label": "Teletext",
+  "image": "images/nodes/screen__teletext.jpg"
+ },
+ {
+  "type": "crossstitch",
+  "category": "craft",
+  "label": "Cross-stitch",
+  "image": "images/nodes/craft__crossstitch.jpg"
+ },
+ {
+  "type": "bricks",
+  "category": "craft",
+  "label": "Brick mosaic",
+  "image": "images/nodes/craft__bricks.jpg"
+ },
+ {
+  "type": "eink",
+  "category": "screen",
+  "label": "E-ink",
+  "image": "images/nodes/screen__eink.jpg"
+ },
+ {
+  "type": "ledmatrix",
+  "category": "screen",
+  "label": "LED matrix",
+  "image": "images/nodes/screen__ledmatrix.jpg"
+ },
+ {
+  "type": "knit",
+  "category": "craft",
+  "label": "Knit (Fair Isle)",
+  "image": "images/nodes/craft__knit.jpg"
+ },
+ {
+  "type": "scope",
+  "category": "machine",
+  "label": "Oscilloscope",
+  "image": "images/nodes/machine__scope.jpg"
+ },
+ {
+  "type": "crosshatch",
+  "category": "paint",
+  "label": "Cross-hatching",
+  "image": "images/nodes/paint__crosshatch.jpg"
+ },
+ {
+  "type": "graphitepencil",
+  "category": "paint",
+  "label": "Pencil",
+  "image": "images/nodes/paint__graphitepencil.jpg"
+ },
+ {
+  "type": "fineliner",
+  "category": "paint",
+  "label": "Fineliner",
+  "image": "images/nodes/paint__fineliner.jpg"
+ },
+ {
+  "type": "marker",
+  "category": "paint",
+  "label": "Marker",
+  "image": "images/nodes/paint__marker.jpg"
+ },
+ {
+  "type": "biro",
+  "category": "paint",
+  "label": "Ballpoint",
+  "image": "images/nodes/paint__biro.jpg"
+ },
+ {
+  "type": "tetris",
+  "category": "craft",
+  "label": "Tetris",
+  "image": "images/nodes/craft__tetris.jpg"
+ },
+ {
+  "type": "shatter",
+  "category": "photo",
+  "label": "Shattered glass",
+  "image": "images/nodes/photo__shatter.jpg"
+ },
+ {
+  "type": "palslot",
+  "category": "slot",
+  "label": "Palette",
+  "image": "images/nodes/slot__palslot.jpg"
+ },
+ {
+  "type": "ground",
+  "category": "slot",
+  "label": "Ground",
+  "image": "images/nodes/slot__ground.jpg"
+ },
+ {
+  "type": "onground",
+  "category": "slot",
+  "label": "On the ground",
+  "image": "images/nodes/slot__onground.jpg"
+ },
+ {
+  "type": "unfinished",
+  "category": "slot",
+  "label": "Unfinished",
+  "image": "images/nodes/slot__unfinished.jpg"
+ },
+ {
+  "type": "age",
+  "category": "slot",
+  "label": "Age",
+  "image": "images/nodes/slot__age.jpg"
+ },
+ {
+  "type": "view",
+  "category": "slot",
+  "label": "Viewing",
+  "image": "images/nodes/slot__view.jpg"
+ }
+]

@@ -1,0 +1,160 @@
+[
+ {
+  "family": "Glass",
+  "presets": [
+   "Shattered glass",
+   "Shattered pane",
+   "Through cracked goggles"
+  ]
+ },
+ {
+  "family": "Paint",
+  "presets": [
+   "Watercolour pencil",
+   "Watercolour pencil, limited palette",
+   "Watercolour pencil, earth",
+   "Watercolour pencil, nocturne",
+   "Oil",
+   "Acrylic, sculptural",
+   "Gouache",
+   "Egg tempera",
+   "Encaustic"
+  ]
+ },
+ {
+  "family": "Drawing",
+  "presets": [
+   "Graphite",
+   "Charcoal",
+   "Chalk pastel",
+   "Ink wash",
+   "Pen plotter"
+  ]
+ },
+ {
+  "family": "Pens and pencils",
+  "presets": [
+   "Cross-hatching, ruled",
+   "Cross-hatching, round the forms",
+   "Pencil, HB",
+   "Pencil, 6B",
+   "Fineliner",
+   "Fineliner, stipple, sepia",
+   "Marker",
+   "Marker, ruled strokes",
+   "Biro",
+   "Biro, on feint-ruled paper"
+  ]
+ },
+ {
+  "family": "Printmaking",
+  "presets": [
+   "Engraving",
+   "Mezzotint",
+   "Linocut",
+   "Cyanotype",
+   "Risograph",
+   "Fluoro palette, risograph"
+  ]
+ },
+ {
+  "family": "Print and screen",
+  "presets": [
+   "Offset press (NASA Facts, 1978)",
+   "Halftone",
+   "Limited palette, then halftone",
+   "Stipple (after Luminet, 1979)",
+   "Dot matrix, black ribbon",
+   "Dot matrix, no scan lines",
+   "Dot matrix, colour ribbon",
+   "Dot matrix, colour, no scan lines",
+   "Dither, 8×8, two colours",
+   "Dither, 8×8, three colours",
+   "Dither, 4×4, original colours",
+   "Dither, random",
+   "Dither, gradient noise, three colours",
+   "Dither, 2×2, Game Boy greens",
+   "CRT television",
+   "Duotone, on a CRT",
+   "Old LCD",
+   "Game Boy",
+   "ASCII, green terminal",
+   "ASCII, white terminal",
+   "ASCII, own colours",
+   "ASCII, 8-bit colour",
+   "ANSI art, 16 colours",
+   "ASCII, amber, on a CRT",
+   "ASCII, typed on paper"
+  ]
+ },
+ {
+  "family": "Block game",
+  "presets": [
+   "Block-game map art",
+   "Block-game map, three shades, no dither",
+   "Blocks",
+   "Blocks, big"
+  ]
+ },
+ {
+  "family": "Craft",
+  "presets": [
+   "Marbling",
+   "Mosaic",
+   "Stained glass",
+   "Kintsugi",
+   "Cut paper",
+   "Thread painting"
+  ]
+ },
+ {
+  "family": "Craft and machines",
+  "presets": [
+   "Cross-stitch",
+   "Cross-stitch, sampler on bare cloth",
+   "Fair Isle knit",
+   "Knit, two colours",
+   "Brick mosaic",
+   "Brick mosaic, big studs",
+   "Teletext",
+   "Teletext, separated graphics",
+   "Teletext, on a CRT",
+   "E-ink",
+   "E-ink, four greys, worn panel",
+   "LED matrix",
+   "LED matrix, amber",
+   "LED matrix, red, coarse",
+   "Oscilloscope",
+   "Oscilloscope, dense, amber",
+   "Stereogram, random dots",
+   "Stereogram, picture's colours",
+   "Stereogram, wallpaper",
+   "Tetris",
+   "Tetris, picture's colours"
+  ]
+ },
+ {
+  "family": "Light and film",
+  "presets": [
+   "Light painting",
+   "Light painting, overexposed",
+   "Light painting, solid",
+   "Light painting, on a Polaroid",
+   "Light painting, solid, on a Polaroid",
+   "Polaroid",
+   "35mm film, developed",
+   "Film negative",
+   "Thin film",
+   "Inverse palette"
+  ]
+ },
+ {
+  "family": "Driven by the data",
+  "presets": [
+   "Relief of lifetime*",
+   "Wet where chaotic*",
+   "Craquelure*",
+   "Unfinished where uncertain*"
+  ]
+ }
+]

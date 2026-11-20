@@ -1,0 +1,12 @@
+[package]
+name = "qa_m0_26_old_form"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Its own workspace: never a member of Principia's (QA fixture, TASK-M0-26; built on a copy).
+[workspace]
+[features]
+controls = []
+[dev-dependencies]
+validation = { path = "../../../crates/validation" }

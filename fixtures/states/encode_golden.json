@@ -1,0 +1,101 @@
+{
+  "about": "Encode's golden pairs (dd_encode §5): a physical state x and the z that E(x) must be, asserted in physical units, D(E(x)) against D(z) within ε_phys (inverse-encode Part 4; kernel/tests/roundtrip.rs, encode_golden_pairs). Built from the contract, not transcribed from prin-rs (TASK-M2-16). Values are f64 decimals.",
+  "pairs": [
+    {
+      "name": "z0",
+      "source": "dd_decoder §5's golden anchor: z = 0 decodes to equal masses, α = π/4, β = π/2, rest, I = 1, the equilateral triangle of side √3 on the unit circle (fixtures/golden_ic/z0.json)",
+      "m": [
+        0.3333333333333333,
+        0.3333333333333333,
+        0.3333333333333333
+      ],
+      "r": [
+        [
+          -0.8660254037844386,
+          -0.5
+        ],
+        [
+          0.8660254037844386,
+          -0.5
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "p": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "z": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "nu": null
+    },
+    {
+      "name": "burrau_345",
+      "source": "chart_reference §4.2's Burrau convention at (m, n) = (2, 1): the right triangle with legs a = 3, b = 4 and hypotenuse c = 5, at its physical size, body 0 at the right angle and the origin, r1 = (a, 0), r2 = (0, b); masses (c, b, a)/(a + b + c) = (5, 4, 3)/12, at rest; ν = 1/2 (a = 1 − ν², b = 2ν, c = 1 + ν² up to scale). z by Part 3's closed forms on its canonical form: z_α = logit(2α/π), z_β = logit(β/π), α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(|λ̃_y|, λ̃_x), the momenta 0, z_μk = artanh(ln(m_k/m_0)/μ_max)",
+      "m": [
+        0.4166666666666667,
+        0.3333333333333333,
+        0.25
+      ],
+      "r": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          3.0,
+          0.0
+        ],
+        [
+          0.0,
+          4.0
+        ]
+      ],
+      "p": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "z": [
+        0.43964084498572137,
+        0.41554360041022925,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        -0.04465837504606035,
+        -0.10252282431954098
+      ],
+      "nu": 0.5
+    }
+  ]
+}

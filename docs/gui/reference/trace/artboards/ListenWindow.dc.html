@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Listen window</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0a0a0a}
+a{color:#5ab4ff}a:hover{color:#8cc8ff}
+.eg{font-family:Ubuntu,system-ui,sans-serif;font-weight:300;font-size:12.5px;color:#a8a8a8}
+.mono{font-family:"Ubuntu Mono",ui-monospace,monospace;font-size:12.5px}
+.hd{display:flex;align-items:center;gap:6px;color:#dcdcdc;font-weight:400;margin:10px 0 4px}
+.hd::before{content:"⏷";font-size:10px;color:#8c8c8c}
+.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.lab{width:84px;flex:none;color:#a8a8a8}
+.btn{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:2px 8px;font:inherit;font-weight:300;cursor:pointer}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#ffffff}
+.combo{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:1px 6px;display:flex;justify-content:space-between;min-width:100px}
+.combo::after{content:"⏷";color:#8c8c8c;margin-left:8px;font-size:10px}
+.combo.open{border-color:#1a7ca3}
+.sl{flex:1;height:4px;background:#303030;border-radius:2px;position:relative}
+.sl i{position:absolute;top:-4px;width:12px;height:12px;border-radius:50%;background:#dcdcdc}
+.sl s{position:absolute;left:0;top:0;bottom:0;background:#005c80;border-radius:2px}
+.val{background:#0a0a0a;border:1px solid #3c3c3c;border-radius:2px;padding:0 5px;min-width:52px;text-align:right;color:#dcdcdc}
+.sep{height:1px;background:#2a2a2a;margin:6px 0}
+.cb{display:inline-flex;align-items:center;gap:6px}.cb i{width:12px;height:12px;flex:none;background:#3c3c3c;border:1px solid #4a4a4a;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;color:#dcdcdc;font-style:normal;font-size:10px}
+.weak{color:#6f6f6f}
+.win{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.wint{display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #2a2a2a;color:#dcdcdc;font-weight:400}
+.cap{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#6f6f6f;margin:6px 0 2px}
+.it{padding:1px 8px;color:#dcdcdc;white-space:nowrap}
+.it.sel{background:#005c80;color:#ffffff}
+.st{color:#6f6f6f;font-size:10px;margin-left:4px}
+.fx{display:grid;grid-template-columns:210px minmax(0,1fr) 60px;align-items:center;gap:8px;min-height:22px}
+</style>
+</helmet>
+<div class="eg" style="width: 1060px; height: 900px; background: #0a0a0a; position: relative">
+<div class="win" style="position: absolute; left: 20px; top: 20px; width: 760px">
+<div class="wint"><span>Listen</span><span class="row" style="gap: 6px; min-height: 0"><span class="weak mono" style="font-size: 11px">listening to</span><button class="btn on">under cursor</button><button class="btn">#1</button><span class="weak mono" style="margin-left: 8px">✕</span></span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; padding: 4px 12px 8px">
+<div>
+<div class="hd">Sound</div>
+<div class="row"><button class="btn on">♪ sound on</button><button class="btn">sweep a row</button><span class="weak">speed</span><span class="val mono">10 s</span></div>
+<div class="row"><span class="lab">known orbit</span><span class="combo" style="flex: 1">—</span></div>
+<div class="weak mono" style="font-size: 10.5px; margin-left: 92px">figure-eight · figure-eight 1% · Burrau 3:4:5 · Lagrange</div>
+<div class="row"><span class="lab">instrument</span><span class="combo open" style="flex: 1">Warm sine</span></div>
+<div class="row"><span class="lab">voices</span><div class="sl"><s style="width: 50%"></s><i style="left: calc(50% - 6px)"></i></div><span class="val mono">16</span></div>
+<div class="row"><span class="lab">strikes on</span><span class="combo" style="flex: 1">each syzygy the head passes</span><span class="combo" style="min-width: 40px">÷2</span></div>
+<div class="weak" style="font-size: 11px; margin-left: 92px">struck instruments only · or every crossing time ÷, or only when a line changes</div>
+<div class="hd">Loudness</div>
+<div class="row"><span class="lab">loudness</span><span class="combo" style="flex: 1">follows the shape's movement</span></div>
+<div class="weak mono" style="font-size: 10.5px; margin-left: 92px">or normalised: every system at full level</div>
+<div class="row"><span class="lab">min level</span><div class="sl"><s style="width: 15%"></s><i style="left: calc(15% - 6px)"></i></div><span class="val mono">15%</span></div>
+<div class="row"><span class="lab">max level</span><div class="sl"><s style="width: 100%"></s><i style="left: calc(100% - 6px)"></i></div><span class="val mono">100%</span></div>
+<div class="row"><span class="lab">volume</span><div class="sl"><s style="width: 60%"></s><i style="left: calc(60% - 6px)"></i></div><span class="val mono">60%</span></div>
+<div class="hd">Listen</div>
+<div class="row"><span class="lab">mode</span><span class="combo" style="flex: 1">follow the head</span></div>
+<div class="weak" style="font-size: 11px; margin-left: 92px">the sound evolves as the trace plays · or whole run: one chord</div>
+<div class="row"><span class="lab">horizon</span><span class="combo" style="flex: 1">t ≤ 60</span></div>
+<div class="weak mono" style="font-size: 10.5px; margin-left: 92px">t ≤ 20 (the maps') · 60 · 150 · 400</div>
+<div class="weak" style="font-size: 11px; line-height: 1.4; margin-top: 4px">moving: a run to t = 20, coarse · dwell or tap: the run goes on to the horizon, trace and sound both, and sharpens</div>
+</div>
+<div>
+<div class="hd">Pitch &amp; analysis</div>
+<div class="row"><span class="lab">signal</span><span class="combo" style="flex: 1">angles + rotation in space</span></div>
+<div class="weak mono" style="font-size: 10.5px; margin-left: 92px">e^{iθ}, φ, e^{iψ} · angles only · shape vector</div>
+<div class="row"><span class="lab">channels</span><span class="combo" style="flex: 1">stereo by winding</span></div>
+<div class="weak mono" style="font-size: 10.5px; margin-left: 92px">anticlockwise left, clockwise right · θ/φ · mono</div>
+<div class="row"><span class="lab">window</span><span class="combo" style="flex: 1">fixed, centred on the head</span></div>
+<div class="weak mono" style="font-size: 10.5px; margin-left: 92px">or grows: all drawn so far · grows: its last half</div>
+<div class="row"><span class="lab">fixed × t_c</span><div class="sl"><s style="width: 40%"></s><i style="left: calc(40% - 6px)"></i></div><span class="val mono">6.0</span></div>
+<div class="row"><span class="lab">1/t_c is</span><span class="combo" style="flex: 1">220 Hz (A3)</span></div>
+<div class="row"><span class="cb"><i>✓</i>fit to hearing: shift by octaves into 110–880 Hz (ratios kept)</span></div>
+<div class="row"><span class="cb"><i>✓</i>spectrogram strip in the Time panel</span></div>
+<div class="hd">Events</div>
+<div class="row"><span class="cb"><i>✓</i>close approach</span><span class="weak" style="font-size: 11px">a whoosh</span></div>
+<div class="row"><span class="cb"><i>✓</i>collision by pair</span><span class="weak" style="font-size: 11px">1–2 tom · 1–3 snare · 2–3 rim · triple crash</span></div>
+<div class="row"><span class="cb"><i>✓</i>escape / ejection</span><span class="weak" style="font-size: 11px">a glide to the body's ear</span></div>
+<div class="row"><span class="cb"><i></i>syzygy tick</span><span class="weak" style="font-size: 11px">panned by the middle body</span></div>
+<div class="row"><span class="lab">event level</span><div class="sl"><s style="width: 80%"></s><i style="left: calc(80% - 6px)"></i></div><span class="val mono">80%</span></div>
+<div class="hd">Effects</div>
+<div class="fx"><span class="cb"><i>✓</i>reverb ← the system's spread</span><div class="sl"><s style="width: 47%"></s><i style="left: calc(47% - 6px)"></i></div><span class="val mono">1.40×</span></div>
+<div class="fx"><span class="cb"><i></i>Doppler ← its expansion rate</span><div class="sl"><s style="width: 50%"></s><i style="left: calc(50% - 6px)"></i></div><span class="val mono">1.50×</span></div>
+<div class="fx"><span class="cb"><i></i>bit-crush ← spectral entropy</span><div class="sl"><s style="width: 20%"></s><i style="left: calc(20% - 6px)"></i></div><span class="val mono">0.60×</span></div>
+<div class="fx"><span class="cb"><i>✓</i>width ← angular momentum</span><div class="sl"><s style="width: 50%"></s><i style="left: calc(50% - 6px)"></i></div><span class="val mono">1.50×</span></div>
+</div>
+</div>
+<div class="sep" style="margin: 0"></div>
+<div class="mono" style="display: grid; grid-template-columns: 70px minmax(0, 1fr) 70px minmax(0, 1fr); gap: 1px 10px; padding: 6px 12px; font-size: 11.5px"><span class="weak">pitch</span><span style="color: #dcdcdc">1/t_c → 220 Hz · +0 oct</span><span class="weak">window</span><span style="color: #dcdcdc">6 t_c · t 5.0–11.0</span><span class="weak">peaks</span><span style="color: #dcdcdc">G♯4+12¢ 418 · D4+35¢ 300 · D5−1¢ 587</span><span class="weak">top two</span><span style="color: #dcdcdc">7:5, a tritone</span><span class="weak">movement</span><span style="color: #dcdcdc">shape rms 1.0e0 → loudness 100%</span><span class="weak">entropy</span><span style="color: #dcdcdc">0.36 · 0 a pure line, 1 noise</span></div>
+<div class="sep" style="margin: 0"></div>
+<div class="row" style="padding: 6px 12px; gap: 6px"><button class="btn">reset</button><button class="btn">save as default</button><span style="flex: 1"></span><span class="weak" style="font-size: 11px">L toggles sound · the Time panel's ♪ strip shows the spectrogram</span></div>
+</div>
+
+<div class="win" style="position: absolute; left: 790px; top: 106px; width: 250px; padding: 6px 4px; border-radius: 4px; z-index: 10">
+<div class="cap" style="margin-left: 8px">Pure</div>
+<div class="it">Sine (pure)</div><div class="it sel">Warm sine</div><div class="it">Theremin</div><div class="it">Whistle</div><div class="it">Sub drone</div>
+<div class="cap" style="margin-left: 8px">Keys</div>
+<div class="it">Organ</div><div class="it">Electric piano (FM)<span class="st">struck</span></div><div class="it">Celesta<span class="st">struck</span></div>
+<div class="cap" style="margin-left: 8px">Struck</div>
+<div class="it">Glass bell · Marimba · Music box</div><div class="it">Harp · Kalimba · Steel drum</div><div class="it">Vibraphone · Glockenspiel</div><div class="it">Tubular bells · Gong</div>
+<div class="cap" style="margin-left: 8px">Bowed and blown</div>
+<div class="it">Strings · Cello · Bowed glass</div><div class="it">Flute · Clarinet · Brass</div><div class="it">Tanpura / sitar drone</div>
+<div class="cap" style="margin-left: 8px">Voices</div>
+<div class="it">Choir (aah) · ooh · ee · oh</div>
+<div class="cap" style="margin-left: 8px">Synths</div>
+<div class="it">Chiptune · Raw saw · Soft pad</div><div class="it">Supersaw lead · PWM pad</div><div class="it">Analogue bass · FM bass</div><div class="it">Acid (resonant sweep)</div>
+<div class="cap" style="margin-left: 8px">Textures</div>
+<div class="it">Wind (tuned noise)</div><div class="it">Grain cloud (approximation)</div>
+<div class="weak mono" style="font-size: 10.5px; padding: 4px 8px 0">39 instruments · grouped here, one per row in the build</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1060,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

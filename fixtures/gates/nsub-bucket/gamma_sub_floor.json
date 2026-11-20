@@ -1,0 +1,6 @@
+{
+  "description": "gamma_sub 0.25 at N_max 56, just inside the least deciding threshold: THR[55], about 2.99e-17, is at or above 2^-55; the floor pairs decide as the specification does.",
+  "config": { "r_sub": 0.05, "gamma_sub": 0.25, "n_max": 56 },
+  "fuzz": { "seed": 9, "random": 4096, "pairs": 4096 },
+  "expected": "pass"
+}

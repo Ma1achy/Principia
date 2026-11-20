@@ -1,0 +1,16 @@
+{
+  "render": {
+    "shader": "two_symptoms.wgsl",
+    "fragment": "fs_main",
+    "width": 64,
+    "height": 64,
+    "constants": { "disc": 0, "stripe": 8 }
+  },
+  "reference": "unused.png",
+  "tolerance": "REQ-VAL-138",
+  "lines": { "row_32": { "from": [0, 32], "to": [63, 32] } },
+  "symptoms": [
+    { "name": "magenta", "kind": "count", "rgb": [255, 0, 255] },
+    { "name": "white", "kind": "fraction", "rgb": [255, 255, 255] }
+  ]
+}

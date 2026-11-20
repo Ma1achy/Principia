@@ -1,0 +1,11 @@
+# An equivalent-mutants list naming both of the untested branch's surviving mutants, in the form of
+# `.cargo/mutants-equivalent.toml` (R-202). Fixture only: these mutants are not equivalent; the entries stand in for
+# justified ones, so that `cargo xtask mutants-check` can be shown to pass a listed survivor (TASK-M0-23).
+
+[[equivalent]]
+mutant = "src/lib.rs:9:17: replace < with > in sign"
+justification = "fixture stand-in for a justified equivalent: shows a listed survivor passes the check"
+
+[[equivalent]]
+mutant = "src/lib.rs:10:9: delete - in sign"
+justification = "fixture stand-in for a justified equivalent: shows a listed survivor passes the check"

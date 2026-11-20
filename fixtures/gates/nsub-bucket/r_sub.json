@@ -1,0 +1,6 @@
+{
+  "description": "r_sub changed to 0.08, its own table.",
+  "config": { "r_sub": 0.08, "gamma_sub": 1.5, "n_max": 64 },
+  "fuzz": { "seed": 2, "random": 4096, "pairs": 4096 },
+  "expected": "pass"
+}

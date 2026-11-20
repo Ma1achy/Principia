@@ -1,0 +1,64 @@
+{
+  "cases": [
+    {
+      "name": "mock_focus_before",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_after",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_shortcuts",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "shortcuts"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_manifold_view",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "enter", "arrow_down", "arrow_down"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_navigation",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_interaction",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_time",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_window",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter", "tab", "arrow_down"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_console",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "shift_tab", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_console_header",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "shift_tab", "enter", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_console_log",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "shift_tab", "enter", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_stain",
+      "surface": { "kind": "gui", "screen": "02_stain", "steps": ["tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    }
+  ]
+}

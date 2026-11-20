@@ -1,0 +1,6 @@
+{
+  "gate": "encode-eps-phys",
+  "inputs": ["interior.json", "mismatched.json"],
+  "threshold": { "value": 64, "requirement": "REQ-ENC-024", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-ENC-024" }
+}

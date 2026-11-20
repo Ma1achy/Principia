@@ -1,0 +1,34 @@
+# The moving pulse (R-166 (e)): a synthetic field, not a chart slice. No integration runs; the field is analytic,
+# so the tree a scheduling policy ought to build is known in advance.
+# Transcribed from docs/reference/prin-rs/src/testing.rs:162-195 (the field) and
+# docs/reference/prin-rs/tests/live_decision.rs:92, 401, 598, 664 (the parameters) (prin-rs 8600d45).
+# The values are copied, not chosen.
+#
+# Definition (testing.rs:162-195), for the pixel at chart position x with cell width hx:
+#   straddles(x) = (x - hx/2) < x0 <= (x + hx/2)
+#   class, shape = (0, [1, 0, 0]) if x < x0, else (1, [-1, 0, 0])      # a step at x0
+#   at each live boundary j = 0 .. n_b-1:
+#     t_j   = t_max * (j + 1) / n_b
+#     w(t_j) = w_max * max(0, sin(pi * t_j / t_max))                 # rises to w_max at mid-march, 0 at t_max
+#     hot   = straddles(x) or |x - x0| <= w(t_j) + hx/2
+#     spread_shape = spread_event = 1 if hot, else 0
+#     shape and class as above, constant over t
+#   terminal fields = the last boundary's (where only the straddling column is hot)
+# The field varies in x only; the states are Bounded at the horizon, drift zero (testing.rs:1-17).
+#
+# The control it provides (testing.rs:167-169): a static tree at the horizon sees only the step, a static tree
+# mid-march sees the whole band, and the two are not nested; the live tree, which can only add, must contain both.
+
+[pulse]
+source = "tests/live_decision.rs:401"
+x0 = 0.123
+w_max = 0.35
+n_b = 8
+t_max = 13.0
+
+[descent]
+# The descent the three tests run the pulse under (tests/live_decision.rs:404, 600, 669): centre (0, 0), half 1.0,
+# body 0, the scheduler config of tests/live_decision.rs:94-105; max_level 4 at lines 401 and 598, 5 at line 664.
+centre = [0.0, 0.0]
+half = 1.0
+body = 0

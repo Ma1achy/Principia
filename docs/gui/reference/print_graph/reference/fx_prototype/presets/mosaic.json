@@ -1,0 +1,193 @@
+{
+ "name": "Mosaic",
+ "doc": "Opus vermiculatum: rows of smalti following the forms, tilted, bevelled and glossy, in grout.",
+ "settings": {
+  "seed": 0,
+  "s": 11.0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 6
+   }
+  },
+  "rows": {
+   "op": "streamlines",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty",
+    "density": "one"
+   },
+   "p": {
+    "dmin": "$s",
+    "dmax": "$s",
+    "tmin": 0.0,
+    "seed": "$seed",
+    "maxlen": 1500,
+    "minlen": 2
+   }
+  },
+  "one": {
+   "op": "expr",
+   "in": {},
+   "p": {
+    "f": "1.0"
+   }
+  },
+  "tiles": {
+   "op": "tiles_along",
+   "in": {
+    "lines": "rows",
+    "rng": "r"
+   },
+   "p": {
+    "s": "$s"
+   }
+  },
+  "cell": {
+   "op": "voronoi",
+   "in": {
+    "points": "tiles.points"
+   }
+  },
+  "n": {
+   "op": "expr",
+   "in": {
+    "p": "tiles.points"
+   },
+   "p": {
+    "f": "len(p)"
+   }
+  },
+  "mc": {
+   "op": "mean_by_label",
+   "in": {
+    "image": "src",
+    "labels": "cell"
+   },
+   "p": {
+    "n": "@n"
+   }
+  },
+  "mcol": {
+   "op": "expr",
+   "in": {
+    "m": "mc"
+   },
+   "p": {
+    "f": "np.nan_to_num(m, nan=0.5)"
+   }
+  },
+  "sm": {
+   "op": "smalti",
+   "in": {
+    "colours": "mcol",
+    "rng": "tiles.rng"
+   },
+   "p": {
+    "K": 28
+   }
+  },
+  "tilt": {
+   "op": "draw",
+   "in": {
+    "rng": "sm.rng",
+    "n": "tiles.points"
+   },
+   "p": {
+    "kind": "normal",
+    "a": 0.0,
+    "b": 0.12,
+    "shape": "N2"
+   }
+  },
+  "edge": {
+   "op": "boundary",
+   "in": {
+    "labels": "cell"
+   }
+  },
+  "ne": {
+   "op": "expr",
+   "in": {
+    "e": "edge"
+   },
+   "p": {
+    "f": "~e"
+   }
+  },
+  "d": {
+   "op": "distance",
+   "in": {
+    "mask": "ne"
+   }
+  },
+  "hgt": {
+   "op": "expr",
+   "in": {
+    "d": "d",
+    "tilt": "tilt.out",
+    "cell": "cell",
+    "pts": "tiles.points",
+    "edge": "edge"
+   },
+   "p": {
+    "f": "h = clip(d/3.0, 0, 1)*3 + tilt[cell, 0]*(xx-pts[cell, 0]) + tilt[cell, 1]*(yy-pts[cell, 1])\nh = where(edge, 0, h)\nout = gaussian(h, 0.6)"
+   }
+  },
+  "li": {
+   "op": "light",
+   "in": {
+    "height": "hgt"
+   },
+   "p": {
+    "strength": 1.0,
+    "shin": 40,
+    "L": [
+     -0.55,
+     -0.75,
+     0.9
+    ]
+   }
+  },
+  "n2": {
+   "op": "noise",
+   "p": {
+    "scale": 1.5,
+    "octaves": 1,
+    "seed": "$seed+2"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "n2": "n2",
+    "edge": "edge",
+    "diff": "li.diff",
+    "spec": "li.spec",
+    "sm": "sm.colours",
+    "cell": "cell"
+   },
+   "p": {
+    "f": "G = array([0.74, 0.72, 0.67])*(1+0.06*n2)[..., None]\nout = where(edge[..., None], G*(0.8+0.2*diff[..., None]), sm[cell]*(0.78+0.22*diff[..., None]) + 0.25*spec[..., None])"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

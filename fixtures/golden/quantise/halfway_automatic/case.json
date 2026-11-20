@@ -1,0 +1,12 @@
+{
+  "render": {
+    "shader": "../halfway/halfway.wgsl",
+    "fragment": "fs_main",
+    "width": 256,
+    "height": 256
+  },
+  "output": "automatic",
+  "reference": { "metal": "metal.png", "vulkan": "vulkan.png" },
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass"
+}

@@ -1,0 +1,1 @@
+rows A_chatgpt=6 B_eye=6; cells compared 36; disagreements 0

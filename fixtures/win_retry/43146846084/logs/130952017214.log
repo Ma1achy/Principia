@@ -1,0 +1,15 @@
+﻿2026-11-12T04:07:13.6406824Z Current runner version: '2.338.2'
+2026-11-12T04:07:13.6412078Z Runner name: 'malachys-pc-rtx2080s'
+2026-11-12T04:07:21.2792253Z ##[group]Run 'E:\runner-tools\checks\job-started.js'
+2026-11-12T04:08:11.2534084Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+2026-11-12T04:08:21.0066901Z ##[group]Run $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+2026-11-12T04:08:28.4319321Z ##[group]Run Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+2026-11-12T04:08:28.6650658Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+2026-11-12T04:09:20.8339838Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+2026-11-12T04:09:22.1441840Z ##[group]Run actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+2026-11-12T04:09:23.0376775Z Starting download of artifact to: E:\actions-runner\_work\_temp\wsl-image
+2026-11-12T04:09:23.5671981Z (node:27540) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2026-11-12T05:07:12.1624370Z ##[error]The operation was canceled.
+2026-11-12T05:07:12.1942994Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+2026-11-12T05:07:12.6829502Z ##[group]Run actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+2026-11-12T05:07:16.2632626Z ##[group]Run 'E:\runner-tools\checks\job-completed.js'

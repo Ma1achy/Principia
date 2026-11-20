@@ -1,0 +1,64 @@
+{
+ "name": "Wet where chaotic",
+ "doc": "Watercolour pencil that runs wet-in-wet where the fate is most sensitive. Binds data.sensitivity.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "proxy": {
+   "op": "edge_density",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "s": 10
+   }
+  },
+  "dry": {
+   "op": "preset:watercolour_pencil_core",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed+3",
+    "pigments": true,
+    "sat": 0.95
+   }
+  },
+  "n1": {
+   "op": "noise",
+   "p": {
+    "scale": 16,
+    "octaves": 3,
+    "seed": "$seed+1"
+   }
+  },
+  "n2": {
+   "op": "noise",
+   "p": {
+    "scale": 30,
+    "octaves": 3,
+    "seed": "$seed+2"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "dry": "dry",
+    "n1": "n1",
+    "n2": "n2",
+    "E": "data.sensitivity|proxy"
+   },
+   "p": {
+    "f": "wet = blur(dry, 5)\nring = (abs(n1) < 0.12).astype(float)\nwet = wet*(1-0.12*gaussian(ring, 1.0))[..., None]\nwet = wet*0.92 + 0.08*array([0.94, 0.93, 0.89])\nm = sig((E - 0.55 + 0.15*n2)*9)[..., None]\nout = dry*(1-m) + wet*m"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

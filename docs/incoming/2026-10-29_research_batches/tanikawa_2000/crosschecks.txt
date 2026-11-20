@@ -1,0 +1,22 @@
+Tanikawa 2000 (CMDA 76, 157-185): in-paper and cross-paper consistency checks (positions only; no engine run).
+
+1. The Figure 2 caption, p. 161 (PDF p. 5), quotes the three points (plotted in Fig. 4) to 6 decimals: (0.371332, 0.466603),
+   (0.305200, 0.548168), (0.301684, 0.551750). They equal the unnumbered p. 162 table rows rounded. OK.
+2. Text of Section 3.3 quotes (0.3535916, 0.4279512), (0.3537153, 0.4248566), (0.3538234, 0.4235700) =
+   Table V n_min 10, 15, 20; and (0.3620889, 0.4005129), (0.3621020, 0.4004934), (0.3621125, 0.4004778) =
+   Table VII n_min 11, 15, 20. OK.
+3. Table V row n_min=4 equals p. 162 table row 1 (0.3713325, 0.4666031, 171.5152620, 1.5313625). OK.
+4. Triple collision point inside D, Fig. 11 caption: (0.2794981, 0.5759310). Nearest Li et al. 2021 workbook
+   row: GT-36 (0.279497366553058, 0.575931768114407), distance 1.06e-6 (dx = -7.3e-7, dy = +7.7e-7): about
+   7 units of the 7th printed decimal, so agreement at the 1e-6 level, not to the last printed digit. Same frame (body 1 at
+   P in D, bodies 2 and 3 at (-0.5, 0), (+0.5, 0), equal masses, at rest). GT-36 is also TSM 2019 point 8
+   (see li2021/workbook_checks.txt).
+5. Triple collision point on the y-axis "nearly at y = 0.18169" (Section 3.3): Li 2021's workbook has no
+   x = 0 row near it (nearest GT-1454 at distance 7.6e-3), because the workbook holds only the general-triangle
+   (GT) orbits. Li 2021's own Table 1 (isosceles, x = 0) row IT-1 has y = 0.18169092589591662
+   (li2021/table1_eye.csv): Tanikawa's "nearly 0.18169" agrees with it to the 5 digits he gives. Recorded only,
+   not a separate target (5 significant figures, "nearly"); IT-1 itself is in the Li 2021 row.
+
+Units: the paper states m1 = m2 = m3 (p. 157) but neither the mass value nor G; no energy or time unit is
+given. Positions are scale-free for equal-mass free fall, so the x, y columns compare like for like with any
+mass normalisation. The 'time' columns do not, until the normalisation is settled: see the README, RQ-640.

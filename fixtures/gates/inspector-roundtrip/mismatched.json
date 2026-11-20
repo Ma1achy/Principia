@@ -1,0 +1,10 @@
+{
+  "description": "PIT-3, the round trip can fire: the same draws, fewer of them, encoded under every link of the defaults swapped (stick_breaking, tanh_alpha, softsign_beta, tanh_q and softsign_q) and decoded under the defaults, so the gate must fail it.",
+  "seed": 1,
+  "samples": 2000,
+  "radius": 4.0,
+  "encode": "mismatched",
+  "shift": 0.0,
+  "shapes": 0,
+  "expected": "fail"
+}

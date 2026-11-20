@@ -1,0 +1,195 @@
+# Principia — deep zoom & adaptive sampling
+
+*The mechanism — quad-local coordinates, linearised decoder, three-layer quadtree, sliding depth bound — and how it couples back to the chart & decoder contract. Sits under that contract; shares its Jacobian and its CPU/GPU split.*
+
+---
+
+## The precision split (the CPU/GPU seam, decode side)
+
+Deep zoom is the **decode-side instance** of "CPU high-fidelity, GPU throughput." The global/nonlinear precision lives in **f64 on the CPU**; the GPU does only **local, relative, f32** arithmetic. Two mechanisms implement it: quad-local coordinates for the UV→sample step, and the linearised decoder for the sample→IC step.
+
+| Component | Precision | Job |
+|---|---|---|
+| CPU (quadtree manager) | f64 | quad bounds, centre/half-width, `x₀` and `J_D`, scheduling |
+| GPU (per-quad uniforms) | f32 | `c, h, x₀, J_D` — exact half-widths, slight centre offset |
+| GPU (kernel) | f32 | quad-local sample positions, IC via `x₀ + J_D·δ`, integration |
+| Pixel inspector | f64 (CPU) | single-trajectory witness at full precision |
+
+**Coordinate conventions (the CPU/GPU seam is also a Y-convention seam — see `principia_coordinate_conventions_note.md`).** Three spaces nest, and the CPU and GPU must share the same orientation or the quad-local decode is silently mirrored:
+
+- **Screen/framebuffer** — `[0,W]×[0,H]`, top-left, **Y-down** (frag_coord, mouse events, output image).
+- **UV / quad addressing** — `[0,1]²`, **unsigned, Y-up** after a single flip `v = 1 − frag_coord.y/H`. UV locates a sample *in the current view*; it chooses which quads are asked for. The quad address itself — `(depth, tx, ty)`, i.e. `(level, i, j)` — and the quadtree key are taken in the **slice plane's own frame**, relative to the plane anchor (`z₀`'s value at the last re-integrating event, R-92): in-plane pan and zoom change which addresses are requested, never the addresses themselves (R-97). The fragment's `ctx.chart.slice_uv` is not this view position but the sample's position in the slice plane, `u = c + h·(2t − 1)` below, stable under pan and zoom; screen-relative positions are the screen lane's fields, `ctx.screen.uv` and `ctx.screen.pixel` (R-394).
+- **Past `[0,1]²` (R-407, R-537).** Wherever the view reaches past the chart's square, by pan, by zoom out or by the figure filling the window (F3 off or present mode, R-406), the slice-plane position continues at the same scale past it: quad indices outside the depth-0 root may be negative or exceed `2^L − 1` and `ctx.chart.slice_uv` may lie outside `[0,1]²`, each axis extending by its declared type (`principia_chart_decoder_contract.md` Part 3; coordinate note); with the figure filling the window, UV also continues past the shown figure's rect. They arise from navigation too, not only from F3 (R-537). Inside `[0,1]²` nothing changes. *Was (R-407):* "With the figure filling the window (F3 off or present mode, R-406), UV continues at the same scale past the shown figure's rect, quad indices outside the depth-0 root may be negative".
+- **Levels below the root (R-570; RQ-535, decided per R-369 by the orchestrator, not a human ruling; ⚑ physics review).** On an affine chart the quadtree past `[0,1]²` also has levels `L < 0`, with no lower bound: a level-`L` quad spans `2^(−L) × 2^(−L)` level-0 roots of R-537 EX7(a)'s lattice, `(L, i, j)` holding `(L + 1, 2i + a, 2j + b)`, `a, b ∈ {0, 1}`, its address in the slice plane's own frame (R-97). The baseline cover of a far zoomed-out viewport is taken at the level whose quads are the smallest still at least the cover's on-screen size, so its quad count is set by the screen, not by the view's extent; coarser quads are scheduled, cached and refined like any other, down through `L = 0` as the view zooms in (`principia_scheduler_contract.md` Part 3, "Infinite zoom-out: levels coarser than the root"). A coarse quad's per-quad centre and half-width are f64 on the CPU, as at every level (§1).
+- **IC / chart space** — **signed real**, centred on `z₀`, Y-up, graph-like (the decoder input; any axis readout). Placement (chart/decoder contract): `z = z₀ + (2s−1)q₁ + (2t−1)q₂` — the `(2s−1)` maps `[0,1]→[−1,1]`, so the plane is signed and centred on `z₀`. The golden IC is `z=0`; ICs on either side are genuinely `±`.
+
+**One orientation (Y-up), one flip (framebuffer↔UV, mirrored once at export).** Everything downstream reads the post-flip coordinate, so a mirrored image is always a wrong-flip-count bug at that one seam — never a reason to add a compensating flip. **Critically for this contract: the CPU (f64 quad centres/half-widths) and the GPU (quad-local sample coord) must agree on Y-up**, or `x₀ + J_D·δ` produces mirror-image ICs *within each quad* — a silent decode corruption at the CPU/GPU seam. "Bottom-left, allow negatives" decomposes as *Y-up orientation* (the flip) + *signed values in IC-space* (the placement) — two facts, two layers; per-axis signedness varies (config/momentum signed; mass fractions/radii constrained), and the decoder mediates.
+
+Nothing here contradicts the contract's rule that the integrator has one input type: `x₀ + J_D·δ` still produces `(m, r, p)`, and the integrator never learns whether the IC came from the full decoder or the linear one.
+
+---
+
+## 1. Quad-local coordinates — UV precision
+
+**Problem.** At quadtree depth `ℓ`, a quad spans `~2^−ℓ` of the `[0,1]²` UV domain. Computing global UV on the GPU as `u = u_min + (u_max−u_min)·t` in f32 burns most of f32's ~7 significant digits on the *offset from the origin* — at depth 30 the quad is `~10⁻⁹` wide, so there's nothing left for within-quad resolution.
+
+**Fix.** The CPU (f64) computes per-quad **centre `c_u`** and **half-width `h_u`** (and `c_v, h_v`), passed to the GPU as f32 uniforms. The kernel works *relative to the centre*:
+
+```
+u = c_u + h_u · (2t − 1)        t = (i + 0.5)/N   (quad-local sample coord)
+```
+
+**Why it works.** `h_u = 2^−(ℓ+1)` is an exact power of two, exactly representable in f32 at any depth up to the exponent limit (`~2⁻¹²⁶`). `c_u` has finite f32 precision, so the quad is misplaced *globally* by less than one quad width — invisible in the image. Within-quad precision is full f32 at any depth. **`t = (i+0.5)/N` and `δ` are in the post-flip Y-up convention** (coordinate note): the same orientation the CPU used to compute `c, h` and the Jacobian, so the quad-local offset is not mirrored relative to the decode. A wrong Y here mirrors ICs within the quad silently.
+
+**Far from the root and in repeats (R-537, EX8).** In a repeat (periodic, pole, fold) the zoom is on the canonical
+quad: its f64 centre, half-width, `x₀` and `J_D` are the canonical ones, so precision is identical to zooming into the
+primary, and only the screen placement is mirrored or shifted, a reflected axis flipping the sign of `δ`. On an affine
+extension far from the root, "misplaced *globally* by less than one quad width" holds only while `ulp_f32(c_u)` is under
+a quad width, and a view panned to `u ~ 10³` breaks it about ten levels sooner: the quad's f32 centre is therefore taken
+relative to an anchor near the view, the root cell's own origin held in f64 (not a re-set plane anchor, which would
+re-address the cache, R-97), the IC still `x₀ + J_D·δ` with `x₀` in f64. The deep-zoom floor is a property of where you
+zoom: a floor depth is quoted with the coordinate magnitude. The sliding depth bound and the screen floor are
+view-relative and unchanged. Seams between images are rasterised with a shared-edge rule, so two adjacent images meet
+with no background pixel between them at any zoom.
+
+**Banding, absolute and quad-local (R-395).** The within-quad precision above is that of `t` and the offset `δ = h·(2t − 1)`. A `u` formed in f32 as the absolute sum `c + h·(2t − 1)` is not: as the depth grows its adjacent samples depart from the exact step `2h/N`, gradually at a non-dyadic `N`, as the global form's do, and at a power-of-two `N` not at all until they collapse to one coordinate at once. So REQ-TOOL-019's "no banding" holds with absolute coordinates only up to the decoder switchover (`ℓ_switch`, R-90), which the M1 gate checks, and beyond it through the per-quad local coordinates, `c` (f64 on the CPU, its f32 uniform on the GPU) and `δ`, never summed into an absolute f32 `u` (REQ-TOOL-158 at M5, the path; REQ-TOOL-159 at M6, the routing of every quad past `ℓ_switch` onto it); §2's linearised decoder already consumes `δ`.
+
+**`N` is a power of two (R-398)**, so the graded departure of a non-dyadic `N` never occurs: with `c = (2k + 1)·h` and
+`t = (i + ½)/N`, the absolute coordinate is `(2kN + 2i + 1)·h/N`, an f32 value while `h/N` is at least the ulp of `u`,
+and the f32 sum is exact until adjacent samples collapse together, where R-90's switchover fires on their
+bitwise-identical ICs. Near `u ≈ 0.6` that is through `ℓ = 20` for every `N ≤ 8`, and to `ℓ = 19` for `N = 16`.
+
+**The banding criterion (R-433; REQ-TOOL-152).** A run of reconstructed coordinates is banded, step-quantised, when an
+adjacent-sample delta departs from the exact step `2h/N` by more than **1/16 of the step**, the bound the human
+confirmed at the M1 gate. Each f32 coordinate is within half an ulp of its value, so a delta departs by at most one
+ulp, and the criterion holds while the step spans at least 16 ulps.
+
+---
+
+## 2. Linearised decoder — IC precision
+
+**Problem.** At shallow zoom the GPU runs the full nonlinear decode per sample (sigmoid, softmax, trig, canonicalise). At deep zoom this hits its own f32 floor at depth **~20–23**: adjacent samples decode to indistinguishable ICs.
+
+**Fix.** Linearise the decode about the quad centre. Error is `O(h²)` — at depth 30, `h ~ 10⁻⁹`, so error `~ 10⁻¹⁸`, far below anything representable.
+
+- **CPU precompute (f64), per deep quad:** evaluate the full decode at the centre, `x₀ = D(c_u, c_v)` in f64 (the reference IC); compute `J_D = ∂D/∂(u,v)` at the centre by **central differences in f64** (two decode evals per axis, the step rule below). *13 Nov 2026 (R-989, RQ-797 Q1 (a)):* `x₀` and `J_D` stay on the CPU; nothing of them is uploaded for the integrator. *Was:* "Pass `x₀` (→f32) and `J_D` (→f32) as uniforms."
+- **CPU expansion (f64), per patched sample (R-989, RQ-797 Q1 (a), 13 Nov 2026):** `x = x₀ + J_D · δ` in f64, where `δ` is the quad-local UV offset, narrowed once to f32: that is the sample's record, the correctly rounded value of its f64 sum, the same on every backend (with R-991's pinned maths library). The GPU reads only finished records and runs neither the nonlinear pipeline nor the patch; collapse and `AT_F32_FLOOR` are read on the CPU from the narrowed records, with nothing read back (R-142). A patched sample carries the quad centre's descriptor, tag and branch words, which R-990's check makes right on every patched quad. *Was:* "- **GPU kernel (f32):** `x = x₀ + J_D · δ`, where `δ` is the quad-local UV offset. A few fused multiply-adds (continuous — the decode is not a branch input, so FMA latitude here is honest divergence, not a determinism concern); the nonlinear pipeline never runs on the GPU."
+
+**`J_D`'s step rule (R-633, closing RQ-600).** Every central-difference Jacobian of the decode takes the encode
+contract's step (`principia_inverse_encode_contract.md` Part 4, "How it is evaluated"): along input coordinate `k`,
+`h_k = ε^{1/3}·max(1, |x_k|)` in f64, `ε` f64's machine epsilon and `x_k` the coordinate stepped (`u` or `v` for
+`J_D`, `z_k` for the latent Jacobian), the difference divided by the step actually taken, `(x + h) − (x − h)` as
+rounded in f64, not by `2h`. It is `J_D`'s step, the latent Jacobian's (below) and the trace fade's Jacobian's (R-596,
+`principia_lines.md` §8). A secant at the quad's half-width is not this rule: that is the cell-width collapse the
+prototype records, and the fix it needs is a Jacobian not built by a secant at the cell width (R-633, RQ-600's option
+(b) rejected).
+
+**What the precision buys, and where the floor sits (R-632, closing RQ-578).** The nonlinear precision lives in `x₀` (computed in f64, so its f32 cast is the best possible representation of the true centre IC). `J_D` is *rates of change* — `O(1)`, no precision lost in f32. But `x = x₀ + J_D·δ` is an absolute f32 number of order `|x₀|`, and the f32 integrator on the GPU starts from it: adjacent ICs closer than f32's ulp at `|x₀|` are one IC to it, whichever decoder produced them. So on the f32 GPU path the linearised decoder's floor is the **measured value, quoted with the coordinate magnitude `|x₀|`** (§1's rule), not a fixed depth: a gate measures the f32 GPU path's distinguishable depth as integrated, at stated coordinate magnitudes (REQ-DEC-052), and the docs and the gates take the measured value, an R-71 calibration (REQ-DEC-051). The linear path stays, for speed (below) and for the f64-anchored decode (§ "Couplings to the contract", c). A floor near ~50 needs the sum and the integration in f64: on the CPU, or the precision ladder under RQ-577, ruled after M3 (R-630). *Was:* "**Why the precision survives.** The nonlinear precision lives in `x₀` (computed in f64, so its f32 cast is the best possible representation of the true centre IC). `J_D` is *rates of change* — `O(1)`, no precision lost in f32. Floor moves from ~23 to **~50+**."
+
+**Also faster.** The linear path is cheaper than the full decode, and deep zoom is exactly where quad count and compute pressure peak. Smooth interior quads are coarsened early and never reach this regime; the linear path targets the expensive boundary quads.
+
+**Switchover.** **Switch to the linearised decoder when the full decoder's adjacent samples give bitwise-identical ICs, with `ℓ_switch = 20` as an upper bound — whichever comes first** (R-90; lowering's `SWITCH` = `ℓ_switch`), via a `DECODE_MODE` flag in `QuadRequest.flags`. Output is identical either side — same `SimState`, same reduction, same render. This is the key point for the scheduler's floor logic: **sample-collapse on the *full* decoder is a switchover trigger, NOT a refinement stop** — it means "the full decoder's f32 pipeline is out of precision, hand off to the linear path," and refinement *continues*. Only sample-collapse on the *linearised* decoder is the true `AT_F32_FLOOR` stop. Same visible symptom, opposite response, keyed to which decoder is active. (The adaptive trigger also covers the corner case where microscope zoom has shrunk `q₁, q₂` to tiny magnitudes at *shallow* quadtree depth — tiny `q` loses precision in the full decode even before the quad pyramid is deep, so the switchover can fire early; still a switch, never a stop.)
+
+*13 Nov 2026 (R-990, RQ-798 (a″) with the owner's two variants; R-1006, RQ-811 (b)):* past `ℓ_switch` a quad takes the one-cell patch only where a check admits it: at its four corners and four edge midpoints the exact f64 evaluation and the patch's f64 prediction differ by at most 4/5 of half an f32 ulp of the component's own value in every component (at the f32 ulp of the quad's smallest value of a component that crosses zero inside the quad, and at the f32 ulp of the quad's smallest sample magnitude of a component whose samples drop a binade below the checked points' without crossing zero, or whose checked points span two binades, R-1006), agree in tag, branch and sheet, and its footprint meets no site REQ-DEC-058 flags; otherwise the quad is exact per sample, at any depth. Every admitted record is within one f32 ulp of the exact one; the value and crossing test for a component that crosses zero, and how the quad's smallest sample magnitude is found for a binade-drop component, are a definition TASK-M6-08 writes (REQ-DEC-064) (REQ-DEC-063). This is R-90's named exception to "whichever comes first". *Was (13 Nov 2026, corrected on #515 by physics review 5886173032 F1, F2 and code review 5886176062 C1):* "Admitted records are within one f32 ulp of the exact ones (REQ-DEC-063)." *Was (13 Nov 2026, corrected by physics review 5886305544 of #515, G1):* "where each component's samples stay within one binade of the checked points; the binade-drop case waits on RQ-811," *Was (13 Nov 2026, R-1006, RQ-811 (b)):* "(at the f32 ulp of the quad's smallest value of a component that crosses zero inside the quad)" and "Admitted records are within one f32 ulp of the exact ones where, for each component, every sample and every checked point lie in one binade; the binade-drop case, which includes a quad whose checked points span two binades, waits on RQ-811, and the value and crossing test for a component that crosses zero are a definition TASK-M6-08 writes (REQ-DEC-064) (REQ-DEC-063)."
+
+Jacobian cost: microseconds per quad on the CPU, amortised over `N²` samples. Negligible.
+
+**The latent Jacobian (R-550, RQ-341 (a)).** A second Jacobian shares this method and is not `J_D`: a CPU, f64,
+central-difference Jacobian `∂x/∂z` of the decoder with **8 columns**, one per latent direction (two decode evaluations
+per direction, the step rule `J_D`'s, above, with `x_k = z_k`), at a latent point (`z₀`, or the hovered pixel's on an
+affine chart). It is taken
+of the decoder's output in the view's coordinates, after canonicalisation, the scale gauge and `η_E` (RQ-345 (b)), so
+it differentiates the state the integrator starts from. The compass's Jacobi and Shape views and their steer read it
+(render_gui_spec § "The compass: look and views (R-451, R-452)"): `J q̂₁`, `J q̂₂` on the slice plane's orthonormalised
+pair, the area stretch `√(|J q̂₁|²|J q̂₂|² − (J q̂₁·J q̂₂)²)` on that pair, so it does not move with the zoom σ or the
+tilts' shear. The linear path never reads it.
+
+---
+
+## 3. Three-layer quadtree
+
+Built in three layers, each a working system; later layers add capability without changing earlier contracts. This is the build order.
+
+| Layer | Adds | Contracts / behaviour |
+|---|---|---|
+| **0 — flat grid** | no cache | Defines the three contracts: `SimState` (compute output), decoder (quad-local UV → IC), fragment shader (`SimState` → colour) |
+| **1 — quad cache + ancestor fallback** | slippy map | Panning never blanks — a cached ancestor always shows; zoom shows blurry ancestors that sharpen as children finish. Data flow identical to L0; CPU tracks cache membership only; **no sim data flows GPU→CPU**; FIFO queue |
+| **2 — adaptive refinement** | budget allocation | CPU→GPU adds the linearised-decoder uniforms; refinement driven by trajectory coherence / ensemble spread (FTLE is on from Medium up — memory-tiers doc) |
+
+**The quadtree is adaptive scientific sampling, not just LOD.** It allocates simulation budget by *local dynamical complexity*: smooth basin interiors stay coarse even at large screen area; filamentary boundaries refine even when visually small. "Resolution" means both screen resolution and dynamical-complexity resolution.
+
+**Consequence that ties to Part 2.5:** refinement density is **not** physical probability density. The quadtree concentrates compute at boundaries because they're interesting, not because those ICs are more probable. So refinement structure must never be read as a measure — quantitative claims use `|det J_D|` (below), not quad density.
+
+---
+
+## 4. Sliding depth bound
+
+The refinement cap is a **sliding window**: refine to `current_depth + max_depth`. The window follows the camera down, so there are always a bounded number of adaptive levels below the view and the work is never unbounded. A trivial scalar in the scheduler.
+
+This sidesteps the floor question at design time — you don't need to *know* where any precision floor sits in order to stop; you just don't refine past a fixed budget below the view.
+
+**Stopping conditions, in effect (by how often they fire):** (i) the **screen-space floor** — `tile_size ≤ pixel_size` — the *everyday* boundary: in view, every quad above it must split (the at-rest target; during a gesture the frame budget governs, R-108), and below it the criterion may supersample where a footprint is unresolved (policy §0.1, R-88); view-relative, un-floors on zoom-in; (ii) the sliding `MAX_REL_DEPTH` budget cap — it caps every split beyond the screen floor, that supersampling and off-screen policy splits alike (`MAX_REL_DEPTH` ≥ the screen floor, R-88, R-98); (iii) the **decode switchover** (not a stop) — if the *full* decoder's `N²` samples collapse to bitwise-identical ICs, or at `ℓ_switch` if that comes first (R-90), **switch to the linearised decoder** and keep refining (see below); (iv) the **decode floor proper** (`AT_F32_FLOOR`) — only if the *linearised* decoder's samples collapse (on the f32 GPU path at the measured floor, quoted with the coordinate magnitude `|x₀|`, §2, REQ-DEC-051; R-632; *was:* "(~depth 50+)"), genuinely terminal, a deep-zoom backstop, collapse judged per axis: an axis along which the field is saturated and the samples are identical does not count, and the quad stops only when every axis along which the field varies has collapsed (R-599; below); (v) the integration floor — reserved (see end). The screen floor governs normal use; (iii)–(v) only matter when zooming *past* pixel-matching into extreme zoom.
+
+**Precision is not a navigation limit (R-570).** None of these conditions stops a pan or a zoom: they stop refinement
+only. On a latent or flat chart, which has no limit on pan or zoom-out (`principia_chart_decoder_contract.md` Part 4,
+"Latent and flat charts: no limit on pan or zoom-out"), the f32 floor arrives sooner at large chart coordinates, because
+the floor depends on where you zoom; (iii) and (iv), with R-537 EX8's root-cell anchor for the f32 centre (TASK-M8-57),
+handle it there as at the root. Far from the origin the decoder saturates (`principia_chart_reference.md` §0), and the
+f64 decode is flat there too: `σ` rounds to 1 in f64 past about 37 and `tanh` to ±1 past about 19, so `J_D`'s central
+differences (§2 a) are 0, and the full and the linearised decoders' samples collapse because the field is flat, not
+because f32 has run out; (iii) and (iv) fire at home zoom. Stopping refinement there is harmless, the field being flat,
+at a quad whose f64 `J_D` columns along the view's plane are all 0. A band quad (`principia_chart_reference.md` §5.4),
+saturated along one in-plane axis only, also collapses and then stops terminally at (iv) (REQ-SCHED-062), above the
+screen floor, while its other axis stays structured. **Collapse is judged per axis** (R-599, closing RQ-554): an axis
+along which the field is saturated and the samples are identical is genuinely flat, so it does not count, and a quad
+stops only when every axis along which the field varies has collapsed, or at the screen floor. The band quad
+therefore keeps refining along its unsaturated axis to the screen floor, and the readout names the saturated axis.
+(iv) fires only when every in-plane axis that is not saturated has collapsed on the linearised decoder; a quad whose
+in-plane axes are all saturated stops, the field being flat along each. The switchover (iii) is unchanged. *Was:*
+"; whether it keeps refining along that axis is RQ-554, open." *Was:* "Stopping refinement there is harmless, the field
+being flat."
+**A saturation collapse raises no precision warning** (RQ-553, decided per R-369 by the orchestrator, not a human
+ruling; recorded against R-54 and R-570 item 5). The test is per direction: a collapse between adjacent samples along
+an in-plane direction `k` is a saturation collapse when f64 `J_D`'s column along `k` is 0 while those two f64 sample
+points are distinct. The warning that `DECODE_SWITCHOVER` and `AT_F32_FLOOR` raise (R-54, `principia_render_gui_spec.md`
+§G2) is not raised for a quad that has at least one collapsed adjacent pair, every one of which is a saturation collapse,
+a true flat image, as in the
+fully saturated far field and in the bands along the axes (`principia_chart_reference.md` §5.4), flat along one axis
+only. Everywhere else it is raised as R-54 defines it, so the genuine floor, where `J_D ≠ 0` and only the offsets fall
+below what the arithmetic resolves, or where the f64 sample points themselves coincide, still warns (REQ-GUI-012).
+*13 Nov 2026 (R-1001, RQ-802 (b) with the owner's slope condition):* a collapsed pair along in-plane direction `d` whose f64 ICs are bitwise equal at distinct f64 sample points is a saturation collapse only if `|J_dual,k|·h_633 < ½ ulp_f64(x_k)` for every component `k` (the dual or implicit slope's column along `d`, R-633's step along `d`; no central difference); otherwise it is the f64 floor and warns, as do pairs whose narrowed records are equal while their f64 ICs differ (the f32 floor) and pairs whose f64 sample points coincide. A pair placed symmetrically about a fold REQ-DEC-058 flags is excluded, as seams are from refinement. What a tier-3 map, with no exact slope, does is RQ-802's Q-T3, deferred to M6. The `J_D` test above is the *Was* this replaces.
+*17 Nov 2026 (R-1033, RQ-802's and RQ-804's Q-T3 decided, logged in `plan/DECISIONS-LOG.md`):* on a tier-3 map, which has no dual or implicit slope, the slope condition above cannot be shown, so an equal pair at distinct f64 sample points is the f64 floor and warns (Q-T3's option (i)), never silenced; no central difference is taken. TASK-M6-21 writes the tier-3 arm's criterion before its run, physics-reviewed, and reports how many saturated tier-3 pairs warn. *Was:* "What a tier-3 map, with no exact slope, does is RQ-802's Q-T3, deferred to M6."
+*13 Nov 2026 (R-1002, RQ-804 (a)):* a switchover at `ℓ_switch` with no collapse raises no warning; the warning is raised at a collapse and at `AT_F32_FLOOR`, saturation excepted as above. *Was:* "A switchover at `ℓ_switch` with no collapsed pair is not a saturation collapse and warns as R-54 defines it." Nothing
+clamps, rescales, wraps or fades the view to hide the flat field. *Was (fix round 3, gui review 5624846336, G8):* "is
+not raised for a quad every collapsed pair of which is a saturation collapse". *Was (fix round 2, gui review 5624788928, G6):*
+"at a quad where f64 `J_D`'s columns along the view's plane are 0 while the quad's f64 sample points are distinct, the collapse is saturation, a true flat image, and the warning that `DECODE_SWITCHOVER` and `AT_F32_FLOOR` raise (R-54, `principia_render_gui_spec.md` §G2) is not raised for it." *Was:* "Far from the origin the decoder saturates (`principia_chart_reference.md` §0), and the f64 decode is flat there too (`σ` rounds to 1 in f64 past about 37 and `sech²` underflows, so `J_D`'s columns are 0): the full and the linearised decoders' samples collapse because the field is flat, not because f32 has run out, and (iv) fires at home zoom. Stopping refinement there is harmless, the field being flat. What the user is told is open: `AT_F32_FLOOR` raises the precision warning (R-54, `principia_render_gui_spec.md` §G2), which would say that f32 has run out where the cause is saturation, against R-570 item 5 and W13 ("never lies"); that conflict is RQ-553, not settled here. Nothing clamps, rescales, wraps or fades the view to hide the flat field."
+
+---
+
+## Couplings to the contract
+
+**a. The linearised object is the full chart→IC composite, not the decoder `D` alone.** What varies with `(u,v)` is the whole map: quad UV → `Φ` → z → decode → canonicalise → physical. Because `J_D` is taken by **central differences in f64**, the deep-zoom path is chart-agnostic — it linearises whatever the composite is, including nonlinear axis warps, the invariant downstream solve, and the Burrau curve embed. The four axis kinds need **zero** special-casing here. The one thing not to do: linearise only the innermost decoder and drop the chart map's contribution.
+
+**b. `|det J_D|` is the shared measure weight from Part 2.5.** `J_D = ∂physical/∂(u,v)` factors through the link derivatives (softmax Jacobian, sigmoid slope, curve tangent). Its determinant *is* the local sampling-measure factor that Part 2.5 requires to travel with a link for quantitative honesty. The CPU already computes `J_D` per deep quad for the linear decode — take `|det J_D|` and the per-quad measure weight is free. Integrity machinery and deep-zoom machinery share one Jacobian; compute once, use for both.
+
+*13 Nov 2026 (R-996, RQ-800 (a)):* the measure weight is per sample, the Gram area factor `√det(J_DᵀJ_D)` of each sample's own exact (tier 1) or implicit (tier 2) slope, not one `|det J_D|` per quad; on a tier-3 map a central difference at R-633's step per sample, labelled, admitted per map only by the Richardson check written before any run, a map that fails giving unweighted chart-area fractions (REQ-VAL-094). Where the paragraph above takes the weight once per quad from the patch's `J_D`, it is the *Was*.
+
+**c. The f64-anchored decode isolates CPU/GPU divergence to the integrator.** Once the decode is anchored in f64 (`x₀`, `J_D` both f64-computed), the GPU's IC is the best f32 representation of the true IC, so the *decode* barely diverges between CPU and GPU. The divergence the pixel inspector then shows is almost purely **integration** divergence — exactly the quantity worth witnessing. The linearised decoder doesn't only buy depth; it cleans the divergence signal.
+
+---
+
+## Reserved: the integration floor
+
+There is a second floor the decode guard doesn't catch — adjacent ICs *distinct* in physical coordinates, but f32 integration error exceeds their difference, so outcomes differ by rounding noise rather than real structure (Trani's numerical chaos, at pixel scale), and/or trajectories saturate the substep cap at close encounters. This floor is a **confidence gradient, not a terminal wall** (integrator contract Part 6, regularisation and the integration floor): saturated/suspect trajectories still reach real dynamical outcomes — they're *flagged* (the `saturated` descriptor bit; a high `suspect_fraction`), not terminated — so the structure is *computed with low confidence*, not cut off. The `saturated` bit and the derived suspect predicates exist in the payload (§2), so nothing is foreclosed; the scheduler uses saturation + high `suspect_fraction` as the **integration floor refinement-stop** (stop subdividing what the integrator can't resolve), not a sample-terminal. The sliding `MAX_REL_DEPTH` and the screen-space floor bound the work regardless of where this floor sits. Not a section — a reserved concern.
+
+**The floor follows the occupant (R-563).** The substep saturation above is the floor with regularisation off,
+unchanged. A regularised occupant (the default, Heggie × RK4, R-560) has no substep cap: its bound is a step budget, a
+rate of steps per unit physical time per copy, and a copy that runs out of it is **undetermined, never discarded**;
+the separation floor firing and steps held at the entry cap are its counted, non-terminal signals, the under-resolved
+markers there (integrator contract Part 6). The scheduler's floor stop reads the sticky `saturated` bit, set when
+either counted signal fires, and `suspect_fraction`, for every occupant, and a budget-undetermined footprint never
+splits (R-603, closing RQ-526; *was:* "How the scheduler's floor stop reads them is RQ-526.").
+
+---
+
+*Global precision on the CPU, relative arithmetic on the GPU. The linear decode is chart-agnostic, shares the integrity Jacobian, and isolates divergence to the integrator. Depth is bounded by budget, not by knowing the floor.*

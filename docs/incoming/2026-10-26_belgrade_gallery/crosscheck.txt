@@ -1,0 +1,35 @@
+== 1. Sequence orbits against Hudomal, initial-conditions.pdf ==
+pdf rows 206, gallery labelled orbits 206, in both 206; gallery only [], pdf only []
+max |difference| over p1, p2, T: 0.0e+00
+
+== 2. Words against labels ==
+206 of 206 consistent; inconsistent: []
+
+== 3. Šuvakov & Dmitrašinović 2013, Table 1 ==
+BUTTERFLY I    max|d numbers| 4.1e-05  word: cyclic, (a,b)<->(A,B)
+BUTTERFLY II   max|d numbers| 7.0e-06  word: cyclic, (a,b)<->(A,B)
+BUMBLEBEE      max|d numbers| 4.1e-05  word: cyclic, (a,b)<->(A,B)
+MOTH I         max|d numbers| 1.1e-05  word: inverse, (a,b)<->(A,B)
+MOTH II        max|d numbers| 2.2e-05  word: cyclic, reverse, a<->b
+BUTTERFLY III  max|d numbers| 3.7e-05  word: inverse, (a,b)<->(A,B)
+MOTH III       max|d numbers| 1.8e-05  word: cyclic, reverse, a<->b (published word is not freely reduced)
+GOGGLES        max|d numbers| 1.8e-05  word: inverse, (a,b)<->(A,B)
+BUTTERFLY IV   max|d numbers| 2.5e-05  word: cyclic, reverse, a<->b
+DRAGONFLY      max|d numbers| 2.5e-05  word: inverse, (a,b)<->(A,B)
+YARN           max|d numbers| 3.8e-05  word: cyclic, reverse, a<->b
+YIN-YANG 1a    max|d numbers| 3.0e-05  word: (a,b)<->(A,B)
+YIN-YANG 1b    max|d numbers| 3.7e-05  word: (a,b)<->(A,B)
+YIN-YANG 2a    max|d numbers| 2.9e-05  word: cyclic
+YIN-YANG 2b    max|d numbers| 3.0e-06  word: cyclic
+
+== 4. Hudomal 2015, Tables 16-22 (E = -1/2) ==
+thesis I.2.B      -> gallery I.2.B differs by 1.2e-05; nearest gallery orbit I.2.B at 1.2e-05
+thesis IVa.6.A    -> gallery IVa.6.A differs by 5.5e-01; nearest gallery orbit IVa.14.C at 1.0e-06
+thesis IVa.8.A    -> gallery IVa.8.A differs by 2.1e-01; nearest gallery orbit IVa.8.F at 1.5e-06
+thesis IVa.8.B    -> gallery IVa.8.B differs by 2.3e-01; nearest gallery orbit IVa.8.G at 1.7e-06
+thesis IVa.8.C    -> gallery IVa.8.C differs by 2.1e-01; nearest gallery orbit IVa.8.H at 2.0e-06
+thesis IVb.15.A   -> gallery IVb.15.A differs by 1.3e-01; nearest gallery orbit IVb.15.D at 5.1e-07
+thesis IVb.24.A   -> gallery IVb.24.A differs by 1.4e-05; nearest gallery orbit IVb.24.A at 1.4e-05
+thesis V.1.B      -> gallery V.1.B differs by 4.2e-05; nearest gallery orbit V.1.B at 4.2e-05
+thesis V.4.A      -> gallery (absent) differs by nan; nearest gallery orbit V.4.A.α at 3.5e-06
+thesis rows 38; all others agree with the gallery's same label to 1e-5 (printed precision)

@@ -1,0 +1,5 @@
+Broucke, Elipe & Riaguas 2006 Table 2: reading B (eye) vs OCR of the page image (rows by order; scripts/rows_by_order.py).
+row ('1.11910280',) col a2: B_eye='.817149' OCR='817149'
+row ('1.11910280',) col precision: B_eye='7.4E-11' OCR='74E-11'
+rows B_eye=2 OCR=2; cells compared 14; disagreements 2
+Resolution: the page (150 and 300 dpi images) prints '.817149' and '7.4E-11'; the OCR dropped the decimal point in both. Kept the eye reading.

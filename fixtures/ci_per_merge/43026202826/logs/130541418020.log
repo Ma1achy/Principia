@@ -1,0 +1,8 @@
+﻿2026-11-11T13:06:56.0242628Z Current runner version: '2.338.2'
+2026-11-11T13:12:14.9630439Z ##[group]Run cargo xtask ci --partition 2/4
+2026-11-11T13:43:32.4089920Z xtask ci: [9/10] gate skipped: it runs in shard 1
+2026-11-11T13:43:32.4090310Z xtask ci: [10/10] golden (--partition 2/4)
+2026-11-11T13:43:32.4090651Z xtask ci: [10/10] golden skipped: it runs in shard 1
+2026-11-11T13:43:32.4090919Z xtask: runner(s) failed: controls
+2026-11-11T13:43:32.6198278Z ##[notice]lowest free 95529 MiB over 32 samples
+2026-11-11T13:43:32.6212384Z ##[error]Process completed with exit code 1.

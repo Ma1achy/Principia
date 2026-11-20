@@ -1,0 +1,414 @@
+[
+ {
+  "name": "Offset press (NASA Facts, 1978)",
+  "image": "images/presets/Offset_press_NASA_Facts_1978.jpg"
+ },
+ {
+  "name": "Halftone",
+  "image": "images/presets/Halftone.jpg"
+ },
+ {
+  "name": "Acrylic, sculptural",
+  "image": "images/presets/Acrylic_sculptural.jpg"
+ },
+ {
+  "name": "Oil",
+  "image": "images/presets/Oil.jpg"
+ },
+ {
+  "name": "Light painting",
+  "image": "images/presets/Light_painting.jpg"
+ },
+ {
+  "name": "Light painting, overexposed",
+  "image": "images/presets/Light_painting_overexposed.jpg"
+ },
+ {
+  "name": "Dither, 8×8, two colours",
+  "image": "images/presets/Dither_8_8_two_colours.jpg"
+ },
+ {
+  "name": "Dither, 4×4, original colours",
+  "image": "images/presets/Dither_4_4_original_colours.jpg"
+ },
+ {
+  "name": "Dither, gradient noise, three colours",
+  "image": "images/presets/Dither_gradient_noise_three_colours.jpg"
+ },
+ {
+  "name": "Dot matrix, colour ribbon",
+  "image": "images/presets/Dot_matrix_colour_ribbon.jpg"
+ },
+ {
+  "name": "Dot matrix, black ribbon",
+  "image": "images/presets/Dot_matrix_black_ribbon.jpg"
+ },
+ {
+  "name": "Risograph",
+  "image": "images/presets/Risograph.jpg"
+ },
+ {
+  "name": "Stipple (after Luminet, 1979)",
+  "image": "images/presets/Stipple_after_Luminet_1979.jpg"
+ },
+ {
+  "name": "CRT television",
+  "image": "images/presets/CRT_television.jpg"
+ },
+ {
+  "name": "Old LCD",
+  "image": "images/presets/Old_LCD.jpg"
+ },
+ {
+  "name": "Block-game map art",
+  "image": "images/presets/Block_game_map_art.jpg"
+ },
+ {
+  "name": "Block-game map, three shades, no dither",
+  "image": "images/presets/Block_game_map_three_shades_no_dither.jpg"
+ },
+ {
+  "name": "Blocks",
+  "image": "images/presets/Blocks.jpg"
+ },
+ {
+  "name": "Blocks, big",
+  "image": "images/presets/Blocks_big.jpg"
+ },
+ {
+  "name": "ASCII, white terminal",
+  "image": "images/presets/ASCII_white_terminal.jpg"
+ },
+ {
+  "name": "ANSI art, 16 colours",
+  "image": "images/presets/ANSI_art_16_colours.jpg"
+ },
+ {
+  "name": "ASCII, 8-bit colour",
+  "image": "images/presets/ASCII_8_bit_colour.jpg"
+ },
+ {
+  "name": "ASCII, green terminal",
+  "image": "images/presets/ASCII_green_terminal.jpg"
+ },
+ {
+  "name": "ASCII, own colours",
+  "image": "images/presets/ASCII_own_colours.jpg"
+ },
+ {
+  "name": "ASCII, amber, on a CRT",
+  "image": "images/presets/ASCII_amber_on_a_CRT.jpg"
+ },
+ {
+  "name": "ASCII, typed on paper",
+  "image": "images/presets/ASCII_typed_on_paper.jpg"
+ },
+ {
+  "name": "Game Boy",
+  "image": "images/presets/Game_Boy.jpg"
+ },
+ {
+  "name": "Limited palette, then halftone",
+  "image": "images/presets/Limited_palette_then_halftone.jpg"
+ },
+ {
+  "name": "Duotone, on a CRT",
+  "image": "images/presets/Duotone_on_a_CRT.jpg"
+ },
+ {
+  "name": "Watercolour pencil",
+  "image": "images/presets/Watercolour_pencil.jpg"
+ },
+ {
+  "name": "Watercolour pencil, limited palette",
+  "image": "images/presets/Watercolour_pencil_limited_palette.jpg"
+ },
+ {
+  "name": "Watercolour pencil, earth",
+  "image": "images/presets/Watercolour_pencil_earth.jpg"
+ },
+ {
+  "name": "Watercolour pencil, nocturne",
+  "image": "images/presets/Watercolour_pencil_nocturne.jpg"
+ },
+ {
+  "name": "Gouache",
+  "image": "images/presets/Gouache.jpg"
+ },
+ {
+  "name": "Egg tempera",
+  "image": "images/presets/Egg_tempera.jpg"
+ },
+ {
+  "name": "Encaustic",
+  "image": "images/presets/Encaustic.jpg"
+ },
+ {
+  "name": "Graphite",
+  "image": "images/presets/Graphite.jpg"
+ },
+ {
+  "name": "Charcoal",
+  "image": "images/presets/Charcoal.jpg"
+ },
+ {
+  "name": "Chalk pastel",
+  "image": "images/presets/Chalk_pastel.jpg"
+ },
+ {
+  "name": "Ink wash",
+  "image": "images/presets/Ink_wash.jpg"
+ },
+ {
+  "name": "Engraving",
+  "image": "images/presets/Engraving.jpg"
+ },
+ {
+  "name": "Mezzotint",
+  "image": "images/presets/Mezzotint.jpg"
+ },
+ {
+  "name": "Linocut",
+  "image": "images/presets/Linocut.jpg"
+ },
+ {
+  "name": "Cyanotype",
+  "image": "images/presets/Cyanotype.jpg"
+ },
+ {
+  "name": "Pen plotter",
+  "image": "images/presets/Pen_plotter.jpg"
+ },
+ {
+  "name": "Dot matrix, no scan lines",
+  "image": "images/presets/Dot_matrix_no_scan_lines.jpg"
+ },
+ {
+  "name": "Dot matrix, colour, no scan lines",
+  "image": "images/presets/Dot_matrix_colour_no_scan_lines.jpg"
+ },
+ {
+  "name": "Dither, 8×8, three colours",
+  "image": "images/presets/Dither_8_8_three_colours.jpg"
+ },
+ {
+  "name": "Dither, random",
+  "image": "images/presets/Dither_random.jpg"
+ },
+ {
+  "name": "Dither, 2×2, Game Boy greens",
+  "image": "images/presets/Dither_2_2_Game_Boy_greens.jpg"
+ },
+ {
+  "name": "Marbling",
+  "image": "images/presets/Marbling.jpg"
+ },
+ {
+  "name": "Mosaic",
+  "image": "images/presets/Mosaic.jpg"
+ },
+ {
+  "name": "Stained glass",
+  "image": "images/presets/Stained_glass.jpg"
+ },
+ {
+  "name": "Kintsugi",
+  "image": "images/presets/Kintsugi.jpg"
+ },
+ {
+  "name": "Cut paper",
+  "image": "images/presets/Cut_paper.jpg"
+ },
+ {
+  "name": "Thread painting",
+  "image": "images/presets/Thread_painting.jpg"
+ },
+ {
+  "name": "Polaroid",
+  "image": "images/presets/Polaroid.jpg"
+ },
+ {
+  "name": "Thin film",
+  "image": "images/presets/Thin_film.jpg"
+ },
+ {
+  "name": "Film negative",
+  "image": "images/presets/Film_negative.jpg"
+ },
+ {
+  "name": "35mm film, developed",
+  "image": "images/presets/35mm_film_developed.jpg"
+ },
+ {
+  "name": "Relief of lifetime*",
+  "image": "images/presets/Relief_of_lifetime.jpg"
+ },
+ {
+  "name": "Inverse palette",
+  "image": "images/presets/Inverse_palette.jpg"
+ },
+ {
+  "name": "Fluoro palette, risograph",
+  "image": "images/presets/Fluoro_palette_risograph.jpg"
+ },
+ {
+  "name": "Light painting, solid",
+  "image": "images/presets/Light_painting_solid.jpg"
+ },
+ {
+  "name": "Light painting, on a Polaroid",
+  "image": "images/presets/Light_painting_on_a_Polaroid.jpg"
+ },
+ {
+  "name": "Light painting, solid, on a Polaroid",
+  "image": "images/presets/Light_painting_solid_on_a_Polaroid.jpg"
+ },
+ {
+  "name": "Wet where chaotic*",
+  "image": "images/presets/Wet_where_chaotic.jpg"
+ },
+ {
+  "name": "Craquelure*",
+  "image": "images/presets/Craquelure.jpg"
+ },
+ {
+  "name": "Unfinished where uncertain*",
+  "image": "images/presets/Unfinished_where_uncertain.jpg"
+ },
+ {
+  "name": "Stereogram, random dots",
+  "image": "images/presets/Stereogram_random_dots.jpg"
+ },
+ {
+  "name": "Stereogram, picture's colours",
+  "image": "images/presets/Stereogram_picture_s_colours.jpg"
+ },
+ {
+  "name": "Stereogram, wallpaper",
+  "image": "images/presets/Stereogram_wallpaper.jpg"
+ },
+ {
+  "name": "Teletext",
+  "image": "images/presets/Teletext.jpg"
+ },
+ {
+  "name": "Teletext, separated graphics",
+  "image": "images/presets/Teletext_separated_graphics.jpg"
+ },
+ {
+  "name": "Teletext, on a CRT",
+  "image": "images/presets/Teletext_on_a_CRT.jpg"
+ },
+ {
+  "name": "Cross-stitch",
+  "image": "images/presets/Cross_stitch.jpg"
+ },
+ {
+  "name": "Cross-stitch, sampler on bare cloth",
+  "image": "images/presets/Cross_stitch_sampler_on_bare_cloth.jpg"
+ },
+ {
+  "name": "Brick mosaic",
+  "image": "images/presets/Brick_mosaic.jpg"
+ },
+ {
+  "name": "Brick mosaic, big studs",
+  "image": "images/presets/Brick_mosaic_big_studs.jpg"
+ },
+ {
+  "name": "E-ink",
+  "image": "images/presets/E_ink.jpg"
+ },
+ {
+  "name": "E-ink, four greys, worn panel",
+  "image": "images/presets/E_ink_four_greys_worn_panel.jpg"
+ },
+ {
+  "name": "LED matrix",
+  "image": "images/presets/LED_matrix.jpg"
+ },
+ {
+  "name": "LED matrix, amber",
+  "image": "images/presets/LED_matrix_amber.jpg"
+ },
+ {
+  "name": "LED matrix, red, coarse",
+  "image": "images/presets/LED_matrix_red_coarse.jpg"
+ },
+ {
+  "name": "Fair Isle knit",
+  "image": "images/presets/Fair_Isle_knit.jpg"
+ },
+ {
+  "name": "Knit, two colours",
+  "image": "images/presets/Knit_two_colours.jpg"
+ },
+ {
+  "name": "Oscilloscope",
+  "image": "images/presets/Oscilloscope.jpg"
+ },
+ {
+  "name": "Oscilloscope, dense, amber",
+  "image": "images/presets/Oscilloscope_dense_amber.jpg"
+ },
+ {
+  "name": "Cross-hatching, ruled",
+  "image": "images/presets/Cross_hatching_ruled.jpg"
+ },
+ {
+  "name": "Cross-hatching, round the forms",
+  "image": "images/presets/Cross_hatching_round_the_forms.jpg"
+ },
+ {
+  "name": "Pencil, HB",
+  "image": "images/presets/Pencil_HB.jpg"
+ },
+ {
+  "name": "Pencil, 6B",
+  "image": "images/presets/Pencil_6B.jpg"
+ },
+ {
+  "name": "Fineliner",
+  "image": "images/presets/Fineliner.jpg"
+ },
+ {
+  "name": "Fineliner, stipple, sepia",
+  "image": "images/presets/Fineliner_stipple_sepia.jpg"
+ },
+ {
+  "name": "Marker",
+  "image": "images/presets/Marker.jpg"
+ },
+ {
+  "name": "Marker, ruled strokes",
+  "image": "images/presets/Marker_ruled_strokes.jpg"
+ },
+ {
+  "name": "Biro",
+  "image": "images/presets/Biro.jpg"
+ },
+ {
+  "name": "Biro, on feint-ruled paper",
+  "image": "images/presets/Biro_on_feint_ruled_paper.jpg"
+ },
+ {
+  "name": "Tetris",
+  "image": "images/presets/Tetris.jpg"
+ },
+ {
+  "name": "Tetris, picture's colours",
+  "image": "images/presets/Tetris_picture_s_colours.jpg"
+ },
+ {
+  "name": "Shattered glass",
+  "image": "images/presets/Shattered_glass.jpg"
+ },
+ {
+  "name": "Shattered pane",
+  "image": "images/presets/Shattered_pane.jpg"
+ },
+ {
+  "name": "Through cracked goggles",
+  "image": "images/presets/Through_cracked_goggles.jpg"
+ }
+]

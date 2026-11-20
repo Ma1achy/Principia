@@ -1,0 +1,8 @@
+Belgrade gallery satellites: 57; atlas rows: 3943, equal-mass with E < 0: 2215
+max |eq.5 E - Cartesian E| = 1.28e-49; max |L recomputed - L| = 5.35e-51
+rows matching a Belgrade gallery satellite (rule 1): 57 of 99; not matched: 42
+  not matched: 3 7 9 12 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 82 83 85 87 88 89 91 93
+rows with an atlas candidate (rule 2) at tol 1e-06: 0
+rows with an atlas candidate (rule 2) at tol 0.0001: 0
+rows with an atlas candidate (rule 2) at tol 0.001: 0
+rows with an atlas row within 1e-4 in |L| |E|^(1/2) alone (period ignored, in case the atlas's T were an absolute period): 7

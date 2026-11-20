@@ -1,0 +1,9 @@
+{
+  "description": "PIT-3, the measurement can fire: the same draws, fewer of them, with E under every link of the defaults swapped (stick_breaking, tanh_alpha, softsign_beta, tanh_q and softsign_q) and D under the defaults (dd_encode §4, seam 2/13), so the gate must fail it.",
+  "seed": 1,
+  "per_chart": 4096,
+  "fuzz": 65536,
+  "span": 6.0,
+  "encode": "mismatched",
+  "expected": "fail"
+}

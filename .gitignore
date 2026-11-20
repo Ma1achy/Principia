@@ -1,0 +1,31 @@
+# Fallback archives — kept on disk, out of history
+/principia_outputs_full.zip
+/principia_spec_sources.zip
+/principia_dev_gui_artboards.zip
+
+.DS_Store
+__MACOSX/
+__pycache__/
+
+# Cargo build output
+/target/
+
+# The Three Body Orbits operator's atlas-params.json: sent by email, not published, never committed
+# (docs/incoming/2026-10-26_orbit_catalogues/, "Data terms"; enforced by scripts/check_no_atlas_params.sh in CI).
+atlas-params.json
+*atlas-params*.json
+*atlas_params*.json
+
+# All-rights-reserved PDFs the human holds, kept here so agents can read them; never committed, the repo being public
+# (docs/incoming/2026-10-28_rq598_data/README.md §1; docs/incoming/2026-10-27_papers/README.md §2).
+/docs/incoming/_local/
+
+# README explainer GIF builds (scripts/readme_gifs); the committed copies live in docs/readme/
+/scripts/out/
+
+# The web skeleton's browser runner: `npm ci` installs it from its lock (TASK-M8-86).
+/web/skeleton/runner/node_modules/
+
+
+# Papers are never committed unless CC BY, CC BY-SA, CC0 or public domain; held copies live in _local.
+/docs/incoming/**/*.pdf

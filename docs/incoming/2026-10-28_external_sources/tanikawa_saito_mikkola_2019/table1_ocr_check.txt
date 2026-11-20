@@ -1,0 +1,4 @@
+NO-OCR-MATCH	row 1	digits	8
+NO-OCR-MATCH	row 2	digits	8
+NO-OCR-MATCH	row 3	digits	8
+numeric cells checked=44; matched by an OCR token=41; unmatched=3

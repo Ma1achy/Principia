@@ -1,0 +1,11 @@
+== -p validation
+scratch_guard_deletes_on_pass: test
+== -p validation --features controls
+scratch_guard_deletes_on_pass: test
+scratch_guard_keeps_a_wrong_message_controls_scratch: test
+== -p xtask
+gate::tests::first: test
+lint_wgsl_rules::self_compare_fails: test
+lint_wgsl_unset_isinf_fails: test
+lint_wgsl_finite_max_fails: test
+no_such_test_after_all: test

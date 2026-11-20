@@ -1,0 +1,68 @@
+
+<!DOCTYPE html>
+<html>
+<head><title>3body</title>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<link rel="stylesheet" href="style.css" type="text/css" />
+
+<script type='text/javascript'>
+var index = 0;
+var text = 'NAME: RETROGRADE BHH SATELLITE 10b 1 \n DISCOVERED: 2015 \n FREE GROUP ELEMENT: a^10 \n PERIOD: 3.956293 \n ANGULAR MOMENTUM: 0.8500000000 \n REL. COORD. a: 0.150808938415 \n REL. VEL. c: -2.170190077810';
+
+
+
+
+
+// Here you can put in the text you want to make it type.
+function type()
+{
+if(text.charAt(index)=='\n') document.getElementById('screen').innerHTML += '<br><br>';
+else if(text.charAt(index)=='@') document.getElementById('screen').innerHTML += '<br>';
+else if(text.charAt(index)=='%') document.getElementById('screen').innerHTML += '<a href="ref.php.html">[4]</a>'
+
+//else if(text.charAt(index)=='h') document.getElementById('screen').innerHTML += 'g<sub>2</sub><sup>-1</sup>';
+//else if(text.charAt(index)=='c') document.getElementById('screen').innerHTML += 'a<sup>-1</sup>';
+//else if(text.charAt(index)=='d') document.getElementById('screen').innerHTML += 'b<sup>-1</sup>';
+else document.getElementById('screen').innerHTML += text.charAt(index);
+index += 1;
+var t;
+if(index<text.length) t = setTimeout('type()',1);
+
+}
+</script>
+
+</head>
+
+<body onload="type()">
+<center>
+<table>
+<tr>
+<td class=beli width=300px>
+<center>
+<br>
+<center> <b>SHAPE SPHERE:</b> </center>
+<img border=0 src="https://web.archive.org/web/20260606193512/http://three-body.ipb.ac.rs/img/bhh_sat_anim_29.gif" />
+<center> <b>REAL SPACE:</b> </center>
+<img border=0 width=300 src="https://web.archive.org/web/20260606193512/http://three-body.ipb.ac.rs/img/bhh_sat_real_29.gif" />
+</center>
+</td>
+<td width=700px>
+<div id="screen"></div>
+</td>
+
+</table>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try{
+var pageTracker = _gat._getTracker("UA-2441426-1");
+pageTracker._trackPageview();
+} catch(err) {}
+</script>
+
+
+</body>
+</html>

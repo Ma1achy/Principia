@@ -1,0 +1,119 @@
+//! The validation harness: may depend on any crate but `gui` and `prin`; every crate but `gui`
+//! reaches it only as a dev-dependency, and `gui` never does (systems_architecture §7.1; R-176,
+//! R-187).
+
+pub mod arctan;
+pub mod az;
+pub mod bench;
+pub mod bringup;
+pub mod control;
+pub mod convergence;
+pub mod cross_backend;
+pub mod decode_agreement;
+pub mod decode_f32_eps;
+pub mod decode_preset;
+pub mod decode_sanity;
+pub mod drift;
+pub mod eps_phys;
+pub mod first_slice;
+pub mod gate;
+pub mod gauge;
+pub mod golden_scene;
+pub mod gpu;
+pub mod heggie;
+pub mod import;
+pub mod inspector;
+pub mod invariant_gradient;
+pub mod link_variation;
+pub mod measure;
+pub mod nsub_bucket;
+pub mod oklab;
+pub mod paths;
+pub mod projection_parity;
+pub mod prop;
+pub mod reference;
+pub mod roundtrip;
+pub mod roundtrip_preset;
+pub mod shape_roundtrip;
+pub mod shape_scene;
+pub mod spawn;
+pub mod structural_scene;
+
+/// The synthetic payload harness (TASK-M1-06), re-exported for the render crate's tests, which reach the engine only
+/// through this dev-dependency (systems_architecture §7.1).
+pub use engine::synthetic;
+
+/// The kernel's `times` packing (payload §2, §6), for ledger's round-trip test, which reaches the kernel only through
+/// this dev-dependency.
+pub use kernel::payload::{pack_times, set_t_dmin_step, tm_t_dmin_step, tm_t_end_step};
+
+/// The wrapper's loop parameters and dispatch's refusals (TASK-M3-06), for ledger's `times` round-trip test, which
+/// reaches the engine only through this dev-dependency: a configuration whose `⌈T/dt_macro⌉` the u16 indices cannot hold
+/// is refused at dispatch (R-86).
+pub use engine::contract::sim_uniforms::SimUniforms;
+pub use engine::dispatch::validate::{validate as validate_dispatch, DispatchError};
+
+/// The kernel's Welford diffusion update (payload §4; TASK-M3-13), for the render crate's tests, which stream a series
+/// through it to build the co-moments a fixture's diffusion view reads, and reach the kernel only through this
+/// dev-dependency.
+pub use kernel::driver::welford;
+
+/// The coordinate presets and the stain graph they are (TASK-M1-07), re-exported for the render crate's tests, as the
+/// harness is.
+pub use engine::{presets, stain};
+
+/// `r_pole`'s register entry (REQ-INT-086, R-433), for the kernel crate's tests, which reach the ledger only through
+/// this dev-dependency: the kernel takes the ledger as a build-dependency alone (systems_architecture §7.1, R-185).
+pub use ledger::constants::R_POLE;
+/// REQ-DEC-054's cut and bound on the f32 sinc (R-696), which `kernel/tests/exponential_sinc.rs` reads.
+pub use ledger::constants::{SINC_BOUND, SINC_CUT};
+
+/// The invariant charts' warp defaults, `K_max` and `γ_K` (REQ-CHART-044, proposed; TASK-M2-12), for the kernel crate's
+/// tests, as `r_pole` is.
+pub use ledger::constants::{GAMMA_K, K_MAX};
+/// The shape-sphere chart's two tolerances' register entries (REQ-CHART-049, REQ-CHART-053; R-427), for the kernel
+/// crate's tests and the `shape-roundtrip` gate, as `r_pole`'s is.
+pub use ledger::constants::{SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL};
+/// dd_integrator §5 test 3's rounding-level criterion's register entries (REQ-VAL-191, proposed; TASK-M3-02), the
+/// criterion, its domain's lower edges at f64 and f32 and its upper edge, for the kernel crate's tests, as `r_pole`'s
+/// is.
+pub use ledger::constants::{
+    STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_EDGE_MAX, STEP_REVERSAL_TOL,
+};
+
+/// The Burrau `ν = 1/2` tolerance (REQ-VAL-118, proposed) and the Euclid plane's defaults (chart_reference §4.5;
+/// TASK-M2-10), for the kernel crate's tests, as `r_pole` is.
+pub use ledger::constants::{
+    BURRAU_NU_HALF_TOL, EUCLID_M_MAX, EUCLID_M_MIN, EUCLID_NU_MAX, EUCLID_NU_MIN,
+};
+
+/// The ternary mass plot's default buffer `ε_m` (chart_reference §4.5; TASK-M2-13), for the kernel and engine crates'
+/// tests, as the Euclid plane's defaults are.
+pub use ledger::constants::MASS_SIMPLEX_EPS_M;
+
+/// The acute-angle Burrau charts' defaults (REQ-CHART-045, REQ-CHART-046, proposed; chart_reference §4.5; TASK-M2-11),
+/// for the kernel crate's tests and the `burrau_acute` evidence, as `r_pole` is.
+pub use ledger::constants::{
+    BURRAU_THETA_LZ_FRACTION, BURRAU_THETA_LZ_K, BURRAU_THETA_MAX, BURRAU_THETA_MIN,
+};
+
+/// The tunable link parameters' declarations and the evaluator of the registry's trees (R-481; TASK-M2-41), for the
+/// kernel crate's tests, which test the generated links at each declared range, as `r_pole` is.
+pub use ledger::links::{eval, range_values, registered, tunables, Fl, Tunable, Values};
+
+/// The payload's pair-id map (R-22; payload §2), for the kernel crate's tests, as `r_pole` is.
+pub use ledger::payload::pair_bodies;
+
+/// The assembler's declaration parser, re-exported for the ledger crate's tests, which reach render only through this
+/// dev-dependency: the numeric view template's `RANGE_AUTO` header round-trips through it (TASK-M1-09).
+pub use render::assemble::{Declaration, UniformType};
+
+/// The samples' chart classification (REQ-COL-102; TASK-M2-32), and the chart trait and the latent chart it classifies
+/// from, with the decoder entry `D ∘ Φ` under `η_E` (`energy_norm`) and the link selections that reach the decoder's
+/// `DEGENERATE` tags, re-exported for the render crate's tests, which reach the engine and the kernel only through this
+/// dev-dependency.
+pub use engine::chart_class;
+pub use kernel::chart;
+pub use kernel::decode::{energy_norm, Degenerate};
+pub use kernel::generated::links::Defaults;
+pub use kernel::stage::decode::StickBreakingLinks;

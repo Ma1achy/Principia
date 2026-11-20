@@ -1,0 +1,7 @@
+{
+  "description": "Control: the default table used under r_sub 0.08, which must fail the specification check.",
+  "config": { "r_sub": 0.08, "gamma_sub": 1.5, "n_max": 64 },
+  "table": { "r_sub": 0.05, "gamma_sub": 1.5, "n_max": 64 },
+  "fuzz": { "seed": 6, "random": 4096, "pairs": 4096 },
+  "expected": "fail"
+}

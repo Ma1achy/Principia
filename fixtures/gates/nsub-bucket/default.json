@@ -1,0 +1,6 @@
+{
+  "description": "The default sim key: d² at every edge (THR[n] and ±1 ulp), log-uniform d² and position triples at the edges, on CPU-f64 and CPU-f32.",
+  "config": { "r_sub": 0.05, "gamma_sub": 1.5, "n_max": 64 },
+  "fuzz": { "seed": 1, "random": 4096, "pairs": 4096 },
+  "expected": "pass"
+}

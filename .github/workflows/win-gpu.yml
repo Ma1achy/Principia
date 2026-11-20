@@ -1,0 +1,1135 @@
+# Measurements on the owner's Windows PC, `malachys-pc-rtx2080s`, RTX 2080 SUPER (R-711 item 1, which amends R-186 and
+# R-656 for this one runner; R-859, which says what it may run from the anchor move, each a named measurement reporting
+# under its own name and never a required check, `xtask/tests/runner_security.rs` holding every self-hosted job to that
+# list by name; gpu-idle and the weekly proof are `runner-proof.yml`'s): the Vulkan GPU suites, nightly and on `main`; a
+# nightly self-check, the only daily
+# re-proof of the setup, since `schedule` fires only from `main`; and, dispatched by hand alone, the proof of Windows
+# containment (`win-contain`, below). Every result
+# here is a measurement, never a required check (R-649): the PC is sometimes off, and nothing on `main` waits for it.
+# No job here is gathered or read by any gate, and a red one is not main red. A job here that stops on a runner-level
+# fault is re-run once, automatically, by the hosted job `win-retry` (`win-retry.yml`, R-988), the one reader of this
+# workflow, which logs every such stop and every hang; nothing else retries a job here. `xtask/tests/runner_security.rs`
+# fails if that ever stops holding, or if a rule below is broken. DX12 waits for its opt-in (R-711 item 2). No
+# benchmarks or soak run here, and no mutants outside the WSL2 distro's `wsl-cpu` (below), which runs one named mutation
+# workload when dispatched with it and nothing else.
+#
+# The PC runs the GPU suites only (the owner, 14 Nov 2026: "The PC runs the GPU suites only. Tests that fail there for
+# lack of Unix tools ... are excluded on Windows with a stated reason (they run on hosted Linux already), not fixed";
+# TASK-M0-71). The nightly Windows build and CPU tests, `win-tests`, are gone: they ran xtask's tests that start a bare
+# `bash`, which on this runner's account resolves to C:\Windows\System32\bash.exe, WSL's launcher, and so ran inside
+# the default distro and wrote to it (run 43593938536). No test a job here runs may start a bare `bash` or `wsl`:
+# `xtask/tests/ci_win_no_wsl.rs` reads every cargo command of the jobs on the runner and fails if a test it can reach
+# does, unless that test's file is excluded on Windows with its reason. The route itself is closed too: gh-runner's
+# default WSL distribution names no distro (the PC's setting of 14 Nov 2026, #390), `wsl.ps1 register` closes it again
+# after each `wsl --import`, which reopens it, and `win-self-check` proves it each night: as gh-runner, System32's
+# `bash.exe -c true` and `wsl.exe -e true` must fail and leave every distro's state as it was (`wsl_route.ps1`).
+#
+# The repository is public and this runner is a real PC, so these are the conditions for having it at all (R-711 items
+# 1 and 5, the owner's job rules of 5 Nov 2026). Never add a `pull_request` or `pull_request_target` trigger: only push
+# to `main`, schedule and workflow_dispatch, which is also the only way to run this on a branch. Every job carries the
+# repository and actor guard. No credential reaches a job: `contents: read`, no repository secret, and checkout with
+# `persist-credentials: false`. Every action is pinned to a full commit SHA, its version in a comment. The hook on the PC
+# enforces the same triggers from outside the repository, whatever this file says.
+#
+# `.env` on the runner sets CARGO_HOME, RUSTUP_HOME, CARGO_TARGET_DIR, TEMP and TMP on E:, so this file sets none of them
+# but CARGO_TARGET_DIR, which each job that compiles moves to a folder of its own on E: (the compile cache, below), and
+# never runs `cargo clean`: a job can change what's in its target folder, not remove it. `core.autocrlf false` is in
+# the account's read-only gitconfig. `.github/actions/cargo-ci-config` isn't used here: it writes a config into
+# CARGO_HOME, which is read-only to the account and outlives the job, so dependencies keep their default debug info on
+# this one runner.
+#
+# Every suite's output goes through `.github/scripts/win_measure.ps1`, which keeps the full output and labels the result
+# `possibly faulty hardware (owner-reported)`, with the commit and driver version, in the job's summary and artifact. A
+# recorded run can serve Paper 2's non-Metal parity evidence (R-711 item 4), and an artifact lasts 90 days at most, so
+# copy one that's cited. A step after a failed suite still runs, so one failure doesn't hide the rest; the job ends red.
+#
+# Reported, not asserted (TASK-M0-88, the orchestrator's call ahead of TASK-M4-30 and TASK-M4-31, which scope these
+# in the code): on this card, a driver other than CI's Metal and lavapipe, twelve tests and the golden suite `quantise` are
+# run and their result recorded, but never fail the job. R-694: `compute_fast_math` is a measurement on gpu-metal and
+# gpu-lavapipe, and "On any other driver it is reported"; R-695: near-tie golden cases are "held only on CI's
+# backends; elsewhere reported, not compared to pass"; `qa_compute_fast_math_header_is_the_dispatch` assumes an adapter
+# `session_adapter` refuses on a discrete GPU (RQ-201); `build_kernel_runs_in_ci` is not a GPU test, and the hosted
+# gpu-kernel job runs it. The asserting steps leave them out through `.config/nextest.toml`'s `win-asserted` and
+# `win-gpu-kernel` profiles, and the golden suites run one step each, `quantise` aside; each reporting step runs
+# exactly them, under `win-reported`, with WIN_MEASURE_REPORT in its own env, which makes `win_measure.ps1 run` write
+# the counts and key lines to the job's summary and exit 0. WIN_MEASURE_REPORT is set on those steps alone, so it can't
+# hide a failure anywhere else. `xtask/tests/runner_security.rs` holds all of this. The hosted gpu-metal and
+# gpu-lavapipe jobs still assert every one of them.
+#
+# Concurrency: a group per job, each holding only that job's runs. The runner is one machine and takes one job at a time,
+# so the GPU is never shared whatever the groups; they bound the queue, and being per job, a push can't displace a
+# nightly's `win-self-check`, which pushes never run. `win-vulkan`, the 85-minute run, cancels in
+# progress (R-986, the owner's ruling of 12 Nov 2026: "merges to main, nightly and dispatch only, with a newer run
+# cancelling an older one; never branch pushes"): a newer run of it, from a merge, the schedule or a dispatch, cancels an
+# older one still running, on `main` too, so the PC always works on the newest commit. Every other job keeps
+# `cancel-in-progress: false`: a running measurement finishes. GitHub keeps at most one run waiting in a group and
+# cancels the older waiting one, so with the PC off at most two of each job wait, the holder and the newest, and no queue
+# can pile up; a job a runner hasn't taken after 24 to 48 hours is cancelled by GitHub. A cancelled run is no failure,
+# and `win-retry` re-runs none.
+#
+# Time limits (R-988): every job here on the runner, and every step that builds or runs tests (each step started
+# through `win_measure.ps1 run`), carries `timeout-minutes` of 1.5 times its measured time, rounded up to a whole
+# minute: the slowest of its last five completed runs on the PC, in `.github/win-times.md` with their run ids, written
+# before the limits were set (R-649). A job or step with no completed run on record keeps its present limit. A step or
+# job at its limit is a hang: it ends there, `win-retry` logs it, and nothing re-runs it.
+#
+# The checkout is kept between runs, since a full clone took 11.2 of 18.3 minutes on this PC's hard drive (the owner, 5 Nov
+# 2026): `fetch-depth: 1` and `clean: true`, explicit. No job here needs history: they run the suites hosted jobs run at
+# checkout's default depth of 1. A job that did would state its own depth and why. A job can write to that folder, so
+# each job's second step is `.github/scripts/git_guard.ps1`, before anything runs git there. It's fetched at the job's own
+# commit, since a copy in the kept folder is what it distrusts, and on a first run there is none. If it fires it logs to
+# WIN_REFUSAL_LOG, on the PC, empties the checkout and fails the job. If it passes it writes an empty `.git/index` and
+# detaches HEAD at an empty tree, so `clean: true` clears the tree and checkout writes it again, keeping `.git` and the
+# fetch's saving. The PC's hook runs a guard of its own before any step; this one is the second layer.
+#
+# The compile cache (TASK-M0-77, the owner's order of 17 Nov 2026), on the PC's own disk and never uploaded. Each job
+# that compiles on the runner itself, `win-vulkan` and `win-self-check` (the WSL2 jobs compile inside the distro, which
+# keeps its own cache), sets in its own env RUSTC_WRAPPER=sccache, SCCACHE_DIR=E:\ci-cache\sccache and a 50G cap, and
+# CARGO_TARGET_DIR=E:\ci-cache\target\<its job id>, outside the checkout, so `clean: true` never empties it, and no two
+# jobs share one: each job's folder is its own, and the runner's one slot runs one job at a time. CARGO_HOME stays on E:
+# from `.env`, so the registry isn't downloaded again. sccache must be on the runner's PATH, in E:\runner-tools\cargo\bin,
+# installed by hand (TASK-M0-77's PR gives the steps): a job never downloads it, and fails naming that step if it isn't
+# there. Its stats are zeroed before the job's first build and shown at its end, pass or fail, the hit rate in the log,
+# whenever that zeroing step succeeded, so a failed guard or free-space check isn't followed by a second error.
+# `win-vulkan` takes the kernel from E:\ci-cache\kernel\<source hash> when that entry is whole (PRIN_KERNEL_CACHE in
+# its env; the hash is `kernel-src-hash`'s, the one the hosted jobs and the Mac use). Before its checkout each such
+# job fails if E: has under 30 GB free. On Sunday (UTC) the scheduled `win-vulkan` trims the cache after its suites
+# (`ci-cache-trim`): the target folders, oldest last write first, until they hold 150 GB at most, never its own, and the
+# kernel entries to the newest 5; sccache trims its own folder to its cap.
+# The persistent compile cache on E:\ci-cache is safe only because this runner runs trusted code: push to `main`,
+# schedule and workflow_dispatch, with the repository and actor guard on every job; if that guard ever loosens, the
+# persistent cache goes too.
+#
+# Every script here is started as a child `powershell -File`, which sets $LASTEXITCODE even if the script can't load or
+# parse. `& script` wouldn't: the step would go on, and `exit $null` is a green step with nothing run.
+#
+# The schedule, 05:17 UTC: Windows may restart for updates from 23:00 to 05:00 on this PC.
+#
+# The WSL2 distro `principia-wsl` (RQ-751 option (c), built in parallel to replace (b) and never blocking; the owner's
+# words of 9 Nov 2026), dispatched by hand alone, each job by `only` naming it, never on a push, the schedule or `all`:
+# - `wsl-register` imports the image of this commit's recipe to E:\wsl\principia-wsl\, as gh-runner: `gh workflow run
+#   win-gpu.yml --ref main -f only=wsl-register`, with `-f replace=true` to replace a registered one. The image comes
+#   from the PC's cache, E:\runner-tools\wsl-cache\, when it holds one of this recipe, and otherwise from this run's
+#   hosted `wsl-image` job (`scripts/wsl/build-image.sh`), downloaded and cached (below). It refuses an image whose
+#   manifest isn't the one pinned in `scripts/wsl/manifest.sha256`, and so refuses every image until a reviewed PR pins
+#   one.
+# - `wsl-proofs` runs the six proofs, each reported PASS or FAIL with its evidence in its log and in `wsl-proofs.txt` in
+#   its artifact: `gh workflow run win-gpu.yml --ref main -f only=wsl-proofs`. Proof 5 compares this run's rebuild, and
+#   proof 6 this run's hosted `wsl-parity`, with what is in the distro.
+# - `wsl-cpu` runs one named mutation workload inside the distro, through `scripts/contain.sh` in its unprivileged
+#   mode, and nothing else (the owner's answer to RQ-825 (closed by R-1029), 16 Nov 2026: "yes move mutation runs onto the PC (if they are
+#   faster there, measure first)"; and on 17 Nov 2026, R-1017, "i'd move them", to be made faster there): `cargo mutants
+#   --in-diff <base..commit> --package <each> -j <jobs> [--shard <k/n>] --timeout <s> -- -E <filterset>` at the commit,
+#   nextest's `mutants` profile, every value from the dispatch's `mutants_*` inputs and each checked inside before
+#   anything runs (`scripts/wsl/inside.sh mutants`): `gh workflow run win-gpu.yml --ref main -f only=wsl-cpu -f
+#   mutants_commit=<sha> -f mutants_base=<its merge base with main> -f mutants_packages='<crate> ...' -f
+#   mutants_timeout=<s> -f mutants_filter='<filterset>'`, with `-f mutants_jobs=<1 to 4>` (1 by default; more than 1
+#   only where the distro's memory is at least 8 GiB a job, an allowance, and the drive has 12 GiB a job) and `-f mutants_shard=<k/n>` for a
+#   workload past the job's 330 minutes, each shard dispatched only once the one before has finished (a run waiting
+#   in the group is cancelled by the next). At -j 1 the run builds in a cache kept in the distro between dispatches,
+#   keyed on the commit's toolchain and lockfile, cleared past 24 GiB; at more, each job's copy builds a target of its
+#   own. An out-of-memory kill during the run fails it (`scripts/contain.sh`). Nothing builds unless the commit is on
+#   one of origin's branches (never `refs/pull`), the base is on main, and every commit between them is signed with the owner's key
+#   pinned in `.github/allowed_signers` (`inside.sh trust`; R-711 item 6). Its artifact holds mutants.out/, the diff, the log, the
+#   wall time and the host's CPU model and cores. The CPU tests and the job queue's mutants stay off the PC (R-1014,
+#   R-912). It refuses unless `.github/wsl-cpu-enabled` exists, added once all six proofs had passed (run 43756345312,
+#   15 Nov 2026).
+# The PC takes the image from this run alone: a run's artifact downloads only with a token, and no job here holds one
+# (the owner's answer to RQ-807, R-1004: "No credential on the PC"). So each of the first two jobs needs a hosted job of
+# the same run, the only hosted jobs in this file. They carry the runner's guard, run only when dispatched, and build no
+# kernel. The hosted `wsl-image` keeps its build in the Actions cache under `wsl-image-<recipe key>`, the key the PC's
+# cache uses (below; R-1004: "(3) + (4), and (i)"): restored in every run, built only on a miss, or for `wsl-proofs`,
+# whose proof 5 is this run's rebuild (i), and uploaded as before. It is saved only from a `wsl-register` dispatch on
+# `main`, the one cache saved outside a push to `main` (R-326's exception, amended by R-1004).
+# Each download of their artifacts has its own time limit and runs a second time if the first failed, hung or didn't
+# finish, and the job then fails naming it if neither did: download-artifact v4.3.0 can stall mid-stream and still end
+# with exit 0, its step green over part of a file (run 43128608743's image), or hang with no output (run 43146846084's),
+# and it sets `download-path` only once a download has finished. The image is checked after each try, its length and
+# SHA-256 against those built (`wsl.ps1 check-image`), and tried again if it isn't whole. Those artifacts' names
+# carry the run but not the attempt, so a re-run of the failed jobs alone finds the first attempt's; their uploads
+# overwrite, so a re-run of the hosted job replaces them. `wsl.ps1 register` still checks the image's length and hash.
+#
+# The image cache (the owner's words of 12 Nov 2026: "stop moving the image every run"). The image's bytes differ from
+# build to build (run 43312851701: tar order, times, logs), so `wsl-register` files it on the PC by its recipe, the
+# SHA-256 of `build-image.sh`, the files of the repository it reads and the manifest's pin (`wsl.ps1`'s
+# `Get-RecipeKey`), in E:\runner-tools\wsl-cache\<recipe key>\ with the length and SHA-256 it had when built. The
+# owner makes that folder, writable by gh-runner; if it isn't there, the job's first step after the checkout's record
+# fails, naming it, and nothing is written anywhere else. On a hit the job downloads nothing; on a miss it downloads as
+# above, and `register` checks the download and moves it into the cache. Either way the cache's copy is checked, its
+# length and SHA-256 against those recorded, before it is imported: never trusted by its name. The cache keeps this
+# image and the one used before it, no more, and stays as built (R-1004's (3)). The hosted job still uploads the image
+# on every `wsl-register` dispatch, restored from the Actions cache or built: it can't learn what the PC holds (no job
+# may wait on a self-hosted one, `runner_security.rs`: never gathered; and a run reads another's artifacts only with a
+# token). The Actions cache's entry, about 1 GB of the repository's 10 GB, goes after 7 days unused or when newer
+# entries evict it; whether it survives between dispatches is reported, a measurement, never tuned. `wsl-proofs` builds
+# as before: proof 5 is this run's rebuild.
+#
+# The paths: what `scripts/ci_changes.sh` calls a GPU path, written as a filter, less R-692's five paths of `gui`. Docs-only
+# pushes run nothing (R-711 item 5); nor do `gui` and `prin`, which no job here builds. `schedule` and
+# `workflow_dispatch` ignore the filter.
+name: win-gpu
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "!crates/gui/**"
+      - "!crates/prin/**"
+      - "xtask/**"
+      - "fixtures/**"
+      - "plan/requirements.yaml"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".cargo/**"
+      - ".config/**"
+      - ".github/workflows/win-gpu.yml"
+      - ".github/scripts/win_measure.ps1"
+      - ".github/scripts/git_guard.ps1"
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: Run one job of this workflow
+        type: choice
+        default: all
+        options:
+          - all
+          - win-vulkan
+          - win-self-check
+          - win-contain
+          - wsl-register
+          - wsl-proofs
+          - wsl-cpu
+      replace:
+        description: wsl-register replaces a registered principia-wsl
+        type: boolean
+        default: false
+      # wsl-cpu's one mutation workload; each reaches the distro as an environment variable of one step, never as text
+      # in a script, and `inside.sh mutants` checks it before anything runs.
+      mutants_commit:
+        description: wsl-cpu, the commit whose diff is mutated (a full commit id)
+        type: string
+        default: ""
+      mutants_base:
+        description: wsl-cpu, the diff's base, an ancestor of the commit (a full commit id)
+        type: string
+        default: ""
+      mutants_packages:
+        description: wsl-cpu, the packages, space-separated, each a crate under crates/
+        type: string
+        default: ""
+      mutants_timeout:
+        description: wsl-cpu, cargo mutants' --timeout in seconds
+        type: string
+        default: ""
+      mutants_filter:
+        description: wsl-cpu, the nextest filterset after -E
+        type: string
+        default: ""
+      # Two optional ones: cargo mutants' jobs, and its shard for a run past the job's time limit.
+      mutants_jobs:
+        description: wsl-cpu, cargo mutants' -j, 1 to 4
+        type: choice
+        default: "1"
+        options:
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+      mutants_shard:
+        description: wsl-cpu, cargo mutants' --shard k/n, k from 0 to n-1 (empty for none)
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    # Plain `shell: powershell` is refused here: the account's execution policy doesn't allow script files. With -File, a
+    # step's result comes from its own exit, so each step ends in an explicit one.
+    shell: powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File {0}
+
+env:
+  PRIN_GPU_BACKEND: vulkan
+  CARGO_TERM_COLOR: never
+  WIN_REFUSAL_LOG: E:\runner-tools\refusal-log\refusals.log
+  # R-374 and the owner's CI setting (PR #394), as in every workflow.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  CARGO_INCREMENTAL: "0"
+  # Proof 6's commit: `main` when the WSL2 work was built, whose rust-toolchain.toml is the image's.
+  WSL_PARITY_COMMIT: 2a69136e3a45caafa494857200693ccb01abc4b9
+
+jobs:
+  # The GPU suites `ci.yml`'s `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` run, on this card under Vulkan. Phase 1 of #390
+  # took about 2.6 hours for these on this PC, warm; a cold build adds about 20 minutes.
+  win-vulkan:
+    # The persistent compile cache on E:\ci-cache is safe only because this runner runs trusted code: push to `main`,
+    # schedule and workflow_dispatch, with the repository and actor guard on every job; if that guard ever loosens, the
+    # persistent cache goes too.
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-vulkan')
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 156
+    concurrency:
+      group: win-vulkan
+      cancel-in-progress: true
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_DIR: E:\ci-cache\sccache
+      SCCACHE_CACHE_SIZE: 50G
+      CARGO_TARGET_DIR: E:\ci-cache\target\win-vulkan
+      PRIN_KERNEL_CACHE: E:\ci-cache\kernel
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: E has 30 GB free
+        run: |
+          try { $free = ([System.IO.DriveInfo]::new('E')).AvailableFreeSpace } catch { "::error::could not read the free space on E: $_"; exit 1 }
+          "E: has $([math]::Floor($free / 1GB)) GB free"
+          if ($free -lt 30GB) { '::error::E: has under 30 GB free, which the compile cache needs: free space on E: or trim E:\ci-cache (TASK-M0-77)'; exit 1 }
+          exit 0
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: sccache on PATH, its stats zeroed
+        id: sccache
+        run: |
+          $null = where.exe sccache 2>&1
+          if ($LASTEXITCODE -ne 0) { '::error::sccache is not on the runner''s PATH: install it in E:\runner-tools\cargo\bin as the PC steps of TASK-M0-77''s PR say; a job never downloads it'; exit 1 }
+          sccache --zero-stats
+          exit $LASTEXITCODE
+      - name: cargo xtask build-kernel
+        id: kernel
+        timeout-minutes: 3
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run build-kernel cargo xtask build-kernel
+          exit $LASTEXITCODE
+      # The suites below are worth nothing on any other adapter, so they run only if this one shows the card's name.
+      - name: The harness runs on the RTX 2080 SUPER
+        id: adapter
+        if: ${{ !cancelled() && steps.kernel.outcome == 'success' }}
+        env:
+          WIN_MEASURE_EXPECT: "adapter: NVIDIA GeForce RTX 2080 SUPER"
+        timeout-minutes: 12
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run adapter cargo nextest run -p validation --features controls --no-capture --no-fail-fast --retries 0 -E 'test(=gpu::tests::gpu_harness_identity_round_trip)'
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p validation -p xtask -p engine
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        env:
+          # gpu-kernel's list less `xtask::build_kernel`, whose `build_kernel_runs_in_ci` is reported, not asserted: not a
+          # GPU test, it runs the real `xtask ci`, and the hosted gpu-kernel job runs it. The binary's other tests
+          # follow, asserted.
+          NEXTEST_PROFILE: win-gpu-kernel
+        timeout-minutes: 44
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run gpu-kernel cargo nextest run -p validation -p xtask -p engine --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p xtask --test build_kernel
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: win-asserted
+        timeout-minutes: 44
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run build_kernel cargo nextest run -p xtask --test build_kernel --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      # Not a GPU test; the hosted gpu-kernel job runs it. Reported, never failing the job (TASK-M0-88).
+      - name: Reported, not asserted, build_kernel_runs_in_ci
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: win-reported
+          WIN_MEASURE_REPORT: "reported per R-694/R-695, hardware-suspect card (owner, 16 Nov)"
+        timeout-minutes: 44
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run reported-build_kernel cargo nextest run -p xtask --test build_kernel --no-capture --no-fail-fast --retries 0 build_kernel_runs_in_ci
+          exit $LASTEXITCODE
+      - name: cargo test -p validation -p xtask -p engine --doc
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 1
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run gpu-kernel-doc cargo test -p validation -p xtask -p engine --doc
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p validation --features controls gpu_harness
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 1
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run gpu_harness cargo nextest run -p validation --features controls gpu_harness --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      # Less the eight reported below: R-694, and RQ-201 for the header test.
+      - name: cargo nextest run -p validation --features controls compute_fast_math
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: win-asserted
+        timeout-minutes: 1
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run compute_fast_math cargo nextest run -p validation --features controls compute_fast_math --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      # R-694: "On any other driver it is reported"; the header test assumes an adapter `session_adapter` refuses on a
+      # discrete GPU (RQ-201). Reported, never failing the job (TASK-M0-88).
+      - name: Reported, not asserted, compute_fast_math
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: win-reported
+          WIN_MEASURE_REPORT: "reported per R-694/R-695, hardware-suspect card (owner, 16 Nov)"
+        timeout-minutes: 1
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run reported-compute_fast_math cargo nextest run -p validation --features controls compute_fast_math --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls compute_entry
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 8
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run compute_entry cargo nextest run -p engine --features controls compute_entry --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls decode_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 22
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run decode cargo nextest run -p engine --features controls decode_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls invariant_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run invariant cargo nextest run -p engine --features controls invariant_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls qa_m206_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 5
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run qa_m206 cargo nextest run -p engine --features controls qa_m206_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls canonicaliser_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 14
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run canonicaliser cargo nextest run -p engine --features controls canonicaliser_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p engine --features controls encode_
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 4
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run encode cargo nextest run -p engine --features controls encode_ --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: cargo xtask gate decode-agreement
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 26
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run decode-agreement cargo xtask gate decode-agreement
+          exit $LASTEXITCODE
+      - name: cargo nextest run -p validation --features controls codegen_selftest
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run codegen_selftest cargo nextest run -p validation --features controls codegen_selftest --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      # Every golden suite but `quantise`, one step each, as `cargo xtask golden --all` takes no exclusion: `quantise`
+      # holds only the near-tie cases, reported below (R-695). `xtask/tests/runner_security.rs` holds this list to
+      # `fixtures/golden/`.
+      - name: cargo xtask golden debug-views
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-debug-views cargo xtask golden debug-views
+          exit $LASTEXITCODE
+      - name: cargo xtask golden decode-preset
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-decode-preset cargo xtask golden decode-preset
+          exit $LASTEXITCODE
+      - name: cargo xtask golden m1-coords
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-m1-coords cargo xtask golden m1-coords
+          exit $LASTEXITCODE
+      - name: cargo xtask golden m1-numeric
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-m1-numeric cargo xtask golden m1-numeric
+          exit $LASTEXITCODE
+      - name: cargo xtask golden m1-outcome
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-m1-outcome cargo xtask golden m1-outcome
+          exit $LASTEXITCODE
+      - name: cargo xtask golden m1-structural
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-m1-structural cargo xtask golden m1-structural
+          exit $LASTEXITCODE
+      - name: cargo xtask golden m1-subfields
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-m1-subfields cargo xtask golden m1-subfields
+          exit $LASTEXITCODE
+      - name: cargo xtask golden m1-synthetic
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-m1-synthetic cargo xtask golden m1-synthetic
+          exit $LASTEXITCODE
+      - name: cargo xtask golden roundtrip-preset
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-roundtrip-preset cargo xtask golden roundtrip-preset
+          exit $LASTEXITCODE
+      - name: cargo xtask golden selftest
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-selftest cargo xtask golden selftest
+          exit $LASTEXITCODE
+      - name: cargo xtask golden shape-sphere
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-shape-sphere cargo xtask golden shape-sphere
+          exit $LASTEXITCODE
+      - name: cargo xtask golden shape-sphere-projection
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden-shape-sphere-projection cargo xtask golden shape-sphere-projection
+          exit $LASTEXITCODE
+      # R-695: "Near-tie cases held only on CI's backends; elsewhere reported, not compared to pass." Reported, never
+      # failing the job (TASK-M0-88).
+      - name: Reported, not asserted, cargo xtask golden quantise
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        env:
+          WIN_MEASURE_REPORT: "reported per R-694/R-695, hardware-suspect card (owner, 16 Nov)"
+        timeout-minutes: 2
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run reported-golden-quantise cargo xtask golden quantise
+          exit $LASTEXITCODE
+      # Less the three reported below (R-695).
+      - name: cargo nextest run -p xtask --features controls golden_halfway
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: win-asserted
+        timeout-minutes: 15
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden_halfway cargo nextest run -p xtask --features controls golden_halfway --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      # R-695: "Near-tie cases held only on CI's backends; elsewhere reported, not compared to pass." Reported, never
+      # failing the job (TASK-M0-88).
+      - name: Reported, not asserted, golden_halfway
+        if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        env:
+          NEXTEST_PROFILE: win-reported
+          WIN_MEASURE_REPORT: "reported per R-694/R-695, hardware-suspect card (owner, 16 Nov)"
+        timeout-minutes: 15
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run reported-golden_halfway cargo nextest run -p xtask --features controls golden_halfway --no-capture --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: Weekly trim of the compile cache
+        if: ${{ !cancelled() && github.event_name == 'schedule' && steps.checkout.outcome == 'success' }}
+        run: |
+          if ([DateTime]::UtcNow.DayOfWeek -ne [DayOfWeek]::Sunday) { 'not Sunday (UTC): the weekly trim waits'; exit 0 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run ci-cache-trim cargo xtask ci-cache-trim --root E:\ci-cache --target-cap-gb 150 --keep-kernels 5 --keep $env:CARGO_TARGET_DIR
+          exit $LASTEXITCODE
+      - name: sccache's stats
+        if: ${{ always() && steps.sccache.outcome == 'success' }}
+        run: |
+          sccache --show-stats
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: win-vulkan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # The only daily re-proof of the setup: this job's first step, and the PC's hook before it. The guard test runs here too
+  # (the hand-over on #390 asks for it), its controls with it, on the PC it protects; it reads the workflows with a YAML
+  # crate, not PyYAML, so that it needs nothing the account doesn't have. So does the check that no launcher naming no
+  # distro reaches one (#390, 14 Nov 2026; TASK-M0-72): a setting of the runner's account, which a hand or a `wsl
+  # --import` can change, re-proved each night here rather than in `wsl-proofs`, which runs only when dispatched and
+  # reports the six proofs RQ-751 (c) needs, no more. Its control, four simulated open routes the verdict must call open,
+  # runs with it.
+  win-self-check:
+    # The persistent compile cache on E:\ci-cache is safe only because this runner runs trusted code: push to `main`,
+    # schedule and workflow_dispatch, with the repository and actor guard on every job; if that guard ever loosens, the
+    # persistent cache goes too.
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-self-check')
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 17
+    concurrency:
+      group: win-self-check
+      cancel-in-progress: false
+    env:
+      RUSTC_WRAPPER: sccache
+      SCCACHE_DIR: E:\ci-cache\sccache
+      SCCACHE_CACHE_SIZE: 50G
+      CARGO_TARGET_DIR: E:\ci-cache\target\win-self-check
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: E has 30 GB free
+        run: |
+          try { $free = ([System.IO.DriveInfo]::new('E')).AvailableFreeSpace } catch { "::error::could not read the free space on E: $_"; exit 1 }
+          "E: has $([math]::Floor($free / 1GB)) GB free"
+          if ($free -lt 30GB) { '::error::E: has under 30 GB free, which the compile cache needs: free space on E: or trim E:\ci-cache (TASK-M0-77)'; exit 1 }
+          exit 0
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: No CRLF and no token left in the checkout
+        run: |
+          $files = @(git ls-files --eol)
+          $status = $LASTEXITCODE
+          if ($status -ne 0 -or -not $files.Count) { "git ls-files read nothing, status $status"; exit 1 }
+          $crlf = @($files | Select-String 'i/lf\s+w/(crlf|mixed)').Count
+          "tracked LF files with CRLF in the tree: $crlf"
+          try { $tok = @(Select-String -LiteralPath '.git\config' -Pattern 'extraheader|x-access-token' -ErrorAction Stop).Count } catch { "could not read .git\config: $_"; exit 1 }
+          "token lines in .git\config: $tok"
+          if ($crlf -or $tok) { exit 1 }
+          exit 0
+      - name: No bash or wsl naming no distro reaches one
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl_route.ps1
+          exit $LASTEXITCODE
+      - name: sccache on PATH, its stats zeroed
+        id: sccache
+        run: |
+          $null = where.exe sccache 2>&1
+          if ($LASTEXITCODE -ne 0) { '::error::sccache is not on the runner''s PATH: install it in E:\runner-tools\cargo\bin as the PC steps of TASK-M0-77''s PR say; a job never downloads it'; exit 1 }
+          sccache --zero-stats
+          exit $LASTEXITCODE
+      - name: The guard on this workflow
+        timeout-minutes: 5
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run guard cargo nextest run -p xtask --features controls --test runner_security --no-fail-fast --retries 0
+          exit $LASTEXITCODE
+      - name: sccache's stats
+        if: ${{ always() && steps.sccache.outcome == 'success' }}
+        run: |
+          sccache --show-stats
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: win-self-check-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # The proof of Windows containment (the owner's CI shape order of 8 Nov 2026, step 1):
+  # `.github/scripts/win_contain.ps1 check`, the scenarios of `scripts/contain.sh check` against a Job Object with
+  # kill-on-close, a process limit and REQ-VAL-181's 8 GiB per-process cap. "Containment, memory cap and the 36 h no-run
+  # alert are prerequisites for any job placed on Windows": until this passes here, mutants of `xtask/src/jobq.rs` and
+  # every job that would be placed on Windows stay on GitHub-hosted runners. By `workflow_dispatch` with `only` set to it
+  # alone, never on a push, the schedule or `all`, until the proof has passed (`xtask/tests/win_contain.rs` pins that):
+  # `gh workflow run win-gpu.yml --ref main -f only=win-contain`. The step "Containment check" ends
+  # `win_contain.ps1 check: contained: ...` and exit 0 when every Job Object scenario held. It runs no cargo.
+  win-contain:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'win-contain'
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 30
+    concurrency:
+      group: win-contain
+      cancel-in-progress: false
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: Containment check
+        env:
+          PRIN_CONTAIN: required
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run contain-check powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_contain.ps1 check
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: win-contain-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # The WSL2 image, built on a hosted runner from `scripts/wsl/build-image.sh` for this run's `wsl-register` or
+  # `wsl-proofs` (proof 5's rebuild): the image, and its manifest alone, as this run's artifacts. Hosted, so the
+  # shell is bash; the build prints the manifest's hash against the pin, and fails if a pin is set and differs.
+  #
+  # The Actions cache (R-1004): the key is `wsl-image-` and the recipe key, computed as `wsl.ps1`'s `Get-RecipeKey`
+  # computes it, from the same files in the same order, so a recipe has one key here and on the PC. The step restores in
+  # every run, with no restore keys, since another recipe's image is never this one's. On a hit the build is skipped,
+  # except for `wsl-proofs`, which always builds (proof 5, R-1004's (i)); a hit was saved by a build of this recipe, its
+  # pin included, which passed the pin's check. The save runs only on a miss in a `wsl-register` dispatch on `main`,
+  # after the build passed, never on a pull request (no trigger here has one) or a push. The cache needs no permission
+  # beyond the workflow's `contents: read`.
+  wsl-image:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && (inputs.only == 'wsl-register' || inputs.only == 'wsl-proofs')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: The recipe key
+        id: recipe
+        run: |
+          files=(scripts/wsl/build-image.sh scripts/wsl/manifest.sh scripts/wsl/wsl.conf scripts/wsl/manifest.sha256 rust-toolchain.toml)
+          key=$({ echo 'principia-wsl recipe 1'; for f in "${files[@]}"; do echo "$f $(sha256sum "$f" | cut -d ' ' -f 1)"; done; } | sha256sum | cut -d ' ' -f 1)
+          echo "recipe key: $key"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+      - name: The image, from the Actions cache
+        id: cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/wsl-image
+          key: wsl-image-${{ steps.recipe.outputs.key }}
+      - name: scripts/wsl/build-image.sh
+        if: steps.cache.outputs.cache-hit != 'true' || inputs.only == 'wsl-proofs'
+        run: |
+          rm -rf "$RUNNER_TEMP/wsl-image"
+          scripts/wsl/build-image.sh "$RUNNER_TEMP/wsl-image"
+      - name: Keep the build in the Actions cache
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.only == 'wsl-register' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ runner.temp }}/wsl-image
+          key: wsl-image-${{ steps.recipe.outputs.key }}
+      - name: The image
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-image-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-image
+          retention-days: 7
+          compression-level: 0
+          overwrite: true
+      - name: The manifest alone
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-manifest-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-image/manifest.txt
+          retention-days: 90
+          overwrite: true
+
+  # Proof 6's hosted side: at WSL_PARITY_COMMIT, `cargo nextest run -p kernel --profile ci`, as `scripts/wsl/inside.sh
+  # parity` runs it in the distro, its per-test results as this run's artifact. Kernel's tests: deterministic, needing
+  # neither bash nor PyYAML of the test machine, and enough of them to compare one by one. Not CPU only: its GPU harness
+  # tests run on Vulkan, which `inside.sh` selects on both sides, so this job installs lavapipe as `ci.yml`'s test jobs
+  # do and the image does (run 43418528499: without it, 13 GPU tests failed here and passed in the distro).
+  wsl-parity:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-proofs'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Dependencies without debug info, as in the image
+        uses: ./.github/actions/cargo-ci-config
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+      - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
+        timeout-minutes: 8
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
+      - name: Proof 6, the hosted side
+        run: |
+          mkdir -p "$RUNNER_TEMP/wsl-parity"
+          bash scripts/wsl/inside.sh parity "$WSL_PARITY_COMMIT" > "$RUNNER_TEMP/wsl-parity/hosted.tsv"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-parity-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-parity
+          retention-days: 90
+          overwrite: true
+
+  # Registers `principia-wsl` from the cached image of this commit's recipe (`.github/scripts/wsl.ps1 register`), as
+  # gh-runner, its disk under E:\wsl\principia-wsl\, never C:. The step ends `registered principia-wsl: ...` and exit
+  # 0, or exit 125 naming why it refused. Its log says `cache hit` or `cache miss`.
+  #
+  # The image's download gets 25 minutes a try: 1.5 times the slower of the two whole downloads of it on the PC, 15 min
+  # 51.5 s (run 42944409475) and 16 min 27.8 s (run 42954587933), each about 982.8 MB, rounded up to the minute. One
+  # try ended short after 31 min 13 s (run 43128608743) and one hung until the job's limit, 57 min 49 s (run
+  # 43146846084). Run 43312851701's took 12 min 56 s; the limit stays on the slower until the cache's misses time more.
+  # The job's 95 minutes: the 4 minutes the PC has taken to reach the download (3 min 59 s at most), the cache lookup's
+  # 5, the two tries' 50, 5 for the two checks' SHA-256 of the image, and the 31 the old limit of 60 left the
+  # registration after a 25-minute download, which now holds the move into the cache and its check as well. R-988
+  # keeps it, and the registration step's want of a limit of its own, until the job has a completed run: no run on the
+  # PC has yet registered the image, every registration having refused within 2 s or never been reached
+  # (`.github/win-times.md`).
+  wsl-register:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-register'
+    needs: [wsl-image]
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 95
+    concurrency:
+      group: wsl-register
+      cancel-in-progress: false
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: The image cache on E:, there and writable
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 cache-ready
+          exit $LASTEXITCODE
+      - name: This run's recipe, its image in the cache and whole
+        id: cache
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 cache-lookup
+          exit $LASTEXITCODE
+      - name: This run's image
+        id: image
+        timeout-minutes: 25
+        if: steps.cache.outcome != 'success'
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-image-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-image
+      - name: Check this run's image
+        id: image-check
+        if: steps.image.outputs.download-path != ''
+        continue-on-error: true
+        env:
+          WSL_IMAGE: ${{ runner.temp }}/wsl-image
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 check-image
+          exit $LASTEXITCODE
+      - name: This run's image, again if the first download didn't finish whole
+        id: image-again
+        if: steps.image-check.outcome != 'success'
+          && steps.cache.outcome != 'success'
+        timeout-minutes: 25
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-image-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-image
+      - name: Check this run's image again
+        id: image-check-again
+        if: steps.image-again.outputs.download-path != ''
+        continue-on-error: true
+        env:
+          WSL_IMAGE: ${{ runner.temp }}/wsl-image
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 check-image
+          exit $LASTEXITCODE
+      - name: This run's image, never downloaded whole
+        if: steps.image-check.outcome != 'success' && steps.image-check-again.outcome != 'success' && steps.cache.outcome != 'success'
+        run: |
+          Write-Output '::error::download-artifact failed, hung or ended short twice (the image): neither attempt gave an image of the length and SHA-256 built'
+          exit 1
+      - name: Register principia-wsl
+        env:
+          WSL_IMAGE: ${{ runner.temp }}/wsl-image
+          WSL_CACHE_HIT: ${{ steps.cache.outcome }}
+          WSL_REPLACE: ${{ inputs.replace }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run wsl-register powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 register
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-register-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # The six proofs (`.github/scripts/wsl.ps1 proofs`). The step's log, and `wsl-proofs.txt` in the artifact, end with
+  # one line per proof, `proof <n>: PASS|FAIL: <evidence>`, and the job passes only if all six do.
+  wsl-proofs:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-proofs'
+    needs: [wsl-image, wsl-parity]
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 180
+    concurrency:
+      group: wsl-proofs
+      cancel-in-progress: false
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: This run's rebuilt manifest
+        id: manifest
+        timeout-minutes: 5
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-manifest-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-image
+      - name: This run's rebuilt manifest, again if the first download didn't finish
+        id: manifest-again
+        if: steps.manifest.outputs.download-path == ''
+        timeout-minutes: 5
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-manifest-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-image
+      - name: This run's rebuilt manifest, never downloaded
+        if: steps.manifest.outputs.download-path == '' && steps.manifest-again.outputs.download-path == ''
+        run: |
+          Write-Output '::error::download-artifact failed, hung or ended short twice (the rebuilt manifest): neither attempt set download-path'
+          exit 1
+      - name: The hosted runner's parity results
+        id: parity
+        timeout-minutes: 5
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-parity-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-parity
+      - name: The hosted runner's parity results, again if the first download didn't finish
+        id: parity-again
+        if: steps.parity.outputs.download-path == ''
+        timeout-minutes: 5
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-parity-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-parity
+      - name: The hosted runner's parity results, never downloaded
+        if: steps.parity.outputs.download-path == '' && steps.parity-again.outputs.download-path == ''
+        run: |
+          Write-Output '::error::download-artifact failed, hung or ended short twice (the parity results): neither attempt set download-path'
+          exit 1
+      - name: The six proofs
+        env:
+          WSL_IMAGE: ${{ runner.temp }}/wsl-image
+          WSL_HOSTED_PARITY: ${{ runner.temp }}/wsl-parity/hosted.tsv
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run wsl-proofs powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 proofs
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-proofs-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # One named mutation workload inside the distro (`.github/scripts/wsl.ps1 cpu`, `scripts/wsl/inside.sh mutants`),
+  # through `scripts/contain.sh` in its unprivileged mode; its results come out as a tar stream into the artifact. CPU
+  # only: the distro's GPU share is off (`[gpu] enabled=false`), so its Vulkan is lavapipe. It refuses unless
+  # `.github/wsl-cpu-enabled` exists, unless the dispatch names the workload in full, and unless the workload's commits
+  # are the owner's, signed with the pinned key (`inside.sh trust`).
+  wsl-cpu:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-cpu'
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 330
+    concurrency:
+      group: wsl-cpu
+      cancel-in-progress: false
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: The named mutation workload in WSL
+        env:
+          WSL_MUTANTS_COMMIT: ${{ inputs.mutants_commit }}
+          WSL_MUTANTS_BASE: ${{ inputs.mutants_base }}
+          WSL_MUTANTS_PACKAGES: ${{ inputs.mutants_packages }}
+          WSL_MUTANTS_TIMEOUT: ${{ inputs.mutants_timeout }}
+          WSL_MUTANTS_FILTER: ${{ inputs.mutants_filter }}
+          WSL_MUTANTS_JOBS: ${{ inputs.mutants_jobs }}
+          WSL_MUTANTS_SHARD: ${{ inputs.mutants_shard }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run wsl-cpu powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 cpu
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-cpu-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90

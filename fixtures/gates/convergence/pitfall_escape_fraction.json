@@ -1,0 +1,7 @@
+{
+  "description": "Escape fraction as recorded in principia_01_pitfalls.md § 3, ordered coarse → fine per R-171. r = 1.054, 0.242, 0.828: r rises again at the finest step, so it must fail.",
+  "expected": "fail",
+  "strides": [32, 4, 1, 0],
+  "series": [{ "label": "escape fraction", "values": [0.2153, 0.4423, 0.5494, 0.0947] }],
+  "region_count": "not recorded"
+}

@@ -1,0 +1,141 @@
+{
+  "cases": [
+    {
+      "name": "mock_shell",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": [] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_f3_off",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["f3"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_footer",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_warning",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "raise_error", "click_footer"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_manifold_view",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": [] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_compass_slice",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "tab", "tab", "tab", "enter", "arrow_right", "enter", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/corners_edges.json"
+    },
+    {
+      "name": "mock_compass_tilt",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter", "enter", "shift_arrow_up", "shift_arrow_up", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "shift_arrow_up", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "enter", "arrow_left", "enter"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/corners_edges.json"
+    },
+    {
+      "name": "mock_axis_labels",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "enter", "shift_arrow_right", "escape", "escape"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_time",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_right", "shift_arrow_right", "space"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_trajectory_sphere",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_trajectory_unwrapped",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_trajectory_views",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "shift_arrow_right", "escape", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_right"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_overlays_menu",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["alt_1", "tab", "enter", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_tile_bounds",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["alt_1"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_hover",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_present",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter", "tab", "tab", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_compass_cube_slice",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["compass_case_slice"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/mock_compass_cube_slice.json"
+    },
+    {
+      "name": "mock_compass_cube_tilt_0",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["compass_case_tilt_0"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/mock_compass_cube_tilt_0.json"
+    },
+    {
+      "name": "mock_compass_cube_tilt_rect",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["compass_case_tilt_rect"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/mock_compass_cube_tilt_rect.json"
+    },
+    {
+      "name": "mock_compass_cube_tilt_hex",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["compass_case_tilt_hex"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/mock_compass_cube_tilt_hex.json"
+    },
+    {
+      "name": "mock_compass_views",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "enter", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_debug_view",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "enter", "arrow_down", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "mock_invalid": "-0.5,-0.5,0.25,1.5"
+    },
+    {
+      "name": "mock_f3_fit",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "enter", "arrow_down", "arrow_down", "enter", "arrow_right", "enter", "f3"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_compass_plucker",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter", "enter", "shift_arrow_up", "shift_arrow_up", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "shift_arrow_up", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter", "arrow_left", "arrow_left", "arrow_left", "arrow_left", "enter", "arrow_right"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_compass_jacobi",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_compass_shape",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    }
+  ]
+}

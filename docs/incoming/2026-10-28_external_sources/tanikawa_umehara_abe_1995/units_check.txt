@@ -1,0 +1,14 @@
+Tanikawa, Umehara & Abe (1995): which mass unit reproduces the tabulated collision times
+
+point (0.42, 0.4369369): tabulated Time 0.6547, stated pair 2-3
+  m = 1/3 (M = total mass 1): integrator stopped (collision) at t = 1.133987; closest pair 2-3, distance 2.1e-08
+  m = 1 (M = each mass 1): integrator stopped (collision) at t = 0.654709; closest pair 2-3, distance 5.3e-09
+
+point (0.1820201, 0.04): tabulated Time 0.4653, stated pair 2-3
+  m = 1/3 (M = total mass 1): reached the end time at t = 1.611846; closest pair 1-3, distance 2.2e-04
+  m = 1 (M = each mass 1): reached the end time at t = 0.930600; closest pair 1-3, distance 6.0e-04
+
+point (0.3386657, 0.38): tabulated Time 0.6034, stated pair 2-3
+  m = 1/3 (M = total mass 1): integrator stopped (collision) at t = 1.045056; closest pair 2-3, distance 4.9e-09
+  m = 1 (M = each mass 1): integrator stopped (collision) at t = 0.603364; closest pair 2-3, distance 4.9e-09
+

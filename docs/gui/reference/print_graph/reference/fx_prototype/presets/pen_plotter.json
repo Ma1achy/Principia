@@ -1,0 +1,84 @@
+{
+ "name": "Pen plotter",
+ "doc": "Evenly spaced streamlines in fineliners, closer where darker, crossed in the shadows.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "L": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "stretch(blur(lum(I), 1.0))"
+   }
+  },
+  "T": {
+   "op": "mono_tone",
+   "in": {
+    "image": "src",
+    "L": "L"
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 6
+   }
+  },
+  "mtx": {
+   "op": "expr",
+   "in": {
+    "tx": "f.tx"
+   },
+   "p": {
+    "f": "-tx"
+   }
+  },
+  "la": {
+   "op": "streamlines",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty",
+    "density": "T"
+   },
+   "p": {
+    "dmin": 2.2,
+    "dmax": 10.0,
+    "tmin": 0.06,
+    "seed": "$seed",
+    "maxlen": 500,
+    "minlen": 8
+   }
+  },
+  "lb": {
+   "op": "streamlines",
+   "in": {
+    "tx": "f.ty",
+    "ty": "mtx",
+    "density": "T"
+   },
+   "p": {
+    "dmin": 2.2,
+    "dmax": 10.0,
+    "tmin": 0.6,
+    "seed": "$seed+1",
+    "maxlen": 500,
+    "minlen": 8
+   }
+  },
+  "out": {
+   "op": "pen_draw",
+   "in": {
+    "image": "src",
+    "lines_a": "la",
+    "lines_b": "lb"
+   }
+  }
+ },
+ "out": "out"
+}

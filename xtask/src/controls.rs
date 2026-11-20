@@ -1,0 +1,963 @@
+//! `cargo xtask controls` (REQ-VAL-147): every test in a crate that declares the `controls` feature has a negative
+//! control, registered with `validation::negative_control!(test_name, "description", expected = "message", control)`,
+//! and every control makes its test fail by panicking with its expected message (philosophy §4.4; pitfalls §9;
+//! R-212). A crate without the feature is skipped and reported, not failed
+//! (R-176). Tests and controls are paired by the name in the macro call (R-199), across all of a crate's test
+//! targets, so a control in `tests/` pairs with a unit test in `src/` (R-201). It runs in `cargo xtask ci`, on every
+//! push (R-177, R-198). With `--list` it lists each test's controls and runs none (R-226).
+//!
+//! Applied per R-204, pending a veto: within a crate, a control covers exactly one test, so tests sharing a name
+//! need a control each; and a doctest, which `negative_control!` cannot name, counts as a test without a control.
+
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
+use std::path::Path;
+use std::process::{Command, Output};
+
+use serde::Deserialize;
+
+use crate::deps::cargo;
+
+/// The feature under which `negative_control!` compiles its controls (R-176).
+pub const FEATURE: &str = "controls";
+
+/// The last path segment of the test `negative_control!` generates, under a module named for its test. The name is
+/// reserved in a crate that declares the feature: a listing carries no mark of the macro, so a hand-written test
+/// whose path ends in `::negative_control` is read as a control of its parent module's name.
+pub const CONTROL_FN: &str = "negative_control";
+
+/// A test the command fails on, by the test's full name as libtest lists it.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Finding {
+    /// No `negative_control!` names the test.
+    NoControl(String),
+    /// A control named for the test ran and did not make it fail.
+    ControlPasses(String),
+    /// A control named for the test panicked, but not with the message it expects (R-212), so it did not trip the
+    /// test's check. `note` is libtest's: the panic message and the expected substring.
+    WrongPanic {
+        /// The test's full name.
+        test: String,
+        /// libtest's note on the panic.
+        note: String,
+    },
+    /// A doctest, which `negative_control!` cannot name, so it has no control (applied per R-204).
+    Doctest(String),
+    /// Tests sharing the last path segment `name` are listed more times across the crate's targets than controls
+    /// named `name` are: each test needs its own control (applied per R-204).
+    Collision {
+        /// The shared name, as `negative_control!` names it.
+        name: String,
+        /// The distinct full names of the tests that share it.
+        tests: Vec<String>,
+        /// How many times tests of that name are listed, counting each target's listing.
+        listings: usize,
+        /// How many controls named `name` are listed.
+        controls: usize,
+    },
+}
+
+impl Finding {
+    /// How many tests the finding leaves without a control that makes them fail.
+    pub fn tests(&self) -> usize {
+        match self {
+            Finding::Collision {
+                listings, controls, ..
+            } => listings - controls,
+            _ => 1,
+        }
+    }
+}
+
+impl fmt::Display for Finding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Finding::NoControl(test) => write!(
+                f,
+                "test `{test}` has no control: no `negative_control!` names it (REQ-VAL-147, R-199)"
+            ),
+            Finding::ControlPasses(test) => write!(
+                f,
+                "test `{test}`: its control did not make it fail, so the test may not be able to (philosophy §4.4)"
+            ),
+            Finding::WrongPanic { test, note } => write!(
+                f,
+                "test `{test}`: its control did not make it fail (philosophy §4.4): it panicked without its \
+                 expected message (R-212): {note}"
+            ),
+            Finding::Doctest(test) => write!(
+                f,
+                "doctest `{test}` has no control: `negative_control!` cannot name a doctest (REQ-VAL-147)"
+            ),
+            Finding::Collision {
+                name,
+                tests,
+                listings,
+                controls,
+            } => write!(
+                f,
+                "tests `{}` share the name `{name}`: listed {listings} time(s), but {controls} control(s) name \
+                 `{name}`, and each test needs its own (REQ-VAL-147)",
+                tests.join("`, `")
+            ),
+        }
+    }
+}
+
+/// The test a listed name is the control of, when it is one: `<path>::<test>::negative_control` gives `<test>`.
+pub fn control_of(name: &str) -> Option<&str> {
+    let module = name.strip_suffix(CONTROL_FN)?.strip_suffix("::")?;
+    module.rsplit("::").next()
+}
+
+/// The test names in the output of libtest's `--list`, across every target (`<name>: test` lines).
+pub fn parse_list(stdout: &str) -> Vec<String> {
+    stdout
+        .lines()
+        .filter_map(|line| line.strip_suffix(": test"))
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Each test libtest reports in `stdout`, and whether it passed, once per run of it. A crate's test targets are
+/// separate binaries, so one name can run in several of them (two targets each registering
+/// `negative_control!(doubles, ...)`); each run keeps its own outcome, in the order reported. A control is
+/// `#[should_panic]`, so it passes when it makes its test's check fail.
+pub fn parse_results(stdout: &str) -> BTreeMap<String, Vec<bool>> {
+    let mut results: BTreeMap<String, Vec<bool>> = BTreeMap::new();
+    for line in stdout.lines() {
+        let Some((name, outcome)) = line
+            .strip_prefix("test ")
+            .and_then(|rest| rest.rsplit_once(" ... "))
+        else {
+            continue;
+        };
+        let name = name.strip_suffix(" - should panic").unwrap_or(name);
+        results
+            .entry(name.to_owned())
+            .or_default()
+            .push(outcome == "ok");
+    }
+    results
+}
+
+/// The controls libtest reports in `stdout` as panicking without their expected message (R-212), each with libtest's
+/// note: the panic message and the expected substring, on one line.
+///
+/// libtest appends that note to the end of the failing test's output, so a control's note is the last three lines of
+/// its output as [`parse_outputs`] reads it: its section runs only to libtest's own next header, and a `---- x stdout
+/// ----` line, or a note, inside the control's output (a child's report it embeds) stays in that control's section
+/// (REQ-SYS-069).
+pub fn parse_wrong_panics(stdout: &str) -> BTreeMap<String, String> {
+    let mut found = BTreeMap::new();
+    for (name, outputs) in parse_outputs(stdout) {
+        for output in outputs {
+            let lines: Vec<&str> = output.lines().collect();
+            if let [.., note, message, expected] = lines[..] {
+                if note == "note: panic did not contain expected string" {
+                    found.insert(
+                        name.clone(),
+                        format!("{} {}", message.trim(), expected.trim()),
+                    );
+                }
+            }
+        }
+    }
+    found
+}
+
+/// `found` with each `ControlPasses` whose test has a control in `wrong` (by [`parse_wrong_panics`]) reported as
+/// `WrongPanic` with that control's note.
+pub fn name_wrong_panics(found: Vec<Finding>, wrong: &BTreeMap<String, String>) -> Vec<Finding> {
+    found
+        .into_iter()
+        .map(|finding| {
+            let Finding::ControlPasses(test) = finding else {
+                return finding;
+            };
+            let short = test.rsplit("::").next().unwrap_or(&test);
+            match wrong
+                .iter()
+                .find(|(control, _)| control_of(control) == Some(short))
+            {
+                Some((_, note)) => Finding::WrongPanic {
+                    test,
+                    note: note.clone(),
+                },
+                None => Finding::ControlPasses(test),
+            }
+        })
+        .collect()
+}
+
+/// Each test libtest reports failing in `stdout`, with its own output: the lines under its `---- <name> stdout ----`
+/// header, up to the next header or libtest's closing list of failures. A name failing in several targets keeps
+/// each output.
+///
+/// A test's output can itself hold libtest's lines (a control that embeds a child's `cargo test` report), so a
+/// boundary is taken only where it is libtest's own, for the target being read: a header names a test that target
+/// reported `FAILED` and not yet given a header, and the closing list is a `failures:` line followed by exactly the
+/// names that target reported `FAILED`, sorted, then a blank line and `test result:`. A target's `FAILED` names are
+/// dropped at its `test result:` or, if it died before printing one, at the next target's `running <n> tests`.
+pub fn parse_outputs(stdout: &str) -> BTreeMap<String, Vec<String>> {
+    let lines: Vec<&str> = stdout.lines().collect();
+    let mut blocks: Vec<(&str, String)> = Vec::new();
+    // The tests the current target reported failing, and those of them still without a header.
+    let mut failed: Vec<&str> = Vec::new();
+    let mut pending: Vec<&str> = Vec::new();
+    let mut in_outputs = false;
+    let mut open = false;
+    for (at, line) in lines.iter().enumerate() {
+        if !in_outputs {
+            if let Some((name, "FAILED")) = line
+                .strip_prefix("test ")
+                .and_then(|rest| rest.rsplit_once(" ... "))
+            {
+                failed.push(name.strip_suffix(" - should panic").unwrap_or(name));
+            } else if *line == "failures:" && !failed.is_empty() {
+                failed.sort_unstable();
+                pending = failed.clone();
+                in_outputs = true;
+                open = false;
+            } else if line.starts_with("test result:") || starts_target(line) {
+                // A target that dies mid-run (abort, stack overflow, signal) prints no `test result:`, so its
+                // `FAILED` names are dropped when the next target starts too.
+                failed.clear();
+            }
+            continue;
+        }
+        if let Some(i) = line
+            .strip_prefix("---- ")
+            .and_then(|rest| rest.strip_suffix(" stdout ----"))
+            .and_then(|name| pending.iter().position(|p| *p == name))
+        {
+            blocks.push((pending.remove(i), String::new()));
+            open = true;
+        } else if *line == "failures:" && closes(&lines[at + 1..], &failed) {
+            in_outputs = false;
+            open = false;
+            failed.clear();
+        } else if let (true, Some((_, output))) = (open, blocks.last_mut()) {
+            output.push_str(line);
+            output.push('\n');
+        }
+    }
+    let mut found: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for (name, output) in blocks {
+        let output = output.trim().to_owned();
+        found.entry(name.to_owned()).or_default().push(output);
+    }
+    found
+}
+
+/// Whether `line` is libtest's first line for a target: `running <n> test` or `running <n> tests`.
+fn starts_target(line: &str) -> bool {
+    line.strip_prefix("running ")
+        .and_then(|rest| {
+            rest.strip_suffix(" tests")
+                .or_else(|| rest.strip_suffix(" test"))
+        })
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// Whether `rest`, the lines after a `failures:` line, is libtest's closing list for a target whose failing tests are
+/// `failed` (sorted): one `    <name>` line for each, then a blank line and the `test result:` line.
+fn closes(rest: &[&str], failed: &[&str]) -> bool {
+    let n = failed.len();
+    rest.len() > n + 1
+        && rest[..n]
+            .iter()
+            .zip(failed)
+            .all(|(line, name)| line.strip_prefix("    ") == Some(*name))
+        && rest[n].is_empty()
+        && rest[n + 1].starts_with("test result:")
+}
+
+/// The message of `finding`; for a control that did not make its test fail (`ControlPasses`, `WrongPanic`), followed
+/// by the output of each control named for the test that libtest reports failing, by [`parse_outputs`] (R-236,
+/// R-244), so the cause is kept.
+pub fn describe(finding: &Finding, outputs: &BTreeMap<String, Vec<String>>) -> String {
+    let (Finding::ControlPasses(test) | Finding::WrongPanic { test, .. }) = finding else {
+        return finding.to_string();
+    };
+    let short = test.rsplit("::").next().unwrap_or(test);
+    let mut message = finding.to_string();
+    let mut shown = false;
+    for (control, runs) in outputs.iter().filter(|(c, _)| control_of(c) == Some(short)) {
+        for output in runs {
+            message.push_str(&format!("\n--- output of control `{control}`:\n{output}"));
+            shown = true;
+        }
+    }
+    if !shown {
+        message.push_str("\n--- libtest reported no output for its control");
+    }
+    message
+}
+
+/// Pairs each listed test with the controls named for it, by the test's last path segment (R-199, R-201), and
+/// returns the tests with no control, with a control that `results` shows passing, or sharing their name with more
+/// tests than there are controls of it (each listing of a test needs a listing of its own control). Every run of
+/// every paired control is judged on its own: one leaky control fails its test, whatever a control of the same name
+/// in another target does. A name listed in several targets is reported once. `Err` when a paired control has fewer
+/// results than it was listed.
+pub fn findings(
+    listed: &[String],
+    results: &BTreeMap<String, Vec<bool>>,
+) -> Result<Vec<Finding>, String> {
+    let mut controls: Vec<(&str, &String, usize)> = Vec::new();
+    for name in listed {
+        let Some(of) = control_of(name) else { continue };
+        match controls.iter_mut().find(|(_, control, _)| *control == name) {
+            Some((_, _, count)) => *count += 1,
+            None => controls.push((of, name, 1)),
+        }
+    }
+    // The tests by last path segment, in the order first listed: the distinct full names, and the listings.
+    let mut groups: Vec<(&str, Vec<&String>, usize)> = Vec::new();
+    for name in listed.iter().filter(|name| control_of(name).is_none()) {
+        let short = name.rsplit("::").next().unwrap_or(name);
+        match groups.iter_mut().find(|(of, _, _)| *of == short) {
+            Some((_, names, listings)) => {
+                *listings += 1;
+                if !names.contains(&name) {
+                    names.push(name);
+                }
+            }
+            None => groups.push((short, vec![name], 1)),
+        }
+    }
+    let mut found = Vec::new();
+    for (short, names, listings) in groups {
+        let paired: Vec<_> = controls.iter().filter(|(of, _, _)| *of == short).collect();
+        let registered: usize = paired.iter().map(|(_, _, count)| count).sum();
+        if registered == 0 {
+            found.extend(names.iter().map(|name| Finding::NoControl((*name).clone())));
+        } else if listings > registered {
+            found.push(Finding::Collision {
+                name: short.to_owned(),
+                tests: names.iter().map(|name| (*name).clone()).collect(),
+                listings,
+                controls: registered,
+            });
+        }
+        let mut leaks = false;
+        for (_, control, count) in paired {
+            let runs = results.get(*control).map_or(&[][..], Vec::as_slice);
+            if runs.len() < *count {
+                let tests = names.iter().map(|name| name.as_str()).collect::<Vec<_>>();
+                return Err(format!(
+                    "the control `{control}` of test `{}` did not run",
+                    tests.join("`, `")
+                ));
+            }
+            leaks |= runs.iter().any(|passed| !passed);
+        }
+        if leaks {
+            found.extend(
+                names
+                    .iter()
+                    .map(|name| Finding::ControlPasses((*name).clone())),
+            );
+        }
+    }
+    Ok(found)
+}
+
+#[derive(Deserialize)]
+struct Metadata {
+    packages: Vec<Package>,
+}
+
+#[derive(Deserialize)]
+struct Package {
+    name: String,
+    features: BTreeMap<String, Vec<String>>,
+    targets: Vec<Target>,
+}
+
+#[derive(Deserialize)]
+struct Target {
+    doctest: bool,
+}
+
+/// What [`run`] does with each crate's controls.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Mode {
+    /// Runs every control and judges its run.
+    Run,
+    /// Lists each test with the controls named for it, and fails only on what the listing shows (a test with no
+    /// control, a shared name, a doctest); runs no control (`--list`, R-226).
+    List,
+}
+
+/// Each listed test with each control named for it (R-199, R-201), once per pair, sorted.
+pub fn pairs(listed: &[String]) -> BTreeSet<(&str, &str)> {
+    let mut found = BTreeSet::new();
+    for test in listed.iter().filter(|name| control_of(name).is_none()) {
+        let short = test.rsplit("::").next().unwrap_or(test);
+        for control in listed.iter().filter(|name| control_of(name) == Some(short)) {
+            found.insert((test.as_str(), control.as_str()));
+        }
+    }
+    found
+}
+
+/// Results in which every listed control made its test fail on each listing, so that [`findings`] reports only what
+/// the listing shows (`--list`).
+pub fn as_tripped(listed: &[String]) -> BTreeMap<String, Vec<bool>> {
+    let mut results: BTreeMap<String, Vec<bool>> = BTreeMap::new();
+    for control in listed.iter().filter(|name| control_of(name).is_some()) {
+        results.entry(control.clone()).or_default().push(true);
+    }
+    results
+}
+
+/// The controls no `--partition` shard runs: `ci.yml`'s `ci-workspace` job runs them, in a step of their own, under
+/// `cargo nextest run --features controls`, as the test each one faults does. A control is `#[should_panic]`, so one
+/// that does not make its test fail, or panics without its expected message (R-212), fails that step.
+///
+/// These are the controls in `xtask/tests/nextest.rs` that list the workspace in its default feature set, which is the
+/// build `ci-workspace` has for their tests. A shard builds only `--features controls`, per package, so in `xtask-ci
+/// (2)` and `(4)` these three cost a second whole build of the workspace's tests, 48 GB of the 92 GB in
+/// `target/debug/deps` (run 41756812074). The unpartitioned run, which the gate and nightly workflows use, runs them
+/// with every other control. `xtask/tests/nextest.rs` checks this list against `ci.yml`'s step. Applied per R-369.
+pub const IN_CI_WORKSPACE: [&str; 3] = [
+    "nextest_ci_steps_list_every_test_cargo_test_listed_without_features::negative_control",
+    "nextest_ci_shards_together_list_every_test::negative_control",
+    "nextest_ci_steps_list_every_test_under_their_profiles::negative_control",
+];
+
+/// The k-th of n slices of the controls, `--partition k/n` (R-360): a control is in the slice its name's
+/// [`shard_of`] gives, so the n slices together hold every control exactly once. A shard runs its slice but for
+/// [`IN_CI_WORKSPACE`] ([`Partition::runs`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Partition {
+    /// The slice, 1 to `n`.
+    pub k: u64,
+    /// How many slices.
+    pub n: u64,
+}
+
+impl Partition {
+    /// Every control: the one slice of one.
+    pub const ALL: Partition = Partition { k: 1, n: 1 };
+
+    /// `k/n`, with 1 ≤ k ≤ n.
+    pub fn parse(text: &str) -> Result<Partition, String> {
+        let parsed = text
+            .split_once('/')
+            .and_then(|(k, n)| Some((k.parse().ok()?, n.parse().ok()?)));
+        match parsed {
+            Some((k, n)) if (1..=n).contains(&k) => Ok(Partition { k, n }),
+            _ => Err(format!(
+                "--partition takes k/n, with 1 <= k <= n, not `{text}`"
+            )),
+        }
+    }
+
+    /// Whether the control named `control`, as libtest lists it, is in this slice.
+    pub fn holds(&self, control: &str) -> bool {
+        shard_of(control, self.n) == self.k
+    }
+
+    /// Whether a run of this slice runs the control named `control`: it is in the slice, and either the run is the
+    /// unpartitioned one or `ci-workspace` does not run the control ([`IN_CI_WORKSPACE`]).
+    pub fn runs(&self, control: &str) -> bool {
+        self.holds(control) && (*self == Partition::ALL || !IN_CI_WORKSPACE.contains(&control))
+    }
+}
+
+impl fmt::Display for Partition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{}", self.k, self.n)
+    }
+}
+
+/// The slice, 1 to `n`, of the control named `control`: 64-bit FNV-1a over the name's bytes, mod `n`, plus one. A
+/// fixed function of the name, the same on every run, machine and Rust version (R-360); never by crate.
+pub fn shard_of(control: &str, n: u64) -> u64 {
+    let hash = control
+        .bytes()
+        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+            (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+        });
+    hash % n + 1
+}
+
+/// Runs the check in `mode` on every member of the workspace of `manifest`; `Err` if any test fails it.
+pub fn run(manifest: &Path, mode: Mode) -> Result<(), String> {
+    run_partition(manifest, mode, Partition::ALL)
+}
+
+/// [`run`] on the controls in `partition` (R-360). Every shard lists every test, and runs, or in `--list` lists, only
+/// its own slice's controls, less those `ci-workspace` runs ([`Partition::runs`]). Each finding is reported by one shard: a control's run by the shard that ran it, and what
+/// the listing shows (a test with no control, a shared name, a doctest) by shard 1, which also runs `cargo xtask ci`'s
+/// other runners.
+pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Result<(), String> {
+    let output = Command::new(cargo())
+        .args([
+            "metadata",
+            "--no-deps",
+            "--format-version",
+            "1",
+            "--manifest-path",
+        ])
+        .arg(manifest)
+        .output()
+        .map_err(|e| format!("cannot run cargo metadata: {e}"))?;
+    let stdout = succeeded("cargo metadata", output)?;
+    let metadata: Metadata =
+        serde_json::from_str(&stdout).map_err(|e| format!("cannot parse cargo metadata: {e}"))?;
+    let resolution = Resolution::of(mode, std::env::var_os(IN_RUN).is_some());
+    let mut failed = 0;
+    for package in &metadata.packages {
+        let name = &package.name;
+        if !package.features.contains_key(FEATURE) {
+            println!("xtask controls: {name}: skipped: it declares no `{FEATURE}` feature (R-176)");
+            continue;
+        }
+        let listed = parse_list(&succeeded(
+            "cargo test -- --list",
+            cargo_test(manifest, mode, resolution, name, "--tests", &["--list"])?,
+        )?);
+        // Doctests are tests of the crate that no `negative_control!` can name (applied per R-204).
+        let doctests = if package.targets.iter().any(|target| target.doctest) {
+            parse_list(&succeeded(
+                "cargo test --doc -- --list",
+                cargo_test(manifest, mode, resolution, name, "--doc", &["--list"])?,
+            )?)
+        } else {
+            Vec::new()
+        };
+        let tests = listed.iter().filter(|t| control_of(t).is_none()).count();
+        let mut outputs = BTreeMap::new();
+        // This shard's controls, once each, and every other's, which that shard, or `ci-workspace`, runs and judges.
+        let (mine, others): (BTreeSet<&String>, BTreeSet<&String>) = listed
+            .iter()
+            .filter(|t| control_of(t).is_some())
+            .partition(|t| partition.runs(t));
+        if partition != Partition::ALL {
+            println!(
+                "xtask controls: {name}: shard {partition}: {} of {} control(s)",
+                mine.len(),
+                mine.len() + others.len()
+            );
+        }
+        let elsewhere: Vec<String> = listed
+            .iter()
+            .filter(|t| others.contains(t))
+            .cloned()
+            .collect();
+        let mut found = match mode {
+            Mode::Run => {
+                let mut results = as_tripped(&elsewhere);
+                let stdout = if partition == Partition::ALL {
+                    // Runs the tests whose names contain `negative_control`: every control, and none when there are
+                    // none.
+                    let output =
+                        cargo_test(manifest, mode, resolution, name, "--tests", &[CONTROL_FN])?;
+                    String::from_utf8_lossy(&output.stdout).into_owned()
+                } else if mine.is_empty() {
+                    String::new()
+                } else {
+                    // This shard's controls by exact name; with no name libtest would run every test.
+                    let mut harness = vec!["--exact"];
+                    harness.extend(mine.iter().map(|c| c.as_str()));
+                    let output = cargo_test(manifest, mode, resolution, name, "--tests", &harness)?;
+                    String::from_utf8_lossy(&output.stdout).into_owned()
+                };
+                results.extend(parse_results(&stdout));
+                let found = findings(&listed, &results).map_err(|e| format!("{name}: {e}"))?;
+                outputs = parse_outputs(&stdout);
+                name_wrong_panics(found, &parse_wrong_panics(&stdout))
+            }
+            Mode::List => {
+                for (test, control) in pairs(&listed) {
+                    if partition.runs(control) {
+                        println!("xtask controls: {name}: test `{test}`: control `{control}`");
+                    }
+                }
+                findings(&listed, &as_tripped(&listed)).map_err(|e| format!("{name}: {e}"))?
+            }
+        };
+        found.extend(doctests.into_iter().map(Finding::Doctest));
+        if partition.k != 1 {
+            found.retain(|f| matches!(f, Finding::ControlPasses(_) | Finding::WrongPanic { .. }));
+        }
+        for finding in &found {
+            eprintln!("xtask controls: {name}: {}", describe(finding, &outputs));
+        }
+        if found.is_empty() {
+            match mode {
+                Mode::Run if partition != Partition::ALL => println!(
+                    "xtask controls: {name}: shard {partition}'s {} control(s) each failed its test{}",
+                    mine.len(),
+                    if partition.k == 1 {
+                        format!("; {tests} test(s), each with a control")
+                    } else {
+                        String::new()
+                    }
+                ),
+                Mode::Run => {
+                    println!("xtask controls: {name}: {tests} test(s), each failed by its control")
+                }
+                Mode::List => println!(
+                    "xtask controls: {name}: {tests} test(s), each with a control; none run (--list)"
+                ),
+            }
+        }
+        failed += found.iter().map(Finding::tests).sum::<usize>();
+    }
+    if failed == 0 {
+        return Ok(());
+    }
+    Err(format!(
+        "{failed} test(s) without a control that makes them fail (REQ-VAL-147)"
+    ))
+}
+
+/// The cargo arguments that resolve the build of whichever package is selected with the features of the whole
+/// workspace: cargo's `workspace` feature unification, an unstable option of the pinned nightly
+/// (`rust-toolchain.toml`, R-169). Without them each package's `cargo test -p <package>` resolves its dependencies'
+/// features over its own graph alone, so the workspace's crates (`engine`, `render`, `validation`, `kernel`, `xtask`)
+/// are built once per package; on a cold target, as in a CI shard run from an archive, that build made
+/// `xtask ci --list` outlast the 600 s timer on its child (R-214, REQ-VAL-156). Applied per R-369.
+pub const WORKSPACE_FEATURES: [&str; 3] = [
+    "-Zfeature-unification",
+    "--config",
+    "resolver.feature-unification=\"workspace\"",
+];
+
+/// The variable [`Mode::Run`] sets on every `cargo test` it runs, so that every `cargo xtask controls --list` its tests
+/// spawn inherits it and resolves as the run does ([`Resolution::of`]).
+pub const IN_RUN: &str = "PRIN_XTASK_CONTROLS_RUN";
+
+/// How the builds of the `cargo test`s [`run_partition`] runs resolve their features.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Resolution {
+    /// Each package's dependencies' features over its own graph, cargo's own resolution, as every other cargo run on
+    /// the workspace resolves them.
+    Package,
+    /// The features of the whole workspace ([`WORKSPACE_FEATURES`]): one build of the workspace's crates for every
+    /// package.
+    Workspace,
+}
+
+impl Resolution {
+    /// The resolution of `mode`'s builds; `in_run` is whether [`IN_RUN`] is set, that is whether a listing runs inside
+    /// a [`Mode::Run`], from one of its tests.
+    ///
+    /// A listing on its own resolves over the workspace: it builds and runs nothing else, so it shares its build with
+    /// nothing, and one build of the workspace's crates is the fast way to it. A run resolves each package as cargo
+    /// does, so its builds are the ones its tests' own cargo runs make (`cargo test -p validation --features controls`
+    /// in validation's `qa_TASK-M0-24`). A listing inside a run resolves as the run, so it reuses the run's builds: one
+    /// resolved apart is a second build of every controls crate's tests, and in `xtask-ci (2)`, which then ran the
+    /// control of `qa_m0_24_every_registered_control_makes_its_test_fail` (`cargo xtask controls --list` on the
+    /// workspace; the test is retired, R-909), that second build ran the runner out of disk (at 04055100); a run resolved over the workspace did the same
+    /// against its tests' per-package builds (at 29111816).
+    pub fn of(mode: Mode, in_run: bool) -> Resolution {
+        match mode {
+            Mode::List if !in_run => Resolution::Workspace,
+            Mode::List | Mode::Run => Resolution::Package,
+        }
+    }
+}
+
+/// `cargo test --features controls <targets> --no-fail-fast` on `package`, with `harness` passed to libtest, resolved
+/// by `resolution`; in [`Mode::Run`], with [`IN_RUN`] set for the tests it runs.
+fn cargo_test(
+    manifest: &Path,
+    mode: Mode,
+    resolution: Resolution,
+    package: &str,
+    targets: &str,
+    harness: &[&str],
+) -> Result<Output, String> {
+    cargo_test_command(manifest, mode, resolution, package, targets, harness)
+        .output()
+        .map_err(|e| format!("cannot run cargo test: {e}"))
+}
+
+/// The command [`cargo_test`] runs.
+fn cargo_test_command(
+    manifest: &Path,
+    mode: Mode,
+    resolution: Resolution,
+    package: &str,
+    targets: &str,
+    harness: &[&str],
+) -> Command {
+    let mut command = Command::new(cargo());
+    command.arg("test");
+    if resolution == Resolution::Workspace {
+        command.args(WORKSPACE_FEATURES);
+    }
+    if mode == Mode::Run {
+        command.env(IN_RUN, "1");
+    }
+    command
+        .arg("--manifest-path")
+        .arg(manifest)
+        .args([
+            "-p",
+            package,
+            "--features",
+            FEATURE,
+            targets,
+            "--no-fail-fast",
+            "--",
+        ])
+        .args(harness);
+    command
+}
+
+/// The stdout of a command that must succeed, or `Err` with its stderr.
+fn succeeded(what: &str, output: Output) -> Result<String, String> {
+    if !output.status.success() {
+        return Err(format!(
+            "{what} failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The output of the control of `tests::t`: a child's libtest report, with its own list of failures (as a control
+    /// embedding a child's `cargo test` report prints), then its panic without its expected message.
+    const OUTPUT: &str = "running 1 test\ntest c::negative_control ... FAILED\n\nfailures:\n\n\
+                          ---- c::negative_control stdout ----\nchild output\n\nfailures:\n    \
+                          c::negative_control\n\ntest result: FAILED. 0 passed; 1 failed\n\n\
+                          thread 't::negative_control' panicked at tests/t.rs:6:36:\nsetup failed\n\
+                          note: panic did not contain expected string\n      panic message: \"setup failed\"\n \
+                          expected substring: \"the check\"";
+
+    /// libtest's report of a run in which the control of `tests::t` printed [`OUTPUT`].
+    fn run() -> String {
+        format!(
+            "running 2 tests\ntest tests::t ... ok\ntest t::negative_control - should panic ... FAILED\n\n\
+             failures:\n\n---- t::negative_control stdout ----\n{OUTPUT}\n\nfailures:\n    \
+             t::negative_control\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered \
+             out; finished in 0.01s\n"
+        )
+    }
+
+    /// R-236, R-244: each finding of a control that did not make its test fail carries that control's output, all of
+    /// it up to libtest's own list of failures, and no longer says it "leaves it passing".
+    fn check_output_kept(stdout: &str) {
+        let output = format!("--- output of control `t::negative_control`:\n{OUTPUT}");
+        let test = "tests::t".to_owned();
+        let note = "the note".to_owned();
+        for finding in [
+            Finding::ControlPasses(test.clone()),
+            Finding::WrongPanic { test, note },
+        ] {
+            let message = describe(&finding, &parse_outputs(stdout));
+            assert!(
+                message.ends_with(&output),
+                "the control's output is not in the message:\n{message}"
+            );
+            assert!(!message.contains("leaves it passing"), "{message}");
+        }
+    }
+
+    /// R-360: the slice is a fixed function of the name, so it cannot move between runs, machines or Rust versions:
+    /// FNV-1a's published 64-bit values, and the slices `k/n` they give.
+    fn check_shard_is_fnv1a(shard: fn(&str, u64) -> u64) {
+        // FNV-1a 64 of "" is 0xcbf29ce484222325, of "a" 0xaf63dc4c8601ec8c, of "foobar" 0x85944171f73967e8.
+        for (name, hash) in [
+            ("", 0xcbf2_9ce4_8422_2325_u64),
+            ("a", 0xaf63_dc4c_8601_ec8c),
+            ("foobar", 0x8594_4171_f739_67e8),
+        ] {
+            for n in [1, 2, 3, 4, 7] {
+                assert_eq!(
+                    shard(name, n),
+                    hash % n + 1,
+                    "the slice of `{name}` of {n} is not FNV-1a's"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn controls_partition_is_fnv1a_of_the_name() {
+        check_shard_is_fnv1a(shard_of);
+    }
+
+    validation::negative_control!(
+        controls_partition_is_fnv1a_of_the_name,
+        "a slice by the name's length, not its hash",
+        expected = "is not FNV-1a's",
+        check_shard_is_fnv1a(|name, n| name.len() as u64 % n + 1)
+    );
+
+    /// `--partition`'s argument: `k/n` with 1 ≤ k ≤ n, and nothing else.
+    fn check_partition_parse(parse: fn(&str) -> Result<Partition, String>) {
+        assert_eq!(parse("2/4"), Ok(Partition { k: 2, n: 4 }));
+        for bad in ["0/4", "5/4", "1/0", "4", "a/4", "1/4/2", ""] {
+            assert!(parse(bad).is_err(), "--partition accepted `{bad}`");
+        }
+    }
+
+    #[test]
+    fn controls_partition_parses_k_of_n() {
+        check_partition_parse(Partition::parse);
+    }
+
+    validation::negative_control!(
+        controls_partition_parses_k_of_n,
+        "a parse that takes any two numbers, a slice 0 among them",
+        expected = "--partition accepted `0/4`",
+        check_partition_parse(|text| {
+            let (k, n) = text.split_once('/').ok_or("no slash")?;
+            let k = k.parse().map_err(|_| "k")?;
+            let n = n.parse().map_err(|_| "n")?;
+            if n == 0 {
+                return Err("n".to_owned());
+            }
+            Ok(Partition { k, n })
+        })
+    );
+
+    /// The arguments of `command`, as text.
+    fn args_of(command: &Command) -> Vec<String> {
+        command
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    /// The `cargo test` of a [`Mode::List`] on its own resolves its features over the whole workspace, so the packages'
+    /// builds share one build of their dependencies: the arguments carry [`WORKSPACE_FEATURES`] as cargo's own, before
+    /// the `--` that starts libtest's.
+    fn check_workspace_features(args: &[String]) {
+        let cargo_args = &args[..args.iter().position(|a| a == "--").unwrap_or(args.len())];
+        assert!(
+            cargo_args
+                .windows(WORKSPACE_FEATURES.len())
+                .any(|w| w == WORKSPACE_FEATURES),
+            "cargo test resolves each package's features over its own graph: {args:?}"
+        );
+    }
+
+    /// The `cargo test` of [`Mode::Run`] resolves each package's features as the rest of the shard's builds do: none of
+    /// [`WORKSPACE_FEATURES`] is among its arguments, so it builds no second, differently featured workspace.
+    fn check_own_features(args: &[String]) {
+        assert!(
+            !args.iter().any(|a| WORKSPACE_FEATURES.contains(&a.as_str())),
+            "the run's cargo test resolves features over the workspace, a second build beside the shard's: {args:?}"
+        );
+    }
+
+    /// The command of `mode` on a package `p`'s tests, with `harness`, run on its own, outside any run.
+    fn command_args(mode: Mode, harness: &[&str]) -> Vec<String> {
+        args_of(&command_of(mode, Resolution::of(mode, false), harness))
+    }
+
+    /// The command of `mode` resolved by `resolution` on a package `p`'s tests, with `harness`.
+    fn command_of(mode: Mode, resolution: Resolution, harness: &[&str]) -> Command {
+        cargo_test_command(
+            Path::new("Cargo.toml"),
+            mode,
+            resolution,
+            "p",
+            "--tests",
+            harness,
+        )
+    }
+
+    #[test]
+    fn controls_list_unifies_features_over_the_workspace() {
+        check_workspace_features(&command_args(Mode::List, &["--list"]));
+    }
+
+    validation::negative_control!(
+        controls_list_unifies_features_over_the_workspace,
+        "the same command with the workspace arguments passed to libtest, after `--`, where cargo never reads them",
+        expected = "cargo test resolves each package's features over its own graph",
+        {
+            let mut args: Vec<String> = command_args(Mode::List, &["--list"])
+                .into_iter()
+                .filter(|a| !WORKSPACE_FEATURES.contains(&a.as_str()))
+                .collect();
+            args.extend(WORKSPACE_FEATURES.map(str::to_owned));
+            check_workspace_features(&args)
+        }
+    );
+
+    #[test]
+    fn controls_run_resolves_each_package_s_own_features() {
+        check_own_features(&command_args(Mode::Run, &["--list"]));
+        check_own_features(&command_args(Mode::Run, &[CONTROL_FN]));
+    }
+
+    validation::negative_control!(
+        controls_run_resolves_each_package_s_own_features,
+        "the run's command with the list's workspace arguments, as at 29111816",
+        expected = "the run's cargo test resolves features over the workspace",
+        {
+            let mut args = command_args(Mode::Run, &[CONTROL_FN]);
+            args.splice(1..1, WORKSPACE_FEATURES.map(str::to_owned));
+            check_own_features(&args)
+        }
+    );
+
+    /// Whether the environment `command` sets holds [`IN_RUN`].
+    fn sets_in_run(command: &Command) -> bool {
+        command
+            .get_envs()
+            .any(|(key, value)| key == IN_RUN && value.is_some())
+    }
+
+    /// A listing spawned by a test of the run `run` (a control running `cargo xtask controls --list`), whose
+    /// environment holds every variable the run's command sets, resolves as the run: its cargo arguments, up to
+    /// libtest's `--`, are the run's, so it builds nothing the run has not.
+    fn check_listing_in_run_resolves_as_run(run: &Command, listing: fn(bool) -> Resolution) {
+        let cargo_args = |args: Vec<String>| -> Vec<String> {
+            args.into_iter().take_while(|a| a != "--").collect()
+        };
+        let resolution = listing(sets_in_run(run));
+        let listed = cargo_args(args_of(&command_of(Mode::List, resolution, &["--list"])));
+        let ran = cargo_args(args_of(run));
+        assert!(
+            listed == ran,
+            "a listing inside the run resolves apart from it, a second build of the workspace beside the run's: \
+             {listed:?} against {ran:?}"
+        );
+    }
+
+    #[test]
+    fn controls_listing_in_a_run_resolves_as_the_run() {
+        for harness in [&[CONTROL_FN][..], &["--exact", "t::negative_control"]] {
+            let run = command_of(Mode::Run, Resolution::of(Mode::Run, false), harness);
+            check_listing_in_run_resolves_as_run(&run, |in_run| Resolution::of(Mode::List, in_run));
+        }
+    }
+
+    validation::negative_control!(
+        controls_listing_in_a_run_resolves_as_the_run,
+        "a listing that resolves over the workspace wherever it runs, as at 04055100",
+        expected = "a listing inside the run resolves apart from it",
+        check_listing_in_run_resolves_as_run(
+            &command_of(Mode::Run, Resolution::Package, &[CONTROL_FN]),
+            |_| Resolution::Workspace
+        )
+    );
+
+    #[test]
+    fn controls_finding_keeps_the_control_output() {
+        check_output_kept(&run());
+    }
+
+    validation::negative_control!(
+        controls_finding_keeps_the_control_output,
+        "the same run with the control's header renamed, so no output is the control's",
+        expected = "the control's output is not in the message",
+        check_output_kept(&run().replace("---- t::", "---- u::"))
+    );
+}

@@ -1,0 +1,259 @@
+# The 32-case integrator matrix (R-165, R-166 (b)).
+# Transcribed from docs/reference/prin-rs/examples/integrator_gallery.rs:138-176 and the gallery list at
+# docs/reference/prin-rs/src/grid.rs:919-1041 (prin-rs 8600d45). The values are copied, not chosen.
+#
+# 32 cases = config_stability + the five Burrau regions + the 26 gallery charts. The slices are defined in
+# fixtures/slices.toml. Result quoted by the contracts: err>10 3915 -> 74 at 8600d45; the original run at 70cfbc4
+# gave 3916 -> 73 (R-165).
+
+[run]
+source = "integrator_gallery.rs:178-183, 220-260"
+resolution = 256                  # default; arg 1
+max_steps = 400000                # arg 4
+refine_flagged = true             # arg 5, default 1
+integrators = ["az", "heggie"]    # both arms run on every case (integrator_gallery.rs:234)
+n_sync_rule = "round(t_max / 0.4), at least 4"
+escape_rule = "closure"
+closure_tau = 1e-3                # src/outcome.rs:263
+closure_k = 1
+# Two passes per case and integrator (integrator_gallery.rs:235-260):
+#   science pass: stop_on_event = true, r_coll = the case's r_coll (outcome counts: escape, coll);
+#   diagnostic pass: stop_on_event = false, r_coll = 0, every trajectory reaches t_max
+#   (drift quantiles, nonfin, err>10).
+
+[metric.err_gt_10]
+source = "integrator_gallery.rs:279; src/ensemble/stats.rs:71-88, 90-108"
+# err>10 counts the diagnostic-pass pixels with error_ratio > 10.
+# error_ratio = sigma_E(t) / sigma_E(0) over the pixel's ensemble energies, where sigma_E = max_dev:
+# the maximum absolute deviation from the median, with a non-finite energy counted as infinite.
+# NaN when sigma_E(0) = 0.
+threshold = 10.0
+
+# ---- The cases, in the order cases() builds them -----------------------------------------------------------
+
+[[case]]
+name = "config_stability"
+slice = "config_stability"        # fixtures/slices.toml
+body = 0
+t_max = 50.0
+r_coll = 0.005
+
+# The five Burrau regions (integrator_gallery.rs:150-165): BodyPlane, half 0.05.
+[[case]]
+name = "near_field"
+slice = "regions.near_field"
+t_max = 13.0
+r_coll = 0.001
+
+[[case]]
+name = "mid_field"
+slice = "regions.mid_field"
+t_max = 13.0
+r_coll = 0.001
+
+[[case]]
+name = "far"
+slice = "regions.far"
+t_max = 13.0
+r_coll = 0.001
+
+[[case]]
+name = "body2_core"
+slice = "regions.body2_core"
+t_max = 13.0
+r_coll = 0.001
+
+[[case]]
+name = "deep_interior"
+slice = "regions.deep_interior"
+t_max = 13.0
+r_coll = 0.001
+
+# The 26 gallery charts (grid.rs:919-1041), each at its own window, body 0, t_max 13, r_coll 0.001.
+# gallery_z0 (grid.rs:920-925), spec order: z_alpha 0.35, z_beta -0.45, z_q [0.25, -0.15, 0.40, 0.05],
+# z_mu [0.20, -0.30].
+# chart forms:
+#   body_plane                      the Burrau BodyPlane chart
+#   plane_for_body(b)               grid.rs:266
+#   shape_at_burrau(phase)          grid.rs:280
+#   latent_axes(z0, i, j)           grid.rs:297: q1 = e_i, q2 = e_j
+#   latent_oblique(z0, a, b)        grid.rs:311: Gram-Schmidt on the seed pair
+#   preset_*                        grid.rs:352-476, through z0 = 0
+
+[gallery_z0]
+z_alpha = 0.35
+z_beta = -0.45
+z_q = [0.25, -0.15, 0.40, 0.05]
+z_mu = [0.20, -0.30]
+
+[[case]]
+name = "body_plane"
+chart = "body_plane"
+centre = [1.0, 3.0]
+half = 0.05
+
+[[case]]
+name = "plane_00deg"
+chart = "plane_for_body(0)"
+centre = [1.0, 3.0]
+half = 0.05
+
+[[case]]
+name = "shape_sphere"
+chart = "shape_at_burrau(0.0)"
+centre = [0.0, 0.0]
+half = 0.05
+
+[[case]]
+name = "latent_shape"
+chart = "latent_axes(gallery_z0, 0, 1)"
+centre = [0.0, 0.0]
+half = 1.5
+
+[[case]]
+name = "latent_inner_p"
+chart = "latent_axes(gallery_z0, 2, 3)"
+centre = [0.0, 0.0]
+half = 1.5
+
+[[case]]
+name = "latent_outer_p"
+chart = "latent_axes(gallery_z0, 4, 5)"
+centre = [0.0, 0.0]
+half = 1.5
+
+[[case]]
+name = "latent_mass"
+chart = "latent_axes(gallery_z0, 6, 7)"
+centre = [0.0, 0.0]
+half = 1.5
+
+[[case]]
+name = "latent_mixed"
+chart = "latent_axes(gallery_z0, 0, 4)"
+centre = [0.0, 0.0]
+half = 1.5
+
+[[case]]
+name = "latent_oblique_a"
+chart = "latent_oblique(gallery_z0, a, b)"
+a = [0.3, -1.2, 0.5, 0.9, -0.4, 0.1, 0.7, -0.6]
+b = [1.1, 0.2, -0.8, 0.3, 0.6, -0.9, 0.15, 0.4]
+centre = [0.0, 0.0]
+half = 1.5
+
+[[case]]
+name = "latent_oblique_b"
+chart = "latent_oblique(gallery_z0, a, b)"
+a = [-0.7, 0.4, 1.0, -0.2, 0.55, 0.8, -0.35, 0.6]
+b = [0.25, 1.3, -0.15, 0.7, -0.9, 0.3, 0.85, -0.4]
+centre = [0.0, 0.0]
+half = 1.5
+
+[[case]]
+name = "burrau_nu_k"
+chart = "burrau_family"
+nu_lo = 0.05
+nu_hi = 0.95
+k_max = 4.0
+gamma_k = 1.5
+centre = [0.5, 0.5]
+half = 0.45
+
+[[case]]
+name = "invariant_lz_k"
+chart = "invariant"
+base = "gallery_z0"
+k_max = 4.0
+gamma_k = 1.5
+report_e = false
+centre = [0.5, 0.5]
+half = 0.45
+
+[[case]]
+name = "mass_simplex"
+chart = "mass_simplex"
+z_alpha = 0.35
+z_beta = -0.45
+z_q = [0.25, -0.15, 0.40, 0.05]
+margin = 0.02
+centre = [0.5, 0.5]
+half = 0.45
+
+[[case]]
+name = "preset_shape"
+chart = "preset_shape"
+centre = [0.0, 0.0]
+half = 3.0
+
+[[case]]
+name = "preset_prho"
+chart = "preset_prho"
+centre = [0.0, 0.0]
+half = 3.0
+
+[[case]]
+name = "preset_plambda"
+chart = "preset_plambda"
+centre = [0.0, 0.0]
+half = 3.0
+
+[[case]]
+name = "preset_shape_pl"
+chart = "preset_shape_pl"
+centre = [0.0, 0.0]
+half = 3.0
+
+[[case]]
+name = "preset_shape_h1"
+chart = "preset_shape"
+centre = [0.0, 0.0]
+half = 1.0
+
+[[case]]
+name = "preset_prho_h1"
+chart = "preset_prho"
+centre = [0.0, 0.0]
+half = 1.0
+
+[[case]]
+name = "preset_plambda_h1"
+chart = "preset_plambda"
+centre = [0.0, 0.0]
+half = 1.0
+
+[[case]]
+name = "preset_shape_pl_h1"
+chart = "preset_shape_pl"
+centre = [0.0, 0.0]
+half = 1.0
+
+[[case]]
+name = "latent_shape_h3"
+chart = "latent_axes(gallery_z0, 0, 1)"
+centre = [0.0, 0.0]
+half = 3.0
+
+[[case]]
+name = "latent_inner_p_h3"
+chart = "latent_axes(gallery_z0, 2, 3)"
+centre = [0.0, 0.0]
+half = 3.0
+
+[[case]]
+name = "latent_outer_p_h3"
+chart = "latent_axes(gallery_z0, 4, 5)"
+centre = [0.0, 0.0]
+half = 3.0
+
+[[case]]
+name = "latent_mass_h3"
+chart = "latent_axes(gallery_z0, 6, 7)"
+centre = [0.0, 0.0]
+half = 3.0
+
+[[case]]
+name = "latent_mixed_h3"
+chart = "latent_axes(gallery_z0, 0, 4)"
+centre = [0.0, 0.0]
+half = 3.0

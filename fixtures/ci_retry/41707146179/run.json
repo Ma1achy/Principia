@@ -1,0 +1,9 @@
+{
+  "conclusion": "failure",
+  "event": "pull_request",
+  "head_branch": "tooling/mutants-check-always",
+  "head_sha": "30466027264871c1967c22eee29d7c39a4070a93",
+  "id": 41707146179,
+  "path": ".github/workflows/ci.yml",
+  "run_attempt": 1
+}

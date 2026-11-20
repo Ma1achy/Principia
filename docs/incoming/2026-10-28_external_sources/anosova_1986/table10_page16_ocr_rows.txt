@@ -1,0 +1,39 @@
+232 J. P. ANOSOVA
+well as their dispersions; the escape time T in units of the crossing time; the relative
+excess energy of the escaper (DE) evaluated with respect to the escape criterion; the
+perimeter p of the configuration triangle at the closest triple approach; and the semi-
+major axis a and eccentricity e of the final binary. Finally, column 9 shows the proportion
+of conditional escape and column 10 contains the assumed value of p*.
+Correlation coefficients between the evolution parameters of 104 triple systems have
+been obtained, and the main ones are shown in Table IX. In particular, there is a strong
+correlation between the values of p and DE, a, and DE. Thus, p and a are also well
+correlated in the sense that close triple approaches produce energetic escapers and small
+final binaries. Results of rotating systems are presented in Table X. Here ko denotes the
+initial virial ratio of kinetic and potential energy, whereas the last two columns contain
+the proportion of final prograde and retrograde orbits of the escapers. It can be seen
+that prograde orbits dominate in cases of fast rotation, whereas retrograde escape is
+more prevalent for slow rotation (ko = 0.1).
+TABLE IX
+The correlation coefficients between the evolution parameters
+Problem (T,п) (DE,P) (DE,a) (p,a) (р,е)
+la +0.875 - 0.464 - 0.693 + 0.679 +0.329
++0.722 - 0.444 - 0.721 + 0.610 + 0.216
++0.865 - 0.462 - 0.803 + 0.601 + 0.229
++0.871 - 0.446 - 0.476 + 0.694 +0.221
+Notes:
+Omax = 0.32 - r.m.s. deviation of the correlation coefficients.
+Ia: plane problem; equal masses; ko = 0, L = 0.
+Ia: plane problem; equal masses; ko # 0, L * 0.
+IIa : three-dimensional problem; equal masses; ko # 0, L ‡ 0.
+IIIb: three-dimensional problem; chance choice of masses and ko.
+TABLE X
+Fraction of the triple systems with prograde
+(Np/N) and retrograde (Nrg/N) motions
+Kо NpIN Nrg/N
+0.1 0.406 0.594
+0.3 0.600 0.400
+0.5 0.644 0.356
+5.3. ESCAPE FROM INITIAL CONFIGURATIONS
+Various studies have demonstrated that small changes of initial conditions can lead to
+widely different outcomes (Anosova, 1969a; Agekian and Anosova, 1974, 1977;
+Standish, 1976). It has been shown (Agekian and Anosova, 1974, 1977) that the region

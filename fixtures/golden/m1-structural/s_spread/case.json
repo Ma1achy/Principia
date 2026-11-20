@@ -1,0 +1,10 @@
+{
+  "render": { "harness": "s_spread", "width": 80, "height": 32 },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass",
+  "lines": {
+    "row_4": { "from": [0, 4], "to": [79, 4] },
+    "row_20": { "from": [0, 20], "to": [79, 20] }
+  }
+}

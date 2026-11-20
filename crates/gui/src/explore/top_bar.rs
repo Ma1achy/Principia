@@ -1,0 +1,331 @@
+//! The top bar (render_gui_spec §G2; 01_main.png; RQ-249, RQ-255): the "principia · dev" wordmark; the menus File,
+//! View, Windows and Help; Overlays ▾ with its count; Run…, Profiler… and Export…, each opening its window (§G5); the
+//! View menu's Home (R-466), F3 hide and reset layout (R-462); the Windows menu listing the registry's seven windows (`crate::windows`);
+//! the mode switch Explore / Stain; the keyboard breadcrumb (§G3); and the status line, in the artboard's format and
+//! order, filled from the snapshot, in egui's `Monospace` (Ubuntu Mono, RQ-251). The top bar is the keyboard's big
+//! scope 1, its controls the sub-scopes Enter reaches, in the order they are drawn; Enter on one acts as its click.
+//! Each menu's entries are the menu's own sub-scopes: Enter opens it on its first entry, the arrows move between
+//! them, Enter on one acts as its click, and Esc closes the menu, back to its control. View holds Home, its first entry,
+//! dimmed while Home has nothing to do (R-466 K8, K11), a separator, F3 hide and, after
+//! it the row F3 fills by: Extend / Fit, two radio options, `ViewUI`'s and so never an edit (R-468 E4), then Debug view,
+//! a check entry: one undoable `SetField` on `RenderState`'s `debug_view` per toggle, as an Overlays ▾ toggle is
+//! (R-467 D5, R-69). The row is a scope of the menu, Enter going into its options, ← → moving between them and Enter on
+//! one choosing it.
+
+use eframe::egui::containers::menu::MenuButton;
+use eframe::egui::{
+    self, Align, Button, Layout as EguiLayout, Rect, Response, RichText, Ui, UiBuilder,
+};
+use engine::contract::render_state::Overlays;
+use engine::contract::set_field::{Edit, RenderField, SetField};
+use engine::contract::snapshot::Snapshot;
+use engine::contract::view_ui::{F3Fill, KeyMode, Mode};
+
+use crate::app::Actions;
+use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
+use crate::keyboard::Keyboard;
+
+/// The top bar's big scope.
+pub const TOP_BAR: ScopeId = "top_bar";
+
+/// The top bar's controls as keyboard scopes, in the order they are drawn: the menus, Overlays ▾, Run…, Profiler…,
+/// Export…, Help, and the mode switch's two sides.
+pub const CONTROLS: [(ScopeId, &str); 10] = [
+    ("file", "File"),
+    ("view", "View"),
+    ("windows", "Windows"),
+    ("overlays", "Overlays ▾"),
+    ("run", "Run…"),
+    ("profiler", "Profiler…"),
+    ("export", "Export…"),
+    ("help", "Help"),
+    ("explore", "Explore"),
+    ("stain", "Stain"),
+];
+
+/// The controls that open a menu.
+const MENUS: [ScopeId; 5] = ["file", "view", "windows", "overlays", "help"];
+
+/// File's Quit.
+pub const QUIT: (ScopeId, &str) = ("file_quit", "Quit");
+/// View's first entry, Home, its shortcut the Home key's (R-466 K8); the key is this entry's Enter wherever the focus is.
+pub const HOME: (ScopeId, &str) = ("view_home", crate::explore::manifold_view::reset::HOME_NAME);
+/// View's entry that hides the layer, as F3 does.
+pub const HIDE: (ScopeId, &str) = ("view_hide", "F3 hide");
+/// View's row that chooses how the figure fills the window with the layer hidden (R-468 E4), after F3 hide.
+pub const FILL_ROW: (ScopeId, &str) = ("view_f3_fill", "F3 fills by:");
+/// The row's option Extend, the default.
+pub const FILL_EXTEND: (ScopeId, &str) = ("view_f3_fill_extend", "Extend");
+/// The row's option Fit.
+pub const FILL_FIT: (ScopeId, &str) = ("view_f3_fill_fit", "Fit");
+/// View's check entry that switches the figure to the debug view (R-467 D5), after the row.
+pub const DEBUG_VIEW: (ScopeId, &str) = ("view_debug", "Debug view");
+/// View's entry that returns every splitter to 01_main.png's layout, after F3 hide (R-462 J3; §G2's View menu).
+pub const RESET_LAYOUT: (ScopeId, &str) = ("view_reset_layout", "reset layout");
+/// Help's entry that opens the `?` shortcuts (RQ-250).
+pub const KEYS: (ScopeId, &str) = ("help_keys", KEYS_ENTRY);
+/// The Windows menu's entries' scopes, one per [`WINDOWS`] name: the registry's, in its order.
+pub const WINDOW_ENTRIES: [ScopeId; 7] = {
+    let mut ids = [""; 7];
+    let mut i = 0;
+    while i < 7 {
+        ids[i] = crate::windows::REGISTRY[i].menu_entry;
+        i += 1;
+    }
+    ids
+};
+
+/// Joins the top bar to `tree` as big scope 1, its controls under it, and each menu's entries under the menu,
+/// Overlays ▾'s toggles, all off and save as default among them (`overlays_menu`).
+pub fn register(tree: &mut ScopeTree) {
+    tree.register(None, Scope::group(TOP_BAR, "Top bar"));
+    for (id, label) in CONTROLS {
+        let scope = if MENUS.contains(&id) {
+            Scope::menu(id, label)
+        } else {
+            Scope::control(id, label)
+        };
+        tree.register(Some(TOP_BAR), scope);
+    }
+    tree.register(Some("file"), Scope::control(QUIT.0, QUIT.1));
+    tree.register(Some("view"), Scope::control(HOME.0, HOME.1));
+    tree.register(Some("view"), Scope::control(HIDE.0, HIDE.1));
+    tree.register(Some("view"), Scope::group(FILL_ROW.0, FILL_ROW.1).row());
+    for option in [FILL_EXTEND, FILL_FIT] {
+        tree.register(Some(FILL_ROW.0), Scope::control(option.0, option.1));
+    }
+    tree.register(Some("view"), Scope::control(DEBUG_VIEW.0, DEBUG_VIEW.1));
+    tree.register(Some("view"), Scope::control(RESET_LAYOUT.0, RESET_LAYOUT.1));
+    for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
+        tree.register(Some("windows"), Scope::control(id, name));
+    }
+    tree.register(Some("help"), Scope::control(KEYS.0, KEYS.1));
+    crate::explore::overlays_menu::register(tree);
+}
+
+/// Enter on control `id`, as its click: the mode switch switches, and a menu's entry acts. A window's opener is the
+/// app's to act on (`crate::windows::opened_by`).
+pub fn activate(id: &str, actions: &mut Actions) {
+    match id {
+        "explore" => actions.mode = Some(Mode::Explore),
+        "stain" => actions.mode = Some(Mode::Stain),
+        id if id == QUIT.0 => actions.quit = true,
+        id if id == HOME.0 => actions.home = true,
+        id if id == HIDE.0 => actions.toggle_layer = true,
+        id if id == FILL_EXTEND.0 => actions.f3_fill = Some(F3Fill::Extend),
+        id if id == FILL_FIT.0 => actions.f3_fill = Some(F3Fill::Fit),
+        id if id == DEBUG_VIEW.0 => actions.debug_view = true,
+        id if id == RESET_LAYOUT.0 => actions.reset_layout = true,
+        id if id == KEYS.0 => actions.shortcuts = true,
+        _ => {}
+    }
+}
+
+/// The Windows menu: the registry's seven windows by their spec names (§G5, §G7, §G8, §G12), each opening its window.
+pub const WINDOWS: [&str; 7] = {
+    let mut names = [""; 7];
+    let mut i = 0;
+    while i < 7 {
+        names[i] = crate::windows::REGISTRY[i].name;
+        i += 1;
+    }
+    names
+};
+
+/// The edit View › Debug view sends to turn the debug view `on` or off: one undoable `SetField` on `RenderState`'s
+/// `debug_view` (R-467 D5; R-69), as an Overlays ▾ toggle is one on the overlay set.
+pub fn debug_view_edit(on: bool) -> SetField {
+    SetField {
+        edit: Edit::Render(RenderField::DebugView(on)),
+        no_history: false,
+    }
+}
+
+/// What an absent value reads (RQ-243).
+pub const ABSENT: &str = "—";
+
+/// How many overlays are on: Overlays ▾'s count (§G2).
+pub fn overlays_on(overlays: &Overlays) -> u32 {
+    crate::explore::overlays_menu::count_on(overlays)
+}
+
+/// `n` with its thousands grouped by spaces, as 01_main.png's "1 842 quads".
+pub fn grouped(n: u64) -> String {
+    let digits = n.to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(' ');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// The status line: "t 12.40 · 60 fps · 4.1 ms · 1 842 quads · undo 2 / redo 0 · F3 hide", "—" for each absent value
+/// (render_gui_spec §G2's list; RQ-255).
+pub fn status_line(snapshot: &Snapshot) -> String {
+    let frame = &snapshot.frame;
+    let or_absent = |v: Option<String>| v.unwrap_or_else(|| ABSENT.to_owned());
+    format!(
+        "t {:.2} · {} fps · {} ms · {} quads · undo {} / redo {} · F3 hide",
+        snapshot.render.playhead.t,
+        or_absent(frame.fps.map(|f| format!("{f:.0}"))),
+        or_absent(frame.frame_ms.map(|m| format!("{m:.1}"))),
+        or_absent(frame.quad_count.map(grouped)),
+        snapshot.history.undo_depth,
+        snapshot.history.redo_depth,
+    )
+}
+
+/// What the top bar shows besides the snapshot.
+pub struct TopBar<'a> {
+    /// The mode switch's mode.
+    pub mode: Mode,
+    /// The keyboard breadcrumb.
+    pub breadcrumb: &'a str,
+    /// The keyboard's mode, which the breadcrumb's colour shows (R-409 A6).
+    pub keys: KeyMode,
+    /// How the figure fills the window with the layer hidden, which View's row marks.
+    pub f3_fill: F3Fill,
+    /// Why View › Home is dimmed, while it is (R-466 K3, K11).
+    pub home_dimmed: Option<&'static str>,
+}
+
+/// Draws the top bar in `rect`, recording what its controls ask for in `actions` and where they are in `keyboard`.
+pub fn show(
+    ui: &mut Ui,
+    rect: Rect,
+    snapshot: &Snapshot,
+    bar_state: &TopBar<'_>,
+    keyboard: &mut Keyboard,
+    actions: &mut Actions,
+) {
+    let mode = bar_state.mode;
+    keyboard.place(TOP_BAR, rect);
+    ui.painter().rect_filled(rect, 0.0, ui.visuals().panel_fill);
+    let inner = rect.shrink2(egui::vec2(8.0, 0.0));
+    let mut bar = ui.new_child(
+        UiBuilder::new()
+            .max_rect(inner)
+            .layout(EguiLayout::left_to_right(Align::Center)),
+    );
+    let menu = |ui: &mut Ui, name: &str, content: &mut dyn FnMut(&mut Ui)| -> Response {
+        MenuButton::from_button(Button::new(name).frame(false))
+            .ui(ui, |ui| content(ui))
+            .0
+    };
+    bar.label(RichText::new("principia · dev").strong());
+    let file = menu(&mut bar, "File", &mut |ui| {
+        let quit = ui.button(QUIT.1);
+        if quit.clicked() {
+            actions.quit = true;
+        }
+        keyboard.place_widget(QUIT.0, &quit);
+    });
+    keyboard.place_widget("file", &file);
+    let view = menu(&mut bar, "View", &mut |ui| {
+        let home = ui
+            .add_enabled(
+                bar_state.home_dimmed.is_none(),
+                Button::new(HOME.1).shortcut_text(HOME.1),
+            )
+            .on_disabled_hover_text(bar_state.home_dimmed.unwrap_or_default());
+        if home.clicked() {
+            actions.home = true;
+            ui.close();
+        }
+        keyboard.place_widget(HOME.0, &home);
+        ui.separator();
+        let hide = ui.button(HIDE.1);
+        if hide.clicked() {
+            actions.toggle_layer = true;
+        }
+        keyboard.place_widget(HIDE.0, &hide);
+        let row = ui.horizontal(|ui| {
+            ui.label(FILL_ROW.1);
+            for (option, this) in [(FILL_EXTEND, F3Fill::Extend), (FILL_FIT, F3Fill::Fit)] {
+                let radio = ui.radio(bar_state.f3_fill == this, option.1);
+                if radio.clicked() {
+                    actions.f3_fill = Some(this);
+                }
+                keyboard.place_widget(option.0, &radio);
+            }
+        });
+        keyboard.place_widget(FILL_ROW.0, &row.response);
+        // A check entry: it shows the contract's state, and a click asks for the toggle (R-467 D5).
+        let mut on = snapshot.render.debug_view;
+        let debug = ui.checkbox(&mut on, DEBUG_VIEW.1);
+        if debug.clicked() {
+            actions.debug_view = true;
+        }
+        keyboard.place_widget(DEBUG_VIEW.0, &debug);
+        let reset = ui.button(RESET_LAYOUT.1);
+        if reset.clicked() {
+            actions.reset_layout = true;
+            ui.close();
+        }
+        keyboard.place_widget(RESET_LAYOUT.0, &reset);
+    });
+    keyboard.place_widget("view", &view);
+    let windows = menu(&mut bar, "Windows", &mut |ui| {
+        for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
+            let entry = ui.button(name);
+            if entry.clicked() {
+                actions.open.push(id);
+                ui.close();
+            }
+            keyboard.place_widget(id, &entry);
+        }
+    });
+    keyboard.place_widget("windows", &windows);
+    let set = &snapshot.render.overlays;
+    let overlays = format!("Overlays ▾ {}", overlays_on(set));
+    // The toggles keep the menu open; a click outside closes it.
+    let config = egui::containers::menu::MenuConfig::new()
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside);
+    let (overlays, _) = MenuButton::from_button(Button::new(overlays))
+        .config(config)
+        .ui(&mut bar, |ui| {
+            crate::explore::overlays_menu::show(ui, set, keyboard, actions)
+        });
+    keyboard.place_widget("overlays", &overlays);
+    for (id, name) in [
+        ("run", "Run…"),
+        ("profiler", "Profiler…"),
+        ("export", "Export…"),
+    ] {
+        let response = bar.button(name);
+        if response.clicked() {
+            actions.open.push(id);
+        }
+        keyboard.place_widget(id, &response);
+    }
+    let help = menu(&mut bar, "Help", &mut |ui| {
+        let keys = ui.button(KEYS.1);
+        if keys.clicked() {
+            actions.shortcuts = true;
+            ui.close();
+        }
+        keyboard.place_widget(KEYS.0, &keys);
+    });
+    keyboard.place_widget("help", &help);
+    bar.separator();
+    for (id, this, name) in [
+        ("explore", Mode::Explore, "Explore"),
+        ("stain", Mode::Stain, "Stain"),
+    ] {
+        let response = bar.add(Button::selectable(mode == this, name));
+        if response.clicked() {
+            actions.mode = Some(this);
+        }
+        keyboard.place_widget(id, &response);
+    }
+    bar.with_layout(EguiLayout::right_to_left(Align::Center), |ui| {
+        ui.label(RichText::new(status_line(snapshot)).monospace());
+        crate::explore::breadcrumb::show(ui, bar_state.breadcrumb, bar_state.keys);
+    });
+}
+
+/// Help's entry that opens the `?` shortcuts (RQ-250).
+pub const KEYS_ENTRY: &str = "Keys (?)";

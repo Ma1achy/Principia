@@ -1,0 +1,6 @@
+{
+  "description": "The conditioned Levi-Civita inverse (integrator contract Part 2b) at a ρ angle of 179.9°, where R turns towards −x: its round trip R → u → L(u)u within one unit round-off at f32 and at f64 (REQ-INT-044).",
+  "form": "conditioned",
+  "angle": 179.9,
+  "expected": "pass"
+}

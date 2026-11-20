@@ -1,0 +1,208 @@
+# CI. Required on every PR: fmt, clippy, checks, test (3 shards). Aim: under 10 minutes.
+# After a merge to main, and nightly: test-workspace (the tests that run cargo on the workspace), the GPU-kernel
+# suites, every negative control and the golden renders. Caches are saved from main only; PR runs restore them.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+
+jobs:
+  fmt:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: rustup toolchain install
+      - run: cargo fmt --all --check
+
+  clippy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: clippy
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/cargo-ci-config
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: No atlas-params.json in any form (licence)
+        run: bash scripts/check_no_atlas_params.sh
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: checks
+          cache-targets: "false"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/cargo-ci-config
+      - run: cargo xtask deps
+      - run: cargo xtask lint vocab
+      - run: cargo xtask lint constants
+      - run: cargo xtask lint wgsl
+      - run: cargo xtask lint compute-pipelines
+      - run: cargo xtask lint no-alloc
+      - name: Every test has a registered negative control
+        run: cargo xtask controls --list
+
+  test:
+    name: test (${{ matrix.shard }}/3)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      PRIN_GPU_BACKEND: vulkan
+      NEXTEST_PROFILE: ci
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: test
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/cargo-ci-config
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+      - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
+        timeout-minutes: 8
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
+      - name: Keep the Mesa packages
+        if: matrix.shard == 1 && github.ref == 'refs/heads/main' && steps.mesa.outputs.installed != 'true'
+        timeout-minutes: 5
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+          save: "true"
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-nextest@0.9.146
+      - run: cargo nextest run --workspace --locked --partition hash:${{ matrix.shard }}/3
+
+  test-workspace:
+    # The tests that run cargo on the workspace itself: slow by nature, so after the merge, not on the PR.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      NEXTEST_PROFILE: ci-workspace
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: test-workspace
+          cache-targets: "false"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/cargo-ci-config
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-nextest@0.9.146
+      - run: cargo nextest run -p xtask -p validation --locked
+
+  gpu-kernel:
+    # The rust-gpu kernel build, its suites on lavapipe, every negative control and the golden renders.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Free runner disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL \
+            /usr/lib/jvm /usr/share/swift /usr/local/share/chromium /opt/google /opt/microsoft \
+            /usr/local/share/powershell /usr/local/share/boost /usr/share/miniconda /usr/local/julia* \
+            /usr/local/lib/node_modules /opt/hostedtoolcache/go /opt/hostedtoolcache/node /opt/az
+          df -h /
+      - name: rustup toolchain install
+        id: toolchain
+        run: |
+          rustup toolchain install
+          echo "channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: gpu-kernel
+          cache-targets: "false"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - uses: ./.github/actions/cargo-ci-config
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+      - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
+        timeout-minutes: 8
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: The kernel's source hash
+        id: kernel-src
+        run: |
+          hash=$(cargo xtask kernel-src-hash)
+          echo "hash=$hash" >> "$GITHUB_OUTPUT"
+          echo "PRIN_KERNEL_CACHE=$HOME/.cache/principia-spirv" >> "$GITHUB_ENV"
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/principia-spirv
+          key: spirv-${{ runner.os }}-${{ steps.kernel-src.outputs.hash }}
+      - run: cargo xtask build-kernel
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: ~/.cache/rust-gpu
+          key: rust-gpu-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: ~/.cache/principia-spirv
+          key: spirv-${{ runner.os }}-${{ steps.kernel-src.outputs.hash }}
+      - name: GPU-kernel suites
+        env:
+          NEXTEST_PROFILE: gpu-kernel
+        run: cargo nextest run -p validation -p xtask -p engine
+      - name: Every negative control fires
+        if: ${{ !cancelled() }}
+        run: cargo xtask controls
+      - name: Golden renders
+        if: ${{ !cancelled() }}
+        run: cargo xtask golden --all

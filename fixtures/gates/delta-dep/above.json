@@ -1,0 +1,5 @@
+{
+  "description": "δ_dep at the gap's upper edge, the smallest generic excursion itself: that fixture never departs, so the control must fail.",
+  "delta": "above",
+  "expected": "fail"
+}

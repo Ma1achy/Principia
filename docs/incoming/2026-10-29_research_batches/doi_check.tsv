@@ -1,0 +1,34 @@
+doi	first_author	year	container	volume	issue	page	article_number	title	licences
+10.1007/s10569-021-10044-6	Li	2021	Celestial Mechanics and Dynamical Astronomy	133	10		46	Triple collision orbits in the free-fall three-body system without binary collisions	https://www.springer.com/tdm
+10.1007/s10509-025-04488-7	Li	2025	Astrophysics and Space Science	370	9		99	The continuation of triple collision orbits for the three-body system with unequal masses	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1007/s10569-021-10050-8	Tanikawa	2021	Celestial Mechanics and Dynamical Astronomy	133	11-12		52	Numerical confirmation of the existence of triple collision orbits inside the domain of the free-fall three-body problem	https://www.springer.com/tdm
+10.1007/s10569-023-10163-2	Tanikawa	2023	Celestial Mechanics and Dynamical Astronomy	135	6		54	Triple collision orbits with nonzero initial velocities	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1134/S106377291505008X	Yasko	2015	Astronomy Reports	59	5	404-413		Search for periodic orbits in Agekyan and Anosova’s region D for the general three-body problem	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1134/1.1562220	Orlov	2003	Astronomy Reports	47	3	254-262		Types of motions in the rectilinear three-body problem with unequal masses	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1007/BF01230249	Broucke	1980	Celestial Mechanics	21	1	73-81		Numerical explorations of the rectilinear problem of three bodies	http://www.springer.com/tdm
+10.1016/j.chaos.2005.11.082	Broucke	2006	Chaos, Solitons &amp; Fractals	30	3	513-520		On the figure-8 periodic solutions in the three-body problem	https://www.elsevier.com/tdm/userlicense/1.0/
+10.1134/S1063772914110080	Iasko	2014	Astronomy Reports	58	11	869-879		Search for periodic orbits in the general three-body problem	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1142/S0218127403007291	Doedel	2003	International Journal of Bifurcation and Chaos	13	06	1353-1381		Computation of Periodic Solutions of Conservative Systems with Application to the 3-Body Problem	none recorded
+10.1063/1.165984	Hietarinta	1993	Chaos: An Interdisciplinary Journal of Nonlinear Science	3	2	183-203		Chaos in the one-dimensional gravitational three-body problem	none recorded
+10.1063/1.2753126	Kuwabara	2007	Chaos: An Interdisciplinary Journal of Nonlinear Science	17	3		033105	Numerical experiments of the planar equal-mass three-body problem: The effects of rotation	none recorded
+10.1063/1.165956	Boyd	1993	Chaos: An Interdisciplinary Journal of Nonlinear Science	3	4	507-523		Chaotic scattering in the gravitational three-body problem	none recorded
+10.1088/0951-7715/26/10/2875	Chen	2013	Nonlinearity	26	10	2875-2898		Periodic brake orbits in the planar isosceles three-body problem	http://iopscience.iop.org/info/page/text-and-data-mining;http://iopscience.iop.org/page/copyright
+10.1016/j.newast.2012.09.004	Mikkola	2013	New Astronomy	20		38-41		Implementation of an efficient logarithmic-Hamiltonian three-body code	https://www.elsevier.com/tdm/userlicense/1.0/
+10.1007/BF01228465	H�non	1977	Celestial Mechanics	15	2	243-261		Stability of interplay motions	http://www.springer.com/tdm
+10.1093/mnras/stv1439	Hernandez	2015	Monthly Notices of the Royal Astronomical Society	452	2	1934-1944		Symplectic integration for the collisional gravitational<i>N</i>-body problem	none recorded
+10.1088/0951-7715/16/6/302	Kapela	2003	Nonlinearity	16	6	1899-1918		The existence of simple choreographies for the<i>N</i>-body problem—a computer-assisted proof	none recorded
+10.1007/BF02426707	Mikkola	1989	Celestial Mechanics &amp; Dynamical Astronomy	46	1	1-18		A numerical investigation of the one-dimensional newtonian three-body problem	none recorded
+10.1007/BF00052929	Mikkola	1991	Celestial Mechanics and Dynamical Astronomy	51	4	379-394		A numerical investigation of the one-dimensional Newtonian three-body problem	http://www.springer.com/tdm
+10.1115/1.2338323	Moore	2006	Journal of Computational and Nonlinear Dynamics	1	4	307-311		New Periodic Orbits for the n-Body Problem	none recorded
+10.1134/1.1522082	Orlov	2002	Astronomy Reports	46	11	932-941		Triple encounters in the linear three-body problem with equal masses	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1093/mnras/staa084	Rantala	2020	Monthly Notices of the Royal Astronomical Society	492	3	4131-4148		mstar – a fast parallelized algorithmically regularized integrator with minimum spanning tree coordinates	https://academic.oup.com/journals/pages/open_access/funder_policies/chorus/standard_publication_model
+10.1196/annals.1311.024	VANDERBEI	2004	Annals of the New York Academy of Sciences	1017	1	422-433		New Orbits for the <i>n</i>‐Body Problem	http://onlinelibrary.wiley.com/termsAndConditions#vor
+10.1007/BF00051009	Mikkola	1990	Celestial Mechanics and Dynamical Astronomy	47	4	321-331		A numerical investigation of the one-dimensional newtonian three-body problem II. Positive energies	http://www.springer.com/tdm
+10.1017/S1743921308015639	Mikkola	2007	Proceedings of the International Astronomical Union	3	S246	218-227		A Brief History of Regularisation	https://www.cambridge.org/core/terms
+10.1002/asna.19131950602	Burrau	1913	Astronomische Nachrichten	195	6	113-118		Numerische Berechnung eines Spezialfalles des Dreikörperproblems	http://onlinelibrary.wiley.com/termsAndConditions#vor
+10.1002/asna.19562830105	Schubart	1956	Astronomische Nachrichten	283	1	17-22		Numerische Aufsuchung periodischer Lösungen im Dreikörperproblem	http://onlinelibrary.wiley.com/termsAndConditions#vor
+10.1023/A:1008313912013	Tanikawa	2000	Celestial Mechanics and Dynamical Astronomy	76	3	157-185		A Search for Collision Orbits in the Free-Fall Three-Body Problem II	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1134/S1063772914100084	Martynova	2014	Astronomy Reports	58	10	756-766		The decay of triple systems	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1023/A:1008301405839	Tanikawa	1998	Celestial Mechanics and Dynamical Astronomy	70	3	167-180		Oscillatory orbits in the planar three‐body problem with equal masses	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1134/S1063772913060048	Mel’nikov	2013	Astronomy Reports	57	6	429-439		The Lyapunov exponents in the dynamics of triple star systems	https://www.springernature.com/gp/researchers/text-and-data-mining
+10.1023/A:1008397420958	Tanikawa	2000	Celestial Mechanics and Dynamical Astronomy	76	1	23-34		Triple collisions in the one-dimensional three-body problem	https://www.springernature.com/gp/researchers/text-and-data-mining

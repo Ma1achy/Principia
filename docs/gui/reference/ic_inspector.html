@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IC Inspector — Principia</title>
+<style>
+  :root{
+    --paper:#F3F0E7; --panel:#EDE8DB; --ink:#1A1712; --muted:#7A7263;
+    --rule:#CFC7B4; --rule-soft:#DED8C8; --accent:#2E4A6B; --accent-soft:#7C93AE;
+    --b0:#C0552F; --b1:#4A7A5C; --b2:#3E5C8A;
+    --warn:#9A6A1E; --bad:#9A2E2E;
+    --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    --mono:"SF Mono","SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans)}
+  body{padding:18px 20px 40px;line-height:1.4}
+  a{color:var(--accent)}
+  header.masthead{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--ink);
+    padding-bottom:8px;margin-bottom:14px;flex-wrap:wrap}
+  header.masthead h1{font-size:15px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin:0}
+  header.masthead .sub{font-size:12px;color:var(--muted);letter-spacing:.02em}
+  header.masthead .spec{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .toolbar .group{display:flex;gap:0;border:1px solid var(--rule);background:#fff}
+  .toolbar .group.spaced{gap:8px;border:none;background:none}
+  button,.tgl{font-family:var(--sans);font-size:12px;color:var(--ink);background:#fff;
+    border:1px solid var(--rule);padding:6px 11px;cursor:pointer;letter-spacing:.02em}
+  .toolbar .group button{border:none;border-right:1px solid var(--rule)}
+  .toolbar .group button:last-child{border-right:none}
+  button:hover,.tgl:hover{background:var(--panel)}
+  button:focus-visible,.tgl:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  button.active,.tgl.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .toolbar label.chk{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+
+  .stage{display:grid;grid-template-columns:1fr 1fr 320px;gap:14px;align-items:start}
+  @media(max-width:1080px){.stage{grid-template-columns:1fr 1fr}.readout{grid-column:1/-1}}
+  @media(max-width:720px){.stage{grid-template-columns:1fr}}
+
+  .frame{border:1px solid var(--rule);background:#fff;position:relative}
+  .frame .cap{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
+    padding:6px 9px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);pointer-events:none;z-index:2}
+  .frame .cap .r{pointer-events:auto}
+  canvas{display:block;width:100%;height:auto;touch-action:none}
+  .rmode{display:inline-flex;border:1px solid var(--rule);background:#fff}
+  .rmode button{border:none;border-right:1px solid var(--rule);padding:2px 8px;font-size:10px;
+    text-transform:uppercase;letter-spacing:.06em}
+  .rmode button:last-child{border-right:none}
+
+  .readout{font-family:var(--mono);font-size:12px}
+  .readout .block{border:1px solid var(--rule);background:#fff;margin-bottom:10px}
+  .readout .block > h2{font-family:var(--sans);font-size:10px;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted);margin:0;padding:7px 10px;border-bottom:1px solid var(--rule-soft)}
+  .readout .rows{padding:7px 10px}
+  .row{display:flex;justify-content:space-between;gap:10px;padding:1.5px 0;white-space:nowrap}
+  .row .k{color:var(--muted)}
+  .row .v{text-align:right;font-variant-numeric:tabular-nums}
+  .z-grid{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:8px 10px}
+  .z-grid .zk{color:var(--muted)}
+  .z-grid .zv{text-align:right;font-variant-numeric:tabular-nums}
+  .z-sep{grid-column:1/-1;height:1px;background:var(--rule-soft);margin:4px 0}
+  .flags{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;min-height:14px}
+  .chip{font-size:10px;letter-spacing:.04em;padding:2px 7px;border:1px solid var(--warn);color:var(--warn);border-radius:2px}
+  .chip.bad{border-color:var(--bad);color:var(--bad)}
+  .chip.ok{border-color:var(--rule);color:var(--muted)}
+  .legend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-top:2px}
+  .legend .sw{display:inline-flex;align-items:center;gap:5px}
+  .legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+  /* properties popover */
+  .pop{position:absolute;z-index:20;background:#fff;border:1px solid var(--ink);
+    box-shadow:0 6px 24px rgba(0,0,0,.12);width:210px;font-family:var(--mono);font-size:11px}
+  .pop h3{font-family:var(--sans);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    margin:0;padding:6px 9px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;align-items:center}
+  .pop h3 button{border:none;background:none;padding:0 2px;font-size:14px;line-height:1;color:var(--muted)}
+  .pop .pbody{padding:8px 9px;display:grid;grid-template-columns:auto 1fr 1fr;gap:5px 6px;align-items:center}
+  .pop .pbody .lab{color:var(--muted)}
+  .pop input[type=number]{width:100%;font-family:var(--mono);font-size:11px;border:1px solid var(--rule);
+    padding:2px 4px;background:var(--paper)}
+  .pop input[type=range]{grid-column:2/-1;width:100%}
+  .pop .full{grid-column:1/-1}
+  .pop .ro{color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+  .note{font-size:11px;color:var(--muted);margin:10px 2px 0;line-height:1.5;font-family:var(--sans)}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <h1>IC Inspector</h1>
+  <span class="sub">single-sample encode / decode bench — planar three-body IC manifold</span>
+  <span class="spec">z ∈ ℝ⁸ · canonical-frame decode</span>
+</header>
+
+<div class="toolbar">
+  <div class="group spaced">
+    <button id="btn-reset">Reset</button>
+    <button id="btn-rand">Randomise</button>
+    <button id="btn-burrau">Burrau-ish</button>
+  </div>
+  <div class="group" title="Whole-system handles — z and the canonical view should not change">
+    <button id="btn-rot">Rotate 15°</button>
+    <button id="btn-scale">Scale ×1.25</button>
+    <button id="btn-boost">Boost →</button>
+  </div>
+</div>
+
+<div class="stage">
+  <!-- LEFT: raw physical, editable -->
+  <div class="frame" id="frame-left">
+    <div class="cap"><span>Editing canvas · raw physical (any gauge) · velocity arrows (dotted = COM-frame)</span><span class="r">drag body · drag arrow · right-click ▸ properties</span></div>
+    <canvas id="cv-left" width="720" height="720"></canvas>
+  </div>
+
+  <!-- RIGHT: canonical representative -->
+  <div class="frame" id="frame-right">
+    <div class="cap"><span>Canonical representative · live decode(z) · momentum arrows</span>
+      <span class="r"><span class="rmode" id="rmode">
+        <button data-mode="bodies" class="active">Bodies</button>
+        <button data-mode="sphere">Shape sphere</button>
+      </span></span></div>
+    <canvas id="cv-right" width="720" height="720"></canvas>
+  </div>
+
+  <!-- READOUT -->
+  <div class="readout">
+    <div class="block">
+      <h2>Latent z</h2>
+      <div class="z-grid" id="z-grid"></div>
+    </div>
+    <div class="block">
+      <h2>Flags</h2>
+      <div class="flags" id="flags"></div>
+    </div>
+    <div class="block">
+      <h2>Configuration</h2>
+      <div class="rows" id="cfg"></div>
+    </div>
+    <div class="block">
+      <h2>Canonical measurements</h2>
+      <div class="rows" id="meas"></div>
+    </div>
+    <div class="block">
+      <h2>Gauge quotient (raw ▸ canonical)</h2>
+      <div class="rows" id="gauge"></div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <span class="sw"><span class="dot" style="background:var(--b0)"></span>body 0</span>
+  <span class="sw"><span class="dot" style="background:var(--b1)"></span>body 1</span>
+  <span class="sw"><span class="dot" style="background:var(--b2)"></span>body 2</span>
+  <span class="sw">disc radius ∝ ∛m</span>
+</div>
+
+<p class="note">
+  The editing canvas holds raw physical state at any gauge — translate, rotate, rescale or boost the whole system and the
+  canonical representative on the right does not move, because the canonicalisation cascade (COM frame → I=1 scale →
+  ρ̃ pinned to +x → mirror β∈[0,π]) quotients exactly those symmetries. Give the bodies a net momentum and watch the boost
+  arrow on the left while total P reads 0 on the right: the frame being fixed, live. The dotted arrows are each body's velocity with the boost removed (v − V_com); those, not the solid raw arrows, are what the canonical momenta on the right correspond to — so a velocity that lies along a triangle edge in the raw frame need not stay along the edge once the shared boost is quotiented.
+</p>
+
+<script>
+"use strict";
+// canvas palette (context cannot resolve CSS custom properties)
+const C={paper:'#F3F0E7',ink:'#1A1712',muted:'#7A7263',rule:'#CFC7B4',ruleSoft:'#DED8C8',
+  accent:'#2E4A6B',accentSoft:'#7C93AE',b0:'#C0552F',b1:'#4A7A5C',b2:'#3E5C8A',com:'#E5863A'};
+const MONO='11px "SF Mono",Menlo,Consolas,monospace';
+const MONO10='10px "SF Mono",Menlo,Consolas,monospace';
+// ============================ physics (verified against principia_spec.tex §2) =========
+const PARAMS = { muMax:5.0, qMax:2.0, eps:1e-6, deltaLam:1e-12, rColl:1e-3 };
+// muMax=5, qMax=2, eps=1e-6 (ε_z=ε_μ=ε_q) confirmed vs spec: dd_decoder §3.1/§3.4, chart_decoder §87, inverse_encode §63.
+// α_min REMOVED (full-sphere coverage): α = (π/2)·σ(z_a) ∈ (0, π/2). The two poles (λ̃=0 / ρ̃=0) are represented,
+//   not excised — their degeneracies (β/φ undefined, inner-pair collision) are fenced by the conditioning readout,
+//   the SAT flags, and COLLISION detection. Finite z never hits an exact pole; an ingested pole config → atan2(0,0)=0
+//   (deterministic, not NaN) + SAT. Matching .tex edit queued in spec_pending_changes; docs in dd_decoder §3.2.
+// deltaLam=1e-12 is the §3.3 mirror deadband (|λ̃_y|<δ_λ ⇒ fixed no-mirror).
+const sigmoid=x=>1/(1+Math.exp(-x));
+const logit=p=>Math.log(p/(1-p));
+const atanh=x=>0.5*Math.log((1+x)/(1-x));
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const hyp=v=>Math.hypot(v[0],v[1]);
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1]];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const scl=(a,s)=>[a[0]*s,a[1]*s];
+const rot=(a,c,s)=>[c*a[0]-s*a[1],s*a[0]+c*a[1]];
+const crs=(a,b)=>a[0]*b[1]-a[1]*b[0];
+
+function decode(z,P=PARAMS){
+  const tags=[];
+  const mu1=P.muMax*Math.tanh(z.m1), mu2=P.muMax*Math.tanh(z.m2);
+  const e1=Math.exp(mu1), e2=Math.exp(mu2), S=1+e1+e2;
+  const m=[1/S,e1/S,e2/S];
+  const M01=m[0]+m[1];
+  if(M01<P.eps) tags.push('DEGENERATE(M01_TINY)');
+  const muRho=m[0]*m[1]/M01, muLam=m[2]*M01;
+  const alpha=(Math.PI/2)*sigmoid(z.a);   // α_min removed → full (0, π/2)
+  const beta=Math.PI*sigmoid(z.b);
+  const rhoT=[Math.cos(alpha),0];
+  const lamT=[Math.sin(alpha)*Math.cos(beta),Math.sin(alpha)*Math.sin(beta)];
+  const rho=scl(rhoT,1/Math.sqrt(muRho)), lam=scl(lamT,1/Math.sqrt(muLam));
+  const r01=scl(lam,-m[2]), r2=scl(lam,M01);
+  const r0=sub(r01,scl(rho,m[1]/M01)), r1=add(r01,scl(rho,m[0]/M01));
+  const q=[z.q0,z.q1,z.q2,z.q3].map(zk=>P.qMax*(2*sigmoid(zk)-1));
+  const pRho=[q[0],q[1]], pLam=[q[2],q[3]];
+  const p0=sub(scl(pRho,-1),scl(pLam,m[0]/M01));
+  const p1=sub(pRho,scl(pLam,m[1]/M01));
+  const p2=pLam;
+  const r=[r0,r1,r2], p=[p0,p1,p2];
+  let rmin=Infinity;
+  for(const [i,j] of [[0,1],[0,2],[1,2]]) rmin=Math.min(rmin,hyp(sub(r[i],r[j])));
+  if(rmin<P.rColl) tags.push('COLLISION_T0');
+  return {m,r,p,alpha,beta,rhoT,lamT,tags};
+}
+
+function canonicalise(bodies,P=PARAMS){
+  const flags=[];
+  let m=bodies.map(b=>b.m); const Ms=m[0]+m[1]+m[2]; m=m.map(mi=>mi/Ms);
+  let r=bodies.map(b=>[...b.r]);
+  let p=bodies.map((b,i)=>scl(b.v,m[i]));
+  const M01=m[0]+m[1];
+  if(M01<P.eps) flags.push('DEGENERATE(M01_TINY)');
+  const Rcom=r.reduce((s,ri,i)=>add(s,scl(ri,m[i])),[0,0]);
+  const Pcom=p.reduce((s,pi)=>add(s,pi),[0,0]);
+  const rawP=[...Pcom], rawRcom=[...Rcom];
+  r=r.map(ri=>sub(ri,Rcom));
+  p=p.map((pi,i)=>sub(pi,scl(Pcom,m[i])));
+  const muRho=m[0]*m[1]/M01, muLam=m[2]*M01;
+  let rho=sub(r[1],r[0]);
+  let icm=scl(add(scl(r[0],m[0]),scl(r[1],m[1])),1/M01);
+  let lam=sub(r[2],icm);
+  let rhoT=scl(rho,Math.sqrt(muRho)), lamT=scl(lam,Math.sqrt(muLam));
+  const I=rhoT[0]**2+rhoT[1]**2+lamT[0]**2+lamT[1]**2;
+  const ell=Math.sqrt(I);
+  if(ell<P.eps) flags.push('DEGENERATE(I_TINY)');
+  r=r.map(ri=>scl(ri,1/ell)); p=p.map(pi=>scl(pi,Math.sqrt(ell)));
+  rhoT=scl(rhoT,1/ell); lamT=scl(lamT,1/ell);
+  const phi=Math.atan2(rhoT[1],rhoT[0]);
+  const c=Math.cos(-phi), s=Math.sin(-phi);
+  r=r.map(ri=>rot(ri,c,s)); p=p.map(pi=>rot(pi,c,s));
+  rhoT=rot(rhoT,c,s); lamT=rot(lamT,c,s);
+  if(lamT[1] < -P.deltaLam){ r=r.map(ri=>[ri[0],-ri[1]]); p=p.map(pi=>[pi[0],-pi[1]]);
+    lamT=[lamT[0],-lamT[1]]; rhoT=[rhoT[0],-rhoT[1]]; }
+  const alpha=Math.atan2(hyp(lamT),hyp(rhoT));
+  const beta=Math.atan2(lamT[1],lamT[0]);
+  const pLam=p[2], pRho=add(p[1],scl(pLam,m[1]/M01));
+  const saRaw=alpha/(Math.PI/2);   // α_min removed → s_α = 2α/π
+  const sa=clamp(saRaw,P.eps,1-P.eps), sb=clamp(beta/Math.PI,P.eps,1-P.eps);
+  if(saRaw<=P.eps||saRaw>=1-P.eps) flags.push('ALPHA_SAT');
+  const mu1=Math.log(m[1]/m[0]), mu2=Math.log(m[2]/m[0]);
+  if(Math.abs(mu1)/P.muMax>=1-P.eps||Math.abs(mu2)/P.muMax>=1-P.eps) flags.push('MASS_SAT');
+  const zm1=atanh(clamp(mu1/P.muMax,-1+P.eps,1-P.eps)), zm2=atanh(clamp(mu2/P.muMax,-1+P.eps,1-P.eps));
+  const qraw=[pRho[0],pRho[1],pLam[0],pLam[1]];
+  const zq=qraw.map(qk=>{ const t=(qk/P.qMax+1)/2;
+    if(t<=P.eps||t>=1-P.eps) flags.push('Q_SAT'); return logit(clamp(t,P.eps,1-P.eps)); });
+  const z={a:logit(sa),b:logit(sb),q0:zq[0],q1:zq[1],q2:zq[2],q3:zq[3],m1:zm1,m2:zm2};
+  return {z,m,r,p,alpha,beta,rhoT,lamT,I,ell,phi,rawP,rawRcom,pRho,pLam,flags:[...new Set(flags)]};
+}
+
+const shapePoint=(a,b)=>[Math.cos(2*a),Math.sin(2*a)*Math.cos(b),Math.sin(2*a)*Math.sin(b)];
+function invariants(m,r,p){
+  const rij=(i,j)=>Math.hypot(r[i][0]-r[j][0],r[i][1]-r[j][1]);
+  const K=p.reduce((s,pi,i)=>s+(pi[0]**2+pi[1]**2)/(2*m[i]),0);
+  const U=-(m[0]*m[1]/rij(0,1)+m[0]*m[2]/rij(0,2)+m[1]*m[2]/rij(1,2));
+  const L=r.reduce((s,ri,i)=>s+crs(ri,p[i]),0);
+  const P=p.reduce((s,pi)=>add(s,pi),[0,0]);
+  return {K,U,E:K+U,L,P,r01:rij(0,1),r02:rij(0,2),r12:rij(1,2)};
+}
+// internal angle at vertex i, from the three separations
+function triAngles(r01,r02,r12){
+  const a=r12, b=r02, c=r01; // side opposite vertex 0,1,2
+  const ang=(o,p,q)=>Math.acos(clamp((p*p+q*q-o*o)/(2*p*q),-1,1))*180/Math.PI;
+  return [ang(a,b,c),ang(b,a,c),ang(c,a,b)];
+}
+
+// ============================ state ====================================================
+const BCOL=[C.b0,C.b1,C.b2];
+const RAW=['#C0552F','#4A7A5C','#3E5C8A'];
+const DEF=()=>[
+  {r:[-0.62,-0.20],v:[0.10,0.42],m:1.00},
+  {r:[ 0.70,-0.12],v:[-0.22,0.08],m:0.80},
+  {r:[ 0.02, 0.82],v:[0.16,-0.30],m:1.30},
+];
+let bodies=DEF();
+const showJacobi=true, showAngles=true; let rightMode='bodies';
+let last=null;                 // last canonicalise() result
+const ARROW=0.9;               // world units of arrow per unit v (or p)
+
+// ============================ canvases =================================================
+const cvL=document.getElementById('cv-left'), ctxL=cvL.getContext('2d');
+const cvR=document.getElementById('cv-right'), ctxR=cvR.getContext('2d');
+const DPR=Math.min(2,window.devicePixelRatio||1);
+function sizeCanvas(cv,ctx){
+  const w=cv.clientWidth||cv.width; cv.width=w*DPR; cv.height=w*DPR;
+  cv.style.height=cv.clientWidth+'px'; ctx.setTransform(DPR,0,0,DPR,0,0);
+  return w;
+}
+let WL=360, WR=360;
+function resize(){ WL=sizeCanvas(cvL,ctxL); WR=sizeCanvas(cvR,ctxR); render(); }
+window.addEventListener('resize',resize);
+
+// both views auto-fit their contents; canonical view stays centred on the COM (origin)
+function fitView(pts,W,{center=null,minSpan=1.2,pad=1.4}={}){
+  let minx=Infinity,maxx=-Infinity,miny=Infinity,maxy=-Infinity;
+  pts.forEach(p=>{minx=Math.min(minx,p[0]);maxx=Math.max(maxx,p[0]);miny=Math.min(miny,p[1]);maxy=Math.max(maxy,p[1]);});
+  if(center){ // symmetric fit about a fixed centre (keeps origin at frame centre)
+    const reach=Math.max(Math.abs(minx-center[0]),Math.abs(maxx-center[0]),
+                         Math.abs(miny-center[1]),Math.abs(maxy-center[1]),minSpan/2);
+    return {cx:center[0],cy:center[1],scale:W/(2*reach*pad),W};
+  }
+  const cx=(minx+maxx)/2, cy=(miny+maxy)/2;
+  const span=Math.max(maxx-minx,maxy-miny,minSpan)*pad;
+  return {cx,cy,scale:W/span,W};
+}
+function leftView(){
+  const pts=[];
+  bodies.forEach(b=>{ pts.push(b.r); pts.push(add(b.r,scl(b.v,ARROW))); });
+  const Msum=bodies.reduce((s,b)=>s+b.m,0);
+  pts.push(bodies.reduce((s,b)=>add(s,scl(b.r,b.m/Msum)),[0,0])); // keep COM in frame
+  return fitView(pts,WL);
+}
+function canonView(){
+  if(!last) return fitView([[0,0]],WR,{center:[0,0]});
+  const d=decode(last.z); const pts=[[0,0]];
+  d.r.forEach((ri,i)=>{ pts.push(ri); pts.push(add(ri,scl(d.p[i],ARROW))); }); // canonical always shows momentum
+  return fitView(pts,WR,{center:[0,0]});   // COM fixed at frame centre
+}
+const w2s=(p,V)=>[V.W/2+(p[0]-V.cx)*V.scale, V.W/2-(p[1]-V.cy)*V.scale];
+const s2w=(sx,sy,V)=>[(sx-V.W/2)/V.scale+V.cx, -(sy-V.W/2)/V.scale+V.cy];
+const bodyR=m=>5+20*Math.cbrt(Math.max(m,1e-3));
+
+// axis ticks (world units) — show the scale, so normalisation is legible
+const niceStep=span=>{const raw=span/6;const p=Math.pow(10,Math.floor(Math.log10(raw)));const f=raw/p;return (f<1.5?1:f<3?2:f<7?5:10)*p;};
+const fmtTick=(x,step)=>x.toFixed(step<0.1?2:step<1?1:0);
+function drawTicks(ctx,V){
+  const step=niceStep(V.W/V.scale), o=w2s([0,0],V), half=(V.W/2)/V.scale;
+  ctx.strokeStyle=C.ruleSoft; ctx.fillStyle=C.muted; ctx.lineWidth=1;
+  ctx.font='9px "SF Mono",Menlo,monospace';
+  if(o[1]>=0&&o[1]<=V.W){ ctx.textAlign='center'; ctx.textBaseline='top';
+    for(let k=Math.ceil((V.cx-half)/step);k<=Math.floor((V.cx+half)/step);k++){ if(k===0)continue;
+      const s=w2s([k*step,0],V); ctx.beginPath(); ctx.moveTo(s[0],o[1]-3); ctx.lineTo(s[0],o[1]+3); ctx.stroke();
+      ctx.fillText(fmtTick(k*step,step),s[0],Math.min(o[1]+5,V.W-11)); } }
+  if(o[0]>=0&&o[0]<=V.W){ ctx.textAlign='left'; ctx.textBaseline='middle';
+    for(let k=Math.ceil((V.cy-half)/step);k<=Math.floor((V.cy+half)/step);k++){ if(k===0)continue;
+      const s=w2s([0,k*step],V); ctx.beginPath(); ctx.moveTo(o[0]-3,s[1]); ctx.lineTo(o[0]+3,s[1]); ctx.stroke();
+      ctx.fillText(fmtTick(k*step,step),Math.min(o[0]+6,V.W-26),s[1]); } }
+}
+
+// binary-collision shape points (equator landmarks), computed from the actual masses
+function collisionPhi(pair,m){
+  const c=[0,1,2].find(k=>k!==pair[0]&&k!==pair[1]);
+  const s=-m[c]/(m[pair[0]]+m[pair[1]]);
+  const x=[0,0,0]; x[pair[0]]=s; x[pair[1]]=s; x[c]=1;
+  const M01=m[0]+m[1];
+  const rho=x[1]-x[0], icm=(m[0]*x[0]+m[1]*x[1])/M01, lam=x[2]-icm;
+  const rt=Math.sqrt(m[0]*m[1]/M01)*rho, lt=Math.sqrt(m[2]*M01)*lam;
+  return (Math.atan2(2*rt*lt, rt*rt-lt*lt)+2*Math.PI)%(2*Math.PI);
+}
+
+// ============================ drawing ==================================================
+function grid(ctx,V){
+  ctx.save();
+  ctx.strokeStyle=C.ruleSoft; ctx.lineWidth=1;
+  const o=w2s([0,0],V);
+  ctx.beginPath(); ctx.moveTo(o[0],0); ctx.lineTo(o[0],V.W); ctx.moveTo(0,o[1]); ctx.lineTo(V.W,o[1]); ctx.stroke();
+  ctx.restore();
+}
+function arrow(ctx,a,b,col,w=2,halo=true){
+  const ang=Math.atan2(b[1]-a[1],b[0]-a[0]), h=8;
+  const head=(s)=>{ctx.beginPath(); ctx.moveTo(b[0],b[1]);
+    ctx.lineTo(b[0]-s*Math.cos(ang-0.42),b[1]-s*Math.sin(ang-0.42));
+    ctx.lineTo(b[0]-s*Math.cos(ang+0.42),b[1]-s*Math.sin(ang+0.42));
+    ctx.closePath(); ctx.fill();};
+  ctx.lineCap='round';
+  if(halo){ ctx.strokeStyle='#fff'; ctx.fillStyle='#fff'; ctx.lineWidth=w+2.5;
+    ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); head(h+2); }
+  ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=w;
+  ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke(); head(h);
+  ctx.lineCap='butt';
+}
+// internal angle at vertex i (between the sides meeting there)
+function vertexAngleDeg(r,i,j,k){
+  const u=sub(r[j],r[i]), v=sub(r[k],r[i]);
+  return Math.acos(clamp((u[0]*v[0]+u[1]*v[1])/((hyp(u)*hyp(v))||1),-1,1))*180/Math.PI;
+}
+function drawAngles(ctx,V,m,r){
+  ctx.font=MONO10;
+  for(const [i,j,k] of [[0,1,2],[1,0,2],[2,0,1]]){
+    const si=w2s(r[i],V), sj=w2s(r[j],V), sk=w2s(r[k],V);
+    const a1=Math.atan2(sj[1]-si[1],sj[0]-si[0]);
+    let d=Math.atan2(sk[1]-si[1],sk[0]-si[0])-a1;
+    while(d<=-Math.PI)d+=2*Math.PI; while(d>Math.PI)d-=2*Math.PI;
+    const rad=bodyR(m[i])+9;
+    ctx.strokeStyle=C.muted; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(si[0],si[1],rad,a1,a1+d,d<0); ctx.stroke();
+    const bis=a1+d/2, tr=rad+11;
+    ctx.fillStyle=C.muted; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(vertexAngleDeg(r,i,j,k).toFixed(0)+'°', si[0]+tr*Math.cos(bis), si[1]+tr*Math.sin(bis));
+  }
+}
+function drawBodies(ctx,V,m,r,p,cols,arrowKind){
+  // arrowKind: 'p' (momentum, = m·v), 'v' (velocity), or null (none)
+  const cen=r.map(ri=>w2s(ri,V));
+  // separation edges
+  ctx.strokeStyle='rgba(26,23,18,.12)'; ctx.lineWidth=1;
+  for(const [i,j] of [[0,1],[0,2],[1,2]]){
+    ctx.beginPath(); ctx.moveTo(cen[i][0],cen[i][1]); ctx.lineTo(cen[j][0],cen[j][1]); ctx.stroke();
+  }
+  if(showAngles) drawAngles(ctx,V,m,r);
+  // discs
+  for(let i=0;i<3;i++){ const R=bodyR(m[i]);
+    ctx.beginPath(); ctx.arc(cen[i][0],cen[i][1],R,0,7); ctx.fillStyle=cols[i]; ctx.globalAlpha=.92; ctx.fill(); ctx.globalAlpha=1;
+    ctx.lineWidth=1.5; ctx.strokeStyle='#fff'; ctx.stroke(); }
+  // arrows ON TOP of discs — the white halo keeps them visible even when short
+  if(arrowKind) for(let i=0;i<3;i++){
+    const vec=arrowKind==='p'?[p[i][0],p[i][1]]:[p[i][0]/m[i],p[i][1]/m[i]];
+    if(hyp(vec)>1e-4){ const tip=w2s(add(r[i],scl(vec,ARROW)),V); arrow(ctx,cen[i],tip,cols[i],2.2); }
+  }
+  // numbers last (readable; only the arrow's base sits under them)
+  ctx.fillStyle='#fff'; ctx.font=MONO; ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(let i=0;i<3;i++) ctx.fillText(i,cen[i][0],cen[i][1]);
+}
+// COM crosshair at world origin (canonical frame) or at the mass centroid (raw)
+function drawCOM(ctx,V,pt,label){
+  const s=w2s(pt,V); ctx.strokeStyle=C.com; ctx.fillStyle=C.com; ctx.lineWidth=1.25;
+  ctx.beginPath(); ctx.moveTo(s[0]-7,s[1]); ctx.lineTo(s[0]+7,s[1]);
+  ctx.moveTo(s[0],s[1]-7); ctx.lineTo(s[0],s[1]+7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(s[0],s[1],2.2,0,7); ctx.fill();
+  if(label){ ctx.font=MONO10; ctx.textAlign='left'; ctx.textBaseline='bottom'; ctx.fillText(label,s[0]+9,s[1]-3); ctx.textBaseline='alphabetic'; }
+}
+function getStyle(v){return getComputedStyle(document.documentElement).getPropertyValue(v)||'monospace';}
+
+function drawLeft(){
+  const V=leftView(); ctxL.clearRect(0,0,V.W,V.W); grid(ctxL,V); drawTicks(ctxL,V);
+  // COM marker (labelled) + total momentum arrow (the boost that will be quotiented)
+  if(last){
+    const Msum=bodies.reduce((s,b)=>s+b.m,0);
+    const com=bodies.reduce((s,b)=>add(s,scl(b.r,b.m/Msum)),[0,0]);
+    const Ptot=bodies.reduce((s,b)=>add(s,scl(b.v,b.m/Msum)),[0,0]);
+    if(hyp(Ptot)>1e-4){ const cs=w2s(com,V), tip=w2s(add(com,scl(Ptot,ARROW)),V);
+      ctxL.setLineDash([4,3]); arrow(ctxL,cs,tip,C.com,1.5,false); ctxL.setLineDash([]); }
+    drawCOM(ctxL,V,com,'COM');
+  }
+  // Jacobi frame overlay
+  if(showJacobi){
+    const m=bodies.map(b=>b.m); const M01=m[0]+m[1];
+    const icm=scl(add(scl(bodies[0].r,m[0]),scl(bodies[1].r,m[1])),1/M01);
+    const a=w2s(bodies[0].r,V), b=w2s(bodies[1].r,V), c=w2s(icm,V), d=w2s(bodies[2].r,V);
+    ctxL.strokeStyle='rgba(192,85,47,.5)'; ctxL.lineWidth=1.5;
+    ctxL.beginPath(); ctxL.moveTo(a[0],a[1]); ctxL.lineTo(b[0],b[1]); ctxL.stroke();
+    ctxL.strokeStyle='rgba(62,92,138,.5)';
+    ctxL.beginPath(); ctxL.moveTo(c[0],c[1]); ctxL.lineTo(d[0],d[1]); ctxL.stroke();
+    ctxL.fillStyle='rgba(192,85,47,.8)'; ctxL.font=MONO10;
+    ctxL.fillText('ρ',(a[0]+b[0])/2+4,(a[1]+b[1])/2-4);
+    ctxL.fillStyle='rgba(62,92,138,.8)'; ctxL.fillText('λ',(c[0]+d[0])/2+4,(c[1]+d[1])/2-4);
+  }
+  const p=bodies.map(b=>scl(b.v,b.m));
+  drawBodies(ctxL,V,bodies.map(b=>b.m),bodies.map(b=>b.r),p,RAW,'v');
+  // dotted COM-frame velocity (v_i − V_com) — the part that survives canonicalisation; shown only when there is a boost
+  const Msum2=bodies.reduce((s,b)=>s+b.m,0);
+  const Vcom=bodies.reduce((s,b)=>add(s,scl(b.v,b.m/Msum2)),[0,0]);
+  if(hyp(Vcom)>3e-3){ ctxL.setLineDash([2,3]);
+    bodies.forEach((b,i)=>{ const vc=sub(b.v,Vcom);
+      if(hyp(vc)>1e-4){ const c=w2s(b.r,V), tip=w2s(add(b.r,scl(vc,ARROW)),V); arrow(ctxL,c,tip,RAW[i],1.4,false); } });
+    ctxL.setLineDash([]); }
+}
+
+function drawRightBodies(){
+  const V=canonView(); ctxR.clearRect(0,0,V.W,V.W); grid(ctxR,V); drawTicks(ctxR,V);
+  if(!last) return;
+  const d=decode(last.z);
+  // canonical rho~ axis on +x
+  ctxR.strokeStyle=C.accentSoft; ctxR.lineWidth=1; ctxR.setLineDash([3,3]);
+  const o=w2s([0,0],V), rhoLen=Math.cos(last.alpha)/Math.sqrt(d.m[0]*d.m[1]/(d.m[0]+d.m[1]));
+  const xa=w2s([Math.max(rhoLen,0.4),0],V);
+  ctxR.beginPath(); ctxR.moveTo(o[0],o[1]); ctxR.lineTo(xa[0],xa[1]); ctxR.stroke(); ctxR.setLineDash([]);
+  ctxR.fillStyle=C.accentSoft; ctxR.font=MONO10; ctxR.textAlign='right'; ctxR.fillText('ρ̃ ▸ +x',xa[0],xa[1]-6); ctxR.textAlign='left';
+  drawCOM(ctxR,V,[0,0],'COM');
+  // Jacobi frame overlay (canonical): ρ̃ = r₁−r₀ (pinned to +x), λ̃ = r₂ − centroid(0,1)
+  if(showJacobi){ const mj=d.m, M01j=mj[0]+mj[1];
+    const icmj=scl(add(scl(d.r[0],mj[0]),scl(d.r[1],mj[1])),1/M01j);
+    const ja=w2s(d.r[0],V), jb=w2s(d.r[1],V), jc=w2s(icmj,V), jd=w2s(d.r[2],V);
+    ctxR.strokeStyle='rgba(192,85,47,.5)'; ctxR.lineWidth=1.5;
+    ctxR.beginPath(); ctxR.moveTo(ja[0],ja[1]); ctxR.lineTo(jb[0],jb[1]); ctxR.stroke();
+    ctxR.strokeStyle='rgba(62,92,138,.5)';
+    ctxR.beginPath(); ctxR.moveTo(jc[0],jc[1]); ctxR.lineTo(jd[0],jd[1]); ctxR.stroke();
+    ctxR.fillStyle='rgba(192,85,47,.85)'; ctxR.font=MONO10; ctxR.textAlign='left';
+    ctxR.fillText('ρ̃',(ja[0]+jb[0])/2+4,(ja[1]+jb[1])/2-4);
+    ctxR.fillStyle='rgba(62,92,138,.85)'; ctxR.fillText('λ̃',(jc[0]+jd[0])/2+4,(jc[1]+jd[1])/2-4); }
+  drawBodies(ctxR,V,d.m,d.r,d.p,[C.b0,C.b1,C.b2],'p');
+  // normalisation stamp: the mass-weighted hyperradius is pinned to 1
+  ctxR.fillStyle=C.muted; ctxR.font=MONO10; ctxR.textAlign='left'; ctxR.textBaseline='top';
+  ctxR.fillText('√I = 1.000  (I = |ρ̃|²+|λ̃|²)', 9, 22);
+  ctxR.textBaseline='alphabetic';
+}
+
+// shape-sphere map (user convention: θ azimuthal, φ polar). Lagrange at the poles (φ=0,π),
+// collinear on the equator (φ=π/2), BC landmarks there.
+function drawSphere(){
+  const W=WR; ctxR.clearRect(0,0,W,W);
+  const L=58, Rr=W-16, T=44, B=W-42;                 // map box (φ ticks left, θ ticks bottom)
+  const px=azim=>L+(azim/(2*Math.PI))*(Rr-L);        // θ azimuthal: 0..2π horizontal
+  const py=polar=>T+(polar/Math.PI)*(B-T);           // φ polar: 0 (L⁺) top .. π (L⁻) bottom
+  const yEq=py(Math.PI/2);
+  // reachable: n₃≥0 ⇒ polar φ ≤ π/2 ⇒ top half; bottom half mirror-folded
+  ctxR.fillStyle='rgba(26,23,18,.05)'; ctxR.fillRect(L,yEq,Rr-L,B-yEq);
+  ctxR.strokeStyle=C.rule; ctxR.lineWidth=1; ctxR.strokeRect(L,T,Rr-L,B-T);
+  ctxR.font='9px "SF Mono",Menlo,monospace';
+  // θ (azimuthal) gridlines + bottom ticks
+  ctxR.textAlign='center'; ctxR.textBaseline='top';
+  for(let d=0;d<=360;d+=60){ const x=px(d*Math.PI/180);
+    ctxR.strokeStyle=C.ruleSoft; ctxR.beginPath(); ctxR.moveTo(x,T); ctxR.lineTo(x,B); ctxR.stroke();
+    ctxR.fillStyle=C.muted; ctxR.fillText(d+'°',x,B+5); }
+  // φ (polar) gridlines + left ticks
+  ctxR.textAlign='right'; ctxR.textBaseline='middle';
+  for(let d=0;d<=180;d+=30){ const y=py(d*Math.PI/180);
+    ctxR.strokeStyle=C.ruleSoft; ctxR.beginPath(); ctxR.moveTo(L,y); ctxR.lineTo(Rr,y); ctxR.stroke();
+    ctxR.fillStyle=C.muted; ctxR.fillText(d+'°',L-5,y); }
+  // axis titles
+  ctxR.fillStyle=C.ink; ctxR.font='11px Helvetica,Arial,sans-serif';
+  ctxR.textAlign='center'; ctxR.textBaseline='top'; ctxR.fillText('θ  azimuthal',(L+Rr)/2,B+17);
+  ctxR.save(); ctxR.translate(15,(T+B)/2); ctxR.rotate(-Math.PI/2);
+  ctxR.textAlign='center'; ctxR.textBaseline='top'; ctxR.fillText('φ  polar',0,0); ctxR.restore();
+  // equator (collinear locus): horizontal line at polar φ=π/2
+  ctxR.strokeStyle=C.muted; ctxR.setLineDash([4,3]);
+  ctxR.beginPath(); ctxR.moveTo(L,yEq); ctxR.lineTo(Rr,yEq); ctxR.stroke(); ctxR.setLineDash([]);
+  // labels
+  ctxR.font='9px "SF Mono",Menlo,monospace'; ctxR.textBaseline='bottom';
+  ctxR.fillStyle=C.b1; ctxR.textAlign='left'; ctxR.fillText('L⁺ equilateral (φ=0)',L+2,T-3);
+  ctxR.fillStyle=C.muted; ctxR.textAlign='right'; ctxR.fillText('collinear equator',Rr,yEq-3);
+  ctxR.textAlign='left'; ctxR.fillStyle='rgba(26,23,18,.35)';
+  ctxR.fillText('mirror-folded (unreachable)',L+2,B-2); ctxR.textBaseline='alphabetic';
+  if(!last) return;
+  const m=decode(last.z).m;
+  // BC landmarks on the equator (φ=π/2), spread across θ (azimuthal)
+  [[0,1],[1,2],[0,2]].forEach(pr=>{ const x=px(collisionPhi(pr,m));
+    ctxR.beginPath(); ctxR.arc(x,yEq,4,0,7); ctxR.fillStyle=C.b0; ctxR.fill();
+    ctxR.fillStyle=C.b0; ctxR.textAlign='center'; ctxR.textBaseline='top'; ctxR.fillText('BC'+pr[0]+pr[1],x,yEq+5); });
+  // current shape n(0): azimuthal θ = atan2(n₂,n₁), polar φ = acos(n₃)
+  const n=shapePoint(last.alpha,last.beta);
+  const polar=Math.acos(Math.max(-1,Math.min(1,n[2])));
+  let azim=Math.atan2(n[1],n[0]); if(azim<0) azim+=2*Math.PI;
+  const X=px(azim), Y=py(polar);
+  ctxR.strokeStyle=C.accentSoft; ctxR.setLineDash([2,3]);
+  ctxR.beginPath(); ctxR.moveTo(X,Y); ctxR.lineTo(X,B); ctxR.moveTo(X,Y); ctxR.lineTo(L,Y); ctxR.stroke(); ctxR.setLineDash([]);
+  ctxR.beginPath(); ctxR.arc(X,Y,6,0,7); ctxR.fillStyle=C.accent; ctxR.fill();
+  ctxR.strokeStyle='#fff'; ctxR.lineWidth=1.5; ctxR.stroke();
+  ctxR.fillStyle=C.ink; ctxR.textAlign='left'; ctxR.textBaseline='bottom';
+  ctxR.fillText('n(0)  θ='+(azim*180/Math.PI).toFixed(0)+'°  φ='+(polar*180/Math.PI).toFixed(0)+'°', Math.min(X+9,Rr-150), Y-9);
+  ctxR.textBaseline='alphabetic';
+}
+
+function drawRight(){ if(rightMode==='bodies') drawRightBodies(); else drawSphere(); }
+
+// ============================ readout ==================================================
+const num=(x,d=3)=>{ if(!isFinite(x)) return '—'; const s=x.toFixed(d); return (x>=0?'+':'')+s; };
+const pos=(x,d=3)=>isFinite(x)?x.toFixed(d):'—';
+function setRows(el,rows){ el.innerHTML=rows.map(([k,v])=>`<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join(''); }
+
+function updateReadout(){
+  if(!last) return;
+  const z=last.z;
+  const zg=document.getElementById('z-grid');
+  const zrow=(k,v)=>`<span class="zk">${k}</span><span class="zv">${num(v)}</span>`;
+  zg.innerHTML=[
+    zrow('z_α',z.a),zrow('z_β',z.b),
+    '<span class="z-sep"></span>',
+    zrow('z_q0',z.q0),zrow('z_q1',z.q1),zrow('z_q2',z.q2),zrow('z_q3',z.q3),
+    '<span class="z-sep"></span>',
+    zrow('z_μ1',z.m1),zrow('z_μ2',z.m2),
+  ].join('');
+
+  const d=decode(z);
+  const inv=invariants(d.m,d.r,d.p);
+  const ang=triAngles(inv.r01,inv.r02,inv.r12);
+
+  // out-of-range residual: does decode(z) match the direct canonicalisation?
+  let resid=0; for(let i=0;i<3;i++) resid=Math.max(resid,hyp(sub(d.r[i],last.r[i])),hyp(sub(d.p[i],last.p[i])));
+
+  // flags
+  const fl=document.getElementById('flags');
+  const chips=[];
+  for(const f of last.flags){ chips.push(`<span class="chip">${f}</span>`); }
+  for(const t of d.tags){ chips.push(`<span class="chip bad">${t}</span>`); }
+  if(resid>1e-5) chips.push(`<span class="chip">OUT_OF_CHART (clamped, Δ=${resid.toExponential(1)})</span>`);
+  fl.innerHTML=chips.length?chips.join(''):'<span class="chip ok">nominal · round-trip exact</span>';
+
+  setRows(document.getElementById('cfg'),[
+    ['α', pos(last.alpha)+' rad · '+pos(last.alpha*180/Math.PI,1)+'°'],
+    ['β', pos(last.beta)+' rad · '+pos(last.beta*180/Math.PI,1)+'°'],
+    ['m₀ : m₁ : m₂', d.m.map(x=>x.toFixed(3)).join(' : ')],
+    ['M₀₁', pos(d.m[0]+d.m[1])],
+  ]);
+
+  setRows(document.getElementById('meas'),[
+    ['r₀₁ · r₀₂ · r₁₂', [inv.r01,inv.r02,inv.r12].map(x=>x.toFixed(3)).join(' · ')],
+    ['|rᵢ| from COM', d.r.map(ri=>hyp(ri).toFixed(3)).join(' · ')],
+    ['triangle ∠ (°)', ang.map(a=>a.toFixed(1)).join(' · ')],
+    ['|p_ρ| · |p_λ|', hyp(last.pRho).toFixed(3)+' · '+hyp(last.pLam).toFixed(3)],
+    ['E = K + U', num(inv.E)],
+    ['L_z', num(inv.L)],
+  ]);
+
+  setRows(document.getElementById('gauge'),[
+    ['|R_com| raw ▸ can', hyp(last.rawRcom).toFixed(3)+' ▸ '+hyp(inv.P).toFixed(3).replace(/^/,'') ],
+    ['|P| raw ▸ can', hyp(last.rawP).toFixed(3)+' ▸ '+Math.hypot(inv.P[0],inv.P[1]).toFixed(3)],
+    ['scale ℓ = √I', pos(last.ell)],
+    ['rotation φ', num(last.phi)+' rad'],
+    ['α margin to pole', pos(Math.min(last.alpha, Math.PI/2-last.alpha))],
+  ]);
+}
+// fix the raw|Rcom| row (COM position collapses to 0 in canonical frame)
+function fixGaugeRows(){
+  const rows=document.getElementById('gauge').children;
+  if(rows[0]) rows[0].querySelector('.v').textContent=hyp(last.rawRcom).toFixed(3)+' ▸ 0.000';
+}
+
+// ============================ main render ==============================================
+function render(){
+  last=canonicalise(bodies);
+  drawLeft(); drawRight(); updateReadout(); fixGaugeRows();
+}
+
+// ============================ interaction ==============================================
+function eventPos(cv,e){ const R=cv.getBoundingClientRect(); return [ (e.clientX-R.left)*(cv.clientWidth/R.width), (e.clientY-R.top)*(cv.clientWidth/R.width) ]; }
+let drag=null;
+cvL.addEventListener('pointerdown',e=>{
+  if(e.button!==0) return;
+  const V=leftView(); const [sx,sy]=eventPos(cvL,e);
+  // arrow tips first
+  for(let i=0;i<3;i++){
+    const vec=bodies[i].v;
+    const tip=w2s(add(bodies[i].r,scl(vec,ARROW)),V);
+    if(Math.hypot(sx-tip[0],sy-tip[1])<11){ drag={mode:'vel',i}; cvL.setPointerCapture(e.pointerId); return; }
+  }
+  for(let i=0;i<3;i++){
+    const c=w2s(bodies[i].r,V);
+    if(Math.hypot(sx-c[0],sy-c[1])<bodyR(bodies[i].m)+3){ drag={mode:'pos',i}; cvL.setPointerCapture(e.pointerId); return; }
+  }
+});
+cvL.addEventListener('pointermove',e=>{
+  if(!drag) return;
+  const V=leftView(); const [sx,sy]=eventPos(cvL,e); const w=s2w(sx,sy,V);
+  if(drag.mode==='pos') bodies[drag.i].r=w;
+  else {
+    let vec=sub(w,bodies[drag.i].r); vec=scl(vec,1/ARROW);
+    bodies[drag.i].v = vec;
+  }
+  render(); syncPop();
+});
+cvL.addEventListener('pointerup',()=>{drag=null;});
+cvL.addEventListener('pointercancel',()=>{drag=null;});
+
+// right-click properties popover
+let pop=null, popIdx=-1;
+cvL.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  const V=leftView(); const [sx,sy]=eventPos(cvL,e);
+  for(let i=0;i<3;i++){ const c=w2s(bodies[i].r,V);
+    if(Math.hypot(sx-c[0],sy-c[1])<bodyR(bodies[i].m)+6){ openPop(i,e.clientX,e.clientY); return; } }
+  closePop();
+});
+function openPop(i,clientX,clientY){
+  closePop(); popIdx=i;
+  const fr=document.getElementById('frame-left'); const R=fr.getBoundingClientRect();
+  pop=document.createElement('div'); pop.className='pop';
+  pop.style.left=Math.min(clientX-R.left, R.width-220)+'px';
+  pop.style.top=Math.max(6, clientY-R.top-10)+'px';
+  pop.innerHTML=`
+    <h3>Body ${i} <button title="close" id="pop-x">×</button></h3>
+    <div class="pbody">
+      <span class="lab">x</span><input type="number" step="0.05" id="p-x"><span></span>
+      <span class="lab">y</span><input type="number" step="0.05" id="p-y"><span></span>
+      <span class="lab">vₓ</span><input type="number" step="0.05" id="p-vx"><span></span>
+      <span class="lab">v_y</span><input type="number" step="0.05" id="p-vy"><span></span>
+      <span class="lab">m</span><input type="number" step="0.05" min="0.05" id="p-m"><span class="ro" id="p-mr"></span>
+      <input type="range" min="0.1" max="3" step="0.01" id="p-ms" class="full">
+      <span class="lab">|v|</span><span class="ro full" id="p-sp"></span>
+      <span class="lab">→COM</span><span class="ro full" id="p-dc"></span>
+      <span class="lab">→others</span><span class="ro full" id="p-do"></span>
+    </div>`;
+  fr.appendChild(pop);
+  const bind=(id,fn)=>{ const el=pop.querySelector(id); el.addEventListener('input',()=>{fn(parseFloat(el.value)); render(); syncPop();}); };
+  bind('#p-x',v=>bodies[i].r[0]=v); bind('#p-y',v=>bodies[i].r[1]=v);
+  bind('#p-vx',v=>bodies[i].v[0]=v); bind('#p-vy',v=>bodies[i].v[1]=v);
+  bind('#p-m',v=>{if(v>0)bodies[i].m=v;}); 
+  pop.querySelector('#p-ms').addEventListener('input',ev=>{bodies[i].m=parseFloat(ev.target.value); render(); syncPop();});
+  pop.querySelector('#pop-x').addEventListener('click',closePop);
+  syncPop();
+}
+function syncPop(){
+  if(!pop||popIdx<0) return; const i=popIdx, b=bodies[i];
+  const set=(id,v)=>{const el=pop.querySelector(id); if(el&&document.activeElement!==el) el.value=v;};
+  set('#p-x',b.r[0].toFixed(3)); set('#p-y',b.r[1].toFixed(3));
+  set('#p-vx',b.v[0].toFixed(3)); set('#p-vy',b.v[1].toFixed(3));
+  set('#p-m',b.m.toFixed(3)); set('#p-ms',b.m);
+  const Msum=bodies.reduce((s,x)=>s+x.m,0);
+  const com=bodies.reduce((s,x)=>add(s,scl(x.r,x.m/Msum)),[0,0]);
+  pop.querySelector('#p-mr').textContent='('+(b.m/Msum).toFixed(3)+' norm)';
+  pop.querySelector('#p-sp').textContent=hyp(b.v).toFixed(3);
+  pop.querySelector('#p-dc').textContent=hyp(sub(b.r,com)).toFixed(3);
+  pop.querySelector('#p-do').textContent=[0,1,2].filter(j=>j!==i).map(j=>hyp(sub(b.r,bodies[j].r)).toFixed(3)).join(' · ');
+}
+function closePop(){ if(pop){pop.remove(); pop=null; popIdx=-1;} }
+
+// ============================ controls =================================================
+document.getElementById('btn-reset').onclick=()=>{bodies=DEF(); closePop(); render();};
+document.getElementById('btn-rand').onclick=()=>{
+  bodies=[0,1,2].map(()=>({r:[(Math.random()*2-1)*0.9,(Math.random()*2-1)*0.9],
+    v:[(Math.random()*2-1)*0.6,(Math.random()*2-1)*0.6], m:0.4+Math.random()*1.4}));
+  closePop(); render();
+};
+document.getElementById('btn-burrau').onclick=()=>{
+  // Pythagorean 3-4-5 rest start, masses ∝ opposite side (Burrau convention), gently perturbed velocities
+  bodies=[{r:[1,3],v:[0,0],m:3},{r:[-2,-1],v:[0,0],m:4},{r:[1,-1],v:[0,0],m:5}];
+  const Msum=12; const com=bodies.reduce((s,b)=>add(s,scl(b.r,b.m/Msum)),[0,0]);
+  bodies.forEach(b=>{b.r=sub(b.r,com);});
+  closePop(); render();
+};
+// whole-system handles — canonical view + z should be invariant
+document.getElementById('btn-rot').onclick=()=>{const a=15*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+  bodies.forEach(b=>{b.r=rot(b.r,c,s); b.v=rot(b.v,c,s);}); render(); syncPop();};
+document.getElementById('btn-scale').onclick=()=>{const k=1.25;
+  bodies.forEach(b=>{b.r=scl(b.r,k); b.v=scl(b.v,1/Math.sqrt(k));}); render(); syncPop();};
+document.getElementById('btn-boost').onclick=()=>{bodies.forEach(b=>{b.v=add(b.v,[0.25,0.12]);}); render(); syncPop();};
+document.querySelectorAll('#rmode button').forEach(b=>b.onclick=()=>{
+  rightMode=b.dataset.mode;
+  document.querySelectorAll('#rmode button').forEach(x=>x.classList.toggle('active',x===b));
+  drawRight();
+});
+window.addEventListener('pointerdown',e=>{ if(pop && !pop.contains(e.target) && e.target!==cvL) closePop(); }, true);
+
+// ============================ go =======================================================
+resize();
+</script>
+</body>
+</html>

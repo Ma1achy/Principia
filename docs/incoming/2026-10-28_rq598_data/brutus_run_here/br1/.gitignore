@@ -1,0 +1,5 @@
+# Trajectories are never committed: row 1 of each is the authors' initial condition x2 (pgbreen/NVM, no licence),
+# and the rows after it track the authors' trajectory closely enough to reconstruct it. run_br1.py regenerates them.
+traj/
+traj_t10/
+*.log

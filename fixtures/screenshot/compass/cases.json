@@ -1,0 +1,28 @@
+{
+ "cases": [
+  {
+   "name": "mock_compass_cube_third_axis",
+   "surface": {
+    "kind": "gui",
+    "screen": "01_main",
+    "steps": [
+     "compass_case_third_axis"
+    ]
+   },
+   "artboard": "docs/gui/design/01_main.png",
+   "compass": "mock_compass_cube_third_axis.json"
+  },
+  {
+   "name": "mock_compass_cube_badge",
+   "surface": {
+    "kind": "gui",
+    "screen": "01_main",
+    "steps": [
+     "compass_case_badge"
+    ]
+   },
+   "artboard": "docs/gui/design/01_main.png",
+   "compass": "mock_compass_cube_badge.json"
+  }
+ ]
+}

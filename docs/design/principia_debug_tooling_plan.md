@@ -1,0 +1,223 @@
+# Principia — debug tooling plan
+
+*Working note before the milestone plan. The organising principle, the four-surface matrix, and the actual catalogue: for each observable, what the **shader shows** and what the **test asserts**. Drawn from the render contract (Parts 5–8), generation-root dd, integrator dd, deep-zoom note, scheduler contract. This is the Phase-0 deliverable enumerated.*
+
+---
+
+## Principle
+
+The debug tooling is not scaffolding — it is **the perception layer for building everything else**, and for an agent that cannot see the screen, it is the *only* sensory organ. It doubles as the test harness. So it is built **first**, before the physics and scheduler it observes, and validated against **synthetic hand-filled buffers** before any real component exists.
+
+**One generated core, four surfaces.** The unpack/accessor layer is generated from the ledger (one source). It feeds four presentation surfaces:
+
+|  | Shader (eyes — spatial/structural bugs) | Unit test (CI — pointwise/logic bugs, agent-perceptible) |
+|---|---|---|
+| **Payload** (`SimState`, bit-packed, arrays) | field-colouring fragment shaders | assert on unpacked accessors |
+| **Structural** (`RenderQuad`, quadtree) | depth/state/coherence heatmaps | assert on the CPU quad structs |
+
+Both modalities on both data sources — neither lens sees everything. A field test can pass (each pixel's `state` individually valid) while the shader reveals them spatially scrambled; a view can look plausible while a test catches an off-by-one in bit 7. The generated accessor (`sd_state` etc.) is called by *both* the shader and the assertion — **WGSL** (fragment) and **Rust** (kernel/host, used by the assertion) versions from the same layout definition — so four surfaces, not four implementations.
+
+**Synthetic-first.** Every payload surface is validated by CPU-filling a `SimState` buffer with known values (a set `state`, a known escaper, a ramp in `energy_drift`, a bitwise-adversarial descriptor) and asserting both the accessor returns it and the shader renders it. This happens before the decoder exists — the direct fix for the black-screen failure.
+
+---
+
+## A. Kernel debug dispatch modes (skip integration; reuse payload slots as scratch)
+
+**The kernel keeps one debug mode (R-75):** `principia_colour_composition.md` Appendix A's bring-up mode — the kernel writes a known pattern instead of physics, selected as a baked kernel variant (lowering contract Part 3), not a dispatch flag (R-41). No new buffers; the pattern is written into existing slots. It exists for when payload writes are too broken for the presets below to run. **UV, DECODE and ROUNDTRIP are fragment presets** (colour_composition §6), computed from `ctx` by fragment-side recompute, not kernel variants.
+
+| Mode | Shader shows | Test asserts | Certifies |
+|---|---|---|---|
+| kernel bring-up (the one kernel mode) | the known pattern the kernel wrote | the unpacked payload equals the pattern | the payload write path, before any preset can be trusted |
+| UV preset | quad-local `u` (and `v`) as a gradient across each quad | reconstructed `(u,v)` for sampled quads = expected `c ± h·(2t−1)`; **no banding** = adjacent-sample deltas are smooth, not step-quantised | quad-local coordinate reconstruction. Banding = f32 precision loss made *visible* |
+| DECODE preset | fragment-side decode of `ctx.chart.z`, before physics: z components, masses (ternary), body positions | decoded `(m,r,p)` = f64 `decodeOnly()` to Tier-N tol; identities (Σm=1, ΣCoM=0, I=1) | the Matter rung, before any integrator exists (Phase-0d "raw IC colouring") |
+| ROUNDTRIP preset | fragment-side `z → D → E → D` physical residual, log-scaled | residual ≤ `ε_phys` except at clamps / feasibility edges (tagged expected); no mirror tie, `C` having no mirror step (R-865). *14 Nov 2026 (R-865; TASK-M2-107; applied per R-369, a mechanical consequence of R-865, after physics review 5907871580 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder on `main`:* *Was:* "residual ≤ `ε_phys` except at clamps/feasibility/mirror-tie (tagged expected)" | the encode path — encode-side sibling of the invariant-chart gradient |
+
+---
+
+## B. Payload field views — `sample_descriptor` (bit-packed u32)
+
+One view + one test per field. Generated from the ledger, conformed to the payload doc (`principia_dd_simstate_payload.md` §2, §6 — it governs, R-86); a garbage view here = ledger ≠ kernel-write, caught day one. All accessors use the **u32** `extractBits` overload (i32 sign-extends — the trap).
+
+| Field | Shader shows | Test asserts |
+|---|---|---|
+| `state` (0–2) | six-colour `dbg_cat` categorical palette, **6 states** (escape/bounded/collision/running/sim_failed/decode_failed) — not the outcome palette, which R-77 sets at `state ⊕ detail` grain (R-115) | `sd_state(w)` round-trips 0–5; union legend switches on it; `running`(3) shows in-flight; the three failure/lifecycle states render distinctly |
+| `detail` (3–4) | **legend keyed by state** (escape→body, collision→pair, sim/decode_failed→failure category — the 4-state union, payload §2; blank for running); the keys are the one display function's names, body 1–3 and a pair by its two bodies, never "body 0" or a pair id (R-449; payload §2, "What a person reads") | correct code per state; **the three-colours-bug regression test** — detail is read, not dropped; undefined-when-running handled |
+| `saturated` (5) | boolean overlay | set iff `N_sub == N_max` occurred at some macro-step (sticky; R-86) |
+| `dmin_pair` (6–7) | categorical(3), its legend naming each pair by its two bodies, 1-based (R-449) | round-trips; matches the pair that achieved `d_min` (a latched fact, not the word) |
+| `last_symbol` (8–9) | categorical(4) — the word's final symbol (`a=0, A=1, b=2, B=3`); invalid-styled when the word is empty or truncated | equals the last symbol of `fgw_decode(word)` whenever `sd_last_symbol_valid(fgw_length_raw(word))` — the cache stays coherent with the sidecar word (payload §3) |
+| *reserved* (10–15) | — | decode as zero (payload §2) |
+| `total_substeps_log2` (derived, not a descriptor field) | scalar (log) — cumulative work / complexity | matches `⌊log₂ Σ N_sub⌋` (0 for a total ≤ 1; R-86), derived at read via `countLeadingZeros` from the exact `total_substeps` u32 (payload §2); the *complexity* proxy (not peak — peak was dropped) |
+| `fgw_truncated` (the **length sentinel** `length_raw == 127` in the word buffer's `.w` — NO flag bit; bit 24 is payload, payload §3) | flag view | fires iff a push arrives at length 76 — the length cap is the normative trigger, not numeric overflow (payload §3); word-derived quantities styled invalid once truncated |
+| `t_end_step` / `t_dmin_step` (in `times`, exact u16) | scalar ramp (fraction via the `horizon_steps` uniform) | exact-index round-trip; `t_dmin_step` absolute; **bit-identical CPU/GPU** (parity); dispatch refuses `⌈T/dt_macro⌉ > 65535` (R-86) |
+| `d_min`, `dE_max`, `dLz_max` (f16, packed) | scalar ramp | `unpack2x16float` round-trips within f16 eps; sentinels shown as their literal values on the ramp, never scaled (R-136); `d_min`'s unset value (+inf, bits `0x7C00`, R-271) drawn in the neutral "not yet" grey of `running` samples, not on the ramp and not hatched (R-96, R-280) |
+| **DERIVED views (not descriptor bits):** `orbit_count`/`retrograde` (from `theta`), the **reduced crossing count** (`fgw_reduced_length`, valid iff not truncated) / `enc_XY`/`dominant_pair` (topological word read — symbolic-dynamics contract; v2, since per-pair views are out of v1 — R-125), `ftle = S_final/(step_count·dt)` (partial renorm finalised — payload §5, never plain `S/t`), current drift (`H(r,p)−E_0`) | computed in the fragment from stored state/word | each matches a reference computed the same way; the word-derived tallies use the generator→pair mapping, not a histogram |
+| **live current-substep count** *(live view, not a descriptor bit)* | **animated heatmap of substeps this macro-step** — read off the marching state | the substepper's live effort; close encounters propagate across the manifold in time (Part-5 live views) |
+| **whole-word hash** | `dbg_hash(w)` — "is it changing at all" | distinct words → distinct colours | 
+
+`d_min`'s unset value is drawn in the "not yet" style (R-399): the neutral grey of `running` samples with a fine dot
+stipple from the pixel position, `debug_not_yet(frag_xy)`, distinct from the invalid hatch's stripes, so no ramp value
+reads as it.
+
+---
+
+## C. Payload field views — `times` (u32), f16-packed scalars & `free_group_word` (separate buffer)
+
+| Field | Shader shows | Test asserts |
+|---|---|---|
+| `t_end_step`/`t_dmin_step` (in `times`, bits 0–15/16–31) | scalar (via `horizon_steps` uniform) | exact-index round-trip; bit-identical CPU/GPU (Tier B) |
+| `total_substeps` (exact u32, separate field) | scalar (log proxy via `countLeadingZeros`) | matches Σ N_sub; the `total_substeps_log2` proxy is derived at read, not stored |
+| *(no packed `orbit_count`/`retrograde` rows — derived from `theta`, §B derived views; `dmin_pair` is descriptor bits 6–7, §B)* | | |
+| **word length** (`.w` bits 25–31, 7 bits; 127 = truncation sentinel) | scalar | `fgw_reduced_length` = **net reduced** crossings (free reduction pops cancel — NOT raw symbols appended), valid iff `fgw_reduced_length_valid`; `fgw_retained_prefix_length` (debug/export only) clamps 127 → 76 |
+| **symbol-at-k** | scrubber `u_k` → symbol colour | `fgw_decode(word)[k]` per slot (sequential decode, cold path) |
+| **whole-word hash** | hashed colour → **renders topological basins** (finer than outcome boundaries) | word-boundary set ≠ outcome-boundary set (the free Burrau topological-boundary diagnostic) |
+
+---
+
+## D. Payload field views — `SimState` scalars (ledger §3.4)
+
+Regenerated from the ledger's §3.4 rows (R-86); the storage column is the payload doc's (§1, §2, §5). Scale per ledger metadata. **The two drift fields are signed → diverging scale, not sequential-log** (generation-root finding).
+
+| Field | Stored as | Shader (scale) | Test asserts |
+|---|---|---|---|
+| `t_end_step` | `times` low u16 (exact) | lin [0,T] via `horizon_steps` | completed-step count at all times, latched at termination (payload §2) |
+| `d_min` | f16, `packed_a` high half | log | > 0; = min over trajectory |
+| `ftle` | derived: `S_final/(step_count·dt_macro)`; NaN whenever `ftle_valid` is false (R-253, R-254) | lin (tier) | ≈0 on Kepler-embedded, large on Burrau |
+| `energy_drift` | derived: `H(r,p) − E_0` | **diverging** | oscillates (symplectic) vs drifts (Euler/RK4) |
+| `diffusion` | derived: `C_ty/C_tt(n)` | lin, an invalid fit (`n < 2`) reads NaN and gets the hatch (R-245) | NaN iff `n < 2`; never scaled |
+| `delta_E_max_abs` | f16, `packed_b` low (`dE_max`) | log | ≥ the final absolute drift (spike-that-recovered) |
+| `Lz_drift` | derived: `L_z(r,p) − Lz_0` | **diverging** | absolute-gated suspect |
+| `delta_Lz_max_abs` | f16, `packed_b` high (`dLz_max`) | log | ≥ the final absolute drift |
+| `E_0` | f32 | diverging | **= K₀+V₀** (cross-check) |
+| `Lz_0` | f32 | diverging | invariant-chart gradient input |
+| `closure_min` | f32 | log | ≥ 0; the running minimum of the shape-sphere distance from `n̂(0)`, once departed by `δ_dep` (R-37) |
+| `closure_step` | u16 (exact) | lin | the step index of the minimum (the period label), as `t_dmin_step`; Tier N/S with `closure_min` (parity contract § "Tier B"; 17 Nov 2026). *Was:* "binary-parity surface, as `t_dmin_step`" |
+
+---
+
+## E. Payload field views — `ICDescriptor` (64 B) & the live-state block
+
+`ICDescriptor` is 64 B at f32: the twelve f32 fields of ledger §3.6 plus explicit padding; its width follows `Real` (R-313). `E₀` is derived (`K_0 + V_0`), not stored (R-86).
+
+| Field | Shader | Test |
+|---|---|---|
+| masses `m0 m1 m2` | ternary colour, its legend reading body 1, 2, 3 (R-449) | = decode masses |
+| `q_mass`, `rho_mag`, `lambda_mag`, `virial_ratio`, `rho_ratio`(log), `rho_angle`(cyclic), `K_0`(lin, [0, ∞)), `V_0`(lin, (−∞, 0]; R-403), `r_min_pair_0`(log) | scalar per scale | = f64 decode values |
+| `E₀` (derived, `K_0 + V_0`) | diverging | = `SimState.E_0` (the energy-agreement cross-check, §G) |
+| **live shape views** `u_mode` | mode 0: `½(n+1)` dir-cosines RGB of current derived `n`; mode 1: running phase `θ̃` cyclic; mode 2: `|n|−1` error | `‖n‖=1` (flat-zero — derived fresh each step); `θ̃` continuous (no 2π jumps); terminal-latched samples frozen |
+| accumulator views | FTLE-running `S/t` (live approx — the finalised read is `S_final/(step_count·dt)`, payload §5); diffusion slope `C_ty/C_tt(n)` (Welford, derived time-moments); drift max-vs-final | accumulator bookkeeping, live |
+
+*ICDescriptor views certify the **decoder**, independent of any integration.*
+
+---
+
+## F. Structural views — `RenderQuad` / quadtree (read quad metadata, not payload)
+
+These certify the **CPU brain** — a wrong view here exonerates the GPU and points at the scheduler.
+
+| View | Shader shows | Test asserts |
+|---|---|---|
+| quad-depth heatmap | depth `ℓ` as colour ramp | at rest, every in-view quad above the screen floor is split (policy §0.1; R-108); below it, subdivision matches complexity + `ℓ < camera_depth + MAX_REL_DEPTH` (the sliding cap on every split beyond the screen floor, off-screen policy splits included, `MAX_REL_DEPTH` ≥ the screen floor — R-88, R-98) |
+| quad-state enum | loaded / pending / refinable / **terminal** / stale as discrete colours | state transitions legal; terminal iff a TRUE floor hit (linear-decoder `AT_F32_FLOOR`, or the integration floor — quad-level refinement-stops; the sample `saturated` flag is non-terminal, and the screen floor is view-relative and never terminal — the criterion may supersample below it, R-88 — scheduler Part 4) |
+| coherence / impurity | scalar heatmap | = reduction output; high where boundaries |
+| ensemble spread | scalar (tier) | present iff `contains-ensemble` |
+| suspect fraction | scalar | flags integration-floor quads |
+| priority score | scalar | = `w_v·P_v + w_z·P_z + w_c·P_c + w_f·P_f` |
+| cache age / ancestor gap | scalar | LRU + fallback-chain behaviour |
+| **UV passthrough (coordinate convention)** | raw post-flip `(u,v)` as a gradient (`u→red, v→green`), + quad-local `δ` as a second mode: `δ = h·(2t−1)`, deep_zoom §2's quad-local offset `u − c`, each component normalised by its bound `h = 2^−(ℓ+1)` to `[−1, 1]` and mapped to `(x + 1)/2`, `u`'s in red and `v`'s in green, blue 0 (REQ-TOOL-153; R-72, written by TASK-M1-07; in exact arithmetic it draws `t`, as `ctx.quad.uv → RG` does, so the two agree unless the δ path is wrong) | **the Y-flip is correct** — the gradient runs bottom-left-origin Y-up (green increases *upward*); a wrong flip is instantly visible as an inverted gradient. Makes the invisible mirror-bug (coordinate note) visible *before any physics*. Structural, validated at 0b |
+| **picking cross-check** | click/hover a known corner or centre → mark the reported UV/IC | reported coordinate = expected corner (top-left click → `v≈1`, bottom-left → `v≈0`); certifies pointer-event → post-flip-UV path agrees with the render flip (the wrong-subsystem bug: clicking top inspects bottom) |
+| **quadtree boundaries / leaf outlines** | overlay (post slot + `ctx.uv`) | active leaf set correct; pinned chain never evicted |
+| fallback ancestor tint / pending hatch | overlay | slippy-map fallback shown, never blank |
+
+**The structural overlays' styling (REQ-TOOL-124; R-72, written by TASK-M1-13; colours, widths and opacity proposed,
+R-71, confirmed by the human at the M1 gate).** Both are post occupants reading `ctx.quad` (RQ-239), drawn over the
+colour beneath, never in its place:
+
+- **The pending hatch** marks a quad whose `quad_state` is 1 (pending, dd_generation_root §3.7a). At pixel
+  `p = ⌊frag_xy⌋`, the pixel is on a line iff `(p.x − p.y) mod 8 < 2`: lines 2 px wide every 8 px, running along the
+  anti-diagonal, drawn in blue `#0000FF`, 8-bit sRGB; the other 6 px in 8 keep the colour beneath, so the field still
+  reads through it.
+- **The fallback ancestor tint** marks a quad whose `ancestor_gap` is above 0, drawn from an ancestor's payload: its
+  colour is mixed 0.4 of the way toward pink `#FF69FF`, 8-bit sRGB, in linear RGB. A flat tint, no pattern.
+
+Neither is `debug_invalid`'s hatch (render contract Part 5, REQ-COL-055), in pattern or in colours. That hatch runs
+across `x + y`, with stripes 4 px wide, and covers every pixel in violet `#9B00FF` and cyan `#48FFFF`. The pending
+hatch runs across `x − y`, with 2 px lines every 8 px, over the colour beneath; the fallback tint has no pattern. So a
+pending or fallback quad never reads as NaN (PIT-8, R-136). REQ-COL-055's no-collision measurement, rerun over the
+same palettes in OKLab, gives these distances. `#0000FF` is 0.137 from its nearest entry (Cool-warm, at its stop 0),
+and 0.230 and 0.546 from the hatch's violet and cyan. `#FF69FF` is 0.124 from its nearest (the outcome palette's
+`#E034C6`), and 0.235 and 0.390 from violet and cyan. Each is farther than the 0.101 that R-16's flat magenta,
+`#FF00FF`, lies from `#E034C6`. The quad boundaries and leaf outlines are render_gui_spec §12.1's Tier-1 `edge_line`
+post node.
+
+---
+
+## G. Cross-check views (certify a *seam*, not a field — integration tests with a display)
+
+| View | Shader shows | Test asserts |
+|---|---|---|
+| **invariant-chart gradient** | `E_0` / `L_z_0` on an (L_z,E)/(L_z,K) chart | **perfect axis-aligned gradient** — one glance certifies the invariant downstream solve (the strongest single test) |
+| energy agreement | `|E_0 − (K_0+V_0)|` log; a non-finite operand, tested on its bits before any arithmetic, in the invalid colour (R-436) | ≤ tol (decode-time vs kernel-time) |
+| winding consistency | derived `orbit_count = ⌊|θ̃|/2π⌋`, `retrograde = θ̃<0` vs the running `θ̃` accumulator | derivation = live source; terminal-latch respected |
+| diffusion (Welford) | slope `C_ty/C_tt` vs reference computed identically | the streaming accumulator bookkeeping is correct |
+| **impurity mask** | per-sample `class ⊕ detail` ≠ the quad's `dominant_outcome` (joint grain; no `majority_class` field — R-20) | spatial mean = `outcome_impurity` — the grain fix is change 1's resolution: one joint `class ⊕ detail` grain, `principia_dd_generation_root.md` §3.7 |
+| drift shape | `energy_drift` (final) vs `delta_E_max_abs` (max) | distinguishes secular loss from recovered spike |
+| colour independence (pitfalls §1.2 (c)) | one slice, from one payload, in event, greyscale and hue modes (`principia_colour_composition.md` §4.1) | the three modes' edge maps agree: colouring is a pure function applied after the physics |
+
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* at `ε ≠ 0` the invariant-chart gradient reads the chart's axis energy, the Newtonian energy, not the stored `E_0`, which is softened (R-654). An untilted chart would still show an axis-aligned gradient on the softened `E_0`, offset by a constant, so the check at `ε ≠ 0` runs under the warp on a chart tilted into a shape or mass control, pixel by pixel: the view's energy minus the pixel's Newtonian `U` equals `K(t)` (REQ-CHART-092). A momentum tilt moves neither `U` nor the offset. The gradient is axis-aligned on an untilted chart; tilted into a shape or mass control, a warped `E` follows the pixel's `U` (R-471 E3), at any `ε`, and the check is per pixel.
+
+**The edge map (R-72; REQ-VAL-182).** The colour-independence check (pitfalls §1.2 (c); REQ-VAL-012) compares the
+edge maps of one slice, rendered from one payload in the three modes colour composition §4.1 defines: event,
+greyscale and hue.
+- **What it is taken on: each mode's rendered output.** The map is taken on the linear-RGB image the stain writes,
+  before the display stage (colour composition §4.3), each pixel taken to OKLab. It is not taken on the payload field:
+  a map of the field before colouring is the same in every mode whatever the colouring does, so the comparison could
+  only pass. Taken on the render, a mode that gives two of the field's classes one colour loses the edge between them,
+  and a mode coloured by anything but the field gains edges the field does not have; either fails.
+- **Its cells are the samples' tiles.** Each sample rasterises to exactly its tile (canonical spec §8), and a tile's
+  appearance is its pixels' OKLab colours in the tile's own order. Whole tiles are compared, not single pixels, so
+  that a style drawn from the pixel position, the invalid hatch or the "not yet" stipple, is one appearance, the same
+  in every mode. Pixel by pixel, one of its colours could match a flat colour of one mode and not another's (the
+  stipple's ground is a grey, which a greyscale class can come near), and the maps would differ at a seam the field
+  does not change. The hatch repeats every 8 px across x + y and the stipple every 4 px (the proposed patterns,
+  REQ-COL-055, REQ-COL-064, awaiting the M1 gate; the hatch's confirmed there, R-428, and the stipple's, its period
+  unchanged, R-434), so on a tile whose side is a
+  multiple of 8 px, as the golden
+  harness's are, two adjacent tiles of one style have one appearance; on any other, they differ alike in every mode,
+  and the maps still agree.
+- **The detector.** Two tiles that share a side are separated by an edge iff their appearances differ: iff a pixel of
+  one differs from the pixel at the same place in the other by more than τ = 0.01 in OKLab (Euclidean distance,
+  ΔE_OK). τ sits in a measured gap (pitfalls §3, a threshold set from a measured gap): above the render's float error,
+  under 10⁻⁵ in OKLab on the harness, and below the least distance any of the three modes puts between two different
+  appearances, which is hue mode's between two neighbouring classes of the outcome field, `2 · 0.12 · sin(π/11)` ≈
+  0.068. The check measures both ends of the gap on its slice before it reads the maps.
+- **The comparison.** Two maps agree iff they hold the same edges, the same pairs of adjacent tiles. The check passes
+  iff the event, greyscale and hue maps of the slice agree, and otherwise names a tile pair that one map holds and
+  another lacks. It is shown able to fail: a payload perturbed between two modes' renders gives maps that differ.
+
+---
+
+## H. Codegen self-test (the tooling that tests the tooling)
+
+| Test | Mechanism |
+|---|---|
+| pack∘unpack = id | property-fuzzed per field, **in Rust (host) and via a GPU self-test dispatch** of the WGSL fragment unpack (where the i32-`extractBits` trap lives — the Rust side has no `extractBits`) |
+| disjointness/coverage | static: no field overlap; reserved bits explicit; widths fit ranges |
+| metadata gate | delete any `scale` → generation fails, field named |
+| f16 pairs | round-trip via `unpack2x16float` within f16 eps |
+| union semantics | `detail` decodes per `state` |
+
+---
+
+## Build order within Phase 0 (the only forced staggering)
+
+1. **0a — generation root**: ledger + generated pack/unpack (Rust + WGSL) + codegen self-test (§H). Nothing renders yet; tests green.
+2. **0b — synthetic payload harness**: CPU-fill `SimState`/`ICDescriptor`, the field-view shaders (§B–E) + their accessor tests. **Screen colours a hand-filled buffer; both surfaces green — before any physics.**
+3. **0c — the kernel bring-up mode** (§A): the kernel writes a known pattern, so the payload write path is trusted first. The §A presets follow on the fragment side: the UV preset first (needs only quad-local coords), then the DECODE preset once the WGSL decode — translated from the one Rust source, never hand-written (R-116) — lands (Phase 1), ROUNDTRIP once encode lands (R-75).
+4. **structural views (§F)** land the moment `RenderQuad` is *defined* — before the scheduler *logic* that fills it with interesting values, so adaptive refinement is visible as it's built. **The UV-passthrough coordinate view is the earliest of all** — it needs only a rasterised quad and the flip, so it lands before decode/schedule/anything, catching a wrong Y-convention (coordinate note) at the very first pixel rather than a week later in the wrong subsystem.
+5. **cross-checks (§G)** land per the seam they certify, as those components arrive.
+
+Everything payload-shaped is testable at 0b against fiction. Everything structural precedes its subsystem. By the time Claude Code writes decode/integrate/schedule, the eyes and the assertions for that component already exist and are green.
+
+---
+
+*One generated core, four surfaces, synthetic-first. The shader catches what a scalar can't; the test is the only thing the agent can see. Build the eyes before the thing seen — for an agent, the eyes are the only sense there is.*

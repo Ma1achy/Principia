@@ -1,0 +1,3 @@
+NO-OCR-MATCH	row 8	abs_E	39.5
+NO-OCR-MATCH	row 8	L	132.58
+numeric cells checked=16; matched by an OCR token=14; unmatched=2

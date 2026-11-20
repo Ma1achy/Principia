@@ -1,0 +1,10 @@
+{
+  "description": "PIT-3, the CoM check can fire: the same draws, fewer of them, with C's output moved by 2⁻⁵⁰ (about 8.9×10⁻¹⁶) on both axes before its CoM is read, a known CoM of about 1.3×10⁻¹⁵, so the gate must fail it while the round trip still passes.",
+  "seed": 1,
+  "samples": 2000,
+  "radius": 4.0,
+  "encode": "defaults",
+  "shift": 8.881784197001252e-16,
+  "shapes": 0,
+  "expected": "fail"
+}

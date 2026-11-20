@@ -1,0 +1,12 @@
+1. Fourier at t = 0 vs printed ICs:
+   body 1: x 1.07590 (printed 1.07590), vy 0.19511 (printed 0.19509)
+   body 2: x -0.07095 (printed -0.07095), vy -1.23182 (printed -1.23187)
+   body 3: x -1.00496 (printed -1.00496), vy 1.03660 (printed 1.03678)
+2. sum x = -0.00001, sum vy = 0.00000; E = -1.107938, L = -0.744624, T = 2 pi; invariants T|E|^1.5 = 7.32746, L^2|E| = 0.61431
+3. closest catalogue rows by the invariants (relative difference, key, T|E|^1.5, L^2|E|):
+   5.57e-06 broucke_broucke_a_7                      7.32742 0.61432
+   3.60e-01 suvakovpc_sn_6                           7.31051 0.39322
+   4.43e-01 broucke_broucke_a_6                      9.65119 0.88635
+   6.61e-01 broucke_broucke_a_10                     12.17032 0.54378
+   6.77e-01 broucke_broucke_a_1                      4.95983 1.03013
+   matches (both within 1e-3): 1

@@ -1,0 +1,8 @@
+hristov2022_123: rows A=123 B=123, rows identical 123, values 492, values differing 0, sig digits [(148, 2), (149, 32), (150, 458)]
+hristov2023_462: rows A=462 B=462, rows identical 462, values 1848, values differing 0, sig digits [(177, 3), (178, 12), (179, 168), (180, 1665)]
+hristov2024_nontriv164: rows A=164 B=164, rows identical 164, values 656, values differing 0, sig digits [(177, 4), (178, 6), (179, 53), (180, 593)]
+hristov2024_triv259: rows A=259 B=259, rows identical 259, values 1036, values differing 0, sig digits [(177, 1), (178, 14), (179, 109), (180, 912)]
+hristov2026_971: rows A=971 B=971, rows identical 971, values 3884, values differing 0, sig digits [(97, 4), (98, 44), (99, 387), (100, 3449)]
+masson_simo_345: rows A=345 B=345, rows identical 345, values 1725, values differing 0, sig digits [(13, 1), (14, 9), (15, 280), (16, 915), (17, 520)]
+971 regions as multiset equal to A: True
+li_liao_2017_695: route A (GitHub) 695, route B (SJTU) keys equal True values differing 0

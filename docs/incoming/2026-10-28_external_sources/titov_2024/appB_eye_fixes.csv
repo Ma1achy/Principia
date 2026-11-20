@@ -1,0 +1,55 @@
+id,field,value,why
+B2-01,x1,2.2650228,OCR missed one IC token in block (p150); read by eye
+B2-01,x2,0.8498728,OCR missed one IC token in block (p150); read by eye
+B2-01,x3,-2.6901372,OCR missed one IC token in block (p150); read by eye
+B2-01,vy1,-0.2750278,OCR missed one IC token in block (p150); read by eye
+B2-01,vy2,0.8999983,OCR missed one IC token in block (p150); read by eye
+B2-01,vy3,-0.5397473,OCR missed one IC token in block (p150); read by eye
+B2-03,vy2,-0.1625086,OCR dropped minus sign (p151); by eye
+B2-03,vy3,-0.7021694,OCR dropped minus sign (p151); by eye
+B2-04,x1,2.0898586,OCR read 3 of 6 IC tokens (p152); read by eye
+B2-04,x2,1.0152828,OCR read 3 of 6 IC tokens (p152); read by eye
+B2-04,x3,-2.6817130,OCR read 3 of 6 IC tokens (p152); read by eye
+B2-04,vy1,0.9850069,OCR read 3 of 6 IC tokens (p152); read by eye
+B2-04,vy2,-0.3660844,OCR read 3 of 6 IC tokens (p152); read by eye
+B2-04,vy3,-0.5345240,OCR read 3 of 6 IC tokens (p152); read by eye
+B2-06,vy3,-0.6296877,OCR dropped minus sign (p153); by eye
+B2-08,vy1,-0.7542570,OCR dropped minus sign (p154); by eye
+B2-09,E,-0.934746,OCR split E and J into two tokens (p155); OCR tokens '-0.934746' and '2.43060' confirmed
+B2-09,J,2.43060,OCR split E and J into two tokens (p155)
+B2-09,vy3,-0.7052349,OCR dropped minus sign (p155); by eye
+B2-12,vy3,-0.6343523,OCR dropped minus sign (p156); by eye
+B2-13,vy3,-0.6338938,OCR dropped minus sign (p157); by eye
+B2-15,vy3,-0.6961205,OCR dropped minus sign (p158); by eye
+B3-01,E,-0.606002,OCR split E and J into two tokens (p159 foot); OCR tokens '-0.606002' and '1.36301'
+B3-01,J,1.36301,OCR split E and J into two tokens (p159 foot)
+B3-03,x1,1.8212172,OCR read 3 of 6 IC tokens (p161); read by eye
+B3-03,x2,0.2323290,OCR read 3 of 6 IC tokens (p161); read by eye
+B3-03,x3,-2.0376573,OCR read 3 of 6 IC tokens (p161); read by eye
+B3-03,vy1,-0.2429600,OCR read 3 of 6 IC tokens (p161); read by eye
+B3-03,vy2,0.9181714,OCR read 3 of 6 IC tokens (p161); read by eye
+B3-03,vy3,-0.6868227,OCR read 3 of 6 IC tokens (p161); read by eye
+B3-04,x1,-2.0480884,OCR read 3 of 6 IC tokens (p162); read by eye
+B3-04,x2,0.2168265,OCR read 3 of 6 IC tokens (p162); read by eye
+B3-04,x3,1.8086127,OCR read 3 of 6 IC tokens (p162); read by eye
+B3-04,vy1,-0.6903640,OCR read 3 of 6 IC tokens (p162); read by eye
+B3-04,vy2,0.9185445,OCR read 3 of 6 IC tokens (p162); read by eye
+B3-04,vy3,-0.2442696,OCR read 3 of 6 IC tokens (p162); read by eye
+B3-08,x1,-1.7650184,OCR dropped minus sign (p167); by eye
+B3-09,x1,1.8244692,OCR read 4 of 6 IC tokens and dropped a sign (p168); read by eye
+B3-09,x2,-1.3042376,OCR read 4 of 6 IC tokens and dropped a sign (p168); read by eye
+B3-09,x3,-0.4889446,OCR read 4 of 6 IC tokens (p168); read by eye
+B3-09,vy1,0.0050039,OCR read 4 of 6 IC tokens (p168); read by eye
+B3-09,vy2,1.0911701,OCR read 4 of 6 IC tokens (p168); read by eye
+B3-09,vy3,-1.1070357,OCR read 4 of 6 IC tokens (p168); read by eye
+B3-13,x1,-1.3402127,OCR dropped minus sign (p173); by eye
+B3-13,x3,-0.6890612,OCR dropped minus sign (p173); by eye
+T4-02,x1,-0.0830573,OCR read 5 of 6 IC tokens (p174); read by eye
+T4-02,x2,-1.5542266,OCR read 5 of 6 IC tokens (p174); read by eye
+T4-02,x3,1.7108424,OCR read 5 of 6 IC tokens (p174); read by eye
+T4-02,vy1,-1.0128514,OCR read 5 of 6 IC tokens (p174); read by eye
+T4-02,vy2,0.8008997,OCR read 5 of 6 IC tokens (p174); read by eye
+T4-02,vy3,0.1212641,OCR read 5 of 6 IC tokens (p174); read by eye
+T4-03,vy3,-0.9798179,OCR dropped minus sign (p175); by eye
+T4-04,vy3,-0.9780935,OCR dropped minus sign (p176); by eye
+T4-05,vy3,-0.9722619,OCR dropped minus sign (p177); by eye

@@ -1,0 +1,36 @@
+# TASK-M7-25 — The Display window: display settings outside the pipeline, CVD on every surface
+
+- **Milestone:** M7
+- **Closes:** REQ-COL-026
+- **Depends on:** TASK-M7-16, TASK-M7-21, TASK-M7-22, TASK-M6-17, TASK-M6-28
+- **Needs (earlier milestones):** REQ-RENDER-042, REQ-GUI-013
+- **Reviewers:** code, gui
+- **Pitfalls:** none
+- **Size:** ~300 lines
+
+## Goal
+The display stage (the Print graph in style's place, R-485; display scale, gamut clamp, CVD) is a set of settings outside every occupant and preset, never seen by the codegen, edited in the Display window (R-67), and colour-vision simulation applies uniformly to everything displayed: the main render, the sphere preview, the equirect unwrap and the node thumbnails.
+
+## References
+- `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the pipeline)"
+- `decisions.md` § "R-67 — The display chain *(closes RQ-23)*"
+- `docs/gui/principia_render_gui_spec.md` § "Display — the last stages"
+- `docs/gui/principia_render_gui_spec.md` § "2. The pipeline"
+- `docs/gui/principia_render_gui_spec.md` § "12. Display stage — global, outside the pipeline"
+- `docs/gui/principia_render_gui_spec.md` § "12.1 Structural overlays and tile debug shaders"
+- `docs/gui/principia_render_gui_spec.md` § "15. Settled decisions (record)"
+- `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
+
+## Deliverables
+- `crates/gui/src/windows/display.rs` — the Display window (order shown, CVD mode, render→display scale, gamut clamp; a Print placeholder until TASK-M8-68's Print panel).
+- Display settings held outside `RenderState`'s stain graph; the preview, unwrap and thumbnail paths routed through the display chain.
+- Screenshot scenario deutan-everywhere.
+
+## Acceptance tests
+- `cargo xtask screenshot 04_windows` (scenario deutan-everywhere) — enable deutan: every surface including thumbnails is simulated; `cargo test -p render preset_has_no_display_state` — no preset serialises CVD (REQ-COL-026).
+
+## Notes
+- Which state struct holds the display settings (RenderState or ViewUI) is not stated by the requirement; gui_state_contract §2 governs.
+- R-390: TASK-M6-28 builds the Display window's frame on the mock engine; this task depends on it and fills the window with the real display settings, keeping REQ-COL-026.
+- **R-485 (PR #281, code review 5608337157 F2):** REQ-COL-026 is restated with the Print graph in style's place. *Was:* the Goal's "The display stage (style, display scale, gamut clamp, CVD)" and the Deliverable's "style placeholder until TASK-M7-26".
+- *19 Nov 2026 (R-1034, applied by TASK-M0-76; logged in `plan/DECISIONS-LOG.md`):* qa's independent tests are asked only of physics-critical tasks, those naming physics among their reviewers, and this task's list names no physics, so qa no longer reviews it. *Was (Reviewers):* "code, qa, gui".

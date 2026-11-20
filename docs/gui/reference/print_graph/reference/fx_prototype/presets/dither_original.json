@@ -1,0 +1,61 @@
+{
+ "name": "Dither, 4x4, original colours",
+ "doc": "Ordered or random dithering on a coarse pixel grid (after paper.design Image Dithering).",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "pd": {
+   "op": "pixelate_down",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "size": 3,
+    "rounding": "ceil"
+   }
+  },
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "thr": {
+   "op": "threshold_map",
+   "in": {
+    "like": "pd.out",
+    "rng": "r"
+   },
+   "p": {
+    "kind": "4x4"
+   }
+  },
+  "small": {
+   "op": "expr",
+   "in": {
+    "small": "pd.out",
+    "thr": "thr.out"
+   },
+   "p": {
+    "f": "steps = 3\ndef q(v):\n    x = v*(steps-1); lo = floor(x); return clip((lo + (x-lo > thr)) / max(steps-1, 1), 0, 1)\nout = stack([q(small[..., c]) for c in range(3)], -1)"
+   }
+  },
+  "big": {
+   "op": "pixelate_up",
+   "in": {
+    "small": "small"
+   },
+   "p": {
+    "size": 3
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "big"
+   }
+  }
+ },
+ "out": "out"
+}

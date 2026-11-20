@@ -1,0 +1,2499 @@
+# One entry per task in plan/PLAN.md, in order. The README's progress grid reads it: a task is done when
+# the PR from branch task/<id> merges. Set status: done only for work merged some other way.
+- id: TASK-C1-01
+  milestone: C1
+  title: The real field in the window
+- id: TASK-C1-02
+  milestone: C1
+  title: A golden frame
+- id: TASK-M2-57
+  milestone: C2
+  title: The decoder's mirror step removed, latent β over the full circle, under the owner's bitwise check
+  depends_on: []
+- id: TASK-M2-108
+  milestone: C2
+  title: The first slice's integrated arms on the default occupant, Heggie × RK4, once its joint march is built
+  depends_on: []
+- id: TASK-M2-61
+  milestone: C2
+  title: The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise
+  depends_on:
+  - TASK-M2-57
+- id: TASK-M2-62
+  milestone: C2
+  title: 'Locking doesn''t move the view, in the engine: the pin at the clicked pixel, tilt and zoom about it, snap-back, exact on nonlinear charts or saying why'
+  depends_on:
+  - TASK-M2-61
+- id: TASK-M2-63
+  milestone: C2
+  title: Save view as chart on curved views, the pivot record at a centred pin, and tilts into the held ν₀, L_z and K, in the engine
+  depends_on:
+  - TASK-M2-61
+- id: TASK-M2-64
+  milestone: C2
+  title: 'Consolidating the chart path: one leaf per operation through REQ-CHART-060''s stop, the merged GUI routes made thin adapters (R-894, R-916, R-919 F1 (a))'
+  depends_on:
+  - TASK-M2-61
+  - TASK-M2-62
+  - TASK-M2-63
+- id: TASK-M2-94
+  milestone: C2
+  title: The lock's solver core, from TASK-M2-73
+  depends_on:
+  - TASK-M2-61
+- id: TASK-M2-90
+  milestone: C2
+  title: 'The blend chart: the state blend, nested blends, both ends navigated, the ends exact, a signed fold indicator defined'
+  depends_on:
+  - TASK-M2-61
+- id: TASK-M2-65
+  milestone: C2
+  title: 'Paths under a lock: the stored anchor'
+  depends_on:
+  - TASK-M2-61
+  - TASK-M2-62
+  - TASK-M2-63
+  - TASK-M2-64
+  - TASK-M2-94
+  - TASK-M2-90
+- id: TASK-M2-66
+  milestone: C2
+  title: The primitive registry, the refusals, the labels and the bitwise digest, on the CPU
+  depends_on:
+  - TASK-M2-65
+- id: TASK-M2-67
+  milestone: C2
+  title: 'CPU decode and encode through the composition: every chart through resolve, every inverse through the registry'
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-65
+- id: TASK-M2-88
+  milestone: C2
+  title: 'Slopes in three tiers: exact (dual numbers), implicit or none, a flag at each kink site'
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-67
+- id: TASK-M2-92
+  milestone: C2
+  title: 'The backwards table on the CPU: bake, key, fold flag, search'
+  depends_on:
+  - TASK-M2-101
+  - TASK-M2-102
+  - TASK-M2-103
+  - TASK-M2-104
+- id: TASK-M2-96
+  milestone: C2
+  title: The invariant construction's second sheet, and a state's sheet from one source with it
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-67
+- id: TASK-M2-97
+  milestone: C2
+  title: 'The backwards table on an extended chart: sheet 1 only, a state looked up as itself and as its time reverse'
+  depends_on:
+  - TASK-M2-92
+  - TASK-M2-96
+  - TASK-M2-101
+- id: TASK-M2-99
+  milestone: C2
+  title: The one placement function, `place(state, chart) → {point, sheet, residual, route, status}`, and the two definitions it owes
+  depends_on:
+  - TASK-M2-90
+  - TASK-M2-92
+  - TASK-M2-94
+  - TASK-M2-96
+  - TASK-M2-67
+- id: TASK-M2-101
+  milestone: C2
+  title: 'Unfold in the CPU evaluator: past a fold the chart shows its second sheet'
+  depends_on:
+  - TASK-M2-96
+  - TASK-M2-66
+  - TASK-M2-67
+- id: TASK-M2-102
+  milestone: C2
+  title: Clamp in the CPU evaluator, the clamp below the floor included
+  depends_on:
+  - TASK-M2-96
+  - TASK-M2-66
+  - TASK-M2-67
+- id: TASK-M2-103
+  milestone: C2
+  title: Saturate in the CPU evaluator
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-67
+- id: TASK-M2-104
+  milestone: C2
+  title: 'Wrap in the CPU evaluator: periodic and pole-crossing edges'
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-67
+- id: TASK-M2-105
+  milestone: C2
+  title: 'The edge kinds'' count, navigation stop and sim key: `energy::count`, the view state''s override, blank''s controls'
+  depends_on:
+  - TASK-M2-101
+  - TASK-M2-102
+  - TASK-M2-103
+  - TASK-M2-104
+- id: TASK-M2-68
+  milestone: C2
+  title: 'Region D on the CPU: the third-body pair, its preset, its velocities and the closed round trips'
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-67
+  - TASK-M2-65
+- id: TASK-M2-69
+  milestone: C2
+  title: Hold L_z on any chart, on the CPU
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-65
+- id: TASK-M2-70
+  milestone: C2
+  title: 'The virial pair: its axis kind, descriptor and entry'
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-65
+- id: TASK-M2-71
+  milestone: C2
+  title: Warps as options, polar and log-polar pair maps, and a statistic's measure
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-65
+- id: TASK-M2-72
+  milestone: C2
+  title: 'Curved slices off the shape sphere: the momentum and mass spheres'
+  depends_on:
+  - TASK-M2-71
+  - TASK-M2-65
+- id: TASK-M2-73
+  milestone: C2
+  title: Numerical inverses and the general numerical solve, on the CPU
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-67
+  - TASK-M2-68
+  - TASK-M2-71
+  - TASK-M2-65
+- id: TASK-M2-74
+  milestone: C2
+  title: 'The primitives of 6 Nov: axes and overlays'
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-71
+  - TASK-M2-65
+- id: TASK-M2-75
+  milestone: C2
+  title: Region D's exact map and every target's native coordinates
+  depends_on:
+  - TASK-M2-68
+  - TASK-M2-65
+- id: TASK-M2-76
+  milestone: C2
+  title: The primitives of the full order
+  depends_on:
+  - TASK-M2-74
+  - TASK-M2-65
+- id: TASK-M2-77
+  milestone: C2
+  title: Paper frames as presets
+  depends_on:
+  - TASK-M2-75
+  - TASK-M2-65
+- id: TASK-M2-78
+  milestone: C2
+  title: 'The fixed-k chart: rigid rotation at a chosen virial coefficient over D₁₁ ∪ D₁₂, a chart and builder axes'
+  depends_on:
+  - TASK-M2-74
+  - TASK-M2-73
+  - TASK-M2-65
+- id: TASK-M2-79
+  milestone: C2
+  title: The binary-plus-single scattering chart, with f_col and Heggie & Sweatman 1991 alongside
+  depends_on:
+  - TASK-M2-76
+  - TASK-M2-73
+  - TASK-M2-65
+- id: TASK-M2-80
+  milestone: C2
+  title: 'Points of interest''s maths: the signed point, the nearest chart point, the off-slice distance and the near-match'
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-57
+  - TASK-M2-65
+  - TASK-M2-99
+- id: TASK-M2-81
+  milestone: C2
+  title: Path re-timing, alignment and flags
+  depends_on:
+  - TASK-M2-55
+  - TASK-M2-57
+  - TASK-M2-66
+  - TASK-M2-67
+  - TASK-M2-68
+  - TASK-M2-69
+  - TASK-M2-70
+  - TASK-M2-71
+  - TASK-M2-72
+  - TASK-M2-73
+  - TASK-M2-74
+  - TASK-M2-75
+  - TASK-M2-76
+  - TASK-M2-77
+  - TASK-M2-78
+  - TASK-M2-79
+  - TASK-M2-80
+- id: TASK-M2-83
+  milestone: C2
+  title: Time-axis chart mode's maths, through the trajectory interface
+  depends_on:
+  - TASK-M2-81
+  - TASK-M2-66
+  - TASK-M2-91
+- id: TASK-M2-91
+  milestone: C2
+  title: 'Time as the last coordinate: the map''s time coordinate, the playhead the window''s centre, a target time to an integer index'
+  depends_on:
+  - TASK-M2-61
+- id: TASK-M2-98
+  milestone: C2
+  title: 'Computed axes, the maths: terms, name, ticks and marks from the window; the dual ruler in a blend'
+  depends_on:
+  - TASK-M2-61
+  - TASK-M2-90
+  - TASK-M2-101
+  - TASK-M2-102
+  - TASK-M2-103
+  - TASK-M2-104
+- id: TASK-M2-84
+  milestone: C2
+  title: 'The symmetry filter''s maths: the mask, the partner check and the statistics, on a synthetic payload'
+  depends_on:
+  - TASK-M2-77
+  - TASK-M2-81
+  - TASK-M2-99
+- id: TASK-M2-85
+  milestone: C2
+  title: The acute-angle Burrau charts over the full acute range, both labellings, the leg swap through the symmetry filter
+  depends_on:
+  - TASK-M2-84
+- id: TASK-M2-55
+  milestone: C2
+  title: 'Saved curved charts, the rest: compositions onto three or four hidden coordinates, a saved chart saved again, and the composed chart''s area weight and repeat counting'
+  depends_on:
+  - TASK-M2-65
+- id: TASK-M2-100
+  milestone: C2
+  title: The measurements P2 and P4, reported to the owner, and P3's timing, reported with no pass line
+  depends_on:
+  - TASK-M2-99
+  - TASK-M2-90
+- id: TASK-M2-109
+  milestone: C2
+  title: 'REQ-DEC-060''s seam clause: the seam measurement across `z_α = 0` under the criterion R-1022 rules, the seed conversion''s other clauses built by TASK-M2-93'
+  depends_on: []
+- id: TASK-M8-06
+  milestone: C2
+  title: 'Manifold view panel: Chart, Navigate, depth readout, Slice centre, Tilt, and the figure''s axis labels'
+  depends_on:
+  - TASK-M8-05
+  - TASK-M2-64
+  - TASK-M2-98
+- id: TASK-M8-07
+  milestone: C2
+  title: 'Lock, compass and time controls: the reticle, the pin, the nav cube and the scrubber (08_lock.png, 01_main.png)'
+  depends_on:
+  - TASK-M8-06
+  - TASK-M2-64
+- id: TASK-M8-18
+  milestone: C2
+  title: 'Chart builder window: axis kinds, presets, domain preview, quick render, Apply (03_chartbuilder.png)'
+  depends_on:
+  - TASK-M8-89
+  - TASK-M4-17
+  - TASK-M5-05
+  - TASK-M8-87
+- id: TASK-M8-44
+  milestone: C2
+  title: 'The shape sphere past [0,1]² as the whole sphere: no hemisphere mode, and the area statistics over the whole sphere'
+  depends_on:
+  - TASK-M8-87
+- id: TASK-M8-47
+  milestone: C2
+  title: 'A Chart-builder chart that fails validity inside [0,1]²: its drawing, and its console warning only for warped axes'
+  depends_on:
+  - TASK-M8-18
+  - TASK-M8-46
+- id: TASK-M8-48
+  milestone: C2
+  title: 'On the real engine: tilt and slice on every chart, the energy axes'' mapping control, the navigation stop in the edit path, and Save view as chart on curved views'
+  depends_on:
+  - TASK-M8-89
+  - TASK-M8-03
+  - TASK-M6-48
+  - TASK-M6-49
+  - TASK-M8-18
+  - TASK-M2-63
+  - TASK-M2-64
+- id: TASK-M8-52
+  milestone: C2
+  title: 'On the real engine: the Decoder window''s Apply re-integrating, the Chart builder''s read-only links, and the warp previews'
+  depends_on:
+  - TASK-M6-50
+  - TASK-M8-18
+  - TASK-M8-89
+  - TASK-M8-03
+  - TASK-M4-21
+- id: TASK-M8-55
+  milestone: C2
+  title: 'Past the square with the controls shown: pan and zoom past [0,1]², drawn with no gaps, every interaction working there, a repeat resolving to its canonical system, the ✕ and the round trip'
+  depends_on:
+  - TASK-M8-56
+  - TASK-M8-87
+  - TASK-M8-08
+  - TASK-M8-09
+  - TASK-M8-32
+  - TASK-M8-44
+  - TASK-M8-48
+  - TASK-M2-64
+- id: TASK-M8-66
+  milestone: C2
+  title: 'The state map in Explore: the legend and its ring, never a gap past the square, copies as the canonical sample and the scheduler''s firewall'
+  depends_on:
+  - TASK-M7-51
+  - TASK-M8-10
+  - TASK-M8-22
+  - TASK-M8-56
+- id: TASK-M8-67
+  milestone: C2
+  title: 'The initial-condition constructor''s shape sphere: every point of both halves reachable, the drag across the equator flipping the triangle, and the mirror twin shown as a faint marker with its
+    note'
+  depends_on:
+  - TASK-M8-15
+- id: TASK-M8-87
+  milestone: C2
+  title: 'Past `[0,1]²` on the real engine: the axis extension types, the area statistics and the F3 fill'
+  depends_on:
+  - TASK-M8-88
+  - TASK-M7-21
+  - TASK-M6-48
+- id: TASK-M8-89
+  milestone: C2
+  title: The Manifold view panel on the real engine
+  depends_on:
+  - TASK-M8-06
+  - TASK-M8-88
+  - TASK-M6-21
+  - TASK-M6-22
+- id: TASK-M8-90
+  milestone: C2
+  title: Lock, compass and time controls on the real engine, and the scrub that re-integrates
+  depends_on:
+  - TASK-M8-07
+  - TASK-M8-89
+  - TASK-M6-21
+  - TASK-M6-22
+  - TASK-M2-64
+- id: TASK-M8-102
+  milestone: C2
+  title: 'CPU batch: numerical inverses, their branch rule and seam'
+  depends_on:
+  - TASK-M2-73
+  - TASK-M4-06
+  - TASK-M6-03
+  - TASK-M4-34
+- id: TASK-M8-103
+  milestone: C2
+  title: The Chart builder's composition panels
+  depends_on:
+  - TASK-M8-18
+  - TASK-M2-68
+  - TASK-M2-69
+  - TASK-M2-71
+  - TASK-M2-73
+  - TASK-M2-65
+- id: TASK-M8-104
+  milestone: C2
+  title: 1D charts in the GUI
+  depends_on:
+  - TASK-M8-18
+  - TASK-M2-66
+  - TASK-M2-65
+- id: TASK-M8-107
+  milestone: C2
+  title: 'Live paths: the blend entry and the coarse cover'
+  depends_on:
+  - TASK-M2-81
+  - TASK-M4-33
+  - TASK-M2-90
+- id: TASK-M8-113
+  milestone: C2
+  title: 'Time-axis chart mode on the real integrator: the column march'
+  depends_on:
+  - TASK-M2-83
+  - TASK-M3-40
+  - TASK-M3-67
+  - TASK-M8-108
+- id: TASK-M8-114
+  milestone: C2
+  title: Time-axis storage and the column cost
+  depends_on:
+  - TASK-M8-113
+  - TASK-M8-108
+- id: TASK-M8-115
+  milestone: C2
+  title: Time-axis mode in the GUI
+  depends_on:
+  - TASK-M8-113
+  - TASK-M8-108
+  - TASK-M2-98
+- id: TASK-M8-120
+  milestone: C2
+  title: 'The symmetry filter: a display option after rendering, GUI and export'
+  depends_on:
+  - TASK-M2-84
+  - TASK-M8-103
+  - TASK-M8-32
+  - TASK-M8-108
+- id: TASK-M8-125
+  milestone: C2
+  title: 'Locking doesn''t move the view: the pin at the clicked pixel, tilt and zoom about it, centre on pin and the auto-snap setting, exact on nonlinear charts or saying why'
+  depends_on:
+  - TASK-M2-62
+- id: TASK-M8-126
+  milestone: C2
+  title: 'Points of interest: saved signed states, their stars on every chart and path frame, and similar-systems overlays'
+  depends_on:
+  - TASK-M2-80
+  - TASK-M7-43
+  - TASK-M7-72
+- id: TASK-M8-128
+  milestone: C2
+  title: 'Final-condition charts: a CPU batch chart of state functions at time T, the round-trip miss measured, large misses masked'
+  depends_on:
+  - TASK-M8-102
+  - TASK-M8-108
+  - TASK-M8-118
+  - TASK-M2-78
+  - TASK-M2-79
+  - TASK-M2-69
+  - TASK-M2-73
+- id: TASK-M8-129
+  milestone: C2
+  title: The same-frame slips D19 and D23, fixed in the GUI's adapters onto the chart-path leaves
+  depends_on:
+  - TASK-M2-64
+- id: TASK-M8-130
+  milestone: C2
+  title: 'The figure draws the computed axes: the dual ruler, the edge marks, mixed names'
+  depends_on:
+  - TASK-M2-98
+  - TASK-M8-06
+  - TASK-M8-50
+- id: TASK-M8-131
+  milestone: C2
+  title: 'Marking clamped and saturated areas: a toggle, off by default'
+  depends_on:
+  - TASK-M2-102
+  - TASK-M2-103
+  - TASK-M2-105
+- id: TASK-M3-12
+  milestone: C3
+  title: 'The escape detector: closure and E_rel, the window, the escaper and ionisation'
+  depends_on:
+  - TASK-M3-75
+- id: TASK-M3-17
+  milestone: C3
+  title: Terminal states, precedence and the terminal latch
+  depends_on:
+  - TASK-M3-12
+- id: TASK-M3-18
+  milestone: C3
+  title: 'The failure path: sim_failed, NaN-free storage and the failed-state values'
+  depends_on:
+  - TASK-M3-17
+- id: TASK-M3-19
+  milestone: C3
+  title: 'The Precision ring: computeIC, computeQuad, stepOnce, decodeOnly and the RK45 inspector reference'
+  depends_on:
+  - TASK-M3-17
+- id: TASK-M3-20
+  milestone: C3
+  title: The CPU worker pool and the hover-trajectory benchmark
+  depends_on:
+  - TASK-M3-19
+- id: TASK-M3-67
+  milestone: C3
+  title: 'After M2: the trajectory interface on the real integrator, and the outcome-class arms of the conversions'
+  depends_on:
+  - TASK-M2-64
+  - TASK-M2-65
+  - TASK-M3-17
+  - TASK-M3-19
+  - TASK-M3-40
+- id: TASK-M8-09
+  milestone: C3
+  title: 'The hover integration: computeIC in the inspector worker, step budget, and the projection onto (q₁, q₂)'
+  depends_on:
+  - TASK-M8-01
+  - TASK-M8-04
+- id: TASK-M8-10
+  milestone: C3
+  title: The hover trace and label on the figure
+  depends_on:
+  - TASK-M8-09
+  - TASK-M8-87
+  - TASK-M7-52
+- id: TASK-M8-11
+  milestone: C3
+  title: 'The Trajectory panel: summary, real space, the turning shape sphere, kept orbits'
+  depends_on:
+  - TASK-M8-09
+  - TASK-M8-87
+- id: TASK-M3-21
+  milestone: C3
+  title: Payload purity and the parity-tier tags
+  depends_on:
+  - TASK-M3-19
+- id: TASK-M3-22
+  milestone: C3
+  title: 'Seam 5: the producer writes every ledger field, and the scalar and shape views'
+  depends_on:
+  - TASK-M3-19
+- id: TASK-M3-23
+  milestone: C3
+  title: The occupant-comparison harness
+  depends_on:
+  - TASK-M3-75
+  - TASK-M3-19
+- id: TASK-M3-24
+  milestone: C3
+  title: 'The ground-truth harness: Path A, Path B, the fixture set and the golden anchors'
+  depends_on:
+  - TASK-M3-19
+- id: TASK-M3-25
+  milestone: C3
+  title: The independent convergence reference (Brutus-style)
+  depends_on:
+  - TASK-M3-24
+- id: TASK-M3-26
+  milestone: C3
+  title: Order scaling and the symplectic-vs-not gates
+  depends_on:
+  - TASK-M3-24
+- id: TASK-M3-27
+  milestone: C3
+  title: 'The Burrau anchor smoke tests: SP-1 run to its horizon, SP-2, and the f64 run against R-33''s reference'
+  depends_on:
+  - TASK-M3-24
+  - TASK-M3-25
+- id: TASK-M3-28
+  milestone: C3
+  title: Figure-eight closure and Lagrange rigidity
+  depends_on:
+  - TASK-M3-24
+- id: TASK-M3-29
+  milestone: C3
+  title: Free-fall brake orbits and the reversibility diagnostic
+  depends_on:
+  - TASK-M3-24
+  - TASK-M3-28
+  - TASK-M3-75
+- id: TASK-M3-30
+  milestone: C3
+  title: Word calculus against the braid classes, and the truncation rate
+  depends_on:
+  - TASK-M3-24
+- id: TASK-M3-31
+  milestone: C3
+  title: The predictive step limit and the two-artefact ablation
+  depends_on:
+  - TASK-M3-75
+  - TASK-M3-19
+- id: TASK-M3-32
+  milestone: C3
+  title: 'Re-registration: the Heggie default gate, the control, the doubling protocol and the logH falsification'
+  depends_on:
+  - TASK-M3-23
+  - TASK-M3-31
+- id: TASK-M3-33
+  milestone: C3
+  title: The validation harness's post-escape march and pitfalls §2.4's checks
+  depends_on:
+  - TASK-M3-24
+  - TASK-M3-18
+- id: TASK-M3-34
+  milestone: C3
+  title: 'Escape re-validation: precision, recall and the tau gap'
+  depends_on:
+  - TASK-M3-33
+- id: TASK-M3-35
+  milestone: C3
+  title: The patchwork regression and the stop_on_escape images
+  depends_on:
+  - TASK-M3-33
+  - TASK-M3-22
+- id: TASK-M3-36
+  milestone: C3
+  title: 'Cross-implementation checks: BodyPlane bit-for-bit and the change-10 re-run'
+  depends_on:
+  - TASK-M3-24
+- id: TASK-M3-37
+  milestone: C3
+  title: 'Cross-chart consistency: the same state through the shape sphere and the latent chart gives the same z, payload and outcome'
+  depends_on:
+  - TASK-M3-19
+  - TASK-M3-22
+- id: TASK-M3-38
+  milestone: C3
+  title: 'The shape sphere''s mirror test, its runs: the run from Π·x the run mirrored, bitwise, fates equal and L_z and the frame''s winding opposite across pixel pairs on a named non-chaotic fixture,
+    and the frame''s winding defined'
+  depends_on:
+  - TASK-M3-12
+- id: TASK-M3-39
+  milestone: C3
+  title: 'Every stepper × regularisation pair: its exact composition, the measured pair table and its warnings'
+  depends_on:
+  - TASK-M3-75
+- id: TASK-M3-40
+  milestone: C3
+  title: 'The fixed sync quantum: one grid of physical time, the march stopping only on it, live, catch-up and re-boot bitwise'
+  depends_on:
+  - TASK-M3-75
+- id: TASK-M3-41
+  milestone: C3
+  title: 'The regularised integration floor: the step budget as a rate, undetermined on exhaustion, the counted signals and the two energies'' reading'
+  depends_on:
+  - TASK-M3-40
+- id: TASK-M3-69
+  milestone: C3
+  title: The FTLE field's chart independence
+  depends_on:
+  - TASK-M2-71
+- id: TASK-M3-75
+  milestone: C3
+  title: LogH, Heggie's and logH's seam, and the visible re-registration count
+  depends_on: []
+- id: TASK-M3-79
+  milestone: C3
+  title: 'Heggie''s landing-order check: the figure-eight convergence order under R-1021''s criterion'
+  depends_on: []
+- id: TASK-M8-14
+  milestone: C3
+  title: 'Inspector window and pane 1: the editable IC on the physical canvas (05_inspectors.png)'
+  depends_on:
+  - TASK-M8-09
+  - TASK-M8-11
+  - TASK-M4-16
+- id: TASK-M8-15
+  milestone: C3
+  title: 'Inspector pane 2: the canonical representative, the gauge buttons, the round-trip ghost, the JS oracle'
+  depends_on:
+  - TASK-M8-14
+- id: TASK-M8-16
+  milestone: C3
+  title: Inspector pane 3, the one timeline, and the readouts
+  depends_on:
+  - TASK-M8-14
+  - TASK-M8-15
+  - TASK-M4-15
+  - TASK-M8-83
+- id: TASK-M8-17
+  milestone: C3
+  title: 'Inspector: Create & locate, degeneracy routing, and the honest CPU / GPU comparison'
+  depends_on:
+  - TASK-M8-14
+  - TASK-M8-16
+  - TASK-M8-90
+  - TASK-M4-13
+- id: TASK-M8-83
+  milestone: C3
+  title: The Precision ring's state-in entry, `computeICState(state, simKey)`, beside `computeIC`, and the frame the constructor integrates
+  depends_on:
+  - TASK-M3-19
+- id: TASK-M8-84
+  milestone: C3
+  title: 'Saving an IC: the `principia.ic/1` record, copy, paste, Save IC… and Open IC…, the twin on reopening, marks in `Lines`, and the trajectory CSV with its bodies labelled 1-based'
+  depends_on:
+  - TASK-M8-17
+  - TASK-M8-83
+  - TASK-M8-67
+  - TASK-M8-58
+  - TASK-M8-53
+- id: TASK-M4-01
+  milestone: C4
+  title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
+  depends_on: []
+- id: TASK-M4-02
+  milestone: C4
+  title: 'The native in-process wgpu parity harness: GPU stepOnce and decodeOnly on shared states'
+  depends_on:
+  - TASK-M4-01
+  - TASK-M3-21
+- id: TASK-M4-03
+  milestone: C4
+  title: 'Tier L: branch decisions bit-identical on identical inputs, at the enumerated branch inputs'
+  depends_on:
+  - TASK-M4-02
+  - TASK-M4-29
+- id: TASK-M4-04
+  milestone: C4
+  title: 'Tier B and Tier N: integer fields exact, continuous values within measured native-wgpu tolerances'
+  depends_on:
+  - TASK-M4-02
+- id: TASK-M4-05
+  milestone: C4
+  title: 'Flat-grid compute: in-kernel decode from chart uniforms, one workgroup per quad, an in-place march'
+  depends_on:
+  - TASK-M4-01
+  - TASK-M2-66
+- id: TASK-M4-06
+  milestone: C4
+  title: 'The baked compute variants: chart × link × occupant × FTLE, with copy_index a uniform'
+  depends_on:
+  - TASK-M4-05
+  - TASK-M2-66
+- id: TASK-M4-07
+  milestone: C4
+  title: The precompile rule and the bounded monomorphisation set
+  depends_on:
+  - TASK-M4-06
+- id: TASK-M4-08
+  milestone: C4
+  title: The sim key, the render key and resolve()
+  depends_on:
+  - TASK-M4-06
+  - TASK-M3-21
+- id: TASK-M4-09
+  milestone: C4
+  title: 'Bounded dispatch: chunked marches that return before a watchdog'
+  depends_on:
+  - TASK-M4-05
+  - TASK-M4-02
+  - TASK-M3-20
+  - TASK-M3-41
+- id: TASK-M4-10
+  milestone: C4
+  title: The fixed-timestep frame loop over the flat grid
+  depends_on:
+  - TASK-M4-08
+  - TASK-M4-09
+- id: TASK-M4-11
+  milestone: C4
+  title: 'Checkerboard march: a per-pixel phase mask over whole sample bundles'
+  depends_on:
+  - TASK-M4-10
+  - TASK-M4-06
+- id: TASK-M4-12
+  milestone: C4
+  title: 'Checkerboard self-erasing: catch-up at rest, the three-state control and export force-off'
+  depends_on:
+  - TASK-M4-11
+- id: TASK-M4-13
+  milestone: C4
+  title: 'FTLE on the GPU: the f32 shadow form and the horizon map'
+  depends_on:
+  - TASK-M4-06
+  - TASK-M4-04
+  - TASK-M3-36
+- id: TASK-M4-14
+  milestone: C4
+  title: Seam cross-check views on GPU payloads, and the live substep heatmap
+  depends_on:
+  - TASK-M4-10
+  - TASK-M3-22
+- id: TASK-M4-15
+  milestone: C4
+  title: 'The closure field on the Config α×β z_q = 0 plane: free-fall orbits light up'
+  depends_on:
+  - TASK-M4-10
+  - TASK-M4-06
+  - TASK-M3-29
+- id: TASK-M4-16
+  milestone: C4
+  title: 'The pixel inspector''s engine side: f64 trace, f32 GPU trace and the divergence overlay'
+  depends_on:
+  - TASK-M4-04
+  - TASK-M4-06
+  - TASK-M3-27
+  - TASK-M3-36
+  - TASK-M4-09
+- id: TASK-M4-17
+  milestone: C4
+  title: 'The uniform-grid survey: CPU↔GPU aggregate agreement, and the prebake path'
+  depends_on:
+  - TASK-M4-09
+  - TASK-M4-06
+  - TASK-M3-34
+- id: TASK-M4-18
+  milestone: C4
+  title: 'The permanent parity suite in CI: trajectories, Tier S and the label-flip report'
+  depends_on:
+  - TASK-M4-03
+  - TASK-M4-04
+  - TASK-M4-06
+  - TASK-M3-27
+  - TASK-M3-35
+- id: TASK-M4-19
+  milestone: C4
+  title: 'First kernel benchmarks: the march''s bottleneck, N = 8 vs 16, and one quad thread-count constant'
+  depends_on:
+  - TASK-M4-06
+  - TASK-M4-09
+- id: TASK-M4-20
+  milestone: C4
+  title: 'Compute fast-math on against off: the march''s speed, and the differences measured and reported'
+  depends_on:
+  - TASK-M4-19
+  - TASK-M4-08
+- id: TASK-M4-21
+  milestone: C4
+  title: 'Link parameters on the GPU: the uniform, bitwise today''s at the defaults, and a parameter change that moves only the masses it should'
+  depends_on:
+  - TASK-M4-06
+- id: TASK-M4-28
+  milestone: C4
+  title: 'The kernel cross-backend check: the same IC set marched on NVIDIA Vulkan, Metal, lavapipe and CPU f32, labels and branch-sensitive results compared per backend pair'
+  depends_on:
+  - TASK-M4-05
+  - TASK-M4-02
+  - TASK-M4-03
+  - TASK-M4-09
+  - TASK-M4-18
+  - TASK-M3-41
+- id: TASK-M4-29
+  milestone: C4
+  title: Written forms for `E_rel` and `|Δn̂|` that use no driver division or `√` in the decision
+  depends_on:
+  - TASK-M4-02
+  - TASK-M3-12
+- id: TASK-M4-30
+  milestone: C4
+  title: The header records "Off" only for drivers measured, otherwise wgpu's path with "driver unverified"
+  depends_on:
+  - TASK-M4-03
+- id: TASK-M4-31
+  milestone: C4
+  title: Near-tie golden cases held only on CI's backends, elsewhere reported
+  depends_on:
+  - TASK-M4-30
+- id: TASK-M4-33
+  milestone: C4
+  title: The baked entries on the GPU, the axis cap and V1's decode time
+  depends_on:
+  - TASK-M2-66
+  - TASK-M2-70
+- id: TASK-M4-34
+  milestone: C4
+  title: 'Region D on the GPU: the pair''s baked entry, its lowering row and its GPU reference'
+  depends_on:
+  - TASK-M2-68
+  - TASK-M4-33
+  - TASK-M4-06
+- id: TASK-M4-38
+  milestone: C4
+  title: Per-backend accuracy of cos near π/2 against f64
+  depends_on: []
+- id: TASK-M5-02
+  milestone: C5
+  title: Quality tiers and the one settings struct
+  depends_on:
+  - TASK-M4-19
+- id: TASK-M5-03
+  milestone: C5
+  title: Quad addresses in the slice plane's frame (the per-slice quadtree)
+  depends_on:
+  - TASK-M4-08
+- id: TASK-M5-04
+  milestone: C5
+  title: 'QuadRequest: flags, per-quad uniforms and quad-local sample positions'
+  depends_on:
+  - TASK-M5-03
+- id: TASK-M5-05
+  milestone: C5
+  title: Chart-domain quad skip and the label of skipped pixels
+  depends_on:
+  - TASK-M5-03
+- id: TASK-M5-06
+  milestone: C5
+  title: Sim key, render key, cache identity and the payload compatibility signature
+  depends_on:
+  - TASK-M5-03
+- id: TASK-M5-07
+  milestone: C5
+  title: 'Payload store: the per-copy index map, chunk sharding, SimState and word in lockstep'
+  depends_on:
+  - TASK-M5-06
+- id: TASK-M5-08
+  milestone: C5
+  title: 'The current-state cache: lookup, resume points, preview vs refined, no history'
+  depends_on:
+  - TASK-M5-06
+  - TASK-M5-07
+  - TASK-M4-10
+- id: TASK-M5-09
+  milestone: C5
+  title: 'Eviction: cost-weighted LRU with t_cached, and the pinned classes'
+  depends_on:
+  - TASK-M5-08
+- id: TASK-M5-10
+  milestone: C5
+  title: 'Memory estimator: payload, word buffer and render targets'
+  depends_on:
+  - TASK-M5-02
+  - TASK-M4-11
+  - TASK-M3-41
+- id: TASK-M5-11
+  milestone: C5
+  title: Memory budgets, the hard cap and continuous pressure
+  depends_on:
+  - TASK-M5-09
+  - TASK-M5-10
+- id: TASK-M5-12
+  milestone: C5
+  title: 'Blast radius: what each knob invalidates, and r_coll on the sim key'
+  depends_on:
+  - TASK-M5-02
+  - TASK-M5-06
+  - TASK-M5-08
+- id: TASK-M5-13
+  milestone: C5
+  title: 'Navigation as chart-uniform edits: in-plane re-addressing and new identities'
+  depends_on:
+  - TASK-M5-04
+  - TASK-M5-06
+  - TASK-M5-08
+  - TASK-M2-64
+- id: TASK-M5-14
+  milestone: C5
+  title: 'Dispatch queue: epochs, in-flight limit, positional readback and the measurement path'
+  depends_on:
+  - TASK-M5-04
+  - TASK-M5-09
+- id: TASK-M5-15
+  milestone: C5
+  title: Baseline-first tier and display-only ancestor fallback
+  depends_on:
+  - TASK-M5-09
+  - TASK-M5-14
+- id: TASK-M5-16
+  milestone: C5
+  title: 'Ensemble copies: Halton offsets and copies as scheduler leaves'
+  depends_on:
+  - TASK-M5-04
+  - TASK-M4-18
+- id: TASK-M5-17
+  milestone: C5
+  title: 'Resolve stage: outcome and validity reductions, and Undetermined quads'
+  depends_on:
+  - TASK-M5-16
+- id: TASK-M5-18
+  milestone: C5
+  title: 'Resolve stage: ensemble spread, error_ratio and the co-computations'
+  depends_on:
+  - TASK-M5-17
+- id: TASK-M5-19
+  milestone: C5
+  title: Roundtrip_error and the per-footprint temporal accumulators
+  depends_on:
+  - TASK-M5-08
+  - TASK-M5-18
+  - TASK-M3-23
+- id: TASK-M5-20
+  milestone: C5
+  title: 'SSAA colour resolve: colour per sample, average last, no interpolation'
+  depends_on:
+  - TASK-M5-16
+- id: TASK-M5-21
+  milestone: C5
+  title: 'Frame loop: the live set, off-loop catch-up and atomic promotion'
+  depends_on:
+  - TASK-M5-08
+  - TASK-M5-14
+  - TASK-M4-12
+  - TASK-M3-40
+- id: TASK-M5-22
+  milestone: C5
+  title: 'Transport: pause, restart, loop and the playhead clock'
+  depends_on:
+  - TASK-M5-21
+- id: TASK-M5-23
+  milestone: C5
+  title: 'Checkerboard in the frame loop: live set only, render resolution, three-state control, dt ceiling'
+  depends_on:
+  - TASK-M5-02
+  - TASK-M5-20
+  - TASK-M5-21
+- id: TASK-M5-24
+  milestone: C5
+  title: 'Loop hygiene: never wait, per-frame scheduler budget, background priority, backgrounding, queue depth'
+  depends_on:
+  - TASK-M5-14
+  - TASK-M5-21
+  - TASK-M5-04
+- id: TASK-M5-25
+  milestone: C5
+  title: 'The two-regime scheduler: in-motion coarse cover, debounce and the backdrop reference'
+  depends_on:
+  - TASK-M5-15
+  - TASK-M5-21
+- id: TASK-M5-26
+  milestone: C5
+  title: 'Compositor: the stale backdrop, blur as the one signal, never blank'
+  depends_on:
+  - TASK-M5-20
+  - TASK-M5-25
+- id: TASK-M5-27
+  milestone: C5
+  title: 'Precompiled pipelines: no compile on the gesture path'
+  depends_on:
+  - TASK-M5-21
+  - TASK-M4-07
+- id: TASK-M5-28
+  milestone: C5
+  title: The frame record, percentiles and the bounded telemetry file
+  depends_on:
+  - TASK-M5-21
+- id: TASK-M5-29
+  milestone: C5
+  title: Tier 3 tile debug shaders and the quad-state transition table
+  depends_on:
+  - TASK-M5-15
+- id: TASK-M5-30
+  milestone: C5
+  title: 'Membrane audit: QuadReduction is the sole automatic return'
+  depends_on:
+  - TASK-M5-14
+  - TASK-M5-26
+  - TASK-M5-29
+- id: TASK-M5-31
+  milestone: C5
+  title: The uniform echo view
+  depends_on:
+  - TASK-M5-02
+- id: TASK-M8-56
+  milestone: C5
+  title: 'The quadtree past the square: roots tiling the plane, canonical addresses, neighbours across seams, poles and folds, scheduling by the union of images, the statistics unchanged'
+  depends_on:
+  - TASK-M8-87
+  - TASK-M8-44
+  - TASK-M5-15
+  - TASK-M6-01
+  - TASK-M6-04
+  - TASK-M6-11
+- id: TASK-M8-57
+  milestone: C5
+  title: Deep zoom in repeats and far from the root, and seams between images with a shared edge
+  depends_on:
+  - TASK-M8-56
+  - TASK-M6-08
+- id: TASK-M6-01
+  milestone: C6
+  title: 'The refinement decision and the quad lifecycle: terminal vs refinable'
+  depends_on:
+  - TASK-M5-17
+  - TASK-M5-30
+- id: TASK-M6-02
+  milestone: C6
+  title: 'The split gate: the screen floor, the sliding MAX_REL_DEPTH and the motion refinement floor'
+  depends_on:
+  - TASK-M6-01
+  - TASK-M5-12
+- id: TASK-M6-03
+  milestone: C6
+  title: Policy::Tolerance's split rule and the per-footprint latch
+  depends_on:
+  - TASK-M6-01
+  - TASK-M5-19
+- id: TASK-M6-04
+  milestone: C6
+  title: 'The stop rule: alpha_area over two levels, neighbour agreement, and the R-42 fixes'
+  depends_on:
+  - TASK-M6-03
+- id: TASK-M6-05
+  milestone: C6
+  title: Error_ratio as the trust flag, and the refinement gate / integrator tolerance pair
+  depends_on:
+  - TASK-M6-03
+  - TASK-M6-04
+- id: TASK-M6-06
+  milestone: C6
+  title: 'Merging under a live playhead: coarsening, resident count and merge memory'
+  depends_on:
+  - TASK-M6-02
+  - TASK-M6-03
+  - TASK-M6-04
+  - TASK-M5-11
+  - TASK-M5-28
+- id: TASK-M6-07
+  milestone: C6
+  title: 'The linearised decoder: x₀ and J_D in f64 on the CPU, x₀ + J_D·δ expanded on the CPU in f64 and narrowed once'
+  depends_on:
+  - TASK-M5-04
+- id: TASK-M6-08
+  milestone: C6
+  title: 'The decoder switchover and AT_F32_FLOOR: DECODE_MODE, collapse detection, the linear-path uniform'
+  depends_on:
+  - TASK-M6-01
+  - TASK-M6-02
+  - TASK-M6-07
+  - TASK-M4-07
+- id: TASK-M6-09
+  milestone: C6
+  title: The per-quad measure weight |det J_D| and the quantitative-claims path
+  depends_on:
+  - TASK-M6-07
+  - TASK-M5-14
+- id: TASK-M6-10
+  milestone: C6
+  title: 'The integration floor: saturated quads stop refining, flagged floor-limited'
+  depends_on:
+  - TASK-M6-01
+- id: TASK-M6-11
+  milestone: C6
+  title: 'Tile priority: P_tile, the pointer-centred P_focus, quad-relative relevance and baseline-first'
+  depends_on:
+  - TASK-M6-02
+  - TASK-M5-13
+  - TASK-M5-24
+- id: TASK-M6-12
+  milestone: C6
+  title: The frontier margin derived from the refill rate, benchmarked against a widened margin
+  depends_on:
+  - TASK-M6-11
+  - TASK-M5-28
+- id: TASK-M6-14
+  milestone: C6
+  title: 'Symbolic spread S_word: the word-reduction diagnostic and its measurement'
+  depends_on:
+  - TASK-M6-03
+- id: TASK-M6-15
+  milestone: C6
+  title: QualitySettings on three axes, the tiers keyed off eps, and the preset selector
+  depends_on:
+  - TASK-M5-11
+  - TASK-M5-12
+- id: TASK-M6-16
+  milestone: C6
+  title: 'Auto: device characterisation — limits, probe, info, solve and the tier inversion'
+  depends_on:
+  - TASK-M6-15
+- id: TASK-M6-17
+  milestone: C6
+  title: 'The arbiter: one writer, the throughput model, the ladder and the lever order'
+  depends_on:
+  - TASK-M6-02
+  - TASK-M6-16
+- id: TASK-M6-18
+  milestone: C6
+  title: 'The arbiter''s timescales: motion offset, change under cover, hysteresis, sensors and persistence'
+  depends_on:
+  - TASK-M6-17
+  - TASK-M5-22
+  - TASK-M5-23
+  - TASK-M5-28
+- id: TASK-M6-19
+  milestone: C6
+  title: The sea_fraction(eps) estimator
+  depends_on:
+  - TASK-M6-03
+  - TASK-M6-17
+- id: TASK-M6-20
+  milestone: C6
+  title: 'Refinement reporting: per-chart reports, weighted stop breakdowns, the binding axis, dp/u'
+  depends_on:
+  - TASK-M6-01
+  - TASK-M6-04
+  - TASK-M6-15
+  - TASK-M5-28
+- id: TASK-M6-21
+  milestone: C6
+  title: 'The event-driven precision warning: DECODE_SWITCHOVER and AT_F32_FLOOR in the snapshot'
+  depends_on:
+  - TASK-M6-08
+- id: TASK-M6-22
+  milestone: C6
+  title: 'Quality in the GUI: the Run window selector, the Custom fields and the arbiter overlay'
+  depends_on:
+  - TASK-M6-15
+  - TASK-M6-17
+  - TASK-M6-18
+- id: TASK-M6-23
+  milestone: C6
+  title: 'The first refine milestone''s measurements: depth past level 6, tau, merging under motion, zoom regression'
+  depends_on:
+  - TASK-M6-06
+  - TASK-M6-12
+  - TASK-M6-17
+  - TASK-M6-20
+  - TASK-M5-23
+- id: TASK-M6-48
+  milestone: C6
+  title: 'The GUI track: RQ-340 ruled — Tip as sheet the default, Lean each axis an option, over the pole, the compass drawing the active map, the readout''s lines'
+  depends_on:
+  - TASK-M2-64
+- id: TASK-M6-49
+  milestone: C6
+  title: 'The GUI track: Save view as chart on the mock — the button and View entry, the Saved group, provenance, one undo entry, the oblique latent chart reopened bitwise'
+  depends_on:
+  - TASK-M6-48
+  - TASK-M2-64
+- id: TASK-M6-50
+  milestone: C6
+  title: 'The GUI track: the Decoder window on the mock, its rows, staged Apply, live previews through the engine''s link evaluator, the Chart section''s Links row, and the decoder badge'
+  depends_on:
+  - TASK-M6-49
+- id: TASK-M6-51
+  milestone: C6
+  title: 'The GUI track: a latent view saved at a tilt, tilted again in the orthonormal frame of its projected targets, the stored pair kept'
+  depends_on:
+  - TASK-M6-49
+  - TASK-M2-63
+  - TASK-M2-64
+- id: TASK-M8-76
+  milestone: C6
+  title: 'Where precision runs out: four runs of the clicked point, the chord''s two marks, the trust line, and nothing changed in the atlas'
+  depends_on:
+  - TASK-M8-17
+  - TASK-M4-16
+  - TASK-M8-75
+- id: TASK-M7-06
+  milestone: C7
+  title: 'Site-blend: kernels, blend space, swatches, static site sets and the vMF engine'
+  depends_on:
+  - TASK-M5-23
+- id: TASK-M7-07
+  milestone: C7
+  title: The seamless LUT sphere and analytic Cubehelix
+  depends_on:
+  - TASK-M7-06
+- id: TASK-M7-09
+  milestone: C7
+  title: ScalarField sources, derived operators and the physics site generators
+  depends_on:
+  - TASK-M7-06
+- id: TASK-M7-10
+  milestone: C7
+  title: Combinators and the physics overlay (blob blend)
+  depends_on:
+  - TASK-M7-09
+- id: TASK-M7-14
+  milestone: C7
+  title: 'Custom per-node WGSL: async compile, last-valid fallback, the Problems surface and eject'
+  depends_on: []
+- id: TASK-M7-15
+  milestone: C7
+  title: The render key and render freedom
+  depends_on:
+  - TASK-M5-12
+- id: TASK-M7-16
+  milestone: C7
+  title: 'The bake tier: the equirect texture for pure-f(n̂) occupants, and the sphere widget'
+  depends_on:
+  - TASK-M7-06
+  - TASK-M7-07
+  - TASK-M7-10
+  - TASK-M7-15
+  - TASK-M5-24
+  - TASK-M5-30
+- id: TASK-M7-17
+  milestone: C7
+  title: 'The preset library: presets as whole graphs, debug views as locked presets'
+  depends_on:
+  - TASK-M7-10
+  - TASK-M5-18
+- id: TASK-M7-18
+  milestone: C7
+  title: The §7.1 map presets and their golden-image suite
+  depends_on:
+  - TASK-M7-07
+  - TASK-M7-09
+  - TASK-M7-10
+  - TASK-M7-17
+- id: TASK-M7-19
+  milestone: C7
+  title: The seam-free guarantee and the two rotations
+  depends_on:
+  - TASK-M7-18
+- id: TASK-M7-21
+  milestone: C7
+  title: 'The display chain: Print graph → display scale → gamut clamp → colour-vision simulation → screen, the line passes either side'
+  depends_on:
+  - TASK-M5-12
+  - TASK-M5-23
+  - TASK-M5-26
+- id: TASK-M7-22
+  milestone: C7
+  title: 'The stain editor canvas (egui): library, graph canvas, preview and ghosted None'
+  depends_on:
+  - TASK-M7-17
+- id: TASK-M7-23
+  milestone: C7
+  title: 'The node inspector: morphing editors, source availability, the L-conflict flag and the map controls'
+  depends_on:
+  - TASK-M7-06
+  - TASK-M7-22
+  - TASK-M6-15
+- id: TASK-M7-24
+  milestone: C7
+  title: 'Code views: Pipeline WGSL, Node WGSL and the Problems pane'
+  depends_on:
+  - TASK-M7-14
+  - TASK-M7-22
+- id: TASK-M7-25
+  milestone: C7
+  title: 'The Display window: display settings outside the pipeline, CVD on every surface'
+  depends_on:
+  - TASK-M7-16
+  - TASK-M7-21
+  - TASK-M7-22
+  - TASK-M6-17
+- id: TASK-M7-26
+  milestone: C7
+  title: 'The print stage: the Print graph''s executor in style''s place, Plain the bitwise identity, measurement blind to it, debug views bypassing it, goldens under Plain'
+  depends_on:
+  - TASK-M7-25
+  - TASK-M7-21
+- id: TASK-M7-31
+  milestone: C7
+  title: 'Image embedding: what travels — the contract-named payload and the build-hash refusal'
+  depends_on:
+  - TASK-M7-14
+  - TASK-M7-17
+  - TASK-M6-48
+- id: TASK-M7-32
+  milestone: C7
+  title: 'Image embedding in PNG export: defaults, the tEXt chunk, capacity and the resolution round trip'
+  depends_on:
+  - TASK-M7-31
+- id: TASK-M7-33
+  milestone: C7
+  title: Pipeline precompile at startup and the render-target counts
+  depends_on:
+  - TASK-M7-14
+  - TASK-M7-17
+  - TASK-M7-21
+  - TASK-M5-10
+  - TASK-M5-27
+  - TASK-M7-69
+- id: TASK-M7-34
+  milestone: C7
+  title: 'Image embedding: the hybrid variant re-measured on real rendered figures, and §5''s ~8 % reconciled'
+  depends_on:
+  - TASK-M7-32
+  - TASK-M7-18
+  - TASK-M7-21
+- id: TASK-M7-35
+  milestone: C7
+  title: 'The Chazy classifier: the rule, the Fewbody reference, the ten fixtures and the I_max latch'
+  depends_on:
+  - TASK-M3-17
+  - TASK-M3-19
+- id: TASK-M7-36
+  milestone: C7
+  title: 'The Chazy fields: chazy_final, chazy_status, chazy_structure, chazy_q, chazy_escaper and chazy_qk, the escape freeze, and the energy certificates'
+  depends_on:
+  - TASK-M7-35
+  - TASK-M3-12
+  - TASK-M3-22
+  - TASK-M3-27
+- id: TASK-M7-37
+  milestone: C7
+  title: 'The Chazy flat stains: the seven-class default, four families, Okabe–Ito, the status map, the filter, the ranks and palette separation'
+  depends_on:
+  - TASK-M7-36
+  - TASK-M7-17
+  - TASK-M7-18
+- id: TASK-M7-38
+  milestone: C7
+  title: 'The Chazy energy-channel stains: seven classes × energy, structure × energy, and B''s hue'
+  depends_on:
+  - TASK-M7-37
+- id: TASK-M7-39
+  milestone: C7
+  title: 'Chazy parity: the f32 against f64 label disagreement, measured and reported'
+  depends_on:
+  - TASK-M7-36
+  - TASK-M4-04
+  - TASK-M4-05
+  - TASK-M4-18
+- id: TASK-M7-40
+  milestone: C7
+  title: 'The Chazy time views: when it was decided, and what just changed'
+  depends_on:
+  - TASK-M7-37
+- id: TASK-M7-41
+  milestone: C7
+  title: 'The Chazy one-body stains: the body lens, its energy form, the escaper map, the mass-rank views and their tie fallback'
+  depends_on:
+  - TASK-M7-36
+  - TASK-M7-38
+- id: TASK-M7-42
+  milestone: C7
+  title: 'The line engine: its overlay pass, data model and styles, polylines with dashes by arc length, smart ink and labels'
+  depends_on:
+  - TASK-M7-21
+- id: TASK-M7-43
+  milestone: C7
+  title: 'Contours: the expression''s variables and totality, evaluation on the decode, levels, marching squares, and energy contours that follow the active mapping'
+  depends_on:
+  - TASK-M7-42
+  - TASK-M2-67
+  - TASK-M2-90
+- id: TASK-M7-44
+  milestone: C7
+  title: 'The embedding''s tiers: the tier table, the drop from the bottom and never below physics, the colour flag and layout version 4, the report, old records, and capacity re-measured'
+  depends_on:
+  - TASK-M7-31
+  - TASK-M7-32
+  - TASK-M7-45
+- id: TASK-M7-45
+  milestone: C7
+  title: 'The decoder''s identity per link: each recorded link''s own entry hash, refusing exactly the changed link'
+  depends_on:
+  - TASK-M7-31
+  - TASK-M7-32
+  - TASK-M2-57
+- id: TASK-M7-47
+  milestone: C7
+  title: 'Chart position: the source, its projection onto each target''s quotient, the four results, the edge clamp, the colour frame and the t = 0 identity'
+  depends_on:
+  - TASK-M7-52
+- id: TASK-M7-48
+  milestone: C7
+  title: 'Chart position''s colour slot: the bases (Gradient, Site blend, Palette), the layers, the brightness occupants and the calibrations'
+  depends_on:
+  - TASK-M7-47
+  - TASK-M7-06
+  - TASK-M7-10
+- id: TASK-M7-49
+  milestone: C7
+  title: Chart position's Picture base, the fade off the slice and the ensemble's nominal copy
+  depends_on:
+  - TASK-M7-48
+  - TASK-M7-44
+- id: TASK-M7-50
+  milestone: C7
+  title: 'Replace-L''s keep in gamut option: chroma scaled by min(1, L/0.75, (1 − L)/0.35), off by default'
+  depends_on:
+  - TASK-M7-48
+- id: TASK-M7-51
+  milestone: C7
+  title: 'The stain editor''s Chart position: the node, the point⟨q⟩ subtype, the base-and-layers inspector, switching and restoring, Problems, the presets and saved stains unchanged'
+  depends_on:
+  - TASK-M7-48
+  - TASK-M7-49
+  - TASK-M7-50
+  - TASK-M7-17
+  - TASK-M7-22
+  - TASK-M7-23
+  - TASK-M7-24
+- id: TASK-M7-52
+  milestone: C7
+  title: 'The one projection: each target chart''s projection, the leaving rule on main''s clamped encode and a curve axis''s nearest point, one Rust source for Chart position and the trace'
+  depends_on:
+  - TASK-M2-99
+- id: TASK-M7-53
+  milestone: C7
+  title: The schema version hashes only the layout and kernel columns; a ledger scale edit re-styles with zero recompute
+  depends_on:
+  - TASK-M5-06
+- id: TASK-M7-55
+  milestone: C7
+  title: 'Print graph determinism, units and stability: seeded streams, `ref_px` / `device_px` / `fraction`, the screen-anchored sheet and `boil`, with the §11 harnesses 3, 4 and 5'
+  depends_on:
+  - TASK-M7-26
+- id: TASK-M7-56
+  milestone: C7
+  title: 'Print graph port, Analyse and Generate: 5 node types, each with its lab golden'
+  depends_on:
+  - TASK-M7-55
+- id: TASK-M7-57
+  milestone: C7
+  title: 'Print graph port, Adjust & combine: 13 node types and one preset, each with its lab golden'
+  depends_on:
+  - TASK-M7-56
+- id: TASK-M7-58
+  milestone: C7
+  title: 'Print graph port, Paint: 15 node types and 26 presets, each with its lab golden'
+  depends_on:
+  - TASK-M7-56
+  - TASK-M7-57
+- id: TASK-M7-59
+  milestone: C7
+  title: 'Print graph port, Print: 9 node types and 11 presets, each with its lab golden'
+  depends_on:
+  - TASK-M7-56
+  - TASK-M7-57
+- id: TASK-M7-60
+  milestone: C7
+  title: 'Print graph port, Screen: 10 node types and 31 presets, each with its lab golden'
+  depends_on:
+  - TASK-M7-56
+  - TASK-M7-57
+- id: TASK-M7-61
+  milestone: C7
+  title: 'Print graph port, Craft: 11 node types and 16 presets, each with its lab golden'
+  depends_on:
+  - TASK-M7-56
+  - TASK-M7-57
+- id: TASK-M7-62
+  milestone: C7
+  title: 'Print graph port, Photographic: 5 node types and 9 presets, each with its lab golden'
+  depends_on:
+  - TASK-M7-56
+  - TASK-M7-57
+  - TASK-M7-58
+- id: TASK-M7-63
+  milestone: C7
+  title: 'Print graph port, Machines: 2 node types and 5 presets, each with its lab golden'
+  depends_on:
+  - TASK-M7-56
+- id: TASK-M7-64
+  milestone: C7
+  title: 'Print graph port, Slots: the six slot nodes and the slot chain template; Palette on the finished colour; screen media and Viewing; the sheet, never the marks, on a pixel that is not a system'
+  depends_on:
+  - TASK-M7-56
+  - TASK-M7-58
+  - TASK-M7-60
+- id: TASK-M7-65
+  milestone: C7
+  title: 'R-130''s eight styles as the Print graph''s Poster family: their definitions in the design doc, any node they need, and their goldens'
+  depends_on:
+  - TASK-M7-58
+  - TASK-M7-59
+- id: TASK-M7-66
+  milestone: C7
+  title: 'Print graph field inputs: the `field` node, the stain''s window, absent fields, and the four "Driven by the data" presets on their real fields'
+  depends_on:
+  - TASK-M7-56
+  - TASK-M7-57
+  - TASK-M7-58
+- id: TASK-M7-67
+  milestone: C7
+  title: '`through_medium` in the line renderer: two passes with complementary filters, the sets drawn through before the Print graph, smart ink reading each pass''s figure'
+  depends_on:
+  - TASK-M7-42
+  - TASK-M7-26
+- id: TASK-M7-68
+  milestone: C7
+  title: 'Print graph cost classes measured: every node at 1024² on the reference machine, classed from the numbers, and each reduced node''s factor'
+  depends_on:
+  - TASK-M7-56
+  - TASK-M7-57
+  - TASK-M7-58
+  - TASK-M7-59
+  - TASK-M7-60
+  - TASK-M7-61
+  - TASK-M7-62
+  - TASK-M7-63
+  - TASK-M7-64
+  - TASK-M7-65
+  - TASK-M7-66
+- id: TASK-M7-69
+  milestone: C7
+  title: '`device_px` and the screen-anchored sheet in a second pass at screen resolution, at every render_scale and at export'
+  depends_on:
+  - TASK-M7-55
+  - TASK-M7-60
+- id: TASK-M7-70
+  milestone: C7
+  title: 'Base px: every mark length of the line system and the Print graph in one unit, scaled by `output_width / base_width`, labels placed at base size, `RenderState.base_width`'
+  depends_on:
+  - TASK-M7-42
+  - TASK-M7-55
+  - TASK-M7-44
+- id: TASK-M7-72
+  milestone: C7
+  title: Contours of any registered primitive
+  depends_on:
+  - TASK-M2-66
+  - TASK-M7-43
+- id: TASK-M7-73
+  milestone: C7
+  title: The five table debug views
+  depends_on:
+  - TASK-M2-92
+  - TASK-M7-74
+- id: TASK-M7-74
+  milestone: C7
+  title: 'The fragment table route: the GPU side of the backwards table, for Chart position and the presets'
+  depends_on:
+  - TASK-M2-92
+  - TASK-M2-99
+- id: TASK-M8-19
+  milestone: C7
+  title: 'Stain mode layout: library drawer, canvas with Graph | Code, preview, Problems pane (02_stain.png)'
+  depends_on:
+  - TASK-M8-05
+- id: TASK-M8-20
+  milestone: C7
+  title: 'Stain canvas: selection, wiring gestures, the node palette, node visuals'
+  depends_on:
+  - TASK-M8-19
+- id: TASK-M8-21
+  milestone: C7
+  title: 'Stain node inspector: morphing editors, Advanced ▸ edit shader, Graph | Code, eject'
+  depends_on:
+  - TASK-M8-93
+  - TASK-M7-16
+  - TASK-M7-18
+  - TASK-M7-23
+  - TASK-M7-24
+- id: TASK-M8-22
+  milestone: C7
+  title: Legend generated by evaluating the stain (06_legend.png)
+  depends_on:
+  - TASK-M8-92
+  - TASK-M8-10
+- id: TASK-M8-23
+  milestone: C7
+  title: 'Display window: the last stages and the display overlays (04_windows.png)'
+  depends_on:
+  - TASK-M8-05
+  - TASK-M8-19
+- id: TASK-M8-45
+  milestone: C7
+  title: 'The Chazy legends: the playhead in the title, B''s label, the status legend''s full names, the one-body legends and the three-body panels'
+  depends_on:
+  - TASK-M8-22
+  - TASK-M7-37
+  - TASK-M7-38
+  - TASK-M7-41
+- id: TASK-M8-46
+  milestone: C7
+  title: 'On the real engine: View › Debug view and its counts, the decoder-bug warning for the gallery charts, the mass simplex''s background and hatch at the same pixels, and F3''s Fit mode'
+  depends_on:
+  - TASK-M8-87
+  - TASK-M8-22
+- id: TASK-M8-49
+  milestone: C7
+  title: 'Traces on the line system: the hover, pinned and kept traces drawn by §8, shared with the orbit viewer'
+  depends_on:
+  - TASK-M7-42
+  - TASK-M8-09
+  - TASK-M8-10
+  - TASK-M8-11
+  - TASK-M7-52
+  - TASK-M2-99
+  - TASK-M2-100
+- id: TASK-M8-50
+  milestone: C7
+  title: Lines ▾, its editors, the axes and presets, Grid, t_end and class edges out of Overlays, and lines in the exported view state
+  depends_on:
+  - TASK-M7-42
+  - TASK-M7-43
+  - TASK-M8-87
+  - TASK-M8-08
+  - TASK-M8-94
+  - TASK-M8-03
+  - TASK-M2-98
+- id: TASK-M8-51
+  milestone: C7
+  title: 'The line system''s open questions as R-509 rules them: the stain''s expression syntax and the ledger''s fields, the trace fade''s proxy, trace labels winning, Screen contour the default'
+  depends_on:
+  - TASK-M7-43
+  - TASK-M8-49
+  - TASK-M8-50
+- id: TASK-M8-54
+  milestone: C7
+  title: The trace fade's general off-plane distance in the pulled-back mass metric
+  depends_on:
+  - TASK-M8-51
+- id: TASK-M8-58
+  milestone: C7
+  title: The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp
+  depends_on:
+  - TASK-M8-49
+  - TASK-M8-50
+  - TASK-M8-51
+  - TASK-M8-55
+  - TASK-M7-52
+  - TASK-M2-99
+  - TASK-M2-100
+  - TASK-M2-96
+  - TASK-M2-101
+  - TASK-M2-102
+  - TASK-M2-103
+- id: TASK-M8-68
+  milestone: C7
+  title: 'Display › Print, the Print panel: Plain / Print, the slots with live thumbnails and their settings, Boil, the 111-preset gallery in 12 families, Edit graph…, Reset; and each line set''s "Through
+    the medium"'
+  depends_on:
+  - TASK-M8-94
+  - TASK-M8-03
+  - TASK-M8-50
+  - TASK-M7-64
+  - TASK-M7-65
+  - TASK-M7-66
+  - TASK-M7-67
+- id: TASK-M8-69
+  milestone: C7
+  title: 'The Print graph editor: the Stain''s node editor reused on the slots'' graph, typed wire refusal, positions in `ViewUI`, unstable nodes marked, and custom WGSL nodes'
+  depends_on:
+  - TASK-M8-68
+  - TASK-M8-93
+  - TASK-M8-21
+- id: TASK-M8-70
+  milestone: C7
+  title: 'The instrument stays honest in the GUI: the "Print: …" badge in the header strip, Styled / Plain export defaulting to Plain, and every readout blind to the print'
+  depends_on:
+  - TASK-M8-68
+  - TASK-M8-32
+  - TASK-M8-22
+  - TASK-M8-34
+  - TASK-M8-14
+  - TASK-M8-87
+- id: TASK-M8-71
+  milestone: C7
+  title: 'Print graph provenance and round trip: `RenderState.print` by value in every destination, tiers 2 and 3, the custom node dropped and badged, and keyframes'
+  depends_on:
+  - TASK-M8-53
+  - TASK-M8-31
+  - TASK-M8-32
+  - TASK-M8-69
+  - TASK-M7-66
+- id: TASK-M8-72
+  milestone: C7
+  title: 'Degrade while moving: per-node motion policies, settle, the playhead not motion, and the print stage in the frame record (`stage_ms.post`, `post_level`, schema v2)'
+  depends_on:
+  - TASK-M7-68
+  - TASK-M5-28
+  - TASK-M6-18
+  - TASK-M8-68
+- id: TASK-M8-73
+  milestone: C7
+  title: 'The print stage''s budget: excluded from the Auto rung solve, the post level the arbiter''s motion-regime lever under Auto only, the budget''s definition and the print share'
+  depends_on:
+  - TASK-M8-72
+  - TASK-M6-17
+  - TASK-M6-18
+- id: TASK-M8-92
+  milestone: C7
+  title: 'Stain mode''s layout on the real engine: the registry, the Code view and the Problems pane'
+  depends_on:
+  - TASK-M8-19
+  - TASK-M8-88
+  - TASK-M8-18
+  - TASK-M7-14
+  - TASK-M7-22
+  - TASK-M6-21
+  - TASK-M6-22
+- id: TASK-M8-93
+  milestone: C7
+  title: The Stain canvas on the real engine
+  depends_on:
+  - TASK-M8-20
+  - TASK-M8-92
+  - TASK-M6-21
+  - TASK-M6-22
+- id: TASK-M8-94
+  milestone: C7
+  title: 'The Display window on the real engine: the last stages and the display overlays'
+  depends_on:
+  - TASK-M8-23
+  - TASK-M8-88
+  - TASK-M8-92
+  - TASK-M8-08
+  - TASK-M7-21
+  - TASK-M6-21
+  - TASK-M6-22
+- id: TASK-M8-01
+  milestone: C8
+  title: 'The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot'
+  depends_on:
+  - TASK-M6-21
+  - TASK-M6-22
+- id: TASK-M8-02
+  milestone: C8
+  title: 'Headless drive: the engine from a JSON state file, and the native headless survey'
+  depends_on:
+  - TASK-M8-01
+- id: TASK-M8-03
+  milestone: C8
+  title: 'Undo in the contract: the shared SetField history, coalescing, and per-field blast-radius metadata'
+  depends_on:
+  - TASK-M8-01
+- id: TASK-M8-04
+  milestone: C8
+  title: 'The gui crate and its firewall: F3 layer, crate-graph wall, and the GUI string lints'
+  depends_on:
+  - TASK-M8-01
+- id: TASK-M8-05
+  milestone: C8
+  title: 'Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)'
+  depends_on:
+  - TASK-M6-49
+- id: TASK-M8-08
+  milestone: C8
+  title: 'Overlays ▾: the grouped toggles, their tiers, the Tier-3 buffer and quad drill-down'
+  depends_on:
+  - TASK-M8-87
+  - TASK-M4-14
+  - TASK-M5-05
+- id: TASK-M8-12
+  milestone: C8
+  title: 'Listen, 1: the signal, spectrum, pitch, windows, channels and loudness from the one computeIC integration, with the audio out'
+  depends_on:
+  - TASK-M8-09
+  - TASK-M8-11
+  - TASK-M3-28
+- id: TASK-M8-13
+  milestone: C8
+  title: Keyboard scopes, global and in-scope keys, focus ring and breadcrumb (07_keyboard.png)
+  depends_on:
+  - TASK-M8-07
+- id: TASK-M8-24
+  milestone: C8
+  title: 'Run window: integration, escape and refinement settings under their contract names (04_windows.png)'
+  depends_on:
+  - TASK-M8-05
+- id: TASK-M8-25
+  milestone: C8
+  title: Quality warnings (Green / Yellow / Red), per-choice suppression, and the target-utilisation ceiling
+  depends_on:
+  - TASK-M8-95
+- id: TASK-M8-26
+  milestone: C8
+  title: 'Telemetry: the full calibration record, binding resource, throttling inference, passive mode'
+  depends_on:
+  - TASK-M8-87
+  - TASK-M5-24
+- id: TASK-M8-27
+  milestone: C8
+  title: 'Console: the footer opened, on the telemetry stream (12_console.png)'
+  depends_on:
+  - TASK-M8-87
+  - TASK-M8-26
+  - TASK-M8-03
+- id: TASK-M8-28
+  milestone: C8
+  title: Profiler window, leak detector, precomputed summaries and `prin profile query --live` (04_windows.png)
+  depends_on:
+  - TASK-M8-26
+  - TASK-M8-27
+- id: TASK-M8-29
+  milestone: C8
+  title: 'Failing gracefully: no-GPU fallback, device loss, and every degradation shown and logged'
+  depends_on:
+  - TASK-M8-26
+  - TASK-M8-27
+- id: TASK-M8-30
+  milestone: C8
+  title: 'Export: the frame loop in blocking mode, as a background job'
+  depends_on:
+  - TASK-M8-02
+  - TASK-M5-24
+- id: TASK-M8-31
+  milestone: C8
+  title: 'Keyframes, the export planner and the spec object: serialise, share, re-render'
+  depends_on:
+  - TASK-M8-30
+  - TASK-M7-31
+  - TASK-M7-45
+  - TASK-M8-81
+- id: TASK-M8-32
+  milestone: C8
+  title: 'Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)'
+  depends_on:
+  - TASK-M8-30
+  - TASK-M8-31
+  - TASK-M8-87
+  - TASK-M7-32
+  - TASK-M8-46
+  - TASK-M6-48
+  - TASK-M7-45
+  - TASK-M3-39
+- id: TASK-M8-33
+  milestone: C8
+  title: Import picture, saved views, and record a time sweep (09_importrecord.png)
+  depends_on:
+  - TASK-M8-32
+  - TASK-M8-08
+  - TASK-M6-48
+  - TASK-M6-49
+  - TASK-M8-81
+- id: TASK-M8-34
+  milestone: C8
+  title: 'Measure: boundary dimension on a dragged region (10_measure.png)'
+  depends_on:
+  - TASK-M8-87
+- id: TASK-M8-35
+  milestone: C8
+  title: 'Research (v2): periodic-orbit seeding, Newton refinement, catalogue comparison (11_research.png)'
+  depends_on:
+  - TASK-M8-11
+  - TASK-M8-87
+  - TASK-M3-30
+  - TASK-M4-15
+- id: TASK-M8-36
+  milestone: C8
+  title: 'Research (v2): continuation, Poincaré return map, side by side with linked views (11_research.png)'
+  depends_on:
+  - TASK-M8-35
+  - TASK-M8-11
+  - TASK-M8-52
+- id: TASK-M8-37
+  milestone: C8
+  title: 'Browser build (v1 web): the wasm engine in a Web Worker on an OffscreenCanvas, the main-thread shell, coi-serviceworker'
+  depends_on:
+  - TASK-M8-02
+  - TASK-M8-04
+  - TASK-M7-16
+- id: TASK-M8-38
+  milestone: C8
+  title: 'V1 web''s membranes: set_field and SAB input in, the ~10 Hz snapshot out, the inspector worker'
+  depends_on:
+  - TASK-M8-37
+  - TASK-M8-09
+- id: TASK-M8-39
+  milestone: C8
+  title: The fixed scripted suite and the calibration campaign
+  depends_on:
+  - TASK-M8-26
+  - TASK-M8-38
+- id: TASK-M8-40
+  milestone: C8
+  title: 'Browser gates: Tier-N on real browsers, and the Playwright fragment goldens'
+  depends_on:
+  - TASK-M8-38
+  - TASK-M7-18
+- id: TASK-M8-41
+  milestone: C8
+  title: 'Release gates: the non-Metal parity run, the seam test index, the atlas horizon label, v1 web on GitHub Pages'
+  depends_on:
+  - TASK-M8-40
+  - TASK-M8-31
+  - TASK-M8-32
+  - TASK-M4-13
+  - TASK-M8-42
+  - TASK-M8-76
+  - TASK-M4-28
+- id: TASK-M8-42
+  milestone: C8
+  title: 'Screen sweep: every artboard screen present, every schema field exposed'
+  depends_on:
+  - TASK-M8-87
+  - TASK-M8-89
+  - TASK-M8-90
+  - TASK-M8-08
+  - TASK-M8-10
+  - TASK-M8-11
+  - TASK-M8-91
+  - TASK-M8-14
+  - TASK-M8-15
+  - TASK-M8-16
+  - TASK-M8-17
+  - TASK-M8-18
+  - TASK-M8-92
+  - TASK-M8-93
+  - TASK-M8-21
+  - TASK-M8-22
+  - TASK-M8-94
+  - TASK-M8-95
+  - TASK-M8-25
+  - TASK-M8-27
+  - TASK-M8-28
+  - TASK-M8-32
+  - TASK-M8-33
+  - TASK-M8-34
+  - TASK-M8-35
+  - TASK-M8-36
+  - TASK-M8-43
+- id: TASK-M8-43
+  milestone: C8
+  title: 'The compute fast-math setting in the GUI: the Run window control and the Profiler''s fast-math line'
+  depends_on:
+  - TASK-M8-95
+  - TASK-M8-28
+  - TASK-M4-08
+- id: TASK-M8-53
+  milestone: C8
+  title: 'The round-trip rule: every export the identity on `SimConfig` and `RenderState`, no empty struct, every destination carrying the links, and the tiers reported in the GUI'
+  depends_on:
+  - TASK-M8-01
+  - TASK-M8-28
+  - TASK-M8-31
+  - TASK-M8-32
+  - TASK-M8-33
+  - TASK-M7-44
+  - TASK-M8-48
+  - TASK-M8-50
+  - TASK-M8-46
+  - TASK-M8-52
+- id: TASK-M8-59
+  milestone: C8
+  title: 'Listen, 2: the voices, the 39 instruments and makeVoice, strikes on the trajectory''s beats, the events and the effects'
+  depends_on:
+  - TASK-M8-12
+  - TASK-M8-38
+- id: TASK-M8-60
+  milestone: C8
+  title: 'Listen, 3: horizon and dwell, the spectrum, spectrogram and readout, sweep a row and the known orbits'
+  depends_on:
+  - TASK-M8-12
+  - TASK-M8-49
+- id: TASK-M8-61
+  milestone: C8
+  title: 'The trace in Explore, 1: the Trajectory panel''s tabs, previews, Trace and Numbers sections, Overlays ▾ › Trace, T, ⇧T and Y, and the trace''s look'
+  depends_on:
+  - TASK-M8-58
+  - TASK-M8-11
+  - TASK-M8-91
+- id: TASK-M8-62
+  milestone: C8
+  title: 'The trace in Explore, 2: the Trace… window'
+  depends_on:
+  - TASK-M8-61
+  - TASK-M8-58
+- id: TASK-M8-63
+  milestone: C8
+  title: 'The trace and Listen in Explore, 3: Listen in the bottom band, the shared time axis and the legend''s trace block'
+  depends_on:
+  - TASK-M8-64
+  - TASK-M8-65
+  - TASK-M8-60
+  - TASK-M8-90
+  - TASK-M8-22
+- id: TASK-M8-64
+  milestone: C8
+  title: 'Listen in Explore, 1: the Trajectory panel''s Listen section, the Figure''s L and the window highlight'
+  depends_on:
+  - TASK-M8-61
+  - TASK-M8-12
+  - TASK-M8-59
+  - TASK-M8-60
+- id: TASK-M8-65
+  milestone: C8
+  title: 'Listen in Explore, 2: the Listen… window'
+  depends_on:
+  - TASK-M8-64
+  - TASK-M8-12
+  - TASK-M8-59
+  - TASK-M8-60
+- id: TASK-M8-74
+  milestone: C8
+  title: 'Result, the job: one job.json run in the app or by `prin batch`, f32 or f64, the result folder and its payload, cancel and resume'
+  depends_on:
+  - TASK-M8-02
+  - TASK-M4-17
+  - TASK-M7-44
+  - TASK-M5-24
+- id: TASK-M8-75
+  milestone: C8
+  title: 'Result, the GUI: the Result window, the result view and Compare'
+  depends_on:
+  - TASK-M8-74
+  - TASK-M8-17
+  - TASK-M8-34
+- id: TASK-M8-77
+  milestone: C8
+  title: 'The Sequence window: whole keyframes, the timeline and its lanes, easing and transitions per segment, the `.principia-seq.json` file'
+  depends_on:
+  - TASK-M8-31
+  - TASK-M8-87
+  - TASK-M8-75
+- id: TASK-M8-78
+  milestone: C8
+  title: 'Sequence: Play preview, the proof strip, the planner''s estimate and its basis, and export with the spec beside it'
+  depends_on:
+  - TASK-M8-77
+  - TASK-M8-30
+  - TASK-M5-28
+  - TASK-M8-32
+- id: TASK-M8-79
+  milestone: C8
+  title: 'The spotlight reel''s machinery, natively: the reel builder and its manifest, the film played without compute, the takeover that keeps playing, the Spotlights window'
+  depends_on:
+  - TASK-M8-78
+  - TASK-M5-26
+- id: TASK-M8-80
+  milestone: C8
+  title: 'Export details: every measured colour window frozen at export and at Record, the clipped shares and the export block, the colour-vision simulation never in an export unless asked, `render_scale`
+    1, and the physical size'
+  depends_on:
+  - TASK-M8-32
+  - TASK-M8-33
+  - TASK-M8-94
+  - TASK-M8-78
+  - TASK-M8-53
+  - TASK-M7-70
+  - TASK-M7-25
+- id: TASK-M8-81
+  milestone: C8
+  title: 'The video carrier: a recording''s record once per file in its container, always (a GIF''s comment and application extension, an MP4''s comment, a WebM''s tag), read back with the embedding''s
+    three outcomes'
+  depends_on:
+  - TASK-M8-30
+  - TASK-M7-32
+- id: TASK-M8-82
+  milestone: C8
+  title: 'The uploaded picture: ingest in the app''s own code, the SHA-256 `PictureRef` in tier 2, the content-addressed store, the `prPc` chunk, and a visible "Picture missing", never a substitute'
+  depends_on:
+  - TASK-M8-33
+  - TASK-M8-53
+  - TASK-M8-74
+  - TASK-M7-49
+  - TASK-M7-51
+- id: TASK-M8-85
+  milestone: C8
+  title: 'The WebM carrier in the browser build: the `PRINCIPIA_SPEC` tag on the file, tested by the Playwright suite'
+  depends_on:
+  - TASK-M8-81
+  - TASK-M8-33
+  - TASK-M8-40
+- id: TASK-M8-88
+  milestone: C8
+  title: 'The Explore shell on the real engine: egui-wgpu on the engine''s device, the status line, the footer and `budget-bound`'
+  depends_on:
+  - TASK-M8-05
+  - TASK-M6-21
+  - TASK-M6-22
+  - TASK-M8-03
+  - TASK-M8-04
+  - TASK-M6-20
+- id: TASK-M8-91
+  milestone: C8
+  title: Keyboard scopes and keys on the real engine
+  depends_on:
+  - TASK-M8-13
+  - TASK-M8-90
+  - TASK-M8-11
+  - TASK-M8-03
+  - TASK-M6-21
+  - TASK-M6-22
+- id: TASK-M8-95
+  milestone: C8
+  title: The Run window on the real engine, and the stepper pairs' warnings
+  depends_on:
+  - TASK-M8-24
+  - TASK-M8-88
+  - TASK-M3-39
+  - TASK-M6-21
+  - TASK-M6-22
+- id: TASK-M8-108
+  milestone: C8
+  title: The Sequence's morph segment
+  depends_on:
+  - TASK-M2-81
+  - TASK-M8-31
+  - TASK-M8-77
+  - TASK-M8-78
+  - TASK-M8-102
+  - TASK-M8-103
+  - TASK-M8-104
+  - TASK-M8-118
+  - TASK-M8-126
+  - TASK-M7-72
+- id: TASK-M8-116
+  milestone: C8
+  title: Time-axis mode in Sequence and export sidecars
+  depends_on:
+  - TASK-M8-115
+  - TASK-M8-77
+  - TASK-M8-108
+- id: TASK-M8-118
+  milestone: C8
+  title: 'Hold L_z on the GPU: the outcome tags across backends and the calibration of τ'
+  depends_on:
+  - TASK-M2-69
+  - TASK-M4-06
+- id: TASK-M9-01
+  milestone: C9
+  title: 'The orbit atlas through encode and decode: E and L per row (OC-2), and every atlas IC in the 8D latent chart (AT-D6)'
+  depends_on:
+  - TASK-M3-27
+- id: TASK-M9-02
+  milestone: C9
+  title: Atlas closure at order (OC-1, the first batch's DRAFT-VAL-01)
+  depends_on:
+  - TASK-M9-01
+  - TASK-M3-24
+  - TASK-M3-75
+- id: TASK-M9-03
+  milestone: C9
+  title: 'Published against refined: each atlas source''s published initial conditions measured (OC-3)'
+  depends_on:
+  - TASK-M9-02
+- id: TASK-M9-04
+  milestone: C9
+  title: The syzygy count against the atlas's `syz` on every row (OC-5), and its counting convention
+  depends_on:
+  - TASK-M9-02
+- id: TASK-M9-05
+  milestone: C9
+  title: The atlas's per-family coverage report (OC-6)
+  depends_on:
+  - TASK-M9-02
+  - TASK-M9-03
+  - TASK-M9-04
+- id: TASK-M9-06
+  milestone: C9
+  title: 'Li & Liao''s free-fall orbits: closure, rest at T/2 and the alias pairs (LL-1, LL-2, the first batch''s DRAFT-VAL-02), and the website-only rows (LL-5)'
+  depends_on:
+  - TASK-M9-02
+- id: TASK-M9-07
+  milestone: C9
+  title: Li & Liao's known orbits against Standish 1970 and Yasko & Orlov 2015 (LL-3)
+  depends_on:
+  - TASK-M9-06
+- id: TASK-M9-08
+  milestone: C9
+  title: 'Heggie 1974''s regularisation targets: the step ratio against Aarseth–Zare (H-1, H-2, DRAFT-VAL-04) and C/3 toward the Lagrange triple collision (H-3, DRAFT-VAL-03)'
+  depends_on:
+  - TASK-M3-24
+  - TASK-M3-75
+- id: TASK-M9-09
+  milestone: C9
+  title: Tanikawa & Mikkola 2021's triple-collision points on the free-fall plane (TM-1)
+  depends_on:
+  - TASK-M9-08
+- id: TASK-M9-10
+  milestone: C9
+  title: 'Agekyan & Anosova II: decay times from exact rest (AA-6, the first batch''s DRAFT-VAL-05)'
+  depends_on:
+  - TASK-M3-34
+- id: TASK-M9-11
+  milestone: C9
+  title: 'The no-integration controls: Monaghan''s planar eccentricity row and the random-triangle Z (Q-2''s Theory row, Q-4; DRAFT-VAL-06)'
+  depends_on:
+  - TASK-M3-12
+  - TASK-M3-24
+- id: TASK-M9-12
+  milestone: C9
+  title: The butterflies' two published periods, decided by closure (BG-4, the first batch's DRAFT-VAL-07)
+  depends_on:
+  - TASK-M3-24
+  - TASK-M3-75
+- id: TASK-M9-13
+  milestone: C9
+  title: 'The Belgrade orbits close: the PRL''s 15, the gallery''s 206 sequence orbits and 57 BHH satellites, Hudomal''s 38 and his E = −0.5 periods (SD-1, BG-1, BG-2, HU-3, HU-5)'
+  depends_on:
+  - TASK-M3-24
+  - TASK-M3-75
+- id: TASK-M9-14
+  milestone: C9
+  title: 'Period against word length: Li & Liao''s period per letter (LL-4) and Hudomal''s seven sequence fits (HU-4)'
+  depends_on:
+  - TASK-M9-06
+  - TASK-M9-13
+  - TASK-M3-30
+- id: TASK-M9-15
+  milestone: C9
+  title: 'The prototype''s integrator and classifier numbers, reproduced or explained (tier D: D-1, D-2, D-4, D-5)'
+  depends_on:
+  - TASK-M3-28
+  - TASK-M3-32
+  - TASK-M3-34
+- id: TASK-M9-16
+  milestone: C9
+  title: 'Burrau and the Pythagorean family: Chitan et al.''s sixteen triangles, Boekholt et al.''s lifetime and τ_L and Mikkola''s bounce orbit (CH-1, B-1, B-2, V-6)'
+  depends_on:
+  - TASK-M3-27
+  - TASK-M3-25
+  - TASK-M3-34
+  - TASK-M4-13
+- id: TASK-M9-17
+  milestone: C9
+  title: 'Aarseth et al. 1994a: the Burrau neighbourhood on six rings per body (P-1 to P-6)'
+  depends_on:
+  - TASK-M3-27
+  - TASK-M3-34
+- id: TASK-M9-18
+  milestone: C9
+  title: 'Aarseth et al. 1994b: triple approaches and parameter distributions over region D, circle R and the Pythagorean escapers (Q-1 to Q-3)'
+  depends_on:
+  - TASK-M9-11
+  - TASK-M9-17
+- id: TASK-M9-19
+  milestone: C9
+  title: Agekyan & Anosova's near-rest runs and Anosova 1969's unequal masses (AA-2 to AA-5, AA-7, AA-8, AN-1)
+  depends_on:
+  - TASK-M9-10
+- id: TASK-M9-20
+  milestone: C9
+  title: 'Lehto et al. 2008 at a small grid: local homogeneity, reversibility and the step-halving controls (L-3, L-4, L-5)'
+  depends_on:
+  - TASK-M3-34
+  - TASK-M3-75
+  - TASK-M2-77
+- id: TASK-M9-21
+  milestone: C9
+  title: 'Region-D statistics: the lifetime tail and lifetime against Lyapunov time (V-9, MT-1)'
+  depends_on:
+  - TASK-M3-34
+- id: TASK-M9-22
+  milestone: C9
+  title: 'Converged-code references: Boekholt et al. 2020''s lifetime grid and Breen et al. 2020''s Brutus runs (GG-1, BR-1)'
+  depends_on:
+  - TASK-M3-25
+  - TASK-M3-34
+  - TASK-M2-77
+- id: TASK-M9-23
+  milestone: C9
+  title: 'Binary-plus-single targets: Trani et al.''s planar row, Manwadkar et al.''s escape probabilities, Stone & Leigh''s closed forms (TR-1, MK-1, SL-1)'
+  depends_on:
+  - TASK-M3-34
+  - TASK-M2-79
+- id: TASK-M9-24
+  milestone: C9
+  title: Parischewsky et al.'s equilateral-triangle experiment around Lagrange (PA-1)
+  depends_on:
+  - TASK-M3-34
+  - TASK-M9-45
+- id: TASK-M9-25
+  milestone: C9
+  title: Hierarchical stability limits, prograde and retrograde (V-11)
+  depends_on:
+  - TASK-M3-34
+- id: TASK-M9-26
+  milestone: C9
+  title: Lehto's lifetime map at full resolution, and the shield's mirror symmetry (L-1, V-8 (a))
+  depends_on:
+  - TASK-M9-20
+  - TASK-M4-17
+- id: TASK-M9-27
+  milestone: C9
+  title: Hudomal's return-proximity map over the Šuvakov plane and the butterfly III zoom (HU-1, HU-2)
+  depends_on:
+  - TASK-M9-13
+  - TASK-M4-17
+  - TASK-M9-40
+- id: TASK-M9-28
+  milestone: C9
+  title: 'Symbol-sequence maps: Tanikawa & Mikkola''s free-fall and non-zero-L maps, and Valtonen et al.''s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7)'
+  depends_on:
+  - TASK-M4-17
+  - TASK-M2-78
+  - TASK-M2-77
+- id: TASK-M9-29
+  milestone: C9
+  title: Li, Li & Liao's mass-plane contours for one periodic family (LLL-1)
+  depends_on:
+  - TASK-M4-17
+- id: TASK-M9-30
+  milestone: C9
+  title: 'The raised-cap run: the targets recorded as "not evaluated within cap", evaluated at a calibrated raised horizon'
+  depends_on:
+  - TASK-M9-02
+  - TASK-M9-03
+  - TASK-M9-05
+- id: TASK-M9-31
+  milestone: C9
+  title: 'Deep zooms of the shield: Lehto''s 3.125×10⁻⁶ zoom and Valtonen et al.''s three windows (L-2, V-8 (b))'
+  depends_on:
+  - TASK-M9-26
+  - TASK-M6-08
+- id: TASK-M9-32
+  milestone: C9
+  title: The prototype's Chazy-classifier numbers against Fewbody, reproduced or explained (D-3)
+  depends_on:
+  - TASK-M7-35
+  - TASK-M7-36
+- id: TASK-M9-33
+  milestone: C9
+  title: 'Stability as structure: atlas orbits off the Šuvakov plane against their published stability (OC-4, AT-D5)'
+  depends_on:
+  - TASK-M9-05
+  - TASK-M8-74
+  - TASK-M6-05
+- id: TASK-M9-34
+  milestone: C9
+  title: The atlas's free-fall orbits marked on the closure field, one plane per mass set (AT-D2)
+  depends_on:
+  - TASK-M9-06
+  - TASK-M8-74
+  - TASK-M4-15
+- id: TASK-M9-35
+  milestone: C9
+  title: The Šuvakov plane rendered, at equal masses and at the eight values of m₃, and OC-4 there (AT-D1, AT-D3, OC-4 on the Šuvakov plane)
+  depends_on:
+  - TASK-M9-33
+  - TASK-M9-40
+- id: TASK-M9-36
+  milestone: C9
+  title: 'The ruled external targets scored: FF-H, the figure-eight''s published shape-sphere curve and SP-1 against Szebehely & Peters'
+  depends_on:
+  - TASK-M3-25
+  - TASK-M3-27
+  - TASK-M3-28
+  - TASK-M3-29
+- id: TASK-M9-37
+  milestone: C9
+  title: 'M9''s report: every external target with its tier, outcome and like-for-like checks'
+  depends_on:
+  - TASK-M9-01
+  - TASK-M9-02
+  - TASK-M9-03
+  - TASK-M9-04
+  - TASK-M9-05
+  - TASK-M9-06
+  - TASK-M9-07
+  - TASK-M9-08
+  - TASK-M9-10
+  - TASK-M9-11
+  - TASK-M9-12
+  - TASK-M9-13
+  - TASK-M9-14
+  - TASK-M9-15
+  - TASK-M9-16
+  - TASK-M9-17
+  - TASK-M9-18
+  - TASK-M9-19
+  - TASK-M9-20
+  - TASK-M9-21
+  - TASK-M9-26
+  - TASK-M9-28
+  - TASK-M9-30
+  - TASK-M9-31
+  - TASK-M9-32
+  - TASK-M9-33
+  - TASK-M9-34
+  - TASK-M9-36
+- id: TASK-M9-38
+  milestone: C9
+  title: 'The GPU-path tightening defined: what agreeing better means, while staying interactive'
+  depends_on:
+  - TASK-M9-37
+- id: TASK-M9-39
+  milestone: C9
+  title: 'The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted'
+  depends_on:
+  - TASK-M4-03
+  - TASK-M4-06
+  - TASK-M4-04
+  - TASK-M4-13
+  - TASK-M3-12
+  - TASK-M3-22
+  - TASK-M7-35
+  - TASK-M7-39
+  - TASK-M8-16
+- id: TASK-M9-40
+  milestone: C9
+  title: The Šuvakov-plane chart, at equal masses and at fixed m₃, defined and built
+  depends_on:
+  - TASK-M4-06
+  - TASK-M4-17
+- id: TASK-M9-41
+  milestone: C9
+  title: 'Candidate original results: per-point FTLE maps over the batch-152 planes and a time-weighted shape-sphere occupancy accumulator'
+  depends_on:
+  - TASK-M4-13
+- id: TASK-M9-42
+  milestone: C9
+  title: 'GG-1: the eight neighbours of (3, 43), a peek'
+  depends_on: []
+- id: TASK-M9-44
+  milestone: C9
+  title: 'LL-6: all 316 free-fall orbits against the authors'' table, a peek target'
+  depends_on:
+  - TASK-M9-06
+- id: TASK-M9-45
+  milestone: C9
+  title: The side-ratio remap onto the shape sphere at rest, its preset on the equilateral point, and the two side ratios in the Inspector
+  depends_on:
+  - TASK-M3-34
+  - TASK-M8-16
+  - TASK-M8-48

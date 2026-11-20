@@ -1,0 +1,6 @@
+{
+  "expected": "fail",
+  "kind": "eight-orbits",
+  "description": "control: the eight-orbit report with the (9, 40, 41) triangle's runs left out, which its completeness check must tell apart",
+  "drop": "(9, 40, 41) at rest"
+}

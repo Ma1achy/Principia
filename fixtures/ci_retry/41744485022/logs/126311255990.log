@@ -1,0 +1,11 @@
+﻿2026-11-04T00:49:09.9668004Z Current runner version: '2.338.2'
+2026-11-04T00:49:09.9690216Z Version: 20261021.618
+2026-11-04T00:49:09.9698170Z Image: ubuntu-24.04
+2026-11-04T00:49:09.9698685Z Version: 20261025.353.1
+2026-11-04T00:49:10.0067952Z Complete job name: ci
+2026-11-04T00:49:10.1126941Z ##[group]Run for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$DOCS_ONLY" = true ]; } || { echo "a job ci gathers ended $r"; exit 1; }; done
+2026-11-04T00:49:10.1128236Z [36;1mfor r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$DOCS_ONLY" = true ]; } || { echo "a job ci gathers ended $r"; exit 1; }; done[0m
+2026-11-04T00:49:10.3131075Z shell: /usr/bin/bash -e {0}
+2026-11-04T00:49:10.3133646Z   RESULTS: failure success success
+2026-11-04T00:49:10.3280828Z a job ci gathers ended failure
+2026-11-04T00:49:10.3295723Z ##[error]Process completed with exit code 1.

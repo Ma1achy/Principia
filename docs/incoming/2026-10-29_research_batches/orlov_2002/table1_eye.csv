@@ -1,0 +1,9 @@
+type,subtype,fraction
+Ejections,,0.599
+Ejections,left body,0.308
+Ejections,right body,0.291
+Departures,,0.370
+Departures,conditional,0.015
+Departures,precise,0.355
+Undisrupted systems,,0.026
+Triple close encounters,,0.005

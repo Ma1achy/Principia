@@ -1,0 +1,12 @@
+{
+  "render": {
+    "shader": "../gradient/gradient.wgsl",
+    "fragment": "fs_main",
+    "width": 256,
+    "height": 256,
+    "constants": { "step": 0 }
+  },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "fail"
+}

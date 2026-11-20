@@ -1,0 +1,10 @@
+# The CI build settings a workflow's top-level env cannot carry (`config.sh`). An action, not a `run:` step: the tests
+# that run a workflow's jobs' `run:` steps outside CI (`qa_TASK-M0-23_r305`, `mutants_no_mutant`) pass over a `uses:`
+# step, so they never write to the CARGO_HOME of the machine they run on (R-233).
+name: cargo-ci-config
+description: Every dependency without debug info, in the runner's CARGO_HOME
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: bash "$GITHUB_ACTION_PATH/config.sh"

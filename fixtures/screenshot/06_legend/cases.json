@@ -1,0 +1,9 @@
+{
+  "cases": [
+    {
+      "name": "mock_legend",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": [] },
+      "artboard": "docs/gui/design/06_legend.png"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+[package]
+name = "kernel"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The rust-gpu standard library: the `#[spirv]` attributes and glam's vector types, for both builds (canonical_spec §1
+# item 2).
+[dependencies]
+# Exact: its version is the rust-gpu release cargo-gpu builds the backend from, 0.10.0-alpha.1, whose backend builds
+# on the pinned nightly (R-169); a caret requirement also admits 0.10.0, which needs another nightly.
+spirv-std = "=0.10.0-alpha.1"
+# Cargo.lock holds spirv-std's glam (">=0.30.8") at 0.32: glam 0.33 puts its integer vectors, spirv-std's `UVec3` among
+# them, behind features spirv-std does not enable on the SPIR-V target, so `cargo xtask build-kernel` fails on it.
+
+# The host's `N_sub` threshold generator (`driver::nsub_table`; R-502, REQ-INT-091) computes its `pow` in f64 through a
+# pinned pure-software libm: libm, already in the build under naga and spirv-std, at the version `Cargo.lock` holds, with
+# `force-soft-floats`, so no platform libm, compiler intrinsic or architecture-specific instruction computes it, and the
+# native and wasm hosts give the same bits. The generator is host code, so the SPIR-V build does not take it.
+[target.'cfg(not(target_arch = "spirv"))'.dependencies]
+libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
+
+# systems_architecture §7.1: kernel -> ledger is a build-dependency only (R-185).
+[build-dependencies]
+ledger = { path = "../ledger" }
+
+# Controls reach kernel's tests through a dev-dependency on validation; they are integration tests in `tests/` (R-176,
+# R-187).
+[dev-dependencies]
+validation = { path = "../validation" }
+# The read side's property tests (`tests/derived.rs`) draw their cases through the shared config, `validation::prop`.
+proptest = "1.11"
+# The golden IC's hand-computed values, `fixtures/golden_ic/z0.json` (TASK-M2-03), are read as JSON.
+serde_json = "1"
+# The order-condition check (`tests/occupant.rs`, REQ-INT-090) evaluates Yoshida's order conditions exactly, in rational
+# arithmetic, on the shipped f64 coefficients; num-rational and num-bigint are already in the build, under `num`.
+num-bigint = "0.4"
+num-rational = "0.4"
+
+# Under `controls`, each `negative_control!` in kernel's tests compiles as a test (R-176).
+[features]
+controls = []
+# The libm-pin measurement's two arms (R-991, REQ-CHART-212; `cargo xtask measure libm-pin`), off in every other build:
+# the f64 path on `num_traits::Float`, the platform's maths library, as before the pin, and the control, the pinned
+# `sin` moved one ulp up (`src/real.rs`'s note).
+measure-std-maths = []
+measure-perturb-sin = []
+
+# cargo-machete's `--with-metadata` mode reports `ledger` unused; it is the build-dependency R-185 requires
+# (systems_architecture §7.1), held in `build.rs` by `use ledger as _;` (TASK-M0-79).
+[package.metadata.cargo-machete]
+ignored = ["ledger"]

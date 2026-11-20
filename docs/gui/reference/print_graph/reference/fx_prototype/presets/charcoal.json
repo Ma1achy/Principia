@@ -1,0 +1,100 @@
+{
+ "name": "Charcoal",
+ "doc": "Smudged tone along the forms on a heavy tooth, highlights lifted with an eraser, loose dust.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "L": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "stretch(blur(lum(I), 0.8))"
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "sigma": 6
+   }
+  },
+  "streak": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 2.5,
+    "density": 0.004,
+    "length": 22,
+    "seed": "$seed"
+   }
+  },
+  "lift": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 1.6,
+    "density": 0.004,
+    "length": 14,
+    "seed": "$seed+5"
+   }
+  },
+  "pt": {
+   "op": "paper_tooth"
+  },
+  "n1": {
+   "op": "noise",
+   "p": {
+    "scale": 1.3,
+    "octaves": 1,
+    "seed": "$seed+1"
+   }
+  },
+  "dust": {
+   "op": "draw",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "kind": "random"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "L": "L",
+    "streak": "streak",
+    "lift": "lift",
+    "pt": "pt",
+    "n1": "n1",
+    "dust": "dust.out"
+   },
+   "p": {
+    "f": "T = (1-L)**1.05\nbase = gaussian(T, 1.6)*(0.8+0.35*clip(streak, 0, 1.3))\ntooth = 0.75*z(pt) + 0.5*n1\ncov = clip(base*1.1, 0, 1)*sig(tooth*1.1 + (base-0.45)*6)\ncov = 0.6*cov + 0.4*gaussian(cov, 3)\ngx, gy = gradient(gaussian(L, 1.0)); edge = clip(hypot(gx, gy)*7-0.1, 0, 1)\ncov = clip(cov + 0.35*edge*sig(tooth+1), 0, 1)\nlf = clip(lift*1.6, 0, 1)\ncov = cov*(1 - 0.85*lf*clip((L-0.5)*3, 0, 1))\nd = gaussian((dust < 0.0012).astype(float), 0.6)*3\ncov = clip(cov + d*0.5, 0, 0.96)\nout = array([0.93, 0.92, 0.89])*(1-cov[..., None]) + array([0.08, 0.08, 0.09])*cov[..., None]\nout = out*(1+0.02*z(pt))[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

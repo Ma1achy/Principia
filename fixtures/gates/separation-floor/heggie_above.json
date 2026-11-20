@@ -1,0 +1,6 @@
+{
+  "description": "Heggie's control can fire: Heggie × RK4 under Eq. 22 on the radial collision passage at f64, with a TINY ten times its least pre-floor dt/dτ there, so the floor acts and its floored steps are counted and reported (R-563, integrator contract Part 6).",
+  "tiny": "above",
+  "occupant": "heggie",
+  "expected": "pass"
+}

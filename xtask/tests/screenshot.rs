@@ -1,0 +1,734 @@
+//! `cargo xtask screenshot selftest` (REQ-TOOL-134): the layout case writes its capture beside its reference; the
+//! presence-only case passes, and fails naming the control when one control is removed (R-68, R-129). Each test runs
+//! on a copy of `fixtures/screenshot/selftest/` under its own root, so the captures land in that root's `target/`.
+//! A control laid out below a 120×20 surface fails presence, named as clipped; inside it, it passes (REQ-TOOL-136,
+//! R-275).
+
+use std::fs;
+use std::path::{Path, PathBuf};
+
+use validation::negative_control;
+use xtask::screenshot::{self, CaseResult, Outcome};
+
+const SUITE: &str = "selftest";
+
+/// The repo's selftest suite directory.
+fn fixture() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(screenshot::SUITES)
+        .join(SUITE)
+}
+
+/// A root holding a copy of the selftest suite, its surface's controls filtered by `keep` (by label).
+fn root(name: &str, keep: impl Fn(&str) -> bool) -> PathBuf {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _ = fs::remove_dir_all(&root);
+    let dir = root.join(screenshot::SUITES).join(SUITE);
+    fs::create_dir_all(&dir).expect("suite dir created");
+    for file in ["cases.json", "reference.png"] {
+        fs::copy(fixture().join(file), dir.join(file)).expect("fixture copied");
+    }
+    let text = fs::read_to_string(fixture().join("surface.json")).expect("surface read");
+    let mut surface: serde_json::Value = serde_json::from_str(&text).expect("surface parsed");
+    surface["controls"]
+        .as_array_mut()
+        .expect("controls")
+        .retain(|c| keep(c["label"].as_str().expect("label")));
+    fs::write(dir.join("surface.json"), surface.to_string()).expect("surface written");
+    root
+}
+
+/// The result of the case `case` of the selftest suite under `root`.
+fn case(root: &Path, case: &str) -> CaseResult {
+    screenshot::run_suite(root, SUITE)
+        .expect("suite read")
+        .into_iter()
+        .find(|r| r.case == case)
+        .unwrap_or_else(|| panic!("no case `{case}`"))
+}
+
+/// The layout case's capture under `root`, after checking it is of the surface's size and sits beside a
+/// byte-for-byte copy of the reference it names.
+fn capture(root: &Path) -> Vec<u8> {
+    let result = case(root, "layout");
+    let Ok(Outcome::Captured { capture, artboard }) = &result.result else {
+        panic!("layout case did not capture: {result}");
+    };
+    assert_eq!(
+        capture.parent(),
+        artboard.parent(),
+        "capture not beside its reference"
+    );
+    assert!(capture.starts_with(root.join(screenshot::OUT)));
+    assert_eq!(
+        fs::read(artboard).expect("artboard copy"),
+        fs::read(fixture().join("reference.png")).expect("reference"),
+        "the copy beside the capture is not the reference"
+    );
+    let (size, rgba) = screenshot::read_png(capture).expect("capture decoded");
+    assert_eq!(size, [240, 80], "capture not the surface's size");
+    rgba
+}
+
+/// The layout case under `root` wrote its capture beside its reference, and the capture shows the surface's controls:
+/// it differs from the capture under `other`, whose surface lacks one of them. Two captures on one backend are
+/// compared, so the check holds on every backend (an empty panel need not render uniform, as on llvmpipe).
+fn check_capture(root: &Path, other: &Path) {
+    assert!(
+        capture(root) != capture(other),
+        "capture is identical to a surface lacking a control: the surface's controls were not drawn"
+    );
+}
+
+#[test]
+fn screenshot_selftest_layout_writes_capture_beside_reference() {
+    check_capture(
+        &root("shot_layout", |_| true),
+        &root("shot_layout_other", |l| l != "Selftest checkbox"),
+    );
+}
+
+negative_control!(
+    screenshot_selftest_layout_writes_capture_beside_reference,
+    "two captures of the same surface are identical, which the capture check must reject",
+    expected = "capture is identical",
+    check_capture(
+        &root("shot_layout_control", |_| true),
+        &root("shot_layout_control_other", |_| true),
+    )
+);
+
+/// The presence-only case under `root` passes, finding both controls.
+fn check_presence_passes(root: &Path) {
+    let result = case(root, "presence");
+    assert_eq!(
+        result.result,
+        Ok(Outcome::Present {
+            controls: vec!["Selftest button".into(), "Selftest checkbox".into()]
+        }),
+        "presence case failed: {result}"
+    );
+}
+
+#[test]
+fn screenshot_selftest_presence_passes() {
+    check_presence_passes(&root("shot_presence", |_| true));
+}
+
+negative_control!(
+    screenshot_selftest_presence_passes,
+    "a surface lacking a listed control must fail the presence case",
+    expected = "presence case failed",
+    check_presence_passes(&root("shot_presence_control", |l| l != "Selftest button"))
+);
+
+/// The presence-only case under `root` fails, naming `Selftest checkbox` and no other control.
+fn check_presence_names_removed(root: &Path) {
+    let result = case(root, "presence");
+    let Err(message) = &result.result else {
+        panic!("presence case did not fail: {result}");
+    };
+    assert!(
+        message.contains("`Selftest checkbox`") && !message.contains("`Selftest button`"),
+        "failure does not name exactly the removed control: {message}"
+    );
+}
+
+#[test]
+fn screenshot_presence_fails_naming_removed_control() {
+    check_presence_names_removed(&root("shot_removed", |l| l != "Selftest checkbox"));
+}
+
+negative_control!(
+    screenshot_presence_fails_naming_removed_control,
+    "with both controls present, the presence case passes, so the removal check must fail",
+    expected = "presence case did not fail",
+    check_presence_names_removed(&root("shot_removed_control", |_| true))
+);
+
+/// `screenshot::run` over `root` fails, and so the CLI exits non-zero, when a case fails.
+fn check_run_fails(root: &Path) {
+    let outcome = screenshot::run(root, screenshot::Which::One(SUITE));
+    assert!(
+        outcome.is_err(),
+        "run passed with a failing case: {outcome:?}"
+    );
+}
+
+#[test]
+fn screenshot_run_fails_on_a_failing_case() {
+    check_run_fails(&root("shot_run", |l| l != "Selftest button"));
+}
+
+negative_control!(
+    screenshot_run_fails_on_a_failing_case,
+    "with every case passing, run must pass, so the failure check must fail",
+    expected = "run passed with a failing case",
+    check_run_fails(&root("shot_run_control", |_| true))
+);
+
+/// `--all` finds the selftest suite in the repo.
+fn check_listed(root: &Path) {
+    let suites = screenshot::list_suites(root).expect("suites listed");
+    assert!(
+        suites.iter().any(|s| s == SUITE),
+        "selftest not among the suites: {suites:?}"
+    );
+}
+
+#[test]
+fn screenshot_all_lists_selftest() {
+    check_listed(&Path::new(env!("CARGO_MANIFEST_DIR")).join(".."));
+}
+
+negative_control!(
+    screenshot_all_lists_selftest,
+    "a root whose suite has no cases.json lists no selftest",
+    expected = "selftest not among the suites",
+    {
+        let root = root("shot_list_control", |_| true);
+        fs::remove_file(root.join(screenshot::SUITES).join(SUITE).join("cases.json"))
+            .expect("cases.json removed");
+        check_listed(&root);
+    }
+);
+
+/// `screenshot --all` over `root` fails, naming the missing suites, when it finds no suite: a run of nothing must not
+/// pass (PIT-3).
+fn check_all_with_no_suite_fails(root: &Path) {
+    let outcome = screenshot::run(root, screenshot::Which::All);
+    assert!(
+        outcome.as_ref().is_err_and(|e| e.contains("no suite")),
+        "--all found no suite to run and did not fail: {outcome:?}"
+    );
+}
+
+#[test]
+fn screenshot_all_with_no_suite_fails() {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("shot_all_empty");
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(root.join(screenshot::SUITES)).expect("empty suites dir created");
+    check_all_with_no_suite_fails(&root);
+}
+
+negative_control!(
+    screenshot_all_with_no_suite_fails,
+    "with a passing suite present, --all passes, so the no-suite check must fail",
+    expected = "did not fail",
+    check_all_with_no_suite_fails(&root("shot_all_empty_control", |_| true))
+);
+
+/// `cargo xtask screenshot <arg>` exits 2, the usage error, so a flag is never taken for a suite name.
+fn check_flag_is_usage_error(arg: &str) {
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["screenshot", arg])
+        .output()
+        .expect("xtask ran");
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "`screenshot {arg}` is not a usage error: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+}
+
+#[test]
+fn screenshot_flag_is_not_a_suite() {
+    check_flag_is_usage_error("--bogus");
+}
+
+negative_control!(
+    screenshot_flag_is_not_a_suite,
+    "a suite name that is not a flag runs as a suite, and an unknown one exits 1, not 2",
+    expected = "is not a usage error",
+    check_flag_is_usage_error("no_such_suite")
+);
+
+/// The capture of the selftest surface resized to `size`, under a root of its own named `name`.
+fn capture_at(name: &str, size: [u32; 2]) -> Vec<u8> {
+    let root = root(name, |_| true);
+    let path = root
+        .join(screenshot::SUITES)
+        .join(SUITE)
+        .join("surface.json");
+    let mut surface: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).expect("surface read"))
+            .expect("surface parsed");
+    surface["size"] = serde_json::json!(size);
+    fs::write(&path, surface.to_string()).expect("surface written");
+    let result = case(&root, "layout");
+    let Ok(Outcome::Captured { capture, .. }) = &result.result else {
+        panic!("layout case did not capture: {result}");
+    };
+    let (got, rgba) = screenshot::read_png(capture).expect("capture decoded");
+    assert_eq!(got, size, "capture not the surface's size");
+    rgba
+}
+
+/// The surface's declared size bounds its layout: the capture at `[narrow, 80]` is not the left `narrow` columns of
+/// the capture at `[240, 80]`, since a panel too narrow for its controls lays them out (clips, wraps) within it.
+fn check_size_bounds_layout(narrow: u32) {
+    let wide = capture_at(&format!("shot_size_wide_{narrow}"), [240, 80]);
+    let cut = capture_at(&format!("shot_size_narrow_{narrow}"), [narrow, 80]);
+    let left: Vec<u8> = wide
+        .chunks(240 * 4)
+        .flat_map(|row| &row[..(narrow * 4) as usize])
+        .copied()
+        .collect();
+    assert!(
+        cut != left,
+        "the capture at width {narrow} is the wide one cut down: the surface's size does not bound its layout"
+    );
+}
+
+#[test]
+fn screenshot_surface_size_bounds_layout() {
+    check_size_bounds_layout(60);
+}
+
+negative_control!(
+    screenshot_surface_size_bounds_layout,
+    "at the full width, the capture is the wide one, so the size check must fail",
+    expected = "is the wide one cut down",
+    check_size_bounds_layout(240)
+);
+
+/// A root holding a one-case presence suite over a 120×20 surface of the buttons `labels`, in order, whose case lists
+/// `Clip target` (R-275). The panel lays its controls out top-down, so a control after the first sits below the
+/// surface.
+fn clip_root(name: &str, labels: &[&str]) -> PathBuf {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _ = fs::remove_dir_all(&root);
+    let dir = root.join(screenshot::SUITES).join(SUITE);
+    fs::create_dir_all(&dir).expect("suite dir created");
+    let controls: Vec<_> = labels
+        .iter()
+        .map(|l| serde_json::json!({ "kind": "button", "label": l }))
+        .collect();
+    let surface = serde_json::json!({ "size": [120, 20], "controls": controls });
+    fs::write(dir.join("surface.json"), surface.to_string()).expect("surface written");
+    let cases = serde_json::json!({ "cases": [
+        { "name": "presence", "surface": "surface.json", "controls": ["Clip target"] }
+    ] });
+    fs::write(dir.join("cases.json"), cases.to_string()).expect("cases written");
+    root
+}
+
+/// The presence case under `root` fails, naming `Clip target` as clipped, not as absent.
+fn check_clipped_fails(root: &Path) {
+    let result = case(root, "presence");
+    let Err(message) = &result.result else {
+        panic!("presence case with the control below the surface did not fail: {result}");
+    };
+    assert!(
+        message.contains("clipped out of surface")
+            && message.contains("`Clip target`")
+            && !message.contains("absent"),
+        "failure does not name `Clip target` as clipped: {message}"
+    );
+}
+
+#[test]
+fn screenshot_presence_fails_naming_clipped_control() {
+    check_clipped_fails(&clip_root("shot_clipped", &["Clip filler", "Clip target"]));
+}
+
+negative_control!(
+    screenshot_presence_fails_naming_clipped_control,
+    "the same control laid out first, inside the surface, is present, so the clipped check must fail",
+    expected = "did not fail",
+    check_clipped_fails(&clip_root("shot_clipped_control", &["Clip target", "Clip filler"]))
+);
+
+/// The presence case under `root` passes, finding `Clip target`.
+fn check_inside_passes(root: &Path) {
+    let result = case(root, "presence");
+    assert_eq!(
+        result.result,
+        Ok(Outcome::Present {
+            controls: vec!["Clip target".into()]
+        }),
+        "presence case with the control inside the surface failed: {result}"
+    );
+}
+
+#[test]
+fn screenshot_presence_passes_control_inside_surface() {
+    check_inside_passes(&clip_root("shot_inside", &["Clip target", "Clip filler"]));
+}
+
+negative_control!(
+    screenshot_presence_passes_control_inside_surface,
+    "the same control laid out below the surface is clipped, so the inside check must fail",
+    expected = "inside the surface failed",
+    check_inside_passes(&clip_root(
+        "shot_inside_control",
+        &["Clip filler", "Clip target"]
+    ))
+);
+
+/// A root holding the suite `gui` of `cases`, with 01_main.png at its artboard path, for `gui` surfaces (R-274;
+/// RQ-253). Its captures land in that root's `target/`.
+fn gui_root(name: &str, cases: serde_json::Value) -> PathBuf {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _ = fs::remove_dir_all(&root);
+    let dir = root.join(screenshot::SUITES).join("gui");
+    fs::create_dir_all(&dir).expect("suite dir created");
+    fs::write(dir.join("cases.json"), cases.to_string()).expect("cases written");
+    let artboard = root.join("docs/gui/design");
+    fs::create_dir_all(&artboard).expect("artboard dir created");
+    fs::copy(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/gui/design/01_main.png"),
+        artboard.join("01_main.png"),
+    )
+    .expect("artboard copied");
+    root
+}
+
+/// A `gui` case on 01_main with `steps`: a layout case beside the artboard, and a presence case listing `controls`.
+fn gui_cases(steps: &[&str], controls: &[&str]) -> serde_json::Value {
+    let surface = serde_json::json!({ "kind": "gui", "screen": "01_main", "steps": steps });
+    serde_json::json!({ "cases": [
+        { "name": "layout", "surface": surface, "artboard": "docs/gui/design/01_main.png" },
+        { "name": "presence", "surface": surface, "controls": controls },
+    ] })
+}
+
+/// Under `root`, the layout case wrote gui's capture, at the artboard's size, beside a copy of the artboard, with the
+/// names file beside it; and the presence case found every control it lists in the capture's names.
+fn check_gui_surface(root: &Path) {
+    let results = screenshot::run_suite(root, "gui").expect("suite read");
+    let layout = &results[0];
+    let Ok(Outcome::Captured { capture, artboard }) = &layout.result else {
+        panic!("gui layout case did not capture: {layout}");
+    };
+    assert_eq!(
+        capture.parent(),
+        artboard.parent(),
+        "capture not beside its artboard"
+    );
+    let (size, _) = screenshot::read_png(capture).expect("capture decoded");
+    assert_eq!(size, [2160, 1350], "the capture is not the artboard's size");
+    let names = capture.with_file_name(screenshot::NAMES);
+    assert!(names.is_file(), "no names file beside the capture");
+    let presence = &results[1];
+    assert!(
+        matches!(presence.result, Ok(Outcome::Present { .. })),
+        "gui presence case failed: {presence}"
+    );
+}
+
+#[test]
+fn screenshot_gui_surface_spawns_capture_mode_with_its_steps() {
+    check_gui_surface(&gui_root(
+        "shot_gui",
+        gui_cases(
+            &["raise_warning", "click_footer"],
+            &["mock engine", "⚠ 1 · × 0 · console ▾", "Console"],
+        ),
+    ));
+}
+
+negative_control!(
+    screenshot_gui_surface_spawns_capture_mode_with_its_steps,
+    "without the steps there is no warning and no console, so the presence case must fail",
+    expected = "gui presence case failed",
+    check_gui_surface(&gui_root(
+        "shot_gui_control",
+        gui_cases(&[], &["mock engine", "⚠ 1 · × 0 · console ▾", "Console"]),
+    ))
+);
+
+/// A `surface` reads as `data` when it is a path, as `gui` when it is the object; an unknown kind or step is refused.
+fn check_surface_forms(cases: &str) {
+    let parse = |surface: &str| {
+        serde_json::from_str::<screenshot::SurfaceRef>(surface).map_err(|e| e.to_string())
+    };
+    assert_eq!(
+        parse(r#""surface.json""#),
+        Ok(screenshot::SurfaceRef::Data("surface.json".into()))
+    );
+    assert_eq!(
+        parse(
+            r#"{"kind":"gui","screen":"01_main","steps":["f3","raise_warning","raise_error","click_footer"]}"#
+        ),
+        Ok(screenshot::SurfaceRef::Gui(screenshot::GuiSurface {
+            kind: screenshot::GuiKind::Gui,
+            screen: "01_main".into(),
+            steps: vec![
+                screenshot::GuiStep::F3,
+                screenshot::GuiStep::RaiseWarning,
+                screenshot::GuiStep::RaiseError,
+                screenshot::GuiStep::ClickFooter,
+            ],
+        }))
+    );
+    for refused in [
+        r#"{"kind":"data","screen":"01_main"}"#,
+        r#"{"kind":"gui","screen":"01_main","steps":["zoom"]}"#,
+        r#"{"kind":"gui","screen":"01_main","extra":1}"#,
+    ] {
+        assert!(parse(refused).is_err(), "{refused} was accepted");
+    }
+    // The selftest suite's cases, unchanged, still read as `data` cases.
+    let value: serde_json::Value = serde_json::from_str(cases).expect("cases parsed");
+    for case in value["cases"].as_array().expect("cases") {
+        let surface = parse(&case["surface"].to_string()).expect("surface read");
+        assert!(
+            matches!(surface, screenshot::SurfaceRef::Data(_)),
+            "a selftest case's surface is not a data surface: {surface:?}"
+        );
+    }
+}
+
+#[test]
+fn screenshot_gui_surface_data_case_unchanged() {
+    check_surface_forms(&fs::read_to_string(fixture().join("cases.json")).expect("cases read"));
+}
+
+negative_control!(
+    screenshot_gui_surface_data_case_unchanged,
+    "a suite whose case names a gui object is not all data cases",
+    expected = "is not a data surface",
+    check_surface_forms(&gui_cases(&[], &["x"]).to_string())
+);
+
+/// A failing case names its surface: a `data` surface by its path, a `gui` one by its screen.
+fn check_surface_shown(gui_shown: &str) {
+    assert_eq!(
+        screenshot::SurfaceRef::Data("surface.json".into()).to_string(),
+        "surface.json"
+    );
+    let gui = screenshot::SurfaceRef::Gui(screenshot::GuiSurface {
+        kind: screenshot::GuiKind::Gui,
+        screen: "01_main".into(),
+        steps: Vec::new(),
+    });
+    assert_eq!(gui.to_string(), gui_shown, "the gui surface's name");
+}
+
+#[test]
+fn screenshot_surface_ref_names_the_surface() {
+    check_surface_shown("gui screen 01_main");
+}
+
+negative_control!(
+    screenshot_surface_ref_names_the_surface,
+    "a gui surface named without its screen must be rejected",
+    expected = "the gui surface's name",
+    check_surface_shown("gui screen")
+);
+
+/// The capture command runs gui's capture mode through cargo, on xtask's own workspace and the mock, with the steps
+/// by name.
+fn check_command(steps: Vec<screenshot::GuiStep>, want_steps: &str) {
+    let gui = screenshot::GuiSurface {
+        kind: screenshot::GuiKind::Gui,
+        screen: "01_main".into(),
+        steps,
+    };
+    let command = screenshot::capture_command(&gui, Path::new("/out"));
+    let args: Vec<String> = command
+        .get_args()
+        .map(|a| a.to_string_lossy().into_owned())
+        .collect();
+    let want = [
+        "-p",
+        "gui",
+        "--features",
+        "mock",
+        "--",
+        "capture",
+        "--screen",
+        "01_main",
+        "--steps",
+        want_steps,
+        "--out",
+        "/out",
+    ];
+    assert_eq!(&args[..3], ["run", "--quiet", "--manifest-path"]);
+    assert!(
+        args[3].ends_with("Cargo.toml"),
+        "not a manifest: {}",
+        args[3]
+    );
+    assert_eq!(&args[4..], want, "the capture command's arguments");
+}
+
+#[test]
+fn screenshot_gui_surface_command() {
+    check_command(
+        vec![screenshot::GuiStep::F3, screenshot::GuiStep::ClickFooter],
+        "f3,click_footer",
+    );
+    check_command(Vec::new(), "");
+}
+
+negative_control!(
+    screenshot_gui_surface_command,
+    "steps in another order are another command",
+    expected = "the capture command's arguments",
+    check_command(
+        vec![screenshot::GuiStep::ClickFooter, screenshot::GuiStep::F3],
+        "f3,click_footer"
+    )
+);
+
+/// The names file's names split by whether their rect meets the capture (R-275); a file for another size is refused.
+fn check_read_names(size: [u32; 2]) {
+    let text = r#"{"size":[100,50],"names":[
+        {"name":"in","rect":[10,10,20,20]},
+        {"name":"edge","rect":[100,0,120,10]},
+        {"name":"out","rect":[0,60,10,70]},
+        {"name":"none","rect":null}
+    ]}"#;
+    let capture = screenshot::read_names(text, size).expect("names read");
+    assert_eq!(capture.names, ["in"]);
+    assert_eq!(capture.clipped, ["edge", "out", "none"]);
+}
+
+#[test]
+fn screenshot_gui_surface_names_split_by_visibility() {
+    check_read_names([100, 50]);
+    assert!(screenshot::read_names(r#"{"size":[1,1],"names":[]}"#, [2, 2]).is_err());
+}
+
+negative_control!(
+    screenshot_gui_surface_names_split_by_visibility,
+    "names for another capture size are refused",
+    expected = "names read",
+    check_read_names([200, 50])
+);
+
+/// The keyboard's steps (TASK-M6-25), the Manifold view's (TASK-M6-26), TASK-M6-27's and TASK-M6-29's read from their names, and each step's name reads back as itself, as gui's
+/// capture mode takes it.
+fn check_keyboard_steps(names: &[(&str, screenshot::GuiStep)]) {
+    for (name, step) in names {
+        let read: screenshot::GuiStep =
+            serde_json::from_str(&format!("\"{name}\"")).expect("a step");
+        assert_eq!(read, *step, "the step `{name}`");
+        assert_eq!(step.name(), *name, "the step's name");
+    }
+}
+
+const KEYBOARD_STEPS: [(&str, screenshot::GuiStep); 24] = [
+    ("f3", screenshot::GuiStep::F3),
+    ("raise_warning", screenshot::GuiStep::RaiseWarning),
+    ("raise_error", screenshot::GuiStep::RaiseError),
+    ("click_footer", screenshot::GuiStep::ClickFooter),
+    ("tab", screenshot::GuiStep::Tab),
+    ("shift_tab", screenshot::GuiStep::ShiftTab),
+    ("enter", screenshot::GuiStep::Enter),
+    ("escape", screenshot::GuiStep::Escape),
+    ("arrow_up", screenshot::GuiStep::ArrowUp),
+    ("arrow_down", screenshot::GuiStep::ArrowDown),
+    ("arrow_left", screenshot::GuiStep::ArrowLeft),
+    ("arrow_right", screenshot::GuiStep::ArrowRight),
+    ("shortcuts", screenshot::GuiStep::Shortcuts),
+    ("shift_arrow_up", screenshot::GuiStep::ShiftArrowUp),
+    ("shift_arrow_right", screenshot::GuiStep::ShiftArrowRight),
+    ("lock", screenshot::GuiStep::Lock),
+    ("hover", screenshot::GuiStep::Hover),
+    ("alt_1", screenshot::GuiStep::Alt1),
+    ("space", screenshot::GuiStep::Space),
+    ("click_node", screenshot::GuiStep::ClickNode),
+    ("compass_case_slice", screenshot::GuiStep::CompassCaseSlice),
+    ("compass_case_tilt_0", screenshot::GuiStep::CompassCaseTilt0),
+    (
+        "compass_case_tilt_rect",
+        screenshot::GuiStep::CompassCaseTiltRect,
+    ),
+    (
+        "compass_case_tilt_hex",
+        screenshot::GuiStep::CompassCaseTiltHex,
+    ),
+];
+
+#[test]
+fn screenshot_gui_keyboard_steps_named() {
+    check_keyboard_steps(&KEYBOARD_STEPS);
+}
+
+negative_control!(
+    screenshot_gui_keyboard_steps_named,
+    "a step under another step's name must be rejected",
+    expected = "the step `tab`",
+    check_keyboard_steps(&[("tab", screenshot::GuiStep::ShiftTab)])
+);
+
+/// The value of `name` the command sets: `Some(Some(v))` set to `v`, `Some(None)` removed, `None` left as inherited.
+fn env_of(command: &std::process::Command, name: &str) -> Option<Option<String>> {
+    command
+        .get_envs()
+        .find(|(k, _)| *k == name)
+        .map(|(_, v)| v.map(|v| v.to_string_lossy().into_owned()))
+}
+
+/// A `gui` case naming `mock_invalid` hands the capture mode its region as `PRIN_MOCK_INVALID` (R-467 D8); one naming
+/// none removes the variable, so the runner's own environment never flags a case.
+fn check_flagging(flagged: Option<&str>, want: Option<Option<String>>) {
+    let gui = screenshot::GuiSurface {
+        kind: screenshot::GuiKind::Gui,
+        screen: "01_main".into(),
+        steps: Vec::new(),
+    };
+    let command = screenshot::capture_command_flagging(&gui, flagged, Path::new("/out"));
+    assert_eq!(
+        env_of(&command, screenshot::MOCK_INVALID_VAR),
+        want,
+        "the hook's variable"
+    );
+    let plain = screenshot::capture_command(&gui, Path::new("/out"));
+    let args = |c: &std::process::Command| c.get_args().map(|a| a.to_owned()).collect::<Vec<_>>();
+    assert_eq!(args(&command), args(&plain), "the arguments changed");
+}
+
+#[test]
+fn screenshot_gui_case_flags_the_mock() {
+    assert_eq!(screenshot::MOCK_INVALID_VAR, "PRIN_MOCK_INVALID");
+    check_flagging(
+        Some("-0.5,-0.5,0,1.5"),
+        Some(Some("-0.5,-0.5,0,1.5".into())),
+    );
+    check_flagging(None, Some(None));
+}
+
+negative_control!(
+    screenshot_gui_case_flags_the_mock,
+    "a case naming no region that leaves the runner's variable inherited must be rejected",
+    expected = "the hook's variable",
+    check_flagging(None, None)
+);
+
+/// A `data` case naming `mock_invalid` is refused: the region belongs to a `gui` case, run on the mock.
+fn check_data_case_refuses_a_region(region: Option<&str>) {
+    let root = root(&format!("shot_mock_invalid_{}", region.is_some()), |_| true);
+    let path = root.join(screenshot::SUITES).join(SUITE).join("cases.json");
+    let mut cases: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(&path).expect("cases read"))
+            .expect("cases parsed");
+    for c in cases["cases"].as_array_mut().expect("cases") {
+        if c["name"] == "layout" {
+            if let Some(region) = region {
+                c["mock_invalid"] = region.into();
+            }
+        }
+    }
+    fs::write(&path, cases.to_string()).expect("cases written");
+    let result = case(&root, "layout");
+    let err = result.result.expect_err("a data case with a region ran");
+    assert!(err.contains("`mock_invalid`"), "{err}");
+}
+
+#[test]
+fn screenshot_data_case_refuses_a_region() {
+    check_data_case_refuses_a_region(Some("0,0,1,1"));
+}
+
+negative_control!(
+    screenshot_data_case_refuses_a_region,
+    "a data case naming no region runs, which the refusal check must reject",
+    expected = "a data case with a region ran",
+    check_data_case_refuses_a_region(None)
+);

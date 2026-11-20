@@ -1,0 +1,58 @@
+[package]
+name = "validation"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+ledger = { path = "../ledger" }
+kernel = { path = "../kernel" }
+engine = { path = "../engine" }
+render = { path = "../render" }
+wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
+pollster = "1"
+proptest = "1.11"
+# The gate runner reads `fixtures/gates/<gate>/` and writes its reports as JSON (TASK-M0-05).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# The spawn helper signals a timed-out child's process group (R-217). rustix is already in the build, under tempfile.
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "1", features = ["process", "std"] }
+
+# `tests/debug_scenes.rs` reads the debug-views references, PNGs, with the png crate render and xtask already use.
+[dev-dependencies]
+png = "0.18"
+
+# Under `controls`, each `negative_control!` in this crate's tests compiles as a test (REQ-VAL-147, R-176).
+[features]
+controls = []
+# The libm-pin measurement's platform-maths arm (R-991; `kernel`'s feature of that name), for the first_slice bench's
+# split of its timed work (REQ-PERF-120): the same bench on the maths before the pin. Off in every other build.
+measure-std-maths = ["kernel/measure-std-maths"]
+# DX12, opt-in and off by default (R-862): local testing only, untested in CI. It adds wgpu's DX12 backend, which
+# builds on Windows only; with it, `PRIN_GPU_BACKEND=dx12` selects DX12 in `GpuHarness`, and without it `dx12` is
+# refused. No required or hosted CI job builds it.
+dx12 = ["wgpu/dx12", "engine/dx12"]
+
+# The subprocess bodies qa's tests spawn, out of libtest (R-210).
+[[bin]]
+name = "qa_child"
+test = false
+
+# The numerical-gate runner, which `cargo xtask gate` runs as a separate process: xtask reaches validation only as a
+# dev-dependency (systems_architecture §7.1; R-176, R-187).
+[[bin]]
+name = "gate"
+test = false
+
+# The benchmark runner, which `cargo xtask bench` runs as a separate process, as it does `gate` (TASK-M0-19).
+[[bin]]
+name = "bench"
+test = false
+
+# The golden harness's scene renderer, which `cargo xtask golden` runs as a separate process for a case of the harness
+# kind, as it does `gate` (TASK-M1-09; RQ-229).
+[[bin]]
+name = "golden_harness"
+test = false

@@ -1,0 +1,884 @@
+//! The payload schema version, the content hash of the ledger (R-36, R-63; dd_generation_root §5 test 7, §6): one
+//! ledger row, one continuation-table entry, one code assignment (R-22's pair map, payload §2's `state` codes and
+//! `detail` meanings, payload §3's symbol codes) or one `QuadReduction` member changes it; the unchanged ledger gives the
+//! same version on every run, in any source order; the emitted `PAYLOAD_SCHEMA_VERSION` equals the computed hash
+//! (REQ-GEN-008). A hashed register entry's value, type or class changes it, its citation does not, and a register
+//! entry that does not decide stored bits leaves it unchanged (dd_generation_root §3.8, "The hash"; REQ-SYS-063,
+//! R-251). The `provisional` mark and its gate are not hashed: marking or unmarking a hashed entry leaves the version,
+//! and changing a marked entry's value changes it (R-427; REQ-SYS-081; `constants_provisional_*`).
+
+use ledger::constants::{Admissibility, Citation, ConstantBuilder, Value, REGISTER};
+use ledger::gen;
+use ledger::layout;
+use ledger::payload::{self, ReductionMember};
+use ledger::schema::{Entry, Location, Storage, Struct, Word};
+use ledger::version::{fnv1a64, schema_version, Hashed, STORED_BITS};
+use validation::negative_control;
+
+/// The payload ledger, owned, so a test can edit one part of it.
+struct Owned {
+    words: Vec<Word>,
+    entries: Vec<Entry>,
+    structs: Vec<Struct>,
+    quad_reduction: Vec<ReductionMember>,
+    register: Vec<ConstantBuilder>,
+}
+
+impl Owned {
+    fn new() -> Self {
+        let ledger = layout();
+        Owned {
+            words: ledger.words.clone(),
+            entries: gen::validate(&ledger).expect("the payload ledger validates"),
+            structs: payload::structs(),
+            quad_reduction: payload::QUAD_REDUCTION.to_vec(),
+            register: REGISTER.to_vec(),
+        }
+    }
+
+    /// Its [`Hashed`], with payload §3's continuation table.
+    fn hashed(&self) -> Hashed<'_> {
+        Hashed {
+            quad_reduction: &self.quad_reduction,
+            register: &self.register,
+            ..Hashed::payload(&self.words, &self.entries, &self.structs)
+        }
+    }
+}
+
+fn version(h: &Hashed) -> u64 {
+    schema_version(h).expect("the schema version is computed")
+}
+
+/// The version of the unedited payload ledger.
+fn base() -> u64 {
+    version(&Owned::new().hashed())
+}
+
+/// `edited`'s version differs from the unedited ledger's.
+fn check_changes(edited: &Hashed) {
+    assert_ne!(version(edited), base(), "the schema version did not change");
+}
+
+/// `edited`'s version equals the unedited ledger's.
+fn check_unchanged(edited: &Hashed) {
+    assert_eq!(version(edited), base(), "the schema version changed");
+}
+
+/// The payload ledger with the hashed register entry `fgw_capacity` replaced by `edit` of it.
+fn with_capacity(edit: impl FnOnce(ConstantBuilder) -> ConstantBuilder) -> Owned {
+    let mut o = Owned::new();
+    let k = o
+        .register
+        .iter_mut()
+        .find(|k| k.name == "fgw_capacity")
+        .expect("the register holds fgw_capacity");
+    *k = edit(*k);
+    o
+}
+
+/// A register entry that decides no stored bit: a render constant the lint brings into the register (§3.8).
+const RENDER_KNOB: ConstantBuilder = ConstantBuilder {
+    name: "fx_render_knob",
+    value: Some(Value::Exact(0.5)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::Corpus {
+        file: "docs/contracts/principia_render_contract.md",
+        section: "fixture",
+    }),
+    relative_basis: None,
+    provisional: None,
+};
+
+// --- REQ-GEN-008: the ledger, the continuation table, stability, the emitted constant -------------------------------
+
+/// Flipping one bit offset: the first `Packed` entry in source order, moved one bit.
+fn one_row_moved() -> Owned {
+    let mut o = Owned::new();
+    let e = o
+        .entries
+        .iter_mut()
+        .find(|e| matches!(e.location, Location::Packed { .. }))
+        .expect("the ledger has a packed entry");
+    if let Location::Packed { offset, .. } = &mut e.location {
+        *offset ^= 1;
+    }
+    o
+}
+
+#[test]
+fn schema_version_changes_with_one_ledger_row() {
+    check_changes(&one_row_moved().hashed());
+}
+
+negative_control!(
+    schema_version_changes_with_one_ledger_row,
+    "the unedited ledger has the base version, so the change check must fail on it",
+    expected = "the schema version did not change",
+    check_changes(&Owned::new().hashed())
+);
+
+#[test]
+fn schema_version_changes_with_one_struct_member() {
+    let mut o = Owned::new();
+    o.structs[0].members[0].storage = Storage::U32x4;
+    check_changes(&o.hashed());
+}
+
+negative_control!(
+    schema_version_changes_with_one_struct_member,
+    "the unedited structs have the base version, so the change check must fail on them",
+    expected = "the schema version did not change",
+    check_changes(&Owned::new().hashed())
+);
+
+#[test]
+fn schema_version_changes_with_one_quad_reduction_member() {
+    let mut o = Owned::new();
+    o.quad_reduction[0].ty = Some("u16");
+    check_changes(&o.hashed());
+}
+
+negative_control!(
+    schema_version_changes_with_one_quad_reduction_member,
+    "the unedited member list has the base version, so the change check must fail on it",
+    expected = "the schema version did not change",
+    check_changes(&Owned::new().hashed())
+);
+
+/// Each continuation-table cell of `h` edited alone: every one changes the version.
+fn check_each_cell_changes(h: Hashed) {
+    for i in 0..4 {
+        let mut e = h;
+        e.inverse[i] ^= 1;
+        check_changes(&e);
+    }
+    for d in 0..3 {
+        for s in 0..4 {
+            let mut e = h;
+            e.cont_symbol[d][s] ^= 1;
+            check_changes(&e);
+            let mut e = h;
+            e.predecessor_symbol[d][s] ^= 1;
+            check_changes(&e);
+        }
+    }
+    for p in 0..4 {
+        for n in 0..4 {
+            let mut e = h;
+            e.continuation_index[p][n] ^= 1;
+            check_changes(&e);
+        }
+    }
+}
+
+#[test]
+fn schema_version_changes_with_one_continuation_table_entry() {
+    check_each_cell_changes(Owned::new().hashed());
+}
+
+negative_control!(
+    schema_version_changes_with_one_continuation_table_entry,
+    "an edit undone by a second edit restores the base version, so the change check must fail on it",
+    expected = "the schema version did not change",
+    {
+        let o = Owned::new();
+        let mut h = o.hashed();
+        h.cont_symbol[1][2] ^= 1;
+        h.cont_symbol[1][2] ^= 1;
+        check_changes(&h);
+    }
+);
+
+/// Two runs' versions are one.
+fn check_runs_agree(first: u64, second: u64) {
+    assert_eq!(first, second, "two runs gave two versions");
+}
+
+/// Each code assignment of `h` edited alone: every symbol code, `state` code, pair-id map entry and `detail` meaning
+/// changes the version (R-22; payload §2, §3).
+fn check_each_assignment_changes(h: Hashed) {
+    for i in 0..4 {
+        let mut e = h;
+        e.symbols.swap(i, (i + 2) % 4);
+        check_changes(&e);
+    }
+    for i in 0..6 {
+        let mut e = h;
+        e.states.swap(i, (i + 1) % 6);
+        check_changes(&e);
+    }
+    for k in 0..3 {
+        for b in 0..2 {
+            let mut e = h;
+            e.pair_bodies[k][b] ^= 3;
+            check_changes(&e);
+        }
+    }
+    for s in 0..4 {
+        let mut e = h;
+        e.detail_meanings[s].0 = "fx_state";
+        check_changes(&e);
+        for code in 0..4 {
+            let mut e = h;
+            e.detail_meanings[s].1[code] = "fx_meaning";
+            check_changes(&e);
+        }
+    }
+}
+
+#[test]
+fn schema_version_changes_with_one_code_assignment() {
+    check_each_assignment_changes(Owned::new().hashed());
+}
+
+negative_control!(
+    schema_version_changes_with_one_code_assignment,
+    "a swap undone by a second swap restores the base version, so the change check must fail on it",
+    expected = "the schema version did not change",
+    {
+        let o = Owned::new();
+        let mut h = o.hashed();
+        h.states.swap(0, 3);
+        h.states.swap(0, 3);
+        check_changes(&h);
+    }
+);
+
+#[test]
+fn schema_version_is_stable_across_runs() {
+    check_runs_agree(
+        version(&Owned::new().hashed()),
+        version(&Owned::new().hashed()),
+    );
+}
+
+negative_control!(
+    schema_version_is_stable_across_runs,
+    "a run over an edited ledger gives another version, so the agreement check must fail on it",
+    expected = "two runs gave two versions",
+    check_runs_agree(base(), version(&one_row_moved().hashed()))
+);
+
+/// The version of the ledger with its words and entries in reverse source order equals the base's.
+fn check_order_free(o: &mut Owned) {
+    o.words.reverse();
+    o.entries.reverse();
+    check_unchanged(&o.hashed());
+}
+
+#[test]
+fn schema_version_does_not_depend_on_source_order() {
+    check_order_free(&mut Owned::new());
+}
+
+negative_control!(
+    schema_version_does_not_depend_on_source_order,
+    "a moved bit offset is a real edit, so the unchanged check must fail on it",
+    expected = "the schema version changed",
+    check_order_free(&mut one_row_moved())
+);
+
+/// The `PAYLOAD_SCHEMA_VERSION` literal in `generated`.
+fn emitted(generated: &str) -> u64 {
+    let literal = generated
+        .lines()
+        .find_map(|l| l.strip_prefix("pub const PAYLOAD_SCHEMA_VERSION: u64 = "))
+        .expect("the generated Rust declares PAYLOAD_SCHEMA_VERSION");
+    let hex = literal.trim_end_matches(';').trim_start_matches("0x");
+    u64::from_str_radix(hex, 16).expect("the version is a hex literal")
+}
+
+/// The generated Rust's emitted version, and the checked-in file's, equal `expected`.
+fn check_emitted(expected: u64) {
+    let files = gen::generate(&layout(), gen::EMITTERS).expect("the payload ledger generates");
+    let rust = files
+        .iter()
+        .find(|f| f.path.ends_with("generated.rs"))
+        .expect("the Rust emitter writes generated.rs");
+    assert_eq!(
+        emitted(&rust.contents),
+        expected,
+        "the emitted version is not the computed hash"
+    );
+    let on_disk = std::fs::read_to_string(format!(
+        "{}/../kernel/src/payload/generated.rs",
+        crate::manifest_dir()
+    ))
+    .expect("the checked-in generated.rs reads");
+    assert_eq!(
+        emitted(&on_disk),
+        expected,
+        "the emitted version is not the computed hash"
+    );
+}
+
+#[test]
+fn schema_version_emitted_equals_the_computed_hash() {
+    check_emitted(base());
+}
+
+negative_control!(
+    schema_version_emitted_equals_the_computed_hash,
+    "an edited ledger's hash is not the emitted one, so the equality check must fail on it",
+    expected = "the emitted version is not the computed hash",
+    check_emitted(version(&one_row_moved().hashed()))
+);
+
+/// FNV-1a 64's published test vectors: the hash is the standard function, the same on every machine.
+fn check_fnv(input: &str, expected: u64) {
+    assert_eq!(fnv1a64(input.as_bytes()), expected, "not FNV-1a 64");
+}
+
+#[test]
+fn schema_version_hash_is_fnv1a64() {
+    check_fnv("", 0xcbf2_9ce4_8422_2325);
+    check_fnv("a", 0xaf63_dc4c_8601_ec8c);
+    check_fnv("foobar", 0x8594_4171_f739_67e8);
+}
+
+negative_control!(
+    schema_version_hash_is_fnv1a64,
+    "FNV-1 (multiply before xor) hashes \"a\" to 0xaf63bd4c8601b7be, so the FNV-1a check must fail on it",
+    expected = "not FNV-1a 64",
+    check_fnv("a", 0xaf63_bd4c_8601_b7be)
+);
+
+// --- REQ-SYS-063, R-251: the register entries that decide stored bits ----------------------------------------------
+
+#[test]
+fn schema_version_changes_with_a_hashed_value() {
+    check_changes(
+        &with_capacity(|k| ConstantBuilder {
+            value: Some(Value::Exact(75.0)),
+            ..k
+        })
+        .hashed(),
+    );
+}
+
+negative_control!(
+    schema_version_changes_with_a_hashed_value,
+    "the same value leaves the base version, so the change check must fail on it",
+    expected = "the schema version did not change",
+    check_changes(
+        &with_capacity(|k| ConstantBuilder {
+            value: Some(Value::Exact(76.0)),
+            ..k
+        })
+        .hashed()
+    )
+);
+
+#[test]
+fn schema_version_changes_with_a_hashed_type() {
+    check_changes(
+        &with_capacity(|k| ConstantBuilder {
+            value: Some(Value::Threshold(76.0)),
+            ..k
+        })
+        .hashed(),
+    );
+}
+
+negative_control!(
+    schema_version_changes_with_a_hashed_type,
+    "the same type leaves the base version, so the change check must fail on it",
+    expected = "the schema version did not change",
+    check_changes(&with_capacity(|k| k).hashed())
+);
+
+#[test]
+fn schema_version_changes_with_a_hashed_class() {
+    check_changes(
+        &with_capacity(|k| ConstantBuilder {
+            class: Some(Admissibility::CanonicalUnits),
+            ..k
+        })
+        .hashed(),
+    );
+}
+
+negative_control!(
+    schema_version_changes_with_a_hashed_class,
+    "the same class leaves the base version, so the change check must fail on it",
+    expected = "the schema version did not change",
+    check_changes(
+        &with_capacity(|k| ConstantBuilder {
+            class: Some(Admissibility::AchievableMaximum),
+            ..k
+        })
+        .hashed()
+    )
+);
+
+#[test]
+fn schema_version_ignores_a_citation_only_edit() {
+    let cited = |k| ConstantBuilder {
+        citation: Some(Citation::Calibration("REQ-FX-000")),
+        ..k
+    };
+    check_unchanged(&with_capacity(cited).hashed());
+}
+
+negative_control!(
+    schema_version_ignores_a_citation_only_edit,
+    "a value edit is hashed, so the unchanged check must fail on it",
+    expected = "the schema version changed",
+    check_unchanged(
+        &with_capacity(|k| ConstantBuilder {
+            value: Some(Value::Exact(75.0)),
+            ..k
+        })
+        .hashed()
+    )
+);
+
+/// The register with a render knob added, then the knob's value, type and class edited: the base version each time.
+fn check_knob_ignored(knob: ConstantBuilder) {
+    let mut o = Owned::new();
+    o.register.push(knob);
+    check_unchanged(&o.hashed());
+    for edit in [
+        ConstantBuilder {
+            value: Some(Value::Exact(0.25)),
+            ..knob
+        },
+        ConstantBuilder {
+            value: Some(Value::Calibration),
+            citation: Some(Citation::Calibration("REQ-FX-000")),
+            ..knob
+        },
+        ConstantBuilder {
+            class: Some(Admissibility::ConservationLaw),
+            ..knob
+        },
+    ] {
+        *o.register.last_mut().expect("the knob") = edit;
+        check_unchanged(&o.hashed());
+    }
+}
+
+#[test]
+fn schema_version_ignores_an_entry_that_does_not_decide_stored_bits() {
+    check_knob_ignored(RENDER_KNOB);
+}
+
+negative_control!(
+    schema_version_ignores_an_entry_that_does_not_decide_stored_bits,
+    "a register entry named as a hashed one is hashed, so the unchanged check must fail on its edits",
+    expected = "the schema version changed",
+    {
+        let mut o = Owned::new();
+        o.register.retain(|k| k.name != "fgw_capacity");
+        let knob = ConstantBuilder { name: "fgw_capacity", ..RENDER_KNOB };
+        o.register.push(knob);
+        check_unchanged(&o.hashed());
+    }
+);
+
+/// The version is refused, naming `name`, when the register lacks it.
+fn check_missing_refused(name: &str) {
+    let mut o = Owned::new();
+    o.register.retain(|k| k.name != name);
+    let error = schema_version(&o.hashed()).expect_err("the version was not refused");
+    assert!(
+        error.contains(name),
+        "refused, but not naming `{name}`: {error}"
+    );
+}
+
+#[test]
+fn schema_version_refuses_a_register_missing_a_hashed_entry() {
+    for name in STORED_BITS {
+        check_missing_refused(name);
+    }
+}
+
+negative_control!(
+    schema_version_refuses_a_register_missing_a_hashed_entry,
+    "removing an unhashed name leaves every hashed entry, so the refusal check must fail",
+    expected = "the version was not refused",
+    check_missing_refused("fx_render_knob")
+);
+
+/// The register's presentation constants (TASK-M1-18; R-427): the six log floors, the hatch's numbers, the hue
+/// wheel's, the diverging fields' `x₀` (TASK-M7-05) and the custom-stop ramp's OKLab bound (TASK-M7-11). None decides
+/// a stored bit, so none is hashed (dd_generation_root §3.8, "The hash").
+const PRESENTATION: [&str; 14] = [
+    "log_floor_d_min",
+    "log_floor_dE_max",
+    "log_floor_dLz_max",
+    "log_floor_closure_min",
+    "log_floor_rho_ratio",
+    "log_floor_r_min_pair_0",
+    "hatch_violet",
+    "hatch_cyan",
+    "hatch_half_period",
+    "hue_wheel_l",
+    "hue_wheel_c",
+    "diverging_x0_E_0",
+    "diverging_x0_Lz_0",
+    "ramp_oklab_ab_max",
+];
+
+/// The calibrations the register holds: the M1 gate's (R-433), `r_pole`, the pole hold's radius, a march parameter that
+/// decides which value `θ̃` and `_reserved` take, not what their bits mean, and `n_norm_tol`, a test's tolerance; and
+/// the shape sphere's (TASK-M2-08), `shape_vec_js_tol` and `shape_roundtrip_bound`, a test's and a gate's tolerances;
+/// and the round trip's `eps_phys` (TASK-M2-16), the T2 tests' and the `encode-eps-phys` gate's tolerance; and
+/// lookup's layer-3 `decode_sanity` and layer-1 `zero_class` (TASK-M2-19), validation tolerances on lookup and lock;
+/// and the literature import's `literature_import_tol` (TASK-M2-20), the `literature-import` gate's tolerance; and
+/// `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and `step_reversal_edge_max` (TASK-M3-02),
+/// dd_integrator §5 test 3's criterion and its domain's edges; and the f32 sinc's `sinc_cut` (TASK-M2-53), which decides
+/// which form gives `k`, not what a stored bit means, and `sinc_bound`, a test's tolerance; and step 0's skip tolerance `tau_i` (TASK-M2-47), which
+/// decides whether `C` rescales, not what a stored bit means; and the arctangent generator's `arctan_sum_bits`
+/// (TASK-M2-26), whose values write the same file across their range, and which no stored bit depends on; and the
+/// closure's departure threshold `delta_dep` (TASK-M3-11; REQ-VAL-055), which decides which value `closure_min`,
+/// `closure_step` and the departed bit take, not what their bits mean, as `r_pole` does for `θ̃`. None is among the
+/// entries §3.8 hashes ("The hash"), so none is hashed.
+const CALIBRATIONS: [&str; 17] = [
+    "r_pole",
+    "n_norm_tol",
+    "shape_vec_js_tol",
+    "shape_roundtrip_bound",
+    "eps_phys",
+    "decode_sanity",
+    "zero_class",
+    "literature_import_tol",
+    "step_reversal_tol",
+    "step_reversal_edge_f64",
+    "step_reversal_edge_f32",
+    "step_reversal_edge_max",
+    "tau_i",
+    "sinc_cut",
+    "sinc_bound",
+    "arctan_sum_bits",
+    "delta_dep",
+];
+
+/// The invariant charts' warp defaults (REQ-CHART-044; TASK-M2-12): `K_max` and `γ_K`, a chart's parameters, which the
+/// decode stage's uniform carries; they decide which IC a pixel decodes to, not what any stored bit means, so they are
+/// not hashed.
+const WARP: [&str; 2] = ["k_max", "gamma_k"];
+
+/// The Burrau family's entries (TASK-M2-10, TASK-M2-11, TASK-M2-13): the Euclid plane's and the acute-angle charts'
+/// defaults and the ternary mass plot's buffer `ε_m`, a chart's parameters as the warp defaults are, and the `ν = 1/2`
+/// tolerance (REQ-VAL-118), a test's, as `n_norm_tol` is. None decides what a stored bit means, so none is hashed.
+const BURRAU: [&str; 10] = [
+    "burrau_nu_half_tol",
+    "euclid_m_min",
+    "euclid_m_max",
+    "euclid_nu_min",
+    "euclid_nu_max",
+    "mass_simplex_eps_m",
+    "burrau_theta_min",
+    "burrau_theta_max",
+    "burrau_theta_lz_k",
+    "burrau_theta_lz_fraction",
+];
+
+/// The march's per-substep crossing capacity (TASK-M3-15): one crossing per branch cut, the size of the per-substep
+/// crossing list the kernel's word path takes. It sizes a kernel-local list, never a stored bit, so it is not hashed.
+const MARCH: [&str; 1] = ["max_crossings_per_substep"];
+
+/// The steppers' coefficients (TASK-M3-02; dd_integrator §3.2): Yoshida's free weights, which the kernel's steps read
+/// through the generated `StepperCoefficients`. They set the integration, never what a stored bit means, so they are
+/// not hashed; the occupant is in the sim key (integrator_contract Part 3), which caching reads.
+const STEPPERS: [&str; 4] = ["yoshida4_w1", "yoshida6_w1", "yoshida6_w2", "yoshida6_w3"];
+
+/// The substep law's entries (TASK-M3-03; dd_integrator §3.3, R-502): `r_sub`, `gamma_sub` and `N_max`'s defaults and
+/// the threshold table's maximum length (REQ-INT-094, provisional until M3), and the least deciding threshold the host
+/// generator accepts. They decide how many substeps a
+/// macro-step takes and so the values stored, never what a stored bit means (`total_substeps` is an exact u32 whatever
+/// they are), so they are not hashed; the sim key carries the three values (integrator_contract Part 3).
+const SUBSTEP: [&str; 5] = [
+    "r_sub",
+    "gamma_sub",
+    "n_max",
+    "nsub_table_max",
+    "nsub_threshold_least",
+];
+
+/// The curve projection's search (TASK-M2-18; dd_encode §3.4): its grid's `log₂`, its golden-section step count and
+/// the golden ratio `1/φ`, the encode's minimiser's own constants. They decide which `ν*` a search finds, never what a
+/// stored bit means, so they are not hashed.
+const CURVE_SEARCH: [&str; 3] = ["curve_grid_log2", "curve_golden_steps", "inv_phi"];
+
+/// The view window's square (TASK-M2-21; chart_decoder_contract Part 3): the centre and half-width of the window over a
+/// chart's whole `[0,1]²`, the view's default placement, which decides which chart point a pixel shows, never what a
+/// stored bit means, so they are not hashed.
+const WINDOW: [&str; 2] = ["window_square_centre", "window_square_half"];
+
+/// The slice frame's default axis (TASK-M6-38; chart_decoder_contract Part 2): `z_q3`'s index, the GUI's slice axis
+/// before R-459, which decides which dimension the view slices through, never what a stored bit means, so it is not
+/// hashed.
+const SLICE: [&str; 1] = ["slice_axis_z_q3"];
+
+/// The invariant monitor's and the drift views' entries (TASK-M3-05; dd_integrator §3.5, render contract Part 5): the
+/// drift suspect predicates' thresholds (REQ-INT-085) and the drift views' `lin` ranges (REQ-TOOL-150). The predicates
+/// are read at read time and the views draw, so they decide what a read shows, never what a stored bit means (no suspect bit is stored, payload §5), and they are not hashed.
+const MONITOR: [&str; 4] = [
+    "suspect_energy_threshold",
+    "suspect_lz_threshold",
+    "drift_lin_r_E",
+    "drift_lin_r_Lz",
+];
+
+/// The wrapper's loop parameters (TASK-M3-06; integrator_contract Part 3): `SimUniforms`' defaults, the horizon's cap
+/// and the macro-step's floor, sim-key values that decide which run is computed, never what a stored bit means (the
+/// step indices' limit, `horizon_steps_max`, is hashed), so they are not hashed.
+const WRAPPER: [&str; 12] = [
+    "t_horizon_default",
+    "t_horizon_max",
+    "dt_macro_floor",
+    "escape_window",
+    "tau",
+    "r_coll",
+    "epsilon",
+    "r_close",
+    "eps_e",
+    "eps_l",
+    "g",
+    "m_total",
+];
+
+/// The tilt's angles in degrees (TASK-M2-36; R-474 R3, R8): Lean each axis's dead zone, Tip as sheet's wrap point and a
+/// whole turn, which decide the view's basis, never what a stored bit means, so they are not hashed.
+const TILT: [&str; 3] = ["tilt_right_angle", "tilt_half_turn", "tilt_turn"];
+
+/// The construction charts' physical hidden coordinates' indices (TASK-M2-52; R-633, chart_reference §4.5): `ν₀`'s, the
+/// held `L_z`'s and the held `K`'s, past the latent controls, which decide which coordinate a tilt or a slice moves,
+/// never what a stored bit means, so they are not hashed.
+const HIDDEN: [&str; 3] = ["hidden_nu0", "hidden_held_lz", "hidden_held_k"];
+
+/// A saved chart's word counts (TASK-M2-40; R-475 L4, L5, R-483 H3): a curved chart's header and parent, and an oblique
+/// chart, which lay out a saved chart's definition, never what a payload's stored bit means, so they are not hashed.
+const SAVED: [&str; 3] = [
+    "saved_header_words",
+    "saved_parent_words",
+    "saved_oblique_words",
+];
+
+/// The end of `u32`'s range (TASK-M3-68; gpu_determinism_note § "The discipline", rule 3): the bound a float holding a
+/// count is clamped to before its cast to `u32`, which decides no stored bit's meaning, so it is not hashed.
+const COUNT_CAST: [&str; 1] = ["u32_range_end"];
+
+/// The forward table's chunk (TASK-M2-89; R-926 item 6): the samples one thread fills at a time when the CPU builds a
+/// quad's table, which changes no bit the table holds, so it is not hashed.
+const SCHEDULING: [&str; 1] = ["forward_table_chunk"];
+
+#[test]
+fn schema_version_hashes_the_registers_stored_bits_entries() {
+    for name in STORED_BITS {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name),
+            "`{name}` is not in the register"
+        );
+    }
+    // §3.8 hashes the register entries that decide stored bits; every other entry is a chart constant, hashed by
+    // value through the link registry instead (§3.9, "The hash"; R-344), or a presentation constant the generated
+    // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
+    // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08), or the
+    // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
+    // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
+    // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21), or the slice
+    // frame's default axis (TASK-M6-38), or the wrapper's loop parameters (TASK-M3-06), or the tilt's angles
+    // (TASK-M2-36), or the construction charts' hidden indices (TASK-M2-52), or a saved chart's word counts
+    // (TASK-M2-40), or the invariant monitor's and the drift views' (TASK-M3-05), or the end of `u32`'s range
+    // (TASK-M3-68), or the forward table's chunk (TASK-M2-89).
+    for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
+        assert!(
+            ledger::links::CHART_CONSTANTS
+                .iter()
+                .any(|c| c.name == k.name)
+                || PRESENTATION.contains(&k.name)
+                || CALIBRATIONS.contains(&k.name)
+                || WARP.contains(&k.name)
+                || BURRAU.contains(&k.name)
+                || MARCH.contains(&k.name)
+                || STEPPERS.contains(&k.name)
+                || CURVE_SEARCH.contains(&k.name)
+                || SUBSTEP.contains(&k.name)
+                || WINDOW.contains(&k.name)
+                || SLICE.contains(&k.name)
+                || WRAPPER.contains(&k.name)
+                || TILT.contains(&k.name)
+                || HIDDEN.contains(&k.name)
+                || MONITOR.contains(&k.name)
+                || SAVED.contains(&k.name)
+                || COUNT_CAST.contains(&k.name)
+                || SCHEDULING.contains(&k.name),
+            "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
+            k.name
+        );
+    }
+    for name in PRESENTATION {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the presentation constant `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in CALIBRATIONS {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the calibration `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in WARP {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the warp default `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in BURRAU {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the Burrau entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in MARCH {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the march's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in STEPPERS {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the stepper coefficient `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in CURVE_SEARCH {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the curve search's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in SUBSTEP {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the substep law's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in WINDOW {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the window's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in SLICE {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the slice frame's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in MONITOR {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the monitor's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in WRAPPER {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the wrapper's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in TILT {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the tilt's entry `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in HIDDEN {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the hidden index `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in SAVED {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the saved chart's word count `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in COUNT_CAST {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the count cast's bound `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in SCHEDULING {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the scheduling unit `{name}` is not an unhashed register entry"
+        );
+    }
+}
+
+negative_control!(
+    schema_version_hashes_the_registers_stored_bits_entries,
+    "a name outside the register fails the membership check",
+    expected = "is not in the register",
+    {
+        let name = "fx_render_knob";
+        assert!(
+            REGISTER.iter().any(|k| k.name == name),
+            "`{name}` is not in the register"
+        );
+    }
+);
+
+// --- REQ-SYS-081: the `provisional` mark is not hashed (R-427) ------------------------------------------------------
+
+/// `k` marked provisional until `gate`, citing a calibration requirement as a provisional entry does.
+fn marked(k: ConstantBuilder, gate: &'static str) -> ConstantBuilder {
+    ConstantBuilder {
+        citation: Some(Citation::Calibration("REQ-FX-000")),
+        provisional: Some(gate),
+        ..k
+    }
+}
+
+/// Checks that marking the hashed entry `fgw_capacity` provisional, under any gate, then removing the mark, leaves the
+/// version; and that changing the marked entry's value by `nudge` changes it, unless `nudge` is 0.
+fn check_mark_unhashed(nudge: f64) {
+    for gate in ["M1", "M2", "M8"] {
+        check_unchanged(&with_capacity(|k| marked(k, gate)).hashed());
+        check_unchanged(
+            &with_capacity(|k| ConstantBuilder {
+                provisional: None,
+                ..marked(k, gate)
+            })
+            .hashed(),
+        );
+    }
+    let moved = with_capacity(|k| ConstantBuilder {
+        value: Some(Value::Exact(k.number() + nudge)),
+        ..marked(k, "M1")
+    });
+    if nudge == 0.0 {
+        check_unchanged(&moved.hashed());
+    } else {
+        check_changes(&moved.hashed());
+    }
+}
+
+#[test]
+fn constants_provisional_mark_is_not_hashed_but_its_value_is() {
+    check_mark_unhashed(0.0);
+    check_mark_unhashed(1.0);
+}
+
+negative_control!(
+    constants_provisional_mark_is_not_hashed_but_its_value_is,
+    "a marked entry's value edit is hashed, so the unchanged check must fail on it",
+    expected = "the schema version changed",
+    check_unchanged(
+        &with_capacity(|k| ConstantBuilder {
+            value: Some(Value::Exact(75.0)),
+            ..marked(k, "M1")
+        })
+        .hashed()
+    )
+);

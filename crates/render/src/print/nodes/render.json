@@ -1,0 +1,17 @@
+{
+  "id": "render",
+  "label": "Render",
+  "category": "print_source",
+  "doc": "The render, as computed: the stain's finished colours, which the graph reads and never writes back.",
+  "inputs": [],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [],
+  "passes": [],
+  "cost": "light",
+  "motion": "full",
+  "temporally_stable": true,
+  "screen_medium": false,
+  "deviations": [
+    "The id is `render`, the lab's `image` (principia_print_graph.md §4.1), and the category Print source, the lab's Source (§4.3; the human's ruling on RQ-497)."
+  ]
+}

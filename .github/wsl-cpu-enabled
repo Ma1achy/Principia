@@ -1,0 +1,3 @@
+# wsl-cpu runs (.github/scripts/wsl.ps1 cpu): the six WSL proofs all passed in run 43756345312 (15 Nov 2026), and
+# the owner answered RQ-825 (closed by R-1029) on 16 Nov 2026: "yes move mutation runs onto the PC (if they are faster there, measure
+# first)". It runs one named mutation workload, nothing else; removing this file turns it off.

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Contour set editor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#7fb6e0}a:hover{color:#a9cff0}
+button,input,select{font:inherit}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; background: #232427; color: #e4e2dc; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13px; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid #34363a;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <h1 style="margin: 0; font-size: 20px; font-weight: 500;">Contour set</h1>
+    <input id="name" type="text" value="Energy E" aria-label="Name" style="background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 6px 8px; width: 220px;">
+    <span style="flex-grow: 1;"></span>
+    <button type="button" style="background: #34363a; color: #e4e2dc; border: 0; border-radius: 3px; padding: 6px 12px;">Duplicate</button>
+    <button type="button" style="background: #34363a; color: #e4e2dc; border: 0; border-radius: 3px; padding: 6px 12px;">Delete</button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: 24px; flex-grow: 1; min-height: 0;">
+    <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+
+      <section style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">Quantity</div>
+        <label for="expr" style="color: #b9b6ad;">Expression, evaluated at every point of the slice</label>
+        <input id="expr" type="text" value="E" style="background: #141518; color: #fff27a; border: 1px solid #3d8fca; border-radius: 3px; padding: 8px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 14px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #9b998f;">e.g. <span style="color: #e4e2dc;">m1/m2</span> · <span style="color: #e4e2dc;">Lz^2/(2*I*K)</span> · <span style="color: #e4e2dc;">min(r12, r13, r23)/max(r12, r13, r23)</span> · <span style="color: #e4e2dc;">h</span> (the chart's horizontal axis)</div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span style="color: #b9b6ad;">Read at</span>
+          <span style="display: inline-flex; border: 1px solid #3a3c41; border-radius: 3px; overflow: hidden;">
+            <button type="button" aria-pressed="true" style="background: #0e5a8a; color: #fff; border: 0; padding: 5px 12px;">Starting state</button>
+            <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 12px;">Playhead</button>
+          </span>
+          <span style="color: #9b998f; font-size: 12px;">starting state: decode only, exact at any zoom</span>
+        </div>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">Levels</div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <span style="display: inline-flex; border: 1px solid #3a3c41; border-radius: 3px; overflow: hidden;">
+            <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 12px;">Count</button>
+            <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 12px;">Step</button>
+            <button type="button" aria-pressed="true" style="background: #0e5a8a; color: #fff; border: 0; padding: 5px 12px;">List</button>
+          </span>
+          <span style="display: inline-flex; border: 1px solid #3a3c41; border-radius: 3px; overflow: hidden;">
+            <button type="button" aria-pressed="true" style="background: #0e5a8a; color: #fff; border: 0; padding: 5px 12px;">Linear</button>
+            <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 12px;">Log</button>
+          </span>
+          <label style="display: flex; gap: 6px; align-items: center; color: #b9b6ad;"><input id="follow" type="checkbox" style="margin: 0;"> follow the view's range</label>
+        </div>
+        <input id="levels" type="text" value="−0.235, −0.225, −0.215, −0.205, −0.198" aria-label="Level values" style="background: #141518; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 7px 10px; font-family: 'IBM Plex Mono', monospace;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #9b998f;">in view: E from −0.2418 to −0.1925 · 5 levels inside</div>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">Line</div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <label for="style" style="color: #b9b6ad;">Style</label>
+          <select id="style" style="background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 5px 8px;"><option>Screen contour</option><option>Dashed secondary</option><option>Print</option><option>Trace</option><option>Grid</option></select>
+          <span style="color: #9b998f; font-size: 12px;">shared · 2 fields overridden here</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+          <label style="display: flex; flex-direction: column; gap: 4px; color: #b9b6ad;">Colour<span style="display: flex; gap: 6px; align-items: center;"><span style="width: 18px; height: 18px; background: #ffffff; border-radius: 2px; border: 1px solid #555;"></span><span style="font-family: 'IBM Plex Mono', monospace; color: #e4e2dc;">#FFFFFF</span></span></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; color: #b9b6ad;">Width<input type="number" id="w" value="1.6" step="0.1" style="background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 4px 6px;"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; color: #b9b6ad;">Opacity<input type="number" id="op" value="1.0" step="0.05" style="background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 4px 6px;"></label>
+          <div style="display: flex; flex-direction: column; gap: 4px; color: #b9b6ad;">Dash
+            <span style="display: inline-flex; gap: 4px;">
+              <button type="button" aria-label="Solid" aria-pressed="true" style="background: #0e5a8a; border: 0; border-radius: 3px; padding: 6px;"><svg width="26" height="6" aria-hidden="true"><line x1="0" y1="3" x2="26" y2="3" stroke="#fff" stroke-width="2"></line></svg></button>
+              <button type="button" aria-label="Dashed" aria-pressed="false" style="background: #2a2b2f; border: 0; border-radius: 3px; padding: 6px;"><svg width="26" height="6" aria-hidden="true"><line x1="0" y1="3" x2="26" y2="3" stroke="#e4e2dc" stroke-width="2" stroke-dasharray="6 4"></line></svg></button>
+              <button type="button" aria-label="Dotted" aria-pressed="false" style="background: #2a2b2f; border: 0; border-radius: 3px; padding: 6px;"><svg width="26" height="6" aria-hidden="true"><line x1="1" y1="3" x2="26" y2="3" stroke="#e4e2dc" stroke-width="2" stroke-dasharray="0.1 4" stroke-linecap="round"></line></svg></button>
+              <button type="button" aria-label="Dash-dot" aria-pressed="false" style="background: #2a2b2f; border: 0; border-radius: 3px; padding: 6px;"><svg width="26" height="6" aria-hidden="true"><line x1="0" y1="3" x2="26" y2="3" stroke="#e4e2dc" stroke-width="2" stroke-dasharray="7 3 1 3"></line></svg></button>
+              <button type="button" aria-label="Custom pattern" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; border-radius: 3px; padding: 2px 6px; font-size: 11px;">custom</button>
+            </span>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+          <label style="display: flex; gap: 6px; align-items: center; color: #b9b6ad;"><input type="checkbox" id="ol" checked style="margin: 0;"> Outline</label>
+          <label style="display: flex; flex-direction: column; gap: 4px; color: #b9b6ad;">Outline colour<span style="display: flex; gap: 6px; align-items: center;"><span style="width: 18px; height: 18px; background: #0b0b0e; border-radius: 2px; border: 1px solid #555;"></span><span style="font-family: 'IBM Plex Mono', monospace; color: #e4e2dc;">#0B0B0E</span></span></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; color: #b9b6ad;">Outline width<input type="number" id="ow" value="1.0" step="0.1" style="background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 4px 6px;"></label>
+          <label style="display: flex; gap: 6px; align-items: center; color: #b9b6ad;"><input type="checkbox" id="ink" style="margin: 0;"> Smart ink</label>
+        </div>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">Labels</div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+          <label style="display: flex; gap: 6px; align-items: center; color: #b9b6ad;"><input type="checkbox" id="lab" checked style="margin: 0;"> Show values</label>
+          <label style="display: flex; flex-direction: column; gap: 4px; color: #b9b6ad;">Format<input type="text" id="fmt" value="E {:.3f}" style="background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 4px 6px; font-family: 'IBM Plex Mono', monospace;"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; color: #b9b6ad;">Size<input type="number" id="ls" value="11" style="background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 4px 6px;"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; color: #b9b6ad;">Every<input type="text" id="sp" value="260 px" style="background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 4px 6px;"></label>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: #b9b6ad;">
+          <span>Position</span>
+          <span style="display: inline-flex; border: 1px solid #3a3c41; border-radius: 3px; overflow: hidden;">
+            <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 10px;">On the line</button>
+            <button type="button" aria-pressed="true" style="background: #0e5a8a; color: #fff; border: 0; padding: 5px 10px;">Above</button>
+            <button type="button" aria-pressed="false" style="background: #2a2b2f; color: #e4e2dc; border: 0; padding: 5px 10px;">Below</button>
+          </span>
+          <label style="display: flex; gap: 6px; align-items: center;">Offset <input type="number" id="loff" value="11" style="width: 56px; background: #1b1c1e; color: #e4e2dc; border: 1px solid #3a3c41; border-radius: 3px; padding: 4px 6px;"> px</label>
+        </div>
+        <div style="display: flex; gap: 18px; flex-wrap: wrap; color: #b9b6ad;">
+          <label style="display: flex; gap: 6px; align-items: center;"><input type="checkbox" id="halo" checked style="margin: 0;"> Halo</label>
+          <label style="display: flex; gap: 6px; align-items: center;"><input type="checkbox" id="gap" checked style="margin: 0;"> Break the line under the label</label>
+          <label style="display: flex; gap: 6px; align-items: center;"><input type="checkbox" id="up" checked style="margin: 0;"> Keep upright</label>
+        </div>
+      </section>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">Label position, plain style, no halo</div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
+          <img src="/_blob/dc062e6f1805d1f290757261442748bb" alt="Labels sitting on plain white contour lines, the line running through the text" style="width: 274px; height: 274px; display: block; border-radius: 3px; image-rendering: pixelated;">
+          <figcaption style="color: #b9b6ad; font-size: 12px;">On the line: the line runs through the digits.</figcaption>
+        </figure>
+        <figure style="margin: 0; display: flex; flex-direction: column; gap: 6px;">
+          <img src="/_blob/2fb3ba2a066923fee98ab6e8bc37fc9f" alt="The same labels lifted 11 pixels above their lines, readable without a halo" style="width: 274px; height: 274px; display: block; border-radius: 3px; image-rendering: pixelated;">
+          <figcaption style="color: #b9b6ad; font-size: 12px;">Above, offset 11 px: readable with no halo.</figcaption>
+        </figure>
+      </div>
+      <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f; margin-top: 4px;">Quantities you can use</div>
+      <div style="display: flex; flex-direction: column; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 12px;">
+        <div><span style="color: #9b998f;">Chart</span> <span style="color: #e4e2dc;">h, v</span> <span style="color: #9b998f;">(axis values, in the axis's own units)</span></div>
+        <div><span style="color: #9b998f;">Latent</span> <span style="color: #e4e2dc;">z_α z_β z_q0 z_q1 z_q2 z_q3 z_μ1 z_μ2</span></div>
+        <div><span style="color: #9b998f;">Start</span> <span style="color: #e4e2dc;">E K U Lz I virial m1 m2 m3 r12 r13 r23 area α β θ φ</span></div>
+        <div><span style="color: #9b998f;">Playhead</span> <span style="color: #e4e2dc;">t_end state d_min drift ftle</span> <span style="color: #9b998f;">(payload)</span></div>
+        <div><span style="color: #9b998f;">Maths</span> <span style="color: #e4e2dc;">+ − × / ^ abs sqrt log exp min max atan2</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

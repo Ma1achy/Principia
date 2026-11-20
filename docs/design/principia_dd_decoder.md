@@ -1,0 +1,720 @@
+# Drill-down — the Decoder (Matter rung)
+
+*Template drill-down. Shape: what it is → consolidated contract → the maths (implementation-independent formulae only) → seams as integration tests → unit tests → deferred. No WGSL, no struct layouts, no code structure — §3 is the implementation-independent maths, and the **one shared Rust source** (its CPU-f64 and GPU-f32 instantiations) must produce these numbers to precision (branch tags bit-exactly); everything else (WGSL accessors, struct layouts, code structure) is the agent's.*
+
+---
+
+## 1. What it is
+
+The **Matter rung**: `z → mass × config × momentum → canonicalise → (m, r, p)`. It turns a point of the 8D manifold into three bodies. It is the first real artefact after the debug substrate — if it is wrong, everything downstream is noise. It runs from **one Rust source** in three roles: the f32 compute **kernel** (Rust → SPIR-V), the f64 (or higher) CPU path (lock, inspector, deep-zoom `x₀`/`J_D`), and — inverted — inside encode. Under the substrate (`principia_spike_brief.md`) these are not three transcriptions of one definition but one source monomorphised/instantiated three ways, so decode-logic drift between them is *structurally impossible*.
+
+---
+
+## 2. Consolidated contract (every clause that binds this component)
+
+From the **chart & decoder contract**: the decoder factorises, `Y ≅ Y_mass × Y_cfg × Y_mom` (2×2×4=8); block ordering fixed `z[0:2]=config, z[2:6]=momentum, z[6:8]=mass`; decode order **mass → config → momentum → derived invariants** (load-bearing: invariant axes solve downstream); links are registry entries — constraint-preserving, invertible with conditioned inverse, C¹, carrying log-det Jacobian; **no latent coordinate on a gauge direction**.
+
+From the **core design + integrator contracts**: physics defined once, compiled twice — now *structurally* (one Rust source), so the decoder's f32/f64 difference is precision only **for continuous values**; its **branch decisions** (the `DEGENERATE` tags, feasibility gates) must be bit-identical across backends by the comparison-only rule (`principia_gpu_determinism_note.md`) — a decoder that tagged `DEGENERATE` on one backend and not another would fork the outcome. Output is `(m, r, p)` in the dimensionless system `G = M = I = 1`; the integrator never learns which chart produced its input (canonicalise is the one seam).
+
+From the **lowering contract**: link selection and chart type are **baked** (monomorphised Rust variants — lowering Part 2, not WGSL snippets); `z₀, q₁, q₂`, slice values are **uniforms**; `DECODE_MODE` (full vs linearised) is a per-quad workgroup-uniform flag; mass is **always produced by the decode snippet** — `SimUniforms.m[3]` is advisory only.
+
+From the **deep-zoom contract**: the linearised path replaces the decode with `x₀ + J_D·δ`; `J_D` is central differences **of the full chart→IC composite** in f64 — chart-agnostic, no per-axis-kind special-casing; error `O(h²)`; `|det J_D|` doubles as the measure weight.
+
+From the **inverse-encode contract**: decoded states are **already canonical** (T2 exercises block inverses only); the block decodes must be invertible with the closed forms of §3; the invariant momentum construction *is* the canonical fibre choice (encode reuses decode).
+
+From the **render contract**: the decode stage writes `ICDescriptor` (what the IC *is*) post-decode, pre-integration; the DECODE view — a fragment preset, the fragment-side decode of `ctx.chart.z` (`principia_colour_composition.md` §6; R-75), not a kernel mode — certifies this rung before any physics exists.
+
+From **totality** (scheduler/render): invalid decodes are **tagged, never dropped** — `DEGENERATE(reason)` is a decode-time terminal label with a narrow, enumerated cause set.
+
+**The `DEGENERATE` cause set** *(definition, R-72; REQ-DEC-038, written by TASK-M2-24)*. The set is closed: five
+reasons, each raised by one block, and none other. Each is recorded in payload §2's `sample_descriptor` as
+`state = decode_failed` (5) with the `detail` code below (`principia_dd_simstate_payload.md` §2, "`detail` failure
+enum"):
+
+| Reason | Raised by, and when | `decode_failed` `detail` |
+|---|---|---|
+| `M01_TINY` | the mass block: `M₀₁ < ε_M01` (§3.1), on the emitted masses of every chart, a chart that sets its masses directly included | 2, invalid mass construction |
+| `NO_QUALIFYING_SEED` | the invariant-momentum construction: feasible targets, but the seed does not qualify; under the seed in force, the expansion `w = r/√I`, only where its `‖w⁽²⁾‖²_m` is 0, which is `I = 0` about the CoM, a finite 0 there, so it is unreachable for `I > 0` (§3.4, R-934); under R-82's named legacy option, where no seed has `‖w⁽²⁾‖²_m > ε_w`. *Was:* "the invariant-momentum construction: feasible targets, but no seed has `‖w⁽²⁾‖²_m > ε_w` (§3.4, R-82)" | 1, degenerate configuration |
+| `INVARIANT_INFEASIBLE` | the invariant-momentum construction: `K* < L_z²/(2I)`, or a `K*` whose `2K*` has no finite float at the decode's own precision (`principia_chart_reference.md` §2.2, §4.5) | 3, other |
+| `ENERGY_INFEASIBLE` | `η_E`: `E* < U` (§3.7) | 3, other |
+| `ENERGY_UNSCALABLE` | `η_E`: the rest start at `E* > U`, or the collision pole `U = −∞` (§3.7) | 3, other |
+
+*15 Nov 2026 (R-836, ruling RQ-715 (a) with (i); REQ-CHART-109; TASK-M2-59):* with `L_z` held beside `E` (§3.7, "Hold
+`L_z`, and both held"), the same stage raises two of these reasons, and the set stays closed at five: `ENERGY_INFEASIBLE`
+is raised by both-held on `E* < U` and on the exact `2K* < L*²` (outcomes 2 and 3), widened since this stage raises it;
+`ENERGY_UNSCALABLE` by both-held at the collision pole and on `rigid(v, Jr)` above the floor (outcomes 1 and 5). Both
+keep code 3, for the reason given below for `η_E`'s: a target the decoded configuration cannot meet. Hold `L_z` alone
+raises none. The table's "`η_E`" in those two rows reads "`η_E`, or both-held".
+
+- **Why these codes.** `M01_TINY` is the mass simplex's boundary, a mass → 0, which is code 2's own example.
+  `NO_QUALIFYING_SEED` fires, under the seed in force, only where the expansion's norm is 0, at `I = 0` about the CoM,
+  every body at the CoM (R-934, §3.4); under R-82's legacy option only where every seed's projected norm is at most `ε_w`, and at
+  `I = 1` the largest is at least ½. Either way it is reached only on a configuration collapsed toward a point, which is
+  code 1's degenerate configuration. *Was:* "`NO_QUALIFYING_SEED` fires only where every seed's projected norm is at
+  most `ε_w`; at `I = 1` the largest is at least ½ (`principia_chart_reference.md` §2.2), so it is reached only on a
+  configuration collapsed toward a point, which is code 1's degenerate configuration." The other three are a target the decoded configuration cannot meet, not
+  a defect of the configuration or the masses: `INVARIANT_INFEASIBLE` is code 3 by `principia_chart_reference.md`
+  §2.2, and the two `η_E` reasons are the same kind of failure, so code 3 too. `ENERGY_UNSCALABLE` at the collision pole
+  is code 3, not 1: the pole without a target is no decode failure at all, but a valid IC already collided
+  (payload §2, "A valid t=0 terminal is a real outcome"), so what fails there is the target.
+- **Code 0 has no reason.** A non-finite decode output is not a `DEGENERATE` reason: the decode of a finite input
+  inside the chart's domain is finite, and that is asserted, not tagged (`crates/kernel/tests/decode_totality.rs`).
+  Code 0 is what the payload records for a decode whose output is non-finite all the same.
+- **Precedence.** One decode carries at most one reason, the first block's: the mass block's, then the momentum
+  stage's (`INVARIANT_INFEASIBLE` over `NO_QUALIFYING_SEED`, `principia_chart_reference.md` §2.2), then `η_E`'s, which
+  runs after the momentum block (§3.7), and which no chart with a momentum construction allows. *15 Nov 2026 (R-836;
+  TASK-M2-59):* with `L_z` held beside `E`, both-held takes `η_E`'s place in that order, after the momentum block, and
+  is reached on no chart with a momentum construction either: those charts forbid `E*` (§3.7).
+- **Every pixel carries a label.** A decode is either tagged with one reason or untagged and goes on to integration,
+  so no pixel is dropped and none is unlabelled (`principia_chart_reference.md` §0.7). A tagged decode keeps its
+  outputs: its `(m, r, p)` finite, its descriptor never NaN, and infinite only at R-436's poles, `rho_ratio`'s `+∞`
+  and `V_0`'s `−∞` (the collision pole). *2 Nov 2026 (R-670):* at `ε ≠ 0`, `V_0` is softened and finite at a zero
+  separation, so only `rho_ratio`'s `+∞` remains (§ 3.6).
+
+**The decoder's branch inputs** *(enumerated per R-34; REQ-VAL-017, written by TASK-M2-24)*. Every decision the
+decode makes that test 12 compares bit for bit across backends, with the value it reads and how that value is formed:
+
+| Decision | Branch input, and its form | Where |
+|---|---|---|
+| `M01_TINY` | `M₀₁`, the one rounded sum `m₀ + m₁` of the emitted masses, formed in mantissa-exponent arithmetic: each mass scaled into `[1, 2)` by powers of two, the two aligned and added once, every product exact and no intermediate subnormal; against the constant `ε_M01`, compared by exponent, then mantissa (§3.1, "The branch input, rewritten"; R-547, built by TASK-M2-48, REQ-DEC-011). *Was:* "`M₀₁ = fma(m₁, 1, m₀)` against the constant `ε_M01`, from the emitted masses (§3.1, "The branch input"; its premise fails, R-547: the form is rewritten to R-547's rule and re-proved by TASK-M2-48, REQ-DEC-011)" | `kernel::decode::mass` (`kernel::canon`'s mantissa-exponent sum) |
+| `INVARIANT_INFEASIBLE` | the sign of `2·I·K* − L_z²`, exactly, from the operands' bits: binades and limb products, every product exact, no `fma`, no `√`, no division; and `K*`'s binade, an integer, for a `2K*` with no finite float, NaN included (applied meanwhile under RQ-298; the corrected rule's form, R-547, as built by TASK-M2-09) | `kernel::decode::invariant::infeasible`, `no_construction` |
+| the momenta's `L_z`, 0 in its place | `K*`'s binade at or past `2K*`'s limit, or twice `L_z`'s binade past it (the limit is 1023 at f64, 127 at f32), integers read on the bits, each precision at its own range: a select, reached only where the outcome is already `INVARIANT_INFEASIBLE` (`principia_chart_reference.md` §2.2) | `kernel::decode::invariant::finish` |
+| `L_max`'s four steps down (the warp's edge columns) | the same exact sign at each step | `kernel::chart::invariant::l_max` |
+| the seed | none: the seed in force is the expansion `w = r/√I` on every chart that uses the construction, one seed with no choice, so the decode makes no seed decision and has no seam (R-934; §3.4). *Was:* two rows, "the seed, on a decoded configuration: `z_α ≤ 0`, read on the control's bits (`kernel::decode::invariant::decoded_seed`)" and "the seed, on the Burrau family: `3ν ≤ 1`, by a two-sum of `2ν + ν`, comparisons only (`kernel::chart::burrau::seed`)", which are now R-82's named legacy option's, its seam declared, and no production decode's | `kernel::decode::invariant::construct_expansion` |
+| `NO_QUALIFYING_SEED` | the expansion's `‖w⁽²⁾‖²_m > 0`, its positions first scaled by a power of two read from their bits so that the largest component lies in `[1, 2)`, exactly: a sum of non-negative products, one of them at least the mass of the body holding that component, the masses positive, so, the CoM at the origin, it is false only where every position is 0 (`I = 0`), on every backend, and never on a decoded configuration (`I = 1`); `β_L`'s divisor is held at 1 where the scaled `I` is 0, so the norm compared is a finite 0 there, not NaN, and a configuration from elsewhere with every body at one point (`I = 0` about its CoM) gives an exact 0 too, its positions relative to the CoM set to exactly 0 where every scaled position is the same (R-934; §3.4). *Was:* "each seed's computed `‖w⁽²⁾‖²_m` against `ε_w`, strict comparisons in seed order; reached only through the rule on computed norms, on a configuration not from the canonical decode, whose choice near a tie is not claimed branch-identical (§3.4)" (`kernel::decode::invariant::choose`), now the legacy option's | `kernel::decode::invariant::construct_expansion` |
+| `η_E`'s outcome | `r_min_pair_0 = 0`, `E* < V₀`, `E* = V₀` and `s = 0`, comparisons of emitted values with no arithmetic at the decision (§3.7) | `kernel::decode::energy_norm::normalise` |
+| `η_E`'s switch | the energy target's `Option`: on the GPU a uniform flag beside `E*` (R-25), the same for the whole dispatch | `kernel::stage::decode::target` |
+| the mirror in `C` (the shape sphere's decode) | `λ̃_y < −δ_λ`, decided in exact mantissa-exponent arithmetic from the state's pair differences (§3.3; R-82). It writes no tag: its branch is compared bit for bit across backends by TASK-M2-07's `canon_gpu` (`canonicaliser_seam_sweep` at the seam states, `canonicaliser_mirror_tie` at the tie), and test 12 compares the shape sphere's decode it feeds | `kernel::canon::mirror_decision` |
+| both-held's outcomes 1 to 3 (§3.7, "Hold `L_z`, and both held") | in order: `r_min_pair_0 = 0`, the collision pole tested on the separation; `E* < V₀`, a comparison of emitted values; then `2K* < L*²` and its floor `2K* = L*²`, by `infeasible`'s exact sign of `2·I·K* − L*²` on `K* = E* − V₀` and `L*` at `I = 1` (the row above), never `E* < U + L*²/2I`, which rounds at the decision (R-836; REQ-CHART-109) | `kernel::decode::invariant::infeasible` |
+| `ENERGY_UNSCALABLE` and the rotation-only outcome, hold `L_z` | `rigid(v, Jr)`: with `w = Jr`, `p` the first index of the largest `\|wᵢ\|`, `V` the largest `\|vᵢ\|`, `\|v_b w_p − v_p w_b\| ≤ τ·V·\|w_p\|` for every component `b`; `τ` a dyadic constant (REQ-CHART-126); each comparison decided exactly from the bits, as `infeasible`, no division, no mass, no intermediate that can be subnormal (R-547) | `kernel::decode::invariant::rigid` |
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5907871580 of PR #533, P4), the target TASK-M2-57
+builds, in force when it merges:* the target has no mirror branch: `C` has no mirror step (R-865, § 3.3), so the row
+"the mirror in `C` (the shape sphere's decode)" has no branch to list. Until TASK-M2-57 merges, that row describes the
+built decoder on `main`, and it stands above as its *Was*.
+
+*7 Nov 2026 (R-836, ruling RQ-715 (a) with (i)):* the last row is RQ-715's option (i), the text the queue entry gave
+for this table, entered now that it is ruled; hold `L_z` is built by TASK-M2-69 on the CPU and TASK-M8-118 on the GPU (R-916; *was:* "by TASK-M8-118").
+
+The selects that choose a pole's value (§3.2's `atan2` poles, §3.6's `rho_angle` cases and R-436's pole values) read
+comparisons against the constant 0 or `±π̂` of values already computed; they choose a stored value, not a tag.
+The shape sphere's f32 exponential sinc reads one comparison they do not cover, `z < 0.0625`, the multi-op `z = ‖d‖²`
+against the nonzero `sinc_cut²` (R-696; REQ-DEC-054's proposal): it chooses between two forms of one continuous value
+and writes no tag, so test 12 does not compare it and it is outside the table's rule.
+
+---
+
+## 3. The maths
+
+Exact. The one shared source, at either precision, must produce these numbers; continuous values agree to precision, branch tags bit-exactly.
+
+**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10). The formulae below keep the symbols. Since R-481 the two are the defaults of tunable link parameters, each within an allowed range, and every formula reads the active value (`principia_dd_generation_root.md` §3.9, "Tunable parameters").
+`α_min = 0` (R-21): full-sphere coverage.
+
+### 3.1 Mass
+
+```
+(m₀, m₁, m₂) = softmax(0, μ₁, μ₂),      μₖ = μ_max · tanh(z_μk)
+M₀₁ = m₀ + m₁ ;   if M₀₁ < ε  →  DEGENERATE(M01_TINY)
+```
+
+Body 0 is the softmax reference (logit 0). Equal masses ⇔ `z_μ = 0`. Burrau point: `μ₁ = log(b/c)`, `μ₂ = log(a/c)`.
+
+**ε is the chart constant `ε_M01`** (REQ-DEC-039, a calibration, R-71). TASK-M2-02 proposes `ε_M01 = 10⁻⁵`, provisional
+until the human confirms it at the M2 gate. It sits in a measured gap between the reachable `M₀₁` floors: the
+edge-reaching simplex link's corner `m₂ → 1` piles up at `ε_μ − ε_μ²/4`, below it; the ternary plot's floor
+`2ε_m = 2×10⁻⁴` and `softmax_tanh`'s far-field floor `(1 + e^−μ_max)/(1 + e^−μ_max + e^μ_max)` lie above it. The gap's
+upper side is that floor at the top of `μ_max`'s allowed range, 10 (R-597, REQ-GEN-038), `≈ 4.5×10⁻⁵`, not its value
+at the default `μ_max = 5` (`≈ 6.7×10⁻³`): a proposed `ε_M01` at or above `4.5×10⁻⁵` would tag far-field pixels at the
+cap and break R-597's "no blank", so it fails (REQ-DEC-039). *Was:* "It sits in a measured gap between the reachable
+`M₀₁` floors at `μ_max = 5`: … the ternary plot's floor `2ε_m = 2×10⁻⁴` and `softmax_tanh`'s `(1 + e^−μ_max)/(1 +
+e^−μ_max + e^μ_max) ≈ 6.7×10⁻³` lie above it." *15 Nov 2026 (TASK-M2-95; physics review 5910557865 of PR #546, F3):* past the ternary plot's square its sides
+saturate (R-941; `principia_chart_reference.md` §5.4, "Saturate on a zero-mass end") with each saturated buffered mass
+in `(ε_M01, ε_m]`, so the plot's floor past the square is `2ε_M01` where two masses saturate, still above the fence;
+the floor `2ε_m` above is the square's. So the corner fires with a tenfold margin at either precision, and the tag's onset falls where `M₀₁` still resolves with `z`
+at f32, so the formula, not rounding, decides it (`fixtures/gates/m01_tiny/measurement.toml`).
+
+**The branch input (R-34; test 12).** `M₀₁` is the one rounded sum of the emitted masses `m₀ + m₁`, compared against the
+constant `ε_M01`. Under the edge-reaching simplex link, `M₀₁ = m₀ + m₁` written as an add is a multi-op branch input:
+inlined, the link's last step `m₁ = t₇·t₁₃` meets the add as `m₀ + t₇·t₁₃`, which a contracting backend may fuse. That
+fusion flips the tag where `M₀₁` lies within one rounding of `ε_M01`: TASK-M2-02 bisected the onset crossing on 20 000
+lines `z₁ ∈ [6.3, 20.3]`, and fusion flips 77 of the 40 000 crossing points at f64 and 45 at f32. So the block forms
+`M₀₁` as the explicit `fma(m₁, 1, m₀)` (R-34; gpu_determinism_note rules 2 and 6): the product `m₁·1` is exact, so it is
+the same single rounding of `m₀ + m₁`, and no add is left for a backend to fuse. It reads only the emitted masses, so a
+chart that sets masses directly gets the same test.
+
+**Its premise.** The form holds only on a backend that keeps an explicit `fma` fused and does not fold the `×1`. Folding
+`fma(x, 1, y)` to `x + y` is exact and standard (LLVM's InstCombine and Mesa's NIR both do it); after it, a contracting
+backend can rebuild `fma(t₇, t₁₃, m₀)` and flip the tag as above. Whether the kernel's SPIR-V keeps GLSL.std.450 `Fma`
+fused, which TASK-M2-02's qa review observes needs the `NoContraction` decoration, and whether rust-gpu emits that
+decoration, is a check for the second-backend parity run, not settled here. So `M₀₁` under the edge-reaching simplex
+link, at its onset crossings, is a branch input for the parity gate's no-fork test (R-34, REQ-VAL-017, REQ-VAL-079).
+That test compares tags on identical emitted masses: a disagreement under `z` fuzz is a fork only where the two
+backends' masses are bit-identical; where the masses differ, it is precision (REQ-VAL-079).
+
+**The premise fails (R-547, closing RQ-298).** CI's lavapipe evaluates an explicit `fma` as a rounded product and an
+add, so the form above is not one every backend rounds alike. Under R-547 a branch input that must agree across
+backends is built only from operations every IEEE backend rounds alike (a condition on the driver, R-690), with no intermediate that can be subnormal
+(gpu_determinism_note rules 2 and 6). `M₀₁`'s form is rewritten to that rule and re-proved by TASK-M2-48
+(REQ-DEC-011, REQ-VAL-017); the two paragraphs above stand as the record of the form built until then.
+
+**The branch input, rewritten (R-547; TASK-M2-48, REQ-DEC-011).** `M₀₁` is still the one rounded sum of the emitted
+masses, `round(m₀ + m₁)`, and the tag still fires iff it is strictly below `ε_M01`; only its form changes. It is formed
+in the mantissa-exponent arithmetic of `C`'s branch inputs (`kernel::canon`, R-547's `IeeeBits::product` pattern):
+each mass is scaled into `[1, 2)` by two powers of two read from its bits, exactly; the smaller is aligned to the
+larger's exponent by a power of two, exactly (the gap capped at 60, below which the smaller is under half an ulp of
+the larger and the sum rounds to the larger either way); the two are added once; the sum, in `[1, 4)`, is renormalised
+by a power of two, exactly. Scaling by a power of two commutes with rounding where nothing underflows, so that one
+add is `round(m₀ + m₁)`, bit for bit. The tag compares it with `ε_M01`, taken into the same form, by exponent and then
+mantissa, comparisons only. Every product the add can meet is by a power of two and exact, so a backend that fuses or
+contracts one into the add, or folds it, rounds the same exact sum once; no intermediate is subnormal for normal masses,
+so a backend that flushes subnormals rounds as one that keeps them. A subnormal mass is read differently by a flushing
+backend before the block runs, so there the two backends' masses differ, which is precision, not a fork: the no-fork
+test still compares tags on identical emitted masses, the CPU's form applied to each backend's own masses
+(REQ-VAL-079, "Its premise" above).
+
+The control that the superseded form fails is the hazard "Its premise" names, not lavapipe's unfused `fma`: unfused,
+`fma(m₁, 1, m₀)` is `round(round(m₁·1) + m₀) = round(m₀ + m₁)`, the one rounded sum on every input, and a flush moves it
+only where `M₀₁` is far below `ε_M01`, so it never flips the tag. Folded and contracted, as a backend may evaluate
+it, it is `fma(t₇, t₁₃, m₀)` fused, which flips the tag at the onset crossings (77 of 40 000 at f64, 45 at f32); the
+rewritten form does not (RQ-621, decided by the orchestrator per R-369 as a test decision, option (a)).
+
+### 3.2 Configuration — hyperspherical mass-weighted Jacobi
+
+Mass-weighted Jacobi vectors and reduced masses:
+
+```
+ρ̃ = √μ_ρ · (r₁ − r₀)                          μ_ρ = m₀m₁ / M₀₁
+λ̃ = √μ_λ · (r₂ − (m₀r₀ + m₁r₁)/M₀₁)           μ_λ = m₂ · M₀₁
+I  = ‖ρ̃‖² + ‖λ̃‖²
+```
+
+**Canonical-frame decode** (the recommended path — rotation and scale gauged by construction):
+
+```
+ρ̃ = R̃ cos α · (1, 0)         λ̃ = R̃ sin α · (cos β, sin β)
+R̃ = 1  (scale gauge = I = 1)      β ∈ S¹, read modulo 2π  (both orientations; no mirror)
+
+α = (π/2) · σ(z_α)          β = z_β + π/2      (periodic_beta, the offset link; R-1020)
+```
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* the two lines above are the periodic `β` (R-898, R-919 Q1 (c)), defined below. *Was:* "`R̃ = 1  (scale
+gauge = I = 1)      β ∈ [0, π]  (mirror fixed by construction)`" and "`α = (π/2) · σ(z_α)          β = π · σ(z_β)`". *17 Nov 2026 (R-1020, RQ-824 (b)):* the link is the offset `β = z_β + π/2`, so `z = 0` stays the golden IC (§ 5). *Was (the link's line, 14 Nov 2026):* "`α = (π/2) · σ(z_α)          β = z_β      (periodic_beta, the identity onto the angle)`".
+
+**Latent `β`, a periodic angle** (defined per R-72 by TASK-M2-107 for TASK-M2-57, under physics review, the target it builds, in force when it merges; REQ-DEC-056;
+R-865, R-898, R-919). The definitions the full-circle `β` rests on:
+
+- **The link and its inverse.** `β`'s one link is `periodic_beta`, the offset link `β = z_β + π/2` (R-1020), with `z_β`
+  any real number and `β` read modulo `2π` by the decode's `cos β` and `sin β` and by nothing else. Its inverse is
+  `z_β = β − π/2`, taking the encode's signed `β ∈ [0, 2π̂]` (`principia_dd_encode.md` § 3.2) to a representative
+  `z_β` in `[−π/2, 3π/2]` to rounding; its log-det is
+  0, it has no clamp, and its sampling note is "uniform on the circle: no edge to crowd". Its codomain is the circle
+  `S¹`, one period `[0, 2π)`, with no bounds (dd_generation_root § 3.9), so the latent space is `ℝ × S¹ × ℝ⁶`, not
+  `ℝ⁸` (R-898). `z_β` and `z_β + 2πk` decode to the same system to the rounding of `cos` and `sin` at the larger
+  argument, and bit for bit only where the arguments are the same value. `sigmoid_beta`, `tanh_beta` and
+  `softsign_beta`, the bounded links onto `β ∈ [0, π]` before it, are no block's link: their forward maps stay as
+  conversion sources only, on a codomain no slot takes (R-919; dd_generation_root § 3.9). *17 Nov 2026 (R-1020, RQ-824 (b)):* the offset keeps
+  `z = 0` the golden IC. The exact floating-point form of `π/2` in the link and its inverse, at f32 and f64, and the
+  values it gives on the seam, on the `−x` half-axis and at the pole, are TASK-M2-57's definition under physics review
+  (R-72); until it is written, each worked value in this section and in dd_encode § 3.2 and § 3.3 written under the
+  identity (`π̂` and `2π̂` as values of `z_β`, the lift-tie example below, `d(0, 2π̂)`) reads shifted by `−π/2`.
+  *Was:* "`β`'s one link is `periodic_beta`, the identity onto the angle: `β = z_β`, with `z_β` any real number, read
+  modulo `2π` by the decode's `cos β` and `sin β` and by nothing else. Its inverse is the identity too, `z_β = β`,
+  taking the encode's signed `β ∈ [0, 2π̂]` (`principia_dd_encode.md` § 3.2);"
+- **Its seam.** The decode has none: `cos β` and `sin β` are continuous and periodic in `z_β`. The encode, which
+  returns one representative, `β` in `[0, 2π̂]` and `z_β = β − π/2`, has one: the `+x` half-axis of `λ̃`, `β = 0`, at
+  `z_β = −π/2 ≡ 3π/2` (R-1020), the collinear shapes with body 2 on `ρ̃`'s side of the inner pair. A state crossing it
+  from `λ̃_y < 0` to `λ̃_y ≥ 0` encodes from `β` near `2π̂` (`z_β` near `3π/2`) to `β = 0` (`z_β = −π/2`). The `−x`
+  half-axis, `β = π`, `z_β = π/2`, is no seam: the encode is continuous across it, `β = π̂` on it (R-438's select,
+  kept). *17 Nov 2026 (R-1020, RQ-824 (b)):* *Was:* "The decode has none: `cos z_β` and `sin z_β` are continuous and periodic. The encode, which
+  returns one representative in `[0, 2π̂]`, has one: the `+x` half-axis of `λ̃`, `β = 0`, the collinear shapes with
+  body 2 on `ρ̃`'s side of the inner pair. A state crossing it from `λ̃_y < 0` to `λ̃_y ≥ 0` encodes from near `2π̂` to
+  `0`. The `−x` half-axis, `β = π`, is no seam: the encode is continuous across it, `π̂` on it (R-438's select, kept)."
+- **The distance between two `z_β` (R-898).** `z_β` is an angle, so two values of it, encoded or stored, are compared by
+  their distance on the circle, never on the line. The signed difference is `δ(a, b) = a − b − 2π·round((a − b)/2π)`, in
+  `[−π, π]`, and the distance is `d(a, b) = |δ(a, b)|`, in `[0, π]`, both evaluated at f64 (a tie at `π` is `π` either
+  way in `d`). Every finite difference of `z_β` reads `δ`, never `a − b` on the line: the conditioning `κ`'s central
+  difference and the mass columns' three-point stencil (inverse_encode_contract Part 4, "How it is evaluated" and "The
+  mass columns"), so a state on the encode's seam, `β = 0` off the pole, has a finite `z_β` derivative, not one of order
+  `π/h`; the `α`-pole stays `κ = +∞`, `β` being undefined there. `d(0, 2π̂)` is `2π − 2π̂`, a rounding of `2π`, so the
+  two ends of the encode's seam are one point to that rounding. Every check that compares a `z_β` to a tolerance (T1's
+  equivariance and T2's round trip, inverse_encode_contract Part 1; the block inverses' recovery; a CPU/GPU agreement on
+  the encode) reads `d`, and a "`z_β` to tolerance" there means `d` within it. A latent `z` with `z_β` drawn off
+  `[0, 2π̂]` (a ball around the origin takes `z_β < 0`) returns from `E(D(z))` on its representative, `2π` away on the
+  line and `d`-close on the circle. *14 Nov 2026 (R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread
+  4573289687 of PR #533), a definition under R-72, the target TASK-M2-57 builds, in force when it merges:* *Was:* "`z_β`
+  is an angle, so two values of it, encoded or stored, are compared by their distance on the circle, never on the line:
+  `d(a, b) = |a − b − 2π·round((a − b)/2π)|`, in `[0, π]`, evaluated at f64 (a tie at `π` is `π` either way)."
+- **A syzygy crossing on a latent chart.** A trajectory through a syzygy has `β(t)` crossing 0 or π continuously, the
+  two collinear orientations, and no mirror changes it. A trace on a latent chart places each sample's encoded `z_β` on
+  its lift nearest the previous sample's value (the unwrap: `z_β + 2πk` with `|z_β + 2πk − z_prev| ≤ π`, a tie to the
+  smaller `k`), its first sample on the lift the lookup's chart point takes (the rule under "Stored reduced or
+  unreduced" below). So it is continuous through a syzygy at `β = π`, where no wrap occurs, and at `β = 0`, where the
+  unwrap carries it past 0 or `2π` rather than jumping by `2π`. A reduced trace, read without the unwrap, jumps by `2π`
+  at `β = 0`, and that jump is the circle's identification, not the state's. *14 Nov 2026 (R-898; TASK-M2-107; the
+  physics reviewer's ruling on Codex thread 4573289690 of PR #533), a definition under R-72, the target TASK-M2-57
+  builds, in force when it merges:* *Was:* "its first sample on the lift nearest the chart's centre `z₀[1]`."
+- **Stored reduced or unreduced, and where a wrap enters (R-898).** A stored `z_β` is unreduced: a real coordinate on
+  the lift, never reduced to one period by anything that stores or edits it. The affine leaves (pan, zoom, the latent
+  tilts), the latent-line blend and the select act on the lift, linearly, with no wrap, and none is needed: the decode
+  reads `z_β` modulo `2π` through `cos` and `sin`, so a plane along `z_β` sweeps the circle as many times as it is long.
+  A wrap enters at one place only: where an encoded `z_β ∈ [0, 2π̂]` is placed on a latent chart or trace. The lookup's
+  chart point on a latent plane `z₀ + u·q₁ + v·q₂` takes the `k` for which `E(x) + 2πk·e_β` is nearest the plane by
+  least plane residual: the residual of `E(x) + 2πk·e_β − z₀` after its least-squares fit by `u·q₁ + v·q₂`. A tie in
+  residual goes to the `k` whose `(u, v)` is nearest the centre, `(0, 0)`, then to the smaller `k`; ties occur
+  where `2π·e_β` lies in the plane's span (on the latent `z_α × z_β` chart, every lift lies on the plane), and where
+  the minimising `k` falls halfway between two integers, the residual being a quadratic in `k` (a plane with no `e_β`
+  component and centre `z_β = 0`, at a collinear state on the `−x` half-axis: `E(x)[β] = π̂`, and `k = 0` and `k = −1`
+  give `π̂` and `π̂ − 2π`, the same size at f64, so the tie goes to `k = −1`, the `(u, v)` being the same). *14 Nov 2026
+  (R-898; TASK-M2-107; physics review 5907871580 of PR #533, P6), a correction of the definition's claim, the tie rule
+  unchanged:* *Was:* "ties occur only where `2π·e_β` lies in the plane's span (on the latent `z_α × z_β` chart, every
+  lift lies on the plane)." So a state
+  with an exact point on an oblique plane lands on it: on a plane through `z_β = z_q0 = 0` with `q₁ = 4e_β + 4e_q0`, the
+  state at `u = 1` takes `k = 0` and lands at `u = 1`, where the lift nearest the centre, `4 − 2π`, is off the plane. A
+  trace's first sample takes its `k` by the same rule; each later sample keeps the unwrap against the previous sample,
+  as above. *14 Nov 2026 (R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread 4573289690 of PR #533), a
+  definition under R-72, the target TASK-M2-57 builds, in force when it merges:* *Was:* "A wrap enters at one place
+  only: where an encoded `z_β ∈ [0, 2π̂]` is placed on a latent chart or trace, the lookup's chart point and the trace
+  each take the lift nearest their reference (the chart's centre `z₀[1]`, or the previous sample), as above."
+- **How a stored value converts (R-898, R-919 Q3 (a); R-921).** A `z_β` stored under a retired link `L` converts
+  once to `z_β′ = L(z_β) − π/2` (R-1020), the `β` it decoded to, `L(z_β)` in `[0, π]`, less the offset: one period,
+  so stored reduced and unreduced alike. The old golden, `z = 0` under `sigmoid_beta` (`L(0) = π/2`), converts to
+  `z_β′ = 0`. *17 Nov 2026 (R-1020, RQ-824 (b)):* *Was:* "converts once to `z_β′ = L(z_β)`, the `β` it decoded to, in `[0, π]`: one period, so
+  stored reduced and unreduced alike." An
+  old saved chart converts from the `β` link it pins (R-516), else from `sigmoid_beta`, the default it was made under,
+  with a notice on load naming the assumption. With the offset, `z_β′ = L(z_β) − π/2` rounds once and the decode adds
+  `π/2` back, so a converted value need not decode bit for bit to the old state: at f64 a start with `L(z_β)` in
+  `[π/4, π]` still does (the subtraction and the add back are both exact there, by Sterbenz's lemma), and below `π/4`
+  the round trip can move `β` by up to about one ulp of `π/2`; at f32 the converted value is the f64 `β` less the
+  offset, rounded once, where the old f32 decode evaluated `L` at f32, so its last bits can differ. Each is within
+  REQ-ENC-024's `ε_phys`, and R-898's conversion test is what binds. *17 Nov 2026 (R-1020, RQ-824 (b); physics review
+  5944675263 of PR #560, F1):* *Was:* "Since `z_β′` is that `β`, a `β ∈ [0, π]` start converted at f64 decodes to the
+  old f64 state bit for bit (the same `cos β` and `sin β` operands); at f32 the converted value is the f64 `β` rounded
+  once, where the old f32 decode evaluated `L` at f32, so its last bits can differ, within REQ-ENC-024's `ε_phys`
+  (R-898's conversion test)." A record made under a retired link recreates through that link itself (R-921):
+  `L`'s forward of `z_β` at the decode's precision, then the one decode, bitwise the old decode; nothing is converted
+  on recreation. The conversion applies to a point's `z_β` only: `z₀[1]`, a stored latent view's centre, an IC's
+  `z_β`. A plane's basis components along `z_β`, `q₁[1]` and `q₂[1]`, are directions, and `L` of a direction means
+  nothing (under `sigmoid_beta`, `L(0) = π/2`): they are not converted, and a plane with either nonzero is redefined
+  in the new coordinates (R-919 Q2 (b); physics review 5903954379 of PR #533, P5).
+- **The pole at `λ̃ = 0`.** At `α = 0`, `λ̃ = 0` and `β` is undefined at the point: every `z_β` decodes to the same
+  state there. The encode's value is 0, chosen by R-437's select on `λ̃_x = 0` and `λ̃_y = 0`, not `atan2(0, 0)`
+  (`principia_dd_encode.md` § 3.2), so `β = 0` and `z_β = −π/2` (R-1020) at the pole on every backend. *17 Nov 2026 (R-1020, RQ-824 (b)):*
+  *Was:* "so `z_β = 0` at the pole on every backend."
+
+**`α_min = 0` (R-21).** The general link is $\alpha = \alpha_{\min} + \left(\tfrac{\pi}{2} - 2\alpha_{\min}\right)\sigma(z_\alpha)$.
+It is not a numerical guard: nothing divides by α, and a non-zero value would only excise a polar cap. The form above is
+its $\alpha_{\min} = 0$ case, the one in force. The paragraph below describes it.
+
+Both `α`-poles are **represented, not excised** — the old `α_min` cap is removed for full-sphere coverage. `α→0` puts body 2 at the inner-pair CoM (`‖λ̃‖→0`, azimuth `β` undefined *at the point*); `α→π/2` collapses the inner pair (`‖ρ̃‖→0` — a binary collision, `U→−∞`, and the rotation pin undefined). These are *coordinate/collision* degeneracies the pipeline already fences — the collision detector, the conditioning readout, and the saturation flags — not a range the chart carves out. In exact arithmetic finite `z` never reaches the poles (`(π/2)σ(z_α) ∈ (0, π/2)`); in floating point the range is closed, `α ∈ [0, π/2]` (R-417); `β = z_β` (the offset `β = z_β + π/2` from 17 Nov 2026, R-1020) has no range to close (R-898). The lower pole, `α = 0`, is reached where the link's output underflows, at f32 and f64 (σ where `exp(−z)` overflows, the tanh links where `tanh` rounds to −1, the softsign links where `x/(2 + |x|)` rounds to −1). The upper image stays inside the bound: the f32 image of π/2 is generated rounded toward zero (dd_generation_root §3.9), and the f64 nearest value already lies below it, so no saturated control passes `π/2`; the image of π, generated the same way, is the encode's `π̂`. *Was (the built decoder until TASK-M2-57 merges; rewritten 14 Nov 2026 to the periodic `β`, TASK-M2-107):* "in floating point the range is closed, `α ∈ [0, π/2]` and `β ∈ [0, π]` (R-417). The lower poles, `α = 0` and `β = 0`, are reached where the link's output underflows, … The upper images stay inside the bounds: the f32 images of π/2 and π are generated rounded toward zero (dd_generation_root §3.9), and the f64 nearest values already lie below them, so no saturated control passes `π/2` or `π`." A config at a pole, reached at underflow or ingested there, is caught by those flags, and an angle at an exact pole has a defined value, 0, rather than a NaN: it is not obtained from `atan2(0, 0)`, which is the CPU's 0 but undefined in GLSL.std.450 `Atan2` and so in WGSL, but chosen branch-free by a select on the operands against 0, so that CPU and GPU agree (R-437; §3.3, §3.6 and the encode's inverses).
+
+**Every `atan2` at a possible pole (R-437).** Where both operands of an `atan2` can be 0 together, the value there is
+defined, not left to `atan2`: the `atan2` term is 0, the CPU's `atan2(+0, +0)`, and the same 0 for every sign of the
+zeros, so that `−0` operands, whose `atan2(±0, −0) = ±π` on the CPU, give it too. The test is a comparison of each
+operand with the constant 0 (true for `+0` and `−0` alike), and the value a select between 0 and the `atan2` already
+computed, never a branch (the GPU determinism note's discipline). Its places: §3.3's rotation angle `φ` at `ρ = 0`
+(the `α = π/2` collision pole), so `R(−φ)` is the identity there; the encode's `β` (`principia_dd_encode.md` § 3.2, the signed
+angle since TASK-M2-57; *was:* "`β = atan2(|λ̃_y|, λ̃_x)` (R-438)") at `λ̃ = 0` (the `α = 0` pole; `principia_dd_encode.md` §3.1, `principia_inverse_encode_contract.md` Part 3); the shape-sphere
+inverse's `atan2(q, p)` at `p = q = 0` (`principia_chart_reference.md` §3.2), so `ψ = φ_f` there; and §3.6's
+`rho_angle`, defined case by case. The encode's `α = atan2(‖λ̃‖, ‖ρ̃‖)` is not among them: after the scale gauge
+`‖ρ̃‖² + ‖λ̃‖² = I = 1`, so its operands are never both 0.
+
+> **⚠ Orientation gotcha (agents will assume the opposite):** `‖ρ̃‖ = cos α`, so **small α = LARGE inner-pair separation**; `α → π/2` = tight inner binary + distant third body (hierarchical). The α-sphere colouring depends on this. Test 5.9 pins it.
+
+**Unweight and reconstruct** (produces CoM = 0 identically):
+
+```
+ρ = ρ̃ / √μ_ρ          λ = λ̃ / √μ_λ
+r₀₁ = −m₂ λ            r₂ = M₀₁ λ
+r₀  = r₀₁ − (m₁/M₀₁) ρ      r₁ = r₀₁ + (m₀/M₀₁) ρ
+```
+
+(Identities: `r₁ − r₀ = ρ`; inner CoM `= r₀₁`; total CoM `= M₀₁ r₀₁ + m₂ r₂ = 0`; `r₂ − r₀₁ = (M₀₁+m₂)λ = λ` since ΣM = 1.)
+
+*4 Nov 2026 (R-696, RQ-687 (b)):* at f32, the shape sphere's exponential sinc (`crates/kernel/src/chart/shape_sphere.rs`:162) never reads the backend's `sin` near 0; f64's bits do not move (REQ-DEC-053). Whether the kernel takes its own `sin` and `cos` at f32 is deferred to M4, with RQ-629.
+
+### 3.3 Canonicalise
+
+*[mirror-step removal (R-865, R-898, R-919): rewritten 14 Nov 2026 by TASK-M2-107 to the decoder TASK-M2-57 builds, with R-898's periodic `β` and R-919's one `β` link; in force when TASK-M2-57 merges, having passed R-898's conversion test; until then each *Was* below describes the built decoder on `main`, and R-82, R-438 and R-544 stand. In the target, `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. 17 Nov 2026 (R-1020, RQ-824 (b)): the periodic link is the offset `β = z_β + π/2` (`principia_dd_decoder.md` § 3.2), so `z = 0` stays the golden IC; the identity just stated is its Was. This section is rewritten to that target, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
+
+Only needed when the input did **not** come through the canonical frame (physical-frame charts, encode):
+
+```
+rotate all rᵢ, pᵢ by R(−φ),  φ = atan2(ρ_y, ρ_x)
+```
+
+With the canonical-frame decode it is a no-op, on both halves of `β` and across the `λ̃_y = 0` seam as away from it —
+and **that no-op property is a test** (5.5). There is no mirror step (R-865): a state with `λ̃_y < 0` keeps it, the
+decode reaches it at `β ∈ (π, 2π)`, and the shape sphere decodes through this same `C` (§ 3.2, "Latent `β`, a periodic
+angle"). `δ_λ` stays a registry constant, read by nothing, so the entry hashes that cover it stand.
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* *Was:* "```rotate all rᵢ, pᵢ by R(−φ),  φ = atan2(ρ_y, ρ_x) / mirror (full state: every rᵢ AND every
+pᵢ, y → −y)  iff λ̃_y < −δ_λ   (λ̃ = √μ_λ·λ, δ_λ = 10⁻¹²) / |λ̃_y| ≤ δ_λ → no mirror   (the one mirror test, in
+encode's frame — R-82)```" and "With the canonical-frame decode both are no-ops away from the seam — and **that no-op
+property is a test** (5.5)."
+
+**`φ` at the pole (R-437).** At `ρ = 0`, the `α = π/2` collision pole, `φ` is 0, whatever the signs of the zeros, so
+the rotation is the identity there; it is chosen by a select on `ρ_x = 0` and `ρ_y = 0`, not obtained from
+`atan2(0, 0)` (§3.2, "Every `atan2` at a possible pole").
+
+### 3.4 Momentum
+
+**Free decode** (4 controls → physical Jacobi momenta `(p_ρ, p_λ) ∈ ℝ⁴`):
+
+```
+qₖ = q_max · (2σ(z_qk) − 1)
+```
+
+**Jacobi-to-particle** (Σpᵢ = 0 identically):
+
+```
+p₀ = −p_ρ − (m₀/M₀₁) p_λ
+p₁ = +p_ρ − (m₁/M₀₁) p_λ
+p₂ = p_λ
+```
+
+Momenta receive the **same** rotation as positions (§3.3 — the full-state rule; `C` has no mirror step, R-865).
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5907871580 of PR #533, P4), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder on `main`:* *Was:* "Momenta receive the **same** rotation/mirror as positions (§3.3 — the full-state rule)."
+
+**Invariant construction** (the momentum stage under `(L_z, E)` / `(L_z, K)` charts; also the canonical fibre for encode): with `I = 1` at the canonical scale,
+
+```
+v = v⁽ᴸ⁾ + a·w
+v⁽ᴸ⁾ = L_z · J r        (rigid rotation — the minimal-KE realisation of L_z)
+a    = √( 2(K* − L_z²/2) )        feasible iff K* ≥ L_z²/2
+w    = r/√I = r          (the uniform expansion: mass-weighted norm 1, zero CoM drift, zero L_z;
+                          ‖w⁽²⁾‖²_m = 0, which is I = 0 about the CoM only → DEGENERATE)   (R-934)
+```
+
+*14 Nov 2026 (R-934, RQ-764 (a); TASK-M2-93):* the seed is the uniform expansion `w = r/√I` on every chart that uses the
+construction, the invariant charts and Burrau's included. The configuration's CoM is at the origin and `rᵢ × rᵢ = 0`,
+so `r` has no CoM drift and no `L_z`, and `‖r‖²_m = I`: `w` meets the three conditions as it stands, (ii)'s projections
+of `principia_chart_reference.md` §2.2 removing only rounding. It is one seed with no choice, so there is no seed branch
+and no seam, and `NO_QUALIFYING_SEED` is unreachable for `I > 0`; at `I = 0` the norm is an exact 0: where every body is at one
+point the positions relative to the CoM are set to exactly 0 (`rᵢ − c` would be a rounding residue where the masses
+do not sum to 1 exactly), and `β_L`'s divisor is held at 1 where the scaled `I` is 0. Every pixel then starts from `vᵢ = (ω·J + a/√I)·rᵢ`,
+a rotation and a uniform dilation of its configuration: a homographic start. R-82's rule stays a named legacy option,
+its seam declared: where its choice flips (`z_α = 0` on a decoded configuration, `ν = 1/3` on Burrau's) its two seeds
+are orthogonal and the decoded velocity jumps by `‖Δv‖_m = 2√(K* − K_min)`, an artefact of the rule, not physics.
+*Was:*
+
+```
+w    = deterministic unit direction (mass-weighted norm 1, zero CoM drift, zero L_z),
+       from the seeded fallback family: among seeds with ‖w⁽²⁾‖²_m > ε_w take the largest
+       norm, ties by seed order; no seed qualifies → DEGENERATE   (R-82)
+```
+
+### 3.5 Scale gauge
+
+```
+rᵢ ← rᵢ / ℓ,     pᵢ ← √ℓ · pᵢ,     ℓ = √I
+```
+
+No-op when `R̃ = 1` was enforced (canonical frame). This is the same similarity map as encode's step 0 (`√ℓ = I^{1/4}` ✓ consistent with the inverse-encode contract).
+
+### 3.6 ICDescriptor derived quantities (decode-time, pre-integration)
+
+```
+K₀ = Σᵢ ‖pᵢ‖² / 2mᵢ        V₀ = − Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖        (G = 1)
+E₀ = K₀ + V₀ ;   virial_ratio = 2K₀ / |V₀| ;   ρ-magnitudes, ρ_ratio, ρ_angle, r_min_pair₀
+```
+
+The stored `ICDescriptor` is the ledger's field list (`principia_dd_generation_root.md` §3.6: 64 B at f32, explicit padding; its width follows `Real`, R-313).
+`E₀` is **derived** from it (`K₀ + V₀`), not stored (R-86).
+
+`E₀` here must agree with the kernel's `E_0` at t=0 — that agreement is a cross-check view, not an assumption.
+
+*2 Nov 2026 (R-670, RQ-656 (5)(i)): under softening.* At `ε ≠ 0`, `V₀ = − Σ_{i<j} mᵢmⱼ / √(‖rᵢ − rⱼ‖² + ε²)`, the
+dynamics' potential (R-654), and `virial_ratio = 2K₀/|V₀|` and `E₀ = K₀ + V₀` follow it, so `E₀` agrees with the
+kernel's softened `E_0`. `ε` is an input of this stage and of the fragment decode (R-116). `V₀` is finite at a zero
+separation, so at `ε ≠ 0` there is no collision pole: the `−∞` select below applies at `ε = 0` only, and a zero
+separation's `V₀` is the finite softened value, read like any other. At `ε = 0` every line of this section stands.
+
+**The six other fields** *(definition, R-72; REQ-PAY-088, written by TASK-M2-03)*. Each is read after the blocks and
+before integration, so it is the same for every chart. Each but `rho_angle` is read from the decoded `(m, r, p)` alone
+(§2: the integrator's input is `(m, r, p)` and nothing else); `rho_angle` is read from the configuration block's own
+`(ρ̃, λ̃)`, `Φ`'s vectors (R-628; its bullet below). With §3.2's reduced masses and Jacobi vectors, written from the
+positions:
+
+```
+M₀₁ = m₀ + m₁        μ_ρ = m₀m₁ / M₀₁        μ_λ = m₂ · M₀₁
+ρ = r₁ − r₀          λ = r₂ − (m₀r₀ + m₁r₁) / M₀₁          ρ × λ = ρ_x λ_y − ρ_y λ_x
+
+q_mass       = min(m₀, m₁) / max(m₀, m₁)                      ∈ (0, 1]
+rho_mag      = ‖ρ̃‖ = √μ_ρ · ‖ρ‖                               ∈ [0, 1]
+lambda_mag   = ‖λ̃‖ = √μ_λ · ‖λ‖                               ∈ [0, 1]
+rho_ratio    = ‖ρ̃‖ / ‖λ̃‖                                      ∈ [0, ∞]
+rho_angle    = atan2(ρ̃ × λ̃, ρ̃ · λ̃),  ρ̃, λ̃ D_cfg's (R-628)          ∈ (−π, π]
+r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖)             ∈ [0, ∞)
+```
+
+- **`rho_mag` and `lambda_mag` are the mass-weighted magnitudes** `‖ρ̃‖` and `‖λ̃‖`, not the unweighted `‖ρ‖` and `‖λ‖`
+  (R-62 names the fields; this settles which norms). So `rho_mag² + lambda_mag² = I = 1`, each lies in `[0, 1]` (the
+  `|ρ| ∈ [0,1]` of render_gui_spec §10.1), and in the canonical frame `rho_mag = cos α` and `lambda_mag = sin α`.
+- **`rho_ratio` is the mass-weighted ratio** `‖ρ̃‖/‖λ̃‖`, `cot α` in the canonical frame and 1 at the golden IC: the
+  ratio that `rho_ratio`'s provisional log floor assumes (R-419), so the floor stands in its units (REQ-TOOL-163). It
+  reads `+∞` only where `‖λ̃‖` is exactly 0. Where `α = 0` is reached at underflow (§3.2), `‖λ̃‖` is the rounding left
+  in the reconstruction or 0. `rho_mag = 1` there, so the ratio is never `0/0`.
+- **`rho_angle` is the signed angle from `ρ` to `λ`**, in radians on `(−π, π]`: a full-turn angle, for the cyclic view's
+  period of 2π (render_gui_spec §10.1; REQ-TOOL-161). The mass weights are positive scalars, so `ρ̃` and `λ̃` give the
+  same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y` of either sign, `C` having no mirror step, R-865) it is
+  `β` on the upper half and `β − 2π̂` on the lower, to rounding, `β` the encode's signed angle in `[0, 2π̂]`
+  (`principia_dd_encode.md` §3.2): `rho_angle ∈ (−π̂, π̂]` is `β` read on the other representative. Its value is defined case by case,
+  not left to `atan2` (measured by TASK-M2-03), with `π̂` §3.2's image of π (rounded toward zero at f32, the nearest
+  value at f64; R-417), so that the range is `(−π̂, π̂]` at each precision. **Its operands are `Φ`'s (R-628):** `ρ̃` and
+  `λ̃` are the configuration block's own (§3.2's, or a chart's `Φ` output, before unweighting), not the Jacobi vectors
+  re-formed from the positions. At the `α = 0` pole `Φ`'s `λ̃` is 0, while the positions' `λ` is the rounding residue of
+  the reconstruction and `C`'s re-centring, whose size and sign each backend rounds its own way; an angle read from it
+  is conditioned as residue/`‖λ̃‖` and differs between backends (measured on PR #303 out to `‖λ̃‖ ≈ 3·10⁻⁵` at f32).
+  Read from `Φ`'s vectors its error against f64 is at most `1.6·10⁻⁷` rad at f32, and at the pole the operands are `±0`,
+  so the case below gives 0 on every backend. No `C` mirrors (R-865), so its sign is the state's own. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:*
+  "In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0` on the decode's output; after the encode's canonicalisation
+  `λ̃_y ≥ −δ_λ`, R-82's deadband, which is why the encode's `β` reads `|λ̃_y|`, R-438) it is `β ∈ [0, π]`." and "Where
+  `C`'s step 3 mirrors, the sign is negated; no decode mirrors (the shape sphere's `C` does not take step 3, R-544;
+  every other chart's configuration is canonical by construction)." An
+  `(m, r, p)` given with no configuration block (the descriptor-alone entries, which serve tests) reads `ρ` and `λ` from
+  its positions, as above. The cases:
+  - **Antiparallel** (`ρ × λ = 0`, `ρ · λ < 0`): `π̂`, whatever the sign of a zero `ρ × λ`. Collinear bodies whose `y`
+    are exact zeros give `ρ × λ = −0`, and `atan2(−0, x < 0) = −π`, outside the range.
+  - **Parallel, or the pole** (`ρ × λ = 0`, `ρ · λ ≥ 0`): 0. At the pole, `ρ × λ = ρ · λ = 0`, GLSL.std.450 `Atan2`
+    is undefined, so the CPU's `atan2(0, 0) = 0` (§3.2) does not carry to the GPU: the value is the constant 0.
+  - **Elsewhere:** `atan2(ρ × λ, ρ · λ)`, a value above `π̂` taken down to `π̂` (f32's nearest π lies above π), and a
+    value at or below `−π̂`, which stands for the half turn `−π`, read as `π̂`, the half turn the range includes.
+
+  Each case is chosen by a comparison against the constant 0 or `±π̂`, selecting a value already computed: no branch
+  (the GPU determinism note's discipline).
+- **`q_mass` is the inner pair's mass ratio**, lighter over heavier: 1 at equal masses, unchanged when bodies 0 and 1
+  swap labels, and greater than 0 wherever `m₀` and `m₁` both are. Its ledger range is declared `[0, 1]` from this
+  formula (REQ-PAY-097, R-426), a range that does not span zero, so its numeric view is on `ramp_viridis` (R-400).
+- **`r_min_pair_0` is the closest pair's separation at `t = 0`**, a distance in `G = M = I = 1`. The `_0` is the
+  initial-time subscript of `K_0`, `V_0` and `E_0`, not a pair id (R-22's pair ids name a side; this field names
+  none).
+- **The collision pole reaches 0** (measured by TASK-M2-03). In exact arithmetic `α < π/2` keeps `‖ρ̃‖ > 0`, so
+  `rho_ratio` and `r_min_pair_0` stay above 0. In floating point, where `α` saturates at the image of π/2 (§3.2),
+  `‖ρ‖ = cos α/√μ_ρ` can fall under the rounding of `r₀₁` in the reconstruction. At f64, `cos α ≈ 6×10⁻¹⁷` there, so
+  the emitted `r₀` and `r₁` can be equal: then `rho_mag`, `rho_ratio` and `r_min_pair_0` read 0, `V_0` reads `−∞`
+  and `virial_ratio` 0. This is §3.2's binary collision, `U → −∞`, which the pipeline fences; the two log fields'
+  ranges are `[0, ∞]` and `[0, ∞)`, and their views place 0 at the bottom of the ramp.
+- **The ledger declares the log fields' lower bound only.** Its `[0, ∞)`, in the payload ledger and the headers of the
+  views generated from it, means that no upper bound is declared, not that `+∞` is excluded: `rho_ratio` reaches `+∞`
+  at the `α = 0` pole, where `‖λ̃‖` is 0. Its view draws that `+∞` in the invalid colour, on the CPU and the GPU
+  alike, not at the top of the ramp (R-436, below).
+- **The poles' infinite values are stored as computed (R-436).** `rho_ratio`'s `+∞` at `α = 0`, and `V_0`'s `−∞` at
+  the collision pole (measured at f64; at f32 too, wherever the reconstruction makes a pair coincide), with
+  `E₀ = K₀ + V₀ = −∞` there, are the true values: storage holds them, as it never holds
+  NaN (R-79). Every consumer, on the CPU and the GPU alike, colours a non-finite input as invalid: each view that reads
+  a stored `±∞` (`rho_ratio`'s, `V_0`'s, `E_0`'s), each agreement preset that differences against `E₀`
+  (`principia_colour_composition.md` §6) and the energy-agreement view (`principia_render_contract.md` § "Cross-check
+  views (the seams)"). The test compares the stored value, on its bits, as R-114's NaN guard does, before any
+  arithmetic, `K_0 + V_0` included; it never does arithmetic on `±∞` and never writes an infinite literal, since WGSL
+  lets an implementation assume there are no infinities (`principia_gpu_determinism_note.md` § "The discipline", rule
+  4). A declared sentinel or unset value keeps the style its own ruling gives it (`d_min`'s unset `+∞`, R-280, R-399).
+- **Each producer selects its pole value (R-436).** The descriptor follows `Real` (R-313), so on the GPU path the
+  decode stage computes it at f32, and the fragment decode (R-116) forms its own `V` and `E`; the poles are reached at
+  f32 as at f64 (§3.2, R-417). WGSL lets an implementation assume there are no infinities, so a GPU-computed `1/0`, or
+  arithmetic on `∞`, is not pinned to `±∞`, and a finite indeterminate result would pass the consumers' bit test. So
+  each pole value is chosen by comparing its divisor with 0 and a select, as §3.2's `atan2` poles and `rho_angle` are,
+  never by the arithmetic:
+  - `rho_ratio = ‖ρ̃‖/‖λ̃‖`: the `+∞` bits where `‖λ̃‖ = 0`;
+  - `V_0`: the `−∞` bits wherever a pair separation `‖rᵢ − rⱼ‖` is 0, for the whole sum, not a sum with an infinite
+    term;
+  - `virial_ratio = 2K₀/|V₀|`: 0 where `V_0` is non-finite, tested on its bits.
+
+  The bits are written by a bitcast of the integer pattern (`0x7F80_0000` and `0xFF80_0000` at f32,
+  `0x7FF0_0000_0000_0000` and `0xFFF0_0000_0000_0000` at f64), as R-271's packer writes `d_min`'s `+inf`, never by an
+  infinite literal or by `1/0`; the quotient the select discards is never read. The CPU path runs the same source and
+  stores the same bits. The fragment-side agreement preset tests the fragment decode's `V` on its bits before it
+  forms `E` (`principia_colour_composition.md` §6).
+- **At rest only `K_0` and `virial_ratio` are 0** (R-421): at the golden IC (§5) the six fields above read 1, `1/√2`,
+  `1/√2`, 1, `π/2` and `√3`.
+
+### 3.7 Energy normalisation (optional; keep-or-drop is decision B9)
+
+A post-momentum rescale that enforces a target energy $E^*$. Compute $K_0$, check feasibility $E^* \ge U$, then
+
+$$\mathbf p_i \leftarrow \eta_E\,\mathbf p_i, \qquad \eta_E = \sqrt{\frac{E^* - U}{K_0}}.$$
+
+"Off" is an explicit `None`; $E^* = 0$ is a real target, the energy set to zero (R-25). The rescale follows the
+momentum block and precedes the derived invariants, so the `ICDescriptor` describes the rescaled IC ($K_0 = E^* - U$
+to rounding).
+
+**The outcome at $K_0 = 0$ and on $E^* < U$ (R-72; REQ-DEC-041): a label, never a refusal.** $U$ is the decoded
+configuration's potential, so whether $E^*$ is reachable is known only after the decode, pixel by pixel; the outcome
+is a label on that decode. The one refusal is the view-level one below, a forbidding chart with any `Some(E*)`. Here
+$U = V_0$ and $K_0$ are §3.6's, of the decoded $(m, r, p)$, and $E^*$ is the view's finite value. In order:
+
+- **The collision pole, $U = -\infty$** (a pair separation is 0, §3.6, R-436): $E^* - U$ is infinite and no finite
+  $\eta_E$ exists. The decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`.
+- **$E^* < U$:** $\eta_E$ is not real, since the kinetic energy would be negative. The decode is tagged
+  `DEGENERATE(ENERGY_INFEASIBLE)`. As $U < 0$, only a bound target $E^* < 0$ can be infeasible; every $E^* \ge 0$,
+  $E^* = 0$ included, is feasible. *15 Nov 2026 (R-836; REQ-CHART-109; TASK-M2-59):* that holds for $\eta_E$ alone. With
+  $L^*$ held too, $2K^* < L^{*2}$ is infeasible at any $E^*$ (both-held's outcome 3, below), so there a target
+  $E^* \ge 0$ can be infeasible.
+- **$K_0 = 0$, the rest start** (every $\mathbf p_i = 0$): there is no direction to scale. At $E^* = U$ the IC is
+  already at the target: $\eta_E$ is not applied, the momenta stay 0, and the decode is not tagged. At $E^* > U$ the
+  decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`; the golden IC, `z = 0` at rest, is so tagged under any $E^* > U$.
+- **Otherwise** ($E^* \ge U$, some $\mathbf p_i \ne 0$, every separation $> 0$) $\eta_E$ is applied; $E^* = U$ gives
+  $\eta_E = 0$, a rest start.
+
+A tagged decode keeps its momenta as decoded: it is kept, never dropped and never NaN, and, as every `DEGENERATE`, it
+is terminal (§2). A decode the mass block has already tagged keeps that tag. `ENERGY_INFEASIBLE` and
+`ENERGY_UNSCALABLE` belong to `DEGENERATE`'s enumerated cause set (§2).
+
+**$K_0 = 0$ means every $\mathbf p_i$ is 0**, not that the rounded $K_0$ is 0: a non-zero momentum whose squares
+underflow is scaled. The rescale is formed on $\hat{\mathbf p}_i = \mathbf p_i / s$, with $s$ the largest
+$|p_{i,x}|, |p_{i,y}|$:
+$\eta_E\,\mathbf p_i = \sqrt{(E^* - U)/\hat K}\;\hat{\mathbf p}_i$, with $\hat K = K_0/s^2 \ge \tfrac12$ the
+kinetic energy of the $\hat{\mathbf p}_i$ (one component is 1 and every $m_i \le 1$). The two are equal in exact
+arithmetic, and the second stays finite where $(E^* - U)/K_0$ overflows or $K_0$ rounds to 0.
+
+**The branch inputs** (§2's comparison-only rule; R-436): $E^* < V_0$, $E^* = V_0$, $s = 0$ and
+`r_min_pair_0` $= 0$, each a comparison of the emitted values with no arithmetic at the decision, as $M_{01}$'s
+test reads the emitted masses (§3.1). The collision pole is tested on the separation, never by arithmetic or a
+comparison on $\infty$.
+
+**Under softening (R-670, RQ-656 (6)(iii), 2 Nov 2026).** A view refuses `ε ≠ 0` with any `Some(E*)`, `Some(0)`
+included, as a forbidding chart refuses it below: `η_E` never runs on a softened decode, so a pixel's IC does not depend
+on `ε`, and `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` keep their meaning.
+
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* the $(L_z, E)$ chart forbids `Some(E*)`, so that refusal doesn't reach it.
+It runs at `ε ≠ 0`, and its $U$ is then §3.6's Newtonian $V_0$, not the softened form, so a pixel's IC doesn't depend on
+`ε` there either (`principia_chart_reference.md` §2.1).
+
+**Where it is allowed.** Only on charts that decode arbitrary momenta without enforcing an energy: the
+free-Jacobi-momentum chart and the latent chart. **It must be disabled** on the invariant-momentum charts
+$(L_z, E)$ and $(L_z, K)$, where energy is a chart coordinate or is fixed by the momentum construction.
+There it would fight the invariant construction near the feasibility boundary, or, for $(L_z, E)$, collapse
+the energy axis entirely. Each chart declares a boolean `forbids_energy_normalisation`, and chart-aware
+validation (`principia_inverse_encode_contract.md`) refuses any view that combines such a chart with an
+$E^*$ override — every `Some(E*)`, including `Some(0)`, since $E^* = 0$ is a real target and "off" is `None` (R-25).
+
+**Hold `L_z`, and both held** *(R-836, ruling RQ-715 (a) with (i), 7 Nov 2026; definitions, R-72; REQ-CHART-108,
+REQ-CHART-109; ported 15 Nov 2026 by TASK-M2-59 from `principia_chart_composition.md` § 5.3, the physics review of PR
+#422, review 5803342655, folded in there).* Hold `L_z` is $\eta_E$'s twin: an optional step after the decode and before
+the derived invariants, in the same place, its switch an `Option` (`None` is off) whose target `L*` is the view's
+finite value. With it off this path is not entered, the choice being on the switch, never on `L* = L₀`, and $\eta_E$'s
+bits and every decode's are today's. With $\langle a, b\rangle_m = \sum m_i\,a_i\cdot b_i$ and $J(x, y) = (-y, x)$,
+$L_z(v) = \langle Jr, v\rangle_m$ and $\|Jr\|^2_m = I$, so every velocity splits orthogonally:
+
+```
+v = (L₀/I)·J r + δv        ⟨Jr, δv⟩_m = 0        K = L₀²/2I + K_δ        K_δ = ½‖δv‖²_m
+```
+
+- **Hold `L_z` alone** replaces the first term: `v ← v + ((L* − L₀)/I)·J r`, with `I = 1` at every decode; `Σp` stays 0,
+  since the centre of mass is at the origin. That is the `m`-orthogonal projection of `v` onto `{L_z = L*}`, the
+  smallest `‖Δv‖_m` that reaches `L*`; it is not a minimal-kinetic-energy state, since `δv` stays (inverse_encode_contract
+  Part 5's theorem is about the fibre's bottom, not this step). It raises no tag: a rest pixel with `L* ≠ 0` becomes
+  `(L*/I)·Jr`, labelled `not at rest` on a chart declared at rest (R-841).
+- **Both held**, with `K* = E* − U`: `{L_z = L*, K = K*}` is a sphere of radius `√(2K* − L*²/I)` about `(L*/I)·Jr` in
+  the 3-space orthogonal to `Jr`, and the nearest point to `v` keeps `δv`'s direction:
+  `v ← (L*/I)·J r + η·δv`, `η = √((K* − L*²/2I)/K_δ)`, feasible iff `2K* ≥ L*²` at `I = 1`. $\eta_E$ alone would break
+  the held `L_z`, so with both held this step takes $\eta_E$'s place. It is inverse_encode_contract Part 5's
+  `v^(L) + a·w` with `w = δ̂v`.
+
+**The computed form of both held** (REQ-CHART-108). The formula above is not what runs. Near a rigid rotation
+`K₀ − L₀²/2I` cancels, goes negative and makes `η` non-real, and the Lagrange and Euler relative equilibria are such
+states; `L_z(δv)` is rounding-sized, not 0, and `η` multiplies it. So `K_δ` is computed from `δv` itself, in the scaled
+form of $\eta_E$'s $\hat K$ above, never as `K₀ − L₀²/2I`, and `Jr` is projected out a second time after normalising:
+
+```
+δv ← v − (L₀/I)·J r
+s  ← largest component of |δv|                       this line and those after it are reached only when not rigid(v, Jr)
+δ̂  ← δv/s      δ̂ ← δ̂ − (⟨Jr, δ̂⟩_m/I)·J r            the second projection
+K̂  ← ½‖δ̂‖²_m
+v  ← (L*/I)·J r + √((K* − L*²/2I)/K̂)·δ̂
+```
+
+Its fixture is near-rigid: REQ-CHART-102's `hold_lz` at `‖δv‖/‖v‖` from 10⁻¹ to 10⁻⁷ at f32, whose control, one
+projection, fails it (the review's f32 worst `|ΔL_z|`, one pass against two, 1.3 against 4.2·10⁻⁷ at 10⁻⁷). A
+near-rigid pixel stays ill-conditioned in direction, as $\eta_E$ is near rest: f32 and f64 can differ there by `O(1)` in
+`δ̂` with no tag.
+
+**`rigid(v, Jr)`** (R-836's option (i)). The tag at outcomes 4 and 5 is an exact comparison, never a test on `s` or `K̂`,
+which come through divisions at each float's rounding and differ between f32 and f64 on exactly rigid inputs. With
+`w = Jr`, `p` the first index of the largest `|wᵢ|` and `V` the largest `|vᵢ|`, over the six components:
+`|v_b w_p − v_p w_b| ≤ τ·V·|w_p|` for every component `b`, each comparison decided exactly from the bits, as
+`infeasible` is, with no division and no mass (§2's branch-input table). `τ` is a dyadic calibration (REQ-CHART-126,
+R-71), proposed `2⁻²²`, provisional at M2 (R-919 F13 (b)). Not `rigid` gives `|δv|∞ ≥ τV/2`, so a direction exists. A
+pixel within `τ` of rigid is tagged at f64 too, though f64 could compute it.
+
+**Both held's outcomes, in this order** (REQ-CHART-109). Each is a label on the decode, never a refusal:
+
+| # | Test | Outcome |
+|---|---|---|
+| 1 | the collision pole, `U = −∞` (tested on the separation, as $\eta_E$'s is) | `DEGENERATE(ENERGY_UNSCALABLE)` |
+| 2 | `E* < U` | `DEGENERATE(ENERGY_INFEASIBLE)` |
+| 3 | `2K* < L*²`, by the exact `infeasible` routine (§2), never `E* < U + L*²/2I`, which rounds at the decision | `DEGENERATE(ENERGY_INFEASIBLE)`, widened, since this stage raises it |
+| 4 | `rigid(v, Jr)`, at `2K* = L*²`: a rest or rigid `v` on the floor | no tag, and **the rotation still applies**: `v ← (L*/I)·Jr`, so a rest pixel with `L* ≠ 0` becomes the rigid rotation |
+| 5 | `rigid(v, Jr)`, above the floor | `DEGENERATE(ENERGY_UNSCALABLE)`: no direction to scale, and no seed (the rest start is tagged, not seeded, as above) |
+| 6 | otherwise | apply the computed form; on the floor, not `rigid`, it gives `η = 0`, the rigid rotation |
+
+A tagged pixel keeps its momenta as decoded, with neither hold applied, and, as every `DEGENERATE`, is terminal (§2).
+A decode an earlier block has tagged keeps that tag. A non-finite `L*` is refused at the view, as a non-finite `E*` is
+(`principia_chart_decoder_contract.md` Part 5); an `L*` whose `L*²` has no finite float at the decode's own precision is
+read as `principia_chart_reference.md` §2.1's exception reads such a held `L_z`, `infeasible`'s exact sign deciding
+outcome 3 (§2).
+
+**Where it runs, and where it is refused.** On the CPU the step is the view's value applied per pixel; where the GPU
+decode entries run as test entries (R-935, RQ-765 (a)), `L*` and its switch sit in `DecodeUniforms.energy`'s two spare
+words and unused bit, so with the switch off the uniform's bytes are today's, and `sample_with` is the one place the
+step goes. "No new variant" holds only with no tilt target on `L*`: on a free chart (latent, `Mixed`, `MixedMassRatio`,
+the shape sphere, region D's eq. 3 family) `L*` is a view setting like `E*`, which has no tilt, and its slider is a
+slice, by value (R-836); on a chart holding `L_z` by construction R-720 applies, by value, to tilt and slice. A chart
+where `L_z` is an axis refuses every `Some(L*)`, `Some(0)` included (`forbids_lz_hold`, R-25's pattern), and the charts
+that forbid `E*` read `L*` as their held value, so the step never runs after a momentum construction
+(`principia_chart_decoder_contract.md` Part 5). A softened run keeps hold `L_z`, since `L_z` does not read `ε`; hold
+`E` stays refused there (R-670). `I = 1` holds where the step runs, after `C` and the scale gauge, so `L*` is read in
+`C`'s frame.
+
+---
+
+## 4. Seams (its side of each — the integration-test list)
+
+| Seam | The decoder's obligation | Integration test |
+|---|---|---|
+| **2** chart → decoder | accept any well-posed chart's `z` (or chart-map output); apply only registered links | every chart in the lowering appendix decodes without special-casing; DECODE preset view per chart |
+| **3** decoder → integrator | emit exactly `(m, r, p)`, canonical, `G=M=I=1` | identities test-suite (5.1–5.4) run on the kernel's actual input |
+| **8** encode ↔ decode | be invertible per block; the invariant construction is the fibre; decoded states are canonical | T2 round-trip in physical units; ROUNDTRIP preset view dark everywhere except clamps / feasibility edges (inverse_encode_contract Part 8, ROUNDTRIP: "There is no mirror tie: `C` has no mirror step (R-865)"; *14 Nov 2026, TASK-M2-107, physics review 5907871580 of PR #533, P3, the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder on `main`. Was:* "dark everywhere except clamps/feasibility/mirror-tie") |
+| **13** generated sources | consume generated link functions (Rust, from the link registry — never inline transcendentals) | link swap recompiles and re-integrates; `|det J_D|` matches analytic link derivatives where closed forms exist |
+| **1** precision (ring law) | one definition, f64 and f32 builds | linearised-vs-full agreement at quad centres; `O(h²)` error scaling with depth |
+
+---
+
+## 5. Unit tests
+
+Golden anchor: **`z = 0` decodes to the canonical golden IC** — equal masses `(⅓,⅓,⅓)`, `α = π/4` (‖ρ̃‖ = ‖λ̃‖), `β = π/2`, rest (`q = 0`), `I = 1`. Assert its every derived value in f64 and f32. Each is asserted against its hand-computed value, the exact value rounded to that precision (R-421: "hand-computed at f32" means the exact value rounded to f32): bit-exact for the fields that are 0 at rest (`K_0` and `virial_ratio`), and within per-precision tolerances for the others, proposed with evidence by TASK-M2-03 and confirmed at the M2 gate (REQ-PAY-095).
+
+*14 Nov 2026 (R-898; TASK-M2-107; Codex thread PRRT_kwDOUpUQ5c63jmxP and physics review 5907871580 of PR #533, P1 and P2):* under the target TASK-M2-57 builds, `β = z_β` (§ 3.2), so `z = 0` decodes to equal masses, `α = π/4`, **`β = 0`**, at rest: a collinear configuration exactly on the encode's `β = 0` seam (`λ̃_y = 0`), not the golden IC. Where the golden anchor sits under the periodic `β` is not settled: it is RQ-824, a question for the owner, and TASK-M2-57 waits on it. The line above stands as written until RQ-824 is ruled, the built decoder on `main`, and it is kept as main's *Was*.
+
+*17 Nov 2026 (R-1020, RQ-824 (b)):* the owner chose option (b), the offset link `β = z_β + π/2` (§ 3.2), so under the target `z = 0` decodes to `β = π/2`, the golden IC: the golden anchor above stands as written, under the target as on `main`, and TASK-M2-57 no longer waits on RQ-824. The Euler collinear landmarks sit at `z_β = −π/2` (`β = 0`, body 2 on the `+x` side) and `z_β = π/2` (`β = π`, on the `−x` side), interior points reached exactly, with no underflow and no edge (REQ-VAL-020).
+
+1. **Identities (every decode, fuzzed z):** `Σmᵢ = 1`; total CoM `= 0`; `Σpᵢ = 0`; `I = 1` — all to precision-appropriate tolerance.
+2. **Factorisation independence:** perturbing `z_μ` leaves `(α, β)` and `(p_ρ, p_λ)` bit-identical (and each block likewise) — the blocks genuinely do not couple except through the join.
+3. **Range respect:** `α ∈ [0, π/2]`, `|qₖ| ≤ q_max`, for all finite z including ±∞-ish saturation, the range closed (R-417): `α = 0` is reached where the link underflows, at f32 and f64; `qₖ` reaches `±q_max` at saturation; `α` never passes `π/2`, compared at the exact bound. `β = z_β` (the offset `β = z_β + π/2` from 17 Nov 2026, R-1020) has no range (R-898): the decode reads it only through `cos` and `sin`, and the check is that `z_β` and `z_β + 2πk` decode to the same state to the rounding of `cos` and `sin` at the larger argument (§ 3.2). *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; Codex thread PRRT_kwDOUpUQ5c63jmxP and physics review 5907871580 of PR #533, P1), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder on `main`:* *Was:* "**Range respect:** `α ∈ [0, π/2]`, `β ∈ [0, π]`, `|qₖ| ≤ q_max`, for all finite z including ±∞-ish saturation, the range closed (R-417): `α = 0` and `β = 0` are reached where the link underflows, at f32 and f64; `qₖ` reaches `±q_max` at saturation; `α` and `β` never pass `π/2` and `π`, compared at the exact bounds."
+4. **Degenerate tagging:** `DEGENERATE(M01_TINY)` fires iff `M₀₁ < ε` and nothing else in the mass block does; degenerate outputs are tagged, never NaN, never dropped.
+5. **Canonical no-op:** for canonical-frame decodes, saturated controls included, applying §3.3 changes nothing (rotation angle ≈ 0), on both halves of `β` and across the `λ̃_y = 0` seam as away from it; there is no mirror step (R-865). An exception covers only a measured case (R-417): the task that measures the no-op lists here each case where it fails, with its `z`, precision and measurement, reviewed by physics; there is no blanket exception. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; Codex thread PRRT_kwDOUpUQ5c63jmxP and physics review 5907871580 of PR #533, P1), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder on `main`:* *Was:* "**Canonical no-op:** for canonical-frame decodes, saturated controls included, applying §3.3 changes nothing (rotation angle ≈ 0, mirror not taken) away from the `λ̃_y = 0` seam; at the seam, the deadband makes the choice deterministic (same result twice)."
+6. **Reconstruction inverse:** from the emitted `(m, rᵢ)`, recompute `ρ̃, λ̃` via §3.2's definitions and recover `(α, β, R̃ = 1)` to tolerance, `β` the signed encode's value in `[0, 2π̂]`, compared by its distance on the circle `d` (§ 3.2) — the decode and its own definitional inverse agree. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; Codex thread PRRT_kwDOUpUQ5c63jmxP and physics review 5907871580 of PR #533, P1), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder on `main`:* *Was:* "**Reconstruction inverse:** from the emitted `(m, rᵢ)`, recompute `ρ̃, λ̃` via §3.2's definitions and recover `(α, β, R̃=1)` to tolerance — the decode and its own definitional inverse agree."
+7. **Round-trip (T2, physical units):** `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys` over interior z on every chart, the shape sphere's included (decoded states are canonical, R-865; inverse-encode Part 1's T2); clamp-adjacent samples assert the flag, not the residual. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; Codex thread PRRT_kwDOUpUQ5c63jmxP and physics review 5907871580 of PR #533, P1), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder on `main`:* *Was:* "**Round-trip (T2, physical units):** `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys` over interior z (on the shape sphere chart against `C(D(z))`, inverse-encode Part 1's T2, R-544); clamp-adjacent samples assert the flag, not the residual."
+8. **Invariant construction:** for a grid of feasible `(L_z, K*)` at fixed config: `L_z(v) = L_z` and `K(v) = K*` to tolerance; infeasible pairs refused/tagged exactly on `K* < L_z²/2`; the largest-norm qualifying seed is taken (ties by seed order), and the degenerate-seed path fires only where no seed has `‖w⁽²⁾‖²_m > ε_w` (R-82). *14 Nov 2026 (R-934):* that seed clause is R-82's named legacy option's; under the seed in force the construction takes `w = r/√I` on every chart that uses it and `NO_QUALIFYING_SEED` is unreachable for `I > 0` (REQ-DEC-021).
+9. **α-orientation:** `α → 0 ⇒ ‖r₁ − r₀‖` is *maximal* (and `‖λ‖` minimal); monotone crossover at `π/4`. Pins the gotcha.
+10. **Scale-gauge idempotence:** §3.5 applied to canonical output is identity; applied to a deliberately scaled input yields `I = 1` and transforms `E, L_z` per the encode contract's table.
+11. **Linearised decode:** at quad centre, `x₀ + J_D·0 = x₀ =` full decode exactly; at half-width, error vs full decode shrinks `∝ h²` across depths; identical behaviour for an affine chart and a curve chart (chart-agnosticity).
+12. **Cross-backend:** the CPU-f64 and GPU-f32 instantiations (and browser-GPU-via-WGSL) agree on the golden IC and fuzzed interiors to f32 eps-scaled tolerance on continuous values; the degenerate/feasibility **branch tags are bit-identical** across all backends (the comparison-only rule — decoder branch inputs, like feasibility `K* ≥ L_z²/2`, must be comparisons against constants / single-rounded, never a runtime transcendental at the decision; `principia_gpu_determinism_note.md`).
+
+---
+
+## 6. Deferred / flagged
+
+- **Body indexing — settled, 0-based (R-22).** The decode uses bodies **0, 1, 2** (softmax reference = body 0), and `ICDescriptor` names `m0, m1, m2`; pair id `k` is the side opposite body `k` (payload §2). The flag was raised because this is exactly the off-by-one that survives until a collision-pair label is wrong on screen. What a person reads is 1-based (R-449): the screen's labels come from the one display function (payload §2, "What a person reads"), so the conversion happens in one place.
+- **Energy normalisation `η_E`**: specified in §3.7, its outcomes at `K₀ = 0` and on `E* < U` included (REQ-DEC-041).
+  It is kept, with an explicit `Option` off switch (R-25), which settles audit decision B9.
+- **Quantised checkpoint storage** — moot under lockstep (no stored trajectory; temporal note, ratified).
+- **KS-regularised state representation** — not built (R-607, closing RQ-530): the integrator contract's Part 2b
+  regularisations are the four, and a later method, Kustaanheimo–Stiefel among them, would be added by its own ruling;
+  it would change the decoder's output type. *Was:* "**KS-regularised state representation (v2)** — changes the
+  decoder's output type; explicitly out of scope until then."
+
+---
+
+*One rung, three homes (f32 kernel, f64 CPU, inverted in encode), one set of numbers. Small α is a wide pair. Body zero is the reference. z = 0 is the golden IC. Everything invalid is tagged, and every backend takes the same branches (comparison-only rule), while continuous values diverge honestly.*

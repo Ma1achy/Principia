@@ -1,0 +1,37 @@
+source ../../../2026-10-25_replication/papers/boekholt_pz_valtonen_2020_MNRAS_493_3932_arXiv2002.04029.pdf
+  sha256 2ded4252b31b10cc1a7f64112fe9946d41c4ee3dffbb19c6e9f604a712c0dbfc
+  page index 2
+  pymupdf 2.0, matplotlib 3.11.2, numpy 2.4.6
+
+== dots ==
+  2469 filled Bezier-only paths; (width pt, height pt, segments): {(2.904, 2.969, 8): 2469}
+  jet entries that are identical: [(29, 30), (29, 31), (30, 31)]
+
+== panel left (eps = 1e-6) ==
+  frame (86.341, 92.826, 239.783, 347.015)
+  x ticks (pt, label) [(89.292, 0.0), (118.8, 0.1), (148.308, 0.2), (177.816, 0.3), (207.324, 0.4), (236.832, 0.5)]; fit residual 5.6e-16
+  y ticks (pt, label) [(114.637, 0.8), (143.326, 0.7), (172.014, 0.6), (200.703, 0.5), (229.392, 0.4), (258.08, 0.3), (286.769, 0.2), (315.458, 0.1), (344.146, 0.0)]; fit residual 1.3e-06
+  grid step in pt: x 4.6106, y 4.4826
+  paths 1238; black 26; distinct grid points 1212; largest snap offset 0.00069 grid steps
+  per grid point: {'coloured only': 1186, 'coloured, then black over it': 26}
+  RECONCILED: 1238 paths = 1212 coloured (one per grid point) + 26 black drawn over a coloured dot at the same point; extra positions: none
+  LUT index of the coloured dot under each black dot: {255: 26}
+  largest colour residual (L1, RGB on 0-1): 5.3e-08
+
+== panel right (eps = 1e-70) ==
+  frame (324.243, 92.826, 477.685, 347.015)
+  x ticks (pt, label) [(327.194, 0.0), (356.702, 0.1), (386.21, 0.2), (415.718, 0.3), (445.226, 0.4), (474.734, 0.5)]; fit residual 6.7e-16
+  y ticks (pt, label) [(114.637, 0.8), (143.326, 0.7), (172.014, 0.6), (200.703, 0.5), (229.392, 0.4), (258.08, 0.3), (286.769, 0.2), (315.458, 0.1), (344.146, 0.0)]; fit residual 1.3e-06
+  grid step in pt: x 4.6106, y 4.4826
+  paths 1231; black 19; distinct grid points 1212; largest snap offset 0.00069 grid steps
+  per grid point: {'coloured only': 1193, 'coloured, then black over it': 19}
+  RECONCILED: 1231 paths = 1212 coloured (one per grid point) + 19 black drawn over a coloured dot at the same point; extra positions: none
+  LUT index of the coloured dot under each black dot: {255: 19}
+  largest colour residual (L1, RGB on 0-1): 5.3e-08
+
+== grid ==
+  both panels hold the same 1212 grid points: True
+  equal to the 1/64 grid points with 0 < x < 1/2, y > 0, (x + 1/2)^2 + y^2 < 1 (1212 points): True
+  i range 1..31, j range 1..54
+  wrote gg1_fig1_left_eps1e-6.csv
+  wrote gg1_fig1_right_eps1e-70.csv

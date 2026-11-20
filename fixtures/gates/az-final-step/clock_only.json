@@ -1,0 +1,11 @@
+{
+  "description": "The control of REQ-INT-119: the same runs with the landing clamp but no retakes, each interval's clamped step kept where its first-order prediction overshoots the boundary and the clock set to the boundary alone, what R-998 forbids. The clock's overshoot is of second order in the step, so the state is left an error of order η² in every interval, and the fitted order must fall out of 4 ± 0.5, so the gate must fail it.",
+  "eta": 0.001,
+  "n": 32,
+  "landing": "clock_only",
+  "ladder": [0.02, 0.01, 0.005, 0.002, 0.001],
+  "reference_eta": 0.0001,
+  "order_expected": 4.0,
+  "order_margin": 0.5,
+  "expected": "fail"
+}

@@ -1,0 +1,50 @@
+# TASK-M2-81 — Path re-timing, alignment and flags (the path type is TASK-M2-61's, the line on blocks TASK-M2-65's, export TASK-M8-108's; R-873, R-899, R-916)
+
+- **Milestone:** M2
+- **Closes:** REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133
+- **Depends on:** TASK-M2-58, TASK-M2-60, TASK-M2-55, TASK-M2-57, TASK-M2-66, TASK-M2-67, TASK-M2-68, TASK-M2-69, TASK-M2-70, TASK-M2-71, TASK-M2-72, TASK-M2-73, TASK-M2-74, TASK-M2-75, TASK-M2-76, TASK-M2-77, TASK-M2-78, TASK-M2-79, TASK-M2-80
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** none
+- **Size:** ~700 lines
+
+## Goal
+Every arm of the path type, with tilt and zoom calling their own code, a frame recorded by value: re-timing, alignment and the flags, on the CPU. Export through CPU batch is TASK-M8-108's (R-916).
+
+## References
+- `docs/design/principia_chart_composition.md` § "17.2 The mechanism"
+- `docs/design/principia_chart_composition.md` § "17.3 The constraint: bitwise through the mechanism"
+- `docs/design/principia_chart_composition.md` § "17.4 `s = 0` and `s = 1`"
+- `docs/design/principia_chart_composition.md` § "17.5 A frame: valid, reproducible, recorded"
+- `docs/design/principia_chart_composition.md` § "17.6 Per-axis and pair-map morphs"
+- `docs/design/principia_chart_composition.md` § "17.7 Plane to plane"
+- `docs/design/principia_chart_composition.md` § "17.9 Path shape and timing"
+- `docs/design/principia_chart_composition.md` § "17.10 Without a lock: alignment"
+- `docs/design/principia_chart_composition.md` § "17.11 Honesty"
+- `docs/design/principia_chart_composition.md` § "17.14 Tests"
+- `decisions.md` § "R-975 — RQ-787, a blend's interior pixel whose blended masses raise `M01_TINY` between two valid ends: option (a), it saturates and is never blank, by physics review's smooth hold: the blended ratio of the two light masses kept and the pair lifted just to the allowed minimum, the rest of the blend unchanged *(closes RQ-787)*"
+
+## Deliverables
+- `crates/engine/src/`: the path type, its arms, the record and the sim key's morph arm.
+- CPU batch's path lowering: blocks, the great circle, alignment, re-timing, control charts.
+- The planner's row and flag.
+
+## Acceptance tests
+- Physics reviewer: the metric on the blended state in the chart reference (REQ-CHART-124).
+- `cargo test -p engine -- path_gram_flags path_blank_ends path_hold_table path_small_step path_links_cut` — each row and its control, path_small_step's fixture of planes δ = 10⁻¹⁰ apart with `arccos` as its control (REQ-CHART-114).
+- `cargo test -p engine path_lower_half_stays` — two views wholly in the open lower hemisphere, whose ends differ at the chart layer, so the arm function returns `Path::Line`, asserted first, keep `n₂ < 0` at every pixel of every frame, ends included; the other arms assert only signed, no mirror taken (R-544, the owner's rider to RQ-736); mutation: `canon::canonicalise` for the signed form; control: a literal `z` blend (REQ-CHART-133).
+- `cargo test -p engine path_retime` — spread at most 1.25, pinned ends; control: the table off (REQ-CHART-116).
+- *11 Nov 2026 (R-949, R-944):* `cargo test -p engine -- path_gram_flags path_blank_ends path_hold_table path_small_step path_links_morph` — REQ-CHART-114's verify as it now reads: `path_links_morph` in place of `path_links_cut` (across a changed link id the ends are exact and `path_small_step` holds; control: a frame that interpolates the link function itself); `path_blank_ends` under (F), **the condition written in: physics review confirms tag by tag, else V21 as written** (a pixel blank or tagged at either end is blank for `0 < s < 1`); no "no tilt or slice" flag (REQ-CHART-114).
+- *11 Nov 2026 (the physics review of PR #482, review 5852979675, its confirmation 3):* `path_blank_ends` under (F), per tag as composition § 17.11's table has it: an end tagged `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE` or `INVARIANT_INFEASIBLE` on the arm `K* < L_z²/(2I)` blends, the state blended equal to the one the end chart draws at that pixel once R-932's kinds apply, so the frame at `s → 0` converges on the frame at `s = 0`; an end tagged on the arm with no finite `2K*`, `NO_QUALIFYING_SEED` or `M01_TINY`, and a no-state end, stays blank; control: the tagged decode's raw output blended where the end chart draws another state. `path_small_step` has a fixture across an end's feasibility boundary, where the jump is a declared seam, drawn; undeclared, it fails (REQ-CHART-114).
+
+## Notes
+- **Build order (R-863):** it straddles stages 1, 2 and 4: its path type and bitwise tests are stage 1's, now TASK-M2-61's too; its line on blocks is the morph stage 2 bases or one of stage 4's families; its re-timing, alignment and export are stage 4's. No stage edge is made; RQ-744 (B) holds the choice.
+- If path_tilt_bitwise or path_zoom_bitwise can't pass through the path type, the generalisation isn't adopted: stop and report (the owner's rule).
+- Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M2-58 in Depends on holds it.
+- *8 Nov 2026 (R-873, R-899):* **Split (RQ-744 (B) (a)).** REQ-CHART-113's stage-1 tests move to TASK-M2-61; the line on blocks is built by TASK-M2-65 as the locked path's carrier (the brief's Q9 (a), R-899); this task keeps re-timing, alignment and export through CPU batch, stage 4, and depends on every stage-3 task. *Was (acceptance):* "`cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip` — each against the direct operation (REQ-CHART-113)." *Was:* "- **Closes:** REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133"; "- **Depends on:** TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31"
+- *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-106; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Depends on: TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31, TASK-M8-103, TASK-M8-104, TASK-M8-112, TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-126, TASK-M7-72"; "Reviewers: code, qa, physics, perf".
+- *9 Nov 2026 (R-916):* the export arm, the perf reviewer's, goes to TASK-M8-108 (export through CPU batch, a visual adapter); this task keeps the non-visual path maths, reviewed by code, qa and physics. *Was (title):* "The path type, the line on blocks, and export through CPU batch"; *was (Goal):* "Every arm of the path type, with tilt and zoom calling their own code, a frame recorded by value, and export working from day one for any ends."; *was (Reviewers):* "code, qa, physics, perf".
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-949, R-944; the re-plan's § A.1, CHANGE):* its arms shrink to the system blend and window edits, and "CPU-batch path lowering" goes (R-926). `path_links_morph` takes the place of `path_links_cut` (R-949: a chart change that changes a link id morphs like any chart change; R-520's rule for link parameters inside one chart stands). `path_blank_ends` changes under (F), applied per R-369 and conditional on physics review, tag by tag; until it confirms V21 stands, and a disagreement goes to the owner as a queue entry. A frame carries no "no tilt or slice" flag. Where a dated line under Acceptance tests differs from an earlier line for the same requirement, the dated line binds and the earlier one is kept as its *Was*.
+- *11 Nov 2026 (the physics review of PR #482, review 5852979675, its confirmation 3):* (F) is answered tag by tag: three tags blend (`ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, `INVARIANT_INFEASIBLE`'s arm `K* < L_z²/(2I)`) and three do not (`INVARIANT_INFEASIBLE`'s arm with no finite `2K*`, `NO_QUALIFYING_SEED`, `M01_TINY`), for which V21 stands; code 0 has no state. Two conditions bind this task: the state blended is the one the end chart itself draws under R-932's kinds, never the tagged decode's raw output where they differ; and the spatial jump across an end's feasibility boundary, the one of P3's three cases the state blend does not remove, survives at weight `(1 − s)` as a declared, drawn seam with a `path_small_step` fixture. It stays applied per R-369 and listed for the owner's veto. *Was (the condition, the acceptance line of 11 Nov above):* "physics review confirms tag by tag, else V21 as written".
+- *12 Nov 2026 (R-975, RQ-787 (a)):* `path_blank_ends` reads the answer for a blend's interior pixel whose blended masses dip below `ε_M01` between two valid ends: it is not blank, it shows R-975's saturated system (TASK-M2-90 builds the hold). R-923's hold is unchanged.
+- *12 Nov 2026 (R-926 item 5, superseding R-839; R-935 under RQ-765; the chart audit's F7):* every chart is evaluated on the CPU, so "CPU batch" reads as the CPU evaluator and no view is labelled CPU-only; a route label is the fragment's, "closed form" or "table" (REQ-CHART-098's, per R-935). *Was:* "Export through CPU batch" (Goal) and "CPU batch's path lowering" (Deliverables), which stands as written.

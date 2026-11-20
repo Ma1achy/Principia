@@ -1,0 +1,59 @@
+# Mesa's packages for lavapipe from the Actions cache, so a warm run fetches nothing from Ubuntu's archive (the owner,
+# 11 Nov 2026: "Cache the Mesa packages for gpu-lavapipe and the release jobs, keyed on the package list, so CI no longer
+# fetches from Ubuntu's archive each run"; on that day the archive's outage failed 25 Mesa steps). Every hosted job that
+# installs Mesa runs it twice around its `Install Mesa (lavapipe)` step, which stays as it was, `bounded`'s apt calls:
+# - first, `id: mesa`, with the packages that step installs: it restores the cache under the key below and, on a hit,
+#   installs the cached packages with dpkg, offline, and outputs `installed=true`, on which the apt step skips
+#   (`if: … steps.mesa.outputs.installed != 'true'`). On a miss, a cache that does not install, or a runner that is not
+#   GitHub-hosted, it outputs `installed=false`, and the apt step installs as before (a cold miss, today's bounded apt);
+# - then, in `ci.yml`'s `gpu-lavapipe-smoke` alone, with `save: "true"`, on a push to `main` only: it keeps the packages
+#   the apt step downloaded under the key, unless they came from the cache.
+# The key names the job that saves it and is keyed on the runner's image and the exact package list:
+# `mesa-gpu-lavapipe-smoke-<os>-<ImageOS>-<ImageVersion>-<packages, joined by +>`. Every other job restores that key,
+# read-only, as R-337 has a restore-only step name the saving job's key; caches are saved on a push to `main` only
+# (R-326). `mesa_debs.sh` holds the steps; `xtask/tests/ci_mesa_debs.rs` tests it and its uses. Applied per
+# R-369/R-812.
+name: mesa-debs
+description: Mesa's packages from the Actions cache, keyed on the package list and the runner image
+inputs:
+  packages:
+    description: The packages the apt step installs, as it names them
+    required: true
+  save:
+    description: '"true" after the apt step: keep what it downloaded under the key, on a push to main only'
+    required: false
+    default: "false"
+outputs:
+  installed:
+    description: '"true" when the cached packages are installed, so the apt step skips'
+    value: ${{ steps.install.outputs.installed }}
+runs:
+  using: composite
+  steps:
+    - id: key
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+      run: bash "$GITHUB_ACTION_PATH/mesa_debs.sh" key
+    - id: restore
+      if: inputs.save != 'true' && steps.key.outputs.key != ''
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ~/.cache/mesa-debs
+        key: ${{ steps.key.outputs.key }}
+    - id: install
+      if: inputs.save != 'true'
+      shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+        HIT: ${{ steps.restore.outputs.cache-hit }}
+      run: bash "$GITHUB_ACTION_PATH/mesa_debs.sh" install
+    - id: collect
+      if: inputs.save == 'true' && steps.key.outputs.key != '' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/mesa_debs.sh" collect
+    - if: steps.collect.outputs.count != '' && steps.collect.outputs.count != '0'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      with:
+        path: ~/.cache/mesa-debs
+        key: ${{ steps.key.outputs.key }}

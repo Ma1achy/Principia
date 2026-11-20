@@ -1,0 +1,11 @@
+table1: rows A=8 B=8; cells=48; disagreements=0; equal as numbers but not as printed strings (A lost a trailing zero or a '.0')=4
+table2: rows A=8 B=8; cells=24; disagreements=0; equal as numbers but not as printed strings (A lost a trailing zero or a '.0')=0
+table3: rows A=8 B=8; cells=16; disagreements=0; equal as numbers but not as printed strings (A lost a trailing zero or a '.0')=0
+table4: rows A=8 B=8; cells=16; disagreements=0; equal as numbers but not as printed strings (A lost a trailing zero or a '.0')=0
+tableB1: rows A=24 B=24; cells=288; disagreements=0; equal as numbers but not as printed strings (A lost a trailing zero or a '.0')=17
+DIFF	15,15,15	row 1	escaper	A=15	B=15 (0)
+DIFF	15,15,15	row 2	escaper	A=15	B=15 (1)
+DIFF	15,15,15	row 3	escaper	A=15	B=15 (2)
+tableB2: rows A=24 B=24; cells=192; disagreements=3; equal as numbers but not as printed strings (A lost a trailing zero or a '.0')=11
+tableB3: rows A=24 B=24; cells=168; disagreements=0; equal as numbers but not as printed strings (A lost a trailing zero or a '.0')=15
+all tables: cells=752; disagreements=3; trailing-zero-only differences=47

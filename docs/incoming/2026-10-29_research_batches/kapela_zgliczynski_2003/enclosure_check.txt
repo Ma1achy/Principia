@@ -1,0 +1,9 @@
+v: N = [0.347116886243943, 0.347116889993313]  inside [x0 +- 1e-6] = [0.347115768716, 0.347117768716]: True; width 3.749370E-9, printed diam 3.749369E-9, |diff| 1.0e-15; midpoint 0.347116888118628; x0 - midpoint -1.194e-07
+u: N = [0.532724941587373, 0.532724949187495]  inside [x0 +- 1e-6] = [0.532723944657, 0.532725944657]: True; width 7.600122E-9, printed diam 7.600121E-9, |diff| 1.0e-15; midpoint 0.532724945387434; x0 - midpoint -7.304e-10
+period: not printed; from 53 steps of h = 0.01 to the section, T = 12 T~ in (6.24, 6.36] (derived, coarse)
+E(v, u) at the centre of N: x1, y1, x2, y2, x3, y3, vx1, vy1, vx2, vy2, vx3, vy3 =
+  1, 0, -1, 0, 0, 0, 0.347116888118628, 0.532724945387434, 0.347116888118628, 0.532724945387434, -0.694233776237256, -1.065449890774868
+E over the enclosure: [-1.287142011685, -1.287141979584]; VO section 0 quotes -1.2871419918: inside True (to its 10 decimals: True)
+VO section 0 period T = 6.32591398 lies in the derived (6.24, 6.36]: True
+threebodyorbits V.1.A pub_* (vx1, vy1) = (0.347113, 0.532727): v inside False (+3.886e-06 beyond), u inside False (+2.051e-06 beyond)
+threebodyorbits V.1.A ref_* (vx1, vy1) = (0.34711688811892694, 0.5327249453880303): v inside True (), u inside True ()

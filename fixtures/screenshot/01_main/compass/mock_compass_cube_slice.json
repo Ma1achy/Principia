@@ -1,0 +1,13 @@
+{
+ "made": "Compared in geometry and labelling, not colour (R-451 B8). The reference records and renders under reference/ were made by make_reference.py: docs/gui/reference/principia_nav_cube.html run headless in Google Chrome at the compass's 172-point square, its state set to the run's parameters, one draw() recorded (each record carries its own `made`). Positions are in points from the square's top left, within `tolerance`; an edge's opacity within `opacity_tolerance`, as the reference's canvas keeps it to 8 bits and writes it to 3 decimals. Slice mode, τ₁ = τ₂ = γ = 0, z₀ +0.25 of range on e_d and 0 on e_a, e_b: wholly against the reference's slice mode at depth +0.25: the corners, the edges' order, opacity and width, the rectangle (±1, ±1, 0.25) and its place in the edge order, the labels Width, Depth and Height with their corner numbers, and the readout.",
+ "tolerance": 0.01,
+ "opacity_tolerance": 0.003,
+ "reference": "reference/slice_+0.25.json",
+ "polygon": {
+  "from": "reference",
+  "record": "reference/slice_+0.25.json"
+ },
+ "labels": {
+  "from": "reference"
+ }
+}

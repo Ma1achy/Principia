@@ -1,0 +1,31 @@
+# TASK-M7-72 — Contours of any registered primitive
+
+- **Milestone:** M7
+- **Closes:** REQ-RENDER-121
+- **Depends on:** TASK-M2-66, TASK-M7-43
+- **Needs (earlier milestones):** REQ-CHART-096
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** none
+- **Size:** ~200 lines
+
+## Goal
+The figure's Tier 1: a contour of any registered primitive's forward, display-only and never scored.
+
+## References
+- `docs/design/principia_chart_composition.md` § "10.2 Tier 1 overlays"
+- `docs/design/principia_lines.md` § "4.1 The expression"
+
+## Deliverables
+- `crates/render/src/lines/contours/`: the new variables and `acos`.
+
+## Acceptance tests
+- `cargo test -p render contour_primitives` — each forward on the decode; the figure's two families at exact angles; no scored field reached; control: an angle off by 1° (REQ-RENDER-121).
+
+## Notes
+- **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
+- Waits on the owner's ruling of the design doc as a whole, no single item mapping here (the order's A6, "Nothing implemented until ruled"); R-917's hold holds it, no longer an edge: R-916 took TASK-M2-58 (was TASK-M4-37), the rulings applied, out of Depends on, and no M3 to M9 task starts until M2's gate passes, which waits on TASK-M2-58 as an M2 task. *Was:* "TASK-M4-37 in Depends on holds it."
+- *8 Nov 2026 (R-873):* **Build order:** stage 3 of R-863's order, released by dispatch after stage 2 (TASK-M8-117, now TASK-M2-65), its milestone kept (RQ-744 (A) (b)); no edge to the M8 task is made. TASK-M8-106 (now TASK-M2-81) and TASK-M8-108, stage 4, depend on it.
+- *9 Nov 2026 (R-916, R-917):* the line above is a record: R-916 supersedes R-873 (A) (b), stage 3's release by dispatch with the milestone kept. Stage 3's maths is M2's; this task keeps M7, depends on TASK-M2-66 and waits for M2's gate by R-917's hold, not for stage 2 (TASK-M8-117 then, TASK-M2-65 now, in M2). TASK-M2-81 (formerly TASK-M8-106) is M2's and no longer depends on this task; TASK-M8-108 still does.
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M4-37, TASK-M7-43, TASK-M4-33".
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-952):* each registered forward is evaluated on the CPU's decoded state; REQ-RENDER-121's verify reads so. Its control, an angle off by 1°, stays. Where the `contour_primitives` line above has "each forward on the decode", read the CPU's decoded state.
+- *17 Nov 2026 (R-1034; logged in `plan/DECISIONS-LOG.md`):* the reviewers follow the diff's area: gui no longer reviews this task, whose deliverables are outside that area. *Was (Reviewers):* "code, qa, gui, physics".

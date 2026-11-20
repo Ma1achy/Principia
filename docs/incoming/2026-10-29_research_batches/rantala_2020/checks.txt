@@ -1,0 +1,21 @@
+Rantala et al. 2020 (MNRAS 492, 4131), Section 5.2, printed p. 14 (PDF p. 14). Reading B: eye, from the page image;
+second reading: Vision OCR of the same page (p14_ocr_values.txt: the OCR lines holding the values, with their line numbers in the page OCR). Both agree on every value; the OCR renders the
+approximately-equal signs as '=' and '~' (typography only) and loses the superscripts of 10^8 and 10^-4
+('108', '10°', '10-4'); those three are resolved against the page: 10^8, 10^8, 10^-4.
+
+Labelling. The prose says the masses sit "in such a manner that the least massive SMBH is opposite to the shortest
+side and so on" (Burrau's arrangement; Aarseth et al. 1994a: m1 = 3 at (1, 3), m2 = 4 at (-2, -1), m3 = 5 at (1, -1),
+r12 = 5, r23 = 3, r31 = 4, docs/incoming/2026-10-27_papers/TARGETS.md). The printed subscripts r13 = 30, r12 = 40,
+r23 = 50 put the 50 pc side between M2 and M3, i.e. opposite M1, the least massive body: the longest side, not the
+shortest. The subscripts contradict the prose; the prose, the stated outcome (M1 escapes) and the beta1 value
+(71.4 deg, Aarseth et al. 1994a's "beta = 71.4 degrees, corresponding to the original Pythagorean triangle") all
+match Burrau's arrangement. Read: the subscripts are a slip; the run is Burrau's set-up scaled by 10 pc and 10^8 M_sun.
+
+Units. Lengths scale by 10 (pc per Burrau unit), masses by 10^8 M_sun; a, e and beta are compared after removing
+the scale: a23 = 5.5 pc -> 0.55 Burrau units; e23 and beta1 are scale-free. Two-figure values (~), no stated
+uncertainty beyond the 1e-4 AR-CHAIN/MSTAR agreement.
+
+beta1 orientation: settled by the corpus, not an RQ. Rantala eq. 32 defines beta1 = arctan(Y1/X1) "if the initial
+triangle setup is oriented as in Fig. 1 of Aarseth et al. (1994)"; that orientation is transcribed in
+docs/incoming/2026-10-27_papers/TARGETS.md (Aarseth et al. 1994a, common set-up), and Aarseth's own value for the
+undisplaced triangle is 71.4 deg (TARGETS.md P-1, p. 4 quote): the two papers agree.

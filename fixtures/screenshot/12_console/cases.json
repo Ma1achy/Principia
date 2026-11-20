@@ -1,0 +1,9 @@
+{
+  "cases": [
+    {
+      "name": "mock_console",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover", "raise_warning", "raise_error"] },
+      "artboard": "docs/gui/design/12_console.png"
+    }
+  ]
+}

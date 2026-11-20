@@ -1,0 +1,5 @@
+{
+  "description": "The register's δ_dep: strictly inside the measured gap between the figure-eight's largest first-return chord and the generic fixtures' smallest greatest chord, the rule's proposal, with the ledger's departed row at packed_a bit 15 and the schema version moved (REQ-VAL-055, R-37, R-545).",
+  "delta": "register",
+  "expected": "pass"
+}

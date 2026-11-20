@@ -1,0 +1,21 @@
+{
+  "render": {
+    "shader": "coords.wgsl",
+    "fragment": "fs_main",
+    "width": 64,
+    "height": 64,
+    "constants": { "W": 64, "H": 64 },
+    "prepend": ["crates/render/shaders/wgsl/lib/coords.wgsl"]
+  },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass",
+  "lines": {
+    "left_column": { "from": [0, 0], "to": [0, 63] },
+    "bottom_row": { "from": [0, 63], "to": [63, 63] }
+  },
+  "symptoms": [
+    { "name": "red_mean", "kind": "mean", "channel": "r" },
+    { "name": "green_mean", "kind": "mean", "channel": "g" }
+  ]
+}

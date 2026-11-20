@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/kernel",
+    "crates/ledger",
+    "crates/engine",
+    "crates/render",
+    "crates/gui",
+    "crates/validation",
+    "crates/prin",
+    "xtask",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false

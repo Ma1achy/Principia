@@ -1,0 +1,2 @@
+Orlov, Petrova & Martynova 2002 Table 1: reading B (eye) vs OCR, number sequence.
+numbers A=8 B=8; disagreements 0

@@ -1,0 +1,22 @@
+DIFF	2	nmin	A=	B=3
+DIFF	2	vh	A=	B=v
+DIFF	2	phi	A=	B=-+
+DIFF	3	vh	A=	B=v
+DIFF	4	phi	A=	B=+-
+DIFF	5	vh	A=	B=h
+DIFF	5	phi	A=	B=+-
+DIFF	7	vh	A=	B=v
+DIFF	8	vh	A=	B=v
+DIFF	11	vh	A=	B=h
+DIFF	12	nmin	A=	B=5
+DIFF	14	nmin	A=	B=5
+DIFF	15	phi	A=	B=+-
+DIFF	16	nmin	A=	B=6
+DIFF	16	vh	A=	B=v
+DIFF	16	phi	A=	B=-+
+DIFF	17	nmin	A=	B=6
+DIFF	17	vh	A=	B=v
+DIFF	18	nmin	A=	B=6
+DIFF	19	nmin	A=	B=6
+DIFF	19	phi	A=	B=+-
+rows A=19 B=19; cells compared=152; disagreements=21

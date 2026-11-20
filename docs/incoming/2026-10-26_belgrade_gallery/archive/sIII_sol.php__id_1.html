@@ -1,0 +1,70 @@
+
+<!DOCTYPE html>
+<html>
+<head><title>3body</title>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<link rel="stylesheet" href="style.css" type="text/css" />
+
+<script type='text/javascript'>
+var index = 0;
+var text = 'NAME: III.3.A.β \n DISCOVERED: 2012 \n FREE GROUP ELEMENT: abABAbaBABab \n PERIOD: 10.963252\n ENERGY: -1.939048 \n ANGULAR MOMENTUM: ZERO \n INITIAL POSITIONS: (-1,0), (1,0), (0,0) \n INITIAL VELOCITIES: (p1,p2), (p1,p2), (-2p1,-2p2) \n p1: 0.282699\n p2: 0.327209\n REF: f\n \n';
+
+
+
+
+
+// Here you can put in the text you want to make it type.
+function type()
+{
+if(text.charAt(index)=='\n') document.getElementById('screen').innerHTML += '<br><br>';
+//else if(text.charAt(index)=='g') document.getElementById('screen').innerHTML += 'g<sub>1</sub>';
+//else if(text.charAt(index)=='h') document.getElementById('screen').innerHTML += 'g<sub>2</sub><sup>-1</sup>';
+//else if(text.charAt(index)=='c') document.getElementById('screen').innerHTML += 'a<sup>-1</sup>';
+//else if(text.charAt(index)=='d') document.getElementById('screen').innerHTML += 'b<sup>-1</sup>';
+else if(text.charAt(index)=='f') document.getElementById('screen').innerHTML += '<a href="ref.php.html">[8]</a>';
+else if(text.charAt(index)=='s') document.getElementById('screen').innerHTML += '<a href="ref.php.html">[9]</a>';
+else if(text.charAt(index)=='t') document.getElementById('screen').innerHTML += '<a href="ref.php.html">[11]</a>';
+
+else document.getElementById('screen').innerHTML += text.charAt(index);
+index += 1;
+var t;
+if(index<text.length) t = setTimeout('type()',40);
+// The time taken for each character here is 100ms. You can change it if you want.
+}
+</script>
+
+</head>
+
+<body onload="type()">
+<center>
+<table>
+<tr>
+<td class=beli width=300px>
+<center>
+<br>
+<center> <b>SHAPE SPHERE:</b> </center>
+<img border=0 src="img/new/yy1b.anim.gif" />
+<center> <b>REAL SPACE:</b> </center>
+<img border=0 width=300 src="img/new/yy1b.real.gif" />
+</center>
+</td>
+<td width=700px>
+<div id="screen"></div>
+</td>
+
+</table>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try{
+var pageTracker = _gat._getTracker("UA-2441426-1");
+pageTracker._trackPageview();
+} catch(err) {}
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,2 @@
+Moore & Nauenberg 2006 initial conditions (p. 11): reading B (eye) vs OCR of the page image (numbers inside the parentheses of each line).
+rows B_eye=3 OCR=3; cells compared 15; disagreements 0

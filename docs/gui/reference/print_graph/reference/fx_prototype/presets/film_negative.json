@@ -1,0 +1,56 @@
+{
+ "name": "Film negative",
+ "doc": "Colour negative on the orange C-41 base, grain, dust and fine scratches.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "gn": {
+   "op": "grain",
+   "p": {
+    "seed": "$seed",
+    "size": 1.0
+   }
+  },
+  "du": {
+   "op": "draw",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "kind": "random"
+   }
+  },
+  "base": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "gn": "gn",
+    "du": "du.out"
+   },
+   "p": {
+    "f": "neg = 1 - blur(I, 0.6)\nout = array([0.93, 0.60, 0.36])*(0.18 + 0.82*neg)\nout = out**array([0.9, 1.0, 1.15])\nout = out*(1 + 0.06*gn*(0.5+neg.mean(-1)))[..., None]\ndust = gaussian((du < 0.00015).astype(float), 0.9)*10\nout = out*(1-clip(dust, 0, 0.6))[..., None]"
+   }
+  },
+  "sc": {
+   "op": "scratches",
+   "in": {
+    "image": "base",
+    "rng": "du.rng"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "sc.out"
+   }
+  }
+ },
+ "out": "out"
+}

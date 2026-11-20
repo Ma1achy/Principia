@@ -1,0 +1,875 @@
+//! The link registry's emitter (dd_generation_root §1, §2: "link functions … are generated Rust (compute side,
+//! monomorphised, no assembler)"; §3.9): writes the kernel's `generated/constants.rs`, the chart constants at each
+//! `Real` (REQ-DEC-009) with the curve projection's search constants and step 0's skip tolerance, and
+//! `generated/links.rs`, each registry entry as a type implementing `Link`, its forward, inverse and log-det generic
+//! over `Real` and `no_std`, so the one kernel source compiles them for SPIR-V and the CPU alike (canonical_spec §1).
+//!
+//! Each tree is written as straight-line code, one `let` per operator node in evaluation order, an equal subtree
+//! evaluated once; `input(i)` is `v[i]`, `param(name)` the chart constant `R::NAME` and `num(v)` the literal constant
+//! that holds it. The per-block selection is a type, `Select<…>`, one link type parameter per slot, each bounded by
+//! its slot's codomain, so a link of another codomain does not compile and a link change is another monomorphised
+//! variant (REQ-GEN-013, REQ-GEN-015); `Defaults` resolves each slot's default by name.
+//!
+//! Generation refuses a registry [`crate::links::check`] refuses, naming each problem ([`refused`]).
+
+use std::f64::consts::{FRAC_PI_2, PI};
+use std::fmt::Write as _;
+use std::path::PathBuf;
+
+use crate::gen::Generated;
+use crate::links::{self, Codomain, Expr, LinkBuilder, Op, Param, Slot, Tunable};
+use crate::schema::{Entry, Word};
+
+/// Where the link functions are written, relative to the workspace root.
+pub const LINKS_PATH: &str = "crates/kernel/src/generated/links.rs";
+
+/// Where the chart constants are written, relative to the workspace root.
+pub const CONSTANTS_PATH: &str = "crates/kernel/src/generated/constants.rs";
+
+/// The problems [`crate::links::check`] finds in the registry `builders`; empty when it generates.
+/// [`crate::gen::generate`] refuses [`crate::links::builders`] with them.
+pub fn refused(builders: &[LinkBuilder]) -> Vec<String> {
+    links::check(builders).err().unwrap_or_default()
+}
+
+/// The emitter [`crate::gen::EMITTERS`] runs: the registry's two files. [`crate::gen::generate`] refuses a registry
+/// with problems before any emitter runs.
+pub fn emit(_words: &[Word], _entries: &[Entry]) -> Vec<Generated> {
+    generate(links::builders()).expect("generation refuses a registry with problems first")
+}
+
+/// The two files of the registry `builders` with the ledger's chart constants and slots, or every problem
+/// [`crate::links::check`] finds.
+pub fn generate(builders: &[LinkBuilder]) -> Result<Vec<Generated>, Vec<String>> {
+    let registered = links::check(builders)?;
+    let mut lits = Vec::new();
+    let mut code = String::new();
+    let tunables = links::tunables();
+    for (l, c) in &registered {
+        let tunable: Vec<&str> = tunables
+            .iter()
+            .filter(|t| t.entry == l.name)
+            .map(|t| t.param)
+            .collect();
+        write_link(&mut code, l, *c, &tunable, &mut lits);
+    }
+    let names: Vec<&str> = registered.iter().map(|(l, _)| l.name).collect();
+    let selection = selection(&links::slots(), &registered)?;
+    Ok(vec![
+        Generated {
+            path: PathBuf::from(CONSTANTS_PATH),
+            contents: constants_file(links::CHART_CONSTANTS, tunables),
+        },
+        Generated {
+            path: PathBuf::from(LINKS_PATH),
+            contents: links_file(&lits, &code, &names, &selection),
+        },
+    ])
+}
+
+/// `name` in CamelCase: `softmax_tanh` → `SoftmaxTanh`.
+fn camel(name: &str) -> String {
+    name.split('_')
+        .map(|w| {
+            let mut c = w.chars();
+            c.next()
+                .map(|f| f.to_ascii_uppercase().to_string() + c.as_str())
+                .unwrap_or_default()
+        })
+        .collect()
+}
+
+/// A Rust literal of `v` at the float type `ty` (`f32` or `f64`): the shortest literal that reads back to `v` at
+/// `ty`, except for π and π/2, whose f64 values are `core`'s constants. At f64 those are the nearest values,
+/// `core::f64::consts::PI` and `FRAC_PI_2`, which lie below π and π/2; at f32 they are the images rounded toward
+/// zero, `fl↓(π)` (bits `0x4049_0FDA`) and `fl↓(π/2)` (`0x3FC9_0FDA`), not the nearest values `0x…_0FDB`, which lie
+/// above, so no bounded link's f32 image passes its upper bound (R-417; dd_generation_root §3.9, "The closed range
+/// and the f32 images of π/2 and π"). Either way no approximation of π is spelt out as a decimal.
+fn literal(v: f64, ty: &str) -> String {
+    if let Some((_, name, toward_zero)) = named_images()
+        .iter()
+        .find(|(k, ..)| k.to_bits() == v.to_bits())
+    {
+        return if ty == "f32" {
+            let (hi, lo) = (toward_zero >> 16, toward_zero & 0xFFFF);
+            format!("f32::from_bits(0x{hi:04X}_{lo:04X})")
+        } else {
+            format!("core::{ty}::consts::{name}")
+        };
+    }
+    if v.is_infinite() {
+        let sign = if v.is_sign_positive() { "" } else { "NEG_" };
+        return format!("{ty}::{sign}INFINITY");
+    }
+    if ty == "f32" {
+        format!("{:?}", v as f32)
+    } else {
+        format!("{v:?}")
+    }
+}
+
+/// π and π/2, each with its `core` constant's name and its f32 image rounded toward zero, by bits (R-417). Interface
+/// data: the emitter's rounding rule ([`literal`]), not register constants (REQ-SYS-082).
+fn named_images() -> [(f64, &'static str, u32); 2] {
+    [
+        (PI, "PI", 0x4049_0FDA),
+        (FRAC_PI_2, "FRAC_PI_2", 0x3FC9_0FDA),
+    ]
+}
+
+/// `v` at f32 as the emitter writes a literal (R-417): π and π/2 rounded toward zero, every other value to nearest, as
+/// a tunable's f32 value is (R-481 G7).
+pub fn f32_image(v: f64) -> f32 {
+    named_images()
+        .iter()
+        .find(|(k, ..)| k.to_bits() == v.to_bits())
+        .map_or(v as f32, |(_, _, bits)| f32::from_bits(*bits))
+}
+
+/// The chart constants' file: the trait `ChartConstants`, one associated constant per chart constant, at f32 and f64.
+fn constants_file(chart: &[Param], tunables: &[Tunable]) -> String {
+    let (bounds, members): (Vec<&Param>, Vec<&Param>) = chart
+        .iter()
+        .partition(|k| OPERATOR_BOUNDS.contains(&k.name));
+    let mut s = String::from(
+        "//! Generated by `cargo xtask codegen` from the link registry's chart constants (`crates/ledger/src/links.rs`,\n\
+         //! their values the constants register's, `crates/ledger/src/constants.rs`), the register's curve projection\n\
+         //! search constants, step 0's skip tolerance, the tilt's angles, the f32 sinc's cut and series, the end of\n\
+         //! `u32`'s range, the shape readout's and the collision floor's record's bounds and bias; do not edit.\n\n\
+         use spirv_std::num_traits::{Float, NumCast};\n\n\
+         /// The chart constants at a float type (dd_generation_root §3.9; REQ-DEC-009): the decode and encode formulae\n\
+         /// and the link functions read each by name, never as a literal.\n\
+         pub trait ChartConstants: Copy {\n",
+    );
+    for (i, k) in members.iter().enumerate() {
+        if i > 0 {
+            s.push('\n');
+        }
+        let _ = writeln!(s, "    /// `{}` = {:?}.", k.name, k.value);
+        let _ = writeln!(s, "    const {}: Self;", k.name.to_uppercase());
+    }
+    s.push_str("}\n");
+    for ty in ["f32", "f64"] {
+        let _ = writeln!(s, "\nimpl ChartConstants for {ty} {{");
+        for k in &members {
+            let _ = writeln!(
+                s,
+                "    const {}: {ty} = {};",
+                k.name.to_uppercase(),
+                literal(k.value, ty)
+            );
+        }
+        s.push_str("}\n");
+    }
+    s.push_str(&link_params(tunables));
+    for k in bounds {
+        assert!(
+            f64::from(k.value as f32).to_bits() == k.value.to_bits(),
+            "operator bound `{}` = {:?} is not exact at f32",
+            k.name,
+            k.value
+        );
+        let _ = write!(
+            s,
+            "\n/// `{name}` = {v:?}: a chart constant an operator reads, not a tree (dd_generation_root §3.9), at the float\n\
+             /// type `R`, the register entry's value converted from f32, where it is exact. Emitted as a function of `R`\n\
+             /// rather than a [`ChartConstants`] item: an operator's bound is one number at every float type the links are\n\
+             /// evaluated at, not a per-type choice, so a type outside the kernel's two (a test's dual number) reads it too.\n\
+             /// Were the conversion ever to fail, the bound would be `R`'s largest finite value, and the operator unclamped.\n\
+             #[inline]\npub fn {name}<R: Float>() -> R {{\n    let v: f32 = {lit};\n    \
+             <R as NumCast>::from(v).unwrap_or_else(R::max_value)\n}}\n",
+            name = k.name,
+            v = k.value,
+            lit = literal(k.value, "f32"),
+        );
+    }
+    s.push_str(&curve_search());
+    s.push_str(&scale_skip());
+    s.push_str(&tilt_angles());
+    s.push_str(&hidden_indices());
+    s.push_str(&saved_words());
+    s.push_str(&sinc());
+    s.push_str(&u32_range());
+    s.push_str(&shape_readout());
+    s.push_str(&coll_floor());
+    s
+}
+
+/// `LinkParams`, one field per tunable parameter of the registry `tunables` in their order, and its `DEFAULT`, each
+/// field its chart constant (R-481 G7; dd_generation_root §3.9, "Tunable parameters").
+fn link_params(tunables: &[Tunable]) -> String {
+    let mut params: Vec<&str> = Vec::new();
+    for t in tunables {
+        if !params.contains(&t.param) {
+            params.push(t.param);
+        }
+    }
+    let mut s = String::from(
+        "\n/// The tunable link parameters' values at a float type (R-481 G7; dd_generation_root §3.9, \"Tunable\n\
+         /// parameters\"): one field per tunable parameter of the registry, which the link functions' `_at` forms read in\n\
+         /// place of the chart constant of its name, so a parameter change is a value and not a compiled variant. On the\n\
+         /// GPU it is a uniform (TASK-M4-21).\n\
+         #[derive(Clone, Copy, Debug, PartialEq)]\npub struct LinkParams<R> {\n",
+    );
+    for p in &params {
+        let entries: Vec<String> = tunables
+            .iter()
+            .filter(|t| t.param == *p)
+            .map(|t| format!("`{}`", t.entry))
+            .collect();
+        let _ = writeln!(
+            s,
+            "    /// `{p}`, tunable on {}.\n    pub {p}: R,",
+            entries.join(", ")
+        );
+    }
+    s.push_str(
+        "}\n\nimpl<R: ChartConstants> LinkParams<R> {\n    \
+         /// The defaults, each field its chart constant (R-481 A2): the link functions at them are bitwise those that\n    \
+         /// read the constants.\n    pub const DEFAULT: Self = LinkParams {\n",
+    );
+    for p in &params {
+        let _ = writeln!(s, "        {p}: R::{},", p.to_uppercase());
+    }
+    s.push_str("    };\n}\n");
+    s
+}
+
+/// The curve projection's search constants, the register's `curve_grid_log2`, `curve_golden_steps` and `inv_phi`
+/// (dd_encode §3.4), which `kernel::encode::curve::nearest` reads, written as the payload file writes the register's
+/// `max_crossings_per_substep` (`crate::gen::rust::fgw`). They are not chart constants, so not
+/// [`links::CHART_CONSTANTS`] members, and not hashed. The grid's cell count is derived from its `log₂`; `1/φ` is one
+/// f64, which the kernel rounds to f32 as a constant.
+fn curve_search() -> String {
+    use crate::constants::{CURVE_GOLDEN_STEPS, CURVE_GRID_LOG2, INV_PHI};
+    let log2 = CURVE_GRID_LOG2.number() as u32;
+    format!(
+        "\n/// The register's `curve_grid_log2`: the curve projection's search grid has `2^CURVE_GRID_LOG2` cells\n\
+         /// (dd_encode §3.4), so its spacing is the span times a power of two, exact.\n\
+         pub const CURVE_GRID_LOG2: i32 = {log2};\n\n\
+         /// The search grid's cells, `2^CURVE_GRID_LOG2`: `CURVE_GRID + 1` points, the span's edges included.\n\
+         pub const CURVE_GRID: u32 = {grid};\n\n\
+         /// The register's `curve_golden_steps`: the golden-section steps inside the best grid point's two cells, a\n\
+         /// fixed count (dd_encode §3.4).\n\
+         pub const CURVE_GOLDEN_STEPS: u32 = {steps};\n\n\
+         /// The register's `inv_phi`: `1/φ = (√5 − 1)/2`, the golden section's ratio, the f64 nearest; its rounding to\n\
+         /// f32 is the f32 nearest as well (dd_encode §3.4).\n\
+         pub const INV_PHI: f64 = {inv_phi};\n",
+        grid = 1u32 << log2,
+        steps = CURVE_GOLDEN_STEPS.number() as u32,
+        inv_phi = literal(INV_PHI.number(), "f64"),
+    )
+}
+
+/// The tilt's angles in degrees, the register's `tilt_right_angle`, `tilt_half_turn` and `tilt_turn` (R-474 R3, R8),
+/// which `kernel::chart::tilt` reads on the CPU from the stored angles, each one f64. They are not chart constants, so
+/// not [`links::CHART_CONSTANTS`] members, and not hashed.
+fn tilt_angles() -> String {
+    use crate::constants::{TILT_HALF_TURN, TILT_RIGHT_ANGLE, TILT_TURN};
+    format!(
+        "\n/// The register's `tilt_right_angle`: `|τ|` at Lean each axis's dead zone, in degrees (R-474 R8).\n\
+         pub const TILT_RIGHT_ANGLE: f64 = {right};\n\n\
+         /// The register's `tilt_half_turn`: the total tip past which Tip as sheet wraps, in degrees (R-474 R3).\n\
+         pub const TILT_HALF_TURN: f64 = {half};\n\n\
+         /// The register's `tilt_turn`: a whole turn, in degrees, Tip as sheet's wrap in total tip (R-474 R3).\n\
+         pub const TILT_TURN: f64 = {turn};\n",
+        right = literal(TILT_RIGHT_ANGLE.number(), "f64"),
+        half = literal(TILT_HALF_TURN.number(), "f64"),
+        turn = literal(TILT_TURN.number(), "f64"),
+    )
+}
+
+/// The construction charts' physical hidden coordinates' indices, the register's `hidden_nu0`, `hidden_held_lz` and
+/// `hidden_held_k` (R-633; chart_reference §4.5), which `kernel::chart::construction` names its hidden coordinates by,
+/// each past the latent controls `0..8`, written as the curve search's step count is. They are not chart constants, so
+/// not [`links::CHART_CONSTANTS`] members, and not hashed.
+fn hidden_indices() -> String {
+    use crate::constants::{HIDDEN_HELD_K, HIDDEN_HELD_LZ, HIDDEN_NU0};
+    format!(
+        "\n/// The register's `hidden_nu0`: `ν₀`'s index as a hidden coordinate, past the latent controls (R-633).\n\
+         pub const HIDDEN_NU0: u32 = {nu0};\n\n\
+         /// The register's `hidden_held_lz`: the held `L_z`'s index as a hidden coordinate (R-633).\n\
+         pub const HIDDEN_HELD_LZ: u32 = {lz};\n\n\
+         /// The register's `hidden_held_k`: the held `K`'s index as a hidden coordinate (R-633).\n\
+         pub const HIDDEN_HELD_K: u32 = {k};\n",
+        nu0 = HIDDEN_NU0.number() as u32,
+        lz = HIDDEN_HELD_LZ.number() as u32,
+        k = HIDDEN_HELD_K.number() as u32,
+    )
+}
+
+/// A saved chart's word counts, the register's `saved_header_words`, `saved_parent_words` and `saved_oblique_words`
+/// (R-475 L4, L5; R-483 H3), which `kernel::chart::saved` lays its serialisation out by, written as the hidden indices
+/// are. They are not chart constants, so not [`links::CHART_CONSTANTS`] members, and not hashed.
+fn saved_words() -> String {
+    use crate::constants::{SAVED_HEADER_WORDS, SAVED_OBLIQUE_WORDS, SAVED_PARENT_WORDS};
+    format!(
+        "\n/// The register's `saved_header_words`: a saved curved chart's header, in doubles (R-475 L5).\n\
+         pub const SAVED_HEADER_WORDS: usize = {header};\n\n\
+         /// The register's `saved_parent_words`: a saved curved chart's parent, its form and params, in doubles\n\
+         /// (R-475 L5).\n\
+         pub const SAVED_PARENT_WORDS: usize = {parent};\n\n\
+         /// The register's `saved_oblique_words`: a saved oblique chart, in doubles (R-475 L4).\n\
+         pub const SAVED_OBLIQUE_WORDS: usize = {oblique};\n",
+        header = SAVED_HEADER_WORDS.number() as usize,
+        parent = SAVED_PARENT_WORDS.number() as usize,
+        oblique = SAVED_OBLIQUE_WORDS.number() as usize,
+    )
+}
+
+/// Step 0's skip tolerance, the register's `tau_i` (dd_encode §3.2; R-547), which `kernel::real::IeeeBits::TAU_I`
+/// reads: `tau_i` eps of each precision, `tau_i·2⁻²³` at f32 and `tau_i·2⁻⁵²` at f64, each written as its width's exact
+/// value. Not a chart constant, so not a [`links::CHART_CONSTANTS`] member, and not hashed.
+fn scale_skip() -> String {
+    use crate::constants::TAU_I;
+    let eps = TAU_I.number();
+    let (f32_value, f64_value) = (eps * f64::from(f32::EPSILON), eps * f64::EPSILON);
+    assert!(
+        f64::from(f32_value as f32).to_bits() == f32_value.to_bits(),
+        "tau_i = {eps:?} eps is not exact at f32"
+    );
+    format!(
+        "\n/// The register's `tau_i` = {eps:?}: step 0's skip tolerance `τ_I` in eps of the precision (dd_encode §3.2;\n\
+         /// R-547), step 0 being skipped where `|I_in − 1| ≤ τ_I`; at f32, `tau_i·2⁻²³`, exact.\n\
+         pub const TAU_I_F32: f32 = {f32_lit};\n\n\
+         /// `τ_I` at f64, `tau_i·2⁻⁵²`, exact.\n\
+         pub const TAU_I_F64: f64 = {f64_lit};\n",
+        f32_lit = literal(f32_value, "f32"),
+        f64_lit = literal(f64_value, "f64"),
+    )
+}
+
+/// The shape sphere's f32 exponential sinc (R-696; REQ-DEC-053), which `kernel::chart::shape_sphere::sinc_of` reads: the
+/// register's `sinc_cut` squared, since the form compares `r²`, exact at f32; the series' coefficients, `−1/3!`, `1/5!`
+/// and `−1/7!`, each the f32 nearest the fraction, numbers of the series and not settled values, so not register
+/// entries. Not chart constants, and not hashed.
+fn sinc() -> String {
+    use crate::constants::SINC_CUT;
+    let cut = SINC_CUT.number();
+    let square = cut * cut;
+    assert!(
+        f64::from(square as f32).to_bits() == square.to_bits(),
+        "sinc_cut = {cut:?} has no exact square at f32"
+    );
+    let series = [-1.0 / 6.0, 1.0 / 120.0, -1.0 / 5040.0].map(|c| literal(c, "f32"));
+    format!(
+        "\n/// The register's `sinc_cut` = {cut:?} squared: at `r² <` this the shape sphere's f32 sinc takes its series (R-696).\n\
+         pub const SINC_CUT2_F32: f32 = {square_lit};\n\n\
+         /// That series' coefficients of `r²`, `r⁴` and `r⁶`: `−1/3!`, `1/5!`, `−1/7!`, each the f32 nearest (R-696).\n\
+         pub const SINC_SERIES_F32: [f32; 3] = [{a}, {b}, {c}];\n",
+        square_lit = literal(square, "f32"),
+        a = series[0],
+        b = series[1],
+        c = series[2],
+    )
+}
+
+/// The end of `u32`'s range, the register's `u32_range_end` (`2³²`), which `kernel::driver::advance::Count::whole` reads
+/// to clamp a float into `u32`'s range before the cast (gpu_determinism_note § "The discipline", rule 3): at f32 the
+/// end itself and the greatest f32 below it, at f64 the greatest f64 whose truncation is in range, `u32::MAX`. Each is
+/// written as its width's exact value. Not a chart constant, and not hashed.
+fn u32_range() -> String {
+    use crate::constants::U32_RANGE_END;
+    let end = U32_RANGE_END.number();
+    let end_f32 = end as f32;
+    assert!(
+        f64::from(end_f32).to_bits() == end.to_bits() && end_f32.to_bits() & 0x007F_FFFF == 0,
+        "u32_range_end = {end:?} is not a power of two exact at f32"
+    );
+    let top_f32 = f32::from_bits(end_f32.to_bits() - 1);
+    let top_f64 = end - 1.0;
+    assert!(
+        top_f64 + 1.0 == end && (top_f64 as u64) + 1 == end as u64,
+        "u32_range_end = {end:?} less one is not exact at f64"
+    );
+    format!(
+        "\n/// The register's `u32_range_end` = {end:?} at f32: at or above it a float cast to `u32` would be out of range, so\n\
+         /// `Count::whole` selects `u32::MAX` there (gpu_determinism_note rule 3).\n\
+         pub const U32_RANGE_END_F32: f32 = {end_lit};\n\n\
+         /// The greatest f32 below `u32_range_end`, `2³² − 2⁸`: the top of the range an f32 is clamped into before the cast.\n\
+         pub const U32_TOP_F32: f32 = {top32_lit};\n\n\
+         /// `u32_range_end` less one, `u32::MAX`, exact at f64: the top of the range an f64 is clamped into before the cast,\n\
+         /// every f64 at or above it truncating to it.\n\
+         pub const U32_TOP_F64: f64 = {top64_lit};\n",
+        end_lit = literal(end, "f32"),
+        top32_lit = literal(f64::from(top_f32), "f32"),
+        top64_lit = literal(top_f64, "f64"),
+    )
+}
+
+/// The shape readout's (dd_integrator §3.7; payload §1, §2), which `kernel::driver::shape` and
+/// `kernel::driver::closure` read: the pole radius `r_pole` (R-389, R-433) and the closure's departure threshold
+/// `delta_dep` (R-37), each one f64, which the march reads at its width; and the step count and sentinel of `θ̃`'s
+/// pole reference in `_reserved`, `theta_ref_steps` and `theta_ref_none` (R-397), each a u32. `r_pole` and
+/// `delta_dep` are not hashed; the two codes are (`crate::version::STORED_BITS`).
+fn shape_readout() -> String {
+    use crate::constants::{DELTA_DEP, R_POLE, THETA_REF_NONE, THETA_REF_STEPS};
+    let steps = THETA_REF_STEPS.number();
+    let none = THETA_REF_NONE.number();
+    assert!(
+        steps.fract() == 0.0 && none.fract() == 0.0 && none <= f64::from(u16::MAX),
+        "theta_ref_steps = {steps:?} and theta_ref_none = {none:?} are not u16 codes"
+    );
+    format!(
+        "\n/// The register's `r_pole` = {r_pole:?}: `θ̃`'s pole radius, below which in `√(n_u² + n_v²)` the longitude is\n\
+         /// not trusted and `θ̃` holds (R-389, R-433; provisional until M3).\n\
+         pub const R_POLE: f64 = {r_pole_lit};\n\n\
+         /// The register's `delta_dep` = {dep:?}: the closure minimum's departure threshold on the shape sphere, a chord\n\
+         /// (R-37; provisional until M3).\n\
+         pub const DELTA_DEP: f64 = {dep_lit};\n\n\
+         /// The register's `theta_ref_steps`: the codes of `θ̃`'s pole reference step the turn in `2π/THETA_REF_STEPS`\n\
+         /// (R-397).\n\
+         pub const THETA_REF_STEPS: u32 = {steps};\n\n\
+         /// The register's `theta_ref_none`: `_reserved`'s \"no reference\" sentinel, 0xFFFF (R-397).\n\
+         pub const THETA_REF_NONE: u32 = {none};\n",
+        r_pole = R_POLE.number(),
+        r_pole_lit = literal(R_POLE.number(), "f64"),
+        dep = DELTA_DEP.number(),
+        dep_lit = literal(DELTA_DEP.number(), "f64"),
+        steps = steps as u32,
+        none = none as u32,
+    )
+}
+
+/// The collision floor's record (integrator_contract Part 7; R-954, R-973; REQ-EVT-035), the register's
+/// `floor_exp_min`, `floor_exp_max` and `floor_code_bias`, which `kernel::detect::collision` forms the code
+/// `clamp(e − 23, floor_exp_min, floor_exp_max) + floor_code_bias` by and `engine::export::below_floor` reads it by,
+/// written as the hidden indices are. Not chart constants: they give a stored code its floor and its clamps, so they
+/// are hashed as stored-bits entries (`crate::version::STORED_BITS`; dd_generation_root §3.8, "The hash").
+fn coll_floor() -> String {
+    use crate::constants::{FLOOR_CODE_BIAS, FLOOR_EXP_MAX, FLOOR_EXP_MIN};
+    format!(
+        "\n/// The register's `floor_exp_min`: the least collision floor's exponent, `2⁻⁴⁰` (Part 7; R-973).\n\
+         pub const FLOOR_EXP_MIN: i32 = {min};\n\n\
+         /// The register's `floor_exp_max`: the greatest collision floor's exponent, `2¹⁰⁴` (Part 7; R-973).\n\
+         pub const FLOOR_EXP_MAX: i32 = {max};\n\n\
+         /// The register's `floor_code_bias`: the floor `2^c` is stored as the code `c + bias`, 0 \"not recorded\"\n\
+         /// (payload §2, `coll_floor_bits`; R-973).\n\
+         pub const FLOOR_CODE_BIAS: i32 = {bias};\n",
+        min = FLOOR_EXP_MIN.number() as i32,
+        max = FLOOR_EXP_MAX.number() as i32,
+        bias = FLOOR_CODE_BIAS.number() as i32,
+    )
+}
+
+/// The chart constants an operator reads rather than a tree, emitted as functions of the float type
+/// ([`constants_file`]): `tanh`'s argument bound (dd_generation_root §3.9; REQ-DEC-047).
+const OPERATOR_BOUNDS: [&str; 1] = ["tanh_sat"];
+
+/// The literal constant holding `v`, added to `lits` on first use.
+fn lit(v: f64, lits: &mut Vec<f64>) -> String {
+    let i = match lits.iter().position(|l| l.to_bits() == v.to_bits()) {
+        Some(i) => i,
+        None => {
+            lits.push(v);
+            lits.len() - 1
+        }
+    };
+    format!("R::LIT_{i}")
+}
+
+/// One function body in straight-line form: its `let`s, each operator node once.
+struct Body<'a> {
+    lets: Vec<(Expr, String)>,
+    lines: String,
+    lits: &'a mut Vec<f64>,
+    reads_input: bool,
+    /// The entry's tunable parameters, read from `p` in place of their chart constants (R-481 G7).
+    tunable: &'a [&'a str],
+    reads_params: bool,
+}
+
+impl Body<'_> {
+    /// The operand that holds `e`'s value, writing the `let`s it needs.
+    fn value(&mut self, e: &Expr) -> String {
+        match e {
+            Expr::Input(i) => {
+                self.reads_input = true;
+                format!("v[{i}]")
+            }
+            Expr::Param(name) if self.tunable.contains(name) => {
+                self.reads_params = true;
+                format!("p.{name}")
+            }
+            Expr::Param(name) => format!("R::{}", name.to_uppercase()),
+            Expr::Num(v) => lit(*v, self.lits),
+            Expr::Op(op, args) => {
+                if let Some((_, name)) = self.lets.iter().find(|(k, _)| k == e) {
+                    return name.clone();
+                }
+                let a: Vec<String> = args.iter().map(|a| self.value(a)).collect();
+                let rhs = match op {
+                    Op::Add => a.join(" + "),
+                    Op::Mul => a.join(" * "),
+                    Op::Sub => format!("{} - {}", a[0], a[1]),
+                    Op::Div => format!("{} / {}", a[0], a[1]),
+                    Op::Neg => format!("-{}", a[0]),
+                    Op::Exp => format!("Real::exponential({})", a[0]),
+                    Op::Log => format!("Real::logarithm({})", a[0]),
+                    Op::Tanh => format!("tanh_sat({})", a[0]),
+                    Op::Artanh => format!("Real::arctanh({})", a[0]),
+                    Op::Clamp => format!("Float::min(Float::max({}, {}), {})", a[0], a[1], a[2]),
+                    Op::Sigmoid | Op::Logit | Op::Softplus | Op::InvSoftplus | Op::Sech2 => {
+                        format!("{}({})", op.spelling_arity().0, a[0])
+                    }
+                };
+                let name = format!("t{}", self.lets.len());
+                let _ = writeln!(self.lines, "        let {name} = {rhs};");
+                self.lets.push((*e, name.clone()));
+                name
+            }
+        }
+    }
+}
+
+/// One trait method's two forms: `fn <name>_at<R: LinkReal>(v: [R; arg], p: &LinkParams<R>) -> <ret> { … }`,
+/// returning `trees`' values (an array of them, or the one value where `ret` is `R`), each of the entry's `tunable`
+/// parameters read from `p`; and `fn <name>`, it at `LinkParams::DEFAULT` (R-481 G7).
+fn method(
+    out: &mut String,
+    name: &str,
+    arg: u32,
+    ret: &str,
+    trees: &[Expr],
+    tunable: &[&str],
+    lits: &mut Vec<f64>,
+) {
+    let mut body = Body {
+        lets: Vec::new(),
+        lines: String::new(),
+        lits,
+        reads_input: false,
+        tunable,
+        reads_params: false,
+    };
+    let values: Vec<String> = trees.iter().map(|t| body.value(t)).collect();
+    let result = if ret != "R" {
+        format!("[{}]", values.join(", "))
+    } else if let Some((_, last)) = body.lets.last().filter(|(_, n)| *n == values[0]) {
+        // The last `let` is the value: it is the tail expression instead (clippy's `let_and_return`).
+        let line = format!("        let {last} = ");
+        let at = body.lines.rfind(&line).expect("the last let was written");
+        let rhs = body.lines[at + line.len()..]
+            .trim_end()
+            .trim_end_matches(';')
+            .to_owned();
+        body.lines.truncate(at);
+        rhs
+    } else {
+        values[0].clone()
+    };
+    let v = if body.reads_input { "v" } else { "_v" };
+    let p = if body.reads_params { "p" } else { "_p" };
+    let _ = write!(
+        out,
+        "\n    #[inline]\n    fn {name}<R: LinkReal>(v: [R; {arg}]) -> {ret} {{\n        \
+         Self::{name}_at(v, &LinkParams::DEFAULT)\n    }}\n\n    #[inline]\n    \
+         fn {name}_at<R: LinkReal>({v}: [R; {arg}], {p}: &LinkParams<R>) -> {ret} {{\n{}        {result}\n    }}\n",
+        body.lines
+    );
+}
+
+/// `text` as `///` lines of at most 100 columns, broken between words.
+fn doc_lines(text: &str) -> String {
+    let mut out = String::new();
+    let mut line = String::from("///");
+    for word in text.split_whitespace() {
+        if line.len() > 3 && line.chars().count() + 1 + word.chars().count() > 100 {
+            out.push_str(&line);
+            out.push('\n');
+            line = String::from("///");
+        }
+        line.push(' ');
+        line.push_str(word);
+    }
+    out.push_str(&line);
+    out.push('\n');
+    out
+}
+
+/// The `Link<C, P>` arguments of a link onto `c`.
+fn arity(c: Codomain) -> (u32, u32) {
+    (c.controls(), c.components())
+}
+
+/// Entry `l` onto `c`: its type, documented with its sampling note, and its `Link` impl.
+fn write_link(
+    out: &mut String,
+    l: &links::Link,
+    c: Codomain,
+    tunable: &[&str],
+    lits: &mut Vec<f64>,
+) {
+    let (controls, components) = arity(c);
+    let ty = camel(l.name);
+    let doc = format!(
+        "`{}`, onto `{}` ({}). Sampling: {}.",
+        l.name,
+        c.name(),
+        l.constraint.spelling(),
+        l.sampling_note
+    );
+    let _ = write!(
+        out,
+        "\n{}pub struct {ty};\n\nimpl Link<{controls}, {components}> for {ty} {{\n    \
+         const NAME: &'static str = \"{}\";\n    type Codomain = {};\n",
+        doc_lines(&doc),
+        l.name,
+        camel(c.name()),
+    );
+    method(
+        out,
+        "forward",
+        controls,
+        &format!("[R; {components}]"),
+        l.forward,
+        tunable,
+        lits,
+    );
+    method(
+        out,
+        "inverse",
+        components,
+        &format!("[R; {controls}]"),
+        l.inverse,
+        tunable,
+        lits,
+    );
+    method(
+        out,
+        "log_det",
+        controls,
+        "R",
+        std::slice::from_ref(&l.log_det),
+        tunable,
+        lits,
+    );
+    out.push_str("}\n");
+}
+
+/// The selection's code: its trait, its `Select` type and impl, and `Defaults`, one link per slot; or a line naming a
+/// slot whose default is not a registry entry.
+fn selection(
+    slots: &[Slot],
+    registered: &[(links::Link, Codomain)],
+) -> Result<String, Vec<String>> {
+    let assoc: Vec<String> = slots
+        .iter()
+        .map(|s| format!("{}Link", camel(s.name)))
+        .collect();
+    let bound = |s: &Slot| {
+        let (c, p) = arity(s.codomain);
+        format!("Link<{c}, {p}, Codomain = {}>", camel(s.codomain.name()))
+    };
+    let params: Vec<String> = (0..slots.len()).map(|i| format!("L{i}")).collect();
+    let mut s = String::from(
+        "\n/// One link per block control, each bounded by its control's codomain (REQ-GEN-013): the decode is generic\n\
+         /// over a `Selection`, so each selection is a monomorphised variant (lowering Part 2).\n\
+         pub trait Selection {\n",
+    );
+    for (slot, a) in slots.iter().zip(&assoc) {
+        let _ = writeln!(
+            s,
+            "    /// The `{}` control's link (block `{}`, `z[{}]`).\n    type {a}: {};",
+            slot.name,
+            slot.block,
+            slot.z,
+            bound(slot)
+        );
+    }
+    let _ = write!(
+        s,
+        "\n    /// Each control's link id, in this order, as provenance records them (chart_decoder_contract § \"Integrity:\n    \
+         /// the link is part of the experiment\").\n    const LINK_IDS: [&'static str; {}] = [\n",
+        slots.len()
+    );
+    for (slot, a) in slots.iter().zip(&assoc) {
+        let (c, p) = arity(slot.codomain);
+        let _ = writeln!(s, "        <Self::{a} as Link<{c}, {p}>>::NAME,");
+    }
+    let list = params.join(", ");
+    let _ = write!(
+        s,
+        "    ];\n}}\n\n/// The selection of `L0` … `L{}`, one per control in `Selection`'s order.\n\
+         pub struct Select<{list}>(PhantomData<({list})>);\n\nimpl<{list}> Selection for Select<{list}>\nwhere\n",
+        slots.len() - 1
+    );
+    for (slot, p) in slots.iter().zip(&params) {
+        let _ = writeln!(s, "    {p}: {},", bound(slot));
+    }
+    s.push_str("{\n");
+    for (a, p) in assoc.iter().zip(&params) {
+        let _ = writeln!(s, "    type {a} = {p};");
+    }
+    s.push_str("}\n");
+    let mut bad = Vec::new();
+    let mut defaults = Vec::new();
+    for slot in slots {
+        match links::select_from(registered, slot, slot.default) {
+            Ok(l) => defaults.push(camel(l.name)),
+            Err(e) => bad.push(e),
+        }
+    }
+    if !bad.is_empty() {
+        return Err(bad);
+    }
+    let one_line = format!("pub type Defaults = Select<{}>;", defaults.join(", "));
+    let defaults = if one_line.len() <= 100 {
+        one_line
+    } else {
+        format!("pub type Defaults =\n    Select<{}>;", defaults.join(", "))
+    };
+    let _ = write!(
+        s,
+        "\n/// The defaults, each resolved by name (dd_decoder §3: mass = softmax ∘ μ_max·tanh, config = sigmoid, free\n\
+         /// momentum = sigmoid).\n{defaults}\n"
+    );
+    Ok(s)
+}
+
+/// The helper of each operator §3.9 defines that Rust's `Float` does not have, or has otherwise than §3.9 evaluates it
+/// (`tanh`), as written.
+const HELPERS: [(&str, &str); 6] = [
+    (
+        "tanh_sat",
+        "/// `tanh`, §3.9's operator: `tanh(clamp(x, −tanh_sat, tanh_sat))`, then ±1 where its magnitude exceeds 1, by\n\
+         /// comparison, a NaN kept (R-72; REQ-DEC-047). The clamp acts only where `tanh` already rounds to ±1 at f32 and\n\
+         /// f64, and gives ±1 where a GPU's `tanh` fails at large arguments, as Metal's does; the select keeps the result\n\
+         /// in `tanh`'s own range where a backend's accuracy bound lets it pass 1, and never acts on the CPU.\n\
+         #[inline]\npub fn tanh_sat<R: LinkReal>(x: R) -> R {\n    let t = super::constants::tanh_sat::<R>();\n    \
+         let lo = if x < -t { -t } else { x };\n    let y = Real::hyperbolic_tangent(if lo > t { t } else { lo });\n    \
+         let one = R::one();\n    let hi = if y > one { one } else { y };\n    if hi < -one {\n        -one\n    } else {\n        hi\n    }\n}\n",
+    ),
+    (
+        "sigmoid",
+        "/// `σ(x) = 1/(1 + e⁻ˣ)`.\n#[inline]\nfn sigmoid<R: LinkReal>(x: R) -> R {\n    R::one() / (R::one() + Real::exponential(-x))\n}\n",
+    ),
+    (
+        "logit",
+        "/// `logit(s) = log(s/(1 − s))`, σ's inverse.\n#[inline]\nfn logit<R: LinkReal>(s: R) -> R {\n    Real::logarithm(s / (R::one() - s))\n}\n",
+    ),
+    (
+        "softplus",
+        "/// `softplus(x) = log(1 + eˣ)`, as `max(x, 0) + log(1 + e^(−|x|))`, which does not overflow.\n#[inline]\n\
+         fn softplus<R: LinkReal>(x: R) -> R {\n    Float::max(x, R::zero()) + Real::ln_one_plus(Real::exponential(-Float::abs(x)))\n}\n",
+    ),
+    (
+        "inv_softplus",
+        "/// `inv_softplus(y) = log(eʸ − 1)`, as `y + log(1 − e⁻ʸ)`, which does not overflow.\n#[inline]\n\
+         fn inv_softplus<R: LinkReal>(y: R) -> R {\n    y + Real::logarithm(-Real::exp_minus_one(-y))\n}\n",
+    ),
+    (
+        "sech2",
+        "/// `sech2(x) = 1/cosh² x`.\n#[inline]\nfn sech2<R: LinkReal>(x: R) -> R {\n    let c = Real::hyperbolic_cosine(x);\n    R::one() / (c * c)\n}\n",
+    ),
+];
+
+/// The helpers `code` calls.
+fn helpers(code: &str) -> String {
+    HELPERS
+        .iter()
+        .filter(|(name, _)| code.contains(&format!(" {name}(")))
+        .map(|(_, text)| format!("\n{text}"))
+        .collect()
+}
+
+/// Each codomain's marker type and its `Codomain` impl.
+fn codomains() -> String {
+    let mut s = String::new();
+    for c in Codomain::ALL {
+        let (lo, hi) = match (c, c.range()) {
+            (_, Some(r)) => r,
+            (Codomain::Mass, None) => (0.0, 1.0),
+            (Codomain::HalfLine, None) => (0.0, f64::INFINITY),
+            (_, None) => (f64::NEG_INFINITY, f64::INFINITY),
+        };
+        let ty = camel(c.name());
+        let constraint = camel(c.constraint().spelling());
+        let _ = write!(
+            s,
+            "\n/// The `{}` codomain ({}).\npub struct {ty};\n\nimpl Codomain for {ty} {{\n    \
+             const NAME: &'static str = \"{}\";\n    const CONSTRAINT: Constraint = Constraint::{constraint};\n    \
+             const LO: f64 = {};\n    const HI: f64 = {};\n}}\n",
+            c.name(),
+            c.constraint().spelling(),
+            c.name(),
+            literal(lo, "f64"),
+            literal(hi, "f64"),
+        );
+    }
+    s
+}
+
+/// The link functions' file.
+fn links_file(lits: &[f64], code: &str, names: &[&str], selection: &str) -> String {
+    let mut s = String::from(
+        "//! Generated by `cargo xtask codegen` from the link registry (`crates/ledger/src/links.rs`;\n\
+         //! dd_generation_root §3.9); do not edit.\n\n\
+         use core::marker::PhantomData;\n\nuse spirv_std::num_traits::Float;\n\n\
+         use super::constants::ChartConstants;\npub use super::constants::LinkParams;\nuse crate::Real;\n\n\
+         /// The literal numbers of the registry's trees at a float type, each its `num(v)`.\npub trait Literals: Copy {\n",
+    );
+    for (i, v) in lits.iter().enumerate() {
+        if i > 0 {
+            s.push('\n');
+        }
+        let _ = writeln!(s, "    /// `num({v:?})`.\n    const LIT_{i}: Self;");
+    }
+    s.push_str("}\n");
+    for ty in ["f32", "f64"] {
+        let _ = writeln!(s, "\nimpl Literals for {ty} {{");
+        for (i, v) in lits.iter().enumerate() {
+            let _ = writeln!(s, "    const LIT_{i}: {ty} = {};", literal(*v, ty));
+        }
+        s.push_str("}\n");
+    }
+    s.push_str(
+        "\n/// A float the links evaluate at: the kernel's `Real` (f32 on the GPU, f64 on the CPU), with its chart\n\
+         /// constants and literals.\npub trait LinkReal: Real + Float + ChartConstants + Literals {}\n\n\
+         impl<R: Real + Float + ChartConstants + Literals> LinkReal for R {}\n\n\
+         /// A link's constraint (dd_generation_root §3.9's first column).\n\
+         #[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub enum Constraint {\n",
+    );
+    for c in ["Simplex", "Bounded", "Positive", "Symmetric", "Unbounded"] {
+        let _ = writeln!(s, "    {c},");
+    }
+    s.push_str(
+        "}\n\n/// What a link maps onto: a block control's constrained range, or a line no block uses.\npub trait Codomain {\n    \
+         const NAME: &'static str;\n    const CONSTRAINT: Constraint;\n    \
+         /// The closed bounds of each physical component at the default tunable parameters, for host-side checks;\n    \
+         /// infinite where unbounded. A bound that reads a tunable parameter, the momenta's `q_max`, reads the active\n    \
+         /// value through `crate::encode::blocks::Ends::ends_at` (R-481 G4; REQ-DEC-048).\n    \
+         const LO: f64;\n    const HI: f64;\n}\n",
+    );
+    s.push_str(&codomains());
+    s.push_str(
+        "\n/// A registry entry: `C` controls onto `P` physical components (dd_generation_root §3.9). The log-det is the log\n\
+         /// of the forward's volume factor: `log |det J|`, or `log √det(JᵀJ)` where `J` is not square (R-368).\n\
+         ///\n/// Each function has an `_at` form taking the tunable parameters `p` (R-481 G7): a generated entry reads its\n\
+         /// tunable parameters from `p`, and its plain form is the `_at` form at `LinkParams::DEFAULT`; a link that reads\n\
+         /// none, as written outside the registry, ignores `p` by default.\n\
+         pub trait Link<const C: usize, const P: usize> {\n    \
+         /// The link id provenance records.\n    const NAME: &'static str;\n    type Codomain: Codomain;\n    \
+         fn forward<R: LinkReal>(v: [R; C]) -> [R; P];\n    fn inverse<R: LinkReal>(v: [R; P]) -> [R; C];\n    \
+         fn log_det<R: LinkReal>(v: [R; C]) -> R;\n\n    \
+         /// The forward at the tunable parameters `p`.\n    #[inline]\n    \
+         fn forward_at<R: LinkReal>(v: [R; C], _p: &LinkParams<R>) -> [R; P] {\n        Self::forward(v)\n    }\n\n    \
+         /// The inverse at the tunable parameters `p`.\n    #[inline]\n    \
+         fn inverse_at<R: LinkReal>(v: [R; P], _p: &LinkParams<R>) -> [R; C] {\n        Self::inverse(v)\n    }\n\n    \
+         /// The log-det at the tunable parameters `p`: a quantitative pass reweights at the active values (R-481 A4).\n    \
+         #[inline]\n    fn log_det_at<R: LinkReal>(v: [R; C], _p: &LinkParams<R>) -> R {\n        Self::log_det(v)\n    }\n}\n",
+    );
+    s.push_str(&helpers(code));
+    s.push_str(code);
+    let _ = write!(
+        s,
+        "\n/// Every entry's name, in registry order.\npub const NAMES: [&str; {}] = [\n",
+        names.len()
+    );
+    for n in names {
+        let _ = writeln!(s, "    \"{n}\",");
+    }
+    s.push_str("];\n");
+    s.push_str(selection);
+    s
+}

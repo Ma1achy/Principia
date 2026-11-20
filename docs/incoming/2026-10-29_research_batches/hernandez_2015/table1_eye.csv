@@ -1,0 +1,3 @@
+method,abs_dE_over_E0,dL,dxcm1,dxcm2,dpcm1,dpcm2,tcpu,h
+DKD leapfrog,8.2e-6,1.2e-13,8.4e-15,1.3e-13,2.0e-13,2.1e-14,7.5,0.0001
+phi_h^2,3.7e-6,1.1e-13,4.7e-14,1.4e-14,2.6e-14,8.0e-15,1.4,0.0015

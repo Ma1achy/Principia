@@ -1,0 +1,2 @@
+row ('0.5',) col x2: B_eye='-0.30346' OCR='-0.30340'
+rows B_eye=23 OCR=23; cells compared 138; disagreements 1

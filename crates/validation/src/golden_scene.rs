@@ -1,0 +1,1844 @@
+//! The golden harness's synthetic scenes (RQ-229, decided per R-369 and amended per code review 5438179638;
+//! TASK-M1-09): a scene is a synthetic payload set (`engine::synthetic`, TASK-M1-06), its context uniforms, and the
+//! colour occupant it is rendered through, a debug catalogue view or a field ramp, with the node's params. `cargo xtask
+//! golden` renders a case of the harness kind by spawning the `golden_harness` binary, which renders the scene named in
+//! the case's `case.json` through the render harness (`render::bind::preset_module` and `upload`) and writes the
+//! `Rgba32Float` image; the runner quantises and compares it in its own pass, as for every case (REQ-VAL-138).
+//!
+//! Every scene is a row of samples, one quad each (`N = 1`, `E = 0`), each tile 8 px square, so sample `i` covers the
+//! pixel columns `8i … 8i + 7` and the hatch's 4 px stripes show inside it. [`Scene::expected`] is the CPU twin of a
+//! render, pixel by pixel, from the ledger's numeric template ([`NumericView::shown`]), the field ramp's
+//! ([`FieldRamp::shown`]) and the presentation layer's mirror (`render::present`).
+//!
+//! **The scenes** (`m1-numeric`; TASK-M1-09's acceptance lines):
+//! - `ftle`: `ftle`'s view: an unstepped sample and a failed one read NaN (R-253, R-254) and are hatched; the rest
+//!   sit on the ramp.
+//! - `diffusion`: `diffusion`'s view: `n = 0` and `n = 1` read NaN (R-245) and are hatched; `n = 2`'s slope and
+//!   the other valid slopes on the ramp.
+//! - `de_max_failed`, `dlz_max_failed`: `dE_max`'s and `dLz_max`'s views: a forced-failure sample's stored 0.0 sits on
+//!   the ramp at 0.0's place (R-79), not hatched.
+//! - `d_min`: `d_min`'s view: a forced-failure sample and an unstepped one hold the unset f16 +∞ and are drawn in the
+//!   "not yet" style, the grey with its dot stipple (R-271, R-280, R-399); an f16 NaN is hatched; a failed-state stored
+//!   0.0 sits on the ramp at 0.0's place; a valid `d_min` on the ramp.
+//! - `length_view`: the word `length`'s view: the sentinel 127 shows as its literal value on the ramp (R-136).
+//! - `length_ramp`, `length_ramp_override`: the word `length`'s field ramp, a presentation view (R-467): 127 in the
+//!   presentation views' invalid colour, `#141418`, then in the node's override colour.
+//! - `d_min_ramp`, `d_min_ramp_override`: `d_min`'s field ramp: NaN and the two forced failures, whatever their
+//!   payload (the unset `+∞`, a stored 0.0), in `#141418`, then in the override colour (R-467, R-511 Z3); the
+//!   unstepped sample's unset value in the "not yet" style either way (R-280, R-399).
+//!
+//! **The ramp follows the declared range** (`m1-numeric`; R-400, R-403; TASK-M1-17's acceptance lines), each view in
+//! its default mode, `RANGE_AUTO = 1`, over the scene's measured range:
+//! - `e_0_signed`, `lz_0_signed`, `c_ty_signed`: `E_0`, `Lz_0` and `C_ty`, whose declared ranges span zero, on
+//!   `ramp_coolwarm` over the symmetric `[−M, M]`: one sample at 0, at the table's neutral, `t = ½`, the negative
+//!   values on the cool side and the positive on the warm.
+//! - `k_0`, `v_0`: `K_0` over `[0, ∞)` and `V_0` over `(−∞, 0]` on `ramp_viridis`, increasing in the value, `K_0`'s
+//!   minimum and `V_0`'s most negative value at the dark end, `t = 0`; physical values, `K₀ ≥ 0` and `V₀ < 0`, never
+//!   a layout fixture's off-sign value.
+//! - `virial_ratio`: a non-negative field, `[0, ∞)`, on `ramp_viridis`.
+//!
+//! **The debug views' scenes** (`debug-views`; RQ-237, decided per R-369; R-153; TASK-M1-12): one per entry of the
+//! render registry tagged debug ([`debug_cases`]), named by its id less `debug/`, `/` read as `-`
+//! (`generated-theta`, `reductions-n_dircos`, `word-hash`), and two more of the live shape view, its modes 1 and 2
+//! (`live_shape-twilight`, `live_shape-norm_error`, the |n|−1 view, flat zero). A catalogue view is coloured as
+//! [`Colouring::View`], its `u_range` measured; every other debug view as [`Colouring::Debug`], its header's defaults
+//! but the params its case sets. Each renders the showcase set ([`showcase`]): eight samples whose every field differs
+//! from sample to sample, the first fresh; the ternary masses view renders its own ([`ternary_masses`]): equal masses,
+//! each vertex, and five mixes.
+//!
+//! **The scenes** (`m1-outcome` and `debug-views`; TASK-M1-10's acceptance lines, as R-444 to R-446 change them;
+//! TASK-M2-32):
+//! - `outcome`: the outcome palette (`render::colour::outcome`; colour_composition §1.4): one sample per class, in the
+//!   table's order: bounded, the collisions with `t_end_step > 0` per pair, the triple collision, the escapes per body,
+//!   the triple ejection; a collision and a triple collision at `t_end_step == 0`, each in its own class's colour
+//!   (R-445); then a running sample, a `sim_failed` sample of each `detail`, a `decode_failed` sample of each `detail`
+//!   and the reserved `state` codes 6 and 7, each drawn bounded / nothing yet's `#141418` (R-446), but the
+//!   `decode_failed` samples, drawn blank, the canvas background (R-511); and a sample whose chart point is forbidden
+//!   ([`OUTCOME_FORBIDDEN`]), a `decode_failed` one, drawn blank too, from the chart (R-467; REQ-COL-101, REQ-COL-102,
+//!   REQ-COL-108).
+//!
+//! **The canvas background** every scene renders with is the harness's recorded value, [`BACKGROUND`]: the GUI's clear
+//! colour, `#0A0A0A` (`render::present::CANVAS_BACKGROUND_SRGB8`; R-467 D2, R-504).
+//! - `outcome_edited`: the same samples, the body-2 escape's swatch (`escape_body_1`) edited: only that class changes
+//!   (REQ-COL-002).
+//! - `state_view`: the raw `state` view, one sample per state, 0–5: six `dbg_cat` colours (R-115).
+//! - `detail_view`: the `detail` view, keyed by state: every `detail` code of escape, collision, sim_failed and
+//!   decode_failed, then bounded and running, which have none and draw blank.
+//!
+//! **The synthetic fixtures' scenes** (`m1-synthetic`; TASK-M1-14; debug tooling plan, "Principle"): each renders one
+//! fixture of `engine::fixtures`, whose accessor tests read the same table (`engine/tests/fixtures.rs`), through a view
+//! that shows the value it sets ([`SYNTHETIC_SCENES`]):
+//! - `set_state`: each `state` code, 0–5 and the reserved 6 and 7, on the `state` view;
+//! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape the settling window allows,
+//!   at step 40, beside a bounded, a colliding and a running sample, on the outcome palette (colour_composition §1.4):
+//!   the triple ejection `#611597` (R-445), the running sample `#141418` (R-446);
+//! - `energy_drift_ramp`: a ramp in the current energy drift, on the `energy_drift` drift view at its defaults
+//!   (TASK-M3-05);
+//! - `adversarial_state`, `adversarial_detail`, `adversarial_saturated`, `adversarial_dmin_pair`,
+//!   `adversarial_last_symbol`: the bitwise-adversarial descriptor, written whole, on each sub-field view, so each
+//!   field reads true beside neighbours at their extremes;
+//! - `forced_failure`: `sim_failed` and `decode_failed` samples of each failure category, on the `detail` view.
+
+use std::sync::OnceLock;
+
+use engine::synthetic::Synthetic;
+use kernel::payload::{
+    canonical_nan, sim_state_from_ftle, ReadParams, SD_DMIN_PAIR_SENTINEL, STATE_RUNNING,
+};
+use ledger::gen::numeric::{non_finite, NumericView, Ramp, Shown as ViewShown};
+use ledger::schema::Storage;
+use render::assemble::{self, Fragment, Kind, Node, Occupant, Stain, Tier, View};
+use render::bind::{self, Context};
+use render::colour::field_ramp::{override_default, FieldRamp, Reads, Shown as RampShown};
+use render::colour::outcome::{self, Shown as OutcomeShown};
+use render::headless::{self, Draw, Target};
+use render::pipeline_cache::{block_layout, encode};
+use render::present::{self, Rgb};
+use render::raster::Grid;
+use render::registry::{self, Catalogue, Category, ZERO_SOURCE};
+
+use kernel::payload::diffusion_c_tt;
+/// The kernel's read side and f16 packing, for the render crate's tests, which reach the kernel only through this
+/// dev-dependency (systems_architecture §7.1), as they reach the synthetic harness; and the word's append and symbol
+/// read (payload §3), for the word inspector's tests.
+pub use kernel::payload::{
+    angular_momentum_z, f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, fgw_symbol, hamiltonian,
+    shape, SimState, FGW_NO_SYMBOL, STATE_DECODE_FAILED, STATE_SIM_FAILED,
+};
+pub use kernel::word::fgw_append;
+
+/// The scenes, by name.
+pub const NAMES: [&str; 29] = [
+    "ftle",
+    "diffusion",
+    "de_max_failed",
+    "dlz_max_failed",
+    "d_min",
+    "length_view",
+    "length_ramp",
+    "length_ramp_override",
+    "d_min_ramp",
+    "d_min_ramp_override",
+    "outcome",
+    "outcome_edited",
+    "state_view",
+    "detail_view",
+    "e_0_signed",
+    "lz_0_signed",
+    "c_ty_signed",
+    "k_0",
+    "v_0",
+    "virial_ratio",
+    "set_state",
+    "known_escaper",
+    "energy_drift_ramp",
+    "adversarial_state",
+    "adversarial_detail",
+    "adversarial_saturated",
+    "adversarial_dmin_pair",
+    "adversarial_last_symbol",
+    "forced_failure",
+];
+
+/// The `m1-synthetic` scenes (TASK-M1-14): each scene, the fixture of `engine::fixtures` it renders, and the field
+/// whose catalogue view colours it, `None` for the outcome palette.
+pub const SYNTHETIC_SCENES: [(&str, &str, Option<&str>); 9] = [
+    ("set_state", "set_state", Some("state")),
+    ("known_escaper", "known_escaper", None),
+    (
+        "energy_drift_ramp",
+        "energy_drift_ramp",
+        Some("energy_drift"),
+    ),
+    ("adversarial_state", "adversarial_descriptor", Some("state")),
+    (
+        "adversarial_detail",
+        "adversarial_descriptor",
+        Some("detail"),
+    ),
+    (
+        "adversarial_saturated",
+        "adversarial_descriptor",
+        Some("saturated"),
+    ),
+    (
+        "adversarial_dmin_pair",
+        "adversarial_descriptor",
+        Some("dmin_pair"),
+    ),
+    (
+        "adversarial_last_symbol",
+        "adversarial_descriptor",
+        Some("last_symbol"),
+    ),
+    ("forced_failure", "forced_failure", Some("detail")),
+];
+
+/// The values of the scenes whose view's ramp follows the declared range, by scene: each set apart from every rounding
+/// tie by at least 0.01 of an 8-bit step, as every scene's render is (`render/tests/numeric_views.rs`).
+pub const RANGE_SCENES: [(&str, &str, [f32; 8]); 6] = [
+    (
+        "e_0_signed",
+        "E_0",
+        [-1.3, -0.85, -0.4, -0.1, 0.0, 0.25, 0.76, 1.05],
+    ),
+    (
+        "lz_0_signed",
+        "Lz_0",
+        [-0.9, -0.6, -0.32, 0.0, 0.15, 0.45, 0.78, 1.2],
+    ),
+    (
+        "c_ty_signed",
+        "C_ty",
+        [-2e-3, -1.2e-3, -5e-4, 0.0, 3e-4, 9e-4, 1.5e-3, 2.4e-3],
+    ),
+    ("k_0", "K_0", [0.0, 0.05, 0.2, 0.36, 0.6, 0.9, 1.2, 1.6]),
+    (
+        "v_0",
+        "V_0",
+        [-2.4, -1.9, -1.5, -1.12, -0.8, -0.55, -0.3, -0.12],
+    ),
+    (
+        "virial_ratio",
+        "virial_ratio",
+        [0.0, 0.3, 0.62, 0.9, 1.0, 1.3, 1.8, 2.5],
+    ),
+];
+
+/// The swatch `outcome_edited` edits, and its edited colour, 8-bit sRGB: escape body 2's (`detail` 1), to olive.
+pub const OUTCOME_EDIT: (&str, [u8; 3]) = ("escape_body_1", [0x80, 0x80, 0x20]);
+
+/// The `outcome` scene's samples, `(state, detail, t_end_step)`, by the state's name (`reserved 6` and `reserved 7`
+/// the reserved codes, payload §2): one per class in colour_composition §1.4's order (R-444), a collision and a triple
+/// collision at step 0 (R-445), then running, `sim_failed` and `decode_failed` of each `detail`, the reserved codes
+/// (R-446), and the forbidden sample ([`OUTCOME_FORBIDDEN`]).
+pub const OUTCOME_SAMPLES: [(&str, u32, u32); 23] = [
+    ("bounded", 0, 1000),
+    ("collision", 2, 40),
+    ("collision", 1, 40),
+    ("collision", 0, 40),
+    ("collision", 3, 40),
+    ("escape", 0, 120),
+    ("escape", 1, 120),
+    ("escape", 2, 120),
+    ("escape", 3, 120),
+    ("collision", 2, 0),
+    ("collision", 3, 0),
+    ("running", 0, 20),
+    ("sim_failed", 0, 40),
+    ("sim_failed", 1, 40),
+    ("sim_failed", 2, 40),
+    ("sim_failed", 3, 40),
+    ("decode_failed", 0, 0),
+    ("decode_failed", 1, 0),
+    ("decode_failed", 2, 0),
+    ("decode_failed", 3, 0),
+    ("reserved 6", 0, 40),
+    ("reserved 7", 0, 40),
+    ("decode_failed", 1, 0),
+];
+
+/// The canvas background every scene renders with, 8-bit sRGB: the value the harness records (R-467 D2, R-504), the
+/// GUI's clear colour, `render::present::CANVAS_BACKGROUND_SRGB8`, `#0A0A0A`, confirmed at the M2 gate.
+pub const BACKGROUND: [u8; 3] = render::present::CANVAS_BACKGROUND_SRGB8;
+
+/// The `outcome` scene's sample whose chart point is forbidden (REQ-COL-102): its last, a `decode_failed` sample like
+/// the one before it, which is not. Both draw the background in the presentation view (R-467, R-511); the debug view
+/// tells them apart, the forbidden one in the hatch and counted as forbidden (REQ-COL-109).
+pub const OUTCOME_FORBIDDEN: u32 = 22;
+
+/// The `state` code of an outcome sample's state name: the ledger's ([`outcome::code`]), or the reserved codes, named
+/// `reserved 6` and `reserved 7`.
+pub fn state_code(name: &str) -> u32 {
+    match name {
+        "reserved 6" => 6,
+        "reserved 7" => 7,
+        _ => outcome::code(name),
+    }
+}
+
+/// Each tile's side in pixels.
+const TILE_PX: u32 = 8;
+
+/// The f16 quiet NaN's bits, which unpack to the canonical f32 quiet NaN, `0x7fc00000` (lowering Part 3a): what a
+/// synthetic `d_min` stores to test the hatch. Storage never holds NaN from the kernel (R-79); the scene writes it
+/// whole, as the debug tooling plan's bitwise-adversarial payloads do.
+const F16_QNAN: u32 = 0x7e00;
+
+/// What colours a scene.
+#[derive(Clone, Debug)]
+pub enum Colouring {
+    /// The debug catalogue's view of the field, as checked in.
+    View(&'static str),
+    /// A field ramp, its invalid colour overridden when `override_on`.
+    Ramp { ramp: FieldRamp, override_on: bool },
+    /// A debug view of the registry other than a catalogue view, by its case ([`debug_cases`]): a reduction or a
+    /// hand-written view, its params the case's over its header's defaults.
+    Debug(&'static DebugCase),
+    /// A colour occupant's WGSL as given, with the params it sets over its header's defaults: a test's probe, which
+    /// writes a view's value rather than its colour.
+    Probe(String, Vec<(String, Vec<f64>)>),
+    /// The outcome palette, the built-in colour `outcome_state`, its default set shown (the sRGB palette, R-447), the
+    /// swatch `edit` names set to its 8-bit sRGB colour, as the linear RGB param the node takes.
+    Outcome {
+        edit: Option<(&'static str, [u8; 3])>,
+    },
+}
+
+/// A case of the `debug-views` suite: its name, the registry id of the view it renders, the params it sets, and the
+/// nudge of its [`showcase`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct DebugCase {
+    pub name: String,
+    pub id: String,
+    pub params: Vec<(String, Vec<f64>)>,
+    pub nudge: u32,
+}
+
+/// The cases whose [`showcase`] is nudged, and by how much: each the least nudge that sets every channel of the case's
+/// render at least 0.01 of an 8-bit step from a rounding tie, so that its one reference holds on every backend (the
+/// numeric views' margin, `crates/render/tests/numeric_views.rs`). Every other case's nudge is 0.
+const NUDGES: &[(&str, u32)] = &[
+    ("accumulators-drift_max_vs_final", 3),
+    ("accumulators-drift_max_vs_final-lz", 2),
+    ("generated-Lz_drift", 3),
+    ("generated-closure_min", 1),
+    ("generated-coll_floor", 2),
+    ("generated-energy_drift", 6),
+    ("generated-r_sh", 1),
+    ("generated-rho_angle", 2),
+    ("generated-t_dmin_step", 2),
+    ("generated-t_end_step", 1),
+    ("generated-total_substeps", 3),
+    ("reductions-r_sh_dircos", 2),
+];
+
+/// The nudge of the case `name`, from [`NUDGES`].
+fn nudge(name: &str) -> u32 {
+    NUDGES
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map_or(0, |&(_, k)| k)
+}
+
+/// The suite of the debug views' cases.
+pub const DEBUG_SUITE: &str = "debug-views";
+
+/// The cases beyond each view's default: the view's registry id, the case name's suffix, and the param it sets. The
+/// live shape view at `u_mode` 1, Twilight of `θ̃`, and 2, `‖n‖ − 1`, the view expected flat zero; the drift
+/// max-vs-final view at `u_quantity` 1, the `L_z` drift (render contract Part 5).
+const EXTRA_CASES: [(&str, &str, &str, f64); 3] = [
+    ("debug/live_shape", "twilight", "u_mode", 1.0),
+    ("debug/live_shape", "norm_error", "u_mode", 2.0),
+    (
+        "debug/accumulators/drift_max_vs_final",
+        "lz",
+        "u_quantity",
+        1.0,
+    ),
+];
+
+/// The views whose one case sets a param off its header's default: the registry id, the param and its value. The
+/// derived current-drift view at `COMPACTION` 1, `lin` (R-652). Every drift view computes `H(r, p) − E_0` or
+/// `L_z(r, p) − Lz_0` in the fragment, never reading a stored drift (dd_generation_root §3.8; payload §5), so a fresh
+/// sample's drift is the backend's f32 rounding, a few `1e-8`; `symlog` draws that as 0 by its neutral band (render
+/// contract Part 5; R-652), and on `lin`'s `±1/16`, which has no band, it moves the colour by some `1e-4` of a step, so
+/// the case's one reference holds on every backend. Its `symlog` default is the generated `energy_drift` view's case's
+/// and `derived_views_match_cpu_current_drift`'s (`crates/render/tests/debug_views.rs`).
+const CASE_PARAMS: [(&str, &str, f64); 1] = [("debug/derived/energy_drift", "COMPACTION", 1.0)];
+
+/// The case name of the registry id `id`: the id less `debug/`, each `/` read as `-`.
+pub fn case_name(id: &str) -> String {
+    id.strip_prefix("debug/").unwrap_or(id).replace('/', "-")
+}
+
+/// Whether the registry id `id` is a structural view's, `debug/<view>` for a view of `render::structural::VIEWS`.
+pub fn is_structural(id: &str) -> bool {
+    id.strip_prefix("debug/")
+        .is_some_and(|view| render::structural::VIEWS.contains(&view))
+}
+
+/// The `debug-views` suite's cases, in name order: one per entry of the render registry tagged debug, its header's
+/// defaults (but a view of `CASE_PARAMS`, its one param set), but the structural views (`render::structural::VIEWS`, `debug/<view>`), which read `ctx.quad` and whose
+/// cases are the structural scenes of the same name (`crate::structural_scene`; TASK-M1-13), then the `EXTRA_CASES`. An `AUTO_RANGE` case's params are `RANGE_AUTO` 1 and its `u_range` measured
+/// over its scene once, here.
+pub fn debug_cases() -> Result<&'static [DebugCase], String> {
+    static CASES: OnceLock<Result<Vec<DebugCase>, String>> = OnceLock::new();
+    CASES
+        .get_or_init(|| {
+            let entries = registry::registry().map_err(|e| e.to_string())?;
+            let mut out: Vec<DebugCase> = entries
+                .iter()
+                .filter(|e| e.category == Category::Debug && !is_structural(&e.id))
+                .map(|e| {
+                    let name = case_name(&e.id);
+                    DebugCase {
+                        nudge: nudge(&name),
+                        name,
+                        id: e.id.clone(),
+                        params: CASE_PARAMS
+                            .iter()
+                            .filter(|(id, _, _)| *id == e.id)
+                            .map(|(_, param, value)| ((*param).to_owned(), vec![*value]))
+                            .collect(),
+                    }
+                })
+                .collect();
+            for (id, suffix, param, value) in EXTRA_CASES {
+                let name = format!("{}-{suffix}", case_name(id));
+                out.push(DebugCase {
+                    nudge: nudge(&name),
+                    name,
+                    id: id.to_owned(),
+                    params: vec![(param.to_owned(), vec![value])],
+                });
+            }
+            for case in &mut out {
+                let field = case.id.strip_prefix("debug/generated/");
+                if let Some(&field) = AUTO_RANGE.iter().find(|f| Some(**f) == field) {
+                    let (grid, mut set) = row(8)?;
+                    showcase(&mut set, case.nudge);
+                    let scene = Scene {
+                        name: "an auto-range case's measure",
+                        set,
+                        context: context(grid),
+                        colouring: Colouring::View(field),
+                    };
+                    let mut params = vec![("RANGE_AUTO".to_owned(), vec![1.0])];
+                    params.extend(scene.params()?);
+                    case.params = params;
+                }
+            }
+            out.sort_by(|a, b| a.name.cmp(&b.name));
+            Ok(out)
+        })
+        .as_ref()
+        .map(Vec::as_slice)
+        .map_err(Clone::clone)
+}
+
+/// What a scene shows at one sample.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Look {
+    /// The hatched invalid pattern, `debug_invalid(frag_xy)` (R-136; REQ-COL-055).
+    Invalid,
+    /// A stored sentinel's literal value, compacted, on the ramp: `dbg_sentinel(raw, frag_xy)` (R-136, R-381).
+    Literal(f64),
+    /// The "not yet" style, `debug_not_yet(frag_xy)`: the grey with a fine dot stipple (R-280, R-399).
+    NotYet,
+    /// The ramp `ramp` at `t`: twilight for a cyclic field, cool-warm for one whose range spans zero, else viridis.
+    Ramp { ramp: Ramp, t: f64 },
+    /// A field ramp's invalid colour, overridden: R-16's magenta (`field_ramp::override_default`).
+    Override,
+    /// A flat colour, linear RGB: a categorical class's (a swatch of the outcome palette, a `dbg_cat` class, or the
+    /// `detail` view's blank).
+    Flat(Rgb),
+    /// The canvas background, [`BACKGROUND`]: a presentation view's pixel that is not a system, or its `decode_failed`
+    /// sample (R-467, R-511).
+    Background,
+    /// The presentation views' invalid colour, `#141418` (R-467 D4): a field ramp's invalid value, not overridden.
+    PresentInvalid,
+    /// A drift view at its defaults (render contract Part 5; R-381; TASK-M3-05): the drift `x` as the view reads it, the
+    /// neutral band applied where it is read (R-928, R-929: [`Scene::look`] gives `present::dbg_drift_banded` of the
+    /// drift at the sample's own band), at `symlog`'s place on the `diverging` ramp, its floor `eps` and `lin` range
+    /// `lin_r`; a non-finite `x` or `reference` hatched; and the suspect styling of the predicates `energy` and `lz` over
+    /// it. The band never changes a non-finite value's bits, so the styling's test of the absence NaN reads the drift's.
+    Drift {
+        x: f32,
+        reference: f32,
+        lin_r: f64,
+        eps: f64,
+        energy: bool,
+        lz: bool,
+    },
+}
+
+impl Look {
+    /// The look's linear RGB at the pixel `(x, y)`, its fragment at the pixel's centre.
+    pub fn colour(self, [x, y]: [u32; 2]) -> Rgb {
+        let frag = [f64::from(x) + 0.5, f64::from(y) + 0.5];
+        match self {
+            Look::Invalid => present::debug_invalid(frag),
+            Look::Literal(s) => present::dbg_sentinel(s as f32, frag),
+            Look::NotYet => present::debug_not_yet(frag),
+            Look::Ramp {
+                ramp: Ramp::Viridis,
+                t,
+            } => present::ramp_viridis(t),
+            Look::Ramp {
+                ramp: Ramp::Twilight,
+                t,
+            } => present::ramp_twilight(t),
+            Look::Ramp {
+                ramp: Ramp::Coolwarm,
+                t,
+            } => present::ramp_coolwarm(t),
+            Look::Override => override_default(),
+            Look::Flat(c) => c,
+            Look::Background => present::srgb8(BACKGROUND),
+            Look::PresentInvalid => present::present_invalid(),
+            Look::Drift { x, reference, .. } if non_finite(x) || non_finite(reference) => {
+                present::debug_invalid(frag)
+            }
+            Look::Drift {
+                x,
+                lin_r,
+                eps,
+                energy,
+                lz,
+                ..
+            } => present::dbg_suspect(
+                present::dbg_drift(x, present::DRIFT_SYMLOG, false, lin_r, eps, frag),
+                x,
+                energy,
+                lz,
+                frag,
+            ),
+        }
+    }
+}
+
+/// One synthetic scene.
+pub struct Scene {
+    pub name: &'static str,
+    pub set: Synthetic,
+    pub context: Context,
+    pub colouring: Colouring,
+}
+
+/// The scenes' macro-step, `dt_macro`.
+const DT_MACRO: f32 = 0.01;
+
+/// The context every scene reads with: `dt_macro` 0.01, `δ₀` 10⁻⁶, a renormalisation every 16 steps, a horizon of
+/// 1000 steps, E = 0; the shape-sphere scenes' too (`crate::shape_scene`).
+pub fn context(grid: Grid) -> Context {
+    Context {
+        dt_macro: DT_MACRO,
+        delta_0: 1e-6,
+        n_renorm: 16,
+        horizon_steps: 1000,
+        z: [0.0; 8],
+        grid,
+        chart_id: 0,
+        time: 0.0,
+        ensemble_spread: 0.0,
+        out_of_chart: false,
+        valid_sample_count: 1,
+    }
+}
+
+/// A row of `samples` samples, one quad each, fresh (`Synthetic::flat`).
+fn row(samples: u32) -> Result<(Grid, Synthetic), String> {
+    let grid = Grid::new([samples, 1], 1, 0, TILE_PX)?;
+    Ok((grid, Synthetic::flat(grid, 0)))
+}
+
+/// A scene of `samples` fresh samples in a row, each tile 8 px square, read with every scene's context, coloured by
+/// `colouring`: for a test that fills its own samples.
+pub fn row_scene(name: &'static str, samples: u32, colouring: Colouring) -> Result<Scene, String> {
+    let (grid, set) = row(samples)?;
+    Ok(Scene {
+        name,
+        set,
+        context: context(grid),
+        colouring,
+    })
+}
+
+/// Sample `i` stepped `n` times with the shadow `δ₀` from the state, so `ftle = S/(n · dt)` (payload §5).
+fn stepped(set: &mut Synthetic, i: u32, n: u32, s: f32) {
+    let mut sh = [[0.0f32; 2]; 3];
+    sh[0][0] = 1e-6;
+    set.sample(i).times(n, 0).S(s).r_sh(sh);
+}
+
+/// `name`'s scene, `m1-numeric`'s or `debug-views`'s, or why not.
+pub fn scene(name: &str) -> Result<Scene, String> {
+    if let Some(case) = debug_cases()?.iter().find(|c| c.name == name) {
+        return debug_scene(case);
+    }
+    let name: &'static str = NAMES.iter().find(|n| **n == name).ok_or_else(|| {
+        format!(
+            "no golden scene `{name}`; the scenes are {} and the debug views' ({})",
+            NAMES.join(", "),
+            DEBUG_SUITE
+        )
+    })?;
+    let samples = match name {
+        "outcome" | "outcome_edited" => OUTCOME_SAMPLES.len() as u32,
+        "state_view" => 6,
+        "detail_view" => 18,
+        _ => 8,
+    };
+    let (grid, mut set) = row(samples)?;
+    if let Some(&(_, field, values)) = RANGE_SCENES.iter().find(|(n, ..)| *n == name) {
+        for (i, v) in (0u32..).zip(values) {
+            match field {
+                "E_0" => {
+                    set.sample(i).E_0(v);
+                }
+                "Lz_0" => {
+                    set.sample(i).Lz_0(v);
+                }
+                "C_ty" => {
+                    set.sample(i).C_ty(v);
+                }
+                "K_0" => set.ic(i).K_0 = v,
+                "V_0" => set.ic(i).V_0 = v,
+                _ => set.ic(i).virial_ratio = v,
+            }
+        }
+        return Ok(Scene {
+            name,
+            set,
+            context: context(grid),
+            colouring: Colouring::View(field),
+        });
+    }
+    if let Some(&(_, fixture, view)) = SYNTHETIC_SCENES.iter().find(|(n, ..)| *n == name) {
+        engine::fixtures::fill(fixture, &mut set)?;
+        return Ok(Scene {
+            name,
+            set,
+            context: context(grid),
+            colouring: view.map_or(Colouring::Outcome { edit: None }, Colouring::View),
+        });
+    }
+    let colouring = match name {
+        "outcome" | "outcome_edited" => {
+            for (i, &(state, detail, t)) in OUTCOME_SAMPLES.iter().enumerate() {
+                set.sample(i as u32)
+                    .state(state_code(state))
+                    .detail(detail)
+                    .times(t, 0);
+            }
+            set.set_forbidden(OUTCOME_FORBIDDEN, true);
+            Colouring::Outcome {
+                edit: (name == "outcome_edited").then_some(OUTCOME_EDIT),
+            }
+        }
+        "state_view" => {
+            for i in 0..6 {
+                set.sample(i).state(i).detail(i % 4).times(40, 0);
+            }
+            Colouring::View("state")
+        }
+        "detail_view" => {
+            let states = ["escape", "collision", "sim_failed", "decode_failed"];
+            for (k, state) in states.into_iter().enumerate() {
+                for d in 0..4 {
+                    set.sample(4 * k as u32 + d)
+                        .state(outcome::code(state))
+                        .detail(d)
+                        .times(40, 0);
+                }
+            }
+            set.sample(16).state(outcome::code("bounded")).detail(2);
+            set.sample(17).state(outcome::code("running")).detail(1);
+            Colouring::View("detail")
+        }
+        "ftle" => {
+            // `ftle = S/(n · dt)` with n = 100, dt = 0.01: S itself.
+            set.sample(0).times(0, 0);
+            stepped(&mut set, 1, 100, 1.0);
+            set.sample(1).state(STATE_SIM_FAILED);
+            for (k, s) in [0.15f32, 0.4, 0.85, 1.35, 2.15, 3.05]
+                .into_iter()
+                .enumerate()
+            {
+                stepped(&mut set, 2 + k as u32, 100, s);
+            }
+            Colouring::View("ftle")
+        }
+        "diffusion" => {
+            // n = 0 and n = 1, below R-245's n ≥ 2, then n = 2, the first valid fit, and five more. The slope is
+            // `C_ty / C_tt(n)`; what it reads is the kernel's (`diffusion_slope`).
+            set.sample(0).times(0, 0).C_ty(0.25e-3);
+            set.sample(1).times(1, 0).C_ty(0.25e-3);
+            set.sample(2).times(2, 0).C_ty(0.3e-4);
+            for (k, c_ty) in [-1.2e-3f32, 0.2e-3, 0.7e-3, 1.5e-3, 3.1e-3]
+                .into_iter()
+                .enumerate()
+            {
+                set.sample(3 + k as u32).times(10, 0).C_ty(c_ty);
+            }
+            Colouring::View("diffusion")
+        }
+        "de_max_failed" | "dlz_max_failed" => {
+            set.sample(0).state(STATE_SIM_FAILED).drift_max(0.0, 0.0);
+            for (k, v) in [3e-6f32, 4.6e-4, 7.1e-3, 0.06, 0.55, 4.0, 90.0]
+                .into_iter()
+                .enumerate()
+            {
+                set.sample(1 + k as u32).times(50, 0).drift_max(v, v * 0.6);
+            }
+            Colouring::View(if name == "de_max_failed" {
+                "dE_max"
+            } else {
+                "dLz_max"
+            })
+        }
+        "d_min" | "d_min_ramp" | "d_min_ramp_override" => {
+            d_min_samples(&mut set);
+            match name {
+                "d_min" => Colouring::View("d_min"),
+                _ => Colouring::Ramp {
+                    ramp: FieldRamp::d_min()?,
+                    override_on: name == "d_min_ramp_override",
+                },
+            }
+        }
+        _ => {
+            for (k, length) in [0u32, 9, 23, 38, 51, 64, 76, 127].into_iter().enumerate() {
+                set.sample(k as u32).word([0; 4], length);
+            }
+            match name {
+                "length_view" => Colouring::View("length"),
+                _ => Colouring::Ramp {
+                    ramp: FieldRamp::length()?,
+                    override_on: name == "length_ramp_override",
+                },
+            }
+        }
+    };
+    Ok(Scene {
+        name,
+        set,
+        context: context(grid),
+        colouring,
+    })
+}
+
+/// `d_min`'s samples: a forced failure and an unstepped sample, each unset (R-271); an f16 NaN; a failed sample whose
+/// stored `d_min` is 0.0; four valid values.
+fn d_min_samples(set: &mut Synthetic) {
+    set.sample(0)
+        .state(STATE_SIM_FAILED)
+        .times(40, 0)
+        .d_min(f32::INFINITY);
+    set.sample(1).state(STATE_RUNNING).times(0, 0);
+    let w = set.simstate(2).packed_a;
+    set.sample(2)
+        .times(40, 0)
+        .packed_a((w & 0xffff) | (F16_QNAN << 16));
+    set.sample(3).state(STATE_SIM_FAILED).times(40, 0);
+    let w = set.simstate(3).packed_a;
+    set.sample(3).packed_a(w & 0xffff);
+    for (k, d) in [2.5e-3f32, 0.07, 0.6, 1.7].into_iter().enumerate() {
+        set.sample(4 + k as u32).times(40, 0).d_min(d);
+    }
+}
+
+/// The scene of the `debug-views` case `case`: a catalogue view coloured as [`Colouring::View`], any other, and an
+/// `AUTO_RANGE` view with its case's params, as [`Colouring::Debug`]; the ternary masses over [`ternary_masses`],
+/// every other over [`showcase`].
+pub fn debug_scene(case: &'static DebugCase) -> Result<Scene, String> {
+    let (grid, mut set) = row(8)?;
+    let colouring = match case.id.strip_prefix("debug/generated/") {
+        Some(field) if !AUTO_RANGE.contains(&field) => {
+            let l = ledger::payload::ledger();
+            let name = l
+                .entries
+                .iter()
+                .filter_map(|e| e.name)
+                .find(|n| *n == field)
+                .ok_or_else(|| format!("`{field}` is no ledger field"))?;
+            Colouring::View(name)
+        }
+        _ => Colouring::Debug(case),
+    };
+    if case.id.ends_with(ledger::gen::catalogue::MASSES_TERNARY) {
+        ternary_masses(&mut set);
+    } else {
+        showcase(&mut set, case.nudge);
+    }
+    Ok(Scene {
+        name: &case.name,
+        set,
+        context: context(grid),
+        colouring,
+    })
+}
+
+/// The generated views whose `debug-views` case renders in auto range, `RANGE_AUTO` 1 over the scene's measured
+/// range: their declared ranges, all of a u32 and all of the word's 25-bit top limb, are so wide that the showcase's
+/// values would all draw the ramp's start (applied per R-369).
+const AUTO_RANGE: [&str; 2] = ["total_substeps", "payload"];
+
+/// The word of the symbols `symbols` (codes `a = 0, A = 1, b = 2, B = 3`), appended in order from the empty word
+/// through the kernel's append (payload §3), and its last symbol, `None` for the empty word.
+pub fn appended(symbols: &[u32]) -> ([u32; 4], Option<u32>) {
+    let mut w = kernel::payload::fgw_pack([0; 4], 0);
+    let (mut prev, mut a) = (FGW_NO_SYMBOL, 0);
+    for &s in symbols {
+        let next = fgw_append(w, prev, a, s);
+        (w, prev, a) = (next.word, next.prev, next.packed_a);
+    }
+    (w, (fgw_length_raw(w) > 0).then_some(prev))
+}
+
+/// The showcase set: eight samples whose every field differs from sample to sample (debug_tooling_plan
+/// "Synthetic-first"). Sample 0 is fresh, running and unstepped, its `ftle`, `diffusion` and accumulators unset or NaN,
+/// its drifts and Welford sums 0; samples 1–7 are stepped, in each state, with distinct configurations, shadows, accumulators, latches, words (one
+/// empty, one truncated, three long enough to set the top limb) and `ICDescriptor`s, the masses positive and summing to
+/// 1, `θ̃` away from every multiple of 2π. Each continuous field takes the samples in its own order, so no two fields'
+/// renders coincide under an auto range. Each shadow sits `off = 0.2 + 0.05·j` (`j` its order's place) from its state:
+/// `r_sh` ahead of `r` by `off` in body 0's x and behind by `off/2` in body 1's y, `p_sh` ahead of `p` by `off/4` in
+/// body 2's x. Each stepped sample's current drifts lie within its latched maxima, `E_0 = H(r, p) − e` and `Lz_0 =
+/// L_z(r, p) − l` with `|e| < dE_max`, `|l| < dLz_max`, as a march leaves them, but the failed samples 4 and 5,
+/// whose latches are the defined `0.0` and `d_min` `+inf` (R-271). Each stepped sample's `C_ty` is its own slope times
+/// `C_tt(n)`, so the diffusion slopes spread whatever the step counts. A nonzero `nudge`, at most 6, moves the
+/// stepped samples' values a little and unevenly, so that no auto range absorbs it: `0.0137·nudge·(1 + i mod 3)` on
+/// sample `i`'s place in each order, on `θ̃` and on `S`; `nudge·(i mod 3)` steps on `t_end_step`, `nudge·(i mod 2)`
+/// more on `t_dmin_step`, `7919` times the first on `total_substeps`; the first amount over 8.2 on the drifts' shares.
+/// It moves every sample's masses, the unstepped sample 0's included: `0.0011·nudge·(1 + i mod 3)` of mass from the
+/// second body to the first and third, and every recorded `coll_floor` code `nudge·(1 + i mod 3)` codes up. The states
+/// and words are unchanged, and the sample stepped 3 times stays short
+/// of a completed renormalisation. The departed bit (R-545) is set on five of the seven stepped samples, in a pattern
+/// that is not `saturated`'s, so the two flag views' renders differ.
+pub fn showcase(set: &mut Synthetic, nudge: u32) {
+    // Thirty orders of the eight samples, none affine in the index nor the reverse of another.
+    const ORDER: [[u8; 8]; 30] = [
+        [3, 1, 0, 6, 4, 5, 2, 7],
+        [1, 7, 4, 5, 6, 3, 2, 0],
+        [2, 7, 6, 3, 1, 4, 5, 0],
+        [2, 3, 7, 6, 4, 0, 1, 5],
+        [1, 3, 2, 4, 5, 0, 7, 6],
+        [2, 7, 4, 5, 0, 6, 3, 1],
+        [3, 6, 7, 1, 4, 0, 5, 2],
+        [0, 2, 1, 5, 7, 3, 4, 6],
+        [4, 3, 2, 1, 7, 6, 5, 0],
+        [4, 7, 0, 1, 5, 6, 2, 3],
+        [5, 3, 2, 1, 7, 4, 0, 6],
+        [5, 6, 2, 7, 4, 1, 3, 0],
+        [3, 4, 1, 6, 7, 5, 0, 2],
+        [6, 5, 1, 3, 0, 4, 2, 7],
+        [1, 6, 0, 4, 7, 3, 2, 5],
+        [3, 0, 5, 6, 1, 2, 4, 7],
+        [3, 5, 7, 4, 1, 6, 2, 0],
+        [6, 7, 5, 1, 2, 0, 4, 3],
+        [6, 2, 7, 3, 1, 0, 5, 4],
+        [2, 0, 7, 6, 1, 3, 5, 4],
+        [0, 5, 6, 1, 3, 7, 2, 4],
+        [2, 1, 3, 7, 6, 5, 0, 4],
+        [2, 0, 4, 3, 5, 7, 1, 6],
+        [1, 5, 2, 7, 3, 0, 6, 4],
+        [0, 3, 5, 2, 4, 1, 7, 6],
+        [4, 7, 3, 6, 1, 5, 0, 2],
+        [7, 5, 2, 0, 3, 1, 4, 6],
+        [1, 0, 5, 7, 4, 6, 2, 3],
+        [2, 5, 0, 1, 7, 6, 4, 3],
+        [3, 7, 4, 1, 6, 0, 2, 5],
+    ];
+    const TOTAL_SUBSTEPS: [u32; 8] = [0, 1, 37, 1000, 65536, 3, 123_456, 999_999];
+    const STATES: [u32; 8] = [3, 1, 0, 2, 4, 5, 1, 0];
+    const T_END: [u32; 8] = [0, 40, 100, 250, 37, 3, 999, 512];
+    const THETA: [f32; 8] = [0.0, 3.5, -8.2, 15.9, -1.3, 0.4, 40.1, -22.7];
+    const S: [f32; 8] = [0.0, 0.4, 1.7, 3.1, 0.9, 0.05, 6.2, 2.4];
+    const SLOPE: [f32; 8] = [0.0, -3.0, 1.2, -0.4, 4.0, 5.0, -0.05, 0.07];
+    const WORDS: [&[u32]; 8] = [
+        &[],
+        &[0],
+        &[0, 2, 1],
+        &[],
+        &[],
+        &[0, 2, 0, 2, 1, 3, 1, 3, 0, 2, 0, 2, 1, 3, 1, 3, 0, 2],
+        &[0; 77],
+        &[],
+    ];
+    const MASSES: [[f32; 3]; 8] = [
+        [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+        [0.5, 0.3, 0.2],
+        [0.2, 0.5, 0.3],
+        [0.3, 0.2, 0.5],
+        [0.6, 0.25, 0.15],
+        [0.15, 0.6, 0.25],
+        [0.25, 0.15, 0.6],
+        [0.4, 0.35, 0.25],
+    ];
+    for i in 0..8u32 {
+        let k = i as usize;
+        // Uneven over the samples, so that no auto range absorbs the nudge.
+        let t_nudge = nudge * (i % 3);
+        let g: f32 = if i > 0 {
+            0.0137 * (nudge * (1 + i % 3)) as f32
+        } else {
+            0.0
+        };
+        // Each continuous value `a + b·(ORDER[row][i] + g)`: its own order of the samples, so no two fields' values
+        // are affine in each other and no auto range maps two fields to one image.
+        let at = |a: f32, b: f32, row: usize| a + b * (f32::from(ORDER[row][k]) + g);
+        let r = [
+            [at(0.6, 0.07, 0), at(-0.2, 0.05, 1)],
+            [at(-0.45, -0.03, 2), at(0.55, -0.09, 3)],
+            [at(-0.15, 0.02, 4), at(-0.35, 0.08, 5)],
+        ];
+        let p = [
+            [at(0.1, -0.04, 6), at(0.3, 0.02, 7)],
+            [at(-0.25, 0.06, 8), at(-0.05, -0.03, 9)],
+            [at(0.15, -0.02, 10), at(-0.25, 0.01, 11)],
+        ];
+        // The shadow sits far enough off its state to show at 8 bits.
+        let off = at(0.2, 0.05, 12);
+        let mut r_sh = r;
+        r_sh[0][0] += off;
+        r_sh[1][1] -= 0.5 * off;
+        let mut p_sh = p;
+        p_sh[2][0] += 0.25 * off;
+        let mut m = MASSES[k];
+        let dm = 0.0011 * (nudge * (1 + i % 3)) as f32;
+        m[0] += dm;
+        m[1] -= 2.0 * dm;
+        m[2] += dm;
+        // The latched maxima, and the current drifts within them, a share of each in (0, 1), alternating in sign.
+        let de_max = at(0.03, 0.05, 13);
+        let dlz_max = at(0.03, 0.03, 14);
+        let sign = [1.0, -1.0][k % 2];
+        // Sample 0 is unstepped: its energy and angular momentum are its own, no drift yet.
+        let (e_drift, lz_drift) = match i {
+            0 => (0.0, 0.0),
+            _ => (
+                sign * de_max * (f32::from(ORDER[15][k]) + 0.5 + g) / 8.2,
+                -sign * dlz_max * (f32::from(ORDER[16][k]) + 0.5 + g) / 8.2,
+            ),
+        };
+        // The Welford fit: none on the unstepped sample (payload §4: y is sampled after each completed step); else
+        // `C_ty` the sample's slope times `C_tt(n)` (the read side's own, `n = t_end_step`), so that each sample's
+        // slope, not its step count, sets its diffusion. `C_tt` grows as `n³`, so the slopes shrink as `n` grows,
+        // which keeps both the slopes and `C_ty` spread. `mean_y` in `[0, 4]`, the range of payload §4's `y`, a squared
+        // shape-sphere chord (REQ-PAY-073, REQ-PAY-098).
+        let n = T_END[k] + t_nudge;
+        let (mean_y, c_ty) = match i {
+            0 => (0.0, 0.0),
+            _ => (at(0.41, 0.45, 17), SLOPE[k] * diffusion_c_tt(n, DT_MACRO)),
+        };
+        // Samples 3, 4 and 7 hold long words, 76, 76 and 74 symbols cycling from different starts, whose top limbs,
+        // `payload`, spread across its range.
+        let long = |cycle: [u32; 4], n: usize| (0..n).map(|j| cycle[j % 4]).collect::<Vec<u32>>();
+        let symbols = match k {
+            3 => long([0, 2, 1, 3], 76),
+            4 => long([2, 0, 3, 1], 76),
+            7 => long([1, 3, 0, 2], 74),
+            _ => WORDS[k].to_vec(),
+        };
+        let (word, last) = appended(&symbols);
+        let mut sample = set.sample(i);
+        sample
+            .r(r)
+            .p(p)
+            .r_sh(r_sh)
+            .p_sh(p_sh)
+            .S(S[k] + g)
+            .theta(THETA[k] + g)
+            .mean_y(mean_y)
+            .C_ty(c_ty)
+            .E_0(hamiltonian(r, p, m) - e_drift)
+            .Lz_0(angular_momentum_z(r, p) - lz_drift)
+            .total_substeps(TOTAL_SUBSTEPS[k] + 7919 * t_nudge)
+            .closure_min(10f32.powf(at(-4.0, 0.6, 19)))
+            .closure_step([0, 7, 33, 120, 15, 2, 640, 300][k])
+            // The collision floor's codes (payload §2; R-973): 0, not recorded, on the two failed samples (4 and 5),
+            // and codes across the range, 1 to 145, on the others, each moved `nudge·(1 + i mod 3)` codes.
+            .coll_floor(match [18, 17, 1, 139, 0, 0, 19, 40][k] {
+                0 => 0,
+                c => c + nudge * (1 + i % 3),
+            })
+            .state(STATES[k])
+            .detail([0, 1, 2, 3, 0, 1, 2, 3][k])
+            .saturated(i % 3 == 1)
+            // R-37's departed bit (payload §2, bit 15; R-545): clear on the fresh sample 0 and on samples 3 and 5.
+            .departed([false, true, true, false, true, false, true, true][k])
+            .dmin_pair(if i == 0 { 3 } else { i % 3 })
+            .times(n, n / 3 + nudge * (i % 2))
+            .word_raw(word);
+        if let Some(s) = last {
+            sample.last_symbol(s);
+        }
+        // A failed sample's latches are defined: `dE_max = dLz_max = 0.0`, `d_min = +inf` (payload §1, "Failed-state
+        // contents are defined"; R-271).
+        if STATES[k] == STATE_SIM_FAILED || STATES[k] == STATE_DECODE_FAILED {
+            sample.d_min(f32::INFINITY).drift_max(0.0, 0.0);
+        } else if i > 0 {
+            let d = at(1.0, 1.0, 20);
+            sample.d_min(0.02 * d * d).drift_max(de_max, dlz_max);
+        }
+        let ic = set.ic(i);
+        (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
+        ic.q_mass = at(0.12, 0.1, 21);
+        ic.rho_mag = at(0.05, 0.12, 22);
+        ic.lambda_mag = at(0.91, -0.08, 23);
+        ic.rho_ratio = at(0.2, 0.45, 24);
+        ic.rho_angle = at(0.4, 0.8, 25);
+        ic.K_0 = at(0.15, 0.09, 26);
+        ic.V_0 = at(-1.4, 0.1, 27);
+        ic.virial_ratio = at(0.3, 0.2, 28);
+        ic.r_min_pair_0 = at(0.05, 0.12, 29);
+    }
+}
+
+/// The ternary masses view's set: equal masses (white), each vertex alone (its primary), then five mixes.
+pub fn ternary_masses(set: &mut Synthetic) {
+    const MASSES: [[f32; 3]; 8] = [
+        [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [0.5, 0.3, 0.2],
+        [0.15, 0.6, 0.25],
+        [0.25, 0.15, 0.6],
+        [0.45, 0.45, 0.1],
+    ];
+    for (i, m) in (0u32..).zip(MASSES) {
+        let ic = set.ic(i);
+        (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
+    }
+}
+
+impl Scene {
+    /// The target's size.
+    pub fn size(&self) -> (u32, u32) {
+        self.context.grid.target()
+    }
+
+    /// The colour occupant's WGSL.
+    pub fn colour(&self) -> Result<String, String> {
+        match &self.colouring {
+            Colouring::View(field) => {
+                let entries = registry::registry().map_err(|e| e.to_string())?;
+                let id = format!("debug/generated/{field}");
+                let catalogue = Catalogue::new(&entries);
+                if !catalogue.fields().contains(field) {
+                    return Err(format!("the catalogue has no view of `{field}`"));
+                }
+                entries
+                    .into_iter()
+                    .find(|e| e.id == id)
+                    .map(|e| e.source)
+                    .ok_or_else(|| format!("no registry entry `{id}`"))
+            }
+            Colouring::Ramp { ramp, .. } => Ok(ramp.wgsl()),
+            Colouring::Debug(case) => registry::registry()
+                .map_err(|e| e.to_string())?
+                .into_iter()
+                .find(|e| e.id == case.id)
+                .map(|e| e.source)
+                .ok_or_else(|| format!("no registry entry `{}`", case.id)),
+            Colouring::Probe(wgsl, _) => Ok(wgsl.clone()),
+            Colouring::Outcome { .. } => Ok(outcome::WGSL.to_owned()),
+        }
+    }
+
+    /// The colour node's occupant: the built-in `outcome_state` for the outcome palette, else the colour's WGSL
+    /// ([`Scene::colour`]) as custom text.
+    pub fn occupant(&self) -> Result<Occupant, String> {
+        Ok(match self.colouring {
+            Colouring::Outcome { .. } => Occupant::BuiltIn(outcome::ID.to_owned()),
+            _ => Occupant::Custom(self.colour()?),
+        })
+    }
+
+    /// The stain: the zero source into the colour, the pass-through combiner and `OUT`, as the catalogue bakes a view.
+    pub fn stain(&self) -> Result<Stain, String> {
+        self.stain_with(self.occupant()?)
+    }
+
+    /// [`Scene::stain`] with the colour node's occupant `colour`.
+    fn stain_with(&self, colour: Occupant) -> Result<Stain, String> {
+        let node = |kind, occupant, inputs: &[Option<usize>]| Node {
+            kind,
+            occupant,
+            inputs: inputs.to_vec(),
+        };
+        Stain::new(vec![
+            node(Kind::Source, Occupant::Custom(ZERO_SOURCE.to_owned()), &[]),
+            node(Kind::Colour, colour, &[Some(0)]),
+            node(
+                Kind::Combiner,
+                Occupant::BuiltIn("pass_through".to_owned()),
+                &[Some(1), None],
+            ),
+            node(Kind::Out, Occupant::None, &[Some(2)]),
+        ])
+        .map_err(|e| e.to_string())
+    }
+
+    /// The read value of the scene's field at sample `i` and its read-side validity (`ftle_valid`, `n ≥ 2`, true for
+    /// a field with neither), through the kernel's read side, the Rust twin of the fragment's: every field a numeric
+    /// view colours (`ledger::gen::numeric`), `dmin_pair`, `state`, `detail`, and each f32 member of the sample's
+    /// `ICDescriptor` (`Scene::ic_member`). Any other field is an error, naming it, so that no scene reads, or
+    /// measures its `u_range` from, a field it does not colour (applied per R-369, qa review 5468844637); a debug
+    /// view's scene has no field and reads none.
+    pub fn value(&self, i: u32) -> Result<(f32, bool), String> {
+        let read = self.read(i);
+        Ok(match self.field() {
+            "ftle" => (read.ftle, read.ftle_valid),
+            "diffusion" => (read.diffusion, read.diffusion_slope_valid),
+            "dE_max" => (read.dE_max, true),
+            "dLz_max" => (read.dLz_max, true),
+            "d_min" => (read.d_min, true),
+            "dmin_pair" => (read.dmin_pair as f32, true),
+            "saturated" => (f32::from(u8::from(read.saturated)), true),
+            "departed" => (f32::from(u8::from(read.departed)), true),
+            "last_symbol" => (
+                read.last_symbol as f32,
+                kernel::payload::sd_last_symbol_valid(fgw_length_raw(read.word)),
+            ),
+            "energy_drift" => (read.energy_drift, true),
+            "state" => (read.state as f32, true),
+            "detail" => (read.detail as f32, true),
+            "length" => (fgw_length_raw(read.word) as f32, true),
+            "S" => (read.S, true),
+            "theta" => (read.theta, true),
+            "mean_y" => (read.mean_y, true),
+            "C_ty" => (read.C_ty, true),
+            "E_0" => (read.E_0, true),
+            "Lz_0" => (read.Lz_0, true),
+            "total_substeps" => (read.total_substeps as f32, true),
+            "closure_min" => (read.closure_min, true),
+            "closure_step" => (read.closure_step as f32, true),
+            "coll_floor" => (read.coll_floor as f32, true),
+            "t_end_step" => (read.t_end_step as f32, true),
+            "t_dmin_step" => (read.t_dmin_step as f32, true),
+            "payload" => (kernel::payload::fgw_payload(read.word) as f32, true),
+            other => match self.ic_member(i, other) {
+                Some(v) => (v, true),
+                None => {
+                    return Err(format!(
+                        "golden scene `{}`: its field `{other}` has no read in `Scene::value`",
+                        self.name
+                    ))
+                }
+            },
+        })
+    }
+
+    /// Sample `i`'s `ICDescriptor` member `name` as the set uploads it, an f32 at the ledger's offset for it
+    /// (`ledger::gen::rust::offsets`), which the fragment reads as `ctx.ic.<name>`; `None` unless `name` is an f32
+    /// member of `ICDescriptor`.
+    fn ic_member(&self, i: u32, name: &str) -> Option<f32> {
+        let s = ledger::payload::structs()
+            .into_iter()
+            .find(|s| s.name == "ICDescriptor")?;
+        let (offsets, size) = ledger::gen::rust::offsets(&s);
+        let (_, at) = s
+            .members
+            .iter()
+            .zip(offsets)
+            .find(|(m, _)| m.name == name && matches!(m.storage, Storage::F32))?;
+        let at = (i * size + at) as usize;
+        let ic = self.set.bytes().ic;
+        Some(f32::from_le_bytes(ic.get(at..at + 4)?.try_into().ok()?))
+    }
+
+    /// Sample `i`'s `ICDescriptor` masses `m0 m1 m2`, as the set uploads them and the fragment reads them (`ctx.ic`).
+    pub fn masses(&self, i: u32) -> [f32; 3] {
+        ["m0", "m1", "m2"].map(|m| self.ic_member(i, m).unwrap_or(f32::NAN))
+    }
+
+    /// Sample `i` as the kernel's read side reads it, the Rust twin of the fragment's unpack: the scene's context, a
+    /// FULL-tier read with no ensemble, with the sample's own masses ([`Scene::masses`], the fragment's `ctx.ic`),
+    /// which the read's `n` and `energy_drift` take (applied per R-369: TASK-M1-09's read took thirds).
+    pub fn read(&self, i: u32) -> SimState {
+        self.read_with(i, self.masses(i))
+    }
+
+    /// The half-width of the neutral band of the current drift `field` at sample `i`, as the fragment computes it
+    /// from the sample's read state and masses (render contract Part 5, "The neutral band"; R-928):
+    /// `present::drift_band_energy` for `energy_drift`, `present::drift_band_lz` for `Lz_drift`, else 0.
+    pub fn drift_band(&self, field: &str, i: u32) -> f32 {
+        let read = self.read(i);
+        match field {
+            "energy_drift" => present::drift_band_energy(read.r, read.p, self.masses(i)),
+            "Lz_drift" => present::drift_band_lz(read.r, read.p),
+            _ => 0.0,
+        }
+    }
+
+    /// Sample `i` through the kernel's read side with the masses `masses`: the scene's context, a FULL-tier read with
+    /// no ensemble. A test's control reads with masses not the sample's through it.
+    pub fn read_with(&self, i: u32, masses: [f32; 3]) -> SimState {
+        let c = &self.context;
+        let params = ReadParams {
+            dt_macro: c.dt_macro,
+            delta_0: c.delta_0,
+            n_renorm: c.n_renorm,
+            horizon_steps: c.horizon_steps,
+        };
+        sim_state_from_ftle(
+            self.set.simstate(i),
+            self.set.word(i),
+            true,
+            canonical_nan(),
+            false,
+            masses,
+            &params,
+        )
+    }
+
+    /// The scene's field; a debug view's scene names its registry id.
+    pub fn field(&self) -> &'static str {
+        match &self.colouring {
+            Colouring::View(f) => f,
+            Colouring::Ramp { ramp, .. } => ramp.field.field,
+            Colouring::Debug(case) => &case.id,
+            Colouring::Probe(..) => "probe",
+            Colouring::Outcome { .. } => "state",
+        }
+    }
+
+    /// The scene's samples' read values, in order.
+    fn values(&self) -> Result<Vec<f32>, String> {
+        (0..self.context.grid.sample_count())
+            .map(|i| self.value(i).map(|(v, _)| v))
+            .collect()
+    }
+
+    /// The numeric view of a view scene, its `RANGE_AUTO` the header's default; `None` for a ramp scene or a view
+    /// of a field with no numeric view (a categorical field's).
+    fn numeric_or_none(&self) -> Result<Option<NumericView>, String> {
+        let Colouring::View(field) = self.colouring else {
+            return Ok(None);
+        };
+        let l = ledger::payload::ledger();
+        let entries = ledger::gen::validate(&l).map_err(|e| e.to_string())?;
+        let e = entries
+            .iter()
+            .find(|e| e.name == field)
+            .ok_or_else(|| format!("`{field}` is no ledger field"))?;
+        Ok(NumericView::of(e))
+    }
+
+    /// The colour node's params as the scene sets them: a view's `u_range`, the measured min and max of its `raw`
+    /// over the scene's samples (TASK-M1-03's note: at M1, a CPU min/max over the synthetic buffer); a ramp's
+    /// `INVALID_OVERRIDE`.
+    pub fn params(&self) -> Result<Vec<(String, Vec<f64>)>, String> {
+        Ok(match &self.colouring {
+            Colouring::View(_) => match self.numeric_or_none()? {
+                Some(n) => vec![("u_range".to_owned(), n.measured(&self.values()?).to_vec())],
+                None => Vec::new(),
+            },
+            Colouring::Ramp { override_on, .. } => vec![(
+                "INVALID_OVERRIDE".to_owned(),
+                vec![f64::from(u32::from(*override_on))],
+            )],
+            Colouring::Debug(case) => case.params.clone(),
+            Colouring::Probe(_, params) => params.clone(),
+            Colouring::Outcome { edit } => edit
+                .iter()
+                .map(|(param, c)| ((*param).to_owned(), present::srgb8(*c).to_vec()))
+                .collect(),
+        })
+    }
+
+    /// The outcome palette's swatches as the scene sets them, 8-bit sRGB in `outcome::SWATCHES`' order: the defaults,
+    /// the edited one replaced.
+    pub fn swatches(&self) -> Vec<[u8; 3]> {
+        let mut out = outcome::defaults();
+        if let Colouring::Outcome {
+            edit: Some((param, c)),
+        } = &self.colouring
+        {
+            if let Some(k) = outcome::index(param) {
+                out[k] = *c;
+            }
+        }
+        out
+    }
+
+    /// What the scene shows at sample `i`, by the CPU twin of its colouring: the ledger's numeric template
+    /// ([`NumericView::shown`]) for a view, its `RANGE_AUTO` the header's default and its `u_range` the scene's
+    /// ([`Scene::params`]); the field ramp's ([`FieldRamp::shown`]) for a ramp.
+    pub fn look(&self, i: u32) -> Result<Look, String> {
+        let (v, gate) = self.value(i)?;
+        let read = self.read(i);
+        match &self.colouring {
+            Colouring::View("state") => Ok(Look::Flat(present::dbg_cat(read.state, 6))),
+            Colouring::View("detail") => {
+                Ok(Look::Flat(outcome::detail_view(read.state, read.detail)))
+            }
+            // The sub-field views (debug tooling plan §B), as the catalogue generates them: `saturated` and `departed`
+            // flags;
+            // `dmin_pair` categorical, its sentinel 3 its literal value; `last_symbol` categorical where the word gives
+            // it one, else the hatch (payload §2).
+            Colouring::View("saturated") => Ok(Look::Flat(present::dbg_flag(read.saturated))),
+            Colouring::View("departed") => Ok(Look::Flat(present::dbg_flag(read.departed))),
+            Colouring::View("dmin_pair") => Ok(if read.dmin_pair == SD_DMIN_PAIR_SENTINEL {
+                Look::Literal(f64::from(SD_DMIN_PAIR_SENTINEL))
+            } else {
+                Look::Flat(present::dbg_cat(read.dmin_pair, 3))
+            }),
+            Colouring::View("last_symbol") => Ok(if gate {
+                Look::Flat(present::dbg_cat(read.last_symbol, 4))
+            } else {
+                Look::Invalid
+            }),
+            // The current energy drift, a derived field with a ledger floor and no numeric view: the drift view at
+            // its defaults (TASK-M3-05), the predicates read from the stored latches at the default `ε_E`.
+            Colouring::View("energy_drift") => {
+                let (energy, lz) = drift_suspects(&read);
+                let band = self.drift_band("energy_drift", i);
+                Ok(Look::Drift {
+                    x: present::dbg_drift_banded(v, band),
+                    reference: read.E_0,
+                    lin_r: ledger::gen::catalogue::drift_range("energy_drift")
+                        .ok_or("`energy_drift` has no drift range")?,
+                    eps: ledger::constants::EPS_E_DEFAULT.number(),
+                    energy,
+                    lz,
+                })
+            }
+            Colouring::Outcome { .. } => Ok(
+                match outcome::shown(read.state, read.detail, self.set.forbidden(i)) {
+                    OutcomeShown::Swatch(k) => Look::Flat(present::srgb8(self.swatches()[k])),
+                    OutcomeShown::Forbidden | OutcomeShown::DecodeFailed => Look::Background,
+                },
+            ),
+            Colouring::View(f) => {
+                let n = self
+                    .numeric_or_none()?
+                    .ok_or_else(|| format!("`{f}` has no numeric view"))?;
+                let u_range = match self.params()?.first() {
+                    Some((_, v)) => [v[0], v[1]],
+                    None => return Err(format!("`{f}`'s view has no `u_range`")),
+                };
+                Ok(
+                    match n.shown(v, n.range_auto, u_range, self.context.horizon_steps) {
+                        ViewShown::Invalid => Look::Invalid,
+                        ViewShown::Literal(s) => Look::Literal(s),
+                        ViewShown::NotYet => Look::NotYet,
+                        ViewShown::Ramp { ramp, t } => Look::Ramp { ramp, t },
+                    },
+                )
+            }
+            // A ramp on a current drift reads it through the sample's own neutral band, as its WGSL does (R-928,
+            // R-929); every other field's band is 0, which the ramp does not read.
+            Colouring::Ramp { ramp, override_on } => Ok(
+                match ramp.shown_in_banded(
+                    v,
+                    gate,
+                    Reads::HEADER,
+                    self.set.forbidden(i),
+                    read.state,
+                    self.drift_band(ramp.field.field, i),
+                ) {
+                    RampShown::Blank => Look::Background,
+                    RampShown::Invalid if *override_on => Look::Override,
+                    RampShown::Invalid => Look::PresentInvalid,
+                    RampShown::NotYet => Look::NotYet,
+                    RampShown::Ramp(t) => Look::Ramp {
+                        ramp: Ramp::Viridis,
+                        t,
+                    },
+                },
+            ),
+            Colouring::Debug(_) | Colouring::Probe(..) => {
+                unreachable!("a debug view's or a probe's scene reads no value")
+            }
+        }
+    }
+
+    /// The pixels of sample `i`'s tile, `(x, y)` from the top left.
+    pub fn pixels(&self, i: u32) -> Vec<(u32, u32)> {
+        let (width, height) = self.size();
+        let grid = self.context.grid;
+        (0..height)
+            .flat_map(|y| (0..width).map(move |x| (x, y)))
+            .filter(|&(x, y)| grid.cell(x, y).sample == i)
+            .collect()
+    }
+
+    /// Whether sample `i` shows a value the fragment returns unchanged from a uniform, with no arithmetic: a swatch of
+    /// the outcome palette (`render::colour::outcome`), or the canvas background, the prelude's uniform. Its render is
+    /// then the same f32 bits on every backend, so it needs no margin from a rounding tie
+    /// ([`tie_checked`](Scene::tie_checked)).
+    pub fn exact(&self, i: u32) -> Result<bool, String> {
+        let look = self.look(i)?;
+        Ok(look == Look::Background
+            || matches!(self.colouring, Colouring::Outcome { .. }) && matches!(look, Look::Flat(_)))
+    }
+
+    /// The twin's pixels a backend's arithmetic may move ([`tie_margin`]'s input): each pixel's linear RGB, rows from
+    /// the top, but those of the samples shown [`exact`](Scene::exact)ly.
+    pub fn tie_checked(&self) -> Result<Vec<Rgb>, String> {
+        let (width, height) = self.size();
+        let grid = self.context.grid;
+        let exact = (0..grid.sample_count())
+            .map(|i| self.exact(i))
+            .collect::<Result<Vec<_>, _>>()?;
+        let all = self.expected()?;
+        Ok((0..height)
+            .flat_map(|y| (0..width).map(move |x| (x, y)))
+            .zip(all)
+            .filter(|((x, y), _)| !exact[grid.cell(*x, *y).sample as usize])
+            .map(|(_, c)| c)
+            .collect())
+    }
+
+    /// The render's CPU twin: each pixel's linear RGB, rows from the top.
+    pub fn expected(&self) -> Result<Vec<Rgb>, String> {
+        let (width, height) = self.size();
+        let grid = self.context.grid;
+        let looks = (0..grid.sample_count())
+            .map(|i| self.look(i))
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut out = Vec::with_capacity((width * height) as usize);
+        for y in 0..height {
+            for x in 0..width {
+                out.push(looks[grid.cell(x, y).sample as usize].colour([x, y]));
+            }
+        }
+        Ok(out)
+    }
+
+    /// Renders the scene through the render harness (`render::bind::preset_module` and `upload`) into an
+    /// `Rgba32Float` target, the colour node's uniform block holding its params ([`Scene::params`]) over its
+    /// declared defaults, and returns each pixel's RGBA, rows from the top.
+    pub fn render(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) -> Result<Vec<[f32; 4]>, String> {
+        self.render_with(device, queue, self.occupant()?, Tier::FULL)
+    }
+
+    /// [`Scene::render`] at the tier `tier` (lowering Part 3a): the stain assembled at `tier`, its baked `has_ftle`
+    /// and `has_word`, over the set's bytes in `tier`'s stored variant (`Synthetic::bytes_at`).
+    pub fn render_at(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        tier: Tier,
+    ) -> Result<Vec<[f32; 4]>, String> {
+        self.render_with(device, queue, self.occupant()?, tier)
+    }
+
+    /// [`Scene::render`] with the colour node's occupant the WGSL `colour` instead: a test's altered occupant.
+    pub fn render_colour(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        colour: &str,
+    ) -> Result<Vec<[f32; 4]>, String> {
+        self.render_with(
+            device,
+            queue,
+            Occupant::Custom(colour.to_owned()),
+            Tier::FULL,
+        )
+    }
+
+    /// [`Scene::render_at`] with the colour node's occupant `colour`.
+    fn render_with(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        colour: Occupant,
+        tier: Tier,
+    ) -> Result<Vec<[f32; 4]>, String> {
+        let params = self.params()?;
+        render_stain_at(
+            device,
+            queue,
+            &self.stain_with(colour)?,
+            tier,
+            &self.set,
+            &self.context,
+            &|_, name| {
+                params
+                    .iter()
+                    .find(|(n, _)| n == name)
+                    .map(|(_, v)| v.clone())
+            },
+        )
+    }
+}
+
+/// Renders `stain` over `set` with `context` through the render harness (`render::bind::preset_module` and `upload`)
+/// into an `Rgba32Float` target the size of `context`'s grid, and returns each pixel's RGBA, rows from the top. Each
+/// node's uniform block holds `param(node, name)` for each of its uniforms, `node` its place in the canonical stain
+/// (`render::assemble::UniformBlock::node`), or the uniform's declared default where that is `None`; a value the
+/// uniform does not admit is refused.
+pub fn render_stain(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+) -> Result<Vec<[f32; 4]>, String> {
+    render_stain_at(device, queue, stain, Tier::FULL, set, context, param)
+}
+
+/// [`render_stain`] at the tier `tier` (lowering Part 3a): `stain` assembled at `tier`, over `set`'s bytes in `tier`'s
+/// stored variant, `SimStateFTLE` or `SimStateBase` (`Synthetic::bytes_at`).
+pub fn render_stain_at(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    tier: Tier,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+) -> Result<Vec<[f32; 4]>, String> {
+    render_stain_bound_at(
+        device,
+        queue,
+        stain,
+        tier,
+        set,
+        context,
+        param,
+        wgpu::BufferUsages::empty(),
+    )
+    .map(|(image, _)| image)
+}
+
+/// [`render_stain`], the four buffers the draw binds made with `usage` beside `STORAGE` (`render::bind::upload_with`)
+/// and returned with the image: `COPY_SRC` for a test that reads them back after the draw (REQ-TOOL-028's observation
+/// taps).
+pub fn render_stain_bound(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    usage: wgpu::BufferUsages,
+) -> Result<(Vec<[f32; 4]>, bind::Bound), String> {
+    render_stain_bound_at(device, queue, stain, Tier::FULL, set, context, param, usage)
+}
+
+/// [`render_stain_bound`] at the tier `tier`, as [`render_stain_at`].
+#[allow(clippy::too_many_arguments)] // the draw's seven inputs and the buffers' usage; a struct would only rename them
+fn render_stain_bound_at(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    tier: Tier,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    usage: wgpu::BufferUsages,
+) -> Result<(Vec<[f32; 4]>, bind::Bound), String> {
+    let fragment = assemble::assemble(stain, tier).map_err(|e| e.to_string())?;
+    let background = present::srgb8(BACKGROUND).map(|c| c as f32);
+    draw(
+        device, queue, &fragment, tier, set, context, param, background, usage,
+    )
+    .map(|(rendered, bound)| (rendered.pixels, bound))
+}
+
+/// What a render takes beside its stain, payload, context and params (R-467; REQ-COL-108, REQ-COL-109): the tier, the
+/// variant, a presentation view or View › Debug view, the render's debug-view flag, and the canvas background, linear
+/// RGB, the prelude's uniform its caller sets to the colour its window is cleared to.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Inputs {
+    pub tier: Tier,
+    pub view: View,
+    pub background: [f32; 3],
+}
+
+impl Default for Inputs {
+    /// The full tier, a presentation view and the harness's recorded background, [`BACKGROUND`].
+    fn default() -> Inputs {
+        Inputs {
+            tier: Tier::FULL,
+            view: View::Presentation,
+            background: present::srgb8(BACKGROUND).map(|c| c as f32),
+        }
+    }
+}
+
+/// A render: each pixel's RGBA, rows from the top, and, for the debug view, the "Debug" key's three counts, the pixels
+/// drawn in "forbidden (chart)", "decode or sim failure" and "NaN / Inf" (REQ-COL-109).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Rendered {
+    pub pixels: Vec<[f32; 4]>,
+    pub counts: Option<[u32; 3]>,
+}
+
+/// [`render_stain`] with the inputs `inputs`: `stain` assembled at `inputs.tier` as `inputs.view`'s variant
+/// (`render::assemble::assemble_view`), drawn with the canvas background `inputs.background`, and the debug view's
+/// counts read back.
+pub fn render_stain_with(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    inputs: Inputs,
+) -> Result<Rendered, String> {
+    let fragment =
+        assemble::assemble_view(stain, inputs.tier, inputs.view).map_err(|e| e.to_string())?;
+    render_fragment(
+        device,
+        queue,
+        &fragment,
+        inputs.tier,
+        set,
+        context,
+        param,
+        inputs.background,
+    )
+}
+
+/// [`render_stain_with`] for an assembled `fragment` at `tier`: a test's control renders an altered debug arm
+/// (`render::assemble::assemble_arm`) through it.
+#[allow(clippy::too_many_arguments)] // the draw's inputs, as `render_stain_with` takes them
+pub fn render_fragment(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    fragment: &Fragment,
+    tier: Tier,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    background: [f32; 3],
+) -> Result<Rendered, String> {
+    draw(
+        device,
+        queue,
+        fragment,
+        tier,
+        set,
+        context,
+        param,
+        background,
+        wgpu::BufferUsages::empty(),
+    )
+    .map(|(rendered, _)| rendered)
+}
+
+/// Draws `fragment` over `set` with `context` through the render harness into an `Rgba32Float` target the size of
+/// `context`'s grid: group 0 the prelude's uniform block, with the canvas background `background`, and the nodes'
+/// blocks; groups 1 and 2 `render::bind::upload_with`'s, its four buffers made with `usage`; and, for a fragment with
+/// the debug arm, group 3 the counts, zeroed, read back after the draw.
+#[allow(clippy::too_many_arguments)] // the draw's inputs, as `render_stain_with` takes them, and the buffers' usage
+fn draw(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    fragment: &Fragment,
+    tier: Tier,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    background: [f32; 3],
+    usage: wgpu::BufferUsages,
+) -> Result<(Rendered, bind::Bound), String> {
+    let module = bind::preset_module(&fragment.source);
+    let bytes = set.bytes_at(tier.has_ftle);
+    let bound = bind::upload_with(device, &bytes.payload(), context, usage);
+    use wgpu::util::DeviceExt;
+    let buffer = |bytes: &[u8]| {
+        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("golden scene uniforms"),
+            contents: bytes,
+            usage: wgpu::BufferUsages::UNIFORM,
+        })
+    };
+    let words: Vec<u8> = ledger::gen::prelude::uniform_words_with(context.grid.e, background)
+        .iter()
+        .flat_map(|w| w.to_le_bytes())
+        .collect();
+    let first = ledger::gen::prelude::uniforms_binding();
+    let mut buffers = vec![(first.binding, buffer(&words))];
+    for block in &fragment.uniforms {
+        let (offsets, size) = block_layout(&block.uniforms);
+        let mut contents = vec![0u8; size as usize];
+        for (u, &at) in block.uniforms.iter().zip(&offsets) {
+            let value = param(block.node, &u.name).unwrap_or_else(|| u.default.clone());
+            if !u.admits(&value) {
+                return Err(format!("{value:?} is not a value of `{}`", u.name));
+            }
+            let v = encode(u.ty, &value);
+            contents[at as usize..at as usize + v.len()].copy_from_slice(&v);
+        }
+        buffers.push((block.binding, buffer(&contents)));
+    }
+    let entries: Vec<wgpu::BindGroupLayoutEntry> = buffers
+        .iter()
+        .map(|(binding, _)| wgpu::BindGroupLayoutEntry {
+            binding: *binding,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        })
+        .collect();
+    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("golden scene uniforms"),
+        entries: &entries,
+    });
+    let group_entries: Vec<wgpu::BindGroupEntry> = buffers
+        .iter()
+        .map(|(binding, b)| wgpu::BindGroupEntry {
+            binding: *binding,
+            resource: b.as_entire_binding(),
+        })
+        .collect();
+    let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("golden scene uniforms"),
+        layout: &layout,
+        entries: &group_entries,
+    });
+    let counts = fragment.debug_arm.then(|| DebugCounts::new(device));
+    let [_, l1, l2] = bound.layout_refs();
+    let [_, g1, g2] = bound.group_refs();
+    let mut layouts = vec![&layout, l1, l2];
+    let mut groups = vec![&group, g1, g2];
+    if let Some(c) = &counts {
+        layouts.push(&c.layout);
+        groups.push(&c.group);
+    }
+    let (width, height) = context.grid.target();
+    let image = headless::render(
+        device,
+        queue,
+        &Draw {
+            module: &module,
+            entry: bind::PRESET_ENTRY,
+            layouts: &layouts,
+            groups: &groups,
+        },
+        Target {
+            width,
+            height,
+            format: wgpu::TextureFormat::Rgba32Float,
+        },
+    )?;
+    let pixels = image
+        .bytes
+        .as_chunks::<16>()
+        .0
+        .iter()
+        .map(|p| {
+            let (c, _) = p.as_chunks::<4>();
+            [0, 1, 2, 3].map(|k| f32::from_le_bytes(c[k]))
+        })
+        .collect();
+    let counts = match counts {
+        Some(c) => Some(c.read(device, queue)?),
+        None => None,
+    };
+    Ok((Rendered { pixels, counts }, bound))
+}
+
+/// The debug view's counts' buffer, zeroed, and its bind group at `render::assemble::DEBUG_COUNTS_GROUP`
+/// (REQ-COL-109).
+struct DebugCounts {
+    buffer: wgpu::Buffer,
+    layout: wgpu::BindGroupLayout,
+    group: wgpu::BindGroup,
+}
+
+impl DebugCounts {
+    /// The counts' buffer, three zeroed u32, read-write storage the draw adds to and a copy reads back.
+    fn new(device: &wgpu::Device) -> DebugCounts {
+        use wgpu::util::DeviceExt;
+        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("debug view counts"),
+            contents: &[0u8; 12],
+            usage: wgpu::BufferUsages::STORAGE.union(wgpu::BufferUsages::COPY_SRC),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("debug view counts"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: assemble::DEBUG_COUNTS_BINDING,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+        });
+        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("debug view counts"),
+            layout: &layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: assemble::DEBUG_COUNTS_BINDING,
+                resource: buffer.as_entire_binding(),
+            }],
+        });
+        DebugCounts {
+            buffer,
+            layout,
+            group,
+        }
+    }
+
+    /// The three counts, read back after the draw.
+    fn read(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> Result<[u32; 3], String> {
+        let readback = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("debug view counts readback"),
+            size: 12,
+            usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
+            mapped_at_creation: false,
+        });
+        let mut encoder = device.create_command_encoder(&Default::default());
+        encoder.copy_buffer_to_buffer(&self.buffer, 0, &readback, 0, 12);
+        queue.submit([encoder.finish()]);
+        let slice = readback.slice(..);
+        slice.map_async(wgpu::MapMode::Read, |r| r.expect("counts map failed"));
+        device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .map_err(|e| format!("device poll failed: {e}"))?;
+        let mapped = slice
+            .get_mapped_range()
+            .map_err(|e| format!("counts range: {e}"))?;
+        let mut out = [0u32; 3];
+        for (k, w) in mapped.as_chunks::<4>().0.iter().enumerate() {
+            out[k] = u32::from_le_bytes(*w);
+        }
+        drop(mapped);
+        readback.unmap();
+        Ok(out)
+    }
+}
+
+/// The drift suspect predicates of `read`'s stored latches at the default floor `eps_e`, `(SUSPECT_ENERGY,
+/// SUSPECT_LZ)`: the read side's `suspect_energy` and `suspect_lz` (TASK-M3-05), as a drift view at its defaults
+/// styles them, the energy predicate unlit on a non-finite `E_0`, tested on its bits first (R-436).
+pub fn drift_suspects(read: &kernel::payload::SimState) -> (bool, bool) {
+    let eps_e = ledger::constants::EPS_E_DEFAULT.number() as f32;
+    (
+        !non_finite(read.E_0) && kernel::payload::suspect_energy(read.dE_max, read.E_0, eps_e),
+        kernel::payload::suspect_lz(read.dLz_max),
+    )
+}
+
+/// The smallest distance, in 8-bit steps, of any channel of `pixels` scaled to 0…255 from a rounding tie (`k + ½`):
+/// how far the quantise pass is from rounding a value the other way, which a backend's f32 error must not cross for
+/// the case's one reference to hold on every backend (R-269, R-296).
+pub fn tie_margin(pixels: &[Rgb]) -> f64 {
+    pixels
+        .iter()
+        .flatten()
+        .map(|&c| {
+            let v = c.clamp(0.0, 1.0) * 255.0;
+            (v - v.floor() - 0.5).abs()
+        })
+        .fold(f64::INFINITY, f64::min)
+}
+
+/// The float image's file: the magic `PRINF32\0`, the width and height as little-endian u32, then each pixel's RGBA as
+/// four little-endian f32, rows from the top.
+pub const MAGIC: &[u8; 8] = b"PRINF32\0";
+
+/// `pixels`, `width` × `height`, as the float image's file ([`MAGIC`]).
+pub fn encode_image(width: u32, height: u32, pixels: &[[f32; 4]]) -> Vec<u8> {
+    let mut out = MAGIC.to_vec();
+    out.extend(width.to_le_bytes());
+    out.extend(height.to_le_bytes());
+    for p in pixels {
+        for c in p {
+            out.extend(c.to_le_bytes());
+        }
+    }
+    out
+}

@@ -1,0 +1,9 @@
+{
+  "description": "T2 in physical units (inverse-encode Part 4): 65 536 points (u, v) uniform on [0, 1]² on each registered chart, and 1 048 576 latent z with every component on [−6, 6], each decoded, encoded under the defaults links and decoded again, at f64 and at f32.",
+  "seed": 1,
+  "per_chart": 65536,
+  "fuzz": 1048576,
+  "span": 6.0,
+  "encode": "defaults",
+  "expected": "pass"
+}

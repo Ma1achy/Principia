@@ -1,0 +1,6 @@
+{
+  "gate": "decode-sanity",
+  "inputs": ["fuzz.json", "shifted.json"],
+  "threshold": { "value": 16, "requirement": "REQ-ENC-027", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-ENC-027" }
+}

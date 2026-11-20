@@ -1,0 +1,33 @@
+[package]
+name = "ledger"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+# The integration tests are one binary, `tests/all/main.rs`, a module per file (TASK-M0-80): one test executable to
+# link rather than one per file. Nothing else under `tests/` is a target; `tests/all/layout.rs` fails on a file there
+# that no module reaches.
+autotests = false
+
+# `cargo xtask codegen` evaluates the default sim key's `N_sub` thresholds (`gen::nsub`; R-502) in f64 through a pinned
+# pure-software libm: libm, already in the build under naga and spirv-std, at the version `Cargo.lock` holds, with
+# `force-soft-floats`, so no platform libm, compiler intrinsic or architecture-specific instruction computes the `pow`.
+[dependencies]
+libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
+
+# Controls reach ledger's tests through a dev-dependency on validation; they are integration tests in `tests/`, never
+# unit tests in `src/` (R-176, R-187).
+[dev-dependencies]
+validation = { path = "../validation" }
+# The WGSL emitter's tests parse the generated WGSL with naga, wgpu 30's front end (REQ-PAY-016, REQ-PAY-091), and the
+# read side's compile it to naga's MSL, SPIR-V and HLSL to show which stored words a stain loads (R-378).
+naga = { version = "30", features = ["wgsl-in", "msl-out", "spv-out", "hlsl-out"] }
+# The read side's property tests (`tests/all/derived.rs`) draw their cases through the shared config, `validation::prop`.
+proptest = "1.11"
+
+[[test]]
+name = "all"
+path = "tests/all/main.rs"
+
+# Under `controls`, each `negative_control!` in ledger's tests compiles as a test (R-176).
+[features]
+controls = []

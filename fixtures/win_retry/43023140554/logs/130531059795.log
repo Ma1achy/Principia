@@ -1,0 +1,17 @@
+﻿2026-11-11T14:38:11.1911994Z Current runner version: '2.338.2'
+2026-11-11T14:38:11.1917235Z Runner name: 'malachys-pc-rtx2080s'
+2026-11-11T14:38:14.1604284Z ##[group]Run 'E:\runner-tools\checks\job-started.js'
+2026-11-11T14:40:51.7000025Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+2026-11-11T14:41:01.5015859Z ##[group]Run $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+2026-11-11T14:41:08.7176146Z ##[group]Run Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+2026-11-11T14:41:08.9534642Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+2026-11-11T14:41:59.5766901Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+2026-11-11T14:42:00.4061446Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run build cargo build --workspace --all-targets --keep-going
+2026-11-11T14:54:31.4768260Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run workspace cargo nextest run --workspace --no-fail-fast --retries 0
+2026-11-11T18:36:20.9040863Z         SLOW [>13020.000s] (─────────) kernel::qa_TASK-M0-13 qa_gpu_accessors_zero_extend_at_payload_bit_positions
+2026-11-11T18:37:20.9076103Z         SLOW [>13080.000s] (─────────) kernel::qa_TASK-M0-13 qa_gpu_accessors_zero_extend_at_payload_bit_positions
+2026-11-11T18:38:10.2253100Z   Cancelling due to interrupt: 1 test still running
+2026-11-11T18:38:10.2993993Z ##[error]The operation was canceled.
+2026-11-11T18:38:10.3353570Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+2026-11-11T18:38:11.4985620Z ##[group]Run actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+2026-11-11T18:38:18.4365208Z ##[group]Run 'E:\runner-tools\checks\job-completed.js'

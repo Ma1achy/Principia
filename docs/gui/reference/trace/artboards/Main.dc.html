@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Principia dev GUI — Explore with a trace and sound</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0a0a0a}
+a{color:#5ab4ff}a:hover{color:#8cc8ff}
+.eg{font-family:Ubuntu,system-ui,sans-serif;font-weight:300;font-size:12.5px;color:#a8a8a8}
+.eg b{font-weight:500;color:#dcdcdc}
+.mono{font-family:"Ubuntu Mono",ui-monospace,monospace;font-size:12.5px}
+.hd{display:flex;align-items:center;gap:6px;color:#dcdcdc;font-weight:400;margin:10px 0 6px}
+.hd::before{content:"⏷";font-size:10px;color:#8c8c8c}
+.hd.shut::before{content:"⏵"}
+.row{display:flex;align-items:center;gap:8px;min-height:22px}
+.lab{width:92px;flex:none;color:#a8a8a8}
+.btn{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:2px 8px;font:inherit;font-weight:300;cursor:pointer}
+.btn.on{background:#005c80;border-color:#1a7ca3;color:#ffffff}
+.combo{background:#3c3c3c;color:#dcdcdc;border:1px solid #4a4a4a;border-radius:2px;padding:1px 6px;display:flex;justify-content:space-between;min-width:96px}
+.combo::after{content:"⏷";color:#8c8c8c;margin-left:8px;font-size:10px}
+.sl{flex:1;height:4px;background:#303030;border-radius:2px;position:relative}
+.sl i{position:absolute;top:-4px;width:12px;height:12px;border-radius:50%;background:#dcdcdc}
+.sl s{position:absolute;left:0;top:0;bottom:0;background:#005c80;border-radius:2px}
+.val{background:#0a0a0a;border:1px solid #3c3c3c;border-radius:2px;padding:0 5px;min-width:52px;text-align:right;color:#dcdcdc}
+.sep{height:1px;background:#2a2a2a;margin:6px 0}
+.cb{display:inline-flex;align-items:center;gap:6px}.cb i{width:12px;height:12px;background:#3c3c3c;border:1px solid #4a4a4a;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;color:#dcdcdc;font-style:normal;font-size:10px}
+.weak{color:#6f6f6f}
+.pt{color:#dcdcdc;font-weight:400;font-size:14px;margin:4px 0 6px}
+.win{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.55);display:flex;flex-direction:column}
+.cap{padding:6px 12px 2px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#6f6f6f}
+.sec{display:flex;align-items:center;gap:6px;min-height:24px;border-top:1px solid #2a2a2a;padding-top:4px;margin-top:2px}
+.sec .tw{color:#8c8c8c;font-size:10px;width:10px}
+</style>
+</helmet>
+<div class="eg" style="width: 1440px; height: 900px; display: flex; flex-direction: column; background: #0a0a0a; position: relative">
+<div style="height: 28px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 10px; background: #1b1b1b; border-bottom: 1px solid #2a2a2a"><b style="color: #dcdcdc">principia · dev</b><span>File</span><span>View</span><span>Windows</span><button class="btn on">Overlays ▾ 4</button><button class="btn">Run…</button><button class="btn">Profiler…</button><button class="btn">Export…</button><span>Help</span><span style="width: 1px; height: 16px; background: #3c3c3c"></span><a href="Main.dc.html" class="btn on" style="text-decoration: none">Explore</a><span class="btn">Stain</span><span style="flex: 1"></span><span class="mono" style="color: #5ab4ff">♪ L listen · T trace · Space keep</span><span class="mono">t 8.00 · 60 fps · 1 842 quads</span><span class="mono weak">F3</span></div>
+
+<div class="win" style="position: absolute; left: 270px; top: 30px; width: 300px; z-index: 50; padding: 6px 0; border-radius: 4px">
+<div class="cap">Quadtree</div>
+<div class="row" style="padding: 0 12px"><span class="cb" style="flex: 1"><i>✓</i>tile bounds</span><span class="mono weak">Alt+1</span></div>
+<div class="row" style="padding: 0 12px"><span class="cb" style="flex: 1"><i></i>depth colouring</span><span class="mono weak">Alt+2</span></div>
+<div class="row weak" style="padding: 0 12px; font-size: 11px">… integration, chart and stain groups as before</div>
+<div class="cap" style="color: #5ab4ff">Trace</div>
+<div class="row" style="padding: 0 12px"><span class="cb" style="flex: 1"><i>✓</i>trace under cursor</span><span class="mono weak">T</span></div>
+<div class="row" style="padding: 0 12px"><span class="cb" style="flex: 1"><i>✓</i>kept traces</span><span class="mono weak">⇧T</span></div>
+<div class="row" style="padding: 0 12px"><span class="cb" style="flex: 1"><i></i>syzygies</span><span class="mono weak">Y</span></div>
+<div class="row" style="padding: 0 12px"><span class="cb" style="flex: 1"><i>✓</i>end event icon</span></div>
+<div class="row" style="padding: 0 12px"><span class="cb" style="flex: 1"><i>✓</i>off-screen icons, pinned to the edge</span></div>
+<div class="row" style="padding: 0 12px"><span class="cb" style="flex: 1"><i>✓</i>repeat in wrapped copies</span></div>
+<div class="row" style="padding: 0 12px"><span class="cb" style="flex: 1"><i>✓</i>outline the chart's square</span></div>
+<div class="sep" style="margin: 6px 0"></div>
+<div class="row" style="padding: 0 12px; gap: 6px"><button class="btn">Trace…</button><button class="btn">all off</button></div>
+</div>
+
+<div style="flex: 1; display: flex; min-height: 0">
+<div style="width: 300px; flex: none; background: #1b1b1b; border-right: 1px solid #2a2a2a; padding: 6px 14px 6px 12px; overflow: hidden; display: flex; flex-direction: column">
+<div class="pt">Manifold view</div><div class="weak">chart · navigate · slice · tilt · rotation</div>
+<div class="hd">Chart</div>
+<div class="row"><span class="lab">preset</span><span class="combo" style="flex: 1">z_α × z_β</span></div>
+<div class="row"><span class="lab">horizontal q₁</span><span class="mono" style="flex: 1; color: #dcdcdc">1.00·z_α</span></div>
+<div class="row"><span class="lab">vertical q₂</span><span class="mono" style="flex: 1; color: #dcdcdc">1.00·z_β</span></div>
+<div class="row"><span class="lab">extension</span><span class="mono" style="flex: 1; color: #dcdcdc">affine</span></div>
+<div class="row"><button class="btn">Chart builder…</button></div>
+<div class="hd">Navigate</div>
+<div class="row"><span class="lab">centre u, v</span><span class="val mono" style="min-width: 56px">0.5000</span><span class="val mono" style="min-width: 56px">0.5900</span></div>
+<div class="row"><span class="lab">zoom (log₂)</span><div class="sl"><s style="width: 20%"></s><i style="left: calc(20% - 6px)"></i></div><span class="val mono">× 1.00</span></div>
+<div class="weak" style="font-size: 11px">pan and zoom run past the square with the GUI shown; the extension renders, never a gap</div>
+<div class="hd">Centre z₀</div>
+<div class="row"><span class="lab">z_α</span><div class="sl"><s style="width: 46%"></s><i style="left: calc(46% - 6px)"></i></div><span class="val mono">0.180</span></div>
+<div class="row"><span class="lab">z_β</span><div class="sl"><s style="width: 58%"></s><i style="left: calc(58% - 6px)"></i></div><span class="val mono">0.410</span></div>
+<div class="row"><span class="lab">z_q0</span><div class="sl"><s style="width: 50%"></s><i style="left: calc(50% - 6px)"></i></div><span class="val mono">0.000</span></div>
+<div class="row"><span class="lab">z_q1</span><div class="sl"><s style="width: 41%"></s><i style="left: calc(41% - 6px)"></i></div><span class="val mono">−0.227</span></div>
+<div class="hd shut">Slice &amp; tilt</div>
+</div>
+
+<div style="flex: 1; position: relative; background: #0a0a0a; overflow: hidden">
+<svg viewBox="0 0 790 650" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%" role="img" aria-label="Outcome map with the hovered trajectory's trace drawn up to the playhead at t 8, with time ticks, direction arrows, the start star and a labelled head marker">
+<rect x="0" y="0" width="790" height="650" fill="#141414"></rect>
+<rect x="60" y="40" width="680" height="570" fill="#1d4a22"></rect>
+<path d="M60 340 C 200 300 300 420 380 360 S 560 250 740 300 L 740 610 L 60 610 Z" fill="#1f2f72"></path>
+<path d="M440 40 C 480 200 540 260 740 260 L 740 40 Z" fill="#7a1c1c"></path>
+<path d="M380 360 C 420 330 470 340 500 300 C 520 360 470 420 410 410 Z" fill="#0a0a0a"></path>
+<path d="M300 140 C 340 170 360 230 330 250 C 300 220 280 180 300 140 Z" fill="#0a0a0a"></path>
+<rect x="60" y="40" width="680" height="570" fill="none" stroke="#a8a8a8" stroke-opacity="0.5" stroke-dasharray="4 4"></rect>
+<polyline points="380,560 420,520 470,500 520,505 560,520 600,548 640,590" fill="none" stroke="#5ab4ff" stroke-width="1.6" stroke-opacity="0.75"></polyline>
+<polyline points="560.0,440.9 599.3,436.8 635.7,432.2 666.4,427.1 689.2,421.5 702.8,415.3 706.9,408.8 702.6,401.8 691.6,394.5 676.5,386.9 660.2,378.9 645.6,370.7 635.2,362.3 631.1,353.8 634.1,345.1 644.2,336.4 660.2,327.8 680.1,319.1 701.2,310.6 720.2,302.3 734.3,294.1 740.7,286.3 737.5,278.8 723.8,271.6 699.7,264.9 666.4,258.7 626.1,253.0 581.8,247.8 536.8,243.3 494.4,239.3 457.6,236.1 428.7,233.6 409.0,231.8 398.7,230.7 397.1,230.4 402.4,230.9 412.1,232.1 423.3,234.2 433.3,237.0 439.4,240.7 439.8,245.0 433.6,250.2 423.3,254.9" fill="none" stroke="#0a0a0a" stroke-opacity="0.55" stroke-width="4.4" stroke-linejoin="round"></polyline>
+<polyline points="560.0,440.9 599.3,436.8 635.7,432.2 666.4,427.1 689.2,421.5 702.8,415.3 706.9,408.8 702.6,401.8 691.6,394.5 676.5,386.9 660.2,378.9 645.6,370.7 635.2,362.3 631.1,353.8 634.1,345.1 644.2,336.4 660.2,327.8 680.1,319.1 701.2,310.6 720.2,302.3 734.3,294.1 740.7,286.3 737.5,278.8 723.8,271.6 699.7,264.9 666.4,258.7 626.1,253.0 581.8,247.8 536.8,243.3 494.4,239.3 457.6,236.1 428.7,233.6 409.0,231.8 398.7,230.7 397.1,230.4 402.4,230.9 412.1,232.1 423.3,234.2 433.3,237.0 439.4,240.7 439.8,245.0 433.6,250.2 423.3,254.9" fill="none" stroke="#fff27a" stroke-width="2.2" stroke-linejoin="round"></polyline>
+<g stroke="#fff27a" stroke-width="1.6"><line x1="651.1" y1="379.5" x2="656.0" y2="370.8"></line><line x1="736.3" y1="283.8" x2="744.0" y2="290.2"></line><line x1="421.1" y1="237.9" x2="422.0" y2="228.0"></line></g>
+<g fill="#fff27a" font-family="Ubuntu Mono" font-size="11"><text x="659" y="372">2</text><text x="748" y="298">4</text><text x="418" y="224">6</text></g>
+<g fill="#fff27a"><polygon points="0,-4.5 9,0 0,4.5" transform="translate(703.7 413.8) rotate(-58)"></polygon><polygon points="0,-4.5 9,0 0,4.5" transform="translate(655.1 330.5) rotate(-28)"></polygon><polygon points="0,-4.5 9,0 0,4.5" transform="translate(620.1 252.3) rotate(-173)"></polygon><polygon points="0,-4.5 9,0 0,4.5" transform="translate(418.7 233.3) rotate(11)"></polygon></g>
+<polygon points="560,429 563.5,437 572,437.5 565.5,443 567.5,451.5 560,447 552.5,451.5 554.5,443 548,437.5 556.5,437" fill="#F0DE32" stroke="#0a0a0a"></polygon>
+<circle cx="423.3" cy="254.9" r="5" fill="#ffffff" stroke="#0a0a0a" stroke-width="2"></circle>
+<rect x="388" y="262" width="40" height="17" fill="#1b1b1b" stroke="#3c3c3c"></rect><text x="393" y="274" fill="#ffffff" font-family="Ubuntu Mono" font-size="11">8.0</text>
+<g opacity="0.55" transform="translate(770 150)"><polygon points="0,-7 2,-2 7,-2 3,1 4.5,6.5 0,3.5 -4.5,6.5 -3,1 -7,-2 -2,-2" fill="#5ab4ff"></polygon><path d="M9 -6 L15 0 L9 6" fill="none" stroke="#dcdcdc" stroke-width="1.5"></path></g>
+</svg>
+<span class="mono" style="position: absolute; left: 12px; top: 10px; padding: 1px 6px; background: rgba(10,10,10,.82); color: #dcdcdc">hover · trace to the playhead, t 8.0 of 30 · Overlays ▾ › Trace</span>
+<span class="mono" style="position: absolute; right: 26px; top: 168px; padding: 1px 6px; background: rgba(10,10,10,.82); border: 1px solid #3c3c3c; color: #a8a8a8; font-size: 11px">#2 start · off-screen</span>
+<div class="mono" style="position: absolute; left: 0; right: 0; bottom: 0; height: 20px; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; background: rgba(10,10,10,.72); color: #dcdcdc; font-size: 11px"><span>−0.42</span><span>z_α →</span><span>+0.78</span></div>
+</div>
+
+<div style="width: 360px; flex: none; background: #1b1b1b; border-left: 1px solid #2a2a2a; padding: 6px 12px; display: flex; flex-direction: column; gap: 4px; overflow: hidden">
+<div class="row" style="justify-content: space-between"><span class="pt" style="margin: 0">Trajectory</span><span class="row" style="gap: 4px"><button class="btn on">under cursor</button><button class="btn">#1</button><button class="btn">#2</button><button class="btn">+ keep</button></span></div>
+<div class="weak mono" style="font-size: 11.5px">running · collision 1–2 at t 13.2 · |ΔE/E| 9.8e−10</div>
+<div style="display: flex; gap: 6px">
+<svg width="164" height="164" style="background: #0a0a0a; border: 1px solid #2a2a2a; flex: none" role="img" aria-label="The three bodies in real space, coloured 1 yellow, 2 magenta, 3 cyan">
+<polyline points="40,120 55,100 72,88 92,84 110,90 122,104 126,122 118,136" fill="none" stroke="#F0DE32" stroke-width="1.1"></polyline>
+<polyline points="130,40 112,52 98,68 90,86 92,104 102,118 116,126 128,124" fill="none" stroke="#E034C6" stroke-width="1.1"></polyline>
+<polyline points="80,140 84,120 82,100 74,82 62,70 52,62 44,58" fill="none" stroke="#30C8DC" stroke-width="1.1"></polyline>
+<circle cx="118" cy="136" r="3.5" fill="#F0DE32"></circle><circle cx="128" cy="124" r="3.5" fill="#E034C6"></circle><circle cx="44" cy="58" r="3.5" fill="#30C8DC"></circle>
+<text x="6" y="157" fill="#6f6f6f" font-family="Ubuntu Mono" font-size="10">real space · COM</text></svg>
+<svg width="164" height="164" style="background: #0a0a0a; border: 1px solid #2a2a2a; flex: none" role="img" aria-label="The shape sphere with the shape path; the stretch inside the sound's analysis window is drawn brighter">
+<circle cx="82" cy="80" r="58" fill="#151515" stroke="#3c3c3c"></circle><ellipse cx="82" cy="80" rx="58" ry="15" fill="none" stroke="#2c2c2c"></ellipse>
+<polyline points="128,80 126,90 120,99 111,106 100,111 88,113 78,111 72,105 72,96 78,88 88,80 96,72 101,64 100,56 94,50 84,47 72,47 60,50 50,56 44,64 42,72" fill="none" stroke="#9ad1a4" stroke-opacity="0.45" stroke-width="1.2"></polyline>
+<polyline points="88,80 96,72 101,64 100,56 94,50 84,47 72,47 60,50" fill="none" stroke="#5ab4ff" stroke-width="2.4"></polyline>
+<circle cx="60" cy="50" r="3" fill="#ffffff"></circle>
+<text x="6" y="157" fill="#5ab4ff" font-family="Ubuntu Mono" font-size="10">shape sphere · ♪ window</text></svg>
+</div>
+<div class="row" style="gap: 4px"><button class="btn on">sphere</button><button class="btn">unwrapped</button><span class="cb"><i>✓</i>turn</span><span style="flex: 1"></span><span class="mono weak" style="font-size: 11px">3 syzygies · word a b⁻¹ a</span></div>
+
+<div class="sec"><span class="tw">⏵</span><span style="color: #dcdcdc; font-weight: 400">Trace</span><span class="cb" style="margin-left: 4px"><i>✓</i></span><span style="width: 22px; height: 4px; background: #fff27a"></span><span class="mono weak" style="flex: 1; font-size: 11px; white-space: nowrap; overflow: hidden">to the head · ticks 2 · left 0×</span><button class="btn" aria-label="Open the Trace window">⋯</button></div>
+
+<div class="sec"><span class="tw">⏷</span><span style="color: #dcdcdc; font-weight: 400">Listen</span><button class="btn on" style="margin-left: 4px">♪ on</button><span class="combo" style="flex: 1">Warm sine</span><button class="btn" aria-label="Open the Listen window">⋯</button></div>
+<div class="row"><span class="lab" style="width: 60px">volume</span><div class="sl"><s style="width: 60%"></s><i style="left: calc(60% - 6px)"></i></div><span class="val mono">60%</span></div>
+<div class="row mono" style="gap: 8px; font-size: 11.5px"><span style="color: #5ab4ff">◀ G♯4 418</span><span style="color: #e0a030">D5 587 ▶</span><span class="weak">7:5 · entropy 0.36</span></div>
+<div class="weak" style="font-size: 11px; line-height: 1.4">following the head · window 6 t_c · spectrogram docked in Time</div>
+</div>
+</div>
+
+<div style="height: 196px; flex: none; background: #1b1b1b; border-top: 1px solid #2a2a2a; display: flex">
+<div style="width: 300px; flex: none; padding: 6px 12px; border-right: 1px solid #2a2a2a; display: flex; gap: 8px">
+<svg width="140" height="176" viewBox="0 0 160 176" style="flex: none" role="img" aria-label="Compass: the slice plane inside the 8D chart"><g stroke="#8c8c8c" stroke-width="1" fill="none"><path d="M36 60 L76 40 L124 60 L84 80 Z"></path><path d="M36 60 L36 118 L84 138 L84 80"></path><path d="M124 60 L124 118 L84 138"></path></g><path d="M36 92 L76 70 L124 88 L84 110 Z" fill="rgba(90,180,255,.28)" stroke="#5ab4ff" stroke-width="1.5"></path><circle cx="80" cy="89" r="3" fill="#ffffff"></circle><text x="46" y="156" fill="#a8a8a8" font-size="10" font-family="Ubuntu Mono">W z_α</text><text x="104" y="148" fill="#a8a8a8" font-size="10" font-family="Ubuntu Mono">D z_q3</text><text x="4" y="92" fill="#a8a8a8" font-size="10" font-family="Ubuntu Mono">H z_β</text></svg>
+<div style="flex: 1; min-width: 0"><div class="pt">Compass</div><div class="row mono" style="gap: 8px"><span style="color: #5ab4ff">● slicing</span><span class="weak">○ tilting</span></div><div class="weak" style="margin-top: 6px; line-height: 1.4; font-size: 11px">drag the plane to tilt · drag the cube to orbit</div><div class="mono" style="margin-top: 6px; color: #dcdcdc">τ₁ 23.4° · γ 30.3°</div></div>
+</div>
+<div style="flex: 1; min-width: 0; padding: 6px 12px; border-right: 1px solid #2a2a2a; display: flex; flex-direction: column; gap: 4px">
+<div class="row"><span class="pt" style="margin: 0; width: 44px">Time</span><button class="btn">⏮</button><button class="btn on">⏸</button><button class="btn">⏭</button><span class="val mono">t 8.00</span><span class="combo" style="min-width: 54px">× 1</span><span class="combo" style="min-width: 64px">loop</span><span style="flex: 1"></span><button class="btn on">♪ strip ⏶</button></div>
+<div style="display: flex; gap: 8px; align-items: center"><span class="mono weak" style="width: 44px; font-size: 11px">events</span><svg viewBox="0 0 640 14" preserveAspectRatio="none" style="display: block; flex: 1; height: 14px" role="img" aria-label="Event lane: syzygies as ticks in the middle body's colour, close approaches as triangles, the collision as a red diamond at t 13.2"><rect x="96" y="2" width="2" height="10" fill="#E034C6"></rect><rect x="185" y="2" width="2" height="10" fill="#30C8DC"></rect><rect x="267" y="2" width="2" height="10" fill="#F0DE32"></rect><polygon points="143,2 148,12 138,12" fill="#dcdcdc"></polygon><polygon points="248,2 253,12 243,12" fill="#dcdcdc"></polygon><polygon points="282,7 276,1 270,7 276,13" fill="#DE2D2D"></polygon></svg></div>
+<div style="display: flex; gap: 8px; align-items: center"><span class="mono weak" style="width: 44px; font-size: 11px">♪</span><div style="flex: 1; height: 54px; position: relative; border: 1px solid #2a2a2a; background: linear-gradient(180deg, #000004 0%, #1c1044 30%, #3b1470 65%, #1c1044 100%)"><div style="position: absolute; left: 0; width: 44%; top: 29px; height: 2px; background: #e95462"></div><div style="position: absolute; left: 0; width: 44%; top: 16px; height: 1px; background: #7e2482"></div><div style="position: absolute; left: 0; width: 44%; top: 39px; height: 1px; background: #a3307e"></div><div style="position: absolute; left: 44%; right: 0; top: 0; bottom: 0; background: rgba(10,10,10,0.75)"></div><div style="position: absolute; left: 26.7%; top: 0; bottom: 0; width: 2px; background: #ffffff"></div></div></div>
+<div style="display: flex; gap: 8px; align-items: center; margin-top: 4px"><span style="width: 44px"></span><div class="sl"><s style="width: 26.7%"></s><i style="left: calc(26.7% - 6px)"></i></div></div>
+<div class="row mono weak" style="justify-content: space-between; margin-left: 52px; min-height: 14px; font-size: 11px"><span>0</span><span>10</span><span>20</span><span>30</span></div>
+<div class="weak" style="font-size: 11px">the strip only appears with ♪ on · ⏶ opens the full spectrogram and spectrum here</div>
+</div>
+<div style="width: 360px; flex: none; padding: 6px 12px; overflow: hidden">
+<div class="row" style="justify-content: space-between"><span class="pt" style="margin: 0">Legend</span><span class="weak">generated from the stain</span></div>
+<div class="weak mono" style="margin: 2px 0 4px">colour · outcome class</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px 10px">
+<div class="row" style="min-height: 17px; gap: 6px"><span style="width: 12px; height: 12px; background: #1d4a22; border: 1px solid #555; flex: none"></span><span style="flex: 1; font-size: 11px">collision 1–3</span><span class="mono weak" style="font-size: 11px">[%]</span></div>
+<div class="row" style="min-height: 17px; gap: 6px"><span style="width: 12px; height: 12px; background: #1f2f72; border: 1px solid #555; flex: none"></span><span style="flex: 1; font-size: 11px">collision 2–3</span><span class="mono weak" style="font-size: 11px">[%]</span></div>
+<div class="row" style="min-height: 17px; gap: 6px"><span style="width: 12px; height: 12px; background: #7a1c1c; border: 1px solid #555; flex: none"></span><span style="flex: 1; font-size: 11px">collision 1–2</span><span class="mono weak" style="font-size: 11px">[%]</span></div>
+<div class="row" style="min-height: 17px; gap: 6px"><span style="width: 12px; height: 12px; background: #0a0a0a; border: 1px solid #555; flex: none"></span><span style="flex: 1; font-size: 11px">horizon</span><span class="mono weak" style="font-size: 11px">[%]</span></div>
+</div>
+<div class="sep"></div>
+<div class="weak mono" style="margin: 2px 0 4px">on the trace</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px 10px; font-size: 11px">
+<div class="row" style="min-height: 17px; gap: 6px"><span style="width: 18px; height: 3px; background: #fff27a; flex: none"></span><span>under cursor</span></div>
+<div class="row" style="min-height: 17px; gap: 6px"><span style="width: 18px; height: 3px; background: #5ab4ff; flex: none"></span><span>kept #2</span></div>
+<div class="row" style="min-height: 17px; gap: 6px"><span style="color: #F0DE32; width: 18px; text-align: center">★</span><span>start</span></div>
+<div class="row" style="min-height: 17px; gap: 6px"><span style="color: #DE2D2D; width: 18px; text-align: center">→●←</span><span>collision, by pair</span></div>
+</div>
+<div class="weak" style="font-size: 11px; margin-top: 2px">full key: Trace… › key</div>
+</div>
+</div>
+<div style="height: 22px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 10px; background: #141414; border-top: 1px solid #2a2a2a" class="mono"><span class="weak">♪ warm sine · 3 voices · stereo by winding · reverb 1.4×</span><span style="flex: 1"></span><span class="weak">GPU 464 MB · heap 148 MB</span><span class="weak">? keys</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

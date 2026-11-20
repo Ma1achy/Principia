@@ -1,0 +1,31 @@
+reference V.1.A: T |E|^1.5 = 9.237681 (m = 1, G = 1)
+reference V.1.B: T |E|^1.5 = 9.237681 (m = 1, G = 1)
+Table1 row1 (MCM figure-8, stable per Table 2): w = 0.7745285246; E = 0.1661317146 (G = 1); C = 2.2e-16; P = (0.0e+00, 0.0e+00); T |E|^1.5 / m^2.5 = 20.155576
+    E >= 0 with G = 1 and masses 1/3: the orbit would be unbound, so this reading of the variables is wrong
+    barycentric inertial state (m = 1/3, G = 1, as printed scale): q = [(-1.0, -0.7827482953), (1.0, -0.7827482953), (0.0, 1.5654965907)]; v = [(-0.3298329443, -0.7745285246), (-0.3298329443, 0.7745285246), (0.6596658885, 0.0)]
+Table1 row2 (Simo H3, unstable per Table 2): w = 0.7958360059; E = 0.1768856096 (G = 1); C = -2.2e-16; P = (0.0e+00, 0.0e+00); T |E|^1.5 / m^2.5 = 23.657914
+    E >= 0 with G = 1 and masses 1/3: the orbit would be unbound, so this reading of the variables is wrong
+    barycentric inertial state (m = 1/3, G = 1, as printed scale): q = [(-1.0, -0.8179344853), (1.0, -0.8179344853), (0.0, 1.6358689707)]; v = [(-0.3243275267, -0.7958360059), (-0.3243275267, 0.7958360059), (0.6486550534, 0.0)]
+
+Other readings (reference T |E|^1.5 = 9.2377, V.1.A):
+Table1 row1 (MCM figure-8, stable per Table 2)
+  (1) masses 1, G = 1: E = -0.3573; T |E|^1.5 = 4.079
+  (2) xdot as m3's inertial x-velocity, masses 1/3, G = 1: w = 2.198178; E = 2.3443 (unbound)
+  (2) xdot as m3's inertial x-velocity, masses 1, G = 1: w = 2.198178; E = 6.1772 (unbound)
+  (3) masses 1/3, G solved from T |E|^1.5 / (G m^2.5) = 9.2377: G = 3.872 (E = -0.2435)
+  (4) virial ratio 2K/|U| at the isosceles instant, G = 1, m = 1/3: 4.33
+Table1 row2 (Simo H3, unstable per Table 2)
+  (1) masses 1, G = 1: E = -0.3059; T |E|^1.5 = 3.451
+  (2) xdot as m3's inertial x-velocity, masses 1/3, G = 1: w = 2.393119; E = 2.7207 (unbound)
+  (2) xdot as m3's inertial x-velocity, masses 1, G = 1: w = 2.393119; E = 7.3257 (unbound)
+  (3) masses 1/3, G solved from T |E|^1.5 / (G m^2.5) = 9.2377: G = 3.967 (E = -0.2368)
+  (4) virial ratio 2K/|U| at the isosceles instant, G = 1, m = 1/3: 4.54
+
+Conclusion: no reading fits. With masses 1/3 and G = 1 both states are unbound; with masses 1 they are bound but
+T |E|^1.5 is far from the figure-eight's; reading xdot as m3's inertial velocity leaves E > 0 for either mass
+choice; the G that would match the reference differs between the rows, i.e. no single G; and at the isosceles
+instant the virial ratio 2K/|U| should be below 1 (m3 at apoapsis), not above 4. The variables cannot be decoded
+from this paper alone; the equations are in refs [7] (Broucke, Elipe & Riaguas, AIAA 2002-4544) and [10] (Broucke
+& Boggs 1975, CM 11, 13-38), neither in the repo. Queued as RQ-641 (README "To apply"). Consistency that does
+hold: Table 2's y/r equals Table 1's y to 1e-8 (same orbits, other scale), and Table 3's f1, f3 follow from a1, a2
+as its footnote defines (checks.txt).

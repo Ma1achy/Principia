@@ -1,0 +1,6 @@
+{
+  "expected": "fail",
+  "kind": "differs",
+  "description": "control: the absolute form against itself, bit-identical on every orbit, which the comparison must fail",
+  "forms": ["absolute", "absolute"]
+}

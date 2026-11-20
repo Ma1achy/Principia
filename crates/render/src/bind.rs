@@ -1,0 +1,888 @@
+//! The four payload-side buffers and the uniforms, bound to the fragment (render contract Part 1; TASK-M1-06), and the
+//! WGSL the fragment reads them through, generated from the layout definition (the ledger, `ledger::payload` and
+//! `ledger::quad`): `RenderContext` `{sample, ic, quad, uv, screen_uv, time}` and colour_composition §3's `ctx` lanes,
+//! screen, chart, quad, tile/sample, payload and validity.
+//!
+//! **Bindings.** Group 0 is the prelude's per-frame uniforms (`ledger::gen::prelude`, R-343). Group 1 holds the four
+//! buffers, all four at the numbers of the ledger's one binding table (`ledger::payload::bindings`, R-343), each with
+//! its generated `<PREFIX>_GROUP` and `<PREFIX>_BINDING`: the `SimState` buffer at binding 0 and the word buffer at
+//! binding 1, read by the read side's `sample_read`; `ICDescriptor` at binding 2, by `ic_read` and its per-member
+//! `ic_read_<member>`; `RenderQuad` at binding 3, by `quad_read` and `quad_read_<member>` ([`buffers`]; applied per
+//! R-369: the corpus binds the first two and gives no number to the others). Every reader loads one stored member at a
+//! time, never the whole stored struct (R-378). Group 2, binding 0 holds the context's uniforms ([`Context`]), binding
+//! 1 the per-quad frames ([`FRAME_BINDING`]) and binding 2 the samples' chart classification ([`CHART_BINDING`]).
+//!
+//! **The chart classification** (REQ-COL-102; colour_composition §3; TASK-M2-32): the validity lane's `forbidden`, one
+//! bit per sample, true where chart_decoder_contract Part 3 hatches the sample's chart point as forbidden. The CPU
+//! fills it from the chart, never from the payload (R-26, R-446; `engine::chart_class`), and binds it as words
+//! ([`chart_words`]); the fragment reads it as `chart_forbidden_at(i)`, into `ctx.validity.forbidden`.
+//!
+//! **The logical view is accessors, not a copy** (render contract Part 1; REQ-RENDER-007). Nothing here writes a
+//! buffer, and no compute pass does: the fragment reads the physical structs through the generated readers, and
+//! `RenderContext` and the lanes are the fragment's own values, per pixel, never a stored unpacked payload.
+//!
+//! **Validity** (colour_composition §3). Each payload field has `<field>_valid` in the validity lane, its ledger
+//! predicate: the entry's tier gate (`ftle_valid`), its sentinel (`dmin_pair` ≠ 3; `d_min` not f16 +∞, tested by its
+//! bits), or the read side's own (`diffusion`'s `n ≥ 2`, R-245; `ensemble_spread`'s E ≥ 1, R-145; the word's and
+//! `last_symbol`'s, payload §6); a field the ledger gives none is valid wherever it is stored (applied per R-369). The
+//! lane also holds the descriptor predicates (`sd_is_failed` and the rest), `saturated` and `out_of_chart`, which
+//! charts fill from M2 and the harness from its uniforms, and `forbidden`, the sample's chart classification.
+
+use std::fmt::Write as _;
+
+use ledger::gen::{self as generate, prelude, read};
+use ledger::payload::Binding;
+use ledger::schema::{Entry, FieldType, Location, Storage, Word};
+
+use crate::raster::{self, Grid};
+
+/// One buffer the fragment binds in group 1: its WGSL global, the struct its elements are, its constants' prefix, its
+/// binding and its reader.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BufferBinding {
+    pub buffer: &'static str,
+    pub element: &'static str,
+    pub constant: &'static str,
+    pub group: u32,
+    pub binding: u32,
+    pub reader: &'static str,
+}
+
+/// `b`'s row, its elements `element`.
+const fn row(b: Binding, element: &'static str) -> BufferBinding {
+    BufferBinding {
+        buffer: b.buffer,
+        element,
+        constant: b.constant,
+        group: b.group,
+        binding: b.binding,
+        reader: b.reader,
+    }
+}
+
+/// The group-1 buffers, in binding order, all four from the ledger's one binding table (`ledger::payload::bindings`,
+/// R-343): the `SimState` and word buffers, then `ICDescriptor` and `RenderQuad`.
+pub const fn buffers() -> [BufferBinding; 4] {
+    let [s, w, ic, quad] = ledger::payload::bindings();
+    [
+        row(s, "SimStateFTLE"),
+        row(w, "vec4<u32>"),
+        row(ic, "ICDescriptor"),
+        row(quad, "RenderQuad"),
+    ]
+}
+
+/// The context's uniform block's group and binding.
+pub const CONTEXT_GROUP: u32 = 2;
+pub const CONTEXT_BINDING: u32 = 0;
+
+/// The per-quad frames' binding, in the context's group: one `vec4<f32>` per quad, `(c_u, c_v, h_u, h_v)`, deep_zoom
+/// §1's centre and half-width, which the CPU computes in f64 and the GPU reads as f32. At M1 the synthetic harness
+/// supplies them from its own grid (RQ-214); the per-quad uniforms of the scheduler's `QuadRequest` replace them
+/// (TASK-M5-04). Applied per R-369: a harness binding in the harness's own group, not the ledger's binding table.
+pub const FRAME_BINDING: u32 = 1;
+
+/// The samples' chart classification's binding, in the context's group (REQ-COL-102; TASK-M2-32): one bit per sample,
+/// bit `i mod 32` of word `i / 32` set where sample `i`'s chart point is forbidden ([`chart_words`]). Applied per
+/// R-369, as [`FRAME_BINDING`] is: a harness binding in the harness's own group, filled by the CPU from the chart
+/// (R-26).
+pub const CHART_BINDING: u32 = 2;
+
+/// The fragment decode's uniform's binding, in the context's group (R-116; TASK-M2-25): the decode stage's
+/// `DecodeUniforms` (the chart's parameters, the flags word and the energy target, 128 B), which the generated decode
+/// snippets (`crate::presets::DECODE_WGSL`) read as the kernel's decode stage reads them, so the fragment decodes a
+/// pixel as the stage decoded its sample. Applied per R-369, as [`FRAME_BINDING`] is: a harness binding in the
+/// harness's own group. `cargo xtask build-kernel` rebinds the snippets' uniform here (`xtask::fragment_wgsl`).
+pub const DECODE_BINDING: u32 = 3;
+
+/// The words [`CHART_BINDING`] holds for the samples' classification `forbidden`, in sample order: bit `i mod 32` of
+/// word `i / 32` set where `forbidden[i]`; at least one word, as a storage binding holds.
+pub fn chart_words(forbidden: &[bool]) -> Vec<u32> {
+    let mut out = vec![0u32; forbidden.len().div_ceil(32).max(1)];
+    for (i, _) in forbidden.iter().enumerate().filter(|(_, f)| **f) {
+        out[i / 32] |= 1 << (i % 32);
+    }
+    out
+}
+
+/// The context's uniforms (lowering Part 3: view-only state is uniform, never a recompile): the read side's
+/// arguments, the grid the raster covers, the chart lane's values (charts land in M2; until then the uniforms fill
+/// them), the playhead, the footprint's ensemble spread and the quad's valid sample count.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Context {
+    pub dt_macro: f32,
+    pub delta_0: f32,
+    pub n_renorm: u32,
+    pub horizon_steps: u32,
+    /// `ctx.chart.z`, the 8-D latent.
+    pub z: [f32; 8],
+    pub grid: Grid,
+    pub chart_id: u32,
+    /// `RenderContext.time`, the playhead.
+    pub time: f32,
+    /// The ensemble spread `sample_read` passes through (lowering Part 3a; R-145).
+    pub ensemble_spread: f32,
+    pub out_of_chart: bool,
+    /// `ctx.quad.sample_count`: dd_generation_root §3.7's `valid_sample_count`, the quad's decoded samples of N², at
+    /// §3.7's grain (R-315: footprints, at most N², not copies). `QuadReduction` carries it once it lands; until then
+    /// the harness sets it here, one value for every quad it draws, as it sets the chart lane.
+    pub valid_sample_count: u32,
+}
+
+/// The `ContextUniforms` block's size in words.
+pub const CONTEXT_WORDS: usize = 24;
+
+impl Context {
+    /// The `ContextUniforms` block's words, in `WGSL_CONTEXT`'s order.
+    pub fn words(&self) -> [u32; CONTEXT_WORDS] {
+        let g = &self.grid;
+        let mut w = [0u32; CONTEXT_WORDS];
+        w[..4].copy_from_slice(&[
+            self.dt_macro.to_bits(),
+            self.delta_0.to_bits(),
+            self.n_renorm,
+            self.horizon_steps,
+        ]);
+        for (k, z) in self.z.iter().enumerate() {
+            w[4 + k] = z.to_bits();
+        }
+        w[12..22].copy_from_slice(&[
+            g.quads[0],
+            g.quads[1],
+            g.n,
+            g.e,
+            g.tile_px,
+            self.chart_id,
+            self.time.to_bits(),
+            self.ensemble_spread.to_bits(),
+            u32::from(self.out_of_chart),
+            self.valid_sample_count,
+        ]);
+        w
+    }
+}
+
+/// The context's uniform block, as [`Context::words`] writes it: 96 B.
+const WGSL_CONTEXT: &str = "
+// The context's uniforms (render::bind::Context): the read side's arguments, the raster's grid, the chart lane's
+// values, the playhead, the ensemble spread `sample_read` passes through and the quad's valid sample count
+// (dd_generation_root §3.7's `valid_sample_count`, decoded of N²).
+struct ContextUniforms {
+    read: ReadParams,
+    z: array<vec4<f32>, 2>,
+    quads: vec2<u32>,
+    n: u32,
+    e: u32,
+    tile_px: u32,
+    chart_id: u32,
+    time: f32,
+    ensemble_spread: f32,
+    out_of_chart: u32,
+    valid_sample_count: u32,
+    _pad0: u32,
+    _pad1: u32,
+}
+";
+
+/// The quad lane's members that `RenderQuad` fills, each `(lane member, RenderQuad member)`: colour_composition §3's
+/// names, then the `RenderQuad` members §3 does not name, under their own (dd_generation_root §3.7a).
+pub const QUAD_LANE: [(&str, &str); 10] = [
+    ("depth", "quad_depth"),
+    ("state", "quad_state"),
+    ("impurity", "outcome_impurity"),
+    ("spread", "ensemble_spread"),
+    ("suspect_frac", "suspect_fraction"),
+    ("priority", "priority_score"),
+    ("cache_age", "cache_age"),
+    ("coherence", "coherence_score"),
+    ("ancestor_gap", "ancestor_gap"),
+    ("dominant_outcome", "dominant_outcome"),
+];
+
+/// The quad lane's members that `RenderQuad` does not hold, each `(name, WGSL type, fill)`, in the lane's order, ahead of
+/// [`QUAD_LANE`]'s: the quad's index; its frame (colour_composition §3, R-72; deep_zoom §1's c and h), from one source,
+/// the per-quad frames the CPU computes in f64 and binds at [`FRAME_BINDING`], read as f32 (deep_zoom § "The precision
+/// split"), its top-left corner, Y-up, `c + (−h, +h)`; the sample's quad-local coordinate; the quad's valid sample
+/// count. Each fill reads the raster `r`, the frames or the context's uniforms, so the harness's lanes and the stain's
+/// quad lane ([`preset_module`]) fill them alike.
+const QUAD_OWN: [(&str, &str, &str); 6] = [
+    ("index", "u32", "r.quad"),
+    (
+        "tl",
+        "vec2<f32>",
+        "quad_frames[r.quad].xy + vec2<f32>(-1.0, 1.0) * quad_frames[r.quad].zw",
+    ),
+    ("centre", "vec2<f32>", "quad_frames[r.quad].xy"),
+    ("half_width", "vec2<f32>", "quad_frames[r.quad].zw"),
+    ("uv", "vec2<f32>", "r.quad_uv"),
+    ("sample_count", "u32", "ctx_uniforms.valid_sample_count"),
+];
+
+/// colour_composition §3's quad lane: `QUAD_OWN`'s members (the lane's own), then each of [`QUAD_LANE`]'s, its type
+/// the ledger's `RenderQuad` member's, filled from the `RenderQuad` value `quad` names (`rc.quad` in the harness's
+/// lanes, the stain's `quad_read(r.quad)` in [`preset_module`]).
+pub fn quad_lane(quad: &str) -> Result<Vec<LaneMember>, String> {
+    let mut out: Vec<LaneMember> = QUAD_OWN
+        .iter()
+        .map(|&(name, ty, fill)| member(name, ty, fill))
+        .collect();
+    let rq = ledger::quad::render_quad();
+    for (lane, field) in QUAD_LANE {
+        let storage = rq
+            .members
+            .iter()
+            .find(|m| m.name == field)
+            .map(|m| m.storage)
+            .ok_or_else(|| format!("RenderQuad has no `{field}` for ctx.quad.{lane}"))?;
+        out.push(member(lane, wgsl_type(storage), format!("{quad}.{field}")));
+    }
+    Ok(out)
+}
+
+/// The read side's descriptor predicates, which the validity lane holds as `sd_<name>`, not the payload lane.
+const PREDICATES: [&str; 4] = [
+    "is_resolved_outcome",
+    "is_running",
+    "is_failed",
+    "is_finished",
+];
+
+/// The read side's members that are another field's validity, not a field: the validity lane carries them as that
+/// field's `<field>_valid`.
+const VALIDITY_OF: [&str; 2] = ["ftle_valid", "diffusion_slope_valid"];
+
+/// One member of a generated struct: its name, its WGSL type, and the expression `lanes` fills it with.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LaneMember {
+    pub name: String,
+    pub ty: String,
+    pub fill: String,
+}
+
+fn member(name: &str, ty: &str, fill: impl Into<String>) -> LaneMember {
+    LaneMember {
+        name: name.to_owned(),
+        ty: ty.to_owned(),
+        fill: fill.into(),
+    }
+}
+
+/// One `ctx` lane: its member in `Lanes`, its struct's name, and its members.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Lane {
+    pub name: &'static str,
+    pub ty: &'static str,
+    pub members: Vec<LaneMember>,
+}
+
+/// The ledger's words and validated entries.
+fn ledger() -> Result<(Vec<Word>, Vec<Entry>), String> {
+    let l = ledger::payload::ledger();
+    let entries = generate::validate(&l).map_err(|e| e.to_string())?;
+    Ok((l.words, entries))
+}
+
+/// `ICDescriptor`'s members, its padding left out.
+fn ic_members() -> Vec<(&'static str, Storage)> {
+    ledger::payload::structs()
+        .into_iter()
+        .filter(|s| s.name == "ICDescriptor")
+        .flat_map(|s| s.members)
+        .filter(|m| !m.name.starts_with('_'))
+        .map(|m| (m.name, m.storage))
+        .collect()
+}
+
+fn wgsl_type(storage: Storage) -> &'static str {
+    match storage {
+        Storage::F32 => "f32",
+        _ => "u32",
+    }
+}
+
+/// `field`'s validity, a WGSL bool over `rc`, by the ledger: its tier gate, its sentinel, or the read side's own
+/// predicate; `true` where it has none.
+fn validity(field: &str, entries: &[Entry]) -> String {
+    validity_over(field, entries, "rc").predicate
+}
+
+/// A field's validity as the validity lane writes it ([`validity_over`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Validity {
+    /// The WGSL `bool`: `<field>_valid`'s fill, over the context root the caller names.
+    pub predicate: String,
+    /// The stored sentinel the predicate tests the field against, if that is its whole test (R-136).
+    pub sentinel: Option<f64>,
+}
+
+/// `field`'s validity, a WGSL bool over the context `root` (`rc` where the validity lane fills it, `ctx` where a
+/// colour occupant reads it), by the ledger: its tier gate, its sentinel, or the read side's own predicate; `true`
+/// where it has none. The one source of the validity lane's predicates (colour_composition §3): the field ramp's
+/// `ScalarField` takes its predicate from here. A tier gate is read beside its tier's baked `has_<feature>`, the gate
+/// `<feature>_valid`: full correctness is `has_ftle && ftle_valid` (render contract Part 2; REQ-RENDER-015).
+pub fn validity_over(field: &str, entries: &[Entry], root: &str) -> Validity {
+    let own = |predicate: String| Validity {
+        predicate,
+        sentinel: None,
+    };
+    match field {
+        "diffusion" => return own(format!("{root}.sample.diffusion_slope_valid")),
+        "ensemble_spread" => return own("has_ensemble()".into()),
+        "word" => return own(format!("fgw_reduced_length_valid({root}.sample.word)")),
+        "last_symbol" => {
+            return own(format!(
+                "sd_last_symbol_valid(fgw_length_raw({root}.sample.word))"
+            ))
+        }
+        _ => {}
+    }
+    let Some(e) = entries.iter().find(|e| e.name == field) else {
+        return own("true".into());
+    };
+    if let Some(gate) = e.tier_gate {
+        let feature = gate.strip_suffix("_valid").unwrap_or(gate);
+        return own(format!("has_{feature} && {root}.sample.{gate}"));
+    }
+    match (e.sentinel, &e.ty, &e.location) {
+        // A float's sentinel is its unset value, tested on its bits: `d_min`'s f16 `+∞` (R-271), `closure_min`'s f32
+        // `+∞` before departure (RQ-835 (a); payload §1).
+        (Some(s), FieldType::F16Pair | FieldType::F32, _) => Validity {
+            predicate: format!(
+                "bitcast<u32>({root}.sample.{field}) != {:#010x}u",
+                (s as f32).to_bits()
+            ),
+            sentinel: Some(s),
+        },
+        (Some(s), _, Location::Packed { .. }) => Validity {
+            predicate: format!("{root}.sample.{field} != {}u", s as u32),
+            sentinel: Some(s),
+        },
+        _ => own("true".into()),
+    }
+}
+
+/// The six `ctx` lanes of colour_composition §3, in its order, generated from the ledger: the payload lane is every
+/// read-side field but the predicates, then `ICDescriptor`'s fields; the validity lane pairs each with `<field>_valid`.
+pub fn lanes() -> Result<Vec<Lane>, String> {
+    let (words, entries) = ledger()?;
+    let screen = vec![
+        member("pixel", "vec2<i32>", "vec2<i32>(r.pixel)"),
+        member("uv", "vec2<f32>", "r.screen_uv"),
+        member("target_dims", "vec2<i32>", "vec2<i32>(r.target_dims)"),
+    ];
+    let z: Vec<String> = (0..8)
+        .map(|k| format!("ctx_uniforms.z[{}].{}", k / 4, ["x", "y", "z", "w"][k % 4]))
+        .collect();
+    let chart = vec![
+        // The sample's position in the slice plane's own frame (colour_composition §3, R-394; REQ-COL-063): its quad's
+        // centre c and half-width h, the per-quad frames the quad lane reads, as c + h·(2·quad.uv − 1), deep_zoom §1's
+        // u = c + h·(2t − 1). Pan and zoom never change it for a sample (R-97); it reads no grid, so it is no view or
+        // screen position, which are the screen lane's.
+        member(
+            "slice_uv",
+            "vec2<f32>",
+            "quad_frames[r.quad].xy + quad_frames[r.quad].zw * (2.0 * r.quad_uv - vec2<f32>(1.0))",
+        ),
+        member(
+            "z",
+            "array<f32, 8>",
+            format!("array<f32, 8>({})", z.join(", ")),
+        ),
+        member("chart_id", "u32", "ctx_uniforms.chart_id"),
+    ];
+    let quad = quad_lane("rc.quad")?;
+    let tile = vec![
+        member("tile_index", "u32", "r.tile"),
+        member("sample_index", "u32", "r.sample"),
+        member("N", "u32", "ctx_uniforms.n"),
+        member("E", "u32", "ctx_uniforms.e"),
+        member("uv", "vec2<f32>", "r.tile_uv"),
+    ];
+    let mut payload = Vec::new();
+    let mut validity_lane = Vec::new();
+    for m in read::members(&words, &entries) {
+        if PREDICATES.contains(&m.name.as_str()) {
+            let name = format!("sd_{}", m.name);
+            validity_lane.push(member(&name, "bool", format!("rc.sample.{}", m.name)));
+            continue;
+        }
+        if VALIDITY_OF.contains(&m.name.as_str()) {
+            continue;
+        }
+        payload.push(member(&m.name, m.wgsl, format!("rc.sample.{}", m.name)));
+    }
+    for (name, storage) in ic_members() {
+        payload.push(member(name, wgsl_type(storage), format!("rc.ic.{name}")));
+    }
+    let mut valid: Vec<LaneMember> = payload
+        .iter()
+        .map(|p| {
+            member(
+                &format!("{}_valid", p.name),
+                "bool",
+                validity(&p.name, &entries),
+            )
+        })
+        .collect();
+    valid.extend(validity_lane);
+    valid.push(member("saturated", "bool", "rc.sample.saturated"));
+    valid.push(member(
+        "out_of_chart",
+        "bool",
+        "ctx_uniforms.out_of_chart != 0u",
+    ));
+    // The sample's chart classification (REQ-COL-102), a validity predicate beside the out-of-chart flag: forbidden
+    // where chart_decoder_contract Part 3 hatches its chart point, filled by the CPU from the chart
+    // ([`CHART_BINDING`]).
+    valid.push(member("forbidden", "bool", "chart_forbidden_at(r.sample)"));
+    let lane = |name, ty, members| Lane { name, ty, members };
+    Ok(vec![
+        lane("screen", "ScreenLane", screen),
+        lane("chart", "ChartLane", chart),
+        lane("quad", "QuadLane", quad),
+        lane("tile", "TileLane", tile),
+        lane("payload", "PayloadLane", payload),
+        lane("validity", "ValidityLane", valid),
+    ])
+}
+
+/// The members `quad_read` loads, each `(name, WGSL type)`: `RenderQuad`'s, from §3.7a's table.
+fn quad_members() -> Vec<(&'static str, &'static str)> {
+    ledger::quad::render_quad()
+        .members
+        .iter()
+        .map(|m| (m.name, wgsl_type(m.storage)))
+        .collect()
+}
+
+/// The declarations every harness module adds to the read side: `RenderQuad` from the ledger, its buffer and its
+/// generated readers, the context's uniform block, the per-quad frames ([`FRAME_BINDING`], which fill `ctx.quad`'s
+/// `tl`, `centre` and `half_width`), and the samples' chart classification ([`CHART_BINDING`]) with its reader
+/// `chart_forbidden_at(i)`, which fills `ctx.validity.forbidden`. The readers load one stored member at a time, never
+/// the whole stored struct (R-378): `quad_read_<member>(i)`, one per member, and `quad_read(i)`, the element built from
+/// them. The `ICDescriptor` buffer and its readers are the read side's (`ledger::gen::read`; RQ-227), which a harness
+/// module fills for every member and an assembled stain for the members it reads.
+pub fn declarations() -> String {
+    let [_, _, _, b] = buffers();
+    let mut out = String::from(
+        "\n// ── The payload-side buffers and uniforms (render::bind; TASK-M1-06), generated from the ledger ──\n",
+    );
+    out.push_str(&ledger::quad::wgsl_struct(&ledger::quad::render_quad()));
+    let _ = write!(
+        out,
+        "\n// `{buf}`'s bind group and binding number (R-343).\n\
+         const {c}_GROUP: u32 = {g}u;\n\
+         const {c}_BINDING: u32 = {n}u;\n\
+         @group({g}) @binding({n}) var<storage, read> {buf}: array<{e}>;\n\
+         // `{buf}`'s readers, element `i`, one stored member per load, never the whole struct (R-378).\n",
+        buf = b.buffer,
+        c = b.constant,
+        g = b.group,
+        n = b.binding,
+        e = b.element,
+    );
+    let members = quad_members();
+    for (m, ty) in &members {
+        let _ = writeln!(
+            out,
+            "fn {r}_{m}(i: u32) -> {ty} {{ return {buf}[i].{m}; }}",
+            r = b.reader,
+            buf = b.buffer,
+        );
+    }
+    let _ = writeln!(
+        out,
+        "fn {}(i: u32) -> {} {{\n    var v: {};",
+        b.reader, b.element, b.element
+    );
+    for (m, _) in &members {
+        let _ = writeln!(out, "    v.{m} = {}_{m}(i);", b.reader);
+    }
+    out.push_str("    return v;\n}\n");
+    out.push_str(WGSL_CONTEXT);
+    let _ = writeln!(
+        out,
+        "@group({CONTEXT_GROUP}) @binding({CONTEXT_BINDING}) var<uniform> ctx_uniforms: ContextUniforms;\n\
+         // The per-quad frames (render::bind::FRAME_BINDING): (c_u, c_v, h_u, h_v), deep_zoom §1's centre and half-width.\n\
+         @group({CONTEXT_GROUP}) @binding({FRAME_BINDING}) var<storage, read> quad_frames: array<vec4<f32>>;\n\
+         // The samples' chart classification (render::bind::CHART_BINDING; REQ-COL-102): bit i mod 32 of word i / 32.\n\
+         @group({CONTEXT_GROUP}) @binding({CHART_BINDING}) var<storage, read> chart_forbidden: array<u32>;\n\
+         // Whether sample `i`'s chart point is forbidden: chart_decoder_contract Part 3 hatches it.\n\
+         fn chart_forbidden_at(i: u32) -> bool {{ return ((chart_forbidden[i >> 5u] >> (i & 31u)) & 1u) != 0u; }}"
+    );
+    out
+}
+
+/// `RenderContext` (render contract Part 1), the lane structs, `Lanes`, and the functions that fill them for a
+/// rasterised pixel: `render_context(r)` and `lanes(rc, r)`.
+pub fn context() -> Result<String, String> {
+    let lanes = lanes()?;
+    let mut out = String::from(
+        "
+// The fragment's context (render contract Part 1): the sample's read-side `SimState`, its `ICDescriptor`, its quad's
+// `RenderQuad`, the within-quad `uv`, the screen-space `screen_uv` and the playhead.
+struct RenderContext {
+    sample: SimState,
+    ic: ICDescriptor,
+    quad: RenderQuad,
+    uv: vec2<f32>,
+    screen_uv: vec2<f32>,
+    time: f32,
+}
+
+// The context of the pixel `r` rasterised: each buffer read through its one reader, the sample through `sample_read`
+// with its own masses (`ctx.ic`).
+fn render_context(r: Raster) -> RenderContext {
+    var rc: RenderContext;
+    rc.ic = ic_read(r.sample);
+    rc.quad = quad_read(r.quad);
+    let masses = vec3<f32>(rc.ic.m0, rc.ic.m1, rc.ic.m2);
+    rc.sample = sample_read(r.sample, ctx_uniforms.ensemble_spread, has_ensemble(), masses, ctx_uniforms.read);
+    rc.uv = r.quad_uv;
+    rc.screen_uv = r.screen_uv;
+    rc.time = ctx_uniforms.time;
+    return rc;
+}
+",
+    );
+    for lane in &lanes {
+        let _ = writeln!(
+            out,
+            "\n// colour_composition §3's {} lane.\nstruct {} {{",
+            lane.name, lane.ty
+        );
+        for m in &lane.members {
+            let _ = writeln!(out, "    {}: {},", m.name, m.ty);
+        }
+        out.push_str("}\n");
+    }
+    out.push_str("\n// The `ctx` lanes (colour_composition §3).\nstruct Lanes {\n");
+    for lane in &lanes {
+        let _ = writeln!(out, "    {}: {},", lane.name, lane.ty);
+    }
+    out.push_str(
+        "}\n\n// The lanes of the pixel `r` rasterised, whose context is `rc`.\nfn lanes(rc: RenderContext, r: Raster) -> Lanes {\n    var l: Lanes;\n",
+    );
+    for lane in &lanes {
+        for m in &lane.members {
+            let _ = writeln!(out, "    l.{}.{} = {};", lane.name, m.name, m.fill);
+        }
+    }
+    out.push_str("    return l;\n}\n");
+    Ok(out)
+}
+
+/// What a view writes: a colour, for an 8-bit target, or four raw words, for an `Rgba32Uint` one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ViewOutput {
+    Colour,
+    Words,
+}
+
+impl ViewOutput {
+    fn wgsl(self) -> &'static str {
+        match self {
+            ViewOutput::Colour => "vec4<f32>",
+            ViewOutput::Words => "vec4<u32>",
+        }
+    }
+}
+
+/// The harness's entry point name.
+pub const ENTRY: &str = "harness_fs";
+
+/// A debug view as a fragment module: the prelude, the unpack layer and the read side filling every field (full tier),
+/// the raster, the [`declarations`], the [`context`], `view`, and the entry [`ENTRY`]. `view` defines
+/// `fn view(rc: RenderContext, l: Lanes) -> vec4<f32>` (or `vec4<u32>` for [`ViewOutput::Words`]).
+pub fn module(view: &str, output: ViewOutput) -> Result<String, String> {
+    let (words, entries) = ledger()?;
+    let tier = read::Tier::FULL;
+    let mut fields: Vec<String> = read::members(&words, &entries)
+        .into_iter()
+        .map(|m| m.name)
+        .collect();
+    fields.extend(read::ic_fields());
+    let fields: Vec<&str> = fields.iter().map(String::as_str).collect();
+    let read_side = read::assemble(&words, &entries, tier, &fields)?;
+    let ty = output.wgsl();
+    Ok(format!(
+        "{}\n{read_side}{}{}{}\n// ── The view ──\n{view}\n\
+         @fragment\nfn {ENTRY}(@builtin(position) pos: vec4<f32>) -> @location(0) {ty} {{\n    \
+         let r = raster(pos.xy, ctx_uniforms.quads, ctx_uniforms.n, ctx_uniforms.e, ctx_uniforms.tile_px);\n    \
+         let rc = render_context(r);\n    \
+         return view(rc, lanes(rc, r));\n}}\n",
+        prelude::wgsl(tier),
+        raster::WGSL,
+        declarations(),
+        context()?,
+    ))
+}
+
+/// The stain harness's entry point name.
+pub const STAIN_ENTRY: &str = "stain_harness_fs";
+
+/// An assembled stain (`crate::assemble::assemble`'s source) as a fragment module over the harness's buffers: the
+/// raster and the [`declarations`] appended, and the entry [`STAIN_ENTRY`], which shades the base sample of the pixel's
+/// tile with its own masses, loading only those three members of its `ICDescriptor` (R-378), and writes the colour
+/// with alpha 1. The stain's nodes may declare no uniforms: group 0 is
+/// the prelude's block alone.
+pub fn stain_module(assembled: &str) -> String {
+    format!(
+        "{assembled}{}{}\n@fragment\nfn {STAIN_ENTRY}(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {{\n    \
+         let r = raster(pos.xy, ctx_uniforms.quads, ctx_uniforms.n, ctx_uniforms.e, ctx_uniforms.tile_px);\n    \
+         let masses = vec3<f32>(ic_read_m0(r.sample), ic_read_m1(r.sample), ic_read_m2(r.sample));\n    \
+         return vec4<f32>(shade_sample(r.sample, pos.xy, ctx_uniforms.ensemble_spread, masses, ctx_uniforms.read), 1.0);\n}}\n",
+        raster::WGSL,
+        declarations(),
+    )
+}
+
+/// The preset harness's entry point name.
+pub const PRESET_ENTRY: &str = "preset_harness_fs";
+
+/// An assembled stain (`crate::assemble::assemble`'s source) as a fragment module over the harness's buffers, its
+/// screen, quad and tile lanes filled: the stain module's ([`stain_module`]) raster and [`declarations`], with the
+/// per-quad frames at [`FRAME_BINDING`], and the entry [`PRESET_ENTRY`], which shades the base sample of the pixel's
+/// tile through `shade_at` with `ctx.screen.uv` the pixel's post-flip UV, `ctx.quad` the quad lane ([`quad_lane`]: `uv`
+/// the sample's quad-local coordinate, `centre` and `half_width` its quad's frame, and the quad's `RenderQuad` members,
+/// read through `quad_read(r.quad)` by [`QUAD_LANE`]'s mapping; RQ-238), `ctx.tile.uv` the within-tile coordinate and
+/// `ctx.validity.forbidden` the sample's chart classification ([`CHART_BINDING`]), and writes the colour with alpha 1.
+/// The presets (`engine::presets`) render through it.
+pub fn preset_module(assembled: &str) -> String {
+    let [.., b] = buffers();
+    let mut quad = String::new();
+    let lane =
+        quad_lane("q").expect("QUAD_LANE names RenderQuad's members (ledger::quad::RENDER_QUAD)");
+    for m in lane {
+        let _ = write!(quad, "\n    quad.{} = {};", m.name, m.fill);
+    }
+    format!(
+        "{assembled}{}{}\n@fragment\nfn {PRESET_ENTRY}(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {{\n    \
+         let r = raster(pos.xy, ctx_uniforms.quads, ctx_uniforms.n, ctx_uniforms.e, ctx_uniforms.tile_px);\n    \
+         let masses = vec3<f32>(ic_read_m0(r.sample), ic_read_m1(r.sample), ic_read_m2(r.sample));\n    \
+         let q = {reader}(r.quad);\n    \
+         var quad: CtxQuad;{quad}\n    \
+         let tile = CtxTile(r.tile_uv);\n    \
+         let validity = CtxValidity(chart_forbidden_at(r.sample));\n    \
+         let rgb = shade_at(r.sample, pos.xy, CtxScreen(r.screen_uv), quad, tile, validity, ctx_uniforms.ensemble_spread, masses, ctx_uniforms.read);\n    \
+         return vec4<f32>(rgb, 1.0);\n}}\n",
+        raster::WGSL,
+        declarations(),
+        reader = b.reader,
+    )
+}
+
+/// The four buffers' contents, as bytes: each the elements its binding's struct declares, in sample order (the quad
+/// buffer in quad order); the per-quad frames, `(c_u, c_v, h_u, h_v)` as four f32 per quad, in quad order
+/// ([`FRAME_BINDING`]); and the samples' chart classification, [`chart_words`]' words ([`CHART_BINDING`]).
+#[derive(Clone, Copy, Debug)]
+pub struct Payload<'a> {
+    pub simstate: &'a [u8],
+    pub word: &'a [u8],
+    pub ic: &'a [u8],
+    pub quad: &'a [u8],
+    pub quad_frame: &'a [u8],
+    pub chart_forbidden: &'a [u8],
+}
+
+/// The three bind groups a harness draw reads, and their layouts, by group number, and the four buffers group 1 binds.
+pub struct Bound {
+    pub layouts: [wgpu::BindGroupLayout; 3],
+    pub groups: [wgpu::BindGroup; 3],
+    /// The `SimState`, word, `ICDescriptor` and `RenderQuad` buffers, in [`buffers`]' order.
+    pub stored: [wgpu::Buffer; 4],
+}
+
+impl Bound {
+    /// The layouts, by group.
+    pub fn layout_refs(&self) -> [&wgpu::BindGroupLayout; 3] {
+        [&self.layouts[0], &self.layouts[1], &self.layouts[2]]
+    }
+
+    /// The groups, by group.
+    pub fn group_refs(&self) -> [&wgpu::BindGroup; 3] {
+        [&self.groups[0], &self.groups[1], &self.groups[2]]
+    }
+}
+
+fn entry(binding: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntry {
+    wgpu::BindGroupLayoutEntry {
+        binding,
+        visibility: wgpu::ShaderStages::FRAGMENT,
+        ty: wgpu::BindingType::Buffer {
+            ty,
+            has_dynamic_offset: false,
+            min_binding_size: None,
+        },
+        count: None,
+    }
+}
+
+/// Uploads `payload` and the uniforms, the prelude's for `context`'s ensemble and the default canvas background
+/// (`crate::present::canvas_background`, R-467 D2) and `context`'s own, and binds them: group
+/// 0 the prelude's block, group 1 the four buffers at [`buffers`]' bindings, group 2 the context's block, the per-quad
+/// frames ([`FRAME_BINDING`]) and the samples' chart classification ([`CHART_BINDING`]).
+pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -> Bound {
+    upload_with(device, payload, context, wgpu::BufferUsages::empty())
+}
+
+/// [`upload`], the four group-1 buffers made with `usage` beside `STORAGE`: `COPY_SRC` for a test that reads them back
+/// (REQ-TOOL-028's observation taps).
+pub fn upload_with(
+    device: &wgpu::Device,
+    payload: &Payload<'_>,
+    context: &Context,
+    usage: wgpu::BufferUsages,
+) -> Bound {
+    upload_all(device, payload, context, usage, None)
+}
+
+/// [`upload`], and the fragment decode's uniform `decode`, the decode stage's `DecodeUniforms` as bytes, bound at
+/// [`DECODE_BINDING`] in the context's group, for a module that places the generated decode (`crate::presets`).
+pub fn upload_decode(
+    device: &wgpu::Device,
+    payload: &Payload<'_>,
+    context: &Context,
+    decode: &[u8],
+) -> Bound {
+    upload_all(
+        device,
+        payload,
+        context,
+        wgpu::BufferUsages::empty(),
+        Some(decode),
+    )
+}
+
+/// [`upload_with`], with the fragment decode's uniform at [`DECODE_BINDING`] where `decode` is given.
+fn upload_all(
+    device: &wgpu::Device,
+    payload: &Payload<'_>,
+    context: &Context,
+    usage: wgpu::BufferUsages,
+    decode: Option<&[u8]>,
+) -> Bound {
+    use wgpu::util::DeviceExt;
+    let buffer = |label: &str, bytes: &[u8], usage| {
+        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some(label),
+            contents: bytes,
+            usage,
+        })
+    };
+    let uniform = wgpu::BufferUsages::UNIFORM;
+    let stored_usage = wgpu::BufferUsages::STORAGE.union(usage);
+    let words = |w: &[u32]| -> Vec<u8> { w.iter().flat_map(|x| x.to_le_bytes()).collect() };
+    let prelude_block = buffer(
+        "prelude uniforms",
+        &words(&prelude::uniform_words_with(
+            context.grid.e,
+            crate::present::canvas_background(),
+        )),
+        uniform,
+    );
+    let context_block = buffer("context uniforms", &words(&context.words()), uniform);
+    let frames = buffer(
+        "quad frames",
+        payload.quad_frame,
+        wgpu::BufferUsages::STORAGE,
+    );
+    let chart = buffer(
+        "chart classification",
+        payload.chart_forbidden,
+        wgpu::BufferUsages::STORAGE,
+    );
+    let stored = [
+        buffer("simstate", payload.simstate, stored_usage),
+        buffer("word", payload.word, stored_usage),
+        buffer("ic", payload.ic, stored_usage),
+        buffer("quad", payload.quad, stored_usage),
+    ];
+    let decode_block = decode.map(|d| buffer("decode uniforms", d, uniform));
+    let read_only = wgpu::BufferBindingType::Storage { read_only: true };
+    let layout = |label: &str, entries: &[wgpu::BindGroupLayoutEntry]| {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some(label),
+            entries,
+        })
+    };
+    let group1: Vec<_> = buffers()
+        .iter()
+        .map(|b| entry(b.binding, read_only))
+        .collect();
+    let layouts = [
+        layout(
+            "harness uniforms",
+            &[entry(
+                prelude::uniforms_binding().binding,
+                wgpu::BufferBindingType::Uniform,
+            )],
+        ),
+        layout("harness buffers", &group1),
+        layout("harness context", &{
+            let mut entries = vec![
+                entry(CONTEXT_BINDING, wgpu::BufferBindingType::Uniform),
+                entry(FRAME_BINDING, read_only),
+                entry(CHART_BINDING, read_only),
+            ];
+            if decode_block.is_some() {
+                entries.push(entry(DECODE_BINDING, wgpu::BufferBindingType::Uniform));
+            }
+            entries
+        }),
+    ];
+    let group = |label: &str, layout: &wgpu::BindGroupLayout, entries: &[wgpu::BindGroupEntry]| {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(label),
+            layout,
+            entries,
+        })
+    };
+    let group1: Vec<wgpu::BindGroupEntry> = buffers()
+        .iter()
+        .zip(&stored)
+        .map(|(b, s)| wgpu::BindGroupEntry {
+            binding: b.binding,
+            resource: s.as_entire_binding(),
+        })
+        .collect();
+    let groups = [
+        group(
+            "harness uniforms",
+            &layouts[0],
+            &[wgpu::BindGroupEntry {
+                binding: prelude::uniforms_binding().binding,
+                resource: prelude_block.as_entire_binding(),
+            }],
+        ),
+        group("harness buffers", &layouts[1], &group1),
+        group("harness context", &layouts[2], &{
+            let mut entries = vec![
+                wgpu::BindGroupEntry {
+                    binding: CONTEXT_BINDING,
+                    resource: context_block.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: FRAME_BINDING,
+                    resource: frames.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: CHART_BINDING,
+                    resource: chart.as_entire_binding(),
+                },
+            ];
+            if let Some(d) = &decode_block {
+                entries.push(wgpu::BindGroupEntry {
+                    binding: DECODE_BINDING,
+                    resource: d.as_entire_binding(),
+                });
+            }
+            entries
+        }),
+    ];
+    Bound {
+        layouts,
+        groups,
+        stored,
+    }
+}

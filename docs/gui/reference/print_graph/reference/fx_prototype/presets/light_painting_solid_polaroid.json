@@ -1,0 +1,28 @@
+{
+ "name": "Light painting, solid, on a Polaroid",
+ "doc": "A light painting, developed on instant film: one preset feeding another.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "lp": {
+   "op": "preset:light_painting_solid",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "pol": {
+   "op": "preset:polaroid",
+   "in": {
+    "src": "lp"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  }
+ },
+ "out": "pol"
+}

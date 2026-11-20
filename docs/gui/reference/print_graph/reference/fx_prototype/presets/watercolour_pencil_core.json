@@ -1,0 +1,238 @@
+{
+ "name": "Watercolour pencil (core)",
+ "doc": "Median-cut washes that pool at their edges, pigment colour, Lu-Xu-Jia pencil strokes and tonal hatching, on paper. Returns the painting as floats.",
+ "settings": {
+  "seed": 0,
+  "pigments": true,
+  "sat": 0.95
+ },
+ "nodes": {
+  "K": {
+   "op": "count_colours",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "cap": 12
+   }
+  },
+  "q": {
+   "op": "mediancut",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "K": "@K",
+    "mode": 3
+   }
+  },
+  "C0": {
+   "op": "fftblur",
+   "in": {
+    "x": "src"
+   },
+   "p": {
+    "s": 1.2
+   }
+  },
+  "C1": {
+   "op": "to_pigment",
+   "in": {
+    "image": "C0"
+   },
+   "p": {
+    "enabled": "$pigments"
+   }
+  },
+  "paper": {
+   "op": "wcp_paper"
+  },
+  "C": {
+   "op": "expr",
+   "in": {
+    "C": "C1",
+    "paper": "paper",
+    "sat": "$sat"
+   },
+   "p": {
+    "f": "C - 0 if False else (lambda l: (l+(C-l)*sat)*0.93+paper[None,None,:]*0.07)(C.mean(-1,keepdims=True))"
+   }
+  },
+  "g": {
+   "op": "expr",
+   "in": {
+    "C": "C"
+   },
+   "p": {
+    "f": "hypot(*gradient(C.mean(-1)))+hypot(*gradient(C[...,0]-C[...,2]))"
+   }
+  },
+  "Eb": {
+   "op": "fftblur",
+   "in": {
+    "x": "g"
+   },
+   "p": {
+    "s": 6
+   }
+  },
+  "E": {
+   "op": "expr",
+   "in": {
+    "Eb": "Eb"
+   },
+   "p": {
+    "f": "clip(Eb/(percentile(Eb,90)+1e-9),0,1)"
+   }
+  },
+  "tex": {
+   "op": "wcp_texture"
+  },
+  "pool": {
+   "op": "pool",
+   "in": {
+    "labels": "q.labels",
+    "E": "E"
+   }
+  },
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "nz": {
+   "op": "draw",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "kind": "normal",
+    "shape": "HW"
+   }
+  },
+  "nzb": {
+   "op": "fftblur",
+   "in": {
+    "x": "nz"
+   },
+   "p": {
+    "s": 40
+   }
+  },
+  "wash0": {
+   "op": "expr",
+   "in": {
+    "C": "C",
+    "paper": "paper",
+    "pool": "pool",
+    "nzb": "nzb",
+    "tex": "tex",
+    "E": "E"
+   },
+   "p": {
+    "f": "absorb = 1-C/paper[None,None,:]\ndens = pool*((1+0.10*z(nzb))*(1+0.10*tex*(1-0.5*E)))\nout = paper[None,None,:]*clip(1-clip(dens*0.97,0,1.5)[...,None]*absorb,0,1)"
+   }
+  },
+  "wash": {
+   "op": "fftblur",
+   "in": {
+    "x": "wash0"
+   },
+   "p": {
+    "s": 0.6
+   }
+  },
+  "Lm": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "I.mean(-1)"
+   }
+  },
+  "L": {
+   "op": "fftblur",
+   "in": {
+    "x": "Lm"
+   },
+   "p": {
+    "s": 1.0
+   }
+  },
+  "S0": {
+   "op": "pencil_strokes",
+   "in": {
+    "x": "L"
+   },
+   "p": {
+    "ks": 5
+   }
+  },
+  "P1": {
+   "op": "pencil_texture",
+   "p": {
+    "angle": 45,
+    "length": 20,
+    "seed": "$seed"
+   }
+  },
+  "P2": {
+   "op": "pencil_texture",
+   "p": {
+    "angle": -45,
+    "length": 20,
+    "seed": "$seed+1"
+   }
+  },
+  "Jh": {
+   "op": "expr",
+   "in": {
+    "L": "L",
+    "E": "E"
+   },
+   "p": {
+    "f": "1-(1-(0.55+0.45*L))*(0.45*(1-0.75*E))"
+   }
+  },
+  "Jh2": {
+   "op": "expr",
+   "in": {
+    "Jh": "Jh"
+   },
+   "p": {
+    "f": "clip(Jh+0.15,0,1)"
+   }
+  },
+  "T1": {
+   "op": "tone",
+   "in": {
+    "P": "P1",
+    "J": "Jh"
+   }
+  },
+  "T2": {
+   "op": "tone",
+   "in": {
+    "P": "P2",
+    "J": "Jh2"
+   }
+  },
+  "art": {
+   "op": "expr",
+   "in": {
+    "S0": "S0",
+    "E": "E",
+    "L": "L",
+    "T1": "T1",
+    "T2": "T2",
+    "wash": "wash"
+   },
+   "p": {
+    "f": "S = 1-(1-S0)*(1-0.55*E)\nJ = 0.55+0.45*L\ndark = clip((0.62-J)/0.25,0,1)*(1-E)\nT = T1*(1-dark*(1-T2))\nout = clip(wash*(0.16+0.84*S*T)[...,None],0,1)"
+   }
+  }
+ },
+ "out": "art"
+}

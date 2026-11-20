@@ -1,0 +1,243 @@
+[
+ {
+  "id": 130946553466,
+  "name": "wsl-image",
+  "status": "completed",
+  "conclusion": "success",
+  "runner_name": "GitHub Actions 1000088052",
+  "labels": [
+   "ubuntu-24.04"
+  ],
+  "steps": [
+   {
+    "number": 1,
+    "name": "Set up job",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 2,
+    "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 3,
+    "name": "scripts/wsl/build-image.sh",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 4,
+    "name": "The image",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 5,
+    "name": "The manifest alone",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 10,
+    "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 11,
+    "name": "Complete job",
+    "status": "completed",
+    "conclusion": "success"
+   }
+  ]
+ },
+ {
+  "id": 130946554828,
+  "name": "win-vulkan",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130946555190,
+  "name": "wsl-cpu",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130946555198,
+  "name": "win-contain",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130946555221,
+  "name": "win-self-check",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130946555364,
+  "name": "win-tests",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130946609906,
+  "name": "wsl-parity",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "ubuntu-24.04"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130952017214,
+  "name": "wsl-register",
+  "status": "completed",
+  "conclusion": "cancelled",
+  "runner_name": "malachys-pc-rtx2080s",
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": [
+   {
+    "number": 1,
+    "name": "Set up job",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 2,
+    "name": "Set up runner",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 3,
+    "name": "Self-check, first step",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 4,
+    "name": "Guard the kept checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 5,
+    "name": "Toolchain on PATH",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 6,
+    "name": "Clean checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 7,
+    "name": "Record the commit, driver and toolchain",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 8,
+    "name": "This run's image",
+    "status": "completed",
+    "conclusion": "cancelled"
+   },
+   {
+    "number": 9,
+    "name": "Register principia-wsl",
+    "status": "completed",
+    "conclusion": "skipped"
+   },
+   {
+    "number": 10,
+    "name": "Label the result in the summary",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 11,
+    "name": "Keep the full output",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 21,
+    "name": "Post Clean checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 22,
+    "name": "Complete runner",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 23,
+    "name": "Complete job",
+    "status": "completed",
+    "conclusion": "success"
+   }
+  ]
+ },
+ {
+  "id": 130952019718,
+  "name": "wsl-proofs",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ }
+]

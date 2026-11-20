@@ -1,0 +1,158 @@
+# Orbit catalogues as a validation cross-check: an addition to the replication suite
+
+The human's instruction of 26 Oct 2026. It adds to the replication suite (`../2026-10-25_replication/`) and replaces
+nothing in it. His words:
+
+> "https://www.threebodyorbits.com wait this could be huge for getting more validation data on our impl"
+
+> "Yeah please. Also already sent off the replication plan so this would have to be an additional new md file / plan
+> etc. and yeah this works as a good cross check. https://web.archive.org/web/20260606193512/http://three-body.ipb.ac.rs/
+> this website (sadly don't think it's up anymore but it's on the internet web archive also is a brilliant reference we
+> should also use, has free word group strings etc)"
+
+## The two sources
+
+### 1. Three Body Orbits (threebodyorbits.com): a snapshot is in this folder
+
+An atlas of 3,943 periodic planar three-body orbits in 41 families. It is compiled from about 25 published sources,
+which its About page cites. In this folder:
+
+- `threebodyorbits_catalogue.json`: the site's catalogue, generated 27 Sep 2026 (stamp 1790531492). Per orbit it gives
+  family, masses, period T, energy E, angular momentum L, closest approach, the stability measure and its published
+  source, the syzygy count, symmetry, and closure for the published and the refined initial conditions.
+- `extract_ics.py`: extracts one row per orbit from the site's per-orbit files into `threebodyorbits_ics.csv`: the
+  catalogue fields plus both sets of initial conditions as full f64 (`repr`), `pub_*` as the source paper published
+  them and `ref_*` as the site re-converged them. E and L are recomputed from `ref_*` as a check on the layout.
+- `threebodyorbits_ics.csv`: that CSV, committed (see "Data terms"). Regenerating it reproduces it byte for byte.
+
+What it covers that nothing else in the suite does:
+
+- 3,916 orbits whose catalogued closure is better than 1e-9 after one period (closure measured on the site's
+  double-double initial conditions, not on the f64 values stored here; see "Its status");
+- 1,728 of them with unequal masses;
+- 413 with non-zero angular momentum;
+- 1,463 linearly stable.
+
+The rest of the replication suite is almost all equal-mass and released from rest.
+
+**Its status.** It is a **compilation, not a primary source**. The operator is not named. The refined initial
+conditions are the site's own numbers: refined in double-double, about 32 significant digits, and stored as f64. 81
+orbits come from the site's own unpublished searches (families `bh2026*`, `bhh2026`, "This site's searches"). Treat it
+under the replication plan's rule 1 as an **index and an independent cross-check**:
+
+- **A reference value traces to the source paper.** The `source` column and the site's About page name it. Most of
+  those papers are in `../2026-10-25_replication/papers/` or are open access.
+- **Where the paper's value and the site's disagree, record both and queue it.** Do not pick one.
+- **The site's own orbits test closure only.** They are not published results.
+
+**Precision of the stored initial conditions (the operator's reply, 26 Oct 2026).** Every orbit is refined in
+double-double, but only the double-precision part is written to the files:
+
+> "We refine every orbit in double-double (about 32 significant digits; the catalogue's closure of around 1e-28
+> reflects that), but only the double-precision part is written to the files."
+
+So the `closure` column (median 1.3e-24) describes the double-double initial conditions, and the `ref_*` values in the
+CSV are those rounded to f64. Integrating `ref_*` cannot close better than the rounding, about 1e-16 relative, amplified
+along the orbit by its instability. **The closure test's tolerance is set by that, never by the catalogued closure.**
+The full double-double values are not available; the operator would have to re-run the catalogue to export them.
+
+**Data terms (the operator's reply, 26 Oct 2026).**
+
+> "You may use the catalogue.json of the atlas and put them on your github under a CC BY 4.0 with reference to
+> threebodyorbits.com - this is an anonymous project, so a link to the website is sufficient."
+
+- `threebodyorbits_catalogue.json` is used under **CC BY 4.0**, attributed to `https://www.threebodyorbits.com`.
+  Every use of it in the repo, and any figure or paper that uses it, carries that link.
+- The orbits the site calls "the hunt" are **not** in the atlas and are not to be included until the operator publishes
+  them: "One thing I'd ask is that you don't yet include the newly found orbits from "the hunt" (they are not part of
+  the atlas)". The snapshot here is `catalogue.json`, the atlas itself, so by the operator's own description it holds
+  none of them. The family `bhunt` (3 rows) is **not** the hunt: the site labels it "New Broucke-region orbits", from
+  its research note of 8 September 2026 (`bh2026`), part of the atlas.
+- **Every citation is in `CITATIONS.md`**, generated by `citations.py` from the catalogue and
+  `threebodyorbits_sources.json` (the site's reference list, transcribed): the licences, a credit line, and the source
+  of every family. That includes 945 unequal-mass Li-family orbits the site's family-level source attributes to Li &
+  Liao 2017 that come from Li, Jing & Liao 2018. Every figure cites from there.
+- **The site's About page licenses more than the email named**: "Everything the atlas computed, the catalogue of
+  measurements, the stored splines, the thumbnails and the map layout" under CC BY 4.0, with Reusser's initial
+  conditions under MIT.
+- **So the extracted CSV is committed**, under those terms. The human, 26 Oct 2026: "put in repo". Its first 2,386
+  sets of initial conditions come from Ricky Reusser's MIT-licensed notebook, whose notice is in `CITATIONS.md`, and the
+  rest from the papers; every use credits as `CITATIONS.md` says.
+- **`atlas-params.json` (below) stays outside the repo.** The operator sent it rather than published it, and the About
+  page does not name it. (Earlier, only `catalogue.json` was committed: the human, 26 Oct 2026, "guess maybe just use
+  the ones explicitly been given permission to". The About page is that permission for the CSV.)
+
+**`atlas-params.json` (attached to the operator's reply; not committed).** One entry per orbit, keyed as the
+catalogue, all 3,943 present. Measured on receipt:
+
+- Its `positions` and `velocities` are the **published** initial conditions: they equal the CSV's `pub_*` to
+  4.4e-16 on every row, with the same masses. `sim_time` is the published period at its printed precision; it differs
+  from the refined `T` on 707 rows.
+- **1,359 rows carry `ic_hp` and `period_hp`**: the initial conditions (12 strings, in the CSV's order) and period as
+  decimal strings, mostly 30, 100 or 180 digits. These are the only initial conditions in the snapshot above f64, and
+  they make the precision tiers testable on these orbits without re-converging anything.
+- **Their provenance is mixed and has to be traced per row before use.** On 1,260 rows `ic_hp` agrees with the
+  published f64 values to 1e-12, consistent with the source paper printing more digits (Hristov et al., Simó, Li &
+  Liao). On the other 99, all with an empty `source`, it differs from the published values by 2e-7 to 3e-6 and agrees
+  with the refined `ref_*` instead: a high-precision value from somewhere else, possibly the site's own refinement.
+  Until traced, those 99 are closure tests only, like the site's own orbits.
+- Data terms: it came attached to the reply granting CC BY 4.0 but is neither the file the grant names nor published
+  on the site, so it is held outside the repo.
+
+### 2. The Belgrade three-body gallery (three-body.ipb.ac.rs) and its free-group words
+
+Šuvakov and Dmitrašinović's gallery. It is now offline, and the Internet Archive holds it
+(`https://web.archive.org/web/20260606193512/http://three-body.ipb.ac.rs/`). It gives initial conditions, periods and
+**free-group words** for the Belgrade families. Those words are the reference the encounter-word reader needs (symbolic
+dynamics contract; the generator and sign convention are to be "transcribed from the literature (Montgomery;
+Šuvakov–Dmitrašinović)", R-125).
+
+**The archive could not be read from the session that wrote this file.** The Internet Archive is blocked from that
+session, and the original site returns HTTP 500. The human asked for another way in; the closest primary source found
+is in this folder:
+
+- `hudomal_2015_msc_belgrade.pdf`: A. Hudomal, *New Periodic Solutions to the Three-Body Problem and Gravitational
+  Waves*, MSc thesis, University of Belgrade, Faculty of Physics, October 2015, supervised by V. Dmitrašinović. It was
+  computed with Šuvakov's code, the gallery's own, and downloaded from `https://www.scl.rs/theses/msc_ahudomal.pdf`.
+  - Its Table 1 reprints the 2013 *PRL* orbits: label, ẋ₁(0), ẏ₁(0), T and **free-group element**, in the collinear
+    convention x₁ = −x₂ = −1, x₃ = 0, with all y = 0, ẋ₂ = ẋ₁, ẋ₃ = −2ẋ₁, ẏ₂ = ẏ₁, ẏ₃ = −2ẏ₁, and G = m = 1.
+  - Tables 3 onward list the members of each sequence, again with their words.
+  - The corpus already names this thesis as "the published catalogue (Hudomal thesis)" (validation_ground_truth).
+
+The free-group words in two papers already in the repo are a second source:
+
+- Šuvakov & Dmitrašinović 2013, *PRL* 110, 114301, Table 1;
+- Dmitrašinović et al. 2018, *J. Phys. A* 51, 315101, more than 200 orbits each labelled with its word.
+
+Li & Liao 2017 (`../2026-10-25_replication/papers/`) gives words for its 600-plus families. If the gallery's archived
+pages are supplied later, they go in this folder with a README entry and are transcribed under the usual rule. The
+atlas's own "Belgrade classes" (242 orbits, including "Sequence VIII, recovered from its archived pages") carry
+initial conditions but no words.
+
+## What to do with it (an addition to tier A)
+
+1. **Closure at order.** For a filtered set (refined closure < 1e-9, short periods first, because unstable orbits
+   amplify any error by e^(T/τ_L)), integrate one period from `ref_*` and assert the return at the occupant's stated
+   order, not at one step size. Run it under the default occupant and under Aarseth–Zare.
+   - Include near-collision orbits on purpose, selected by small `rmin`. They exercise the regularisation, which most
+     catalogue orbits do not.
+2. **Invariants from the state builder.** E and L_z recomputed through our own decode and encode path must match the
+   row. The catalogue's printed precision bounds the comparison; the CSV's recomputed values do not.
+   - **Above f64, use `ic_hp`.** For the 1,260 traced rows, integrate from `ic_hp` at an extended-precision tier and
+     assert closure against `period_hp` at that tier's precision. The f64 `ref_*` cannot test above f64.
+3. **Published against refined.** `closure_published` against `closure_refined` per row is a measurement of how
+   accurate the published initial conditions are. Where ours disagrees with the site's, that is information, not a
+   failure.
+4. **Stability as structure.** The linearly stable orbits should sit inside small regular islands on a chart through
+   them, and the unstable ones should not. This is a qualitative tier-B check, and it waits for the charts.
+5. **Words.** The syzygy count `syz` checks the crossing counter against every row. The full free-group word is checked
+   against Hudomal's tables, the 2013 and 2018 papers, or the gallery if it is supplied, and is blocked on the encounter-word reader.
+6. **Coverage report.** Print, per family: rows tested, closure order achieved, and failures. A family where every row
+   fails is a fault in one of them; find out which before blaming the engine.
+
+## Rules
+
+The replication plan's rules apply unchanged: source in the repo, transcribe twice, tolerances as calibrations, never
+tune to match, and remap before comparing. This catalogue's coordinate convention is the site's centre-of-mass frame
+with G = 1, and the masses are as given, not normalised to sum to 1. Converting into our canonical frame is a tested
+function, not a guess.

@@ -1,0 +1,22 @@
+# Valtonen et al. 2016, Fig. 8.1, p. 148 (PDF p. 158). Credit: Valtonen 1976, A&A 46, 435 (no DOI on Crossref).
+# Open-circle centres at the labelled times, refined by a ring-score search on the 301x504 px raster; +-0.5 px.
+# Scale: the '1 UNIT' bar is 102 px (cols 25-127 on row 322), +-1.5 px, i.e. +-1.5 per cent on every distance.
+# Origin: the mass-weighted centre at t = 1, 2, 3, 4, which is constant to 1 px (pixel COM per time in px_x/px_y);
+# at t = 4.56 it is 1.6 px off. y is up. Time unit as in the figure (not defined in the book).
+# Masses from the labels: m1 = 0.5, m2 = 0.5, m3 = 1.0. At t = 4.56 m2 and m3 coincide (collision); m1 leaves.
+body,mass,t,x_units,y_units,px_x,px_y
+m2,0.5,1,0.238,2.542,171.75,9.00
+m2,0.5,2,-0.240,1.716,123.00,93.25
+m2,0.5,3,-0.201,0.915,127.00,175.00
+m2,0.5,4,0.042,0.339,151.75,233.75
+m2,0.5,4.56,0.328,-0.139,181.00,282.50
+m1,0.5,1,0.752,1.788,224.25,86.00
+m1,0.5,2,0.669,1.856,215.75,79.00
+m1,0.5,3,0.083,1.765,156.00,88.25
+m1,0.5,4,-0.691,1.072,77.00,159.00
+m1,0.5,4.56,-0.966,0.430,49.00,224.50
+m3,1.0,1,-0.500,-2.168,96.50,489.50
+m3,1.0,2,-0.213,-1.774,125.75,449.25
+m3,1.0,3,0.061,-1.340,153.75,405.00
+m3,1.0,4,0.326,-0.715,180.75,341.25
+m3,1.0,4.56,0.289,-0.176,177.00,286.25

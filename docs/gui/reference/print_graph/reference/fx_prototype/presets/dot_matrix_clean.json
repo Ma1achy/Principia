@@ -1,0 +1,20 @@
+{
+ "name": "Dot-matrix printer, no scan lines",
+ "doc": "The dot-matrix preset with its bands turned off.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "p": {
+   "op": "preset:dot_matrix",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed",
+    "bands": 0.0
+   }
+  }
+ },
+ "out": "p"
+}

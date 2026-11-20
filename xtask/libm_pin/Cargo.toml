@@ -1,0 +1,30 @@
+# The libm-pin measurement's harness (R-991, REQ-CHART-212; `cargo xtask measure libm-pin`): the first slice's three
+# charts decoded in f64 over their grids, each sample's record hashed at f64 and after narrowing. Its own workspace, not
+# a member of the repository's: it builds for the wasm target too, which validation (wgpu, render) does not, and the
+# same source then runs natively (the binary) and under a wasm runtime (the cdylib's export, `run.mjs`). Its arms are
+# kernel's two measurement features: `std-maths`, the f64 path before the pin, and `perturb-sin`, the control.
+[package]
+name = "libm-pin"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "libm-pin"
+path = "src/main.rs"
+
+[dependencies]
+kernel = { path = "../../crates/kernel" }
+ledger = { path = "../../crates/ledger" }
+
+[features]
+std-maths = ["kernel/measure-std-maths"]
+perturb-sin = ["kernel/measure-perturb-sin"]
+
+[profile.release]
+debug = false
+
+[workspace]

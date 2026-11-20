@@ -1,0 +1,7 @@
+# The toolchain pin rust-gpu needs (canonical_spec §1 item 2; R-169): the nightly that `rustc_codegen_spirv`
+# 0.10.0-alpha.1 is built against, with the components it builds and links with (`rust-src` for `-Zbuild-std=core`,
+# `rustc-dev` and `llvm-tools` for the codegen backend). The whole workspace builds on it, so the kernel's native build
+# and its SPIR-V build share one compiler. Every CI job installs it from this file.
+[toolchain]
+channel = "nightly-2026-04-11"
+components = ["rust-src", "rustc-dev", "llvm-tools", "clippy", "rustfmt"]

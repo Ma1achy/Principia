@@ -1,0 +1,6 @@
+{
+  "description": "N_max changed to 50, not a power of two.",
+  "config": { "r_sub": 0.05, "gamma_sub": 1.5, "n_max": 50 },
+  "fuzz": { "seed": 4, "random": 4096, "pairs": 4096 },
+  "expected": "pass"
+}

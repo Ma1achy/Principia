@@ -1,0 +1,5 @@
+IT-0: printed y = 8.6602540371998815e-01; the double's shortest decimal 0.8660254037199882, 16 significant figures; sqrt(3)/2 = 0.86602540378443860, printed - exact = -6.45e-11
+IT-1: printed y = 1.8169092589591662e-01; the double's shortest decimal 0.18169092589591662, 17 significant figures
+IT-2: printed y = 6.4437073883662183e-02; the double's shortest decimal 0.06443707388366218, 16 significant figures
+IT-3: printed y = 2.3930000000000000e-02; the double's shortest decimal 0.02393, 4 significant figures
+IT-4: printed y = 8.8999999999999999e-03; the double's shortest decimal 0.0089, 2 significant figures

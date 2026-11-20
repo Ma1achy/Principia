@@ -1,0 +1,359 @@
+//! The generator driver (dd_generation_root §1; debug_tooling_plan step 0a): validate every entry against §3.8, run
+//! the static layout check (§5 test 1, [`crate::check`]), then run each emitter. It refuses to emit anything when an
+//! entry is incomplete, naming each field and the missing key, when the layout check finds anything, or when a
+//! payload struct member the Rust or WGSL emitter would write is off the ledger ([`rust::check`]), or when a field has
+//! no read the debug catalogue or the export decoder needs ([`catalogue::refused`], [`export::refused`]), or when the
+//! link registry fails its checks ([`links::refused`]). The emitters
+//! are registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]), each also writing the read side
+//! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]); the host export decoder ([`export`]); the
+//! debug catalogue, its views and their tests ([`catalogue`]); the kernel's link functions and chart constants from
+//! the link registry ([`links`]; dd_generation_root §3.9); `QuadReduction`'s Rust and WGSL struct, from its own
+//! ledger ([`crate::reduction::emit`]); the steppers' coefficients, from the constants register ([`steppers`];
+//! dd_integrator §3.2); and the `N_sub` bucket's comparison tree and default threshold table, from the constants
+//! register ([`nsub`]; dd_integrator §3.3, R-502); and the fragment entry points' word layouts, from their table
+//! ([`fragment`]; TASK-M2-25); and the fixed-point numbers of the kernel's own f32 `atan2` ([`arctan`]; RQ-628). One
+//! source generates all four payload artefacts (seam 13).
+
+pub mod arctan;
+pub mod catalogue;
+pub mod export;
+pub mod fragment;
+pub mod links;
+pub mod nsub;
+pub mod numeric;
+pub mod prelude;
+pub mod read;
+pub mod rust;
+pub mod steppers;
+pub mod wgsl;
+
+use std::fmt;
+use std::path::{Path, PathBuf};
+
+use crate::check::{self, LayoutError};
+use crate::schema::{Entry, FieldType, IncompleteEntry, Ledger, Location, RangeState, Scale, Word};
+
+/// One generated file: its path, relative to the workspace root, and its contents.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Generated {
+    pub path: PathBuf,
+    pub contents: String,
+}
+
+/// An emitter: the files it generates from a validated layout.
+pub type Emitter = fn(&[Word], &[Entry]) -> Vec<Generated>;
+
+/// The registered emitters, run in order.
+pub const EMITTERS: &[Emitter] = &[
+    rust::emit,
+    wgsl::emit,
+    export::emit,
+    catalogue::emit,
+    links::emit,
+    crate::reduction::emit,
+    steppers::emit,
+    nsub::emit,
+    fragment::emit,
+    arctan::emit,
+];
+
+/// Why generation was refused.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum GenError {
+    /// Entries missing a required §3.8 key (REQ-GEN-002).
+    Incomplete(Vec<IncompleteEntry>),
+    /// Names given to more than one entry, derived fields whose `from` is empty or names something other than exactly
+    /// one stored entry, vectors whose component is not a scalar type or whose `k` is below 2, and a `floor` that is
+    /// empty or names a ledger entry or a register constant (§3.8 `location`, `type`, `floor`), a `diverging` scale
+    /// over a range that does not span zero (§3.8, R-403), a `lin` or `diverging` scalar whose range is a gap (§3.8,
+    /// R-426; [`numeric::undeclared`]), and a word buffer `.w`
+    /// whose `length` entry is missing or has no closed greatest value or no sentinel, or whose `payload` entry is
+    /// missing ([`rust::fgw_problem`]).
+    Malformed(Vec<String>),
+    /// Findings of the static layout check (REQ-GEN-003, REQ-GEN-028).
+    Layout(Vec<LayoutError>),
+    /// Struct members off the ledger: stored as other than their entry's type or word's width, off their entry's
+    /// scalar slot, or with no entry or word, each naming the member ([`rust::check`]; dd_generation_root §3.8: "A
+    /// field without a complete entry fails generation loudly").
+    Structs(Vec<String>),
+    /// Constants-register entries missing a value, class or citation, or thresholds without an admissible relative
+    /// basis, each naming the constant ([`crate::constants::gate`]; REQ-SYS-001, REQ-SYS-005, REQ-VAL-006).
+    Constants(Vec<String>),
+    /// Fields an artefact emitter has no read of, each naming the field: the debug catalogue's
+    /// ([`catalogue::refused`]) and the export decoder's ([`export::refused`]), so the catalogue is exhaustive by
+    /// construction (render contract Part 6; dd_generation_root §4, seam 13); and the export decoder's body- or
+    /// pair-indexed fields whose base the ledger does not state ([`export::index_refused`]; R-449, REQ-GEN-036).
+    Unread(Vec<String>),
+    /// Link registry problems, each naming the entry: a missing member, a §3.9 row without its entries, a default that
+    /// is not an entry of its slot's codomain ([`crate::links::check`]; REQ-CHART-032, REQ-GEN-013).
+    Links(Vec<String>),
+}
+
+impl fmt::Display for GenError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let lines: Vec<String> = match self {
+            GenError::Incomplete(entries) => entries.iter().map(ToString::to_string).collect(),
+            GenError::Malformed(lines)
+            | GenError::Structs(lines)
+            | GenError::Constants(lines)
+            | GenError::Unread(lines)
+            | GenError::Links(lines) => lines.clone(),
+            GenError::Layout(errors) => errors.iter().map(ToString::to_string).collect(),
+        };
+        write!(
+            f,
+            "generation refused: {} ledger problem(s):\n  {}",
+            lines.len(),
+            lines.join("\n  ")
+        )
+    }
+}
+
+/// Every entry of `ledger` built, or every incomplete one; an unnamed entry is reported as "entry #i (unnamed)"
+/// (R-242).
+pub fn validate(ledger: &Ledger) -> Result<Vec<Entry>, GenError> {
+    let mut entries = Vec::new();
+    let mut incomplete = Vec::new();
+    for (i, builder) in ledger.entries.iter().enumerate() {
+        match builder.build() {
+            Ok(entry) => entries.push(entry),
+            Err(mut error) => {
+                if builder.name.is_none() {
+                    error.field = format!("entry #{i} (unnamed)");
+                }
+                incomplete.push(error);
+            }
+        }
+    }
+    if !incomplete.is_empty() {
+        return Err(GenError::Incomplete(incomplete));
+    }
+    let mut bad: Vec<String> = entries
+        .iter()
+        .enumerate()
+        .filter(|(i, e)| entries[..*i].iter().any(|f| f.name == e.name))
+        .map(|(_, e)| {
+            format!(
+                "field `{}` has more than one entry: names are unique across the ledger (dd_generation_root §3.8)",
+                e.name
+            )
+        })
+        .collect();
+    bad.extend(bad_derived(&entries));
+    bad.extend(entries.iter().filter_map(bad_vector));
+    bad.extend(entries.iter().filter_map(bad_diverging));
+    bad.extend(entries.iter().filter_map(numeric::undeclared));
+    bad.extend(bad_floor(&ledger.words, &entries));
+    bad.extend(rust::fgw_problem(&ledger.words, &entries));
+    if bad.is_empty() {
+        Ok(entries)
+    } else {
+        Err(GenError::Malformed(bad))
+    }
+}
+
+/// Each derived entry whose `from` is empty, or names anything but exactly one entry, a packed or scalar one, as a
+/// line naming it (§3.8: "each must be an entry of the ledger whose location is a packed word or a scalar index").
+fn bad_derived(entries: &[Entry]) -> Vec<String> {
+    let stored = |name: &str| {
+        let mut named = entries.iter().filter(|e| e.name == name);
+        let one = named.next().filter(|_| named.next().is_none());
+        one.is_some_and(|e| !matches!(e.location, Location::Derived { .. }))
+    };
+    let mut bad = Vec::new();
+    for e in entries {
+        let Location::Derived { from } = &e.location else {
+            continue;
+        };
+        if from.is_empty() {
+            bad.push(format!(
+                "derived field `{}` has an empty `from` (dd_generation_root §3.8)",
+                e.name
+            ));
+        }
+        for source in from.iter().filter(|s| !stored(s)) {
+            bad.push(format!(
+                "derived field `{}`: `from` names `{source}`, not exactly one stored ledger entry (dd_generation_root §3.8)",
+                e.name
+            ));
+        }
+    }
+    bad
+}
+
+/// A line naming `e` if it is a vector whose component is itself a vector or whose `k` is below 2 (§3.8: "`k ≥ 2`
+/// components, each of the scalar `type`").
+fn bad_vector(e: &Entry) -> Option<String> {
+    match &e.ty {
+        FieldType::Vector { component, k }
+            if matches!(**component, FieldType::Vector { .. }) || *k < 2 =>
+        {
+            Some(format!(
+                "vector field `{}` needs k ≥ 2 scalar components (dd_generation_root §3.8)",
+                e.name
+            ))
+        }
+        _ => None,
+    }
+}
+
+/// A line naming `e` and its range if it carries the `diverging` scale over a declared range that does not span zero
+/// (R-403; REQ-GEN-033; dd_generation_root §3.8: "A `diverging` entry whose declared range does not span zero fails
+/// generation, naming the field and its range"), the tag agreeing with the range R-400 derives the diverging ramp from.
+///
+/// A gap declares nothing, so it never spans zero (R-426), and no entry carries `diverging` over one (§3.8: an entry
+/// carries `diverging` "only when its declared range spans zero"). A scalar's gap is [`numeric::undeclared`]'s to
+/// refuse, so it is not named twice; a vector's is refused here, since §3.8's carve-out for a vector, whose views
+/// read no range, exempts it from the undeclared-range check but not from the `diverging` rule (applied per R-369,
+/// qa F1 on PR #208).
+fn bad_diverging(e: &Entry) -> Option<String> {
+    if e.scale != Scale::Diverging {
+        return None;
+    }
+    match e.range_state() {
+        RangeState::Gap if matches!(e.ty, FieldType::Vector { .. }) => Some(format!(
+            "vector field `{}` has scale `diverging` and no declared range: the (−∞, ∞) it writes is a ledger gap, \
+             not a range that spans zero, and a field is `diverging` only when its declared range spans zero; declare \
+             its range with its citation (dd_generation_root §3.8, R-426, R-403)",
+            e.name
+        )),
+        RangeState::Gap => None,
+        state if !state.spans_zero() => Some(format!(
+            "field `{}` has scale `diverging` over {}, a range that does not span zero: a field is `diverging` only \
+             when its declared range spans zero (dd_generation_root §3.8, R-403)",
+            e.name, e.range
+        )),
+        _ => None,
+    }
+}
+
+/// Each entry whose `floor` is not a sim-key parameter name, as a line naming it: §3.8's `floor` names a sim-key
+/// parameter, which is "neither a ledger entry nor a register constant" (R-263). So an empty floor, one that is not a
+/// name ([`is_name`]: a number such as `1e-6` is a value), a ledger entry's or packed word's name (a packed word is a
+/// stored field of the ledger, payload §1) or a register constant's name fails.
+fn bad_floor(words: &[Word], entries: &[Entry]) -> Vec<String> {
+    let register = crate::constants::REGISTER;
+    entries
+        .iter()
+        .filter_map(|e| e.floor.map(|floor| (e.name, floor)))
+        .filter_map(|(name, floor)| {
+            let what = if floor.is_empty() {
+                "is empty"
+            } else if !is_name(floor) {
+                "is not a name"
+            } else if entries.iter().any(|f| f.name == floor) {
+                "names a ledger entry"
+            } else if words.iter().any(|w| w.name == floor) {
+                "names a ledger word"
+            } else if register.iter().any(|c| c.name == floor) {
+                "names a register constant"
+            } else {
+                return None;
+            };
+            Some(format!(
+                "field `{name}`: `floor` `{floor}` {what}, not a sim-key parameter (dd_generation_root §3.8, R-263)"
+            ))
+        })
+        .collect()
+}
+
+/// Whether `s` is a name: an ASCII letter or `_`, then ASCII letters, digits or `_` (the form of every sim-key
+/// parameter the corpus names, such as `eps_E`). The corpus does not define "name"; this is the tightest reading
+/// that admits §3.4's `eps_E` and `eps_L` (applied per R-204).
+fn is_name(s: &str) -> bool {
+    let mut chars = s.chars();
+    chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
+/// Validates `ledger` and runs the static layout check over it; if `emitters` include a struct emitter
+/// ([`rust::emit`] or [`wgsl::emit`]) and `ledger` declares any member of the payload structs, checks every member against it
+/// ([`rust::check`], exempting [`crate::payload::PENDING`]); if they include the export decoder ([`export::emit`]) or
+/// the catalogue ([`catalogue::emit`]), refuses a field it has no read of; refuses a link registry that fails its checks
+/// ([`links::refused`]); then runs `emitters` over it. The files they generate, or why not. With the export decoder, a
+/// body- or pair-indexed entry whose index-base key does not state its base is refused, naming the field
+/// ([`export::index_refused`]; R-449, REQ-GEN-036).
+pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>, GenError> {
+    let entries = validate(ledger)?;
+    let refused = links::refused(crate::links::builders());
+    if !refused.is_empty() {
+        return Err(GenError::Links(refused));
+    }
+    let findings = check::check(&ledger.words, &entries);
+    if !findings.is_empty() {
+        return Err(GenError::Layout(findings));
+    }
+    let structs = crate::payload::structs();
+    let writes_structs = emitters.iter().any(|&e| {
+        std::ptr::fn_addr_eq(e, rust::emit as Emitter)
+            || std::ptr::fn_addr_eq(e, wgsl::emit as Emitter)
+    });
+    if writes_structs && rust::declares(&structs, &ledger.words, &entries) {
+        let found = rust::check(&structs, &ledger.words, &entries, crate::payload::PENDING);
+        if !found.is_empty() {
+            return Err(GenError::Structs(found));
+        }
+    }
+    let runs = |emitter: Emitter| emitters.iter().any(|&e| std::ptr::fn_addr_eq(e, emitter));
+    let mut unread = Vec::new();
+    if runs(export::emit as Emitter) {
+        unread.extend(export::refused(&ledger.words, &entries));
+        unread.extend(export::index_refused(&entries));
+    }
+    if runs(catalogue::emit as Emitter) {
+        unread.extend(catalogue::refused(&ledger.words, &entries));
+    }
+    if !unread.is_empty() {
+        return Err(GenError::Unread(unread));
+    }
+    Ok(emitters
+        .iter()
+        .flat_map(|emit| emit(&ledger.words, &entries))
+        .collect())
+}
+
+/// What a generator run did with each generated file (paths relative to the root), by whether it was written.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Outcome {
+    /// Files absent from disk, or whose content differed from the file on disk: written.
+    pub written: Vec<PathBuf>,
+    /// Files whose content matched the file on disk: left untouched, so their modification time does not move
+    /// (R-284).
+    pub unchanged: Vec<PathBuf>,
+}
+
+/// Passes the constants register ([`crate::constants::REGISTER`]) through its gate, then generates from `ledger` with
+/// `emitters` (`cargo xtask codegen` passes [`EMITTERS`]) and writes each file under `root` only when its content
+/// differs from the file on disk (R-284); which files were written and which were unchanged.
+pub fn run(ledger: &Ledger, emitters: &[Emitter], root: &Path) -> Result<Outcome, String> {
+    run_with_register(crate::constants::REGISTER, ledger, emitters, root)
+}
+
+/// [`run`] with `register` as the constants register: generation is refused, and nothing written, unless every entry
+/// of `register` passes [`crate::constants::gate`].
+pub fn run_with_register(
+    register: &[crate::constants::ConstantBuilder],
+    ledger: &Ledger,
+    emitters: &[Emitter],
+    root: &Path,
+) -> Result<Outcome, String> {
+    crate::constants::gate(register).map_err(|e| e.to_string())?;
+    let files = generate(ledger, emitters).map_err(|e| e.to_string())?;
+    let mut outcome = Outcome::default();
+    for file in files {
+        let path = root.join(&file.path);
+        // A file that cannot be read (absent, or not UTF-8) counts as differing, and is written.
+        if std::fs::read_to_string(&path).is_ok_and(|on_disk| on_disk == file.contents) {
+            outcome.unchanged.push(file.path);
+            continue;
+        }
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        }
+        std::fs::write(&path, &file.contents).map_err(|e| format!("{}: {e}", path.display()))?;
+        outcome.written.push(file.path);
+    }
+    Ok(outcome)
+}

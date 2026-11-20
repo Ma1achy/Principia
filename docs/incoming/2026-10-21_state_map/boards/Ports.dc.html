@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Ports and wire rules</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500&amp;family=Ubuntu+Mono&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#5ab4ff}a:hover{color:#8fd0ff}
+.mono{font-family:'Ubuntu Mono',ui-monospace,monospace}
+.hd{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#a8a8a8}
+table{border-collapse:collapse;width:100%;font-size:12px}
+td,th{border-bottom:1px solid #2a2a2a;padding:6px 8px;text-align:left;vertical-align:top}
+th{font-weight:400;color:#a8a8a8;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.new{color:#5ab4ff;font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-left:6px}
+.menu{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:4px;font-size:12px;width:280px;box-shadow:0 6px 20px #000}
+.menu div{padding:4px 10px}
+.mh{color:#a8a8a8;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding-top:8px!important}
+.hl{background:#005c80;color:#fff}
+.dim{color:#8a8a8a}
+.node{background:#1b1b1b;border:1px solid #3c3c3c;border-radius:4px;padding:6px 10px;font-size:12px}
+</style>
+</helmet>
+<div style="width:1280px;height:860px;box-sizing:border-box;background:#0a0a0a;color:#dcdcdc;font-family:Ubuntu,system-ui,sans-serif;font-weight:300;padding:28px 32px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px">
+
+<div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+<h1 style="margin:0;font-size:24px;font-weight:400">One new field subtype carries the state map</h1>
+<div style="color:#a8a8a8;font-size:13px;line-height:1.5">The three port types stay. <span class="mono">field</span> gains a fourth subtype, <span class="mono">point⟨quotient⟩</span>: a position on one of four shapes. Shape n̂ already is one — <span class="mono">point⟨sphere⟩</span> — so every existing stain type-checks unchanged.</div>
+
+<table>
+<tr><th>port</th><th>subtype</th><th>carries</th></tr>
+<tr><td rowspan="4"><span class="dot" style="background:#9a9a9a"></span>field</td><td>scalar</td><td>one number per pixel</td></tr>
+<tr><td>vector</td><td>a direction</td></tr>
+<tr><td>categorical</td><td>a class id (outcome, event)</td></tr>
+<tr><td>point⟨q⟩<span class="new">new</span></td><td>a position on q ∈ sphere · plane · cylinder · simplex, with a status: ok, clamped, past edge, undetermined</td></tr>
+<tr><td><span class="dot" style="background:#e27a6e"></span>vec3</td><td>colour</td><td>OKLab, before Replace-L</td></tr>
+<tr><td><span class="dot" style="background:#7cc3c8"></span>f32</td><td>brightness</td><td>an L value</td></tr>
+</table>
+
+<span class="hd" style="margin-top:6px">What each new node accepts</span>
+<table>
+<tr><th>node</th><th>in</th><th>out</th></tr>
+<tr><td>Chart position ⟨chart⟩</td><td>— · at: playhead · t = 0 · fixed t</td><td>point⟨q of chart⟩</td></tr>
+<tr><td>Base: Gradient · Site blend · Palette</td><td>point⟨any⟩ from Chart position — the choices offered are the chart's own</td><td>vec3</td></tr>
+<tr><td>Base: Picture</td><td>point⟨any⟩</td><td>vec3</td></tr>
+<tr><td>Layer (grid, checker, edges, stripes, rings, dots)</td><td>base: vec3 · point: the same Chart position</td><td>vec3</td></tr>
+<tr><td>Shape n̂'s nodes</td><td>point⟨sphere⟩ — unchanged</td><td>vec3</td></tr>
+<tr><td>Displacement</td><td>now, t = 0: two point⟨q⟩, same q</td><td>f32</td></tr>
+<tr><td>Left its starting tile</td><td>now, t = 0: two point⟨q⟩, same q; flat: the Palette's tiling · sphere: the nearest site</td><td>f32</td></tr>
+</table>
+
+<div style="font-size:12px;color:#a8a8a8;line-height:1.55">Rules kept from the editor: one wire per in-port; fan-out is free; the pipeline order is source → colour? / brightness? → combine → post* → OUT. A point never reaches OUT directly; it must pass a colour node.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:22px;min-width:0">
+<div style="display:flex;flex-direction:column;gap:8px">
+<span class="hd">Drag off a point⟨plane⟩ pin</span>
+<div style="display:flex;gap:10px;align-items:flex-start">
+<div class="node">Chart position ⟨plane⟩ <span class="dot" style="background:#9a9a9a;margin:0 0 0 6px"></span></div>
+<div class="menu">
+<div style="border-bottom:1px solid #2a2a2a;color:#a8a8a8">Search… <span class="mono">point⟨plane⟩</span></div>
+<div class="mh">Colour</div>
+<div class="hl">Gradient</div><div>Site blend</div><div>Palette</div><div>Picture</div>
+<div class="mh">Layer</div>
+<div>Grid lines · Checkerboard · Tile edges…</div>
+<div class="mh">Brightness</div>
+<div>Displacement <span class="dim">· adds Chart position at t = 0</span></div>
+<div>Left its starting tile <span class="dim">· adds Chart position at t = 0</span></div>
+<div class="mh">Not for this pin</div>
+<div class="dim">Ramp — needs a scalar</div>
+<div class="dim" style="padding-bottom:8px">Shape n̂'s colour nodes — wired from the Shape n̂ node</div>
+</div>
+</div>
+<span style="font-size:11px;color:#a8a8a8">Brightness entries wire both inputs: the second is created as a second Chart position at t = 0 on the same chart.</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span class="hd">Mismatch: two quotients into one node</span>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+<div class="node">Chart position ⟨plane⟩</div>
+<span style="color:#9a9a9a">→</span>
+<div class="node" style="border-color:#c0504a">Displacement <span class="mono" style="color:#e88a84">now ✓ · t = 0 ✗</span></div>
+<span style="color:#c0504a">←</span>
+<div class="node">Chart position ⟨sphere⟩ · t = 0</div>
+</div>
+<div style="background:#1b1b1b;border:1px solid #3c3c3c;border-radius:3px;padding:8px 10px;font-size:12px;display:grid;grid-template-columns:18px 1fr;gap:6px"><span style="color:#e88a84">✕</span><span>Displacement: <span class="mono">now</span> is point⟨plane⟩ and <span class="mono">t = 0</span> is point⟨sphere⟩. A distance needs one shape. <span style="color:#5ab4ff">Set both to this chart</span></span></div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span class="hd">Changing the source chart re-types the wires</span>
+<div style="font-size:12px;color:#a8a8a8;line-height:1.55">Switch the source from Chart position to the Shape n̂ node, or Chart position's chart from Latent to Shape sphere and the wire becomes point⟨sphere⟩. The flat base takes its sphere counterpart's place (Gradient → Position, Site blend → Site blend, Palette → Bands); the layers have no sphere form and are kept, ghosted, until the chart is flat again. Switching back restores everything exactly. Picture carries across.</div>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

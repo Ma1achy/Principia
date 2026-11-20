@@ -1,0 +1,6 @@
+start: E = -1.2871419918 (principia_dd_validation_orbits.md section 0 quotes -1.2871419918)
+|x1| = 1.0000000028; rescale: positions / |x1|, velocities * |x1|^(1/2) = 1.0000000014
+x1 on +x: outer body at (1.0000000000, 0.0e+00) -> (+1, 0); (v, u) = (-0.3471168892, -0.5327249447): v -6.942e-01 from the centre, half-width 1.875e-09, inside False; u -1.065e+00 from the centre, half-width 3.800e-09, inside False
+x1 on +x, reflected: outer body at (1.0000000000, 0.0e+00) -> (+1, 0); (v, u) = (-0.3471168892, 0.5327249447): v -6.942e-01 from the centre, half-width 1.875e-09, inside False; u -6.632e-10 from the centre, half-width 3.800e-09, inside True
+x2 on +x: outer body at (1.0000000000, 0.0e+00) -> (+1, 0); (v, u) = (0.3471168892, 0.5327249447): v +1.126e-09 from the centre, half-width 1.875e-09, inside True; u -6.632e-10 from the centre, half-width 3.800e-09, inside True
+x2 on +x, reflected: outer body at (1.0000000000, 0.0e+00) -> (+1, 0); (v, u) = (0.3471168892, -0.5327249447): v +1.126e-09 from the centre, half-width 1.875e-09, inside True; u -1.065e+00 from the centre, half-width 3.800e-09, inside False

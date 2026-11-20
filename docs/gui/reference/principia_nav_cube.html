@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Principia — navigation cube</title>
+<style>
+  :root{
+    --cream:#ece4d3; --panel:#f3ecdd; --ink:#26221d; --ink-soft:#6c6353;
+    --line:#c9bfa8; --accent:#2f6f69; --accent-ink:#1e4a46; --hinge:#b5502f;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--sans);}
+  .wrap{max-width:560px;margin:0 auto;padding:22px 16px 40px;}
+  h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:0 0 2px;}
+  .sub{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin:0 0 16px;letter-spacing:.02em;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:3px;}
+  .stage{position:relative;}
+  canvas{display:block;width:100%;height:400px;touch-action:none;cursor:grab;}
+  canvas:active{cursor:grabbing;}
+  .hud{position:absolute;left:12px;bottom:10px;font-family:var(--mono);font-size:11px;color:var(--ink-soft);line-height:1.5;pointer-events:none;}
+  .hud b{color:var(--ink);font-weight:400;}
+  .hud .k{color:var(--accent-ink);}
+  .controls{padding:14px 14px 16px;border-top:1px solid var(--line);}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .row:last-child{margin-bottom:0;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;}
+  .seg button{font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:6px 11px;border:0;background:transparent;color:var(--ink-soft);cursor:pointer;}
+  .seg button.on{background:var(--ink);color:var(--cream);}
+  .lab{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.02em;}
+  select{font-family:var(--mono);font-size:11px;background:var(--cream);color:var(--ink);border:1px solid var(--line);border-radius:3px;padding:4px 6px;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field .cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:2px;background:var(--line);border-radius:2px;outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:2px;background:var(--ink);cursor:pointer;border:2px solid var(--panel);}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:2px;background:var(--ink);cursor:pointer;border:2px solid var(--panel);}
+  .slid{flex:1;min-width:120px;}
+  .val{font-family:var(--mono);font-size:11px;color:var(--cream);background:var(--ink);border-radius:2px;padding:4px 8px;min-width:60px;text-align:right;}
+  .btn{font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:6px 11px;border:1px solid var(--line);border-radius:3px;background:transparent;color:var(--ink);cursor:pointer;}
+  .btn.on{background:var(--hinge);color:var(--cream);border-color:var(--hinge);}
+  .tiltlabel{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--cream);background:var(--ink);border-radius:2px;padding:5px 8px;}
+  .tiltlabel select{background:transparent;border:0;color:var(--cream);padding:0 2px;}
+  .note{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);line-height:1.6;margin:14px 2px 0;}
+  .note .k{color:var(--accent-ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Navigation Cube</h1>
+  <p class="sub">two modes · slice = translate along the slider · tilt = slice tilted by q₁ and q₂ · drag the cube to move it</p>
+
+  <div class="card">
+    <div class="stage">
+      <canvas id="c"></canvas>
+      <div class="hud" id="hud"></div>
+    </div>
+    <div class="controls">
+      <div class="row">
+        <span class="lab">Mode</span>
+        <span class="seg" id="mode">
+          <button data-m="slice" class="on">SLICE</button>
+          <button data-m="tilt">TILT</button>
+        </span>
+        <button class="btn" id="anim">ANIMATE</button>
+      </div>
+
+      <div id="sliceCtl">
+        <div class="row">
+          <div class="field" style="flex:1;min-width:110px"><span class="cap">Width · chart x</span><select id="xName"></select></div>
+          <div class="field" style="flex:1;min-width:110px"><span class="cap">Height · chart y</span><select id="yName"></select></div>
+          <div class="field" style="flex:1;min-width:110px"><span class="cap">Depth · slider</span><select id="dName"></select></div>
+        </div>
+        <div class="row">
+          <span class="lab" style="min-width:64px">Depth&nbsp;pos</span>
+          <input class="slid" type="range" id="depth" min="-100" max="100" value="0" />
+        </div>
+      </div>
+
+      <div id="tiltCtl" style="display:none">
+        <div class="row">
+          <span class="tiltlabel">q₁ into <select id="t1Name"></select></span>
+          <input class="slid" type="range" id="tau1" min="-90" max="90" value="0" />
+          <span class="val" id="tau1v">+0.0°</span>
+        </div>
+        <div class="row">
+          <span class="tiltlabel">q₂ into <select id="t2Name"></select></span>
+          <input class="slid" type="range" id="tau2" min="-90" max="90" value="0" />
+          <span class="val" id="tau2v">+0.0°</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="note" id="noteSlice">
+    <b>Slice mode.</b> The plane is your view — Width (<span class="k">chart&nbsp;x</span>) × Height (<span class="k">chart&nbsp;y</span>) —
+    sliding along the <span class="k">slider</span> axis (Depth). The cube bounds stand in for the slider's min/max.
+  </p>
+  <p class="note" id="noteTilt" style="display:none">
+    <b>Tilt mode.</b> Two tilt directions become two axes: <span class="k">Width = q₁'s target</span>, <span class="k">Depth = q₂'s target</span>.
+    The plane is the actual slice cut through the cube at that orientation — it deforms into rectangles and hexagons as you tilt (<b>±90°</b>, sign matters).
+    The third axis is left unnamed on purpose: there's no single coordinate perpendicular to both targets in 8D, so it's just the direction the slice tips through.
+  </p>
+</div>
+
+<script>
+const COORDS = ["z_α","z_β","z_q₀","z_q₁","z_q₂","z_q₃","z_μ₁","z_μ₂"];
+
+const state = {
+  mode:"slice",
+  depth:0, depthT:0,
+  tau1:0, tau1T:0, tau2:0, tau2T:0,
+  xName:"z_α", yName:"z_β", dName:"z_μ₁",
+  t1Name:"z_μ₁", t2Name:"z_β",
+  anim:false
+};
+
+// ---- DOM ----
+const cv=document.getElementById("c"), ctx=cv.getContext("2d"), hud=document.getElementById("hud");
+const fill=(el,val)=>{COORDS.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;if(c===val)o.selected=true;el.appendChild(o);});};
+fill(document.getElementById("xName"),state.xName); fill(document.getElementById("yName"),state.yName); fill(document.getElementById("dName"),state.dName);
+fill(document.getElementById("t1Name"),state.t1Name); fill(document.getElementById("t2Name"),state.t2Name);
+document.getElementById("xName").onchange=e=>state.xName=e.target.value;
+document.getElementById("yName").onchange=e=>state.yName=e.target.value;
+document.getElementById("dName").onchange=e=>state.dName=e.target.value;
+document.getElementById("t1Name").onchange=e=>state.t1Name=e.target.value;
+document.getElementById("t2Name").onchange=e=>state.t2Name=e.target.value;
+
+const depthEl=document.getElementById("depth"), tau1El=document.getElementById("tau1"), tau2El=document.getElementById("tau2");
+depthEl.oninput=e=>{state.depthT=(+e.target.value)/100; stopAnim();};
+tau1El.oninput=e=>{state.tau1T=(+e.target.value)*Math.PI/180; stopAnim();};
+tau2El.oninput=e=>{state.tau2T=(+e.target.value)*Math.PI/180; stopAnim();};
+
+function stopAnim(){ state.anim=false; document.getElementById("anim").classList.remove("on"); }
+document.getElementById("anim").onclick=function(){ state.anim=!state.anim; this.classList.toggle("on",state.anim); };
+
+document.querySelectorAll("#mode button").forEach(b=>b.onclick=()=>{
+  state.mode=b.dataset.m;
+  document.querySelectorAll("#mode button").forEach(x=>x.classList.toggle("on",x===b));
+  const tilt=state.mode==="tilt";
+  document.getElementById("sliceCtl").style.display=tilt?"none":"";
+  document.getElementById("tiltCtl").style.display=tilt?"":"none";
+  document.getElementById("noteSlice").style.display=tilt?"none":"";
+  document.getElementById("noteTilt").style.display=tilt?"":"none";
+});
+
+let drag=false,lx=0,ly=0;
+cv.addEventListener("pointerdown",e=>{drag=true;lx=e.clientX;ly=e.clientY;stopAnim();cv.setPointerCapture(e.pointerId);});
+cv.addEventListener("pointerup",()=>drag=false);
+cv.addEventListener("pointermove",e=>{
+  if(!drag)return;
+  const dx=(e.clientX-lx)/cv.clientWidth, dy=(e.clientY-ly)/cv.clientHeight; lx=e.clientX; ly=e.clientY;
+  if(state.mode==="slice"){ state.depthT=clamp(state.depthT+dx*2,-1,1); depthEl.value=Math.round(state.depthT*100); }
+  else{
+    state.tau1T=clamp(state.tau1T+dx*Math.PI, -Math.PI/2, Math.PI/2); tau1El.value=Math.round(state.tau1T*180/Math.PI);
+    state.tau2T=clamp(state.tau2T-dy*Math.PI, -Math.PI/2, Math.PI/2); tau2El.value=Math.round(state.tau2T*180/Math.PI);
+  }
+});
+
+// ---- vector helpers ----
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+const norm=a=>{const L=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/L,a[1]/L,a[2]/L];};
+
+// ---- iso projection ----
+const A=0.8660254; let S=100,CX=0,CY=0;
+function P(x,y,z){ return { X:CX+S*A*(x-z), Y:CY+S*(0.5*(x+z)-y), key:x+z }; }
+
+const V=[]; for(const x of[-1,1])for(const y of[-1,1])for(const z of[-1,1])V.push([x,y,z]);
+const EDGES=[]; for(let i=0;i<8;i++)for(let j=i+1;j<8;j++){const d=V[i].map((v,k)=>Math.abs(v-V[j][k])).reduce((a,b)=>a+b,0); if(Math.abs(d-2)<1e-9)EDGES.push([V[i],V[j]]);}
+
+// ---- plane spec per mode ----
+function planeSpec(){
+  if(state.mode==="slice") return { n:[0,0,1], p0:[0,0,state.depth] };
+  // tilt: axis-angle ("joystick") map — rotate the up-normal by angle m toward (τ₁,0,τ₂).
+  // Both sliders always move the plane; the only singularity is at m = 180°, which the
+  // ±90° range never reaches — so no gimbal lock (the naïve Euler form freezes q₂ at τ₁=±90°).
+  const t1=state.tau1, t2=state.tau2, m=Math.hypot(t1,t2);
+  let n;
+  if(m<1e-6) n=[0,1,0];
+  else { const c=Math.cos(m), s=Math.sin(m); n=[ s*t1/m, c, s*t2/m ]; }
+  return { n, p0:[0,0,0] };
+}
+function planeBasis(n){
+  const nn=norm(n);
+  const helper = Math.abs(nn[1])<0.9 ? [0,1,0] : [1,0,0];
+  const u=norm(cross(helper,nn));
+  const v=cross(nn,u);
+  return [u,v];
+}
+// intersection polygon of plane {n·(x-p0)=0} with cube [-1,1]^3
+function crossSection(n,p0){
+  const side=p=>n[0]*(p[0]-p0[0])+n[1]*(p[1]-p0[1])+n[2]*(p[2]-p0[2]);
+  const raw=[];
+  for(const [a,b] of EDGES){
+    const da=side(a), db=side(b);
+    if(Math.abs(da)<1e-7 && Math.abs(db)<1e-7) continue;
+    if(da===0 || db===0 || (da>0)!==(db>0)){
+      const t=da/(da-db);
+      if(t>=-1e-9 && t<=1+1e-9) raw.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t]);
+    }
+  }
+  const pts=[];
+  for(const p of raw){ if(!pts.some(q=>Math.abs(q[0]-p[0])<1e-6&&Math.abs(q[1]-p[1])<1e-6&&Math.abs(q[2]-p[2])<1e-6)) pts.push(p); }
+  if(pts.length<3) return pts;
+  const [u,v]=planeBasis(n);
+  const c=pts.reduce((s,p)=>[s[0]+p[0],s[1]+p[1],s[2]+p[2]],[0,0,0]).map(x=>x/pts.length);
+  const ang=p=>Math.atan2((p[0]-c[0])*v[0]+(p[1]-c[1])*v[1]+(p[2]-c[2])*v[2], (p[0]-c[0])*u[0]+(p[1]-c[1])*u[1]+(p[2]-c[2])*u[2]);
+  pts.sort((a,b)=>ang(a)-ang(b));
+  return pts;
+}
+
+// ---- palette ----
+function mix(hex,f){const c=parseInt(hex.slice(1),16),cr=parseInt("ece4d3",16);
+  const r=(c>>16&255)*(1-f)+(cr>>16&255)*f,g=(c>>8&255)*(1-f)+(cr>>8&255)*f,b=(c&255)*(1-f)+(cr&255)*f;return `rgb(${r|0},${g|0},${b|0})`;}
+function rgba(hex,a){const c=parseInt(hex.slice(1),16);return `rgba(${c>>16&255},${c>>8&255},${c&255},${a})`;}
+function lerpHex(h1,h2,f){const a=parseInt(h1.slice(1),16),b=parseInt(h2.slice(1),16);
+  const r=((a>>16&255)+((b>>16&255)-(a>>16&255))*f)|0,g=((a>>8&255)+((b>>8&255)-(a>>8&255))*f)|0,bl=((a&255)+((b&255)-(a&255))*f)|0;
+  return `rgb(${r},${g},${bl})`;}
+const LIGHT=norm([0.35,1.0,0.55]), VIEW=norm([1,1,1]);   // light from upper-front; iso camera along (1,1,1)
+function faceShade(n){
+  let nn=norm(n);
+  if(nn[0]*VIEW[0]+nn[1]*VIEW[1]+nn[2]*VIEW[2]<0) nn=[-nn[0],-nn[1],-nn[2]]; // two-sided: light the face we see
+  const d=Math.max(0, nn[0]*LIGHT[0]+nn[1]*LIGHT[1]+nn[2]*LIGHT[2]);
+  return 0.2+0.8*d;                                       // 0.2 ambient
+}
+
+function resize(){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
+  cv.width=w*dpr;cv.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+  S=Math.min(w*0.78/3.4641,h*0.78/4);CX=w/2;CY=h/2;}
+window.addEventListener("resize",resize);
+
+function draw(){
+  const w=cv.clientWidth,h=cv.clientHeight; ctx.clearRect(0,0,w,h);
+  const {n,p0}=planeSpec();
+  const poly=crossSection(n,p0);
+  const pKey = poly.length ? poly.reduce((s,p)=>s+p[0]+p[2],0)/poly.length : 0;
+
+  const prims=[];
+  for(const [a,b] of EDGES){const pa=P(...a),pb=P(...b);prims.push({t:"edge",key:(pa.key+pb.key)/2,pa,pb});}
+  prims.push({t:"plane",key:pKey});
+  prims.sort((m,n2)=>m.key-n2.key);
+
+  for(const pr of prims){
+    if(pr.t==="edge"){
+      const near=(pr.key+2)/4;
+      ctx.strokeStyle=rgba("#26221d",0.28+0.55*near); ctx.lineWidth=0.8+1.0*near;
+      ctx.beginPath();ctx.moveTo(pr.pa.X,pr.pa.Y);ctx.lineTo(pr.pb.X,pr.pb.Y);ctx.stroke();
+    } else { drawSlice(poly,n,p0,pKey); }
+  }
+  drawAxes(); drawHud();
+  requestAnimationFrame(tick);
+}
+
+function drawSlice(poly,n,p0,pKey){
+  if(poly.length<3) return;
+  const scr=poly.map(p=>P(...p));
+  const path=()=>{ctx.beginPath();scr.forEach((p,i)=>i?ctx.lineTo(p.X,p.Y):ctx.moveTo(p.X,p.Y));ctx.closePath();};
+  const near=(pKey+2)/4;
+  // fill — Lambert shading from the slice's own surface normal
+  const shade=clamp(faceShade(n)+(near-0.5)*0.10, 0, 1);
+  ctx.fillStyle=lerpHex("#153b36","#9ccabf",shade); ctx.globalAlpha=0.6; path(); ctx.fill(); ctx.globalAlpha=1;
+  // in-plane grid, clipped to the polygon
+  ctx.save(); path(); ctx.clip();
+  const [u,v]=planeBasis(n);
+  ctx.strokeStyle=rgba("#2f6f69",0.26); ctx.lineWidth=0.7;
+  const R=1.9, st=0.5;
+  const line=(P0,P1)=>{const s0=P(...P0),s1=P(...P1);ctx.beginPath();ctx.moveTo(s0.X,s0.Y);ctx.lineTo(s1.X,s1.Y);ctx.stroke();};
+  for(let a=-R;a<=R+1e-9;a+=st) line(
+    [p0[0]+a*u[0]-R*v[0],p0[1]+a*u[1]-R*v[1],p0[2]+a*u[2]-R*v[2]],
+    [p0[0]+a*u[0]+R*v[0],p0[1]+a*u[1]+R*v[1],p0[2]+a*u[2]+R*v[2]]);
+  for(let b=-R;b<=R+1e-9;b+=st) line(
+    [p0[0]-R*u[0]+b*v[0],p0[1]-R*u[1]+b*v[1],p0[2]-R*u[2]+b*v[2]],
+    [p0[0]+R*u[0]+b*v[0],p0[1]+R*u[1]+b*v[1],p0[2]+R*u[2]+b*v[2]]);
+  ctx.restore();
+  // outline
+  ctx.strokeStyle=rgba("#1e4a46",0.9); ctx.lineWidth=1.7; path(); ctx.stroke();
+}
+
+function labelAt(x,y,text,size,colour,strong){
+  ctx.font=`${strong?700:400} ${size}px ${getComputedStyle(document.body).fontFamily}`;
+  ctx.fillStyle=colour; ctx.textAlign="center"; ctx.textBaseline="middle";
+  ctx.fillText(text,x,y);
+}
+// label an edge: range endpoints at its ends, axis name centred, all pushed outward from the cube centre
+function drawEdgeLabel(e){
+  const sA=P(...e.a), sB=P(...e.b);
+  const dx=sB.X-sA.X, dy=sB.Y-sA.Y, L=Math.hypot(dx,dy)||1;
+  const mid={X:(sA.X+sB.X)/2, Y:(sA.Y+sB.Y)/2};
+  let px=-dy/L, py=dx/L;
+  if((mid.X-CX)*px+(mid.Y-CY)*py < 0){ px=-px; py=-py; }          // orient outward
+  labelAt(mid.X+px*20, mid.Y+py*20, e.name, 11, e.col, true);     // axis name, centred on the edge
+}
+function drawAxes(){
+  const tilt=state.mode==="tilt", K="#1e4a46", INK="#26221d";
+  let edges;
+  if(tilt){
+    edges=[
+      { a:[-1,-1,1], b:[1,-1,1],  name:state.t1Name, col:K },   // Width = q₁ target  (bottom-left edge)
+      { a:[1,-1,-1], b:[1,-1,1],  name:state.t2Name, col:K },   // Depth = q₂ target  (bottom-right edge)
+      // vertical edge intentionally unnamed
+    ];
+  } else {
+    edges=[
+      { a:[-1,-1,1], b:[1,-1,1],  name:state.xName, col:INK, range:true }, // Width  bottom-left   (x: −1→+1)
+      { a:[1,-1,-1], b:[1,-1,1],  name:state.dName, col:K,   range:true }, // Depth  bottom-right  (z: −1→+1)
+      { a:[-1,-1,1], b:[-1,1,1],  name:state.yName, col:INK, range:true }, // Height LEFT vertical (y: −1→+1)
+    ];
+  }
+  for(const e of edges) drawEdgeLabel(e);
+  // range endpoints: one number per corner — shared corners carry a single (identical) value, offset straight out
+  if(!tilt){
+    const seen=[];
+    const put=(p3,val)=>{ const s=P(...p3); const key=Math.round(s.X)+","+Math.round(s.Y);
+      if(!seen.some(k=>k.key===key)) seen.push({key,s,val}); };
+    for(const e of edges) if(e.range){ put(e.a,"−1.0"); put(e.b,"1.0"); }
+    for(const k of seen){ const ox=k.s.X-CX, oy=k.s.Y-CY, L=Math.hypot(ox,oy)||1;
+      labelAt(k.s.X+ox/L*12, k.s.Y+oy/L*12, k.val, 9, "#6c6353", false); }
+  }
+}
+function drawHud(){
+  if(state.mode==="slice"){
+    const v=(state.depth>=0?"+":"")+state.depth.toFixed(2);
+    hud.innerHTML=`mode <b>slice</b> · plane ⟂ <span class="k">${state.dName}</span><br><span class="k">${state.dName}</span> = <b>${v}</b> of range`;
+  } else {
+    const d1=state.tau1*180/Math.PI, d2=state.tau2*180/Math.PI, s=x=>(x>=0?"+":"")+x.toFixed(1);
+    hud.innerHTML=`mode <b>tilt</b><br>q₁→<span class="k">${state.t1Name}</span> <b>${s(d1)}°</b> · q₂→<span class="k">${state.t2Name}</span> <b>${s(d2)}°</b>`;
+  }
+}
+
+// ---- loop ----
+let last=performance.now();
+function tick(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(state.anim){
+    if(state.mode==="slice"){ state.depthT=Math.sin(now/1100); depthEl.value=Math.round(state.depthT*100); }
+    else{
+      state.tau1T=Math.sin(now/1300)*Math.PI/2; state.tau2T=Math.cos(now/1700)*Math.PI/2;
+      tau1El.value=Math.round(state.tau1T*180/Math.PI); tau2El.value=Math.round(state.tau2T*180/Math.PI);
+    }
+  }
+  const k=1-Math.pow(0.0016,dt);
+  state.depth+=(state.depthT-state.depth)*k;
+  state.tau1+=(state.tau1T-state.tau1)*k;
+  state.tau2+=(state.tau2T-state.tau2)*k;
+  document.getElementById("tau1v").textContent=(state.tau1>=0?"+":"")+(state.tau1*180/Math.PI).toFixed(1)+"°";
+  document.getElementById("tau2v").textContent=(state.tau2>=0?"+":"")+(state.tau2*180/Math.PI).toFixed(1)+"°";
+  draw();
+}
+resize(); requestAnimationFrame(tick);
+</script>
+</body>
+</html>

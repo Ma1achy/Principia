@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tick and axis variants</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#7fb6e0}a:hover{color:#a9cff0}
+</style>
+</helmet>
+<div style="width: 1480px; height: 900px; box-sizing: border-box; background: #1b1c1e; color: #e4e2dc; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13px; padding: 26px 28px; display: flex; flex-direction: column; gap: 18px;">
+  <div style="display: flex; align-items: baseline; gap: 14px;">
+    <h1 style="margin: 0; font-size: 22px; font-weight: 500;">Tick density, sides and labels</h1>
+    <span style="color: #b9b6ad;">Eight settings of the same axes over the same figure.</span>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px 24px;">
+    <sc-for list="{{ items }}" as="it" hint-placeholder-count="8">
+      <figure style="margin: 0; display: flex; flex-direction: column; gap: 8px;">
+        <img src="{{ it.src }}" alt="{{ it.alt }}" style="width: 340px; height: 340px; display: block;">
+        <figcaption style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-weight: 500;">{{ it.name }}</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad; line-height: 1.4;">{{ it.spec }}</span>
+        </figcaption>
+      </figure>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1480,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { items: [
+      { name: 'Sparse', src: '/_blob/b4950507276d35182a0df3b3c79c53b2', alt: 'Axes with ticks only at minus one, zero and one', spec: 'major: list −1, 0, 1 · out · bottom, left' },
+      { name: 'Default', src: '/_blob/34b56239df74e3488632b03ab7b2368c', alt: 'Axes with labelled ticks every 0.5 and small minor ticks every 0.1', spec: 'major: every 0.5 · minor: 5 per major · out' },
+      { name: 'Dense minor', src: '/_blob/c059e33c5fbbeaf864ad6e4e7a108713', alt: 'Axes with labels every 0.5 and a fine comb of minor ticks every 0.05', spec: 'major: every 0.5 · minor: 10 per major · labels stay sparse' },
+      { name: 'Count, label every other', src: '/_blob/7bc90923c45466fc50f8d5fd8d3d8c22', alt: 'Eleven ticks per axis with every second one labelled', spec: 'major: count 11 · label stride 2' },
+      { name: 'Four sides, framed', src: '/_blob/4e239cfb32f18d54b8e7a254f589a13c', alt: 'A framed figure with inward ticks on all four sides, labels on two', spec: 'frame on · ticks in, all sides · labels bottom, left' },
+      { name: 'Top and right, across', src: '/_blob/8920b0685b630d116ef4187407034efe', alt: 'Ticks that cross the edge on the top and right, labelled there', spec: 'sides: top, right · ticks across · labels follow' },
+      { name: 'Inside the figure', src: '/_blob/2e6cbe57ac169754302adcdb594623a0', alt: 'Long inward ticks with haloed labels sitting inside the figure', spec: 'ticks in, 14 px · labels inside with halo · no margin' },
+      { name: 'Ends only', src: '/_blob/21871b4d3a6f8e2e92122d84ef0eac40', alt: 'No ticks, just the range written at each end of each axis', spec: 'no ticks · range at each end + axis name (today’s GUI)' }
+    ] };
+  }
+}
+</script>
+</body>
+</html>

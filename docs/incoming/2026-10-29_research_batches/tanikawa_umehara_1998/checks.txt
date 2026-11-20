@@ -1,0 +1,3 @@
+TU1998 4a: |P - A| = 0.9500038 (printed circle 0.95; diff 3.8e-06)
+TU1998 4b: |P - A| = 0.9500001 (printed circle 0.95; diff 8.0e-08)
+TU1998 4c: |P - A| = 0.9500000 (printed circle 0.95; diff 0.0e+00)

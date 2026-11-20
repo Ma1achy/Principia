@@ -1,0 +1,13 @@
+name,set,stratum,authors_rows,t_end_to_run
+run9941,validex,"full, min-sep tertile 1 (1 = closest)",2561,10.0
+run9968,validex,"full, min-sep tertile 1 (1 = closest)",2561,10.0
+run9956,validex,"full, min-sep tertile 1 (1 = closest)",2561,10.0
+run28,trainex,"full, min-sep tertile 2 (1 = closest)",2561,10.0
+run14,trainex,"full, min-sep tertile 2 (1 = closest)",2561,10.0
+run53,trainex,"full, min-sep tertile 2 (1 = closest)",2561,10.0
+run86,trainex,"full, min-sep tertile 3 (1 = closest)",2561,10.0
+run9946,validex,"full, min-sep tertile 3 (1 = closest)",2561,10.0
+run99,trainex,"full, min-sep tertile 3 (1 = closest)",2561,10.0
+run9992,validex,truncated by the authors,33,0.125
+run9994,validex,truncated by the authors,403,1.5703125
+run9959,validex,truncated by the authors,2298,8.97265625

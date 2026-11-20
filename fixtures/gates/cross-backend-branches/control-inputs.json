@@ -1,0 +1,48 @@
+{
+ "expected": "refused",
+ "description": "a pair over different inputs",
+ "records": [
+  {
+   "commit": "control",
+   "backend": "CPU f32",
+   "adapter": "CPU f32: a control record",
+   "driver": "control",
+   "fast_math": "setting off; compute compiled off",
+   "hardware_label": null,
+   "inputs_hash": "00000000000000aa",
+   "inputs": 4,
+   "canon_operands": "",
+   "groups": [
+    {
+     "entry": "stage_branch_read_latent_defaults",
+     "branch": "M01_TINY",
+     "kind": "+ and ×",
+     "operands": 2,
+     "bits": 4,
+     "rows": "00000000ffffffff000000003f8000003f0000000000000100000002000000030000000400000001ffffffff000000003f8000003f0000000000000100000002000000030000000400000002ffffffff000000003f8000003f0000000000000100000002000000030000000400000003ffffffff000000003f8000003f00000000000001000000020000000300000004"
+    }
+   ]
+  },
+  {
+   "commit": "control",
+   "backend": "Metal",
+   "adapter": "Metal: a control record",
+   "driver": "control",
+   "fast_math": "setting off; compute compiled off",
+   "hardware_label": null,
+   "inputs_hash": "00000000000000bb",
+   "inputs": 4,
+   "canon_operands": "",
+   "groups": [
+    {
+     "entry": "stage_branch_read_latent_defaults",
+     "branch": "M01_TINY",
+     "kind": "+ and ×",
+     "operands": 2,
+     "bits": 4,
+     "rows": "00000000ffffffff000000003f8000003f0000000000000100000002000000030000000400000001ffffffff000000003f8000003f0000000000000100000002000000030000000400000002ffffffff000000003f8000003f0000000000000100000002000000030000000400000003ffffffff000000003f8000003f00000000000001000000020000000300000004"
+    }
+   ]
+  }
+ ]
+}

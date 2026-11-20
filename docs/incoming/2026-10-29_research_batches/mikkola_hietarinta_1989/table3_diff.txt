@@ -1,0 +1,5 @@
+Mikkola & Hietarinta 1989 Table 3: reading B (eye) vs OCR of the page image (row labels assigned in order; Table 3 OCR'd cell by cell: whole-table OCR returned rotated glyphs; Table 4 row k=6's lone '6' missed by OCR, assigned by order).
+row ('Onedirectional',) col t8: B_eye='9.x10^7' OCR="9.x10'"
+row ('Total',) col t8: B_eye='9.x10^7' OCR='9.× 10'
+rows B_eye=2 OCR=2; cells compared 18; disagreements 2
+Resolution: t8 in both rows is printed '9.x10' with superscript 7 (page image); the OCR lost the superscript. Kept 9.x10^7. Reconciled = reading B.

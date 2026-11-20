@@ -1,0 +1,7 @@
+{
+  "description": "The pitfalls § 3 record in the order it was read, strides 0, 32, 4, 1: not coarse → fine, so it is refused (R-171).",
+  "expected": "refused",
+  "strides": [0, 32, 4, 1],
+  "series": [{ "label": "escape fraction", "values": [0.0947, 0.2153, 0.4423, 0.5494] }],
+  "region_count": "not recorded"
+}

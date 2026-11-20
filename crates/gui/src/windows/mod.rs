@@ -1,0 +1,447 @@
+//! The dev GUI's windows (render_gui_spec §G5, §G7, §G8, §G12; GUI_DESIGN_NOTES § "03 Chart builder", § "04 Windows",
+//! § "05 Inspector", § "12 Console"; R-390, ORDER item 5): Run, Chart builder, Export & share, Display, Profiler,
+//! Console and the Inspector's frame, one registry of seven that the Windows menu lists and every opener reads.
+//!
+//! **The window rule** (render_gui_spec §G3; R-405, R-409): an open window is a scope outside the big scopes' Tab
+//! order that takes the focus when it opens, on its first section's first element, in navigation mode; Tab and
+//! Shift+Tab move between its sections and stay in it; the arrows move within a section in navigation mode; Esc backs
+//! out one level, and from a section closes the window, the focus going back to the scope that opened it
+//! (`crate::keyboard::Keyboard::open_window`). The console's sections are its two scopes, the header bar and the log,
+//! landed on themselves (R-450); it opening by itself on an error takes no focus. Every window's × is a control in its
+//! scope tree, Enter on it closing the window as Esc does: the console's the last of its header bar (R-450), every
+//! other window's its last section, drawn at its title row's right (the R-450 audit's finding, applied per R-369).
+//!
+//! **Where they open** (applied per R-369): with no place remembered, each at a rect over the side panels or the bottom
+//! row, never over the figure (§G1, "The figure is never covered"; R-390's review list): Profiler and Chart builder
+//! over the Manifold view, Run, Export & share, Display and the Inspector over the Trajectory panel, the console over
+//! the bottom row, at its dragged height (§G12; R-463). The artboards' windows are layouts of their content, kept inside those rects, each scrolling
+//! where it is longer. Every window but the console is then dragged by its title bar and resized from its edges and
+//! corners, kept at least partly on screen, and its place remembered across sessions (R-461; [`place`],
+//! `crate::settings`); the console is docked, its top edge dragged ([`console_edge`]).
+//!
+//! Each window's state is the GUI's own (`ViewUI`'s open list, and its drafts), never the engine's; what reaches the
+//! engine goes through `SetField` (gui_state_contract §1).
+
+pub mod chart_builder;
+pub mod console;
+pub mod display;
+pub mod export;
+pub mod inspector;
+pub mod place;
+pub mod profiler;
+pub mod run;
+
+use eframe::egui::{self, Id, LayerId, Rect, Response, RichText, ScrollArea, Sense, Ui, UiBuilder};
+use engine::contract::view_ui::Window;
+
+use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
+use crate::keyboard::Keyboard;
+use crate::layout::Layout;
+
+/// One window of the registry.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Entry {
+    /// The window, by its contract name.
+    pub window: Window,
+    /// Its scope in the keyboard's tree.
+    pub scope: ScopeId,
+    /// Its name in the Windows menu (§G5's names).
+    pub name: &'static str,
+    /// Its title bar, as its artboard's.
+    pub title: &'static str,
+    /// Its entry in the Windows menu, a scope under it.
+    pub menu_entry: ScopeId,
+    /// Its close button ×, a control in its scope tree (R-450; the audit's finding, applied per R-369): the last of
+    /// the console's header bar, and every other window's last section, drawn at its title row's right.
+    pub close: ScopeId,
+}
+
+/// The seven windows, in the Windows menu's order (applied per R-369: the first five as TASK-M6-24 listed them, then
+/// the Chart builder and the Inspector).
+pub const REGISTRY: [Entry; 7] = [
+    Entry {
+        window: Window::Run,
+        scope: run::WINDOW,
+        name: "Run",
+        title: run::TITLE,
+        menu_entry: "windows_run",
+        close: "run_close",
+    },
+    Entry {
+        window: Window::Profiler,
+        scope: profiler::WINDOW,
+        name: "Profiler",
+        title: profiler::TITLE,
+        menu_entry: "windows_profiler",
+        close: "profiler_close",
+    },
+    Entry {
+        window: Window::Export,
+        scope: export::WINDOW,
+        name: "Export & share",
+        title: export::TITLE,
+        menu_entry: "windows_export",
+        close: "export_close",
+    },
+    Entry {
+        window: Window::Display,
+        scope: display::WINDOW,
+        name: "Display",
+        title: display::TITLE,
+        menu_entry: "windows_display",
+        close: "display_close",
+    },
+    Entry {
+        window: Window::Console,
+        scope: console::WINDOW,
+        name: "Console",
+        title: console::TITLE,
+        menu_entry: "windows_console",
+        close: console::CLOSE,
+    },
+    Entry {
+        window: Window::ChartBuilder,
+        scope: chart_builder::WINDOW,
+        name: "Chart builder",
+        title: chart_builder::TITLE,
+        menu_entry: "windows_chart_builder",
+        close: "chart_builder_close",
+    },
+    Entry {
+        window: Window::Inspector,
+        scope: inspector::WINDOW,
+        name: "Inspector",
+        title: inspector::TITLE,
+        menu_entry: "windows_inspector",
+        close: "inspector_close",
+    },
+];
+
+/// The registry's entry for `window`.
+pub fn entry(window: Window) -> &'static Entry {
+    REGISTRY
+        .iter()
+        .find(|e| e.window == window)
+        .expect("every window is in the registry")
+}
+
+/// The window control `id` opens, as its click or Enter: a Windows menu entry, the top bar's Run…, Profiler… and
+/// Export…, and the footer (the console, §G12). The Manifold view's Chart builder… and open in Inspector, and the
+/// Trajectory panel's IC Inspector… and Open full viewer…, ask through their own panels instead, the one path for their
+/// click and their Enter, so the lock badge's guard holds (open in Inspector acts only while locked, §G4).
+pub fn opened_by(id: &str) -> Option<Window> {
+    if let Some(e) = REGISTRY.iter().find(|e| e.menu_entry == id) {
+        return Some(e.window);
+    }
+    match id {
+        "run" => Some(Window::Run),
+        "profiler" => Some(Window::Profiler),
+        "export" => Some(Window::Export),
+        crate::explore::footer::FOOTER => Some(Window::Console),
+        _ => None,
+    }
+}
+
+/// Joins each window to `tree`, outside the big scopes' Tab order, its sections and elements under it: the console's
+/// two scopes, its × the last of its header bar (R-450); every other window's × its last section, so Shift+Tab from
+/// its landing reaches it (the audit's finding, applied per R-369).
+pub fn register(tree: &mut ScopeTree) {
+    for e in REGISTRY {
+        let scope = match e.window {
+            Window::Console => Scope::scoped_window(e.scope, e.title),
+            _ => Scope::window(e.scope, e.title),
+        };
+        tree.register(None, scope);
+    }
+    run::register(tree);
+    profiler::register(tree);
+    export::register(tree);
+    display::register(tree);
+    console::register(tree);
+    chart_builder::register(tree);
+    inspector::register(tree);
+    for e in REGISTRY.iter().filter(|e| e.window != Window::Console) {
+        tree.register(Some(e.scope), Scope::control(e.close, CLOSE_LABEL));
+    }
+}
+
+/// The close button's name in the breadcrumb (R-450 A6).
+pub const CLOSE_LABEL: &str = "Close";
+/// The close button's text: §G12's ×.
+pub const CLOSE_TEXT: &str = "×";
+
+/// The window whose close button is `id`, if any.
+pub fn closed_by(id: &str) -> Option<Window> {
+    REGISTRY.iter().find(|e| e.close == id).map(|e| e.window)
+}
+
+/// Where `window` opens in `layout` (applied per R-369, as the module says): never over the figure.
+pub fn rect(window: Window, layout: &Layout) -> Rect {
+    match window {
+        Window::Profiler | Window::ChartBuilder => layout.manifold_view,
+        Window::Run | Window::Export | Window::Display | Window::Inspector => layout.trajectory,
+        Window::Console => layout.console,
+    }
+}
+
+/// The windows' own state: each window's draft and view, the GUI's, never the engine's.
+#[derive(Debug, Default)]
+pub struct State {
+    /// The Run window's draft.
+    pub run: run::Draft,
+    /// The Chart builder's draft.
+    pub chart: chart_builder::Draft,
+    /// Export & share's choices.
+    pub export: export::State,
+    /// Display's choices.
+    pub display: display::State,
+    /// The Profiler's tab and transport.
+    pub profiler: profiler::State,
+    /// The console's filters and scroll.
+    pub console: console::State,
+    /// The Inspector's IC and timeline.
+    pub inspector: inspector::State,
+}
+
+/// The frames a window keeps scrolling to its focused element after the focus moves there: egui lays a new window
+/// out in an invisible sizing pass first, so the first frame's scroll can be lost (a look choice, R-390).
+pub const SCROLL_FRAMES: u8 = 3;
+
+/// What a frame's drawing of the windows needs from the keyboard: where to place each scope, and which is focused.
+pub struct Keys<'a> {
+    /// The keyboard layer, which records where each scope is drawn.
+    pub keyboard: &'a mut Keyboard,
+    /// The focused scope, the last of the focus path, while the window is to scroll to it: for
+    /// [`SCROLL_FRAMES`] frames after the focus moved.
+    pub focused: Option<String>,
+}
+
+impl Keys<'_> {
+    /// Scope `id` is the widget of `response`; focused, the window scrolls to it.
+    pub fn place(&mut self, id: ScopeId, response: &Response) {
+        self.keyboard.place_widget(id, response);
+        if self.focused.as_deref() == Some(id) {
+            response.scroll_to_me(None);
+        }
+    }
+
+    /// Scope `id` was drawn in `rect`, in `ui`: placed on the part of it `ui` shows; focused, the window scrolls to it,
+    /// so the ring is drawn on the section, never past the window's edge.
+    pub fn place_rect(&mut self, ui: &Ui, id: ScopeId, rect: Rect) {
+        if self.focused.as_deref() == Some(id) {
+            ui.scroll_to_rect(rect, None);
+        }
+        self.keyboard.place(id, rect.intersect(ui.clip_rect()));
+    }
+}
+
+/// The id of the title bar of the window of scope `scope`: the widget a drag on it holds.
+fn title_bar_id(scope: ScopeId) -> Id {
+    Id::new(("title_bar", scope))
+}
+
+/// The id of the handle of `edges` of the window of scope `scope`.
+fn edge_id(scope: ScopeId, edges: place::Edges) -> Id {
+    Id::new((
+        "window_edge",
+        scope,
+        edges.left,
+        edges.right,
+        edges.top,
+        edges.bottom,
+    ))
+}
+
+/// What of `entry`'s window a drag holds this frame, if anything: its title bar, or edges of it (R-461). egui decides
+/// the drag as the frame begins, so a caller reads it before drawing anything: the window is drawn where this frame's
+/// drag puts it, under the pointer, and the figure takes no hover from a pointer carrying a window.
+pub fn held(ctx: &egui::Context, entry: &Entry) -> Option<place::Grip> {
+    // The console lays no title bar nor edges, so no drag holds it.
+    let dragged = ctx.dragged_id()?;
+    if dragged == title_bar_id(entry.scope) {
+        return Some(place::Grip::Title);
+    }
+    place::Edges::ALL
+        .into_iter()
+        .find(|e| dragged == edge_id(entry.scope, *e))
+        .map(place::Grip::Edges)
+}
+
+/// The id of the console's top edge's handle (R-463 K1).
+fn console_edge_id() -> Id {
+    Id::new(("console_edge", console::WINDOW))
+}
+
+/// How far the pointer has moved along a drag holding the console's top edge, if one does. egui decides the drag as the
+/// frame begins, so it is read before anything is drawn, and the console is drawn where the drag puts it.
+pub fn console_held(ctx: &egui::Context) -> Option<f32> {
+    (ctx.dragged_id()? == console_edge_id()).then(|| {
+        ctx.input(|i| i.pointer.total_drag_delta())
+            .unwrap_or_default()
+            .y
+    })
+}
+
+/// Lays the handle of the top edge of the console at `rect` on its window's layer, above its content, a pointer control
+/// outside the keyboard's tree (R-463 K1, as R-462 J6): it shows the resize cursor while hovered or dragged, and returns
+/// whether it was double-clicked, which resets the height (R-462 J3).
+pub fn console_edge(ctx: &egui::Context, rect: Rect) -> bool {
+    let layer = LayerId::new(egui::Order::Middle, window_id(console::WINDOW));
+    let builder = UiBuilder::new()
+        .layer_id(layer)
+        .max_rect(ctx.content_rect());
+    let ui = Ui::new(ctx.clone(), console_edge_id().with("ui"), builder);
+    let handle = ui.interact(
+        crate::layout::console_handle(rect),
+        console_edge_id(),
+        Sense::CLICK.union(Sense::DRAG),
+    );
+    if handle.hovered() || handle.dragged() {
+        ctx.set_cursor_icon(egui::CursorIcon::ResizeVertical);
+    }
+    handle.double_clicked()
+}
+
+/// The id of the window of scope `scope`.
+fn window_id(scope: ScopeId) -> Id {
+    Id::new(("window", scope))
+}
+
+/// Draws `entry`'s window's frame at `rect`, its content scrolling when `scroll`, the window's scope placed on its
+/// rect. Every window but the console starts with a title row: its title, and its × at the right, the scope
+/// `entry.close` (the audit's finding: egui's own title-bar × is outside the scope tree, which no key reaches); the
+/// console's header bar holds its title and its × (R-450). Every window but the console is dragged by its title bar,
+/// off its ×, and resized from its edges and corners (R-461; `place`): the frame lays their widgets, the caller reads
+/// the drag ([`held`]) and moves the window, egui drawing it where it is told. Returns whether it is still open: false
+/// once its title row's × is clicked.
+pub fn frame(
+    ctx: &egui::Context,
+    entry: &Entry,
+    rect: Rect,
+    keys: &mut Keys<'_>,
+    scroll: bool,
+    add: impl FnOnce(&mut Ui, &mut Keys<'_>),
+) -> bool {
+    let (scope, title) = (entry.scope, entry.title);
+    let movable = place::movable(entry.window);
+    let mut open = true;
+    // egui lays a new area out in an invisible pass first: for the console, opening within its frame (R-463), that pass
+    // is discarded and the frame's second draws it.
+    if !movable && egui::AreaState::load(ctx, window_id(scope)).is_none() {
+        ctx.request_discard("the console's first opening");
+    }
+    let shown = egui::Window::new(title)
+        .id(window_id(scope))
+        // The size first, then the rect: egui lays a new window out in an invisible sizing pass, at its default size
+        // pushed back on screen; at the rect's own size, that pass already sits on the rect, never over the figure.
+        .default_size(rect.size())
+        .fixed_rect(rect)
+        // A movable window is kept on screen by `place::on_screen` alone: partly, never pushed wholly inside, nor made
+        // smaller than its place. The console's rect is on screen by the layout, and egui, holding it to the screen at
+        // last frame's size, would push it up for the frame it shrinks (R-463).
+        .constrain_to(Rect::EVERYTHING)
+        // The console appears whole in the frame it opens (R-463), where egui would fade it in over several.
+        .fade_in(movable)
+        .collapsible(false)
+        .resizable(false)
+        .title_bar(false)
+        .show(ctx, |ui| {
+            if movable {
+                let close = title_row(ui, keys, title, entry.close);
+                open = !close.clicked();
+                // The title bar off the ×, laid after the title row so a drag on its title holds it.
+                let mut bar = place::title_bar(rect);
+                bar.max.x = bar.max.x.min(close.rect.min.x);
+                let _ = ui.interact(bar, title_bar_id(scope), Sense::drag());
+            }
+            if scroll {
+                ScrollArea::vertical()
+                    .id_salt(scope)
+                    .auto_shrink(false)
+                    .show(ui, |ui| add(ui, keys));
+            } else {
+                add(ui, keys);
+            }
+        });
+    if let Some(shown) = shown {
+        keys.keyboard.place(scope, shown.response.rect);
+        if movable {
+            edge_handles(ctx, shown.response.layer_id, scope, shown.response.rect);
+        }
+    }
+    open
+}
+
+/// Lays the edge and corner handles of the window at `rect` on its `layer`, above its content, the corners last so
+/// they take priority; shows the resize cursor over one, or the one a drag holds.
+fn edge_handles(ctx: &egui::Context, layer: LayerId, scope: ScopeId, rect: Rect) {
+    let builder = UiBuilder::new()
+        .layer_id(layer)
+        .max_rect(ctx.content_rect());
+    let ui = Ui::new(ctx.clone(), Id::new(("window_edges", scope)), builder);
+    for edges in place::Edges::ALL {
+        let handle = ui.interact(edges.handle(rect), edge_id(scope, edges), Sense::drag());
+        if handle.hovered() || handle.dragged() {
+            ctx.set_cursor_icon(edges.cursor());
+        }
+    }
+}
+
+/// Draws a window's title row: `title`, centred, and its × at the right, placed as scope `close`; then a separator.
+/// Returns the ×'s response.
+fn title_row(ui: &mut Ui, keys: &mut Keys<'_>, title: &str, close: ScopeId) -> Response {
+    // The row is the title's height at least: its × grows it to fit.
+    let height = ui.text_style_height(&egui::TextStyle::Heading);
+    let size = egui::vec2(ui.available_width(), height);
+    let right = egui::Layout::right_to_left(egui::Align::Center);
+    let button = ui
+        .allocate_ui_with_layout(size, right, |ui| {
+            let button =
+                ui.add(egui::Button::new(RichText::new(CLOSE_TEXT).heading()).frame(false));
+            keys.place(close, &button);
+            let rest = egui::vec2(ui.available_width(), height);
+            let centred = egui::Layout::centered_and_justified(egui::Direction::LeftToRight);
+            ui.allocate_ui_with_layout(rest, centred, |ui| {
+                ui.label(RichText::new(title).heading())
+            });
+            button
+        })
+        .inner;
+    ui.separator();
+    button
+}
+
+/// Draws one section: its heading, as the artboards' "▾ Title", and its content, the section's scope placed on the
+/// rect they take.
+pub fn section(
+    ui: &mut Ui,
+    keys: &mut Keys<'_>,
+    id: ScopeId,
+    heading: &str,
+    add: impl FnOnce(&mut Ui, &mut Keys<'_>),
+) {
+    let response = ui
+        .scope(|ui| {
+            ui.label(RichText::new(format!("▾ {heading}")).strong());
+            add(ui, keys);
+        })
+        .response;
+    keys.place_rect(ui, id, response.rect);
+    ui.add_space(8.0);
+}
+
+/// A row of one label and its value, as the windows' forms draw them, the label in a fixed column.
+pub fn form_label(ui: &mut Ui, label: &str) {
+    ui.add_sized(
+        [FORM_LABEL_W, ui.spacing().interact_size.y],
+        egui::Label::new(label),
+    );
+}
+
+/// The form labels' column width, in points (a look choice, R-390).
+pub const FORM_LABEL_W: f32 = 96.0;
+
+/// A placeholder line, in egui's weak text colour.
+pub fn note(ui: &mut Ui, text: &str) {
+    ui.label(RichText::new(text).weak());
+}

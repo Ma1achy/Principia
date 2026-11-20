@@ -1,0 +1,11 @@
+quantity,value,unit,source_text
+M1,3e8,M_sun,"M1 = 3 x 10^8 M_sun"
+M2,4e8,M_sun,"M2 = 4 x 10^8 M_sun"
+M3,5e8,M_sun,"M3 = 5 x 10^8 M_sun"
+r13,30,pc,"r13 = 30 pc"
+r12,40,pc,"r12 = 40 pc"
+r23,50,pc,"r23 = 50 pc"
+beta1,71.4,deg,"beta1 ~ 71.4 deg (eq. 32: beta1 = arctan(Y1/X1), triangle oriented as in Aarseth et al. 1994 Fig. 1)"
+a23,5.5,pc,"a2,3 ~ 5.5 pc"
+e23,0.99,,"e2,3 ~ 0.99"
+rel_diff_AR-CHAIN_vs_MSTAR,1e-4,,"relative difference of only ~10^-4 in each value"

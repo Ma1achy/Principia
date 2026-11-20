@@ -1,0 +1,5 @@
+TU1998 4a: |P - A| = 0.9500038 (printed circle 0.95; diff 3.8e-06)
+TU1998 4b: |P - A| = 0.9500001 (printed circle 0.95; diff 8.0e-08)
+TU1998 4c: |P - A| = 0.9500000 (printed circle 0.95; diff 0.0e+00)
+MO2014: interior points, arc excluded 306402, arc included 306406; printed 306346; difference 56
+MO2014: survivors 26 / 306346 = 8.487e-05; decayed 306320 + 26 = 306346

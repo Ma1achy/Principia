@@ -1,0 +1,27 @@
+1. Identities per row (5-decimal table, so |residual| <= 1e-5 expected from rounding):
+   max |r13 - (xi + eta)| = 1.0e-05 ; max |x2 - (xi - eta/3)| = 6.7e-06 over 23 rows
+2. Time convention: dt/du = r12 r23 / 2 = xi (eta - xi); Simpson's rule on the tabulated u grid (h = 0.1):
+   u=0.2  t_table=0.00033  t_simpson=0.00033  diff=+9.7e-07
+   u=0.4  t_table=0.00259  t_simpson=0.00259  diff=-1.4e-06
+   u=0.6  t_table=0.00843  t_simpson=0.00843  diff=+1.9e-06
+   u=0.8  t_table=0.01905  t_simpson=0.01905  diff=-2.1e-06
+   u=1.0  t_table=0.03507  t_simpson=0.03507  diff=-1.0e-06
+   u=1.2  t_table=0.05658  t_simpson=0.05658  diff=+2.4e-06
+   u=1.4  t_table=0.08322  t_simpson=0.08322  diff=-4.7e-06
+   u=1.6  t_table=0.11424  t_simpson=0.11424  diff=-2.8e-06
+   u=1.8  t_table=0.14867  t_simpson=0.14866  diff=-5.4e-06
+   u=2.0  t_table=0.18535  t_simpson=0.18535  diff=-4.2e-06
+   u=2.2  t_table=0.22303  t_simpson=0.22303  diff=+2.1e-06
+   max |diff| = 5.4e-06
+3. Turning point from the last two rows (x2 odd, r13 even about t*):
+   linear zero of x2 between u=2.1 and u=2.2: t = 0.21470 (text: 0.21470)
+   dt=-0.01056: (r13max - r13)/dt^2 = 3.318 ; x2/dt = 1.0568
+   dt=+0.00833: (r13max - r13)/dt^2 = 3.315 ; x2/dt = 1.0576
+4. Energy: E = rdot12^2/4 + etadot^2/3 - 1/r12 - 1/r23 - 1/r13 (Jacobi reduced masses 1/2 and 2/3);
+   at t -> 0: etadot = 0, r23 = r13 = 1, so E = -lim/4 - 2 = -3.229025
+5. Cartesian state at x2 = 0 (t = t*), barycentric, line = x-axis, order m1, m2, m3:
+   q = (-0.614745, 0, +0.614745); U = 4.066727; v1 = v3 = -0.528426, v2 = 1.056852 (signs: m2 moves toward m3, x2 increasing)
+   check: v2 from the table slope x2/dt above (~1.057) vs energy-derived 2 v1 = 1.05685
+   period T = 4 t* = 0.85880
+6. The same orbit rescaled to E = -1 (r -> L r, v -> v / sqrt(L), t -> L^1.5 t, L = |E|):
+   L = 3.229025; q3 = 1.985027; v2 = 0.588137; T = 4.98309; collision-time r13 = 3.229025

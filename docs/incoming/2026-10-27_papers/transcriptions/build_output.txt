@@ -1,0 +1,21 @@
+== A against B ==
+  ('II.1', 16, 6): A 0.003  B 0.903  -> 0.003  (B read the printed glyph literally as 0.903; II p. 16 says column 7 never exceeds 0.02 and the PDF's own text layer reads 0,003; kept 0.003)
+  1 difference(s), all resolved
+
+== II Table 1 (exact rest) against the paper's own statements ==
+  rows 100; mean T 110.13 (paper: 110.1); sd 125.02 (paper: 125.0)
+  asterisked T 14 (paper p. 16: 12 conditional decays); asterisked p 19 (paper: 19); both 6 ['15', '30', '45', '63', '66', '98'] (paper: 6)
+  |dE/E| max 0.019 (paper: does not exceed 0.02); <0.01: 84 (paper 84); <0.005: 56 (paper 55); <0.0005: 13 (paper 13)
+  Table 2, 0 < p <= 0.1: n 15 (paper 15), mean D'E/-E 2.451 (paper 2.45)
+  Table 2, 0.1 < p <= 0.2: n 35 (paper 35), mean D'E/-E 0.412 (paper 0.412)
+  Table 2, 0.2 < p <= 99: n 50 (paper 50), mean D'E/-E 0.205 (paper 0.205)
+  xi, eta against fixtures/anosova/table1.csv (II's values where II differs): 0 mismatches []
+
+== II Table 3 (the 38 near-rest runs I left unfinished) ==
+  rows 38; same set as I's rows printing '—' in column 8: True
+  M*1e4 against eta (M = eta*1e-4 under I's eq. 3): 35 of 38 agree to the printed 4 decimals; differ: [(13, '0.6172', 0.617363867), (27, '0.1394', 0.139119704), (52, '0.4205', 0.426512804)]
+
+== I Table 1 columns 5-8 ==
+  rows printing column 8: 62; column 8 against the fixture: 0 mismatches []
+  T values 59 (paper: 59); mean 64.63 (paper eq. 12: 61.6); sd 74.52 (paper eq. 13: 74.4)
+  I's 59 + II Table 3's 38 = 97 values: mean 80.67, sd 82.99 (II p. 16: 80.7 and 83.0, 'for 100 systems')

@@ -1,0 +1,12 @@
+[package]
+name = "validated_chart_forged"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Its own workspace: never a member of Principia's (TASK-M2-14; built on a copy by `crates/engine/tests/validated_chart.rs`).
+[workspace]
+
+[dependencies]
+engine = { path = "../../crates/engine" }
+kernel = { path = "../../crates/kernel" }
