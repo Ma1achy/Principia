@@ -34,6 +34,8 @@ validation = { path = "../validation" }
 # The shared proptest configuration's runner (validation::prop), for the lock's anchor-invariance property
 # (REQ-GUI-005, a property test; applied per R-369, code review 5640435439 of PR #290, C1).
 proptest = "1.11"
+# The golden frame's stored image (TASK-C1-02) is a PNG, read and written with the png crate render already brings in.
+png = "0.18"
 
 # Under `controls`, each `negative_control!` in engine's tests compiles as a test (R-176).
 [features]

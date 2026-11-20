@@ -1181,6 +1181,7 @@ dependencies = [
  "ledger",
  "libm",
  "naga",
+ "png",
  "pollster",
  "proptest",
  "render",

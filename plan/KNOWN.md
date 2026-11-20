@@ -19,6 +19,8 @@ delete its line when it's done.
   and `docs/design`). They are correct, just noisy. Clean a passage when you next edit it; don't run a
   mechanical sweep, because the reasons in them matter.
 - **Test file names** (`qa_TASK-…`) are historical. Rename when touched.
+- **`xtask` has no `dx12` feature**, so the golden runner and the `cargo xtask` suites cannot select DX12; add
+  it with the DX12 compute path (TASK-M0-85).
 - **What was run at import** (Linux, lavapipe): fmt, clippy with and without `controls`, every lint, `xtask
   controls --list`, and the ledger, validation, kernel and engine suites, plus the xtask and render tests the
   move touched. **Not run:** the GPU-kernel suites (they need `cargo xtask build-kernel`, which CI's
