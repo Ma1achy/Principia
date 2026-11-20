@@ -57,10 +57,13 @@ use kernel::occupant::{Geom, State};
 use kernel::payload::{
     sd_detail, sd_state, tm_t_end_step, SimStateBaseOf, STATE_BOUNDED, STATE_ESCAPE, STATE_RUNNING,
 };
-use kernel::regularisation::az::{self, AzCount, AzParams, AzReal, ExplicitTest};
+use kernel::regularisation::az::{
+    self, AarsethZare, AzConfig, AzCount, AzParams, AzReal, ExplicitTest,
+};
 use kernel::regularisation::heggie::{self as hg, HgConfig, HgParams, DEFAULT_TIME};
-use kernel::regularisation::logh::{self, LhParams};
+use kernel::regularisation::logh::{self, LhConfig, LhParams, LogH};
 use kernel::regularisation::pairs::{DefaultOccupant, LogHMode};
+use kernel::regularisation::Composed;
 use kernel::shape::shape;
 use spirv_std::glam::UVec4;
 use validation::negative_control;
@@ -409,6 +412,43 @@ impl HgConfig for Tenth {
 /// The default occupant, Heggie × RK4, at [`DELTA_SYNC`].
 type Default10 = DefaultOccupant<Tenth>;
 
+impl AzConfig for Tenth {
+    fn params<R: AzReal>() -> AzParams<R> {
+        AzParams {
+            eta: R::at_width(0.01, 0.01),
+            delta_sync: R::at_width(0.1, 0.1),
+            tiny: R::at_width(1e-37, 1e-300),
+            predictive_f: R::at_width(0.02, 0.02),
+            step_budget_rate: R::at_width(1e7, 1e7),
+            n_min: 1_000_000,
+            clamp: true,
+            secant_tries: 4,
+            bisect_tries: 64,
+        }
+    }
+}
+
+impl LhConfig for Tenth {
+    fn params<R: AzReal>() -> LhParams<R> {
+        LhParams {
+            eta: R::at_width(0.01, 0.01),
+            delta_sync: R::at_width(0.1, 0.1),
+            tiny: R::at_width(1e-37, 1e-300),
+            predictive_f: R::at_width(0.02, 0.02),
+            step_budget_rate: R::at_width(1e7, 1e7),
+            n_min: 1_000_000,
+            clamp: true,
+            secant_tries: 4,
+            bisect_tries: 64,
+            mode: LogHMode::LogH,
+        }
+    }
+}
+
+/// Aarseth–Zare × RK4 and logH × KDK at [`DELTA_SYNC`], through their seams.
+type Az10 = Composed<Rk4, AarsethZare<Tenth>>;
+type LogH10 = Composed<Kdk, LogH<Tenth>>;
+
 /// The sync boundaries to `t_end` at `delta_sync`.
 fn boundaries(t_end: f64, delta_sync: f64) -> u32 {
     (t_end / delta_sync).round() as u32
@@ -541,6 +581,36 @@ fn escape_detector_hyperbolic_ejection() {
     assert!(last.chord < TAU_PROVISIONAL && prior.chord >= TAU_PROVISIONAL);
     // The march stopped there: the horizon was not reached.
     assert!(t < num(&text, "t_end"));
+    // At f32, the app's width, through the same path: the same firing mark as f64, or one mark either side, naming
+    // the same body.
+    let s32 = Ic::<f32> {
+        m: s.m.map(|x| x as f32),
+        r: s.r.map(|v| v.map(|x| x as f32)),
+        p: s.p.map(|v| v.map(|x| x as f32)),
+    };
+    let steps = boundaries(num(&text, "t_end"), DELTA_SYNC);
+    let uniforms = WrapperUniforms::<f32> {
+        dt_macro: 0.1,
+        horizon_steps: steps,
+        n_max: 1,
+        thresholds: key(DELTA_SYNC, steps, 1).thresholds,
+    };
+    let out32 = integrate_detecting::<Default10, f32>(&s32, &uniforms, CollisionRadius::none());
+    let t32 = f64::from(tm_t_end_step(out32.times)) * DELTA_SYNC;
+    println!(
+        "hyperbolic_ejection at f32: state {} detail {} at t_end = {t32}",
+        sd_state(out32.packed_a),
+        sd_detail(out32.packed_a)
+    );
+    assert_eq!(
+        (sd_state(out32.packed_a), sd_detail(out32.packed_a)),
+        (STATE_ESCAPE, 2),
+        "at f32"
+    );
+    assert!(
+        (t32 - t).abs() < 0.4 + 1e-9,
+        "at f32 the ejection fired at t = {t32}, more than one mark from f64's {t}"
+    );
 }
 
 negative_control!(
@@ -1106,16 +1176,36 @@ fn grids(mark: fn(u32, f64) -> bool) -> Vec<Grid> {
             probe,
         });
     }
-    // Heggie through the wrapper, its macro-step half its sync quantum: the samples are the sync grid's.
+    // Each regularised occupant through the wrapper and its seam, the macro-step half its sync quantum: the samples
+    // are the sync grid's, one per boundary landed on, none from the wrapper's macro-steps.
+    out.push(seam_grid::<Default10>(
+        "Heggie × RK4 through the wrapper at dt_macro = 0.05",
+        mark,
+    ));
+    out.push(seam_grid::<Az10>(
+        "Aarseth–Zare × RK4 through the wrapper at dt_macro = 0.05",
+        mark,
+    ));
+    out.push(seam_grid::<LogH10>(
+        "logH × KDK through the wrapper at dt_macro = 0.05",
+        mark,
+    ));
+    out
+}
+
+/// A regularised occupant's march of the bound fixture through the wrapper at `dt_macro = 0.05`, its sync quantum
+/// [`DELTA_SYNC`], watched by a probe of `mark`.
+fn seam_grid<A: Advance>(who: &'static str, mark: fn(u32, f64) -> bool) -> Grid {
+    assert!(A::OWN_SAMPLING, "{who} does not report its own sampling");
+    let s = state("grazing_near_escape");
     let mut probe = Probe::new(&s, real, mark);
     let steps = (GRID_T / 0.05).round() as u32;
-    integrate_with::<Default10, f64, _>(&ic_of(&s), &key(0.05, steps, 1), &mut probe);
-    out.push(Grid {
-        who: "Heggie × RK4 through the wrapper at dt_macro = 0.05",
+    integrate_with::<A, f64, _>(&ic_of(&s), &key(0.05, steps, 1), &mut probe);
+    Grid {
+        who,
         q: SYNC[0],
         probe,
-    });
-    out
+    }
 }
 
 /// On every grid march, the samples are the occupant's grid, one per boundary, and the marks of `mark` are the first
@@ -1188,6 +1278,46 @@ fn escape_window_grid() {
         for j in 1..=400 {
             assert_eq!(is_mark(j, q), j % per == 0, "f32, quantum {q}, index {j}");
         }
+    }
+    // At f32 on the app's quantum, 1/8, whose multiples are exact: every mark is the first sampling point at or
+    // after its `k·0.4`, exactly, to `t = 200`.
+    let eighth = Quantum { num: 1, den: 8 };
+    let marks: Vec<u32> = (1..=1600).filter(|&j| is_mark(j, 0.125f32)).collect();
+    assert_eq!(marks, expected_marks(eighth, 1600), "f32, quantum 1/8");
+    // At f32 on decimal quanta that are not binary fractions of the window, where a product can fall an ulp short
+    // of its tie: each mark is the exact one or the next sampling point, never earlier, and each window spans within
+    // one quantum of 0.4.
+    for (q, value) in [
+        (Quantum { num: 1, den: 100 }, 0.01f32),
+        (Quantum { num: 3, den: 100 }, 0.03),
+        (Quantum { num: 1, den: 1000 }, 1e-3),
+    ] {
+        let last = 20 * q.den as u32 / q.num as u32;
+        let marks: Vec<u32> = (1..=last).filter(|&j| is_mark(j, value)).collect();
+        let want = expected_marks(q, last);
+        let late = marks.iter().zip(&want).filter(|(m, w)| m != w).count();
+        let step = q.value();
+        let spans: Vec<f64> = core::iter::once(0)
+            .chain(marks.iter().copied())
+            .zip(marks.iter().copied())
+            .map(|(a, b)| f64::from(b - a) * step)
+            .collect();
+        let (lo, hi) = spans
+            .iter()
+            .fold((f64::MAX, 0.0f64), |(lo, hi), &s| (lo.min(s), hi.max(s)));
+        println!(
+            "f32, quantum {value}: {} marks, {late} one sampling point late, window spans {lo} to {hi}",
+            marks.len()
+        );
+        assert!(marks.len() + 1 >= want.len() && marks.len() <= want.len());
+        assert!(
+            marks.iter().zip(&want).all(|(&m, &w)| m == w || m == w + 1),
+            "f32, quantum {value}: a mark is early, or more than one sampling point late"
+        );
+        assert!(
+            spans.iter().all(|s| (s - 0.4).abs() < step * (1.0 + 1e-9)),
+            "f32, quantum {value}: a window spans {lo} to {hi}"
+        );
     }
 }
 
