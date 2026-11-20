@@ -1175,9 +1175,14 @@ table says; it writes only its count there.
 
 Heggie's march through the seam is the direct march, bitwise, for any cut into calls (`regularised_state_carried`).
 What makes it so is `Q`, `P`, `h` and, where the step budget binds, the running step total. The interval clock is
-carried so that the buffer is the march's whole state wherever a call ends, but no later interval reads it: a call
-ends on a sync boundary, where the clock is `Δ_sync` exactly, and the next interval restarts it at 0
-(`regularised_state_carried_clock` measures this).
+carried too, but it is redundant: a call that can be marched on ends on a sync boundary, where the clock is `Δ_sync`
+exactly, and the next interval restarts it at 0, so no later interval reads it (`regularised_state_carried_clock`
+measures this). Its slot could be dropped later at no cost to the march.
+
+Only a call that ended on a boundary can be marched on. A march that ended between boundaries (not finite, its budget
+spent, or a terminal mid-interval) leaves a mid-interval state in the buffer, which a further call would take as
+standing on a boundary. That is safe only because such a march is never marched on: a failed or terminal run is not
+resumed, and a spent budget stays spent, the carried total being checked before any further step.
 
 The profile gains **`owns_time_mapping: bool`** — the honest name, because the question is not "is it
 regularised" but **"does the wrapper still know how far a step goes"**. It is reported for the **composed occupant**

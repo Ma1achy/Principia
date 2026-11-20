@@ -1187,10 +1187,15 @@ pub fn carry<R: AzReal>(carried: &mut Carried<R>, q: &HgQ<R>, p: &HgP<R>, h: R, 
 /// The interval clock is carried as the march left it. The plan is unclear here (it asks for the clock to be carried
 /// so that a re-boot reproduces the live march); chose to carry it and to leave the march as it is, because a call ends
 /// on a sync boundary, where the clock is `Δ_sync` exactly, and the next interval restarts it at 0, so no interval
-/// reads the clock it is handed and making one read it would change the direct march. It is kept so that the buffer
-/// is the march's whole state wherever a call ends, a march ended between boundaries included. The running step
-/// total is carried for the same equality: the budget reads the total since `t = 0` (R-604), so a call that started
-/// its own would run on where the direct march has spent its budget.
+/// reads the clock it is handed and making one read it would change the direct march. The running step total is
+/// carried for the same equality: the budget reads the total since `t = 0` (R-604), so a call that started its own
+/// would run on where the direct march has spent its budget.
+///
+/// **Only a call that ended on a boundary can be marched on.** A march that ended between boundaries (not finite, its
+/// budget spent, or a terminal mid-interval) leaves a mid-interval `(Q, P)` and clock in the buffer, and a further
+/// call would restart the clock and take that state as standing on `k_now`. That is safe only because such a march is
+/// never marched on: the wrapper stops at a failed or terminal run, and a spent budget stays spent, since the carried
+/// total is checked against an allowance that has not grown before any further step is taken.
 #[inline]
 fn advance_seam<C: HgConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     state: &State<R>,

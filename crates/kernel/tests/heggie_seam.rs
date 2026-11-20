@@ -635,11 +635,13 @@ fn check_carried<R: P>(call: SeamCall<R>, dt_macro: f64, n: u32, k: u32) {
 }
 
 /// The arrangements: sixteen calls of half a sync interval each, every second one marching; four calls of two
-/// intervals each; and three calls of 3/8, which reach boundaries 3, 6 and 9.
+/// intervals each; three calls of 3/8, which reach boundaries 3, 6 and 9; and twelve calls of 0.1, a macro-step that
+/// is no multiple or fraction of the sync quantum, which reach `t = 1.2` and so boundary 9 (`1.125 ≤ 1.2 < 1.25`).
 fn check_carried_all<R: P>(call: SeamCall<R>) {
     check_carried::<R>(call, 1.0 / 16.0, 16, 8);
     check_carried::<R>(call, 1.0 / 4.0, 4, 8);
     check_carried::<R>(call, 3.0 / 8.0, 3, 9);
+    check_carried::<R>(call, 0.1, 12, 9);
 }
 
 #[test]
