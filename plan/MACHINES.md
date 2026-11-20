@@ -1,15 +1,11 @@
 # Machines
 
+The rule: the PC does only what the Mac can't.
+
 ## The Mac
 
-The build machine. The orchestrator and the implementers run here; builds go through the job queue (`orch/`
-on the X10 drive, outside the repo) with sccache.
-
-## Reviews
-
-Reviewers don't build: they read the diff and CI's results. So they cost little and can run on either
-machine. Put them on the PC when the Mac is busy: a Claude Code session there runs the `reviewer` and
-`physics-reviewer` agents on PRs the Mac's orchestrator lists as ready, and posts its reviews with `gh`.
+The build machine. The orchestrator, the implementers and the reviewers run here; builds go through the job
+queue (`orch/` on the X10 drive, outside the repo) with sccache.
 
 ## The PC: two roles, kept apart
 
@@ -26,17 +22,15 @@ compute box runs.
 - Containment proof, on request only: `gh workflow run win-gpu.yml --ref main -f only=win-contain`.
 
 **2. Compute box: an ordinary development machine.**
-- Your own account, a separate clone (e.g. `D:\src\Principia`, or `~/principia` in WSL), never the runner's
-  folders.
-- A Claude Code session there takes tasks that need the GPU or long compute, from the same `plan/PLAN.md`,
-  on its own branches and PRs, reviewed like any other. Mark those tasks `machine: pc` in `plan/tasks.yaml`
-  so the Mac's orchestrator doesn't dispatch them too.
-- Good work for it:
-  - the C4 GPU tasks, and the GPU-kernel suites on real hardware while developing them;
-  - large renders (README images, galleries, the golden frames' references);
-  - long measurements: convergence ladders, horizon sweeps, cross-checks against prin-rs;
-  - the C8 replication runs;
-  - mutation testing, on request.
+- Your own account, its own clone at `D:\src\Principia`, never the runner's folders.
+- It takes only work the Mac can't do:
+  - anything needing the NVIDIA GPU or Windows: the C4 GPU tasks, DX12, Vulkan on real hardware;
+  - compute too long or heavy for the Mac: big renders, long sweeps, the replication runs;
+  - mutation testing: the weekly sweep of the kernel (TASK-M0-73). Its surviving mutants come to the Mac as a
+    `to:mac` issue, and each real one is a missing test, added in the next PR that touches that file.
+- The Mac hands it work through a `to:pc` issue in `Ma1achy/principia-ops`, one request per issue. Tasks it
+  owns are marked `machine: pc` in `plan/tasks.yaml`, so the Mac's orchestrator doesn't dispatch them. Its
+  branches and PRs are reviewed like any other, on the Mac.
 - GitHub access is your own `gh auth login` on that account. The runner's account has none.
 
 **Sharing the machine**

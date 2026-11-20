@@ -589,6 +589,5 @@ explained divergence or unexplained.
 Work for the Windows PC's own session (`plan/MACHINES.md`). Not a checkpoint.
 
 - The Windows runner's DX12 run, Phase 2: the GPU suites on DX12 as a named measurement (TASK-M0-58)
-- Mutation testing off the merge path: the PC's weekly whole-repo sweep, its backlog file, the gate check, and the
-  job queue refusing mutation runs (TASK-M0-73)
+- Mutation testing off the merge path: the PC's weekly sweep of the kernel (TASK-M0-73)
 
