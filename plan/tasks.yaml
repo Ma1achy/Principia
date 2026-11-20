@@ -499,6 +499,80 @@
   - TASK-M2-102
   - TASK-M2-103
   - TASK-M2-105
+- id: TASK-C2-01
+  milestone: C2
+  title: 'The chart comparison pass: every preset against the original app and against prin-rs'
+  depends_on:
+  - TASK-M2-57
+  - TASK-M2-108
+  - TASK-M2-61
+  - TASK-M2-62
+  - TASK-M2-63
+  - TASK-M2-64
+  - TASK-M2-94
+  - TASK-M2-90
+  - TASK-M2-65
+  - TASK-M2-66
+  - TASK-M2-67
+  - TASK-M2-88
+  - TASK-M2-92
+  - TASK-M2-96
+  - TASK-M2-97
+  - TASK-M2-99
+  - TASK-M2-101
+  - TASK-M2-102
+  - TASK-M2-103
+  - TASK-M2-104
+  - TASK-M2-105
+  - TASK-M2-68
+  - TASK-M2-69
+  - TASK-M2-70
+  - TASK-M2-71
+  - TASK-M2-72
+  - TASK-M2-73
+  - TASK-M2-74
+  - TASK-M2-75
+  - TASK-M2-76
+  - TASK-M2-77
+  - TASK-M2-78
+  - TASK-M2-79
+  - TASK-M2-80
+  - TASK-M2-81
+  - TASK-M2-83
+  - TASK-M2-91
+  - TASK-M2-98
+  - TASK-M2-84
+  - TASK-M2-85
+  - TASK-M2-55
+  - TASK-M2-100
+  - TASK-M2-109
+  - TASK-M8-06
+  - TASK-M8-07
+  - TASK-M8-18
+  - TASK-M8-44
+  - TASK-M8-47
+  - TASK-M8-48
+  - TASK-M8-52
+  - TASK-M8-55
+  - TASK-M8-66
+  - TASK-M8-67
+  - TASK-M8-87
+  - TASK-M8-89
+  - TASK-M8-90
+  - TASK-M8-102
+  - TASK-M8-103
+  - TASK-M8-104
+  - TASK-M8-107
+  - TASK-M8-113
+  - TASK-M8-114
+  - TASK-M8-115
+  - TASK-M8-120
+  - TASK-M8-125
+  - TASK-M8-126
+  - TASK-M8-128
+  - TASK-M8-129
+  - TASK-M8-130
+  - TASK-M8-131
 - id: TASK-M3-12
   milestone: C3
   title: 'The escape detector: closure and E_rel, the window, the escaper and ionisation'
