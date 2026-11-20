@@ -47,7 +47,8 @@
       "mcp__github__list_issues",
       "mcp__claude-code-remote__subscribe_pr_activity",
       "mcp__claude-code-remote__unsubscribe_pr_activity",
-      "mcp__claude-code-remote__send_later"
+      "mcp__claude-code-remote__send_later",
+      "mcp__claude-code-remote__delete_trigger"
     ],
     "ask": [
       "Bash(git push --force*)",
