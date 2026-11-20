@@ -6,6 +6,8 @@
 //!   `Λ = ln(K + B) − ln U`, `dt/ds` against `∂Λ/∂B`; TTL's, which has no Hamiltonian of the state alone, against
 //!   `K − U` under its two denominators and `dW/ds` against `Ω` differenced along the velocities. Controls: a momentum
 //!   rate's sign flipped, and `dW/ds`'s.
+//! - `logh_leapfrog_denominators`: the leapfrog's drift and kick move `(r, t)` and `p` at the rates above, on the same
+//!   states off the solution, so each divides by its own denominator. Control: the two denominators swapped.
 //! - `logh_reversed_involution`: the time-reversal map negates `p` and `t`, keeps `r` and `W`, and is an involution.
 //!   Control: a map that negates `W` too.
 //! - `logh_step_reversible`: dd_integrator §5's test 3 on logH's leapfrog in each time mode, through the map, the
@@ -16,6 +18,8 @@
 //!   after one period; an `e = 0.99` binary after one period). Control: a stepper whose clock runs twice as fast.
 //! - `logh_landing_state`: every landing leaves the state's own clock on the boundary, bitwise. Control: the
 //!   clock-only landing, the retakes off.
+//! - `logh_clamped_step_lands`: the leapfrog's clamped step from a clock one to four ulps short of a boundary ends on
+//!   the boundary, bitwise. Control: the leapfrog with the clock advanced by each half-drift in turn.
 //! - `logh_march_non_finite`, `logh_march_exhausted`: the march ends not finite (at entry and mid-interval, its state
 //!   latched finite) and exhausted apart. Controls: the finiteness test removed, and a budget that does not bind.
 
@@ -23,11 +27,12 @@ use kernel::driver::advance::Cadence;
 use kernel::occupant::kdk::Kdk;
 use kernel::occupant::rk4::Rk4;
 use kernel::occupant::{Geom, State};
+use kernel::physics::PairGeom;
 use kernel::regularisation::az::{AzReal, End, ExplicitTest};
 use kernel::regularisation::form::Flow;
 use kernel::regularisation::logh::{
-    march, profile, register, reversed, LhAdvanced, LhP, LhParams, LhQ, LhRegistered, LhStepper,
-    LhSystem, LhWatch,
+    drift, kick, march, profile, register, reversed, step_size, LhAdvanced, LhP, LhParams, LhQ,
+    LhRegistered, LhStepper, LhSystem, LhWatch,
 };
 use kernel::regularisation::pairs::LogHMode;
 use validation::drift::{FIGURE_EIGHT_V3, FIGURE_EIGHT_X1};
@@ -139,6 +144,24 @@ impl Draws {
             .wrapping_add(1_442_695_040_888_963_407);
         lo + (hi - lo) * ((self.0 >> 11) as f64 / (1u64 << 53) as f64)
     }
+
+    /// A random state off the solution: unequal masses in `[0.3, 3]`, the flat state `x` with positions in
+    /// `[−1.2, 1.2]`, every pair at least `0.3` apart, and momenta in `[−1, 1]`, and `B` (logH) or `W` (TTL) in
+    /// `[0.5, 3]`, drawn independently of the state.
+    fn state(&mut self) -> ([f64; 3], Vec<f64>, f64) {
+        let m = [
+            self.next(0.3, 3.0),
+            self.next(0.3, 3.0),
+            self.next(0.3, 3.0),
+        ];
+        let mut x: Vec<f64> = (0..6).map(|_| self.next(-1.2, 1.2)).collect();
+        while separations(&x).iter().any(|&s| s < 0.3) {
+            x = (0..6).map(|_| self.next(-1.2, 1.2)).collect();
+        }
+        x.extend((0..6).map(|_| self.next(-1.0, 1.0)));
+        let extra = self.next(0.5, 3.0);
+        (m, x, extra)
+    }
 }
 
 /// The three pair separations of the flat state `x = (r₀, r₁, r₂, p₀, p₁, p₂)`, pairs `(0, 1)`, `(0, 2)`, `(1, 2)`.
@@ -192,22 +215,14 @@ fn central(f: impl Fn(&[f64]) -> f64, x: &[f64], c: usize) -> f64 {
     (f(&up) - f(&down)) / (up[c] - down[c])
 }
 
-/// The largest discrepancy, over 32 random states under `mode`, between the analytic rates and the central
-/// differences, over the largest analytic rate. Each state has unequal masses in `[0.3, 3]`, positions in `[−1.2, 1.2]`
-/// with every pair at least `0.3` apart, momenta in `[−1, 1]`, and `B` (logH) or `W` (TTL) in `[0.5, 3]`, drawn
-/// independently of the state. `flip` flips one rate's sign, the control's: `dp₀ₓ/ds` in the logH mode, `dW/ds` in the
-/// TTL mode.
+/// The largest discrepancy, over 32 random states under `mode` ([`Draws::state`]), between the analytic rates and the
+/// central differences, over the largest analytic rate. `flip` flips one rate's sign, the control's: `dp₀ₓ/ds` in the
+/// logH mode, `dW/ds` in the TTL mode.
 fn rates_discrepancy(mode: LogHMode, flip: bool) -> f64 {
     let mut d = Draws(11);
     let mut worst = 0.0f64;
     for _ in 0..32 {
-        let m = [d.next(0.3, 3.0), d.next(0.3, 3.0), d.next(0.3, 3.0)];
-        let mut x: Vec<f64> = (0..6).map(|_| d.next(-1.2, 1.2)).collect();
-        while separations(&x).iter().any(|&s| s < 0.3) {
-            x = (0..6).map(|_| d.next(-1.2, 1.2)).collect();
-        }
-        x.extend((0..6).map(|_| d.next(-1.0, 1.0)));
-        let extra = d.next(0.5, 3.0);
+        let (m, x, extra) = d.state();
         let (s, q, p) = at(&x, m, extra, mode);
         let (dq, mut dp) = s.rates_of(&q, &p);
         assert_eq!(
@@ -307,6 +322,88 @@ negative_control!(
     "dW/ds's sign flipped",
     expected = "rates miss the finite difference",
     check_rates(LogHMode::Ttl, true)
+);
+
+// ── The leapfrog's two denominators ────────────────────────────────────────────────────────────────────────────
+
+/// A drift or a kick: `(system, q, p, h)` to the positions with the clock, or to the momenta with `W`.
+type Part<T> = fn(&LhSystem<f64>, &LhQ<f64>, &LhP<f64>, f64) -> T;
+
+/// The drift with the kick's denominator under it: the control's.
+#[cfg(feature = "controls")]
+fn swapped_drift(s: &LhSystem<f64>, q: &LhQ<f64>, p: &LhP<f64>, h: f64) -> LhQ<f64> {
+    drift(
+        s,
+        q,
+        p,
+        h * s.drift_raw(p) / s.kick_raw(&PairGeom::new(&q.r)),
+    )
+}
+
+/// The kick with the drift's denominator under it: the control's.
+#[cfg(feature = "controls")]
+fn swapped_kick(s: &LhSystem<f64>, q: &LhQ<f64>, p: &LhP<f64>, h: f64) -> LhP<f64> {
+    kick(
+        s,
+        q,
+        p,
+        h * s.kick_raw(&PairGeom::new(&q.r)) / s.drift_raw(p),
+    )
+}
+
+/// The criterion, written before the first run: over the 32 states off the solution ([`Draws::state`]) in each mode,
+/// a drift of `h = 10⁻³` moves `(r, t)` and a kick of `h` moves `p` by `h` times the equations' rates, within `1e-9` of
+/// the largest rate. Both are linear in `h`, so the only difference is the rounding of `(x₁ − x)/h`, of order
+/// `ε/h ≈ 2·10⁻¹³`. On the solution the two denominators are one number and a swap is invisible; off it, where `B` and
+/// `W` are drawn apart from the state, a swap reads of order 1. `W`'s increment is not read here: it is taken at the
+/// midpoint velocity, which the rate at `(r, p)` is not.
+fn check_parts(drift: Part<LhQ<f64>>, kick: Part<LhP<f64>>) {
+    let h = 1e-3;
+    for mode in [LogHMode::LogH, LogHMode::Ttl] {
+        let mut d = Draws(11);
+        let mut worst = 0.0f64;
+        for _ in 0..32 {
+            let (m, x, extra) = d.state();
+            let (s, q, p) = at(&x, m, extra, mode);
+            assert!(
+                ((s.drift_raw(&p) / s.kick_raw(&PairGeom::new(&q.r))) - 1.0).abs() > 1e-3,
+                "the state is on the solution, where a swap cannot be seen"
+            );
+            let (dq, dp) = s.rates_of(&q, &p);
+            let (q1, p1) = (drift(&s, &q, &p, h), kick(&s, &q, &p, h));
+            let mut want: Vec<f64> = dq.r.iter().flatten().copied().collect();
+            want.extend(dp.p.iter().flatten());
+            want.push(dq.t);
+            let mut got: Vec<f64> = (0..3)
+                .flat_map(|i| [0, 1].map(|c| (q1.r[i][c] - q.r[i][c]) / h))
+                .collect();
+            got.extend((0..3).flat_map(|i| [0, 1].map(|c| (p1.p[i][c] - p.p[i][c]) / h)));
+            got.push((q1.t - q.t) / h);
+            let scale = want.iter().fold(0.0f64, |a, u| a.max(u.abs()));
+            let off = want
+                .iter()
+                .zip(&got)
+                .fold(0.0f64, |a, (u, w)| a.max((u - w).abs()));
+            worst = worst.max(off / scale);
+        }
+        println!("logh leapfrog_denominators: {mode:?}: discrepancy {worst:.3e} (criterion 1e-9)");
+        assert!(
+            worst < 1e-9,
+            "{mode:?}'s drift and kick miss the rates by {worst:.3e}"
+        );
+    }
+}
+
+#[test]
+fn logh_leapfrog_denominators() {
+    check_parts(drift, kick);
+}
+
+negative_control!(
+    logh_leapfrog_denominators,
+    "the drift dividing by the kick's denominator and the kick by the drift's",
+    expected = "drift and kick miss the rates",
+    check_parts(swapped_drift, swapped_kick)
 );
 
 // ── The time-reversal map ──────────────────────────────────────────────────────────────────────────────────────
@@ -510,7 +607,10 @@ negative_control!(
 // ── The march on known fixtures ────────────────────────────────────────────────────────────────────────────────
 
 /// `S`'s step with its clock run twice as fast as its state moves: the control's, the time transformation's clock
-/// broken.
+/// broken. The step's own increment is read from a copy whose clock is `0` (the rates do not read the clock, so the
+/// state is the same): read as `q1.t − q.t` it is a whole number of the clock's ulps, its double cannot close a gap of
+/// one ulp, and the control's march stands short of a boundary until its budget is spent, which is not the failure
+/// the control is for (measured: both fast-clock controls ended exhausted before this).
 #[cfg(feature = "controls")]
 fn fast_step<S: LhStepper, R: AzReal>(
     system: &LhSystem<R>,
@@ -518,8 +618,12 @@ fn fast_step<S: LhStepper, R: AzReal>(
     p: &LhP<R>,
     h: R,
 ) -> (LhQ<R>, LhP<R>) {
-    let (mut q1, p1) = S::regularised_step(system, q, p, h);
-    q1.t = q.t + (q1.t - q.t) + (q1.t - q.t);
+    let from_zero = LhQ {
+        r: q.r,
+        t: R::default(),
+    };
+    let (mut q1, p1) = S::regularised_step(system, &from_zero, p, h);
+    q1.t = q.t + (q1.t + q1.t);
     (q1, p1)
 }
 
@@ -576,8 +680,10 @@ fn check_fixture(
     assert_eq!(
         out.count.end,
         End::Marching,
-        "{name}: the march did not land: {:?}",
-        out.count.end
+        "{name}: the march did not land: boundary {}, clock {:e}, {:?}",
+        out.boundary,
+        out.q.t,
+        out.count
     );
     assert_eq!(
         (out.boundary, out.t),
@@ -694,6 +800,10 @@ fn binary_runs<S: LhStepper>(name: &str) {
 /// second-order error in time, here at about `3·10⁴` steps a period, so the pair returns to its start within `1e-4`
 /// (the time error, of order `10⁻⁸`, moves the apocentre state far less) and its energy holds within `1e-6`. A clock
 /// running twice as fast leaves the pair at pericentre, a miss of order 1.
+///
+/// Measured: the logH mode holds the energy to rounding (`10⁻¹⁴`), the TTL mode to `3·10⁻⁸`. The difference is the
+/// third body's: `Ω` weights every pair alike, so its two far pairs add `2w/10⁴` to `w/r₀₁`, and `Ω` is no longer a
+/// multiple of `U`; with the third body at `10⁶` and `10⁸` the TTL figure fell to `3·10⁻¹⁰` and `3·10⁻¹²`, as `1/d²`.
 #[test]
 fn logh_march_close_passage() {
     binary_runs::<Kdk>("KDK");
@@ -747,6 +857,77 @@ negative_control!(
     "the clock-only landing: no retake, a step past the boundary kept",
     expected = "the state's own clock is not the boundary's",
     check_landings(0, 0)
+);
+
+// ── The clamped step at a boundary ─────────────────────────────────────────────────────────────────────────────
+
+/// The leapfrog as the reference composes it, each half-drift adding its own time to the clock: the control's.
+#[cfg(feature = "controls")]
+struct SplitKdk;
+
+#[cfg(feature = "controls")]
+impl LhStepper for SplitKdk {
+    fn pair_profile(mode: LogHMode) -> kernel::occupant::CapabilityProfile {
+        Kdk::pair_profile(mode)
+    }
+
+    fn regularised_step<R: AzReal>(
+        system: &LhSystem<R>,
+        q: &LhQ<R>,
+        p: &LhP<R>,
+        h: R,
+    ) -> (LhQ<R>, LhP<R>) {
+        let half = h / (R::one() + R::one());
+        let q_half = drift(system, q, p, half);
+        let p1 = kick(system, &q_half, p, h);
+        (drift(system, &q_half, &p1, half), p1)
+    }
+}
+
+/// The criterion, written before the first run: from [`triple`] with its clock set 1, 2, 3 and 4 ulps short of the
+/// boundary, the step the march's own clamp sizes ([`step_size`]) ends `S`'s clock on the boundary, bitwise, in each
+/// time mode and at two boundaries whose last bits differ (`T/32` of the figure-eight, where the march was measured
+/// to stand one ulp short for its whole budget, and the next number up). A clock advanced by two half-increments
+/// loses both to rounding at one ulp short where the clock's last bit is even.
+fn check_clamped_lands<S: LhStepper>() {
+    let boundary = FIGURE_EIGHT_PERIOD / 32.0;
+    for mode in [LogHMode::LogH, LogHMode::Ttl] {
+        for delta in [boundary, f64::from_bits(boundary.to_bits() + 1)] {
+            for gap in 1..=4u64 {
+                let LhRegistered { system, mut q, p } = register(&triple::<f64>(), tiny(), mode);
+                q.t = f64::from_bits(delta.to_bits() - gap);
+                let sized = step_size(
+                    &system,
+                    &q,
+                    &p,
+                    f64::INFINITY,
+                    &params(mode, 0.01, delta, 0.0),
+                );
+                assert!(sized.h > 0.0, "the clamp's step");
+                let (q1, _) = S::regularised_step(&system, &q, &p, sized.h);
+                assert_eq!(
+                    q1.t.to_bits(),
+                    delta.to_bits(),
+                    "{mode:?}: the clamped step from {gap} ulp short did not land on the boundary {delta:e}: it \
+                     ended {} ulp short",
+                    delta.to_bits().wrapping_sub(q1.t.to_bits()) as i64
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn logh_clamped_step_lands() {
+    check_clamped_lands::<Kdk>();
+    check_clamped_lands::<Rk4>();
+}
+
+negative_control!(
+    logh_clamped_step_lands,
+    "the leapfrog with the clock advanced by each half-drift in turn",
+    expected = "did not land on the boundary",
+    check_clamped_lands::<SplitKdk>()
 );
 
 // ── The march's ends ───────────────────────────────────────────────────────────────────────────────────────────

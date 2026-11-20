@@ -19,8 +19,8 @@
 //! for the rate of `t` and for the step control.
 //!
 //! **The steps** ([`LhStepper`]): logH's own leapfrog, drift–kick–drift `X(h/2) V(h) X(h/2)`, the TTL kick advancing
-//! `W` at the midpoint velocity ([`leapfrog`]), selected as logH × KDK; and classical RK4 on `(r, p, t, W)` through the
-//! system's [`Flow`], logH × RK4.
+//! `W` at the midpoint velocity and the clock advanced once a step by the two drifts' summed time ([`leapfrog`]),
+//! selected as logH × KDK; and classical RK4 on `(r, p, t, W)` through the system's [`Flow`], logH × RK4.
 //!
 //! **The march** ([`march`]) is Heggie's step control on logH's clock ([`super::heggie`]): registered once at `t = 0`,
 //! `B` and `W` carried across every boundary of the sync grid; the interval clock reset at each interval's start; an
@@ -356,18 +356,24 @@ impl<R: AzReal> Flow<R> for LhSystem<R> {
 
 // ── The leapfrog ───────────────────────────────────────────────────────────────────────────────────────────────
 
+/// The positions `r` moved by the physical time `dt` at the momenta `p`: `rᵢ + (pᵢ/mᵢ)·dt`.
+#[inline]
+fn moved<R: AzReal>(system: &LhSystem<R>, r: &[V<R>; 3], p: &LhP<R>, dt: R) -> [V<R>; 3] {
+    let v = system.velocities(&p.p);
+    [
+        add(r[0], scale(dt, v[0])),
+        add(r[1], scale(dt, v[1])),
+        add(r[2], scale(dt, v[2])),
+    ]
+}
+
 /// One drift of fictitious length `h` (`step.rs:78-84`): `dt = h·dt/ds`, `rᵢ += vᵢ dt`, `t += dt`. No force
 /// evaluation: the denominator reads the momenta and `W`, which a drift does not change.
 #[inline]
 pub fn drift<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> LhQ<R> {
     let dt = h * system.dt_ds(p);
-    let v = system.velocities(&p.p);
     LhQ {
-        r: [
-            add(q.r[0], scale(dt, v[0])),
-            add(q.r[1], scale(dt, v[1])),
-            add(q.r[2], scale(dt, v[2])),
-        ],
+        r: moved(system, &q.r, p, dt),
         t: q.t + dt,
     }
 }
@@ -402,12 +408,30 @@ pub fn kick<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> Lh
 
 /// logH's own leapfrog, drift–kick–drift `X(h/2) V(h) X(h/2)` (`step.rs:122-135`), in either time mode: time-symmetric,
 /// one force evaluation.
+///
+/// The clock is advanced once, `t += dt_a + dt_b`, the two drifts' physical times summed first. The reference adds
+/// each drift's `dt` to `t` as it goes (`step.rs:84`), which is the same number until the clock is one ulp short of a
+/// boundary: there each half is half an ulp, both additions round away, and a march that lands with no tolerance
+/// never lands (measured on the figure-eight, `Δ_sync = T/32`: the leapfrog stood one ulp short until its budget was
+/// spent). Summed first, a clamped step's increment is the whole gap, and the clock reaches the boundary. The
+/// positions still drift in two halves; nothing reads the clock between them.
 #[inline]
 pub fn leapfrog<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> (LhQ<R>, LhP<R>) {
     let half = h / two::<R>();
-    let q_half = drift(system, q, p, half);
+    let dt_a = half * system.dt_ds(p);
+    let q_half = LhQ {
+        r: moved(system, &q.r, p, dt_a),
+        t: q.t,
+    };
     let p1 = kick(system, &q_half, p, h);
-    (drift(system, &q_half, &p1, half), p1)
+    let dt_b = half * system.dt_ds(&p1);
+    (
+        LhQ {
+            r: moved(system, &q_half.r, &p1, dt_b),
+            t: q.t + (dt_a + dt_b),
+        },
+        p1,
+    )
 }
 
 // ── The stepper slot ───────────────────────────────────────────────────────────────────────────────────────────
@@ -434,7 +458,8 @@ impl LhStepper for Kdk {
     /// The leapfrog's: order 2, one force evaluation, step-reversible in either time mode (the kernel's
     /// `logh_step_reversible` test measures it), symplectic in the logH mode, where the drift and the kick are the exact
     /// flows of `ln(K + B)` and `−ln U`, and not claimed in the TTL mode, whose `W` has no Hamiltonian; the TTL mode is
-    /// the one run-reversible occupant.
+    /// the one run-reversible occupant. `run_reversible` is the plan's assignment, not a measurement: no test here
+    /// reverses a whole march.
     #[inline]
     fn pair_profile(mode: LogHMode) -> CapabilityProfile {
         CapabilityProfile {
@@ -709,6 +734,11 @@ pub fn step_size<R: AzReal>(
 /// last retake is still past, its clock finite, a bisection on `h` between `0` (the saved state) and that retake's
 /// step, at most `bisect_tries` halvings. The bisection keeps the bracket's short end, so the step kept ends the clock
 /// at or short of the boundary, never past it. Each retake is a counted step.
+///
+/// The plan is unclear here; chose Heggie's landing, with no tolerance, over the reference's (`driver.rs:338`,
+/// `:390-419`: a landing test and a secant stop that each read `LAND_EPS_REL`), because that tolerance is a
+/// precision-dependent constant in a branch and leaves the state stored at a boundary with a clock that is not the
+/// boundary's, and Heggie's march in this kernel already lands without it.
 struct Landing<R> {
     q: LhQ<R>,
     p: LhP<R>,

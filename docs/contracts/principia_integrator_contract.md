@@ -1029,6 +1029,12 @@ expression for the rate by which a step advances `t` and for the rate the step c
   TTL mode `W += Ω̇(r, v_mid) dt`, `v_mid` the mean of the velocities before and after the kick, since `Ω̇` read at
   either end alone would break the kick's symmetry under time reversal (`step.rs:102-112`). One force evaluation a
   step; second order; time-symmetric.
+  **The clock is advanced once a step**, `t += dt_a + dt_b`, the two half-drifts' physical times summed first. The
+  reference adds each drift's `dt` to `t` in turn (`step.rs:84`); that is the same number until the clock is one ulp
+  short of a boundary, where each half is half an ulp, both additions round away and, the landing having no
+  tolerance (step 8), the march never lands (measured on the figure-eight at `Δ_sync = T/32`: the clock stood one ulp
+  short until the step budget was spent). Summed first, a clamped step's increment is the whole gap. The positions
+  still drift in two halves, and nothing reads the clock between them.
 - **logH × RK4**: the classical step `s + (h/6)(k₁ + 2k₂ + 2k₃ + k₄)` on the whole state `(r, p, t, W)` with the
   equations of motion above (`step.rs:44-71`). It reads both denominators at the same point, so on the solution it
   sees only `dt = ds/U` (`step.rs:18-22`).

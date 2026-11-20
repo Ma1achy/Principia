@@ -24,3 +24,5 @@ delete its line when it's done.
   move touched. **Not run:** the GPU-kernel suites (they need `cargo xtask build-kernel`, which CI's
   `gpu-kernel` job runs on main), the GUI's and the remaining render and xtask tests (CI runs them on the first
   PR), and the WSL trust tests that need `ssh-keygen`.
+- **`xtask` has no `dx12` feature**, so the golden runner and the `cargo xtask` suites cannot select DX12; add it with
+  the DX12 compute path (TASK-M0-85).
