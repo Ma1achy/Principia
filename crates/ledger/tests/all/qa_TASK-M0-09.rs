@@ -250,10 +250,13 @@ fn section_1(ftle: bool) -> Vec<(&'static str, Storage)> {
         ("closure_min", Storage::F32),
         ("closure_step", Storage::U16),
         ("_reserved", Storage::U16),
-        // the collision floor's record and its declared padding, its own 8 B after the u16s (payload §1, the recheck
-        // on the collision floor's record; R-973, R-86; TASK-M3-71)
+        // the collision floor's record after the u16s (payload §1, the recheck on the collision floor's record;
+        // R-973, R-86; TASK-M3-71), then the escape rule's lagged n̂ register, three Reals in place of the 4 B of
+        // declared padding that followed the record (payload §1; TASK-M3-12)
         ("coll_floor_bits", Storage::U32),
-        ("_pad", Storage::Pad(1)),
+        ("_nhat_lag_0", Storage::F32),
+        ("_nhat_lag_1", Storage::F32),
+        ("_nhat_lag_2", Storage::F32),
     ]);
     m
 }

@@ -407,7 +407,7 @@ negative_control!(
 
 /// The members of `SimStateFTLE` and `ICDescriptor` this scanner has a rule for, in the ledger's order. A new member
 /// makes `check_members` fail, so it cannot pass unscanned.
-const SIMSTATE_MEMBERS: [&str; 19] = [
+const SIMSTATE_MEMBERS: [&str; 21] = [
     "r",
     "p",
     "r_sh",
@@ -425,10 +425,12 @@ const SIMSTATE_MEMBERS: [&str; 19] = [
     "closure_min",
     "closure_step",
     "_reserved",
-    // the collision floor's u32 record and its declared padding (payload §1; R-973; TASK-M3-71): no f32, so no
-    // float rule; neither holds an f16
+    // the collision floor's u32 record (payload §1; R-973; TASK-M3-71): no f32, so no float rule, and no f16
     "coll_floor_bits",
-    "_pad",
+    // the escape rule's lagged n̂ register (payload §1; TASK-M3-12): three f32s, under the float rule
+    "_nhat_lag_0",
+    "_nhat_lag_1",
+    "_nhat_lag_2",
 ];
 const IC_MEMBERS: [&str; 13] = [
     "m0",
@@ -479,6 +481,9 @@ fn simstate_floats(s: &SimStateFTLE) -> Vec<(String, f32)> {
         ("E_0", s.E_0),
         ("Lz_0", s.Lz_0),
         ("closure_min", s.closure_min),
+        ("_nhat_lag_0", s._nhat_lag_0),
+        ("_nhat_lag_1", s._nhat_lag_1),
+        ("_nhat_lag_2", s._nhat_lag_2),
     ] {
         out.push((name.to_owned(), v));
     }

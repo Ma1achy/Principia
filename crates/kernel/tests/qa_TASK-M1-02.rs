@@ -20,7 +20,8 @@
 //! - REQ-PAY-033 (`word_accessor_names_qa_*`): the Rust accessors at lengths 0, 1, 76 and 127, and the reduced
 //!   crossing count equals `fgw_reduced_length` when valid.
 //! - REQ-PAY-025 (`word_buffer_split_qa_*`): the stored Rust word element is exactly 16 B; the stored `SimState`
-//!   variants are 152 / 104 B, aligned to 8, not 16 (payload §0; 144 / 96 B before the collision floor's record,
+//!   variants are 160 / 112 B, aligned to 8, not 16 (payload §0; 152 / 104 B before the escape rule's lagged n̂
+//!   register, three Reals in place of 4 B of padding, TASK-M3-12; 144 / 96 B before the collision floor's record,
 //!   R-973, TASK-M3-71).
 //!
 //! Each check takes the implementation under test as function pointers; its negative control (R-176) runs the same
@@ -722,13 +723,13 @@ fn check_split(word: (usize, usize), ftle: (usize, usize), base: (usize, usize))
     );
     assert_eq!(
         ftle,
-        (152, 8),
-        "SimStateFTLE is not 152 B at align 8 (payload §0)"
+        (160, 8),
+        "SimStateFTLE is not 160 B at align 8 (payload §0)"
     );
     assert_eq!(
         base,
-        (104, 8),
-        "SimStateBase is not 104 B at align 8 (payload §0)"
+        (112, 8),
+        "SimStateBase is not 112 B at align 8 (payload §0)"
     );
 }
 
@@ -753,7 +754,7 @@ struct InlineWord {
 negative_control!(
     word_buffer_split_qa_rust_sizes,
     "a SimState with the word inline must fail",
-    expected = "SimStateFTLE is not 152 B at align 8",
+    expected = "SimStateFTLE is not 160 B at align 8",
     {
         use std::mem::{align_of, size_of};
         check_split(

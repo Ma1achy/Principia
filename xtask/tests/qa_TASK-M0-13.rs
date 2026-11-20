@@ -186,16 +186,16 @@ negative_control!(
 );
 
 /// `SimStateFTLE`'s last members and end. Anchored on `closure_min` and `closure_step_reserved` until the collision
-/// floor's record (R-973; TASK-M3-71) added `coll_floor_bits` and `_pad` after them.
-const CLOSURE_FTLE: &str =
-    "    coll_floor_bits: u32,\n    _pad: array<u32, 1>,\n}\n\n// `SimStateBase`";
+/// floor's record (R-973; TASK-M3-71) added `coll_floor_bits` and `_pad` after them, and on `_pad` until the escape
+/// rule's lagged n̂ register (TASK-M3-12) took its place.
+const CLOSURE_FTLE: &str = "    _nhat_lag_1: f32,\n    _nhat_lag_2: f32,\n}\n\n// `SimStateBase`";
 
 #[test]
 fn qa_lint_wgsl_word_inside_simstate_fires() {
     fires(
         &edit(
             CLOSURE_FTLE,
-            "    coll_floor_bits: u32,\n    _pad: array<u32, 1>,\n    free_group_word: vec4<u32>,\n}\n\n// `SimStateBase`",
+            "    _nhat_lag_1: f32,\n    _nhat_lag_2: f32,\n    free_group_word: vec4<u32>,\n}\n\n// `SimStateBase`",
         ),
         Rule::WordBinding,
     );

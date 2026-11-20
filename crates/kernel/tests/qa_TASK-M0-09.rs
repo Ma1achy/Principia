@@ -11,8 +11,9 @@ use validation::negative_control;
 
 // ---------------------------------------------------------------------------------------------------------------
 // REQ-PAY-008: every offset, from payload §1's field widths (phase 48 B, shadow 48 B, accumulators 16 B, drift refs
-// 8 B, packed words 12 B, total_substeps 4 B, closure 8 B, the collision floor's record 8 B: R-973, TASK-M3-71), and
-// the type of each field.
+// 8 B, packed words 12 B, total_substeps 4 B, closure 8 B, the collision floor's record 4 B: R-973, TASK-M3-71, and
+// the escape rule's lagged n̂ register 12 B, three Reals in place of the record's 4 B of padding: TASK-M3-12), and the
+// type of each field.
 
 /// `(name, width in bytes, Rust type)` of payload §1, in order; the shadow rows only when `ftle`.
 fn section_1(ftle: bool) -> Vec<(&'static str, usize, &'static str)> {
@@ -31,9 +32,11 @@ fn section_1(ftle: bool) -> Vec<(&'static str, usize, &'static str)> {
         ("closure_min", 4, "f32"),
         ("closure_step", 2, "u16"),
         ("_reserved", 2, "u16"),
-        // the collision floor's record and its declared padding (payload §1, R-973; TASK-M3-71)
+        // the collision floor's record (payload §1, R-973; TASK-M3-71), then the lagged n̂ register (TASK-M3-12)
         ("coll_floor_bits", 4, "u32"),
-        ("_pad", 4, "[u32; 1]"),
+        ("_nhat_lag_0", 4, "f32"),
+        ("_nhat_lag_1", 4, "f32"),
+        ("_nhat_lag_2", 4, "f32"),
     ]);
     rows
 }
@@ -80,7 +83,9 @@ fn ftle_actual() -> Vec<(&'static str, usize, &'static str)> {
         closure_step,
         _reserved,
         coll_floor_bits,
-        _pad
+        _nhat_lag_0,
+        _nhat_lag_1,
+        _nhat_lag_2
     )
 }
 
@@ -106,7 +111,9 @@ fn base_actual() -> Vec<(&'static str, usize, &'static str)> {
         closure_step,
         _reserved,
         coll_floor_bits,
-        _pad
+        _nhat_lag_0,
+        _nhat_lag_1,
+        _nhat_lag_2
     )
 }
 
@@ -159,8 +166,9 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-003, REQ-PAY-008: size_of/align_of are 152/8 and 104/8 as generated, with the collision floor's 8 B (R-973;
-// TASK-M3-71; 144/8 and 96/8 before it), and equal the widths the corpus quotes.
+// REQ-PAY-003, REQ-PAY-008: size_of/align_of are 160/8 and 112/8 as generated, with the escape rule's lagged n̂
+// register (three Reals in place of 4 B of padding, TASK-M3-12; 152/8 and 104/8 before it, with the collision floor's
+// 8 B, R-973, TASK-M3-71; 144/8 and 96/8 before that), and equal the widths the corpus quotes.
 
 /// The first number of bytes after `marker` in `text`.
 fn quoted_after(text: &str, marker: &str) -> usize {
@@ -182,8 +190,8 @@ fn doc(path: &str) -> String {
 }
 
 fn check_widths(ftle: (usize, usize), base: (usize, usize)) {
-    assert_eq!(ftle, (152, 8), "SimStateFTLE (size_of, align_of)");
-    assert_eq!(base, (104, 8), "SimStateBase (size_of, align_of)");
+    assert_eq!(ftle, (160, 8), "SimStateFTLE (size_of, align_of)");
+    assert_eq!(base, (112, 8), "SimStateBase (size_of, align_of)");
     let payload = doc("docs/design/principia_dd_simstate_payload.md");
     let render = doc("docs/contracts/principia_render_contract.md");
     let quotes = [

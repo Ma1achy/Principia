@@ -7,8 +7,10 @@
 //! - The record is the largest code over every pair near firing at every state the test reads, until it fires
 //!   (`d_quant < r_coll + floor`, strictly, in squared form), and over the `d_min` state, the state and pair the latch
 //!   holds when the sample is written (so a later, closer `d_min` state replaces the earlier one's code).
-//! - The bring-up mode's f32 writer writes the record's two words, `coll_floor_bits` and `_pad`, as 0 (code 0, "not
-//!   recorded"; colour_composition Appendix A's row), so a reused buffer keeps no stale word.
+//! - The bring-up mode's f32 writer writes the record's word, `coll_floor_bits`, as 0 (code 0, "not recorded";
+//!   colour_composition Appendix A's row), and the three words after it as 0 too, so a reused buffer keeps no stale
+//!   word: they were the record's padding `_pad` and are, since TASK-M3-12, the escape rule's lagged n̂ register
+//!   `_nhat_lag_0..2`, which the pattern leaves at zero.
 //!
 //! Every figure below is exact in f32: the separations are whole multiples of the spacing at their coordinates, and
 //! `r_coll` is a multiple of a power of two whose square f32 holds exactly.
@@ -300,12 +302,14 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// The bring-up mode's f32 writer: the record's two words (colour_composition Appendix A's `coll_floor_bits`, `_pad`
-// row; payload §2, code 0 "not recorded", reserved bits 8–31 zero).
+// The bring-up mode's f32 writer: the record's word (colour_composition Appendix A's `coll_floor_bits` row; payload
+// §2, code 0 "not recorded", reserved bits 8–31 zero) and the lagged n̂ register's three words after it, which stand
+// where the record's `_pad` did (TASK-M3-12).
 // ---------------------------------------------------------------------------------------------------------------
 
-/// The word index, within a sample, of `SimStateFTLE`'s `coll_floor_bits` and of its `_pad`.
-fn record_words() -> [(&'static str, usize); 2] {
+/// The word index, within a sample, of `SimStateFTLE`'s `coll_floor_bits` and of the three members after it, the
+/// lagged n̂ register's.
+fn record_words() -> [(&'static str, usize); 4] {
     use kernel::payload::SimStateFTLE;
     use std::mem::offset_of;
     [
@@ -313,12 +317,15 @@ fn record_words() -> [(&'static str, usize); 2] {
             "coll_floor_bits",
             offset_of!(SimStateFTLE, coll_floor_bits) / 4,
         ),
-        ("_pad", offset_of!(SimStateFTLE, _pad) / 4),
+        ("_nhat_lag_0", offset_of!(SimStateFTLE, _nhat_lag_0) / 4),
+        ("_nhat_lag_1", offset_of!(SimStateFTLE, _nhat_lag_1) / 4),
+        ("_nhat_lag_2", offset_of!(SimStateFTLE, _nhat_lag_2) / 4),
     ]
 }
 
 /// Sample `i`, written by `write` into a buffer of `i + 2` samples filled with `0xA5A5A5A5` (a reused buffer's stale
-/// words): Appendix A's row says both words are 0, so neither may keep the stale word.
+/// words): Appendix A's row says the record's word is 0 and the pattern leaves the register at zero, so none may keep
+/// the stale word.
 fn check_record_words(write: fn(u32, &mut [u32])) {
     let n = kernel::bringup::words_per_sample();
     for i in [0u32, 1, 7, 65537] {
@@ -335,7 +342,7 @@ fn check_record_words(write: fn(u32, &mut [u32])) {
 }
 
 #[test]
-fn qa_bringup_writes_the_records_two_words() {
+fn qa_bringup_writes_the_record_and_the_register_as_zero() {
     check_record_words(kernel::bringup::write_words);
 }
 
@@ -358,7 +365,7 @@ fn skipping(skip: usize, i: u32, out: &mut [u32]) {
 mod skips_floor {
     use super::*;
     negative_control!(
-        qa_bringup_writes_the_records_two_words,
+        qa_bringup_writes_the_record_and_the_register_as_zero,
         "a writer that leaves coll_floor_bits stale",
         expected = "`coll_floor_bits` is 0xa5a5a5a5",
         check_record_words(|i, out| skipping(0, i, out))
@@ -366,13 +373,13 @@ mod skips_floor {
 }
 
 #[cfg(feature = "controls")]
-mod skips_pad {
+mod skips_lag {
     use super::*;
     negative_control!(
-        qa_bringup_writes_the_records_two_words,
-        "a writer that leaves _pad stale",
-        expected = "`_pad` is 0xa5a5a5a5",
-        check_record_words(|i, out| skipping(1, i, out))
+        qa_bringup_writes_the_record_and_the_register_as_zero,
+        "a writer that leaves _nhat_lag_2, the last word of what was _pad's place, stale",
+        expected = "`_nhat_lag_2` is 0xa5a5a5a5",
+        check_record_words(|i, out| skipping(3, i, out))
     );
 }
 
@@ -380,7 +387,7 @@ mod skips_pad {
 mod nonzero_code {
     use super::*;
     negative_control!(
-        qa_bringup_writes_the_records_two_words,
+        qa_bringup_writes_the_record_and_the_register_as_zero,
         "a writer that records a code (18) for the pattern",
         expected = "`coll_floor_bits` is 0x12",
         check_record_words(|i, out| {

@@ -58,7 +58,9 @@ fn sample() -> Sample {
         closure_step: 9,
         _reserved: 0,
         coll_floor_bits: 0,
-        _pad: [0],
+        _nhat_lag_0: 0.0,
+        _nhat_lag_1: 0.0,
+        _nhat_lag_2: 0.0,
         _tail: [],
     };
     let ic = ICDescriptor {

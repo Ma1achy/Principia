@@ -35,7 +35,9 @@ fn ftle_layout<R: PayloadReal>() -> (Vec<(&'static str, usize)>, usize, usize) {
         ("closure_step", offset_of!(S<R>, closure_step)),
         ("_reserved", offset_of!(S<R>, _reserved)),
         ("coll_floor_bits", offset_of!(S<R>, coll_floor_bits)),
-        ("_pad", offset_of!(S<R>, _pad)),
+        ("_nhat_lag_0", offset_of!(S<R>, _nhat_lag_0)),
+        ("_nhat_lag_1", offset_of!(S<R>, _nhat_lag_1)),
+        ("_nhat_lag_2", offset_of!(S<R>, _nhat_lag_2)),
     ];
     (offsets, size_of::<S<R>>(), align_of::<S<R>>())
 }
@@ -60,46 +62,55 @@ fn base_layout<R: PayloadReal>() -> (Vec<(&'static str, usize)>, usize, usize) {
         ("closure_step", offset_of!(S<R>, closure_step)),
         ("_reserved", offset_of!(S<R>, _reserved)),
         ("coll_floor_bits", offset_of!(S<R>, coll_floor_bits)),
-        ("_pad", offset_of!(S<R>, _pad)),
+        ("_nhat_lag_0", offset_of!(S<R>, _nhat_lag_0)),
+        ("_nhat_lag_1", offset_of!(S<R>, _nhat_lag_1)),
+        ("_nhat_lag_2", offset_of!(S<R>, _nhat_lag_2)),
     ];
     (offsets, size_of::<S<R>>(), align_of::<S<R>>())
 }
 
-/// dd_simstate_payload §1's f32 `SimStateFTLE` (the WGSL block: 48 + 48 + 16 + 8 + 12 + 4 + 8 + 8 = 152 B, aligned
-/// to 8, the last 8 B the collision floor's record, `coll_floor_bits` at 144 and `_pad` at 148: §1's recheck on the
-/// collision floor's record, R-973, TASK-M3-71; 144 B before it).
-const FTLE_F32: ([usize; 19], usize, usize) = (
+/// dd_simstate_payload §1's f32 `SimStateFTLE` (the WGSL block: 48 + 48 + 16 + 8 + 12 + 4 + 8 + 4 + 12 = 160 B,
+/// aligned to 8, the last 16 B the collision floor's record, `coll_floor_bits` at 144, §1's recheck on the collision
+/// floor's record, R-973, TASK-M3-71, and the escape rule's lagged n̂ register, `_nhat_lag_0..2` at 148, 152 and 156,
+/// three Reals in place of the 4 B of padding that stood at 148, TASK-M3-12; 152 B before the register, 144 B before
+/// the record).
+const FTLE_F32: ([usize; 21], usize, usize) = (
     [
         0, 24, 48, 72, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 142, 144, 148,
+        152, 156,
     ],
-    152,
+    160,
     8,
 );
-/// §1's f32 `SimStateBase`: the same less the 48 B shadow, 104 B (`coll_floor_bits` at 96, `_pad` at 100; 96 B
-/// before the collision floor's record).
-const BASE_F32: ([usize; 17], usize, usize) = (
+/// §1's f32 `SimStateBase`: the same less the 48 B shadow, 112 B (`coll_floor_bits` at 96, `_nhat_lag_0..2` at 100,
+/// 104 and 108; 104 B before the lagged register, 96 B before the collision floor's record).
+const BASE_F32: ([usize; 19], usize, usize) = (
     [
-        0, 24, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 94, 96, 100,
+        0, 24, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 94, 96, 100, 104, 108,
     ],
-    104,
+    112,
     8,
 );
-/// §1 "The f64 layout", as generated until TASK-M3-41: `SimStateFTLE` at `r` 0 … `_reserved` 266,
-/// `coll_floor_bits` 268, `_pad` 272, `_tail` 276, 280 B, aligned to 8 (272 B before the collision floor's record).
-const FTLE_F64: ([usize; 19], usize, usize) = (
+/// §1 "The f64 layout": `SimStateFTLE` at `r` 0 … `_reserved` 266, `coll_floor_bits` 268, which ends on the 8 B
+/// boundary at 272, so the lagged register's three f64s follow it with no hole, `_nhat_lag_0..2` at 272, 280 and 288,
+/// and the struct ends at 296 B, aligned to 8, with an empty `_tail` (280 B with `_pad` at 272 and a 4 B `_tail` at
+/// 276 before the register; 272 B before the collision floor's record).
+const FTLE_F64: ([usize; 21], usize, usize) = (
     [
         0, 48, 96, 144, 192, 200, 208, 216, 224, 232, 240, 244, 248, 252, 256, 264, 266, 268, 272,
+        280, 288,
     ],
-    280,
+    296,
     8,
 );
-/// §1 "The f64 layout": `SimStateBase` "the same less `r_sh` and `p_sh`, 96 B earlier from `S`"; as generated until
-/// TASK-M3-41, `coll_floor_bits` at 172 and "`_tail` at 180: 184 B" (176 B before the collision floor's record).
-const BASE_F64: ([usize; 17], usize, usize) = (
+/// §1 "The f64 layout": `SimStateBase` "the same less `r_sh` and `p_sh`, 96 B earlier from `S`": `coll_floor_bits`
+/// at 172, `_nhat_lag_0..2` at 176, 184 and 192, 200 B with an empty `_tail` (184 B with a 4 B `_tail` at 180 before
+/// the lagged register; 176 B before the collision floor's record).
+const BASE_F64: ([usize; 19], usize, usize) = (
     [
-        0, 48, 96, 104, 112, 120, 128, 136, 144, 148, 152, 156, 160, 168, 170, 172, 176,
+        0, 48, 96, 104, 112, 120, 128, 136, 144, 148, 152, 156, 160, 168, 170, 172, 176, 184, 192,
     ],
-    184,
+    200,
     8,
 );
 
@@ -126,7 +137,8 @@ fn qa_payload_layouts_at_f32_and_f64_are_payload_s1() {
     check_layout("SimStateBase<f32>", base_layout::<f32>(), BASE_F32);
     check_layout("SimStateFTLE<f64>", ftle_layout::<f64>(), FTLE_F64);
     check_layout("SimStateBase<f64>", base_layout::<f64>(), BASE_F64);
-    // The declared tail sits where §1 puts it: after `_pad`, at 276 and 180 at f64, at the end at f32.
+    // The declared tail sits where §1 puts it: after the lagged register, at the end at both widths (it is empty at
+    // both since the register took the place of `_pad`; it was 4 B at 276 and 180 at f64 before).
     assert_eq!(
         [
             offset_of!(SimStateFTLEOf<f64>, _tail),
@@ -134,7 +146,7 @@ fn qa_payload_layouts_at_f32_and_f64_are_payload_s1() {
             offset_of!(SimStateFTLEOf<f32>, _tail),
             offset_of!(SimStateBaseOf<f32>, _tail),
         ],
-        [276, 180, 152, 104],
+        [296, 200, 160, 112],
         "the declared tail is not where dd_simstate_payload §1 puts it"
     );
 }
@@ -168,7 +180,9 @@ fn ftle_member_sizes<R: PayloadReal>() -> Vec<(&'static str, usize)> {
         ("closure_step", size_of_val(&s.closure_step)),
         ("_reserved", size_of_val(&s._reserved)),
         ("coll_floor_bits", size_of_val(&s.coll_floor_bits)),
-        ("_pad", size_of_val(&s._pad)),
+        ("_nhat_lag_0", size_of_val(&s._nhat_lag_0)),
+        ("_nhat_lag_1", size_of_val(&s._nhat_lag_1)),
+        ("_nhat_lag_2", size_of_val(&s._nhat_lag_2)),
         ("_tail", size_of_val(&s._tail)),
     ]
 }
@@ -193,7 +207,9 @@ fn base_member_sizes<R: PayloadReal>() -> Vec<(&'static str, usize)> {
         ("closure_step", size_of_val(&s.closure_step)),
         ("_reserved", size_of_val(&s._reserved)),
         ("coll_floor_bits", size_of_val(&s.coll_floor_bits)),
-        ("_pad", size_of_val(&s._pad)),
+        ("_nhat_lag_0", size_of_val(&s._nhat_lag_0)),
+        ("_nhat_lag_1", size_of_val(&s._nhat_lag_1)),
+        ("_nhat_lag_2", size_of_val(&s._nhat_lag_2)),
         ("_tail", size_of_val(&s._tail)),
     ]
 }
@@ -210,7 +226,8 @@ fn check_no_implicit_padding(what: &str, members: &[(&'static str, usize)], size
 }
 
 /// R-86 and §1 "Layout at a `Real` of `w` bytes": the tail padding each width needs is declared, `(size − end)/4`
-/// u32s, empty at f32; nothing is implicit at either instantiation.
+/// u32s, empty at f32 and, since the lagged register's three Reals replaced the 4 B `_pad`, empty at f64 too (one u32
+/// there before, TASK-M3-12); nothing is implicit at either instantiation.
 #[test]
 fn qa_payload_padding_is_declared_at_every_instantiation() {
     check_no_implicit_padding(
@@ -241,19 +258,20 @@ fn qa_payload_padding_is_declared_at_every_instantiation() {
     ];
     assert_eq!(
         tails,
-        [0, 0, 4, 4],
-        "the declared tails are not §1's (empty at f32, one u32 at f64)"
+        [0, 0, 0, 0],
+        "the declared tails are not §1's (empty at f32 and at f64)"
     );
 }
 
 negative_control!(
     qa_payload_padding_is_declared_at_every_instantiation,
-    "the f64 members without their declared tail leave 4 B unaccounted",
+    "the f64 members without the lagged register's last Real, the struct's last 8 B, leave them unaccounted (the \
+     declared tail, which this control dropped before TASK-M3-12, is empty at f64 now)",
     expected = "B of implicit padding",
     {
         let members: Vec<_> = ftle_member_sizes::<f64>()
             .into_iter()
-            .filter(|(n, _)| *n != "_tail")
+            .filter(|(n, _)| *n != "_nhat_lag_2")
             .collect();
         check_no_implicit_padding(
             "SimStateFTLE<f64>",
@@ -264,7 +282,7 @@ negative_control!(
 );
 
 /// §1 "Which fields follow `Real`": the members that are f32 in §1's block. Every other member keeps its width.
-const FOLLOWS_REAL: [&str; 11] = [
+const FOLLOWS_REAL: [&str; 14] = [
     "r",
     "p",
     "r_sh",
@@ -276,6 +294,9 @@ const FOLLOWS_REAL: [&str; 11] = [
     "E_0",
     "Lz_0",
     "closure_min",
+    "_nhat_lag_0",
+    "_nhat_lag_1",
+    "_nhat_lag_2",
 ];
 
 /// Between the instantiation `narrow` (`wn`-byte `Real`) and `wide` (`ww`-byte), each member that follows the `Real`
@@ -321,7 +342,7 @@ fn qa_payload_width_follows_the_real() {
         size_of::<f64>(),
     );
     // The fixed-width members hold §1's widths: u32 words and counter, u16 step index and reserve, and the
-    // collision floor's u32 record and u32 padding (R-973).
+    // collision floor's u32 record (R-973).
     let fixed: Vec<(&str, usize)> = ftle_member_sizes::<f64>()
         .into_iter()
         .filter(|(n, _)| !FOLLOWS_REAL.contains(n) && *n != "_tail")
@@ -335,8 +356,7 @@ fn qa_payload_width_follows_the_real() {
             ("total_substeps", 4),
             ("closure_step", 2),
             ("_reserved", 2),
-            ("coll_floor_bits", 4),
-            ("_pad", 4)
+            ("coll_floor_bits", 4)
         ],
         "the fixed-width members are not §1's"
     );
@@ -362,11 +382,12 @@ negative_control!(
     )
 );
 
-/// §1 "Layout at a `Real` of `w` bytes": a struct storing `reals` `Real`s ends, as generated until TASK-M3-41, at
-/// `reals·w + 28` (16 B of u32s, 4 B of u16s and the collision floor's 8 B; `reals·w + 20` before it, R-973) and is
-/// aligned to 8 or to the `Real`'s alignment if greater.
+/// §1 "Layout at a `Real` of `w` bytes": a struct storing `reals` `Real`s, the lagged register's three among them,
+/// ends at `reals·w + 24` (16 B of u32s, 4 B of u16s and the collision floor's 4 B record; `(reals − 3)·w + 28`
+/// before the register replaced the record's 4 B of padding, TASK-M3-12, and `(reals − 3)·w + 20` before the record,
+/// R-973) and is aligned to 8 or to the `Real`'s alignment if greater.
 fn s1_size(reals: usize, w: usize, align: usize) -> usize {
-    (reals * w + 28).next_multiple_of(align.max(8))
+    (reals * w + 24).next_multiple_of(align.max(8))
 }
 
 /// A generated row: the `Real`'s name, size and alignment, and each struct's `(name, size, alignment)` at it.
@@ -381,8 +402,8 @@ type Row = (
 fn check_rows(rows: &[Row]) {
     for (real, w, a, structs) in rows {
         let want = [
-            ("SimStateFTLE", s1_size(31, *w, *a), *a.max(&8)),
-            ("SimStateBase", s1_size(19, *w, *a), *a.max(&8)),
+            ("SimStateFTLE", s1_size(34, *w, *a), *a.max(&8)),
+            ("SimStateBase", s1_size(22, *w, *a), *a.max(&8)),
         ];
         assert_eq!(
             structs, &want,
@@ -392,8 +413,9 @@ fn check_rows(rows: &[Row]) {
 }
 
 /// REQ-PAY-017 / REQ-PAY-087: the generated precision rows are f32, f64 and the DoubleF64 stub (a pair of f64s, 16 B
-/// aligned to 8; §1 "The DoubleF64 stub row"); each row's sizes are §1's function of its width (528 B and 336 B for
-/// DoubleF64 as generated until TASK-M3-41, with the collision floor's 8 B; 520 B and 328 B before it); and the
+/// aligned to 8; §1 "The DoubleF64 stub row"); each row's sizes are §1's function of its width (568 B and 376 B for
+/// DoubleF64 with the lagged register's three Reals in place of 4 B of padding; 528 B and 336 B before it, with the
+/// collision floor's 8 B; 520 B and 328 B before that); and the
 /// instantiated rows are the instantiated types' sizes.
 #[test]
 fn qa_payload_rows_are_the_width_function() {
@@ -417,8 +439,8 @@ fn qa_payload_rows_are_the_width_function() {
     check_rows(&rows);
     assert_eq!(
         (rows[2].3[0].1, rows[2].3[1].1),
-        (528, 336),
-        "the DoubleF64 row is not §1's 528 B and 336 B"
+        (568, 376),
+        "the DoubleF64 row is not §1's 568 B and 376 B"
     );
     assert_eq!(
         [rows[0].3, rows[1].3],

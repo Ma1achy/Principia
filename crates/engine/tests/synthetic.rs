@@ -54,7 +54,10 @@ fn marked_simstate() -> SimStateFTLE {
         closure_step: 0x1234,
         _reserved: 0x5678,
         coll_floor_bits: 0xe5e5_e5e5,
-        _pad: [0xf6f6_f6f6],
+        // the escape rule's lagged n̂ register, three Reals where the 4 B `_pad` stood (TASK-M3-12): a marker each
+        _nhat_lag_0: 36.0,
+        _nhat_lag_1: 37.0,
+        _nhat_lag_2: 38.0,
         ..SimStateFTLE::default()
     }
 }
@@ -80,7 +83,9 @@ fn simstate_marker(member: &str) -> u32 {
         "closure_step" => 0x1234,
         "_reserved" => 0x5678,
         "coll_floor_bits" => 0xe5e5_e5e5,
-        "_pad" => 0xf6f6_f6f6,
+        "_nhat_lag_0" => 36.0f32.to_bits(),
+        "_nhat_lag_1" => 37.0f32.to_bits(),
+        "_nhat_lag_2" => 38.0f32.to_bits(),
         other => panic!("no marker for `{other}`"),
     }
 }
@@ -96,6 +101,7 @@ fn check_layout(s: &Struct, words: &[u32], marker: impl Fn(&str) -> u32) {
         s.name
     );
     for (m, &at) in s.members.iter().zip(&offs) {
+        // `ICDescriptor`'s declared padding holds no value to find
         if m.name == "_pad" {
             continue;
         }

@@ -743,7 +743,8 @@ negative_control!(
 // REQ-PAY-021 / REQ-PAY-031: the ledger stores none of the derived or removed fields.
 
 /// Payload §1's stored members, in order (the u16 pair is the Rust `closure_step`, `_reserved`; the collision floor's
-/// record `coll_floor_bits` last, its `_pad` a reserved member, R-973, TASK-M3-71).
+/// record `coll_floor_bits` last, R-973, TASK-M3-71; the `_`-named members, `_reserved` and the escape rule's lagged
+/// n̂ register `_nhat_lag_0..2`, are [`RESERVED_1`]).
 const PAYLOAD_1: [&str; 17] = [
     "r",
     "p",
@@ -762,6 +763,16 @@ const PAYLOAD_1: [&str; 17] = [
     "closure_min",
     "closure_step",
     "coll_floor_bits",
+];
+
+/// Payload §1's `_`-named members, which no ledger entry reads, with their storage: the u16 pair's `_reserved` and
+/// the escape rule's lagged n̂ register, three `Real`s of march state after `coll_floor_bits` (TASK-M3-12; they took
+/// the place of the declared padding `_pad`).
+const RESERVED_1: [(&str, Storage); 4] = [
+    ("_reserved", Storage::U16),
+    ("_nhat_lag_0", Storage::F32),
+    ("_nhat_lag_1", Storage::F32),
+    ("_nhat_lag_2", Storage::F32),
 ];
 
 /// Derived at read or removed from storage (payload §5's table and "Removed from storage entirely"; REQ-PAY-021,
@@ -814,15 +825,16 @@ fn check_not_stored(structs: &[Struct], entries: &[Entry]) {
             .filter(|n| name == "SimStateFTLE" || (*n != "r_sh" && *n != "p_sh"))
             .collect();
         assert_eq!(got, want, "`{name}` stores other members than payload §1's");
-        for m in &s.members {
-            if m.name.starts_with('_') {
-                assert!(
-                    matches!(m.storage, Storage::U16 | Storage::Pad(_)),
-                    "`{name}.{}` is a reserved member of another storage",
-                    m.name
-                );
-            }
-        }
+        let reserved: Vec<(&str, Storage)> = s
+            .members
+            .iter()
+            .filter(|m| m.name.starts_with('_'))
+            .map(|m| (m.name, m.storage))
+            .collect();
+        assert_eq!(
+            reserved, RESERVED_1,
+            "`{name}` has a reserved member of another name or storage than payload §1's"
+        );
     }
     for e in entries {
         if NOT_STORED.contains(&e.name) {
@@ -1037,8 +1049,8 @@ fn times(t_end: u32, t_dmin: u32) -> u32 {
     (t_end & 0xFFFF) | (t_dmin << 16)
 }
 
-/// The stored words of `s` at `tier`, payload §1's order (closure fields zero; the collision floor's record and its
-/// `_pad` zero, R-973, TASK-M3-71).
+/// The stored words of `s` at `tier`, payload §1's order (closure fields zero; the collision floor's record, R-973,
+/// TASK-M3-71, and the lagged n̂ register's three words, TASK-M3-12, zero).
 fn stored(s: &Sample, tier: Tier) -> Vec<u32> {
     let mut v = Vec::new();
     let pairs = if tier.has_ftle {
@@ -1053,8 +1065,8 @@ fn stored(s: &Sample, tier: Tier) -> Vec<u32> {
     }
     v.extend([s.s, s.theta, s.mean_y, s.c_ty, s.e_0, s.lz_0].map(f32::to_bits));
     v.extend([s.packed_a, s.packed_b, s.times, s.total, 0, 0]);
-    // `coll_floor_bits` and `_pad` (payload §1's collision floor's 8 B)
-    v.extend([0, 0]);
+    // `coll_floor_bits`, then `_nhat_lag_0..2` (payload §1)
+    v.extend([0, 0, 0, 0]);
     v
 }
 

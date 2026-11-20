@@ -70,7 +70,9 @@ fn base(s: &SimStateFTLE) -> SimStateBase {
         closure_step: s.closure_step,
         _reserved: s._reserved,
         coll_floor_bits: s.coll_floor_bits,
-        _pad: s._pad,
+        _nhat_lag_0: s._nhat_lag_0,
+        _nhat_lag_1: s._nhat_lag_1,
+        _nhat_lag_2: s._nhat_lag_2,
         _tail: [],
     }
 }

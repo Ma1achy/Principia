@@ -26,7 +26,10 @@
 //!   `theta_ref_none` (R-397), and today's bytes without the bit and those two entries hash to those two again, so they
 //!   are the one change; then 0x0ed82d06ffed3aec and 0x97ec01cba5af4336 until TASK-M3-11 declared `closure_min`'s
 //!   unset `+∞` its sentinel (RQ-835 (a); payload §1), and today's bytes with that sentinel cleared hash to those two
-//!   again, so it is the one change; an active value is no input of the hash (`qa_m241_hash_*`).
+//!   again, so it is the one change; then 0xa348a30b13584059 and 0xfbaf6327b921761f until the escape rule's lagged
+//!   `n̂` register took the place of `SimState`'s `_pad` (payload §1; TASK-M3-12), and today's bytes with the three
+//!   `_nhat_lag_*` members replaced by that `_pad` hash to those two again, so it is the one change; an active value
+//!   is no input of the hash (`qa_m241_hash_*`).
 //! - REQ-DEC-048 (host side): `Codomain::range` at an active `q_max` = 1.5 gives the momenta `[−1.5, 1.5]` and moves no
 //!   other codomain's bounds (`qa_m241_range_with_active`).
 //!
@@ -62,8 +65,11 @@ use validation::negative_control;
 /// (`qa_m241_hash_departed_is_the_one_change`). Then pinned at 0x0ed8_2d06_ffed_3aec
 /// ([`PRE_SENTINEL_PROVISIONAL_VERSION`]) until TASK-M3-11 declared `closure_min`'s unset `+∞` its sentinel
 /// (RQ-835 (a); payload §1), which today's bytes with it cleared give back
-/// (`qa_m241_hash_closure_sentinel_is_the_one_change`).
-const MEAN_Y_PROVISIONAL_VERSION: u64 = 0xa348_a30b_1358_4059;
+/// (`qa_m241_hash_closure_sentinel_is_the_one_change`). Then pinned at 0xa348_a30b_1358_4059
+/// ([`PRE_LAG_PROVISIONAL_VERSION`]) until the escape rule's lagged `n̂` register replaced `SimState`'s `_pad`
+/// (payload §1; TASK-M3-12), which today's bytes with the `_pad` back give back
+/// (`qa_m241_hash_lag_register_is_the_one_change`).
+const MEAN_Y_PROVISIONAL_VERSION: u64 = 0x4190_fd79_82e0_f199;
 
 /// The hash of the ledger without the declarations' block once REQ-PAY-098 declared `mean_y`'s range [0, 4]
 /// (R-426; TASK-M3-13): the one change to the hashed entries since [`MEAN_Y_PROVISIONAL_VERSION`], which reverting it
@@ -72,8 +78,15 @@ const MEAN_Y_PROVISIONAL_VERSION: u64 = 0xa348_a30b_1358_4059;
 /// ([`PRE_REGISTER_DECLARED_VERSION`]) until TASK-M3-71 hashed its three register entries, and at
 /// 0xccdd_707a_a771_cf86 ([`PRE_DEPARTED_DECLARED_VERSION`]) until TASK-M3-11's departed bit and pole-reference
 /// entries, and at 0x97ec_01cb_a5af_4336 ([`PRE_SENTINEL_DECLARED_VERSION`]) until TASK-M3-11's `closure_min`
-/// sentinel, for the reasons at [`MEAN_Y_PROVISIONAL_VERSION`].
-const MEAN_Y_DECLARED_VERSION: u64 = 0xfbaf_6327_b921_761f;
+/// sentinel, and at 0xfbaf_6327_b921_761f ([`PRE_LAG_DECLARED_VERSION`]) until TASK-M3-12's lagged `n̂` register, for
+/// the reasons at [`MEAN_Y_PROVISIONAL_VERSION`].
+const MEAN_Y_DECLARED_VERSION: u64 = 0xf974_859f_765e_5b5f;
+
+/// [`MEAN_Y_PROVISIONAL_VERSION`] before the lagged `n̂` register replaced `SimState`'s `_pad` (TASK-M3-12).
+const PRE_LAG_PROVISIONAL_VERSION: u64 = 0xa348_a30b_1358_4059;
+
+/// [`MEAN_Y_DECLARED_VERSION`] before the lagged `n̂` register replaced `SimState`'s `_pad` (TASK-M3-12).
+const PRE_LAG_DECLARED_VERSION: u64 = 0xfbaf_6327_b921_761f;
 
 /// [`MEAN_Y_PROVISIONAL_VERSION`] before TASK-M3-11 declared `closure_min`'s unset `+∞` its sentinel (RQ-835 (a)).
 const PRE_SENTINEL_PROVISIONAL_VERSION: u64 = 0x0ed8_2d06_ffed_3aec;
@@ -717,17 +730,50 @@ fn clear_closure_sentinel(l: &mut ledger::schema::Ledger) {
     e.sentinel = None;
 }
 
-/// The bytes before the declarations' block with `closure_min`'s sentinel cleared (TASK-M3-11's last change).
+/// The escape rule's lagged `n̂` register, three `Real`s after `coll_floor_bits` in `SimState`'s two variants (payload
+/// §1; TASK-M3-12).
+const LAG_MEMBERS: [&str; 3] = ["_nhat_lag_0", "_nhat_lag_1", "_nhat_lag_2"];
+
+/// `s` with the lagged `n̂` register taken out of `SimState`'s two variants and the 4 B of declared padding it
+/// replaced, `_pad`, back in its place, as the structs were before TASK-M3-12. A struct without the register is left
+/// as it is, so the strips below compose.
+fn without_lag_members(mut s: Vec<ledger::schema::Struct>) -> Vec<ledger::schema::Struct> {
+    for st in s.iter_mut().filter(|st| st.buffer == Some("SimState")) {
+        let Some(at) = st.members.iter().position(|m| m.name == LAG_MEMBERS[0]) else {
+            continue;
+        };
+        let names: Vec<&str> = st.members[at..].iter().map(|m| m.name).collect();
+        assert_eq!(
+            names, LAG_MEMBERS,
+            "`{}` does not end with the lagged register's three members (lag members)",
+            st.name
+        );
+        st.members.truncate(at);
+        st.members.push(ledger::schema::Member {
+            name: "_pad",
+            storage: ledger::schema::Storage::Pad(1),
+        });
+    }
+    s
+}
+
+/// The bytes before the declarations' block without TASK-M3-12's lagged `n̂` register, `_pad` in its place.
+fn without_lag_register(l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
+    before_block_with(l, without_lag_members(s))
+}
+
+/// The bytes before the declarations' block without the lagged `n̂` register and with `closure_min`'s sentinel
+/// cleared (TASK-M3-11's last change).
 fn without_closure_sentinel(
     mut l: ledger::schema::Ledger,
     s: Vec<ledger::schema::Struct>,
 ) -> Vec<u8> {
     clear_closure_sentinel(&mut l);
-    before_block_with(l, s)
+    without_lag_register(l, s)
 }
 
-/// The bytes before the declarations' block without TASK-M3-11's changes to the hashed bytes: `closure_min`'s
-/// sentinel cleared (RQ-835 (a)), no `departed` entry, `packed_a`'s reserved span bits 10–15 again (payload §2;
+/// The bytes before the declarations' block without the lagged `n̂` register (TASK-M3-12) and without TASK-M3-11's
+/// changes to the hashed bytes: `closure_min`'s sentinel cleared (RQ-835 (a)), no `departed` entry, `packed_a`'s reserved span bits 10–15 again (payload §2;
 /// R-545), and the register's hashed block of today's ten entries replaced by the eight TASK-M3-71 left, without
 /// `θ̃`'s pole-reference entries (§3.8; R-397).
 fn without_departed(mut l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
@@ -750,21 +796,23 @@ fn without_departed(mut l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct
         .chain(FLOOR_CONSTANTS.iter())
         .copied()
         .collect();
-    replace_register_block(before_block_with(l, s), &today, &then, "ten")
+    replace_register_block(without_lag_register(l, s), &today, &then, "ten")
 }
 
 /// The bytes before the declarations' block of a ledger and its structs, with or without a change.
 type Strip = fn(ledger::schema::Ledger, Vec<ledger::schema::Struct>) -> Vec<u8>;
 
 /// The bytes without TASK-M3-71's collision floor's record (payload §1, §2; R-973): no `coll_floor` entry, no
-/// `coll_floor_bits` word, neither `coll_floor_bits` nor `_pad` in `SimState`'s two variants, and none of the
-/// record's three register entries in the register's hashed block (§3.8).
+/// `coll_floor_bits` word, neither `coll_floor_bits` nor `_pad` in `SimState`'s two variants (the `_pad` the lagged
+/// `n̂` register has since replaced, put back first), and none of the record's three register entries in the
+/// register's hashed block (§3.8).
 fn without_floor_record(
     mut l: ledger::schema::Ledger,
-    mut s: Vec<ledger::schema::Struct>,
+    s: Vec<ledger::schema::Struct>,
 ) -> Vec<u8> {
     l.entries.retain(|e| e.name != Some("coll_floor"));
     l.words.retain(|w| w.name != "coll_floor_bits");
+    let mut s = without_lag_members(s);
     for st in s.iter_mut().filter(|st| st.buffer == Some("SimState")) {
         st.members
             .retain(|m| m.name != "coll_floor_bits" && m.name != "_pad");
@@ -873,7 +921,7 @@ negative_control!(
 
 /// TASK-M3-11's `closure_min` sentinel, its unset `+∞` (RQ-835 (a); payload §1), is the one change to the hashed bytes
 /// since [`PRE_SENTINEL_DECLARED_VERSION`]: cleared, today's ledger hashes to the pins before it, so
-/// [`MEAN_Y_DECLARED_VERSION`] and [`MEAN_Y_PROVISIONAL_VERSION`] follow from it alone (added by qa for TASK-M3-11).
+/// [`PRE_LAG_DECLARED_VERSION`] and [`PRE_LAG_PROVISIONAL_VERSION`] follow from it alone (added by qa for TASK-M3-11).
 fn check_closure_sentinel(strip: Strip) {
     check_strip(
         strip,
@@ -892,7 +940,32 @@ negative_control!(
     qa_m241_hash_closure_sentinel_is_the_one_change,
     "today's bytes, closure_min's sentinel kept, are not the pins before it, so the sentinel is hashed",
     expected = "(closure sentinel)",
-    check_closure_sentinel(before_block_with)
+    check_closure_sentinel(without_lag_register)
+);
+
+/// The escape rule's lagged `n̂` register (payload §1; TASK-M3-12), three `Real` members where `SimState`'s 4 B of
+/// declared padding stood, is the one change to the hashed bytes since [`PRE_LAG_DECLARED_VERSION`]: with `_pad` back
+/// in its place, today's ledger hashes to the pins before it, so [`MEAN_Y_DECLARED_VERSION`] and
+/// [`MEAN_Y_PROVISIONAL_VERSION`] follow from it alone.
+fn check_lag_register(strip: Strip) {
+    check_strip(
+        strip,
+        PRE_LAG_PROVISIONAL_VERSION,
+        PRE_LAG_DECLARED_VERSION,
+        "without the lagged register (lag)",
+    );
+}
+
+#[test]
+fn qa_m241_hash_lag_register_is_the_one_change() {
+    check_lag_register(without_lag_register);
+}
+
+negative_control!(
+    qa_m241_hash_lag_register_is_the_one_change,
+    "today's bytes, the lagged register kept, are not the pins before it, so its members are hashed",
+    expected = "(lag)",
+    check_lag_register(before_block_with)
 );
 
 // ── REQ-DEC-048, host side: the codomain's bounds at the active value ───────────────────────────────────────────
