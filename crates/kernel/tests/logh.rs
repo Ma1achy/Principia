@@ -27,8 +27,11 @@
 //!   latched finite) and exhausted apart. Controls: the finiteness test removed, and a budget that does not bind.
 
 use kernel::driver::advance::Cadence;
+use kernel::occupant::euler::Euler;
 use kernel::occupant::kdk::Kdk;
 use kernel::occupant::rk4::Rk4;
+use kernel::occupant::yoshida4::Yoshida4;
+use kernel::occupant::yoshida6::Yoshida6;
 use kernel::occupant::{Geom, State};
 use kernel::physics::PairGeom;
 use kernel::regularisation::az::{AzReal, End, ExplicitTest};
@@ -651,6 +654,42 @@ fn reversibility_at<R: P>() {
         );
         assert!(!c.flag, "{rk4}'s profile says step-reversible");
     }
+    // The pairs written after the leapfrog's (the criterion, written before their first run: the register's, as
+    // above): the leapfrog composed, logH × Yoshida-4 and × Yoshida-6, reads reversible in each time mode and its
+    // profile says so; Euler on the same state reads not reversible and its profile says not.
+    for (mode, y4, y6, euler) in [
+        (
+            LogHMode::LogH,
+            "logH × Yoshida-4",
+            "logH × Yoshida-6",
+            "logH × Euler",
+        ),
+        (
+            LogHMode::Ttl,
+            "logH-TTL × Yoshida-4",
+            "logH-TTL × Yoshida-6",
+            "logH-TTL × Euler",
+        ),
+    ] {
+        for m in [
+            measure::<R, Yoshida4>(y4, mode),
+            measure::<R, Yoshida6>(y6, mode),
+        ] {
+            check_reversible(&m, R::edge());
+            assert!(m.flag, "{}'s profile does not say step-reversible", m.name);
+        }
+        let c = measure::<R, Euler>(euler, mode);
+        println!(
+            "logh_step_reversible at {}: {}: dt/τ {:.3e}, residual {:.3e} ε",
+            c.precision, c.name, c.ratio, c.residual
+        );
+        assert!(
+            c.residual > tol,
+            "{euler} reads reversible: {:.3e} ε",
+            c.residual
+        );
+        assert!(!c.flag, "{euler}'s profile says step-reversible");
+    }
 }
 
 #[test]
@@ -814,12 +853,20 @@ fn figure_eight_runs<S: LhStepper>(name: &str, eta: f64, tols: (f64, f64)) {
 ///   within `1e-8`.
 /// - The leapfrog at `η = 0.002` (`dt ≈ 4·10⁻⁴`, a second-order phase error of order `(ω dt)²·ωT/24 ≈ 10⁻⁶`): closure
 ///   within `1e-3`, energy within `1e-5`.
+/// - The leapfrog composed, Yoshida-4 and Yoshida-6, at RK4's `η = 0.005` (fourth and sixth order, no worse than
+///   RK4's): RK4's criteria, closure within `1e-5`, energy within `1e-8`.
+/// - Euler at `η = 0.0005` (first order, `dt ≈ 10⁻⁴`, an energy error growing as `dt` over the period): closure
+///   within `1e-1`, energy within `1e-2`. Loose: what the arm guards is that the march lands on each of its 32
+///   boundaries, the clock bitwise.
 ///
 /// A clock running twice as fast leaves the state at `T/2`, where the bodies are mirrored, a miss of order 1.
 #[test]
 fn logh_march_figure_eight() {
     figure_eight_runs::<Rk4>("RK4", 0.005, (1e-8, 1e-5));
     figure_eight_runs::<Kdk>("KDK", 0.002, (1e-5, 1e-3));
+    figure_eight_runs::<Yoshida4>("Yoshida-4", 0.005, (1e-8, 1e-5));
+    figure_eight_runs::<Yoshida6>("Yoshida-6", 0.005, (1e-8, 1e-5));
+    figure_eight_runs::<Euler>("Euler", 0.0005, (1e-2, 1e-1));
 }
 
 negative_control!(
@@ -987,6 +1034,9 @@ fn check_clamped_lands<S: LhStepper>() {
 fn logh_clamped_step_lands() {
     check_clamped_lands::<Kdk>();
     check_clamped_lands::<Rk4>();
+    check_clamped_lands::<Euler>();
+    check_clamped_lands::<Yoshida4>();
+    check_clamped_lands::<Yoshida6>();
 }
 
 negative_control!(
