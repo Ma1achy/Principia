@@ -134,19 +134,64 @@ pub const HEGGIE_KDK_WARNING: &str =
     "Heggie's Hamiltonian is not separable, so a leapfrog step is first order here \
      and can diverge (figure-eight: order about 1, diverged within 100 orbits).";
 
-/// The pair table: a [`Status`] per [`Choice`] (row) and stepper (column).
+/// The warning of Heggie × the generalised (Störmer–Verlet) leapfrog, the table's note 4: the design's measurement,
+/// kept as its record. That stepper is not built and is no column of the table.
+pub const GENERALISED_LEAPFROG_WARNING: &str =
+    "does not keep Heggie's Eq. (9); the energy breaks once its residual reaches ~2e-2";
+
+/// The pair table: a [`Status`] and an evidence line per [`Choice`] (row) and stepper (column), and the table's note
+/// 4, the one pair recorded that is not of the built steppers.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PairTable {
     cells: [[Status; 5]; 6],
+    evidence: [[&'static str; 5]; 6],
+    generalised_leapfrog: Status,
 }
 
 impl PairTable {
-    /// A table with no pair measured.
+    /// A table with no pair measured, no evidence and no note 4.
     #[inline]
     pub const fn not_measured() -> Self {
         PairTable {
             cells: [[Status::NotMeasured; 5]; 6],
+            evidence: [[""; 5]; 6],
+            generalised_leapfrog: Status::NotMeasured,
         }
+    }
+
+    /// The table with the cell of `stepper` under `regularisation` set to `status`, with `evidence`, the line that
+    /// states what was measured (or why nothing was).
+    #[inline]
+    pub const fn measured(
+        mut self,
+        stepper: Selection,
+        regularisation: Choice,
+        status: Status,
+        evidence: &'static str,
+    ) -> Self {
+        self.cells[regularisation.row()][column(stepper)] = status;
+        self.evidence[regularisation.row()][column(stepper)] = evidence;
+        self
+    }
+
+    /// The evidence line of the cell of `stepper` under `regularisation`: what was measured, or why nothing was.
+    #[inline]
+    pub const fn evidence(&self, stepper: Selection, regularisation: Choice) -> &'static str {
+        self.evidence[regularisation.row()][column(stepper)]
+    }
+
+    /// The table with its note 4, Heggie × the generalised leapfrog, set to `status`.
+    #[inline]
+    pub const fn with_generalised_leapfrog(mut self, status: Status) -> Self {
+        self.generalised_leapfrog = status;
+        self
+    }
+
+    /// The table's note 4: the status of Heggie × the generalised (Störmer–Verlet) leapfrog, a pair of a stepper that
+    /// is not built, recorded from the design's measurement.
+    #[inline]
+    pub const fn generalised_leapfrog(&self) -> Status {
+        self.generalised_leapfrog
     }
 
     /// The table with the cell of `stepper` under `regularisation` set to `status`.
@@ -181,6 +226,9 @@ impl PairTable {
             .with(rk4, Choice::Heggie(HeggieTime::Eq20), Status::MeasuredGood)
             .with(kdk, Choice::Heggie(HeggieTime::Eq22), bad)
             .with(rk4, Choice::Heggie(HeggieTime::Eq22), Status::MeasuredGood)
+            .with_generalised_leapfrog(Status::MeasuredBad {
+                warning: GENERALISED_LEAPFROG_WARNING,
+            })
     }
 }
 

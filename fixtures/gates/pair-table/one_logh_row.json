@@ -1,0 +1,5 @@
+{
+  "description": "control: the kernel's table with one row for logH, whose two time modes need two",
+  "table": "one-logh-row",
+  "expected": "fail"
+}

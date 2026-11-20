@@ -1,0 +1,5 @@
+{
+  "description": "control: the kernel's table without note 4's warning (Heggie × the generalised leapfrog)",
+  "table": "no-note-4",
+  "expected": "fail"
+}

@@ -1060,7 +1060,25 @@ expression for the rate by which a step advances `t` and for the rate the step c
 - **logH × RK4**: the classical step `s + (h/6)(k₁ + 2k₂ + 2k₃ + k₄)` on the whole state `(r, p, t, W)` with the
   equations of motion above (`step.rs:44-71`). It reads both denominators at the same point, so on the solution it
   sees only `dt = ds/U` (`step.rs:18-22`).
-- logH × Euler, × Yoshida-4 and × Yoshida-6 are not written here and not built.
+- **logH × Yoshida-4 and × Yoshida-6**: the leapfrog above taken in sequence at `wᵢ·h`, in dd_integrator §3.2's
+  drift order, in either mode: Yoshida-4 at `w₁·h`, `w₀·h`, `w₁·h`; Yoshida-6 at `w₃·h`, `w₂·h`, `w₁·h`, `w₀·h`,
+  `w₁·h`, `w₂·h`, `w₃·h`. Each sub-step is the whole leapfrog `X(wᵢh/2) V(wᵢh) X(wᵢh/2)`, the TTL kick's `W` at its
+  own midpoint velocity; **adjacent half-drifts are not merged**, so the half-drift ending one sub-step and the one
+  starting the next are two moves of the positions (in exact arithmetic one, since a drift's denominator reads `p`
+  and `W` only; in floating point not the same bits, and the pair is defined bitwise). **The clock is advanced once a
+  step**, by the sub-steps' physical times `Δtᵢ = dt_a + dt_b` summed in the order taken, `t += ((Δt₁ + Δt₂) + Δt₃)`
+  and so on to `Δt₇`: the middle sub-steps run backwards (`w₀ < 0`), so a clock advanced sub-step by sub-step would
+  pass a boundary and return, and a clamped step would lose its last ulp as the leapfrog's two half-drifts did.
+  Three and seven force evaluations a step; fourth and sixth order; time-symmetric, each being a symmetric
+  composition of a symmetric step.
+- **logH × Euler**: the explicit step `s + h·F(s)` on the whole state `(r, p, t, W)` with the equations of motion
+  above, both denominators read at the step's start, in either mode. One force evaluation; first order.
+
+The profiles of these three pairs: Euler's is its form's on a regularised system (order 1, one evaluation, nothing
+else claimed). A Yoshida pair's is the composed leapfrog's: order 4 or 6, 3 or 7 evaluations, `step_reversible` true
+in either mode (measured by dd test 3 on each, `logh_step_reversible`), `symplectic` true in the logH mode alone, as
+the leapfrog's is, a composition of symplectic maps being symplectic, and `run_reversible` false: it is assigned to
+logH-TTL's leapfrog alone, and no test reverses a whole march.
 
 The reference's third arm, the leapfrog under Gragg–Bulirsch–Stoer extrapolation (`gbs.rs`), its untransformed control
 (`LhTime::None`) and its chain coordinates (`chain.rs`) are not transcribed.
@@ -1177,20 +1195,14 @@ at the step `h` the step control gives:
   physics review 5605806092 of PR #277, F5).
 - **RK4 and Euler:** their classical forms on the whole state `(u, p, t)`.
 
-Under logH, whose time transformation is built for a leapfrog, each pair's exact form is written with logH's equations
-and checked as the others are (REQ-INT-097). **TASK-M3-39 writes them here**, each pair in each of logH's time modes, from
-logH's equations once TASK-M3-75 has transcribed them (R-160, REQ-INT-084, which covers logH's own equations, time
-transformations and step control, not its pairs), physics-reviewed before merge (applied per R-369, qa review 5607548278
-of PR #277, Q1). *Was:* "when they are transcribed (R-160, REQ-INT-084)", which named no writer for the pair forms. *Was (13 Nov 2026, TASK-M3-08 split,
-applied per R-369):* "once TASK-M3-08 has transcribed them"; logH's pairs are RQ-809's.
-
-*13 Nov 2026 (R-993, RQ-809 (a)):* under logH, the pair logH × KDK is logH's own leapfrog, the reference's
-drift–kick–drift with `W` at the midpoint velocity in TTL mode, in each time mode, not the generic kick–drift–kick above;
-logH × RK4 is classical RK4 on `(r, v, t, W)`. logH × Euler, × Yoshida-4 and × Yoshida-6 are TASK-M3-39's to write, as
-above, and REQ-INT-006's every-pair test runs them once it writes them. Until then those three are selectable and not
-defined: the pair is selected with no refusal, and its occupant type fails to build, as a stepper with no form on a
-regularised system does. The every-pair test (`regularisation_default_pairs`) runs the 24 pairs that are defined and
-lists these 6 (three steppers in each of logH's two modes).
+Under logH, whose time transformation is built for a leapfrog, each pair's exact form is written with logH's
+equations (§ "logH and TTL: the equations, the time transformations, the map and the step control (transcribed)", "The
+steps") and checked as the others are, each in each of logH's two time modes: **logH × KDK** is logH's own leapfrog,
+the reference's drift–kick–drift with `W` at the midpoint velocity in TTL mode, not the generic kick–drift–kick above;
+**logH × Yoshida-4 and × Yoshida-6** are that leapfrog taken in sequence at `wᵢ·h` in dd_integrator §3.2's drift
+order, adjacent half-drifts not merged, the clock advanced once by the sub-steps' summed time; **logH × RK4 and
+× Euler** are the classical steps on the whole state `(r, p, t, W)`. Every one of the 30 pairs is built and runs
+through the seam (the every-pair test, `regularisation_default_pairs`).
 
 The explicit composition is not symplectic on a non-separable Hamiltonian, so the composed occupant's profile is the
 pair's, not the stepper's row in Part 2: `symplectic` false for these pairs, and `step_reversible` dd test 3's
@@ -1200,6 +1212,39 @@ occupant, if one is wanted, is an implicit stepper and gets its own row in the t
 **Which pairs work, as measured (R-561).** Each pair is measured good, measured bad or not measured; only a measured-bad
 pair carries the warning. A status changes only by a measurement, recorded here with its evidence; the criterion for
 "measured not to work" is a definition (R-72, REQ-INT-099).
+
+**The criterion for "measured not to work".** It decides one cell, a pair under one time transformation, from one
+measurement, the design's (the gap sweep's §1 and its probe), taken by `cargo xtask gate pair-table` through the
+kernel's own steps:
+
+- **The fixture.** The figure-eight, registered once at `t = 0` under the regularisation and time transformation of
+  the cell (Aarseth–Zare with the reference body its rule picks at `t = 0`, held), marched at a **fixed fictitious
+  step with no step control**: no sync grid, no re-registration, no landing. `τ_end` is the fictitious length of one
+  period, found by that regularisation's RK4 at the fixed step `1e-4` until the clock reaches the period, rounded to
+  the nearest 1/64.
+- **Order.** The state error at `τ_end`, the largest component difference over the whole regularised state, the
+  clock included, against RK4 at `τ_end/16384`, on the halving ladder `h = τ_end/64, /128, /256, /512, /1024`. The
+  fitted order is `log₂(e_first/e_last)/(n − 1)` over the rungs kept. A rung is kept, counting from the coarsest,
+  while its error is finite and at least 100 times the reference's self-difference (RK4 at `τ_end/16384` against RK4
+  at `τ_end/8192`); the fit stops at the first rung that is not, since an error at the reference's own error measures
+  the reference. With fewer than two rungs kept the order is not resolved, and decides nothing.
+- **Energy.** The regularised energy (Part 1, "The regularised energies, defined") after every step of a march of
+  `100·τ_end` at `h = τ_end/128`: the largest `|E − E₀|/|E₀|`.
+
+A cell is **measured bad** when either holds, and **measured good** otherwise:
+
+1. the largest energy error over the 100 orbits is not below `1e-2` (so an energy that is not finite is bad);
+2. the fitted order, where resolved, is not at least `0.5`: the error does not fall when the step is halved.
+
+`1e-2` is the design's own mark for a broken energy: its probe records the first step whose `|ΔE/E|` is not below
+it. A pair's order alone does not make it bad unless the pair fails to converge: Heggie × KDK's measured order,
+about 1, is the order the explicit composition has on a non-separable system, and Euler's is 1 by construction; what
+makes Heggie × KDK bad is that its energy diverges. Applied to the design's measurements the criterion reads Heggie ×
+RK4 good (order 3.99; energy `5e-7` to `3e-6`) and Heggie × KDK bad (order 0.8–1.2; energy to `1e78` and beyond). The
+bounds were written before the gate's first run and are not fitted to it. A measured-good pair is good **on this
+fixture at this step**: the figure-eight has no close approach, so the verdict says the stepper integrates the
+regularised equations stably, not that the pair passes a collision. The gate fails when the kernel's table
+(`kernel::regularisation::pairs`) or the table below differs from the measured verdicts.
 
 **One cell per pair and time transformation.** A regularisation with more than one time transformation (Heggie's Eq. 20
 and Eq. 22, R-161; logH's logH and TTL modes, R-162) has a row for each, since each is selectable and is measured on its

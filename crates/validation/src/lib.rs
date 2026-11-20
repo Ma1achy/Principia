@@ -29,6 +29,7 @@ pub mod logh;
 pub mod measure;
 pub mod nsub_bucket;
 pub mod oklab;
+pub mod pair_table;
 pub mod paths;
 pub mod projection_parity;
 pub mod prop;

@@ -1,0 +1,5 @@
+{
+  "description": "control: the kernel's table with Heggie (Eq. 22) × KDK measured bad and its warning empty",
+  "table": "empty-warning",
+  "expected": "fail"
+}

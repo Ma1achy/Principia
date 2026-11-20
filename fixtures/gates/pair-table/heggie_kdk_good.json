@@ -1,0 +1,5 @@
+{
+  "description": "control: the kernel's table with Heggie (Eq. 22) × KDK marked measured good",
+  "table": "heggie-kdk-good",
+  "expected": "fail"
+}
