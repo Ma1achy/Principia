@@ -23,6 +23,16 @@
 //!   [`ORBITS`]`·τ_end` at `h = τ_end/`[`ENERGY_DIVISIONS`]: its largest value, its last, and the orbit at which it
 //!   first was not below the bound.
 //!
+//! - **The form's order, beside the criterion** ([`Cell::form_order`]). Where a pair's error over a whole orbit is of
+//!   order 1 the one-orbit ladder is not in its asymptotic range, and its slope is not the order of the pair's form.
+//!   So the order a pair's profile states is read on a second, short ladder: the same state error over the horizon
+//!   `τ_end/`[`SHORT_HORIZON`], at `16, 32, 64, 128, 256` steps ([`SHORT_LADDER`]), against RK4 at
+//!   [`SHORT_REFERENCE`] steps, a rung kept by the same rule. Where the short ladder does not resolve an order (a
+//!   high-order pair's error there is at the reference's), the one-orbit order is read. It enters no verdict.
+//! - **Aarseth–Zare's other arms** ([`az_arms`]), printed and deciding nothing: Aarseth–Zare × RK4 with the reference
+//!   body held at 256 and 512 steps an orbit, and at 128 with the reference body re-chosen by its rule after every
+//!   step. They show what the held-reference verdict is made of.
+//!
 //! **The criterion** ([`verdict`]), deciding one cell, a pair under one time transformation, and combining nothing
 //! across time transformations. A cell is **measured bad** when either holds, and **measured good** otherwise:
 //!
@@ -91,6 +101,15 @@ pub const ENERGY_BOUND: f64 = 1e-2;
 /// The criterion's order floor: a resolved fitted order that is not at least it reads bad.
 pub const ORDER_FLOOR: f64 = 0.5;
 
+/// The short ladder's horizon is `τ_end` over this.
+pub const SHORT_HORIZON: f64 = 64.0;
+
+/// The short ladder: the number of steps over its horizon at each rung.
+pub const SHORT_LADDER: [f64; 5] = [16.0, 32.0, 64.0, 128.0, 256.0];
+
+/// The short ladder's RK4 reference takes this many steps over its horizon.
+pub const SHORT_REFERENCE: f64 = 4096.0;
+
 /// The most steps the period search may take: twenty times the most any regularisation here needs. A guard against
 /// a clock that never reaches the period, not a calibration.
 const PERIOD_SEARCH_CAP: usize = 10_000_000;
@@ -108,6 +127,10 @@ pub struct Cell {
     pub kept: usize,
     /// The fitted order over the kept rungs; `None` where fewer than two are kept.
     pub order: Option<f64>,
+    /// The state error over the short horizon at each rung of [`SHORT_LADDER`].
+    pub short_errors: [f64; 5],
+    /// The fitted order over the short ladder's kept rungs; `None` where fewer than two are kept.
+    pub short_order: Option<f64>,
     /// The order the pair's composed profile states.
     pub profile_order: u32,
     /// The flow evaluations a step takes, by the pair's composed profile.
@@ -120,6 +143,14 @@ pub struct Cell {
     pub broke_at: Option<f64>,
     /// The physical time the energy run's clock reached.
     pub t_reached: f64,
+}
+
+impl Cell {
+    /// The order of the pair's form, as measured: the short ladder's where it resolves one, the one-orbit ladder's
+    /// otherwise (the module's note).
+    pub fn form_order(&self) -> Option<f64> {
+        self.short_order.or(self.order)
+    }
 }
 
 /// One row's measurement: a regularisation under one time transformation.
@@ -267,7 +298,23 @@ impl<Q: Copy, P: Copy> System<'_, Q, P> {
         ));
         let reference_difference = difference(&reference, &coarser);
         let e0 = (self.energy)(&self.q, &self.p);
+        let short = tau_end / SHORT_HORIZON;
+        let short_reference =
+            flat(self.march(RK4, short / SHORT_REFERENCE, SHORT_REFERENCE as usize));
+        let short_coarser = flat(self.march(
+            RK4,
+            2.0 * short / SHORT_REFERENCE,
+            (SHORT_REFERENCE / 2.0) as usize,
+        ));
+        let short_floor = RESOLVED_FACTOR * difference(&short_reference, &short_coarser);
         let cells = STEPPERS.map(|stepper| {
+            let short_errors = SHORT_LADDER.map(|n| {
+                difference(
+                    &flat(self.march(stepper, short / n, n as usize)),
+                    &short_reference,
+                )
+            });
+            let (_, short_order) = fit(&short_errors, short_floor);
             let errors = LADDER.map(|n| {
                 difference(
                     &flat(self.march(stepper, tau_end / n, n as usize)),
@@ -297,6 +344,8 @@ impl<Q: Copy, P: Copy> System<'_, Q, P> {
                 errors,
                 kept,
                 order,
+                short_errors,
+                short_order,
                 profile_order: profile.order,
                 profile_evals: profile.force_evals,
                 energy_max,
@@ -424,6 +473,66 @@ pub fn measure(choice: Choice) -> Result<Row, String> {
             .measure(choice, period)
         }
     }
+}
+
+/// One of Aarseth–Zare × RK4's other arms: what it is, the largest energy error over its run, the orbit at which the
+/// error first was not below [`ENERGY_BOUND`], and the physical time reached.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AzArm {
+    /// What the arm is.
+    pub what: String,
+    /// The largest `|E − E₀|/|E₀|`; NaN once any step's energy is not a number.
+    pub energy_max: f64,
+    /// The orbit (fictitious time over `τ_end`) at which the energy error first was not below the bound.
+    pub broke_at: Option<f64>,
+    /// The physical time reached.
+    pub t_reached: f64,
+}
+
+/// Aarseth–Zare × RK4's other arms on the figure-eight over `100·τ_end`, `tau_end` the Aarseth–Zare row's (the
+/// module's note): the reference body held at `τ_end/256` and `τ_end/512`, and at `τ_end/128` with the reference
+/// body re-chosen by Aarseth–Zare's rule after every step (the state re-registered, which also re-freezes `E`; the
+/// physical time is summed across the registrations). They decide no cell.
+pub fn az_arms(tau_end: f64) -> Result<Vec<AzArm>, String> {
+    let (s0, _) = fixture()?;
+    let tiny = reference_tiny::<f64>();
+    let arm = |divisions: f64, rechosen: bool| {
+        let (mut system, mut q, mut p) = az::register(&s0, tiny);
+        let e0 = system.energy(&q, &p);
+        let h = tau_end / divisions;
+        let (mut energy_max, mut broke_at, mut t) = (0.0f64, None, 0.0f64);
+        for k in 0..(ORBITS * divisions) as usize {
+            let before = q.t;
+            (q, p) = <Rk4 as AzStepper>::regularised_step(&system, &q, &p, h);
+            t += q.t - before;
+            let e = ((system.energy(&q, &p) - e0) / e0.abs()).abs();
+            energy_max = if e.is_nan() || energy_max.is_nan() {
+                f64::NAN
+            } else {
+                energy_max.max(e)
+            };
+            if broke_at.is_none() && verdict_of(None, e).is_bad() {
+                broke_at = Some((k + 1) as f64 / divisions);
+            }
+            if rechosen {
+                (system, q, p) = az::register(&system.image(&q, &p), tiny);
+            }
+        }
+        AzArm {
+            what: format!(
+                "RK4, the reference body {}, h = τ_end/{divisions}",
+                if rechosen {
+                    "re-chosen by the rule after every step"
+                } else {
+                    "held"
+                }
+            ),
+            energy_max,
+            broke_at,
+            t_reached: t,
+        }
+    };
+    Ok(vec![arm(256.0, false), arm(512.0, false), arm(128.0, true)])
 }
 
 /// The regularised rows, in the table's order: every row but `none`.
@@ -724,9 +833,9 @@ pub fn report(rows: &[Row]) -> String {
     for row in rows {
         out.push_str(&format!(
             "\n## {}\n\nτ for one period {:.4}, τ_end {}; the reference's self-difference {:.3e}\n\n\
-             | stepper | error at τ_end/64, /128, /256, /512, /1024 | rungs kept | order | profile's order, \
-             evaluations | max \\|ΔE/E₀\\| | last | bound over max | first not below the bound (orbit) | t reached \
-             | verdict |\n|---|---|---|---|---|---|---|---|---|---|---|\n",
+             | stepper | error at τ_end/64, /128, /256, /512, /1024 | rungs kept | order | short ladder's order | \
+             profile's order, evaluations | max \\|ΔE/E₀\\| | last | bound over max | first not below the bound \
+             (orbit) | t reached | verdict |\n|---|---|---|---|---|---|---|---|---|---|---|---|\n",
             label(row.choice),
             row.tau_period,
             row.tau_end,
@@ -736,11 +845,13 @@ pub fn report(rows: &[Row]) -> String {
             let errors: Vec<String> = cell.errors.iter().map(|e| format!("{e:.3e}")).collect();
             let v = verdict(cell);
             out.push_str(&format!(
-                "| {} | {} | {} | {} | {}, {} | {:.3e} | {:.3e} | {:.3e} | {} | {:.2} | {} |\n",
+                "| {} | {} | {} | {} | {} | {}, {} | {:.3e} | {:.3e} | {:.3e} | {} | {} | {} |\n",
                 stepper_name(cell.stepper),
                 errors.join(", "),
                 cell.kept,
                 cell.order
+                    .map_or("not resolved".to_owned(), |o| format!("{o:.2}")),
+                cell.short_order
                     .map_or("not resolved".to_owned(), |o| format!("{o:.2}")),
                 cell.profile_order,
                 cell.profile_evals,
@@ -749,15 +860,45 @@ pub fn report(rows: &[Row]) -> String {
                 ENERGY_BOUND / cell.energy_max,
                 cell.broke_at
                     .map_or("never".to_owned(), |o| format!("{o:.2}")),
-                cell.t_reached,
+                time(cell.t_reached),
                 match &v {
                     Measured::Good => "**measured good**".to_owned(),
                     Measured::Bad(why) => format!("**measured bad**: {why}"),
                 }
             ));
         }
+        if row.choice == Choice::AarsethZare {
+            out.push_str(
+                "\nAarseth–Zare × RK4's other arms, over 100·τ_end; they decide no cell:\n\n| arm | max \\|ΔE/E₀\\| | \
+                 first not below the bound (orbit) | t reached |\n|---|---|---|---|\n",
+            );
+            match az_arms(row.tau_end) {
+                Ok(arms) => {
+                    for arm in arms {
+                        out.push_str(&format!(
+                            "| {} | {:.3e} | {} | {} |\n",
+                            arm.what,
+                            arm.energy_max,
+                            arm.broke_at
+                                .map_or("never".to_owned(), |o| format!("{o:.2}")),
+                            time(arm.t_reached)
+                        ));
+                    }
+                }
+                Err(e) => out.push_str(&format!("not measured: {e}\n")),
+            }
+        }
     }
     out
+}
+
+/// A physical time as the report prints it: to two places, or in exponent form where it is not an orbit's scale.
+fn time(t: f64) -> String {
+    if t.abs() < 1e6 {
+        format!("{t:.2}")
+    } else {
+        format!("{t:.3e}")
+    }
 }
 
 // ── The gate ───────────────────────────────────────────────────────────────────────────────────────────────────

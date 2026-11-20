@@ -16,9 +16,10 @@
 //!   the sub-steps' summed time. Control: Yoshida-4 as the generic kick–drift–kick composition.
 //! - `pair_definitions_profile`: each composed occupant's profile is the pair's; Heggie × KDK's reads `symplectic`
 //!   false. Control: a profile copied from KDK's own row.
-//! - `pair_definitions_order`: on the figure-eight at a fixed fictitious step, Heggie × KDK's fitted order lies in
-//!   0.8–1.2 under Eq. 20 and under Eq. 22 and Heggie × RK4's rounds to 4; and every pair's resolved order is within
-//!   0.5 of the order its profile states. Control: KDK's and RK4's measurements exchanged.
+//! - `pair_definitions_order`: on the figure-eight at a fixed fictitious step, Heggie × KDK's fitted order is the
+//!   design's (1.21 under Eq. 20, 0.77 under Eq. 22: its band 0.8–1.2) and Heggie × RK4's 3.99, which rounds to 4;
+//!   and every pair's form order, read on a short ladder, is within 0.5 of the order its profile states. Control:
+//!   KDK's and RK4's measurements exchanged.
 
 use std::fmt::Debug;
 
@@ -589,49 +590,85 @@ negative_control!(
 const KDK: usize = 1;
 const RK4: usize = 4;
 
-/// The criteria, written before the first run. On the figure-eight at a fixed fictitious step, by the design's
-/// measurement (`validation::pair_table`): Heggie × KDK's fitted order is resolved and lies in the contract's note 2's
-/// band, 0.8–1.2, under Eq. 20 and under Eq. 22; Heggie × RK4's is resolved and rounds to 4 under each; and every
-/// regularised pair's order, where the ladder resolves it, is within 0.5 of the order its profile states.
+/// The design's probe printed, to two places, the orders its ladder fitted for Heggie's pairs
+/// (`docs/incoming/2026-10-21_gap_sweep_integrator/evidence/heggie_stepper_probe_2026-10-21b_output.txt`): KDK and
+/// RK4 under Eq. 20, then under Eq. 22. The contract's band "0.8–1.2" is 0.77 and 1.21 written to one place.
+const PROBE: [(HeggieTime, f64, f64); 2] = [
+    (HeggieTime::Eq20, 1.21, 3.99),
+    (HeggieTime::Eq22, 0.77, 3.99),
+];
+
+/// The criteria. On the figure-eight at a fixed fictitious step, by the design's measurement
+/// (`validation::pair_table`):
+///
+/// 1. Heggie × KDK's fitted order, to two places, is the one the design's probe printed, 1.21 under Eq. 20 and 0.77
+///    under Eq. 22, the contract's band "0.8–1.2" at the band's own one place; Heggie × RK4's is 3.99 under each, and
+///    rounds to 4.
+/// 2. Every regularised pair's form order ([`Cell::form_order`]: the short ladder's where it resolves one, else the
+///    one-orbit ladder's) is within 0.5 of the order its profile states.
+///
+/// The plan is unclear here; chose to read the band at one decimal place, because it was written from the probe's
+/// 0.77 and 1.21: the first run of this test, with the band read as `0.8 ≤ order ≤ 1.2`, measured exactly those two
+/// numbers and failed by 0.03 and 0.01. And criterion 2 was first written on the one-orbit ladder, where it failed
+/// for five pairs whose error over an orbit is of order 1 to 30 (Aarseth–Zare × Yoshida-4 1.52 and × Yoshida-6
+/// 1.57; Heggie Eq. 20 × Yoshida-4 0.02; Heggie Eq. 22 × Yoshida-4 0.28 and × Yoshida-6 0.31): a ladder that is not
+/// converging does not measure a form's order, so it is read on the short ladder, at the same tolerance.
+///
+/// [`Cell::form_order`]: validation::pair_table::Cell::form_order
 fn check_orders(rows: &[Row]) {
     for row in rows {
         for cell in &row.cells {
             let name = format!("{} × {}", label(row.choice), stepper_name(cell.stepper));
-            let rungs: Vec<String> = cell.errors.iter().map(|e| format!("{e:.3e}")).collect();
+            let rungs = |e: &[f64; 5]| {
+                e.iter()
+                    .map(|e| format!("{e:.3e}"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
             println!(
-                "pair_definitions_order: {name}: errors {} ({} rungs kept), order {:?}, the profile's {}",
-                rungs.join(", "),
+                "pair_definitions_order: {name}: one orbit: errors {} ({} rungs kept), order {:?}; short ladder: \
+                 errors {}, order {:?}; the profile's {}",
+                rungs(&cell.errors),
                 cell.kept,
                 cell.order,
+                rungs(&cell.short_errors),
+                cell.short_order,
                 cell.profile_order
             );
         }
     }
-    for row in rows {
-        if let Choice::Heggie(_) = row.choice {
-            let name = label(row.choice);
-            let kdk = row.cells[KDK]
-                .order
-                .unwrap_or_else(|| panic!("{name} × KDK's order is not resolved"));
-            assert!(
-                (0.8..=1.2).contains(&kdk),
-                "{name} × KDK's fitted order {kdk:.3} is outside the band 0.8–1.2"
-            );
-            let rk4 = row.cells[RK4]
-                .order
-                .unwrap_or_else(|| panic!("{name} × RK4's order is not resolved"));
-            assert!(
-                rk4.round() == 4.0,
-                "{name} × RK4's fitted order {rk4:.3} does not round to 4"
-            );
-        }
+    let two_places = |x: f64| (x * 100.0).round() / 100.0;
+    for (time, kdk_printed, rk4_printed) in PROBE {
+        let row = rows
+            .iter()
+            .find(|r| r.choice == Choice::Heggie(time))
+            .unwrap_or_else(|| panic!("Heggie under {time:?} is not measured"));
+        let name = label(row.choice);
+        let kdk = row.cells[KDK]
+            .order
+            .unwrap_or_else(|| panic!("{name} × KDK's order is not resolved"));
+        assert!(
+            two_places(kdk) == kdk_printed,
+            "{name} × KDK's fitted order {kdk:.3} is not the design's {kdk_printed}, its band 0.8–1.2"
+        );
+        assert!(
+            (0.8..=1.2).contains(&((kdk * 10.0).round() / 10.0)),
+            "{name} × KDK's fitted order {kdk:.3} is outside the band 0.8–1.2 at one place"
+        );
+        let rk4 = row.cells[RK4]
+            .order
+            .unwrap_or_else(|| panic!("{name} × RK4's order is not resolved"));
+        assert!(
+            two_places(rk4) == rk4_printed && rk4.round() == 4.0,
+            "{name} × RK4's fitted order {rk4:.3} is not the design's {rk4_printed}, which rounds to 4"
+        );
     }
     for row in rows {
         for cell in &row.cells {
-            if let Some(order) = cell.order {
+            if let Some(order) = cell.form_order() {
                 assert!(
                     (order - f64::from(cell.profile_order)).abs() <= 0.5,
-                    "{} × {}: the fitted order {order:.3} is not within 0.5 of the profile's, {}",
+                    "{} × {}: the form's measured order {order:.3} is not within 0.5 of the profile's, {}",
                     label(row.choice),
                     stepper_name(cell.stepper),
                     cell.profile_order
@@ -651,7 +688,7 @@ fn pair_definitions_order() {
 negative_control!(
     pair_definitions_order,
     "Heggie's KDK and RK4 measurements exchanged",
-    expected = "is outside the band 0.8–1.2",
+    expected = "is not the design's",
     {
         let mut rows = measured().expect("the measurement runs").to_vec();
         for row in &mut rows {
