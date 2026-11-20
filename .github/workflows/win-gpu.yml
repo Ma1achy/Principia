@@ -85,17 +85,32 @@
 # The compile cache (TASK-M0-77, the owner's order of 17 Nov 2026), on the PC's own disk and never uploaded. Each job
 # that compiles on the runner itself, `win-vulkan` and `win-self-check` (the WSL2 jobs compile inside the distro, which
 # keeps its own cache), sets in its own env RUSTC_WRAPPER=sccache, SCCACHE_DIR=E:\ci-cache\sccache and a 50G cap, and
-# CARGO_TARGET_DIR=E:\ci-cache\target\<its job id>, outside the checkout, so `clean: true` never empties it, and no two
-# jobs share one: each job's folder is its own, and the runner's one slot runs one job at a time. CARGO_HOME stays on E:
-# from `.env`, so the registry isn't downloaded again. sccache must be on the runner's PATH, in E:\runner-tools\cargo\bin,
-# installed by hand (TASK-M0-77's PR gives the steps): a job never downloads it, and fails naming that step if it isn't
-# there. Its stats are zeroed before the job's first build and shown at its end, pass or fail, the hit rate in the log,
-# whenever that zeroing step succeeded, so a failed guard or free-space check isn't followed by a second error.
+# CARGO_TARGET_DIR=E:\ci-cache\target\<its job id>-m89 (the suffix is TASK-M0-89's: see below), outside the checkout,
+# so `clean: true` never empties it, and no two jobs share one: each job's folder is its own, and the runner's one slot
+# runs one job at a time. CARGO_HOME stays on E: from `.env`, so the registry isn't downloaded again. sccache must be on
+# the runner's PATH, in E:\runner-tools\cargo\bin, installed by hand (TASK-M0-77's PR gives the steps): a job never
+# downloads it, and fails naming that step if it isn't there. Its stats are zeroed before the job's first build and
+# shown at its end, pass or fail, the hit rate in the log, whenever that zeroing step succeeded, so a failed guard or
+# free-space check isn't followed by a second error.
 # `win-vulkan` takes the kernel from E:\ci-cache\kernel\<source hash> when that entry is whole (PRIN_KERNEL_CACHE in
 # its env; the hash is `kernel-src-hash`'s, the one the hosted jobs and the Mac use). Before its checkout each such
 # job fails if E: has under 30 GB free. On Sunday (UTC) the scheduled `win-vulkan` trims the cache after its suites
 # (`ci-cache-trim`): the target folders, oldest last write first, until they hold 150 GB at most, never its own, and the
 # kernel entries to the newest 5; sccache trims its own folder to its cap.
+# Warm rebuilds (TASK-M0-89, the orchestrator's call under R-1033): the guard's empty index has `clean: true` delete and
+# write every tracked file, so each source gets a mtime newer than cargo's fingerprints and unchanged crates rebuild. In
+# each job that compiles, the step after the checkout, `.github/scripts/mtime_restore.ps1`, fetched at the job's own
+# commit as the guard is and never run from the checkout, gives each tracked file whose git blob id is the one the job's
+# last run recorded the mtime it had then, and keeps a changed or new file's fresh mtime. Its record is the file beside
+# the job's target folder, <CARGO_TARGET_DIR>.mtimes.txt, outside the checkout; the trim removes folders only, so it
+# never removes a record, and a record whose folder it removed restores mtimes onto an empty target: a full build. A
+# missing, unreadable or malformed record, or a changed `.gitattributes`, restores nothing: a full rebuild, never a
+# stale one. A run that builds without the step can't leave a record that no longer describes its target: the jobs
+# that carry the step build into target folders named `<job id>-m89`, which no workflow before this step names, so a
+# dispatch of an older ref builds into the old `<job id>` folders, and a revert of the step reverts the folder's name
+# with it. One case stays open: a build step that rewrites a tracked file with other bytes after the restore leaves a
+# record naming the checkout's blob for those bytes; no step does so. It changes no test and no suite;
+# `xtask/tests/ci_win_mtimes.rs` holds it.
 # The persistent compile cache on E:\ci-cache is safe only because this runner runs trusted code: push to `main`,
 # schedule and workflow_dispatch, with the repository and actor guard on every job; if that guard ever loosens, the
 # persistent cache goes too.
@@ -281,7 +296,7 @@ jobs:
       RUSTC_WRAPPER: sccache
       SCCACHE_DIR: E:\ci-cache\sccache
       SCCACHE_CACHE_SIZE: 50G
-      CARGO_TARGET_DIR: E:\ci-cache\target\win-vulkan
+      CARGO_TARGET_DIR: E:\ci-cache\target\win-vulkan-m89
       PRIN_KERNEL_CACHE: E:\ci-cache\kernel
     steps:
       - name: Self-check, first step
@@ -312,6 +327,15 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
           clean: true
+      # Unchanged sources get back the mtimes the last run left them (TASK-M0-89): see the header.
+      - name: Unchanged sources keep their mtimes
+        timeout-minutes: 5
+        run: |
+          $restore = Join-Path $env:RUNNER_TEMP 'mtime_restore.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $restore -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/mtime_restore.ps1" } catch { "could not fetch the mtime restore: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $restore $env:GITHUB_WORKSPACE "${env:CARGO_TARGET_DIR}.mtimes.txt"
+          exit $LASTEXITCODE
       - name: Record the commit, driver and toolchain
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
@@ -598,7 +622,7 @@ jobs:
       RUSTC_WRAPPER: sccache
       SCCACHE_DIR: E:\ci-cache\sccache
       SCCACHE_CACHE_SIZE: 50G
-      CARGO_TARGET_DIR: E:\ci-cache\target\win-self-check
+      CARGO_TARGET_DIR: E:\ci-cache\target\win-self-check-m89
     steps:
       - name: Self-check, first step
         run: |
@@ -628,6 +652,15 @@ jobs:
           persist-credentials: false
           fetch-depth: 1
           clean: true
+      # Unchanged sources get back the mtimes the last run left them (TASK-M0-89): see the header.
+      - name: Unchanged sources keep their mtimes
+        timeout-minutes: 5
+        run: |
+          $restore = Join-Path $env:RUNNER_TEMP 'mtime_restore.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $restore -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/mtime_restore.ps1" } catch { "could not fetch the mtime restore: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $restore $env:GITHUB_WORKSPACE "${env:CARGO_TARGET_DIR}.mtimes.txt"
+          exit $LASTEXITCODE
       - name: Record the commit, driver and toolchain
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
