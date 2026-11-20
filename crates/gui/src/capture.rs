@@ -370,11 +370,35 @@ pub fn shoot_case(
     (shot, compass)
 }
 
+/// The app on the real engine's `side`, its canvas `canvas`, rendered on `screen` (`02_stain` in Stain mode) after two
+/// frames with no input: the capture of the real app as it opens. The real side takes no steps yet: its engine has no
+/// warning to raise and no plane edit applies to its field, which is computed once.
+pub fn shoot_real(side: crate::side::RealSide, canvas: &dyn Canvas, screen: &str) -> Shot {
+    let mut app = crate::app::App::new(side, FORMAT);
+    if screen == "02_stain" {
+        app.view.mode = engine::contract::view_ui::Mode::Stain;
+    }
+    let mut headless = Headless::new(SIZE, PIXELS_PER_POINT);
+    for _ in 0..2 {
+        let _ = headless.frame(&mut app, Vec::new());
+    }
+    render_frame_on(canvas, &mut app, &mut headless)
+}
+
 /// Runs one more frame of `app` on `headless` (at [`SIZE`] and [`PIXELS_PER_POINT`]) with no input and renders it
 /// through `canvas`'s device: the capture of the app as it stands.
 pub fn render_frame(
     canvas: &crate::mock::canvas::MockCanvas,
     app: &mut crate::app::App<crate::side::MockSide>,
+    headless: &mut Headless,
+) -> Shot {
+    render_frame_on(canvas, app, headless)
+}
+
+/// [`render_frame`] on any engine side, through `canvas`'s device.
+pub fn render_frame_on<S: crate::side::EngineSide>(
+    canvas: &dyn Canvas,
+    app: &mut crate::app::App<S>,
     headless: &mut Headless,
 ) -> Shot {
     let output = headless.frame(app, Vec::new());

@@ -8,7 +8,7 @@ use eframe::egui_wgpu::WgpuSetup;
 
 use super::support::rejects;
 use crate::cli::mock::{dispatch, WINDOW_SIZE};
-use crate::cli::{run, NO_ENGINE};
+use crate::cli::run;
 
 /// What a runner was given: the app name, the window's title and size, and whether its wgpu setup is the engine
 /// side's existing device.
@@ -124,14 +124,15 @@ fn cli_capture_writes_the_capture_and_names() {
     std::fs::remove_dir_all(&out).expect("scratch removed");
 }
 
-/// Without the `mock` feature the binary says the real engine has no window yet; with it, `run` dispatches.
+/// `run` dispatches on the mock with the `mock` feature and on the real engine without it, each refusing a command it
+/// does not run, the real engine before computing any field.
 #[test]
-fn cli_run_without_the_mock_feature_says_so() {
+fn cli_run_refuses_an_unknown_command() {
     let outcome = run(&["bogus".to_owned()]);
     if cfg!(feature = "mock") {
         assert!(outcome.expect_err("bogus ran").contains("unknown command"));
     } else {
-        assert_eq!(outcome, Err(NO_ENGINE.to_owned()));
+        assert_eq!(outcome, Err(crate::cli::real::unknown("bogus")));
     }
 }
 
