@@ -224,12 +224,14 @@ fn verdict(fired: bool, body: u32, detail: u32) -> Verdict {
 }
 
 /// The detector's rule with its closure condition dropped: an unbound body fires at once.
+#[cfg(feature = "controls")]
 fn no_closure(s: &State<f64>, _n_lag: [f64; 3], _e_0: f64) -> Verdict {
     let c = escaper(&s.m, &s.r, &s.p);
     verdict(c.found, c.body, c.body)
 }
 
 /// The detector's rule with its energy condition dropped: a settled shape fires.
+#[cfg(feature = "controls")]
 fn no_energy(s: &State<f64>, n_lag: [f64; 3], _e_0: f64) -> Verdict {
     verdict(settled(shape(s.r, s.m), n_lag), 2, 2)
 }
@@ -247,6 +249,7 @@ fn mass_of(s: &State<f64>, x: &escape::Relative<f64>) -> f64 {
 }
 
 /// The detector's rule on the pair-mass `E_rel`: the farthest body, unbound under it, once settled.
+#[cfg(feature = "controls")]
 fn pair_mass_only(s: &State<f64>, n_lag: [f64; 3], _e_0: f64) -> Verdict {
     let body = escaper(&s.m, &s.r, &s.p).body;
     let fired = settled(shape(s.r, s.m), n_lag) && e_rel_pair_mass(s)[body as usize] > 0.0;
@@ -255,6 +258,7 @@ fn pair_mass_only(s: &State<f64>, n_lag: [f64; 3], _e_0: f64) -> Verdict {
 
 /// The detector's rule with the escaper read as the farthest of the bodies that have `E_rel > 0`, any of the three a
 /// candidate.
+#[cfg(feature = "controls")]
 fn any_unbound(s: &State<f64>, n_lag: [f64; 3], _e_0: f64) -> Verdict {
     let rel = relative(&s.m, &s.r, &s.p);
     let body = (0..3)
@@ -266,6 +270,7 @@ fn any_unbound(s: &State<f64>, n_lag: [f64; 3], _e_0: f64) -> Verdict {
 }
 
 /// The detector's rule with the ionisation gate able to fire on its own, where no body has `E_rel > 0`.
+#[cfg(feature = "controls")]
 fn gate_alone(s: &State<f64>, n_lag: [f64; 3], e_0: f64) -> Verdict {
     let own = real(s, n_lag, e_0);
     if !own.fired && settled(shape(s.r, s.m), n_lag) && ionised(&s.m, &s.r, &s.p, e_0) {
@@ -276,6 +281,7 @@ fn gate_alone(s: &State<f64>, n_lag: [f64; 3], e_0: f64) -> Verdict {
 }
 
 /// The detector's rule with the gate's pairwise condition dropped: any escape at `E_0 > 0` is a triple ejection.
+#[cfg(feature = "controls")]
 fn no_pair_condition(s: &State<f64>, n_lag: [f64; 3], e_0: f64) -> Verdict {
     let own = real(s, n_lag, e_0);
     if own.fired && e_0 > 0.0 {
@@ -665,10 +671,13 @@ fn check_two_conditions(rule: Rule) {
     );
 }
 
+/// The escape test's signature: masses, positions, momenta, the lagged shape point and the stored `E_0`.
+type Inputs = fn(&[f64; 3], &[[f64; 2]; 3], &[[f64; 2]; 3], [f64; 3], f64) -> Verdict;
+
 #[test]
 fn escape_two_conditions() {
     // The detector's inputs: the state, the lagged shape point and the stored `E_0`; no `r_esc`, receding or `k_esc`.
-    let _: fn(&[f64; 3], &[[f64; 2]; 3], &[[f64; 2]; 3], [f64; 3], f64) -> Verdict = escape::test;
+    let _: Inputs = escape::test;
     check_two_conditions(real);
 }
 

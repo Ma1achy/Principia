@@ -405,7 +405,9 @@ fn u32_range() -> String {
 /// (`kernel::detect::escape`; Part 7), written with them: the settling threshold `tau` and the window `escape_window`,
 /// each one f64 read at the march's width, neither hashed, since neither gives a stored bit its meaning.
 fn shape_readout() -> String {
-    use crate::constants::{DELTA_DEP, ESCAPE_WINDOW, R_POLE, TAU, THETA_REF_NONE, THETA_REF_STEPS};
+    use crate::constants::{
+        DELTA_DEP, ESCAPE_WINDOW, R_POLE, TAU, THETA_REF_NONE, THETA_REF_STEPS,
+    };
     let steps = THETA_REF_STEPS.number();
     let none = THETA_REF_NONE.number();
     assert!(
