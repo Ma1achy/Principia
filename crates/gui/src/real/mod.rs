@@ -18,6 +18,15 @@ pub fn start() -> (SimConfig, engine::contract::render_state::RenderState) {
     crate::mock::state(0.0)
 }
 
+/// The state every image taken from the app is taken on: [`start`]'s, the chart "z_α × z_β" untilted over its default
+/// window, with the slice centre `z₀` at the origin, every slice offset 0. The capture's view is the owner's choice of
+/// 20 Nov 2026 for every image taken from the app; the app's window still opens on [`start`].
+pub fn capture_view() -> (SimConfig, engine::contract::render_state::RenderState) {
+    let (mut sim, render) = start();
+    sim.plane.z0 = [0.0; 8];
+    (sim, render)
+}
+
 /// The samples across and up of the field the app shows.
 pub const FIELD_SIZE: [usize; 2] = [64, 64];
 

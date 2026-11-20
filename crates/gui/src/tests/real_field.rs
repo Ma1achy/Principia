@@ -1,20 +1,27 @@
 //! The real field in the window: the app on the real engine shows the field `engine::field` computes. A fixed 16 × 16
 //! frame of the start chart has the stored outcome histogram, and the mock's field swapped in for it does not; the
 //! real side's canvas draws each sample's swatch where its field point lies in the figure, the bottom row at the
-//! bottom. Each check also runs on an input it must reject (R-176, through `rejects`).
+//! bottom. The capture shoots the origin slice of z_α × z_β, its field computed from that state. Each check also runs
+//! on an input it must reject (through `rejects`).
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
+use engine::compute::ComputeError;
+use engine::contract::interface::EngineInterface;
 use engine::contract::legend::SWATCHES;
-use engine::field::{Cpu, Field, Outcome};
+use engine::contract::sim_config::{SimConfig, Window};
+use engine::field::{Cpu, Field, FieldBackend, Outcome};
 
 use super::support::rejects;
 use crate::app::App;
 use crate::capture::{render_frame_on, FORMAT, PIXELS_PER_POINT, SIZE};
+use crate::cli::real::open_capture;
+use crate::explore::manifold_view::tilt::Angles;
+use crate::explore::manifold_view::{View, AXES};
 use crate::headless::Headless;
 use crate::mock::field::MockField;
-use crate::real::{compute, start, RealCanvas};
-use crate::side::RealSide;
+use crate::real::{capture_view, compute, start, RealCanvas};
+use crate::side::{EngineSide, RealSide};
 
 /// The fixed frame: the start chart over its window, 16 × 16 samples.
 const FRAME: [usize; 2] = [16, 16];
@@ -132,4 +139,88 @@ fn the_real_canvas_draws_each_sample_where_it_lies() {
     rejects("the field drawn upside down", || {
         check_quadrants(&rgba, &canvas)
     });
+}
+
+/// A backend that integrates nothing: it records each sim key it is asked a field of, and answers all bounded.
+#[derive(Default)]
+struct Recording(Mutex<Vec<SimConfig>>);
+
+impl FieldBackend for Recording {
+    fn field(
+        &self,
+        sim: &SimConfig,
+        _window: Window,
+        size: [usize; 2],
+    ) -> Result<Field, ComputeError> {
+        self.0.lock().expect("the record's lock").push(sim.clone());
+        let bounded = Outcome {
+            state: BOUNDED,
+            detail: 0,
+        };
+        Ok(Field {
+            size,
+            outcomes: vec![bounded; size[0] * size[1]],
+        })
+    }
+}
+
+/// Asserts that `sim` is the origin slice of z_α × z_β: the chart on those two axes at scale 1 over its default
+/// window, `τ₁ = τ₂ = γ = 0`, and every component of `z₀` 0.
+fn check_origin_slice(sim: &SimConfig) {
+    let view = View::read(sim);
+    assert_eq!(
+        (AXES[view.a], AXES[view.b]),
+        ("z_α", "z_β"),
+        "not the chart z_α × z_β"
+    );
+    assert_eq!(
+        (view.tau1, view.tau2, view.gamma),
+        (0.0, 0.0, 0.0),
+        "the plane is tilted or turned"
+    );
+    assert_eq!(view.scale, 1.0, "the plane is zoomed");
+    assert_eq!(sim.chart.window, Window::SQUARE, "not the default window");
+    assert_eq!(sim.plane.z0, [0.0; 8], "a slice offset is not 0");
+}
+
+/// Asserts that the capture's one field was computed from `shown`, the state its app shows, and that `shown` is the
+/// origin slice.
+fn check_capture(computed: &[SimConfig], shown: &SimConfig) {
+    assert_eq!(
+        computed,
+        std::slice::from_ref(shown),
+        "the field was not computed, once, from the state the app shows"
+    );
+    check_origin_slice(shown);
+}
+
+/// The capture's side holds the origin slice of z_α × z_β and its field is computed from that state.
+#[test]
+fn the_capture_shoots_the_origin_slice() {
+    let backend = Recording::default();
+    let (mut side, _canvas) = open_capture(&backend, [1, 1]).expect("the capture's side");
+    let computed = backend.0.lock().expect("the record's lock").clone();
+    let shown = side.engine().snapshot().sim;
+    check_capture(&computed, &shown);
+    assert_eq!(shown, capture_view().0);
+    // The controls: a capture reading the start state, for its field, for its panels, and for both; no field; a tilt.
+    let (opening, _) = start();
+    rejects("a field computed from the start state", || {
+        check_capture(std::slice::from_ref(&opening), &shown)
+    });
+    rejects("an app showing the start state", || {
+        check_capture(&computed, &opening)
+    });
+    rejects("the start state throughout", || {
+        check_capture(std::slice::from_ref(&opening), &opening)
+    });
+    rejects("no field computed", || check_capture(&[], &shown));
+    let mut tilted = shown.clone();
+    let angles = Angles {
+        tau1: 30.0,
+        tau2: 0.0,
+        gamma: 0.0,
+    };
+    (tilted.plane.q1, tilted.plane.q2) = angles.apply(View::read(&shown)).basis();
+    rejects("a tilted plane", || check_origin_slice(&tilted));
 }

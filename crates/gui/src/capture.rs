@@ -371,7 +371,8 @@ pub fn shoot_case(
 }
 
 /// The app on the real engine's `side`, its canvas `canvas`, rendered on `screen` (`02_stain` in Stain mode) after two
-/// frames with no input: the capture of the real app as it opens. The real side takes no steps yet: its engine has no
+/// frames with no input: the capture of the real app on the state `side` holds, the capture's view from the binary
+/// (`crate::cli::real::open_capture`). The real side takes no steps yet: its engine has no
 /// warning to raise and no plane edit applies to its field, which is computed once.
 pub fn shoot_real(side: crate::side::RealSide, canvas: &dyn Canvas, screen: &str) -> Shot {
     let mut app = crate::app::App::new(side, FORMAT);

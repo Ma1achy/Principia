@@ -2,7 +2,8 @@
 //! `eframe` 0.36 window on its wgpu renderer, built from the device and queue the engine side provides (RQ-247,
 //! RQ-251): on the real engine by default, its field computed on the CPU before the window opens ([`real`]); on the
 //! mock with the `mock` feature ([`mock`]). `capture --screen <screen> --steps <steps> --out <dir>` is the headless
-//! capture mode the screenshot runner spawns, on either; the real side takes no steps yet. `--bench
+//! capture mode the screenshot runner spawns, on either; the real side takes no steps yet, and shoots the capture's
+//! view (`crate::real::capture_view`), the origin slice of z_α × z_β, not the start state the window opens on. `--bench
 //! console-open-close` measures the console's frames on the mock (R-463 K4; `crate::bench`). The mock's commands read
 //! `PRIN_MOCK_INVALID`, the mock's invalid-pixel test hook's launch switch (R-467 D8), and refuse a malformed value,
 //! naming it. `PRIN_MEASURE=1` opens the mock's window with the v1 web skeleton's measurement panel beside the figure
@@ -22,12 +23,14 @@ pub fn run(args: &[String]) -> Result<(), String> {
 pub mod real {
     use std::sync::Arc;
 
-    use engine::field::Cpu;
+    use engine::contract::render_state::RenderState;
+    use engine::contract::sim_config::SimConfig;
+    use engine::field::{Cpu, FieldBackend};
 
     use crate::app::{window_title, App};
     use crate::capture;
     use crate::layout::LEAST_WINDOW;
-    use crate::real::{compute, start, RealCanvas, FIELD_SIZE};
+    use crate::real::{capture_view, compute, start, RealCanvas, FIELD_SIZE};
     use crate::settings::Store;
     use crate::side::{EngineSide, RealSide};
 
@@ -52,7 +55,7 @@ pub mod real {
                 if !args.steps.is_empty() {
                     return Err("capture: the real engine takes no steps yet".to_owned());
                 }
-                let (side, canvas) = open()?;
+                let (side, canvas) = open_capture(&Cpu, FIELD_SIZE)?;
                 let shot = capture::shoot_real(side, canvas.as_ref(), &args.screen);
                 capture::write(&shot, &args.out)
             }
@@ -61,13 +64,31 @@ pub mod real {
     }
 
     /// The real side at its start state ([`start`]), its [`FIELD_SIZE`] field computed on the CPU, blocking, and its
-    /// canvas open with the field uploaded.
+    /// canvas open with the field uploaded: what the app's window opens on.
     pub fn open() -> Result<(RealSide, Arc<RealCanvas>), String> {
-        let (sim, render) = start();
-        let [w, h] = FIELD_SIZE;
-        eprintln!("gui: computing the {w}×{h} field on the CPU");
+        open_at(start(), &Cpu, FIELD_SIZE)
+    }
+
+    /// The real side the capture shoots: at the capture's view ([`capture_view`]), not the start state, its field of
+    /// `size` samples computed through `backend` from that view, so the figure and the panels show the one slice.
+    pub fn open_capture(
+        backend: &dyn FieldBackend,
+        size: [usize; 2],
+    ) -> Result<(RealSide, Arc<RealCanvas>), String> {
+        open_at(capture_view(), backend, size)
+    }
+
+    /// The real side at the state `(sim, render)`, the field of `sim` at `size` samples computed through `backend`,
+    /// blocking, and its canvas open with the field uploaded.
+    fn open_at(
+        (sim, render): (SimConfig, RenderState),
+        backend: &dyn FieldBackend,
+        size: [usize; 2],
+    ) -> Result<(RealSide, Arc<RealCanvas>), String> {
+        let [w, h] = size;
+        eprintln!("gui: computing the {w}×{h} field");
         let begun = std::time::Instant::now();
-        let field = compute(&Cpu, &sim, FIELD_SIZE)?;
+        let field = compute(backend, &sim, size)?;
         eprintln!(
             "gui: the field took {:.1} s: {:?}",
             begun.elapsed().as_secs_f64(),
