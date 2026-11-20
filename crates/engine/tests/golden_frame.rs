@@ -23,7 +23,8 @@
 //! ever fails on one platform only, that is a finding about the kernel's determinism: report it, do not loosen this.
 //!
 //! **On a failure** the test says how many pixels differ and where the first is, and writes the frame it computed to
-//! `target/tmp/golden_frame/` (`actual.png`, `actual_histogram.txt`) to be looked at beside the stored one.
+//! `target/tmp/golden_frame/` (`actual.png`, `actual_histogram.txt`; the control's as `control…`) to be looked at beside
+//! the stored one.
 //!
 //! **To regenerate the golden on purpose** (the field's physics or its colours were meant to change):
 //! `PRINCIPIA_BLESS_GOLDEN_FRAME=1 cargo test -p engine --test golden_frame`, then look at the image's diff and commit
@@ -160,8 +161,9 @@ fn write(field: &Field, dir: &Path, names: [&str; 2]) {
 
 /// Asserts that `field` is the golden frame (the module's criterion): its histogram the stored one, line for line, and
 /// its image the stored one, pixel for pixel. Where it is not, the frame is written under `target/tmp/golden_frame/`
-/// and the panic says how the histogram differs, how many pixels differ and where the first is.
-fn check_golden(field: &Field) {
+/// as `<name>.png` and `<name>_histogram.txt`, and the panic says how the histogram differs, how many pixels differ and
+/// where the first is.
+fn check_golden(field: &Field, name: &str) {
     let dir = golden_dir();
     let stored_text = std::fs::read_to_string(dir.join("histogram.txt"))
         .unwrap_or_else(|e| panic!("the stored histogram: {e}: to create it, set {BLESS}=1"));
@@ -182,7 +184,11 @@ fn check_golden(field: &Field) {
     }
 
     let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("golden_frame");
-    write(field, &out, ["actual.png", "actual_histogram.txt"]);
+    write(
+        field,
+        &out,
+        [&format!("{name}.png"), &format!("{name}_histogram.txt")],
+    );
     let mut report = String::from("the frame is not the golden frame.\n");
     if histogram_matches {
         report += "its histogram is the stored one\n";
@@ -213,7 +219,7 @@ fn check_golden(field: &Field) {
         report += "its image is the stored one\n";
     }
     panic!(
-        "{report}the computed frame is in {}; if the change was meant, see {BLESS} in this file",
+        "{report}the computed frame is {name}.png in {}; if the change was meant, see {BLESS} in this file",
         out.display()
     );
 }
@@ -224,12 +230,12 @@ fn the_frame_is_the_golden_frame() {
     if std::env::var_os(BLESS).is_some() {
         write(&field, &golden_dir(), ["frame.png", "histogram.txt"]);
     }
-    check_golden(&field);
+    check_golden(&field, "actual");
 }
 
 negative_control!(
     the_frame_is_the_golden_frame,
     "the same view at half the horizon, before the collisions between t = 2.5 and t = 5",
     expected = "the frame is not the golden frame",
-    check_golden(&frame(HORIZON / 2.0))
+    check_golden(&frame(HORIZON / 2.0), "control")
 );
