@@ -501,7 +501,7 @@
   - TASK-M2-105
 - id: TASK-C2-01
   milestone: C2
-  title: 'The chart comparison pass: every preset against the original app and against prin-rs'
+  title: "The chart comparison pass: every preset beside prin-rs and the original app, for the owner's eye"
   depends_on:
   - TASK-M2-57
   - TASK-M2-108
