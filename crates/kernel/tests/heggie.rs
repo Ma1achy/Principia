@@ -1102,7 +1102,7 @@ negative_control!(
     "the clock-only landing (R-1007's control, re-run under R-1021's `T/8` interval and predictive setting): the \
      clamped step's state kept where it overshoots, the clock set to the boundary over it, whose order must fall and \
      still read as a landing defect",
-    expected = "a landing defect",
+    expected = "heggie_landing_order (the clock-only landing): a landing defect: the order fitted above the round-off floor",
     check_order(false)
 );
 
