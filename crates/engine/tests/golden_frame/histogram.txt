@@ -1,0 +1,7 @@
+# The golden frame's outcome histogram (64 x 64 samples). To regenerate: crates/engine/tests/golden_frame.rs.
+# state detail samples
+bounded 0 3042
+collision 0 378
+collision 1 378
+collision 2 298
+total 4096
