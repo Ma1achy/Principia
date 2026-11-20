@@ -2,7 +2,7 @@
 //! the escaper and ionisation.
 //!
 //! **The rule, two conditions** (Part 7): `ESCAPE ⟺ |Δn̂| over the window < tau AND E_rel > 0`. The shape point has
-//! settled and a body is unbound. There is no receding test, no `r_esc` and no persistence counter: the detector reads
+//! settled and the farthest body is unbound. There is no receding test, no `r_esc` and no persistence counter: the detector reads
 //! the state and the lagged shape point, nothing else ([`Detector::sample`]'s inputs).
 //!
 //! **`E_rel`** ([`relative`], [`e_rel`]): for a candidate body `b`, `E_rel = ½|Δv|² − (M_pair + m_b)/d`, with `Δv` and
@@ -14,14 +14,25 @@
 //! window, 0.4 time units, earlier. The occupant's sampling points are the macro-step boundaries for an unregularised
 //! occupant and the sync boundaries for a regularised one, each `index · quantum` in physical time. The lagged point is
 //! one register, [`Detector::lagged`]: set to `n̂(0)` at `t = 0`, and at the first sampling point at or after each
-//! `k · 0.4` the test reads `|n̂ − n̂_lag|` and the register takes `n̂`. So the window spans 0.4 exactly where the quantum
-//! divides it, and otherwise from one mark's sampling point to the next's, within one quantum of 0.4. Whether a
+//! `k · 0.4` the test reads `|n̂ − n̂_lag|` and the register takes `n̂`. So the window spans from one mark's sampling
+//! point to the next's, within one quantum of 0.4. "At or after" is decided on the two float products, `k · 0.4` and
+//! `index · quantum`: where the quantum is 0.4 over a power of two the products are equal and the window is 0.4
+//! exactly, and where they are equal as decimals but not as floats (a quantum of 0.03 at `t = 1.2`) the mark can fall
+//! one sampling point late. Whether a
 //! sampling point is such a mark is a function of its index and the quantum alone ([`is_mark`]), so a resumed march
 //! needs only the register (`SimState`'s `_nhat_lag_*`, payload §1) to go on as the uncut one. The settling test reads
 //! this register, never `closure_min`, which is a minimum against the IC's shape and a different quantity.
 //!
-//! **The escaper** ([`escaper`]): the body with `E_rel > 0` and the largest `d`, the same `d` as in its `E_rel`; the
-//! lowest index of a tie. It is the escape's `detail`.
+//! **The escaper** ([`escaper`]): the body with the largest `d`, the same `d` as in its `E_rel` and the lowest index
+//! of a tie, and it is a candidate only where its own `E_rel > 0`. It is the escape's `detail`. The plan is unclear
+//! here: "the body with `E_rel > 0` and the largest `d`" also reads as the farthest of the bodies that have
+//! `E_rel > 0`. Chose the farthest body, tested on its own `E_rel`, because under the other reading the energy
+//! condition does not hold back a bound hierarchy: a member of the inner binary moves at the binary's orbital speed
+//! relative to the centre of mass of the other two, which lies about half way to the far body, so its `E_rel` turns
+//! positive with the binary's phase once the third body is a few binary separations away, bound or not (measured on
+//! `fixtures/escape/settled_bound_hierarchy.toml` at `t = 0`: `+0.37` for one binary member, `−0.40` for the other,
+//! `−0.15` for the third body). A body that does escape becomes the farthest, so this reading can only fire later,
+//! never on a different body.
 //!
 //! **Triple ejection** ([`ionised`]) is a classification of a firing the rule has already made, never a second way to
 //! fire: where all three pairwise two-body energies are positive, all three separations are growing and the total
@@ -167,11 +178,7 @@ fn relative_of<R: EscapeReal>(
 /// Each body's relation to the other two, by body index, at masses `m`, positions `r` and momenta `p`. Constant
 /// indices only (gpu_determinism_note rule 5).
 #[inline]
-pub fn relative<R: EscapeReal>(
-    m: &[R; 3],
-    r: &[[R; 2]; 3],
-    p: &[[R; 2]; 3],
-) -> [Relative<R>; 3] {
+pub fn relative<R: EscapeReal>(m: &[R; 3], r: &[[R; 2]; 3], p: &[[R; 2]; 3]) -> [Relative<R>; 3] {
     let b0 = (m[0], r[0], p[0]);
     let b1 = (m[1], r[1], p[1]);
     let b2 = (m[2], r[2], p[2]);
@@ -189,32 +196,33 @@ pub fn e_rel<R: EscapeReal>(m: &[R; 3], r: &[[R; 2]; 3], p: &[[R; 2]; 3]) -> [R;
     [a.e_rel(), b.e_rel(), c.e_rel()]
 }
 
-/// The candidate escaper: whether a body is unbound, and which.
+/// The candidate escaper: the farthest body, and whether it is unbound.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Escaper {
-    /// Whether at least one body has `E_rel > 0`.
+    /// Whether the farthest body has `E_rel > 0`.
     pub found: bool,
-    /// The body with `E_rel > 0` and the largest `d`, the lowest index of a tie; where none is found, 0, which
-    /// nothing reads.
+    /// The body with the largest `d`, the lowest index of a tie.
     pub body: u32,
 }
 
-/// The escaper among the bodies' relations `rel` (the module's note): of the bodies with `E_rel > 0`, the one whose
-/// `d²` is largest, a later body replacing an earlier only where strictly farther. Constant indices only.
+/// The escaper among the bodies' relations `rel` (the module's note): the body whose `d²` is largest, a later body
+/// replacing an earlier only where strictly farther, found where its own `E_rel > 0`. Constant indices only.
 #[inline]
 pub fn escaper_of<R: EscapeReal>(rel: &[Relative<R>; 3]) -> Escaper {
     let [a, b, c] = *rel;
-    let (mut found, mut body, mut far) = (a.unbound(), DETAIL_ESCAPE_BODY_0, a.d2);
-    if b.unbound() && (!found || b.d2 > far) {
-        found = true;
+    let (mut body, mut far) = (DETAIL_ESCAPE_BODY_0, a);
+    if b.d2 > far.d2 {
         body = DETAIL_ESCAPE_BODY_1;
-        far = b.d2;
+        far = b;
     }
-    if c.unbound() && (!found || c.d2 > far) {
-        found = true;
+    if c.d2 > far.d2 {
         body = DETAIL_ESCAPE_BODY_2;
+        far = c;
     }
-    Escaper { found, body }
+    Escaper {
+        found: far.unbound(),
+        body,
+    }
 }
 
 /// The escaper of the state `(m, r, p)`: [`escaper_of`] its bodies' [`relative`] relations.
@@ -263,8 +271,8 @@ pub struct Verdict {
 }
 
 /// The escape test on the state `(m, r, p)` against the lagged shape point `n_lag`, for a trajectory whose stored
-/// initial energy is `e_0` (the module's note): fired where the shape has settled and a body is unbound, its escaper
-/// that body, its `detail` 3 where the ionisation gate holds and the escaper otherwise.
+/// initial energy is `e_0` (the module's note): fired where the shape has settled and the farthest body is unbound,
+/// its escaper that body, its `detail` 3 where the ionisation gate holds and the escaper otherwise.
 #[inline]
 pub fn test<R: EscapeReal>(
     m: &[R; 3],

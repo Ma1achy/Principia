@@ -1,0 +1,21 @@
+# An escape-detector fixture (integrator contract Part 7; plan/tasks/M3/TASK-M3-12.md, "Fixture definitions").
+# Units G = 1. The state is built in the centre-of-mass frame by crates/kernel/tests/escape.rs from these values:
+# "Binary(a)" is bodies 0 and 1 on a circular orbit of separation a about their own centre of mass, relative speed
+# sqrt((m0 + m1)/a); the third body's d and speed are relative to that pair's centre of mass. The window is 0.4 time
+# units and tau the provisional 1e-3. Built from the contract, not transcribed from prin-rs.
+# The ionisation gate sits behind E_rel > 0: on this equilateral family, u^2 = 2.5/side, every pair is unbound and
+# separating and the total energy is positive from t = 0, but E_rel = 0.05625 - 1.2141/r is negative until the side
+# r has grown to 2.158 times its start. The escape fires there, with detail 3, and not at the first window mark.
+name = "gate_behind_e_rel"
+m = [1.0, 1.0, 1.0]
+construction = "equilateral_outward"
+side = 10.0
+speed_squared = 0.25
+pair_energy = 0.0875
+total_energy = 0.075
+run = "marched"
+t_end = 30.0
+fires = true
+fires_side_ratio_after = 2.158
+fires_side_ratio_before = 2.2
+detail = 3
