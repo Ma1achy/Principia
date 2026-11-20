@@ -143,9 +143,9 @@ computed axes. Today's charts are kept as maps. Each piece lands with its contro
 - The figure draws the computed axes: the dual ruler, the edge marks, mixed names (TASK-M8-130)
 - Marking clamped and saturated areas: a toggle, off by default (TASK-M8-131)
 - Last, after every chart task above has merged, and never per chart during C2: the chart comparison pass. For
-  every preset, the chart itself against the original app (Ma1achy/principia-ii), the field against prin-rs's
-  render of the same preset and window (the physics reference; collision regions only until escape detection,
-  TASK-M3-12, lands, then re-run), and a symmetry test with a control where the preset has a symmetry. A
+  every preset, the chart itself against the original app (Ma1achy/principia-ii), the field against prin-rs
+  (Ma1achy/prin-rs, the physics reference) rendering the same preset and window at its production config
+  (collision regions only until escape detection, TASK-M3-12, lands, then re-run), and a symmetry test with a control where the preset has a symmetry. A
   difference is a finding to explain, not a failure to tune away (TASK-C2-01)
 
 ## C3 — Physics you can trust
