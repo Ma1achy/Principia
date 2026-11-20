@@ -42,8 +42,8 @@ as its control".
 - `crates/kernel/tests/heggie.rs` — `heggie_landing_order` and its clock-only control (the clamp on, the secant's and
   the bisection's caps 0), under R-1021's criterion: the fixture on `T/8` sync intervals in place of `T/32`, the
   predictive step limit set not to bind, the η ladder, the floor rule and the bands unchanged, and the control run under
-  the same interval and setting. The test as built and run on #530 is on the local branch `task/TASK-M3-79` at
-  58ee2abef, under TASK-M3-77's first criterion; it is taken up and changed only as R-1021 says. *Was (17 Nov 2026,
+  the same interval and setting. The test, taken up from the one built and run on #530 in the archive repo under TASK-M3-77's first
+  criterion and changed only as R-1021 says, is commit 473388fe1 on `task/TASK-M3-79` in this repo. *Was (17 Nov 2026,
   R-1021):* "under the criterion RQ-823's ruling names." and "it is taken up and changed only as the ruling's
   criterion says."
 - The criterion in the pull request, written before any run and approved by physics before it runs (R-649), and the
