@@ -12,7 +12,7 @@ marked `complete: false`; the results sheet (p50, p95, p99 per scenario and a su
 Quick suite once ("nothing runs unless the user accepts").
 
 ## Touches
-`crates/gui/src/windows/profiler.rs` and a new dialog beside it; the runner from TASK-C8-01, never a second one.
+The Profiler window's code (TASK-M8-28's) and a new dialog beside it; the runner from TASK-C8-01, never a second one.
 
 ## Tests
 The dialog's states and the undo entry, each with a control; Esc's incomplete file; the first-launch prompt shown once.

@@ -27,7 +27,7 @@ The refinement reports the corpus requires: per chart the leaf count, `alpha` di
 - `docs/design/principia_dd_predictability_horizon.md` § "4.2 The horizon is a field, not a constant"
 
 ## Deliverables
-- `crates/engine/src/telemetry/refine_report.rs`: the per-chart report, foreclosed-weight stop breakdown, binding axis in the frame record.
+- `crates/engine/src/telemetry/refine_report.rs`: the per-chart report, foreclosed-weight stop breakdown, binding axis in the frame record, and the past-its-horizon mark per quad.
 - `xtask` bench report template carrying `dp/u` next to `tol/u`.
 - `cargo xtask gate anisotropic-splits` on the standard charts.
 

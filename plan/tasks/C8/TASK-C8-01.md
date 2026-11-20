@@ -5,7 +5,7 @@
 ## Goal
 The benchmark as `docs/design/principia_benchmark.md` describes it, for the command line: a scenario is a file in
 `bench/scenarios/` read by the runner, "Adding one needs no code" (§2); one scenario runner and one registry behind
-`prin profile`, `cargo xtask bench` and the GUI's button (§1); the suite and its hash (§3); the sweep and the Quick,
+`prin profile`, `cargo xtask bench` and the GUI's button (§1); the suite (§3) and its suite hash; the sweep and the Quick,
 Full and Soak modes (§4); `prin bench run [--mode quick|full|soak]`, `show`, `report` and `compare` (§5.2); the result
 file's benchmark block (§6); and `prin bench report FILE`, a Markdown report fixed in structure, with the anomaly list
 and the device-comparison table (§7).
