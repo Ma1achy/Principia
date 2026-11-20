@@ -397,7 +397,7 @@ reason:
 | **none** | Cartesian | — | **the INDEPENDENT control.** Shares no coordinate machinery with the others, which is what let it catch the wedge bug. Prior findings, not controls (R-164): the FTLE–drift Spearman correlation is **+0.305** for leapfrog and **−0.082** for AZ, and AZ's is a null against its shifted control (−0.102; prin-rs `NOTES.md:2077`). No gate rests on them. Keep permanently. |
 | **Aarseth–Zare** | two pairs, reference body from the longest side | **yes, at every sync boundary** | wins on **sustained hierarchy** (`far`: all 65,536 pixels, 0.7–0.9 decades) — precisely because the reference never has to change |
 | **Heggie 1974 (global)** | three relative vectors, symmetric | **no reference body at all** | the general default, stepped with RK4: the default occupant is Heggie × RK4 (R-560; *was:* "the general default."). **31 of 32 cases**, `err>10` (`error_ratio > 10`) 3915 → 74 at prin-rs `8600d45` (the original run at `70cfbc4` gave 3916 → 73; R-165), fixes AZ's worst decile on 100% of pixels. Default time transformation: Eq. 22 at n = 3/2 (R-161) |
-| **logH (algorithmic)** | **none whatsoever** | n/a | time transformation only, no coordinate transformation. The *strongest* form of the no-chart property. Its **TTL time mode (Mikkola–Tanikawa)** is the reversible occupant (R-162): `run_reversible`, the only one, and `step_reversible` as dd test 3 measures it (R-500) |
+| **logH (algorithmic)** | **none whatsoever** | n/a | time transformation only, no coordinate transformation. The *strongest* form of the no-chart property. Its **TTL time mode (Mikkola & Aarseth 2002, as the reference cites it)** is the reversible occupant (R-162): `run_reversible`, the only one, and `step_reversible` as dd test 3 measures it (R-500) |
 
 **Why this axis exists at all — the measured finding it came from.** Doubling the sync-boundary
 **re-registration count** at *fixed step size* moves the drift field by **0.444 decades**, against
@@ -1057,10 +1057,12 @@ of the reference's.
    There is no landing tolerance.
 3. **The entry size.** `ds_entry = η·dt_left/(dt/ds)` at the interval's entry; an entry `dt/ds` that is not positive
    or not finite ends the march not finite (`driver.rs:341-347`).
-4. **Each step's guards** (`driver.rs:350-363`): the explicit finiteness test of the whole state, `W` included; the
-   landing exit `t ≥ dt_left`, with no tolerance; the step budget (Part 6's: the running total of steps since `t = 0`
-   against `max(N_min, step_budget_rate·t_elapsed)`). The two ends are reported apart: not finite, and exhausted. The
-   reference marks an exhausted march not finite too (`driver.rs:359-362`); that is not transcribed.
+4. **Each step's guards** (`driver.rs:350-363`), in the order the kernel tests them, which is Heggie's: the explicit
+   finiteness test of the whole state, `W` included; the step budget (Part 6's: the running total of steps since
+   `t = 0` against `max(N_min, step_budget_rate·t_elapsed)`); the cadence's `done`; then the landing exit
+   `t ≥ dt_left`, with no tolerance. So a step that lands and overruns the budget at once ends exhausted, not landed.
+   The two ends are reported apart: not finite, and exhausted. The reference marks an exhausted march not finite too
+   (`driver.rs:359-362`); that is not transcribed.
 5. **Each step's size** (`driver.rs:365-384`): the floor signal (Part 6: the drift denominator below `TINY`, or either
    denominator not positive); `d = dt/ds`; `ds = min(η·dt_left/d, ds_entry)`, an entry-cap hit counted when
    `η·dt_left/d > ds_entry`; the predictive limit, `ds = lim` where `lim < ds`; then the landing clamp,
@@ -1407,7 +1409,7 @@ false` loudly and nothing downstream quietly assumes otherwise. Note `Gamma` is 
 Mikkola–Tanikawa form is required, not optional."* The pair is still allowed, defined as Part 2b's explicit composition
 and warned of if it is measured not to work (R-561, Part 2b § "Every stepper × regularisation pair runs; the pairs
 measured not to work carry a warning (R-561)"). **A reversible occupant exists: logH's TTL time mode
-(Mikkola–Tanikawa), as prin-rs built it; Aarseth–Zare with Mikkola–Tanikawa isn't required (R-162).**
+(Mikkola & Aarseth 2002, as the reference cites it), as prin-rs built it; Aarseth–Zare with Mikkola–Tanikawa isn't required (R-162).**
 
 ---
 
