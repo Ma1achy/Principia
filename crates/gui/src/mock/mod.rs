@@ -14,6 +14,7 @@
 
 pub mod canvas;
 pub mod clock;
+pub mod field;
 pub mod invalid;
 pub mod legend;
 pub mod profile;
@@ -359,7 +360,7 @@ impl Default for MockEngine {
 /// The mock's initial state: the chart "z_α × z_β" at 01_main.png's `z₀`, unlocked, the horizon [`MOCK_T_MAX`], every
 /// overlay off, no hover, the stain graph 02_stain.png's (`stain`), the other groups empty, the physics kernel and
 /// `t = 0.0` (placeholder content).
-fn state(t: f64) -> (SimConfig, RenderState) {
+pub fn state(t: f64) -> (SimConfig, RenderState) {
     (
         SimConfig {
             chart: Chart {

@@ -129,17 +129,32 @@ impl FigureView {
     }
 }
 
-/// The real engine's data contract, with no figure, no time source and no trace: its frame loop and canvas are
-/// TASK-M8-05's, its telemetry stream TASK-M8-27's and TASK-M8-28's.
+/// The real engine's data contract and, when one is open, its canvas, which shows the field `engine::field` computed
+/// for the sim key it started on (`crate::real`); no time source and no trace: its frame loop is TASK-M8-05's, its
+/// telemetry stream TASK-M8-27's and TASK-M8-28's.
 pub struct RealSide {
     store: StateStore,
+    canvas: Option<Arc<crate::real::RealCanvas>>,
 }
 
 impl RealSide {
-    /// The real engine's state store over the explicit initial state.
+    /// The real engine's state store over the explicit initial state, with no canvas and so no figure.
     pub fn new(sim: SimConfig, render: RenderState) -> Self {
         Self {
             store: StateStore::new(sim, render),
+            canvas: None,
+        }
+    }
+
+    /// The real engine's state store over the explicit initial state, drawing through `canvas`.
+    pub fn with_canvas(
+        sim: SimConfig,
+        render: RenderState,
+        canvas: Arc<crate::real::RealCanvas>,
+    ) -> Self {
+        Self {
+            store: StateStore::new(sim, render),
+            canvas: Some(canvas),
         }
     }
 }
@@ -155,16 +170,28 @@ impl EngineSide for RealSide {
         false
     }
 
+    /// The canvas, the field over the whole viewport, when one is open.
     fn canvas(&self) -> Option<Arc<dyn Canvas>> {
-        None
+        self.canvas.clone().map(|c| c as Arc<dyn Canvas>)
     }
 
-    /// None: the real engine's figure, and its fill past `[0,1]²` (REQ-GUI-180), are TASK-M8-05's.
-    fn figure(&self, _placement: Placement) -> Option<Arc<dyn Canvas>> {
-        None
+    /// The canvas, told the placement first, so it draws the field into the shown figure's rect; past `[0,1]²` the
+    /// canvas background (the fill past it, REQ-GUI-180, is TASK-M8-05's).
+    fn figure(&self, placement: Placement) -> Option<Arc<dyn Canvas>> {
+        let canvas = self.canvas.clone()?;
+        canvas.set_placement(placement);
+        Some(Arc::new(crate::real::FigureCanvas(canvas)) as Arc<dyn Canvas>)
     }
 
-    /// Nothing: the real engine's figure, and its quads, are TASK-M8-05's, which follows R-462 J4.
+    /// The canvas told the background, the colour the window is cleared to.
+    fn figure_view(&mut self, view: FigureView) {
+        if let Some(canvas) = &self.canvas {
+            canvas.set_background(view.background);
+        }
+    }
+
+    /// Nothing: the field is computed once, for the sim key the app started on; re-framing it is TASK-M8-05's, which
+    /// follows R-462 J4.
     fn show_span(&mut self, _span: [f64; 4]) {}
 
     fn time_source(&mut self) -> Option<&mut dyn TimeSource> {
@@ -180,7 +207,7 @@ impl EngineSide for RealSide {
         None
     }
 
-    /// None: the real engine's canvas is TASK-M8-05's.
+    /// None: the real engine's Stain preview is TASK-M8-05's.
     fn preview(&self) -> Option<Arc<dyn Canvas>> {
         None
     }

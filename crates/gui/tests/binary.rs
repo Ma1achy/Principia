@@ -1,5 +1,5 @@
-//! The `gui` binary exits non-zero, saying why, on a command it does not run: with the `mock` feature an unknown
-//! command, without it any command, since the real engine has no window yet (TASK-M8-05).
+//! The `gui` binary exits non-zero, saying why, on a command it does not run, on the mock (the `mock` feature) or on
+//! the real engine.
 
 use std::process::Command;
 

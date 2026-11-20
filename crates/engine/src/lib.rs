@@ -181,6 +181,10 @@ pub mod first_slice;
 // documented in the module itself, whose links resolve there.
 pub mod forward_table;
 
+// The field: a sim key, a window and a size to an outcome per sample, behind a backend, the CPU's first (TASK-C1-01):
+// documented in the module itself, whose links resolve there.
+pub mod field;
+
 /// Telemetry (dd_telemetry_and_tiers): the session-header probe that `prin profile` and the benchmark runner share
 /// (§2, §5; TASK-M0-19).
 pub mod telemetry {

@@ -16,6 +16,7 @@ pub mod headless;
 pub mod keyboard;
 pub mod layout;
 pub mod measure;
+pub mod real;
 pub mod settings;
 pub mod side;
 pub mod stain;
@@ -104,6 +105,7 @@ mod tests {
     mod mock_windows_remembered;
     mod present_fills_window_mock;
     mod reachability;
+    mod real_field;
     mod scope_tab_order_mock;
     mod support;
     mod theme;

@@ -61,6 +61,11 @@ pub const FATES: [&str; 9] = [
     "triple_collision",
 ];
 
+/// The fake outcome class of the IC `ic`, one of [`FATES`], fixed by its hash (placeholder content).
+pub fn fate(ic: &Latent) -> &'static str {
+    FATES[(ic_hash(ic, 0.0) * FATES.len() as f64) as usize % FATES.len()]
+}
+
 /// The fake sample at the figure point `at` of `plane`, with the playhead at `t` and the horizon `t_max`: its fate is
 /// decided once the playhead reaches its `t_end` (`t_max` for `bounded`; no class is decided at `t = 0`, R-445).
 pub fn sample(plane: &Plane, at: [f64; 2], t: f64, t_max: f64) -> Sample {
@@ -71,7 +76,7 @@ pub fn sample(plane: &Plane, at: [f64; 2], t: f64, t_max: f64) -> Sample {
 /// the mock's `computeIC` (trajectory_viewing §1, §6), deterministic in the IC, so a pinned IC integrates the same on
 /// any chart (R-453 D1, D5).
 pub fn integrate(ic: Latent, at: [f64; 2], t: f64, t_max: f64) -> Sample {
-    let class = FATES[(ic_hash(&ic, 0.0) * FATES.len() as f64) as usize % FATES.len()];
+    let class = fate(&ic);
     let end = match class {
         "bounded" => t_max,
         _ => t_max * (0.1 + 0.8 * ic_hash(&ic, 1.0)),

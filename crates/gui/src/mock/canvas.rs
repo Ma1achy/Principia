@@ -61,6 +61,28 @@ pub fn backend_in(value: Option<&str>, dx12: bool) -> Result<wgpu::Backends, Str
     }
 }
 
+/// Opens a device on [`BACKEND_VAR`]'s backend, and logs the adapter and backend chosen, `who` naming the canvas: the
+/// context a canvas hands the app.
+pub fn open(who: &str) -> Result<CanvasContext, String> {
+    let backends = backend(std::env::var(BACKEND_VAR).ok().as_deref())?;
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends,
+        ..wgpu::InstanceDescriptor::new_without_display_handle()
+    });
+    let adapter = pollster::block_on(instance.request_adapter(&Default::default()))
+        .map_err(|e| format!("no {backends:?} adapter ({BACKEND_VAR}): {e}"))?;
+    let info = adapter.get_info();
+    eprintln!("{who}: adapter {} ({:?})", info.name, info.backend);
+    let (device, queue) = pollster::block_on(adapter.request_device(&Default::default()))
+        .map_err(|e| format!("request_device failed: {e}"))?;
+    Ok(CanvasContext {
+        instance,
+        adapter,
+        device,
+        queue,
+    })
+}
+
 /// The weights of the six hidden coordinates in the stand-in's third direction, after z_α and z_β (placeholder
 /// content): a slice along any of them, or a tilt toward it, changes the picture.
 pub const HIDDEN_WEIGHTS: [f64; 6] = [0.7, 0.5, 0.9, 1.3, 0.6, 0.4];
@@ -210,21 +232,8 @@ pub struct MockCanvas {
 impl MockCanvas {
     /// Opens a device on [`BACKEND_VAR`]'s backend, and logs the adapter and backend chosen.
     pub fn new() -> Result<Self, String> {
-        let backends = backend(std::env::var(BACKEND_VAR).ok().as_deref())?;
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends,
-            ..wgpu::InstanceDescriptor::new_without_display_handle()
-        });
-        let adapter = pollster::block_on(instance.request_adapter(&Default::default()))
-            .map_err(|e| format!("no {backends:?} adapter ({BACKEND_VAR}): {e}"))?;
-        let info = adapter.get_info();
-        eprintln!(
-            "gui mock canvas: adapter {} ({:?})",
-            info.name, info.backend
-        );
-        let (device, queue) = pollster::block_on(adapter.request_device(&Default::default()))
-            .map_err(|e| format!("request_device failed: {e}"))?;
-        Ok(Self::on(instance, adapter, device, queue))
+        let c = open("gui mock canvas")?;
+        Ok(Self::on(c.instance, c.adapter, c.device, c.queue))
     }
 
     /// Opens a device on the browser's WebGPU, which can only be awaited (TASK-M8-86).
