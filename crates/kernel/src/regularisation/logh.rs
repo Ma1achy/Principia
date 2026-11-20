@@ -403,12 +403,7 @@ pub fn kick<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> Lh
 /// logH's own leapfrog, drift–kick–drift `X(h/2) V(h) X(h/2)` (`step.rs:122-135`), in either time mode: time-symmetric,
 /// one force evaluation.
 #[inline]
-pub fn leapfrog<R: AzReal>(
-    system: &LhSystem<R>,
-    q: &LhQ<R>,
-    p: &LhP<R>,
-    h: R,
-) -> (LhQ<R>, LhP<R>) {
+pub fn leapfrog<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> (LhQ<R>, LhP<R>) {
     let half = h / two::<R>();
     let q_half = drift(system, q, p, half);
     let p1 = kick(system, &q_half, p, h);
@@ -653,12 +648,7 @@ pub struct LhStepSize<R> {
 /// not where `f ≤ 0`, the denominator is not positive, or `d_min` or the denominator is not finite, the absence of a
 /// bound.
 #[inline]
-pub fn predictive<R: AzReal>(
-    system: &LhSystem<R>,
-    g: &PairGeom<R>,
-    p: &LhP<R>,
-    f: R,
-) -> (R, bool) {
+pub fn predictive<R: AzReal>(system: &LhSystem<R>, g: &PairGeom<R>, p: &LhP<R>, f: R) -> (R, bool) {
     let zero = R::default();
     if f <= zero {
         return (zero, false);
