@@ -1,5 +1,4 @@
 # TASK-C2-01 — The chart comparison pass: every preset against the original app and against prin-rs
-
 - **Checkpoint:** C2, its last task: it starts after every other chart task has merged. No per-chart comparisons
   during C2.
 ## Goal
