@@ -95,6 +95,8 @@ def load_tasks(path):
     tasks = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     if not isinstance(tasks, list):
         raise ValueError(f"{path}: expected a list of tasks")
+    # The PC's own work (`machine: pc`) is not a checkpoint, so the grid leaves it out.
+    tasks = [t for t in tasks if t.get("machine") != "pc"]
     return sorted(tasks, key=lambda t: task_key(t["id"]))
 
 

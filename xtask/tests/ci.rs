@@ -1,5 +1,5 @@
 //! `cargo xtask ci` runs its registered runners in order and fails when any runner fails (R-177); its registry holds
-//! `plan-check` (TASK-M0-02), `controls` (R-198), `lint constants` (TASK-M0-08), `lint vocab` (TASK-M0-16), `gate`
+//! `build-kernel` (TASK-M0-14), `controls` (R-198), `lint constants` (TASK-M0-08), `lint vocab` (TASK-M0-16), `gate`
 //! (TASK-M0-05) and `golden` (TASK-M0-06). `cargo xtask ci --list` runs each runner's listing-only form alone, which
 //! for `controls` runs no control (R-235).
 
@@ -63,7 +63,7 @@ fn ci_with_no_runners_passes() {
     assert_eq!(run(&[]), Ok(()));
 }
 
-/// The registry's names: `plan-check` (TASK-M0-02), `build-kernel` (TASK-M0-14), `controls` (TASK-M0-22, R-198),
+/// The registry's names: `build-kernel` (TASK-M0-14), `controls` (TASK-M0-22, R-198),
 /// `lint constants` (TASK-M0-08), `lint vocab` (TASK-M0-16), `lint wgsl` (TASK-M0-13), `lint compute-pipelines`
 /// (TASK-M0-44), `lint no-alloc` (TASK-M3-01), then `gate` (TASK-M0-05), then `golden` (TASK-M0-06, R-110).
 fn check_the_registry(runners: &[Runner]) {
@@ -71,7 +71,6 @@ fn check_the_registry(runners: &[Runner]) {
     assert_eq!(
         names,
         [
-            "plan-check",
             "build-kernel",
             "controls",
             "lint constants",
@@ -82,7 +81,7 @@ fn check_the_registry(runners: &[Runner]) {
             "gate",
             "golden"
         ],
-        "the ci registry is not `plan-check`, `build-kernel`, `controls`, `lint constants`, `lint vocab`, `lint wgsl`, \
+        "the ci registry is not `build-kernel`, `controls`, `lint constants`, `lint vocab`, `lint wgsl`, \
          `lint compute-pipelines`, `lint no-alloc`, `gate`, then `golden`"
     );
 }
@@ -131,9 +130,9 @@ validation::negative_control!(
 
 validation::negative_control!(
     ci_registry_runs_controls,
-    "a registry holding a runner other than `plan-check`, `build-kernel`, `controls`, `lint constants`, `lint vocab`, \
+    "a registry holding a runner other than `build-kernel`, `controls`, `lint constants`, `lint vocab`, \
      `lint wgsl`, `lint compute-pipelines`, `lint no-alloc`, `gate` and `golden`",
-    expected = "the ci registry is not `plan-check`, `build-kernel`, `controls`, `lint constants`, `lint vocab`, \
+    expected = "the ci registry is not `build-kernel`, `controls`, `lint constants`, `lint vocab`, \
                 `lint wgsl`, `lint compute-pipelines`, `lint no-alloc`, `gate`, then `golden`",
     check_the_registry(&[Runner {
         name: "failing",

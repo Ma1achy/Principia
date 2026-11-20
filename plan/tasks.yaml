@@ -2497,3 +2497,13 @@
   - TASK-M3-34
   - TASK-M8-16
   - TASK-M8-48
+# The PC's own work (plan/PLAN.md § "The PC", plan/MACHINES.md): machine: pc, never dispatched from the Mac, not a checkpoint, so the
+# progress grid leaves it out.
+- id: TASK-M0-58
+  milestone: PC
+  machine: pc
+  title: "The Windows runner's DX12 run, Phase 2: the GPU suites on DX12 as a named measurement"
+- id: TASK-M0-73
+  milestone: PC
+  machine: pc
+  title: "Mutation testing off the merge path: the PC's weekly sweep of the kernel"
