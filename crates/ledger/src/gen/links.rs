@@ -401,9 +401,13 @@ fn u32_range() -> String {
 /// `kernel::driver::closure` read: the pole radius `r_pole` (R-389, R-433) and the closure's departure threshold
 /// `delta_dep` (R-37), each one f64, which the march reads at its width; and the step count and sentinel of `θ̃`'s
 /// pole reference in `_reserved`, `theta_ref_steps` and `theta_ref_none` (R-397), each a u32. `r_pole` and
-/// `delta_dep` are not hashed; the two codes are (`crate::version::STORED_BITS`).
+/// `delta_dep` are not hashed; the two codes are (`crate::version::STORED_BITS`). And the escape detector's
+/// (`kernel::detect::escape`; Part 7), written with them: the settling threshold `tau` and the window `escape_window`,
+/// each one f64 read at the march's width, neither hashed, since neither gives a stored bit its meaning.
 fn shape_readout() -> String {
-    use crate::constants::{DELTA_DEP, R_POLE, THETA_REF_NONE, THETA_REF_STEPS};
+    use crate::constants::{
+        DELTA_DEP, ESCAPE_WINDOW, R_POLE, TAU, THETA_REF_NONE, THETA_REF_STEPS,
+    };
     let steps = THETA_REF_STEPS.number();
     let none = THETA_REF_NONE.number();
     assert!(
@@ -421,7 +425,17 @@ fn shape_readout() -> String {
          /// (R-397).\n\
          pub const THETA_REF_STEPS: u32 = {steps};\n\n\
          /// The register's `theta_ref_none`: `_reserved`'s \"no reference\" sentinel, 0xFFFF (R-397).\n\
-         pub const THETA_REF_NONE: u32 = {none};\n",
+         pub const THETA_REF_NONE: u32 = {none};\n\n\
+         /// The register's `tau` = {tau:?}: the escape rule's settling threshold on `|Δn̂|`, a chord on the unit shape\n\
+         /// sphere (integrator_contract Part 7; provisional until M3).\n\
+         pub const TAU: f64 = {tau_lit};\n\n\
+         /// The register's `escape_window` = {window:?}: the physical time `|Δn̂|` is taken over (integrator_contract\n\
+         /// Part 7; provisional).\n\
+         pub const ESCAPE_WINDOW: f64 = {window_lit};\n",
+        tau = TAU.number(),
+        tau_lit = literal(TAU.number(), "f64"),
+        window = ESCAPE_WINDOW.number(),
+        window_lit = literal(ESCAPE_WINDOW.number(), "f64"),
         r_pole = R_POLE.number(),
         r_pole_lit = literal(R_POLE.number(), "f64"),
         dep = DELTA_DEP.number(),

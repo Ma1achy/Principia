@@ -1,0 +1,19 @@
+# An escape-detector fixture (integrator contract Part 7; plan/tasks/M3/TASK-M3-12.md, "Fixture definitions").
+# Units G = 1. The state is built in the centre-of-mass frame by crates/kernel/tests/escape.rs from these values:
+# "Binary(a)" is bodies 0 and 1 on a circular orbit of separation a about their own centre of mass, relative speed
+# sqrt((m0 + m1)/a); the third body's d and speed are relative to that pair's centre of mass. The window is 0.4 time
+# units and tau the provisional 1e-3. Built from the contract, not transcribed from prin-rs.
+name = "settled_bound_hierarchy"
+m = [1.0, 1.0, 1.0]
+construction = "binary_third"
+binary_a = 1.0
+d = 10.0
+speed_squared = 0.3
+direction = "tangential"
+e_rel = -0.15
+run = "marched"
+# The task's file expects the chord to settle below tau. It does not: at d = 10 it is 0.558/d, about 0.056, so this
+# march is held back by both conditions. The energy condition alone is tested on this state with the lagged
+# register primed as settled.
+t_end = 20.0
+fires = false

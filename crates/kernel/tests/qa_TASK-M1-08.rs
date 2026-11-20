@@ -39,7 +39,9 @@ fn stored(sh: &[u32; 12], rest: &[u32; 12]) -> SimStateFTLE {
         closure_step: 5,
         _reserved: 0,
         coll_floor_bits: 0,
-        _pad: [0],
+        _nhat_lag_0: 0.0,
+        _nhat_lag_1: 0.0,
+        _nhat_lag_2: 0.0,
         _tail: [],
     }
 }
@@ -62,7 +64,9 @@ fn base_of(s: &SimStateFTLE) -> SimStateBase {
         closure_step: s.closure_step,
         _reserved: s._reserved,
         coll_floor_bits: s.coll_floor_bits,
-        _pad: s._pad,
+        _nhat_lag_0: s._nhat_lag_0,
+        _nhat_lag_1: s._nhat_lag_1,
+        _nhat_lag_2: s._nhat_lag_2,
         _tail: [],
     }
 }

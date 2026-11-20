@@ -4,14 +4,17 @@
 //! **In order, after each `STEP`** (Part 1's loop): the COM projection ([`WrapperCadence::project`], with the force
 //! evaluation re-formed at the projected positions), the invariant accumulation on the projected state
 //! ([`WrapperCadence::monitor`]; TASK-M3-05), and terminal detection, which sets the `done` flag on collision
-//! ([`Detector`]; TASK-M3-09) or escape (TASK-M3-12) and never breaks. Escape's detector is not built yet, so a run
-//! ends at its horizon or at a collision.
+//! ([`Detector`]) and never breaks. **At each sampling point** of the occupant's grid ([`Cadence::sample`]: a completed
+//! macro-step, or a sync boundary under an occupant that owns its time mapping) the escape detector runs
+//! ([`escape::Detector`]; Part 7), on the state the step's cadence left, and sets `done` where it fires. A run on which
+//! a collision has fired takes no escape test: the collision's is the earlier step.
 //!
 //! **Built from the run's IC** ([`WrapperCadence::with_radius`]): the projection's `M` and weights are formed once,
 //! there ([`ComProjection`]; Part 1, "with `M` constant (computed once and cached)"), `E₀`, `L_{z,0}` are evaluated
 //! and stored, before the loop ([`Monitor`]), and the detectors run on the IC, before the first step, so a run that
 //! begins inside `r_coll` is done at step 0, a collision (integrator_contract Part 5, "t=0 terminals are real
-//! outcomes"). The wrapper writes the monitor's references and maxima, and the detector's label and `dmin_pair`, into
+//! outcomes"); the escape detector's lagged shape register is set to the IC's shape and its `E_0` is the monitor's,
+//! and there is no escape at `t = 0`. The wrapper writes the monitor's references and maxima, and the detector's label and `dmin_pair`, into
 //! the run's `SimState` when the loop ends (`super::wrapper`).
 //!
 //! **One `d²` per step** (Part 7; REQ-EVT-004): the detector forms the projected state's pair separations once, and
@@ -32,6 +35,7 @@ use super::project::ComProjection;
 use super::substep::Quantise;
 use super::wrapper::{monitored, WrapperReal};
 use crate::detect::collision::{CollisionRadius, Detector};
+use crate::detect::escape;
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{sd_last_symbol, set_last_symbol, PayloadReal, SimStateBaseOf};
@@ -49,13 +53,15 @@ pub struct WrapperCadence<R> {
     monitor: Monitor<R>,
     /// The collision detector and the `dmin_pair` latch.
     detector: Detector,
+    /// The escape detector: the lagged shape register, the stored `E₀` and its verdict.
+    escape: escape::Detector<R>,
     /// The calls so far.
     invocations: u32,
     /// Whether a terminal has fired.
     done: bool,
 }
 
-impl<R: IeeeBits + Quantise> WrapperCadence<R> {
+impl<R: WrapperReal> WrapperCadence<R> {
     /// The cadence of a run from masses `m`, positions `r` and momenta `p` at `r_coll = 0`
     /// ([`CollisionRadius::none`], Part 7's "refuse to regularise"), so no collision fires:
     /// [`WrapperCadence::with_radius`].
@@ -76,10 +82,12 @@ impl<R: IeeeBits + Quantise> WrapperCadence<R> {
         radius: CollisionRadius,
     ) -> Self {
         let detector = Detector::new(radius, r);
+        let monitor = Monitor::new(m, r, p, &Geom::new(m, r));
         WrapperCadence {
             projection: ComProjection::new(m),
-            monitor: Monitor::new(m, r, p, &Geom::new(m, r)),
+            monitor,
             detector,
+            escape: escape::Detector::new(m, r, monitor.e_0()),
             invocations: 0,
             done: detector.fired(),
         }
@@ -107,6 +115,23 @@ impl<R: IeeeBits + Quantise> WrapperCadence<R> {
     #[inline]
     pub fn detector(&self) -> &Detector {
         &self.detector
+    }
+
+    /// The escape detector: its verdict and the lagged shape register.
+    #[inline]
+    pub fn escape(&self) -> &escape::Detector<R> {
+        &self.escape
+    }
+
+    /// Takes up the escape detector of a march still running from what its `SimState` `stored` holds: the lagged
+    /// shape register and `E_0`. With it a march re-booted from `stored` tests escape as the uncut march does, since
+    /// which sampling points are window marks follows from their indices alone ([`escape::is_mark`]).
+    #[inline]
+    pub fn resume_escape(&mut self, stored: &SimStateBaseOf<R>) {
+        self.escape = escape::Detector::resumed(
+            [stored._nhat_lag_0, stored._nhat_lag_1, stored._nhat_lag_2],
+            stored.E_0,
+        );
     }
 
     /// The COM projection after a `STEP` (integrator_contract Part 1, "COM projection and invariant monitoring"):
@@ -153,6 +178,16 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
     #[inline]
     fn done(&self) -> bool {
         self.done
+    }
+
+    /// The escape test at a sampling point, on a run nothing has ended; `done` where it fires.
+    #[inline]
+    fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
+        if !self.done {
+            self.escape
+                .sample(&state.m, &state.r, &state.p, index, quantum);
+            self.done = self.escape.fired();
+        }
     }
 
     #[inline]
@@ -220,6 +255,11 @@ impl<R: LinkReal + IeeeBits, C: Cadence<R>, B: WordBuffer + ?Sized> Cadence<R>
     #[inline]
     fn done(&self) -> bool {
         self.inner.done()
+    }
+
+    #[inline]
+    fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
+        self.inner.sample(state, index, quantum);
     }
 
     #[inline]

@@ -7,14 +7,16 @@ use kernel::burrau::euclid;
 use kernel::canon::canonicalise;
 use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
-use kernel::driver::advance::Advance;
+use kernel::driver::advance::{Advance, Cadence};
 use kernel::driver::benettin::{
-    completed_renorms, integrate_ftle_with, sum_failed, Absolute, BenettinParams, CancellationFree,
+    completed_renorms, sum_failed, Absolute, Benettin, BenettinParams, CancellationFree,
     Displacement, Plain, ShadowForm,
 };
-use kernel::driver::wrapper::WrapperReal;
+use kernel::driver::cadence::WrapperCadence;
+use kernel::driver::substep::Quantise;
+use kernel::driver::wrapper::{integrate_with_co, monitored, WrapperReal};
 use kernel::occupant::yoshida4::Yoshida4;
-use kernel::occupant::State;
+use kernel::occupant::{Geom, State};
 use kernel::payload::{sd_is_failed, tm_t_end_step};
 
 use std::path::Path;
@@ -131,6 +133,31 @@ pub fn figure_eight(horizon: f64) -> Orbit {
     }
 }
 
+/// The wrapper's own cadence with the escape test left out: the sampling points are not passed on, so an escape
+/// neither ends the march nor labels it, and the measurement runs to its horizon. The measurement's exponents were
+/// taken over the whole horizon, and a time average that stops at an escape is a different quantity (integrator
+/// contract Part 7: in production the march ends when escape fires, and a march past it is the validation
+/// harness's). Without this the Burrau calibration orbit, under Yoshida-4 with no collision, ends at an escape at
+/// macro-step 15200 of 50000 at f32 and 12400 at f64 (measured).
+struct PastEscape<R>(WrapperCadence<R>);
+
+impl<R: WrapperReal> Cadence<R> for PastEscape<R> {
+    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.0.after_step(state, geom);
+    }
+
+    fn done(&self) -> bool {
+        self.0.done()
+    }
+
+    fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32
+    where
+        R: Quantise,
+    {
+        self.0.bucket_d2(r)
+    }
+}
+
 /// One FTLE measurement: `λ_T`, `S`, the completed macro-steps and the shadow's final separation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Ftle {
@@ -141,7 +168,8 @@ pub struct Ftle {
 }
 
 /// `λ_T` of `orbit` by the occupant `A` at `R`, the shadow in the form `F`, at `‖δ₀‖ = delta_0` and `n_renorm`, through
-/// `kernel::driver::benettin::integrate_ftle_with` at the orbit's sim key ([`sim_key`]) with no collision: the FTLE
+/// `kernel::driver::benettin::integrate_ftle_with`'s march at the orbit's sim key ([`sim_key`]) with no collision,
+/// under a cadence that does not end at an escape ([`PastEscape`]): the FTLE
 /// finalised at the run's end, in the form's own `δ`; NaN, as `kernel::driver::benettin::ftle_read` reads it, whenever
 /// payload §6's `ftle_valid` is false: a failed sample, no completed renormalisation (`n_renorm` 0 or beyond the run's
 /// macro-steps; R-253, R-254), or a shadow whose sum went non-finite (R-972).
@@ -159,7 +187,11 @@ where
         delta_0: delta_0.to_r(),
         n_renorm,
     };
-    let (out, shadow) = integrate_ftle_with::<A, R, F>(&ic, &key, CollisionRadius::none(), params);
+    let radius = CollisionRadius::none();
+    let mut cadence = PastEscape(WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius));
+    let mut shadow = Benettin::<R, F>::new(&ic, radius, params);
+    let out = integrate_with_co::<A, R, _, _>(&ic, &key, &mut cadence, &mut shadow);
+    let out = shadow.write(monitored(out, &cadence.0));
     let x = State {
         m: ic.m,
         r: out.r,

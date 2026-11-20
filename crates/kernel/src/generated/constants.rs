@@ -174,6 +174,14 @@ pub const THETA_REF_STEPS: u32 = 65535;
 /// The register's `theta_ref_none`: `_reserved`'s "no reference" sentinel, 0xFFFF (R-397).
 pub const THETA_REF_NONE: u32 = 65535;
 
+/// The register's `tau` = 0.001: the escape rule's settling threshold on `|Δn̂|`, a chord on the unit shape
+/// sphere (integrator_contract Part 7; provisional until M3).
+pub const TAU: f64 = 0.001;
+
+/// The register's `escape_window` = 0.4: the physical time `|Δn̂|` is taken over (integrator_contract
+/// Part 7; provisional).
+pub const ESCAPE_WINDOW: f64 = 0.4;
+
 /// The register's `floor_exp_min`: the least collision floor's exponent, `2⁻⁴⁰` (Part 7; R-973).
 pub const FLOOR_EXP_MIN: i32 = -40;
 

@@ -1726,9 +1726,18 @@ ruling RQ-708 (a)).
     mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the
     pair's mass (`G = 1`). It uses the **total** mass. An `M_pair`-only form (prin-rs) biases toward escape.
   - **The window:** `|Δn̂|` is taken over 0.4 time units (**provisional**), sampled at macro-step boundaries for
-    unregularised occupants and at sync boundaries for regularised ones (R-95).
+    unregularised occupants and at sync boundaries for regularised ones (R-95). One lagged
+    register holds `n̂`, set to `n̂(0)` at `t = 0`; at the first sampling point at or after each `k·0.4` the test reads
+    `|n̂ − n̂_lag|` and the register takes `n̂`, so the test runs once a window and the window spans within one sampling
+    quantum of 0.4, exactly 0.4 where the quantum divides it (`kernel::detect::escape`).
   - **The escaper** is the body with `E_rel > 0` and the largest separation from the other two: its distance `d` to their
-    centre of mass, the same `d` as in `E_rel` (R-61).
+    centre of mass, the same `d` as in `E_rel` (R-61). The candidate is the body with the largest
+    `d`, and the rule's `E_rel > 0` is that body's. Read the other way, the farthest of the bodies with `E_rel > 0`,
+    the energy condition does not hold back a bound hierarchy, because a member of the inner binary has `E_rel > 0`
+    about the centre of mass of the other two for part of each binary orbit once the third body is a few binary
+    separations away (measured: `kernel/tests/escape.rs`, `escaper_farthest_body`). Neither reading is exact: the rule
+    treats "the other two" as one mass whether or not they are the bound pair, and it fires on a bound system whose
+    inner pair is light and slow beside a heavy third body (`plan/KNOWN.md`).
   - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
     this `E_rel`, against check 2's independent ground truth (pitfalls §2.4), keeping the legacy `t = 30` set as a
     comparison (R-95).

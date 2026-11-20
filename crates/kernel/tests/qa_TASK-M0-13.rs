@@ -69,9 +69,12 @@ fn ftle(seed: u32) -> SimStateFTLE {
         closure_min: f(seed + 34),
         closure_step: 0x8000 | (seed as u16 * 7 + 3),
         _reserved: 0xc000 | (seed as u16 * 5 + 1),
-        // the collision floor's record and its declared padding (R-973; TASK-M3-71)
+        // the collision floor's record (R-973; TASK-M3-71), then the escape rule's lagged n̂ register, three Reals in
+        // place of the record's 4 B of declared padding (TASK-M3-12)
         coll_floor_bits: u(seed + 35),
-        _pad: [u(seed + 36)],
+        _nhat_lag_0: f(seed + 36),
+        _nhat_lag_1: f(seed + 37),
+        _nhat_lag_2: f(seed + 38),
         // the declared tail padding at f32 is [u32; 0] (R-313, R-86)
         _tail: [],
     }
@@ -95,6 +98,7 @@ fn ftle_expected(s: &SimStateFTLE, shadow: bool) -> Vec<u32> {
     out.push(s.closure_step as u32 | (s._reserved as u32) << 16);
     out.push(s.closure_step as u32);
     out.push(s.coll_floor_bits);
+    out.extend([s._nhat_lag_0, s._nhat_lag_1, s._nhat_lag_2].map(f32::to_bits));
     out
 }
 
@@ -121,6 +125,9 @@ fn struct_kernel(ty: &str, shadow: bool) -> String {
     reads.push("s.closure_step_reserved".into());
     reads.push("closure_step(s.closure_step_reserved)".into());
     reads.push("s.coll_floor_bits".into());
+    for j in 0..3 {
+        reads.push(format!("bitcast<u32>(s._nhat_lag_{j})"));
+    }
     let n = reads.len();
     let body: String = reads
         .iter()
@@ -143,17 +150,19 @@ fn t_struct(@builtin(global_invocation_id) id: vec3<u32>) {{
     )
 }
 
-fn ftle_words(s: &SimStateFTLE) -> [u32; 38] {
-    // SimStateFTLE is repr(C), all members 4-byte or wider with no padding: its 152 B are 38 initialised words
-    // (144 B and 36 words before the collision floor's 8 B, TASK-M3-71).
-    unsafe { std::mem::transmute::<SimStateFTLE, [u32; 38]>(*s) }
+fn ftle_words(s: &SimStateFTLE) -> [u32; 40] {
+    // SimStateFTLE is repr(C), all members 4-byte or wider with no padding: its 160 B are 40 initialised words
+    // (152 B and 38 words before the lagged n̂ register replaced 4 B of padding, TASK-M3-12; 144 B and 36 words before
+    // the collision floor's 8 B, TASK-M3-71).
+    unsafe { std::mem::transmute::<SimStateFTLE, [u32; 40]>(*s) }
 }
 
 fn check_ftle(generated: &str) {
     let states = [ftle(0), ftle(40)];
     let mut input: Vec<u32> = states.iter().flat_map(ftle_words).collect();
-    // the kernel writes 38 words per element, as many as the 38 stored (37 and 36 before the collision floor's
-    // record, TASK-M3-71): the pad is kept, harmless.
+    // the kernel writes 41 words per element, one more than the 40 stored (38 and 38 before the lagged n̂ register,
+    // TASK-M3-12; 37 and 36 before the collision floor's record, TASK-M3-71): pad the input, whose length is the
+    // output's, by the two words the two elements need.
     input.extend([0, 0]);
     let got = run(
         generated,
@@ -204,7 +213,9 @@ fn base(seed: u32) -> SimStateBase {
         closure_step: s.closure_step,
         _reserved: s._reserved,
         coll_floor_bits: s.coll_floor_bits,
-        _pad: s._pad,
+        _nhat_lag_0: s._nhat_lag_0,
+        _nhat_lag_1: s._nhat_lag_1,
+        _nhat_lag_2: s._nhat_lag_2,
         _tail: [],
     }
 }
@@ -213,7 +224,7 @@ fn check_base(generated: &str) {
     let states = [base(3), base(50)];
     let mut input: Vec<u32> = states
         .iter()
-        .flat_map(|s| unsafe { std::mem::transmute::<SimStateBase, [u32; 26]>(*s) })
+        .flat_map(|s| unsafe { std::mem::transmute::<SimStateBase, [u32; 28]>(*s) })
         .collect();
     input.extend([0, 0]);
     let got = run(

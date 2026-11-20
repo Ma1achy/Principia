@@ -388,7 +388,9 @@ fn simstate_member(s: &SimStateFTLE, member: &str) -> Option<Vec<u8>> {
         "closure_step" => s.closure_step.to_le_bytes().to_vec(),
         "_reserved" => s._reserved.to_le_bytes().to_vec(),
         "coll_floor_bits" => le([s.coll_floor_bits]),
-        "_pad" => le(s._pad),
+        "_nhat_lag_0" => f32s([s._nhat_lag_0]),
+        "_nhat_lag_1" => f32s([s._nhat_lag_1]),
+        "_nhat_lag_2" => f32s([s._nhat_lag_2]),
         _ => return None,
     })
 }
@@ -432,7 +434,9 @@ pub fn simstate_from_words(words: &[u32]) -> Result<SimStateFTLE, String> {
             "closure_step" => s.closure_step = u16::from_le_bytes([bytes[at], bytes[at + 1]]),
             "_reserved" => s._reserved = u16::from_le_bytes([bytes[at], bytes[at + 1]]),
             "coll_floor_bits" => s.coll_floor_bits = word_at(at),
-            "_pad" => s._pad = [word_at(at)],
+            "_nhat_lag_0" => s._nhat_lag_0 = f32_at(at),
+            "_nhat_lag_1" => s._nhat_lag_1 = f32_at(at),
+            "_nhat_lag_2" => s._nhat_lag_2 = f32_at(at),
             other => {
                 return Err(format!(
                     "`SimStateFTLE` has no reader for the ledger's `{other}`"

@@ -28,21 +28,24 @@ fn real_structs() -> Vec<ledger::schema::Struct> {
         .collect()
 }
 
-/// §1: a `SimState` struct storing `reals` `Real`s of `w` bytes, aligned to `a`, has `reals − 1` of them before the
-/// packed words, 16 B of u32s, `closure_min` at its alignment, then 4 B of u16s, then, as generated until TASK-M3-41,
-/// the collision floor's 8 B, `coll_floor_bits` and `_pad` (§1's recheck on the collision floor's record, R-973,
-/// TASK-M3-71): `(packed_a, closure_min, coll_floor_bits, end, size, align)`, the size rounded up to 8 or to `a` if
-/// greater.
-fn s1(reals: u32, w: u32, a: u32) -> (u32, u32, u32, u32, u32, u32) {
+/// §1: a `SimState` struct storing `reals` `Real`s of `w` bytes up to `closure_min`, aligned to `a`, has `reals − 1`
+/// of them before the packed words, 16 B of u32s, `closure_min` at its alignment, then 4 B of u16s, then the
+/// collision floor's 4 B record `coll_floor_bits` (§1's recheck on the collision floor's record, R-973, TASK-M3-71),
+/// then the escape rule's lagged n̂ register, three more `Real`s at their alignment, where the record's 4 B of padding
+/// `_pad` stood (TASK-M3-12): `(packed_a, closure_min, coll_floor_bits, _nhat_lag_0, end, size, align)`, the size
+/// rounded up to 8 or to `a` if greater.
+fn s1(reals: u32, w: u32, a: u32) -> (u32, u32, u32, u32, u32, u32, u32) {
     let packed_a = (reals - 1) * w;
     let closure_min = (packed_a + 16).next_multiple_of(a);
     let coll_floor_bits = closure_min + w + 4;
-    let end = coll_floor_bits + 8;
+    let nhat_lag = (coll_floor_bits + 4).next_multiple_of(a);
+    let end = nhat_lag + 3 * w;
     let align = a.max(8);
     (
         packed_a,
         closure_min,
         coll_floor_bits,
+        nhat_lag,
         end,
         end.next_multiple_of(align),
         align,
@@ -69,6 +72,7 @@ fn check_width_function(w: u32, a: u32) {
                 at("packed_a"),
                 at("closure_min"),
                 at("coll_floor_bits"),
+                at("_nhat_lag_0"),
                 l.end,
                 l.size,
                 l.align
@@ -77,14 +81,17 @@ fn check_width_function(w: u32, a: u32) {
             "{}'s layout at a {w}-B Real aligned to {a} is not dd_simstate_payload §1's",
             s.name
         );
-        // §1: "they end at … `31w + 28` and `19w + 28` as generated until then" (with the collision floor's 8 B;
-        // `31w + 20` and `19w + 20` before it) whenever `closure_min` needs no padding before it.
-        if (at("packed_a") + 16).is_multiple_of(a) {
+        // §1: they end at `34w + 24` and `22w + 24` (the lagged register's three Reals in place of 4 B of padding;
+        // `31w + 28` and `19w + 28` before it, with the collision floor's 8 B; `31w + 20` and `19w + 20` before
+        // that) whenever neither `closure_min` nor the register needs padding before it.
+        if (at("packed_a") + 16).is_multiple_of(a) && (at("coll_floor_bits") + 4).is_multiple_of(a)
+        {
             assert_eq!(
                 l.end,
-                reals * w + 28,
-                "{} does not end at {reals}w + 28",
-                s.name
+                (reals + 3) * w + 24,
+                "{} does not end at {}w + 24",
+                s.name,
+                reals + 3
             );
         }
     }
@@ -149,7 +156,7 @@ negative_control!(
         let l = layout(s, &p);
         assert_eq!(
             (l.end, l.size),
-            (s1(31, 8, 8).3, s1(31, 8, 8).4),
+            (s1(31, 8, 8).4, s1(31, 8, 8).5),
             "{}'s layout at an 8-B Real is not dd_simstate_payload §1's",
             s.name
         );

@@ -2,9 +2,9 @@
 
 /// The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger, computed at generation
 /// and never bumped by hand (R-36, R-63; `ledger::version`).
-pub const PAYLOAD_SCHEMA_VERSION: u64 = 0xaa8a800b5316e936;
+pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x4af8884670544576;
 
-/// `SimStateFTLE` at the `Real` `R`: 152 B aligned to 8 at f32, 280 B aligned to 8 at f64.
+/// `SimStateFTLE` at the `Real` `R`: 160 B aligned to 8 at f32, 296 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
 #[repr(C, align(8))]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -27,14 +27,16 @@ pub struct SimStateFTLEOf<R: PayloadReal> {
     pub closure_step: u16,
     pub _reserved: u16,
     pub coll_floor_bits: u32,
-    pub _pad: [u32; 1],
+    pub _nhat_lag_0: R,
+    pub _nhat_lag_1: R,
+    pub _nhat_lag_2: R,
     pub _tail: R::SimStateFTLETail,
 }
 
-/// `SimStateFTLE` at f32, the GPU's instantiation (canonical_spec §1 item 3): 152 B.
+/// `SimStateFTLE` at f32, the GPU's instantiation (canonical_spec §1 item 3): 160 B.
 pub type SimStateFTLE = SimStateFTLEOf<f32>;
 
-/// `SimStateBase` at the `Real` `R`: 104 B aligned to 8 at f32, 184 B aligned to 8 at f64.
+/// `SimStateBase` at the `Real` `R`: 112 B aligned to 8 at f32, 200 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
 #[repr(C, align(8))]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -55,11 +57,13 @@ pub struct SimStateBaseOf<R: PayloadReal> {
     pub closure_step: u16,
     pub _reserved: u16,
     pub coll_floor_bits: u32,
-    pub _pad: [u32; 1],
+    pub _nhat_lag_0: R,
+    pub _nhat_lag_1: R,
+    pub _nhat_lag_2: R,
     pub _tail: R::SimStateBaseTail,
 }
 
-/// `SimStateBase` at f32, the GPU's instantiation (canonical_spec §1 item 3): 104 B.
+/// `SimStateBase` at f32, the GPU's instantiation (canonical_spec §1 item 3): 112 B.
 pub type SimStateBase = SimStateBaseOf<f32>;
 
 /// `FreeGroupWord`: 16 B, aligned to 16 (dd_simstate_payload §1; dd_generation_root §3.3a, §3.6).
@@ -108,8 +112,8 @@ impl PayloadReal for f32 {
 }
 
 impl PayloadReal for f64 {
-    type SimStateFTLETail = [u32; 1];
-    type SimStateBaseTail = [u32; 1];
+    type SimStateFTLETail = [u32; 0];
+    type SimStateBaseTail = [u32; 0];
     type ICDescriptorTail = [u32; 0];
 }
 
@@ -134,7 +138,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 4,
         real_align: 4,
         instantiated: true,
-        structs: [("SimStateFTLE", 152, 8), ("SimStateBase", 104, 8)],
+        structs: [("SimStateFTLE", 160, 8), ("SimStateBase", 112, 8)],
         descriptor: ("ICDescriptor", 64, 4),
     },
     PayloadLayout {
@@ -142,7 +146,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 8,
         real_align: 8,
         instantiated: true,
-        structs: [("SimStateFTLE", 280, 8), ("SimStateBase", 184, 8)],
+        structs: [("SimStateFTLE", 296, 8), ("SimStateBase", 200, 8)],
         descriptor: ("ICDescriptor", 112, 8),
     },
     PayloadLayout {
@@ -150,7 +154,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 16,
         real_align: 8,
         instantiated: false,
-        structs: [("SimStateFTLE", 528, 8), ("SimStateBase", 336, 8)],
+        structs: [("SimStateFTLE", 568, 8), ("SimStateBase", 376, 8)],
         descriptor: ("ICDescriptor", 208, 8),
     },
 ];
@@ -196,6 +200,18 @@ pub const DETAIL_DECODE_FAILED_INVALID_MASS_CONSTRUCTION: u32 = 2;
 
 /// `decode_failed`'s `detail` code 3: other/reserved (payload §2).
 pub const DETAIL_DECODE_FAILED_OTHER_RESERVED: u32 = 3;
+
+/// `escape`'s `detail` code 0: body 0 (payload §2).
+pub const DETAIL_ESCAPE_BODY_0: u32 = 0;
+
+/// `escape`'s `detail` code 1: body 1 (payload §2).
+pub const DETAIL_ESCAPE_BODY_1: u32 = 1;
+
+/// `escape`'s `detail` code 2: body 2 (payload §2).
+pub const DETAIL_ESCAPE_BODY_2: u32 = 2;
+
+/// `escape`'s `detail` code 3: all three: triple ejection (payload §2).
+pub const DETAIL_ESCAPE_ALL_THREE_TRIPLE_EJECTION: u32 = 3;
 
 /// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
 pub const F16_FINITE_MAX: f32 = 65504.0;

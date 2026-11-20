@@ -170,6 +170,9 @@ impl<S: Stepper, G: Regularisation> Composed<S, G> {
 }
 
 impl<S: Stepper, G: Regularisation> Advance for Composed<S, G> {
+    /// An occupant that owns its time mapping samples on its sync grid, from inside its march.
+    const OWN_SAMPLING: bool = G::KIND.owns_time_mapping();
+
     #[inline]
     fn advance<R: AdvanceReal, C: Cadence<R>>(
         state: &State<R>,

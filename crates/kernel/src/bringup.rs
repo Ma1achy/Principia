@@ -149,7 +149,9 @@ pub fn pattern<R: PatternReal>(i: u32) -> SimStateFTLEOf<R> {
         closure_step: closure_step(i) as u16,
         _reserved: 0,
         coll_floor_bits: 0,
-        _pad: [0],
+        _nhat_lag_0: Default::default(),
+        _nhat_lag_1: Default::default(),
+        _nhat_lag_2: Default::default(),
         _tail: Default::default(),
     }
 }
@@ -203,10 +205,13 @@ pub fn write_words(i: u32, out: &mut [u32]) {
         real_slot(i, 30),
     );
     out[at(offset_of!(SimStateFTLE, closure_step))] = closure_step(i);
-    // The collision floor's record, code 0, "not recorded", and its pad (Appendix A; payload §2; R-973): written, as
-    // every member is, so a reused buffer keeps no stale word.
+    // The collision floor's record, code 0, "not recorded" (Appendix A; payload §2; R-973), and the escape rule's
+    // lagged shape register, zero, march state the pattern does not march (payload §1): written, as every member
+    // is, so a reused buffer keeps no stale word.
     out[at(offset_of!(SimStateFTLE, coll_floor_bits))] = 0;
-    out[at(offset_of!(SimStateFTLE, _pad))] = 0;
+    out[at(offset_of!(SimStateFTLE, _nhat_lag_0))] = 0;
+    out[at(offset_of!(SimStateFTLE, _nhat_lag_1))] = 0;
+    out[at(offset_of!(SimStateFTLE, _nhat_lag_2))] = 0;
 }
 
 /// The bring-up mode's compute entry point, one invocation per sample, at the workgroup size of the GPU harness (64):

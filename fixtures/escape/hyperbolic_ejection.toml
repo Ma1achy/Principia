@@ -1,0 +1,23 @@
+# An escape-detector fixture (integrator contract Part 7; plan/tasks/M3/TASK-M3-12.md, "Fixture definitions").
+# Units G = 1. The state is built in the centre-of-mass frame by crates/kernel/tests/escape.rs from these values:
+# "Binary(a)" is bodies 0 and 1 on a circular orbit of separation a about their own centre of mass, relative speed
+# sqrt((m0 + m1)/a); the third body's d and speed are relative to that pair's centre of mass. The window is 0.4 time
+# units and tau the provisional 1e-3. Built from the contract, not transcribed from prin-rs.
+name = "hyperbolic_ejection"
+m = [1.0, 1.0, 1.0]
+construction = "binary_third"
+binary_a = 1.0
+d = 20.0
+speed_squared = 1.3
+direction = "radial_out"
+e_rel = 0.5
+run = "marched"
+# The task's file gives t_end = 20. It cannot fire by then: the shape point's transverse part is 1/d here and turns
+# with the binary's phase, so the chord over a 0.4 window is 2 sin(0.2 sqrt(2))/d = 0.558/d, measured 0.5585/d at
+# t = 500 and 0.5583/d at t = 600, which is below tau only once d > 558, near t = 529. So the march runs to 640.
+t_end = 640.0
+fires = true
+fires_after = 520.0
+fires_before = 540.0
+escaper = 2
+detail = 2

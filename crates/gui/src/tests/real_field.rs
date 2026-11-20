@@ -27,13 +27,16 @@ use crate::side::{EngineSide, RealSide};
 const FRAME: [usize; 2] = [16, 16];
 
 /// The `state` codes (payload §2).
+const ESCAPE: u32 = 0;
 const BOUNDED: u32 = 1;
 const COLLISION: u32 = 2;
 
 /// The fixed frame's histogram, `(state, detail, samples)`, stored from a run checked by hand (the PR has the run):
-/// 253 samples bounded at the horizon and 3 a collision of pair 1 (bodies 1 and 3), no failure of any kind. No escape
-/// is labelled until the escape detector is built, so a sample that does not collide ends bounded.
-const STORED: &[(u32, u32, usize)] = &[(BOUNDED, 0, 253), (COLLISION, 1, 3)];
+/// 253 samples a triple ejection (`escape`, `detail` 3) and 3 a collision of pair 1 (bodies 1 and 3), no failure of
+/// any kind. The start chart's `z₀` gives every sample a positive total energy (0.27 to 0.37, measured), so all three
+/// bodies fly apart, and the escape rule fires on each between `t = 8.9` and `t = 31.6`, inside the horizon of 50.
+/// Before the escape detector those 253 ended `bounded`.
+const STORED: &[(u32, u32, usize)] = &[(ESCAPE, 3, 253), (COLLISION, 1, 3)];
 
 /// Asserts that `field`'s histogram is the stored one.
 fn check_histogram(field: &Field) {
@@ -59,13 +62,20 @@ fn the_real_frame_has_the_stored_histogram() {
                         state: COLLISION,
                         detail,
                     } => char::from(b'0' + detail as u8),
+                    Outcome {
+                        state: ESCAPE,
+                        detail,
+                    } => char::from(b'a' + detail as u8),
                     _ => '?',
                 })
                 .collect::<String>()
                 + "\n"
         })
         .collect();
-    eprintln!("the frame, top row first ('.' bounded, a digit a collision's pair):\n{map}");
+    eprintln!(
+        "the frame, top row first ('.' bounded, a digit a collision's pair, a letter an escape: a to c the \
+         escaper's body, d a triple ejection):\n{map}"
+    );
     check_histogram(&field);
     let mock = compute(&MockField, &sim, FRAME).expect("the mock's field");
     rejects("the mock's field", || check_histogram(&mock));

@@ -673,7 +673,10 @@ fn check_macros(who: &str, horizon: u32, t_end: u32, steps: u32) {
 fn horizon_run<R: Q>(dt: f32, h: u32) {
     let ic = decoded::<R>([0.1, 0.2, -0.3, 0.0, 0.4, -0.1, 0.2, 0.3]);
     reset_steps();
-    let out = integrate::<Counted<Euler>, R>(&ic, &key(dt, h, Table::Unit));
+    // A cadence with no terminal, so the count alone ends the run: under the wrapper's own, the escape detector ends
+    // some of these marches first (Euler at `dt_macro = 0.1` throws the bodies apart, an escape at step 164 of 1000).
+    let u = key(dt, h, Table::Unit);
+    let out = integrate_with::<Counted<Euler>, R, _>(&ic, &u, &mut StopAfter::new(None));
     check_macros(
         &format!("dt_macro {dt}, horizon {h}"),
         h,
