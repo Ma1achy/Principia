@@ -130,18 +130,33 @@ negative_control!(
     check_image_rows(&two_rows(BOUNDED, PAIR_2))
 );
 
-/// A decode failure has no colour: transparent, for the canvas to draw its background.
-#[test]
-fn a_decode_failure_is_transparent() {
-    let failed = Outcome {
-        state: kernel::payload::STATE_DECODE_FAILED,
-        detail: 1,
-    };
+/// A field of one sample, `o`: it must have no colour, transparent, for the canvas to draw its background, and be in
+/// no palette class, while the histogram keeps it under its own `(state, detail)`.
+fn check_no_colour(o: Outcome) {
     let f = Field {
         size: [1, 1],
-        outcomes: vec![failed],
+        outcomes: vec![o],
     };
-    assert_eq!(f.rgba8(), vec![0; 4]);
-    assert_eq!(f.classes().iter().sum::<usize>(), 0);
-    assert_eq!(f.histogram(), vec![(failed, 1)]);
+    assert_eq!(f.histogram(), vec![(o, 1)]);
+    assert_eq!(f.rgba8(), vec![0; 4], "the sample has a colour");
+    assert_eq!(
+        f.classes().iter().sum::<usize>(),
+        0,
+        "the sample is in a palette class"
+    );
 }
+
+#[test]
+fn a_decode_failure_is_transparent() {
+    check_no_colour(Outcome {
+        state: kernel::payload::STATE_DECODE_FAILED,
+        detail: 1,
+    });
+}
+
+negative_control!(
+    a_decode_failure_is_transparent,
+    "a bounded sample, which the palette draws in its black class",
+    expected = "the sample has a colour",
+    check_no_colour(BOUNDED)
+);

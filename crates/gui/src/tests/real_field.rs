@@ -64,12 +64,20 @@ fn the_real_frame_has_the_stored_histogram() {
     rejects("the mock's field", || check_histogram(&mock));
 }
 
+/// Asserts that the horizon `t` is the kernel's default.
+fn check_default_horizon(t: f64) {
+    let default = engine::contract::sim_uniforms::SimUniforms::default().t_horizon;
+    assert_eq!(t, default, "the horizon is not the default");
+}
+
 /// The start state's horizon is the kernel's default.
 #[test]
 fn the_start_horizon_is_the_default() {
     let (sim, _) = start();
-    let default = engine::contract::sim_uniforms::SimUniforms::default().t_horizon;
-    assert_eq!(sim.horizon.t, default);
+    check_default_horizon(sim.horizon.t);
+    rejects("half the start horizon", || {
+        check_default_horizon(sim.horizon.t / 2.0)
+    });
 }
 
 /// A 2 × 2 field, rows from the bottom: collision 1–2 then bounded; bounded then the triple collision.
