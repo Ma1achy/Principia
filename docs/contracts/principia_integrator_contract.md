@@ -162,9 +162,9 @@ Cartesian read-out that is not, has no logH form: there is one read-out, and wha
 error. Measured on the gate's radial collision passage (`cargo xtask gate separation-floor --propose`, logH's arm;
 `η = 0.01`, `Δ_sync = 1/8`, f64, to `t = 2`):
 - **With the predictive step limit on, `f = 0.02`, no logH march passes the collision.** In either time mode, with the
-  leapfrog or with RK4, the march ends not finite at `t = 1.3603`, the collision, after 13438 steps: the limit cuts each
-  step in proportion to the closest separation, so the march steps onto the singularity. (Part 2b's logH step 6 records
-  the reference's form of this, the step budget spent.)
+  leapfrog or with RK4, the march ends not finite at `t = 1.3603`, the collision, after 13438 steps, 12212 of them cut
+  by the limit; its last finite state has the pair `1.4·10⁻¹⁰⁸` apart, the two bodies not yet crossed. (Part 2b's logH
+  step 6 records the reference's form of this, the step budget spent.)
 - **With the limit off, logH's leapfrog passes it in both time modes**, 2014 steps to `t = 2`, with
   `(E − E₀)/U = 4.9·10⁻⁷` there. That is integration error, not round-off: over `η = 0.02, 0.01, 0.005, 0.0025, 0.00125`
   it reads `4.2·10⁻⁶`, `4.9·10⁻⁷`, `−1.5·10⁻⁷`, `−2.5·10⁻⁸`, `−6.9·10⁻¹⁰` in the logH mode. At f32 the logH mode reads

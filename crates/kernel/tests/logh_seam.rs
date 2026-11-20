@@ -146,9 +146,9 @@ impl<const TTL: bool> LhConfig for Tight<TTL> {
 }
 
 /// [`values`] with the landing off, its clamp and its retakes: each interval's last step is kept where it ends, past
-/// the boundary. Never the occupant's; here it plants a landed clock that is not the boundary's. (With the clamp on
-/// and only the retakes off, logH's clamped step ends on the boundary by itself on this fixture, measured, so
-/// Heggie's plant, the retakes alone, plants nothing here.)
+/// the boundary. Never the occupant's; here it plants a landed clock that is not the boundary's. (Heggie's plant, the
+/// retakes alone, was tried first: with the clamp on, the fixture's first landing ends on the boundary by itself in
+/// every arm, measured, so the clamp is off too, and the test asserts that the plant took.)
 struct Loose<const TTL: bool>;
 
 impl<const TTL: bool> LhConfig for Loose<TTL> {
@@ -1013,9 +1013,17 @@ negative_control!(
     "a re-boot that does not restore the carried state, which re-freezes B and resets W from the stored (r, p)",
     expected = "a re-boot after eviction is the live march, bitwise",
     {
-        // In either mode: under logH the re-frozen B differs, under TTL the reset W does.
+        // In either mode: under logH the re-frozen B differs, under TTL the reset W does. The TTL arm's panic is
+        // caught and its message checked here; the logH arm's is the control's own.
         let ttl = std::panic::catch_unwind(|| check_reboot::<Kdk, true, f64>(Restore::Nothing));
-        assert!(ttl.is_err(), "the TTL arm's re-boot with nothing restored passed");
+        let message = ttl
+            .err()
+            .and_then(|payload| payload.downcast::<String>().ok())
+            .expect("the TTL arm's re-boot with nothing restored passed");
+        assert!(
+            message.contains("a re-boot after eviction is the live march, bitwise"),
+            "the TTL arm failed elsewhere: {message}"
+        );
         check_reboot::<Kdk, false, f64>(Restore::Nothing)
     }
 );
@@ -1279,7 +1287,7 @@ fn regularised_re_registrations_visible_logh() {
 
 negative_control!(
     regularised_re_registrations_visible_logh,
-    "a seam that registers at every call: seven registrations after t = 0 over eight sync intervals",
+    "a seam that registers at every call, so every call from a boundary after 0 re-registers",
     expected = "logH registers once, and its count reads 0",
     check_visible::<Kdk, true, f64, Again>()
 );
