@@ -2,7 +2,6 @@
 
 - **Checkpoint:** C2, its last task: it starts after every other chart task has merged. No per-chart comparisons
   during C2.
-
 ## Goal
 For every chart preset, three comparisons, each reported in the PR with its image pair and any difference:
 - **The chart itself** (decode, constants, preset window and basis) against the original app, Ma1achy/principia-ii
