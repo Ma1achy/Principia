@@ -151,6 +151,29 @@ at every rung of a 32× refinement with the regularised drift flat at `4.4·10�
 with it like for like: it goes twelve decades deeper, and its Cartesian read-out does not rise with refinement. The
 figure is recorded, not used as a criterion, and nothing is tuned toward it (R-649).
 
+*logH's* regularised energy is the Cartesian `E = K − U` of its state, and it has no other (Part 2b § "logH and TTL: the
+equations, the time transformations, the map and the step control (transcribed)", "The energy"). logH has no chart: its
+state is the physical `(r, p)`, so the two energies named above are one number under logH, read from the equation
+`E = Σᵢ |pᵢ|²/(2mᵢ) − Σ_{i<j} mᵢmⱼ/rᵢⱼ` against `E₀ = −B`, `B = U − K` frozen at the one registration at `t = 0`. Its
+relative form is `(K + B − U)/U = (E − E₀)/U` (`kernel::regularisation::logh::LhSystem::residual`); in the TTL mode `B`
+is still frozen at registration and read the same way, though no equation of motion reads it. So the property the
+other two occupants have on the radial collision, a regularised energy at round-off through the passage beside a
+Cartesian read-out that is not, has no logH form: there is one read-out, and what it shows is logH's own integration
+error. Measured on the gate's radial collision passage (`cargo xtask gate separation-floor --propose`, logH's arm;
+`η = 0.01`, `Δ_sync = 1/8`, f64, to `t = 2`):
+- **With the predictive step limit on, `f = 0.02`, no logH march passes the collision.** In either time mode, with the
+  leapfrog or with RK4, the march ends not finite at `t = 1.3603`, the collision, after 13438 steps: the limit cuts each
+  step in proportion to the closest separation, so the march steps onto the singularity. (Part 2b's logH step 6 records
+  the reference's form of this, the step budget spent.)
+- **With the limit off, logH's leapfrog passes it in both time modes**, 2014 steps to `t = 2`, with
+  `(E − E₀)/U = 4.9·10⁻⁷` there. That is integration error, not round-off: over `η = 0.02, 0.01, 0.005, 0.0025, 0.00125`
+  it reads `4.2·10⁻⁶`, `4.9·10⁻⁷`, `−1.5·10⁻⁷`, `−2.5·10⁻⁸`, `−6.9·10⁻¹⁰` in the logH mode. At f32 the logH mode reads
+  `5.0·10⁻⁶` and the TTL mode `1.2·10⁻¹`.
+- **logH × RK4 does not pass it with the limit off either:** at f64 it spends its step budget at the collision in both
+  modes.
+
+The radial-collision gate (REQ-VAL-045) runs Heggie and Aarseth–Zare and has no logH arm.
+
 This factoring is load-bearing: it puts all the shared, determinism-critical machinery in one place, and keeps occupants trivially simple and interchangeable. Adaptive substepping lives in the **wrapper**, not the integrator — the wrapper calls `STEP` `N_sub` times at `dt_macro/N_sub`. RK4-as-validation and the inspector's f64 run are just "different occupant + different precision," no special path.
 
 ---
@@ -1051,7 +1074,9 @@ the secant on with at most 4 retakes, `B` and `W` never refreshed), with the lan
 of the reference's.
 
 1. **Registration, once** (`driver.rs:279-291`). `B = U − K` and `W = Ω(r₀)` at `t = 0`; both are carried across
-   every sync boundary, and a boundary is a sampling cadence that touches neither.
+   every sync boundary, and a boundary is a sampling cadence that touches neither. The occupant seam carries them
+   across `ADVANCE` calls in the trajectory's carried buffer (§ "Part 2a" below), so the march through the seam is
+   this one, registered once at `t = 0`, bitwise.
 2. **The interval.** `dt_left = Δ_sync`, the interval clock `t` set to `0` at each interval's start (`driver.rs:337-339`).
    There is no landing tolerance.
 3. **The entry size.** `ds_entry = η·dt_left/(dt/ds)` at the interval's entry; an entry `dt/ds` that is not positive
@@ -1070,7 +1095,9 @@ of the reference's.
    and `v_max` the largest relative speed `|vⱼ − vᵢ|`, read off the state; `+∞` when `f ≤ 0`, the denominator is not
    positive, or `d_min` or the denominator is not finite. The reference records that at an exact collision this limit
    spends the step budget (`driver.rs:18-41`): `dt/ds = 1/U`, so the bound tends to `f·√d` while the transformation's
-   own step grows as `1/d`. It is a value the caller supplies, off where `f ≤ 0`.
+   own step grows as `1/d`. It is a value the caller supplies, off where `f ≤ 0`. In the kernel, on the two-body radial
+   collision at `f = 0.02`, the march ends not finite at the collision in either mode with either stepper; with the
+   limit off the leapfrog passes it and RK4 does not (Part 1, "The regularised energies, defined").
 7. **The step.** One step of the stepper from the saved state: the leapfrog, or RK4.
 8. **The landing**: Heggie's step 8 above, on logH's clock, with the same two integer caps (the secant's 4 retakes,
    the bisection's 64 halvings). A step that ends the clock past the boundary is retaken from its saved state, by
@@ -1088,10 +1115,12 @@ sampling (`driver.rs:440-513`) is the wrapper's detectors here (Part 7), not the
 
 #### The time-reversal maps (REQ-INT-095)
 
-*Defined 13 Nov 2026 by TASK-M3-08 (R-72; physics reviewer approves): Heggie's and Aarseth–Zare + RK4's; logH's, its time
-variable and its conjugate and TTL's `W`, are TASK-M3-75's, which closes REQ-INT-095.* Each map `Θ` acts on the occupant's
-full state, the domain on which dd_integrator §5's test 3 takes its residual (REQ-VAL-190, REQ-VAL-191): `STEP(dt)`, `Θ`,
-`STEP(dt)`, `Θ`.
+Each regularised occupant's map is defined here: Heggie's, Aarseth–Zare + RK4's, and logH's with its time variable, its
+conjugate `B` and TTL's `W`. Each map `Θ` acts on the occupant's full state, the domain on which dd_integrator §5's test
+3 takes its residual (REQ-VAL-190, REQ-VAL-191): `STEP(dt)`, `Θ`, `STEP(dt)`, `Θ`. The kernel's
+`regularised_step_reversibility` test measures every built occupant through its map and holds each profile's
+`step_reversible` to the verdict: Heggie × RK4, Aarseth–Zare + RK4 and logH × RK4 read not reversible, and logH's
+leapfrog reads reversible in both time modes.
 
 - **Heggie**, on `(Q₀, P₀, Q₁, P₁, Q₂, P₂, t)` with `h` held: `Θ(Q, P, t) = (Q, −P, −t)`.
 - **Aarseth–Zare + RK4**, on `(u₁, p₁, u₂, p₂, t)` with `E` and the reference body held: `Θ(u, p, t) = (u, −p, −t)`.
@@ -1158,7 +1187,10 @@ applied per R-369):* "once TASK-M3-08 has transcribed them"; logH's pairs are RQ
 *13 Nov 2026 (R-993, RQ-809 (a)):* under logH, the pair logH × KDK is logH's own leapfrog, the reference's
 drift–kick–drift with `W` at the midpoint velocity in TTL mode, in each time mode, not the generic kick–drift–kick above;
 logH × RK4 is classical RK4 on `(r, v, t, W)`. logH × Euler, × Yoshida-4 and × Yoshida-6 are TASK-M3-39's to write, as
-above, and REQ-INT-006's every-pair test runs them once it writes them.
+above, and REQ-INT-006's every-pair test runs them once it writes them. Until then those three are selectable and not
+defined: the pair is selected with no refusal, and its occupant type fails to build, as a stepper with no form on a
+regularised system does. The every-pair test (`regularisation_default_pairs`) runs the 24 pairs that are defined and
+lists these 6 (three steppers in each of logH's two modes).
 
 The explicit composition is not symplectic on a non-separable Hamiltonian, so the composed occupant's profile is the
 pair's, not the stepper's row in Part 2: `symplectic` false for these pairs, and `step_reversible` dd test 3's
@@ -1244,6 +1276,8 @@ had already marched. The registration at `t = 0` is the registration, not a re-r
 - **Heggie**: 0, so long as its state is carried. A call handed an unregistered buffer at a boundary
   after 0 has to register there, and counts 1: the count says the march is no longer the one
   registered once.
+- **logH**: 0, so long as its `B` and `W` are carried, as Heggie. A call handed an unregistered buffer at a
+  boundary after 0 re-freezes `B` and resets `W` there, and counts 1.
 - **Aarseth–Zare**: one for every boundary after `t = 0` it marched on from, so `n − 1` over a run
   of `n` sync intervals from `t = 0`. (`AzCount::re_registrations`, the per-call diagnostic, counts
   every registration of its call, the one at `t = 0` included, so over the same run it reads `n`.)
@@ -1298,7 +1332,10 @@ rename, no behaviour change. AZ implements it by stepping in `tau` until it land
 
 **The carried state.** An occupant that registers once, Heggie and logH, carries its own state across `ADVANCE`
 calls, registered once at `t = 0`: Heggie's `Qᵢ`, `Pᵢ` and `h` (13 numbers), its interval clock and its running step
-total; logH's `B` and, in TTL mode, `W`. The seam passes that state in and out of each call beside `(m, r, p)`
+total; logH's `B`, `W`, its interval clock and its running step total. logH's positions and momenta are not carried a
+second time: it has no chart, so they are the Cartesian `(r, p)` the seam already passes, bit for bit, and reading them
+at a call rebuilds nothing. `W` is carried in the logH mode too, where nothing reads it, so the buffer is the direct
+march's state in either mode. The seam passes that state in and out of each call beside `(m, r, p)`
 (`Advance::advance_carrying`), so neither occupant rebuilds its variables or re-freezes its energy at a call, and its
 re-registration count is 0 (§ "The profile gains a field"). The state lives in a buffer beside `SimState`, one element
 per trajectory, not in the GPU payload's struct, so the payload's layout and schema version are unchanged (payload §1,
@@ -1310,6 +1347,11 @@ What makes it so is `Q`, `P`, `h` and, where the step budget binds, the running 
 carried too, but it is redundant: a call that can be marched on ends on a sync boundary, where the clock is `Δ_sync`
 exactly, and the next interval restarts it at 0, so no later interval reads it (`regularised_state_carried_clock`
 measures this). Its slot could be dropped later at no cost to the march.
+
+logH's march through the seam is its direct march, bitwise, in each time mode and with each stepper it defines a pair
+with (`regularised_state_carried_logh`, `…_logh_ttl`). What makes it so is `B` in the logH mode and `W` in the TTL
+mode, and the running step total where the budget binds: a seam that re-freezes `B`, or resets `W` to `Ω(r)`, at each
+call is not the direct march. logH's clock is redundant as Heggie's is (`regularised_state_carried_logh_clock`).
 
 Only a call that ended on a boundary can be marched on. A march that ended between boundaries (not finite, its budget
 spent, or a terminal mid-interval) leaves a mid-interval state in the buffer, which a further call would take as
@@ -1607,7 +1649,7 @@ regularisations, and a later method is added by its own ruling. *Was:* "whether 
   - **The floor `TINY`** is one value per working precision, a calibration (R-71, REQ-INT-105): the corpus sets no value, and the reference set names it (`T::TINY`) and states its prin-rs values, `1e-300` at f64 and `1e-37` at f32, only in a comment (`driver.rs:244-245`). *Was (corrected 11 Nov 2026 by the review of PR #488):* "it is in neither the corpus nor the reference set, which names it only (`T::TINY`)".
   - **Heggie:** the quantity floored is `dt/dτ`, at `TINY`: `R₁R₂R₃` under Eq. 20, and `R₁R₂R₃ / S^{3/2}` under the default, Eq. 22 (R-161), with `S` itself floored at `TINY` first; `Rᵢ` is tested, never floored. **The signal counts every step on which the floor acts:** it fires when `dt/dτ < TINY` or (under Eq. 22) `S < TINY`, and also when any pair separation `Rᵢ < TINY`, the reference's own test. This differs from the reference, whose `r_floored` fires on `Rᵢ < TINY` only (`heggie/driver.rs`): `dt/dτ` can fall below `TINY` while every `Rᵢ ≥ TINY` (under Eq. 20 with one `Rᵢ` just above `TINY` and the other two's product below 1; under Eq. 22 near a binary collision, where `dt/dτ ≈ R₁/√(R₂R₃)`, whenever `R₂R₃ > 1`), and such a step advances on a fabricated denominator. Counting it keeps "each is counted" true, as logH's bullet does (applied per R-369, physics review 5606990734 of PR #277, P1). *Was:* "the signal fires when any pair separation `Rᵢ < TINY` (prin-rs `r_floored`)".
   - **Aarseth–Zare:** the signal fires when `A < TINY` or `B < TINY` (prin-rs `ab_floored`); each factor is floored at `TINY`, and the denominator is the product `A·B` of the floored factors. At f32 `TINY·TINY` can underflow, so a step with both factors floored is recorded by the proposal of REQ-INT-105. *11 Nov 2026 (R-953, the owner's follow-up on RQ-756):* the guard that catches such a doubly degenerate state is the march's explicit finiteness test (Part 2b, the Aarseth–Zare step control, step 7; `driver.rs:1000-1001`), not the floor: at f32 `dτ = η·dt_left/(A·B)`, `A·B` the product of the floored factors, is not finite whenever that product is below about `η·dt_left/FLT_MAX` (about `3e-43` at `η·dt_left ≈ 1e-4`, both factors near `5e-22` for example), when neither factor is floored and `ab_floored` does not fire; `1e-37 × 1e-37` underflowing to `0` is one case of it. *Was (corrected 11 Nov 2026 by the physics review of PR #488):* "`1e-37 × 1e-37` underflows to `0` at f32, the denominator `A·B` of the floored factors is `0`, and `dτ = η·dt_left/(A·B)` is infinite." Its test arm (REQ-INT-105's, built by TASK-M3-68) exercises that finiteness test on a state degenerate at the interval's entry, since a state degenerate only mid-interval takes a finite step under step 3's per-step rule and never reaches it.
-  - **logH:** it floors its own drift denominator at `TINY` (`K + B` in the logH time mode, the carried `W` in the TTL mode), so `dt/ds` is `1 / max(drift, TINY)`. The signal fires when that drift denominator is below `TINY` or either denominator, drift or kick, is not positive (prin-rs records the second, `den_degenerate`; the first is counted too, so every floored step is counted, applied per R-369).
+  - **logH:** it floors its own drift denominator at `TINY` (`K + B` in the logH time mode, the carried `W` in the TTL mode), so `dt/ds` is `1 / max(drift, TINY)`. The signal fires when that drift denominator is below `TINY` or either denominator, drift or kick, is not positive (prin-rs records the second, `den_degenerate`; the first is counted too, so every floored step is counted, applied per R-369). This floor is not a separation floor: the drift denominator grows at a close approach (`K + B` follows `U`, `W` follows `Ω`), and over the floor's fixtures its least value is the registration's in 27 of 32 runs, at least 36 decades above `TINY` at f32 and 299 at f64, no step floored (`cargo xtask gate separation-floor --propose`, logH's arm). The separations themselves are floored only inside TTL's `Ω` and `Ω̇`.
   - **An entry-cap hit**, every regularised occupant: the step-size rule in force sizes each step as `η·Δ_sync / (dt/dτ)` from the current state and caps it at the interval's entry size, `dτ_entry = η·Δ_sync / (dt/dτ at the interval's entry)`, each `dt/dτ` the occupant's floored one above. A hit is counted when the per-step size asks for more than the entry cap (prin-rs `capped = cons[0] > cons[1]`, counted into `n_cap_hits`), before the predictive step limit (Part 2b), which may cut the step further, and before the landing clamp, which is never counted as a hit. prin-rs counts it under Aarseth–Zare only; Heggie's and logH's drivers apply the same cap uncounted, and here it is counted under each.
 
   **How they are stored and drive the floor (R-603, closing RQ-526: a flag bit plus counters, and the tile doesn't split).** Budget exhaustion sets a sticky flag, `budget_exhausted`, the copy's `state` latched as it stood and its footprint undetermined at read; the `saturated` bit is set when either counted signal fires. The flag and the two counts are kept together in the hot payload word `budget_word`, not in `sample_descriptor`, whose sixteen bits are all assigned (R-545; payload §1; REQ-PAY-110, whose bits are a definition), a schema change. *Was (code review 5662211284 of PR #293, applied per R-369):* "Budget exhaustion sets a sticky descriptor flag, `budget_exhausted`, beside `saturated`, … and the two counts are kept in a payload word (a schema change; the bit's and the counters' layout are REQ-PAY-110, a definition)." An undetermined-by-budget footprint is undetermined: never discarded and never treated as resolved, and it takes the refinement policy's `Undetermined` decision, never a split, since halving the cell does not help it (`principia_dd_refinement_policy.md` §1, §6). Its remedy is finer steps, as an explicit re-run the user asks for, never an automatic one. The scheduler's integration-floor stop reads `saturated` and `suspect_fraction` for every occupant (`principia_scheduler_contract.md` Part 4). *Was:* "How budget exhaustion and the two counts are stored in `SimState`, and how they drive the scheduler's integration-floor stop, is RQ-526." Measured over 35 charts at `t = 13` with a whole-run budget of 480,000 steps (prin-rs `results/step_budget/`): running out of the budget was the only failure mechanism present, every chart cleared at 480,000, and a too-small budget **manufactures work**, truncated footprints reading undetermined and splitting. `error_ratio` is blind to a truncated run (it reads its converged 1.0000), so the budget's outcome is read directly, never inferred from drift. At `t = 50` the same 480,000 left 42 of 576 pixels of `burrau_nu_k` exhausted, and the step rate (p99 over pixels, per unit time) was nearly the same at 13 and at 50: about 1.8e4 on `burrau_nu_k`, 4.5e3 on `latent_mixed_h3`, 1.1e3 on `config_stability` and 3e2 on `latent_shape`, the control that never binds; rates are averaged over a pixel's copies and the budget applies per copy, so the worst copy needs more (prin-rs `budget_horizon_probe`, PR #34). Hence a rate, starting at about 4e4 per unit time per copy, about twice the worst measured pixel mean, confirmed at its gate (R-564).

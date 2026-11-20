@@ -400,6 +400,16 @@ fn check_non_finite_fails<S: Defined, const TTL: bool, R: P, D: Reading>() {
 
 /// `$check::<S, TTL, R, $d>()` over logH's two steppers, its two modes and the two precisions.
 macro_rules! every_arm {
+    ($check:ident) => {
+        $check::<Kdk, false, f64>();
+        $check::<Kdk, true, f64>();
+        $check::<Rk4, false, f64>();
+        $check::<Rk4, true, f64>();
+        $check::<Kdk, false, f32>();
+        $check::<Kdk, true, f32>();
+        $check::<Rk4, false, f32>();
+        $check::<Rk4, true, f32>();
+    };
     ($check:ident, $d:ty) => {
         $check::<Kdk, false, f64, $d>();
         $check::<Kdk, true, f64, $d>();
@@ -989,13 +999,13 @@ fn check_reboot<S: Defined, const TTL: bool, R: P>(restore: Restore) {
 }
 
 /// [`check_reboot`] with the buffer restored whole, over every arm.
-fn check_reboot_whole<S: Defined, const TTL: bool, R: P, D>() {
+fn check_reboot_whole<S: Defined, const TTL: bool, R: P>() {
     check_reboot::<S, TTL, R>(Restore::Whole);
 }
 
 #[test]
 fn regularised_state_carried_logh_reboot() {
-    every_arm!(check_reboot_whole, ());
+    every_arm!(check_reboot_whole);
 }
 
 negative_control!(
@@ -1108,7 +1118,7 @@ fn check_clock(name: &str, own: Clocks, planted: Clocks) {
 }
 
 /// [`check_clock`] on one arm.
-fn check_clock_arm<S: Defined, const TTL: bool, R: P, D>() {
+fn check_clock_arm<S: Defined, const TTL: bool, R: P>() {
     check_clock(
         &name::<S, Values<TTL>, R>(),
         clocks::<Seamed<S, Values<TTL>>, R>(),
@@ -1118,7 +1128,7 @@ fn check_clock_arm<S: Defined, const TTL: bool, R: P, D>() {
 
 #[test]
 fn regularised_state_carried_logh_clock() {
-    every_arm!(check_clock_arm, ());
+    every_arm!(check_clock_arm);
 }
 
 negative_control!(
