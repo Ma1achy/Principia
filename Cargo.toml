@@ -15,3 +15,15 @@ members = [
 version = "0.1.0"
 edition = "2021"
 publish = false
+
+# Debug info for local builds: the workspace's own crates keep line tables, so a panic's backtrace still names file
+# and line for every workspace frame; dependencies build with none. CI sets the same values in its environment.
+# `test` inherits `dev`'s `package."*"`.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.test]
+debug = "line-tables-only"
