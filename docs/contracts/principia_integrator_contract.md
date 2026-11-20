@@ -861,9 +861,8 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
 1. **Registration, once.** The Cartesian state at `t = 0` is mapped to `(Q, P)` and `h` (`driver.rs:275-277`); the
    march then runs uninterrupted, and each sync boundary is a sampling cadence that does not touch the state
    (`driver.rs:8-11`, `:482`). Heggie never re-registers (Part 2a, R-565). The occupant seam carries this state across
-   `ADVANCE` calls in the payload under R-992 (RQ-808 (a); § "Part 2a" below), and TASK-M3-75 builds it; the march here
-   is the reference driver's, registered once at `t = 0`. *Was (corrected 13 Nov 2026 by code review 5895563626 C1 of
-   PR #522):* "How the occupant seam carries this state across `ADVANCE` calls is RQ-808 (TASK-M3-75)".
+   `ADVANCE` calls in the trajectory's carried buffer (§ "Part 2a" below), so the march through the seam is this one,
+   registered once at `t = 0`, bitwise.
 2. **The interval.** `dt_left = Δ_sync` (R-565), and the interval clock `t` is set to `0` at each interval's start
    (`driver.rs:327-329`). There is no landing tolerance (R-1007; step 8). *Was (13 Nov 2026, until TASK-M3-77, the
    reference's landing; physics review 5895439304 of #522):* "(`driver.rs:327-329`); the landing tolerance is
@@ -1227,10 +1226,28 @@ over 100 orbits and worse at smaller steps, unexplained and probably the probe's
 
 #### The profile gains a field
 
-`re_registrations: u32` — or at minimum a per-trajectory count in the payload. **This is the
-quantity the entire wedge investigation turned on and it is currently invisible.** A method that
-re-registers is structurally different from one that does not, and downstream must be able to read
-that rather than know it as folklore.
+`re_registrations: u32`, a per-trajectory count. **This is the quantity the entire wedge
+investigation turned on.** A method that re-registers is structurally different from one that does
+not, and downstream must be able to read that rather than know it as folklore.
+
+**Where it lives.** In the trajectory's carried buffer, the element beside its `SimState`
+(`kernel::driver::carried::Carried::re_registrations`; payload §1, "The carried regularised state"),
+written by the occupant through the seam and handed back by the wrapper with the `SimState`
+(`integrate_carrying`, `integrate_resumed_carrying`). It is not a field of the capability profile,
+which is one static row per pair and cannot hold a number that differs between trajectories, and it
+is not in the GPU payload, so it adds no ledger row and no schema-version change.
+
+**What it counts.** The registrations the trajectory's occupant made at a sync boundary after
+`t = 0`: each time it built its regularised variables from the Cartesian `(m, r, p)` of a state it
+had already marched. The registration at `t = 0` is the registration, not a re-registration.
+
+- **Heggie**: 0, so long as its state is carried. A call handed an unregistered buffer at a boundary
+  after 0 has to register there, and counts 1: the count says the march is no longer the one
+  registered once.
+- **Aarseth–Zare**: one for every boundary after `t = 0` it marched on from, so `n − 1` over a run
+  of `n` sync intervals from `t = 0`. (`AzCount::re_registrations`, the per-call diagnostic, counts
+  every registration of its call, the one at `t = 0` included, so over the same run it reads `n`.)
+- **`none`** and any stepper alone: 0; they have no registration.
 
 #### The comparison discipline is part of the seam, NOT a convention
 
@@ -1279,14 +1296,25 @@ The seam moves from *"advance by `dt`"* to *"advance to `t`"*. **The wrapper own
 occupant owns how it gets there.** KDK/Yoshida implement `ADVANCE` as the loop they already run — a
 rename, no behaviour change. AZ implements it by stepping in `tau` until it lands on `t_target`.
 
-*13 Nov 2026 (R-992, RQ-808 (a)):* an occupant that registers once, Heggie and logH, carries its own state across
-`ADVANCE` calls in the payload, registered once at `t = 0`: Heggie's `Qᵢ`, `Pᵢ` and `h`, logH's `B` and, in TTL mode,
-`W`. The seam passes that carried state in and out of each call beside `(m, r, p)`, so neither occupant rebuilds its
-variables or re-freezes its energy at a call, and its re-registration count is 0 (REQ-INT-018, REQ-INT-118). It is a
-payload schema change (REQ-PAY-114). Aarseth–Zare carries none and re-registers at every sync boundary, as Part 2b's
-table says. *Was:* the seam passed only `(m, r, p)`, so through it a Heggie or logH occupant would have rebuilt its
-state at every call that marches (RQ-808). *Corrected 13 Nov 2026 (physics review 5886173032 of #515, F5):* Heggie's carried state includes its own
-clock, as option (a) reads ("13 numbers and the clock"), so that re-boot reproduces live march bitwise.
+**The carried state.** An occupant that registers once, Heggie and logH, carries its own state across `ADVANCE`
+calls, registered once at `t = 0`: Heggie's `Qᵢ`, `Pᵢ` and `h` (13 numbers), its interval clock and its running step
+total; logH's `B` and, in TTL mode, `W`. The seam passes that state in and out of each call beside `(m, r, p)`
+(`Advance::advance_carrying`), so neither occupant rebuilds its variables or re-freezes its energy at a call, and its
+re-registration count is 0 (§ "The profile gains a field"). The state lives in a buffer beside `SimState`, one element
+per trajectory, not in the GPU payload's struct, so the payload's layout and schema version are unchanged (payload §1,
+"The carried regularised state"). Aarseth–Zare carries no state and re-registers at every sync boundary, as Part 2b's
+table says; it writes only its count there.
+
+Heggie's march through the seam is the direct march, bitwise, for any cut into calls (`regularised_state_carried`).
+What makes it so is `Q`, `P`, `h` and, where the step budget binds, the running step total. The interval clock is
+carried too, but it is redundant: a call that can be marched on ends on a sync boundary, where the clock is `Δ_sync`
+exactly, and the next interval restarts it at 0, so no later interval reads it (`regularised_state_carried_clock`
+measures this). Its slot could be dropped later at no cost to the march.
+
+Only a call that ended on a boundary can be marched on. A march that ended between boundaries (not finite, its budget
+spent, or a terminal mid-interval) leaves a mid-interval state in the buffer, which a further call would take as
+standing on a boundary. That is safe only because such a march is never marched on: a failed or terminal run is not
+resumed, and a spent budget stays spent, the carried total being checked before any further step.
 
 The profile gains **`owns_time_mapping: bool`** — the honest name, because the question is not "is it
 regularised" but **"does the wrapper still know how far a step goes"**. It is reported for the **composed occupant**
@@ -1300,9 +1328,9 @@ system that handles integration makes the main path the exception, and that leak
 #### What this preserves, and what it costs
 
 **Preserved — the canonicalise seam.** The integrator still takes `(m, r, p)` and never learns the
-chart's name. This change does not come near it. *13 Nov 2026 (R-992):* a Heggie or logH occupant also takes its
-carried regularised state from the payload; that state is the occupant's own, set once at `t = 0`, and holds nothing of
-the chart.
+chart's name. This change does not come near it. A Heggie or logH occupant also takes its carried regularised state
+from the buffer beside `SimState`; that state is the occupant's own, set once at `t = 0`, and holds nothing of the
+chart.
 
 **Preserved — payload purity, and it gets *cleaner*.** The guarantee is *"`SimState` is a pure
 function of `(IC, sim key, playhead t)` — identical whether reached by continuous marching, catch-up,
@@ -1379,8 +1407,8 @@ run, independent of the horizon `T` and of frame timing.** The boundaries are `t
   (0.10) costs 1–3% more steps, 16× (0.025) 17–25%, 32× (0.0125, about a display frame) 40–52%; the shape changes by
   about 1e-11 to 1e-10 (about 1e-6 on `far`), and 0, at most 1 and at most 4 outcome labels of 1024 flip (prin-rs
   `sync_grid_probe`, PR #34). Heggie never re-registers, so its sensitivity to the boundary cadence is about 10×
-  smaller than Aarseth–Zare's. *13 Nov 2026 (R-992):* that holds through the seam because Heggie's state is carried
-  across `ADVANCE` calls in the payload, registered once at `t = 0`.
+  smaller than Aarseth–Zare's. That holds through the seam because Heggie's state is carried across `ADVANCE` calls,
+  registered once at `t = 0`.
 
 R-565 is the sync grid only (R-602, closing RQ-524): the unregularised occupants' macro-step grid, `dt_macro =
 max(1e-3, T/65535)` (Part 3, R-132), which depends on `T` above `T = 65.535`, stays R-132's, unchanged. *Was:* "Whether

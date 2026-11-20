@@ -11,7 +11,9 @@
 //! (TASK-M3-39 measures the table). It is host-side interface data, read by the selector, the status line and the
 //! export sidecar, not by a step.
 
-use super::Kind;
+use super::heggie::Heggie;
+use super::{Composed, Kind};
+use crate::occupant::rk4::Rk4;
 use crate::occupant::{DebugOccupant, Occupant, Selection};
 
 /// Heggie's time transformations (Part 2b; R-161).
@@ -191,7 +193,20 @@ pub struct Pair {
     pub regularisation: Choice,
 }
 
+/// The default occupant as the kernel runs it: RK4 under Heggie with the values of `C`, [`Pair::DEFAULT`]'s type
+/// where `C`'s time transformation is Eq. 22. The plan is unclear here (a "default occupant config" with no values
+/// to give it); chose to leave the type open in its configuration, because Heggie's step-control values are
+/// calibrations with no register entry yet, and a number written here would be one the register does not hold.
+pub type DefaultOccupant<C> = Composed<Rk4, Heggie<C>>;
+
 impl Pair {
+    /// The default occupant: Heggie × RK4 under Eq. 22 at n = 3/2 ([`super::heggie::DEFAULT_TIME`]), the pair every
+    /// Heggie result was measured with, at every tier (Part 2b). Every other pair is selectable ([`Pair::select`]).
+    pub const DEFAULT: Pair = Pair::select(
+        Selection::Production(Occupant::Rk4),
+        Choice::Heggie(super::heggie::DEFAULT_TIME),
+    );
+
     /// Selects `stepper` with `regularisation`. Every pair is selectable, `none` and the measured-bad pairs included:
     /// there is no refusal (R-561).
     #[inline]

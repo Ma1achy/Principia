@@ -70,11 +70,20 @@
 //! readout ([`super::shape::Readout::load`]), and marches on; a march split into any number of resumed calls writes
 //! these fields bit-identically to one call (R-397's "however the march is split into dispatches"). The cadence is the
 //! caller's: one that keeps state across macro-steps (the monitor's latches, the detector's) is the caller's to resume.
+//!
+//! **The carried regularised state** ([`Carried`]; Part 2a): the wrapper passes the trajectory's buffer into every
+//! `ADVANCE` call ([`Advance::advance_carrying`]), so an occupant that registers once, Heggie, registers at `t = 0` and
+//! marches on from its own state at every later call. A run from its IC starts the buffer unregistered. Like the
+//! cadence, the buffer is the caller's to resume: [`integrate_carrying`] hands it back beside the `SimState`, and
+//! [`integrate_resumed_carrying`] takes it up again with the stored `SimState`, bitwise the uncut march. A resume with
+//! no buffer ([`integrate_resumed_with`]) starts one unregistered, which under such an occupant is a re-registration
+//! from the stored `(r, p)`, not the march registered once: it is for occupants that carry nothing.
 
 use spirv_std::num_traits::Float;
 
 use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence, Reached};
 use super::cadence::{WordCadence, WrapperCadence};
+use super::carried::Carried;
 use super::latch::Latches;
 use super::shape::{Readout, ReadoutReal};
 use super::substep::{NsubThresholds, Quantise, SubstepState};
@@ -254,6 +263,21 @@ pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
     integrate_with_co::<A, R, C, ()>(ic, uniforms, cadence, &mut ())
 }
 
+/// [`integrate_with`], with the trajectory's carried regularised state handed back in `carried` (the module's note):
+/// the buffer is set unregistered, as a run from its IC starts it, and holds what the occupant carried where the
+/// march stopped, its re-registration count with it. The `SimState` is [`integrate_with`]'s, bit for bit.
+#[inline]
+pub fn integrate_carrying<A: Advance, R: WrapperReal, C: Cadence<R>>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    cadence: &mut C,
+    carried: &mut Carried<R>,
+) -> SimStateBaseOf<R> {
+    *carried = Carried::unregistered();
+    let end = uniforms.horizon_steps;
+    march::<A, R, C, ()>(uniforms, cadence, &mut (), Start::fresh(ic), end, carried)
+}
+
 /// A trajectory the wrapper marches beside the sample's own, macro-step by macro-step (dd_integrator §3.4: the
 /// wrapper runs the per-`STEP` sequence on every marching trajectory it owns): the Benettin shadow
 /// ([`super::benettin`]). It is never the sample: nothing it does reaches the sample's state or its cadence.
@@ -297,19 +321,9 @@ pub fn integrate_with_co<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R
     cadence: &mut C,
     co: &mut M,
 ) -> SimStateBaseOf<R> {
-    let start = Start {
-        state: State {
-            m: ic.m,
-            r: ic.r,
-            p: ic.p,
-        },
-        completed: 0,
-        total_substeps: 0,
-        saturated: false,
-        diffusion: Welford::default(),
-        readout: Readout::fresh(ic.r, ic.m),
-    };
-    march::<A, R, C, M>(uniforms, cadence, co, start, uniforms.horizon_steps)
+    let mut carried = Carried::unregistered();
+    let end = uniforms.horizon_steps;
+    march::<A, R, C, M>(uniforms, cadence, co, Start::fresh(ic), end, &mut carried)
 }
 
 /// The march resumed from `stored`, a `SimState` this wrapper wrote for the same `ic` under the same `uniforms`, for at
@@ -317,12 +331,31 @@ pub fn integrate_with_co<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R
 /// `t_end_step`, with its `total_substeps`, `saturated` bit, Welford co-moments, `θ̃`, `_reserved`, closure registers and
 /// departed bit, and `cadence` the caller's. A march that stops short of the horizon is `running`. `stored` is a march
 /// still running: one whose `state` is terminal is finished and never resumed.
+///
+/// No carried state is resumed: the occupant is handed an unregistered buffer (the module's note).
 #[inline]
 pub fn integrate_resumed_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
     ic: &Ic<R>,
     uniforms: &WrapperUniforms<R>,
     cadence: &mut C,
     stored: &SimStateBaseOf<R>,
+    steps: u32,
+) -> SimStateBaseOf<R> {
+    let mut carried = Carried::unregistered();
+    integrate_resumed_carrying::<A, R, C>(ic, uniforms, cadence, stored, &mut carried, steps)
+}
+
+/// [`integrate_resumed_with`], with the trajectory's carried regularised state resumed too (the module's note): the
+/// occupant marches on from `carried`, the buffer the wrapper handed back with `stored`, both of the same trajectory
+/// at the same macro-step, and its state where this march stops is written there. A march split into any number of
+/// these calls is the uncut march, bit for bit, in the `SimState` and in the buffer.
+#[inline]
+pub fn integrate_resumed_carrying<A: Advance, R: WrapperReal, C: Cadence<R>>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    cadence: &mut C,
+    stored: &SimStateBaseOf<R>,
+    carried: &mut Carried<R>,
     steps: u32,
 ) -> SimStateBaseOf<R> {
     let completed = tm_t_end_step(stored.times);
@@ -353,7 +386,7 @@ pub fn integrate_resumed_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
     } else {
         uniforms.horizon_steps
     };
-    march::<A, R, C, ()>(uniforms, cadence, &mut (), start, end)
+    march::<A, R, C, ()>(uniforms, cadence, &mut (), start, end, carried)
 }
 
 /// Where a march starts: the state, the completed macro-steps, `total_substeps` and `saturated` so far, the Welford
@@ -368,8 +401,28 @@ struct Start<R> {
     readout: Readout<R>,
 }
 
+impl<R: WrapperReal> Start<R> {
+    /// A run from its IC: the IC's state with every count 0.
+    #[inline]
+    fn fresh(ic: &Ic<R>) -> Self {
+        Start {
+            state: State {
+                m: ic.m,
+                r: ic.r,
+                p: ic.p,
+            },
+            completed: 0,
+            total_substeps: 0,
+            saturated: false,
+            diffusion: Welford::default(),
+            readout: Readout::fresh(ic.r, ic.m),
+        }
+    }
+}
+
 /// The macro-step loop from `start` to the macro-step `end`, at most the horizon (integrator_contract Part 1's loop,
-/// under `ADVANCE`; the module's note): `co` marched beside it. The run is `bounded` where it reaches the horizon,
+/// under `ADVANCE`; the module's note): `co` marched beside it, `carried` the trajectory's buffer, passed into every
+/// call. The run is `bounded` where it reaches the horizon,
 /// `running` where `done`, an ended march or `end` stops it first, and `sim_failed` where its march went non-finite.
 #[inline]
 fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
@@ -378,6 +431,7 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
     co: &mut M,
     start: Start<R>,
     end: u32,
+    carried: &mut Carried<R>,
 ) -> SimStateBaseOf<R> {
     let mut state = start.state;
     let mut geom = Geom::new(&state.m, &state.r);
@@ -401,8 +455,15 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
             dt_macro: uniforms.dt_macro,
             n_sub,
         };
-        let (out, reached) =
-            A::advance_reaching(&state, &geom, macro_step, macro_step + 1, &params, cadence);
+        let (out, reached) = A::advance_carrying(
+            &state,
+            &geom,
+            macro_step,
+            macro_step + 1,
+            &params,
+            cadence,
+            carried,
+        );
         co.after_macro::<A>(&state, &out.state, macro_step, &params, out.substeps);
         state = out.state;
         geom = out.geom;
