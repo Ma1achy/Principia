@@ -3,12 +3,22 @@
 Carried over from the old repository's review follow-ups and open threads. Fix one when you're in that code;
 delete its line when it's done.
 
-- **Escape fires only once the escaper is several hundred binary separations away.** The shape point of a
-  hierarchy keeps turning with the inner binary's phase, so the chord over the 0.4 window is about `0.56·a/d`
-  for an equal-mass circular binary of separation `a` with the third body at `d`, and it drops below the
-  provisional `tau = 1e-3` only at `d ≈ 560·a` (measured: `fixtures/escape/hyperbolic_ejection.toml` fires at
-  `t = 529`, not by 20). So at the default horizon of 50 only escapes that leave a tight binary are labelled, and
-  the golden frame (horizon 3) has none. `tau` and the window are provisional; the re-validation is TASK-M3-34.
+- **Escape from a binary fires late.** The shape point of a hierarchy keeps turning with the inner binary's
+  phase, so the chord over the 0.4 window falls only as `1/d`, `d` the third body's distance. Measured on
+  `fixtures/escape/hyperbolic_ejection.toml` (masses 1, 1, 1, a circular binary of separation 1; not the kernel's
+  `M = 1` gauge, and `shape` takes the masses as given): the chord is `0.558/d`, below the provisional
+  `tau = 1e-3` only at `d = 558`, so it fires at `t = 529`, not by 20. The coefficient is the fixture's: it is
+  `2·√(μ_ρ/μ_λ)·(a/d)·2 sin(0.2·ω)` for a circular binary of separation `a` and angular speed `ω`, at most
+  `4·√(μ_ρ/μ_λ)·a/d`. Systems that fly apart settle much sooner (the app's start view: every sample by `t = 32`).
+  The golden frame (horizon 3) has no escape. `tau` and the window are provisional; the re-validation is
+  TASK-M3-34.
+- **The escape rule fires on a bound system with a light, slow inner pair.** `E_rel` tests one body against the
+  other two as if they were one mass, whether or not they are the bound pair. Measured: masses
+  `(0.001, 0.001, 1)`, the light pair on a circle of separation 1, the heavy body at 400 on a circular orbit;
+  every pair bound, total `E = −3.0e-6`. The far member of the pair is the farthest body (`d = 400.10` against
+  400), its `E_rel = +1.2e-4`, and the window chord is `4.5e-5`, so `escape` fires at the first window mark
+  naming that member. At `d = 300` and 150 it does not (`E_rel < 0`). It needs a mass ratio near `1:1000` or
+  beyond; which body is the candidate is a call the physics review should confirm (the escape detector's PR).
 - **The inverse encode's T2 range.** `docs/contracts/principia_inverse_encode_contract.md` Part 1 still
   requires E's representative in `[0, 2π]`, but under the offset link `β = z_β + π/2` (which keeps z = 0 at
   the equilateral) the inverse returns β below π/2. The contract needs restating when the decoder's mirror

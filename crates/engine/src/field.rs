@@ -11,9 +11,9 @@
 //! `bounded`; one whose step budget ran out is `running` (undetermined, as the wrapper labels it); one that went
 //! non-finite is `sim_failed`. **Escape** is the cadence's too (`kernel::detect::escape`): at each sync boundary that
 //! is a window mark the escape test runs, and where it fires the march ends there and the sample is `escape`, its
-//! `detail` the escaper's body index or 3, a triple ejection. It fires only once the shape point has settled, which
-//! for an escaper leaving a binary of separation `a` is at a distance of several hundred `a`, so a short horizon
-//! shows few.
+//! `detail` the escaper's body index or 3, a triple ejection. It fires only once the shape point has settled: soon
+//! for bodies that all fly apart, late for an escaper leaving a binary, whose phase keeps the shape point turning
+//! (`plan/KNOWN.md`).
 //!
 //! **Heggie's step-control values** are calibrations with no value in the register yet. The plan is unclear here;
 //! chose the integrator contract's radial-collision gate values (`η = 0.01`, `Δ_sync = 1/8`, the predictive limit's

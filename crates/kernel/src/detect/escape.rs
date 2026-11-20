@@ -31,8 +31,13 @@
 //! relative to the centre of mass of the other two, which lies about half way to the far body, so its `E_rel` turns
 //! positive with the binary's phase once the third body is a few binary separations away, bound or not (measured on
 //! `fixtures/escape/settled_bound_hierarchy.toml` at `t = 0`: `+0.37` for one binary member, `−0.40` for the other,
-//! `−0.15` for the third body). A body that does escape becomes the farthest, so this reading can only fire later,
-//! never on a different body.
+//! `−0.15` for the third body). A body that escapes from a pair of comparable masses becomes the farthest, so there
+//! this reading can only fire later. Neither reading is exact, because the rule treats "the other two" as one mass
+//! whether or not they are the bound pair: where the inner pair is light and slow beside a heavy third body, a member
+//! of the pair can be the farthest body with `E_rel > 0` while every pair is bound, and the rule fires on a bound
+//! system (measured, and recorded in `plan/KNOWN.md`: masses `(0.001, 0.001, 1)`, the pair's separation 1, the heavy
+//! body at 400 on a circular orbit, total `E < 0`; the window chord is `4.5·10⁻⁵` and `E_rel = +1.2·10⁻⁴` for the far
+//! member, so it fires at the first mark).
 //!
 //! **Triple ejection** ([`ionised`]) is a classification of a firing the rule has already made, never a second way to
 //! fire: where all three pairwise two-body energies are positive, all three separations are growing and the total
