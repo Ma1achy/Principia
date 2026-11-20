@@ -19,16 +19,19 @@ fn with_component(d: Draw, at: usize, value: f64) -> Draw {
         x,
         hamiltonian,
         rates,
+        differenced,
     } = d;
     Draw {
         x,
         hamiltonian,
+        differenced,
         rates: Box::new(move |y| {
             let (dq, dp, dt) = rates(y);
             let n = dq.len();
             let mut all: Vec<f64> = dq.into_iter().chain(dp).chain([dt]).collect();
             all[at] = value;
-            (all[..n].to_vec(), all[n..2 * n].to_vec(), all[2 * n])
+            let last = all.len() - 1;
+            (all[..n].to_vec(), all[n..last].to_vec(), all[last])
         }),
     }
 }

@@ -1,0 +1,9 @@
+{
+  "description": "The control under logH's TTL time mode: the first momentum rate's sign flipped; its discrepancy is of order one, far beyond the tolerance, so the gate must fail it (REQ-VAL-170).",
+  "occupant": "logh-ttl",
+  "step": 1e-6,
+  "samples": 64,
+  "seed": 79600363727205,
+  "flip": true,
+  "expected": "fail"
+}
