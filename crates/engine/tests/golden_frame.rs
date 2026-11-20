@@ -8,19 +8,21 @@
 //! whole square, under the physics kernel. At `z₀ = 0` the three bodies start at rest, so the frame is the free-fall
 //! map over the shape plane, with all three pairs' collision regions in it.
 //!
-//! **The horizon** is 5, not the app's default 50. The plan is unclear here (it fixes the window, not the horizon);
-//! chose 5 because the frame at 50 takes 197 s in a debug build on 4 cores, more than CI's debug test shards should
-//! carry, and at 5 it takes 34 s and already has 2164 of its 4096 samples in a collision, of every pair. What it gives
-//! up: the samples that first collide between `t = 5` and `t = 50` (651 of them) are `bounded` here.
+//! **The horizon** is 3, not the app's default 50. The plan is unclear here (it fixes the window, not the horizon);
+//! chose 3 because the frame at 50 takes 197 s in a debug build on 4 cores and at 5 it took 72 s in a CI test shard,
+//! more than those shards should carry, while at 3 it takes 25 s on 4 cores and still has 1054 of its 4096 samples in a
+//! collision, of every pair. What it gives up: the samples that first collide between `t = 3` and `t = 50` (1761 of
+//! them) are `bounded` here.
 //!
 //! **The criterion**, written before the first run. The histogram must equal the stored one exactly, line for line. The
 //! image must equal the stored one exactly, every byte of every pixel. Exact is the honest criterion because the CPU
 //! path has no platform-dependent arithmetic: the chart is decoded at f64 with the kernel's pinned pure-software libm
 //! and narrowed once to f32; the march (Heggie × RK4 at f32) uses the four operations, a fused multiply-add and a
 //! square root, each correctly rounded under IEEE 754, and no transcendental; each sample is computed alone, so the
-//! thread count cannot change it; and the image is a table lookup of the outcome. The golden was generated on Linux
-//! x86-64, where CI also runs; that it holds on macOS arm64 rests on that argument and is not yet measured there. If it
-//! ever fails on one platform only, that is a finding about the kernel's determinism: report it, do not loosen this.
+//! thread count cannot change it; and the image is a table lookup of the outcome. The golden is generated on Linux
+//! x86-64, where CI also runs. On macOS arm64 the same frame at horizon 5 was measured to match exactly; this one, at
+//! horizon 3, is not yet run there. If it ever fails on one platform only, that is a finding about the kernel's
+//! determinism: report it, do not loosen this.
 //!
 //! **On a failure** the test says how many pixels differ and where the first is, and writes the frame it computed to
 //! `target/tmp/golden_frame/` (`actual.png`, `actual_histogram.txt`; the control's as `control…`) to be looked at beside
@@ -51,7 +53,7 @@ const BLESS: &str = "PRINCIPIA_BLESS_GOLDEN_FRAME";
 const SIZE: [usize; 2] = [64, 64];
 
 /// The golden frame's horizon (the module's note).
-const HORIZON: f64 = 5.0;
+const HORIZON: f64 = 3.0;
 
 /// The sim key of the module's view at the horizon `t`: the plane through `z₀ = 0` spanned by `z_α` and `z_β`, the
 /// chart's whole square, every other group as `first_slice::Quad::sim_key` sets it.
@@ -235,7 +237,7 @@ fn the_frame_is_the_golden_frame() {
 
 negative_control!(
     the_frame_is_the_golden_frame,
-    "the same view at half the horizon, before the collisions between t = 2.5 and t = 5",
+    "the same view at half the horizon, before the collisions between t = 1.5 and t = 3",
     expected = "the frame is not the golden frame",
     check_golden(&frame(HORIZON / 2.0), "control")
 );
