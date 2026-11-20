@@ -31,8 +31,8 @@ use kernel::physics::PairGeom;
 use kernel::regularisation::az::{AzReal, End, ExplicitTest};
 use kernel::regularisation::form::Flow;
 use kernel::regularisation::logh::{
-    drift, kick, march, profile, register, reversed, step_size, LhAdvanced, LhP, LhParams, LhQ,
-    LhRegistered, LhStepper, LhSystem, LhWatch,
+    drift, kick, leapfrog, march, profile, register, reversed, step_size, LhAdvanced, LhP,
+    LhParams, LhQ, LhRegistered, LhStepper, LhSystem, LhWatch,
 };
 use kernel::regularisation::pairs::LogHMode;
 use validation::drift::{FIGURE_EIGHT_V3, FIGURE_EIGHT_X1};
@@ -357,14 +357,24 @@ fn swapped_kick(s: &LhSystem<f64>, q: &LhQ<f64>, p: &LhP<f64>, h: f64) -> LhP<f6
 /// `ε/h ≈ 2·10⁻¹³`. On the solution the two denominators are one number and a swap is invisible; off it, where `B` and
 /// `W` are drawn apart from the state, a swap reads of order 1. `W`'s increment is not read here: it is taken at the
 /// midpoint velocity, which the rate at `(r, p)` is not.
+///
+/// And the leapfrog is these parts: on every state its `(r, p, W)` after a step `h` are those of `drift(h/2)`,
+/// `kick(h)`, `drift(h/2)`, bitwise (its clock is not: it adds the two drift times once, the parts in turn). The
+/// leapfrog forms its drifts itself, so without this the check above would guard a drift the march does not run.
 fn check_parts(drift: Part<LhQ<f64>>, kick: Part<LhP<f64>>) {
     let h = 1e-3;
     for mode in [LogHMode::LogH, LogHMode::Ttl] {
         let mut d = Draws(11);
         let mut worst = 0.0f64;
+        let mut apart = 0;
         for _ in 0..32 {
             let (m, x, extra) = d.state();
             let (s, q, p) = at(&x, m, extra, mode);
+            let q_half = drift(&s, &q, &p, h / 2.0);
+            let p_kicked = kick(&s, &q_half, &p, h);
+            let q_parts = drift(&s, &q_half, &p_kicked, h / 2.0);
+            let (q_leap, p_leap) = leapfrog(&s, &q, &p, h);
+            apart += u32::from((q_leap.r, p_leap) != (q_parts.r, p_kicked));
             assert!(
                 ((s.drift_raw(&p) / s.kick_raw(&PairGeom::new(&q.r))) - 1.0).abs() > 1e-3,
                 "the state is on the solution, where a swap cannot be seen"
@@ -390,6 +400,10 @@ fn check_parts(drift: Part<LhQ<f64>>, kick: Part<LhP<f64>>) {
         assert!(
             worst < 1e-9,
             "{mode:?}'s drift and kick miss the rates by {worst:.3e}"
+        );
+        assert_eq!(
+            apart, 0,
+            "{mode:?}: the leapfrog is not its drift and kick composed on {apart} of 32 states"
         );
     }
 }
@@ -803,7 +817,8 @@ fn binary_runs<S: LhStepper>(name: &str) {
 ///
 /// Measured: the logH mode holds the energy to rounding (`10⁻¹⁴`), the TTL mode to `3·10⁻⁸`. The difference is the
 /// third body's: `Ω` weights every pair alike, so its two far pairs add `2w/10⁴` to `w/r₀₁`, and `Ω` is no longer a
-/// multiple of `U`; with the third body at `10⁶` and `10⁸` the TTL figure fell to `3·10⁻¹⁰` and `3·10⁻¹²`, as `1/d²`.
+/// multiple of `U`; with the third body at `10⁶` and `10⁸` the TTL figure fell to `3·10⁻¹⁰` and `3·10⁻¹²`, as `1/d`,
+/// which is how `2w/d` falls.
 #[test]
 fn logh_march_close_passage() {
     binary_runs::<Kdk>("KDK");

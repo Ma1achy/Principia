@@ -28,7 +28,7 @@ pub enum HeggieTime {
 pub enum LogHMode {
     /// The logH mode.
     LogH,
-    /// The TTL mode (Mikkola–Tanikawa).
+    /// The TTL mode (Mikkola & Aarseth 2002, as the reference set cites it).
     Ttl,
 }
 

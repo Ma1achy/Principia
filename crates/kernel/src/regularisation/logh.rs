@@ -217,7 +217,8 @@ impl<R: AzReal> LhSystem<R> {
     }
 
     /// `(K + B − U)/U` at `(q, p)` (`hamiltonian.rs:197-205`): the energy's change since registration over `U`, not an
-    /// independent constraint.
+    /// independent constraint. Signed and unguarded, where the reference returns the magnitude, and `+∞` where `U` is
+    /// not positive or not finite: a reader that needs either forms it.
     #[inline]
     pub fn residual(&self, q: &LhQ<R>, p: &LhP<R>) -> R {
         let u = self.u(&PairGeom::new(&q.r));
@@ -735,10 +736,9 @@ pub fn step_size<R: AzReal>(
 /// step, at most `bisect_tries` halvings. The bisection keeps the bracket's short end, so the step kept ends the clock
 /// at or short of the boundary, never past it. Each retake is a counted step.
 ///
-/// The plan is unclear here; chose Heggie's landing, with no tolerance, over the reference's (`driver.rs:338`,
-/// `:390-419`: a landing test and a secant stop that each read `LAND_EPS_REL`), because that tolerance is a
-/// precision-dependent constant in a branch and leaves the state stored at a boundary with a clock that is not the
-/// boundary's, and Heggie's march in this kernel already lands without it.
+/// This is the contract's one landing rule, Heggie's, not the reference's (`driver.rs:338`, `:390-419`: a landing test
+/// and a secant stop that each read `LAND_EPS_REL`): that tolerance is a precision-dependent constant in a branch and
+/// leaves the state stored at a boundary with a clock that is not the boundary's.
 struct Landing<R> {
     q: LhQ<R>,
     p: LhP<R>,
