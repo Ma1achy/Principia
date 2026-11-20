@@ -45,8 +45,14 @@
 //! `running`, and `coll_floor`, the collision test's floor over its near-firing states and the `d_min` state (Part 7,
 //! R-954, R-973; [`crate::detect`]). The three latches are packed through [`super::latch::Latches`], which clamps
 //! them and writes the failed-state values (payload §1; R-271). `integrate_with` writes `dmin_pair`'s sentinel, 3, and
-//! `d_min` unset, so a run whose cadence latches nothing keeps them; `t_dmin_step` is TASK-M3-17's, and escape's label
-//! TASK-M3-12's. The shape readout's fields, `theta`, `_reserved`, `closure_min`, `closure_step` and the departed bit,
+//! `d_min` unset, so a run whose cadence latches nothing keeps them; `t_dmin_step` is TASK-M3-17's. [`monitored`] writes
+//! the escape detector's too ([`crate::detect::escape`]): where escape fired and no collision did, `state` `escape`
+//! and its `detail`, the escaper's body index or 3, over `running` or `bounded` (an escape that fires on the horizon's
+//! own boundary is an escape); and the lagged shape register, `_nhat_lag_0`, `_1`, `_2` (payload §1), which a re-boot
+//! reloads into its cadence ([`WrapperCadence::resume_escape`]). The escape test runs at the occupant's sampling
+//! points ([`Cadence::sample`]): the wrapper reports each completed macro-step under an occupant that marches the
+//! macro-step grid, and an occupant that owns its time mapping reports its sync boundaries from inside its march
+//! ([`Advance::OWN_SAMPLING`]). The shape readout's fields, `theta`, `_reserved`, `closure_min`, `closure_step` and the departed bit,
 //! are written by [`super::shape::Readout::store`] (below).
 //!
 //! **`r_coll`** (Part 7): [`integrate_detecting`] takes the sim key's collision threshold ([`CollisionRadius`]),
@@ -176,7 +182,14 @@ pub fn monitored<R: WrapperReal>(
 ) -> SimStateBaseOf<R> {
     let m = cadence.monitor_state();
     let detector = cadence.detector();
-    let detected = detector.label(out.packed_a);
+    // A collision keeps its label over an escape: the collision test runs first on every step and ends the run
+    // there, so the two meet only on one sampling point's state. The full precedence is TASK-M3-17's.
+    let detected = if detector.fired() {
+        detector.label(out.packed_a)
+    } else {
+        cadence.escape().label(detector.label(out.packed_a))
+    };
+    let [lag_0, lag_1, lag_2] = cadence.escape().lagged();
     let failed = m.non_finite() || sd_is_failed(out.packed_a);
     let labelled = if m.non_finite() {
         let marked = set_state(detected, STATE_SIM_FAILED);
@@ -198,6 +211,9 @@ pub fn monitored<R: WrapperReal>(
         packed_a,
         packed_b,
         coll_floor_bits: set_coll_floor(out.coll_floor_bits, floor),
+        _nhat_lag_0: lag_0,
+        _nhat_lag_1: lag_1,
+        _nhat_lag_2: lag_2,
         ..out
     }
 }
@@ -476,6 +492,11 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
                 uniforms.dt_macro,
             );
             readout.after_macro(state.r, state.m, completed);
+            // The escape window's sampling point under an occupant that marches the macro-step grid; one that owns
+            // its time mapping has reported its sync boundaries from inside the call (Part 7).
+            if !A::OWN_SAMPLING {
+                cadence.sample(&state, completed, uniforms.dt_macro);
+            }
         }
         last = reached;
         macro_step += 1;

@@ -143,6 +143,15 @@ pub trait Cadence<R> {
     /// Whether the run is done: a terminal has fired, so no further step is taken (Part 1, R-103).
     fn done(&self) -> bool;
 
+    /// A sampling point of the occupant's grid, `index` on a grid of `quantum`, physical time `index · quantum`, at the
+    /// state the last [`Cadence::after_step`] left: a completed macro-step under an occupant that marches the
+    /// macro-step grid, which the wrapper reports, and a sync boundary landed on under one that owns its time
+    /// mapping, which its march reports ([`Advance::OWN_SAMPLING`]; integrator_contract Part 7: the escape window's
+    /// sampling). The escape detector reads it; a cadence with none ignores it. A cadence that wraps another passes
+    /// it on.
+    #[inline]
+    fn sample(&mut self, _state: &State<R>, _index: u32, _quantum: R) {}
+
     /// The position-quantised `d²` of the closest pair at the positions `r`, the state the cadence last saw (its run's
     /// IC, or the state its last [`Cadence::after_step`] left), which the wrapper's `N_sub` bucket reads
     /// (dd_integrator §3.3). A cadence that formed it there returns its own, so the step's one computation serves the
@@ -275,6 +284,12 @@ pub trait Advance {
             *delta,
         )
     }
+
+    /// Whether the occupant's march reports its own sampling points to the cadence ([`Cadence::sample`]), the sync
+    /// boundaries it lands on: true of an occupant that owns its time mapping
+    /// ([`crate::regularisation::Composed`] over a regularisation). False, this default, of a stepper, whose sampling
+    /// points are the macro-step boundaries, which the wrapper reports.
+    const OWN_SAMPLING: bool = false;
 
     /// The build failure of [`Advance::advance_joint`]'s default, read as its step count: evaluated only where an
     /// occupant with no joint step is asked for one, and it fails there (as [`Stepper::FORM`]'s default does).

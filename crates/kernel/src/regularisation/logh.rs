@@ -859,6 +859,12 @@ fn interval<S: LhStepper, R: AzReal, C: Cadence<R>, X: LhWatch<R>>(
                 let mut g = Geom::new(&s.m, &s.r);
                 cadence.after_step(&mut s, &mut g);
                 count.accepted += 1;
+                // A landing is a sampling point of the sync grid, boundary `k + 1` (Part 7: the escape window is
+                // sampled at sync boundaries under a regularised occupant), on the state the cadence left, before
+                // `done` is read, so a terminal it fires latches on this step.
+                if q.t >= dt_left {
+                    cadence.sample(&s, k + 1, dt_left);
+                }
             }
             kept_q = q;
             kept_p = p;

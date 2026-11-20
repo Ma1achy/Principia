@@ -599,10 +599,17 @@ fn simstate(ftle: bool) -> Struct {
         m("closure_min", Storage::F32),
         m("closure_step", Storage::U16),
         m("_reserved", Storage::U16),
-        // The collision test's floor (integrator contract Part 7; R-954, R-973): its own 8 B after the u16s, so no
-        // row has a hole (payload §1, the recheck on the collision floor's record; R-86).
+        // The collision test's floor (integrator contract Part 7; R-954, R-973), after the u16s, so no row has a hole
+        // (payload §1, the recheck on the collision floor's record; R-86).
         m("coll_floor_bits", Storage::U32),
-        m("_pad", Storage::Pad(1)),
+        // The escape rule's lagged `n̂` (payload §1, the recheck on the lagged register): the shape point at the last
+        // window mark, three `Real`s of march state, read only by the kernel, so `_`-named as `_reserved` is. They
+        // take the place of the 4 B of declared padding that stood here, and every row stays exactly packed. The
+        // plan is unclear here (it asks for "a member of three `Real`s"); chose three scalar members because the
+        // layout has no three-vector storage and a new one would touch every emitter for no stored difference.
+        m("_nhat_lag_0", Storage::F32),
+        m("_nhat_lag_1", Storage::F32),
+        m("_nhat_lag_2", Storage::F32),
     ]);
     Struct {
         name: if ftle { "SimStateFTLE" } else { "SimStateBase" },
