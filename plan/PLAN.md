@@ -142,6 +142,12 @@ computed axes. Today's charts are kept as maps. Each piece lands with its contro
 - The same-frame slips D19 and D23, fixed in the GUI's adapters onto the chart-path leaves (TASK-M8-129)
 - The figure draws the computed axes: the dual ruler, the edge marks, mixed names (TASK-M8-130)
 - Marking clamped and saturated areas: a toggle, off by default (TASK-M8-131)
+- Last, after every chart task above has merged, and never per chart during C2: the chart comparison pass, for the
+  owner's eye. One row of images per preset: ours, prin-rs's (Ma1achy/prin-rs, the physics reference, at its
+  production config) and the original app's (Ma1achy/principia-ii) where it has the preset, over the same window.
+  The owner looks for the same structure and no obvious warp; the pairs that clearly differ are listed first. No
+  new tests or gates, and nothing fixed without the owner's say. Collision regions only until escape detection
+  (TASK-M3-12) lands, then re-run (TASK-C2-01)
 
 ## C3 — Physics you can trust
 

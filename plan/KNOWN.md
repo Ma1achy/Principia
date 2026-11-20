@@ -17,6 +17,9 @@ delete its line when it's done.
   driver investigation (see `win-gpu.yml`).
 - **`xtask` has no `dx12` feature**, so the golden runner and the `cargo xtask` suites cannot select DX12; add it
   with the DX12 compute path (TASK-M0-85).
+- **DX12: wgpu reports no VRAM size**, so the session header cannot be written and
+  `qa_compute_fast_math_header_is_the_dispatch` fails there for that reason, not the fast-math refusal. Engine
+  suites built for DX12 also need `validation/dx12`. Both belong with the DX12 compute path (TASK-M0-85).
 - **The docs carry old ruling ids and *Was* blocks** (about 10,000 ids, 900 blocks across `docs/contracts`
   and `docs/design`). They are correct, just noisy. Clean a passage when you next edit it; don't run a
   mechanical sweep, because the reasons in them matter.
