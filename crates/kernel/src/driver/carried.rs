@@ -2,7 +2,7 @@
 //! beside the Cartesian `(m, r, p)` (integrator_contract Part 2a; dd_simstate_payload §1, "The carried regularised
 //! state").
 //!
-//! **Why it exists.** An occupant that registers once (Heggie) maps the Cartesian state to its own variables at
+//! **Why it exists.** An occupant that registers once (Heggie, logH) maps the Cartesian state to its own variables at
 //! `t = 0` and never again: rebuilding them from `(m, r, p)` at a later call is a re-registration, a pass through the
 //! Levi-Civita inverse and a re-frozen energy, and the march after it is no longer the march registered once
 //! (pitfalls §4). So the occupant's own state crosses the seam in this buffer, and the wrapper passes it into every
@@ -16,7 +16,9 @@
 //!
 //! **Its layout** ([`Carried`]) is occupant-neutral: fourteen floats at the working precision, whose meaning is the
 //! occupant's that wrote them, and four `u32`. Heggie's fourteen are `Q₀, Q₁, Q₂`, `P₀, P₁, P₂`, the frozen energy `h`
-//! and its interval clock `t` ([`crate::regularisation::heggie::carried_state`]). 72 bytes at f32, 128 at f64.
+//! and its interval clock `t` ([`crate::regularisation::heggie::carried_state`]); logH's are `B`, `W` and its interval
+//! clock `t`, the first three, the rest 0 ([`crate::regularisation::logh::carried_state`]). 72 bytes at f32, 128 at
+//! f64.
 //!
 //! **The re-registration count** ([`Carried::re_registrations`]; integrator_contract § "The profile gains a field"):
 //! the registrations the trajectory's occupant made at a sync boundary after `t = 0`. It is 0 for an occupant that

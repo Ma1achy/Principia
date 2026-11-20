@@ -12,12 +12,12 @@
 //!
 //! **`none`** ([`NoRegularisation`]) is built here: Cartesian, the independent control, always available. Its pairs are
 //! separable, so each is the stepper's own form: the stepper's profile and the stepper's `ADVANCE`. **Aarseth–Zare**
-//! ([`az::AarsethZare`]) is built in [`az`]; Heggie's regularised system in [`heggie`] (TASK-M3-08), its march,
-//! registered once at `t = 0`, TASK-M3-77's, its seam `ADVANCE` and logH TASK-M3-75's (R-992 to R-994). Under a regularisation the stepper is
-//! applied to the regularised equations of motion in its form on a non-separable system ([`form`]).
+//! ([`az::AarsethZare`]) is built in [`az`]; Heggie's regularised system, its march, registered once at `t = 0`, and
+//! its seam `ADVANCE` in [`heggie`]. Under Aarseth–Zare and Heggie the stepper is applied to the regularised
+//! equations of motion in its form on a non-separable system ([`form`]).
 //!
-//! **logH** ([`logh`]) has its two time modes, its own state, its steps and its direct march, registered once at
-//! `t = 0`; its seam `ADVANCE` is not built yet.
+//! **logH** ([`logh`]) has its two time modes, its own state, its steps, its direct march, registered once at
+//! `t = 0`, and its seam `ADVANCE` ([`logh::LogH`]), which carries `B`, `W` and its clock as Heggie's carries `(Q, P, h)`.
 //!
 //! [`heggie_joint`] is the FTLE shadow's joint step on Heggie × RK4, the default occupant (R-974, R-560; TASK-M3-74).
 //!
@@ -87,8 +87,8 @@ pub trait Regularisation {
     /// quantum of physical time (R-565)"), and the steps it took there are its own, not the wrapper's `N_sub` (Part 2a,
     /// Cost 2). `none` keeps the stepper's rule ([`Reached::by_count`]). **This default suits only a march that cannot
     /// fail**: it never reports [`Reached::NonFinite`] or [`Reached::Exhausted`], so a regularisation whose march can
-    /// end non-finite or on its step budget reports it in its own, as [`az::AarsethZare`] does; Heggie and logH must
-    /// (TASK-M3-75, from TASK-M3-08's split; physics review 5879658175 of PR #502, P2).
+    /// end non-finite or on its step budget reports it in its own, as [`az::AarsethZare`], [`heggie::Heggie`] and
+    /// [`logh::LogH`] do.
     #[inline]
     fn advance_reaching<S: Stepper, R: AdvanceReal, C: Cadence<R>>(
         state: &State<R>,
@@ -111,7 +111,7 @@ pub trait Regularisation {
 
     /// The pair's `ADVANCE` with the trajectory's carried regularised state passed in and out beside `(m, r, p)`
     /// ([`Advance::advance_carrying`]; Part 2a). This default is for a regularisation that carries nothing: the buffer
-    /// is left as it was. One that registers once keeps its own state there ([`heggie::Heggie`]); one that
+    /// is left as it was. One that registers once keeps its own state there ([`heggie::Heggie`], [`logh::LogH`]); one that
     /// re-registers counts its registrations there ([`az::AarsethZare`]).
     #[inline]
     fn advance_carrying<S: Stepper, R: AdvanceReal, C: Cadence<R>>(

@@ -1,0 +1,9 @@
+{
+  "description": "logH in its logH time mode, Λ = ln(K + B) − ln U as integrator_contract Part 2b writes it, B drawn independently of the state so that the drift's and the kick's denominators differ: its analytic rates (the position rates, the momentum rates and dt/ds) against a central finite difference of the Hamiltonian over 64 random states, within REQ-VAL-171's tolerance at its step (REQ-VAL-170).",
+  "occupant": "logh",
+  "step": 1e-6,
+  "samples": 64,
+  "seed": 79600363727205,
+  "flip": false,
+  "expected": "pass"
+}

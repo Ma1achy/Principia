@@ -1,0 +1,9 @@
+{
+  "description": "logH in its TTL time mode, which has no Hamiltonian of (r, p) alone: its analytic rates against central finite differences of the physical K and U under its two denominators (dr/ds = (∂K/∂p)/W, dp/ds = (∂U/∂r)/Ω), dW/ds against Ω differenced along the velocities and dt/ds against 1/W, W drawn independently of the state, over 64 random states, within REQ-VAL-171's tolerance at its step (REQ-VAL-170).",
+  "occupant": "logh-ttl",
+  "step": 1e-6,
+  "samples": 64,
+  "seed": 79600363727205,
+  "flip": false,
+  "expected": "pass"
+}

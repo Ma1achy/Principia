@@ -1,0 +1,6 @@
+{
+  "description": "The reference's TINY, 1e-300 at f64, under logH's leapfrog in its logH time mode on the same passage: below every pre-floor drift denominator there, it floors no step, so the control's count reads zero and it fails.",
+  "tiny": "reference",
+  "occupant": "logh",
+  "expected": "fail"
+}

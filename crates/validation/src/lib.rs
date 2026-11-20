@@ -25,6 +25,7 @@ pub mod import;
 pub mod inspector;
 pub mod invariant_gradient;
 pub mod link_variation;
+pub mod logh;
 pub mod measure;
 pub mod nsub_bucket;
 pub mod oklab;
