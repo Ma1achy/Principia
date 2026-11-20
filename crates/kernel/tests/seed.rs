@@ -1375,9 +1375,10 @@ impl Seam {
         (dv - motion).abs() / motion
     }
 
-    /// The largest residual over every neighbouring pair of the row.
-    fn worst(&self) -> f64 {
+    /// The largest residual over the row's neighbouring pairs away from the line.
+    fn worst_away(&self) -> f64 {
         (0..self.pairs.len())
+            .filter(|&j| j != LINE)
             .map(|j| self.residual(j))
             .fold(0.0, f64::max)
     }
@@ -1399,15 +1400,15 @@ fn first_criterion(seams: &[Seam], what: &str) -> bool {
     seams.iter().all(|s| s.across <= s.beside)
 }
 
-/// Prints the identity's residuals on each row of `seams`: the pair across the line and the largest of all 63.
+/// Prints the identity's residuals on each row of `seams`: the pair across the line and the largest of the other 62.
 fn report_explained(seams: &[Seam], what: &str) {
     for (s, (u, v)) in seams.iter().zip(ROWS) {
         println!(
             "{what}, row (u, v) = ({u}, {v}): the identity's relative residual across the line {:.3e}, the largest \
-             of all {} pairs {:.3e} (criterion: each ≤ {EXPLAINED:e})",
+             of the other {} pairs {:.3e} (criterion: each ≤ {EXPLAINED:e})",
             s.residual(LINE),
-            s.pairs.len(),
-            s.worst()
+            s.pairs.len() - 1,
+            s.worst_away()
         );
     }
 }
@@ -1430,18 +1431,28 @@ fn check_explained(seams: &[Seam], pairs: std::ops::Range<usize>, what: &str) {
     }
 }
 
-/// The control's reading: under the legacy rule the pair across the line fails the identity on every row. A row whose
-/// pair across the line satisfies it means the identity cannot see the seam there, and the result is void.
+/// The control's reading: under the legacy rule the pair across the line fails the identity on every row, and by more
+/// than any other pair of its row. A row where either fails means the identity cannot see the seam there, and the
+/// result is void.
 ///
-/// The plan is unclear here; chose to read the control at the pair across the line alone, not at the first failing
-/// pair, because the legacy rule also fails the identity away from the line (where its seed does not turn with `α`,
-/// rows 0 and 1 from pair 0), so "some pair fails" would hold with no seam seen.
+/// The plan is unclear here; chose to require the line's residual to exceed every other pair's on the row, not only the
+/// tolerance, because the legacy rule misses the identity away from the line too, on every row: its seed is one fixed
+/// vector on each side and does not turn with `α`, so each pair there is short by a relative `1 − |L_z|/√(2K*)`, at
+/// most 1. Failing the identity at the line would then hold with no jump across it; the jump is what makes the line's
+/// residual the row's largest. No threshold is added.
 fn check_seam_seen(control: &[Seam]) {
     for (s, (u, v)) in control.iter().zip(ROWS) {
         assert!(
             s.residual(LINE) > EXPLAINED,
             "the control satisfies the identity across the line on the row (u, v) = ({u}, {v}): the identity cannot \
              see the seam, the result is void"
+        );
+        assert!(
+            s.residual(LINE) > s.worst_away(),
+            "the control's residual across the line, {:e}, is not above every other pair's on the row (u, v) = ({u}, \
+             {v}), {:e}: no jump is seen at the line, the result is void",
+            s.residual(LINE),
+            s.worst_away()
         );
     }
 }
