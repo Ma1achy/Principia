@@ -459,7 +459,8 @@ physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
 
 *13 Nov 2026 (TASK-M3-08 split, applied per R-369):* Heggie's equations, time transformations and step control are
 transcribed in § "Heggie: the equations, the time transformations, the maps and the step control (transcribed)" below
-(TASK-M3-08); logH's and TTL's are TASK-M3-75's, under R-992 to R-994.
+(TASK-M3-08); logH's and TTL's are transcribed in § "logH and TTL: the equations, the time transformations, the map
+and the step control (transcribed)" below.
 
 #### Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)
 
@@ -965,6 +966,125 @@ retaken is the definition TASK-M3-77, building this step control, writes here." 
 is ruled the landing reads a caller-supplied setting, with no value in the kernel and no production configuration, its
 tests and gates at the reference's values (applied per R-369, as #502 did for Aarseth–Zare before RQ-795 was ruled)."
 
+#### logH and TTL: the equations, the time transformations, the map and the step control (transcribed)
+
+Citations: S. Mikkola & K. Tanikawa, *Algorithmic regularization of the few-body problem*, MNRAS **310** (1999) 745;
+M. Preto & S. Tremaine, *A class of symplectic integrators with adaptive time step for separable Hamiltonian systems*,
+AJ **118** (1999) 2532; and, for the TTL mode, S. Mikkola & S. Aarseth, CMDA **84** (2002) 343, the paper the reference
+file cites for it (`hamiltonian.rs:79`). No equation numbers are given: the papers are not in the repository, so each
+equation is cited to the reference file it was transcribed from, `docs/reference/prin-rs/src/integrate/logh/`:
+`mod.rs`, `state.rs`, `system.rs`, `hamiltonian.rs`, `step.rs` and `driver.rs` (each by its file name below;
+reference, not authority). Planar, `G = 1`. The kernel's is `crates/kernel/src/regularisation/logh.rs`.
+
+**No coordinate transformation** (`mod.rs:21-23`, `state.rs:3-7`). The state is the Cartesian one with the interval
+clock and one auxiliary: `(r₀, r₁, r₂, p₀, p₁, p₂, t, W)`, fourteen numbers. There is no chart, no reference body and
+nothing to re-register; the Cartesian state at a boundary is a read. The reference carries velocities `vᵢ`
+(`state.rs:23-47`); the kernel carries the momenta `pᵢ = mᵢvᵢ`, as its state does, and every equation below is the
+reference's with `vᵢ = pᵢ/mᵢ`.
+
+**The quantities** (`hamiltonian.rs:9-15`, `system.rs:33-36`). `U = Σ_{i<j} mᵢmⱼ/rᵢⱼ > 0`, `K = Σᵢ |pᵢ|²/(2mᵢ)`, the
+energy `E = K − U`, and `B = U − K = −E`, evaluated once at registration and constant: under autonomous Newtonian
+gravity `dB/ds = 0`, so `B` is a parameter, not a state component (`state.rs:13-18`).
+
+**The logH time mode** (`hamiltonian.rs:9-15`, `:206-248`). The Hamiltonian in fictitious time `s` is
+
+    Λ = ln(K + B) − ln(U)
+
+and its equations of motion are
+
+    drᵢ/ds = ∂Λ/∂pᵢ = vᵢ/(K + B)        dpᵢ/ds = −∂Λ/∂rᵢ = mᵢaᵢ/U        dt/ds = ∂Λ/∂B = 1/(K + B)
+
+with `aᵢ` the Newtonian acceleration (`∂U/∂rᵢ = mᵢaᵢ`). So the **drift** divides by `K + B` and the **kick** by `U`.
+On the solution `K + B = U`, and the two denominators are one number, `dt = ds/U`; off it they differ, and that
+difference is the method (`hamiltonian.rs:27-39`): a step that reads the two at different points, the leapfrog,
+follows a two-body orbit exactly but for an error in time. A swap of the two is invisible on the solution, so the
+finite-difference check draws `B` independently of the state.
+
+**The TTL time mode** (`hamiltonian.rs:79-99`, `:128-161`, `:240-248`). The kick's denominator `U` is mass-weighted,
+so a close approach of a heavy and a light body barely moves it. TTL replaces it by
+
+    Ω(r) = w·Σ_{i<j} 1/rᵢⱼ        w = m̄²,  m̄ = (m₀ + m₁ + m₂)/3
+
+each `rᵢⱼ` floored at `TINY`, and carries an auxiliary `W`, registered once as `W = Ω(r₀)`, for the drift:
+
+    drᵢ/ds = vᵢ/W        dt/ds = 1/W        dpᵢ/ds = mᵢaᵢ/Ω        dW/ds = Ω̇/Ω,   Ω̇ = −w·Σ_{i<j} (rᵢⱼ·vᵢⱼ)/rᵢⱼ³
+
+`Ω̇` is written out, not differenced. `W` follows `Ω` along the exact flow and departs from it as the integration
+errs, the part `K + B` plays against `U` in the logH mode. With `w = m̄²`, `Ω = U` identically at equal masses, so the
+equal-mass control is an identity (`hamiltonian.rs:91-98`). These are the physical equations under two denominators
+with one auxiliary variable; they are not the canonical equations of a Hamiltonian of `(r, p)` alone, so the
+finite-difference check reads them against `K − U` and `Ω` differenced, `W` drawn independently of the state.
+In the logH mode `W` is set at registration as in the TTL mode and held (`driver.rs:285-290`,
+`hamiltonian.rs:235-239`); nothing reads it.
+
+**`dt/ds` and the floor** (`driver.rs:237-241`, `hamiltonian.rs:220-231`; Part 6). Each denominator is floored at
+`TINY` where it divides. `dt/ds = 1/max(drift, TINY)`, the drift denominator `K + B` (logH) or `W` (TTL); it is one
+expression for the rate by which a step advances `t` and for the rate the step control sizes by.
+
+**The steps** (`step.rs`).
+- **logH's own leapfrog**, drift–kick–drift `X(h/2) V(h) X(h/2)` (`step.rs:122-135`), in either mode, selected as
+  logH × KDK. The drift of length `h` (`step.rs:78-84`): `dt = h·dt/ds`, `rᵢ += vᵢ dt`, `t += dt`; its denominator
+  reads `p` and `W` only, which a drift does not change, so it costs no force evaluation. The kick of length `h`
+  (`step.rs:92-115`): `dt = h/max(kick, TINY)`, `pᵢ += mᵢaᵢ dt`, the denominator `U` or `Ω` reading `r` only; in the
+  TTL mode `W += Ω̇(r, v_mid) dt`, `v_mid` the mean of the velocities before and after the kick, since `Ω̇` read at
+  either end alone would break the kick's symmetry under time reversal (`step.rs:102-112`). One force evaluation a
+  step; second order; time-symmetric.
+  **The clock is advanced once a step**, `t += dt_a + dt_b`, the two half-drifts' physical times summed first. The
+  reference adds each drift's `dt` to `t` in turn (`step.rs:84`); that is the same number until the clock is one ulp
+  short of a boundary, where each half is half an ulp, both additions round away and, the landing having no
+  tolerance (step 8), the march never lands (measured on the figure-eight at `Δ_sync = T/32`: the clock stood one ulp
+  short until the step budget was spent). Summed first, a clamped step's increment is the whole gap. The positions
+  still drift in two halves, and nothing reads the clock between them.
+- **logH × RK4**: the classical step `s + (h/6)(k₁ + 2k₂ + 2k₃ + k₄)` on the whole state `(r, p, t, W)` with the
+  equations of motion above (`step.rs:44-71`). It reads both denominators at the same point, so on the solution it
+  sees only `dt = ds/U` (`step.rs:18-22`).
+- logH × Euler, × Yoshida-4 and × Yoshida-6 are not written here and not built.
+
+The reference's third arm, the leapfrog under Gragg–Bulirsch–Stoer extrapolation (`gbs.rs`), its untransformed control
+(`LhTime::None`) and its chain coordinates (`chain.rs`) are not transcribed.
+
+**The energy** (`hamiltonian.rs:41-52`, `:197-205`). logH's state is the physical one, so its regularised energy is
+the Cartesian `E = K − U` of that state; there is no second one. `(K + B − U)/U` is `(E − E₀)/U`, the energy's change
+since registration over `U`, not an independent constraint.
+
+**The step control**, `driver.rs`'s defaults (`driver.rs:146-167`: the per-step interval rule, the landing clamp on,
+the secant on with at most 4 retakes, `B` and `W` never refreshed), with the landing rule of Heggie's step 8 in place
+of the reference's.
+
+1. **Registration, once** (`driver.rs:279-291`). `B = U − K` and `W = Ω(r₀)` at `t = 0`; both are carried across
+   every sync boundary, and a boundary is a sampling cadence that touches neither.
+2. **The interval.** `dt_left = Δ_sync`, the interval clock `t` set to `0` at each interval's start (`driver.rs:337-339`).
+   There is no landing tolerance.
+3. **The entry size.** `ds_entry = η·dt_left/(dt/ds)` at the interval's entry; an entry `dt/ds` that is not positive
+   or not finite ends the march not finite (`driver.rs:341-347`).
+4. **Each step's guards** (`driver.rs:350-363`): the explicit finiteness test of the whole state, `W` included; the
+   landing exit `t ≥ dt_left`, with no tolerance; the step budget (Part 6's: the running total of steps since `t = 0`
+   against `max(N_min, step_budget_rate·t_elapsed)`). The two ends are reported apart: not finite, and exhausted. The
+   reference marks an exhausted march not finite too (`driver.rs:359-362`); that is not transcribed.
+5. **Each step's size** (`driver.rs:365-384`): the floor signal (Part 6: the drift denominator below `TINY`, or either
+   denominator not positive); `d = dt/ds`; `ds = min(η·dt_left/d, ds_entry)`, an entry-cap hit counted when
+   `η·dt_left/d > ds_entry`; the predictive limit, `ds = lim` where `lim < ds`; then the landing clamp,
+   `ds = min(ds, max(dt_left − t, 0)/d)`, with the same `d`.
+6. **The predictive limit** (`driver.rs:243-267`): `lim = f·d_min/(v_max·dt/ds)`, `d_min` the least pair separation
+   and `v_max` the largest relative speed `|vⱼ − vᵢ|`, read off the state; `+∞` when `f ≤ 0`, the denominator is not
+   positive, or `d_min` or the denominator is not finite. The reference records that at an exact collision this limit
+   spends the step budget (`driver.rs:18-41`): `dt/ds = 1/U`, so the bound tends to `f·√d` while the transformation's
+   own step grows as `1/d`. It is a value the caller supplies, off where `f ≤ 0`.
+7. **The step.** One step of the stepper from the saved state: the leapfrog, or RK4.
+8. **The landing**: Heggie's step 8 above, on logH's clock, with the same two integer caps (the secant's 4 retakes,
+   the bisection's 64 halvings). A step that ends the clock past the boundary is retaken from its saved state, by
+   the secant on `t(ds)` (`driver.rs:397-419`, its stop without the tolerance) and then the bisection, so the step
+   kept ends the clock on the boundary or short of it, never past; one kept short is closed by the march's next
+   clamped step. The interval lands when a kept step ends the clock at or past the boundary, so the state stored has
+   the boundary's own clock, bitwise. The reference's landing test before the step, with its factor `1 − 1e-12`
+   (`driver.rs:390-391`), and its `LAND_EPS_REL` (`driver.rs:338`, `:399`) are not transcribed.
+9. **The records** (`driver.rs:427-438`): the physical step `t − t_before` folded into `dt_max`; a step that carries
+   `t` past `2·dt_left` with the clamp on counted as an overshoot.
+10. **The boundary.** The march lands, and the boundary's physical time is `k·Δ_sync`.
+
+Each kept step's Cartesian state goes to the cadence; the reference driver's own collision, escape and closure
+sampling (`driver.rs:440-513`) is the wrapper's detectors here (Part 7), not the occupant's.
+
 #### The time-reversal maps (REQ-INT-095)
 
 *Defined 13 Nov 2026 by TASK-M3-08 (R-72; physics reviewer approves): Heggie's and Aarseth–Zare + RK4's; logH's, its time
@@ -974,6 +1094,7 @@ full state, the domain on which dd_integrator §5's test 3 takes its residual (R
 
 - **Heggie**, on `(Q₀, P₀, Q₁, P₁, Q₂, P₂, t)` with `h` held: `Θ(Q, P, t) = (Q, −P, −t)`.
 - **Aarseth–Zare + RK4**, on `(u₁, p₁, u₂, p₂, t)` with `E` and the reference body held: `Θ(u, p, t) = (u, −p, −t)`.
+- **logH**, in either time mode, on `(r, p, t, W)` with `B` held: `Θ(r, p, t, W) = (r, −p, −t, W)`.
 
 Each is an involution, `Θ∘Θ = id`. **The derivation.** Each Hamiltonian is even in its momenta: Heggie's `Γ*` has its
 kinetic terms `RⱼRₖ|Pᵢ|²` quadratic in `P`, its coupling terms `Wⱼ·Wₖ` bilinear (`Wᵢ = L(Qᵢ)Pᵢ` is linear in `Pᵢ`), and
@@ -987,6 +1108,15 @@ exactly for the flow, and the residual it reads is the stepper's. In physical te
 `R = L(u)u`) are unchanged and the relative momenta `L(Q)P/(2R)` negated, so the Cartesian velocities are reversed, the
 ordinary time reversal; the root's sign, `±Q` giving the same `q`, is not touched. The frozen energy (`h`, `E`) is held:
 it is not a state component, and the reversal keeps the energy.
+
+**logH's derivation.** In the logH mode `Λ = ln(K + B) − ln(U)` is even in the momenta (`K` is quadratic), so the
+argument above holds as it stands, `t`'s rate `1/(K + B)` even in `p` and `B`, the conjugate of `t`, held. In the TTL
+mode the rates of `r` (`v/W`) are odd in `p`, those of `p` (`mᵢaᵢ/Ω`) and of `t` (`1/W`) even, and that of `W`
+(`Ω̇/Ω`, linear in the velocities) odd, with `W` itself kept: if `x(s) = (r, p, t, W)(s)` solves the equations, so does
+`Θx(−s) = (r(−s), −p(−s), −t(−s), W(−s))`, whose `W` rate is `−W′(−s) = −Ω̇(r, v)/Ω = Ω̇(r, −v)/Ω`. So `W` is carried
+through the reversal unchanged, as `Ω(r)`, which it follows, is. The leapfrog is symmetric under the map step by
+step: a drift at `−p` undoes a drift at `p` with the same denominator, and a kick's `W` increment, read at the mean of
+the velocities before and after, changes sign with them.
 
 #### Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)
 
