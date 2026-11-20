@@ -22,8 +22,8 @@
 //!
 //! **The integration** ([`outcome`]): `kernel::driver::wrapper::integrate_detecting` at f32 under a horizon's
 //! validated loop values and the key's collision threshold, Part 3's default `r_coll` ([`uniforms`]), the occupant a
-//! type parameter. No escape is labelled: nothing writes `escape` until TASK-M3-12's detector, so every march that
-//! does not collide ends `bounded` at the horizon, whatever the occupant.
+//! type parameter. The wrapper's cadence labels collisions and escapes (`kernel::detect`); a march neither ends is
+//! `bounded` at the horizon, whatever the occupant.
 //!
 //! **Domain** (pitfalls §10): a decode and a march from its record, the chart and the window held fixed.
 

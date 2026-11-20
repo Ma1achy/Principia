@@ -3,8 +3,12 @@
 Carried over from the old repository's review follow-ups and open threads. Fix one when you're in that code;
 delete its line when it's done.
 
-- **No escape detection.** The kernel labels collisions only; every other run ends `bounded` at the
-  horizon. Building it is in C3 (TASK-M3-12).
+- **Escape fires only once the escaper is several hundred binary separations away.** The shape point of a
+  hierarchy keeps turning with the inner binary's phase, so the chord over the 0.4 window is about `0.56·a/d`
+  for an equal-mass circular binary of separation `a` with the third body at `d`, and it drops below the
+  provisional `tau = 1e-3` only at `d ≈ 560·a` (measured: `fixtures/escape/hyperbolic_ejection.toml` fires at
+  `t = 529`, not by 20). So at the default horizon of 50 only escapes that leave a tight binary are labelled, and
+  the golden frame (horizon 3) has none. `tau` and the window are provisional; the re-validation is TASK-M3-34.
 - **The inverse encode's T2 range.** `docs/contracts/principia_inverse_encode_contract.md` Part 1 still
   requires E's representative in `[0, 2π]`, but under the offset link `β = z_β + π/2` (which keeps z = 0 at
   the equilateral) the inverse returns β below π/2. The contract needs restating when the decoder's mirror
