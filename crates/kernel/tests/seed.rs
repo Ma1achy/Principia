@@ -9,14 +9,17 @@
 //! **`seed_conversion`** (REQ-DEC-060): every chart image that runs the construction, the invariant charts, their
 //! linear option, the lone energy axes beside `α` and the Burrau family's `K` and `L_z` charts, starts every pixel from
 //! a homographic state `vᵢ = (ω·J + λ)·rᵢ`, `λ = a/√I ≥ 0`, which is `w = r/√I` read off the decoded `(m, r, p)` with no
-//! knowledge of the chart: the conversion each golden of these charts records. The seam measurement, its criterion
-//! written before any run (the task's): across `z_α = 0` on the kernel's `(L_z, E)` chart, tilted toward `z_α` so the
-//! line crosses the window, no neighbouring pair of pixels across the line differs in decoded velocity, `‖Δv‖_m`, by
-//! more than the largest neighbouring difference within 8 pixels of it on either side. The control is the same
-//! measurement under R-82's legacy rule, which must fail it (else the result is void); its jump is predicted to be
-//! `2√(K* − K_min)` (printed beside it, no threshold reading it). And at the invariant charts' default pin, the
-//! equal-mass Lagrange triangle (`z = 0`), every pixel starts a homographic orbit, whose break-up is set by rounding:
-//! labelled so.
+//! knowledge of the chart: the conversion each golden of these charts records. The seam measurement, on the kernel's
+//! `(L_z, E)` chart tilted toward `z_α` so the line `z_α = 0` crosses the window, is judged by the explanation identity,
+//! written before any run: every neighbouring pair of pixels, the pair across the line included, differs in decoded
+//! velocity by `‖Δv‖_m = √(2K*)·2 sin(|Δα|/2)`, the configuration's own motion, to a relative 10⁻⁹. The control is the
+//! same measurement under R-82's legacy rule, which must fail the identity at the pair across the line on every row
+//! (else the result is void); its jump there is predicted to be `2√(K* − K_min)` (printed beside it, no threshold
+//! reading it). The criterion first written, no pair across the line differing by more than the largest neighbouring
+//! difference within 8 pixels of it on either side, is still printed and judges nothing: it does not hold though there
+//! is no seam, an explained divergence, the step across the line being `1 + h²/4` times its neighbours at `h = 1/64`
+//! from the `α` link's own warp. And at the invariant charts' default pin, the equal-mass Lagrange triangle (`z = 0`),
+//! every pixel starts a homographic orbit, whose break-up is set by rounding: labelled so.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory. Every loop is over a fixed grid.
 //!
@@ -1259,7 +1262,9 @@ mod conversion_burrau {
 
 /// The seam image's columns: `z_α = (j − 31.5)/64`, `j = 0 … 63`, so the line `z_α = 0` lies between columns 31 and 32.
 const COLUMNS: usize = 64;
-/// The neighbouring pairs read on either side of the line (the criterion's 8 pixels).
+/// The neighbouring pair across the line: columns 31 and 32.
+const LINE: usize = COLUMNS / 2 - 1;
+/// The neighbouring pairs read on either side of the line (the first criterion's 8 pixels).
 const SIDE: usize = 8;
 
 /// The seam image's rows: chart points `(u, v)` of the `(L_z, E)` chart, `K* > K_min` at each.
@@ -1346,13 +1351,12 @@ fn measure(seeding: Seeding) -> Vec<Seam> {
                     (gap(&w[0].0, &w[1].0), (2.0 * t.k).sqrt() * chord)
                 })
                 .collect();
-            let line = COLUMNS / 2 - 1;
-            let beside = (line - SIDE..=line + SIDE)
-                .filter(|&j| j != line)
+            let beside = (LINE - SIDE..=LINE + SIDE)
+                .filter(|&j| j != LINE)
                 .map(|j| pairs[j].0)
                 .fold(0.0, f64::max);
             Seam {
-                across: pairs[line].0,
+                across: pairs[LINE].0,
                 beside,
                 predicted: 2.0 * (t.k - t.lz * t.lz / 2.0).max(0.0).sqrt(),
                 pairs,
@@ -1361,9 +1365,27 @@ fn measure(seeding: Seeding) -> Vec<Seam> {
         .collect()
 }
 
-/// Whether the criterion holds on `seams`, printing each row: no row's jump across the line exceeds its largest
-/// neighbouring difference within [`SIDE`] pixels.
-fn criterion(seams: &[Seam], what: &str) -> bool {
+/// The explanation identity's tolerance: each pair's `‖Δv‖_m` against `√(2K*)·2 sin(|Δα|/2)`, relative.
+const EXPLAINED: f64 = 1e-9;
+
+impl Seam {
+    /// Pair `j`'s relative residual from the identity, `|‖Δv‖_m − √(2K*)·2 sin(|Δα|/2)|` over the latter.
+    fn residual(&self, j: usize) -> f64 {
+        let (dv, motion) = self.pairs[j];
+        (dv - motion).abs() / motion
+    }
+
+    /// The largest residual over every neighbouring pair of the row.
+    fn worst(&self) -> f64 {
+        (0..self.pairs.len())
+            .map(|j| self.residual(j))
+            .fold(0.0, f64::max)
+    }
+}
+
+/// Prints the first criterion's numbers on each row of `seams`, and returns whether it holds (no row's jump across the
+/// line exceeds its largest neighbouring difference within [`SIDE`] pixels). It judges nothing: a report only.
+fn first_criterion(seams: &[Seam], what: &str) -> bool {
     for (s, (u, v)) in seams.iter().zip(ROWS) {
         println!(
             "{what}, row (u, v) = ({u}, {v}): across {:.9e}, largest beside {:.9e}, ratio {:.6}, \
@@ -1377,15 +1399,30 @@ fn criterion(seams: &[Seam], what: &str) -> bool {
     seams.iter().all(|s| s.across <= s.beside)
 }
 
-/// Every neighbouring pair of every row differs in decoded velocity by exactly what the configuration's own motion
-/// gives a homographic start, `‖Δv‖_m = √(2K*)·2 sin(|Δα|/2)` (`v = (ω·J + λ)·r` at fixed `ω`, `λ`, `ω² + λ² = 2K*`
-/// at `I = 1`, and `‖Δr‖_m` the chord of `Δα` on the unit hypersphere at fixed `β` and masses), to a relative 10⁻⁹: no
-/// seed term, so no seam.
-fn check_explained(seams: &[Seam], what: &str) {
+/// Prints the identity's residuals on each row of `seams`: the pair across the line and the largest of all 63.
+fn report_explained(seams: &[Seam], what: &str) {
     for (s, (u, v)) in seams.iter().zip(ROWS) {
-        for (j, &(dv, motion)) in s.pairs.iter().enumerate() {
+        println!(
+            "{what}, row (u, v) = ({u}, {v}): the identity's relative residual across the line {:.3e}, the largest \
+             of all {} pairs {:.3e} (criterion: each ≤ {EXPLAINED:e})",
+            s.residual(LINE),
+            s.pairs.len(),
+            s.worst()
+        );
+    }
+}
+
+/// The criterion. Every neighbouring pair of every row, the pair across the line included, differs in decoded velocity
+/// by exactly what the configuration's own motion gives a homographic start, `‖Δv‖_m = √(2K*)·2 sin(|Δα|/2)`
+/// (`v = (ω·J + λ)·r` at fixed `ω`, `λ`, `ω² + λ² = 2K*` at `I = 1`, and `‖Δr‖_m` the chord of `Δα` on the unit
+/// hypersphere at fixed `β` and masses), to a relative 10⁻⁹: no seed term, so no seam. Read on the pairs `pairs` of
+/// each row.
+fn check_explained(seams: &[Seam], pairs: std::ops::Range<usize>, what: &str) {
+    for (s, (u, v)) in seams.iter().zip(ROWS) {
+        for j in pairs.clone() {
+            let (dv, motion) = s.pairs[j];
             assert!(
-                (dv - motion).abs() <= 1e-9 * motion,
+                s.residual(j) <= EXPLAINED,
                 "{what}: the row (u, v) = ({u}, {v}), pair {j}: ‖Δv‖_m = {dv:e} is not the configuration's own \
                  motion, {motion:e}"
             );
@@ -1393,29 +1430,63 @@ fn check_explained(seams: &[Seam], what: &str) {
     }
 }
 
+/// The control's reading: under the legacy rule the pair across the line fails the identity on every row. A row whose
+/// pair across the line satisfies it means the identity cannot see the seam there, and the result is void.
+///
+/// The plan is unclear here; chose to read the control at the pair across the line alone, not at the first failing
+/// pair, because the legacy rule also fails the identity away from the line (where its seed does not turn with `α`,
+/// rows 0 and 1 from pair 0), so "some pair fails" would hold with no seam seen.
+fn check_seam_seen(control: &[Seam]) {
+    for (s, (u, v)) in control.iter().zip(ROWS) {
+        assert!(
+            s.residual(LINE) > EXPLAINED,
+            "the control satisfies the identity across the line on the row (u, v) = ({u}, {v}): the identity cannot \
+             see the seam, the result is void"
+        );
+    }
+}
+
 #[test]
 fn seed_conversion_seam() {
     let now = measure(Seeding::Expansion);
     let before = measure(Seeding::LargestNorm);
-    let held = criterion(&now, "the seed in force");
-    let fired = !criterion(&before, "R-82's legacy rule");
-    assert!(
-        fired && before.iter().all(|s| s.across > s.beside),
-        "the control passes the criterion on some row: the criterion cannot see the seam, the result is void"
-    );
-    check_explained(&now, "the seed in force");
+    let held = first_criterion(&now, "the seed in force");
+    let held_before = first_criterion(&before, "R-82's legacy rule");
     println!(
-        "seed_conversion_seam: the criterion {} under the seed in force; the control fails it on every row; every \
-         neighbouring difference under the seed in force is the configuration's own motion, no seed term",
-        if held { "holds (PASS)" } else { "does not hold" }
+        "seed_conversion_seam: the first criterion (across ≤ largest beside), judging nothing: under the seed in force \
+         it {} (an explained divergence where it does not: the α link's warp, 1 + h²/4 at h = 1/64, no seam); under \
+         R-82's legacy rule it {}",
+        if held { "holds" } else { "does not hold" },
+        if held_before {
+            "holds"
+        } else {
+            "does not hold"
+        }
+    );
+    report_explained(&now, "the seed in force");
+    report_explained(&before, "R-82's legacy rule (the control)");
+    check_seam_seen(&before);
+    check_explained(&now, 0..COLUMNS - 1, "the seed in force");
+    println!(
+        "seed_conversion_seam: PASS: every neighbouring difference under the seed in force, the pair across the line \
+         included, is the configuration's own motion to a relative {EXPLAINED:e}, no seed term; the control fails the \
+         identity across the line on every row"
     );
 }
 
+// The control arm: the criterion under the legacy rule, read at the pair across the line on every row. It panics with
+// the criterion's own message only when every row fails there; a row that passes panics as void instead, which is not
+// the message the control expects.
 negative_control!(
     seed_conversion_seam,
-    "the same pairs under R-82's legacy rule carry the seed's jump across z_α = 0, not the configuration's motion",
-    expected = "is not the configuration's own",
-    check_explained(&measure(Seeding::LargestNorm), "R-82's legacy rule")
+    "the pair across z_α = 0 under R-82's legacy rule carries the seed's jump, not the configuration's motion, on \
+     every row",
+    expected = "R-82's legacy rule, across the line: the row (u, v) = (0.5, 0.4), pair 31: ‖Δv‖_m",
+    {
+        let before = measure(Seeding::LargestNorm);
+        check_seam_seen(&before);
+        check_explained(&before, LINE..LINE + 1, "R-82's legacy rule, across the line");
+    }
 );
 
 // ── seed_conversion_lagrange ────────────────────────────────────────────────────────────────────────────────────
