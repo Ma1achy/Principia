@@ -453,6 +453,8 @@ sequences, measurement and research tools, the browser build and the release che
 - Console: the footer opened, on the telemetry stream (12_console.png) (TASK-M8-27)
 - Profiler window, leak detector, precomputed summaries and `prin profile query --live` (04_windows.png)
   (TASK-M8-28)
+- Profiler › Run benchmark…: the dialog, the run, the results sheet and Apply suggested tier, and the first-launch
+  Quick prompt (TASK-C8-02)
 - Failing gracefully: no-GPU fallback, device loss, and every degradation shown and logged (TASK-M8-29)
 - Export: the frame loop in blocking mode, as a background job (TASK-M8-30)
 - Keyframes, the export planner and the spec object: serialise, share, re-render (TASK-M8-31)
@@ -466,6 +468,7 @@ sequences, measurement and research tools, the browser build and the release che
   serviceworker (TASK-M8-37)
 - V1 web's membranes: set_field and SAB input in, the ~10 Hz snapshot out, the inspector worker (TASK-M8-38)
 - The fixed scripted suite and the calibration campaign (TASK-M8-39)
+- Benchmark scenarios as data, one runner, and `prin bench run/show/report/compare` (TASK-C8-01)
 - Browser gates: Tier-N on real browsers, and the Playwright fragment goldens (TASK-M8-40)
 - Release gates: the non-Metal parity run, the seam test index, the atlas horizon label, v1 web on GitHub Pages
   (TASK-M8-41)
@@ -578,6 +581,8 @@ explained divergence or unexplained.
 - LL-6: all 316 free-fall orbits against the authors' table, a peek target (TASK-M9-44)
 - The side-ratio remap onto the shape sphere at rest, its preset on the equilateral point, and the two side ratios
   in the Inspector (TASK-M9-45)
+- The closure field as a stability reading: well width and `alpha`, and Szebehely–Peters located on it, a
+  measurement (TASK-C9-01)
 
 ## Excluded
 
