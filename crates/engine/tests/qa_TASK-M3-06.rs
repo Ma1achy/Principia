@@ -24,7 +24,7 @@ use engine::dispatch::validate::{check_total_substeps, dispatch, validate, Dispa
 use kernel::decode::{self, Latent};
 use kernel::driver::nsub_table::NsubTableError;
 use kernel::driver::substep::{n_sub, NsubThresholds};
-use kernel::driver::wrapper::{integrate, WrapperUniforms};
+use kernel::driver::wrapper::{integrate_with, WrapperUniforms};
 use kernel::generated::links::Defaults;
 use kernel::generated::nsub_thresholds::NSUB_TABLE_MAX;
 use kernel::occupant::kdk::Kdk;
@@ -301,12 +301,30 @@ negative_control!(
 /// `uniforms_of` gives the wrapper's loop values for `T`; the sample integrated to the horizon is `bounded` with
 /// `t_end_step` the latched `⌈T/dt_macro⌉`, and its `t_end_step / horizon_steps` reads 1, at T = 200 (65535, the top
 /// of the u16), T = 3.2105 (⌈3210.5⌉ = 3211) and the floor, T = 0.4 (400).
+/// A cadence that does nothing and never ends the march.
+struct NoTerminal;
+
+impl kernel::driver::advance::Cadence<f64> for NoTerminal {
+    fn after_step(
+        &mut self,
+        _state: &mut kernel::occupant::State<f64>,
+        _geom: &mut kernel::occupant::Geom<f64>,
+    ) {
+    }
+
+    fn done(&self) -> bool {
+        false
+    }
+}
+
 fn check_latched(uniforms_of: &dyn Fn(f64) -> (u32, WrapperUniforms<f64>)) {
     let ic = decode::decode::<Defaults, f64>(&Latent::new([0.0; 8])).ic;
     for (t, want) in [(200.0, 65535u32), (3.2105, 3211), (0.4, 400)] {
         let (horizon_steps, wu) = uniforms_of(t);
         assert_eq!(horizon_steps, want, "horizon_steps at T = {t}");
-        let s = integrate::<Kdk, f64>(&ic, &wu);
+        // A cadence with no terminal: the count alone ends the run. Under the wrapper's own, the escape detector ends
+        // the T = 200 march first (the equal-mass start at rest falls to its centre, and KDK throws the bodies out).
+        let s = integrate_with::<Kdk, f64, _>(&ic, &wu, &mut NoTerminal);
         assert_eq!(sd_state(s.packed_a), STATE_BOUNDED, "T = {t}: not bounded");
         assert_eq!(
             tm_t_end_step(s.times),

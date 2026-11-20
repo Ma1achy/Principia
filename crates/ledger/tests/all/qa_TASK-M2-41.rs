@@ -806,10 +806,7 @@ type Strip = fn(ledger::schema::Ledger, Vec<ledger::schema::Struct>) -> Vec<u8>;
 /// `coll_floor_bits` word, neither `coll_floor_bits` nor `_pad` in `SimState`'s two variants (the `_pad` the lagged
 /// `n̂` register has since replaced, put back first), and none of the record's three register entries in the
 /// register's hashed block (§3.8).
-fn without_floor_record(
-    mut l: ledger::schema::Ledger,
-    s: Vec<ledger::schema::Struct>,
-) -> Vec<u8> {
+fn without_floor_record(mut l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
     l.entries.retain(|e| e.name != Some("coll_floor"));
     l.words.retain(|w| w.name != "coll_floor_bits");
     let mut s = without_lag_members(s);

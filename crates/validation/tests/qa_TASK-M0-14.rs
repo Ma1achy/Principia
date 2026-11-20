@@ -84,7 +84,8 @@ fn check_width_function(w: u32, a: u32) {
         // §1: they end at `34w + 24` and `22w + 24` (the lagged register's three Reals in place of 4 B of padding;
         // `31w + 28` and `19w + 28` before it, with the collision floor's 8 B; `31w + 20` and `19w + 20` before
         // that) whenever neither `closure_min` nor the register needs padding before it.
-        if (at("packed_a") + 16).is_multiple_of(a) && (at("coll_floor_bits") + 4).is_multiple_of(a) {
+        if (at("packed_a") + 16).is_multiple_of(a) && (at("coll_floor_bits") + 4).is_multiple_of(a)
+        {
             assert_eq!(
                 l.end,
                 (reals + 3) * w + 24,
