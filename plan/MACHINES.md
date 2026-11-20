@@ -26,7 +26,7 @@ compute box runs.
 - Containment proof, on request only: `gh workflow run win-gpu.yml --ref main -f only=win-contain`.
 
 **2. Compute box: an ordinary development machine.**
-- Your own account, a separate clone (e.g. `E:\work\principia`, or `~/principia` in WSL), never the runner's
+- Your own account, a separate clone (e.g. `D:\src\Principia`, or `~/principia` in WSL), never the runner's
   folders.
 - A Claude Code session there takes tasks that need the GPU or long compute, from the same `plan/PLAN.md`,
   on its own branches and PRs, reviewed like any other. Mark those tasks `machine: pc` in `plan/tasks.yaml`

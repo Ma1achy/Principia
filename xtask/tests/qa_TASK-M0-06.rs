@@ -53,6 +53,7 @@ fn root_with(name: &str, suites: &[&str], edit: impl Fn(&Path)) -> PathBuf {
             &root.join("fixtures/golden").join(suite),
         );
     }
+    fs::create_dir_all(root.join("docs/history")).expect("docs/history created");
     fs::copy(
         repo_root().join("docs/history/decisions.md"),
         root.join("docs/history/decisions.md"),

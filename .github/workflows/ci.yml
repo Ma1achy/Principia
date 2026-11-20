@@ -117,6 +117,7 @@ jobs:
     timeout-minutes: 60
     env:
       NEXTEST_PROFILE: ci-workspace
+      PRIN_GPU_BACKEND: vulkan
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: rustup toolchain install
@@ -126,6 +127,17 @@ jobs:
           cache-targets: "false"
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: ./.github/actions/cargo-ci-config
+      # The GUI's screenshot test spawns a capture that needs a Vulkan adapter: lavapipe, as the test shards have.
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+      - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
+        timeout-minutes: 8
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146

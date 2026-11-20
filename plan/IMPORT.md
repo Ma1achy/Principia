@@ -44,8 +44,8 @@ longer exists: `ai_review_rules`, `ci_*` (except `ci_partition`, `ci_win_retry`,
 `qa_fix_rq_union_control`, `qa_wsl_cpu_mutants*`, `qa_sampler_*` (the deleted disk sampler),
 `qa_TASK-M1-18*` and `qa_TASK-M2-54` (milestone listings of provisional constants), `qa_TASK-M8-86*` (the Pages
 deploy), `qa_TASK-M2-49`, `qa_TASK-M6-53`, `qa_TASK-M0-14_*`, `qa_TASK-M0-88` (the old CI's job layout), and the
-M0 tooling tasks' qa files (M0-02, 03, 19, 20, 22_r235, 23*, 29, 33, 36, 37, 38, 42, 45, 49, 52, 53, 54, 60, 71, 72,
-76). The full list is in the archive's tree at
+M0 tooling tasks' qa files (M0-02, 03, 19, 20, 22_r235, 23*, 29, 33, 36, 37, 38, 42, 45, 49, 52, 53, 54, 60, 70, 71, 72,
+76; M0-70's subject, `ci_self_hosted`, is gone, and `runner_security` covers the guard it tested). The full list is in the archive's tree at
 `ea49959`.
 
 ## Architecture, reviewed at import

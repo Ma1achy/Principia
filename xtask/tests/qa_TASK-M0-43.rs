@@ -294,6 +294,7 @@ fn scratch_root(
         }
     }
     fs::write(root.join("fixtures/golden/BASELINES.md"), table).unwrap();
+    fs::create_dir_all(root.join("docs/history")).unwrap();
     fs::write(
         root.join("docs/history/decisions.md"),
         "## R-296 — qa scratch\n",
