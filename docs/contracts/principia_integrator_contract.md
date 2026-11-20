@@ -1409,7 +1409,7 @@ false` loudly and nothing downstream quietly assumes otherwise. Note `Gamma` is 
 Mikkola–Tanikawa form is required, not optional."* The pair is still allowed, defined as Part 2b's explicit composition
 and warned of if it is measured not to work (R-561, Part 2b § "Every stepper × regularisation pair runs; the pairs
 measured not to work carry a warning (R-561)"). **A reversible occupant exists: logH's TTL time mode
-(Mikkola–Tanikawa), as prin-rs built it; Aarseth–Zare with Mikkola–Tanikawa isn't required (R-162).**
+(Mikkola & Aarseth 2002, as the reference cites it), as prin-rs built it; Aarseth–Zare with Mikkola–Tanikawa isn't required (R-162).**
 
 ---
 

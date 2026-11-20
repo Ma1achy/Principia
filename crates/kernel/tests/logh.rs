@@ -8,6 +8,9 @@
 //!   rate's sign flipped, and `dW/ds`'s.
 //! - `logh_leapfrog_denominators`: the leapfrog's drift and kick move `(r, t)` and `p` at the rates above, on the same
 //!   states off the solution, so each divides by its own denominator. Control: the two denominators swapped.
+//! - `logh_leapfrog_is_its_parts`: the leapfrog, which forms its drifts itself, is that drift and kick composed:
+//!   `(r, p, W)` bitwise, the clock within rounding. Control: a leapfrog whose second half-drift reads the momenta
+//!   from before the kick.
 //! - `logh_reversed_involution`: the time-reversal map negates `p` and `t`, keeps `r` and `W`, and is an involution.
 //!   Control: a map that negates `W` too.
 //! - `logh_step_reversible`: dd_integrator §5's test 3 on logH's leapfrog in each time mode, through the map, the
@@ -326,7 +329,8 @@ negative_control!(
 
 // ── The leapfrog's two denominators ────────────────────────────────────────────────────────────────────────────
 
-/// A drift or a kick: `(system, q, p, h)` to the positions with the clock, or to the momenta with `W`.
+/// A drift, a kick or a step: `(system, q, p, h)` to the positions with the clock, to the momenta with `W`, or to
+/// both.
 type Part<T> = fn(&LhSystem<f64>, &LhQ<f64>, &LhP<f64>, f64) -> T;
 
 /// The drift with the kick's denominator under it: the control's.
@@ -357,24 +361,14 @@ fn swapped_kick(s: &LhSystem<f64>, q: &LhQ<f64>, p: &LhP<f64>, h: f64) -> LhP<f6
 /// `ε/h ≈ 2·10⁻¹³`. On the solution the two denominators are one number and a swap is invisible; off it, where `B` and
 /// `W` are drawn apart from the state, a swap reads of order 1. `W`'s increment is not read here: it is taken at the
 /// midpoint velocity, which the rate at `(r, p)` is not.
-///
-/// And the leapfrog is these parts: on every state its `(r, p, W)` after a step `h` are those of `drift(h/2)`,
-/// `kick(h)`, `drift(h/2)`, bitwise (its clock is not: it adds the two drift times once, the parts in turn). The
-/// leapfrog forms its drifts itself, so without this the check above would guard a drift the march does not run.
 fn check_parts(drift: Part<LhQ<f64>>, kick: Part<LhP<f64>>) {
     let h = 1e-3;
     for mode in [LogHMode::LogH, LogHMode::Ttl] {
         let mut d = Draws(11);
         let mut worst = 0.0f64;
-        let mut apart = 0;
         for _ in 0..32 {
             let (m, x, extra) = d.state();
             let (s, q, p) = at(&x, m, extra, mode);
-            let q_half = drift(&s, &q, &p, h / 2.0);
-            let p_kicked = kick(&s, &q_half, &p, h);
-            let q_parts = drift(&s, &q_half, &p_kicked, h / 2.0);
-            let (q_leap, p_leap) = leapfrog(&s, &q, &p, h);
-            apart += u32::from((q_leap.r, p_leap) != (q_parts.r, p_kicked));
             assert!(
                 ((s.drift_raw(&p) / s.kick_raw(&PairGeom::new(&q.r))) - 1.0).abs() > 1e-3,
                 "the state is on the solution, where a swap cannot be seen"
@@ -401,10 +395,6 @@ fn check_parts(drift: Part<LhQ<f64>>, kick: Part<LhP<f64>>) {
             worst < 1e-9,
             "{mode:?}'s drift and kick miss the rates by {worst:.3e}"
         );
-        assert_eq!(
-            apart, 0,
-            "{mode:?}: the leapfrog is not its drift and kick composed on {apart} of 32 states"
-        );
     }
 }
 
@@ -418,6 +408,67 @@ negative_control!(
     "the drift dividing by the kick's denominator and the kick by the drift's",
     expected = "drift and kick miss the rates",
     check_parts(swapped_drift, swapped_kick)
+);
+
+/// A leapfrog whose second half-drift reads the momenta from before the kick, not after: the control's.
+#[cfg(feature = "controls")]
+fn stale_leapfrog(s: &LhSystem<f64>, q: &LhQ<f64>, p: &LhP<f64>, h: f64) -> (LhQ<f64>, LhP<f64>) {
+    let q_half = drift(s, q, p, h / 2.0);
+    let p1 = kick(s, &q_half, p, h);
+    let mut q1 = drift(s, &q_half, p, h / 2.0);
+    q1.t = leapfrog(s, q, p, h).0.t;
+    (q1, p1)
+}
+
+/// The criterion, written before the first run: on the 32 states off the solution ([`Draws::state`]) in each mode, the
+/// clock started at `0.1`, `leap`'s `(r, p, W)` after a step `h = 10⁻³` are those of `drift(h/2)`, `kick(h)`,
+/// `drift(h/2)`, bitwise, on every state; and its clock is within 2 ulps of theirs (the leapfrog adds the two drift
+/// times to the clock once, the parts each in turn, so the two differ by rounding and no more). The leapfrog forms its
+/// drifts itself, so [`check_parts`] alone would guard a drift the march does not run; this ties the march's step to
+/// the parts that check ties to the equations.
+fn check_composed(leap: Part<(LhQ<f64>, LhP<f64>)>) {
+    let h = 1e-3;
+    for mode in [LogHMode::LogH, LogHMode::Ttl] {
+        let mut d = Draws(11);
+        let mut apart = 0;
+        let mut clock = 0u64;
+        for _ in 0..32 {
+            let (m, x, extra) = d.state();
+            let (s, mut q, p) = at(&x, m, extra, mode);
+            q.t = 0.1;
+            let q_half = drift(&s, &q, &p, h / 2.0);
+            let p_kicked = kick(&s, &q_half, &p, h);
+            let q_parts = drift(&s, &q_half, &p_kicked, h / 2.0);
+            let (q_leap, p_leap) = leap(&s, &q, &p, h);
+            apart += u32::from((q_leap.r, p_leap) != (q_parts.r, p_kicked));
+            assert!(q_leap.t > q.t && q_parts.t > q.t, "the clocks moved");
+            clock = clock.max(q_leap.t.to_bits().abs_diff(q_parts.t.to_bits()));
+        }
+        println!(
+            "logh leapfrog_is_its_parts: {mode:?}: {apart} of 32 states apart (criterion 0), the clocks at most \
+             {clock} ulp apart (criterion 2)"
+        );
+        assert_eq!(
+            apart, 0,
+            "{mode:?}: the leapfrog is not its drift and kick composed on {apart} of 32 states"
+        );
+        assert!(
+            clock <= 2,
+            "{mode:?}: the leapfrog's clock is {clock} ulp from its parts'"
+        );
+    }
+}
+
+#[test]
+fn logh_leapfrog_is_its_parts() {
+    check_composed(leapfrog);
+}
+
+negative_control!(
+    logh_leapfrog_is_its_parts,
+    "a leapfrog whose second half-drift reads the momenta from before the kick",
+    expected = "the leapfrog is not its drift and kick composed",
+    check_composed(stale_leapfrog)
 );
 
 // ── The time-reversal map ──────────────────────────────────────────────────────────────────────────────────────
