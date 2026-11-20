@@ -32,6 +32,7 @@
 //! **Determinism** (REQ-INT-007, REQ-INT-023): the number and size of the steps are a function of the integer span, the
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.
 
+use super::carried::Carried;
 use super::substep::{d2_quantised, Quantise};
 use crate::generated::constants::{U32_RANGE_END_F32, U32_TOP_F32, U32_TOP_F64};
 use crate::occupant::{Geom, State, StepReal, Stepper};
@@ -225,6 +226,24 @@ pub trait Advance {
         let out = Self::advance(state, geom, t_now, t_target, params, cadence);
         let reached = Reached::by_count(out.substeps, params.n_sub);
         (out, reached)
+    }
+
+    /// [`Advance::advance_reaching`], with the trajectory's carried regularised state ([`Carried`]) passed in and out
+    /// beside `(m, r, p)` (integrator_contract Part 2a): the wrapper's call. An occupant that registers once reads its
+    /// own state from `carried` and writes it back, so it never rebuilds it from `(m, r, p)`
+    /// ([`crate::regularisation::Composed`]). This default is for an occupant that carries nothing, a stepper: the
+    /// buffer is left as it was.
+    #[inline]
+    fn advance_carrying<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+        _carried: &mut Carried<R>,
+    ) -> (Advanced<R>, Reached) {
+        Self::advance_reaching(state, geom, t_now, t_target, params, cadence)
     }
 
     /// The joint march of the FTLE shadow's displacement form (R-974; the module's note): `state`, whose force

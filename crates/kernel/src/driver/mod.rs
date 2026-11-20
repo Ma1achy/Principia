@@ -9,12 +9,14 @@
 //! f32s packed to the payload's f16 halves at a persist boundary and reloaded from them at a resume ([`latch`]; payload
 //! §1, §2). The FTLE tier's Benettin shadow, marched beside the sample through its own cadence ([`benettin`];
 //! TASK-M3-14). The live shape readout per macro-step, `θ̃` with its pole hold in `_reserved` ([`shape`]; R-397), and
-//! the closure registers with their departure gate ([`closure`]; R-37). Like the physics layer, it allocates nothing
-//! (Part 2c rule 5; `cargo xtask lint no-alloc`).
+//! the closure registers with their departure gate ([`closure`]; R-37). The regularised state an occupant carries from
+//! one `ADVANCE` call to the next, in a buffer beside `SimState` ([`carried`]). Like the physics layer, it allocates
+//! nothing (Part 2c rule 5; `cargo xtask lint no-alloc`).
 
 pub mod advance;
 pub mod benettin;
 pub mod cadence;
+pub mod carried;
 pub mod closure;
 pub mod latch;
 pub mod monitor;

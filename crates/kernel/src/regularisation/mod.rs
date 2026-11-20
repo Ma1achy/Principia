@@ -104,6 +104,23 @@ pub trait Regularisation {
         };
         (out, reached)
     }
+
+    /// The pair's `ADVANCE` with the trajectory's carried regularised state passed in and out beside `(m, r, p)`
+    /// ([`Advance::advance_carrying`]; Part 2a). This default is for a regularisation that carries nothing: the buffer
+    /// is left as it was. One that registers once keeps its own state there ([`heggie::Heggie`]); one that
+    /// re-registers counts its registrations there ([`az::AarsethZare`]).
+    #[inline]
+    fn advance_carrying<S: Stepper, R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+        _carried: &mut crate::driver::carried::Carried<R>,
+    ) -> (Advanced<R>, Reached) {
+        Self::advance_reaching::<S, R, C>(state, geom, t_now, t_target, params, cadence)
+    }
 }
 
 /// `none`: no regularisation. The pair with a stepper is the stepper itself (Part 2b: "The `none` pairs are separable,
@@ -171,5 +188,18 @@ impl<S: Stepper, G: Regularisation> Advance for Composed<S, G> {
         cadence: &mut C,
     ) -> (Advanced<R>, Reached) {
         G::advance_reaching::<S, R, C>(state, geom, t_now, t_target, params, cadence)
+    }
+
+    #[inline]
+    fn advance_carrying<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+        carried: &mut crate::driver::carried::Carried<R>,
+    ) -> (Advanced<R>, Reached) {
+        G::advance_carrying::<S, R, C>(state, geom, t_now, t_target, params, cadence, carried)
     }
 }

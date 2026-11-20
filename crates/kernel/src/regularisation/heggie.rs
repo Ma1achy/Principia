@@ -7,8 +7,11 @@
 //! `Pᵢ = 2L(Qᵢ)ᵀpᵢ` ([`register`]); the state `(Q₀, P₀, Q₁, P₁, Q₂, P₂, t)` is marched in fictitious time `τ` under
 //! `Γ*` with the energy `h` frozen at registration ([`HgSystem`], its [`Flow`]), and its Cartesian image is
 //! [`HgSystem::image`]. [`march`] registers once, at `t = 0`, and carries the state across every boundary of R-565's
-//! grid, never re-registering (TASK-M3-77); the occupant seam carries it across `ADVANCE` calls as R-992 rules, and
-//! its [`super::Regularisation`] impl is TASK-M3-75's.
+//! grid, never re-registering (TASK-M3-77). **Through the occupant seam** ([`Heggie`], its [`Regularisation`] impl)
+//! the march is the same one, cut into `ADVANCE` calls: the regularised state, `h`, the interval clock and the running
+//! step total cross from call to call in the trajectory's carried buffer ([`Carried`]; [`carried_state`]), so a call
+//! registers only where the buffer holds no registration, at `t = 0` in a run from its IC, and marches on from the
+//! state the last call left ([`march_on`]). A registration at a later boundary is a re-registration and is counted.
 //!
 //! **The time transformations** ([`HeggieTime`]; R-161): Eq. 20, `dτ = dt/(R₀R₁R₂)`, and Eq. 22 at n = 3/2, the
 //! default ([`DEFAULT_TIME`]), `dτ = S^{3/2}/(R₀R₁R₂) dt`, whose momentum rates gain `3Γ*Qᵢ/S`, `S` floored at `TINY`.
@@ -42,10 +45,15 @@ use super::az::{
     add, dot, finite, floored, lc, lc_inverse, least, lmul, ltmul, norm, over_allowance, scale,
     sub, two, AzReal, End, ExplicitTest, V,
 };
+use core::marker::PhantomData;
+
+use super::az::{boundary_at_or_before, reached};
 use super::dt_max::DtMax;
 use super::form::Flow;
 use super::pairs::HeggieTime;
-use crate::driver::advance::Cadence;
+use super::{Kind, Regularisation};
+use crate::driver::advance::{AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
+use crate::driver::carried::Carried;
 use crate::occupant::{CapabilityProfile, Geom, State, Stepper};
 
 /// Heggie's default time transformation: Eq. 22 at n = 3/2 (R-161).
@@ -1040,6 +1048,20 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
     }
 }
 
+/// Where a march stands between two of its intervals: the regularised state with its interval clock, the sync
+/// boundary it stands on, and the trajectory's counts so far.
+#[derive(Clone, Copy, Debug)]
+pub struct HgStanding<R> {
+    /// The regularised positions and the interval clock.
+    pub q: HgQ<R>,
+    /// The regularised momenta.
+    pub p: HgP<R>,
+    /// The sync boundary the state stands on, `k`.
+    pub boundary: u32,
+    /// The trajectory's counts, its running step total among them.
+    pub count: HgCount<R>,
+}
+
 /// Heggie's march over the sync grid (R-565), registered once (Part 2b, step 1): the Cartesian `state` at `t = 0`,
 /// in the centre-of-mass frame, registered under `params.time` and marched to boundary `k_target` with the stepper `S`
 /// and the watch `watch`, each boundary a sampling cadence that does not touch the regularised state or `h`. On a
@@ -1058,14 +1080,37 @@ pub fn march<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
         p: p0,
     } = register(state, params.tiny, params.time);
     watch.registered(&q0);
+    let from = HgStanding {
+        q: q0,
+        p: p0,
+        boundary: 0,
+        count: HgCount::new(),
+    };
+    march_on::<S, R, C, X>(&system, state, from, k_target, params, cadence, watch)
+}
+
+/// [`march`] from where it stands, with no registration: `system` the one registered at `t = 0`, `state` the Cartesian
+/// state at the boundary `from` stands on (returned as it is where no interval is marched), and `from` the regularised
+/// state and counts the march has carried to there. [`march`] is this from its own registration at boundary 0, and a
+/// march cut at any of its landings and taken up again here is the uncut march, step for step.
+#[inline]
+pub fn march_on<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
+    system: &HgSystem<R>,
+    state: &State<R>,
+    from: HgStanding<R>,
+    k_target: u32,
+    params: &HgParams<R>,
+    cadence: &mut C,
+    watch: &mut X,
+) -> HgAdvanced<R> {
     let mut s = *state;
-    let (mut q, mut p) = (q0, p0);
-    let mut k = 0;
-    let mut count = HgCount::new();
+    let (mut q, mut p) = (from.q, from.p);
+    let mut k = from.boundary;
+    let mut count = from.count;
     let mut t_s = R::default();
     while k < k_target && count.end == End::Marching {
         q.t = R::default();
-        let out = interval::<S, R, C, X>(&system, (q, p), k, params, &mut count, cadence, watch);
+        let out = interval::<S, R, C, X>(system, (q, p), k, params, &mut count, cadence, watch);
         q = out.q;
         p = out.p;
         s = system.image(&q, &p);
@@ -1081,8 +1126,168 @@ pub fn march<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
         boundary: k,
         t: R::count(k) * params.delta_sync + t_s,
         count,
-        system,
+        system: *system,
         q,
         p,
+    }
+}
+
+// ── The occupant seam ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// Where Heggie's values come from: the occupant's configuration, a type, so that the composed occupant stays a type
+/// (Part 2b). Its values are calibrations (the module's note), the time transformation among them ([`DEFAULT_TIME`]
+/// the default's, Eq. 20 selectable).
+pub trait HgConfig {
+    /// The step control's values at `R`.
+    fn params<R: AzReal>() -> HgParams<R>;
+}
+
+/// Heggie with the values of `C`.
+#[derive(Clone, Copy, Debug)]
+pub struct Heggie<C>(PhantomData<C>);
+
+/// Heggie's own numbers in a trajectory's carried buffer: `(Q, P, h)`, the interval clock in `Q`. The fourteen floats
+/// are `Q₀, Q₁, Q₂` (six), `P₀, P₁, P₂` (six), `h`, and the clock `t`, in that order.
+#[inline]
+pub fn carried_state<R: AzReal>(carried: &Carried<R>) -> (HgQ<R>, HgP<R>, R) {
+    let x = &carried.x;
+    (
+        HgQ {
+            q: [[x[0], x[1]], [x[2], x[3]], [x[4], x[5]]],
+            t: x[13],
+        },
+        HgP {
+            p: [[x[6], x[7]], [x[8], x[9]], [x[10], x[11]]],
+        },
+        x[12],
+    )
+}
+
+/// Writes Heggie's `(Q, P, h)`, the interval clock in `Q`, and its running step total into `carried`, registered
+/// ([`carried_state`]'s order). The re-registration count is left as it stood.
+#[inline]
+pub fn carry<R: AzReal>(carried: &mut Carried<R>, q: &HgQ<R>, p: &HgP<R>, h: R, steps: u32) {
+    carried.x = [
+        q.q[0][0], q.q[0][1], q.q[1][0], q.q[1][1], q.q[2][0], q.q[2][1], p.p[0][0], p.p[0][1],
+        p.p[1][0], p.p[1][1], p.p[2][0], p.p[2][1], h, q.t,
+    ];
+    carried.steps = steps;
+    carried.registered = 1;
+}
+
+/// Heggie's seam `ADVANCE` (Part 2a; R-565): `t_now` and `t_target` on the macro-step grid, physical time
+/// `index·dt_macro`, mapped to the sync grid, the latest boundary at or before each ([`boundary_at_or_before`]).
+///
+/// Where `carried` holds no registration, `state` is registered into it; that is the march's one registration when it
+/// happens at boundary 0, and a re-registration, counted in [`Carried::re_registrations`], at any later boundary. The
+/// march then goes on from the carried `(Q, P)` under the carried `h` with the carried step total ([`march_on`]), and
+/// what it reached is written back. `(r, p)` of `state` are read only by a registration: the regularised state is
+/// never rebuilt from them. `substeps` is the steps the cadence followed in this call.
+///
+/// The interval clock is carried as the march left it. At a landing it is the boundary's `Δ_sync`, and the next
+/// interval restarts it at 0, so between calls it holds nothing the march reads; it is kept so that the buffer is the
+/// march's whole state wherever a call ends, a march ended between boundaries included.
+#[inline]
+fn advance_seam<C: HgConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
+    state: &State<R>,
+    t_now: u32,
+    t_target: u32,
+    params: &AdvanceParams<R>,
+    cadence: &mut Cd,
+    carried: &mut Carried<R>,
+) -> (Advanced<R>, Reached) {
+    let values = C::params::<R>();
+    let k_now = boundary_at_or_before(R::count(t_now) * params.dt_macro, values.delta_sync);
+    let k_target = boundary_at_or_before(R::count(t_target) * params.dt_macro, values.delta_sync);
+    if carried.registered == 0 {
+        let fresh = register(state, values.tiny, values.time);
+        carry(carried, &fresh.q, &fresh.p, fresh.system.h, carried.steps);
+        if k_now > 0 {
+            carried.re_registrations += 1;
+        }
+    }
+    let (q, p, h) = carried_state(carried);
+    let system = HgSystem::new(state.m, h, values.tiny, values.time);
+    let from = HgStanding {
+        q,
+        p,
+        boundary: k_now,
+        count: HgCount {
+            steps: carried.steps,
+            ..HgCount::new()
+        },
+    };
+    let out = march_on::<S, R, Cd, ExplicitTest>(
+        &system,
+        state,
+        from,
+        k_target,
+        &values,
+        cadence,
+        &mut ExplicitTest,
+    );
+    carry(carried, &out.q, &out.p, h, out.count.steps);
+    (
+        Advanced {
+            state: out.state,
+            geom: out.geom,
+            substeps: out.count.accepted,
+        },
+        reached(out.count.end, out.boundary, k_target),
+    )
+}
+
+impl<C: HgConfig> Regularisation for Heggie<C> {
+    const KIND: Kind = Kind::Heggie;
+
+    #[inline]
+    fn profile<S: Stepper>() -> CapabilityProfile {
+        <S as HgStepper>::pair_profile()
+    }
+
+    /// The seam's `ADVANCE` with nothing carried: the call registers `state` and marches from it. It is the march
+    /// registered once only as a run's first marching call; a caller that calls again carries the state
+    /// ([`Regularisation::advance_carrying`]).
+    #[inline]
+    fn advance<S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
+        state: &State<R>,
+        _geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut Cd,
+    ) -> Advanced<R> {
+        let mut none = Carried::unregistered();
+        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, &mut none).0
+    }
+
+    /// [`Regularisation::advance`], nothing carried, with how the march ended ([`reached`]).
+    #[inline]
+    fn advance_reaching<S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
+        state: &State<R>,
+        _geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut Cd,
+    ) -> (Advanced<R>, Reached) {
+        let mut none = Carried::unregistered();
+        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, &mut none)
+    }
+
+    /// The seam's `ADVANCE` with the trajectory's carried state, and how the march ended: a landing on the boundary at
+    /// or before `t_target` is the target reached, whatever the steps it took (Part 2a, Cost 2), and a march ended
+    /// non-finite or by its budget ends the run, latched where it stopped ([`reached`]).
+    #[inline]
+    fn advance_carrying<S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
+        state: &State<R>,
+        _geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut Cd,
+        carried: &mut Carried<R>,
+    ) -> (Advanced<R>, Reached) {
+        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, carried)
     }
 }
