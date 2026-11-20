@@ -15,6 +15,8 @@ delete its line when it's done.
   passage through the whole gate. Add one before relying on the gate at a checkpoint.
 - **Windows Vulkan:** four suites are reported rather than asserted on the PC runner, pending the NVIDIA
   driver investigation (see `win-gpu.yml`).
+- **`xtask` has no `dx12` feature**, so the golden runner and the `cargo xtask` suites cannot select DX12; add it
+  with the DX12 compute path (TASK-M0-85).
 - **The docs carry old ruling ids and *Was* blocks** (about 10,000 ids, 900 blocks across `docs/contracts`
   and `docs/design`). They are correct, just noisy. Clean a passage when you next edit it; don't run a
   mechanical sweep, because the reasons in them matter.
