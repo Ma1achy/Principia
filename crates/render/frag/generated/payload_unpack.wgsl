@@ -3,8 +3,8 @@
 // f64, f16 pairs through core `unpack2x16float` (no `enable f16`).
 
 // The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger (R-36, R-63; the Rust
-// PAYLOAD_SCHEMA_VERSION, 0x76e70670b6f511f9). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
-const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0xb6f511f9u, 0x76e70670u);
+// PAYLOAD_SCHEMA_VERSION, 0x0c1825aa4f761ded). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
+const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0x4f761dedu, 0x0c1825aau);
 
 // `SimStateFTLE`: 168 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
 struct SimStateFTLE {
@@ -126,6 +126,9 @@ fn sd_dmin_pair(w: u32) -> u32 { return extractBits(w, 6u, 2u); }
 
 // `last_symbol`: bits 8–9 of `packed_a` (payload §2, §6).
 fn sd_last_symbol(w: u32) -> u32 { return extractBits(w, 8u, 2u); }
+
+// `I_max`: bits 10–14 of `packed_a` (payload §2, §6).
+fn sd_I_max(w: u32) -> u32 { return extractBits(w, 10u, 5u); }
 
 // `departed`: bit 15 of `packed_a` (payload §2, §6).
 fn sd_departed(w: u32) -> bool { return extractBits(w, 15u, 1u) == 1u; }

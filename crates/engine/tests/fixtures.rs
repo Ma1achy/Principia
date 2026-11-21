@@ -70,6 +70,7 @@ fn fields(k: &Known) -> PackedA {
         saturated: k.saturated,
         dmin_pair: k.dmin_pair,
         last_symbol: k.last_symbol,
+        i_max: 0,
         departed: false,
         d_min: f16_bits_to_f32(k.d_min),
     }
@@ -383,8 +384,9 @@ negative_control!(
 );
 
 /// Checks each adversarial sample's raw `packed_a` whole against the packing of the fields it holds
-/// (`roundtrip_ctl`), and its reserved bits 10–15 clear: a raw-word comparison, which a bit the accessors mask
-/// still fails (pitfalls §9).
+/// (`roundtrip_ctl`), and any reserved bit clear (since R-545 `packed_a` has none: bits 10–14 are `I_max`'s level, 0 in
+/// these samples, and 15 the departed bit): a raw-word comparison, which a bit a field check masks still fails
+/// (pitfalls §9).
 fn check_raw_words(set: &Synthetic, want: &[Known]) {
     for (i, k) in (0u32..).zip(want) {
         let w = set.simstate(i).packed_a;
@@ -412,8 +414,8 @@ fn fixtures_adversarial_raw_words_are_their_fields_packed() {
 
 negative_control!(
     fixtures_adversarial_raw_words_are_their_fields_packed,
-    "the adversarial descriptor with reserved bit 12 contaminated fails the raw-word check",
-    expected = "a reserved bit is set",
+    "the adversarial descriptor with bit 12, `I_max`'s, contaminated fails the raw-word check",
+    expected = "is not the packing of its fields",
     {
         let mut set = filled("adversarial_descriptor");
         let w = set.simstate(5).packed_a;
@@ -422,8 +424,9 @@ negative_control!(
     }
 );
 
-/// Checks that setting bit `bit` of each adversarial sample's `packed_a` changes none of the fields its accessors
-/// read: the masking that makes a check of the unpacked fields blind to it (pitfalls §9).
+/// Checks that setting bit `bit` of each adversarial sample's `packed_a` changes none of the fields this check compares
+/// (`state`, `detail`, `saturated`, `dmin_pair`, `last_symbol`, `d_min`): the masking that makes a check of the
+/// unpacked fields blind to it (pitfalls §9).
 fn check_masked(bit: u32) {
     let set = filled("adversarial_descriptor");
     for i in 0..8 {
@@ -440,10 +443,10 @@ fn check_masked(bit: u32) {
 
 #[test]
 fn fixtures_adversarial_reserved_bits_are_masked_by_the_unpack() {
-    for (at, width) in PACKED_A_RESERVED {
-        for bit in at..at + width {
-            check_masked(bit);
-        }
+    // `packed_a` has no reserved span since R-545; bits 10–14, `I_max`'s level, are the ones the compared fields mask.
+    assert!(PACKED_A_RESERVED.is_empty(), "packed_a's reserved spans");
+    for bit in 10..15 {
+        check_masked(bit);
     }
 }
 

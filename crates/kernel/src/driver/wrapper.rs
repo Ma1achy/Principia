@@ -113,9 +113,9 @@ use crate::detect::label::{precedence, Events, Fired};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    pack_times, sd_detail, sd_is_failed, sd_saturated, sd_state, set_coll_floor, set_d_min_unset,
-    set_dmin_pair, set_saturated, set_t_dmin_step, tm_t_dmin_step, tm_t_end_step, DminCounters,
-    PayloadReal, SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED,
+    pack_times, sd_detail, sd_is_failed, sd_saturated, sd_state, set_I_max, set_coll_floor,
+    set_d_min_unset, set_dmin_pair, set_saturated, set_t_dmin_step, tm_t_dmin_step, tm_t_end_step,
+    DminCounters, PayloadReal, SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED,
 };
 use crate::real::IeeeBits;
 use crate::regularisation::budget::latch_exhausted;
@@ -238,6 +238,9 @@ fn written<R: WrapperReal>(
     latches.separation_squared(detector.latch().d2());
     latches.drift(m.de_max().quantise(), m.dlz_max().quantise());
     let (packed_a, packed_b) = latches.persist(labelled, &DminCounters::new());
+    // The Chazy latch's stored level (chazy drill-down §6; R-545): the greater of a resumed march's stored level and its
+    // own maximum's, so a split march stores the uncut one's. A failed run's is replaced below (`failure::sim_failed`).
+    let packed_a = set_I_max(packed_a, cadence.i_max().code());
     // R-605: the regularised drift, or the Cartesian where no regularised one was reported (regularisation off, the two
     // energies one). A failed run's is replaced by the failed-state value below (`failure::sim_failed`).
     let reg = cadence.regularised();

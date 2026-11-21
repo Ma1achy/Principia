@@ -100,8 +100,9 @@ fn pack(s: &[u32]) -> [(&'static str, u32); 4] {
         sat,
         f("dmin_pair"),
         f("last_symbol"),
-        // The departed bit is not among this harness's selectable fields (its shaders read FIELDS by index); its pack
-        // and unpack are `kernel`'s payload_pack tests'.
+        // Neither `I_max`'s level nor the departed bit is among this harness's selectable fields (its shaders read
+        // FIELDS by index); their pack and unpack are `kernel`'s payload_pack tests'.
+        0,
         false,
         half("d_min"),
         &counters,
@@ -352,7 +353,8 @@ fn codegen_selftest_pack_unpack_host() {
 
 negative_control!(
     codegen_selftest_pack_unpack_host,
-    "a contaminated reserved bit (packed_a bit 10), which no accessor reads, must fail the raw-word comparison",
+    "a contaminated packed_a bit 10 (`I_max`'s, which this harness's samples hold at 0) must fail the raw-word \
+     comparison",
     expected = "host Rust: the repacked words are not the observed words",
     check_host(&fixed_batch(), |n, w| if n == "packed_a" { w | 1 << 10 } else { w })
 );
@@ -713,7 +715,19 @@ fn legend(state: u32, detail: u32) -> Option<&'static str> {
 fn check_detail(h: &GpuHarness, module: &str) {
     let combos: Vec<(u32, u32)> = (0..8).flat_map(|s| (0..4).map(move |d| (s, d))).collect();
     let words: Vec<u32> = (combos.iter())
-        .map(|&(s, d)| pack_packed_a(s, d, true, 3, 3, true, f32::INFINITY, &DminCounters::new()))
+        .map(|&(s, d)| {
+            pack_packed_a(
+                s,
+                d,
+                true,
+                3,
+                3,
+                31,
+                true,
+                f32::INFINITY,
+                &DminCounters::new(),
+            )
+        })
         .collect();
     let (state, detail) = (sel("state") as u32, sel("detail") as u32);
     let jobs: Vec<_> = words
