@@ -371,25 +371,33 @@ fn state_enum() {
 }
 
 negative_control!(
-    state_enum_cut,
+    state_enum,
     "the run stopped one macro-step short of its horizon",
     expected = "is not `bounded` at the horizon",
     check_bounded(200, 199)
 );
 
-negative_control!(
-    state_enum_no_nan,
-    "no NaN injected",
-    expected = "is not `sim_failed` with detail 0",
-    check_nan(0)
-);
+mod no_nan {
+    use super::*;
 
-negative_control!(
-    state_enum_cap_terminal,
-    "the substep cap made terminal",
-    expected = "the substep cap ended the march",
-    check_cap(true)
-);
+    negative_control!(
+        state_enum,
+        "no NaN injected",
+        expected = "is not `sim_failed` with detail 0",
+        check_nan(0)
+    );
+}
+
+mod cap_terminal {
+    use super::*;
+
+    negative_control!(
+        state_enum,
+        "the substep cap made terminal",
+        expected = "the substep cap ended the march",
+        check_cap(true)
+    );
+}
 
 // ── nmax_cap_continues ──────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -745,25 +753,33 @@ fn failure_last(e: &Events) -> Label {
 }
 
 negative_control!(
-    terminal_precedence_collision_always,
+    terminal_precedence,
     "collision over escape whatever their times",
     expected = "escape before collision: collision",
     check_precedence(collision_always_first)
 );
 
-negative_control!(
-    terminal_precedence_tie_to_escape,
-    "a same-step tie to escape",
-    expected = "a same-step tie: escape",
-    check_precedence(tie_to_escape)
-);
+mod tie_to_escape {
+    use super::*;
 
-negative_control!(
-    terminal_precedence_failure_last,
-    "sim_failed only where nothing else fired",
-    expected = "sim_failed with a collision and an escape: collision",
-    check_precedence(failure_last)
-);
+    negative_control!(
+        terminal_precedence,
+        "a same-step tie to escape",
+        expected = "a same-step tie: escape",
+        check_precedence(tie_to_escape)
+    );
+}
+
+mod failure_last {
+    use super::*;
+
+    negative_control!(
+        terminal_precedence,
+        "sim_failed only where nothing else fired",
+        expected = "sim_failed with a collision and an escape: collision",
+        check_precedence(failure_last)
+    );
+}
 
 // ── escape_latch ────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -1188,18 +1204,22 @@ fn t_end_step_counter() {
 }
 
 negative_control!(
-    t_end_step_counter_unlatched,
+    t_end_step_counter,
     "`done` never read",
     expected = "a step was taken after the collision",
     check_t_end_step(false, true)
 );
 
-negative_control!(
-    t_end_step_counter_no_clock,
-    "the macro-step clock dropped",
-    expected = "t_dmin_step is not the argmin step",
-    check_t_end_step(true, false)
-);
+mod no_clock {
+    use super::*;
+
+    negative_control!(
+        t_end_step_counter,
+        "the macro-step clock dropped",
+        expected = "t_dmin_step is not the argmin step",
+        check_t_end_step(true, false)
+    );
+}
 
 // ── totality_labels ─────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -1434,15 +1454,19 @@ fn plain_s_over_t(s: &SimStateFTLEOf<f64>) -> f64 {
 }
 
 negative_control!(
-    escape_freezes_accumulators_plain,
+    escape_freezes_accumulators,
     "plain S/t, the partial interval left unfinalised",
     expected = "is not S_final/(t_esc) at the firing step",
     check_freeze(plain_s_over_t, true)
 );
 
-negative_control!(
-    escape_freezes_accumulators_unlatched,
-    "later dispatches with no latch",
-    expected = "changed the frozen sample",
-    check_freeze(read_ftle, false)
-);
+mod unlatched {
+    use super::*;
+
+    negative_control!(
+        escape_freezes_accumulators,
+        "later dispatches with no latch",
+        expected = "changed the frozen sample",
+        check_freeze(read_ftle, false)
+    );
+}

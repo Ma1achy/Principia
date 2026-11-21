@@ -55,7 +55,8 @@
 //! value that is not finite fires nothing: the chord is tested on its bits, and a NaN energy fails its comparison.
 //!
 //! **After it fires** the verdict stays, the run's `done` flag is set by the cadence that holds the detector
-//! (`crate::driver::cadence::WrapperCadence`), and the label is written when the loop ends ([`Detector::label`]).
+//! (`crate::driver::cadence::WrapperCadence`), and the label is written when the loop ends, by time against a collision
+//! ([`crate::detect::label`]).
 
 use spirv_std::num_traits::Float;
 

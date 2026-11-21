@@ -26,7 +26,7 @@
 //! **What it writes** of the `SimState`: the state `(r, p)` where the march stopped; `total_substeps`; `saturated`
 //! (descriptor bit 5); `state`, `bounded` where the loop ran to the horizon (Part 7: reaching `T` without a terminal is
 //! `bounded`; there is no timeout state) and `running` where the cadence's `done` ended it, for the terminal's label to
-//! replace; and `t_end_step`, the completed macro-steps (Part 5, "Exact step-index timing invariant"; payload §2): a
+//! replace, every label through one precedence and one write ([`crate::detect::label`]); and `t_end_step`, the completed macro-steps (Part 5, "Exact step-index timing invariant"; payload §2): a
 //! macro-step counts once the occupant reports its target reached ([`Advance::advance_reaching`]), a stepper once its
 //! `N_sub` substeps were all taken and an occupant that owns its time mapping once its march stopped on the sync grid
 //! at or before the target (Part 2a, Cost 2; R-565), so one that `done` cut short does not, while the loop's counter
@@ -45,11 +45,13 @@
 //! `running`, and `coll_floor`, the collision test's floor over its near-firing states and the `d_min` state (Part 7,
 //! R-954, R-973; [`crate::detect`]). The three latches are packed through [`super::latch::Latches`], which clamps
 //! them and writes the failed-state values (payload §1; R-271). `integrate_with` writes `dmin_pair`'s sentinel, 3, and
-//! `d_min` unset, so a run whose cadence latches nothing keeps them; `t_dmin_step` is TASK-M3-17's. [`monitored`] writes
-//! the escape detector's too ([`crate::detect::escape`]): where escape fired and no collision did, `state` `escape`
-//! and its `detail`, the escaper's body index or 3, over `running` or `bounded` (an escape that fires on the horizon's
-//! own boundary is an escape); and the lagged shape register, `_nhat_lag_0`, `_1`, `_2` (payload §1), which a re-boot
-//! reloads into its cadence ([`WrapperCadence::resume_escape`]). The escape test runs at the occupant's sampling
+//! `d_min` unset, so a run whose cadence latches nothing keeps them, and carries `t_dmin_step` from where it started;
+//! [`monitored`] writes the cadence's `t_dmin_step`, the macro-step index of the latched least `d²`
+//! ([`WrapperCadence::dmin_step`]), which the wrapper's clock stamps ([`Cadence::clock`]). [`monitored`] writes the
+//! escape detector's too ([`crate::detect::escape`]): where escape fired before any collision, `state` `escape` and its
+//! `detail`, the escaper's body index or 3, over `running` or `bounded` (an escape that fires on the horizon's own
+//! boundary is an escape); and the lagged shape register, `_nhat_lag_0`, `_1`, `_2` (payload §1), which a re-boot
+//! hands back to its cadence ([`Cadence::resume`]). The escape test runs at the occupant's sampling
 //! points ([`Cadence::sample`]): the wrapper reports each completed macro-step under an occupant that marches the
 //! macro-step grid, and an occupant that owns its time mapping reports its sync boundaries from inside its march
 //! ([`Advance::OWN_SAMPLING`]). The shape readout's fields, `theta`, `_reserved`, `closure_min`, `closure_step` and the departed bit,
@@ -75,7 +77,9 @@
 //! wrapper reloads the state `(r, p)`, `total_substeps`, the sticky `saturated` bit, the Welford co-moments and the
 //! readout ([`super::shape::Readout::load`]), and marches on; a march split into any number of resumed calls writes
 //! these fields bit-identically to one call (R-397's "however the march is split into dispatches"). The cadence is the
-//! caller's: one that keeps state across macro-steps (the monitor's latches, the detector's) is the caller's to resume.
+//! caller's; the wrapper hands it the stored state before the first step ([`Cadence::resume`]), and the wrapper's own
+//! reloads the escape register from it. The monitor's latches and the collision detector's are still the caller's to
+//! resume. A stored sample that is finished is handed back word for word, never marched (`super::terminal`).
 //!
 //! **The carried regularised state** ([`Carried`]; Part 2a): the wrapper passes the trajectory's buffer into every
 //! `ADVANCE` call ([`Advance::advance_carrying`]), so an occupant that registers once, Heggie or logH, registers at `t = 0` and
@@ -170,8 +174,9 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
 /// contents are defined"; R-79, R-271), `dmin_pair` its sentinel, 3, unset as `d_min` is, and `coll_floor` 0, "not
 /// recorded" (payload §2). **A run `out` already
 /// `sim_failed`**, its march ended non-finite ([`integrate_with`]), keeps its `state` and `detail`, over a collision
-/// too (R-30), with the same failed-state latches, sentinel and `coll_floor`. The rest of the failure path, the terminal that ends
-/// the march and the other fields' failed-state values, is TASK-M3-17's and TASK-M3-18's.
+/// too (R-30), with the same failed-state latches, sentinel and `coll_floor`, and `t_dmin_step` 0, unset as `d_min` is.
+/// The label is [`precedence`]'s, of the failure, the cadence's terminals with their step ordinals and the horizon. The
+/// other fields' failed-state values are TASK-M3-18's.
 ///
 /// The `d_min` counters [`Latches::persist`] counts into are a pair of this write's own: the latch admits no NaN `d²`
 /// and the detector's quantised `d²` is never negative (`crate::driver::substep::square`), so `√` gives neither a NaN
@@ -354,8 +359,9 @@ pub fn integrate_with_co<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R
 /// The march resumed from `stored`, a `SimState` this wrapper wrote for the same `ic` under the same `uniforms`, for at
 /// most `steps` more macro-steps, never past the horizon (the module's note): from `stored`'s state at its
 /// `t_end_step`, with its `total_substeps`, `saturated` bit, Welford co-moments, `θ̃`, `_reserved`, closure registers and
-/// departed bit, and `cadence` the caller's. A march that stops short of the horizon is `running`. `stored` is a march
-/// still running: one whose `state` is terminal is finished and never resumed.
+/// departed bit, and `cadence` the caller's, handed `stored` first ([`Cadence::resume`]). A march that stops short of the
+/// horizon is `running`. A `stored` that is finished ([`super::terminal::finished`]) is returned as it is, every word,
+/// with no step taken and no cadence call.
 ///
 /// No carried state is resumed: the occupant is handed an unregistered buffer (the module's note).
 #[inline]
