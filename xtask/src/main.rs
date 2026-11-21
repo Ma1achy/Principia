@@ -101,6 +101,8 @@ Commands:
                                   `extern crate alloc`, in the kernel's physics and driver layers
                                   (crates/kernel/src/{physics,driver}), naming file, line and token
                                   (integrator_contract Part 2c rule 5; REQ-PERF-002)
+  lint parity-tiers               fail on an integrator-suite test with no parity-tier tag, or a tag whose tier is
+                                  not parity_contract §8's for its kind (crates/kernel/tests/parity_tiers.rs)
   measure libm-pin [--wasm] [--against <run>...]
                                   the libm-pin measurement (R-991, REQ-CHART-212): the harness xtask/libm_pin/ decodes
                                   the first slice's three charts over their grids in f64 on this machine, on the pinned
@@ -177,6 +179,7 @@ fn main() -> ExitCode {
         ["lint", "wgsl"] => xtask::lint_wgsl::run(&workspace_manifest()),
         ["lint", "compute-pipelines"] => xtask::lint_compute::run(&workspace_manifest()),
         ["lint", "no-alloc"] => xtask::lint_no_alloc::run(&workspace_manifest()),
+        ["lint", "parity-tiers"] => xtask::lint_parity_tiers::run(&workspace_manifest()),
         ["measure", "libm-pin", rest @ ..] => measure_libm_pin(rest),
         ["web-skeleton"] => {
             xtask::web_skeleton::build("wasm-bindgen", &xtask::web_skeleton::default_out())

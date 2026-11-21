@@ -697,6 +697,13 @@ fn simstate(ftle: bool) -> Struct {
         m("_nhat_lag_0", Storage::F32),
         m("_nhat_lag_1", Storage::F32),
         m("_nhat_lag_2", Storage::F32),
+        // The march state a re-boot reloads that no other word holds exactly (payload §1, "Payload purity";
+        // scheduler_contract Part 1): `_dmin_d2`, the `d_min` latch's least position-quantised `d²`, an f32's bits at
+        // every precision row, which the f16 `d_min` rounds; `_march_bits`, the collision floor's two codes that
+        // `coll_floor` is the larger of and the regularised drift's reported flag. Read only by the kernel, so
+        // `_`-named, with no entry, field or view. Two u32s, so every row stays exactly packed.
+        m("_dmin_d2", Storage::U32),
+        m("_march_bits", Storage::U32),
     ]);
     Struct {
         name: if ftle { "SimStateFTLE" } else { "SimStateBase" },

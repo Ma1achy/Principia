@@ -99,6 +99,9 @@ impl<R: PayloadReal> Scan for SimStateBaseOf<R> {
             _nhat_lag_0,
             _nhat_lag_1,
             _nhat_lag_2,
+            // u32s, no float: the scan reads floats and the f16 halves only
+            _dmin_d2: _,
+            _march_bits: _,
             _tail: _,
         } = *self;
         vectors("r", &r, f);
@@ -147,6 +150,9 @@ impl<R: PayloadReal> Scan for SimStateFTLEOf<R> {
             _nhat_lag_0,
             _nhat_lag_1,
             _nhat_lag_2,
+            // u32s, no float: the scan reads floats and the f16 halves only
+            _dmin_d2: _,
+            _march_bits: _,
             _tail: _,
         } = *self;
         vectors("r", &r, f);

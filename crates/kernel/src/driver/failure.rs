@@ -326,6 +326,9 @@ fn failed_words<R: PayloadReal>(
         dE_reg: pack_dE_reg(0.0, 0.0),
         times: set_t_dmin_step(s.times, 0),
         coll_floor_bits: set_coll_floor(s.coll_floor_bits, 0),
+        // The re-boot's registers (payload §1, "Payload purity"): a failed sample is finished, never re-booted.
+        _dmin_d2: 0,
+        _march_bits: 0,
         ..s
     }
 }
@@ -335,7 +338,7 @@ fn failed_words<R: PayloadReal>(
 /// where all twelve are finite and 0.0 otherwise; `S` the failed mark ([`s_failed`]); `theta`, `mean_y`, `C_ty`,
 /// `E_0`, `Lz_0` and the lagged register as given where finite, 0.0 where not; `closure_min` as given unless NaN, `+∞`
 /// (unset) then. With the failed words: `d_min` unset, both drift halves 0.0, `dmin_pair` 3, `t_dmin_step` 0,
-/// `coll_floor` 0, `dE_reg` 0.0 in both halves. `t_end_step`, `total_substeps`, `budget_bits`, `saturated`, the departed
+/// `coll_floor` 0, `dE_reg` 0.0 in both halves, `_dmin_d2` and `_march_bits` 0. `t_end_step`, `total_substeps`, `budget_bits`, `saturated`, the departed
 /// bit and `closure_step` are kept: the
 /// march's counts up to its failure. Writing it twice gives the same words.
 #[inline]
