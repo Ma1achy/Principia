@@ -9,14 +9,13 @@
 //! **The pass criterion of a rung**: no firing whose check-2 truth is bound or another body's escape (at most the
 //! gate's threshold, 0, `escape-precision`'s criterion: late rather than wrong, pitfalls §2.3), over at least
 //! [`check2::MIN_DECIDED_FIRINGS`] decided firings: the one property a window must not change. Recall and the label
-//! changes are recorded, not judged. The criterion was first written as precision ≥ 0.99; at that the control passed
-//! (one false positive over 748 firings, 0.9987), so it could not fail, and it became `escape-precision`'s, set before
-//! the ladder ran; no rung's verdict changed. **The control**: a rung far below the ladder, one sync quantum (0.125,
+//! changes are recorded, not judged. **The control**: a rung far below the ladder, one sync quantum (0.125,
 //! every sampling point a mark), at which the chord of a turning inner binary is a fraction of the 0.4 window's, so
 //! transients settle in it and it must fail.
 //!
 //! **The range a carried window may take** ([`propose`]): the rungs about 0.4 at which the criterion holds, contiguous
-//! with it.
+//! with it, at the register's `tau`; and, because the range depends on `tau`, at each `tau` of the zero-false-positive
+//! band the rungs whose false-positive edge lies above it.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -251,6 +250,15 @@ pub fn propose(wrong: f64) -> Result<String, String> {
         if ok.contains(w) && *w <= hi * 2.0001 {
             hi = *w;
         }
+    }
+    out += "\nThe rungs whose false-positive edge U lies above tau, by tau (the range depends on tau):\n";
+    for tau in [1e-3, 3e-3, 5e-3, 1e-2] {
+        let clean: Vec<f64> = rungs
+            .iter()
+            .filter(|r| r.window >= LADDER[0] && r.gap.u > tau)
+            .map(|r| r.window)
+            .collect();
+        out += &format!("- tau {tau:e}: {clean:?}\n");
     }
     out += &format!(
         "\nThe window: 0.4 {}. The range a carried window may take, the ladder's rungs contiguous with 0.4 that meet the \

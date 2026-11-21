@@ -15,7 +15,7 @@
 //!   least armed chord by then ([`RunGap::fires_above`]), and each bound trajectory, or escaper whose firing would name
 //!   another body, fires wrongly exactly where `tau` exceeds the least armed chord at which a wrong mark leads
 //!   ([`RunGap::wrong_above`]). The gap's edges:
-//!   - `U`, the false-positive edge: the least `wrong_above` over the population. Any `tau ≤ U` fires on no bound
+//!   - `U`, the false-positive edge: the least `wrong_above` over the population. Any `tau` below `U` fires on no bound
 //!     trajectory (late rather than wrong, pitfalls §2.3).
 //!   - `L`, the escapers' edge: the median of the escapers' `fires_above` (never-armed escapers counting as never
 //!     firing). Above it, at least half the escapers fire by `T_h/2`.

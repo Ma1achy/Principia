@@ -1,0 +1,6 @@
+{
+  "description": "The gate's passing branch, not a proposal: tau = 1.3e-2, inside the middle half [1.2751e-2, 1.3265e-2] of the gap measured on the re-validation set (64 × 64 each); the gate must pass it.",
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 64, "r_coll": 0.0 }],
+  "tau": 0.013,
+  "expected": "pass"
+}
