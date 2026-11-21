@@ -92,6 +92,8 @@ pub struct WrapperCadence<R> {
     dmin_at: u32,
     /// Whether that replacement has not yet met a [`Cadence::clock`] report.
     dmin_pending: bool,
+    /// Whether the wrapper handed a finished stored sample back ([`Cadence::latched`]): the write leaves it.
+    handed_back: bool,
 }
 
 impl<R: WrapperReal> WrapperCadence<R> {
@@ -129,7 +131,15 @@ impl<R: WrapperReal> WrapperCadence<R> {
             dmin_step: 0,
             dmin_at: 0,
             dmin_pending: false,
+            handed_back: false,
         }
+    }
+
+    /// Whether the run was a finished stored sample handed back ([`Cadence::latched`]), which [`monitored`] leaves as
+    /// it is.
+    #[inline]
+    pub fn handed_back(&self) -> bool {
+        self.handed_back
     }
 
     /// The run's terminal events for its label ([`crate::detect::label::precedence`]): the collision and the escape, each with the
@@ -260,7 +270,9 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
 
     /// The escape test at a sampling point, on a run nothing ended before this point's state; `done` where it fires.
     /// A collision that fired on this point's own step is a tie, not an earlier event: the test runs on that state as
-    /// well, and the label settles the tie ([`crate::detect::label::precedence`]).
+    /// well, and the label settles the tie ([`crate::detect::label::precedence`]). Where that point is a window mark
+    /// the lagged register takes its shape, so a collision on a mark stores the mark's register, which a run that ended
+    /// on a collision never reads again.
     #[inline]
     fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
         let tie = self.detector.fired() && self.collision_at == self.invocations;
@@ -283,6 +295,11 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
         }
         self.dmin_pending = false;
         self.clock = completed;
+    }
+
+    #[inline]
+    fn latched(&mut self) {
+        self.handed_back = true;
     }
 
     /// The escape register of a re-booted march reloaded from `stored` ([`WrapperCadence::resume_escape`]), where
@@ -376,6 +393,11 @@ impl<R: LinkReal + IeeeBits, C: Cadence<R>, B: WordBuffer + ?Sized> Cadence<R>
     #[inline]
     fn clock(&mut self, completed: u32) {
         self.inner.clock(completed);
+    }
+
+    #[inline]
+    fn latched(&mut self) {
+        self.inner.latched();
     }
 
     #[inline]

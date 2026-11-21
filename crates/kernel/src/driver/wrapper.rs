@@ -176,13 +176,31 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
 /// `sim_failed`**, its march ended non-finite ([`integrate_with`]), keeps its `state` and `detail`, over a collision
 /// too (R-30), with the same failed-state latches, sentinel and `coll_floor`, and `t_dmin_step` 0, unset as `d_min` is.
 /// The label is [`precedence`]'s, of the failure, the cadence's terminals with their step ordinals and the horizon. The
-/// other fields' failed-state values are TASK-M3-18's.
+/// rest of the failure path, the terminal that ends the march on a non-finite monitored value (a stepper's march goes
+/// on to its horizon today) and the other fields' failed-state values, is TASK-M3-18's.
+///
+/// **A finished stored sample handed back** by a resumed call (`super::terminal`; [`Cadence::latched`]) is returned as
+/// it is: the cadence followed no run, and its write would replace the stored label and latches with a fresh
+/// cadence's.
 ///
 /// The `d_min` counters [`Latches::persist`] counts into are a pair of this write's own: the latch admits no NaN `d²`
 /// and the detector's quantised `d²` is never negative (`crate::driver::substep::square`), so `√` gives neither a NaN
 /// nor a negative value and neither counter can count here (R-288).
 #[inline]
 pub fn monitored<R: WrapperReal>(
+    out: SimStateBaseOf<R>,
+    cadence: &WrapperCadence<R>,
+) -> SimStateBaseOf<R> {
+    if cadence.handed_back() {
+        out
+    } else {
+        written(out, cadence)
+    }
+}
+
+/// [`monitored`]'s write of a run the cadence followed.
+#[inline]
+fn written<R: WrapperReal>(
     out: SimStateBaseOf<R>,
     cadence: &WrapperCadence<R>,
 ) -> SimStateBaseOf<R> {
@@ -390,6 +408,7 @@ pub fn integrate_resumed_carrying<A: Advance, R: WrapperReal, C: Cadence<R>>(
     steps: u32,
 ) -> SimStateBaseOf<R> {
     if super::terminal::finished(stored.packed_a, stored.times, uniforms.horizon_steps) {
+        cadence.latched();
         *stored
     } else {
         resume_march::<A, R, C>(ic, uniforms, cadence, stored, carried, steps)

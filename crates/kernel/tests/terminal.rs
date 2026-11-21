@@ -243,6 +243,10 @@ impl<R: P> Cadence<R> for Recording<R> {
         self.inner.resume(stored);
     }
 
+    fn latched(&mut self) {
+        self.inner.latched();
+    }
+
     fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R> {
         self.inner.finish(out)
     }
@@ -439,7 +443,9 @@ impl<R: P> Cadence<R> for CapStop<R> {
 
 /// The near-singular encounter under the law capped at `N_max = 4`, with no collision threshold: the bucket exceeds
 /// the cap at the closest approach, the run is `saturated`, and it marches on past the encounter to an outcome,
-/// `bounded` at the horizon or an `escape`, never `running` and never failed.
+/// `bounded` at the horizon or an `escape`, never `running` and never failed. The outcome is a label, not a claim about
+/// the physics: unregularised KDK through a passage at `d ≈ 2·10⁻³` throws the pair apart on its energy error (measured
+/// `dE_max` at the f16 clamp, 65504, against `|E_0| = 0.83`, and the same escape at `N_max = 64`).
 fn check_nmax_cap(stop_on_cap: bool) {
     let s = near_singular::<f64>();
     let key = law::<f64>(0.01, 2000, 4);
@@ -456,10 +462,12 @@ fn check_nmax_cap(stop_on_cap: bool) {
     let d_min = c.inner.detector().latch().d2().sqrt();
     println!(
         "nmax_cap_continues: d_min {d_min:.3e} at macro-step {t_dmin}, the bucket there {}, N_max 4; {} at \
-         t_end_step {t_end} of 2000, saturated {}",
+         t_end_step {t_end} of 2000, saturated {}, E_0 {:.4}, dE_max {:.4e}",
         key.thresholds.bucket(c.inner.detector().latch().d2()),
         name(sd_state(out.packed_a)),
-        sd_saturated(out.packed_a)
+        sd_saturated(out.packed_a),
+        out.E_0,
+        kernel::payload::pb_dE_max(out.packed_b)
     );
     assert!(
         key.thresholds.bucket(c.inner.detector().latch().d2()) > 4,
@@ -840,19 +848,32 @@ negative_control!(
 
 // ── terminal_latch ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// A later dispatch of `stored` with `latched` the terminal latch ([`redispatch`]) or none (the march resumed and the
-/// cadence's write applied regardless): a fresh cadence from the stored state, `carried` the buffer.
+/// How a later dispatch reaches the stored sample.
+#[derive(Clone, Copy, Debug)]
+enum Again {
+    /// The terminal latch's entry point, [`redispatch`].
+    Redispatch,
+    /// The resumed march and then the cadence's write, as the re-boot tests call them.
+    ResumeFinish,
+    /// No latch: the march from the stored state and the cadence's write, as if it were still running.
+    Unlatched,
+}
+
+/// A later dispatch of `stored` by `how`: a fresh cadence from the stored state, `carried` the buffer.
 fn dispatch_again<R: P>(
     s: &State<R>,
     key: &WrapperUniforms<R>,
     radius: CollisionRadius,
     stored: &SimStateBaseOf<R>,
     carried: &mut Carried<R>,
-    latched: bool,
+    how: Again,
 ) -> (SimStateBaseOf<R>, u32) {
     let mut c = WrapperCadence::with_radius(&s.m, &stored.r, &stored.p, radius);
-    let out = if latched {
+    let out = if let Again::Redispatch = how {
         redispatch::<Kdk, R, _>(&ic(s), key, &mut c, stored, carried, 100)
+    } else if let Again::ResumeFinish = how {
+        let out = integrate_resumed_with::<Kdk, R, _>(&ic(s), key, &mut c, stored, 100);
+        c.finish(out)
     } else {
         // The latch bypassed: the march from the stored state, as if it were still running.
         let resumed = Ic {
@@ -868,7 +889,8 @@ fn dispatch_again<R: P>(
 
 /// Synthetic samples run to a collision, to an escape and to the horizon: the loop ends with `done` set at the step
 /// that terminated it (the horizon's `bounded` has no event), and every `SimState` word is bit-identical on three
-/// later dispatches, under longer horizons for the two events, the carried buffer and the cadence untouched.
+/// later dispatches, under longer horizons for the two events, the carried buffer and the cadence untouched: through
+/// the latch's entry point and through the resumed march and the cadence's write.
 fn check_terminal_latch<R: P>(latched: bool) {
     let cases = [
         ("escape", expanding::<R>(), CollisionRadius::none(), 0.05),
@@ -906,7 +928,14 @@ fn check_terminal_latch<R: P>(latched: bool) {
                 300 + 400 * k
             };
             let key = flat::<R>(dt, horizon, 2);
-            let (again, steps) = dispatch_again(&s, &key, radius, &stored, &mut carried, latched);
+            let how = if !latched {
+                Again::Unlatched
+            } else if k % 2 == 0 {
+                Again::Redispatch
+            } else {
+                Again::ResumeFinish
+            };
+            let (again, steps) = dispatch_again(&s, &key, radius, &stored, &mut carried, how);
             let changed: Vec<&str> = [
                 ("r", bytes(&again.r) != bytes(&stored.r)),
                 ("p", bytes(&again.p) != bytes(&stored.p)),
@@ -926,7 +955,7 @@ fn check_terminal_latch<R: P>(latched: bool) {
             .collect();
             assert!(
                 bytes(&again) == bytes(&stored),
-                "{what} at {}: dispatch {k} changed the stored words ({changed:?}, {steps} steps taken)",
+                "{what} at {}: dispatch {k} ({how:?}) changed the stored words ({changed:?}, {steps} steps taken)",
                 core::any::type_name::<R>()
             );
             assert_eq!(steps, 0, "{what}: a later dispatch called the cadence");
@@ -1223,13 +1252,16 @@ mod no_clock {
 
 // ── totality_labels ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// Fuzzed ICs at `R`, slow and fast, under the law capped at `N_max = 3` and `r_coll = 0.01`, run to the horizon: every
+/// Fuzzed ICs at `R`, slow and fast, under the law capped at `N_max = 3` and `r_coll = 0.01`, `dt = 0.005` for 30 time
+/// units, run to the horizon: every
 /// sample's `state` is a finished label, one of the six (never `running`, never a reserved code), and it is the
 /// precedence of the cadence's own events; every saturated sample reaches a dynamical outcome. `labelled: false` reads
 /// the march's label alone, before the cadence's write.
 fn check_totality<R: P>(labelled: bool) {
     let mut g = Lcg(0x707A_1171);
-    let key = law::<R>(0.02, 1500, 3);
+    // At `dt = 0.02` this set meets one collision in 48, and 20 at `dt = 0.005` (measured, `N_max` 3 and 64 alike):
+    // `N_sub` is chosen from the macro-step's starting separation, so a coarse macro-step steps over `r_coll`.
+    let key = law::<R>(0.005, 6000, 3);
     let radius = CollisionRadius::from_r_coll(0.01);
     let mut tally = std::collections::BTreeMap::new();
     let mut saturated = 0;
@@ -1255,7 +1287,7 @@ fn check_totality<R: P>(labelled: bool) {
             } else {
                 Fired::none()
             },
-            horizon: tm_t_end_step(out.times) == 1500,
+            horizon: tm_t_end_step(out.times) == 6000,
             ..c.events()
         };
         assert_eq!(

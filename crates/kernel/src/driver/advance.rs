@@ -181,6 +181,12 @@ pub trait Cadence<R> {
     {
     }
 
+    /// The stored state the wrapper was asked to march on is finished, and was handed back as it is
+    /// (`super::terminal`): a cadence that writes into the `SimState` ([`Cadence::finish`]) must leave it so. One that
+    /// writes nothing ignores it; one that wraps another passes it on.
+    #[inline]
+    fn latched(&mut self) {}
+
     /// The stored state `out` of the finished run, with what this cadence kept written into it. A cadence that keeps
     /// nothing leaves it; the wrapper's writes its monitored fields ([`super::wrapper::monitored`]).
     #[inline]
