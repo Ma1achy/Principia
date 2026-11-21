@@ -476,9 +476,9 @@ mod qa_tool017_view_and_test_reference_the_same_accessors_ic {
 
 // ── REQ-GEN-011: a new field is viewed, or generation fails naming it ────────────────────────────────────────────
 
-/// The payload ledger plus `qa_cat`, a 4-category field in `packed_a`'s bits 10–11, the reserved span narrowed to
-/// bits 12–14 (payload §2's reserved bits; bit 15 is the departed bit, R-545); its builder `entry`, or none when `add`
-/// is false.
+/// The payload ledger plus `qa_cat`, a 4-category field in `coll_floor_bits`' bits 8–9, the reserved span narrowed to
+/// bits 10–31 (payload §2's reserved bits; `packed_a` has none left since R-545 spent 10–15); its builder `entry`, or
+/// none when `add` is false.
 fn with_qa_cat(add: bool, entry: impl FnOnce(EntryBuilder) -> EntryBuilder) -> Ledger {
     let mut l = ledger::layout();
     if !add {
@@ -487,16 +487,16 @@ fn with_qa_cat(add: bool, entry: impl FnOnce(EntryBuilder) -> EntryBuilder) -> L
     let a = l
         .words
         .iter_mut()
-        .find(|w| w.name == "packed_a")
-        .expect("packed_a");
+        .find(|w| w.name == "coll_floor_bits")
+        .expect("coll_floor_bits");
     a.reserved = vec![Span {
-        offset: 12,
-        width: 3,
+        offset: 10,
+        width: 22,
     }];
     let b = EntryBuilder::new("qa_cat")
         .location(Location::Packed {
-            word: "packed_a",
-            offset: 10,
+            word: "coll_floor_bits",
+            offset: 8,
             width: 2,
         })
         .ty(FieldType::UBits)

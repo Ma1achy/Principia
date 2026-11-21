@@ -273,7 +273,7 @@ pub const PROVISIONAL: [(&str, &str); 0] = [];
 
 /// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0`,
 /// `rho_angle` and `n`.
-pub const DECLARED: [(&str, &str); 19] = [
+pub const DECLARED: [(&str, &str); 20] = [
     (
         "V_0",
         "dd_generation_root §3.6: `V_0` (lin, (−∞, 0]); dd_decoder §3.6: `V₀ = −Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖` (R-403)",
@@ -323,6 +323,11 @@ pub const DECLARED: [(&str, &str); 19] = [
     (
         "last_symbol",
         "dd_simstate_payload §3: the symbol codes `a = 0, A = 1, b = 2, B = 3`",
+    ),
+    (
+        "I_max",
+        "dd_simstate_payload §2: `I_max`, bits 10–14, the Chazy latch's level in half-octaves above `I_0`, 0–31, \
+         saturating at 31 (R-545; chazy drill-down §6)",
     ),
     (
         "budget_exhausted",
