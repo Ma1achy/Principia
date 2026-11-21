@@ -1483,21 +1483,6 @@ pub const ESCAPE_WINDOW: ConstantBuilder = proposed(
     "M3",
 );
 
-/// The escape settling threshold `tau`, `10⁻³`, a bound on `|Δn̂|`, a pure number: Part 3 gives no value, and R-173
-/// rules this one, the provisional `tau` (REQ-EVT-024), prin-rs's `CLOSURE_TAU`, inside the recorded range
-/// `7.04·10⁻⁵ … 2.70·10⁻²` and near its geometric mean. The confirmed `tau`, REQ-EVT-025's calibration inside the
-/// re-measured gap, replaces it at the M3 gate, so the entry is provisional until M3 and cites that requirement
-/// (R-427; dd_generation_root §3.8). Re-measured by TASK-M3-34 (`cargo xtask gate tau-gap --propose`): no false positive
-/// up to 1.353e-2, but the gap its criterion reads is 1.08× and its middle half holds no one-figure value, so the
-/// value stays at 1e-3 until the owner settles it.
-pub const TAU: ConstantBuilder = proposed(
-    "tau",
-    1e-3,
-    Admissibility::CanonicalUnits,
-    "REQ-EVT-025",
-    "M3",
-);
-
 /// The distance floor's reach, 10, in units of the initial hyperradius `R_0`: the escape rule `DistanceFloor`
 /// (`kernel::detect::escape_rule`) fires where the farthest body is beyond `10 R_0` from the other two's centre of mass,
 /// prin-rs's naive distance baseline ("the farthest body beyond `10 R0` has escaped"), ported as measured there.
@@ -1512,6 +1497,21 @@ pub const ESCAPE_DISTANCE_FLOOR: ConstantBuilder = ConstantBuilder {
     relative_basis: None,
     provisional: None,
 };
+
+/// The escape settling threshold `tau`, `10⁻³`, a bound on `|Δn̂|`, a pure number: Part 3 gives no value, and R-173
+/// rules this one, the provisional `tau` (REQ-EVT-024), prin-rs's `CLOSURE_TAU`, inside the recorded range
+/// `7.04·10⁻⁵ … 2.70·10⁻²` and near its geometric mean. The confirmed `tau`, REQ-EVT-025's calibration inside the
+/// re-measured gap, replaces it at the M3 gate, so the entry is provisional until M3 and cites that requirement
+/// (R-427; dd_generation_root §3.8). Re-measured by TASK-M3-34 (`cargo xtask gate tau-gap --propose`): no false positive
+/// up to 1.353e-2, but the gap its criterion reads is 1.08× and its middle half holds no one-figure value, so the
+/// value stays at 1e-3 until the owner settles it.
+pub const TAU: ConstantBuilder = proposed(
+    "tau",
+    1e-3,
+    Admissibility::CanonicalUnits,
+    "REQ-EVT-025",
+    "M3",
+);
 
 /// `Δ_sync`, the sync quantum, 1/8 of a time unit: the regularised occupants' sync grid is `t = k·Δ_sync`, the same for
 /// every run, independent of the horizon and of frame timing; each interval's steps are sized from it and `ADVANCE`
@@ -1900,8 +1900,8 @@ pub const REGISTER: &[ConstantBuilder] = &[
     T_HORIZON_MAX,
     DT_MACRO_FLOOR,
     ESCAPE_WINDOW,
-    TAU,
     ESCAPE_DISTANCE_FLOOR,
+    TAU,
     DELTA_SYNC,
     R_COLL,
     EPSILON,
