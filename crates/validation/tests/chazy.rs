@@ -88,6 +88,18 @@ negative_control!(
 /// §12.1's tidal row says.
 #[test]
 fn chazy_fewbody_agrees_with_the_classifier_where_the_fixtures_say() {
+    check_agreement(DELTA);
+}
+
+negative_control!(
+    chazy_fewbody_agrees_with_the_classifier_where_the_fixtures_say,
+    "a reference at δ = 10⁻³ resolves d = 20, which §12.1 says it does not",
+    expected = "the reference reads",
+    check_agreement(1e-3)
+);
+
+/// [`fewbody_resolved`] at `delta` and the classifier read each fixture as §12.1 says.
+fn check_agreement(delta: f64) {
     use kernel::chazy::{classify, inertia, ChazyCfg, Motion, Playhead, Previous};
     let at = |s: &State| Playhead {
         m: s.m,
@@ -113,7 +125,8 @@ fn chazy_fewbody_agrees_with_the_classifier_where_the_fixtures_say() {
         ),
     ];
     for (s, reference, classifier) in cases {
-        assert_eq!(fewbody_resolved(&s, DELTA), reference);
+        let got = fewbody_resolved(&s, delta);
+        assert_eq!(got, reference, "the reference reads {got:?}");
         assert_eq!(label(&s), classifier);
     }
 }

@@ -714,8 +714,23 @@ negative_control!(
 );
 
 /// REQ-PAY-099: every output is one of the ten labels, each code `0..10` once, and the read side's code is the label's.
+/// A read side's `chazy_class`: masses, positions, momenta, `E_0`, `R_0` and the stored level in, a code out.
+type ReadClass = fn([f64; 3], [[f64; 2]; 3], [[f64; 2]; 3], f64, f64, u32) -> u32;
+
 #[test]
 fn chazy_fixtures_every_output_is_one_of_the_ten_labels() {
+    check_ten_labels(kernel::chazy::chazy_class);
+}
+
+negative_control!(
+    chazy_fixtures_every_output_is_one_of_the_ten_labels,
+    "a read side whose codes run one label past the ten gives codes no label has",
+    expected = "is no label's",
+    check_ten_labels(|m, r, p, e, r_0, l| kernel::chazy::chazy_class(m, r, p, e, r_0, l) + 1)
+);
+
+/// The ten labels' codes, `from_code` and the committed set, and `read`'s code of 2000 random states each one of them.
+fn check_ten_labels(read: ReadClass) {
     let codes: std::collections::BTreeSet<u32> = Motion::ALL.iter().map(|m| m.code()).collect();
     assert_eq!(codes, (0..10).collect(), "the ten labels' codes");
     for m in Motion::ALL {
@@ -723,8 +738,11 @@ fn chazy_fixtures_every_output_is_one_of_the_ten_labels() {
     }
     assert_eq!(Motion::from_code(10), None);
     for s in draws(2000) {
-        let code = kernel::chazy::chazy_class(s.m, s.r, s.p(), s.energy(), 1.0, 0);
-        assert!(Motion::from_code(code).is_some(), "code {code}");
+        let code = read(s.m, s.r, s.p(), s.energy(), 1.0, 0);
+        assert!(
+            Motion::from_code(code).is_some(),
+            "code {code} is no label's"
+        );
     }
     let committed: Vec<&str> = Motion::ALL
         .iter()
@@ -738,6 +756,21 @@ fn chazy_fixtures_every_output_is_one_of_the_ten_labels() {
 /// change may differ between widths (§8); none of these states is near one.
 #[test]
 fn chazy_fixtures_f32_instantiates_the_one_rule() {
+    check_f32(ChazyCfg::<f32>::defaults());
+}
+
+negative_control!(
+    chazy_fixtures_f32_instantiates_the_one_rule,
+    "an f32 rule with no parabolic band reads the PE fixture otherwise",
+    expected = "f64 reads",
+    check_f32(ChazyCfg {
+        eps: 0.0,
+        ..ChazyCfg::<f32>::defaults()
+    })
+);
+
+/// Every fixture's label at f32 under `cfg32` is its label at f64 under the defaults.
+fn check_f32(cfg32: ChazyCfg<f32>) {
     for (name, s) in fixtures() {
         let ph = at(&s);
         let f = |x: f64| x as f32;
@@ -751,7 +784,7 @@ fn chazy_fixtures_f32_instantiates_the_one_rule() {
         };
         let (a, b) = (
             classify(&ph, &ChazyCfg::defaults(), &Previous::none()),
-            classify(&ph32, &ChazyCfg::<f32>::defaults(), &Previous::none()),
+            classify(&ph32, &cfg32, &Previous::none()),
         );
         assert_eq!(a, b, "{name}: f64 reads {}, f32 {}", a.name(), b.name());
     }
