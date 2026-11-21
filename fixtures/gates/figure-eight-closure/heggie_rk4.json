@@ -1,0 +1,8 @@
+{
+  "description": "The default occupant, Heggie (Eq. 22) × RK4, on the figure-eight for one period across the η ladder: the closure |dr| at η = 0.01 within its bound, and the order fitted to the error at the period against the RK45 reference at least RK4's 4 less the tolerance.",
+  "stepper": "rk4",
+  "regularisation": "heggie-eq22",
+  "order_tolerance": 0.5,
+  "closure_bound": 1e-6,
+  "expected": "pass"
+}

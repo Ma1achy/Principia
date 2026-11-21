@@ -1,0 +1,6 @@
+{
+  "gate": "figure-eight-closure",
+  "inputs": ["heggie_rk4.json", "heggie_eq20_rk4.json", "aarseth_zare_rk4.json", "logh_rk4.json", "logh_yoshida4.json", "ttl_kdk.json", "control_overshoot.json", "control_euler.json"],
+  "threshold": { "value": 1e-5, "requirement": "REQ-VAL-133", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-133" }
+}

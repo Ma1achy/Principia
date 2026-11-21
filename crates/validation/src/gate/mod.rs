@@ -27,6 +27,8 @@
 //! with no GPU ([`MeasurementGate`]). What it measures runs under its flags, which assert nothing.
 
 pub mod ablation;
+pub mod figure_eight;
+pub mod lagrange;
 pub mod report;
 
 use std::path::{Path, PathBuf};
@@ -102,6 +104,8 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &HamiltonianFdGate,
     &EscapeChecksGate,
     &EscapeRebindGate,
+    &figure_eight::FigureEightClosureGate,
+    &lagrange::ExactCasesGate,
 ];
 
 /// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.
