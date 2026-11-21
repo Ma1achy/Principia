@@ -1,0 +1,6 @@
+{
+  "description": "The range control: a ladder whose fine rungs fall below the rounding floor is refused whole, never trimmed",
+  "occupant": "yoshida6",
+  "ladder": [3200, 4525, 6400],
+  "expected": "refused"
+}

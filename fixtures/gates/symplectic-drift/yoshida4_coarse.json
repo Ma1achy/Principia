@@ -1,0 +1,8 @@
+{
+  "description": "Yoshida-4, symplectic, with only dt_macro changed (×4) so its truncation error stands above rounding: it oscillates with no secular trend, and SUSPECT_ENERGY stays unlit",
+  "occupant": "yoshida4",
+  "claim": "bounded",
+  "suspect_energy": false,
+  "dt_scale": 4.0,
+  "expected": "pass"
+}

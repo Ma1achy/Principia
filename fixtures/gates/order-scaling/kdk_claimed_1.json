@@ -1,0 +1,7 @@
+{
+  "description": "The control: KDK mislabelled as order 1 must fail",
+  "occupant": "kdk",
+  "ladder": [400, 566, 800, 1131, 1600, 2263, 3200],
+  "claimed_order": 1,
+  "expected": "fail"
+}

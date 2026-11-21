@@ -1,0 +1,6 @@
+{
+  "gate": "order-scaling",
+  "inputs": ["euler.json", "kdk.json", "yoshida4.json", "rk4.json", "yoshida6.json", "rk4_claimed_3.json", "yoshida6_claimed_4.json", "kdk_claimed_1.json", "kdk_too_coarse.json", "yoshida6_below_floor.json"],
+  "threshold": { "value": 0.25, "requirement": "REQ-VAL-139", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-139" }
+}
