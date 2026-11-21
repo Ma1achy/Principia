@@ -1,0 +1,10 @@
+{
+  "description": "Control: Lagrange's triangle at masses (0.2, 0.3, 0.5) marched by Heggie (Eq. 22) × Euler, the first-order debug stepper, at η = 0.01. It must fail.",
+  "case": "lagrange",
+  "masses": [0.2, 0.3, 0.5],
+  "stepper": "euler",
+  "regularisation": "heggie-eq22",
+  "eta": 0.01,
+  "control": true,
+  "expected": "fail"
+}

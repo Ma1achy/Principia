@@ -2,7 +2,9 @@
 //! Precision ring (`engine::precision`), each case's reference independent of the kernel's stepper: a closed form, a
 //! published value, or the RK45 reference.
 //!
-//! - `entry_paths_figure_eight` (tier 3, Path A): CHECK 1, then the figure-eight's closure after its period.
+//! - `entry_paths_figure_eight` (tier 3, Path A): CHECK 1, then the figure-eight's closure after its period, by
+//!   Yoshida-4 and by the shipping occupant, Heggie × RK4 (the closure gate's ladder and order are
+//!   `tests/figure_eight_closure.rs`'s).
 //! - `entry_paths_burrau` (tier 4, Path A): CHECK 1, then Szebehely & Peters' outcome, structurally; `r_coll` pinned
 //!   and carried. Ignored until TASK-M3-34: its escape label fires near 158 of S&P's units.
 //! - `entry_paths_burrau_ejects_on_time` (tier 4): the march and the reference eject the lightest body in 60–65.
@@ -145,12 +147,64 @@ fn check_figure_eight<A: Advance>(start: &Start, occupant: &'static str) {
 #[test]
 fn entry_paths_figure_eight() {
     check_figure_eight::<Yoshida4>(&tiers::figure_eight(), "Yoshida-4");
+    // The shipping occupant through the same pixel path (TASK-M3-28): the wrapper's march, as a pixel runs it.
+    check_figure_eight_landed::<DefaultOccupant>(landed);
     // Reported: the published labelling, on the α = 0 pole.
     let x = unit_state(&tiers::figure_eight_published()).unwrap();
     let c = path_a::check1::<Defaults>(&x);
     println!(
         "figure_eight, published labelling (reported): residual {:e}, κ {:e}, clamped {}",
         c.residual, c.kappa, c.clamped
+    );
+}
+
+/// Where an occupant that owns its time mapping ends a march asked for `horizon`: on the last sync boundary at or before
+/// it, `⌊T/Δ_sync⌋·Δ_sync` (integrator_contract Part 2a: it stops only on the grid). Measured on the figure-eight
+/// (TASK-M3-28): asked for the period, `14.8509`, Heggie × RK4 ends at `14.75`, `1.8·10⁻¹²` from the RK45 reference
+/// there and `5.5·10⁻²` from it at the period, so its closure is the closure gate's to judge, on a grid that lands on
+/// the period (`validation::gate::figure_eight`).
+fn landed(horizon: f64) -> f64 {
+    let d = kernel::regularisation::sync::delta_sync::<f64>();
+    (horizon / d).floor() * d
+}
+
+/// The figure-eight through Path A by `A`, an occupant that owns its time mapping, against the RK45 reference at
+/// `at(period)`: CHECK 1, then the march within [`REFERENCE_TOL`] of the reference there. Criterion written before the
+/// run: the reference tolerance the Yoshida-4 arm is held to.
+fn check_figure_eight_landed<A: Advance>(at: fn(f64) -> f64) {
+    assert!(
+        A::OWN_SAMPLING,
+        "the occupant does not own its time mapping"
+    );
+    let (run, period) = figure_eight_run::<A>(
+        &tiers::figure_eight(),
+        "Heggie × RK4 (field backend's values)",
+    );
+    check1("figure_eight", &run);
+    let end = ic_of(&run.forward);
+    let t = at(period);
+    let reference =
+        tiers::reference(&run.check1.decoded, &[t], &REFERENCE).expect("the reference reaches t");
+    let against = phys(&reference[0], &end);
+    println!(
+        "figure_eight: {}; asked for the period {period:.6}, compared at t = {t:.6}: march against the reference \
+         {against:e} (≤ {REFERENCE_TOL:e}); its closure there {:e}, reported",
+        run.provenance,
+        phys(&run.check1.decoded, &end)
+    );
+    assert!(
+        against <= REFERENCE_TOL,
+        "the shipping occupant's march is {against:e} from the RK45 reference at t = {t:.6}"
+    );
+}
+
+mod figure_eight_default_at_period {
+    use super::*;
+    negative_control!(
+        entry_paths_figure_eight,
+        "the shipping occupant compared at the period, which its march does not land on",
+        expected = "the shipping occupant's march is",
+        check_figure_eight_landed::<DefaultOccupant>(|t| t)
     );
 }
 

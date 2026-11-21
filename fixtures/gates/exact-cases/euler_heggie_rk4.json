@@ -1,0 +1,8 @@
+{
+  "description": "Euler's collinear line at equal masses, the middle body at the centre, marched one turn by Heggie (Eq. 22) × RK4 at η = 0.01: collinear, and each side at its closed-form length, at every sync boundary.",
+  "case": "euler",
+  "stepper": "rk4",
+  "regularisation": "heggie-eq22",
+  "eta": 0.01,
+  "expected": "pass"
+}

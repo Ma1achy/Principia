@@ -24,11 +24,13 @@
 //!
 //! **What the runs are.** Each arm runs the occupant's own direct march at f64 (`kernel::regularisation::{az, heggie,
 //! logh}::march`), the march the seam's `ADVANCE` is bitwise (`kernel/tests/sync_quantum.rs`), because an arm's step
-//! control is a value here and the seam reads it from a type. The march gets no cadence: no projection, no terminal
-//! detection (collision, escape); each trajectory ends on its last boundary, or where its march ended non-finite or
-//! on its step budget, as its [`Trajectory::end`] says.
+//! control is a value here and the seam reads it from a type. [`run`]'s march gets no cadence: no projection, no
+//! terminal detection (collision, escape); [`run_sampled`]'s gets only the caller's, which reads the boundary states and
+//! need detect nothing. Each trajectory ends on its last boundary, or where its march ended non-finite or on its step
+//! budget, as its [`Trajectory::end`] says.
 
 use engine::precision::rk45::{self, Rk45End, Rk45Params};
+use kernel::driver::advance::Cadence;
 use kernel::occupant::euler::Euler;
 use kernel::occupant::kdk::Kdk;
 use kernel::occupant::rk4::Rk4;
@@ -446,25 +448,26 @@ impl WithStepper for LogHProfile {
     }
 }
 
-/// One arm's march from one IC.
-struct March<'a> {
+/// One arm's march from one IC, its sync boundaries reported to `cadence`.
+struct March<'a, C> {
     arm: &'a Arm,
     ic: &'a State<f64>,
     k: u32,
+    cadence: &'a mut C,
 }
 
-impl WithStepper for March<'_> {
+impl<C: Cadence<f64>> WithStepper for March<'_, C> {
     type Out = Trajectory;
     fn go<S: Stepper>(self) -> Trajectory {
         let (arm, d) = (self.arm, &self.arm.discretisation);
         let c = &arm.step_control;
         match arm.regularisation {
             Choice::Heggie(time) => {
-                let out = hg::march::<S, f64, Quiet, ExplicitTest>(
+                let out = hg::march::<S, f64, C, ExplicitTest>(
                     self.ic,
                     self.k,
                     &c.heggie(d, time),
-                    &mut Quiet,
+                    self.cadence,
                     &mut ExplicitTest,
                 );
                 Trajectory {
@@ -476,11 +479,11 @@ impl WithStepper for March<'_> {
                 }
             }
             Choice::LogH(mode) => {
-                let out = lh::march::<Slot<S>, f64, Quiet, ExplicitTest>(
+                let out = lh::march::<Slot<S>, f64, C, ExplicitTest>(
                     self.ic,
                     self.k,
                     &c.logh(d, mode),
-                    &mut Quiet,
+                    self.cadence,
                     &mut ExplicitTest,
                 );
                 Trajectory {
@@ -492,13 +495,13 @@ impl WithStepper for March<'_> {
                 }
             }
             Choice::AarsethZare => {
-                let out = az::march::<S, f64, Quiet, ExplicitTest>(
+                let out = az::march::<S, f64, C, ExplicitTest>(
                     self.ic,
                     0,
                     self.k,
                     AzCount::new(),
                     &c.aarseth_zare(d),
-                    &mut Quiet,
+                    self.cadence,
                     &mut ExplicitTest,
                 );
                 Trajectory {
@@ -517,11 +520,25 @@ impl WithStepper for March<'_> {
 /// `arm`'s trajectory from `ic` to its last boundary. `arm` must have been admitted: a `none` arm or one with no
 /// boundary panics.
 pub fn run(arm: &Arm, ic: &State<f64>) -> Trajectory {
+    run_sampled(arm, ic, &mut Quiet)
+}
+
+/// [`run`], each sync boundary the march lands on reported to `cadence` ([`Cadence::sample`]), with the state there:
+/// the boundary states of the one march, never a re-run per boundary.
+pub fn run_sampled<C: Cadence<f64>>(arm: &Arm, ic: &State<f64>, cadence: &mut C) -> Trajectory {
     let k = arm
         .discretisation
         .boundaries()
         .expect("an admitted arm has a boundary");
-    with_stepper(arm.stepper, March { arm, ic, k })
+    with_stepper(
+        arm.stepper,
+        March {
+            arm,
+            ic,
+            k,
+            cadence,
+        },
+    )
 }
 
 // ── The reference ──────────────────────────────────────────────────────────────────────────────────────────────

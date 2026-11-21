@@ -1,0 +1,6 @@
+{
+  "gate": "exact-cases",
+  "inputs": ["lagrange_heggie_rk4.json", "lagrange_equal_heggie_rk4.json", "lagrange_aarseth_zare_rk4.json", "lagrange_logh_rk4.json", "euler_heggie_rk4.json", "control_displaced.json", "control_euler_stepper.json"],
+  "threshold": { "value": 1e-11, "requirement": "REQ-VAL-130", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-130" }
+}

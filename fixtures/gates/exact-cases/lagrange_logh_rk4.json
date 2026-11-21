@@ -1,0 +1,9 @@
+{
+  "description": "Lagrange's triangle at masses (0.2, 0.3, 0.5), one turn by logH (logH mode) × RK4 at η = 0.01: rigid at every sync boundary.",
+  "case": "lagrange",
+  "masses": [0.2, 0.3, 0.5],
+  "stepper": "rk4",
+  "regularisation": "logh",
+  "eta": 0.01,
+  "expected": "pass"
+}

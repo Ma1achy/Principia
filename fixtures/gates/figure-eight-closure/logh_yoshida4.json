@@ -1,0 +1,8 @@
+{
+  "description": "logH (logH mode) × Yoshida-4, a symplectic fourth-order pair, on the figure-eight: the same ladder and criteria.",
+  "stepper": "yoshida4",
+  "regularisation": "logh",
+  "order_tolerance": 0.5,
+  "closure_bound": 1e-6,
+  "expected": "pass"
+}

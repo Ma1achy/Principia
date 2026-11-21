@@ -1,0 +1,9 @@
+{
+  "description": "Lagrange's equilateral triangle at equal masses, marched one turn by Heggie (Eq. 22) × RK4 at η = 0.01: rigid at every sync boundary.",
+  "case": "lagrange",
+  "masses": [0.3333333333333333, 0.3333333333333333, 0.33333333333333337],
+  "stepper": "rk4",
+  "regularisation": "heggie-eq22",
+  "eta": 0.01,
+  "expected": "pass"
+}
