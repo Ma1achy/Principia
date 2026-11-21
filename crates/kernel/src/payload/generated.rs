@@ -2,7 +2,7 @@
 
 /// The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger, computed at generation
 /// and never bumped by hand (R-36, R-63; `ledger::version`).
-pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x76e70670b6f511f9;
+pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x0c1825aa4f761ded;
 
 /// `SimStateFTLE` at the `Real` `R`: 168 B aligned to 8 at f32, 304 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
@@ -501,6 +501,18 @@ pub fn set_last_symbol(w: u32, v: u32) -> u32 {
     insert(w, v, 8, 2)
 }
 
+/// `I_max`: bits 10–14 of `packed_a` (payload §2, §6).
+#[inline]
+pub fn sd_I_max(w: u32) -> u32 {
+    extract(w, 10, 5)
+}
+
+/// `packed_a` with `I_max` set to `v`; every other bit kept.
+#[inline]
+pub fn set_I_max(w: u32, v: u32) -> u32 {
+    insert(w, v, 10, 5)
+}
+
 /// `departed`: bit 15 of `packed_a` (payload §2, §6).
 #[inline]
 pub fn sd_departed(w: u32) -> bool {
@@ -582,7 +594,7 @@ pub fn set_d_min_release(w: u32, v: f32, counters: &super::DminCounters) -> u32 
 
 /// `packed_a`'s reserved spans, `(offset, width)`, as the ledger declares them: never written, decoded as zero
 /// (payload §2; dd_generation_root §5 test 1).
-pub const PACKED_A_RESERVED: [(u32, u32); 1] = [(10, 5)];
+pub const PACKED_A_RESERVED: [(u32, u32); 0] = [];
 
 /// `packed_a` from its fields, each written in bit order over zero, so its reserved bits are zero (payload §2).
 #[inline]
@@ -593,6 +605,7 @@ pub fn pack_packed_a(
     saturated: bool,
     dmin_pair: u32,
     last_symbol: u32,
+    I_max: u32,
     departed: bool,
     d_min: f32,
     counters: &super::DminCounters,
@@ -602,6 +615,7 @@ pub fn pack_packed_a(
     let w = set_saturated(w, saturated);
     let w = set_dmin_pair(w, dmin_pair);
     let w = set_last_symbol(w, last_symbol);
+    let w = set_I_max(w, I_max);
     let w = set_departed(w, departed);
     set_d_min(w, d_min, counters)
 }

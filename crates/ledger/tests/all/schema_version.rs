@@ -678,6 +678,16 @@ const COUNT_CAST: [&str; 1] = ["u32_range_end"];
 /// quad's table, which changes no bit the table holds, so it is not hashed.
 const SCHEDULING: [&str; 1] = ["forward_table_chunk"];
 
+/// The Chazy classifier's parameters (TASK-M7-35; chazy drill-down §3.3): the classifier is derived at read, so they
+/// decide no stored bit's meaning and are not hashed. `I_max`'s levels need no register entry: they are exact powers
+/// of two above the IC's `I_0`.
+const CHAZY: [&str; 4] = [
+    "chazy_epsilon",
+    "chazy_h_far",
+    "chazy_os_ratio",
+    "chazy_delta",
+];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -718,7 +728,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || MONITOR.contains(&k.name)
                 || SAVED.contains(&k.name)
                 || COUNT_CAST.contains(&k.name)
-                || SCHEDULING.contains(&k.name),
+                || SCHEDULING.contains(&k.name)
+                || CHAZY.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -823,6 +834,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the scheduling unit `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in CHAZY {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the Chazy parameter `{name}` is not an unhashed register entry"
         );
     }
 }

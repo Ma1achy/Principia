@@ -273,7 +273,7 @@ pub const PROVISIONAL: [(&str, &str); 0] = [];
 
 /// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0`,
 /// `rho_angle` and `n`.
-pub const DECLARED: [(&str, &str); 19] = [
+pub const DECLARED: [(&str, &str); 20] = [
     (
         "V_0",
         "dd_generation_root §3.6: `V_0` (lin, (−∞, 0]); dd_decoder §3.6: `V₀ = −Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖` (R-403)",
@@ -323,6 +323,11 @@ pub const DECLARED: [(&str, &str); 19] = [
     (
         "last_symbol",
         "dd_simstate_payload §3: the symbol codes `a = 0, A = 1, b = 2, B = 3`",
+    ),
+    (
+        "I_max",
+        "dd_simstate_payload §2: `I_max`, bits 10–14, the Chazy latch's level in half-octaves above `I_0`, 0–31, \
+         saturating at 31 (R-545; chazy drill-down §6)",
     ),
     (
         "budget_exhausted",
@@ -449,14 +454,8 @@ fn words() -> Vec<Word> {
         reserved,
     };
     vec![
-        word(
-            "packed_a",
-            // Bits 10–14 are `I_max`'s, reserved until TASK-M7-35 spends them; bit 15 is R-37's departed bit (R-545).
-            vec![Span {
-                offset: 10,
-                width: 5,
-            }],
-        ),
+        // Bits 10–14 are the Chazy latch `I_max`, bit 15 R-37's departed bit (R-545): nothing reserved.
+        word("packed_a", vec![]),
         word("packed_b", vec![]),
         word("times", vec![]),
         // Bit 0 `budget_exhausted`, bits 1–15 the floor hits, 16–30 the entry-cap hits, bit 31 reserved (payload §2;
@@ -533,6 +532,9 @@ fn entries() -> Vec<EntryBuilder> {
                 "pair id, 0-based; pair k is the side opposite body k; 3 unset",
             ),
         descriptor("last_symbol", 8, 2, Scale::Categorical(4), 3),
+        // The Chazy latch `I_max` (R-545, RQ-310; chazy drill-down §6): its level in half-octaves above `I_0`, 32 levels
+        // to 2¹⁶, saturating at 31; 0 is the fresh latch, `I_0`, and a failed sample's (`kernel::chazy::i_max_code`).
+        descriptor("I_max", 10, 5, Scale::Lin, 31),
         // R-37's departed bit (R-545, RQ-310): sticky, set at the first macro-step whose `|n̂(t) − n̂(0)|` exceeds
         // `δ_dep`; `closure_min` and `closure_step` are a minimum only where it is set (payload §1, §2).
         descriptor("departed", 15, 1, Scale::Flag, 1),

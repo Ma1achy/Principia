@@ -72,7 +72,8 @@ negative_control!(
     check_table(&emitted(), &[("dmin_pair", 7, 2)])
 );
 
-/// `packed_a` in `ledger` reserves exactly bits 10–14 (bit 15 the departed bit, R-545), and without that reservation the static check reports them.
+/// `packed_a` in `ledger` reserves no span since R-545 (10–14 `I_max`'s level, 15 the departed bit), and without the
+/// `I_max` entry the static check reports bits 10–14 neither covered nor reserved.
 fn check_reserved_listed(ledger: &Ledger) {
     let word = |l: &Ledger| -> Word {
         l.words
@@ -83,17 +84,11 @@ fn check_reserved_listed(ledger: &Ledger) {
     };
     assert_eq!(
         word(ledger).reserved,
-        [Span {
-            offset: 10,
-            width: 5
-        }],
+        [],
         "packed_a's reserved spans in the ledger"
     );
     let mut bare = ledger.clone();
-    bare.words
-        .iter_mut()
-        .filter(|w| w.name == "packed_a")
-        .for_each(|w| w.reserved.clear());
+    bare.entries.retain(|e| e.name != Some("I_max"));
     let entries = gen::validate(&bare).expect("validates");
     let found = check::check(&bare.words, &entries);
     assert!(
@@ -111,7 +106,7 @@ fn reserved_bits_listed_as_reserved_by_the_static_check() {
 
 negative_control!(
     reserved_bits_listed_as_reserved_by_the_static_check,
-    "a ledger reserving bits 10–13 only is not payload §2's, so the check must fail",
+    "a ledger reserving bits 10–13 is not payload §2's, so the check must fail",
     expected = "packed_a's reserved spans in the ledger",
     check_reserved_listed(&{
         let mut l = layout();
@@ -336,11 +331,12 @@ fn packer_allowed(contents: &str, word: &str) -> bool {
         .is_some_and(|l| l.starts_with("#[allow(clippy::too_many_arguments)]"))
 }
 
-/// The payload ledger without the departed bit, its bit 15 reserved again: `packed_a`'s packer takes seven arguments,
-/// the six fields and `d_min`'s counters.
+/// The payload ledger without the departed bit and `I_max`, bits 10–15 reserved again: `packed_a`'s packer takes seven
+/// arguments, the six fields and `d_min`'s counters.
 fn without_departed() -> Ledger {
     let mut l = layout();
-    l.entries.retain(|e| e.name != Some("departed"));
+    l.entries
+        .retain(|e| e.name != Some("departed") && e.name != Some("I_max"));
     l.words
         .iter_mut()
         .filter(|w| w.name == "packed_a")
@@ -354,12 +350,12 @@ fn without_departed() -> Ledger {
 }
 
 /// The allowance is on a packer of more than seven arguments, clippy's limit, and on no other: `eight`'s `packed_a`
-/// takes eight and has it; `seven`'s takes seven and has none; `packed_b` and `times` take two and have none.
+/// takes more (nine today) and has it; `seven`'s takes seven and has none; `packed_b` and `times` take two and have none.
 fn check_packer_allowance(eight: &Ledger, seven: &Ledger) {
     let wide = emitted_from(eight);
     assert!(
         packer_allowed(&wide, "packed_a"),
-        "`pack_packed_a`, of eight arguments, lacks the too_many_arguments allowance"
+        "`pack_packed_a`, of more than seven arguments, lacks the too_many_arguments allowance"
     );
     for word in ["packed_b", "times"] {
         assert!(

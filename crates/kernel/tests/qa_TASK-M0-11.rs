@@ -237,9 +237,10 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-001: descriptor bits 10–14 are reserved, "decode as zero, never opportunistically reused" (payload §2): no
-// pack or setter of `packed_a` writes them, over every in-range field value and a spread of d_min values. Bit 15 is
-// R-37's departed bit (R-545), which the pack and its setter write.
+// REQ-PAY-001: descriptor bits 10–14 were reserved, "decode as zero, never opportunistically reused" (payload §2), until
+// R-545 spent them on the Chazy latch `I_max` and bit 15 on R-37's departed bit, each a versioned assignment: no pack
+// or setter of `packed_a` writes them but `I_max`'s and the departed bit's own, over every in-range field value and a
+// spread of d_min values.
 
 /// `d_min` values across binary16's range and its edges: zero, the subnormal floor, normal values, the clamp, beyond
 /// it, and infinity. NaN and negative values, which the debug pack refuses (R-79, R-281), go through
@@ -257,9 +258,10 @@ const D_MINS: [f32; 9] = [
 ];
 
 /// Every word `packed_a`'s pack and setters produce, from zero, over payload §2's full field ranges (state 0–7,
-/// detail 0–3, saturated, dmin_pair 0–3, last_symbol 0–3, departed) and [`D_MINS`], each with the departed value it
-/// was produced with (false for every setter but `set_departed(_, true)`).
-fn packed_a_words() -> Vec<(u32, bool)> {
+/// detail 0–3, saturated, dmin_pair 0–3, last_symbol 0–3, `I_max`'s level at 0, 1, 17 and 31, departed) and
+/// [`D_MINS`], each with the `I_max` level and departed value it was produced with (0 and false for every setter but
+/// `set_I_max` and `set_departed(_, true)`).
+fn packed_a_words() -> Vec<(u32, u32, bool)> {
     let c = DminCounters::new();
     let mut out = Vec::new();
     for state in 0..8 {
@@ -267,21 +269,25 @@ fn packed_a_words() -> Vec<(u32, bool)> {
             for saturated in [false, true] {
                 for dmin_pair in 0..4 {
                     for last_symbol in 0..4 {
-                        for departed in [false, true] {
-                            for d in D_MINS {
-                                out.push((
-                                    pack_packed_a(
-                                        state,
-                                        detail,
-                                        saturated,
-                                        dmin_pair,
-                                        last_symbol,
+                        for level in [0, 1, 17, 31] {
+                            for departed in [false, true] {
+                                for d in D_MINS {
+                                    out.push((
+                                        pack_packed_a(
+                                            state,
+                                            detail,
+                                            saturated,
+                                            dmin_pair,
+                                            last_symbol,
+                                            level,
+                                            departed,
+                                            d,
+                                            &c,
+                                        ),
+                                        level,
                                         departed,
-                                        d,
-                                        &c,
-                                    ),
-                                    departed,
-                                ));
+                                    ));
+                                }
                             }
                         }
                     }
@@ -290,34 +296,37 @@ fn packed_a_words() -> Vec<(u32, bool)> {
         }
     }
     for v in [0, 1, 3, 7, 0xff, u32::MAX] {
-        out.push((set_state(0, v), false));
-        out.push((set_detail(0, v), false));
-        out.push((set_dmin_pair(0, v), false));
-        out.push((set_last_symbol(0, v), false));
-        out.push((set_last_symbol(set_dmin_pair(0, v), v), false));
+        out.push((set_state(0, v), 0, false));
+        out.push((set_detail(0, v), 0, false));
+        out.push((set_dmin_pair(0, v), 0, false));
+        out.push((set_last_symbol(0, v), 0, false));
+        out.push((set_last_symbol(set_dmin_pair(0, v), v), 0, false));
+        out.push((set_I_max(0, v), v & 0x1f, false));
     }
-    out.push((set_saturated(0, true), false));
-    out.push((set_departed(0, true), true));
-    out.push((set_departed(set_departed(0, true), false), false));
+    out.push((set_saturated(0, true), 0, false));
+    out.push((set_departed(0, true), 0, true));
+    out.push((set_departed(set_departed(0, true), false), 0, false));
+    out.push((set_departed(set_I_max(0, 31), true), 31, true));
     for d in D_MINS {
-        out.push((set_d_min(0, d, &c), false));
-        out.push((set_d_min_release(0, d, &c), false));
+        out.push((set_d_min(0, d, &c), 0, false));
+        out.push((set_d_min_release(0, d, &c), 0, false));
     }
     for d in [f32::NAN, -1.0, -0.0, f32::NEG_INFINITY] {
-        out.push((set_d_min_release(0, d, &c), false));
+        out.push((set_d_min_release(0, d, &c), 0, false));
     }
-    out.push((set_d_min_unset(0), false));
+    out.push((set_d_min_unset(0), 0, false));
     out
 }
 
-/// Bits 10–14 are never written, and bit 15 holds exactly the requested departed value: `(w >> 10) & 0x3f` is 0 for
-/// a departed-false word and 0x20 for a departed one, so no field spills into bit 15 either.
-fn check_reserved_zero(words: &[(u32, bool)]) {
-    for &(w, departed) in words {
+/// Bits 10–14 hold exactly the requested `I_max` level and bit 15 exactly the requested departed value (R-545):
+/// `(w >> 10) & 0x3f` is `level | departed << 5`, so no other field spills into either.
+fn check_reserved_zero(words: &[(u32, u32, bool)]) {
+    for &(w, level, departed) in words {
         assert_eq!(
             (w >> 10) & 0x3f,
-            if departed { 0x20 } else { 0 },
-            "descriptor bits 10–14 are written, or bit 15 differs from departed {departed}: {w:#034b}"
+            level | u32::from(departed) << 5,
+            "descriptor bits 10–14 differ from I_max {level}, or bit 15 differs from departed {departed}: \
+             {w:#034b}"
         );
     }
 }
@@ -331,42 +340,56 @@ fn qa_payload_sizes_descriptor_bits_10_to_15_never_written() {
 
 negative_control!(
     qa_payload_sizes_descriptor_bits_10_to_15_never_written,
-    "a packer that spends bit 14, the span's last, must fail the reserved-bits check",
-    expected = "descriptor bits 10–14 are written",
+    "a packer that spills into bit 14, the span's last, must fail the bits check",
+    expected = "descriptor bits 10–14 differ from I_max 0",
     check_reserved_zero(
         &packed_a_words()
             .into_iter()
-            .map(|(w, d)| (w | 1 << 14, d))
+            .map(|(w, l, d)| (w | 1 << 14, l, d))
             .collect::<Vec<_>>()
     )
 );
 
 negative_control!(
     qa_payload_sizes_descriptor_bit_10,
-    "a packer that spends bit 10, the span's first, must fail the reserved-bits check",
-    expected = "descriptor bits 10–14 are written",
+    "a packer that spills into bit 10, the span's first, must fail the bits check",
+    expected = "descriptor bits 10–14 differ from I_max 0",
     check_reserved_zero(&[(
-        pack_packed_a(1, 2, true, 3, 3, true, 1.0, &DminCounters::new()) | 1 << 10,
+        pack_packed_a(1, 2, true, 3, 3, 0, true, 1.0, &DminCounters::new()) | 1 << 10,
+        0,
         true
     )])
 );
 
 negative_control!(
     qa_payload_sizes_descriptor_bit_15_departed_false,
-    "a packer that spills into bit 15 on a departed-false word must fail the reserved-bits check",
+    "a packer that spills into bit 15 on a departed-false word must fail the bits check",
     expected = "bit 15 differs from departed false",
     check_reserved_zero(&[(
-        pack_packed_a(1, 2, true, 3, 3, false, 1.0, &DminCounters::new()) | 1 << 15,
+        pack_packed_a(1, 2, true, 3, 3, 0, false, 1.0, &DminCounters::new()) | 1 << 15,
+        0,
         false
     )])
 );
 
 negative_control!(
     qa_payload_sizes_descriptor_bit_15_departed_true,
-    "a packer that drops bit 15 on a departed word must fail the reserved-bits check",
+    "a packer that drops bit 15 on a departed word must fail the bits check",
     expected = "bit 15 differs from departed true",
     check_reserved_zero(&[(
-        pack_packed_a(1, 2, true, 3, 3, true, 1.0, &DminCounters::new()) & !(1 << 15),
+        pack_packed_a(1, 2, true, 3, 3, 0, true, 1.0, &DminCounters::new()) & !(1 << 15),
+        0,
+        true
+    )])
+);
+
+negative_control!(
+    qa_payload_sizes_descriptor_i_max_dropped,
+    "a packer that drops `I_max` must fail the bits check",
+    expected = "descriptor bits 10–14 differ from I_max 17",
+    check_reserved_zero(&[(
+        pack_packed_a(1, 2, true, 3, 3, 17, true, 1.0, &DminCounters::new()) & !(0x1f << 10),
+        17,
         true
     )])
 );

@@ -15,7 +15,8 @@ fn set_d_min_frame(w: u32, v: f32) -> u32 {
     set_d_min(w, v, &DminCounters::new())
 }
 
-/// [`pack_packed_a`] into a fresh frame pair, the departed bit clear (bit 15, R-545; its own tests set it).
+/// [`pack_packed_a`] into a fresh frame pair, `I_max`'s level 0 and the departed bit clear (bits 10–15, R-545; their
+/// own tests set them).
 fn pack_a(
     state: u32,
     detail: u32,
@@ -30,6 +31,7 @@ fn pack_a(
         saturated,
         dmin_pair,
         last_symbol,
+        0,
         false,
         d_min,
         &DminCounters::new(),
@@ -216,47 +218,40 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-015: the reserved bits 10–14 (bit 15 is R-37's departed bit, R-545).
+// REQ-PAY-015, REQ-PAY-106: `packed_a` has no reserved bits left: 10–14 are the Chazy latch `I_max`'s level and 15
+// R-37's departed bit (R-545).
 
-/// `packed_a` with every field at its maximum, the departed bit set.
+/// `packed_a` with every field at its maximum, `I_max`'s level 31 and the departed bit set.
 fn full_a() -> u32 {
-    pack_packed_a(7, 3, true, 3, 3, true, 65504.0, &DminCounters::new())
+    pack_packed_a(7, 3, true, 3, 3, 31, true, 65504.0, &DminCounters::new())
 }
 
-/// Every field at its maximum packs bits 0–9 and 15 all set, `reserved` (the ledger's reserved spans) zero, and those
-/// spans are bits 10–14.
-fn check_reserved(w: u32, reserved: &[(u32, u32)]) {
-    assert_eq!(reserved, [(10, 5)], "packed_a's reserved spans");
-    assert_eq!(
-        extract(w, 0, 10),
-        0x3ff,
-        "bits 0–9 at every field's maximum"
+/// Every field at its maximum packs bits 0–15 all set, `I_max` reads its level back from bits 10–14, and the ledger
+/// declares no reserved span in `packed_a`.
+fn check_descriptor_full(w: u32, reserved: &[(u32, u32)]) {
+    assert!(
+        reserved.is_empty(),
+        "packed_a's reserved spans: {reserved:?}"
     );
     assert_eq!(
-        extract(w, 15, 1),
-        1,
-        "bit 15, the departed bit, at its maximum"
+        extract(w, 0, 16),
+        0xffff,
+        "bits 0–15 at every field's maximum"
     );
-    for &(offset, width) in reserved {
-        assert_eq!(
-            extract(w, offset, width),
-            0,
-            "reserved bits {offset}–{}",
-            offset + width - 1
-        );
-    }
+    assert_eq!(sd_I_max(w), 31, "I_max's level read back");
+    assert_eq!(extract(w, 10, 5), 31, "I_max in bits 10–14");
 }
 
 #[test]
-fn reserved_bits_are_zero_with_every_field_at_max() {
-    check_reserved(full_a(), &PACKED_A_RESERVED);
+fn descriptor_bits_are_all_spent_with_every_field_at_max() {
+    check_descriptor_full(full_a(), &PACKED_A_RESERVED);
 }
 
 negative_control!(
-    reserved_bits_are_zero_with_every_field_at_max,
-    "a word with bit 12 set has reserved bits written, so the check must fail",
-    expected = "reserved bits 10–14",
-    check_reserved(full_a() | 1 << 12, &PACKED_A_RESERVED)
+    descriptor_bits_are_all_spent_with_every_field_at_max,
+    "a packer that drops `I_max` leaves bits 10–14 clear, so the check must fail",
+    expected = "bits 0–15 at every field's maximum",
+    check_descriptor_full(full_a() & !(0x1f << 10), &PACKED_A_RESERVED)
 );
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -277,7 +272,8 @@ fn check_flips(ctl: fn(&PackedA, u32) -> bool, expected: &PackedA) {
     }
 }
 
-/// The check pitfalls §9 records, over the unpacked fields: it cannot see a bit no accessor reads.
+/// The check pitfalls §9 records, over the unpacked fields it was written for (`I_max`'s level, added since, is not
+/// among them): it cannot see a bit no field it compares reads.
 fn fields_ctl(expected: &PackedA, observed: u32) -> bool {
     let (a, b) = (
         PackedA::unpack(expected.pack(&DminCounters::new())),
@@ -314,6 +310,7 @@ fn sample() -> PackedA {
         saturated: false,
         dmin_pair: 2,
         last_symbol: 1,
+        i_max: 0,
         departed: true,
         d_min: 0.25,
     }
@@ -326,21 +323,30 @@ fn roundtrip_ctl_fails_on_every_flipped_bit() {
 
 negative_control!(
     roundtrip_ctl_fails_on_every_flipped_bit,
-    "a field comparison cannot see the reserved bits, so the flip check must fail on bit 10",
+    "a field comparison that does not compare `I_max` cannot see its bits, so the flip check must fail on bit 10",
     expected = "the ctl passed with bit 10 flipped",
     check_flips(fields_ctl, &sample())
 );
 
 #[test]
 fn roundtrip_ctl_property_every_flip_of_every_descriptor_fails() {
-    let fields = (0u32..8, 0u32..4, 0u32..4, 0u32..4, 0u32..4, 1u16..0x7c00);
-    validation::prop::run(&fields, |(state, detail, flags, pair, sym, h)| {
+    let fields = (
+        0u32..8,
+        0u32..4,
+        0u32..4,
+        0u32..4,
+        0u32..4,
+        0u32..32,
+        1u16..0x7c00,
+    );
+    validation::prop::run(&fields, |(state, detail, flags, pair, sym, i_max, h)| {
         let expected = PackedA {
             state,
             detail,
             saturated: flags & 1 == 1,
             dmin_pair: pair,
             last_symbol: sym,
+            i_max,
             departed: flags & 2 == 2,
             d_min: f16_bits_to_f32(h),
         };
@@ -357,7 +363,7 @@ negative_control!(
 );
 
 /// `ctl` fails on the contaminated values pitfalls §9 is about: a fork in bits 0–1, which `from_bits` masks off, and
-/// one in the reserved bits 10–14, which no accessor reads.
+/// one in bits 10–14, `I_max`'s level, which the recorded field comparison does not read.
 fn check_contaminated(ctl: fn(&PackedA, u32) -> bool) {
     let clean = sample().pack(&DminCounters::new());
     for contaminated in [
@@ -382,7 +388,7 @@ fn roundtrip_ctl_fails_where_the_recorded_check_passed() {
     );
     assert!(
         fields_ctl(&sample(), clean | 1 << 10),
-        "a field comparison passes on a reserved-bit contamination"
+        "a field comparison passes on a contamination of `I_max`'s bits"
     );
     check_contaminated(roundtrip_ctl);
 }
@@ -760,6 +766,7 @@ fn pack_counted(w: u32, v: f32, counters: &DminCounters) -> u32 {
         sd_saturated(w),
         sd_dmin_pair(w),
         sd_last_symbol(w),
+        sd_I_max(w),
         sd_departed(w),
         v,
         counters,
@@ -897,7 +904,7 @@ const CONTAMINATED_D_MIN: [u32; 6] = [0x7e00, 0xfe00, 0xbc00, 0x8001, 0xfbff, 0x
 /// left it: the check observes, it does not store (R-288; R-294).
 fn check_roundtrip_uncounted(ctl: &dyn Fn(&PackedA, u32, &DminCounters) -> bool) {
     let frame = DminCounters::new();
-    let good = pack_packed_a(2, 1, true, 0, 3, true, 1.0, &frame);
+    let good = pack_packed_a(2, 1, true, 0, 3, 17, true, 1.0, &frame);
     let expected = PackedA::unpack(good);
     for h in CONTAMINATED_D_MIN {
         let observed = h << 16 | good & 0xffff;

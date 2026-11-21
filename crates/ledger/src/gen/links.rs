@@ -194,6 +194,7 @@ fn constants_file(chart: &[Param], tunables: &[Tunable]) -> String {
     s.push_str(&u32_range());
     s.push_str(&shape_readout());
     s.push_str(&coll_floor());
+    s.push_str(&chazy());
     s.push_str(&sync_grid());
     s
 }
@@ -480,6 +481,35 @@ fn coll_floor() -> String {
         min = FLOOR_EXP_MIN.number() as i32,
         max = FLOOR_EXP_MAX.number() as i32,
         bias = FLOOR_CODE_BIAS.number() as i32,
+    )
+}
+
+/// The Chazy classifier's four parameters (chazy drill-down §3.3; `kernel::chazy`): the parabolic band `ε`, `h_far`,
+/// `os_ratio` and the tidal tolerance `δ`, each one f64 read at the classifier's width. None is hashed: the classifier
+/// is derived at read and gives no stored bit its meaning (payload §5).
+fn chazy() -> String {
+    use crate::constants::{CHAZY_DELTA, CHAZY_EPSILON, CHAZY_H_FAR, CHAZY_OS_RATIO};
+    format!(
+        "\n/// The register's `chazy_epsilon` = {eps:?}: the Chazy classifier's parabolic band, the half-width in a two-body\n\
+         /// `K/U` about 1 (chazy drill-down §3.3; provisional until M7).\n\
+         pub const CHAZY_EPSILON: f64 = {eps_lit};\n\n\
+         /// The register's `chazy_h_far` = {h:?}: the hierarchy ratio a body passes to commit, and the dispersal distance in\n\
+         /// units of `R_0` (chazy drill-down §3.3; provisional until M7).\n\
+         pub const CHAZY_H_FAR: f64 = {h_lit};\n\n\
+         /// The register's `chazy_os_ratio` = {os:?}: `I_max / I` above which a bound system reads OS-candidate (chazy\n\
+         /// drill-down §3.3; provisional until M7).\n\
+         pub const CHAZY_OS_RATIO: f64 = {os_lit};\n\n\
+         /// The register's `chazy_delta` = {d:?}: the tidal tolerance, read by the tidal gate alone (chazy drill-down §3.3,\n\
+         /// §3.6; provisional until M7).\n\
+         pub const CHAZY_DELTA: f64 = {d_lit};\n",
+        eps = CHAZY_EPSILON.number(),
+        eps_lit = literal(CHAZY_EPSILON.number(), "f64"),
+        h = CHAZY_H_FAR.number(),
+        h_lit = literal(CHAZY_H_FAR.number(), "f64"),
+        os = CHAZY_OS_RATIO.number(),
+        os_lit = literal(CHAZY_OS_RATIO.number(), "f64"),
+        d = CHAZY_DELTA.number(),
+        d_lit = literal(CHAZY_DELTA.number(), "f64"),
     )
 }
 

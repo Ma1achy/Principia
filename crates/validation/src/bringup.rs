@@ -87,6 +87,7 @@ pub fn check(i: u32, s: &SimStateFTLE) -> Result<(), String> {
         saturated: (i / 8) % 2 == 1,
         dmin_pair: (i / 16) % 4,
         last_symbol: (i / 64) % 4,
+        i_max: 0,
         departed: false,
         d_min: f32::INFINITY,
     };

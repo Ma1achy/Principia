@@ -37,6 +37,15 @@
 //! fragment unpack layer's and the Rust emitter's, [`super::rust`], already), and payload §5's otherwise (`ftle`,
 //! `diffusion_slope`, `orbit_count`, `retrograde`); the drifts carry dd_generation_root §3.8's entry names.
 //!
+//! **The Chazy label** (payload §5; chazy drill-down §5.1; R-442): the Rust read side gives `chazy_class`, beside the
+//! drifts, a function of the live state, the masses, `E_0`, `R_0` and the stored `I_max` level, which calls the one
+//! rule, `kernel::chazy`. It is a function, not a `SimState` member, and the WGSL read side does not carry it yet. The
+//! plan is unclear here (REQ-PAY-099 asks for an accessor "beside `energy_drift`" without saying whether the fragment
+//! reads it); chose the Rust function alone because `R_0` is not in the read side's inputs (no stored field holds
+//! `I_0`, and the masses come from the `ICDescriptor`, which holds no `I_0` either), and the WGSL twin must be the
+//! kernel source's translation through `cargo xtask build-kernel` (as `shape`'s is, R-116), never a second rule written
+//! here; the Chazy stains' task adds the member and its WGSL with the fragment input that carries `R_0`.
+//!
 //! The current drifts (payload §5; dd_generation_root §3.8, R-246) are `energy_drift = H(r, p) − E_0` and
 //! `Lz_drift = L_z(r, p) − Lz_0`, with integrator dd §3.5's forms in CoM-frame particle coordinates and `G = 1`:
 //! `H = Σᵢ ‖pᵢ‖²/2mᵢ − Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` (decoder dd §3.6's `K₀ + V₀`) and `L_z = Σᵢ (xᵢ p_{y,i} − yᵢ p_{x,i})`.
@@ -546,6 +555,22 @@ pub fn energy_drift(r: [[f32; 2]; 3], p: [[f32; 2]; 3], m: [f32; 3], e_0: f32) -
 #[inline]
 pub fn Lz_drift(r: [[f32; 2]; 3], p: [[f32; 2]; 3], lz_0: f32) -> f32 {
     angular_momentum_z(r, p) - lz_0
+}
+
+/// The Chazy final-motion label at the playhead, its code `0..10` (`crate::chazy::Motion`; payload §5; chazy
+/// drill-down §5.1, R-442): derived at read, never stored, from the live state `r`, `p`, the `ICDescriptor`'s masses,
+/// `E_0`, the initial hyperradius `R_0 = √(I_0/M)` and the stored level of the latch `I_max` (descriptor bits 10–14,
+/// R-545), in live f32. `R_0` is the caller's, from the sample's decoded IC, as the masses are.
+#[inline]
+pub fn chazy_class(
+    r: [[f32; 2]; 3],
+    p: [[f32; 2]; 3],
+    m: [f32; 3],
+    e_0: f32,
+    r_0: f32,
+    i_max: u32,
+) -> u32 {
+    crate::chazy::chazy_class(m, r, p, e_0, r_0, i_max)
 }
 "#;
 

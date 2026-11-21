@@ -524,10 +524,10 @@ fn check_not_stored(ledger: &Ledger, rust_source: &str, wgsl_source: &str) {
         .iter()
         .map(|s| (s.offset, s.width))
         .collect();
-    assert_eq!(
-        reserved,
-        [(10, 5)],
-        "`packed_a`'s descriptor bits 10–14 are not reserved (payload §2; bit 15 is R-37's departed bit, R-545)"
+    assert!(
+        reserved.is_empty(),
+        "`packed_a` reserves {reserved:?}: since R-545 its bits 10–14 are `I_max`'s level and 15 the departed bit \
+         (payload §2)"
     );
     assert!(
         !ledger::payload::states()

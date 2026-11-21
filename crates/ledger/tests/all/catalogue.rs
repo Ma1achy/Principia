@@ -204,23 +204,23 @@ negative_control!(
 
 // ── REQ-GEN-011: a new field appears in the catalogue, or generation fails ──────────────────────────────────────
 
-/// The payload ledger with `probe_bit`, a flag in `packed_a`'s bit 10, its reserved span narrowed to bits 11–14 (bit 15
-/// is the departed bit, R-545); its entry built by `entry`.
+/// The payload ledger with `probe_bit`, a flag in `coll_floor_bits`' bit 8, its reserved span narrowed to bits 9–31
+/// (`packed_a` has no reserved bit left since R-545 spent 10–15); its entry built by `entry`.
 fn with_probe_bit(entry: impl FnOnce(EntryBuilder) -> EntryBuilder) -> Ledger {
     let mut l = ledger::layout();
     let a = l
         .words
         .iter_mut()
-        .find(|w| w.name == "packed_a")
-        .expect("packed_a");
+        .find(|w| w.name == "coll_floor_bits")
+        .expect("coll_floor_bits");
     a.reserved = vec![Span {
-        offset: 11,
-        width: 4,
+        offset: 9,
+        width: 23,
     }];
     let builder = EntryBuilder::new("probe_bit")
         .location(Location::Packed {
-            word: "packed_a",
-            offset: 10,
+            word: "coll_floor_bits",
+            offset: 8,
             width: 1,
         })
         .ty(FieldType::UBits)
@@ -367,14 +367,14 @@ negative_control!(
 
 // ── The placeholder ramp, the probe and the header at their boundaries ───────────────────────────────────────────
 
-/// The payload ledger with `name`, a field of `width` bits at `packed_a`'s bit 10, its reserved span narrowed to the
-/// bits above it to 14 (bit 15 the departed bit, R-545), of `scale` over `range`.
+/// The payload ledger with `name`, a field of `width` bits at `coll_floor_bits`' bit 8, its reserved span narrowed to
+/// the bits above it to 31, of `scale` over `range`.
 fn with_probe(name: &'static str, width: u32, scale: Scale, range: Range) -> Ledger {
     let mut l = with_probe_bit(|_| {
         EntryBuilder::new(name)
             .location(Location::Packed {
-                word: "packed_a",
-                offset: 10,
+                word: "coll_floor_bits",
+                offset: 8,
                 width,
             })
             .ty(FieldType::UBits)
@@ -390,11 +390,11 @@ fn with_probe(name: &'static str, width: u32, scale: Scale, range: Range) -> Led
     let a = l
         .words
         .iter_mut()
-        .find(|w| w.name == "packed_a")
-        .expect("packed_a");
+        .find(|w| w.name == "coll_floor_bits")
+        .expect("coll_floor_bits");
     a.reserved = vec![Span {
-        offset: 10 + width,
-        width: 5 - width,
+        offset: 8 + width,
+        width: 24 - width,
     }];
     l
 }

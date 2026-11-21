@@ -34,7 +34,9 @@
 //!   not hashed), and today's bytes without that entry hash to those two again, so it is the one change; then
 //!   0x2ee1260ae02d31de and 0x5cce9d2ed11dc744 until TASK-M3-41 added the budget word and the regularised drift and
 //!   moved the Cartesian drift latches to the `log16` form, and today's bytes without them hash to those two again, so
-//!   they are the one change; an active
+//!   they are the one change; then 0xdf30f3c2b1bdba96 and 0x6420123ffd8c492c until TASK-M7-35 spent `packed_a`'s bits
+//!   10–14 on the Chazy latch `I_max` (R-545), and today's bytes without that entry, the span reserved again, hash to
+//!   those two again, so it is the one change; an active
 //!   value is no input of the hash (`qa_m241_hash_*`).
 //! - REQ-DEC-048 (host side): `Codomain::range` at an active `q_max` = 1.5 gives the momenta `[−1.5, 1.5]` and moves no
 //!   other codomain's bounds (`qa_m241_range_with_active`).
@@ -79,8 +81,10 @@ use validation::negative_control;
 /// today's bytes without it give back (`qa_m241_hash_periodic_beta_is_the_one_change`). Then pinned at
 /// 0x2ee1_260a_e02d_31de ([`PRE_BUDGET_PROVISIONAL_VERSION`]) until TASK-M3-41 added the budget word and the
 /// regularised drift and moved the Cartesian drift latches to the `log16` form, which today's bytes without them give
-/// back (`qa_m241_hash_budget_and_drift_is_the_one_change`).
-const MEAN_Y_PROVISIONAL_VERSION: u64 = 0xdf30_f3c2_b1bd_ba96;
+/// back (`qa_m241_hash_budget_and_drift_is_the_one_change`). Then pinned at 0xdf30_f3c2_b1bd_ba96
+/// ([`PRE_IMAX_PROVISIONAL_VERSION`]) until TASK-M7-35 spent `packed_a`'s bits 10–14 on `I_max`, which today's bytes
+/// without it give back (`qa_m241_hash_i_max_is_the_one_change`).
+const MEAN_Y_PROVISIONAL_VERSION: u64 = 0xc444_f5f6_fc9f_a7fa;
 
 /// The hash of the ledger without the declarations' block once REQ-PAY-098 declared `mean_y`'s range [0, 4]
 /// (R-426; TASK-M3-13): the one change to the hashed entries since [`MEAN_Y_PROVISIONAL_VERSION`], which reverting it
@@ -91,9 +95,16 @@ const MEAN_Y_PROVISIONAL_VERSION: u64 = 0xdf30_f3c2_b1bd_ba96;
 /// entries, and at 0x97ec_01cb_a5af_4336 ([`PRE_SENTINEL_DECLARED_VERSION`]) until TASK-M3-11's `closure_min`
 /// sentinel, and at 0xfbaf_6327_b921_761f ([`PRE_LAG_DECLARED_VERSION`]) until TASK-M3-12's lagged `n̂` register, and
 /// at 0xf974_859f_765e_5b5f ([`PRE_PERIODIC_DECLARED_VERSION`]) until TASK-M2-57's periodic `β` link, and at
-/// 0x5cce_9d2e_d11d_c744 ([`PRE_BUDGET_DECLARED_VERSION`]) until TASK-M3-41's budget word and regularised drift, for
-/// the reasons at [`MEAN_Y_PROVISIONAL_VERSION`].
-const MEAN_Y_DECLARED_VERSION: u64 = 0x6420_123f_fd8c_492c;
+/// 0x5cce_9d2e_d11d_c744 ([`PRE_BUDGET_DECLARED_VERSION`]) until TASK-M3-41's budget word and regularised drift, and
+/// at 0x6420_123f_fd8c_492c ([`PRE_IMAX_DECLARED_VERSION`]) until TASK-M7-35's `I_max`, for the reasons at
+/// [`MEAN_Y_PROVISIONAL_VERSION`].
+const MEAN_Y_DECLARED_VERSION: u64 = 0xc8a9_156d_cb6c_4ae0;
+
+/// [`MEAN_Y_PROVISIONAL_VERSION`] before TASK-M7-35 spent `packed_a`'s bits 10–14 on the Chazy latch `I_max` (R-545).
+const PRE_IMAX_PROVISIONAL_VERSION: u64 = 0xdf30_f3c2_b1bd_ba96;
+
+/// [`MEAN_Y_DECLARED_VERSION`] before TASK-M7-35's change.
+const PRE_IMAX_DECLARED_VERSION: u64 = 0x6420_123f_fd8c_492c;
 
 /// [`MEAN_Y_PROVISIONAL_VERSION`] before TASK-M3-41 added the budget word and the regularised drift and moved the
 /// Cartesian drift latches to the `log16` form (payload §1, §2; R-603, R-605, R-632).
@@ -572,14 +583,36 @@ fn before_block_with_links(
     b
 }
 
+/// The ledger without TASK-M7-35's change to the hashed bytes (payload §2; R-545): no `I_max` entry, and `packed_a`'s
+/// bits 10–14 its reserved span again where no strip has set the span already (`without_departed` sets 10–15).
+fn without_i_max_members(mut l: ledger::schema::Ledger) -> ledger::schema::Ledger {
+    l.entries.retain(|e| e.name != Some("I_max"));
+    for w in l.words.iter_mut().filter(|w| w.name == "packed_a") {
+        if w.reserved.is_empty() {
+            w.reserved = vec![ledger::schema::Span {
+                offset: 10,
+                width: 5,
+            }];
+        }
+    }
+    l
+}
+
+/// The bytes before the declarations' block without TASK-M7-35's change ([`without_i_max_members`]).
+fn without_i_max(l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
+    before_block_with(without_i_max_members(l), s)
+}
+
 /// The ledger and structs without TASK-M3-41's change to the hashed bytes (payload §1, §2; R-603, R-605, R-632): no
 /// `budget_bits` or `dE_reg` word, member or field entry, `dE_max` and `dLz_max` binary16 again, and `closure_min` and
-/// `closure_step` back at the scalar slots 34 and 35 the two words moved them from.
+/// `closure_step` back at the scalar slots 34 and 35 the two words moved them from; and without the change after it,
+/// TASK-M7-35's ([`without_i_max_members`]).
 fn without_budget_members(
-    mut l: ledger::schema::Ledger,
+    l: ledger::schema::Ledger,
     mut s: Vec<ledger::schema::Struct>,
 ) -> (ledger::schema::Ledger, Vec<ledger::schema::Struct>) {
     use ledger::schema::{FieldType, Location};
+    let mut l = without_i_max_members(l);
     const ADDED: [&str; 5] = [
         "budget_exhausted",
         "floor_hits",
@@ -1133,6 +1166,29 @@ negative_control!(
     "today's bytes, the budget word and the regularised drift kept, are not the pins before them, so they are hashed",
     expected = "(budget)",
     check_budget(before_block_with)
+);
+
+/// TASK-M7-35's `I_max` in `packed_a`'s bits 10–14 (payload §2; R-545) is the one change to the hashed bytes since
+/// [`PRE_IMAX_DECLARED_VERSION`]: taken out, the span reserved again, today's ledger hashes to the pins before it.
+fn check_i_max(strip: Strip) {
+    check_strip(
+        strip,
+        PRE_IMAX_PROVISIONAL_VERSION,
+        PRE_IMAX_DECLARED_VERSION,
+        "without the Chazy latch I_max (i_max)",
+    );
+}
+
+#[test]
+fn qa_m241_hash_i_max_is_the_one_change() {
+    check_i_max(without_i_max);
+}
+
+negative_control!(
+    qa_m241_hash_i_max_is_the_one_change,
+    "today's bytes, I_max kept, are not the pins before it, so it is hashed",
+    expected = "(i_max)",
+    check_i_max(before_block_with)
 );
 
 // ── REQ-DEC-048, host side: the codomain's bounds at the active value ───────────────────────────────────────────

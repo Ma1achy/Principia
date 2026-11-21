@@ -34,6 +34,7 @@ pub struct Decoded {
     /// Index base: pair id, 0-based; pair k is the side opposite body k; 3 unset.
     pub dmin_pair: u32,
     pub last_symbol: u32,
+    pub I_max: u32,
     pub departed: bool,
     pub d_min: f32,
     pub dE_max: f32,
@@ -102,6 +103,7 @@ pub fn decode(s: &SimStateFTLE, word: [u32; 4], ic: &ICDescriptor, params: &Read
         saturated: read.saturated,
         dmin_pair: read.dmin_pair,
         last_symbol: read.last_symbol,
+        I_max: read.I_max,
         departed: read.departed,
         d_min: read.d_min,
         dE_max: read.dE_max,

@@ -795,7 +795,8 @@ pub fn appended(symbols: &[u32]) -> ([u32; 4], Option<u32>) {
 /// second body to the first and third, and every recorded `coll_floor` code `nudge·(1 + i mod 3)` codes up. The states
 /// and words are unchanged, and the sample stepped 3 times stays short
 /// of a completed renormalisation. The departed bit (R-545) is set on five of the seven stepped samples, in a pattern
-/// that is not `saturated`'s, so the two flag views' renders differ.
+/// that is not `saturated`'s, so the two flag views' renders differ. The Chazy latch's level is 0 on samples 0, 4 and 5
+/// and spread over 1–31 on the others.
 pub fn showcase(set: &mut Synthetic, nudge: u32) {
     // Thirty orders of the eight samples, none affine in the index nor the reverse of another.
     const ORDER: [[u8; 8]; 30] = [
@@ -974,6 +975,15 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             [0, 0, 3, 41, 0, 9, 1200, 32_767][k],
             [0, 12, 400, 9000, 2, 31_000, 77, 32_767][k],
         );
+        // The Chazy latch's level (payload §2, bits 10–14; R-545): 0 on the fresh sample 0 and the failed samples 4 and
+        // 5, as a fresh latch and a failed sample store it, and levels across 1–31 on the others, each moved
+        // `nudge·(1 + i mod 3)` levels, at most 31 (TASK-M7-35).
+        let level = match [0, 3, 9, 30, 0, 0, 17, 24][k] {
+            0 => 0,
+            c => (c + nudge * (1 + i % 3)).min(31),
+        };
+        let w = set.simstate(i).packed_a;
+        set.sample(i).packed_a(kernel::payload::set_I_max(w, level));
         let ic = set.ic(i);
         (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
         ic.q_mass = at(0.12, 0.1, 21);
@@ -1097,6 +1107,7 @@ impl Scene {
             "dmin_pair" => (read.dmin_pair as f32, true),
             "saturated" => (f32::from(u8::from(read.saturated)), true),
             "departed" => (f32::from(u8::from(read.departed)), true),
+            "I_max" => (read.I_max as f32, true),
             "last_symbol" => (
                 read.last_symbol as f32,
                 kernel::payload::sd_last_symbol_valid(fgw_length_raw(read.word)),
