@@ -566,7 +566,7 @@ const WARP: [&str; 2] = ["k_max", "gamma_k"];
 /// The Burrau family's entries (TASK-M2-10, TASK-M2-11, TASK-M2-13): the Euclid plane's and the acute-angle charts'
 /// defaults and the ternary mass plot's buffer `ε_m`, a chart's parameters as the warp defaults are, and the `ν = 1/2`
 /// tolerance (REQ-VAL-118), a test's, as `n_norm_tol` is. None decides what a stored bit means, so none is hashed.
-const BURRAU: [&str; 10] = [
+const BURRAU: [&str; 11] = [
     "burrau_nu_half_tol",
     "euclid_m_min",
     "euclid_m_max",
@@ -577,6 +577,7 @@ const BURRAU: [&str; 10] = [
     "burrau_theta_max",
     "burrau_theta_lz_k",
     "burrau_theta_lz_fraction",
+    "burrau_theta_lz_gamma_k",
 ];
 
 /// The march's per-substep crossing capacity (TASK-M3-15): one crossing per branch cut, the size of the per-substep
@@ -646,8 +647,15 @@ const WRAPPER: [&str; 13] = [
 ];
 
 /// The tilt's angles in degrees (TASK-M2-36; R-474 R3, R8): Lean each axis's dead zone, Tip as sheet's wrap point and a
-/// whole turn, which decide the view's basis, never what a stored bit means, so they are not hashed.
-const TILT: [&str; 3] = ["tilt_right_angle", "tilt_half_turn", "tilt_turn"];
+/// whole turn, which decide the view's basis, never what a stored bit means, so they are not hashed; and a latent
+/// slider's span (TASK-M2-63; R-920), the unit a tilt's hidden offset is divided by, which decides which IC a pixel
+/// decodes to, not what a stored bit means.
+const TILT: [&str; 4] = [
+    "tilt_right_angle",
+    "tilt_half_turn",
+    "tilt_turn",
+    "latent_slider_span",
+];
 
 /// The construction charts' physical hidden coordinates' indices (TASK-M2-52; R-633, chart_reference §4.5): `ν₀`'s, the
 /// held `L_z`'s and the held `K`'s, past the latent controls, which decide which coordinate a tilt or a slice moves,

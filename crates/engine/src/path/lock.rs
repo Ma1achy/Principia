@@ -274,8 +274,9 @@ pub fn hold_window(window: &Window, [s, t]: [f64; 2], target: &[f64; 2]) -> ([f6
 /// at `point + R·(u − at)` with hidden offsets `d0 + R_d·(u − at)`, the tilt's own [`Tilt::offsets`]. The pin, at `at`,
 /// is placed at `point + R·0`: its own chart point and hidden offsets, bit for bit wherever adding a zero is exact (every
 /// value but `−0`). At `at = point = c`, the window's centre, and `d0 = [−0, −0]` it is the kernel's [`Tilt`] about the
-/// centre bit for bit (`x + (−0) = x` for every `x`). Nothing passes a non-zero `d0` yet: it is the pivot record's hidden
-/// offset, which a lock placed on an already-tilted curved view and the untilt need, neither built here.
+/// centre bit for bit (`x + (−0) = x` for every `x`). `d0` is R-899's pivot record's hidden offset ([`super::Pivot`]):
+/// zero by value at a centred pin, the only lock on a tilted curved view built; a lock off its centre and the untilt
+/// need a non-zero one.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Pivoted {
     tilt: Tilt<f64>,
@@ -300,6 +301,13 @@ impl Pivoted {
             point,
             d0,
         }
+    }
+}
+
+impl Pivoted {
+    /// The pivot: its window point `at`, the chart point it is placed at, and its hidden offsets `d0`.
+    pub fn pivot(&self) -> ([f64; 2], [f64; 2], [f64; 2]) {
+        (self.at, self.point, self.d0)
     }
 }
 
