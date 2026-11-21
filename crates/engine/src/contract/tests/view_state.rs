@@ -28,7 +28,7 @@ use crate::contract::sim_config::{
 };
 use crate::contract::view_state::{export, restore};
 use crate::lock::point;
-use crate::nav::tilt_vector;
+use crate::path::tilt_vector;
 
 /// The non-default selection the view uses: `tanh_alpha` for `α`, the rest the defaults.
 type TanhAlphaLinks =

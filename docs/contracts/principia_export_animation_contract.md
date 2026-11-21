@@ -199,6 +199,11 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
     function of the pixel in R-82's pattern. Which function is a definition the corpus does not give (R-72): RQ-832.
     *16 Nov 2026 (applied per R-369):* RQ-832 is closed as R-72's, from the physics review of PR #550 (review
     5912994647, A1): the definition is REQ-CHART-213, to be written by TASK-M2-61 under physics review.
+    *21 Nov 2026 (TASK-M2-61, physics review 6002173203 of PR #24):* written, in design § 17.2, "The great circle's two
+    degenerate cases, defined": the general circle `atan2(‖w‖, c)` wherever `‖w‖ > 0` on the same side, `c ≥ 0`,
+    and `‖w‖ > √ε_64` on the far side, `c < 0`; equal ends (`w = 0` with `c ≥ 0`) holding `n̂_A`; and the tie at `c < 0`, `‖w‖ ≤ √ε_64` (inclusive),
+    the circle through the coordinate axis least aligned with `n̂_A` (lowest index on a tie), a pure function of the
+    pixel, flagged `antipodal_tie`, a declared seam.
     **The time block and the playhead:** how the time row meets the playhead policies of this Part (hold, advance with
     wall time, set to a value) in a morph segment is not settled: RQ-831. (*15 Nov 2026, physics review 5912914414 of
     PR #550, P3 and P4.*)

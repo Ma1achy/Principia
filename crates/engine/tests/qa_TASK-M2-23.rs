@@ -10,6 +10,8 @@
 //! its control through `check_with_seed` at a fixed seed; the other random draws are a fixed-seed SplitMix64 over
 //! `CASES`-scaled cases.
 
+mod path_shim;
+
 use engine::chart_authoring::charts::NU_CURVE;
 use engine::chart_authoring::{CurveMeta, CurvePoint};
 use engine::contract::interface::EngineInterface;
@@ -21,12 +23,12 @@ use engine::contract::sim_config::{
 };
 use engine::contract::store::StateStore;
 use engine::lock::{
-    curve_tangent, curve_tilt, kernel_chart, move_slider, recentre, set, set_on_chart, slider,
-    snap_back, unlock, validate, FrozenControls, LockError, Notice, Pixel, Report, Tag, Window,
+    curve_tangent, curve_tilt, kernel_chart, slider, validate, FrozenControls, LockError, Notice,
+    Pixel, Report, Tag, Window,
 };
 use engine::lookup::Tolerances;
 use engine::nav::directions::hidden;
-use engine::nav::{oblique, slice, zoom, BasisVector, ChartConstructor};
+use engine::nav::BasisVector;
 use kernel::chart::invariant::Invariant;
 use kernel::chart::mixed::{Beta, ZQ1};
 use kernel::chart::{
@@ -40,6 +42,10 @@ use kernel::encode::by_kind::ByKind;
 use kernel::encode::SimplexClamp;
 use kernel::generated::links::{
     Defaults, Link, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ, StickBreaking,
+};
+use path_shim::{
+    move_slider, oblique, recentre, set, set_on_chart, slice, snap_back, unlock, zoom,
+    ChartConstructor,
 };
 use proptest::prelude::*;
 use validation::negative_control;
@@ -682,7 +688,7 @@ negative_control!(
     qa_lock_anchor_property,
     "a pan is not anchor-preserving",
     expected = "the centre IC moved off the anchor",
-    anchor_property(Some(17), |s, rng| engine::nav::pan(
+    anchor_property(Some(17), |s, rng| path_shim::pan(
         &s.plane,
         rng.in_(0.05, 0.3),
         rng.in_(0.05, 0.3)

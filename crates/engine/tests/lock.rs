@@ -23,6 +23,8 @@
 //!   chart group, and the lock's command, `z₀`, the lock group and the re-centred window sent under one history key, is
 //!   one history entry: one undo restores all three, and one redo sets them again.
 
+mod path_shim;
+
 use engine::chart_authoring::charts::{nu_embed, NU_CURVE};
 use engine::chart_authoring::CurvePoint;
 use engine::contract::interface::EngineInterface;
@@ -34,13 +36,11 @@ use engine::contract::sim_config::{
 };
 use engine::contract::store::StateStore;
 use engine::lock::{
-    centre, curve_tangent, curve_tilt, kernel_chart, move_slider, point, recentre, set,
-    set_on_chart, slider, snap_back, unlock, validate, ChartLock, FrozenControls, LockError,
-    Nearest, Notice, Pixel, Report, Tag, Window,
+    centre, curve_tangent, curve_tilt, kernel_chart, point, slider, validate, FrozenControls,
+    LockError, Nearest, Notice, Pixel, Report, Tag, Window,
 };
 use engine::lookup::Tolerances;
 use engine::nav::directions::hidden;
-use engine::nav::{oblique, slice, zoom, ChartConstructor};
 use kernel::chart::invariant::Invariant;
 use kernel::chart::mixed::{Alpha, ZMu1};
 use kernel::chart::{
@@ -57,6 +57,10 @@ use kernel::generated::links::{
     StickBreaking,
 };
 use kernel::stage::decode::DecodeUniforms;
+use path_shim::{
+    move_slider, oblique, recentre, set, set_on_chart, slice, snap_back, unlock, zoom,
+    ChartConstructor, ChartLock,
+};
 use proptest::prelude::*;
 use validation::negative_control;
 use validation::prop::{check_with_seed, run};
@@ -650,7 +654,7 @@ negative_control!(
     "a pan in place of each basis edit moves the centre",
     expected = "the centre IC moved",
     at_seed(
-        |s, _| engine::nav::pan(&s.plane, 0.1, 0.0).expect("a pan"),
+        |s, _| path_shim::pan(&s.plane, 0.1, 0.0).expect("a pan"),
         snap
     )
 );
