@@ -1,0 +1,6 @@
+{
+  "gate": "escape-rebind",
+  "inputs": ["deep_interior.json", "config_stability.json", "control_energy_receding.json"],
+  "threshold": { "value": 0, "requirement": "REQ-EVT-013", "status": "confirmed" },
+  "min_regions": { "value": null, "requirement": "REQ-EVT-032" }
+}

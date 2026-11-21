@@ -1,0 +1,11 @@
+{
+  "description": "Control: Lagrange's triangle at masses (0.2, 0.3, 0.5) with body 0 displaced by 10⁻⁶ from the closed form's start, so the march is no longer the relative equilibrium. It must fail.",
+  "case": "lagrange",
+  "masses": [0.2, 0.3, 0.5],
+  "stepper": "rk4",
+  "regularisation": "heggie-eq22",
+  "eta": 0.01,
+  "displace": { "body": 0, "by": [1e-6, 0.0] },
+  "control": true,
+  "expected": "fail"
+}

@@ -1,0 +1,8 @@
+{
+  "description": "logH (TTL mode) × KDK, the run-reversible occupant, second order, on the figure-eight: the same ladder and criteria.",
+  "stepper": "kdk",
+  "regularisation": "ttl",
+  "order_tolerance": 0.5,
+  "closure_bound": 1e-5,
+  "expected": "pass"
+}

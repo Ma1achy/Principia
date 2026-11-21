@@ -1,0 +1,8 @@
+{
+  "description": "The control: the same deep-interior marches read from the pre-fix rule's firings, E_rel > 0 and receding with no closure and no distance gate (pitfalls §1.5), the rule that fired on 895 transients in prin-rs; the test must fail it.",
+  "slice": "deep_interior",
+  "n": 32,
+  "r_coll": 0.0,
+  "rule": "energy_receding",
+  "expected": "fail"
+}

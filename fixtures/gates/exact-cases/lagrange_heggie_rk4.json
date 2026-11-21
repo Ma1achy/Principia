@@ -1,0 +1,9 @@
+{
+  "description": "Lagrange's equilateral triangle at masses (0.2, 0.3, 0.5), turning at its ω, marched one turn by the default occupant, Heggie (Eq. 22) × RK4 at η = 0.01: equilateral, and each side at its closed-form length, at every sync boundary.",
+  "case": "lagrange",
+  "masses": [0.2, 0.3, 0.5],
+  "stepper": "rk4",
+  "regularisation": "heggie-eq22",
+  "eta": 0.01,
+  "expected": "pass"
+}
