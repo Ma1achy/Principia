@@ -1,0 +1,7 @@
+{
+  "kind": "converge",
+  "description": "Lagrange's triangle at masses (0.2, 0.3, 0.5), G = 1, I = 1, over half a turn: the ladder converges, and the accepted run is within 1e-15 of the rigid rotation",
+  "start": "lagrange",
+  "truth_bound": 1e-15,
+  "expected": "pass"
+}

@@ -1,0 +1,8 @@
+{
+  "kind": "converge",
+  "description": "control: the figure-eight's ladder cut to three rungs (12, 16, 20 digits), whose successive results differ by more than 1e-20, is spent without agreement and gives no result",
+  "start": "figure_eight",
+  "rungs": 3,
+  "truth_bound": 1e-6,
+  "expected": "fail"
+}

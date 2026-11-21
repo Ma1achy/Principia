@@ -1,0 +1,6 @@
+{
+  "kind": "independence",
+  "description": "control: a crate the kernel does depend on (libm) named as forbidden must fail the closure check",
+  "forbidden": ["libm"],
+  "expected": "fail"
+}

@@ -110,6 +110,7 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &lagrange::ExactCasesGate,
     &order_scaling::OrderScalingGate,
     &symplectic::SymplecticDriftGate,
+    &crate::reference::brutus_gate::ReferenceConvergenceGate,
 ];
 
 /// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.

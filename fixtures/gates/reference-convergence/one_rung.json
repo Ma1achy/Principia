@@ -1,0 +1,8 @@
+{
+  "kind": "converge",
+  "description": "control: a ladder of one rung has nothing to agree with, and gives no result",
+  "start": "lagrange",
+  "rungs": 1,
+  "truth_bound": 1e-15,
+  "expected": "fail"
+}
