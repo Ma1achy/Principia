@@ -1,0 +1,6 @@
+{
+  "gate": "escape-checks",
+  "inputs": ["check2.json", "check3.json", "control_check2_energy_receding.json", "control_check3_energy_receding.json"],
+  "threshold": { "value": 0.99, "requirement": "REQ-VAL-123", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-123" }
+}

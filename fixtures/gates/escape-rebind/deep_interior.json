@@ -1,0 +1,8 @@
+{
+  "description": "The re-bind test (pitfalls §1.5's 0-of-895 measurement, its analogue): every escape the detector fires on deep interior (32 × 32, r_coll 0, marched to 3·t_max), read at the five physical offsets past firing prin-rs's +1, +2, +3, +4 and +8 sync boundaries stood at (k·13/32 Burrau units), each at the first sync boundary at or after it: none may re-bind (the escaper's E_rel ≤ 0), over at least 20 firings.",
+  "slice": "deep_interior",
+  "n": 32,
+  "r_coll": 0.0,
+  "rule": "detector",
+  "expected": "pass"
+}

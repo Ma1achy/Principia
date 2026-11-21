@@ -1,0 +1,8 @@
+{
+  "description": "The control of check 2: the same marches of config_stability scored with the pre-fix rule's firings in place of the detector's, E_rel > 0 and receding at a sampling point with no closure and no distance gate (pitfalls §1.5), which fires mid-encounter on transients; the check must fail it.",
+  "slice": "config_stability",
+  "n": 32,
+  "r_coll": null,
+  "rule": "energy_receding",
+  "expected": "fail"
+}

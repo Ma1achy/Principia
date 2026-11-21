@@ -1,0 +1,8 @@
+{
+  "description": "Check 3 (pitfalls §2.4): the escape detector as it is, on deep interior (fixtures/slices.toml), 32 × 32 pixel centres, t_max 13 Burrau units, r_coll 0 (no collision terminal: the slice's own 0.001 ends nearly every march in a collision before anything can fire), marched past escape to 3·t_max; its firings by T_h/2 scored against check 2's geometric ground truth: precision at least the gate's threshold over at least 20 decided firings, the production buffer byte-identical across the harness.",
+  "slice": "deep_interior",
+  "n": 32,
+  "r_coll": 0.0,
+  "rule": "detector",
+  "expected": "pass"
+}

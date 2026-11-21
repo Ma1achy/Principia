@@ -17,6 +17,7 @@ pub mod decode_preset;
 pub mod decode_sanity;
 pub mod drift;
 pub mod eps_phys;
+pub mod escape_checks;
 pub mod first_slice;
 pub mod gate;
 pub mod gauge;

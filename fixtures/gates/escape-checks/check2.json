@@ -1,0 +1,8 @@
+{
+  "description": "Check 2 (pitfalls §2.4): the escape detector as it is, on config_stability (fixtures/slices.toml), 32 × 32 pixel centres at its own horizon 50 and r_coll 0.005, each trajectory marched past escape by the harness to 3·t_max = 150 under Heggie × RK4; its firings by T_h/2 scored against the geometric ground truth (separation growing without bound, read from distances alone): precision at least the gate's threshold over at least 20 decided firings, the production buffer byte-identical across the harness (REQ-VAL-054).",
+  "slice": "config_stability",
+  "n": 32,
+  "r_coll": null,
+  "rule": "detector",
+  "expected": "pass"
+}
