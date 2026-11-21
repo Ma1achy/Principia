@@ -59,8 +59,18 @@ pub struct Firing {
 /// One sampling point of the harness march.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point {
+    /// The sampling point's index on its grid of [`PostEscape::quantum`].
+    pub index: u32,
     /// The physical time.
     pub t: f64,
+    /// The shape point `n̂` there, the kernel's own (`kernel::shape::shape`), for a replay over any window
+    /// ([`super::replay`]).
+    pub n: [f64; 3],
+    /// The detector's candidate there (`kernel::detect::escape::escaper`): the farthest body and whether it is unbound,
+    /// decided as the detector decides it.
+    pub candidate: escape::Escaper,
+    /// The ionisation gate there (`kernel::detect::escape::ionised`, on the run's stored `E_0`).
+    pub ionised: bool,
     /// Each body's distance from the other two's centre of mass, computed here (the module's note).
     pub d: [f64; 3],
     /// Each body's `E_rel` about the other two, the detector's own (`kernel::detect::escape::e_rel`).
@@ -102,6 +112,26 @@ pub struct PostEscape {
     pub stop: Stop,
     /// The physical time of its last sampling point, 0 where it took none.
     pub t_end: f64,
+    /// The sampling grid's quantum: the sync quantum under an occupant that owns its sampling, else the macro-step.
+    pub quantum: f64,
+    /// The state at the first sampling point at or after [`SNAPSHOT_T`], where the march reached it: the legacy
+    /// `t = 30` ground truth reads it ([`super::revalidation`]).
+    pub snapshot: Option<Snapshot>,
+}
+
+/// The time, canonical, the harness keeps one state at: the legacy ground truth's `t = 30` (pitfalls §2.2's table, read
+/// on the config chart).
+pub const SNAPSHOT_T: f64 = 30.0;
+
+/// A state the harness kept ([`PostEscape::snapshot`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Snapshot {
+    /// The physical time.
+    pub t: f64,
+    /// The positions.
+    pub r: [[f64; 2]; 3],
+    /// The momenta.
+    pub p: [[f64; 2]; 3],
 }
 
 /// Each body's distance from the centre of mass of the other two, from the state's positions and masses alone.
@@ -123,6 +153,7 @@ pub struct Harness {
     firing: Option<Firing>,
     points: Vec<Point>,
     marks: Vec<Mark>,
+    snapshot: Option<Snapshot>,
 }
 
 impl Harness {
@@ -135,6 +166,7 @@ impl Harness {
             firing: None,
             points: Vec::new(),
             marks: Vec::new(),
+            snapshot: None,
         }
     }
 
@@ -186,8 +218,20 @@ impl Cadence<f64> for Harness {
             });
             self.n_lag = n;
         }
+        if self.snapshot.is_none() && t >= SNAPSHOT_T {
+            self.snapshot = Some(Snapshot {
+                t,
+                r: state.r,
+                p: state.p,
+            });
+        }
+        let e_0 = self.inner.monitor_state().e_0();
         self.points.push(Point {
+            index,
             t,
+            n: shape(state.r, state.m),
+            candidate: escape::escaper(&state.m, &state.r, &state.p),
+            ionised: escape::ionised(&state.m, &state.r, &state.p, e_0),
             d: distances(&state.m, &state.r),
             e_rel: escape::e_rel(&state.m, &state.r, &state.p),
         });
@@ -273,6 +317,8 @@ pub fn march_past<A: Advance>(ic: &Ic<f64>, key: &MarchKey64, horizon_steps: u32
         marks: harness.marks,
         stop,
         t_end,
+        quantum,
+        snapshot: harness.snapshot,
     }
 }
 

@@ -12,5 +12,6 @@
 
 pub mod collision;
 pub mod escape;
+pub mod escape_rule;
 pub mod label;
 pub mod t0;

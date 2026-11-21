@@ -628,14 +628,15 @@ const MONITOR: [&str; 4] = [
 ];
 
 /// The wrapper's loop parameters (TASK-M3-06; integrator_contract Part 3): `SimUniforms`' defaults, the horizon's cap
-/// and the macro-step's floor, and the sync quantum `delta_sync` (TASK-M3-40), sim-key values that decide which run is computed, never what a stored bit means (the
+/// and the macro-step's floor, the sync quantum `delta_sync` (TASK-M3-40) and the distance floor's reach (TASK-M3-34), sim-key values that decide which run is computed, never what a stored bit means (the
 /// step indices' limit, `horizon_steps_max`, is hashed), so they are not hashed.
-const WRAPPER: [&str; 13] = [
+const WRAPPER: [&str; 14] = [
     "t_horizon_default",
     "t_horizon_max",
     "dt_macro_floor",
     "escape_window",
     "tau",
+    "escape_distance_floor",
     "delta_sync",
     "r_coll",
     "epsilon",

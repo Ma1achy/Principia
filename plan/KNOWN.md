@@ -13,12 +13,17 @@ delete its line when it's done.
   The golden frame (horizon 3) has no escape. In plain words: within the app's horizon of 50, a single body
   leaving a binary is in most cases still drawn as `bounded`, so the bounded region of a picture contains
   escapes that are not labelled yet; only starts that fly apart and escapes from tight binaries are caught.
-  `tau` and the window are provisional; the re-validation is TASK-M3-34.
+  `tau` and the window are provisional. The re-validation (TASK-M3-34) measured, on 64 × 64 of `config stability`,
+  `config basin` and `deep interior`: at `tau = 1e-3` precision 1.0000 and recall 3.4% (config) and 14.8% (deep
+  interior) against check 2's ground truth; no false positive at any `tau` up to `1.353e-2`; the gap between escapers'
+  and bound runs' `|Δn̂|` is 1.08× pooled, 1.9× and 2.4× by the claim's statistic, not 383×. Its criterion, written
+  before the run, did not set a new `tau`, so the owner decides (the PR's "For the owner").
   Burrau (PR #29, TASK-M3-24) is an instance: the march and the RK45 reference both leave the lightest body unbound
   from `t ≈ 59.6` of Szebehely & Peters' units, but the chord's envelope is `≈ 0.85/d` (log–log slope `−0.97`
-  against the escaper's distance `d`), so the escape label fires only near `t ≈ 158`, not by 60–65. Two tests are
-  ignored until TASK-M3-34 re-enables them: `golden_anchors_burrau_integrator` (kernel) and `entry_paths_burrau`
-  (validation); `entry_paths_burrau_ejects_on_time` holds the physics meanwhile.
+  against the escaper's distance `d`), so the escape label fires at `t = 157.6` at `tau = 1e-3`, in `[50, 100]` from
+  `tau = 3e-3` (96.5) and by 65 only from about `5e-2`, which has false positives. Two tests stay ignored until `tau`
+  is settled: `golden_anchors_burrau_integrator` (kernel) and `entry_paths_burrau` (validation);
+  `entry_paths_burrau_ejects_on_time` holds the physics meanwhile.
 - **The escape rule fires on a bound system with a light, slow inner pair.** `E_rel` tests one body against the
   other two as if they were one mass, whether or not they are the bound pair. Measured: masses
   `(0.001, 0.001, 1)`, the light pair on a circle of separation 1, the heavy body at 400 on a circular orbit;

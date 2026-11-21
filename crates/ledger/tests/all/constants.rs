@@ -644,6 +644,7 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
             "step_reversal_edge_f32",
             "step_reversal_edge_max",
             "nsub_table_max",
+            "escape_window",
             "tau",
             "delta_sync",
             "suspect_energy_threshold",

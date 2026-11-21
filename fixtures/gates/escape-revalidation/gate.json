@@ -1,0 +1,6 @@
+{
+  "gate": "escape-revalidation",
+  "inputs": ["check2_config.json", "check2_deep_interior.json", "legacy_t30.json", "control_check2_energy_receding.json", "control_legacy_energy_alone.json"],
+  "threshold": { "value": 0.99, "requirement": "REQ-VAL-123", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-123" }
+}

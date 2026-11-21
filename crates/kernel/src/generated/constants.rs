@@ -195,3 +195,7 @@ pub const FLOOR_CODE_BIAS: i32 = 41;
 /// The register's `delta_sync` = 0.125: the sync quantum `Δ_sync`, the regularised occupants' sync grid
 /// `t = k·Δ_sync`, the same for every run (integrator_contract Part 2a; provisional until M3).
 pub const DELTA_SYNC: f64 = 0.125;
+
+/// The register's `escape_distance_floor` = 10.0: the distance floor's reach in units of the initial hyperradius
+/// `R_0` (prin-rs's naive distance baseline; TASK-M3-34).
+pub const ESCAPE_DISTANCE_FLOOR: f64 = 10.0;

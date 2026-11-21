@@ -1,0 +1,7 @@
+{
+  "description": "Control: prin-rs's naive distance baseline (the farthest body beyond 10 R_0) on the same marches, which commits on trajectories that do not escape (prin-rs results/chazy: 0.85–1.4% wrong at late horizons, and commits on unresolved ones); the gate must fail it.",
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 64, "r_coll": 0.0 }],
+  "burrau": true,
+  "rule": "distance floor",
+  "expected": "fail"
+}

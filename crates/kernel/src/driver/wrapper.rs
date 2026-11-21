@@ -109,6 +109,7 @@ use super::substep::{NsubThresholds, Quantise, SubstepState};
 use super::welford::{self, Welford};
 use crate::decode::Ic;
 use crate::detect::collision::CollisionRadius;
+use crate::detect::escape_rule::EscapeRule;
 use crate::detect::label::{precedence, Events, Fired};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
@@ -163,8 +164,21 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
     uniforms: &WrapperUniforms<R>,
     radius: CollisionRadius,
 ) -> SimStateBaseOf<R> {
-    let mut cadence = WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius);
-    let out = integrate_with::<A, R, WrapperCadence<R>>(ic, uniforms, &mut cadence);
+    integrate_detecting_rule::<A, R, crate::detect::escape_rule::DefaultRule<R>>(
+        ic, uniforms, radius,
+    )
+}
+
+/// [`integrate_detecting`] under the escape rule `E` (`crate::detect::escape_rule`), selected as the occupant `A` is:
+/// the wrapper's cadence holds `E` in place of the closure detector, and nothing else changes.
+#[inline]
+pub fn integrate_detecting_rule<A: Advance, R: WrapperReal, E: EscapeRule<R>>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    radius: CollisionRadius,
+) -> SimStateBaseOf<R> {
+    let mut cadence = WrapperCadence::<R, E>::with_rule(&ic.m, &ic.r, &ic.p, radius);
+    let out = integrate_with::<A, R, WrapperCadence<R, E>>(ic, uniforms, &mut cadence);
     monitored(out, &cadence)
 }
 
@@ -196,9 +210,9 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
 /// and the detector's quantised `d²` is never negative (`crate::driver::substep::square`), so `√` gives neither a NaN
 /// nor a negative value and neither counter can count here (R-288).
 #[inline]
-pub fn monitored<R: WrapperReal>(
+pub fn monitored<R: WrapperReal, E: EscapeRule<R>>(
     out: SimStateBaseOf<R>,
-    cadence: &WrapperCadence<R>,
+    cadence: &WrapperCadence<R, E>,
 ) -> SimStateBaseOf<R> {
     if cadence.handed_back() {
         out
@@ -209,9 +223,9 @@ pub fn monitored<R: WrapperReal>(
 
 /// [`monitored`]'s write of a run the cadence followed.
 #[inline]
-fn written<R: WrapperReal>(
+fn written<R: WrapperReal, E: EscapeRule<R>>(
     out: SimStateBaseOf<R>,
-    cadence: &WrapperCadence<R>,
+    cadence: &WrapperCadence<R, E>,
 ) -> SimStateBaseOf<R> {
     let m = cadence.monitor_state();
     let detector = cadence.detector();

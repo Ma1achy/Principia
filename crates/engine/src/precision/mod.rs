@@ -32,7 +32,7 @@ use kernel::decode::{Degenerate, Ic};
 use kernel::detect::collision::CollisionRadius;
 use kernel::detect::t0::t0;
 use kernel::driver::advance::Advance;
-use kernel::driver::wrapper::{integrate_detecting, WrapperUniforms};
+use kernel::driver::wrapper::{integrate_detecting_rule, WrapperUniforms};
 use kernel::generated::links::Selection as Links;
 use kernel::occupant::{Geom, Selection, State};
 use kernel::payload::{
@@ -91,6 +91,15 @@ pub fn integrate_ic<A: Advance>(
     degenerate: Option<Degenerate>,
     key: &MarchKey64,
 ) -> SimState64 {
+    integrate_ic_rule::<A, kernel::detect::escape_rule::DefaultRule<f64>>(ic, degenerate, key)
+}
+
+/// [`integrate_ic`] under the escape rule `E` (`kernel::detect::escape_rule`), selected as the occupant `A` is.
+pub fn integrate_ic_rule<A: Advance, E: kernel::detect::escape_rule::EscapeRule<f64>>(
+    ic: &Ic<f64>,
+    degenerate: Option<Degenerate>,
+    key: &MarchKey64,
+) -> SimState64 {
     let start = t0(ic, degenerate, &key.radius);
     if start.state == STATE_DECODE_FAILED {
         // `(r, p)` keep the IC as decoded, non-finite values included, as the wrapper's own `sim_failed` write keeps its
@@ -105,7 +114,7 @@ pub fn integrate_ic<A: Advance>(
             ..SimState64::default()
         };
     }
-    integrate_detecting::<A, f64>(ic, &key.loop_values, key.radius)
+    integrate_detecting_rule::<A, f64, E>(ic, &key.loop_values, key.radius)
 }
 
 /// parity_contract §1's `computeICState(state, simKey) → SimState`: one IC given as its state, `(m, r, p)` in the

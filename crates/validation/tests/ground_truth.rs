@@ -425,10 +425,10 @@ fn check_burrau<A: Advance>(occupant: &'static str, r_coll: f64) {
     tiers::check_burrau_label(s, key.loop_values.dt_macro, scale, start.m);
 }
 
-// The plan is unclear here; chose to ignore the two Burrau label tests until TASK-M3-34 because keeping them red blocks
-// TASK-M3-33 and TASK-M3-34, which fix the cause.
+// Ignored until the owner settles tau: at the provisional 1e-3 the label fires at 157.6 of S&P's units; at any tau from
+// 3e-3 to the measured false-positive edge 1.353e-2 it fires in [50, 100] (`cargo xtask gate tau-gap --propose`).
 #[test]
-#[ignore = "Burrau: the escape label fires near t=158, not 60-65; the march ejects on time (measured, PR #29). Re-enable in TASK-M3-34; plan/KNOWN.md"]
+#[ignore = "Burrau: at tau = 1e-3 the escape label fires at t = 157.6, outside [50, 100]; the measured tau gap (TASK-M3-34) did not settle a new tau, so the owner decides; plan/KNOWN.md"]
 fn entry_paths_burrau() {
     check_burrau::<DefaultOccupant>("Heggie × RK4 (field backend's values)", BENCHMARK_R_COLL);
 }

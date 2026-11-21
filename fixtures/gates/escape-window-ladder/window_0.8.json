@@ -1,0 +1,6 @@
+{
+  "description": "The ladder's rung at window 0.8: the escape rule replayed at the register's tau and window 0.8 on the re-validation set (config_stability, config_basin, deep_interior; 64 × 64 each, the same marches as every rung): no firing whose check-2 truth is bound or another body's escape (at most the threshold, 0) over at least 20 decided firings; recall, the gap, the labels changed against the 0.4 rung and Burrau's firing recorded.",
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 64, "r_coll": 0.0 }],
+  "window": 0.8,
+  "expected": "pass"
+}
