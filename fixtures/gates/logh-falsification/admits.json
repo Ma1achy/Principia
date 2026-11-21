@@ -1,0 +1,5 @@
+{
+  "description": "The logH-vs-Heggie harness admits Heggie and logH under one RK4 step control",
+  "check": "admits",
+  "expected": "pass"
+}

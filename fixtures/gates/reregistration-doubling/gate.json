@@ -1,0 +1,8 @@
+{
+  "gate": "reregistration-doubling",
+  "inputs": ["az_doubles.json", "null_subject.json", "heggie_doubled_wedges.json", "az_none_wedges_subject.json"],
+  "measurement": {
+    "requirement": "REQ-VAL-052",
+    "ruling": "R-71"
+  }
+}
