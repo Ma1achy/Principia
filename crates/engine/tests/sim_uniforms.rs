@@ -60,10 +60,10 @@ fn bits(table: &NsubThresholds) -> Vec<u32> {
 // ── sim_uniforms_defaults (REQ-INT-026) ──────────────────────────────────────────────────────────────────────────
 
 /// `u` is Part 3's table: `T_horizon = 50`, `dt_macro = 10⁻³`, `N_max = 64`, `r_sub = 0.05`, `gamma_sub = 1.5`,
-/// `r_coll = 10⁻³`, `tau = 10⁻³`, the 0.4 escape window, `r_close = 0.01`, `eps_E = eps_L = 10⁻⁶`, `G = M_total = 1`,
+/// `r_coll = 10⁻³`, `tau = 10⁻³`, the 0.4 escape window, the register's `Δ_sync = 1/8`, `r_close = 0.01`, `eps_E = eps_L = 10⁻⁶`, `G = M_total = 1`,
 /// `epsilon = 0`, no `n_renorm` or `δ₀` yet, and the build-time table.
 fn check_defaults(u: &SimUniforms) {
-    let expected: [(&str, f64, f64); 14] = [
+    let expected: [(&str, f64, f64); 15] = [
         ("T_horizon", u.t_horizon, 50.0),
         ("dt_macro", u.dt_macro, 1e-3),
         ("N_max", f64::from(u.n_max), 64.0),
@@ -72,6 +72,7 @@ fn check_defaults(u: &SimUniforms) {
         ("r_coll", u.r_coll, 1e-3),
         ("tau", u.tau, 1e-3),
         ("escape window", u.escape_window, 0.4),
+        ("Δ_sync", u.delta_sync, 0.125),
         ("r_close", u.r_close, 0.01),
         ("eps_E", u.eps_e, 1e-6),
         ("eps_L", u.eps_l, 1e-6),
@@ -839,6 +840,7 @@ fn check_collision_softening(u: &SimUniforms) {
         r_coll,
         tau: _,
         escape_window: _,
+        delta_sync: _,
         r_close: _,
         eps_e: _,
         eps_l: _,
@@ -868,7 +870,7 @@ fn check_collision_softening(u: &SimUniforms) {
     let plain = u.sim_key_bytes();
     assert_eq!(
         plain.len(),
-        2 * 8 + 4 + 11 * 8 + 1 + 1 + 1,
+        2 * 8 + 4 + 12 * 8 + 1 + 1 + 1,
         "the sim key's bytes"
     );
     assert_eq!(plain.last(), Some(&0), "the unsoftened run's sim-key tag");
@@ -982,7 +984,7 @@ fn collision_softening_defaults_every_value_on_the_sim_key() {
 fn check_every_value_keyed(key_of: &dyn Fn(&SimUniforms) -> Vec<u8>) {
     let d = SimUniforms::default();
     let base = key_of(&d);
-    let changed: [(&str, SimUniforms); 16] = [
+    let changed: [(&str, SimUniforms); 17] = [
         (
             "t_horizon",
             SimUniforms {
@@ -1012,6 +1014,13 @@ fn check_every_value_keyed(key_of: &dyn Fn(&SimUniforms) -> Vec<u8>) {
             "escape_window",
             SimUniforms {
                 escape_window: 0.5,
+                ..d
+            },
+        ),
+        (
+            "delta_sync",
+            SimUniforms {
+                delta_sync: 0.1,
                 ..d
             },
         ),

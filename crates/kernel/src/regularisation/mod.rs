@@ -21,6 +21,8 @@
 //!
 //! [`heggie_joint`] is the FTLE shadow's joint step on Heggie × RK4, the default occupant (R-974, R-560; TASK-M3-74).
 //!
+//! [`sync`] is the regularised occupants' sync grid, the fixed quantum `Δ_sync` every march lands on (Part 2a; R-565).
+//!
 //! [`pairs`] is Part 2b's pair table and the selection of a pair; [`dt_max`] is the per-trajectory largest-step
 //! diagnostic with its "no usable step" sentinel (Part 2c).
 
@@ -31,6 +33,7 @@ pub mod heggie;
 pub mod heggie_joint;
 pub mod logh;
 pub mod pairs;
+pub mod sync;
 
 use core::marker::PhantomData;
 
@@ -112,7 +115,7 @@ pub trait Regularisation {
     /// The pair's `ADVANCE` with the trajectory's carried regularised state passed in and out beside `(m, r, p)`
     /// ([`Advance::advance_carrying`]; Part 2a). This default is for a regularisation that carries nothing: the buffer
     /// is left as it was. One that registers once keeps its own state there ([`heggie::Heggie`], [`logh::LogH`]); one that
-    /// re-registers counts its registrations there ([`az::AarsethZare`]).
+    /// re-registers counts its registrations there, and carries its running step total ([`az::AarsethZare`]).
     #[inline]
     fn advance_carrying<S: Stepper, R: AdvanceReal, C: Cadence<R>>(
         state: &State<R>,

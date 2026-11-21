@@ -192,7 +192,22 @@ fn constants_file(chart: &[Param], tunables: &[Tunable]) -> String {
     s.push_str(&u32_range());
     s.push_str(&shape_readout());
     s.push_str(&coll_floor());
+    s.push_str(&sync_grid());
     s
+}
+
+/// The regularised occupants' sync grid (integrator_contract Part 2a; R-565): the register's `delta_sync`, one f64,
+/// which `kernel::regularisation::sync` reads at the march's width. Not hashed: it decides which state a run reaches,
+/// never what a stored bit means; the engine carries it on the sim key.
+fn sync_grid() -> String {
+    use crate::constants::DELTA_SYNC;
+    format!(
+        "\n/// The register's `delta_sync` = {v:?}: the sync quantum `Δ_sync`, the regularised occupants' sync grid\n\
+         /// `t = k·Δ_sync`, the same for every run (integrator_contract Part 2a; provisional until M3).\n\
+         pub const DELTA_SYNC: f64 = {lit};\n",
+        v = DELTA_SYNC.number(),
+        lit = literal(DELTA_SYNC.number(), "f64"),
+    )
 }
 
 /// `LinkParams`, one field per tunable parameter of the registry `tunables` in their order, and its `DEFAULT`, each

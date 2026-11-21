@@ -1452,6 +1452,24 @@ pub const TAU: ConstantBuilder = proposed(
     "M3",
 );
 
+/// `Δ_sync`, the sync quantum, 1/8 of a time unit: the regularised occupants' sync grid is `t = k·Δ_sync`, the same for
+/// every run, independent of the horizon and of frame timing; each interval's steps are sized from it and `ADVANCE`
+/// stops only on it (integrator_contract Part 2a § "The sync grid is a fixed quantum of physical time"). A calibration
+/// (REQ-INT-080), proposed and confirmed at the M3 gate, so the entry is provisional until M3. `kernel::regularisation::
+/// sync` reads it; the engine carries it on the sim key, so a change re-integrates.
+///
+/// The plan is unclear here: it says the value is REQ-INT-080's proposal, and no full run of that proposal is recorded
+/// (`validation::az::propose_sync_with`, Aarseth–Zare on the figure-eight; its test, at a two-rung `η` ladder, picks
+/// 0.2); chose 1/8 because it is what the engine's field marches at and what the radial-collision gate measures Heggie
+/// at (integrator_contract Part 2a), so registering it changes no product output. The tests also run at 0.1 and 0.2.
+pub const DELTA_SYNC: ConstantBuilder = proposed(
+    "delta_sync",
+    0.125,
+    Admissibility::CanonicalUnits,
+    "REQ-INT-080",
+    "M3",
+);
+
 /// The collision radius `r_coll`'s default, `10⁻³` of `R`, a length in canonical units, where `R = √I = 1` (Part 5): it
 /// separates tail from bulk on the slices measured, and no more (Part 7). A user-exposed sim-key value, nonzero by
 /// default (dd_generation_root §3.7, "Open").
@@ -1732,7 +1750,8 @@ pub const FLOOR_CODE_BIAS: ConstantBuilder = chart("floor_code_bias", 41.0, COLL
 /// `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's rounding-level criterion (TASK-M3-02; REQ-INT-037,
 /// REQ-VAL-191), and the substep law's defaults and its threshold table's maximum length (TASK-M3-03; R-502,
 /// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38), and the
-/// wrapper's loop parameters' defaults, the horizon's cap and the macro-step's floor (TASK-M3-06; R-132, R-610), and the
+/// wrapper's loop parameters' defaults, the horizon's cap and the macro-step's floor (TASK-M3-06; R-132, R-610), with the
+/// sync quantum `Δ_sync` (TASK-M3-40; REQ-INT-080), and the
 /// tilt's angles in degrees (TASK-M2-36; R-474), and the construction charts' physical hidden coordinates' indices
 /// (TASK-M2-52; R-633), and a saved chart's word counts (TASK-M2-40; R-475, R-483), and the custom-stop ramp's OKLab
 /// bound (TASK-M7-11), and the arctangent generator's working precision (TASK-M2-26; REQ-GEN-044). Then the drift
@@ -1818,6 +1837,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     DT_MACRO_FLOOR,
     ESCAPE_WINDOW,
     TAU,
+    DELTA_SYNC,
     R_COLL,
     EPSILON,
     R_CLOSE,

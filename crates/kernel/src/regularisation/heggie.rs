@@ -47,10 +47,11 @@ use super::az::{
 };
 use core::marker::PhantomData;
 
-use super::az::{boundary_at_or_before, reached};
+use super::az::reached;
 use super::dt_max::DtMax;
 use super::form::Flow;
 use super::pairs::HeggieTime;
+use super::sync::boundary_of_step;
 use super::{Kind, Regularisation};
 use crate::driver::advance::{AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
 use crate::driver::carried::Carried;
@@ -1182,7 +1183,7 @@ pub fn carry<R: AzReal>(carried: &mut Carried<R>, q: &HgQ<R>, p: &HgP<R>, h: R, 
 }
 
 /// Heggie's seam `ADVANCE` (Part 2a; R-565): `t_now` and `t_target` on the macro-step grid, physical time
-/// `index·dt_macro`, mapped to the sync grid, the latest boundary at or before each ([`boundary_at_or_before`]).
+/// `index·dt_macro`, mapped to the sync grid, the latest boundary at or before each ([`boundary_of_step`]).
 ///
 /// Where `carried` holds no registration, `state` is registered into it; that is the march's one registration when it
 /// happens at boundary 0, and a re-registration, counted in [`Carried::re_registrations`], at any later boundary. The
@@ -1212,8 +1213,8 @@ fn advance_seam<C: HgConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     carried: &mut Carried<R>,
 ) -> (Advanced<R>, Reached) {
     let values = C::params::<R>();
-    let k_now = boundary_at_or_before(R::count(t_now) * params.dt_macro, values.delta_sync);
-    let k_target = boundary_at_or_before(R::count(t_target) * params.dt_macro, values.delta_sync);
+    let k_now = boundary_of_step(t_now, params.dt_macro, values.delta_sync);
+    let k_target = boundary_of_step(t_target, params.dt_macro, values.delta_sync);
     if carried.registered == 0 {
         let fresh = register(state, values.tiny, values.time);
         carry(carried, &fresh.q, &fresh.p, fresh.system.h, carried.steps);
