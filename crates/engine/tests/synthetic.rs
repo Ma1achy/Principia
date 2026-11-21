@@ -50,6 +50,9 @@ fn marked_simstate() -> SimStateFTLE {
         packed_b: 0xb2b2_b2b2,
         times: 0xc3c3_c3c3,
         total_substeps: 0xd4d4_d4d4,
+        // the budget word and the regularised drift (payload §1; TASK-M3-41): a marker each
+        budget_bits: 0xf6f6_f6f6,
+        dE_reg: 0xa7a7_a7a7,
         closure_min: 35.0,
         closure_step: 0x1234,
         _reserved: 0x5678,
@@ -79,6 +82,8 @@ fn simstate_marker(member: &str) -> u32 {
         "packed_b" => 0xb2b2_b2b2,
         "times" => 0xc3c3_c3c3,
         "total_substeps" => 0xd4d4_d4d4,
+        "budget_bits" => 0xf6f6_f6f6,
+        "dE_reg" => 0xa7a7_a7a7,
         "closure_min" => 35.0f32.to_bits(),
         "closure_step" => 0x1234,
         "_reserved" => 0x5678,

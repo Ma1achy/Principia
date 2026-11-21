@@ -155,6 +155,11 @@ impl Canon {
             FieldType::F32 => self.str("f32"),
             FieldType::F16 => self.str("f16"),
             FieldType::F16Pair => self.str("f16-pair"),
+            // The form's meaning is its octave range, so a change of the lowest octave is a change of version.
+            FieldType::Log16 => {
+                self.str("log16");
+                self.u32(crate::payload::log16_octave_lo() as u32);
+            }
             FieldType::Fixed16 => self.str("fixed16"),
             FieldType::Vector { component, k } => {
                 self.str("vector");

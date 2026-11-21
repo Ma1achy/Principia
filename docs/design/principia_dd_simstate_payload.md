@@ -10,7 +10,7 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 
 | Buffer | Contents | Access pattern | Size |
 |---|---|---|---|
-| **`SimState`** (hot) | phase state, shadow, accumulators, drift refs, packed status/times/scalars | read/updated **every substep** by the march | **160 B** (FTLE-on); **112 B** (FTLE-off) as generated, with the escape rule's lagged `n̂` register (three `Real`s in place of 4 B of padding, §1); **168 / 120 B** from TASK-M3-41 on, with R-603's and R-605's two u32s (§1) — *before the lagged register: 152 / 104 B as generated, 160 / 112 B from TASK-M3-41 on; was "152 / 104 B from TASK-M3-41 on; 144 / 96 B as generated until then" before the collision floor's 8 B; was 144 / 96 before them (perf review 5661999637 of PR #293, P1), and 136 / 88 before the 8 B closure field, §1* |
+| **`SimState`** (hot) | phase state, shadow, accumulators, drift refs, packed status/times/scalars | read/updated **every substep** by the march | **168 B** (FTLE-on); **120 B** (FTLE-off) as generated, with the escape rule's lagged `n̂` register (three `Real`s in place of 4 B of padding, §1) and R-603's and R-605's two u32s, `budget_bits` and `dE_reg` (§1); 160 / 112 B before the two u32s — *before the lagged register: 152 / 104 B as generated, 160 / 112 B from TASK-M3-41 on; was "152 / 104 B from TASK-M3-41 on; 144 / 96 B as generated until then" before the collision floor's 8 B; was 144 / 96 before them (perf review 5661999637 of PR #293, P1), and 136 / 88 before the 8 B closure field, §1* |
 | **word buffer** (cold) | the free-group word (`vec4<u32>`) | **append on branch-cut crossing; read at resolve/inspect** — never per-step | 16 B/entry, ×(E+1) (no shadow, appended in place), sharded per-quad |
 
 **Why split.** `SimState` fields are **hot** in the sense of being *co-resident march state updated during marching* — the physics and shadow (every substep), the accumulators, the drift refs and latches, `times`/`total_substeps`/descriptor (updated as the march progresses). Not every field is literally loaded+written at every substep (`packed_a/b`, `times`, `total_substeps` are march bookkeeping updated during marching, not per-substep operands) — they belong in the hot struct because they are co-resident march state, not because each is touched every substep. The word alone is **cold**: appended only on branch-cut crossings and read only at resolve/inspect. Co-locating it inline (a) forced the struct to 16-byte alignment (the `vec4` is the sole 16-align driver), padding the tail with **12 dead bytes**; (b) dragged 16 B of unused word through every hot cache line. Moving the word to a parallel buffer drops `SimState` to **8-byte alignment**, kills the padding (→ 4 B residual), and cuts the persistent hot-state footprint 160→136 (FTLE-on) / 112→88 (FTLE-off) — a **~15% reduction in the persistent hot-state footprint**, expected to reduce storage traffic and working-set pressure (the *measured* bottleneck is unconfirmed — see §3). Cost: one extra buffer binding + an indexed word fetch on the *cold* paths only. **Only the word moves** — splitting the hot fields further would fragment co-accessed data and hurt the prefetcher.
@@ -28,14 +28,12 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 // kernel layout (the kernel is Rust → SPIR-V — lowering Part 2). Bit offsets/sizes are language-agnostic.
 // TWO stored sizes — the Benettin shadow is 48 B, so FTLE-on/off are monomorphised as two Rust variants
 // to avoid paying for the shadow when FTLE is off (a MEMORY split, NOT a language limitation):
-//   SimStateBase (FTLE off): no shadow, 112 B actual / 112 B effective as generated, with the collision
-//                            floor's word (R-973) and the lagged n̂ register, 120 B from TASK-M3-41 on
+//   SimStateBase (FTLE off): no shadow, 120 B actual / 120 B effective, with the collision floor's word
+//                            (R-973), the lagged n̂ register and the budget and regularised-drift words
 //                            (R-603, R-605).
-//   SimStateFTLE (FTLE on):  with shadow, 160 B actual / 160 B effective as generated, with the collision
-//                            floor's word (R-973) and the lagged n̂ register, 168 B from TASK-M3-41 on
-//                            (R-603, R-605).
-//   Before the lagged register (TASK-M3-12) these were 104 / 152 B as generated and 112 / 160 B from
-//   TASK-M3-41 on.
+//   SimStateFTLE (FTLE on):  with shadow, 168 B actual / 168 B effective, likewise.
+//   Before the two words (TASK-M3-41) these were 112 / 160 B, and before the lagged register (TASK-M3-12)
+//   104 / 152 B.
 //   Was (before the collision floor's 8 B, 16 Nov 2026, TASK-M3-71): "96 B actual / 96 B effective as
 //   generated until TASK-M3-41, 104 B from TASK-M3-41 on" and "144 B actual / 144 B effective as generated
 //   until TASK-M3-41, 152 B from TASK-M3-41 on".
@@ -68,7 +66,8 @@ struct SimStateFTLE {
 
     // ── PACKED WORDS (u32 ×3) ───────────────────────────────  12 B
     packed_a : u32,               // sample_descriptor[bits 0–9 used; 10–14 I_max, 15 departed (R-545)] | d_min:f16[high 16]
-    packed_b : u32,               // dE_max:f16[low] | dLz_max:f16[high]
+    packed_b : u32,               // dE_max:log16[low] | dLz_max:log16[high] (R-632; diagnostic only under a
+                                  //   regularised occupant, R-605)
     times    : u32,               // t_end_step:u16[low] | t_dmin_step:u16[high]  (EXACT step indices)
 
     // ── EXACT SUBSTEP COUNTER (u32) ─────────────────────────  4 B
@@ -77,27 +76,21 @@ struct SimStateFTLE {
                                   //   NOT stored in the descriptor (descriptor uses bits 0–9; 10–14 I_max, 15 departed, R-545).
 
     // ── REGULARISED-OCCUPANT WORDS (u32 ×2, R-603, R-605) ───  8 B
-    budget_word : u32,            // R-603's two counters (separation-floor hits, entry-cap hits) and, since
-                                  //   sample_descriptor's 16 bits are all assigned (R-545), the sticky
-                                  //   budget_exhausted bit. Bits, widths and saturation: TASK-M3-41, in §2
-                                  //   (REQ-PAY-110). Updated by the march under a regularised occupant: hot.
-    dE_reg      : u32,            // R-605's regularised energy drift latches beside packed_b's Cartesian ones:
-                                  //   final and max, two 16-bit halves. Open (REQ-PAY-111): the halves'
-                                  //   encoding, linear binary16 or a log-encoded 16-bit form, and which half
-                                  //   holds which. The regularised drift stays at round-off (integrator
-                                  //   contract Part 1), where linear binary16 keeps about one digit near 6e-8
-                                  //   and flushes anything smaller to zero ("Why f32 and not f16", below), so
-                                  //   TASK-M3-41 chooses the encoding against REQ-INT-106's measured drift,
-                                  //   under physics review: the measured values and REQ-INT-109's threshold
-                                  //   sit above its floor, and final and max stay ordered. Was: "final and
-                                  //   max, two f16 halves" (physics review 5662346996 of PR #293, F1).
-                                  //   The final value is stored, not derived (§5), because the stored state
-                                  //   is Cartesian and the regularised energy is not recoverable from it at
-                                  //   read. Names and halves:
-                                  //   TASK-M3-41, in §1 and §5 (REQ-PAY-111). Each word's name here is a
-                                  //   placeholder; its place and its 4 B are fixed (perf review 5661999637 of
-                                  //   PR #293, P1, applied per R-369). Was: "dE_reg_final:f16[low] |
-                                  //   dE_reg_max:f16[high]" (code review 5662268789 of PR #293, (3)).
+    budget_bits : u32,            // budget_exhausted:1[bit 0] | floor_hits:15[1–15] | cap_hits:15[16–30] (§2;
+                                  //   REQ-PAY-110): R-603's sticky exhaustion flag and its two counted
+                                  //   signals, each count saturating. Written by the wrapper from the march
+                                  //   under a regularised occupant; all zero under a stepper. Hot.
+    dE_reg      : u32,            // dE_reg_final:log16[low] | dE_reg_max:log16[high] (§2, "The log16 form";
+                                  //   REQ-PAY-111): R-605's regularised energy drift, the final value signed
+                                  //   and the greatest magnitude, beside packed_b's Cartesian latches. The
+                                  //   regularised drift stays at round-off (integrator contract Part 1): Heggie
+                                  //   × RK4 reads 2e-13 to 6e-13 at f64 on dd_integrator §5's tests 2 and 7,
+                                  //   which binary16 would flush to zero, so both halves are log16, floor
+                                  //   2^-96. The final value is stored, not derived (§5), because the stored
+                                  //   state is Cartesian and the regularised energy is not recoverable from it
+                                  //   at read. Under regularisation off the two energies are one, and dE_reg
+                                  //   holds the Cartesian drift, so a reader reads dE_reg under every
+                                  //   occupant. A failed state's halves are 0.0, as packed_b's are.
 
     // ── CLOSURE (return-map) ────────────────────────────────  8 B
     closure_min  : f32,           // running min, once departed (R-37), of |n̂(t) − n̂(0)| — the SHAPE-sphere
@@ -139,12 +132,10 @@ struct SimStateFTLE {
                                   //   Three scalar members, the layout having no three-vector storage. They
                                   //   follow Real. In the place of the 4 B of declared padding that stood here.
 }
-// SimStateFTLE: 160 B actual / 160 B effective (8-byte aligned), as generated until TASK-M3-41; 168 B from
-//   TASK-M3-41 on, with budget_word and dE_reg (R-603, R-605)
-// SimStateBase: drop r_sh,p_sh → 112 B actual / 112 B effective, as generated until TASK-M3-41;
-//   120 B from TASK-M3-41 on (R-603, R-605)
-// Before the lagged register (TASK-M3-12): 152 / 104 B as generated, with 4 B of declared padding (_pad) after
-//   coll_floor_bits; 160 / 112 B from TASK-M3-41 on.
+// SimStateFTLE: 168 B actual / 168 B effective (8-byte aligned), with budget_bits and dE_reg (R-603, R-605)
+// SimStateBase: drop r_sh,p_sh → 120 B actual / 120 B effective
+// Before the two words (TASK-M3-41): 160 / 112 B. Before the lagged register (TASK-M3-12): 152 / 104 B, with 4 B
+//   of declared padding (_pad) after coll_floor_bits.
 // Was (before the collision floor's 8 B, TASK-M3-71): "144 B ... as generated until TASK-M3-41; 152 B from
 //   TASK-M3-41 on" and "96 B ... 104 B from TASK-M3-41 on".
 ```
@@ -217,7 +208,7 @@ register is march state, so it is hot, and it is not gated on a tier: the escape
 `closure_min` at f64 (R-86).
 
 **The recheck, on R-603's and R-605's two u32s (REQ-PAY-009, REQ-PAY-110, REQ-PAY-111; perf review 5661999637 of PR #293, P1,
-applied per R-369).** From TASK-M3-41 on, which builds them; until then the generated layout is the one above at every row. `budget_word` and `dE_reg` are one u32 each, in the hot struct, after `total_substeps` with the
+applied per R-369).** Built by TASK-M3-41; the generated layout is 8 B above the previous recheck's at every row, 168 / 120 B at f32, 304 / 208 B at f64 and 576 / 384 B at DoubleF64. `budget_bits` and `dE_reg` are one u32 each, in the hot struct, after `total_substeps` with the
 other u32s: the march updates both under a regularised occupant, so the word buffer's cold precedent does not apply.
 Bytes per copy, at every precision row:
 - **f32:** `SimStateFTLE` 144 → **152 B** = 19×8 and `SimStateBase` 96 → **104 B** = 13×8, both still exactly packed
@@ -281,7 +272,7 @@ tested on its bits, is no sample: it neither sets the departed bit nor moves `cl
 **Precision rule (why each field is the width it is):**
 - **f32, mandatory:** phase state and shadow (integration — f16 storage of a chaotic state injects rounding that chaos amplifies; empirically confirmed, §5); all summed accumulators `S, theta, mean_y, C_ty` (summing many terms in f16 loses the tail); `E_0, Lz_0` (subtraction operands for drift — f16 resolves O(1) energy to ~1e-3 = the drift magnitude, tested catastrophic).
 - **f16, safe — but they are MONOTONE LATCHES, not "written once":** `d_min = min(d_min, d)`, `dE_max = max(dE_max, |ΔE|)`, `dLz_max = max(dLz_max, |ΔLz|)` — updated repeatedly during the march (absolute maxima / running min over the whole trajectory). Two precise semantics, pick one: **(a)** hold the latch in a **local f32** during the march and pack to f16 only when writing persistent state (one requantisation per persist boundary — preferred); or **(b)** accept repeated f16 requantisation at every resume/write. Either way, **threshold/suspect decisions must use the live f32 measurement, never the unpacked f16 latch** (the f16 latch is for display, not for control flow). *1 Nov 2026 (R-669, RQ-636 (a)):* "decisions" here are the march's control flow: a branch of the march reads the live f32 value, never an unpacked latch. The read-time suspect predicates (`drift_suspect`, `suspect_energy`, `suspect_lz`; § 5, REQ-INT-040), which run after the march, when no live value exists, read the stored latches, as the display does. Near a zero `E_0` the stored and the live reading can give different verdicts: for `|E_0|` below about 1.5×10⁻⁵ (2⁻²⁴/τ_E), one f16 subnormal step crosses τ_E (the physics review of PR #360); the floor `ε_E` limits it, and it is recorded, not hidden.
-- **The drift latches' encoding (R-632, closing RQ-581 with its option (d), else (b)).** Linear binary16 floors `dE_max` and `dLz_max` near 6e-8, above the f64 path's drift. They take the 16-bit encoding TASK-M3-41 chooses for `dE_reg`'s halves against REQ-INT-106's measured drift (REQ-PAY-111); if TASK-M3-41 does not settle on one encoding for both halves, they take a log-encoded 16-bit form, in the same bits, so `packed_b` keeps its size (REQ-PAY-112). Control flow stays on the live value, as the rule above says. Until TASK-M3-41 lands they are linear binary16 as written here and in §2 and §6; where its encoding differs, that task rewrites this section's f16 wording for the two latches, §2's `packed_b` diagram and accessors, §6, the render contract's unpack layer, the debug tooling plan's rows and the parity contract's f16-packed display scalars, each with a *Was*. `d_min` stays f16.
+- **The drift latches' encoding (R-632, closing RQ-581 with its option (d), else (b)).** Linear binary16 floors `dE_max` and `dLz_max` near 6e-8, above the f64 path's drift. They take the 16-bit encoding TASK-M3-41 chooses for `dE_reg`'s halves against REQ-INT-106's measured drift (REQ-PAY-111); if TASK-M3-41 does not settle on one encoding for both halves, they take a log-encoded 16-bit form, in the same bits, so `packed_b` keeps its size (REQ-PAY-112). Control flow stays on the live value, as the rule above says. TASK-M3-41 settled on one form for both: `dE_reg`'s halves, `dE_max` and `dLz_max` are all the 16-bit `log16` form (§2), so the f16 wording below covers `d_min` alone, which stays f16.
 - **f16 packing does NOT require the `shader-f16` feature.** `pack2x16float`/`unpack2x16float` take/return `vec2<f32>` and are core WGSL — available everywhere. The `shader-f16` extension is only needed for *native f16 types* (`f16` scalars/vectors), which this design does not use. So the f16-packed scalars are **not tier-gated** — no f32 fallback needed.
 - **Pack requires clamp/canonicalise first:** `pack2x16float` gives an **indeterminate** result when an input is outside binary16's finite range (±65504). The packer must clamp or canonicalise before packing. **Failed-state contents are defined:** for `sim_failed`/`decode_failed` samples, the `dE_max`/`dLz_max` halves hold **0.0**, and the `d_min` half holds **+inf** (R-271, below) (0.0 is a canonical sentinel — the `state` field already marks the sample untrusted, so the scalar values are not read for those states; 0.0 is chosen over clamped-65504 or NaN so a stray read is visibly-null rather than plausibly-real or `isNan`-unreliable). Valid-state values are clamped to ±65504 before packing (a drift exceeding 65504 in normalised units is already pathological and the sample would be flagged). **`d_min` (R-271):** its unset value is f16 +inf (bits `0x7C00`), the minimum of an empty set: a failed sample's, and any sample's before its first step. A valid `d_min` below f16's smallest positive subnormal (2⁻²⁴ ≈ 5.96e-8) is stored as that subnormal, so 0.0 never appears. The packer writes the +inf and subnormal bit patterns itself, since `pack2x16float` is indeterminate outside the finite range and may flush subnormals. Readers test the unset value by its bits, not by a float comparison. A field view draws an unset `d_min` in the neutral "not yet" grey that `running` samples show (R-96, R-280): not the invalid colour, which stays NaN's, and not a place on the ramp.
 - **Storage never holds NaN (R-79).** A blown-up sample stores the defined failed-state values, never the non-finite values that failed it; the failed-state value of each f32 field is the table below, written by one writer (`crates/kernel/src/driver/failure.rs`). A tier-absent (derived) field reads NaN at unpack (§5). Every colouring maps NaN or a sentinel to its invalid colour; debug fields show the literal stored values, and NaN still goes to the invalid colour.
@@ -298,10 +289,12 @@ tested on its bits, is no sample: it neither sets the departed bit nor moves `cl
   | `E_0`, `Lz_0` | the IC's, kept; else 0.0 | 0.0 |
   | `closure_min` | the register of the last completed macro-step, `+∞` (unset) before departure, kept unless NaN; `+∞` where NaN | `+∞` (unset), `closure_step` 0, `_reserved` 0xFFFF |
   | `_nhat_lag_0`, `_1`, `_2` | the escape register as it stood, kept; else 0.0 | 0.0 |
-  | `packed_b`'s `dE_max`, `dLz_max` (f16) | 0.0 | 0.0 |
+  | `packed_b`'s `dE_max`, `dLz_max` (`log16`, R-632) | 0.0 | 0.0 |
+  | `dE_reg`'s `dE_reg_final`, `dE_reg_max` (`log16`, R-605) | 0.0 | 0.0 |
+  | `budget_bits` (R-603) | kept: the counts up to the failure; `budget_exhausted` is clear, since a march that failed ended non-finite, not on its budget | 0 |
   | `packed_a`'s `d_min` (f16) | `+∞`, unset (R-271) | `+∞`, unset |
 
-  With them, in both states: `dmin_pair` 3, `t_dmin_step` 0 and `coll_floor` 0, unset as `d_min` is; `saturated`, the departed bit and `closure_step` are kept under `sim_failed`. A `decode_failed` sample takes no step, so every count is 0.
+  With them, in both states: `dmin_pair` 3, `t_dmin_step` 0 and `coll_floor` 0, unset as `d_min` is; `saturated`, the departed bit, `closure_step` and `budget_bits` are kept under `sim_failed`. A `decode_failed` sample takes no step, so every count is 0.
 - **bf16:** nowhere — wrong precision/range trade for bounded normalised quantities (bf16 buys exponent range you don't need at the cost of mantissa you do), and not in web WGSL anyway.
 
 **The payload as a function of `Real` (R-72; REQ-PAY-017, REQ-PAY-087).** The payload width is a function of the kernel's `Real`, never hardcoded to f32 (philosophy §7.1, §7.7). The struct
@@ -318,10 +311,10 @@ width.
 | `E_0`, `Lz_0` (drift references) | f32 | `Real`, `w` |
 | `closure_min` | f32 | `Real`, `w` |
 | `_nhat_lag_0`, `_nhat_lag_1`, `_nhat_lag_2` (the escape rule's lagged `n̂`, march state) | f32 | `Real`, `w` each |
-| `packed_a`, `packed_b` (descriptor and the f16-packed latches `d_min`, `dE_max`, `dLz_max`) | u32 | u32, fixed |
+| `packed_a`, `packed_b` (descriptor, the f16 `d_min` and the `log16` latches `dE_max`, `dLz_max`) | u32 | u32, fixed |
 | `times` (the u16 step indices `t_end_step`, `t_dmin_step`) | u32 | u32, fixed |
 | `total_substeps` | u32 | u32, fixed |
-| `budget_word`, `dE_reg` (R-603's counters and flag, R-605's regularised drift latches) | u32 | u32, fixed |
+| `budget_bits`, `dE_reg` (R-603's counters and flag, R-605's regularised drift latches) | u32 | u32, fixed |
 | `closure_step`, `_reserved` | u16 | u16, fixed |
 | `coll_floor_bits` (the collision floor's record, R-973) | u32 | u32, fixed |
 
@@ -335,22 +328,22 @@ which do not depend on the float type (parity_contract Tier B), so they keep the
 
 **Layout at a `Real` of `w` bytes.** Members in the order above, each at its own alignment (`Real` at its alignment,
 u32 at 4, u16 at 2); the struct aligned to 8, or to `Real`'s alignment if greater. As generated, `SimStateFTLE` stores
-31 `Real`s and `SimStateBase` 19, then 16 B of u32s, 4 B of u16s and the collision floor's 4 B u32, ending at
-`31w + 24` and `19w + 24`, a multiple of 8 at every width; then the lagged register's three `Real`s, so the structs
-end at `34w + 24` and `22w + 24`: 160 / 112 B at f32, 296 / 200 B at f64, 568 / 376 B at DoubleF64, each exactly its
-size, with no tail padding. From TASK-M3-41 on, its two u32s add 8 B before `closure_min`: `34w + 32` and `22w + 32`.
+31 `Real`s and `SimStateBase` 19, then 24 B of u32s (`budget_bits` and `dE_reg` among them), 4 B of u16s and the
+collision floor's 4 B u32, ending at `31w + 32` and `19w + 32`, a multiple of 8 at every width; then the lagged
+register's three `Real`s, so the structs end at `34w + 32` and `22w + 32`: 168 / 120 B at f32, 304 / 208 B at f64,
+576 / 384 B at DoubleF64, each exactly its size, with no tail padding. Before the two u32s they were `34w + 24` and
+`22w + 24`.
 Tail padding, where a row has any, is declared, never implicit (R-86): a trailing `_tail` of `(size − end)/4` u32s,
 empty at every row today.
 
 **The f64 layout** (`w` = 8, aligned to 8), as generated:
 - `SimStateFTLE`: `r` 0, `p` 48, `r_sh` 96, `p_sh` 144, `S` 192, `theta` 200, `mean_y` 208, `C_ty` 216, `E_0` 224,
-  `Lz_0` 232, `packed_a` 240, `packed_b` 244, `times` 248, `total_substeps` 252, `closure_min` 256, `closure_step` 264,
-  `_reserved` 266, `coll_floor_bits` 268, `_nhat_lag_0` 272, `_nhat_lag_1` 280, `_nhat_lag_2` 288: **296 B**, no
-  `_tail`.
-- `SimStateBase`: the same less `r_sh` and `p_sh`, 96 B earlier from `S`: `coll_floor_bits` 172, the register at 176,
-  184 and 192: **200 B**.
-- From TASK-M3-41 on, `budget_word` 256 and `dE_reg` 260 come after `total_substeps` and every later member moves
-  8 B on: **304 B** and **208 B**.
+  `Lz_0` 232, `packed_a` 240, `packed_b` 244, `times` 248, `total_substeps` 252, `budget_bits` 256, `dE_reg` 260,
+  `closure_min` 264, `closure_step` 272, `_reserved` 274, `coll_floor_bits` 276, `_nhat_lag_0` 280, `_nhat_lag_1`
+  288, `_nhat_lag_2` 296: **304 B**, no `_tail`.
+- `SimStateBase`: the same less `r_sh` and `p_sh`, 96 B earlier from `S`: `coll_floor_bits` 180, the register at 184,
+  192 and 200: **208 B**.
+- Before the two u32s (TASK-M3-41): every member from `closure_min` 8 B earlier, **296 B** and **200 B**.
 - Before the lagged register (TASK-M3-12): `coll_floor_bits` 268, `_pad` 272, `_tail` 276 (one u32), **280 B**, and
   **184 B**.
 
@@ -359,9 +352,9 @@ item 3).
 
 **The DoubleF64 stub row.** DoubleF64 is an unevaluated pair (hi, lo) of f64s: 16 B, aligned to 8. It is a precision row
 of the ledger for the width function only. It has no `Real` impl, no kernel instantiation (R-265) and no arithmetic
-(REQ-SYS-007), and its layout exists only as a row of the generated layout table: `SimStateFTLE` **568 B** and
-`SimStateBase` **376 B** as generated, aligned to 8, with no tail (`34·16 + 24` and `22·16 + 24`), and **576 B** and
-**384 B** from TASK-M3-41 on. Before the lagged register (TASK-M3-12) they were 528 B (524 used) and 336 B (332
+(REQ-SYS-007), and its layout exists only as a row of the generated layout table: `SimStateFTLE` **576 B** and
+`SimStateBase` **384 B** as generated, aligned to 8, with no tail (`34·16 + 32` and `22·16 + 32`); 568 B and 376 B
+before TASK-M3-41's two u32s. Before the lagged register (TASK-M3-12) they were 528 B (524 used) and 336 B (332
 used). A new instantiation
 would be one more row, as philosophy §7.1 says, and the generator would not fork.
 
@@ -432,7 +425,7 @@ The flag an output reads is `r_coll < 2^(code − 41)`, from the sim key's `r_co
 - **`decode_failed`** (state 5, **the chart/decoder could not produce a valid physical IC** — nothing to do with dynamics): `0` = non-finite decode output; `1` = degenerate configuration (e.g. exact zero-separation collinear); `2` = invalid mass construction (a mass → 0, mass-simplex boundary); `3` = other/reserved.
 - **An unusable copy (R-633, closing RQ-604).** "Unusable copy" (`principia_dd_refinement_policy.md` §1) is
   `state ∈ {sim_failed, decode_failed}` (codes 4 and 5) or `budget_exhausted`: a bit test on `sample_descriptor`'s
-  `state` and on `budget_word`'s sticky `budget_exhausted` bit (§1; R-603, its bit placed by TASK-M3-41, REQ-PAY-110).
+  `state` and on `budget_bits`'s sticky `budget_exhausted` bit 0 (§2's `budget_bits`; R-603, REQ-PAY-110).
   No other flag or code means it, and no new field carries it.
 - **Which `DEGENERATE` reason writes which `decode_failed` code** (R-72; REQ-DEC-038): `principia_dd_decoder.md` §2's
   closed cause set maps `M01_TINY` to `2`; `NO_QUALIFYING_SEED` to `1`; `INVARIANT_INFEASIBLE`, `ENERGY_INFEASIBLE`
@@ -470,18 +463,54 @@ The flag an output reads is `r_coll < 2^(code − 41)`, from the sim key's `r_co
 
 > **A valid t=0 terminal is a real outcome, NOT a decode failure.** If a validly-decoded IC *begins* inside `r_coll`, that is a **collision outcome at step 0** (`state=collision`, `detail=pair`, `t_end_step=0`) — the decoder *succeeded*; the state is simply already-collided. Escape has no step-0 case: its settling test needs a window of history (R-29), so an IC that is already escaping is classified when its window completes (RQ-19). These must NOT be folded into `decode_failed` — doing so would undercount the collision/escape basins and inflate the failure diagnostics. `decode_failed` is reserved strictly for the decoder failing to produce a valid physical IC.
 
-**Drift latches are ABSOLUTE maxima:** `dE_max = max_t |ΔE(t)|`, `dLz_max = max_t |ΔL_z(t)|` (in `packed_b`, f16 — §1, held in f32 during the march). `d_min = min_t |separation|` (in `packed_a` high half). All monotone latches over the whole trajectory.
+**Drift latches are ABSOLUTE maxima:** `dE_max = max_t |ΔE(t)|`, `dLz_max = max_t |ΔL_z(t)|`, `dE_reg_max = max_t |ΔE_reg(t)|` (in `packed_b` and `dE_reg`, `log16` — §2, held in f32 during the march). `d_min = min_t |separation|` (in `packed_a` high half). All monotone latches over the whole trajectory.
 
 > **Why `total_substeps` is an EXACT u32, not the log proxy: resumability.** A log-compressed accumulator **cannot be incrementally updated**: `⌊log₂ Σ⌋ = 10` means `Σ ∈ [1024, 2047]` — the exact value is lost, so on a **cached-state resume** (a quad continuing its march from cached `SimState` at `t_cached`, which lockstep does) the next `⌊log₂(Σ + ΔΣ)⌋` cannot be computed from the stored exponent. Storing the **exact** running sum (in the otherwise-dead 4 B tail padding — free) makes it resumable. Proxy derived at read via `countLeadingZeros` (§6). **Dispatch guarantee:** `horizon_steps × N_max ≤ 2³²−1` (joint constraint, asserted at dispatch) so the counter cannot overflow.
 
 ### `packed_b` (u32)
 ```
  bit  31 ··················· 16 | 15 ··················· 0
-      └──── dLz_max : f16 ─────┘ | └──── dE_max : f16 ────┘
+      └─── dLz_max : log16 ────┘ | └─── dE_max : log16 ───┘
 ```
-`dE_max = unpack2x16float(packed_b).x`, `dLz_max = unpack2x16float(packed_b).y`.
+`dE_max = pb_dE_max(packed_b)`, `dLz_max = pb_dLz_max(packed_b)`: the two halves in `dE_reg`'s `log16` form (below;
+R-632, REQ-PAY-112). Control flow never reads them: the march's branches read the live f32 latch (R-669). A failed
+state's halves are 0.0. *Was:* linear binary16, read by `unpack2x16float`.
 
-The two halves' encoding follows `dE_reg`'s, else a log-encoded 16-bit form (R-632, §1; REQ-PAY-112); linear binary16, read by `unpack2x16float`, until TASK-M3-41 lands.
+### `budget_bits` (u32) — the regularised integration floor (R-603; REQ-PAY-110)
+```
+ bit  31 | 30 ··········· 16 | 15 ··········· 1 | 0
+     rsv | └── cap_hits ───┘ | └─ floor_hits ─┘ | budget_exhausted
+```
+| Field | Bits | Width | Meaning |
+|---|---|---|---|
+| `budget_exhausted` | 0 | 1 | **sticky**: the copy's step budget ran out (R-604): its `state` stays `running`, it is undetermined, finished (a later dispatch hands it back word for word, never marching it on), never discarded, never a physical outcome (R-563) |
+| `floor_hits` | 1–15 | 15 | steps on which the separation floor `TINY` bound (integrator contract Part 6), saturating at `2¹⁵ − 1`, which then reads "at least" |
+| `cap_hits` | 16–30 | 15 | steps whose per-step size asked for more than the interval's entry size (Part 6), saturating likewise |
+| reserved | 31 | 1 | decodes as zero |
+
+`saturated` (descriptor bit 5) is set when either count is non-zero (R-603). All zero under a stepper. Named `_bits`,
+as `coll_floor_bits` is: no `SimState` member names the word (the plan's placeholder was `budget_word`). The counts are
+15 bits each because a field declared `[0, 2¹⁶ − 1]` is read as a step index, drawn on `[0, horizon_steps]`.
+
+### `dE_reg` (u32) — the regularised drift (R-605; REQ-PAY-111)
+```
+ bit  31 ················ 16 | 15 ················ 0
+      └─ dE_reg_max : log16 ─┘ | └ dE_reg_final : log16 ┘
+```
+`dE_reg_final` is the regularised energy's drift where the march stopped, signed; `dE_reg_max` its greatest magnitude,
+so `|dE_reg_final| ≤ dE_reg_max` reads back ordered (the form is monotone). Heggie's is Eq. 6 against `h`, Aarseth–
+Zare's against its first registration's `E`, logH's against `E₀ = −B` (integrator contract Part 1). Under a stepper the
+two energies are one and the halves hold the Cartesian drift. A failed state's halves are 0.0.
+
+### The `log16` form (R-605, R-632)
+One 16-bit value: bit 15 the sign, bits 0–14 the magnitude's code `c`. `c = 0` is 0.0; `c ≥ 1` is the f32 whose bits
+are `(c − 1 + ((−96 + 127) << 8)) << 15`: an f32 with an 8-bit fraction, code 1 being `2⁻⁹⁶ ≈ 1.26e-29` and the
+greatest, `0x7FFF`, `2³¹·(1 + 254/256) ≈ 4.28e9`. Encoding rounds the f32 bits to the 8-bit fraction, half up, on
+integer operations only, so every backend gives the same code: a relative error at most 2⁻⁹. A magnitude below
+`2⁻⁹⁶` is held as `2⁻⁹⁶`, never flushed to 0.0; one above the greatest code, `+∞` included, as the greatest; NaN as
+0.0 (R-79). Chosen against the measured regularised drift (Heggie × RK4 on dd_integrator §5's tests 2 and 7: 2.1e-13
+to 5.7e-13 at f64, 3.1e-5 to 6.5e-5 at f32), which linear binary16 (floor 6e-8) flushes to zero at f64; the floor
+`2⁻⁹⁶` is the ledger's `log16_octave_lo`, hashed into the schema version.
 
 ### `times` (u32)
 ```
@@ -734,7 +763,7 @@ Everything that is a function of stored state is a shader helper, zero storage:
 | `retrograde` | `theta < 0` | winding sense |
 | current drift `ΔE` | `H(r,p) − E_0` | cancellation-tolerant (feeds thresholds/display); threshold uses live f32 |
 | current drift `ΔLz` | `L_z(r,p) − Lz_0` | ditto |
-| regularised drift (R-605) | **stored, not derived:** `dE_reg`'s two 16-bit halves, final and max, their encoding open (§1; *was* "two f16 halves", physics review 5662346996 of PR #293, F1) | under a regularised occupant the suspect flags and the drift view read it, and the Cartesian `ΔE` above is diagnostic only; the stored state is Cartesian, so the regularised energy cannot be derived here. The halves' names and the accessors that read them are TASK-M3-41's (REQ-PAY-111; code review 5662211284 of PR #293, note (c), applied per R-369) |
+| regularised drift (R-605) | **stored, not derived:** `dE_reg`'s two `log16` halves (§2), `dE_reg_final` (signed) and `dE_reg_max`, read by `dr_dE_reg_final` and `dr_dE_reg_max` | the suspect predicate (`suspect_energy(dE_reg_max, E_0, ε_E)`) and the drift view read it, and the Cartesian `ΔE` above and `dE_max` are diagnostic only, read only from runs that did not stop at an event (`kernel::payload::drift`); the stored state is Cartesian, so the regularised energy cannot be derived here. With regularisation off the two energies are one and `dE_reg` holds the Cartesian drift. A run that stopped at an event (escape or collision) draws as now, its readout saying "stopped at event" (REQ-PAY-111, REQ-TOOL-219) |
 | reduced crossing count | `fgw_reduced_length` — **valid only if `fgw_reduced_length_valid`** | **net branch-cut crossings** (free reduction); **INVALID for truncated samples** (later cancellations untracked after the cap — §3). `fgw_retained_prefix_length` (=76 when truncated) is a debug/export quantity, NOT the reduced count; never expose `127` |
 | `r_coll` below the collision test's floor (R-973) | the sim key's `r_coll` and `coll_floor`: `r_coll < 2^(coll_floor − 41)`, exactly | read on the host from the sim key, where `r_coll` is (13 Nov 2026, TASK-M3-71); `coll_floor = 0` reads no flag (§2; integrator contract Part 7) |
 | `total_substeps_log2` | `total_substeps` (exact u32) via `countLeadingZeros` | complexity proxy derived at read, not stored (§2) |
@@ -874,7 +903,7 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 
 **The carried buffer adds 72 B per sample at f32** under a regularised occupant that carries its state (§1), `×(E+1)` like the word buffer. The default occupant, Heggie × RK4, is one, and so is logH (which uses three of its fourteen floats and pays the same element), so by default every sample pays it: **+45%** on the 160 B FTLE-on `SimState` and **+64%** on the 112 B FTLE-off one. Only a run under a stepper alone pays nothing. On the table's rows that is 0.597 GB at 1080p E=3, 0.299 GB at 1080p E=1, 2.389 GB at 4K E=3 and 1.194 GB at 4K E=1, on top of each row's total (72 B × (E+1) × pixels; decimal GB). The rows below are without it. A Benettin shadow marched beside a regularised sample would need an element of its own, which is not counted here. **It does not have one yet**: the absolute-form shadow (`kernel::driver::benettin`) marches by the seam's uncarried call, so under Heggie it would re-register at every macro-step, uncounted, beside a sample registered once. Nothing runs the FTLE tier under Heggie today; it must carry the shadow's state, or refuse to build, before it does.
 
-Per-sample: hot `SimState` **160 B (FTLE-on) / 112 B (FTLE-off)** effective as generated, with the lagged `n̂` register (TASK-M3-12), **168 B / 120 B** from TASK-M3-41 on (R-603, R-605; before the register, 152 / 104 B and 160 / 112 B; *was* "**144 B (FTLE-on) / 96 B (FTLE-off)** effective as generated until TASK-M3-41, **152 B / 104 B** from TASK-M3-41 on", before the collision floor's 8 B); the table below is at 152 / 104 B + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
+Per-sample: hot `SimState` **168 B (FTLE-on) / 120 B (FTLE-off)** effective, with the lagged `n̂` register (TASK-M3-12) and R-603's and R-605's two words (TASK-M3-41); 160 / 112 B before the two words, 152 / 104 B before the register; the table below is at 152 / 104 B, and at 168 / 120 B its hot parts are 1.393 / 0.995 / 0.498 / 5.574 / 1.991 GB + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
 
 | Config (at the stated *render* resolution) | Hot | +Word | Total |
 |---|---|---|---|

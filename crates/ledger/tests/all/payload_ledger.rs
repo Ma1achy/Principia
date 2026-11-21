@@ -81,7 +81,7 @@ negative_control!(
     expected = "generated structs differ from the ledger's",
     check_fields(&{
         let mut s = payload::structs();
-        s[0].members[14].storage = ledger::schema::Storage::U32;
+        s[0].members[16].storage = ledger::schema::Storage::U32;
         s
     })
 );
@@ -349,7 +349,7 @@ fn check_buffers(structs: &[Struct]) {
         .filter(|s| s.buffer.is_some())
         .map(|s| rust::offsets(s).1)
         .collect();
-    assert_eq!(sizes, [160, 112, 16], "payload element sizes, fixed in t");
+    assert_eq!(sizes, [168, 120, 16], "payload element sizes, fixed in t");
     for s in structs.iter().filter(|s| s.buffer == Some("SimState")) {
         let has = |n: &str| s.members.iter().any(|m| m.name == n);
         assert!(

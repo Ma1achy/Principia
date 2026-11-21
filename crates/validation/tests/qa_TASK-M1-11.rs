@@ -87,11 +87,14 @@ fn perturbations(i: u32) -> Vec<(String, SimStateFTLE)> {
         }
     }
     type Word = (&'static str, fn(&mut SimStateFTLE, u32), u32);
-    let words: [Word; 6] = [
+    let words: [Word; 8] = [
         ("packed_a", |s, b| s.packed_a ^= 1 << b, 32),
         ("packed_b", |s, b| s.packed_b ^= 1 << b, 32),
         ("times", |s, b| s.times ^= 1 << b, 32),
         ("total_substeps", |s, b| s.total_substeps ^= 1 << b, 32),
+        // the budget word and the regularised drift, zero in the pattern (payload §1; TASK-M3-41)
+        ("budget_bits", |s, b| s.budget_bits ^= 1 << b, 32),
+        ("dE_reg", |s, b| s.dE_reg ^= 1 << b, 32),
         ("closure_step", |s, b| s.closure_step ^= 1 << b, 16),
         ("_reserved", |s, b| s._reserved ^= 1 << b, 16),
     ];

@@ -359,21 +359,39 @@ const F16_KNOWN: [(u16, f32); 10] = [
     (0x7c00, f32::INFINITY),
 ];
 
-/// Each known pattern in the low half (`dE_max`) and the high half (`d_min`, `dLz_max`) of a word whose other half is a
-/// different known pattern: each accessor reads the value exactly, on the GPU through `generated` and on the host.
+/// `log16` patterns and their exact f32 values (payload §2, "The `log16` form": code `c ≥ 1` is the f32 whose bits are
+/// `(c − 1 + 0x1F00) << 15`, bit 15 the sign): `dE_max` and `dLz_max` since R-632. 1.0, −2.0, 0.5, 0.25, 3.0, the least
+/// code `2⁻⁹⁶`, the greatest `2³¹·(1 + 254/256)`, and both zeros.
+const LOG16_KNOWN: [(u16, f32); 9] = [
+    (0x6001, 1.0),
+    (0xe101, -2.0),
+    (0x5f01, 0.5),
+    (0x5e01, 0.25),
+    (0x6181, 3.0),
+    (0x0001, f32::from_bits(0x0f80_0000)),
+    (0x7fff, 4_278_190_080.0),
+    (0x0000, 0.0),
+    (0x8000, -0.0),
+];
+
+/// Each known pattern of `d_min`'s binary16 in the high half of a word, and of the drifts' `log16` in the low half
+/// (`dE_max`) and the high half (`dLz_max`), each word's other half a different known pattern: each accessor reads the
+/// value exactly, on the GPU through `generated` and on the host.
 fn check_f16_known(h: &GpuHarness, generated: &str) {
     let mut jobs = Vec::new();
     let mut want = Vec::new();
-    for (i, &(lo, lo_v)) in F16_KNOWN.iter().enumerate() {
-        let (hi, hi_v) = F16_KNOWN[(i + 3) % F16_KNOWN.len()];
+    for (i, &(lo, lo_v)) in LOG16_KNOWN.iter().enumerate() {
+        let (hi, hi_v) = LOG16_KNOWN[(i + 3) % LOG16_KNOWN.len()];
+        let (d, d_v) = F16_KNOWN[i % F16_KNOWN.len()];
         let w = u32::from(lo) | u32::from(hi) << 16;
+        let a = u32::from(d) << 16;
         assert_eq!(
-            [pb_dE_max(w), pa_d_min(w), pb_dLz_max(w)].map(f32::to_bits),
-            [lo_v, hi_v, hi_v].map(f32::to_bits),
-            "f16 on the host: word {w:#010x}"
+            [pb_dE_max(w), pa_d_min(a), pb_dLz_max(w)].map(f32::to_bits),
+            [lo_v, d_v, hi_v].map(f32::to_bits),
+            "f16 on the host: words {w:#010x}, {a:#010x}"
         );
-        jobs.extend([(w, SEL_DE_MAX, 0), (w, SEL_D_MIN, 0), (w, SEL_DLZ_MAX, 0)]);
-        want.extend([(lo_v, "dE_max"), (hi_v, "d_min"), (hi_v, "dLz_max")]);
+        jobs.extend([(w, SEL_DE_MAX, 0), (a, SEL_D_MIN, 0), (w, SEL_DLZ_MAX, 0)]);
+        want.extend([(lo_v, "dE_max"), (d_v, "d_min"), (hi_v, "dLz_max")]);
     }
     let got = run(h, generated, &jobs);
     for ((j, (v, name)), &g) in jobs.iter().zip(&want).zip(&got) {
@@ -408,6 +426,10 @@ negative_control!(
     expected = "f16 `dE_max` on the GPU without shader-f16",
     check_f16_known(
         &harness(),
-        &GENERATED.replacen("unpack2x16float(w).x", "unpack2x16float(w).y", 1)
+        &GENERATED.replacen(
+            "fn pb_dE_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 0u, 16u)); }",
+            "fn pb_dE_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 16u, 16u)); }",
+            1
+        )
     )
 );

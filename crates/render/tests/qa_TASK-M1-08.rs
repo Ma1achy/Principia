@@ -370,9 +370,10 @@ fn expected_fields(field: &str, word_fields: &[&str]) -> Vec<String> {
         // reference (R-436), its neutral band's reads, the rounding's own scale (R-928): `r`, `p` and, for the
         // energy, the masses; and `state`, its failed-sample gate (a failed sample's reference is a failed-state value,
         // payload §1); and nothing else.
+        // The energy predicate's latch is the regularised drift's, `dE_reg_max` (R-605; TASK-M3-41).
         vec![
             "E_0",
-            "dE_max",
+            "dE_reg_max",
             "dLz_max",
             "energy_drift",
             "ic.m0",
@@ -387,7 +388,14 @@ fn expected_fields(field: &str, word_fields: &[&str]) -> Vec<String> {
         .collect()
     } else if field == "Lz_drift" {
         vec![
-            "E_0", "Lz_0", "Lz_drift", "dE_max", "dLz_max", "p", "r", "state",
+            "E_0",
+            "Lz_0",
+            "Lz_drift",
+            "dE_reg_max",
+            "dLz_max",
+            "p",
+            "r",
+            "state",
         ]
         .into_iter()
         .map(str::to_owned)

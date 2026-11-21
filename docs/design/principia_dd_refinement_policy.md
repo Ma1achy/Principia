@@ -101,7 +101,7 @@ remedy is finer steps, as an explicit re-run, never an automatic one. The other 
 spread, an unusable copy of another kind) split as above.
 
 **An unusable copy (R-633, closing RQ-604).** A copy is unusable iff its `state ∈ {sim_failed, decode_failed}` or its
-`budget_exhausted` bit is set: a bit test on the copy's `sample_descriptor` `state` (payload §2) and its `budget_word`
+`budget_exhausted` bit is set: a bit test on the copy's `sample_descriptor` `state` (payload §2) and its `budget_bits`
 (R-603, placed by TASK-M3-41, REQ-PAY-110). So the second undetermined case of `unresolved(f)` above is "some copy of
 `f` is unusable", and "an unusable copy of another kind" is a copy whose `state` is `sim_failed` or `decode_failed`;
 a budget-exhausted copy is the kind the paragraph above takes out of the split.

@@ -410,6 +410,9 @@ fn needs(field: &str, tier: Tier) -> Option<(Vec<&'static str>, Vec<char>)> {
         | "is_failed"
         | "is_finished" => st(&["packed_a"]),
         "dE_max" | "dLz_max" => st(&["packed_b"]),
+        // R-603's budget word and R-605's regularised drift (payload §1, §2; TASK-M3-41)
+        "budget_exhausted" | "floor_hits" | "cap_hits" => st(&["budget_bits"]),
+        "dE_reg_final" | "dE_reg_max" => st(&["dE_reg"]),
         "t_end_step"
         | "t_dmin_step"
         | "t_end_fraction"
@@ -745,7 +748,7 @@ negative_control!(
 /// Payload §1's stored members, in order (the u16 pair is the Rust `closure_step`, `_reserved`; the collision floor's
 /// record `coll_floor_bits` last, R-973, TASK-M3-71; the `_`-named members, `_reserved` and the escape rule's lagged
 /// n̂ register `_nhat_lag_0..2`, are [`RESERVED_1`]).
-const PAYLOAD_1: [&str; 17] = [
+const PAYLOAD_1: [&str; 19] = [
     "r",
     "p",
     "r_sh",
@@ -760,6 +763,8 @@ const PAYLOAD_1: [&str; 17] = [
     "packed_b",
     "times",
     "total_substeps",
+    "budget_bits",
+    "dE_reg",
     "closure_min",
     "closure_step",
     "coll_floor_bits",
@@ -1064,7 +1069,8 @@ fn stored(s: &Sample, tier: Tier) -> Vec<u32> {
         }
     }
     v.extend([s.s, s.theta, s.mean_y, s.c_ty, s.e_0, s.lz_0].map(f32::to_bits));
-    v.extend([s.packed_a, s.packed_b, s.times, s.total, 0, 0]);
+    // `budget_bits` and `dE_reg` zero after `total_substeps` (TASK-M3-41), then `closure_min` and the u16 pair
+    v.extend([s.packed_a, s.packed_b, s.times, s.total, 0, 0, 0, 0]);
     // `coll_floor_bits`, then `_nhat_lag_0..2` (payload §1)
     v.extend([0, 0, 0, 0]);
     v

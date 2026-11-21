@@ -151,34 +151,29 @@ fn base_plants(v: f32) -> Vec<(String, SimStateBase)> {
     out
 }
 
-/// A binary16 NaN (quiet, payload 1) and the three halves it can be planted in.
+/// A binary16 NaN (quiet, payload 1) and the one half it can be planted in, `d_min`'s.
 const F16_NAN: u32 = 0x7E01;
 
 fn half_plants() -> Vec<(String, SimStateBase)> {
     let clean = SimStateBase::default();
-    vec![
-        (
-            "packed_a.d_min".into(),
-            SimStateBase {
-                packed_a: F16_NAN << 16,
-                ..clean
-            },
-        ),
-        (
-            "packed_b.dE_max".into(),
-            SimStateBase {
-                packed_b: F16_NAN,
-                ..clean
-            },
-        ),
-        (
-            "packed_b.dLz_max".into(),
-            SimStateBase {
-                packed_b: F16_NAN << 16,
-                ..clean
-            },
-        ),
-    ]
+    vec![(
+        "packed_a.d_min".into(),
+        SimStateBase {
+            packed_a: F16_NAN << 16,
+            ..clean
+        },
+    )]
+}
+
+/// The drift latches' `log16` halves (payload §2; R-632, R-605) hold no NaN at all: every one of the 2¹⁶ codes reads
+/// back as a number, so there is nothing for the scanner to plant there.
+fn check_log16_has_no_nan() {
+    for h in 0..=u16::MAX {
+        assert!(
+            !kernel::payload::log16_to_f32(h).is_nan(),
+            "the log16 code {h:#06x} reads back NaN"
+        );
+    }
 }
 
 /// The scanner finds a NaN planted in every float, by its name, and only there; it finds none in `±∞`, which is no NaN.
@@ -199,19 +194,20 @@ fn check_scanner(plants: Vec<(String, SimStateBase)>, nan: bool) {
 
 #[test]
 fn no_nan_in_storage_scanner_sees_every_float() {
-    // 6 + 6 phase-state components (three 2-vectors each), 10 scalars, 3 f16 halves; the FTLE tier adds the shadow's
-    // 12.
+    // 6 + 6 phase-state components (three 2-vectors each), 10 scalars, 5 16-bit halves (`d_min`, `packed_b`'s two and
+    // `dE_reg`'s two, TASK-M3-41); the FTLE tier adds the shadow's 12.
     assert_eq!(
         count(&SimStateBase::default()),
-        25,
+        27,
         "the base tier's floats"
     );
     assert_eq!(
         count(&SimStateFTLE::default()),
-        37,
+        39,
         "the FTLE tier's floats"
     );
-    assert_eq!(count(&SimStateBaseOf::<f64>::default()), 25, "at f64");
+    assert_eq!(count(&SimStateBaseOf::<f64>::default()), 27, "at f64");
+    check_log16_has_no_nan();
     for nan in [
         f32::NAN,
         -f32::NAN,
@@ -267,6 +263,10 @@ negative_control!(
 
 // ── The failed-state values (payload §1's table) ─────────────────────────────────────────────────────────────────────
 
+/// The budget word a poisoned sample carries: the exhausted bit, 5 floor hits and 3 cap hits, the counts a failed
+/// run keeps (payload §1's failed-state table).
+const POISONED_BUDGET_BITS: u32 = 1 | (5 << 1) | (3 << 16);
+
 /// A sample with every f32 field `v`, the packed halves NaN, and the integer words set, as a march gone wrong might
 /// leave it.
 fn poisoned(v: f32) -> SimStateBase {
@@ -283,6 +283,8 @@ fn poisoned(v: f32) -> SimStateBase {
         packed_b: F16_NAN | (F16_NAN << 16),
         times: 7 | (5 << 16),
         total_substeps: 31,
+        budget_bits: POISONED_BUDGET_BITS,
+        dE_reg: 0x3f9d_bb93,
         closure_min: v,
         closure_step: 4,
         _reserved: 0xFFFF,
@@ -331,6 +333,26 @@ negative_control!(
     })
 );
 
+negative_control!(
+    no_nan_in_storage_failed_state_values_regularised_drift,
+    "a sim_failed writer that keeps dE_reg as given",
+    expected = "the regularised drift, both halves 0.0",
+    check_failed_state_values(|s, d| SimStateBase {
+        dE_reg: s.dE_reg,
+        ..sim_failed(s, d)
+    })
+);
+
+negative_control!(
+    no_nan_in_storage_failed_state_values_budget_word,
+    "a sim_failed writer that zeroes budget_bits",
+    expected = "the budget word is kept",
+    check_failed_state_values(|s, d| SimStateBase {
+        budget_bits: 0,
+        ..sim_failed(s, d)
+    })
+);
+
 /// `write`'s failed samples against payload §1's table: from samples poisoned NaN and `±∞`, from a finite sample, and
 /// `decode_failed`'s, at f32 and f64.
 fn check_failed_state_values(write: fn(SimStateBase, u32) -> SimStateBase) {
@@ -364,6 +386,14 @@ fn check_failed_state_values(write: fn(SimStateBase, u32) -> SimStateBase) {
                 (tm_t_end_step(s.times), s.total_substeps, s.closure_step),
                 (7, 31, 4),
                 "{what}: the counts up to the failure are kept"
+            );
+            assert_eq!(
+                s.budget_bits, POISONED_BUDGET_BITS,
+                "{what}: the budget word is kept"
+            );
+            assert_eq!(
+                s.dE_reg, 0,
+                "{what}: the regularised drift, both halves 0.0"
             );
             assert_eq!(write(s, detail), s, "{what}: written twice");
         }

@@ -1,0 +1,8 @@
+{
+  "gate": "step-budget",
+  "inputs": ["binds.json", "clears.json"],
+  "measurement": {
+    "requirement": "REQ-INT-103",
+    "ruling": "R-71"
+  }
+}

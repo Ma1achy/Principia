@@ -1,0 +1,5 @@
+{
+  "description": "The other arm: the same march under a budget of 10^8 steps at rate 0, far above its count, does not run out, so the control's verdict follows the budget, not the march.",
+  "n_min": 100000000,
+  "expected": "fail"
+}

@@ -258,7 +258,7 @@ fn check_signed(states: &[(Entry, RangeState)], want: &[(&str, &[&str])]) {
 }
 
 /// R-426's declarations, and the fix round's: each field and what its citation names.
-const SIGNED_SOURCES: [(&str, &[&str]); 8] = [
+const SIGNED_SOURCES: [(&str, &[&str]); 9] = [
     ("S", &["R-423", "signed at finite time"]),
     ("ftle", &["R-423", "signed at finite time"]),
     ("diffusion", &["R-423", "signed at finite time"]),
@@ -267,6 +267,10 @@ const SIGNED_SOURCES: [(&str, &[&str]); 8] = [
     ("C_ty", &["R-423", "C_ty = diffusion · C_tt(n)", "n ≥ 2"]),
     ("energy_drift", &["§3.8's worked entry", "§3.4", "signed"]),
     ("Lz_drift", &["§3.8's worked entry", "§3.4", "signed"]),
+    (
+        "dE_reg_final",
+        &["dd_simstate_payload §1, §5", "signed", "R-605"],
+    ),
 ];
 
 #[test]

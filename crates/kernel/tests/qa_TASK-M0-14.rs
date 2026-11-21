@@ -31,6 +31,8 @@ fn ftle_layout<R: PayloadReal>() -> (Vec<(&'static str, usize)>, usize, usize) {
         ("packed_b", offset_of!(S<R>, packed_b)),
         ("times", offset_of!(S<R>, times)),
         ("total_substeps", offset_of!(S<R>, total_substeps)),
+        ("budget_bits", offset_of!(S<R>, budget_bits)),
+        ("dE_reg", offset_of!(S<R>, dE_reg)),
         ("closure_min", offset_of!(S<R>, closure_min)),
         ("closure_step", offset_of!(S<R>, closure_step)),
         ("_reserved", offset_of!(S<R>, _reserved)),
@@ -58,6 +60,8 @@ fn base_layout<R: PayloadReal>() -> (Vec<(&'static str, usize)>, usize, usize) {
         ("packed_b", offset_of!(S<R>, packed_b)),
         ("times", offset_of!(S<R>, times)),
         ("total_substeps", offset_of!(S<R>, total_substeps)),
+        ("budget_bits", offset_of!(S<R>, budget_bits)),
+        ("dE_reg", offset_of!(S<R>, dE_reg)),
         ("closure_min", offset_of!(S<R>, closure_min)),
         ("closure_step", offset_of!(S<R>, closure_step)),
         ("_reserved", offset_of!(S<R>, _reserved)),
@@ -69,48 +73,54 @@ fn base_layout<R: PayloadReal>() -> (Vec<(&'static str, usize)>, usize, usize) {
     (offsets, size_of::<S<R>>(), align_of::<S<R>>())
 }
 
-/// dd_simstate_payload §1's f32 `SimStateFTLE` (the WGSL block: 48 + 48 + 16 + 8 + 12 + 4 + 8 + 4 + 12 = 160 B,
+/// dd_simstate_payload §1's f32 `SimStateFTLE` (the WGSL block: 48 + 48 + 16 + 8 + 12 + 4 + 8 + 8 + 4 + 12 = 168 B,
+/// with the budget word and the regularised drift at 136 and 140, TASK-M3-41, the rest 8 B later than the 160 B form
+/// before them, which was
 /// aligned to 8, the last 16 B the collision floor's record, `coll_floor_bits` at 144, §1's recheck on the collision
 /// floor's record, R-973, TASK-M3-71, and the escape rule's lagged n̂ register, `_nhat_lag_0..2` at 148, 152 and 156,
 /// three Reals in place of the 4 B of padding that stood at 148, TASK-M3-12; 152 B before the register, 144 B before
 /// the record).
-const FTLE_F32: ([usize; 21], usize, usize) = (
+const FTLE_F32: ([usize; 23], usize, usize) = (
     [
-        0, 24, 48, 72, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 142, 144, 148,
-        152, 156,
+        0, 24, 48, 72, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 148, 150,
+        152, 156, 160, 164,
     ],
-    160,
+    168,
     8,
 );
-/// §1's f32 `SimStateBase`: the same less the 48 B shadow, 112 B (`coll_floor_bits` at 96, `_nhat_lag_0..2` at 100,
+/// §1's f32 `SimStateBase`: the same less the 48 B shadow, 120 B (112 B before the two words, with `_nhat_lag_0..2` at 100,
 /// 104 and 108; 104 B before the lagged register, 96 B before the collision floor's record).
-const BASE_F32: ([usize; 19], usize, usize) = (
+const BASE_F32: ([usize; 21], usize, usize) = (
     [
-        0, 24, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 94, 96, 100, 104, 108,
+        0, 24, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 102, 104, 108, 112, 116,
     ],
-    112,
+    120,
     8,
 );
-/// §1 "The f64 layout": `SimStateFTLE` at `r` 0 … `_reserved` 266, `coll_floor_bits` 268, which ends on the 8 B
+/// §1 "The f64 layout": `SimStateFTLE` at `r` 0 … `budget_bits` 256, `dE_reg` 260 (TASK-M3-41), `_reserved` 274,
+/// `coll_floor_bits` 276, ending on the 8 B boundary at 280, the lagged register at 280, 288 and 296, the struct
+/// 304 B with an empty `_tail` (296 B before the two words: `_reserved` 266, `coll_floor_bits` 268, which ends on the 8 B
 /// boundary at 272, so the lagged register's three f64s follow it with no hole, `_nhat_lag_0..2` at 272, 280 and 288,
 /// and the struct ends at 296 B, aligned to 8, with an empty `_tail` (280 B with `_pad` at 272 and a 4 B `_tail` at
 /// 276 before the register; 272 B before the collision floor's record).
-const FTLE_F64: ([usize; 21], usize, usize) = (
+const FTLE_F64: ([usize; 23], usize, usize) = (
     [
-        0, 48, 96, 144, 192, 200, 208, 216, 224, 232, 240, 244, 248, 252, 256, 264, 266, 268, 272,
-        280, 288,
+        0, 48, 96, 144, 192, 200, 208, 216, 224, 232, 240, 244, 248, 252, 256, 260, 264, 272, 274,
+        276, 280, 288, 296,
     ],
-    296,
+    304,
     8,
 );
-/// §1 "The f64 layout": `SimStateBase` "the same less `r_sh` and `p_sh`, 96 B earlier from `S`": `coll_floor_bits`
+/// §1 "The f64 layout": `SimStateBase` "the same less `r_sh` and `p_sh`, 96 B earlier from `S`": 208 B with the two
+/// words at 160 and 164 (TASK-M3-41; before them `coll_floor_bits`
 /// at 172, `_nhat_lag_0..2` at 176, 184 and 192, 200 B with an empty `_tail` (184 B with a 4 B `_tail` at 180 before
 /// the lagged register; 176 B before the collision floor's record).
-const BASE_F64: ([usize; 19], usize, usize) = (
+const BASE_F64: ([usize; 21], usize, usize) = (
     [
-        0, 48, 96, 104, 112, 120, 128, 136, 144, 148, 152, 156, 160, 168, 170, 172, 176, 184, 192,
+        0, 48, 96, 104, 112, 120, 128, 136, 144, 148, 152, 156, 160, 164, 168, 176, 178, 180, 184,
+        192, 200,
     ],
-    200,
+    208,
     8,
 );
 
@@ -146,7 +156,7 @@ fn qa_payload_layouts_at_f32_and_f64_are_payload_s1() {
             offset_of!(SimStateFTLEOf<f32>, _tail),
             offset_of!(SimStateBaseOf<f32>, _tail),
         ],
-        [296, 200, 160, 112],
+        [304, 208, 168, 120],
         "the declared tail is not where dd_simstate_payload §1 puts it"
     );
 }
@@ -176,6 +186,8 @@ fn ftle_member_sizes<R: PayloadReal>() -> Vec<(&'static str, usize)> {
         ("packed_b", size_of_val(&s.packed_b)),
         ("times", size_of_val(&s.times)),
         ("total_substeps", size_of_val(&s.total_substeps)),
+        ("budget_bits", size_of_val(&s.budget_bits)),
+        ("dE_reg", size_of_val(&s.dE_reg)),
         ("closure_min", size_of_val(&s.closure_min)),
         ("closure_step", size_of_val(&s.closure_step)),
         ("_reserved", size_of_val(&s._reserved)),
@@ -203,6 +215,8 @@ fn base_member_sizes<R: PayloadReal>() -> Vec<(&'static str, usize)> {
         ("packed_b", size_of_val(&s.packed_b)),
         ("times", size_of_val(&s.times)),
         ("total_substeps", size_of_val(&s.total_substeps)),
+        ("budget_bits", size_of_val(&s.budget_bits)),
+        ("dE_reg", size_of_val(&s.dE_reg)),
         ("closure_min", size_of_val(&s.closure_min)),
         ("closure_step", size_of_val(&s.closure_step)),
         ("_reserved", size_of_val(&s._reserved)),
@@ -354,6 +368,8 @@ fn qa_payload_width_follows_the_real() {
             ("packed_b", 4),
             ("times", 4),
             ("total_substeps", 4),
+            ("budget_bits", 4),
+            ("dE_reg", 4),
             ("closure_step", 2),
             ("_reserved", 2),
             ("coll_floor_bits", 4)
@@ -383,11 +399,12 @@ negative_control!(
 );
 
 /// §1 "Layout at a `Real` of `w` bytes": a struct storing `reals` `Real`s, the lagged register's three among them,
-/// ends at `reals·w + 24` (16 B of u32s, 4 B of u16s and the collision floor's 4 B record; `(reals − 3)·w + 28`
+/// ends at `reals·w + 32` (24 B of u32s, the budget word and the regularised drift among them, TASK-M3-41, 4 B of
+/// u16s and the collision floor's 4 B record; `reals·w + 24` before the two words; `(reals − 3)·w + 28`
 /// before the register replaced the record's 4 B of padding, TASK-M3-12, and `(reals − 3)·w + 20` before the record,
 /// R-973) and is aligned to 8 or to the `Real`'s alignment if greater.
 fn s1_size(reals: usize, w: usize, align: usize) -> usize {
-    (reals * w + 24).next_multiple_of(align.max(8))
+    (reals * w + 32).next_multiple_of(align.max(8))
 }
 
 /// A generated row: the `Real`'s name, size and alignment, and each struct's `(name, size, alignment)` at it.
@@ -413,8 +430,9 @@ fn check_rows(rows: &[Row]) {
 }
 
 /// REQ-PAY-017 / REQ-PAY-087: the generated precision rows are f32, f64 and the DoubleF64 stub (a pair of f64s, 16 B
-/// aligned to 8; §1 "The DoubleF64 stub row"); each row's sizes are §1's function of its width (568 B and 376 B for
-/// DoubleF64 with the lagged register's three Reals in place of 4 B of padding; 528 B and 336 B before it, with the
+/// aligned to 8; §1 "The DoubleF64 stub row"); each row's sizes are §1's function of its width (576 B and 384 B for
+/// DoubleF64 with the budget word and the regularised drift, TASK-M3-41; 568 B and 376 B before them, with the
+/// lagged register's three Reals in place of 4 B of padding; 528 B and 336 B before it, with the
 /// collision floor's 8 B; 520 B and 328 B before that); and the
 /// instantiated rows are the instantiated types' sizes.
 #[test]
@@ -439,8 +457,8 @@ fn qa_payload_rows_are_the_width_function() {
     check_rows(&rows);
     assert_eq!(
         (rows[2].3[0].1, rows[2].3[1].1),
-        (568, 376),
-        "the DoubleF64 row is not §1's 568 B and 376 B"
+        (576, 384),
+        "the DoubleF64 row is not §1's 576 B and 384 B"
     );
     assert_eq!(
         [rows[0].3, rows[1].3],

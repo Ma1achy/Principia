@@ -81,31 +81,51 @@ fn probe(alter: Option<&str>) -> Probe {
     );
     s.packed_b = insert(
         s.packed_b,
-        u32::from(f32_to_f16_bits(pick(alter, "dE_max", 5.25, 5.5))),
+        u32::from(f32_to_log16(pick(alter, "dE_max", 5.25, 5.5))),
         0,
         16,
     );
     s.packed_b = insert(
         s.packed_b,
-        u32::from(f32_to_f16_bits(pick(alter, "dLz_max", 5.5, 5.75))),
+        u32::from(f32_to_log16(pick(alter, "dLz_max", 5.5, 5.75))),
+        16,
+        16,
+    );
+    s.budget_bits = insert(s.budget_bits, pick(alter, "budget_exhausted", 1, 0), 0, 1);
+    s.budget_bits = insert(
+        s.budget_bits,
+        pick(alter, "floor_hits", 16384, 16385),
+        1,
+        15,
+    );
+    s.budget_bits = insert(s.budget_bits, pick(alter, "cap_hits", 16384, 16385), 16, 15);
+    s.dE_reg = insert(
+        s.dE_reg,
+        u32::from(f32_to_log16(pick(alter, "dE_reg_final", 6.5, 6.75))),
+        0,
+        16,
+    );
+    s.dE_reg = insert(
+        s.dE_reg,
+        u32::from(f32_to_log16(pick(alter, "dE_reg_max", 6.75, 7.0))),
         16,
         16,
     );
     s.times = insert(s.times, pick(alter, "t_end_step", 32768, 32769), 0, 16);
     s.times = insert(s.times, pick(alter, "t_dmin_step", 32768, 32769), 16, 16);
     s.coll_floor_bits = insert(s.coll_floor_bits, pick(alter, "coll_floor", 73, 74), 0, 8);
-    ic.m0 = pick(alter, "m0", 7.75, 8.0);
-    ic.m1 = pick(alter, "m1", 8.0, 8.25);
-    ic.m2 = pick(alter, "m2", 8.25, 8.5);
-    ic.q_mass = pick(alter, "q_mass", 8.5, 8.75);
-    ic.rho_mag = pick(alter, "rho_mag", 8.75, 9.0);
-    ic.lambda_mag = pick(alter, "lambda_mag", 9.0, 9.25);
-    ic.rho_ratio = pick(alter, "rho_ratio", 9.25, 9.5);
-    ic.rho_angle = pick(alter, "rho_angle", 9.5, 9.75);
-    ic.K_0 = pick(alter, "K_0", 9.75, 10.0);
-    ic.V_0 = pick(alter, "V_0", 10.0, 10.25);
-    ic.virial_ratio = pick(alter, "virial_ratio", 10.25, 10.5);
-    ic.r_min_pair_0 = pick(alter, "r_min_pair_0", 10.5, 10.75);
+    ic.m0 = pick(alter, "m0", 9.0, 9.25);
+    ic.m1 = pick(alter, "m1", 9.25, 9.5);
+    ic.m2 = pick(alter, "m2", 9.5, 9.75);
+    ic.q_mass = pick(alter, "q_mass", 9.75, 10.0);
+    ic.rho_mag = pick(alter, "rho_mag", 10.0, 10.25);
+    ic.lambda_mag = pick(alter, "lambda_mag", 10.25, 10.5);
+    ic.rho_ratio = pick(alter, "rho_ratio", 10.5, 10.75);
+    ic.rho_angle = pick(alter, "rho_angle", 10.75, 11.0);
+    ic.K_0 = pick(alter, "K_0", 11.0, 11.25);
+    ic.V_0 = pick(alter, "V_0", 11.25, 11.5);
+    ic.virial_ratio = pick(alter, "virial_ratio", 11.5, 11.75);
+    ic.r_min_pair_0 = pick(alter, "r_min_pair_0", 11.75, 12.0);
     word[3] = insert(word[3], pick(alter, "payload", 16777216, 16777217), 0, 25);
     word[3] = insert(word[3], pick(alter, "length", 38, 39), 25, 7);
     let params = ReadParams {
@@ -626,6 +646,116 @@ negative_control!(
     check_dlz_max(&probe(Some("dLz_max")))
 );
 
+/// `budget_exhausted`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_budget_exhausted(p: &Probe) {
+    let read = read(p);
+    expect(
+        read.budget_exhausted,
+        true,
+        "`budget_exhausted` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_budget_exhausted() {
+    check_budget_exhausted(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_budget_exhausted,
+    "a probe storing another `budget_exhausted` reads another `budget_exhausted`",
+    expected = "does not read back the value stored",
+    check_budget_exhausted(&probe(Some("budget_exhausted")))
+);
+
+/// `floor_hits`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_floor_hits(p: &Probe) {
+    let read = read(p);
+    expect(
+        read.floor_hits,
+        16384,
+        "`floor_hits` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_floor_hits() {
+    check_floor_hits(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_floor_hits,
+    "a probe storing another `floor_hits` reads another `floor_hits`",
+    expected = "does not read back the value stored",
+    check_floor_hits(&probe(Some("floor_hits")))
+);
+
+/// `cap_hits`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_cap_hits(p: &Probe) {
+    let read = read(p);
+    expect(
+        read.cap_hits,
+        16384,
+        "`cap_hits` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_cap_hits() {
+    check_cap_hits(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_cap_hits,
+    "a probe storing another `cap_hits` reads another `cap_hits`",
+    expected = "does not read back the value stored",
+    check_cap_hits(&probe(Some("cap_hits")))
+);
+
+/// `dE_reg_final`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_de_reg_final(p: &Probe) {
+    let read = read(p);
+    expect(
+        read.dE_reg_final.to_bits(),
+        6.5_f32.to_bits(),
+        "`dE_reg_final` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_de_reg_final() {
+    check_de_reg_final(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_de_reg_final,
+    "a probe storing another `dE_reg_final` reads another `dE_reg_final`",
+    expected = "does not read back the value stored",
+    check_de_reg_final(&probe(Some("dE_reg_final")))
+);
+
+/// `dE_reg_max`, read through the Rust twin of its view's accessor, is the value the probe stored.
+fn check_de_reg_max(p: &Probe) {
+    let read = read(p);
+    expect(
+        read.dE_reg_max.to_bits(),
+        6.75_f32.to_bits(),
+        "`dE_reg_max` does not read back the value stored",
+    );
+}
+
+#[test]
+fn catalogue_view_de_reg_max() {
+    check_de_reg_max(&probe(None));
+}
+
+negative_control!(
+    catalogue_view_de_reg_max,
+    "a probe storing another `dE_reg_max` reads another `dE_reg_max`",
+    expected = "does not read back the value stored",
+    check_de_reg_max(&probe(Some("dE_reg_max")))
+);
+
 /// `t_end_step`, read through the Rust twin of its view's accessor, is the value the probe stored.
 fn check_t_end_step(p: &Probe) {
     let read = read(p);
@@ -740,8 +870,8 @@ fn check_energy_drift(p: &Probe) {
         "`energy_drift` is not its derived accessor's value",
     );
     expect(
-        suspect_energy(read.dE_max, read.E_0, 1e-6_f32),
-        suspect_energy(pb_dE_max(s.packed_b), s.E_0, 1e-6_f32),
+        suspect_energy(read.dE_reg_max, read.E_0, 1e-6_f32),
+        suspect_energy(dr_dE_reg_max(s.dE_reg), s.E_0, 1e-6_f32),
         "`energy_drift`'s energy-suspect predicate is not its derived accessor's value",
     );
     expect(
@@ -795,8 +925,8 @@ fn check_lz_drift(p: &Probe) {
         "`Lz_drift` is not its derived accessor's value",
     );
     expect(
-        suspect_energy(read.dE_max, read.E_0, 1e-6_f32),
-        suspect_energy(pb_dE_max(s.packed_b), s.E_0, 1e-6_f32),
+        suspect_energy(read.dE_reg_max, read.E_0, 1e-6_f32),
+        suspect_energy(dr_dE_reg_max(s.dE_reg), s.E_0, 1e-6_f32),
         "`Lz_drift`'s energy-suspect predicate is not its derived accessor's value",
     );
     expect(
@@ -896,7 +1026,7 @@ fn check_m0(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.m0.to_bits(),
-        7.75_f32.to_bits(),
+        9.0_f32.to_bits(),
         "`m0` does not read back the value stored",
     );
 }
@@ -918,7 +1048,7 @@ fn check_m1(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.m1.to_bits(),
-        8.0_f32.to_bits(),
+        9.25_f32.to_bits(),
         "`m1` does not read back the value stored",
     );
 }
@@ -940,7 +1070,7 @@ fn check_m2(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.m2.to_bits(),
-        8.25_f32.to_bits(),
+        9.5_f32.to_bits(),
         "`m2` does not read back the value stored",
     );
 }
@@ -962,7 +1092,7 @@ fn check_q_mass(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.q_mass.to_bits(),
-        8.5_f32.to_bits(),
+        9.75_f32.to_bits(),
         "`q_mass` does not read back the value stored",
     );
 }
@@ -984,7 +1114,7 @@ fn check_rho_mag(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.rho_mag.to_bits(),
-        8.75_f32.to_bits(),
+        10.0_f32.to_bits(),
         "`rho_mag` does not read back the value stored",
     );
 }
@@ -1006,7 +1136,7 @@ fn check_lambda_mag(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.lambda_mag.to_bits(),
-        9.0_f32.to_bits(),
+        10.25_f32.to_bits(),
         "`lambda_mag` does not read back the value stored",
     );
 }
@@ -1028,7 +1158,7 @@ fn check_rho_ratio(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.rho_ratio.to_bits(),
-        9.25_f32.to_bits(),
+        10.5_f32.to_bits(),
         "`rho_ratio` does not read back the value stored",
     );
 }
@@ -1050,7 +1180,7 @@ fn check_rho_angle(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.rho_angle.to_bits(),
-        9.5_f32.to_bits(),
+        10.75_f32.to_bits(),
         "`rho_angle` does not read back the value stored",
     );
 }
@@ -1072,7 +1202,7 @@ fn check_k_0(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.K_0.to_bits(),
-        9.75_f32.to_bits(),
+        11.0_f32.to_bits(),
         "`K_0` does not read back the value stored",
     );
 }
@@ -1094,7 +1224,7 @@ fn check_v_0(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.V_0.to_bits(),
-        10.0_f32.to_bits(),
+        11.25_f32.to_bits(),
         "`V_0` does not read back the value stored",
     );
 }
@@ -1116,7 +1246,7 @@ fn check_virial_ratio(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.virial_ratio.to_bits(),
-        10.25_f32.to_bits(),
+        11.5_f32.to_bits(),
         "`virial_ratio` does not read back the value stored",
     );
 }
@@ -1138,7 +1268,7 @@ fn check_r_min_pair_0(p: &Probe) {
     let ic = &p.ic;
     expect(
         ic.r_min_pair_0.to_bits(),
-        10.5_f32.to_bits(),
+        11.75_f32.to_bits(),
         "`r_min_pair_0` does not read back the value stored",
     );
 }

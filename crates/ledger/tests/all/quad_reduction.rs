@@ -681,6 +681,7 @@ fn type_name(ty: &FieldType) -> String {
         FieldType::F32 => "f32".to_owned(),
         FieldType::F16 => "f16".to_owned(),
         FieldType::F16Pair => "f16-pair".to_owned(),
+        FieldType::Log16 => "log16".to_owned(),
         FieldType::Fixed16 => "fixed16".to_owned(),
         FieldType::Vector { component, k } => format!("vector({}, {k})", type_name(component)),
     }

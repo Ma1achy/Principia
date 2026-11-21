@@ -758,17 +758,33 @@ pub const LOG_FLOOR_D_MIN: ConstantBuilder = confirmed("log_floor_d_min", 1.0 / 
 /// `dE_max`'s floor, an absolute energy in the stored field's normalised units (`dE_max = max_t |ΔE(t)|`, an absolute
 /// maximum, payload §2; R-401's note, R-403): 2⁻²⁰ ≈ 9.54e-7, the power of two nearest `eps_E`'s default 10⁻⁶
 /// (integrator contract Part 3), the floor the drift `energy_drift`'s view takes, so the latch and the drift compress
-/// at the same magnitude. The f16 latch holds it as 16 subnormal steps of 2⁻²⁴: the floor and the values below
-/// 2⁻¹⁴ are f16 subnormals, which a GPU that flushes them on unpack draws at raw 0 (payload §1; R-271).
+/// at the same magnitude. The latch is `log16` (payload §2; R-632), which holds values down to 2⁻⁹⁶ in its 8-bit
+/// fraction with no subnormals, so a value below the floor reads back as itself and draws at the floor.
+/// *Was:* "The f16 latch holds it as 16 subnormal steps of 2⁻²⁴: the floor and the values below 2⁻¹⁴ are f16
+/// subnormals, which a GPU that flushes them on unpack draws at raw 0 (payload §1; R-271)."
 pub const LOG_FLOOR_DE_MAX: ConstantBuilder =
     confirmed("log_floor_dE_max", 1.0 / 1_048_576.0, R428);
 
 /// `dLz_max`'s floor, an absolute angular momentum in the stored field's normalised units
 /// (`dLz_max = max_t |ΔL_z(t)|`, payload §2; R-401's note, R-403): 2⁻²⁰ ≈ 9.54e-7, the power of two nearest `eps_L`'s
-/// default 10⁻⁶ (integrator contract Part 3), as [`LOG_FLOOR_DE_MAX`] is `eps_E`'s, and subnormal in the f16 latch
-/// as that floor is.
+/// default 10⁻⁶ (integrator contract Part 3), as [`LOG_FLOOR_DE_MAX`] is `eps_E`'s, held in the `log16` latch as that
+/// floor is (R-632; *was:* "and subnormal in the f16 latch as that floor is").
 pub const LOG_FLOOR_DLZ_MAX: ConstantBuilder =
     confirmed("log_floor_dLz_max", 1.0 / 1_048_576.0, R428);
+
+/// `dE_reg_max`'s floor, the regularised drift's maximum, an absolute energy as `dE_max` is (payload §1, §2; R-605):
+/// 2⁻²⁰ ≈ 9.54e-7, [`LOG_FLOOR_DE_MAX`]'s value, so the two energies' latches compress at the same magnitude and a
+/// view of either reads alike. Its own entry, as R-401 gives each log field one. Proposed by TASK-M3-41 (R-71),
+/// provisional until the M3 gate, where the human confirms it with the energy-suspect threshold (REQ-PAY-111). The
+/// regularised drift sits far below it at round-off (2e-13 to 6e-13 at f64, 3e-5 to 6e-5 at f32 on dd_integrator §5's
+/// tests 2 and 7): the floor places the suspect band, not the round-off, which the view draws at its lowest colour.
+pub const LOG_FLOOR_DE_REG_MAX: ConstantBuilder = proposed(
+    "log_floor_dE_reg_max",
+    1.0 / 1_048_576.0,
+    Admissibility::CanonicalUnits,
+    "REQ-PAY-111",
+    "M3",
+);
 
 /// `closure_min`'s floor, a dimensionless chord `|n̂(t) − n̂(0)|` on the unit shape sphere: 2⁻²³ ≈ 1.19e-7, f32's
 /// spacing on `[1, 2)`, the floor of a difference of two O(1) f32 states, where closure bottoms out on the f32 GPU
@@ -809,9 +825,10 @@ pub const LOG_FLOOR_R_MIN_PAIR_0: ConstantBuilder = proposed(
 /// Each log-scaled field with no ledger `floor`, by its ledger name, with its floor's register entry: the numeric view
 /// template reads `ε_f` from here (`crate::gen::numeric`), as TASK-M7-05's `log` compaction will ("its R-401 display
 /// floor"). A log field not listed has no floor of its own, and its view is refused (R-401: no default).
-pub const LOG_FLOORS: [(&str, ConstantBuilder); 6] = [
+pub const LOG_FLOORS: [(&str, ConstantBuilder); 7] = [
     ("d_min", LOG_FLOOR_D_MIN),
     ("dE_max", LOG_FLOOR_DE_MAX),
+    ("dE_reg_max", LOG_FLOOR_DE_REG_MAX),
     ("dLz_max", LOG_FLOOR_DLZ_MAX),
     ("closure_min", LOG_FLOOR_CLOSURE_MIN),
     ("rho_ratio", LOG_FLOOR_RHO_RATIO),
@@ -1793,6 +1810,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     SINC_BOUND,
     LOG_FLOOR_D_MIN,
     LOG_FLOOR_DE_MAX,
+    LOG_FLOOR_DE_REG_MAX,
     LOG_FLOOR_DLZ_MAX,
     LOG_FLOOR_CLOSURE_MIN,
     LOG_FLOOR_RHO_RATIO,

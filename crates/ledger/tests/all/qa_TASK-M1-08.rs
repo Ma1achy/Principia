@@ -260,7 +260,8 @@ fn check_view_lanes(views: &[(String, String)], word_fields: &[&str]) {
         // (R-928): the state `r` and `p`, and for the energy the `ICDescriptor` masses of `K + |V|`; and `state`, its
         // failed-sample gate (a failed sample's reference is a failed-state value, payload §1); and nothing else.
         if field == "energy_drift" || field == "Lz_drift" {
-            for latch in ["dE_max", "E_0", "dLz_max", "r", "p", "state"] {
+            // The energy predicate's latch is the regularised drift's, `dE_reg_max` (R-605; TASK-M3-41).
+            for latch in ["dE_reg_max", "E_0", "dLz_max", "r", "p", "state"] {
                 want.insert(("sample".to_owned(), latch.to_owned()));
             }
         }

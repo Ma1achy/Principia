@@ -113,7 +113,7 @@ fn check_payload(entries: &[Entry]) {
         .collect();
     assert_eq!(
         diverging,
-        ["E_0", "Lz_0", "energy_drift", "Lz_drift"],
+        ["E_0", "Lz_0", "dE_reg_final", "energy_drift", "Lz_drift"],
         "the diverging entries"
     );
     for (field, range) in [("K_0", NON_NEGATIVE), ("V_0", NON_POSITIVE)] {

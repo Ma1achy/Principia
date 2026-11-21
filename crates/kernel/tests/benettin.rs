@@ -118,39 +118,117 @@ fn bits6<R: P>(x: &[[R; 2]; 3]) -> Vec<u64> {
 }
 
 /// The sample's stored fields, every one the base tier has, as bits.
-fn sample_bits<R: P>(
-    r: &[[R; 2]; 3],
-    p: &[[R; 2]; 3],
-    scalars: [R; 6],
-    words: [u32; 4],
-    closure: (R, u16),
-) -> Vec<u64> {
-    let mut v = bits6(r);
-    v.extend(bits6(p));
-    v.extend(scalars.iter().map(|x| x.bits()));
-    v.extend(words.iter().map(|&w| u64::from(w)));
-    v.extend([closure.0.bits(), u64::from(closure.1)]);
+/// Every member of a base `SimState` but `S`, by its bits, in declaration order; the struct is destructured with no
+/// `..`, so a member the schema adds fails to compile here until it is compared.
+fn members<R: P>(b: &SimStateBaseOf<R>) -> Vec<u64> {
+    let SimStateBaseOf {
+        r,
+        p,
+        S: _,
+        theta,
+        mean_y,
+        C_ty,
+        E_0,
+        Lz_0,
+        packed_a,
+        packed_b,
+        times,
+        total_substeps,
+        budget_bits,
+        dE_reg,
+        closure_min,
+        closure_step,
+        _reserved,
+        coll_floor_bits,
+        _nhat_lag_0,
+        _nhat_lag_1,
+        _nhat_lag_2,
+        _tail: _,
+    } = *b;
+    let mut v = bits6(&r);
+    v.extend(bits6(&p));
+    v.extend(
+        [
+            theta,
+            mean_y,
+            C_ty,
+            E_0,
+            Lz_0,
+            closure_min,
+            _nhat_lag_0,
+            _nhat_lag_1,
+            _nhat_lag_2,
+        ]
+        .map(P::bits),
+    );
+    v.extend(
+        [
+            packed_a,
+            packed_b,
+            times,
+            total_substeps,
+            budget_bits,
+            dE_reg,
+            coll_floor_bits,
+        ]
+        .map(u64::from),
+    );
+    v.extend([u64::from(closure_step), u64::from(_reserved)]);
     v
 }
 
-fn base_bits<R: P>(b: &SimStateBaseOf<R>) -> Vec<u64> {
-    sample_bits(
-        &b.r,
-        &b.p,
-        [b.S, b.theta, b.mean_y, b.C_ty, b.E_0, b.Lz_0],
-        [b.packed_a, b.packed_b, b.times, b.total_substeps],
-        (b.closure_min, b.closure_step),
-    )
-}
-
-fn ftle_sample_bits<R: P>(s: &SimStateFTLEOf<R>) -> Vec<u64> {
-    sample_bits(
-        &s.r,
-        &s.p,
-        [R::default(), s.theta, s.mean_y, s.C_ty, s.E_0, s.Lz_0],
-        [s.packed_a, s.packed_b, s.times, s.total_substeps],
-        (s.closure_min, s.closure_step),
-    )
+/// The FTLE tier's base members, as [`members`] reads them; destructured with no `..` likewise.
+fn ftle_members<R: P>(s: &SimStateFTLEOf<R>) -> Vec<u64> {
+    let SimStateFTLEOf {
+        r,
+        p,
+        r_sh: _,
+        p_sh: _,
+        S: _,
+        theta,
+        mean_y,
+        C_ty,
+        E_0,
+        Lz_0,
+        packed_a,
+        packed_b,
+        times,
+        total_substeps,
+        budget_bits,
+        dE_reg,
+        closure_min,
+        closure_step,
+        _reserved,
+        coll_floor_bits,
+        _nhat_lag_0,
+        _nhat_lag_1,
+        _nhat_lag_2,
+        _tail: _,
+    } = *s;
+    members(&SimStateBaseOf {
+        r,
+        p,
+        S: R::default(),
+        theta,
+        mean_y,
+        C_ty,
+        E_0,
+        Lz_0,
+        packed_a,
+        packed_b,
+        times,
+        total_substeps,
+        budget_bits,
+        dE_reg,
+        closure_min,
+        closure_step,
+        _reserved,
+        coll_floor_bits,
+        _nhat_lag_0,
+        _nhat_lag_1,
+        _nhat_lag_2,
+        _tail: Default::default(),
+    })
 }
 
 /// dd test 11 on `orbit` at `R`, the pool's member taken by `member`.
@@ -162,8 +240,8 @@ where
     let s = integrate_ftle::<Yoshida4, R>(&ic, &key, CollisionRadius::none(), proposed());
     let b = integrate_detecting::<Yoshida4, R>(&ic, &key, CollisionRadius::none());
     assert_eq!(
-        ftle_sample_bits(&s),
-        base_bits(&b),
+        ftle_members(&s),
+        members(&b),
         "{}: the FTLE tier's sample differs from the base tier's: the shadow reached it",
         orbit.name
     );
@@ -208,8 +286,15 @@ negative_control!(
 type Writer = fn(&Benettin<f64, Absolute>, SimStateBaseOf<f64>) -> SimStateFTLEOf<f64>;
 
 /// `write` keeps every field of the sample's `SimState` and adds the shadow's `r_sh`, `p_sh` and `S`: each field is
-/// set to a value of its own, so a field dropped or crossed shows.
-fn check_write(write: Writer) {
+/// set to a value of its own, so a field dropped or crossed shows. With `failed`, the sample is `sim_failed` and the
+/// shadow stored is the failed one ([`kernel::driver::failure::failed_shadow`]): `r_sh`, `p_sh` the sample's own and
+/// `S` the failed mark, every other field kept as well.
+fn check_write(write: Writer, failed: bool) {
+    let packed_a = if failed {
+        set_state(18, STATE_SIM_FAILED)
+    } else {
+        18
+    };
     // A shadow that has marched and renormalised, so its momenta and `S` are not the zeros a dropped field reads.
     let (ic, key) = setup::<f64>(&burrau(), 5.0);
     let params = BenettinParams {
@@ -228,17 +313,35 @@ fn check_write(write: Writer) {
         C_ty: k(15),
         E_0: k(16),
         Lz_0: k(17),
-        packed_a: 18,
+        packed_a,
         packed_b: 19,
         times: 20,
         total_substeps: 21,
+        budget_bits: 26,
+        dE_reg: 27,
         closure_min: k(22),
         closure_step: 23,
         _reserved: 24,
         coll_floor_bits: 25,
-        ..SimStateBaseOf::default()
+        _nhat_lag_0: k(28),
+        _nhat_lag_1: k(29),
+        _nhat_lag_2: k(30),
+        _tail: Default::default(),
     };
     let s = write(&shadow, out);
+    assert!(
+        ftle_members(&s) == members(&out),
+        "the FTLE tier's SimState does not carry the sample's fields"
+    );
+    if failed {
+        assert!(
+            bits6(&s.r_sh) == bits6(&out.r)
+                && bits6(&s.p_sh) == bits6(&out.p)
+                && s.S.bits() == s_failed::<f64>().bits(),
+            "the failed sample's FTLE tier does not carry the failed shadow"
+        );
+        return;
+    }
     let sh = shadow.shadow(&State {
         m: ic.m,
         r: out.r,
@@ -249,39 +352,75 @@ fn check_write(write: Writer) {
         "the marched shadow's S or a momentum is zero, the value a dropped field reads"
     );
     assert!(
-        ftle_sample_bits(&s) == base_bits(&out)
-            && s._reserved == out._reserved
-            && s.coll_floor_bits == out.coll_floor_bits
-            && bits6(&s.r_sh) == bits6(&sh.r)
+        bits6(&s.r_sh) == bits6(&sh.r)
             && bits6(&s.p_sh) == bits6(&sh.p)
             && s.S.bits() == shadow.s_sum().bits(),
-        "the FTLE tier's SimState does not carry the sample's fields and the shadow's state and S"
+        "the FTLE tier's SimState does not carry the shadow's state and S"
     );
 }
 
 #[test]
 fn shadow_write() {
-    check_write(|b, out| b.write(out));
+    check_write(|b, out| b.write(out), false);
+}
+
+/// A `sim_failed` sample through the same writer: the failed shadow, and every base member kept, the budget word and
+/// the regularised drift included (payload §1's failed-state table).
+#[test]
+fn shadow_write_failed() {
+    check_write(|b, out| b.write(out), true);
 }
 
 negative_control!(
     shadow_write,
     "a writer that drops the sample's theta must fail",
     expected = "does not carry",
-    check_write(|b, out| SimStateFTLEOf {
-        theta: 0.0,
-        ..b.write(out)
-    })
+    check_write(
+        |b, out| SimStateFTLEOf {
+            theta: 0.0,
+            ..b.write(out)
+        },
+        false
+    )
 );
 
 negative_control!(
     shadow_write_floor,
     "a writer that drops the sample's coll_floor_bits must fail",
     expected = "does not carry",
-    check_write(|b, out| SimStateFTLEOf {
-        coll_floor_bits: 0,
-        ..b.write(out)
-    })
+    check_write(
+        |b, out| SimStateFTLEOf {
+            coll_floor_bits: 0,
+            ..b.write(out)
+        },
+        false
+    )
+);
+
+negative_control!(
+    shadow_write_regularised_drift,
+    "a writer that drops the sample's dE_reg, as this tier's writer once did, must fail",
+    expected = "does not carry the sample's fields",
+    check_write(
+        |b, out| SimStateFTLEOf {
+            dE_reg: 0,
+            ..b.write(out)
+        },
+        false
+    )
+);
+
+negative_control!(
+    shadow_write_failed,
+    "a failed-shadow writer that drops the sample's budget_bits must fail",
+    expected = "does not carry the sample's fields",
+    check_write(
+        |b, out| SimStateFTLEOf {
+            budget_bits: 0,
+            ..b.write(out)
+        },
+        true
+    )
 );
 
 // ── shadow_own_projection (REQ-INT-039) ─────────────────────────────────────────────────────────────────────────
@@ -1047,7 +1186,7 @@ fn check_only_watches(run: Run) {
     );
     let base = integrate_detecting::<Yoshida4, f64>(&ic, &key, radius);
     assert!(
-        ftle_sample_bits(&s) == base_bits(&base) && sd_state(s.packed_a) != STATE_COLLISION,
+        ftle_members(&s) == members(&base) && sd_state(s.packed_a) != STATE_COLLISION,
         "the shadow's terminal reached the sample"
     );
     let lambda = ftle_read(&s, &pair_params(), key.dt_macro);
@@ -1155,8 +1294,8 @@ fn check_failed_sum(write: Writer) {
             "n_renorm {n_renorm}: the failed sum's stored values are not the mark and the sample's state"
         );
         assert_eq!(
-            ftle_sample_bits(&s),
-            base_bits(&base),
+            ftle_members(&s),
+            members(&base),
             "n_renorm {n_renorm}: the shadow's failed sum reached the sample"
         );
         // Read at a nonzero `‖δ₀‖`, so only the mark makes the read NaN: without its clause, `S_FAILED + ln(0)`

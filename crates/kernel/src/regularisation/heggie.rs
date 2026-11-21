@@ -1024,6 +1024,7 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
     while go {
         if watch.finite(&q, &p) {
             if stepped {
+                cadence.regularised_drift(system.energy(&q, &p) - system.h);
                 let mut s = system.image(&q, &p);
                 let mut g = Geom::new(&s.m, &s.r);
                 cadence.after_step(&mut s, &mut g);
@@ -1041,11 +1042,13 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
             // `done` is read before the landing: a terminal that fires on the landing step ends the march there, its
             // state latched (Part 2a § "The sync grid is a fixed quantum of physical time (R-565)"); the landing itself
             // still counts ([`Interval::landed`]).
-            if over_allowance(count.steps, t0 + q.t, params.step_budget_rate, params.n_min) {
-                count.end = End::Exhausted;
-                go = false;
-            } else if cadence.done() {
+            // A terminal is read before the budget: one found on a step the budget allowed is the copy's outcome, and a
+            // copy never stores a terminal beside `budget_exhausted` (payload §2; R-603).
+            if cadence.done() {
                 count.end = End::Done;
+                go = false;
+            } else if over_allowance(count.steps, t0 + q.t, params.step_budget_rate, params.n_min) {
+                count.end = End::Exhausted;
                 go = false;
             } else if landed {
                 go = false;
@@ -1066,6 +1069,7 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
                 least(least(r[0], r[1]), r[2]),
             );
             let sized = step_size_in(system, &q, &p, entry, params, X::PER_STEP);
+            cadence.signals(sized.floored, sized.cap_hit);
             count.floored += u32::from(sized.floored);
             count.cap_hits += u32::from(sized.cap_hit);
             count.predictive_bound += u32::from(sized.by_limit);

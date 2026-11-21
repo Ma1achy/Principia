@@ -127,12 +127,13 @@ fn check_raw(cases: &[(&str, u32, u32)]) {
 }
 
 /// Payload §2's diagrams at known values: `packed_a` = d_min 1.0 (f16 0x3c00) | state 2, detail 1, saturated,
-/// dmin_pair 2, last_symbol 3 (2 + 8 + 32 + 128 + 768 = 0x3aa); `packed_b` = dLz_max 2.0 (0x4000) | dE_max 0.5
-/// (0x3800); `times` = t_dmin_step 0xabcd | t_end_step 0x1234.
+/// dmin_pair 2, last_symbol 3 (2 + 8 + 32 + 128 + 768 = 0x3aa); `packed_b` = dLz_max 2.0 | dE_max 0.5 in the `log16`
+/// form (R-632; payload §2): 2.0's f32 bits `0x4000_0000 >> 15 = 0x8000`, less the base `0x1F00`, plus 1, is `0x6101`,
+/// and 0.5's `0x7E00` gives `0x5F01` (0x4000 and 0x3800 in binary16 before R-632); `times` = t_dmin_step 0xabcd | t_end_step 0x1234.
 fn known() -> [(&'static str, u32, u32); 3] {
     [
         ("packed_a", pack_a(2, 1, true, 2, 3, 1.0), 0x3c00_03aa),
-        ("packed_b", pack_packed_b(0.5, 2.0), 0x4000_3800),
+        ("packed_b", pack_packed_b(0.5, 2.0), 0x6101_5f01),
         ("times", pack_times(0x1234, 0xabcd), 0xabcd_1234),
     ]
 }
@@ -148,7 +149,11 @@ fn packed_words_pack_to_payload_section_2_bits() {
         (0.5, 2.0),
         "pb_dE_max, pb_dLz_max"
     );
-    assert_eq!(pack2x16float([0.5, 2.0]), b, "packed_b is pack2x16float");
+    assert_eq!(
+        u32::from(f32_to_log16(0.5)) | u32::from(f32_to_log16(2.0)) << 16,
+        b,
+        "packed_b is two log16 halves (R-632; pack2x16float before)"
+    );
     assert_eq!(
         (tm_t_end_step(t), tm_t_dmin_step(t)),
         (0x1234, 0xabcd),

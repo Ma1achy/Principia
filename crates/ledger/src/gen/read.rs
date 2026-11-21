@@ -45,8 +45,9 @@
 //! f32 values, not the f16 latches (payload §1, §5).
 //!
 //! **The drift suspect predicates** (dd_integrator §3.5; payload §5; TASK-M3-05) are read-time predicates over the
-//! stored latches, no suspect bit being stored: `suspect_energy(dE_max, E_0, eps_e)`, the relative energy drift
-//! `dE_max / max(ε_E, |E_0|)` above `τ_E`, and `suspect_lz(dLz_max)`, the absolute `L_z` drift above `τ_L`, both
+//! stored latches, no suspect bit being stored: `suspect_energy(dE_reg_max, E_0, eps_e)`, the relative energy drift
+//! `dE_reg_max / max(ε_E, |E_0|)` above `τ_E`, read from the regularised drift's latch (R-605: the Cartesian `dE_max`
+//! is diagnostic only; with regularisation off the two are one), and `suspect_lz(dLz_max)`, the absolute `L_z` drift above `τ_L`, both
 //! thresholds the constants register's (REQ-INT-085). `ε_E` is the sim key's, an argument. The Rust side also gives
 //! `drift_suspect`, which carries the occupant's `symplectic` flag beside them, since what the energy predicate
 //! measures depends on it (integrator contract Part 2).
@@ -217,7 +218,7 @@ fn packed(word: &'static str, entries: &[Entry]) -> Vec<ReadMember> {
         .filter_map(|(e, _, width)| {
             let prefix = stored::prefix(word, e)?;
             let ty = match (&e.ty, width) {
-                (FieldType::F16Pair, _) => "f32",
+                (FieldType::F16Pair | FieldType::Log16, _) => "f32",
                 (_, 1) => "bool",
                 _ => "u32",
             };
@@ -608,11 +609,13 @@ pub struct DriftSuspect {{
 }}
 
 /// The drift suspect predicates of the read-side `s`, at the sim key's `eps_e`, under an occupant whose profile's
-/// `symplectic` flag is `symplectic` (dd_integrator §3.5; integrator contract Part 2).
+/// `symplectic` flag is `symplectic` (dd_integrator §3.5; integrator contract Part 2). The energy predicate reads the
+/// regularised drift's latch, `dE_reg_max`, never the Cartesian `dE_max`, which is diagnostic only (R-605); with
+/// regularisation off the two energies are one and `dE_reg_max` holds the Cartesian maximum.
 #[inline]
 pub fn drift_suspect(s: &SimState, eps_e: f32, symplectic: bool) -> DriftSuspect {{
     DriftSuspect {{
-        energy: suspect_energy(s.dE_max, s.E_0, eps_e),
+        energy: suspect_energy(s.dE_reg_max, s.E_0, eps_e),
         lz: suspect_lz(s.dLz_max),
         reads_dynamics: symplectic,
     }}

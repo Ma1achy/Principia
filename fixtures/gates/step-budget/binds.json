@@ -1,0 +1,5 @@
+{
+  "description": "The control can fire: Heggie × RK4 at f32 on a Burrau-like close-encounter march (the Pythagorean masses and positions scaled by 1/5, small momenta) under a budget of 1000 steps at rate 0, far below the march's own count to t = 50, runs out, undetermined, through the occupant's every-step budget (R-563, R-604; integrator contract Part 6).",
+  "n_min": 1000,
+  "expected": "pass"
+}

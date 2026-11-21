@@ -31,7 +31,10 @@
 //!   `_nhat_lag_*` members replaced by that `_pad` hash to those two again, so it is the one change; then
 //!   0x4190fd7982e0f199 and 0xf974859f765e5b5f until TASK-M2-57 added the periodic `β` link's entry, `periodic_beta`,
 //!   to the registry (the three bounded `β` links stay, their hashed bytes as they were: the codomain they moved to is
-//!   not hashed), and today's bytes without that entry hash to those two again, so it is the one change; an active
+//!   not hashed), and today's bytes without that entry hash to those two again, so it is the one change; then
+//!   0x2ee1260ae02d31de and 0x5cce9d2ed11dc744 until TASK-M3-41 added the budget word and the regularised drift and
+//!   moved the Cartesian drift latches to the `log16` form, and today's bytes without them hash to those two again, so
+//!   they are the one change; an active
 //!   value is no input of the hash (`qa_m241_hash_*`).
 //! - REQ-DEC-048 (host side): `Codomain::range` at an active `q_max` = 1.5 gives the momenta `[−1.5, 1.5]` and moves no
 //!   other codomain's bounds (`qa_m241_range_with_active`).
@@ -73,8 +76,11 @@ use validation::negative_control;
 /// (payload §1; TASK-M3-12), which today's bytes with the `_pad` back give back
 /// (`qa_m241_hash_lag_register_is_the_one_change`). Then pinned at 0x4190_fd79_82e0_f199
 /// ([`PRE_PERIODIC_PROVISIONAL_VERSION`]) until TASK-M2-57 added the periodic `β` link's entry to the registry, which
-/// today's bytes without it give back (`qa_m241_hash_periodic_beta_is_the_one_change`).
-const MEAN_Y_PROVISIONAL_VERSION: u64 = 0x2ee1_260a_e02d_31de;
+/// today's bytes without it give back (`qa_m241_hash_periodic_beta_is_the_one_change`). Then pinned at
+/// 0x2ee1_260a_e02d_31de ([`PRE_BUDGET_PROVISIONAL_VERSION`]) until TASK-M3-41 added the budget word and the
+/// regularised drift and moved the Cartesian drift latches to the `log16` form, which today's bytes without them give
+/// back (`qa_m241_hash_budget_and_drift_is_the_one_change`).
+const MEAN_Y_PROVISIONAL_VERSION: u64 = 0xdf30_f3c2_b1bd_ba96;
 
 /// The hash of the ledger without the declarations' block once REQ-PAY-098 declared `mean_y`'s range [0, 4]
 /// (R-426; TASK-M3-13): the one change to the hashed entries since [`MEAN_Y_PROVISIONAL_VERSION`], which reverting it
@@ -84,9 +90,17 @@ const MEAN_Y_PROVISIONAL_VERSION: u64 = 0x2ee1_260a_e02d_31de;
 /// 0xccdd_707a_a771_cf86 ([`PRE_DEPARTED_DECLARED_VERSION`]) until TASK-M3-11's departed bit and pole-reference
 /// entries, and at 0x97ec_01cb_a5af_4336 ([`PRE_SENTINEL_DECLARED_VERSION`]) until TASK-M3-11's `closure_min`
 /// sentinel, and at 0xfbaf_6327_b921_761f ([`PRE_LAG_DECLARED_VERSION`]) until TASK-M3-12's lagged `n̂` register, and
-/// at 0xf974_859f_765e_5b5f ([`PRE_PERIODIC_DECLARED_VERSION`]) until TASK-M2-57's periodic `β` link, for the reasons
-/// at [`MEAN_Y_PROVISIONAL_VERSION`].
-const MEAN_Y_DECLARED_VERSION: u64 = 0x5cce_9d2e_d11d_c744;
+/// at 0xf974_859f_765e_5b5f ([`PRE_PERIODIC_DECLARED_VERSION`]) until TASK-M2-57's periodic `β` link, and at
+/// 0x5cce_9d2e_d11d_c744 ([`PRE_BUDGET_DECLARED_VERSION`]) until TASK-M3-41's budget word and regularised drift, for
+/// the reasons at [`MEAN_Y_PROVISIONAL_VERSION`].
+const MEAN_Y_DECLARED_VERSION: u64 = 0x6420_123f_fd8c_492c;
+
+/// [`MEAN_Y_PROVISIONAL_VERSION`] before TASK-M3-41 added the budget word and the regularised drift and moved the
+/// Cartesian drift latches to the `log16` form (payload §1, §2; R-603, R-605, R-632).
+const PRE_BUDGET_PROVISIONAL_VERSION: u64 = 0x2ee1_260a_e02d_31de;
+
+/// [`MEAN_Y_DECLARED_VERSION`] before TASK-M3-41's change.
+const PRE_BUDGET_DECLARED_VERSION: u64 = 0x5cce_9d2e_d11d_c744;
 
 /// [`MEAN_Y_PROVISIONAL_VERSION`] before TASK-M2-57 added the periodic `β` link's entry, `periodic_beta`.
 const PRE_PERIODIC_PROVISIONAL_VERSION: u64 = 0x4190_fd79_82e0_f199;
@@ -558,10 +572,58 @@ fn before_block_with_links(
     b
 }
 
+/// The ledger and structs without TASK-M3-41's change to the hashed bytes (payload §1, §2; R-603, R-605, R-632): no
+/// `budget_bits` or `dE_reg` word, member or field entry, `dE_max` and `dLz_max` binary16 again, and `closure_min` and
+/// `closure_step` back at the scalar slots 34 and 35 the two words moved them from.
+fn without_budget_members(
+    mut l: ledger::schema::Ledger,
+    mut s: Vec<ledger::schema::Struct>,
+) -> (ledger::schema::Ledger, Vec<ledger::schema::Struct>) {
+    use ledger::schema::{FieldType, Location};
+    const ADDED: [&str; 5] = [
+        "budget_exhausted",
+        "floor_hits",
+        "cap_hits",
+        "dE_reg_final",
+        "dE_reg_max",
+    ];
+    let before = l.entries.len();
+    l.entries
+        .retain(|e| !e.name.is_some_and(|n| ADDED.contains(&n)));
+    assert_eq!(
+        before - l.entries.len(),
+        ADDED.len(),
+        "the ledger does not hold TASK-M3-41's five entries (budget)"
+    );
+    l.words
+        .retain(|w| w.name != "budget_bits" && w.name != "dE_reg");
+    for e in l.entries.iter_mut() {
+        match e.name {
+            Some("dE_max") | Some("dLz_max") => e.ty = Some(FieldType::F16Pair),
+            Some("closure_min") => e.location = Some(Location::Scalar(34)),
+            Some("closure_step") => e.location = Some(Location::Scalar(35)),
+            _ => {}
+        }
+    }
+    for st in s.iter_mut().filter(|st| st.buffer == Some("SimState")) {
+        st.members
+            .retain(|m| m.name != "budget_bits" && m.name != "dE_reg");
+    }
+    (l, s)
+}
+
+/// The bytes before the declarations' block without TASK-M3-41's change ([`without_budget_members`]).
+fn without_budget(l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
+    let (l, s) = without_budget_members(l, s);
+    before_block_with(l, s)
+}
+
 /// The bytes before the declarations' block without TASK-M2-57's change to the hashed bytes: the registry without its
-/// one periodic entry, `periodic_beta`, every other entry as it is today. The three bounded `β` links are kept: the
-/// task moved them to a codomain no block takes, and a codomain is not hashed.
+/// one periodic entry, `periodic_beta`, every other entry as it is today, and without the change after it,
+/// TASK-M3-41's ([`without_budget_members`]). The three bounded `β` links are kept: the task moved them to a codomain
+/// no block takes, and a codomain is not hashed.
 fn without_periodic_beta(l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
+    let (l, s) = without_budget_members(l, s);
     let all = ledger::links::registry();
     let periodic: Vec<&str> = all
         .iter()
@@ -1047,6 +1109,30 @@ negative_control!(
     "today's bytes, the periodic β link's entry kept, are not the pins before it, so the entry is hashed",
     expected = "(periodic)",
     check_periodic_beta(before_block_with)
+);
+
+/// TASK-M3-41's budget word, regularised drift and `log16` drift latches (payload §1, §2; R-603, R-605, R-632) are the
+/// one change to the hashed bytes since [`PRE_BUDGET_DECLARED_VERSION`]: taken out, today's ledger hashes to the pins
+/// before it, so [`MEAN_Y_DECLARED_VERSION`] and [`MEAN_Y_PROVISIONAL_VERSION`] follow from it alone.
+fn check_budget(strip: Strip) {
+    check_strip(
+        strip,
+        PRE_BUDGET_PROVISIONAL_VERSION,
+        PRE_BUDGET_DECLARED_VERSION,
+        "without the budget word and the regularised drift (budget)",
+    );
+}
+
+#[test]
+fn qa_m241_hash_budget_and_drift_is_the_one_change() {
+    check_budget(without_budget);
+}
+
+negative_control!(
+    qa_m241_hash_budget_and_drift_is_the_one_change,
+    "today's bytes, the budget word and the regularised drift kept, are not the pins before them, so they are hashed",
+    expected = "(budget)",
+    check_budget(before_block_with)
 );
 
 // ── REQ-DEC-048, host side: the codomain's bounds at the active value ───────────────────────────────────────────

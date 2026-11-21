@@ -15,10 +15,10 @@ use engine::fixtures::{self, Known, NAMES, UNSET};
 use engine::synthetic::Synthetic;
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::{
-    canonical_nan, f16_bits_to_f32, fgw_length_raw, pb_dE_max, pb_dLz_max, sd_detail, sd_dmin_pair,
-    sd_last_symbol, sd_saturated, sd_state, sim_state_from_ftle, tm_t_dmin_step, tm_t_end_step,
-    ReadParams, PACKED_A_RESERVED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_ESCAPE,
-    STATE_SIM_FAILED,
+    canonical_nan, f16_bits_to_f32, fgw_length_raw, log16_to_f32, pb_dE_max, pb_dLz_max, sd_detail,
+    sd_dmin_pair, sd_last_symbol, sd_saturated, sd_state, sim_state_from_ftle, tm_t_dmin_step,
+    tm_t_end_step, ReadParams, PACKED_A_RESERVED, STATE_COLLISION, STATE_DECODE_FAILED,
+    STATE_ESCAPE, STATE_SIM_FAILED,
 };
 use ledger::gen::rust::offsets;
 use ledger::schema::Storage;
@@ -527,10 +527,23 @@ fn check_stored(set: &Synthetic, n: u32) {
                             "packed_a" => {
                                 check_half(i, m.name, "bits 16–31", hi, true, failed, t_end_step)
                             }
-                            "packed_b" => {
-                                check_half(i, m.name, "bits 0–15", lo, false, failed, t_end_step);
-                                check_half(i, m.name, "bits 16–31", hi, false, failed, t_end_step);
+                            // The drift latches, `log16` since R-632 (payload §2): every code is a finite value, and
+                            // NaN is stored as 0.0, so a stored half reads finite.
+                            "packed_b" | "dE_reg" => {
+                                for (bits, h) in [("bits 0–15", lo), ("bits 16–31", hi)] {
+                                    let v = log16_to_f32(h);
+                                    assert!(
+                                        v.is_finite(),
+                                        "sample {i}: {} {bits} holds the non-finite {v}",
+                                        m.name
+                                    );
+                                }
                             }
+                            // The budget word: a flag and two counts, its reserved bit 31 zero (payload §2; R-603).
+                            "budget_bits" => assert!(
+                                w >> 31 == 0,
+                                "sample {i}: `budget_bits` {w:#x} has its reserved bit set"
+                            ),
                             "times" | "total_substeps" => {}
                             // The collision floor's code, 0 to 145, its reserved bits zero (payload §2; R-973).
                             "coll_floor_bits" => assert!(

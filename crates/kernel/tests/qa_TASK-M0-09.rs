@@ -11,7 +11,8 @@ use validation::negative_control;
 
 // ---------------------------------------------------------------------------------------------------------------
 // REQ-PAY-008: every offset, from payload §1's field widths (phase 48 B, shadow 48 B, accumulators 16 B, drift refs
-// 8 B, packed words 12 B, total_substeps 4 B, closure 8 B, the collision floor's record 4 B: R-973, TASK-M3-71, and
+// 8 B, packed words 12 B, total_substeps 4 B, the budget word and the regularised drift 8 B: R-603, R-605,
+// TASK-M3-41, closure 8 B, the collision floor's record 4 B: R-973, TASK-M3-71, and
 // the escape rule's lagged n̂ register 12 B, three Reals in place of the record's 4 B of padding: TASK-M3-12), and the
 // type of each field.
 
@@ -25,7 +26,14 @@ fn section_1(ftle: bool) -> Vec<(&'static str, usize, &'static str)> {
     for f in ["S", "theta", "mean_y", "C_ty", "E_0", "Lz_0"] {
         rows.push((f, 4, "f32"));
     }
-    for u in ["packed_a", "packed_b", "times", "total_substeps"] {
+    for u in [
+        "packed_a",
+        "packed_b",
+        "times",
+        "total_substeps",
+        "budget_bits",
+        "dE_reg",
+    ] {
         rows.push((u, 4, "u32"));
     }
     rows.extend([
@@ -79,6 +87,8 @@ fn ftle_actual() -> Vec<(&'static str, usize, &'static str)> {
         packed_b,
         times,
         total_substeps,
+        budget_bits,
+        dE_reg,
         closure_min,
         closure_step,
         _reserved,
@@ -107,6 +117,8 @@ fn base_actual() -> Vec<(&'static str, usize, &'static str)> {
         packed_b,
         times,
         total_substeps,
+        budget_bits,
+        dE_reg,
         closure_min,
         closure_step,
         _reserved,
@@ -166,7 +178,8 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-003, REQ-PAY-008: size_of/align_of are 160/8 and 112/8 as generated, with the escape rule's lagged n̂
+// REQ-PAY-003, REQ-PAY-008: size_of/align_of are 168/8 and 120/8, with the budget word and the regularised drift
+// (R-603, R-605; TASK-M3-41; 160/8 and 112/8 before them), with the escape rule's lagged n̂
 // register (three Reals in place of 4 B of padding, TASK-M3-12; 152/8 and 104/8 before it, with the collision floor's
 // 8 B, R-973, TASK-M3-71; 144/8 and 96/8 before that), and equal the widths the corpus quotes.
 
@@ -190,8 +203,8 @@ fn doc(path: &str) -> String {
 }
 
 fn check_widths(ftle: (usize, usize), base: (usize, usize)) {
-    assert_eq!(ftle, (160, 8), "SimStateFTLE (size_of, align_of)");
-    assert_eq!(base, (112, 8), "SimStateBase (size_of, align_of)");
+    assert_eq!(ftle, (168, 8), "SimStateFTLE (size_of, align_of)");
+    assert_eq!(base, (120, 8), "SimStateBase (size_of, align_of)");
     let payload = doc("docs/design/principia_dd_simstate_payload.md");
     let render = doc("docs/contracts/principia_render_contract.md");
     let quotes = [

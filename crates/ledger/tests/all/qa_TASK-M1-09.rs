@@ -46,10 +46,12 @@ const F32_INF: u32 = 0x7F80_0000;
 /// before departure (RQ-835 (a); payload §1; amended by qa for TASK-M3-11).
 const UNSET_INF: [&str; 2] = ["d_min", "closure_min"];
 
-/// REQ-TOOL-160's statement: the log-scaled numeric fields with no ledger `floor`.
-const LOG_FIELDS: [&str; 6] = [
+/// REQ-TOOL-160's statement: the log-scaled numeric fields with no ledger `floor`, and the regularised drift's maximum,
+/// `dE_reg_max`, its seventh since R-605 (TASK-M3-41), with its own register floor.
+const LOG_FIELDS: [&str; 7] = [
     "d_min",
     "dE_max",
+    "dE_reg_max",
     "dLz_max",
     "closure_min",
     "rho_ratio",
@@ -719,7 +721,7 @@ fn check_log_fields(es: &[Entry]) {
     let want: BTreeSet<&str> = LOG_FIELDS.into_iter().collect();
     assert_eq!(
         got, want,
-        "the log fields with no ledger floor are not REQ-TOOL-160's six"
+        "the log fields with no ledger floor are not REQ-TOOL-160's six and dE_reg_max"
     );
     let l = ledger::layout();
     for drift in ["energy_drift", "Lz_drift"] {

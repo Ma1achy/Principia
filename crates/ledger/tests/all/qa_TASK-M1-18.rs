@@ -287,10 +287,12 @@ enum Stand {
 /// (R-173, R-427); and the closure's departure threshold `delta_dep`, proposed by TASK-M3-11 from its measured gap and
 /// provisional until the M3 gate, citing REQ-VAL-055 (R-37, R-427); and the sync quantum `delta_sync`, provisional until
 /// the M3 gate, citing REQ-INT-080, its calibration (TASK-M3-40).
-const TABLE: [(&str, Stand); 42] = [
+const TABLE: [(&str, Stand); 43] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
+    // R-605's regularised drift maximum's floor, proposed by TASK-M3-41 (REQ-PAY-111).
+    ("log_floor_dE_reg_max", Stand::Until("M3", "REQ-PAY-111")),
     ("log_floor_closure_min", Stand::Confirmed),
     ("log_floor_rho_ratio", Stand::Until("M2", "REQ-TOOL-163")),
     ("log_floor_r_min_pair_0", Stand::Until("M2", "REQ-TOOL-163")),

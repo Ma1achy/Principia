@@ -3,10 +3,10 @@
 // f64, f16 pairs through core `unpack2x16float` (no `enable f16`).
 
 // The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger (R-36, R-63; the Rust
-// PAYLOAD_SCHEMA_VERSION, 0x77d6831e84273311). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
-const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0x84273311u, 0x77d6831eu);
+// PAYLOAD_SCHEMA_VERSION, 0x76e70670b6f511f9). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
+const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0xb6f511f9u, 0x76e70670u);
 
-// `SimStateFTLE`: 160 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
+// `SimStateFTLE`: 168 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
 struct SimStateFTLE {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -22,6 +22,8 @@ struct SimStateFTLE {
     packed_b: u32,
     times: u32,
     total_substeps: u32,
+    budget_bits: u32,
+    dE_reg: u32,
     closure_min: f32,
     closure_step_reserved: u32, // `closure_step` in bits 0–15, `_reserved` in bits 16–31 (WGSL has no u16; R-343)
     coll_floor_bits: u32,
@@ -30,7 +32,7 @@ struct SimStateFTLE {
     _nhat_lag_2: f32,
 }
 
-// `SimStateBase`: 112 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
+// `SimStateBase`: 120 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
 struct SimStateBase {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -44,6 +46,8 @@ struct SimStateBase {
     packed_b: u32,
     times: u32,
     total_substeps: u32,
+    budget_bits: u32,
+    dE_reg: u32,
     closure_min: f32,
     closure_step_reserved: u32, // `closure_step` in bits 0–15, `_reserved` in bits 16–31 (WGSL has no u16; R-343)
     coll_floor_bits: u32,
@@ -136,16 +140,31 @@ fn pa_d_min_is_unset(w: u32) -> bool { return extractBits(w, 16u, 16u) == PA_D_M
 fn pa_d_min(w: u32) -> f32 { return unpack2x16float(w).y; }
 
 // `dE_max`: bits 0–15 of `packed_b` (payload §2, §6).
-fn pb_dE_max(w: u32) -> f32 { return unpack2x16float(w).x; }
+fn pb_dE_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 0u, 16u)); }
 
 // `dLz_max`: bits 16–31 of `packed_b` (payload §2, §6).
-fn pb_dLz_max(w: u32) -> f32 { return unpack2x16float(w).y; }
+fn pb_dLz_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 16u, 16u)); }
 
 // `t_end_step`: bits 0–15 of `times` (payload §2, §6).
 fn tm_t_end_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }
 
 // `t_dmin_step`: bits 16–31 of `times` (payload §2, §6).
 fn tm_t_dmin_step(w: u32) -> u32 { return extractBits(w, 16u, 16u); }
+
+// `budget_exhausted`: bit 0 of `budget_bits` (payload §2, §6).
+fn bb_budget_exhausted(w: u32) -> bool { return extractBits(w, 0u, 1u) == 1u; }
+
+// `floor_hits`: bits 1–15 of `budget_bits` (payload §2, §6).
+fn bb_floor_hits(w: u32) -> u32 { return extractBits(w, 1u, 15u); }
+
+// `cap_hits`: bits 16–30 of `budget_bits` (payload §2, §6).
+fn bb_cap_hits(w: u32) -> u32 { return extractBits(w, 16u, 15u); }
+
+// `dE_reg_final`: bits 0–15 of `dE_reg` (payload §2, §6).
+fn dr_dE_reg_final(w: u32) -> f32 { return log16_to_f32(extractBits(w, 0u, 16u)); }
+
+// `dE_reg_max`: bits 16–31 of `dE_reg` (payload §2, §6).
+fn dr_dE_reg_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 16u, 16u)); }
 
 // `coll_floor`'s sentinel in the ledger (dd_generation_root §3.8).
 const CF_COLL_FLOOR_SENTINEL: u32 = 0u;
@@ -237,6 +256,14 @@ fn fgw_symbol(word: vec4<u32>, k: u32) -> u32 {
     return extractBits(perm, 2u * (v.x & 3u), 2u);
 }
 
+// The f32 value of the `log16` bits `h` (payload §2, the `log16` form): code 0 is ±0.0, bit 15 its sign (no packer
+// writes the signed one); a code `c ≥ 1` is the f32
+// whose bits are `(c − 1 + 7936) << 15` (code 1 is `2^LOG16_OCTAVE_LO`), bit 15 its sign. Exact, integer operations.
+fn log16_to_f32(h: u32) -> f32 {
+    let code = h & 0x7fffu;
+    let sign = (h & 0x8000u) << 16u;
+    return select(bitcast<f32>(sign | ((code - 1u + 7936u) << 15u)), bitcast<f32>(sign), code == 0u);
+}
 // Escape, bounded or collision: a resolved outcome. sim_failed and decode_failed are finished but not resolved, so
 // never gate re-dispatch on this (payload §6).
 fn sd_is_resolved_outcome(w: u32) -> bool {

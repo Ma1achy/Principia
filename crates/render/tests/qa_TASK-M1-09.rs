@@ -531,16 +531,21 @@ fn f16_values() -> Vec<f32> {
         .collect()
 }
 
-/// Each value written to `d_min`, `dE_max` and `dLz_max` reads back within `eps · |x|`.
+/// The `log16` form's resolution, 2⁻⁹ relative (payload §2): `dE_max` and `dLz_max` are `log16` since R-632.
+const LOG16_EPS: f64 = 1.0 / 512.0;
+
+/// Each value written to `d_min` reads back within `eps · |x|`, and to `dE_max` and `dLz_max` within the `log16` form's
+/// resolution scaled as `eps` is from f16's, `eps · |x| · LOG16_EPS / F16_EPS`.
 fn check_f16(values: &[f32], eps: f64) {
     let mut s = fresh(Colouring::View("d_min"));
     for &v in values {
         s.set.sample(0).times(10, 0).d_min(v).drift_max(v, v);
         let r = s.read(0);
-        for (name, got) in [
-            ("d_min", r.d_min),
-            ("dE_max", r.dE_max),
-            ("dLz_max", r.dLz_max),
+        let log16 = eps * LOG16_EPS / F16_EPS;
+        for (name, got, eps) in [
+            ("d_min", r.d_min, eps),
+            ("dE_max", r.dE_max, log16),
+            ("dLz_max", r.dLz_max, log16),
         ] {
             let err = (f64::from(got) - f64::from(v)).abs();
             assert!(

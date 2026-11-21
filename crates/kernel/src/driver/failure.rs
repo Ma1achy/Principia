@@ -32,8 +32,9 @@ use super::wrapper::WrapperReal;
 use crate::detect::label::{Fired, Label};
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    pack_packed_b, set_coll_floor, set_d_min_unset, set_dmin_pair, set_t_dmin_step, PayloadReal,
-    SimStateBaseOf, SimStateFTLEOf, SD_DMIN_PAIR_SENTINEL, STATE_DECODE_FAILED, STATE_SIM_FAILED,
+    pack_dE_reg, pack_packed_b, set_coll_floor, set_d_min_unset, set_dmin_pair, set_t_dmin_step,
+    PayloadReal, SimStateBaseOf, SimStateFTLEOf, SD_DMIN_PAIR_SENTINEL, STATE_DECODE_FAILED,
+    STATE_SIM_FAILED,
 };
 use crate::real::IeeeBits;
 
@@ -236,6 +237,16 @@ impl<R: WrapperReal, C: Cadence<R>> Cadence<R> for Recorder<'_, R, C> {
     }
 
     #[inline]
+    fn signals(&mut self, floored: bool, cap_hit: bool) {
+        self.inner.signals(floored, cap_hit);
+    }
+
+    #[inline]
+    fn regularised_drift(&mut self, drift: R) {
+        self.inner.regularised_drift(drift);
+    }
+
+    #[inline]
     fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32 {
         self.inner.bucket_d2(r)
     }
@@ -311,6 +322,8 @@ fn failed_words<R: PayloadReal>(
     SimStateBaseOf {
         packed_a: set_dmin_pair(set_d_min_unset(labelled), SD_DMIN_PAIR_SENTINEL),
         packed_b: pack_packed_b(0.0, 0.0),
+        // The regularised drift's halves, 0.0 as `packed_b`'s (payload §2; R-605, TASK-M3-41).
+        dE_reg: pack_dE_reg(0.0, 0.0),
         times: set_t_dmin_step(s.times, 0),
         coll_floor_bits: set_coll_floor(s.coll_floor_bits, 0),
         ..s
@@ -322,7 +335,8 @@ fn failed_words<R: PayloadReal>(
 /// where all twelve are finite and 0.0 otherwise; `S` the failed mark ([`s_failed`]); `theta`, `mean_y`, `C_ty`,
 /// `E_0`, `Lz_0` and the lagged register as given where finite, 0.0 where not; `closure_min` as given unless NaN, `+∞`
 /// (unset) then. With the failed words: `d_min` unset, both drift halves 0.0, `dmin_pair` 3, `t_dmin_step` 0,
-/// `coll_floor` 0. `t_end_step`, `total_substeps`, `saturated`, the departed bit and `closure_step` are kept: the
+/// `coll_floor` 0, `dE_reg` 0.0 in both halves. `t_end_step`, `total_substeps`, `budget_bits`, `saturated`, the departed
+/// bit and `closure_step` are kept: the
 /// march's counts up to its failure. Writing it twice gives the same words.
 #[inline]
 pub fn sim_failed<R: WrapperReal>(s: SimStateBaseOf<R>, detail: u32) -> SimStateBaseOf<R> {
@@ -367,28 +381,5 @@ pub fn decode_failed<R: WrapperReal>(detail: u32) -> SimStateBaseOf<R> {
 /// shadow whose sum went non-finite.
 #[inline]
 pub fn failed_shadow<R: WrapperReal>(s: SimStateBaseOf<R>) -> SimStateFTLEOf<R> {
-    SimStateFTLEOf {
-        r: s.r,
-        p: s.p,
-        r_sh: s.r,
-        p_sh: s.p,
-        S: s_failed::<R>(),
-        theta: s.theta,
-        mean_y: s.mean_y,
-        C_ty: s.C_ty,
-        E_0: s.E_0,
-        Lz_0: s.Lz_0,
-        packed_a: s.packed_a,
-        packed_b: s.packed_b,
-        times: s.times,
-        total_substeps: s.total_substeps,
-        closure_min: s.closure_min,
-        closure_step: s.closure_step,
-        _reserved: s._reserved,
-        coll_floor_bits: s.coll_floor_bits,
-        _nhat_lag_0: s._nhat_lag_0,
-        _nhat_lag_1: s._nhat_lag_1,
-        _nhat_lag_2: s._nhat_lag_2,
-        ..SimStateFTLEOf::default()
-    }
+    super::benettin::ftle_of(s, s.r, s.p, s_failed::<R>())
 }

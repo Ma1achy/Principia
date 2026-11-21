@@ -534,8 +534,8 @@ pub fn numeric_view(
 // ── The drift views (render contract Part 5, "Presentation layer"; R-379, R-381; REQ-TOOL-149; TASK-M3-05) ──────────
 
 /// The read-side members a drift view reads beside its field: the stored latches the drift suspect predicates read
-/// (payload §5; dd_integrator §3.5).
-pub const DRIFT_LATCHES: [&str; 3] = ["dE_max", "E_0", "dLz_max"];
+/// (payload §5; dd_integrator §3.5), the energy's the regularised drift's, `dE_reg_max` (R-605).
+pub const DRIFT_LATCHES: [&str; 3] = ["dE_reg_max", "E_0", "dLz_max"];
 
 /// The drift suspect predicates a drift view reads, the generated read side's (`read::suspect_wgsl`).
 pub const DRIFT_PREDICATES: [&str; 2] = ["suspect_energy", "suspect_lz"];
@@ -636,7 +636,8 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
          reference or drift hatched, tested on its bits first (R-436); under `symlog` a \
          drift within the neutral band, the rounding's own scale {scale}, is drawn as 0 (`dbg_drift_shown`, R-652, \
          R-928). Over it the suspect \
-         styling of the drift suspect predicates read from the stored latches: rows for `SUSPECT_ENERGY`, columns for \
+         styling of the drift suspect predicates read from the stored latches, the energy's from the regularised \
+         drift's `dE_reg_max` (R-605): rows for `SUSPECT_ENERGY`, columns for \
          `SUSPECT_LZ`. `LIN_R`'s default is the constants register's (REQ-TOOL-150)."
     );
     format!(
@@ -648,7 +649,7 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
          let band = {band};\n    \
          let shown = dbg_drift_shown(x, uniforms.COMPACTION, band);\n    \
          let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.{eps}, ctx.frag_xy);\n    \
-         let energy = {energy_finite}suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);\n    \
+         let energy = {energy_finite}suspect_energy(ctx.sample.dE_reg_max, ctx.sample.E_0, uniforms.EPS_E);\n    \
          let lz = suspect_lz(ctx.sample.dLz_max);\n    \
          return dbg_suspect(rgb, x, energy, lz, ctx.frag_xy);\n}}\n",
         header(e, r, &colouring)
@@ -885,6 +886,7 @@ fn header(e: &Entry, r: &Read, colouring: &str) -> String {
         FieldType::F32 => "f32".to_owned(),
         FieldType::F16 => "f16".to_owned(),
         FieldType::F16Pair => "f16-pair".to_owned(),
+        FieldType::Log16 => "log16".to_owned(),
         FieldType::Fixed16 => "fixed16".to_owned(),
         FieldType::Vector { k, .. } => format!("vector(·, {k})"),
     };
@@ -1022,6 +1024,10 @@ fn probe(e: &Entry, k: usize, simstate: &Struct, ic: &Struct) -> Option<Probe> {
             let (value, bits) = if e.ty == FieldType::F16Pair {
                 let (v, a) = floats(probe_float(k, 0));
                 let bits = format!("u32::from(f32_to_f16_bits({}))", pick(&v, &a));
+                (v, bits)
+            } else if e.ty == FieldType::Log16 {
+                let (v, a) = floats(probe_float(k, 0));
+                let bits = format!("u32::from(f32_to_log16({}))", pick(&v, &a));
                 (v, bits)
             } else {
                 let (v, a) = probe_bits(e.range.hi, *width);
@@ -1218,8 +1224,8 @@ fn check(
 fn drift_check(n: &str) -> String {
     let eps = float(crate::constants::EPS_E_DEFAULT.number());
     let energy = [
-        format!("suspect_energy(read.dE_max, read.E_0, {eps}_f32)"),
-        format!("suspect_energy(pb_dE_max(s.packed_b), s.E_0, {eps}_f32)"),
+        format!("suspect_energy(read.dE_reg_max, read.E_0, {eps}_f32)"),
+        format!("suspect_energy(dr_dE_reg_max(s.dE_reg), s.E_0, {eps}_f32)"),
         format!("\"`{n}`'s energy-suspect predicate {NOT_DERIVED}\""),
     ];
     let lz = [

@@ -1,4 +1,5 @@
-//! The monotone latches and their f16 packing (`kernel::driver::latch`; payload §1, §2; render_contract Part 5,
+//! The monotone latches and their packing, `d_min` f16 and the drift maxima `log16` since R-632 (`kernel::driver::latch`;
+//! payload §1, §2; render_contract Part 5,
 //! "Unpack layer"; R-271, R-933):
 //! - `f16_pack_clamp_*`: values beyond ±65504 pack to the finite 65504, never `+∞`; a failed state (`sim_failed`,
 //!   `decode_failed` and the reserved codes) packs 0.0 in `dE_max` and `dLz_max` and the unset bits `0x7C00` in `d_min`,
@@ -34,9 +35,10 @@ use kernel::generated::links::Defaults;
 use kernel::occupant::kdk::Kdk;
 use kernel::occupant::{Geom, State};
 use kernel::payload::{
-    f32_to_f16_bits, pa_d_min, pb_dE_max, pb_dLz_max, sd_state, set_state, tm_t_end_step,
-    DminCounters, SimStateBaseOf, F16_FINITE_MAX, F16_MIN_SUBNORMAL, STATE_BOUNDED,
-    STATE_COLLISION, STATE_DECODE_FAILED, STATE_ESCAPE, STATE_RUNNING, STATE_SIM_FAILED,
+    f32_to_f16_bits, f32_to_log16, log16_to_f32, pa_d_min, pb_dE_max, pb_dLz_max, sd_state,
+    set_state, tm_t_end_step, DminCounters, SimStateBaseOf, F16_FINITE_MAX, F16_MIN_SUBNORMAL,
+    STATE_BOUNDED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_ESCAPE, STATE_RUNNING,
+    STATE_SIM_FAILED,
 };
 use kernel::physics::energy::{angular_momentum, energy};
 use proptest::prelude::*;
@@ -83,28 +85,33 @@ const FAILED: [u32; 4] = [STATE_SIM_FAILED, STATE_DECODE_FAILED, 6, 7];
 /// The valid states: the resolved outcomes and `running`.
 const VALID: [u32; 4] = [STATE_ESCAPE, STATE_BOUNDED, STATE_COLLISION, STATE_RUNNING];
 
-/// Asserts `pack`'s clamp on each valid state: every value beyond ±65504 packs as 65504 (bits `0x7BFF`), finite, a
-/// value inside the range as its own f16, a zero separation as the least subnormal and an unobserved `d_min` as
-/// unset, with the descriptor's low 16 bits kept.
+/// Asserts `pack`'s clamp on each valid state: every `d_min` beyond ±65504 packs as 65504 (bits `0x7BFF`), finite; the
+/// drift maxima, in the `log16` form since R-632, pack as their own `log16` codes, which decode finite, saturating at
+/// the form's greatest; a value inside the range as its own f16 or `log16`, a zero separation as the least subnormal
+/// and an unobserved `d_min` as unset, with the descriptor's low 16 bits kept.
 fn check_valid(pack: Persist) {
     let beyond = [65504.0, 65519.0, 65520.0, 1e5, 1e6, f32::MAX, f32::INFINITY];
     for &state in &VALID {
         for &x in &beyond {
             for sign in [1.0f32, -1.0] {
                 let (a, b) = pack(&latches(x, sign * x, sign * x), descriptor(state));
-                let halves = [d_min_bits(a), b as u16, (b >> 16) as u16];
                 assert!(
-                    halves.iter().all(|&h| finite16(h)),
-                    "state {state}, value {x}, sign {sign}: a half of {halves:04x?} is not finite"
+                    finite16(d_min_bits(a))
+                        && pb_dE_max(b).is_finite()
+                        && pb_dLz_max(b).is_finite(),
+                    "state {state}, value {x}, sign {sign}: a half of {:04x?} is not finite",
+                    [d_min_bits(a), b as u16, (b >> 16) as u16]
                 );
+                let drift = f32_to_log16(x);
                 assert_eq!(
-                    halves, [0x7bff; 3],
-                    "state {state}, value {x}, sign {sign}: the halves are not clamped to 65504"
+                    [d_min_bits(a), b as u16, (b >> 16) as u16],
+                    [0x7bff, drift, drift],
+                    "state {state}, value {x}, sign {sign}: the halves are not clamped to 65504 and the log16 form"
                 );
                 assert_eq!(
                     (pa_d_min(a), pb_dE_max(b), pb_dLz_max(b)),
-                    (F16_FINITE_MAX, F16_FINITE_MAX, F16_FINITE_MAX),
-                    "state {state}, value {x}: unpack does not read 65504"
+                    (F16_FINITE_MAX, log16_to_f32(drift), log16_to_f32(drift)),
+                    "state {state}, value {x}: unpack does not read 65504 and the log16 value"
                 );
                 assert_eq!(
                     a & 0xffff,
@@ -116,8 +123,9 @@ fn check_valid(pack: Persist) {
         let (a, b) = pack(&latches(1.0, -0.5, 2.0), descriptor(state));
         assert_eq!(
             (d_min_bits(a), b),
-            (0x3c00, 0x4000_3800),
-            "state {state}: values inside the range are not their own f16"
+            (0x3c00, 0x6101_5f01),
+            "state {state}: values inside the range are not their own f16 and log16 (0.5 and 2.0 at codes 0x5F01 \
+             and 0x6101)"
         );
         let (a, _) = pack(&latches(0.0, 0.0, 0.0), descriptor(state));
         assert_eq!(
@@ -168,8 +176,9 @@ fn f16_pack_clamp_valid() {
     check_valid(persist);
 }
 
-/// A packer with no clamp: each half whose live value is past ±65504 converted as it is, every other half as
-/// [`persist`] packs it, so it differs from the writer in the clamp alone.
+/// A packer with no clamp: `d_min`'s half, where its live value is past ±65504, converted as it is, every other half
+/// as [`persist`] packs it, so it differs from the writer in the clamp alone. The drift halves are `log16` since R-632,
+/// which saturates by its own form and takes no clamp.
 #[cfg(feature = "controls")]
 fn unclamped(l: &Latches, a: u32) -> (u32, u32) {
     let (packed_a, packed_b) = persist(l, a);
@@ -188,10 +197,7 @@ fn unclamped(l: &Latches, a: u32) -> (u32, u32) {
     } else {
         packed_a >> 16
     };
-    (
-        (packed_a & 0xffff) | (d << 16),
-        raw(l.de_max(), packed_b & 0xffff) | (raw(l.dlz_max(), packed_b >> 16) << 16),
-    )
+    ((packed_a & 0xffff) | (d << 16), packed_b)
 }
 
 negative_control!(
@@ -327,12 +333,13 @@ fn value() -> impl Strategy<Value = f32> {
     ]
 }
 
-/// The f16 bits of a valid state's clamped value `x`, NaN as 0.0: the oracle for a drift half.
+/// The `log16` bits of a valid state's drift maximum `x` (R-632), NaN as 0.0: the oracle for a drift half. The form
+/// saturates at its greatest code, so it takes no clamp.
 fn drift_bits(x: f32) -> u16 {
     if x.is_nan() {
         0
     } else {
-        f32_to_f16_bits(x.clamp(-F16_FINITE_MAX, F16_FINITE_MAX))
+        f32_to_log16(x)
     }
 }
 
@@ -392,7 +399,9 @@ fn check_fuzz(pack: Persist, state: u32, obs: &[(f32, f32, f32)]) -> Result<(), 
         let (d2, de, dlz) = offline(obs);
         let d = d2.map_or(0x7c00, |d2| d_min_oracle(d2.sqrt()));
         prop_assert!(
-            halves[1..].iter().all(|&h| finite16(h)) && (d2.is_none() || finite16(halves[0])),
+            log16_to_f32(halves[1]).is_finite()
+                && log16_to_f32(halves[2]).is_finite()
+                && (d2.is_none() || finite16(halves[0])),
             "state {}: a half of {:04x?} is not finite and clamped",
             state,
             halves

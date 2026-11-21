@@ -1,0 +1,8 @@
+{
+  "gate": "suspect-default-occupant",
+  "inputs": ["regularised.json", "cartesian.json"],
+  "measurement": {
+    "requirement": "REQ-INT-106",
+    "ruling": "R-71"
+  }
+}

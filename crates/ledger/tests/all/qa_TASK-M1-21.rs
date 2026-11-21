@@ -377,7 +377,16 @@ negative_control!(
 /// The views on cool-warm before R-426: R-423's six less `theta` (now cyclic), `C_ty` (RQ-277), and the `diverging`
 /// `E_0` and `Lz_0`; less `q_mass`, whose range TASK-M2-03 declared [0, 1] (REQ-PAY-097, R-426), and `mean_y`, whose
 /// range TASK-M3-13 declared [0, 4] (REQ-PAY-098, R-426).
-const COOLWARM: [&str; 6] = ["ftle", "S", "diffusion", "C_ty", "E_0", "Lz_0"];
+/// R-605's `dE_reg_final` joins them, signed (TASK-M3-41).
+const COOLWARM: [&str; 7] = [
+    "ftle",
+    "S",
+    "diffusion",
+    "C_ty",
+    "E_0",
+    "Lz_0",
+    "dE_reg_final",
+];
 
 fn check_coolwarm(es: &[Entry], want: &[&str]) {
     let got: BTreeSet<&str> = es

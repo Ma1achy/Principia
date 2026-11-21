@@ -9,7 +9,7 @@
 //!   `.w[25:31]`.
 //!
 //! - REQ-PAY-036 / REQ-PAY-038 (`qa_m315_binding_*`): the word buffer is a binding of its own (its own binding slot,
-//!   16 B entries, SimState 112 / 160 B with no word member; 104 / 152 B before the escape rule's lagged n̂ register, 96 / 144 B before the collision floor's record, R-973); a crossing of sample `i` touches only index `i`; a substep
+//!   16 B entries, SimState 120 / 168 B with no word member; 112 / 160 B before the budget word and the regularised drift (TASK-M3-41); 104 / 152 B before the escape rule's lagged n̂ register, 96 / 144 B before the collision floor's record, R-973); a crossing of sample `i` touches only index `i`; a substep
 //!   with no crossing touches the buffer not at all.
 //! - REQ-PAY-042 (`qa_m315_write_count_*`): over lockstep marches of several samples, word-buffer writes == crossings
 //!   on every substep, and no read on a substep with no crossing.
@@ -434,7 +434,7 @@ negative_control!(
 );
 
 /// The binding's layout: the word buffer has a slot of its own, apart from SimState's; its entry is one 16 B
-/// `vec4<u32>`; SimState is 112 / 160 B at align 8 (with the collision floor's record, R-973, and the lagged n̂ register), so it holds no 16-aligned word member (payload §0).
+/// `vec4<u32>`; SimState is 120 / 168 B at align 8 (with the collision floor's record, R-973, and the lagged n̂ register), so it holds no 16-aligned word member (payload §0).
 fn check_layout(word_slot: (u32, u32), state_slot: (u32, u32), sizes: [(usize, usize); 3]) {
     assert_ne!(
         word_slot, state_slot,
@@ -447,13 +447,13 @@ fn check_layout(word_slot: (u32, u32), state_slot: (u32, u32), sizes: [(usize, u
     );
     assert_eq!(
         sizes[1],
-        (112, 8),
-        "SimStateBase is not 112 B at align 8 (no word member)"
+        (120, 8),
+        "SimStateBase is not 120 B at align 8 (no word member)"
     );
     assert_eq!(
         sizes[2],
-        (160, 8),
-        "SimStateFTLE is not 160 B at align 8 (no word member)"
+        (168, 8),
+        "SimStateFTLE is not 168 B at align 8 (no word member)"
     );
 }
 

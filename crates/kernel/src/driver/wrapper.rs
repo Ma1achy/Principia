@@ -33,8 +33,10 @@
 //! `macro`, which still advances past it, bounds the loop only. **A march that ended** ([`Reached::ended`]) is never
 //! run on: the loop stops at the macro-step it ended in, which is not completed, its state the one the occupant
 //! latched (Part 2a § "The sync grid is a fixed quantum of physical time (R-565)": "a terminal event … still latches
-//! at the step it fires on"). A spent budget leaves `state` `running`, as it stood (Part 7; R-603, whose
-//! `budget_exhausted` flag is TASK-M3-41's).
+//! at the step it fires on"). A spent budget leaves `state` `running`, as it stood, and sets the sticky
+//! `budget_exhausted` bit of `budget_bits`, which also holds the two counted signals, `saturated` set when either fired
+//! (Part 7; R-603; `crate::regularisation::budget`). A terminal found on the step the budget ran out is the outcome:
+//! the march reads `done` before its budget, so the copy is labelled and the bit is never set beside a terminal.
 //!
 //! **A march that fails** ([`super::failure`]) ends on its first non-finite step: the cadence's per-step detection, or
 //! a regularised march's own step-7 exit, which reports its cause by what failed ([`Cadence::non_finite`]; payload §2,
@@ -45,7 +47,7 @@
 //! [`integrate`] writes the monitored fields from
 //! its cadence's monitor ([`monitored`]; Part 1, "COM projection and invariant monitoring"): `E_0` and `Lz_0`, stored
 //! before the loop, and `packed_b`'s `dE_max` and `dLz_max`, the maxima latched at `Real` during the march and packed
-//! to f16 once, here (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
+//! once, here, in the `log16` form (R-632) (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
 //! side derives them from the final state (payload §5). [`monitored`] also writes the detector's: `dmin_pair`, the
 //! latched pair (payload §2), `d_min`, the `√` of its latched least `d²`, a collision's `state` and `detail` over
 //! `running`, and `coll_floor`, the collision test's floor over its near-firing states and the `d_min` state (Part 7,
@@ -101,7 +103,7 @@ use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence, Reached};
 use super::cadence::{WordCadence, WrapperCadence};
 use super::carried::Carried;
 use super::failure::{self, Recorder};
-use super::latch::Latches;
+use super::latch::{persist_de_reg, Latches};
 use super::shape::{Readout, ReadoutReal};
 use super::substep::{NsubThresholds, Quantise, SubstepState};
 use super::welford::{self, Welford};
@@ -112,10 +114,11 @@ use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
     pack_times, sd_detail, sd_is_failed, sd_saturated, sd_state, set_coll_floor, set_d_min_unset,
-    set_dmin_pair, set_t_dmin_step, tm_t_dmin_step, tm_t_end_step, DminCounters, PayloadReal,
-    SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED,
+    set_dmin_pair, set_saturated, set_t_dmin_step, tm_t_dmin_step, tm_t_end_step, DminCounters,
+    PayloadReal, SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED,
 };
 use crate::real::IeeeBits;
+use crate::regularisation::budget::latch_exhausted;
 use crate::shape::shape;
 use crate::word::WordBuffer;
 
@@ -167,7 +170,9 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
 
 /// `out` with the monitored fields of the run `cadence` followed (Part 1, "COM projection and invariant monitoring";
 /// payload §1, §2): `E_0` and `Lz_0` as stored before the loop, and `packed_b` holding `dE_max = max|ΔE|` and
-/// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed to f16 (clamped to binary16's finite range first); and its
+/// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed in the `log16` form (R-632); `dE_reg`, the regularised drift's
+/// final value and maximum as the occupant reported them, or the Cartesian ones where it reported none (R-605); and
+/// `budget_bits`' two counts, `saturated` set when either fired (R-603); and its
 /// detector's fields (Part 7; [`crate::detect::collision::Detector::label`]): `dmin_pair` the latched pair, `d_min` the
 /// `√` of the latched least `d²`, the IC's included, so a start already collided stores its least separation (R-933),
 /// and where a collision fired, `state` `collision` and its `detail`; and `coll_floor`, the floor's record
@@ -225,16 +230,29 @@ fn written<R: WrapperReal>(
         horizon: sd_state(out.packed_a) == STATE_BOUNDED,
         ..cadence.events()
     };
-    let labelled = precedence(&events).write(set_dmin_pair(out.packed_a, detector.latch().pair()));
+    // R-603: `saturated` is set when either of the regularised march's counted signals fired.
+    let signals = cadence.signal_counts();
+    let described = set_saturated(out.packed_a, sd_saturated(out.packed_a) || signals.fired());
+    let labelled = precedence(&events).write(set_dmin_pair(described, detector.latch().pair()));
     let mut latches = Latches::unset();
     latches.separation_squared(detector.latch().d2());
     latches.drift(m.de_max().quantise(), m.dlz_max().quantise());
     let (packed_a, packed_b) = latches.persist(labelled, &DminCounters::new());
+    // R-605: the regularised drift, or the Cartesian where no regularised one was reported (regularisation off, the two
+    // energies one). A failed run's is replaced by the failed-state value below (`failure::sim_failed`).
+    let reg = cadence.regularised();
+    let (last, max) = if reg.seen() {
+        (reg.last().quantise(), reg.max().quantise())
+    } else {
+        (m.de_final().quantise(), m.de_max().quantise())
+    };
     let measured = SimStateBaseOf {
         E_0: m.e_0(),
         Lz_0: m.lz_0(),
         packed_a,
         packed_b,
+        budget_bits: signals.write(out.budget_bits),
+        dE_reg: persist_de_reg(false, last, max),
         coll_floor_bits: set_coll_floor(out.coll_floor_bits, detector.floor_code()),
         times: set_t_dmin_step(out.times, cadence.dmin_step()),
         _nhat_lag_0: lag_0,
@@ -380,7 +398,12 @@ pub fn integrate_resumed_carrying<A: Advance, R: WrapperReal, C: Cadence<R>>(
     carried: &mut Carried<R>,
     steps: u32,
 ) -> SimStateBaseOf<R> {
-    if super::terminal::finished(stored.packed_a, stored.times, uniforms.horizon_steps) {
+    if super::terminal::finished(
+        stored.packed_a,
+        stored.times,
+        stored.budget_bits,
+        uniforms.horizon_steps,
+    ) {
         cadence.latched();
         *stored
     } else {
@@ -568,6 +591,8 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
         packed_a,
         times: pack_times(completed, start.t_dmin_step),
         total_substeps,
+        // R-603: a spent budget is the sticky flag, `state` left `running` (`crate::regularisation::budget`).
+        budget_bits: latch_exhausted(0, last == Reached::Exhausted),
         ..SimStateBaseOf::default()
     });
     if failure.fired {

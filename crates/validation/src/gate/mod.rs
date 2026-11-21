@@ -132,6 +132,8 @@ pub struct MeasurementControl {
 /// The registered measurement gates, in the order `--all` runs them, after [`REGISTRY`].
 pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[
     &CrossBackendGate,
+    &crate::budget::StepBudgetGate,
+    &crate::suspect::SuspectGate,
     &SeparationFloorGate,
     &ShadowFormGate,
     &DeltaDepGate,

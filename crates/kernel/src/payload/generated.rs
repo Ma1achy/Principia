@@ -2,9 +2,9 @@
 
 /// The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger, computed at generation
 /// and never bumped by hand (R-36, R-63; `ledger::version`).
-pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x77d6831e84273311;
+pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x76e70670b6f511f9;
 
-/// `SimStateFTLE` at the `Real` `R`: 160 B aligned to 8 at f32, 296 B aligned to 8 at f64.
+/// `SimStateFTLE` at the `Real` `R`: 168 B aligned to 8 at f32, 304 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
 #[repr(C, align(8))]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -23,6 +23,8 @@ pub struct SimStateFTLEOf<R: PayloadReal> {
     pub packed_b: u32,
     pub times: u32,
     pub total_substeps: u32,
+    pub budget_bits: u32,
+    pub dE_reg: u32,
     pub closure_min: R,
     pub closure_step: u16,
     pub _reserved: u16,
@@ -33,10 +35,10 @@ pub struct SimStateFTLEOf<R: PayloadReal> {
     pub _tail: R::SimStateFTLETail,
 }
 
-/// `SimStateFTLE` at f32, the GPU's instantiation (canonical_spec §1 item 3): 160 B.
+/// `SimStateFTLE` at f32, the GPU's instantiation (canonical_spec §1 item 3): 168 B.
 pub type SimStateFTLE = SimStateFTLEOf<f32>;
 
-/// `SimStateBase` at the `Real` `R`: 112 B aligned to 8 at f32, 200 B aligned to 8 at f64.
+/// `SimStateBase` at the `Real` `R`: 120 B aligned to 8 at f32, 208 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
 #[repr(C, align(8))]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -53,6 +55,8 @@ pub struct SimStateBaseOf<R: PayloadReal> {
     pub packed_b: u32,
     pub times: u32,
     pub total_substeps: u32,
+    pub budget_bits: u32,
+    pub dE_reg: u32,
     pub closure_min: R,
     pub closure_step: u16,
     pub _reserved: u16,
@@ -63,7 +67,7 @@ pub struct SimStateBaseOf<R: PayloadReal> {
     pub _tail: R::SimStateBaseTail,
 }
 
-/// `SimStateBase` at f32, the GPU's instantiation (canonical_spec §1 item 3): 112 B.
+/// `SimStateBase` at f32, the GPU's instantiation (canonical_spec §1 item 3): 120 B.
 pub type SimStateBase = SimStateBaseOf<f32>;
 
 /// `FreeGroupWord`: 16 B, aligned to 16 (dd_simstate_payload §1; dd_generation_root §3.3a, §3.6).
@@ -138,7 +142,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 4,
         real_align: 4,
         instantiated: true,
-        structs: [("SimStateFTLE", 160, 8), ("SimStateBase", 112, 8)],
+        structs: [("SimStateFTLE", 168, 8), ("SimStateBase", 120, 8)],
         descriptor: ("ICDescriptor", 64, 4),
     },
     PayloadLayout {
@@ -146,7 +150,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 8,
         real_align: 8,
         instantiated: true,
-        structs: [("SimStateFTLE", 296, 8), ("SimStateBase", 200, 8)],
+        structs: [("SimStateFTLE", 304, 8), ("SimStateBase", 208, 8)],
         descriptor: ("ICDescriptor", 112, 8),
     },
     PayloadLayout {
@@ -154,7 +158,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 16,
         real_align: 8,
         instantiated: false,
-        structs: [("SimStateFTLE", 568, 8), ("SimStateBase", 376, 8)],
+        structs: [("SimStateFTLE", 576, 8), ("SimStateBase", 384, 8)],
         descriptor: ("ICDescriptor", 208, 8),
     },
 ];
@@ -306,6 +310,56 @@ pub fn f16_bits_to_f32(h: u16) -> f32 {
         return f32::from_bits(sign | 0x7f80_0000 | (man << 13));
     }
     f32::from_bits(sign | ((exp + 112) << 23) | (man << 13))
+}
+
+/// The `log16` form's lowest octave: code 1 is `2^-96` (payload §2, "The `log16` form").
+pub const LOG16_OCTAVE_LO: i32 = -96;
+
+/// The `log16` form's greatest magnitude code, 15 bits: `2^31·(1 + 254/256)`, the saturation value.
+pub const LOG16_CODE_MAX: u32 = 0x7fff;
+
+/// The f32 bits, shifted right by 15, of `2^LOG16_OCTAVE_LO`: the code-1 value's.
+const LOG16_BASE: u32 = ((LOG16_OCTAVE_LO + 127) as u32) << 8;
+
+/// `x` in the `log16` form (payload §2): bit 15 its sign, bits 0–14 its magnitude's code. The magnitude is rounded
+/// to an 8-bit fraction of its octave, half up, on its f32 bits (relative error at most 2⁻⁹); one below
+/// `2^LOG16_OCTAVE_LO` is held as that, never flushed to 0.0, and one above the greatest code, `+∞` included, as the
+/// greatest. `±0.0` is code 0 and a NaN is code 0 too: storage never holds NaN (R-79). Integer operations only, so
+/// the code is the same on every backend.
+#[inline]
+pub fn f32_to_log16(x: f32) -> u16 {
+    let b = x.to_bits();
+    let sign = (b >> 16) & 0x8000;
+    let mag = b & 0x7fff_ffff;
+    let code = if mag == 0 || mag > 0x7f80_0000 {
+        0
+    } else {
+        let q = (mag + 0x4000) >> 15;
+        if q < LOG16_BASE {
+            1
+        } else if q - LOG16_BASE >= LOG16_CODE_MAX {
+            LOG16_CODE_MAX
+        } else {
+            q - LOG16_BASE + 1
+        }
+    };
+    let sign = if code == 0 { 0 } else { sign };
+    (sign | code) as u16
+}
+
+/// The f32 value of the `log16` bits `h` (payload §2): code 0 is ±0.0, with bit 15's sign (no packer writes the
+/// signed one, so a set sign on code 0 reads back as itself, `-0.0`, not as a stored 0.0); a code `c ≥ 1` is the f32
+/// whose bits are `(c − 1 + LOG16_BASE) << 15`, with bit 15's sign. Exact: every `log16` value is an f32.
+#[inline]
+pub fn log16_to_f32(h: u16) -> f32 {
+    let h = u32::from(h);
+    let code = h & LOG16_CODE_MAX;
+    let sign = (h & 0x8000) << 16;
+    if code == 0 {
+        f32::from_bits(sign)
+    } else {
+        f32::from_bits(sign | ((code - 1 + LOG16_BASE) << 15))
+    }
 }
 
 /// WGSL's `pack2x16float`: `v[0]` in bits 0–15, `v[1]` in bits 16–31. No clamp: callers clamp first (payload §1).
@@ -555,25 +609,25 @@ pub fn pack_packed_a(
 /// `dE_max`: bits 0–15 of `packed_b` (payload §2, §6).
 #[inline]
 pub fn pb_dE_max(w: u32) -> f32 {
-    f16_bits_to_f32(extract(w, 0, 16) as u16)
+    log16_to_f32(extract(w, 0, 16) as u16)
 }
 
-/// `packed_b` with `dE_max` set to `v`, clamped to ±65504 first (payload §1); every other bit kept.
+/// `packed_b` with `dE_max` set to `v`, in the `log16` form ([`f32_to_log16`]; payload §2); every other bit kept.
 #[inline]
 pub fn set_dE_max(w: u32, v: f32) -> u32 {
-    insert(w, u32::from(f32_to_f16_bits(clamp_f16(v))), 0, 16)
+    insert(w, u32::from(f32_to_log16(v)), 0, 16)
 }
 
 /// `dLz_max`: bits 16–31 of `packed_b` (payload §2, §6).
 #[inline]
 pub fn pb_dLz_max(w: u32) -> f32 {
-    f16_bits_to_f32(extract(w, 16, 16) as u16)
+    log16_to_f32(extract(w, 16, 16) as u16)
 }
 
-/// `packed_b` with `dLz_max` set to `v`, clamped to ±65504 first (payload §1); every other bit kept.
+/// `packed_b` with `dLz_max` set to `v`, in the `log16` form ([`f32_to_log16`]; payload §2); every other bit kept.
 #[inline]
 pub fn set_dLz_max(w: u32, v: f32) -> u32 {
-    insert(w, u32::from(f32_to_f16_bits(clamp_f16(v))), 16, 16)
+    insert(w, u32::from(f32_to_log16(v)), 16, 16)
 }
 
 /// `packed_b`'s reserved spans, `(offset, width)`, as the ledger declares them: never written, decoded as zero
@@ -620,6 +674,89 @@ pub const TIMES_RESERVED: [(u32, u32); 0] = [];
 pub fn pack_times(t_end_step: u32, t_dmin_step: u32) -> u32 {
     let w = set_t_end_step(0, t_end_step);
     set_t_dmin_step(w, t_dmin_step)
+}
+
+/// `budget_exhausted`: bit 0 of `budget_bits` (payload §2, §6).
+#[inline]
+pub fn bb_budget_exhausted(w: u32) -> bool {
+    extract(w, 0, 1) == 1
+}
+
+/// `budget_bits` with `budget_exhausted` set to `v`; every other bit kept.
+#[inline]
+pub fn set_budget_exhausted(w: u32, v: bool) -> u32 {
+    insert(w, u32::from(v), 0, 1)
+}
+
+/// `floor_hits`: bits 1–15 of `budget_bits` (payload §2, §6).
+#[inline]
+pub fn bb_floor_hits(w: u32) -> u32 {
+    extract(w, 1, 15)
+}
+
+/// `budget_bits` with `floor_hits` set to `v`; every other bit kept.
+#[inline]
+pub fn set_floor_hits(w: u32, v: u32) -> u32 {
+    insert(w, v, 1, 15)
+}
+
+/// `cap_hits`: bits 16–30 of `budget_bits` (payload §2, §6).
+#[inline]
+pub fn bb_cap_hits(w: u32) -> u32 {
+    extract(w, 16, 15)
+}
+
+/// `budget_bits` with `cap_hits` set to `v`; every other bit kept.
+#[inline]
+pub fn set_cap_hits(w: u32, v: u32) -> u32 {
+    insert(w, v, 16, 15)
+}
+
+/// `budget_bits`'s reserved spans, `(offset, width)`, as the ledger declares them: never written, decoded as zero
+/// (payload §2; dd_generation_root §5 test 1).
+pub const BUDGET_BITS_RESERVED: [(u32, u32); 1] = [(31, 1)];
+
+/// `budget_bits` from its fields, each written in bit order over zero, so its reserved bits are zero (payload §2).
+#[inline]
+pub fn pack_budget_bits(budget_exhausted: bool, floor_hits: u32, cap_hits: u32) -> u32 {
+    let w = set_budget_exhausted(0, budget_exhausted);
+    let w = set_floor_hits(w, floor_hits);
+    set_cap_hits(w, cap_hits)
+}
+
+/// `dE_reg_final`: bits 0–15 of `dE_reg` (payload §2, §6).
+#[inline]
+pub fn dr_dE_reg_final(w: u32) -> f32 {
+    log16_to_f32(extract(w, 0, 16) as u16)
+}
+
+/// `dE_reg` with `dE_reg_final` set to `v`, in the `log16` form ([`f32_to_log16`]; payload §2); every other bit kept.
+#[inline]
+pub fn set_dE_reg_final(w: u32, v: f32) -> u32 {
+    insert(w, u32::from(f32_to_log16(v)), 0, 16)
+}
+
+/// `dE_reg_max`: bits 16–31 of `dE_reg` (payload §2, §6).
+#[inline]
+pub fn dr_dE_reg_max(w: u32) -> f32 {
+    log16_to_f32(extract(w, 16, 16) as u16)
+}
+
+/// `dE_reg` with `dE_reg_max` set to `v`, in the `log16` form ([`f32_to_log16`]; payload §2); every other bit kept.
+#[inline]
+pub fn set_dE_reg_max(w: u32, v: f32) -> u32 {
+    insert(w, u32::from(f32_to_log16(v)), 16, 16)
+}
+
+/// `dE_reg`'s reserved spans, `(offset, width)`, as the ledger declares them: never written, decoded as zero
+/// (payload §2; dd_generation_root §5 test 1).
+pub const DE_REG_RESERVED: [(u32, u32); 0] = [];
+
+/// `dE_reg` from its fields, each written in bit order over zero, so its reserved bits are zero (payload §2).
+#[inline]
+pub fn pack_dE_reg(dE_reg_final: f32, dE_reg_max: f32) -> u32 {
+    let w = set_dE_reg_final(0, dE_reg_final);
+    set_dE_reg_max(w, dE_reg_max)
 }
 
 /// `coll_floor`'s sentinel in the ledger (dd_generation_root §3.8).

@@ -145,6 +145,8 @@ pub fn pattern<R: PatternReal>(i: u32) -> SimStateFTLEOf<R> {
         packed_b: packed_b(i),
         times: times(i),
         total_substeps: total_substeps(i),
+        budget_bits: 0,
+        dE_reg: 0,
         closure_min: real_slot(i, 30),
         closure_step: closure_step(i) as u16,
         _reserved: 0,
@@ -209,6 +211,10 @@ pub fn write_words(i: u32, out: &mut [u32]) {
     // lagged shape register, zero, march state the pattern does not march (payload §1): written, as every member
     // is, so a reused buffer keeps no stale word.
     out[at(offset_of!(SimStateFTLE, coll_floor_bits))] = 0;
+    // The budget word and the regularised drift (payload §1, §2; R-603, R-605): zero, no budget spent and no drift,
+    // as the pattern marches nothing.
+    out[at(offset_of!(SimStateFTLE, budget_bits))] = 0;
+    out[at(offset_of!(SimStateFTLE, dE_reg))] = 0;
     out[at(offset_of!(SimStateFTLE, _nhat_lag_0))] = 0;
     out[at(offset_of!(SimStateFTLE, _nhat_lag_1))] = 0;
     out[at(offset_of!(SimStateFTLE, _nhat_lag_2))] = 0;

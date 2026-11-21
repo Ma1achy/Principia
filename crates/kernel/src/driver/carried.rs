@@ -11,15 +11,15 @@
 //! **Where it lives.** The plan is unclear here (the carried state "in `SimState` or a buffer beside it"); chose a
 //! buffer beside `SimState`, one element per trajectory at the trajectory's own index, as the word buffer is, because
 //! it leaves the GPU payload's layout, its ledger rows and its schema version as they are, and a trajectory under a
-//! stepper pays nothing for numbers it would not use, and Aarseth–Zare uses only the step total and the count. It is
+//! stepper pays nothing for numbers it would not use, and Aarseth–Zare uses only the step total, the count and one energy. It is
 //! part of the one logical payload `f(IC, sim key, t)`: stored, evicted, recomputed and resumed with the `SimState` it
 //! sits beside.
 //!
 //! **Its layout** ([`Carried`]) is occupant-neutral: fourteen floats at the working precision, whose meaning is the
 //! occupant's that wrote them, and four `u32`. Heggie's fourteen are `Q₀, Q₁, Q₂`, `P₀, P₁, P₂`, the frozen energy `h`
 //! and its interval clock `t` ([`crate::regularisation::heggie::carried_state`]); logH's are `B`, `W` and its interval
-//! clock `t`, the first three, the rest 0 ([`crate::regularisation::logh::carried_state`]). 72 bytes at f32, 128 at
-//! f64.
+//! clock `t`, the first three, the rest 0 ([`crate::regularisation::logh::carried_state`]); Aarseth–Zare's is only
+//! `x[12]`, the `E` of its first registration, which its regularised drift reads against (R-566). 72 bytes at f32, 128 at f64.
 //!
 //! **The re-registration count** ([`Carried::re_registrations`]; integrator_contract § "The profile gains a field"):
 //! the registrations the trajectory's occupant made at a sync boundary after `t = 0`. It is 0 for an occupant that

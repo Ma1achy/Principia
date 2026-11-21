@@ -207,24 +207,25 @@ fn check_rows(rows: &[(&str, u32, u32)]) {
 }
 
 /// Raw words for known values. `packed_a` = d_min(1.0 → 0x3c00) << 16 | last_symbol 3 << 8 | dmin_pair 0 << 6 |
-/// saturated << 5 | detail 1 << 3 | state 2 = 0x3c00_032a. `packed_b` = dLz_max(2.0 → 0x4000) << 16 | dE_max(0.5 →
-/// 0x3800). `times` = t_dmin_step << 16 | t_end_step.
+/// saturated << 5 | detail 1 << 3 | state 2 = 0x3c00_032a. `packed_b` = dLz_max(2.0 → 0x6101) << 16 | dE_max(0.5 →
+/// 0x5F01), the `log16` form's codes since R-632 (0x4000 and 0x3800 in binary16 before; payload §2). `times` = t_dmin_step << 16 | t_end_step.
 fn known_rows() -> Vec<(&'static str, u32, u32)> {
     vec![
         ("packed_a", pa(2, 1, true, 0, 3, 1.0), 0x3c00_032a),
-        ("packed_b", pack_packed_b(0.5, 2.0), 0x4000_3800),
+        ("packed_b", pack_packed_b(0.5, 2.0), 0x6101_5f01),
         ("times", pack_times(0x1234, 0xabcd), 0xabcd_1234),
         ("times max end", pack_times(0xffff, 0), 0x0000_ffff),
         ("times max dmin", pack_times(0, 0xffff), 0xffff_0000),
         (
             "set_dE_max keeps high",
+            // 1.0 in the `log16` form (R-632): f32 bits `0x3F80_0000 >> 15 = 0x7F00`, less `0x1F00`, plus 1.
             set_dE_max(0xabcd_0000, 1.0),
-            0xabcd_3c00,
+            0xabcd_6001,
         ),
         (
             "set_dLz_max keeps low",
             set_dLz_max(0x0000_1234, 1.0),
-            0x3c00_1234,
+            0x6001_1234,
         ),
         ("set_d_min keeps low", sdm(0x0000_03ff, 1.0), 0x3c00_03ff),
         (
@@ -237,13 +238,14 @@ fn known_rows() -> Vec<(&'static str, u32, u32)> {
             set_t_dmin_step(0x0000_1234, 7),
             0x0007_1234,
         ),
-        // Payload §1: valid values are clamped to ±65504 before packing.
-        ("dE_max clamp", set_dE_max(0, 1.0e9), 0x0000_7bff),
-        ("dE_max clamp -", set_dE_max(0, -1.0e9), 0x0000_fbff),
+        // Payload §2: the `log16` form (R-632) holds 1e9 as itself to 2⁻⁹ (code 0x7DDE, its sign in bit 15) and
+        // saturates `+∞` at its greatest code, 0x7FFF; binary16 clamped all three to ±65504 before.
+        ("dE_max clamp", set_dE_max(0, 1.0e9), 0x0000_7dde),
+        ("dE_max clamp -", set_dE_max(0, -1.0e9), 0x0000_fdde),
         (
             "dLz_max clamp inf",
             set_dLz_max(0, f32::INFINITY),
-            0x7bff_0000,
+            0x7fff_0000,
         ),
     ]
 }
@@ -258,13 +260,13 @@ fn packed_words_qa_known_values_and_accessors() {
         unpack2x16float(a)[1],
         "d_min is .y (payload §2)"
     );
-    let b = 0x4000_3800;
+    let b = 0x6101_5f01;
     assert_eq!(pb_dE_max(b), 0.5, "pb_dE_max");
     assert_eq!(pb_dLz_max(b), 2.0, "pb_dLz_max");
     assert_eq!(
-        unpack2x16float(b),
+        [log16_to_f32(b as u16), log16_to_f32((b >> 16) as u16)],
         [0.5, 2.0],
-        "dE_max .x, dLz_max .y (payload §2)"
+        "dE_max low, dLz_max high, each log16 (payload §2; R-632)"
     );
     let t = 0xabcd_1234;
     assert_eq!(tm_t_end_step(t), 0x1234, "tm_t_end_step");
@@ -290,7 +292,7 @@ negative_control!(
     packed_words_qa_known_values_and_accessors,
     "dE_max and dLz_max swapped is not payload §2's packed_b, so the raw-word check must fail",
     expected = "packed_b: got",
-    check_rows(&[("packed_b", pack_packed_b(2.0, 0.5), 0x4000_3800)])
+    check_rows(&[("packed_b", pack_packed_b(2.0, 0.5), 0x6101_5f01)])
 );
 
 // ---------------------------------------------------------------------------------------------------------------

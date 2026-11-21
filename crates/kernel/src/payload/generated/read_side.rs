@@ -67,6 +67,11 @@ pub struct SimState {
     pub t_end_step: u32,
     pub t_dmin_step: u32,
     pub total_substeps: u32,
+    pub budget_exhausted: bool,
+    pub floor_hits: u32,
+    pub cap_hits: u32,
+    pub dE_reg_final: f32,
+    pub dE_reg_max: f32,
     pub closure_min: f32,
     pub closure_step: u32,
     pub coll_floor: u32,
@@ -258,11 +263,13 @@ pub struct DriftSuspect {
 }
 
 /// The drift suspect predicates of the read-side `s`, at the sim key's `eps_e`, under an occupant whose profile's
-/// `symplectic` flag is `symplectic` (dd_integrator §3.5; integrator contract Part 2).
+/// `symplectic` flag is `symplectic` (dd_integrator §3.5; integrator contract Part 2). The energy predicate reads the
+/// regularised drift's latch, `dE_reg_max`, never the Cartesian `dE_max`, which is diagnostic only (R-605); with
+/// regularisation off the two energies are one and `dE_reg_max` holds the Cartesian maximum.
 #[inline]
 pub fn drift_suspect(s: &SimState, eps_e: f32, symplectic: bool) -> DriftSuspect {
     DriftSuspect {
-        energy: suspect_energy(s.dE_max, s.E_0, eps_e),
+        energy: suspect_energy(s.dE_reg_max, s.E_0, eps_e),
         lz: suspect_lz(s.dLz_max),
         reads_dynamics: symplectic,
     }
@@ -314,6 +321,11 @@ pub fn sim_state_from_ftle(
         t_end_step: tm_t_end_step(s.times),
         t_dmin_step: tm_t_dmin_step(s.times),
         total_substeps: s.total_substeps,
+        budget_exhausted: bb_budget_exhausted(s.budget_bits),
+        floor_hits: bb_floor_hits(s.budget_bits),
+        cap_hits: bb_cap_hits(s.budget_bits),
+        dE_reg_final: dr_dE_reg_final(s.dE_reg),
+        dE_reg_max: dr_dE_reg_max(s.dE_reg),
         closure_min: s.closure_min,
         closure_step: u32::from(s.closure_step),
         coll_floor: cf_coll_floor(s.coll_floor_bits),
@@ -388,6 +400,11 @@ pub fn sim_state_from_base(
         t_end_step: tm_t_end_step(s.times),
         t_dmin_step: tm_t_dmin_step(s.times),
         total_substeps: s.total_substeps,
+        budget_exhausted: bb_budget_exhausted(s.budget_bits),
+        floor_hits: bb_floor_hits(s.budget_bits),
+        cap_hits: bb_cap_hits(s.budget_bits),
+        dE_reg_final: dr_dE_reg_final(s.dE_reg),
+        dE_reg_max: dr_dE_reg_max(s.dE_reg),
         closure_min: s.closure_min,
         closure_step: u32::from(s.closure_step),
         coll_floor: cf_coll_floor(s.coll_floor_bits),
