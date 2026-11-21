@@ -16,6 +16,8 @@
 //! of the grid below and dd tests 2 and 7: Euler's relative drift there is at least 2.9 at the default horizon, while
 //! over latent cubes with momentum it can fall to 10⁻⁷ on a fast, unbound start that barely interacts, below any
 //! threshold that leaves the symplectic occupants unlit on test 2 (R-660, RQ-626 (a)).
+//!
+//! parity-tier: N (drift)
 
 use kernel::decode::{self, Ic, Latent};
 #[cfg(feature = "controls")]
@@ -185,6 +187,7 @@ where
     }
 }
 
+// parity-tier: N (one-step)
 #[test]
 fn com_projection_after_one_step() {
     for_each_occupant::<f64>();
@@ -283,6 +286,7 @@ where
     (WrapperCadence::new(&ic.m, &ic.r, &ic.p), ic.m)
 }
 
+// parity-tier: N (one-step)
 #[test]
 fn com_projection_m_cached() {
     for z in Z {
@@ -775,6 +779,7 @@ fn check_velocity_form(project: VelocityForm) {
     }
 }
 
+// parity-tier: N (one-step)
 #[test]
 fn com_projection_velocity_form() {
     check_velocity_form(ComProjection::project_velocities);

@@ -13,6 +13,8 @@
 //!
 //! **Domain** (pitfalls §10): `qa_com_projection_every_step` holds over the first steps of dd test 7's fixture; the
 //! rounding bounds are multiples of the unit roundoff at the state's own scale.
+//!
+//! parity-tier: N (drift)
 
 use kernel::decode::{self, Ic, Latent};
 use kernel::driver::advance::Cadence;
@@ -102,6 +104,7 @@ fn the_projection(m: &[f64; 3], r: &V, p: &V) -> (V, V) {
     ComProjection::new(m).project(r, p)
 }
 
+// parity-tier: N (one-step)
 #[test]
 fn qa_com_projection_worked() {
     check_worked(the_projection);
@@ -137,6 +140,7 @@ fn check_velocity(project: fn(&V) -> V) {
     assert_eq!(project(&R0), R1, "vᵢ − V_com is not the worked one");
 }
 
+// parity-tier: N (one-step)
 #[test]
 fn qa_com_projection_velocity_worked() {
     check_velocity(|v| ComProjection::new(&M).project_velocities(v));
@@ -262,6 +266,7 @@ where
     );
 }
 
+// parity-tier: N (one-step)
 #[test]
 fn qa_com_projection_every_step() {
     audit::<Euler, f64>(2000);
@@ -367,6 +372,7 @@ fn through_the_cadence(s: &State<f64>) -> State<f64> {
     out
 }
 
+// parity-tier: N (one-step)
 #[test]
 fn qa_projection_restores_nothing() {
     check_restores_nothing(through_the_cadence);

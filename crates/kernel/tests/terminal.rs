@@ -15,6 +15,8 @@
 //!   head-on and passes at a separation far inside the substep law's cap, with no collision threshold.
 //!
 //! Pass criteria are written in each test before it was run.
+//!
+//! parity-tier: L (detector labels)
 
 use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
@@ -719,6 +721,7 @@ fn check_precedence(rule: Rule) {
     );
 }
 
+// parity-tier: L (priority)
 #[test]
 fn terminal_precedence() {
     check_precedence(precedence);

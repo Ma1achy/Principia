@@ -31,7 +31,6 @@
 //! **Parity tier.** The plan is unclear here (parity §8 indexes the drill-down suites, and purity is the seam table's
 //! test 13, not a tier row); chose Tier B for every test here: it is integer-exact equality of one backend with
 //! itself, the same decisions on the same inputs, never a comparison across precisions.
-// parity-tier: B (the whole file; see the note above)
 
 use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
@@ -508,9 +507,13 @@ fn random_quad_routes<R: P>(boot: Boot) {
 
 /// The random quad's labels at the horizon: the fixture reaches the terminals the routes must carry across a
 /// dispatch, so the property is not tested on running samples alone.
-fn labels<R: P>() -> Vec<u32> {
+fn labels<R: P>(horizon: u32) -> Vec<u32> {
     quad::<R>(0x5EED_0021, 8)
         .iter()
+        .map(|c| Case {
+            key: key(DT, horizon),
+            ..*c
+        })
         .map(|c| sd_state(c.uncut::<Kdk>().sim.packed_a))
         .collect()
 }
@@ -527,10 +530,9 @@ fn payload_purity_random_quad_routes_f32() {
 
 /// The fixture is not all of one kind: among the eight samples, at least one ends `running`/`bounded` at the horizon
 /// and at least one in a terminal (collision or escape) before it, at both precisions.
-#[test]
-fn payload_purity_random_quad_reaches_terminals() {
+fn reaches_terminals(horizon: u32) {
     use kernel::payload::{STATE_BOUNDED, STATE_RUNNING};
-    for states in [labels::<f64>(), labels::<f32>()] {
+    for states in [labels::<f64>(horizon), labels::<f32>(horizon)] {
         let open = states
             .iter()
             .filter(|&&s| s == STATE_BOUNDED || s == STATE_RUNNING)
@@ -547,25 +549,38 @@ fn payload_purity_random_quad_reaches_terminals() {
 }
 
 #[test]
-fn payload_purity_schedules_f64() {
-    let cases = quad::<f64>(0x5EED_0021, 8);
+fn payload_purity_random_quad_reaches_terminals() {
+    reaches_terminals(HORIZON);
+}
+
+negative_control!(
+    payload_purity_random_quad_reaches_terminals,
+    "The same quad stopped after one macro-step reaches no terminal: the fixture check must fail on it.",
+    expected = "no sample of the quad ends in a terminal",
+    reaches_terminals(1)
+);
+
+/// The quad under four schedules, to a playhead short of the horizon and to the horizon.
+fn every_schedule<R: P>(visit: Visit) {
+    let cases = quad::<R>(0x5EED_0021, 8);
     for seed in [1, 2, 3, 4] {
-        schedules(&cases, 40, seed, Visit::Own);
-        schedules(&cases, HORIZON, seed, Visit::Own);
+        schedules(&cases, 40, seed, visit);
+        schedules(&cases, HORIZON, seed, visit);
     }
 }
 
 #[test]
+fn payload_purity_schedules_f64() {
+    every_schedule::<f64>(Visit::Own);
+}
+
+#[test]
 fn payload_purity_schedules_f32() {
-    let cases = quad::<f32>(0x5EED_0021, 8);
-    for seed in [1, 2, 3, 4] {
-        schedules(&cases, 40, seed, Visit::Own);
-        schedules(&cases, HORIZON, seed, Visit::Own);
-    }
+    every_schedule::<f32>(Visit::Own);
 }
 
 negative_control!(
-    payload_purity_control_reboot_reloads_nothing,
+    payload_purity_random_quad_routes_f64,
     "A re-boot whose cadence reloads nothing from the stored state (its resume hook dropped) is not the continuous \
      march: the routes must fail.",
     expected = "payload purity",
@@ -573,11 +588,25 @@ negative_control!(
 );
 
 negative_control!(
-    payload_purity_control_warm_start,
+    payload_purity_random_quad_routes_f32,
+    "A re-boot whose cadence reloads nothing, at f32: the routes must fail.",
+    expected = "payload purity",
+    random_quad_routes::<f32>(Boot::Forgetting)
+);
+
+negative_control!(
+    payload_purity_schedules_f64,
     "A schedule that warm-starts a sample from its neighbour's stored state breaks the firewall: the schedules must \
      fail.",
     expected = "payload purity",
-    schedules(&quad::<f64>(0x5EED_0021, 8), 40, 1, Visit::WarmStart)
+    every_schedule::<f64>(Visit::WarmStart)
+);
+
+negative_control!(
+    payload_purity_schedules_f32,
+    "A warm-starting schedule, at f32: the schedules must fail.",
+    expected = "payload purity",
+    every_schedule::<f32>(Visit::WarmStart)
 );
 
 // ── Heggie × RK4 with its carried buffer ────────────────────────────────────────────────────────────────────────
@@ -604,6 +633,20 @@ fn payload_purity_heggie_carried_f64() {
 fn payload_purity_heggie_carried_f32() {
     routes::<HgRk4, f32>(&encounter(), &[1, 7, 13], Boot::Fresh, "Heggie × RK4");
 }
+
+negative_control!(
+    payload_purity_heggie_carried_f64,
+    "Heggie × RK4 re-booted by a cadence that reloads nothing from the stored state: the routes must fail.",
+    expected = "payload purity",
+    routes::<HgRk4, f64>(&encounter(), &[1, 7, 13], Boot::Forgetting, "Heggie × RK4")
+);
+
+negative_control!(
+    payload_purity_heggie_carried_f32,
+    "Heggie × RK4 re-booted by a cadence that reloads nothing, at f32: the routes must fail.",
+    expected = "payload purity",
+    routes::<HgRk4, f32>(&encounter(), &[1, 7, 13], Boot::Forgetting, "Heggie × RK4")
+);
 
 // ── The `d_min` latch across a persist boundary ─────────────────────────────────────────────────────────────────
 
@@ -653,18 +696,23 @@ fn payload_purity_dmin_latch_across_boundaries_f32() {
 }
 
 negative_control!(
-    payload_purity_control_dmin_latch_from_f16,
+    payload_purity_dmin_latch_across_boundaries_f64,
     "The `d_min` latch reloaded from the stored f16 `d_min` squared, not the exact `_dmin_d2`: on the closing pair a \
      later step's d² falls between the two, so `t_dmin_step` forks from the continuous march.",
     expected = "payload purity",
     closing_every_step::<f64>(Boot::FromF16)
 );
 
+negative_control!(
+    payload_purity_dmin_latch_across_boundaries_f32,
+    "The `d_min` latch reloaded from the stored f16 `d_min` squared, at f32: the closing pair must fork.",
+    expected = "payload purity",
+    closing_every_step::<f32>(Boot::FromF16)
+);
+
 /// The closing pair's least separation falls at every macro-step to the horizon, and its `t_dmin_step` is the horizon:
 /// the directed case is what it says.
-#[test]
-fn payload_purity_closing_pair_closes_to_the_horizon() {
-    let case = closing::<f64>();
+fn closes_to_the_horizon(case: &Case<f64>) {
     let s = case.uncut::<Kdk>().sim;
     assert_eq!(tm_t_end_step(s.times), case.key.horizon_steps);
     assert_eq!(
@@ -673,3 +721,24 @@ fn payload_purity_closing_pair_closes_to_the_horizon() {
         "the closing pair's least separation is not at the horizon"
     );
 }
+
+#[test]
+fn payload_purity_closing_pair_closes_to_the_horizon() {
+    closes_to_the_horizon(&closing());
+}
+
+negative_control!(
+    payload_purity_closing_pair_closes_to_the_horizon,
+    "The same pair with its momenta reversed opens: its least separation is at t = 0, so the check must fail.",
+    expected = "the closing pair's least separation is not at the horizon",
+    closes_to_the_horizon(&{
+        let c = closing::<f64>();
+        Case {
+            ic: Ic {
+                p: c.ic.p.map(|v| v.map(|x| -x)),
+                ..c.ic
+            },
+            ..c
+        }
+    })
+);
