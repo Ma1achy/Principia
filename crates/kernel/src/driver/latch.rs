@@ -200,8 +200,8 @@ impl<R: crate::real::Real + IeeeBits> RegularisedDrift<R> {
         }
     }
 
-    /// The latches of a march re-booted from its stored state: the last drift `last` and the greatest magnitude `max`
-    /// as stored, and `seen` whether any drift had been reported.
+    /// The latches of a march re-booted from its stored state, where a drift had been reported: the last drift `last`
+    /// and the greatest magnitude `max` as stored, `seen` true. Where none had, the re-boot takes [`Self::none`].
     #[inline]
     pub fn reloaded(last: R, max: R, seen: bool) -> Self {
         RegularisedDrift { last, max, seen }

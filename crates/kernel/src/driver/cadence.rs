@@ -280,11 +280,17 @@ impl<R: WrapperReal> WrapperCadence<R> {
         self.clock = tm_t_end_step(stored.times);
         self.dmin_step = tm_t_dmin_step(stored.times);
         self.dmin_pending = false;
-        self.regularised = RegularisedDrift::reloaded(
-            wide(dr_dE_reg_final(stored.dE_reg)),
-            wide(dr_dE_reg_max(stored.dE_reg)),
-            march_reported(stored._march_bits),
-        );
+        // `dE_reg` holds the regularised drift only once one was reported; before that it holds the Cartesian drift,
+        // which the regularised latch must not start from.
+        self.regularised = if march_reported(stored._march_bits) {
+            RegularisedDrift::reloaded(
+                wide(dr_dE_reg_final(stored.dE_reg)),
+                wide(dr_dE_reg_max(stored.dE_reg)),
+                true,
+            )
+        } else {
+            RegularisedDrift::none()
+        };
     }
 
     /// The COM projection after a `STEP` (integrator_contract Part 1, "COM projection and invariant monitoring"):

@@ -22,8 +22,12 @@
 //!
 //! **The fixtures**: seeded random ICs under the KDK stepper and the default substep law (a sim key short enough to
 //! split at every macro-step), with and without a collision radius, so some end in a collision or an escape between
-//! dispatches; Heggie × RK4, the default occupant, with its carried buffer, on a close-encounter state; and a pair
-//! closing slowly, a directed case for the `d_min` latch across a persist boundary, which a lossy reload would fork.
+//! dispatches (none of them substeps); Heggie × RK4, the default occupant, with its carried buffer, and Aarseth–Zare ×
+//! RK4, whose sync quantum is two macro-steps so some macro-steps report no regularised drift, on a close-encounter
+//! state; an eccentric tight binary diving in and out of the substep band, so a re-boot's first `N_sub` bucket matters;
+//! and a pair closing slowly, a directed case for the `d_min` latch across a persist boundary, which a lossy reload
+//! would fork. Each has a control that breaks one reload: nothing reloaded, the first bucket from the IC, the latch from
+//! the f16 `d_min`; and the schedules' control warm-starts a sample from its neighbour.
 //!
 //! **What it does not cover.** The FTLE tier's shadow and the word buffer have no resumed march yet (the wrapper's
 //! resumed entry points march the base tier without a word); their purity is that of the base march they ride on.
@@ -44,8 +48,11 @@ use kernel::driver::wrapper::{
     integrate_carrying, integrate_carrying_for, WrapperReal, WrapperUniforms,
 };
 use kernel::occupant::kdk::Kdk;
+use kernel::occupant::rk4::Rk4;
 use kernel::occupant::{Geom, State};
 use kernel::payload::{sd_state, tm_t_end_step, PayloadReal, SimStateBaseOf};
+use kernel::regularisation::az::{AarsethZare, AzConfig, AzParams, AzReal};
+use kernel::regularisation::Composed;
 use validation::ground_truth::DefaultOccupant as HgRk4;
 use validation::negative_control;
 
@@ -167,6 +174,10 @@ enum Boot {
     /// The same cadence with its re-boot hook dropped, so nothing is reloaded from the stored state (a control).
     #[cfg_attr(not(feature = "controls"), allow(dead_code))]
     Forgetting,
+    /// The production form, the first macro-step's `N_sub` bucket read from the IC's `d²`, not the stored state's: the
+    /// detector a re-boot left at the IC (a control).
+    #[cfg_attr(not(feature = "controls"), allow(dead_code))]
+    IcBucket,
     /// The production form, the `d_min` latch reloaded from the stored f16 `d_min` squared in place of the exact
     /// `_dmin_d2`: the payload as it was before `_dmin_d2` (a control).
     #[cfg_attr(not(feature = "controls"), allow(dead_code))]
@@ -219,6 +230,69 @@ impl<R: WrapperReal> Cadence<R> for Forget<R> {
 
     fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R> {
         self.0.finish(out)
+    }
+}
+
+/// The wrapper's cadence whose first `N_sub` bucket reads the IC's `d²` (a control's): what a re-boot whose detector
+/// stayed at the IC would give the first macro-step.
+struct IcBucket<R: WrapperReal> {
+    inner: WrapperCadence<R>,
+    ic_d2: f32,
+    first: bool,
+}
+
+impl<R: WrapperReal> Cadence<R> for IcBucket<R> {
+    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.first = false;
+        self.inner.after_step(state, geom);
+    }
+
+    fn done(&self) -> bool {
+        self.inner.done()
+    }
+
+    fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
+        self.inner.sample(state, index, quantum);
+    }
+
+    fn signals(&mut self, floored: bool, cap_hit: bool) {
+        self.inner.signals(floored, cap_hit);
+    }
+
+    fn regularised_drift(&mut self, drift: R) {
+        self.inner.regularised_drift(drift);
+    }
+
+    fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32 {
+        if self.first {
+            self.ic_d2
+        } else {
+            self.inner.bucket_d2(r)
+        }
+    }
+
+    fn clock(&mut self, completed: u32) {
+        self.inner.clock(completed);
+    }
+
+    fn resume(&mut self, stored: &SimStateBaseOf<R>) {
+        self.inner.resume(stored);
+    }
+
+    fn latched(&mut self) {
+        self.inner.latched();
+    }
+
+    fn non_finite(&mut self, detail: u32) {
+        self.inner.non_finite(detail);
+    }
+
+    fn failure(&self) -> Fired {
+        self.inner.failure()
+    }
+
+    fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R> {
+        self.inner.finish(out)
     }
 }
 
@@ -278,6 +352,15 @@ impl<R: P> Case<R> {
                 };
                 let mut c = self.cadence();
                 redispatch::<A, R, _>(&self.ic, &self.key, &mut c, &sim, &mut carried, steps)
+            }
+            Boot::IcBucket => {
+                let ic_d2 = self.cadence().detector().last_d2();
+                let mut c = IcBucket {
+                    inner: self.cadence(),
+                    ic_d2,
+                    first: true,
+                };
+                redispatch::<A, R, _>(&self.ic, &self.key, &mut c, &s.sim, &mut carried, steps)
             }
             Boot::Forgetting => {
                 let mut c = Forget(self.cadence());
@@ -646,6 +729,126 @@ negative_control!(
     "Heggie × RK4 re-booted by a cadence that reloads nothing, at f32: the routes must fail.",
     expected = "payload purity",
     routes::<HgRk4, f32>(&encounter(), &[1, 7, 13], Boot::Forgetting, "Heggie × RK4")
+);
+
+// ── Aarseth–Zare × RK4: macro-steps with no kept step ───────────────────────────────────────────────────────────
+
+/// Aarseth–Zare's test values, as `tests/heggie_seam.rs` takes them: a sync quantum of 1/8, twice the macro-step
+/// below, so some macro-steps take no kept step and report no regularised drift, and a re-boot must know from the
+/// payload whether `dE_reg` holds the regularised drift or the Cartesian one (`_march_bits`' `reported`).
+struct AzValues;
+
+impl AzConfig for AzValues {
+    fn params<R: AzReal>() -> AzParams<R> {
+        AzParams {
+            eta: R::at_width(0.01, 0.01),
+            delta_sync: R::at_width(0.125, 0.125),
+            tiny: R::at_width(1e-37, 1e-300),
+            predictive_f: R::at_width(0.02, 0.02),
+            step_budget_rate: R::at_width(1e7, 1e7),
+            n_min: 1_000_000,
+            clamp: true,
+            secant_tries: 4,
+            bisect_tries: 64,
+        }
+    }
+}
+
+type AzRk4 = Composed<Rk4, AarsethZare<AzValues>>;
+
+#[test]
+fn payload_purity_aarseth_zare_f64() {
+    routes::<AzRk4, f64>(
+        &encounter(),
+        &[1, 2, 7, 13],
+        Boot::Fresh,
+        "Aarseth–Zare × RK4",
+    );
+}
+
+#[test]
+fn payload_purity_aarseth_zare_f32() {
+    routes::<AzRk4, f32>(
+        &encounter(),
+        &[1, 2, 7, 13],
+        Boot::Fresh,
+        "Aarseth–Zare × RK4",
+    );
+}
+
+negative_control!(
+    payload_purity_aarseth_zare_f64,
+    "Aarseth–Zare × RK4 re-booted by a cadence that reloads nothing from the stored state: the routes must fail.",
+    expected = "payload purity",
+    routes::<AzRk4, f64>(&encounter(), &[1, 2, 7, 13], Boot::Forgetting, "Aarseth–Zare × RK4")
+);
+
+negative_control!(
+    payload_purity_aarseth_zare_f32,
+    "Aarseth–Zare × RK4 re-booted by a cadence that reloads nothing, at f32: the routes must fail.",
+    expected = "payload purity",
+    routes::<AzRk4, f32>(
+        &encounter(),
+        &[1, 2, 7, 13],
+        Boot::Forgetting,
+        "Aarseth–Zare × RK4"
+    )
+);
+
+// ── The `N_sub` bucket at a re-boot ─────────────────────────────────────────────────────────────────────────────
+
+/// An eccentric tight binary, bodies 0 and 1 (`m = 0.4` each, `e = 0.5`, apocentre 0.06, pericentre 0.02, period about
+/// 0.056), started at apocentre, with body 2 at rest a unit away: the pair dives into the substep band (`r_sub` = 0.05)
+/// at every pericentre and leaves it, so the default substep law's `N_sub` changes along the march, and a re-boot whose
+/// first bucket read the IC's `d²` and not the stored state's would take another number of substeps.
+fn diving<R: P>() -> Case<R> {
+    let m = [0.4, 0.4, 0.2];
+    let v = (0.8f64 * 0.5 / (0.04 * 1.5)).sqrt() / 2.0;
+    let r = [[-0.03, 0.0], [0.03, 0.0], [0.0, 1.0]];
+    let p = [[0.0, -0.4 * v], [0.0, 0.4 * v], [0.0, 0.0]];
+    Case {
+        ic: at(&Ic { m, r, p }),
+        key: key(1.0 / 256.0, 64),
+        radius: CollisionRadius::none(),
+    }
+}
+
+/// The diving binary's routes, after checking it substeps: some macro-step takes more than one substep, so the bucket
+/// is exercised.
+fn diving_routes<R: P>(boot: Boot) {
+    let case = diving::<R>();
+    let s = case.uncut::<Kdk>().sim;
+    assert!(
+        s.total_substeps > tm_t_end_step(s.times),
+        "the diving binary never substeps: {} substeps in {} macro-steps",
+        s.total_substeps,
+        tm_t_end_step(s.times)
+    );
+    routes::<Kdk, R>(&case, &[5, 23, 41], boot, "the diving binary");
+}
+
+#[test]
+fn payload_purity_substep_bucket_f64() {
+    diving_routes::<f64>(Boot::Fresh);
+}
+
+#[test]
+fn payload_purity_substep_bucket_f32() {
+    diving_routes::<f32>(Boot::Fresh);
+}
+
+negative_control!(
+    payload_purity_substep_bucket_f64,
+    "A re-boot whose first macro-step's N_sub bucket reads the IC's d², not the stored state's: the routes must fail.",
+    expected = "payload purity",
+    diving_routes::<f64>(Boot::IcBucket)
+);
+
+negative_control!(
+    payload_purity_substep_bucket_f32,
+    "A re-boot whose first bucket reads the IC's d², at f32: the routes must fail.",
+    expected = "payload purity",
+    diving_routes::<f32>(Boot::IcBucket)
 );
 
 // ── The `d_min` latch across a persist boundary ─────────────────────────────────────────────────────────────────

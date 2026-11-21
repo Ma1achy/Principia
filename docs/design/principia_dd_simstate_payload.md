@@ -355,9 +355,10 @@ empty at every row today.
 - `SimStateFTLE`: `r` 0, `p` 48, `r_sh` 96, `p_sh` 144, `S` 192, `theta` 200, `mean_y` 208, `C_ty` 216, `E_0` 224,
   `Lz_0` 232, `packed_a` 240, `packed_b` 244, `times` 248, `total_substeps` 252, `budget_bits` 256, `dE_reg` 260,
   `closure_min` 264, `closure_step` 272, `_reserved` 274, `coll_floor_bits` 276, `_nhat_lag_0` 280, `_nhat_lag_1`
-  288, `_nhat_lag_2` 296: **304 B**, no `_tail`.
+  288, `_nhat_lag_2` 296, `_dmin_d2` 304, `_march_bits` 308: **312 B**, no `_tail`.
 - `SimStateBase`: the same less `r_sh` and `p_sh`, 96 B earlier from `S`: `coll_floor_bits` 180, the register at 184,
-  192 and 200: **208 B**.
+  192 and 200, `_dmin_d2` 208, `_march_bits` 212: **216 B**.
+- Before the re-boot's two u32s (TASK-M3-21): the same without them, **304 B** and **208 B**.
 - Before the two u32s (TASK-M3-41): every member from `closure_min` 8 B earlier, **296 B** and **200 B**.
 - Before the lagged register (TASK-M3-12): `coll_floor_bits` 268, `_pad` 272, `_tail` 276 (one u32), **280 B**, and
   **184 B**.
@@ -403,7 +404,8 @@ held exactly, so the payload gained two u32s for them:
 - **`_dmin_d2`**, the `d_min` latch's least `d²`. `d_min` is its `√` rounded to binary16, and a latch reloaded from
   that rounding sits off the true least `d²` by up to half an f16 spacing: a later step's `d²` between the two is
   latched by one route and not the other, so `dmin_pair`, `t_dmin_step` and `coll_floor` would fork with the persist
-  boundaries (measured: a slowly closing pair split at every macro-step forks at 28 of 95 steps).
+  boundaries (`kernel/tests/payload_purity.rs`' closing pair, split at every macro-step, forks under such a latch:
+  the test's control).
 - **`_march_bits`' two floor codes**: `coll_floor` is the larger of the near-firing code and the latched state's code,
   and the larger alone does not say what a later, smaller latched code gives.
 - **`_march_bits`' `reported` bit**: whether `dE_reg` holds the regularised drift or the Cartesian one, which a
