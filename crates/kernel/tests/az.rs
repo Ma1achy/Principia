@@ -416,12 +416,16 @@ fn check_every_pair<G: Regularisation>() {
 fn regularisation_compose_az_runs() {
     assert_eq!(Az::KIND, Kind::AarsethZare);
     check_every_pair::<Az>();
-    // The table's Aarseth–Zare row: RK4 measured good, the rest not measured, none with a warning.
+    // The table's Aarseth–Zare row: every pair measured bad at a fixed step with the reference body held, RK4 among
+    // them, each with its warning; none is blocked, and each ran above.
     let table = PairTable::part_2b();
-    assert_eq!(
-        Pair::select(Selection::Production(Occupant::Rk4), Choice::AarsethZare).status(&table),
-        Status::MeasuredGood
-    );
+    for stepper in kernel::regularisation::pairs::STEPPERS {
+        let pair = Pair::select(stepper, Choice::AarsethZare);
+        assert!(
+            matches!(pair.status(&table), Status::MeasuredBad { warning } if !warning.is_empty()),
+            "{stepper:?} × Aarseth–Zare"
+        );
+    }
 }
 
 negative_control!(

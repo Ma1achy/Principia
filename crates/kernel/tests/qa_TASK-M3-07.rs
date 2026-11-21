@@ -554,13 +554,23 @@ const CHOICES: [Choice; 6] = [NONE, AZ, H20, H22, LOGH, TTL];
 const NOTE_2: &str = "Heggie's Hamiltonian is not separable, so a leapfrog step is first order here and can diverge \
                       (figure-eight: order about 1, diverged within 100 orbits).";
 
-/// Part 2b's table: the cells it marks, every other one not measured.
+/// Part 2b's table: each cell as measured. `none`'s cells are not measured; under logH every stepper but Euler is
+/// good; under Heggie RK4 alone is good; under Aarseth–Zare none is; every other cell is bad, with its warning.
 fn part_2b_cell(s: Selection, c: Choice) -> Status {
-    match (c, s) {
-        (AZ, RK4) | (H20, RK4) | (H22, RK4) => Status::MeasuredGood,
-        (H20, KDK) | (H22, KDK) => Status::MeasuredBad { warning: NOTE_2 },
-        _ => Status::NotMeasured,
-    }
+    use kernel::regularisation::pairs::{
+        AARSETH_ZARE_LEAPFROG_WARNING, AARSETH_ZARE_RK4_WARNING, EULER_WARNING,
+        HEGGIE_YOSHIDA_WARNING,
+    };
+    let warning = match (c, s) {
+        (NONE, _) => return Status::NotMeasured,
+        (_, EULER) => EULER_WARNING,
+        (AZ, RK4) => AARSETH_ZARE_RK4_WARNING,
+        (AZ, _) => AARSETH_ZARE_LEAPFROG_WARNING,
+        (H20 | H22, KDK) => NOTE_2,
+        (H20 | H22, Y4 | Y6) => HEGGIE_YOSHIDA_WARNING,
+        _ => return Status::MeasuredGood,
+    };
+    Status::MeasuredBad { warning }
 }
 
 const TABLE: &str = "the pair table is not Part 2b's";
@@ -583,10 +593,10 @@ fn check_part_2b(
             let want = part_2b_cell(s, c);
             assert_eq!(pair.status(&table), want, "{TABLE}: {s:?} × {c:?}");
             match want {
-                Status::MeasuredBad { .. } => {
+                Status::MeasuredBad { warning: text } => {
                     assert_eq!(
                         warning(pair),
-                        Some(NOTE_2),
+                        Some(text),
                         "{TABLE}: {s:?} × {c:?} has no warning"
                     )
                 }

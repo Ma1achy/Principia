@@ -1060,7 +1060,25 @@ expression for the rate by which a step advances `t` and for the rate the step c
 - **logH × RK4**: the classical step `s + (h/6)(k₁ + 2k₂ + 2k₃ + k₄)` on the whole state `(r, p, t, W)` with the
   equations of motion above (`step.rs:44-71`). It reads both denominators at the same point, so on the solution it
   sees only `dt = ds/U` (`step.rs:18-22`).
-- logH × Euler, × Yoshida-4 and × Yoshida-6 are not written here and not built.
+- **logH × Yoshida-4 and × Yoshida-6**: the leapfrog above taken in sequence at `wᵢ·h`, in dd_integrator §3.2's
+  drift order, in either mode: Yoshida-4 at `w₁·h`, `w₀·h`, `w₁·h`; Yoshida-6 at `w₃·h`, `w₂·h`, `w₁·h`, `w₀·h`,
+  `w₁·h`, `w₂·h`, `w₃·h`. Each sub-step is the whole leapfrog `X(wᵢh/2) V(wᵢh) X(wᵢh/2)`, the TTL kick's `W` at its
+  own midpoint velocity; **adjacent half-drifts are not merged**, so the half-drift ending one sub-step and the one
+  starting the next are two moves of the positions (in exact arithmetic one, since a drift's denominator reads `p`
+  and `W` only; in floating point not the same bits, and the pair is defined bitwise). **The clock is advanced once a
+  step**, by the sub-steps' physical times `Δtᵢ = dt_a + dt_b` summed in the order taken, `t += ((Δt₁ + Δt₂) + Δt₃)`
+  and so on to `Δt₇`: the middle sub-steps run backwards (`w₀ < 0`), so a clock advanced sub-step by sub-step would
+  pass a boundary and return, and a clamped step would lose its last ulp as the leapfrog's two half-drifts did.
+  Three and seven force evaluations a step; fourth and sixth order; time-symmetric, each being a symmetric
+  composition of a symmetric step.
+- **logH × Euler**: the explicit step `s + h·F(s)` on the whole state `(r, p, t, W)` with the equations of motion
+  above, both denominators read at the step's start, in either mode. One force evaluation; first order.
+
+The profiles of these three pairs: Euler's is its form's on a regularised system (order 1, one evaluation, nothing
+else claimed). A Yoshida pair's is the composed leapfrog's: order 4 or 6, 3 or 7 evaluations, `step_reversible` true
+in either mode (measured by dd test 3 on each, `logh_step_reversible`), `symplectic` true in the logH mode alone, as
+the leapfrog's is, a composition of symplectic maps being symplectic, and `run_reversible` false: it is assigned to
+logH-TTL's leapfrog alone, and no test reverses a whole march.
 
 The reference's third arm, the leapfrog under Gragg–Bulirsch–Stoer extrapolation (`gbs.rs`), its untransformed control
 (`LhTime::None`) and its chain coordinates (`chain.rs`) are not transcribed.
@@ -1177,20 +1195,14 @@ at the step `h` the step control gives:
   physics review 5605806092 of PR #277, F5).
 - **RK4 and Euler:** their classical forms on the whole state `(u, p, t)`.
 
-Under logH, whose time transformation is built for a leapfrog, each pair's exact form is written with logH's equations
-and checked as the others are (REQ-INT-097). **TASK-M3-39 writes them here**, each pair in each of logH's time modes, from
-logH's equations once TASK-M3-75 has transcribed them (R-160, REQ-INT-084, which covers logH's own equations, time
-transformations and step control, not its pairs), physics-reviewed before merge (applied per R-369, qa review 5607548278
-of PR #277, Q1). *Was:* "when they are transcribed (R-160, REQ-INT-084)", which named no writer for the pair forms. *Was (13 Nov 2026, TASK-M3-08 split,
-applied per R-369):* "once TASK-M3-08 has transcribed them"; logH's pairs are RQ-809's.
-
-*13 Nov 2026 (R-993, RQ-809 (a)):* under logH, the pair logH × KDK is logH's own leapfrog, the reference's
-drift–kick–drift with `W` at the midpoint velocity in TTL mode, in each time mode, not the generic kick–drift–kick above;
-logH × RK4 is classical RK4 on `(r, v, t, W)`. logH × Euler, × Yoshida-4 and × Yoshida-6 are TASK-M3-39's to write, as
-above, and REQ-INT-006's every-pair test runs them once it writes them. Until then those three are selectable and not
-defined: the pair is selected with no refusal, and its occupant type fails to build, as a stepper with no form on a
-regularised system does. The every-pair test (`regularisation_default_pairs`) runs the 24 pairs that are defined and
-lists these 6 (three steppers in each of logH's two modes).
+Under logH, whose time transformation is built for a leapfrog, each pair's exact form is written with logH's
+equations (§ "logH and TTL: the equations, the time transformations, the map and the step control (transcribed)", "The
+steps") and checked as the others are, each in each of logH's two time modes: **logH × KDK** is logH's own leapfrog,
+the reference's drift–kick–drift with `W` at the midpoint velocity in TTL mode, not the generic kick–drift–kick above;
+**logH × Yoshida-4 and × Yoshida-6** are that leapfrog taken in sequence at `wᵢ·h` in dd_integrator §3.2's drift
+order, adjacent half-drifts not merged, the clock advanced once by the sub-steps' summed time; **logH × RK4 and
+× Euler** are the classical steps on the whole state `(r, p, t, W)`. Every one of the 30 pairs is built and runs
+through the seam (the every-pair test, `regularisation_default_pairs`).
 
 The explicit composition is not symplectic on a non-separable Hamiltonian, so the composed occupant's profile is the
 pair's, not the stepper's row in Part 2: `symplectic` false for these pairs, and `step_reversible` dd test 3's
@@ -1201,37 +1213,126 @@ occupant, if one is wanted, is an implicit stepper and gets its own row in the t
 pair carries the warning. A status changes only by a measurement, recorded here with its evidence; the criterion for
 "measured not to work" is a definition (R-72, REQ-INT-099).
 
+**The criterion for "measured not to work".** It decides one cell, a pair under one time transformation, from one
+measurement, the design's (the gap sweep's §1 and its probe), taken by `cargo xtask gate pair-table` through the
+kernel's own steps:
+
+- **The fixture.** The figure-eight, registered once at `t = 0` under the regularisation and time transformation of
+  the cell (Aarseth–Zare with the reference body its rule picks at `t = 0`, held), marched at a **fixed fictitious
+  step with no step control**: no sync grid, no re-registration, no landing. `τ_end` is the fictitious length of one
+  period, found by that regularisation's RK4 at the fixed step `1e-4` until the clock reaches the period, rounded to
+  the nearest 1/64.
+- **Order.** The state error at `τ_end`, the largest component difference over the whole regularised state, the
+  clock included, against RK4 at `τ_end/16384`, on the halving ladder `h = τ_end/64, /128, /256, /512, /1024`. The
+  fitted order is `log₂(e_first/e_last)/(n − 1)` over the rungs kept. A rung is kept, counting from the coarsest,
+  while its error is finite and at least 100 times the reference's self-difference (RK4 at `τ_end/16384` against RK4
+  at `τ_end/8192`); the fit stops at the first rung that is not, since an error at the reference's own error measures
+  the reference. With fewer than two rungs kept the order is not resolved, and decides nothing.
+- **Energy.** The regularised energy (Part 1, "The regularised energies, defined") after every step of a march of
+  `100·τ_end` at `h = τ_end/128`: the largest `|E − E₀|/|E₀|`.
+
+A cell is **measured bad** when either holds, and **measured good** otherwise:
+
+1. the largest energy error over the 100 orbits is not below `1e-2` (so an energy that is not finite is bad);
+2. the fitted order, where resolved, is not at least `0.5`: the error does not fall when the step is halved.
+
+`1e-2` is the design's own mark for a broken energy: its probe records the first step whose `|ΔE/E|` is not below
+it. A pair's order alone does not make it bad unless the pair fails to converge: Heggie × KDK's measured order,
+about 1, is the order the explicit composition has on a non-separable system, and Euler's is 1 by construction; what
+makes Heggie × KDK bad is that its energy diverges. Applied to the design's measurements the criterion reads Heggie ×
+RK4 good (order 3.99; energy `5e-7` to `3e-6`) and Heggie × KDK bad (order 0.8–1.2; energy to `1e78` and beyond). The
+bounds were written before the gate's first run and are not fitted to it. A measured-good pair is good **on this
+fixture at this step**: the figure-eight has no close approach, so the verdict says the stepper integrates the
+regularised equations stably, not that the pair passes a collision. The gate fails when the kernel's table
+(`kernel::regularisation::pairs`) or the table below differs from the measured verdicts.
+
 **One cell per pair and time transformation.** A regularisation with more than one time transformation (Heggie's Eq. 20
 and Eq. 22, R-161; logH's logH and TTL modes, R-162) has a row for each, since each is selectable and is measured on its
 own; a pair's status, and its warning, are the cell's for the time transformation in force, and no rule combines
-verdicts across them. The design measured Heggie's pairs under both transformations with the same verdict, so the two
-Heggie rows agree (applied per R-369, qa review 5607548278 of PR #277, Q2; *was:* one row per regularisation, "Heggie"
+verdicts across them. The design measured Heggie's pairs under both transformations with the same verdict, and the
+gate measures every pair under each; the two Heggie rows agree, and the two logH rows agree (applied per R-369, qa review 5607548278 of PR #277, Q2; *was:* one row per regularisation, "Heggie"
 and "logH" a row each).
 
 | regularisation (time transformation) \ stepper | Euler (debug) | KDK | Yoshida-4 | Yoshida-6 | RK4 |
 |---|---|---|---|---|---|
 | `none` | not measured | not measured | not measured | not measured | not measured |
-| Aarseth–Zare | not measured | not measured | not measured | not measured | **measured good** (1) |
-| Heggie (Eq. 20) | not measured | **measured bad** (2) | not measured | not measured | **measured good** (3) |
-| Heggie (Eq. 22, the default) | not measured | **measured bad** (2) | not measured | not measured | **measured good, the default** (3) |
-| logH (logH mode) | not measured | not measured | not measured | not measured | not measured |
-| logH (TTL mode) | not measured | not measured | not measured | not measured | not measured |
+| Aarseth–Zare | **measured bad** (7) | **measured bad** (6) | **measured bad** (6) | **measured bad** (6) | **measured bad** (1) |
+| Heggie (Eq. 20) | **measured bad** (7) | **measured bad** (2) | **measured bad** (5) | **measured bad** (5) | **measured good** (3) |
+| Heggie (Eq. 22, the default) | **measured bad** (7) | **measured bad** (2) | **measured bad** (5) | **measured bad** (5) | **measured good, the default** (3) |
+| logH (logH mode) | **measured bad** (7) | **measured good** (8) | **measured good** (8) | **measured good** (8) | **measured good** (8) |
+| logH (TTL mode) | **measured bad** (7) | **measured good** (8) | **measured good** (8) | **measured good** (8) | **measured good** (8) |
 
-1. Aarseth–Zare + RK4 passes through exact collision at `d_min = 1.35e-11` with energy drift `6.2e-15` (Part 2a); the
-   32-case matrix ran it and Heggie under the same RK4 and step control (the comparison discipline, below). This status
-   is the port's, applied per R-369, not the human's: the gap sweep measured only Heggie's pairs, and the collision
-   passage is a different measurement from REQ-INT-099's criterion, so REQ-INT-098's gate re-measures it by that
-   criterion (physics review 5605806092 of PR #277, F7).
+**Each cell's evidence**, the gate's measurement by the criterion above (`cargo xtask gate pair-table`, which prints
+every rung's error): the fitted order over one orbit, the order on the short ladder (below), and the regularised
+energy's error over 100 orbits. The kernel's table carries the same line per cell.
+
+| pair | verdict | measured |
+|---|---|---|
+| Aarseth–Zare × Euler | bad | order 1.37 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.19, not finite by 100 |
+| Aarseth–Zare × KDK | bad | order 0.95 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.21, not finite by 100 |
+| Aarseth–Zare × Yoshida-4 | bad | order 1.52 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.12, not finite by 100 |
+| Aarseth–Zare × Yoshida-6 | bad | order 1.57 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.12, not finite by 100 |
+| Aarseth–Zare × RK4 | bad | order 4.13 over one orbit; the energy error past 1e-2 at orbit 14.07, not finite by 100 |
+| Heggie (Eq. 20) × Euler | bad | order 1.11 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.09, not finite by 100 |
+| Heggie (Eq. 20) × KDK | bad | order 1.21 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.21, not finite by 100 |
+| Heggie (Eq. 20) × Yoshida-4 | bad | order 0.02 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.04, 7.769e299 at most by 100 |
+| Heggie (Eq. 20) × Yoshida-6 | bad | order not resolved over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.05, not finite by 100 |
+| Heggie (Eq. 20) × RK4 | good | order 3.99 over one orbit, 4.00 on the short ladder; the energy error at most 5.026e-7 over 100 orbits |
+| Heggie (Eq. 22) × Euler | bad | order 1.14 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.09, not finite by 100 |
+| Heggie (Eq. 22) × KDK | bad | order 0.77 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.21, 7.769e299 at most by 100 |
+| Heggie (Eq. 22) × Yoshida-4 | bad | order 0.28 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.04, 1.461e157 at most by 100 |
+| Heggie (Eq. 22) × Yoshida-6 | bad | order 0.31 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.05, 3.583e0 at most by 100 |
+| Heggie (Eq. 22) × RK4 | good | order 3.99 over one orbit, 4.00 on the short ladder; the energy error at most 2.617e-6 over 100 orbits |
+| logH (logH mode) × Euler | bad | order 0.79 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.02, 1.139e3 at most by 100 |
+| logH (logH mode) × KDK | good | order 2.00 over one orbit, 2.00 on the short ladder; the energy error at most 3.376e-5 over 100 orbits |
+| logH (logH mode) × Yoshida-4 | good | order 4.05 over one orbit, 4.00 on the short ladder; the energy error at most 5.594e-6 over 100 orbits |
+| logH (logH mode) × Yoshida-6 | good | order 5.93 over one orbit; the energy error at most 2.228e-9 over 100 orbits |
+| logH (logH mode) × RK4 | good | order 4.14 over one orbit, 4.01 on the short ladder; the energy error at most 3.308e-4 over 100 orbits |
+| logH (TTL mode) × Euler | bad | order 1.16 over one orbit, 1.00 on the short ladder; the energy error past 1e-2 at orbit 0.02, 2.157e0 at most by 100 |
+| logH (TTL mode) × KDK | good | order 2.00 over one orbit, 2.00 on the short ladder; the energy error at most 3.376e-5 over 100 orbits |
+| logH (TTL mode) × Yoshida-4 | good | order 4.05 over one orbit, 4.00 on the short ladder; the energy error at most 5.594e-6 over 100 orbits |
+| logH (TTL mode) × Yoshida-6 | good | order 5.93 over one orbit; the energy error at most 2.228e-9 over 100 orbits |
+| logH (TTL mode) × RK4 | good | order 4.39 over one orbit, 4.00 on the short ladder; the energy error at most 6.927e-4 over 100 orbits |
+
+**The short ladder, beside the criterion.** Where a pair's error over a whole orbit is of order 1, the one-orbit
+ladder is not converging and its slope is not the order of the pair's form (Heggie × Yoshida-4 reads 0.02 and 0.28 on
+it). The order each pair's profile states is therefore read on a second ladder: the same state error over the
+horizon `τ_end/64`, at 16, 32, 64, 128 and 256 steps, against RK4 at 4096 steps, a rung kept by the same rule; where
+that ladder does not resolve an order (logH × Yoshida-6 and Aarseth–Zare × RK4, whose errors there are at the
+reference's), the one-orbit order is read. Every pair's order so read is within 0.5 of its profile's
+(`pair_definitions_order`): 1.00 for Euler and for KDK, Yoshida-4 and Yoshida-6 under Aarseth–Zare and Heggie, so
+the explicit compositions are first order on a non-separable system, as their profiles say; 2.00, 4.00 and 5.93 for
+logH's leapfrog and its two compositions; 4.00 and 4.01 for RK4, and 4.13, over one orbit, for Aarseth–Zare × RK4.
+The short ladder enters no verdict.
+
+1. Aarseth–Zare × RK4, **measured bad by the criterion, on a fixture that is not how the occupant runs.** With the
+   reference body its rule picks at `t = 0` held for the whole run and the step fixed at `τ_end/128`, RK4 is fourth
+   order (4.13 over one orbit) and the energy error grows steadily, `3.1e-3` at orbit 10, past `1e-2` at orbit 14.07,
+   after which the orbit breaks up and the run is not finite. It is a step-size limit, not a divergence of the
+   method: with the reference body held, the error at orbit 10 is `3.1e-3`, `1.0e-4` and `3.3e-6` at `τ_end/128`,
+   `/256` and `/512`; at `/256` the run breaks at orbit 51.6, and at `/512` it holds all 100 orbits at `3.2e-5`.
+   Aarseth–Zare's time transformation `dt = R₁R₂ dτ` sizes the step by the two regularised pairs, so with the
+   reference body held the step is long whenever the third pair is the close one; the same fixed step with the
+   reference body re-chosen by Aarseth–Zare's rule after every step holds the energy to `1.4e-5` over `100·τ_end`.
+   The occupant re-chooses its reference body at every sync boundary and controls its step, and that is not what
+   the criterion's fixture measures: Aarseth–Zare + RK4 passes through exact collision at `d_min = 1.35e-11` with
+   energy drift `6.2e-15` (Part 2a), a different measurement, which stands. The three other arms above are printed
+   by the gate beside the cell and decide nothing. Its warning reads: "With its reference body held and its step
+   fixed, Aarseth–Zare × RK4 loses the figure-eight at 128 steps an orbit (fourth order; the energy error past 1e-2
+   at orbit 14, not finite by 100). It holds 100 orbits at 512 steps an orbit, and at 128 with the reference body
+   re-chosen after every step; the occupant re-chooses it at every sync boundary and controls its step, which this
+   did not measure."
 2. Heggie × KDK, the explicit composition above, on the figure-eight at a fixed fictitious step with no step control,
-   under both of Heggie's time transformations (Eq. 20 and Eq. 22): order 0.8–1.2 at 3.0 calls per step, and the
-   regularised energy diverges within 100 orbits (to 1e78 and beyond). Its warning reads: "Heggie's Hamiltonian is not
+   under both of Heggie's time transformations (Eq. 20 and Eq. 22): order 0.8–1.2 at 3.0 calls per step (1.21 under
+   Eq. 20 and 0.77 under Eq. 22, the design's probe's two numbers, which the gate reproduces digit for digit; 1.00
+   on the short ladder), and the regularised energy diverges within 100 orbits (to 1e78 and beyond; past `1e-2` at
+   orbit 0.21). Its warning reads: "Heggie's Hamiltonian is not
    separable, so a leapfrog step is first order here and can diverge (figure-eight: order about 1, diverged within 100
    orbits)."
 3. Heggie × RK4, the same fixture, under both of Heggie's time transformations (Eq. 20 and Eq. 22; the design §1's
    table, "Tested today on the figure-eight, fixed fictitious step, no step control, both of Heggie's time
-   transformations"): order 3.99 at 4.0 calls per step, the regularised energy bounded, 5e-7 to 3e-6, over 100 orbits;
-   31 of 32 gallery cases (row above). *Was:* "Heggie × RK4, the same fixture: order 3.99 …", which named no time
-   transformation (qa re-check 5607645188 of PR #277).
+   transformations"): order 3.99 at 4.0 calls per step, the regularised energy bounded, 5e-7 to 3e-6, over 100 orbits
+   (`5.026e-7` under Eq. 20 and `2.617e-6` under Eq. 22, the design's and the gate's alike); 31 of 32 gallery cases.
 4. Heggie × the generalised (Störmer–Verlet) leapfrog, **measured bad** (R-567), the same fixture: order 2.0 over one
    orbit at 15–20 calls per step, growing without bound over 100. **Cause, measured:** it does not keep Heggie's
    Eq. (9), `Σ qᵢ = 0`, which is quadratic in the regularised positions (`qᵢ = Qᵢ²`); implicit midpoint keeps every
@@ -1246,6 +1347,28 @@ and "logH" a row each).
    the pair is recorded here as measured bad, for the record, and "stays allowed" means that no pair of the built
    steppers is blocked (*was:* "whether it, and the implicit midpoint rule, become selectable steppers is RQ-532, and
    meanwhile neither is built") (prin-rs `examples/heggie_stepper_probe.rs`, its header and its third section, the causal arm; R-567).
+5. Heggie × Yoshida-4 and × Yoshida-6, the KDK step of note 2 taken in sequence, under both of Heggie's time
+   transformations: first order (1.00 on the short ladder), and over one orbit the error does not fall under halving
+   at all (0.02 to 0.31, the errors of order 1 to 10); the energy error passes `1e-2` within 0.05 of an orbit and
+   reaches `1e157` and beyond, but for Yoshida-6 under Eq. 22, which stays finite at 3.6. A negative sub-step of a
+   first-order, non-symmetric step makes the composition less stable than the step it is built from. Its warning
+   reads: "Heggie's Hamiltonian is not separable, so a Yoshida step, a sequence of leapfrog steps, is first order
+   here and can diverge (figure-eight: order about 1, the energy error past 1e-2 within a tenth of an orbit)."
+6. Aarseth–Zare × KDK, × Yoshida-4 and × Yoshida-6, the same explicit compositions on `Γ`, the reference body held:
+   first order (1.00 on the short ladder; 0.95, 1.52 and 1.57 over one orbit), the energy error past `1e-2` at orbit
+   0.21, 0.12 and 0.12 and not finite by 100. Its warning reads: "Aarseth–Zare's Hamiltonian is not separable, so a
+   leapfrog or Yoshida step is first order here and can diverge (figure-eight, reference body held: order about 1,
+   the energy error past 1e-2 within a quarter of an orbit)."
+7. Euler, under every regularisation and time transformation: first order (1.00 on the short ladder), the energy
+   error past `1e-2` at orbit 0.19 (Aarseth–Zare), 0.09 (Heggie, both) and 0.02 (logH, both), not finite by 100 under
+   Aarseth–Zare and Heggie and of order 1 to `1e3` under logH. Euler is the debug stepper, kept for its drift (Part
+   2). Its warning reads: "Explicit Euler is first order and its energy error grows without bound (figure-eight,
+   fixed fictitious step: order about 1, the energy error past 1e-2 within a fifth of an orbit)."
+8. logH × KDK, × Yoshida-4, × Yoshida-6 and × RK4, in the logH mode and the TTL mode alike (at the figure-eight's
+   equal masses `Ω = U`, so the two modes differ only in carrying `W`): orders 2.00, 4.05, 5.93 and 4.14 (4.39 in
+   the TTL mode), and the energy error bounded over 100 orbits at `3.4e-5`, `5.6e-6`, `2.2e-9` and `3.3e-4`
+   (`6.9e-4` in the TTL mode). RK4's is the largest and grows steadily, as a method that is not symplectic does; it
+   is a factor 14 inside the bound.
 
 The `none` pairs are separable, so each stepper's own form applies; they are not measured as pairs here. Two implicit
 steppers were measured under Heggie on the same fixture and are not occupants: the implicit midpoint rule (order 2.00,

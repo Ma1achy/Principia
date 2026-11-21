@@ -1,0 +1,5 @@
+{
+  "description": "the kernel's pair table against the measured verdicts and the contract's table",
+  "table": "kernel",
+  "expected": "pass"
+}

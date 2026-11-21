@@ -18,9 +18,12 @@
 //! different points (the leapfrog) is the method. `dt/ds = 1/max(drift, TINY)` ([`LhSystem::dt_ds`]), one expression
 //! for the rate of `t` and for the step control.
 //!
-//! **The steps** ([`LhStepper`]): logH's own leapfrog, drift–kick–drift `X(h/2) V(h) X(h/2)`, the TTL kick advancing
-//! `W` at the midpoint velocity and the clock advanced once a step by the two drifts' summed time ([`leapfrog`]),
-//! selected as logH × KDK; and classical RK4 on `(r, p, t, W)` through the system's [`Flow`], logH × RK4.
+//! **The steps** ([`LhStepper`]), one per stepper, each in either time mode: logH's own leapfrog, drift–kick–drift
+//! `X(h/2) V(h) X(h/2)`, the TTL kick advancing `W` at the midpoint velocity and the clock advanced once a step by
+//! the two drifts' summed time ([`leapfrog`]), selected as logH × KDK; that leapfrog taken in sequence at `wᵢ·h`,
+//! dd_integrator §3.2's drift order, the clock advanced once by the sub-steps' summed time ([`yoshida4`],
+//! [`yoshida6`]), logH × Yoshida-4 and × Yoshida-6; and the classical RK4 and explicit Euler steps on `(r, p, t, W)`
+//! through the system's [`Flow`], logH × RK4 and × Euler.
 //!
 //! **The march** ([`march`]) is Heggie's step control on logH's clock ([`super::heggie`]): registered once at `t = 0`,
 //! `B` and `W` carried across every boundary of the sync grid; the interval clock reset at each interval's start; an
@@ -58,8 +61,11 @@ use super::pairs::LogHMode;
 use super::{Kind, Regularisation};
 use crate::driver::advance::{AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
 use crate::driver::carried::Carried;
+use crate::occupant::euler::Euler;
 use crate::occupant::kdk::Kdk;
 use crate::occupant::rk4::Rk4;
+use crate::occupant::yoshida4::Yoshida4;
+use crate::occupant::yoshida6::Yoshida6;
 use crate::occupant::{CapabilityProfile, Geom, State, Stepper};
 use crate::physics::energy::{kinetic, potential};
 use crate::physics::force::force;
@@ -418,17 +424,17 @@ pub fn kick<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> Lh
     LhP { p: kicked, w }
 }
 
-/// logH's own leapfrog, drift–kick–drift `X(h/2) V(h) X(h/2)` (`step.rs:122-135`), in either time mode: time-symmetric,
-/// one force evaluation.
-///
-/// The clock is advanced once, `t += dt_a + dt_b`, the two drifts' physical times summed first. The reference adds
-/// each drift's `dt` to `t` as it goes (`step.rs:84`), which is the same number until the clock is one ulp short of a
-/// boundary: there each half is half an ulp, both additions round away, and a march that lands with no tolerance
-/// never lands (measured on the figure-eight, `Δ_sync = T/32`: the leapfrog stood one ulp short until its budget was
-/// spent). Summed first, a clamped step's increment is the whole gap, and the clock reaches the boundary. The
-/// positions still drift in two halves; nothing reads the clock between them.
+/// The leapfrog's move with the clock left where it was: the positions and momenta one drift–kick–drift
+/// `X(h/2) V(h) X(h/2)` on (the returned positions carry `q`'s clock), and the physical time the two half-drifts took,
+/// `dt_a + dt_b`, summed. [`leapfrog`] adds that time to the clock; the Yoshida compositions sum their sub-steps'
+/// times first and add once ([`yoshida4`], [`yoshida6`]).
 #[inline]
-pub fn leapfrog<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> (LhQ<R>, LhP<R>) {
+fn leapfrog_span<R: AzReal>(
+    system: &LhSystem<R>,
+    q: &LhQ<R>,
+    p: &LhP<R>,
+    h: R,
+) -> (LhQ<R>, LhP<R>, R) {
     let half = h / two::<R>();
     let dt_a = half * system.dt_ds(p);
     let q_half = LhQ {
@@ -440,7 +446,79 @@ pub fn leapfrog<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -
     (
         LhQ {
             r: moved(system, &q_half.r, &p1, dt_b),
-            t: q.t + (dt_a + dt_b),
+            t: q.t,
+        },
+        p1,
+        dt_a + dt_b,
+    )
+}
+
+/// logH's own leapfrog, drift–kick–drift `X(h/2) V(h) X(h/2)` (`step.rs:122-135`), in either time mode: time-symmetric,
+/// one force evaluation.
+///
+/// The clock is advanced once, `t += dt_a + dt_b`, the two drifts' physical times summed first. The reference adds
+/// each drift's `dt` to `t` as it goes (`step.rs:84`), which is the same number until the clock is one ulp short of a
+/// boundary: there each half is half an ulp, both additions round away, and a march that lands with no tolerance
+/// never lands (measured on the figure-eight, `Δ_sync = T/32`: the leapfrog stood one ulp short until its budget was
+/// spent). Summed first, a clamped step's increment is the whole gap, and the clock reaches the boundary. The
+/// positions still drift in two halves; nothing reads the clock between them.
+#[inline]
+pub fn leapfrog<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> (LhQ<R>, LhP<R>) {
+    let (q1, p1, dt) = leapfrog_span(system, q, p, h);
+    (
+        LhQ {
+            r: q1.r,
+            t: q.t + dt,
+        },
+        p1,
+    )
+}
+
+/// logH × Yoshida-4 (integrator_contract Part 2b, logH's steps): the leapfrog taken three times in sequence, at
+/// `w₁·h`, `w₀·h`, `w₁·h`, dd_integrator §3.2's drift order. Each sub-step is the whole leapfrog, so the half-drifts
+/// of two adjacent sub-steps are two moves, not one merged move. The clock is advanced once, by the three sub-steps'
+/// times summed in that order, `(Δt₁ + Δt₂) + Δt₃`: the middle sub-step runs backwards (`w₀ < 0`), and a clock
+/// advanced sub-step by sub-step would pass the boundary and come back, and lose a clamped step's last ulp as the
+/// leapfrog's two half-drifts did ([`leapfrog`]). Three force evaluations.
+#[inline]
+pub fn yoshida4<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> (LhQ<R>, LhP<R>) {
+    let (q1, p1, dt) = leapfrog_span(system, q, p, R::YOSHIDA4_W1 * h);
+    let (q1, p1, d) = leapfrog_span(system, &q1, &p1, R::YOSHIDA4_W0 * h);
+    let dt = dt + d;
+    let (q1, p1, d) = leapfrog_span(system, &q1, &p1, R::YOSHIDA4_W1 * h);
+    let dt = dt + d;
+    (
+        LhQ {
+            r: q1.r,
+            t: q.t + dt,
+        },
+        p1,
+    )
+}
+
+/// logH × Yoshida-6 (integrator_contract Part 2b, logH's steps): the leapfrog taken seven times in sequence, at
+/// `w₃·h`, `w₂·h`, `w₁·h`, `w₀·h`, `w₁·h`, `w₂·h`, `w₃·h`, dd_integrator §3.2's drift order, adjacent half-drifts not
+/// merged, the clock advanced once by the seven sub-steps' times summed in that order ([`yoshida4`]). Seven force
+/// evaluations.
+#[inline]
+pub fn yoshida6<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -> (LhQ<R>, LhP<R>) {
+    let (q1, p1, dt) = leapfrog_span(system, q, p, R::YOSHIDA6_W3 * h);
+    let (q1, p1, d) = leapfrog_span(system, &q1, &p1, R::YOSHIDA6_W2 * h);
+    let dt = dt + d;
+    let (q1, p1, d) = leapfrog_span(system, &q1, &p1, R::YOSHIDA6_W1 * h);
+    let dt = dt + d;
+    let (q1, p1, d) = leapfrog_span(system, &q1, &p1, R::YOSHIDA6_W0 * h);
+    let dt = dt + d;
+    let (q1, p1, d) = leapfrog_span(system, &q1, &p1, R::YOSHIDA6_W1 * h);
+    let dt = dt + d;
+    let (q1, p1, d) = leapfrog_span(system, &q1, &p1, R::YOSHIDA6_W2 * h);
+    let dt = dt + d;
+    let (q1, p1, d) = leapfrog_span(system, &q1, &p1, R::YOSHIDA6_W3 * h);
+    let dt = dt + d;
+    (
+        LhQ {
+            r: q1.r,
+            t: q.t + dt,
         },
         p1,
     )
@@ -448,11 +526,9 @@ pub fn leapfrog<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -
 
 // ── The stepper slot ───────────────────────────────────────────────────────────────────────────────────────────
 
-/// The stepper slot under logH: a step `h` in fictitious time, and the pair's profile in a time mode.
-///
-/// The plan is unclear here; chose to fill the slot for KDK and RK4 only, because the contract defines those two pairs
-/// (logH × KDK is logH's own leapfrog, logH × RK4 classical RK4 on `(r, p, t, W)`) and leaves logH × Euler and the
-/// Yoshidas to be written; a stepper without an impl fails to build under logH, through the seam too ([`Slot`]).
+/// The stepper slot under logH: a step `h` in fictitious time, and the pair's profile in a time mode. Each of the five
+/// steppers fills it (integrator_contract Part 2b, logH's steps): KDK is logH's own leapfrog, Yoshida-4 and Yoshida-6
+/// that leapfrog composed, RK4 and Euler their classical forms on `(r, p, t, W)`.
 pub trait LhStepper {
     /// The profile of the pair this stepper forms with logH in the time mode `mode`.
     fn pair_profile(mode: LogHMode) -> CapabilityProfile;
@@ -510,6 +586,78 @@ impl LhStepper for Rk4 {
         h: R,
     ) -> (LhQ<R>, LhP<R>) {
         Form::Rk4.step(system, q, p, h)
+    }
+}
+
+impl LhStepper for Euler {
+    /// Euler's form's profile on a regularised system ([`Form::pair_profile`]).
+    #[inline]
+    fn pair_profile(_mode: LogHMode) -> CapabilityProfile {
+        Form::Euler.pair_profile()
+    }
+
+    #[inline]
+    fn regularised_step<R: AzReal>(
+        system: &LhSystem<R>,
+        q: &LhQ<R>,
+        p: &LhP<R>,
+        h: R,
+    ) -> (LhQ<R>, LhP<R>) {
+        Form::Euler.step(system, q, p, h)
+    }
+}
+
+/// The profile of the leapfrog composed by a Yoshida sequence of `force_evals` sub-steps, of order `order`, in `mode`.
+/// A symmetric composition of the symmetric leapfrog is symmetric, and a composition of symplectic maps symplectic,
+/// so `step_reversible` and `symplectic` are the leapfrog's own (the kernel's `logh_step_reversible` test measures
+/// the first on each composition; `pair_definitions_order` the order). The plan is unclear here (`run_reversible` is
+/// assigned to logH-TTL's leapfrog and to nothing else, and no test reverses a whole march); chose false for the
+/// compositions, because a flag nobody assigned or measured should not be claimed.
+#[inline]
+const fn composed_profile(mode: LogHMode, order: u32, force_evals: u32) -> CapabilityProfile {
+    CapabilityProfile {
+        order,
+        force_evals,
+        symplectic: matches!(mode, LogHMode::LogH),
+        step_reversible: true,
+        run_reversible: false,
+        owns_time_mapping: true,
+    }
+}
+
+impl LhStepper for Yoshida4 {
+    /// The composed leapfrog's: order 4, three force evaluations ([`composed_profile`]).
+    #[inline]
+    fn pair_profile(mode: LogHMode) -> CapabilityProfile {
+        composed_profile(mode, 4, 3)
+    }
+
+    #[inline]
+    fn regularised_step<R: AzReal>(
+        system: &LhSystem<R>,
+        q: &LhQ<R>,
+        p: &LhP<R>,
+        h: R,
+    ) -> (LhQ<R>, LhP<R>) {
+        yoshida4(system, q, p, h)
+    }
+}
+
+impl LhStepper for Yoshida6 {
+    /// The composed leapfrog's: order 6, seven force evaluations ([`composed_profile`]).
+    #[inline]
+    fn pair_profile(mode: LogHMode) -> CapabilityProfile {
+        composed_profile(mode, 6, 7)
+    }
+
+    #[inline]
+    fn regularised_step<R: AzReal>(
+        system: &LhSystem<R>,
+        q: &LhQ<R>,
+        p: &LhP<R>,
+        h: R,
+    ) -> (LhQ<R>, LhP<R>) {
+        yoshida6(system, q, p, h)
     }
 }
 
@@ -1031,45 +1179,36 @@ pub trait LhConfig {
 #[derive(Clone, Copy, Debug)]
 pub struct LogH<C>(PhantomData<C>);
 
-/// The stepper `S` in logH's slot through the seam, by its form ([`Stepper::FORM`]): KDK is logH's own leapfrog and
-/// RK4 the classical step, the two pairs [`LhStepper`] defines. Euler, Yoshida-4 and Yoshida-6 under logH are not
-/// defined, and composing one with logH fails to build where the pair is reached, as a stepper with no form does
-/// under any regularisation.
+/// The stepper `S` in logH's slot through the seam, by its form ([`Stepper::FORM`]): each stepper's own pair
+/// ([`LhStepper`]), the match below selecting one arm when the march is compiled for `S`.
 #[derive(Clone, Copy, Debug)]
 pub struct Slot<S>(PhantomData<S>);
-
-impl<S: Stepper> Slot<S> {
-    /// Whether the pair is logH × RK4; logH × KDK otherwise. Evaluated only where a pair is reached.
-    const RK4: bool = match S::FORM {
-        Form::Kdk => false,
-        Form::Rk4 => true,
-        Form::Euler | Form::Yoshida4 | Form::Yoshida6 => panic!(
-            "logH × Euler, × Yoshida-4 and × Yoshida-6 are not defined (integrator_contract Part 2b, logH's steps)"
-        ),
-    };
-}
 
 impl<S: Stepper> LhStepper for Slot<S> {
     #[inline]
     fn pair_profile(mode: LogHMode) -> CapabilityProfile {
-        if Self::RK4 {
-            <Rk4 as LhStepper>::pair_profile(mode)
-        } else {
-            <Kdk as LhStepper>::pair_profile(mode)
+        match S::FORM {
+            Form::Euler => <Euler as LhStepper>::pair_profile(mode),
+            Form::Kdk => <Kdk as LhStepper>::pair_profile(mode),
+            Form::Yoshida4 => <Yoshida4 as LhStepper>::pair_profile(mode),
+            Form::Yoshida6 => <Yoshida6 as LhStepper>::pair_profile(mode),
+            Form::Rk4 => <Rk4 as LhStepper>::pair_profile(mode),
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn regularised_step<R: AzReal>(
         system: &LhSystem<R>,
         q: &LhQ<R>,
         p: &LhP<R>,
         h: R,
     ) -> (LhQ<R>, LhP<R>) {
-        if Self::RK4 {
-            <Rk4 as LhStepper>::regularised_step(system, q, p, h)
-        } else {
-            <Kdk as LhStepper>::regularised_step(system, q, p, h)
+        match S::FORM {
+            Form::Euler => <Euler as LhStepper>::regularised_step(system, q, p, h),
+            Form::Kdk => <Kdk as LhStepper>::regularised_step(system, q, p, h),
+            Form::Yoshida4 => <Yoshida4 as LhStepper>::regularised_step(system, q, p, h),
+            Form::Yoshida6 => <Yoshida6 as LhStepper>::regularised_step(system, q, p, h),
+            Form::Rk4 => <Rk4 as LhStepper>::regularised_step(system, q, p, h),
         }
     }
 }

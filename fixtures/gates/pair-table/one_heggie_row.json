@@ -1,0 +1,5 @@
+{
+  "description": "control: the kernel's table with one row for Heggie, whose two time transformations need two",
+  "table": "one-heggie-row",
+  "expected": "fail"
+}

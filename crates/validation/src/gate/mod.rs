@@ -49,6 +49,7 @@ use crate::measure::benettin::{BenettinCalibrationGate, ShadowFormGate};
 use crate::measure::delta_dep::DeltaDepGate;
 use crate::nsub_bucket::NsubBucketGate;
 use crate::oklab::OklabRoundtripGate;
+use crate::pair_table::PairTableGate;
 use crate::projection_parity::ProjectionParityGate;
 use crate::shape_roundtrip::ShapeRoundtripGate;
 
@@ -133,6 +134,7 @@ pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[
     &SeparationFloorGate,
     &ShadowFormGate,
     &DeltaDepGate,
+    &PairTableGate,
 ];
 
 /// `gate.json`'s `measurement`: what it is measured under, in place of a threshold.
