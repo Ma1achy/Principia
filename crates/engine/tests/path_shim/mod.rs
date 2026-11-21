@@ -137,10 +137,18 @@ impl ChartConstructor {
     }
 }
 
-/// The lock on the affine chart, through `Segment::lock`.
+/// The lock on the affine chart with the centre-on-pin setting on, today's lock before the pin (the lock and centre on
+/// pin in one command, `z₀ ← z_locked`), through `Segment::lock_centred`: the earlier tests' lock.
 pub fn set(plane: &Plane, s: f64, t: f64) -> Result<[SetField; 2], LockError> {
-    Segment::lock(&view_of(plane), s, t)
+    Segment::lock_centred(&view_of(plane), s, t)
         .map(|seg| <[SetField; 2]>::try_from(seg.edits().to_vec()).expect("two edits"))
+        .map_err(lock)
+}
+
+/// The lock on the affine chart, the setting off, through `Segment::lock`: the lock group alone, the view unchanged.
+pub fn set_pinned(plane: &Plane, s: f64, t: f64) -> Result<[SetField; 1], LockError> {
+    Segment::lock(&view_of(plane), s, t)
+        .map(|seg| <[SetField; 1]>::try_from(seg.edits().to_vec()).expect("one edit"))
         .map_err(lock)
 }
 
@@ -153,7 +161,8 @@ pub struct ChartLock {
     pub notices: Notices,
 }
 
-/// The lock on the nonlinear `chart` through `window`, through `Segment::lock_on_chart`.
+/// The lock on the nonlinear `chart` through `window` with the centre-on-pin setting on, today's lock before the pin,
+/// through `Segment::lock_on_chart_centred`: the earlier tests' lock.
 pub fn set_on_chart<S, C, N>(
     chart: &C,
     window: &Window,
@@ -176,10 +185,54 @@ where
     });
     sim.chart.window = *window;
     let view = View::kernel(chart, sim).expect("a registry chart");
-    Segment::lock_on_chart::<S, C, N>(&view, chart, (s, t), norm, tol)
+    Segment::lock_on_chart_centred::<S, C, N>(&view, chart, (s, t), norm, tol)
         .map(|(seg, found)| ChartLock {
             edits: <[SetField; 3]>::try_from(seg.edits().to_vec()).expect("three edits"),
+            window: seg.b().sim.chart.window,
+            ic: found.ic,
+            notices: found.notices,
+        })
+        .map_err(lock)
+}
+
+/// A lock on a nonlinear chart with the setting off: its one edit and what it found.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PinnedLock {
+    pub edits: [SetField; 1],
+    pub window: Window,
+    pub point: [f64; 2],
+    pub ic: Ic<f64>,
+    pub notices: Notices,
+}
+
+/// The lock on the nonlinear `chart` through `window`, the setting off, through `Segment::lock_on_chart`.
+pub fn set_on_chart_pinned<S, C, N>(
+    chart: &C,
+    window: &Window,
+    s: f64,
+    t: f64,
+    norm: N,
+    tol: &Tolerances,
+) -> Result<PinnedLock, LockError>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    C: ByKind + FrozenControls,
+    f64: From<C::Param>,
+    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+{
+    let mut sim = sim_of(&Plane {
+        z0: [0.0; 8],
+        q1: [0.0; 8],
+        q2: [0.0; 8],
+    });
+    sim.chart.window = *window;
+    let view = View::kernel(chart, sim).expect("a registry chart");
+    Segment::lock_on_chart::<S, C, N>(&view, chart, (s, t), norm, tol)
+        .map(|(seg, found)| PinnedLock {
+            edits: <[SetField; 1]>::try_from(seg.edits().to_vec()).expect("one edit"),
             window: found.window,
+            point: found.point,
             ic: found.ic,
             notices: found.notices,
         })

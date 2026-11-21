@@ -46,9 +46,10 @@ chart, which writes `z₀` and the window, is a view edit, not a map edit; only 
 the map.
 
 **One evaluator per window shape.** A family acts on the window shape its route acts on, by one evaluator per shape:
-stage 1 builds the plane's (the only shape an engine route edits today). Pan and zoom on a chart window exist only as
-GUI routes (`gui/src/explore/manifold_view/navigate.rs`); their evaluator is typed and `NotBuilt` until the consolidation
-task (TASK-M2-64), so it is an added evaluator, not a branch.
+stage 1 builds the plane's (the only shape an engine route edited then). Stage 2 adds the chart window's evaluator for
+zoom (`family::zoom_window`), which zoom about a lock's pin on a nonlinear chart needs; pan on a chart window exists only
+as a GUI route (`gui/src/explore/manifold_view/navigate.rs`) until the consolidation task (TASK-M2-64), its evaluator
+an added one, not a branch.
 
 **One family per formula that exists in code. Special cases are families, never if-branches** (§ 17 header). In
 floating point, "an operation is its family's member" means the same formula in the same order (model § 8). So each
@@ -88,14 +89,21 @@ point whose step has an in-plane part evaluated through `Slice`, which fails tha
 the whole `z₀` with no scaled form in today's code, so it is a cut, not a new translation family (a latent translation
 `z₀ᴬ + s(z₀ᴮ − z₀ᴬ)` would be new arithmetic, a stage-2 choice with the sliding anchor).
 
-**The lock in stage 1 keeps what it does today.** Today a lock is not "lock state only": `lock::set` re-centres `z₀` on
-the clicked pixel through the kernel's `Φ` (`point`), `set_on_chart` also re-centres the window, and `recentre` sets
-`z₀` and the anchor. Those are jumps of the view, so each is a `Cut` labelled `CutLabel::LockRecentre`, its `B` the
-stored result of today's function; `snap_back` (`z₀ ← z_locked`, by assignment) is a `Cut` labelled `SnapBack`. Unlock
-changes the lock group only: a `Cut` labelled `Unlock` whose `B` differs from `A` in `lock` alone. "The lock doesn't move
-the view" (model § 0.7) is stage 2's change (TASK-M2-62, TASK-M2-65), not stage 1's. `lock::curve_tilt` returns a vector,
-not a view edit, and no engine route turns it into one: it stays in `lock`, reading the tilt formula
-`path::tilt_tangent(γ′(ν₀), length, τ, d)`, with no family until a route uses it.
+**The lock (stage 2: locking does not move the view).** A lock (`lock::set`, `set_on_chart`) edits the lock group
+alone: a `Cut` labelled `CutLabel::Lock`, its `B` differing from `A` in the lock group and the pin, which the view holds
+beside its `SimConfig` (`View.pin`: the clicked address and the point it is held at), so the sim key does not move.
+**Centre on pin** is its own cut (`CentreOnPin`), `z₀ ←` the pin's held point (on a kernel map the window's centre too);
+the stage-1 lock, which re-centred, is the two in one command (`Segment::lock_centred`, `lock_on_chart_centred`,
+labelled `LockRecentre`, the setting on), and reproduces every stage-1 lock digest bit for bit. **Zoom and the raw tilt
+turn about the pin** inside their families: the basis (or a kernel map's window, zoom's second evaluator) changes, then
+the centre is re-solved so the pinned pixel keeps its held point (`lock::hold_plane`, `hold_window`), exact wherever a
+float gives it (chart_decoder_contract Part 4, "How the pin is held"). Snap-back (`SnapBack`) re-solves `z₀` so the
+pinned pixel is `z_locked` again, the pin unmoved; the re-centre lock validation offers stays `LockRecentre`. A curved
+chart's tilt turns about the pin through `lock::Pivoted`, a placement of the kernel's tilt. Unlock clears the lock group
+and the pin. The lock's re-recorded baseline cases are `fixtures/chart_composition/lock_stage2.json`. *Was (stage 1):*
+"Today a lock is not "lock state only" … each is a `Cut` labelled `CutLabel::LockRecentre`." `lock::curve_tilt`
+returns a vector, not a view edit: it stays in `lock`, reading the tilt formula `path::tilt_tangent(γ′(ν₀), length, τ,
+d)`, with no family until a route uses it.
 
 **The end rule** (§ 17.4). `s` is f64 and compared exactly: `s == 0.0` returns `A`, and `s == 1.0` returns `B`, the
 stored values, never through the family's arithmetic. So every family's ends are bitwise its keyframes, and a zoom's or
@@ -172,7 +180,7 @@ neither is a sketch with one "the plan is unclear" comment.
 | Tilt (affine) | `nav::ChartConstructor::{tilt, tilt_pair}` | `Segment::raw_tilt` / `raw_tilt_pair` on `path::Constructor`; `tilt_tangent` and `tilt_vector` stay as the family's formula |
 | Tilt (curve axis) | `lock::curve_tilt` (a vector) | stays in `lock`, reading the tilt formula `path::tilt_tangent`; no family |
 | Tilt (R-474's maps) | kernel `latent_basis`, `Tilted<C, P>`; the GUI's compass; no engine route | sketch (`R474Tilt`) |
-| Lock | `engine/src/lock.rs` `set`, `set_on_chart`, `recentre`, `snap_back`, `unlock`, `move_slider` | `path::lock`'s constructors (`Cut` with its label; `Control`); the old functions deleted |
+| Lock | `engine/src/lock.rs` `set`, `set_on_chart`, `recentre`, `snap_back`, `unlock`, `move_slider` | `path::lock`'s constructors (`Cut` with its label; `Control`); the old functions deleted; stage 2: the lock moves no view |
 | Oblique slice | `nav::oblique` (a plane, not an edit) | `path::oblique`, the same function, a constructor of a view's plane; as an edit, a `Cut`; deleted from `nav` |
 | Chart switch | none in the engine (a `SimConfig` has no chart id) | `Segment::cut` |
 | Save view as chart | kernel `Saved::latent`, `Saved::curved` | `Segment::commit`, the kernel call unchanged |
@@ -248,7 +256,9 @@ pub enum TiltForm {
 /// Why a cut is a cut. ✓
 pub enum CutLabel {
     ChartSwitch,      // today's chart switch: a jump (model § 3)
-    LockRecentre,     // lock::set, set_on_chart, recentre: today's lock re-centres the view
+    Lock,             // lock::set, set_on_chart: the lock group and the pin, the view unchanged (stage 2)
+    LockRecentre,     // recentre, and a lock with the centre-on-pin setting on
+    CentreOnPin,      // the pinned pixel brought to the centre
     SnapBack,         // z₀ ← z_locked, by assignment
     Unlock,           // the lock group cleared; the view unchanged
     JumpUnderLock,    // Home, resets, presets, steers, capture while locked: non-conformant with R-849 until stage 2

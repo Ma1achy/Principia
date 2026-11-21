@@ -700,8 +700,10 @@ For a nonlinear chart, replay $\Phi$ and $D$ on the CPU, or read the GPU buffer 
 action, a navigation edit that brings the pin to the centre, and a setting, off by default, applies it at every lock in
 the same command (render_gui_spec §G4). Where this part reads the anchor as the centre pixel (the anchor-preserving
 class below, "keeps the anchor at centre", and the nonlinear chart's re-centred window), the anchor is at the pin;
-TASK-M2-62 builds it in the engine (R-916; *was* TASK-M8-125), exactly on nonlinear charts or stating why not, an inexact pin's bound a calibration the owner rules on before merge (R-866, R-71; REQ-CHART-166, REQ-GUI-429; *was* "REQ-GUI-425, REQ-GUI-429", REQ-GUI-425 being the GUI's badge, TASK-M8-125's). Until it lands the code
-re-centres as below. *Was (before R-866):* "Select the pixel at $(s,t)$ and snap the centre to its IC."
+the engine builds it (`engine::path`, TASK-M2-62): the lock edits the lock group alone, and the pin, its address and
+the point it is held at, is held in the view; "How the pin is held" below defines it. The stage-1 lock, which re-centred,
+is the lock and centre on pin in one command. *Was (before R-866):* "Select the pixel at $(s,t)$ and snap the centre to
+its IC."
 
 The centre pixel has one special property: `z(½,½) = z₀` **regardless of the basis**. That property sorts the operations into two classes:
 
@@ -710,7 +712,7 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
 
 **Sliders are re-based, not frozen.** An earlier design froze the sliders in locked mode. Here, in locked mode, sliders are **re-based to the anchor, not frozen**. Each slider shows `z_anchor + δ` live, with the anchor value marked; moving one is an anchor-excursion along that control's direction. Frozen sliders give only the microscope; re-based sliders additionally give slice-through-the-lock — strictly more capability, same GPU interface. Unlock preserves the current `(z₀, q₁, q₂)` as the new free-mode state.
 
-**Nonlinear charts:** the anchor is preserved by re-centring `Φ` on `z_locked` via the inverse-encode path (two options: CPU replicate-and-evaluate, or per-pixel readback). Feasibility applies: an excursion or tilt can carry the neighbourhood outside the feasible region of an invariant chart — those pixels are tagged, never dropped, exactly as for any chart.
+**Nonlinear charts:** the anchor is found via the inverse-encode path (two options: CPU replicate-and-evaluate, or per-pixel readback) and held at the pin, the window not re-centred ("How the pin is held", below). *Was:* "the anchor is preserved by re-centring `Φ` on `z_locked`". Feasibility applies: an excursion or tilt can carry the neighbourhood outside the feasible region of an invariant chart — those pixels are tagged, never dropped, exactly as for any chart.
 
 **The lock's construction, defined** (R-72; REQ-CHART-089; TASK-M2-23):
 
@@ -723,8 +725,7 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   basis `B = [q₁ q₂ | hidden]`, or a few ulps if built as `z_locked` plus the in-plane part recomputed from the pin's
   stored chart parameters) and stated by that task, its decoded state within REQ-ENC-024's `ε_phys` only where that bound
   and the decoder's conditioning allow; a bound that can't be derived is a calibration (R-71); the test's fixture names
-  its `κ(B)` and `‖δ‖`; its construction is a definition TASK-M2-62
-  writes here under physics review (R-72) (the chart-path brief's Q2 (a), R-899; the auto-snap setting off by
+  its `κ(B)` and `‖δ‖`; its construction is the one "How the pin is held" defines (the auto-snap setting off by
   default); and `δ` has no field of its own that could disagree with `z₀`. *Was:* "snap-back is `z₀ ← z_locked`, bit
   for bit;". Unlock clears the flag and the anchor and leaves
   `(z₀, q₁, q₂)` as it stands. A basis edit (a tilt, a zoom, a chart-mode switch) turns about the pin
@@ -740,20 +741,47 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   `z_locked` the controls the chart's axes set; every other control of `z_locked` is the clicked pixel's own frozen
   control, bit for bit, as the invariant charts' fibre point keeps them. The chart's hidden coordinates are `z₀`'s
   (`principia_chart_reference.md` §2.1), so the chart rebuilt on `z₀ = z_locked` freezes what it froze before. The
-  window is re-centred, `c ← (u, v)`, so the rebuilt chart's centre pixel decodes the clicked state bit for bit. Where
-  the ladder clamps none of the controls the chart's axes set, `z_locked` decodes the clicked state within lookup's
-  `ε_phys`; where it clamps one, `z_locked` holds the clamp's image and the lock carries `lookup_clamped`, its free
-  decode as far from the clicked state as the clamp moved it, and the rebuilt chart's centre pixel still decodes the
-  clicked state bit for bit. *(R-866, 8 Nov 2026: locking must not move the view, so this re-centring of the window is
-  replaced; how the pin is held on a nonlinear chart without it, exactly or with the reason it can't be, is TASK-M2-62's
-  definition (R-72; REQ-CHART-166; *was* "REQ-GUI-425", the GUI's badge, TASK-M8-125's), written here. This bullet stands as the built behaviour until then.)* The edits are the
-  `SetField` on `z₀ = z_locked` and the lock group's:
-  one command, sent in one frame under one history key, so the history keeps one entry and one undo restores both
-  (gui_state_contract §2, "A command of several edits is one history entry"; R-466); a re-centre's edits likewise. The
-  window is chart construction, held in `SimConfig` (R-69) among "chart id and params"; `SimConfig`'s chart group has no
-  fields yet (R-133), and TASK-M2-21 fills it, the ViewState record that must restore any chart exactly being
-  `SimConfig`'s serialisation (REQ-SYS-011; R-483 H2). Until then the lock returns the re-centred window beside its
-  edits, and undoing a nonlinear lock restores `z₀` and the lock group but not the window.
+  lock's one edit is the lock group's: `z₀` and the window are not edited, so the pinned pixel is the clicked pixel of
+  the same chart through the same window and decodes the clicked state bit for bit. Where the ladder clamps none of the
+  controls the chart's axes set, `z_locked` decodes the clicked state within lookup's `ε_phys`; where it clamps one,
+  `z_locked` holds the clamp's image and the lock carries `lookup_clamped`, its free decode as far from the clicked
+  state as the clamp moved it. **Centre on pin** on a nonlinear chart moves the window's centre to the pin's held chart
+  point, `c ← (u, v)`, and sets `z₀` to the centre's controls, `z_locked`'s where the chart's axes set them and the
+  chart's frozen ones elsewhere, so the lock and centre on pin in one command is the stage-1 lock, bit for bit. Its
+  edits, `z₀` and the window, and a re-centre's, are one command under one history key (gui_state_contract §2, "A
+  command of several edits is one history entry"; R-466). *Was (the stage-1 lock):* "The window is re-centred,
+  `c ← (u, v)`, so the rebuilt chart's centre pixel decodes the clicked state bit for bit."
+- **How the pin is held** (TASK-M2-62). The pin is the clicked pixel's address `(s, t)` in the window's `[0,1]²` and the
+  point it is held at, recorded when it is set or moved on purpose (the lock: `z_locked` on the affine chart, `(u, v)` on
+  a nonlinear one; a slice or a slider's move: the point the pixel then has; snap-back: `z_locked`) and held through
+  every basis or window edit, so their rounding does not accumulate. A pin exactly at `(½, ½)` is the centre, which a
+  basis edit keeps without arithmetic (`z(½, ½) = z₀`). A pan moves the pin's address with the content.
+  - *Zoom and the raw tilt about an off-centre pin.* After the basis (or a nonlinear chart's half-widths) changes, the
+    centre is re-solved, component by component, so that the kernel's own placement of the pinned address,
+    `z₀ + (2s−1)q₁ + (2t−1)q₂` (or `c + (2s−1)h`), gives the held point bit for bit. Each component of that sum is
+    non-decreasing in the centre's component, so a bracket and a bisection over the floats find a centre that gives the
+    held point wherever one exists. **Where none exists the pin cannot be exact through this placement:** where the
+    centre's component lies in a higher binade than the held value, the sum's attainable values near the held value are
+    spaced by the centre's ulp, coarser than the held value's, and step over it. The closer neighbour is kept, within one
+    ulp of the largest of the centre, the two offsets and the held value there (measured, TASK-M2-62's PR: on random
+    planes 78.8% of components exact, every miss within that ulp, the decoded state within 9.3·10⁻¹⁴ relative). An
+    exact pin needs the placement evaluated about the pin, `pin + R·(offset − offset_pin)`, a change to the kernel's
+    `Φ` on the CPU and the GPU; the bound above is proposed to the owner as the calibration until then.
+  - *A curved chart's tilt about the pin.* The pixel at window point `(u, v)` is placed at
+    `point + R·(u − at)` with hidden offsets `d0 + R_d·(u − at)`, `at` the pinned pixel's window point and `point` its
+    held chart point: the pin is placed at `point + R·0`, its held point and zero hidden offset, so it decodes the
+    pinned state bit for bit whatever the window's zoom. At `at = point = c` and `d0 = [−0, −0]` this is the tilt about
+    the window's centre bit for bit (`x + (−0) = x`). It is built on the CPU as a placement of the kernel's tilt
+    (`engine::path::Pivoted`); its GPU lowering, the record's persistence through unlock and the untilt's re-base are
+    not built yet.
+  - *Snap-back* on the affine chart re-solves `z₀` for the basis as above so that the pinned pixel's `Φ` is `z_locked`,
+    the pin where it is on screen, the hidden excursion cleared. With `H` the plane's orthonormal hidden directions, the
+    centre's hidden excursion `Hᵀ(z₀ − z_locked)` is the rounding of the re-solve, a few ulps of
+    `M = ‖|z_locked| + |2s−1|·|q₁| + |2t−1|·|q₂|‖`; `κ(B)` of `B = [q₁ q₂ | H]` does not multiply it, `H` being
+    orthonormal and orthogonal to the plane (measured on the skew plane, `κ(B) = 2.96`, `‖δ‖` up to 1.11:
+    `‖Hᵀ(z₀ − z_locked)‖ ≤ 5.8·10⁻¹⁷`, against the test's `8·ε·M`). On a nonlinear chart, whose hidden coordinates are
+    `z₀`'s and whose window the lock did not move, snap-back is `z₀ ← z_locked`, exact. Centre on pin assigns `z₀ ←`
+    the held point, so snap-back then centre on pin is `z₀ ← z_locked` bit for bit.
 - **Lock validation on an invariant chart.** Each pixel of the locked view is read as an entered pair `(L_z, y)`, `y`
   the chart's vertical value, `E` or `K`, at its own configuration and masses: the chart frozen at the pixel's hidden
   coordinates, which a tilt or an excursion moves. A pair that fails the chart's layer 2 there is tagged with the

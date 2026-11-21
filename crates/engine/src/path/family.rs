@@ -5,7 +5,7 @@
 //! | Family | Formula | Edit |
 //! |---|---|---|
 //! | `Pan` | [`pan`] | `z₀ += 2ds·q₁ + 2dt·q₂` (chart_decoder_contract Part 4, "Pan") |
-//! | `Zoom` | [`zoom`] | `q₁, q₂ ×= 2^−octaves`, log-stepped (Part 4, "Zoom"; R-83) |
+//! | `Zoom` | [`zoom`], [`zoom_window`] | `q₁, q₂ ×= 2^−octaves`, or a kernel map's half-widths, log-stepped (Part 4, "Zoom"; R-83) |
 //! | `Slice` | [`slice`] | `z₀ += t·off_plane(d)` (Part 4, "Slice") |
 //! | `Control` | [`control`] | `z₀[k] ← value`, no projection (Part 4, "Sliders are re-based") |
 //! | `RawTilt` | [`Constructor::tilt`], [`Constructor::tilt_pair`] | `q′ = ‖q‖·normalise(cos τ·q̂ + sin τ·d̂)` from the committed plane (Part 4, "Tilt"; chart_reference §1.1) |
@@ -15,7 +15,7 @@
 //! (chart_reference §1.1): the [`Constructor`] holds the committed plane each raw tilt starts from.
 
 use crate::contract::set_field::{Edit, SetField, SimField};
-use crate::contract::sim_config::{Latent, Plane, SimConfig};
+use crate::contract::sim_config::{Latent, Plane, SimConfig, Window};
 use crate::lock::LockError;
 use crate::nav::{
     axpy, finite, frame, norm, off_plane, scaled, unit, unit_of, BasisVector, NavError,
@@ -58,6 +58,20 @@ pub(crate) fn zoom(plane: &Plane, octaves: f64) -> Result<SetField, NavError> {
         q1: scaled(&plane.q1, k),
         q2: scaled(&plane.q2, k),
     }))
+}
+
+/// Zoom a kernel map's window by `octaves` about its centre (R-83): both half-widths scaled by the one common factor
+/// `2^−octaves`, log-stepped as the plane's zoom, the centre kept. The window-shape evaluator of the zoom family.
+pub(crate) fn zoom_window(window: &Window, octaves: f64) -> Result<Window, NavError> {
+    finite(&[octaves])?;
+    let k = (-octaves).exp2();
+    if k == 0.0 || !k.is_finite() {
+        return Err(NavError::DegeneratePlane);
+    }
+    Ok(Window {
+        centre: window.centre,
+        half: [window.half[0] * k, window.half[1] * k],
+    })
 }
 
 /// A slider's move of the control `k` to `value`: the `SetField` on `z₀` with that control set, the others kept. While
