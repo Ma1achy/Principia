@@ -7,6 +7,9 @@
 //!   `t` is that body's escape; separations that do not grow are no escape. Control: prin-rs's first truth, which read
 //!   the pair's own separation exponent (required under 0.3) and so called the eccentric binary's escape unresolved.
 //!
+//! - `escape_rules_default_is_the_kernels`: `RuleId::DEFAULT`'s production march is the default march
+//!   (`engine::precision::integrate_ic`, the kernel's `DefaultRule`), bit for bit. Control: the energy floor named.
+//!
 //! **Domain**: f64, Heggie × RK4 as the field backend marches it, for the harness; constructed records for the truth.
 
 use kernel::occupant::State;
@@ -129,4 +132,28 @@ negative_control!(
     "prin-rs's first truth, the pair's own separation exponent",
     expected = "the eccentric binary's escaper is not the truth's",
     check_truth(first_truth)
+);
+
+fn check_default(rule: RuleId) {
+    let pop = config_stability(16, 50.0);
+    let (ic, key) = (pop.ics[104], pop.keys[104]);
+    let own = engine::precision::integrate_ic::<GroundTruthOccupant>(&ic, None, &key);
+    let named = rules::production::<GroundTruthOccupant>(&ic, &key, rule);
+    assert_eq!(
+        format!("{own:?}"),
+        format!("{named:?}"),
+        "RuleId::DEFAULT is not the kernel's DefaultRule"
+    );
+}
+
+#[test]
+fn escape_rules_default_is_the_kernels() {
+    check_default(RuleId::DEFAULT);
+}
+
+negative_control!(
+    escape_rules_default_is_the_kernels,
+    "the energy floor named as the default",
+    expected = "is not the kernel's DefaultRule",
+    check_default(RuleId::EnergyFloor)
 );

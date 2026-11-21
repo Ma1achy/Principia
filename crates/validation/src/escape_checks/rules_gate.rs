@@ -1,7 +1,8 @@
 //! `cargo xtask gate escape-rules` (TASK-M3-34): every escape rule against the continued-run truth
 //! ([`super::rules`]), on the re-validation fixtures and the Burrau anchor; the per-rule table and the default's pick.
 //!
-//! **An input** (`fixtures/gates/escape-rules/*.json`): `{ "description", "populations", "burrau", "rule", "expected" }`.
+//! **An input** (`fixtures/gates/escape-rules/*.json`): `{ "description", "populations", "burrau", "rule", "expected" }`,
+//! `rule` a rule's name or `default`, the kernel's `DefaultRule`.
 //! It passes where the rule's wrong commits, pooled over the populations and (with `burrau`) the anchor, are at most the
 //! gate's threshold, 0.
 //!
@@ -73,6 +74,9 @@ pub fn burrau() -> Result<&'static (Measured, f64), String> {
 
 /// The rule called `word`.
 fn rule_of(word: &str) -> Result<RuleId, String> {
+    if word == "default" {
+        return Ok(RuleId::DEFAULT);
+    }
     RuleId::ALL
         .into_iter()
         .find(|r| r.name() == word)

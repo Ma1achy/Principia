@@ -1,0 +1,7 @@
+{
+  "description": "The default escape rule (kernel::detect::escape_rule::DefaultRule) on the re-validation fixtures (config_stability at its r_coll, config_basin and deep_interior at r_coll 0; 64 × 64 each) and the Burrau anchor, every trajectory marched past T_eval = 3·t_max to the continued-run truth (prin-rs chazy_probe's Chazy exponents, asymptotic stop after T_eval or T_truth = 10·T_eval): no wrong commit by T_eval, pooled. The default is picked so (the PR's criteria), so it must pass.",
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 64, "r_coll": 0.0 }],
+  "burrau": true,
+  "rule": "default",
+  "expected": "pass"
+}

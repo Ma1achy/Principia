@@ -63,6 +63,9 @@ impl RuleId {
     /// Every rule, in table order.
     pub const ALL: [RuleId; 3] = [RuleId::Closure, RuleId::EnergyFloor, RuleId::DistanceFloor];
 
+    /// The rule `kernel::detect::escape_rule::DefaultRule` names (kept equal to it by `escape_rules_default_is_the_kernels`).
+    pub const DEFAULT: RuleId = RuleId::Closure;
+
     /// The rule's name in the table.
     pub fn name(self) -> &'static str {
         match self {
@@ -482,6 +485,21 @@ pub fn census(runs: &[Measured]) -> String {
     )
 }
 
+/// The production march of `ic` under `key` with the escape rule `rule`: `engine::precision::integrate_ic_rule` with
+/// that rule's kernel type.
+pub fn production<A: Advance>(
+    ic: &Ic<f64>,
+    key: &MarchKey64,
+    rule: RuleId,
+) -> engine::precision::SimState64 {
+    use engine::precision::integrate_ic_rule;
+    match rule {
+        RuleId::Closure => integrate_ic_rule::<A, Closure<f64>>(ic, None, key),
+        RuleId::EnergyFloor => integrate_ic_rule::<A, EnergyFloor<f64>>(ic, None, key),
+        RuleId::DistanceFloor => integrate_ic_rule::<A, DistanceFloor<f64>>(ic, None, key),
+    }
+}
+
 /// Whether the harness's commit under `rule` on `ic` under `key` is the production march's under `production` (the
 /// same rule, unless a control says otherwise), to the horizon `horizon_steps`: production fires escape on the macro-step
 /// holding the harness's sampling point with the same `detail`, or neither fires. `Err` says where they part.
@@ -496,15 +514,7 @@ pub fn same_as_production<A: Advance>(
     let mut k = *key;
     k.loop_values.horizon_steps = horizon_steps;
     let t_h = f64::from(horizon_steps) * k.loop_values.dt_macro;
-    let out = match production {
-        RuleId::Closure => engine::precision::integrate_ic_rule::<A, Closure<f64>>(ic, None, &k),
-        RuleId::EnergyFloor => {
-            engine::precision::integrate_ic_rule::<A, EnergyFloor<f64>>(ic, None, &k)
-        }
-        RuleId::DistanceFloor => {
-            engine::precision::integrate_ic_rule::<A, DistanceFloor<f64>>(ic, None, &k)
-        }
-    };
+    let out = self::production::<A>(ic, &k, production);
     let m = measure::<A>(ic, &k, t_h, horizon_steps);
     let idx = RuleId::ALL.iter().position(|&r| r == rule).expect("a rule");
     let production = (sd_state(out.packed_a) == STATE_ESCAPE).then(|| {
