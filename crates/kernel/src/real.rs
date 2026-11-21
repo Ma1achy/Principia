@@ -101,6 +101,20 @@ pub trait Real:
         self.sine() / self
     }
 
+    /// `self` read on the circle, for an angle handed to [`Real::sine`] and [`Real::cosine`]: a value whose `sin` and `cos`
+    /// are `self`'s, in `[−π̂, π̂]` (`π̂` the f32 nearest `π`) where the backend's own functions are bounded. At f32, the
+    /// GPU's precision, [`crate::circle::on_circle_f32`], the kernel's own exact reduction modulo `2π` in integer
+    /// arithmetic, since WGSL bounds `sin` and `cos` only inside `[−π, π]` and a GPU need not reduce past it. By default,
+    /// at f64 included, `self` unchanged: f64 runs only on the host, where the pinned libm's `sin` and `cos` reduce
+    /// exactly, so its bits stay as they were.
+    #[inline]
+    fn on_circle(self) -> Self
+    where
+        Self: Float,
+    {
+        self
+    }
+
     /// `(sin(self), cos(self))`: [`Real::sine`]'s and [`Real::cosine`]'s values, so the pair is the two functions' own.
     #[inline]
     fn sine_cosine(self) -> (Self, Self)
@@ -273,6 +287,11 @@ impl Real for f32 {
     #[inline]
     fn sinc(self, square: f32) -> f32 {
         crate::chart::shape_sphere::sinc_f32(self, square)
+    }
+
+    #[inline]
+    fn on_circle(self) -> f32 {
+        crate::circle::on_circle_f32(self)
     }
 }
 

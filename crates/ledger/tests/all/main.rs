@@ -37,6 +37,7 @@ mod layout;
 
 pub mod arctan;
 pub mod catalogue;
+pub mod circle;
 pub mod constants;
 pub mod declared_ranges;
 pub mod derived;
