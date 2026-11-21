@@ -6,6 +6,7 @@ pub mod arctan;
 pub mod az;
 pub mod bench;
 pub mod bringup;
+pub mod compare;
 pub mod control;
 pub mod convergence;
 pub mod cross_backend;
