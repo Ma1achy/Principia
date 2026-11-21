@@ -1,0 +1,6 @@
+{
+  "gate": "escape-window-ladder",
+  "inputs": ["window_0.2.json", "window_0.4.json", "window_0.8.json", "window_1.6.json", "window_3.2.json", "control_one_quantum.json"],
+  "threshold": { "value": 0, "requirement": "REQ-EVT-019", "status": "confirmed" },
+  "min_regions": { "value": null, "requirement": "REQ-EVT-033" }
+}

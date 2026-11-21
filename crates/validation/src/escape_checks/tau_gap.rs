@@ -66,6 +66,8 @@ pub struct RunGap {
     pub fires_above: f64,
     /// The `tau` above which its first firing by the judged time is wrong; infinite where none can be.
     pub wrong_above: f64,
+    /// The time of the mark that sets `wrong_above`.
+    pub wrong_t: f64,
 }
 
 /// Whether a firing at a mark naming `body` with `detail` is wrong under `truth`.
@@ -106,11 +108,13 @@ pub fn runs(m: &Marched, window: f64) -> Vec<RunGap> {
             let judged = m.pop.judged(i);
             // A mark fires first at `tau` just above its chord exactly where its chord is below every earlier armed
             // mark's: a running minimum's record.
-            let (mut least, mut wrong_above) = (f64::INFINITY, f64::INFINITY);
+            let (mut least, mut wrong_above, mut wrong_t) =
+                (f64::INFINITY, f64::INFINITY, f64::NAN);
             for c in chords.iter().filter(|c| c.armed && c.t <= judged) {
                 if c.chord < least {
-                    if wrong(truth, c.body, c.detail) {
-                        wrong_above = wrong_above.min(c.chord);
+                    if wrong(truth, c.body, c.detail) && c.chord < wrong_above {
+                        wrong_above = c.chord;
+                        wrong_t = c.t;
                     }
                     least = c.chord;
                 }
@@ -120,6 +124,7 @@ pub fn runs(m: &Marched, window: f64) -> Vec<RunGap> {
                 claim: median(&claim),
                 fires_above: least,
                 wrong_above,
+                wrong_t,
             }
         })
         .collect()
@@ -279,6 +284,7 @@ pub fn report(m: &Marched, rg: &[RunGap]) -> String {
     let finite = |v: Vec<f64>| v.into_iter().filter(|x| x.is_finite()).collect::<Vec<_>>();
     let g = Gap::of(rg);
     let censored = rg.iter().filter(|r| r.truth == Truth::Censored).count();
+    let edge = edge_line(m, rg);
     format!(
         "{} ({} trajectories, {censored} censored):\n\
          - the claim's statistic, per-trajectory median |Δn̂| over t ∈ [25, 30]: escapers {}; bound {}\n\
@@ -286,7 +292,8 @@ pub fn report(m: &Marched, rg: &[RunGap]) -> String {
          - escapers' least armed chord by T_h/2 (the tau above which each fires; never armed left out): {}\n\
          - bound trajectories' least armed chord by T_h/2 (never armed left out): {}\n\
          - wrong-firing edges (the tau above which each fires wrongly): {}\n\
-         - L (escapers' edge) {:.4e}, U (false-positive edge) {:.4e}, U/L {:.3}",
+         - L (escapers' edge) {:.4e}, U (false-positive edge) {:.4e}, U/L {:.3}\n\
+         - {edge}",
         m.pop.name,
         rg.len(),
         spread(&ce),
@@ -297,6 +304,57 @@ pub fn report(m: &Marched, rg: &[RunGap]) -> String {
         g.l,
         g.u,
         g.ratio()
+    )
+}
+
+/// The trajectory that sets the false-positive edge, described: its truth and why, the mark, and its farthest body's
+/// distance and `E_rel` over the ground truth's segment.
+fn edge_line(m: &Marched, rg: &[RunGap]) -> String {
+    let Some((i, r)) = rg
+        .iter()
+        .enumerate()
+        .filter(|(_, r)| r.wrong_above.is_finite())
+        .min_by(|a, b| a.1.wrong_above.total_cmp(&b.1.wrong_above))
+    else {
+        return "the false-positive edge: no trajectory fires wrongly at any tau".into();
+    };
+    let run = &m.runs[i];
+    let why = match check2::growth(run) {
+        Some(g) => format!(
+            "farthest body {} at T_h, farthest throughout the segment {}, increasing {}, growth ratio {:.4} (ρ {:.4})",
+            g.body,
+            g.farthest,
+            g.increasing,
+            g.ratio,
+            check2::RHO
+        ),
+        None => "too few points".into(),
+    };
+    let at = |t: f64| {
+        run.points
+            .iter()
+            .find(|p| p.t >= t)
+            .or(run.points.last())
+            .map(|p| {
+                let k = p.candidate.body as usize;
+                format!(
+                    "t {:.2}: body {k} d {:.3} E_rel {:+.3e}",
+                    p.t, p.d[k], p.e_rel[k]
+                )
+            })
+            .unwrap_or_default()
+    };
+    let t_h = run.t_end;
+    format!(
+        "the false-positive edge is set by pixel {i}: truth {:?} ({why}); its wrong mark at t {:.3}, chord {:.4e}; \
+         {}; {}; {}; {}",
+        r.truth,
+        r.wrong_t,
+        r.wrong_above,
+        at(r.wrong_t),
+        at(t_h / 2.0),
+        at(0.75 * t_h),
+        at(t_h)
     )
 }
 

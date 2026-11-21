@@ -21,12 +21,14 @@
 
 pub mod check2;
 pub mod check3;
+pub mod convergence_study;
 pub mod gate;
 pub mod march;
 pub mod rebind;
 pub mod replay;
 pub mod revalidation;
 pub mod tau_gap;
+pub mod window_ladder;
 
 use kernel::canon::canonicalise;
 use kernel::decode::Ic;

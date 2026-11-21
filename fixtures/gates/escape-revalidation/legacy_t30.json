@@ -1,6 +1,6 @@
 {
   "description": "The escape detector as it is, on the config slices, against the checked-in legacy t = 30 set (fixtures/escape/legacy_t30.json: unbound by the pair's mass and receding at t = 30, prin-rs's classifier): pooled precision of the firings by t = 30 at least the threshold over at least 20 decided firings; recall recorded.",
-  "populations": [{ "slice": "config_stability", "n": 32, "r_coll": null }, { "slice": "config_basin", "n": 32, "r_coll": 0.0 }],
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }],
   "truth": "legacy",
   "rule": "detector",
   "expected": "pass"

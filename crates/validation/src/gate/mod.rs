@@ -109,6 +109,7 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &crate::escape_checks::tau_gap::TauGapGate,
     &crate::escape_checks::revalidation::EscapeRevalidationGate,
     &crate::escape_checks::revalidation::EscapePrecisionGate,
+    &crate::escape_checks::window_ladder::EscapeWindowLadderGate,
     &figure_eight::FigureEightClosureGate,
     &lagrange::ExactCasesGate,
     &order_scaling::OrderScalingGate,

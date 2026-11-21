@@ -281,4 +281,17 @@ impl Gate for ConvergenceGate {
             .map_err(|e| format!("refused: {name} is not a convergence input: {e}"))?;
         Self::judge(config, name, &input)
     }
+
+    fn flags(&self, _root: &std::path::Path, args: &[&str]) -> Result<(), String> {
+        match args {
+            ["--propose"] => {
+                println!("{}", crate::escape_checks::convergence_study::propose()?);
+                Ok(())
+            }
+            _ => Err(format!(
+                "convergence: unrecognised flags `{}`; use `--propose`",
+                args.join(" ")
+            )),
+        }
+    }
 }

@@ -286,8 +286,9 @@ enum Stand {
 /// proposed by R-173 and provisional until the M3 gate, citing REQ-EVT-025, the calibration that replaces it there
 /// (R-173, R-427); and the closure's departure threshold `delta_dep`, proposed by TASK-M3-11 from its measured gap and
 /// provisional until the M3 gate, citing REQ-VAL-055 (R-37, R-427); and the sync quantum `delta_sync`, provisional until
-/// the M3 gate, citing REQ-INT-080, its calibration (TASK-M3-40).
-const TABLE: [(&str, Stand); 43] = [
+/// the M3 gate, citing REQ-INT-080, its calibration (TASK-M3-40); and the escape window `escape_window`, provisional
+/// until the M3 gate, citing REQ-EVT-033, its ladder's calibration (R-698; TASK-M3-34).
+const TABLE: [(&str, Stand); 44] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -336,6 +337,7 @@ const TABLE: [(&str, Stand); 43] = [
     ("tau_i", Stand::Until("M2", "REQ-ENC-035")),
     ("sinc_cut", Stand::Until("M2", "REQ-DEC-054")),
     ("sinc_bound", Stand::Until("M2", "REQ-DEC-054")),
+    ("escape_window", Stand::Until("M3", "REQ-EVT-033")),
     ("tau", Stand::Until("M3", "REQ-EVT-025")),
     ("delta_dep", Stand::Until("M3", "REQ-VAL-055")),
     ("delta_sync", Stand::Until("M3", "REQ-INT-080")),

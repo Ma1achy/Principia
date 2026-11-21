@@ -1,6 +1,6 @@
 {
   "description": "Control: tau = 5e-2, above the false-positive edge; the gate must fail it.",
-  "populations": [{ "slice": "config_stability", "n": 32, "r_coll": null }, { "slice": "config_basin", "n": 32, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 32, "r_coll": 0.0 }],
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 64, "r_coll": 0.0 }],
   "tau": 0.05,
   "expected": "fail"
 }
