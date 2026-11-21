@@ -11,7 +11,8 @@
 
 use eframe::egui::{self, DragValue, Rect, RichText, Slider, Stroke, Ui};
 
-use super::{reset::Section, row, row_ui, z0_edit, Panel, Touch, AXES, SLIDERS, Z0_HALF_RANGE};
+use super::{reset::Section, row, row_ui, Panel, Touch, AXES, SLIDERS, Z0_HALF_RANGE};
+use crate::dispatch::{self, Class};
 use crate::explore::lock::GOLD;
 
 /// The width of the value field, in points (a look choice, R-390).
@@ -180,11 +181,8 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
             panel.scratch.compass.mode = Touch::Slice;
         }
         if let Some(value) = moved {
-            let mut next = z0;
-            next[i] = value;
-            panel
-                .out
-                .edit(z0_edit(next), Some(Touch::Slice), panel.scratch);
+            let edit = dispatch::one(&panel.snapshot.sim.plane, Class::Control { k: i, value });
+            panel.out.edit(edit, Some(Touch::Slice), panel.scratch);
         }
     }
 }

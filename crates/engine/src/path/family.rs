@@ -4,8 +4,9 @@
 //!
 //! | Family | Formula | Edit |
 //! |---|---|---|
-//! | `Pan` | [`pan`] | `z₀ += 2ds·q₁ + 2dt·q₂` (chart_decoder_contract Part 4, "Pan") |
-//! | `Zoom` | [`zoom`], [`zoom_window`] | `q₁, q₂ ×= 2^−octaves`, or a kernel map's half-widths, log-stepped (Part 4, "Zoom"; R-83) |
+//! | `Pan` | [`pan`], [`pan_window`] | `z₀ += 2ds·q₁ + 2dt·q₂` (chart_decoder_contract Part 4, "Pan") |
+//! | `Zoom` | [`octave_factor`], then [`zoom_by`], [`zoom_window_by`] | `q₁, q₂ ×= 2^−octaves`, or a kernel map's half-widths, log-stepped (Part 4, "Zoom"; R-83) |
+//! | `ZoomFactor` | [`zoom_by`], [`zoom_window_by`] | `q₁, q₂ ×= k`, `k` a ratio of scales: the zoom row's form, bit for bit |
 //! | `Slice` | [`slice`] | `z₀ += t·off_plane(d)` (Part 4, "Slice") |
 //! | `Control` | [`control`] | `z₀[k] ← value`, no projection (Part 4, "Sliders are re-based") |
 //! | `RawTilt` | [`Constructor::tilt`], [`Constructor::tilt_pair`] | `q′ = ‖q‖·normalise(cos τ·q̂ + sin τ·d̂)` from the committed plane (Part 4, "Tilt"; chart_reference §1.1) |
@@ -46,28 +47,47 @@ pub(crate) fn slice(plane: &Plane, d: &Latent, t: f64) -> Result<SetField, NavEr
     Ok(edit(SimField::Z0(axpy(&plane.z0, t, &step))))
 }
 
-/// Zoom by `octaves` about the centre (R-83): `q₁` and `q₂` scaled by the one common factor `2^−octaves`, log-stepped,
-/// `z₀` kept; a positive `octaves` narrows the window.
-pub(crate) fn zoom(plane: &Plane, octaves: f64) -> Result<SetField, NavError> {
+/// The factor `2^−octaves` of a zoom by `octaves`; [`NavError::DegeneratePlane`] where it is 0 or not finite.
+pub(crate) fn octave_factor(octaves: f64) -> Result<f64, NavError> {
     finite(&[octaves])?;
-    let k = (-octaves).exp2();
-    if k == 0.0 || !k.is_finite() {
-        return Err(NavError::DegeneratePlane);
+    factor(&(-octaves).exp2())
+}
+
+/// `k` itself where it is a factor a zoom can take: finite and not 0.
+pub(crate) fn factor(k: &f64) -> Result<f64, NavError> {
+    match *k == 0.0 || !k.is_finite() {
+        true => Err(NavError::DegeneratePlane),
+        false => Ok(*k),
     }
+}
+
+/// Zoom by the factor `k` about the centre: `q₁` and `q₂` times `k`, `z₀` kept. The zoom family's arithmetic, which
+/// the zoom in octaves reaches at `k = 2^−octaves` ([`octave_factor`]) and the factor form at a ratio of scales `σ′/σ` (the gui's zoom row).
+pub(crate) fn zoom_by(plane: &Plane, k: f64) -> Result<SetField, NavError> {
+    let k = factor(&k)?;
     Ok(edit(SimField::Basis {
         q1: scaled(&plane.q1, k),
         q2: scaled(&plane.q2, k),
     }))
 }
 
-/// Zoom a kernel map's window by `octaves` about its centre (R-83): both half-widths scaled by the one common factor
-/// `2^−octaves`, log-stepped as the plane's zoom, the centre kept. The window-shape evaluator of the zoom family.
-pub(crate) fn zoom_window(window: &Window, octaves: f64) -> Result<Window, NavError> {
-    finite(&[octaves])?;
-    let k = (-octaves).exp2();
-    if k == 0.0 || !k.is_finite() {
-        return Err(NavError::DegeneratePlane);
-    }
+/// Pan a kernel map's window by `(ds, dt)` of its `[0,1]²` addresses: the centre moves to `window.at(½ + ds, ½ + dt)`,
+/// `c + (2ds·h_u, 2dt·h_v)`, the half-widths kept. The window-shape evaluator of the pan family, in the plane's order:
+/// the step `2ds` formed first, then its product with the half-width added to the centre.
+pub(crate) fn pan_window(window: &Window, ds: f64, dt: f64) -> Result<Window, NavError> {
+    finite(&[ds, dt])?;
+    Ok(Window {
+        centre: [
+            window.centre[0] + 2.0 * ds * window.half[0],
+            window.centre[1] + 2.0 * dt * window.half[1],
+        ],
+        half: window.half,
+    })
+}
+
+/// Zoom a kernel map's window by the factor `k` about its centre: both half-widths times `k`, the centre kept.
+pub(crate) fn zoom_window_by(window: &Window, k: f64) -> Result<Window, NavError> {
+    let k = factor(&k)?;
     Ok(Window {
         centre: window.centre,
         half: [window.half[0] * k, window.half[1] * k],

@@ -8,7 +8,8 @@ use eframe::egui::{Rect, RichText, Ui};
 use engine::contract::sim_config::{Lock, Plane};
 use engine::contract::view_ui::Window;
 
-use super::{lock_edit, point, row_ui, z0_edit, Out, Panel, Scratch, OPEN_INSPECTOR, UNLOCK};
+use super::{lock_edit, row_ui, Out, Panel, Scratch, OPEN_INSPECTOR, UNLOCK};
+use crate::dispatch::{self, Class};
 use crate::explore::lock::{anchor_text, badge};
 
 /// The figure's right-click entry.
@@ -18,18 +19,12 @@ pub const NOTE: &str = "sliders re-based to the anchor · moving one is an excur
 /// What the anchor line reads while free.
 pub const FREE: &str = "free · K, or right-click › lock here, on the figure";
 
-/// Locks at the figure's point `(s, t)` of `plane`: recentres on it, then sets the lock there.
-pub fn lock_at(plane: &Plane, (s, t): (f64, f64), scratch: &mut Scratch, out: &mut Out) {
-    let z_locked = point(plane, s, t);
-    out.edit(z0_edit(z_locked), None, scratch);
-    out.edit(
-        lock_edit(Lock {
-            locked: true,
-            z_locked,
-        }),
-        None,
-        scratch,
-    );
+/// Locks at the figure's point `(s, t)` of `plane`: recentres on it, then sets the lock there, the engine's lock with
+/// the centre-on-pin setting on ([`Class::Lock`]), its two edits sent in its order.
+pub fn lock_at(plane: &Plane, at: (f64, f64), scratch: &mut Scratch, out: &mut Out) {
+    for edit in dispatch::send(plane, Class::Lock { at }) {
+        out.edit(edit, None, scratch);
+    }
 }
 
 /// Unlock: the `SetField` that clears the lock, while it is set.
