@@ -165,6 +165,22 @@ pub trait Cadence<R> {
         d2_quantised(r)
     }
 
+    /// The completed macro-steps, `completed`, which the wrapper reports before each macro-step and once after the
+    /// last: the macro-step grid's clock, for a cadence that stamps what it latches with a step index
+    /// (`t_dmin_step`). A cadence with none ignores it; one that wraps another passes it on.
+    #[inline]
+    fn clock(&mut self, _completed: u32) {}
+
+    /// A march re-booted from the stored state `stored` (the wrapper's resumed entry points), before its first step:
+    /// what this cadence keeps across macro-steps and can read back from `stored` is reloaded. A cadence that keeps
+    /// nothing ignores it; one that wraps another passes it on.
+    #[inline]
+    fn resume(&mut self, _stored: &SimStateBaseOf<R>)
+    where
+        R: PayloadReal,
+    {
+    }
+
     /// The stored state `out` of the finished run, with what this cadence kept written into it. A cadence that keeps
     /// nothing leaves it; the wrapper's writes its monitored fields ([`super::wrapper::monitored`]).
     #[inline]

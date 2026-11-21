@@ -43,10 +43,11 @@
 //! payload's `coll_floor` stores, the larger of the near-firing maximum and the code of the pair and state the latch
 //! holds.
 
+use crate::detect::label::Label;
 use crate::driver::substep::{pair_d2_quantised, Quantise};
 use crate::payload::{
-    set_detail, set_dmin_pair, set_state, DETAIL_COLLISION_ALL_THREE_TRIPLE_COLLISION,
-    DETAIL_COLLISION_PAIR_0, DETAIL_COLLISION_PAIR_1, DETAIL_COLLISION_PAIR_2, STATE_COLLISION,
+    set_dmin_pair, DETAIL_COLLISION_ALL_THREE_TRIPLE_COLLISION, DETAIL_COLLISION_PAIR_0,
+    DETAIL_COLLISION_PAIR_1, DETAIL_COLLISION_PAIR_2, STATE_COLLISION,
 };
 use crate::real::IeeeBits;
 #[cfg(not(target_arch = "spirv"))]
@@ -432,7 +433,11 @@ impl Detector {
     pub fn label(&self, packed_a: u32) -> u32 {
         let w = set_dmin_pair(packed_a, self.latch.pair);
         if self.collision.fired {
-            set_detail(set_state(w, STATE_COLLISION), self.collision.detail)
+            Label {
+                state: STATE_COLLISION,
+                detail: self.collision.detail,
+            }
+            .write(w)
         } else {
             w
         }

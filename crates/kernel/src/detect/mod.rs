@@ -8,7 +8,9 @@
 //!   terminals are real outcomes"; R-60): a pure function of the decode's output and the sim key's `r_coll`.
 //! - [`escape`]: the escape test at the occupant's sampling points, the shape point settled over the window and a body
 //!   unbound, with the lagged shape register, the escaper and the ionisation gate (Part 7; pitfalls §2).
+//! - [`label`]: the label writer, the precedence of the terminals by time and the one write of `state` and `detail`.
 
 pub mod collision;
 pub mod escape;
+pub mod label;
 pub mod t0;
