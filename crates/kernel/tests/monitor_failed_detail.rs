@@ -1,19 +1,18 @@
-//! The monitor's failure mark at its edges (`kernel::driver::{monitor::latched, wrapper::monitored}`; payload §2,
-//! `sim_failed`'s `detail`; TASK-M3-05):
-//! - `invariant_monitor_failed_detail_walks_every_component`: a failed run's detail reads each of `r`'s and `p`'s twelve
-//!   components, and the walk finishes, within a bound of its own: a loop that stops advancing fails this test where
-//!   it would otherwise run to the mutants job's timeout.
+//! The monitor's failure mark at its edges (`kernel::driver::{monitor::latched, failure::Detector}`; payload §2,
+//! `sim_failed`'s `detail`; TASK-M3-05, TASK-M3-18):
+//! - `invariant_monitor_failed_detail_walks_every_component`: the cause the cadence's per-step detection reads on a
+//!   state reads each of `r`'s and `p`'s twelve components, and the walk finishes, within a bound of its own: a loop
+//!   that stops advancing fails this test where it would otherwise run to the mutants job's timeout.
 //! - `invariant_monitor_latch_keeps_its_value_at_a_tie`: a tie keeps the held maximum, on its bits.
 
 use std::sync::mpsc;
 use std::time::Duration;
 
 use kernel::decode::Ic;
-use kernel::driver::cadence::WrapperCadence;
+use kernel::driver::failure::Detector;
 use kernel::driver::monitor::latched;
-use kernel::driver::wrapper::monitored;
 use kernel::occupant::kdk::Kdk;
-use kernel::payload::{sd_detail, SimStateBase};
+use kernel::payload::SimStateBase;
 use validation::drift::{integrate_fixture, Fixture};
 use validation::negative_control;
 
@@ -50,11 +49,22 @@ fn failed_run() -> Fixture {
     }
 }
 
-/// `mark`'s detail with each component of `r`, then of `p`, taken non-finite alone: 0 for a NaN, 1 for a `±∞`, and for
+/// The cause the cadence's per-step detection reads on the state of `o` ([`Detector::state`]); 2 where it reads none,
+/// the cause a non-finite quantity derived from that finite state then takes.
+fn cadence_cause(o: SimStateBase) -> u32 {
+    let mut d = Detector::new();
+    if d.state(1, &o.r, &o.p) {
+        d.failure().detail
+    } else {
+        2
+    }
+}
+
+/// `read`'s cause with each component of `r`, then of `p`, taken non-finite alone: 0 for a NaN, 1 for a `±∞`, and for
 /// a finite state 2; and 0 for a NaN beside a `±∞`, whichever comes first in the walk.
-fn check_walk(mark: fn(SimStateBase, &WrapperCadence<f32>) -> SimStateBase) {
-    let (out, cadence) = integrate_fixture::<Kdk, f32>(&failed_run());
-    let detail = |o: SimStateBase| sd_detail(mark(o, &cadence).packed_a);
+fn check_walk(read: fn(SimStateBase) -> u32) {
+    let (out, _) = integrate_fixture::<Kdk, f32>(&failed_run());
+    let detail = read;
     assert_eq!(detail(out), 2, "a finite state");
     for i in 0..3 {
         for j in 0..2 {
@@ -84,16 +94,16 @@ fn check_walk(mark: fn(SimStateBase, &WrapperCadence<f32>) -> SimStateBase) {
 
 #[test]
 fn invariant_monitor_failed_detail_walks_every_component() {
-    within(WALK_BOUND, || check_walk(monitored));
+    within(WALK_BOUND, || check_walk(cadence_cause));
 }
 
 negative_control!(
     invariant_monitor_failed_detail_walks_every_component,
     "a walk that never reads `p`",
     expected = "+inf in p[0][0]",
-    within(WALK_BOUND, || check_walk(|mut o, c| {
+    within(WALK_BOUND, || check_walk(|mut o| {
         o.p = [[0.0; 2]; 3];
-        monitored(o, c)
+        cadence_cause(o)
     }))
 );
 

@@ -1004,14 +1004,16 @@ pub fn state_codes() -> String {
     out.push_str(&details("collision"));
     out.push_str(&details("decode_failed"));
     out.push_str(&details("escape"));
+    out.push_str(&details("sim_failed"));
     out
 }
 
 /// Payload §2's `detail` codes under `state`, as constants `DETAIL_<STATE>_<MEANING>`, each meaning at its code in the
-/// ledger's table ([`crate::payload::detail_meanings`]). Three states take them: `collision`, whose pair ids and
+/// ledger's table ([`crate::payload::detail_meanings`]). Four states take them: `collision`, whose pair ids and
 /// triple-collision code the collision detector writes (integrator_contract Part 7), `decode_failed`, its failure
 /// enum, onto which the decode's `DEGENERATE` reasons map (dd_decoder §2, "The `DEGENERATE` cause set"), and `escape`,
-/// whose body ids and triple-ejection code the escape detector writes (Part 7); none is written as a literal code.
+/// whose body ids and triple-ejection code the escape detector writes (Part 7), and `sim_failed`, its failure causes,
+/// which the failure path writes (`kernel::driver::failure`); none is written as a literal code.
 fn details(state: &str) -> String {
     let mut out = String::new();
     let meanings = crate::payload::detail_meanings()

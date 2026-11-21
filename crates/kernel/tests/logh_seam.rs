@@ -294,7 +294,27 @@ impl<A: Advance> Advance for Dropping<A> {
         params: &AdvanceParams<R>,
         cadence: &mut C,
     ) -> Advanced<R> {
-        A::advance(state, geom, t_now, t_target, params, cadence)
+        A::advance(state, geom, t_now, t_target, params, &mut Muted(cadence))
+    }
+}
+
+/// The cadence with the march's own report of a non-finite end dropped (`Cadence::non_finite`), every other call
+/// passed on: [`Dropping`]'s, so no march ever ended.
+#[cfg_attr(not(feature = "controls"), allow(dead_code))]
+struct Muted<'a, C>(&'a mut C);
+
+impl<R, C: Cadence<R>> Cadence<R> for Muted<'_, C> {
+    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.0.after_step(state, geom);
+    }
+    fn done(&self) -> bool {
+        self.0.done()
+    }
+    fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
+        self.0.sample(state, index, quantum);
+    }
+    fn clock(&mut self, completed: u32) {
+        self.0.clock(completed);
     }
 }
 
@@ -332,8 +352,10 @@ fn coincident<R: P>() -> State<R> {
 /// [`coincident`] through the wrapper at `dt_macro = 1/16` (`Δ_sync = 1/8`), eight macro-steps, `N_sub = 4`: the first
 /// macro-step's target is before the first boundary, so it takes no step and is completed; the second's march ends not
 /// finite. The run is `sim_failed`, latched at the macro-step it ended in, which is not completed (`t_end_step = 1`),
-/// its state the direct march's latched finite one, its detail 2 (a non-finite derived quantity on a finite state,
-/// payload §2), and no step kept.
+/// its state the direct march's latched finite one, and no step kept. Its detail is by cause (payload §2; the
+/// contract's dated line of 13 Nov 2026): under logH the entry size is not finite, 2; under TTL the first step's size
+/// is finite (0.0) and its state NaN, 0 (`tests/failure.rs`, `failure_is_measurement_logh_coincident_cause`, measures
+/// both). Was: 2 in both modes, read on the latched finite state.
 fn check_non_finite_fails<S: Defined, const TTL: bool, R: P, D: Reading>() {
     let name = name::<S, Values<TTL>, R>();
     let s = coincident::<R>();
@@ -346,6 +368,7 @@ fn check_non_finite_fails<S: Defined, const TTL: bool, R: P, D: Reading>() {
     let (latched, _) = direct_from::<S, Values<TTL>, R>(&s, 1);
     // The precondition, per mode: at the entry under logH, at the first step under TTL.
     let expected_end = if TTL { (0, 1) } else { (1, 0) };
+    let want = if TTL { 0 } else { 2 };
     assert_eq!(
         (
             latched.count.end,
@@ -357,7 +380,7 @@ fn check_non_finite_fails<S: Defined, const TTL: bool, R: P, D: Reading>() {
     );
     println!(
         "{name}: logh_seam non-finite (direct march: {} non-finite entries, {} steps): state {} (criterion \
-         {STATE_SIM_FAILED}), t_end_step {} (criterion 1), detail {} (criterion 2), total_substeps {} (criterion 0)",
+         {STATE_SIM_FAILED}), t_end_step {} (criterion 1), detail {} (criterion {want}), total_substeps {} (criterion 0)",
         latched.count.non_finite_entries,
         latched.count.steps,
         sd_state(out.packed_a),
@@ -378,8 +401,8 @@ fn check_non_finite_fails<S: Defined, const TTL: bool, R: P, D: Reading>() {
     );
     assert_eq!(
         sd_detail(out.packed_a),
-        2,
-        "a non-finite derived quantity on a finite state"
+        want,
+        "{name}: the cause: a non-finite entry size (logH), a NaN state from a finite step (TTL)"
     );
     assert_eq!(out.total_substeps, 0, "no step is kept");
     assert_eq!(

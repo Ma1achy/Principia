@@ -5,8 +5,9 @@
 // compaction, `COMPACTION` 0 `symlog`, the default, at `dbg_sentinel`'s place of `sign(x)·ln(1 + |x|/eps_E)`, 1 `lin`,
 // `range_norm` over the fixed, clamped `[−LIN_R, LIN_R]`, and 2 `log`, which shows `|drift|`, the magnitude, at
 // `dbg_log`'s place, unsigned; `symlog` and `lin` on the `diverging(c−, c0, c+)` ramp, or viridis under the palette
-// swap, `PALETTE` 1, and `log` on viridis always; a non-finite reference or drift hatched, tested on its bits first
-// (R-436); under `symlog` a drift within the neutral band, the rounding's own scale `15·2⁻²³·(K + |V|)`, is drawn as 0
+// swap, `PALETTE` 1, and `log` on viridis always; a failed sample (`sim_failed`, `decode_failed`) hatched, its
+// reference and state being failed-state values (payload §1), and a non-finite reference or drift hatched, tested on
+// its bits first (R-436); under `symlog` a drift within the neutral band, the rounding's own scale `15·2⁻²³·(K + |V|)`, is drawn as 0
 // (`dbg_drift_shown`, R-652, R-928). Over it the suspect styling of the drift suspect predicates read from the stored
 // latches: rows for `SUSPECT_ENERGY`, columns for `SUSPECT_LZ`. `LIN_R`'s and `EPS_E`'s defaults are the constants
 // register's `drift_lin_r_E` (REQ-TOOL-150) and `eps_e`, as the generated `energy_drift` view's are.
@@ -22,6 +23,7 @@ fn value(ctx: Ctx) -> f32 {
 }
 
 fn colour(ctx: Ctx) -> vec3<f32> {
+    if (sd_is_failed(ctx.sample.state)) { return debug_invalid(ctx.frag_xy); }
     if (dbg_drift_non_finite(ctx.sample.E_0)) { return debug_invalid(ctx.frag_xy); }
     let x = value(ctx);
     if (dbg_drift_non_finite(x)) { return debug_invalid(ctx.frag_xy); }

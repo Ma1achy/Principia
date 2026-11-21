@@ -215,8 +215,9 @@ impl View {
     }
 
     /// The accessor symbols the view and its test reference: its field's ([`Read::accessors`]); for the union
-    /// [`UNION_FIELD`], its key's member [`UNION_KEY`], which the view switches on; and for [`WORD_GATED`], the word
-    /// and the two word accessors its gate reads.
+    /// [`UNION_FIELD`], its key's member [`UNION_KEY`], which the view switches on; for [`WORD_GATED`], the word
+    /// and the two word accessors its gate reads; and for a drift view, its latches, predicates, reference, band reads
+    /// and the failed-sample gate, `state` through `sd_is_failed`.
     pub fn accessors(&self) -> Vec<Accessor> {
         let mut out = self.read.accessors(self.field);
         if self.field == UNION_FIELD {
@@ -229,6 +230,9 @@ impl View {
         if self.floor.is_some() {
             out.extend(DRIFT_LATCHES.map(|m| Accessor::Member(m.to_owned())));
             out.extend(DRIFT_PREDICATES.map(|f| Accessor::Function(f.to_owned())));
+            // The failed-sample gate: a failed sample's reference is a failed-state value (payload §1).
+            out.push(Accessor::Member(UNION_KEY.to_owned()));
+            out.push(Accessor::Function("sd_is_failed".to_owned()));
             let reference = drift_reference(self.field);
             if !DRIFT_LATCHES.contains(&reference) {
                 out.push(Accessor::Member(reference.to_owned()));
@@ -627,8 +631,9 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
          compaction, `COMPACTION` 0 `symlog`, the default, at `dbg_sentinel`'s place of `sign(x)·ln(1 + |x|/{floor})`, \
          1 `lin`, `range_norm` over the fixed, clamped `[−LIN_R, LIN_R]`, and 2 `log`, which shows `|drift|`, the \
          magnitude, at `dbg_log`'s place, unsigned; `symlog` and `lin` on the `diverging(c−, c0, c+)` ramp, or viridis \
-         under the palette swap, `PALETTE` 1, and `log` on viridis always; a non-finite reference or drift hatched, \
-         tested on its bits first (R-436); under `symlog` a \
+         under the palette swap, `PALETTE` 1, and `log` on viridis always; a failed sample (`sim_failed`, \
+         `decode_failed`) hatched, its reference and state being failed-state values (payload §1), and a non-finite \
+         reference or drift hatched, tested on its bits first (R-436); under `symlog` a \
          drift within the neutral band, the rounding's own scale {scale}, is drawn as 0 (`dbg_drift_shown`, R-652, \
          R-928). Over it the suspect \
          styling of the drift suspect predicates read from the stored latches: rows for `SUSPECT_ENERGY`, columns for \
@@ -636,6 +641,7 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
     );
     format!(
         "{}{uniforms}fn colour(ctx: Ctx) -> vec3<f32> {{\n    \
+         if (sd_is_failed(ctx.sample.state)) {{ return debug_invalid(ctx.frag_xy); }}\n    \
          if (dbg_drift_non_finite(ctx.sample.{reference})) {{ return debug_invalid(ctx.frag_xy); }}\n    \
          let x = {value};\n    \
          if (dbg_drift_non_finite(x)) {{ return debug_invalid(ctx.frag_xy); }}\n    \
@@ -1227,11 +1233,18 @@ fn drift_check(n: &str) -> String {
         format!("s.{reference}.to_bits()"),
         format!("\"`{n}`'s reference, its guard's (R-436), {NOT_DERIVED}\""),
     ];
+    // The failed-sample gate (payload §1): the view reads `state` through `sd_is_failed`.
+    let failed = [
+        "sd_is_failed(read.state)".to_owned(),
+        "sd_is_failed(sd_state(s.packed_a))".to_owned(),
+        format!("\"`{n}`'s failed-sample gate {NOT_DERIVED}\""),
+    ];
     let mut out = format!(
-        "{}\n{}\n{}",
+        "{}\n{}\n{}\n{}",
         call(4, "", "expect", &energy),
         call(4, "", "expect", &lz),
-        call(4, "", "expect", &band)
+        call(4, "", "expect", &band),
+        call(4, "", "expect", &failed)
     );
     // The neutral band's reads (R-928), the probe's: its `r` and `p`; the masses are the derived value's own.
     let (members, _) = drift_band_reads(n);

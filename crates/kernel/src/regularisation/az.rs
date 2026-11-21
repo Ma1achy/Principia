@@ -55,6 +55,7 @@ use super::form::Flow;
 use super::{Kind, Regularisation};
 use crate::driver::advance::{AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
 use crate::driver::carried::Carried;
+use crate::driver::failure;
 use crate::occupant::{CapabilityProfile, Geom, State, Stepper};
 use crate::physics::PairGeom;
 
@@ -748,6 +749,23 @@ impl<R: AzReal> Watch<R> for ExplicitTest {
     }
 }
 
+/// Whether any component of the regularised state `(q, p)` is not finite, and whether any is NaN, on the bits: the
+/// state step 7 rejected, read for `sim_failed`'s cause (`crate::driver::failure`).
+#[inline]
+fn state_bits<R: AzReal>(q: &AzQ<R>, p: &AzP<R>) -> (bool, bool) {
+    let xs = [
+        q.u1[0], q.u1[1], q.u2[0], q.u2[1], q.t, p.p1[0], p.p1[1], p.p2[0], p.p2[1],
+    ];
+    let (mut bad, mut nan) = (false, false);
+    let mut i = 0;
+    while i < 9 {
+        bad = bad || xs[i].non_finite_bits();
+        nan = nan || xs[i].nan_bits();
+        i += 1;
+    }
+    (bad, nan)
+}
+
 /// Whether a constraint is usable: finite and positive (Part 2b, step 3).
 #[inline]
 fn usable<R: AzReal>(c: R) -> bool {
@@ -970,6 +988,8 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     let mut closed = false;
     let mut go = true;
     let mut here = 0u32;
+    // Whether the last step's size was finite; true before the first step, so a state rejected untaken is read itself.
+    let mut size_finite = true;
     while go {
         if watch.finite(&q, &p) {
             if stepped {
@@ -1005,6 +1025,10 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
         } else {
             count.end = End::NonFinite;
             go = false;
+            // The cause by what failed: the step size that produced the rejected state, else that state itself
+            // (payload §2; the contract's dated line of 13 Nov 2026).
+            let (_, nan) = state_bits(&q, &p);
+            cadence.non_finite(failure::regularised(size_finite, nan));
         }
         if go {
             let (a, b) = AzSystem::ab(&q);
@@ -1014,6 +1038,7 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
             count.cap_hits += u32::from(sized.cap_hit);
             count.predictive_bound += u32::from(sized.by_limit);
             let h = sized.h;
+            size_finite = finite(h);
             let before = q.t;
             let (mut q1, mut p1) = S::regularised_step(system, &q, &p, h);
             count.steps += 1;

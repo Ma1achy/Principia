@@ -47607,7 +47607,7 @@
     },
     {
       "decodes": "none",
-      "image_sha256": "7c95f9d8bde5d90609ae209bcf46b0b94510e90e781ba20fcec5cc0d886e4405",
+      "image_sha256": "5b7c058f4744f075fff75589dacf7a942458835b755e87ba8679e04ec5f25e0c",
       "kind": "golden",
       "name": "debug-views/derived-energy_drift"
     },
@@ -47667,7 +47667,7 @@
     },
     {
       "decodes": "none",
-      "image_sha256": "9ddadbb387b8ab5e3e1ab55aab376204cfbd76759e428313377bbdfd64be5b92",
+      "image_sha256": "983ca846b87a423f78b6c09157a6ba9c0cd6b86eb6fed5b81826d0740640a7a7",
       "kind": "golden",
       "name": "debug-views/generated-Lz_drift"
     },
@@ -47733,7 +47733,7 @@
     },
     {
       "decodes": "none",
-      "image_sha256": "31c33abdfd32f142274f46d409ec8eadd198f630e9de7436a76795db328245b9",
+      "image_sha256": "515e15f64cb7111998ed480432ff605e4795c5acdfb2d1ed81f59ea8794a377b",
       "kind": "golden",
       "name": "debug-views/generated-energy_drift"
     },
@@ -48161,5 +48161,14 @@
       }
     }
   },
-  "what": "TASK-M2-57's baseline of the goldens (REQ-DEC-055): each golden's image hash, its sim key and, where it decodes a chart, each sample's chart point (u, v), its f64 decoded state (m0 m1 m2 r0x r0y r1x r1y r2x r2y p0x p0y p1x p1y p2x p2y) and the angle beta of lambda~ from rho~ in [0, 2pi), as IEEE bits in hex, through the baseline commit's decoder"
+  "what": "TASK-M2-57's baseline of the goldens (REQ-DEC-055): each golden's image hash, its sim key and, where it decodes a chart, each sample's chart point (u, v), its f64 decoded state (m0 m1 m2 r0x r0y r1x r1y r2x r2y p0x p0y p1x p1y p2x p2y) and the angle beta of lambda~ from rho~ in [0, 2pi), as IEEE bits in hex, through the baseline commit's decoder",
+  "rewritten_failure_path": {
+    "what": "these items' image hashes were recorded again by this file's writer (mirror_step_baseline_write_goldens) in TASK-M3-18 (PR #26), because the failure path hatches a failed sample in the drift views: 384 pixels change, 192 in the showcase set's sim_failed sample 4 and 192 in its decode_failed sample 5, 64 of each per golden, each now the hatch, no other pixel; these goldens decode no chart, so no IC word moves; every other item is as first written, byte for byte, the writer's other output (two goldens added since, the beta link's id) not taken",
+    "command": "cargo test -p validation --test mirror_step_baseline -- --ignored mirror_step_baseline_write_goldens, its output for these items only",
+    "items": [
+      "debug-views/derived-energy_drift",
+      "debug-views/generated-energy_drift",
+      "debug-views/generated-Lz_drift"
+    ]
+  }
 }

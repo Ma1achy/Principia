@@ -496,9 +496,13 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
 
     /// The FTLE tier's `SimState`: the sample's `out`, every field kept, with the shadow's absolute state in `r_sh`,
     /// `p_sh` and `S`; or, once the shadow's finalised sum is non-finite, the failed-state values: `S` the mark
-    /// [`s_failed`] and `r_sh`, `p_sh` the sample's own `r`, `p`, never NaN (R-79, R-972).
+    /// [`s_failed`] and `r_sh`, `p_sh` the sample's own `r`, `p`, never NaN (R-79, R-972). A failed sample
+    /// (`sim_failed`) stores the failed shadow whatever the shadow's sum ([`super::failure::failed_shadow`]; payload §1).
     #[inline]
     pub fn write(&self, out: SimStateBaseOf<R>) -> SimStateFTLEOf<R> {
+        if sd_is_failed(out.packed_a) {
+            return super::failure::failed_shadow(out);
+        }
         let x = State {
             m: self.held.m,
             r: out.r,
