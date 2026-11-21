@@ -1,0 +1,5 @@
+{
+  "description": "The subject control: the same pair on KDK must be refused (not the same RK4)",
+  "check": "refuses-kdk",
+  "expected": "refused"
+}

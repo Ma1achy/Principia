@@ -1,0 +1,12 @@
+{
+  "gate": "heggie-vs-az",
+  "inputs": [
+    "default.json",
+    "decides_latent_mass_h3.json",
+    "same_arm_subject.json"
+  ],
+  "measurement": {
+    "requirement": "REQ-INT-051",
+    "ruling": "R-165"
+  }
+}

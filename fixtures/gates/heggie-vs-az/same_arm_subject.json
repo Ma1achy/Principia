@@ -1,0 +1,16 @@
+{
+  "description": "The subject control: the default against itself on the same raster; identical runs must decide no IC",
+  "check": "decides",
+  "case": "latent_mass_h3",
+  "raster": 8,
+  "crop": [
+    0,
+    0,
+    8
+  ],
+  "occupants": [
+    "heggie",
+    "heggie"
+  ],
+  "expected": "fail"
+}

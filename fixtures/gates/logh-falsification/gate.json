@@ -1,0 +1,8 @@
+{
+  "gate": "logh-falsification",
+  "inputs": ["admits.json", "refuses_kdk.json", "decides_near_field.json"],
+  "measurement": {
+    "requirement": "REQ-VAL-115",
+    "ruling": "R-74"
+  }
+}

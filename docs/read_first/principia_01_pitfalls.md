@@ -307,6 +307,27 @@ transformation at all* — a strictly stronger form of the property Heggie's win
 wrong.** Run it under the same RK4 and step control, or the comparison scores the integrator
 instead.
 
+**The verdict: logH does not match Heggie, so the mechanism as stated is recorded wrong.** Run here
+(`cargo xtask gate logh-falsification --res 64`): logH × RK4 against Heggie × RK4 under one step
+control, on the 30 matrix cases this repository builds, 4096 ICs each, scored against RK45 (and by
+energy where the reference cannot pass). Of 122,880 ICs logH wins **none** against the reference;
+Heggie wins 17,835, 2917 of them on `config_stability`. logH's energy error sits two to three decades
+above Heggie's on every Burrau case (`1.4e-9` against `1.8e-12` on `near_field`), the margin prin-rs
+saw (3.2 decades). So having no coordinate transformation at all does not make an occupant as accurate
+as Heggie: the prediction fails on absolute accuracy. prin-rs offers a reason, not measured here:
+Heggie's KS map takes the `1/r` out of the equations of motion, and logH only rescales time.
+
+**The doubling is a separate reading** (`reregistration-doubling --propose --res 64`: the drift field's
+median `log₁₀` drift before → after doubling the sync boundaries at fixed step). Only the occupant
+that re-registers gets worse, and only on `config_stability`: AZ `−10.10 → −9.62` (per pixel `0.49`
+decades at p50, prin-rs's `0.44`), while on the five Burrau regions it is flat or slightly better (`−11.03 → −11.10` on
+`near_field`). Heggie is flat or slightly better everywhere (`−12.06 → −12.04` on `config_stability`,
+`−12.36 → −12.47` on `far`). logH gets
+*better* on five of the six cases (`−9.51 → −10.10` on `mid_field`), unexplained; steps p50 held flat
+does not rule out a step-size effect in the tail. So §4.1 stands for AZ: re-registration costs it.
+What the falsification removes is the claim that not re-registering is, by itself, why Heggie is the
+more accurate occupant. On the latent cases both scores sit near round-off and decide little.
+
 ### 4.5 THIS WAS ALREADY ON RECORD
 
 From this project's own earlier notes, months before the wedge investigation:

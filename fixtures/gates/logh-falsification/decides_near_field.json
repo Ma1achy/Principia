@@ -1,0 +1,8 @@
+{
+  "description": "logH against Heggie on a crop of near_field: the per-IC judgement decides at least one IC",
+  "check": "decides",
+  "case": "near_field",
+  "raster": 64,
+  "crop": [30, 30, 3],
+  "expected": "pass"
+}
