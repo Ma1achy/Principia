@@ -16,7 +16,7 @@ use kernel::detect::label::Fired;
 use kernel::driver::advance::Cadence;
 use kernel::driver::cadence::WrapperCadence;
 use kernel::driver::nsub_table::{thresholds, NsubConfig};
-use kernel::driver::wrapper::{integrate_resumed_with, integrate_with, WrapperUniforms};
+use kernel::driver::wrapper::{integrate_resumed_with, integrate_with, monitored, WrapperUniforms};
 use kernel::occupant::kdk::Kdk;
 use kernel::occupant::{Geom, State};
 use kernel::payload::{sd_I_max, sd_state, SimStateBaseOf, STATE_SIM_FAILED};
@@ -124,8 +124,9 @@ impl Cadence<f64> for Watching {
 /// The march of `ic` for `steps` macro-steps of 0.01 under Kdk, watched.
 fn watched(ic: &Ic<f64>, steps: u32) -> (SimStateBaseOf<f64>, Watching) {
     let mut c = Watching::new(ic);
+    // The monitored write is the caller's, as `integrate_detecting` makes it: `I_max`'s level is written there.
     let out = integrate_with::<Kdk, f64, _>(ic, &key(0.01, steps), &mut c);
-    (out, c)
+    (c.finish(out), c)
 }
 
 // ── The latch equals the offline maximum at every step (REQ-PAY-105) ─────────────────────────────────────────────
@@ -191,14 +192,20 @@ negative_control!(
 fn split(ic: &Ic<f64>, total: u32, cuts: &[u32], drop_level: bool) -> SimStateBaseOf<f64> {
     let k = key(0.01, total);
     let mut c = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
-    let mut stored = integrate_with::<Kdk, f64, _>(ic, &key(0.01, cuts[0]), &mut c);
+    let mut stored = monitored(
+        integrate_with::<Kdk, f64, _>(ic, &key(0.01, cuts[0]), &mut c),
+        &c,
+    );
     for (n, &at) in cuts.iter().enumerate() {
         let next = cuts.get(n + 1).copied().unwrap_or(total);
         if drop_level {
             stored.packed_a &= !(0x1f << 10);
         }
         let mut c = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
-        stored = integrate_resumed_with::<Kdk, f64, _>(ic, &k, &mut c, &stored, next - at);
+        stored = monitored(
+            integrate_resumed_with::<Kdk, f64, _>(ic, &k, &mut c, &stored, next - at),
+            &c,
+        );
     }
     stored
 }
