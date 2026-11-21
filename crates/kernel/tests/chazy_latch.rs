@@ -58,6 +58,9 @@ fn trajectory() -> Fixture {
     binary_plus_escaper(1.0, 0.5, 5.0, 0.3)
 }
 
+/// A sampling point's record: the completed macro-steps, the state's positions and momenta, and the stored level.
+type Mark = (u32, [[f64; 2]; 3], [[f64; 2]; 3], u32);
+
 /// A cadence around the wrapper's own that records, after each internal step, the state's `I` (written here) and the
 /// cadence's live latch; and at each completed macro-step, the state and the stored level the cadence would write.
 struct Watching {
@@ -65,7 +68,7 @@ struct Watching {
     /// `(I, live I_max)` after each internal step.
     steps: Vec<(f64, f64)>,
     /// `(completed macro-steps, r, p, level)` at each sampling point.
-    marks: Vec<(u32, [[f64; 2]; 3], [[f64; 2]; 3], u32)>,
+    marks: Vec<Mark>,
 }
 
 impl Watching {

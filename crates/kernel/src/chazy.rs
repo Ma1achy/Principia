@@ -576,9 +576,6 @@ pub fn classify<R: ChazyReal>(ph: &Playhead<R>, cfg: &ChazyCfg<R>, prev: &Previo
     Motion::BSoFar
 }
 
-/// The greatest level of the stored latch: 5 bits (R-545).
-pub const I_MAX_LEVELS: u32 = 32;
-
 /// `I_max`'s stored level (R-545; REQ-PAY-106): the number of whole half-octaves `I_max` lies above `I_0`, the `c` with
 /// `2^(c/2) ≤ I_max / I_0 < 2^((c+1)/2)`, saturating at 31 (`2^15.5` and up, 32 levels to `2¹⁶`), 0 at or below `I_0`.
 /// Decided on `(I_max / I_0)²` against the exact powers of two `2^c`, so no logarithm, `√2` or non-finite constant is
@@ -588,9 +585,10 @@ pub fn i_max_code<R: ChazyReal>(i_max: R, i_0: R) -> u32 {
     let ratio = i_max / i_0;
     let square = ratio * ratio;
     let two = R::one() + R::one();
+    // The field's five bits hold levels 0–31 (R-545).
     let mut code = 0;
     let mut edge = two;
-    while code < I_MAX_LEVELS - 1 && square >= edge {
+    while code < 31 && square >= edge {
         code += 1;
         edge = edge * two;
     }

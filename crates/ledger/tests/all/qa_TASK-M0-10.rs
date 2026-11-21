@@ -4,7 +4,7 @@
 
 use ledger::gen::{self, rust};
 use ledger::layout;
-use ledger::schema::{Ledger, Location, Span};
+use ledger::schema::{Ledger, Location};
 use validation::negative_control;
 
 /// Payload §2's `packed_a`: `(field, first bit, width)`, the descriptor, R-37's departed bit at 15 (R-545), then
