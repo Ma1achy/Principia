@@ -17,7 +17,10 @@ Commands:
                                   profiler schema v1 trace to target/bench/<bench>.jsonl and compare it with
                                   fixtures/bench/<bench>/baseline.json through `prin profile diff`, every rise in a
                                   scope's p95 listed (telemetry §1.1); --bless writes the trace as the baseline first.
-                                  Not in `ci` nor any hosted workflow: run on the human's Mac (R-186)
+                                  Not in `ci` nor any hosted workflow: run on the human's Mac (R-186).
+                                  `hover-computeic` is a CPU bench, engine's example: computeIC at t = 50 on
+                                  one core timed against a 60 fps frame, printed; no kernel build, trace or
+                                  baseline, and it never fails on the number
   build-kernel [--bless]          compile crates/kernel to SPIR-V with rust-gpu (target/spirv/kernel.spv) and
                                   translate it to WGSL with naga (target/spirv/kernel.wgsl, and the read-back's
                                   entries apart in target/spirv/branch_read.wgsl); refuses when

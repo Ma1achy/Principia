@@ -21,6 +21,9 @@ ryu = "1"
 wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
 naga = { version = "30", features = ["wgsl-in", "msl-out"] }
 pollster = "1"
+# The CPU worker pool (`pool`, TASK-M3-20): a rayon pool of its own, sized from the cores less a reserve
+# (dd_telemetry_and_tiers §6, "CPU").
+rayon = "1"
 # The trajectory fixtures' closed forms (TASK-M2-82) evaluate sin and cos through the pinned pure-software libm the
 # ledger already uses, documented below one ulp, so their rounding bounds are derived and their bits the same on every
 # platform.
