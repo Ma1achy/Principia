@@ -6,7 +6,10 @@
 //! - [`compute_ic`] (`computeIC(chart, uv, simKey) → SimState`): that decode, the dispatch-time label of its IC
 //!   (`kernel::detect::t0`), then the wrapper's own integration, `kernel::driver::wrapper::integrate_detecting`, at
 //!   f64 under the sim key's horizon as dispatch validates it (its f64 loop values and its collision threshold).
-//! - [`compute_ic_state`] (`computeICState(state, simKey) → SimState`): the same march from an IC given as its state.
+//! - [`compute_ic_state`] (`computeICState(state, simKey) → SimState`): the same march from an IC given as its state,
+//!   taken as given (no `C`), so computeIC's decoded state gives computeIC's `SimState` bit for bit. The IC
+//!   constructor reaches it through [`compute_built`], which first takes its built state to `C(as_built)`
+//!   ([`built_ic`]).
 //! - [`compute_quad`] (`computeQuad(chart, quadID, simKey) → SimState[]`): [`compute_ic`] at each of a quad's samples.
 //! - [`step_once`] (`stepOnce(state, dt, params) → state'`): one `STEP` of the bound stepper at f64.
 //!
@@ -23,6 +26,7 @@
 
 pub mod rk45;
 
+use kernel::canon::canonicalise;
 use kernel::chart::ChartDecode;
 use kernel::decode::{Degenerate, Ic};
 use kernel::detect::collision::CollisionRadius;
@@ -112,6 +116,29 @@ pub fn compute_ic_state<A: Advance>(
     sim_key: &SimConfig,
 ) -> Result<SimState64, ComputeError> {
     Ok(integrate_ic::<A>(ic, None, &march_key(sim_key)?))
+}
+
+/// The state the IC constructor integrates for a state it built, `as_built` (any frame, any scale, off every slice):
+/// `C(as_built)`, the shared canonicalisation `kernel::canon::canonicalise` at f64, so the centre of mass is at the
+/// origin and at rest, `I = 1` and `ρ̃` on `+x`, and `λ̃_y` and `L_z` keep their signs: the hemisphere it was built in,
+/// never its mirror twin, which for `L_z ≠ 0` is another system. `as_built.m` is positive with `Σmᵢ = 1`, as `C`
+/// requires.
+///
+/// The plan is unclear here: it asks for `C` "with its mirror step not taken", but `C` has had no mirror step since
+/// the decoder's mirror was removed, so its one entry already keeps the hemisphere. Chose to call that one entry as
+/// is, because a second path beside it would be the special case its removal took out.
+pub fn built_ic(as_built: &Ic<f64>) -> Ic<f64> {
+    canonicalise(as_built).ic
+}
+
+/// The IC constructor's integration of `as_built`: [`compute_ic_state`] of [`built_ic`], the same march as
+/// `computeIC`'s after its decode, from the state the constructor built rather than from a decode, since an off-slice
+/// state has no `uv` and decoding its `z` is not bitwise.
+pub fn compute_built<A: Advance>(
+    as_built: &Ic<f64>,
+    sim_key: &SimConfig,
+) -> Result<SimState64, ComputeError> {
+    compute_ic_state::<A>(&built_ic(as_built), sim_key)
 }
 
 /// parity_contract §1's `computeIC(chart, uv, simKey) → SimState`: `chart` decoded at `uv` at f64 under the link
