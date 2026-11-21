@@ -17,6 +17,26 @@
 //! and there is no escape at `t = 0`. The wrapper writes the monitor's references and maxima, and the detector's label and `dmin_pair`, into
 //! the run's `SimState` when the loop ends (`super::wrapper`).
 //!
+//! **The terminals' times** ([`WrapperCadence::events`]): each detector's firing is recorded with the cadence's call
+//! count at that moment, the ordinal of the internal step whose state it read (0 for the IC), so the label writer
+//! orders them by time and settles a same-state tie ([`crate::detect::label`]). The escape test runs at a sampling
+//! point whose own step fired a collision, the one state the two can share; on any later point the collision is earlier
+//! and ended the run.
+//!
+//! **`t_dmin_step`** ([`WrapperCadence::dmin_step`]; payload §2, "absolute macro-step index of closest approach"): the
+//! wrapper reports its completed macro-steps before each macro-step and after the last ([`Cadence::clock`]). A `d_min`
+//! latched mid-macro-step takes the completed count then, the macro-step it lies in; one latched on the step that
+//! completes a macro-step takes the count that step completes, the grid point it reached, which is `closure_step`'s
+//! convention (`super::closure`), so `t_dmin_step` never exceeds `t_end_step`. The plan is unclear here (payload §2
+//! gives "the macro-step index" without a rule for a minimum between two grid points); chose the grid point at or before
+//! the minimum because a collision, whose own step holds the least `d²`, then has `t_dmin_step = t_end_step`, as the
+//! engine's fixtures state it (`engine::fixtures::Known::t_dmin_step`), and the IC's latch is step 0.
+//!
+//! **A re-boot** ([`Cadence::resume`]): the wrapper hands a resumed march's stored `SimState` to its cadence before the
+//! first step, and this cadence reloads the escape detector's lagged register and `E_0` from it, so a re-booted march
+//! tests escape as the uncut one does without the caller remembering to. The monitor's drift maxima and references and
+//! the collision detector's `d_min` latch are still the caller's to resume.
+//!
 //! **One `d²` per step** (Part 7; REQ-EVT-004): the detector forms the projected state's pair separations once, and
 //! the collision test, the `dmin_pair` latch and the next macro-step's bucket ([`Cadence::bucket_d2`]) all read them.
 //!
@@ -36,6 +56,7 @@ use super::substep::Quantise;
 use super::wrapper::{monitored, WrapperReal};
 use crate::detect::collision::{CollisionRadius, Detector};
 use crate::detect::escape;
+use crate::detect::label::{Events, Fired};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{sd_last_symbol, set_last_symbol, PayloadReal, SimStateBaseOf};
@@ -59,6 +80,20 @@ pub struct WrapperCadence<R> {
     invocations: u32,
     /// Whether a terminal has fired.
     done: bool,
+    /// The collision's step ordinal, the calls made when it fired (0 at the IC); 0 where none has.
+    collision_at: u32,
+    /// The escape's step ordinal; 0 where it has not fired.
+    escape_at: u32,
+    /// The completed macro-steps as the wrapper last reported them ([`Cadence::clock`]).
+    clock: u32,
+    /// `t_dmin_step`: the completed macro-steps when the `d_min` latch was last replaced (the module's note).
+    dmin_step: u32,
+    /// The step ordinal of that replacement, 0 for the IC.
+    dmin_at: u32,
+    /// Whether that replacement has not yet met a [`Cadence::clock`] report.
+    dmin_pending: bool,
+    /// Whether the wrapper handed a finished stored sample back ([`Cadence::latched`]): the write leaves it.
+    handed_back: bool,
 }
 
 impl<R: WrapperReal> WrapperCadence<R> {
@@ -90,7 +125,49 @@ impl<R: WrapperReal> WrapperCadence<R> {
             escape: escape::Detector::new(m, r, monitor.e_0()),
             invocations: 0,
             done: detector.fired(),
+            collision_at: 0,
+            escape_at: 0,
+            clock: 0,
+            dmin_step: 0,
+            dmin_at: 0,
+            dmin_pending: false,
+            handed_back: false,
         }
+    }
+
+    /// Whether the run was a finished stored sample handed back ([`Cadence::latched`]), which [`monitored`] leaves as
+    /// it is.
+    #[inline]
+    pub fn handed_back(&self) -> bool {
+        self.handed_back
+    }
+
+    /// The run's terminal events for its label ([`crate::detect::label::precedence`]): the collision and the escape, each with the
+    /// step ordinal it fired on and its `detail`. The failure and the horizon are the wrapper's to add.
+    #[inline]
+    pub fn events(&self) -> Events {
+        let collision = if self.detector.fired() {
+            Fired::at(self.collision_at, self.detector.collision().detail)
+        } else {
+            Fired::none()
+        };
+        let escape = if self.escape.fired() {
+            Fired::at(self.escape_at, self.escape.verdict().detail)
+        } else {
+            Fired::none()
+        };
+        Events {
+            failed: Fired::none(),
+            collision,
+            escape,
+            horizon: false,
+        }
+    }
+
+    /// `t_dmin_step`: the macro-step index of the closest approach the `d_min` latch holds (the module's note).
+    #[inline]
+    pub fn dmin_step(&self) -> u32 {
+        self.dmin_step
     }
 
     /// The calls made so far, one per internal step taken.
@@ -163,8 +240,19 @@ impl<R: WrapperReal> WrapperCadence<R> {
     pub fn watch(&mut self, state: &State<R>, geom: &Geom<R>) {
         self.invocations += 1;
         self.monitor(state, geom);
+        let before = self.detector.latch();
+        let fired = self.detector.fired();
         self.detector.observe(&state.r);
-        self.done = self.detector.fired();
+        let after = self.detector.latch();
+        if after.d2().to_bits() != before.d2().to_bits() || after.pair() != before.pair() {
+            self.dmin_at = self.invocations;
+            self.dmin_step = self.clock;
+            self.dmin_pending = true;
+        }
+        if self.detector.fired() && !fired {
+            self.collision_at = self.invocations;
+        }
+        self.done = self.detector.fired() || self.escape.fired();
     }
 }
 
@@ -180,13 +268,53 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
         self.done
     }
 
-    /// The escape test at a sampling point, on a run nothing has ended; `done` where it fires.
+    /// The escape test at a sampling point, on a run nothing ended before this point's state; `done` where it fires.
+    /// A collision that fired on this point's own step is a tie, not an earlier event: the test runs on that state as
+    /// well, and the label settles the tie ([`crate::detect::label::precedence`]). Where that point is a window mark
+    /// the lagged register takes its shape, so a collision on a mark stores the mark's register, which a run that ended
+    /// on a collision never reads again.
     #[inline]
     fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
-        if !self.done {
+        let tie = self.detector.fired() && self.collision_at == self.invocations;
+        if !self.escape.fired() && (!self.detector.fired() || tie) {
             self.escape
                 .sample(&state.m, &state.r, &state.p, index, quantum);
-            self.done = self.escape.fired();
+            if self.escape.fired() {
+                self.escape_at = self.invocations;
+            }
+        }
+        self.done = self.detector.fired() || self.escape.fired();
+    }
+
+    /// The completed macro-steps, `completed`, before each macro-step and after the last (the module's note): a `d_min`
+    /// latched on the step that completed the macro-step just ended takes that macro-step's end, `completed`.
+    #[inline]
+    fn clock(&mut self, completed: u32) {
+        if self.dmin_pending && self.dmin_at == self.invocations {
+            self.dmin_step = completed;
+        }
+        self.dmin_pending = false;
+        self.clock = completed;
+    }
+
+    #[inline]
+    fn latched(&mut self) {
+        self.handed_back = true;
+    }
+
+    /// The escape register of a re-booted march reloaded from `stored` ([`WrapperCadence::resume_escape`]), where
+    /// `stored` holds one: a shape point is a unit vector, so a register of three zeros is a `SimState` the wrapper's
+    /// [`monitored`] never wrote, and the cadence keeps its own, the shape at the re-boot.
+    #[inline]
+    fn resume(&mut self, stored: &SimStateBaseOf<R>)
+    where
+        R: PayloadReal,
+    {
+        let zero = R::default();
+        let held =
+            stored._nhat_lag_0 != zero || stored._nhat_lag_1 != zero || stored._nhat_lag_2 != zero;
+        if held {
+            self.resume_escape(stored);
         }
     }
 
@@ -260,6 +388,24 @@ impl<R: LinkReal + IeeeBits, C: Cadence<R>, B: WordBuffer + ?Sized> Cadence<R>
     #[inline]
     fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
         self.inner.sample(state, index, quantum);
+    }
+
+    #[inline]
+    fn clock(&mut self, completed: u32) {
+        self.inner.clock(completed);
+    }
+
+    #[inline]
+    fn latched(&mut self) {
+        self.inner.latched();
+    }
+
+    #[inline]
+    fn resume(&mut self, stored: &SimStateBaseOf<R>)
+    where
+        R: PayloadReal,
+    {
+        self.inner.resume(stored);
     }
 
     #[inline]

@@ -26,7 +26,7 @@
 //! **What it writes** of the `SimState`: the state `(r, p)` where the march stopped; `total_substeps`; `saturated`
 //! (descriptor bit 5); `state`, `bounded` where the loop ran to the horizon (Part 7: reaching `T` without a terminal is
 //! `bounded`; there is no timeout state) and `running` where the cadence's `done` ended it, for the terminal's label to
-//! replace; and `t_end_step`, the completed macro-steps (Part 5, "Exact step-index timing invariant"; payload §2): a
+//! replace, every label through one precedence and one write ([`crate::detect::label`]); and `t_end_step`, the completed macro-steps (Part 5, "Exact step-index timing invariant"; payload §2): a
 //! macro-step counts once the occupant reports its target reached ([`Advance::advance_reaching`]), a stepper once its
 //! `N_sub` substeps were all taken and an occupant that owns its time mapping once its march stopped on the sync grid
 //! at or before the target (Part 2a, Cost 2; R-565), so one that `done` cut short does not, while the loop's counter
@@ -45,11 +45,13 @@
 //! `running`, and `coll_floor`, the collision test's floor over its near-firing states and the `d_min` state (Part 7,
 //! R-954, R-973; [`crate::detect`]). The three latches are packed through [`super::latch::Latches`], which clamps
 //! them and writes the failed-state values (payload §1; R-271). `integrate_with` writes `dmin_pair`'s sentinel, 3, and
-//! `d_min` unset, so a run whose cadence latches nothing keeps them; `t_dmin_step` is TASK-M3-17's. [`monitored`] writes
-//! the escape detector's too ([`crate::detect::escape`]): where escape fired and no collision did, `state` `escape`
-//! and its `detail`, the escaper's body index or 3, over `running` or `bounded` (an escape that fires on the horizon's
-//! own boundary is an escape); and the lagged shape register, `_nhat_lag_0`, `_1`, `_2` (payload §1), which a re-boot
-//! reloads into its cadence ([`WrapperCadence::resume_escape`]). The escape test runs at the occupant's sampling
+//! `d_min` unset, so a run whose cadence latches nothing keeps them, and carries `t_dmin_step` from where it started;
+//! [`monitored`] writes the cadence's `t_dmin_step`, the macro-step index of the latched least `d²`
+//! ([`WrapperCadence::dmin_step`]), which the wrapper's clock stamps ([`Cadence::clock`]). [`monitored`] writes the
+//! escape detector's too ([`crate::detect::escape`]): where escape fired before any collision, `state` `escape` and its
+//! `detail`, the escaper's body index or 3, over `running` or `bounded` (an escape that fires on the horizon's own
+//! boundary is an escape); and the lagged shape register, `_nhat_lag_0`, `_1`, `_2` (payload §1), which a re-boot
+//! hands back to its cadence ([`Cadence::resume`]). The escape test runs at the occupant's sampling
 //! points ([`Cadence::sample`]): the wrapper reports each completed macro-step under an occupant that marches the
 //! macro-step grid, and an occupant that owns its time mapping reports its sync boundaries from inside its march
 //! ([`Advance::OWN_SAMPLING`]). The shape readout's fields, `theta`, `_reserved`, `closure_min`, `closure_step` and the departed bit,
@@ -75,7 +77,9 @@
 //! wrapper reloads the state `(r, p)`, `total_substeps`, the sticky `saturated` bit, the Welford co-moments and the
 //! readout ([`super::shape::Readout::load`]), and marches on; a march split into any number of resumed calls writes
 //! these fields bit-identically to one call (R-397's "however the march is split into dispatches"). The cadence is the
-//! caller's: one that keeps state across macro-steps (the monitor's latches, the detector's) is the caller's to resume.
+//! caller's; the wrapper hands it the stored state before the first step ([`Cadence::resume`]), and the wrapper's own
+//! reloads the escape register from it. The monitor's latches and the collision detector's are still the caller's to
+//! resume. A stored sample that is finished is handed back word for word, never marched (`super::terminal`).
 //!
 //! **The carried regularised state** ([`Carried`]; Part 2a): the wrapper passes the trajectory's buffer into every
 //! `ADVANCE` call ([`Advance::advance_carrying`]), so an occupant that registers once, Heggie or logH, registers at `t = 0` and
@@ -96,12 +100,13 @@ use super::substep::{NsubThresholds, Quantise, SubstepState};
 use super::welford::{self, Welford};
 use crate::decode::Ic;
 use crate::detect::collision::CollisionRadius;
+use crate::detect::label::{precedence, Events, Fired};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    pack_times, sd_is_failed, sd_saturated, set_coll_floor, set_d_min_unset, set_detail,
-    set_dmin_pair, set_state, tm_t_end_step, DminCounters, PayloadReal, SimStateBaseOf,
-    SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING, STATE_SIM_FAILED,
+    pack_times, sd_detail, sd_is_failed, sd_saturated, sd_state, set_coll_floor, set_d_min_unset,
+    set_dmin_pair, set_t_dmin_step, tm_t_dmin_step, tm_t_end_step, DminCounters, PayloadReal,
+    SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED,
 };
 use crate::real::IeeeBits;
 use crate::shape::shape;
@@ -169,8 +174,14 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
 /// contents are defined"; R-79, R-271), `dmin_pair` its sentinel, 3, unset as `d_min` is, and `coll_floor` 0, "not
 /// recorded" (payload §2). **A run `out` already
 /// `sim_failed`**, its march ended non-finite ([`integrate_with`]), keeps its `state` and `detail`, over a collision
-/// too (R-30), with the same failed-state latches, sentinel and `coll_floor`. The rest of the failure path, the terminal that ends
-/// the march and the other fields' failed-state values, is TASK-M3-17's and TASK-M3-18's.
+/// too (R-30), with the same failed-state latches, sentinel and `coll_floor`, and `t_dmin_step` 0, unset as `d_min` is.
+/// The label is [`precedence`]'s, of the failure, the cadence's terminals with their step ordinals and the horizon. The
+/// rest of the failure path, the terminal that ends the march on a non-finite monitored value (a stepper's march goes
+/// on to its horizon today) and the other fields' failed-state values, is TASK-M3-18's.
+///
+/// **A finished stored sample handed back** by a resumed call (`super::terminal`; [`Cadence::latched`]) is returned as
+/// it is: the cadence followed no run, and its write would replace the stored label and latches with a fresh
+/// cadence's.
 ///
 /// The `d_min` counters [`Latches::persist`] counts into are a pair of this write's own: the latch admits no NaN `d²`
 /// and the detector's quantised `d²` is never negative (`crate::driver::substep::square`), so `√` gives neither a NaN
@@ -180,26 +191,46 @@ pub fn monitored<R: WrapperReal>(
     out: SimStateBaseOf<R>,
     cadence: &WrapperCadence<R>,
 ) -> SimStateBaseOf<R> {
+    if cadence.handed_back() {
+        out
+    } else {
+        written(out, cadence)
+    }
+}
+
+/// [`monitored`]'s write of a run the cadence followed.
+#[inline]
+fn written<R: WrapperReal>(
+    out: SimStateBaseOf<R>,
+    cadence: &WrapperCadence<R>,
+) -> SimStateBaseOf<R> {
     let m = cadence.monitor_state();
     let detector = cadence.detector();
-    // A collision keeps its label over an escape: the collision test runs first on every step and ends the run
-    // there, so the two meet only on one sampling point's state. The full precedence is TASK-M3-17's.
-    let detected = if detector.fired() {
-        detector.label(out.packed_a)
-    } else {
-        cadence.escape().label(detector.label(out.packed_a))
-    };
     let [lag_0, lag_1, lag_2] = cadence.escape().lagged();
+    // A monitored quantity's failure is read on the state; a march's own failure, the monitor finite, keeps its detail.
     let failed = m.non_finite() || sd_is_failed(out.packed_a);
-    let labelled = if m.non_finite() {
-        let marked = set_state(detected, STATE_SIM_FAILED);
-        let marked = set_dmin_pair(marked, SD_DMIN_PAIR_SENTINEL);
-        set_detail(marked, failed_detail(&out.r, &out.p))
-    } else if sd_is_failed(out.packed_a) {
-        set_dmin_pair(out.packed_a, SD_DMIN_PAIR_SENTINEL)
+    let cause = if m.non_finite() {
+        failed_detail(&out.r, &out.p)
     } else {
-        detected
+        sd_detail(out.packed_a)
     };
+    let events = Events {
+        failed: if failed {
+            Fired::at(0, cause)
+        } else {
+            Fired::none()
+        },
+        horizon: sd_state(out.packed_a) == STATE_BOUNDED,
+        ..cadence.events()
+    };
+    let pair = if failed {
+        SD_DMIN_PAIR_SENTINEL
+    } else {
+        detector.latch().pair()
+    };
+    let labelled = precedence(&events).write(set_dmin_pair(out.packed_a, pair));
+    // A failed sample's `d_min` is unset (payload §1), and so is its step, 0 as before the first observation.
+    let dmin_step = if failed { 0 } else { cadence.dmin_step() };
     let mut latches = Latches::unset();
     latches.separation_squared(detector.latch().d2());
     latches.drift(m.de_max().quantise(), m.dlz_max().quantise());
@@ -211,6 +242,7 @@ pub fn monitored<R: WrapperReal>(
         packed_a,
         packed_b,
         coll_floor_bits: set_coll_floor(out.coll_floor_bits, floor),
+        times: set_t_dmin_step(out.times, dmin_step),
         _nhat_lag_0: lag_0,
         _nhat_lag_1: lag_1,
         _nhat_lag_2: lag_2,
@@ -345,8 +377,9 @@ pub fn integrate_with_co<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R
 /// The march resumed from `stored`, a `SimState` this wrapper wrote for the same `ic` under the same `uniforms`, for at
 /// most `steps` more macro-steps, never past the horizon (the module's note): from `stored`'s state at its
 /// `t_end_step`, with its `total_substeps`, `saturated` bit, Welford co-moments, `θ̃`, `_reserved`, closure registers and
-/// departed bit, and `cadence` the caller's. A march that stops short of the horizon is `running`. `stored` is a march
-/// still running: one whose `state` is terminal is finished and never resumed.
+/// departed bit, and `cadence` the caller's, handed `stored` first ([`Cadence::resume`]). A march that stops short of the
+/// horizon is `running`. A `stored` that is finished ([`super::terminal::finished`]) is returned as it is, every word,
+/// with no step taken and no cadence call.
 ///
 /// No carried state is resumed: the occupant is handed an unregistered buffer (the module's note).
 #[inline]
@@ -374,6 +407,26 @@ pub fn integrate_resumed_carrying<A: Advance, R: WrapperReal, C: Cadence<R>>(
     carried: &mut Carried<R>,
     steps: u32,
 ) -> SimStateBaseOf<R> {
+    if super::terminal::finished(stored.packed_a, stored.times, uniforms.horizon_steps) {
+        cadence.latched();
+        *stored
+    } else {
+        resume_march::<A, R, C>(ic, uniforms, cadence, stored, carried, steps)
+    }
+}
+
+/// [`integrate_resumed_carrying`] of a march still running: the cadence handed `stored` ([`Cadence::resume`]), then the
+/// march from `stored`'s state.
+#[inline]
+fn resume_march<A: Advance, R: WrapperReal, C: Cadence<R>>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    cadence: &mut C,
+    stored: &SimStateBaseOf<R>,
+    carried: &mut Carried<R>,
+    steps: u32,
+) -> SimStateBaseOf<R> {
+    cadence.resume(stored);
     let completed = tm_t_end_step(stored.times);
     let start = Start {
         state: State {
@@ -382,6 +435,7 @@ pub fn integrate_resumed_carrying<A: Advance, R: WrapperReal, C: Cadence<R>>(
             p: stored.p,
         },
         completed,
+        t_dmin_step: tm_t_dmin_step(stored.times),
         total_substeps: stored.total_substeps,
         saturated: sd_saturated(stored.packed_a),
         diffusion: Welford {
@@ -411,6 +465,7 @@ pub fn integrate_resumed_carrying<A: Advance, R: WrapperReal, C: Cadence<R>>(
 struct Start<R> {
     state: State<R>,
     completed: u32,
+    t_dmin_step: u32,
     total_substeps: u32,
     saturated: bool,
     diffusion: Welford<R>,
@@ -428,6 +483,7 @@ impl<R: WrapperReal> Start<R> {
                 p: ic.p,
             },
             completed: 0,
+            t_dmin_step: 0,
             total_substeps: 0,
             saturated: false,
             diffusion: Welford::default(),
@@ -462,6 +518,7 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
     let mut diffusion = start.diffusion;
     let mut last = Reached::Target;
     while macro_step < end && !cadence.done() && !last.ended() {
+        cadence.clock(completed);
         let n_sub = substep.macro_step(
             cadence.bucket_d2(&state.r),
             &uniforms.thresholds,
@@ -501,19 +558,19 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
         last = reached;
         macro_step += 1;
     }
-    let outcome = if last == Reached::NonFinite {
-        STATE_SIM_FAILED
-    } else if cadence.done() || last.ended() || macro_step < uniforms.horizon_steps {
-        STATE_RUNNING
-    } else {
-        STATE_BOUNDED
+    cadence.clock(completed);
+    // The march's own label: its failure, or whether it reached the horizon; the cadence's terminals are written over
+    // it by its `finish` ([`monitored`]), through the same precedence.
+    let events = Events {
+        failed: if last == Reached::NonFinite {
+            Fired::at(0, failed_detail(&state.r, &state.p))
+        } else {
+            Fired::none()
+        },
+        horizon: !(cadence.done() || last.ended() || macro_step < uniforms.horizon_steps),
+        ..Events::default()
     };
-    let described = substep.packed_a(set_state(0, outcome));
-    let described = if outcome == STATE_SIM_FAILED {
-        set_detail(described, failed_detail(&state.r, &state.p))
-    } else {
-        described
-    };
+    let described = precedence(&events).write(substep.packed_a(0));
     let packed_a = set_dmin_pair(set_d_min_unset(described), SD_DMIN_PAIR_SENTINEL);
     readout.store(SimStateBaseOf {
         r: state.r,
@@ -521,7 +578,7 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
         mean_y: diffusion.mean_y,
         C_ty: diffusion.c_ty,
         packed_a,
-        times: pack_times(completed, 0),
+        times: pack_times(completed, start.t_dmin_step),
         total_substeps,
         ..SimStateBaseOf::default()
     })

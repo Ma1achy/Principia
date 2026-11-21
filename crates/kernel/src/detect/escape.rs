@@ -55,16 +55,18 @@
 //! value that is not finite fires nothing: the chord is tested on its bits, and a NaN energy fails its comparison.
 //!
 //! **After it fires** the verdict stays, the run's `done` flag is set by the cadence that holds the detector
-//! (`crate::driver::cadence::WrapperCadence`), and the label is written when the loop ends ([`Detector::label`]).
+//! (`crate::driver::cadence::WrapperCadence`), and the label is written when the loop ends, by time against a collision
+//! ([`crate::detect::label`]).
 
 use spirv_std::num_traits::Float;
 
+use crate::detect::label::Label;
 use crate::driver::advance::{Count, Width};
 use crate::driver::welford::chord2;
 use crate::generated::constants::{ESCAPE_WINDOW, TAU};
 use crate::payload::{
-    set_detail, set_state, DETAIL_ESCAPE_ALL_THREE_TRIPLE_EJECTION, DETAIL_ESCAPE_BODY_0,
-    DETAIL_ESCAPE_BODY_1, DETAIL_ESCAPE_BODY_2, STATE_ESCAPE,
+    DETAIL_ESCAPE_ALL_THREE_TRIPLE_EJECTION, DETAIL_ESCAPE_BODY_0, DETAIL_ESCAPE_BODY_1,
+    DETAIL_ESCAPE_BODY_2, STATE_ESCAPE,
 };
 use crate::real::IeeeBits;
 use crate::shape::shape;
@@ -365,7 +367,11 @@ impl<R: EscapeReal> Detector<R> {
     #[inline]
     pub fn label(&self, packed_a: u32) -> u32 {
         if self.verdict.fired {
-            set_detail(set_state(packed_a, STATE_ESCAPE), self.verdict.detail)
+            Label {
+                state: STATE_ESCAPE,
+                detail: self.verdict.detail,
+            }
+            .write(packed_a)
         } else {
             packed_a
         }

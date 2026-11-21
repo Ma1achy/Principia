@@ -25,5 +25,6 @@ pub mod nsub_table;
 pub mod project;
 pub mod shape;
 pub mod substep;
+pub mod terminal;
 pub mod welford;
 pub mod wrapper;
