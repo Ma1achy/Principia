@@ -10,6 +10,7 @@ pub mod capture;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod cli;
 pub mod clock;
+pub mod dispatch;
 pub mod explore;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod headless;

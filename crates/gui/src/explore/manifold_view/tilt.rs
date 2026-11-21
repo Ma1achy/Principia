@@ -16,10 +16,11 @@ use eframe::egui::{self, ComboBox, DragValue, Rect, Slider, Ui};
 
 use crate::explore::compass::Gesture;
 
+use crate::dispatch::{self, Class};
+
 use super::{
-    basis_edit, close_under_console, reset::Section, row, row_ui, target_choices, target_edit,
-    Panel, Target, Touch, View, AXES, GAMMA, TAU1, TAU2, TILT_X, TILT_X_ENTRIES, TILT_Y,
-    TILT_Y_ENTRIES,
+    close_under_console, reset::Section, row, row_ui, target_choices, target_edit, Panel, Target,
+    Touch, View, AXES, GAMMA, TAU1, TAU2, TILT_X, TILT_X_ENTRIES, TILT_Y, TILT_Y_ENTRIES,
 };
 
 /// The tilts' span, in degrees.
@@ -123,13 +124,11 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         }
         panel.place(id, &slider.union(field), clip);
         if changed {
-            let mut next = angles;
-            next.turn(id, moved - value);
-            panel.out.edit(
-                basis_edit(next.apply(view).basis()),
-                Some(Touch::Tilt),
-                panel.scratch,
-            );
+            let mut to = angles;
+            to.turn(id, moved - value);
+            let plane = &panel.snapshot.sim.plane;
+            let edit = dispatch::one(plane, Class::Tilt { from: view, to });
+            panel.out.edit(edit, Some(Touch::Tilt), panel.scratch);
         }
     }
     for (i, (which, id, entries, label, now)) in [

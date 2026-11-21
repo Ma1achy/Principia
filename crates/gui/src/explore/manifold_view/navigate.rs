@@ -11,11 +11,13 @@ use eframe::egui::{self, DragValue, Key, Rect, Response, RichText, Sense, Slider
 use engine::contract::sim_config::Plane;
 
 use super::{
-    add, basis_edit, in_plane, reset::Section, row, row_ui, z0_edit, Out, Panel, Scratch, View,
-    CENTRE_U, CENTRE_V, ZOOM,
+    basis_edit, in_plane, reset::Section, row, row_ui, Out, Panel, Scratch, View, CENTRE_U,
+    CENTRE_V, ZOOM,
 };
+use crate::dispatch::{self, Class};
 use crate::keyboard::keymap::{multiplier, Direction};
 use crate::keyboard::scopes::{Adjust, Base, StepKind};
+use engine::path::leaf::Scale;
 
 /// The note beside Navigate's title, as 01_main.png's.
 pub const NOTE: &str = "edits z₀ and the basis — no camera";
@@ -67,10 +69,16 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
             );
             panel.place(id, &field, clip);
             if field.changed() {
-                // Along the unit direction: the other coordinate stays where it is.
-                let unit = super::norm(&along);
+                // Along the unit direction: the other coordinate stays where it is. A pan by half the move over the
+                // vector's length, the window being `2q` across.
+                let step = (edited - value) / super::norm(&along) / 2.0;
+                let (ds, dt) = if id == CENTRE_U {
+                    (step, 0.0)
+                } else {
+                    (0.0, step)
+                };
                 panel.out.edit(
-                    z0_edit(add(&plane.z0, (edited - value) / unit, &along)),
+                    dispatch::one(&plane, Class::Pan { ds, dt }),
                     None,
                     panel.scratch,
                 );
@@ -93,7 +101,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
 }
 
 /// The pan of a drag by `delta` points over a figure `size` points in size: the picture follows the pointer, `t`
-/// being Y-up.
+/// being Y-up. The drag read as a [`Class::Pan`] of the window's addresses.
 pub fn pan(
     plane: &Plane,
     delta: egui::Vec2,
@@ -101,32 +109,36 @@ pub fn pan(
 ) -> engine::contract::set_field::SetField {
     let ds = -f64::from(delta.x) / f64::from(size.x);
     let dt = f64::from(delta.y) / f64::from(size.y);
-    z0_edit(add(
-        &add(&plane.z0, 2.0 * ds, &plane.q1),
-        2.0 * dt,
-        &plane.q2,
-    ))
+    dispatch::one(plane, Class::Pan { ds, dt })
 }
 
-/// The zoom by `octaves` about the centre: the basis scaled by `2^−octaves`.
+/// The zoom by `octaves` about the centre ([`Class::Zoom`]).
 pub fn zoom_by(plane: &Plane, octaves: f64) -> engine::contract::set_field::SetField {
-    let k = (-octaves).exp2();
-    basis_edit((plane.q1.map(|x| x * k), plane.q2.map(|x| x * k)))
+    let scale = Scale::Octaves(octaves);
+    dispatch::one(plane, Class::Zoom { scale })
 }
 
-/// The zoom row's edit from `view`, `plane`'s reading, to the view `to` at the zoom asked for: the stored basis scaled
-/// by `σ' / σ`, so an edit that names only the scale keeps the plane (R-705). A reading with no scale that a finite
-/// factor reaches, the `σ = 0` of a basis with no plane above all, has no plane to keep, and takes `to`'s basis.
+/// The zoom row's edit from `view`, `plane`'s reading, to the view `to` at the zoom asked for: a zoom by the ratio of
+/// their scales `σ′/σ` ([`Class::Zoom`], the factor form, today's bits), so an edit that names only the scale keeps the
+/// plane (R-705). A reading with no scale
+/// that a finite factor reaches, the `σ = 0` of a basis with no plane above all, has no plane to keep, and takes `to`'s
+/// basis.
 pub fn zoom_to(plane: &Plane, view: View, to: View) -> engine::contract::set_field::SetField {
     let k = to.scale / view.scale;
-    basis_edit(if k.is_normal() {
-        (plane.q1.map(|x| x * k), plane.q2.map(|x| x * k))
+    if k.is_normal() {
+        dispatch::one(
+            plane,
+            Class::Zoom {
+                scale: Scale::Factor(k),
+            },
+        )
     } else {
-        to.basis()
-    })
+        basis_edit(to.basis())
+    }
 }
 
-/// The arrows on the focused figure: ← → along `q₁`, ↑ ↓ along `q₂`, by `fraction` of the view's span.
+/// The arrows on the focused figure: ← → along `q₁`, ↑ ↓ along `q₂`, by `fraction` of the view's span
+/// ([`Class::Pan`]).
 pub fn pan_by_keys(
     adjust: &Adjust,
     plane: &Plane,
@@ -134,15 +146,11 @@ pub fn pan_by_keys(
     scratch: &mut Scratch,
     out: &mut Out,
 ) {
-    let along = match adjust.direction {
-        Direction::Left | Direction::Right => &plane.q1,
-        Direction::Up | Direction::Down => &plane.q2,
+    let (ds, dt) = match adjust.direction {
+        Direction::Left | Direction::Right => (fraction, 0.0),
+        Direction::Up | Direction::Down => (0.0, fraction),
     };
-    out.edit(
-        z0_edit(add(&plane.z0, 2.0 * fraction, along)),
-        None,
-        scratch,
-    );
+    out.edit(dispatch::one(plane, Class::Pan { ds, dt }), None, scratch);
 }
 
 /// The figure's point under `pos`, `(s, t)`, `t` Y-up (the coordinate convention's one flip).

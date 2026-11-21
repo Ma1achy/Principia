@@ -11,18 +11,24 @@
 //! - A [`Path`] is a chain of segments joined bit for bit (Theorem 4).
 //! - A frame is recorded by value ([`FrameRecord`]).
 //!
-//! **Stage 1's fence** (R-863): the families are today's operations. The blend, the plane rotation, R-474's two tilt
-//! maps, several fields eased together, alignment and retiming are typed and refuse to be shown
+//! - Every route that edits a view calls its operation's one leaf ([`leaf`]), which passes the segment through the stop
+//!   ([`stop`]; REQ-CHART-060) before its edits are recorded (TASK-M2-64).
+//!
+//! **The fence** (R-863): the families are today's operations, and R-474's tilt of a latent view (TASK-M2-64). The
+//! blend, the plane rotation, several fields eased together, alignment and retiming are typed and refuse to be shown
 //! ([`PathError::NotBuilt`]) until their stage builds them; no special case is an if-branch outside a family.
 
 pub mod curved;
 pub mod family;
+pub mod leaf;
 pub mod lock;
 mod record;
+pub mod stop;
 mod timing;
 
+use kernel::chart::nav::Field;
 use kernel::chart::saved::{Composed, ParentParams, SaveParent, Saved};
-use kernel::chart::tilt::{Placement, TiltSpec, Tiltable, Tilted};
+use kernel::chart::tilt::{latent_basis, LatentFrame, Placement, Tiltable, Tilted};
 use kernel::chart::{Latent as LatentChart, REGISTRY};
 use kernel::decode::Ic;
 use kernel::encode::by_kind::ByKind;
@@ -32,8 +38,10 @@ use serde::{Deserialize, Serialize};
 
 pub use curved::{held_k, CurvedTilt, Pivot, SliderSpan, LATENT_SPAN, NU0_SPAN};
 pub use family::{oblique, tilt_tangent, tilt_vector, Constructor};
+pub use kernel::chart::tilt::{TiltMap, TiltSpec};
 pub use lock::{hold_plane, hold_window, ChartLock, Held, Pivoted};
 pub use record::{Align, FrameRecord};
+pub use stop::{Gate, Numbers};
 pub use timing::{Easing, MonotoneTable, Timing};
 
 use crate::contract::set_field::{Edit, SetField, SimField};
@@ -322,9 +330,9 @@ impl View {
         }
     }
 
-    /// The plane a window edit acts on: the latent map's; [`PathError::WrongMap`] on a kernel map, whose pan and slice
-    /// are the GUI's until TASK-M2-64 (its zoom has its own evaluator, [`family::zoom_window`]); and [`saved_refused`]
-    /// on a saved chart.
+    /// The plane a window edit acts on: the latent map's; [`PathError::WrongMap`] on a kernel map, whose pan and zoom
+    /// have their own evaluators ([`family::pan_window`], [`family::zoom_window_by`]) and whose hidden coordinates a slider
+    /// moves ([`Segment::control`]); and [`saved_refused`] on a saved chart.
     fn plane(&self) -> Result<&Plane, PathError> {
         match &self.map {
             Map::Latent => Ok(&self.sim.plane),
@@ -453,6 +461,12 @@ pub enum Family {
         /// The zoom, in octaves.
         octaves: f64,
     },
+    /// The zoom by a factor `k`, a ratio of scales `σ′/σ` (the gui's zoom row): `B` is `q·k`, today's bits; its
+    /// interior `zoom_by(A, k^s)`, the same arithmetic at the factor's `s`-th power.
+    ZoomFactor {
+        /// The factor.
+        k: f64,
+    },
     /// `slice(A, d, s·t)`, along the part of `d` off the plane.
     Slice {
         /// The direction.
@@ -485,9 +499,37 @@ pub enum Family {
     Commit,
     /// Several fields eased together on one `s` (export contract Part 3): not built.
     WindowEase,
-    /// R-474's Tip as sheet and Lean each axis on a latent view: not built. On a curved view it is
-    /// [`Family::CurvedTilt`].
-    R474Tilt,
+    /// R-474's tilt of a latent view (Tip as sheet or Lean each axis, one target or two): the basis
+    /// `kernel::chart::tilt::latent_basis` gives on the frame `(e_a, e_b)` at the scale `σ`, `(τ₁, τ₂, γ)` lerped from
+    /// `from` to `to`, the map and the targets the same at both ends, `z₀` kept (or re-solved about the pin). On a
+    /// curved view it is [`Family::CurvedTilt`].
+    R474Tilt {
+        /// The frame's horizontal axis `a`.
+        a: u32,
+        /// The frame's vertical axis `b`.
+        b: u32,
+        /// The scale `σ`.
+        scale: f64,
+        /// `(τ₁, τ₂, γ)` at `A`, degrees.
+        from: [f64; 3],
+        /// `(τ₁, τ₂, γ)` at `B`, degrees.
+        to: [f64; 3],
+        /// Lean each axis where true, Tip as sheet where false.
+        lean: bool,
+        /// `τ₁`'s target.
+        x: u32,
+        /// `τ₂`'s target.
+        y: u32,
+    },
+    /// An edit the stop cut short (REQ-CHART-060): `B` the last valid view along the straight line from `A` to the
+    /// view `requested` asks for, at the fraction `lambda` of it ([`stop`]); its interior that line's, its other fields
+    /// `B`'s.
+    Stopped {
+        /// The family the edit asked for.
+        requested: Box<Family>,
+        /// The fraction of the line the stop accepted, `0 ≤ λ < 1`.
+        lambda: f64,
+    },
     /// A curved view's own tilt (R-473 T2, R-474 on a curved chart; R-513 on a saved one), `(τ₁, τ₂)` lerped from `from`
     /// to `to`, the map, targets and spans `tilt`'s, the same at both ends; it turns about the view's pivot
     /// ([`View::pivoted`]).
@@ -601,9 +643,10 @@ impl Segment {
         let edits = match &self.family {
             Family::Pan { ds, dt } => {
                 pin = panned(a, s * ds, s * dt);
-                vec![family::pan(a.plane()?, s * ds, s * dt)?]
+                vec![pan_edit(a, s * ds, s * dt)?]
             }
-            Family::Zoom { octaves } => zoomed(a, s * octaves)?,
+            Family::Zoom { octaves } => zoomed(a, family::octave_factor(s * octaves)?)?,
+            Family::ZoomFactor { k } => zoomed(a, k.powf(s))?,
             Family::Slice { d, t } => vec![family::slice(a.plane()?, d, s * t)?],
             Family::Control { k, from, to } => {
                 vec![family::control(&a.sim, *k, from + s * (to - from))?]
@@ -616,9 +659,33 @@ impl Segment {
                 tilt = Some(t.at([lerp(0), lerp(1)]));
                 Vec::new()
             }
+            Family::R474Tilt {
+                a: ax,
+                b: bx,
+                scale,
+                from,
+                to,
+                lean,
+                x,
+                y,
+            } => {
+                let at: [f64; 3] = std::array::from_fn(|i| from[i] + s * (to[i] - from[i]));
+                let tilt = LatentTilt {
+                    a: *ax,
+                    b: *bx,
+                    scale: *scale,
+                    from: *from,
+                };
+                about_pin(a, tilt.basis(at, *lean, *x, *y)?)
+            }
+            Family::Stopped { .. } => {
+                if self.timing.retime.is_some() {
+                    return Err(PathError::NotBuilt("retiming"));
+                }
+                return Ok(Numbers::of(a).along(Numbers::of(&self.b), s).into(&self.b));
+            }
             Family::Cut { .. } | Family::Commit => return Ok(a.clone()),
             Family::WindowEase => return Err(PathError::NotBuilt("several fields eased together")),
-            Family::R474Tilt => return Err(PathError::NotBuilt("R-474's tilt maps")),
             Family::PlaneRotation => return Err(PathError::NotBuilt("the plane rotation")),
             Family::Blend(_) => return Err(PathError::NotBuilt("the state blend")),
         };
@@ -665,8 +732,10 @@ impl Segment {
     /// Pan by `(ds, dt)` of the view's `[0,1]²` addresses (chart_decoder_contract Part 4, "Pan"): `Δz₀ = 2ds·q₁ +
     /// 2dt·q₂`, the same plane, another window.
     /// The pin moves with the content: it stays on the pixel it marked.
+    /// On a kernel map the window's centre moves by `(2ds·h_u, 2dt·h_v)`, the pixel at `(½ + ds, ½ + dt)` becoming the
+    /// centre ([`family::pan_window`]), the window shape's evaluator.
     pub fn pan(a: &View, ds: f64, dt: f64) -> Result<Self, PathError> {
-        let e = family::pan(a.plane()?, ds, dt)?;
+        let e = pan_edit(a, ds, dt)?;
         let seg = Self::of(a, Family::Pan { ds, dt }, vec![e]);
         Ok(seg.pinned(panned(a, ds, dt)))
     }
@@ -675,8 +744,16 @@ impl Segment {
     /// `q₁, q₂ ×= 2^−octaves`, on a kernel map the window's half-widths, each by one common factor; where the pin is off
     /// the centre, the centre re-solved so the pinned pixel keeps its point ([`hold_plane`], [`hold_window`]).
     pub fn zoom(a: &View, octaves: f64) -> Result<Self, PathError> {
-        let edits = zoomed(a, octaves)?;
+        let edits = zoomed(a, family::octave_factor(octaves)?)?;
         Ok(Self::of(a, Family::Zoom { octaves }, edits))
+    }
+
+    /// Zoom by the factor `k` about the pin, or the centre while free: [`Segment::zoom`]'s arithmetic at the factor
+    /// itself, `q·k` (or a kernel map's half-widths times `k`), so a route that reads its zoom as a ratio of scales `σ′/σ`
+    /// (the gui's zoom row) keeps its bits. [`NavError::DegeneratePlane`] for a factor 0 or not finite.
+    pub fn zoom_factor(a: &View, k: f64) -> Result<Self, PathError> {
+        let edits = zoomed(a, k)?;
+        Ok(Self::of(a, Family::ZoomFactor { k }, edits))
     }
 
     /// `B`'s pin set to `pin`.
@@ -1055,6 +1132,64 @@ impl Segment {
         Ok(seg)
     }
 
+    /// R-474's tilt of the latent view `a` (Tip as sheet or Lean each axis, one target or two, chart_decoder_contract
+    /// Part 4, "Tilt"; R-474): from `tilt`'s frame and angles at `A` to `spec`'s angles and the rotation `gamma`
+    /// (degrees), about the pin. An R-474 tilt family where the basis at `tilt.from` is `A`'s to rounding, so the
+    /// interior starts at `A`; otherwise a cut labelled `TiltReplaces`, the direct operation's jump.
+    pub fn latent_tilt(
+        a: &View,
+        tilt: &LatentTilt,
+        spec: &TiltSpec,
+        gamma: f64,
+    ) -> Result<Self, PathError> {
+        let plane = a.plane()?;
+        let lean = spec.map == TiltMap::Lean;
+        let to = [spec.tau1, spec.tau2, gamma];
+        let end = about_pin(a, tilt.basis(to, lean, spec.x, spec.y)?);
+        let starts = match tilt.basis(tilt.from, lean, spec.x, spec.y).map(|e| e.edit) {
+            Ok(Edit::Sim(SimField::Basis { q1, q2 })) => {
+                rounding_equal(&q1, &plane.q1) && rounding_equal(&q2, &plane.q2)
+            }
+            _ => false,
+        };
+        let family = match starts {
+            true => Family::R474Tilt {
+                a: tilt.a,
+                b: tilt.b,
+                scale: tilt.scale,
+                from: tilt.from,
+                to,
+                lean,
+                x: spec.x,
+                y: spec.y,
+            },
+            false => cut(CutLabel::TiltReplaces),
+        };
+        Ok(Self::of(a, family, end))
+    }
+
+    /// The edit `requested` cut short by the stop at `lambda` (REQ-CHART-060): `B` the stop's view
+    /// ([`stopped_view`]), its edits those of the numbers that moved, a family [`Family::Stopped`].
+    /// At `λ = 0`, a refusal, `B` is `A` whole, with no edits: the lock group and the pin a refused lock asked for are
+    /// not numbers the line carries.
+    fn stopped(requested: &Segment, lambda: f64) -> Self {
+        let a = &requested.a;
+        let b = match lambda == 0.0 {
+            true => a.clone(),
+            false => stopped_view(a, &requested.b, &requested.family, lambda),
+        };
+        Segment {
+            a: a.clone(),
+            edits: number_edits(a, &b),
+            b,
+            family: Family::Stopped {
+                requested: Box::new(requested.family.clone()),
+                lambda,
+            },
+            timing: requested.timing.clone(),
+        }
+    }
+
     /// The commit of `a` as the saved chart `saved`.
     fn committed(a: &View, saved: Saved) -> Self {
         Segment {
@@ -1075,9 +1210,26 @@ impl Segment {
     /// The segment a record names, rebuilt from its `A` and its family; its `B` must be the record's, bit for bit, where
     /// the family reaches one, and is the record's where it is a cut or a commit.
     fn rebuilt(a: &View, b: &View, family: &Family) -> Result<Self, PathError> {
-        let reached = match family {
+        let reached = Self::reach(a, family)?;
+        match reached {
+            Some(seg) if seg.b.bytes() == b.bytes() && &seg.family == family => Ok(seg),
+            Some(_) => Err(PathError::Rebuilt),
+            None => Ok(Segment {
+                a: a.clone(),
+                b: b.clone(),
+                family: family.clone(),
+                edits: Vec::new(),
+                timing: Timing::default(),
+            }),
+        }
+    }
+
+    /// The segment `family` reaches from `a`, where it reaches one; `None` for a cut or a commit, whose `B` is stored.
+    fn reach(a: &View, family: &Family) -> Result<Option<Self>, PathError> {
+        Ok(match family {
             Family::Pan { ds, dt } => Some(Self::pan(a, *ds, *dt)?),
             Family::Zoom { octaves } => Some(Self::zoom(a, *octaves)?),
+            Family::ZoomFactor { k } => Some(Self::zoom_factor(a, *k)?),
             Family::Slice { d, t } => Some(Self::slice(a, d, *t)?),
             Family::Control { k, from, to } => {
                 (a.sim.plane.z0.get(*k).map(|x| x.to_bits()) == Some(from.to_bits()))
@@ -1103,19 +1255,49 @@ impl Segment {
                 seg.b.tilt = Some(tilt.at(*to));
                 Some(seg)
             }
+            Family::R474Tilt {
+                a: ax,
+                b: bx,
+                scale,
+                from,
+                to,
+                lean,
+                x,
+                y,
+            } => {
+                let tilt = LatentTilt {
+                    a: *ax,
+                    b: *bx,
+                    scale: *scale,
+                    from: *from,
+                };
+                let spec = TiltSpec {
+                    tau1: to[0],
+                    tau2: to[1],
+                    map: match lean {
+                        true => TiltMap::Lean,
+                        false => TiltMap::Sheet,
+                    },
+                    x: *x,
+                    y: *y,
+                };
+                Some(Self::latent_tilt(a, &tilt, &spec, to[2])?)
+            }
+            // A refusal is `A` whatever was asked; a cut the stop cut short has no family to rebuild its line's end
+            // from, so its `B` is stored, as the cut's own is.
+            Family::Stopped { requested, lambda } => match Self::reach(a, requested)? {
+                Some(asked) => Some(Self::stopped(&asked, *lambda)),
+                None if *lambda == 0.0 => Some(Segment {
+                    a: a.clone(),
+                    b: a.clone(),
+                    family: family.clone(),
+                    edits: Vec::new(),
+                    timing: Timing::default(),
+                }),
+                None => None,
+            },
             _ => None,
-        };
-        match reached {
-            Some(seg) if seg.b.bytes() == b.bytes() && &seg.family == family => Ok(seg),
-            Some(_) => Err(PathError::Rebuilt),
-            None => Ok(Segment {
-                a: a.clone(),
-                b: b.clone(),
-                family: family.clone(),
-                edits: Vec::new(),
-                timing: Timing::default(),
-            }),
-        }
+        })
     }
 }
 
@@ -1161,9 +1343,122 @@ fn panned(a: &View, ds: f64, dt: f64) -> Option<Pin> {
         },
         Pin::Centre => Pin::At {
             address: [0.5 - ds, 0.5 - dt],
-            point: PinPoint::Latent(point(&a.sim.plane, 0.5, 0.5)),
+            point: match a.window() {
+                ViewWindow::Plane(plane) => PinPoint::Latent(point(plane, 0.5, 0.5)),
+                ViewWindow::Chart(window) => PinPoint::Chart(window.centre),
+            },
         },
     })
+}
+
+/// The pan of `a` by `(ds, dt)`, by the window shape (one evaluator per shape): the plane's `z₀` ([`family::pan`]) or a
+/// kernel map's window centre ([`family::pan_window`]); a saved chart's view is not edited ([`saved_refused`]).
+fn pan_edit(a: &View, ds: f64, dt: f64) -> Result<SetField, PathError> {
+    if a.tilt.is_some_and(|t| !t.spec().untilted()) {
+        return Err(PathError::NotBuilt(
+            "a pan of a tilted curved view: its tilt turns about the window's centre, so the pan would change the slice",
+        ));
+    }
+    match (&a.map, a.window()) {
+        (Map::Saved(_), _) => Err(saved_refused()),
+        (_, ViewWindow::Plane(plane)) => Ok(family::pan(plane, ds, dt)?),
+        (_, ViewWindow::Chart(window)) => Ok(family::edit(SimField::Window(family::pan_window(
+            window, ds, dt,
+        )?))),
+    }
+}
+
+/// R-474's tilt of a latent view (chart_decoder_contract Part 4, "Tilt"; R-457 E1; R-474 K1): the frame `(e_a, e_b)` at
+/// the scale `σ`, and `(τ₁, τ₂, γ)` at `A`, in degrees. The basis at an angle is `kernel::chart::tilt::latent_basis`'s:
+/// `û₁ = R e_a`, `û₂ = R e_b` on the axes and the targets, turned by `γ` and scaled by `σ`.
+///
+/// The plan is unclear here; chose to read `A`'s frame and angles from the caller (the gui's reading of its basis,
+/// `View::framed`), as the raw tilt reads its committed plane, and to check them: the family starts at `A` only where
+/// the basis at `from` is `A`'s to rounding ([`rounding_equal`]), and is a cut labelled `TiltReplaces` otherwise.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LatentTilt {
+    /// The frame's horizontal axis `a`.
+    pub a: u32,
+    /// The frame's vertical axis `b`.
+    pub b: u32,
+    /// The scale `σ`.
+    pub scale: f64,
+    /// `(τ₁, τ₂, γ)` at `A`, degrees.
+    pub from: [f64; 3],
+}
+
+impl LatentTilt {
+    /// The basis edit at `[τ₁, τ₂, γ]` (degrees) under the map `lean` (Lean each axis where true) toward `x` and `y`.
+    fn basis(
+        &self,
+        [tau1, tau2, gamma]: [f64; 3],
+        lean: bool,
+        x: u32,
+        y: u32,
+    ) -> Result<SetField, PathError> {
+        crate::nav::finite(&[tau1, tau2, gamma, self.scale])?;
+        let frame = LatentFrame {
+            a: self.a,
+            b: self.b,
+            scale: self.scale,
+            gamma: gamma.to_radians(),
+        };
+        let spec = TiltSpec {
+            tau1,
+            tau2,
+            map: match lean {
+                true => TiltMap::Lean,
+                false => TiltMap::Sheet,
+            },
+            x,
+            y,
+        };
+        let (q1, q2) = latent_basis(&frame, &spec).ok_or(PathError::Refused(
+            "a target that is not one of the frame's hidden dimensions",
+        ))?;
+        Ok(family::edit(SimField::Basis { q1, q2 }))
+    }
+}
+
+/// `B` of an edit of `family` the stop cut short at `lambda` of the line from `a` to `requested`: the line's point, its
+/// other fields `requested`'s, and the pin by the family's own pin rule at the part taken. A pan moves the pin with the
+/// content by `λ` of its step ([`panned`]), so the pin still marks the state it was set on. Every other family
+/// re-reads it at its address: a slice and a slider's move by their own rule, and a zoom or a tilt, which hold the
+/// pinned pixel's point at both ends of the line, give it back to rounding. The plan is unclear here (no stop under a
+/// lock is specified); chose each family's pin rule because the pin marks a state, not a pixel.
+fn stopped_view(a: &View, requested: &View, family: &Family, lambda: f64) -> View {
+    let mut b = Numbers::of(a)
+        .along(Numbers::of(requested), lambda)
+        .into(requested);
+    b.pin = match family {
+        Family::Pan { ds, dt } => panned(a, lambda * ds, lambda * dt),
+        _ => {
+            b.pin = a.pin;
+            reread(&b)
+        }
+    };
+    b
+}
+
+/// The edits taking `a` to `b` on the fields the stop moves: `z₀`, the basis and the window, each where its bits differ.
+fn number_edits(a: &View, b: &View) -> Vec<SetField> {
+    let bits = |x: &[f64]| x.iter().map(|v| v.to_bits()).collect::<Vec<_>>();
+    let (pa, pb) = (&a.sim.plane, &b.sim.plane);
+    let (wa, wb) = (&a.sim.chart.window, &b.sim.chart.window);
+    let mut edits = Vec::new();
+    if bits(&pa.z0) != bits(&pb.z0) {
+        edits.push(family::edit(SimField::Z0(pb.z0)));
+    }
+    if bits(&pa.q1) != bits(&pb.q1) || bits(&pa.q2) != bits(&pb.q2) {
+        edits.push(family::edit(SimField::Basis {
+            q1: pb.q1,
+            q2: pb.q2,
+        }));
+    }
+    if bits(&[wa.centre, wa.half].concat()) != bits(&[wb.centre, wb.half].concat()) {
+        edits.push(family::edit(SimField::Window(*wb)));
+    }
+    edits
 }
 
 /// The edits of a basis `change` to `a`'s plane about its pin: the change alone where the pin is the centre or there is
@@ -1186,14 +1481,15 @@ fn about_pin(a: &View, change: SetField) -> Vec<SetField> {
     vec![change, family::edit(SimField::Z0(z0))]
 }
 
-/// The zoom of `a` by `octaves`, about its pin: by the window shape (one evaluator per shape), the plane's basis
-/// ([`family::zoom`]) or a kernel map's window ([`family::zoom_window`]), the centre re-solved where the pin is off it.
-fn zoomed(a: &View, octaves: f64) -> Result<Vec<SetField>, PathError> {
+/// The zoom of `a` by the factor `k`, about its pin: by the window shape (one evaluator per shape), the plane's basis
+/// ([`family::zoom_by`]) or a kernel map's window ([`family::zoom_window_by`]), the centre re-solved where the pin is
+/// off it.
+fn zoomed(a: &View, k: f64) -> Result<Vec<SetField>, PathError> {
     match (&a.map, a.window()) {
         (Map::Saved(_), _) => Err(saved_refused()),
-        (_, ViewWindow::Plane(plane)) => Ok(about_pin(a, family::zoom(plane, octaves)?)),
+        (_, ViewWindow::Plane(plane)) => Ok(about_pin(a, family::zoom_by(plane, k)?)),
         (_, ViewWindow::Chart(window)) => {
-            let mut zoomed = family::zoom_window(window, octaves)?;
+            let mut zoomed = family::zoom_window_by(window, k)?;
             if let Some(Pin::At { address, point }) = a.pin {
                 let held = match point {
                     PinPoint::Chart(uv) => uv,
