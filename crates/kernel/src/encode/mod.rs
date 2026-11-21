@@ -5,7 +5,7 @@
 //! E  =  (block inverses) ∘ C
 //! ```
 //!
-//! [`encode`] runs `C` (`crate::canon`: 1a CoM → 0 scale → 1b boost → 2 rotate → 3 mirror, R-23), then the block
+//! [`encode`] runs `C` (`crate::canon`: 1a CoM → 0 scale → 1b boost → 2 rotate, R-23; no mirror step, R-865), then the block
 //! inverses ([`blocks`]: config, momentum and mass, each through the selection's registry link inverse), and reports
 //! what it discarded ([`report`]).
 //! [`by_kind`] then encodes into the active chart, axis by axis by kind, and lands in latent `z` where the chart does
@@ -13,11 +13,12 @@
 //! off-curve projection and the fold.
 //! [`ingest`] is the ground-truth import's (Part 7): `z`, the physical residual `‖D(z) − C(x)‖_phys` and `κ(x)`.
 //!
-//! **T1, constant on gauge orbits** (Part 1; dd_encode §3.3): translation and boost are removed by `C`'s 1a and 1b,
-//! rotation by step 2, scale by step 0, and the mirror by step 3, with R-82's deterministic tie: `|λ̃_y| ≤ δ_λ` is no
-//! mirror, the same branch on every backend (`crate::canon`'s note). `β` reads `|λ̃_y|` (R-438), so the deadband's two
-//! sides give the same `β`. On that band, exactly collinear states included, `x` and `Π·x` are both left unmirrored,
-//! so `E(Π·x)` and `E(x)` differ in the momenta's `y` components: RQ-360 holds T1 there for the mirror.
+//! **T1, constant on the continuous gauge orbits and equivariant under the mirror** (Part 1; dd_encode §3.3; R-865):
+//! translation and boost are removed by `C`'s 1a and 1b, rotation by step 2, scale by step 0. The mirror `Π` is no gauge
+//! direction: `E(Π·x)` is the mirrored `z`, `β → 2π − β` (reduced to `[0, 2π)`, so `β = 0` stays 0; on the control, `z_β → π − z_β`), the momentum
+//! controls `z_q1` and `z_q3` (the `y` components of `p_ρ` and `p_λ`) negated by the odd momentum links, `L_z`
+//! negated. *Was:* "the mirror by step 3, with R-82's deterministic tie: `|λ̃_y| ≤ δ_λ` is no mirror … RQ-360 holds T1
+//! there for the mirror"
 //!
 //! **One source** (REQ-SYS-015; R-116): the block inverses are the registry's (`crate::generated::links`), the Jacobi
 //! map is the decoder's run backwards, and `C` is the decode's. The fragment WGSL encode is never written by hand: it is
@@ -49,7 +50,7 @@ use crate::real::IeeeBits;
 pub struct Encoded<R> {
     /// The eight controls, in the latent block layout.
     pub z: Latent<R>,
-    /// `C`'s output: the canonical `(m, r, p)`, `I_in`, `λ`, `φ`, `λ̃_y` and its notices.
+    /// `C`'s output: the canonical `(m, r, p)`, `I_in`, `λ`, `φ`, `λ̃_y`, its notices and the decided signs of `λ̃`.
     pub canonical: Canonical<R>,
     /// The block inverses' output: `z`, `α`, `β`, the Jacobi coordinates and the clamp bits.
     pub blocks: Inverted<R>,
@@ -80,7 +81,8 @@ where
     R: LinkReal + IeeeBits,
 {
     let canonical = canonicalise(ic);
-    let blocks = blocks::invert_at::<S, R>(&canonical.ic, p);
+    // β's case is the one `C` decided on `ic`, not one read off the rotated `canonical.ic` (`blocks`' note).
+    let blocks = blocks::invert_decided_at::<S, R>(&canonical.ic, canonical.signs, p);
     Encoded {
         z: Latent::new(blocks.z),
         canonical,
@@ -90,7 +92,6 @@ where
             rescaled: canonical.rescaled,
             coincident: canonical.clamped,
             clamped_controls: blocks.clamped,
-            mirrored: canonical.mirrored,
         },
     }
 }

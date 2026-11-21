@@ -1,11 +1,24 @@
 //! `engine::field`'s CPU backend: the march's labels on ICs whose ends are known (a head-on collision, the
 //! figure-eight bounded) and the image's row order. A frame's histogram is gui's test (`real_field`).
+//!
+//! `the_start_view_before_the_periodic_link_ends_the_same`: the app's start view, the chart "z_α × z_β", runs along
+//! `z_β`, so under the periodic `β` link it is a redefined plane and its frame is a different picture. This holds the
+//! picture it showed before: each of the old view's 16 × 16 samples, its `z_β` converted to the periodic link point
+//! by point, decodes to the starting state the old link gave, bit for bit, and the frame of those samples has the
+//! histogram main stores for that view (253 a triple ejection, 3 a collision of pair 1). So no sample's outcome class moved; what
+//! the app's first frame shows differently is the redefined plane alone.
 
-use engine::field::{heggie_params, outcome, Field, Outcome};
-use engine::first_slice::uniforms;
-use kernel::decode::Ic;
+use engine::contract::sim_config::Window;
+use engine::field::{boundaries, heggie_params, outcome, Field, Outcome};
+use engine::first_slice::{narrow, uniforms, Quad};
+use kernel::chart::{Chart, Latent};
+use kernel::decode::retired::{converted, decode_retired};
+use kernel::decode::{decode, Ic};
 use kernel::detect::collision::CollisionRadius;
-use kernel::payload::{STATE_BOUNDED, STATE_COLLISION};
+#[cfg(feature = "controls")]
+use kernel::generated::links::TanhBeta;
+use kernel::generated::links::{Defaults, Link, RetiredBeta, SigmoidBeta};
+use kernel::payload::{STATE_BOUNDED, STATE_COLLISION, STATE_ESCAPE};
 use render::colour::outcome::SWATCHES;
 use validation::negative_control;
 
@@ -159,4 +172,85 @@ negative_control!(
     "a bounded sample, which the palette draws in its black class",
     expected = "the sample has a colour",
     check_no_colour(BOUNDED)
+);
+
+/// The start view before the periodic link: "z_α × z_β" at the base point whose `z_β` was 0.410 under
+/// `sigmoid_beta`, `q₁ = e_α`, `q₂ = e_β`, as the field narrows a plane to f32.
+fn old_start_view() -> Latent<f32> {
+    let e = |k: usize| {
+        let mut q = [0.0f32; 8];
+        q[k] = 1.0;
+        q
+    };
+    Latent {
+        z0: [0.180, 0.410, 0.0, -0.227, 0.0, 0.312, 0.333, 0.333].map(|x: f64| x as f32),
+        q1: e(0),
+        q2: e(1),
+    }
+}
+
+/// The 16 × 16 frame of the old start view through the new decoder, each sample's `z_β` converted from the retired
+/// link `L` point by point: asserts each sample decodes bit for bit to the state `sigmoid_beta` gave it, then that the
+/// frame's histogram is the one stored before the change. Returns the samples.
+fn check_old_start_view<L: Link<1, 1, Codomain = RetiredBeta>>() -> usize {
+    const STORED: [(u32, u32, usize); 2] = [(STATE_ESCAPE, 3, 253), (STATE_COLLISION, 1, 3)];
+    let quad = Quad {
+        chart: old_start_view(),
+        window: Window::SQUARE,
+        size: [16, 16],
+    };
+    let params = heggie_params();
+    let k_target = boundaries(50.0, &params);
+    let outcomes: Vec<Outcome> = (0..quad.len())
+        .map(|i| {
+            let [u, v] = quad.uv(i);
+            let z = quad.chart.map::<f64>(u, v).z;
+            let old = decode_retired::<Defaults, SigmoidBeta, f64>(&z);
+            let new = decode::<Defaults, f64>(&converted::<L, f64>(&z));
+            let bits = |ic: &Ic<f64>| {
+                let mut w = ic.m.to_vec();
+                w.extend(ic.r.iter().flatten());
+                w.extend(ic.p.iter().flatten());
+                w.iter().map(|x| x.to_bits()).collect::<Vec<u64>>()
+            };
+            assert!(
+                bits(&old.ic) == bits(&new.ic),
+                "sample {i} at ({u}, {v}) does not decode bit for bit to the state the old link gave"
+            );
+            outcome(&narrow(&new.ic), new.degenerate, radius(), k_target, &params)
+        })
+        .collect();
+    let n = outcomes.len();
+    let field = Field {
+        size: quad.size,
+        outcomes,
+    };
+    let got: Vec<(u32, u32, usize)> = field
+        .histogram()
+        .into_iter()
+        .map(|(o, n)| (o.state, o.detail, n))
+        .collect();
+    assert_eq!(
+        got, STORED,
+        "the old start view's frame is not the histogram stored before the change"
+    );
+    n
+}
+
+#[test]
+fn the_start_view_before_the_periodic_link_ends_the_same() {
+    let n = check_old_start_view::<SigmoidBeta>();
+    eprintln!(
+        "the_start_view_before_the_periodic_link_ends_the_same: {n} of {n} samples decode bit for bit; the frame's \
+         histogram is the stored 253 a triple ejection, 3 a collision of pair 1"
+    );
+}
+
+negative_control!(
+    the_start_view_before_the_periodic_link_ends_the_same,
+    "the samples converted from tanh_beta, not the link the view was made under, must fail",
+    expected = "does not decode bit for bit to the state the old link gave",
+    {
+        check_old_start_view::<TanhBeta>();
+    }
 );

@@ -48,10 +48,11 @@ pub use crate::generated::fragment_words::*;
 /// `z₀ + (2u − 1)·q₁ + (2v − 1)·q₂`; every other chart's hands the decoder its own output, and its `ChartOut.z` holds
 /// only the latent blocks it carries (zeros elsewhere), no latent.
 ///
-/// And whether its decode lands on `C`'s section (inverse-encode contract Part 1): every chart's does but the shape
-/// sphere's, which decodes with `C`'s step 3 not taken, so a lower-hemisphere pixel is its own system, off the section
-/// (R-544). The ROUNDTRIP preset measures its round trip against the decoded state on the section and against `C` of it
-/// off it (Part 4, "One norm for every round trip"; TASK-M2-26).
+/// And whether its decode lands on `C`'s section (inverse-encode contract Part 1): every chart's does, the shape
+/// sphere's too since TASK-M2-57 took `C`'s mirror step out (R-865; before then the shape sphere decoded with `C`'s
+/// step 3 not taken, so a lower-hemisphere pixel was off the section, R-544). The ROUNDTRIP preset measures its round
+/// trip against the decoded state on the section and against `C` of it off it (Part 4, "One norm for every round
+/// trip"; TASK-M2-26).
 pub trait FragmentChart: UniformChart {
     /// `true` where `Φ`'s `z` is the 8-D latent.
     const Z_IS_LATENT: bool;
@@ -65,7 +66,7 @@ impl FragmentChart for Latent<f32> {
 }
 impl FragmentChart for ShapeSphere<f32> {
     const Z_IS_LATENT: bool = false;
-    const ON_SECTION: bool = false;
+    const ON_SECTION: bool = true;
 }
 impl FragmentChart for InvariantLE<f32> {
     const Z_IS_LATENT: bool = false;

@@ -82,16 +82,29 @@ fn f32w(w: u32) -> f64 {
 
 // ── REQ-COL-057: ctx.chart.z per colour_composition §3's table ──────────────────────────────────────────────────────
 
-/// The latent chart's frame, as the harness fixes it (`validation::decode_preset::uniforms`).
-const Z0: [f32; 8] = [0.3, -0.2, 0.1, -0.4, 0.25, 0.05, 0.2, -0.35];
+/// The latent chart's frame, as the harness fixes it (`validation::decode_preset::uniforms`). `z₀`'s `z_β` is the
+/// periodic link's value for the angle the frame had under the retired `sigmoid_beta` at `z_β = −0.2`, `π·σ(−0.2) − π/2`
+/// rounded to f32 ([`converted_z_beta`], which the test holds it to): the plane is redefined in the periodic link's
+/// coordinates (TASK-M2-57). Was `−0.2`.
+const Z0: [f32; 8] = [0.3, -0.156_558_13, 0.1, -0.4, 0.25, 0.05, 0.2, -0.35];
 const Q1: [f32; 8] = [0.5, 0.2, -0.3, 0.1, 0.0, 0.2, 0.4, -0.1];
 const Q2: [f32; 8] = [-0.2, 0.5, 0.2, 0.3, -0.25, 0.1, -0.3, 0.3];
 /// The shape sphere's held momentum and mass controls.
 const SHAPE_Z_MOM: [f32; 4] = [0.2, -0.1, 0.3, 0.15];
 const SHAPE_Z_MASS: [f32; 2] = [0.3, -0.2];
-/// The invariant charts' frozen config and mass.
-const INV_Z_CFG: [f32; 2] = [0.4, -0.3];
+/// The invariant charts' frozen config and mass, `z_β` converted likewise from `−0.3` under `sigmoid_beta`.
+const INV_Z_CFG: [f32; 2] = [0.4, -0.233_868_08];
 const INV_Z_MASS: [f32; 2] = [0.2, -0.5];
+
+/// The periodic link's `z_β` for the angle `sigmoid_beta` gave at `old`: `π·σ(old) − π/2`, at f64 rounded to f32.
+///
+/// `old` is the stored f32 itself: the old frames held f32 controls, and the old angle is the link at that f32,
+/// widened, not at the decimal it was typed as. (Taking the decimal, as this did before, gives −0.233 868 06 for
+/// `−0.3`, one f32 step from the right −0.233 868 08.)
+fn converted_z_beta(old: f32) -> f32 {
+    use std::f64::consts::{FRAC_PI_2, PI};
+    (PI / (1.0 + (-f64::from(old)).exp()) - FRAC_PI_2) as f32
+}
 
 /// The table's `z` on `chart` at `(s, t)`, and its `z_latent`; `swap` exchanges `q₁` and `q₂` (the control).
 fn defined_z(chart: DecodeChart, st: [f64; 2], swap: bool) -> ([f64; 8], bool) {
@@ -127,6 +140,12 @@ fn defined_z(chart: DecodeChart, st: [f64; 2], swap: bool) -> ([f64; 8], bool) {
 fn check_chart_z(swap: bool) {
     use kernel::chart::Latent;
     use kernel::stage::decode::UniformChart;
+    // The frames' `z_β` are the old frames' angles, converted, not other numbers.
+    assert_eq!(
+        [Z0[1], INV_Z_CFG[1]].map(f32::to_bits),
+        [converted_z_beta(-0.2), converted_z_beta(-0.3)].map(f32::to_bits),
+        "a frame's z_β is not its old angle's periodic value"
+    );
     // The constants above are the harness's: its latent uniform is the frame built from them.
     let frame = Latent {
         z0: Z0,

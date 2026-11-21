@@ -115,7 +115,8 @@ pub fn unit_state(s: &Start) -> Result<Ic<f64>, String> {
     })
 }
 
-/// The recorded rescale: the total mass `M`, the paper's `G`, `C`'s `λ` and its mirror flag.
+/// The recorded rescale: the total mass `M`, the paper's `G` and `C`'s `λ` (`C` has no mirror step, R-865, so the sign
+/// of `L_z` is the paper's).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Rescale {
     /// `M = Σmᵢ` in the paper's units.
@@ -124,8 +125,6 @@ pub struct Rescale {
     pub g: f64,
     /// `λ = I_in^{−1/2}`, `C`'s step 0.
     pub lambda: f64,
-    /// `C` mirrored the state.
-    pub mirrored: bool,
 }
 
 impl Rescale {
@@ -134,10 +133,9 @@ impl Rescale {
         self.g * self.mass * self.mass * self.lambda * e_c
     }
 
-    /// `L_z = ±√G·M^{3/2}·λ^{−1/2}·L_{z,c}`, minus where `C` mirrored.
+    /// `L_z = √G·M^{3/2}·λ^{−1/2}·L_{z,c}`.
     pub fn lz(&self, lz_c: f64) -> f64 {
-        let sign = if self.mirrored { -1.0 } else { 1.0 };
-        sign * self.g.sqrt() * self.mass * self.mass.sqrt() / self.lambda.sqrt() * lz_c
+        self.g.sqrt() * self.mass * self.mass.sqrt() / self.lambda.sqrt() * lz_c
     }
 
     /// `R = 1/λ`.
@@ -194,7 +192,6 @@ pub fn import(s: &Start) -> Result<Imported, String> {
         mass: s.m[0] + s.m[1] + s.m[2],
         g: s.g,
         lambda: ingested.encoded.canonical.lambda,
-        mirrored: ingested.encoded.report.mirrored,
     };
     let canonical = canonical_invariants(&ingested.decoded);
     Ok(Imported {
@@ -609,7 +606,7 @@ impl Tagged {
             })
             .collect();
         format!(
-            "{} [{}]: z = {:?}; ‖D(z) − C(x)‖_phys = {:.3e}; κ = {:.3e}; rescale M = {}, G = {}, λ = {:.12e}, mirrored = {}; \
+            "{} [{}]: z = {:?}; ‖D(z) − C(x)‖_phys = {:.3e}; κ = {:.3e}; rescale M = {}, G = {}, λ = {:.12e}; \
              {}{}",
             self.name,
             self.citation,
@@ -619,7 +616,6 @@ impl Tagged {
             i.rescale.mass,
             i.rescale.g,
             i.rescale.lambda,
-            i.rescale.mirrored,
             parts.join("; "),
             if self.misprinted.is_empty() {
                 String::new()

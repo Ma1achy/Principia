@@ -15,7 +15,7 @@
 //! - (ii) `E` by eq. 4 equals the start's own `½Σmv² − GΣmᵢmⱼ/rᵢⱼ`, and is what the gate compares with.
 //! - (iii) The exact-rest control: zero velocities, so `L_z == 0` and `E == U` exactly, on the start and on `D(z)`.
 //! - (iv) Through the chart: the canonical `D(z)` has its CoM at the origin, `Σmᵢ = 1`, `I = 1`, `Σpᵢ = 0`; its `E`
-//!   and `L_z`, multiplied back by this file's own `(M, G, λ)` and mirror, match eq. 4 and `η·10⁻⁴` within
+//!   and `L_z`, multiplied back by this file's own `(M, G, λ)` (no mirror: `C` keeps `L_z`'s sign), match eq. 4 and `η·10⁻⁴` within
 //!   `literature_import_tol`; `L_z²·|E|/(G²·M⁵)` matches with no factor.
 //! - (v) Points outside region D (eq. 8, `ξ < 0`, `η < 0`) are refused by the gate.
 //! - Column 8 is recorded beside eq. 4 on every row (`col8_comparison.csv`), with RQ-566's examples, and the gate's
@@ -641,7 +641,7 @@ negative_control!(
 // ── (iv) Through the chart ───────────────────────────────────────────────────────────────────────────────────────
 
 /// Every row imported, at this file's own rescale: the canonical `D(z)` is on the section (CoM 0, `Σm = 1`, `I = 1`,
-/// `Σp = 0`); its `E` times `G·M²·λ` and its `L_z` times `±√G·M^{3/2}·λ^{−1/2}` match eq. 4 and `η·10⁻⁴`, and
+/// `Σp = 0`); its `E` times `G·M²·λ` and its `L_z` times `√G·M^{3/2}·λ^{−1/2}` match eq. 4 and `η·10⁻⁴`, and
 /// `L_z²|E|` matches `L_z²|E|/(G²M⁵)` with no factor, each within `literature_import_tol`. `mass_power` is the power
 /// of `M` taken in the energy's factor (2 by §2).
 fn check_through(mass_power: i32) {
@@ -682,13 +682,10 @@ fn check_through(mass_power: i32) {
         let ec = kinetic(x.m, vc) + potential(1.0, x.m, x.r);
         let lc = lz(x.m, x.r, vc);
         let m_tot = 3.0f64;
-        let sign = if i.ingested.encoded.report.mirrored {
-            -1.0
-        } else {
-            1.0
-        };
+        // No sign of this file's own: `C` has no mirror step (TASK-M2-57), so the canonical `L_z` keeps the start's
+        // sign and the factor alone takes it back. Was: negated where the encode reported `mirrored`.
         let e_back = G * m_tot.powi(mass_power) * lambda * ec;
-        let l_back = sign * G.sqrt() * m_tot.powf(1.5) / lambda.sqrt() * lc;
+        let l_back = G.sqrt() * m_tot.powf(1.5) / lambda.sqrt() * lc;
         let (e_paper, l_paper) = (eq4(xi, eta), eta * 1e-4);
         assert!(
             rel(e_back, e_paper) <= k,

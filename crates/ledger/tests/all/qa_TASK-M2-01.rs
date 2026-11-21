@@ -1,14 +1,17 @@
 //! QA tests for TASK-M2-01 on the ledger side (`ledger::links`, `ledger::gen::links`), written from the requirements,
 //! not from the implementation:
 //! - REQ-CHART-032 (dd_generation_root §3.9): the registry covers §3.9's six rows (simplex, bounded σ, bounded tanh,
-//!   positive, symmetric, unbounded), each entry with forward, inverse, log-det, ε clamps and a sampling note; each
+//!   positive, symmetric, unbounded) and the periodic row (`periodic_beta`, the one `β` link), each entry with forward, inverse, log-det, ε clamps and a sampling note; each
 //!   entry's trees, evaluated here by §3.9's own node semantics ("The canonical form of a link's functions"), are the
 //!   formulae §3.9 and dd_decoder §3 write; deleting any member, or any entry, fails generation, naming the entry.
 //! - REQ-GEN-013: a link is selectable for a block control only if its codomain is the control's; each default
-//!   (mass = softmax ∘ μ_max·tanh, config = sigmoid, free momentum = sigmoid) resolves to the named entry, which
-//!   decodes as dd_decoder §3 writes it.
+//!   (mass = softmax ∘ μ_max·tanh, `α` = sigmoid, `β` = the periodic offset, free momentum = sigmoid) resolves to the
+//!   named entry, which decodes as dd_decoder §3 writes it. The three bounded `β` links (`sigmoid_beta`, `tanh_beta`,
+//!   `softsign_beta`) are kept as conversion sources onto the retired `β` interval `(0, π)`, which no block control
+//!   takes, so no slot can select one.
 //! - REQ-GEN-014 (its verify detail, cheap to test as well as review): each block's codomain holds at least two links
-//!   whose sampling notes differ.
+//!   whose sampling notes differ, but `β`'s: the circle has one link, `periodic_beta`, so the property is knowingly not
+//!   met there, and the test pins that exception to `β` alone.
 //! - REQ-DEC-009: the registry's chart constants are μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶,
 //!   δ_λ = 10⁻¹², ε_w = 10⁻¹⁰, register entries; the trees read them by name (changing a constant's value changes
 //!   the formula that names it) and never write one of μ_max, ε, δ_λ, ε_w as a literal.
@@ -213,11 +216,12 @@ fn stick_log_det(z: &[f64], k: &dyn Fn(&str) -> f64) -> f64 {
     log_area([[-ds, ds * not_u, ds * u], [0.0, -s * du, s * du]])
 }
 
-/// An interval's lower end and width at constants `k`: α's (α_min, π/2 − α_min), β's (0, π), q's (−q_max, q_max).
+/// An interval's lower end and width at constants `k`: α's (α_min, π/2 − α_min), the retired β's (0, π), q's
+/// (−q_max, q_max).
 fn interval(c: Codomain, k: &dyn Fn(&str) -> f64) -> (f64, f64) {
     match c {
         Codomain::Alpha => (k("alpha_min"), FRAC_PI_2 - 2.0 * k("alpha_min")),
-        Codomain::Beta => (0.0, PI),
+        Codomain::RetiredBeta => (0.0, PI),
         Codomain::Momentum => (-k("q_max"), 2.0 * k("q_max")),
         _ => unreachable!("not an interval"),
     }
@@ -284,7 +288,8 @@ macro_rules! softsign_doc {
     };
 }
 
-/// §3.9's fourteen entries: its six rows, registered once per block codomain, and its two R-72 definitions.
+/// §3.9's fifteen entries: its six rows, registered once per interval codomain (α, the retired β, the momenta), its
+/// two R-72 definitions, and the periodic `β` link.
 fn docs() -> Vec<Doc> {
     vec![
         Doc {
@@ -304,13 +309,13 @@ fn docs() -> Vec<Doc> {
             log_det: stick_log_det,
         },
         sigmoid_doc!("sigmoid_alpha", Codomain::Alpha, "eps_z"),
-        sigmoid_doc!("sigmoid_beta", Codomain::Beta, "eps_z"),
+        sigmoid_doc!("sigmoid_beta", Codomain::RetiredBeta, "eps_z"),
         sigmoid_doc!("sigmoid_q", Codomain::Momentum, "eps_q"),
         tanh_doc!("tanh_alpha", Codomain::Alpha, "eps_z"),
-        tanh_doc!("tanh_beta", Codomain::Beta, "eps_z"),
+        tanh_doc!("tanh_beta", Codomain::RetiredBeta, "eps_z"),
         tanh_doc!("tanh_q", Codomain::Momentum, "eps_q"),
         softsign_doc!("softsign_alpha", Codomain::Alpha, "eps_z"),
-        softsign_doc!("softsign_beta", Codomain::Beta, "eps_z"),
+        softsign_doc!("softsign_beta", Codomain::RetiredBeta, "eps_z"),
         softsign_doc!("softsign_q", Codomain::Momentum, "eps_q"),
         Doc {
             name: "softplus",
@@ -334,6 +339,15 @@ fn docs() -> Vec<Doc> {
             constraint: Constraint::Unbounded,
             clamp: None,
             forward: |x, _| vec![x[0]],
+            log_det: |_, _| 0.0,
+        },
+        // β = z_β + π/2 on the circle: no clamp, unit slope.
+        Doc {
+            name: "periodic_beta",
+            codomain: Codomain::Beta,
+            constraint: Constraint::Periodic,
+            clamp: None,
+            forward: |x, _| vec![x[0] + FRAC_PI_2],
             log_det: |_, _| 0.0,
         },
     ]
@@ -413,12 +427,19 @@ fn check_entries(registered: &[(Link, Codomain)]) {
         .iter()
         .map(|(l, _)| format!("{:?}", l.constraint))
         .collect();
-    let six: BTreeSet<String> = ["Simplex", "Bounded", "Positive", "Symmetric", "Unbounded"]
-        .iter()
-        .map(|s| s.to_string())
-        .collect();
+    let all_classes: BTreeSet<String> = [
+        "Simplex",
+        "Bounded",
+        "Positive",
+        "Symmetric",
+        "Unbounded",
+        "Periodic",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
     assert_eq!(
-        classes, six,
+        classes, all_classes,
         "the registry's constraints are not §3.9's (entries)"
     );
 }
@@ -584,17 +605,36 @@ negative_control!(
 const SLOTS: [(&str, Codomain, &str); 7] = [
     ("mass", Codomain::Mass, "softmax_tanh"),
     ("alpha", Codomain::Alpha, "sigmoid_alpha"),
-    ("beta", Codomain::Beta, "sigmoid_beta"),
+    ("beta", Codomain::Beta, "periodic_beta"),
     ("q0", Codomain::Momentum, "sigmoid_q"),
     ("q1", Codomain::Momentum, "sigmoid_q"),
     ("q2", Codomain::Momentum, "sigmoid_q"),
     ("q3", Codomain::Momentum, "sigmoid_q"),
 ];
 
+/// The bounded `β` links kept as conversion sources: onto the retired `β` interval, which no slot takes.
+const RETIRED_BETA: [&str; 3] = ["sigmoid_beta", "tanh_beta", "softsign_beta"];
+
 /// Through `pick`, every docs entry is selectable for exactly the slots of its codomain, and is refused for the
-/// others.
+/// others; the retired `β` links, whose codomain is no slot's, are refused for every slot, `beta` included.
 fn check_compat(pick: &dyn Fn(&ledger::links::Slot, &str) -> Result<&'static Link, String>) {
     let docs = docs();
+    for name in RETIRED_BETA {
+        let d = docs.iter().find(|d| d.name == name).expect("a docs entry");
+        assert_eq!(
+            d.codomain,
+            Codomain::RetiredBeta,
+            "`{name}` is not onto the retired β (compat)"
+        );
+        for slot in slots() {
+            assert!(
+                pick(&slot, name).is_err(),
+                "slot `{}` ({:?}) accepted the retired `{name}` (compat)",
+                slot.name,
+                slot.codomain
+            );
+        }
+    }
     for slot in slots() {
         for d in &docs {
             let picked = pick(&slot, d.name);
@@ -667,7 +707,7 @@ fn check_defaults(defaults: &[(&str, &str)]) {
             let want = match slot.codomain {
                 Codomain::Mass => softmax_tanh_doc(&x, &at_chart),
                 Codomain::Alpha => vec![FRAC_PI_2 * sigma(x[0])],
-                Codomain::Beta => vec![PI * sigma(x[0])],
+                Codomain::Beta => vec![x[0] + FRAC_PI_2],
                 _ => vec![chart("q_max") * (2.0 * sigma(x[0]) - 1.0)],
             };
             assert!(
@@ -692,7 +732,7 @@ negative_control!(
     check_defaults(&[
         ("mass", "softmax_tanh"),
         ("alpha", "sigmoid_alpha"),
-        ("beta", "sigmoid_beta"),
+        ("beta", "periodic_beta"),
         ("q0", "tanh_q"),
     ])
 );
@@ -722,8 +762,30 @@ negative_control!(
 
 // ── REQ-GEN-014: two links per block, with differing sampling notes ─────────────────────────────────────────────
 
+/// Every slot's codomain holds two links whose sampling notes differ, but `β`'s. The circle has one link,
+/// `periodic_beta`, so the two-densities property is knowingly not met there: the exception is written here, not read
+/// from the ledger's own list, and is held to exactly that one entry, so a second codomain slipping under two links,
+/// or `β` gaining a link without this test being restated, fails.
 fn check_two_notes(registered: &[(Link, Codomain)]) {
+    assert_eq!(
+        ledger::links::ONE_LINK,
+        [Codomain::Beta].as_slice(),
+        "the codomains excused from two links are not β alone (two notes)"
+    );
+    let onto_beta: Vec<&str> = registered
+        .iter()
+        .filter(|(_, c)| *c == Codomain::Beta)
+        .map(|(l, _)| l.name)
+        .collect();
+    assert_eq!(
+        onto_beta,
+        ["periodic_beta"],
+        "β's one link is not `periodic_beta` (two notes)"
+    );
     for slot in slots() {
+        if slot.codomain == Codomain::Beta {
+            continue;
+        }
         let notes: BTreeSet<&str> = registered
             .iter()
             .filter(|(_, c)| *c == slot.codomain)

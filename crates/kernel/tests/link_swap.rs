@@ -7,7 +7,7 @@
 //!   default selection and two others, T2 holds in physical units, `‖x − D(E(x))‖_phys ≤ ε_phys` at `x = D(z)`, and
 //!   every control encode returns is its registry entry's own inverse of the intermediate it read, bit for bit.
 //! - `link_swap_swaps_both_directions`: swapping one block's link (α's `sigmoid_alpha` for `tanh_alpha`, and every
-//!   block at once) changes the provenance in that block and no other, as the kernel records it, the selection's link
+//!   block with a second link at once, `β` having one, R-919) changes the provenance in that block and no other, as the kernel records it, the selection's link
 //!   ids (`Selection::LINK_IDS`, each its entry's `Link::NAME`); the encode's control of that block changes and no
 //!   other, bit for bit; T2 holds after the swap; and a swap of one direction only, encode under the old link and
 //!   decode under the new, misses `ε_phys`. The provenance as `SimConfig`'s `Links` records it (R-483) and its
@@ -20,8 +20,8 @@
 use kernel::decode::{decode, Ic, Latent};
 use kernel::encode::{encode, Encoded, SimplexClamp};
 use kernel::generated::links::{
-    Defaults, Link, Select, Selection, SigmoidBeta, SigmoidQ, SoftmaxTanh, SoftsignAlpha,
-    StickBreaking, TanhAlpha, TanhBeta, TanhQ,
+    Defaults, Link, PeriodicBeta, Select, Selection, SigmoidQ, SoftmaxTanh, SoftsignAlpha,
+    StickBreaking, TanhAlpha, TanhQ,
 };
 use proptest::prelude::*;
 use validation::negative_control;
@@ -30,10 +30,11 @@ use validation::roundtrip::{eps_phys, phys, trip_with};
 
 /// The defaults with `α`'s link swapped for `tanh_alpha`.
 type AlphaSwapped =
-    Select<SoftmaxTanh, TanhAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<SoftmaxTanh, TanhAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
-/// Every block swapped: the edge-reaching simplex, softsign for `α`, tanh for `β` and the momenta.
-type AllSwapped = Select<StickBreaking, SoftsignAlpha, TanhBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
+/// Every block that has a second link swapped: the edge-reaching simplex, softsign for `α`, tanh for the momenta; `β`
+/// keeps its one link, the periodic one (R-919 Q1 (c)). *Was (TASK-M2-57):* "tanh for `β` and the momenta".
+type AllSwapped = Select<StickBreaking, SoftsignAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 
 /// The latent box the samples come from.
 fn latents() -> impl Strategy<Value = [f64; 8]> {
@@ -179,7 +180,7 @@ where
 fn link_swap_swaps_both_directions() {
     check_swap::<Defaults, AlphaSwapped>(&[1], &[0]);
     check_swap::<AlphaSwapped, Defaults>(&[1], &[0]);
-    check_swap::<Defaults, AllSwapped>(&[0, 1, 2, 3, 4, 5, 6], &[0, 1, 2, 3, 4, 5, 6, 7]);
+    check_swap::<Defaults, AllSwapped>(&[0, 1, 3, 4, 5, 6], &[0, 2, 3, 4, 5, 6, 7]);
 }
 
 negative_control!(

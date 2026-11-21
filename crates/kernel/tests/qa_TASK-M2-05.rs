@@ -52,13 +52,14 @@ impl Fp for f32 {
 }
 
 // Every link family, as in the registry (the default mass link with each angle/momentum family, and the stick-breaking
-// mass link).
+// mass link). β has one link, the periodic one, in every family: the bounded β links are retired and no selection can
+// name them, so the families differ in their α and momentum links.
 type Sigmoids = Defaults;
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
-type Tanhs = Select<SoftmaxTanh, TanhAlpha, TanhBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+type Tanhs = Select<SoftmaxTanh, TanhAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 type Softsigns =
-    Select<StickBreaking, SoftsignAlpha, SoftsignBeta, SoftsignQ, SoftsignQ, SoftsignQ, SoftsignQ>;
+    Select<StickBreaking, SoftsignAlpha, PeriodicBeta, SoftsignQ, SoftsignQ, SoftsignQ, SoftsignQ>;
 
 // ── Fixtures: dyadic charts, so the affine formula is exact at f32 ──────────────────────────────────────────────
 

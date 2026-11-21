@@ -45,13 +45,24 @@
 //! tilt.
 //!
 //! **The serialisation** ([`Saved::to_words`], [`Saved::from_words`]): the definition as [`WORDS`] doubles, by value,
-//! so it reads back bit for bit (R-483 H3); a saved chart carries no links (R-478). The words: the kind (0 oblique,
-//! 1 curved), then `z₀`, `q₁`, `q₂` for an oblique chart, the rest `+0`; or, for a curved one, the parent's registry
+//! so it reads back bit for bit (R-483 H3); a saved chart carries no links (R-478). The words: the kind (2 oblique,
+//! 3 curved), then `z₀`, `q₁`, `q₂` for an oblique chart, the rest `+0`; or, for a curved one, the parent's registry
 //! index, `s`, `τ₁`, `τ₂`, the map (0 Tip as sheet, 1 Lean each axis), `X`, `Y` and the two spans, then the parent's
 //! [`PARAMS`] words ([`ParentParams`]): its form, which of its registry entry's charts it is, then its params, the
 //! rest `+0`. A word list that is not one of these, or holds a non-finite value, reads as `None`; params that are not
 //! the named parent's are refused on reopening. The layout is the kernel's own (applied per R-369); the export format
-//! is REQ-TOOL-065's and REQ-SYS-011's.
+//! is REQ-TOOL-065's and REQ-SYS-011's. *Was (TASK-M2-57):* "the kind (0 oblique, 1 curved)".
+//!
+//! **The version, and an old file converted on load** (R-898, R-919 Q3 (a); REQ-DEC-055; TASK-M2-57). Kinds 0 and 1
+//! are the same layouts written before latent `β` became periodic, their `z_β` made under a retired `β` link
+//! (`crate::decode::retired`); [`Saved::from_words`] refuses them, and [`Saved::load`] reads them, converting each
+//! stored `z_β` once, `z_β′ = L(z_β) − π/2` (R-1020), from the link the file pins (R-516), else from `sigmoid_beta`, the default it
+//! was made under, the assumption reported for the notice on load ([`Loaded::assumed`]). The converted definition
+//! writes the current kinds. The stored `z_β` words: an oblique chart's `z₀[1]`, and a curved chart's frozen `z_β`
+//! where its parent holds one, the invariant charts' `z_cfg[1]` and the mixed charts' `frozen[1]` ([`beta_word`]); no
+//! other parent stores a latent `z_β`. A definition whose plane runs along `z_β`, which the retired link made curved
+//! in the periodic coordinate, is refused rather than approximated by a plane (applied per R-369): an oblique chart
+//! with `q₁[1]` or `q₂[1]` nonzero, a mixed chart with a raw `z_β` axis, a curved chart tilted into `z_β`.
 //!
 //! **The parent's params** ([`ParentParams`]): each value field in declaration order, an enum as its index in
 //! declaration order ([`Mapping`], [`ShapeMap`]), a body or other index as itself; each type-level parameter as a
@@ -72,6 +83,8 @@ use super::mixed;
 use super::shape_sphere::{ShapeMap, ShapeSphere};
 use super::tilt::{narrow, Placement, Shift, Tilt, TiltMap, TiltSpec, Tiltable, Tilted};
 use super::{Chart, REGISTRY};
+#[cfg(not(target_arch = "spirv"))]
+use crate::decode::retired::{RetiredLink, ASSUMED};
 use crate::generated::constants::{SAVED_HEADER_WORDS, SAVED_OBLIQUE_WORDS, SAVED_PARENT_WORDS};
 
 /// The words of a curved chart's header: the kind, the parent's index, `s`, `τ₁`, `τ₂`, the map, `X`, `Y`, the spans
@@ -91,10 +104,19 @@ const OBLIQUE_WORDS: usize = SAVED_OBLIQUE_WORDS;
 
 const _: () = assert!(OBLIQUE_WORDS <= WORDS);
 
-/// A saved chart's kind, its word the index in declaration order.
+/// A saved chart's kind, its word the index in declaration order (the module's note).
 #[derive(Clone, Copy)]
 #[repr(u32)]
 enum Kind {
+    /// An oblique chart written before TASK-M2-57, its `z_β` under a retired link.
+    // Built only by `Saved::load`, which is off the SPIR-V build; the variant stays there so the kinds keep their words
+    // (an index in declaration order), so the SPIR-V build's dead-code lint is allowed on it (R-197).
+    #[cfg_attr(target_arch = "spirv", allow(dead_code))]
+    RetiredOblique,
+    /// A curved chart written before TASK-M2-57, its `z_β` under a retired link.
+    // As `RetiredOblique` (R-197).
+    #[cfg_attr(target_arch = "spirv", allow(dead_code))]
+    RetiredCurved,
     /// An oblique chart.
     Oblique,
     /// A curved chart.
@@ -591,11 +613,17 @@ impl Saved {
     /// or an oblique chart's padding word other than `+0`. A curved chart's params are read on reopening
     /// ([`Curved::open`]).
     pub fn from_words(words: &[f64; WORDS]) -> Option<Self> {
+        Saved::parse(words, Kind::Oblique, Kind::Curved)
+    }
+
+    /// The definition `words` hold, an oblique chart where the kind is `oblique`'s, a curved one where it is
+    /// `curved`'s ([`Saved::from_words`]).
+    fn parse(words: &[f64; WORDS], oblique: Kind, curved: Kind) -> Option<Self> {
         if !words.iter().all(|w| w.is_finite()) {
             return None;
         }
         let kind = words[0].to_bits();
-        if kind == Kind::Oblique.word().to_bits()
+        if kind == oblique.word().to_bits()
             && words[OBLIQUE_WORDS..].iter().all(|w| w.to_bits() == 0)
         {
             let mut v = [[0.0; 8]; 3];
@@ -607,7 +635,7 @@ impl Saved {
                 q1: v[1],
                 q2: v[2],
             }))
-        } else if kind == Kind::Curved.word().to_bits() {
+        } else if kind == curved.word().to_bits() {
             let any = u64::from(u32::MAX) + 1;
             index(words[HEADER], any)?;
             let mut params = [0.0; PARAMS];
@@ -634,6 +662,106 @@ impl Saved {
             None
         }
     }
+}
+
+#[cfg(not(target_arch = "spirv"))]
+impl Saved {
+    /// A saved file's words read (the module's note): a definition of the current kinds as it is; one written before
+    /// TASK-M2-57, kinds 0 and 1, converted from the retired `β` link `pinned`, the link the file pins (R-516), else
+    /// from [`ASSUMED`], `sigmoid_beta`, the assumption reported ([`Loaded::assumed`]). `None` where `words` is no
+    /// definition of either version, or an old one whose plane runs along `z_β` ([`Saved::converted`]).
+    pub fn load(words: &[f64; WORDS], pinned: Option<RetiredLink>) -> Option<Loaded> {
+        if let Some(saved) = Saved::from_words(words) {
+            return Some(Loaded {
+                saved,
+                assumed: None,
+            });
+        }
+        let old = Saved::parse(words, Kind::RetiredOblique, Kind::RetiredCurved)?;
+        let link = pinned.unwrap_or(ASSUMED);
+        Some(Loaded {
+            saved: old.converted(link)?,
+            assumed: pinned.is_none().then_some(link),
+        })
+    }
+
+    /// The definition with each stored `z_β`, made under the retired link `link`, converted to the periodic `β`
+    /// (`z_β′ = link(z_β) − π/2`, at f64; R-1020), everything else as it is; `None` where its plane runs along `z_β` (the module's
+    /// note).
+    pub fn converted(&self, link: RetiredLink) -> Option<Self> {
+        match *self {
+            Saved::Oblique(mut chart) => {
+                if chart.q1[1] != 0.0 || chart.q2[1] != 0.0 {
+                    return None;
+                }
+                chart.z0[1] = link.convert(chart.z0[1]);
+                Some(Saved::Oblique(chart))
+            }
+            Saved::Curved(mut c) => {
+                if let Some(at) = beta_word(&c)? {
+                    c.params[at] = link.convert(c.params[at]);
+                }
+                Some(Saved::Curved(c))
+            }
+        }
+    }
+}
+
+/// What [`Saved::load`] read.
+#[cfg(not(target_arch = "spirv"))]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Loaded {
+    /// The definition, of the current kinds.
+    pub saved: Saved,
+    /// The retired `β` link an old file that pins none was converted from, for the notice on load naming the
+    /// assumption (R-919 Q3 (a)); `None` where the file is of the current kinds or pins its link.
+    pub assumed: Option<RetiredLink>,
+}
+
+#[cfg(not(target_arch = "spirv"))]
+/// The latent index of `z_β`, the hidden coordinate a tilt into `z_β` names on the invariant and mixed charts:
+/// [`mixed::Coordinate::ZBeta`]'s.
+const BETA: u32 = mixed::Coordinate::ZBeta as u32;
+
+#[cfg(not(target_arch = "spirv"))]
+/// The mixed axis code ([`axis_code`]) of a raw `z_β` axis, as a params word holds it: [`BETA`], not derived.
+const RAW_BETA: f64 = BETA as f64;
+
+#[cfg(not(target_arch = "spirv"))]
+/// Where in `c`'s params its parent stores a frozen latent `z_β` (the module's note): `Some(None)` where it stores
+/// none, `None` where its plane runs along `z_β`, a raw `z_β` axis or a tilt into `z_β`, which no conversion keeps
+/// affine. The offsets count the form word: the invariant charts, either form, `[form, z_cfg[0], z_cfg[1], …]`;
+/// `Mixed`, `[form, H, V, frozen…]`; its second form, `[form, A, Q, frozen…]`; its third, `[form, A, frozen…]`.
+fn beta_word(c: &Curved) -> Option<Option<usize>> {
+    let name = REGISTRY.get(c.parent as usize).copied();
+    let form = c.params[0];
+    let at = match name {
+        Some("InvariantLE" | "InvariantLK") => 2,
+        Some("Mixed") if form == f64::from(Form::Own as u32) => {
+            if c.params[1] == RAW_BETA || c.params[2] == RAW_BETA {
+                return None;
+            }
+            4
+        }
+        Some("Mixed") if form == f64::from(Form::Second as u32) => {
+            if c.params[1] == RAW_BETA {
+                return None;
+            }
+            4
+        }
+        Some("Mixed") => {
+            if c.params[1] == RAW_BETA {
+                return None;
+            }
+            3
+        }
+        _ => return Some(None),
+    };
+    let tilted = c.tilt.tau1 != 0.0 || c.tilt.tau2 != 0.0;
+    if tilted && (c.tilt.x == BETA || c.tilt.y == BETA) {
+        return None;
+    }
+    Some(Some(at))
 }
 
 /// The index `x` writes, below `below`: `None` unless `x` is exactly the double of a `u32` below it.

@@ -19,11 +19,11 @@
 //!
 //! **The reference** (Part 4, "One norm for every round trip"; Part 1's T2; Part 8's T2; R-544). `D(E(x))` is `C(x)`
 //! (Part 1's T3), so the second decode is measured against the first where the chart's decode lands on `C`'s section,
-//! and against `C` of it where it does not: the shape sphere chart, which decodes with `C`'s step 3 not taken, so a
-//! lower-hemisphere pixel is its own system, off the section, and `C` mirrors it (`validation::roundtrip`'s
-//! `Against::Canonical`). The chart's decode says which (`FragDecode.on_section`, the kernel's
-//! `FragmentChart::ON_SECTION`); `C(x)` is the generated encode's own (`FragEncoded.canonical`), so no preset names a
-//! chart and nothing of `C` is written by hand.
+//! and against `C` of it where it does not. Every chart's lands on it since TASK-M2-57 took `C`'s mirror step out
+//! (R-865); before then the shape sphere chart decoded with `C`'s step 3 not taken, so a lower-hemisphere pixel was off
+//! the section and `C` mirrored it (`validation::roundtrip`'s `Against::Canonical`). The chart's decode says which
+//! (`FragDecode.on_section`, the kernel's `FragmentChart::ON_SECTION`); `C(x)` is the generated encode's own
+//! (`FragEncoded.canonical`), so no preset names a chart and nothing of `C` is written by hand.
 //!
 //! **Tagged expected** (Part 8: "Legitimate bright regions: clamp boundaries, feasibility edges, the mirror tie —
 //! tagged expected, not bugs"), each read off what the trip itself reports, by [`Class`], in this order:
@@ -31,11 +31,11 @@
 //!   energy target out of reach), so the state is not the pixel's;
 //! - **clamp**: the encode reports `lookup_clamped`, a control past its clamp (notices bits 8 to 15) or the coincident
 //!   inner pair (bit 0; R-13);
-//! - **mirror tie**: the encode reports `lookup_mirrored` (bit 1) on a chart whose decode lands on `C`'s section
-//!   ([`tie_notices`]). There the decoded state has `λ̃_y ≥ 0`, so the mirror fires only where rounding puts `λ̃_y` past
-//!   `−δ_λ`, at the tie (R-82), and `D(E(x))` is the mirror image, measured against `x`. Off the section (the shape
-//!   sphere's lower hemisphere, R-544) the mirror is `C`'s own, not the tie: the residual is measured against `C(x)`,
-//!   which carries it, so the trip is held to `ε_phys` there untagged, and a fault in the block inverses shows red.
+//! - **mirror tie**: the encode reports notices bit 1, `lookup_mirrored`, on a chart whose decode lands on `C`'s section
+//!   ([`tie_notices`]). The encode never sets it since TASK-M2-57 took `C`'s mirror step out (R-865; the bit is
+//!   retired, the others in place), so no pixel takes this class; its code and hue stay so the words view's codes do
+//!   not move. Was: there the decoded state had `λ̃_y ≥ 0`, so the mirror fired only where rounding put `λ̃_y` past
+//!   `−δ_λ`, at the tie (R-82), and `D(E(x))` was the mirror image, measured against `x`.
 //!
 //! **Its colour** (Discipline 1: ROUNDTRIP-red means the same thing every time). The brightness is the residual
 //! log-scaled from `ε_phys`: `b = min(log₂ ρ / SPAN, 1)` for `ρ > 1`, 0 at or below it, [`SPAN`] octaves to full scale.
@@ -73,7 +73,8 @@ pub enum Class {
     Feasibility = 1,
     /// The encode's `lookup_clamped`.
     Clamp = 2,
-    /// The encode's `lookup_mirrored` where the decode lands on `C`'s section: R-82's tie ([`tie_notices`]).
+    /// The encode's `lookup_mirrored` where the decode lands on `C`'s section: R-82's tie ([`tie_notices`]). No pixel
+    /// takes it since TASK-M2-57: the encode never sets the bit (R-865).
     MirrorTie = 3,
     /// A non-finite value among the trip's states or its residual.
     Invalid = 4,
@@ -113,13 +114,13 @@ impl Class {
 /// The notices bits that are `lookup_clamped`: the coincident inner pair (bit 0) and the eight controls (bits 8 to 15).
 pub const CLAMPED: u32 = 0xff01;
 
-/// The notices bit that is `lookup_mirrored`.
+/// The notices bit that was `lookup_mirrored`, retired by TASK-M2-57 (R-865): the encode never sets it.
 pub const MIRRORED: u32 = 2;
 
 /// The encode's notices word as the class reads it: whole where the chart's decode lands on `C`'s section
-/// (`on_section`), so its mirror bit is R-82's tie; with the mirror bit cleared off it (the shape sphere, R-544), where
-/// the mirror is `C`'s own and the residual is measured against `C(x)`. The CPU twin of the view's
-/// `roundtrip_tie_notices`.
+/// (`on_section`), so its mirror bit is R-82's tie; with the mirror bit cleared off it, where the mirror would be `C`'s
+/// own and the residual is measured against `C(x)` (the shape sphere before TASK-M2-57, R-544; no chart since). The CPU
+/// twin of the view's `roundtrip_tie_notices`.
 pub fn tie_notices(notices: u32, on_section: bool) -> u32 {
     if on_section {
         notices

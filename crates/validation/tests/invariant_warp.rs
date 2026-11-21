@@ -57,9 +57,13 @@ const FROZEN: [[f64; 4]; 6] = [
     [-1e-30, 0.6, -2.0, 0.1],
 ];
 
+/// The invariant chart at the configuration `z`, `(z_α, z_β, z_μ₁, z_μ₂)`, its `z_β` written for `sigmoid_beta` and
+/// converted once to `periodic_beta`'s (R-898), so each configuration, and the measurement held, is the one it was.
 fn chart(z: [f64; 4], k_max: f64, gamma_k: f64) -> Invariant<f64> {
+    use kernel::decode::retired::convert;
+    use kernel::generated::links::SigmoidBeta;
     Invariant {
-        z_cfg: [z[0], z[1]],
+        z_cfg: [z[0], convert::<SigmoidBeta, f64>(z[1])],
         z_mass: [z[2], z[3]],
         k_max,
         gamma_k,

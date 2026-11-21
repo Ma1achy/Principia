@@ -12,7 +12,8 @@
 use engine::contract::fast_math::FastMath;
 use engine::decode_dispatch::{decode_only, DecodeStage};
 use engine::synthetic::Synthetic;
-use kernel::generated::links::Defaults;
+use kernel::decode::retired::convert_stored_f32;
+use kernel::generated::links::{Defaults, SigmoidBeta};
 use kernel::stage::decode::{
     BurrauThetaKDefaults, DecodeMode, DecodeOut, DecodeUniforms, DecodeVariant,
     EuclidPlaneDefaults, InvariantLEDefaults, InvariantLKDefaults, LatentDefaults,
@@ -36,15 +37,31 @@ pub fn uniforms(chart: DecodeChart) -> DecodeUniforms {
     };
     let k_max = crate::K_MAX.number() as f32;
     let gamma_k = crate::GAMMA_K.number() as f32;
+    // The frozen `z_β` converted from `sigmoid_beta`, the link it was set under: the stored f32 `−0.3` itself through
+    // the kernel's conversion, rounded once to f32, −0.233 868 08 (TASK-M2-57). It is computed, not typed: the value
+    // typed here before, −0.233 868 06, was the conversion of the decimal −0.3 and one f32 step off. The `(L_z, E)` and
+    // `(L_z, K)` planes do not run along `z_β`, so they are converted, not redefined. Was: `z_cfg[1] = −0.3`.
     let frozen = Invariant {
-        z_cfg: [0.4, -0.3],
+        z_cfg: [0.4, convert_stored_f32::<SigmoidBeta>(-0.3)],
         z_mass: [0.2, -0.5],
         k_max,
         gamma_k,
     };
     let rows = match chart {
+        // The plane runs along `z_β` (`q₁[1]`, `q₂[1]`): redefined as an affine plane in the periodic link's
+        // coordinates, its base point's `z_β` converted from `sigmoid_beta`, `π·σ(−0.2) − π/2` rounded to f32, and its
+        // directions the same numbers, now in radians (R-919 Q2 (b); TASK-M2-57). Was: `z₀[1] = −0.2`.
         DecodeChart::Latent => Latent {
-            z0: [0.3, -0.2, 0.1, -0.4, 0.25, 0.05, 0.2, -0.35],
+            z0: [
+                0.3,
+                convert_stored_f32::<SigmoidBeta>(-0.2),
+                0.1,
+                -0.4,
+                0.25,
+                0.05,
+                0.2,
+                -0.35,
+            ],
             q1: [0.5, 0.2, -0.3, 0.1, 0.0, 0.2, 0.4, -0.1],
             q2: [-0.2, 0.5, 0.2, 0.3, -0.25, 0.1, -0.3, 0.3],
         }

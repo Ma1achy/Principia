@@ -5,8 +5,13 @@
 //! - `encode_beta_half_axis`: `β` on the `−x` half-axis, `λ̃_y = ±0` and `λ̃_x < 0`, is `π̂` by the select, never
 //!   `atan2`'s value, on CPU-f64, CPU-f32 and GPU-f32, `±0` operands included; at `λ̃ = (±0, ±0)` it is 0; and collinear
 //!   states with body 2 on the `−x` side encode on the GPU as on the CPU (R-438; REQ-ENC-007).
-//! - `encode_beta_signed_zero`: `λ̃_x = ±0` with `λ̃_y ≠ 0`: `β` is `π/2` on CPU-f64, CPU-f32 and GPU-f32, Metal's
-//!   `atan2(y, −0)` sign kept out by `beta`'s select (pitfalls §11; REQ-ENC-007).
+//! - `encode_beta_collinear_residue`: collinear states in random gauge, whose rotated `λ̃_y` is a rounding residue of
+//!   either sign, subnormal residues included: where the terms of `C`'s decision are exact the GPU's `β` is `+0` or
+//!   `π̂`, the CPU's bits; where the state is collinear only to rounding the GPU's `β` is on the side CPU-f32's `C`
+//!   decided, never across the seam's two values, 0 and `2π̂` (dd_encode §3.2, "The signed encode of `β`"; REQ-DEC-002).
+//! - `encode_beta_signed_zero`: `λ̃_x = ±0` with `λ̃_y ≠ 0`: `β` is `π/2` where `λ̃_y > 0` and `3π/2` where `λ̃_y < 0`,
+//!   the signed encode (R-865), on CPU-f64, CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `beta`'s
+//!   select (pitfalls §11; REQ-ENC-007).
 //! - `encode_exact_poles`: configurations with `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, `±0` components included: no NaN,
 //!   the output identical on repeat, bit for bit, and on CPU-f64, CPU-f32 and GPU-f32 to the precision (`z` against
 //!   CPU-f32's, the angles and the decoded state against CPU-f64's), the notices identical, and `lookup_clamped` set, the
@@ -28,6 +33,7 @@ use kernel::decode::{decode, Ic, Latent};
 use kernel::encode::{blocks, encode, Encoded};
 use kernel::generated::links::{Defaults, LinkReal};
 use kernel::stage::encode::EncodeOut;
+use validation::decode_f32_eps::SplitMix;
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 
@@ -78,12 +84,12 @@ const EPS32: f64 = f32::EPSILON as f64;
 /// selects and notices are compared exactly.
 const AGREE_EPS: f64 = 64.0;
 
-/// One encode's comparable outputs at any precision: `z`, `α`, `β`, and the notices `(coincident, clamped controls,
-/// mirrored)`.
+/// One encode's comparable outputs at any precision: `z`, `α`, `β`, and the notices `(coincident, clamped controls)`
+/// (no mirror notice: `C` has no mirror step, R-865).
 #[derive(Clone, Debug, PartialEq)]
 struct Out {
     values: Vec<f64>,
-    notices: (bool, u32, bool),
+    notices: (bool, u32),
 }
 
 fn out_of<R: LinkReal + Into<f64>>(e: &Encoded<R>) -> Out {
@@ -96,7 +102,7 @@ fn out_of<R: LinkReal + Into<f64>>(e: &Encoded<R>) -> Out {
             .chain(&[e.blocks.alpha, e.blocks.beta])
             .map(|x| (*x).into())
             .collect(),
-        notices: (r.coincident, r.clamped_controls, r.mirrored),
+        notices: (r.coincident, r.clamped_controls),
     }
 }
 
@@ -109,7 +115,7 @@ fn out_of_gpu(o: &EncodeOut) -> Out {
             .chain(&[o.alpha, o.beta])
             .map(|x| f64::from(*x))
             .collect(),
-        notices: (r.coincident, r.clamped_controls, r.mirrored),
+        notices: (r.coincident, r.clamped_controls),
     }
 }
 
@@ -322,13 +328,243 @@ negative_control!(
     }
 );
 
+// ── encode_beta_collinear_residue (REQ-DEC-002; dd_encode §3.2, "The signed encode of β") ──────────────────────
+
+/// `2^e` at f32, `e` in the normal range.
+fn pow2(e: i32) -> f32 {
+    f32::from_bits(((e + 127) as u32) << 23)
+}
+
+/// The exact collinear states' number, and the rounded ones'.
+const EXACT: usize = 2000;
+const ROUNDED: usize = 2000;
+
+/// Collinear f32 states in a random rational gauge whose terms of `C`'s decision, `ρ × Λ` and `ρ · Λ`, are exact, as
+/// `crates/kernel/tests/beta_case.rs` builds them (the bodies at `tᵢ·(a, b) + o` in few-bit integers and quarters,
+/// times a power of two; one in four turned only `2⁻⁴⁰` to `2⁻⁵⁰` off `±x`, two masses in five with `m₂` at `2⁻⁹⁰` and
+/// `2⁻¹²⁰`, where the rotated `λ̃_y`'s residue is subnormal); with body 2 off the pair's centre of mass, so no state is
+/// at the `α = 0` pole.
+fn exact_states() -> Vec<Ic<f32>> {
+    let mut rng = SplitMix::new(0x0057_e2c0);
+    let mut int = move |lo: i32, hi: i32| lo + (rng.next_u64() % (hi - lo + 1) as u64) as i32;
+    (0..EXACT)
+        .map(|n| {
+            let m = match n % 5 {
+                0 => [0.25, 0.25, 0.5],
+                1 => [0.5, 0.25, 0.25],
+                2 => [0.125, 0.375, 0.5],
+                3 => [0.5, 0.5, pow2(-90)],
+                _ => [0.5, 0.5, pow2(-120)],
+            };
+            let mut nonzero = || {
+                let v = int(1, 15);
+                if int(0, 1) == 0 {
+                    v
+                } else {
+                    -v
+                }
+            };
+            let (a, b) = (nonzero(), nonzero());
+            let t0 = int(-16, 16);
+            let t1 = (t0 + 16 + int(1, 32)) % 33 - 16;
+            // Body 2 off the pair's centre of mass, M₀₁t₂ ≠ m₀t₀ + m₁t₁, exact in f32 on these few bits.
+            let t2 = loop {
+                let t = int(-16, 16);
+                if (m[0] + m[1]) * t as f32 != m[0] * t0 as f32 + m[1] * t1 as f32 {
+                    break t;
+                }
+            };
+            let o = [int(-8, 8), int(-8, 8)];
+            let k = pow2(int(-30, 30));
+            let flat = if n % 4 == 3 { pow2(-int(40, 50)) } else { 1.0 };
+            let at = |t: i32| {
+                [
+                    (t as f32 * 0.25 * a as f32 + o[0] as f32) * k,
+                    (t as f32 * 0.25 * b as f32 + o[1] as f32) * k * flat,
+                ]
+            };
+            let q = |j: i32| 0.125 * (j % 5 - 2) as f32;
+            Ic {
+                m,
+                r: [at(t0), at(t1), at(t2)],
+                p: [[q(t0), q(t1)], [q(t2), q(a)], [q(b), q(o[0])]],
+            }
+        })
+        .collect()
+}
+
+/// States collinear only to rounding: f64 collinear states, random masses, the bodies at random places on a line with
+/// body 2 at least 0.1 from the pair's centre of mass, turned by a random angle, moved and scaled, then rounded to f32.
+fn rounded_states() -> Vec<Ic<f32>> {
+    let mut rng = SplitMix::new(0x0057_5eed);
+    (0..ROUNDED)
+        .map(|_| {
+            let mut u = |lo: f32, hi: f32| f64::from(rng.uniform(lo, hi));
+            let w = [u(0.2, 1.2), u(0.2, 1.2), u(0.2, 1.2)];
+            let total: f64 = w.iter().sum();
+            let (t0, t1) = (u(-1.0, -0.2), u(0.2, 1.0));
+            let com = (w[0] * t0 + w[1] * t1) / (w[0] + w[1]);
+            let off = u(0.1, 1.5);
+            let t2 = if u(0.0, 1.0) < 0.5 {
+                com + off
+            } else {
+                com - off
+            };
+            let (s, c) = u(-3.2, 3.2).sin_cos();
+            let (o, k) = ([u(-2.0, 2.0), u(-2.0, 2.0)], u(0.1, 10.0));
+            narrow(&Ic {
+                m: w.map(|x| x / total),
+                r: [t0, t1, t2].map(|t| [(t * c + o[0]) * k, (t * s + o[1]) * k]),
+                p: [0; 3].map(|_| [u(-0.5, 0.5), u(-0.5, 0.5)]),
+            })
+        })
+        .collect()
+}
+
+/// What the residue check measured.
+#[derive(Debug, Default)]
+struct Residues {
+    /// The CPU's float `λ̃_y` above 0, below 0, and subnormal and nonzero, on the exact states.
+    exact: [usize; 3],
+    /// Rounded states decided below with the CPU's float `λ̃_y` not below 0, and decided above with it below 0.
+    disagree: [usize; 2],
+    /// The backends' `β` apart on the circle, the worst, in f32 eps of a radian.
+    worst: f64,
+}
+
+/// One backend's `β`, `betas`, on the exact states then the rounded ones, against CPU-f32's `C` and encode on the same
+/// inputs. The criteria, written before the first run:
+/// - an exact state is decided on the axis, and the backend's `β` is the CPU's bits: `+0` with body 2 ahead of the
+///   pair, `π̂` with it behind;
+/// - a rounded state's `β` is on the side CPU-f32's `C` decided: decided below, in `[π̂ − 1 ulp, 2π̂]` and above `3π/2`
+///   where body 2 is decided ahead; decided above, in `[+0, π̂]` and below `π/2` where it is ahead; decided on the
+///   axis, the CPU's bits;
+/// - the inputs put the residue to the test: on the exact states the CPU's float `λ̃_y` is above 0 on some, below 0 on
+///   others and subnormal and nonzero on some; among the rounded states some are decided below with a float `λ̃_y` not
+///   below 0, and some above with one below 0.
+///
+/// Measured and printed, not asserted: how far apart on the circle the backends' `β` are, which is their rotations'
+/// rounding over `‖λ̃‖`, not a case.
+fn check_residue(betas: &[f32], states: &[Ic<f32>], backend: &str) -> Residues {
+    assert_eq!(betas.len(), states.len(), "β for every state on {backend}");
+    let pi = f32::from_bits(0x4049_0FDA);
+    let tau = pi + pi;
+    let turn = std::f64::consts::TAU;
+    let mut seen = Residues::default();
+    for (n, (b, x)) in betas.iter().zip(states).enumerate() {
+        let cpu = encode::<Defaults, f32>(x);
+        let (signs, y) = (cpu.canonical.signs, cpu.canonical.lambda_t_y);
+        let ahead = !(signs.x_negative | signs.x_zero);
+        let d = (f64::from(*b) - f64::from(cpu.blocks.beta)).abs() % turn;
+        seen.worst = seen.worst.max(d.min(turn - d) / EPS32);
+        if n < EXACT {
+            seen.exact[0] += usize::from(y > 0.0);
+            seen.exact[1] += usize::from(y < 0.0);
+            seen.exact[2] += usize::from(y != 0.0 && y.abs() < f32::MIN_POSITIVE);
+            assert!(
+                signs.y_zero && !signs.x_zero,
+                "exact state {n} is not decided on the axis and off the pole: {signs:?}"
+            );
+        }
+        if signs.y_zero {
+            let want = if signs.x_negative { pi } else { 0.0 };
+            assert!(
+                b.to_bits() == want.to_bits() && cpu.blocks.beta.to_bits() == want.to_bits(),
+                "β = {b:e} on {backend} and {:e} on CPU-f32, not {want:e}, on the other side of a state decided on \
+                 the axis, state {n} (CPU float λ̃_y = {y:e}): {x:?}",
+                cpu.blocks.beta
+            );
+        } else if signs.y_negative {
+            seen.disagree[0] += usize::from(y >= 0.0);
+            assert!(
+                *b >= pi.next_down() && *b <= tau && (!ahead || f64::from(*b) > 0.75 * turn),
+                "β = {b:e} on {backend} is on the other side of a state decided below, state {n} (CPU β = {:e}, \
+                 float λ̃_y = {y:e}): {x:?}",
+                cpu.blocks.beta
+            );
+        } else {
+            seen.disagree[1] += usize::from(y < 0.0);
+            assert!(
+                b.to_bits() != (-0.0f32).to_bits()
+                    && *b >= 0.0
+                    && *b <= pi
+                    && (!ahead || f64::from(*b) < 0.25 * turn),
+                "β = {b:e} on {backend} is on the other side of a state decided above, state {n} (CPU β = {:e}, \
+                 float λ̃_y = {y:e}): {x:?}",
+                cpu.blocks.beta
+            );
+        }
+    }
+    assert!(
+        seen.exact.iter().all(|k| *k > 0) && seen.disagree.iter().all(|k| *k > 0),
+        "the residue of λ̃_y is not put to the test: {seen:?}"
+    );
+    seen
+}
+
+/// The exact states, then the rounded ones.
+fn residue_states() -> Vec<Ic<f32>> {
+    let mut states = exact_states();
+    states.extend(rounded_states());
+    states
+}
+
+#[test]
+fn encode_beta_collinear_residue() {
+    let h = harness();
+    let states = residue_states();
+    let outs = gpu_encode(&h, &states);
+    let betas: Vec<f32> = outs.iter().map(|o| o.beta).collect();
+    let seen = check_residue(&betas, &states, "GPU-f32");
+    // The notices are the CPU's on every state: β's case sets none, the circle having no edge to clamp at.
+    for (n, (o, x)) in outs.iter().zip(&states).enumerate() {
+        let cpu = EncodeOut::of(&encode::<Defaults, f32>(x));
+        assert_eq!(
+            (o.report.coincident, o.report.clamped_controls),
+            (cpu.report.coincident, cpu.report.clamped_controls),
+            "the notices differ at state {n}"
+        );
+    }
+    let info = h.adapter_info();
+    eprintln!(
+        "encode_beta_collinear_residue: {EXACT} exact collinear states (the CPU's float λ̃_y above 0 on {}, below on \
+         {}, subnormal on {}), β the CPU's bits on every one; {ROUNDED} collinear to rounding ({} decided below with a \
+         float λ̃_y not below 0, {} above with one below 0), β on the decided side on every one; the backends' β at \
+         most {:.1} f32 eps of a radian apart on the circle (measured), on {} ({:?})",
+        seen.exact[0],
+        seen.exact[1],
+        seen.exact[2],
+        seen.disagree[0],
+        seen.disagree[1],
+        seen.worst,
+        info.name,
+        info.backend
+    );
+}
+
+negative_control!(
+    encode_beta_collinear_residue,
+    "the superseded encode, β's case read off the rotated float λ̃, lands across the seam wherever the residue \
+     disagrees with the decision and must fail",
+    expected = "on the other side of a state decided",
+    {
+        let states = residue_states();
+        let betas: Vec<f32> = states
+            .iter()
+            .map(|x| blocks::beta(blocks::jacobi(&kernel::canon::canonicalise(x).ic).lambda_t))
+            .collect();
+        check_residue(&betas, &states, "the superseded encode");
+    }
+);
+
 // ── encode_beta_signed_zero (REQ-ENC-007; pitfalls §11) ─────────────────────────────────────────────────────────
 
-/// `β`'s limit off `π/2`, in f32 eps of `π/2` (applied per R-369, a test tolerance): a backend reading `λ̃_x = −0`'s
-/// sign turns `β` by `π`, `2²³` eps; WGSL's `atan2` is not correctly rounded, and 4 eps leaves it room.
+/// `β`'s limit off `π/2` or `3π/2`, in f32 eps of it (applied per R-369, a test tolerance): a backend reading
+/// `λ̃_x = −0`'s sign turns `β` by `π`, `2²³` eps; WGSL's `atan2` is not correctly rounded, and 4 eps leaves it room.
 const SIGNED_ZERO_EPS: f64 = 4.0;
 
-/// The `y` axis's operands, `λ̃_x` each sign of zero, `λ̃_y` of each sign from 3 to the smallest normal: `β = π/2`.
+/// The `y` axis's operands, `λ̃_x` each sign of zero, `λ̃_y` of each sign from 3 to the smallest normal: `β = π/2`
+/// above, `3π/2` below.
 fn y_axis() -> Vec<[f32; 2]> {
     let mut pairs = Vec::new();
     for y in [3.0f32, 1.0, -1.0, 0.5, 1e-3, -1e-20, f32::MIN_POSITIVE] {
@@ -338,7 +574,8 @@ fn y_axis() -> Vec<[f32; 2]> {
     pairs
 }
 
-/// `β` is `π/2` within [`SIGNED_ZERO_EPS`] `eps` of it at each operand; returns the worst miss in `eps`.
+/// `β` is `π/2` where `λ̃_y > 0` and `3π/2` where `λ̃_y < 0`, the signed encode (R-865), within [`SIGNED_ZERO_EPS`]
+/// `eps` of it at each operand; returns the worst miss in `eps`.
 fn check_y_axis<R: LinkReal>(betas: &[R], pairs: &[[f32; 2]], eps: f64, backend: &str) -> f64 {
     assert_eq!(
         betas.len(),
@@ -351,10 +588,15 @@ fn check_y_axis<R: LinkReal>(betas: &[R], pairs: &[[f32; 2]], eps: f64, backend:
     let mut worst = 0.0f64;
     for (b, pair) in betas.iter().zip(pairs) {
         let b = b.to_f64().unwrap();
-        let err = (b - quarter).abs() / (eps * quarter);
+        let (want, name) = if pair[1] < 0.0 {
+            (3.0 * quarter, "3π/2")
+        } else {
+            (quarter, "π/2")
+        };
+        let err = (b - want).abs() / (eps * want);
         assert!(
             err <= SIGNED_ZERO_EPS,
-            "β = {b:e}, not π/2 ({err:.3e} eps), on the y axis at {pair:?} on {backend}"
+            "β = {b:e}, not {name} ({err:.3e} eps), on the y axis at {pair:?} on {backend}"
         );
         worst = worst.max(err);
     }
@@ -395,20 +637,29 @@ fn encode_beta_signed_zero() {
     );
     let info = h.adapter_info();
     eprintln!(
-        "encode_beta_signed_zero: worst GPU-f32 β {worst:.2} f32 eps of π/2 on {} ({:?})",
+        "encode_beta_signed_zero: worst GPU-f32 β {worst:.2} f32 eps of π/2 or 3π/2 on {} ({:?})",
         info.name, info.backend
     );
 }
 
 negative_control!(
     encode_beta_signed_zero,
-    "β from Metal's atan2 with λ̃_x's zero sign kept, which turns β by π at λ̃_x = −0, must fail",
+    "β from Metal's atan2 with λ̃_x's zero sign kept, which turns β by π at λ̃_x = −0, wrapped onto [0, 2π̂] as the \
+     signed encode wraps, must fail",
     expected = "not π/2",
     {
         let pairs = y_axis();
+        let tau = std::f32::consts::PI + std::f32::consts::PI;
         let betas: Vec<f32> = pairs
             .iter()
-            .map(|[x, y]| metal_atan2(y.abs(), *x))
+            .map(|[x, y]| {
+                let a = metal_atan2(*y, *x);
+                if a < 0.0 {
+                    a + tau
+                } else {
+                    a
+                }
+            })
             .collect();
         check_y_axis(&betas, &pairs, EPS32, "Metal's atan2");
     }
@@ -458,7 +709,7 @@ fn pole_states() -> Vec<(Ic<f64>, &'static str)> {
 /// One pole's encode at one precision: `lookup_clamped` set, `α` the pole's (0, or `π/2` to rounding), `β` 0 by the
 /// select at `‖λ̃‖ = 0`, the coincident notice iff `‖ρ̃‖ = 0`, and no NaN.
 fn check_pole(o: &Out, kind: &str, at: &str) {
-    let (coincident, controls, _) = o.notices;
+    let (coincident, controls) = o.notices;
     assert!(
         coincident || controls != 0,
         "lookup_clamped is not set at {kind}, {at}"

@@ -20,12 +20,13 @@
 //!   `‖λ̃‖² = I(1 − n₀)/2`, `ρ̃` at `φ_f`, `λ̃` at `φ_f + atan2(q, p)`; at `n₀ = ±1` with `±0` in `n₁`, `n₂` the `atan2` term
 //!   is `+0` and `ψ = φ_f` (R-437). The gate's fixture holds the register's bound (`shape_sphere_roundtrip_qa_gate_json`).
 //!   `Φ` is the decode's blocks (its `masses`, `config` and `momentum`), not its `ic`, which is `C`'s (below).
-//! - REQ-CHART-020, R-141 (`shape_sphere_canonical_fold_qa`): `C(Φ(s, t))` is at `(θ, π − φ)` on the lower hemisphere,
-//!   at `(θ, φ)` on the upper, and at the default gauge (`I = 1`, `φ_f = 0`) an upper-hemisphere `Φ` is on `C`'s section,
-//!   so `C` leaves it.
+//! - REQ-CHART-020 (`shape_sphere_canonical_fold_qa`): `C(Φ(s, t))` is at its own signed point `(θ, φ)` on both
+//!   hemispheres, a lower-hemisphere point keeping `n₂ < 0`: `C` has no mirror step, so nothing is folded onto the upper
+//!   hemisphere; and at the default gauge (`I = 1`, `φ_f = 0`) `Φ` is on `C`'s section on either hemisphere, so `C`
+//!   leaves it. (While `C` mirrored, this test asserted the fold, `(θ, π − φ)` below the equator; its name is kept.)
 //! - dd_decoder §2, §3.3, §3.5, §3.6; REQ-CHART-020, R-544 (`shape_sphere_decode_canonical_qa`,
 //!   `shape_sphere_energy_norm_qa`): the decode's `ic` is canonical, `G = M = I = 1`, at any chart `I` and on both
-//!   hemispheres, with `C`'s step 3, the mirror, not taken (R-544): the CoM at rest at the origin, `I = 1`, `ρ` on
+//!   hemispheres, nothing mirrored (`C` has no mirror step): the CoM at rest at the origin, `I = 1`, `ρ` on
 //!   `+x`, `λ̃_y` keeping `n₂`'s sign, the masses `m_fixed`, the shape the signed `n(u, v)`, the energy `√I·E(Φ)` and
 //!   `|L_z|` `I^{−1/4}·|L_z(Φ)|` (§3.5's similarity), the descriptor read from it; `η_E`'s entry decodes the chart's
 //!   signed shape, with no target as the chart's own decode, with `E*` at the same positions and energy `E*`.
@@ -56,6 +57,8 @@
 use std::path::Path;
 
 use kernel::canon::canonicalise;
+#[cfg(feature = "controls")]
+use kernel::canon::reflect;
 use kernel::chart::shape_sphere::{exponential, inverse, spherical, ShapeMap, ShapeSphere};
 use kernel::chart::{self, Chart};
 use kernel::decode::energy_norm::{self, Outcome};
@@ -1003,14 +1006,14 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-020, R-141: Φ then C ─────────────────────────────────────────────────────────────────────────────────
+// ── REQ-CHART-020: Φ then C ────────────────────────────────────────────────────────────────────────────────────────
 
 type CanonFn = fn(&Ic<f64>) -> Ic<f64>;
 
-/// `C(Φ(s, t))` on random spherical charts: on the lower hemisphere (`t < ½`) its shape is the map's point at
-/// `(s, 1 − t)`, which is `(θ, π − φ)`; on the upper it is `(s, t)`'s own; within `shape_roundtrip_bound`. At the
-/// default gauge `I = 1`, `φ_f = 0`, an upper-hemisphere `Φ` is on `C`'s section, so `C` leaves its positions. Returns
-/// the worst.
+/// `C(Φ(s, t))` on random spherical charts: its shape is the map's own signed point at `(s, t)` on both hemispheres,
+/// within `shape_roundtrip_bound`, a lower-hemisphere point (`t < ½`) staying below the equator: `C` has no mirror
+/// step, so no point is folded to `(θ, π − φ)`. At the default gauge `I = 1`, `φ_f = 0`, `Φ` is on `C`'s section on
+/// either hemisphere, so `C` leaves its positions. Returns the worst.
 fn check_fold(canon: CanonFn) -> f64 {
     let mut rng = SplitMix::new(0x2141);
     let (mut worst, mut lower): (f64, u32) = (0.0, 0);
@@ -1024,19 +1027,15 @@ fn check_fold(canon: CanonFn) -> f64 {
         let phi = chart_phi(&chart, s, t);
         let c = canon(&phi);
         let got = shape(c.r, c.m);
-        let want = if t < 0.5 {
-            lower += 1;
-            spherical(s, 1.0 - t, PI)
-        } else {
-            spherical(s, t, PI)
-        };
+        let want = spherical(s, t, PI);
+        lower += u32::from(t < 0.5);
         let miss = dist(got, want);
         assert!(
             miss <= ROUNDTRIP,
-            "C(Φ({s}, {t})) is at {got:?}, not the fold's {want:?} ({miss:e})"
+            "C(Φ({s}, {t})) is at {got:?}, not its own signed point {want:?} ({miss:e})"
         );
         worst = worst.max(miss);
-        if k % 2 == 0 && t > 0.5 {
+        if k % 2 == 0 {
             let size = phi.r.iter().flatten().fold(1.0f64, |k, x| k.max(x.abs()));
             let moved = (0..3)
                 .flat_map(|b| (0..2).map(move |x| (b, x)))
@@ -1045,7 +1044,7 @@ fn check_fold(canon: CanonFn) -> f64 {
                 / size;
             assert!(
                 moved <= ROUNDTRIP,
-                "at the default gauge C moves the upper-hemisphere Φ({s}, {t}) by {moved:e}"
+                "at the default gauge C moves Φ({s}, {t}) by {moved:e}"
             );
         }
     }
@@ -1059,19 +1058,44 @@ fn shape_sphere_canonical_fold_qa() {
     eprintln!("shape_sphere_canonical_fold_qa: worst {w:.3e}");
 }
 
+// The control's defect is the retired mirror step, rebuilt here on `C`'s output: it folds every lower-hemisphere
+// point to `(θ, π − φ)`. (The earlier control, `Φ` with no `C` at all, cannot fail the restated property: the shape
+// does not depend on the gauge.)
 negative_control!(
     shape_sphere_canonical_fold_qa,
-    "without C the lower hemisphere stays put, off the fold's point, so it must fail",
-    expected = "not the fold's",
+    "a C with the mirror step left in folds the lower hemisphere onto the upper, off its own point, so it must fail",
+    expected = "not its own signed point",
     {
-        check_fold(|ic| *ic);
+        check_fold(|ic| {
+            let c = canonicalise(ic);
+            reflect(&c.ic, c.lambda_t_y < 0.0)
+        });
     }
 );
 
-// ── dd_decoder §2, §3.5, R-544: the decode hands the integrator C(Φ), step 3 not taken, canonical ──────────────────
+mod fold_moves_section {
+    use super::*;
+    negative_control!(
+        shape_sphere_canonical_fold_qa,
+        "a C that turns the state a little off its section moves a Φ already on it, so it must fail",
+        expected = "at the default gauge C moves",
+        {
+            check_fold(|ic| {
+                let c = canonicalise(ic).ic;
+                let (sn, cs) = 1e-9f64.sin_cos();
+                Ic {
+                    r: c.r.map(|v| [cs * v[0] - sn * v[1], sn * v[0] + cs * v[1]]),
+                    ..c
+                }
+            });
+        }
+    );
+}
+
+// ── dd_decoder §2, §3.5: the decode hands the integrator C(Φ), nothing mirrored, canonical ─────────────────────────
 
 /// The canonical section's identities (`I = 1`, the CoM, `ρ_y`, `Σp`) and §3.5's scalings of `E` and `L_z`: `C`'s
-/// rotation, mirror and scale, a few roundings each, against the state's own size (applied per R-369, a test decision).
+/// rotation and scale, a few roundings each, against the state's own size (applied per R-369, a test decision).
 const CANON_TOL: f64 = 64.0 * EPS;
 
 /// `|n₂|` above which `λ̃_y`'s sign is asserted to be `n₂`'s: with `ρ` on `+x`, `n₂ = 2ρ̃ₓλ̃_y` at `I = 1` (§3.1), so the
@@ -1111,7 +1135,7 @@ type DecodedFn = fn(&ShapeSphere<f64>, f64, f64) -> Decoded<f64>;
 
 /// The decode's `ic` on random charts of both maps, `I ∈ [¼, 4]`, both hemispheres drawn, is canonical in
 /// `G = M = I = 1` (dd_decoder §2, §3.3, §3.5): the CoM at the origin and at rest, `I = 1`, `ρ = r₁ − r₀` on `+x`,
-/// `λ̃_y` of `n₂`'s sign (`C`'s mirror not taken, R-544), the masses the blocks' `m_fixed`, its shape the signed
+/// `λ̃_y` of `n₂`'s sign (nothing mirrored), the masses the blocks' `m_fixed`, its shape the signed
 /// `n(u, v)` within `shape_roundtrip_bound`, and §3.5's similarity of `Φ`'s state, `ℓ = √I`: `E = ℓ·E(Φ)`,
 /// `|L_z| = ℓ^{−½}·|L_z(Φ)|`. Its descriptor is read from that `ic` (§3.6): `rho_mag² + lambda_mag² = 1`,
 /// `K₀ + V₀ = E`. Returns the worst relative miss of the identities.
@@ -1237,13 +1261,14 @@ mod decode_mirrored {
     use super::*;
     negative_control!(
         shape_sphere_decode_canonical_qa,
-        "R-141's gauge left in, C's mirror step run on the decode, puts the lower hemisphere at λ̃_y > 0, so it must fail",
+        "the retired mirror step run on the decode puts the lower hemisphere at λ̃_y > 0, so it must fail",
         expected = "C's mirror step is taken",
         {
             check_decode_canonical(|c, u, v| {
                 let d = c.decode::<Defaults, f64>(u, v);
+                let k = canonicalise(&d.ic);
                 Decoded {
-                    ic: canonicalise(&d.ic).ic,
+                    ic: reflect(&k.ic, k.lambda_t_y < 0.0),
                     ..d
                 }
             });

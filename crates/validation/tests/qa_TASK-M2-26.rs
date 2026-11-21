@@ -6,20 +6,26 @@
 //!   (`qa_m226_tags_follow_what_the_trip_reports`): the ROUNDTRIP class of a trip is read off what the trip itself
 //!   reports. Over foreign physical states (random scale, offset, orientation and parity, including extreme mass ratios
 //!   and momenta that push a control past its clamp), each encoded by the one encode (`kernel::encode::encode`, f32,
-//!   default links): `Class::of` on the encode's notices word as read on a chart whose decode lands on `C`'s section
-//!   (`tie_notices(notices, true)`, the whole word, where `lookup_mirrored` is R-82's tie): where the report says
-//!   `lookup_clamped` and not `lookup_mirrored` the class is the clamp tag; `lookup_mirrored` and not clamped, the
-//!   mirror-tie tag; both, one of those two; neither, untagged. Where either decode's tag word is any `DEGENERATE`
-//!   reason, the class is the feasibility tag whatever the encode reports; a non-finite trip is invalid. Each of the
-//!   clamped-only, mirrored-only and plain cases is reached. Control: a class function blind to the mirror bit.
-//! - Inverse-encode contract Part 4 ("One norm for every round trip"), Part 1's T3 (`D(E(x)) = C(x)`), R-544 and R-82
+//!   default links): `Class::of` on the encode's notices word as the preset reads it (`tie_notices(notices, true)`,
+//!   the whole word): where the report says `lookup_clamped` the class is the clamp tag; otherwise untagged. `C` has
+//!   no mirror step since TASK-M2-57, so no trip reports a mirror: the retired `lookup_mirrored` bit of the notices word
+//!   is set on no state, and no state is tagged mirror tie, the lower-half states (`λ̃_y < 0` after `C`, which the
+//!   mirror step used to reflect) among them. Where either decode's tag word is any `DEGENERATE` reason, the class is
+//!   the feasibility tag whatever the encode reports; a non-finite trip is invalid. Each of the clamped, plain and
+//!   plain lower-half cases is reached. Control: a notices word with the retired bit set on every lower-half state, as
+//!   the mirror step set it, which tags them mirror tie. *Was:* where the report said `lookup_mirrored` and not
+//!   clamped, the mirror-tie tag (R-82's tie); control: a class function blind to the mirror bit.
+//! - Inverse-encode contract Part 4 ("One norm for every round trip") and Part 1's T3 (`D(E(x)) = C(x)`)
 //!   (`qa_m226_shape_sphere_lower_hemisphere_untagged_within_eps_phys`): the shape sphere chart decodes each pixel as
-//!   its own system, off `C`'s section in the lower hemisphere, so there the encode's mirror is `C`'s own, not R-82's
-//!   tie. Over a grid of the chart's lower hemisphere (CPU twin, f32, default links), every sample the encode mirrors
-//!   and does not clamp, with no `DEGENERATE` tag, is untagged and its residual, measured against `C(D(z))`, within
-//!   `ε_phys`; and the mirror is real there (the residual against `D(z)` itself is past `ε_phys`), so the check bites.
-//!   No sample anywhere on the sphere is tagged mirror tie. Control: the twin read as if on the section, which tags the
-//!   lower hemisphere mirror tie.
+//!   its own system through the one decode path, a lower-hemisphere pixel kept below the axis (`λ̃_y < 0`), on `C`'s
+//!   section like every chart. Over a grid of the chart's lower hemisphere (CPU twin, f32, default links), every
+//!   sample that does not clamp, with no `DEGENERATE` tag, is below the axis, is untagged, and its residual, measured
+//!   against `D(z)` itself, is within `ε_phys`: the trip returns the pixel's own system, not its mirror image. The two
+//!   differ there (the residual against the mirror image of `D(z)` is past `ε_phys`), so the check bites. No sample
+//!   anywhere on the sphere is tagged mirror tie or sets the retired bit. Control: the encode's `z_β` folded onto the
+//!   upper half (`z_β → π − z_β`, the retired mirror step on `β`), which sends the lower hemisphere's trips off `D(z)`.
+//!   *Was:* the lower hemisphere off `C`'s section, the encode's mirror `C`'s own, the residual against `C(D(z))`;
+//!   control: the twin read as if on the section, tagging the lower hemisphere mirror tie.
 //! - REQ-RENDER-025 ("log-scaled", "dark everywhere except … tagged expected"; colour_composition §6, Discipline 1:
 //!   "ROUNDTRIP-red means the same thing every time") (`qa_m226_colour_is_log_scaled_and_red_only_untagged`): an
 //!   untagged trip within `ε_phys` is black; past it, its red rises by the same step for every doubling of the residual
@@ -113,79 +119,87 @@ fn state(rng: &mut Rng, kind: u32) -> Ic<f32> {
 
 // ── The class follows what the trip reports ─────────────────────────────────────────────────────────────────────────
 
-fn check_tags(class_of: fn(bool, u32, u32, u32) -> Class) {
+/// `word` is the notices word the class reads, from the encode's own and whether the state is in the lower half
+/// (`λ̃_y < 0` after `C`): the encode's own word in the test.
+fn check_tags(word: fn(u32, bool) -> u32) {
     let mut rng = Rng(0x2026_0226);
-    let (mut clamped_only, mut mirrored_only, mut plain, mut both) = (0, 0, 0, 0);
+    let (mut clamped, mut plain, mut plain_lower, mut lower) = (0, 0, 0, 0);
     for i in 0..4000u32 {
         let x = state(&mut rng, i % 4);
         let e = kernel::encode::encode::<Defaults, f32>(&x);
-        let notices = kernel::stage::encode::notices(&e.report);
-        let (cl, mi) = (e.report.lookup_clamped(), e.report.lookup_mirrored());
-        let got = class_of(true, 0, 0, roundtrip::tie_notices(notices, true));
-        match (cl, mi) {
-            (true, false) => {
-                clamped_only += 1;
-                assert_eq!(got, Class::Clamp, "state {i}: clamped, not tagged clamp");
-            }
-            (false, true) => {
-                mirrored_only += 1;
-                assert_eq!(
-                    got,
-                    Class::MirrorTie,
-                    "state {i}: mirrored, not tagged mirror tie"
-                );
-            }
-            (true, true) => {
-                both += 1;
-                assert!(
-                    matches!(got, Class::Clamp | Class::MirrorTie),
-                    "state {i}: clamped and mirrored, tagged {got:?}"
-                );
-            }
-            (false, false) => {
-                plain += 1;
-                assert_eq!(
-                    got,
-                    Class::Untagged,
-                    "state {i}: nothing reported, tagged {got:?}"
-                );
-            }
+        let own = kernel::stage::encode::notices(&e.report);
+        assert_eq!(
+            own & roundtrip::MIRRORED,
+            0,
+            "state {i}: the encode set the retired lookup_mirrored bit"
+        );
+        let below = e.canonical.lambda_t_y < 0.0;
+        lower += usize::from(below);
+        let notices = word(own, below);
+        let cl = e.report.lookup_clamped();
+        let got = Class::of(true, 0, 0, roundtrip::tie_notices(notices, true));
+        assert_ne!(
+            got,
+            Class::MirrorTie,
+            "state {i}: tagged mirror tie, which no trip reports (λ̃_y = {:e})",
+            e.canonical.lambda_t_y
+        );
+        if cl {
+            clamped += 1;
+            assert_eq!(got, Class::Clamp, "state {i}: clamped, not tagged clamp");
+        } else {
+            plain += 1;
+            plain_lower += usize::from(below);
+            assert_eq!(
+                got,
+                Class::Untagged,
+                "state {i}: nothing reported, tagged {got:?}"
+            );
         }
         // A DEGENERATE decode on either side is the feasibility tag, whatever the encode reported.
         for reason in 1..=5u32 {
             assert_eq!(
-                class_of(true, reason, 0, notices),
+                Class::of(true, reason, 0, notices),
                 Class::Feasibility,
                 "state {i}: first decode tag {reason}"
             );
             assert_eq!(
-                class_of(true, 0, reason, notices),
+                Class::of(true, 0, reason, notices),
                 Class::Feasibility,
                 "state {i}: free decode tag {reason}"
             );
         }
         assert_eq!(
-            class_of(false, 0, 0, notices),
+            Class::of(false, 0, 0, notices),
             Class::Invalid,
             "state {i}: a non-finite trip"
         );
     }
-    println!("qa_m226_tags: clamped only {clamped_only}, mirrored only {mirrored_only}, both {both}, plain {plain}");
-    assert!(clamped_only > 0, "no state reached a clamp alone");
-    assert!(mirrored_only > 0, "no state was mirrored alone");
+    println!(
+        "qa_m226_tags: clamped {clamped}, plain {plain} ({plain_lower} in the lower half), lower half {lower}"
+    );
+    assert!(clamped > 0, "no state reached a clamp");
     assert!(plain > 0, "no state was plain");
+    assert!(
+        plain_lower > 0 && plain_lower < plain,
+        "the plain states do not reach both halves: {plain_lower} of {plain} in the lower half"
+    );
 }
 
 #[test]
 fn qa_m226_tags_follow_what_the_trip_reports() {
-    check_tags(Class::of);
+    check_tags(|notices, _| notices);
 }
 
 negative_control!(
     qa_m226_tags_follow_what_the_trip_reports,
-    "a class blind to the mirror bit misses the mirror tie",
-    expected = "not tagged mirror tie",
-    check_tags(|f, t, tf, n| Class::of(f, t, tf, n & !roundtrip::MIRRORED))
+    "a notices word with the retired mirror bit set on the lower-half states, as the mirror step set it, tags them",
+    expected = "tagged mirror tie",
+    check_tags(|notices, below| if below {
+        notices | roundtrip::MIRRORED
+    } else {
+        notices
+    })
 );
 
 // ── The colour ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -307,18 +321,43 @@ negative_control!(
     check_variants(&[("bring_up", true), ("roundtrip", true)])
 );
 
-// ── The shape sphere's lower hemisphere: C's own mirror, not the tie ────────────────────────────────────────────────
+// ── The shape sphere's lower hemisphere: the pixel's own system, not its mirror image ───────────────────────────────
 
-fn check_shape_sphere(on_section: bool) {
+/// `‖x − D(z)‖_phys` over `ε_phys`, `z` the encode of `x` at f32, default links; with `fold`, `z_β` folded onto the
+/// upper half first where it lies in the lower (`z_β > π/2`, so `β = z_β + π/2 > π`): `z_β → π − z_β`, the mirror's
+/// map on `β`, the retired mirror step.
+fn trip(x: &Ic<f32>, fold: bool) -> f64 {
+    let mut z = kernel::encode::encode::<Defaults, f32>(x).z;
+    if fold && z.z[1] > std::f32::consts::FRAC_PI_2 {
+        z.z[1] = std::f32::consts::PI - z.z[1];
+    }
+    let back = kernel::decode::decode::<Defaults, f32>(&z).ic;
+    roundtrip::ratio(validation::roundtrip::phys(
+        &validation::roundtrip::widen(x),
+        &validation::roundtrip::widen(&back),
+    ))
+}
+
+/// `x` reflected in the `x` axis, positions and momenta: its mirror image.
+fn mirror_image(x: &Ic<f32>) -> Ic<f32> {
+    Ic {
+        m: x.m,
+        r: x.r.map(|v| [v[0], -v[1]]),
+        p: x.p.map(|v| [v[0], -v[1]]),
+    }
+}
+
+fn check_shape_sphere(fold: bool) {
     use kernel::chart::ShapeSphere;
     use kernel::stage::decode::{sample_with, tag, UniformChart};
+    use kernel::stage::fragment::FragmentChart;
     let side = 48u32;
     let scene =
         validation::decode_preset::Scene::new(DecodeChart::ShapeSphere, [1, 1], 1, 20, &[[0, 0]])
             .unwrap();
     let u = scene.uniforms;
     let chart = ShapeSphere::<f32>::from_uniform(&u.chart);
-    let (mut lower_mirrored, mut real_mirror) = (0usize, 0usize);
+    let (mut lower, mut real_mirror) = (0usize, 0usize);
     for j in 0..side {
         for i in 0..side {
             let uv = [
@@ -327,44 +366,70 @@ fn check_shape_sphere(on_section: bool) {
             ];
             let out = sample_with::<ShapeSphere<f32>, Defaults, f32>(&chart, uv[0], uv[1], None);
             let first = tag(out.degenerate);
-            // The shape sphere is off C's section: the twin as the preset reads it.
-            let t = validation::roundtrip_preset::twin_of(&out.ic, first, on_section);
+            // The twin as the preset reads the shape sphere.
+            let t = validation::roundtrip_preset::twin_of(
+                &out.ic,
+                first,
+                <ShapeSphere<f32> as FragmentChart>::ON_SECTION,
+            );
             assert_ne!(
                 t.class,
                 Class::MirrorTie,
-                "shape sphere sample {uv:?}: tagged mirror tie, off R-82's band"
+                "shape sphere sample {uv:?}: tagged mirror tie"
+            );
+            assert_eq!(
+                t.notices & roundtrip::MIRRORED,
+                0,
+                "shape sphere sample {uv:?}: the retired lookup_mirrored bit set"
             );
             let clamped = t.notices & roundtrip::CLAMPED != 0;
-            if uv[1] < 0.5 && t.notices & roundtrip::MIRRORED != 0 && !clamped && t.tags == 0 {
-                lower_mirrored += 1;
+            if uv[1] < 0.5 && !clamped && t.tags == 0 {
+                lower += 1;
+                let e = kernel::encode::encode::<Defaults, f32>(&out.ic);
+                assert!(
+                    e.canonical.lambda_t_y < 0.0,
+                    "lower hemisphere sample {uv:?}: λ̃_y = {:e}, not kept below the axis",
+                    e.canonical.lambda_t_y
+                );
                 assert_eq!(
                     t.class,
                     Class::Untagged,
-                    "lower hemisphere sample {uv:?}: mirrored by C and tagged"
+                    "lower hemisphere sample {uv:?}: tagged"
                 );
+                let own = trip(&out.ic, fold);
+                if !fold {
+                    assert_eq!(
+                        own.to_bits(),
+                        t.ratio().to_bits(),
+                        "lower hemisphere sample {uv:?}: the twin's residual is not the trip's against D(z)"
+                    );
+                }
                 assert!(
-                    t.ratio() <= 1.0,
-                    "lower hemisphere sample {uv:?}: {} ε_phys against C(D(z)), past ε_phys",
-                    t.ratio()
+                    own <= 1.0,
+                    "lower hemisphere sample {uv:?}: {own} ε_phys against D(z), past ε_phys"
                 );
-                // The mirror is real: against D(z) itself the trip is far off.
-                let raw = validation::roundtrip_preset::twin_of(&out.ic, first, true);
-                if raw.ratio() > 1.0 {
+                // The mirror image is another system: against it the trip is far off.
+                let back = kernel::decode::decode::<Defaults, f32>(&e.z).ic;
+                let against_image = roundtrip::ratio(validation::roundtrip::phys(
+                    &validation::roundtrip::widen(&mirror_image(&out.ic)),
+                    &validation::roundtrip::widen(&back),
+                ));
+                if against_image > 1.0 {
                     real_mirror += 1;
                 }
             }
         }
     }
     println!(
-        "qa_m226_shape_sphere: {lower_mirrored} lower-hemisphere samples mirrored by C, {real_mirror} past ε_phys against D(z)"
+        "qa_m226_shape_sphere: {lower} unclamped lower-hemisphere samples, {real_mirror} past ε_phys against the mirror image of D(z)"
     );
     assert!(
-        lower_mirrored * 4 > (side * side) as usize,
-        "too few lower-hemisphere samples mirrored by C: {lower_mirrored}"
+        lower * 4 > (side * side) as usize,
+        "too few unclamped lower-hemisphere samples: {lower}"
     );
     assert!(
-        real_mirror * 2 > lower_mirrored,
-        "the mirror is not visible against D(z): {real_mirror} of {lower_mirrored}"
+        real_mirror * 2 > lower,
+        "the mirror image is not told from D(z): {real_mirror} of {lower}"
     );
 }
 
@@ -375,7 +440,7 @@ fn qa_m226_shape_sphere_lower_hemisphere_untagged_within_eps_phys() {
 
 negative_control!(
     qa_m226_shape_sphere_lower_hemisphere_untagged_within_eps_phys,
-    "the shape sphere read as if on C's section tags its lower hemisphere mirror tie",
-    expected = "tagged mirror tie",
+    "the encode's z_β folded onto the upper half, the retired mirror step, sends the lower hemisphere off D(z)",
+    expected = "ε_phys against D(z), past ε_phys",
     check_shape_sphere(true)
 );

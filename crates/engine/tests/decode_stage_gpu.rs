@@ -164,19 +164,19 @@ fn check_identities(ic: &Ic<f32>, at: &str) {
     assert!(err <= INERTIA_EPS, "I − 1 = {err} eps at {at}");
 }
 
-/// Test 3 on one output, in the canonical frame: `ρ̃` on `+x` (`r₁ − r₀` with `y` exactly 0, `x ≥ 0`), `λ̃_y ≥ 0`;
-/// `α ∈ [0, π/2]` as `rho_mag = cos α` and `lambda_mag = sin α` on `[0, 1]`, each read back from the emitted `(m, r)`, so
-/// to the reconstruction's rounding, the `I = 1` bound [`INERTIA_EPS`]; `β ∈ [0, π]` as `rho_angle` on `[0, π̂]`, exactly,
-/// its value selected (dd_decoder §3.6); and `|p_λ| = |(q₂, q₃)| ≤ q_max`.
+/// Test 3 on one output, in the canonical frame: `ρ̃` on `+x` (`r₁ − r₀` with `y` exactly 0, `x ≥ 0`), `λ̃_y` of either
+/// sign (no mirror step, R-865); `α ∈ [0, π/2]` as `rho_mag = cos α` and `lambda_mag = sin α` on `[0, 1]`, each read
+/// back from the emitted `(m, r)`, so to the reconstruction's rounding, the `I = 1` bound [`INERTIA_EPS`]; `β` as
+/// `rho_angle` on `[−π̂, π̂]`, exactly, its value selected (dd_decoder §3.6's `(−π, π]`); and `|p_λ| = |(q₂, q₃)| ≤
+/// q_max`. *Was:* `λ̃_y ≥ 0` and `rho_angle` on `[0, π̂]`, under the mirror step.
 fn check_ranges(out: &DecodeOut<f32>, at: &str) {
-    let [r0, r1, r2] = out.ic.r;
+    let [r0, r1, _] = out.ic.r;
     assert_eq!(
         r1[1].to_bits(),
         r0[1].to_bits(),
         "ρ̃ is not on the x axis at {at}"
     );
     assert!(r1[0] >= r0[0], "ρ̃ points along −x at {at}");
-    assert!(r2[1] >= r0[1], "λ̃_y < 0 at {at}");
     let d = &out.descriptor;
     for (what, x) in [("rho_mag", d.rho_mag), ("lambda_mag", d.lambda_mag)] {
         let top = 1.0 + INERTIA_EPS * EPS;
@@ -187,8 +187,8 @@ fn check_ranges(out: &DecodeOut<f32>, at: &str) {
     }
     let pi = pi_image::<f32>();
     assert!(
-        (0.0..=pi).contains(&d.rho_angle),
-        "β = rho_angle = {} is outside [0, π̂] at {at}",
+        (-pi..=pi).contains(&d.rho_angle),
+        "β = rho_angle = {} is outside [−π̂, π̂] at {at}",
         d.rho_angle
     );
     let q_max = <f32 as ChartConstants>::Q_MAX;

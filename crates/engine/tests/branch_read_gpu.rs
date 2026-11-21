@@ -65,7 +65,9 @@ fn check_canon(sample: usize) {
         operand_words(&states[1]),
         "a state's operands are not its bits"
     );
-    assert_eq!(read::CANON_WORDS, 40);
+    // 38: the slot of λ̃'s signs, its outcome and two `Wide`s, last, after the 33 words the other slots keep. Those
+    // signs choose the encode's case of β and are decided in `C`, so the read-back carries them.
+    assert_eq!(read::CANON_WORDS, 38);
     assert_eq!(BRANCH_READ_CANON_ENTRY, "stage_branch_read_canon");
 }
 

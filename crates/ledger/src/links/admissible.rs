@@ -316,9 +316,9 @@ pub fn constraint<F: Fl>(
     }
 }
 
-/// An interval codomain's closed bounds at `F`, as the emitter writes them: `α`'s and `β`'s upper ends are π/2 and π
-/// images, rounded toward zero at f32, the momenta's `±q_max` at the active value; a line's are infinite and the
-/// half-line's lower end 0.
+/// An interval codomain's closed bounds at `F`, as the emitter writes them: `α`'s and the retired `β`'s upper ends are
+/// π/2 and π images, rounded toward zero at f32, the momenta's `±q_max` at the active value; a line's and the circle's
+/// are infinite (the circle has no edge: its angle is read modulo its period, R-898) and the half-line's lower end 0.
 pub fn bounds<F: Fl>(codomain: Codomain, values: &Values) -> (f64, f64) {
     let at = |v: f64| F::lit(v).f64();
     match codomain {
@@ -326,13 +326,13 @@ pub fn bounds<F: Fl>(codomain: Codomain, values: &Values) -> (f64, f64) {
             let a = values.get("alpha_min");
             (at(a), (F::lit(FRAC_PI_2) - F::lit(a)).f64())
         }
-        Codomain::Beta => (0.0, at(PI)),
+        Codomain::RetiredBeta => (0.0, at(PI)),
         Codomain::Momentum => {
             let q = at(values.get("q_max"));
             (-q, q)
         }
         Codomain::HalfLine => (0.0, f64::INFINITY),
-        Codomain::Mass | Codomain::RealLine => (f64::NEG_INFINITY, f64::INFINITY),
+        Codomain::Mass | Codomain::Beta | Codomain::RealLine => (f64::NEG_INFINITY, f64::INFINITY),
     }
 }
 

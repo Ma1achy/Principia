@@ -18,14 +18,14 @@ use kernel::chart::mixed::ZBeta;
 use kernel::chart::physical::{ratio_masses, MixedMassRatio};
 use kernel::chart::{Chart, ValidationResult};
 use kernel::generated::links::{
-    Defaults, Link, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
+    Defaults, Link, LinkParams, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ,
     StickBreaking,
 };
 use validation::negative_control;
 
 /// The selection with `stick_breaking` on the mass block.
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 type Ratio<S> = MixedMassRatio<ZBeta, S, f64>;
 

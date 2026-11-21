@@ -13,13 +13,13 @@
 use kernel::decode::degenerate::Degenerate;
 use kernel::decode::mass::{self, Masses};
 use kernel::generated::links::{
-    Defaults, Link, LinkReal, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
+    Defaults, Link, LinkReal, PeriodicBeta, Select, SigmoidAlpha, SigmoidQ, StickBreaking,
 };
 use proptest::prelude::*;
 use validation::{negative_control, prop};
 
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 trait Fp: LinkReal + std::fmt::Debug {
     fn of(x: f64) -> Self;

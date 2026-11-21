@@ -1,0 +1,11 @@
+{
+  "description": "R-176 (R-1018), β flags nothing: the same draws, fewer of them, with every collinear state's z_β clamp bit set as a clamp on β would set it, so the check that no lookup_clamped bit is set by β must fail.",
+  "seed": 1,
+  "samples": 2000,
+  "radius": 4.0,
+  "encode": "defaults",
+  "shift": 0.0,
+  "shapes": 2000,
+  "beta_clamp": true,
+  "expected": "fail"
+}

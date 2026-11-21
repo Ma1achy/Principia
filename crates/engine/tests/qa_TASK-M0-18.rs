@@ -68,7 +68,7 @@ fn render() -> RenderState {
 /// TASK-M2-37, the chart's axis mappings, both `warped` by default, `mapping` sorting before `window` (R-471 E2;
 /// REQ-CHART-068).
 const SIM_TEXT: &str =
-    "{\"chart\":{\"mapping\":[\"warped\",\"warped\"],\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}},\"collision\":{},\"horizon\":{\"t\":0},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"sigmoid_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\
+    "{\"chart\":{\"mapping\":[\"warped\",\"warped\"],\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}},\"collision\":{},\"horizon\":{\"t\":0},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"periodic_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\
 \"plane\":{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]},\"quality\":{},\"slice\":{\"frame\":{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5}}}";
 const RENDER_TEXT: &str = "{\"debug_view\":false,\"hover\":{\"at\":null},\
@@ -125,7 +125,7 @@ validation::negative_control!(
     expected = "is not its groups in byte order",
     check_skeleton(
         "{\"chart\":{\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]},\"mapping\":[\"warped\",\"warped\"]},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{\"frame\":{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5}},\
-\"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"sigmoid_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\"integrator\":{},\
+\"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"periodic_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\"integrator\":{},\
 \"kernel_variant\":\"physics\",\"horizon\":{\"t\":0},\"collision\":{},\"quality\":{}}",
         RENDER_TEXT
     )

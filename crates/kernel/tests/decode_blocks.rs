@@ -119,7 +119,7 @@ fn dec<S: Selection, R: P>() -> Dec<R> {
 
 /// The default selection with the `stick_breaking` mass link.
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 /// Both mass links' decoders at `R`, named.
 fn both<R: P>() -> [(&'static str, Dec<R>); 2] {
@@ -308,7 +308,7 @@ impl Link<2, 3> for ReferenceOne {
 }
 
 #[cfg(feature = "controls")]
-type WithMass<L> = Select<L, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+type WithMass<L> = Select<L, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 negative_control!(
     decode_mass_equal_at_zero,
@@ -1128,11 +1128,12 @@ negative_control!(
 /// The tolerance of `‖ρ̃‖ = ‖λ̃‖` at the golden IC and of `‖ρ̃‖² + ‖λ̃‖² = 1`, in `eps`.
 const SPHERE_EPS: f64 = 4.0;
 
-/// `z = 0`: `α = π/4` and `β = π/2` (each `(π/2)·½` and `π·½`, exact at `R`), `‖ρ̃‖ = ‖λ̃‖`, `I = 1`.
+/// `z = 0`: `α = π/4` and `β = π/2` (`(π/2)·½`, and `0 + π̂/2` under the offset link, R-1020, each exact at `R`),
+/// `‖ρ̃‖ = ‖λ̃‖`, `I = 1`.
 fn check_golden<R: P>(d: Dec<R>) {
+    let half = R::one() / R::of(2.0);
     let m = (d.mass)([R::zero(), R::zero()]);
     let c = (d.config)([R::zero(), R::zero()], &m);
-    let half = R::one() / R::of(2.0);
     assert_eq!(
         c.alpha,
         R::LIT_6 * half,
@@ -1192,7 +1193,7 @@ negative_control!(
     "an α link of width π must fail the golden α",
     expected = "z = 0: α is not π/4",
     check_golden(dec::<
-        Select<SoftmaxTanh, WideAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>,
+        Select<SoftmaxTanh, WideAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>,
         f64,
     >())
 );
@@ -1367,7 +1368,7 @@ fn check_inverse<R: P>(decs: &[(&str, Dec<R>)], worst: &Worst) {
                 ("|R̃ − 1|", (r_t - 1.0).abs()),
                 ("|ρ̃_y|", rho_t[1].abs()),
                 ("|Δα|", (alpha - c.alpha.f()).abs()),
-                ("sin α·|Δβ|", c.alpha.f().sin() * wrapped(beta - c.beta.f())),
+                ("sin α·|Δβ|", c.alpha.f().sin() * wrapped(beta, c.beta.f())),
             ];
             for (what, e) in errs {
                 let e = e / R::eps();
@@ -1386,12 +1387,14 @@ fn decode_reconstruct_inverse() {
     worst.print("decode_reconstruct_inverse");
 }
 
-/// `|d|` for an angle difference `d`, wrapped into `[0, π]`: β's recovered value is `atan2`'s, in `(−π, π]`. With
-/// R-417's f32 image of π rounded toward zero (TASK-M2-30), a saturated `β` stays at or below π and the wrap changes
-/// nothing; with the round-to-nearest image, f32's saturated `β = fl(π)` lies past π, `λ̃_y` is negative and `atan2`
-/// gives a value near `−π`, which the wrap folds back. So the check holds under either constant.
-fn wrapped(d: f64) -> f64 {
-    d.sin().atan2(d.cos()).abs()
+/// The angle between the recovered `β`, `atan2`'s in `(−π, π]`, and the decoder's `b`, wrapped into `[0, π]`: latent
+/// `β` is periodic, `β = z_β + π/2` read modulo `2π` (R-898, R-1020), so `b` may lie anywhere on the line, `±1e38` included, and the
+/// difference is taken between the two points on the circle, `b` read through its own `cos` and `sin` as the decoder
+/// reads it, never by subtracting `b` itself, whose size would swallow `atan2`'s value.
+fn wrapped(recovered: f64, b: f64) -> f64 {
+    let (sr, cr) = recovered.sin_cos();
+    let (sb, cb) = b.sin_cos();
+    (sr * cb - cr * sb).atan2(cr * cb + sr * sb).abs()
 }
 
 /// The reconstruction with body 2 reflected through the inner pair's CoM: `r₂ = −M₀₁λ`.

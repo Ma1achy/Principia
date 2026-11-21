@@ -4,7 +4,10 @@
 //! its negative control (R-176).
 //!
 //! Every selection the registry offers one block at a time is exercised: the default selection and, per block, each
-//! other entry onto that block's codomain (two mass links, three each for `α`, `β` and the momenta: 7 swaps).
+//! other entry onto that block's codomain (two mass links, three each for `α` and the momenta: 5 swaps). `β` takes
+//! one link since TASK-M2-57, the periodic one, so no selection swaps it: the test asserts the registry offers `β`
+//! exactly that entry, and that none of the three retired `β` links is an entry onto any block's codomain. Was: three
+//! `β` links and 7 swaps.
 //!
 //! - `qa_link_swap_t2_every_registry_link` (property, `validation::prop`, `CASES`): under each selection, at
 //!   `x = D_S(z)`, encode's eight controls are, bit for bit, the selection's registry inverses of the intermediates it
@@ -15,6 +18,9 @@
 //!   swap of one direction only, in either order (encode under one selection, decode under the other), misses
 //!   `ε_phys`, while the swap of both holds T2.
 //!
+//! - `qa_link_swap_covers_the_registrys_swaps`: the swaps the two tests above exercise are every one the registry
+//!   offers, `β`'s one entry is `periodic_beta`, and no retired `β` link is an entry onto any block's codomain.
+//!
 //! It lives in `validation`'s tests, which may use `kernel` and `engine` both: `kernel` may not depend on `engine`,
 //! not even as a dev-dependency (systems_architecture §7, R-187; `cargo xtask deps`).
 //!
@@ -24,18 +30,17 @@ use engine::contract::sim_config::Links;
 use kernel::decode::{decode, Latent};
 use kernel::encode::{encode, Encoded, SimplexClamp};
 use kernel::generated::links::{
-    Defaults, Link, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
-    SoftsignAlpha, SoftsignBeta, SoftsignQ, StickBreaking, TanhAlpha, TanhBeta, TanhQ,
+    Defaults, Link, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ, SoftmaxTanh,
+    SoftsignAlpha, SoftsignQ, StickBreaking, TanhAlpha, TanhQ,
 };
 use proptest::prelude::*;
 use validation::negative_control;
 use validation::prop::run;
 use validation::roundtrip::{eps_phys, phys};
 
-type WMass<M> = Select<M, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
-type WAlpha<A> = Select<SoftmaxTanh, A, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
-type WBeta<B> = Select<SoftmaxTanh, SigmoidAlpha, B, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
-type WMom<Q> = Select<SoftmaxTanh, SigmoidAlpha, SigmoidBeta, Q, Q, Q, Q>;
+type WMass<M> = Select<M, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+type WAlpha<A> = Select<SoftmaxTanh, A, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+type WMom<Q> = Select<SoftmaxTanh, SigmoidAlpha, PeriodicBeta, Q, Q, Q, Q>;
 
 fn bits(v: [f64; 8]) -> [u64; 8] {
     v.map(f64::to_bits)
@@ -91,8 +96,6 @@ fn qa_link_swap_t2_every_registry_link() {
         t2::<WMass<StickBreaking>>(z)?;
         t2::<WAlpha<TanhAlpha>>(z)?;
         t2::<WAlpha<SoftsignAlpha>>(z)?;
-        t2::<WBeta<TanhBeta>>(z)?;
-        t2::<WBeta<SoftsignBeta>>(z)?;
         t2::<WMom<TanhQ>>(z)?;
         t2::<WMom<SoftsignQ>>(z)
     });
@@ -100,15 +103,16 @@ fn qa_link_swap_t2_every_registry_link() {
 
 negative_control!(
     qa_link_swap_t2_every_registry_link,
-    "controls read through softsign while the selection's β link is tanh are not its registry inverses",
+    "controls read through softsign while the selection's α link is tanh are not its registry inverses",
     expected = "encode's controls are not the registry inverses",
     {
+        // On `α` since `β` has one link (was: `β`'s tanh against its softsign).
         let z = [0.3, -0.9, 0.4, -0.2, 0.6, -0.5, 0.2, 0.7];
-        let x = decode::<WBeta<TanhBeta>, f64>(&Latent::new(z)).ic;
-        let e = encode::<WBeta<SoftsignBeta>, f64>(&x);
+        let x = decode::<WAlpha<TanhAlpha>, f64>(&Latent::new(z)).ic;
+        let e = encode::<WAlpha<SoftsignAlpha>, f64>(&x);
         assert_eq!(
             bits(e.z.z),
-            bits(registry_inverses::<WBeta<TanhBeta>>(&e)),
+            bits(registry_inverses::<WAlpha<TanhAlpha>>(&e)),
             "encode's controls are not the registry inverses"
         );
     }
@@ -181,13 +185,64 @@ where
     );
 }
 
+/// The registry entries onto `slot`'s codomain, as `ledger::links` lists them.
+fn entries(slot: &str) -> Vec<&'static str> {
+    let codomain = ledger::links::slots()
+        .into_iter()
+        .find(|s| s.name == slot)
+        .unwrap_or_else(|| panic!("the registry has no slot {slot}"))
+        .codomain;
+    ledger::links::registered()
+        .iter()
+        .filter(|(_, c)| *c == codomain)
+        .map(|(l, _)| l.name)
+        .collect()
+}
+
+/// The swaps above are every one the registry offers: per block, `others` are its entries besides the default's, and
+/// `β`'s only entry is `beta`. No retired `β` link is an entry onto any block's codomain, so none can be swapped in.
+fn check_registry_swaps(beta: &str) {
+    let others = |slot: &str, default: &str| -> Vec<&str> {
+        entries(slot)
+            .into_iter()
+            .filter(|n| *n != default)
+            .collect()
+    };
+    assert_eq!(
+        others("mass", SoftmaxTanh::NAME),
+        [StickBreaking::NAME],
+        "the mass swaps tested are not the registry's"
+    );
+    assert_eq!(
+        others("alpha", SigmoidAlpha::NAME),
+        [TanhAlpha::NAME, SoftsignAlpha::NAME],
+        "the α swaps tested are not the registry's"
+    );
+    assert_eq!(
+        others("q0", SigmoidQ::NAME),
+        [TanhQ::NAME, SoftsignQ::NAME],
+        "the momenta swaps tested are not the registry's"
+    );
+    assert_eq!(
+        entries("beta"),
+        [beta],
+        "the registry's β entries are not the one periodic link"
+    );
+    for slot in ["mass", "alpha", "beta", "q0", "q1", "q2", "q3"] {
+        for retired in ["sigmoid_beta", "tanh_beta", "softsign_beta"] {
+            assert!(
+                !entries(slot).contains(&retired),
+                "the retired {retired} is an entry onto {slot}'s codomain"
+            );
+        }
+    }
+}
+
 #[test]
 fn qa_link_swap_provenance_and_directions() {
     check_swap::<WMass<StickBreaking>>("mass", &[6, 7]);
     check_swap::<WAlpha<TanhAlpha>>("alpha", &[0]);
     check_swap::<WAlpha<SoftsignAlpha>>("alpha", &[0]);
-    check_swap::<WBeta<TanhBeta>>("beta", &[1]);
-    check_swap::<WBeta<SoftsignBeta>>("beta", &[1]);
     check_swap::<WMom<TanhQ>>("momenta", &[2, 3, 4, 5]);
     check_swap::<WMom<SoftsignQ>>("momenta", &[2, 3, 4, 5]);
 }
@@ -197,4 +252,16 @@ negative_control!(
     "a swap to the defaults' own links changes no provenance",
     expected = "the swap's provenance changed",
     check_swap::<WAlpha<SigmoidAlpha>>("alpha", &[0])
+);
+
+#[test]
+fn qa_link_swap_covers_the_registrys_swaps() {
+    check_registry_swaps(PeriodicBeta::NAME);
+}
+
+negative_control!(
+    qa_link_swap_covers_the_registrys_swaps,
+    "the retired sigmoid_beta is not the registry's β entry",
+    expected = "the registry's β entries are not the one periodic link",
+    check_registry_swaps("sigmoid_beta")
 );

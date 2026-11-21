@@ -181,9 +181,7 @@ pub struct Notices {
     pub projected: Option<Constraint>,
     /// Layer 2's clamp, naming the constraint the entry failed.
     pub clamped: Option<Constraint>,
-    /// `lookup_mirrored`.
-    pub mirrored: bool,
-    /// `λ`, `lookup_rescaled`'s value.
+    /// `λ`, `lookup_rescaled`'s value. (`lookup_mirrored` went with `C`'s mirror step, R-865.)
     pub lambda: f64,
     /// `M`, the entered masses' sum, the mass unit the entry was carried from to the section's `M = 1` (Part 6, "The
     /// physical form's masses"): with `λ`, the multiply-back's factor (REQ-ENC-014).
@@ -1063,7 +1061,6 @@ where
             moved,
             projected,
             clamped,
-            mirrored: e.report.mirrored,
             lambda: e.report.lambda,
             mass,
             past_fold: ce.curve.is_some_and(|c| c.closed.past_fold),

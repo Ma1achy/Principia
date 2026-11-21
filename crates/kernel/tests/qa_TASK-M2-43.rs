@@ -13,7 +13,7 @@
 //!   `n(θ, φ)` within REQ-CHART-053's bound; it is canonical in CoM, boost, scale and rotation (`Σmᵢrᵢ = 0`, `Σpᵢ = 0`,
 //!   `I = 1`, `ρ` on `+x`) with `λ̃_y` of `n₂`'s sign; its masses are `m_fixed`; its Jacobi momenta are `D_mom`'s
 //!   `p_fixed` at `(θ, φ)` and at `(θ, π − φ)`. At f32 the pole rows decode to the pole's own sign, `L⁻` at `t = 0`
-//!   (a sign, no tolerance). Controls: `C`'s mirror step run on the decode, a held momentum mirrored below the equator,
+//!   (a sign, no tolerance). Controls: the retired mirror step run on the decode, a held momentum mirrored below the equator,
 //!   and `Φ`'s state handed over without `C`, each fail.
 //! - REQ-CHART-082, M2 half (`shape_sphere_mirror_test_qa`): the held coordinates classified (released from rest, and
 //!   `p_fixed` with zero `y`-components, mirror-equivariant; a held `p_λ,y ≠ 0` or `p_ρ,y ≠ 0`, "does not apply"),
@@ -21,21 +21,25 @@
 //!   reflected bit for bit (`to_bits`), `L_z` negated by value and the shape's `w` negated bitwise where nonzero; in the
 //!   equivariant case, each pixel pair's shapes mirror images within REQ-CHART-053's bound at every pixel, and its
 //!   states within `ε_phys` in `‖·‖_phys` on the pixels farther than [`DELTA`] from each binary-collision landmark.
-//!   Controls: R-141's gauge left in, a momentum rule turning `p_x` below the equator, the symmetry asserted where it
+//!   Controls: the retired mirror step left in, a momentum rule turning `p_x` below the equator, the symmetry asserted where it
 //!   does not apply, the state comparison at `BC₀₁`'s pixel `(½, ½)` of the odd grid, and a configuration-only `Π` on a
 //!   state with `p_y ≠ 0`, each fail. The run arms are REQ-CHART-085's (R-579).
 //! - REQ-ENC-034 (`encode_shape_sphere_signed_qa`): a random state and its mirror image are placed at their own signed
 //!   shapes, `n₂` of opposite signs, `n(u′, v′)` the mirror of `n(u, v)`; decode then lookup returns the pixel on both
-//!   hemispheres, both maps; T1 under the mirror holds bitwise for `z` and for the other charts' coordinates; a
-//!   lower-hemisphere state with `p_y ≠ 0`, the slice's, under a proper gauge, lands on the chart, decodes back within
-//!   `ε_phys` with `L_z`'s sign kept, and its mirror goes to latent `z` unless the slice holds its momenta. Controls: a
-//!   lookup leaving the mirror in, T1 on the shape sphere's coordinates, and a landing against the mirrored `C(x)`,
-//!   each fail.
+//!   hemispheres, both maps; T1 under the mirror is an equivariance, for `z` and for every chart's coordinates, the
+//!   shape sphere's included: `E(Π·x)` is `E(x)` mirrored, `z_β → π̂ − z_β` on the circle and the momenta's
+//!   `y`-controls negated, to [`T1_EPS`] (the encode no longer folds `Π·x` back onto `x`, so `E(Π·x) = E(x)`, which
+//!   this test asserted bitwise while it did, is now false); a lower-hemisphere state with `p_y ≠ 0`, the slice's,
+//!   under a proper gauge, lands on the chart, decodes back within `ε_phys` with `L_z`'s sign kept, and its mirror
+//!   goes to latent `z` unless the slice holds its momenta. Controls: a lookup with the mirror step left in, T1 as the
+//!   invariance on `z` and on the shape sphere's coordinates, and a landing against `C(x)` with the mirror step left
+//!   in, each fail.
 //!
-//! - REQ-ENC-004's amended T2 on the shape sphere (`t2_per_chart_shape_sphere_qa`): on a grid of both hemispheres,
-//!   `D(E(x))`, the free decode of `x`'s `z`, is `x` within `ε_phys` above the equator and `Π·x` below it, the mirror
-//!   image, so T2 is taken against `C(x)` there (R-544; inverse_encode_contract Part 1's T2). Control: T2 against `x`
-//!   on the lower hemisphere fails.
+//! - REQ-ENC-004's T2 on the shape sphere (`t2_per_chart_shape_sphere_qa`): on a grid of both hemispheres, the
+//!   equator's row included but for the latent chart's two poles on it, `D(E(x))`, the free decode of `x`'s `z`, is `x` itself within `ε_phys`: a lower-hemisphere
+//!   state encodes to `β ∈ (π, 2π)` and decodes back to itself, not to its mirror image (inverse_encode_contract
+//!   Part 1's T2). (While the encode mirrored, `D(E(x))` was `Π·x` below the equator, and this test asserted that.)
+//!   Control: T2 against `Π·x` on the lower hemisphere, the retired fold, fails.
 //!
 //! **Tolerances.** Shapes against REQ-CHART-053's `shape_roundtrip_bound`; states in REQ-ENC-024's `ε_phys` under
 //! REQ-ENC-029's `‖·‖_phys` ([`phys`]); the canonical section's identities and the held momenta to [`CANON_TOL`], a few
@@ -223,6 +227,14 @@ fn phi_state(c: &ShapeSphere<f64>, u: f64, v: f64) -> Ic<f64> {
     }
 }
 
+/// `C(x)` with the retired mirror step left in, rebuilt here for the controls: `C`, then `Π` where `λ̃_y < 0`, which
+/// folds every lower-hemisphere state onto its mirror image.
+#[cfg(feature = "controls")]
+fn folded(x: &Ic<f64>) -> Ic<f64> {
+    let c = canonicalise(x);
+    reflect(&c.ic, c.lambda_t_y < 0.0)
+}
+
 // ── REQ-CHART-081: the signed decode ───────────────────────────────────────────────────────────────────────────────
 
 /// The decode on random charts of both maps, at random pixels and, for the spherical map, every fifth draw on a pole
@@ -377,10 +389,10 @@ fn shape_sphere_signed_decode_qa() {
 
 negative_control!(
     shape_sphere_signed_decode_qa,
-    "R-141's gauge left in, C's mirror step run on the decode, lands every lower pixel at (θ, π − φ), so it must fail",
+    "the retired mirror step run on the decode lands every lower pixel at (θ, π − φ), so it must fail",
     expected = "not the signed n",
     {
-        check_signed(|c, u, v| canonicalise(&kernel_decode(c, u, v)).ic);
+        check_signed(|c, u, v| folded(&kernel_decode(c, u, v)));
     }
 );
 
@@ -576,13 +588,13 @@ fn shape_sphere_mirror_test_qa() {
 
 negative_control!(
     shape_sphere_mirror_test_qa,
-    "R-141's gauge left in folds each pair onto one shape, equal, not mirror images, so it must fail",
+    "the retired mirror step left in folds each pair onto one shape, equal, not mirror images, so it must fail",
     expected = "shapes are not mirror images",
     {
         let chart = holding(&mut SplitMix::new(11), ALONG_X);
         mirror_test(
             &chart,
-            |c, u, v| canonicalise(&kernel_decode(c, u, v)).ic,
+            |c, u, v| folded(&kernel_decode(c, u, v)),
             kernel_pi,
             DELTA,
             false,
@@ -784,37 +796,91 @@ fn check_decode_lookup(chart: &ShapeSphere<f64>) -> u32 {
     lower
 }
 
-/// The bits of a chart point.
-fn coord_bits(c: [Coord<f64>; 2]) -> [Option<u64>; 2] {
-    c.map(|k| match k {
-        Coord::At(x) => Some(x.to_bits()),
-        _ => None,
-    })
+/// The image of `π` at f64, the nearest: `z_β`'s mirror is taken about half of it, and its period is twice it.
+const PI_HAT: f64 = PI;
+
+/// `E(x)` mirrored, written from the equivariance: what `E(Π·x)` must be. `Π` takes `λ̃`'s angle `β` to `−β`, so under
+/// `β = z_β + π̂/2` the control goes `z_β → π̂ − z_β`, on the circle; the Jacobi momenta's `y`-components, the controls
+/// `z_q1` and `z_q3`, change sign; `α`, the `x`-controls and the masses stay. The intermediates a chart reads go with
+/// them: `β`, the Jacobi coordinates' `y`-components, `C(x)` under `Π`, the frame angle `φ` and `λ̃_y`, negated.
+fn mirror_encoded(e: &Encoded<f64>) -> Encoded<f64> {
+    let flip = |v: [f64; 2]| [v[0], -v[1]];
+    let z = |z: [f64; 8]| [z[0], PI_HAT - z[1], z[2], -z[3], z[4], -z[5], z[6], z[7]];
+    let mut m = *e;
+    m.z.z = z(e.z.z);
+    m.blocks.z = z(e.blocks.z);
+    m.blocks.beta = 2.0 * PI_HAT - e.blocks.beta;
+    let j = &mut m.blocks.jacobi;
+    (j.rho_t, j.lambda_t) = (flip(j.rho_t), flip(j.lambda_t));
+    (j.p_rho, j.p_lambda) = (flip(j.p_rho), flip(j.p_lambda));
+    m.canonical.ic = pi(&e.canonical.ic);
+    m.canonical.phi = -e.canonical.phi;
+    m.canonical.lambda_t_y = -e.canonical.lambda_t_y;
+    m
 }
 
-/// T1 under the mirror on one chart: `E(x)` and `E(Π·x)` give one chart point, bit for bit.
-fn check_t1<C: ByKind<Param = f64>>(name: &str, chart: &C, xs: &[Ic<f64>]) {
+/// The T1 limit on a control or a chart coordinate, over `1 + |·|`, in ε: the bound the encode's own T1 test is
+/// built to (`encode_core`'s `T1_EPS`), taken as it stands and written here before this test ran. `E(x)` and `E(Π·x)`
+/// round alike but for the links' and the `β` branch's own arithmetic, so equality to the bit no longer holds.
+const T1_EPS: f64 = 128.0;
+
+/// What `E(Π·x)` must be, given `E(x)`: [`mirror_encoded`], or a control's.
+type Want = fn(&Encoded<f64>) -> Encoded<f64>;
+
+/// `|a − b|` over `1 + |b|`, in ε.
+fn gap(a: f64, b: f64) -> f64 {
+    (a - b).abs() / ((1.0 + b.abs()) * EPS)
+}
+
+/// T1 under the mirror on one chart, as the equivariance: `Π·x` is placed where `want(E(x))` is, each coordinate
+/// within [`T1_EPS`], and an axis that places one places the other.
+fn check_t1<C: ByKind<Param = f64>>(name: &str, chart: &C, xs: &[Ic<f64>], want: Want) {
     for x in xs {
-        let (a, b): (Encoded<f64>, Encoded<f64>) =
-            (encode::<Defaults, f64>(x), encode::<Defaults, f64>(&pi(x)));
+        let (a, b): (Encoded<f64>, Encoded<f64>) = (
+            want(&encode::<Defaults, f64>(x)),
+            encode::<Defaults, f64>(&pi(x)),
+        );
+        let (ca, cb) = (
+            chart.coords::<Defaults, f64>(&a),
+            chart.coords::<Defaults, f64>(&b),
+        );
+        let held = ca.iter().zip(&cb).all(|(p, q)| match (p, q) {
+            (Coord::At(p), Coord::At(q)) => gap(*q, *p) <= T1_EPS,
+            (p, q) => p == q,
+        });
         assert!(
-            coord_bits(chart.coords::<Defaults, f64>(&a))
-                == coord_bits(chart.coords::<Defaults, f64>(&b)),
-            "T1 fails on {name}: x and Π·x are two chart points"
+            held,
+            "T1 fails on {name}: Π·x is placed at {cb:?}, the mirrored E(x) at {ca:?}"
         );
     }
 }
 
-/// T1 for `z` and the other charts under the mirror, bitwise: `E(Π·x).z` is `E(x).z`, and each chart reads one point.
-fn check_t1_others(xs: &[Ic<f64>]) {
+/// T1 for `z` and every chart under the mirror, as the equivariance: `E(Π·x).z` is `want(E(x)).z`, `z_β` compared on
+/// the circle, every control within [`T1_EPS`], and each chart reads the mirrored point. Returns the worst gap on `z`,
+/// in ε.
+fn check_t1_others(xs: &[Ic<f64>], want: Want) -> f64 {
+    let tau = 2.0 * PI_HAT;
+    let mut worst_z = 0.0f64;
     for x in xs {
-        let (a, b) = (encode::<Defaults, f64>(x), encode::<Defaults, f64>(&pi(x)));
-        assert!(
-            a.z.z.map(f64::to_bits) == b.z.z.map(f64::to_bits),
-            "T1 fails on z: {:?} against {:?}",
-            a.z.z,
-            b.z.z
+        let (a, b) = (
+            want(&encode::<Defaults, f64>(x)).z.z,
+            encode::<Defaults, f64>(&pi(x)).z.z,
         );
+        let worst = (0..8)
+            .map(|k| {
+                let b_k = if k == 1 {
+                    b[1] - tau * ((b[1] - a[1]) / tau).round()
+                } else {
+                    b[k]
+                };
+                gap(b_k, a[k])
+            })
+            .fold(0.0, f64::max);
+        assert!(
+            worst <= T1_EPS,
+            "T1 fails on z: {b:?} against the mirrored {a:?} ({worst:.1} ε)"
+        );
+        worst_z = worst_z.max(worst);
     }
     check_t1(
         "a latent chart",
@@ -824,11 +890,13 @@ fn check_t1_others(xs: &[Ic<f64>]) {
             q2: [0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
         },
         xs,
+        want,
     );
     check_t1(
         "(β, p_λ,y)",
         &Mixed::<Beta, PLambdaY, f64>::new([0.2; 8], [-1.0, 1.0], [-0.5, 0.5]),
         xs,
+        want,
     );
     check_t1(
         "the mass simplex",
@@ -837,6 +905,7 @@ fn check_t1_others(xs: &[Ic<f64>]) {
             eps_m: 1e-3,
         },
         xs,
+        want,
     );
     check_t1(
         "(ν, K)",
@@ -846,7 +915,10 @@ fn check_t1_others(xs: &[Ic<f64>]) {
             gamma_k: 2.0,
         },
         xs,
+        want,
     );
+    check_t1("the shape sphere", &lookup_chart(SLICE_MOM), xs, want);
+    worst_z
 }
 
 /// A proper gauge, written here: turn by `a`, move by `b`, boost by `w` (`pᵢ += mᵢw`), no mirror.
@@ -944,22 +1016,24 @@ fn encode_shape_sphere_signed_qa() {
     );
     let mut rng = SplitMix::new(0x4386);
     let xs: Vec<Ic<f64>> = (0..300).map(|_| generic(&mut rng)).collect();
-    check_t1_others(&xs);
+    let t1 = check_t1_others(&xs, mirror_encoded);
     let worst = check_landing(kernel_land);
     eprintln!(
         "encode_shape_sphere_signed_qa: {lower} lower-hemisphere states and their mirrors placed at their signed shapes; \
-         {spherical} and {exponential} lower pixels return themselves; landing worst {worst:.2} ε (ε_phys {} ε)",
+         {spherical} and {exponential} lower pixels return themselves; T1 under the mirror worst {t1:.2} ε on z (limit \
+         {T1_EPS} ε); landing worst {worst:.2} ε (ε_phys {} ε)",
         eps_phys::<f64>() / EPS
     );
 }
 
 negative_control!(
     encode_shape_sphere_signed_qa,
-    "a lookup reading the shape of C(x) without undoing the mirror lands every lower-hemisphere state on the upper",
+    "a lookup reading the shape of C(x) with the retired mirror step left in lands every lower-hemisphere state on \
+     the upper",
     expected = "not the state's signed shape",
     {
         check_lookup(|_, x| {
-            let c = canonicalise(x).ic;
+            let c = folded(x);
             sphere_inverse(reference_n(c.r, c.m))
         });
     }
@@ -969,12 +1043,26 @@ mod signed_t1_on_sphere {
     use super::*;
     negative_control!(
         encode_shape_sphere_signed_qa,
-        "T1 applied to the shape sphere's coordinates, where x and Π·x are two points, must fail",
+        "T1 as the invariance on the shape sphere's coordinates, where x and Π·x are two points, must fail",
         expected = "T1 fails on the shape sphere",
         {
             let mut rng = SplitMix::new(0x4386);
             let xs: Vec<Ic<f64>> = (0..300).map(|_| generic(&mut rng)).collect();
-            check_t1("the shape sphere", &lookup_chart(SLICE_MOM), &xs);
+            check_t1("the shape sphere", &lookup_chart(SLICE_MOM), &xs, |e| *e);
+        }
+    );
+}
+
+mod signed_t1_invariant {
+    use super::*;
+    negative_control!(
+        encode_shape_sphere_signed_qa,
+        "T1 as the retired invariance, E(Π·x) = E(x), where x and Π·x are two states with two z, must fail",
+        expected = "T1 fails on z",
+        {
+            let mut rng = SplitMix::new(0x4386);
+            let xs: Vec<Ic<f64>> = (0..300).map(|_| generic(&mut rng)).collect();
+            check_t1_others(&xs, |e| *e);
         }
     );
 }
@@ -983,15 +1071,13 @@ mod signed_landing_mirrored {
     use super::*;
     negative_control!(
         encode_shape_sphere_signed_qa,
-        "a landing test against the mirrored C(x) sends every lower-hemisphere state to latent z, so it must fail",
+        "a landing test against C(x) with the retired mirror step left in sends every lower-hemisphere state to latent \
+         z, so it must fail",
         expected = "lands in latent z",
         {
             check_landing(|c, x| {
                 let (u, v) = kernel_lookup(c, x);
-                let d = phys(
-                    &canonicalise(x).ic,
-                    &c.decode::<Defaults, f64>(u, v).ic,
-                );
+                let d = phys(&folded(x), &c.decode::<Defaults, f64>(u, v).ic);
                 if d <= eps_phys::<f64>() {
                     Landing::Chart { u, v }
                 } else {
@@ -1002,22 +1088,23 @@ mod signed_landing_mirrored {
     );
 }
 
-// ── REQ-ENC-004 as R-544 amends it: T2 on the shape sphere ─────────────────────────────────────────────────────────
+// ── REQ-ENC-004: T2 on the shape sphere ────────────────────────────────────────────────────────────────────────────
 
-/// The state T2 compares `D(E(x))` with: `C(x)`'s physical content, `x` above the equator and [`pi`]`(x)` below, or a
-/// control's.
+/// The state T2 compares `D(E(x))` with: `x` itself on both hemispheres, or a control's.
 type ReferenceFn = fn(&Ic<f64>, f64) -> Ic<f64>;
 
-/// T2 on the spherical chart over the pixels `(i, j)/24` of both hemispheres, the poles' and the equator's rows left
-/// out (on the equator `λ̃_y` is a rounding, in R-82's deadband, where `C` may or may not mirror): `D(E(x))` within
-/// `ε_phys` of `reference(x, n₂)` in `‖·‖_phys`. Returns the lower-hemisphere pixels and the worst residual in `ε`.
+/// T2 on the spherical chart over the pixels `(i, j)/24` of both hemispheres, the equator's row included (nothing
+/// mirrors there any more, whichever sign `λ̃_y`'s rounding takes), the poles' rows left out, and on the equator the
+/// two pixels `(0, ½)` and `(½, ½)`, `n = (±1, 0, 0)`, where `λ̃ = 0` or `ρ̃ = 0`: the latent chart's own poles, where
+/// `α`'s control saturates and the encode clamps it. `D(E(x))` within `ε_phys` of `reference(x, n₂)` in `‖·‖_phys`.
+/// Returns the lower-hemisphere pixels and the worst residual in `ε`.
 fn check_t2_sphere(reference: ReferenceFn) -> (u32, f64) {
     let chart = lookup_chart(SLICE_MOM);
     let (mut lower, mut worst) = (0u32, 0.0f64);
     for i in 0..24 {
         for j in 1..24 {
             let (s, t) = (f64::from(i) / 24.0, f64::from(j) / 24.0);
-            if j == 12 {
+            if j == 12 && (i == 0 || i == 12) {
                 continue;
             }
             let x = chart.decode::<Defaults, f64>(s, t).ic;
@@ -1037,10 +1124,10 @@ fn check_t2_sphere(reference: ReferenceFn) -> (u32, f64) {
 
 #[test]
 fn t2_per_chart_shape_sphere_qa() {
-    let (lower, worst) = check_t2_sphere(|x, n2| if n2 < 0.0 { pi(x) } else { *x });
+    let (lower, worst) = check_t2_sphere(|x, _| *x);
     assert!(lower > 200, "{lower} lower-hemisphere pixels");
     eprintln!(
-        "t2_per_chart_shape_sphere_qa: D(E(x)) is x above the equator and Π·x below, worst {worst:.2} ε (ε_phys {} ε), \
+        "t2_per_chart_shape_sphere_qa: D(E(x)) is x on both hemispheres, worst {worst:.2} ε (ε_phys {} ε), \
          {lower} lower pixels",
         eps_phys::<f64>() / EPS
     );
@@ -1048,9 +1135,9 @@ fn t2_per_chart_shape_sphere_qa() {
 
 negative_control!(
     t2_per_chart_shape_sphere_qa,
-    "T2 against x itself on the lower hemisphere, where D(E(x)) is the mirror image, must fail",
+    "T2 against Π·x on the lower hemisphere, the retired fold, where D(E(x)) is x itself, must fail",
     expected = "from the reference",
     {
-        check_t2_sphere(|x, _| *x);
+        check_t2_sphere(|x, n2| if n2 < 0.0 { pi(x) } else { *x });
     }
 );

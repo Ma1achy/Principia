@@ -67,7 +67,7 @@ fn under<const C: usize, const P: usize, L: Link<C, P>>() -> Under {
                 let (lo, hi) = (<L::Codomain as Codomain>::LO, <L::Codomain as Codomain>::HI);
                 lo.abs().max(hi.abs())
             }
-            Constraint::Positive | Constraint::Unbounded => 0.0,
+            Constraint::Positive | Constraint::Unbounded | Constraint::Periodic => 0.0,
         },
         controls: C,
         forward64: |v| L::forward::<f64>(v.try_into().expect("the controls")).to_vec(),
@@ -102,6 +102,7 @@ fn registry() -> Vec<Under> {
         under::<1, 1, Softplus>(),
         under::<1, 1, Exp>(),
         under::<1, 1, Identity>(),
+        under::<1, 1, PeriodicBeta>(),
     ]
 }
 
@@ -211,7 +212,7 @@ fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64) {
             );
         }
         Constraint::Positive => assert!(y.iter().all(|&v| v > 0.0), "{}", at("not positive")),
-        Constraint::Unbounded => {}
+        Constraint::Unbounded | Constraint::Periodic => {}
     }
 }
 
@@ -331,11 +332,11 @@ mod simplex_constraint_control {
 /// The clamp's tolerance in `u`'s physical units: how far the ε clamp can move a value that saturated past it
 /// (inverse_encode Part 4). The mass inverse clamps the logits at `(1 − ε_μ)·μ_max`, moving each by at most
 /// `ε_μ·μ_max`, and a mass by less; an interval's inverse clamps `s` or `u` within `ε` of its end, moving `y` by at
-/// most `ε·(b − a)`; the lines have no clamp, so nothing.
+/// most `ε·(b − a)`; the lines and the periodic `β` have no clamp, so nothing.
 fn clamp_tolerance(u: &Under) -> f64 {
     match u.codomain {
         "mass" => f64::EPS_MU * f64::MU_MAX,
-        "alpha" | "beta" => f64::EPS_Z * (u.hi - u.lo),
+        "alpha" | "retired_beta" => f64::EPS_Z * (u.hi - u.lo),
         "momentum" => f64::EPS_Q * (u.hi - u.lo),
         _ => 0.0,
     }
@@ -1127,15 +1128,15 @@ negative_control!(
 
 // ── Selection ───────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// `ids` are dd_decoder §3's defaults, in `Selection`'s order: mass = softmax ∘ `μ_max·tanh`, config = sigmoid, free
-/// momentum = sigmoid.
+/// `ids` are dd_decoder §3's defaults, in `Selection`'s order: mass = softmax ∘ `μ_max·tanh`, `α` = sigmoid, `β` =
+/// `periodic_beta` (R-919 Q1 (c); *was:* "config = sigmoid"), free momentum = sigmoid.
 fn check_defaults(ids: [&str; 7]) {
     assert_eq!(
         ids,
         [
             "softmax_tanh",
             "sigmoid_alpha",
-            "sigmoid_beta",
+            "periodic_beta",
             "sigmoid_q",
             "sigmoid_q",
             "sigmoid_q",
@@ -1155,7 +1156,7 @@ negative_control!(
     "a selection with tanh for α is not the defaults",
     expected = "the baked defaults are not dd_decoder §3's",
     check_defaults(
-        <Select<SoftmaxTanh, TanhAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ> as Selection>::LINK_IDS
+        <Select<SoftmaxTanh, TanhAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ> as Selection>::LINK_IDS
     )
 );
 

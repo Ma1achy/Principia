@@ -543,7 +543,7 @@ const RATIOS: [f64; 6] = [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8];
 
 /// Hierarchical states, each ratio's edge on `+x`, its edge at a random angle and `−2δ_λ` on `+x`: `r₀ = 0`, `‖ρ‖` the
 /// ratio, `r₂` at distance `0.5…2` from the pair and, on `+x`, where the offset survives the rounding to f32, `λ̃_y` is
-/// `−k·δ_λ` with `k = 1 ± 10⁻⁶` or 2, the latter mirroring.
+/// `−k·δ_λ` with `k = 1 ± 10⁻⁶` or 2, the latter past the band the retired mirror step read ([`past_band`]).
 fn check_hierarchy(inputs: &Inputs) {
     for (n, x) in part(inputs, HIERARCHY).iter().enumerate() {
         let (ratio, block) = (RATIOS[n / 6000], (n / 2000) % 3);
@@ -570,8 +570,8 @@ fn check_hierarchy(inputs: &Inputs) {
             "a hierarchical state's λ̃_y is {k}·δ_λ, not ±{want}, state {n}"
         );
         assert!(
-            block == 0 || canonicalise(x).mirrored,
-            "a state at −2δ_λ does not mirror, state {n}"
+            block == 0 || past_band(x),
+            "a state at −2δ_λ is not past the band, state {n}"
         );
     }
 }
@@ -601,8 +601,14 @@ const EDGE_RATIOS: [i32; 4] = [-12, -15, -20, -40];
 /// The edge's sweeps, 61 consecutive f32 `a`, 40 draws at each ratio and angle.
 const SWEEP: usize = 61;
 
+/// `C(x)`'s recorded `λ̃_y` is below `−δ_λ`: the side of the band the retired mirror step mirrored (R-547), which `C`
+/// no longer branches on (R-865) and these inputs, the fixture's, still straddle.
+fn past_band(x: &Ic<f32>) -> bool {
+    canonicalise(x).lambda_t_y < -f32::DELTA_LAMBDA
+}
+
 /// One sweep on `+x`: `r = [(−u, a), (u, a), (x₂, −a)]` at rest, `a` stepping one float at a time across the deadband's
-/// edge, so that the first state does not mirror and the last does.
+/// edge, so that the first state is not [`past_band`] and the last is.
 fn check_edge_sweep(run: &[Ic<f32>], j: i32) {
     let a0 = run[0].r[0][1];
     let (u, x2) = (run[0].r[1][0], run[0].r[2][0]);
@@ -620,7 +626,7 @@ fn check_edge_sweep(run: &[Ic<f32>], j: i32) {
         a = a.next_up();
     }
     assert!(
-        !canonicalise(&run[0]).mirrored && canonicalise(&run[SWEEP - 1]).mirrored,
+        !past_band(&run[0]) && past_band(&run[SWEEP - 1]),
         "a sweep does not cross the deadband's edge, at 2^{j}"
     );
 }
@@ -703,10 +709,12 @@ fn gauged(x: &Ic<f64>, a: [f64; 2], theta: f64, s: f64, mirror: bool) -> Ic<f32>
 }
 
 /// Each representative under each gauge: three scales, three angles, both mirrors, a translation of several times the
-/// state's size; `C` of it mirrors iff `Π` does and reads `I_in = s²`.
+/// state's size; `C` of it keeps the representative's half, `λ̃_y`'s sign, iff `Π` is not taken (`C` has no mirror step,
+/// R-865), and reads `I_in = s²`.
 fn check_order(inputs: &Inputs) {
     let mut states = part(inputs, ORDER).iter();
     for rep in representatives() {
+        let lower = canonicalise(&narrow(&rep)).lambda_t_y < 0.0;
         for (k, s) in [0.5, 3.0, 40.0].into_iter().enumerate() {
             for theta in [0.7, 2.9, -1.3] {
                 for mirror in [false, true] {
@@ -719,7 +727,7 @@ fn check_order(inputs: &Inputs) {
                     let c = canonicalise(x);
                     let off = (f64::from(c.i_in) / (s * s) - 1.0).abs();
                     assert!(
-                        c.mirrored == mirror && off <= 64.0 * EPS32,
+                        (c.lambda_t_y < 0.0) == (lower != mirror) && off <= 64.0 * EPS32,
                         "C of an order state does not read its gauge"
                     );
                 }
@@ -850,15 +858,12 @@ negative_control!(
     }
 );
 
-/// dd_decoder §5 test 5 at f32: `C` of a decode takes no mirror and turns nothing.
+/// dd_decoder §5 test 5 at f32: `C` of a decode turns nothing (and takes no mirror, having no mirror step, R-865).
 fn check_noop(inputs: &Inputs) {
     for name in [NOOP, NOOP_WIDE] {
         for (n, x) in part(inputs, name).iter().enumerate() {
             let c = canonicalise(x);
-            assert!(
-                !c.mirrored && c.phi == 0.0,
-                "C moved a decode of {name}, state {n}"
-            );
+            assert!(c.phi == 0.0, "C moved a decode of {name}, state {n}");
         }
     }
 }

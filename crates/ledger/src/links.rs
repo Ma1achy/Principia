@@ -27,7 +27,7 @@ pub mod admissible;
 
 pub use admissible::{controls, eval, range_values, Fl, Values};
 
-use std::f64::consts::{FRAC_PI_2, PI};
+use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use std::sync::OnceLock;
 
 use crate::constants::{
@@ -43,6 +43,8 @@ pub enum Constraint {
     Positive,
     Symmetric,
     Unbounded,
+    /// The circle: an angle read modulo its period (R-898; §3.9's R-72 row, TASK-M2-57).
+    Periodic,
 }
 
 impl Constraint {
@@ -54,6 +56,7 @@ impl Constraint {
             Constraint::Positive => "positive",
             Constraint::Symmetric => "symmetric",
             Constraint::Unbounded => "unbounded",
+            Constraint::Periodic => "periodic",
         }
     }
 }
@@ -172,8 +175,11 @@ pub enum Codomain {
     Mass,
     /// `α ∈ (α_min, π/2 − α_min)` (dd_decoder §3.2).
     Alpha,
-    /// `β ∈ (0, π)` (dd_decoder §3.2).
+    /// `β` on the circle, a periodic angle (dd_decoder §3.2; R-898, R-919 Q1 (c)): the one `β` slot's codomain.
     Beta,
+    /// `β ∈ (0, π)`, the bounded interval the retired `β` links map onto (R-919 Q1 (c); R-921): conversion sources only,
+    /// no slot's codomain, so no block can select them.
+    RetiredBeta,
     /// A free momentum `q ∈ (−q_max, q_max)`, a symmetric cap (dd_decoder §3.4).
     Momentum,
     /// The positive half-line `(0, ∞)`.
@@ -184,10 +190,11 @@ pub enum Codomain {
 
 impl Codomain {
     /// Every codomain.
-    pub const ALL: [Codomain; 6] = [
+    pub const ALL: [Codomain; 7] = [
         Codomain::Mass,
         Codomain::Alpha,
         Codomain::Beta,
+        Codomain::RetiredBeta,
         Codomain::Momentum,
         Codomain::HalfLine,
         Codomain::RealLine,
@@ -199,6 +206,7 @@ impl Codomain {
             Codomain::Mass => "mass",
             Codomain::Alpha => "alpha",
             Codomain::Beta => "beta",
+            Codomain::RetiredBeta => "retired_beta",
             Codomain::Momentum => "momentum",
             Codomain::HalfLine => "half_line",
             Codomain::RealLine => "real_line",
@@ -209,7 +217,8 @@ impl Codomain {
     pub fn constraint(self) -> Constraint {
         match self {
             Codomain::Mass => Constraint::Simplex,
-            Codomain::Alpha | Codomain::Beta => Constraint::Bounded,
+            Codomain::Alpha | Codomain::RetiredBeta => Constraint::Bounded,
+            Codomain::Beta => Constraint::Periodic,
             Codomain::Momentum => Constraint::Symmetric,
             Codomain::HalfLine => Constraint::Positive,
             Codomain::RealLine => Constraint::Unbounded,
@@ -234,9 +243,19 @@ impl Codomain {
         }
     }
 
-    /// The closed bounds of an interval codomain, from the chart constants; `None` for the simplex and the lines.
+    /// The closed bounds of an interval codomain, from the chart constants; `None` for the simplex, the lines and the
+    /// circle.
     pub fn range(self) -> Option<(f64, f64)> {
         self.range_with(&[])
+    }
+
+    /// A periodic codomain's one period, its primary range, `[0, 2π)` for `β` (R-898; chart_decoder_contract Part 3's
+    /// periodic type): what a host-side check or a chart axis spans; `None` for every other codomain.
+    pub fn period(self) -> Option<(f64, f64)> {
+        match self {
+            Codomain::Beta => Some((0.0, TAU)),
+            _ => None,
+        }
     }
 
     /// [`Codomain::range`] at the active values `active`, each a tunable parameter's value by name, the chart constants
@@ -255,9 +274,9 @@ impl Codomain {
     pub fn range_at(self, alpha_min: f64, q_max: f64) -> Option<(f64, f64)> {
         match self {
             Codomain::Alpha => Some((alpha_min, FRAC_PI_2 - alpha_min)),
-            Codomain::Beta => Some((0.0, PI)),
+            Codomain::RetiredBeta => Some((0.0, PI)),
             Codomain::Momentum => Some((-q_max, q_max)),
-            Codomain::Mass | Codomain::HalfLine | Codomain::RealLine => None,
+            Codomain::Mass | Codomain::Beta | Codomain::HalfLine | Codomain::RealLine => None,
         }
     }
 }
@@ -273,7 +292,8 @@ pub struct Slot {
     /// Its first latent coordinate.
     pub z: u32,
     pub codomain: Codomain,
-    /// Its default link, by name: mass = softmax ∘ `μ_max·tanh`, config = sigmoid, free momentum = sigmoid.
+    /// Its default link, by name: mass = softmax ∘ `μ_max·tanh`, `α` = sigmoid, `β` = the periodic link (R-919 Q1
+    /// (c)), free momentum = sigmoid.
     pub default: &'static str,
 }
 
@@ -291,7 +311,7 @@ pub fn slots() -> [Slot; 7] {
     [
         slot("mass", "mass", 6, Codomain::Mass, "softmax_tanh"),
         slot("alpha", "config", 0, Codomain::Alpha, "sigmoid_alpha"),
-        slot("beta", "config", 1, Codomain::Beta, "sigmoid_beta"),
+        slot("beta", "config", 1, Codomain::Beta, "periodic_beta"),
         q("q0", 2),
         q("q1", 3),
         q("q2", 4),
@@ -300,8 +320,9 @@ pub fn slots() -> [Slot; 7] {
 }
 
 /// §3.9's six rows, each by its label and the entries that instantiate it, and the rows its R-72 definitions add
-/// (REQ-GEN-026). The registry must hold every entry named here ([`check`]).
-pub fn rows() -> [(&'static str, &'static [&'static str]); 8] {
+/// (REQ-GEN-026; REQ-DEC-056). The registry must hold every entry named here ([`check`]). The bounded rows' `β` entries
+/// are the retired links (R-919 Q1 (c)), onto [`Codomain::RetiredBeta`].
+pub fn rows() -> [(&'static str, &'static [&'static str]); 9] {
     [
         ("Simplex Δ²: softmax ∘ μ_max·tanh", &["softmax_tanh"]),
         (
@@ -316,6 +337,10 @@ pub fn rows() -> [(&'static str, &'static [&'static str]); 8] {
         (
             "Bounded, heavier-tailed (R-72)",
             &["softsign_alpha", "softsign_beta", "softsign_q"],
+        ),
+        (
+            "Periodic S¹: the offset onto the angle (R-72; R-1020)",
+            &["periodic_beta"],
         ),
     ]
 }
@@ -525,7 +550,7 @@ fn interval(codomain: Codomain) -> Interval {
                 symmetric: false,
             }
         }
-        Codomain::Beta => Interval {
+        Codomain::RetiredBeta => Interval {
             lo: None,
             width: num(PI),
             half: num(FRAC_PI_2),
@@ -541,8 +566,8 @@ fn interval(codomain: Codomain) -> Interval {
             params: declared(&[&Q_MAX]),
             symmetric: true,
         },
-        Codomain::Mass | Codomain::HalfLine | Codomain::RealLine => {
-            unreachable!("only α, β and the momenta are intervals")
+        Codomain::Mass | Codomain::Beta | Codomain::HalfLine | Codomain::RealLine => {
+            unreachable!("only α, the retired β and the momenta are intervals")
         }
     }
 }
@@ -745,11 +770,11 @@ pub fn builders() -> &'static [LinkBuilder] {
             softmax_tanh(),
             stick_breaking(),
             sigmoid_link("sigmoid_alpha", Codomain::Alpha),
-            sigmoid_link("sigmoid_beta", Codomain::Beta),
+            sigmoid_link("sigmoid_beta", Codomain::RetiredBeta),
             tanh_link("tanh_alpha", Codomain::Alpha, tanh_note),
-            tanh_link("tanh_beta", Codomain::Beta, tanh_note),
+            tanh_link("tanh_beta", Codomain::RetiredBeta, tanh_note),
             softsign_link("softsign_alpha", Codomain::Alpha),
-            softsign_link("softsign_beta", Codomain::Beta),
+            softsign_link("softsign_beta", Codomain::RetiredBeta),
             sigmoid_link("sigmoid_q", Codomain::Momentum),
             tanh_link("tanh_q", Codomain::Momentum, "as bounded"),
             softsign_link("softsign_q", Codomain::Momentum),
@@ -776,6 +801,17 @@ pub fn builders() -> &'static [LinkBuilder] {
                 x(0),
                 num(0.0),
                 "neutral",
+            ),
+            // The offset link `β = z_β + π/2` (R-1020), so `z = 0` stays the golden IC; its `π/2` is the emitter's
+            // image of `FRAC_PI_2`, `fl↓(π/2)` at f32 (bits `0x3FC9_0FDA`) and the nearest at f64, the one constant
+            // in the forward and the inverse (dd_decoder § 3.2, "The offset in floating point").
+            line(
+                "periodic_beta",
+                Codomain::Beta,
+                add(vec![x(0), num(FRAC_PI_2)]),
+                sub(x(0), num(FRAC_PI_2)),
+                num(0.0),
+                "uniform on the circle: the offset onto the angle, which has no edge to crowd",
             ),
         ]
     })
@@ -954,10 +990,15 @@ fn entry_problems(l: &Link, codomain: Codomain) -> Vec<String> {
     bad
 }
 
+/// The codomains REQ-GEN-014's two links per block is not met on, by ruling: `β`, which takes one periodic link until
+/// a study needs a second density (R-919 Q1 (c); R-519).
+pub const ONE_LINK: &[Codomain] = &[Codomain::Beta];
+
 /// The registry `builders` builds to, or every problem: an entry missing a member, two entries of one name, a tree
 /// count or input index its codomain does not have, a clamp or parameter that is not the chart constant of its name
 /// and value or that no tree reads, a read of one it does not declare, a row of [`rows`] with an entry missing, a slot whose default is not an entry of its
-/// codomain, and a slot whose codomain has fewer than two entries with differing sampling notes (REQ-GEN-014).
+/// codomain, and a slot whose codomain has fewer than two entries with differing sampling notes (REQ-GEN-014), but
+/// for the codomains of [`ONE_LINK`].
 ///
 /// It checks the declarations of [`tunables`] and Part 2.5's three requirements too ([`check_with`]).
 pub fn check(builders: &[LinkBuilder]) -> Result<Vec<(Link, Codomain)>, Vec<String>> {
@@ -1007,6 +1048,9 @@ pub fn check_with(
                 slot.default,
                 slot.codomain.name()
             ));
+        }
+        if ONE_LINK.contains(&slot.codomain) {
+            continue;
         }
         let mut notes: Vec<&str> = built
             .iter()

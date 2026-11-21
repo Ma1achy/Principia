@@ -28,8 +28,9 @@
 //!   with nonzero momenta: divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0` by its bits, no `lookup_rescaled`,
 //!   every output finite (no `1/0` formed); encode reports the coincident pair and no rescale.
 //! - REQ-DEC-002 (`qa_m247_subnormal_differences`): f32 states at coordinates near `1e-36` whose inner pair is a
-//!   subnormal apart: `ρ ≠ 0`, so no `lookup_clamped`; `φ` the exact difference's angle; the mirror the exact
-//!   difference's decision; every output finite at `I = 1`.
+//!   subnormal apart: `ρ ≠ 0`, so no `lookup_clamped`; `φ` the exact difference's angle; the half `C` leaves the
+//!   state in, `λ̃_y`'s sign, the exact difference's, `C` taking no mirror (TASK-M2-57; *was:* "the mirror the exact
+//!   difference's decision"); every output finite at `I = 1`.
 //!
 //! **Tolerances** (applied per R-369: a test's bound, not a constant of the system). `τ_I` is the register's, read as
 //! `IeeeBits::TAU_I` (REQ-ENC-035, provisional until M2). `I = 1` after step 0: 8 eps (each `rᵢ/√I_in` rounded by a
@@ -51,7 +52,8 @@ use kernel::real::IeeeBits;
 use validation::decode_f32_eps::SplitMix;
 use validation::negative_control;
 
-/// δ_λ, dd_decoder §3.3 and R-82.
+/// δ_λ, the old mirror deadband's half-width (dd_decoder §3.3), which `C` no longer reads: the scale of the margin
+/// about the `x`-axis inside which a state's half is not asserted.
 const DELTA: f64 = 1e-12;
 
 /// A precision the shared source runs at.
@@ -176,14 +178,11 @@ fn check_unchanged<R: P>(x: &Ic<R>, step: &Scaled<R>, at: &str) {
     }
 }
 
-/// Encode's three notices on `x`: `(lookup_clamped, lookup_mirrored, lookup_rescaled)`.
-fn notices<R: P>(x: &Ic<R>) -> (bool, bool, bool) {
+/// Encode's two notices on `x`: `(lookup_clamped, lookup_rescaled)`. `lookup_mirrored` went with `C`'s mirror step:
+/// a decode in the lower half, as these are for half the `z_β` drawn, has nothing to report.
+fn notices<R: P>(x: &Ic<R>) -> (bool, bool) {
     let e = encode::<Defaults, R>(x);
-    (
-        e.report.lookup_clamped(),
-        e.report.lookup_mirrored(),
-        e.report.lookup_rescaled(),
-    )
+    (e.report.lookup_clamped(), e.report.lookup_rescaled())
 }
 
 fn canonical_decodes<R: P>(n: usize, seed: u64) -> Vec<Ic<R>> {
@@ -216,13 +215,13 @@ fn skip_at<R: P>(n: usize) -> f64 {
         // (inverse-encode Part 3), never `lookup_rescaled`.
         let got = notices(x);
         let want = if j % 8 == 0 {
-            (got.0, false, false)
+            (got.0, false)
         } else {
-            (false, false, false)
+            (false, false)
         };
         assert_eq!(
             got, want,
-            "{at}: a canonical input raised a notice (lookup_clamped, lookup_mirrored, lookup_rescaled)"
+            "{at}: a canonical input raised a notice (lookup_clamped, lookup_rescaled)"
         );
     }
     worst
@@ -443,7 +442,7 @@ fn generic(rng: &mut SplitMix) -> Ic<f64> {
         let apart = [(0, 1), (0, 2), (1, 2)].iter().all(|&(i, j)| {
             ((r[i][0] - r[j][0]).powi(2) + (r[i][1] - r[j][1]).powi(2)).sqrt() >= 0.3
         });
-        // Off the mirror's band by far, so the scaled and unscaled states mirror alike.
+        // Off the canonical frame's x-axis by far, on either side, so no state's half hangs on rounding.
         let c =
             (r[1][0] - r[0][0]) * (r[2][1] - r[0][1]) - (r[1][1] - r[0][1]) * (r[2][0] - r[0][0]);
         if apart && c.abs() > 0.05 {
@@ -519,9 +518,18 @@ fn check_scaled<R: P>(x: &Ic<f64>, s: f64, c: &Canonical<R>, at: &str) -> [f64; 
     // E_canon = √I_in·E_in and L_z,canon = L_z,in/I_in^{1/4}: with I_in = s²I₀, E_in = E₀/s, L_z,in = L₀/√s.
     // In the input's rest frame (CoM at the origin, `Σp = 0`), where steps 1a and 1b leave `E` and `L_z` alone.
     let x0 = rest(&widen(&narrow::<R>(x)));
-    // A mirrored output has its `L_z` reversed (R-82's full-state reflection).
-    let sign = if c.mirrored { -1.0 } else { 1.0 };
-    let (e_want, l_want) = (i0.sqrt() * energy(&x0), sign * lz(&x0) / i0.sqrt().sqrt());
+    // `L_z` keeps its sign on either half: `C` takes no mirror, so nothing reverses it (was: "a mirrored output has its
+    // `L_z` reversed"). The half itself is the input's: `λ̃_y`'s sign is that of `ρ × (r₂ − r₀)`, which [`generic`]
+    // keeps past 0.05 in magnitude, at every scale.
+    let cross = (x.r[1][0] - x.r[0][0]) * (x.r[2][1] - x.r[0][1])
+        - (x.r[1][1] - x.r[0][1]) * (x.r[2][0] - x.r[0][0]);
+    let lty: f64 = c.lambda_t_y.into();
+    assert_eq!(
+        lty < 0.0,
+        cross < 0.0,
+        "{at}: C changed the state's half: λ̃_y = {lty:e} for ρ × (r₂ − r₀) = {cross:e}"
+    );
+    let (e_want, l_want) = (i0.sqrt() * energy(&x0), lz(&x0) / i0.sqrt().sqrt());
     let e_err = (energy(&out) - e_want).abs() / (e * e_want.abs().max(1.0));
     let l_err = (lz(&out) - l_want).abs() / (e * l_want.abs().max(1.0));
     assert!(
@@ -746,8 +754,9 @@ fn exact_branch_inputs(x: &Ic<f32>) -> ([f64; 2], f64) {
 }
 
 /// `C` on `x` against its exact branch inputs `(ρ, λ̃_y)`: `lookup_clamped` iff `ρ = 0`; `φ` within 4 eps of
-/// `atan2(ρ_y, ρ_x)`; the mirror iff `λ̃_y < −δ_λ` (only where `λ̃_y` is clear of `−δ_λ` by `10⁻³`); every output
-/// finite at `I = 1`. The worst `φ` error, in f32 eps.
+/// `atan2(ρ_y, ρ_x)`; the half kept, `C`'s recorded `λ̃_y` negative iff the exact `λ̃_y` is (only where `λ̃_y` is
+/// clear of 0 by `10⁻³·δ_λ`; *was:* "the mirror iff `λ̃_y < −δ_λ` (only where `λ̃_y` is clear of `−δ_λ` by `10⁻³`)");
+/// every output finite at `I = 1`. The worst `φ` error, in f32 eps.
 fn check_exact_branches(c: &Canonical<f32>, exact: ([f64; 2], f64), at: &str) -> f64 {
     let (rho, lty) = exact;
     let pole = rho[0] == 0.0 && rho[1] == 0.0;
@@ -765,11 +774,12 @@ fn check_exact_branches(c: &Canonical<f32>, exact: ([f64; 2], f64), at: &str) ->
         "{at}: φ = {}, the exact ρ's is {phi_want} ({phi_err} eps)",
         c.phi
     );
-    if (lty + DELTA).abs() > 1e-3 * DELTA {
+    if lty.abs() > 1e-3 * DELTA {
         assert_eq!(
-            c.mirrored,
-            lty < -DELTA,
-            "{at}: lookup_mirrored is not the exact decision, λ̃_y = {lty:e}"
+            c.lambda_t_y < 0.0,
+            lty < 0.0,
+            "{at}: C's λ̃_y = {:e} is not in the exact half, λ̃_y = {lty:e}",
+            c.lambda_t_y
         );
     }
     phi_err
@@ -778,7 +788,7 @@ fn check_exact_branches(c: &Canonical<f32>, exact: ([f64; 2], f64), at: &str) ->
 #[test]
 fn qa_m247_subnormal_differences() {
     let mut worst = 0.0f64;
-    let (mut mirrored, mut pole) = (0, 0);
+    let (mut lower, mut pole) = (0, 0);
     let states = subnormal_states(4000, 0x5ab);
     for (j, x) in states.iter().enumerate() {
         let c = canonicalise(x);
@@ -787,7 +797,7 @@ fn qa_m247_subnormal_differences() {
             exact_branch_inputs(x),
             &format!("state {j}"),
         ));
-        mirrored += usize::from(c.mirrored);
+        lower += usize::from(c.lambda_t_y < 0.0);
     }
     // The same states with the inner pair made coincident: the guard's other side.
     for (j, x) in states.iter().take(400).enumerate() {
@@ -800,13 +810,14 @@ fn qa_m247_subnormal_differences() {
         pole += usize::from(c.clamped);
     }
     assert!(
-        mirrored > 0,
-        "no state mirrored, so the mirror arm was never reached"
+        lower > 0 && lower < states.len(),
+        "{lower} of {} states in the lower half, so one half was never reached",
+        states.len()
     );
     println!(
-        "qa_m247_subnormal_differences: 4000 f32 states with subnormal inner-pair differences ({mirrored} mirrored) \
-         and 400 with the pair coincident ({pole} clamped): the guard, φ and the mirror the exact differences'; worst φ \
-         {worst} eps"
+        "qa_m247_subnormal_differences: 4000 f32 states with subnormal inner-pair differences ({lower} in the lower \
+         half) and 400 with the pair coincident ({pole} clamped): the guard, φ and the half the exact differences'; \
+         worst φ {worst} eps"
     );
 }
 
@@ -834,3 +845,26 @@ negative_control!(
         }
     }
 );
+
+/// A second control: `C` with the removed mirror step left in, the full state reflected where `λ̃_y < −δ_λ`.
+#[cfg(feature = "controls")]
+mod subnormal_mirror_left_in {
+    use super::*;
+
+    negative_control!(
+        qa_m247_subnormal_differences,
+        "C with its mirror step left in moves a lower-half state to the upper half and must fail",
+        expected = "is not in the exact half",
+        {
+            for x in subnormal_states(64, 0x5ab) {
+                let mut c = canonicalise(&x);
+                if f64::from(c.lambda_t_y) < -DELTA {
+                    c.ic.r = c.ic.r.map(|v| [v[0], -v[1]]);
+                    c.ic.p = c.ic.p.map(|v| [v[0], -v[1]]);
+                    c.lambda_t_y = -c.lambda_t_y;
+                }
+                check_exact_branches(&c, exact_branch_inputs(&x), "mirror left in");
+            }
+        }
+    );
+}

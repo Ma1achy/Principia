@@ -1,7 +1,8 @@
 //! `D_cfg`, the configuration block (dd_decoder §3.2; chart_reference §0.2; REQ-DEC-012, REQ-DEC-013, REQ-DEC-015):
 //! the two controls `z[0:2]` through the selection's α and β links, the canonical-frame hyperspherical decode, then
 //! unweighting and reconstruction. Under the default links, `α = (π/2)·σ(z_α)` (`α_min = 0`, R-21) and
-//! `β = π·σ(z_β)`.
+//! `β = z_β + π/2`, the periodic link, the offset onto the angle so that `z = 0` stays the golden IC (R-1020), a latent
+//! angle over the full circle read modulo `2π` by `cos β` and `sin β` (R-898, R-919 Q1 (c)). *Was:* "`β = π·σ(z_β)`".
 //!
 //! **Canonical frame** (rotation and scale gauged by construction, so no latent coordinate is spent on them;
 //! REQ-SYS-010): `ρ̃ = R̃ cos α·(1, 0)`, `λ̃ = R̃ sin α·(cos β, sin β)`, `R̃ = 1`, so `I = ‖ρ̃‖² + ‖λ̃‖² = 1`.
@@ -19,8 +20,8 @@
 //! them.
 //!
 //! **No guard** (REQ-DEC-028): finite `z` keeps `α` off the exact poles in exact arithmetic. In floating point the
-//! range is closed, `α ∈ [0, π/2]` and `β ∈ [0, π]` (R-417, dd_decoder §3.2): `α = 0` and `β = 0` are reached where
-//! the link's output underflows, at f32 and f64, by the link's own rounding. Nothing here clamps, excludes or lands
+//! range is closed, `α ∈ [0, π/2]` (R-417, dd_decoder §3.2): `α = 0` is reached where the link's output underflows, at
+//! f32 and f64, by the link's own rounding. `β` has no range to close: every finite `z_β` is an angle. Nothing here clamps, excludes or lands
 //! on a pole, and the poles are fenced downstream (the collision detector, the conditioning readout, the saturation
 //! flags; R-21).
 
@@ -96,7 +97,8 @@ pub fn reconstruct<R: LinkReal>(
 /// `ρ̃ = √μ_ρ·ρ`, `λ̃ = √μ_λ·λ`; brought to `R̃ = 1` by the scale gauge `ℓ = √I`, `I = ‖ρ̃‖² + ‖λ̃‖²` (§0.5), which
 /// divides both by `ℓ`; `α = atan2(‖λ̃‖, ‖ρ̃‖)` and `β = atan2(λ̃_y, λ̃_x)` read off them (`‖ρ̃‖ = cos α`); then
 /// [`reconstruct`], the same unweighting and reconstruction as [`decode`]'s. `(ρ, λ)` must already be in the canonical
-/// frame, `ρ` on `+x` and `λ_y ≥ 0`, as the Burrau embed's are, so no rotation or mirror is left for `C`.
+/// frame, `ρ` on `+x`, as the Burrau embed's are, so no rotation is left for `C`; `β` is `λ̃`'s signed angle,
+/// `(−π, π]`, which the periodic decode reads as the same point of the circle as its reduction.
 #[inline]
 pub fn from_jacobi<R: LinkReal>(masses: &Masses<R>, rho: [R; 2], lambda: [R; 2]) -> Config<R> {
     let [m0, m1, m2] = masses.m;
@@ -131,6 +133,13 @@ pub fn from_jacobi<R: LinkReal>(masses: &Masses<R>, rho: [R; 2], lambda: [R; 2])
 #[inline]
 pub fn decode<S: Selection, R: LinkReal>(z_cfg: [R; 2], masses: &Masses<R>) -> Config<R> {
     let (alpha, beta) = angles::<S, R>(z_cfg);
+    from_angles(alpha, beta, masses)
+}
+
+/// The canonical-frame configuration at `(α, β)`, whatever links gave them: [`hyperspherical`], then [`reconstruct`].
+/// [`decode`]'s tail, and the recreation of a record made under a retired `β` link (`crate::decode::retired`).
+#[inline]
+pub fn from_angles<R: LinkReal>(alpha: R, beta: R, masses: &Masses<R>) -> Config<R> {
     let (rho_t, lambda_t) = hyperspherical(alpha, beta);
     let (rho, lambda, r) = reconstruct(masses, rho_t, lambda_t);
     Config {

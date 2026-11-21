@@ -1,28 +1,39 @@
 //! QA tests for TASK-M2-15, written from the requirements, not the implementation: encode `E = (block inverses) ∘ C`
 //! on the CPU at f64 and f32. The GPU side is `engine`'s `qa_TASK-M2-15_gpu`.
 //!
-//! - REQ-ENC-007 (`encode_qa_m215_block_inverses`): the forward mates of inverse-encode Part 3 / dd_encode §3.1 are
-//!   written here from the docs (softmax ∘ μ_max·tanh, `α = (π/2)σ`, `β = πσ`, `q = q_max(2σ − 1)`, the Jacobi map of
-//!   dd_decoder §3.2 and the momentum table of §3.1), never taken from the kernel. Fuzzed interior `z`, put through that
-//!   forward map and a random gauge element `g` of dd_encode §3.3 off the mirror band (translation, boost, rotation,
-//!   scale `s` with `p` scaled by `s^(−1/2)`, and the mirror on positions *and* momenta), encodes back to `z`, and its
-//!   decode is the canonical state in physical units (Part 4). The control mirrors positions only, the half-mirror
-//!   §3.3 names.
+//! **No mirror step** (TASK-M2-57): the decoder's mirror step is removed and latent `β` is a periodic angle over the
+//! full circle, `β = z_β + π/2`, so a state below the `x`-axis encodes to `β ∈ (π, 2π)` and raises no notice of its
+//! own. The tests whose subject was the mirror's quotient are restated to that, each with its *was*.
+//!
+//! - REQ-ENC-007, REQ-ENC-003 (`encode_qa_m215_block_inverses`): the forward mates of inverse-encode Part 3 /
+//!   dd_encode §3.1 are written here from the docs (softmax ∘ μ_max·tanh, `α = (π/2)σ`, `β = z_β + π/2` (*was:*
+//!   "`β = πσ`"), `q = q_max(2σ − 1)`, the Jacobi map of dd_decoder §3.2 and the momentum table of §3.1), never taken
+//!   from the kernel. Fuzzed interior `z`, `z_β` on both halves of the circle, put through that forward map and a
+//!   random gauge element `g` of dd_encode §3.3 (translation, boost, rotation, scale `s` with `p` scaled by
+//!   `s^(−1/2)`, and the mirror on positions *and* momenta), encodes back to `z`, or where `g` mirrors to the
+//!   mirrored `z` (`z_β → π − z_β`, `z_q1` and `z_q3` negated: the equivariance), `z_β` read on the circle, and its
+//!   decode is the canonical state in physical units (Part 4), reflected where `g` mirrors. The controls: the
+//!   half-mirror §3.3 names, positions only; and an encode with the mirror step left in.
 //! - REQ-ENC-007, REQ-ENC-014 (`encode_qa_m215_clamp_iff`): each `q` component and each mass ratio is driven across its
 //!   clamp: the control's bit and `lookup_clamped` are set iff the inverse's argument lies outside the clamp interval
 //!   (`|q| > q_max(1 − 2ε_q)`, the `s` clamp; `|μ| > (1 − ε_μ)μ_max`), `|q| > q_max` always clamped and flagged, the
 //!   clamped `z` finite and on the clamp's image.
-//! - REQ-ENC-007 (`encode_qa_m215_beta_quotient`): `β` alone (R-437, R-438): `β(x, −y)` and `β(x, y)` have the same bits
-//!   (`abs`, the mirror's quotient), `β ∈ [0, π̂]`, `(±0, ±0)` gives `+0`, the `−x` half-axis `π̂` at each precision
-//!   (the nearest value at f64, rounded toward zero at f32; R-417), never `atan2`'s `−π`.
+//! - REQ-ENC-007 (`encode_qa_m215_beta_quotient`): `β` alone (R-437): the signed angle on `[0, 2π̂]`, so `β(x, −y)` is
+//!   `2π̂ − β(x, y)`, the mirror's image, off the axis and the same bits on it (*was:* "`β(x, −y)` and `β(x, y)` have
+//!   the same bits (`abs`, the mirror's quotient), `β ∈ [0, π̂]`"), at or below `π̂` above the axis and at or above it below (f32 to one ulp there), `(±0, ±0)`
+//!   gives `+0`, the `−x` half-axis `π̂` at each precision (the nearest value at f64, rounded toward zero at f32;
+//!   R-417), never `atan2`'s negative values.
 //! - REQ-ENC-007 (`encode_qa_m215_collinear_beta`): dd_encode §5 test 10 at the three Euler collinear central
 //!   configurations of masses `(0.2, 0.3, 0.5)` (solved here by bisection on Euler's condition, so no landmark sits on
-//!   the pole), with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`; and the pole landmark `m₀ = m₁` on its own.
+//!   the pole), with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`: `β` at π or at 0 on the circle (just below `2π̂` for body 2 on
+//!   `+x` below the axis), nothing clamped, and the decode keeping `λ̃_y`'s sign (*was:* the four inputs folded to one
+//!   `z` with `lookup_clamped`); and the pole landmark `m₀ = m₁` on its own.
 //! - REQ-DEC-014 (`encode_qa_m215_exact_poles`): `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components:
 //!   no NaN, identical on repeat and across the zeros' signs, `lookup_clamped` set, `β` and `φ` R-437's `+0`, and the
 //!   CPU-f32 instantiation agreeing with CPU-f64 (angles, notices, decoded state).
-//! - REQ-ENC-014 (`encode_qa_m215_notices`): a canonical input raises no notice; a mirrored one only
-//!   `lookup_mirrored`; an out-of-range momentum only `lookup_clamped`.
+//! - REQ-ENC-014 (`encode_qa_m215_notices`): a canonical input raises no notice; its mirror image, in the other half,
+//!   raises none either and stays in that half (*was:* "a mirrored one only `lookup_mirrored`"); an out-of-range
+//!   momentum only `lookup_clamped`.
 //! - REQ-SYS-015 (`encode_qa_m215_no_wgsl_decode`): no checked-in `.wgsl` file carries the decode's or encode's link
 //!   formulae (the verify detail's grep, including `.wgsl`): the fragment decode/encode can only be the translation's
 //!   output. *Amended by qa for TASK-M2-25 (R-116, REQ-COL-006; exception applied per R-369 on PR #303):* R-116's
@@ -41,6 +52,8 @@
 use std::f64::consts::{FRAC_PI_2, PI};
 use std::path::{Path, PathBuf};
 
+#[cfg(feature = "controls")]
+use kernel::canon::canonicalise;
 use kernel::decode::{decode, Ic, Latent};
 use kernel::encode::blocks::beta;
 use kernel::encode::{encode, Encoded};
@@ -51,7 +64,6 @@ use validation::negative_control;
 const MU_MAX: f64 = 5.0;
 const Q_MAX: f64 = 2.0;
 const EPS_MU: f64 = 1e-6;
-const EPS_Z: f64 = 1e-6;
 const EPS_Q: f64 = 1e-6;
 const DELTA_LAMBDA: f64 = 1e-12;
 
@@ -135,7 +147,8 @@ fn forward(z: [f64; 8]) -> Ic<f64> {
     let t: f64 = w.iter().sum();
     let m = w.map(|v| v / t);
     let a = FRAC_PI_2 * sigma(z[0]);
-    let b = PI * sigma(z[1]);
+    // The periodic link: β = z_β + π/2, an angle over the full circle (was: β = π·σ(z_β)).
+    let b = z[1] + FRAC_PI_2;
     let q = [2, 3, 4, 5].map(|k| Q_MAX * (2.0 * sigma(z[k]) - 1.0));
     from_jacobi(
         m,
@@ -280,19 +293,63 @@ negative_control!(
 
 // ── REQ-ENC-007: each block recovers z, under the gauge ───────────────────────────────────────────────────────────
 
-/// Encodes `g·forward(z)` for `n` random interior `z` and `g`, and checks that `z` comes back and that its decode is
-/// `forward(z)` in physical units.
-fn check_block_inverses(n: usize, seed: u64, half_mirror: bool) {
+/// `x` with every `rᵢ` and every `pᵢ` reflected in the `x`-axis: the mirror map `Π` on the full state.
+fn mirror_image(x: &Ic<f64>) -> Ic<f64> {
+    Ic {
+        m: x.m,
+        r: x.r.map(|v| [v[0], -v[1]]),
+        p: x.p.map(|v| [v[0], -v[1]]),
+    }
+}
+
+/// The mirrored `z` (dd_encode §3.3): `β → 2π − β`, which under `β = z_β + π/2` is `z_β → π − z_β`, read on the circle;
+/// the controls of `p_ρ,y` and `p_λ,y` (`z_q1`, `z_q3`) negated, the momentum link being odd; every other control as
+/// it is.
+fn mirrored_z(z: [f64; 8]) -> [f64; 8] {
+    let mut out = z;
+    out[Z_BETA] = PI - z[Z_BETA];
+    out[Z_Q0 + 1] = -z[Z_Q0 + 1];
+    out[Z_Q0 + 3] = -z[Z_Q0 + 3];
+    out
+}
+
+/// `|got − want|` for control `k`: `z_β`'s on the circle, the difference reduced by whole periods `2π` (`z_β` and
+/// `z_β + 2π` are one state, and the encode returns the representative with `β ∈ [0, 2π]`).
+fn z_gap(k: usize, got: f64, want: f64) -> f64 {
+    let d = got - want;
+    if k == Z_BETA {
+        (d - 2.0 * PI * (d / (2.0 * PI)).round()).abs()
+    } else {
+        d.abs()
+    }
+}
+
+/// An encode under test, at f64.
+type Enc = fn(&Ic<f64>) -> Encoded<f64>;
+
+/// Encodes `g·forward(z)` for `n` random interior `z` and `g`, and checks that `z` comes back, mirrored where `g`
+/// mirrors (the equivariance: no mirror step folds the lower half onto the upper), and that its decode is
+/// `forward(z)` in physical units, reflected where `g` mirrors. Both halves of the circle and both parities are
+/// reached.
+fn check_block_inverses(enc: Enc, n: usize, seed: u64, half_mirror: bool) {
     let mut rng = Rng(seed);
     let mut worst = (0.0f64, 0.0f64);
+    let (mut lower, mut mirrors) = (0, 0);
     for case in 0..n {
         let z: [f64; 8] = [0; 8].map(|_| rng.range(-3.0, 3.0));
         let x = forward(z);
         let mut g = G::random(&mut rng);
         g.mirror_p = !half_mirror;
-        let e = enc64(&g.act(&x));
+        let e = enc(&g.act(&x));
+        let (z, x) = if g.mirror {
+            (mirrored_z(z), mirror_image(&x))
+        } else {
+            (z, x)
+        };
+        lower += usize::from(jac(&x).lam_t[1] < 0.0);
+        mirrors += usize::from(g.mirror);
         for (k, (got, want)) in e.z.z.iter().zip(z).enumerate() {
-            let d = (got - want).abs();
+            let d = z_gap(k, *got, want);
             worst.0 = worse(worst.0, d);
             assert!(
                 d <= Z_TOL_F64,
@@ -312,23 +369,52 @@ fn check_block_inverses(n: usize, seed: u64, half_mirror: bool) {
             );
         }
     }
+    assert!(
+        lower > n / 8 && n - lower > n / 8 && mirrors > n / 8 && n - mirrors > n / 8,
+        "the cases do not reach both halves and both parities: {lower} of {n} in the lower half, {mirrors} mirrored"
+    );
     println!(
-        "block inverses: worst |Δz| {:e}, worst physical {:e}",
+        "block inverses: worst |Δz| {:e}, worst physical {:e}; {lower} of {n} in the lower half, {mirrors} mirrored",
         worst.0, worst.1
     );
 }
 
 #[test]
 fn encode_qa_m215_block_inverses() {
-    check_block_inverses(4000, 0x2150_0001, false);
+    check_block_inverses(enc64, 4000, 0x2150_0001, false);
 }
 
 negative_control!(
     encode_qa_m215_block_inverses,
     "the half-mirror (Π on positions only, dd_encode §3.3) must fail the recovery",
     expected = "does not recover",
-    check_block_inverses(4000, 0x2150_0001, true)
+    check_block_inverses(enc64, 4000, 0x2150_0001, true)
 );
+
+/// An encode with the removed mirror step left in: the canonical state reflected in full where `λ̃_y < −δ_λ`, then
+/// encoded, so a lower-half state comes back as its upper-half image.
+#[cfg(feature = "controls")]
+fn mirror_left_in(x: &Ic<f64>) -> Encoded<f64> {
+    let c = canonicalise(x);
+    if c.lambda_t_y < -DELTA_LAMBDA {
+        enc64(&mirror_image(&c.ic))
+    } else {
+        enc64(x)
+    }
+}
+
+/// A second control: the mirror step left in the encode.
+#[cfg(feature = "controls")]
+mod block_inverses_mirror_left_in {
+    use super::*;
+
+    negative_control!(
+        encode_qa_m215_block_inverses,
+        "an encode with the mirror step left in folds the lower half onto the upper and must fail the recovery",
+        expected = "does not recover",
+        check_block_inverses(mirror_left_in, 4000, 0x2150_0001, false)
+    );
+}
 
 /// At f32, the same source recovers `z` from `forward(z)` (no gauge) to f32's rounding times the conditioning.
 fn check_block_inverses_f32(n: usize, seed: u64, offset: f32) {
@@ -341,7 +427,7 @@ fn check_block_inverses_f32(n: usize, seed: u64, offset: f32) {
         let z: [f64; 8] = [0; 8].map(|_| rng.range(-3.0, 3.0));
         let e = enc32(&forward(z));
         for (k, (got, want)) in e.z.z.iter().zip(z).enumerate() {
-            let d = (f64::from(got + offset) - want).abs();
+            let d = z_gap(k, f64::from(got + offset), want);
             worst = worse(worst, d);
             assert!(
                 d <= Z_TOL_F32,
@@ -470,7 +556,7 @@ negative_control!(
     check_clamp_iff(true)
 );
 
-// ── REQ-ENC-007: β alone (R-437, R-438) ───────────────────────────────────────────────────────────────────────────
+// ── REQ-ENC-007: β alone (R-437; the signed angle over the full circle) ───────────────────────────────────────────
 
 /// f32's π̂: the image of π rounded toward zero (R-417).
 fn pi_hat_f32() -> f32 {
@@ -482,6 +568,13 @@ fn pi_hat_f32() -> f32 {
     }
 }
 
+/// The bound on `β(x, y) + β(x, −y) − 2π̂` off the axis, in eps of `2π`: the lower half's `β` is `atan2 + 2π̂`, one
+/// rounded add onto a rounded constant, and the upper half's `atan2` is its mirror's to an ulp; under 2, with room.
+const IMAGE_EPS: f64 = 4.0;
+
+/// `β` is the signed angle on `[0, 2π̂]`: `β(x, −y)` is the mirror's image `2π̂ − β(x, y)` off the axis (within
+/// [`IMAGE_EPS`]) and the same bits on it; `β < π̂` strictly above the axis and `> π̂` strictly below; `π̂` on the `−x`
+/// half-axis; 0 at the pole. *Was:* `β(x, −y)` and `β(x, y)` the same bits, `β ∈ [0, π̂]`, the mirror's quotient.
 fn check_beta_quotient(beta64: fn([f64; 2]) -> f64) {
     let mut rng = Rng(0x2150_0003);
     let pairs: Vec<[f64; 2]> = (0..20000)
@@ -499,24 +592,53 @@ fn check_beta_quotient(beta64: fn([f64; 2]) -> f64) {
         .collect();
     for [x, y] in pairs.iter().copied() {
         let (b, bm) = (beta64([x, y]), beta64([x, -y]));
+        let image = if y == 0.0 {
+            b.to_bits() == bm.to_bits()
+        } else {
+            (b + bm - 2.0 * PI).abs() <= IMAGE_EPS * f64::EPSILON * 2.0 * PI
+        };
         assert!(
-            b.to_bits() == bm.to_bits(),
-            "β({x:e}, {y:e}) = {b} but β({x:e}, {:e}) = {bm}: not the mirror's quotient",
+            image,
+            "β({x:e}, {y:e}) = {b} but β({x:e}, {:e}) = {bm}: not the mirror's image",
             -y
         );
-        assert!((0.0..=PI).contains(&b), "β({x:e}, {y:e}) = {b} ∉ [0, π]");
+        assert!(
+            (0.0..=2.0 * PI).contains(&b),
+            "β({x:e}, {y:e}) = {b} ∉ [0, 2π]"
+        );
+        assert!(
+            (y <= 0.0 || b <= PI) && (y >= 0.0 || b >= PI),
+            "β({x:e}, {y:e}) = {b} is in the other half of the circle"
+        );
         if y == 0.0 && x < 0.0 {
             assert!(b == PI, "β({x:e}, {y:e}) = {b}, not π̂ on the −x half-axis");
         }
-        let b32 = beta([x as f32, y as f32]);
-        let bm32 = beta([x as f32, -(y as f32)]);
+        let (x32, y32) = (x as f32, y as f32);
+        let b32 = beta([x32, y32]);
+        let bm32 = beta([x32, -y32]);
+        let tau32 = 2.0 * f64::from(pi_hat_f32());
+        let image32 = if y32 == 0.0 {
+            b32.to_bits() == bm32.to_bits()
+        } else {
+            (f64::from(b32) + f64::from(bm32) - tau32).abs()
+                <= IMAGE_EPS * f64::from(f32::EPSILON) * tau32
+        };
         assert!(
-            b32.to_bits() == bm32.to_bits(),
-            "f32 β({x:e}, {y:e}) = {b32} but {bm32} mirrored: not the mirror's quotient"
+            image32,
+            "f32 β({x:e}, {y:e}) = {b32} but {bm32} mirrored: not the mirror's image"
         );
         assert!(
-            (0.0..=pi_hat_f32()).contains(&b32),
-            "f32 β({x:e}, {y:e}) = {b32} ∉ [0, π̂]"
+            (0.0..=2.0 * pi_hat_f32()).contains(&b32),
+            "f32 β({x:e}, {y:e}) = {b32} ∉ [0, 2π̂]"
+        );
+        // Above the axis β never passes π̂ (the select). Below it, f32's β may sit one ulp under π̂ and no more:
+        // π̂ is π rounded toward zero, so within about 3e-8 rad of the −x half-axis `atan2`'s −π, the nearest f32 and
+        // past π̂, plus 2π̂ lands on the f32 below π̂ (measured: 423 of these 20000 pairs, each exactly one ulp,
+        // every one with |λ̃_y/λ̃_x| ≤ 3.1e-8; none at f64).
+        let below_pi_hat = f32::from_bits(pi_hat_f32().to_bits() - 1);
+        assert!(
+            (y32 <= 0.0 || b32 <= pi_hat_f32()) && (y32 >= 0.0 || b32 >= below_pi_hat),
+            "f32 β({x:e}, {y:e}) = {b32} is in the other half of the circle"
         );
         if (y as f32) == 0.0 && (x as f32) < 0.0 {
             assert!(
@@ -548,10 +670,27 @@ fn encode_qa_m215_beta_quotient() {
 
 negative_control!(
     encode_qa_m215_beta_quotient,
-    "β read as atan2(λ̃_y, λ̃_x), without |·|, must fail",
-    expected = "not the mirror's quotient",
-    check_beta_quotient(|[x, y]| y.atan2(x))
+    "β with the mirror's fold left in, atan2(|λ̃_y|, λ̃_x), must fail: β(x, −y) is then β(x, y), not its image",
+    expected = "not the mirror's image",
+    check_beta_quotient(|[x, y]| if x == 0.0 && y == 0.0 {
+        0.0
+    } else {
+        y.abs().atan2(x)
+    })
 );
+
+/// A second control: `atan2`'s own value, negative below the axis.
+#[cfg(feature = "controls")]
+mod beta_raw_atan2 {
+    use super::*;
+
+    negative_control!(
+        encode_qa_m215_beta_quotient,
+        "β read as atan2(λ̃_y, λ̃_x), unreduced, is negative below the axis and must fail",
+        expected = "not the mirror's image",
+        check_beta_quotient(|[x, y]| y.atan2(x))
+    );
+}
 
 // ── REQ-ENC-007: dd_encode §5 test 10 ─────────────────────────────────────────────────────────────────────────────
 
@@ -607,7 +746,16 @@ fn collinear_jacobi(m: [f64; 3], x: [f64; 3]) -> (f64, f64) {
 const P_RHO: [f64; 2] = [0.3, -0.2];
 const P_LAM: [f64; 2] = [-0.4, 0.25];
 
-fn check_collinear(m: [f64; 3], tamper: bool) {
+/// A `β` put in the encode's place, from `(λ̃_x, λ̃_y)`: the controls' tampering.
+type Tamper = Option<fn(f64, f64) -> f64>;
+
+/// Test 10 under the signed encode: at each landmark and each `λ̃_y`, `β` is at π (body 2 on `−x`) or at 0 on the
+/// circle (body 2 on `+x`: just above 0 for `λ̃_y ≥ 0`, just below `2π` for `λ̃_y < 0`), `π̂` and `+0` exactly at
+/// `λ̃_y = ±0` by the selects; nothing is clamped, `β` having no clamp; the decode keeps the side, `λ̃_y`'s sign and
+/// `λ̃` to rounding; and the four inputs' `z` agree to their `λ̃_y`s' own spread, `z_β` on the circle. *Was:* the four
+/// inputs folded by `|λ̃_y|` onto one `z` with `lookup_clamped` and `s_β` reported clamped, `λ̃_y` recovered only to
+/// `π·ε_z·‖λ̃‖ + |λ̃_y|`.
+fn check_collinear(m: [f64; 3], tamper: Tamper) {
     let ys = [-1e-13, -0.0, 0.0, 1e-13];
     let mut sides = (0, 0);
     for middle in 0..3 {
@@ -626,13 +774,13 @@ fn check_collinear(m: [f64; 3], tamper: bool) {
         for y in ys {
             let x = from_jacobi(m, [rt, 0.0], [lx, y], P_RHO, P_LAM);
             let mut e = enc64(&x);
-            if tamper {
-                e.blocks.beta = y.atan2(lx);
+            if let Some(f) = tamper {
+                e.blocks.beta = f(lx, y);
             }
             let b = e.blocks.beta;
             let what = format!("landmark {middle} (λ̃_x = {lx:.4}), λ̃_y = {y:?}");
             if lx < 0.0 {
-                // β = atan2(|λ̃_y|, λ̃_x) is π − |λ̃_y|/‖λ̃‖ to first order.
+                // β = atan2(λ̃_y, λ̃_x), reduced to [0, 2π], is π − λ̃_y/‖λ̃‖ to first order.
                 assert!(
                     (b - PI).abs() <= y.abs() / lam_norm + ROUND_F64,
                     "{what}: β = {b}, not π (body 2 on the −x side)"
@@ -640,18 +788,34 @@ fn check_collinear(m: [f64; 3], tamper: bool) {
                 if y == 0.0 {
                     assert!(b == PI, "{what}: β = {b}, not π̂ by the select");
                 }
+            } else if y < 0.0 {
+                // Below the axis: β = 2π − |λ̃_y|/‖λ̃‖ to first order, the lower half's, never folded onto 0.
+                assert!(
+                    (b - 2.0 * PI).abs() <= y.abs() / lam_norm + ROUND_F64 && b <= 2.0 * PI,
+                    "{what}: β = {b}, not just below 2π (body 2 on the +x side, below the axis)"
+                );
             } else {
                 assert!(
                     (0.0..=y.abs() / lam_norm + ROUND_F64).contains(&b),
                     "{what}: β = {b}, not 0 (body 2 on the +x side)"
                 );
+                if y == 0.0 {
+                    assert!(
+                        b.to_bits() == 0.0f64.to_bits(),
+                        "{what}: β = {b:?}, not +0 by the select"
+                    );
+                }
             }
-            assert!(e.report.lookup_clamped(), "{what}: lookup_clamped not set");
+            // β has no clamp: a collinear state is an ordinary point of the circle and raises nothing.
             assert!(
-                e.report.clamped_controls >> Z_BETA & 1 == 1,
-                "{what}: s_β not reported clamped"
+                !e.report.lookup_clamped(),
+                "{what}: lookup_clamped is set: {:?}",
+                e.report
             );
-            assert!(!e.report.mirrored, "{what}: mirrored inside the deadband");
+            assert!(
+                e.report.clamped_controls >> Z_BETA & 1 == 0,
+                "{what}: z_β reported clamped"
+            );
             zs.push(e.z.z);
             // The round trip, in mass-weighted Jacobi coordinates.
             let j = jac(&decode::<Defaults, f64>(&Latent::new(e.z.z)).ic);
@@ -660,16 +824,19 @@ fn check_collinear(m: [f64; 3], tamper: bool) {
                 "{what}: the decode moved body 2 to the other side: λ̃_x = {}",
                 j.lam_t[0]
             );
+            // No clamp moves β and no fold drops λ̃_y's sign, so the clamp's and the fold's terms are gone and the
+            // rounding term alone is left (was: π·ε_z·‖λ̃‖ + |λ̃_y| + rounding, and ‖λ̃‖(1 − cos(π·ε_z)) + rounding).
             let dy = (j.lam_t[1] - y).abs();
-            assert!(
-                dy <= PI * EPS_Z * lam_norm + y.abs() + ROUND_F64,
-                "{what}: |Δλ̃_y| = {dy:e} over π·ε_z·‖λ̃‖ + |λ̃_y|"
-            );
+            assert!(dy <= ROUND_F64, "{what}: |Δλ̃_y| = {dy:e} over rounding");
+            if y != 0.0 {
+                assert!(
+                    j.lam_t[1].signum() == y.signum(),
+                    "{what}: the decode mirrored λ̃_y: {:e}",
+                    j.lam_t[1]
+                );
+            }
             let dx = (j.lam_t[0] - lx).abs();
-            assert!(
-                dx <= lam_norm * (1.0 - (PI * EPS_Z).cos()) + ROUND_F64,
-                "{what}: |Δλ̃_x| = {dx:e} over ‖λ̃‖(1 − cos(π·ε_z))"
-            );
+            assert!(dx <= ROUND_F64, "{what}: |Δλ̃_x| = {dx:e} over rounding");
             let rest = (0..3)
                 .map(|i| (j.m[i] - m[i]).abs())
                 .chain([
@@ -683,10 +850,17 @@ fn check_collinear(m: [f64; 3], tamper: bool) {
                 "{what}: the masses, ρ̃ or the momenta move by {rest:e}"
             );
         }
+        // The four inputs are one configuration to within their λ̃_y: z_β, on the circle, differs by the angles
+        // those subtend, the other controls by rounding.
         for (k, z) in zs.iter().enumerate().skip(1) {
             for c in 0..8 {
+                let spread = if c == Z_BETA {
+                    (ys[0].abs() + ys[k].abs()) / lam_norm
+                } else {
+                    0.0
+                };
                 assert!(
-                    (z[c] - zs[0][c]).abs() <= ROUND_F64 * (1.0 + z[c].abs()),
+                    z_gap(c, z[c], zs[0][c]) <= spread + ROUND_F64 * (1.0 + z[c].abs()),
                     "landmark {middle}: λ̃_y = {:?} and {:?} encode to different z[{c}]: {} and {}",
                     ys[0],
                     ys[k],
@@ -709,6 +883,9 @@ fn check_collinear(m: [f64; 3], tamper: bool) {
 
 /// The pole landmark: `m₀ = m₁` with body 2 at the inner pair's centre of mass, `λ̃ = 0` exactly. Dyadic masses and
 /// symmetric positions keep every product exact, so `λ̃_x` is 0 whatever `C` rounds.
+///
+/// `λ̃_y = ±0` gives `β = +0` by the select; `+1e-13` gives π/2 and `−1e-13` the lower half's 3π/2 (*was:* π/2 at
+/// either sign, `λ̃_y` folded), each to 4 eps of π/2 per quarter turn.
 fn check_pole_landmark(tamper: bool) {
     let m = [0.25, 0.25, 0.5];
     for y in [-1e-13, -0.0, 0.0, 1e-13] {
@@ -730,9 +907,10 @@ fn check_pole_landmark(tamper: bool) {
                 "pole, λ̃_y = {y:?}: β = {b:?}, not R-437's 0 by the select"
             );
         } else {
+            let quarters = if y > 0.0 { 1.0 } else { 3.0 };
             assert!(
-                (b - FRAC_PI_2).abs() <= 4.0 * f64::EPSILON,
-                "pole, λ̃_y = {y:?}: β = {b}, not π/2"
+                (b - quarters * FRAC_PI_2).abs() <= 4.0 * f64::EPSILON * quarters,
+                "pole, λ̃_y = {y:?}: β = {b}, not {quarters}·π/2"
             );
         }
         assert!(
@@ -749,15 +927,28 @@ fn check_pole_landmark(tamper: bool) {
 
 #[test]
 fn encode_qa_m215_collinear_beta() {
-    check_collinear([0.2, 0.3, 0.5], false);
+    check_collinear([0.2, 0.3, 0.5], None);
 }
 
 negative_control!(
     encode_qa_m215_collinear_beta,
-    "β read as atan2(λ̃_y, λ̃_x) must fail on the −x side at λ̃_y < 0",
+    "β read as atan2(λ̃_y, λ̃_x), unreduced, must fail on the −x side at λ̃_y < 0",
     expected = "not π (body 2 on the −x side)",
-    check_collinear([0.2, 0.3, 0.5], true)
+    check_collinear([0.2, 0.3, 0.5], Some(|lx, y| y.atan2(lx)))
 );
+
+/// A second control: the mirror's fold left in `β`.
+#[cfg(feature = "controls")]
+mod collinear_fold_left_in {
+    use super::*;
+
+    negative_control!(
+        encode_qa_m215_collinear_beta,
+        "β read as atan2(|λ̃_y|, λ̃_x), the mirror's fold left in, must fail below the axis on the +x side",
+        expected = "not just below 2π",
+        check_collinear([0.2, 0.3, 0.5], Some(|lx, y: f64| y.abs().atan2(lx)))
+    );
+}
 
 negative_control!(
     encode_qa_m215_collinear_beta_pole,
@@ -814,7 +1005,6 @@ fn bits64(e: &Encoded<f64>) -> Vec<u64> {
     w.extend([e.blocks.alpha.to_bits(), e.blocks.beta.to_bits()]);
     w.extend([
         u64::from(e.report.lookup_clamped()),
-        u64::from(e.report.mirrored),
         u64::from(e.report.clamped_controls),
     ]);
     w
@@ -825,7 +1015,6 @@ fn bits32(e: &Encoded<f32>) -> Vec<u32> {
     w.extend([e.blocks.alpha.to_bits(), e.blocks.beta.to_bits()]);
     w.extend([
         u32::from(e.report.lookup_clamped()),
-        u32::from(e.report.mirrored),
         e.report.clamped_controls,
     ]);
     w
@@ -903,13 +1092,11 @@ fn check_poles(name: &str, states: &[Ic<f64>], alpha: f64, rho_pole: bool, nan_a
         assert_eq!(
             (
                 e.report.lookup_clamped(),
-                e.report.mirrored,
                 e.report.clamped_controls,
                 e.report.coincident
             ),
             (
                 f.report.lookup_clamped(),
-                f.report.mirrored,
                 f.report.clamped_controls,
                 f.report.coincident
             ),
@@ -957,35 +1144,48 @@ negative_control!(
 
 // ── REQ-ENC-014: the notices ──────────────────────────────────────────────────────────────────────────────────────
 
-fn check_notices(forget_mirror: bool) {
+/// A canonical input raises no notice; nor does its mirror image, which the encode leaves in its own half (`λ̃_y`'s
+/// sign reversed from the input's, `β` on the other side of `π̂`), there being no mirror step to report (*was:* "a
+/// mirrored input raised `lookup_mirrored` alone"); `|q| > q_max` raises `lookup_clamped` alone. Both halves are
+/// reached by the canonical inputs.
+fn check_notices(enc: Enc) {
     let mut rng = Rng(0x2150_0004);
+    let mut halves = [0usize; 2];
     for case in 0..500 {
         let z: [f64; 8] = [0; 8].map(|_| rng.range(-3.0, 3.0));
         let x = forward(z);
-        let e = enc64(&x);
+        let e = enc(&x);
         assert!(
-            !e.report.mirrored && !e.report.lookup_clamped(),
+            !e.report.lookup_clamped() && !e.report.lookup_rescaled(),
             "case {case}: a canonical input raised a notice: {:?}",
             e.report
         );
-        let mirrored = Ic {
-            m: x.m,
-            r: x.r.map(|v| [v[0], -v[1]]),
-            p: x.p.map(|v| [v[0], -v[1]]),
-        };
-        let mut e = enc64(&mirrored);
-        if forget_mirror {
-            e.report.mirrored = false;
-        }
+        let ly = jac(&x).lam_t[1];
+        halves[usize::from(ly < 0.0)] += 1;
+        let e = enc(&mirror_image(&x));
         assert!(
-            e.report.lookup_mirrored() && !e.report.lookup_clamped(),
-            "case {case}: a mirrored input did not raise lookup_mirrored alone: {:?}",
+            !e.report.lookup_clamped() && !e.report.lookup_rescaled(),
+            "case {case}: a mirrored input raised a notice: {:?}",
             e.report
         );
+        // Clear of the axis, where rounding cannot move the state across it.
+        if ly.abs() > 1e-9 {
+            let got = e.canonical.lambda_t_y;
+            assert!(
+                (got < 0.0) == (ly > 0.0) && (e.blocks.beta > PI) == (ly > 0.0),
+                "case {case}: the mirrored input did not keep its half: λ̃_y = {got:e}, β = {}, for the input's \
+                 λ̃_y = {ly:e}",
+                e.blocks.beta
+            );
+        }
     }
-    let e = enc64(&with_q([2.5, -0.2, -0.4, 0.25]));
     assert!(
-        e.report.lookup_clamped() && !e.report.mirrored,
+        halves[0] > 50 && halves[1] > 50,
+        "the canonical inputs do not reach both halves: {halves:?}"
+    );
+    let e = enc(&with_q([2.5, -0.2, -0.4, 0.25]));
+    assert!(
+        e.report.lookup_clamped() && !e.report.lookup_rescaled(),
         "|q| > q_max did not raise lookup_clamped alone: {:?}",
         e.report
     );
@@ -993,14 +1193,14 @@ fn check_notices(forget_mirror: bool) {
 
 #[test]
 fn encode_qa_m215_notices() {
-    check_notices(false);
+    check_notices(enc64);
 }
 
 negative_control!(
     encode_qa_m215_notices,
-    "a mirror taken but not reported must fail",
-    expected = "did not raise lookup_mirrored alone",
-    check_notices(true)
+    "an encode with the mirror step left in, taken and not reported, must fail",
+    expected = "the mirrored input did not keep its half",
+    check_notices(mirror_left_in)
 );
 
 // ── REQ-SYS-015: no hand-written WGSL decode or encode ────────────────────────────────────────────────────────────

@@ -88,6 +88,8 @@ fn doc_constraint(c: Constraint) -> &'static str {
         Constraint::Positive => "positive",
         Constraint::Symmetric => "symmetric",
         Constraint::Unbounded => "unbounded",
+        // The doc's spelling list predates the periodic beta link; "periodic" is the ledger's spelling.
+        Constraint::Periodic => "periodic",
     }
 }
 
@@ -223,6 +225,20 @@ fn unbounded(name: &'static str) -> Link {
     }
 }
 
+/// A periodic link, the offset onto an angle read modulo its period: no clamp, no parameter, log-det 0.
+fn periodic() -> Link {
+    Link {
+        name: "p_periodic",
+        constraint: Constraint::Periodic,
+        forward: leak(vec![op(Op::Add, vec![x(0), num(1.5)])]),
+        inverse: leak(vec![op(Op::Sub, vec![x(0), num(1.5)])]),
+        log_det: num(0.0),
+        clamps: &[],
+        params: &[],
+        sampling_note: "uniform on the circle",
+    }
+}
+
 /// Test entries, in an order neither byte-sorted nor UTF-16-sorted, with names whose byte order differs from a
 /// case-folded order (`B_` < `a_`) and from UTF-16 order (U+FF61 < U+10000 in UTF-8 bytes, the reverse in UTF-16).
 fn links() -> Vec<Link> {
@@ -233,6 +249,8 @@ fn links() -> Vec<Link> {
         symmetric("é_symmetric"),
         bounded(),
         unbounded("\u{FF61}_unbounded"),
+        // Last, so the entries above keep their places ([`SIMPLEX`], [`BOUNDED`]).
+        periodic(),
     ]
 }
 
@@ -440,6 +458,7 @@ fn qa_m046_canonical_bytes_match_the_written_definition() {
         Constraint::Positive,
         Constraint::Symmetric,
         Constraint::Unbounded,
+        Constraint::Periodic,
     ] {
         assert!(
             ls.iter().any(|l| l.constraint == c),
@@ -581,6 +600,7 @@ fn single_edits() -> Vec<(String, Vec<Link>, Vec<Param>)> {
         Constraint::Positive,
         Constraint::Symmetric,
         Constraint::Unbounded,
+        Constraint::Periodic,
     ] {
         push(
             &format!("constraint {}", doc_constraint(k)),

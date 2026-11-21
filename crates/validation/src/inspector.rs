@@ -28,15 +28,49 @@
 //! defaults swapped (`crate::eps_phys::Mismatched`), and its `shift` moves `C`'s output by a known offset before the CoM
 //! is read, so the CoM check must fail it.
 //!
-//! **The shape checks** (TASK-M2-50; R-551, RQ-475; R-549, RQ-355; RQ-624). Over RQ-475's families, equal-mass
-//! equilateral triangles and collinear states, each through a random gauge element ([`shape_families`]): every collinear
-//! state's `z_β` at its clamp image with its `lookup_clamped` bit set, and no equilateral state's set, bit for bit;
-//! `max |w − 1|` at the pole and `max |w|` at the equator, read on the canonical state `C(x)`, within the bounds
-//! [`POLE_BOUND`] and [`EQUATOR_BOUND`] proposed under REQ-VAL-121. On `D(E(x))` a collinear state's `|w|` is the `β`
-//! clamp's image, `sin2α·sin(π·ε_z)`, by design: it is reported, not judged (RQ-624, decided per R-369). The controls
-//! (R-176): `z_β` moved one ulp off its clamp image ([`RoundtripInput::beta_nudge`]); the collinear states moved off
-//! the line inside the clamp's band ([`RoundtripInput::off_line`]), which only `|w|` on `C(x)` catches; and both bounds
-//! one step below their own measurement ([`ShapeBounds::BelowMeasurement`]).
+//! **The shape checks** (TASK-M2-50; R-551, RQ-475; R-549, RQ-355; RQ-624; R-1018, RQ-821 (a) + (a2), read on `β`
+//! under R-1020's offset link). Over RQ-475's families, equal-mass equilateral triangles and collinear states, each
+//! through a random gauge element, and each collinear state once more through a gauge element that keeps it on the
+//! `x`-axis, the axis sub-family ([`shape_families`]), on the decoder without its mirror step:
+//! - **the equilateral line:** `|w − w_in|` on `C(x)`, `w_in` the input's own orientation (+1 for an `L⁺` input, −1 for
+//!   an `L⁻` input), within [`POLE_BOUND`]: the sign is kept, so a decoder that still mirrors fails it;
+//! - **the collinear line:** `|w|` on `C(x)` within [`EQUATOR_BOUND`]; the decoded angle at 0 or `π̂`, bit for bit
+//!   where the input's `C(x)` has `λ̃_y` exactly `±0` (its `z_β` the encode's value there, [`beta_images`]), and every
+//!   other member within [`COLLINEAR_TOL`] on `|λ̃_y|`. No member in a random gauge has `λ̃_y` exactly `±0` (0 of 2000
+//!   at seeds 1, 2 and 3), so the members judged bit for bit are the axis sub-family's, every one of them when the
+//!   states are on the line, and the check fails if one of them is not;
+//! - **`β` flags nothing:** no collinear or equilateral state's `lookup_clamped` bit set by `β`;
+//! - **reported, unjudged:** `D(E(x))`'s `|w|`.
+//!
+//! The controls (R-176), each of which must fail: `L⁻` read against `+1` ([`PoleControl::PlusOne`]); a decoder that
+//! still mirrors, an `L⁻` input at `w = +1` ([`PoleControl::Mirrors`]); a collinear value off by one ulp on a member
+//! judged bit for bit ([`RoundtripInput::beta_nudge`]) or past the tolerance on the others
+//! ([`ShapeBounds::CollinearBelowMeasurement`]); a clamp on `β` ([`RoundtripInput::beta_clamp`]); and, kept, the
+//! collinear states moved off the line ([`RoundtripInput::off_line`]) and the pole's and equator's bounds one step below
+//! their own measurement ([`ShapeBounds::BelowMeasurement`]). *Was (before TASK-M2-57):* "every collinear state's
+//! `z_β` at its clamp image with its `lookup_clamped` bit set, and no equilateral state's set, bit for bit;
+//! `max |w − 1|` at the pole …; On `D(E(x))` a collinear state's `|w|` is the `β` clamp's image,
+//! `sin2α·sin(π·ε_z)`, by design: it is reported, not judged".
+//!
+//! **The collinear tolerance, its criterion written before the run** (R-1018's (a1) under REQ-VAL-121; R-71, R-649;
+//! TASK-M2-57). *The measure:* `|λ̃_y|` on `C(x)`, the encode's own `λ̃` at `I = 1`, over the collinear members whose
+//! `C(x)` has `λ̃_y` not `±0`; (a1) offers it or the distance on the circle `d` of `z_β`. It is taken because, at
+//! `I = 1`, `|λ̃_y|` is the state's distance from the line in the configuration's own units, while `β`, and so `z_β`,
+//! is `atan2(λ̃_y, λ̃_x)`, which divides that distance by `|λ̃| = sin α` and grows without bound near the `α = 0` pole,
+//! where `β` is undefined and the state is still on the line. *The run:* `random.json`'s collinear family, seed 1,
+//! 2000 states, on this decoder. *The proposal:* 4 × the measured maximum, rounded up to the next `k·10ⁿ`,
+//! `k ∈ {1, 2, 5}`, as [`EQUATOR_BOUND`] sits above its measurement. *The expectation, before the run:* the residue
+//! is rounding: the family's scales `2^[−4, 4)` and offsets on `[−2, 2)` put an input coordinate's rounding at up to
+//! about `2⁶ε` of a length at `I = 1`; a maximum above `10⁻¹²` is reported to the physics reviewer as unexplained, and
+//! no tolerance is proposed from it. Proposed, provisional, until the owner confirms it at the M2 gate with
+//! REQ-VAL-121's other values.
+//!
+//! *The measurement, on the named run* (seed 1, the 2000 collinear states in a random gauge, none with `λ̃_y` exactly
+//! `±0`): `|λ̃_y|` has median `8.78×10⁻¹⁷`, 90th percentile `1.58×10⁻¹⁵`, 99th `1.72×10⁻¹⁴`, 99.9th `2.20×10⁻¹³` and
+//! maximum `8.68×10⁻¹³`, below `10⁻¹²`. *The rule applied:* `4 × 8.68×10⁻¹³ = 3.47×10⁻¹²`, rounded up to
+//! `5×10⁻¹²`, [`COLLINEAR_TOL`]. *Reported for the physics review, not explained:* other draws of the same family
+//! reach above the `10⁻¹²` expectation, all under `5×10⁻¹²`: seed 2's maximum is `2.73×10⁻¹²` (2 of 2000 states above
+//! `10⁻¹²`), seed 3's `2.3×10⁻¹³`, and `tests/qa_TASK-M2-50.rs`'s own 6000 draws reach `3.85×10⁻¹²`.
 //!
 //! **The Randomise arm** (REQ-VAL-193; R-551, RQ-477 (c); [`RandomiseArm`]). The Inspector's Randomise distribution
 //! (render GUI spec §G8's Randomise: masses on `[0.4, 1.8]` normalised, positions on `±0.9`, velocities on `±0.6`,
@@ -45,7 +79,11 @@
 //! `‖E(x)‖ < radius` beside them, per seed. Its verdict is separate: it is reported while its bound in `gate.json`
 //! (`randomise_bound`, [`crate::gate::ArmBound`]) is null, until REQ-VAL-121 records it; once recorded, the arm fails
 //! when its worst over every move and seed, over the in-ball subset, is above it, and that verdict joins the gate's
-//! ([`arm_verdict`]). It is never read by REQ-VAL-021's verdict, except in its control ([`RandomiseArm::fed`]).
+//! ([`arm_verdict`]). It is never read by REQ-VAL-021's verdict, except in its control ([`RandomiseArm::fed`]): fed
+//! in, the arm's draws join the verdict's population, which is then not the gated distribution's, `g₀·D(z)`'s alone,
+//! and the gate fails on that, whatever the arm's values (R-551; RQ-822 point 2, on a physics consult: the arm's
+//! maximum, 7.16×10⁻¹⁵ over seeds 1 and 2, is within 1.6×10⁻¹⁴ since `z_β` is periodic, R-898). *Was:* the fed arm
+//! failed when its maximum was above REQ-VAL-021's bound.
 
 use serde::Deserialize;
 
@@ -82,13 +120,33 @@ pub const POLE_BOUND: f64 = 2.0 * f64::EPSILON;
 /// from the Rust measurement, provisional until the human confirms it at the M2 gate.
 pub const EQUATOR_BOUND: f64 = 2.5e-13;
 
+/// The collinear tolerance, the bound on `|λ̃_y|` on `C(x)` over the collinear members not judged bit for bit
+/// (R-1018, the module's note, its criterion written before the run): `5×10⁻¹²`, 4 × the maximum measured on the named
+/// run, `8.68×10⁻¹³` (seed 1, 2000 states; median `8.78×10⁻¹⁷`, 99th percentile `1.72×10⁻¹⁴`), rounded up to the next
+/// `k·10ⁿ`, `k ∈ {1, 2, 5}`. Proposed under REQ-VAL-121 (R-71), provisional until the owner confirms it at the M2
+/// gate. Other seeds reach above the criterion's `10⁻¹²` expectation and stay under this bound (seed 2:
+/// `2.73×10⁻¹²`), which the module's note reports for the physics review.
+pub const COLLINEAR_TOL: f64 = 5e-12;
+
 const PI: f64 = std::f64::consts::PI;
 
-/// `‖a − b‖`, the Euclidean norm on ℝ⁸.
+/// `‖a − b‖`, the Euclidean norm on the latent space, `z_β`'s difference taken on the circle, the nearest of
+/// `z_β + 2πk` (R-898: `z_β` a periodic angle, `periodic_beta`'s, so `z` and `z + 2π·e_β` are one point). *Was:* the
+/// Euclidean norm on ℝ⁸, when `z_β` was a σ-type link's control on the line.
 pub fn z_gap(a: [f64; 8], b: [f64; 8]) -> f64 {
+    let tau = std::f64::consts::TAU;
     a.iter()
         .zip(b)
-        .map(|(x, y)| (x - y) * (x - y))
+        .enumerate()
+        .map(|(k, (x, y))| {
+            let d = x - y;
+            let d = if k == 1 {
+                d - tau * (d / tau).round()
+            } else {
+                d
+            };
+            d * d
+        })
         .sum::<f64>()
         .sqrt()
 }
@@ -213,10 +271,7 @@ pub fn encode_leaky(x: &Ic<f64>, leak: Leak) -> [f64; 8] {
         }
         Leak::Boost => {
             let total = [0, 1].map(|k| x.p.iter().map(|p| p[k]).sum::<f64>());
-            let mut t = turn(total, -c.phi).map(|w| w * i_in.sqrt().sqrt());
-            if c.mirrored {
-                t[1] = -t[1];
-            }
+            let t = turn(total, -c.phi).map(|w| w * i_in.sqrt().sqrt());
             for (p, m) in ic.p.iter_mut().zip(x.m) {
                 *p = [p[0] + m * t[0], p[1] + m * t[1]];
             }
@@ -263,7 +318,8 @@ pub struct RandomiseArm {
     pub seeds: Vec<u64>,
     /// The draws per seed.
     pub ics: u32,
-    /// The control (R-176): the arm's maximum fed into REQ-VAL-021's verdict, which must then fail.
+    /// The control (R-176): the arm's maximum fed into REQ-VAL-021's verdict, which must then fail, caught by the
+    /// verdict's population (the module's note).
     #[serde(default)]
     pub fed: bool,
 }
@@ -358,7 +414,8 @@ pub fn randomise_seed(seed: u64, ics: u32, radius: f64, octaves: f64, leak: Leak
     out
 }
 
-/// Whether `z` is in the open ball `‖z‖ < radius`.
+/// Whether `z` is in the open ball `‖z‖ < radius`, the norm [`z_gap`]'s, `z_β` read on the circle (R-898): every
+/// [`ball`] draw is inside, its `z_β` on the line no nearer 0 than on the circle.
 pub fn inside(z: [f64; 8], radius: f64) -> bool {
     z_gap(z, [0.0; 8]) < radius
 }
@@ -634,13 +691,22 @@ impl InspectorHandlesGate {
                 negative.push(line);
             }
             if arm.fed {
+                // Caught by the verdict's population, not by the arm's values: the arm's maximum is within the bound
+                // since `z_β` is periodic (R-898), and a draw past the bound need not exist (RQ-822 point 2).
+                let drawn: usize = seeds.iter().map(|s| s.gaps.len()).sum();
+                let named: Vec<String> = seeds.iter().map(|s| s.seed.to_string()).collect();
+                negative.push(format!(
+                    "REQ-VAL-021's verdict, the Randomise arm fed in, reads {drawn} draws of the Randomise \
+                     distribution (seed {}) beside its {} of g₀·D(z): not the gated distribution's population \
+                     (R-551), so it fails",
+                    named.join(", "),
+                    input.ics
+                ));
+                all = Verdict::Fail;
                 let line = format!(
                     "the Randomise arm's maximum, {arm_worst:.3e}, fed into REQ-VAL-021's verdict at {bound:.3e} \
                      (R-176: it must fail)"
                 );
-                if verdict(arm_worst, bound) == Verdict::Fail {
-                    all = Verdict::Fail;
-                }
                 negative.push(line);
             }
         }
@@ -696,12 +762,33 @@ pub struct RoundtripInput {
     /// before its gauge element; 0 for on the line.
     #[serde(default)]
     pub off_line: u32,
-    /// The bit-for-bit control (RQ-624): each `z_β` moved one ulp off its encoded value before it is compared.
+    /// The bit-for-bit control (RQ-624; R-1018): each collinear member judged bit for bit has its `z_β` moved one ulp
+    /// off its encoded value before it is compared.
     #[serde(default)]
     pub beta_nudge: bool,
     /// The bounds the shape checks are judged against.
     #[serde(default)]
     pub bounds: ShapeBounds,
+    /// A control of the equilateral line (R-1018), or none.
+    #[serde(default)]
+    pub pole: PoleControl,
+    /// The `β`-clamp control (R-1018): a clamp on `β`, the collinear states' `lookup_clamped` bit for `z_β` set as a
+    /// clamping encode would, so the check that `β` flags nothing must fail.
+    #[serde(default)]
+    pub beta_clamp: bool,
+}
+
+/// A control of the equilateral line (R-1018; R-176), each of which must fail it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PoleControl {
+    /// None: `|w − w_in|`, `w_in` the input's own orientation.
+    #[default]
+    Own,
+    /// `L⁻` read against `+1`: `w_in = +1` for every input, so an `L⁻` input's `|w − 1|` is about 2.
+    PlusOne,
+    /// A decoder that still mirrors: `C(x)`'s `w` read as `|w|`, so an `L⁻` input lands at `w = +1`.
+    Mirrors,
 }
 
 /// The bounds the shape checks are judged against.
@@ -713,6 +800,9 @@ pub enum ShapeBounds {
     Proposed,
     /// The control (R-176): each bound the largest float below its own measurement, so both checks must fail.
     BelowMeasurement,
+    /// The control (R-176): the collinear tolerance the largest float below its own measurement, so the collinear
+    /// members not judged bit for bit must fail it.
+    CollinearBelowMeasurement,
 }
 
 /// The largest float below a measured `w ≥ 0`: one ulp down, or below 0 at 0.
@@ -770,147 +860,304 @@ pub fn latents(input: &RoundtripInput) -> Vec<[f64; 8]> {
 /// RQ-475's families, measured (see [`shape_families`]): `[equilateral, collinear]` in each count.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Shapes {
-    /// The equilateral states' `|w − 1|` on `C(x)`.
+    /// The equilateral states' `|w − w_in|` on `C(x)`, `w_in` the input's own orientation (R-1018).
     pub pole: Vec<f64>,
-    /// The collinear states' `|w|` on `C(x)`.
+    /// How many equilateral inputs are `L⁺` (`w_in = +1`) and how many `L⁻` (`w_in = −1`).
+    pub orientations: [usize; 2],
+    /// The collinear states' `|w|` on `C(x)`: the `n` in a random gauge, then the `n` of the axis sub-family, as in
+    /// every collinear field here.
     pub equator: Vec<f64>,
-    /// The collinear states' `|w|` on `D(E(x))`, the clamp image `sin2α·sin(π·ε_z)`: reported, not judged (RQ-624).
-    pub clamp_image: Vec<f64>,
+    /// The collinear states' `|w|` on `D(E(x))`: reported, not judged (R-1018).
+    pub round: Vec<f64>,
     /// How many of each family have `z_β`'s clamp bit set.
     pub beta_bit: [usize; 2],
-    /// How many of each family have `z_β` at its clamp image bit for bit, `β ∈ {0, π̂}` clamped.
-    pub beta_image: [usize; 2],
+    /// The collinear members judged bit for bit, by their index in the family (`n + i` for the axis sub-family's
+    /// member `i`): those whose `C(x)` has `λ̃_y` exactly `±0` (R-1018 (a2)).
+    pub exact: Vec<usize>,
+    /// How many of [`Shapes::exact`] have `z_β` bit for bit at the encode's value for `β = 0` or `β = π̂`.
+    pub exact_at_image: usize,
+    /// How many of [`Shapes::exact`] are at the value for `β = 0`, and for `β = π̂` ([`beta_images`]' order).
+    pub images: [usize; 2],
+    /// The other collinear members' measure, `|λ̃_y|` on `C(x)` (the collinear tolerance's, the module's note).
+    pub line: Vec<f64>,
     /// The collinear states' masses.
     pub masses: Vec<[f64; 3]>,
 }
 
-/// `z_β`'s two clamp images under the defaults, `β = 0` and `β = π̂` through the β link's inverse.
+impl Shapes {
+    /// How many states each family has: the equilateral family's count, which is also each collinear sub-family's.
+    pub fn n(&self) -> usize {
+        self.pole.len()
+    }
+
+    /// How many of the axis sub-family's members are judged bit for bit: all of them when the states are on the line.
+    pub fn axis_exact(&self) -> usize {
+        let n = self.n();
+        self.exact.iter().filter(|&&i| i >= n).count()
+    }
+}
+
+/// The encode's `z_β` for the two collinear orientations under the defaults' link, `β = 0` (body 2 on the `+x` side)
+/// and `β = π̂` (on the `−x` side): the link's inverse at each (R-1020: `−π/2` and `π̂ − π/2`).
 pub fn beta_images() -> [f64; 2] {
     type BetaLink = <Defaults as Selection>::BetaLink;
     [0.0, pi_image::<f64>()].map(|b| BetaLink::inverse([b])[0])
 }
 
+/// What [`shape_families`] is told to break, each a control (R-176).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ShapeControls {
+    /// Body 2 moved off the line by this many ulps of 1, before the gauge element.
+    pub off_line: u32,
+    /// Each bit-for-bit member's `z_β` moved one ulp before it is compared.
+    pub beta_nudge: bool,
+    /// The equilateral line's control.
+    pub pole: PoleControl,
+    /// The collinear states' clamp bit for `z_β` set.
+    pub beta_clamp: bool,
+}
+
+/// A gauge element that keeps a state on the `x`-axis there exactly: no turn and an offset along `x` only, so every
+/// `y` stays `0`; the scale, the parity, the offset's `x` and the boost drawn as [`Gauge::random`] draws them.
+fn axis_gauge(rng: &mut SplitMix, span: f64, scale_octaves: f64) -> Gauge {
+    Gauge {
+        a: [uniform(rng, -span, span), 0.0],
+        u: [uniform(rng, -span, span), uniform(rng, -span, span)],
+        theta: 0.0,
+        s: uniform(rng, -scale_octaves, scale_octaves).exp2(),
+        mirror: rng.next_u64() & 1 == 1,
+    }
+}
+
+/// The axis sub-family's stream, apart from `seed`'s own, so the random-gauge families are the draws they were before
+/// the sub-family was added (the collinear tolerance's measurement among them).
+const AXIS_STREAM: u64 = 0xA715_5EED_0000_0001;
+
 /// RQ-475's families, `n` of each from `seed`: the equal-mass unit equilateral triangle, and three bodies on the
-/// `x`-axis with masses from the mass block at `z_μ` on `[−4, 4)²`, body 2 moved off the line by `off_line` ulps of 1;
-/// each at rest, then through a random gauge element (either parity, so `L⁺` and `L⁻` both). `w` is read through
-/// `kernel::shape::shape` on `C(x)`, the canonical state `E` reads, and on `D(E(x))`. `z_β` is moved one ulp where
-/// `beta_nudge`, then compared with its clamp images bit for bit. Neither `w` nor `z_β` reads the momenta.
-pub fn shape_families(seed: u64, n: u32, off_line: u32, beta_nudge: bool) -> Shapes {
+/// `x`-axis with masses from the mass block at `z_μ` on `[−4, 4)²`; each at rest, then through a random gauge element
+/// (either parity, so `L⁺` and `L⁻` both). Each collinear state then goes once more through a gauge element that
+/// keeps it on the axis ([`axis_gauge`]), the axis sub-family, the collinear family's members `n` to `2n − 1`: on the
+/// line their `C(x)` has `λ̃_y` exactly `±0`, which no member in a random gauge has. `w` is read through
+/// `kernel::shape::shape` on `C(x)`, the canonical state `E` reads, and on `D(E(x))`; `w_in` on the input `x` itself,
+/// its sign. A collinear member is judged bit for bit where the encode's `λ̃_y`, on `C(x)`, is `±0`, its `z_β`
+/// compared with [`beta_images`]; every other collinear member's `|λ̃_y|` is kept for the tolerance. Neither `w` nor
+/// `z_β` reads the momenta.
+pub fn shape_families(seed: u64, n: u32, controls: ShapeControls) -> Shapes {
     let mut rng = SplitMix::new(seed);
+    let mut axis_rng = SplitMix::new(seed ^ AXIS_STREAM);
     let images = beta_images();
     let equal = mass::decode::<Defaults, f64>([0.0, 0.0]).m;
     let triangle = [[0.0, 0.0], [1.0, 0.0], [0.5, 3f64.sqrt() / 2.0]];
-    let lift = f64::from(off_line) * f64::EPSILON;
+    let lift = f64::from(controls.off_line) * f64::EPSILON;
     let mut out = Shapes {
         pole: Vec::new(),
+        orientations: [0; 2],
         equator: Vec::new(),
-        clamp_image: Vec::new(),
+        round: Vec::new(),
         beta_bit: [0; 2],
-        beta_image: [0; 2],
+        exact: Vec::new(),
+        exact_at_image: 0,
+        images: [0; 2],
+        line: Vec::new(),
         masses: Vec::new(),
     };
-    for _ in 0..n {
+    // One collinear member, `index` in the family, from its gauged state `x`.
+    let collinear = |out: &mut Shapes, index: usize, x: &Ic<f64>| {
+        let e = encode::<Defaults, f64>(x);
+        let w = shape(e.canonical.ic.r, x.m)[2];
+        let clamp = e.report.clamped_controls & 2 != 0 || controls.beta_clamp;
+        out.equator.push(w.abs());
+        let back = decode_z(e.z.z);
+        out.round.push(shape(back.r, back.m)[2].abs());
+        out.masses.push(x.m);
+        let lambda_y = e.blocks.jacobi.lambda_t[1];
+        if lambda_y == 0.0 {
+            out.exact.push(index);
+            let mut z_beta = e.z.z[1];
+            if controls.beta_nudge {
+                z_beta = f64::from_bits(z_beta.to_bits() + 1);
+            }
+            if let Some(at) = images.iter().position(|b| b.to_bits() == z_beta.to_bits()) {
+                out.exact_at_image += 1;
+                out.images[at] += 1;
+            }
+        } else {
+            out.line.push(lambda_y.abs());
+        }
+        out.beta_bit[1] += usize::from(clamp);
+    };
+    let mut lines = Vec::new();
+    for i in 0..n as usize {
         let z_mu = [uniform(&mut rng, -4.0, 4.0), uniform(&mut rng, -4.0, 4.0)];
         let line: [f64; 3] = std::array::from_fn(|_| uniform(&mut rng, -1.0, 1.0));
         let mut r = line.map(|t| [t, 0.0]);
         r[2][1] = lift;
-        let states = [
-            Ic {
-                m: equal,
-                r: triangle,
-                p: [[0.0; 2]; 3],
-            },
-            Ic {
-                m: mass::decode::<Defaults, f64>(z_mu).m,
-                r,
-                p: [[0.0; 2]; 3],
-            },
-        ];
-        for (k, state) in states.iter().enumerate() {
-            let x = Gauge::random(&mut rng, 2.0, 4.0).act(state);
-            let e = encode::<Defaults, f64>(&x);
-            let w = shape(e.canonical.ic.r, x.m)[2];
-            if k == 0 {
-                out.pole.push((w - 1.0).abs());
-            } else {
-                out.equator.push(w.abs());
-                let back = decode_z(e.z.z);
-                out.clamp_image.push(shape(back.r, back.m)[2].abs());
-                out.masses.push(x.m);
-            }
-            let mut z_beta = e.z.z[1];
-            if beta_nudge {
-                z_beta = f64::from_bits(z_beta.to_bits() + 1);
-            }
-            out.beta_bit[k] += usize::from(e.report.clamped_controls & 2 != 0);
-            out.beta_image[k] +=
-                usize::from(images.iter().any(|i| i.to_bits() == z_beta.to_bits()));
-        }
+        let tri = Ic {
+            m: equal,
+            r: triangle,
+            p: [[0.0; 2]; 3],
+        };
+        let on_line = Ic {
+            m: mass::decode::<Defaults, f64>(z_mu).m,
+            r,
+            p: [[0.0; 2]; 3],
+        };
+        let x = Gauge::random(&mut rng, 2.0, 4.0).act(&tri);
+        let e = encode::<Defaults, f64>(&x);
+        let w = shape(e.canonical.ic.r, x.m)[2];
+        let own = shape(x.r, x.m)[2].signum();
+        out.orientations[usize::from(own < 0.0)] += 1;
+        let (w, w_in) = match controls.pole {
+            PoleControl::Own => (w, own),
+            PoleControl::PlusOne => (w, 1.0),
+            PoleControl::Mirrors => (w.abs(), own),
+        };
+        out.pole.push((w - w_in).abs());
+        out.beta_bit[0] += usize::from(e.report.clamped_controls & 2 != 0);
+        let x = Gauge::random(&mut rng, 2.0, 4.0).act(&on_line);
+        collinear(&mut out, i, &x);
+        lines.push(on_line);
+    }
+    for (i, on_line) in lines.iter().enumerate() {
+        let x = axis_gauge(&mut axis_rng, 2.0, 4.0).act(on_line);
+        collinear(&mut out, n as usize + i, &x);
     }
     out
 }
 
-/// The shape checks' verdict and lines on `input`'s families: the bit-for-bit `z_β` check, the pole's `|w − 1|` and the
-/// equator's `|w|` on `C(x)` judged; `D(E(x))`'s `|w|` reported.
+/// The shape checks' verdict and lines on `input`'s families (R-1018): the equilateral line's `|w − w_in|` and the
+/// collinear line's `|w|` on `C(x)`; the collinear members bit for bit at their `z_β` image where `C(x)`'s `λ̃_y` is
+/// `±0`, the axis sub-family's every member among them unless the input moves the states off the line, every other
+/// within [`COLLINEAR_TOL`] on `|λ̃_y|`; no `lookup_clamped` bit set by `β`; `D(E(x))`'s `|w|` reported.
 fn shape_checks(input: &RoundtripInput) -> (Verdict, Vec<String>, Vec<String>) {
-    let s = shape_families(input.seed, input.shapes, input.off_line, input.beta_nudge);
+    let controls = ShapeControls {
+        off_line: input.off_line,
+        beta_nudge: input.beta_nudge,
+        pole: input.pole,
+        beta_clamp: input.beta_clamp,
+    };
+    let s = shape_families(input.seed, input.shapes, controls);
     let n = input.shapes as usize;
     let scatter = vec![
         summary(
-            "|w − 1| on C(x), equal-mass equilateral (L⁺ and L⁻)",
+            "|w − w_in| on C(x), equal-mass equilateral (L⁺ and L⁻)",
             &s.pole,
         ),
         summary("|w| on C(x), collinear", &s.equator),
         summary(
-            "|w| on D(E(x)), collinear, reported, not judged: the clamp image, sin2α·sin(π·ε_z)",
-            &s.clamp_image,
+            "|λ̃_y| on C(x), collinear, the members not judged bit for bit",
+            &s.line,
         ),
+        summary("|w| on D(E(x)), collinear, reported, not judged", &s.round),
     ];
-    let bits = if s.beta_bit == [0, n] && s.beta_image[1] == n {
+    let flags = if s.beta_bit == [0, 0] {
         Verdict::Pass
     } else {
         Verdict::Fail
     };
-    let (pole_bound, equator_bound) = match input.bounds {
-        ShapeBounds::Proposed => (POLE_BOUND, EQUATOR_BOUND),
-        ShapeBounds::BelowMeasurement => (below(worst(&s.pole).0), below(worst(&s.equator).0)),
+    // On the line, every axis member has `λ̃_y` exactly `±0`: one that has not would leave the bit-for-bit check
+    // with nothing to judge, so it fails it.
+    let axis_judged = input.off_line > 0 || s.axis_exact() == n;
+    let exact = if s.exact_at_image == s.exact.len() && axis_judged {
+        Verdict::Pass
+    } else {
+        Verdict::Fail
     };
-    let (pole, pole_line) = outcome("the pole's |w − 1| on C(x)", &s.pole, pole_bound);
+    let (pole_bound, equator_bound, line_bound) = match input.bounds {
+        ShapeBounds::Proposed => (POLE_BOUND, EQUATOR_BOUND, COLLINEAR_TOL),
+        ShapeBounds::BelowMeasurement => (
+            below(worst(&s.pole).0),
+            below(worst(&s.equator).0),
+            COLLINEAR_TOL,
+        ),
+        ShapeBounds::CollinearBelowMeasurement => {
+            (POLE_BOUND, EQUATOR_BOUND, below(worst(&s.line).0))
+        }
+    };
+    let (pole, pole_line) = outcome("the pole's |w − w_in| on C(x)", &s.pole, pole_bound);
     let (equator, equator_line) = outcome("the equator's |w| on C(x)", &s.equator, equator_bound);
+    let (line, line_line) = outcome(
+        "the collinear line's |λ̃_y| on C(x), off the bit-for-bit members",
+        &s.line,
+        line_bound,
+    );
+    let pass_fail = |v: Verdict| {
+        if v == Verdict::Pass {
+            "passes"
+        } else {
+            "fails"
+        }
+    };
     let mut negative = vec![
         format!(
-            "z_β bit for bit: the clamp bit set in {} of {n} collinear and {} of {n} equilateral states; z_β at its \
-             clamp image in {} of {n} collinear states; {}",
+            "β flags nothing: the clamp bit set in {} of {} collinear and {} of {n} equilateral states; {}",
             s.beta_bit[1],
+            s.equator.len(),
             s.beta_bit[0],
-            s.beta_image[1],
-            if bits == Verdict::Pass { "passes" } else { "fails" }
+            pass_fail(flags)
+        ),
+        format!(
+            "z_β bit for bit: {} of {} collinear members have λ̃_y exactly ±0 on C(x) ({} of {n} in a random gauge, {} \
+             of {n} on the axis), {} of them at the encode's value for β = 0 and {} at π̂'s; {}",
+            s.exact.len(),
+            s.equator.len(),
+            s.exact.len() - s.axis_exact(),
+            s.axis_exact(),
+            s.images[0],
+            s.images[1],
+            pass_fail(exact)
+        ),
+        format!(
+            "the equilateral inputs: {} L⁺ and {} L⁻",
+            s.orientations[0], s.orientations[1]
         ),
         pole_line,
         equator_line,
+        line_line,
     ];
     negative.push(match input.bounds {
         ShapeBounds::Proposed => format!(
-            "the shape bounds, |w − 1| ≤ {POLE_BOUND:e} and |w| ≤ {EQUATOR_BOUND:e}: proposed, provisional \
-             (REQ-VAL-121, R-71)"
+            "the shape bounds, |w − w_in| ≤ {POLE_BOUND:e}, |w| ≤ {EQUATOR_BOUND:e} and |λ̃_y| ≤ \
+             {COLLINEAR_TOL:e}: proposed, provisional (REQ-VAL-121, R-71)"
         ),
         ShapeBounds::BelowMeasurement => {
-            "each shape bound one ulp below its own measurement (R-176: both must fail)".to_owned()
+            "the pole's and the equator's bounds each one ulp below its own measurement (R-176: both must fail)"
+                .to_owned()
+        }
+        ShapeBounds::CollinearBelowMeasurement => {
+            "the collinear tolerance one ulp below its own measurement (R-176: it must fail)".to_owned()
         }
     });
     if input.off_line > 0 {
         negative.push(format!(
-            "every collinear state moved {} ulps of 1 off the line (R-176: the |w| check must fail it, z_β still \
-             clamped)",
+            "every collinear state moved {} ulps of 1 off the line (R-176: the |w| check must fail it)",
             input.off_line
         ));
     }
     if input.beta_nudge {
         negative.push(
-            "every z_β moved one ulp off its encoded value (R-176: the bit-for-bit check must fail)".to_owned(),
+            "every bit-for-bit member's z_β moved one ulp off its encoded value (R-176: the bit-for-bit check must \
+             fail)"
+                .to_owned(),
         );
     }
-    let all = [bits, pole, equator]
+    match input.pole {
+        PoleControl::Own => {}
+        PoleControl::PlusOne => negative.push(
+            "every equilateral input read against w_in = +1 (R-176: the L⁻ inputs must fail)"
+                .to_owned(),
+        ),
+        PoleControl::Mirrors => negative.push(
+            "C(x)'s w read as |w|, a decoder that still mirrors (R-176: the L⁻ inputs must fail)"
+                .to_owned(),
+        ),
+    }
+    if input.beta_clamp {
+        negative.push(
+            "a clamp on β: every collinear state's z_β clamp bit set (R-176: β flags nothing must fail)".to_owned(),
+        );
+    }
+    let all = [flags, exact, pole, equator, line]
         .into_iter()
         .all(|v| v == Verdict::Pass);
     (
@@ -933,8 +1180,11 @@ impl InspectorRoundtripGate {
         if input.samples == 0 {
             return Err("refused: no samples".to_owned());
         }
-        let control =
-            input.off_line > 0 || input.beta_nudge || input.bounds != ShapeBounds::Proposed;
+        let control = input.off_line > 0
+            || input.beta_nudge
+            || input.bounds != ShapeBounds::Proposed
+            || input.pole != PoleControl::Own
+            || input.beta_clamp;
         if input.shapes == 0 && control {
             return Err("refused: a shape control with no shapes".to_owned());
         }

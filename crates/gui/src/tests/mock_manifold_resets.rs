@@ -371,7 +371,17 @@ fn mock_manifold_resets_read_the_preset_never_literal_zero() {
     // §G7's table: the second preset's values, each sign among them.
     assert_eq!(
         PRESET_HOMES[1].base,
-        [0.250, 0.500, 0.125, -0.250, 0.0625, 0.375, 0.250, -0.125]
+        // z_β converted from sigmoid_beta, π·σ(0.5) − π/2 (R-898, R-1020; TASK-M2-57). Was: 0.500.
+        [
+            0.250,
+            0.3847173352672657,
+            0.125,
+            -0.250,
+            0.0625,
+            0.375,
+            0.250,
+            -0.125
+        ]
     );
     assert_eq!(PRESET_HOMES[1].window, 0.5);
     assert_eq!(

@@ -1,0 +1,11 @@
+{
+  "description": "R-176 (R-1018), the collinear tolerance binds: the same draws, fewer of them, judged with the collinear tolerance one ulp below its own measurement of |λ̃_y| on C(x), so the members not judged bit for bit must fail it.",
+  "seed": 1,
+  "samples": 2000,
+  "radius": 4.0,
+  "encode": "defaults",
+  "shift": 0.0,
+  "shapes": 2000,
+  "bounds": "collinear_below_measurement",
+  "expected": "fail"
+}

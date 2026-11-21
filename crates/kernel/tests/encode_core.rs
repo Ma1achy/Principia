@@ -7,8 +7,12 @@
 //!   selections; a clamped input's `z` is the clamp's image; the simplex corner gives no NaN (REQ-ENC-007, REQ-ENC-014).
 //! - `encode_collinear_beta`: dd_encode §5 test 10 (R-438) at the Euler landmarks, `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`,
 //!   and the pole landmark on its own (REQ-ENC-007).
-//! - `encode_t1_gauge`: dd_encode §5 test 2, `E(g·x) = E(x)` over random `g` per §3.3, deadband states under turns,
-//!   and the mirror tie twice (REQ-ENC-003).
+//! - `encode_t1_gauge`: dd_encode §5 test 2, T1 as the equivariance (R-865): `E(g·x) = E(x)` over random `g` per
+//!   §3.3, the mirrored `E(x)` where `g` mirrors, on interior states, across the `λ̃_y = 0` seam, and the old tie twice
+//!   (REQ-ENC-003). *Was:* "`E(g·x) = E(x)` over random `g` per §3.3, deadband states under turns, and the mirror tie
+//!   twice".
+//! - `encode_t1_full_state_mirror`: `E(Π·x)` is the mirrored `E(x)` with `Π` on every `rᵢ` and `pᵢ` (REQ-ENC-003,
+//!   REQ-DEC-016).
 //! - `encode_notices`: canonical inputs raise no notice, `lookup_rescaled` included (step 0 skipped within `τ_I`,
 //!   R-547); each operation forced alone raises exactly its own, `lookup_rescaled` with its `λ` (REQ-ENC-014).
 //! - `stage_encode_native`: the compute entry points `kernel::stage::encode::{encode, beta}`, called natively, write
@@ -30,9 +34,8 @@ use kernel::encode::blocks::{alpha, beta, clamps, guard, jacobi, Ends, SimplexCl
 use kernel::encode::{encode, Encoded, Report};
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
-    Alpha, Beta, Defaults, Link, LinkReal, Momentum, Select, Selection, SigmoidAlpha, SigmoidBeta,
-    SigmoidQ, SoftmaxTanh, SoftsignAlpha, SoftsignBeta, SoftsignQ, StickBreaking, TanhAlpha,
-    TanhBeta, TanhQ,
+    Alpha, Beta, Defaults, Link, LinkReal, Momentum, PeriodicBeta, Select, Selection, SigmoidAlpha,
+    SigmoidQ, SoftmaxTanh, SoftsignAlpha, SoftsignQ, StickBreaking, TanhAlpha, TanhQ,
 };
 use kernel::payload::PayloadReal;
 use kernel::real::IeeeBits;
@@ -48,7 +51,7 @@ use validation::negative_control;
 
 /// The second selection: the edge-reaching simplex link and the tanh and softsign links, so that every inverse kind
 /// is exercised (dd_encode §4 seam 2/13: a link swapped, encode's inverse swaps with it).
-type Alt = Select<StickBreaking, TanhAlpha, SoftsignBeta, TanhQ, SoftsignQ, SigmoidQ, TanhQ>;
+type Alt = Select<StickBreaking, TanhAlpha, PeriodicBeta, TanhQ, SoftsignQ, SigmoidQ, TanhQ>;
 
 // ── Precisions ──────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -124,11 +127,7 @@ fn out_bits<R: P>(e: &Encoded<R>) -> Vec<u64> {
         .iter()
         .chain(&[e.blocks.alpha, e.blocks.beta, r.lambda])
         .map(|x| x.bits())
-        .chain([
-            u64::from(r.coincident),
-            u64::from(r.clamped_controls),
-            u64::from(r.mirrored),
-        ])
+        .chain([u64::from(r.coincident), u64::from(r.clamped_controls)])
         .collect()
 }
 
@@ -158,6 +157,14 @@ struct BlockLimits {
 /// `|a − b|` over `scale`, in eps.
 fn err<R: P>(a: R, b: R, scale: f64) -> f64 {
     (a.f() - b.f()).abs() / (scale * R::eps())
+}
+
+/// [`err`] on the circle: `a − b` reduced by whole periods `2π̂` first, `z_β` and `z_β + 2π` being one state (R-898),
+/// the decoder's `z_β` anywhere on the line and the encode's representative in `[−π̂/2, 3π̂/2]` (R-1020).
+fn circ_err<R: P>(a: R, b: R, scale: f64) -> f64 {
+    let t = (R::LIT_7 + R::LIT_7).f();
+    let d = a.f() - b.f();
+    (d - t * (d / t).round()).abs() / (scale * R::eps())
 }
 
 /// The larger of `a` and `b`, or NaN if either is (pitfalls §9): a worst-case fold that `f64::max` would make drop a
@@ -198,11 +205,15 @@ where
     );
     worst.angles = worse(
         worse(worst.angles, err(a, d.config.alpha, 1.0)),
-        err(b, d.config.beta, 1.0),
+        circ_err(b, d.config.beta, 1.0),
     );
     let e = encode::<S, R>(&d.ic);
     for (k, (got, want)) in e.z.z.iter().zip(z).enumerate() {
-        let x = err(*got, want, 1.0 + want.f().abs());
+        let x = if k == 1 {
+            circ_err(*got, want, 1.0 + want.f().abs())
+        } else {
+            err(*got, want, 1.0 + want.f().abs())
+        };
         let slot = match k {
             0 | 1 => &mut worst.config,
             2..=5 => &mut worst.momentum,
@@ -232,7 +243,7 @@ where
         );
     }
     assert!(
-        !e.report.lookup_clamped() && !e.report.lookup_mirrored(),
+        !e.report.lookup_clamped(),
         "an interior decode raised a notice, {:?}, at {at}",
         e.report
     );
@@ -438,24 +449,66 @@ where
     (lo, hi)
 }
 
+/// `periodic_beta`, `β`'s one link since TASK-M2-57 (R-919 Q1 (c)): the offset `β = z_β + c`, `c = π̂/2` (R-1020), its
+/// inverse `β − c` and its forward `z_β + c` each one rounding at `R`, with no clamp on the period `[0, 2π̂]` the
+/// encode's `β` lies in, its ends included; outside it, and at a NaN, the bit is set, which the encode's `β` never
+/// reaches. At the landmarks the offset is exact: `0 ↦ −c`, `π̂ ↦ c` and back.
+fn check_periodic<R: P>() {
+    let (a, b) = <Beta as Ends>::ends::<R>();
+    let c = R::LIT_7 / (R::one() + R::one());
+    assert!(
+        a == R::of(0.0) && (b.f() - std::f64::consts::TAU).abs() < 1e-3,
+        "β's period is not [0, 2π̂]"
+    );
+    assert!(
+        PeriodicBeta::inverse([R::zero()])[0] == -c
+            && PeriodicBeta::inverse([R::LIT_7])[0] == c
+            && PeriodicBeta::forward([-c])[0] == R::zero()
+            && PeriodicBeta::forward([c])[0] == R::LIT_7
+            && PeriodicBeta::forward([R::zero()])[0] == c,
+        "periodic_beta is not exact at its landmarks"
+    );
+    for v in [a, b, R::of(1.0), R::of(3.0), b.down()] {
+        assert_eq!(
+            PeriodicBeta::inverse([v])[0].bits(),
+            (v - c).bits(),
+            "periodic_beta's inverse at {v:e}"
+        );
+        assert_eq!(
+            PeriodicBeta::forward([v])[0].bits(),
+            (v + c).bits(),
+            "periodic_beta's forward at {v:e}"
+        );
+        assert!(
+            !clamps::<PeriodicBeta, R>(v),
+            "the clamp bit is set on the period at {v:e}"
+        );
+    }
+    for v in [a.down(), b.up(), R::nan()] {
+        assert!(
+            clamps::<PeriodicBeta, R>(v),
+            "the clamp bit is clear off the period at {v:e}"
+        );
+    }
+}
+
 fn edges_at<R: P>() {
     check_edges::<SigmoidAlpha, R>("sigmoid_alpha");
     check_edges::<TanhAlpha, R>("tanh_alpha");
     check_edges::<SoftsignAlpha, R>("softsign_alpha");
-    check_edges::<SigmoidBeta, R>("sigmoid_beta");
-    check_edges::<TanhBeta, R>("tanh_beta");
-    check_edges::<SoftsignBeta, R>("softsign_beta");
+    check_periodic::<R>();
     check_edges::<SigmoidQ, R>("sigmoid_q");
     check_edges::<TanhQ, R>("tanh_q");
     check_edges::<SoftsignQ, R>("softsign_q");
 }
 
-/// The ends the codomains give: `α`'s `α_min` and the registry's `π/2`, `β`'s 0 and `π̂`, the momenta's `±q_max`.
+/// The ends the codomains give: `α`'s `α_min` and the registry's `π/2`, `β`'s one period, 0 and `2π̂` (R-898; *was:*
+/// "0 and `π̂`"), the momenta's `±q_max`.
 fn check_ends<R: P>() {
     let pi = R::LIT_7;
     let cases = [
         (Alpha::ends::<R>(), (R::ALPHA_MIN, R::LIT_6), "α"),
-        (Beta::ends::<R>(), (R::zero(), pi), "β"),
+        (Beta::ends::<R>(), (R::zero(), pi + pi), "β"),
         (Momentum::ends::<R>(), (-R::Q_MAX, R::Q_MAX), "q"),
     ];
     for (got, want, name) in cases {
@@ -712,10 +765,10 @@ negative_control!(
     "a test that reads the range one step inside its end must fail",
     expected = "the clamp bit is",
     {
-        let (lo, _) = check_edges::<SigmoidBeta, f64>("sigmoid_beta");
+        let (lo, _) = check_edges::<SigmoidAlpha, f64>("sigmoid_alpha");
         assert!(
-            clamps::<SigmoidBeta, f64>(lo.up()),
-            "the clamp bit is false at sigmoid_beta at v = {:e}",
+            clamps::<SigmoidAlpha, f64>(lo.up()),
+            "the clamp bit is false at sigmoid_alpha at v = {:e}",
             lo.up()
         );
     }
@@ -809,10 +862,12 @@ struct RoundTrip {
 /// Rounding headroom of the round trip, in eps.
 const ROUND_TRIP_EPS: f64 = 64.0;
 
-/// Test 10 at one landmark off the pole: `ρ̃`, `λ̃_x` of the landmark at `I = 1`, body 2's `side` the sign of `λ̃_x`. The
-/// four `λ̃_y` inputs give `β` near π (side `−x`) or near 0 (`+x`), `π̂` or 0 exactly at `±0`, never near `−π`; they
-/// encode to the same `z`, with `lookup_clamped`; and `decode(encode(x))` keeps the side, `λ̃_y` and `λ̃_x` within
-/// their bounds, the rest within rounding (R-438, "Contradiction flagged, applied").
+/// Test 10 at one landmark off the pole: `ρ̃`, `λ̃_x` of the landmark at `I = 1`, body 2's `side` the sign of `λ̃_x`.
+/// Under the signed encode (dd_encode §3.2; R-865, R-898): `±0` give `π̂` (side `−x`) or `+0` (`+x`) exactly by the
+/// selects; `+1e-13` a `β` just above 0 or just below π, `−1e-13` one just below `2π̂` or just above π, never near
+/// `−π`; `z_β` is `β − π̂/2` (R-1020's offset link, one rounding) and nothing is clamped; and `decode(encode(x))` keeps the side and `λ̃` within rounding,
+/// `λ̃_y`'s sign wherever `|λ̃_y|` is past that rounding, the rest within rounding. *Was (TASK-M2-57):* the four inputs
+/// encoded to one `z` with `lookup_clamped`, `λ̃_y` folded by `|λ̃_y|` (R-438).
 fn check_landmark<R: P>(
     m: [f64; 3],
     rho_t: [f64; 2],
@@ -822,7 +877,7 @@ fn check_landmark<R: P>(
 ) {
     assert!(lambda_t[0] != 0.0, "the landmark sits on the pole");
     let pi = R::LIT_7;
-    let mut z_seen: Option<[u64; 8]> = None;
+    let tau = (pi + pi).f();
     for y in deadband_inputs::<R>() {
         let lt = [R::of(lambda_t[0]), y];
         let rt = rho_t.map(R::of);
@@ -843,29 +898,35 @@ fn check_landmark<R: P>(
                     "β = {b:e}, not π̂ by the select, at {at}"
                 );
             }
+        } else if y < R::zero() {
+            assert!(
+                (b.f() - tau).abs() <= slope + 8.0 * R::eps() && b.f() <= tau,
+                "β = {b:e}, not just below 2π̂, with body 2 on the +x side below it, at {at}"
+            );
         } else {
             assert!(
-                b.f().abs() <= slope + 4.0 * R::eps() && b >= R::zero(),
+                b.f() <= slope + 4.0 * R::eps() && b >= R::zero(),
                 "β = {b:e}, not 0, with body 2 on the +x side, at {at}"
             );
+            if y == R::zero() {
+                assert_eq!(
+                    b.bits(),
+                    R::zero().bits(),
+                    "β = {b:e}, not +0 by the select, at {at}"
+                );
+            }
         }
-        assert!(
-            e.report.lookup_clamped(),
-            "lookup_clamped is not set at {at}"
+        // `z_β = β − c` under the offset link, `c = π̂/2` (R-1020), one rounding.
+        let c = R::LIT_7 / (R::one() + R::one());
+        assert_eq!(
+            e.z.z[1].bits(),
+            (b - c).bits(),
+            "z_β is not β − π̂/2 at {at}"
         );
-        assert!(!e.report.lookup_mirrored(), "the deadband mirrored at {at}");
-        let bits = e.z.z.map(P::bits);
-        match z_seen {
-            None => z_seen = Some(bits),
-            Some(first) => assert_eq!(
-                bits, first,
-                "the four λ̃_y inputs encode to different z at {at}"
-            ),
-        }
+        assert!(!e.report.lookup_clamped(), "lookup_clamped is set at {at}");
         // The round trip, in mass-weighted Jacobi coordinates.
         let d = decode::<Defaults, R>(&e.z);
         let norm = R::of(lambda_t[0].abs()).f();
-        let eps_z = R::EPS_Z.f();
         let back = d.config.lambda_t;
         assert_eq!(
             back[0].f().signum(),
@@ -874,19 +935,22 @@ fn check_landmark<R: P>(
         );
         let round = ROUND_TRIP_EPS * R::eps();
         let dy = (back[1].f() - y.f()).abs();
-        let bound_y = std::f64::consts::PI * eps_z * norm + y.f().abs();
+        let bound_y = 4.0 * std::f64::consts::PI * R::eps() * norm;
         worst.lambda_y = worse(worst.lambda_y, (dy - bound_y) / R::eps());
         assert!(
             dy <= bound_y + round,
-            "|Δλ̃_y| = {dy:e} over π·ε_z·‖λ̃‖ + |λ̃_y| = {bound_y:e} at {at}"
+            "|Δλ̃_y| = {dy:e} over rounding {bound_y:e} at {at}"
         );
+        if y.f().abs() > bound_y + round {
+            assert_eq!(
+                back[1].f().signum(),
+                y.f().signum(),
+                "decode(encode(x)) mirrored λ̃_y at {at}"
+            );
+        }
         let dx = (back[0].f() - lambda_t[0]).abs();
-        let bound_x = norm * (1.0 - (std::f64::consts::PI * eps_z).cos());
-        worst.lambda_x = worse(worst.lambda_x, (dx - bound_x) / R::eps());
-        assert!(
-            dx <= bound_x + round,
-            "|Δλ̃_x| = {dx:e} over ‖λ̃‖(1 − cos(π·ε_z)) = {bound_x:e} at {at}"
-        );
+        worst.lambda_x = worse(worst.lambda_x, dx / R::eps());
+        assert!(dx <= round, "|Δλ̃_x| = {dx:e} over rounding at {at}");
         let rest = [
             (d.ic.m.to_vec(), x.m.to_vec()),
             (d.config.rho_t.to_vec(), rt.to_vec()),
@@ -907,8 +971,9 @@ fn check_landmark<R: P>(
 }
 
 /// Test 10's pole landmark on its own: `m₀ = m₁`, body 2 in the middle, at the inner pair's centre of mass, so `λ̃ = 0`
-/// exactly. `λ̃_y = ±0` gives `β = 0` by the select; `λ̃_y = ±1e-13` with `λ̃_x = 0` gives `β = π/2` as `atan2`
-/// computes it at the precision; each sets `lookup_clamped`, gives no NaN, and the same bits twice.
+/// exactly. `λ̃_y = ±0` gives `β = 0` by the select; `λ̃_y = +1e-13` with `λ̃_x = 0` gives `β = π/2` as `atan2`
+/// computes it at the precision, and `−1e-13` the lower half's `−π/2 + 2π̂` (the signed encode, R-865); each sets
+/// `lookup_clamped` (`α` at its pole), gives no NaN, and the same bits twice.
 ///
 /// The masses are `(¼, ¼, ½)` (applied per R-369, a test decision): every product `C` and the Jacobi map form of a
 /// mass and a coordinate is then exact, so `C`'s CoM is 0 and `λ̃_x` stays exactly 0 through the encode. With masses
@@ -927,10 +992,13 @@ fn check_pole<R: P>() {
         let e = encode::<Defaults, R>(&x);
         let at = format!("the pole landmark, λ̃_y = {y:e}");
         let b = e.blocks.beta;
+        let pi = R::LIT_7;
         let want = if y == R::zero() {
             R::zero()
-        } else {
+        } else if y > R::zero() {
             Float::atan2(R::one(), R::zero())
+        } else {
+            Float::atan2(-R::one(), R::zero()) + (pi + pi)
         };
         assert_eq!(b.bits(), want.bits(), "β = {b:e}, not {want:e}, at {at}");
         assert!(
@@ -991,8 +1059,9 @@ fn collinear_at<R: P>() -> RoundTrip {
 }
 
 /// Just off the `−x` half-axis, `λ̃_y = ±1e-13` and `±1e-9`: the true `β` is within `10⁻¹³` of π, which a
-/// round-to-nearest f32 `atan2` returns as f32's nearest π, above `π̂`; `β` is then `π̂` by the select, never above it,
-/// at either sign of `λ̃_y` (C8/Q5; dd_encode §3.1). glibc's `atan2f` returns f32's π here; Apple's returns `π̂`, so on
+/// round-to-nearest f32 `atan2` returns as f32's nearest π, above `π̂`; above the axis `β` is then `π̂` by the select,
+/// never above it (C8/Q5; dd_encode §3.1); below it, the lower half's `atan2(λ̃_y, λ̃_x) + 2π̂` (the signed encode,
+/// R-865; *was:* "at either sign of `λ̃_y`", `β` reading `|λ̃_y|`). glibc's `atan2f` returns f32's π here; Apple's returns `π̂`, so on
 /// macOS the select is not reached and this checks only the bound. At f64, `π̂` is f64's nearest π, which `atan2` never
 /// exceeds. Below
 /// `π̂`, as at `λ̃_y = 1e-6`, `β` is `atan2`'s own value.
@@ -1005,14 +1074,26 @@ fn check_near_half_axis<R: P>() {
     ] {
         let lambda_t = [R::of(x), R::of(y)];
         let b = beta(lambda_t);
-        let raw = Float::atan2(Float::abs(lambda_t[1]), lambda_t[0]);
-        let want = if raw > pi { pi } else { raw };
+        let raw = Float::atan2(lambda_t[1], lambda_t[0]);
+        // Below the axis no select is reached: the kernel's own `atan2` (`kernel::Real`), whose last bit there can differ
+        // from the platform's.
+        let below = <R as kernel::Real>::arctan2(lambda_t[1], lambda_t[0]);
+        let want = if lambda_t[1] < R::zero() {
+            below + (pi + pi)
+        } else if raw > pi {
+            pi
+        } else {
+            raw
+        };
         assert_eq!(
             b.bits(),
             want.bits(),
             "β = {b:e}, not {want:e}, at λ̃ = {lambda_t:?}"
         );
-        assert!(b <= pi, "β = {b:e} above π̂ = {pi:e} at λ̃ = {lambda_t:?}");
+        assert!(
+            lambda_t[1] < R::zero() || b <= pi,
+            "β = {b:e} above π̂ = {pi:e} at λ̃ = {lambda_t:?}"
+        );
     }
     let lambda_t = [R::of(-1.0), R::of(1e-6)];
     let raw = Float::atan2(lambda_t[1], lambda_t[0]);
@@ -1044,23 +1125,47 @@ negative_control!(
     }
 );
 
-// ── encode_t1_gauge (REQ-ENC-003; dd_encode §5 test 2) ──────────────────────────────────────────────────────────
+// ── encode_t1_gauge (REQ-ENC-003; dd_encode §5 test 2, §3.3) ────────────────────────────────────────────────────
 
-/// `|E(a) − E(b)|` over `z`, each control's difference over `1 + |z|`, in eps.
-fn z_gap<R: P>(a: &Encoded<R>, b: &Encoded<R>) -> f64 {
-    a.z.z
-        .iter()
-        .zip(&b.z.z)
-        .map(|(x, y)| err(*x, *y, 1.0 + y.f().abs()))
+/// `β`'s period at `R`, `2π̂`.
+fn tau<R: P>() -> f64 {
+    (R::LIT_7 + R::LIT_7).f()
+}
+
+/// `|a − b|` over `z`, each control's difference over `1 + |b|`, in eps; `z_β`'s on the circle, the difference reduced
+/// by whole periods `2π̂` (R-898: `z_β` and `z_β + 2π` are one state).
+fn z_gap_to<R: P>(a: &[R; 8], b: &[R; 8]) -> f64 {
+    let t = tau::<R>();
+    a.iter()
+        .zip(b)
+        .enumerate()
+        .map(|(k, (x, y))| {
+            let mut d = x.f() - y.f();
+            if k == 1 {
+                d -= t * (d / t).round();
+            }
+            d.abs() / ((1.0 + y.f().abs()) * R::eps())
+        })
         .fold(0.0, worse)
+}
+
+/// The mirrored `z` (dd_encode §3.3, R-865, R-1020): `z_β → π̂ − z_β` under the offset link (`β → 2π − β`, and
+/// `2c = π̂`), compared on the circle, the momentum controls of `p_ρ,y` and `p_λ,y` (`z_q1`, `z_q3`) negated, every
+/// other control as it is. *Was (14 Nov 2026, the identity link):* "`z_β → 2π̂ − z_β`".
+fn mirrored<R: P>(z: &[R; 8]) -> [R; 8] {
+    let mut out = *z;
+    out[1] = R::LIT_7 - z[1];
+    out[3] = -z[3];
+    out[5] = -z[5];
+    out
 }
 
 /// The T1 limit, in eps of the precision, over `1 + |z|`: `z`'s error after `C` on a moved and rescaled state,
 /// conditioned by the interior's `d logit/ds` and `d artanh/dt`.
 const T1_EPS: f64 = 128.0;
 
-/// A random interior state: the default decode of a random `z`, `|z| ≤ 4`, at f64. Its `λ̃_y = sin α·sin β` is at
-/// least about `1.5e-3`, far outside the deadband at either precision.
+/// A random interior state: the default decode of a random `z`, `|z| ≤ 4`, at f64, `z_β` on both halves of the
+/// circle.
 fn interior_state(rng: &mut SplitMix) -> Ic<f64> {
     decode::<Defaults, f64>(&Latent::new(random_z(rng, SPAN))).ic
 }
@@ -1072,23 +1177,22 @@ fn kappa(g: &Gauge) -> f64 {
     1.0 + g.a[0].hypot(g.a[1]) / g.s + g.u[0].hypot(g.u[1]) * g.s.sqrt()
 }
 
-/// T1 on one state and one `g`: `E(g·x)` and `E(x)` agree to [`T1_EPS`] times `g`'s [`kappa`]; `E(x)` does not
-/// mirror and `E(g·x)` mirrors iff `g` does (both off the deadband); `λ` scales as `1/s`. Returns the `z` gap over
-/// `κ`, in eps.
-fn check_t1<R: P>(x: &Ic<f64>, g: &Gauge) -> f64 {
-    let ex = encode::<Defaults, R>(&ic_of(x));
-    let egx = encode::<Defaults, R>(&ic_of(&g.act(x)));
+/// An encode under test, at `R`.
+type Enc<R> = fn(&Ic<R>) -> Encoded<R>;
+
+/// T1 on one state and one `g`, under the encode `enc`: `E(g·x)` agrees with `E(x)`, or with the mirrored `E(x)`
+/// where `g` mirrors (the equivariance, R-865), to [`T1_EPS`] times `g`'s [`kappa`]; `λ` scales as `1/s`. Returns the
+/// `z` gap over `κ`, in eps.
+fn check_t1<R: P>(enc: Enc<R>, x: &Ic<f64>, g: &Gauge) -> f64 {
+    let ex = enc(&ic_of(x));
+    let egx = enc(&ic_of(&g.act(x)));
     let k = kappa(g);
-    let gap = z_gap(&egx, &ex) / k;
+    let want = if g.mirror { mirrored(&ex.z.z) } else { ex.z.z };
+    let gap = z_gap_to(&egx.z.z, &want) / k;
     let at = format!("g = {g:?}, x = {x:?}");
     assert!(
         gap <= T1_EPS,
-        "E(g·x) differs from E(x) by {gap:.1} eps (over κ = {k:.1}) at {at}"
-    );
-    assert!(!ex.report.mirrored, "E(x) mirrored a canonical x at {at}");
-    assert_eq!(
-        egx.report.mirrored, g.mirror,
-        "E(g·x)'s mirror is not g's at {at}"
+        "E(g·x) differs from E(x) (mirrored where g mirrors) by {gap:.1} eps (over κ = {k:.1}) at {at}"
     );
     let scaled = egx.report.lambda.f() * g.s / ex.report.lambda.f();
     assert!(
@@ -1098,17 +1202,23 @@ fn check_t1<R: P>(x: &Ic<f64>, g: &Gauge) -> f64 {
     gap
 }
 
-fn t1_generic<R: P>(seed: u64) -> f64 {
+/// The encode under the defaults at `R`.
+fn defaults<R: P>(x: &Ic<R>) -> Encoded<R> {
+    encode::<Defaults, R>(x)
+}
+
+fn t1_generic<R: P>(enc: Enc<R>, seed: u64) -> (f64, usize) {
     let mut rng = SplitMix::new(seed);
-    let mut worst = 0.0f64;
+    let (mut worst, mut mirrors) = (0.0f64, 0);
     for _ in 0..2000 {
         let x = interior_state(&mut rng);
         for _ in 0..5 {
             let g = Gauge::random(&mut rng, 10.0, 8.0);
-            worst = worse(worst, check_t1::<R>(&x, &g));
+            mirrors += usize::from(g.mirror);
+            worst = worse(worst, check_t1::<R>(enc, &x, &g));
         }
     }
-    worst
+    (worst, mirrors)
 }
 
 /// A near-collinear state in the deadband: `ρ̃ = (cos α, 0)`, `λ̃ = (±sin α, y)`, `|y| ≤ 0.9·δ_λ`, interior momenta.
@@ -1123,45 +1233,33 @@ fn deadband_state(rng: &mut SplitMix) -> Ic<f64> {
     state(m, [a.cos(), 0.0], [side * a.sin(), y], p_rho, p_lambda)
 }
 
-/// T1 across the deadband (f64): `g` turns, moves, boosts and rescales, never mirrors, so `C` turns the state back
-/// with `λ̃_y` still inside `±δ_λ` to rounding: no mirror either way, and `E(g·x) = E(x)`. Each is encoded twice, with
-/// the same bits. Returns the `z` gap, in eps.
-fn t1_deadband(seed: u64) -> f64 {
+/// T1 across the `λ̃_y = 0` seam (f64), the old mirror's deadband: each `g` drawn, mirroring or not, on states with
+/// `|λ̃_y| ≤ 0.9·δ_λ`, body 2 on either side, so `β` near 0, `2π̂` or π: the equivariance holds there too, on the
+/// circle, and each state encodes twice to the same bits. Returns the `z` gap, in eps.
+fn t1_seam(seed: u64) -> f64 {
     let mut rng = SplitMix::new(seed);
     let mut worst = 0.0f64;
     for _ in 0..2000 {
         let x = deadband_state(&mut rng);
         for _ in 0..5 {
-            let g = Gauge {
-                mirror: false,
-                ..Gauge::random(&mut rng, 1.0, 2.0)
-            };
+            let g = Gauge::random(&mut rng, 1.0, 2.0);
             let gx = g.act(&x);
-            let (ex, egx) = (encode::<Defaults, f64>(&x), encode::<Defaults, f64>(&gx));
-            let at = format!("g = {g:?}, x = {x:?}");
-            assert!(
-                !ex.report.mirrored && !egx.report.mirrored,
-                "a deadband state mirrored at {at}"
-            );
+            let egx = encode::<Defaults, f64>(&gx);
             assert_eq!(
                 out_bits(&encode::<Defaults, f64>(&gx)),
                 out_bits(&egx),
-                "the tie encodes differently twice at {at}"
+                "a seam state encodes differently twice at g = {g:?}, x = {x:?}"
             );
-            let gap = z_gap(&egx, &ex) / kappa(&g);
-            assert!(
-                gap <= T1_EPS,
-                "E(g·x) differs from E(x) by {gap:.1} eps across the deadband at {at}"
-            );
-            worst = worse(worst, gap);
+            worst = worse(worst, check_t1::<f64>(defaults, &x, &g));
         }
     }
     worst
 }
 
-/// The exact tie, at each precision: masses `(¼, ¼, ½)`, `r₀ = r₁ = (−1, a)`, `r₂ = (1, −a)`, at rest, so that `λ̃_y`
-/// is `−a` exactly (`kernel::canon`'s tie): at `a = δ_λ`, `λ̃_y = −δ_λ`, no mirror, the same bits twice; one step past,
-/// a mirror.
+/// The old tie, at each precision: masses `(¼, ¼, ½)`, `r₀ = r₁ = (−1, a)`, `r₂ = (1, −a)`, at rest, so that `λ̃_y`
+/// is `−a` exactly and body 2 on the `+x` side: at `a = ±δ_λ` and one step past, the encode keeps `λ̃_y`'s side, `β`
+/// just below `2π̂` where `λ̃_y < 0` and just above 0 where `λ̃_y > 0`, the same bits twice. *Was (TASK-M2-57):* "at
+/// `a = δ_λ`, `λ̃_y = −δ_λ`, no mirror, the same bits twice; one step past, a mirror."
 fn check_tie<R: P>() {
     let tie = |a: R| -> Ic<R> {
         let (q, h, one) = (R::of(0.25), R::of(0.5), R::one());
@@ -1172,13 +1270,14 @@ fn check_tie<R: P>() {
         }
     };
     let d = R::DELTA_LAMBDA;
-    for (a, mirror) in [(d, false), (-d, false), (d.up(), true)] {
+    for a in [d, -d, d.up()] {
         let first = encode::<Defaults, R>(&tie(a));
         let again = encode::<Defaults, R>(&tie(a));
-        assert_eq!(
-            first.report.mirrored, mirror,
-            "the tie at λ̃_y = {:e} mirrors: {}",
-            -a, first.report.mirrored
+        let b = first.blocks.beta.f();
+        assert!(
+            (b > std::f64::consts::PI) == (a > R::zero()),
+            "the tie at λ̃_y = {:e} encodes to β = {b:e}, the other side",
+            -a
         );
         assert_eq!(
             out_bits(&first),
@@ -1191,58 +1290,89 @@ fn check_tie<R: P>() {
 
 #[test]
 fn encode_t1_gauge() {
-    let generic64 = t1_generic::<f64>(11);
-    let generic32 = t1_generic::<f32>(12);
-    let deadband = t1_deadband(13);
+    let (generic64, m64) = t1_generic::<f64>(defaults, 11);
+    let (generic32, m32) = t1_generic::<f32>(defaults, 12);
+    assert!(
+        m64 > 1000 && m32 > 1000,
+        "too few mirroring g drawn: {m64}, {m32}"
+    );
+    let seam = t1_seam(13);
     check_tie::<f64>();
     check_tie::<f32>();
     eprintln!(
-        "encode_t1_gauge: worst z gap (eps): generic f64 {generic64:.1}, f32 {generic32:.1}; deadband f64 {deadband:.1}"
+        "encode_t1_gauge: worst z gap (eps): generic f64 {generic64:.1}, f32 {generic32:.1}; seam f64 {seam:.1}"
     );
 }
 
 negative_control!(
     encode_t1_gauge,
-    "a g that mirrors the positions but not the momenta must break T1",
+    "an encode with C's mirror step left in (R-82's λ̃_y < −δ_λ) is invariant, not equivariant, so it must fail",
     expected = "differs from E(x)",
     {
-        let mut rng = SplitMix::new(22);
-        let x = interior_state(&mut rng);
-        let g = Gauge {
-            mirror: true,
-            ..Gauge::identity()
-        };
-        let mut gx = g.act(&x);
-        gx.p = x.p;
-        let (ex, egx) = (encode::<Defaults, f64>(&x), encode::<Defaults, f64>(&gx));
-        let gap = z_gap(&egx, &ex);
-        assert!(gap <= T1_EPS, "E(g·x) differs from E(x) by {gap:.1} eps");
+        t1_generic::<f64>(
+            |x| {
+                let c = kernel::canon::canonicalise(x);
+                let flip = c.lambda_t_y < -f64::DELTA_LAMBDA;
+                encode::<Defaults, f64>(&kernel::canon::reflect(&c.ic, flip))
+            },
+            22,
+        );
     }
+);
+
+/// T1 under the mirror alone on 200 interior states: `E(Π·x)` is the mirrored `E(x)`, `Π` reflecting every `rᵢ` and
+/// every `pᵢ`; `act` applies `Π` to a state, the kernel's full-state mirror or a control's.
+fn check_full_state_mirror(act: fn(&Ic<f64>) -> Ic<f64>) {
+    let mut rng = SplitMix::new(23);
+    for _ in 0..200 {
+        let x = interior_state(&mut rng);
+        let (ex, epx) = (
+            encode::<Defaults, f64>(&x),
+            encode::<Defaults, f64>(&act(&x)),
+        );
+        let gap = z_gap_to(&epx.z.z, &mirrored(&ex.z.z));
+        assert!(
+            gap <= T1_EPS,
+            "E(Π·x) differs from the mirrored E(x) by {gap:.1} eps at x = {x:?}"
+        );
+    }
+}
+
+#[test]
+fn encode_t1_full_state_mirror() {
+    check_full_state_mirror(|x| kernel::canon::reflect(x, true));
+}
+
+negative_control!(
+    encode_t1_full_state_mirror,
+    "a mirror of the positions but not the momenta must break T1's equivariance",
+    expected = "differs from the mirrored E(x)",
+    check_full_state_mirror(|x| Ic {
+        p: x.p,
+        ..kernel::canon::reflect(x, true)
+    })
 );
 
 // ── encode_notices (REQ-ENC-014) ────────────────────────────────────────────────────────────────────────────────
 
-/// The notices `e` raised: `(lookup_clamped, lookup_mirrored, lookup_rescaled)`, and `λ`.
-fn raised<R: P>(e: &Encoded<R>) -> ((bool, bool, bool), f64) {
+/// The notices `e` raised: `(lookup_clamped, lookup_rescaled)`, and `λ`; `lookup_mirrored` is retired with the mirror
+/// step (R-865).
+fn raised<R: P>(e: &Encoded<R>) -> ((bool, bool), f64) {
     (
-        (
-            e.report.lookup_clamped(),
-            e.report.lookup_mirrored(),
-            e.report.lookup_rescaled(),
-        ),
+        (e.report.lookup_clamped(), e.report.lookup_rescaled()),
         e.report.lambda.f(),
     )
 }
 
-/// One forced operation's notices: `want`, `(lookup_clamped, lookup_mirrored, lookup_rescaled)`, and `λ`, exactly 1
+/// One forced operation's notices: `want`, `(lookup_clamped, lookup_rescaled)`, and `λ`, exactly 1
 /// where `lookup_rescaled` is not raised (step 0 skipped, R-547), else within 16 eps of `lambda`.
-fn check_notice<R: P>(name: &str, x: &Ic<R>, want: (bool, bool, bool), lambda: f64) {
+fn check_notice<R: P>(name: &str, x: &Ic<R>, want: (bool, bool), lambda: f64) {
     let (got, l) = raised(&encode::<Defaults, R>(x));
     assert_eq!(
         got, want,
-        "{name}: (lookup_clamped, lookup_mirrored, lookup_rescaled) = {got:?}, not {want:?}"
+        "{name}: (lookup_clamped, lookup_rescaled) = {got:?}, not {want:?}"
     );
-    if want.2 {
+    if want.1 {
         assert!(
             (l - lambda).abs() <= 16.0 * R::eps() * lambda,
             "{name}: λ = {l}, not {lambda}"
@@ -1258,7 +1388,7 @@ fn notices_at<R: P>(seed: u64) {
     for _ in 0..2000 {
         let z: [R; 8] = random_z(&mut rng, SPAN);
         let x = decode::<Defaults, R>(&Latent::new(z)).ic;
-        check_notice("a canonical input", &x, (false, false, false), 1.0);
+        check_notice("a canonical input", &x, (false, false), 1.0);
     }
     let x = interior_state(&mut rng);
     let moved = Gauge {
@@ -1269,7 +1399,7 @@ fn notices_at<R: P>(seed: u64) {
     check_notice(
         "translated, boosted and turned",
         &ic_of::<R>(&moved.act(&x)),
-        (false, false, false),
+        (false, false),
         1.0,
     );
     let scaled = Gauge {
@@ -1279,24 +1409,26 @@ fn notices_at<R: P>(seed: u64) {
     check_notice(
         "rescaled by 4",
         &ic_of::<R>(&scaled.act(&x)),
-        (false, false, true),
+        (false, true),
         0.25,
     );
     let mirrored = Gauge {
         mirror: true,
         ..Gauge::identity()
     };
-    check_notice(
-        "mirrored",
-        &ic_of::<R>(&mirrored.act(&x)),
-        (false, true, false),
-        1.0,
+    // A mirrored state raises nothing: no mirror step, and bit 1 of the notices word never set (R-865).
+    let lower = ic_of::<R>(&mirrored.act(&x));
+    check_notice("mirrored", &lower, (false, false), 1.0);
+    assert_eq!(
+        notices(&encode::<Defaults, f32>(&ic_of::<f32>(&mirrored.act(&x))).report) & 2,
+        0,
+        "bit 1 of the notices word, lookup_mirrored, set on a mirrored state"
     );
     let z = [R::zero(); 8];
     check_notice(
         "|q| > q_max",
         &with_p_rho(z, [R::of(2.5), R::zero()]),
-        (true, false, false),
+        (true, false),
         1.0,
     );
     // The coincident inner pair at `I = 1` exactly: `r₀ = r₁ = (−1, 0)`, `r₂ = (1, 0)`, masses `(¼, ¼, ½)`.
@@ -1310,12 +1442,7 @@ fn notices_at<R: P>(seed: u64) {
             [R::of(-0.2), R::of(0.1)],
         ],
     };
-    check_notice(
-        "the coincident inner pair",
-        &coincident,
-        (true, false, false),
-        1.0,
-    );
+    check_notice("the coincident inner pair", &coincident, (true, false), 1.0);
     let e = encode::<Defaults, R>(&coincident);
     assert!(
         e.report.coincident,
@@ -1323,26 +1450,24 @@ fn notices_at<R: P>(seed: u64) {
     );
 }
 
-/// [`Report`]'s three notices from its fields: `lookup_clamped` iff the coincident pair or any control's bit,
-/// `lookup_mirrored` and `lookup_rescaled` their own.
+/// [`Report`]'s two notices from its fields: `lookup_clamped` iff the coincident pair or any control's bit,
+/// `lookup_rescaled` its own.
 fn check_report() {
-    let report = |coincident, clamped_controls, mirrored, rescaled| Report {
+    let report = |coincident, clamped_controls, rescaled| Report {
         lambda: 1.0f64,
         rescaled,
         coincident,
         clamped_controls,
-        mirrored,
     };
     for (r, want) in [
-        (report(false, 0, false, false), (false, false, false)),
-        (report(true, 0, false, false), (true, false, false)),
-        (report(false, 1 << 7, false, false), (true, false, false)),
-        (report(true, 1, false, false), (true, false, false)),
-        (report(false, 0, true, false), (false, true, false)),
-        (report(false, 0, false, true), (false, false, true)),
+        (report(false, 0, false), (false, false)),
+        (report(true, 0, false), (true, false)),
+        (report(false, 1 << 7, false), (true, false)),
+        (report(true, 1, false), (true, false)),
+        (report(false, 0, true), (false, true)),
     ] {
         assert_eq!(
-            (r.lookup_clamped(), r.lookup_mirrored(), r.lookup_rescaled()),
+            (r.lookup_clamped(), r.lookup_rescaled()),
             want,
             "the report {r:?} raises the wrong notices"
         );
@@ -1358,12 +1483,12 @@ fn encode_notices() {
 
 negative_control!(
     encode_notices,
-    "a canonical input read with a raised mirror must fail",
-    expected = "(lookup_clamped, lookup_mirrored, lookup_rescaled)",
+    "a canonical input read with a raised rescale must fail",
+    expected = "(lookup_clamped, lookup_rescaled)",
     {
         let mut rng = SplitMix::new(33);
         let x = interior_state(&mut rng);
-        check_notice("a canonical input", &x, (false, true, false), 1.0);
+        check_notice("a canonical input", &x, (false, true), 1.0);
     }
 );
 
@@ -1377,7 +1502,6 @@ fn out_words(o: &EncodeOut) -> Vec<u32> {
         .chain([
             u32::from(o.report.coincident),
             o.report.clamped_controls,
-            u32::from(o.report.mirrored),
             u32::from(o.report.rescaled),
         ])
         .collect()
@@ -1426,25 +1550,20 @@ fn stage_encode_native() {
         p: [[0.0; 2]; 3],
     });
     check_stage(&states);
-    // The notices word's bits, and its round trip through the words.
-    for (coincident, mirrored, rescaled, controls) in [
-        (true, false, false, 0),
-        (false, true, false, 0),
-        (false, false, true, 0),
-        (false, false, false, 0xA5),
-        (true, true, true, 0xFF),
+    // The notices word's bits, and its round trip through the words; bit 1 never set (R-865).
+    for (coincident, rescaled, controls) in [
+        (true, false, 0),
+        (false, true, 0),
+        (false, false, 0xA5),
+        (true, true, 0xFF),
     ] {
         let report = Report {
             lambda: 0.5f32,
             rescaled,
             coincident,
             clamped_controls: controls,
-            mirrored,
         };
-        let want = u32::from(coincident)
-            | (u32::from(mirrored) << 1)
-            | (u32::from(rescaled) << 2)
-            | (controls << 8);
+        let want = u32::from(coincident) | (u32::from(rescaled) << 2) | (controls << 8);
         assert_eq!(notices(&report), want, "the notices word of {report:?}");
         let e = Encoded {
             report,

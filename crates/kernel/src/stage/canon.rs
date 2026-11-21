@@ -6,7 +6,7 @@
 use spirv_std::glam::UVec3;
 use spirv_std::spirv;
 
-use crate::canon::{self, Canonical};
+use crate::canon::{self, Canonical, LambdaSigns};
 use crate::stage::decode::{ic_words, read_ic, read_ic_at, write_ic_at};
 
 /// The words of one sample's [`Canonical`]: the `(m, r, p)` ([`ic_words`]), then `I_in`, `λ`, `φ`, `λ̃_y`, and the
@@ -16,13 +16,15 @@ pub fn canon_words() -> usize {
     ic_words() + 5
 }
 
-/// The notices word: bit 0 `lookup_clamped`, bit 1 `lookup_mirrored`, bit 2 `lookup_rescaled`.
+/// The notices word: bit 0 `lookup_clamped`, bit 2 `lookup_rescaled`; bit 1, `lookup_mirrored` until `C`'s mirror
+/// step was removed (R-865, TASK-M2-57), is never set, so the other bits keep their places. Bits 4 to 7 are no notice:
+/// they carry the decided signs of `λ̃` ([`Canonical::signs`], `LambdaSigns::word`), so a test reads the GPU's case of
+/// `β` beside the CPU's.
 #[inline]
 pub fn notices(c: &Canonical<f32>) -> u32 {
     let clamped = if c.clamped { 1 } else { 0 };
-    let mirrored = if c.mirrored { 2 } else { 0 };
     let rescaled = if c.rescaled { 4 } else { 0 };
-    clamped + mirrored + rescaled
+    clamped + rescaled + (c.signs.word() << 4)
 }
 
 /// Writes `c` as sample `i`'s words in `out`, in [`canon_words`]' order.
@@ -52,7 +54,7 @@ pub fn read_canonical(words: &[u32], i: usize) -> Canonical<f32> {
         lambda_t_y: f32::from_bits(words[tail + 3]),
         rescaled: flags & 4 != 0,
         clamped: flags & 1 != 0,
-        mirrored: flags & 2 != 0,
+        signs: LambdaSigns::of_word(flags >> 4),
     }
 }
 

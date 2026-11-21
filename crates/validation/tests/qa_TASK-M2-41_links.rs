@@ -29,8 +29,8 @@ use kernel::encode::blocks::clamps_at;
 use kernel::encode::{encode, encode_at, SimplexClamp};
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
-    Defaults, Link, LinkParams, LinkReal, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
-    SoftsignQ, TanhQ,
+    Defaults, Link, LinkParams, LinkReal, PeriodicBeta, Select, SigmoidAlpha, SigmoidQ,
+    SoftmaxTanh, SoftsignQ, TanhQ,
 };
 use ledger::constants::EPS_PHYS;
 use ledger::links::{eval, registered, tunables, Fl, Param, Values};
@@ -576,9 +576,9 @@ negative_control!(
 
 // ── REQ-DEC-048: the active value everywhere ────────────────────────────────────────────────────────────────────
 
-type TanhMomenta = Select<SoftmaxTanh, SigmoidAlpha, SigmoidBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
+type TanhMomenta = Select<SoftmaxTanh, SigmoidAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 type SoftsignMomenta =
-    Select<SoftmaxTanh, SigmoidAlpha, SigmoidBeta, SoftsignQ, SoftsignQ, SoftsignQ, SoftsignQ>;
+    Select<SoftmaxTanh, SigmoidAlpha, PeriodicBeta, SoftsignQ, SoftsignQ, SoftsignQ, SoftsignQ>;
 
 /// The largest `|q|` the decode under `S` gives at `p` over the 8-control sample with saturating controls.
 fn max_q<S: kernel::generated::links::Selection, R: Both + kernel::payload::PayloadReal>(

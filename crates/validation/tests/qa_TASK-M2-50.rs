@@ -2,12 +2,17 @@
 //! decision (applied per R-369), not from the gate's code: the shape families, the gauge elements and the readings of
 //! `w` and `z_β` are this file's own, on `kernel::encode` and `kernel::shape` directly.
 //!
-//! - REQ-VAL-022, the bit-for-bit check: every collinear state's `z_β` at its clamp image (the β link's inverse of an
-//!   input inside the clamp's band, `ε_z = 10⁻⁶`), bit for bit, with its `lookup_clamped` bit set; no equal-mass
-//!   equilateral state sets it; a state moved past `π·ε_z` leaves the clamp.
-//! - REQ-VAL-022, the pole and the equator, read on the canonical state `C(x)` (RQ-624): `|w − 1|` (L⁺ and L⁻, `C`'s
-//!   mirror taking L⁻ to `w = +1`) and `|w|` within REQ-VAL-121's proposed bounds; a collinear state moved about 10³
-//!   ulps off the line keeps `z_β` clamped and is caught by `|w|`; the proposed bounds sit on the measurement.
+//! - REQ-VAL-022, the bit-for-bit check, on the decoder without its mirror step and with `β`'s one periodic link
+//!   (TASK-M2-57): `β` has no clamp, so no collinear and no equilateral state sets `lookup_clamped`'s `β` bit; every
+//!   collinear state whose `C(x)` has `λ̃_y` exactly `±0` has its `z_β` bit for bit at the link's inverse of `β = 0` or
+//!   `β = π̂`, both reached; a state moved off the line leaves those images. *Was:* every collinear state's `z_β` at
+//!   its clamp image (the bounded link's inverse of an input inside the clamp's band, `ε_z = 10⁻⁶`) with its bit set,
+//!   a state moved past `π·ε_z` leaving the clamp.
+//! - REQ-VAL-022, the pole and the equator, read on the canonical state `C(x)` (RQ-624): `|w − w_in|`, `w_in` the
+//!   input's own orientation (+1 for L⁺, −1 for L⁻: `C` keeps the sign), and `|w|` within REQ-VAL-121's proposed
+//!   bounds; a collinear state moved about 10³ ulps off the line is caught by `|w|`; the proposed bounds sit on the
+//!   measurement; the collinear states whose `λ̃_y` is not `±0` are within the gate's collinear tolerance on `|λ̃_y|`.
+//!   *Was:* `|w − 1|` for L⁺ and L⁻ alike, `C`'s mirror taking L⁻ to `w = +1`; the lifted state's `z_β` kept clamped.
 //! - REQ-VAL-193: the Randomise draw is the stated distribution (masses on `[0.4, 1.8]` normalised, positions on `±0.9`,
 //!   velocities on `±0.6`, each uniform); the arm's reported maxima, over all the draws and over the in-ball subset, are
 //!   `‖E(h·x) − E(x)‖` re-measured here; and the arm never moves REQ-VAL-021's verdict at 1.6×10⁻¹⁴, either way.
@@ -25,14 +30,14 @@ use validation::decode_f32_eps::SplitMix;
 use validation::gate::{self, GateConfig, Verdict};
 use validation::inspector::{
     randomise_ic, randomise_moves, randomise_seed, randomise_worst, HandlesInput,
-    InspectorHandlesGate, Leak, RandomiseArm, RandomiseSeed, EQUATOR_BOUND, HANDLES, MOVES,
-    POLE_BOUND,
+    InspectorHandlesGate, Leak, RandomiseArm, RandomiseSeed, COLLINEAR_TOL, EQUATOR_BOUND, HANDLES,
+    MOVES, POLE_BOUND,
 };
 use validation::negative_control;
 
 /// REQ-VAL-021's bound, which the Randomise arm never loosens (R-551).
 const HANDLE_BOUND: f64 = 1.6e-14;
-/// The β link's clamp, `ε_z` (R-10, R-21; inverse-encode contract Part 3).
+/// The retired bounded β links' clamp, `ε_z`: the periodic link has none, which the image test's control reads.
 const EPS_Z: f64 = 1e-6;
 /// The draws of each shape family per seed, the gate's own count.
 const N_SHAPES: usize = 2000;
@@ -89,48 +94,72 @@ fn gauge(rng: &mut Rng, x: &Ic<f64>) -> (Ic<f64>, bool) {
     (act(x, a, u, theta, s, mirror), mirror)
 }
 
-/// `z_β`'s two clamp images: the β link's inverse of an input a quarter of the band inside each end, `β = π·ε_z/4` and
-/// `β = π − π·ε_z/4`, which the clamp takes to `s = ε_z` and `s = 1 − ε_z`.
-fn clamp_images() -> [f64; 2] {
+/// A gauge element that keeps a state on the `x`-axis there exactly: no turn, an offset along `x` only; scale, parity
+/// and boost as [`gauge`]'s. `C` of a collinear state through it has `λ̃_y` exactly `±0`.
+fn axis_gauge(rng: &mut Rng, x: &Ic<f64>) -> Ic<f64> {
+    let s = rng.on(-4.0, 4.0).exp2();
+    let mirror = rng.next() & 1 == 1;
+    let a = [rng.on(-2.0, 2.0), 0.0];
+    let u = [rng.on(-2.0, 2.0), rng.on(-2.0, 2.0)];
+    act(x, a, u, 0.0, s, mirror)
+}
+
+/// `π̂`, π's nearest f64 (dd_decoder §3.2's image of π at f64).
+const PI_HAT: f64 = PI;
+
+/// `z_β`'s two collinear images: the β link's inverse of `β = 0` (`λ̃` along `+x`) and of `β = π̂` (along `−x`).
+fn beta_images() -> [f64; 2] {
     type BetaLink = <Defaults as Selection>::BetaLink;
-    let band = PI * EPS_Z / 4.0;
-    [band, PI - band].map(|b| BetaLink::inverse([b])[0])
+    [0.0, PI_HAT].map(|b| BetaLink::inverse([b])[0])
 }
 
 /// What this file reads off RQ-475's two families.
 struct Measured {
-    /// The equilateral states' `|w − 1|` on `C(x)`.
+    /// The equilateral states' `|w − w_in|` on `C(x)`, `w_in` the input's own orientation.
     pole: Vec<f64>,
-    /// The equilateral states' `|w − 1|` on `x` itself, before `C`.
-    pole_raw: Vec<f64>,
-    /// How many equilateral states the gauge mirrored, and how many of those read `w = −1` before `C` (L⁻).
-    mirrored: [usize; 2],
+    /// The equilateral states' `|w − 1|` on `C(x)`: L⁻ read against `+1` (the control's reading).
+    pole_plus: Vec<f64>,
+    /// How many equilateral states the gauge mirrored; how many of those read `w = −1` before `C` (L⁻); and how many
+    /// of those still read `w = −1` on `C(x)`.
+    mirrored: [usize; 3],
     /// The collinear states' `|w|` on `C(x)`.
     equator: Vec<f64>,
     /// The collinear states' `|w|` on `D(E(x))`.
     equator_back: Vec<f64>,
-    /// `[equilateral, collinear]`: how many set `lookup_clamped`'s β bit.
-    bit: [usize; 2],
-    /// `[equilateral, collinear]`: how many have `z_β` bit for bit at one of its clamp images.
-    image: [usize; 2],
+    /// `[equilateral, collinear, collinear on the axis]`: how many set `lookup_clamped`'s β bit.
+    bit: [usize; 3],
+    /// `[equilateral, collinear, collinear on the axis]`: how many have `z_β` bit for bit at one of its images.
+    image: [usize; 3],
+    /// `[equilateral, collinear, collinear on the axis]`: how many have `λ̃_y` exactly `±0` on `C(x)`, and how many of
+    /// those have `z_β` at an image.
+    exact: [[usize; 2]; 3],
+    /// The axis family's `z_β` at the image of `β = 0`, and of `β = π̂`.
+    sides: [usize; 2],
+    /// The collinear states' `|λ̃_y|` on `C(x)` where it is not `±0`.
+    line: Vec<f64>,
 }
 
 /// RQ-475's families from `seed`, `n` of each: the equal-mass unit equilateral triangle (L⁺; the gauge's parity gives
 /// L⁻), and three bodies on the `x`-axis at `[−1, 1)` with masses from `z_μ` on `[−4, 4)²`, body 2 raised by `lift`
-/// off the line; each at rest, then through a random gauge element. `nudge` moves each `z_β` one ulp before it is
-/// compared.
+/// off the line; each at rest, then through a random gauge element; and the collinear state again through a gauge
+/// element that keeps it on the axis ([`axis_gauge`]). `nudge` moves each `z_β` one ulp before it is compared.
 fn measure(seed: u64, n: usize, lift: f64, nudge: bool) -> Measured {
     let mut rng = Rng(seed);
-    let images = clamp_images();
+    // The axis family draws from its own stream, so the two random-gauge families are the draws they were.
+    let mut axis_rng = Rng(seed ^ 0xA715_0000_0000);
+    let images = beta_images();
     let equal = mass::decode::<Defaults, f64>([0.0, 0.0]).m;
     let mut out = Measured {
         pole: Vec::new(),
-        pole_raw: Vec::new(),
-        mirrored: [0; 2],
+        pole_plus: Vec::new(),
+        mirrored: [0; 3],
         equator: Vec::new(),
         equator_back: Vec::new(),
-        bit: [0; 2],
-        image: [0; 2],
+        bit: [0; 3],
+        image: [0; 3],
+        exact: [[0; 2]; 3],
+        sides: [0; 2],
+        line: Vec::new(),
     };
     for _ in 0..n {
         let tri = Ic {
@@ -145,20 +174,26 @@ fn measure(seed: u64, n: usize, lift: f64, nudge: bool) -> Measured {
             r: [[t[0], 0.0], [t[1], 0.0], [t[2], lift]],
             p: [[0.0; 2]; 3],
         };
-        for (k, x0) in [tri, line].iter().enumerate() {
-            let (x, mirrored) = gauge(&mut rng, x0);
+        for (k, x0) in [tri, line, line].iter().enumerate() {
+            let (x, mirrored) = if k == 2 {
+                (axis_gauge(&mut axis_rng, x0), false)
+            } else {
+                gauge(&mut rng, x0)
+            };
             let e = encode::<Defaults, f64>(&x);
             let c = e.canonical.ic;
             let w = shape(c.r, c.m)[2];
             if k == 0 {
-                out.pole.push((w - 1.0).abs());
                 let raw = shape(x.r, x.m)[2];
-                out.pole_raw.push((raw - 1.0).abs());
+                out.pole.push((w - raw.signum()).abs());
+                out.pole_plus.push((w - 1.0).abs());
                 if mirrored {
                     out.mirrored[0] += 1;
-                    out.mirrored[1] += usize::from((raw + 1.0).abs() < 1e-12);
+                    let lower = (raw + 1.0).abs() < 1e-12;
+                    out.mirrored[1] += usize::from(lower);
+                    out.mirrored[2] += usize::from(lower && (w + 1.0).abs() < 1e-12);
                 }
-            } else {
+            } else if k == 1 {
                 out.equator.push(w.abs());
                 let back = decode::decode::<Defaults, f64>(&Latent::new(e.z.z)).ic;
                 out.equator_back.push(shape(back.r, back.m)[2].abs());
@@ -167,8 +202,19 @@ fn measure(seed: u64, n: usize, lift: f64, nudge: bool) -> Measured {
             if nudge {
                 z_beta = f64::from_bits(z_beta.to_bits() + 1);
             }
+            let at = images.iter().position(|i| i.to_bits() == z_beta.to_bits());
             out.bit[k] += usize::from(e.report.clamped_controls & 0b10 != 0);
-            out.image[k] += usize::from(images.iter().any(|i| i.to_bits() == z_beta.to_bits()));
+            out.image[k] += usize::from(at.is_some());
+            let lambda_y = e.canonical.lambda_t_y;
+            if lambda_y == 0.0 {
+                out.exact[k][0] += 1;
+                out.exact[k][1] += usize::from(at.is_some());
+            } else if k == 1 {
+                out.line.push(lambda_y.abs());
+            }
+            if let (2, Some(side)) = (k, at) {
+                out.sides[side] += 1;
+            }
         }
     }
     out
@@ -186,54 +232,74 @@ const SEEDS: [u64; 3] = [0x5157_0501, 0x5157_0502, 0x5157_0503];
 
 // ── The bit-for-bit check ───────────────────────────────────────────────────────────────────────────────────────
 
-/// The clamp images are the logit's at `ε_z` and `1 − ε_z` (the β link's inverse, `z = logit(s)`, `s` clamped to
-/// `[ε_z, 1 − ε_z]`), to a few ulps: so "at its clamp image" is at the clamp's, not at some other constant.
-fn check_clamp_images(eps: f64) {
-    let logit = |s: f64| (s / (1.0 - s)).ln();
-    let want = [logit(eps), logit(1.0 - eps)];
-    let got = clamp_images();
-    for (g, w) in got.iter().zip(want) {
+/// The images are the periodic link's inverse of the two collinear angles, `β − π/2` at `β = 0` and `β = π̂` (`image`
+/// is that map), to a few ulps; and the link clamps nothing: an angle inside the retired links' band, `π·ε_z/4` from
+/// either end, has its own `z_β`, `π·ε_z/4` from the image, not the image's (the retired clamp gave the whole band one
+/// value).
+fn check_beta_images(image: fn(f64) -> f64) {
+    type BetaLink = <Defaults as Selection>::BetaLink;
+    let got = beta_images();
+    for (g, b) in got.iter().zip([0.0, PI_HAT]) {
+        let w = image(b);
         assert!(
-            (g - w).abs() <= 1e-12 * w.abs(),
-            "a clamp image {g:e} is not logit at the clamp, {w:e}"
+            (g - w).abs() <= 1e-15 * w.abs().max(1.0),
+            "an image {g:e} is not the link's inverse at β = {b}, {w:e}"
         );
     }
-    type BetaLink = <Defaults as Selection>::BetaLink;
-    let edges = [0.0, PI].map(|b| BetaLink::inverse([b])[0]);
-    assert_eq!(
-        edges.map(f64::to_bits),
-        got.map(f64::to_bits),
-        "β = 0 and β = π do not clamp to the band's image, bit for bit"
-    );
+    let band = PI * EPS_Z / 4.0;
+    for (inside, edge) in [(band, got[0]), (PI_HAT - band, got[1])] {
+        let z = BetaLink::inverse([inside])[0];
+        let apart = (z - edge).abs();
+        assert!(
+            (apart - band).abs() <= 1e-9 * band,
+            "β = {inside:e}, inside the retired band, is {apart:e} from the image, not π·ε_z/4"
+        );
+    }
 }
 
 #[test]
-fn qa_clamp_images_are_the_clamps() {
-    check_clamp_images(EPS_Z);
+fn qa_beta_images_are_the_links() {
+    check_beta_images(|b| b - PI / 2.0);
 }
 
 negative_control!(
-    qa_clamp_images_are_the_clamps,
-    "a clamp at 10⁻⁵, not ε_z, must not match",
-    expected = "is not logit at the clamp",
-    check_clamp_images(1e-5)
+    qa_beta_images_are_the_links,
+    "the retired sigmoid link's clamp image, logit at ε_z and 1 − ε_z, must not match",
+    expected = "is not the link's inverse at β",
+    check_beta_images(|b| {
+        let s = (b / PI).clamp(EPS_Z, 1.0 - EPS_Z);
+        (s / (1.0 - s)).ln()
+    })
 );
 
-/// REQ-VAL-022 (R-551): every collinear state's `z_β` at its clamp image, bit for bit, with its bit set; no
-/// equilateral state's bit set, nor its `z_β` at an image.
+/// REQ-VAL-022 on the decoder without `β`'s clamp: no state of either family sets `lookup_clamped`'s `β` bit; every
+/// collinear state whose `C(x)` has `λ̃_y` exactly `±0` has its `z_β` at an image, bit for bit, the axis family's
+/// every state among them, with both images reached; no equilateral state's `z_β` is at an image.
 fn check_bits(nudge: bool) {
     for seed in SEEDS {
         let m = measure(seed, N_SHAPES, 0.0, nudge);
-        assert_eq!(
-            m.bit[1], N_SHAPES,
-            "a collinear state without lookup_clamped's β bit"
+        eprintln!(
+            "seed {seed:#x}: λ̃_y exactly ±0 on C(x) in {} of {N_SHAPES} collinear states in a random gauge, {} of \
+             {N_SHAPES} on the axis (at β = 0: {}, at π̂: {})",
+            m.exact[1][0], m.exact[2][0], m.sides[0], m.sides[1]
         );
+        assert_eq!(m.bit, [0; 3], "a state sets lookup_clamped's β bit");
         assert_eq!(
-            m.image[1], N_SHAPES,
-            "a collinear z_β not at its clamp image, bit for bit"
+            m.exact[2][0], N_SHAPES,
+            "an axis state's λ̃_y is not exactly ±0, so it is not judged bit for bit"
         );
-        assert_eq!(m.bit[0], 0, "an equilateral state sets the β bit");
-        assert_eq!(m.image[0], 0, "an equilateral z_β at a clamp image");
+        for k in [1, 2] {
+            assert_eq!(
+                m.exact[k][1], m.exact[k][0],
+                "a collinear z_β not at its image, bit for bit"
+            );
+        }
+        assert!(
+            m.sides[0] > 0 && m.sides[1] > 0,
+            "the axis family does not reach both images: {:?}",
+            m.sides
+        );
+        assert_eq!(m.image[0], 0, "an equilateral z_β at a collinear image");
     }
 }
 
@@ -244,51 +310,58 @@ fn qa_beta_bit_for_bit() {
 
 negative_control!(
     qa_beta_bit_for_bit,
-    "z_β one ulp off its clamp image must fail the bit-for-bit check",
-    expected = "a collinear z_β not at its clamp image",
+    "z_β one ulp off its image must fail the bit-for-bit check",
+    expected = "a collinear z_β not at its image",
     check_bits(true)
 );
 
-/// The bit check tells collinear from not: body 2 raised `lift` off the line, enough to put `β` past `π·ε_z`, leaves
-/// every state off the clamp, its bit unset (RQ-624 (2), the optional control).
-fn check_leaves_clamp(lift: f64) {
+/// The bit check tells collinear from not: body 2 raised `lift` off the line leaves every axis state off the images,
+/// its `λ̃_y` not `±0` (RQ-624 (2), the optional control). *Was:* a lift putting `β` past `π·ε_z` left the clamp.
+fn check_leaves_images(lift: f64) {
     let m = measure(SEEDS[0], N_SHAPES, lift, false);
     assert!(
-        m.bit[1] == 0 && m.image[1] == 0,
-        "a state {lift:e} off the line still clamps: bit in {}, image in {} of {N_SHAPES}",
-        m.bit[1],
-        m.image[1]
+        m.exact[2][0] == 0 && m.image[2] == 0 && m.image[1] == 0,
+        "a state {lift:e} off the line is still at an image: λ̃_y = ±0 in {}, image in {} of {N_SHAPES}",
+        m.exact[2][0],
+        m.image[2]
     );
 }
 
 #[test]
-fn qa_beta_past_band_unclamps() {
-    check_leaves_clamp(1e-2);
+fn qa_beta_off_line_leaves_images() {
+    check_leaves_images(1e-2);
 }
 
 negative_control!(
-    qa_beta_past_band_unclamps,
-    "a state on the line must still clamp",
-    expected = "off the line still clamps",
-    check_leaves_clamp(0.0)
+    qa_beta_off_line_leaves_images,
+    "a state on the line must still be at its image",
+    expected = "off the line is still at an image",
+    check_leaves_images(0.0)
 );
 
 // ── The pole and the equator, on C(x) ───────────────────────────────────────────────────────────────────────────
 
-/// REQ-VAL-022: the equal-mass equilateral family's `max |w − 1|`, read on `C(x)` (or on `x` itself, the control),
-/// within the proposed pole bound; both L⁺ and L⁻ drawn, the mirrored ones at `w = −1` before `C`.
-fn check_pole(on_canonical: bool) {
+/// REQ-VAL-022: the equal-mass equilateral family's `max |w − w_in|`, read on `C(x)`, `w_in` the input's own
+/// orientation, within the proposed pole bound; both L⁺ and L⁻ drawn, the mirrored ones at `w = −1` before `C` and on
+/// `C(x)`, which keeps the sign. `own` false is the control's reading, every input against `+1`.
+fn check_pole(own: bool) {
     for seed in SEEDS {
         let m = measure(seed, N_SHAPES, 0.0, false);
         assert!(
-            m.mirrored[0] > N_SHAPES * 2 / 5 && m.mirrored[1] == m.mirrored[0],
-            "L⁻ is not drawn: {:?} of {N_SHAPES}",
+            m.mirrored[0] > N_SHAPES * 2 / 5
+                && m.mirrored[0] < N_SHAPES * 3 / 5
+                && m.mirrored[1] == m.mirrored[0],
+            "L⁺ and L⁻ are not both drawn: {:?} of {N_SHAPES}",
             m.mirrored
         );
-        let w = max(if on_canonical { &m.pole } else { &m.pole_raw });
+        assert_eq!(
+            m.mirrored[2], m.mirrored[1],
+            "C does not keep an L⁻ input at w = −1"
+        );
+        let w = max(if own { &m.pole } else { &m.pole_plus });
         assert!(
             w <= POLE_BOUND,
-            "the pole's |w − 1| reaches {w:e}, past {POLE_BOUND:e}"
+            "the pole's |w − w_in| reaches {w:e}, past {POLE_BOUND:e}"
         );
     }
 }
@@ -300,31 +373,24 @@ fn qa_pole_on_canonical_state() {
 
 negative_control!(
     qa_pole_on_canonical_state,
-    "|w − 1| read before C's mirror, L⁻ at w = −1, must fail",
-    expected = "the pole's |w − 1| reaches",
+    "L⁻ read against w = +1, where the retired mirror step put it, must fail",
+    expected = "the pole's |w − w_in| reaches",
     check_pole(false)
 );
 
-/// REQ-VAL-022 (RQ-624 (1a)): the collinear family's `max |w|`, read on `C(x)` (or on `D(E(x))`, the control, where it
-/// is the clamp image `sin2α·sin(π·ε_z)`), within the proposed equator bound.
-fn check_equator(on_canonical: bool) {
+/// REQ-VAL-022 (RQ-624 (1a)): the collinear family's `max |w|`, read on `C(x)`, within the proposed equator bound,
+/// the states `ulps` ulps of 1 off the line (0 in the test). `D(E(x))`'s `|w|` is reported, not judged. *Was:*
+/// `D(E(x))`'s `|w|` held to the retired clamp's image, `sin(π·ε_z)`, and read against the bound as the control; with
+/// no clamp on `β` it is rounding, like `C(x)`'s, and controls nothing.
+fn check_equator(ulps: u32) {
     for seed in SEEDS {
-        let m = measure(seed, N_SHAPES, 0.0, false);
-        let back = max(&m.equator_back);
+        let m = measure(seed, N_SHAPES, f64::from(ulps) * f64::EPSILON, false);
         eprintln!(
-            "seed {seed:#x}: |w| on C(x) max {:.3e}; on D(E(x)), reported: max {back:.3e} (sin(π·ε_z) = {:.3e})",
+            "seed {seed:#x}: |w| on C(x) max {:.3e}; on D(E(x)), reported: max {:.3e}",
             max(&m.equator),
-            (PI * EPS_Z).sin()
+            max(&m.equator_back)
         );
-        assert!(
-            back <= (PI * EPS_Z).sin() * (1.0 + 1e-9),
-            "D(E(x))'s |w|, {back:e}, past the clamp image"
-        );
-        let w = max(if on_canonical {
-            &m.equator
-        } else {
-            &m.equator_back
-        });
+        let w = max(&m.equator);
         assert!(
             w <= EQUATOR_BOUND,
             "the equator's |w| reaches {w:e}, past {EQUATOR_BOUND:e}"
@@ -334,26 +400,22 @@ fn check_equator(on_canonical: bool) {
 
 #[test]
 fn qa_equator_on_canonical_state() {
-    check_equator(true);
+    check_equator(0);
 }
 
 negative_control!(
     qa_equator_on_canonical_state,
-    "|w| read on D(E(x)), the clamp image, must fail the equator's bound",
+    "collinear states 1000 ulps of 1 off the line must fail the equator's bound",
     expected = "the equator's |w| reaches",
-    check_equator(false)
+    check_equator(1000)
 );
 
-/// RQ-624 (2): the collinear family moved `ulps` ulps of 1 off the line (body 2's `y`, before the gauge) keeps every
-/// `z_β` at its clamp image with its bit set, bit for bit, while `|w|` on `C(x)` catches it, several times the bound.
+/// RQ-624 (2): the collinear family moved `ulps` ulps of 1 off the line (body 2's `y`, before the gauge) sets no `β`
+/// bit, `β` having no clamp, while `|w|` on `C(x)` catches it, several times the bound. *Was:* the lifted states kept
+/// `z_β` at its clamp image with its bit set.
 fn check_in_band(ulps: u32) {
     let m = measure(SEEDS[1], N_SHAPES, f64::from(ulps) * f64::EPSILON, false);
-    assert!(
-        m.bit[1] == N_SHAPES && m.image[1] == N_SHAPES,
-        "the lifted states leave the clamp: bit in {}, image in {} of {N_SHAPES}",
-        m.bit[1],
-        m.image[1]
-    );
+    assert_eq!(m.bit, [0; 3], "a lifted state sets lookup_clamped's β bit");
     let w = max(&m.equator);
     assert!(
         w > 4.0 * EQUATOR_BOUND,
@@ -374,7 +436,8 @@ negative_control!(
 );
 
 /// REQ-VAL-121 (R-71): each proposed shape bound passes its measurement over this file's own draws, and sits on it, at
-/// most 4× its worst, so the bound can fire; a bound one ulp below the measurement fails.
+/// most 4× its worst, so the bound can fire; a bound one ulp below the measurement fails. The pole's measure is
+/// `|w − w_in|` (was `|w − 1|`).
 fn check_bounds(pole_bound: f64, equator_bound: f64) {
     let (mut pole, mut equator) = (0.0f64, 0.0f64);
     for seed in SEEDS {
@@ -382,15 +445,15 @@ fn check_bounds(pole_bound: f64, equator_bound: f64) {
         pole = pole.max(max(&m.pole));
         equator = equator.max(max(&m.equator));
     }
-    eprintln!("this file's worst: |w − 1| {pole:e}, |w| {equator:e}");
+    eprintln!("this file's worst: |w − w_in| {pole:e}, |w| {equator:e}");
     assert!(
         pole > 0.0 && pole <= pole_bound && equator <= equator_bound,
-        "a shape bound below its measurement: |w − 1| {pole:e} against {pole_bound:e}, |w| {equator:e} against \
+        "a shape bound below its measurement: |w − w_in| {pole:e} against {pole_bound:e}, |w| {equator:e} against \
          {equator_bound:e}"
     );
     assert!(
         pole_bound <= 4.0 * pole && equator_bound <= 4.0 * equator,
-        "a shape bound not from its measurement: |w − 1| {pole:e} against {pole_bound:e}, |w| {equator:e} against \
+        "a shape bound not from its measurement: |w − w_in| {pole:e} against {pole_bound:e}, |w| {equator:e} against \
          {equator_bound:e}"
     );
 }
@@ -405,6 +468,39 @@ negative_control!(
     "the pole's bound one ulp below 2⁻⁵², the measured worst, must fail",
     expected = "a shape bound below its measurement",
     check_bounds(f64::from_bits(f64::EPSILON.to_bits() - 1), EQUATOR_BOUND)
+);
+
+/// REQ-VAL-022, the collinear tolerance: every collinear state in a random gauge whose `C(x)` has `λ̃_y` not `±0`,
+/// the members not judged bit for bit, has `|λ̃_y|` within `tol` (the gate's, proposed from its own measurement).
+fn check_collinear_tolerance(tol: fn(f64) -> f64) {
+    let mut worst = 0.0f64;
+    let mut members = 0;
+    for seed in SEEDS {
+        let m = measure(seed, N_SHAPES, 0.0, false);
+        worst = worst.max(max(&m.line));
+        members += m.line.len();
+    }
+    eprintln!(
+        "this file's worst |λ̃_y| on C(x) over {members} collinear states not at ±0: {worst:e}"
+    );
+    assert!(members > 0, "no collinear state is judged by the tolerance");
+    let tol = tol(worst);
+    assert!(
+        worst <= tol,
+        "a collinear |λ̃_y| on C(x) reaches {worst:e}, past the collinear tolerance {tol:e}"
+    );
+}
+
+#[test]
+fn qa_collinear_tolerance() {
+    check_collinear_tolerance(|_| COLLINEAR_TOL);
+}
+
+negative_control!(
+    qa_collinear_tolerance,
+    "a tolerance one ulp below the measured worst must fail",
+    expected = "past the collinear tolerance",
+    check_collinear_tolerance(|worst| f64::from_bits(worst.to_bits() - 1))
 );
 
 // ── REQ-VAL-193: the Randomise arm ──────────────────────────────────────────────────────────────────────────────
@@ -492,23 +588,34 @@ negative_control!(
     check_distribution(wide_randomise)
 );
 
+/// `‖a − b‖` on the latent space, this file's own: Euclidean, with `z_β`'s difference (component 1) taken on the
+/// circle, the nearest of the differences `2πk` apart, `z_β` being a periodic angle since TASK-M2-57. *Was:* the
+/// Euclidean norm on ℝ⁸.
+fn circle_norm(a: [f64; 8], b: [f64; 8]) -> f64 {
+    let mut sum = 0.0;
+    for k in 0..8 {
+        let mut d = a[k] - b[k];
+        if k == 1 {
+            d = d.rem_euclid(2.0 * PI);
+            d = d.min(2.0 * PI - d);
+        }
+        sum += d * d;
+    }
+    sum.sqrt()
+}
+
 /// `‖E(y) − E(x)‖`.
 fn gap(x: &Ic<f64>, y: &Ic<f64>) -> f64 {
-    let (a, b) = (
+    circle_norm(
         encode::<Defaults, f64>(x).z.z,
         encode::<Defaults, f64>(y).z.z,
-    );
-    a.iter()
-        .zip(b)
-        .map(|(p, q)| (p - q) * (p - q))
-        .sum::<f64>()
-        .sqrt()
+    )
 }
 
 /// The arm's measurement is REQ-VAL-193's: re-drawn here from the same stream, each of the six moves is the handle it
 /// names (only its own component off the identity, the buttons at 15° and ×1.25), each `‖Δz‖` is `‖E(h·x) − E(x)‖`
 /// read by this file's own gauge action (to `10⁻¹³`, the actions' roundings apart), the in-ball flag is
-/// `‖E(x)‖ < 4`, and the reported worst, over all the draws and over the in-ball subset, is this file's maximum.
+/// `‖E(x)‖ < 4` (the norm with `z_β` on the circle), and the reported worst, over all the draws and over the in-ball subset, is this file's maximum.
 fn check_arm_measures(leak: Leak) {
     const ICS: u32 = 400;
     for seed in [1u64, 7] {
@@ -554,7 +661,7 @@ fn check_arm_measures(leak: Leak) {
                 row[k] = gap(&x, y);
             }
             let z = encode::<Defaults, f64>(&x).z.z;
-            let inside = z.iter().map(|c| c * c).sum::<f64>().sqrt() < 4.0;
+            let inside = circle_norm(z, [0.0; 8]) < 4.0;
             assert_eq!(arm.in_ball[j], inside, "draw {j}'s in-ball flag");
             for k in 0..6 {
                 assert!(

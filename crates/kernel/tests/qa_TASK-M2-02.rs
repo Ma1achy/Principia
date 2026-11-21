@@ -20,8 +20,9 @@
 //!   §3.9's `stick_breaking` formula, evaluated here in f64, crosses ε, within that precision's rounding band
 //!   ([`K_SB`]); and over `z_μ ∈ [3, 20]²` the f64 and f32 blocks give the same tag wherever the formula's `M₀₁` lies
 //!   outside the f32 band.
-//! - REQ-DEC-012: `α = (π/2)σ(z_α)`, `β = πσ(z_β)`, `ρ̃ = cos α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)` against the
-//!   formula in f64; `z = 0` gives `α = π/4`, `β = π/2`, `‖ρ̃‖ = ‖λ̃‖`; `‖ρ̃‖² + ‖λ̃‖² = 1`; ranges.
+//! - REQ-DEC-012: `α = (π/2)σ(z_α)`, `β = z_β + π/2` (the periodic link, an angle over the full circle; *was:*
+//!   "`β = πσ(z_β)`", the retired link's), `ρ̃ = cos α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)` against the formula in
+//!   f64; `z = 0` gives `α = π/4`, `β = π/2`, `‖ρ̃‖ = ‖λ̃‖`; `‖ρ̃‖² + ‖λ̃‖² = 1`; `α`'s range, `β` finite.
 //! - REQ-DEC-013: `r₁ − r₀ = ρ`, `r₂ − r₀₁ = λ`, CoM `= 0`, `I = 1`, and decoder test 6 (from the emitted `(m, rᵢ)`
 //!   alone, §3.2's definitions give back `α`, `β` and `R̃ = 1`), over link-produced and directly set masses.
 //! - REQ-DEC-015: decoder test 9, over a fine `z_α` sweep at several mass points, skewed and tagged ones included.
@@ -46,7 +47,8 @@ use kernel::decode::latent::Latent;
 use kernel::decode::mass::{self, Masses};
 use kernel::decode::units;
 use kernel::generated::links::{
-    Defaults, Link, LinkReal, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
+    Defaults, Link, LinkReal, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ,
+    StickBreaking,
 };
 use proptest::prelude::*;
 use validation::{negative_control, prop};
@@ -140,7 +142,7 @@ fn blocks<S: Selection, R: Fp>(name: &'static str) -> Blocks<R> {
 }
 
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 fn defaults<R: Fp>() -> Blocks<R> {
     blocks::<Defaults, R>("softmax_tanh")
@@ -425,7 +427,7 @@ negative_control!(
     "a mass link at μ_max = 4 must fail the formula",
     expected = "mass formula",
     check_mass_all(blocks::<
-        Select<MuMaxFour, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>,
+        Select<MuMaxFour, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>,
         f64,
     >("mu_max_four"))
 );
@@ -946,10 +948,13 @@ fn sigma(x: f64) -> f64 {
     1.0 / (1.0 + (-x).exp())
 }
 
-/// `|Δα|` and `|Δβ|` against the f64 formula, in eps of the angle's range: σ is `exp`, an add and a divide (its
-/// relative error at most 1 ulp + two roundings, 2 eps), times the rounded constant `π/2` or `π` and one more
-/// rounding (1 eps): 3 eps of the value, at most 3 eps of the range; 4 with a half-ulp of slack per step. Measured
-/// in absolute terms: where f32's `e^−z` overflows, σ is 0 against f64's 10⁻⁴⁴.
+/// `|Δα|` and `|Δβ|` against the f64 formula. `α`, in eps of its range: σ is `exp`, an add and a divide (its
+/// relative error at most 1 ulp + two roundings, 2 eps), times the rounded constant `π/2` and one more rounding
+/// (1 eps): 3 eps of the value, at most 3 eps of the range; 4 with a half-ulp of slack per step. Measured in absolute
+/// terms: where f32's `e^−z` overflows, σ is 0 against f64's 10⁻⁴⁴. `β`, the periodic link's `z_β + π/2`, has no
+/// range, so its measure is eps of `max(π, |β|)`: one add of the rounded constant, half an eps of `|β|` for the sum,
+/// the same for the f64 reference's own sum, and the constant's rounding, under an eps of `π/2` (f32's image of `π/2`
+/// is rounded toward zero): under 2, inside the same 4.
 const TOL_ANGLE: f64 = 4.0;
 
 /// `ρ̃, λ̃` against the formula at the block's own `(α, β)`: `cos`/`sin` within 1 ulp each, and one product, at most
@@ -963,10 +968,10 @@ fn check_cfg_formula<R: Fp>(b: Blocks<R>, zc: [f64; 2]) -> Result<(), String> {
     let pi = std::f64::consts::PI;
     let (a, be) = (c.alpha.f(), c.beta.f());
     let ea = (a - half_pi * sigma(zc[0])).abs() / (half_pi * R::EPS);
-    let eb = (be - pi * sigma(zc[1])).abs() / (pi * R::EPS);
+    let eb = (be - (zc[1] + half_pi)).abs() / (pi.max(be.abs()) * R::EPS);
     if !(within(ea, TOL_ANGLE) && within(eb, TOL_ANGLE)) {
         return Err(format!(
-            "config formula: (α, β) = ({a}, {be}) ≠ ((π/2)σ, πσ) by ({ea}, {eb}) eps at z_cfg = {zc:?}, {}",
+            "config formula: (α, β) = ({a}, {be}) ≠ ((π/2)σ, z_β + π/2) by ({ea}, {eb}) eps at z_cfg = {zc:?}, {}",
             R::NAME
         ));
     }
@@ -999,18 +1004,15 @@ fn check_cfg_formula<R: Fp>(b: Blocks<R>, zc: [f64; 2]) -> Result<(), String> {
             R::NAME
         ));
     }
-    // Ranges: closed against the precision's own π/2 and π everywhere; open on the interior.
-    if !(within(-a, 0.0) && within(a, R::LIT_6.f()) && within(-be, 0.0) && within(be, R::LIT_7.f()))
-    {
+    // Ranges: α closed against the precision's own π/2 everywhere, open on the interior. β is a periodic angle with
+    // no range to close: every finite z_β gives a finite β, the precision's largest control included.
+    if !(within(-a, 0.0) && within(a, R::LIT_6.f()) && be.is_finite()) {
         return Err(format!(
             "config range: (α, β) = ({a}, {be}) at z_cfg = {zc:?}, {}",
             R::NAME
         ));
     }
-    if zc[0].abs() <= 10.0
-        && zc[1].abs() <= 10.0
-        && !(a > 0.0 && a < half_pi && be > 0.0 && be < pi)
-    {
+    if zc[0].abs() <= 10.0 && !(a > 0.0 && a < half_pi) {
         return Err(format!(
             "config range: (α, β) = ({a}, {be}) not interior at z_cfg = {zc:?}, {}",
             R::NAME
@@ -1157,8 +1159,12 @@ fn check_recon<R: Fp>(b: Blocks<R>, m: &Masses<R>, zc: [f64; 2], at_z: &str) -> 
     let r_t = norm(rho_t).hypot(norm(lambda_t));
     let alpha = norm(lambda_t).atan2(rho_t[0]);
     let beta = lambda_t[1].atan2(lambda_t[0]);
-    let db = beta - c.beta.f();
-    let db = db.sin().atan2(db.cos()).abs();
+    // The angle between the recovered β, `atan2`'s in (−π, π], and the block's, on the circle: the block's β is
+    // z_β + π/2 anywhere on the line, the precision's largest value included, so each is read through its own cos and
+    // sin, as the decode reads it; subtracting the block's β itself would swallow `atan2`'s value.
+    let (sr, cr) = beta.sin_cos();
+    let (sb, cb) = c.beta.f().sin_cos();
+    let db = (sr * cb - cr * sb).atan2(cr * cb + sr * sb).abs();
     for (what, v) in [
         ("|R̃ − 1|", (r_t - 1.0).abs()),
         ("|ρ̃_y|", rho_t[1].abs()),

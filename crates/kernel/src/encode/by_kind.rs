@@ -41,14 +41,13 @@
 //! cannot place the state ([`Coord::Unplaced`]), lands it in latent `z` with no comparison. A curve chart's own report,
 //! `d`, `ν*` and the fold's flag, is [`ChartEncoded::curve`].
 //!
-//! **The shape sphere's section** (R-544; inverse_encode_contract Parts 5 and 6, "On the shape sphere chart";
-//! REQ-ENC-034). The shape sphere chart decodes with `C`'s step 3 not taken (`crate::canon::canonicalise_signed`), so
-//! its states keep their signed shape, and its point and its comparison are read off that section, not `C(x)`'s: `C(x)`
-//! with step 3's mirror undone on the full state, every `rᵢ` and `pᵢ`, where `lookup_mirrored` is set
-//! ([`ByKind::section`]). So `x` and `Π·x` land at `(θ, φ)` and `(θ, π − φ)`, and a lower-hemisphere `x` whose masses
-//! and unmirrored body-frame momenta are the slice's lands on the chart and decodes back to itself. `E(x)` itself, its
-//! `z` and T1 over the gauge group with its `Z₂` mirror, is unchanged, and so is every other chart's point and
-//! comparison, against `C(x)`.
+//! **The shape sphere's section** (R-544, R-865; inverse_encode_contract Parts 5 and 6, "On the shape sphere chart";
+//! REQ-ENC-034). `C` has no mirror step (TASK-M2-57), so every chart, the shape sphere included, reads its point and
+//! its comparison off the one section, `C(x)`, whose states keep their signed shape. So `x` and `Π·x` land at `(θ, φ)`
+//! and `(θ, π − φ)`, and a lower-hemisphere `x` whose masses and body-frame momenta are the slice's lands on the chart
+//! and decodes back to itself. *Was:* "The shape sphere chart decodes with `C`'s step 3 not taken
+//! (`crate::canon::canonicalise_signed`) … its point and its comparison are read off that section, not `C(x)`'s: `C(x)`
+//! with step 3's mirror undone on the full state … where `lookup_mirrored` is set (`ByKind::section`)"
 //!
 //! **The branch inputs** (R-34; gpu_determinism_note, "The discipline", rules 1, 2, 4 and 6). The kernel builds this
 //! module to f32 SPIR-V, so every float that decides a branch or a select is built in a fixed form, every sum of
@@ -63,8 +62,6 @@
 //!   subtractions, no division.
 //! - **The pole and `θ`'s sign**, in [`spherical_inverse`]: `n₀`, `n₁` against 0, `θ`'s sign decided on `n₁`, never on
 //!   `atan2`'s output; the pole's `θ` is selected as 0, as `crate::canon`'s rotation angle selects `φ` (R-437).
-//! - **The signed point and section**, in [`ShapeSphere`]'s impl: `C`'s own `lookup_mirrored`, decided by
-//!   `crate::canon::mirror_decision` in its fixed form, no float of this module's.
 //! - **The centre**, in [`exponential_inverse`]: `‖n⊥‖²`, a chain of explicit `fma`s, against 0, not its `sqrt`.
 //! - **The warp at rest**, in [`warp_inverse`]: `K` against 0, where `L_max(K) = 0`, not `L_max` itself.
 //! - **Feasibility**, in [`feasibility`]: the finiteness of the entries; the construction's own exact test
@@ -100,11 +97,11 @@ use spirv_std::num_traits::{Float, FloatConst};
 
 use super::curve::CurveEncoded;
 use super::{encode_at, Encoded, SimplexClamp};
-use crate::canon;
 use crate::chart::invariant::{l_max, InvariantChart, InvariantLE, InvariantLK, WarpReal};
 use crate::chart::mixed::{Coordinate, Quantity};
 use crate::chart::{ChartDecode, Constraint, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere};
 use crate::decode::config::{self, Config};
+use crate::decode::descriptor::pi_image;
 use crate::decode::invariant::{
     construct, construct_by_norms, construct_expansion, infeasible, Outcome,
 };
@@ -170,13 +167,6 @@ pub trait ByKind: ChartDecode {
     {
         (self.coords::<S, R>(e), None)
     }
-
-    /// The state the chart's decode at `c(x)` is compared with, on the chart's own section (Part 6, step 4): `C(x)`,
-    /// `e`'s canonical state, on every chart but the shape sphere ([`ShapeSphere`]'s impl, the module's note).
-    #[inline]
-    fn section<R: LinkReal>(&self, e: &Encoded<R>) -> Ic<R> {
-        e.canonical.ic
-    }
 }
 
 /// Encode into the active chart: `E(x)`, the chart point read off it by kind, and where it lands.
@@ -224,7 +214,7 @@ where
 
 /// Encode `ic` into `chart` under the selection `S` (the module's note): `E(ic)`, the chart point by kind at the curve
 /// tolerance `tol`, and the chart as the landing where `norm(C(ic), D(Φ(c(ic))))`, its decode there measured from
-/// `C(ic)` (on the shape sphere, from [`ByKind::section`]'s `C(ic)` with the mirror undone), is at most `eps_phys`, else
+/// `C(ic)` on every chart, is at most `eps_phys`, else
 /// latent `z`. `norm` is inverse_encode_contract Part 4's `‖·‖_phys` (REQ-ENC-029) and `eps_phys` its `ε_phys`
 /// (REQ-ENC-024), both the caller's (Part 6, step 4's "where possible"), and `tol` Part 5 kind 4's (REQ-ENC-026), the
 /// caller's too.
@@ -270,7 +260,7 @@ where
     let (residual, landing) = match (placed(coords[0]), placed(coords[1])) {
         (Some(u), Some(v)) => {
             let d = norm(
-                &chart.section(&encoded),
+                &encoded.canonical.ic,
                 &chart.decode_at_params::<S, R>(u, v, p).ic,
             );
             (
@@ -338,7 +328,76 @@ pub fn plane<R: LinkReal>(d: &[R; 8], q1: &[R; 8], q2: &[R; 8]) -> Option<(R, R)
     )
 }
 
-/// The latent chart: both axes kind 1, `(u, v) = ((a + 1)/2, (b + 1)/2)` from `z − z₀ = a·q₁ + b·q₂`.
+/// `z_β` on the lift nearest `reference` (dd_decoder §3.2, "A syzygy crossing on a latent chart" and "Stored reduced
+/// or unreduced, and where a wrap enters"; R-898): `z_β + 2π̂k`, `k` the integer with `|z_β + 2π̂k − reference| ≤ π̂`,
+/// a tie to the smaller `k`, so `k = ⌈(reference − z_β)/2π̂ − ½⌉`: an encoded `z_β` placed on a trace, about the
+/// previous sample. A latent chart's point takes its lift by [`plane_lift`] instead.
+#[inline]
+pub fn nearest_lift<R: LinkReal>(z_beta: R, reference: R) -> R {
+    let pi = pi_image::<R>();
+    let tau = pi + pi;
+    let half = R::one() / (R::one() + R::one());
+    let k = Float::ceil((reference - z_beta) / tau - half);
+    z_beta + k * tau
+}
+
+/// `d − a·q₁ − b·q₂`'s squared length: the residual of `d` after its fit `(a, b)` in the plane of `q1`, `q2`.
+#[inline]
+fn residual2<R: LinkReal>(d: &[R; 8], q1: &[R; 8], q2: &[R; 8], a: R, b: R) -> R {
+    let r = [0, 1, 2, 3, 4, 5, 6, 7].map(|i| d[i] - a * q1[i] - b * q2[i]);
+    dot(&r, &r)
+}
+
+/// `d` with `2π̂·k` added to its `z_β` component: the offset of `E(x) + 2πk·e_β` from the centre.
+#[inline]
+fn lifted<R: LinkReal>(d: &[R; 8], k: R) -> [R; 8] {
+    let pi = pi_image::<R>();
+    let mut out = *d;
+    out[1] = d[1] + k * (pi + pi);
+    out
+}
+
+/// The `k` of the lift `E(x) + 2πk·e_β` a latent plane `z₀ + u·q₁ + v·q₂` takes (dd_decoder § 3.2, "Stored reduced or
+/// unreduced, and where a wrap enters"; R-898): the `k` whose offset `d(k) = E(x) + 2πk·e_β − z₀` has the least plane
+/// residual, `d(k)`'s residual after its least-squares fit by `u·q₁ + v·q₂`; a tie to the `k` whose `(u, v)` is
+/// nearest the centre, `(0, 0)`, then to the smaller `k`. `d` is `d(0)`.
+///
+/// The residual is a quadratic in `k`, `‖r₀ + 2πk·n‖²`, `n` the residual of `e_β`, so its least lies at
+/// `k* = −⟨r₀, n⟩/(2π⟨n, n⟩)` and the integer `k` is `⌊k*⌋` or `⌈k*⌉`, compared by their residuals. Where `e_β` lies
+/// in the plane's span (`⟨n, n⟩ ≤ ε_R`, `n` the rounding of 0; the latent `z_α × z_β` chart), every lift ties in
+/// residual and `k*` is the least of `‖(u, v)(k)‖²`, also a quadratic in `k`. `None` where the plane's directions are
+/// dependent. Branch-free on the arms (gpu_determinism_note rule 5).
+#[inline]
+pub fn plane_lift<R: LinkReal>(d: &[R; 8], q1: &[R; 8], q2: &[R; 8]) -> Option<R> {
+    let e_beta = [0, 1, 2, 3, 4, 5, 6, 7].map(|i| if i == 1 { R::one() } else { R::zero() });
+    let ((a0, b0), (ab, bb)) = (plane(d, q1, q2)?, plane(&e_beta, q1, q2)?);
+    let r0 = [0, 1, 2, 3, 4, 5, 6, 7].map(|i| d[i] - a0 * q1[i] - b0 * q2[i]);
+    let n = [0, 1, 2, 3, 4, 5, 6, 7].map(|i| e_beta[i] - ab * q1[i] - bb * q2[i]);
+    let pi = pi_image::<R>();
+    let tau = pi + pi;
+    let nn = dot(&n, &n);
+    let in_span = nn <= <R as Float>::epsilon();
+    let uv = Float::mul_add(ab, ab, bb * bb);
+    let k_uv = -Float::mul_add(a0, ab, b0 * bb) / (tau * select(uv > R::zero(), uv, R::one()));
+    let k_res = -dot(&r0, &n) / (tau * select(in_span, R::one(), nn));
+    let k_star = select(in_span, k_uv, k_res);
+    let lo = Float::floor(k_star);
+    let hi = lo + R::one();
+    let at = |k: R| {
+        let dk = lifted(d, k);
+        let (a, b) = plane(&dk, q1, q2).unwrap_or((R::zero(), R::zero()));
+        (residual2(&dk, q1, q2, a, b), Float::mul_add(a, a, b * b))
+    };
+    let ((res_lo, uv_lo), (res_hi, uv_hi)) = (at(lo), at(hi));
+    let by_uv = uv_lo <= uv_hi;
+    let by_res = res_lo < res_hi || (res_lo == res_hi && by_uv);
+    Some(select(select(in_span, by_uv, by_res), lo, hi))
+}
+
+/// The latent chart: both axes kind 1, `(u, v) = ((a + 1)/2, (b + 1)/2)` from `z − z₀ = a·q₁ + b·q₂`, `z_β` on the
+/// lift [`plane_lift`] takes, the least plane residual (dd_decoder § 3.2, "Stored reduced or unreduced"; R-898).
+/// *Was:* "`z_β` on the lift nearest `z₀[1]` ([`nearest_lift`])", which put a state with an exact point on an oblique
+/// plane off it (the physics reviewer's ruling on Codex thread 4573289690 of PR #533).
 impl<P: Copy> ByKind for Latent<P> {
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
@@ -346,20 +405,12 @@ impl<P: Copy> ByKind for Latent<P> {
         R: LinkReal + PayloadReal + From<P>,
     {
         let wide = |q: [P; 8]| q.map(<R as From<P>>::from);
-        let z0 = wide(self.z0);
+        let (z0, q1, q2) = (wide(self.z0), wide(self.q1), wide(self.q2));
         let z = e.z.z;
-        let d = [
-            z[0] - z0[0],
-            z[1] - z0[1],
-            z[2] - z0[2],
-            z[3] - z0[3],
-            z[4] - z0[4],
-            z[5] - z0[5],
-            z[6] - z0[6],
-            z[7] - z0[7],
-        ];
+        let d = [0, 1, 2, 3, 4, 5, 6, 7].map(|i| z[i] - z0[i]);
         let half = R::one() / (R::one() + R::one());
-        match plane(&d, &wide(self.q1), &wide(self.q2)) {
+        let placed = plane_lift(&d, &q1, &q2).and_then(|k| plane(&lifted(&d, k), &q1, &q2));
+        match placed {
             Some((a, b)) => [
                 Coord::At((a + R::one()) * half),
                 Coord::At((b + R::one()) * half),
@@ -561,10 +612,9 @@ pub fn exponential_inverse<R: LinkReal>(
 }
 
 /// The shape sphere: both axes kind 2 in the configuration block, together pinning its two DOF, so no residual. The
-/// point is the state's signed `n̂` (R-544; REQ-ENC-034): `n = shape_vec(ρ̃, λ̃)` of `C(x)` with step 3's mirror undone
-/// where `lookup_mirrored` is set, `λ̃_y` and `ρ̃_y` negated back, so a lower-hemisphere state is placed below the
-/// equator, through the chart map's inverse. The held masses and momenta are [`encode_into`]'s comparison, against
-/// [`ByKind::section`], the same state undone in full.
+/// point is the state's signed `n̂` (R-544; REQ-ENC-034): `n = shape_vec(ρ̃, λ̃)` of `C(x)`, which keeps `λ̃_y`'s sign
+/// (no mirror step, R-865), so a lower-hemisphere state is placed below the equator, through the chart map's inverse.
+/// The held masses and momenta are [`encode_into`]'s comparison, against `C(x)`.
 impl<P: Copy + FloatConst> ByKind for ShapeSphere<P> {
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
@@ -573,9 +623,7 @@ impl<P: Copy + FloatConst> ByKind for ShapeSphere<P> {
     {
         let wide = <R as From<P>>::from;
         let j = &e.blocks.jacobi;
-        let flip = e.canonical.mirrored;
-        let undo = |v: [R; 2]| [v[0], select(flip, -v[1], v[1])];
-        let n = shape_vec(undo(j.rho_t), undo(j.lambda_t));
+        let n = shape_vec(j.rho_t, j.lambda_t);
         let (u, v) = match self.map {
             ShapeMap::Spherical => spherical_inverse(n, wide(P::PI())),
             ShapeMap::Exponential => exponential_inverse(
@@ -585,13 +633,6 @@ impl<P: Copy + FloatConst> ByKind for ShapeSphere<P> {
             ),
         };
         [Coord::At(u), Coord::At(v)]
-    }
-
-    /// `C(x)` with step 3's mirror undone on the full state, every `rᵢ` and every `pᵢ`, where `lookup_mirrored` is set:
-    /// the decode's own section, `C` with its step 3 not taken (the module's note).
-    #[inline]
-    fn section<R: LinkReal>(&self, e: &Encoded<R>) -> Ic<R> {
-        canon::reflect(&e.canonical.ic, e.canonical.mirrored)
     }
 }
 

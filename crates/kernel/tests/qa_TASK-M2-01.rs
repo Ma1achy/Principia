@@ -6,8 +6,10 @@
 //!   Jacobian, the log of the volume factor (`log |f'|`, or `log √det(JᵀJ)` for the 3×2 simplex Jacobian), and
 //!   (d) C¹.
 //! - Each generated link's forward is the formula §3.9 and dd_decoder §3 give for it, evaluated here from the docs.
-//! - REQ-GEN-013 / REQ-GEN-015: the baked defaults are mass = softmax ∘ μ_max·tanh, config = sigmoid, free momentum =
-//!   sigmoid, and the selection is a type, so another selection is another variant.
+//! - REQ-GEN-013 / REQ-GEN-015: the baked defaults are mass = softmax ∘ μ_max·tanh, α = sigmoid, β = the periodic
+//!   link (`β = z_β + π/2`, an angle over the full circle; *was:* "config = sigmoid"), free momentum = sigmoid, and
+//!   the selection is a type, so another selection is another variant. The three bounded `β` links are retired:
+//!   still links, held to (a) to (d) here as conversion sources, onto `retired_beta`, which no selection can name.
 //! - REQ-DEC-009: the generated chart constants are μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶,
 //!   δ_λ = 10⁻¹², ε_w = 10⁻¹⁰ at f32 and f64, and no decode/encode source, nor the generated link bodies, writes one
 //!   as a literal.
@@ -32,9 +34,9 @@ use kernel::generated::constants::ChartConstants;
 #[cfg(feature = "controls")]
 use kernel::generated::links::LinkReal;
 use kernel::generated::links::{
-    Codomain, Defaults, Exp, Identity, Link, Literals, Select, Selection, SigmoidAlpha,
-    SigmoidBeta, SigmoidQ, SoftmaxTanh, Softplus, SoftsignAlpha, SoftsignBeta, SoftsignQ,
-    StickBreaking, TanhAlpha, TanhBeta, TanhQ, NAMES,
+    Codomain, Defaults, Exp, Identity, Link, Literals, PeriodicBeta, Select, Selection,
+    SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh, Softplus, SoftsignAlpha, SoftsignBeta,
+    SoftsignQ, StickBreaking, TanhAlpha, TanhBeta, TanhQ, NAMES,
 };
 use kernel::Real;
 use proptest::prelude::*;
@@ -466,6 +468,7 @@ fn generated() -> Vec<Under> {
         one::<Softplus>(),
         one::<Exp>(),
         one::<Identity>(),
+        one::<PeriodicBeta>(),
     ]
 }
 
@@ -540,7 +543,10 @@ fn reach_softsign() -> f64 {
 /// value lies in it, to within the normal range's ends.
 const REACH_LINE: f64 = 700.0;
 
-/// The docs' fourteen entries: §3.9's six rows, registered once per block codomain, and the two R-72 definitions.
+/// The docs' fifteen entries: §3.9's six rows, registered once per block codomain, the two R-72 definitions, and the
+/// periodic `β` link. The three bounded `β` rows map onto `retired_beta` (*was:* "beta"): conversion sources, onto
+/// the interval they always had. `periodic_beta` maps onto `beta`, a periodic angle with no bound, so its kind here is
+/// the line's: every finite control gives a finite angle, with no clamp.
 fn specs() -> Vec<Spec> {
     let alpha = Kind::Interval(ALPHA_MIN, HALF_PI - ALPHA_MIN);
     let beta = Kind::Interval(0.0, PI);
@@ -579,7 +585,7 @@ fn specs() -> Vec<Spec> {
         },
         Spec {
             name: "sigmoid_beta",
-            codomain: "beta",
+            codomain: "retired_beta",
             kind: beta,
             clamp: EPS * width(beta),
             reach: reach_sigmoid(),
@@ -595,7 +601,7 @@ fn specs() -> Vec<Spec> {
         },
         Spec {
             name: "tanh_beta",
-            codomain: "beta",
+            codomain: "retired_beta",
             kind: beta,
             clamp: EPS * width(beta) / 2.0,
             reach: reach_tanh(),
@@ -611,7 +617,7 @@ fn specs() -> Vec<Spec> {
         },
         Spec {
             name: "softsign_beta",
-            codomain: "beta",
+            codomain: "retired_beta",
             kind: beta,
             clamp: EPS * width(beta) / 2.0,
             reach: reach_softsign(),
@@ -673,6 +679,15 @@ fn specs() -> Vec<Spec> {
             clamp: 0.0,
             reach: 1e300,
             forward: |x| vec![x[0]],
+        },
+        Spec {
+            name: "periodic_beta",
+            codomain: "beta",
+            kind: Kind::Line,
+            clamp: 0.0,
+            reach: 1e300,
+            // dd_decoder §3.2: β = z_β + π/2, the offset onto the angle, read modulo 2π by the decode.
+            forward: |x| vec![x[0] + HALF_PI],
         },
     ]
 }
@@ -1418,7 +1433,8 @@ fn log_det_doc(name: &str, x: &[f64]) -> f64 {
         }
         "softplus" => log_sigma(x[0]),
         "exp" => x[0],
-        "identity" => 0.0,
+        // The periodic link is an offset: its derivative is 1 everywhere.
+        "identity" | "periodic_beta" => 0.0,
         other => panic!("`{other}` has no log-det in §3.9 (log-det value)"),
     }
 }
@@ -1612,13 +1628,13 @@ negative_control!(
 
 // ── Selection (REQ-GEN-013, REQ-GEN-015) ────────────────────────────────────────────────────────────────────────
 
-/// A selection's link ids are dd_decoder §3's defaults: mass = softmax ∘ μ_max·tanh, config = sigmoid, free
-/// momentum = sigmoid.
+/// A selection's link ids are dd_decoder §3's defaults: mass = softmax ∘ μ_max·tanh, α = sigmoid, β = the periodic
+/// link (*was:* "config = sigmoid"), free momentum = sigmoid.
 fn check_defaults(ids: [&str; 7]) {
     let want = [
         "softmax_tanh",
         "sigmoid_alpha",
-        "sigmoid_beta",
+        "periodic_beta",
         "sigmoid_q",
         "sigmoid_q",
         "sigmoid_q",
@@ -1647,7 +1663,7 @@ fn defaults_decode<S: Selection>() {
         );
         let b = <S::BetaLink as Link<1, 1>>::forward([x])[0];
         assert!(
-            (b - PI * sigma(x)).abs() <= 8.0 * f64::EPSILON,
+            (b - (x + HALF_PI)).abs() <= 8.0 * f64::EPSILON,
             "β at {x} (defaults)"
         );
         for q in [
@@ -1671,13 +1687,13 @@ fn qa_link_selection_defaults() {
     defaults_decode::<Defaults>();
     // Another selection is another type, with its own ids: the selection is baked per block.
     type Swapped =
-        Select<StickBreaking, TanhAlpha, SoftsignBeta, TanhQ, SigmoidQ, SoftsignQ, TanhQ>;
+        Select<StickBreaking, TanhAlpha, PeriodicBeta, TanhQ, SigmoidQ, SoftsignQ, TanhQ>;
     assert_eq!(
         <Swapped as Selection>::LINK_IDS,
         [
             "stick_breaking",
             "tanh_alpha",
-            "softsign_beta",
+            "periodic_beta",
             "tanh_q",
             "sigmoid_q",
             "softsign_q",
@@ -1691,7 +1707,7 @@ negative_control!(
     "a selection with tanh for a free momentum is not the defaults",
     expected = "(defaults)",
     check_defaults(
-        <Select<SoftmaxTanh, SigmoidAlpha, SigmoidBeta, TanhQ, SigmoidQ, SigmoidQ, SigmoidQ> as Selection>::LINK_IDS
+        <Select<SoftmaxTanh, SigmoidAlpha, PeriodicBeta, TanhQ, SigmoidQ, SigmoidQ, SigmoidQ> as Selection>::LINK_IDS
     )
 );
 

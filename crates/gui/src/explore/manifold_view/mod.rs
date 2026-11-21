@@ -72,11 +72,23 @@ const ARTBOARD: PresetHome = PresetHome {
 };
 
 /// Each of [`PRESETS`]' home values, by its index there: §G7's table, placeholder content on the mock (R-390). The first
-/// is the mock's starting view, so it opens at home. The second has home values of its own.
+/// is the mock's starting view, so it opens at home. The second has home values of its own, its `z_β` converted from
+/// `sigmoid_beta`, `π·σ(0.5) − π/2` (R-898, R-1020; TASK-M2-57). The first, `z_α × z_β`, runs along `z_β`: it is redefined as an
+/// affine plane in the new coordinates, the same axes, its base point's `z_β` converted and `σ_h` the same number, now
+/// in radians (R-919 Q2 (b)). *Was:* the second's `z_β = 0.500`.
 pub const PRESET_HOMES: [PresetHome; 6] = [
     ARTBOARD,
     PresetHome {
-        base: [0.250, 0.500, 0.125, -0.250, 0.0625, 0.375, 0.250, -0.125],
+        base: [
+            0.250,
+            0.3847173352672657,
+            0.125,
+            -0.250,
+            0.0625,
+            0.375,
+            0.250,
+            -0.125,
+        ],
         window: 0.5,
     },
     ARTBOARD,

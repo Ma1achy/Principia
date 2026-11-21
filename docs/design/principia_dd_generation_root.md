@@ -1059,7 +1059,7 @@ log-det are written as expression trees, never as text:
   operator's), length-prefixed UTF-8, then `input`'s index as a big-endian u32, `param`'s name length-prefixed, `num`'s
   value by its f64 bits, big-endian, or an operator's argument count as a big-endian u32 and each argument. A list of
   trees is its count, then each tree. An entry is written as its name; its constraint, spelled `simplex`, `bounded`,
-  `positive`, `symmetric` or `unbounded`; its forward and inverse lists; its log-det tree; then its ε clamps and its
+  `positive`, `symmetric`, `unbounded` or `periodic` (the periodic `β` link's); its forward and inverse lists; its log-det tree; then its ε clamps and its
   parameters, each list sorted by its names' UTF-8 bytes, lexicographically, each item its name and its value's f64
   bits. Entries are sorted by their names' UTF-8 bytes, lexicographically, then the chart constants, sorted by their
   names' UTF-8 bytes, lexicographically, each its name and value's bits. The sampling note is not written. Two entries,

@@ -42,7 +42,7 @@ use kernel::chart::tilt::Tiltable;
 use kernel::chart::{Chart, Tilt, TiltMap, TiltSpec, Tilted, ValidationResult};
 use kernel::decode::Decoded;
 use kernel::generated::links::{
-    Defaults, LinkParams, LinkReal, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
+    Defaults, LinkParams, LinkReal, PeriodicBeta, Select, SigmoidAlpha, SigmoidQ, StickBreaking,
 };
 use kernel::payload::PayloadReal;
 use validation::{negative_control, tunables, GAMMA_K, K_MAX};
@@ -70,7 +70,7 @@ const U_CENTRE: f64 = 0.75;
 
 /// The selection with `stick_breaking` on the mass block.
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 fn k_max() -> f64 {
     K_MAX.number()

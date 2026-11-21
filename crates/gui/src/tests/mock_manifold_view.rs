@@ -1113,6 +1113,163 @@ fn mock_manifold_view_slider_rows_fill_the_panel() {
     });
 }
 
+/// The six-decimal reading a number box gives a value by default, which the value field showed before it was fitted.
+fn six_decimals(value: f64) -> String {
+    egui::emath::format_with_decimals_in_range(value, mv::centre::DECIMALS)
+}
+
+#[test]
+fn mock_manifold_view_a_value_field_reads_no_wider_than_it_holds() {
+    use crate::explore::manifold_view::centre::value_text;
+    // A field of seven characters, as the slider rows' holds of its font's digits.
+    let fits = |text: &str| text.chars().count() <= 7;
+    // What fits is read as before: three decimals at least, six at most.
+    for (value, text) in [
+        (0.410, "0.410"),
+        (0.0, "0.000"),
+        (-0.227, "-0.227"),
+        (0.0625, "0.0625"),
+        (0.123456, "0.12346"),
+        (MOCK_Z0[1], "0.31758"),
+        (-MOCK_Z0[1], "-0.3176"),
+        (-12.345678, "-12.346"),
+        (-1234.5678, "-1234.6"),
+        (123456.789, "123457"),
+        (-123456.789, "-123457"),
+        (1e15, "1.00e15"),
+        (-1e15, "-1.0e15"),
+        (1.5e-7, "0.000"),
+        (-1.7976931348623157e308, "-2e308"),
+    ] {
+        assert_eq!(value_text(value, fits), text, "{value}");
+    }
+    // Any value: finite or not, of any size and sign.
+    let mut values = vec![
+        f64::NAN,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+        f64::MAX,
+        f64::MIN,
+    ];
+    for e in -320..=308 {
+        for m in [1.0, -1.0, 3.175_769_375_570_134, -9.999_999_999_999_999] {
+            values.push(m * 10f64.powi(e));
+        }
+    }
+    for value in &values {
+        let text = value_text(*value, fits);
+        assert!(fits(&text), "{value}: {text}");
+    }
+    rejects("the six decimals of a value of more digits", || {
+        assert!(fits(&six_decimals(MOCK_Z0[1])))
+    });
+    rejects("the three decimals of a large value", || {
+        assert!(fits(&six_decimals(-123456.789)))
+    });
+}
+
+#[test]
+fn mock_manifold_view_slider_rows_fill_the_panel_at_any_value() {
+    // Values of more digits than a field holds, none of them rounded on its way to the row: a converted base point's,
+    // a negative, a large and a small one. Each row still ends at the body's edge, free and locked.
+    let points: [Latent; 4] = [
+        MOCK_Z0.map(|v| -v - 0.123_456_789),
+        [
+            -0.317_576_937_557,
+            12.345_678_912,
+            -98_765.432_123,
+            123_456.789_012,
+            1.5e-7,
+            -2.5e-12,
+            1e15,
+            -3.3e9,
+        ],
+        [std::f64::consts::PI; 8],
+        [-1e-3 / 3.0; 8],
+    ];
+    for z0 in points {
+        let mut app = mock_app();
+        let mut h = headless();
+        let _ = h.frame(&mut app, Vec::new());
+        let (_, body, rh, [_, _, centre, _]) = panel_geometry(&h);
+        app.set_field(z0_edit(z0));
+        let _ = h.frame(&mut app, Vec::new());
+        assert_eq!(app.snapshot().sim.plane.z0, z0);
+        let all = nodes(&mut h, &mut app);
+        check_slider_rows(&all, centre, rh, 1..9, body, false);
+        // Each field reads its value, in the digits that fit.
+        for (i, value) in z0.iter().enumerate() {
+            let field = &in_rect(&all, mv::row(centre, rh, 1 + i), Role::SpinButton)[0];
+            assert_eq!(field.value, Some(*value), "row {i}");
+            assert!(
+                field.rect.width() <= mv::centre::VALUE_W + 0.5,
+                "row {i}: {} in {:?}",
+                field.text,
+                field.rect
+            );
+        }
+        app.set_field(lock_edit(Lock {
+            locked: true,
+            z_locked: z0,
+        }));
+        let _ = h.frame(&mut app, Vec::new());
+        let locked = nodes(&mut h, &mut app);
+        check_slider_rows(&locked, centre, rh, 1..9, body, true);
+        // Control: the z_β field as wide as its six decimals made it, 4.5 points past the body's edge.
+        let mut wide = all.clone();
+        let z_beta = mv::row(centre, rh, 2);
+        for n in &mut wide {
+            if n.role == Role::SpinButton && z_beta.contains(n.rect.center()) {
+                n.rect.max.x += 4.5;
+            }
+        }
+        rejects("a field grown to its text", || {
+            check_slider_rows(&wide, centre, rh, 1..9, body, false)
+        });
+    }
+}
+
+#[test]
+fn mock_manifold_view_a_value_field_left_untyped_keeps_its_value() {
+    // The z_β field shows fewer digits than its value has. Clicked into and left, by Enter or by Tab, nothing typed, it
+    // writes back what it showed: that reads as the value it was shown for, bit for bit, and nothing is edited.
+    for leave in [Key::Enter, Key::Tab] {
+        let mut app = mock_app();
+        let mut h = headless();
+        let _ = h.frame(&mut app, Vec::new());
+        let (_, _, rh, [_, _, centre, _]) = panel_geometry(&h);
+        let all = nodes(&mut h, &mut app);
+        let field = in_rect(&all, mv::row(centre, rh, 2), Role::SpinButton)[0].clone();
+        let depth = app.snapshot().history.undo_depth;
+        click_at(&mut h, &mut app, field.rect.center());
+        for events in crate::capture::key(leave, NONE) {
+            let _ = h.frame(&mut app, events);
+        }
+        let _ = h.frame(&mut app, Vec::new());
+        let _ = h.frame(&mut app, Vec::new());
+        assert_eq!(app.snapshot().sim.plane.z0, MOCK_Z0, "left by {leave:?}");
+        assert_eq!(app.snapshot().history.undo_depth, depth, "no edit");
+        // Control: the shown text read as a number is another value, the one a field without this would write.
+        rejects("the field's text read back as its value", || {
+            assert_eq!(field.text.parse::<f64>().ok(), Some(MOCK_Z0[1]))
+        });
+    }
+    // A typed value is still read as typed: the text shown, with a digit added.
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    let (_, _, rh, [_, _, centre, _]) = panel_geometry(&h);
+    let all = nodes(&mut h, &mut app);
+    let field = in_rect(&all, mv::row(centre, rh, 2), Role::SpinButton)[0].clone();
+    let typed = format!("{}5", field.text);
+    type_at(&mut h, &mut app, field.rect.center(), &typed);
+    assert_eq!(
+        app.snapshot().sim.plane.z0[1],
+        typed.parse::<f64>().expect("a number"),
+        "{typed}"
+    );
+}
+
 #[test]
 fn mock_manifold_view_every_control_in_its_row_inside_the_body() {
     let mut app = mock_app();

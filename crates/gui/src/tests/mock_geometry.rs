@@ -84,7 +84,8 @@ fn mock_hover_geometry_path_on_a_scaled_sheared_basis_is_pinned() {
     };
     let (at, alpha) = print(&path);
     assert!((at - 27_410.660_121_150_48).abs() < 1e-6, "{at}");
-    assert!((alpha - 123.363_011_002_540_59).abs() < 1e-4, "{alpha}");
+    // The path's tilt off the plane is the fake hash of the latent point, the mock's `z₀` in it.
+    assert!((alpha - 94.998_360_276_222_23).abs() < 1e-4, "{alpha}");
     let unit = print(&hover_path(&plane(MOCK_Z0, MOCK_Q1, MOCK_Q2), [0.4, 0.6]));
     rejects("the path of the unit basis", || {
         assert!((unit.0 - 27_410.660_121_150_48).abs() < 1e-6, "{}", unit.0)
@@ -96,6 +97,7 @@ fn mock_hover_geometry_path_on_a_scaled_sheared_basis_is_pinned() {
         MOCK_T_MAX,
         MOCK_T_MAX,
     );
+    assert_eq!(s.fate.as_deref(), Some("escape body 1"), "body 0 escapes");
     let end = s.t_end.expect("decided at the horizon");
     let n = s.bodies[0].len();
     let early = index_at(end * 0.5, s.path_t, n);

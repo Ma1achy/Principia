@@ -27,8 +27,10 @@
 //! are named, its words packed as hex, canon's operands once per input: at some 1.7 million rows, a JSON object per row
 //! would be gigabytes (applied per R-369). A row's outcome in the rate is the stage's where the stage emits it, otherwise
 //! the read-back's ([`Row::outcome`]), and the row names which ([`Row::source`]). `stage_canon_canonicalise` emits only
-//! the skip (`rescaled`), `ρ = 0` (`clamped`) and the mirror; the decode entries only the tag, and an earlier block's tag
-//! masks a later one's ([`Listed::stage_outcome`]). `rescaled` is `¬(skip ∨ coincidence)`, so the row named `skip` reads
+//! the skip (`rescaled`), `ρ = 0` (`clamped`) and the decided signs of `λ̃` (`signs`, the encode's case of `β`, the row
+//! `lambda_signs`, whose outcome is the signs' four-bit word), canon having no mirror step since TASK-M2-57 (R-865; it emitted the
+//! mirror too, its row `mirror` in `comparison.md`'s records before then); the decode entries only the tag, and an
+//! earlier block's tag masks a later one's ([`Listed::stage_outcome`]). `rescaled` is `¬(skip ∨ coincidence)`, so the row named `skip` reads
 //! that word, and the coincidence is among its input words, so a row whose decision moved with the coincidence's is not
 //! read as a comparison fork (applied per R-369).
 //!
@@ -132,8 +134,8 @@ pub enum Emits {
     Rescaled,
     /// `Canonical::clamped`.
     Clamped,
-    /// `Canonical::mirrored`.
-    Mirrored,
+    /// `Canonical::signs`, as its word: the encode's case of `β`.
+    Signs,
     /// The decode stage's tag word, raised when it is this.
     Tag(u32),
     /// Nothing: the branch reaches a record only through the read-back.
@@ -260,13 +262,6 @@ pub const LIST: [Listed; 17] = [
         Emits::Clamped,
     ),
     canon_row(
-        "mirror",
-        read::MIRROR_AT,
-        read::MIRROR_BITS,
-        "canon: Wide c < 0 and m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²",
-        Emits::Mirrored,
-    ),
-    canon_row(
         "rho_x_zero",
         read::RHO_X_AT,
         read::AXIS_BITS,
@@ -279,6 +274,13 @@ pub const LIST: [Listed; 17] = [
         read::AXIS_BITS,
         "canon: scaled ρ_y = 0, an exact scaling of a Wide mantissa",
         Emits::Nothing,
+    ),
+    canon_row(
+        "lambda_signs",
+        read::SIGNS_AT,
+        read::SIGNS_BITS,
+        "canon: Wide ρ × Λ and ρ · Λ, each < 0 and = 0, the encode's case of β",
+        Emits::Signs,
     ),
     exact_row(
         "M01_TINY",
@@ -364,7 +366,7 @@ impl Listed {
         match self.stage {
             Emits::Rescaled => Some(u32::from(c.rescaled)),
             Emits::Clamped => Some(u32::from(c.clamped)),
-            Emits::Mirrored => Some(u32::from(c.mirrored)),
+            Emits::Signs => Some(c.signs.word()),
             _ => None,
         }
     }

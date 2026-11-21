@@ -4,22 +4,30 @@
 //!
 //! Every expected value here comes from an independent construction: a canonical representative built from
 //! dd_decoder §3.2's Jacobi reconstruction, the gauge group action of dd_encode §3.3, a plain f64 reference of
-//! dd_encode §3.2's steps 1a → 0 → 1b → 2 → 3 written from the text ([`reference`]), and chart_reference §4.2's Burrau
+//! dd_encode §3.2's steps 1a → 0 → 1b → 2 written from the text ([`reference`]), and chart_reference §4.2's Burrau
 //! construction.
+//!
+//! **`C` takes no mirror** (TASK-M2-57): the decoder's mirror step is removed and latent `β` runs over the full
+//! circle, so a state below the `x`-axis stays there. The tests whose subject was the mirror are restated to that: a
+//! lower-half state keeps `λ̃_y < 0` through `C`, and each one's control is a `C` with the mirror step left in. *Was:*
+//! "mirrors iff `Π` did", "the mirror is the test `λ̃_y < −δ_λ`", "`L_z` flips sign with `lookup_mirrored`".
 //! - REQ-DEC-002, REQ-ENC-015 (`qa_m207_gauge_quotient`): for a canonical representative `x` and a random gauge
-//!   `g = (a, u, θ, s, Π)`, `C(g·x)` lies on the section (CoM 0, `Σp = 0`, `ρ̃` on `+x`, `λ̃_y ≥ −δ_λ`, `I = 1`), equals
-//!   `x`, records `I_in = s²` (the CoM-frame `I`, not the origin's) and `λ = 1/s`, mirrors iff `Π` did, and `C` is
-//!   idempotent; at f64 and f32.
+//!   `g = (a, u, θ, s, Π)`, `C(g·x)` lies on the section (CoM 0, `Σp = 0`, `ρ̃` on `+x`, `I = 1`, `λ̃_y` of either
+//!   sign), equals `x` where `Π` is off and `x`'s reflection where it is on (so `λ̃_y` keeps the sign the gauge left
+//!   it), records `I_in = s²` (the CoM-frame `I`, not the origin's) and `λ = 1/s`, and `C` is idempotent; at f64 and
+//!   f32.
 //! - REQ-DEC-002 (`qa_m207_reference`): on arbitrary physical states, `C` agrees with the f64 reference of the ordered
-//!   procedure, its notices included.
-//! - REQ-DEC-017 (`qa_m207_deadband_tilde`): the mirror is the test `λ̃_y < −δ_λ` on the mass-weighted `λ̃`, never on
-//!   `λ_y`: states with `λ̃_y = k·δ_λ`, `k` straddling `±1`, under rotations, translations, boosts, scales and `Π`, at
-//!   masses where `|λ_y| > δ_λ > |λ̃_y|`; the same output twice; f32 on states whose steps are exact there.
-//! - dd_encode §5 test 3's half-mirror catch, R-82's full-state rule (`qa_m207_mirror_full_state`): a mirrored output
-//!   has every `rᵢ` and every `pᵢ` reflected, so `L_z` flips sign with `lookup_mirrored` and keeps its magnitude.
+//!   procedure, its notice and the half its output lies in included; both halves are reached.
+//! - REQ-DEC-017 (`qa_m207_deadband_tilde`): `C` reads no `δ_λ`: states with `λ̃_y = k·δ_λ`, `k` straddling `±1`, the
+//!   old deadband's edges, and 0, under rotations, translations, boosts, scales and `Π`, at masses where
+//!   `|λ_y| > δ_λ > |λ̃_y|`, leave `C` with the `λ̃_y` they entered with, its sign kept; the same output twice; f32 on
+//!   states whose steps are exact there.
+//! - dd_encode §5 test 3's half-mirror catch (`qa_m207_mirror_full_state`): `C` keeps `L_z`'s sign on either half
+//!   (`L_canon = +L_in/I_in^{1/4}`), and the mirror map `Π` on the full state, every `rᵢ` and every `pᵢ`, negates it:
+//!   `L_z(C(g·x)) = det(Π_g)·L_z(C(x))`.
 //! - REQ-DEC-018 (`qa_m207_noop_extreme`): dd_decoder §5 test 5 on decodes at the extreme finite `z` (each control at
-//!   `±10³⁰` and at the precision's largest finite value), at f32 and f64: no mirror, rotation angle ≈ 0, the state
-//!   unchanged to rounding, the same result twice.
+//!   `±10³⁰` and at the precision's largest finite value, `z_β` among them, so on both halves), at f32 and f64: the
+//!   half kept, rotation angle ≈ 0, the state unchanged to rounding, the same result twice.
 //! - REQ-DEC-023 (`qa_m207_scale_gauge_powers`): dd_decoder §3.5 component by component, `rᵢ/ℓ` and `√ℓ·pᵢ` (the
 //!   asymmetric powers chart_reference §0.5 warns of), `I = 1`, the identity on canonical output, idempotent, and the
 //!   same map as `C`'s step 0.
@@ -53,7 +61,8 @@ use proptest::prelude::*;
 
 use validation::{negative_control, prop};
 
-/// δ_λ, dd_decoder §3.3 and R-82.
+/// δ_λ, the old mirror deadband's half-width (dd_decoder §3.3): no longer read by `C`, kept here as the scale the
+/// straddling states are built at and as the test of the controls' mirror step.
 const DELTA: f64 = 1e-12;
 
 /// A precision the shared source runs at.
@@ -234,14 +243,36 @@ fn act(g: &Gauge, x: &Ic<f64>) -> Ic<f64> {
 
 /// The ordered procedure of dd_encode §3.2 written from its text, at f64, `M` kept general: 1a `r ← r − R_com`;
 /// 0 `I_in = Σmᵢ‖rᵢ‖²`, `r ← r/√I_in`, `p ← I_in^{1/4}·p`, `λ = I_in^{−1/2}`; 1b `p ← p − mᵢP_tot/M`; 2 rotate by
-/// `−φ`, `φ = atan2(ρ_y, ρ_x)` and 0 at `ρ = 0` (R-437), `lookup_clamped` there (R-13); 3 mirror the full state iff
-/// `λ̃_y < −δ_λ`. Defined for `I_in > 0`.
+/// `−φ`, `φ = atan2(ρ_y, ρ_x)` and 0 at `ρ = 0` (R-437), `lookup_clamped` there (R-13). There is no step 3: the state
+/// keeps the half `λ̃_y` puts it in (*was:* "3 mirror the full state iff `λ̃_y < −δ_λ`"). Defined for `I_in > 0`.
 struct Reference {
     ic: Ic<f64>,
     i_in: f64,
     lambda: f64,
     clamped: bool,
-    mirrored: bool,
+    /// `λ̃_y` of `ic`: its sign is the half the state lies in.
+    lambda_t_y: f64,
+}
+
+/// `x` with every `rᵢ` and every `pᵢ` reflected in the `x`-axis: the mirror map `Π` on the full state.
+fn mirror_image(x: &Ic<f64>) -> Ic<f64> {
+    Ic {
+        m: x.m,
+        r: x.r.map(|v| [v[0], -v[1]]),
+        p: x.p.map(|v| [v[0], -v[1]]),
+    }
+}
+
+/// `C` with the removed mirror step left in after it: the full state reflected iff `λ̃_y < −δ_λ` (the old step 3). The
+/// controls' broken `C`.
+#[cfg(feature = "controls")]
+fn mirror_left_in(x: &Ic<f64>) -> Canonical<f64> {
+    let mut c = canonicalise(x);
+    if lambda_tilde(&c.ic)[1] < -DELTA {
+        c.ic = mirror_image(&c.ic);
+        c.lambda_t_y = -c.lambda_t_y;
+    }
+    c
 }
 
 fn reference(x: &Ic<f64>) -> Reference {
@@ -266,23 +297,17 @@ fn reference(x: &Ic<f64>) -> Reference {
     let phi = if clamped { 0.0 } else { rh[1].atan2(rh[0]) };
     let (s, cs) = phi.sin_cos();
     let rot = |v: [f64; 2]| [cs * v[0] + s * v[1], cs * v[1] - s * v[0]];
-    let mut out = Ic {
+    let out = Ic {
         m: x.m,
         r: r.map(rot),
         p: p.map(rot),
     };
-    let mirrored = lambda_tilde(&out)[1] < -DELTA;
-    if mirrored {
-        for v in out.r.iter_mut().chain(out.p.iter_mut()) {
-            v[1] = -v[1];
-        }
-    }
     Reference {
         ic: out,
         i_in,
         lambda: 1.0 / root,
         clamped,
-        mirrored,
+        lambda_t_y: lambda_tilde(&out)[1],
     }
 }
 
@@ -295,7 +320,8 @@ const QUOTIENT_EPS: f64 = 32.0;
 const SECTION_EPS: f64 = 32.0;
 
 /// A representative and a gauge: masses each ≥ 0.05 before normalising, `α ∈ [0.15, 1.42]`, `β ∈ [0.05, π − 0.05]`,
-/// momenta in `[−1, 1]`; the gauge's `s = 10^t`, `t ∈ [−3, 3]`, `θ ∈ [−π, π]`, `‖a‖ ≤ 3s`, `|uₖ| ≤ 2`.
+/// momenta in `[−1, 1]`; the gauge's `s = 10^t`, `t ∈ [−3, 3]`, `θ ∈ [−π, π]`, `‖a‖ ≤ 3s`, `|uₖ| ≤ 2`. The
+/// representative is in the upper half, `sin β ≥ sin 0.05`, and `Π`, drawn half the time, puts `g·x` in the lower.
 fn cases() -> impl Strategy<Value = (Ic<f64>, Gauge)> {
     (
         proptest::array::uniform3(0.05f64..1.0),
@@ -343,12 +369,7 @@ fn section<R: P>(out: &Canonical<R>, boost: f64) -> Result<f64, String> {
     if rh[0] <= 0.0 {
         return Err(format!("ρ̃ is not on +x: ρ = {rh:?}"));
     }
-    if lambda_tilde(&x)[1] < -DELTA {
-        return Err(format!(
-            "λ̃_y = {} < −δ_λ on C's output",
-            lambda_tilde(&x)[1]
-        ));
-    }
+    // λ̃_y is of either sign on the section: there is no fourth condition (*was:* "λ̃_y ≥ −δ_λ").
     let m = [
         ("the CoM", norm(c) / (size * e)),
         ("Σp", norm(pt) / (psize * e)),
@@ -365,8 +386,9 @@ fn section<R: P>(out: &Canonical<R>, boost: f64) -> Result<f64, String> {
     Ok(worst)
 }
 
-/// `C(g·x)` against `x`, at the precision `R`: the section, `x` itself, `I_in = s²`, `λ = 1/s`, the mirror iff `Π`,
-/// no clamp, and `C` idempotent; the worst gap, in eps.
+/// `C(g·x)` against `x`, at the precision `R`: the section, `x` itself where `Π` is off and its reflection where `Π`
+/// is on (`C` takes no mirror, so the lower half `Π` put the state in is kept: `λ̃_y < 0` iff `Π`), `I_in = s²`,
+/// `λ = 1/s`, no clamp, and `C` idempotent, the half kept again; the worst gap, in eps.
 fn quotient<R: P>(c: Canon<R>, x: &Ic<f64>, g: &Gauge) -> Result<f64, String> {
     let e = eps::<R>();
     let y = narrow::<R>(&act(g, x));
@@ -387,12 +409,19 @@ fn quotient<R: P>(c: Canon<R>, x: &Ic<f64>, g: &Gauge) -> Result<f64, String> {
     if dl > QUOTIENT_EPS {
         return Err(format!("λ = {lambda}, not 1/s = {} ({dl} eps)", 1.0 / g.s));
     }
-    if out.mirrored != g.mirror || out.clamped {
+    // The representative's λ̃_y is at least sin 0.15·sin 0.05 > 0.007, far above any rounding here, so its sign after C
+    // is the half the gauge left the state in: below the axis exactly when Π acted.
+    let lower = Into::<f64>::into(out.lambda_t_y) < 0.0;
+    if lower != g.mirror || lower != (lambda_tilde(&wide(&out.ic))[1] < 0.0) || out.clamped {
         return Err(format!(
-            "mirrored {} clamped {} under Π = {}",
-            out.mirrored, out.clamped, g.mirror
+            "C changed λ̃_y's half: lower {lower} (λ̃_y = {:e}) clamped {} under Π = {}",
+            Into::<f64>::into(out.lambda_t_y),
+            out.clamped,
+            g.mirror
         ));
     }
+    // What C(g·x) must be: x, reflected where Π acted.
+    let x = &if g.mirror { mirror_image(x) } else { *x };
     // The error model: a translation of `‖a‖` rounds the positions by `eps·‖a‖`, `‖a‖/s` in output units, and step 2's
     // angle, read off `ρ`, turns every `rᵢ` and `pᵢ` by that over `‖ρ‖`; so the output's gap is `eps` times
     // `κ = (1 + ‖a‖/(s·R))·(1 + R/‖ρ‖)`, `R = maxᵢ‖rᵢ‖` of `x`.
@@ -409,10 +438,11 @@ fn quotient<R: P>(c: Canon<R>, x: &Ic<f64>, g: &Gauge) -> Result<f64, String> {
     // being already at its CoM to rounding of its own size.
     let again = c(&out.ic);
     let di = gap_over(&wide(&out.ic), &wide(&again.ic), e, [0.0, boost]) / kappa;
-    if again.mirrored || again.clamped || di > QUOTIENT_EPS {
+    let lower_again = Into::<f64>::into(again.lambda_t_y) < 0.0;
+    if lower_again != lower || again.clamped || di > QUOTIENT_EPS {
         return Err(format!(
-            "C(C(y)) is {di} eps from C(y), mirrored {} clamped {}",
-            again.mirrored, again.clamped
+            "C(C(y)) is {di} eps from C(y), lower {lower_again} after lower {lower}, clamped {}",
+            again.clamped
         ));
     }
     worst = worst.max(d).max(di);
@@ -469,8 +499,8 @@ negative_control!(
 // ── qa_m207_reference (REQ-DEC-002) ─────────────────────────────────────────────────────────────────────────────
 
 /// Arbitrary physical states: masses ≥ 0.05 before normalising, positions and momenta in `[−5, 5]`, the inner pair at
-/// least 0.5 apart so the rotation is well conditioned, and `|λ̃_y|` of the reference's pre-mirror frame away from
-/// `δ_λ` (rejected in the run).
+/// least 0.5 apart so the rotation is well conditioned, and `|λ̃_y|` of the reference's frame away from 0, where the
+/// two could round to different halves (rejected in the run).
 fn states() -> impl Strategy<Value = Ic<f64>> {
     (
         proptest::array::uniform3(0.05f64..1.0),
@@ -493,10 +523,10 @@ const REFERENCE_EPS: f64 = 32.0;
 fn against_reference(c: Canon<f64>, x: &Ic<f64>) -> Result<f64, String> {
     let want = reference(x);
     let got = c(x);
-    if got.mirrored != want.mirrored || got.clamped != want.clamped {
+    if got.clamped != want.clamped {
         return Err(format!(
-            "notices mirrored {} clamped {}, the reference's {} {}",
-            got.mirrored, got.clamped, want.mirrored, want.clamped
+            "notice clamped {}, the reference's {}",
+            got.clamped, want.clamped
         ));
     }
     let checks = [
@@ -517,62 +547,99 @@ fn against_reference(c: Canon<f64>, x: &Ic<f64>) -> Result<f64, String> {
         }
         worst = worst.max(d);
     }
+    // The half: C's recorded λ̃_y has the sign of the reference's, the state staying on its side of the x-axis.
+    if (got.lambda_t_y < 0.0) != (want.lambda_t_y < 0.0) {
+        return Err(format!(
+            "C's λ̃_y = {:e} is not in the reference's half, λ̃_y = {:e}",
+            got.lambda_t_y, want.lambda_t_y
+        ));
+    }
     Ok(worst)
 }
 
 #[test]
 fn qa_m207_reference() {
     let worst = std::cell::Cell::new(0.0f64);
-    let mirrored = std::cell::Cell::new(0usize);
+    let halves = std::cell::Cell::new([0usize; 2]);
     prop::run(&states(), |x| {
         let pre = reference(&x);
-        // Keep away from the deadband's edge, where the two may round to different sides.
-        prop_assume!((lambda_tilde(&pre.ic)[1].abs() - DELTA).abs() > 1e-9);
-        mirrored.set(mirrored.get() + usize::from(pre.mirrored));
+        // Keep away from the x-axis, where the two may round to different halves.
+        prop_assume!(pre.lambda_t_y.abs() > 1e-9);
+        let mut h = halves.get();
+        h[usize::from(pre.lambda_t_y < 0.0)] += 1;
+        halves.set(h);
         let w = against_reference(canonicalise, &x).map_err(TestCaseError::fail)?;
         worst.set(worst.get().max(w));
         Ok(())
     });
-    assert!(mirrored.get() > 0, "no state reached the mirror");
+    let [upper, lower] = halves.get();
+    assert!(lower > 0, "no state lay in the lower half");
+    assert!(upper > 0, "no state lay in the upper half");
     eprintln!(
-        "qa_m207_reference: worst {} eps (tolerance {REFERENCE_EPS}); {} mirrored; {}",
+        "qa_m207_reference: worst {} eps (tolerance {REFERENCE_EPS}); {upper} upper, {lower} lower; {}",
         worst.get(),
-        mirrored.get(),
         prop::cases_status()
     );
 }
 
-/// `C` with the mirror applied to positions only, the config-only mirror dd_encode §5 test 3 exists to catch.
+/// `C` with a mirror step left in on the positions only: `rᵢ` reflected iff `λ̃_y < −δ_λ`, the momenta not, the
+/// config-only mirror dd_encode §5 test 3 exists to catch.
 #[cfg(feature = "controls")]
 fn config_only_mirror(x: &Ic<f64>) -> Canonical<f64> {
     let mut c = canonicalise(x);
-    if c.mirrored {
-        for v in c.ic.p.iter_mut() {
+    if lambda_tilde(&c.ic)[1] < -DELTA {
+        for v in c.ic.r.iter_mut() {
             v[1] = -v[1];
         }
+        c.lambda_t_y = -c.lambda_t_y;
     }
     c
 }
 
+/// A state whose canonical frame is in the lower half, for the controls.
+#[cfg(feature = "controls")]
+fn lower_half_state() -> Ic<f64> {
+    let x = Ic {
+        m: [0.3, 0.3, 0.4],
+        r: [[0.0, 0.0], [2.0, 0.0], [1.0, -1.5]],
+        p: [[0.2, 0.4], [-0.1, -0.3], [0.5, 0.1]],
+    };
+    assert!(
+        reference(&x).lambda_t_y < -DELTA,
+        "the control's state must lie in the lower half"
+    );
+    x
+}
+
 negative_control!(
     qa_m207_reference,
-    "a C that mirrors the positions but not the momenta must fail",
+    "C with its mirror step left in (the full state reflected where λ̃_y < −δ_λ) must fail on a lower-half state",
     expected = "the state is",
     {
-        let x = Ic {
-            m: [0.3, 0.3, 0.4],
-            r: [[0.0, 0.0], [2.0, 0.0], [1.0, -1.5]],
-            p: [[0.2, 0.4], [-0.1, -0.3], [0.5, 0.1]],
-        };
-        assert!(reference(&x).mirrored, "the control's state must mirror");
-        against_reference(config_only_mirror, &x).unwrap();
+        against_reference(mirror_left_in, &lower_half_state()).unwrap();
     }
 );
 
-// ── qa_m207_mirror_full_state (dd_encode §5 test 3; R-82's full-state rule) ──────────────────────────────────────
+/// A second control: the mirror step left in on the positions only.
+#[cfg(feature = "controls")]
+mod reference_config_only_mirror {
+    use super::*;
 
-/// On `x` and `C(x)`: `L_z(C(x)) = ±L_z(x)·λ^{1/2}`, `L_z(x)` taken in `x`'s CoM frame at zero total momentum, minus exactly when mirrored (`L_canon = L_in/I_in^{1/4}`); every
-/// `pᵢ` of a mirrored output is the reflection of the unmirrored one.
+    negative_control!(
+        qa_m207_reference,
+        "a C that mirrors the positions but not the momenta must fail",
+        expected = "the state is",
+        {
+            against_reference(config_only_mirror, &lower_half_state()).unwrap();
+        }
+    );
+}
+
+// ── qa_m207_mirror_full_state (dd_encode §5 test 3; the mirror map on the full state) ───────────────────────────
+
+/// On `x` and `C(x)`: `L_z(C(x)) = +L_z(x)·λ^{1/2}`, `L_z(x)` taken in `x`'s CoM frame at zero total momentum
+/// (`L_canon = L_in/I_in^{1/4}`), on either half: `C` is a translation, a boost, a scaling and a rotation, none of
+/// which reverses orientation. *Was:* "minus exactly when mirrored".
 fn lz_sign(c: Canon<f64>, x: &Ic<f64>) -> Result<(), String> {
     let out = c(x);
     // `L_in` in the input's CoM frame at zero total momentum, the `L_z` the scale step's table transforms.
@@ -582,13 +649,42 @@ fn lz_sign(c: Canon<f64>, x: &Ic<f64>) -> Result<(), String> {
         r: x.r.map(|v| [v[0] - cm[0], v[1] - cm[1]]),
         p: [0, 1, 2].map(|i| [x.p[i][0] - x.m[i] * pt[0], x.p[i][1] - x.m[i] * pt[1]]),
     };
-    let want = if out.mirrored { -1.0 } else { 1.0 } * lz(&internal) * out.lambda.sqrt();
+    let want = lz(&internal) * out.lambda.sqrt();
     let got = lz(&out.ic);
     let scale: f64 = (0..3).map(|i| norm(out.ic.r[i]) * norm(out.ic.p[i])).sum();
     if (got - want).abs() > 64.0 * f64::EPSILON * scale {
         return Err(format!(
-            "L_z(C(x)) = {got}, not {want}, mirrored {}",
-            out.mirrored
+            "L_z(C(x)) = {got}, not {want}, λ̃_y = {:e}",
+            out.lambda_t_y
+        ));
+    }
+    Ok(())
+}
+
+/// `L_z(C(g·x)) = det(Π_g)·L_z(C(x))` for a canonical `x`, whose `C(x)` is itself: the mirror map negates `L_z` and
+/// nothing else in the gauge moves it, `s·s^{−1/2}` of the gauge against `λ^{1/2}` of step 0. `mirror_p` false is the
+/// half-mirror, `Π` on the positions only.
+fn lz_det(x: &Ic<f64>, g: &Gauge, mirror_p: bool) -> Result<(), String> {
+    let mut y = act(g, x);
+    if g.mirror && !mirror_p {
+        // Undo Π on the momenta: p' = s^{−1/2}·R(θ)·p + m·u.
+        let whole = act(
+            &Gauge {
+                mirror: false,
+                ..*g
+            },
+            x,
+        );
+        y.p = whole.p;
+    }
+    let out = canonicalise(&y);
+    let det = if g.mirror { -1.0 } else { 1.0 };
+    let want = det * lz(x);
+    let got = lz(&out.ic);
+    let scale: f64 = (0..3).map(|i| norm(out.ic.r[i]) * norm(out.ic.p[i])).sum();
+    if (got - want).abs() > 64.0 * f64::EPSILON * scale {
+        return Err(format!(
+            "L_z(C(g·x)) = {got}, not det(Π)·L_z(C(x)) = {want}, at {g:?}"
         ));
     }
     Ok(())
@@ -596,7 +692,8 @@ fn lz_sign(c: Canon<f64>, x: &Ic<f64>) -> Result<(), String> {
 
 #[test]
 fn qa_m207_mirror_full_state() {
-    // λ̃_y below −δ_λ by far, at three gauges each.
+    // λ̃_y below −δ_λ by far, at three gauges each: the first two leave the state in the lower half, where C keeps it;
+    // the third's Π puts it in the upper.
     let x = representative([0.25, 0.35, 0.4], 0.8, -1.2, [0.3, -0.2], [0.1, 0.4]);
     let mut seen = [false; 2];
     for g in [
@@ -624,34 +721,94 @@ fn qa_m207_mirror_full_state() {
     ] {
         let y = act(&g, &x);
         let out = canonicalise(&y);
-        seen[usize::from(out.mirrored)] = true;
+        let lower = out.lambda_t_y < 0.0;
+        seen[usize::from(lower)] = true;
+        // The half is the one the gauge left the state in: x's own, the lower, unless Π acted.
+        assert_eq!(lower, !g.mirror, "C changed λ̃_y's half at {g:?}");
         lz_sign(canonicalise, &y).unwrap();
-        // The mirror of the unmirrored canonical frame: compare with the reference's full-state mirror.
+        lz_det(&x, &g, true).unwrap();
+        // The state: the reference's, which takes no mirror; and x itself, reflected in full where Π acted.
         let want = reference(&y);
-        assert_eq!(out.mirrored, want.mirrored, "the mirror decision at {g:?}");
+        assert_eq!(
+            lower,
+            want.lambda_t_y < 0.0,
+            "the half against the reference's at {g:?}"
+        );
         let d = gap(&want.ic, &out.ic, f64::EPSILON);
         assert!(
             d <= REFERENCE_EPS,
-            "C's state is {d} eps from the full-state mirror at {g:?}"
+            "C's state is {d} eps from the reference's at {g:?}"
+        );
+        let image = if g.mirror { mirror_image(&x) } else { x };
+        // The same error model as the quotient's: the translation's and the boost's rounding, over the conditioning.
+        let big_r = x.r.iter().map(|v| norm(*v)).fold(0.0, f64::max);
+        let kappa = (1.0 + norm(g.a) / (g.s * big_r)) * (1.0 + big_r / norm(rho(&x)));
+        let extra = [norm(g.a) / g.s, norm(g.u) * g.s.sqrt()];
+        let d = gap_over(&image, &out.ic, f64::EPSILON, extra) / kappa;
+        assert!(
+            d <= QUOTIENT_EPS,
+            "C(g·x) is {d} eps from x under the full-state mirror map at {g:?}"
         );
     }
-    assert_eq!(
-        seen,
-        [true, true],
-        "the gauges must reach both sides of the mirror"
-    );
+    assert_eq!(seen, [true, true], "the gauges must reach both halves");
 }
 
 negative_control!(
     qa_m207_mirror_full_state,
-    "a config-only mirror keeps L_z's sign and must fail",
-    expected = "not",
+    "C with its mirror step left in reverses L_z on a lower-half state and must fail",
+    expected = "L_z(C(x)) =",
     {
         let x = representative([0.25, 0.35, 0.4], 0.8, -1.2, [0.3, -0.2], [0.1, 0.4]);
-        assert!(canonicalise(&x).mirrored, "the control's state must mirror");
-        lz_sign(config_only_mirror, &x).unwrap();
+        assert!(
+            canonicalise(&x).lambda_t_y < -DELTA,
+            "the control's state must lie in the lower half"
+        );
+        lz_sign(mirror_left_in, &x).unwrap();
     }
 );
+
+/// A second control: a mirror step left in on the positions only changes `L_z` and must fail the same check.
+#[cfg(feature = "controls")]
+mod full_state_config_only_mirror {
+    use super::*;
+
+    negative_control!(
+        qa_m207_mirror_full_state,
+        "a config-only mirror left in C must fail",
+        expected = "L_z(C(x)) =",
+        {
+            let x = representative([0.25, 0.35, 0.4], 0.8, -1.2, [0.3, -0.2], [0.1, 0.4]);
+            assert!(
+                canonicalise(&x).lambda_t_y < -DELTA,
+                "the control's state must lie in the lower half"
+            );
+            lz_sign(config_only_mirror, &x).unwrap();
+        }
+    );
+}
+
+/// A third control: the half-mirror on the test's side, `Π` on the positions only, does not negate `L_z`.
+#[cfg(feature = "controls")]
+mod full_state_half_mirror {
+    use super::*;
+
+    negative_control!(
+        qa_m207_mirror_full_state,
+        "a mirror map reflecting the positions only must fail the determinant's sign",
+        expected = "not det(Π)·L_z(C(x))",
+        {
+            let x = representative([0.25, 0.35, 0.4], 0.8, -1.2, [0.3, -0.2], [0.1, 0.4]);
+            let g = Gauge {
+                a: [-1.0, 2.0],
+                u: [-0.2, 0.1],
+                theta: -0.4,
+                s: 0.2,
+                mirror: true,
+            };
+            lz_det(&x, &g, false).unwrap();
+        }
+    );
+}
 
 // ── qa_m207_deadband_tilde (REQ-DEC-017) ────────────────────────────────────────────────────────────────────────
 
@@ -661,8 +818,10 @@ const KS: [f64; 9] = [-3.0, -1.1, -0.9, -0.5, 0.0, 0.5, 0.9, 1.1, 3.0];
 /// Masses with `√μ_λ = √(m₂M₀₁) = 0.3`, so `|λ_y| = |λ̃_y|/0.3`: every `|k| ≥ 0.5` here has `|λ_y| > δ_λ`.
 const LIGHT: [f64; 3] = [0.5, 0.4, 0.1];
 
-/// The output `λ̃_y` of `C` and its mirror flag, against what the test on `λ̃_y` gives: the frame's
-/// `λ̃_y = (Π ? −k : k)·δ_λ`, mirrored iff below `−δ_λ`, and then `+|λ̃_y|`; read to `ABS` absolute. Twice the same.
+/// The output `λ̃_y` of `C` against the frame's, `λ̃_y = (Π ? −k : k)·δ_λ`: `C` takes no mirror and reads no `δ_λ`,
+/// so the output's is the frame's at every `k`, either side of the old deadband's edges and inside it, its sign kept
+/// (*was:* "mirrored iff below `−δ_λ`, and then `+|λ̃_y|`"); the recorded `λ̃_y` the same; no clamp; read to `ABS`
+/// absolute. Twice the same.
 fn deadband(c: Canon<f64>, k: f64, g: &Gauge) -> Result<(), String> {
     const ABS: f64 = 1e-14;
     let x = representative(
@@ -677,20 +836,16 @@ fn deadband(c: Canon<f64>, k: f64, g: &Gauge) -> Result<(), String> {
     if c(&y) != out {
         return Err(format!("two results at k = {k}"));
     }
-    let frame = if g.mirror { -k } else { k } * DELTA;
-    let mirror = frame < -DELTA;
-    if out.mirrored != mirror {
-        return Err(format!(
-            "the mirror is {} at λ̃_y = {frame:e}, k = {k}, {g:?}",
-            out.mirrored
-        ));
+    let want = if g.mirror { -k } else { k } * DELTA;
+    if out.clamped {
+        return Err(format!("lookup_clamped at λ̃_y = {want:e}, k = {k}, {g:?}"));
     }
-    let want = if mirror { -frame } else { frame };
-    let got = lambda_tilde(&out.ic)[1];
-    if (got - want).abs() > ABS {
-        return Err(format!(
-            "the output's λ̃_y is {got:e}, not {want:e}, at k = {k}, {g:?}"
-        ));
+    for got in [lambda_tilde(&out.ic)[1], out.lambda_t_y] {
+        if (got - want).abs() > ABS {
+            return Err(format!(
+                "the output's λ̃_y is {got:e}, not {want:e}, at k = {k}, {g:?}"
+            ));
+        }
     }
     Ok(())
 }
@@ -734,21 +889,15 @@ fn qa_m207_deadband_tilde() {
         };
         let out = canonicalise(&x);
         assert_eq!(canonicalise(&x), out, "f32: two results at k = {k}");
+        // The recorded λ̃_y keeps the sign the state entered with, k's, at every k (0 at k = 0).
         let lt: f64 = f64::from(out.lambda_t_y);
-        let pre = if out.mirrored { -lt } else { lt };
-        assert_eq!(
-            out.mirrored,
-            k < -1.0,
-            "f32: the mirror is {} at λ̃_y = {k}δ_λ (C read {pre:e})",
-            out.mirrored
+        assert!(
+            (lt < 0.0) == (k < 0.0) && (lt > 0.0) == (k > 0.0),
+            "f32: C changed λ̃_y's sign at λ̃_y = {k}δ_λ (C read {lt:e})"
         );
-        // r₂'s y follows the flag: −a before, +a after the mirror (to step 0's relative ulp).
+        // r₂'s y is the input's, −a, on either side (to step 0's relative ulp): no mirror moved it.
         let r2y = f64::from(out.ic.r[2][1]);
-        let want = if out.mirrored {
-            f64::from(a)
-        } else {
-            -f64::from(a)
-        };
+        let want = -f64::from(a);
         assert!(
             (r2y - want).abs() <= 4.0 * f64::from(f32::EPSILON) * want.abs(),
             "f32: r₂'s y is {r2y:e}, not {want:e}, at k = {k}"
@@ -758,56 +907,75 @@ fn qa_m207_deadband_tilde() {
     eprintln!("qa_m207_deadband_tilde: {n} states");
 }
 
-/// `C` whose mirror test reads `λ_y = λ̃_y/√μ_λ`: the defect REQ-DEC-017 names.
+/// `C` with a mirror step left in whose test reads `λ_y = λ̃_y/√μ_λ`: the full state reflected iff `λ_y < −δ_λ`.
 #[cfg(feature = "controls")]
 fn lambda_y_test(x: &Ic<f64>) -> Canonical<f64> {
     let mut c = canonicalise(x);
-    // Undo C's own mirror, then mirror on λ_y.
-    if c.mirrored {
-        for v in c.ic.r.iter_mut().chain(c.ic.p.iter_mut()) {
-            v[1] = -v[1];
-        }
-    }
     let m01 = x.m[0] + x.m[1];
     let ly = lambda_tilde(&c.ic)[1] / (x.m[2] * m01).sqrt();
-    c.mirrored = ly < -DELTA;
-    if c.mirrored {
-        for v in c.ic.r.iter_mut().chain(c.ic.p.iter_mut()) {
-            v[1] = -v[1];
-        }
+    if ly < -DELTA {
+        c.ic = mirror_image(&c.ic);
+        c.lambda_t_y = -c.lambda_t_y;
     }
     c
 }
 
+/// The controls' gauge: a turn only.
+#[cfg(feature = "controls")]
+fn turned() -> Gauge {
+    Gauge {
+        a: [0.0; 2],
+        u: [0.0; 2],
+        theta: 0.37,
+        s: 1.0,
+        mirror: false,
+    }
+}
+
 negative_control!(
     qa_m207_deadband_tilde,
-    "a mirror test on λ_y, not λ̃_y, mirrors inside the deadband and must fail",
-    expected = "the mirror is true",
-    {
-        let g = Gauge {
-            a: [0.0; 2],
-            u: [0.0; 2],
-            theta: 0.37,
-            s: 1.0,
-            mirror: false,
-        };
-        deadband(lambda_y_test, -0.9, &g).unwrap();
-    }
+    "C with its mirror step left in (λ̃_y < −δ_λ reflects the full state) changes λ̃_y's sign past the old edge and \
+     must fail",
+    // The output's λ̃_y read positive, +3δ_λ, where the state entered at −3δ_λ.
+    expected = "_y is 3.0",
+    deadband(mirror_left_in, -3.0, &turned()).unwrap()
 );
+
+/// A second control: a mirror step left in that reads `λ_y`, which is past `−δ_λ` at `k = −0.9` under these masses.
+#[cfg(feature = "controls")]
+mod deadband_lambda_y_test {
+    use super::*;
+
+    negative_control!(
+        qa_m207_deadband_tilde,
+        "a mirror step on λ_y left in C changes λ̃_y's sign inside the old deadband and must fail",
+        // The output's λ̃_y read positive, +0.9δ_λ, where the state entered at −0.9δ_λ.
+        expected = "_y is 9.0",
+        deadband(lambda_y_test, -0.9, &turned()).unwrap()
+    );
+}
 
 // ── qa_m207_noop_extreme (REQ-DEC-018) ──────────────────────────────────────────────────────────────────────────
 
 /// The no-op's tolerance on the state, in eps: step 1a's and step 0's rounding on a state already at CoM 0, `I = 1`.
 const NOOP_EPS: f64 = 8.0;
 
-/// dd_decoder §5 test 5 on `C(x)`: no mirror, `|φ| ≤ NOOP_EPS·eps`, the state within `NOOP_EPS`, the same twice.
+/// A decode this far below the `x`-axis is in the lower half whatever rounds: the states [`noop`] holds to it.
+const CLEAR_OF_AXIS: f64 = 1e-3;
+
+/// dd_decoder §5 test 5 on `C(x)`: the half kept (a decode with `λ̃_y < −`[`CLEAR_OF_AXIS`] leaves `C` with
+/// `λ̃_y < 0`, and one above it with `λ̃_y > 0`; *was:* "no mirror"), `|φ| ≤ NOOP_EPS·eps`, the state within
+/// `NOOP_EPS`, the same twice.
 fn noop<R: P>(c: Canon<R>, x: &Ic<R>, at: &str) -> Result<f64, String> {
     let out = c(x);
     if c(x) != out {
         return Err(format!("two results at {at}"));
     }
-    if out.mirrored {
-        return Err(format!("the mirror was taken at {at}"));
+    let (before, after) = (lambda_tilde(&wide(x))[1], Into::<f64>::into(out.lambda_t_y));
+    if (before < -CLEAR_OF_AXIS && after >= 0.0) || (before > CLEAR_OF_AXIS && after <= 0.0) {
+        return Err(format!(
+            "C changed λ̃_y's half, {before:e} to {after:e}, at {at}"
+        ));
     }
     let phi: f64 = out.phi.into();
     if phi.abs() > NOOP_EPS * eps::<R>() {
@@ -848,12 +1016,23 @@ fn extreme_z<R: P>() -> Vec<[R; 8]> {
 
 fn noop_at<R: P>(name: &str) {
     let mut worst = 0.0f64;
+    let mut halves = [0usize; 2];
     for (j, z) in extreme_z::<R>().into_iter().enumerate() {
         let x = decode::<Defaults, R>(&Latent::new(z)).ic;
         let at = format!("{name} z = {z:?} (case {j})");
         worst = worst.max(noop::<R>(canonicalise, &x, &at).unwrap());
+        let lt = lambda_tilde(&wide(&x))[1];
+        halves[0] += usize::from(lt > CLEAR_OF_AXIS);
+        halves[1] += usize::from(lt < -CLEAR_OF_AXIS);
     }
-    eprintln!("qa_m207_noop_extreme {name}: worst {worst} eps (tolerance {NOOP_EPS})");
+    assert!(
+        halves[0] > 0 && halves[1] > 0,
+        "{name}: the extreme decodes must reach both halves, {halves:?}"
+    );
+    eprintln!(
+        "qa_m207_noop_extreme {name}: worst {worst} eps (tolerance {NOOP_EPS}); {} upper, {} lower",
+        halves[0], halves[1]
+    );
 }
 
 #[test]
@@ -1057,11 +1236,8 @@ fn row<R: P>(c: Canon<R>, x: &Ic<f64>) -> Result<f64, String> {
                     .max(f64::MIN_POSITIVE)),
         ),
     ];
-    if out.mirrored || out.clamped {
-        return Err(format!(
-            "a notice besides λ: mirrored {} clamped {}",
-            out.mirrored, out.clamped
-        ));
+    if out.clamped {
+        return Err("a notice besides λ: lookup_clamped".to_string());
     }
     let mut worst = 0.0f64;
     for (what, d) in checks {
@@ -1173,7 +1349,7 @@ fn poles() -> Vec<(&'static str, Ic<f64>)> {
 }
 
 /// At `ρ = 0`: `lookup_clamped`, `φ = +0` by its bits, and the output the reference's with no rotation (R-437:
-/// `R(−φ)` the identity), its own mirror flag applied; at precision `R`.
+/// `R(−φ)` the identity), which takes no mirror; at precision `R`.
 fn pole<R: P>(c: Canon<R>, name: &str, x: &Ic<f64>) -> Result<(), String> {
     let xr = narrow::<R>(x);
     let out = c(&xr);
@@ -1185,10 +1361,9 @@ fn pole<R: P>(c: Canon<R>, name: &str, x: &Ic<f64>) -> Result<(), String> {
         return Err(format!("φ = {phi} at ρ = {name}, not +0"));
     }
     let want = reference(&wide(&xr));
-    if !want.clamped || want.mirrored != out.mirrored {
+    if !want.clamped {
         return Err(format!(
-            "the reference disagrees at ρ = {name}: mirrored {} vs {}",
-            want.mirrored, out.mirrored
+            "the reference disagrees at ρ = {name}: not clamped"
         ));
     }
     let d = gap(&want.ic, &wide(&out.ic), eps::<R>());

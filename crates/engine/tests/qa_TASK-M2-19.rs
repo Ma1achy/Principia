@@ -1,15 +1,15 @@
-//! QA's tests for TASK-M2-19, written from the requirements it closes, not from `engine::lookup`'s code: the exact and
-//! partial forms of lookup and the lock and slice they give (REQ-ENC-012; inverse_encode_contract Part 6, "Lookup",
-//! and REQ-ENC-031's slice rule, "The partial specification's blocks and slice basis"), the validation ladder with its
-//! clamp, its rejection naming the class a clamp would change, and layer 3's residuals (REQ-ENC-013; § "Chart-aware
-//! validation", "Layer 1's space and bounds", "Layer 3's tolerance", "A qualitatively different IC"), exactly
-//! coincident bodies clamped and never rejected (REQ-ENC-019; R-13, R-113), and the decode-sanity tolerance's claim
-//! that decode's residuals sit under it at f64 and f32 over fuzzed `z` (REQ-ENC-027). Every quantity asserted is
-//! computed here from the contract's own formulas (the masses carried to `M = 1` with the momenta by `M^{3/2}`,
-//! Burrau's sides, `ν = sec θ − tan θ`, `q = (p_ρ, p_λ)`, `L_z`, `E`, `‖Σmᵢrᵢ‖/R_x`). Each test registers its negative
-//! control (R-176). The mass unit (Part 6, "The physical form's masses", physics review 5630998530 of PR #284, P1) and
-//! layer 1's zero class (§ "The zero class in floating point", REQ-ENC-036, and its band `k`, REQ-ENC-037) are tested
-//! at the end.
+//! QA's tests for TASK-M2-19, written from the requirements it closes, not from `engine::lookup`'s code: the exact
+//! and partial forms of lookup and the lock and slice they give (REQ-ENC-012; inverse_encode_contract Part 6,
+//! "Lookup", and REQ-ENC-031's slice rule, "The partial specification's blocks and slice basis"), the validation
+//! ladder with its clamp, its rejection naming the class a clamp would change, and layer 3's residuals (REQ-ENC-013;
+//! § "Chart-aware validation", "Layer 1's space and bounds", "Layer 3's tolerance", "A qualitatively different IC"),
+//! exactly coincident bodies never rejected, the inner pair clamped and an outer pair a state as it is (REQ-ENC-019;
+//! R-13, R-113), and the decode-sanity tolerance's claim that decode's residuals sit under it at f64 and f32 over
+//! fuzzed `z` (REQ-ENC-027). Every quantity asserted is computed here from the contract's own formulas (the masses
+//! carried to `M = 1` with the momenta by `M^{3/2}`, Burrau's sides, `ν = sec θ − tan θ`, `q = (p_ρ, p_λ)`, `L_z`,
+//! `E`, `‖Σmᵢrᵢ‖/R_x`). Each test registers its negative control (R-176). The mass unit (Part 6, "The physical form's
+//! masses", physics review 5630998530 of PR #284, P1) and layer 1's zero class (§ "The zero class in floating point",
+//! REQ-ENC-036, and its band `k`, REQ-ENC-037) are tested at the end.
 
 use engine::lookup::{
     after, changed, lookup, lookup_partial, moves, residuals, sanity, Class, Classes, Exact,
@@ -363,10 +363,12 @@ fn gauge(
     }
 }
 
-/// A physical entry locks `C(x)`'s `z`: every member of `x`'s gauge orbit, in any mass unit, locks the same state
-/// (T1, T3), its masses the entry's proportions, its CoM at the origin and `Σpᵢ = 0` though the entry's were not,
-/// `I = 1`, `M = Σmᵢ` recorded, and `E` and `L_z` the entry's carried to `M = 1` (`E/M²`, `L_z/M^{3/2}`; Part 6) and
-/// then by Part 2's rescale; the full-state mirror raises `lookup_mirrored` on one side only.
+/// A physical entry locks `C(x)`'s `z`: every member of `x`'s orbit under translation, boost, rotation and rescale,
+/// in any mass unit, locks the same state (T1, T3), its masses the entry's proportions, its CoM at the origin and
+/// `Σpᵢ = 0` though the entry's were not, `I = 1`, `M = Σmᵢ` recorded, and `E` and `L_z` the entry's own carried to
+/// `M = 1` (`E/M²`, `L_z/M^{3/2}`; Part 6) and then by Part 2's rescale. `C` has no mirror step, so the full-state
+/// mirror of the entry is another system, its `L_z` negated: its lock is the mirror image of the entry's lock
+/// (`y → −y` on every `rᵢ` and `pᵢ`), the equivariance, and no notice records it.
 fn check_physical(x: &Ic<f64>, orbit: &[(Ic<f64>, bool)]) {
     let chart = latent();
     let base = exact(&chart, Exact::Physical(*x)).expect("a physical entry is refused");
@@ -394,16 +396,20 @@ fn check_physical(x: &Ic<f64>, orbit: &[(Ic<f64>, bool)]) {
     for (g, mirrored) in orbit {
         let lock = exact(&chart, Exact::Physical(*g)).expect("a gauge image is refused");
         let xg = decoded(&chart, &lock);
+        // The base lock, mirrored where the image is: the state the image must lock.
+        let want = kernel::canon::reflect(&xb, *mirrored);
         assert!(
-            phys(&xb, &xg) <= eps_phys(),
+            phys(&want, &xg) <= eps_phys(),
             "a gauge image locks a different state: ‖Δ‖_phys = {:e}",
-            phys(&xb, &xg)
+            phys(&want, &xg)
         );
-        assert_eq!(
-            lock.notices.mirrored != base.notices.mirrored,
-            *mirrored,
-            "lookup_mirrored does not follow the mirror"
-        );
+        if *mirrored {
+            assert!(
+                phys(&xb, &xg) > eps_phys(),
+                "a mirrored image locks the entry's own state, not its mirror image: the lock does not follow the \
+                 mirror"
+            );
+        }
         // M = Σmᵢ is recorded with the lock (Part 6).
         let gm: f64 = g.m.iter().sum();
         assert!(
@@ -437,14 +443,11 @@ fn check_physical(x: &Ic<f64>, orbit: &[(Ic<f64>, bool)]) {
             "the lock's E = {} is not the entry's rescaled {e_want}",
             energy(&xg)
         );
-        let lz_lock = if lock.notices.mirrored {
-            -lz(&xg)
-        } else {
-            lz(&xg)
-        };
+        // The image's own `L_z`, sign and all: a mirrored image turns the other way and its lock with it.
+        let lz_lock = lz(&xg);
         assert!(
             (lz_lock - lz_want).abs() <= eps_phys() * magnitude(&xg).1,
-            "the lock's L_z = {lz_lock} (mirror undone) is not the entry's rescaled {lz_want}"
+            "the lock's L_z = {lz_lock} is not the entry's rescaled {lz_want}"
         );
     }
 }
@@ -875,26 +878,30 @@ negative_control!(
 
 // ── REQ-ENC-019: exactly coincident bodies ─────────────────────────────────────────────────────────────────────────
 
-/// Each pair exactly coincident, and all three, at rest and moving, and moving with `L_z = 0` on a line: lookup
-/// locks, with `lookup_clamped`, and never rejects (R-13: "no coincident-bodies rejection branch").
-fn coincident_states() -> Vec<(String, Ic<f64>)> {
+/// Bodies `i` and `j` exactly coincident, at rest and moving, and moving with `L_z = 0` on a line.
+fn coincident_pair(i: usize, j: usize) -> Vec<(String, Ic<f64>)> {
     let mut out = Vec::new();
-    for (i, j) in [(0, 1), (1, 2), (0, 2)] {
-        let mut x = some_state();
-        x.r[j] = x.r[i];
-        out.push((format!("{i}{j} moving"), x));
-        let mut rest = x;
-        rest.p = [[0.0; 2]; 3];
-        out.push((format!("{i}{j} at rest"), rest));
-        // Collinear on the x axis, moving along it: L_z = 0 exactly.
-        let mut line = Ic {
-            m: [0.4, 0.35, 0.25],
-            r: [[-0.6, 0.0], [0.7, 0.0], [0.1, 0.0]],
-            p: [[0.1, 0.0], [-0.3, 0.0], [0.2, 0.0]],
-        };
-        line.r[j] = line.r[i];
-        out.push((format!("{i}{j} on a line, L_z = 0"), line));
-    }
+    let mut x = some_state();
+    x.r[j] = x.r[i];
+    out.push((format!("{i}{j} moving"), x));
+    let mut rest = x;
+    rest.p = [[0.0; 2]; 3];
+    out.push((format!("{i}{j} at rest"), rest));
+    // Collinear on the x axis, moving along it: L_z = 0 exactly.
+    let mut line = Ic {
+        m: [0.4, 0.35, 0.25],
+        r: [[-0.6, 0.0], [0.7, 0.0], [0.1, 0.0]],
+        p: [[0.1, 0.0], [-0.3, 0.0], [0.2, 0.0]],
+    };
+    line.r[j] = line.r[i];
+    out.push((format!("{i}{j} on a line, L_z = 0"), line));
+    out
+}
+
+/// The coincidences the section cannot represent: the inner pair, bodies 0 and 1 (`ρ = 0`), and all three. Lookup
+/// locks each, with `lookup_clamped`, and never rejects (R-13: "no coincident-bodies rejection branch").
+fn coincident_states() -> Vec<(String, Ic<f64>)> {
+    let mut out = coincident_pair(0, 1);
     let mut all = some_state();
     all.r = [[0.2, -0.1]; 3];
     out.push(("all three".into(), all));
@@ -925,6 +932,57 @@ negative_control!(
     "bodies apart raise no lookup_clamped, so the coincident check must fail on them",
     expected = "lock without lookup_clamped",
     check_coincident(&[("apart".into(), some_state())])
+);
+
+/// An outer pair exactly coincident, body 2 on body 0 or on body 1: the three bodies are on a line with `λ̃` along
+/// `∓ρ̃`, so `β` is `π` or 0, inside the circle the periodic `β` runs over, which has no edge there. It is a
+/// representable state, a collision at `t = 0`: lookup locks it, never rejects it, raises no `lookup_clamped` and no
+/// coincidence flag (that one is the inner pair's), and the locked state's pair is still together, within `r_coll`
+/// (10⁻³ by default; integrator_contract Part 7), so the collision detector meets it, not a notice.
+fn check_outer_coincident(states: &[(String, Ic<f64>, (usize, usize))]) {
+    let mut failures = Vec::new();
+    for (what, x, (i, j)) in states {
+        match exact(&latent(), Exact::Physical(*x)) {
+            Ok(lock) if lock.notices.lookup_clamped() || lock.notices.moved.coincident => failures
+                .push(format!(
+                    "{what}: a coincident outer pair is clamped: {:?}",
+                    lock.notices.moved
+                )),
+            Ok(lock) => {
+                let y = decoded(&latent(), &lock);
+                let gap = (y.r[*j][0] - y.r[*i][0]).hypot(y.r[*j][1] - y.r[*i][1]);
+                if gap >= 1e-3 {
+                    failures.push(format!(
+                        "{what}: the locked pair is {gap:e} apart, not within r_coll"
+                    ));
+                }
+            }
+            Err(e) => failures.push(format!("{what}: coincident bodies are rejected: {e}")),
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// [`coincident_pair`]'s states, each with its pair.
+fn outer_states(i: usize, j: usize) -> Vec<(String, Ic<f64>, (usize, usize))> {
+    coincident_pair(i, j)
+        .into_iter()
+        .map(|(what, x)| (what, x, (i, j)))
+        .collect()
+}
+
+#[test]
+fn lookup_coincident_qa_outer_pair_unclamped() {
+    let mut states = outer_states(1, 2);
+    states.extend(outer_states(0, 2));
+    check_outer_coincident(&states);
+}
+
+negative_control!(
+    lookup_coincident_qa_outer_pair_unclamped,
+    "the inner pair coincident cannot be represented and is clamped, so the outer pair's check must fail on it",
+    expected = "a coincident outer pair is clamped",
+    check_outer_coincident(&outer_states(0, 1))
 );
 
 // ── REQ-ENC-027: decode's residuals under the proposed tolerance ──────────────────────────────────────────────────
@@ -1022,7 +1080,7 @@ fn lagrange(m: [f64; 3], a: f64) -> Ic<f64> {
 
 /// An entry of mass `M ≠ 1` with momenta locks the same motion (Part 6: `mᵢ ← mᵢ/M`, `pᵢ ← pᵢ/M^{3/2}`, which keeps
 /// `K/|U|` and the signs of `E` and `L_z`): its lock's `K/|U|` is the entry's, its `E < 0`, its `L_z` the entry's sign
-/// (the mirror undone), `E·L_z²` the entry's over `M⁵` (`E/M²`, `L_z/M^{3/2}`, and Part 2's rescale keeps `E·L_z²`),
+/// (`C` takes no mirror), `E·L_z²` the entry's over `M⁵` (`E/M²`, `L_z/M^{3/2}`, and Part 2's rescale keeps `E·L_z²`),
 /// and `M` is recorded.
 fn check_mass_unit(entry: &Ic<f64>, want_ratio: f64) {
     let total: f64 = entry.m.iter().sum();
@@ -1042,9 +1100,8 @@ fn check_mass_unit(entry: &Ic<f64>, want_ratio: f64) {
         "the lock's E = {} is not bound",
         energy(&x)
     );
-    let sign = if lock.notices.mirrored { -1.0 } else { 1.0 };
     assert_eq!(
-        (sign * lz(&x)).signum(),
+        lz(&x).signum(),
         lz(entry).signum(),
         "the lock's sense of rotation is not the entry's"
     );
@@ -1228,14 +1285,20 @@ fn random_state(rng: &mut Rng) -> Ic<f64> {
     }
 }
 
-/// A random gauge image of `x` in its own mass unit: offset and boost on `[−span, span)²`, any rotation, scale
-/// `2^[−octaves, octaves]`, either parity.
+/// A random image of `x` in its own mass unit: offset and boost on `[−span, span)²`, any rotation, scale
+/// `2^[−octaves, octaves]`, either parity. A mirrored image is `x`'s mirror image, another system: its `E` is `x`'s
+/// and its `L_z` is `x`'s negated.
 fn random_image(rng: &mut Rng, x: &Ic<f64>, span: f64, octaves: f64) -> Ic<f64> {
+    signed_image(rng, x, span, octaves).0
+}
+
+/// [`random_image`] and its parity, `−1` where mirrored, the factor its `L_z` carries against `x`'s.
+fn signed_image(rng: &mut Rng, x: &Ic<f64>, span: f64, octaves: f64) -> (Ic<f64>, f64) {
     let g = proper_image(rng, x, span, octaves);
     if rng.next() & 1 == 1 {
-        gauge(&g, [0.0; 2], [0.0; 2], 0.0, (1.0, 1.0), true)
+        (gauge(&g, [0.0; 2], [0.0; 2], 0.0, (1.0, 1.0), true), -1.0)
     } else {
-        g
+        (g, 1.0)
     }
 }
 
@@ -1397,20 +1460,18 @@ negative_control!(
     check_zero_band((2.0_f64.powi(-28) * 3.0).next_up())
 );
 
-/// A collinear state, unequal masses, moving along its line (`L_z = 0` in exact arithmetic, in every frame boosted
-/// along it), entered at 64 orientations, each with its own offset, boost along the line, scale and mass unit: one
-/// physical state, so one verdict (REQ-ENC-036). `β`'s clamp at the line moves `L_z` off 0 by about `ε_z` relative, a
-/// change of the sense of rotation, so that verdict is a layer-1 rejection naming `L_z`'s class.
+/// [`q1_start`]'s balanced state, `L_z = 0` in exact arithmetic (`a·q₁` cancelled by `b·q₂`) and a rounding of either
+/// sign as entered, with `q₁` past `q_max`, entered at 64 orientations, each with its own offset, boost, scale and
+/// mass unit: one physical state, so one verdict (REQ-ENC-036). `q₁`'s clamp moves `L_z` off 0 by `a·Δq`, a change of
+/// the sense of rotation, so that verdict is a layer-1 rejection naming `L_z`'s class. (A collinear state moving
+/// along its line, this check's first subject, clamps nothing under the periodic `β`, whose circle has no edge at
+/// the line, so it would lock at any band and tell the bands apart no longer.)
 fn check_one_verdict(band: f64) {
     let t = Tolerances {
         zero_class: band,
         ..tol()
     };
-    let x = Ic {
-        m: [0.5, 0.3, 0.2],
-        r: [[-0.9, 0.0], [0.4, 0.0], [1.7, 0.0]],
-        p: [[0.25, 0.0], [-0.6, 0.0], [0.35, 0.0]],
-    };
+    let x = q1_start(true);
     let mut verdicts = Vec::new();
     for k in 0..64 {
         let angle = std::f64::consts::TAU * f64::from(k) / 64.0;
@@ -1447,7 +1508,7 @@ fn check_one_verdict(band: f64) {
                 }
             })
         ),
-        "the collinear state's verdict is {first:?}, not a layer-1 rejection naming L_z's class"
+        "the L_z = 0 state's verdict is {first:?}, not a layer-1 rejection naming L_z's class"
     );
 }
 
@@ -1555,49 +1616,64 @@ fn check_rejected(what: &str, x: &Ic<f64>, want: u32) {
     }
 }
 
-const Z_BETA: u32 = 1 << 1;
 const Z_Q0: u32 = 1 << 2;
 const Z_Q1: u32 = 1 << 3;
 const Z_MASS: u32 = 0b1100_0000;
 
-/// A collinear start, every momentum along the line, so `L_z = 0`, with `p_λ = (t, 0)`: `β = 0` clamps, and its move
-/// `ΔL_z = −2b·sin(Δβ/2)·(p_λ·ê)` is nonzero as `p_λ` is, however small, so the clamp changes the sense of rotation
-/// and is rejected, in every gauge (§ "The class a clamp moves", REQ-ENC-038's verify: `t = 10⁻⁴, 10⁻⁶, 10⁻⁸`).
+/// A collinear start, every momentum along the line, so `L_z = 0`, with `p_λ = (t, 0)`: `β = 0`, on the line. The
+/// periodic `β` runs over the whole circle, which has no edge at the line, so nothing clamps there and nothing
+/// moves `L_z`: the start is represented as it is.
 fn collinear(t: f64) -> Ic<f64> {
     canonical_state([0.5, 0.3, 0.2], 0.8, 0.0, [0.4, 0.0, t, 0.0])
 }
 
-fn check_beta_rejected(ts: &[f64]) {
-    for &t in ts {
-        let x = collinear(t);
-        assert_eq!(lz(&x), 0.0, "fixture: L_z is not 0");
-        check_rejected(&format!("β's clamp at p_λ = {t:e}"), &x, Z_BETA);
+/// The collinear starts with `p_λ ≠ 0`, however small (REQ-ENC-038's `t = 10⁻⁴, 10⁻⁶, 10⁻⁸`): each encodes with no
+/// control clamped and locks in every gauge with no control moved, so its `L_z = 0` is kept. Under the bounded `β`
+/// link these were rejected: the line was that link's edge, and its clamp turned `λ` off the line and `L_z` off 0.
+fn check_beta_line_moving(starts: &[(String, Ic<f64>)]) {
+    for (what, x) in starts {
+        assert_eq!(
+            encode::<Defaults, f64>(x).report.clamped_controls,
+            0,
+            "{what}: a control clamps"
+        );
+        check_accepted(what, x, 0);
     }
 }
 
 #[test]
-fn lookup_validation_ladder_clamp_rule_qa_beta_rejected() {
-    check_beta_rejected(&[1e-4, 1e-6, 1e-8]);
+fn lookup_validation_ladder_clamp_rule_qa_beta_line_moving_stands() {
+    let starts: Vec<(String, Ic<f64>)> = [1e-4, 1e-6, 1e-8]
+        .into_iter()
+        .map(|t| {
+            let x = collinear(t);
+            assert_eq!(lz(&x), 0.0, "fixture: L_z is not 0");
+            (format!("β on the line at p_λ = {t:e}"), x)
+        })
+        .collect();
+    check_beta_line_moving(&starts);
 }
 
 negative_control!(
-    lookup_validation_ladder_clamp_rule_qa_beta_rejected,
-    "at p_λ = 0 β's move of L_z is 0, so the clamp stands and the check expecting a rejection must fail",
-    expected = "is not rejected naming L_z's class",
-    check_beta_rejected(&[0.0])
+    lookup_validation_ladder_clamp_rule_qa_beta_line_moving_stands,
+    "an L_z = 0 start with a control that does clamp, q₁ past q_max, is not represented as it is, so the check must \
+     fail",
+    expected = "a control clamps",
+    check_beta_line_moving(&[("q₁ past q_max".into(), q1_start(true))])
 );
 
-/// The same collinear start at `p_λ = 0`, `p_ρ` along the line, bound (`E < 0`) and unbound (`E > 0`): `β`'s clamp
-/// moves neither `L_z` (`p_λ·ê = 0`) nor `E`'s sign (`ΔE = ΔU`, of order `ε_z²`), so it stands in every gauge,
-/// boosted or not.
-fn check_beta_accepted(t: f64) {
-    for q0 in [0.05, 1.5] {
+/// The same collinear start at `p_λ = 0`, `p_ρ = (q₀, 0)` along the line, bound (`E < 0`, `q₀ = 0.05`) and unbound
+/// (`E > 0`, `q₀ = 1.5`): `β` on the line clamps nothing, so every image locks with no control moved, boosted or
+/// not.
+fn check_beta_accepted(q0s: [f64; 2]) {
+    let (t, want) = (0.0, 0);
+    for q0 in q0s {
         let x = canonical_state([0.5, 0.3, 0.2], 0.8, 0.0, [q0, 0.0, t, 0.0]);
         assert_eq!(lz(&x), 0.0, "fixture: L_z is not 0");
         check_accepted(
-            &format!("β's clamp at p_λ = {t:e}, E = {:.3}", energy(&x)),
+            &format!("β on the line at p_λ = {t:e}, E = {:.3}", energy(&x)),
             &x,
-            Z_BETA,
+            want,
         );
     }
 }
@@ -1619,14 +1695,15 @@ fn lookup_validation_ladder_clamp_rule_qa_beta_accepted() {
             )) > 0.0,
         "fixture: the two starts are not one bound and one unbound"
     );
-    check_beta_accepted(0.0);
+    check_beta_accepted([0.05, 1.5]);
 }
 
 negative_control!(
     lookup_validation_ladder_clamp_rule_qa_beta_accepted,
-    "at p_λ = 10⁻⁶ β's clamp moves L_z off 0, so it is rejected and the check expecting it to stand must fail",
-    expected = "is refused",
-    check_beta_accepted(1e-6)
+    "with p_ρ past q_max the same start locks with z_q0 clamped and moved, so the check that no control moves must \
+     fail",
+    expected = "moved controls are not 0b0",
+    check_beta_accepted([0.05, 3.0])
 );
 
 /// `L_z = 0` with `A = a·q₁ ≠ 0` cancelled by `B = −b·q₂` (`β = π/2`), `q₁ = 2.5` past `q_max`: `q₁`'s clamp moves
@@ -1802,11 +1879,11 @@ negative_control!(
 
 /// Each clamped control's move against the contract's closed form, evaluated here from the encoded parameters and the
 /// clamp's image `σ(z)` (§ "The class a clamp moves"; dd_decoder §3.2, §3.4), within the zero class's band of the
-/// move's own bound, with its direction: `β` at a collinear start, `ΔL_z = −2b·sin(Δβ/2)·(p_λ·ê)` and
-/// `ΔE = 2ab·(m₀m₁m₂/M₀₁)(cos β' − cos β)[1/(r₀₂r₀₂'(r₀₂ + r₀₂')) − 1/(r₁₂r₁₂'(r₁₂ + r₁₂'))]`; `q₁`, `ΔL_z = a·Δq`
+/// move's own bound, with its direction: `β` at a collinear start, where the periodic link clamps nothing, both
+/// moves exactly 0; `q₁`, `ΔL_z = a·Δq`
 /// and `ΔE = Δq(q₁ + q₁')/2μ_ρ < 0`; `q₀`, `ΔL_z` in class 0 and `ΔE = Δq(q₀ + q₀')/2μ_ρ < 0`; a rest start's
 /// masses, `ΔL_z` in class 0 and `E` after equal to `U` at the clamped masses, below 0. `sign` multiplies the
-/// expected `β` move.
+/// expected `q₁` move of `L_z`.
 fn check_closed_forms(sign: f64) {
     let k = ZERO_CLASS.number() * f64::EPSILON;
     let within = |got: f64, want: f64, bound: f64, what: &str| {
@@ -1826,35 +1903,15 @@ fn check_closed_forms(sign: f64) {
         (e, mv)
     };
     let mu_rho = |m: [f64; 3]| m[0] * m[1] / (m[0] + m[1]);
-    // β at a collinear start, p_λ = (0.3, 0).
+    // β at a collinear start, p_λ = (0.3, 0): on the line, inside the circle, so no control clamps and nothing moves.
     {
-        let (e, mv) = moved(&collinear(0.3), Z_BETA);
-        let m = e.canonical.ic.m;
-        let (a, b) = ab(m, e.blocks.alpha);
-        let (beta, beta_c) = (e.blocks.beta, std::f64::consts::PI * sigma(e.z.z[1]));
-        let pl = e.blocks.jacobi.p_lambda;
-        let (db, mean) = (beta_c - beta, 0.5 * (beta + beta_c));
-        let along = pl[0] * mean.cos() + pl[1] * mean.sin();
-        let dl = -2.0 * b * (0.5 * db).sin() * along;
-        within(mv.lz, sign * dl, mv.lz_scale, "β's ΔL_z");
-        assert_eq!(
-            mv.lz.signum(),
-            -db.signum() * along.signum(),
-            "β's ΔL_z has the wrong direction"
+        let (_, mv) = moved(&collinear(0.3), 0);
+        assert!(
+            mv.lz == 0.0 && mv.e == 0.0,
+            "an unclamped start's moves are ΔL_z = {:e}, ΔE = {:e}, not 0",
+            mv.lz,
+            mv.e
         );
-        let m01 = m[0] + m[1];
-        let (w0, w1) = (m[0] / m01, m[1] / m01);
-        let r = |w: f64, c: f64| (b * b + w * w * a * a + 2.0 * w * a * b * c).sqrt();
-        let (r02, r02c) = (r(w1, beta.cos()), r(w1, beta_c.cos()));
-        let (r12, r12c) = (r(-w0, beta.cos()), r(-w0, beta_c.cos()));
-        let dcos = -2.0 * mean.sin() * (0.5 * db).sin();
-        let de = 2.0
-            * a
-            * b
-            * (m[0] * m[1] * m[2] / m01)
-            * dcos
-            * (1.0 / (r02 * r02c * (r02 + r02c)) - 1.0 / (r12 * r12c * (r12 + r12c)));
-        within(mv.e, de, mv.e_scale, "β's ΔE");
     }
     // q₁ past q_max at L_z = 0.
     {
@@ -1863,7 +1920,7 @@ fn check_closed_forms(sign: f64) {
         let (a, _) = ab(m, e.blocks.alpha);
         let q = e.blocks.jacobi.p_rho[1];
         let qc = Q_MAX * (2.0 * sigma(e.z.z[3]) - 1.0);
-        within(mv.lz, a * (qc - q), mv.lz_scale, "q₁'s ΔL_z");
+        within(mv.lz, sign * a * (qc - q), mv.lz_scale, "q₁'s ΔL_z");
         assert!(mv.lz < 0.0, "q₁'s ΔL_z is not −sign(q₁)·a");
         within(
             mv.e,
@@ -1918,8 +1975,8 @@ fn lookup_validation_ladder_clamp_qa_closed_forms() {
 
 negative_control!(
     lookup_validation_ladder_clamp_qa_closed_forms,
-    "β's move with its sign flipped is not the contract's closed form, so the check must fail",
-    expected = "β's ΔL_z is",
+    "q₁'s move of L_z with its sign flipped is not the contract's closed form, so the check must fail",
+    expected = "q₁'s ΔL_z is",
     check_closed_forms(-1.0)
 );
 
@@ -1927,10 +1984,11 @@ negative_control!(
 
 /// `C`'s rounding of `L_z` and `E` against its bound, in units of `ε`, over gauge images of `n` fuzzed states (offset
 /// and boost on `[−8, 8)²`, any rotation, scale `2^[−12, 12]`, either parity): two images of one state are one
-/// physical state, so `|v₁ − v₂| ≤ ρ·ε·(S₁ + S₂)` where `ρ` bounds each one's rounding over its bound, and the worst
-/// `|v₁ − v₂|/(ε(S₁ + S₂))` is a measurement of `ρ`; and for `n` collinear states moving along their line, whose `L_z`
-/// is 0 exactly, `|L_z|/(ε·S_{L_z})` of one image. `canonical_only` reads the bounds at `R = P = 0`, the canonical
-/// state's alone.
+/// physical state up to the mirror, which `C` no longer undoes and which negates `L_z` and keeps `E`, so `L_z` is
+/// read with its image's parity; then `|v₁ − v₂| ≤ ρ·ε·(S₁ + S₂)` where `ρ` bounds each one's rounding over its
+/// bound, and the worst `|v₁ − v₂|/(ε(S₁ + S₂))` is a measurement of `ρ`; and for `n` collinear states moving along
+/// their line, whose `L_z` is 0 exactly, `|L_z|/(ε·S_{L_z})` of one image. `canonical_only` reads the bounds at `R =
+/// P = 0`, the canonical state's alone.
 fn measure_gauge(n: usize, canonical_only: bool) -> f64 {
     let eps = f64::EPSILON;
     let mut rng = Rng(0x2E80_0037);
@@ -1946,15 +2004,18 @@ fn measure_gauge(n: usize, canonical_only: bool) -> f64 {
     let mut worst = 0.0_f64;
     for _ in 0..n {
         let x = random_state(&mut rng);
-        let (g1, g2) = (
-            random_image(&mut rng, &x, 8.0, 12.0),
-            random_image(&mut rng, &x, 8.0, 12.0),
+        let ((g1, parity1), (g2, parity2)) = (
+            signed_image(&mut rng, &x, 8.0, 12.0),
+            signed_image(&mut rng, &x, 8.0, 12.0),
         );
         let (e1, e2) = (encode::<Defaults, f64>(&g1), encode::<Defaults, f64>(&g2));
         let (c1, c2) = (Classes::of(&e1.canonical.ic), Classes::of(&e2.canonical.ic));
         let (s1, s2) = (bounds(&g1, &e1), bounds(&g2, &e2));
         worst = worst
-            .max(ratio((c1.lz - c2.lz).abs(), s1.0 + s2.0))
+            .max(ratio(
+                (parity1 * c1.lz - parity2 * c2.lz).abs(),
+                s1.0 + s2.0,
+            ))
             .max(ratio((c1.e - c2.e).abs(), s1.1 + s2.1));
     }
     for _ in 0..n {
@@ -1992,7 +2053,8 @@ negative_control!(
 );
 
 /// A `z` past its clamp: controls on `[−1.5, 1.5]`, one or two of them pushed past the clamp (`|z| ∈ [16, 22]` for
-/// `α`, `β` and the momenta, `[8, 12]` for the masses), decoded.
+/// `α` and the momenta, `[8, 12]` for the masses), decoded. A push of `z_β` clamps nothing, `β` being periodic; a
+/// state with no other push is one [`measure_moves`] passes over.
 fn clamped_state(rng: &mut Rng) -> Ic<f64> {
     let mut z: [f64; 8] = std::array::from_fn(|_| rng.uniform(-1.5, 1.5));
     for _ in 0..1 + (rng.next() & 1) {
@@ -2010,11 +2072,11 @@ fn clamped_state(rng: &mut Rng) -> Ic<f64> {
 
 /// The moves' and the values after them, their rounding against their bounds, in units of `ε`, over two gauge images
 /// each of `n` clamped states (offset and boost on `[−4, 4)²`, scale `2^[−4, 4]`, parity kept), the pair taken where
-/// both images clamp the same controls under the same mirror decision, so that they are one canonical state and one
-/// clamp (at the `α` poles `λ̃_y` is rounding, and `C` may mirror one image and not the other): `|v₁ − v₂|/(ε(s₁ + s₂))` for
-/// `ΔL_z`, `ΔE`, and `L_z` and `E` after; and for moves 0 in exact arithmetic (`β` at a collinear start with
-/// `p_λ = 0`, `q₀`'s `ΔL_z`), `|Δ|/(ε·s)` of one image. `by_difference` replaces each move by the difference of the two
-/// rounded values, after (the decode of the clamped `z`) less before (`C(x)`), the form the contract forbids.
+/// both images clamp the same controls, so that they are one canonical state and one clamp: `|v₁ − v₂|/(ε(s₁ + s₂))`
+/// for `ΔL_z`, `ΔE`, and `L_z` and `E` after; and for moves 0 in exact arithmetic (a collinear start with `p_λ = 0`,
+/// where nothing clamps, and `q₀`'s `ΔL_z`), `|Δ|/(ε·s)` of one image. `by_difference` replaces each move by the
+/// difference of the two rounded values, after (the decode of the clamped `z`) less before (`C(x)`), the form the
+/// contract forbids.
 fn measure_moves(n: usize, by_difference: bool) -> (f64, usize) {
     let eps = f64::EPSILON;
     let mut rng = Rng(0x2E80_003A);
@@ -2027,7 +2089,7 @@ fn measure_moves(n: usize, by_difference: bool) -> (f64, usize) {
             mv.lz = a.lz - b.lz;
             mv.e = a.e - b.e;
         }
-        ((e.report.clamped_controls, e.canonical.mirrored), mv)
+        (e.report.clamped_controls, mv)
     };
     let mut worst = 0.0_f64;
     let mut pairs = 0;
@@ -2038,9 +2100,8 @@ fn measure_moves(n: usize, by_difference: bool) -> (f64, usize) {
             proper_image(&mut rng, &x, 4.0, 4.0),
         );
         let ((b1, m1), (b2, m2)) = (of(&g1), of(&g2));
-        // Near the α poles β is undefined, and `C`'s mirror decision and the clamped controls follow the gauge: the
-        // two canonical states are then mirror images, each clamped toward the same `β` edge, so not one clamp.
-        if b1 != b2 || b1.0 == 0 {
+        // Two images that clamp different controls (at a clamp's edge, the rounding's choice) are not one clamp.
+        if b1 != b2 || b1 == 0 {
             continue;
         }
         pairs += 1;

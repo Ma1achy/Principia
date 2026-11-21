@@ -232,16 +232,20 @@ negative_control!(
 );
 
 /// Checks a physical state: the lock is `E(x)`'s `z`, the same under a gauge and for the same system in another mass
-/// unit (`mᵢ·M`, `pᵢ·M^{3/2}`), with `lookup_mirrored`, `λ`, `M` and the landing on the latent chart's plane where it
-/// holds `x`.
+/// unit (`mᵢ·M`, `pᵢ·M^{3/2}`), with `λ`, `M` and the landing on the latent chart's plane where it holds `x`; a state
+/// below its `ρ` at `β ∈ (π, 2π)` and its mirror image above at `β ∈ (0, π)`, the signed encode (`C` has no mirror
+/// step, R-865).
 fn check_physical(masses: [f64; 3]) {
     let x = generic();
     let lock = exact(&latent_chart(), Exact::Physical(x)).expect("a physical state is refused");
     let enc = e(&x);
     assert_eq!(lock.z, enc.z.z, "the lock is not E(x)");
+    // `β`, not `z_β`: the lock's `z_β` is `β − π/2` under the offset link, so the angle is read off the encode.
+    let pi = std::f64::consts::PI;
+    let beta = enc.blocks.beta;
     assert!(
-        lock.notices.mirrored,
-        "the state below its ρ is not mirrored"
+        beta > pi && beta < 2.0 * pi,
+        "the state below its ρ encodes to β = {beta}, not in (π, 2π)"
     );
     assert_eq!(lock.notices.lambda, enc.report.lambda, "λ is not reported");
     assert_eq!(lock.notices.mass, 1.0, "M is not reported");
@@ -264,14 +268,23 @@ fn check_physical(masses: [f64; 3]) {
         "the masses {masses:?} are not read as proportions"
     );
     assert_eq!(lock2.notices.mass, total, "M is not reported");
-    // Upper: no mirror.
+    // Its mirror image, above: β ∈ (0, π).
     let up = Ic {
         r: x.r.map(|v| [v[0], -v[1]]),
         p: x.p.map(|v| [v[0], -v[1]]),
         ..x
     };
     let lock = exact(&latent_chart(), Exact::Physical(up)).expect("refused");
-    assert!(!lock.notices.mirrored, "the state above its ρ is mirrored");
+    let enc_up = e(&up);
+    assert_eq!(
+        lock.z, enc_up.z.z,
+        "the mirror image's lock is not its encode"
+    );
+    let beta_up = enc_up.blocks.beta;
+    assert!(
+        beta_up > 0.0 && beta_up < pi,
+        "the state above its ρ encodes to β = {beta_up}, not in (0, π)"
+    );
     // On a latent plane through x, it lands on the chart at the plane's centre.
     let plane = Latent {
         z0: enc.z.z,
@@ -599,10 +612,12 @@ negative_control!(
 // ── REQ-ENC-013: the ladder ────────────────────────────────────────────────────────────────────────────────────────
 
 /// The canonical state at the latent controls `z_cfg`, equal masses, with Jacobi momenta `p_ρ`, `p_λ`: `p₂ = p_λ`,
-/// `p₁ = p_ρ − (m₁/M₀₁)p_λ`, `p₀ = −p₁ − p₂`.
+/// `p₁ = p_ρ − (m₁/M₀₁)p_λ`, `p₀ = −p₁ − p₂`. `z_cfg`'s `z_β` is written for `sigmoid_beta` and converted once to
+/// `periodic_beta`'s (R-898), so each state is the one it was.
 fn jacobi_state(z_cfg: [f64; 2], p_rho: [f64; 2], p_lambda: [f64; 2]) -> Ic<f64> {
     let mut z = [0.0; 8];
     z[..2].copy_from_slice(&z_cfg);
+    z[1] = kernel::decode::retired::convert::<kernel::generated::links::SigmoidBeta, f64>(z[1]);
     let x = d(z);
     let w = x.m[1] / (x.m[0] + x.m[1]);
     let p1 = [p_rho[0] - w * p_lambda[0], p_rho[1] - w * p_lambda[1]];
@@ -1079,7 +1094,6 @@ fn check_changed(out: f64) {
         moved: Moved::default(),
         projected: None,
         clamped: None,
-        mirrored: false,
         lambda: 1.0,
         mass: 1.0,
         past_fold: false,
@@ -1130,14 +1144,10 @@ negative_control!(
     check_changed(tol().zero_class)
 );
 
-/// A collinear, equal-mass state moving along its line, `L_z = 0` in exact arithmetic, turned by `angle`.
-fn collinear(angle: f64) -> Ic<f64> {
-    let x = Ic {
-        m: [1.0 / 3.0; 3],
-        r: [[-1.0, 0.0], [0.2, 0.0], [1.3, 0.0]],
-        p: [[0.3, 0.0], [-0.5, 0.0], [0.2, 0.0]],
-    };
-    gauge(&x, angle, [0.0, 0.0])
+/// [`q_case`]'s pulled state, `L_z = 0` up to rounding and `z_q1` past its clamp, turned by `angle`. *Was:* a collinear,
+/// equal-mass state moving along its line, whose `β` clamped at the line, which `periodic_beta` does not (R-898).
+fn zero_case(angle: f64) -> Ic<f64> {
+    gauge(&d(q_case(true)), angle, [0.0, 0.0])
 }
 
 /// The 64 orientations `2πk/64`.
@@ -1145,9 +1155,9 @@ fn orientations() -> impl Iterator<Item = f64> {
     (0..64).map(|k| std::f64::consts::TAU * f64::from(k) / 64.0)
 }
 
-/// Checks the zero class's gauge invariance (§ "The zero class in floating point", REQ-ENC-036): the collinear state
-/// at each of 64 orientations gets one verdict at the zero-class band `band`, the contract's: its true `L_z` is class
-/// 0, and the clamp of `β` at the line moves it off 0, so each is rejected as a change of the sense of rotation.
+/// Checks the zero class's gauge invariance (§ "The zero class in floating point", REQ-ENC-036): [`zero_case`] at each
+/// of 64 orientations gets one verdict at the zero-class band `band`, the contract's: its true `L_z` is class 0, and the
+/// clamp of `z_q1` moves it off 0, so each is rejected as a change of the sense of rotation.
 fn check_orientations(band: f64) {
     let t = Tolerances {
         zero_class: band,
@@ -1155,7 +1165,7 @@ fn check_orientations(band: f64) {
     };
     let verdicts: Vec<Result> = orientations()
         .map(|a| {
-            lookup::<Defaults, _, _>(&latent_chart(), &Exact::Physical(collinear(a)), phys, &t)
+            lookup::<Defaults, _, _>(&latent_chart(), &Exact::Physical(zero_case(a)), phys, &t)
         })
         .collect();
     for (k, v) in verdicts.iter().enumerate() {
@@ -1164,7 +1174,7 @@ fn check_orientations(band: f64) {
             Some((
                 Layer::Hypercube,
                 Failed::Clamp {
-                    controls: 0b10,
+                    controls: 0b1000,
                     class: Class::Rotation
                 }
             )),
@@ -1217,7 +1227,12 @@ fn rounding(n: usize) -> Rounding {
             z[pick / 2] = if pick.is_multiple_of(2) { -20.0 } else { 20.0 };
         }
         let x = d(z);
-        let gx = Gauge::random(&mut rng, 8.0, 12.0).act(&x);
+        // No mirror: `Π·x` is another system, its `L_z` negated (R-865).
+        let gx = Gauge {
+            mirror: false,
+            ..Gauge::random(&mut rng, 8.0, 12.0)
+        }
+        .act(&x);
         let (ex, ey) = (e(&x), e(&gx));
         let (tx, ty) = (
             Extents::entered(&x, ex.canonical.lambda),
@@ -1311,7 +1326,8 @@ negative_control!(
 );
 
 /// A collinear state moving along its line, the outer body's momentum `t` against the inner pair's ±1, turned by
-/// `angle` and moved: `L_z = 0` exactly, and `β` at the line, so its clamp fires.
+/// `angle` and moved: `L_z = 0` exactly, and `β` at the line, where `periodic_beta` has no clamp (R-898; under
+/// `sigmoid_beta` its clamp fired).
 fn along(t: f64, angle: f64) -> Ic<f64> {
     let x = Ic {
         m: [1.0 / 3.0; 3],
@@ -1354,22 +1370,43 @@ fn q_case(pull: bool) -> [f64; 8] {
         let u = (q / 2.0 + 1.0) / 2.0;
         (u / (1.0 - u)).ln()
     };
+    // `z_β = 0`, `sigmoid_beta`'s 0 converted, `π/2 − π/2` under the offset link (R-898, R-1020).
+    let beta = kernel::decode::retired::convert::<kernel::generated::links::SigmoidBeta, f64>(0.0);
     if pull {
-        [1.0, 0.0, 0.0, 40.0, logit(2.0 * ratio), 0.0, 0.0, 0.0]
+        [1.0, beta, 0.0, 40.0, logit(2.0 * ratio), 0.0, 0.0, 0.0]
     } else {
-        [1.0, 0.0, 40.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        [1.0, beta, 40.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     }
 }
 
+/// [`q_case`]'s pulled state with `q₁` a relative `1e-10` past its clamp, `q_max·(1 − 2ε_q)`, and `q₂` cancelling it, so
+/// `L_z = 0` up to rounding: the clamp moves `L_z` by about `1e-10` of its scale, past the zero-class band (`16ε`,
+/// 3.6e-15) and inside `2²⁴ε` (3.7e-9), the band the `clamp_rule` control reads through.
+fn q_just_past() -> [f64; 8] {
+    let alpha = std::f64::consts::FRAC_PI_2 / (1.0 + (-1.0_f64).exp());
+    let (mu_rho, mu_lambda) = (1.0 / 6.0, 2.0 / 9.0);
+    let ratio = (alpha.cos() / mu_rho.sqrt()) / (alpha.sin() / mu_lambda.sqrt());
+    let logit = |q: f64| {
+        let u = (q / 2.0 + 1.0) / 2.0;
+        (u / (1.0 - u)).ln()
+    };
+    let beta = kernel::decode::retired::convert::<kernel::generated::links::SigmoidBeta, f64>(0.0);
+    let q1 = 2.0 * (1.0 - 2.0 * 1e-6) * (1.0 + 1e-10);
+    [1.0, beta, 0.0, logit(q1), logit(q1 * ratio), 0.0, 0.0, 0.0]
+}
+
 /// The clamp-rule table (§ "The class a clamp moves", REQ-ENC-038): each state, its clamped controls and the class
-/// its clamp changes in exact arithmetic.
+/// its clamp changes in exact arithmetic. The collinear states moving along their line clamp nothing: `β` at the line
+/// is 0 or `π`, inside `periodic_beta`'s circle, which has no clamp (R-898). *Was:* each clamped `β` (`0b10`), the class
+/// `Rotation` where `p_λ ≠ 0`. The last row's clamp moves `L_z` between the zero-class band and `2²⁴ε` of its scale
+/// ([`q_just_past`]), the move the `clamp_rule` control must not read as rounding.
 fn table() -> Vec<(&'static str, Ic<f64>, u32, Option<Class>)> {
     let mut rows = Vec::new();
     for angle in [0.0, 0.3, 2.0] {
         for t in [1e-4, 1e-6, 1e-8] {
-            rows.push(("β, p_λ ≠ 0", along(t, angle), 0b10, Some(Class::Rotation)));
+            rows.push(("β at the line, p_λ ≠ 0", along(t, angle), 0, None));
         }
-        rows.push(("β, p_λ = 0", along(0.0, angle), 0b10, None));
+        rows.push(("β at the line, p_λ = 0", along(0.0, angle), 0, None));
     }
     for small in [1e-6, 1e-9] {
         rows.push(("masses at rest", rest(small), 0b1100_0000, None));
@@ -1383,14 +1420,20 @@ fn table() -> Vec<(&'static str, Ic<f64>, u32, Option<Class>)> {
             None,
         ));
         rows.push((
-            "β, p_λ = 0, boosted",
+            "β at the line, p_λ = 0, boosted",
             boosted(&along(0.0, 0.0), u, 1e-3),
-            0b10,
+            0,
             None,
         ));
     }
     rows.push(("q₁ = p_ρy", d(q_case(true)), 0b1000, Some(Class::Rotation)));
     rows.push(("q₀ = p_ρx", d(q_case(false)), 0b100, None));
+    rows.push((
+        "q₁ just past its clamp",
+        d(q_just_past()),
+        0b1000,
+        Some(Class::Rotation),
+    ));
     rows
 }
 
@@ -1434,9 +1477,9 @@ fn lookup_validation_ladder_clamp_rule() {
 
 negative_control!(
     lookup_validation_ladder_clamp_rule,
-    "the decoded value read through a band wider than the rounding (round 3's 2^24 eps) takes β's moves of L_z for \
-     rounding",
-    expected = "β, p_λ ≠ 0",
+    "the decoded value read through a band wider than the rounding (round 3's 2^24 eps) takes a clamp's small move of \
+     L_z, q₁ a relative 1e-10 past its clamp, for rounding",
+    expected = "q₁ just past its clamp",
     check_clamp_rule(|x: &Ic<f64>, en: &Encoded<f64>| {
         let ext = Extents::entered(x, en.canonical.lambda);
         let (a, b) = (Classes::within(&en.canonical.ic, &ext), Classes::within(&d(en.z.z), &ext));
@@ -1459,7 +1502,7 @@ fn lookup_validation_ladder_clamp_rule_unmoved() {
 negative_control!(
     lookup_validation_ladder_clamp_rule_unmoved,
     "rejecting every clamp on a class-0 state rejects the clamps that leave L_z at 0",
-    expected = "p_λ = 0",
+    expected = "masses at rest",
     check_clamp_rule(|_: &Ic<f64>, en: &Encoded<f64>| {
         let c = Classes::of(&en.canonical.ic);
         (en.blocks.clamped != 0
@@ -1589,30 +1632,37 @@ negative_control!(
 // ── REQ-ENC-019: coincident bodies ─────────────────────────────────────────────────────────────────────────────────
 
 /// Entries whose controls clamp: latent `z` on `[−3, 3]⁸` with one control, or both mass controls, pushed to `±20`,
-/// each entered under a gauge element with an offset, a boost, a rotation and a scale.
+/// each entered under a gauge element with an offset, a boost, a rotation and a scale. `z_β`, drawn for `sigmoid_beta`,
+/// is converted once to `periodic_beta`'s (R-898), so each entry is the state it was; the entries that pushed `z_β`,
+/// which has no clamp (R-898), are drawn and dropped, the others' draws unchanged. *Was:* `z_β` as drawn, and its
+/// push among the controls.
 fn clamped_entries(n: usize) -> Vec<Ic<f64>> {
+    use kernel::decode::retired::convert;
+    use kernel::generated::links::SigmoidBeta;
     use validation::decode_f32_eps::SplitMix;
     use validation::gauge::{uniform, Gauge};
     let mut rng = SplitMix::new(38);
     (0..n)
-        .map(|k| {
+        .filter_map(|k| {
             let mut z: [f64; 8] = std::array::from_fn(|_| uniform(&mut rng, -3.0, 3.0));
             let push = if k % 2 == 0 { -20.0 } else { 20.0 };
-            match (k / 2) % 9 {
+            let c = (k / 2) % 9;
+            match c {
                 8 => {
                     z[6] = push;
                     z[7] = -push;
                 }
                 c => z[c] = push,
             }
-            Gauge {
+            z[1] = convert::<SigmoidBeta, f64>(z[1]);
+            let g = Gauge {
                 a: [uniform(&mut rng, -4.0, 4.0), uniform(&mut rng, -4.0, 4.0)],
                 u: [uniform(&mut rng, -2.0, 2.0), uniform(&mut rng, -2.0, 2.0)],
                 theta: uniform(&mut rng, 0.0, 6.0),
                 s: uniform(&mut rng, 0.5, 2.0),
                 mirror: false,
-            }
-            .act(&d(z))
+            };
+            (c != 1).then(|| g.act(&d(z)))
         })
         .collect()
 }
@@ -1659,9 +1709,10 @@ fn check_moves(sign: f64) {
             after.e
         );
     }
+    // Every control but `z_β`, which has no clamp (R-898). Was: all eight.
     assert_eq!(
         seen & 0b1111_1111,
-        0b1111_1111,
+        0b1111_1101,
         "every control clamps somewhere"
     );
 }
@@ -1678,12 +1729,12 @@ negative_control!(
     check_moves(-1.0)
 );
 
-/// The rounding bounds of the first 18 [`clamped_entries`], each control clamped at either end and the masses
-/// together: `ΔL_z`'s, `ΔE`'s, `L_z`'s after and `E`'s after ([`Moves`]), and `L_z`'s and `E`'s on the canonical state
+/// The rounding bounds of the first 16 [`clamped_entries`] (of 18 drawn; `z_β`'s two dropped, R-898), each control
+/// but `z_β` clamped at either end and the masses together: `ΔL_z`'s, `ΔE`'s, `L_z`'s after and `E`'s after ([`Moves`]), and `L_z`'s and `E`'s on the canonical state
 /// ([`Classes::within`]), the contract's first-order bounds (§ "The zero class in floating point", § "The class a
 /// clamp moves") as computed when TASK-M2-19 set `zero_class`, pinned so that a change to a bound is a change to the
 /// band's calibration (REQ-ENC-037).
-const BOUNDS: [[f64; 6]; 18] = [
+const BOUNDS: [[f64; 6]; 16] = [
     [
         45133.859988981676,
         22.14838392164068,
@@ -1699,22 +1750,6 @@ const BOUNDS: [[f64; 6]; 18] = [
         42907220080395.805,
         6858.1797058026805,
         1500023597524619.0,
-    ],
-    [
-        11.775488371263185,
-        0.5251475005146352,
-        226.27081322071083,
-        4996.939382737815,
-        129.58769598469473,
-        1507.0702794465408,
-    ],
-    [
-        156.0851124383438,
-        0.003985999381107991,
-        647.1088099432584,
-        22559.341490835683,
-        439.0643845103764,
-        6586.748906401859,
     ],
     [
         0.0,
@@ -1832,7 +1867,9 @@ const BOUNDS: [[f64; 6]; 18] = [
 
 /// Checks the bounds against [`BOUNDS`] to 1e-9 relative, the entries' extents read through `extents`.
 fn check_bounds(extents: impl Fn(&Ic<f64>, f64) -> Extents) {
-    for (k, (x, want)) in clamped_entries(18).iter().zip(BOUNDS).enumerate() {
+    let entries = clamped_entries(18);
+    assert_eq!(entries.len(), BOUNDS.len(), "the entries");
+    for (k, (x, want)) in entries.iter().zip(BOUNDS).enumerate() {
         let en = e(x);
         let ext = extents(x, en.canonical.lambda);
         let m = moves::<Defaults>(&en, &en.z.z, &ext);
@@ -1954,7 +1991,7 @@ fn verdict(x: &Ic<f64>) -> Option<Class> {
 
 /// Checks that each of [`poles`] gets its one verdict, read by `read`, over 64 gauge images, rotated, offset,
 /// scaled by `2^[−3, 3]`, boosted on odd images and mirrored on every other pair, among them images where `C` lands
-/// with `λ̃ = 0` exactly (`β` the defined 0, so clamped too) and images where it lands on rounding.
+/// with `λ̃ = 0` exactly (`β` the defined 0) and images where it lands on rounding.
 fn check_poles(read: impl Fn(&Ic<f64>) -> Option<Class>) {
     for (what, x, want) in poles() {
         let (mut exact, mut rounded) = (0, 0);
@@ -1969,7 +2006,11 @@ fn check_poles(read: impl Fn(&Ic<f64>) -> Option<Class>) {
             .act(&x);
             let en = e(&g);
             assert_eq!(en.blocks.clamped & 1, 1, "{what}, image {k}: α clamps");
-            if en.blocks.clamped & 0b10 != 0 {
+            // On `λ̃_y = 0`, `β` exactly 0 or `π̂` by its selects, R-437's defined 0 at `λ̃ = 0` among them. Was: `β`'s
+            // clamp bit, set there under `sigmoid_beta`; `periodic_beta` has no clamp (R-898).
+            // `β` itself, not `z_β`, which is `β − π/2` under the offset link.
+            let beta = en.blocks.beta;
+            if beta == 0.0 || beta == std::f64::consts::PI {
                 exact += 1;
             } else {
                 rounded += 1;
@@ -2170,23 +2211,31 @@ negative_control!(
     check_pole_moves(-1.0)
 );
 
-/// Checks R-13 for the pair `(i, j)` made to coincide in `generic()`: the lookup locks it, clamped, never refused.
-fn check_coincident(pairs: &[(usize, usize)]) {
-    for &(i, j) in pairs {
+/// `generic()` with the bodies `group` made to coincide, at body `group[0]`'s position, momenta scaled by `p`, in a
+/// gauge.
+fn coincident(group: &[usize], p: f64) -> Ic<f64> {
+    let mut x = generic();
+    for &j in &group[1..] {
+        x.r[j] = x.r[group[0]];
+    }
+    x.p = x.p.map(|v| [p * v[0], p * v[1]]);
+    gauge(&x, 1.1, [0.4, 2.0])
+}
+
+/// Checks R-13 as R-1019 reads it for the bodies `group` made to coincide: the coincident inner pair, `[0, 1]`, and all
+/// three, `[0, 1, 2]`: the lookup locks it, clamped, never refused, the inner pair's flag raised.
+fn check_coincident(groups: &[&[usize]]) {
+    for group in groups {
         for p in [0.0, 1.0, 3.0] {
-            let mut x = generic();
-            x.r[j] = x.r[i];
-            x.p = x.p.map(|v| [p * v[0], p * v[1]]);
-            let lock = exact(&latent_chart(), Exact::Physical(gauge(&x, 1.1, [0.4, 2.0])))
-                .unwrap_or_else(|r| panic!("bodies {i} and {j} coincident are refused: {r}"));
+            let lock = exact(&latent_chart(), Exact::Physical(coincident(group, p)))
+                .unwrap_or_else(|r| panic!("bodies {group:?} coincident are refused: {r}"));
             assert!(
                 lock.notices.lookup_clamped(),
-                "bodies {i} and {j} coincident are not clamped"
+                "bodies {group:?} coincident are not clamped"
             );
-            assert_eq!(
+            assert!(
                 lock.notices.moved.coincident,
-                (i, j) == (0, 1),
-                "the inner pair's flag"
+                "bodies {group:?}: the inner pair's flag"
             );
         }
     }
@@ -2194,14 +2243,52 @@ fn check_coincident(pairs: &[(usize, usize)]) {
 
 #[test]
 fn lookup_coincident_clamped() {
-    check_coincident(&[(0, 1), (0, 2), (1, 2)]);
+    check_coincident(&[&[0, 1], &[0, 1, 2]]);
 }
 
 negative_control!(
     lookup_coincident_clamped,
     "bodies apart are not clamped",
     expected = "are not clamped",
-    check_coincident(&[(0, 0)])
+    check_coincident(&[&[0]])
+);
+
+/// Checks R-1019's coincident outer pair, bodies `(i, j)` with `j = 2`: a representable `t = 0` collision state, the
+/// lookup locks it unrefused and unclamped, no coincidence flag raised, and the locked state's pair within `r_coll`
+/// (10⁻³ by default; integrator_contract Part 7), fenced by the collision detector, not by a flag (REQ-ENC-019).
+fn check_outer_coincident(pairs: &[(usize, usize)]) {
+    for &(i, j) in pairs {
+        for p in [0.0, 1.0, 3.0] {
+            let lock = exact(&latent_chart(), Exact::Physical(coincident(&[i, j], p)))
+                .unwrap_or_else(|r| panic!("bodies {i} and {j} coincident are refused: {r}"));
+            assert!(
+                !lock.notices.lookup_clamped(),
+                "bodies {i} and {j} coincident are clamped"
+            );
+            assert!(
+                !lock.notices.moved.coincident,
+                "bodies {i} and {j}: the inner pair's flag"
+            );
+            let y = d(lock.z);
+            let gap = (y.r[j][0] - y.r[i][0]).hypot(y.r[j][1] - y.r[i][1]);
+            assert!(
+                gap < 1e-3,
+                "the locked pair {i}, {j} is {gap} apart, not within r_coll"
+            );
+        }
+    }
+}
+
+#[test]
+fn lookup_coincident_outer_pair_unclamped() {
+    check_outer_coincident(&[(0, 2), (1, 2)]);
+}
+
+negative_control!(
+    lookup_coincident_outer_pair_unclamped,
+    "the inner pair coincident is clamped, not a representable state",
+    expected = "coincident are clamped",
+    check_outer_coincident(&[(0, 1)])
 );
 
 /// Checks bodies within `r_coll` (10⁻³ by default; integrator_contract Part 7): a pair `sep` apart at `I ≈ 1` locks,
@@ -2237,4 +2324,66 @@ negative_control!(
     "a pair 0.1 apart is not within r_coll",
     expected = "not within r_coll",
     check_within(0.1)
+);
+
+// ── latent_plane_lift (TASK-M2-57; dd_decoder § 3.2, "Stored reduced or unreduced"; physics review 5907871580 of PR
+// #533, P8) ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The oblique latent plane `z₀ + u·q₁ + v·q₂`, `z₀ = 0`, `q₁ = 4e_β + 4e_q0`, `q₂ = e_q1`.
+fn oblique_beta_plane() -> Latent<f64> {
+    let mut q1 = [0.0; 8];
+    q1[1] = 4.0;
+    q1[2] = 4.0;
+    Latent {
+        z0: [0.0; 8],
+        q1,
+        q2: unit(3),
+    }
+}
+
+/// The bounds written before the test ran (R-649): `|u − 1| ≤ 10⁻¹⁰` and `|v| ≤ 10⁻¹⁰`, against `E∘D`'s recovery at
+/// f64 of about `10⁻¹³` in the ball and the `q` link's `1/(σ(1 − σ)) ≈ 57` at `z_q0 = 4`.
+fn check_on_plane(u: f64, v: f64) {
+    assert!(
+        (u - 1.0).abs() <= 1e-10 && v.abs() <= 1e-10,
+        "the state at u = 1, v = 0 lands at u = {u}, v = {v}: |u − 1| or |v| above 10⁻¹⁰"
+    );
+}
+
+/// The state whose encode is the plane's point at `u = 1, v = 0`: `z_β = z_q0 = 4`, every other component 0.
+fn on_plane_state() -> Ic<f64> {
+    let mut z = [0.0; 8];
+    z[1] = 4.0;
+    z[2] = 4.0;
+    d(z)
+}
+
+#[test]
+fn latent_plane_lift() {
+    let lock = exact(&oblique_beta_plane(), Exact::Physical(on_plane_state())).expect("refused");
+    let Landing::Chart { u, v } = lock.landing else {
+        panic!("the state on the plane lands in latent z, not on the chart");
+    };
+    // The chart's `(u, v)` is `((a + 1)/2, (b + 1)/2)` of the plane's `z₀ + a·q₁ + b·q₂`.
+    check_on_plane(2.0 * u - 1.0, 2.0 * v - 1.0);
+}
+
+negative_control!(
+    latent_plane_lift,
+    "the lift nearest the centre, z_β = 4 − 2π, leaves the plane: its residual nonzero and its u = 1 − π/4",
+    expected = "|u − 1| or |v| above 10⁻¹⁰",
+    {
+        let plane = oblique_beta_plane();
+        let mut dz = e(&on_plane_state()).z.z;
+        dz[1] = kernel::encode::by_kind::nearest_lift(dz[1], 0.0);
+        assert!((dz[1] - (4.0 - std::f64::consts::TAU)).abs() < 1e-9, "the nearest lift is {}", dz[1]);
+        let (a, b) = kernel::encode::by_kind::plane(&dz, &plane.q1, &plane.q2).expect("independent");
+        let r: f64 = (0..8)
+            .map(|i| dz[i] - a * plane.q1[i] - b * plane.q2[i])
+            .map(|x| x * x)
+            .sum();
+        assert!(r > 1.0, "the nearest lift's residual is {r}, not off the plane");
+        assert!((a - (1.0 - std::f64::consts::FRAC_PI_4)).abs() < 1e-9, "its u is {a}");
+        check_on_plane(a, b);
+    }
 );

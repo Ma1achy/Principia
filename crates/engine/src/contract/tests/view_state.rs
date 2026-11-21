@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 
 use kernel::decode::{decode_at, Ic, Latent as KernelLatent};
 use kernel::generated::links::{
-    Defaults, Link, Select, Selection, SigmoidBeta, SigmoidQ, SoftmaxTanh, TanhAlpha,
+    Defaults, Link, PeriodicBeta, Select, Selection, SigmoidQ, SoftmaxTanh, TanhAlpha,
 };
 
 use crate::contract::sim_config::{
@@ -32,7 +32,7 @@ use crate::nav::tilt_vector;
 
 /// The non-default selection the view uses: `tanh_alpha` for `α`, the rest the defaults.
 type TanhAlphaLinks =
-    Select<SoftmaxTanh, TanhAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<SoftmaxTanh, TanhAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 /// The pixels sampled per side.
 const SIDE: usize = 17;
@@ -253,7 +253,12 @@ fn links_filled() {
         .collect();
     assert_eq!(
         ids,
-        ["softmax_tanh", "sigmoid_alpha", "sigmoid_beta", "sigmoid_q"],
+        [
+            "softmax_tanh",
+            "sigmoid_alpha",
+            "periodic_beta",
+            "sigmoid_q"
+        ],
         "the default links are not dd_decoder §3's"
     );
     assert_eq!(
@@ -282,7 +287,7 @@ validation::negative_control!(
 // ----- links_written_in_full (REQ-SYS-084) -----
 
 /// The default links' text, every block's id and every parameter.
-const FULL: &str = r#""links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"sigmoid_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}}"#;
+const FULL: &str = r#""links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"periodic_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}}"#;
 
 /// `text` writes the default links in full: every block's id and every parameter, as [`FULL`] has them.
 fn check_full(text: &str) {
@@ -333,11 +338,19 @@ fn links_written_in_full() {
         "no_such_link",
     );
     check_refused(
-        &edit(alpha, r#""id":"sigmoid_beta","params":{}"#),
+        &edit(alpha, r#""id":"periodic_beta","params":{}"#),
+        "periodic_beta",
+    );
+    // A retired `β` link, a conversion source only, no block's (R-919 Q1 (c)).
+    check_refused(
+        &edit(
+            r#""beta":{"id":"periodic_beta","params":{}}"#,
+            r#""beta":{"id":"sigmoid_beta","params":{}}"#,
+        ),
         "sigmoid_beta",
     );
     check_refused(
-        &edit(r#""beta":{"id":"sigmoid_beta","params":{}},"#, ""),
+        &edit(r#""beta":{"id":"periodic_beta","params":{}},"#, ""),
         "beta",
     );
 }
@@ -401,7 +414,7 @@ validation::negative_control!(
 type SplitMomenta = Select<
     SoftmaxTanh,
     TanhAlpha,
-    SigmoidBeta,
+    PeriodicBeta,
     kernel::generated::links::TanhQ,
     SigmoidQ,
     SigmoidQ,
@@ -412,7 +425,7 @@ type SplitMomenta = Select<
 type StickTanhQ = Select<
     kernel::generated::links::StickBreaking,
     TanhAlpha,
-    SigmoidBeta,
+    PeriodicBeta,
     kernel::generated::links::TanhQ,
     kernel::generated::links::TanhQ,
     kernel::generated::links::TanhQ,

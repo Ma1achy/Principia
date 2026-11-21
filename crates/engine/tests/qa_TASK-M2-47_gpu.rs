@@ -1,8 +1,8 @@
-//! QA tests for TASK-M2-47 on the GPU, written from the requirements and R-547: step 0's skip, its coincidence select,
-//! step 2's guard and step 3's mirror on CPU-f32 and GPU-f32, fed the same `Ic<f32>`. The CPU side's own checks are
-//! `kernel`'s `qa_TASK-M2-47`, whose constructions these states repeat.
-//! - REQ-DEC-002, REQ-ENC-006 (`canonicaliser_qa_m247_branches_agree`): `lookup_rescaled` (the skip), `lookup_clamped`
-//!   (the guard and the coincidence) and `lookup_mirrored` are the same on both, with no condition on any value
+//! QA tests for TASK-M2-47 on the GPU, written from the requirements and R-547: step 0's skip, its coincidence select
+//! and step 2's guard on CPU-f32 and GPU-f32, fed the same `Ic<f32>` (`C` has no mirror step, so no mirror branch).
+//! The CPU side's own checks are `kernel`'s `qa_TASK-M2-47`, whose constructions these states repeat.
+//! - REQ-DEC-002, REQ-ENC-006 (`canonicaliser_qa_m247_branches_agree`): `lookup_rescaled` (the skip) and
+//!   `lookup_clamped` (the guard and the coincidence) are the same on both, with no condition on any value
 //!   agreeing first (pitfalls §9), over: states whose `I_in` is exactly `1 ± τ_I`, inside it and just outside it; f32
 //!   states at coordinates near `1e-36` whose inner pair is a subnormal apart, and the same with the pair coincident;
 //!   three coincident bodies at the origin and off it; generic states scaled from `1e-37` to `1e37`; and canonical
@@ -237,7 +237,7 @@ fn families() -> Vec<(&'static str, Vec<Ic<f32>>)> {
     ]
 }
 
-/// The branches of each backend's `C` on `ics`: `(lookup_rescaled, lookup_clamped, lookup_mirrored)`, and where the
+/// The branches of each backend's `C` on `ics`: `(lookup_rescaled, lookup_clamped)`, and where the
 /// CPU skipped step 0, the GPU's `λ` 1 by its bits. `Err` counts the disagreements and names the first.
 fn branches(
     name: &str,
@@ -245,7 +245,7 @@ fn branches(
     cpu: &[Canonical<f32>],
     g: &[Canonical<f32>],
 ) -> Result<(), String> {
-    let flags = |c: &Canonical<f32>| (c.rescaled, c.clamped, c.mirrored);
+    let flags = |c: &Canonical<f32>| (c.rescaled, c.clamped);
     let bad: Vec<usize> = (0..ics.len())
         .filter(|&i| {
             flags(&cpu[i]) != flags(&g[i])
@@ -255,7 +255,7 @@ fn branches(
     match bad.first() {
         None => Ok(()),
         Some(&i) => Err(format!(
-            "{name}: CPU-f32 and GPU-f32 differ on {} of {} states; first, state {i}: (rescaled, clamped, mirrored) \
+            "{name}: CPU-f32 and GPU-f32 differ on {} of {} states; first, state {i}: (rescaled, clamped) \
              CPU {:?} GPU {:?}, GPU λ = {:e}; {:?}",
             bad.len(),
             ics.len(),
@@ -278,11 +278,10 @@ fn canonicaliser_qa_m247_branches_agree() {
         let cpu: Vec<Canonical<f32>> = ics.iter().map(canonicalise).collect();
         let count = |f: fn(&Canonical<f32>) -> bool| cpu.iter().filter(|c| f(c)).count();
         summary.push(format!(
-            "{name}: {} states ({} rescaled, {} clamped, {} mirrored)",
+            "{name}: {} states ({} rescaled, {} clamped)",
             ics.len(),
             count(|c| c.rescaled),
-            count(|c| c.clamped),
-            count(|c| c.mirrored)
+            count(|c| c.clamped)
         ));
         if let Err(e) = branches(name, &ics, &cpu, &g) {
             failures.push(e);
@@ -290,7 +289,7 @@ fn canonicaliser_qa_m247_branches_agree() {
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
     println!(
-        "canonicaliser_qa_m247_branches_agree on {}: the same skip, guard and mirror; {}",
+        "canonicaliser_qa_m247_branches_agree on {}: the same skip and guard; {}",
         h.adapter_info().name,
         summary.join("; ")
     );

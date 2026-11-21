@@ -25,7 +25,9 @@ use engine::contract::sim_config::Links;
 use kernel::decode::{decode, Ic, Latent};
 use kernel::encode::encode;
 use kernel::encode::ingest::ingest;
-use kernel::generated::links::{Defaults, Select, SigmoidAlpha, SigmoidBeta, StickBreaking, TanhQ};
+use kernel::generated::links::{
+    Defaults, PeriodicBeta, Select, SigmoidAlpha, StickBreaking, TanhQ,
+};
 use ledger::links::{registered, slots};
 use validation::link_variation::{diagnose, Row};
 use validation::negative_control;
@@ -115,8 +117,8 @@ fn link_variation_covers_the_registry() {
     check_covers(&rows);
     assert_eq!(
         rows.len(),
-        54,
-        "two mass links times three each for α, β and the momenta"
+        18,
+        "two mass links times three each for α and the momenta, and β's one (R-919 Q1 (c))"
     );
 }
 
@@ -298,7 +300,7 @@ negative_control!(
 );
 
 /// The selection off the default in the mass and the momenta that reaches the two-block IC.
-type Both = Select<StickBreaking, SigmoidAlpha, SigmoidBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
+type Both = Select<StickBreaking, SigmoidAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 
 /// An IC hard in two blocks: the edge masses, and a first momentum control at `tanh_q`'s `z = 7`, where
 /// `u = tanh 7 ≈ 1 − 1.7·10⁻⁶`, so `s = (1 + u)/2` lies past `sigmoid_q`'s clamp `1 − ε_q` and inside `tanh_q`'s

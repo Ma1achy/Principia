@@ -2,7 +2,7 @@
 
 /// The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger, computed at generation
 /// and never bumped by hand (R-36, R-63; `ledger::version`).
-pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x4af8884670544576;
+pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x77d6831e84273311;
 
 /// `SimStateFTLE` at the `Real` `R`: 160 B aligned to 8 at f32, 296 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).

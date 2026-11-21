@@ -712,14 +712,19 @@ fn check_collision<R: P>(norm: Norm<R>) {
 }
 
 /// A `z` at f64's collision pole: `α` saturated at the image of π/2, where the emitted `r₀` and `r₁` coincide
-/// (dd_decoder §3.6), found by a grid search over `β` and the masses.
-const POLE: [f64; 8] = [60.0, -8.0, 1.0, -0.5, 0.3, 0.7, 0.0, 0.5];
+/// (dd_decoder §3.6), found by a grid search over `β` and the masses; its `z_β`, −8 under `sigmoid_beta`, converted to
+/// the periodic link at f64 (R-898, R-1020: `L(−8) − π/2`, rounded once, the same `β` to rounding).
+fn pole() -> [f64; 8] {
+    let mut z = [60.0, -8.0, 1.0, -0.5, 0.3, 0.7, 0.0, 0.5];
+    z[1] = kernel::decode::retired::convert::<SigmoidBeta, f64>(z[1]);
+    z
+}
 
 #[test]
 fn energy_normalisation_collision_pole() {
     check_collision::<f64>(energy_norm::normalise::<f64>);
     check_collision::<f32>(energy_norm::normalise::<f32>);
-    let z = POLE;
+    let z = pole();
     let plain = decode::decode::<Defaults, f64>(&latent::<f64>(z)).descriptor;
     assert_eq!(
         (plain.r_min_pair_0, plain.V_0),

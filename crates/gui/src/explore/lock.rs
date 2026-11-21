@@ -27,7 +27,7 @@ pub const RETICLE_R: f32 = 14.0;
 /// The reticle's ticks' length beyond its circle, in points (a look choice, R-390).
 pub const RETICLE_TICK: f32 = 8.0;
 
-/// The anchor's value as the panel reads it: "z_locked (0.180, 0.410, …)".
+/// The anchor's value as the panel reads it: "z_locked (0.180, 0.318, …)".
 pub fn anchor_text(z: &Latent) -> String {
     let parts: Vec<String> = z.iter().map(|v| format!("{v:.3}")).collect();
     format!("z_locked ({})", parts.join(", "))

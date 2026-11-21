@@ -442,7 +442,7 @@ fn check_shared<R: Q>(f: MixedDecodeFn<R>) {
     let axes = alpha_prho::<f64>();
     let frozen: [R; 8] = at(FROZEN);
     let masses = mass::decode::<Defaults, R>([frozen[6], frozen[7]]);
-    let [beta] = SigmoidBeta::forward([frozen[1]]);
+    let [beta] = PeriodicBeta::forward([frozen[1]]);
     let q = [frozen[3], frozen[4], frozen[5]].map(|z| SigmoidQ::forward([z])[0]);
     for (u, v) in grid() {
         let d = f(&chart, R::of(u), R::of(v));
@@ -786,7 +786,7 @@ fn mixed_axis_latent_axes() {
         z
     };
     let q = SigmoidQ::inverse([x])[0];
-    assert_eq!(controls::<Beta>(x), place(1, SigmoidBeta::inverse([x])[0]));
+    assert_eq!(controls::<Beta>(x), place(1, PeriodicBeta::inverse([x])[0]));
     assert_eq!(controls::<PRhoX>(x), place(2, q));
     assert_eq!(controls::<PRhoY>(x), place(3, q));
     assert_eq!(controls::<PLambdaX>(x), place(4, q));
@@ -796,7 +796,8 @@ fn mixed_axis_latent_axes() {
         <Alpha as Quantity>::DOMAIN,
         [0.0, core::f64::consts::FRAC_PI_2]
     );
-    assert_eq!(<Beta as Quantity>::DOMAIN, [0.0, core::f64::consts::PI]);
+    // `β`'s domain is the circle's one period (R-898).
+    assert_eq!(<Beta as Quantity>::DOMAIN, [0.0, core::f64::consts::TAU]);
     for d in [
         <PRhoX as Quantity>::DOMAIN,
         <PRhoY as Quantity>::DOMAIN,

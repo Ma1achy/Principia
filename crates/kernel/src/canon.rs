@@ -1,7 +1,7 @@
 //! Canonicalisation `C`, the one seam to `(m, r, p)` (core_design §5; canonical_spec §3; dd_encode §3.2; inverse-encode
 //! contract Parts 1, 2 and 6; dd_decoder §3.3, §3.5; chart_reference §0.4, §0.5): the quotient of a physical state onto
-//! the decode's canonical section, CoM at the origin, total momentum zero, `ρ̃` on `+x`, `λ̃_y ≥ −δ_λ` and `I = 1`, one
-//! source for the f32 kernel and the f64 CPU path (R-265). Decode and encode both run it (seam 8).
+//! the decode's canonical section, CoM at the origin, total momentum zero, `ρ̃` on `+x` and `I = 1`, `λ̃` in either
+//! half-plane, one source for the f32 kernel and the f64 CPU path (R-265). Decode and encode both run it (seam 8).
 //!
 //! **The order is normative** (R-23; [`canonicalise`]): every step acts on the full state, every `rᵢ` and every `pᵢ`.
 //! ```text
@@ -13,25 +13,24 @@
 //! 1b BOOST   p ← p − mᵢ·P_tot                      P_tot = Σ pᵢ    (M = 1)
 //! 2  ROTATE  φ = atan2(ρ_y, ρ_x), ρ = r₁ − r₀;  R(−φ) on every rᵢ and pᵢ;  ρ = 0 → lookup_clamped (R-13), φ = +0
 //!            R(−φ)'s cos φ and sin φ formed as ρ/‖ρ‖, the same in exact arithmetic (rotation)
-//! 3  MIRROR  iff λ̃_y < −δ_λ (λ̃ = √μ_λ·λ):  y → −y on every rᵢ and pᵢ;  lookup_mirrored;
-//!            |λ̃_y| ≤ δ_λ → no mirror (R-82)
 //! ```
-//! CoM subtraction precedes the `I` computation because `I` is CoM-frame-defined. After step 3, `λ̃_y ≥ −δ_λ`, not
-//! `λ̃_y ≥ 0`: the deadband is left unmirrored, `−0` included (R-82, R-438).
+//! CoM subtraction precedes the `I` computation because `I` is CoM-frame-defined.
 //!
-//! **Step 3 not taken** (R-544; chart_reference §3, §0.4; chart_decoder_contract Part 2). `C` is one function, its
-//! steps written once, in one private function: [`canonicalise`] runs all five, as encode and every other caller do, and
-//! [`canonicalise_signed`] runs 1a, 0, 1b and 2 and not 3, so `λ̃_y` keeps its sign and the state its signed shape.
-//! The shape sphere chart's decode is its one caller: a lower-hemisphere pixel decodes to its own system, never to its
-//! mirror. Its `lookup_mirrored` is never raised, there being no mirror. [`reflect`] is the mirror itself, `Π`, the
-//! `y → −y` of every `rᵢ` and every `pᵢ`, which step 3 applies.
+//! **No mirror step** (R-865, R-898; TASK-M2-57; dd_encode §3.2, dd_decoder §3.3). `C` has four steps, and `λ̃_y` keeps
+//! its sign: a state below the `x`-axis stays there, and the encode reads its `β` in `(π, 2π)` (latent `β` is a periodic
+//! angle over the full circle). Which side that is, the encode does not read off the rotated floats: `C` decides it on
+//! its input and records it ([`Canonical::signs`]; "The signs of `λ̃`" below), and moves no coordinate for it. Every caller, the shape sphere chart's decode among them, runs the one [`canonicalise`],
+//! so there is one path with no special case. *Was:* a step 3, `MIRROR iff λ̃_y < −δ_λ: y → −y on every rᵢ and pᵢ;
+//! lookup_mirrored; |λ̃_y| ≤ δ_λ → no mirror (R-82)`, and a second entry without it for the shape sphere (R-544).
+//! [`reflect`] is the mirror itself, `Π`, the `y → −y` of every `rᵢ` and every `pᵢ`, which the encode is now
+//! equivariant under (T1, inverse-encode contract Part 1).
 //!
 //! **Precondition.** The masses are positive and `Σmᵢ = 1`, as the decode emits them: `R_com` and `P_tot` are the
 //! mass-weighted sums with `M = 1`. The one exception is `κ`'s mass columns (`encode::ingest`; inverse-encode contract
 //! Part 4, "The mass columns"), which differentiate these formulas off the simplex, `M` still taken as 1.
 //!
-//! **The notices.** [`Canonical`] carries `λ` and `lookup_rescaled` (step 0 ran), `lookup_clamped` and
-//! `lookup_mirrored`, each raised iff its operation did (seam 8; REQ-ENC-014).
+//! **The notices.** [`Canonical`] carries `λ` and `lookup_rescaled` (step 0 ran) and `lookup_clamped`, each raised iff
+//! its operation did (seam 8; REQ-ENC-014). [`Canonical::signs`] is no notice: nothing was discarded.
 //!
 //! **Step 0** ([`scale_step`]; R-547, closing RQ-295 and RQ-296; dd_encode §3.2; inverse-encode contract Parts 2
 //! and 6). Three cases, chosen by selects on its branch inputs (below), every one computed:
@@ -62,15 +61,16 @@
 //! the validation ladder's (TASK-M2-15).
 //!
 //! **The branch inputs** (R-547, correcting R-34 and the determinism note's rules 2 and 6; R-84). Five branches must
-//! agree across backends: step 0's skip, its coincidence select, step 2's guard `ρ = 0`, step 3's mirror decision, and
-//! where `ρ_x` or `ρ_y` is 0 in step 2's turn and angle. Each is built only from operations every IEEE backend rounds
+//! agree across backends: step 0's skip, its coincidence select, step 2's guard `ρ = 0`, where `ρ_x` or `ρ_y` is
+//! 0 in step 2's turn and angle, and the signs of `λ̃_x` and `λ̃_y` that choose the encode's case of `β`
+//! (dd_encode §3.2, "The signed encode of `β`"). Each is built only from operations every IEEE backend rounds
 //! alike, with no intermediate that can be subnormal. `√`, `/` and `atan2` carry ulp bounds in WGSL, not correct
 //! rounding; `fma` is not fused on every backend (CI's lavapipe evaluates it as a rounded product and an add, RQ-298),
 //! nor is `a·b + c` left uncontracted on every one; and a backend that flushes subnormal results (Metal) rounds a
 //! subnormal intermediate differently from one that keeps it (the CPU), fused or not. So none of them is built from
 //! those. Every quantity a branch reads is carried as a `Wide`, a mantissa in `[1, 2)` and an integer exponent, its
 //! operations ([`IeeeBits::product`]'s pattern):
-//! - **Into the form** (`wide`): an input coordinate, a mass, `δ_λ`, `τ_I` or 1 is scaled by `2^−k`, `k` its exponent
+//! - **Into the form** (`wide`): an input coordinate, a mass, `τ_I` or 1 is scaled by `2^−k`, `k` its exponent
 //!   field, as two normal powers of two, exactly, into `[1, 2)` (for a normal input; a subnormal one, which a flushing
 //!   GPU reads as 0 before `C` runs, is taken in exactly on a backend that keeps it).
 //! - **Products** (`wide_mul`): the mantissas' [`IeeeBits::product`], in `[1, 4)`: at f32 each operand split at its bits
@@ -104,24 +104,24 @@
 //!   are normal. In exact arithmetic `atan2` and `ρ/‖ρ‖` are unchanged by the positive factor; the cap moves the smaller
 //!   component, where it is more than `2^60` below the larger, by under `2^−59` of `‖ρ‖`, below an ulp of the turn.
 //!   The turn's and the angle's values are WGSL's `√`, `/` and `atan2`, read, not branched on.
-//! - **The mirror** ([`mirror_decision`]). `R(−φ)` puts `ρ̂ = ρ/‖ρ‖` on `+x` and keeps cross products, so a vector's `y`
-//!   after it is its cross product with `ρ̂`, `a × b = a_xb_y − a_yb_x`. In the scaled frame `λ = Λ/(M₀₁d)`, with
-//!   `Λ = M₀₁r₂ − m₀r₀ − m₁r₁ = m₀(r₂ − r₀) + m₁(r₂ − r₁)`; hence `λ̃_y = √(m₂M₀₁)·c/(‖ρ‖·M₀₁·d)`, `c = ρ × Λ`. The
-//!   factor of `c` is positive, so `λ̃_y < −δ_λ` iff `c < 0` and `c² > δ_λ²·‖ρ‖²·d²·M₀₁/m₂`, that is
-//!   `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`: `δ_λ` carried into the units of `c²`. At `ρ = 0` step 2 is the identity and
-//!   `λ̃_y = √(m₂M₀₁)·Λ_y/(M₀₁d)`, the same with `ρ` read as `(1, 0)`. `d² = I_in = Σ_{i<j} mᵢmⱼ‖rⱼ − rᵢ‖²` (with
-//!   `Σmᵢ = 1`), from the differences too, so the test reads no CoM. `c²` and `‖ρ‖²d²` are both of degree 4 in the
-//!   state's scale, and `‖ρ‖²` of degree 2 in the inner pair's own size, so a float form of the test overflows,
-//!   underflows or, on a GPU that flushes subnormals, drops terms, at large or small scales and on hierarchical states
-//!   (an inner pair `10⁻³` of the outer distance is enough at f32: `δ_λ² ≈ 2^−80` takes the products' low parts below
-//!   the smallest normal); every quantity is a `Wide`. The pair differences `ρ`, `d02` and `d12` are `Wide` differences
-//!   of the coordinates, not float subtractions, which are subnormal for normal coordinates closer than about
-//!   `1.2e-38` at f32 and which a flushing backend returns as 0.
+//! - **The signs of `λ̃`** ([`signs_input`], [`signs_of`]; [`Canonical::signs`]). The rotated `λ̃_y` of a collinear
+//!   state is a rounding residue: its sign turns on whether a backend fuses step 2's `fma`s and on whether it flushes
+//!   a subnormal, and the encode's two ends there, `β = 0` and `β = 2π̂`, are one point of the circle but two values.
+//!   So the signs are decided on `C`'s input, from the `Wide` pair differences `ρ`, `d02 = r₂ − r₀` and
+//!   `d12 = r₂ − r₁` and the `Wide` masses: `Λ = m₀·d02 + m₁·d12` (`= M₀₁·λ` in exact arithmetic, `M₀₁ > 0`),
+//!   `ρ × Λ = ρ_xΛ_y − ρ_yΛ_x`, whose sign is the rotated `λ̃_y`'s, and `ρ · Λ = ρ_xΛ_x + ρ_yΛ_y`, whose sign is
+//!   the rotated `λ̃_x`'s (`R(−φ)` takes `ρ` to `+x`, and the weights `√μ_λ`, `1/M₀₁` and `1/‖ρ‖` are positive), with
+//!   `ρ` read as `(1, 0)` at the guard, where step 2 is the identity. Each is `< 0`, `= 0` or `> 0` by a read of its
+//!   mantissa. The decision is the same on every backend, not exact: the `Wide` products and sums round, so a state
+//!   collinear only to its coordinates' rounding gets a cross product of either sign, the same one everywhere, and
+//!   a state whose `Wide` terms are exact gets its exact sign and its exact zero. `C` moves no coordinate for it (no
+//!   mirror): only `crate::encode::blocks::beta_at`'s selects read it, and they give `atan2` operands of the decided
+//!   signs. *Was (to TASK-M2-57's physics review):* the encode's `β` compared the rotated float `λ̃_x`, `λ̃_y`
+//!   ([`lambda_t_axis`]: an `fma`, a division and a `√`) with 0.
 //!
-//! `|λ̃_y| ≤ δ_λ`, `−δ_λ` itself included, is no mirror. [`Canonical::lambda_t_y`] is formed after the rotation and read,
-//! not branched on; within rounding of `−δ_λ` it may disagree with the flag. The cross-backend claim is for identical
-//! inputs only (PIT-10). A state with a subnormal coordinate is itself read differently by a flushing GPU, before `C`
-//! runs; on a backend that keeps subnormals, the CPU's, such a coordinate is taken into the `Wide` form exactly too.
+//! The cross-backend claim is for identical inputs only (PIT-10). A state with a subnormal coordinate is itself read
+//! differently by a flushing GPU, before `C` runs; on a backend that keeps subnormals, the CPU's, such a coordinate is
+//! taken into the `Wide` form exactly too.
 //!
 //! **The scale gauge** ([`scale_gauge`]; dd_decoder §3.5, chart_reference §0.5): `ℓ = √I`, `rᵢ ← rᵢ/ℓ`,
 //! `pᵢ ← √ℓ·pᵢ` ([`similarity`]), at every `I`: dd_decoder §3.5's map, a no-op, to rounding, on canonical output. Step
@@ -146,14 +146,16 @@ pub struct Canonical<R> {
     pub lambda: R,
     /// Step 2's rotation angle `φ`, the rotation applied being `R(−φ)`.
     pub phi: R,
-    /// `λ̃_y = √μ_λ·λ_y` after the rotation, before the mirror ([`lambda_t_y`]): recorded, not branched on.
+    /// `λ̃_y = √μ_λ·λ_y` after the rotation ([`lambda_t_y`]): recorded, not branched on. Its sign is a backend's own
+    /// rounding at a collinear state; the half the encode reads is [`Canonical::signs`].
     pub lambda_t_y: R,
     /// `lookup_rescaled`: step 0 ran, `|I_in − 1| > τ_I` with the bodies apart (R-547).
     pub rescaled: bool,
     /// `lookup_clamped`: `ρ = 0` exactly at step 2 (R-13), read before step 0's division.
     pub clamped: bool,
-    /// `lookup_mirrored`: step 3 mirrored the state, `λ̃_y < −δ_λ` (R-82), by [`mirror_decision`].
-    pub mirrored: bool,
+    /// The signs of the rotated `λ̃_x` and `λ̃_y`, decided on the input ([`signs_of`]; the module's note): the case the
+    /// encode's `β` takes. The state is not moved for it.
+    pub signs: LambdaSigns,
 }
 
 /// What steps 1a and 0 give ([`scale_step`]): 1a's CoM-frame positions, step 0's output and its record.
@@ -611,8 +613,8 @@ fn rotate<R: LinkReal>(v: [R; 2], c: R, s: R) -> [R; 2] {
 }
 
 /// `λ̃_y = √μ_λ·λ_y` of `r` under `m`, `μ_λ = m₂M₀₁`, `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`, `M₀₁` the one rounding of
-/// `m₀ + m₁` (`fma(m₁, 1, m₀)`, as the mass block forms it): step 3's quantity, read on `C`'s rotated output and
-/// recorded in [`Canonical::lambda_t_y`]. `C` does not branch on it ([`mirror_decision`] does the branching).
+/// `m₀ + m₁` (`fma(m₁, 1, m₀)`, as the mass block forms it), read on `C`'s rotated output and recorded in
+/// [`Canonical::lambda_t_y`]. `C` does not branch on it.
 #[inline]
 pub fn lambda_t_y<R: LinkReal>(m: [R; 3], r: [[R; 2]; 3]) -> R {
     lambda_t_axis(m, [r[0][1], r[1][1], r[2][1]])
@@ -621,36 +623,12 @@ pub fn lambda_t_y<R: LinkReal>(m: [R; 3], r: [[R; 2]; 3]) -> R {
 /// One component of `λ̃ = √μ_λ·λ` under `m`, from the three bodies' coordinates `x` on that axis:
 /// `√(m₂M₀₁)·(x₂ − fma(m₁, x₁, m₀x₀)/M₀₁)`, `M₀₁ = fma(m₁, 1, m₀)`. The one place this arithmetic is written:
 /// [`lambda_t_y`] reads it on `y`, and the encode's Jacobi map (`crate::encode::blocks::jacobi`) on both axes, so the
-/// mirror decision and `β` read the same bits.
+/// recorded `λ̃_y` and `β`'s operands are the same bits. A value: no case is chosen on its sign ([`signs_of`]).
 #[inline]
 pub fn lambda_t_axis<R: LinkReal>(m: [R; 3], x: [R; 3]) -> R {
     let m01 = Float::mul_add(m[1], R::one(), m[0]);
     let inner = Float::mul_add(m[1], x[1], m[0] * x[0]) / m01;
     Float::sqrt(m[2] * m01) * (x[2] - inner)
-}
-
-/// R-82's test as it reads, on a given `λ̃_y`: mirror iff `λ̃_y < −δ_λ`; `|λ̃_y| ≤ δ_λ` is no mirror. The reference
-/// [`mirror_decision`] equals in exact arithmetic.
-#[inline]
-pub fn mirror_taken<R: LinkReal>(lambda_t_y: R) -> bool {
-    lambda_t_y < -R::DELTA_LAMBDA
-}
-
-/// Step 3's branch input ([`mirror_decision`]): `c`, and the two sides of `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`.
-#[derive(Clone, Copy)]
-pub struct MirrorInput<R> {
-    /// `c = ρ × Λ`.
-    pub c: Wide<R>,
-    /// `m₂c²`.
-    pub left: Wide<R>,
-    /// `δ_λ²·M₀₁·‖ρ‖²·d²`.
-    pub right: Wide<R>,
-}
-
-/// Step 3's decision on its branch input: mirror iff `c < 0` and the left side is above the right.
-#[inline]
-pub fn mirror_side<R: LinkReal + IeeeBits>(input: &MirrorInput<R>) -> bool {
-    (input.c.m < R::zero()) & wide_greater(input.left, input.right)
 }
 
 /// A plane vector in `Wide`, `x` then `y`.
@@ -668,58 +646,109 @@ pub fn pair_differences<R: LinkReal + IeeeBits>(
     )
 }
 
-/// Step 3's branch input on the [`Wide`] masses and pair differences `ρ = r₁ − r₀`, `d02 = r₂ − r₀`, `d12 = r₂ − r₁`
-/// ([`mirror_decision`]).
+/// The signs of the rotated `λ̃ = (λ̃_x, λ̃_y)`, each below 0, 0 or above 0 (neither flag): the case of the encode's
+/// `β` (dd_encode §3.2, "The signed encode of `β`"; `crate::encode::blocks::beta_at`). [`signs_of`] decides them on
+/// `C`'s input (the module's note); [`LambdaSigns::of_floats`] reads them off a given `λ̃`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LambdaSigns {
+    /// `λ̃_y < 0`: the lower half, `β` in `(π, 2π]`.
+    pub y_negative: bool,
+    /// `λ̃_y = 0`: on the `x`-axis, `β` exactly 0 or `π̂`.
+    pub y_zero: bool,
+    /// `λ̃_x < 0`.
+    pub x_negative: bool,
+    /// `λ̃_x = 0`.
+    pub x_zero: bool,
+}
+
+impl LambdaSigns {
+    /// The signs of a given `λ̃`, each component compared with 0, which `+0` and `−0` pass alike: exact on the operands
+    /// as given, for a caller that holds `λ̃` and no state `C` saw.
+    #[inline]
+    pub fn of_floats<R: LinkReal>(lambda_t: [R; 2]) -> LambdaSigns {
+        let zero = R::zero();
+        LambdaSigns {
+            y_negative: lambda_t[1] < zero,
+            y_zero: lambda_t[1] == zero,
+            x_negative: lambda_t[0] < zero,
+            x_zero: lambda_t[0] == zero,
+        }
+    }
+
+    /// The signs as a word: bit 0 `λ̃_y < 0`, bit 1 `λ̃_y = 0`, bit 2 `λ̃_x < 0`, bit 3 `λ̃_x = 0`.
+    #[inline]
+    pub fn word(self) -> u32 {
+        select(self.y_negative, 1, 0)
+            | select(self.y_zero, 2, 0)
+            | select(self.x_negative, 4, 0)
+            | select(self.x_zero, 8, 0)
+    }
+
+    /// The signs [`LambdaSigns::word`] wrote in `word`'s low four bits.
+    #[inline]
+    pub fn of_word(word: u32) -> LambdaSigns {
+        LambdaSigns {
+            y_negative: word & 1 != 0,
+            y_zero: word & 2 != 0,
+            x_negative: word & 4 != 0,
+            x_zero: word & 8 != 0,
+        }
+    }
+}
+
+/// The branch input of `λ̃`'s signs ([`signs_of`]): `ρ × Λ` and `ρ · Λ`, `Λ = m₀·d02 + m₁·d12`.
+#[derive(Clone, Copy)]
+pub struct SignsInput<R> {
+    /// `ρ × Λ = ρ_xΛ_y − ρ_yΛ_x`: its sign is the rotated `λ̃_y`'s.
+    pub cross: Wide<R>,
+    /// `ρ · Λ = ρ_xΛ_x + ρ_yΛ_y`: its sign is the rotated `λ̃_x`'s.
+    pub dot: Wide<R>,
+}
+
+/// The branch input of `λ̃`'s signs on the [`Wide`] masses and pair differences `ρ = r₁ − r₀`, `d02 = r₂ − r₀`,
+/// `d12 = r₂ − r₁` (the module's note): `Λ = m₀·d02 + m₁·d12`, and `ρ × Λ` and `ρ · Λ` with `ρ` read as `(1, 0)` where
+/// it is 0, step 2's guard on the same `ρ`. Every float it rounds is a mantissa product in `[1, 4)` or an aligned sum
+/// of mantissas, 0 or normal, so no backend rounds it differently, whether it fuses, contracts or flushes subnormals.
 #[inline]
-pub fn mirror_input<R: LinkReal + IeeeBits>(
+pub fn signs_input<R: LinkReal + IeeeBits>(
     mass: [Wide<R>; 3],
     rho: [Wide<R>; 2],
     d02: [Wide<R>; 2],
     d12: [Wide<R>; 2],
-) -> MirrorInput<R> {
+) -> SignsInput<R> {
     let pole = is_pole(rho);
     let one = wide(R::one());
     let zero = wide(R::zero());
     let axis = [select(pole, one, rho[0]), select(pole, zero, rho[1])];
     let lam = |k: usize| wide_add(wide_mul(mass[0], d02[k]), wide_mul(mass[1], d12[k]));
-    let c = wide_add(
-        wide_mul(axis[0], lam(1)),
-        wide_neg(wide_mul(axis[1], lam(0))),
-    );
-    let d2 = wide_add(
-        wide_add(
-            wide_mul(wide_mul(mass[0], mass[1]), wide_norm2(rho)),
-            wide_mul(wide_mul(mass[0], mass[2]), wide_norm2(d02)),
+    SignsInput {
+        cross: wide_add(
+            wide_mul(axis[0], lam(1)),
+            wide_neg(wide_mul(axis[1], lam(0))),
         ),
-        wide_mul(wide_mul(mass[1], mass[2]), wide_norm2(d12)),
-    );
-    let m01 = wide_add(mass[0], mass[1]);
-    let delta = wide(R::DELTA_LAMBDA);
-    let left = wide_mul(wide_mul(c, c), mass[2]);
-    let right = wide_mul(
-        wide_mul(wide_mul(wide_mul(delta, delta), m01), wide_norm2(axis)),
-        d2,
-    );
-    MirrorInput { c, left, right }
+        dot: wide_add(wide_mul(axis[0], lam(0)), wide_mul(axis[1], lam(1))),
+    }
 }
 
-/// Step 3's decision (R-82), on the positions `r` in any frame, before step 0 (the module's note):
-/// 1. every coordinate and mass taken as a `Wide`, its exponent carried as an integer, and the pair differences
-///    `ρ = r₁ − r₀`, `d02 = r₂ − r₀`, `d12 = r₂ − r₁` formed as `Wide` differences;
-/// 2. `Λ = m₀d02 + m₁d12` (`= M₀₁r₂ − m₀r₀ − m₁r₁`), `c = ρ × Λ = ρ_xΛ_y − ρ_yΛ_x` with `ρ` read as `(1, 0)` where it is
-///    0 (step 2's guard, on the same `ρ`), `d² = Σ_{i<j} mᵢmⱼ‖dᵢⱼ‖²`, and mirror iff `c < 0` and
-///    `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`, compared by exponent, then mantissa.
-///
-/// Every float the decision rounds is a mantissa product in `[1, 4)` (an [`IeeeBits::product`], its partial products
-/// at least `2^−46`), an aligned sum of mantissas scaled by at most `2^−60`, 0 or at least `2^−83` (f32), or a
-/// power-of-two scaling into `[1, 2)`: none is subnormal and none overflows, for any state whose coordinates are 0 or
-/// normal, its pair differences whatever their size. So no backend rounds it differently, whether it fuses, contracts
-/// or flushes subnormals, and the same input takes the same branch everywhere.
+/// The signs of the rotated `λ̃` on their branch input: each of `ρ × Λ` and `ρ · Λ` below 0 or 0, read on its mantissa,
+/// which a `Wide` holds 0 only for zero.
 #[inline]
-pub fn mirror_decision<R: LinkReal + IeeeBits>(m: [R; 3], r: [[R; 2]; 3]) -> bool {
+pub fn signs_of<R: LinkReal + IeeeBits>(input: &SignsInput<R>) -> LambdaSigns {
+    LambdaSigns {
+        y_negative: input.cross.m < R::zero(),
+        y_zero: is_zero(input.cross),
+        x_negative: input.dot.m < R::zero(),
+        x_zero: is_zero(input.dot),
+    }
+}
+
+/// The signs of the rotated `λ̃` of the state `(m, r)`, in any frame and at any scale, as `C` decides them on its
+/// input ([`signs_input`], [`signs_of`]).
+#[inline]
+pub fn lambda_signs<R: LinkReal + IeeeBits>(m: [R; 3], r: [[R; 2]; 3]) -> LambdaSigns {
     let (mass, x) = wide_state(m, r);
     let (rho, d02, d12) = pair_differences(x);
-    mirror_side(&mirror_input(mass, rho, d02, d12))
+    signs_of(&signs_input(mass, rho, d02, d12))
 }
 
 /// `(v_x, −v_y)` where `flip` holds, else `v`, selected.
@@ -729,7 +758,7 @@ fn mirror<R: LinkReal>(v: [R; 2], flip: bool) -> [R; 2] {
 }
 
 /// `Π·ic` where `flip` holds, else `ic`: the mirror through the `x`-axis on the full state, `y → −y` on every `rᵢ` and
-/// every `pᵢ` (inverse-encode contract Part 1, "The classic bug"; step 3's), selected; the masses unchanged.
+/// every `pᵢ` (inverse-encode contract Part 1, "The classic bug"; T1's `Π`), selected; the masses unchanged.
 #[inline]
 pub fn reflect<R: LinkReal>(ic: &Ic<R>, flip: bool) -> Ic<R> {
     Ic {
@@ -747,31 +776,19 @@ pub fn reflect<R: LinkReal>(ic: &Ic<R>, flip: bool) -> Ic<R> {
     }
 }
 
-/// `C`: `ic` onto the canonical section, in R-23's order (the module's note). `ic.m` is positive with `Σmᵢ = 1`.
+/// `C`: `ic` onto the canonical section, in R-23's order (the module's note): 1a, 0, 1b and 2, so the state is at its
+/// CoM, at rest, at `I = 1` with `ρ̃` on `+x`, and `λ̃_y` keeps its sign; the signs of `λ̃` are decided on `ic` and
+/// recorded, the state not moved for them. `ic.m` is positive with `Σmᵢ = 1`.
 #[inline]
 pub fn canonicalise<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
-    canonical(ic, true)
-}
-
-/// `C` with its step 3, the mirror, not taken (R-544; the module's note): 1a, 0, 1b and 2, so the state is at its CoM,
-/// at rest, at `I = 1` with `ρ̃` on `+x`, and `λ̃_y` keeps its sign. `mirrored` is `false`. The shape sphere chart's
-/// decode; every other caller runs [`canonicalise`].
-#[inline]
-pub fn canonicalise_signed<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
-    canonical(ic, false)
-}
-
-/// `C`'s steps, written once: 1a, 0, 1b and 2, then step 3 where `mirror_step` holds and R-82's test mirrors.
-#[inline]
-fn canonical<R: LinkReal + IeeeBits>(ic: &Ic<R>, mirror_step: bool) -> Canonical<R> {
     let m = ic.m;
     let (mass, x) = wide_state(m, ic.r);
-    // The pair differences every branch reads (the module's note): step 2's guard and angle, step 3's decision and
-    // step 0's coincidence, all translation- and scale-free in exact arithmetic.
+    // The pair differences every branch reads (the module's note): step 2's guard and angle, step 0's coincidence and
+    // the signs of λ̃, all translation- and scale-free in exact arithmetic.
     let (rho, d02, d12) = pair_differences(x);
     let (turned, clamped) = scaled_rho(rho);
     let phi = angle_of(turned, clamped);
-    let mirrored = mirror_step & mirror_side(&mirror_input(mass, rho, d02, d12));
+    let signs = signs_of(&signs_input(mass, rho, d02, d12));
     // 1a and 0.
     let scaled = scale_wide(mass, x, ic.p, clamped & is_pole(d02));
     // 1b: zero total momentum.
@@ -788,22 +805,20 @@ fn canonical<R: LinkReal + IeeeBits>(ic: &Ic<R>, mirror_step: bool) -> Canonical
         unboost(p[1], m[1]),
         unboost(p[2], m[2]),
     ];
-    // 2: ρ onto +x, by ρ̂, `φ`'s cosine and sine.
+    // 2: ρ onto +x, by ρ̂, `φ`'s cosine and sine; λ̃_y recorded.
     let (c, s) = turn_of(turned, clamped);
     let r = scaled.r;
     let r = [rotate(r[0], c, s), rotate(r[1], c, s), rotate(r[2], c, s)];
     let p = [rotate(p[0], c, s), rotate(p[1], c, s), rotate(p[2], c, s)];
-    // 3: the mirror, in encode's frame, as decided above; λ̃_y recorded.
-    let lambda_t_y = lambda_t_y(m, r);
     Canonical {
-        ic: reflect(&Ic { m, r, p }, mirrored),
+        ic: Ic { m, r, p },
         i_in: scaled.i_in,
         lambda: scaled.lambda,
         phi,
-        lambda_t_y,
+        lambda_t_y: lambda_t_y(m, r),
         rescaled: scaled.rescaled,
         clamped,
-        mirrored,
+        signs,
     }
 }
 

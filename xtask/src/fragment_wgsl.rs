@@ -463,8 +463,8 @@ fn encode_glue(prefix: &str) -> String {
         "\n// C's canonical (m, r, p), the state the encode's z decodes to (inverse-encode Part 1, T3).\n\
          struct FragCanonical {\n    m: vec3<f32>,\n    r: array<vec2<f32>, 3>,\n    p: array<vec2<f32>, 3>,\n}\n\n\
          // One state's encode under the default links (kernel stage::encode's words): z, α, β, λ and the notices word\n\
-         // (bit 0 the coincident inner pair, bit 1 lookup_mirrored, bits 8 to 15 the clamped controls); and C's\n\
-         // canonical state.\n\
+         // (bit 0 the coincident inner pair, bit 1 lookup_mirrored, retired and never set since TASK-M2-57, bits 8\n\
+         // to 15 the clamped controls); and C's canonical state.\n\
          struct FragEncoded {\n    z: array<f32, 8>,\n    alpha: f32,\n    beta: f32,\n    lambda: f32,\n    notices: u32,\n    canonical: FragCanonical,\n}\n\n\
          // The fragment encode of the state (m, r, p).\n\
          fn frag_encode(m: vec3<f32>, r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -> FragEncoded {\n",

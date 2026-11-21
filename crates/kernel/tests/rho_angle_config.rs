@@ -1,9 +1,9 @@
 //! The descriptor's `rho_angle` read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors (R-628; dd_decoder
 //! §3.6; `kernel::decode::descriptor::config_angle`), on the CPU at f32 and f64:
 //! - `rho_angle_latent_is_beta`: on the latent chart's decode, whose `ρ̃ = cos α·(1, 0)` and `λ̃ = sin α·(cos β, sin β)`
-//!   (dd_decoder §3.2), `rho_angle` is the configuration block's `β` within a few ε of it, over random `z`, and is
-//!   `config_angle` of the decode's configuration bit for bit; `η_E` (`energy_norm::apply_shared`, and `apply` through
-//!   the free blocks) keeps it, bit for bit, since it moves only the momenta.
+//!   (dd_decoder §3.2), `rho_angle` is the configuration block's `β`, on the circle (R-898), within a few ε of it, over
+//!   random `z`, and is `config_angle` of the decode's configuration bit for bit; `η_E` (`energy_norm::apply_shared`,
+//!   and `apply` through the free blocks) keeps it, bit for bit, since it moves only the momenta.
 //! - `rho_angle_shape_pole`: on the shape sphere's exponential map at `(½, ½)`, where the point is `n₀`, at the exact
 //!   `λ̃ = 0` pole `n₀ = (+1, ±0, ±0)` `rho_angle` is 0's bits at f32 and f64, at the phases `φ_f = 0`, `0.3` and `2`;
 //!   near it, `n₀ = (+1, ε, 0)` and `(+1, 0, ε)` with `|ε|` from `10⁻¹²` to `10⁻⁴`, both signs, the f32 decode's
@@ -81,8 +81,11 @@ fn check_latent<R: Width>(rewrite: fn(Decoded<R>) -> Decoded<R>) {
             "rho_angle is not the configuration's at {at}"
         );
         let (g, b): (f64, f64) = (got.into(), beta.into());
+        // `β = z_β` is periodic, anywhere on the line (R-898): the two compared on the circle.
+        let tau = std::f64::consts::TAU;
+        let off = (g - b) - tau * ((g - b) / tau).round();
         assert!(
-            (g - b).abs() <= 16.0 * R::EPS * b.abs().max(1.0),
+            off.abs() <= 16.0 * R::EPS * b.abs().max(1.0),
             "rho_angle {g:e} is not β = {b:e} at {at}"
         );
         let e = R::of(Into::<f64>::into(d.descriptor.V_0) + 0.5);

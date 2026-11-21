@@ -211,10 +211,13 @@ fn compass_physical_views_draw_on_the_decoder_and_a_slice_edit_moves_them() {
         let before = push_of(&app);
         check_painted(&compass_shapes(&mut h, &mut app), &h, &before.grid, set);
         let latent = plucker(&app.snapshot().sim.plane);
-        // A slice edit: z₀ moves, the basis does not.
+        // A slice edit: z₀ moves, the basis does not. The plane's pair lies in z_α, z_β and z_q3, and the Jacobi grid
+        // reads J on it alone, so the move is along z_α as well: β = z_β + π/2 has slope 1 at every z_β, and a move
+        // along z_β, which turned this grid while β's link was a sigmoid, leaves its β column as it was.
         let mut z0 = p.z0;
         z0[6] += 0.9;
         z0[1] -= 0.7;
+        z0[0] += 0.9;
         app.set_field(z0_edit(z0));
         let _ = h.frame(&mut app, Vec::new());
         let _ = h.frame(&mut app, Vec::new());

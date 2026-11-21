@@ -71,13 +71,24 @@ fn check_bounds(beta_hi_f32: f32) {
     use std::f64::consts::{FRAC_PI_2, PI};
     let v = values(0.25);
     let half_pi_32 = f32::from_bits(0x3FC9_0FDA);
-    let want: [(Codomain, Ends, Ends); 6] = [
+    let want: [(Codomain, Ends, Ends); 7] = [
         (
             Codomain::Alpha,
             (0.25, FRAC_PI_2 - 0.25),
             (0.25, f64::from(half_pi_32 - 0.25)),
         ),
-        (Codomain::Beta, (0.0, PI), (0.0, f64::from(beta_hi_f32))),
+        // `β` on the circle, unbounded on the line (R-898); the retired links' `(0, π)` (R-919 Q1 (c)). Was: `Beta`'s
+        // `(0, π)`.
+        (
+            Codomain::Beta,
+            (f64::NEG_INFINITY, f64::INFINITY),
+            (f64::NEG_INFINITY, f64::INFINITY),
+        ),
+        (
+            Codomain::RetiredBeta,
+            (0.0, PI),
+            (0.0, f64::from(beta_hi_f32)),
+        ),
         (Codomain::Momentum, (-2.0, 2.0), (-2.0, 2.0)),
         (
             Codomain::HalfLine,
@@ -118,8 +129,8 @@ fn link_admissible_bounds() {
 
 negative_control!(
     link_admissible_bounds,
-    "β's f32 upper end is π rounded toward zero, not to nearest",
-    expected = "`beta`'s bounds at f32",
+    "the retired β links' f32 upper end is π rounded toward zero, not to nearest",
+    expected = "`retired_beta`'s bounds at f32",
     check_bounds(std::f32::consts::PI)
 );
 

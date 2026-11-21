@@ -122,14 +122,22 @@ negative_control!(
 
 // ── The clamp oracle ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The margins of the decode at `z` (Part 3's formulas, the defaults): `α` and `β` by `s = σ(z)`, so the margin is
-/// `min(s, 1 − s)/ε`; each `q` likewise; each mass by `(μ_max − |μₖ|)/(ε_μ·μ_max)`, `μₖ = 5·tanh(z_μk)`.
+/// The margins of the decode at `z` (Part 3's formulas, the defaults): `α` by `s = σ(z)`, so the margin is
+/// `min(s, 1 − s)/ε`; each `q` likewise; `β` none, ∞ (R-898; was by `σ(z_β)` like `α`); each mass by
+/// `(μ_max − |μₖ|)/(ε_μ·μ_max)`, `μₖ = 5·tanh(z_μk)`.
 fn check_margins(margin: fn(&Ic<f64>) -> [f64; 8]) {
     let z = [1.5, -2.0, 3.0, -4.0, 0.5, 0.0, 1.0, -0.5];
     let x = decode::decode::<Defaults, f64>(&Latent::new(z)).ic;
     let got = margin(&x);
     let sigma = |t: f64| 1.0 / (1.0 + (-t).exp());
-    for k in 0..6 {
+    // `β` has no clamp, `periodic_beta`'s inverse the offset on the circle (R-898, R-1020): its margin is ∞.
+    assert_eq!(
+        got[1],
+        f64::INFINITY,
+        "control 1: margin {} against ∞",
+        got[1]
+    );
+    for k in [0, 2, 3, 4, 5] {
         let s = sigma(z[k]);
         let want = s.min(1.0 - s) / 1e-6;
         assert!(

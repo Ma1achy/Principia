@@ -31,12 +31,22 @@ const ESCAPE: u32 = 0;
 const BOUNDED: u32 = 1;
 const COLLISION: u32 = 2;
 
-/// The fixed frame's histogram, `(state, detail, samples)`, stored from a run checked by hand (the PR has the run):
-/// 253 samples a triple ejection (`escape`, `detail` 3) and 3 a collision of pair 1 (bodies 1 and 3), no failure of
-/// any kind. The start chart's `z₀` gives every sample a positive total energy (0.27 to 0.37, measured), so all three
-/// bodies fly apart, and the escape rule fires on each between `t = 8.9` and `t = 31.6`, inside the horizon of 50.
-/// Before the escape detector those 253 ended `bounded`.
-const STORED: &[(u32, u32, usize)] = &[(ESCAPE, 3, 253), (COLLISION, 1, 3)];
+/// The fixed frame's histogram, `(state, detail, samples)`: 248 samples a triple ejection (`escape`, `detail` 3), 4
+/// an escape of one body (`detail` 1), 2 bounded at the horizon of 50 and 2 a collision of pair 1 (bodies 1 and 3), no
+/// failure of any kind.
+///
+/// The start chart, "z_α × z_β", runs along `z_β`, so under the periodic `β` link it is a redefined plane (the same
+/// axes and window number, the base point's `z_β` converted): its 16 × 16 samples sit at other `β` than before, 2.0 rad
+/// across in place of 1.40, about the same centre, and this is that plane's histogram, stored when the plane was
+/// redefined. The frame the old plane showed, 253 triple ejections and 3 collisions, is held in
+/// `crates/engine/tests/field.rs` (`the_start_view_before_the_periodic_link_ends_the_same`): each old sample,
+/// converted point by point, decodes bit for bit as before and ends the same, so no outcome moved.
+const STORED: &[(u32, u32, usize)] = &[
+    (ESCAPE, 1, 4),
+    (ESCAPE, 3, 248),
+    (BOUNDED, 0, 2),
+    (COLLISION, 1, 2),
+];
 
 /// Asserts that `field`'s histogram is the stored one.
 fn check_histogram(field: &Field) {

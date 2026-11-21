@@ -6,7 +6,7 @@
 //! entry, because `decode_cross_backend_registry` takes every one of those for a decode variant it must run.
 //!
 //! **No parity-only physics.** Each branch's input and decision is a function its production site calls too
-//! (`crate::canon`'s [`skip_input`](canon::skip_input) and [`mirror_input`](canon::mirror_input), `mass::m01_input`,
+//! (`crate::canon`'s [`skip_input`](canon::skip_input) and [`signs_input`](canon::signs_input), `mass::m01_input`,
 //! `invariant::feasibility_input` and `invariant::doubling_input`, decided by `invariant::construction_short` as
 //! `no_construction` decides them, the descriptor's poles; `invariant::alpha_sign` and `burrau::seed_input` are R-82's
 //! legacy option's, which no production decode takes since R-934, so their slots are never present). The CPU's
@@ -66,10 +66,10 @@ type SkipWords = ([WideWords; 2], OutcomeWord);
 type CoincidenceWords = [WideWords; 4];
 /// `ρ`, two `Wide`s.
 type GuardWords = [WideWords; 2];
-/// `c` and the two sides, three `Wide`s.
-type MirrorWords = [WideWords; 3];
 /// A scaled `ρ` component.
 type AxisWords = [u32; 1];
+/// `ρ × Λ` and `ρ · Λ`, two `Wide`s.
+type SignsWords = [WideWords; 2];
 /// `M01_TINY`'s operands: `m₀`, `m₁`.
 type M01Operands = [u32; 2];
 /// `M01_TINY`'s input: `M₀₁` and `ε`, each a `Wide`.
@@ -110,12 +110,13 @@ pub struct CanonRead {
     pub coincidence: CanonSlot<CoincidenceWords>,
     /// The guard `ρ = 0`'s slot; its outcome is `lookup_clamped`.
     pub guard: CanonSlot<GuardWords>,
-    /// The mirror's slot; its outcome is `lookup_mirrored`.
-    pub mirror: CanonSlot<MirrorWords>,
     /// `ρ_x`'s zero test's slot.
     pub rho_x: CanonSlot<AxisWords>,
     /// `ρ_y`'s zero test's slot.
     pub rho_y: CanonSlot<AxisWords>,
+    /// The slot of `λ̃`'s signs, the encode's case of `β`: its outcome is `LambdaSigns::word`, its input `ρ × Λ` and
+    /// `ρ · Λ`. Last, so the slots before it keep the places earlier records read them at.
+    pub signs: CanonSlot<SignsWords>,
 }
 
 /// A slot of a decode's words: whether the branch ran, its outcome, then its own operands and its input's bits.
@@ -198,16 +199,16 @@ pub const COINCIDENCE_BITS: usize = words::<CoincidenceWords>();
 pub const GUARD_AT: usize = word_of!(CanonRead, guard);
 /// The guard's input words.
 pub const GUARD_BITS: usize = words::<GuardWords>();
-/// [`CanonRead::mirror`].
-pub const MIRROR_AT: usize = word_of!(CanonRead, mirror);
-/// The mirror's input words.
-pub const MIRROR_BITS: usize = words::<MirrorWords>();
 /// [`CanonRead::rho_x`].
 pub const RHO_X_AT: usize = word_of!(CanonRead, rho_x);
 /// [`CanonRead::rho_y`].
 pub const RHO_Y_AT: usize = word_of!(CanonRead, rho_y);
 /// A scaled component's input words.
 pub const AXIS_BITS: usize = words::<AxisWords>();
+/// [`CanonRead::signs`].
+pub const SIGNS_AT: usize = word_of!(CanonRead, signs);
+/// The signs' input words.
+pub const SIGNS_BITS: usize = words::<SignsWords>();
 /// The words of one canon sample.
 pub const CANON_WORDS: usize = words::<CanonRead>();
 
@@ -304,16 +305,15 @@ pub fn write_canon(out: &mut [u32], at: usize, m: [f32; 3], r: [[f32; 2]; 3]) {
     out[at_guard] = word(clamped);
     put_wide(out, at_guard + 1, rho[0]);
     put_wide(out, at_guard + 3, rho[1]);
-    let input = canon::mirror_input(mass, rho, d02, d12);
-    let at_mirror = at + MIRROR_AT;
-    out[at_mirror] = word(canon::mirror_side(&input));
-    put_wide(out, at_mirror + 1, input.c);
-    put_wide(out, at_mirror + 3, input.left);
-    put_wide(out, at_mirror + 5, input.right);
     out[at + RHO_X_AT] = word(canon::axis_zero(turned[0]));
     out[at + RHO_X_AT + 1] = turned[0].to_bits();
     out[at + RHO_Y_AT] = word(canon::axis_zero(turned[1]));
     out[at + RHO_Y_AT + 1] = turned[1].to_bits();
+    let input = canon::signs_input(mass, rho, d02, d12);
+    let at_signs = at + SIGNS_AT;
+    out[at_signs] = canon::signs_of(&input).word();
+    put_wide(out, at_signs + 1, input.cross);
+    put_wide(out, at_signs + 3, input.dot);
 }
 
 /// Writes `M01_TINY`'s slot from word `at` of `out` on the emitted masses `m₀`, `m₁`.

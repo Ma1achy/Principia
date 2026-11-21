@@ -8,17 +8,17 @@
 use engine::contract::canonical;
 use engine::contract::sim_config::Links;
 use kernel::generated::links::{
-    Defaults, Link, Select, Selection, SigmoidBeta, SigmoidQ, SoftmaxTanh, SoftsignAlpha,
-    StickBreaking, TanhAlpha, TanhBeta, TanhQ,
+    Defaults, Link, PeriodicBeta, Select, Selection, SigmoidQ, SoftmaxTanh, SoftsignAlpha,
+    StickBreaking, TanhAlpha, TanhQ,
 };
 use validation::negative_control;
 
 /// The defaults with `α`'s link swapped for `tanh_alpha`.
 type AlphaSwapped =
-    Select<SoftmaxTanh, TanhAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<SoftmaxTanh, TanhAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
-/// Every block swapped.
-type AllSwapped = Select<StickBreaking, SoftsignAlpha, TanhBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
+/// Every block swapped but `β`, which takes one link (R-919 Q1 (c)).
+type AllSwapped = Select<StickBreaking, SoftsignAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 
 /// `S`'s links name, per block, its entries: mass, `α`, `β` and the momenta (the first momentum control's, which the
 /// four share).
@@ -63,7 +63,8 @@ fn check_swap<A: Selection, B: Selection>(blocks: &[&str]) {
 fn link_swap_changes_the_links() {
     check_swap::<Defaults, AlphaSwapped>(&["alpha"]);
     check_swap::<AlphaSwapped, Defaults>(&["alpha"]);
-    check_swap::<Defaults, AllSwapped>(&["mass", "alpha", "beta", "momenta"]);
+    // `β` takes one link, `periodic_beta` (R-919 Q1 (c)), so no swap changes it. Was: every block, `β` included.
+    check_swap::<Defaults, AllSwapped>(&["mass", "alpha", "momenta"]);
 }
 
 negative_control!(

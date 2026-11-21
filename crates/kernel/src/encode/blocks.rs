@@ -4,8 +4,8 @@
 //! ```text
 //! Mass      μₖ = log(mₖ/m₀),  z_μk = artanh(μₖ/μ_max), |μₖ| clamped to (1 − ε_μ)·μ_max      (the mass link's inverse)
 //! Config    ρ̃ = √μ_ρ·(r₁ − r₀),  λ̃ = √μ_λ·(r₂ − (m₀r₀ + m₁r₁)/M₀₁)                           (dd_decoder §3.2)
-//!           α = atan2(‖λ̃‖, ‖ρ̃‖),  β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π]  (R-438)
-//!           s_α = 2α/π, s_β = β/π, z = logit(s), s clamped to [ε_z, 1 − ε_z]                  (the α and β links' inverses)
+//!           α = atan2(‖λ̃‖, ‖ρ̃‖),  β = atan2(λ̃_y, λ̃_x) reduced to [0, 2π)  (R-865, R-898)
+//!           s_α = 2α/π, z_α = logit(s_α), s_α clamped to [ε_z, 1 − ε_z];  z_β = β − π/2    (the α and β links' inverses; R-1020)
 //! Momentum  p_λ = p₂,  p_ρ = p₁ + (m₁/M₀₁)·p₂;  s = ½(q/q_max + 1), z = logit(s), s clamped to [ε_q, 1 − ε_q]
 //! ```
 //!
@@ -15,22 +15,43 @@
 //! `momentum::to_particles`), `α` and `β` ([`alpha`], [`beta`]), and the clamp tests ([`clamps`], [`SimplexClamp`]).
 //! `M₀₁` is the mass block's one rounding, `fma(m₁, 1, m₀)` (`mass::from_masses`).
 //!
-//! **`β`** ([`beta`]; R-437, R-438; dd_encode §3.1). `β` reads `|λ̃_y|`, by `abs`, never `max` (`FMax` returns `−0` for
-//! `max(−0, +0)`): `C`'s deadband leaves `λ̃_y ∈ [−δ_λ, 0]` unmirrored (R-82), and `β ∈ [0, π]` holds because `β` reads
-//! `|λ̃_y|`. Each case is chosen by a comparison with a constant (0, or `π̂` for the third), selecting a value already
-//! computed:
-//! - `λ̃_y` compares equal to 0 (true for `±0`) and `λ̃_x < 0`, the `−x` half-axis: `π̂`, R-417's image of π
-//!   (`descriptor::pi_image`), since a GPU may ignore a zero's sign through `atan2` and give `−π` there;
-//! - `λ̃_x = 0` and `λ̃_y = 0`, the `α = 0` pole: 0, never `atan2(0, 0)`, which GLSL.std.450 leaves undefined;
-//! - `atan2(|λ̃_y|, λ̃_x)` above `π̂`: `π̂`. Near the `−x` half-axis the true `β` is just below π, and an f32 `atan2`
-//!   that rounds to nearest (glibc's `atan2f`; Apple's returns `π̂` there) gives f32's nearest π, above `π̂` (C8/Q5;
-//!   dd_encode §3.1);
-//! - elsewhere `atan2(|λ̃_y|, λ̃_x)`, a zero `λ̃_x` taken as `+0` by a select on it against 0: Metal's `atan2` at its
-//!   default math mode gives `atan2(y, −0)` the opposite sign of `π/2` to IEEE's (pitfalls §11). Where `λ̃_y ≠ 0`
-//!   IEEE's `atan2(|λ̃_y|, ±0)` is one value, and at the pole the pole's select discards it, so the CPU's `β` is
-//!   unchanged.
+//! **`β`** ([`beta_at`], [`beta`]; R-437, R-865, R-898; dd_encode §3.1, §3.2). `C` has no mirror step, so `λ̃_y` keeps
+//! its sign and `β` is the signed angle of `λ̃` from `+x`, reduced to one period, `[0, 2π̂]`: a state above the `x`-axis
+//! reads `β ∈ (0, π)`, one below it `β ∈ (π, 2π]`, `π̂` being R-417's image of π (`descriptor::pi_image`) and
+//! `τ̂ = 2π̂`, exact.
 //!
-//! The two zero-selected cases are disjoint (`λ̃_x < 0` against `λ̃_x = 0`). `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole on the
+//! **The case is not read off the floats.** A collinear state's rotated `λ̃_y` is a rounding residue whose sign turns
+//! on a backend's `fma` and on whether it flushes subnormals, and the two ends there, 0 and `τ̂`, are one point of the
+//! circle but two values. So [`encode_at`](super::encode_at) hands [`beta_at`] the signs `C` decided on its input
+//! (`crate::canon::signs_of`: the `Wide` `ρ × Λ` and `ρ · Λ`, the same on every backend), and each case is chosen by
+//! those, selecting a value already computed:
+//! - `λ̃_y` decided 0 and `λ̃_x` decided below 0, the `−x` half-axis: `π̂`, with no `atan2`;
+//! - `λ̃_y` decided 0 elsewhere, the `+x` half-axis and the `α = 0` pole: `+0`, never `atan2(0, 0)`;
+//! - `λ̃_y` decided below 0, the lower half: `τ̂ − a`, in `(π, 2π̂]` to rounding;
+//! - `λ̃_y` decided above 0: `a` where it is above 0, `π̂` where it is above `π̂` (near the `−x` half-axis an f32
+//!   `atan2` that rounds to nearest gives f32's nearest π, above `π̂`; C8/Q5, dd_encode §3.1), and `+0` where it is not
+//!   above 0.
+//!
+//! `a = atan2(|λ̃_y|, x′)` is the angle from `+x` on the decided side, in `[0, π]`: `x′` is `|λ̃_x|` with the decided
+//! sign, and `+0` where `λ̃_x` is decided 0 or the float is 0 (never `−0`: Metal's `atan2` at its default math mode
+//! gives `atan2(y, −0)` the opposite sign of `π/2` to IEEE's, pitfalls §11). So the operands agree with the decision
+//! whatever the residues' own signs: a state decided below reads `[π, 2π̂]` even where its float `λ̃_y` is `+tiny`
+//! or 0, one decided above reads `[0, π̂]`, and no result lies on the other side of its select. `atan2` is odd in its
+//! first operand, bit for bit (`crate::arctan` applies the sign last; the pinned libm's is odd), so off the seam
+//! `τ̂ − a` is `atan2(λ̃_y, λ̃_x) + τ̂`'s bits and `a` is `atan2(λ̃_y, λ̃_x)`'s.
+//!
+//! **A NaN `λ̃`** gives a NaN `β`, by a select on the operands' bits, so `z_β` is NaN and its clamp bit is set
+//! ([`clamps`] reads a NaN as outside): a state that is not a number is never encoded to a clean angle.
+//!
+//! [`beta`] is the same selects on a given `λ̃` alone, its signs the operands' own compared with 0
+//! (`LambdaSigns::of_floats`): exact on those operands, for a caller with no state `C` saw. [`invert_at`], given a
+//! state and no decision, decides on that state as `C` would (`crate::canon::lambda_signs`).
+//!
+//! *Was (to TASK-M2-57's physics review):* every case chosen by comparing the rotated float `λ̃_x`, `λ̃_y` with 0.
+//!
+//! *Was (R-438):* "`β = atan2(|λ̃_y|, λ̃_x)`
+//! ∈ [0, π]: `C`'s deadband leaves `λ̃_y ∈ [−δ_λ, 0]` unmirrored (R-82), and `β ∈ [0, π]` holds because `β` reads
+//! `|λ̃_y|`". `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole on the
 //! section, where `‖ρ̃‖² + ‖λ̃‖² = I = 1`; its operands are both 0 only where `C` could not reach `I = 1`, all three
 //! bodies coinciding, which keeps `C`'s select (divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0`; R-547).
 //!
@@ -63,7 +84,7 @@ use spirv_std::num_traits::Float;
 
 use crate::Real;
 
-use crate::canon::lambda_t_axis;
+use crate::canon::{lambda_signs, lambda_t_axis, LambdaSigns};
 use crate::decode::descriptor::pi_image;
 use crate::decode::mass::from_masses;
 use crate::decode::Ic;
@@ -105,7 +126,7 @@ pub struct Jacobi<R> {
 /// The Jacobi coordinates of `ic` (dd_decoder §3.2, §3.4; inverse-encode Part 3): `ρ = r₁ − r₀`,
 /// `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`, each weighted by its reduced mass's root, and `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p₂`, with
 /// no mass unweighting of the momenta (R-28). `Σpᵢ = 0` is consumed, not assumed: `p₀` is not read. `λ̃` is
-/// [`lambda_t_axis`] on each axis, the arithmetic `C`'s mirror decision reads.
+/// [`lambda_t_axis`] on each axis, the arithmetic `C`'s recorded `λ̃_y` reads.
 #[inline]
 pub fn jacobi<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Jacobi<R> {
     let [m0, m1, _] = ic.m;
@@ -133,20 +154,34 @@ pub fn alpha<R: LinkReal>(rho_t: [R; 2], lambda_t: [R; 2]) -> R {
     Real::arctan2(norm(lambda_t), norm(rho_t))
 }
 
-/// `β = atan2(|λ̃_y|, λ̃_x)` (R-438), with `π̂` on the `−x` half-axis and 0 at the `α = 0` pole, each selected by a
-/// comparison with 0 that `±0` pass alike (R-437), and `π̂` wherever `atan2` returns more, so `β ∈ [0, π̂]` (the
-/// module's note). `atan2` is [`crate::arctan`]'s (RQ-628), as [`alpha`]'s.
+/// `β` of `λ̃` at the decided `signs` of its components (the module's note): `π̂` on the `−x` half-axis and `+0` on the
+/// `+x` half-axis and at the `α = 0` pole, with no `atan2`; elsewhere `a = atan2(|λ̃_y|, x′)`, `x′` being `|λ̃_x|` with
+/// the decided sign, read as `τ̂ − a` below the axis and as `a`, held to `[+0, π̂]`, above it. A NaN operand gives NaN.
+/// `atan2` is [`crate::arctan`]'s (RQ-628), as [`alpha`]'s.
 #[inline]
-pub fn beta<R: LinkReal>(lambda_t: [R; 2]) -> R {
+pub fn beta_at<R: LinkReal + IeeeBits>(lambda_t: [R; 2], signs: LambdaSigns) -> R {
     let zero = R::zero();
     let pi = pi_image::<R>();
     let [x, y] = lambda_t;
-    let x0 = select(x == zero, zero, x);
-    let raw = Real::arctan2(Float::abs(y), x0);
-    let off_axis = select(raw > pi, pi, raw);
-    let half_axis = (y == zero) & (x < zero);
-    let pole = (x == zero) & (y == zero);
-    select(half_axis, pi, select(pole, zero, off_axis))
+    let (ax, ay) = (Float::abs(x), Float::abs(y));
+    let x_signed = select(signs.x_negative, -ax, ax);
+    let x_operand = select(signs.x_zero | (ax == zero), zero, x_signed);
+    let a = Real::arctan2(ay, x_operand);
+    let upper = select(a > zero, select(a > pi, pi, a), zero);
+    let lower = (pi + pi) - a;
+    let off_axis = select(signs.y_negative, lower, upper);
+    let on_axis = select(signs.x_negative, pi, zero);
+    let decided = select(signs.y_zero, on_axis, off_axis);
+    // A NaN operand is handed on itself, its bits selected, so no arithmetic has to carry it.
+    let nan = select(x.nan_bits(), x, y);
+    select(x.nan_bits() | y.nan_bits(), nan, decided)
+}
+
+/// `β` of a given `λ̃` alone: [`beta_at`] at the operands' own signs, each compared with 0, which `±0` pass alike
+/// (R-437). In `[0, 2π̂]`: `atan2(λ̃_y, λ̃_x)`, `+ τ̂` below the `x`-axis.
+#[inline]
+pub fn beta<R: LinkReal + IeeeBits>(lambda_t: [R; 2]) -> R {
+    beta_at(lambda_t, LambdaSigns::of_floats(lambda_t))
 }
 
 /// A codomain's two ends at `R`: values at or past its closed range's ends, which the inverse's clamp moves. Any such
@@ -171,11 +206,13 @@ impl Ends for Alpha {
     }
 }
 
-/// `β`'s `[0, π̂]`.
+/// `β`'s one period, `[0, τ̂]`, `τ̂ = 2π̂`: the circle has no clamp, and the periodic link, the offset onto it
+/// (R-1020), has no edge, so every `β` [`beta`] reads lies in the range and `z_β`'s clamp bit is never set (R-898; REQ-DEC-056).
 impl Ends for Beta {
     #[inline]
     fn ends<R: LinkReal>() -> (R, R) {
-        (R::zero(), pi_image::<R>())
+        let pi = pi_image::<R>();
+        (R::zero(), pi + pi)
     }
 }
 
@@ -320,7 +357,8 @@ where
 }
 
 /// [`invert`] at the tunable parameters `p`: each inverse and each clamp test at the active `μ_max` and `q_max`
-/// (R-481 A2, G4; REQ-DEC-048).
+/// (R-481 A2, G4; REQ-DEC-048). `β`'s case is decided on `ic` itself, as `C` decides it on its input
+/// (`crate::canon::lambda_signs`); [`invert_decided_at`] takes a decision already made.
 #[inline]
 pub fn invert_at<S, R>(ic: &Ic<R>, p: &LinkParams<R>) -> Inverted<R>
 where
@@ -328,9 +366,21 @@ where
     S::MassLink: SimplexClamp,
     R: LinkReal + IeeeBits,
 {
+    invert_decided_at::<S, R>(ic, lambda_signs(ic.m, ic.r), p)
+}
+
+/// [`invert_at`] with `β`'s case given: `signs` are the signs of `λ̃` that `C` decided on the state it canonicalised
+/// to `ic` (`crate::canon::Canonical::signs`), the same on every backend, where `ic`'s own rotated `λ̃` is not.
+#[inline]
+pub fn invert_decided_at<S, R>(ic: &Ic<R>, signs: LambdaSigns, p: &LinkParams<R>) -> Inverted<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + IeeeBits,
+{
     let j = jacobi(ic);
     let a = alpha(j.rho_t, j.lambda_t);
-    let b = beta(j.lambda_t);
+    let b = beta_at(j.lambda_t, signs);
     let [z_alpha] = <S::AlphaLink as Link<1, 1>>::inverse_at([a], p);
     let [z_beta] = <S::BetaLink as Link<1, 1>>::inverse_at([b], p);
     let q = [j.p_rho[0], j.p_rho[1], j.p_lambda[0], j.p_lambda[1]];

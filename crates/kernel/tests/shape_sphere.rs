@@ -14,12 +14,12 @@
 //!   hemispheres, the gate's measure in miniature (REQ-CHART-020, REQ-CHART-053).
 //! - `shape_sphere_roundtrip_near_poles`: the same within polar radii `10⁻²` to `10⁻¹⁵` of `n₀ = ±1`, where `n₀` rounds
 //!   to `±1` and the smaller of `a` and `b` must come from `n₁² + n₂²` (REQ-CHART-020).
-//! - `shape_sphere_canonical_form`: `Φ` then `C` with its step 3 not taken keeps every point's signed shape, a
+//! - `shape_sphere_canonical_form`: `Φ` then `C`, which has no mirror step (R-865), keeps every point's signed shape, a
 //!   lower-hemisphere point below the equator, with the held masses and momenta, and never mirrors (R-544, R-178;
 //!   REQ-CHART-020, REQ-CHART-048).
 //! - `shape_sphere_shared_decoder`: the chart's decode is the shared blocks, the configuration [`place`]'s, `C` with its
 //!   step 3 not taken after, and its `validate` is `Valid` everywhere (REQ-CHART-015's shape, R-544).
-//! - `shape_sphere_decode_canonical`: the decode's `ic` is `C(Φ)` with step 3 not taken, on `I = 1`, and its
+//! - `shape_sphere_decode_canonical`: the decode's `ic` is `C(Φ)` (C has no mirror step, R-865), on `I = 1`, and its
 //!   descriptor that state's, at `I ≠ 1` and on both hemispheres (dd_decoder §2, §3.6; REQ-CHART-015, R-544).
 //! - `shape_sphere_energy_norm`: `η_E`'s entry, `energy_norm::decode_chart`, decodes the shape sphere through its own
 //!   decode, the configuration `place`'s at `n(u, v)`, with and without a target `E*` (REQ-CHART-015).
@@ -40,7 +40,7 @@
 
 use std::path::Path;
 
-use kernel::canon::{self, canonicalise, canonicalise_signed};
+use kernel::canon::{self, canonicalise};
 use kernel::chart::shape_sphere::{
     exponential, held_momentum, inverse, place, spherical, Inverse, ShapeMap, ShapeSphere,
 };
@@ -53,8 +53,7 @@ use kernel::stage::decode::StickBreakingLinks;
 use kernel::Real;
 use proptest::prelude::*;
 use validation::decode_f32_eps::SplitMix;
-use validation::gauge::Gauge;
-use validation::roundtrip::{eps_phys, phys, registry, DecodeAt, Precision};
+use validation::roundtrip::{eps_phys, phys};
 use validation::{negative_control, prop, SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL};
 
 const PI: f64 = std::f64::consts::PI;
@@ -704,7 +703,7 @@ negative_control!(
     }
 );
 
-// ── Φ then C, its step 3 not taken ──────────────────────────────────────────────────────────────────────────────────────────────
+// ── Φ then C, with no mirror step ──────────────────────────────────────────────────────────────────────────────────────────────
 
 type Decode64 = fn(&ShapeSphere<f64>, f64, f64) -> Decoded<f64>;
 
@@ -749,7 +748,7 @@ fn phi(chart: &ShapeSphere<f64>, s: f64, t: f64) -> Ic<f64> {
 
 type Phi64 = fn(&ShapeSphere<f64>, f64, f64) -> Ic<f64>;
 
-/// `C(Φ(chart, s, t))` with step 3 not taken, `Φ` given by `phi`: its shape is `n(s, t)` with its sign on both
+/// `C(Φ(chart, s, t))` (C has no mirror step, R-865), `Φ` given by `phi`: its shape is `n(s, t)` with its sign on both
 /// hemispheres, a lower-hemisphere point at `n₂ < 0`, within `tol`; its masses are `m_fixed` exactly and its momenta
 /// `p_fixed` within `tol` relative; nothing is mirrored. Returns the worst.
 fn check_form(phi: Phi64, tol: f64) -> f64 {
@@ -762,11 +761,11 @@ fn check_form(phi: Phi64, tol: f64) -> f64 {
         let fixed_p = momentum::decode::<Defaults, f64>(chart.z_mom, &fixed_m).p;
         let (s, t) = (on(&mut rng, 0.0, 1.0), on(&mut rng, 0.02, 0.98));
         let n = chart.point(s, t);
-        let c = canonicalise_signed(&phi(&chart, s, t));
+        let c = canonicalise(&phi(&chart, s, t));
         let got = shape(c.ic.r, c.ic.m);
         assert!(
             dist(got, n) <= tol,
-            "C(Φ({s}, {t})) with step 3 not taken is at {got:?}, not n {n:?}"
+            "C(Φ({s}, {t})) (C has no mirror step, R-865) is at {got:?}, not n {n:?}"
         );
         assert_eq!(c.ic.m, fixed_m.m, "C(Φ)'s masses are not m_fixed");
         let dp = relative(c.ic.p, fixed_p);
@@ -775,7 +774,6 @@ fn check_form(phi: Phi64, tol: f64) -> f64 {
             "C(Φ({s}, {t}))'s momenta {:?} are not p_fixed {fixed_p:?}",
             c.ic.p
         );
-        assert!(!c.mirrored, "C with step 3 not taken mirrored at n {n:?}");
         lower += usize::from(n[2] < 0.0);
         worst = worst.max(dist(got, n)).max(dp);
     }
@@ -818,7 +816,7 @@ negative_control!(
 
 /// `decode` on random spherical and exponential charts, under both link sets: its masses are `D_mass`'s on `z₀`'s
 /// mass block, its configuration [`place`]'s at the chart's point, its momenta [`held_momentum`]'s, its `ic` `C` of
-/// their join with step 3 not taken (R-544) and its descriptor that `ic`'s, `Σpᵢ = 0` and the CoM at the origin within `16ε`; `map`'s controls are the held blocks; `validate` is `Valid`
+/// their join (C has no mirror step, R-865) (R-544) and its descriptor that `ic`'s, `Σpᵢ = 0` and the CoM at the origin within `16ε`; `map`'s controls are the held blocks; `validate` is `Valid`
 /// inside and past `[0,1]²`; the name is `ShapeSphere`.
 fn check_shared(decode: Decode64) {
     let mut rng = SplitMix::new(9);
@@ -851,8 +849,8 @@ fn check_shared(decode: Decode64) {
         };
         assert_eq!(
             d.ic,
-            canonicalise_signed(&joined).ic,
-            "the ic is not C of the joined blocks with step 3 not taken"
+            canonicalise(&joined).ic,
+            "the ic is not C of the joined blocks (C has no mirror step, R-865)"
         );
         assert_eq!(
             d.descriptor,
@@ -940,8 +938,8 @@ fn random_chart(rng: &mut SplitMix, exponential: bool) -> ShapeSphere<f64> {
     }
 }
 
-/// `decode` on random charts of both maps, `I` in `[¼, 4]`, both hemispheres drawn: its `ic` is `C(Φ)` with step 3
-/// not taken (R-544), at `I = 1` within `64ε`, and its descriptor is that state's, with `rho_mag` and `lambda_mag` in
+/// `decode` on random charts of both maps, `I` in `[¼, 4]`, both hemispheres drawn: its `ic` is `C(Φ)` (no mirror step,
+/// R-865; R-544's signed sphere), at `I = 1` within `64ε`, and its descriptor is that state's, with `rho_mag` and `lambda_mag` in
 /// `[0, 1]`.
 fn check_canonical(decode: Decode64) {
     let mut rng = SplitMix::new(0x0206);
@@ -956,10 +954,10 @@ fn check_canonical(decode: Decode64) {
             "the decode's ic at ({u}, {v}) is not on I = 1: I = {i} (chart I {})",
             chart.inertia
         );
-        let want = canonicalise_signed(&phi(&chart, u, v)).ic;
+        let want = canonicalise(&phi(&chart, u, v)).ic;
         assert_eq!(
             d.ic, want,
-            "the decode's ic is not C(Φ) with step 3 not taken at ({u}, {v})"
+            "the decode's ic is not C(Φ) (C has no mirror step, R-865) at ({u}, {v})"
         );
         assert_eq!(
             d.descriptor,
@@ -1112,7 +1110,7 @@ fn signed_pixel(rng: &mut SplitMix, k: usize) -> (f64, f64) {
 
 /// `decode` over random masses, held momenta, `I` and `φ_f`, at pixels of both hemispheres, the poles and the equator
 /// included (R-544; REQ-CHART-081): its shape is `n(θ, φ)` with its sign, within `shape_roundtrip_bound`; it is
-/// canonical in its CoM, scale, boost and rotation, `C` with its step 3 not taken leaving it unchanged within
+/// canonical in its CoM, scale, boost and rotation, `C`, which has no mirror step (R-865), leaving it unchanged within
 /// [`SIGNED_TOL`] and `I = 1`; and its held Jacobi momenta are `p_fixed` at `(θ, φ)` and at `(θ, π − φ)`, within
 /// [`SIGNED_TOL`] relative. Returns the worst shape distance.
 fn check_signed_decode(decode: DecodeIc) -> f64 {
@@ -1129,12 +1127,12 @@ fn check_signed_decode(decode: DecodeIc) -> f64 {
             "the decoded state at ({s}, {t}) is at {got:?}, not the signed n {n:?}"
         );
         worst = worst.max(dist(got, n));
-        let again = canonicalise_signed(&x);
+        let again = canonicalise(&x);
         let off = relative(again.ic.r, x.r).max(relative(again.ic.p, x.p));
         let i = canon::inertia(x.m, x.r);
         assert!(
             off <= SIGNED_TOL && (i - 1.0).abs() <= SIGNED_TOL,
-            "the decoded state at ({s}, {t}) is not canonical: C with step 3 not taken moves it by {off:e}, I − 1 = \
+            "the decoded state at ({s}, {t}) is not canonical: C moves it by {off:e}, I − 1 = \
              {:e}",
             i - 1.0
         );
@@ -1159,83 +1157,11 @@ fn check_signed_decode(decode: DecodeIc) -> f64 {
     worst
 }
 
-/// The bits of a state's masses, positions and momenta, widened to f64 exactly.
-type StateBits = ([u64; 3], [[u64; 2]; 3], [[u64; 2]; 3]);
-
-fn state_bits<R: Precision>(c: &Ic<R>) -> StateBits {
-    let b = |x: R| Into::<f64>::into(x).to_bits();
-    let v = |a: [R; 2]| [b(a[0]), b(a[1])];
-    (c.m.map(b), c.r.map(v), c.p.map(v))
-}
-
-/// `C` on the state `x` of the chart `key`: `canonicalise` is `C`'s steps with step 3 taken, bit for bit
-/// [`canonicalise_signed`] then `Π` where R-82's decision ([`canon::mirror_decision`]) mirrors, every other field equal.
-fn check_c_unchanged<R: Precision>(key: &str, x: &Ic<R>) {
-    let full = canonicalise(x);
-    let signed = canonicalise_signed(x);
-    let flip = canon::mirror_decision(x.m, x.r);
-    assert!(
-        state_bits(&full.ic) == state_bits(&canon::reflect(&signed.ic, flip))
-            && full.mirrored == flip
-            && !signed.mirrored
-            && (
-                full.i_in,
-                full.lambda,
-                full.phi,
-                full.lambda_t_y,
-                full.clamped
-            ) == (
-                signed.i_in,
-                signed.lambda,
-                signed.phi,
-                signed.lambda_t_y,
-                signed.clamped
-            ),
-        "{key}: C on its decoded state is not its steps with step 3 taken, bit for bit"
-    );
-}
-
-/// `C` on every other registered chart's decoded states, over a `9 × 9` grid at f64 and f32, each state with its
-/// mirror and, at f64, a turned, scaled, moved and boosted copy ([`check_c_unchanged`]). These charts' decodes run no
-/// `C`, so `C` with step 3 taken is the one piece of theirs this task's change reaches (R-544: "On every other chart
-/// `C` is unchanged"). Returns the charts checked.
-fn check_other_charts() -> usize {
-    let gauge = Gauge {
-        a: [0.3, -1.2],
-        u: [0.4, 0.2],
-        theta: 2.1,
-        s: 3.0,
-        mirror: false,
-    };
-    let mut checked = 0;
-    for chart in registry() {
-        if chart.type_name() == "ShapeSphere" {
-            continue;
-        }
-        for i in 0..9 {
-            for j in 0..9 {
-                let (u, v) = (f64::from(i) / 8.0, f64::from(j) / 8.0);
-                let x = <f64 as DecodeAt>::decode_at(chart.as_ref(), u, v).ic;
-                for y in [x, canon::reflect(&x, true), gauge.act(&x)] {
-                    check_c_unchanged(chart.key(), &y);
-                }
-                let x32 = <f32 as DecodeAt>::decode_at(chart.as_ref(), u, v).ic;
-                check_c_unchanged(chart.key(), &x32);
-                check_c_unchanged(chart.key(), &canon::reflect(&x32, true));
-            }
-        }
-        checked += 1;
-    }
-    checked
-}
-
 #[test]
 fn shape_sphere_signed_decode() {
     let worst = check_signed_decode(decode_ic);
-    let charts = check_other_charts();
     eprintln!(
-        "shape_sphere_signed_decode: worst ‖shape(decode) − n‖ {worst:.3e} over 2048 pixels of both hemispheres; C on \
-         {charts} other registered charts' decodes is its steps with step 3 taken, bit for bit"
+        "shape_sphere_signed_decode: worst ‖shape(decode) − n‖ {worst:.3e} over 2048 pixels of both hemispheres"
     );
 }
 
@@ -1244,12 +1170,15 @@ negative_control!(
     "R-141's gauge left in, C's mirror step run on Φ, lands every lower pixel at (θ, π − φ), so it must fail",
     expected = "not the signed n",
     {
-        check_signed_decode(|c, u, v| canonicalise(&phi(c, u, v)).ic);
+        check_signed_decode(|c, u, v| {
+            let out = canonicalise(&phi(c, u, v));
+            canon::reflect(&out.ic, out.lambda_t_y < -1e-12)
+        });
     }
 );
 
 /// `Φ` with `p_fixed` mirrored below the equator, R-141's held momentum, its `y`-controls negated where `n₂ < 0`, then
-/// `C` with step 3 not taken: a control's decode.
+/// `C` (C has no mirror step, R-865): a control's decode.
 #[cfg(feature = "controls")]
 fn mirrored_hold(chart: &ShapeSphere<f64>, u: f64, v: f64) -> Ic<f64> {
     let below = chart.point(u, v)[2] < 0.0;
@@ -1258,7 +1187,7 @@ fn mirrored_hold(chart: &ShapeSphere<f64>, u: f64, v: f64) -> Ic<f64> {
         z_mom: if below { [z[0], -z[1], z[2], -z[3]] } else { z },
         ..*chart
     };
-    canonicalise_signed(&phi(&held, u, v)).ic
+    canonicalise(&phi(&held, u, v)).ic
 }
 
 mod signed_decode_mirrored_hold {
@@ -1445,13 +1374,17 @@ fn shape_sphere_mirror_test() {
 
 negative_control!(
     shape_sphere_mirror_test,
-    "R-141's gauge left in folds each pair onto one shape, equal, not mirror images, so it must fail",
+    "R-141's gauge left in, C's retired mirror step, folds each pair onto one shape, equal, not mirror images, so it \
+     must fail",
     expected = "shapes are not mirror images",
     {
         let chart = mirror_chart(&mut SplitMix::new(1), X_ONLY);
         mirror_test(
             &chart,
-            |c, u, v| canonicalise(&phi(c, u, v)).ic,
+            |c, u, v| {
+                let out = canonicalise(&phi(c, u, v));
+                kernel::canon::reflect(&out.ic, out.lambda_t_y < -1e-12)
+            },
             full_mirror,
             DELTA,
             false,

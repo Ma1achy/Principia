@@ -1,7 +1,7 @@
 //! QA tests for TASK-M2-17, written from the requirements, not the implementation:
 //! - REQ-ENC-008: a state round-trips through each axis kind (kind 1 on an oblique latent plane, kind 2 on a mixed
 //!   chart, kind 3 on both invariant charts, its coordinates checked against `L_z`, `K` computed here from first
-//!   principles); a state off the chart lands in latent `z`, `E(x)`'s own.
+//!   principles), under gauges without the mirror; a state off the chart lands in latent `z`, `E(x)`'s own.
 //! - REQ-ENC-009: entering the `(L_z, E)` computed here from a clicked pixel's state gives the pixel's `z`, and the same
 //!   state in physical units.
 //! - REQ-ENC-010 / REQ-ENC-030: the feasibility test, fuzzed over the plane of `(L_z, K*)` with its edges and non-finite
@@ -90,14 +90,20 @@ fn land<C: ByKind<Param = f64>>(chart: &C, x: &Ic<f64>) -> (Landing<f64>, Option
     (e.landing, e.residual)
 }
 
-/// Decodes `from` at interior points, applies a random gauge, encodes into `into`: must land at the same point.
+/// Decodes `from` at interior points, applies a random gauge without the mirror, encodes into `into`: must land at the
+/// same point. The mirror is left out because the mirror image of a state is another system, which the encode no
+/// longer folds back onto the original: it is on the chart only where the chart's slice happens to hold it.
 fn round_trip<C: ByKind<Param = f64>>(from: &C, into: &C, seed: u64, name: &str) {
     let mut rng = SplitMix::new(seed);
     let mut worst = 0.0f64;
     for _ in 0..60 {
         let (u, v) = (uniform(&mut rng, 0.15, 0.85), uniform(&mut rng, 0.15, 0.85));
         let x = from.decode_at::<Defaults, f64>(u, v).ic;
-        let g = Gauge::random(&mut rng, 2.0, 1.5).act(&x);
+        let g = Gauge {
+            mirror: false,
+            ..Gauge::random(&mut rng, 2.0, 1.5)
+        }
+        .act(&x);
         let (landing, residual) = land(into, &g);
         match landing {
             Landing::Chart { u: lu, v: lv } => {
