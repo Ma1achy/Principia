@@ -36,7 +36,9 @@ use crate::compute::ComputeError;
 use crate::contract::sim_config::SimConfig;
 use crate::picking::{pick, Screen};
 use crate::precision::rk45::{self, Rk45Params, Rk45Run};
-use crate::precision::{decode_only, integrate_ic, march_key, state_of, MarchKey64, SimState64};
+use crate::precision::{
+    built_ic, decode_only, integrate_ic, march_key, state_of, MarchKey64, SimState64,
+};
 
 /// The Inspector: a chart, the sim key it is read under, and the reference's tolerances. One type for the IC Inspector
 /// and the trajectory viewer (the module's note).
@@ -213,6 +215,16 @@ impl<C> Inspector<C> {
     /// decoded one: parity_contract §1's `computeICState`, with the path and the reference.
     pub fn inspect_state<A: Advance>(&self, ic: &Ic<f64>) -> Result<Inspection, ComputeError> {
         self.run::<A>(ic, None)
+    }
+
+    /// A state the IC constructor built, `as_built`, inspected from `C(as_built)` ([`built_ic`]): the march
+    /// [`crate::precision::compute_built`] runs, its `SimState` bit for bit, with the path and the RK45 reference from
+    /// the same canonical state. [`Inspection::ic`] is the state integrated.
+    pub fn inspect_built<A: Advance>(
+        &self,
+        as_built: &Ic<f64>,
+    ) -> Result<Inspection, ComputeError> {
+        self.run::<A>(&built_ic(as_built), None)
     }
 
     /// The march of `ic`, tagged `degenerate` or not, with its path and the reference (the module's note).
