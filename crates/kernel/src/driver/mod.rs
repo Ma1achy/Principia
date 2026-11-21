@@ -10,8 +10,9 @@
 //! §1, §2). The FTLE tier's Benettin shadow, marched beside the sample through its own cadence ([`benettin`];
 //! TASK-M3-14). The live shape readout per macro-step, `θ̃` with its pole hold in `_reserved` ([`shape`]; R-397), and
 //! the closure registers with their departure gate ([`closure`]; R-37). The regularised state an occupant carries from
-//! one `ADVANCE` call to the next, in a buffer beside `SimState` ([`carried`]). Like the physics layer, it allocates
-//! nothing (Part 2c rule 5; `cargo xtask lint no-alloc`).
+//! one `ADVANCE` call to the next, in a buffer beside `SimState` ([`carried`]). The payload's producer, which joins
+//! the march, the word and the shadow into one call that writes every stored field ([`producer`]; seam 5). Like the
+//! physics layer, it allocates nothing (Part 2c rule 5; `cargo xtask lint no-alloc`).
 
 pub mod advance;
 pub mod benettin;
@@ -23,6 +24,7 @@ pub mod latch;
 pub mod monitor;
 #[cfg(not(target_arch = "spirv"))]
 pub mod nsub_table;
+pub mod producer;
 pub mod project;
 pub mod shape;
 pub mod substep;
