@@ -481,11 +481,12 @@ fn settled<R: ChazyReal>(ph: &Playhead<R>, cfg: &ChazyCfg<R>, prev: &Previous<R>
 /// The label at a playhead (§3.2, the rule in order, as R-548 and R-595 rule it). `prev` is the settling gate's
 /// previous snapshot, read only with settling on.
 ///
-/// 1. **Dispersal.** If `E ≥ 0`, every pair is farther than `h_far · R_0` (under the tidal gate: `E > 0`), the shape
-///    has settled and every pair recedes: with no pair bound by its band, H when no pair is in the band, HP when one or
+/// 1. **Dispersal.** If `E ≥ 0`, every pair is farther than `h_far · R_0` and the shape has settled (under the tidal
+///    gate, both replaced by `E > 0`), and every pair recedes: with no pair bound by its band, H when no pair is in the band, HP when one or
 ///    two are, P when all three are.
 /// 2. **Hierarchy.** For the body `b` most separated from its pair, the pair's binding is a sign (`K < U`, else its
-///    band); the gate is `ρ_b > h_far` (tidal: the tidal ratio below `δ`) and settled. Where it passes and `b` recedes:
+///    band); the gate is `ρ_b > h_far` and settled (under the tidal gate, both replaced by the tidal ratio below `δ`:
+///    settling is the hierarchy gate's alone, as prin-rs PR #32's `classify` has it). Where it passes and `b` recedes:
 ///    a bound pair reads HE, PE, or (outer bound) B-stable where step 4's test holds and excursion where not; an
 ///    unbound pair with `b` not bound reads H, the two-stage break-up, at `E ≥ 0`. Otherwise go on.
 /// 3. **Transient**, at `E > 0`.
@@ -502,12 +503,12 @@ pub fn classify<R: ChazyReal>(ph: &Playhead<R>, cfg: &ChazyCfg<R>, prev: &Previo
     let far_limit = cfg.h_far * ph.r_0;
     let far = match cfg.gate {
         Gate::Hierarchy => {
-            pairs[0].d > far_limit && pairs[1].d > far_limit && pairs[2].d > far_limit
+            pairs[0].d > far_limit && pairs[1].d > far_limit && pairs[2].d > far_limit && settled
         }
         Gate::Tidal => ph.e > zero,
     };
     let receding = pairs[0].v_r > zero && pairs[1].v_r > zero && pairs[2].v_r > zero;
-    if ph.e >= zero && far && settled && receding {
+    if ph.e >= zero && far && receding {
         let bands = [
             band(pairs[0].k, pairs[0].u, cfg.eps),
             band(pairs[1].k, pairs[1].u, cfg.eps),
@@ -537,9 +538,9 @@ pub fn classify<R: ChazyReal>(ph: &Playhead<R>, cfg: &ChazyCfg<R>, prev: &Previo
     };
     let outer_band = band(outer.k, outer.u, cfg.eps);
     let gate = match cfg.gate {
-        Gate::Hierarchy => hierarchy_ratio(ph, b) > cfg.h_far,
+        Gate::Hierarchy => hierarchy_ratio(ph, b) > cfg.h_far && settled,
         Gate::Tidal => tidal_ratio(ph, i, j, b) < cfg.delta,
-    } && settled;
+    };
     // Step 4's test, read in step 2 too: B-stable before excursion (R-548).
     let stable = ph.e < zero
         && cfg.mardling_aarseth

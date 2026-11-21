@@ -63,6 +63,8 @@ struct Switches {
     no_latch: bool,
     /// The parabolic band's half-width at zero.
     no_band: bool,
+    /// Settling read under the tidal gate too, which prin-rs PR #32's `classify` does not.
+    settle_tidal: bool,
 }
 
 /// The rule of §3.2, written out again from the drill-down with `sw`'s switches; with none set it is the rule
@@ -77,11 +79,12 @@ fn mutant(sw: Switches) -> impl Fn(&Playhead<f64>, &ChazyCfg<f64>, &Previous<f64
         };
         let guard = sw.no_e_guard || ph.e >= 0.0;
         let pairs = [pair_kup(ph, 0, 1), pair_kup(ph, 0, 2), pair_kup(ph, 1, 2)];
+        let tidal_settled = !sw.settle_tidal || settled;
         let far = match cfg.gate {
-            Gate::Hierarchy => pairs.iter().all(|p| p.d > cfg.h_far * ph.r_0),
-            Gate::Tidal => ph.e > 0.0,
+            Gate::Hierarchy => pairs.iter().all(|p| p.d > cfg.h_far * ph.r_0) && settled,
+            Gate::Tidal => ph.e > 0.0 && tidal_settled,
         };
-        let geometric = far && settled && pairs.iter().all(|p| p.v_r > 0.0);
+        let geometric = far && pairs.iter().all(|p| p.v_r > 0.0);
         if guard && geometric {
             let bands = pairs.map(|p| band(p.k, p.u, eps));
             if bands.iter().all(|&s| s != -1) {
@@ -101,11 +104,10 @@ fn mutant(sw: Switches) -> impl Fn(&Playhead<f64>, &ChazyCfg<f64>, &Previous<f64
             band(pair.k, pair.u, eps)
         };
         let outer_band = band(outer.k, outer.u, eps);
-        let gate = settled
-            && match cfg.gate {
-                Gate::Hierarchy => hierarchy_ratio(ph, b) > cfg.h_far,
-                Gate::Tidal => tidal_ratio(ph, i, j, b) < cfg.delta,
-            };
+        let gate = match cfg.gate {
+            Gate::Hierarchy => hierarchy_ratio(ph, b) > cfg.h_far && settled,
+            Gate::Tidal => tidal_ratio(ph, i, j, b) < cfg.delta && tidal_settled,
+        };
         let stable = ph.e < 0.0
             && cfg.mardling_aarseth
             && pair_sign == -1
@@ -456,6 +458,42 @@ negative_control!(
     "with settling off the moved shape commits",
     expected = "withheld when the shape moved",
     settling(&rule, false)
+);
+
+/// Settling is the hierarchy gate's alone (prin-rs PR #32's `classify`): under the tidal gate, with settling on and the
+/// shape moved, the tidally isolated escaper at d = 50 still reads HE.
+fn tidal_ignores_settling(c: Classifier) {
+    let s = binary_plus_escaper(1.0, 0.0, 50.0, 2.0);
+    let ph = at(&s);
+    let cfg = ChazyCfg {
+        gate: Gate::Tidal,
+        settling: true,
+        tau: 1e-3,
+        ..defaults()
+    };
+    let n = shape(ph.r, ph.m);
+    let got = c(&ph, &cfg, &Previous::at([n[0] + 0.1, n[1], n[2]]));
+    assert_eq!(
+        got,
+        Motion::He,
+        "the tidal gate with the shape moved reads {}",
+        got.name()
+    );
+}
+
+#[test]
+fn chazy_fixtures_the_tidal_gate_reads_no_settling() {
+    tidal_ignores_settling(&rule);
+}
+
+negative_control!(
+    chazy_fixtures_the_tidal_gate_reads_no_settling,
+    "a rule that reads settling under the tidal gate withholds the isolated escaper",
+    expected = "the tidal gate with the shape moved",
+    tidal_ignores_settling(&mutant(Switches {
+        settle_tidal: true,
+        ..Switches::default()
+    }))
 );
 
 // ── §12.2 items 10 and 11, and R-595's arm ──────────────────────────────────────────────────────────────────────
