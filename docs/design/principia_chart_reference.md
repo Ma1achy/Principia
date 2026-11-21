@@ -770,6 +770,28 @@ chart a 2-to-1 cover, `(θ, φ) ∼ (θ, π − φ)`, the canonical decode keepi
 or both with the redundancy flagged, through the hemisphere toggle in the Manifold view's Chart section, with one
 hemisphere drawn φ's span remapped to end at the equator; the spherical map's `system_image` n-to-1 with n = 2.
 
+**The frame's winding** (the signed field beside `L_z` above; `kernel::winding`). The net turn, in radians, of
+`ρ = r₁ − r₀`, the separation of bodies 0 and 1, in the inertial plane. It is not `θ̃` (dd_integrator §3.7), the shape
+sphere's unwrapped longitude, which the mirror leaves unchanged (`u` and `v` are mirror-invariant, only `w` turns).
+- **Start:** `W = +0` at the IC.
+- **Cadence:** every state the march leaves, each internal step's (what the wrapper's cadence sees after its
+  projection), from the IC, then one closing step to the state the `SimState` stores (the occupant hands that state
+  back, and it can differ from the last one the cadence saw by a rounding). The sum telescopes to the net turn of `ρ` whatever the
+  cadence, so long as no step turns `ρ` by `π` or more; the finest cadence the run has aliases least. It is read from a
+  run's states, not stored in the `SimState`.
+- **Per step**, from `ρ_prev` to `ρ`: `c = ρ_prev × ρ` and `d = ρ_prev · ρ`. Where `c ≠ 0`, the step adds
+  `atan2(c, d)`, in `[−π, π]` (±π only by rounding, for a tiny `c` against a negative `d`), with a zero `d` taken as `+0` (pitfalls §11). Where `c = 0`, of either sign, the step
+  adds `+0`. That covers three cases: `ρ` did not turn (`d > 0`); `ρ_prev` or `ρ` vanished, bodies 0 and 1 together
+  (`d = 0`); or the step turned `ρ` by exactly `±π` (`d < 0`). That last one is the tie, which has no sign of its own.
+- **At a collision or an escape** the march stops at its latched state, the one the `SimState` stores, and the
+  winding is that state's.
+- **Under the mirror `Π`** the run from `Π·x` winds `−W(x)`, bitwise where nonzero and `+0` in both where zero, with
+  no case excluded. `Π` negates `c` exactly where it is nonzero (a zero `c` is `+0` in both runs) and leaves `d`'s bits
+  unchanged; `atan2` is odd in its first operand; and a sum of negated terms is negated, an exact-zero sum `+0` in both.
+  A difference of principal-value angles is not odd. On the negative `x`-axis `ρ_y = +0` in both runs, so the angle
+  is `+π` in both, and the mirrored deltas differ from the negated ones in their last bits. A tie left at
+  `atan2(+0, d < 0) = +π`, the wrap that dd_integrator §3.7 closes at `+π`, winds `+π` in both runs.
+
 **The exponential map's `system_image` is computed from its cap (R-503, closing RQ-371; R-544).** The cap is the
 part of the sphere in view, `[0,1]²`'s pixels with `r ≤ π`; past `r = π` is a repeat, and past the square the formula
 continues to `r = π` (§5.4's table, R-932, R-938; *was:* "past `r = π` is the domain's end, and past the square the map

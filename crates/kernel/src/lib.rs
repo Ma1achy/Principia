@@ -20,6 +20,7 @@ pub mod regularisation;
 pub mod shape;
 pub mod stage;
 pub mod toolchain;
+pub mod winding;
 pub mod word;
 
 pub use real::Real;
