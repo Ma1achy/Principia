@@ -330,13 +330,15 @@ fn precision_code(structs: &[Struct], rows: &[Precision]) -> String {
     out
 }
 
-/// The accessor prefix of each packed word (payload §6): `pa_`, `pb_`, `tm_` and `cf_` (the collision floor's word,
-/// R-973), and `sd_` for the unsigned fields of `packed_a`, which are the `sample_descriptor`'s; `fgw_` for the word
+/// The accessor prefix of each packed word (payload §6): `pa_`, `pb_`, `tm_`, `bb_` and `dr_` (the budget word and the
+/// regularised drift's, R-603, R-605) and `cf_` (the collision floor's word, R-973), and `sd_` for the unsigned fields of `packed_a`, which are the `sample_descriptor`'s; `fgw_` for the word
 /// buffer's `.w` (payload §3), whose accessors are [`fgw`]'s.
-pub const PREFIXES: [(&str, &str); 5] = [
+pub const PREFIXES: [(&str, &str); 7] = [
     ("packed_a", "pa"),
     ("packed_b", "pb"),
     ("times", "tm"),
+    ("budget_bits", "bb"),
+    ("dE_reg", "dr"),
     ("coll_floor_bits", "cf"),
     ("fgw_w", "fgw"),
 ];
@@ -369,7 +371,7 @@ fn literal(entry: &Entry, value: f64) -> (&'static str, String) {
         FieldType::F16Pair if !value.is_finite() => {
             ("f32", format!("f32::from_bits({})", f32_bits(value)))
         }
-        FieldType::F16Pair => ("f32", format!("{value:?}")),
+        FieldType::F16Pair | FieldType::Log16 => ("f32", format!("{value:?}")),
         _ => ("u32", format!("{}", value as u64)),
     }
 }
@@ -426,6 +428,11 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
                     "f32",
                     format!("f16_bits_to_f32(extract(w, {offset}, {width}) as u16)"),
                     "u32::from(f32_to_f16_bits(clamp_f16(v)))".to_owned(),
+                ),
+                (FieldType::Log16, _) => (
+                    "f32",
+                    format!("log16_to_f32(extract(w, {offset}, {width}) as u16)"),
+                    "u32::from(f32_to_log16(v))".to_owned(),
                 ),
                 (_, 1) => (
                     "bool",
@@ -507,6 +514,8 @@ pub fn accessors(words: &[Word], entries: &[Entry]) -> String {
             } else {
                 let clamp = if e.ty == FieldType::F16Pair {
                     ", clamped to ±65504 first (payload §1)"
+                } else if e.ty == FieldType::Log16 {
+                    ", in the `log16` form ([`f32_to_log16`]; payload §2)"
                 } else {
                     ""
                 };
@@ -1045,10 +1054,70 @@ fn slug(meaning: &str) -> String {
 /// register's `f16_min_subnormal`, R-278), and payload §6's accessors that
 /// no single entry determines: the state predicates, `sd_last_symbol_valid` (the register's `fgw_length_sentinel`),
 /// `total_substeps_log2` and the `times` fractions.
+/// The `log16` form's Rust encode and decode (payload §2, "The `log16` form"; [`FieldType::Log16`]): integer
+/// operations on the f32 bits only, so every backend that runs them gives the same code and value.
+fn log16_rust() -> String {
+    let lo = crate::payload::log16_octave_lo();
+    format!(
+        r#"/// The `log16` form's lowest octave: code 1 is `2^{lo}` (payload §2, "The `log16` form").
+pub const LOG16_OCTAVE_LO: i32 = {lo};
+
+/// The `log16` form's greatest magnitude code, 15 bits: `2^{hi}·(1 + 254/256)`, the saturation value.
+pub const LOG16_CODE_MAX: u32 = 0x7fff;
+
+/// The f32 bits, shifted right by 15, of `2^LOG16_OCTAVE_LO`: the code-1 value's.
+const LOG16_BASE: u32 = ((LOG16_OCTAVE_LO + 127) as u32) << 8;
+
+/// `x` in the `log16` form (payload §2): bit 15 its sign, bits 0–14 its magnitude's code. The magnitude is rounded
+/// to an 8-bit fraction of its octave, half up, on its f32 bits (relative error at most 2⁻⁹); one below
+/// `2^LOG16_OCTAVE_LO` is held as that, never flushed to 0.0, and one above the greatest code, `+∞` included, as the
+/// greatest. `±0.0` is code 0 and a NaN is code 0 too: storage never holds NaN (R-79). Integer operations only, so
+/// the code is the same on every backend.
+#[inline]
+pub fn f32_to_log16(x: f32) -> u16 {{
+    let b = x.to_bits();
+    let sign = (b >> 16) & 0x8000;
+    let mag = b & 0x7fff_ffff;
+    let code = if mag == 0 || mag > 0x7f80_0000 {{
+        0
+    }} else {{
+        let q = (mag + 0x4000) >> 15;
+        if q < LOG16_BASE {{
+            1
+        }} else if q - LOG16_BASE >= LOG16_CODE_MAX {{
+            LOG16_CODE_MAX
+        }} else {{
+            q - LOG16_BASE + 1
+        }}
+    }};
+    let sign = if code == 0 {{ 0 }} else {{ sign }};
+    (sign | code) as u16
+}}
+
+/// The f32 value of the `log16` bits `h` (payload §2): code 0 is ±0.0, with bit 15's sign (no packer writes the
+/// signed one, so a set sign on code 0 reads back as itself, `-0.0`, not as a stored 0.0); a code `c ≥ 1` is the f32
+/// whose bits are `(c − 1 + LOG16_BASE) << 15`, with bit 15's sign. Exact: every `log16` value is an f32.
+#[inline]
+pub fn log16_to_f32(h: u16) -> f32 {{
+    let h = u32::from(h);
+    let code = h & LOG16_CODE_MAX;
+    let sign = (h & 0x8000) << 16;
+    if code == 0 {{
+        f32::from_bits(sign)
+    }} else {{
+        f32::from_bits(sign | ((code - 1 + LOG16_BASE) << 15))
+    }}
+}}
+"#,
+        hi = lo + 127,
+    )
+}
+
 fn helpers() -> String {
     let f16_max = crate::constants::F16_FINITE_MAX.number();
     let f16_floor = crate::constants::F16_MIN_SUBNORMAL.number() as f32;
     let truncated = crate::constants::FGW_LENGTH_SENTINEL.number();
+    let log16 = log16_rust();
     format!(
         r#"
 /// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
@@ -1120,6 +1189,7 @@ pub fn f32_to_f16_bits(x: f32) -> u16 {{
 }}
 
 {f16_decode}
+{log16}
 /// WGSL's `pack2x16float`: `v[0]` in bits 0–15, `v[1]` in bits 16–31. No clamp: callers clamp first (payload §1).
 #[inline]
 pub fn pack2x16float(v: [f32; 2]) -> u32 {{

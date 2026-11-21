@@ -1915,6 +1915,14 @@ impl<R: WrapperReal> Cadence<R> for Recorder<R> {
         self.samples.push((index, (state.r, state.p)));
     }
 
+    fn signals(&mut self, floored: bool, cap_hit: bool) {
+        self.inner.signals(floored, cap_hit);
+    }
+
+    fn regularised_drift(&mut self, drift: R) {
+        self.inner.regularised_drift(drift);
+    }
+
     fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32
     where
         R: Quantise,

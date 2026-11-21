@@ -1038,6 +1038,8 @@ fn interval<S: LhStepper, R: AzReal, C: Cadence<R>, X: LhWatch<R>>(
     while go {
         if watch.finite(&q, &p) {
             if stepped {
+                // logH's one energy against `E₀ = −B`, frozen at its registration (Part 1).
+                cadence.regularised_drift(system.energy(&q, &p) + system.b);
                 let mut s = system.image(&q, &p);
                 let mut g = Geom::new(&s.m, &s.r);
                 cadence.after_step(&mut s, &mut g);
@@ -1054,11 +1056,13 @@ fn interval<S: LhStepper, R: AzReal, C: Cadence<R>, X: LhWatch<R>>(
             landed = q.t >= dt_left;
             // `done` is read before the landing: a terminal that fires on the landing step ends the march there, its
             // state latched; the landing itself still counts ([`Interval::landed`]).
-            if over_allowance(count.steps, t0 + q.t, params.step_budget_rate, params.n_min) {
-                count.end = End::Exhausted;
-                go = false;
-            } else if cadence.done() {
+            // A terminal is read before the budget: one found on a step the budget allowed is the copy's outcome, and a
+            // copy never stores a terminal beside `budget_exhausted` (payload §2; R-603).
+            if cadence.done() {
                 count.end = End::Done;
+                go = false;
+            } else if over_allowance(count.steps, t0 + q.t, params.step_budget_rate, params.n_min) {
+                count.end = End::Exhausted;
                 go = false;
             } else if landed {
                 go = false;
@@ -1074,6 +1078,7 @@ fn interval<S: LhStepper, R: AzReal, C: Cadence<R>, X: LhWatch<R>>(
         if go {
             let sized = step_size(system, &q, &p, entry, params);
             watch.sized(sized.drift, sized.kick);
+            cadence.signals(sized.floored, sized.cap_hit);
             count.floored += u32::from(sized.floored);
             count.cap_hits += u32::from(sized.cap_hit);
             count.predictive_bound += u32::from(sized.by_limit);

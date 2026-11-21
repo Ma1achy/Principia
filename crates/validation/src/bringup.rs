@@ -109,7 +109,9 @@ pub fn check(i: u32, s: &SimStateFTLE) -> Result<(), String> {
         true,
     )?;
     same(i, "_reserved", s._reserved, 0)?;
-    same(i, "coll_floor_bits", s.coll_floor_bits, 0)
+    same(i, "coll_floor_bits", s.coll_floor_bits, 0)?;
+    same(i, "budget_bits", s.budget_bits, 0)?;
+    same(i, "dE_reg", s.dE_reg, 0)
 }
 
 /// `s` at f64 narrowed to the f32 payload, member by member: exact for the pattern, whose every real is an integer
@@ -131,6 +133,8 @@ pub fn narrow(s: &SimStateFTLEOf<f64>) -> SimStateFTLE {
         packed_b: s.packed_b,
         times: s.times,
         total_substeps: s.total_substeps,
+        budget_bits: s.budget_bits,
+        dE_reg: s.dE_reg,
         closure_min: s.closure_min as f32,
         closure_step: s.closure_step,
         _reserved: s._reserved,

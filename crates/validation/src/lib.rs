@@ -6,6 +6,7 @@ pub mod arctan;
 pub mod az;
 pub mod bench;
 pub mod bringup;
+pub mod budget;
 pub mod compare;
 pub mod control;
 pub mod convergence;
@@ -42,6 +43,7 @@ pub mod shape_roundtrip;
 pub mod shape_scene;
 pub mod spawn;
 pub mod structural_scene;
+pub mod suspect;
 
 /// The synthetic payload harness (TASK-M1-06), re-exported for the render crate's tests, which reach the engine only
 /// through this dev-dependency (systems_architecture §7.1).

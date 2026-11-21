@@ -35,9 +35,10 @@
 //! [`QuadFrame`]: crate::synthetic::QuadFrame
 
 use kernel::payload::{
-    fgw_pack, pack_packed_b, pack_times, set_coll_floor, set_d_min, set_d_min_unset, set_departed,
-    set_detail, set_dmin_pair, set_last_symbol, set_saturated, set_state, DminCounters,
-    ICDescriptor, SimStateFTLE, SD_DMIN_PAIR_SENTINEL, STATE_RUNNING,
+    fgw_pack, pack_budget_bits, pack_dE_reg, pack_packed_b, pack_times, set_coll_floor,
+    set_dE_reg_max, set_d_min, set_d_min_unset, set_departed, set_detail, set_dmin_pair,
+    set_last_symbol, set_saturated, set_state, DminCounters, ICDescriptor, SimStateFTLE,
+    SD_DMIN_PAIR_SENTINEL, STATE_RUNNING,
 };
 use ledger::gen::rust::offsets;
 use ledger::quad::RENDER_QUAD;
@@ -384,6 +385,8 @@ fn simstate_member(s: &SimStateFTLE, member: &str) -> Option<Vec<u8>> {
         "packed_b" => le([s.packed_b]),
         "times" => le([s.times]),
         "total_substeps" => le([s.total_substeps]),
+        "budget_bits" => le([s.budget_bits]),
+        "dE_reg" => le([s.dE_reg]),
         "closure_min" => f32s([s.closure_min]),
         "closure_step" => s.closure_step.to_le_bytes().to_vec(),
         "_reserved" => s._reserved.to_le_bytes().to_vec(),
@@ -430,6 +433,8 @@ pub fn simstate_from_words(words: &[u32]) -> Result<SimStateFTLE, String> {
             "packed_b" => s.packed_b = word_at(at),
             "times" => s.times = word_at(at),
             "total_substeps" => s.total_substeps = word_at(at),
+            "budget_bits" => s.budget_bits = word_at(at),
+            "dE_reg" => s.dE_reg = word_at(at),
             "closure_min" => s.closure_min = f32_at(at),
             "closure_step" => s.closure_step = u16::from_le_bytes([bytes[at], bytes[at + 1]]),
             "_reserved" => s._reserved = u16::from_le_bytes([bytes[at], bytes[at + 1]]),
@@ -601,9 +606,24 @@ impl Sample<'_> {
         self
     }
 
-    /// `dE_max` and `dLz_max`, through `pack_packed_b`.
+    /// `dE_max` and `dLz_max`, through `pack_packed_b`; and `dE_reg_max`, the latch the energy-suspect predicate reads,
+    /// `de_max` too, as a run under a stepper stores it, its two energies one (R-605; payload §1). A scene that sets the
+    /// regularised drift apart sets it after ([`Sample::reg_drift`]).
     pub fn drift_max(&mut self, de_max: f32, dlz_max: f32) -> &mut Self {
         self.s.packed_b = pack_packed_b(de_max, dlz_max);
+        self.s.dE_reg = set_dE_reg_max(self.s.dE_reg, de_max);
+        self
+    }
+
+    /// `dE_reg_final` and `dE_reg_max`, the regularised drift, through `pack_dE_reg` (payload §2; R-605).
+    pub fn reg_drift(&mut self, last: f32, max: f32) -> &mut Self {
+        self.s.dE_reg = pack_dE_reg(last, max);
+        self
+    }
+
+    /// `budget_bits`' flag and two counts, through `pack_budget_bits` (payload §2; R-603).
+    pub fn budget(&mut self, exhausted: bool, floor_hits: u32, cap_hits: u32) -> &mut Self {
+        self.s.budget_bits = pack_budget_bits(exhausted, floor_hits, cap_hits);
         self
     }
 

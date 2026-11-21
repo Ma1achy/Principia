@@ -165,6 +165,14 @@ impl Cadence<f64> for Recorder {
         self.inner.bucket_d2(r)
     }
 
+    fn signals(&mut self, floored: bool, cap_hit: bool) {
+        self.inner.signals(floored, cap_hit);
+    }
+
+    fn regularised_drift(&mut self, drift: f64) {
+        self.inner.regularised_drift(drift);
+    }
+
     fn clock(&mut self, completed: u32) {
         self.inner.clock(completed);
     }

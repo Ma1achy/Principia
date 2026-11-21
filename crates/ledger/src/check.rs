@@ -129,7 +129,7 @@ fn check_width(word: &str, entry: &Entry, offset: u32, width: u32, found: &mut V
             return;
         }
         FieldType::UBits => return,
-        FieldType::F16 | FieldType::F16Pair | FieldType::Fixed16 => 16,
+        FieldType::F16 | FieldType::F16Pair | FieldType::Log16 | FieldType::Fixed16 => 16,
         FieldType::F32 => 32,
         _ => {
             found.push(format!(
@@ -229,6 +229,7 @@ fn type_name(ty: &FieldType) -> String {
         FieldType::F32 => "f32".to_owned(),
         FieldType::F16 => "f16".to_owned(),
         FieldType::F16Pair => "f16-pair".to_owned(),
+        FieldType::Log16 => "log16".to_owned(),
         FieldType::Fixed16 => "fixed16".to_owned(),
         FieldType::Vector { component, k } => format!("vector({}, {k})", type_name(component)),
     }

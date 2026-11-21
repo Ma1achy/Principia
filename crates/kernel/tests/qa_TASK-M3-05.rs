@@ -615,15 +615,16 @@ negative_control!(
     check_lz_absolute(|d| d > 8.0 * tau_l())
 );
 
-/// The read side's whole predicate, from the stored state: it reads `dE_max`, `E_0`, `dLz_max`, not `r`, `p`, `Lz_0`, so
-/// moving those moves nothing; and the flag it carries is the one it is given, the occupant's.
+/// The read side's whole predicate, from the stored state: it reads `dE_reg_max` (the regularised drift's latch since
+/// R-605; `dE_max` before), `E_0`, `dLz_max`, not `r`, `p`, `Lz_0` or the Cartesian `dE_max`, so moving those moves
+/// nothing; and the flag it carries is the one it is given, the occupant's.
 fn check_latches(read: fn(&SimState, f32, bool) -> DriftSuspect) {
     let t = tau_e();
     let eps = 1e-6f32;
     let mut s = read_state();
     s.E_0 = 1.0;
     s.Lz_0 = 1.0;
-    s.dE_max = 8.0 * t;
+    s.dE_reg_max = 8.0 * t;
     s.dLz_max = tau_l() / 2.0;
     let want = read(&s, eps, true);
     assert_eq!(
@@ -634,6 +635,7 @@ fn check_latches(read: fn(&SimState, f32, bool) -> DriftSuspect) {
     moved.r = [[9.0, 9.0]; 3];
     moved.p = [[-7.0, 7.0]; 3];
     moved.Lz_0 = 1e6;
+    moved.dE_max = 0.0;
     assert_eq!(
         read(&moved, eps, true),
         want,

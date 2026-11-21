@@ -50,6 +50,11 @@ struct SimState {
     t_end_step: u32,
     t_dmin_step: u32,
     total_substeps: u32,
+    budget_exhausted: bool,
+    floor_hits: u32,
+    cap_hits: u32,
+    dE_reg_final: f32,
+    dE_reg_max: f32,
     closure_min: f32,
     closure_step: u32,
     coll_floor: u32,
@@ -249,6 +254,8 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f3
     let s_packed_b = simstate_buffer[i].packed_b;
     let s_times = simstate_buffer[i].times;
     let s_total_substeps = simstate_buffer[i].total_substeps;
+    let s_budget_bits = simstate_buffer[i].budget_bits;
+    let s_dE_reg = simstate_buffer[i].dE_reg;
     let s_closure_min = simstate_buffer[i].closure_min;
     let s_closure_step_reserved = simstate_buffer[i].closure_step_reserved;
     let s_coll_floor_bits = simstate_buffer[i].coll_floor_bits;
@@ -279,6 +286,11 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f3
     out.t_end_step = tm_t_end_step(s_times);
     out.t_dmin_step = tm_t_dmin_step(s_times);
     out.total_substeps = s_total_substeps;
+    out.budget_exhausted = bb_budget_exhausted(s_budget_bits);
+    out.floor_hits = bb_floor_hits(s_budget_bits);
+    out.cap_hits = bb_cap_hits(s_budget_bits);
+    out.dE_reg_final = dr_dE_reg_final(s_dE_reg);
+    out.dE_reg_max = dr_dE_reg_max(s_dE_reg);
     out.closure_min = s_closure_min;
     out.closure_step = closure_step(s_closure_step_reserved);
     out.coll_floor = cf_coll_floor(s_coll_floor_bits);

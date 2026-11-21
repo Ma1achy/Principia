@@ -1,0 +1,5 @@
+{
+  "description": "The predicate's reader, the stored dE_reg_max: on test 7's close passages under Heggie × RK4 at f64 it reads the regularised drift, more than four times below the Cartesian read-out (R-566, R-605). Its report carries REQ-INT-106's measurement.",
+  "reader": "regularised",
+  "expected": "pass"
+}

@@ -325,6 +325,10 @@ fn accessors(words: &[Word], entries: &[Entry]) -> String {
             let (ty, get) = match (&e.ty, offset, width) {
                 (FieldType::F16Pair, 0, 16) => ("f32", "unpack2x16float(w).x".to_owned()),
                 (FieldType::F16Pair, 16, 16) => ("f32", "unpack2x16float(w).y".to_owned()),
+                (FieldType::Log16, _, 16) => (
+                    "f32",
+                    format!("log16_to_f32(extractBits(w, {offset}u, 16u))"),
+                ),
                 (FieldType::F16Pair, _, _) => {
                     let _ = write!(
                         out,
@@ -335,8 +339,9 @@ fn accessors(words: &[Word], entries: &[Entry]) -> String {
                 (_, _, 1) => ("bool", format!("extractBits(w, {offset}u, 1u) == 1u")),
                 _ => ("u32", format!("extractBits(w, {offset}u, {width}u)")),
             };
-            match (e.ty == FieldType::F16Pair, e.sentinel) {
-                (true, Some(s)) if s == f64::INFINITY => {
+            let float = matches!(e.ty, FieldType::F16Pair | FieldType::Log16);
+            match (float, e.sentinel) {
+                (true, Some(s)) if s == f64::INFINITY && e.ty == FieldType::F16Pair => {
                     let _ = write!(
                         out,
                         "\n// `{f}`'s unset bits: f16 +∞, the minimum of an empty set (R-271).\n\
@@ -484,8 +489,17 @@ fn fgw_symbol(word: vec4<u32>, k: u32) -> u32 {{
 /// `sd_last_symbol_valid` (the register's `fgw_length_sentinel`), `total_substeps_log2` and the `times` fractions.
 fn helpers() -> String {
     let truncated = crate::constants::FGW_LENGTH_SENTINEL.number() as u32;
+    let base = ((crate::payload::log16_octave_lo() + 127) as u32) << 8;
     format!(
         r"
+// The f32 value of the `log16` bits `h` (payload §2, the `log16` form): code 0 is ±0.0, bit 15 its sign (no packer
+// writes the signed one); a code `c ≥ 1` is the f32
+// whose bits are `(c − 1 + {base}) << 15` (code 1 is `2^LOG16_OCTAVE_LO`), bit 15 its sign. Exact, integer operations.
+fn log16_to_f32(h: u32) -> f32 {{
+    let code = h & 0x7fffu;
+    let sign = (h & 0x8000u) << 16u;
+    return select(bitcast<f32>(sign | ((code - 1u + {base}u) << 15u)), bitcast<f32>(sign), code == 0u);
+}}
 // Escape, bounded or collision: a resolved outcome. sim_failed and decode_failed are finished but not resolved, so
 // never gate re-dispatch on this (payload §6).
 fn sd_is_resolved_outcome(w: u32) -> bool {{

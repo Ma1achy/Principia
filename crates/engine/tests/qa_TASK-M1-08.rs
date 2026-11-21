@@ -51,9 +51,12 @@ fn sample() -> Sample {
         E_0: -3.25,
         Lz_0: 1.5,
         packed_a,
-        packed_b: 0x3400 | (0x4000 << 16),
+        // dE_max 0.25 and dLz_max 2.0 in the `log16` form (R-632; payload §2): 0x3400 and 0x4000 in binary16 before.
+        packed_b: 0x5e01 | (0x6101 << 16),
         times: 30 | (7 << 16),
         total_substeps: 1000,
+        budget_bits: 0,
+        dE_reg: 0,
         closure_min: 0.125,
         closure_step: 9,
         _reserved: 0,
@@ -190,7 +193,7 @@ fn check_values(x: &Sample, d: &Decoded) {
         ("E_0", d.E_0, -3.25),
         ("Lz_0", d.Lz_0, 1.5),
         ("closure_min", d.closure_min, 0.125),
-        // f16 fields, by their known binary16 bits.
+        // 16-bit fields, by their known bits: d_min binary16, the drifts `log16`.
         ("d_min", d.d_min, 0.5),
         ("dE_max", d.dE_max, 0.25),
         ("dLz_max", d.dLz_max, 2.0),

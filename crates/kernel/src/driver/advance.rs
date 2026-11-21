@@ -153,6 +153,23 @@ pub trait Cadence<R> {
     #[inline]
     fn sample(&mut self, _state: &State<R>, _index: u32, _quantum: R) {}
 
+    /// A regularised step's two counted, non-terminal signals (integrator_contract Part 6; R-563, R-603), reported
+    /// by the march once per step it sizes, before the step: `floored`, the separation floor (`TINY`) bound one of
+    /// its separations, and `cap_hit`, its per-step size asked for more than the interval's entry size. A stepper
+    /// reports none. The wrapper's cadence counts them into `budget_bits` (payload §2; [`crate::regularisation::budget`]);
+    /// a cadence with no counts ignores them; one that wraps another passes them on.
+    #[inline]
+    fn signals(&mut self, _floored: bool, _cap_hit: bool) {}
+
+    /// The regularised energy's drift after a kept step of a regularised march (integrator_contract Part 1, "The
+    /// regularised energies, defined"; R-566, R-605): the occupant's regularised energy of its own state against its
+    /// own reference (Heggie's `h`, Aarseth–Zare's first registration's `E`, logH's `E₀ = −B`), at the working
+    /// precision, reported before the step's [`Cadence::after_step`]. A stepper reports none: with regularisation off
+    /// the two energies are one. The wrapper's cadence latches it into `dE_reg` (payload §1); a cadence that keeps
+    /// nothing ignores it; one that wraps another passes it on.
+    #[inline]
+    fn regularised_drift(&mut self, _drift: R) {}
+
     /// The position-quantised `d²` of the closest pair at the positions `r`, the state the cadence last saw (its run's
     /// IC, or the state its last [`Cadence::after_step`] left), which the wrapper's `N_sub` bucket reads
     /// (dd_integrator §3.3). A cadence that formed it there returns its own, so the step's one computation serves the

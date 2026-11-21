@@ -139,7 +139,7 @@ negative_control!(
 
 /// Payload §2 / generation-root §3.1: `(name, word, offset, width, type)`.
 fn section_2() -> Vec<(&'static str, &'static str, u32, u32, FieldType)> {
-    use FieldType::{F16Pair, UBits};
+    use FieldType::{F16Pair, Log16, UBits};
     vec![
         ("state", "packed_a", 0, 3, UBits),
         ("detail", "packed_a", 3, 2, UBits),
@@ -147,8 +147,15 @@ fn section_2() -> Vec<(&'static str, &'static str, u32, u32, FieldType)> {
         ("dmin_pair", "packed_a", 6, 2, UBits),
         ("last_symbol", "packed_a", 8, 2, UBits),
         ("d_min", "packed_a", 16, 16, F16Pair),
-        ("dE_max", "packed_b", 0, 16, F16Pair),
-        ("dLz_max", "packed_b", 16, 16, F16Pair),
+        // the Cartesian drift latches in `dE_reg`'s `log16` form (R-632; TASK-M3-41)
+        ("dE_max", "packed_b", 0, 16, Log16),
+        ("dLz_max", "packed_b", 16, 16, Log16),
+        // R-603's budget word and R-605's regularised drift (payload §2; TASK-M3-41)
+        ("budget_exhausted", "budget_bits", 0, 1, UBits),
+        ("floor_hits", "budget_bits", 1, 15, UBits),
+        ("cap_hits", "budget_bits", 16, 15, UBits),
+        ("dE_reg_final", "dE_reg", 0, 16, Log16),
+        ("dE_reg_max", "dE_reg", 16, 16, Log16),
         ("t_end_step", "times", 0, 16, UBits),
         ("t_dmin_step", "times", 16, 16, UBits),
         // payload §2's `coll_floor_bits`: bits 0–7 the floor's code (R-973; TASK-M3-71)
@@ -243,7 +250,15 @@ fn section_1(ftle: bool) -> Vec<(&'static str, Storage)> {
     for f in ["S", "theta", "mean_y", "C_ty", "E_0", "Lz_0"] {
         m.push((f, Storage::F32));
     }
-    for u in ["packed_a", "packed_b", "times", "total_substeps"] {
+    // R-603's budget word and R-605's regularised drift after `total_substeps` (payload §1; TASK-M3-41)
+    for u in [
+        "packed_a",
+        "packed_b",
+        "times",
+        "total_substeps",
+        "budget_bits",
+        "dE_reg",
+    ] {
         m.push((u, Storage::U32));
     }
     m.extend([
@@ -347,14 +362,16 @@ fn check_precision(entries: &[Entry]) {
     }
     let mut f16: Vec<&str> = entries
         .iter()
-        .filter(|e| e.ty == FieldType::F16Pair || e.ty == FieldType::Fixed16)
+        .filter(|e| {
+            e.ty == FieldType::F16Pair || e.ty == FieldType::Fixed16 || e.ty == FieldType::Log16
+        })
         .map(|e| e.name)
         .collect();
     f16.sort_unstable();
     assert_eq!(
         f16,
-        ["dE_max", "dLz_max", "d_min"],
-        "only the three latches are 16-bit floats (payload §1)"
+        ["dE_max", "dE_reg_final", "dE_reg_max", "dLz_max", "d_min"],
+        "only the five latches are 16-bit floats, d_min binary16 and the drifts log16 (payload §1; R-632)"
     );
 }
 

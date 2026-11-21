@@ -66,6 +66,8 @@ fn ftle(seed: u32) -> SimStateFTLE {
         packed_b: u(seed + 31),
         times: u(seed + 32),
         total_substeps: u(seed + 33),
+        budget_bits: 0,
+        dE_reg: 0,
         closure_min: f(seed + 34),
         closure_step: 0x8000 | (seed as u16 * 7 + 3),
         _reserved: 0xc000 | (seed as u16 * 5 + 1),
@@ -150,17 +152,18 @@ fn t_struct(@builtin(global_invocation_id) id: vec3<u32>) {{
     )
 }
 
-fn ftle_words(s: &SimStateFTLE) -> [u32; 40] {
-    // SimStateFTLE is repr(C), all members 4-byte or wider with no padding: its 160 B are 40 initialised words
-    // (152 B and 38 words before the lagged n̂ register replaced 4 B of padding, TASK-M3-12; 144 B and 36 words before
+fn ftle_words(s: &SimStateFTLE) -> [u32; 42] {
+    // SimStateFTLE is repr(C), all members 4-byte or wider with no padding: its 168 B are 42 initialised words (160 B
+    // and 40 words before the budget word and the regularised drift, TASK-M3-41; 152 B and 38 words before the lagged n̂ register replaced 4 B of padding, TASK-M3-12; 144 B and 36 words before
     // the collision floor's 8 B, TASK-M3-71).
-    unsafe { std::mem::transmute::<SimStateFTLE, [u32; 40]>(*s) }
+    unsafe { std::mem::transmute::<SimStateFTLE, [u32; 42]>(*s) }
 }
 
 fn check_ftle(generated: &str) {
     let states = [ftle(0), ftle(40)];
     let mut input: Vec<u32> = states.iter().flat_map(ftle_words).collect();
-    // the kernel writes 41 words per element, one more than the 40 stored (38 and 38 before the lagged n̂ register,
+    // the kernel writes 43 words per element, one more than the 42 stored (41 and 40 before the budget word and the
+    // regularised drift, TASK-M3-41; 38 and 38 before the lagged n̂ register,
     // TASK-M3-12; 37 and 36 before the collision floor's record, TASK-M3-71): pad the input, whose length is the
     // output's, by the two words the two elements need.
     input.extend([0, 0]);
@@ -209,6 +212,8 @@ fn base(seed: u32) -> SimStateBase {
         packed_b: s.packed_b,
         times: s.times,
         total_substeps: s.total_substeps,
+        budget_bits: s.budget_bits,
+        dE_reg: s.dE_reg,
         closure_min: s.closure_min,
         closure_step: s.closure_step,
         _reserved: s._reserved,
@@ -224,7 +229,7 @@ fn check_base(generated: &str) {
     let states = [base(3), base(50)];
     let mut input: Vec<u32> = states
         .iter()
-        .flat_map(|s| unsafe { std::mem::transmute::<SimStateBase, [u32; 28]>(*s) })
+        .flat_map(|s| unsafe { std::mem::transmute::<SimStateBase, [u32; 30]>(*s) })
         .collect();
     input.extend([0, 0]);
     let got = run(
@@ -715,7 +720,8 @@ negative_control!(
 
 // ---------------------------------------------------------------------------------------------------------------
 // f16 pairs read through core unpack2x16float (REQ-RENDER-001): on a device opened with no features (so no
-// shader-f16), `pa_d_min` reads the high half, `pb_dE_max` the low and `pb_dLz_max` the high, as binary16 values.
+// shader-f16), `pa_d_min` reads the high half as a binary16 value; `pb_dE_max` the low and `pb_dLz_max` the high, in the
+// `log16` form since R-632 (payload §2), each bit-identical to the Rust `log16_to_f32`, and so are `dE_reg`'s halves.
 
 /// IEEE 754 binary16 `h` as f32, for normal and zero halves (sign, 5-bit exponent biased 15, 10-bit mantissa).
 fn half(h: u32) -> f32 {
@@ -739,7 +745,14 @@ fn check_f16_pairs(generated: &str) {
             xs.push(hi << 16 | lo);
         }
     }
-    for (call, pick) in [("pa_d_min", 16u32), ("pb_dE_max", 0), ("pb_dLz_max", 16)] {
+    let calls = [
+        ("pa_d_min", 16u32, false),
+        ("pb_dE_max", 0, true),
+        ("pb_dLz_max", 16, true),
+        ("dr_dE_reg_final", 0, true),
+        ("dr_dE_reg_max", 16, true),
+    ];
+    for (call, pick, log16) in calls {
         let kernel = format!(
             "@group(0) @binding(0) var<storage, read> a: array<u32>;
 @group(0) @binding(1) var<storage, read_write> out: array<u32>;
@@ -751,10 +764,15 @@ fn t_{call}(@builtin(global_invocation_id) id: vec3<u32>) {{
         );
         let got = run(generated, &kernel, &format!("t_{call}"), &[&xs]);
         for (x, g) in xs.iter().zip(&got) {
-            let want = half((x >> pick) & 0xffff);
+            let h = (x >> pick) & 0xffff;
+            let want = if log16 {
+                kernel::payload::log16_to_f32(h as u16)
+            } else {
+                half(h)
+            };
             assert_eq!(
-                f32::from_bits(*g),
-                want,
+                *g,
+                want.to_bits(),
                 "WGSL {call}({x:#010x}) is {}, not {want}",
                 f32::from_bits(*g)
             );
@@ -772,7 +790,7 @@ negative_control!(
     "pb_dE_max reading the high half must fail",
     expected = "WGSL pb_dE_max(",
     check_f16_pairs(&wgsl().replace(
-        "fn pb_dE_max(w: u32) -> f32 { return unpack2x16float(w).x; }",
-        "fn pb_dE_max(w: u32) -> f32 { return unpack2x16float(w).y; }"
+        "fn pb_dE_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 0u, 16u)); }",
+        "fn pb_dE_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 16u, 16u)); }"
     ))
 );

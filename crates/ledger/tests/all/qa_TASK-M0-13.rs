@@ -1,7 +1,8 @@
 //! QA tests for TASK-M0-13, written from the requirements, not from the implementation: the checked-in generated
 //! WGSL (`crates/render/frag/generated/payload_unpack.wgsl`), parsed with naga, against the corpus's own numbers.
 //! - REQ-PAY-091 (payload §1; dd_generation_root §3.6; R-86, R-343): `SimStateFTLE` and `SimStateBase` have payload
-//!   §1's members in its order, at the offsets its sizes give (160 B and 112 B, aligned to 8, with the collision
+//!   §1's members in its order, at the offsets its sizes give (168 B and 120 B, aligned to 8, with the budget word and
+//!   the regularised drift, TASK-M3-41; 160 B and 112 B before them, with the collision
 //!   floor's `coll_floor_bits: u32`, R-973, then the escape rule's lagged n̂ register, `_nhat_lag_0..2: f32`, last;
 //!   152 B and 104 B before the register, which took the place of 4 B of padding; 144 B and 96 B before the floor),
 //!   with
@@ -76,7 +77,7 @@ fn ty_name(m: &Module, h: naga::Handle<naga::Type>) -> String {
 const V2X3: &str = "array<vec2<f32>, 3>";
 
 /// Payload §1's `SimStateFTLE`, member by member: name, WGSL type, byte size.
-const FTLE: [(&str, &str, u32); 20] = [
+const FTLE: [(&str, &str, u32); 22] = [
     ("r", V2X3, 24),
     ("p", V2X3, 24),
     ("r_sh", V2X3, 24),
@@ -91,6 +92,9 @@ const FTLE: [(&str, &str, u32); 20] = [
     ("packed_b", "u32", 4),
     ("times", "u32", 4),
     ("total_substeps", "u32", 4),
+    // R-603's budget word and R-605's regularised drift (payload §1; TASK-M3-41).
+    ("budget_bits", "u32", 4),
+    ("dE_reg", "u32", 4),
     ("closure_min", "f32", 4),
     // closure_step: u16 and _reserved: u16 as one u32 (R-343).
     ("closure_step_reserved", "u32", 4),
@@ -148,8 +152,8 @@ fn check_simstate(src: &str) {
         .filter(|(n, _, _)| *n != "r_sh" && *n != "p_sh")
         .collect();
     for (name, fields, size) in [
-        ("SimStateFTLE", FTLE.to_vec(), 160),
-        ("SimStateBase", base, 112),
+        ("SimStateFTLE", FTLE.to_vec(), 168),
+        ("SimStateBase", base, 120),
     ] {
         let (got, span, align) = wgsl_struct(src, name);
         let want = packed(&fields);
@@ -157,7 +161,8 @@ fn check_simstate(src: &str) {
         assert_eq!(span, size, "`{name}` is {span} B, not payload §1's {size}");
         assert_eq!(align, 8, "`{name}` is aligned to {align}, not 8");
     }
-    // R-343's offsets, stated as numbers: 140 (FTLE), 92 (Base).
+    // R-343's offsets, stated as numbers: 148 (FTLE), 100 (Base), 8 B on from 140 and 92 with the budget word and the
+    // regularised drift (TASK-M3-41).
     let (f, ..) = wgsl_struct(src, "SimStateFTLE");
     let (b, ..) = wgsl_struct(src, "SimStateBase");
     let at = |v: &[(String, u32, String)]| {
@@ -167,12 +172,12 @@ fn check_simstate(src: &str) {
     };
     assert_eq!(
         at(&f),
-        Some((140, "u32".to_string())),
+        Some((148, "u32".to_string())),
         "FTLE closure_step_reserved"
     );
     assert_eq!(
         at(&b),
-        Some((92, "u32".to_string())),
+        Some((100, "u32".to_string())),
         "Base closure_step_reserved"
     );
 }
@@ -196,7 +201,7 @@ fn qa_wgsl_simstate_base_drops_only_the_shadow() {
 
 negative_control!(
     qa_wgsl_simstate_base_drops_only_the_shadow,
-    "a SimStateBase that keeps the shadow is 160 B, not 112",
+    "a SimStateBase that keeps the shadow is 168 B, not 120",
     expected = "`SimStateBase` is not payload §1's layout",
     check_simstate(&wgsl().replacen(
         "struct SimStateBase {\n    r: array<vec2<f32>, 3>,\n    p: array<vec2<f32>, 3>,",

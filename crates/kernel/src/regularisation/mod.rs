@@ -21,12 +21,16 @@
 //!
 //! [`heggie_joint`] is the FTLE shadow's joint step on Heggie × RK4, the default occupant (R-974, R-560; TASK-M3-74).
 //!
+//! [`budget`] is the regularised integration floor: R-604's step budget as a rate, the sticky exhaustion flag and the
+//! two counted signals in `budget_bits` (R-603).
+//!
 //! [`sync`] is the regularised occupants' sync grid, the fixed quantum `Δ_sync` every march lands on (Part 2a; R-565).
 //!
 //! [`pairs`] is Part 2b's pair table and the selection of a pair; [`dt_max`] is the per-trajectory largest-step
 //! diagnostic with its "no usable step" sentinel (Part 2c).
 
 pub mod az;
+pub mod budget;
 pub mod dt_max;
 pub mod form;
 pub mod heggie;

@@ -15,7 +15,8 @@
 //! **Across dispatches** ([`finished`], [`latch`], [`redispatch`]): a stored sample that is finished is handed back
 //! word for word, with no march, no cadence call, no carried state touched and no field rewritten: every `SimState`
 //! word is bit-identical on every later dispatch. `done` is not a stored bit: a sample is done when its `state` is not
-//! `running` (payload §6, `sd_is_finished`), with one exception. A `bounded` sample is finished under the horizon it
+//! `running` (payload §6, `sd_is_finished`) or its step budget ran out (`budget_bits`'s sticky `budget_exhausted` bit,
+//! whose `state` stays `running`: undetermined, never marched on, R-603), with one exception. A `bounded` sample is finished under the horizon it
 //! reached, and under a longer one it marches on. The plan is unclear here (it makes reaching `T` the label `bounded`
 //! and `T` part of the sim key, and says nothing of a `bounded` state read under a longer `T`); chose to march it on
 //! because under that key it has not reached its horizon, so it is not terminal there, and a march extended to a
@@ -33,6 +34,7 @@ use crate::payload::{
     sd_state, tm_t_end_step, PayloadReal, SimStateBaseOf, SimStateFTLEOf, STATE_BOUNDED,
     STATE_RUNNING,
 };
+use crate::regularisation::budget::exhausted;
 
 /// A stored `SimState` of any tier: what the latch reads of it, `packed_a`'s `state` and `times`' `t_end_step`.
 pub trait Stored: Copy {
@@ -40,6 +42,8 @@ pub trait Stored: Copy {
     fn packed_a(&self) -> u32;
     /// The step indices' word.
     fn times(&self) -> u32;
+    /// The budget word (payload §2; R-603).
+    fn budget_bits(&self) -> u32;
 }
 
 impl<R: PayloadReal> Stored for SimStateBaseOf<R> {
@@ -51,6 +55,11 @@ impl<R: PayloadReal> Stored for SimStateBaseOf<R> {
     #[inline]
     fn times(&self) -> u32 {
         self.times
+    }
+
+    #[inline]
+    fn budget_bits(&self) -> u32 {
+        self.budget_bits
     }
 }
 
@@ -64,21 +73,34 @@ impl<R: PayloadReal> Stored for SimStateFTLEOf<R> {
     fn times(&self) -> u32 {
         self.times
     }
+
+    #[inline]
+    fn budget_bits(&self) -> u32 {
+        self.budget_bits
+    }
 }
 
-/// Whether a stored sample, its `packed_a` and `times`, is finished under a sim key of `horizon_steps` (the module's
-/// note): any `state` but `running`, except `bounded` short of the horizon.
+/// Whether a stored sample, its `packed_a`, `times` and `budget_bits`, is finished under a sim key of `horizon_steps`
+/// (the module's note): any `state` but `running`, except `bounded` short of the horizon; and a `running` sample whose
+/// step budget ran out, the sticky `budget_exhausted` bit set, which is undetermined and never marched on: its remedy
+/// is finer steps as an explicit re-run (R-603; `crate::regularisation::budget`).
 #[inline]
-pub fn finished(packed_a: u32, times: u32, horizon_steps: u32) -> bool {
+pub fn finished(packed_a: u32, times: u32, budget_bits: u32, horizon_steps: u32) -> bool {
     let s = sd_state(packed_a);
-    s != STATE_RUNNING && !(s == STATE_BOUNDED && tm_t_end_step(times) < horizon_steps)
+    exhausted(budget_bits)
+        || (s != STATE_RUNNING && !(s == STATE_BOUNDED && tm_t_end_step(times) < horizon_steps))
 }
 
 /// A later dispatch of the stored sample `stored` under a sim key of `horizon_steps`: `stored` itself, every word,
 /// where it is finished ([`finished`]), and otherwise what `dispatch` makes of it.
 #[inline]
 pub fn latch<S: Stored, F: FnOnce(&S) -> S>(stored: &S, horizon_steps: u32, dispatch: F) -> S {
-    if finished(stored.packed_a(), stored.times(), horizon_steps) {
+    if finished(
+        stored.packed_a(),
+        stored.times(),
+        stored.budget_bits(),
+        horizon_steps,
+    ) {
         *stored
     } else {
         dispatch(stored)
@@ -98,7 +120,12 @@ pub fn redispatch<A: Advance, R: WrapperReal, C: Cadence<R>>(
     carried: &mut Carried<R>,
     steps: u32,
 ) -> SimStateBaseOf<R> {
-    if finished(stored.packed_a, stored.times, uniforms.horizon_steps) {
+    if finished(
+        stored.packed_a,
+        stored.times,
+        stored.budget_bits,
+        uniforms.horizon_steps,
+    ) {
         *stored
     } else {
         let out =

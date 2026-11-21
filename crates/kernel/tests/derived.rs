@@ -66,6 +66,8 @@ fn base(s: &SimStateFTLE) -> SimStateBase {
         packed_b: s.packed_b,
         times: s.times,
         total_substeps: s.total_substeps,
+        budget_bits: s.budget_bits,
+        dE_reg: s.dE_reg,
         closure_min: s.closure_min,
         closure_step: s.closure_step,
         _reserved: s._reserved,
@@ -116,6 +118,8 @@ fn marching(n: u32, ratio: f32) -> Case {
         packed_a: set_state(PA_D_MIN_UNSET << 16, STATE_BOUNDED),
         times: n | (n / 2) << 16,
         total_substeps: 1000,
+        budget_bits: 0,
+        dE_reg: 0,
         closure_step: 9,
         ..SimStateFTLE::default()
     };

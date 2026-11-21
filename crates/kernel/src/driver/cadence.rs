@@ -53,6 +53,7 @@
 
 use super::advance::Cadence;
 use super::failure;
+use super::latch::RegularisedDrift;
 use super::monitor::Monitor;
 use super::project::ComProjection;
 use super::substep::Quantise;
@@ -64,6 +65,7 @@ use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{sd_last_symbol, set_last_symbol, PayloadReal, SimStateBaseOf};
 use crate::real::IeeeBits;
+use crate::regularisation::budget::Signals;
 use crate::word::{state_cuts, CrossingDetector, CrossingHook, WordBuffer};
 
 /// The wrapper's per-substep callback: the projection, the monitor and the detector, the hooks in Part 1's order, the
@@ -99,6 +101,10 @@ pub struct WrapperCadence<R> {
     dmin_pending: bool,
     /// Whether the wrapper handed a finished stored sample back ([`Cadence::latched`]): the write leaves it.
     handed_back: bool,
+    /// The regularised march's two counted signals (R-603), reloaded from a re-booted march's `budget_bits`.
+    signals: Signals,
+    /// The regularised energy's drift latches (R-605).
+    regularised: RegularisedDrift<R>,
 }
 
 impl<R: WrapperReal> WrapperCadence<R> {
@@ -147,6 +153,8 @@ impl<R: WrapperReal> WrapperCadence<R> {
             dmin_at: 0,
             dmin_pending: false,
             handed_back: false,
+            signals: Signals::none(),
+            regularised: RegularisedDrift::none(),
         }
     }
 
@@ -183,6 +191,18 @@ impl<R: WrapperReal> WrapperCadence<R> {
     #[inline]
     pub fn dmin_step(&self) -> u32 {
         self.dmin_step
+    }
+
+    /// The regularised march's two counted signals so far (R-603).
+    #[inline]
+    pub fn signal_counts(&self) -> Signals {
+        self.signals
+    }
+
+    /// The regularised energy's drift latches so far (R-605).
+    #[inline]
+    pub fn regularised(&self) -> &RegularisedDrift<R> {
+        &self.regularised
     }
 
     /// The calls made so far, one per internal step taken.
@@ -307,6 +327,16 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
         self.done = self.detector.fired() || self.escape.fired() || self.failure.fired();
     }
 
+    #[inline]
+    fn signals(&mut self, floored: bool, cap_hit: bool) {
+        self.signals.observe(floored, cap_hit);
+    }
+
+    #[inline]
+    fn regularised_drift(&mut self, drift: R) {
+        self.regularised.report(drift);
+    }
+
     /// The completed macro-steps, `completed`, before each macro-step and after the last (the module's note): a `d_min`
     /// latched on the step that completed the macro-step just ended takes that macro-step's end, `completed`.
     #[inline]
@@ -350,6 +380,9 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
         if held {
             self.resume_escape(stored);
         }
+        // The budget word's counts go on from the stored ones, so a march split at any persist boundary stores the
+        // uncut march's word (R-603; `crate::regularisation::budget`).
+        self.signals = Signals::reload(stored.budget_bits);
     }
 
     #[inline]
@@ -426,6 +459,16 @@ impl<R: LinkReal + IeeeBits, C: Cadence<R>, B: WordBuffer + ?Sized> Cadence<R>
     #[inline]
     fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
         self.inner.sample(state, index, quantum);
+    }
+
+    #[inline]
+    fn signals(&mut self, floored: bool, cap_hit: bool) {
+        self.inner.signals(floored, cap_hit);
+    }
+
+    #[inline]
+    fn regularised_drift(&mut self, drift: R) {
+        self.inner.regularised_drift(drift);
     }
 
     #[inline]

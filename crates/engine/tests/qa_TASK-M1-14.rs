@@ -117,11 +117,12 @@ fn check_accessors(layout: fn(u32) -> (u32, u32, bool, u32, u32)) {
                 s.times >> 16,
                 "`{name}` {i}: t_dmin_step"
             );
+            // The drift halves are `log16` since R-632 (payload §2): the value its bits hold is the form's.
             for (got, h, what) in [
                 (pb_dE_max(s.packed_b), s.packed_b as u16, "dE_max"),
                 (pb_dLz_max(s.packed_b), (s.packed_b >> 16) as u16, "dLz_max"),
             ] {
-                let want = f16_value(h);
+                let want = f64::from(kernel::payload::log16_to_f32(h));
                 assert!(
                     f64::from(got) == want || (got.is_nan() && want.is_nan()),
                     "`{name}` {i}: {what} reads {got}, its bits {h:#06x} hold {want}"
@@ -407,7 +408,7 @@ negative_control!(
 
 /// The members of `SimStateFTLE` and `ICDescriptor` this scanner has a rule for, in the ledger's order. A new member
 /// makes `check_members` fail, so it cannot pass unscanned.
-const SIMSTATE_MEMBERS: [&str; 21] = [
+const SIMSTATE_MEMBERS: [&str; 23] = [
     "r",
     "p",
     "r_sh",
@@ -422,6 +423,9 @@ const SIMSTATE_MEMBERS: [&str; 21] = [
     "packed_b",
     "times",
     "total_substeps",
+    // the budget word and the regularised drift (payload §1; TASK-M3-41): u32s, no f32, so no float rule
+    "budget_bits",
+    "dE_reg",
     "closure_min",
     "closure_step",
     "_reserved",
@@ -541,8 +545,9 @@ fn check_stored(set: &mut Synthetic, n: u32) {
             (s.packed_b as u16, "dE_max"),
             ((s.packed_b >> 16) as u16, "dLz_max"),
         ] {
-            let v = f16_value(h);
-            assert!(!v.is_nan(), "sample {i}: {what} holds the f16 NaN {h:#06x}");
+            // `log16` since R-632 (payload §2): every code is finite, NaN stored as 0.0.
+            let v = kernel::payload::log16_to_f32(h);
+            assert!(!v.is_nan(), "sample {i}: {what} holds NaN, {h:#06x}");
             assert!(
                 v.is_finite(),
                 "sample {i}: {what} holds the non-finite {h:#06x}; only d_min may be +inf"

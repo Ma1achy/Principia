@@ -961,7 +961,19 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
         } else if i > 0 {
             let d = at(1.0, 1.0, 20);
             sample.d_min(0.02 * d * d).drift_max(de_max, dlz_max);
+            // R-605's regularised drift, apart from the Cartesian latch: its maximum 0.85 of `dE_max`, so the suspect
+            // styling, which reads it, lights the samples it lit on `dE_max` (none near the threshold), and its final
+            // value alternately signed and within it (payload §2; TASK-M3-41).
+            let reg_max = 0.85 * de_max;
+            let sign = if i % 2 == 0 { 1.0 } else { -1.0 };
+            sample.reg_drift(sign * reg_max * at(0.3, 0.09, 9), reg_max);
         }
+        // R-603's budget word: the flag on one running sample and one stepped, counts spread over their 15 bits.
+        sample.budget(
+            [false, false, false, true, false, false, false, true][k],
+            [0, 0, 3, 41, 0, 9, 1200, 32_767][k],
+            [0, 12, 400, 9000, 2, 31_000, 77, 32_767][k],
+        );
         let ic = set.ic(i);
         (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
         ic.q_mass = at(0.12, 0.1, 21);
@@ -1075,6 +1087,12 @@ impl Scene {
             "diffusion" => (read.diffusion, read.diffusion_slope_valid),
             "dE_max" => (read.dE_max, true),
             "dLz_max" => (read.dLz_max, true),
+            // R-603's budget word and R-605's regularised drift (payload §2; TASK-M3-41)
+            "dE_reg_final" => (read.dE_reg_final, true),
+            "dE_reg_max" => (read.dE_reg_max, true),
+            "budget_exhausted" => (f32::from(u8::from(read.budget_exhausted)), true),
+            "floor_hits" => (read.floor_hits as f32, true),
+            "cap_hits" => (read.cap_hits as f32, true),
             "d_min" => (read.d_min, true),
             "dmin_pair" => (read.dmin_pair as f32, true),
             "saturated" => (f32::from(u8::from(read.saturated)), true),

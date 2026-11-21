@@ -336,6 +336,16 @@ impl<R: WrapperReal, C: Cadence<R>> Cadence<R> for Limited<'_, C> {
     fn done(&self) -> bool {
         self.left == 0
     }
+
+    #[inline]
+    fn signals(&mut self, floored: bool, cap_hit: bool) {
+        self.inner.signals(floored, cap_hit);
+    }
+
+    #[inline]
+    fn regularised_drift(&mut self, drift: R) {
+        self.inner.regularised_drift(drift);
+    }
 }
 
 /// The displacement form's joint cadence for one macro-step (R-974; the module's note): after each joint step, the
@@ -513,27 +523,69 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
         } else {
             (x, s_failed())
         };
-        SimStateFTLEOf {
-            r: out.r,
-            p: out.p,
-            r_sh: sh.r,
-            p_sh: sh.p,
-            S: s_sum,
-            theta: out.theta,
-            mean_y: out.mean_y,
-            C_ty: out.C_ty,
-            E_0: out.E_0,
-            Lz_0: out.Lz_0,
-            packed_a: out.packed_a,
-            packed_b: out.packed_b,
-            times: out.times,
-            total_substeps: out.total_substeps,
-            closure_min: out.closure_min,
-            closure_step: out.closure_step,
-            _reserved: out._reserved,
-            coll_floor_bits: out.coll_floor_bits,
-            ..SimStateFTLEOf::default()
-        }
+        ftle_of(out, sh.r, sh.p, s_sum)
+    }
+}
+
+/// The FTLE tier's `SimState` of the base tier's `out` with the shadow `r_sh`, `p_sh` and its sum `s`: every base
+/// member copied, each named, with no `..default()`, so a member the schema adds is a compile error here rather
+/// than a word stored as 0 on every FTLE-on sample.
+#[inline]
+pub fn ftle_of<R: WrapperReal>(
+    out: SimStateBaseOf<R>,
+    r_sh: [[R; 2]; 3],
+    p_sh: [[R; 2]; 3],
+    s: R,
+) -> SimStateFTLEOf<R> {
+    let SimStateBaseOf {
+        r,
+        p,
+        S: _,
+        theta,
+        mean_y,
+        C_ty,
+        E_0,
+        Lz_0,
+        packed_a,
+        packed_b,
+        times,
+        total_substeps,
+        budget_bits,
+        dE_reg,
+        closure_min,
+        closure_step,
+        _reserved,
+        coll_floor_bits,
+        _nhat_lag_0,
+        _nhat_lag_1,
+        _nhat_lag_2,
+        _tail: _,
+    } = out;
+    SimStateFTLEOf {
+        r,
+        p,
+        r_sh,
+        p_sh,
+        S: s,
+        theta,
+        mean_y,
+        C_ty,
+        E_0,
+        Lz_0,
+        packed_a,
+        packed_b,
+        times,
+        total_substeps,
+        budget_bits,
+        dE_reg,
+        closure_min,
+        closure_step,
+        _reserved,
+        coll_floor_bits,
+        _nhat_lag_0,
+        _nhat_lag_1,
+        _nhat_lag_2,
+        _tail: Default::default(),
     }
 }
 

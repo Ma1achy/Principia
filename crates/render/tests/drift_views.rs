@@ -264,6 +264,50 @@ fn drift_suspect_styling_predicates_drive_their_styles() {
     }
 }
 
+/// REQ-TOOL-219's render arm (R-605; TASK-M3-41): the drift view's energy styling reads the regularised drift's latch,
+/// `dE_reg_max`, bitwise, never the Cartesian `dE_max`. The styling scene with sample 0's regularised maximum set to
+/// 0.0, its Cartesian `dE_max` left lighting the predicate, must draw sample 0 unstyled: what the view reads is the
+/// regularised latch. `colouring` is the view under test.
+fn check_regularised(view: View, colouring: Colouring) {
+    let mut s = styling_scene(colouring);
+    s.set.sample(0).reg_drift(0.0, 0.0);
+    let read = s.read(0);
+    assert!(
+        read.dE_reg_max.to_bits() == 0 && read.dE_max > 0.0,
+        "the scene's sample 0 does not set the two latches apart"
+    );
+    check_styles(
+        view,
+        &s,
+        &render(&gpu(), &s),
+        [(false, false), LIT[1], LIT[2]],
+    );
+}
+
+#[test]
+fn drift_view_regularised_reads_the_regularised_latch() {
+    for view in VIEWS {
+        check_regularised(view, debug(view.id, &[]));
+    }
+}
+
+negative_control!(
+    drift_view_regularised_reads_the_regularised_latch,
+    "a view fed the Cartesian drift's latch lights on it and draws sample 0 styled",
+    expected = "not the styled ramp",
+    {
+        let view = VIEWS[0];
+        check_regularised(
+            view,
+            broken(
+                view.id,
+                "suspect_energy(ctx.sample.dE_reg_max,",
+                "suspect_energy(ctx.sample.dE_max,",
+            ),
+        )
+    }
+);
+
 negative_control!(
     drift_suspect_styling_predicates_drive_their_styles,
     "a view that draws each predicate's style for the other",
@@ -1518,7 +1562,7 @@ negative_control!(
 
 /// The energy predicate's line in the `L_z` view.
 #[cfg(feature = "controls")]
-const LZ_ENERGY: &str = "!dbg_drift_non_finite(ctx.sample.E_0) && suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E)";
+const LZ_ENERGY: &str = "!dbg_drift_non_finite(ctx.sample.E_0) && suspect_energy(ctx.sample.dE_reg_max, ctx.sample.E_0, uniforms.EPS_E)";
 
 /// A tile per non-finite `E_0`, the `L_z` drift finite and off the band, a latch that lights the energy predicate on any
 /// finite `E_0`.

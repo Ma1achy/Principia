@@ -9,7 +9,8 @@ use validation::negative_control;
 
 /// Payload §1's `SimStateFTLE` offsets; `SimStateBase` is the same less `r_sh` and `p_sh`, 48 B earlier from `S`.
 /// The last three are the escape rule's lagged n̂ register, three Reals where 4 B of padding stood (TASK-M3-12).
-const FTLE: [(&str, usize); 21] = [
+/// `budget_bits` and `dE_reg` follow `total_substeps` (R-603, R-605; TASK-M3-41).
+const FTLE: [(&str, usize); 23] = [
     ("r", 0),
     ("p", 24),
     ("r_sh", 48),
@@ -24,13 +25,15 @@ const FTLE: [(&str, usize); 21] = [
     ("packed_b", 124),
     ("times", 128),
     ("total_substeps", 132),
-    ("closure_min", 136),
-    ("closure_step", 140),
-    ("_reserved", 142),
-    ("coll_floor_bits", 144),
-    ("_nhat_lag_0", 148),
-    ("_nhat_lag_1", 152),
-    ("_nhat_lag_2", 156),
+    ("budget_bits", 136),
+    ("dE_reg", 140),
+    ("closure_min", 144),
+    ("closure_step", 148),
+    ("_reserved", 150),
+    ("coll_floor_bits", 152),
+    ("_nhat_lag_0", 156),
+    ("_nhat_lag_1", 160),
+    ("_nhat_lag_2", 164),
 ];
 
 fn ftle_offsets() -> Vec<(&'static str, usize)> {
@@ -52,6 +55,8 @@ fn ftle_offsets() -> Vec<(&'static str, usize)> {
         packed_b,
         times,
         total_substeps,
+        budget_bits,
+        dE_reg,
         closure_min,
         closure_step,
         _reserved,
@@ -79,6 +84,8 @@ fn base_offsets() -> Vec<(&'static str, usize)> {
         packed_b,
         times,
         total_substeps,
+        budget_bits,
+        dE_reg,
         closure_min,
         closure_step,
         _reserved,
@@ -123,14 +130,14 @@ fn check_size(name: &str, actual: (usize, usize), expected: (usize, usize)) {
 }
 
 #[test]
-fn payload_layout_sizes_are_160_112_and_8_aligned() {
+fn payload_layout_sizes_are_168_120_and_8_aligned() {
     let ftle = (size_of::<SimStateFTLE>(), align_of::<SimStateFTLE>());
     let base = (size_of::<SimStateBase>(), align_of::<SimStateBase>());
     println!(
         "recomputed widths: SimStateFTLE {ftle:?}, SimStateBase {base:?} (size_of, align_of) B"
     );
-    check_size("SimStateFTLE", ftle, (160, 8));
-    check_size("SimStateBase", base, (112, 8));
+    check_size("SimStateFTLE", ftle, (168, 8));
+    check_size("SimStateBase", base, (120, 8));
     let word = (size_of::<FreeGroupWord>(), align_of::<FreeGroupWord>());
     check_size("FreeGroupWord", word, (16, 16));
     let ic = (size_of::<ICDescriptor>(), align_of::<ICDescriptor>());
@@ -138,10 +145,10 @@ fn payload_layout_sizes_are_160_112_and_8_aligned() {
 }
 
 negative_control!(
-    payload_layout_sizes_are_160_112_and_8_aligned,
-    "136 B is the pre-closure width (D6), so the size check must fail on it",
+    payload_layout_sizes_are_168_120_and_8_aligned,
+    "160 B is the width without the budget word and the regularised drift, so the size check must fail on it",
     expected = "SimStateFTLE: (size_of, align_of)",
-    check_size("SimStateFTLE", (size_of::<SimStateFTLE>(), 8), (136, 8))
+    check_size("SimStateFTLE", (160, 8), (size_of::<SimStateFTLE>(), 8))
 );
 
 /// Payload §7's hot and word memory, decimal GB to three places, for `bytes × copies × pixels`.
@@ -149,8 +156,8 @@ fn gb(bytes: usize, copies: usize, (w, h): (usize, usize)) -> String {
     format!("{:.3}", (bytes * copies * w * h) as f64 / 1e9)
 }
 
-/// The memory rows computed from the generated widths equal payload §7's quotes, at 160 / 112 B (with the lagged n̂
-/// register; 1.261, 0.863, 0.431, 5.043 and 1.725 GB hot at 152 / 104 B before it).
+/// The memory rows computed from the generated widths equal payload §7's quotes, at 168 / 120 B (with the budget word
+/// and the regularised drift; 1.327, 0.929, 0.464, 5.308 and 1.858 GB hot at 160 / 112 B before them).
 fn check_memory(ftle: usize, base: usize) {
     let (hd, uhd) = ((1920, 1080), (3840, 2160));
     let word = size_of::<FreeGroupWord>();
@@ -159,35 +166,35 @@ fn check_memory(ftle: usize, base: usize) {
             "1080p E=3 FTLE-on",
             gb(ftle, 4, hd),
             gb(word, 4, hd),
-            "1.327",
+            "1.393",
             "0.133",
         ),
         (
             "1080p E=3 FTLE-off",
             gb(base, 4, hd),
             gb(word, 4, hd),
-            "0.929",
+            "0.995",
             "0.133",
         ),
         (
             "1080p E=1 FTLE-off",
             gb(base, 2, hd),
             gb(word, 2, hd),
-            "0.464",
+            "0.498",
             "0.066",
         ),
         (
             "4K E=3 FTLE-on",
             gb(ftle, 4, uhd),
             gb(word, 4, uhd),
-            "5.308",
+            "5.574",
             "0.531",
         ),
         (
             "4K E=1 FTLE-off",
             gb(base, 2, uhd),
             gb(word, 2, uhd),
-            "1.858",
+            "1.991",
             "0.265",
         ),
     ];

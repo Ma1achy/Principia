@@ -1,7 +1,8 @@
 //! QA's tests for TASK-M3-10, written from the requirements it closes (payload §1, "Why closure is here, at this
 //! width, unconditionally"; payload §2, "Drift latches are ABSOLUTE maxima"; R-271):
-//! - `qa_layout_read_with_unpack2x16float` (REQ-PAY-041): `d_min` is the high half of `packed_a`, `dE_max` the low and
-//!   `dLz_max` the high half of `packed_b`, read with WGSL's `unpack2x16float`, the descriptor's low 16 bits kept.
+//! - `qa_layout_read_with_unpack2x16float` (REQ-PAY-041): `d_min` is the high half of `packed_a`, read with WGSL's
+//!   `unpack2x16float`, `dE_max` the low and `dLz_max` the high half of `packed_b`, `log16` since R-632, the
+//!   descriptor's low 16 bits kept.
 //! - `qa_clamp_fuzz_any_bits` (REQ-PAY-045): over every f32 bit pattern (NaN payloads, ±∞, ±10⁶, subnormals), a valid
 //!   state's halves are finite, clamped to 65504, the drift maxima never negative and `d_min` never 0.0 (R-271); a failed
 //!   state's halves are exactly `0x0000` in both drifts and `0x7C00` in `d_min`, tested by the bits.
@@ -22,9 +23,10 @@
 use kernel::driver::latch::Latches;
 use kernel::occupant::kdk::Kdk;
 use kernel::payload::{
-    f32_to_f16_bits, pa_d_min, pb_dE_max, pb_dLz_max, sd_state, set_state, unpack2x16float,
-    DminCounters, F16_FINITE_MAX, F16_MIN_SUBNORMAL, STATE_BOUNDED, STATE_COLLISION,
-    STATE_DECODE_FAILED, STATE_ESCAPE, STATE_RUNNING, STATE_SIM_FAILED,
+    f32_to_f16_bits, f32_to_log16, log16_to_f32, pa_d_min, pb_dE_max, pb_dLz_max, sd_state,
+    set_state, unpack2x16float, DminCounters, F16_FINITE_MAX, F16_MIN_SUBNORMAL, LOG16_CODE_MAX,
+    STATE_BOUNDED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_ESCAPE, STATE_RUNNING,
+    STATE_SIM_FAILED,
 };
 use proptest::prelude::*;
 use validation::drift::{integrate_fixture, Fixture};
@@ -74,9 +76,10 @@ fn observed(ds: &[f32], drifts: &[(f32, f32)]) -> Latches {
 
 // ── qa_layout_read_with_unpack2x16float (REQ-PAY-041) ────────────────────────────────────────────────────────────
 
-/// Asserts the bit layout `pack` writes: `d_min = 0.5` (`0x3800`) in `packed_a`'s high half, `dE_max = |−0.25|`
-/// (`0x3400`) in `packed_b`'s low half and `dLz_max = 3` (`0x4200`) in its high half, each read back by
-/// `unpack2x16float`, the descriptor kept.
+/// Asserts the bit layout `pack` writes: `d_min = 0.5` (`0x3800`) in `packed_a`'s high half, read back by
+/// `unpack2x16float`; `dE_max = |−0.25|` (`log16` `0x5E01`) in `packed_b`'s low half and `dLz_max = 3` (`0x6181`) in
+/// its high half, in the `log16` form since R-632 (binary16 `0x3400` and `0x4200` before), read back by their
+/// accessors; the descriptor kept.
 fn check_layout(pack: Persist) {
     let l = observed(&[2.0, 0.5, 1.0], &[(-0.25, 1.0), (0.125, -3.0)]);
     let a0 = descriptor(STATE_BOUNDED);
@@ -84,11 +87,11 @@ fn check_layout(pack: Persist) {
     assert_eq!(a & 0xffff, a0, "the descriptor half is not kept");
     assert_eq!(
         (a >> 16, b),
-        (0x3800, 0x4200_3400),
+        (0x3800, 0x6181_5e01),
         "the halves are not d_min high in packed_a, dE_max low and dLz_max high in packed_b"
     );
     assert_eq!(
-        (unpack2x16float(a)[1], unpack2x16float(b)),
+        (unpack2x16float(a)[1], [pb_dE_max(b), pb_dLz_max(b)]),
         (0.5, [0.25, 3.0]),
         "unpack2x16float does not read the latches"
     );
@@ -133,8 +136,9 @@ fn check_clamp(pack: Persist, state: u32, obs: &[(f32, f32, f32)]) -> Result<(),
     }
     let met = obs.iter().any(|o| !(o.0 * o.0).is_nan());
     let finite = |h: u16| h & 0x7c00 != 0x7c00;
+    let finite_log16 = |h: u16| log16_to_f32(h).is_finite();
     prop_assert!(
-        finite(he) && finite(hl) && (finite(hd) || (!met && hd == 0x7c00)),
+        finite_log16(he) && finite_log16(hl) && (finite(hd) || (!met && hd == 0x7c00)),
         "state {}: a half of {:04x}/{:04x}/{:04x} is not finite (d_min unset only with no separation met)",
         state,
         hd,
@@ -154,21 +158,22 @@ fn check_clamp(pack: Persist, state: u32, obs: &[(f32, f32, f32)]) -> Result<(),
         "state {}: d_min is 0.0, which never appears (R-271)",
         state
     );
-    let unpacked = [pa_d_min(a), pb_dE_max(b), pb_dLz_max(b)];
-    let set = usize::from(hd == 0x7c00);
     prop_assert!(
-        unpacked[set..].iter().all(|&x| x <= F16_FINITE_MAX),
-        "state {}: an unpacked half {:?} exceeds 65504",
+        hd == 0x7c00 || pa_d_min(a) <= F16_FINITE_MAX,
+        "state {}: d_min {} exceeds 65504",
         state,
-        unpacked
+        pa_d_min(a)
     );
     // A column with a NaN in it is a march that marks itself `sim_failed` (payload §1), outside this check's domain.
-    let big = |x: f32| x.abs() >= F16_FINITE_MAX;
-    let max_de = obs.iter().any(|o| big(o.1)) && !obs.iter().any(|o| o.1.is_nan());
-    let max_dlz = obs.iter().any(|o| big(o.2)) && !obs.iter().any(|o| o.2.is_nan());
+    // The drift halves are `log16` (R-632), which saturates at its greatest code, `LOG16_CODE_MAX`, never past it: a
+    // drift of `±∞` is stored as that code.
+    let inf = |x: f32| x.is_infinite();
+    let max_de = obs.iter().any(|o| inf(o.1)) && !obs.iter().any(|o| o.1.is_nan());
+    let max_dlz = obs.iter().any(|o| inf(o.2)) && !obs.iter().any(|o| o.2.is_nan());
+    let top = LOG16_CODE_MAX as u16;
     prop_assert!(
-        (!max_de || he == 0x7bff) && (!max_dlz || hl == 0x7bff),
-        "state {}: a drift of magnitude at least 65504 (or ±∞) is not stored as 65504: {:04x}/{:04x}",
+        (!max_de || he == top) && (!max_dlz || hl == top),
+        "state {}: a drift of ±∞ is not stored as the log16 form's greatest code: {:04x}/{:04x}",
         state,
         he,
         hl
@@ -332,9 +337,10 @@ fn d_min_bits(d: f32) -> u32 {
     }
 }
 
-/// The f16 bits a valid sample stores for a drift maximum `x >= 0`, clamped to 65504.
+/// The bits a valid sample stores for a drift maximum `x >= 0`: its `log16` code (R-632; binary16 clamped to 65504
+/// before).
 fn drift_bits(x: f32) -> u32 {
-    u32::from(f32_to_f16_bits(x.min(F16_FINITE_MAX)))
+    u32::from(f32_to_log16(x))
 }
 
 /// Asserts, for a `running` sample observing `obs` (`(d, ΔE, ΔL_z)`, finite) and persisting after each index in

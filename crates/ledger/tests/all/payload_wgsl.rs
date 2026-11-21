@@ -5,7 +5,7 @@
 //!   digit ≥ 3, as the Rust release build does (R-321, R-324).
 //! - REQ-PAY-091: the generated WGSL struct layouts for `SimState` and `ICDescriptor` match the ledger's field by field,
 //!   and the checked-in WGSL is the emitter's output; under R-343, `closure_step_reserved` is a u32 at `closure_step`'s
-//!   byte (140 in `SimStateFTLE`, 92 in `SimStateBase`), `closure_step(w)` reads bits 0–15 on the GPU, the schema version's halves are the Rust `u64`'s, and the
+//!   byte (148 in `SimStateFTLE`, 100 in `SimStateBase`), `closure_step(w)` reads bits 0–15 on the GPU, the schema version's halves are the Rust `u64`'s, and the
 //!   buffers' `@group`/`@binding` numbers equal the generated constants in both the WGSL and the Rust.
 
 use std::path::Path;
@@ -521,11 +521,12 @@ negative_control!(
 // R-343: `closure_step`'s WGSL form and the binding constants.
 
 /// `closure_step_reserved` is a u32 at the byte of the stored `closure_step` in both `SimState` variants in `source`:
-/// 140 in `SimStateFTLE` (R-343) and 92 in `SimStateBase`, which drops the 48 B shadow before it (payload §1: "drop
-/// r_sh,p_sh → 96 B"). The task file's "byte 140 of both variants" reads as FTLE's offset; applied per R-204.
+/// 148 in `SimStateFTLE` (R-343; 140 before the budget word and the regularised drift, TASK-M3-41) and 100 in
+/// `SimStateBase`, which drops the 48 B shadow before it (payload §1: "drop r_sh,p_sh"). The task file's "byte 140 of
+/// both variants" reads as FTLE's offset; applied per R-204.
 fn check_closure_member(source: &str) {
     let module = parse(source);
-    for (variant, at) in [("SimStateFTLE", 140), ("SimStateBase", 92)] {
+    for (variant, at) in [("SimStateFTLE", 148), ("SimStateBase", 100)] {
         let (_, ty) = module
             .types
             .iter()
@@ -553,8 +554,8 @@ fn wgsl_layouts_closure_step_reserved_is_a_u32_at_closure_steps_byte() {
 
 negative_control!(
     wgsl_layouts_closure_step_reserved_is_a_u32_at_closure_steps_byte,
-    "a SimStateBase with closure_min after closure_step_reserved moves it to byte 88 and must fail",
-    expected = "`SimStateBase.closure_step_reserved` is not a u32 at byte 92",
+    "a SimStateBase with closure_min after closure_step_reserved moves it to byte 96 and must fail",
+    expected = "`SimStateBase.closure_step_reserved` is not a u32 at byte 100",
     {
         let wgsl = generated_wgsl();
         let base = wgsl.find("struct SimStateBase").expect("SimStateBase");

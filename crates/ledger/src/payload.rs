@@ -78,10 +78,34 @@ fn descriptor(name: &'static str, offset: u32, width: u32, scale: Scale, hi: i64
     entry(name, location, FieldType::UBits, scale).range(Range::int(0, hi))
 }
 
+/// A u-bits field of the word `word` (payload §2): `budget_bits`'s flag and counts.
+fn descriptor_in(
+    name: &'static str,
+    word: &'static str,
+    offset: u32,
+    width: u32,
+    scale: Scale,
+    hi: i64,
+) -> EntryBuilder {
+    entry(name, packed(word, offset, width), FieldType::UBits, scale).range(Range::int(0, hi))
+}
+
 /// An exact macro-step index, at most `horizon_steps_max` (§3.1, R-86).
 fn step(name: &'static str, location: Location) -> EntryBuilder {
     let max = HORIZON_STEPS_MAX.number() as i64;
     entry(name, location, FieldType::UBits, Scale::Lin).range(Range::int(0, max))
+}
+
+/// A drift latch ≥ 0 in the `log16` form (payload §2, "The `log16` form"; R-632): `dE_max`, `dLz_max` and
+/// `dE_reg_max`. The form saturates at its greatest code, so it declares `overflow` as binary16's latches do.
+fn drift_latch(name: &'static str, location: Location) -> EntryBuilder {
+    let range = Range {
+        lo: Bound::Closed(0.0),
+        hi: Bound::Unbounded,
+    };
+    entry(name, location, FieldType::Log16, Scale::Log)
+        .range(range)
+        .overflow(Overflow::Saturate)
 }
 
 /// An `f16-pair` latch ≥ 0 (or > 0), clamped to ±65504 before packing (payload §1).
@@ -117,7 +141,7 @@ fn shape_point() -> EntryBuilder {
 /// The fields the corpus or their own definition make non-negative, other than the unsigned bit fields, each with the
 /// line that does (R-400; TASK-M1-17): each declares a lower bound of 0, closed or open, and nothing else declares
 /// one. The physics reviewer checks each citation.
-pub const NON_NEGATIVE: [(&str, &str); 15] = [
+pub const NON_NEGATIVE: [(&str, &str); 16] = [
     (
         "closure_min",
         "dd_generation_root §3.4: `closure_min` | log | ≥ 0",
@@ -133,6 +157,11 @@ pub const NON_NEGATIVE: [(&str, &str); 15] = [
     (
         "dLz_max",
         "dd_generation_root §3.4: `delta_Lz_max_abs` | log | ≥ 0",
+    ),
+    (
+        "dE_reg_max",
+        "dd_simstate_payload §1: `dE_reg`'s max half, `max_t |ΔE_reg(t)|`, an absolute maximum as `dE_max` is \
+         (R-605; REQ-PAY-111)",
     ),
     (
         "m0",
@@ -189,7 +218,7 @@ pub const NON_NEGATIVE: [(&str, &str); 15] = [
 
 /// The fields declared signed over (−∞, ∞), each with its citation (R-426; dd_generation_root §3.8): §3 gives none of
 /// them a range, so without its citation each would be a gap. The physics reviewer checks each citation.
-pub const SIGNED: [(&str, &str); 8] = [
+pub const SIGNED: [(&str, &str); 9] = [
     (
         "S",
         "R-423: physics review 5484757609 found `S` signed at finite time, with zero a meaningful centre (R-426)",
@@ -228,6 +257,11 @@ pub const SIGNED: [(&str, &str); 8] = [
         "dd_generation_root §3.8's worked entry: `Lz_drift`, (−∞, ∞), signed; §3.4: `Lz_drift` | diverging (signed) \
          (R-426)",
     ),
+    (
+        "dE_reg_final",
+        "dd_simstate_payload §1, §5: `dE_reg`'s final half, the regularised energy's drift `ΔE_reg` where the march \
+         stopped, signed as `energy_drift` is (R-605; REQ-PAY-111)",
+    ),
 ];
 
 /// The fields whose range is provisional, each with the requirement that declares it (R-426): each stays on
@@ -239,7 +273,7 @@ pub const PROVISIONAL: [(&str, &str); 0] = [];
 
 /// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0`,
 /// `rho_angle` and `n`.
-pub const DECLARED: [(&str, &str); 16] = [
+pub const DECLARED: [(&str, &str); 19] = [
     (
         "V_0",
         "dd_generation_root §3.6: `V_0` (lin, (−∞, 0]); dd_decoder §3.6: `V₀ = −Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖` (R-403)",
@@ -289,6 +323,20 @@ pub const DECLARED: [(&str, &str); 16] = [
     (
         "last_symbol",
         "dd_simstate_payload §3: the symbol codes `a = 0, A = 1, b = 2, B = 3`",
+    ),
+    (
+        "budget_exhausted",
+        "dd_simstate_payload §2, `budget_bits`: `budget_exhausted`, bit 0, a sticky flag, 0 or 1 (R-603; REQ-PAY-110)",
+    ),
+    (
+        "floor_hits",
+        "dd_simstate_payload §2, `budget_bits`: the separation-floor hits, bits 1–15, a count saturating at 2¹⁵ − 1 \
+         (R-603; REQ-PAY-110)",
+    ),
+    (
+        "cap_hits",
+        "dd_simstate_payload §2, `budget_bits`: the entry-cap hits, bits 16–30, a count saturating at 2¹⁵ − 1 (R-603; \
+         REQ-PAY-110)",
     ),
     (
         "coll_floor",
@@ -411,6 +459,17 @@ fn words() -> Vec<Word> {
         ),
         word("packed_b", vec![]),
         word("times", vec![]),
+        // Bit 0 `budget_exhausted`, bits 1–15 the floor hits, 16–30 the entry-cap hits, bit 31 reserved (payload §2;
+        // R-603).
+        word(
+            "budget_bits",
+            vec![Span {
+                offset: 31,
+                width: 1,
+            }],
+        ),
+        // Bits 0–15 the regularised drift's final value, 16–31 its maximum, each `log16` (payload §2; R-605).
+        word("dE_reg", vec![]),
         // Bits 0–7 `coll_floor`, 8–31 reserved (payload §2; R-973).
         word(
             "coll_floor_bits",
@@ -454,10 +513,10 @@ fn entries() -> Vec<EntryBuilder> {
         ubits("total_substeps", 33).range(u32s),
         // Unset before departure, the minimum of an empty set, is +∞, with `closure_step` 0 and the departed bit clear
         // (RQ-835 (a); payload §1, §2): a view draws it "not yet", as `d_min`'s (R-271).
-        f32_at("closure_min", 34, Scale::Log)
+        f32_at("closure_min", 36, Scale::Log)
             .range(from_zero)
             .sentinel(f64::INFINITY),
-        step("closure_step", Location::Scalar(35)),
+        step("closure_step", Location::Scalar(37)),
         descriptor("state", 0, 3, Scale::Categorical(6), 5),
         // A body index under escape and a pair id under collision (payload §2; R-449).
         descriptor("detail", 3, 2, Scale::Categorical(4), 3).index_base(
@@ -480,8 +539,28 @@ fn entries() -> Vec<EntryBuilder> {
         // Unset, the minimum of an empty set, is f16 +∞: a failed sample's, and any sample's before its first step
         // (R-271, payload §1). A stored value is never 0.0: one below f16's smallest positive subnormal is stored as it.
         latch("d_min", packed("packed_a", 16, 16), Bound::Open(0.0)).sentinel(f64::INFINITY),
-        latch("dE_max", packed("packed_b", 0, 16), Bound::Closed(0.0)),
-        latch("dLz_max", packed("packed_b", 16, 16), Bound::Closed(0.0)),
+        // The Cartesian drift latches, in `dE_reg`'s `log16` form (R-632; REQ-PAY-112): diagnostic only under a
+        // regularised occupant (R-605).
+        drift_latch("dE_max", packed("packed_b", 0, 16)),
+        drift_latch("dLz_max", packed("packed_b", 16, 16)),
+        // R-603's budget word (payload §2; REQ-PAY-110): the sticky exhaustion flag and the two counted signals,
+        // each count saturating at its width's greatest value, which then reads "at least".
+        descriptor_in("budget_exhausted", "budget_bits", 0, 1, Scale::Flag, 1),
+        descriptor_in("floor_hits", "budget_bits", 1, 15, Scale::Lin, (1 << 15) - 1),
+        descriptor_in("cap_hits", "budget_bits", 16, 15, Scale::Lin, (1 << 15) - 1),
+        // R-605's regularised drift latches (payload §1, §2, §5; REQ-PAY-111): the final drift, signed, and the
+        // maximum magnitude, each `log16`. Under `none` the two energies are one, and they hold the Cartesian drift.
+        entry(
+            "dE_reg_final",
+            packed("dE_reg", 0, 16),
+            FieldType::Log16,
+            Scale::Diverging,
+        )
+        // No drift-view floor or neutral band: the band's reason is the fragment's f32 rounding of a live `H − E_0`
+        // (render contract Part 5, "The neutral band"; R-652), and this is a stored latch with no fragment rounding,
+        // so the band does not stay on it. Its view is a plain diverging view of the stored value.
+        .overflow(Overflow::Saturate),
+        drift_latch("dE_reg_max", packed("dE_reg", 16, 16)),
         step("t_end_step", packed("times", 0, 16)),
         step("t_dmin_step", packed("times", 16, 16)),
         // The collision test's floor, `2^(code − 41)`, 1 to 145; 0 "not recorded" (payload §2; integrator contract
@@ -589,7 +668,15 @@ fn simstate(ftle: bool) -> Struct {
     for name in ["S", "theta", "mean_y", "C_ty", "E_0", "Lz_0"] {
         members.push(m(name, Storage::F32));
     }
-    for name in ["packed_a", "packed_b", "times", "total_substeps"] {
+    // `budget_bits` and `dE_reg` follow `total_substeps` (payload §1; R-603, R-605): 4 B each, at every precision row.
+    for name in [
+        "packed_a",
+        "packed_b",
+        "times",
+        "total_substeps",
+        "budget_bits",
+        "dE_reg",
+    ] {
         members.push(m(name, Storage::U32));
     }
     // `_reserved` is `θ̃`'s frozen pole reference (R-397; payload §2): the longitude stored on entering the pole disc,
@@ -802,6 +889,17 @@ pub const fn continuation_index() -> [[u32; 4]; 4] {
         e += 1;
     }
     out
+}
+
+/// The `log16` form's lowest octave (payload §2, "The `log16` form"; R-605, R-632): its code 1 is `2^-96 ≈ 1.26e-29`
+/// and its greatest code `2^31·(1 + 254/256) ≈ 4.28e9`, 128 octaves at an 8-bit fraction each (relative error at most
+/// 2⁻⁹ ≈ 1.95e-3). Chosen against the measured drifts (TASK-M3-41): Heggie × RK4's regularised drift on dd_integrator
+/// §5's tests 2 and 7 reads 2.1e-13 to 5.7e-13 at f64 and 3.1e-5 to 6.5e-5 at f32, binary16's floor being 6e-8; the
+/// floor sits sixteen decades below the least, so an f64 round-off drift of an `|E|` far below 1 is held too. Interface
+/// data written into the generated code, as the canonical quiet NaN is; hashed into the schema version with the
+/// layout table, since it is the form's meaning.
+pub const fn log16_octave_lo() -> i32 {
+    -96
 }
 
 /// The canonical quiet NaN's f32 bits, `0x7fc0_0000`: sign 0, exponent all ones, the quiet bit (bit 22) alone in the

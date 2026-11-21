@@ -1105,7 +1105,16 @@ negative_control!(
 /// The fields on `ramp_coolwarm` before R-426 (TASK-M1-17, TASK-M1-20): R-426 moves none (REQ-GEN-035);
 /// REQ-PAY-097 moves `q_mass` to viridis once its range is declared [0, 1] (TASK-M2-03), and REQ-PAY-098 `mean_y`
 /// once its range is declared [0, 4] (TASK-M3-13).
-const COOLWARM: [&str; 6] = ["S", "C_ty", "E_0", "Lz_0", "ftle", "diffusion"];
+/// R-605's `dE_reg_final`, signed, joins them (TASK-M3-41).
+const COOLWARM: [&str; 7] = [
+    "S",
+    "C_ty",
+    "E_0",
+    "Lz_0",
+    "ftle",
+    "diffusion",
+    "dE_reg_final",
+];
 
 /// Checks that the views on `ramp_coolwarm`, in `views`, are exactly [`COOLWARM`].
 fn check_coolwarm_kept(views: &[(Entry, NumericView, String)]) {
@@ -1508,9 +1517,11 @@ negative_control!(
 /// The proposed floors (R-71, REQ-TOOL-160), each a power of two, `(field, log2 ε_f)`: the distances 2⁻¹⁴, binary16's
 /// smallest normal; the drift latches 2⁻²⁰, nearest `eps_E` and `eps_L`'s default 10⁻⁶; `closure_min` and `rho_ratio`
 /// 2⁻²³, f32's spacing on `[1, 2)`.
-const FLOORS: [(&str, i32); 6] = [
+const FLOORS: [(&str, i32); 7] = [
     ("d_min", -14),
     ("dE_max", -20),
+    // R-605's regularised drift maximum, at `dE_max`'s floor (TASK-M3-41).
+    ("dE_reg_max", -20),
     ("dLz_max", -20),
     ("closure_min", -23),
     ("rho_ratio", -23),
@@ -1554,7 +1565,10 @@ fn check_floors(views: &[(Entry, NumericView, String)], floors: &[(&str, i32)]) 
     let mut got = logs.clone();
     want.sort_unstable();
     got.sort_unstable();
-    assert_eq!(got, want, "the log views are not REQ-TOOL-160's six");
+    assert_eq!(
+        got, want,
+        "the log views are not REQ-TOOL-160's six and dE_reg_max"
+    );
     for &(field, k) in floors {
         let eps = 2f64.powi(k);
         let (_, n, wgsl) = views
@@ -1572,6 +1586,8 @@ fn check_floors(views: &[(Entry, NumericView, String)], floors: &[(&str, i32)]) 
             .unwrap_or_else(|| panic!("no register entry for `{field}`'s floor"));
         let gate = match field {
             "rho_ratio" | "r_min_pair_0" => Some("M2"),
+            // proposed by TASK-M3-41, provisional until the M3 gate (R-605)
+            "dE_reg_max" => Some("M3"),
             _ => None,
         };
         assert_eq!(

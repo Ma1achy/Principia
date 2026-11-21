@@ -906,7 +906,12 @@ fn check_terminal_latch<R: P>(latched: bool) {
         let key = flat::<R>(dt, 300, 2);
         let (stored, c) = recorded(&s, &key, radius, true, true);
         assert_eq!(name(sd_state(stored.packed_a)), what);
-        assert!(finished(stored.packed_a, stored.times, 300));
+        assert!(finished(
+            stored.packed_a,
+            stored.times,
+            stored.budget_bits,
+            300
+        ));
         if what != "bounded" {
             let e = c.inner.events();
             let at = if what == "escape" {

@@ -1,14 +1,18 @@
-//! The monotone latches and their f16 packing (payload §1, the precision rule; payload §2; render_contract Part 5,
+//! The monotone latches and their 16-bit packing, `d_min` binary16 and the drift maxima `log16` (payload §1, the
+//! precision rule; payload §2; R-632; render_contract Part 5,
 //! "Unpack layer"; REQ-PAY-041, REQ-PAY-044, REQ-PAY-045, REQ-PAY-050, REQ-INT-045).
 //!
 //! **What they are** (payload §2, "Drift latches are ABSOLUTE maxima"): `d_min = min_t |separation|`,
 //! `dE_max = max_t |ΔE(t)|` and `dLz_max = max_t |ΔL_z(t)|`, each a monotone latch over the whole trajectory, `t = 0`
-//! included for `d_min`. [`Latches`] holds the three as local f32s and packs them to the payload's f16 halves only when
-//! persistent state is written ([`Latches::persist`]): payload §1's semantics (a), one requantisation per persist
+//! included for `d_min`. [`Latches`] holds the three as local f32s and packs them to the payload's 16-bit halves only
+//! when persistent state is written ([`Latches::persist`]): payload §1's semantics (a), one requantisation per persist
 //! boundary. At a resume the latches reload from the payload ([`Latches::reload`]) and go on latching, so a sample
-//! resumed across any number of persist boundaries stores the f16 of the one f32 latch over its whole run: f16
-//! rounding and the clamp are monotone and leave an f16 value where it is, so latching the reloaded f16 value of a
-//! segment's latch and then rounding gives what rounding the segment's own latch would have.
+//! resumed across any number of persist boundaries stores the packing of the one f32 latch over its whole run: binary16
+//! rounding with its clamp, and the `log16` form's rounding with its saturation, are monotone and leave a value of their
+//! own where it is, so latching the reloaded value of a segment's latch and then rounding gives what rounding the
+//! segment's own latch would have. The regularised drift's latches ([`RegularisedDrift`], `dE_reg`; R-605) pack in the
+//! same form but are not reloaded at a resume: like the monitor's Cartesian maxima, they are the caller's to resume,
+//! and a march resumed with a fresh cadence stores its own segment's `dE_reg` (no production caller resumes yet).
 //!
 //! **`d_min` is latched as its square.** The collision detector forms each pair's position-quantised `d²` once per
 //! step and compares `d²`, never `d` (`crate::detect::collision`'s note), and its `dmin_pair` latch holds the least
@@ -16,9 +20,10 @@
 //! persist: `√` is monotone, so the least `√` is the `√` of the least `d²`. A reloaded `d_min` is squared back exactly:
 //! an f16 value has at most 11 significant bits, so its square is an f32 value, and its `√` is it again.
 //!
-//! **What is packed** (payload §1, "Pack requires clamp/canonicalise first"; R-271): each value is clamped to
-//! binary16's finite range, ±65504, before the generated packers convert it ([`crate::payload::set_d_min`],
-//! [`crate::payload::pack_packed_b`]), so every half of a valid state is finite. A `sim_failed` or `decode_failed`
+//! **What is packed** (payload §1, "Pack requires clamp/canonicalise first"; R-271): `d_min` is clamped to binary16's
+//! finite range, ±65504, before the generated packer converts it ([`crate::payload::set_d_min`]); the drift maxima go
+//! through the `log16` form ([`crate::payload::pack_packed_b`]), which saturates at its greatest code, so every half of
+//! a valid state is finite. A `sim_failed` or `decode_failed`
 //! sample, and a reserved state code, which a decoder reads as untrusted ([`crate::payload::sd_is_failed`]), holds the
 //! defined failed-state values whatever its latches held: 0.0 in `dE_max` and `dLz_max`, and `d_min` its unset value,
 //! f16 `+∞` (bits `0x7C00`), written by [`crate::payload::set_d_min_unset`], never left to the generated struct's
@@ -36,8 +41,8 @@
 
 use super::monitor::{latched, magnitude};
 use crate::payload::{
-    clamp_f16, pa_d_min, pa_d_min_is_unset, pack_packed_b, pb_dE_max, pb_dLz_max, sd_is_failed,
-    set_d_min, set_d_min_unset, DminCounters,
+    clamp_f16, pa_d_min, pa_d_min_is_unset, pack_dE_reg, pack_packed_b, pb_dE_max, pb_dLz_max,
+    sd_is_failed, set_d_min, set_d_min_unset, DminCounters,
 };
 use crate::real::{IeeeBits, RealOps};
 
@@ -78,7 +83,7 @@ impl Latches {
 
     /// The latches a resumed sample continues from, reloaded from its persisted `packed_a` and `packed_b`: `d_min`
     /// unset where its bits are the unset value (tested by the bits, R-271), else its f16 value, squared back exactly
-    /// (the module's note); `dE_max` and `dLz_max` their f16 values. A failed sample is finished and never resumed
+    /// (the module's note); `dE_max` and `dLz_max` their `log16` values. A failed sample is finished and never resumed
     /// (payload §6, `sd_is_finished`).
     #[inline]
     pub fn reload(packed_a: u32, packed_b: u32) -> Self {
@@ -164,5 +169,71 @@ fn stored(x: f32) -> f32 {
         0.0
     } else {
         x
+    }
+}
+
+/// The regularised energy's drift latches, live during the march (integrator_contract Part 1, "The regularised
+/// energies, defined"; R-566, R-605; payload §1's `dE_reg`): the last drift reported, signed, and the greatest
+/// magnitude, at the working precision, as the occupant reports them ([`super::advance::Cadence::regularised_drift`]).
+/// `seen` is whether any was reported: a stepper reports none, and with regularisation off the two energies are one,
+/// so the write then takes the Cartesian monitor's drifts (payload §1, §5). A non-finite drift is kept from then on, as
+/// the monitor keeps one ([`latched`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RegularisedDrift<R> {
+    /// `ΔE_reg` at the last kept step.
+    last: R,
+    /// `max|ΔE_reg|` so far.
+    max: R,
+    /// Whether the occupant has reported a drift.
+    seen: bool,
+}
+
+impl<R: crate::real::Real + IeeeBits> RegularisedDrift<R> {
+    /// No drift reported: a run before its first regularised step.
+    #[inline]
+    pub fn none() -> Self {
+        RegularisedDrift {
+            last: R::default(),
+            max: R::default(),
+            seen: false,
+        }
+    }
+
+    /// A kept step's drift `drift`, latched.
+    #[inline]
+    pub fn report(&mut self, drift: R) {
+        self.last = drift;
+        self.max = latched(self.max, magnitude(drift));
+        self.seen = true;
+    }
+
+    /// Whether any drift was reported: the run was under a regularised occupant and took a step.
+    #[inline]
+    pub fn seen(&self) -> bool {
+        self.seen
+    }
+
+    /// The final drift, signed.
+    #[inline]
+    pub fn last(&self) -> R {
+        self.last
+    }
+
+    /// The greatest magnitude.
+    #[inline]
+    pub fn max(&self) -> R {
+        self.max
+    }
+}
+
+/// `dE_reg` as a valid state stores it (payload §1, §2; R-605): the final drift, signed, and the greatest magnitude,
+/// each rounded to f32 and then to the `log16` form, a NaN as 0.0 (R-79); a failed state's is both halves 0.0, as
+/// `packed_b`'s is.
+#[inline]
+pub fn persist_de_reg(failed: bool, last: f32, max: f32) -> u32 {
+    if failed {
+        pack_dE_reg(0.0, 0.0)
+    } else {
+        pack_dE_reg(stored(last), stored(max))
     }
 }

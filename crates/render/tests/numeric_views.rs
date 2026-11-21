@@ -359,7 +359,13 @@ fn f16_scalar_views_pack_and_unpack_within_f16_eps() {
         s.set.sample(4).d_min(x).drift_max(x, x);
         let r = read(&s, 4);
         assert_eq!(r.dE_max.to_bits(), r.dLz_max.to_bits(), "{x}: the drifts");
-        assert_eq!(r.d_min.to_bits(), r.dE_max.to_bits(), "{x}: d_min");
+        // The drifts are `log16` since R-632 (payload §2), to 2⁻⁹ relative; `d_min` stays binary16.
+        let off = (f64::from(r.dE_max) - f64::from(x)).abs();
+        assert!(
+            off <= f64::from(x).abs() / 512.0,
+            "{x}: the drifts read {}",
+            r.dE_max
+        );
         r.d_min
     });
     assert_eq!(

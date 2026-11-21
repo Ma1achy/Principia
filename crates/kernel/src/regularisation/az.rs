@@ -657,6 +657,11 @@ pub struct AzCount<R> {
     pub dt_max: DtMax<R>,
     /// The last registration's reference body; `3` before the first.
     pub reference: u32,
+    /// The energy `E` of the trajectory's first registration, at `t = 0`, against which its regularised energy drifts
+    /// (integrator_contract Part 1, "The regularised energies, defined"; R-566); meaningful only where `referenced`.
+    pub e_ref: R,
+    /// Whether `e_ref` holds the first registration's `E`: false until the march's first registration.
+    pub referenced: bool,
     /// How the march stands.
     pub end: End,
 }
@@ -680,6 +685,8 @@ impl<R: AzReal> AzCount<R> {
             largest_interval: 0,
             dt_max: DtMax::new(),
             reference: 3,
+            e_ref: R::default(),
+            referenced: false,
             end: End::Marching,
         }
     }
@@ -813,14 +820,9 @@ fn predictive<R: AzReal>(system: &AzSystem<R>, q: &AzQ<R>, p: &AzP<R>, f: R, ab:
     f * d_min / (p_max * ab)
 }
 
-/// R-604's budget for any regularised occupant: whether the running total `steps` exceeds `max(n_min, rate·t)` at
-/// physical time `t`. An allowance that is not a number, read on its bits, spends the budget too, so that the march
-/// stays bounded (Part 2c rule 3).
-#[inline]
-pub fn over_allowance<R: AzReal>(steps: u32, t: R, rate: R, n_min: u32) -> bool {
-    let allowance = floored(rate * t, R::count(n_min));
-    R::count(steps) > allowance || allowance.nan_bits()
-}
+/// R-604's budget for any regularised occupant ([`super::budget`]), named here too for the callers that took it from
+/// this module.
+pub use super::budget::over_allowance;
 
 /// Whether the running total `steps` exceeds Aarseth–Zare's budget `max(N_min, rate·t)` at physical time `t` (R-604):
 /// [`over_allowance`] at its values.
@@ -1014,6 +1016,7 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     while go {
         if watch.finite(&q, &p) {
             if stepped {
+                cadence.regularised_drift(system.energy(&q, &p) - count.e_ref);
                 let mut s = system.image(&q, &p);
                 let mut g = Geom::new(&s.m, &s.r);
                 cadence.after_step(&mut s, &mut g);
@@ -1034,11 +1037,13 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
             // 5880407311 of PR #502, F2). The landing itself still counts ([`Interval::landed`]): the boundary is
             // reached, its time exact, and the march then ends (physics review 5880652590, P3; code review 5880701680,
             // F3).
-            if over_budget(count.steps, t0 + q.t, params) {
-                count.end = End::Exhausted;
-                go = false;
-            } else if cadence.done() {
+            // A terminal is read before the budget: one found on a step the budget allowed is the copy's outcome, and a
+            // copy never stores a terminal beside `budget_exhausted` (payload §2; R-603).
+            if cadence.done() {
                 count.end = End::Done;
+                go = false;
+            } else if over_budget(count.steps, t0 + q.t, params) {
+                count.end = End::Exhausted;
                 go = false;
             } else if landed {
                 go = false;
@@ -1055,6 +1060,7 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
             let (a, b) = AzSystem::ab(&q);
             watch.sized(a, b);
             let sized = step_size_in(system, &q, &p, entry, params, X::PER_STEP);
+            cadence.signals(sized.floored, sized.cap_hit);
             count.floored += u32::from(sized.floored);
             count.cap_hits += u32::from(sized.cap_hit);
             count.predictive_bound += u32::from(sized.by_limit);
@@ -1118,6 +1124,10 @@ pub fn march<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
         let (system, q, p) = register(&s, params.tiny);
         if count.re_registrations == first {
             registered = system.e;
+        }
+        if !count.referenced {
+            count.e_ref = system.e;
+            count.referenced = true;
         }
         count.re_registrations += 1;
         if count.reference != 3 && count.reference != system.a {
@@ -1205,7 +1215,7 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
         params: &AdvanceParams<R>,
         cadence: &mut Cd,
     ) -> Advanced<R> {
-        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, 0).0
+        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, AzCount::new()).0
     }
 
     /// The seam's `ADVANCE` with how the march ended: a landing on the boundary at or before `t_target`
@@ -1222,7 +1232,7 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
         cadence: &mut Cd,
     ) -> (Advanced<R>, Reached) {
         let (out, reached, _, _) =
-            advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, 0);
+            advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, AzCount::new());
         (out, reached)
     }
 
@@ -1242,10 +1252,23 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
         cadence: &mut Cd,
         carried: &mut Carried<R>,
     ) -> (Advanced<R>, Reached) {
-        let (out, reached, later, steps) =
-            advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, carried.steps);
+        let seed = AzCount {
+            steps: carried.steps,
+            // The `E` of the first registration, the reference its regularised energy drifts against across calls
+            // (Part 1, R-566), in Heggie's frozen-energy slot `x[12]`, held once `registered` is set; Aarseth–Zare
+            // keeps no other number there.
+            e_ref: carried.x[12],
+            referenced: carried.registered == 1,
+            ..AzCount::new()
+        };
+        let (out, reached, later, count) =
+            advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, seed);
         carried.re_registrations += later;
-        carried.steps = steps;
+        carried.steps = count.steps;
+        if count.referenced {
+            carried.x[12] = count.e_ref;
+            carried.registered = 1;
+        }
         (out, reached)
     }
 }
@@ -1271,9 +1294,10 @@ pub(super) fn reached(end: End, boundary: u32, target: u32) -> Reached {
     }
 }
 
-/// [`AarsethZare`]'s seam `ADVANCE` from the running step total `steps`, with how its march ended ([`reached`]), the
-/// registrations it made at a sync boundary after `t = 0` (the call's registrations, less the one at boundary 0 where
-/// the call started there and registered), and the running step total where it stopped.
+/// [`AarsethZare`]'s seam `ADVANCE` from the trajectory's counts `seed` (its running step total and its first
+/// registration's `E`, where held), with how its march ended ([`reached`]), the registrations it made at a sync
+/// boundary after `t = 0` (the call's registrations, less the one at boundary 0 where the call started there and
+/// registered), and the counts where it stopped.
 #[inline]
 fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     state: &State<R>,
@@ -1281,13 +1305,15 @@ fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     t_target: u32,
     params: &AdvanceParams<R>,
     cadence: &mut Cd,
-    steps: u32,
-) -> (Advanced<R>, Reached, u32, u32) {
+    seed: AzCount<R>,
+) -> (Advanced<R>, Reached, u32, AzCount<R>) {
     let delta_sync = C::params::<R>().delta_sync;
     let t_now = R::count(t_now) * params.dt_macro;
     let t_target = R::count(t_target) * params.dt_macro;
     let count = AzCount {
-        steps,
+        steps: seed.steps,
+        e_ref: seed.e_ref,
+        referenced: seed.referenced,
         ..AzCount::new()
     };
     let out = AarsethZare::<C>::advance_to::<S, R, Cd>(state, t_now, t_target, count, cadence);
@@ -1306,6 +1332,6 @@ fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
         },
         reached(out.count.end, out.boundary, target),
         later,
-        out.count.steps,
+        out.count,
     )
 }

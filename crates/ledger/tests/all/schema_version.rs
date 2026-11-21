@@ -502,12 +502,14 @@ negative_control!(
     check_missing_refused("fx_render_knob")
 );
 
-/// The register's presentation constants (TASK-M1-18; R-427): the six log floors, the hatch's numbers, the hue
+/// The register's presentation constants (TASK-M1-18; R-427): the seven log floors (the regularised drift maximum's
+/// since TASK-M3-41), the hatch's numbers, the hue
 /// wheel's, the diverging fields' `x₀` (TASK-M7-05) and the custom-stop ramp's OKLab bound (TASK-M7-11). None decides
 /// a stored bit, so none is hashed (dd_generation_root §3.8, "The hash").
-const PRESENTATION: [&str; 14] = [
+const PRESENTATION: [&str; 15] = [
     "log_floor_d_min",
     "log_floor_dE_max",
+    "log_floor_dE_reg_max",
     "log_floor_dLz_max",
     "log_floor_closure_min",
     "log_floor_rho_ratio",

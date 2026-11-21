@@ -31,6 +31,11 @@ pub enum FieldType {
     /// as a vector component, and storage-only, read widened to f32 (R-317).
     F16,
     F16Pair,
+    /// One 16-bit log-encoded value at a packed location of exactly 16 bits (payload §2, "The `log16` form";
+    /// R-605, R-632): bit 15 the sign, bits 0–14 the magnitude's code, `0` for 0.0 and `c ≥ 1` for the float whose
+    /// f32 bits are `(c − 1 + ((log16_octave_lo() + 127) << 8)) << 15`, an 8-bit fraction in each octave; read widened
+    /// to f32. The drift latches' form, so that a round-off drift at f64 is held, not flushed as binary16 would.
+    Log16,
     Fixed16,
     /// `vector(type, k)`: `k ≥ 2` components of the scalar `component` type, such as `n`; [`crate::gen::validate`]
     /// refuses a vector component or a smaller `k` (§3.8, R-72).

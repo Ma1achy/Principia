@@ -29,14 +29,15 @@ fn real_structs() -> Vec<ledger::schema::Struct> {
 }
 
 /// §1: a `SimState` struct storing `reals` `Real`s of `w` bytes up to `closure_min`, aligned to `a`, has `reals − 1`
-/// of them before the packed words, 16 B of u32s, `closure_min` at its alignment, then 4 B of u16s, then the
+/// of them before the packed words, 24 B of u32s (the budget word and the regularised drift's 8 B among them,
+/// TASK-M3-41), `closure_min` at its alignment, then 4 B of u16s, then the
 /// collision floor's 4 B record `coll_floor_bits` (§1's recheck on the collision floor's record, R-973, TASK-M3-71),
 /// then the escape rule's lagged n̂ register, three more `Real`s at their alignment, where the record's 4 B of padding
 /// `_pad` stood (TASK-M3-12): `(packed_a, closure_min, coll_floor_bits, _nhat_lag_0, end, size, align)`, the size
 /// rounded up to 8 or to `a` if greater.
 fn s1(reals: u32, w: u32, a: u32) -> (u32, u32, u32, u32, u32, u32, u32) {
     let packed_a = (reals - 1) * w;
-    let closure_min = (packed_a + 16).next_multiple_of(a);
+    let closure_min = (packed_a + 24).next_multiple_of(a);
     let coll_floor_bits = closure_min + w + 4;
     let nhat_lag = (coll_floor_bits + 4).next_multiple_of(a);
     let end = nhat_lag + 3 * w;
@@ -81,15 +82,16 @@ fn check_width_function(w: u32, a: u32) {
             "{}'s layout at a {w}-B Real aligned to {a} is not dd_simstate_payload §1's",
             s.name
         );
-        // §1: they end at `34w + 24` and `22w + 24` (the lagged register's three Reals in place of 4 B of padding;
-        // `31w + 28` and `19w + 28` before it, with the collision floor's 8 B; `31w + 20` and `19w + 20` before
-        // that) whenever neither `closure_min` nor the register needs padding before it.
-        if (at("packed_a") + 16).is_multiple_of(a) && (at("coll_floor_bits") + 4).is_multiple_of(a)
+        // §1: they end at `34w + 32` and `22w + 32` (`34w + 24` and `22w + 24` before the budget word and the
+        // regularised drift; the lagged register's three Reals in place of 4 B of padding; `31w + 28` and `19w + 28`
+        // before it, with the collision floor's 8 B; `31w + 20` and `19w + 20` before that) whenever neither
+        // `closure_min` nor the register needs padding before it.
+        if (at("packed_a") + 24).is_multiple_of(a) && (at("coll_floor_bits") + 4).is_multiple_of(a)
         {
             assert_eq!(
                 l.end,
-                (reals + 3) * w + 24,
-                "{} does not end at {}w + 24",
+                (reals + 3) * w + 32,
+                "{} does not end at {}w + 32",
                 s.name,
                 reals + 3
             );

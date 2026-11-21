@@ -47589,7 +47589,7 @@
     },
     {
       "decodes": "none",
-      "image_sha256": "6e05b63bfedd1c93da3ba44ac8400be40e14f84274d9f459c5476621da443bea",
+      "image_sha256": "60cda219d885beec06a0e611794e9fe66782970e788107278030fde78fd08fb3",
       "kind": "golden",
       "name": "debug-views/accumulators-drift_max_vs_final"
     },
@@ -48162,6 +48162,12 @@
     }
   },
   "what": "TASK-M2-57's baseline of the goldens (REQ-DEC-055): each golden's image hash, its sim key and, where it decodes a chart, each sample's chart point (u, v), its f64 decoded state (m0 m1 m2 r0x r0y r1x r1y r2x r2y p0x p0y p1x p1y p2x p2y) and the angle beta of lambda~ from rho~ in [0, 2pi), as IEEE bits in hex, through the baseline commit's decoder",
+  "rewritten_log16": {
+    "what": "this item's image hash was recorded again from BASELINES.md in TASK-M3-41 (PR #32), because packed_b's dE_max moved from binary16 to log16 and its rounding moves 128 pixels of debug-views/accumulators-drift_max_vs_final by one 8-bit step; the golden decodes no chart, so no IC word moves; every other item is as before, byte for byte",
+    "items": [
+      "debug-views/accumulators-drift_max_vs_final"
+    ]
+  },
   "rewritten_failure_path": {
     "what": "these items' image hashes were recorded again by this file's writer (mirror_step_baseline_write_goldens) in TASK-M3-18 (PR #26), because the failure path hatches a failed sample in the drift views: 384 pixels change, 192 in the showcase set's sim_failed sample 4 and 192 in its decode_failed sample 5, 64 of each per golden, each now the hatch, no other pixel; these goldens decode no chart, so no IC word moves; every other item is as first written, byte for byte, the writer's other output (two goldens added since, the beta link's id) not taken",
     "command": "cargo test -p validation --test mirror_step_baseline -- --ignored mirror_step_baseline_write_goldens, its output for these items only",

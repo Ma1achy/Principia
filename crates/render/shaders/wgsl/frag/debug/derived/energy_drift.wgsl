@@ -30,7 +30,8 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     let band = dbg_drift_band_energy(ctx.sample.r, ctx.sample.p, vec3<f32>(ctx.ic.m0, ctx.ic.m1, ctx.ic.m2));
     let shown = dbg_drift_shown(x, uniforms.COMPACTION, band);
     let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.EPS_E, ctx.frag_xy);
-    let energy = suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);
+    // The energy predicate reads the regularised drift's latch (R-605), as the generated drift views do.
+    let energy = suspect_energy(ctx.sample.dE_reg_max, ctx.sample.E_0, uniforms.EPS_E);
     let lz = suspect_lz(ctx.sample.dLz_max);
     return dbg_suspect(rgb, x, energy, lz, ctx.frag_xy);
 }

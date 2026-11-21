@@ -1,0 +1,5 @@
+{
+  "description": "The control can fire: a reader of the Cartesian dE_max on the same run reads the cancellation the close passages leave, not the regularised drift, and fails. This arm shows the gate's own reader picks the two latches apart; that the kernel's predicate reads `dE_reg_max` is `kernel`'s `energy_named` test's.",
+  "reader": "cartesian",
+  "expected": "fail"
+}

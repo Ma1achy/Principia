@@ -635,6 +635,7 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
     assert_eq!(
         provisional_until(register, "M3"),
         [
+            "log_floor_dE_reg_max",
             "r_pole",
             "delta_dep",
             "step_reversal_tol",
@@ -714,7 +715,10 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
         }
     }
     let floors: Vec<&str> = LOG_FLOORS.iter().map(|(_, k)| k.name).collect();
-    assert_eq!(floors, M1_PROPOSED[..6], "the floors' entries");
+    // M1's six, and the regularised drift maximum's, proposed by TASK-M3-41 and provisional until M3 (R-605).
+    let mut want = M1_PROPOSED[..6].to_vec();
+    want.insert(2, "log_floor_dE_reg_max");
+    assert_eq!(floors, want, "the floors' entries");
     for (field, k) in LOG_FLOORS {
         assert_eq!(k.name, format!("log_floor_{field}"), "`{field}`'s entry");
     }

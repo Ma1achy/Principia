@@ -40,7 +40,9 @@ const FIELDS: [&str; 11] = [
     "t_dmin_step",
     "length",
 ];
-const F16: [&str; 3] = ["d_min", "dE_max", "dLz_max"];
+const F16: [&str; 1] = ["d_min"];
+/// The drift latches, `log16` since R-632 (payload §2).
+const LOG16: [&str; 2] = ["dE_max", "dLz_max"];
 const T_END_FRACTION: u32 = 11;
 const T_DMIN_FRACTION: u32 = 12;
 /// Samples per property case: one GPU dispatch each.
@@ -82,7 +84,13 @@ fn location(name: &str) -> (&'static str, u32, u32) {
 /// bits: the march writes it, and no setter is generated). f16 fields hold their binary16 bits.
 fn pack(s: &[u32]) -> [(&'static str, u32); 4] {
     let f = |n| s[sel(n)];
-    let half = |n| f16_bits_to_f32(f(n) as u16);
+    let half = |n| {
+        if LOG16.contains(&n) {
+            log16_to_f32(f(n) as u16)
+        } else {
+            f16_bits_to_f32(f(n) as u16)
+        }
+    };
     let (_, offset, width) = location("length");
     let counters = DminCounters::new();
     let (state, detail, sat) = (f("state"), f("detail"), f("saturated") == 1);
@@ -116,6 +124,8 @@ fn word_of(words: &[(&str, u32)], name: &str) -> u32 {
 fn want(name: &str, raw: u32) -> u32 {
     if F16.contains(&name) {
         f16_bits_to_f32(raw as u16).to_bits()
+    } else if LOG16.contains(&name) {
+        log16_to_f32(raw as u16).to_bits()
     } else {
         raw
     }
@@ -140,11 +150,12 @@ fn host_unpack(name: &str, w: u32) -> u32 {
 }
 
 /// A field's values: its whole bit range, half the draws with its top bit set. `d_min` over (0, 65504] and its unset
-/// +∞ (R-271; a negative `d_min` is refused, R-281); `dE_max`/`dLz_max` over every finite f16, sign bit included.
+/// +∞ (R-271; a negative `d_min` is refused, R-281); `dE_max`/`dLz_max` over every `log16` code, sign bit included, but
+/// `0x8000`, a signed code 0, which no packer writes (payload §2).
 fn field_value(name: &str) -> BoxedStrategy<u32> {
     match name {
         "d_min" => prop_oneof![1u32..0x7c00, Just(PA_D_MIN_UNSET)].boxed(),
-        "dE_max" | "dLz_max" => prop_oneof![0u32..0x7c00, 0x8000u32..0xfc00].boxed(),
+        "dE_max" | "dLz_max" => prop_oneof![0u32..0x8000, 0x8001u32..0x1_0000].boxed(),
         _ => {
             let top = 1u32 << (location(name).2 - 1);
             prop_oneof![0..top << 1, top..top << 1].boxed()
@@ -234,6 +245,8 @@ fn check_host(batch: &[Vec<u32>], observe: impl Fn(&str, u32) -> u32) {
             .map(|(n, &g)| {
                 if F16.contains(n) {
                     f32_to_f16_bits(f32::from_bits(g)).into()
+                } else if LOG16.contains(n) {
+                    f32_to_log16(f32::from_bits(g)).into()
                 } else {
                     g
                 }
@@ -305,7 +318,11 @@ fn check_kernel<'h>(
     kernel.load(&[&input], SENTINEL);
     let gpu = dispatch(kernel);
     for (s, out) in batch.iter().zip(gpu.chunks(2)) {
-        for (k, name) in FIELDS.iter().enumerate().filter(|(_, n)| !F16.contains(n)) {
+        for (k, name) in FIELDS
+            .iter()
+            .enumerate()
+            .filter(|(_, n)| !F16.contains(n) && !LOG16.contains(n))
+        {
             let word = match location(name).0 {
                 "packed_a" => out[0],
                 "times" => out[1],
@@ -612,25 +629,40 @@ fn within_f16_eps(x: f32, got: f32) -> bool {
     (x - got).abs() <= 2f32.powi(-10) * x.abs().max(2f32.powi(-14))
 }
 
-/// f16 pairs: each half packed by the Rust `pack2x16float` and read back by the generated `.x`/`.y` accessors, on the
-/// host and on the GPU, is within f16 eps of the value, and the GPU's read is the host's bit for bit.
+/// Whether `got` is within the `log16` form's resolution (2⁻⁹, relative) of `x`, in its range (payload §2).
+fn within_log16(x: f32, got: f32) -> bool {
+    (x - got).abs() <= 2f32.powi(-9) * x.abs()
+}
+
+/// The 16-bit pairs: `d_min`'s half packed by the Rust `pack2x16float` and read back by its generated `.y` accessor
+/// within f16 eps; `dE_max` and `dLz_max` packed by `pack_packed_b`, `log16` since R-632, and read back by theirs
+/// within the form's resolution; on the host and on the GPU, the GPU's read the host's bit for bit.
 fn check_f16_pairs(h: &GpuHarness, module: &str, pairs: &[(f32, f32)]) {
     let fields = [("dE_max", 0), ("dLz_max", 1), ("d_min", 1)];
-    let words: Vec<u32> = pairs.iter().map(|&(a, b)| pack2x16float([a, b])).collect();
+    let words: Vec<[u32; 2]> = pairs
+        .iter()
+        .map(|&(a, b)| [pack_packed_b(a, b), pack2x16float([a, b])])
+        .collect();
+    let word = |name: &str, w: &[u32; 2]| if name == "d_min" { w[1] } else { w[0] };
     let jobs: Vec<_> = (words.iter())
-        .flat_map(|&w| fields.map(|(n, _)| (w, sel(n) as u32, 0)))
+        .flat_map(|w| fields.map(|(n, _)| (word(n, w), sel(n) as u32, 0)))
         .collect();
     let gpu = wgsl_unpack(h, module, &jobs);
-    for ((&(a, b), &w), gpu) in pairs.iter().zip(&words).zip(gpu.chunks(3)) {
+    for ((&(a, b), w), gpu) in pairs.iter().zip(&words).zip(gpu.chunks(3)) {
         for (&(name, half), &g) in fields.iter().zip(gpu) {
             let (x, got) = ([a, b][half], f32::from_bits(g));
+            let near = if name == "d_min" {
+                within_f16_eps(x, got)
+            } else {
+                within_log16(x, got)
+            };
             assert!(
-                within_f16_eps(x, got),
-                "f16 pair: `{name}` on the GPU is {got}, not within f16 eps of {x}"
+                near,
+                "f16 pair: `{name}` on the GPU is {got}, not within its form's resolution of {x}"
             );
             assert_eq!(
                 g,
-                host_unpack(name, w),
+                host_unpack(name, word(name, w)),
                 "f16 pair: `{name}` on the GPU is not the host's"
             );
         }
@@ -656,7 +688,10 @@ negative_control!(
     expected = "f16 pair: `dE_max` on the GPU is",
     check_f16_pairs(
         &harness(),
-        &altered("unpack2x16float(w).x", "unpack2x16float(w).y"),
+        &altered(
+            "fn pb_dE_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 0u, 16u)); }",
+            "fn pb_dE_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 16u, 16u)); }"
+        ),
         &[(1.0, 2.0), (-3.5, 0.25)]
     )
 );
@@ -735,7 +770,11 @@ negative_control!(
 /// GPU: the value, zero-extended (REQ-TOOL-003).
 fn check_top_bit(h: &GpuHarness, module: &str) {
     let mut jobs = Vec::new();
-    for (k, name) in FIELDS.iter().enumerate().filter(|(_, n)| !F16.contains(n)) {
+    for (k, name) in FIELDS
+        .iter()
+        .enumerate()
+        .filter(|(_, n)| !F16.contains(n) && !LOG16.contains(n))
+    {
         let (_, offset, width) = location(name);
         for v in 1u32 << (width - 1)..1u32 << width {
             jobs.push((insert(u32::MAX, v, offset, width), k as u32, v));
@@ -778,7 +817,11 @@ fn check_f16_unpack(h: &GpuHarness, module: &str) {
         .map(|i| i | (i.wrapping_mul(40503) & 0xffff) << 16)
         .collect();
     let jobs: Vec<_> = (words.iter())
-        .flat_map(|&w| F16.map(|n| (w, sel(n) as u32, 0)))
+        .flat_map(|&w| {
+            F16.iter()
+                .chain(LOG16.iter())
+                .map(move |n| (w, sel(n) as u32, 0))
+        })
         .collect();
     for (&(w, k, _), &g) in jobs.iter().zip(&wgsl_unpack(h, module, &jobs)) {
         let (name, (gf, r)) = (
@@ -812,6 +855,9 @@ negative_control!(
     expected = "unpacked without shader-f16 is not the Rust unpack",
     check_f16_unpack(
         &harness(),
-        &altered("unpack2x16float(w).x", "unpack2x16float(w).y")
+        &altered(
+            "fn pb_dE_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 0u, 16u)); }",
+            "fn pb_dE_max(w: u32) -> f32 { return log16_to_f32(extractBits(w, 16u, 16u)); }"
+        )
     )
 );

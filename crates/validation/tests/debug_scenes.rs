@@ -82,7 +82,9 @@ fn check_references(cases: &[DebugCase], scene_of: &dyn Fn(&'static DebugCase) -
 #[test]
 fn debug_scenes_render_their_references() {
     let cases = debug_cases().unwrap_or_else(|e| panic!("{e}"));
-    assert_eq!(cases.len(), 66);
+    // 71 since TASK-M3-41 added the views of `budget_exhausted`, `floor_hits`, `cap_hits`, `dE_reg_final` and
+    // `dE_reg_max`.
+    assert_eq!(cases.len(), 71);
     for c in cases {
         let by_name = scene(&c.name).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(by_name.name, c.name, "`{}` names another scene", c.name);

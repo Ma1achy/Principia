@@ -58,8 +58,9 @@ fn by_name<'a>(es: &'a [Entry], name: &str) -> &'a Entry {
 
 // ── REQ-GEN-033: the `diverging` tag agrees with the declared range ─────────────────────────────────────────────────
 
-/// R-403's list of the `diverging` entries left once `K_0` and `V_0` are `lin`.
-const DIVERGING: [&str; 4] = ["energy_drift", "Lz_drift", "E_0", "Lz_0"];
+/// R-403's list of the `diverging` entries left once `K_0` and `V_0` are `lin`, and the regularised drift's final value,
+/// `dE_reg_final`, signed as `energy_drift` is (R-605; TASK-M3-41).
+const DIVERGING: [&str; 5] = ["energy_drift", "Lz_drift", "E_0", "Lz_0", "dE_reg_final"];
 
 fn check_payload_tags(es: &[Entry]) {
     let mut seen = BTreeSet::new();
@@ -75,7 +76,7 @@ fn check_payload_tags(es: &[Entry]) {
     assert_eq!(
         seen,
         DIVERGING.into_iter().collect::<BTreeSet<_>>(),
-        "the `diverging` entries are not R-403's four"
+        "the `diverging` entries are not R-403's four and dE_reg_final"
     );
     let k = by_name(es, "K_0");
     assert_eq!(k.scale, Scale::Lin, "`K_0`'s scale (R-403)");
