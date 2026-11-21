@@ -778,6 +778,12 @@ pub trait HgWatch<R> {
     /// A step's pre-floor `dt/dτ`, its `S` and its least `Rᵢ`.
     #[inline]
     fn sized(&mut self, _dt_dtau: R, _s: R, _r_least: R) {}
+
+    /// The dτ mode, fixed when the march is built: per step (`true`, the occupant's, Part 2b, step 5), each step sized
+    /// from its own `dt/dτ` and capped at the interval's entry size; or (`false`) every step of an interval at the entry
+    /// size, prin-rs's `FixedPerInterval`. The fixed mode is the step-limit ablation's `dtau`-off arm alone (pitfalls
+    /// §8; validation's `ablation`), never the occupant's: no watch the shipping path builds turns it off.
+    const PER_STEP: bool = true;
 }
 
 impl<R: AzReal> HgWatch<R> for ExplicitTest {
@@ -830,6 +836,21 @@ pub fn step_size<R: AzReal>(
     entry: R,
     params: &HgParams<R>,
 ) -> HgStepSize<R> {
+    step_size_in(system, q, p, entry, params, true)
+}
+
+/// [`step_size`] in the dτ mode `per_step` ([`HgWatch::PER_STEP`]): with it `false`, the size before the predictive
+/// limit is the entry size `entry` itself, for every step of the interval; the floor signal, the cap hit, the limit
+/// and the clamp read as in the per-step mode.
+#[inline]
+pub fn step_size_in<R: AzReal>(
+    system: &HgSystem<R>,
+    q: &HgQ<R>,
+    p: &HgP<R>,
+    entry: R,
+    params: &HgParams<R>,
+    per_step: bool,
+) -> HgStepSize<R> {
     let r = rr(q);
     let tiny = params.tiny;
     let dt_dtau = system.dt_dtau(q);
@@ -838,7 +859,7 @@ pub fn step_size<R: AzReal>(
     let floored_signal = dt_dtau < tiny || r[0] < tiny || r[1] < tiny || r[2] < tiny;
     let d = floored(dt_dtau, tiny);
     let c0 = params.eta * params.delta_sync / d;
-    let mut h = least(c0, entry);
+    let mut h = if per_step { least(c0, entry) } else { entry };
     let mut by_limit = false;
     let (lim, on) = predictive(system, q, p, params.predictive_f);
     if on && lim < h {
@@ -1044,7 +1065,7 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
                 r[0] + r[1] + r[2],
                 least(least(r[0], r[1]), r[2]),
             );
-            let sized = step_size(system, &q, &p, entry, params);
+            let sized = step_size_in(system, &q, &p, entry, params, X::PER_STEP);
             count.floored += u32::from(sized.floored);
             count.cap_hits += u32::from(sized.cap_hit);
             count.predictive_bound += u32::from(sized.by_limit);

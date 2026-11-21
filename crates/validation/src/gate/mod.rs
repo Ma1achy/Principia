@@ -26,6 +26,7 @@
 //! `inputs` are its control records alone, the only ones with `"expected"`, which `gate <name>` and `gate --all` run
 //! with no GPU ([`MeasurementGate`]). What it measures runs under its flags, which assert nothing.
 
+pub mod ablation;
 pub mod report;
 
 use std::path::{Path, PathBuf};
@@ -135,6 +136,7 @@ pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[
     &ShadowFormGate,
     &DeltaDepGate,
     &PairTableGate,
+    &ablation::StepLimitAblationGate,
 ];
 
 /// `gate.json`'s `measurement`: what it is measured under, in place of a threshold.

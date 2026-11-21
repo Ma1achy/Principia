@@ -1,0 +1,8 @@
+{
+  "description": "The subject control: every switch off, over the Aarseth-Zare wedge; the judgement must fail it, or it cannot see the artefact",
+  "occupant": "aarseth-zare",
+  "arm": "none",
+  "raster": 64,
+  "crop": [48, 29, 16],
+  "expected": "fail"
+}

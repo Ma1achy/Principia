@@ -1,0 +1,8 @@
+{
+  "description": "Heggie's shipping step control, the shipping occupant, over the same crop",
+  "occupant": "heggie",
+  "arm": "all three",
+  "raster": 64,
+  "crop": [48, 29, 16],
+  "expected": "pass"
+}

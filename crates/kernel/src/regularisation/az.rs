@@ -728,6 +728,12 @@ pub trait Watch<R> {
     /// A step's `A` and `B`, before the floor.
     #[inline]
     fn sized(&mut self, _a: R, _b: R) {}
+
+    /// The dτ mode, fixed when the march is built: per step (`true`, the occupant's, Part 2b, step 3), `c₀` sized from
+    /// the step's own `A·B`; or (`false`) every step of an interval at the entry size `c₁`, prin-rs's
+    /// `FixedPerInterval`. The fixed mode is the step-limit ablation's `dtau`-off arm alone (pitfalls §8; validation's
+    /// `ablation`), never the occupant's: no watch the shipping path builds turns it off.
+    const PER_STEP: bool = true;
 }
 
 /// The test the occupant runs: every component of `(u₁, p₁, u₂, p₂, t)`, on its bits.
@@ -850,11 +856,26 @@ pub fn step_size<R: AzReal>(
     entry: R,
     params: &AzParams<R>,
 ) -> StepSize<R> {
+    step_size_in(system, q, p, entry, params, true)
+}
+
+/// [`step_size`] in the dτ mode `per_step` ([`Watch::PER_STEP`]): with it `false`, `c₀` is the entry size `c₁`
+/// itself, so every step of the interval is sized at the entry size, cut by the predictive limit and clamped as in the
+/// per-step mode; the floor signal and the cap hit read the step's own `c₀` as there.
+#[inline]
+pub fn step_size_in<R: AzReal>(
+    system: &AzSystem<R>,
+    q: &AzQ<R>,
+    p: &AzP<R>,
+    entry: R,
+    params: &AzParams<R>,
+    per_step: bool,
+) -> StepSize<R> {
     let (a, b) = AzSystem::ab(q);
     let ab = floored(a, params.tiny) * floored(b, params.tiny);
     let c0 = params.eta * params.delta_sync / ab;
     let c2 = predictive(system, q, p, params.predictive_f, ab);
-    let (mut h, by_limit) = size(c0, entry, c2);
+    let (mut h, by_limit) = size(if per_step { c0 } else { entry }, entry, c2);
     if params.clamp {
         h = least(h, floored(params.delta_sync - q.t, R::default()) / ab);
     }
@@ -1033,7 +1054,7 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
         if go {
             let (a, b) = AzSystem::ab(&q);
             watch.sized(a, b);
-            let sized = step_size(system, &q, &p, entry, params);
+            let sized = step_size_in(system, &q, &p, entry, params, X::PER_STEP);
             count.floored += u32::from(sized.floored);
             count.cap_hits += u32::from(sized.cap_hit);
             count.predictive_bound += u32::from(sized.by_limit);
