@@ -1,0 +1,7 @@
+{
+  "description": "The control: KDK claimed secular must fail",
+  "occupant": "kdk",
+  "claim": "secular",
+  "suspect_energy": false,
+  "expected": "fail"
+}

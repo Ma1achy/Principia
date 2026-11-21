@@ -1,0 +1,7 @@
+{
+  "description": "The control: Euler claimed bounded, as if it were symplectic, must fail",
+  "occupant": "euler",
+  "claim": "bounded",
+  "suspect_energy": true,
+  "expected": "fail"
+}

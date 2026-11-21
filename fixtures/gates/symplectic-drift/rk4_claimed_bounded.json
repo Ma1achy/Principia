@@ -1,0 +1,8 @@
+{
+  "description": "The control: RK4 at the ×4 key claimed bounded, as if it were symplectic, must fail",
+  "occupant": "rk4",
+  "claim": "bounded",
+  "suspect_energy": false,
+  "expected": "fail",
+  "dt_scale": 4.0
+}

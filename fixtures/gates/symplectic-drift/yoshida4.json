@@ -1,0 +1,7 @@
+{
+  "description": "Yoshida-4 at the default sim key: its energy error is below the rounding bound (100·ε·√steps), so it judges no claim and is refused",
+  "occupant": "yoshida4",
+  "claim": "bounded",
+  "suspect_energy": false,
+  "expected": "refused"
+}

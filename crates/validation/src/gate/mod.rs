@@ -29,7 +29,9 @@
 pub mod ablation;
 pub mod figure_eight;
 pub mod lagrange;
+pub mod order_scaling;
 pub mod report;
+pub mod symplectic;
 
 use std::path::{Path, PathBuf};
 
@@ -106,6 +108,8 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &EscapeRebindGate,
     &figure_eight::FigureEightClosureGate,
     &lagrange::ExactCasesGate,
+    &order_scaling::OrderScalingGate,
+    &symplectic::SymplecticDriftGate,
 ];
 
 /// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.

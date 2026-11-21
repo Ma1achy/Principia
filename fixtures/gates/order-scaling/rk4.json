@@ -1,0 +1,14 @@
+{
+  "description": "RK4, order 4: a ladder a factor 2^(1/4) apart, every rung in the asymptotic regime; finer than first chosen, since at 400 to 1131 the local slopes climbed from 3.72 to 3.89, not yet flat",
+  "occupant": "rk4",
+  "ladder": [
+    1600,
+    1903,
+    2263,
+    2691,
+    3200,
+    3805,
+    4525
+  ],
+  "expected": "pass"
+}

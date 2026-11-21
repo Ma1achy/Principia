@@ -1,0 +1,7 @@
+{
+  "description": "The control: KDK claimed to light SUSPECT_ENERGY must fail",
+  "occupant": "kdk",
+  "claim": "bounded",
+  "suspect_energy": true,
+  "expected": "fail"
+}

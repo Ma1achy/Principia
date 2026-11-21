@@ -1,0 +1,8 @@
+{
+  "description": "RK4, not symplectic, with only dt_macro changed (×4) so its truncation error stands above rounding: its energy error drifts secularly",
+  "occupant": "rk4",
+  "claim": "secular",
+  "suspect_energy": false,
+  "dt_scale": 4.0,
+  "expected": "pass"
+}

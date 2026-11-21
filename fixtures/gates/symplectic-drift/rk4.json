@@ -1,0 +1,7 @@
+{
+  "description": "RK4 at the default sim key: its drift is below the rounding bound (100·ε·√steps), so it judges no claim and is refused",
+  "occupant": "rk4",
+  "claim": "secular",
+  "suspect_energy": false,
+  "expected": "refused"
+}

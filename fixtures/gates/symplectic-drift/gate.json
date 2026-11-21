@@ -1,0 +1,6 @@
+{
+  "gate": "symplectic-drift",
+  "inputs": ["kdk.json", "yoshida4.json", "yoshida4_coarse.json", "yoshida6.json", "yoshida6_coarse.json", "rk4.json", "rk4_coarse.json", "euler.json", "rk4_claimed_bounded.json", "kdk_claimed_secular.json", "euler_claimed_bounded.json", "kdk_claimed_suspect.json"],
+  "threshold": { "value": 0.25, "requirement": "REQ-VAL-139", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-139" }
+}
