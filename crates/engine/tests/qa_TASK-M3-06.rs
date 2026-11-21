@@ -439,6 +439,7 @@ fn every_field(epsilon: f64, r_coll: f64) -> SimUniforms {
         r_coll,
         tau: d.tau,
         escape_window: d.escape_window,
+        delta_sync: d.delta_sync,
         r_close: d.r_close,
         eps_e: d.eps_e,
         eps_l: d.eps_l,

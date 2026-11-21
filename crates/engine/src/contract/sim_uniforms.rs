@@ -28,6 +28,11 @@
 //! and `M = 1`, so dispatch refuses any other value of either ([`crate::dispatch::validate`]): a source in another `G`
 //! or total mass is converted at the import boundary. The fields and their sim-key bytes stay.
 //!
+//! **The sync quantum** (Part 2a § "The sync grid is a fixed quantum of physical time"; R-565). `delta_sync`, `Δ_sync`,
+//! the regularised occupants' sync grid, is a constant of the build, the register's `delta_sync`, which the kernel's
+//! marches read (`kernel::regularisation::sync`). It is carried and on the sim key, so a change to it re-integrates, and
+//! dispatch refuses any other value, as it does `g` and `m_total`: the kernel cannot march on another grid.
+//!
 //! **Benettin's `n_renorm` and `δ₀`** (dd_integrator §3.8) have no value yet: they are REQ-INT-076's calibration, which
 //! the task that needs them proposes. Until then each is `None`, and `Default` gives no number for them.
 
@@ -35,8 +40,8 @@ use kernel::driver::nsub_table::{pack, thresholds, NsubConfig, NsubTableError};
 use kernel::driver::substep::NsubThresholds;
 use kernel::generated::nsub_thresholds::DEFAULT_THRESHOLD_BITS;
 use ledger::constants::{
-    DT_MACRO_FLOOR, EPSILON, EPS_E, EPS_L, ESCAPE_WINDOW, G, HORIZON_STEPS_MAX, M_TOTAL, R_CLOSE,
-    R_COLL, TAU, T_HORIZON_DEFAULT,
+    DELTA_SYNC, DT_MACRO_FLOOR, EPSILON, EPS_E, EPS_L, ESCAPE_WINDOW, G, HORIZON_STEPS_MAX,
+    M_TOTAL, R_CLOSE, R_COLL, TAU, T_HORIZON_DEFAULT,
 };
 
 /// The wrapper's loop parameters (integrator_contract Part 3), with the `N_sub` threshold table generated from three
@@ -59,6 +64,9 @@ pub struct SimUniforms {
     pub tau: f64,
     /// The escape window `|Δn̂|` is taken over, in time units: 0.4, provisional (R-29). The horizon's floor (R-610).
     pub escape_window: f64,
+    /// `Δ_sync`, the regularised occupants' sync quantum, physical time: the register's 1/8, a constant of the build;
+    /// dispatch refuses any other value (R-565).
+    pub delta_sync: f64,
     /// `r_close`, the close-encounter counting distance: default 0.01.
     pub r_close: f64,
     /// `eps_E`, the relative energy drift's floor at rest starts: default `10⁻⁶`.
@@ -93,6 +101,7 @@ impl Default for SimUniforms {
             r_coll: R_COLL.number(),
             tau: TAU.number(),
             escape_window: ESCAPE_WINDOW.number(),
+            delta_sync: DELTA_SYNC.number(),
             r_close: R_CLOSE.number(),
             eps_e: EPS_E.number(),
             eps_l: EPS_L.number(),
@@ -221,6 +230,7 @@ impl SimUniforms {
             self.r_coll,
             self.tau,
             self.escape_window,
+            self.delta_sync,
             self.r_close,
             self.eps_e,
             self.eps_l,

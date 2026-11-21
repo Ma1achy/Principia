@@ -11,8 +11,9 @@
 //! **Where it lives.** The plan is unclear here (the carried state "in `SimState` or a buffer beside it"); chose a
 //! buffer beside `SimState`, one element per trajectory at the trajectory's own index, as the word buffer is, because
 //! it leaves the GPU payload's layout, its ledger rows and its schema version as they are, and a trajectory under a
-//! stepper or Aarseth–Zare pays nothing for numbers it would not use. It is part of the one logical payload
-//! `f(IC, sim key, t)`: stored, evicted, recomputed and resumed with the `SimState` it sits beside.
+//! stepper pays nothing for numbers it would not use, and Aarseth–Zare uses only the step total and the count. It is
+//! part of the one logical payload `f(IC, sim key, t)`: stored, evicted, recomputed and resumed with the `SimState` it
+//! sits beside.
 //!
 //! **Its layout** ([`Carried`]) is occupant-neutral: fourteen floats at the working precision, whose meaning is the
 //! occupant's that wrote them, and four `u32`. Heggie's fourteen are `Q₀, Q₁, Q₂`, `P₀, P₁, P₂`, the frozen energy `h`

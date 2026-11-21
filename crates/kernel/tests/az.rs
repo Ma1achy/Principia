@@ -2649,9 +2649,9 @@ impl AzConfig for Spent {
 /// Aarseth–Zare + RK4 on a budget of 4 steps.
 type SpentRk4 = Composed<Rk4, AarsethZare<Spent>>;
 
-/// The budget here is `N_min = 4` at rate 0, so one seam call's fresh count spends it whatever the time: the cumulative
-/// budget across seam calls at `step_budget_rate > 0` (R-604) is TASK-M3-41's, with the count carried through the seam
-/// (code review 5880407311 of PR #502, F1).
+/// The budget here is `N_min = 4` at rate 0, so the second macro-step's march spends it whatever the time. The running
+/// step total is carried across seam calls in the trajectory's buffer (`tests/sync_quantum.rs`,
+/// `sync_quantum_bitwise_budget`); the budget as a rate and its flag are TASK-M3-41's.
 ///
 /// Burrau's state through the wrapper as in [`check_completes`] on a budget of 4 steps: the first macro-step takes no
 /// step and is completed, the second's march spends its budget, and the copy is never run on (R-604): the run stops

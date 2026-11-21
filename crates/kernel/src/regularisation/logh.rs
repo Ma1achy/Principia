@@ -52,12 +52,13 @@
 use core::marker::PhantomData;
 
 use super::az::{
-    add, boundary_at_or_before, dot, finite, floored, least, norm, over_allowance, reached, scale,
-    sub, two, AzReal, End, ExplicitTest, V,
+    add, dot, finite, floored, least, norm, over_allowance, reached, scale, sub, two, AzReal, End,
+    ExplicitTest, V,
 };
 use super::dt_max::DtMax;
 use super::form::{Flow, Form};
 use super::pairs::LogHMode;
+use super::sync::boundary_of_step;
 use super::{Kind, Regularisation};
 use crate::driver::advance::{AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
 use crate::driver::carried::Carried;
@@ -1233,7 +1234,7 @@ pub fn carry<R: AzReal>(carried: &mut Carried<R>, b: R, w: R, t: R, steps: u32) 
 }
 
 /// logH's seam `ADVANCE` (Part 2a): `t_now` and `t_target` on the macro-step grid, physical time `index·dt_macro`,
-/// mapped to the sync grid, the latest boundary at or before each ([`boundary_at_or_before`]).
+/// mapped to the sync grid, the latest boundary at or before each ([`boundary_of_step`]).
 ///
 /// Where `carried` holds no registration, `state` is registered into it: `B = U − K` frozen and `W = Ω(r)`. That is the
 /// march's one registration when it happens at boundary 0, and a re-registration, counted in
@@ -1264,8 +1265,8 @@ fn advance_seam<C: LhConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     carried: &mut Carried<R>,
 ) -> (Advanced<R>, Reached) {
     let values = C::params::<R>();
-    let k_now = boundary_at_or_before(R::count(t_now) * params.dt_macro, values.delta_sync);
-    let k_target = boundary_at_or_before(R::count(t_target) * params.dt_macro, values.delta_sync);
+    let k_now = boundary_of_step(t_now, params.dt_macro, values.delta_sync);
+    let k_target = boundary_of_step(t_target, params.dt_macro, values.delta_sync);
     if carried.registered == 0 {
         let fresh = register(state, values.tiny, values.mode);
         carry(carried, fresh.system.b, fresh.p.w, fresh.q.t, carried.steps);

@@ -1099,19 +1099,9 @@ pub fn march<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     }
 }
 
-/// The latest sync boundary at or before the physical time `t`: `k` with `k·Δ_sync ≤ t < (k + 1)·Δ_sync`, decided by
-/// those products, comparison-only (Part 2c rule 2); `0` for a `t` before the first boundary after `0`.
-#[inline]
-pub fn boundary_at_or_before<R: AzReal>(t: R, delta_sync: R) -> u32 {
-    let mut k = (t / delta_sync).whole();
-    if k > 0 && R::count(k) * delta_sync > t {
-        k -= 1;
-    }
-    if k < u32::MAX && R::count(k + 1) * delta_sync <= t {
-        k += 1;
-    }
-    k
-}
+/// The latest sync boundary at or before a physical time: the sync grid's ([`super::sync`]), named here too for the
+/// callers that took it from this module.
+pub use super::sync::boundary_at_or_before;
 
 /// Where Aarseth–Zare's values come from: the occupant's configuration, a type, so that the composed occupant stays a
 /// type (Part 2b). Its values are calibrations (the module's note).
@@ -1169,7 +1159,7 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
         params: &AdvanceParams<R>,
         cadence: &mut Cd,
     ) -> Advanced<R> {
-        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence).0
+        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, 0).0
     }
 
     /// The seam's `ADVANCE` with how the march ended: a landing on the boundary at or before `t_target`
@@ -1185,14 +1175,17 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
         params: &AdvanceParams<R>,
         cadence: &mut Cd,
     ) -> (Advanced<R>, Reached) {
-        let (out, reached, _) =
-            advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence);
+        let (out, reached, _, _) =
+            advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, 0);
         (out, reached)
     }
 
-    /// The seam's `ADVANCE` with the trajectory's buffer: Aarseth–Zare keeps no state of its own there, and adds to
-    /// its count the registrations this call made at a sync boundary after `t = 0` (Part 2b, "The profile gains a
-    /// field"): every registration of the call but one at boundary 0.
+    /// The seam's `ADVANCE` with the trajectory's buffer: Aarseth–Zare keeps no regularised state of its own there; it
+    /// carries its running step total, which its budget reads (R-604), so a march split into calls spends its budget
+    /// at the same step as one call (Part 2a § "The sync grid is a fixed quantum of physical time": live march,
+    /// catch-up and re-boot reach the same state), and adds to its count the registrations this call made at a sync
+    /// boundary after `t = 0` (Part 2b, "The profile gains a field"): every registration of the call but one at
+    /// boundary 0.
     #[inline]
     fn advance_carrying<S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
         state: &State<R>,
@@ -1203,9 +1196,10 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
         cadence: &mut Cd,
         carried: &mut Carried<R>,
     ) -> (Advanced<R>, Reached) {
-        let (out, reached, later) =
-            advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence);
+        let (out, reached, later, steps) =
+            advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, carried.steps);
         carried.re_registrations += later;
+        carried.steps = steps;
         (out, reached)
     }
 }
@@ -1231,9 +1225,9 @@ pub(super) fn reached(end: End, boundary: u32, target: u32) -> Reached {
     }
 }
 
-/// [`AarsethZare`]'s seam `ADVANCE`, with how its march ended ([`reached`]) and the registrations it made at a sync
-/// boundary after `t = 0`: the call's registrations, less the one at boundary 0 where the call started there and
-/// registered.
+/// [`AarsethZare`]'s seam `ADVANCE` from the running step total `steps`, with how its march ended ([`reached`]), the
+/// registrations it made at a sync boundary after `t = 0` (the call's registrations, less the one at boundary 0 where
+/// the call started there and registered), and the running step total where it stopped.
 #[inline]
 fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     state: &State<R>,
@@ -1241,12 +1235,16 @@ fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     t_target: u32,
     params: &AdvanceParams<R>,
     cadence: &mut Cd,
-) -> (Advanced<R>, Reached, u32) {
+    steps: u32,
+) -> (Advanced<R>, Reached, u32, u32) {
     let delta_sync = C::params::<R>().delta_sync;
     let t_now = R::count(t_now) * params.dt_macro;
     let t_target = R::count(t_target) * params.dt_macro;
-    let out =
-        AarsethZare::<C>::advance_to::<S, R, Cd>(state, t_now, t_target, AzCount::new(), cadence);
+    let count = AzCount {
+        steps,
+        ..AzCount::new()
+    };
+    let out = AarsethZare::<C>::advance_to::<S, R, Cd>(state, t_now, t_target, count, cadence);
     let target = boundary_at_or_before(t_target, delta_sync);
     let registrations = out.count.re_registrations;
     let later = if registrations > 0 && boundary_at_or_before(t_now, delta_sync) == 0 {
@@ -1262,5 +1260,6 @@ fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
         },
         reached(out.count.end, out.boundary, target),
         later,
+        out.count.steps,
     )
 }

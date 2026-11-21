@@ -15,11 +15,14 @@
 //! for bodies that all fly apart, late for an escaper leaving a binary, whose phase keeps the shape point turning
 //! (`plan/KNOWN.md`).
 //!
-//! **Heggie's step-control values** are calibrations with no value in the register yet. The plan is unclear here;
-//! chose the integrator contract's radial-collision gate values (`η = 0.01`, `Δ_sync = 1/8`, the predictive limit's
-//! `f = 0.02`, the landing's 4 secant retakes and 64 halvings, Eq. 22's time transformation), the reference `TINY`
-//! (`1e-37` at f32), and a finite step budget (Part 3's starting rate, 4·10⁴ steps per unit time, floored at 10⁵ steps),
-//! because those are the values the gate measures Heggie at, and a march with no budget can stall one sample.
+//! **The sync grid** is the register's `Δ_sync` (`kernel::regularisation::sync`), and the march stops on the latest
+//! boundary at or before the horizon ([`boundaries`]), never past it (integrator_contract Part 2a; R-565).
+//!
+//! **Heggie's other step-control values** are calibrations with no value in the register yet. The plan is unclear here;
+//! chose the integrator contract's radial-collision gate values (`η = 0.01`, the predictive limit's `f = 0.02`, the
+//! landing's 4 secant retakes and 64 halvings, Eq. 22's time transformation), the reference `TINY` (`1e-37` at f32),
+//! and a finite step budget (Part 3's starting rate, 4·10⁴ steps per unit time, floored at 10⁵ steps), because those
+//! are the values the gate measures Heggie at, and a march with no budget can stall one sample.
 //!
 //! **Domain** (pitfalls §10): one frame, the chart, the window, the horizon and these values held fixed.
 
@@ -40,6 +43,7 @@ use kernel::payload::{
 };
 use kernel::regularisation::az::{End, ExplicitTest};
 use kernel::regularisation::heggie::{march, HgParams, DEFAULT_TIME};
+use kernel::regularisation::sync::{boundary_at_or_before, delta_sync};
 use render::colour::outcome::{shown, Shown, K, SWATCHES};
 
 use crate::compute::ComputeError;
@@ -138,7 +142,7 @@ pub type HgParams32 = HgParams<f32>;
 pub fn heggie_params() -> HgParams<f32> {
     HgParams {
         eta: 0.01,
-        delta_sync: 0.125,
+        delta_sync: delta_sync(),
         tiny: 1e-37,
         predictive_f: 0.02,
         step_budget_rate: 4e4,
@@ -150,9 +154,11 @@ pub fn heggie_params() -> HgParams<f32> {
     }
 }
 
-/// The sync boundaries a march to the horizon `t` takes: `⌈t/Δ_sync⌉`.
+/// The sync boundaries a march to the horizon `t` takes: the latest boundary at or before `t`, `⌊t/Δ_sync⌋` decided by
+/// the products `k·Δ_sync` (`kernel::regularisation::sync`), at f64. `ADVANCE` stops only on the grid and never past
+/// its target (R-565), so a horizon off the grid ends on the boundary before it.
 pub fn boundaries(t: f64, params: &HgParams<f32>) -> u32 {
-    (t / f64::from(params.delta_sync)).ceil() as u32
+    boundary_at_or_before(t, f64::from(params.delta_sync))
 }
 
 /// The latent chart `sim` holds, at f32: its plane's `z₀`, `q₁` and `q₂`, each rounded once.
