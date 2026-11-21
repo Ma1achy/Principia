@@ -16,6 +16,38 @@ use std::process::Command;
 
 use crate::deps::cargo;
 
+/// The benches that live in `engine` as examples, by name, each with its example: CPU measurements that open no GPU
+/// and write no profiler trace. The plan is unclear here: it asks for `cargo xtask bench hover-computeic`, while every
+/// bench so far is validation's, run through its trace and baseline diff. Chose an engine example run on its own,
+/// release-built, with no kernel build, trace or baseline, because the measurement is one CPU call timed against a
+/// frame, which the engine reaches directly, and a p95 diff against a stored baseline would add nothing a printed
+/// time against 16.7 ms does not say. It reports; it never gates.
+pub const ENGINE_BENCHES: &[(&str, &str)] = &[("hover-computeic", "hover_computeic")];
+
+/// The engine example that runs the bench `name`, if it is one of [`ENGINE_BENCHES`].
+pub fn engine_example(name: &str) -> Option<&'static str> {
+    ENGINE_BENCHES
+        .iter()
+        .find(|(bench, _)| *bench == name)
+        .map(|(_, example)| *example)
+}
+
+/// Runs the engine bench `name` through its `example`, release-built, on the workspace of `manifest`: it prints its
+/// own report; only a failure to run, or a run that fails, fails it.
+fn run_engine(cargo: &OsStr, manifest: &Path, name: &str, example: &str) -> Result<(), String> {
+    let status = Command::new(cargo)
+        .args(["run", "--release", "--quiet", "--manifest-path"])
+        .arg(manifest)
+        .args(["-p", "engine", "--example", example])
+        .status()
+        .map_err(|e| format!("cannot run engine's {example} example: {e}"))?;
+    if !status.success() {
+        return Err(format!("bench {name} failed ({status})"));
+    }
+    println!("bench {name}: a CPU measurement, reported above; no trace or baseline");
+    Ok(())
+}
+
 /// Which benches to run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Which<'a> {
@@ -81,12 +113,19 @@ fn registered(cargo: &OsStr, manifest: &Path) -> Result<Vec<String>, String> {
 
 /// Builds the kernel (`cargo xtask build-kernel`), then runs `which` on the workspace of `manifest` ([`run_built`]).
 pub fn run(manifest: &Path, which: Which<'_>, bless: bool) -> Result<(), String> {
+    if let Which::One(name) = which {
+        if let Some(example) = engine_example(name) {
+            // A CPU bench: no GPU, so no kernel to build.
+            return run_engine(OsStr::new(&cargo()), manifest, name, example);
+        }
+    }
     crate::build_kernel::run(manifest)?;
     run_built(OsStr::new(&cargo()), manifest, which, bless)
 }
 
 /// Runs `which` on the workspace of `manifest`, its kernel already built, through `cargo` (validation's `bench` binary
 /// and `prin profile diff`, each `cargo run --release`); with `bless`, writes each trace as its bench's baseline first.
+/// An engine bench ([`ENGINE_BENCHES`]) runs as its example, with no trace or baseline; `--all` runs them last.
 pub fn run_built(
     cargo: &OsStr,
     manifest: &Path,
@@ -95,7 +134,10 @@ pub fn run_built(
 ) -> Result<(), String> {
     let root = manifest.parent().unwrap_or(Path::new("."));
     let names = match which {
-        Which::One(name) => vec![name.to_owned()],
+        Which::One(name) => match engine_example(name) {
+            Some(example) => return run_engine(cargo, manifest, name, example),
+            None => vec![name.to_owned()],
+        },
         Which::All => registered(cargo, manifest)?,
     };
     std::fs::create_dir_all(root.join("target/bench")).map_err(|e| e.to_string())?;
@@ -134,6 +176,11 @@ pub fn run_built(
             .status()
             .map_err(|e| format!("cannot run prin profile diff: {e}"))?;
         println!("bench {name}: {}", diff_outcome(status.code())?);
+    }
+    if which == Which::All {
+        for (name, example) in ENGINE_BENCHES {
+            run_engine(cargo, manifest, name, example)?;
+        }
     }
     Ok(())
 }

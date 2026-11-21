@@ -24,9 +24,10 @@
 //! and a finite step budget (Part 3's starting rate, 4·10⁴ steps per unit time, floored at 10⁵ steps), because those
 //! are the values the gate measures Heggie at, and a march with no budget can stall one sample.
 //!
+//! **Where it runs**: on the engine's shared CPU worker pool (`crate::pool`), which leaves a core free and returns
+//! the samples in index order, so the field is the same bit for bit on any worker count.
+//!
 //! **Domain** (pitfalls §10): one frame, the chart, the window, the horizon and these values held fixed.
-
-use std::num::NonZeroUsize;
 
 use kernel::chart::Latent;
 use kernel::decode::Ic;
@@ -131,7 +132,7 @@ pub trait FieldBackend: Send + Sync {
     ) -> Result<Field, ComputeError>;
 }
 
-/// The CPU backend: the module's note. Blocking, on as many threads as the machine has.
+/// The CPU backend: the module's note. Blocking, on the engine's shared worker pool (`crate::pool::shared`).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Cpu;
 
@@ -233,6 +234,19 @@ impl FieldBackend for Cpu {
         window: Window,
         size: [usize; 2],
     ) -> Result<Field, ComputeError> {
+        self.field_on(crate::pool::shared()?, sim, window, size)
+    }
+}
+
+impl Cpu {
+    /// [`FieldBackend::field`] on the workers of `pool`: the same field, bit for bit, on any pool.
+    pub fn field_on(
+        &self,
+        pool: &crate::pool::Pool,
+        sim: &SimConfig,
+        window: Window,
+        size: [usize; 2],
+    ) -> Result<Field, ComputeError> {
         let key = uniforms(sim.horizon.t).map_err(|e| ComputeError(format!("{e:?}")))?;
         let params = heggie_params();
         let k_target = boundaries(sim.horizon.t, &params);
@@ -260,42 +274,8 @@ impl FieldBackend for Cpu {
                 &params,
             ))
         };
-        let threads = std::thread::available_parallelism().map_or(1, NonZeroUsize::get);
-        let outcomes = on_threads(quad.len(), threads, sample)?;
+        let outcomes = pool.map(quad.len(), sample)?;
         Ok(Field { size, outcomes })
-    }
-}
-
-/// `f` at every index below `n`, sample `i` on worker `i mod threads`, in index order; the error of the lowest failing
-/// index where one fails.
-fn on_threads<T: Send + Copy + Default, E: Send>(
-    n: usize,
-    threads: usize,
-    f: impl Fn(usize) -> Result<T, E> + Sync,
-) -> Result<Vec<T>, E> {
-    let threads = threads.clamp(1, n.max(1));
-    let f = &f;
-    let lanes: Vec<Vec<(usize, Result<T, E>)>> = std::thread::scope(|s| {
-        let workers: Vec<_> = (0..threads)
-            .map(|lane| s.spawn(move || (lane..n).step_by(threads).map(|i| (i, f(i))).collect()))
-            .collect();
-        workers
-            .into_iter()
-            .map(|w| w.join().unwrap_or_else(|p| std::panic::resume_unwind(p)))
-            .collect()
-    });
-    let mut out = vec![T::default(); n];
-    let mut failed: Option<(usize, E)> = None;
-    for (i, r) in lanes.into_iter().flatten() {
-        match r {
-            Ok(v) => out[i] = v,
-            Err(e) if failed.as_ref().is_none_or(|(j, _)| i < *j) => failed = Some((i, e)),
-            Err(_) => {}
-        }
-    }
-    match failed {
-        Some((_, e)) => Err(e),
-        None => Ok(out),
     }
 }
 

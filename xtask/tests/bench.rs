@@ -256,3 +256,100 @@ negative_control!(
         true
     ))
 );
+
+/// The calls the stand-in logged on the scratch workspace `root`.
+fn calls(root: &Path) -> Vec<String> {
+    fs::read_to_string(root.join("calls.log"))
+        .unwrap_or_default()
+        .lines()
+        .map(str::to_owned)
+        .collect()
+}
+
+/// `bench hover-computeic` (TASK-M3-20) runs engine's example, release-built, and nothing else: no validation bench,
+/// no diff, and no baseline needed, so it passes with none.
+fn check_engine_bench(case: &str, which: Which<'_>) {
+    let (root, cargo) = stand_in(case, OK);
+    let result = no_write(|| run_built(cargo.as_os_str(), &root.join("Cargo.toml"), which, false));
+    let calls = calls(&root);
+    assert!(
+        result.is_ok()
+            && calls.len() == 1
+            && calls[0].contains("--release")
+            && calls[0].ends_with("-p engine --example hover_computeic"),
+        "bench hover-computeic did not run engine's example alone: {result:?}, calls {calls:?}"
+    );
+}
+
+#[test]
+fn bench_hover_computeic_runs_the_engine_example() {
+    check_engine_bench("hover", Which::One("hover-computeic"));
+}
+
+negative_control!(
+    bench_hover_computeic_runs_the_engine_example,
+    "a validation bench, which needs its baseline",
+    expected = "did not run engine's example alone",
+    check_engine_bench("hover_control", Which::One("a"))
+);
+
+/// `--all` runs the engine benches too, after validation's.
+fn check_all_runs_engine(case: &str, answers: Answers) {
+    let (root, cargo) = stand_in(case, answers);
+    let result = no_write(|| {
+        run_built(
+            cargo.as_os_str(),
+            &root.join("Cargo.toml"),
+            Which::All,
+            true,
+        )
+    });
+    let calls = calls(&root);
+    assert!(
+        result.is_ok()
+            && calls
+                .last()
+                .is_some_and(|c| c.ends_with("-p engine --example hover_computeic")),
+        "bench --all did not run the engine bench last: {result:?}, calls {calls:?}"
+    );
+}
+
+#[test]
+fn bench_all_runs_the_engine_bench() {
+    check_all_runs_engine("all_engine", OK);
+}
+
+negative_control!(
+    bench_all_runs_the_engine_bench,
+    "a run that fails on validation's list stops before it",
+    expected = "bench --all did not run the engine bench last",
+    check_all_runs_engine("all_engine_control", Answers { list_exit: 1, ..OK })
+);
+
+/// `bench hover-computeic` through `run` builds no kernel: on a workspace with no `rust-toolchain.toml`, where the
+/// kernel build fails, it reaches the example (the real `cargo` then fails on the scratch workspace's missing
+/// manifest, saying the bench failed, not the toolchain).
+fn check_no_kernel(case: &str, which: Which<'_>) {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("bench_{case}"));
+    let _ = fs::remove_dir_all(&root);
+    fs::create_dir_all(&root).expect("scratch workspace made");
+    let result = run(&root.join("Cargo.toml"), which, false);
+    assert!(
+        result
+            .as_ref()
+            .is_err_and(|e| !e.contains("rust-toolchain.toml")),
+        "bench hover-computeic tried to build the kernel: {result:?}"
+    );
+}
+
+#[test]
+fn bench_hover_computeic_builds_no_kernel() {
+    check_no_kernel("hover_no_kernel", Which::One("hover-computeic"));
+}
+
+negative_control!(
+    bench_hover_computeic_builds_no_kernel,
+    "a GPU bench builds the kernel first",
+    expected = "tried to build the kernel",
+    check_no_kernel("hover_no_kernel_control", Which::One("a"))
+);
