@@ -135,6 +135,74 @@ Written for self-round-trip (`decode(encode(x))=x` for x's the decode produces);
 
 ---
 
+## Path B's entry, defined (TASK-M3-24)
+
+The lower harness entry is `validation::ground_truth::path_b::inject`:
+
+```
+inject::<A>(m: [f64; 3], r: [[f64; 2]; 3], p: [[f64; 2]; 3], key: &MarchKey64) -> Result<PathB, Refused>
+```
+
+- **Input:** masses, positions and momenta in the sim's units (`G = 1`, `Σmᵢ = 1`), in the canonical gauge: centre of
+  mass at the origin and at rest. The gauge is **checked, never imposed**: a start off it by more than 16 ulp of its own
+  extent, a mass that is not positive, masses not summing to 1, or a value that is not finite is refused, so the march
+  sees the closed form's own numbers. `I = 1` is not required (the march is scale-covariant). `A` is the occupant, a
+  type; `key` carries the horizon, the macro-step and the collision radius.
+- **Bypassed:** the chart (no `(u, v)`, no window), the decode `D` (no `z`, no link selection), the encode `E`, and
+  canonicalisation `C`.
+- **Kept:** the dispatch-time label of the start, the wrapper's march at f64 with its cadence, detectors, monitor and
+  shape readout (`engine::precision::integrate_ic`, the Precision ring's own), and the shape map `n(r, m)`, read on the
+  start and where the march stopped.
+- **Routed here:** an exactly degenerate start. Euler's equal-mass collinear configuration with the middle body
+  labelled 2 sits at the inner pair's centre of mass, `λ̃ = 0`, the `α = 0` pole: the encode reaches it only by clamping
+  (`lookup_clamped`, measured: residual `1.8·10⁻⁶`, `κ = 8.2·10⁵`), so it enters by Path B. Under the periodic `β`
+  link a collinear state with `λ̃ ≠ 0` is an interior point, and Path A takes it.
+
+## The fixture set (TASK-M3-24)
+
+`fixtures/ground_truth/fixtures.json` holds each start with its source, construction and criteria; the golden anchors
+are `fixtures/anchors/anchors.json`. Every case runs at CPU-f64 through the Precision ring; each reference is
+independent of the kernel's stepper (a closed form, a published value, or the RK45 reference,
+`engine::precision::rk45`). Times are canonical unless a unit is named.
+
+| fixture | tier | path | source | asserted |
+|---|---|---|---|---|
+| `conservation_figure_eight` | 1 | A | Noether, on `figure_eight`'s march | `\|ΔE/E\| ≤ 10⁻⁹`, `L_z` and `P` within `10⁻¹¹` of their scales, each computed here from the final state, never from the f16 latches |
+| `lagrange_equilateral` | 2 | A | Lagrange 1772, masses (0.2, 0.3, 0.5), `ω² = M/a³` | CHECK 1 unclamped within `ε_phys`; the pixel's decode is `D(z)` bit for bit; the march within `10⁻⁸` (phys) of the rigid rotation at half a turn |
+| `euler_collinear` | 2 | B | Euler 1767, equal masses, middle body 2, `ω² = 5m/(4a³)` | the encode clamps it; the march within `10⁻⁸` of the rigid rotation at half a turn; the shape point at the Euler point `E₂ = (1, 0, 0)` within `10⁻⁸`; a start off the gauge refused |
+| `figure_eight` | 3 | A | Chenciner & Montgomery 2000, Simó's digits, `T₈ = 6.32591398`; relabelled so the middle body is in the inner pair (the published labelling is on the `α = 0` pole) | CHECK 1 unclamped within `ε_phys`; closure after the period within `10⁻⁶` (the reference's own closure from the published digits is `4.1·10⁻⁸`); the march within `10⁻⁸` of the reference at the period |
+| `burrau` | 4 | A | Burrau 1913; Szebehely & Peters 1967: masses (3, 4, 5) at rest at (1, 3), (−2, −1), (1, −1) | CHECK 1 unclamped within `ε_phys`; the march ends in `escape`, the lightest body, labelled between 50 and 100 of S&P's time units (dd_validation_orbits §1.5's coarse window); the reference's escaper the same; provenance carries `r_coll` |
+
+The anchors, `z0` and `burrau_345` (dd_integrator §5), are held as `z` and their f64 decode bit for bit; `z0` is also
+checked against Lagrange's homothetic collapse, and `burrau_345` against the Burrau criterion above.
+
+**Measured, at the first run** (TASK-M3-24's PR gives the output): every case but the Burrau label passes. Burrau's
+physics is right on both trajectories, the march's and the reference's (the lightest body leaves between 60 and 65 of S&P's
+units and is unbound, ten binary separations away, at 100), but the escape **label** is `bounded` at 100: the shape
+chord over a window stays above `tau = 10⁻³` because the inner binary keeps turning, its envelope `≈ 0.85/d` (slope
+`−0.97` against the escaper's distance `d`), the mechanism `plan/KNOWN.md` records as "escape from a binary fires late".
+The label comes near 158 of S&P's units, far past §1.5's window. The anchor fails as written; it is reported, not moved: its two tests, `golden_anchors_burrau_integrator` and
+`entry_paths_burrau`, are ignored until TASK-M3-34 fixes the label's lag, and `entry_paths_burrau_ejects_on_time`
+holds the physics meanwhile (the lightest body unbound from a time in 60–65 of S&P's units on, on both trajectories,
+and escaped at 100; at 0.05 resolution the reference's onset is 59.6, which the test's 0.5 grid reads as 60.0).
+
+## The benchmark `r_coll` (proposed, TASK-M3-24)
+
+**Proposed: `r_coll = 0` for the Burrau benchmark** (`validation::ground_truth::BENCHMARK_R_COLL`). Szebehely & Peters
+integrated with Levi-Civita regularisation and a fifth-order Runge–Kutta method (S&P pp. 881–883, as
+`docs/incoming/2026-10-27_papers/valtonen2016/README.md` records): point masses, every binary encounter regularised and
+integrated through, none terminated at a separation. So no separation may end the benchmark's march: `r_coll = 0`, no
+collision terminal, with the default occupant, Heggie × RK4, regularising as Levi-Civita did. The default `10⁻³` would
+not be theirs: the march's least separation is `d_min = 1.85·10⁻⁴` (measured), so at the default the run would end at
+that encounter as a collision. Every benchmark run carries the `r_coll` it ran at in its provenance
+(`validation::ground_truth::Provenance`).
+
+## Open sub-questions (settle at implementation)
+
+*Settled by TASK-M3-24 (the sections above):* the analytic ICs (Lagrange at masses (0.2, 0.3, 0.5); Euler, by Path B);
+the figure-eight first; the Burrau feature set (escaper, outcome class, the coarse window); the pinned `r_coll`; the
+lower entry point; the tolerances (exact cases by closed form or reference, at f64; Burrau structurally).
+
 ## Open sub-questions (settle at implementation)
 
 - Exact analytic ICs to encode: Lagrange (equal-mass equilateral, known ω), Euler (collinear, via Path B), plus a couple of central configurations.

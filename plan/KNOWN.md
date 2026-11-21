@@ -14,6 +14,11 @@ delete its line when it's done.
   leaving a binary is in most cases still drawn as `bounded`, so the bounded region of a picture contains
   escapes that are not labelled yet; only starts that fly apart and escapes from tight binaries are caught.
   `tau` and the window are provisional; the re-validation is TASK-M3-34.
+  Burrau (PR #29, TASK-M3-24) is an instance: the march and the RK45 reference both leave the lightest body unbound
+  from `t ≈ 59.6` of Szebehely & Peters' units, but the chord's envelope is `≈ 0.85/d` (log–log slope `−0.97`
+  against the escaper's distance `d`), so the escape label fires only near `t ≈ 158`, not by 60–65. Two tests are
+  ignored until TASK-M3-34 re-enables them: `golden_anchors_burrau_integrator` (kernel) and `entry_paths_burrau`
+  (validation); `entry_paths_burrau_ejects_on_time` holds the physics meanwhile.
 - **The escape rule fires on a bound system with a light, slow inner pair.** `E_rel` tests one body against the
   other two as if they were one mass, whether or not they are the bound pair. Measured: masses
   `(0.001, 0.001, 1)`, the light pair on a circle of separation 1, the heavy body at 400 on a circular orbit;
