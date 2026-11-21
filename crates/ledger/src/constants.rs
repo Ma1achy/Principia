@@ -1498,6 +1498,21 @@ pub const TAU: ConstantBuilder = proposed(
     "M3",
 );
 
+/// The distance floor's reach, 10, in units of the initial hyperradius `R_0`: the escape rule `DistanceFloor`
+/// (`kernel::detect::escape_rule`) fires where the farthest body is beyond `10 R_0` from the other two's centre of mass,
+/// prin-rs's naive distance baseline ("the farthest body beyond `10 R0` has escaped"), ported as measured there.
+pub const ESCAPE_DISTANCE_FLOOR: ConstantBuilder = ConstantBuilder {
+    name: "escape_distance_floor",
+    value: Some(Value::Exact(10.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::PrinRs {
+        commit: "57a7f5e",
+        path: "results/chazy/README.md",
+    }),
+    relative_basis: None,
+    provisional: None,
+};
+
 /// `Δ_sync`, the sync quantum, 1/8 of a time unit: the regularised occupants' sync grid is `t = k·Δ_sync`, the same for
 /// every run, independent of the horizon and of frame timing; each interval's steps are sized from it and `ADVANCE`
 /// stops only on it (integrator_contract Part 2a § "The sync grid is a fixed quantum of physical time"). A calibration
@@ -1886,6 +1901,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     DT_MACRO_FLOOR,
     ESCAPE_WINDOW,
     TAU,
+    ESCAPE_DISTANCE_FLOOR,
     DELTA_SYNC,
     R_COLL,
     EPSILON,
