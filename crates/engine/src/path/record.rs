@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use kernel::chart::saved::{Saved, WORDS};
 
-use super::{Family, KernelMap, Map, PathError, Pin, Segment, View};
+use super::{CurvedTilt, Family, KernelMap, Map, PathError, Pin, Pivot, Segment, View};
 use crate::contract::sim_config::SimConfig;
 
 /// § 17.10's alignment `T`, in the window's similarity group: content, not timing. Typed, not built (stage 4).
@@ -38,6 +38,10 @@ struct ViewText {
     sim: SimConfig,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pin: Option<Pin>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    tilt: Option<CurvedTilt>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pivot: Option<Pivot>,
 }
 
 fn hex(x: f64) -> String {
@@ -60,6 +64,8 @@ fn view_text(v: &View) -> ViewText {
         map,
         sim: v.sim.clone(),
         pin: v.pin,
+        tilt: v.tilt,
+        pivot: v.pivot,
     }
 }
 
@@ -81,6 +87,8 @@ fn view_of(t: ViewText) -> Result<View, PathError> {
         map,
         sim: t.sim,
         pin: t.pin,
+        tilt: t.tilt,
+        pivot: t.pivot,
     })
 }
 

@@ -15,12 +15,14 @@
 //! maps, several fields eased together, alignment and retiming are typed and refuse to be shown
 //! ([`PathError::NotBuilt`]) until their stage builds them; no special case is an if-branch outside a family.
 
+pub mod curved;
 pub mod family;
 pub mod lock;
 mod record;
 mod timing;
 
-use kernel::chart::saved::Saved;
+use kernel::chart::saved::{Composed, ParentParams, SaveParent, Saved};
+use kernel::chart::tilt::{Placement, TiltSpec, Tiltable, Tilted};
 use kernel::chart::{Latent as LatentChart, REGISTRY};
 use kernel::decode::Ic;
 use kernel::encode::by_kind::ByKind;
@@ -28,6 +30,7 @@ use kernel::encode::SimplexClamp;
 use kernel::generated::links::Selection;
 use serde::{Deserialize, Serialize};
 
+pub use curved::{held_k, CurvedTilt, Pivot, SliderSpan, LATENT_SPAN, NU0_SPAN};
 pub use family::{oblique, tilt_tangent, tilt_vector, Constructor};
 pub use lock::{hold_plane, hold_window, ChartLock, Held, Pivoted};
 pub use record::{Align, FrameRecord};
@@ -177,7 +180,13 @@ fn reread(view: &View) -> Option<Pin> {
     })
 }
 
-/// A view: a map seen through the window its `SimConfig` holds, and the lock's pin.
+/// A view: a map seen through the window its `SimConfig` holds, the lock's pin, and on a curved map its own tilt and
+/// pivot record.
+///
+/// The plan is unclear here; chose to hold a curved view's tilt in the view beside its `SimConfig`, as the pin is, not
+/// in a `SimConfig` group, because today's `SimConfig` has no group for a kernel map's tilt and adding one would move
+/// every view's sim key; the tilt's sim-key wiring is the gui adapter's (TASK-M2-64). Absent, a view's bytes are
+/// stage 1's.
 #[derive(Clone, Debug, PartialEq)]
 pub struct View {
     /// The map.
@@ -186,6 +195,10 @@ pub struct View {
     pub sim: SimConfig,
     /// The pin while locked, `None` while free.
     pub pin: Option<Pin>,
+    /// A curved view's own tilt ([`Family::CurvedTilt`]); on a saved curved chart the new tilt `R′`. `None` untilted.
+    pub tilt: Option<CurvedTilt>,
+    /// R-899's pivot record, set by a lock on a tilted curved view; `None` elsewhere.
+    pub pivot: Option<Pivot>,
 }
 
 /// The window `(c, Q)`, read from a view.
@@ -204,6 +217,8 @@ impl View {
             map: Map::Latent,
             sim,
             pin: None,
+            tilt: None,
+            pivot: None,
         }
     }
 
@@ -213,13 +228,16 @@ impl View {
             map: Map::Kernel(KernelMap::of(chart)?),
             sim,
             pin: None,
+            tilt: None,
+            pivot: None,
         })
     }
 
-    /// A curved chart's tilt `spec` of this view, the targets' slider spans `span`, turned about the pin: the pivot at
-    /// the pinned pixel, `window.at(pin)`, placed at the pin's held chart point, its hidden offsets zero (`[−0, −0]`);
-    /// or about the window's centre while free or pinned there, the kernel's tilt bit for bit. [`PathError::WrongMap`]
-    /// off a kernel map.
+    /// A curved chart's tilt `spec` of this view, the targets' slider spans `span`, turned about the pin: where the view
+    /// holds a pivot record, the pixel at its stored address placed at its stored point with its stored offsets `d0`;
+    /// else the pivot at the pinned pixel, `window.at(pin)`, placed at the pin's held chart point, its hidden offsets zero
+    /// (`[−0, −0]`); or about the window's centre while free or pinned there, the kernel's tilt bit for bit.
+    /// [`PathError::WrongMap`] off a kernel map.
     pub fn pivoted(
         &self,
         spec: &kernel::chart::tilt::TiltSpec,
@@ -228,6 +246,15 @@ impl View {
         let ViewWindow::Chart(window) = self.window() else {
             return Err(PathError::WrongMap);
         };
+        if let Some(Pivot {
+            address: [s, t],
+            point,
+            d0,
+            ..
+        }) = self.pivot
+        {
+            return Ok(Pivoted::new(spec, window.at(s, t), point, d0, span));
+        }
         let (at, point) = match self.pin {
             Some(Pin::At {
                 address: [s, t],
@@ -236,6 +263,51 @@ impl View {
             _ => (window.centre, window.centre),
         };
         Ok(Pivoted::new(spec, at, point, [-0.0, -0.0], span))
+    }
+
+    /// The view's own placement on a kernel map: its held tilt about its pivot ([`View::pivoted`]), the chart's own
+    /// where it holds none.
+    pub fn placement(&self) -> Result<Pivoted, PathError> {
+        let tilt = self.tilt.unwrap_or_else(untilted);
+        self.pivoted(&tilt.spec(), tilt.span)
+    }
+
+    /// The kernel map `chart` as this view shows it: `chart` under the view's placement ([`View::placement`]);
+    /// [`PathError::WrongMap`] where the view is not of `chart`, [`PathError::Refused`] where a target is not hidden.
+    pub fn tilted<C>(&self, chart: C) -> Result<Tilted<C, f64, Pivoted>, PathError>
+    where
+        C: Tiltable<Param = f64>,
+    {
+        if self.map != Map::Kernel(KernelMap::of(&chart)?) {
+            return Err(PathError::WrongMap);
+        }
+        Tilted::placed(chart, self.placement()?).ok_or(PathError::Refused(TARGET_REFUSED))
+    }
+
+    /// A saved curved chart as this view shows it (R-475, R-513): reopened from its definition alone on its parent `C`,
+    /// under the view's own tilt `R′` about the window's centre (the saved `R` after it, [`Composed`]); at `R′ = 0` the
+    /// view it was saved from, bit for bit. [`PathError::WrongMap`] off a saved curved chart or where `C` is not its
+    /// parent; [`PathError::NotBuilt`] with the pin off the centre, about which `Composed` does not turn.
+    pub fn reopened<C>(&self) -> Result<Tilted<C, f64, Composed<f64>>, PathError>
+    where
+        C: Tiltable<Param = f64> + ParentParams,
+    {
+        let Map::Saved(saved) = &self.map else {
+            return Err(PathError::WrongMap);
+        };
+        let Saved::Curved(curved) = **saved else {
+            return Err(PathError::WrongMap);
+        };
+        if matches!(self.pin, Some(Pin::At { .. })) {
+            return Err(PathError::NotBuilt(
+                "a saved curved chart's tilt about a pin off its centre",
+            ));
+        }
+        curved.parent::<C>().ok_or(PathError::WrongMap)?;
+        let tilt = self.tilt.unwrap_or_else(untilted);
+        curved
+            .open::<C>(&tilt.spec(), self.sim.chart.window.centre, tilt.span)
+            .ok_or(PathError::Refused(TARGET_REFUSED))
     }
 
     /// The window `(c, Q)`, by the map's window shape (one evaluator per shape).
@@ -267,12 +339,27 @@ impl View {
     }
 }
 
+/// A curved view with no tilt of its own: every angle 0, so no tilt path is taken; its targets name no coordinate.
+fn untilted() -> CurvedTilt {
+    CurvedTilt {
+        tau1: 0.0,
+        tau2: 0.0,
+        lean: false,
+        x: u32::MAX,
+        y: u32::MAX,
+        span: [LATENT_SPAN, LATENT_SPAN],
+    }
+}
+
+/// The kernel's refusal of a tilt whose target is not one of the chart's hidden coordinates.
+const TARGET_REFUSED: &str = "a target that is not one of the chart's hidden coordinates";
+
 /// An edit of a saved chart's view. The plan is unclear here; chose to refuse it in stage 1, because a saved chart holds
 /// its definition by value (an oblique one its `z₀`, `q₁`, `q₂`) beside the window in `SimConfig`, so an edit of the
-/// window would leave the two disagreeing, and no engine route edits a saved chart's view today: its tilts compose in
-/// the kernel (`Composed`), and editing and saving again are TASK-M2-55's and TASK-M2-63's.
+/// window would leave the two disagreeing. A saved curved chart's new tilt is built ([`Segment::curved_tilt`], composed
+/// in the kernel's `Composed`); editing its window and saving it again are TASK-M2-55's.
 fn saved_refused() -> PathError {
-    PathError::NotBuilt("an edit of a saved chart's view (TASK-M2-55, TASK-M2-63)")
+    PathError::NotBuilt("an edit of a saved chart's view (TASK-M2-55)")
 }
 
 /// `sim` after `edits`, each written as the state store writes it (`contract::store::write`).
@@ -398,8 +485,20 @@ pub enum Family {
     Commit,
     /// Several fields eased together on one `s` (export contract Part 3): not built.
     WindowEase,
-    /// R-474's Tip as sheet and Lean each axis, on a latent or a curved view: not built.
+    /// R-474's Tip as sheet and Lean each axis on a latent view: not built. On a curved view it is
+    /// [`Family::CurvedTilt`].
     R474Tilt,
+    /// A curved view's own tilt (R-473 T2, R-474 on a curved chart; R-513 on a saved one), `(τ₁, τ₂)` lerped from `from`
+    /// to `to`, the map, targets and spans `tilt`'s, the same at both ends; it turns about the view's pivot
+    /// ([`View::pivoted`]).
+    CurvedTilt {
+        /// `(τ₁, τ₂)` at `A`.
+        from: [f64; 2],
+        /// `(τ₁, τ₂)` at `B`.
+        to: [f64; 2],
+        /// The map, the targets and the spans.
+        tilt: CurvedTilt,
+    },
     /// § 17.7's geodesic between two planes: not built.
     PlaneRotation,
     /// The state blend, its path named: not built (stage 3).
@@ -444,7 +543,7 @@ impl Segment {
         let b = View {
             map: a.map.clone(),
             sim: apply(&a.sim, &edits),
-            pin: a.pin,
+            ..a.clone()
         };
         Segment {
             a: a.clone(),
@@ -498,6 +597,7 @@ impl Segment {
         }
         let a = &self.a;
         let mut pin = a.pin;
+        let mut tilt = a.tilt;
         let edits = match &self.family {
             Family::Pan { ds, dt } => {
                 pin = panned(a, s * ds, s * dt);
@@ -510,6 +610,11 @@ impl Segment {
             }
             Family::RawTilt { committed, form } => {
                 about_pin(a, raw_tilt_at(committed, a.plane()?, form, s)?)
+            }
+            Family::CurvedTilt { from, to, tilt: t } => {
+                let lerp = |i: usize| from[i] + s * (to[i] - from[i]);
+                tilt = Some(t.at([lerp(0), lerp(1)]));
+                Vec::new()
             }
             Family::Cut { .. } | Family::Commit => return Ok(a.clone()),
             Family::WindowEase => return Err(PathError::NotBuilt("several fields eased together")),
@@ -524,6 +629,8 @@ impl Segment {
             map: a.map.clone(),
             sim: apply(&a.sim, &edits),
             pin,
+            tilt,
+            pivot: a.pivot,
         };
         Ok(match self.family {
             Family::Slice { .. } | Family::Control { .. } => View {
@@ -740,7 +847,9 @@ impl Segment {
 
     /// The lock at the pixel `(s, t)` of `A`'s window on the nonlinear `chart`, under the link selection `S`, `norm` and
     /// `tol` lookup's (the contract's definition): the lock group alone, the pin at `(s, t)`, the window not re-centred,
-    /// so the pinned pixel decodes the clicked state bit for bit. A cut labelled `Lock`, and what the lock found.
+    /// so the pinned pixel decodes the clicked state bit for bit. A cut labelled `Lock`, and what the lock found. On a
+    /// tilted curved view the lock is placed at the centre only, where the tilt is anchor-preserving, and the view gains
+    /// R-899's pivot record there ([`Pivot`]); off the centre it is the untilt's (R-899 (a1)), not built.
     pub fn lock_on_chart<S, C, N>(
         a: &View,
         chart: &C,
@@ -758,10 +867,12 @@ impl Segment {
         if a.map != Map::Kernel(KernelMap::of(chart)?) {
             return Err(PathError::WrongMap);
         }
+        let pivot = pivot_at(a, (s, t))?;
         let (e, found) =
             lock::set_on_chart::<S, C, N>(chart, &a.sim.chart.window, s, t, norm, tol)?;
-        let seg = Self::of(a, cut(CutLabel::Lock), vec![e]);
-        Ok((seg.pinned(Some(Pin::at(a, s, t))), found))
+        let mut seg = Self::of(a, cut(CutLabel::Lock), vec![e]).pinned(Some(Pin::at(a, s, t)));
+        seg.b.pivot = pivot;
+        Ok((seg, found))
     }
 
     /// The lock on the nonlinear `chart` with the centre-on-pin setting on: the lock and centre on pin in one command,
@@ -823,7 +934,9 @@ impl Segment {
     /// Unlock: the lock group cleared, `(z₀, q₁, q₂)` kept, the pin gone; a cut labelled `Unlock`.
     pub fn unlock(a: &View) -> Result<Self, PathError> {
         let e = lock::unlock(&a.sim)?;
-        Ok(Self::of(a, cut(CutLabel::Unlock), vec![e]).pinned(None))
+        let mut seg = Self::of(a, cut(CutLabel::Unlock), vec![e]).pinned(None);
+        seg.b.pivot = None;
+        Ok(seg)
     }
 
     /// A cut from `a` to the view `b` labelled `label`: no interior, `B` stored.
@@ -879,6 +992,69 @@ impl Segment {
         Ok(Self::committed(a, saved))
     }
 
+    /// Save view as chart of the curved view `a` of `parent` (R-475 S2, L5): its parent, its slice centre and its own tilt
+    /// (the angles, map, targets and spans), read from the view. The slice centre `s` is the point the view's tilt turns
+    /// about, the window's centre, or the pivot record's point where its pixel is placed there with no hidden offset;
+    /// the saved chart places the pixel at window point `u` at `s + R·(u − s)`, the view's own placement, so reopened at
+    /// zero tilt it decodes the view bit for bit. A view pivoted elsewhere (a pivot record with an offset) is the
+    /// untilt's (R-899 (a1)): not built.
+    pub fn save_view_curved<C>(a: &View, parent: &C) -> Result<Self, PathError>
+    where
+        C: SaveParent + ParentParams,
+    {
+        if a.map != Map::Kernel(KernelMap::of(parent)?) {
+            return Err(PathError::WrongMap);
+        }
+        let tilt = a.tilt.unwrap_or_else(untilted);
+        let (at, point, d0) = a.placement()?.pivot();
+        let about_own_point = at.map(f64::to_bits) == point.map(f64::to_bits);
+        if !about_own_point || d0.iter().any(|d| *d != 0.0) {
+            return Err(PathError::NotBuilt(
+                "Save view as chart of a view pivoted off its own point: the untilt (R-899 (a1))",
+            ));
+        }
+        Self::save_curved(a, parent, tilt.spec(), at, tilt.span)
+    }
+
+    /// The tilt `spec` of the curved view `a` of `chart`, or on a saved curved chart whose parent is `chart` its new tilt
+    /// `R′` (R-473 T2, R-474, R-513): the view's tilt set to `spec` at the targets' slider spans, R-920's, read from the
+    /// chart ([`SliderSpan`]), never from the view. A curved tilt family from the view's own tilt where only the angles
+    /// change; otherwise a cut labelled `TiltReplaces`. The tilt turns about the view's pivot ([`View::pivoted`]). A
+    /// non-finite angle is refused ([`NavError::NonFinite`]).
+    pub fn curved_tilt<C>(a: &View, chart: &C, spec: &TiltSpec) -> Result<Self, PathError>
+    where
+        C: SliderSpan,
+    {
+        crate::nav::finite(&[spec.tau1, spec.tau2])?;
+        let index = KernelMap::of(chart)?;
+        let named = match &a.map {
+            Map::Kernel(k) => *k == index,
+            Map::Saved(saved) => matches!(**saved, Saved::Curved(c) if c.parent == index.registry),
+            Map::Latent => false,
+        };
+        if !named {
+            return Err(PathError::WrongMap);
+        }
+        let span = |k: u32| {
+            chart
+                .slider_span(k)
+                .ok_or(PathError::Refused(TARGET_REFUSED))
+        };
+        let to = CurvedTilt::of(spec, [span(spec.x)?, span(spec.y)?]);
+        let from = a.tilt.unwrap_or(to.at([0.0, 0.0]));
+        let family = match from.same_axes(&to) {
+            true => Family::CurvedTilt {
+                from: [from.tau1, from.tau2],
+                to: [to.tau1, to.tau2],
+                tilt: to,
+            },
+            false => cut(CutLabel::TiltReplaces),
+        };
+        let mut seg = Self::of(a, family, Vec::new());
+        seg.b.tilt = Some(to);
+        Ok(seg)
+    }
+
     /// The commit of `a` as the saved chart `saved`.
     fn committed(a: &View, saved: Saved) -> Self {
         Segment {
@@ -887,6 +1063,8 @@ impl Segment {
                 map: Map::Saved(Box::new(saved)),
                 sim: a.sim.clone(),
                 pin: a.pin,
+                tilt: None,
+                pivot: a.pivot,
             },
             family: Family::Commit,
             edits: Vec::new(),
@@ -914,6 +1092,17 @@ impl Segment {
                 let edits = about_pin(a, raw_tilt_at(committed, a.plane()?, form, 1.0)?);
                 Some(Self::of(a, family.clone(), edits))
             }
+            Family::CurvedTilt { from, to, tilt } => {
+                let start = a.tilt.unwrap_or(tilt.at([0.0, 0.0]));
+                let starts = start.same_axes(tilt)
+                    && [start.tau1, start.tau2].map(f64::to_bits) == from.map(f64::to_bits);
+                if !starts {
+                    return Err(PathError::Rebuilt);
+                }
+                let mut seg = Self::of(a, family.clone(), Vec::new());
+                seg.b.tilt = Some(tilt.at(*to));
+                Some(seg)
+            }
             _ => None,
         };
         match reached {
@@ -928,6 +1117,29 @@ impl Segment {
             }),
         }
     }
+}
+
+/// R-899's pivot record of a lock at the address `(s, t)` of `a`: on a tilted curved view, the pin's screen position and
+/// the pinned state as the view places it there, its chart point and hidden offsets; `None` on any other view, whose
+/// bytes stay stage 2's. A lock off the centre of a tilted curved view is the untilt's (R-899 (a1)): not built.
+fn pivot_at(a: &View, (s, t): (f64, f64)) -> Result<Option<Pivot>, PathError> {
+    match a.tilt {
+        Some(tilt) if !tilt.spec().untilted() => {}
+        _ => return Ok(None),
+    }
+    if (s, t) != (0.5, 0.5) {
+        return Err(PathError::NotBuilt(
+            "a lock off the centre of a tilted curved view: the untilt (R-899 (a1))",
+        ));
+    }
+    let [u, v] = a.sim.chart.window.at(s, t);
+    let (point, shift) = a.placement()?.place(u, v);
+    Ok(Some(Pivot {
+        address: [s, t],
+        assumed: false,
+        point,
+        d0: [shift.dx, shift.dy],
+    }))
 }
 
 /// A cut labelled `label`.
