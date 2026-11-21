@@ -1,0 +1,8 @@
+{
+  "gate": "pair-table",
+  "inputs": ["kernel.json", "heggie_kdk_good.json", "empty_warning.json", "no_note_4.json", "one_heggie_row.json", "one_logh_row.json"],
+  "measurement": {
+    "requirement": "REQ-INT-098",
+    "ruling": "R-561"
+  }
+}

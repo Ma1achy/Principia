@@ -27,10 +27,9 @@
 //!   carried state after `t = 0`. Control: a seam that does not pass the buffer on.
 //! - `regularisation_default`: the default pair is Heggie × RK4 under Eq. 22, measured good, with Eq. 20 selectable,
 //!   and its occupant type runs with RK4's profile on a regularised system. Control: a default of Heggie × KDK.
-//! - `regularisation_default_pairs`: every stepper × regularisation pair is selected, and every pair that is defined
-//!   runs a call through the seam: all five steppers under `none`, Aarseth–Zare and Heggie (Eq. 20 and Eq. 22), and
-//!   KDK and RK4 under logH in each time mode. logH × Euler, × Yoshida-4 and × Yoshida-6 are selected and listed as
-//!   not defined: the contract writes no form for them. Control: a builder that refuses a pair.
+//! - `regularisation_default_pairs`: every stepper × regularisation pair is selected and runs a call through the
+//!   seam: all five steppers under `none`, Aarseth–Zare, Heggie (Eq. 20 and Eq. 22) and logH in each time mode, 30
+//!   pairs. Control: a builder that refuses a pair.
 //!
 //! logH's seam and carried state are `tests/logh_seam.rs`.
 
@@ -1383,65 +1382,32 @@ impl<const TTL: bool> LhConfig for LhValues<TTL> {
     }
 }
 
-/// One seam call of logH × the stepper `stepper` selects, in the mode `TTL`, at `R`; `None` for a pair logH does not
-/// define. logH defines two: × KDK, its own drift–kick–drift leapfrog, and × RK4, the classical step on
-/// `(r, p, t, W)` (integrator_contract Part 2b, logH's steps). × Euler, × Yoshida-4 and × Yoshida-6 have no written
-/// form, so their occupant types fail to build (`logh::Slot`) and are never named here.
-fn run_logh<const TTL: bool, R: P>(stepper: Selection) -> Option<(Advanced<R>, u32)> {
-    match stepper {
-        Selection::Production(Occupant::Kdk) => {
-            Some(one_call::<Composed<Kdk, LogH<LhValues<TTL>>>, R>())
-        }
-        Selection::Production(Occupant::Rk4) => {
-            Some(one_call::<Composed<Rk4, LogH<LhValues<TTL>>>, R>())
-        }
-        Selection::Debug(DebugOccupant::Euler)
-        | Selection::Production(Occupant::Yoshida4)
-        | Selection::Production(Occupant::Yoshida6) => None,
-    }
-}
-
-/// One seam call of the occupant `pair` selects, at `R`; `None` for a pair that is not defined ([`run_logh`]).
-fn run_pair<R: P>(pair: Pair) -> Option<(Advanced<R>, u32)> {
+/// One seam call of the occupant `pair` selects, at `R`. Every pair is defined: under logH, KDK is its own
+/// drift–kick–drift leapfrog, Yoshida-4 and Yoshida-6 that leapfrog composed, RK4 and Euler the classical steps on
+/// `(r, p, t, W)` (integrator_contract Part 2b, logH's steps).
+fn run_pair<R: P>(pair: Pair) -> (Advanced<R>, u32) {
     match pair.regularisation {
-        Choice::None => Some(by_stepper!(pair.stepper, NoRegularisation, R)),
-        Choice::AarsethZare => Some(by_stepper!(pair.stepper, AarsethZare<AzValues>, R)),
-        Choice::Heggie(HeggieTime::Eq20) => Some(by_stepper!(pair.stepper, Heggie<Eq20>, R)),
-        Choice::Heggie(HeggieTime::Eq22) => Some(by_stepper!(pair.stepper, Heggie<Eq22>, R)),
-        Choice::LogH(LogHMode::LogH) => run_logh::<false, R>(pair.stepper),
-        Choice::LogH(LogHMode::Ttl) => run_logh::<true, R>(pair.stepper),
+        Choice::None => by_stepper!(pair.stepper, NoRegularisation, R),
+        Choice::AarsethZare => by_stepper!(pair.stepper, AarsethZare<AzValues>, R),
+        Choice::Heggie(HeggieTime::Eq20) => by_stepper!(pair.stepper, Heggie<Eq20>, R),
+        Choice::Heggie(HeggieTime::Eq22) => by_stepper!(pair.stepper, Heggie<Eq22>, R),
+        Choice::LogH(LogHMode::LogH) => by_stepper!(pair.stepper, LogH<LhValues<false>>, R),
+        Choice::LogH(LogHMode::Ttl) => by_stepper!(pair.stepper, LogH<LhValues<true>>, R),
     }
 }
 
-/// Every stepper × regularisation pair is selected, and every pair that is defined runs a call through the seam at
-/// `R`: the state moves and stays finite, and the cadence is called once per kept step. The criterion, written before
-/// the run: 24 pairs run (5 steppers × `none`, Aarseth–Zare, Heggie Eq. 20, Heggie Eq. 22, and KDK and RK4 × logH's
-/// two modes), and the 6 that do not are exactly logH's two modes × Euler, Yoshida-4 and Yoshida-6. `select` is the
-/// builder under test.
+/// Every stepper × regularisation pair is selected and runs a call through the seam at `R`: the state moves and stays
+/// finite, and the cadence is called once per kept step. The criterion, written before the run: 30 pairs run, the 5
+/// steppers × `none`, Aarseth–Zare, Heggie Eq. 20, Heggie Eq. 22, logH and logH-TTL. `select` is the builder under
+/// test.
 fn check_pairs<R: P>(select: impl Fn(Selection, Choice) -> Option<Pair>) {
-    let (mut ran, mut unbuilt) = (0, 0);
+    let mut ran = 0;
     for stepper in STEPPERS {
         for choice in Choice::ALL {
             let pair = select(stepper, choice)
                 .unwrap_or_else(|| panic!("the builder refused {stepper:?} × {choice:?}"));
             assert_eq!((pair.stepper, pair.regularisation), (stepper, choice));
-            let Some((out, calls)) = run_pair::<R>(pair) else {
-                let leapfrog_or_rk4 = matches!(
-                    stepper,
-                    Selection::Production(Occupant::Kdk) | Selection::Production(Occupant::Rk4)
-                );
-                assert!(
-                    matches!(choice, Choice::LogH(_)) && !leapfrog_or_rk4,
-                    "{stepper:?} × {choice:?} did not run: only logH × Euler, × Yoshida-4 and × Yoshida-6 are not \
-                     defined"
-                );
-                println!(
-                    "{}: regularisation_default_pairs: {stepper:?} × {choice:?} is selected and not defined",
-                    R::NAME
-                );
-                unbuilt += 1;
-                continue;
-            };
+            let (out, calls) = run_pair::<R>(pair);
             let name = format!("{stepper:?} × {choice:?} ({})", R::NAME);
             assert!(out.substeps > 0, "{name}: no step taken");
             assert_eq!(
@@ -1463,12 +1429,11 @@ fn check_pairs<R: P>(select: impl Fn(Selection, Choice) -> Option<Pair>) {
         }
     }
     println!(
-        "{}: regularisation_default_pairs: {ran} pairs ran (criterion 24: 5 steppers × none, Aarseth–Zare, Heggie \
-         Eq. 20, Heggie Eq. 22; KDK and RK4 × logH, logH-TTL), {unbuilt} selected and not defined (criterion 6: logH's \
-         two modes × Euler, Yoshida-4, Yoshida-6)",
+        "{}: regularisation_default_pairs: {ran} pairs ran (criterion 30: 5 steppers × none, Aarseth–Zare, Heggie \
+         Eq. 20, Heggie Eq. 22, logH, logH-TTL)",
         R::NAME
     );
-    assert_eq!((ran, unbuilt), (24, 6), "every pair that is defined runs");
+    assert_eq!(ran, 30, "every pair runs");
 }
 
 #[test]
