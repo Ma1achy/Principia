@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use kernel::chart::saved::{Saved, WORDS};
 
-use super::{Family, KernelMap, Map, PathError, Segment, View};
+use super::{Family, KernelMap, Map, PathError, Pin, Segment, View};
 use crate::contract::sim_config::SimConfig;
 
 /// § 17.10's alignment `T`, in the window's similarity group: content, not timing. Typed, not built (stage 4).
@@ -36,6 +36,8 @@ enum MapText {
 struct ViewText {
     map: MapText,
     sim: SimConfig,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pin: Option<Pin>,
 }
 
 fn hex(x: f64) -> String {
@@ -57,6 +59,7 @@ fn view_text(v: &View) -> ViewText {
     ViewText {
         map,
         sim: v.sim.clone(),
+        pin: v.pin,
     }
 }
 
@@ -74,7 +77,11 @@ fn view_of(t: ViewText) -> Result<View, PathError> {
             })?))
         }
     };
-    Ok(View { map, sim: t.sim })
+    Ok(View {
+        map,
+        sim: t.sim,
+        pin: t.pin,
+    })
 }
 
 /// The view's bytes.

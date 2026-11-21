@@ -29,13 +29,13 @@ use kernel::generated::links::Selection;
 use serde::{Deserialize, Serialize};
 
 pub use family::{oblique, tilt_tangent, tilt_vector, Constructor};
-pub use lock::ChartLock;
+pub use lock::{hold_plane, hold_window, ChartLock, Held, Pivoted};
 pub use record::{Align, FrameRecord};
 pub use timing::{Easing, MonotoneTable, Timing};
 
 use crate::contract::set_field::{Edit, SetField, SimField};
 use crate::contract::sim_config::{Latent, Plane, SimConfig, Window};
-use crate::lock::{FrozenControls, LockError, Nearest};
+use crate::lock::{point, FrozenControls, LockError, Nearest};
 use crate::lookup::Tolerances;
 use crate::nav::{BasisVector, NavError};
 
@@ -111,13 +111,81 @@ pub enum Map {
     Saved(Box<Saved>),
 }
 
-/// A view: a map seen through the window its `SimConfig` holds.
+/// The pin (chart_decoder_contract Part 4, "Setting the lock"): the locked pixel, by its screen address in the window's
+/// `[0,1]²`, stored (not re-derived), so a slice leaves it where it is on screen, and the point it is held at. Tilt and
+/// zoom turn about it.
+///
+/// The plan is unclear here; chose to hold the pin in the view beside its `SimConfig`, not in `SimConfig`'s lock group,
+/// because the sim key must not move with a lock (Part 4, "the lock changes neither") and the lock group's struct is
+/// built field by field across the gui; the state store's copy is the gui adapter's (TASK-M8-125).
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub enum Pin {
+    /// The window's centre, `(½, ½)`, where `z(½, ½) = z₀` whatever the basis: tilt and zoom keep the centre.
+    Centre,
+    /// An address off the centre, and the point it is held at: tilt and zoom re-solve the centre so this pixel is placed
+    /// there again.
+    At {
+        /// The pixel's address in the window's `[0,1]²`.
+        address: [f64; 2],
+        /// Where the pixel is held.
+        point: PinPoint,
+    },
+}
+
+/// Where a pin is held: the point its pixel is placed at, recorded when it is set or moved on purpose (a lock, a slice,
+/// a slider's move, snap-back) and held through every basis or window edit, so the edits' rounding does not accumulate.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub enum PinPoint {
+    /// On the latent map: the latent point, `Φ` at the address.
+    Latent(Latent),
+    /// On a kernel map: the chart point, `window.at` the address.
+    Chart([f64; 2]),
+}
+
+impl Pin {
+    /// The pin at the address `(s, t)` of `view`, held at the point the view places it: the centre where `2s − 1` and
+    /// `2t − 1` are both 0, the kernel's offset of the centre pixel, exactly at `(½, ½)`.
+    pub fn at(view: &View, s: f64, t: f64) -> Self {
+        let point = match view.window() {
+            ViewWindow::Plane(plane) => PinPoint::Latent(point(plane, s, t)),
+            ViewWindow::Chart(window) => PinPoint::Chart(window.at(s, t)),
+        };
+        match (s, t) == (0.5, 0.5) {
+            true => Pin::Centre,
+            false => Pin::At {
+                address: [s, t],
+                point,
+            },
+        }
+    }
+
+    /// The pin's address.
+    pub fn address(&self) -> [f64; 2] {
+        match self {
+            Pin::Centre => [0.5, 0.5],
+            Pin::At { address, .. } => *address,
+        }
+    }
+}
+
+/// `view`'s pin re-read where an edit moved the pinned state on purpose (a slice, a slider's move): the same address,
+/// held at the point the view now places it.
+fn reread(view: &View) -> Option<Pin> {
+    view.pin.map(|p| {
+        let [s, t] = p.address();
+        Pin::at(view, s, t)
+    })
+}
+
+/// A view: a map seen through the window its `SimConfig` holds, and the lock's pin.
 #[derive(Clone, Debug, PartialEq)]
 pub struct View {
     /// The map.
     pub map: Map,
     /// The whole `SimConfig`: the window, the lock and every other group, as today.
     pub sim: SimConfig,
+    /// The pin while locked, `None` while free.
+    pub pin: Option<Pin>,
 }
 
 /// The window `(c, Q)`, read from a view.
@@ -135,6 +203,7 @@ impl View {
         View {
             map: Map::Latent,
             sim,
+            pin: None,
         }
     }
 
@@ -143,7 +212,30 @@ impl View {
         Ok(View {
             map: Map::Kernel(KernelMap::of(chart)?),
             sim,
+            pin: None,
         })
+    }
+
+    /// A curved chart's tilt `spec` of this view, the targets' slider spans `span`, turned about the pin: the pivot at
+    /// the pinned pixel, `window.at(pin)`, placed at the pin's held chart point, its hidden offsets zero (`[−0, −0]`);
+    /// or about the window's centre while free or pinned there, the kernel's tilt bit for bit. [`PathError::WrongMap`]
+    /// off a kernel map.
+    pub fn pivoted(
+        &self,
+        spec: &kernel::chart::tilt::TiltSpec,
+        span: [f64; 2],
+    ) -> Result<Pivoted, PathError> {
+        let ViewWindow::Chart(window) = self.window() else {
+            return Err(PathError::WrongMap);
+        };
+        let (at, point) = match self.pin {
+            Some(Pin::At {
+                address: [s, t],
+                point: PinPoint::Chart(point),
+            }) => (window.at(s, t), point),
+            _ => (window.centre, window.centre),
+        };
+        Ok(Pivoted::new(spec, at, point, [-0.0, -0.0], span))
     }
 
     /// The window `(c, Q)`, by the map's window shape (one evaluator per shape).
@@ -158,8 +250,9 @@ impl View {
         }
     }
 
-    /// The plane a window edit acts on: the latent map's; [`PathError::WrongMap`] on a kernel map, whose window edits
-    /// are the GUI's until TASK-M2-64; and [`saved_refused`] on a saved chart.
+    /// The plane a window edit acts on: the latent map's; [`PathError::WrongMap`] on a kernel map, whose pan and slice
+    /// are the GUI's until TASK-M2-64 (its zoom has its own evaluator, [`family::zoom_window`]); and [`saved_refused`]
+    /// on a saved chart.
     fn plane(&self) -> Result<&Plane, PathError> {
         match &self.map {
             Map::Latent => Ok(&self.sim.plane),
@@ -204,8 +297,14 @@ fn apply(sim: &SimConfig, edits: &[SetField]) -> SimConfig {
 pub enum CutLabel {
     /// Today's chart switch: a jump (the chart-space model's § 3).
     ChartSwitch,
-    /// The lock set, on the affine or a nonlinear chart, or its re-centre: today's lock re-centres the view.
+    /// The lock set at a pixel, on the affine or a nonlinear chart: the lock group and the pin, the view unchanged
+    /// (chart_decoder_contract Part 4, "Setting the lock": locking does not move the view).
+    Lock,
+    /// A lock that moves the view to its point: lock validation's re-centre at the nearest feasible point, and a lock
+    /// with the centre-on-pin setting on, the lock and centre on pin in one command.
     LockRecentre,
+    /// Centre on pin: the pinned pixel brought to the centre, a navigation edit by assignment.
+    CentreOnPin,
     /// Snap-back, `z₀ ← z_locked` by assignment.
     SnapBack,
     /// Unlock: the lock group cleared, the view unchanged.
@@ -345,6 +444,7 @@ impl Segment {
         let b = View {
             map: a.map.clone(),
             sim: apply(&a.sim, &edits),
+            pin: a.pin,
         };
         Segment {
             a: a.clone(),
@@ -397,15 +497,19 @@ impl Segment {
             return Ok(self.b.clone());
         }
         let a = &self.a;
+        let mut pin = a.pin;
         let edits = match &self.family {
-            Family::Pan { ds, dt } => vec![family::pan(a.plane()?, s * ds, s * dt)?],
-            Family::Zoom { octaves } => vec![family::zoom(a.plane()?, s * octaves)?],
+            Family::Pan { ds, dt } => {
+                pin = panned(a, s * ds, s * dt);
+                vec![family::pan(a.plane()?, s * ds, s * dt)?]
+            }
+            Family::Zoom { octaves } => zoomed(a, s * octaves)?,
             Family::Slice { d, t } => vec![family::slice(a.plane()?, d, s * t)?],
             Family::Control { k, from, to } => {
                 vec![family::control(&a.sim, *k, from + s * (to - from))?]
             }
             Family::RawTilt { committed, form } => {
-                vec![raw_tilt_at(committed, a.plane()?, form, s)?]
+                about_pin(a, raw_tilt_at(committed, a.plane()?, form, s)?)
             }
             Family::Cut { .. } | Family::Commit => return Ok(a.clone()),
             Family::WindowEase => return Err(PathError::NotBuilt("several fields eased together")),
@@ -416,9 +520,17 @@ impl Segment {
         if self.timing.retime.is_some() {
             return Err(PathError::NotBuilt("retiming"));
         }
-        Ok(View {
+        let view = View {
             map: a.map.clone(),
             sim: apply(&a.sim, &edits),
+            pin,
+        };
+        Ok(match self.family {
+            Family::Slice { .. } | Family::Control { .. } => View {
+                pin: reread(&view),
+                ..view
+            },
+            _ => view,
         })
     }
 
@@ -445,21 +557,34 @@ impl Segment {
 
     /// Pan by `(ds, dt)` of the view's `[0,1]²` addresses (chart_decoder_contract Part 4, "Pan"): `Δz₀ = 2ds·q₁ +
     /// 2dt·q₂`, the same plane, another window.
+    /// The pin moves with the content: it stays on the pixel it marked.
     pub fn pan(a: &View, ds: f64, dt: f64) -> Result<Self, PathError> {
         let e = family::pan(a.plane()?, ds, dt)?;
-        Ok(Self::of(a, Family::Pan { ds, dt }, vec![e]))
+        let seg = Self::of(a, Family::Pan { ds, dt }, vec![e]);
+        Ok(seg.pinned(panned(a, ds, dt)))
     }
 
-    /// Zoom by `octaves` about the centre (Part 4, "Zoom"; R-83): `q₁, q₂ ×= 2^−octaves`, `z₀` kept.
+    /// Zoom by `octaves` about the pin, or the centre while free (Part 4, "Zoom"; R-83): on the latent map
+    /// `q₁, q₂ ×= 2^−octaves`, on a kernel map the window's half-widths, each by one common factor; where the pin is off
+    /// the centre, the centre re-solved so the pinned pixel keeps its point ([`hold_plane`], [`hold_window`]).
     pub fn zoom(a: &View, octaves: f64) -> Result<Self, PathError> {
-        let e = family::zoom(a.plane()?, octaves)?;
-        Ok(Self::of(a, Family::Zoom { octaves }, vec![e]))
+        let edits = zoomed(a, octaves)?;
+        Ok(Self::of(a, Family::Zoom { octaves }, edits))
+    }
+
+    /// `B`'s pin set to `pin`.
+    fn pinned(mut self, pin: Option<Pin>) -> Self {
+        self.b.pin = pin;
+        self
     }
 
     /// Slice by `t` along the hidden direction `d` (Part 4, "Slice"): `z₀ += t·off_plane(d)`.
+    /// The pin stays at its address, held at the point the slice moves it to.
     pub fn slice(a: &View, d: &Latent, t: f64) -> Result<Self, PathError> {
         let e = family::slice(a.plane()?, d, t)?;
-        Ok(Self::of(a, Family::Slice { d: *d, t }, vec![e]))
+        let seg = Self::of(a, Family::Slice { d: *d, t }, vec![e]);
+        let pin = reread(&seg.b);
+        Ok(seg.pinned(pin))
     }
 
     /// A slider's move of the control `k` to `value` (Part 4, "Sliders are re-based"): `z₀[k] ← value`, from `A`'s own
@@ -470,7 +595,9 @@ impl Segment {
         }
         let e = family::control(&a.sim, k, value)?;
         let from = a.sim.plane.z0[k];
-        Ok(Self::of(a, Family::Control { k, from, to: value }, vec![e]))
+        let seg = Self::of(a, Family::Control { k, from, to: value }, vec![e]);
+        let pin = reread(&seg.b);
+        Ok(seg.pinned(pin))
     }
 
     /// The raw tilt of `which` toward `target` from `from` to `to` degrees, from `constructor`'s committed plane
@@ -513,7 +640,7 @@ impl Segment {
     fn tilted(constructor: &Constructor, a: &View, form: TiltForm) -> Result<Self, PathError> {
         let plane = a.plane()?;
         let committed = constructor.committed().clone();
-        let end = raw_tilt_at(&committed, plane, &form, 1.0)?;
+        let end = about_pin(a, raw_tilt_at(&committed, plane, &form, 1.0)?);
         let family = match starts_at(&committed, plane, &form) {
             true => Family::RawTilt {
                 committed: Box::new(committed),
@@ -523,20 +650,97 @@ impl Segment {
                 label: CutLabel::TiltReplaces,
             },
         };
-        Ok(Self::of(a, family, vec![end]))
+        Ok(Self::of(a, family, end))
     }
 
-    /// The lock at the affine chart's pixel `(s, t)` (Part 4, "Setting the lock"): today's lock re-centres `z₀` on the
-    /// clicked pixel, so a cut labelled `LockRecentre`.
+    /// The lock at the affine chart's pixel `(s, t)` (Part 4, "Setting the lock"): the lock group, `z_locked` the
+    /// kernel's `Φ` there, and the pin at `(s, t)`; `z₀` and the basis are not edited. A cut labelled `Lock`.
     pub fn lock(a: &View, s: f64, t: f64) -> Result<Self, PathError> {
         a.plane()?;
-        let edits = lock::set(&a.sim.plane, s, t)?;
-        Ok(Self::of(a, recentre_cut(), Vec::from(edits)))
+        let e = lock::set(&a.sim.plane, s, t)?;
+        let seg = Self::of(a, cut(CutLabel::Lock), vec![e]);
+        Ok(seg.pinned(Some(Pin::at(a, s, t))))
+    }
+
+    /// The lock at the affine chart's pixel `(s, t)` with the centre-on-pin setting on (render_gui_spec §G4, off by
+    /// default): the lock and centre on pin in one command, `z₀ ← z_locked` and the lock group, the pin at the centre.
+    /// A cut labelled `LockRecentre`.
+    pub fn lock_centred(a: &View, s: f64, t: f64) -> Result<Self, PathError> {
+        let locked = Self::lock(a, s, t)?;
+        let centred = Self::centre_on_pin(locked.b())?;
+        Ok(Self::joined(a, &[locked, centred], CutLabel::LockRecentre))
+    }
+
+    /// One command of `parts`, a chain from `a`, `B` the last part's, a cut labelled `label`: their edits in the order a
+    /// lock's command sends them, `z₀`, then the lock group, then the window (the order is not read: each edits its own
+    /// field).
+    fn joined(a: &View, parts: &[Segment], label: CutLabel) -> Self {
+        let rank = |e: &SetField| match e.edit {
+            Edit::Sim(SimField::Z0(_)) => 0,
+            Edit::Sim(SimField::Lock(_)) => 1,
+            _ => 2,
+        };
+        let mut edits: Vec<SetField> = parts.iter().flat_map(|p| p.edits.clone()).collect();
+        edits.sort_by_key(rank);
+        let b = parts.last().map_or_else(|| a.clone(), |p| p.b.clone());
+        Segment {
+            a: a.clone(),
+            b,
+            family: cut(label),
+            edits,
+            timing: Timing::default(),
+        }
+    }
+
+    /// Centre on pin (Part 4, "Setting the lock"): a navigation edit that brings the pinned pixel to the centre. On the
+    /// latent map `z₀ ← ` the pin's held point, by assignment (`Φ` at the pinned address where nothing has rounded it),
+    /// so after snap-back `z₀ ← z_locked`; the pin is then the centre. A cut labelled `CentreOnPin`;
+    /// [`LockError::NotLocked`] while free. On a kernel map, see [`Segment::centre_on_pin_chart`].
+    pub fn centre_on_pin(a: &View) -> Result<Self, PathError> {
+        let pin = a.pin.ok_or(LockError::NotLocked)?;
+        let plane = a.plane()?;
+        let held = match pin {
+            Pin::At {
+                point: PinPoint::Latent(z),
+                ..
+            } => z,
+            other => point(plane, other.address()[0], other.address()[1]),
+        };
+        let e = lock::centre_on_pin(held);
+        let seg = Self::of(a, cut(CutLabel::CentreOnPin), vec![e]);
+        Ok(seg.pinned(Some(Pin::Centre)))
+    }
+
+    /// Centre on pin on the nonlinear `chart`: the window's centre moved to the pin's chart point, and `z₀` the
+    /// centre's controls, `z_locked`'s where the chart's axes set them, the chart's frozen ones elsewhere; the pin is then
+    /// the centre. A cut labelled `CentreOnPin`.
+    pub fn centre_on_pin_chart<C>(a: &View, chart: &C) -> Result<Self, PathError>
+    where
+        C: kernel::chart::Chart + FrozenControls,
+    {
+        if a.map != Map::Kernel(KernelMap::of(chart)?) {
+            return Err(PathError::WrongMap);
+        }
+        let pin = a.pin.ok_or(LockError::NotLocked)?;
+        let held = match pin {
+            Pin::At {
+                point: PinPoint::Chart(uv),
+                ..
+            } => uv,
+            other => a
+                .sim
+                .chart
+                .window
+                .at(other.address()[0], other.address()[1]),
+        };
+        let edits = lock::centre_on_pin_chart(&a.sim, chart.frozen(), chart.set_by_axes(), held);
+        let seg = Self::of(a, cut(CutLabel::CentreOnPin), Vec::from(edits));
+        Ok(seg.pinned(Some(Pin::Centre)))
     }
 
     /// The lock at the pixel `(s, t)` of `A`'s window on the nonlinear `chart`, under the link selection `S`, `norm` and
-    /// `tol` lookup's (the contract's definition): `z₀`, the lock group and the window in one cut labelled
-    /// `LockRecentre`, and what the lock found.
+    /// `tol` lookup's (the contract's definition): the lock group alone, the pin at `(s, t)`, the window not re-centred,
+    /// so the pinned pixel decodes the clicked state bit for bit. A cut labelled `Lock`, and what the lock found.
     pub fn lock_on_chart<S, C, N>(
         a: &View,
         chart: &C,
@@ -554,28 +758,72 @@ impl Segment {
         if a.map != Map::Kernel(KernelMap::of(chart)?) {
             return Err(PathError::WrongMap);
         }
-        let (edits, found) =
+        let (e, found) =
             lock::set_on_chart::<S, C, N>(chart, &a.sim.chart.window, s, t, norm, tol)?;
-        Ok((Self::of(a, recentre_cut(), Vec::from(edits)), found))
+        let seg = Self::of(a, cut(CutLabel::Lock), vec![e]);
+        Ok((seg.pinned(Some(Pin::at(a, s, t))), found))
     }
 
-    /// The re-centre lock validation offers (R-593): the lock at `nearest`, a cut labelled `LockRecentre`.
+    /// The lock on the nonlinear `chart` with the centre-on-pin setting on: the lock and centre on pin in one command,
+    /// `z₀`, the lock group and the window, the pin at the centre. A cut labelled `LockRecentre`.
+    pub fn lock_on_chart_centred<S, C, N>(
+        a: &View,
+        chart: &C,
+        at: (f64, f64),
+        norm: N,
+        tol: &Tolerances,
+    ) -> Result<(Self, ChartLock), PathError>
+    where
+        S: Selection,
+        S::MassLink: SimplexClamp,
+        C: ByKind + FrozenControls,
+        f64: From<C::Param>,
+        N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+    {
+        let (locked, found) = Self::lock_on_chart::<S, C, N>(a, chart, at, norm, tol)?;
+        let centred = Self::centre_on_pin_chart(locked.b(), chart)?;
+        let seg = Self::joined(a, &[locked, centred], CutLabel::LockRecentre);
+        Ok((seg, found))
+    }
+
+    /// The re-centre lock validation offers (R-593): the lock at `nearest`, `z₀` moved there, the pin at the centre; a
+    /// cut labelled `LockRecentre`.
     pub fn recentre(a: &View, nearest: &Nearest) -> Self {
-        Self::of(a, recentre_cut(), Vec::from(lock::recentre(nearest)))
+        let seg = Self::of(
+            a,
+            cut(CutLabel::LockRecentre),
+            Vec::from(lock::recentre(nearest)),
+        );
+        seg.pinned(Some(Pin::Centre))
     }
 
-    /// Snap-back: `z₀ ← z_locked`, by assignment, bit for bit; a cut labelled `SnapBack`.
+    /// Snap-back (Part 4, "The lock's construction, defined"): the slice undone, the pin where it is on screen. On the
+    /// latent map with the pin off the centre, `z₀` re-solved for the basis so the pinned pixel's `Φ` is `z_locked`
+    /// ([`hold_plane`]); with the pin at the centre, and on a kernel map, whose hidden coordinates are `z₀`'s and whose
+    /// window the lock did not move, `z₀ ← z_locked` by assignment. A cut labelled `SnapBack`.
     pub fn snap_back(a: &View) -> Result<Self, PathError> {
-        let e = lock::snap_back(&a.sim)?;
-        let label = CutLabel::SnapBack;
-        Ok(Self::of(a, Family::Cut { label }, vec![e]))
+        if !a.sim.lock.locked {
+            return Err(LockError::NotLocked.into());
+        }
+        let anchor = a.sim.lock.z_locked;
+        let (z0, pin) = match (a.window(), a.pin) {
+            (ViewWindow::Plane(plane), Some(Pin::At { address, .. })) => {
+                let point = PinPoint::Latent(anchor);
+                (
+                    hold_plane(plane, address, &anchor).0,
+                    Some(Pin::At { address, point }),
+                )
+            }
+            (_, pin) => (anchor, pin),
+        };
+        let e = family::edit(SimField::Z0(z0));
+        Ok(Self::of(a, cut(CutLabel::SnapBack), vec![e]).pinned(pin))
     }
 
-    /// Unlock: the lock group cleared, `(z₀, q₁, q₂)` kept; a cut labelled `Unlock`.
+    /// Unlock: the lock group cleared, `(z₀, q₁, q₂)` kept, the pin gone; a cut labelled `Unlock`.
     pub fn unlock(a: &View) -> Result<Self, PathError> {
         let e = lock::unlock(&a.sim)?;
-        let label = CutLabel::Unlock;
-        Ok(Self::of(a, Family::Cut { label }, vec![e]))
+        Ok(Self::of(a, cut(CutLabel::Unlock), vec![e]).pinned(None))
     }
 
     /// A cut from `a` to the view `b` labelled `label`: no interior, `B` stored.
@@ -638,6 +886,7 @@ impl Segment {
             b: View {
                 map: Map::Saved(Box::new(saved)),
                 sim: a.sim.clone(),
+                pin: a.pin,
             },
             family: Family::Commit,
             edits: Vec::new(),
@@ -662,8 +911,8 @@ impl Segment {
                 if !starts_at(committed, a.plane()?, form) {
                     return Err(PathError::Rebuilt);
                 }
-                let edit = raw_tilt_at(committed, a.plane()?, form, 1.0)?;
-                Some(Self::of(a, family.clone(), vec![edit]))
+                let edits = about_pin(a, raw_tilt_at(committed, a.plane()?, form, 1.0)?);
+                Some(Self::of(a, family.clone(), edits))
             }
             _ => None,
         };
@@ -681,10 +930,67 @@ impl Segment {
     }
 }
 
-/// The lock's re-centring cut.
-fn recentre_cut() -> Family {
-    Family::Cut {
-        label: CutLabel::LockRecentre,
+/// A cut labelled `label`.
+fn cut(label: CutLabel) -> Family {
+    Family::Cut { label }
+}
+
+/// The pin after a pan by `(ds, dt)`: it moves with the content, so it stays on the pixel it marked. The plan is unclear
+/// here (no pan under a lock is specified); chose to move it, because the pin marks a state on screen and a pan moves
+/// every state by `(−ds, −dt)` of the window.
+fn panned(a: &View, ds: f64, dt: f64) -> Option<Pin> {
+    a.pin.map(|p| match p {
+        Pin::At {
+            address: [s, t],
+            point,
+        } => Pin::At {
+            address: [s - ds, t - dt],
+            point,
+        },
+        Pin::Centre => Pin::At {
+            address: [0.5 - ds, 0.5 - dt],
+            point: PinPoint::Latent(point(&a.sim.plane, 0.5, 0.5)),
+        },
+    })
+}
+
+/// The edits of a basis `change` to `a`'s plane about its pin: the change alone where the pin is the centre or there is
+/// none (the centre pixel is `z₀` whatever the basis), else the change and `z₀` re-solved so the pinned pixel keeps the
+/// point it had in `a` ([`hold_plane`]).
+fn about_pin(a: &View, change: SetField) -> Vec<SetField> {
+    let Some(Pin::At {
+        address: st,
+        point: held,
+    }) = a.pin
+    else {
+        return vec![change];
+    };
+    let held = match held {
+        PinPoint::Latent(z) => z,
+        PinPoint::Chart(_) => point(&a.sim.plane, st[0], st[1]),
+    };
+    let plane = apply(&a.sim, std::slice::from_ref(&change)).plane;
+    let (z0, _) = hold_plane(&plane, st, &held);
+    vec![change, family::edit(SimField::Z0(z0))]
+}
+
+/// The zoom of `a` by `octaves`, about its pin: by the window shape (one evaluator per shape), the plane's basis
+/// ([`family::zoom`]) or a kernel map's window ([`family::zoom_window`]), the centre re-solved where the pin is off it.
+fn zoomed(a: &View, octaves: f64) -> Result<Vec<SetField>, PathError> {
+    match (&a.map, a.window()) {
+        (Map::Saved(_), _) => Err(saved_refused()),
+        (_, ViewWindow::Plane(plane)) => Ok(about_pin(a, family::zoom(plane, octaves)?)),
+        (_, ViewWindow::Chart(window)) => {
+            let mut zoomed = family::zoom_window(window, octaves)?;
+            if let Some(Pin::At { address, point }) = a.pin {
+                let held = match point {
+                    PinPoint::Chart(uv) => uv,
+                    PinPoint::Latent(_) => window.at(address[0], address[1]),
+                };
+                zoomed.centre = hold_window(&zoomed, address, &held).0;
+            }
+            Ok(vec![family::edit(SimField::Window(zoomed))])
+        }
     }
 }
 

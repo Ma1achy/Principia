@@ -177,8 +177,8 @@ impl SliceFrame {
 /// construction (chart_decoder_contract Part 4, "The lock"). The flag and the anchor are added for the dev GUI's lock
 /// (R-390, "Contract fields"). The excursion is held by the stored pair, `δ = z₀ − z_locked` ([`Lock::excursion`]),
 /// the anchor stored, not re-derived (chart_decoder_contract Part 4, "The lock's construction, defined"; R-72): a slice
-/// step or a slider move edits `z₀` alone, snap-back sets `z₀` to the anchor bit for bit, and `δ` has no field of its
-/// own that could disagree with `z₀`. TASK-M2-23 keeps the lock's requirements (`crate::lock`).
+/// step or a slider move edits `z₀` alone, snap-back clears the hidden part of `δ` (the pin, held in the view beside
+/// this group, unmoved: `engine::path::Pin`), and `δ` has no field of its own that could disagree with `z₀`. TASK-M2-23 keeps the lock's requirements (`crate::lock`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Lock {

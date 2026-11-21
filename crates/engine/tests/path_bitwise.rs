@@ -9,7 +9,10 @@
 //!
 //! **The criterion**, written before the first run: every case's digest equals the stored one exactly, text for text,
 //! and every stored case is produced. One test per operation reads its own cases; `path_every_case` reads them all.
-//! The file is never written here: the code that wrote it is gone.
+//! `digest.json` is never written here: the code that wrote it is gone. Stage 2 (TASK-M2-62) changes the lock's own
+//! cases, locking no longer moving the view: they are re-recorded in `lock_stage2.json`, which overlays the baseline
+//! (`PRINCIPIA_RECORD_LOCK_STAGE2=1`, by hand; the section "The lock's re-recorded cases" below says which and why), and with the
+//! centre-on-pin setting on every lock case is still its stage-1 digest.
 //!
 //! **Controls**: one floating-point operation reordered in the pan family; the general geodesic (a rotation of `q` in
 //! the plane of `q` and the target) in the raw tilt family's place; a path triple `(A, B, family, s)` in a zoom's sim
@@ -34,15 +37,15 @@ use engine::lock::{curve_tilt, kernel_chart, Nearest};
 use engine::lookup::Tolerances;
 use engine::nav::directions::hidden;
 use engine::nav::BasisVector;
-use engine::path::{Map, Segment, View};
+use engine::path::{Map, PathError, Segment, View};
 use kernel::chart::saved::Saved;
 use kernel::chart::tilt::{TiltMap, TiltSpec};
 use kernel::chart::{ChartDecode, ShapeSphere};
+use kernel::decode::Ic;
 use kernel::encode::by_kind::ByKind;
 use kernel::generated::links::Defaults;
 use path_shim::{
-    move_slider, oblique, pan, recentre, set, set_on_chart, slice, snap_back, unlock, zoom,
-    ChartConstructor,
+    oblique, pan, recentre, set_on_chart, set_on_chart_pinned, slice, zoom, ChartConstructor,
 };
 use path_support::*;
 use validation::negative_control;
@@ -53,6 +56,14 @@ use validation::roundtrip::phys;
 enum Variant {
     /// The object.
     Object,
+    /// The object with the centre-on-pin setting on at every lock: the stage-1 lock, which re-centred.
+    Centred,
+    /// The lock re-centring the view where the setting is off.
+    #[cfg(feature = "controls")]
+    LockRecentres,
+    /// The setting off where the stage-1 lock is checked.
+    #[cfg(feature = "controls")]
+    CentredSettingOff,
     /// The pan family with one floating-point operation reordered.
     #[cfg(feature = "controls")]
     PanReordered,
@@ -90,7 +101,21 @@ fn latent<E: std::fmt::Debug>(
 ) -> String {
     match result {
         Ok(edits) => latent_digest(before, &edits, with_image),
-        Err(e) => err_digest(&e),
+        Err(e) => err_digest(&e).replace('"', ""),
+    }
+}
+
+/// A segment's edits.
+fn edits_of(seg: Segment) -> Vec<engine::contract::set_field::SetField> {
+    seg.edits().to_vec()
+}
+
+/// The lock's or the navigation's own error, as the stage-1 baseline digested it (the formula's error, not the path's).
+fn bare(e: PathError) -> String {
+    match e {
+        PathError::Lock(e) => format!("{e:?}"),
+        PathError::Nav(e) => format!("{e:?}"),
+        other => format!("{other:?}"),
     }
 }
 
@@ -105,7 +130,7 @@ fn zoomed(plane: &Plane, octaves: f64) -> Plane {
 
 /// Today's lock on a nonlinear chart, digested: its edits, the clicked state, the notices, and the probe of the chart
 /// through the re-centred window.
-fn chart_lock<C>(chart: &C, at: (f64, f64, f64)) -> String
+fn chart_lock<C>(chart: &C, at: (f64, f64, f64), centred: bool) -> String
 where
     C: ByKind + engine::lock::FrozenControls + ChartDecode,
     f64: From<C::Param>,
@@ -117,29 +142,45 @@ where
         &window([0.5, 0.5], h),
         (s, t),
         &Tolerances::register(128.0 * f64::EPSILON),
+        centred,
     )
 }
 
-/// [`chart_lock`] through `win` at the pixel `(s, t)` under the tolerances `tol`.
-fn chart_lock_in<C>(chart: &C, win: &Window, (s, t): (f64, f64), tol: &Tolerances) -> String
+/// [`chart_lock`] through `win` at the pixel `(s, t)` under the tolerances `tol`: the setting off, or on where
+/// `centred` (the stage-1 lock: the window re-centred, which the digest's `ic` probes through).
+fn chart_lock_in<C>(
+    chart: &C,
+    win: &Window,
+    (s, t): (f64, f64),
+    tol: &Tolerances,
+    centred: bool,
+) -> String
 where
     C: ByKind + engine::lock::FrozenControls + ChartDecode,
     f64: From<C::Param>,
     f64: From<<C as kernel::chart::Chart>::Param>,
 {
-    match set_on_chart::<Defaults, C, _>(chart, win, s, t, phys, tol) {
-        Ok(lock) => {
+    let digest =
+        |edits: &[engine::contract::set_field::SetField], clicked: &Ic<f64>, notices, window| {
             let mut ic = Vec::new();
-            ic_words(&lock.ic, &mut ic);
+            ic_words(clicked, &mut ic);
             format!(
                 "edits={} clicked={:016x} notices={:?} ic={:016x}",
-                edits_words(&lock.edits),
+                edits_words(edits),
                 fnv(&ic),
-                lock.notices,
-                chart_ic(chart, &lock.window)
+                notices,
+                chart_ic(chart, window)
             )
-        }
-        Err(e) => err_digest(&e),
+        };
+    match centred {
+        true => match set_on_chart::<Defaults, C, _>(chart, win, s, t, phys, tol) {
+            Ok(lock) => digest(&lock.edits, &lock.ic, lock.notices, &lock.window),
+            Err(e) => err_digest(&e),
+        },
+        false => match set_on_chart_pinned::<Defaults, C, _>(chart, win, s, t, phys, tol) {
+            Ok(lock) => digest(&lock.edits, &lock.ic, lock.notices, &lock.window),
+            Err(e) => err_digest(&e),
+        },
     }
 }
 
@@ -285,41 +326,66 @@ fn record(variant: Variant) -> BTreeMap<String, String> {
                 Err(e) => err_digest(&e),
             },
         );
+        // The lock, the setting off (the lock group alone, the view still), or on (`Variant::Centred`: the lock and
+        // centre on pin in one command, the stage-1 lock); then a slider's move, snap-back and unlock from the lock
+        // at `LOCKS[1]`, each through its segment from the locked view, its pin carried.
+        let lock_at = |at: (f64, f64)| -> Result<Segment, PathError> {
+            let from = View::latent(before.clone());
+            match variant {
+                Variant::Centred => Segment::lock_centred(&from, at.0, at.1),
+                _ => Segment::lock(&from, at.0, at.1),
+            }
+        };
         for (i, (s, t)) in LOCKS.iter().enumerate() {
             let r = match variant {
                 #[cfg(feature = "controls")]
-                Variant::LockByPan => lock_by_pan(&plane, *s, *t),
-                _ => set(&plane, *s, *t),
-            }
-            .map(Vec::from);
-            put(format!("lock/set/{pname}/{i}"), latent(&before, r, i == 1));
-        }
-        let [z0, group] = set(&plane, LOCKS[1].0, LOCKS[1].1).expect("a lock");
-        let locked = after(&before, &[z0, group]);
-        for (i, (k, v)) in SLIDERS.iter().enumerate() {
-            let r = move_slider(&locked, *k, *v).map(|e| vec![e]);
+                Variant::LockByPan => lock_by_pan(&plane, *s, *t)
+                    .map(Vec::from)
+                    .map_err(PathError::Lock),
+                #[cfg(feature = "controls")]
+                Variant::LockRecentres => {
+                    Segment::lock_centred(&View::latent(before.clone()), *s, *t).map(edits_of)
+                }
+                _ => lock_at((*s, *t)).map(edits_of),
+            };
             put(
-                format!("lock/slider/{pname}/{i}"),
-                latent(&locked, r, false),
+                format!("lock/set/{pname}/{i}"),
+                latent(&before, r.map_err(bare), i == 1),
             );
         }
-        let moved = after(&locked, &[move_slider(&locked, 3, 0.75).expect("a move")]);
+        let locked = lock_at(LOCKS[1]).expect("a lock").b().clone();
+        for (i, (k, v)) in SLIDERS.iter().enumerate() {
+            let r = Segment::control(&locked, *k, *v)
+                .map(edits_of)
+                .map_err(bare);
+            put(
+                format!("lock/slider/{pname}/{i}"),
+                latent(&locked.sim, r, false),
+            );
+        }
+        let moved = Segment::control(&locked, 3, 0.75)
+            .expect("a move")
+            .b()
+            .clone();
+        let free = View::latent(before.clone());
+        let ends = |seg: Result<Segment, PathError>| seg.map(edits_of).map_err(bare);
         put(
             format!("lock/snap_back/{pname}"),
-            latent(&moved, snap_back(&moved).map(|e| vec![e]), false),
+            latent(&moved.sim, ends(Segment::snap_back(&moved)), false),
         );
         put(
             format!("lock/snap_back_free/{pname}"),
-            latent(&before, snap_back(&before).map(|e| vec![e]), false),
+            latent(&before, ends(Segment::snap_back(&free)), false),
         );
         put(
             format!("lock/unlock/{pname}"),
-            latent(&moved, unlock(&moved).map(|e| vec![e]), false),
+            latent(&moved.sim, ends(Segment::unlock(&moved)), false),
         );
         put(
             format!("lock/unlock_free/{pname}"),
-            latent(&before, unlock(&before).map(|e| vec![e]), false),
+            latent(&before, ends(Segment::unlock(&free)), false),
         );
+        let moved = moved.sim;
         let nearest = Nearest {
             lz: 0.3,
             k: 0.7,
@@ -406,6 +472,7 @@ fn record(variant: Variant) -> BTreeMap<String, String> {
     }
     // The lock's refusals and edges on a nonlinear chart: the (L_z, E) parabola's edge, one float past it, a
     // non-finite pixel, a chart point past f64's range, and a state the ladder refuses under strict tolerances.
+    let centred = variant == Variant::Centred;
     let reg = Tolerances::register(128.0 * f64::EPSILON);
     let strict = Tolerances {
         sanity: -1.0,
@@ -414,15 +481,27 @@ fn record(variant: Variant) -> BTreeMap<String, String> {
     let edge = |u: f64| window([u, 0.5], 0.5);
     put(
         "lock/chart/le_edge".into(),
-        chart_lock_in(&invariant_le(), &edge(1.0), (0.5, 0.5), &reg),
+        chart_lock_in(&invariant_le(), &edge(1.0), (0.5, 0.5), &reg, centred),
     );
     put(
         "lock/chart/le_past_edge".into(),
-        chart_lock_in(&invariant_le(), &edge(1.0f64.next_up()), (0.5, 0.5), &reg),
+        chart_lock_in(
+            &invariant_le(),
+            &edge(1.0f64.next_up()),
+            (0.5, 0.5),
+            &reg,
+            centred,
+        ),
     );
     put(
         "lock/chart/le_nan".into(),
-        chart_lock_in(&invariant_le(), &Window::SQUARE, (f64::NAN, 0.5), &reg),
+        chart_lock_in(
+            &invariant_le(),
+            &Window::SQUARE,
+            (f64::NAN, 0.5),
+            &reg,
+            centred,
+        ),
     );
     let wide = Window {
         centre: [f64::MAX, 0.5],
@@ -430,21 +509,24 @@ fn record(variant: Variant) -> BTreeMap<String, String> {
     };
     put(
         "lock/chart/le_wide".into(),
-        chart_lock_in(&invariant_le(), &wide, (1.0, 0.5), &reg),
+        chart_lock_in(&invariant_le(), &wide, (1.0, 0.5), &reg, centred),
     );
     put(
         "lock/chart/mixed_strict".into(),
-        chart_lock_in(&mixed(), &Window::SQUARE, (0.3, 0.8), &strict),
+        chart_lock_in(&mixed(), &Window::SQUARE, (0.3, 0.8), &strict, centred),
     );
     for (i, at) in CHART_LOCKS.iter().enumerate() {
         put(
             format!("lock/chart/lk/{i}"),
-            chart_lock(&invariant_lk(), *at),
+            chart_lock(&invariant_lk(), *at, centred),
         );
-        put(format!("lock/chart/mixed/{i}"), chart_lock(&mixed(), *at));
+        put(
+            format!("lock/chart/mixed/{i}"),
+            chart_lock(&mixed(), *at, centred),
+        );
         put(
             format!("lock/chart/le/{i}"),
-            chart_lock(&invariant_le(), *at),
+            chart_lock(&invariant_le(), *at, centred),
         );
     }
     // The chart switch's end views onto nonlinear charts: each chart through its window, as the switch shows it.
@@ -645,15 +727,19 @@ fn check(prefixes: &[&str], variant: Variant) {
             .filter(|(name, _)| prefixes.iter().any(|p| name.starts_with(p)))
             .collect()
     };
-    let expected = pick(stored());
+    let expected = pick(match variant {
+        Variant::Centred => stored(),
+        #[cfg(feature = "controls")]
+        Variant::CentredSettingOff => stored(),
+        _ => expected(),
+    });
     assert!(
         !expected.is_empty(),
         "no stored case starts with {prefixes:?}"
     );
     // The object's cases are computed once and shared by every test; a control computes its own.
-    static OBJECT: std::sync::OnceLock<BTreeMap<String, String>> = std::sync::OnceLock::new();
     let actual = match variant {
-        Variant::Object => OBJECT.get_or_init(|| record(Variant::Object)).clone(),
+        Variant::Object => object(),
         #[allow(unreachable_patterns)]
         other => record(other),
     };
@@ -683,6 +769,146 @@ fn path_tilt_bitwise() {
 #[test]
 fn path_lock_bitwise() {
     check(&["lock/"], Variant::Object);
+}
+
+/// The lock's own cases: the lock set on the affine and the nonlinear charts.
+#[test]
+fn path_lock_set_bitwise() {
+    check(&["lock/set/", "lock/chart/"], Variant::Object);
+}
+
+/// The object's cases, computed once and shared by every test.
+fn object() -> BTreeMap<String, String> {
+    static OBJECT: std::sync::OnceLock<BTreeMap<String, String>> = std::sync::OnceLock::new();
+    OBJECT.get_or_init(|| record(Variant::Object)).clone()
+}
+
+// ── The lock's re-recorded cases (stage 2: locking does not move the view) ─────────────────────────────────────────
+//
+// The stage-1 baseline, `digest.json`, is kept as it was recorded. Locking no longer moves the view, so the cases
+// that read a lock's edits, or the view a lock leaves, change; they are re-recorded in `lock_stage2.json`, which
+// overlays the baseline case by case. **The criterion**, written before the first run: the overlay's cases are exactly
+// `RERECORDED`, each differs from its stage-1 digest, and every other case is bit for bit its stage-1 digest (the tests
+// above); and with the centre-on-pin setting on at every lock (`Variant::Centred`), every case, the re-recorded ones
+// included, is bit for bit its stage-1 digest: the stage-1 lock is the lock and centre on pin in one command.
+
+/// The re-recorded cases' file, relative to the workspace root.
+const STAGE2: &str = "fixtures/chart_composition/lock_stage2.json";
+
+/// The cases R-866 changes, by prefix, and why. Every other case must stay bit for bit.
+const RERECORDED: [(&str, &str); 6] = [
+    ("lock/set/", "the lock edits the lock group alone, not z₀"),
+    ("lock/slider/", "the move starts from the unmoved z₀"),
+    (
+        "lock/snap_back/",
+        "snap-back undoes the slice only: z₀ re-solved for the pin",
+    ),
+    ("lock/unlock/", "the view unlocked is the unmoved one"),
+    (
+        "lock/kernel_chart/",
+        "the kernel's chart of the unmoved view",
+    ),
+    (
+        "lock/chart/",
+        "the nonlinear lock edits the lock group alone, the window not re-centred",
+    ),
+];
+
+/// The re-recorded cases.
+fn stage2() -> BTreeMap<String, String> {
+    let text = std::fs::read_to_string(root().join(STAGE2)).expect("the re-recorded cases");
+    let value: serde_json::Value = serde_json::from_str(&text).expect("JSON");
+    serde_json::from_value(value["cases"].clone()).expect("the cases")
+}
+
+/// The baseline with the re-recorded cases in place of their stage-1 digests.
+fn expected() -> BTreeMap<String, String> {
+    let mut cases = stored();
+    cases.extend(stage2());
+    cases
+}
+
+#[test]
+fn path_lock_rerecorded_only_where_the_lock_changes() {
+    if std::env::var_os(RECORD).is_some() {
+        record_lock_stage2();
+    }
+    check_rerecorded(stage2());
+}
+
+/// Set, the test above first re-records the lock's cases: `PRINCIPIA_RECORD_LOCK_STAGE2=1 cargo test -p engine --test
+/// path_bitwise path_lock_rerecorded_only_where_the_lock_changes`, by hand, when the lock's behaviour is meant to change.
+const RECORD: &str = "PRINCIPIA_RECORD_LOCK_STAGE2";
+
+/// The re-recorded cases `new` are exactly the ones the lock changes, each changed.
+fn check_rerecorded(new: BTreeMap<String, String>) {
+    let old = stored();
+    let named = |name: &str| RERECORDED.iter().any(|(p, _)| name.starts_with(p));
+    let wrong: Vec<String> = new
+        .iter()
+        .filter(|(name, digest)| !named(name) || old.get(*name) == Some(*digest))
+        .map(|(name, _)| name.clone())
+        .collect();
+    assert!(
+        wrong.is_empty(),
+        "re-recorded but not a case the lock changes, or unchanged: {wrong:?}"
+    );
+    for (prefix, why) in RERECORDED {
+        assert!(
+            new.keys().any(|n| n.starts_with(prefix)),
+            "no case under {prefix} re-recorded ({why})"
+        );
+    }
+}
+
+#[test]
+fn path_lock_centred_is_the_stage1_lock() {
+    check(&["lock/"], Variant::Centred);
+}
+
+negative_control!(
+    path_lock_centred_is_the_stage1_lock,
+    "the setting off where the stage-1 lock is checked",
+    expected = "not bit for bit with the chart-path baseline",
+    check(&["lock/"], Variant::CentredSettingOff)
+);
+
+/// The re-recorded cases with a pan's case among them.
+#[cfg(feature = "controls")]
+fn with_a_pan() -> BTreeMap<String, String> {
+    let mut cases = stage2();
+    cases.insert(
+        "pan/axis/0".into(),
+        "edits= key=0000000000000000 ic=0000000000000000".into(),
+    );
+    cases
+}
+
+negative_control!(
+    path_lock_rerecorded_only_where_the_lock_changes,
+    "a pan's case among the re-recorded ones",
+    expected = "re-recorded but not a case the lock changes",
+    check_rerecorded(with_a_pan())
+);
+
+/// Writes the re-recorded cases: every `lock/` case the object now digests differently from its stage-1 digest (see
+/// [`RECORD`]); `path_lock_rerecorded_only_where_the_lock_changes` then checks what it wrote.
+fn record_lock_stage2() {
+    let old = stored();
+    let cases: BTreeMap<String, String> = record(Variant::Object)
+        .into_iter()
+        .filter(|(name, digest)| name.starts_with("lock/") && old.get(name) != Some(digest))
+        .collect();
+    let text = serde_json::json!({
+        "what": "The chart-path baseline's lock cases re-recorded for stage 2 (TASK-M2-62): locking does not move the view. Each overlays its case in digest.json; path_bitwise.rs's RERECORDED says why each prefix changes.",
+        "command": "PRINCIPIA_RECORD_LOCK_STAGE2=1 cargo test -p engine --test path_bitwise path_lock_rerecorded_only_where_the_lock_changes",
+        "cases": cases,
+    });
+    std::fs::write(
+        root().join(STAGE2),
+        serde_json::to_string_pretty(&text).expect("JSON") + "\n",
+    )
+    .expect("written");
 }
 
 #[test]
@@ -846,13 +1072,13 @@ fn slice_unprojected(
 }
 
 /// The lock's pixel with one floating-point operation reordered, `z₀ + b·q₂ + a·q₁` (`a = 2s − 1`, `b = 2t − 1`), in
-/// place of the kernel's `Φ`, `z₀ + a·q₁ + b·q₂`.
+/// place of the kernel's `Φ`, `z₀ + a·q₁ + b·q₂`: the lock group alone, as the lock sends it.
 #[cfg(feature = "controls")]
 fn lock_by_pan(
     plane: &Plane,
     s: f64,
     t: f64,
-) -> Result<[engine::contract::set_field::SetField; 2], engine::lock::LockError> {
+) -> Result<[engine::contract::set_field::SetField; 1], engine::lock::LockError> {
     use engine::contract::set_field::{Edit, SetField, SimField};
     if !(s.is_finite() && t.is_finite()) {
         return Err(engine::lock::LockError::NonFinite);
@@ -864,13 +1090,10 @@ fn lock_by_pan(
         edit: Edit::Sim(field),
         no_history: false,
     };
-    Ok([
-        edit(SimField::Z0(z)),
-        edit(SimField::Lock(engine::contract::sim_config::Lock {
-            locked: true,
-            z_locked: z,
-        })),
-    ])
+    Ok([edit(SimField::Lock(engine::contract::sim_config::Lock {
+        locked: true,
+        z_locked: z,
+    }))])
 }
 
 negative_control!(
@@ -885,6 +1108,13 @@ negative_control!(
     "the lock's pixel with one floating-point operation reordered",
     expected = "not bit for bit with the chart-path baseline",
     check(&["lock/set/"], Variant::LockByPan)
+);
+
+negative_control!(
+    path_lock_set_bitwise,
+    "a lock that re-centres the view",
+    expected = "not bit for bit with the chart-path baseline",
+    check(&["lock/set/"], Variant::LockRecentres)
 );
 
 negative_control!(
