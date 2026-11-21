@@ -3,7 +3,8 @@
 //! kernel's own pack/unpack on the GPU (TASK-M0-14's rust-gpu entry, `target/spirv/kernel.wgsl`) and the generated
 //! WGSL fragment unpack on the GPU, through `codegen_selftest.wgsl`'s entry point, on a device requested with no
 //! optional features, so no `shader-f16` (payload §1, §6). `times`' steps round-trip exactly and bit-identically
-//! CPU/GPU; f16 pairs round-trip within f16 eps; `detail` decodes per `state`; the static layout check passes. Every
+//! CPU/GPU; f16 pairs round-trip within f16 eps; `detail` decodes per `state`. The static layout check, CPU-only, is in
+//! `generated_layout.rs`, which every PR runs (this binary runs only after the merge, in `gpu-kernel`). Every
 //! comparison is of whole values, never masked, and its control shows it can fail (pitfalls §9). CI runs it on
 //! `macos-15` (Metal) and lavapipe on every commit (parity_contract §6; R-110, R-186).
 
@@ -13,7 +14,7 @@ use std::time::Instant;
 
 use kernel::payload::*;
 use kernel::toolchain::{pack_unpack, UVec3};
-use ledger::schema::{Entry, Ledger, Location};
+use ledger::schema::{Entry, Location};
 use proptest::collection::vec;
 use proptest::prelude::*;
 use validation::gpu::{first_mismatch, GpuHarness, Prepared};
@@ -574,54 +575,6 @@ negative_control!(
         ),
         &kernel_wgsl()
     )
-);
-
-/// The static layout check passes on the layout table (dd_generation_root §5 test 1), and the generated Rust's reserved
-/// spans are the table's.
-fn check_static(layout: &Ledger) {
-    let entries = ledger::gen::validate(layout).expect("the ledger validates");
-    let found = ledger::check::check(&layout.words, &entries);
-    assert!(found.is_empty(), "static layout check failed: {found:?}");
-    for word in &layout.words {
-        let generated: &[(u32, u32)] = match word.name {
-            "packed_a" => &PACKED_A_RESERVED,
-            "packed_b" => &PACKED_B_RESERVED,
-            "times" => &TIMES_RESERVED,
-            _ => continue,
-        };
-        let table: Vec<(u32, u32)> = word.reserved.iter().map(|s| (s.offset, s.width)).collect();
-        assert_eq!(
-            generated,
-            &table[..],
-            "static layout check failed: `{}`'s reserved spans",
-            word.name
-        );
-    }
-}
-
-#[test]
-fn codegen_selftest_static_layout() {
-    check_static(&ledger::layout());
-}
-
-negative_control!(
-    codegen_selftest_static_layout,
-    "`detail` moved onto `state`'s bits must fail the overlap check",
-    expected = "static layout check failed",
-    {
-        let mut layout = ledger::layout();
-        let detail = layout
-            .entries
-            .iter_mut()
-            .find(|e| e.name == Some("detail"))
-            .expect("detail");
-        detail.location = Some(Location::Packed {
-            word: "packed_a",
-            offset: 2,
-            width: 2,
-        });
-        check_static(&layout)
-    }
 );
 
 /// Whether `got` is within f16 eps (2⁻¹⁰, relative; absolute below the least normal 2⁻¹⁴) of `x`.
