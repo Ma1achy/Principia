@@ -57,12 +57,13 @@ use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
 use engine::contract::view_ui::{Focus, KeyMode};
 
+use crate::dispatch::{self, Class};
 use crate::explore::lock::GOLD;
 use crate::explore::manifold_view::tilt::{Angles, TILT_RANGE};
 use crate::explore::manifold_view::{
-    about_the_pin, add, axis, basis_edit, chart_coords, close_under_console, normal_edit,
-    plane_edit, plane_s, point, target_choices, target_edit, z0_edit, Out, Scratch, Target, Touch,
-    View, AXES, Z0_HALF_RANGE,
+    about_the_pin, add, axis, chart_coords, close_under_console, normal_edit, plane_edit, plane_s,
+    point, target_choices, target_edit, z0_edit, Out, Scratch, Target, Touch, View, AXES,
+    Z0_HALF_RANGE,
 };
 use crate::explore::{
     COMPASS, COMPASS_BADGE, COMPASS_D, COMPASS_D_ENTRIES, COMPASS_H, COMPASS_H_ENTRIES,
@@ -1284,12 +1285,12 @@ pub fn drag_edit(plane: &Plane, frame: &SliceFrame, drag: &Drag) -> Option<SetFi
     match drag.mode {
         Touch::Tilt => {
             let view = View::framed(plane, Some(frame));
-            let angles = Angles {
+            let to = Angles {
                 tau1: drag.tau.0,
                 tau2: drag.tau.1,
                 gamma: Angles::of(&view).gamma,
             };
-            Some(basis_edit(angles.apply(view).basis()))
+            Some(dispatch::one(plane, Class::Tilt { from: view, to }))
         }
         Touch::Slice => slice(plane, frame, drag.amount),
     }
@@ -1307,16 +1308,17 @@ pub fn latent_normal(plane: &Plane, frame: &SliceFrame) -> Option<Latent> {
 /// unchanged. Locked, `z₀` leaves the anchor along that line: an excursion, as a Slice centre slider's is. `None` where
 /// the compass draws no plane (R-451 B11).
 pub fn slice(plane: &Plane, frame: &SliceFrame, amount: f64) -> Option<SetField> {
+    // Not merged with the slice leaf: the drawn normal is not always normal to the plane in 8D (`crate::dispatch`).
     latent_normal(plane, frame).map(|n| z0_edit(add(&plane.z0, amount, &n)))
 }
 
 /// The tilt edit turning `τ₁` by `d1` and `τ₂` by `d2` degrees, within their span, each into its target.
 pub fn tilt(plane: &Plane, frame: &SliceFrame, d1: f64, d2: f64) -> SetField {
     let view = View::framed(plane, Some(frame));
-    let mut angles = Angles::of(&view);
-    angles.tau1 = (angles.tau1 + d1).clamp(TILT_RANGE.0, TILT_RANGE.1);
-    angles.tau2 = (angles.tau2 + d2).clamp(TILT_RANGE.0, TILT_RANGE.1);
-    basis_edit(angles.apply(view).basis())
+    let mut to = Angles::of(&view);
+    to.tau1 = (to.tau1 + d1).clamp(TILT_RANGE.0, TILT_RANGE.1);
+    to.tau2 = (to.tau2 + d2).clamp(TILT_RANGE.0, TILT_RANGE.1);
+    dispatch::one(plane, Class::Tilt { from: view, to })
 }
 
 /// `plane` after `edits`, each on the plane the earlier leave.

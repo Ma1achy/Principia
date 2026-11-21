@@ -36,6 +36,7 @@ use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame, L
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::Window;
 
+use crate::dispatch::{self, Class};
 use crate::explore::compass::{self, Compass};
 use crate::keyboard::scopes::{Adjust, Base, Scope, ScopeId, ScopeTree};
 use crate::keyboard::Keyboard;
@@ -1101,9 +1102,9 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
     let id = adjust.scope;
     let span = 2.0 * Z0_HALF_RANGE;
     if let Some(i) = SLIDERS.iter().position(|s| *s == id) {
-        let mut z0 = plane.z0;
-        z0[i] += range * span;
-        out.edit(z0_edit(z0), Some(Touch::Slice), scratch);
+        let value = plane.z0[i] + range * span;
+        let edit = dispatch::one(plane, Class::Control { k: i, value });
+        out.edit(edit, Some(Touch::Slice), scratch);
         return;
     }
     for (components, which) in [(Q1_COMPONENTS, 0), (Q2_COMPONENTS, 1)] {
@@ -1117,24 +1118,33 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
     let view = View::read(&snapshot.sim);
     match id {
         CENTRE_U => out.edit(
-            z0_edit(add(&plane.z0, 2.0 * view_fraction, &plane.q1)),
+            dispatch::one(
+                plane,
+                Class::Pan {
+                    ds: view_fraction,
+                    dt: 0.0,
+                },
+            ),
             None,
             scratch,
         ),
         CENTRE_V => out.edit(
-            z0_edit(add(&plane.z0, 2.0 * view_fraction, &plane.q2)),
+            dispatch::one(
+                plane,
+                Class::Pan {
+                    ds: 0.0,
+                    dt: view_fraction,
+                },
+            ),
             None,
             scratch,
         ),
         ZOOM => out.edit(navigate::zoom_by(plane, octaves), None, scratch),
         TAU1 | TAU2 | GAMMA => {
-            let mut angles = tilt::Angles::of(&view);
-            angles.turn(id, degrees);
-            out.edit(
-                basis_edit(angles.apply(view).basis()),
-                Some(Touch::Tilt),
-                scratch,
-            );
+            let mut to = tilt::Angles::of(&view);
+            to.turn(id, degrees);
+            let edit = dispatch::one(plane, Class::Tilt { from: view, to });
+            out.edit(edit, Some(Touch::Tilt), scratch);
         }
         crate::explore::FIGURE => navigate::pan_by_keys(adjust, plane, view_fraction, scratch, out),
         crate::explore::COMPASS_VIEW => compass::adjust(adjust, &snapshot.sim, scratch, out),

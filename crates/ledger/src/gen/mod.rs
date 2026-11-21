@@ -11,11 +11,13 @@
 //! ledger ([`crate::reduction::emit`]); the steppers' coefficients, from the constants register ([`steppers`];
 //! dd_integrator §3.2); and the `N_sub` bucket's comparison tree and default threshold table, from the constants
 //! register ([`nsub`]; dd_integrator §3.3, R-502); and the fragment entry points' word layouts, from their table
-//! ([`fragment`]; TASK-M2-25); and the fixed-point numbers of the kernel's own f32 `atan2` ([`arctan`]; RQ-628). One
+//! ([`fragment`]; TASK-M2-25); and the fixed-point numbers of the kernel's own f32 `atan2` ([`arctan`]; RQ-628); and the bits of `1/2π` and `π̂` its
+//! reduction of the decode's `β` reads ([`circle`]). One
 //! source generates all four payload artefacts (seam 13).
 
 pub mod arctan;
 pub mod catalogue;
+pub mod circle;
 pub mod export;
 pub mod fragment;
 pub mod links;
@@ -55,6 +57,7 @@ pub const EMITTERS: &[Emitter] = &[
     nsub::emit,
     fragment::emit,
     arctan::emit,
+    circle::emit,
 ];
 
 /// Why generation was refused.

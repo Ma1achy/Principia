@@ -5,9 +5,11 @@
 //! dd_integrator §3.2, REQ-INT-037) and the `N_sub` bucket's comparison tree and the default sim key's threshold table
 //! ([`nsub_thresholds`]; dd_integrator §3.3, R-502) from the constants register too, and the fragment entry points'
 //! word layouts ([`fragment_words`]; TASK-M2-25) from the ledger's layout table, and the fixed-point numbers of the
-//! kernel's own f32 `atan2` ([`arctan`]; RQ-628), summed in integer arithmetic.
+//! kernel's own f32 `atan2` ([`arctan`]; RQ-628), summed in integer arithmetic, and the bits of `1/2π` and `π̂` its
+//! reduction of the decode's `β` modulo `2π` reads ([`circle`]).
 
 pub mod arctan;
+pub mod circle;
 pub mod constants;
 pub mod fragment_words;
 pub mod links;
