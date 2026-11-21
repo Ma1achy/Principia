@@ -1469,6 +1469,49 @@ pub const TAU: ConstantBuilder = proposed(
     "M3",
 );
 
+/// The Chazy classifier's parabolic band `ε`, 0.05, the half-width of the band in a two-body `K/U` about 1
+/// (chazy drill-down §3.3): prin-rs PR #32's `ChazyCfg::default()`, not swept (§11.2). Provisional until the M7 gate,
+/// where REQ-EVT-028's calibration confirms it (R-427).
+pub const CHAZY_EPSILON: ConstantBuilder = proposed(
+    "chazy_epsilon",
+    0.05,
+    Admissibility::CanonicalUnits,
+    "REQ-EVT-028",
+    "M7",
+);
+
+/// The Chazy classifier's `h_far`, 5: the hierarchy ratio a body must pass to commit, and the dispersal distance in
+/// units of `R_0` (chazy drill-down §3.3): prin-rs PR #32's default; 3, 5 and 10 tried, 3 and 5 within 2 points of
+/// correct share (§4.1, §11.2). Provisional until the M7 gate (REQ-EVT-029; R-427).
+pub const CHAZY_H_FAR: ConstantBuilder = proposed(
+    "chazy_h_far",
+    5.0,
+    Admissibility::CanonicalUnits,
+    "REQ-EVT-029",
+    "M7",
+);
+
+/// The Chazy classifier's `os_ratio`, 25: `I_max / I` above which a bound system reads OS-candidate (chazy drill-down
+/// §3.3): prin-rs PR #32's default, measured at the snapshot cadence, not swept, the label unvalidated (§4.2, §11.2).
+/// Provisional until the M7 gate (REQ-EVT-030; R-427).
+pub const CHAZY_OS_RATIO: ConstantBuilder = proposed(
+    "chazy_os_ratio",
+    25.0,
+    Admissibility::CanonicalUnits,
+    "REQ-EVT-030",
+    "M7",
+);
+
+/// The Chazy classifier's tidal tolerance `δ`, `10⁻⁵`, read only by the tidal gate and the Fewbody reference
+/// (chazy drill-down §3.3, §3.6, §3.7). Provisional until the M7 gate, with `h_far` (REQ-EVT-029; R-427).
+pub const CHAZY_DELTA: ConstantBuilder = proposed(
+    "chazy_delta",
+    1e-5,
+    Admissibility::CanonicalUnits,
+    "REQ-EVT-029",
+    "M7",
+);
+
 /// `Δ_sync`, the sync quantum, 1/8 of a time unit: the regularised occupants' sync grid is `t = k·Δ_sync`, the same for
 /// every run, independent of the horizon and of frame timing; each interval's steps are sized from it and `ADVANCE`
 /// stops only on it (integrator_contract Part 2a § "The sync grid is a fixed quantum of physical time"). A calibration
@@ -1855,6 +1898,10 @@ pub const REGISTER: &[ConstantBuilder] = &[
     DT_MACRO_FLOOR,
     ESCAPE_WINDOW,
     TAU,
+    CHAZY_EPSILON,
+    CHAZY_H_FAR,
+    CHAZY_OS_RATIO,
+    CHAZY_DELTA,
     DELTA_SYNC,
     R_COLL,
     EPSILON,

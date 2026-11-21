@@ -192,6 +192,22 @@ pub const FLOOR_EXP_MAX: i32 = 104;
 /// (payload §2, `coll_floor_bits`; R-973).
 pub const FLOOR_CODE_BIAS: i32 = 41;
 
+/// The register's `chazy_epsilon` = 0.05: the Chazy classifier's parabolic band, the half-width in a two-body
+/// `K/U` about 1 (chazy drill-down §3.3; provisional until M7).
+pub const CHAZY_EPSILON: f64 = 0.05;
+
+/// The register's `chazy_h_far` = 5.0: the hierarchy ratio a body passes to commit, and the dispersal distance in
+/// units of `R_0` (chazy drill-down §3.3; provisional until M7).
+pub const CHAZY_H_FAR: f64 = 5.0;
+
+/// The register's `chazy_os_ratio` = 25.0: `I_max / I` above which a bound system reads OS-candidate (chazy
+/// drill-down §3.3; provisional until M7).
+pub const CHAZY_OS_RATIO: f64 = 25.0;
+
+/// The register's `chazy_delta` = 1e-5: the tidal tolerance, read by the tidal gate alone (chazy drill-down §3.3,
+/// §3.6; provisional until M7).
+pub const CHAZY_DELTA: f64 = 1e-5;
+
 /// The register's `delta_sync` = 0.125: the sync quantum `Δ_sync`, the regularised occupants' sync grid
 /// `t = k·Δ_sync`, the same for every run (integrator_contract Part 2a; provisional until M3).
 pub const DELTA_SYNC: f64 = 0.125;

@@ -7,6 +7,7 @@ pub mod az;
 pub mod bench;
 pub mod bringup;
 pub mod budget;
+pub mod chazy;
 pub mod compare;
 pub mod control;
 pub mod convergence;
