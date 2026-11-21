@@ -1,0 +1,7 @@
+{
+  "description": "Control: the pre-fix rule (E_rel > 0 and receding, no closure) on the same marches against check 2; it fires mid-encounter and must fail.",
+  "populations": [{ "slice": "config_stability", "n": 32, "r_coll": null }, { "slice": "config_basin", "n": 32, "r_coll": 0.0 }],
+  "truth": "check2",
+  "rule": "energy_receding",
+  "expected": "fail"
+}

@@ -1,0 +1,6 @@
+{
+  "description": "The register's tau against the gap measured on the re-validation set (config_stability at its r_coll, config_basin and deep_interior at r_coll 0; 32 × 32 each, Heggie × RK4, marched past escape to 3·t_max): the gap exists (L < U), tau lies in its middle half in log tau, and across that middle half no false positive and no label change other than an escape gained.",
+  "populations": [{ "slice": "config_stability", "n": 32, "r_coll": null }, { "slice": "config_basin", "n": 32, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 32, "r_coll": 0.0 }],
+  "tau": null,
+  "expected": "pass"
+}

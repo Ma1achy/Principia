@@ -114,12 +114,17 @@ pub fn population(slice: &str, n: usize, r_coll: Option<f64>) -> Result<Populati
             None => Ok(config_stability(n, CONFIG_HORIZON)),
             Some(_) => Err("config_stability takes its own r_coll".into()),
         },
+        "config_basin" => Ok(super::config_basin(
+            n,
+            CONFIG_HORIZON,
+            r_coll.unwrap_or(super::CONFIG_BASIN_R_COLL),
+        )),
         "deep_interior" => Ok(deep_interior(
             n,
             r_coll.unwrap_or(super::DEEP_INTERIOR_R_COLL),
         )),
         other => Err(format!(
-            "no slice `{other}` (config_stability, deep_interior)"
+            "no slice `{other}` (config_stability, config_basin, deep_interior)"
         )),
     }
 }

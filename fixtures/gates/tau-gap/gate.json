@@ -1,0 +1,6 @@
+{
+  "gate": "tau-gap",
+  "inputs": ["revalidation_set.json", "control_provisional_tau.json", "control_above_gap.json"],
+  "threshold": { "value": 0, "requirement": "REQ-VAL-051", "status": "confirmed" },
+  "min_regions": { "value": null, "requirement": "REQ-EVT-025" }
+}

@@ -24,6 +24,9 @@ pub mod check3;
 pub mod gate;
 pub mod march;
 pub mod rebind;
+pub mod replay;
+pub mod revalidation;
+pub mod tau_gap;
 
 use kernel::canon::canonicalise;
 use kernel::decode::Ic;
@@ -122,18 +125,57 @@ fn pixels(centre: [f64; 2], half: f64, n: usize) -> impl Iterator<Item = [f64; 2
 /// with `q₁ = mag·e_β`, `q₂ = mag·e_α`, over its window, decoded under the default links, at the production horizon
 /// `horizon` (canonical: the latent chart decodes onto the canonical section) and the slice's `r_coll = 0.005`.
 pub fn config_stability(n: usize, horizon: f64) -> Population {
-    let g = [
-        -0.098, 0.11, -0.034, 0.067, -0.093, -0.066, 0.027, -0.114, 0.107, -0.116,
-    ];
+    config_slice(
+        "config_stability",
+        [
+            -0.098, 0.11, -0.034, 0.067, -0.093, -0.066, 0.027, -0.114, 0.107, -0.116,
+        ],
+        ([-0.01213, -0.00783], 0.63763, 1.0, 0.005),
+        n,
+        horizon,
+    )
+}
+
+/// `config basin` (`fixtures/slices.toml`, prin-rs `grid.rs:408-426`), the user's other saved Config-chart slice, as
+/// [`config_stability`] is built: its `z₀`, window and `mag = 4`, at the production horizon `horizon` and the collision
+/// radius `r_coll` (the slice's own is [`CONFIG_BASIN_R_COLL`]).
+pub fn config_basin(n: usize, horizon: f64, r_coll: f64) -> Population {
+    config_slice(
+        "config_basin",
+        [
+            0.006, -0.052, -0.063, 0.095, -0.024, -0.088, 0.036, -0.123, -0.029, -0.044,
+        ],
+        (
+            [-0.3600253385391027, 0.6719382722543119],
+            0.009095268722082687,
+            4.0,
+            r_coll,
+        ),
+        n,
+        horizon,
+    )
+}
+
+/// `config basin`'s own `r_coll` as `fixtures/slices.toml` gives it.
+pub const CONFIG_BASIN_R_COLL: f64 = 0.02;
+
+/// A Config-chart slice of `fixtures/slices.toml`: its ten GLSL slots `g`, its window's centre and half-width, its
+/// `mag` and `r_coll`, sampled on `n × n` pixel centres at the production horizon `horizon`.
+fn config_slice(
+    name: &'static str,
+    g: [f64; 10],
+    (centre, half, mag, r_coll): ([f64; 2], f64, f64, f64),
+    n: usize,
+    horizon: f64,
+) -> Population {
     // The GLSL's ten slots in the spec's order: α, β, z_q, z_μ (slots 2 and 3 unused by the decode).
     let z0 = [g[1], g[0], g[4], g[5], g[6], g[7], g[8], g[9]];
-    let (centre, half, mag, r_coll) = ([-0.01213, -0.00783], 0.63763, 1.0, 0.005);
     let key = march_key(horizon, r_coll).expect("the config slice's key");
     // The plan is unclear here: the re-bind offsets are times on prin-rs's deep-interior grid, in Burrau's units, and a
     // latent slice has none. Chose to state them in canonical time as the measurement's own system had them, at the
     // deep interior's centre pixel, because canonical time is the one unit both slices share.
     let scale = deep_interior(1, DEEP_INTERIOR_R_COLL).scale[0];
-    let mut pop = Population::named("config_stability");
+    let mut pop = Population::named(name);
     for [u, v] in pixels(centre, half, n) {
         let mut z = z0;
         z[1] += mag * u;

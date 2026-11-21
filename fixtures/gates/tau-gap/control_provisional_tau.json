@@ -1,0 +1,6 @@
+{
+  "description": "Control: the provisional tau, 1e-3, which lies below the measured gap; the gate must fail it.",
+  "populations": [{ "slice": "config_stability", "n": 32, "r_coll": null }, { "slice": "config_basin", "n": 32, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 32, "r_coll": 0.0 }],
+  "tau": 0.001,
+  "expected": "fail"
+}

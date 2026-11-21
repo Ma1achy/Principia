@@ -1,0 +1,8 @@
+{
+  "description": "Control: the energy arm alone (the rule replayed at tau = 1e300, closure always met) against the legacy t = 30 set; it fires on transients and must fail.",
+  "populations": [{ "slice": "config_stability", "n": 32, "r_coll": null }, { "slice": "config_basin", "n": 32, "r_coll": 0.0 }],
+  "truth": "legacy",
+  "rule": "replay",
+  "tau": 1e300,
+  "expected": "fail"
+}

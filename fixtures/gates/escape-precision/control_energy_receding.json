@@ -1,0 +1,6 @@
+{
+  "description": "Control: the pre-fix rule, E_rel > 0 and receding with no closure, which fires earliest of all; it has false positives and must fail.",
+  "populations": [{ "slice": "config_stability", "n": 32, "r_coll": null }, { "slice": "config_basin", "n": 32, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 32, "r_coll": 0.0 }],
+  "rule": "energy_receding",
+  "expected": "fail"
+}
