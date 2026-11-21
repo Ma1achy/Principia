@@ -408,7 +408,7 @@ negative_control!(
 
 /// The members of `SimStateFTLE` and `ICDescriptor` this scanner has a rule for, in the ledger's order. A new member
 /// makes `check_members` fail, so it cannot pass unscanned.
-const SIMSTATE_MEMBERS: [&str; 23] = [
+const SIMSTATE_MEMBERS: [&str; 25] = [
     "r",
     "p",
     "r_sh",
@@ -435,6 +435,10 @@ const SIMSTATE_MEMBERS: [&str; 23] = [
     "_nhat_lag_0",
     "_nhat_lag_1",
     "_nhat_lag_2",
+    // the re-boot's exact d_min latch and its march bits (payload §1, "Payload purity"; TASK-M3-21): u32s, no f32, so
+    // no float rule
+    "_dmin_d2",
+    "_march_bits",
 ];
 const IC_MEMBERS: [&str; 13] = [
     "m0",

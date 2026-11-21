@@ -10,7 +10,7 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 
 | Buffer | Contents | Access pattern | Size |
 |---|---|---|---|
-| **`SimState`** (hot) | phase state, shadow, accumulators, drift refs, packed status/times/scalars | read/updated **every substep** by the march | **168 B** (FTLE-on); **120 B** (FTLE-off) as generated, with the escape rule's lagged `n̂` register (three `Real`s in place of 4 B of padding, §1) and R-603's and R-605's two u32s, `budget_bits` and `dE_reg` (§1); 160 / 112 B before the two u32s — *before the lagged register: 152 / 104 B as generated, 160 / 112 B from TASK-M3-41 on; was "152 / 104 B from TASK-M3-41 on; 144 / 96 B as generated until then" before the collision floor's 8 B; was 144 / 96 before them (perf review 5661999637 of PR #293, P1), and 136 / 88 before the 8 B closure field, §1* |
+| **`SimState`** (hot) | phase state, shadow, accumulators, drift refs, packed status/times/scalars | read/updated **every substep** by the march | **176 B** (FTLE-on); **128 B** (FTLE-off) as generated, with the re-boot's two u32s, `_dmin_d2` and `_march_bits` (§1, "Payload purity"; 168 / 120 B before them), the escape rule's lagged `n̂` register (three `Real`s in place of 4 B of padding, §1) and R-603's and R-605's two u32s, `budget_bits` and `dE_reg` (§1); 160 / 112 B before the two u32s — *before the lagged register: 152 / 104 B as generated, 160 / 112 B from TASK-M3-41 on; was "152 / 104 B from TASK-M3-41 on; 144 / 96 B as generated until then" before the collision floor's 8 B; was 144 / 96 before them (perf review 5661999637 of PR #293, P1), and 136 / 88 before the 8 B closure field, §1* |
 | **word buffer** (cold) | the free-group word (`vec4<u32>`) | **append on branch-cut crossing; read at resolve/inspect** — never per-step | 16 B/entry, ×(E+1) (no shadow, appended in place), sharded per-quad |
 
 **Why split.** `SimState` fields are **hot** in the sense of being *co-resident march state updated during marching* — the physics and shadow (every substep), the accumulators, the drift refs and latches, `times`/`total_substeps`/descriptor (updated as the march progresses). Not every field is literally loaded+written at every substep (`packed_a/b`, `times`, `total_substeps` are march bookkeeping updated during marching, not per-substep operands) — they belong in the hot struct because they are co-resident march state, not because each is touched every substep. The word alone is **cold**: appended only on branch-cut crossings and read only at resolve/inspect. Co-locating it inline (a) forced the struct to 16-byte alignment (the `vec4` is the sole 16-align driver), padding the tail with **12 dead bytes**; (b) dragged 16 B of unused word through every hot cache line. Moving the word to a parallel buffer drops `SimState` to **8-byte alignment**, kills the padding (→ 4 B residual), and cuts the persistent hot-state footprint 160→136 (FTLE-on) / 112→88 (FTLE-off) — a **~15% reduction in the persistent hot-state footprint**, expected to reduce storage traffic and working-set pressure (the *measured* bottleneck is unconfirmed — see §3). Cost: one extra buffer binding + an indexed word fetch on the *cold* paths only. **Only the word moves** — splitting the hot fields further would fragment co-accessed data and hurt the prefetcher.
@@ -28,10 +28,11 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 // kernel layout (the kernel is Rust → SPIR-V — lowering Part 2). Bit offsets/sizes are language-agnostic.
 // TWO stored sizes — the Benettin shadow is 48 B, so FTLE-on/off are monomorphised as two Rust variants
 // to avoid paying for the shadow when FTLE is off (a MEMORY split, NOT a language limitation):
-//   SimStateBase (FTLE off): no shadow, 120 B actual / 120 B effective, with the collision floor's word
+//   SimStateBase (FTLE off): no shadow, 128 B actual / 128 B effective, with the collision floor's word
 //                            (R-973), the lagged n̂ register and the budget and regularised-drift words
 //                            (R-603, R-605).
-//   SimStateFTLE (FTLE on):  with shadow, 168 B actual / 168 B effective, likewise.
+//   SimStateFTLE (FTLE on):  with shadow, 176 B actual / 176 B effective, likewise; both with the re-boot's
+//                            two u32s, _dmin_d2 and _march_bits (TASK-M3-21; 168 / 120 B before them).
 //   Before the two words (TASK-M3-41) these were 112 / 160 B, and before the lagged register (TASK-M3-12)
 //   104 / 152 B.
 //   Was (before the collision floor's 8 B, 16 Nov 2026, TASK-M3-71): "96 B actual / 96 B effective as
@@ -131,9 +132,22 @@ struct SimStateFTLE {
                                   //   kernel: `_`-named, as _reserved is, so no ledger entry, field or view.
                                   //   Three scalar members, the layout having no three-vector storage. They
                                   //   follow Real. In the place of the 4 B of declared padding that stood here.
+
+    // ── THE RE-BOOT'S REGISTERS (u32 ×2; TASK-M3-21) ─────────  8 B
+    _dmin_d2    : u32,            // The d_min latch's least position-quantised d², an f32's bits at every
+                                  //   precision row: the value the march's latch compares, which d_min's f16
+                                  //   rounds. A re-boot reloads the latch from it, never from d_min (see
+                                  //   "Payload purity" below). March state, read only by the kernel.
+    _march_bits : u32,            // near:8[0–7] | latched:8[8–15] | reported:1[16] | zero[17–31] (§2):
+                                  //   the collision floor's two codes, of which coll_floor is the larger,
+                                  //   and whether the occupant has reported a regularised drift (whether
+                                  //   dE_reg holds the regularised or the Cartesian drift). March state, read
+                                  //   only by the kernel.
 }
-// SimStateFTLE: 168 B actual / 168 B effective (8-byte aligned), with budget_bits and dE_reg (R-603, R-605)
-// SimStateBase: drop r_sh,p_sh → 120 B actual / 120 B effective
+// SimStateFTLE: 176 B actual / 176 B effective (8-byte aligned), with budget_bits and dE_reg (R-603, R-605)
+//   and the re-boot's _dmin_d2 and _march_bits (TASK-M3-21)
+// SimStateBase: drop r_sh,p_sh → 128 B actual / 128 B effective
+// Before the re-boot's two u32s (TASK-M3-21): 168 / 120 B.
 // Before the two words (TASK-M3-41): 160 / 112 B. Before the lagged register (TASK-M3-12): 152 / 104 B, with 4 B
 //   of declared padding (_pad) after coll_floor_bits.
 // Was (before the collision floor's 8 B, TASK-M3-71): "144 B ... as generated until TASK-M3-41; 152 B from
@@ -330,8 +344,9 @@ which do not depend on the float type (parity_contract Tier B), so they keep the
 u32 at 4, u16 at 2); the struct aligned to 8, or to `Real`'s alignment if greater. As generated, `SimStateFTLE` stores
 31 `Real`s and `SimStateBase` 19, then 24 B of u32s (`budget_bits` and `dE_reg` among them), 4 B of u16s and the
 collision floor's 4 B u32, ending at `31w + 32` and `19w + 32`, a multiple of 8 at every width; then the lagged
-register's three `Real`s, so the structs end at `34w + 32` and `22w + 32`: 168 / 120 B at f32, 304 / 208 B at f64,
-576 / 384 B at DoubleF64, each exactly its size, with no tail padding. Before the two u32s they were `34w + 24` and
+register's three `Real`s, so the structs end at `34w + 32` and `22w + 32`; then the re-boot's two u32s, `_dmin_d2` and
+`_march_bits`, ending at `34w + 40` and `22w + 40`: 176 / 128 B at f32, 312 / 216 B at f64, 584 / 392 B at DoubleF64,
+each exactly its size, with no tail padding. Before the re-boot's two u32s they were `34w + 32` and `22w + 32`. Before the two u32s they were `34w + 24` and
 `22w + 24`.
 Tail padding, where a row has any, is declared, never implicit (R-86): a trailing `_tail` of `(size − end)/4` u32s,
 empty at every row today.
@@ -373,6 +388,26 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
 **`ICDescriptor` follows `Real` too (R-313).** The payload is `SimState` + `ICDescriptor`; the descriptor's float fields have the width of `Real`, and R-86's 64 B is its f32 instantiation (generation-root §3.6). Its f64 and DoubleF64 layouts are part of REQ-PAY-087's definition.
 
 ---
+
+### Payload purity: what a re-boot reloads (TASK-M3-21)
+
+A sample's stored `SimState` and carried buffer are a pure function of `(IC, sim key, t)` on one backend
+(scheduler_contract Part 1): continuous march, catch-up in dispatches of any frame budget, eviction and re-boot, and any
+visit order store the same bits (`kernel/tests/payload_purity.rs`). So everything the march keeps across macro-steps is
+either recomputed from the stored state or stored exactly, and a re-boot reloads it before its first step
+(`kernel::driver::cadence`, "A re-boot"): the monitor's `E_0`, `Lz_0`, `packed_b`'s maxima and `dE_reg`'s last value;
+the collision detector at the stored positions (so the first macro-step's `N_sub` reads the stored state's `d²`, not
+the IC's); `dmin_pair` and `t_dmin_step`; the escape register; the budget word's counts. Three things no stored word
+held exactly, so the payload gained two u32s for them:
+
+- **`_dmin_d2`**, the `d_min` latch's least `d²`. `d_min` is its `√` rounded to binary16, and a latch reloaded from
+  that rounding sits off the true least `d²` by up to half an f16 spacing: a later step's `d²` between the two is
+  latched by one route and not the other, so `dmin_pair`, `t_dmin_step` and `coll_floor` would fork with the persist
+  boundaries (measured: a slowly closing pair split at every macro-step forks at 28 of 95 steps).
+- **`_march_bits`' two floor codes**: `coll_floor` is the larger of the near-firing code and the latched state's code,
+  and the larger alone does not say what a later, smaller latched code gives.
+- **`_march_bits`' `reported` bit**: whether `dE_reg` holds the regularised drift or the Cartesian one, which a
+  regularised macro-step that takes no kept step cannot otherwise tell.
 
 ## 2. Bit layouts (the packed u32s)
 
@@ -583,6 +618,19 @@ used; `sample_descriptor`'s bits 10–15 stay reserved." (R-545 spent bit 15 on 
   `closure_step_reserved` (R-343), for which no accessor is emitted.
 
 ---
+
+### `_march_bits` (u32) — the re-boot's march bits (TASK-M3-21)
+
+| Bits | Field | Meaning |
+|---|---|---|
+| 0–7 | `near` | the largest floor code of a pair near firing at a state the collision test read; 0 where none was |
+| 8–15 | `latched` | the floor code of the `d_min` latch's pair and state; `coll_floor` is the larger of `near` and `latched` |
+| 16 | `reported` | 1 once the occupant has reported a regularised drift: `dE_reg` then holds it, else the Cartesian drift |
+| 17–31 | — | zero |
+
+March state, read only by the kernel: `_`-named, so no ledger entry, field or view. A failed sample stores 0, as it
+stores `_dmin_d2` 0: it is finished and never re-booted. `_dmin_d2` is the latch's f32 `d²` by its bits, at every
+precision row (the detector's `d²` is position-quantised f32 at every `Real`).
 
 ## 3. The word buffer — `free_group_word`
 
@@ -903,7 +951,7 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 
 **The carried buffer adds 72 B per sample at f32** under a regularised occupant that carries its state (§1), `×(E+1)` like the word buffer. The default occupant, Heggie × RK4, is one, and so is logH (which uses three of its fourteen floats and pays the same element), so by default every sample pays it: **+45%** on the 160 B FTLE-on `SimState` and **+64%** on the 112 B FTLE-off one. Only a run under a stepper alone pays nothing. On the table's rows that is 0.597 GB at 1080p E=3, 0.299 GB at 1080p E=1, 2.389 GB at 4K E=3 and 1.194 GB at 4K E=1, on top of each row's total (72 B × (E+1) × pixels; decimal GB). The rows below are without it. A Benettin shadow marched beside a regularised sample would need an element of its own, which is not counted here. **It does not have one yet**: the absolute-form shadow (`kernel::driver::benettin`) marches by the seam's uncarried call, so under Heggie it would re-register at every macro-step, uncounted, beside a sample registered once. Nothing runs the FTLE tier under Heggie today; it must carry the shadow's state, or refuse to build, before it does.
 
-Per-sample: hot `SimState` **168 B (FTLE-on) / 120 B (FTLE-off)** effective, with the lagged `n̂` register (TASK-M3-12) and R-603's and R-605's two words (TASK-M3-41); 160 / 112 B before the two words, 152 / 104 B before the register; the table below is at 152 / 104 B, and at 168 / 120 B its hot parts are 1.393 / 0.995 / 0.498 / 5.574 / 1.991 GB + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
+Per-sample: hot `SimState` **176 B (FTLE-on) / 128 B (FTLE-off)** effective with the re-boot's two u32s (TASK-M3-21; 168 / 120 B before them; at 176 / 128 B the hot parts are 1.460 / 1.062 / 0.531 / 5.839 / 2.123 GB), with the lagged `n̂` register (TASK-M3-12) and R-603's and R-605's two words (TASK-M3-41); 160 / 112 B before the two words, 152 / 104 B before the register; the table below is at 152 / 104 B, and at 168 / 120 B its hot parts are 1.393 / 0.995 / 0.498 / 5.574 / 1.991 GB + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
 
 | Config (at the stated *render* resolution) | Hot | +Word | Total |
 |---|---|---|---|

@@ -11,8 +11,9 @@
 //! rounding with its clamp, and the `log16` form's rounding with its saturation, are monotone and leave a value of their
 //! own where it is, so latching the reloaded value of a segment's latch and then rounding gives what rounding the
 //! segment's own latch would have. The regularised drift's latches ([`RegularisedDrift`], `dE_reg`; R-605) pack in the
-//! same form but are not reloaded at a resume: like the monitor's Cartesian maxima, they are the caller's to resume,
-//! and a march resumed with a fresh cadence stores its own segment's `dE_reg` (no production caller resumes yet).
+//! same form and reload the same way, with whether any was reported, which `_march_bits` holds ([`march_bits`]). The
+//! `d_min` latch that steers `dmin_pair`, `t_dmin_step` and the floor's latched code reloads from the exact `_dmin_d2`,
+//! not from the f16 `d_min` (`super::cadence`'s note, "A re-boot").
 //!
 //! **`d_min` is latched as its square.** The collision detector forms each pair's position-quantised `d²` once per
 //! step and compares `d²`, never `d` (`crate::detect::collision`'s note), and its `dmin_pair` latch holds the least
@@ -41,8 +42,8 @@
 
 use super::monitor::{latched, magnitude};
 use crate::payload::{
-    clamp_f16, pa_d_min, pa_d_min_is_unset, pack_dE_reg, pack_packed_b, pb_dE_max, pb_dLz_max,
-    sd_is_failed, set_d_min, set_d_min_unset, DminCounters,
+    clamp_f16, extract, insert, pa_d_min, pa_d_min_is_unset, pack_dE_reg, pack_packed_b, pb_dE_max,
+    pb_dLz_max, sd_is_failed, set_d_min, set_d_min_unset, DminCounters,
 };
 use crate::real::{IeeeBits, RealOps};
 
@@ -199,6 +200,13 @@ impl<R: crate::real::Real + IeeeBits> RegularisedDrift<R> {
         }
     }
 
+    /// The latches of a march re-booted from its stored state: the last drift `last` and the greatest magnitude `max`
+    /// as stored, and `seen` whether any drift had been reported.
+    #[inline]
+    pub fn reloaded(last: R, max: R, seen: bool) -> Self {
+        RegularisedDrift { last, max, seen }
+    }
+
     /// A kept step's drift `drift`, latched.
     #[inline]
     pub fn report(&mut self, drift: R) {
@@ -236,4 +244,36 @@ pub fn persist_de_reg(failed: bool, last: f32, max: f32) -> u32 {
     } else {
         pack_dE_reg(stored(last), stored(max))
     }
+}
+
+/// `_march_bits` (payload §1, "Payload purity"): the march state a re-boot reloads that no other word holds, packed
+/// into one word, read only by the kernel: bits 0–7 `near`, the largest floor code of a pair near firing at a state
+/// the collision test read (0 where none was); bits 8–15 `latched`, the floor code of the `d_min` latch's pair and
+/// state (`coll_floor` is the larger of the two, `crate::detect::collision::Detector::floor_code`); bit 16 `reported`,
+/// whether the occupant has reported a regularised drift ([`RegularisedDrift::seen`]), which says whether `dE_reg`
+/// holds the regularised drift or the Cartesian one. Bits 17–31 are zero. A floor code is at most 145, so 8 bits hold
+/// it.
+#[inline]
+pub fn march_bits(near: u32, latched: u32, reported: bool) -> u32 {
+    let w = insert(0, near, 0, 8);
+    let w = insert(w, latched, 8, 8);
+    insert(w, u32::from(reported), 16, 1)
+}
+
+/// `near` of a `_march_bits` word ([`march_bits`]).
+#[inline]
+pub fn march_near(w: u32) -> u32 {
+    extract(w, 0, 8)
+}
+
+/// `latched` of a `_march_bits` word ([`march_bits`]).
+#[inline]
+pub fn march_latched(w: u32) -> u32 {
+    extract(w, 8, 8)
+}
+
+/// `reported` of a `_march_bits` word ([`march_bits`]).
+#[inline]
+pub fn march_reported(w: u32) -> bool {
+    extract(w, 16, 1) != 0
 }

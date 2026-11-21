@@ -75,6 +75,8 @@ fn base(s: &SimStateFTLE) -> SimStateBase {
         _nhat_lag_0: s._nhat_lag_0,
         _nhat_lag_1: s._nhat_lag_1,
         _nhat_lag_2: s._nhat_lag_2,
+        _dmin_d2: s._dmin_d2,
+        _march_bits: s._march_bits,
         _tail: [],
     }
 }

@@ -79,8 +79,10 @@ use validation::negative_control;
 /// today's bytes without it give back (`qa_m241_hash_periodic_beta_is_the_one_change`). Then pinned at
 /// 0x2ee1_260a_e02d_31de ([`PRE_BUDGET_PROVISIONAL_VERSION`]) until TASK-M3-41 added the budget word and the
 /// regularised drift and moved the Cartesian drift latches to the `log16` form, which today's bytes without them give
-/// back (`qa_m241_hash_budget_and_drift_is_the_one_change`).
-const MEAN_Y_PROVISIONAL_VERSION: u64 = 0xdf30_f3c2_b1bd_ba96;
+/// back (`qa_m241_hash_budget_and_drift_is_the_one_change`). Then pinned at 0xdf30_f3c2_b1bd_ba96
+/// ([`PRE_REBOOT_PROVISIONAL_VERSION`]) until TASK-M3-21 added the re-boot's two registers, which today's bytes without
+/// them give back (`qa_m241_hash_reboot_registers_are_the_one_change`).
+const MEAN_Y_PROVISIONAL_VERSION: u64 = 0x8e71_7ba0_0507_fa26;
 
 /// The hash of the ledger without the declarations' block once REQ-PAY-098 declared `mean_y`'s range [0, 4]
 /// (R-426; TASK-M3-13): the one change to the hashed entries since [`MEAN_Y_PROVISIONAL_VERSION`], which reverting it
@@ -91,9 +93,17 @@ const MEAN_Y_PROVISIONAL_VERSION: u64 = 0xdf30_f3c2_b1bd_ba96;
 /// entries, and at 0x97ec_01cb_a5af_4336 ([`PRE_SENTINEL_DECLARED_VERSION`]) until TASK-M3-11's `closure_min`
 /// sentinel, and at 0xfbaf_6327_b921_761f ([`PRE_LAG_DECLARED_VERSION`]) until TASK-M3-12's lagged `n̂` register, and
 /// at 0xf974_859f_765e_5b5f ([`PRE_PERIODIC_DECLARED_VERSION`]) until TASK-M2-57's periodic `β` link, and at
-/// 0x5cce_9d2e_d11d_c744 ([`PRE_BUDGET_DECLARED_VERSION`]) until TASK-M3-41's budget word and regularised drift, for
-/// the reasons at [`MEAN_Y_PROVISIONAL_VERSION`].
-const MEAN_Y_DECLARED_VERSION: u64 = 0x6420_123f_fd8c_492c;
+/// 0x5cce_9d2e_d11d_c744 ([`PRE_BUDGET_DECLARED_VERSION`]) until TASK-M3-41's budget word and regularised drift, and
+/// at 0x6420_123f_fd8c_492c ([`PRE_REBOOT_DECLARED_VERSION`]) until TASK-M3-21's re-boot registers, for the reasons at
+/// [`MEAN_Y_PROVISIONAL_VERSION`].
+const MEAN_Y_DECLARED_VERSION: u64 = 0xbabb_7cc4_68e9_b564;
+
+/// [`MEAN_Y_PROVISIONAL_VERSION`] before TASK-M3-21 added the re-boot's two registers, `_dmin_d2` and `_march_bits`, to
+/// `SimState`'s two variants (payload §1, "Payload purity").
+const PRE_REBOOT_PROVISIONAL_VERSION: u64 = 0xdf30_f3c2_b1bd_ba96;
+
+/// [`MEAN_Y_DECLARED_VERSION`] before TASK-M3-21's change.
+const PRE_REBOOT_DECLARED_VERSION: u64 = 0x6420_123f_fd8c_492c;
 
 /// [`MEAN_Y_PROVISIONAL_VERSION`] before TASK-M3-41 added the budget word and the regularised drift and moved the
 /// Cartesian drift latches to the `log16` form (payload §1, §2; R-603, R-605, R-632).
@@ -572,14 +582,43 @@ fn before_block_with_links(
     b
 }
 
+/// The re-boot's two registers, the last members of `SimState`'s two variants (payload §1, "Payload purity";
+/// TASK-M3-21).
+const REBOOT_MEMBERS: [&str; 2] = ["_dmin_d2", "_march_bits"];
+
+/// `s` with the re-boot's two registers taken out of `SimState`'s two variants, as the structs were before TASK-M3-21.
+/// A struct without them is left as it is, so the strips below compose.
+fn without_reboot_members(mut s: Vec<ledger::schema::Struct>) -> Vec<ledger::schema::Struct> {
+    for st in s.iter_mut().filter(|st| st.buffer == Some("SimState")) {
+        let Some(at) = st.members.iter().position(|m| m.name == REBOOT_MEMBERS[0]) else {
+            continue;
+        };
+        let names: Vec<&str> = st.members[at..].iter().map(|m| m.name).collect();
+        assert_eq!(
+            names, REBOOT_MEMBERS,
+            "`{}` does not end with the re-boot's two registers (re-boot members)",
+            st.name
+        );
+        st.members.truncate(at);
+    }
+    s
+}
+
+/// The bytes before the declarations' block without TASK-M3-21's re-boot registers.
+fn without_reboot(l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
+    before_block_with(l, without_reboot_members(s))
+}
+
 /// The ledger and structs without TASK-M3-41's change to the hashed bytes (payload §1, §2; R-603, R-605, R-632): no
 /// `budget_bits` or `dE_reg` word, member or field entry, `dE_max` and `dLz_max` binary16 again, and `closure_min` and
 /// `closure_step` back at the scalar slots 34 and 35 the two words moved them from.
 fn without_budget_members(
     mut l: ledger::schema::Ledger,
-    mut s: Vec<ledger::schema::Struct>,
+    s: Vec<ledger::schema::Struct>,
 ) -> (ledger::schema::Ledger, Vec<ledger::schema::Struct>) {
     use ledger::schema::{FieldType, Location};
+    // and without the change after it, TASK-M3-21's re-boot registers
+    let mut s = without_reboot_members(s);
     const ADDED: [&str; 5] = [
         "budget_exhausted",
         "floor_hits",
@@ -854,7 +893,8 @@ const LAG_MEMBERS: [&str; 3] = ["_nhat_lag_0", "_nhat_lag_1", "_nhat_lag_2"];
 /// `s` with the lagged `n̂` register taken out of `SimState`'s two variants and the 4 B of declared padding it
 /// replaced, `_pad`, back in its place, as the structs were before TASK-M3-12. A struct without the register is left
 /// as it is, so the strips below compose.
-fn without_lag_members(mut s: Vec<ledger::schema::Struct>) -> Vec<ledger::schema::Struct> {
+fn without_lag_members(s: Vec<ledger::schema::Struct>) -> Vec<ledger::schema::Struct> {
+    let mut s = without_reboot_members(s);
     for st in s.iter_mut().filter(|st| st.buffer == Some("SimState")) {
         let Some(at) = st.members.iter().position(|m| m.name == LAG_MEMBERS[0]) else {
             continue;
@@ -1133,6 +1173,30 @@ negative_control!(
     "today's bytes, the budget word and the regularised drift kept, are not the pins before them, so they are hashed",
     expected = "(budget)",
     check_budget(before_block_with)
+);
+
+/// TASK-M3-21's re-boot registers, `_dmin_d2` and `_march_bits` (payload §1, "Payload purity"), are the one change to
+/// the hashed bytes since [`PRE_REBOOT_DECLARED_VERSION`]: taken out, today's ledger hashes to the pins before them,
+/// so [`MEAN_Y_DECLARED_VERSION`] and [`MEAN_Y_PROVISIONAL_VERSION`] follow from them alone.
+fn check_reboot(strip: Strip) {
+    check_strip(
+        strip,
+        PRE_REBOOT_PROVISIONAL_VERSION,
+        PRE_REBOOT_DECLARED_VERSION,
+        "without the re-boot's two registers (re-boot)",
+    );
+}
+
+#[test]
+fn qa_m241_hash_reboot_registers_are_the_one_change() {
+    check_reboot(without_reboot);
+}
+
+negative_control!(
+    qa_m241_hash_reboot_registers_are_the_one_change,
+    "today's bytes, the re-boot's two registers kept, are not the pins before them, so they are hashed",
+    expected = "(re-boot)",
+    check_reboot(before_block_with)
 );
 
 // ── REQ-DEC-048, host side: the codomain's bounds at the active value ───────────────────────────────────────────

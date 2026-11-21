@@ -64,6 +64,8 @@ fn sample() -> Sample {
         _nhat_lag_0: 0.0,
         _nhat_lag_1: 0.0,
         _nhat_lag_2: 0.0,
+        _dmin_d2: 0,
+        _march_bits: 0,
         _tail: [],
     };
     let ic = ICDescriptor {

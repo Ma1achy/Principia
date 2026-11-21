@@ -394,6 +394,8 @@ fn simstate_member(s: &SimStateFTLE, member: &str) -> Option<Vec<u8>> {
         "_nhat_lag_0" => f32s([s._nhat_lag_0]),
         "_nhat_lag_1" => f32s([s._nhat_lag_1]),
         "_nhat_lag_2" => f32s([s._nhat_lag_2]),
+        "_dmin_d2" => le([s._dmin_d2]),
+        "_march_bits" => le([s._march_bits]),
         _ => return None,
     })
 }
@@ -442,6 +444,8 @@ pub fn simstate_from_words(words: &[u32]) -> Result<SimStateFTLE, String> {
             "_nhat_lag_0" => s._nhat_lag_0 = f32_at(at),
             "_nhat_lag_1" => s._nhat_lag_1 = f32_at(at),
             "_nhat_lag_2" => s._nhat_lag_2 = f32_at(at),
+            "_dmin_d2" => s._dmin_d2 = word_at(at),
+            "_march_bits" => s._march_bits = word_at(at),
             other => {
                 return Err(format!(
                     "`SimStateFTLE` has no reader for the ledger's `{other}`"

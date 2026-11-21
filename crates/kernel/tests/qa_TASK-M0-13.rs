@@ -77,6 +77,9 @@ fn ftle(seed: u32) -> SimStateFTLE {
         _nhat_lag_0: f(seed + 36),
         _nhat_lag_1: f(seed + 37),
         _nhat_lag_2: f(seed + 38),
+        // the re-boot's two registers (payload §1, "Payload purity"; TASK-M3-21)
+        _dmin_d2: u(seed + 39),
+        _march_bits: u(seed + 40),
         // the declared tail padding at f32 is [u32; 0] (R-313, R-86)
         _tail: [],
     }
@@ -101,6 +104,7 @@ fn ftle_expected(s: &SimStateFTLE, shadow: bool) -> Vec<u32> {
     out.push(s.closure_step as u32);
     out.push(s.coll_floor_bits);
     out.extend([s._nhat_lag_0, s._nhat_lag_1, s._nhat_lag_2].map(f32::to_bits));
+    out.extend([s._dmin_d2, s._march_bits]);
     out
 }
 
@@ -130,6 +134,8 @@ fn struct_kernel(ty: &str, shadow: bool) -> String {
     for j in 0..3 {
         reads.push(format!("bitcast<u32>(s._nhat_lag_{j})"));
     }
+    reads.push("s._dmin_d2".into());
+    reads.push("s._march_bits".into());
     let n = reads.len();
     let body: String = reads
         .iter()
@@ -152,17 +158,19 @@ fn t_struct(@builtin(global_invocation_id) id: vec3<u32>) {{
     )
 }
 
-fn ftle_words(s: &SimStateFTLE) -> [u32; 42] {
-    // SimStateFTLE is repr(C), all members 4-byte or wider with no padding: its 168 B are 42 initialised words (160 B
+fn ftle_words(s: &SimStateFTLE) -> [u32; 44] {
+    // SimStateFTLE is repr(C), all members 4-byte or wider with no padding: its 176 B are 44 initialised words (168 B
+    // and 42 words before the re-boot's two registers, TASK-M3-21; 160 B
     // and 40 words before the budget word and the regularised drift, TASK-M3-41; 152 B and 38 words before the lagged n̂ register replaced 4 B of padding, TASK-M3-12; 144 B and 36 words before
     // the collision floor's 8 B, TASK-M3-71).
-    unsafe { std::mem::transmute::<SimStateFTLE, [u32; 42]>(*s) }
+    unsafe { std::mem::transmute::<SimStateFTLE, [u32; 44]>(*s) }
 }
 
 fn check_ftle(generated: &str) {
     let states = [ftle(0), ftle(40)];
     let mut input: Vec<u32> = states.iter().flat_map(ftle_words).collect();
-    // the kernel writes 43 words per element, one more than the 42 stored (41 and 40 before the budget word and the
+    // the kernel writes 45 words per element, one more than the 44 stored (43 and 42 before the re-boot's two
+    // registers, TASK-M3-21; 41 and 40 before the budget word and the
     // regularised drift, TASK-M3-41; 38 and 38 before the lagged n̂ register,
     // TASK-M3-12; 37 and 36 before the collision floor's record, TASK-M3-71): pad the input, whose length is the
     // output's, by the two words the two elements need.
@@ -221,6 +229,8 @@ fn base(seed: u32) -> SimStateBase {
         _nhat_lag_0: s._nhat_lag_0,
         _nhat_lag_1: s._nhat_lag_1,
         _nhat_lag_2: s._nhat_lag_2,
+        _dmin_d2: s._dmin_d2,
+        _march_bits: s._march_bits,
         _tail: [],
     }
 }
@@ -229,7 +239,7 @@ fn check_base(generated: &str) {
     let states = [base(3), base(50)];
     let mut input: Vec<u32> = states
         .iter()
-        .flat_map(|s| unsafe { std::mem::transmute::<SimStateBase, [u32; 30]>(*s) })
+        .flat_map(|s| unsafe { std::mem::transmute::<SimStateBase, [u32; 32]>(*s) })
         .collect();
     input.extend([0, 0]);
     let got = run(

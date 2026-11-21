@@ -112,6 +112,23 @@ impl<R: IeeeBits> Monitor<R> {
         }
     }
 
+    /// The monitor of a march re-booted from its stored state (`super::cadence::WrapperCadence`'s resume): the stored
+    /// references `e_0`, `lz_0`, and the drifts as the payload holds them, `de_final` the last `ΔE` and `de_max`,
+    /// `dlz_max` the maxima. `ΔL_z` final is not stored and nothing writes it (payload §5 derives it), so it starts at
+    /// 0. Latching on from a stored maximum and then storing gives what the uncut march stores, the packing being
+    /// monotone and leaving its own values where they are (`super::latch`'s note).
+    #[inline]
+    pub fn resumed(e_0: R, lz_0: R, de_final: R, de_max: R, dlz_max: R) -> Self {
+        Monitor {
+            e_0,
+            lz_0,
+            de_final,
+            de_max,
+            dlz_final: R::default(),
+            dlz_max,
+        }
+    }
+
     /// Accumulates the state after one projected step: masses `m`, positions `r`, momenta `p` and the force
     /// evaluation `geom` at `r`. `E(t)` and `L_z(t)` are evaluated; the finals are replaced and the maxima raised.
     #[inline]
