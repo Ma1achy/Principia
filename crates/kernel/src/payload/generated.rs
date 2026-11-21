@@ -213,6 +213,18 @@ pub const DETAIL_ESCAPE_BODY_2: u32 = 2;
 /// `escape`'s `detail` code 3: all three: triple ejection (payload §2).
 pub const DETAIL_ESCAPE_ALL_THREE_TRIPLE_EJECTION: u32 = 3;
 
+/// `sim_failed`'s `detail` code 0: NaN in state (payload §2).
+pub const DETAIL_SIM_FAILED_NAN_IN_STATE: u32 = 0;
+
+/// `sim_failed`'s `detail` code 1: Inf/overflow in state (payload §2).
+pub const DETAIL_SIM_FAILED_INF_OVERFLOW_IN_STATE: u32 = 1;
+
+/// `sim_failed`'s `detail` code 2: non-finite derived quantity (payload §2).
+pub const DETAIL_SIM_FAILED_NON_FINITE_DERIVED_QUANTITY: u32 = 2;
+
+/// `sim_failed`'s `detail` code 3: reserved (payload §2).
+pub const DETAIL_SIM_FAILED_RESERVED: u32 = 3;
+
 /// binary16's greatest finite value, the pack clamp (payload §1; the register's `f16_finite_max`).
 pub const F16_FINITE_MAX: f32 = 65504.0;
 

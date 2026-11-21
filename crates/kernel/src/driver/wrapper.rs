@@ -33,10 +33,16 @@
 //! `macro`, which still advances past it, bounds the loop only. **A march that ended** ([`Reached::ended`]) is never
 //! run on: the loop stops at the macro-step it ended in, which is not completed, its state the one the occupant
 //! latched (Part 2a § "The sync grid is a fixed quantum of physical time (R-565)": "a terminal event … still latches
-//! at the step it fires on"). A non-finite one writes `sim_failed` with its detail (`failed_detail`; payload §2) read
-//! on the latched, finite state, so 2 for Aarseth–Zare: that detail is interim until RQ-806 is ruled (physics review
-//! 5879658175 of PR #502, P1; the failure path is TASK-M3-18's). A spent budget leaves `state` `running`, as it stood (Part 7; R-603, whose `budget_exhausted` flag is
-//! TASK-M3-41's). [`integrate`] writes the monitored fields from
+//! at the step it fires on"). A spent budget leaves `state` `running`, as it stood (Part 7; R-603, whose
+//! `budget_exhausted` flag is TASK-M3-41's).
+//!
+//! **A march that fails** ([`super::failure`]) ends on its first non-finite step: the cadence's per-step detection, or
+//! a regularised march's own step-7 exit, which reports its cause by what failed ([`Cadence::non_finite`]; payload §2,
+//! the contract's dated line of 13 Nov 2026). The macro-step it failed in is not completed, whatever the steps it took,
+//! so it takes no Welford sample, shape readout or escape sample. The march keeps its record around the caller's cadence
+//! ([`super::failure::Recorder`]) and writes `sim_failed` once, through [`super::failure::sim_failed`], the one writer:
+//! the cause, the last finite state the cadence left, and every other field's failed-state value (payload §1).
+//! [`integrate`] writes the monitored fields from
 //! its cadence's monitor ([`monitored`]; Part 1, "COM projection and invariant monitoring"): `E_0` and `Lz_0`, stored
 //! before the loop, and `packed_b`'s `dE_max` and `dLz_max`, the maxima latched at `Real` during the march and packed
 //! to f16 once, here (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
@@ -94,6 +100,7 @@ use spirv_std::num_traits::Float;
 use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence, Reached};
 use super::cadence::{WordCadence, WrapperCadence};
 use super::carried::Carried;
+use super::failure::{self, Recorder};
 use super::latch::Latches;
 use super::shape::{Readout, ReadoutReal};
 use super::substep::{NsubThresholds, Quantise, SubstepState};
@@ -168,16 +175,13 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
 /// [`Latches::persist`] (payload §1's semantics (a)). Rounding the `Real` maxima to f32 at write-out gives what an f32
 /// latch of the f32-rounded drifts would hold, since rounding is monotone.
 ///
-/// **A run whose monitor latched a non-finite value** is marked, never stored as measured: `state` `sim_failed`, with
-/// its detail by what failed (payload §2: `failed_detail`), over a collision too (R-30: `sim_failed` first), the
-/// latches the defined failed-state values, 0.0 in both drift halves and `d_min` unset (payload §1, "Failed-state
-/// contents are defined"; R-79, R-271), `dmin_pair` its sentinel, 3, unset as `d_min` is, and `coll_floor` 0, "not
-/// recorded" (payload §2). **A run `out` already
-/// `sim_failed`**, its march ended non-finite ([`integrate_with`]), keeps its `state` and `detail`, over a collision
-/// too (R-30), with the same failed-state latches, sentinel and `coll_floor`, and `t_dmin_step` 0, unset as `d_min` is.
-/// The label is [`precedence`]'s, of the failure, the cadence's terminals with their step ordinals and the horizon. The
-/// rest of the failure path, the terminal that ends the march on a non-finite monitored value (a stepper's march goes
-/// on to its horizon today) and the other fields' failed-state values, is TASK-M3-18's.
+/// **A failed run** is marked, never stored as measured: where the cadence recorded a failure (its per-step detection,
+/// or a regularised march's step-7 exit it was told of; [`super::failure`]), `state` `sim_failed` with that cause, over
+/// a collision too (`sim_failed` first); where it recorded none and `out` is already `sim_failed`, `out`'s cause. Either
+/// way the one writer, [`super::failure::sim_failed`], writes every field's failed-state value (payload §1): the
+/// latches 0.0 in both drift halves and `d_min` unset (R-271), `dmin_pair` 3, `coll_floor` 0, `t_dmin_step` 0, and no
+/// f32 field holds the non-finite value that failed it, `E_0` and `Lz_0` included. The label is [`precedence`]'s, of
+/// the failure, the cadence's terminals with their step ordinals and the horizon.
 ///
 /// **A finished stored sample handed back** by a resumed call (`super::terminal`; [`Cadence::latched`]) is returned as
 /// it is: the cadence followed no run, and its write would replace the stored label and latches with a fresh
@@ -207,72 +211,41 @@ fn written<R: WrapperReal>(
     let m = cadence.monitor_state();
     let detector = cadence.detector();
     let [lag_0, lag_1, lag_2] = cadence.escape().lagged();
-    // A monitored quantity's failure is read on the state; a march's own failure, the monitor finite, keeps its detail.
-    let failed = m.non_finite() || sd_is_failed(out.packed_a);
-    let cause = if m.non_finite() {
-        failed_detail(&out.r, &out.p)
+    // The cadence's own record of a failure first; a march's failure it was not told of keeps the march's cause.
+    let own = cadence.failure();
+    let failure = if own.fired {
+        own
+    } else if sd_is_failed(out.packed_a) {
+        Fired::at(0, sd_detail(out.packed_a))
     } else {
-        sd_detail(out.packed_a)
+        Fired::none()
     };
     let events = Events {
-        failed: if failed {
-            Fired::at(0, cause)
-        } else {
-            Fired::none()
-        },
+        failed: failure,
         horizon: sd_state(out.packed_a) == STATE_BOUNDED,
         ..cadence.events()
     };
-    let pair = if failed {
-        SD_DMIN_PAIR_SENTINEL
-    } else {
-        detector.latch().pair()
-    };
-    let labelled = precedence(&events).write(set_dmin_pair(out.packed_a, pair));
-    // A failed sample's `d_min` is unset (payload §1), and so is its step, 0 as before the first observation.
-    let dmin_step = if failed { 0 } else { cadence.dmin_step() };
+    let labelled = precedence(&events).write(set_dmin_pair(out.packed_a, detector.latch().pair()));
     let mut latches = Latches::unset();
     latches.separation_squared(detector.latch().d2());
     latches.drift(m.de_max().quantise(), m.dlz_max().quantise());
     let (packed_a, packed_b) = latches.persist(labelled, &DminCounters::new());
-    let floor = if failed { 0 } else { detector.floor_code() };
-    SimStateBaseOf {
+    let measured = SimStateBaseOf {
         E_0: m.e_0(),
         Lz_0: m.lz_0(),
         packed_a,
         packed_b,
-        coll_floor_bits: set_coll_floor(out.coll_floor_bits, floor),
-        times: set_t_dmin_step(out.times, dmin_step),
+        coll_floor_bits: set_coll_floor(out.coll_floor_bits, detector.floor_code()),
+        times: set_t_dmin_step(out.times, cadence.dmin_step()),
         _nhat_lag_0: lag_0,
         _nhat_lag_1: lag_1,
         _nhat_lag_2: lag_2,
         ..out
-    }
-}
-
-/// `sim_failed`'s detail for a run ending at `(r, p)` (payload §2): 0 for a NaN in the state, else 1 for a `±∞` in it,
-/// else 2, a non-finite derived quantity on a finite state. The two are told apart on the bits
-/// ([`IeeeBits::nan_bits`], [`IeeeBits::non_finite_bits`]; gpu_determinism_note § "The discipline", rule 4).
-#[inline]
-fn failed_detail<R: WrapperReal>(r: &[[R; 2]; 3], p: &[[R; 2]; 3]) -> u32 {
-    let (mut nan, mut inf) = (false, false);
-    let mut i = 0;
-    while i < 3 {
-        let mut j = 0;
-        while j < 2 {
-            let (a, b) = (r[i][j], p[i][j]);
-            nan = nan || a.nan_bits() || b.nan_bits();
-            inf = inf || a.non_finite_bits() || b.non_finite_bits();
-            j += 1;
-        }
-        i += 1;
-    }
-    if nan {
-        0
-    } else if inf {
-        1
+    };
+    if failure.fired {
+        failure::sim_failed(measured, failure.detail)
     } else {
-        2
+        measured
     }
 }
 
@@ -494,8 +467,9 @@ impl<R: WrapperReal> Start<R> {
 
 /// The macro-step loop from `start` to the macro-step `end`, at most the horizon (integrator_contract Part 1's loop,
 /// under `ADVANCE`; the module's note): `co` marched beside it, `carried` the trajectory's buffer, passed into every
-/// call. The run is `bounded` where it reaches the horizon,
-/// `running` where `done`, an ended march or `end` stops it first, and `sim_failed` where its march went non-finite.
+/// call, and `cadence` with the failure path's record kept around it ([`Recorder`]). The run is `bounded` where it
+/// reaches the horizon, `running` where `done`, an ended march or `end` stops it first, and `sim_failed` where its march
+/// went non-finite, written by [`failure::sim_failed`] on the last finite state the cadence left.
 #[inline]
 fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
     uniforms: &WrapperUniforms<R>,
@@ -507,6 +481,7 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
 ) -> SimStateBaseOf<R> {
     let mut state = start.state;
     let mut geom = Geom::new(&state.m, &state.r);
+    let mut cadence = Recorder::new(cadence, &start.state);
     let mut substep = SubstepState {
         saturated: start.saturated,
         ..SubstepState::default()
@@ -534,13 +509,19 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
             macro_step,
             macro_step + 1,
             &params,
-            cadence,
+            &mut cadence,
             carried,
         );
         co.after_macro::<A>(&state, &out.state, macro_step, &params, out.substeps);
         state = out.state;
         geom = out.geom;
         total_substeps += out.substeps;
+        // A macro-step the march failed in is not completed, whatever steps it took (the module's note).
+        let reached = if cadence.failure().fired {
+            Reached::NonFinite
+        } else {
+            reached
+        };
         if reached == Reached::Target {
             completed += 1;
             diffusion = diffusion.update(
@@ -559,27 +540,39 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
         macro_step += 1;
     }
     cadence.clock(completed);
-    // The march's own label: its failure, or whether it reached the horizon; the cadence's terminals are written over
-    // it by its `finish` ([`monitored`]), through the same precedence.
+    // The march's own label, whether it reached the horizon; the cadence's terminals are written over it by its
+    // `finish` ([`monitored`]), through the same precedence. A failed march is written once, by the one writer.
+    let failure = cadence.failure_at(last, &state);
+    // The state a failed march stores: a regularised march's step-7 exit latched its last finite state, which the
+    // contract stores (Part 2b, the dated line of 13 Nov 2026); a failure the cadence read stores the last finite state
+    // the cadence left. Either is finite; one that is not is the writer's to blank.
+    let latched = last == Reached::NonFinite
+        && !cadence.read_by_cadence()
+        && !failure::state_bits(&state.r, &state.p).0;
     let events = Events {
-        failed: if last == Reached::NonFinite {
-            Fired::at(0, failed_detail(&state.r, &state.p))
-        } else {
-            Fired::none()
-        },
         horizon: !(cadence.done() || last.ended() || macro_step < uniforms.horizon_steps),
         ..Events::default()
     };
     let described = precedence(&events).write(substep.packed_a(0));
     let packed_a = set_dmin_pair(set_d_min_unset(described), SD_DMIN_PAIR_SENTINEL);
-    readout.store(SimStateBaseOf {
-        r: state.r,
-        p: state.p,
+    let stopped = if !failure.fired || latched {
+        state
+    } else {
+        *cadence.last()
+    };
+    let out = readout.store(SimStateBaseOf {
+        r: stopped.r,
+        p: stopped.p,
         mean_y: diffusion.mean_y,
         C_ty: diffusion.c_ty,
         packed_a,
         times: pack_times(completed, start.t_dmin_step),
         total_substeps,
         ..SimStateBaseOf::default()
-    })
+    });
+    if failure.fired {
+        failure::sim_failed(out, failure.detail)
+    } else {
+        out
+    }
 }

@@ -2400,7 +2400,28 @@ impl<A: Advance> Advance for Dropping<A> {
         params: &AdvanceParams<R>,
         cadence: &mut C,
     ) -> Advanced<R> {
-        A::advance(state, geom, t_now, t_target, params, cadence)
+        A::advance(state, geom, t_now, t_target, params, &mut Muted(cadence))
+    }
+}
+
+/// The cadence with the march's own report of a non-finite end dropped (`Cadence::non_finite`), every other call
+/// passed on: [`Dropping`]'s, so no march ever ended.
+#[cfg(feature = "controls")]
+struct Muted<'a, C>(&'a mut C);
+
+#[cfg(feature = "controls")]
+impl<R, C: Cadence<R>> Cadence<R> for Muted<'_, C> {
+    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.0.after_step(state, geom);
+    }
+    fn done(&self) -> bool {
+        self.0.done()
+    }
+    fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
+        self.0.sample(state, index, quantum);
+    }
+    fn clock(&mut self, completed: u32) {
+        self.0.clock(completed);
     }
 }
 

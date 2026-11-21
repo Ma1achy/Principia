@@ -55,6 +55,7 @@ use super::sync::boundary_of_step;
 use super::{Kind, Regularisation};
 use crate::driver::advance::{AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
 use crate::driver::carried::Carried;
+use crate::driver::failure;
 use crate::occupant::{CapabilityProfile, Geom, State, Stepper};
 
 /// Heggie's default time transformation: Eq. 22 at n = 3/2 (R-161).
@@ -943,6 +944,23 @@ struct Interval<R> {
     landed: bool,
 }
 
+/// Whether any component of the regularised state `(q, p)` is not finite, and whether any is NaN, on the bits: the
+/// state the finiteness test rejected, read for `sim_failed`'s cause (`crate::driver::failure`).
+#[inline]
+fn state_bits<R: AzReal>(q: &HgQ<R>, p: &HgP<R>) -> (bool, bool) {
+    let xs = [
+        q.q[0][0], q.q[0][1], q.q[1][0], q.q[1][1], q.q[2][0], q.q[2][1], q.t, p.p[0][0],
+        p.p[0][1], p.p[1][0], p.p[1][1], p.p[2][0], p.p[2][1],
+    ];
+    let (mut bad, mut nan) = (false, false);
+    let mut i = 0;
+    while i < 13 {
+        bad = bad || xs[i].non_finite_bits();
+        nan = nan || xs[i].nan_bits();
+        i += 1;
+    }
+    (bad, nan)
+}
 /// Marches one sync interval from `(q, p)`, its clock at `0`, at boundary `k` (Part 2b, Heggie's steps 2 to 9), the
 /// cadence after every kept step on its Cartesian image, the counts in `count`. The interval lands when a kept step
 /// ends the clock at or past the boundary, with no tolerance (R-998, R-1007); with the landing's retakes on, a kept step
@@ -963,6 +981,9 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
     if !(finite(entry_rate) && entry_rate > R::default()) {
         count.non_finite_entries += 1;
         count.end = End::NonFinite;
+        // A non-finite entry size is a non-finite step size: 2, whatever the registered state (the contract's dated
+        // line of 13 Nov 2026 names "an entry size that is not finite").
+        cadence.non_finite(failure::DETAIL_DERIVED);
         return Interval {
             q,
             p,
@@ -977,6 +998,8 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
     let mut closed = false;
     let mut go = true;
     let mut here = 0u32;
+    // Whether the last step's size was finite; true before the first step, so a state rejected untaken is read itself.
+    let mut size_finite = true;
     while go {
         if watch.finite(&q, &p) {
             if stepped {
@@ -1009,6 +1032,10 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
         } else {
             count.end = End::NonFinite;
             go = false;
+            // The cause by what failed: the step size that produced the rejected state, else that state itself
+            // (payload §2; the contract's dated line of 13 Nov 2026).
+            let (_, nan) = state_bits(&q, &p);
+            cadence.non_finite(failure::regularised(size_finite, nan));
         }
         if go {
             let r = rr(&q);
@@ -1022,6 +1049,7 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
             count.cap_hits += u32::from(sized.cap_hit);
             count.predictive_bound += u32::from(sized.by_limit);
             let h = sized.h;
+            size_finite = finite(h);
             let before = q.t;
             let (mut q1, mut p1) = S::regularised_step(system, &q, &p, h);
             count.steps += 1;

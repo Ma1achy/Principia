@@ -755,6 +755,11 @@ fn check_energy_drift(p: &Probe) {
         "`energy_drift`'s reference, its guard's (R-436), is not its derived accessor's value",
     );
     expect(
+        sd_is_failed(read.state),
+        sd_is_failed(sd_state(s.packed_a)),
+        "`energy_drift`'s failed-sample gate is not its derived accessor's value",
+    );
+    expect(
         read.r.map(|v| v.map(f32::to_bits)),
         s.r.map(|v| v.map(f32::to_bits)),
         "`energy_drift`'s neutral band's `r` is not its derived accessor's value",
@@ -803,6 +808,11 @@ fn check_lz_drift(p: &Probe) {
         read.Lz_0.to_bits(),
         s.Lz_0.to_bits(),
         "`Lz_drift`'s reference, its guard's (R-436), is not its derived accessor's value",
+    );
+    expect(
+        sd_is_failed(read.state),
+        sd_is_failed(sd_state(s.packed_a)),
+        "`Lz_drift`'s failed-sample gate is not its derived accessor's value",
     );
     expect(
         read.r.map(|v| v.map(f32::to_bits)),

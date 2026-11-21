@@ -367,8 +367,9 @@ fn expected_fields(field: &str, word_fields: &[&str]) -> Vec<String> {
         vec!["last_symbol".to_owned(), "word.w".to_owned()]
     } else if field == "energy_drift" {
         // The drift views (R-379, R-381; TASK-M3-05): each also reads its suspect predicates' latches and its
-        // reference (R-436), and its neutral band's reads, the rounding's own scale (R-928): `r`, `p` and, for the
-        // energy, the masses; and nothing else.
+        // reference (R-436), its neutral band's reads, the rounding's own scale (R-928): `r`, `p` and, for the
+        // energy, the masses; and `state`, its failed-sample gate (a failed sample's reference is a failed-state value,
+        // payload §1); and nothing else.
         vec![
             "E_0",
             "dE_max",
@@ -379,15 +380,18 @@ fn expected_fields(field: &str, word_fields: &[&str]) -> Vec<String> {
             "ic.m2",
             "p",
             "r",
+            "state",
         ]
         .into_iter()
         .map(str::to_owned)
         .collect()
     } else if field == "Lz_drift" {
-        vec!["E_0", "Lz_0", "Lz_drift", "dE_max", "dLz_max", "p", "r"]
-            .into_iter()
-            .map(str::to_owned)
-            .collect()
+        vec![
+            "E_0", "Lz_0", "Lz_drift", "dE_max", "dLz_max", "p", "r", "state",
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect()
     } else {
         vec![field.to_owned()]
     }

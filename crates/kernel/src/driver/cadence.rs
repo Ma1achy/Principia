@@ -1,10 +1,12 @@
 //! The wrapper's per-substep cadence (integrator_contract Part 1, "Cadence (pinned)"; Part 2a, Cost 1; R-19): what runs
 //! after every internal step, inside the occupant's march, as the callback [`WrapperCadence`] the wrapper passes in.
 //!
-//! **In order, after each `STEP`** (Part 1's loop): the COM projection ([`WrapperCadence::project`], with the force
-//! evaluation re-formed at the projected positions), the invariant accumulation on the projected state
-//! ([`WrapperCadence::monitor`]; TASK-M3-05), and terminal detection, which sets the `done` flag on collision
-//! ([`Detector`]) and never breaks. **At each sampling point** of the occupant's grid ([`Cadence::sample`]: a completed
+//! **In order, after each `STEP`** (Part 1's loop): the failure path's read of the state the step left
+//! ([`super::failure::Detector`]), the COM projection ([`WrapperCadence::project`], with the force evaluation re-formed
+//! at the projected positions), the failure path's read of the projected state, the invariant accumulation on it
+//! ([`WrapperCadence::monitor`]; TASK-M3-05) and the failure path's read of its energy and `L_z`, and terminal
+//! detection, which sets the `done` flag on collision ([`Detector`]) and never breaks. A failure sets `done` too: the
+//! march ends on its first non-finite step (`super::failure`). **At each sampling point** of the occupant's grid ([`Cadence::sample`]: a completed
 //! macro-step, or a sync boundary under an occupant that owns its time mapping) the escape detector runs
 //! ([`escape::Detector`]; Part 7), on the state the step's cadence left, and sets `done` where it fires. A run on which
 //! a collision has fired takes no escape test: the collision's is the earlier step.
@@ -50,6 +52,7 @@
 //! features off, TASK-M4-05), which is why it is a wrapper around the cadence and not a hook in it.
 
 use super::advance::Cadence;
+use super::failure;
 use super::monitor::Monitor;
 use super::project::ComProjection;
 use super::substep::Quantise;
@@ -76,6 +79,8 @@ pub struct WrapperCadence<R> {
     detector: Detector,
     /// The escape detector: the lagged shape register, the stored `E₀` and its verdict.
     escape: escape::Detector<R>,
+    /// The failure path's per-step detection: the first non-finite state or monitored quantity (`super::failure`).
+    failure: failure::Detector,
     /// The calls so far.
     invocations: u32,
     /// Whether a terminal has fired.
@@ -118,13 +123,23 @@ impl<R: WrapperReal> WrapperCadence<R> {
     ) -> Self {
         let detector = Detector::new(radius, r);
         let monitor = Monitor::new(m, r, p, &Geom::new(m, r));
+        // An IC whose `E₀` or `L_{z,0}` is not finite fails before its first step, at ordinal 0: every drift of its run
+        // would be measured against a non-finite reference (`super::failure`). An IC already inside `r_coll` is a
+        // collision at t = 0, a real outcome (integrator_contract Part 5), and no failure is read on it.
+        let mut failed = failure::Detector::new();
+        failed.derived(
+            0,
+            !detector.fired()
+                && (monitor.e_0().non_finite_bits() || monitor.lz_0().non_finite_bits()),
+        );
         WrapperCadence {
             projection: ComProjection::new(m),
             monitor,
             detector,
             escape: escape::Detector::new(m, r, monitor.e_0()),
+            failure: failed,
             invocations: 0,
-            done: detector.fired(),
+            done: detector.fired() || failed.fired(),
             collision_at: 0,
             escape_at: 0,
             clock: 0,
@@ -142,8 +157,8 @@ impl<R: WrapperReal> WrapperCadence<R> {
         self.handed_back
     }
 
-    /// The run's terminal events for its label ([`crate::detect::label::precedence`]): the collision and the escape, each with the
-    /// step ordinal it fired on and its `detail`. The failure and the horizon are the wrapper's to add.
+    /// The run's terminal events for its label ([`crate::detect::label::precedence`]): the failure, the collision and the
+    /// escape, each with the step ordinal it fired on and its `detail`. The horizon is the wrapper's to add.
     #[inline]
     pub fn events(&self) -> Events {
         let collision = if self.detector.fired() {
@@ -157,7 +172,7 @@ impl<R: WrapperReal> WrapperCadence<R> {
             Fired::none()
         };
         Events {
-            failed: Fired::none(),
+            failed: self.failure.failure(),
             collision,
             escape,
             horizon: false,
@@ -239,7 +254,10 @@ impl<R: WrapperReal> WrapperCadence<R> {
     #[inline]
     pub fn watch(&mut self, state: &State<R>, geom: &Geom<R>) {
         self.invocations += 1;
+        self.failure.state(self.invocations, &state.r, &state.p);
         self.monitor(state, geom);
+        self.failure
+            .derived(self.invocations, self.monitor.non_finite());
         let before = self.detector.latch();
         let fired = self.detector.fired();
         self.detector.observe(&state.r);
@@ -252,13 +270,16 @@ impl<R: WrapperReal> WrapperCadence<R> {
         if self.detector.fired() && !fired {
             self.collision_at = self.invocations;
         }
-        self.done = self.detector.fired() || self.escape.fired();
+        self.done = self.detector.fired() || self.escape.fired() || self.failure.fired();
     }
 }
 
 impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
+    /// The state the step left read for a failure before the projection, so a `±∞` is read as itself
+    /// (`super::failure`), then the projection and [`WrapperCadence::watch`].
     #[inline]
     fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.failure.state(self.invocations + 1, &state.r, &state.p);
         self.project(state, geom);
         self.watch(state, geom);
     }
@@ -276,14 +297,14 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
     #[inline]
     fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
         let tie = self.detector.fired() && self.collision_at == self.invocations;
-        if !self.escape.fired() && (!self.detector.fired() || tie) {
+        if !self.escape.fired() && !self.failure.fired() && (!self.detector.fired() || tie) {
             self.escape
                 .sample(&state.m, &state.r, &state.p, index, quantum);
             if self.escape.fired() {
                 self.escape_at = self.invocations;
             }
         }
-        self.done = self.detector.fired() || self.escape.fired();
+        self.done = self.detector.fired() || self.escape.fired() || self.failure.fired();
     }
 
     /// The completed macro-steps, `completed`, before each macro-step and after the last (the module's note): a `d_min`
@@ -300,6 +321,19 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
     #[inline]
     fn latched(&mut self) {
         self.handed_back = true;
+    }
+
+    /// The occupant's step-7 failure, which this cadence was never handed: recorded as its first if it has none, and
+    /// the run done.
+    #[inline]
+    fn non_finite(&mut self, detail: u32) {
+        self.failure.fire(self.invocations, detail);
+        self.done = true;
+    }
+
+    #[inline]
+    fn failure(&self) -> Fired {
+        self.failure.failure()
     }
 
     /// The escape register of a re-booted march reloaded from `stored` ([`WrapperCadence::resume_escape`]), where
@@ -370,14 +404,18 @@ impl<R: LinkReal + IeeeBits, C: Cadence<R>, B: WordBuffer + ?Sized> Cadence<R>
     for WordCadence<'_, R, C, B>
 {
     #[inline]
+    /// `inner`'s work, then the substep's crossings, unless `inner` has recorded a failure: a state that failed is
+    /// no crossing (`super::failure`).
     fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
         self.inner.after_step(state, geom);
-        self.packed_a = self.detector.accept_into(
-            state_cuts(&state.r),
-            &mut self.hook,
-            self.words,
-            self.packed_a,
-        );
+        if !self.inner.failure().fired {
+            self.packed_a = self.detector.accept_into(
+                state_cuts(&state.r),
+                &mut self.hook,
+                self.words,
+                self.packed_a,
+            );
+        }
     }
 
     #[inline]
@@ -398,6 +436,16 @@ impl<R: LinkReal + IeeeBits, C: Cadence<R>, B: WordBuffer + ?Sized> Cadence<R>
     #[inline]
     fn latched(&mut self) {
         self.inner.latched();
+    }
+
+    #[inline]
+    fn non_finite(&mut self, detail: u32) {
+        self.inner.non_finite(detail);
+    }
+
+    #[inline]
+    fn failure(&self) -> Fired {
+        self.inner.failure()
     }
 
     #[inline]

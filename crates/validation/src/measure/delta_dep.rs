@@ -38,10 +38,11 @@
 //! the fixture's horizon, `r_coll = 0`; each sample is the state after a completed macro-step, read by one-step resumed
 //! calls of the wrapper (`kernel::driver::wrapper::integrate_resumed_with`), the march the payload's registers sample.
 //!
-//! **A failed run is stated, never read.** Yoshida4 reports every macro-step it takes as reached, finite or not, and at
-//! `r_coll = 0` nothing ends the march, so a run tests each sample itself: a macro-step that does not complete, a state
-//! `(r, p)` or a chord that is not finite ends the run there, that sample is not kept, and the run records the step and
-//! the cause ([`Run::failed`]). Every run below and above must be finite and full-length ([`Run::fault`]); one that is
+//! **A failed run is stated, never read.** The wrapper ends a march on its first non-finite step and stores it
+//! `sim_failed`, its state the last finite one, the macro-step it failed in not completed (`kernel::driver::failure`);
+//! so a run tests each sample itself: a sample stored `sim_failed` is a state that went not finite, and otherwise a
+//! macro-step that does not complete, a state `(r, p)` or a chord that is not finite ends the run there, that sample is
+//! not kept, and the run records the step and the cause ([`Run::failed`]). Every run below and above must be finite and full-length ([`Run::fault`]); one that is
 //! not fails the judgement, leaves no proposal and is named in the report. The reductions carry a NaN through rather
 //! than dropping it, so a failed sample can never pass as a smaller excursion.
 
@@ -57,7 +58,7 @@ use kernel::driver::wrapper::{
     integrate_resumed_with, integrate_with, WrapperReal, WrapperUniforms,
 };
 use kernel::occupant::yoshida4::Yoshida4;
-use kernel::payload::{tm_t_end_step, PAYLOAD_SCHEMA_VERSION};
+use kernel::payload::{sd_is_failed, tm_t_end_step, PAYLOAD_SCHEMA_VERSION};
 use kernel::shape::shape;
 use ledger::constants::DELTA_DEP_VALUE;
 use ledger::schema::Location;
@@ -279,7 +280,15 @@ where
                 .flatten()
                 .all(|&x| Into::<f64>::into(x).is_finite());
         let d2: f64 = chord2(shape(s.r, ic.m), n_0).into();
-        match sample(k, tm_t_end_step(s.times), state_finite, d2) {
+        // A sample the failure path stored `sim_failed` went not finite in this macro-step: its stored state is the
+        // last finite one, and the macro-step it failed in is not completed.
+        let failed_here = sd_is_failed(s.packed_a);
+        let reached = if failed_here {
+            k
+        } else {
+            tm_t_end_step(s.times)
+        };
+        match sample(k, reached, state_finite && !failed_here, d2) {
             Ok(c) => chords.push(c),
             Err(f) => {
                 failed = Some(f);

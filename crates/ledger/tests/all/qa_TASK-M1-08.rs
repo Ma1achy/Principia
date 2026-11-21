@@ -257,9 +257,10 @@ fn check_view_lanes(views: &[(String, String)], word_fields: &[&str]) {
         }
         // The drift views (R-379, R-381; TASK-M3-05): each also reads the latches its suspect predicates read and its
         // reference, tested on the bits first (R-436); and the reads of its neutral band, the rounding's own scale
-        // (R-928): the state `r` and `p`, and for the energy the `ICDescriptor` masses of `K + |V|`; and nothing else.
+        // (R-928): the state `r` and `p`, and for the energy the `ICDescriptor` masses of `K + |V|`; and `state`, its
+        // failed-sample gate (a failed sample's reference is a failed-state value, payload §1); and nothing else.
         if field == "energy_drift" || field == "Lz_drift" {
-            for latch in ["dE_max", "E_0", "dLz_max", "r", "p"] {
+            for latch in ["dE_max", "E_0", "dLz_max", "r", "p", "state"] {
                 want.insert(("sample".to_owned(), latch.to_owned()));
             }
         }

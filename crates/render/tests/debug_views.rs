@@ -751,7 +751,12 @@ fn drift_drawn(s: &Scene, i: u32, _: f32, v: f32, frag: [f64; 2]) -> Rgb {
     let (energy, lz) = golden_scene::drift_suspects(&s.read(i));
     let eps = ledger::constants::EPS_E_DEFAULT.number();
     let lin_r = ledger::constants::DRIFT_LIN_R_E.number();
-    if ledger::gen::numeric::non_finite(v) || ledger::gen::numeric::non_finite(s.read(i).E_0) {
+    // The view's failed-sample gate first, `sd_is_failed`: `sim_failed`, `decode_failed` and the reserved codes 6–7
+    // (a failed sample's reference is a failed-state value, payload §1).
+    if s.read(i).state >= ledger::display::State::SimFailed.code()
+        || ledger::gen::numeric::non_finite(v)
+        || ledger::gen::numeric::non_finite(s.read(i).E_0)
+    {
         return present::debug_invalid(frag);
     }
     let read = s.read(i);

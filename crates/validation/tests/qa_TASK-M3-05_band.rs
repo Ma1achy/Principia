@@ -475,7 +475,9 @@ fn lz_only(scale: f64) -> Fixture {
     )
 }
 
-/// Coincident bodies from rest: `E₀ = −∞`, the state NaN after the first kick.
+/// Coincident bodies from rest: `E₀ = −∞` on a finite state, so the run fails before its first step with detail 2, a
+/// non-finite derived quantity (`kernel::driver::failure`). Before the failure path ended a march on its first failure,
+/// it marched on into a NaN state and read 0 there.
 fn coincident() -> Fixture {
     fixture(
         "coincident",
@@ -485,8 +487,8 @@ fn coincident() -> Fixture {
 }
 
 fn check_every_occupant<A: Advance>(name: &str) {
-    check_marked::<A, f32>(&format!("{name}, f32, coincident"), &coincident(), 0);
-    check_marked::<A, f64>(&format!("{name}, f64, coincident"), &coincident(), 0);
+    check_marked::<A, f32>(&format!("{name}, f32, coincident"), &coincident(), 2);
+    check_marked::<A, f64>(&format!("{name}, f64, coincident"), &coincident(), 2);
     check_marked::<A, f32>(&format!("{name}, f32, L_z alone"), &lz_only(4e33), 2);
 }
 
@@ -571,11 +573,12 @@ fn off_hatch(s: &Scene, img: &[Rgb], i: u32) -> Option<String> {
 const NON_FINITE: [&str; 4] = [
     "a stored -inf reference on a finite state",
     "a NaN reference, its sign set, on a finite state",
-    "a failed run's output: coincident bodies, E_0 = -inf",
-    "a failed run's output: overflowing momenta, E_0 = +inf",
+    "a failed run's output: coincident bodies, E_0 = -inf at the IC, stored 0.0",
+    "a failed run's output: overflowing momenta, E_0 = +inf at the IC, stored 0.0",
 ];
 
-/// R-79, R-436 and render_gui_spec §10.1: a non-finite operand draws the hatch, never a place on the ramp. Every view and
+/// R-79, R-436 and render_gui_spec §10.1: a non-finite operand draws the hatch, never a place on the ramp; so does a
+/// failed sample in every drift view, its references being failed-state values (payload §1). Every view and
 /// case is judged before it fails, so the failure lists them all.
 fn check_invalid(ids: &[(&str, Colouring)]) {
     let h = gpu();
@@ -597,10 +600,6 @@ fn check_invalid(ids: &[(&str, Colouring)]) {
         );
         let img = image(&h, &s);
         for (i, what) in (0u32..).zip(NON_FINITE) {
-            // That run's `L_z` is finite, so the L_z view's drift is a value, shown as it is (R-79).
-            if *id == LZ && i == 3 {
-                continue;
-            }
             if let Some(off) = off_hatch(&s, &img, i) {
                 failures.push(format!("`{id}`, {what}: {off}"));
             }
@@ -622,12 +621,17 @@ negative_control!(
     qa_drift_views_draw_a_non_finite_operand_invalid,
     "a view with no hatch at all",
     expected = "not invalid",
-    check_invalid(&[(
-        LZ,
-        broken(
+    check_invalid(&[(LZ, {
+        // Its drift a constant and its failed-sample gate gone, so no operand reaches a hatch.
+        let Colouring::Probe(src, extra) = broken(
             LZ,
             "let x = ctx.sample.Lz_drift;",
-            "let x = 0.0 * ctx.sample.Lz_0 + 1.0;"
-        ),
-    )])
+            "let x = 0.0 * ctx.sample.Lz_0 + 1.0;",
+        ) else {
+            unreachable!("broken gives a probe")
+        };
+        let gate = "if (sd_is_failed(ctx.sample.state)) { return debug_invalid(ctx.frag_xy); }";
+        assert!(src.contains(gate), "`{LZ}` has no failed-sample gate");
+        Colouring::Probe(src.replace(gate, ""), extra)
+    })])
 );

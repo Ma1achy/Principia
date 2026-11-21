@@ -18,6 +18,7 @@ pub mod benettin;
 pub mod cadence;
 pub mod carried;
 pub mod closure;
+pub mod failure;
 pub mod latch;
 pub mod monitor;
 #[cfg(not(target_arch = "spirv"))]

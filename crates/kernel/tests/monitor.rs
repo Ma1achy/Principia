@@ -956,8 +956,7 @@ fn overflowing() -> Fixture {
     }
 }
 
-/// Two coincident bodies from rest: the force is NaN at the first kick, so the state goes NaN, with no terminal detector
-/// yet to stop the march (TASK-M3-09).
+/// Two coincident bodies from rest: a zero separation, so `E₀` is `−∞` on a finite state.
 fn coincident() -> Fixture {
     Fixture {
         name: "coincident bodies",
@@ -989,22 +988,40 @@ fn check_failed(name: &str, out: &SimStateBase, detail: u32) {
     );
 }
 
+/// A run whose `E₀` is not finite fails before its first step (`kernel::driver::failure`): the cadence records the
+/// failure at step ordinal 0 with detail 2, a non-finite derived quantity on a finite state, no step is taken, and the
+/// stored `E_0` is its failed-state value 0.0, never the `±∞` that failed it. Before the failure path ended the march
+/// at its first failure, the march ran on, so coincident bodies read 0 on the NaN state it ended in.
+fn check_failed_at_ic(name: &str, fixture: &Fixture) {
+    use kernel::detect::label::Fired;
+    use kernel::payload::tm_t_end_step;
+    let (out, cadence) = integrate_fixture::<Kdk, f32>(fixture);
+    assert!(
+        !cadence.monitor_state().e_0().is_finite(),
+        "{name}: the fixture's E₀ is finite"
+    );
+    assert_eq!(
+        kernel::driver::advance::Cadence::failure(&cadence),
+        Fired::at(0, 2),
+        "{name}: the cadence's record"
+    );
+    assert_eq!(
+        (tm_t_end_step(out.times), out.total_substeps),
+        (0, 0),
+        "{name}: a step was taken"
+    );
+    assert!(
+        out.r.iter().chain(&out.p).flatten().all(|x| x.is_finite()),
+        "{name}: the stored state"
+    );
+    assert_eq!(out.E_0.to_bits(), 0, "{name}: the stored E_0");
+    check_failed(name, &out, 2);
+}
+
 #[test]
 fn invariant_monitor_marks_a_non_finite_run_failed() {
-    let (out, cadence) = integrate_fixture::<Kdk, f32>(&overflowing());
-    assert!(
-        out.r.iter().flatten().all(|x| x.is_finite()),
-        "the state failed too"
-    );
-    assert!(
-        cadence.monitor_state().de_max().is_nan(),
-        "the live latch holds the NaN"
-    );
-    assert!(cadence.monitor_state().non_finite());
-    check_failed("a NaN energy on a finite state", &out, 2);
-    let (out, cadence) = integrate_fixture::<Kdk, f32>(&coincident());
-    assert!(cadence.monitor_state().non_finite());
-    check_failed("coincident bodies", &out, 0);
+    check_failed_at_ic("a non-finite energy on a finite state", &overflowing());
+    check_failed_at_ic("coincident bodies", &coincident());
     // A healthy run keeps its measured latches and its label.
     let (out, cadence) = integrate_fixture::<Kdk, f32>(&figure_eight());
     assert!(!cadence.monitor_state().non_finite());
@@ -1018,11 +1035,21 @@ fn invariant_monitor_marks_a_non_finite_run_failed() {
     );
 }
 
-/// `monitored`'s detail for a run whose latch failed, at each of `r`'s and `p`'s components taken non-finite in turn:
-/// 0 for a NaN, either sign, even beside a `±∞`; 1 for a `±∞`; 2 for a finite state (payload §2).
-fn check_detail(mark: fn(SimStateBase, &WrapperCadence<f32>) -> SimStateBase) {
-    let (out, cadence) = integrate_fixture::<Kdk, f32>(&overflowing());
-    let detail = |o: SimStateBase| kernel::payload::sd_detail(mark(o, &cadence).packed_a);
+/// The cause the cadence's per-step detection reads on a state (`kernel::driver::failure::Detector::state`), at each
+/// of `r`'s and `p`'s components taken non-finite in turn: 0 for a NaN, either sign, even beside a `±∞`; 1 for a `±∞`;
+/// and on a finite state none, which a failure of a quantity derived from it makes 2 (payload §2).
+fn cadence_cause(o: &SimStateBase) -> u32 {
+    let mut d = kernel::driver::failure::Detector::new();
+    if d.state(1, &o.r, &o.p) {
+        d.failure().detail
+    } else {
+        2
+    }
+}
+
+fn check_detail(read: fn(&SimStateBase) -> u32) {
+    let (out, _) = integrate_fixture::<Kdk, f32>(&overflowing());
+    let detail = |o: SimStateBase| read(&o);
     assert_eq!(detail(out), 2, "a finite state");
     let neg_nan = f32::from_bits(0xFFC0_0000);
     for (i, j) in [(0, 0), (2, 1)] {
@@ -1048,17 +1075,18 @@ fn check_detail(mark: fn(SimStateBase, &WrapperCadence<f32>) -> SimStateBase) {
 
 #[test]
 fn invariant_monitor_failed_detail_reads_nan_and_inf() {
-    check_detail(kernel::driver::wrapper::monitored);
+    check_detail(cadence_cause);
 }
 
 negative_control!(
     invariant_monitor_failed_detail_reads_nan_and_inf,
     "a run marked with no detail of its own",
     expected = "+inf in r[0][0]",
-    check_detail(|mut o, c| {
-        o.r = [[0.0; 2]; 3];
-        o.p = [[0.0; 2]; 3];
-        kernel::driver::wrapper::monitored(o, c)
+    check_detail(|o| {
+        let mut blank = *o;
+        blank.r = [[0.0; 2]; 3];
+        blank.p = [[0.0; 2]; 3];
+        cadence_cause(&blank)
     })
 );
 

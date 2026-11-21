@@ -38,6 +38,7 @@
 
 use super::carried::Carried;
 use super::substep::{d2_quantised, Quantise};
+use crate::detect::label::Fired;
 use crate::generated::constants::{U32_RANGE_END_F32, U32_TOP_F32, U32_TOP_F64};
 use crate::occupant::{Geom, State, StepReal, Stepper};
 use crate::payload::{PayloadReal, SimStateBaseOf};
@@ -186,6 +187,20 @@ pub trait Cadence<R> {
     /// writes nothing ignores it; one that wraps another passes it on.
     #[inline]
     fn latched(&mut self) {}
+
+    /// The occupant's own march went non-finite and ended (integrator_contract Part 2b, step 7: a state the cadence was
+    /// never handed), with `sim_failed`'s `detail` by cause (`super::failure::regularised`). A cadence that records
+    /// failures takes it as its first if it has none ([`Cadence::failure`]); one that records none ignores it; one that
+    /// wraps another passes it on.
+    #[inline]
+    fn non_finite(&mut self, _detail: u32) {}
+
+    /// The first failure this cadence recorded, its own per-step detection's or one [`Cadence::non_finite`] reported
+    /// (`super::failure`); [`Fired::none`] for a cadence that records none. One that wraps another passes it on.
+    #[inline]
+    fn failure(&self) -> Fired {
+        Fired::none()
+    }
 
     /// The stored state `out` of the finished run, with what this cadence kept written into it. A cadence that keeps
     /// nothing leaves it; the wrapper's writes its monitored fields ([`super::wrapper::monitored`]).
