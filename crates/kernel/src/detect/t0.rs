@@ -21,10 +21,11 @@
 
 use crate::decode::{Degenerate, Ic};
 use crate::detect::collision::{classify, CollisionRadius, Separations};
+use crate::detect::label::Label;
 use crate::driver::substep::Quantise;
 use crate::payload::{
-    set_detail, set_state, DETAIL_DECODE_FAILED_NON_FINITE_DECODE_OUTPUT, STATE_COLLISION,
-    STATE_DECODE_FAILED, STATE_RUNNING,
+    DETAIL_DECODE_FAILED_NON_FINITE_DECODE_OUTPUT, STATE_COLLISION, STATE_DECODE_FAILED,
+    STATE_RUNNING,
 };
 use crate::real::IeeeBits;
 
@@ -48,7 +49,11 @@ impl T0 {
     /// `packed_a` with `state` and `detail` written through the generated descriptor setters, every other bit kept.
     #[inline]
     pub fn packed_a(&self, packed_a: u32) -> u32 {
-        set_detail(set_state(packed_a, self.state), self.detail)
+        Label {
+            state: self.state,
+            detail: self.detail,
+        }
+        .write(packed_a)
     }
 }
 

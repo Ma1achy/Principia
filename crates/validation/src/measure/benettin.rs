@@ -156,6 +156,10 @@ impl<R: WrapperReal> Cadence<R> for PastEscape<R> {
     {
         self.0.bucket_d2(r)
     }
+
+    fn clock(&mut self, completed: u32) {
+        self.0.clock(completed);
+    }
 }
 
 /// One FTLE measurement: `λ_T`, `S`, the completed macro-steps and the shadow's final separation.

@@ -1503,9 +1503,36 @@ negative_control!(
     check_lagged(true)
 );
 
+/// A fresh wrapper cadence that drops the re-boot hook ([`Cadence::resume`]): the register is the shape at the re-boot.
+struct NoReload(WrapperCadence<f64>);
+
+impl Cadence<f64> for NoReload {
+    fn after_step(&mut self, state: &mut State<f64>, geom: &mut Geom<f64>) {
+        self.0.after_step(state, geom);
+    }
+
+    fn done(&self) -> bool {
+        self.0.done()
+    }
+
+    fn sample(&mut self, state: &State<f64>, index: u32, quantum: f64) {
+        self.0.sample(state, index, quantum);
+    }
+
+    fn clock(&mut self, completed: u32) {
+        self.0.clock(completed);
+    }
+
+    fn finish(&self, out: SimStateBaseOf<f64>) -> SimStateBaseOf<f64> {
+        self.0.finish(out)
+    }
+}
+
 /// A KDK march of the hyperbolic ejection cut mid-window, at `t = 120.35`, and re-booted from its stored `SimState`
-/// with a fresh cadence, the register reloaded or not (`reload`), run on past the mark at `t = 120.4`: it goes on as
-/// the uncut march, which has not fired there (its chord is 0.558/d, about `4·10⁻³`), to the same state and register.
+/// with a fresh cadence, the register reloaded by the wrapper's re-boot hook or not (`reload`), run on past the mark at
+/// `t = 120.4`: it goes on as the uncut march, which has not fired there (its chord is 0.558/d, about `4·10⁻³`), to
+/// the same state and register. The caller does not reload the register: the wrapper hands the stored state to the
+/// cadence ([`Cadence::resume`]).
 fn check_reboot(reload: bool) {
     let s = state("hyperbolic_ejection");
     let ic = ic_of(&s);
@@ -1521,18 +1548,28 @@ fn check_reboot(reload: bool) {
     // The stored register is the mark's at `t = 120`, not the cut state's shape: the cut is mid-window.
     let held = [stored._nhat_lag_0, stored._nhat_lag_1, stored._nhat_lag_2];
     assert!(chord(held, shape(stored.r, s.m)) > 1e-4);
-    let mut cadence = WrapperCadence::new(&s.m, &stored.r, &stored.p);
-    if reload {
-        cadence.resume_escape(&stored);
-    }
-    let out = integrate_resumed_with::<Kdk, f64, _>(
-        &ic,
-        &key(dt, end, 1),
-        &mut cadence,
-        &stored,
-        end - cut,
-    );
-    let out = cadence.finish(out);
+    let fresh = WrapperCadence::new(&s.m, &stored.r, &stored.p);
+    let out = if reload {
+        let mut cadence = fresh;
+        let out = integrate_resumed_with::<Kdk, f64, _>(
+            &ic,
+            &key(dt, end, 1),
+            &mut cadence,
+            &stored,
+            end - cut,
+        );
+        cadence.finish(out)
+    } else {
+        let mut cadence = NoReload(fresh);
+        let out = integrate_resumed_with::<Kdk, f64, _>(
+            &ic,
+            &key(dt, end, 1),
+            &mut cadence,
+            &stored,
+            end - cut,
+        );
+        cadence.finish(out)
+    };
     assert!(
         sd_state(out.packed_a) != STATE_ESCAPE && sd_state(out.packed_a) != STATE_RUNNING,
         "the re-booted march fired at step {} where the uncut march did not: its window was not the uncut one's",
@@ -1564,7 +1601,7 @@ fn lagged_nhat_reboot() {
 
 negative_control!(
     lagged_nhat_reboot,
-    "a re-boot that does not reload the register, whose first window is 0.05 long",
+    "a re-boot whose cadence drops the reload, its first window 0.05 long",
     expected = "its window was not the uncut one's",
     check_reboot(false)
 );
