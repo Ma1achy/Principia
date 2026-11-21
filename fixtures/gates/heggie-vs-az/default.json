@@ -1,0 +1,5 @@
+{
+  "description": "The default occupant is Heggie under Eq. 22 at n = 3/2, x RK4",
+  "check": "default",
+  "expected": "pass"
+}

@@ -1,0 +1,9 @@
+{
+  "description": "Aarseth-Zare on a crop of near_field: the protocol doubles every IC's re-registration count, holds steps p50 within 6% and sees the drift field move",
+  "check": "doubles",
+  "case": "near_field",
+  "raster": 64,
+  "crop": [30, 30, 3],
+  "factor": 2,
+  "expected": "pass"
+}

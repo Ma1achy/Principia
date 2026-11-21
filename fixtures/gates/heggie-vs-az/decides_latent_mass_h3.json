@@ -1,0 +1,16 @@
+{
+  "description": "Aarseth-Zare against the default on latent_mass_h3 at 8x8, a case the reference resolves (on near_field, and on a 3x3 crop of latent_mass_h3 at 64x64, every IC was unresolved: both arms err ~1e-9, under ten times the reference's own uncertainty; at 8x8 the matrix run decided 24 of 64): the per-IC judgement decides at least one IC",
+  "check": "decides",
+  "case": "latent_mass_h3",
+  "raster": 8,
+  "crop": [
+    0,
+    0,
+    8
+  ],
+  "occupants": [
+    "aarseth-zare",
+    "heggie"
+  ],
+  "expected": "pass"
+}

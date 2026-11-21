@@ -492,10 +492,32 @@ fn check_half(
     );
 }
 
+/// Checks that the drift half `h` (bits `bits` of `member`, a `log16` pair) of sample `i`, read by `read`, is finite:
+/// a non-finite value there is one only d_min's unset +inf may be. The check reads with the kernel's `log16_to_f32`;
+/// the controls pass another reader.
+fn check_drift_half(i: u32, member: &str, bits: &str, h: u16, read: fn(u16) -> f32) {
+    let v = read(h);
+    assert!(
+        v.is_finite(),
+        "sample {i}: {member} {bits} holds the non-finite {h:#06x} ({v}), which only d_min's unset +inf may"
+    );
+}
+
+/// Checks [`check_drift_half`] on every one of the 2^16 patterns a drift half can store, read by `read`.
+///
+/// Every `log16` code decodes to a finite value (payload §2), so no stored bits put a non-finite value in a drift
+/// half and the stored-value check cannot fail there, whatever a writer stores. This checks that construction over
+/// the whole code space; it fails the day a code decodes non-finite.
+fn check_every_drift_code(read: fn(u16) -> f32) {
+    for h in 0..=u16::MAX {
+        check_drift_half(0, "packed_b", "bits 0–15", h, read);
+    }
+}
+
 /// Checks every stored value of `set`'s first `n` samples, member by member by the ledger's layout of `SimStateFTLE`
-/// and `ICDescriptor`: every f32 is not NaN and finite; `packed_a`'s top half, `d_min`, and both halves of `packed_b`,
-/// `dE_max` and `dLz_max`, are f16s held to [`check_half`]; the other words are integers. A member the check has no
-/// rule for fails it, so a new member is not passed unread.
+/// and `ICDescriptor`: every f32 is not NaN and finite; `packed_a`'s top half, `d_min`, is an f16 held to
+/// [`check_half`]; both halves of `packed_b` and `dE_reg` are `log16` codes held to [`check_drift_half`]; the other
+/// words are integers. A member the check has no rule for fails it, so a new member is not passed unread.
 fn check_stored(set: &Synthetic, n: u32) {
     let bytes = set.bytes();
     let structs = ledger::payload::structs();
@@ -530,16 +552,11 @@ fn check_stored(set: &Synthetic, n: u32) {
                             "packed_a" => {
                                 check_half(i, m.name, "bits 16–31", hi, true, failed, t_end_step)
                             }
-                            // The drift latches, `log16` since R-632 (payload §2): every code is a finite value, and
-                            // NaN is stored as 0.0, so a stored half reads finite.
+                            // The drift latches, `log16` (payload §2): every code is a finite value, and NaN is
+                            // stored as 0.0, so a stored half reads finite.
                             "packed_b" | "dE_reg" => {
                                 for (bits, h) in [("bits 0–15", lo), ("bits 16–31", hi)] {
-                                    let v = log16_to_f32(h);
-                                    assert!(
-                                        v.is_finite(),
-                                        "sample {i}: {} {bits} holds the non-finite {v}",
-                                        m.name
-                                    );
+                                    check_drift_half(i, m.name, bits, h, log16_to_f32);
                                 }
                             }
                             // The budget word: a flag and two counts, its reserved bit 31 zero (payload §2; R-603).
@@ -615,16 +632,15 @@ negative_control!(
 fn stored_values_no_nan_misplaced_inf() {
     // A failed sample's latches: `dE_max` and `dLz_max` 0.0, `d_min` unset.
     check_stored(&filled("forced_failure"), 8);
+    check_every_drift_code(log16_to_f32);
 }
 
 negative_control!(
     stored_values_no_nan_misplaced_inf,
-    "f16 +inf in dE_max's half, not d_min's, fails the check",
+    "dE_max's half read as an f16 (as before log16), where 0x7C00 is +inf in a half that is not d_min's",
     expected = "which only d_min's unset +inf may",
     {
-        let mut set = filled("forced_failure");
-        set.sample(0).packed_b(0x7c00);
-        check_stored(&set, 8);
+        check_every_drift_code(f16_bits_to_f32);
     }
 );
 
