@@ -1,0 +1,6 @@
+{
+  "kind": "independence",
+  "description": "control: the reference's source with a kernel import added must fail the scan",
+  "inject": "use kernel::physics as _;",
+  "expected": "fail"
+}

@@ -197,6 +197,90 @@ not be theirs: the march's least separation is `d_min = 1.85·10⁻⁴` (measure
 that encounter as a collision. Every benchmark run carries the `r_coll` it ran at in its provenance
 (`validation::ground_truth::Provenance`).
 
+## The independent convergence reference: its protocol (TASK-M3-25)
+
+The Brutus-style reference of "The correctness factoring" above is `validation::reference::brutus`. This section is its
+definition: the ladder, the stop rule, when it runs and how a harness calls it.
+
+**What it integrates.** Three point masses in the plane, Newton's law with any `G`, Cartesian positions and velocities
+in the frame the start gives: no regularisation, no softening, no change of time. The method is Bulirsch–Stoer: Gragg's
+modified midpoint over a step `H` in `n = 2, 4, 6, …` substeps, then Neville's extrapolation to `h → 0` in `h²`. A step
+is accepted at the first column `k ≥ 2` whose error estimate `‖T_kk − T_k,k−1‖` is within the rung's tolerance. The
+error is measured as `max_i max(|Δrᵢ|/R, |Δvᵢ|/V)`, where `R` is the largest distance of a body from the centre of mass
+and `V` the largest speed relative to it, floored at `√(GM/R)`. The next step is chosen by the least work per unit time
+over the columns tried. Each output time is landed on exactly.
+
+**Independence.** The arithmetic is `dashu-float` (MIT or Apache-2.0), binary floats rounded to nearest-even at the
+rung's precision, and the kernel does not depend on it. The source uses `std` and `dashu_float` only. The gate's
+independence input checks both: a scan of the source for any other path, and `cargo tree` on `kernel`'s and `engine`'s
+normal and build dependencies. Each check has a control: a kernel import injected into the source, and a crate the
+kernel does use (`libm`) named as forbidden.
+
+**The ladder.** A rung of `d` digits has:
+- tolerance `ε = 10⁻ᵈ`;
+- working precision `⌈d·log₂10⌉ + 64` bits;
+- `clamp(4 + d/2, 8, 24)` extrapolation columns, so the order rises with the digits.
+
+The rungs run `d₀, d₀ + Δ, d₀ + 2Δ, …`, up to a set number of rungs. The default is `d₀ = 12`, `Δ = 4`, up to ten
+rungs. A rung whose precision cannot resolve its tolerance (fewer than `⌈d·log₂10⌉ + 8` bits) is refused, not run.
+
+**The stop rule.** After each rung past the first, the disagreement `δ` with the rung before is measured at every output
+time, at full precision, in the error's scaled measure. The ladder stops at the first `δ ≤ 10⁻ᵖ`, and the finer rung of
+the two is the result. There is no result when:
+- the ladder is spent without agreement;
+- a rung fails (collision, step underflow, budget, or an unresolvable precision);
+- a rung is no finer than the one before;
+- a rung's march took exactly the steps and force evaluations of the rung before. Agreement then shows only that it was
+  the same run.
+
+A refused ladder never returns its last rung in place of a result.
+
+**Choosing `p`.** The consumer sets the agreement digits `p` and states them: at least two more than the digits it then
+reads from the result. The gate uses `p = 20`, below f64's rounding, so a ladder held at 53 bits cannot pass. The Burrau
+ejection test uses `p = 6`: it reads a two-body energy's sign on a 0.5 grid.
+
+**When it runs.** Never per pixel, never in the app. It runs:
+- in CI, the gate `reference-convergence` (seconds): the Lagrange triangle over half a turn and the figure-eight over
+  its period, each converged and checked against a truth that does not come from convergence, with the controls;
+- in the test suite (`crates/validation/tests/brutus.rs`, seconds): RK45 and the kernel's march at f64 measured against
+  it at the figure-eight's period;
+- on demand, as the reference for the integration-floor probe and Burrau's ground truth. The converged Burrau run to 100
+  of Szebehely & Peters' units is an ignored test, `brutus_burrau` (84 s in a debug build).
+
+A converged result holds for its start, its output times and its `p` alone. Convergence on one start says nothing of
+another's, so each start runs its own ladder.
+
+**Harness interface.**
+
+```
+brutus::converge(start: &Start, times: &[f64], ladder: &Ladder) -> Result<Converged, NotConverged>
+Start { g, m: [f64; 3], r: [[f64; 2]; 3], w: [[f64; 2]; 3], motion: Velocity | Momentum }
+Converged::accepted().outputs[k] = { t, r, v, energy_error, lz_error }   // at times[k], rounded to f64
+```
+
+Every `f64` of the start is taken as the exact binary number it is. A kernel state enters through
+`brutus_gate::from_ic`, which keeps its momenta and divides by the mass at the rung's precision, so a comparison with the
+kernel's march starts from the kernel's own bits. A published start enters through `brutus_gate::from_published`, with
+its velocities and its own `G`. A comparison with a regularised march is read at the sync boundary where the march
+stops (`⌊t/Δ_sync⌋·Δ_sync`), not at the time asked for. `brutus::run` runs one rung, for a consumer that wants the
+ladder's table.
+
+**Measured, at the first run** (TASK-M3-25's PR gives the output):
+
+| case | accepted rung | `δ` with the rung before | truth |
+|---|---|---|---|
+| Lagrange, half a turn | 24 digits | `2.7·10⁻²²` | `3.2·10⁻¹⁶` from the rigid rotation, the closed form's own f64 rounding |
+| figure-eight, one period | 28 digits | `1.6·10⁻²³` | closure `4.102·10⁻⁸`, the published digits' |
+
+At the figure-eight's period, measured against the reference:
+- RK45 (`rtol = 10⁻¹³`): `phys` `1.8·10⁻¹²`;
+- Yoshida-4's march: `3.4·10⁻¹²`;
+- Heggie × RK4's march, at its boundary 14.75: `2.3·10⁻¹³`.
+
+Burrau to 100 of Szebehely & Peters' units at `p = 6` converges at the 24-digit rung, `δ = 3.1·10⁻⁷` with the
+20-digit rung (the 12- and 16-digit rungs disagree by `4.6`, chaos at work). On it the lightest body is unbound from
+60.0 on, in the window 60–65, and has escaped at 100.
+
 ## Open sub-questions (settle at implementation)
 
 *Settled by TASK-M3-24 (the sections above):* the analytic ICs (Lagrange at masses (0.2, 0.3, 0.5); Euler, by Path B);

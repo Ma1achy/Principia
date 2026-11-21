@@ -25,5 +25,16 @@ debug = "line-tables-only"
 [profile.dev.package."*"]
 debug = false
 
+# The independent convergence reference's arbitrary-precision arithmetic (validation's `reference::brutus`) runs six
+# times slower unoptimised; optimised, its gate's runs stay at seconds in a debug build.
+[profile.dev.package.dashu-base]
+opt-level = 3
+
+[profile.dev.package.dashu-int]
+opt-level = 3
+
+[profile.dev.package.dashu-float]
+opt-level = 3
+
 [profile.test]
 debug = "line-tables-only"
