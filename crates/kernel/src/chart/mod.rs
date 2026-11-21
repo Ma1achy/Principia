@@ -76,6 +76,8 @@ pub mod construction;
 pub mod energy;
 pub mod invariant;
 pub mod latent;
+#[cfg(not(target_arch = "spirv"))]
+pub mod lock_solve;
 pub mod mass_simplex;
 pub mod mixed;
 #[cfg(not(target_arch = "spirv"))]
