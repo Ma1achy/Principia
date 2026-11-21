@@ -17,7 +17,8 @@
 //! that suite); chose the kernel's test files whose tests are those kinds: the substep law, the two detectors and the
 //! label precedence (L), the steppers' order, coefficients and one step, and the COM projection and invariant monitor
 //! (N). §8's two S kinds, the Burrau smoke and the divergence structure (dd_integrator §5 test 12; parity §2 Tier S),
-//! have no test in the kernel yet, which [`check`] reports by kind, never as a pass. The purity test,
+//! have no test in the kernel yet, which [`check`] reports by kind, never as a pass: the Burrau smoke runs in the
+//! validation crate (`crates/validation/tests/ground_truth.rs`, `entry_paths_burrau`), outside this suite. The purity test,
 //! `tests/payload_purity.rs`, is dd §5's test 13, which §8's row does not index; its own notes give its tier.
 //!
 //! Parity tier of this file: none; it reads sources, no backend.
