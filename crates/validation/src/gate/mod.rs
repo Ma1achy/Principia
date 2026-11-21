@@ -31,6 +31,7 @@ pub mod figure_eight;
 pub mod lagrange;
 pub mod order_scaling;
 pub mod report;
+pub mod reregistration;
 pub mod symplectic;
 
 use std::path::{Path, PathBuf};
@@ -151,6 +152,9 @@ pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[
     &DeltaDepGate,
     &PairTableGate,
     &ablation::StepLimitAblationGate,
+    &reregistration::HeggieVsAzGate,
+    &reregistration::ReregistrationDoublingGate,
+    &reregistration::LogHFalsificationGate,
 ];
 
 /// `gate.json`'s `measurement`: what it is measured under, in place of a threshold.

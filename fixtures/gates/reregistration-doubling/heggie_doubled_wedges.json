@@ -1,0 +1,9 @@
+{
+  "description": "config_stability under the default occupant at the doubled count, over the step-limit ablation's wedge crop: no non-finite and no dense damaged pixel",
+  "check": "wedges",
+  "occupants": ["heggie"],
+  "raster": 64,
+  "crop": [48, 29, 16],
+  "factor": 2,
+  "expected": "pass"
+}

@@ -1,0 +1,9 @@
+{
+  "description": "The subject control: the null (factor 1, the base arm against itself) must fail the doubling check",
+  "check": "doubles",
+  "case": "near_field",
+  "raster": 64,
+  "crop": [30, 30, 3],
+  "factor": 1,
+  "expected": "fail"
+}

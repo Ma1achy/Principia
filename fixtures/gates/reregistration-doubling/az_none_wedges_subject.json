@@ -1,0 +1,15 @@
+{
+  "description": "The subject control: Aarseth-Zare with the step-limit ablation's switches all off, at the base count over the same crop, where the ablation sees its wedge; this census must see it too (at the doubled count it does not: damaged 4, dense 0, a measurement reported, not a control)",
+  "check": "wedges",
+  "occupants": [
+    "aarseth-zare-none"
+  ],
+  "raster": 64,
+  "crop": [
+    48,
+    29,
+    16
+  ],
+  "factor": 1,
+  "expected": "fail"
+}
