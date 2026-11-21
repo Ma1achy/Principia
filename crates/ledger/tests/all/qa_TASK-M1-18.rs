@@ -287,7 +287,7 @@ enum Stand {
 /// (R-173, R-427); and the closure's departure threshold `delta_dep`, proposed by TASK-M3-11 from its measured gap and
 /// provisional until the M3 gate, citing REQ-VAL-055 (R-37, R-427); and the sync quantum `delta_sync`, provisional until
 /// the M3 gate, citing REQ-INT-080, its calibration (TASK-M3-40).
-const TABLE: [(&str, Stand); 47] = [
+const TABLE: [(&str, Stand); 48] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -319,6 +319,10 @@ const TABLE: [(&str, Stand); 47] = [
     (
         "burrau_theta_lz_fraction",
         Stand::Until("M2", "REQ-CHART-046"),
+    ),
+    (
+        "burrau_theta_lz_gamma_k",
+        Stand::Until("M2", "REQ-CHART-141"),
     ),
     ("step_reversal_tol", Stand::Until("M3", "REQ-VAL-191")),
     ("step_reversal_edge_f64", Stand::Until("M3", "REQ-VAL-191")),
