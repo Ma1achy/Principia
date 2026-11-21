@@ -1,7 +1,8 @@
 //! QA tests for TASK-M0-13, written from the requirements, not from the implementation: the checked-in generated
 //! WGSL (`crates/render/frag/generated/payload_unpack.wgsl`), parsed with naga, against the corpus's own numbers.
 //! - REQ-PAY-091 (payload §1; dd_generation_root §3.6; R-86, R-343): `SimStateFTLE` and `SimStateBase` have payload
-//!   §1's members in its order, at the offsets its sizes give (168 B and 120 B, aligned to 8, with the budget word and
+//!   §1's members in its order, at the offsets its sizes give (176 B and 128 B with the re-boot's two u32s last, TASK-M3-21;
+//!   168 B and 120 B before them, aligned to 8, with the budget word and
 //!   the regularised drift, TASK-M3-41; 160 B and 112 B before them, with the collision
 //!   floor's `coll_floor_bits: u32`, R-973, then the escape rule's lagged n̂ register, `_nhat_lag_0..2: f32`, last;
 //!   152 B and 104 B before the register, which took the place of 4 B of padding; 144 B and 96 B before the floor),
@@ -77,7 +78,7 @@ fn ty_name(m: &Module, h: naga::Handle<naga::Type>) -> String {
 const V2X3: &str = "array<vec2<f32>, 3>";
 
 /// Payload §1's `SimStateFTLE`, member by member: name, WGSL type, byte size.
-const FTLE: [(&str, &str, u32); 22] = [
+const FTLE: [(&str, &str, u32); 24] = [
     ("r", V2X3, 24),
     ("p", V2X3, 24),
     ("r_sh", V2X3, 24),
@@ -104,6 +105,9 @@ const FTLE: [(&str, &str, u32); 22] = [
     ("_nhat_lag_0", "f32", 4),
     ("_nhat_lag_1", "f32", 4),
     ("_nhat_lag_2", "f32", 4),
+    // the re-boot's exact `d_min` latch and its march bits (payload §1, "Payload purity"; TASK-M3-21).
+    ("_dmin_d2", "u32", 4),
+    ("_march_bits", "u32", 4),
 ];
 
 /// `(name, offset, type)` for each member of `fields` laid end to end from 0.
@@ -152,8 +156,8 @@ fn check_simstate(src: &str) {
         .filter(|(n, _, _)| *n != "r_sh" && *n != "p_sh")
         .collect();
     for (name, fields, size) in [
-        ("SimStateFTLE", FTLE.to_vec(), 168),
-        ("SimStateBase", base, 120),
+        ("SimStateFTLE", FTLE.to_vec(), 176),
+        ("SimStateBase", base, 128),
     ] {
         let (got, span, align) = wgsl_struct(src, name);
         let want = packed(&fields);
@@ -201,7 +205,7 @@ fn qa_wgsl_simstate_base_drops_only_the_shadow() {
 
 negative_control!(
     qa_wgsl_simstate_base_drops_only_the_shadow,
-    "a SimStateBase that keeps the shadow is 168 B, not 120",
+    "a SimStateBase that keeps the shadow is 176 B, not 128",
     expected = "`SimStateBase` is not payload §1's layout",
     check_simstate(&wgsl().replacen(
         "struct SimStateBase {\n    r: array<vec2<f32>, 3>,\n    p: array<vec2<f32>, 3>,",

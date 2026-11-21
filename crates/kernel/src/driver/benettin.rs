@@ -559,6 +559,8 @@ pub fn ftle_of<R: WrapperReal>(
         _nhat_lag_0,
         _nhat_lag_1,
         _nhat_lag_2,
+        _dmin_d2,
+        _march_bits,
         _tail: _,
     } = out;
     SimStateFTLEOf {
@@ -585,6 +587,8 @@ pub fn ftle_of<R: WrapperReal>(
         _nhat_lag_0,
         _nhat_lag_1,
         _nhat_lag_2,
+        _dmin_d2,
+        _march_bits,
         _tail: Default::default(),
     }
 }

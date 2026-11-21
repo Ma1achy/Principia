@@ -18,6 +18,7 @@ pub mod libm_pin;
 pub mod lint_compute;
 pub mod lint_constants;
 pub mod lint_no_alloc;
+pub mod lint_parity_tiers;
 pub mod lint_vocab;
 pub mod lint_wgsl;
 pub mod screenshot;

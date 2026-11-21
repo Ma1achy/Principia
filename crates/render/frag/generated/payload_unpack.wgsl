@@ -3,10 +3,10 @@
 // f64, f16 pairs through core `unpack2x16float` (no `enable f16`).
 
 // The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger (R-36, R-63; the Rust
-// PAYLOAD_SCHEMA_VERSION, 0x76e70670b6f511f9). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
-const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0xb6f511f9u, 0x76e70670u);
+// PAYLOAD_SCHEMA_VERSION, 0xf8f75db2f4abdcb1). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
+const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0xf4abdcb1u, 0xf8f75db2u);
 
-// `SimStateFTLE`: 168 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
+// `SimStateFTLE`: 176 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
 struct SimStateFTLE {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -30,9 +30,11 @@ struct SimStateFTLE {
     _nhat_lag_0: f32,
     _nhat_lag_1: f32,
     _nhat_lag_2: f32,
+    _dmin_d2: u32,
+    _march_bits: u32,
 }
 
-// `SimStateBase`: 120 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
+// `SimStateBase`: 128 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
 struct SimStateBase {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -54,6 +56,8 @@ struct SimStateBase {
     _nhat_lag_0: f32,
     _nhat_lag_1: f32,
     _nhat_lag_2: f32,
+    _dmin_d2: u32,
+    _march_bits: u32,
 }
 
 // `ICDescriptor`: 64 B, aligned to 4 (payload §1; dd_generation_root §3.3a, §3.6).

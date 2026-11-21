@@ -33,6 +33,8 @@
 //!   criterion on every fixture at each edge, at every dt of the ladder in the domain and across it at 16 points per
 //!   decade, at f64 and f32, so the domain is one where test 3 can fail; its control is the f32 edge taken down to
 //!   `dt/τ = 0.2`, where RK4 reads below the criterion (REQ-VAL-191).
+//!
+//! parity-tier: N (one-step)
 
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
@@ -328,6 +330,7 @@ fn check_table(table: &[Row]) {
     }
 }
 
+// parity-tier: - (out of parity: the capability profile transcribed from integrator_contract Part 2, a rule checked by inspection, parity §2 Tier L part 1)
 #[test]
 fn occupant_profiles_table() {
     check_table(&table());
@@ -356,6 +359,7 @@ fn check_run_reversible(table: &[Row]) {
     }
 }
 
+// parity-tier: - (out of parity: the capability profile transcribed from integrator_contract Part 2, a rule checked by inspection, parity §2 Tier L part 1)
 #[test]
 fn occupant_profiles_run_reversible() {
     check_run_reversible(&table());
@@ -409,6 +413,7 @@ fn built() -> Vec<Selection> {
         .collect()
 }
 
+// parity-tier: - (out of parity: the capability profile transcribed from integrator_contract Part 2, a rule checked by inspection, parity §2 Tier L part 1)
 #[test]
 fn occupant_profiles_advertised() {
     check_advertised(&table(), &built());
@@ -444,6 +449,7 @@ fn check_tier_defaults(table: &[Row], default: fn(Tier) -> Occupant) {
     }
 }
 
+// parity-tier: - (out of parity: the capability profile transcribed from integrator_contract Part 2, a rule checked by inspection, parity §2 Tier L part 1)
 #[test]
 fn occupant_profiles_tier_defaults() {
     check_tier_defaults(&table(), default_occupant);
@@ -487,6 +493,7 @@ fn check_euler(production: &[Selection], debug: &[Selection]) {
     );
 }
 
+// parity-tier: - (out of parity: the capability profile transcribed from integrator_contract Part 2, a rule checked by inspection, parity §2 Tier L part 1)
 #[test]
 fn occupant_profiles_euler_debug_only() {
     let production: Vec<Selection> = Occupant::PRODUCTION
@@ -528,6 +535,7 @@ fn check_future(table: &[Row]) {
     }
 }
 
+// parity-tier: - (out of parity: the capability profile transcribed from integrator_contract Part 2, a rule checked by inspection, parity §2 Tier L part 1)
 #[test]
 fn occupant_profiles_az_ttl_not_built() {
     check_future(&table());
@@ -658,6 +666,7 @@ fn check_evals(claimed: fn(Selection) -> CapabilityProfile) {
     }
 }
 
+// parity-tier: - (out of parity: the capability profile transcribed from integrator_contract Part 2, a rule checked by inspection, parity §2 Tier L part 1)
 #[test]
 fn occupant_profiles_force_evals() {
     check_evals(Selection::profile);
@@ -765,6 +774,7 @@ fn check_readers(profiles: &[(&str, CapabilityProfile)]) {
     }
 }
 
+// parity-tier: - (out of parity: the capability profile transcribed from integrator_contract Part 2, a rule checked by inspection, parity §2 Tier L part 1)
 #[test]
 fn capability_profile_readers() {
     check_readers(&profiles(&table()));
@@ -974,6 +984,7 @@ fn check_y4_shipped() {
     }
 }
 
+// parity-tier: - (out of parity: coefficients transcribed from the published digits, checked by inspection and exact arithmetic, no backend compared)
 #[test]
 fn occupant_coefficients_yoshida4() {
     check_y4_shipped();
@@ -1016,6 +1027,7 @@ fn check_y6(w: [f64; 4]) {
     );
 }
 
+// parity-tier: - (out of parity: coefficients transcribed from the published digits, checked by inspection and exact arithmetic, no backend compared)
 #[test]
 fn occupant_coefficients_yoshida6() {
     check_y6([
@@ -1084,6 +1096,7 @@ fn check_sequences<R: P>(y4d: [R; 3], y4c: [R; 4], y6d: [R; 7], y6c: [R; 8]) {
     same(&y6c, kicks(&y6_drift()), "Yoshida-6's kick sequence");
 }
 
+// parity-tier: - (out of parity: coefficients transcribed from the published digits, checked by inspection and exact arithmetic, no backend compared)
 #[test]
 fn occupant_coefficients_sequences() {
     check_sequences::<f64>(
@@ -1138,6 +1151,7 @@ fn check_citation(what: &str, source: &str, extra: &str) {
     }
 }
 
+// parity-tier: - (out of parity: coefficients transcribed from the published digits, checked by inspection and exact arithmetic, no backend compared)
 #[test]
 fn yoshida6_published() {
     check_y6([
@@ -1163,6 +1177,7 @@ negative_control!(
     )
 );
 
+// parity-tier: - (out of parity: coefficients transcribed from the published digits, checked by inspection and exact arithmetic, no backend compared)
 #[test]
 fn yoshida6_published_yoshida4_citation() {
     check_citation(
@@ -1321,6 +1336,7 @@ fn check_floor(
     );
 }
 
+// parity-tier: N (order-scaling)
 #[test]
 fn yoshida_convergence_order_yoshida4() {
     check_order("Yoshida-4", &y4_drift(), &Y4_LADDER, 4.0);
@@ -1510,6 +1526,7 @@ fn check_order_conditions(d: &[f64], bound: f64, six: bool) {
     }
 }
 
+// parity-tier: N (order-scaling)
 #[test]
 fn yoshida_order_conditions_yoshida4_shipped() {
     check_order_conditions(&y4_drift(), Y4_BOUND, false);

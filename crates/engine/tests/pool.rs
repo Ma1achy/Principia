@@ -165,6 +165,8 @@ fn words(s: &SimState64) -> Vec<u64> {
             s.times,
             s.total_substeps,
             s.coll_floor_bits,
+            s._dmin_d2,
+            s._march_bits,
         ]
         .map(u64::from),
     );

@@ -37,6 +37,8 @@
 //! **Domain** (pitfalls §10): these fixtures, at f64, the default occupant's step-control values those of
 //! `tests/heggie_seam.rs` at `Δ_sync = 0.1`, the window 0.4 and `tau` the provisional `10⁻³`. The marches show the
 //! detector's reading of them; none is a measurement of precision, recall or the `tau` gap.
+//!
+//! parity-tier: L (detector labels)
 
 use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
