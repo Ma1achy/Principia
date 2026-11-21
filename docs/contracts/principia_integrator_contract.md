@@ -1426,6 +1426,23 @@ a selector would need a boundary — and *an imposed choice with a boundary is t
 that produced the wedges*. The current position: **expose the choice, report which would have been
 better, never switch silently.** Revisit only with a measurement showing the boundary is stable.
 
+**The "which would have been better" report, defined** (`validation::compare`):
+- **Judging criterion.** Per IC, between two admitted arms (the same stepper, step control and discretisation; only the
+  regularisation differs), each arm's error is the Euclidean distance of its positions at the run's last sync boundary,
+  `⌊T/Δ_sync⌋·Δ_sync`, from an independent reference: the Precision ring's RK45 at f64, `rtol = atol = 1e-13`. Scored on
+  the state, never through a colour ramp (pitfalls §5). The reference's own uncertainty `u` is the distance between that
+  run and one at `1e-12`. With `lo` and `hi` the smaller and larger error: **unresolved** where `hi < 10·u`; otherwise
+  the arm with `lo` **would have been better** where `hi ≥ 10·max(lo, u)`, the factor 10 being the one the
+  Heggie/Aarseth–Zare finding counted by (`err>10`); otherwise a **tie**. An IC where either arm or the reference did not
+  reach that boundary (non-finite, step budget, a reference that cannot pass a collision) is **not judged**, counted
+  apart and never pooled.
+- **Trigger.** On demand only: a comparison run through the harness with two or more arms it admits. Never during a
+  field render, a march or a re-boot, and never on a trajectory's state.
+- **Where it is reported.** In the comparison's report beside each arm's provenance block: per IC each arm's end,
+  steps, re-registrations and error with the reference's uncertainty, and for each pair of arms the tally of the five
+  verdicts with the quantiles of `log₁₀(e_b/e_a)`. Nowhere else: not in the `SimState`, the payload or the field, and
+  nothing reads it back to choose an occupant. The occupant stays the user's choice.
+
 ---
 
 ### Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature
