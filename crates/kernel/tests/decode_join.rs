@@ -9,9 +9,11 @@
 //!   (REQ-DEC-030, R-28).
 //! - `decode_block_independence`: decoder test 2, each block's controls perturbed alone (REQ-DEC-026).
 //! - `decode_ranges`: decoder test 3, the closed ranges at f32 and f64, every registered link (REQ-DEC-027, R-417).
-//! - `golden_ic`: `z = 0` decodes to the golden IC, every value against `fixtures/golden_ic/z0.json` (REQ-VAL-018).
-//! - `chart_landmarks_lagrange_euler`: Lagrange's equilateral triangle at `z = 0`, Euler's collinear line at `β = 0`
-//!   past the underflow threshold and approached at `β → π` from below (REQ-VAL-020, R-417).
+//! - `golden_ic`: `z = 0` decodes to the golden IC, every value against `fixtures/golden_ic/z0.json` (REQ-VAL-018;
+//!   under the offset link `z = 0` is the old golden's `z` converted, R-1020).
+//! - `chart_landmarks_lagrange_euler`: Lagrange's equilateral triangle at `z = 0`, Euler's collinear states at
+//!   `z_β = −π/2` (`β = 0`, body 2 on the `+x` side) and `z_β = π/2` (`β = π̂`, on the `−x` side), interior points of
+//!   the periodic `β` reached exactly (REQ-VAL-020, R-1020, R-898).
 //!
 //! **REQ-DEC-045's proposal** (R-71; unconfirmed until the M2 gate): dd_decoder test 1's `Σpᵢ = 0` holds to
 //! [`SUM_P_EPS`] = 4 `eps`, componentwise, relative to `Σᵢ‖pᵢ‖`, at both precisions (`eps` = 2.2×10⁻¹⁶ at f64, 1.2×10⁻⁷
@@ -718,20 +720,24 @@ negative_control!(
 
 // ── decode_ranges (REQ-DEC-027) ─────────────────────────────────────────────────────────────────────────────────
 
-/// Checks decoder test 3 at `z` for the entry `run`: `α ∈ [0, π/2]` and `β ∈ [0, π]`, compared in f64 at the exact
-/// bounds (`FRAC_PI_2` and `PI` are the greatest f64s at or below them, so `≤` against them is `≤` against the exact
-/// bounds); `|qₖ| ≤ q_max`; every mass in the open simplex `(0, 1)`.
+/// Checks decoder test 3 at `z` for the entry `run`: `α ∈ [0, π/2]`, compared in f64 at the exact bound
+/// (`FRAC_PI_2` is the greatest f64 at or below it, so `≤` against it is `≤` against the exact bound); `β = z_β + c`
+/// bit for bit at `R`, `c` the offset ([`offset`]), the periodic link having no range to close (R-898, R-1020;
+/// dd_decoder §3.2); `|qₖ| ≤ q_max`; every mass in the open simplex `(0, 1)`. *Was (TASK-M2-57):* "`β ∈ [0, π]`,
+/// compared in f64 at the exact bounds".
 fn check_ranges<R: P>(name: &str, run: Entry<R>, z: [f64; 8]) {
-    let d = run(&latent::<R>(z));
+    let zl = latent::<R>(z);
+    let d = run(&zl);
     let (alpha, beta) = (d.config.alpha.f(), d.config.beta.f());
     let at = format!("{name} at z = {z:?}, {}", R::NAME);
     assert!(
         (0.0..=std::f64::consts::FRAC_PI_2).contains(&alpha),
         "α = {alpha} is outside [0, π/2]: {at}"
     );
+    let want = (zl.z[1] + offset::<R>()).f();
     assert!(
-        (0.0..=std::f64::consts::PI).contains(&beta),
-        "β = {beta} is outside [0, π]: {at}"
+        beta.to_bits() == want.to_bits(),
+        "β = {beta} is not z_β + c = {want}: {at}"
     );
     let q_max = <f64 as ChartConstants>::Q_MAX;
     for q in d.momentum.q {
@@ -746,15 +752,16 @@ fn check_ranges<R: P>(name: &str, run: Entry<R>, z: [f64; 8]) {
     }
 }
 
-/// Past the underflow thresholds the lower poles are reached exactly, and saturated `qₖ` reach `±q_max` (R-417).
+/// Past the underflow threshold the lower `α`-pole is reached exactly, `β = z_β + c` far out as near (R-898, R-1020),
+/// and saturated `qₖ` reach `±q_max` (R-417).
 fn check_saturation<R: P>(name: &str, run: Entry<R>) {
     let q_max = <f64 as ChartConstants>::Q_MAX;
     for far in [1e30, 1e38] {
         let d = run(&latent::<R>([-far, -far, far, -far, far, -far, 0.0, 0.0]));
         assert_eq!(
             (d.config.alpha.f(), d.config.beta.f()),
-            (0.0, 0.0),
-            "{name}: α and β past the underflow threshold are not 0 at {}",
+            (0.0, (R::of(-far) + offset::<R>()).f()),
+            "{name}: α past the underflow threshold is not 0, or β not z_β + c, at {}",
             R::NAME
         );
         assert_eq!(
@@ -820,8 +827,8 @@ type WithNearestPi =
 
 negative_control!(
     decode_ranges,
-    "a β link with the round-to-nearest π passes π at saturation",
-    expected = "is outside [0, π]",
+    "a σ-type β link, β = π̂·σ(z_β), is not the periodic link's offset and must fail",
+    expected = "not z_β + c",
     check_ranges_all(
         &[("nearest_pi", decode::decode::<WithNearestPi, f64>)],
         &[("nearest_pi", decode::decode::<WithNearestPi, f32>)]
@@ -889,11 +896,12 @@ fn golden_value<R: P>(d: &Decoded<R>, name: &str) -> Option<f64> {
     }
 }
 
-/// Checks `run`'s decode of `z = 0` against every value of the fixture at `R`: the descriptor's fields within
-/// REQ-PAY-095's ulps (bit-exact for those 0 at rest), its derived `E₀` as `V_0`, the rest within [`GOLDEN_EPS`].
+/// Checks `run`'s decode of the golden `z` ([`golden_z`]) against every value of the fixture at `R`: the descriptor's
+/// fields within REQ-PAY-095's ulps (bit-exact for those 0 at rest), its derived `E₀` as `V_0`, the rest within
+/// [`GOLDEN_EPS`].
 fn check_golden<R: P>(run: Entry<R>, worst: &Worst) {
     let g = golden();
-    let d = run(&latent::<R>([0.0; 8]));
+    let d = run(&golden_z::<R>());
     for v in golden_values(&g) {
         let n = name(&v);
         let want = R::from_fixture(&v);
@@ -961,7 +969,15 @@ negative_control!(
     expected = "the golden IC's m0",
     check_golden(
         decode::decode::<
-            Select<ReferenceOne, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>,
+            Select<
+                ReferenceOne,
+                SigmoidAlpha,
+                PeriodicBeta,
+                SigmoidQ,
+                SigmoidQ,
+                SigmoidQ,
+                SigmoidQ,
+            >,
             f64,
         >,
         &Worst::default()
@@ -980,22 +996,55 @@ fn area2<R: P>(ic: &Ic<R>) -> f64 {
     a[0] * b[1] - a[1] * b[0]
 }
 
-/// The z_β past which `σ(z_β)` underflows to 0 at `R`: `e^{−z}` overflows above `ln(max)`, so σ = 1/(1 + ∞) = 0.
-fn beta_underflow<R: P>() -> f64 {
-    if R::NAME == "f32" {
-        -(f32::MAX as f64).ln() - 1.0
-    } else {
-        -f64::MAX.ln() - 1.0
-    }
+/// The collinear landmark at `z_β` under `run`: `β` bit for bit `want`, body 2 on the `side` of the inner pair's
+/// centre of mass (`+1` for `+x`, `−1` for `−x`), and the triangle's area, relative to `r_min²`, at most `bound`.
+fn check_euler<R: P>(run: Entry<R>, z_beta: R, want: R, side: f64, bound: f64) {
+    let mut z = latent::<R>([0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.4, -0.2]);
+    z.z[1] = z_beta;
+    let d = run(&z);
+    let at = format!("z_β = {} at {}", z_beta.f(), R::NAME);
+    assert!(
+        d.config.beta.f().to_bits() == want.f().to_bits(),
+        "{at} does not give β = {}: β = {}",
+        want.f(),
+        d.config.beta.f()
+    );
+    let r = d.ic.r.map(|v| v.map(|x| x.f()));
+    let m = d.ic.m.map(|x| x.f());
+    let inner = (m[0] * r[0][0] + m[1] * r[1][0]) / (m[0] + m[1]);
+    assert!(
+        side * (r[2][0] - inner) > 0.0,
+        "{at}: body 2 is not on the {} side: r = {r:?}",
+        if side > 0.0 { "+x" } else { "−x" }
+    );
+    let rmin = d.descriptor.r_min_pair_0.f();
+    let flat = area2(&d.ic).abs() / (rmin * rmin);
+    assert!(flat <= bound, "{at} is not collinear: area/r_min² = {flat}");
 }
 
-/// Checks the landmarks under `run`: `z = 0` is Lagrange's equilateral triangle, its three sides `√3` within
-/// [`GOLDEN_EPS`]; `z_β` past the underflow threshold gives `β = 0` exactly, every body on the x axis, collinear
-/// exactly; `z_β → +large` approaches Euler's collinear line at `β → π` from below, `β` non-decreasing and at most `PI`
-/// (the greatest f64 below π, so in f64 `β ≤ PI` is `β < π`), and the triangle's area, relative to `r_min²`,
-/// shrinking to within [`GOLDEN_EPS`] `eps` of 0.
+/// Checks the landmarks under `run` (REQ-VAL-020, R-1020): `z = 0` is Lagrange's equilateral triangle, its three sides
+/// `√3` within [`GOLDEN_EPS`]; `z_β = −c` gives `β = 0` exactly, body 2 on the `+x` side, every body on the x axis,
+/// collinear exactly; `z_β = c` gives `β = π̂` exactly (`c + c = π̂`), body 2 on the `−x` side, collinear to `sin π̂`,
+/// π's rounding at `R`, its area relative to `r_min²` within [`GOLDEN_EPS`] `eps` of 0; `c` the offset ([`offset`]),
+/// so each is an interior point of the periodic `β`, reached with no underflow and no edge. *Was (14 Nov 2026, the
+/// identity link):* "the golden `z` … is Lagrange's …; `z_β = 0` gives `β = 0` exactly …; `z_β → π̂` from below
+/// approaches Euler's collinear line at `β = π̂`, `β = z_β` non-decreasing"; before that, "`z_β` past the underflow
+/// threshold gives `β = 0` exactly …; `z_β → +large` approaches Euler's collinear line at `β → π` from below".
 fn check_landmarks<R: P>(run: Entry<R>) {
-    let d = run(&latent::<R>([0.0; 8]));
+    // The collinear states first: a σ-type link, or the offset's nearest f32, the controls, fail there.
+    let c = offset::<R>();
+    check_euler(run, -c, R::zero(), 1.0, 0.0);
+    let mut z = latent::<R>([0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.4, -0.2]);
+    z.z[1] = -c;
+    let d = run(&z);
+    assert!(
+        d.ic.r.iter().all(|v| v[1].f() == 0.0),
+        "β = 0 is not on the x axis at {}: r = {:?}",
+        R::NAME,
+        d.ic.r
+    );
+    check_euler(run, c, R::LIT_7, -1.0, GOLDEN_EPS * R::eps());
+    let d = run(&golden_z::<R>());
     let r = d.ic.r.map(|v| v.map(|x| x.f()));
     let side = |i: usize, j: usize| (r[i][0] - r[j][0]).hypot(r[i][1] - r[j][1]);
     for (i, j) in [(0, 1), (1, 2), (2, 0)] {
@@ -1007,41 +1056,6 @@ fn check_landmarks<R: P>(run: Entry<R>) {
             side(i, j)
         );
     }
-    for zb in [beta_underflow::<R>(), -1e3, -1e38] {
-        let d = run(&latent::<R>([0.3, zb, 0.0, 0.0, 0.0, 0.0, 0.4, -0.2]));
-        assert_eq!(
-            d.config.beta.f(),
-            0.0,
-            "z_β = {zb} past the underflow threshold does not give β = 0 at {}",
-            R::NAME
-        );
-        assert!(
-            d.ic.r.iter().all(|v| v[1].f() == 0.0) && area2(&d.ic) == 0.0,
-            "β = 0 is not collinear at {}: r = {:?}",
-            R::NAME,
-            d.ic.r
-        );
-    }
-    let mut last = (0.0, f64::INFINITY);
-    for zb in [2.0, 8.0, 16.0, 40.0, 1e3, 1e38] {
-        let d = run(&latent::<R>([0.3, zb, 0.0, 0.0, 0.0, 0.0, 0.4, -0.2]));
-        let beta = d.config.beta.f();
-        let rmin = d.descriptor.r_min_pair_0.f();
-        let flat = area2(&d.ic).abs() / (rmin * rmin);
-        assert!(
-            beta <= std::f64::consts::PI && beta >= last.0 && flat <= last.1,
-            "z_β = {zb} does not approach β = π from below at {}: β = {beta}, area/r_min² = {flat}",
-            R::NAME
-        );
-        last = (beta, flat);
-    }
-    // At saturation `sin β` is π's rounding at `R`, under one `eps`, and the triangle's aspect scales it by a few.
-    assert!(
-        last.1 <= GOLDEN_EPS * R::eps(),
-        "β → π does not approach the collinear line at {}: area/r_min² = {}",
-        R::NAME,
-        last.1
-    );
 }
 
 #[test]
@@ -1052,7 +1066,42 @@ fn chart_landmarks_lagrange_euler() {
 
 negative_control!(
     chart_landmarks_lagrange_euler,
-    "a β link with the round-to-nearest π passes π at saturation",
-    expected = "does not approach β = π from below",
+    "a σ-type β link, β = π̂·σ(z_β), takes z_β = −π/2 to β > 0, not the collinear β = 0, and must fail",
+    expected = "does not give β = 0",
     check_landmarks(decode::decode::<WithNearestPi, f32>)
 );
+
+/// The offset link with f32's nearest `π/2`, `0x3FC9_0FDB`, in place of `fl↓(π/2)`: the constant the definition does
+/// not take (physics review 5944675263 of PR #560).
+#[cfg(feature = "controls")]
+struct NearestOffset;
+
+#[cfg(feature = "controls")]
+impl Link<1, 1> for NearestOffset {
+    const NAME: &'static str = "nearest_offset";
+    type Codomain = Beta;
+    fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        [v[0] + num_traits_cast::<R>(f32::from_bits(0x3FC9_0FDB) as f64)]
+    }
+    fn inverse<R: LinkReal>(_: [R; 1]) -> [R; 1] {
+        unreachable!()
+    }
+    fn log_det<R: LinkReal>(_: [R; 1]) -> R {
+        unreachable!()
+    }
+}
+
+#[cfg(feature = "controls")]
+type WithNearestOffset =
+    Select<SoftmaxTanh, SigmoidAlpha, NearestOffset, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+
+mod nearest_offset {
+    use super::*;
+
+    negative_control!(
+        chart_landmarks_lagrange_euler,
+        "the offset with f32's nearest π/2 takes z_β = −fl↓(π/2) to one ulp above 0, not β = 0, and must fail",
+        expected = "does not give β = 0",
+        check_landmarks(decode::decode::<WithNearestOffset, f32>)
+    );
+}

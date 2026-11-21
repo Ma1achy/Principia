@@ -1296,11 +1296,7 @@ fn unsaturated<R: Q>(x: f64) -> Vec<String> {
             <<S as Selection>::AlphaLink as Link<1, 1>>::forward([edge]),
             <<S as Selection>::AlphaLink as Link<1, 1>>::forward([limit]),
         ));
-        found.extend(one(
-            "beta",
-            <<S as Selection>::BetaLink as Link<1, 1>>::forward([edge]),
-            <<S as Selection>::BetaLink as Link<1, 1>>::forward([limit]),
-        ));
+        // No `β`: the periodic link, the offset onto the angle, has no limit to reach (R-898, R-1020).
         for (name, at, lim) in [
             (
                 "q0",

@@ -609,6 +609,8 @@ fn check_upstream(moved: fn(&mut Record, usize)) {
     moved(&mut d, 7);
     let c = compare(&[cpu.clone(), d]).unwrap();
     let p = c.pair(CPU, "Metal").unwrap();
+    // Canon's six branches: skip, coincidence, rho_zero, rho_x_zero, rho_y_zero and lambda_signs, the signs of λ̃ that
+    // choose the encode's case of β, decided in C since the mirror branch went with C's mirror step (TASK-M2-57).
     let canon_rows = 6;
     assert_eq!(
         p.level_1, canon_rows,

@@ -365,21 +365,26 @@ fn mock_compass_steer_cut_inside_the_pole_radius_the_shell_keeps_its_name() {
     });
 }
 
+/// The saturated fixture: `z_α` far down its sigmoid, where `α = (π/2)·σ(z_α)` is 0 at `z_α` and a step either side of
+/// it. `z_α` far up it saturates as well, but closes the inner pair, where an `E*` chart's entries run past `1e7`.
+const SATURATED: Latent = [-1000.0, 0.4, 0.3, -0.2, 0.5, 0.1, 0.1, -0.2];
+
 #[test]
 fn mock_compass_steer_cut_a_saturated_link_refuses() {
-    // z_β far along its sigmoid: β's column is exactly 0, its row nowhere reached.
+    // z_α far along its sigmoid: α's column is exactly 0, its row nowhere reached.
     let mut p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
-    p.z0 = [0.3, 1000.0, 0.3, -0.2, 0.5, 0.1, 0.1, -0.2];
+    p.z0 = SATURATED;
     let (app, _h) = app_at(&p);
     let sim = app.snapshot().sim.clone();
     let links = Links::defaults();
     let d = Decoder::default();
     let j = latent_jacobian(&d, Set::Jacobi, &links, &p.z0);
     for row in &j {
-        assert_eq!(row[1], 0.0, "β's column");
+        assert_eq!(row[0], 0.0, "α's column");
     }
+    assert_eq!(Inverse::of(&j, CUT).kept, 7);
     assert_eq!(
-        steer(&d, Set::Jacobi, &sim, 1, 3),
+        steer(&d, Set::Jacobi, &sim, 0, 3),
         Some(Err(Refusal::Saturated))
     );
     assert_eq!(
@@ -389,12 +394,65 @@ fn mock_compass_steer_cut_a_saturated_link_refuses() {
     assert!(steer(&d, Set::Jacobi, &sim, 2, 3).expect("a cell").is_ok());
     // Control: unsaturated, the same cell is steered.
     let mut free = sim.clone();
-    free.plane.z0[1] = 0.4;
+    free.plane.z0[0] = 0.4;
     rejects("the same cell off the link's saturation", || {
         assert_eq!(
-            steer(&d, Set::Jacobi, &free, 1, 3),
+            steer(&d, Set::Jacobi, &free, 0, 3),
             Some(Err(Refusal::Saturated))
         )
+    });
+}
+
+#[test]
+fn mock_compass_steer_cut_the_periodic_beta_link_never_saturates() {
+    // β = z_β + π/2: every finite z_β is an angle, so β's column is 1 over β's reference range however far along
+    // z_β the state is, nothing is dropped, and β's cells are steered. Under the sigmoid the column was exactly 0 from
+    // far enough out, and those cells refused.
+    let mut p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
+    let links = Links::defaults();
+    let d = Decoder::default();
+    let check = |z: &Latent, sim: &engine::contract::sim_config::SimConfig| {
+        let j = latent_jacobian(&d, Set::Jacobi, &links, z);
+        // A central difference of a straight line: off 1 by its rounding alone, 2.1e-11 at most over these.
+        let slope = j[1][1] * Set::Jacobi.ranges(links.link_params().q_max)[1];
+        assert!((slope - 1.0).abs() < 1e-9, "β's column at {z:?}: {slope}");
+        assert_eq!(Inverse::of(&j, CUT).kept, 8, "at {z:?}");
+        for cell in [(0, 1), (1, 3), (1, 7)] {
+            assert!(
+                steer(&d, Set::Jacobi, sim, cell.0, cell.1)
+                    .expect("a cell")
+                    .is_ok(),
+                "{cell:?} at {z:?}"
+            );
+        }
+    };
+    // Among them β = 0 and β = 2π, where the angle read modulo 2π would jump.
+    let quarter = std::f64::consts::FRAC_PI_2;
+    for z_beta in [
+        -1000.0,
+        -4.0,
+        -quarter,
+        0.0,
+        0.4,
+        2.0,
+        3.0 * quarter,
+        7.0,
+        1000.0,
+    ] {
+        p.z0 = [0.3, z_beta, 0.3, -0.2, 0.5, 0.1, 0.1, -0.2];
+        let (app, _h) = app_at(&p);
+        check(&p.z0, &app.snapshot().sim);
+    }
+    // Control: a link that does saturate there, α's, fails the same check.
+    p.z0 = SATURATED;
+    let (app, _h) = app_at(&p);
+    let sim = app.snapshot().sim.clone();
+    rejects("a saturated link's column", || {
+        let j = latent_jacobian(&d, Set::Jacobi, &links, &p.z0);
+        assert_eq!(Inverse::of(&j, CUT).kept, 8)
+    });
+    rejects("a saturated link's cell", || {
+        assert!(steer(&d, Set::Jacobi, &sim, 0, 1).expect("a cell").is_ok())
     });
 }
 
@@ -402,7 +460,7 @@ fn mock_compass_steer_cut_a_saturated_link_refuses() {
 fn mock_compass_steer_cut_a_saturated_link_on_an_e_star_chart_names_each_cause() {
     // The saturated fixture on E* = 0: the shell drops one value and the link another.
     let mut p: Plane = plane(&view(10.0, 5.0, 0.0, 0.8), [0.1, -0.3, 0.25]);
-    p.z0 = [0.3, 1000.0, 0.3, -0.2, 0.5, 0.1, 0.1, -0.2];
+    p.z0 = SATURATED;
     let (app, _h) = app_at(&p);
     let mut sim = app.snapshot().sim.clone();
     let links = Links::defaults();
@@ -410,18 +468,18 @@ fn mock_compass_steer_cut_a_saturated_link_on_an_e_star_chart_names_each_cause()
     let inverse =
         |d: &Decoder, z: &Latent| Inverse::of(&latent_jacobian(d, Set::Jacobi, &links, z), CUT);
     assert_eq!(inverse(&shell, &p.z0).kept, 6);
-    for cell in [(0, 1), (1, 3), (1, 7)] {
+    for cell in [(0, 1), (0, 3), (0, 7)] {
         assert_eq!(
             steer(&shell, Set::Jacobi, &sim, cell.0, cell.1),
             Some(Err(Refusal::Saturated)),
-            "{cell:?}, β's column gone with or without the shell"
+            "{cell:?}, α's column gone with or without the shell"
         );
     }
     // A cell of the same kind of state that only the shell refuses: reachable with η_E off, so the shell is its cause.
     let off = Decoder::Real { e_star: None };
     let mut shell_only = 0;
     for mut z in sample() {
-        z[1] = 1000.0;
+        z[0] = SATURATED[0];
         let (on, unset) = (inverse(&shell, &z), inverse(&off, &z));
         for (a, b) in upper() {
             if on.smaller(a, b) < TOLERANCE && unset.smaller(a, b) >= TOLERANCE {
@@ -444,7 +502,7 @@ fn mock_compass_steer_cut_a_saturated_link_on_an_e_star_chart_names_each_cause()
     sim.plane.z0 = p.z0;
     rejects("a saturated cell blamed on the shell", || {
         assert_eq!(
-            steer(&shell, Set::Jacobi, &sim, 1, 3),
+            steer(&shell, Set::Jacobi, &sim, 0, 3),
             Some(Err(Refusal::EnergyShell))
         )
     });

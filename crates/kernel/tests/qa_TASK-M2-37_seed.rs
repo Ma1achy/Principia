@@ -30,14 +30,14 @@ use kernel::chart::physical::MixedMassRatio;
 use kernel::chart::{Chart, ValidationResult};
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
-    Defaults, Link, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
+    Defaults, Link, LinkParams, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ,
     StickBreaking,
 };
 use validation::{negative_control, tunables};
 
 /// The selection with `stick_breaking` on the mass block.
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 fn eps_mu() -> f64 {
     <f64 as ChartConstants>::EPS_MU

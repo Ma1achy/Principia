@@ -4,6 +4,8 @@
 
 Inputs: 236346, hash `455b67f16ebf9adb`.
 
+*14 Nov 2026 (TASK-M2-57; R-865, R-898):* this comparison is over the inputs as they stood before TASK-M2-57, hash `455b67f16ebf9adb`. Its `mirror` rows measure `C`'s mirror step, which TASK-M2-57 removes: the branch and its slot are gone from the kernel, and the inputs, written again by `--write-inputs` (236346, hash `a3df41959cf8e53d`), no longer hold them; the representatives' `z_β` now reads through `periodic_beta`. The rows are kept as the record of what was measured. A comparison over the new inputs needs each backend's own run on its hardware (Metal, lavapipe, NVIDIA), so it is not rewritten here.
+
 ## Records
 
 | backend | commit | adapter | driver | fast math | hardware label |

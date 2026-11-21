@@ -24,12 +24,12 @@ use kernel::encode::ingest::{
     components, condition, ingest, kappa, sigma_max, sigma_min, state as from_components,
     weighted_encode_jacobian, weighted_jacobian, weights, Ingested, Phys,
 };
-use kernel::generated::links::{Defaults, Select, SigmoidAlpha, SigmoidBeta, SoftmaxTanh, TanhQ};
+use kernel::generated::links::{Defaults, PeriodicBeta, Select, SigmoidAlpha, SoftmaxTanh, TanhQ};
 use validation::negative_control;
 use validation::roundtrip::{eps_phys, phys};
 
 /// The defaults with every free momentum's link swapped to `tanh_q`: another registry link for the same controls.
-type TanhMomenta = Select<SoftmaxTanh, SigmoidAlpha, SigmoidBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
+type TanhMomenta = Select<SoftmaxTanh, SigmoidAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 
 /// A state from masses, positions and velocities.
 fn state(m: [f64; 3], r: [[f64; 2]; 3], v: [[f64; 2]; 3]) -> Ic<f64> {
@@ -889,3 +889,201 @@ negative_control!(
     expected = "the weights at",
     check_weights(&extents().0, 0.5, 4.0)
 );
+
+// ── κ on the encode's seam (TASK-M2-57; physics reviews 5907871580 and 5908031552 of PR #533, P7) ─────────────────
+
+/// The seam state's momentum controls `z_q0 … z_q3`, fixed and recorded: through `sigmoid_q` at `q_max = 2` they give
+/// `(p_ρ, p_λ)` with no component zero and none above 1 in size ([`seam_state`] asserts it).
+const SEAM_Z_Q: [f64; 4] = [0.3, -0.4, 0.5, -0.2];
+
+/// The fixed, recorded turn the seam states are put in, so that `C`'s `λ̃_y` is a rounding residue.
+const SEAM_TURN: f64 = 0.7;
+
+/// The off-seam offset `η`, rad: `|λ̃_y| = sin(π/4)·sin η ≈ 7.1·10⁻⁴`, over 80 steps `hₖ`.
+const ETA: f64 = 1e-3;
+
+/// The encode's seam state turned by `β = offset` and put in the recorded turn: equal masses, `α = π/4`, `β = offset`
+/// (`z_α = 0`, `z_β = −π/2 + offset` under the offset link, R-1020), `I = 1`, momenta from [`SEAM_Z_Q`].
+fn seam_state(offset: f64) -> Ic<f64> {
+    let c = std::f64::consts::FRAC_PI_2;
+    let z = [
+        0.0,
+        -c + offset,
+        SEAM_Z_Q[0],
+        SEAM_Z_Q[1],
+        SEAM_Z_Q[2],
+        SEAM_Z_Q[3],
+        0.0,
+        0.0,
+    ];
+    let d = decode::decode::<Defaults, f64>(&Latent::new(z));
+    let q = d.momentum.q;
+    assert!(
+        q.iter().all(|v| *v != 0.0 && v.abs() <= 1.0),
+        "the seam state's (p_ρ, p_λ) {q:?} has a zero component or one above 1"
+    );
+    if offset == 0.0 {
+        assert_eq!(
+            d.config.lambda_t[1], 0.0,
+            "the seam state's λ̃ is not on the +x half-axis"
+        );
+    }
+    moved(&d.ic, SEAM_TURN, [0.0; 2], [0.0; 2], 1.0)
+}
+
+/// `(J_E(x)·W⁻¹)ᵀ` as [`weighted_encode_jacobian`] forms it, but with `z_β`'s differences taken on the line, `a − b`:
+/// the control's Jacobian (R-176).
+#[cfg(feature = "controls")]
+fn line_jacobian(x: &Ic<f64>) -> [Phys<f64>; 8] {
+    let w = weights(x);
+    let c = components(x);
+    let step = f64::EPSILON.cbrt();
+    let enc = |c: &Phys<f64>| encode::<Defaults, f64>(&from_components(c)).z.z;
+    let mut cols = [[0.0; 15]; 8];
+    for (k, (ck, wk)) in c.iter().zip(&w).enumerate() {
+        let h = step * ck.abs().max(1.0);
+        let mut up = c;
+        up[k] = ck + h;
+        let plus = enc(&up);
+        if k < 3 && *ck <= h {
+            let mut far = c;
+            far[k] = ck + (h + h);
+            let (beyond, here) = (enc(&far), enc(&c));
+            let span = (far[k] - ck) * wk;
+            for (col, ((a, b), e)) in cols.iter_mut().zip(plus.iter().zip(&beyond).zip(&here)) {
+                col[k] = (4.0 * a - 3.0 * e - b) / span;
+            }
+        } else {
+            let mut down = c;
+            down[k] = ck - h;
+            let minus = enc(&down);
+            let span = (up[k] - down[k]) * wk;
+            for (col, (a, b)) in cols.iter_mut().zip(plus.iter().zip(&minus)) {
+                col[k] = (a - b) / span;
+            }
+        }
+    }
+    cols
+}
+
+/// `κ` at the seam state and at the two off-seam states, through the Jacobian `jac`.
+fn seam_kappas(jac: fn(&Ic<f64>) -> [Phys<f64>; 8]) -> (f64, [f64; 2]) {
+    let k = |x: &Ic<f64>| sigma_max(jac(x));
+    (
+        k(&seam_state(0.0)),
+        [k(&seam_state(ETA)), k(&seam_state(-ETA))],
+    )
+}
+
+/// The criterion written before the test ran (TASK-M2-57's acceptance, R-649): `κ` at the seam finite, and within a
+/// relative `10⁻²` of `κ` at each off-seam state.
+fn check_seam(seam: f64, off: [f64; 2]) {
+    assert!(
+        seam.is_finite(),
+        "κ at the seam state is not finite: {seam}"
+    );
+    for (k, o) in off.iter().enumerate() {
+        assert!(
+            (seam - o).abs() <= 1e-2 * seam,
+            "κ at the seam, {seam:.6e}, is not within 10⁻² of the off-seam state {k}'s, {o:.6e}"
+        );
+    }
+}
+
+/// The light-mass seam state: `m₀ = 3·10⁻⁶ ≤ hₖ`, `m₁ = m₂`, at rest, positions at `α = π/4`, `I = 1`, `β = 0`, turned by
+/// `turn`.
+fn light_seam(turn: f64) -> Ic<f64> {
+    let m0 = 3e-6;
+    let m1 = (1.0 - m0) / 2.0;
+    let masses = kernel::decode::mass::from_masses([m0, m1, 1.0 - m0 - m1]);
+    let config = kernel::decode::config::from_angles(std::f64::consts::FRAC_PI_4, 0.0, &masses);
+    let x = Ic {
+        m: masses.m,
+        r: config.r,
+        p: [[0.0; 2]; 3],
+    };
+    moved(&x, turn, [0.0; 2], [0.0; 2], 1.0)
+}
+
+/// The fixed, recorded list of turns the light-mass seam state is tried in.
+fn light_turns() -> impl Iterator<Item = f64> {
+    (1..=64).map(|j| 0.37 * f64::from(j))
+}
+
+/// `E[β]` at `x`, `x + hₖe_{m₀}` and `x + 2hₖe_{m₀}`.
+fn mass_stencil_betas(x: &Ic<f64>) -> [f64; 3] {
+    let c = components(x);
+    let h = f64::EPSILON.cbrt() * c[0].abs().max(1.0);
+    let at = |s: f64| {
+        let mut v = c;
+        v[0] = c[0] + s;
+        encode::<Defaults, f64>(&from_components(&v)).z.z[1]
+    };
+    [at(0.0), at(h), at(h + h)]
+}
+
+/// The first recorded turn whose three `E[β]` values straddle the seam: not all within `π` of each other on the line.
+fn straddling() -> Option<Ic<f64>> {
+    light_turns().map(light_seam).find(|x| {
+        let b = mass_stencil_betas(x);
+        let (lo, hi) = (
+            b.iter().copied().fold(f64::INFINITY, f64::min),
+            b.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+        );
+        hi - lo > std::f64::consts::PI
+    })
+}
+
+/// `z_β`'s component of `m₀`'s column, unweighted (a mass's weight is 1), at most `10⁻⁴` in size.
+fn check_mass_column(beta_m0: f64) {
+    assert!(
+        beta_m0.abs() <= 1e-4,
+        "z_β's component of m₀'s three-point column is {beta_m0:.3e}, above 10⁻⁴"
+    );
+}
+
+#[test]
+fn kappa_on_beta_seam() {
+    let (seam, off) = seam_kappas(weighted_encode_jacobian::<Defaults, f64>);
+    eprintln!(
+        "κ: seam {seam:.6e}, off-seam +η {:.6e}, −η {:.6e}",
+        off[0], off[1]
+    );
+    check_seam(seam, off);
+    let x = straddling().expect("no recorded turn puts m₀'s three-point stencil across the seam");
+    check_mass_column(weighted_encode_jacobian::<Defaults, f64>(&x)[1][0]);
+}
+
+negative_control!(
+    kappa_on_beta_seam,
+    "z_β subtracted on the line: κ at the seam state exceeds the off-seam states' by a factor of at least 10³",
+    expected = "is not within 10⁻² of the off-seam state",
+    {
+        let (seam, off) = seam_kappas(line_jacobian);
+        let (_, own) = seam_kappas(weighted_encode_jacobian::<Defaults, f64>);
+        let factor = seam / own[0].max(own[1]);
+        eprintln!("the line's κ at the seam over the off-seam κ: {factor:.3e}");
+        assert!(factor >= 1e3, "the line's κ at the seam is only {factor:.3e} times the off-seam κ");
+        check_seam(seam, off);
+    }
+);
+
+mod mass_stencil_on_the_line {
+    use super::*;
+
+    negative_control!(
+        kappa_on_beta_seam,
+        "the mass stencil combined on the line gives a z_β component of at least π/(2hₖ) in size",
+        expected = "above 10⁻⁴",
+        {
+            let x = straddling().expect("no recorded turn straddles the seam");
+            let v = line_jacobian(&x)[1][0];
+            let h = f64::EPSILON.cbrt();
+            assert!(
+                v.abs() >= std::f64::consts::PI / (2.0 * h),
+                "the line's mass stencil gives only {v:.3e}"
+            );
+            check_mass_column(v);
+        }
+    );
+}

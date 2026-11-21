@@ -3,18 +3,19 @@
 //! negative control (R-176).
 //!
 //! - `qa_viewstate_tilted_nonlinear_roundtrip` (REQ-SYS-011): a tilted view (its basis on no coordinate axis), every
-//!   block's link off its default, a non-default `q_max` and a nonlinear chart's window off the square is exported and
-//!   reloaded; the reloaded `SimConfig` is the exported one bitwise, field by field, `z` at every pixel of a 33 × 33 grid
-//!   is bitwise the same, as is the window's chart point, the link ids and parameter values are identical, and the
-//!   state each pixel decodes to under the reloaded links at the reloaded parameter is bitwise the same and differs
-//!   from the state at the default parameter (so the parameter carries meaning). Control (C6): the record with the
-//!   parameter stripped does not reproduce the view.
+//!   block's link off its default (but `β`'s, which has the one link, `periodic_beta`), a non-default `q_max` and a
+//!   nonlinear chart's window off the square is exported and reloaded; the reloaded `SimConfig` is the exported one
+//!   bitwise, field by field, `z` at every pixel of a 33 × 33 grid is bitwise the same, as is the window's chart
+//!   point, the link ids and parameter values are identical, and the state each pixel decodes to under the reloaded
+//!   links at the reloaded parameter is bitwise the same and differs from the state at the default parameter (so the
+//!   parameter carries meaning). Control (C6): the record with the parameter stripped does not reproduce the view.
 //! - `qa_viewstate_roundtrip_property` (REQ-SYS-011, "any chart … restores exactly"): over random planes, windows and
 //!   parameter values across the whole finite `f64` range (normal and subnormal, both signs), the record reloads
 //!   bitwise. Signed zero is excluded: RFC 8785 writes `-0` as `0` (R-318), noted in the review.
 //! - `qa_viewstate_refuses_unread_links` (R-483: an unknown or changed link is refused, never substituted; R-482 C6):
-//!   a record whose link id is unknown, on the wrong block's codomain, missing, or whose parameters are missing, extra
-//!   or renamed, or whose block is missing, is refused; none is read back under a default.
+//!   a record whose link id is unknown, on the wrong block's codomain, a retired `β` link's, missing, or whose
+//!   parameters are missing, extra or renamed, or whose block is missing, is refused; none is read back under a
+//!   default.
 //! - `qa_links_filled` (REQ-SYS-083): the canonical text's `links` object, parsed, has exactly the four blocks, each
 //!   exactly `{id, params}`, the ids the registry slots' defaults and the parameters each entry's tunables at their
 //!   register defaults (`ledger::links`), and a non-default link or parameter serialises differently. The grep half: no
@@ -47,7 +48,7 @@ use kernel::chart::invariant::Invariant;
 use kernel::chart::InvariantLK;
 use kernel::decode::{decode_at, Ic, Latent as KernelLatent};
 use kernel::generated::links::{
-    Defaults, LinkParams, Select, SigmoidBeta, SoftsignAlpha, StickBreaking, TanhQ,
+    Defaults, LinkParams, PeriodicBeta, Select, SoftsignAlpha, StickBreaking, TanhQ,
 };
 use ledger::links::{self as registry};
 use proptest::prelude::*;
@@ -67,8 +68,8 @@ const BLOCKS: [(&str, &str); 4] = [
     ("momenta", "q0"),
 ];
 
-/// The view's selection: every block off its default.
-type Off = Select<StickBreaking, SoftsignAlpha, SigmoidBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
+/// The view's selection: every block that has a choice off its default; `β` has one link, `periodic_beta`.
+type Off = Select<StickBreaking, SoftsignAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 
 fn sim(plane: Plane, window: Window, links: Links) -> SimConfig {
     SimConfig {
@@ -144,14 +145,15 @@ fn q_max_off() -> f64 {
     v
 }
 
-/// The view's links: `stick_breaking`, `softsign_alpha`, `sigmoid_beta`, `tanh_q` at the non-default `q_max`.
+/// The view's links: `stick_breaking`, `softsign_alpha`, `periodic_beta` (`β`'s one link), `tanh_q` at the non-default
+/// `q_max`.
 fn off_links() -> Links {
     let mut momenta = choice("tanh_q");
     momenta.params.insert("q_max".to_owned(), q_max_off());
     Links {
         mass: choice("stick_breaking"),
         alpha: choice("softsign_alpha"),
-        beta: choice("sigmoid_beta"),
+        beta: choice("periodic_beta"),
         momenta,
     }
 }
@@ -417,6 +419,12 @@ fn qa_viewstate_refuses_unread_links() {
         v["links"]["beta"]["id"] = "softmax_tanh".into();
         v["links"]["beta"]["params"] = serde_json::json!({"mu_max": 5.0});
     });
+    // The three bounded `β` links are conversion sources only, no block's link: a record naming one is refused.
+    for retired in ["sigmoid_beta", "tanh_beta", "softsign_beta"] {
+        check_refused(&format!("the retired β link {retired}"), |v| {
+            v["links"]["beta"]["id"] = retired.into()
+        });
+    }
     check_refused("no id", |v| {
         v["links"]["alpha"].as_object_mut().unwrap().remove("id");
     });

@@ -65,8 +65,19 @@ pub const MOCK_WARNING: &str = "mock warning (placeholder)";
 /// The error [`MockEngine::raise_error`] logs.
 pub const MOCK_ERROR: &str = "mock error (placeholder)";
 
-/// The mock's initial `z₀`: 01_main.png's eight values (placeholder content).
-pub const MOCK_Z0: Latent = [0.180, 0.410, 0.0, -0.227, 0.0, 0.312, 0.333, 0.333];
+/// The mock's initial `z₀`: 01_main.png's eight values (placeholder content), its `z_β` converted from `sigmoid_beta`,
+/// `π·σ(0.410) − π/2`, the periodic link's control (R-898, R-1020; TASK-M2-57, `fixtures/mirror_step_baseline/gui_converted.json`).
+/// *Was:* `z_β = 0.410`.
+pub const MOCK_Z0: Latent = [
+    0.180,
+    0.31757693755701344,
+    0.0,
+    -0.227,
+    0.0,
+    0.312,
+    0.333,
+    0.333,
+];
 
 /// The mock's initial basis: `q₁ = 1·z_α`, `q₂ = 1·z_β`, the chart "z_α × z_β" at zoom 0, as 01_main.png's Chart
 /// rows read (placeholder content).

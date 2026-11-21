@@ -959,9 +959,9 @@ fn cross_backend_compare_the_list_is_the_written_forms() {
         "skip",
         "coincidence",
         "rho_zero",
-        "mirror",
         "rho_x_zero",
         "rho_y_zero",
+        "lambda_signs",
     ] {
         let l = listed(b).unwrap();
         assert!(
@@ -1008,7 +1008,7 @@ negative_control!(
     )
 );
 
-fn canonical(rescaled: bool, clamped: bool, mirrored: bool) -> Canonical<f32> {
+fn canonical(rescaled: bool, clamped: bool) -> Canonical<f32> {
     let ic = kernel::decode::Ic {
         m: [0.25, 0.25, 0.5],
         r: [[-1.0, 0.0], [1.0, 0.0], [0.0, 1.0]],
@@ -1017,23 +1017,21 @@ fn canonical(rescaled: bool, clamped: bool, mirrored: bool) -> Canonical<f32> {
     Canonical {
         rescaled,
         clamped,
-        mirrored,
         ..kernel::canon::canonicalise(&ic)
     }
 }
 
 #[test]
 fn cross_backend_read_back_stage_emissions() {
-    let c = canonical(true, false, false);
+    let c = canonical(true, false);
     let at = |b: &str, c: &Canonical<f32>| listed(b).unwrap().canon_stage_outcome(c);
     assert_eq!(at("skip", &c), Some(1));
     assert_eq!(at("rho_zero", &c), Some(0));
-    assert_eq!(at("mirror", &c), Some(0));
-    let c = canonical(false, true, false);
+    let c = canonical(false, true);
     assert_eq!(at("skip", &c), Some(0));
     assert_eq!(at("rho_zero", &c), Some(1));
-    let c = canonical(false, false, true);
-    assert_eq!(at("mirror", &c), Some(1));
+    // C has no mirror step (R-865): no branch of that name is listed.
+    assert!(listed("mirror").is_none());
     assert_eq!(at("coincidence", &c), None);
     assert_eq!(at("rho_x_zero", &c), None);
 

@@ -12,7 +12,7 @@
 //!
 //! Generation refuses a registry [`crate::links::check`] refuses, naming each problem ([`refused`]).
 
-use std::f64::consts::{FRAC_PI_2, PI};
+use std::f64::consts::{FRAC_PI_2, PI, TAU};
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
@@ -80,7 +80,7 @@ fn camel(name: &str) -> String {
 }
 
 /// A Rust literal of `v` at the float type `ty` (`f32` or `f64`): the shortest literal that reads back to `v` at
-/// `ty`, except for π and π/2, whose f64 values are `core`'s constants. At f64 those are the nearest values,
+/// `ty`, except for π, π/2 and 2π, whose f64 values are `core`'s constants. At f64 those are the nearest values,
 /// `core::f64::consts::PI` and `FRAC_PI_2`, which lie below π and π/2; at f32 they are the images rounded toward
 /// zero, `fl↓(π)` (bits `0x4049_0FDA`) and `fl↓(π/2)` (`0x3FC9_0FDA`), not the nearest values `0x…_0FDB`, which lie
 /// above, so no bounded link's f32 image passes its upper bound (R-417; dd_generation_root §3.9, "The closed range
@@ -110,10 +110,12 @@ fn literal(v: f64, ty: &str) -> String {
 
 /// π and π/2, each with its `core` constant's name and its f32 image rounded toward zero, by bits (R-417). Interface
 /// data: the emitter's rounding rule ([`literal`]), not register constants (REQ-SYS-082).
-fn named_images() -> [(f64, &'static str, u32); 2] {
+fn named_images() -> [(f64, &'static str, u32); 3] {
     [
         (PI, "PI", 0x4049_0FDA),
         (FRAC_PI_2, "FRAC_PI_2", 0x3FC9_0FDA),
+        // 2π, the periodic `β`'s one period (R-898): `2·fl↓(π)`, exact, at f32.
+        (TAU, "TAU", 0x40C9_0FDA),
     ]
 }
 
@@ -735,8 +737,8 @@ fn selection(
     };
     let _ = write!(
         s,
-        "\n/// The defaults, each resolved by name (dd_decoder §3: mass = softmax ∘ μ_max·tanh, config = sigmoid, free\n\
-         /// momentum = sigmoid).\n{defaults}\n"
+        "\n/// The defaults, each resolved by name (dd_decoder §3: mass = softmax ∘ μ_max·tanh, α = sigmoid, β = the\n\
+         /// periodic link (R-919 Q1 (c)), free momentum = sigmoid).\n{defaults}\n"
     );
     Ok(s)
 }
@@ -791,7 +793,7 @@ fn helpers(code: &str) -> String {
 fn codomains() -> String {
     let mut s = String::new();
     for c in Codomain::ALL {
-        let (lo, hi) = match (c, c.range()) {
+        let (lo, hi) = match (c, c.range().or(c.period())) {
             (_, Some(r)) => r,
             (Codomain::Mass, None) => (0.0, 1.0),
             (Codomain::HalfLine, None) => (0.0, f64::INFINITY),
@@ -844,14 +846,21 @@ fn links_file(lits: &[f64], code: &str, names: &[&str], selection: &str) -> Stri
          /// A link's constraint (dd_generation_root §3.9's first column).\n\
          #[derive(Clone, Copy, Debug, PartialEq, Eq)]\npub enum Constraint {\n",
     );
-    for c in ["Simplex", "Bounded", "Positive", "Symmetric", "Unbounded"] {
+    for c in [
+        "Simplex",
+        "Bounded",
+        "Positive",
+        "Symmetric",
+        "Unbounded",
+        "Periodic",
+    ] {
         let _ = writeln!(s, "    {c},");
     }
     s.push_str(
         "}\n\n/// What a link maps onto: a block control's constrained range, or a line no block uses.\npub trait Codomain {\n    \
          const NAME: &'static str;\n    const CONSTRAINT: Constraint;\n    \
          /// The closed bounds of each physical component at the default tunable parameters, for host-side checks;\n    \
-         /// infinite where unbounded. A bound that reads a tunable parameter, the momenta's `q_max`, reads the active\n    \
+         /// infinite where unbounded, one period where periodic. A bound that reads a tunable parameter, the momenta's `q_max`, reads the active\n    \
          /// value through `crate::encode::blocks::Ends::ends_at` (R-481 G4; REQ-DEC-048).\n    \
          const LO: f64;\n    const HI: f64;\n}\n",
     );

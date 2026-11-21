@@ -34,13 +34,13 @@ use kernel::chart::Chart;
 use kernel::encode::blocks::SimplexClamp;
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
-    Link, LinkParams, LinkReal, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
+    Link, LinkParams, LinkReal, PeriodicBeta, Select, SigmoidAlpha, SigmoidQ, StickBreaking,
 };
 use validation::negative_control;
 
 /// The selection with `stick_breaking` on the mass block.
 type Links =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 type Stick = MixedMassRatio<ZBeta, Links, f64>;
 

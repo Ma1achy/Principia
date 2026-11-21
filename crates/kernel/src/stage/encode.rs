@@ -3,7 +3,8 @@
 //! - [`encode()`]: invocation `i` reads sample `i`'s `(m, r, p)` in the decode stage's word layout ([`read_ic`]) and writes
 //!   its encode under the default links, [`encode_words`] words ([`write_encoded`]).
 //! - [`beta()`]: invocation `i` reads the pair `λ̃ = (λ̃_x, λ̃_y)` at words `2i`, `2i + 1` and writes `β` at word `i`, so
-//!   a test gives `β`'s selects their operands' exact bits, `±0` included.
+//!   a test gives `β`'s selects their operands' exact bits, `±0` included: `blocks::beta`, the selects at the operands'
+//!   own signs. The whole encode takes its case from `C`'s decision instead (`blocks::beta_at`).
 //! - [`arctangent()`]: invocation `i` reads the pair `(y, x)` at words `2i`, `2i + 1` and writes the kernel's own f32
 //!   `atan2(y, x)` (`crate::arctan`; RQ-628) at word `i`, so a test reads it as the backend compiles it.
 
@@ -21,14 +22,14 @@ pub fn encode_words() -> usize {
     12
 }
 
-/// The notices word: bit 0 the coincident inner pair (R-13), bit 1 `lookup_mirrored`, bit 2 `lookup_rescaled`, bits 8 to
-/// 15 the clamped controls `z[0]` to `z[7]`.
+/// The notices word: bit 0 the coincident inner pair (R-13), bit 2 `lookup_rescaled`, bits 8 to 15 the clamped
+/// controls `z[0]` to `z[7]`; bit 1, `lookup_mirrored` until `C`'s mirror step was removed (R-865, TASK-M2-57), is never
+/// set, so the other bits keep their places.
 #[inline]
 pub fn notices(r: &Report<f32>) -> u32 {
     let coincident = if r.coincident { 1 } else { 0 };
-    let mirrored = if r.mirrored { 2 } else { 0 };
     let rescaled = if r.rescaled { 4 } else { 0 };
-    coincident | mirrored | rescaled | (r.clamped_controls << 8)
+    coincident | rescaled | (r.clamped_controls << 8)
 }
 
 /// What a test reads back of one sample's encode at f32: `z`, `α`, `β` and the report.
@@ -104,7 +105,6 @@ pub fn read_encoded(words: &[u32], i: usize) -> EncodeOut {
             rescaled: flags & 4 != 0,
             coincident: flags & 1 != 0,
             clamped_controls: (flags >> 8) & 0xFF,
-            mirrored: flags & 2 != 0,
         },
     }
 }

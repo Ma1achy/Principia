@@ -60,8 +60,9 @@ const UNBOUND: Key = Key::F12;
 /// A row of §G7's table: the preset's axes, base point, centre and window.
 type Row = ((usize, usize), Latent, (f64, f64), f64);
 
-/// §G7's table, transcribed: each preset's axes, base point, centre and window.
-const G7: [Row; 6] = {
+/// §G7's table as it was transcribed, each preset's axes, base point, centre and window, its `z_β` the control of the
+/// sigmoid β link the table was written under, `β = π·σ(z_β)`.
+const G7_SIGMOID: [Row; 6] = {
     let main = [0.180, 0.410, 0.0, -0.227, 0.0, 0.312, 0.333, 0.333];
     [
         ((0, 1), main, (0.180, 0.410), 1.0),
@@ -77,6 +78,28 @@ const G7: [Row; 6] = {
         ((5, 6), main, (0.312, 0.333), 1.0),
     ]
 };
+
+/// `z_β` of the main base point and of the second preset's, each the control of the periodic β link, `β = z_β + π/2`,
+/// at the same β the table's value gave: `π·σ(0.410) − π/2` and `π·σ(0.500) − π/2`.
+const Z_BETA: [f64; 2] = [0.31757693755701344, 0.3847173352672657];
+
+/// §G7's table with each `z_β` converted: the base points', and the first preset's centre, the one preset whose plane
+/// runs along `z_β`; its window is the same number.
+const G7: [Row; 6] = {
+    let mut table = G7_SIGMOID;
+    let mut p = 0;
+    while p < table.len() {
+        table[p].1[1] = Z_BETA[if p == 1 { 1 } else { 0 }];
+        p += 1;
+    }
+    table[0].2 .1 = Z_BETA[0];
+    table
+};
+
+/// The periodic link's control at the β the sigmoid link gave its control `z`: `π·σ(z) − π/2`.
+fn converted(z: f64) -> f64 {
+    PI / (1.0 + (-z).exp()) - FRAC_PI_2
+}
 
 /// Asserts that `check` panics: the check can fail (R-176's control, run in the test).
 fn rejects(what: &str, check: impl FnOnce()) {
@@ -500,6 +523,21 @@ fn check_table(table: &[Row; 6]) {
 #[test]
 fn qa_presets_carry_g7_table() {
     check_table(&G7);
+    // Each converted `z_β` is the table's own through the conversion, to a few ulps of its rounding.
+    for (p, (new, old)) in G7.iter().zip(&G7_SIGMOID).enumerate() {
+        let (z, want) = (new.1[1], converted(old.1[1]));
+        assert!(
+            (z - want).abs() <= 4.0 * f64::EPSILON,
+            "preset {p}'s z_β {z}, converted {want}"
+        );
+    }
+    rejects("a z_β left as the sigmoid link's", || {
+        assert!((G7_SIGMOID[0].1[1] - converted(0.410)).abs() <= 4.0 * f64::EPSILON)
+    });
+    // Control: the table as transcribed, its `z_β` still the sigmoid link's.
+    rejects("the table before the conversion", || {
+        check_table(&G7_SIGMOID)
+    });
     assert_ne!(PRESET_HOMES[0].base, PRESET_HOMES[1].base, "other values");
     let (mu1, mu2) = (PRESET_HOMES[0].base[6], PRESET_HOMES[0].base[7]);
     assert!(

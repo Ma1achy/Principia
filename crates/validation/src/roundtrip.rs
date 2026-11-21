@@ -21,13 +21,15 @@
 //! dd §2: decoded states are already canonical), so `E`'s `C` is a no-op on it to rounding, and T2 exercises the block
 //! inverses and their numerics (Part 1, T2).
 //!
-//! **The shape sphere chart** (R-544; Part 1's T2, Part 4; REQ-ENC-004, REQ-ENC-024) decodes with `C`'s step 3 not
-//! taken, so at a lower-hemisphere pixel its state is off `C`'s section and `D(E(x))` is `C(x)`, the mirror image `Π·x`
-//! to rounding, at a residual of order 1 against `x`. There T2 compares `D(E(x))` against `C(x)`, as T3 does
-//! ([`Against::Canonical`], [`Reference`]); every other chart against `x` ([`Against::Decoded`]).
+//! **The shape sphere chart** (R-544; Part 1's T2, Part 4; REQ-ENC-004, REQ-ENC-024) lands on `C`'s section like every
+//! chart since TASK-M2-57 took `C`'s mirror step out (R-865), so T2 compares `D(E(x))` against `x` on every chart
+//! ([`Against::Decoded`], [`Reference`]). Was: it decoded with `C`'s step 3 not taken, so at a lower-hemisphere pixel
+//! its state was off `C`'s section and `D(E(x))` was `C(x)`, the mirror image `Π·x`, and T2 compared against `C(x)`
+//! ([`Against::Canonical`], which no chart now takes).
 //!
 //! **The link set** is the registry's defaults ([`Defaults`]) throughout: the clamp oracle's formulas are Part 3's for
-//! those links (`s_α = 2α/π`, `s_β = β/π`, `s_q = ½(q/q_max + 1)` into `[ε, 1 − ε]`, and `|μₖ| ≤ (1 − ε_μ)·μ_max`).
+//! those links (`s_α = 2α/π`, `s_q = ½(q/q_max + 1)` into `[ε, 1 − ε]`, and `|μₖ| ≤ (1 − ε_μ)·μ_max`; the periodic `β`
+//! has no clamp, R-898). *Was (TASK-M2-57):* "(`s_α = 2α/π`, `s_β = β/π`, `s_q` …".
 
 use engine::chart_authoring::{validate, Authored, ValidatedChart};
 use kernel::chart::invariant::{Invariant, WarpReal};
@@ -38,9 +40,10 @@ use kernel::chart::{
     Latent, Mapped, Mapping, MassSimplex, Mixed, MixedEnergy, MixedMassRatio, ShapeMap,
     ShapeSphere,
 };
+use kernel::decode::retired::convert;
 use kernel::decode::{self, Decoded, Ic};
 use kernel::encode::{encode, Encoded, SimplexClamp};
-use kernel::generated::links::{Defaults, LinkReal, Selection};
+use kernel::generated::links::{Defaults, LinkReal, Selection, SigmoidBeta};
 use kernel::payload::PayloadReal;
 use kernel::real::IeeeBits;
 use ledger::constants::{EPS_MU, EPS_PHYS, EPS_Q, EPS_Z, MU_MAX, Q_MAX};
@@ -118,9 +121,10 @@ pub fn eps_phys<R: Precision>() -> f64 {
 /// What a round trip's residual measures `D(E(x))` against (Part 1's T2, R-544; the module's note).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Against {
-    /// `x`, the decoded state itself, on `C`'s section: every chart but the shape sphere.
+    /// `x`, the decoded state itself, on `C`'s section: every chart, since TASK-M2-57 (R-865).
     Decoded,
-    /// `C(x)`, `E`'s canonical state: the shape sphere chart, whose lower-hemisphere states are off `C`'s section.
+    /// `C(x)`, `E`'s canonical state: a chart whose states are off `C`'s section, which none is since TASK-M2-57 (the
+    /// shape sphere's lower hemisphere was, R-544).
     Canonical,
 }
 
@@ -183,11 +187,12 @@ where
 // ── The clamp oracle ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// How far each control of `x` lies inside its clamp, in units of the clamp's own `ε` (Part 3, the defaults links),
-/// in the latent block layout `z_α, z_β | z_q0 … z_q3 | z_μ1, z_μ2`: `min(s, 1 − s)/ε` for `α`, `β` and the four `q`,
-/// and `(μ_max − |μₖ|)/(ε_μ·μ_max)` for the two masses, so a control is at its clamp at 1, inside above it and past it
-/// below. Read off `x`'s own masses, positions and momenta: `ρ = r₁ − r₀`, `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`, each weighted
-/// by its reduced mass's root, `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(|λ̃_y|, λ̃_x)`, `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p₂`,
-/// `μₖ = ln(mₖ/m₀)`.
+/// in the latent block layout `z_α, z_β | z_q0 … z_q3 | z_μ1, z_μ2`: `min(s, 1 − s)/ε` for `α` and the four `q`,
+/// `+∞` for `β`, whose periodic link has no clamp (R-898), and `(μ_max − |μₖ|)/(ε_μ·μ_max)` for the two masses, so a
+/// control is at its clamp at 1, inside above it and past it below. Read off `x`'s own masses, positions and momenta:
+/// `ρ = r₁ − r₀`, `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`, each weighted by its reduced mass's root, `α = atan2(‖λ̃‖, ‖ρ̃‖)`,
+/// `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p₂`, `μₖ = ln(mₖ/m₀)`. *Was (TASK-M2-57):* "`min(s, 1 − s)/ε` for `α`, `β` and the
+/// four `q` … `β = atan2(|λ̃_y|, λ̃_x)`".
 pub fn margins(x: &Ic<f64>) -> [f64; 8] {
     let [m0, m1, m2] = x.m;
     let m01 = m0 + m1;
@@ -202,7 +207,6 @@ pub fn margins(x: &Ic<f64>) -> [f64; 8] {
     let lam_t = [w_lam * lam[0], w_lam * lam[1]];
     let pi = std::f64::consts::PI;
     let alpha = norm(lam_t).atan2(norm(rho_t));
-    let beta = lam_t[1].abs().atan2(lam_t[0]);
     let [_, p1, p2] = x.p;
     let w = m1 / m01;
     let q = [p1[0] + w * p2[0], p1[1] + w * p2[1], p2[0], p2[1]];
@@ -214,7 +218,7 @@ pub fn margins(x: &Ic<f64>) -> [f64; 8] {
     };
     [
         unit(2.0 * alpha / pi, eps_z),
-        unit(beta / pi, eps_z),
+        f64::INFINITY,
         unit(0.5 * (q[0] / q_max + 1.0), eps_q),
         unit(0.5 * (q[1] / q_max + 1.0), eps_q),
         unit(0.5 * (q[2] / q_max + 1.0), eps_q),
@@ -325,8 +329,9 @@ impl<C: Reference, S> Reference for Mapped<C, S> {
     const AGAINST: Against = C::AGAINST;
 }
 
+/// On `C`'s section since TASK-M2-57 (R-865); `Against::Canonical` before then (R-544).
 impl<P> Reference for ShapeSphere<P> {
-    const AGAINST: Against = Against::Canonical;
+    const AGAINST: Against = Against::Decoded;
 }
 
 /// The decode at `R`: [`Registered::decode64`] or [`Registered::decode32`].
@@ -422,10 +427,28 @@ pub mod charts {
         x.map(P::of)
     }
 
-    /// An oblique latent plane through every block, `|zₖ| ≤ 3.4` over `[0, 1]²`.
+    /// A representative's stored `z_β`, written for `sigmoid_beta`, converted once to `periodic_beta`'s,
+    /// `π·σ(z_β) − π/2` (R-898, R-1020; `kernel::decode::retired::convert`), so each representative decodes to the state it did.
+    fn beta(z_beta: f64) -> f64 {
+        convert::<SigmoidBeta, f64>(z_beta)
+    }
+
+    /// An oblique latent plane through every block, `|zₖ| ≤ 3.4` over `[0, 1]²`. Its `z_β`, `−0.4 + 0.4(2u − 1) +
+    /// 1.4(2v − 1)`, is shifted by the conversion at the pinned point `(0.3, 0.6)`, `z_β = −0.28`, so that point decodes
+    /// to the state it did (R-898). *Was:* `z0`'s `z_β` −0.4.
     pub fn latent<P: Precision>() -> Latent<P> {
+        let pinned = -0.4 + 0.4 * (2.0 * 0.3 - 1.0) + 1.4 * (2.0 * 0.6 - 1.0);
         Latent {
-            z0: of([0.3, -0.4, 0.5, -0.2, 0.1, 0.6, 0.2, -0.3]),
+            z0: of([
+                0.3,
+                -0.4 + beta(pinned) - pinned,
+                0.5,
+                -0.2,
+                0.1,
+                0.6,
+                0.2,
+                -0.3,
+            ]),
             q1: of([1.2, 0.4, -0.9, 1.5, 0.3, -1.1, 0.8, 0.5]),
             q2: of([-0.6, 1.4, 0.7, -0.3, 1.6, 0.9, -0.5, 1.1]),
         }
@@ -513,7 +536,7 @@ pub mod charts {
 
     fn invariant<P: Precision>() -> Invariant<P> {
         Invariant {
-            z_cfg: of([0.3, -0.5]),
+            z_cfg: of([0.3, beta(-0.5)]),
             z_mass: of([0.2, 0.1]),
             k_max: P::of(1.0),
             gamma_k: P::of(2.0),
@@ -538,20 +561,27 @@ pub mod charts {
         }
     }
 
+    /// The mixed charts' base `z`: the stored 0, its `z_β` converted, `π·σ(0) − π/2 = 0` (R-898, R-1020).
+    fn base() -> [f64; 8] {
+        let mut z = [0.0; 8];
+        z[1] = beta(0.0);
+        z
+    }
+
     /// A mixed chart of two derived quantities, `α` and `p_ρx`.
     pub fn mixed<P: Precision>() -> Mixed<Alpha, PRhoX, P> {
-        Mixed::new(of([0.0; 8]), of([0.1, 1.4]), of([-1.0, 1.0]))
+        Mixed::new(of(base()), of([0.1, 1.4]), of([-1.0, 1.0]))
     }
 
     /// A mixed chart of two latent coordinates, `z_μ1` and `z_q2`.
     pub fn mixed_latent<P: Precision>() -> Mixed<ZMu1, ZQ2, P> {
-        Mixed::new(of([0.0; 8]), of([-1.0, 1.0]), of([-1.0, 1.0]))
+        Mixed::new(of(base()), of([-1.0, 1.0]), of([-1.0, 1.0]))
     }
 
     /// A mixed chart of `z_μ1` and a lone `E` axis, warped, at `L_z = 0` (TASK-M2-37).
     pub fn mixed_energy<P: Precision>() -> MixedEnergy<ZMu1, AxisE, Defaults, P> {
         MixedEnergy::new(
-            of([0.0; 8]),
+            of(base()),
             of([-1.0, 1.0]),
             P::of(1.0),
             P::of(2.0),
@@ -564,7 +594,7 @@ pub mod charts {
     /// (TASK-M2-37).
     pub fn mixed_mass_ratio<P: Precision>() -> MixedMassRatio<Alpha, Defaults, P> {
         MixedMassRatio::<Alpha, Defaults, f64>::new(
-            [0.0; 8],
+            base(),
             [0.1, 1.4],
             [0.05, 20.0],
             [0, 1],

@@ -33,7 +33,7 @@ use serde::Deserialize;
 
 use kernel::decode::{self, Ic, Latent};
 use kernel::generated::links::{
-    Defaults, Select, SoftsignBeta, SoftsignQ, StickBreaking, TanhAlpha, TanhQ,
+    Defaults, PeriodicBeta, Select, SoftsignQ, StickBreaking, TanhAlpha, TanhQ,
 };
 
 use crate::decode_f32_eps::SplitMix;
@@ -49,10 +49,11 @@ use ledger::constants::EPS_PHYS;
 /// The gate's name, its directory under `fixtures/gates/`.
 pub const NAME: &str = "encode-eps-phys";
 
-/// Every link of the defaults swapped, `stick_breaking`, `tanh_alpha`, `softsign_beta` and the `tanh_q` and
-/// `softsign_q` momenta: the negative input's encode.
+/// Every link of the defaults that has another swapped, `stick_breaking`, `tanh_alpha` and the `tanh_q` and `softsign_q`
+/// momenta: the negative input's encode. `β` keeps `periodic_beta`, its one link since TASK-M2-57 (R-919 Q1 (c); it
+/// was `softsign_beta` before then).
 pub type Mismatched =
-    Select<StickBreaking, TanhAlpha, SoftsignBeta, TanhQ, SoftsignQ, TanhQ, SoftsignQ>;
+    Select<StickBreaking, TanhAlpha, PeriodicBeta, TanhQ, SoftsignQ, TanhQ, SoftsignQ>;
 
 /// Which encode the round trip runs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]

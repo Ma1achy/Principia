@@ -73,7 +73,8 @@ fn mock_axis_labels_name_each_axis_and_its_ends_beside_the_figure() {
     let mut h = headless();
     let _ = h.frame(&mut app, Vec::new());
     let [horizontal, vertical] = axes(&plane(&app));
-    // The mock's chart, z_α × z_β at z₀ = (0.180, 0.410, …), span 2 along each.
+    // The mock's chart, z_α × z_β at z₀ = (0.180, π·σ(0.410) − π/2, …), span 2 along each, its z_β converted
+    // from sigmoid_beta (R-898, R-1020; TASK-M2-57). Was: z₀ = (0.180, 0.410, …).
     assert_eq!(
         horizontal,
         Axis {
@@ -86,8 +87,8 @@ fn mock_axis_labels_name_each_axis_and_its_ends_beside_the_figure() {
         vertical,
         Axis {
             name: "z_β",
-            low: 0.41 - 1.0,
-            high: 0.41 + 1.0
+            low: crate::mock::MOCK_Z0[1] - 1.0,
+            high: crate::mock::MOCK_Z0[1] + 1.0
         }
     );
     let strip = strip_texts(&mut h, &mut app);
@@ -231,7 +232,8 @@ fn mock_axis_labels_vertical_axis_reads_upwards_beside_the_figure() {
     let strip = Layout::new(h.screen(), PIXELS_PER_POINT).axis_y;
     let [_, vertical] = axes(&plane(&app));
     let want = texts(&vertical, "→");
-    assert_eq!(want, ["−0.59", "z_β →", "+1.41"]);
+    // z_β converted from sigmoid_beta, π·σ(0.410) − π/2 ± 1 (R-898, R-1020; TASK-M2-57). Was: −0.59 and +1.41.
+    assert_eq!(want, ["−0.68", "z_β →", "+1.32"]);
     let drawn = vertical_texts(&mut h, &mut app);
     check_vertical(&drawn, &want, strip);
     let swapped = [want[2].clone(), want[1].clone(), want[0].clone()];
@@ -261,7 +263,17 @@ fn mock_axis_labels_decimals_follow_the_span() {
 fn mock_axis_labels_start_at_01_mains_values() {
     assert_eq!(
         crate::mock::MOCK_Z0,
-        [0.180, 0.410, 0.0, -0.227, 0.0, 0.312, 0.333, 0.333]
+        // 01_main.png's values, z_β converted from sigmoid_beta, π·σ(0.410) − π/2 (R-898, R-1020; TASK-M2-57). Was: 0.410.
+        [
+            0.180,
+            0.31757693755701344,
+            0.0,
+            -0.227,
+            0.0,
+            0.312,
+            0.333,
+            0.333
+        ]
     );
     let mut app = mock_app();
     let mut h = headless();

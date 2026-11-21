@@ -22,14 +22,14 @@
 use kernel::decode::degenerate::Degenerate;
 use kernel::decode::mass::{self, Masses};
 use kernel::generated::links::{
-    tanh_sat, Link, LinkReal, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
+    tanh_sat, Link, LinkReal, PeriodicBeta, Select, SigmoidAlpha, SigmoidQ, StickBreaking,
 };
 use kernel::real::{IeeeBits, Real};
 use proptest::prelude::*;
 use validation::{negative_control, prop};
 
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 trait Fp: LinkReal + IeeeBits + std::fmt::Debug {
     fn of(x: f64) -> Self;

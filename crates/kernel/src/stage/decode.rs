@@ -54,7 +54,7 @@ use crate::chart::{
 };
 use crate::decode::{descriptor, energy_norm, Degenerate, Ic};
 use crate::generated::links::{
-    tanh_sat, Defaults, LinkReal, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
+    tanh_sat, Defaults, LinkReal, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ,
     StickBreaking,
 };
 use crate::payload::{ICDescriptor, ICDescriptorOf, PayloadReal};
@@ -452,7 +452,7 @@ impl DecodeVariant for LatentDefaults {
 /// The default links with `stick_breaking` the mass link: the selection whose saturated corner reaches
 /// `DEGENERATE(M01_TINY)` (dd_decoder §3.1; `crate::decode::mass`).
 pub type StickBreakingLinks =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 /// The latent chart under [`StickBreakingLinks`].
 pub struct LatentStickBreaking;

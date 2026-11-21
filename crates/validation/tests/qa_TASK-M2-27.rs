@@ -55,12 +55,21 @@ fn z_of(x: &Ic<f64>) -> [f64; 8] {
     encode::<Defaults, f64>(x).z.z
 }
 
+/// `‖a − b‖` on the latent space: Euclidean, with `z_β`'s difference (component 1) taken on the circle, the nearest of
+/// the differences `2πk` apart. `z_β` is a periodic angle since TASK-M2-57, so `z` and `z + 2π·e_β` are one point, and
+/// the encode returns one period's value whichever the decode was given. *Was:* the Euclidean norm on ℝ⁸.
 fn gap(a: [f64; 8], b: [f64; 8]) -> f64 {
-    a.iter()
-        .zip(b)
-        .map(|(x, y)| (x - y) * (x - y))
-        .sum::<f64>()
-        .sqrt()
+    let tau = std::f64::consts::TAU;
+    let mut sum = 0.0;
+    for k in 0..8 {
+        let mut d = a[k] - b[k];
+        if k == 1 {
+            d = d.rem_euclid(tau);
+            d = d.min(tau - d);
+        }
+        sum += d * d;
+    }
+    sum.sqrt()
 }
 
 /// The Inspector's Randomise: masses on `[0.4, 1.8]`, normalised to `Σmᵢ = 1` exactly (the last as `1 − m₀ − m₁`),

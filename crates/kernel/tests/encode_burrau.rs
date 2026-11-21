@@ -17,8 +17,14 @@
 //!   the positions by `kernel::shape::shape`, not from the encode's Jacobi vectors (REQ-ENC-020). Its control, the
 //!   same search under another weighting, is the one that shows the projection test can fail (PIT-3).
 //! - `encode_burrau_fold`: on a folded chart an input at `θ > π/4`, the leg-swapped twin of a fold shape, is not
-//!   relabelled: it falls back to latent `z`, flagged `past_fold`; on the full-range Euclid plane the twin is its own
-//!   chart point; the flag reaches the caller in the curve encode (REQ-ENC-022, dd_encode §3.1).
+//!   relabelled: it falls back to latent `z`, flagged `past_fold`; on the full-range Euclid plane the twin, the mirror
+//!   image of `γ(ν′)`, falls back to latent `z` too, and its mirror lands at `ν′` (R-865); the flag reaches the caller
+//!   in the curve encode (REQ-ENC-022, dd_encode §3.1). *Was (TASK-M2-57):* "on the full-range Euclid plane the twin
+//!   is its own chart point".
+//! - `encode_burrau_fold_hemispheres`: dd_encode §3.1 on a full-range `ν` chart, past the fold: the input on the
+//!   embed's hemisphere lands at `ν′`, the mirror twin on the other falls back to latent `z`, both flagged (R-865).
+//! - `encode_burrau_fold_twin_off_curve`: the twin's curve encode does not report it on the curve, its shape point's
+//!   `w` signed; its control reads `|w|` (R-865).
 //! - `encode_burrau_by_kind`: every Burrau chart's state, under a random gauge, lands back on its chart at its own
 //!   point through `by_kind::encode_into_within` at the curve tolerance, `encode_into` being it at `tol = 0`; past the
 //!   curve axis's edge the axis places nothing.
@@ -102,9 +108,13 @@ fn burrau(nu: f64) -> Ic<f64> {
     }
 }
 
-/// `x` under a random gauge.
+/// `x` under a random gauge without the mirror: `Π·x` is another system, which `C` no longer folds back (R-865).
 fn gauged(x: &Ic<f64>, rng: &mut SplitMix) -> Ic<f64> {
-    Gauge::random(rng, 3.0, 2.0).act(x)
+    Gauge {
+        mirror: false,
+        ..Gauge::random(rng, 3.0, 2.0)
+    }
+    .act(x)
 }
 
 /// The Euclid plane on its default range, at `R`.
@@ -933,12 +943,12 @@ negative_control!(
 
 // ── The metric against a brute-force search (REQ-ENC-020) ──────────────────────────────────────────────────────────
 
-/// The test's own metric at mass weight `w`: the shape point of the positions by `kernel::shape::shape`, `w` as
-/// `|w|`, its chordal distance squared, plus `w` times the masses' Euclidean distance squared.
+/// The test's own metric at mass weight `w`: the shape point of the positions by `kernel::shape::shape`, `w` signed
+/// (R-865), its chordal distance squared, plus `w` times the masses' Euclidean distance squared. *Was (TASK-M2-57):*
+/// "`w` as `|w|`".
 fn own_d2(x: &Ic<f64>, nu: f64, w: f64) -> f64 {
     let y = burrau(nu);
     let (a, b) = (shape(x.r, x.m), shape(y.r, y.m));
-    let (a, b) = ([a[0], a[1], a[2].abs()], [b[0], b[1], b[2].abs()]);
     let shape2: f64 = (0..3).map(|k| (a[k] - b[k]).powi(2)).sum();
     let mass2: f64 = (0..3).map(|i| (x.m[i] - y.m[i]).powi(2)).sum();
     shape2 + w * mass2
@@ -958,7 +968,9 @@ const FIXTURES: [(f64, f64, f64, f64); 8] = [
 ];
 
 /// Two far states, `d² > 1`, whose `d²` has a second local minimum on the Euclid span (found by a random search, 2 in
-/// 200 000): a search that leaves the best grid point's two cells can settle in the other basin.
+/// 200 000, under the metric's `|w|`): a search that leaves the best grid point's two cells can settle in the other
+/// basin. Both are lower-half states; [`fixture`] takes their mirror images, on the upper hemisphere, where the signed
+/// `w` (R-865) reads them as `|w|` read the states themselves, so their two basins stand.
 const FAR: [Ic<f64>; 2] = [
     Ic {
         m: [0.6590993899962303, 0.260895262143094, 0.08000534786067577],
@@ -980,10 +992,14 @@ const FAR: [Ic<f64>; 2] = [
     },
 ];
 
-/// The fixture `i`: [`FIXTURES`]' perturbations, then the [`FAR`] states.
+/// The fixture `i`: [`FIXTURES`]' perturbations, then the [`FAR`] states' mirror images.
 fn fixture(i: usize) -> Ic<f64> {
     if i >= FIXTURES.len() {
-        return FAR[i - FIXTURES.len()];
+        return Gauge {
+            mirror: true,
+            ..Gauge::identity()
+        }
+        .act(&FAR[i - FIXTURES.len()]);
     }
     let (nu, dx, dy, dm) = FIXTURES[i];
     let mut x = burrau(nu);
@@ -1061,8 +1077,11 @@ fn swapped(x: &Ic<f64>) -> Ic<f64> {
 /// `Φ_θ,K`'s state at `(u, v)` and its leg-swapped twin, at `R`, each under a random gauge: the state lands on the
 /// chart, inside the fold; the twin, at `θ > π/4`, is flagged `past_fold`, is not relabelled onto the chart, and falls
 /// back to latent `z`, by `encode_into_within` and by the projection both, the flag in the curve encode it reports; at
-/// rest (`v = 0`) the twin is the full-range Euclid plane's own chart point, flagged too. When `twin` is false the twin
-/// is replaced by the state itself, for the control.
+/// rest (`v = 0`) the twin is the mirror image of `γ(ν′)`, `ν′` its closed form's `ν`: on the full-range Euclid plane
+/// it falls back to latent `z`, flagged, its curve encode not reporting it on the curve ([`check_twin_off_curve`]),
+/// and its mirror `Π·twin` lands at `ν′`, flagged too (R-865: `C` no longer folds the mirror back). When `twin` is
+/// false the twin is replaced by the state itself, for the control. *Was (TASK-M2-57):* "at rest (`v = 0`) the twin is
+/// the full-range Euclid plane's own chart point, flagged too".
 fn check_fold<R: Precision>(u: f64, v: f64, rng: &mut SplitMix, twin: bool)
 where
     f64: From<R>,
@@ -1102,11 +1121,67 @@ where
     if v == 0.0 {
         let full = into(&euclid::<R>(), &gauged(&y, rng));
         assert!(
-            matches!(full.landing, Landing::Chart { .. })
-                && full.curve.is_some_and(|c| c.closed.past_fold),
-            "on the full range the twin is not its own chart point, flagged: {:?}",
-            full.residual
+            matches!(full.landing, Landing::Latent)
+                && full.curve.is_some_and(|c| {
+                    c.closed.past_fold && !matches!(c.landing, CurveLanding::OnCurve { .. })
+                }),
+            "on the full range the twin is not latent z, flagged and off the curve: {:?}, {:?}",
+            full.landing,
+            full.curve.map(|c| c.landing)
         );
+        check_twin_off_curve::<R>(&gauged(&y, rng), state_point::<R>);
+        let nu = cf.nu;
+        let mirrored = into(
+            &euclid::<R>(),
+            &gauged(
+                &Gauge {
+                    mirror: true,
+                    ..Gauge::identity()
+                }
+                .act(&y),
+                rng,
+            ),
+        );
+        let at = mirrored.curve.map(|c| (c.closed.past_fold, c.landing));
+        assert!(
+            matches!(mirrored.landing, Landing::Chart { .. })
+                && matches!(at, Some((true, CurveLanding::OnCurve { nu: n }))
+                    if (f(n) - f(nu)).abs() <= 1024.0 * R::EPS),
+            "on the full range the twin's mirror does not land at ν′ = {}, flagged: {:?}, {at:?}",
+            f(nu),
+            mirrored.landing
+        );
+    }
+}
+
+/// The twin `x`'s curve encode on the full-range Euclid plane, with its shape point read by `point`, does not report
+/// it on the curve: its closed form's `ν` in the span and `d ≤` the curve tolerance there is [`project`]'s on-curve
+/// test, so `point`'s distance there must exceed the tolerance. The signed `w` of [`state_point`] puts the twin on the
+/// lower hemisphere, the mirror of `γ(ν′)`'s point; `|w|`, the control, folds it back onto the curve.
+fn check_twin_off_curve<R: Precision>(x: &Ic<f64>, point: fn(&Ic<R>) -> Point<R>)
+where
+    f64: From<R>,
+{
+    let e = enc::<R>(x);
+    let cf = closed_form(&e.canonical.ic);
+    let [lo, hi] = euclid::<R>().nu_span::<R>();
+    let tol = curve_tol::<R>();
+    let d2 = curve_distance2(&point(&e.canonical.ic), cf.nu);
+    assert!(
+        cf.nu < lo || cf.nu > hi || d2 > tol.product(tol),
+        "the twin's curve encode reports it on the curve at ν′ = {}: d² = {}",
+        f(cf.nu),
+        f(d2)
+    );
+}
+
+/// [`state_point`] with `w` read as `|w|`, the encode's form before R-865: the control's defect.
+#[cfg(feature = "controls")]
+fn folded_point<R: Precision>(ic: &Ic<R>) -> Point<R> {
+    let p = state_point(ic);
+    Point {
+        n: [p.n[0], p.n[1], Float::abs(p.n[2])],
+        m: p.m,
     }
 }
 
@@ -1127,6 +1202,100 @@ negative_control!(
     "the fold's own state is not past the fold",
     expected = "is not past the fold",
     check_fold::<f64>(0.5, 0.0, &mut rng(22), false)
+);
+
+/// The twins of [`encode_burrau_fold`]'s rest states, at f64 and f32, are off the curve under [`state_point`]'s signed
+/// `w` (R-865).
+#[test]
+fn encode_burrau_fold_twin_off_curve() {
+    let chart = theta_k::<f64>();
+    let mut r = rng(23);
+    for _ in 0..64 {
+        let u = uniform(&mut r, 0.05, 0.9);
+        let x = swapped(&chart.decode_at::<Defaults, f64>(u, 0.0).ic);
+        check_twin_off_curve::<f64>(&gauged(&x, &mut r), state_point::<f64>);
+        check_twin_off_curve::<f32>(&gauged(&x, &mut r), state_point::<f32>);
+    }
+}
+
+negative_control!(
+    encode_burrau_fold_twin_off_curve,
+    "a shape point read with |w| folds the twin onto the curve and must fail",
+    expected = "the twin's curve encode reports it on the curve",
+    {
+        let chart = theta_k::<f64>();
+        let x = swapped(&chart.decode_at::<Defaults, f64>(0.5, 0.0).ic);
+        check_twin_off_curve::<f64>(&gauged(&x, &mut rng(22)), folded_point::<f64>)
+    }
+);
+
+/// dd_encode §3.1 on a full-range `ν` chart: an input past the fold on the embed's hemisphere (`w > 0`) is the chart
+/// point at `ν′` and lands, flagged `past_fold`; one on the other hemisphere (`w < 0`), the mirror twin, falls back to
+/// latent `z`, flagged. `on_embed` and `other` are the two inputs, before a random gauge without the mirror; the
+/// control passes them swapped.
+fn check_hemispheres<R: Precision>(on_embed: &Ic<f64>, other: &Ic<f64>, rng: &mut SplitMix)
+where
+    f64: From<R>,
+{
+    let mut w = |x: &Ic<f64>| {
+        let e = enc::<R>(&gauged(x, rng));
+        f(state_point(&e.canonical.ic).n[2])
+    };
+    let (w_on, w_other) = (w(on_embed), w(other));
+    let lands = into(&euclid::<R>(), &gauged(on_embed, rng));
+    assert!(
+        w_on > 0.0
+            && matches!(lands.landing, Landing::Chart { .. })
+            && lands.curve.is_some_and(|c| c.closed.past_fold),
+        "the input past the fold on the embed's hemisphere (w = {w_on}) does not land, flagged: {:?}",
+        lands.landing
+    );
+    let falls = into(&euclid::<R>(), &gauged(other, rng));
+    assert!(
+        w_other < 0.0
+            && matches!(falls.landing, Landing::Latent)
+            && falls.curve.is_some_and(|c| c.closed.past_fold),
+        "the mirror twin on the other hemisphere (w = {w_other}) does not fall back to latent z, flagged: {:?}",
+        falls.landing
+    );
+}
+
+/// The fold's twins at rest, `θ_K`'s `(u, 0)` with bodies 1 and 2 exchanged, and their mirrors: on each hemisphere one
+/// input, at f64 and f32.
+fn hemisphere_pairs() -> Vec<(Ic<f64>, Ic<f64>)> {
+    let chart = theta_k::<f64>();
+    let mut r = rng(24);
+    (0..32)
+        .map(|_| {
+            let u = uniform(&mut r, 0.05, 0.9);
+            let twin = swapped(&chart.decode_at::<Defaults, f64>(u, 0.0).ic);
+            let mirror = Gauge {
+                mirror: true,
+                ..Gauge::identity()
+            }
+            .act(&twin);
+            (mirror, twin)
+        })
+        .collect()
+}
+
+#[test]
+fn encode_burrau_fold_hemispheres() {
+    let mut r = rng(25);
+    for (on_embed, other) in hemisphere_pairs() {
+        check_hemispheres::<f64>(&on_embed, &other, &mut r);
+        check_hemispheres::<f32>(&on_embed, &other, &mut r);
+    }
+}
+
+negative_control!(
+    encode_burrau_fold_hemispheres,
+    "the two hemispheres' inputs swapped: the mirror twin taken for the chart point must fail",
+    expected = "does not land, flagged",
+    {
+        let (on_embed, other) = hemisphere_pairs()[0];
+        check_hemispheres::<f64>(&other, &on_embed, &mut rng(25));
+    }
 );
 
 // ── Into every Burrau chart ────────────────────────────────────────────────────────────────────────────────────────

@@ -9,9 +9,10 @@
 //!   be untagged or clamped. The framed chart shows clamps and the `(L_z, E)` chart feasibility tags. Control: a trip
 //!   whose free decode reads the encode's `z` with one momentum control moved by 0.05 is past `ε_phys`.
 //! - `roundtrip_preset_shape_sphere_both_hemispheres`: over the shape sphere chart's two hemispheres (R-544), each
-//!   sample's class is the CPU trip's, none is a mirror tie, and every lower-hemisphere sample the encode mirrors, its
-//!   decode off `C`'s section, is untagged and within `ε_phys` against `C(D(z))` (inverse-encode Part 4, Part 8's T2).
-//!   Control: the trip measured against `D(z)` with every mirror tagged, as before; the lower hemisphere is tagged.
+//!   sample's class is the CPU trip's, none is a mirror tie or sets the retired `lookup_mirrored`, and every unclamped
+//!   lower-hemisphere sample, kept below the axis by `C` (R-865), is untagged and within `ε_phys` against `C(D(z))`
+//!   (inverse-encode Part 4, Part 8's T2). Control: the encode's `z` folded onto `β ≤ π`, the retired mirror step; the
+//!   lower hemisphere's trips land on the mirror images.
 //! - `roundtrip_preset_golden_renders_its_reference`: each golden scene's render, through the harness and through the
 //!   `golden_harness` binary, quantised as the golden runner quantises, is its CPU trip's image, pixel for pixel, and its
 //!   words view's classes are the CPU trip's, sample for sample; and
@@ -146,8 +147,10 @@ negative_control!(
 // ── The shape sphere's two hemispheres (R-544) ──────────────────────────────────────────────────────────────────────
 
 /// The shape sphere chart over both hemispheres, 64 × 64 samples of the spherical map, `v < ½` the lower: every trip is
-/// the CPU twin's, no sample is tagged mirror tie, every untagged residual is within `ε_phys`, and every lower-hemisphere
-/// sample the encode mirrors, its decode off `C`'s section, is untagged and within `ε_phys`, measured against `C(D(z))`.
+/// the CPU twin's, no sample is tagged mirror tie or sets the retired `lookup_mirrored` bit, every untagged residual is
+/// within `ε_phys`, and every unclamped lower-hemisphere sample, which `C` keeps below the axis (no mirror step, R-865),
+/// is untagged and within `ε_phys`, measured against `C(D(z))`. *Was:* every lower-hemisphere sample the encode
+/// mirrored, its decode off `C`'s section.
 fn check_shape_sphere(view: &str) {
     use roundtrip::MIRRORED;
     let gpu = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
@@ -159,17 +162,22 @@ fn check_shape_sphere(view: &str) {
         .into_iter()
         .map(|a| a.0)
         .collect();
-    let (mut lower_mirrored, mut upper, mut worst) = (0usize, 0usize, 0.0f64);
+    let (mut lower, mut upper, mut worst) = (0usize, 0usize, 0.0f64);
     let mut counts = [0usize; 5];
     for (q, (g, c)) in gpu_trips.iter().zip(&cpu).enumerate() {
         let p = s.point(q as u32);
         counts[g.class as usize] += 1;
-        if p[1] < 0.5 && g.notices & MIRRORED != 0 && g.class != Class::Clamp {
-            lower_mirrored += 1;
+        assert_eq!(
+            g.notices & MIRRORED,
+            0,
+            "sample {q} at {p:?}: the retired lookup_mirrored bit set (R-865)"
+        );
+        if p[1] < 0.5 && g.class != Class::Clamp {
+            lower += 1;
             assert_eq!(
                 g.class,
                 Class::Untagged,
-                "lower hemisphere sample {q} at {p:?}: mirrored by C and tagged, not held to ε_phys"
+                "lower hemisphere sample {q} at {p:?}: tagged, not held to ε_phys"
             );
             assert!(
                 g.ratio <= 1.0,
@@ -202,12 +210,12 @@ fn check_shape_sphere(view: &str) {
         }
     }
     assert!(
-        lower_mirrored * 4 > gpu_trips.len() && upper * 4 > gpu_trips.len(),
-        "the scene covers too little of either hemisphere: {lower_mirrored} lower mirrored, {upper} upper"
+        lower * 4 > gpu_trips.len() && upper * 4 > gpu_trips.len(),
+        "the scene covers too little of either hemisphere: {lower} lower, {upper} upper"
     );
     println!(
-        "roundtrip_preset_shape_sphere_both_hemispheres: classes {counts:?}, {lower_mirrored} lower-hemisphere samples \
-         mirrored by C, worst untagged {worst:.4} ε_phys"
+        "roundtrip_preset_shape_sphere_both_hemispheres: classes {counts:?}, {lower} unclamped lower-hemisphere \
+         samples, worst untagged {worst:.4} ε_phys"
     );
 }
 
@@ -218,18 +226,16 @@ fn roundtrip_preset_shape_sphere_both_hemispheres() {
 
 negative_control!(
     roundtrip_preset_shape_sphere_both_hemispheres,
-    "measured against D(z) with every mirror tagged, as before R-544's reference, the lower hemisphere is tagged",
-    expected = "lower hemisphere",
+    "the encode's z folded onto β ≤ π, C's retired mirror step, sends each lower-hemisphere sample to its mirror image",
+    expected = "lower hemisphere sample",
     check_shape_sphere(&{
         let view = roundtrip::words().view().to_owned();
-        let undone = view
-            .replace("if (!d.on_section) {", "if (false) {")
-            .replace(
-                "roundtrip_tie_notices(e.notices, d.on_section)",
-                "e.notices",
-            );
-        assert_ne!(view, undone, "the control's edit did not apply");
-        undone
+        let folded = view.replace(
+            "let back = frag_decode_free(e.z);",
+            "var zm = e.z;\n    if (zm[1] > 3.14159265) { zm[1] = 6.28318531 - zm[1]; }\n    let back = frag_decode_free(zm);",
+        );
+        assert_ne!(folded, view, "the control's edit did not apply");
+        folded
     })
 );
 

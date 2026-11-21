@@ -1,7 +1,8 @@
 //! Canonicalisation `C` and the scale gauge on the CPU, at f64 and f32, the one source's two instantiations
 //! (`kernel::canon`; TASK-M2-07). The GPU-f32 build's checks are `engine/tests/canon_gpu.rs`.
 //! - `canonicalise_section`: on random physical states, the output has CoM at the origin, zero total momentum, `ρ̃` on
-//!   `+x`, `λ̃_y ≥ −δ_λ` and `I = 1`, and `C` is idempotent (REQ-DEC-002).
+//!   `+x` and `I = 1`, `λ̃_y` of either sign (no mirror step, R-865; *was:* "`λ̃_y ≥ −δ_λ`"), and `C` is idempotent
+//!   (REQ-DEC-002).
 //! - `canonical_noop`: dd_decoder §5 test 5, `C` on canonical-frame decodes of fuzzed and saturated `z` leaves them
 //!   unchanged, and at the `λ̃_y = 0` seam gives the same result twice (REQ-DEC-018).
 //! - `scale_gauge`: dd_decoder §5 test 10, the identity on canonical output; on a scaled input, `I = 1` and `E`, `L_z`
@@ -17,26 +18,18 @@
 //!   precision leave step 0 and `C` at `I = 1` to rounding, every output finite, `lookup_rescaled` and no
 //!   `lookup_clamped`; the coincident bodies, at the origin and off it, keep the select: divisor 1, `λ = 1`, `p = 0`,
 //!   `lookup_clamped`, `φ = +0` (REQ-ENC-006, R-547).
-//! - `canon_mirror_deadband`: the mirror test at the deadband's edge, `λ̃_y = −δ_λ` and one step below it, at each
-//!   precision; and `λ̃_y` is the decoder's own `λ̃_y` on canonical decodes.
-//! - `canon_mirror_decision_edges`: `C`'s decision ([`mirror_decision`], R-82's test without `fma`, `√`, division or
-//!   trig) at the pole, where its arithmetic is exact: no mirror at `|λ̃_y| ≤ δ_λ`, a mirror one step below `−δ_λ`, at
-//!   each precision; and off it, `10⁻⁴` of `δ_λ` either side of the edges (REQ-DEC-017).
-//! - `canon_mirror_decision_near`: the decision against `λ̃_y < −δ_λ` at f64 on turned, scaled, translated and mirrored
-//!   states `1%` of `δ_λ` either side of the deadband's edges, and `C`'s flag on such states at `I_in ≠ 1`
-//!   (REQ-DEC-017).
-//! - `canon_mirror_extreme_scales`: the decision and `C`'s flag at `λ̃_y = ∓0.577` on states scaled to the edges of
-//!   `I_in`'s finite, normal range at each precision (REQ-DEC-017, REQ-DEC-002).
-//! - `canon_mirror_scale_invariance`: on 2000 generic states, the decision and `C`'s flag are the same at every
-//!   power-of-two scale from `2^−60` to `2^60` at f32 and `2^±500` at f64 (REQ-DEC-017).
-//! - `canon_product_fusion_proof`: the f32 product the mirror decision is built from rounds the same fused or not at
-//!   each of its contractible sites, on 200 000 pairs (REQ-DEC-017).
-//! - `canon_pow2_bits`: the bit-formed powers of two and exponents the decision's integer exponents are read with.
-//! - `canon_mirror_exact_terms`: the decision on states whose sums have an exact zero term, at powers of two from
-//!   `2^−100` to `2^100` (f32) and `2^±900` (f64), and on states whose sums add terms more than the exponent range
-//!   apart, is the one their exact `c` gives (REQ-DEC-017).
-//! - `canon_mirror_subnormal_difference`: the decision on an inner pair a subnormal apart is the exact one at f32 and
-//!   f64, where subnormals are kept (REQ-DEC-017).
+//! - `canon_lambda_t_y`: `λ̃_y` as `C` reads it is the decoder's own `λ̃_y` on canonical decodes, `z_β` over the full
+//!   circle, at each precision.
+//! - `canon_no_mirror`: `C` takes no mirror (R-865): on turned, scaled, translated and mirrored states `λ̃_y = k·δ_λ`
+//!   either side of the old deadband's edges and on generic states, `C`'s output keeps the input's `λ̃_y` sign, raises
+//!   no clamp and is deterministic (REQ-DEC-017, REQ-DEC-002). *Was (TASK-M2-57):* `canon_mirror_deadband`,
+//!   `canon_mirror_decision_edges`, `canon_mirror_decision_near`, `canon_mirror_extreme_scales`,
+//!   `canon_mirror_scale_invariance`, `canon_mirror_exact_terms` and `canon_mirror_subnormal_difference`, the mirror
+//!   decision's tests, gone with it.
+//! - `canon_product_fusion_proof`: the f32 product `C`'s wide arithmetic is built from (the mirror decision's, before
+//!   TASK-M2-57) rounds the same fused or not at each of its contractible sites, on 200 000 pairs (REQ-DEC-002).
+//! - `canon_pow2_bits`: the bit-formed powers of two and exponents `C`'s wide arithmetic's integer exponents are read
+//!   with.
 //! - `canon_rotation`: step 2's turn `(cos φ, sin φ)`, formed as `ρ/‖ρ‖` ([`canon::rotation`]): `(1, +0)` at `ρ = 0`
 //!   for every sign of the zeros (R-437), and elsewhere within 2 eps of `ρ/‖ρ‖`, in value and in the direction it
 //!   leaves `ρ` in, from the least subnormal to the greatest finite `ρ` at each precision (REQ-DEC-002).
@@ -57,9 +50,7 @@
 
 use std::path::Path;
 
-use kernel::canon::{
-    self, canonicalise, inertia, lambda_t_y, mirror_decision, mirror_taken, Canonical, Scaled,
-};
+use kernel::canon::{self, canonicalise, inertia, lambda_t_y, Canonical, Scaled};
 use kernel::decode::descriptor::{kinetic, potential};
 use kernel::decode::{decode, Ic, Latent};
 use kernel::generated::constants::ChartConstants;
@@ -247,14 +238,10 @@ fn check_section<R: Precision>(
             ));
         }
     }
-    let lty = lambda_t_y(out.ic.m, out.ic.r);
-    if lty < -<R as ChartConstants>::DELTA_LAMBDA {
-        return Err(format!("λ̃_y = {lty:?} < −δ_λ on the output"));
-    }
     Ok(())
 }
 
-/// `C` applied to its own output `out`, which takes neither the mirror nor the guard, changes it by what its own steps
+/// `C` applied to its own output `out`, which takes no guard, changes it by what its own steps
 /// remove, plus at most [`IDEMPOTENT_EPS`] over the rotation's conditioning. The error model, per [`state_error`]'s
 /// units (positions over the largest `‖rᵢ‖`, momenta over the largest `‖pᵢ‖`, in eps): the second `C`'s step 1a moves
 /// every `rᵢ` by `out`'s CoM residual, `‖R_com‖`; its step 1b moves `pᵢ` by `mᵢ‖P_tot‖`; its step 0 scales `r` by
@@ -264,11 +251,8 @@ fn check_section<R: Precision>(
 /// input offset (the CoM far from the bodies) the CoM's can be several eps of the output's size.
 fn check_idempotent<R: Precision>(out: &Canonical<R>, worst: &mut Worst) -> Result<(), String> {
     let again = canonicalise(&out.ic);
-    if again.mirrored || again.clamped {
-        return Err(format!(
-            "C(C(x)) mirrored {} clamped {}",
-            again.mirrored, again.clamped
-        ));
+    if again.clamped {
+        return Err("C(C(x)) clamped".to_owned());
     }
     let e = eps::<R>();
     let ic = to64(&out.ic);
@@ -392,7 +376,9 @@ negative_control!(
 const NOOP_EPS: f64 = 4.0;
 
 /// The `z` the no-op runs on: 4096 fuzzed on `[−4, 4]⁸`; each component alone at `±30` and `±1000`, the others fuzzed
-/// on `[−2, 2]`; and `(z_α, z_β)` together at every pair of `{±30, ±1000}`, the rest fuzzed.
+/// on `[−2, 2]`; `(z_α, z_β)` together at every pair of `{±30, ±1000}`, the rest fuzzed; and `z_β` on the
+/// `λ̃_y = 0` seam, at `0`, `±π` and `±2π` as f32 (the collinear shapes, `β` periodic since TASK-M2-57), the rest
+/// fuzzed.
 fn noop_z() -> Vec<[f32; 8]> {
     let mut rng = SplitMix::new(11);
     let mut out: Vec<[f32; 8]> = (0..4096)
@@ -414,13 +400,22 @@ fn noop_z() -> Vec<[f32; 8]> {
             out.push(z);
         }
     }
+    // `β` at the half-axes and a period on, `z_β = β − c` under the offset link (R-1020), `c` f32's `fl↓(π/2)`.
+    let pi = std::f32::consts::PI;
+    let c = f32::from_bits(0x3FC9_0FDA);
+    for b in [0.0f32, -0.0, pi, -pi, 2.0 * pi, -2.0 * pi] {
+        for _ in 0..8 {
+            let mut z: [f32; 8] = core::array::from_fn(|_| rng.uniform(-2.0, 2.0));
+            z[1] = b - c;
+            out.push(z);
+        }
+    }
     out
 }
 
-/// Test 5 on one decode `x` and `C(x)`: the mirror not taken, the rotation angle 0, and the state unchanged within
-/// [`NOOP_EPS`]; the measured error.
+/// Test 5 on one decode `x` and `C(x)`: the rotation angle 0 and the state unchanged within [`NOOP_EPS`], so no
+/// mirror, on either half of `β` (R-865); the measured error.
 fn check_noop<R: Precision>(x: &Ic<R>, out: &Canonical<R>, at: &str) -> f64 {
-    assert!(!out.mirrored, "the mirror was taken at {at}");
     assert!(
         out.phi == R::zero(),
         "the rotation angle is {:?}, not 0, at {at}",
@@ -464,13 +459,16 @@ fn canonical_noop() {
 
 negative_control!(
     canonical_noop,
-    "a C that mirrors the seam (a test reading λ̃_y ≤ δ_λ, the deadband's sign reversed) must fail test 5",
-    expected = "the mirror was taken",
+    "a C that mirrors the seam (the old deadband's test, sign reversed, λ̃_y ≤ δ_λ) must fail test 5",
+    expected = "C moved the decode",
     {
-        let x = decode::<Defaults, f64>(&Latent::new([0.3, -30.0, 0.1, 0.2, -0.4, 0.5, 0.2, -0.1])).ic;
+        // `z_β = −π/2` is `β = 0` under the offset link, the seam `λ̃_y = 0`.
+        let seam = -core::f64::consts::FRAC_PI_2;
+        let x = decode::<Defaults, f64>(&Latent::new([0.3, seam, 0.1, 0.2, -0.4, 0.5, 0.2, -0.1])).ic;
         let mut out = canonicalise(&x);
         assert!(out.lambda_t_y.abs() <= f64::DELTA_LAMBDA, "not at the seam");
-        out.mirrored = out.lambda_t_y <= f64::DELTA_LAMBDA;
+        out.ic.r = out.ic.r.map(|v| [v[0], -v[1]]);
+        out.ic.p = out.ic.p.map(|v| [v[0], -v[1]]);
         check_noop(&x, &out, "the seam");
     }
 );
@@ -664,7 +662,7 @@ fn step_at<R: Precision>() {
         let xr = from64::<R>(&x);
         let c = canonicalise(&xr);
         let at = format!("{} {what}", R::NAME);
-        assert!(!c.mirrored && !c.clamped, "a notice besides λ at {at}");
+        assert!(!c.clamped, "a notice besides λ at {at}");
         assert!(c.rescaled, "no lookup_rescaled at I_in = 4, {at}");
         let worst = check_row(&xr, &c, &at);
         eprintln!("scale_step {at}: λ = {:?}, I_in = {:?}; worst row error {worst} eps (tolerance {STEP_EPS})", c.lambda, c.i_in);
@@ -1134,9 +1132,10 @@ negative_control!(
 
 // ── stage_canon_native ──────────────────────────────────────────────────────────────────────────────────────────
 
-/// States reaching the notices: at `I_in = 0.75`, so `lookup_rescaled`, alone, with `lookup_mirrored`, with
-/// `lookup_clamped`, and with both; and at `I = 1` to under an eps, so no `lookup_rescaled`, alone and with
-/// `lookup_mirrored`.
+/// States reaching the notices: at `I_in = 0.75`, so `lookup_rescaled`, alone, on a lower-half state, with
+/// `lookup_clamped`, and with both; and at `I = 1` to under an eps, so no `lookup_rescaled`, alone and on a lower-half
+/// state. A lower-half state raises no notice of its own: bit 1, `lookup_mirrored`, is retired (R-865; *was:* "with
+/// `lookup_mirrored`").
 fn notice_states() -> [Ic<f32>; 6] {
     let plain = Ic {
         m: [0.25f32, 0.25, 0.5],
@@ -1201,29 +1200,36 @@ fn check_stage(states: &[Ic<f32>], entry: fn(UVec3, &[u32], &mut [u32])) {
 fn stage_canon_native() {
     assert_eq!(canon_words(), ic_words() + 5, "the words of a Canonical");
     let states = notice_states();
-    let flags: Vec<(bool, bool, bool)> = states
+    let flags: Vec<(bool, bool)> = states
         .iter()
         .map(|x| {
             let c = canonicalise(x);
-            (c.clamped, c.mirrored, c.rescaled)
+            (c.clamped, c.rescaled)
         })
         .collect();
     assert_eq!(
         flags,
         [
-            (false, false, true),
-            (false, true, true),
-            (true, false, true),
-            (true, true, true),
-            (false, false, false),
-            (false, true, false),
+            (false, true),
+            (false, true),
+            (true, true),
+            (true, true),
+            (false, false),
+            (false, false),
         ],
         "the states do not reach each set of notices"
     );
+    // The notices are the low four bits; bits 4 to 7 carry the decided signs of λ̃, the encode's case of β, since
+    // that case is decided in C and no longer read off the rotated floats. The pins of the notices are unchanged.
     assert_eq!(
-        states.map(|x| notices(&canonicalise(&x))),
-        [4, 6, 5, 7, 0, 2],
-        "the notices word: bit 0 clamped, bit 1 mirrored, bit 2 rescaled"
+        states.map(|x| notices(&canonicalise(&x)) & 0xF),
+        [4, 4, 5, 5, 0, 0],
+        "the notices word: bit 0 clamped, bit 1 retired and never set, bit 2 rescaled"
+    );
+    assert_eq!(
+        states.map(|x| notices(&canonicalise(&x)) >> 4),
+        states.map(|x| canonicalise(&x).signs.word()),
+        "the notices word: bits 4 to 7 the decided signs of λ̃, and nothing above them"
     );
     check_stage(&states, canonicalise_entry);
     // A Canonical written at sample 1 of three reads back there, its neighbours untouched.
@@ -1254,25 +1260,18 @@ negative_control!(
     }
 );
 
-// ── canon_mirror_deadband (REQ-DEC-017) ─────────────────────────────────────────────────────────────────────────
+// ── canon_no_mirror (REQ-DEC-017, REQ-DEC-002; R-865) ─────────────────────────────────────────────────────────────
 
 /// The tolerance on `λ̃_y` against the decoder's, absolute (`|λ̃| ≤ 1`), in eps.
 const LAMBDA_T_EPS: f64 = 4.0;
 
-/// The mirror test at `−δ_λ` (no mirror) and one step below (mirror), at both edges; and on decodes with unequal
-/// masses, `C`'s branch input against the decoder's `λ̃_y = sin α·sin β`, `test` reading `λ̃_y` of `r` and `m`.
-fn check_deadband<R: Precision>(test: fn([R; 3], [[R; 2]; 3]) -> R, down: fn(R) -> R) {
-    let d = <R as ChartConstants>::DELTA_LAMBDA;
-    assert!(!mirror_taken(-d), "{}: mirrored at λ̃_y = −δ_λ", R::NAME);
-    assert!(
-        mirror_taken(down(-d)),
-        "{}: no mirror just below −δ_λ",
-        R::NAME
-    );
-    assert!(!mirror_taken(d), "{}: mirrored at λ̃_y = +δ_λ", R::NAME);
+/// `λ̃_y`, as `C`'s step 2 reads it ([`lambda_t_y`]), is the decoder's own `λ̃_y = sin α·sin β` on canonical decodes
+/// of `z` over the full circle in `z_β`, at `R`, `test` reading `λ̃_y` of `r` and `m`.
+fn check_lambda_t_y<R: Precision>(test: fn([R; 3], [[R; 2]; 3]) -> R) {
     let mut rng = SplitMix::new(31);
     for j in 0..256 {
-        let z: [f32; 8] = core::array::from_fn(|_| rng.uniform(-2.0, 2.0));
+        let mut z: [f32; 8] = core::array::from_fn(|_| rng.uniform(-2.0, 2.0));
+        z[1] = rng.uniform(-7.0, 7.0);
         let x = decode::<Defaults, R>(&Latent::new(z.map(|v| cast::<R>(v as f64))));
         let got: f64 = test(x.ic.m, x.ic.r).into();
         let want: f64 = x.config.lambda_t[1].into();
@@ -1281,66 +1280,6 @@ fn check_deadband<R: Precision>(test: fn([R; 3], [[R; 2]; 3]) -> R, down: fn(R) 
             "{}: λ̃_y = {got}, the decoder's {want}, at sample {j}",
             R::NAME
         );
-    }
-}
-
-/// [`mirror_decision`]'s signature: masses, CoM-frame positions before step 0; whether to mirror.
-type Decide<R> = fn([R; 3], [[R; 2]; 3]) -> bool;
-
-/// An edge state, masses `(¼, ¼, ½)`, its CoM 0:
-/// - at the pole, `x₀ = x₁ = (−1, a)`, `x₂ = (1, −a)`: `ρ = 0`, so step 2 is the identity, `Λ = (1, −a)`, `I = 1`
-///   exactly and `λ̃_y = −a`. Every operation of the decision is exact on it but `a²` and `δ_λ²`, so its sides compare
-///   `a²/2` with `δ_λ²/2`, each one rounding: the deadband's edge exactly, at each precision;
-/// - on `+x`, `x₀ = (−1, a)`, `x₁ = (1, a)`, `x₂ = (0, −a)`: `ρ = (2, 0)`, `Λ = (0, −a)`, `I = ½` exactly and
-///   `λ̃_y = −√2·a`, which no float `a` puts on `−δ_λ`; the cases there are a set fraction either side.
-fn edge<R: Precision>(pole: bool, a: R) -> ([R; 3], [[R; 2]; 3]) {
-    let (q, h, one, z) = (cast::<R>(0.25), cast::<R>(0.5), R::one(), R::zero());
-    let x = if pole {
-        [[-one, a], [-one, a], [one, -a]]
-    } else {
-        [[-one, a], [one, a], [z, -a]]
-    };
-    ([q, q, h], x)
-}
-
-/// The decision at the deadband's edges, `λ̃_y = −a` at the pole: no mirror at `a = ±δ_λ`, one step inside, `±0`, and
-/// `−2δ_λ`; a mirror one step outside `−δ_λ` and at `2δ_λ`. On `+x`, `λ̃_y = −√2·a`: no mirror at `√2·a = δ_λ(1 − 10⁻⁴)`,
-/// a mirror at `δ_λ(1 + 10⁻⁴)`.
-fn check_decision_edges<R: Precision + std::fmt::LowerExp>(
-    decide: Decide<R>,
-    up: fn(R) -> R,
-    down: fn(R) -> R,
-) {
-    let d = <R as ChartConstants>::DELTA_LAMBDA;
-    let pole = [
-        (d, false),
-        (up(d), true),
-        (down(d), false),
-        (d + d, true),
-        (-d, false),
-        (-up(d), false),
-        (-(d + d), false),
-        (R::zero(), false),
-        (-R::zero(), false),
-    ];
-    let at = |k: f64| cast::<R>(f64::DELTA_LAMBDA * k / 2f64.sqrt());
-    let axis = [
-        (at(1.0 - 1e-4), false),
-        (at(1.0 + 1e-4), true),
-        (at(2.0), true),
-        (at(-1.0 - 1e-4), false),
-        (R::zero(), false),
-    ];
-    for (on_pole, cases) in [(true, &pole[..]), (false, &axis[..])] {
-        for &(a, want) in cases {
-            let (m, x) = edge(on_pole, a);
-            assert_eq!(
-                decide(m, x),
-                want,
-                "{}: the decision at a = {a:e}, at the pole {on_pole}, against λ̃_y < −δ_λ",
-                R::NAME
-            );
-        }
     }
 }
 
@@ -1368,211 +1307,66 @@ fn gauged(m: [f64; 3], t: f64, mirror: bool, theta: f64, s: f64) -> [[f64; 2]; 3
     })
 }
 
-/// The decision against R-82's `λ̃_y < −δ_λ` on f64 states whose `λ̃_y` is a set fraction of `δ_λ` off the deadband's
-/// edges, `±1%` and more, under masses with `m₂/M₀₁` of 1.5 and of 3/7, turned, scaled, translated and mirrored.
-fn check_decision_near(decide: Decide<f64>) {
-    let d = f64::DELTA_LAMBDA;
-    for m in [[0.15, 0.25, 0.6], [0.35, 0.35, 0.3]] {
-        for k in [-2.0, -1.01, -0.99, -0.5, 0.0, 0.5, 0.99, 1.01, 2.0] {
-            for mirror in [false, true] {
-                for theta in [0.4, 2.2, -1.7] {
-                    for s in [0.5, 3.0] {
-                        let y = gauged(m, k * d, mirror, theta, s);
-                        let com = canon::centre_of_mass(m, y);
-                        let x = y.map(|v| [v[0] - com[0], v[1] - com[1]]);
-                        let want = if mirror { -k } else { k } < -1.0;
-                        assert_eq!(
-                            decide(m, x),
-                            want,
-                            "the decision at λ̃_y = {}δ_λ, masses {m:?}, θ {theta}, s {s}, mirrored {mirror}, \
-                             against λ̃_y < −δ_λ",
-                            if mirror { -k } else { k }
-                        );
-                    }
+/// `C` takes no mirror (R-865): on [`gauged`]'s states, `λ̃_y = k·δ_λ` for `k` either side of the old deadband's
+/// edges and well past them, under masses with `m₂/M₀₁` of 1.5 and of 3/7, turned, scaled, translated and mirrored, at
+/// `I_in ≠ 1`; and on generic states, whose `λ̃_y` lies anywhere: `canon`'s output keeps the sign of the input's own
+/// `λ̃_y` (`t`, or `−t` where the input is mirrored), raises no notice besides `λ`'s, and is the same twice.
+fn check_no_mirror(canon: fn(&Ic<f64>) -> Canonical<f64>) {
+    let d = <f64 as ChartConstants>::DELTA_LAMBDA;
+    let mut states = Vec::new();
+    for m in [[0.3, 0.1, 0.6], [0.4, 0.3, 0.3]] {
+        for mirror in [false, true] {
+            for k in [
+                -1e6, -2.0, -1.01, -1.0, -0.99, -0.5, 0.5, 0.99, 1.0, 1.01, 2.0, 1e6,
+            ] {
+                for s in [0.5, 3.0] {
+                    let ic = Ic {
+                        m,
+                        r: gauged(m, k * d, mirror, 0.9, s),
+                        p: [[0.1, -0.2], [0.05, 0.3], [-0.15, -0.1]],
+                    };
+                    states.push((ic, if mirror { -k } else { k } < 0.0));
                 }
             }
         }
     }
-}
-
-#[test]
-fn canon_mirror_deadband() {
-    check_deadband::<f64>(lambda_t_y, f64::next_down);
-    check_deadband::<f32>(lambda_t_y, f32::next_down);
-}
-
-negative_control!(
-    canon_mirror_deadband,
-    "a branch input that reads λ_y, not λ̃_y = √μ_λ·λ_y, must fail",
-    expected = "the decoder's",
-    check_deadband::<f64>(
-        |m, r| lambda_t_y(m, r) / (m[2] * (m[0] + m[1])).sqrt(),
-        f64::next_down
-    )
-);
-
-/// The decision at f64 in plain arithmetic, unrescaled, for the controls: `m₂` and `M₀₁` exchanged where `swap`
-/// (R-82's threshold scaled by `m₂/M₀₁`), and the tie `m₂c² = δ_λ²M₀₁‖ρ‖²d²` taken as a mirror where `tie`.
-#[cfg(feature = "controls")]
-fn defective(m: [f64; 3], x: [[f64; 2]; 3], swap: bool, tie: bool) -> bool {
-    let rho = [x[1][0] - x[0][0], x[1][1] - x[0][1]];
-    let rho = if rho == [0.0, 0.0] { [1.0, 0.0] } else { rho };
-    let m01 = m[0] + m[1];
-    let big = |k: usize| m01 * x[2][k] - m[0] * x[0][k] - m[1] * x[1][k];
-    let c = rho[0] * big(1) - rho[1] * big(0);
-    let (lhs, rhs) = if swap { (m01, m[2]) } else { (m[2], m01) };
-    let (left, right) = (
-        c * c * lhs,
-        f64::DELTA_LAMBDA
-            * f64::DELTA_LAMBDA
-            * rhs
-            * (rho[0] * rho[0] + rho[1] * rho[1])
-            * inertia(m, x),
-    );
-    c < 0.0 && if tie { left >= right } else { left > right }
-}
-
-/// `C` itself at f64 on [`gauged`]'s states, with momenta, scaled so `I_in = s²` is not 1: its mirror flag against
-/// `λ̃_y < −δ_λ`.
-fn check_canonicalise_near() {
-    let d = f64::DELTA_LAMBDA;
-    for k in [-1.01, -0.99, 0.99, 1.01] {
-        for mirror in [false, true] {
-            for s in [0.5, 3.0] {
-                let m = [0.15, 0.25, 0.6];
-                let ic = Ic {
-                    m,
-                    r: gauged(m, k * d, mirror, 0.9, s),
-                    p: [[0.2, -0.1], [-0.3, 0.4], [0.05, 0.1]],
-                };
-                let want = if mirror { -k } else { k } < -1.0;
-                assert_eq!(
-                    canonicalise(&ic).mirrored,
-                    want,
-                    "C's mirror at λ̃_y = {}δ_λ, s {s}, mirrored {mirror}, against λ̃_y < −δ_λ",
-                    if mirror { -k } else { k }
-                );
-            }
-        }
+    let mut lower = 0;
+    for ic in generic::<f64>(512) {
+        let own = lambda_t_y(ic.m, rotated(&ic).r);
+        states.push((ic, own < 0.0));
+        lower += <usize as From<bool>>::from(own < 0.0);
+    }
+    assert!(lower > 0, "no generic state in the lower half");
+    for (j, (ic, below)) in states.iter().enumerate() {
+        let out = canon(ic);
+        let y = lambda_t_y(out.ic.m, out.ic.r);
+        assert!(
+            (y < 0.0) == *below && !out.clamped,
+            "C changed λ̃_y's sign at state {j}: λ̃_y = {y:e}, the input's below 0: {below}"
+        );
+        let again = canon(ic);
+        assert!(
+            again.ic.r == out.ic.r && again.ic.p == out.ic.p,
+            "C is not deterministic at state {j}"
+        );
     }
 }
 
-#[test]
-fn canon_mirror_decision_near() {
-    check_decision_near(mirror_decision);
-    check_canonicalise_near();
-}
-
-negative_control!(
-    canon_mirror_decision_near,
-    "a decision with m₂ and M₀₁ exchanged, R-82's threshold scaled by m₂/M₀₁, must fail near the edge",
-    expected = "against λ̃_y < −δ_λ",
-    check_decision_near(|m, x| defective(m, x, true, false))
-);
-
-#[test]
-fn canon_mirror_decision_edges() {
-    check_decision_edges::<f64>(mirror_decision, f64::next_up, f64::next_down);
-    check_decision_edges::<f32>(mirror_decision, f32::next_up, f32::next_down);
-}
-
-negative_control!(
-    canon_mirror_decision_edges,
-    "a decision that mirrors at |λ̃_y| = δ_λ, the deadband's tie taken as a mirror, must fail",
-    expected = "the decision at a = 1e-12, at the pole true",
-    check_decision_edges::<f64>(
-        |m, x| defective(m, x, false, true),
-        f64::next_up,
-        f64::next_down
-    )
-);
-
-// ── canon_mirror_extreme_scales (REQ-DEC-017, REQ-DEC-002) ───────────────────────────────────────────────────
-
-/// The far scales at each precision: up to the largest `s` whose `I_in = s²` is finite, down to the smallest whose
-/// `I_in` is normal, where the decision's sides, of degree 4 in `s`, overflow or underflow in plain floats.
-const SCALES_F32: [f64; 9] = [4e15, 1e16, 1e18, 1e-8, 1e-9, 1e-10, 1e-12, 1e-15, 1e-18];
-const SCALES_F64: [f64; 9] = [
-    1e83, 1e100, 1e150, 1e153, 1e-75, 1e-80, 1e-100, 1e-150, 1e-153,
-];
-
-/// [`gauged`]'s state at `λ̃_y = t`, turned by 0.9 and scaled by `s`, with momenta, at `R`.
-fn far<R: Precision>(t: f64, s: f64) -> Ic<R> {
-    let m = [0.15, 0.25, 0.6];
-    from64(&Ic {
-        m,
-        r: gauged(m, t, false, 0.9, s),
-        p: [[0.2, -0.1], [-0.3, 0.4], [0.05, 0.1]],
-    })
-}
-
-/// The decision at `λ̃_y = ∓0.577` (mirror, no mirror) on [`far`]'s states at each scale, with `I_in` finite and normal
-/// at `R`, and `C`'s own flag there where `with_c`.
-fn check_extreme_scales<R: Precision>(decide: Decide<R>, scales: &[f64], with_c: bool) {
-    for &s in scales {
-        for t in [-0.577, 0.577] {
-            let ic = far::<R>(t, s);
-            let com = canon::centre_of_mass(ic.m, ic.r);
-            let x = ic.r.map(|v| [v[0] - com[0], v[1] - com[1]]);
-            let i = inertia(ic.m, x);
-            assert!(
-                !i.non_finite_bits() && i >= R::min_positive_value(),
-                "{}: I_in = {i:?} is not finite and normal at s = {s:e}",
-                R::NAME
-            );
-            let want = t < 0.0;
-            assert_eq!(
-                decide(ic.m, x),
-                want,
-                "{}: the decision at s = {s:e}, λ̃_y = {t}, against λ̃_y < −δ_λ",
-                R::NAME
-            );
-            if with_c {
-                assert_eq!(
-                    canonicalise(&ic).mirrored,
-                    want,
-                    "{}: C's mirror at s = {s:e}, λ̃_y = {t}",
-                    R::NAME
-                );
-            }
-        }
+/// `ic` turned so `ρ` lies on `+x`, by `C`'s own steps 1a and 2 alone, unscaled: the sign of its `λ̃_y` is the input's.
+fn rotated(ic: &Ic<f64>) -> Ic<f64> {
+    let com = canon::centre_of_mass(ic.m, ic.r);
+    let r = ic.r.map(|v| [v[0] - com[0], v[1] - com[1]]);
+    let rho = [r[1][0] - r[0][0], r[1][1] - r[0][1]];
+    let n = rho[0].hypot(rho[1]);
+    let (c, s) = (rho[0] / n, rho[1] / n);
+    Ic {
+        m: ic.m,
+        r: r.map(|v| [c * v[0] + s * v[1], -s * v[0] + c * v[1]]),
+        p: ic.p,
     }
 }
 
-#[test]
-fn canon_mirror_extreme_scales() {
-    check_extreme_scales::<f32>(mirror_decision, &SCALES_F32, true);
-    check_extreme_scales::<f64>(mirror_decision, &SCALES_F64, true);
-}
-
-/// The decision in plain floats, without its integer exponents, for the control.
-#[cfg(feature = "controls")]
-fn unscaled<R: Precision>(m: [R; 3], x: [[R; 2]; 3]) -> bool {
-    let rho = [x[1][0] - x[0][0], x[1][1] - x[0][1]];
-    let m01 = m[0] + m[1];
-    let big = |k: usize| m01 * x[2][k] - m[0] * x[0][k] - m[1] * x[1][k];
-    let c = rho[0] * big(1) - rho[1] * big(0);
-    let d = <R as ChartConstants>::DELTA_LAMBDA;
-    let p = rho[0] * rho[0] + rho[1] * rho[1];
-    c < R::zero() && c * c * m[2] > d * d * m01 * p * inertia(m, x)
-}
-
-negative_control!(
-    canon_mirror_extreme_scales,
-    "the decision in plain floats overflows at s = 1e16 in f32 and must fail",
-    expected = "f32: the decision at s = 1e16",
-    check_extreme_scales::<f32>(unscaled, &SCALES_F32, false)
-);
-
-// ── canon_mirror_scale_invariance (REQ-DEC-017) ────────────────────────────────────────────────────────────────
-
-/// The powers of two the states are scaled by, at each precision: near `1e±8`, `1e±9`, `1e±12`, `1e±18` and `1e±30`
-/// at f32, and to `2^±900` at f64. Past `2^±60` (f32) and `2^±500` (f64) `I_in` itself overflows or underflows, which
-/// the decision, formed from the differences alone, does not read.
-const EXPS_F32: [i32; 11] = [-100, -60, -40, -30, -27, 0, 27, 30, 40, 60, 100];
-const EXPS_F64: [i32; 11] = [-900, -500, -330, -250, -100, 0, 100, 250, 330, 500, 900];
-
-/// Generic states, random masses, positions and momenta: `λ̃_y` anywhere, about half of them mirrored.
+/// Generic states, random masses, positions and momenta: `λ̃_y` anywhere, about half in the lower half.
 fn generic<R: Precision>(n: usize) -> Vec<Ic<R>> {
     let mut rng = SplitMix::new(43);
     let mut u = |lo: f32, hi: f32| rng.uniform(lo, hi) as f64;
@@ -1589,72 +1383,39 @@ fn generic<R: Precision>(n: usize) -> Vec<Ic<R>> {
         .collect()
 }
 
-/// `ic`'s positions times `2^e`, exactly.
-fn scaled<R: Precision>(ic: &Ic<R>, e: i32) -> Ic<R> {
-    let k = cast::<R>(2f64.powi(e));
-    Ic {
-        m: ic.m,
-        r: ic.r.map(|v| v.map(|q| q * k)),
-        p: ic.p,
-    }
-}
-
-/// The decision on `ic`'s CoM-frame positions, formed as `C` forms them.
-fn decide_on<R: Precision>(decide: Decide<R>, ic: &Ic<R>) -> bool {
-    let com = canon::centre_of_mass(ic.m, ic.r);
-    decide(ic.m, ic.r.map(|v| [v[0] - com[0], v[1] - com[1]]))
-}
-
-/// A power-of-two scale changes no bit of the rescaled state, so the decision, and `C`'s flag where `with_c`, is the
-/// same at every scale in `exps` as at `2⁰`, on every one of `n` generic states; the number mirrored at `2⁰`.
-fn check_scale_invariance<R: Precision>(decide: Decide<R>, exps: &[i32], with_c: bool) -> usize {
-    let states = generic::<R>(2000);
-    let mut mirrors = 0;
-    for (j, ic) in states.iter().enumerate() {
-        let base = decide_on(decide, ic);
-        mirrors += base as usize;
-        for &e in exps {
-            let x = scaled(ic, e);
-            assert_eq!(
-                decide_on(decide, &x),
-                base,
-                "{}: the decision at 2^{e} differs from 2⁰ at state {j}",
-                R::NAME
-            );
-            if with_c {
-                assert_eq!(
-                    canonicalise(&x).mirrored,
-                    base,
-                    "{}: C's mirror at 2^{e} differs from 2⁰ at state {j}",
-                    R::NAME
-                );
-            }
-        }
-    }
-    mirrors
-}
-
 #[test]
-fn canon_mirror_scale_invariance() {
-    let m32 = check_scale_invariance::<f32>(mirror_decision, &EXPS_F32, true);
-    let m64 = check_scale_invariance::<f64>(mirror_decision, &EXPS_F64, true);
-    assert!(m32 > 0 && m64 > 0, "no generic state mirrored");
-    eprintln!(
-        "canon_mirror_scale_invariance: 2000 generic states, {m32} (f32) and {m64} (f64) mirrored, the same at every \
-         scale"
-    );
+fn canon_lambda_t_y() {
+    check_lambda_t_y::<f64>(lambda_t_y);
+    check_lambda_t_y::<f32>(lambda_t_y);
 }
 
 negative_control!(
-    canon_mirror_scale_invariance,
-    "the decision in plain floats changes with the scale and must fail",
-    expected = "f32: the decision at 2^",
-    {
-        check_scale_invariance::<f32>(unscaled, &EXPS_F32, false);
-    }
+    canon_lambda_t_y,
+    "a branch input that reads λ_y, not λ̃_y = √μ_λ·λ_y, must fail",
+    expected = "the decoder's",
+    check_lambda_t_y::<f64>(|m, r| lambda_t_y(m, r) / (m[2] * (m[0] + m[1])).sqrt())
 );
 
-// ── canon_product_fusion_proof (REQ-DEC-017) ───────────────────────────────────────────────────────────────────
+#[test]
+fn canon_no_mirror() {
+    check_no_mirror(canonicalise);
+}
+
+negative_control!(
+    canon_no_mirror,
+    "C with its mirror step left in (R-82's test, λ̃_y < −δ_λ mirrors the full state) must fail",
+    expected = "C changed λ̃_y's sign",
+    check_no_mirror(|ic| {
+        let mut out = canonicalise(ic);
+        if lambda_t_y(out.ic.m, out.ic.r) < -<f64 as ChartConstants>::DELTA_LAMBDA {
+            out.ic.r = out.ic.r.map(|v| [v[0], -v[1]]);
+            out.ic.p = out.ic.p.map(|v| [v[0], -v[1]]);
+        }
+        out
+    })
+);
+
+// ── canon_product_fusion_proof (REQ-DEC-002) ───────────────────────────────────────────────────────────────────
 
 /// The f32 [`IeeeBits::product`]'s four partial products and its fixed sum, written out with each of its two
 /// contractible sites `x·y + z` fused or not as `fuse` says.
@@ -1746,154 +1507,6 @@ negative_control!(
     "a pow2 whose bias has the wrong sign must fail",
     expected = "f32: pow2(-126)",
     check_pow2::<f32>(|e| f32::from_bits(((e - 127) as u32) << 23), -126, 127)
-);
-
-// ── canon_mirror_exact_terms (REQ-DEC-017) ─────────────────────────────────────────────────────────────────────
-
-/// `v` turned by `k` quarter turns, exactly: `(x, y) ↦ (−y, x)` `k` times.
-fn quarter<R: Precision>(v: [R; 2], k: usize) -> [R; 2] {
-    (0..k).fold(v, |w, _| [-w[1], w[0]])
-}
-
-/// States whose sums have an exact zero term, masses `(¼, ¼, ½)`, and their exact `c = ρ × Λ`, whose sign alone sets
-/// the decision (each `λ̃_y` is at least about `0.1`, far outside the deadband):
-/// - `x₀ = 0`, `x₁ = (1, 1)`, `x₂ = (0, y)`: `d02_x = 0`, so `Λ_x = m₀·0 + m₁·(−1)`, and `c = y/2`;
-/// - `x₀ = 0`, `x₁ = (1, 0)`, `x₂ = (0.375, y)`: `ρ_y = 0`, so `c = ρ_xΛ_y − 0·Λ_x` and `‖ρ‖² = 1 + 0`, and `c = y/2`;
-///
-/// each turned by `k` quarter turns, which keeps the zeros (in the other component) and `c`.
-fn zero_terms<R: Precision>() -> Vec<([[R; 2]; 3], bool)> {
-    let mut out = Vec::new();
-    for y in [0.25, -0.25, 0.75, -0.75, 3.0, -3.0] {
-        for x1 in [[1.0, 1.0], [1.0, 0.0]] {
-            let x2 = if x1[1] == 1.0 { 0.0 } else { 0.375 };
-            for k in 0..4 {
-                let r = [[0.0, 0.0], x1, [x2, y]].map(|v| quarter(v.map(cast::<R>), k));
-                out.push((r, y < 0.0));
-            }
-        }
-    }
-    out
-}
-
-/// States whose sums add terms more than the exponent range apart, masses `(¼, ¼, ½)`: `x₀ = 0`,
-/// `x₁ = (1, 2^−g)`, `x₂ = (0, −t)`, with `g = 100` at f32 and `1000` at f64, so `‖ρ‖² = 1 + 2^−2g` sums terms `2g`
-/// binades apart, past the exponent range. `c = −M₀₁t` to within `2^−g`; at `t = 2^−50`
-/// `m₂c² ≈ 2^−103` is below `δ_λ²·M₀₁·‖ρ‖²·d² ≈ 2^−83` (no mirror), at `t = 2^−20` it is above (a mirror), and at
-/// `t = −2^−20` `c > 0` (no mirror).
-fn spread_terms<R: Precision>(g: i32) -> Vec<([[R; 2]; 3], bool)> {
-    [(-50, 1.0, false), (-20, 1.0, true), (-20, -1.0, false)]
-        .into_iter()
-        .map(|(e, sign, mirror)| {
-            let t = sign * 2f64.powi(e);
-            let r = [[0.0, 0.0], [1.0, 2f64.powi(-g)], [0.0, -t]].map(|v| v.map(cast::<R>));
-            (r, mirror)
-        })
-        .collect()
-}
-
-/// The decision on every exact-term state at every power of two in `exps`, and on the spread states, is the exact
-/// one; the number of states checked.
-fn check_exact_terms<R: Precision>(decide: Decide<R>, exps: &[i32], g: i32) -> usize {
-    let m = [0.25, 0.25, 0.5].map(cast::<R>);
-    let mut n = 0;
-    for (j, (r, want)) in zero_terms::<R>().into_iter().enumerate() {
-        for &e in exps {
-            let k = cast::<R>(2f64.powi(e));
-            let x = r.map(|v| v.map(|q| q * k));
-            assert_eq!(
-                decide(m, x),
-                want,
-                "{}: the decision at 2^{e} on zero-term state {j} ({x:?})",
-                R::NAME
-            );
-            n += 1;
-        }
-    }
-    for (j, (r, want)) in spread_terms::<R>(g).into_iter().enumerate() {
-        assert_eq!(
-            decide(m, r),
-            want,
-            "{}: the decision on spread state {j} ({r:?})",
-            R::NAME
-        );
-        n += 1;
-    }
-    n
-}
-
-#[test]
-fn canon_mirror_exact_terms() {
-    let n32 = check_exact_terms::<f32>(mirror_decision, &EXPS_F32, 100);
-    let n64 = check_exact_terms::<f64>(mirror_decision, &EXPS_F64, 1000);
-    eprintln!(
-        "canon_mirror_exact_terms: {n32} (f32) and {n64} (f64) states with an exact zero term or terms past the \
-         exponent range apart, each decided as its exact c says"
-    );
-}
-
-negative_control!(
-    canon_mirror_exact_terms,
-    "the decision in plain floats underflows on the zero-term states at 2^−100 in f32 and must fail",
-    expected = "f32: the decision at 2^-100",
-    {
-        check_exact_terms::<f32>(unscaled, &EXPS_F32, 100);
-    }
-);
-
-// ── canon_mirror_subnormal_difference (REQ-DEC-017) ────────────────────────────────────────────────────────────
-
-/// States whose inner pair is a subnormal apart, `v` the subnormal with bits `0x201`, masses `(¼, ¼, ½)`, and the exact
-/// decision: `x₁ = (v, 0)`, `x₂ = (1536, −1024)`, `c = −512v`, a mirror; `x₁ = (0, v)`, `x₂ = (−1536, −1024)`,
-/// `c = 768v`, none. `x₀ = 0`. Each `λ̃_y` is far outside the deadband.
-fn subnormal_pairs<R: Precision>(v: R) -> [([[R; 2]; 3], bool); 2] {
-    let z = R::zero();
-    let c = cast::<R>;
-    [
-        ([[z, z], [v, z], [c(1536.0), c(-1024.0)]], true),
-        ([[z, z], [z, v], [c(-1536.0), c(-1024.0)]], false),
-    ]
-}
-
-/// The decision on the subnormal pairs at `R`, through `decide`, is the exact one, on a backend that keeps subnormals.
-fn check_subnormal<R: Precision>(decide: Decide<R>, v: R) {
-    assert!(
-        v != R::zero() && v.exponent() == R::zero().exponent(),
-        "{}: v is subnormal",
-        R::NAME
-    );
-    let m = [0.25, 0.25, 0.5].map(cast::<R>);
-    for (j, (r, want)) in subnormal_pairs(v).into_iter().enumerate() {
-        assert_eq!(
-            decide(m, r),
-            want,
-            "{}: the decision on subnormal pair {j}",
-            R::NAME
-        );
-    }
-}
-
-#[test]
-fn canon_mirror_subnormal_difference() {
-    check_subnormal::<f32>(mirror_decision, f32::from_bits(0x201));
-    check_subnormal::<f64>(mirror_decision, f64::from_bits(0x201));
-    eprintln!(
-        "canon_mirror_subnormal_difference: an inner pair 0x201 (subnormal) apart, at f32 and f64: the mirror on c < 0 \
-         and none on c > 0"
-    );
-}
-
-/// The decision after flushing every subnormal coordinate to zero, as a GPU that flushes reads the state.
-#[cfg(feature = "controls")]
-fn flushed_input(m: [f32; 3], r: [[f32; 2]; 3]) -> bool {
-    let flush = |q: f32| if q.abs() < f32::MIN_POSITIVE { 0.0 } else { q };
-    mirror_decision(m, r.map(|v| v.map(flush)))
-}
-
-negative_control!(
-    canon_mirror_subnormal_difference,
-    "the decision on the input with its subnormals flushed reads the pole and must fail",
-    expected = "f32: the decision on subnormal pair 1",
-    check_subnormal::<f32>(flushed_input, f32::from_bits(0x201))
 );
 
 // ── canon_rotation (REQ-DEC-002) ────────────────────────────────────────────────────────────────────────────────

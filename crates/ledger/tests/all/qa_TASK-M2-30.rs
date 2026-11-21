@@ -1,14 +1,14 @@
 //! QA tests for TASK-M2-30 on the ledger side, written from REQ-GEN-034 and R-417, not from the implementation:
 //! - the hashed bytes do not change (R-417; dd_generation_root §3.9, "The closed range and the f32 images of π/2 and
 //!   π": "a tree's `num` is the f64 value's bits, so the hashed bytes do not change"): every literal π/2 and π in the
-//!   registry's trees is the f64 nearest value's bits, never an f32-rounded image, and the codomains' bounds are the
-//!   f64 values;
+//!   registry's trees is the f64 nearest value's bits, never an f32-rounded image, and the codomains' bounds (α's, the
+//!   retired β's interval's, and the periodic β's period) are the f64 values;
 //! - the generator's emitted f32 literals of π/2 and π, compiled here from the generated text's spelling, are not the
 //!   round-to-nearest images: the emitted file names no `core::f32::consts` π, and its f32 literals of π/2 and π,
 //!   decoded, are below π/2 and π (the kernel side, `crates/kernel/tests/qa_TASK-M2-30.rs`, checks the compiled
 //!   values are `fl↓`).
 
-use std::f64::consts::{FRAC_PI_2, PI};
+use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
 use ledger::gen::links::{generate, LINKS_PATH};
 use ledger::links::{builders, registry, Codomain, Expr, Link};
@@ -60,7 +60,8 @@ fn check_hashed_pi(lits: &[f64]) {
 #[test]
 fn qa_hashed_pi_is_the_f64_value() {
     check_hashed_pi(&literals(registry()));
-    for (c, hi) in [(Codomain::Alpha, FRAC_PI_2), (Codomain::Beta, PI)] {
+    // π is the upper bound of the interval the retired β links map onto; the periodic β has a period, not bounds.
+    for (c, hi) in [(Codomain::Alpha, FRAC_PI_2), (Codomain::RetiredBeta, PI)] {
         let (_, b) = c.range().expect("an interval codomain");
         assert_eq!(
             b.to_bits(),
@@ -68,6 +69,13 @@ fn qa_hashed_pi_is_the_f64_value() {
             "{c:?}'s upper bound is not the f64 value"
         );
     }
+    assert_eq!(Codomain::Beta.range(), None, "the circle has bounds");
+    let (lo, hi) = Codomain::Beta.period().expect("β is periodic");
+    assert_eq!(
+        (lo.to_bits(), hi.to_bits()),
+        (0.0_f64.to_bits(), TAU.to_bits()),
+        "β's period is not [0, 2π) at the f64 values"
+    );
 }
 
 negative_control!(

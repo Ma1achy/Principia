@@ -278,7 +278,8 @@ fn f3_fills_window_mock_quads_copied_past_the_root() {
     let span = layout().placement().span();
     let shown = quads::quads(&plane);
     let all = quads::quads_over(&plane, span);
-    // The window in the plane's (u, v): the mock's unit basis, centred on z₀'s (0.18, 0.41).
+    // The window in the plane's (u, v): the mock's unit basis, centred on z₀'s (0.18, π·σ(0.41) − π/2), its z_β
+    // converted (R-898, R-1020; TASK-M2-57).
     let (cu, cv) = (plane.z0[0], plane.z0[1]);
     let window = [
         cu + 2.0 * span[0] - 1.0,

@@ -33,8 +33,8 @@ use kernel::decode::{decode, Ic};
 use kernel::encode::ingest::kappa;
 use kernel::encode::{encode, SimplexClamp};
 use kernel::generated::links::{
-    Alpha, Beta, Defaults, Link, Mass, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
-    SoftmaxTanh, SoftsignAlpha, SoftsignBeta, SoftsignQ, StickBreaking, TanhAlpha, TanhBeta, TanhQ,
+    Alpha, Beta, Defaults, Link, Mass, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ,
+    SoftmaxTanh, SoftsignAlpha, SoftsignQ, StickBreaking, TanhAlpha, TanhQ,
 };
 use validation::link_variation::{diagnose, Row};
 use validation::negative_control;
@@ -141,12 +141,16 @@ fn check_covers(rows: &[Row]) {
 fn qa_link_variation_covers_every_selection() {
     let rows = diagnose(&moving());
     check_covers(&rows);
-    // Two mass entries and three each for α, β and the momenta in today's registry (dd_generation_root §3.9).
-    assert_eq!(
-        rows.len(),
-        2 * 3 * 3 * 3,
-        "the product is not 54 selections"
-    );
+    // Two mass entries, three each for α and the momenta, and β's one, the periodic link, in today's registry
+    // (dd_generation_root §3.9). Was, before TASK-M2-57 retired the three bounded β links: 2·3·3·3 = 54.
+    assert_eq!(rows.len(), 2 * 3 * 3, "the product is not 18 selections");
+    for r in &rows {
+        assert_eq!(
+            r.links.beta.id,
+            PeriodicBeta::NAME,
+            "a row inverts under a β link that is not the periodic one"
+        );
+    }
 }
 
 negative_control!(
@@ -200,9 +204,8 @@ where
     A: Link<1, 1, Codomain = Alpha>,
 {
     match b {
-        "sigmoid_beta" => by_q::<M, A, SigmoidBeta>(q, ic),
-        "tanh_beta" => by_q::<M, A, TanhBeta>(q, ic),
-        "softsign_beta" => by_q::<M, A, SoftsignBeta>(q, ic),
+        // The one `β` link; a retired one (`sigmoid_beta`, `tanh_beta`, `softsign_beta`) is no registry entry.
+        "periodic_beta" => by_q::<M, A, PeriodicBeta>(q, ic),
         other => panic!("a β link {other} no registry entry gives"),
     }
 }
@@ -418,8 +421,9 @@ negative_control!(
     "a row recording a β link on its α block records links the registry refuses",
     expected = "records links the registry refuses",
     {
+        // The β link is the periodic one (was `tanh_beta`, now retired and no block's link).
         let mut rows = diagnose(&moving());
-        rows[5].links.alpha.id = "tanh_beta".to_owned();
+        rows[5].links.alpha.id = "periodic_beta".to_owned();
         check_provenance(&rows)
     }
 );

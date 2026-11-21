@@ -57,7 +57,7 @@ use kernel::chart::{
 use kernel::decode::Decoded;
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
-    Defaults, Link, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
+    Defaults, Link, LinkParams, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ,
     StickBreaking,
 };
 use validation::{negative_control, tunables, GAMMA_K, K_MAX};
@@ -74,7 +74,7 @@ const N: u32 = 65;
 
 /// The selection with `stick_breaking` on the mass block.
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 fn k_max() -> f64 {
     K_MAX.number()

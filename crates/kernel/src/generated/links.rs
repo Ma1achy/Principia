@@ -77,6 +77,7 @@ pub enum Constraint {
     Positive,
     Symmetric,
     Unbounded,
+    Periodic,
 }
 
 /// What a link maps onto: a block control's constrained range, or a line no block uses.
@@ -84,7 +85,7 @@ pub trait Codomain {
     const NAME: &'static str;
     const CONSTRAINT: Constraint;
     /// The closed bounds of each physical component at the default tunable parameters, for host-side checks;
-    /// infinite where unbounded. A bound that reads a tunable parameter, the momenta's `q_max`, reads the active
+    /// infinite where unbounded, one period where periodic. A bound that reads a tunable parameter, the momenta's `q_max`, reads the active
     /// value through `crate::encode::blocks::Ends::ends_at` (R-481 G4; REQ-DEC-048).
     const LO: f64;
     const HI: f64;
@@ -110,11 +111,21 @@ impl Codomain for Alpha {
     const HI: f64 = core::f64::consts::FRAC_PI_2;
 }
 
-/// The `beta` codomain (bounded).
+/// The `beta` codomain (periodic).
 pub struct Beta;
 
 impl Codomain for Beta {
     const NAME: &'static str = "beta";
+    const CONSTRAINT: Constraint = Constraint::Periodic;
+    const LO: f64 = 0.0;
+    const HI: f64 = core::f64::consts::TAU;
+}
+
+/// The `retired_beta` codomain (bounded).
+pub struct RetiredBeta;
+
+impl Codomain for RetiredBeta {
+    const NAME: &'static str = "retired_beta";
     const CONSTRAINT: Constraint = Constraint::Bounded;
     const LO: f64 = 0.0;
     const HI: f64 = core::f64::consts::PI;
@@ -502,12 +513,12 @@ impl Link<1, 1> for SigmoidAlpha {
     }
 }
 
-/// `sigmoid_beta`, onto `beta` (bounded). Sampling: edge-heavy: crowds the bounds.
+/// `sigmoid_beta`, onto `retired_beta` (bounded). Sampling: edge-heavy: crowds the bounds.
 pub struct SigmoidBeta;
 
 impl Link<1, 1> for SigmoidBeta {
     const NAME: &'static str = "sigmoid_beta";
-    type Codomain = Beta;
+    type Codomain = RetiredBeta;
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
@@ -622,13 +633,13 @@ impl Link<1, 1> for TanhAlpha {
     }
 }
 
-/// `tanh_beta`, onto `beta` (bounded). Sampling: interchangeable with σ up to reparam (`tanh x =
-/// 2σ(2x)−1`) — differs in slope profile only.
+/// `tanh_beta`, onto `retired_beta` (bounded). Sampling: interchangeable with σ up to reparam
+/// (`tanh x = 2σ(2x)−1`) — differs in slope profile only.
 pub struct TanhBeta;
 
 impl Link<1, 1> for TanhBeta {
     const NAME: &'static str = "tanh_beta";
-    type Codomain = Beta;
+    type Codomain = RetiredBeta;
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
@@ -756,8 +767,8 @@ impl Link<1, 1> for SoftsignAlpha {
     }
 }
 
-/// `softsign_beta`, onto `beta` (bounded). Sampling: heavier-tailed than σ: σ's slope at the
-/// centre, but it nears each bound as 1/|x|, not as e^(−|x|); where σ saturates, crowding every
+/// `softsign_beta`, onto `retired_beta` (bounded). Sampling: heavier-tailed than σ: σ's slope at
+/// the centre, but it nears each bound as 1/|x|, not as e^(−|x|); where σ saturates, crowding every
 /// control beyond a few units into a sliver at each bound, it spreads that band over a wide control
 /// range, so relative to σ it under-samples the bounds' immediate neighbourhoods (in the density of
 /// samples drawn with uniform controls, R-413).
@@ -765,7 +776,7 @@ pub struct SoftsignBeta;
 
 impl Link<1, 1> for SoftsignBeta {
     const NAME: &'static str = "softsign_beta";
-    type Codomain = Beta;
+    type Codomain = RetiredBeta;
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
@@ -1116,8 +1127,49 @@ impl Link<1, 1> for Identity {
     }
 }
 
+/// `periodic_beta`, onto `beta` (periodic). Sampling: uniform on the circle: the offset onto the
+/// angle, which has no edge to crowd.
+pub struct PeriodicBeta;
+
+impl Link<1, 1> for PeriodicBeta {
+    const NAME: &'static str = "periodic_beta";
+    type Codomain = Beta;
+
+    #[inline]
+    fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::forward_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
+        let t0 = v[0] + R::LIT_6;
+        [t0]
+    }
+
+    #[inline]
+    fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        Self::inverse_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
+        let t0 = v[0] - R::LIT_6;
+        [t0]
+    }
+
+    #[inline]
+    fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        Self::log_det_at(v, &LinkParams::DEFAULT)
+    }
+
+    #[inline]
+    fn log_det_at<R: LinkReal>(_v: [R; 1], _p: &LinkParams<R>) -> R {
+        R::LIT_8
+    }
+}
+
 /// Every entry's name, in registry order.
-pub const NAMES: [&str; 14] = [
+pub const NAMES: [&str; 15] = [
     "softmax_tanh",
     "stick_breaking",
     "sigmoid_alpha",
@@ -1132,6 +1184,7 @@ pub const NAMES: [&str; 14] = [
     "softplus",
     "exp",
     "identity",
+    "periodic_beta",
 ];
 
 /// One link per block control, each bounded by its control's codomain (REQ-GEN-013): the decode is generic
@@ -1187,7 +1240,7 @@ where
     type Q3Link = L6;
 }
 
-/// The defaults, each resolved by name (dd_decoder §3: mass = softmax ∘ μ_max·tanh, config = sigmoid, free
-/// momentum = sigmoid).
+/// The defaults, each resolved by name (dd_decoder §3: mass = softmax ∘ μ_max·tanh, α = sigmoid, β = the
+/// periodic link (R-919 Q1 (c)), free momentum = sigmoid).
 pub type Defaults =
-    Select<SoftmaxTanh, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<SoftmaxTanh, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;

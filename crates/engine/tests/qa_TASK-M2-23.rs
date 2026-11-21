@@ -39,7 +39,7 @@ use kernel::encode::blocks::clamps;
 use kernel::encode::by_kind::ByKind;
 use kernel::encode::SimplexClamp;
 use kernel::generated::links::{
-    Defaults, Link, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
+    Defaults, Link, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ, StickBreaking,
 };
 use proptest::prelude::*;
 use validation::negative_control;
@@ -47,7 +47,7 @@ use validation::prop::{check_with_seed, run, CASES};
 use validation::roundtrip::phys;
 
 type Sticks =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 // ---- shared ----
 
@@ -1015,9 +1015,13 @@ fn feasible_here(p: &Pixel<InvariantLE<f64>>) -> Option<bool> {
 /// One pixel of a locked `(L_z, E)` view near the parabola's edge, at `(x, y) = (2s − 1, 2t − 1)`, tilted by `tau`
 /// degrees so its horizontal axis carries `z_α`, after an excursion `δ` of `dza` along `z_α` and `de` along `E`.
 /// The anchor is `K = 1.002` times the parabola's bound, so the untilted window at `δ = 0` is inside it; the potential
-/// rises along `+z_α`.
+/// rises along `+z_α`. The anchor's `z_β` was written for `sigmoid_beta` (`−0.4`) and is converted once to
+/// `periodic_beta`'s, so the anchor is the configuration it was and the view keeps its place against the parabola.
 fn view_pixel(tau: f64, dza: f64, de: f64, x: f64, y: f64) -> Pixel<InvariantLE<f64>> {
-    let anchor_cfg = [0.3, -0.4];
+    let anchor_cfg = [
+        0.3,
+        kernel::decode::retired::convert::<kernel::generated::links::SigmoidBeta, f64>(-0.4),
+    ];
     let base = frozen_ic(anchor_cfg, le(anchor_cfg).0.z_mass);
     let lz0 = 0.6;
     let e0 = potential(&base) + 1.002 * lz0 * lz0 / (2.0 * inertia(&base));

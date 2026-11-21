@@ -15,7 +15,7 @@ use ledger::constants::{Admissibility, Value, REGISTER};
 use ledger::gen::links::{generate, refused, CONSTANTS_PATH, LINKS_PATH};
 use ledger::links::{
     builders, check, rows, select, select_from, slots, Codomain, Expr, Link, LinkBuilder, Op,
-    Param, Slot, CHART_CONSTANTS,
+    Param, Slot, CHART_CONSTANTS, ONE_LINK,
 };
 use validation::negative_control;
 
@@ -277,9 +277,22 @@ negative_control!(
     check_accepted(&reading_last(2))
 );
 
-/// Each slot's codomain holds at least two links whose sampling notes differ (REQ-GEN-014), in `registered`.
+/// Each slot's codomain holds at least two links whose sampling notes differ (REQ-GEN-014), in `registered`, but for
+/// the codomains of `ONE_LINK`, `β`'s, which hold one (R-919 Q1 (c); R-519).
 fn check_two_notes(registered: &[(Link, Codomain)]) {
     for slot in slots() {
+        if ONE_LINK.contains(&slot.codomain) {
+            let n = registered
+                .iter()
+                .filter(|(_, c)| *c == slot.codomain)
+                .count();
+            assert_eq!(
+                n, 1,
+                "block control `{}` has {n} links, not its one",
+                slot.name
+            );
+            continue;
+        }
         let mut notes: Vec<&str> = registered
             .iter()
             .filter(|(_, c)| *c == slot.codomain)
@@ -314,6 +327,25 @@ negative_control!(
         check_two_notes(&defaults)
     }
 );
+
+mod beta_one_link {
+    use super::*;
+    negative_control!(
+        link_registry_complete_two_notes_per_block,
+        "a second link onto β's codomain, which takes one, must fail",
+        expected = "links, not its one",
+        {
+            let mut registered = check(builders()).expect("the registry checks");
+            let (mut second, c) = *registered
+                .iter()
+                .find(|(_, c)| *c == Codomain::Beta)
+                .expect("β's link");
+            second.name = "second_beta";
+            registered.push((second, c));
+            check_two_notes(&registered)
+        }
+    );
+}
 
 /// The generated files are the checked-in ones (`cargo xtask codegen` was run).
 fn check_current(files: &[(String, String)]) {
@@ -422,7 +454,7 @@ fn check_defaults(slots: &[Slot]) {
     for slot in slots {
         let want = match slot.block {
             "mass" => "softmax_tanh",
-            "config" => ["sigmoid_alpha", "sigmoid_beta"][slot.z as usize],
+            "config" => ["sigmoid_alpha", "periodic_beta"][slot.z as usize],
             _ => "sigmoid_q",
         };
         assert_eq!(
@@ -776,7 +808,10 @@ fn check_ranges(range: impl Fn(Codomain) -> Option<(f64, f64)>) {
     let want = [
         (Codomain::Mass, None),
         (Codomain::Alpha, Some((0.25, FRAC_PI_2 - 0.25))),
-        (Codomain::Beta, Some((0.0, PI))),
+        // `β` on the circle, no bounds on the line (R-898); the retired links' `(0, π)` (R-919 Q1 (c)). Was: `Beta`'s
+        // `(0, π)`.
+        (Codomain::Beta, None),
+        (Codomain::RetiredBeta, Some((0.0, PI))),
         (Codomain::Momentum, Some((-3.0, 3.0))),
         (Codomain::HalfLine, None),
         (Codomain::RealLine, None),

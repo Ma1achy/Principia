@@ -5,7 +5,8 @@
 //!
 //! **"Each registry link"** is each selection of the entries the blocks can select (REQ-GEN-013): a block's slot
 //! codomain names its entries, and a row's selection takes one per block, the four momentum controls sharing one
-//! (R-479 E1). The rows are the whole product, 2 mass × 3 `α` × 3 `β` × 3 momenta = 54 selections, not the default
+//! (R-479 E1). The rows are the whole product, 2 mass × 3 `α` × 1 `β` × 3 momenta = 18 selections (54 before TASK-M2-57, when `β` had
+//! three; it has one, `periodic_beta`, since, R-919 Q1 (c)), not the default
 //! with one block replaced: `residual_L` is the whole state's, so an IC whose difficulty sits in two blocks at once
 //! clamps in every selection off the default in one block alone, and only a selection off it in both reaches it. Over
 //! the product, an IC no row reaches is hard under every selection the registry offers; one some row reaches is a
@@ -28,8 +29,8 @@ use kernel::decode::Ic;
 use kernel::encode::ingest::ingest;
 use kernel::encode::SimplexClamp;
 use kernel::generated::links::{
-    Alpha, Beta, Link, Mass, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
-    SoftsignAlpha, SoftsignBeta, SoftsignQ, StickBreaking, TanhAlpha, TanhBeta, TanhQ,
+    Alpha, Beta, Link, Mass, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ, SoftmaxTanh,
+    SoftsignAlpha, SoftsignQ, StickBreaking, TanhAlpha, TanhQ,
 };
 
 use crate::roundtrip::phys;
@@ -80,15 +81,14 @@ where
     >(ic));
 }
 
-/// The rows of the mass link `M` and `α`'s `A`: one run of [`momenta`] per `β` link, in registry order.
+/// The rows of the mass link `M` and `α`'s `A`: one run of [`momenta`] per `β` link, in registry order, the one
+/// `periodic_beta` (R-919 Q1 (c)).
 fn beta<M, A>(ic: &Ic<f64>, rows: &mut Vec<Row>)
 where
     M: Link<2, 3, Codomain = Mass> + SimplexClamp,
     A: Link<1, 1, Codomain = Alpha>,
 {
-    momenta::<M, A, SigmoidBeta>(ic, rows);
-    momenta::<M, A, TanhBeta>(ic, rows);
-    momenta::<M, A, SoftsignBeta>(ic, rows);
+    momenta::<M, A, PeriodicBeta>(ic, rows);
 }
 
 /// The rows of the mass link `M`: one run of [`beta`] per `α` link, in registry order.

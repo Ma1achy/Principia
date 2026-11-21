@@ -8,9 +8,10 @@
 //!   variants (the defaults, whose mass link `softmax_tanh` reads `tanh`, and `stick_breaking`, which reads it too):
 //!   every `(m, r, p)` word finite, no NaN anywhere, dd_decoder §5 test 1's identities within REQ-DEC-044's and
 //!   REQ-DEC-045's proposals, the masses on the simplex (each positive, at most 1: dd_generation_root §5 test 8(a)), the
-//!   descriptor's fields in dd_decoder §3.6's ranges (test 3's `β ∈ [0, π]` as the GPU can show it, `rho_angle`
-//!   within `(−π̂, π̂]`), test 4's tag (`M01_TINY` exactly where the GPU's own `m₀ + m₁ < ε_M01`), and test 12's tag
-//!   clause, the GPU's tag the same source's natively at f32 (`qa_m206_gpu_saturated_controls`). A descriptor field is
+//!   descriptor's fields in dd_decoder §3.6's ranges (test 3's `β` as the GPU can show it, on the whole circle,
+//!   `rho_angle` within `(−π̂, π̂]`), test 4's tag (`M01_TINY` exactly where the GPU's own `m₀ + m₁ < ε_M01`), and
+//!   test 12's tag clause, the GPU's tag the same source's natively at f32 (`qa_m206_gpu_saturated_controls`). A
+//!   descriptor field is
 //!   non-finite only at its pole, as R-436 selects it. No `(m, r, p)` value is held to an eps factor there: test 12
 //!   scopes its tolerance to "the golden IC and fuzzed interiors", REQ-DEC-043's domain is the defaults at `|zₖ| ≤ 2`
 //!   (`validation::decode_f32_eps`), and the corpus gives no factor for saturated controls, so the differences from

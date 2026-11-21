@@ -17,12 +17,15 @@
 //! ```
 //!
 //! the shape sphere's chordal distance ⊕ the mass simplex's Euclidean one, unit weights. `n(α, β)` is `C(x)`'s shape
-//! point, `crate::shape::shape_vec` of its mass-weighted Jacobi vectors, `w` read as `|w|` as `β` reads `|λ̃_y|`
-//! (R-438), so the point is on the upper hemisphere where the embed's are ([`state_point`]); `n(α_γ(ν), β_γ(ν))` is the
-//! embed's, through the same Jacobi weighting and the same map ([`curve_point`]). The search runs over the chart's own
-//! `ν` span ([`CurveChart::nu_span`]): a grid of [`GRID`] + 1 points, the span's edges included, then golden-section
-//! steps ([`GOLDEN_STEPS`], a fixed count) inside the best grid point's two neighbouring cells, and `ν*` the better of
-//! the two searches, so an edge minimum is the edge itself ([`Projection::edge`]).
+//! point, `crate::shape::shape_vec` of its mass-weighted Jacobi vectors, `w` signed ([`state_point`]): `C` no longer
+//! mirrors (R-865), so a lower-half state's point is on the lower hemisphere, the mirror image of the upper one's, a
+//! distinct system that is not on the curve; the embed's points are on the upper hemisphere by construction (`ρ̃` on
+//! `+x`, `λ̃_y > 0` for `ν ∈ (0, 1)`). *Was:* "`w` read as `|w|` as `β` reads `|λ̃_y|` (R-438), so the point is on the
+//! upper hemisphere where the embed's are". `n(α_γ(ν), β_γ(ν))` is the embed's, through the same Jacobi weighting and
+//! the same map ([`curve_point`]). The search runs over the chart's own `ν` span ([`CurveChart::nu_span`]): a grid of
+//! [`GRID`] + 1 points, the span's edges included, then golden-section steps ([`GOLDEN_STEPS`], a fixed count) inside
+//! the best grid point's two neighbouring cells, and `ν*` the better of the two searches, so an edge minimum is the
+//! edge itself ([`Projection::edge`]).
 //!
 //! **The landing on the curve** ([`project`], kind 4 (a) and (b)): on the curve where `ν(θ)` lies in the span and
 //! `d(ν(θ)) ≤ tol`, the argmin bypassed; else projected to `ν*` where `d(ν*) ≤ tol`; else latent `z`, `E(x)`'s, always
@@ -108,20 +111,21 @@ pub const GOLDEN_STEPS: u32 = constants::CURVE_GOLDEN_STEPS;
 /// A point of the metric's space: a shape-sphere point `n` and the masses `m`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point<R> {
-    /// The shape point, on the upper hemisphere.
+    /// The shape point, `w` signed: on the upper hemisphere for the embed's points, on the lower for a lower-half
+    /// state (R-865).
     pub n: [R; 3],
     /// The masses.
     pub m: [R; 3],
 }
 
 /// The metric's point of the state `ic` (the module's note): its shape point by the encode's Jacobi weighting
-/// (`super::blocks::jacobi`) and `crate::shape::shape_vec`, `w` as `|w|`, and its masses.
+/// (`super::blocks::jacobi`) and `crate::shape::shape_vec`, `w` signed (R-865), and its masses. *Was:* "`w` as
+/// `|w|`".
 #[inline]
 pub fn state_point<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Point<R> {
     let j = blocks::jacobi(ic);
-    let n = shape_vec(j.rho_t, j.lambda_t);
     Point {
-        n: [n[0], n[1], Float::abs(n[2])],
+        n: shape_vec(j.rho_t, j.lambda_t),
         m: ic.m,
     }
 }

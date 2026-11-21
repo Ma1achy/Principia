@@ -13,8 +13,16 @@
 //!   own Jacobi weighting and shape map (chart_reference §3.1, §4.2), not from the kernel's. Its control is the same
 //!   search under another weighting.
 //! - REQ-ENC-022: on a folded chart the leg-swapped twin (bodies 1 and 2 exchanged) is not relabelled: it falls back to
-//!   latent `z`, flagged `past_fold`; the isosceles triangle is not past the fold; on the full-range Euclid plane the
-//!   twin is its own chart point at `ν′ = (1 − ν)/(1 + ν)`.
+//!   latent `z`, flagged `past_fold`; the isosceles triangle is not past the fold. Exchanging two bodies reverses the
+//!   triangle's orientation, so the twin is the mirror image of the curve point at `ν′ = (1 − ν)/(1 + ν)`, on the other
+//!   hemisphere of the shape sphere from the curve, and the encode no longer folds a mirror image back: on the
+//!   full-range Euclid plane the twin falls back to latent `z`, flagged, and its mirror image, the curve point `γ(ν′)`
+//!   itself, lands at `ν′`, flagged, and on the folded chart is not relabelled either. (While the encode mirrored,
+//!   this read "on the full-range Euclid plane the twin is its own chart point at `ν′`".)
+//!
+//! **Gauges.** Where a state must land on the curve it is put in a random gauge without the mirror: the mirror image
+//! of a curve point is another system, off the curve. The off-curve states keep the mirror in their gauge, the test's
+//! own metric reading the shape point's `w` with its sign, as the projection does.
 //! - Past the span (dd_encode §3.4): a state on the family's curve but past the chart's `ν` span is no chart point; its
 //!   `ν*` is the span's edge exactly, flagged.
 //!
@@ -69,8 +77,9 @@ fn swapped(x: &Ic<f64>) -> Ic<f64> {
 }
 
 /// The test's own point of the metric's space: the shape-sphere point of the mass-weighted Jacobi vectors (inner
-/// pair (0, 1)), `n = (‖ρ̃‖² − ‖λ̃‖², 2ρ̃·λ̃, 2|ρ̃ ∧ λ̃|)/(‖ρ̃‖² + ‖λ̃‖²)` (chart_reference §3.1, the cross read as its
-/// absolute value as the encode's `β` reads `|λ̃_y|`), and the masses over their total.
+/// pair (0, 1)), `n = (‖ρ̃‖² − ‖λ̃‖², 2ρ̃·λ̃, 2ρ̃ ∧ λ̃)/(‖ρ̃‖² + ‖λ̃‖²)` (chart_reference §3.1), the cross with its sign: a
+/// state and its mirror image are two points, one on each hemisphere, since the encode keeps `λ̃_y`'s sign. (While the
+/// encode read `|λ̃_y|` the cross was read as its absolute value.) And the masses over their total.
 fn own_point(x: &Ic<f64>) -> ([f64; 3], [f64; 3]) {
     let [m0, m1, m2] = x.m;
     let total = m0 + m1 + m2;
@@ -90,7 +99,7 @@ fn own_point(x: &Ic<f64>) -> ([f64; 3], [f64; 3]) {
     let dot = rt[0] * lt[0] + rt[1] * lt[1];
     let cross = rt[0] * lt[1] - rt[1] * lt[0];
     (
-        [(aa - bb) / i, 2.0 * dot / i, 2.0 * cross.abs() / i],
+        [(aa - bb) / i, 2.0 * dot / i, 2.0 * cross / i],
         [m0 / total, m1 / total, m2 / total],
     )
 }
@@ -120,6 +129,25 @@ fn brute(x: &Ic<f64>, span: [f64; 2], w: f64) -> (f64, f64) {
 }
 
 // ── Plumbing ───────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// `x` under a random gauge without the mirror: a turn, a shift, a boost and a scale. The mirror image of a state is
+/// another system, which the encode does not fold back, so a state that must land on the curve is gauged by this.
+fn proper(x: &Ic<f64>, rng: &mut SplitMix) -> Ic<f64> {
+    Gauge {
+        mirror: false,
+        ..Gauge::random(rng, 3.0, 2.0)
+    }
+    .act(x)
+}
+
+/// The mirror image `Π·x`: `y → −y` on every position and momentum.
+fn mirror_image(x: &Ic<f64>) -> Ic<f64> {
+    Gauge {
+        mirror: true,
+        ..Gauge::identity()
+    }
+    .act(x)
+}
 
 /// REQ-ENC-026's proposed `k`, read from its calibration fixture, not chosen here.
 fn k_curve() -> f64 {
@@ -189,12 +217,12 @@ fn check_t2<R: Precision>(e: &Encoded<R>, what: &str) {
 // ── REQ-ENC-011: the physical (3, 4, 5) ────────────────────────────────────────────────────────────────────────────
 
 /// dd_encode §5 test 5 on the physical triangle with legs `(a, b)` at their own size, expecting `ν = nu`, under a
-/// random gauge, at `R`.
+/// random gauge without the mirror, at `R`.
 fn check_345<R: Precision>(legs: [f64; 2], nu: f64, rng: &mut SplitMix)
 where
     f64: From<R>,
 {
-    let x = Gauge::random(rng, 3.0, 2.0).act(&triangle(legs[0], legs[1]));
+    let x = proper(&triangle(legs[0], legs[1]), rng);
     let e = enc::<R>(&x);
     let eps = eps_phys::<R>();
     let cf = closed_form(&e.canonical.ic);
@@ -365,7 +393,7 @@ fn check_on_curve<R: Precision>(nu: f64, rng: &mut SplitMix, offset: f64)
 where
     f64: From<R>,
 {
-    let x = Gauge::random(rng, 3.0, 2.0).act(&family(nu, 1.0));
+    let x = proper(&family(nu, 1.0), rng);
     let e = enc::<R>(&x);
     let span = euclid_plane::<R>().nu_span::<R>();
     let star = nearest(&state_point(&e.canonical.ic), span);
@@ -402,8 +430,8 @@ negative_control!(
 );
 
 /// The family at `ν`, each position moved by up to `delta` per component and the masses by up to `delta/4`
-/// (renormalised), under a random gauge.
-fn off_curve(nu: f64, delta: f64, rng: &mut SplitMix) -> Ic<f64> {
+/// (renormalised), in the family's own frame.
+fn perturbed(nu: f64, delta: f64, rng: &mut SplitMix) -> Ic<f64> {
     let mut x = family(nu, 1.0);
     for r in x.r.iter_mut() {
         for c in r.iter_mut() {
@@ -415,6 +443,13 @@ fn off_curve(nu: f64, delta: f64, rng: &mut SplitMix) -> Ic<f64> {
     }
     let s: f64 = x.m.iter().sum();
     x.m = x.m.map(|m| m / s);
+    x
+}
+
+/// [`perturbed`] under a random gauge, the mirror included: half the draws are mirror images, on the other hemisphere
+/// from the curve, farther off it still.
+fn off_curve(nu: f64, delta: f64, rng: &mut SplitMix) -> Ic<f64> {
+    let x = perturbed(nu, delta, rng);
     Gauge::random(rng, 3.0, 2.0).act(&x)
 }
 
@@ -488,14 +523,15 @@ negative_control!(
     }
 );
 
-/// Within the tolerance: a state moved off the curve by a few ε, the projection run at `tol_run`, lands on the curve,
-/// at `ν` within the tolerance of its own.
+/// Within the tolerance: a state moved off the curve by a few ε, under a gauge without the mirror, the projection run
+/// at `tol_run`, lands on the curve, at `ν` within the tolerance of its own.
 fn check_within(tol_run: f64) {
     let mut rng = SplitMix::new(19);
     let t = tol::<f64>();
     for _ in 0..64 {
         let nu = uniform(&mut rng, 0.1, 0.9);
-        let x = off_curve(nu, 4.0 * f64::EPSILON, &mut rng);
+        let x = perturbed(nu, 4.0 * f64::EPSILON, &mut rng);
+        let x = proper(&x, &mut rng);
         let e = enc::<f64>(&x);
         let p = project(&e, euclid_plane::<f64>().nu_span::<f64>(), tol_run);
         let at = match p.landing {
@@ -623,16 +659,20 @@ negative_control!(
 // ── REQ-ENC-022: the fold ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// On the folded `Φ_θ,K`: the original at `ν` lands at its own `θ`, not past the fold; its leg-swapped twin (bodies 1
-/// and 2 exchanged) is flagged `past_fold`, is not relabelled onto the chart, falls back to latent `z` satisfying T2,
-/// and lands on the full-range Euclid plane at `ν′ = (1 − ν)/(1 + ν)`.
+/// and 2 exchanged) is flagged `past_fold`, is not relabelled onto the chart and falls back to latent `z` satisfying
+/// T2. The exchange reverses the triangle's orientation, so the twin is the mirror image of the curve point
+/// `γ(ν′)`, `ν′ = (1 − ν)/(1 + ν)`, on the other hemisphere from the curve: on the full-range Euclid plane it falls
+/// back to latent `z` too, flagged. Its mirror image is `γ(ν′)` itself, the input past the fold on the curve's own
+/// hemisphere, so the one the fold alone decides: flagged, not relabelled onto the folded chart, latent `z` satisfying
+/// T2 there, and on the Euclid plane landing at `ν′`. Every gauge is without the mirror.
 fn check_fold(nu: f64, build_twin: bool, twin: bool, rng: &mut SplitMix) {
-    let g = Gauge::random(rng, 3.0, 2.0);
     let original = family(nu, 1.0);
-    let x = g.act(&if build_twin {
+    let ungauged = if build_twin {
         swapped(&original)
     } else {
         original
-    });
+    };
+    let x = proper(&ungauged, rng);
     let folded: BurrauThetaK<f64> = burrau_theta_k::<f64>();
     let c = into::<f64, _>(&folded, &x);
     let curve = c.curve.expect("a curve chart reports its curve encode");
@@ -666,19 +706,43 @@ fn check_fold(nu: f64, build_twin: bool, twin: bool, rng: &mut SplitMix) {
     check_t2::<f64>(&c.encoded, "the fold's twin");
     let euclid = euclid_plane::<f64>();
     let e = into::<f64, _>(&euclid, &x);
-    let nu_twin = (1.0 - nu) / (1.0 + nu);
-    let want = (nu_twin - 1.0 / 32.0) / (30.0 / 32.0);
     assert!(
         e.curve.expect("a curve chart").closed.past_fold,
         "the twin's flag does not reach the caller on the full-range chart"
     );
-    match e.landing {
+    assert!(
+        e.landing == Landing::Latent,
+        "at ν = {nu}: the twin, the mirror image of a curve point, lands on the full-range chart: {:?}",
+        e.landing
+    );
+    // The twin's mirror image, γ(ν′): past the fold on the curve's own hemisphere.
+    let y = proper(&mirror_image(&ungauged), rng);
+    let cy = into::<f64, _>(&folded, &y);
+    let curve_y = cy.curve.expect("a curve chart reports its curve encode");
+    assert!(
+        curve_y.closed.past_fold,
+        "at ν = {nu}: the twin's mirror image is not flagged past_fold"
+    );
+    assert!(
+        cy.landing == Landing::Latent && curve_y.landing == CurveLanding::Latent,
+        "at ν = {nu}: the twin's mirror image is relabelled onto the folded chart: {:?}",
+        cy.landing
+    );
+    check_t2::<f64>(&cy.encoded, "the fold's twin, mirrored");
+    let ey = into::<f64, _>(&euclid, &y);
+    let nu_twin = (1.0 - nu) / (1.0 + nu);
+    let want = (nu_twin - 1.0 / 32.0) / (30.0 / 32.0);
+    assert!(
+        ey.curve.expect("a curve chart").closed.past_fold,
+        "the flag of the twin's mirror image does not reach the caller on the full-range chart"
+    );
+    match ey.landing {
         Landing::Chart { v, .. } => assert!(
             (v - want).abs() <= eps_phys::<f64>(),
-            "at ν = {nu}: the twin lands at v = {v} on the Euclid plane, not ν′'s {want}"
+            "at ν = {nu}: the twin's mirror image lands at v = {v} on the Euclid plane, not ν′'s {want}"
         ),
         Landing::Latent => {
-            panic!("at ν = {nu}: the twin is not its own point on the full-range chart")
+            panic!("at ν = {nu}: the twin's mirror image is not its own point on the full-range chart")
         }
     }
 }

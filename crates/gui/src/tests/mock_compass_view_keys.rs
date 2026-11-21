@@ -503,6 +503,11 @@ fn near_the_pole(r: f64) -> Plane {
     p
 }
 
+/// How far off the pole the stretch reads just under `physical::STRETCH_SCIENTIFIC_FROM`: 9994.6 here, measured, the
+/// stretch 9995 at 9.16788e-3. With `β = z_β + π/2` the stretch at a given `r` is not what it was under the sigmoid,
+/// whose slope at `z_β = 0` was `π/4`: the earlier `r`, 8.889e-3, now reads 10969.3.
+const JUST_UNDER: f64 = 9.168e-3;
+
 /// The point of [`at_the_pole`].
 const POLE: engine::contract::sim_config::Latent = [0.0, 0.0, 0.3, -0.2, 0.5, 0.1, 0.0, 0.0];
 
@@ -653,7 +658,7 @@ fn mock_compass_view_keys_near_the_pole_the_element_shows_the_whole_column() {
 fn mock_compass_view_keys_just_under_the_threshold_the_element_shows_the_plain_digits() {
     let shape = 6;
     for (name, window, narrow) in SMALL {
-        let (mut app, mut h, panel) = at_element(&near_the_pole(8.889e-3), window, narrow, shape);
+        let (mut app, mut h, panel) = at_element(&near_the_pole(JUST_UNDER), window, narrow, shape);
         let output = settled_output(&mut h, &mut app);
         let text = column_text(&app, panel);
         assert_eq!(unread(&output, panel, &text), None, "{name}");

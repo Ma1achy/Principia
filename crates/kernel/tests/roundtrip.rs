@@ -2,24 +2,25 @@
 //! dd_decoder §3.3, §3.4 and §5 test 7; TASK-M2-16), on the CPU at f64 and f32, the one source's two instantiations,
 //! every residual in physical units (`validation::roundtrip`):
 //! - `t2_per_chart`, generated for every chart of the registry (`validation::registered_charts!`): interior samples
-//!   `(u, v)` → the chart's `D` → `E` → `D`, `‖·‖_phys ≤ ε_phys`, against the decoded state `x`, and on the shape sphere
-//!   chart, whose lower-hemisphere decode is off `C`'s section, against `C(x)` (R-544; `validation::roundtrip::Against`);
+//!   `(u, v)` → the chart's `D` → `E` → `D`, `‖·‖_phys ≤ ε_phys`, against the decoded state `x` on every chart, the
+//!   shape sphere's included since `C` has no mirror step (R-865; *was:* "and on the shape sphere chart, whose
+//!   lower-hemisphere decode is off `C`'s section, against `C(x)` (R-544; `validation::roundtrip::Against`)");
 //!   a sample with a control past its clamp asserts its `lookup_clamped` bit instead, and one inside asserts the bit
 //!   clear (REQ-ENC-004). `t2_per_chart_registry_complete`:
 //!   every chart `engine::chart_authoring` and `kernel::chart` declare has a registry entry, so a T2 test.
 //! - `t2_qmax_boundary`: random `z` across the momentum clamps; decode applies no per-body cap, the decoded momenta
 //!   being the Jacobi map of `q` with `|qₖ| ≤ q_max` alone bounding them; the round trip holds on the interior, and the
 //!   clamped samples carry their flags (REQ-DEC-029).
-//! - `t3_half_mirror`: dd_encode §5 test 3 on random scale, orientation, offset and parity: masses and shape match,
-//!   `E` matches after the recorded rescale, `|L_z|` matches with its sign by `lookup_mirrored`, and `D(E(x))` is the
-//!   orbit's canonical representative; a configuration-only mirror fails the `L_z` check (REQ-ENC-005).
-//! - `t3_full_state_rigid_ops`: random-gauge `x` → `E` → `D` equals `C(x)`, the kernel's own, with the same `L_z` check;
+//! - `t1_mirror_equivariance`: T1 under the mirror (R-865): `E(Π·x)` is the mirrored `E(x)`, `z_β → π̂ − z_β` on the
+//!   circle under the offset link (R-1020; *was* `2π̂ − z_β`, the identity's), `z_q1` and `z_q3` negated, the rest equal, and `L_z` negated on the decode; an encode with `C`'s mirror step
+//!   left in fails (REQ-ENC-003). `t3_half_mirror` is removed with `lookup_mirrored` (REQ-ENC-005's change).
+//! - `t3_full_state_rigid_ops`: dd_encode §5 test 3, random-gauge `x`, parity included, → `E` → `D` equals `C(x)`, the
+//!   kernel's own, masses, shape and `E` matching, `L_z` with its sign, a lower-half state decoding back to itself;
 //!   a configuration-only mirror and a configuration-only rotation each fail it; at `ρ = 0`, every sign of its zeros,
 //!   `φ` is +0 and the full-state rotation the identity, at both precisions (REQ-DEC-016; R-437).
 //! - `encode_reuses_decode`: `decode(encode(x)) = canonicalise(x)` within `ε_phys` on random physical states
 //!   (REQ-ENC-001).
-//! - `encode_report`: encode's discard report on the T1–T3 inputs: `λ = 1/s` and `lookup_mirrored` the gauge's parity
-//!   (T1, T3), no clamp on the interior (T2), a clamped control's bit and the coincident pair's `lookup_clamped`; and the
+//! - `encode_report`: encode's discard report on the T1–T3 inputs: `λ = 1/s` (T1, T3; `lookup_mirrored` retired), no clamp on the interior (T2), a clamped control's bit and the coincident pair's `lookup_clamped`; and the
 //!   orbit's decode is its canonical representative (REQ-ENC-018).
 //! - `conditioning_physical_space`: dd_encode §5 test 8: near the momentum clamps the `z` residual is ~10⁵× the physical
 //!   one; the physical tolerance passes and a naive `z` tolerance fails (REQ-VAL-013).
@@ -475,11 +476,10 @@ fn bounds(x: &Ic<f64>, delta: f64) -> (f64, f64, f64) {
     (tol_l, delta * (kinetic + potential), 16.0 * delta * big_r)
 }
 
-/// What a T3 encode returned: `z` and the step-0 and step-3 values the check reads.
+/// What a T3 encode returned: `z` and the step-0 value the check reads.
 #[derive(Clone, Copy)]
 struct Out<R> {
     z: [R; 8],
-    mirrored: bool,
     lambda: R,
 }
 
@@ -488,29 +488,29 @@ fn full<R: Precision>(x: &Ic<R>) -> Out<R> {
     let e = encode::<Defaults, R>(x);
     Out {
         z: e.z.z,
-        mirrored: e.report.mirrored,
         lambda: e.report.lambda,
     }
 }
 
-/// The classic bug (Part 1): `C` with the mirror applied to the positions only, the momenta left unreflected.
+/// The classic bug (Part 1), on a mirror: `C(x)` with a mirror applied to the positions only, the momenta left
+/// unreflected, where `x` is in the lower half (R-865 took the mirror out of `C`; the bug is the one a hand-written
+/// mirror would carry).
 #[cfg(feature = "controls")]
 fn half_mirror<R: Precision>(x: &Ic<R>) -> Out<R> {
     let mut c = canonicalise(x);
-    if c.mirrored {
-        for p in c.ic.p.iter_mut() {
-            p[1] = -p[1];
+    if c.lambda_t_y < R::zero() {
+        for r in c.ic.r.iter_mut() {
+            r[1] = -r[1];
         }
     }
     Out {
         z: blocks::invert::<Defaults, R>(&c.ic).z,
-        mirrored: c.mirrored,
         lambda: c.lambda,
     }
 }
 
-/// `C` with the rotation `R(−φ)` applied to the positions only: the momenta, mirrored as `C` mirrors them, left in the
-/// input's orientation, `R(−φ)` undone on them as `Π·R(φ)·Π = R(−φ)` gives it.
+/// `C` with the rotation `R(−φ)` applied to the positions only: the momenta left in the input's orientation, `R(−φ)`
+/// undone on them.
 #[cfg(feature = "controls")]
 fn config_rotation<R: Precision>(x: &Ic<R>) -> Out<R> {
     let mut c = canonicalise(x);
@@ -522,15 +522,17 @@ fn config_rotation<R: Precision>(x: &Ic<R>) -> Out<R> {
     }
     Out {
         z: blocks::invert::<Defaults, R>(&c.ic).z,
-        mirrored: c.mirrored,
         lambda: c.lambda,
     }
 }
 
 /// T3 (Part 8) on the input `x` at `R`, `out` its encode, `reference` the canonical state `D(E(x))` must equal: first the
-/// half-mirror catch, `L_z = ±L_z,in·λ^{1/2}` with the sign `lookup_mirrored` gives (Part 1: `L_canon =
-/// L_in/I_in^{1/4}`); then `lookup_mirrored` is the input's parity, `E = E_in/λ` (`E_canon = √I_in·E_in`), the masses,
-/// the shape `n` with its `w` reflected by the mirror, and `‖D(E(x)) − reference‖_phys ≤ ε_phys`.
+/// half-mirror catch, `L_z = L_z,in·λ^{1/2}` with its sign (Part 1: `L_canon = L_in/I_in^{1/4}`; no mirror step, so no
+/// sign change, R-865: for the input `g·x`, `L_z(D(E(g·x))) = det(Π_g)·L_z(C(x))`, `L_z,in` carrying `g`'s parity);
+/// then `E = E_in/λ` (`E_canon = √I_in·E_in`), the masses, the shape `n` with its `w` as the
+/// input's, and `‖D(E(x)) − reference‖_phys ≤ ε_phys`. *Was (TASK-M2-57):* "`L_z = ±L_z,in·λ^{1/2}` with the sign
+/// `lookup_mirrored` gives …; then `lookup_mirrored` is the input's parity, … the shape `n` with its `w` reflected by
+/// the mirror".
 fn check_t3<R: Precision>(what: &dyn Fn() -> String, x: &Ic<R>, reference: &Ic<f64>, out: &Out<R>) {
     let back = widen(&decode_z(out.z).ic);
     let input = widen(x);
@@ -538,22 +540,13 @@ fn check_t3<R: Precision>(what: &dyn Fn() -> String, x: &Ic<R>, reference: &Ic<f
     let eps = eps_phys::<R>();
     let lambda: f64 = out.lambda.into();
     let (tol_l, tol_e, tol_n) = bounds(&back, eps);
-    let sign = if out.mirrored { -1.0 } else { 1.0 };
-    let want_l = sign * have.lz * lambda.sqrt();
+    let want_l = have.lz * lambda.sqrt();
     assert!(
         (got.lz - want_l).abs() <= tol_l,
-        "{}: L_z {:.9e} is not {want_l:.9e}, the input's {:.9e} × λ^½ signed by lookup_mirrored = {} (within {tol_l:.3e})",
+        "{}: L_z {:.9e} is not {want_l:.9e}, the input's {:.9e} × λ^½ (within {tol_l:.3e})",
         what(),
         got.lz,
         have.lz,
-        out.mirrored
-    );
-    assert_eq!(
-        out.mirrored,
-        have.orientation < 0.0,
-        "{}: lookup_mirrored on an input of orientation {:.3e}",
-        what(),
-        have.orientation
     );
     let want_e = have.e / lambda;
     assert!(
@@ -571,14 +564,14 @@ fn check_t3<R: Precision>(what: &dyn Fn() -> String, x: &Ic<R>, reference: &Ic<f
             input.m[i]
         );
     }
-    let want_n = [have.n[0], have.n[1], sign * have.n[2]];
+    let want_n = have.n;
     let dn = (0..3)
         .map(|k| (got.n[k] - want_n[k]).powi(2))
         .sum::<f64>()
         .sqrt();
     assert!(
         dn <= tol_n,
-        "{}: the shape {:?} is {dn:.3e} from the input's {want_n:?}, reflected by the mirror (within {tol_n:.3e})",
+        "{}: the shape {:?} is {dn:.3e} from the input's {want_n:?} (within {tol_n:.3e})",
         what(),
         got.n
     );
@@ -593,41 +586,76 @@ fn check_t3<R: Precision>(what: &dyn Fn() -> String, x: &Ic<R>, reference: &Ic<f
 /// An encode, as T3 runs it.
 type EncodeFn<R> = fn(&Ic<R>) -> Out<R>;
 
-/// T3 over random `g·x₀` at `R`, `D(E(x))` against `x₀` (Part 1: `C(g·x₀) = x₀`, the orbit's representative), with
-/// `enc` as the encode; the mirrored samples' count.
-fn t3_gauge<R: Precision>(enc: EncodeFn<R>) -> usize {
-    let mut rng = SplitMix::new(53);
-    let mut mirrored = 0;
+// ── t1_mirror_equivariance (REQ-ENC-003; R-865) ─────────────────────────────────────────────────────────────
+
+/// `E(Π·x)` against the mirrored `E(x)` (dd_encode §3.3) over the T3 draws `x₀` at `R`, `enc` the encode: `z_β` as
+/// `π̂ − z_β` on the circle (the difference reduced by whole periods; R-1020's offset link, `2c = π̂`), `z_q1` and `z_q3` negated, every other control
+/// equal, each within `ε_phys` relative to `1 + |z|`; and `D(E(Π·x₀))`'s `L_z` the negated `L_z` of `D(E(x₀))`. Returns
+/// the worst `z` gap.
+fn t1_mirror<R: Precision>(enc: fn(&Ic<R>) -> [R; 8]) -> f64 {
+    let mut rng = SplitMix::new(61);
+    let pi: f64 = <R as kernel::generated::links::Literals>::LIT_7.into();
+    let tau = pi + pi;
+    let mut worst = 0.0f64;
     for i in 0..T3_SAMPLES {
-        let (x0, g) = t3_draw(&mut rng);
-        let x = narrow::<R>(&g.act(&x0));
-        let out = enc(&x);
-        let what = || format!("f{} sample {i}, gauge {g:?}", bits::<R>());
-        check_t3(&what, &x, &x0, &out);
-        mirrored += usize::from(out.mirrored);
+        let (x0, _) = t3_draw(&mut rng);
+        let x = narrow::<R>(&x0);
+        let px = narrow::<R>(&kernel::canon::reflect(&x0, true));
+        let (z, pz) = (enc(&x).map(f::<R>), enc(&px).map(f::<R>));
+        let mut want = z;
+        want[1] = pi - z[1];
+        want[3] = -z[3];
+        want[5] = -z[5];
+        for k in 0..8 {
+            let mut d = pz[k] - want[k];
+            if k == 1 {
+                d -= tau * (d / tau).round();
+            }
+            let gap = d.abs() / (1.0 + want[k].abs());
+            worst = worst.max(gap);
+            assert!(
+                gap <= eps_phys::<R>(),
+                "f{} sample {i}: E(Π·x)'s z[{k}] = {:e} is not the mirrored E(x)'s {:e}",
+                bits::<R>(),
+                pz[k],
+                want[k]
+            );
+        }
+        let (lz, plz) = (
+            invariants(&widen(&decode_z(z.map(R::of)).ic)).lz,
+            invariants(&widen(&decode_z(pz.map(R::of)).ic)).lz,
+        );
+        assert!(
+            (lz + plz).abs() <= 1e3 * eps_phys::<R>() * (1.0 + lz.abs()),
+            "f{} sample {i}: L_z of D(E(Π·x)) is {plz:e}, not −{lz:e}",
+            bits::<R>()
+        );
     }
-    mirrored
+    worst
+}
+
+/// The default encode's `z`.
+fn z_of<R: Precision>(x: &Ic<R>) -> [R; 8] {
+    encode::<Defaults, R>(x).z.z
 }
 
 #[test]
-fn t3_half_mirror() {
-    for (n, width) in [
-        (t3_gauge::<f64>(full::<f64>), 64),
-        (t3_gauge::<f32>(full::<f32>), 32),
-    ] {
-        assert!(
-            n > 0 && n < T3_SAMPLES as usize,
-            "f{width}: {n} of {T3_SAMPLES} samples mirrored: parity is not exercised both ways"
-        );
-    }
+fn t1_mirror_equivariance() {
+    let w64 = t1_mirror::<f64>(z_of::<f64>);
+    let w32 = t1_mirror::<f32>(z_of::<f32>);
+    eprintln!("t1_mirror_equivariance: worst relative z gap f64 {w64:.3e}, f32 {w32:.3e}");
 }
 
 negative_control!(
-    t3_half_mirror,
-    "a configuration-only mirror preserves the shape but not L_z, so it must fail the L_z check",
-    expected = "L_z",
+    t1_mirror_equivariance,
+    "an encode with C's mirror step left in (R-82's λ̃_y < −δ_λ) maps x and Π·x to one z, so it must fail",
+    expected = "is not the mirrored E(x)'s",
     {
-        t3_gauge::<f64>(half_mirror::<f64>);
+        t1_mirror::<f64>(|x| {
+            let c = canonicalise(x);
+            let flip = c.lambda_t_y < -f64::DELTA_LAMBDA;
+            encode::<Defaults, f64>(&kernel::canon::reflect(&c.ic, flip)).z.z
+        });
     }
 );
 
@@ -649,9 +677,8 @@ fn pole_inputs() -> Vec<Ic<f64>> {
     out
 }
 
-/// `x` through `C`'s steps 1a, 0, 1b and the mirror `C` decided, with no rotation, in f64: what `C(x)` is when its
-/// rotation is the identity.
-fn unrotated(x: &Ic<f64>, mirrored: bool) -> Ic<f64> {
+/// `x` through `C`'s steps 1a, 0 and 1b, with no rotation, in f64: what `C(x)` is when its rotation is the identity.
+fn unrotated(x: &Ic<f64>) -> Ic<f64> {
     let m = x.m;
     let com = [0, 1].map(|k| (0..3).map(|i| m[i] * x.r[i][k]).sum::<f64>());
     let r = x.r.map(|v| [v[0] - com[0], v[1] - com[1]]);
@@ -666,12 +693,7 @@ fn unrotated(x: &Ic<f64>, mirrored: bool) -> Ic<f64> {
         pi[0] -= mi * total[0];
         pi[1] -= mi * total[1];
     }
-    let flip = |v: [f64; 2]| if mirrored { [v[0], -v[1]] } else { v };
-    Ic {
-        m,
-        r: r.map(flip),
-        p: p.map(flip),
-    }
+    Ic { m, r, p }
 }
 
 /// At `ρ = 0` (R-437; dd_decoder §3.3): `C` raises `lookup_clamped` and takes `φ = +0`, so its rotation is the identity
@@ -683,7 +705,7 @@ fn check_pole<R: Precision>(x: &Ic<f64>) {
     let phi: f64 = c.phi.into();
     assert!(c.clamped, "{what}: no lookup_clamped at ρ = 0");
     assert_eq!(phi.to_bits(), 0, "{what}: φ is {phi:e}, not +0");
-    let r = phys(&unrotated(&widen(&xr), c.mirrored), &widen(&c.ic));
+    let r = phys(&unrotated(&widen(&xr)), &widen(&c.ic));
     let eps = eps_phys::<R>();
     assert!(
         r <= eps,
@@ -711,23 +733,34 @@ fn check_pole<R: Precision>(x: &Ic<f64>) {
     );
 }
 
-/// T3 over random-gauge `x` at `R` with `enc` as the encode, `D(E(x))` against `C(x)`, the kernel's canonicaliser at
-/// `R`.
-fn t3_full<R: Precision>(enc: EncodeFn<R>) {
+/// T3 over random-gauge `x` at `R`, parity included, with `enc` as the encode, `D(E(x))` against `C(x)`, the kernel's
+/// canonicaliser at `R`; the lower-half inputs' count (orientation below 0), so a lower-half state is checked to
+/// decode back to itself, not its mirror image (R-865).
+fn t3_full<R: Precision>(enc: EncodeFn<R>) -> usize {
     let mut rng = SplitMix::new(71);
+    let mut lower = 0;
     for i in 0..T3_SAMPLES {
         let (x0, g) = t3_draw(&mut rng);
         let x = narrow::<R>(&g.act(&x0));
         let c = widen(&canonicalise(&x).ic);
         let what = || format!("f{} sample {i}, gauge {g:?}", bits::<R>());
         check_t3(&what, &x, &c, &enc(&x));
+        lower += usize::from(invariants(&widen(&x)).orientation < 0.0);
     }
+    lower
 }
 
 #[test]
 fn t3_full_state_rigid_ops() {
-    t3_full::<f64>(full::<f64>);
-    t3_full::<f32>(full::<f32>);
+    for (n, width) in [
+        (t3_full::<f64>(full::<f64>), 64),
+        (t3_full::<f32>(full::<f32>), 32),
+    ] {
+        assert!(
+            n > 0 && n < T3_SAMPLES as usize,
+            "f{width}: {n} of {T3_SAMPLES} samples in the lower half: parity is not exercised both ways"
+        );
+    }
     for x in pole_inputs() {
         check_pole::<f64>(&x);
         check_pole::<f32>(&x);
@@ -738,7 +771,9 @@ negative_control!(
     t3_full_state_rigid_ops,
     "a configuration-only mirror must fail the L_z check",
     expected = "L_z",
-    t3_full::<f64>(half_mirror::<f64>)
+    {
+        t3_full::<f64>(half_mirror::<f64>);
+    }
 );
 
 mod config_only_rotation {
@@ -748,7 +783,9 @@ mod config_only_rotation {
         t3_full_state_rigid_ops,
         "a configuration-only rotation, the momenta left in the input's orientation, must fail the L_z check",
         expected = "L_z",
-        t3_full::<f32>(config_rotation::<f32>)
+        {
+            t3_full::<f32>(config_rotation::<f32>);
+        }
     );
 }
 
@@ -825,7 +862,8 @@ negative_control!(
 // ── encode_report (REQ-ENC-018) ─────────────────────────────────────────────────────────────────────────────────
 
 /// The report on `g·x₀` for an interior `x₀` (Parts 1, 2 and 6): `λ = I_in^{−1/2} = 1/s` (`I_in = s²`) within
-/// `ε_phys`, relative; `lookup_mirrored` is `g`'s parity (T3); no clamp (T2's interior); no coincident pair.
+/// `ε_phys`, relative; no clamp (T2's interior); no coincident pair. *Was (TASK-M2-57):* "`lookup_mirrored` is `g`'s
+/// parity (T3);".
 fn check_report<R: Precision>(what: &dyn Fn() -> String, rep: &Report<R>, g: &Gauge) {
     let lambda: f64 = rep.lambda.into();
     let eps = eps_phys::<R>();
@@ -835,12 +873,6 @@ fn check_report<R: Precision>(what: &dyn Fn() -> String, rep: &Report<R>, g: &Ga
         what(),
         1.0 / g.s
     );
-    assert_eq!(
-        rep.mirrored,
-        g.mirror,
-        "{}: lookup_mirrored against the gauge's parity",
-        what()
-    );
     assert!(
         !rep.lookup_clamped(),
         "{}: lookup_clamped on an interior state",
@@ -849,7 +881,8 @@ fn check_report<R: Precision>(what: &dyn Fn() -> String, rep: &Report<R>, g: &Ga
 }
 
 /// The report over random `g·x₀` at `R`, `alter` applied to each report before it is checked; and the orbit's decode
-/// `D(E(g·x₀))` within `ε_phys` of `x₀` (T1 and T3 in physical units).
+/// `D(E(g·x₀))` within `ε_phys` of `x₀`, or of `Π·x₀` where `g` mirrors (T1's equivariance and T3 in physical units,
+/// R-865).
 fn reports<R: Precision>(alter: fn(&mut Report<R>)) {
     let mut rng = SplitMix::new(113);
     for i in 0..T3_SAMPLES {
@@ -859,7 +892,8 @@ fn reports<R: Precision>(alter: fn(&mut Report<R>)) {
         alter(&mut e.report);
         let what = || format!("f{} sample {i}, gauge {g:?}", bits::<R>());
         check_report(&what, &e.report, &g);
-        let r = phys(&x0, &widen(&decode_z(e.z.z).ic));
+        let want = kernel::canon::reflect(&x0, g.mirror);
+        let r = phys(&want, &widen(&decode_z(e.z.z).ic));
         assert!(
             r <= eps_phys::<R>(),
             "{}: D(E(g·x₀)) is {r:.3e} from x₀",
@@ -904,9 +938,9 @@ fn encode_report() {
 
 negative_control!(
     encode_report,
-    "a report that drops the mirror notice must fail the parity check",
-    expected = "lookup_mirrored against the gauge's parity",
-    reports::<f64>(|r| r.mirrored = false)
+    "a report whose λ is doubled must fail the λ = 1/s check",
+    expected = "is not 1/s",
+    reports::<f64>(|r| r.lambda *= 2.0)
 );
 
 // ── conditioning_physical_space (REQ-VAL-013) ───────────────────────────────────────────────────────────────────
@@ -999,7 +1033,9 @@ negative_control!(
 
 // ── encode_golden_pairs (dd_encode §5) ──────────────────────────────────────────────────────────────────────────
 
-/// One golden pair, `fixtures/states/encode_golden.json`.
+/// One golden pair, `fixtures/states/encode_golden.json`. The file's `z` were written under `sigmoid_beta`, the `β`
+/// link before TASK-M2-57: each `z_β` is converted on read to the periodic link (R-898; `kernel::decode::retired`), the
+/// same `β` bit for bit at f64.
 struct Pair {
     name: String,
     state: Ic<f64>,
@@ -1026,7 +1062,16 @@ fn pairs() -> Vec<Pair> {
                 r: std::array::from_fn(|i| pair2(&p["r"][i])),
                 p: std::array::from_fn(|i| pair2(&p["p"][i])),
             },
-            z: std::array::from_fn(|k| num(&p["z"][k])),
+            z: std::array::from_fn(|k| {
+                let z = num(&p["z"][k]);
+                if k == 1 {
+                    kernel::decode::retired::convert::<kernel::generated::links::SigmoidBeta, f64>(
+                        z,
+                    )
+                } else {
+                    z
+                }
+            }),
             nu: p["nu"].as_f64(),
         })
         .collect()

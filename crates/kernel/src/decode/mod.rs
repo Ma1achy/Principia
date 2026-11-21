@@ -14,6 +14,8 @@
 //! - [`energy_norm`]: the optional `η_E` rescale toward a target energy, between the momentum block and the derived
 //!   invariants, behind an explicit `Option` (R-25).
 //! - [`degenerate`]: the `DEGENERATE` reason type.
+//! - [`retired`]: the retired `β` links, kept as conversion sources only, the conversion into the periodic `β` and the
+//!   decode of a record made under one (R-919, R-921).
 //! - [`units`]: the dimensionless system `G = M = I = 1`.
 //!
 //! **The ordered entry** ([`decode`], through [`decode_with`]; REQ-DEC-001, REQ-DEC-004): `D = D_mass × D_cfg × D_mom`
@@ -40,6 +42,7 @@ pub mod invariant;
 pub mod latent;
 pub mod mass;
 pub mod momentum;
+pub mod retired;
 pub mod units;
 
 use core::marker::PhantomData;
@@ -54,7 +57,7 @@ use mass::Masses;
 use momentum::Momentum;
 
 /// The canonical `(m, r, p)`, the decoder's output and the integrator's one input type (dd_decoder §2; seam 3): CoM at
-/// the origin, `ρ̃` on `+x`, `λ̃_y ≥ 0`, `G = M = I = 1`.
+/// the origin, `ρ̃` on `+x`, `λ̃` in either half-plane (latent `β` over the full circle, R-865), `G = M = I = 1`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Ic<R> {
     /// The masses `m₀, m₁, m₂`, `Σmᵢ = 1`.

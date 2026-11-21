@@ -1,13 +1,16 @@
-//! QA tests for TASK-M2-07, round 4, written from the requirement, not from the implementation: R-82's one mirror test
-//! (REQ-DEC-017; dd_decoder §3.3, dd_encode §3.2 step 3) holds on hierarchical states at the precision's whole
-//! exponent range, near the deadband's edge, through `C` itself (`kernel::canon::canonicalise`), at f64 and f32.
+//! QA tests for TASK-M2-07, round 4, written from the requirement, not from the implementation: `C`
+//! (`kernel::canon::canonicalise`) takes no mirror and reads no `δ_λ` (REQ-DEC-017; dd_decoder §3.3, dd_encode §3.2),
+//! on hierarchical states at the precision's whole exponent range, either side of the old deadband's edge, at f64
+//! and f32. *Was (before TASK-M2-57 removed the decoder's mirror step):* "R-82's one mirror test holds … near the
+//! deadband's edge".
 //!
 //! - `qa_m207_edge_range`: states whose inner pair is `2^j` of the outer distance (`j` down to −40 at f32, −500 at
 //!   f64), built with `λ̃_y = −k·δ_λ` exactly in f64 and rounded to the precision, `k` either side of 1 by `10⁻³`, and
 //!   at `0.5` and 2; each turned by the exact quarter turns, reflected (`y → −y`, `λ̃_y = +k·δ_λ`) and scaled by
 //!   exact powers of two up to the precision's range, wherever every coordinate and pair difference stays 0 or normal
-//!   (the domain the decision is claimed for). `C` mirrors iff `λ̃_y < −δ_λ`: for `k > 1` on the unreflected state,
-//!   and never on the reflected one or for `k < 1` (R-82: `|λ̃_y| ≤ δ_λ` is no mirror).
+//!   (the domain `C`'s branch inputs are claimed for). `C` keeps `λ̃_y`'s sign at every `k`: its output is in the
+//!   lower half, `λ̃_y < 0`, on the unreflected state and in the upper on the reflected one, whether `k` is inside or
+//!   outside the old deadband (*was:* "`C` mirrors iff `λ̃_y < −δ_λ`: for `k > 1` on the unreflected state").
 //!
 //! The expected value is `k`'s, from the construction; the state's own `λ̃_y`, recomputed at f64 from its rounded
 //! values at scale 1, is checked to land within `10⁻⁵·k` of `−k·δ_λ` (the rounding of the inputs, about `ε` relative),
@@ -16,17 +19,19 @@
 //!
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory.
 //!
-//! Its negative control (R-176) decides R-82's test in plain floats, `m₂c² > δ_λ²·M₀₁·‖ρ‖²·I`, which underflows on
-//! the hierarchical states at f32.
+//! Its negative controls (R-176): `C` with the mirror step left in, which changes the sign for `k > 1`; and the half
+//! read in plain floats off the input, the sign of `ρ × (M₀₁r₂ − m₀r₀ − m₁r₁)`, which underflows on the scaled states
+//! at f32.
 
-use kernel::canon::canonicalise;
+use kernel::canon::{canonicalise, Canonical};
 use kernel::decode::Ic;
 use kernel::generated::links::LinkReal;
 use kernel::payload::PayloadReal;
 use validation::decode_f32_eps::SplitMix;
 use validation::negative_control;
 
-/// δ_λ, dd_decoder §3.3 and R-82.
+/// δ_λ, the old mirror deadband's half-width (dd_decoder §3.3): no longer read by `C`; the scale the states are built
+/// at, and the test of the control's mirror step.
 const DELTA: f64 = 1e-12;
 
 /// A precision the shared source runs at.
@@ -51,7 +56,7 @@ fn cast<R: P>(v: f64) -> R {
     <R as spirv_std::num_traits::NumCast>::from(v).expect("finite")
 }
 
-/// The `k` of `λ̃_y = −k·δ_λ`: inside the deadband (no mirror) and outside it (a mirror).
+/// The `k` of `λ̃_y = −k·δ_λ`: inside the old deadband and outside it (where the removed step mirrored).
 const KS: [f64; 4] = [0.5, 1.0 - 1e-3, 1.0 + 1e-3, 2.0];
 
 /// How far the rounded state's own `λ̃_y/δ_λ` may sit from `−k`, relative: the inputs' rounding, about `ε_f32`, with
@@ -143,13 +148,31 @@ fn exact<R: P>(x: &Ic<R>, unscaled: &Ic<R>) -> bool {
         .all(|(q, u)| ok(q, u))
 }
 
-/// One mirror decision on a state.
+/// Whether a state's canonical form is in the lower half, `λ̃_y < 0`.
 type Decide<R> = fn(&Ic<R>) -> bool;
 
-/// `decide` against R-82 on every variant of 24 base states per ratio and `k`; the numbers checked and mirrored.
+/// The half of `C`'s output: `λ̃_y < 0`, read off the output state at f64 (`√μ_λ·(y₂ − (m₀y₀ + m₁y₁)/M₀₁)`), which
+/// `C`'s own record, [`Canonical::lambda_t_y`], must agree with.
+fn lower_half<R: P>(c: &Canonical<R>) -> bool {
+    let m: [f64; 3] = c.ic.m.map(Into::into);
+    let y: [f64; 3] = c.ic.r.map(|v| v[1].into());
+    let m01 = m[0] + m[1];
+    let lt = (m[2] * m01).sqrt() * (y[2] - (m[0] * y[0] + m[1] * y[1]) / m01);
+    let recorded: f64 = c.lambda_t_y.into();
+    assert_eq!(
+        lt < 0.0,
+        recorded < 0.0,
+        "{}: C's recorded λ̃_y = {recorded:e} is not in its output's half, λ̃_y = {lt:e}",
+        R::NAME
+    );
+    lt < 0.0
+}
+
+/// `decide` on every variant of 24 base states per ratio and `k`: the lower half exactly on the unreflected states,
+/// at every `k`; the numbers checked and found in the lower half.
 fn check_edge_range<R: P>(decide: Decide<R>) -> (usize, usize) {
     let mut rng = SplitMix::new(2207);
-    let (mut n, mut mirrored) = (0, 0);
+    let (mut n, mut lower) = (0, 0);
     for &j in R::RATIOS {
         for k in KS {
             for _ in 0..24 {
@@ -161,42 +184,47 @@ fn check_edge_range<R: P>(decide: Decide<R>) -> (usize, usize) {
                             if !exact(&v, &variant(&x, q, flip, 0)) {
                                 continue;
                             }
-                            let want = !flip && k > 1.0;
+                            let want = !flip;
                             let got = decide(&v);
                             assert_eq!(
                                 got,
                                 want,
                                 "{}: λ̃_y = {}{k}·δ_λ, inner pair 2^{j} of the outer distance, scaled by 2^{e}, {q} \
-                                 quarter turns: the mirror must be {want} (R-82); state {v:?}",
+                                 quarter turns: the lower half must be {want} (C keeps λ̃_y's sign); state {v:?}",
                                 R::NAME,
                                 if flip { "+" } else { "−" }
                             );
                             n += 1;
-                            mirrored += usize::from(got);
+                            lower += usize::from(got);
                         }
                     }
                 }
             }
         }
     }
-    (n, mirrored)
+    (n, lower)
 }
 
 #[test]
 fn qa_m207_edge_range() {
-    let c = |x: &Ic<f32>| canonicalise(x).mirrored;
+    let c = |x: &Ic<f32>| lower_half(&canonicalise(x));
     let (n32, m32) = check_edge_range::<f32>(c);
-    let c = |x: &Ic<f64>| canonicalise(x).mirrored;
+    let c = |x: &Ic<f64>| lower_half(&canonicalise(x));
     let (n64, m64) = check_edge_range::<f64>(c);
     // Every ratio meets scales on both sides of 1 where it stays normal, so each precision checks thousands.
     assert!(
         n32 > 5000 && n64 > 5000,
         "too few states in range: {n32} (f32), {n64} (f64)"
     );
+    // The reflected and unreflected variants are in range together, so half of the states are in the lower half.
+    assert!(
+        2 * m32 == n32 && 2 * m64 == n64,
+        "the lower half is not half the states: {m32} of {n32} (f32), {m64} of {n64} (f64)"
+    );
     eprintln!(
-        "qa_m207_edge_range: {n32} f32 states ({m32} mirrored) and {n64} f64 states ({m64} mirrored), λ̃_y = ∓k·δ_λ \
-         with k = {KS:?}, inner pairs 2^{:?} (f32) and 2^{:?} (f64), scaled 2^{:?} (f32) and 2^{:?} (f64): C mirrors \
-         exactly on λ̃_y < −δ_λ",
+        "qa_m207_edge_range: {n32} f32 states ({m32} lower) and {n64} f64 states ({m64} lower), λ̃_y = ∓k·δ_λ \
+         with k = {KS:?}, inner pairs 2^{:?} (f32) and 2^{:?} (f64), scaled 2^{:?} (f32) and 2^{:?} (f64): C keeps \
+         λ̃_y's sign at every k",
         <f32 as P>::RATIOS,
         <f64 as P>::RATIOS,
         <f32 as P>::SCALES,
@@ -204,7 +232,30 @@ fn qa_m207_edge_range() {
     );
 }
 
-/// R-82's test in plain floats, `c < 0` and `m₂c² > δ_λ²·M₀₁·‖ρ‖²·I_in`, `c = ρ × (M₀₁r₂ − m₀r₀ − m₁r₁)`.
+/// `C` with the removed mirror step left in: the half read after reflecting the output where `λ̃_y < −δ_λ`.
+#[cfg(feature = "controls")]
+fn mirror_left_in(x: &Ic<f32>) -> bool {
+    let mut c = canonicalise(x);
+    if f64::from(c.lambda_t_y) < -DELTA {
+        c.ic.r = c.ic.r.map(|v| [v[0], -v[1]]);
+        c.ic.p = c.ic.p.map(|v| [v[0], -v[1]]);
+        c.lambda_t_y = -c.lambda_t_y;
+    }
+    lower_half(&c)
+}
+
+negative_control!(
+    qa_m207_edge_range,
+    "C with its mirror step left in puts a state past the old deadband in the upper half and must fail",
+    // The first state past the edge, unreflected: the message names its k.
+    expected = "f32: λ̃_y = −1.001·δ_λ",
+    {
+        check_edge_range::<f32>(mirror_left_in);
+    }
+);
+
+/// The half in plain floats, read off the input: `c < 0`, `c = ρ × (M₀₁r₂ − m₀r₀ − m₁r₁)`, whose sign is `λ̃_y`'s.
+/// *Was:* R-82's whole test in plain floats, this with `m₂c² > δ_λ²·M₀₁·‖ρ‖²·I_in`.
 #[cfg(feature = "controls")]
 fn plain(x: &Ic<f32>) -> bool {
     let (m, r) = (x.m, x.r);
@@ -212,19 +263,20 @@ fn plain(x: &Ic<f32>) -> bool {
     let m01 = m[0] + m[1];
     let big = |k: usize| m01 * r[2][k] - m[0] * r[0][k] - m[1] * r[1][k];
     let c = rho[0] * big(1) - rho[1] * big(0);
-    let com = [0, 1].map(|k| m[0] * r[0][k] + m[1] * r[1][k] + m[2] * r[2][k]);
-    let i: f32 = (0..3)
-        .map(|i| m[i] * ((r[i][0] - com[0]).powi(2) + (r[i][1] - com[1]).powi(2)))
-        .sum();
-    let d = DELTA as f32;
-    c < 0.0 && m[2] * c * c > d * d * m01 * (rho[0] * rho[0] + rho[1] * rho[1]) * i
+    c < 0.0
 }
 
-negative_control!(
-    qa_m207_edge_range,
-    "R-82's test in plain f32 floats underflows on hierarchical and scaled states and must fail",
-    expected = "f32: λ̃_y = −",
-    {
-        check_edge_range::<f32>(plain);
-    }
-);
+/// A second control: the plain-float half.
+#[cfg(feature = "controls")]
+mod edge_plain_floats {
+    use super::*;
+
+    negative_control!(
+        qa_m207_edge_range,
+        "the half read in plain f32 floats underflows on scaled states and must fail",
+        expected = "f32: λ̃_y = −",
+        {
+            check_edge_range::<f32>(plain);
+        }
+    );
+}

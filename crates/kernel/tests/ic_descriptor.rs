@@ -7,7 +7,7 @@
 //!   the derived `E₀` is `K_0 + V_0` (REQ-PAY-034, R-86).
 //! - `ic_descriptor_definitions`: on fuzzed `z`, every field is dd_decoder §3.6's formula of the decoded `(m, r, p)`,
 //!   evaluated again here in f64, in the canonical frame and rotated out of it; and in the canonical frame
-//!   `rho_mag = cos α`, `lambda_mag = sin α` and `rho_angle = β` (REQ-PAY-088).
+//!   `rho_mag = cos α`, `lambda_mag = sin α` and `rho_angle = β`, the two angles compared on the circle (REQ-PAY-088).
 //! - `ic_descriptor_rho_angle_axis`: `rho_angle` on the axis `ρ × λ = 0` and next to it, at f64 and f32: `π̂` when
 //!   antiparallel, whatever the sign of a zero `ρ × λ`; 0 when parallel and at the pole; `atan2`'s value taken down to
 //!   `π̂`, or read as `π̂` at or below `−π̂`, elsewhere (dd_decoder §3.6; REQ-PAY-088).
@@ -348,7 +348,7 @@ fn check_formulas<R: P>(
 
 /// Checks `describe` at `z` (the defaults' decode) against dd_decoder §3.6's formulas, on the decoded `(m, r, p)` and
 /// on it [`turned`] out of the canonical frame (`check_formulas`); and, where `z` is in the interior (`|zₖ| ≤ 2`), the
-/// canonical frame's `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β`.
+/// canonical frame's `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β` on the circle.
 fn check_definitions<R: P>(describe: Describe<R>, z: [f64; 8], worst: &Worst) {
     let dec = decode::decode::<Defaults, R>(&latent::<R>(z));
     let at = format!("z = {z:?}, {}", R::NAME);
@@ -363,13 +363,14 @@ fn check_definitions<R: P>(describe: Describe<R>, z: [f64; 8], worst: &Worst) {
     let angle = d.rho_angle.f();
     if z.iter().all(|x| x.abs() <= 2.0) {
         let (alpha, beta) = (dec.config.alpha.f(), dec.config.beta.f());
+        // `β = z_β + π/2` is an angle read modulo 2π, anywhere on the line (past π once `z_β > π/2`), and `rho_angle`
+        // is its value on `(−π̂, π̂]`: the two are compared as points of the circle.
+        // The whole turns are taken off the difference itself, so one that needs none is kept to the last bit.
+        let off = (angle - beta) - TAU * ((angle - beta) / TAU).round();
         let canon = [
             ("rho_mag = cos α", d.rho_mag.f() - alpha.cos()),
             ("lambda_mag = sin α", d.lambda_mag.f() - alpha.sin()),
-            (
-                "lambda_mag·(rho_angle − β)",
-                d.lambda_mag.f() * (angle - beta),
-            ),
+            ("lambda_mag·(rho_angle − β)", d.lambda_mag.f() * off),
             (
                 "rho_mag² + lambda_mag² = 1",
                 d.rho_mag.f().powi(2) + d.lambda_mag.f().powi(2) - 1.0,

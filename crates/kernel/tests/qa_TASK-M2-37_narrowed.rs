@@ -45,7 +45,7 @@ use kernel::chart::physical::MixedMassRatio;
 use kernel::chart::{Chart, ValidationResult};
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
-    Defaults, LinkParams, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
+    Defaults, LinkParams, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ, StickBreaking,
 };
 #[cfg(feature = "controls")]
 use kernel::generated::links::{Link, LinkReal, Mass};
@@ -53,7 +53,7 @@ use validation::{negative_control, tunables};
 
 /// The selection with `stick_breaking` on the mass block.
 type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 type Ratio<S> = MixedMassRatio<ZBeta, S, f64>;
 
@@ -402,7 +402,7 @@ impl Link<2, 3> for TableStick {
 
 #[cfg(feature = "controls")]
 type TableLinks =
-    Select<TableStick, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<TableStick, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 negative_control!(
     qa_narrowed_decode_stick,

@@ -4,9 +4,13 @@
 //! - REQ-DEC-014 (`encode_qa_m215_gpu_poles`): `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components: no
 //!   NaN, two dispatches bit-identical, the notices identical to CPU-f32's and CPU-f64's, `lookup_clamped` set, `β`
 //!   R-437's `+0` at `λ̃ = 0`, and `α`, `β` within f32 rounding of CPU-f64's.
-//! - REQ-ENC-007 (`encode_qa_m215_gpu_half_axis`): `β` on given operands (R-437, R-438): `(x < 0, ±0)` gives π̂ (f32's
-//!   image of π, rounded toward zero, R-417) with CPU-f32's bits, `(±0, ±0)` gives `+0`, `β(x, −y)` has `β(x, y)`'s
-//!   bits; and collinear states with body 2 on the `−x` side, `λ̃_y = ±0`, encode on the GPU with `β = π̂`.
+//! - REQ-ENC-007 (`encode_qa_m215_gpu_half_axis`): `β` on given operands (R-437, R-438): `(x < 0, ±0)` gives π̂
+//!   (f32's image of π, rounded toward zero, R-417) with CPU-f32's bits, `(±0, ±0)` gives `+0`; the encode is signed,
+//!   so `β ∈ [0, π̂]` on and above the `x`-axis and `β ∈ [2π̂ − π, 2π̂]` below it (π here f32's nearest, `atan2`'s
+//!   largest value), and `β(x, −y)` is `β(x, y)`'s mirror image, `2π̂ − β(x, y)`, within 4 f32 eps of `2π̂`, the CPU
+//!   side's bound (also `encode_qa_m215_gpu_mirror_image`, whose control is the unsigned encode); and collinear
+//!   states with body 2 on the `−x` side, `λ̃_y = ±0`, encode on the GPU with `β = π̂` and no `lookup_clamped`, the
+//!   circle having no edge there.
 //!
 //! The test names carry `encode_` so CI's Metal and lavapipe steps select them. The binary reads
 //! `target/spirv/kernel.wgsl`, which `cargo xtask build-kernel` writes. Operands are normal or zero: a subnormal may be
@@ -89,10 +93,9 @@ fn pole_states() -> (Vec<Ic<f32>>, Vec<Ic<f32>>) {
     (lam, rho)
 }
 
-fn notices(o: &EncodeOut) -> (bool, bool, u32, bool) {
+fn notices(o: &EncodeOut) -> (bool, u32, bool) {
     (
         o.report.lookup_clamped(),
-        o.report.mirrored,
         o.report.clamped_controls,
         o.report.coincident,
     )
@@ -106,7 +109,7 @@ fn words(o: &EncodeOut) -> Vec<u32> {
         o.report.lambda.to_bits(),
     ]);
     w.push(o.report.clamped_controls);
-    w.push(u32::from(o.report.mirrored) | u32::from(o.report.coincident) << 1);
+    w.push(u32::from(o.report.coincident));
     w
 }
 
@@ -141,7 +144,6 @@ fn check_poles(
         let c64 = encode::<Defaults, f64>(&x64);
         let n64 = (
             c64.report.lookup_clamped(),
-            c64.report.mirrored,
             c64.report.clamped_controls,
             c64.report.coincident,
         );
@@ -217,7 +219,8 @@ negative_control!(
 
 /// Just off the `−x` half-axis, `λ̃_y = ±|λ̃_x|·2⁻ᵏ`: the true `β` is below π by about `2⁻ᵏ`, under half an f32 ulp of
 /// π for `k ≥ 23`, so an `atan2` that rounds to nearest returns f32's nearest π, above π̂; `β ∈ [0, π̂]` (REQ-ENC-007,
-/// R-417, R-438) must hold there too. Each pair comes with its mirror image.
+/// R-417, R-438) must hold there too. Each pair comes with its mirror image, below the axis, whose `β` is `2π̂` less
+/// `atan2`'s value: at least `2π̂` less f32's nearest π, one step under π̂.
 fn near_half_axis() -> Vec<[f32; 2]> {
     let mut v = Vec::new();
     for e in [-6, -1, 0, 3] {
@@ -262,13 +265,23 @@ fn pairs() -> Vec<[f32; 2]> {
 }
 
 fn check_half_axis(p: &[[f32; 2]], g: &[f32]) {
+    let tau = pi_hat() + pi_hat();
+    // Below the axis `β` is `atan2 + 2π̂`, and `atan2` is no lower than f32's nearest π negated.
+    let floor = tau - std::f32::consts::PI;
     for (k, &[x, y]) in p.iter().enumerate() {
         let b = g[k];
         let cpu = blocks::beta([x, y]);
-        assert!(
-            (0.0..=pi_hat()).contains(&b),
-            "GPU β({x:e}, {y:e}) = {b} ∉ [0, π̂]"
-        );
+        if y < 0.0 {
+            assert!(
+                (floor..=tau).contains(&b),
+                "GPU β({x:e}, {y:e}) = {b} ∉ [2π̂ − π, 2π̂], below the x-axis"
+            );
+        } else {
+            assert!(
+                (0.0..=pi_hat()).contains(&b),
+                "GPU β({x:e}, {y:e}) = {b} ∉ [0, π̂]"
+            );
+        }
         if y == 0.0 && x < 0.0 {
             assert!(
                 b.to_bits() == pi_hat().to_bits() && cpu.to_bits() == b.to_bits(),
@@ -291,18 +304,35 @@ fn check_half_axis(p: &[[f32; 2]], g: &[f32]) {
             "GPU β({x:e}, {y:e}) = {b}, CPU-f32 {cpu}"
         );
     }
-    for k in (0..p.len()).filter(|&k| p[k][1] != 0.0) {
+    check_mirror_images(p, g);
+}
+
+/// The bound on `β(x, y) + β(x, −y) − 2π̂` off the axis, in f32 eps of `2π̂`, the one `kernel`'s `qa_TASK-M2-15` holds
+/// the CPU to: the lower half's `β` is `atan2 + 2π̂`, one rounded add onto a rounded constant, and the upper half's
+/// `atan2` is its mirror's to an ulp. (On CPU-f32 the sum is `2π̂` exactly on every pair of [`pairs`] whose upper `β`
+/// was not capped at π̂, and one ulp of π under it on those that were.)
+const IMAGE_EPS: f32 = 4.0;
+
+/// Each pair above the axis against its mirror image below: `β → 2π̂ − β`, within [`IMAGE_EPS`]. Returns the number of
+/// pairs compared.
+fn check_mirror_images(p: &[[f32; 2]], g: &[f32]) -> usize {
+    let tau = pi_hat() + pi_hat();
+    let mut n = 0;
+    for k in (0..p.len()).filter(|&k| p[k][1] > 0.0) {
         if let Some(m) = (0..p.len()).find(|&m| p[m] == [p[k][0], -p[k][1]]) {
             assert!(
-                g[k].to_bits() == g[m].to_bits(),
-                "GPU β({:e}, {:e}) = {} but {} mirrored: not the mirror's quotient",
+                (f64::from(g[k]) + f64::from(g[m]) - f64::from(tau)).abs()
+                    <= f64::from(IMAGE_EPS * f32::EPSILON * tau),
+                "GPU β({:e}, {:e}) = {} but {} mirrored: not the mirror image's 2π̂ − β",
                 p[k][0],
                 p[k][1],
                 g[k],
                 g[m]
             );
+            n += 1;
         }
     }
+    n
 }
 
 /// Collinear states with body 2 on the `−x` side, `λ̃_y = ±0`, through the whole encode on the GPU.
@@ -338,9 +368,10 @@ fn encode_qa_m215_gpu_half_axis() {
             o.beta,
             cpu.beta
         );
+        // `β = π̂` is inside the circle, which has no edge to clamp at.
         assert!(
-            o.report.lookup_clamped() && notices(o) == notices(&cpu),
-            "collinear state {i}: GPU notices {:?}, CPU-f32 {:?}",
+            !o.report.lookup_clamped() && notices(o) == notices(&cpu),
+            "collinear state {i}: GPU notices {:?}, CPU-f32 {:?}, lookup_clamped at β = π̂ or not the CPU's",
             notices(o),
             notices(&cpu)
         );
@@ -360,6 +391,28 @@ negative_control!(
     }
 );
 
+#[test]
+fn encode_qa_m215_gpu_mirror_image() {
+    let h = GpuHarness::new().expect("a GPU device");
+    let p = pairs();
+    let n = check_mirror_images(&p, &gpu_beta(&h, &p));
+    assert!(n >= 256, "only {n} pairs with a mirror image compared");
+    eprintln!(
+        "encode_qa_m215_gpu_mirror_image: {n} pairs, each image 2π̂ − β within {IMAGE_EPS} eps"
+    );
+}
+
+negative_control!(
+    encode_qa_m215_gpu_mirror_image,
+    "a β that is the same on both sides of the x-axis, atan2(|λ̃_y|, λ̃_x), the unsigned encode, must fail",
+    expected = "not the mirror image's 2π̂ − β",
+    {
+        let p = pairs();
+        let g: Vec<f32> = p.iter().map(|&[x, y]| blocks::beta([x, y.abs()])).collect();
+        check_mirror_images(&p, &g);
+    }
+);
+
 negative_control!(
     encode_qa_m215_gpu_near_half_axis,
     "a GPU β of f32's nearest π just off the −x half-axis, above π̂, must fail",
@@ -369,9 +422,10 @@ negative_control!(
         let p = pairs();
         let mut g = gpu_beta(&h, &p);
         let near = near_half_axis();
+        // The last pair above the axis (its mirror image follows it).
         let k = p
             .iter()
-            .position(|q| *q == near[near.len() - 1])
+            .position(|q| *q == near[near.len() - 2])
             .expect("a near pair");
         // An uncapped round-to-nearest atan2: f32's nearest π, one ulp above π̂.
         g[k] = std::f32::consts::PI;

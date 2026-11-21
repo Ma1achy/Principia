@@ -732,21 +732,16 @@ negative_control!(
 );
 
 /// The recorded rescale's factors on hand values, `M = 4`, `G = 9`, `λ = ¼`: `E = G·M²·λ·E_c = 36·E_c`, `L_z =
-/// ±√G·M^{3/2}·λ^{−1/2}·L_{z,c} = ±48·L_{z,c}`, minus where mirrored, `R = 1/λ = 4`; the length-only rescale keeps
-/// `λ` and the mirror and sets `M = G = 1`.
-fn check_rescale(mirrored: bool, sign: f64) {
+/// √G·M^{3/2}·λ^{−1/2}·L_{z,c} = 48·L_{z,c}`, its sign the canonical one's (`C` has no mirror step, R-865), here for
+/// `L_{z,c} = lz_c` against `want`, `R = 1/λ = 4`; the length-only rescale keeps `λ` and sets `M = G = 1`.
+fn check_rescale(lz_c: f64, want: f64) {
     let r = Rescale {
         mass: 4.0,
         g: 9.0,
         lambda: 0.25,
-        mirrored,
     };
     assert_eq!(r.energy(1.0), 36.0, "E = G·M²·λ·E_c");
-    assert_eq!(
-        r.lz(1.0),
-        sign * 48.0,
-        "L_z = ±√G·M^{{3/2}}·λ^{{−1/2}}·L_z,c"
-    );
+    assert_eq!(r.lz(lz_c), want, "L_z = √G·M^{{3/2}}·λ^{{−1/2}}·L_z,c");
     assert_eq!(r.hyper(), 4.0, "R = 1/λ");
     assert_eq!(
         r.length_only(),
@@ -754,7 +749,6 @@ fn check_rescale(mirrored: bool, sign: f64) {
             mass: 1.0,
             g: 1.0,
             lambda: 0.25,
-            mirrored
         },
         "the length-only rescale"
     );
@@ -762,15 +756,15 @@ fn check_rescale(mirrored: bool, sign: f64) {
 
 #[test]
 fn literature_import_rescale_factors() {
-    check_rescale(false, 1.0);
-    check_rescale(true, -1.0);
+    check_rescale(1.0, 48.0);
+    check_rescale(-1.0, -48.0);
 }
 
 negative_control!(
     literature_import_rescale_factors,
-    "a mirrored start's L_z keeps its sign",
-    expected = "L_z = ±√G",
-    check_rescale(true, 1.0)
+    "a lower-half start's L_z with its sign flipped, as the retired mirror step flipped it, must fail",
+    expected = "L_z = √G",
+    check_rescale(-1.0, 48.0)
 );
 
 /// `relative` is `|got − want|/|want|`, and `|got|` where `want` is 0.

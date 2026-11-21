@@ -1,5 +1,5 @@
 {
-  "description": "R-176, the bit-for-bit check can fire (RQ-624): the same draws, fewer of them, with every z_β moved one ulp off its encoded value before it is compared with its clamp image, so the bit-for-bit check must fail while the round trip, the CoM and |w| pass.",
+  "description": "R-176, the bit-for-bit check can fire (RQ-624; R-1018): the same draws, fewer of them, with every collinear member whose C(x) has λ̃_y exactly ±0 having its z_β moved one ulp off its encoded value before it is compared with the encode's value for β = 0 or π̂, so the bit-for-bit check must fail while the round trip, the CoM and |w| pass.",
   "seed": 1,
   "samples": 2000,
   "radius": 4.0,

@@ -28,8 +28,11 @@
 //!   unset `+∞` its sentinel (RQ-835 (a); payload §1), and today's bytes with that sentinel cleared hash to those two
 //!   again, so it is the one change; then 0xa348a30b13584059 and 0xfbaf6327b921761f until the escape rule's lagged
 //!   `n̂` register took the place of `SimState`'s `_pad` (payload §1; TASK-M3-12), and today's bytes with the three
-//!   `_nhat_lag_*` members replaced by that `_pad` hash to those two again, so it is the one change; an active value
-//!   is no input of the hash (`qa_m241_hash_*`).
+//!   `_nhat_lag_*` members replaced by that `_pad` hash to those two again, so it is the one change; then
+//!   0x4190fd7982e0f199 and 0xf974859f765e5b5f until TASK-M2-57 added the periodic `β` link's entry, `periodic_beta`,
+//!   to the registry (the three bounded `β` links stay, their hashed bytes as they were: the codomain they moved to is
+//!   not hashed), and today's bytes without that entry hash to those two again, so it is the one change; an active
+//!   value is no input of the hash (`qa_m241_hash_*`).
 //! - REQ-DEC-048 (host side): `Codomain::range` at an active `q_max` = 1.5 gives the momenta `[−1.5, 1.5]` and moves no
 //!   other codomain's bounds (`qa_m241_range_with_active`).
 //!
@@ -42,8 +45,8 @@ use ledger::gen;
 use ledger::gen::links::generate;
 use ledger::layout;
 use ledger::links::{
-    builders, check, check_with, registered, slots, tunables, Codomain, Expr, LinkBuilder, Op,
-    Param, Slot, Tunable, CHART_CONSTANTS,
+    builders, check, check_with, registered, slots, tunables, Codomain, Constraint, Expr, Link,
+    LinkBuilder, Op, Param, Slot, Tunable, CHART_CONSTANTS,
 };
 use ledger::payload;
 use ledger::version::{canonical, fnv1a64, Hashed};
@@ -68,8 +71,10 @@ use validation::negative_control;
 /// (`qa_m241_hash_closure_sentinel_is_the_one_change`). Then pinned at 0xa348_a30b_1358_4059
 /// ([`PRE_LAG_PROVISIONAL_VERSION`]) until the escape rule's lagged `n̂` register replaced `SimState`'s `_pad`
 /// (payload §1; TASK-M3-12), which today's bytes with the `_pad` back give back
-/// (`qa_m241_hash_lag_register_is_the_one_change`).
-const MEAN_Y_PROVISIONAL_VERSION: u64 = 0x4190_fd79_82e0_f199;
+/// (`qa_m241_hash_lag_register_is_the_one_change`). Then pinned at 0x4190_fd79_82e0_f199
+/// ([`PRE_PERIODIC_PROVISIONAL_VERSION`]) until TASK-M2-57 added the periodic `β` link's entry to the registry, which
+/// today's bytes without it give back (`qa_m241_hash_periodic_beta_is_the_one_change`).
+const MEAN_Y_PROVISIONAL_VERSION: u64 = 0x2ee1_260a_e02d_31de;
 
 /// The hash of the ledger without the declarations' block once REQ-PAY-098 declared `mean_y`'s range [0, 4]
 /// (R-426; TASK-M3-13): the one change to the hashed entries since [`MEAN_Y_PROVISIONAL_VERSION`], which reverting it
@@ -78,9 +83,16 @@ const MEAN_Y_PROVISIONAL_VERSION: u64 = 0x4190_fd79_82e0_f199;
 /// ([`PRE_REGISTER_DECLARED_VERSION`]) until TASK-M3-71 hashed its three register entries, and at
 /// 0xccdd_707a_a771_cf86 ([`PRE_DEPARTED_DECLARED_VERSION`]) until TASK-M3-11's departed bit and pole-reference
 /// entries, and at 0x97ec_01cb_a5af_4336 ([`PRE_SENTINEL_DECLARED_VERSION`]) until TASK-M3-11's `closure_min`
-/// sentinel, and at 0xfbaf_6327_b921_761f ([`PRE_LAG_DECLARED_VERSION`]) until TASK-M3-12's lagged `n̂` register, for
-/// the reasons at [`MEAN_Y_PROVISIONAL_VERSION`].
-const MEAN_Y_DECLARED_VERSION: u64 = 0xf974_859f_765e_5b5f;
+/// sentinel, and at 0xfbaf_6327_b921_761f ([`PRE_LAG_DECLARED_VERSION`]) until TASK-M3-12's lagged `n̂` register, and
+/// at 0xf974_859f_765e_5b5f ([`PRE_PERIODIC_DECLARED_VERSION`]) until TASK-M2-57's periodic `β` link, for the reasons
+/// at [`MEAN_Y_PROVISIONAL_VERSION`].
+const MEAN_Y_DECLARED_VERSION: u64 = 0x5cce_9d2e_d11d_c744;
+
+/// [`MEAN_Y_PROVISIONAL_VERSION`] before TASK-M2-57 added the periodic `β` link's entry, `periodic_beta`.
+const PRE_PERIODIC_PROVISIONAL_VERSION: u64 = 0x4190_fd79_82e0_f199;
+
+/// [`MEAN_Y_DECLARED_VERSION`] before TASK-M2-57 added the periodic `β` link's entry, `periodic_beta`.
+const PRE_PERIODIC_DECLARED_VERSION: u64 = 0xf974_859f_765e_5b5f;
 
 /// [`MEAN_Y_PROVISIONAL_VERSION`] before the lagged `n̂` register replaced `SimState`'s `_pad` (TASK-M3-12).
 const PRE_LAG_PROVISIONAL_VERSION: u64 = 0xa348_a30b_1358_4059;
@@ -495,8 +507,19 @@ fn bytes_with(
     structs: Vec<ledger::schema::Struct>,
     t: &[Tunable],
 ) -> Vec<u8> {
+    bytes_with_links(ledger, structs, ledger::links::registry(), t)
+}
+
+/// The canonical bytes of `ledger` and `structs` with the link registry `links` and the declarations `t`.
+fn bytes_with_links(
+    ledger: ledger::schema::Ledger,
+    structs: Vec<ledger::schema::Struct>,
+    links: &[Link],
+    t: &[Tunable],
+) -> Vec<u8> {
     let entries = gen::validate(&ledger).expect("the payload ledger validates");
     canonical(&Hashed {
+        links,
         tunables: t,
         ..Hashed::payload(&ledger.words, &entries, &structs)
     })
@@ -519,11 +542,43 @@ fn before_block_with(
     ledger: ledger::schema::Ledger,
     structs: Vec<ledger::schema::Struct>,
 ) -> Vec<u8> {
-    let mut b = bytes_with(ledger, structs, &[]);
+    before_block_with_links(ledger, structs, ledger::links::registry())
+}
+
+/// [`before_block`] of `ledger` and `structs` with the link registry `links`.
+fn before_block_with_links(
+    ledger: ledger::schema::Ledger,
+    structs: Vec<ledger::schema::Struct>,
+    links: &[Link],
+) -> Vec<u8> {
+    let mut b = bytes_with_links(ledger, structs, links, &[]);
     let n = b.len() - 4;
     assert_eq!(b[n..], [0, 0, 0, 0], "the empty block's count is not last");
     b.truncate(n);
     b
+}
+
+/// The bytes before the declarations' block without TASK-M2-57's change to the hashed bytes: the registry without its
+/// one periodic entry, `periodic_beta`, every other entry as it is today. The three bounded `β` links are kept: the
+/// task moved them to a codomain no block takes, and a codomain is not hashed.
+fn without_periodic_beta(l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
+    let all = ledger::links::registry();
+    let periodic: Vec<&str> = all
+        .iter()
+        .filter(|l| l.constraint == Constraint::Periodic)
+        .map(|l| l.name)
+        .collect();
+    assert_eq!(
+        periodic,
+        ["periodic_beta"],
+        "the registry's periodic entries are not `periodic_beta` alone (periodic)"
+    );
+    let then: Vec<Link> = all
+        .iter()
+        .filter(|l| l.constraint != Constraint::Periodic)
+        .copied()
+        .collect();
+    before_block_with_links(l, s, &then)
 }
 
 /// An edit of one declaration.
@@ -757,13 +812,14 @@ fn without_lag_members(mut s: Vec<ledger::schema::Struct>) -> Vec<ledger::schema
     s
 }
 
-/// The bytes before the declarations' block without TASK-M3-12's lagged `n̂` register, `_pad` in its place.
+/// The bytes before the declarations' block without TASK-M3-12's lagged `n̂` register, `_pad` in its place, and
+/// without the change after it, TASK-M2-57's periodic `β` link.
 fn without_lag_register(l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
-    before_block_with(l, without_lag_members(s))
+    without_periodic_beta(l, without_lag_members(s))
 }
 
-/// The bytes before the declarations' block without the lagged `n̂` register and with `closure_min`'s sentinel
-/// cleared (TASK-M3-11's last change).
+/// The bytes before the declarations' block without the lagged `n̂` register and the periodic `β` link, and with
+/// `closure_min`'s sentinel cleared (TASK-M3-11's last change).
 fn without_closure_sentinel(
     mut l: ledger::schema::Ledger,
     s: Vec<ledger::schema::Struct>,
@@ -775,7 +831,7 @@ fn without_closure_sentinel(
 /// The bytes before the declarations' block without the lagged `n̂` register (TASK-M3-12) and without TASK-M3-11's
 /// changes to the hashed bytes: `closure_min`'s sentinel cleared (RQ-835 (a)), no `departed` entry, `packed_a`'s reserved span bits 10–15 again (payload §2;
 /// R-545), and the register's hashed block of today's ten entries replaced by the eight TASK-M3-71 left, without
-/// `θ̃`'s pole-reference entries (§3.8; R-397).
+/// `θ̃`'s pole-reference entries (§3.8; R-397); and without the change after them, TASK-M2-57's periodic `β` link.
 fn without_departed(mut l: ledger::schema::Ledger, s: Vec<ledger::schema::Struct>) -> Vec<u8> {
     clear_closure_sentinel(&mut l);
     l.entries.retain(|e| e.name != Some("departed"));
@@ -917,8 +973,9 @@ negative_control!(
 );
 
 /// TASK-M3-11's `closure_min` sentinel, its unset `+∞` (RQ-835 (a); payload §1), is the one change to the hashed bytes
-/// since [`PRE_SENTINEL_DECLARED_VERSION`]: cleared, today's ledger hashes to the pins before it, so
-/// [`PRE_LAG_DECLARED_VERSION`] and [`PRE_LAG_PROVISIONAL_VERSION`] follow from it alone (added by qa for TASK-M3-11).
+/// since [`PRE_SENTINEL_DECLARED_VERSION`] but the two after it: cleared, with the lagged register and the periodic
+/// `β` link's entry taken out, today's ledger hashes to the pins before it, so [`PRE_LAG_DECLARED_VERSION`] and
+/// [`PRE_LAG_PROVISIONAL_VERSION`] follow from it alone (added by qa for TASK-M3-11).
 fn check_closure_sentinel(strip: Strip) {
     check_strip(
         strip,
@@ -935,15 +992,16 @@ fn qa_m241_hash_closure_sentinel_is_the_one_change() {
 
 negative_control!(
     qa_m241_hash_closure_sentinel_is_the_one_change,
-    "today's bytes, closure_min's sentinel kept, are not the pins before it, so the sentinel is hashed",
+    "today's bytes, the periodic β link's entry taken out but closure_min's sentinel kept, are not the pins before \
+     it, so the sentinel is hashed",
     expected = "(closure sentinel)",
     check_closure_sentinel(without_lag_register)
 );
 
 /// The escape rule's lagged `n̂` register (payload §1; TASK-M3-12), three `Real` members where `SimState`'s 4 B of
-/// declared padding stood, is the one change to the hashed bytes since [`PRE_LAG_DECLARED_VERSION`]: with `_pad` back
-/// in its place, today's ledger hashes to the pins before it, so [`MEAN_Y_DECLARED_VERSION`] and
-/// [`MEAN_Y_PROVISIONAL_VERSION`] follow from it alone.
+/// declared padding stood, is the one change to the hashed bytes since [`PRE_LAG_DECLARED_VERSION`] but TASK-M2-57's
+/// periodic `β` link: with `_pad` back in its place and that link's entry taken out, today's ledger hashes to the pins
+/// before it, so [`PRE_PERIODIC_DECLARED_VERSION`] and [`PRE_PERIODIC_PROVISIONAL_VERSION`] follow from it alone.
 fn check_lag_register(strip: Strip) {
     check_strip(
         strip,
@@ -960,9 +1018,35 @@ fn qa_m241_hash_lag_register_is_the_one_change() {
 
 negative_control!(
     qa_m241_hash_lag_register_is_the_one_change,
-    "today's bytes, the lagged register kept, are not the pins before it, so its members are hashed",
+    "today's bytes, the periodic β link's entry taken out but the lagged register kept, are not the pins before it, \
+     so its members are hashed",
     expected = "(lag)",
-    check_lag_register(before_block_with)
+    check_lag_register(without_periodic_beta)
+);
+
+/// TASK-M2-57's periodic `β` link, the registry's entry `periodic_beta`, is the one change to the hashed bytes since
+/// [`PRE_PERIODIC_DECLARED_VERSION`]: taken out, today's ledger hashes to the pins before it, so
+/// [`MEAN_Y_DECLARED_VERSION`] and [`MEAN_Y_PROVISIONAL_VERSION`] follow from it alone. The three bounded `β` links'
+/// move to the retired codomain, and `β`'s new default, changed no hashed byte.
+fn check_periodic_beta(strip: Strip) {
+    check_strip(
+        strip,
+        PRE_PERIODIC_PROVISIONAL_VERSION,
+        PRE_PERIODIC_DECLARED_VERSION,
+        "without the periodic β link's entry (periodic)",
+    );
+}
+
+#[test]
+fn qa_m241_hash_periodic_beta_is_the_one_change() {
+    check_periodic_beta(without_periodic_beta);
+}
+
+negative_control!(
+    qa_m241_hash_periodic_beta_is_the_one_change,
+    "today's bytes, the periodic β link's entry kept, are not the pins before it, so the entry is hashed",
+    expected = "(periodic)",
+    check_periodic_beta(before_block_with)
 );
 
 // ── REQ-DEC-048, host side: the codomain's bounds at the active value ───────────────────────────────────────────
@@ -980,6 +1064,7 @@ fn check_range_with(q: f64) {
     for c in [
         Codomain::Alpha,
         Codomain::Beta,
+        Codomain::RetiredBeta,
         Codomain::Mass,
         Codomain::HalfLine,
         Codomain::RealLine,

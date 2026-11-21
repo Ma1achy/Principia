@@ -13,17 +13,24 @@
 //!   kinetic energy of the particles equals the Jacobi form `‖p_ρ‖²/2μ_ρ + ‖p_λ‖²/2μ_λ`, which holds only for the
 //!   conjugate map and so catches the factor swap `Σpᵢ = 0` cannot (PIT-9: swapping both factors keeps `Σpᵢ = 0`);
 //!   `z_q = 0` gives rest; `|qₖ| ≤ q_max`, reached at saturation (R-417).
-//! - REQ-DEC-027: decoder test 3 over fuzzed `z` with saturation: α, β compared in f64 at the exact `π/2` and `π`, the
-//!   lower poles reached at underflow, `|qₖ| = q_max` at saturation, masses in the open simplex.
+//! - REQ-DEC-027: decoder test 3 over fuzzed `z` with saturation: α compared in f64 at the exact `π/2`, its lower pole
+//!   reached at underflow, `|qₖ| = q_max` at saturation, masses in the open simplex. `β` is a periodic angle with no
+//!   range to respect: `β = z_β + π̂/2` bit for bit at every finite `z_β`, far out as near, with nothing saturating;
+//!   between the two collinear landmarks, `|z_β| ≤ π̂/2`, it lies in `[0, π]`, compared in f64 at the exact `π`, the
+//!   upper landmark the image of `π` rounded toward zero. (Before the periodic link this read "β in `[0, π]` at every
+//!   `z`, `β = 0` reached at underflow"; that was the squashing link's saturation.)
 //! - REQ-VAL-018, REQ-PAY-034: the golden IC at f64 and f32 against values written here from their closed forms
 //!   (exact decimals, each rounded once to the precision, R-421), `K_0` and `virial_ratio` bit-exact, the others within
 //!   REQ-PAY-095's proposal; `E₀ = K_0 + V_0`; the struct's members, with no `E₀`; and `fixtures/golden_ic/z0.json`
 //!   cross-checked against the same closed forms.
-//! - REQ-VAL-020: `z = 0` is equilateral; `z_β` past underflow gives `β = 0` exactly and a collinear IC; `z_β → +∞`
-//!   approaches `π` from below, monotone, never past it.
+//! - REQ-VAL-020: `z = 0` is equilateral; `z_β = −π̂/2` gives `β = 0` exactly and a collinear IC; from `z_β = 0` up to
+//!   `z_β = π̂/2`, `β` rises to the image of `π` from below, monotone, never past it, the IC as collinear as `β` says.
+//!   Both collinear landmarks are interior points of the periodic `β`, reached exactly, with no underflow and no edge.
+//!   (Before the periodic link they were the limits `z_β → ∓∞` of the squashing link.)
 //! - REQ-PAY-088: the six defined fields on ICs out of the canonical frame (rotated, mirrored, unequal masses) against
 //!   dd_decoder §3.6's formulas evaluated here in f64; their stated ranges, `rho_angle ∈ (−π, π]` included on the
-//!   collinear antiparallel IC; on canonical decodes `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β`.
+//!   collinear antiparallel IC; on canonical decodes `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β`, the two
+//!   angles compared on the circle (`β` runs over the whole line, `rho_angle` over `(−π, π]`).
 //!
 //! **Tolerances.** REQ-PAY-095 (calibrated; the PR's proposal, pending the M2 gate): 4 ulps from the exact value
 //! rounded to the precision. REQ-DEC-045 (calibrated; the PR's proposal, pending the M2 gate): `|Σpᵢ|` per component
@@ -155,6 +162,13 @@ fn toward_zero<R: Fp>(s: &str) -> R {
     } else {
         n
     }
+}
+
+/// The periodic `β` link's offset at `R`, written here from its definition, not read from the kernel: `β = z_β + c`
+/// with `c` half the image of `π`, which is `π/2` rounded toward zero (halving is exact), so that `z = 0` is the
+/// equilateral golden IC and `c + c` is the image of `π`.
+fn offset<R: Fp>() -> R {
+    toward_zero::<R>(HALF_PI)
 }
 
 // ── The domain ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -835,9 +849,21 @@ fn check_ranges<R: Fp>(d: &Decoded<R>, z: &[f64; 8]) {
         "α = {a} outside [0, π/2] at z = {z:?}, {}",
         R::NAME
     );
+    // `β` is a periodic angle: no range holds at every `z`. Between the two collinear landmarks, `|z_β| ≤ c`, it lies
+    // in `[0, π]`, the upper end inside the exact `π` because `c` is rounded toward zero.
+    let c = offset::<R>();
+    if z[1].abs() <= c.f() {
+        assert!(
+            (0.0..=std::f64::consts::PI).contains(&b),
+            "β = {b} outside [0, π] at z = {z:?}, {}",
+            R::NAME
+        );
+    }
+    // Everywhere, saturation included, it is the offset of `z_β`, bit for bit: nothing squashes or clamps it.
+    let want = (R::of(z[1]) + c).f();
     assert!(
-        (0.0..=std::f64::consts::PI).contains(&b),
-        "β = {b} outside [0, π] at z = {z:?}, {}",
+        b.to_bits() == want.to_bits(),
+        "β = {b} is not z_β + π̂/2 = {want} at z = {z:?}, {}",
         R::NAME
     );
     for q in d.momentum.q {
@@ -859,12 +885,14 @@ fn check_ranges<R: Fp>(d: &Decoded<R>, z: &[f64; 8]) {
 }
 
 fn check_poles<R: Fp>(dec: Decode<R>) {
+    let c = offset::<R>();
     for z in [-1e3, -1e30, -R::MAX] {
         let d = dec(&Latent::new(at([z, z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])));
+        // α's lower pole is reached past underflow; β, periodic, has no pole to reach: it is `z_β + c` far out as near.
         assert_eq!(
             (d.config.alpha.f(), d.config.beta.f()),
-            (0.0, 0.0),
-            "α = 0 and β = 0 are not reached past underflow at z = {z:e}, {}",
+            (0.0, (R::of(z) + c).f()),
+            "α = 0 is not reached past underflow, or β is not z_β + π̂/2, at z = {z:e}, {}",
             R::NAME
         );
         let d = dec(&Latent::new(at([-z, -z, -z, z, -z, z, 0.0, 0.0])));
@@ -875,20 +903,50 @@ fn check_poles<R: Fp>(dec: Decode<R>) {
             -z,
             R::NAME
         );
-        // The upper images: the generated π/2 and π rounded toward zero, times σ = 1.
+        // α's upper image: the generated π/2 rounded toward zero, times σ = 1. β does not saturate.
         assert_eq!(
             (d.config.alpha, d.config.beta),
-            (toward_zero::<R>(HALF_PI), toward_zero::<R>(PI)),
-            "α, β at saturation are not the images of π/2 and π rounded toward zero (R-417), {}",
+            (toward_zero::<R>(HALF_PI), R::of(-z) + c),
+            "α at saturation is not the image of π/2 rounded toward zero (R-417), or β is not z_β + π̂/2, {}",
             R::NAME
         );
     }
+    // β's two collinear landmarks, interior points reached exactly: 0 at `z_β = −c`, and at `z_β = c` the image of π
+    // rounded toward zero, inside the exact π.
+    let at_beta = |zb: R| {
+        dec(&Latent::new([
+            R::of(0.0),
+            zb,
+            R::of(0.0),
+            R::of(0.0),
+            R::of(0.0),
+            R::of(0.0),
+            R::of(0.0),
+            R::of(0.0),
+        ]))
+        .config
+        .beta
+    };
+    assert_eq!(
+        (at_beta(R::of(-c.f())), at_beta(c)),
+        (R::of(0.0), toward_zero::<R>(PI)),
+        "β at z_β = ∓π̂/2 is not 0 and the image of π rounded toward zero (R-417), {}",
+        R::NAME
+    );
 }
 
 #[test]
 fn qa_m2_03_ranges() {
     check_poles::<f64>(decode::<Defaults, f64>);
     check_poles::<f32>(decode::<Defaults, f32>);
+    // Between the collinear landmarks, ends included, where β's `[0, π]` is asserted.
+    for k in 0..=64 {
+        let mut z = [0.3, 0.0, -0.4, 0.9, 0.0, -1.3, 0.2, -0.6];
+        z[1] = offset::<f64>() * (f64::from(k) / 32.0 - 1.0);
+        check_ranges(&decode::<Defaults, f64>(&Latent::new(z)), &z);
+        z[1] = offset::<f32>().f() * (f64::from(k) / 32.0 - 1.0);
+        check_ranges(&decode::<Defaults, f32>(&Latent::new(at(z))), &z);
+    }
     validation::prop::run(&latent(f32::MAX as f64), |z| {
         check_ranges(&decode::<Defaults, f64>(&Latent::new(z)), &z);
         check_ranges(&decode::<Defaults, f32>(&Latent::new(at(z))), &z);
@@ -910,6 +968,21 @@ negative_control!(
         check_ranges(&d, &[0.0; 8]);
     }
 );
+
+mod ranges_squashed_beta {
+    use super::*;
+    negative_control!(
+        qa_m2_03_ranges,
+        "a β squashed onto (0, π), π·σ(z_β), stays in range but is not the periodic link's angle",
+        expected = "is not z_β + π̂/2",
+        {
+            let z = [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+            let mut d = decode::<Defaults, f64>(&Latent::new(z));
+            d.config.beta = std::f64::consts::PI / (1.0 + (-1.0f64).exp());
+            check_ranges(&d, &z);
+        }
+    );
+}
 
 // ── REQ-VAL-018, REQ-PAY-034: the golden IC ─────────────────────────────────────────────────────────────────────
 
@@ -1195,8 +1268,10 @@ fn check_landmarks<R: Fp>(dec: Decode<R>) {
     check_equilateral(&dec(&Latent::new([R::of(0.0); 8])).ic);
     for za in [-2.0, 0.0, 1.5] {
         for zm in [[0.0, 0.0], [0.8, -1.1]] {
-            // β = 0 past underflow: every body on the x axis exactly.
-            for zb in [-1e3, -R::MAX] {
+            // β = 0 at z_β = −c, an interior point reached exactly: every body on the x axis exactly.
+            let c = offset::<R>().f();
+            {
+                let zb = -c;
                 let d = dec(&Latent::new(at([za, zb, 0.0, 0.0, 0.0, 0.0, zm[0], zm[1]])));
                 assert_eq!(d.config.beta.f(), 0.0, "β ≠ 0 at z_β = {zb:e}, {}", R::NAME);
                 assert!(
@@ -1206,9 +1281,21 @@ fn check_landmarks<R: Fp>(dec: Decode<R>) {
                     R::NAME
                 );
             }
-            // z_β → +∞: β rises to π from below, the IC approaching collinear.
+            // z_β from the equilateral point up to c: β rises to π from below, the IC approaching collinear, and
+            // reaches the image of π at z_β = c itself.
             let mut prev: Option<f64> = None;
-            for zb in [1.0, 2.0, 4.0, 8.0, 16.0, 30.0, 1e3, R::MAX] {
+            let below = offset::<R>().next_down().f();
+            for zb in [
+                0.0,
+                0.25 * c,
+                0.5 * c,
+                0.75 * c,
+                0.9 * c,
+                0.99 * c,
+                0.999_999 * c,
+                below,
+                c,
+            ] {
                 let d = dec(&Latent::new(at([za, zb, 0.0, 0.0, 0.0, 0.0, zm[0], zm[1]])));
                 let b = d.config.beta.f();
                 assert!(
@@ -1241,7 +1328,7 @@ fn check_landmarks<R: Fp>(dec: Decode<R>) {
             assert_eq!(
                 prev.unwrap(),
                 toward_zero::<R>(PI).f(),
-                "z_β → ∞ does not reach the image of π, the Euler collinear limit, {}",
+                "z_β = π̂/2 does not reach the image of π, the Euler collinear landmark, {}",
                 R::NAME
             );
         }
@@ -1521,7 +1608,8 @@ negative_control!(
     check_definitions_all(unweighted_norms::<f64>, unweighted_norms::<f32>)
 );
 
-/// On canonical decodes: `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β`, `rho_mag² + lambda_mag² = 1`.
+/// On canonical decodes: `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β` on the circle,
+/// `rho_mag² + lambda_mag² = 1`.
 fn check_canonical<R: Fp>(d: &Decoded<R>) {
     let (a, b) = (d.config.alpha.f(), d.config.beta.f());
     let [_, rm, lm, _, ang, _] = six(&d.descriptor);
@@ -1545,8 +1633,11 @@ fn check_canonical<R: Fp>(d: &Decoded<R>) {
         R::NAME
     );
     if lm > 0.01 && rm > 0.01 {
+        // `β` is anywhere on the line and `rho_angle` its value on `(−π, π]`: compared as points of the circle.
+        let tau = std::f64::consts::TAU;
+        let off = (ang - b) - tau * ((ang - b) / tau).round();
         assert!(
-            (ang - b).abs() <= tol / lm.min(rm),
+            off.abs() <= tol / lm.min(rm),
             "rho_angle = {ang} ≠ β = {b} at {}",
             R::NAME
         );

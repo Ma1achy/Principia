@@ -34,7 +34,7 @@ use kernel::decode::descriptor::{kinetic, potential};
 use kernel::decode::latent::Latent as Controls;
 use kernel::decode::{decode, invariant};
 use kernel::generated::links::{
-    Defaults, Link, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh, StickBreaking,
+    Defaults, Link, PeriodicBeta, Select, SigmoidAlpha, SigmoidQ, SoftmaxTanh, StickBreaking,
 };
 use validation::negative_control;
 
@@ -1037,7 +1037,7 @@ negative_control!(
 
 /// The mass selection a stick-breaking link makes, the rest the defaults.
 type StickSelection =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 /// Under `S`, the mass line from `z` ends at equal masses.
 fn check_mass_line<S: kernel::generated::links::Selection>(z: &Latent) {

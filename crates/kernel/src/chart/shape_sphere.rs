@@ -41,8 +41,8 @@
 //! **Into the shared decoder** (REQ-CHART-015, REQ-CHART-081). The chart sets the configuration explicitly, which
 //! `ChartOut`'s latent controls cannot carry, so it overrides [`Chart::decode`]: the shared decoder's blocks run in its
 //! order, `D_mass` on `z₀`'s mass block, [`place`] in place of `D_cfg`, `D_mom` on `z₀`'s momentum block placed by
-//! [`held_momentum`]; then the one shared `C` with its step 3, the mirror, not taken ([`canon::canonicalise_signed`],
-//! its scale included) on the joined state, and the shared descriptor of its output. So the decode's `ic` has its CoM
+//! [`held_momentum`]; then the one shared `C` ([`canon::canonicalise`], its scale included; it has no mirror step, R-865,
+//! so the shape sphere takes the one decode path every chart takes) on the joined state, and the shared descriptor of its output. So the decode's `ic` has its CoM
 //! at the origin and at rest, `I = 1`, `ρ̃` on `+x` and `λ̃_y` keeping its sign: the system whose signed `n̂` is the
 //! pixel's (R-544), `G = M = I = 1`, which crosses to the integrator, and its descriptor that state's (dd_decoder §2,
 //! §3.6), while its `config` and `momentum` stay the blocks' outputs in `Φ`'s gauge. No pixel is folded onto another.
@@ -398,7 +398,7 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     }
 
     /// `D ∘ Φ` with the configuration set explicitly (the module's notes): mass → [`place`] → [`held_momentum_at`],
-    /// then `C` with its step 3 not taken on the joined state ([`canon::canonicalise_signed`], R-544) and the descriptor
+    /// then `C` on the joined state ([`canon::canonicalise`], no mirror step, R-544, R-865) and the descriptor
     /// of its output. The `ic` keeps the pixel's signed shape; `config` and `momentum` are the blocks' outputs, in `Φ`'s
     /// gauge. The mass and momentum links read the tunable parameters `p`.
     #[inline]
@@ -475,7 +475,7 @@ impl<P: Copy + FloatConst> ShapeSphere<P> {
         let masses = mass::decode_at::<S, R>(z_mass, p);
         let config = place(self.point(u, v), inertia, wide(self.phase), &masses);
         let momentum = held_momentum_at::<S, R>(z_mom, &masses, &config, inertia, p);
-        let ic = canon::canonicalise_signed(&Ic {
+        let ic = canon::canonicalise(&Ic {
             m: masses.m,
             r: config.r,
             p: momentum.p,

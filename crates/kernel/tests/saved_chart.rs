@@ -995,7 +995,12 @@ fn check_words(alter: fn(&mut [f64; WORDS])) {
         w
     };
     for (bad, what) in [
-        (set(0, 2.0), "a kind past curved"),
+        (set(0, 4.0), "a kind past curved"),
+        (
+            set(0, 1.0),
+            "the old version's curved kind, read only by Saved::load (TASK-M2-57)",
+        ),
+        (set(0, 2.0), "the oblique kind on a curved chart's words"),
         (set(0, -0.0), "a negative-zero kind"),
         (set(1, 0.0), "the latent chart as a curved parent"),
         (set(1, 11.0), "a parent past the registry"),

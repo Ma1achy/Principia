@@ -1,0 +1,11 @@
+{
+  "description": "R-176 (R-1018), a decoder that still mirrors fails: the same draws, fewer of them, with C(x)'s w read as |w|, an L⁻ input landing at w = +1 as the mirror step put it, so its |w − w_in| = 2 must fail the pole's bound.",
+  "seed": 1,
+  "samples": 2000,
+  "radius": 4.0,
+  "encode": "defaults",
+  "shift": 0.0,
+  "shapes": 2000,
+  "pole": "mirrors",
+  "expected": "fail"
+}

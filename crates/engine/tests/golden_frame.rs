@@ -8,6 +8,15 @@
 //! whole square, under the physics kernel. At `z₀ = 0` the three bodies start at rest, so the frame is the free-fall
 //! map over the shape plane, with all three pairs' collision regions in it.
 //!
+//! **Under the periodic `β` link the view is a redefined plane.** Its plane runs along `z_β`, so the same numbers
+//! (`z₀ = 0`, `q₂` along `z_β`) now span `β = z_β + π/2` evenly, 2.0 rad about `π/2`, where the old link
+//! `β = π·σ(z_β)` spanned 1.45 rad unevenly: a different picture, stored anew. The picture the view showed before is
+//! kept, exactly, as `frame_sigmoid_beta.png` and `histogram_sigmoid_beta.txt` (the files as they were), and
+//! `the_frame_before_the_periodic_link_is_kept` holds it: each of the old view's samples, its `z_β` converted to the
+//! periodic link point by point, decodes to the state the old link gave, bit for bit, and the frame of those samples
+//! is the kept image, every byte, and the kept histogram. So the removal of the mirror step and the new link move no
+//! sample's outcome; only the plane's redefinition changes what the view shows.
+//!
 //! **The horizon** is 3, not the app's default 50. The plan is unclear here (it fixes the window, not the horizon);
 //! chose 3 because the frame at 50 takes 197 s in a debug build on 4 cores and at 5 it took 72 s in a CI test shard,
 //! more than those shards should carry, while at 3 it takes 25 s on 4 cores and still has 1054 of its 4096 samples in a
@@ -39,7 +48,14 @@ use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
     Slice, SliceFrame, Window, Z_Q3,
 };
-use engine::field::{field, Field};
+use engine::field::{boundaries, field, heggie_params, outcome, Field};
+use engine::first_slice::{narrow, uniforms, Quad};
+use kernel::chart::Chart as _;
+use kernel::decode::retired::{converted, decode_retired};
+use kernel::decode::{decode, Ic};
+#[cfg(feature = "controls")]
+use kernel::generated::links::TanhBeta;
+use kernel::generated::links::{Defaults, Link, RetiredBeta, SigmoidBeta};
 use kernel::payload::{
     STATE_BOUNDED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_ESCAPE, STATE_RUNNING,
     STATE_SIM_FAILED,
@@ -166,13 +182,18 @@ fn write(field: &Field, dir: &Path, names: [&str; 2]) {
 /// as `<name>.png` and `<name>_histogram.txt`, and the panic says how the histogram differs, how many pixels differ and
 /// where the first is.
 fn check_golden(field: &Field, name: &str) {
+    check_stored(field, name, ["frame.png", "histogram.txt"]);
+}
+
+/// [`check_golden`] against the stored image and histogram `files`.
+fn check_stored(field: &Field, name: &str, files: [&str; 2]) {
     let dir = golden_dir();
-    let stored_text = std::fs::read_to_string(dir.join("histogram.txt"))
+    let stored_text = std::fs::read_to_string(dir.join(files[1]))
         .unwrap_or_else(|e| panic!("the stored histogram: {e}: to create it, set {BLESS}=1"));
     let text = histogram_text(field);
     let histogram_matches = text.lines().eq(stored_text.lines());
 
-    let (stored, stored_size) = read_png(&dir.join("frame.png"));
+    let (stored, stored_size) = read_png(&dir.join(files[0]));
     let rgba = field.rgba8();
     let differing: Vec<usize> = if stored_size == field.size {
         (0..rgba.len() / 4)
@@ -265,3 +286,59 @@ fn rows_reversed(field: &Field) -> Field {
             .collect(),
     }
 }
+
+/// The frame the view showed before the periodic link, through today's decoder: each sample's latent point on the
+/// same plane, its `z_β` converted from the retired link `L` point by point, decoded and marched as the field marches
+/// it. Asserts on the way that each converted sample decodes bit for bit to the state `sigmoid_beta` gave it.
+fn frame_before<L: Link<1, 1, Codomain = RetiredBeta>>() -> Field {
+    let sim = view(HORIZON);
+    let quad = Quad {
+        chart: engine::field::latent(&sim),
+        window: sim.chart.window,
+        size: SIZE,
+    };
+    let params = heggie_params();
+    let k_target = boundaries(HORIZON, &params);
+    let radius = uniforms(HORIZON).expect("the horizon").radius;
+    let bits = |ic: &Ic<f64>| {
+        let mut w = ic.m.to_vec();
+        w.extend(ic.r.iter().flatten());
+        w.extend(ic.p.iter().flatten());
+        w.iter().map(|x| x.to_bits()).collect::<Vec<u64>>()
+    };
+    let outcomes = (0..quad.len())
+        .map(|i| {
+            let [u, v] = quad.uv(i);
+            let z = quad.chart.map::<f64>(u, v).z;
+            let old = decode_retired::<Defaults, SigmoidBeta, f64>(&z);
+            let new = decode::<Defaults, f64>(&converted::<L, f64>(&z));
+            assert!(
+                bits(&old.ic) == bits(&new.ic),
+                "sample {i} at ({u}, {v}) does not decode bit for bit to the state the old link gave"
+            );
+            outcome(&narrow(&new.ic), new.degenerate, radius, k_target, &params)
+        })
+        .collect();
+    Field {
+        size: SIZE,
+        outcomes,
+    }
+}
+
+#[test]
+fn the_frame_before_the_periodic_link_is_kept() {
+    check_stored(
+        &frame_before::<SigmoidBeta>(),
+        "before_periodic",
+        ["frame_sigmoid_beta.png", "histogram_sigmoid_beta.txt"],
+    );
+}
+
+negative_control!(
+    the_frame_before_the_periodic_link_is_kept,
+    "the samples converted from tanh_beta, not the link the frame was made under, must fail",
+    expected = "does not decode bit for bit to the state the old link gave",
+    {
+        frame_before::<TanhBeta>();
+    }
+);

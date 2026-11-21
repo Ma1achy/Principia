@@ -132,9 +132,25 @@ where
     cols
 }
 
+/// `z_β`'s index in the latent `z`: the latent coordinate's own, not a number written here.
+const BETA: usize = crate::chart::mixed::Coordinate::ZBeta as usize;
+
+/// `δ(a, b) = a − b − 2π·round((a − b)/2π)`, the signed difference of two `z_β` on the circle, in `[−π, π]`, evaluated
+/// at f64 (dd_decoder § 3.2, "The distance between two `z_β`"; R-898).
+pub fn delta<R: Float>(a: R, b: R) -> R {
+    let tau = core::f64::consts::TAU;
+    let (a, b) = (
+        a.to_f64().unwrap_or(f64::NAN),
+        b.to_f64().unwrap_or(f64::NAN),
+    );
+    let d = a - b;
+    R::from(d - tau * Float::round(d / tau)).unwrap_or_else(R::nan)
+}
+
 /// `(J_E(x)·W⁻¹)ᵀ`, as its eight columns, one per control: entry `k` of column `i` is the central difference of
-/// `E(x)ᵢ` along `x`'s component `k`, step `hₖ = ε_R^{1/3}·max(1, |xₖ|)`, divided by `W`'s entry `wₖ` at `x`. `x` may be
-/// on the canonical section or off it; every component is moved, the masses included.
+/// `E(x)ᵢ` along `x`'s component `k` (`z_β`'s by [`delta`], on the circle), step `hₖ = ε_R^{1/3}·max(1, |xₖ|)`,
+/// divided by `W`'s entry `wₖ` at `x`. `x` may be on the canonical section or off it; every component is moved, the
+/// masses included.
 ///
 /// **The mass columns** (Part 4, "The mass columns"): moving `mₖ` alone puts `Σmᵢ` at `1 ± hₖ`, the one use of
 /// [`encode`] outside its precondition `Σmᵢ = 1`. They differentiate encode's own formulas off the simplex, the total
@@ -166,8 +182,19 @@ where
             let span = (far[k] - *ck) * *wk;
             let three = R::one() + R::one() + R::one();
             let four = three + R::one();
-            for (col, ((a, b), e)) in cols.iter_mut().zip(plus.iter().zip(&beyond).zip(&here)) {
-                col[k] = (four * *a - three * *e - *b) / span;
+            for (i, (col, ((a, b), e))) in cols
+                .iter_mut()
+                .zip(plus.iter().zip(&beyond).zip(&here))
+                .enumerate()
+            {
+                // `z_β`'s two far values unwrapped against `E(x)`'s by `δ`, so a stencil that straddles the encode's
+                // seam combines one lift (Part 4, "The mass columns"; dd_decoder § 3.2).
+                let (a, b) = if i == BETA {
+                    (*e + delta(*a, *e), *e + delta(*b, *e))
+                } else {
+                    (*a, *b)
+                };
+                col[k] = (four * a - three * *e - b) / span;
             }
         } else {
             let mut down = c;
@@ -175,8 +202,10 @@ where
             let minus = encode::<S, R>(&state(&down)).z.z;
             // The step actually taken: `x ± h` rounded, so the difference quotient divides by what was added.
             let span = (up[k] - down[k]) * *wk;
-            for (col, (a, b)) in cols.iter_mut().zip(plus.iter().zip(&minus)) {
-                col[k] = (*a - *b) / span;
+            for (i, (col, (a, b))) in cols.iter_mut().zip(plus.iter().zip(&minus)).enumerate() {
+                // `z_β`'s difference by `δ`, on the circle, never on the line (dd_decoder § 3.2).
+                let diff = if i == BETA { delta(*a, *b) } else { *a - *b };
+                col[k] = diff / span;
             }
         }
     }

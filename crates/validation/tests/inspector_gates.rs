@@ -16,9 +16,9 @@ use validation::inspector::{
     arm_verdict, ball, below, com, encode_leaky, handle_gaps, handle_samples, inside, latents,
     population_worst, radius_refusal, randomise_ic, randomise_moves, randomise_seed,
     randomise_worst, round_trip, shape_families, verdict, worst, z_gap, Handle, HandlesInput,
-    InspectorHandlesGate, InspectorRoundtripGate, Leak, RandomiseArm, RandomiseSeed,
-    RoundtripInput, ShapeBounds, Shapes, COM_BOUND, EQUATOR_BOUND, HANDLES, MOVES, POLE_BOUND,
-    ROUNDTRIP,
+    InspectorHandlesGate, InspectorRoundtripGate, Leak, PoleControl, RandomiseArm, RandomiseSeed,
+    RoundtripInput, ShapeBounds, ShapeControls, Shapes, COLLINEAR_TOL, COM_BOUND, EQUATOR_BOUND,
+    HANDLES, MOVES, POLE_BOUND, ROUNDTRIP,
 };
 use validation::negative_control;
 
@@ -52,7 +52,14 @@ fn roundtrip_input(samples: u32, encode: EncodeKind, shift: f64) -> RoundtripInp
         off_line: 0,
         beta_nudge: false,
         bounds: ShapeBounds::Proposed,
+        pole: PoleControl::Own,
+        beta_clamp: false,
     }
+}
+
+/// The families with no control.
+fn plain(n: u32) -> Shapes {
+    shape_families(5, n, ShapeControls::default())
 }
 
 fn config(name: &str) -> GateConfig {
@@ -243,12 +250,22 @@ negative_control!(
 
 // ── The norm and the worst ───────────────────────────────────────────────────────────────────────────────────────
 
-/// `z_gap` is the Euclidean norm of the difference: `‖(3, 4, 0, …)‖ = 5`, and 0 on equal vectors.
+/// `z_gap` is the Euclidean norm of the difference, `z_β`'s on the circle (R-898): `‖(3, 0, 4, 0, …)‖ = 5`, 0 on
+/// equal vectors, and `z_β` and `z_β + 2π` one point, `0.1` and `2π − 0.1` 0.2 apart.
 fn check_gap(gap: fn([f64; 8], [f64; 8]) -> f64) {
-    let a = [1.0, 2.0, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0];
-    let b = [4.0, 6.0, 0.5, 0.0, 0.0, 0.0, 0.0, -1.0];
-    assert_eq!(gap(a, b), 5.0, "‖(3, 4, 0, …)‖ is not 5");
+    let a = [1.0, 0.5, 2.0, 0.0, 0.0, 0.0, 0.0, -1.0];
+    let b = [4.0, 0.5, 6.0, 0.0, 0.0, 0.0, 0.0, -1.0];
+    assert_eq!(gap(a, b), 5.0, "‖(3, 0, 4, 0, …)‖ is not 5");
     assert_eq!(gap(a, a), 0.0, "a vector's gap to itself");
+    let tau = std::f64::consts::TAU;
+    let at = |beta: f64| [0.0, beta, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+    let wrapped = gap(at(0.1), at(0.1 + tau));
+    assert!(wrapped <= 1e-15, "z_β and z_β + 2π are {wrapped} apart");
+    let across = gap(at(0.1), at(tau - 0.1));
+    assert!(
+        (across - 0.2).abs() <= 1e-15,
+        "0.1 and 2π − 0.1 are {across} apart, not 0.2"
+    );
 }
 
 #[test]
@@ -266,6 +283,21 @@ negative_control!(
         .map(|(x, y)| (x - y).abs())
         .fold(0.0, f64::max))
 );
+
+mod gap_on_the_line {
+    use super::*;
+    negative_control!(
+        inspector_z_gap,
+        "the Euclidean norm on ℝ⁸, z_β's difference on the line, must fail",
+        expected = "z_β and z_β + 2π are",
+        check_gap(|a, b| a
+            .iter()
+            .zip(b)
+            .map(|(x, y)| (x - y) * (x - y))
+            .sum::<f64>()
+            .sqrt())
+    );
+}
 
 /// `worst` is the largest value and its first index; a NaN anywhere gives NaN at its index; an empty list `(0, 0)`.
 fn check_worst(pick: fn(&[f64]) -> (f64, usize)) {
@@ -382,19 +414,19 @@ fn momenta_times(x: &Ic<f64>, k: f64) -> Ic<f64> {
 /// Each leak's state, known from a canonical `x = D(z)` moved by a gauge element `g` that `C` undoes: the CoM leak is
 /// `x` with its momenta by `(I₀/I_in)^{1/4}`, `I₀ = s² + ‖a‖²` about the origin and `I_in = s²`; the boost leak `x`
 /// boosted by the `u` that `g` carries into its own frame; the rotation leak `R(θ)·x`; the scale leak `x` with its
-/// momenta by `s^{−1/2}`. Each within `10⁻¹⁰` of `encode`'s, over turns, parities and scales.
+/// momenta by `s^{−1/2}`. Each within `10⁻¹⁰` of `encode`'s, over turns and scales, no mirror: `C` has no mirror step
+/// (R-865). *Was:* over turns, parities and scales.
 fn check_leak_states(leaky: fn(&Ic<f64>, Leak) -> [f64; 8]) {
     let mut rng = SplitMix::new(19);
     let near = |a: [f64; 8], b: [f64; 8], what: &str| {
         let d = z_gap(a, b);
         assert!(d <= 1e-10, "the {what} leak's state is off by {d:e}");
     };
-    for k in 0..200 {
+    for _ in 0..200 {
         let x = validation::inspector::decode_z(ball(&mut rng, 1.5));
         let theta = validation::gauge::uniform(&mut rng, -3.0, 3.0);
         let s = validation::gauge::uniform(&mut rng, -2.0, 2.0).exp2();
         let a = [validation::gauge::uniform(&mut rng, -1.0, 1.0) * s, 0.7 * s];
-        let mirror = k % 2 == 1;
         let id = Gauge::identity();
         let moved = Gauge { a, theta, s, ..id };
         let i0 = s * s + a[0] * a[0] + a[1] * a[1];
@@ -405,13 +437,8 @@ fn check_leak_states(leaky: fn(&Ic<f64>, Leak) -> [f64; 8]) {
         );
         let u = [0.3, -0.2];
         let boosted = Gauge { u, ..id }.act(&x);
-        let y = Gauge {
-            theta,
-            s,
-            mirror,
-            ..id
-        }
-        .act(&boosted);
+        // No mirror: `C` keeps the parity, so `Π·x` is another system (R-865).
+        let y = Gauge { theta, s, ..id }.act(&boosted);
         near(leaky(&y, Leak::Boost), blocks(&boosted), "Boost");
         let turned = Gauge { theta, ..id }.act(&x);
         near(
@@ -570,33 +597,57 @@ negative_control!(
     check_trips(EncodeKind::Mismatched, 1.2e-13)
 );
 
-/// RQ-475's families: `n` of each; every collinear state's `z_β` at its clamp image, bit for bit, with its bit set,
-/// and no equilateral one's set or at the image; `|w − 1|` and `|w|` on `C(x)` within the proposed bounds; `|w|` on
-/// `D(E(x))` the clamp image, at most `sin(π·ε_z)`, `ε_z = 10⁻⁶`, and reaching it; the masses across the mass block.
+/// RQ-475's families (R-1018): `n` equilateral and `2n` collinear states, `n` in a random gauge and the same `n` on
+/// the axis; the axis members every one judged bit for bit, both `z_β` images reached, so that check is not empty;
+/// both orientations among the equilateral inputs; no state's clamp bit set
+/// by `β`; every collinear member with `λ̃_y` exactly `±0` on `C(x)` at its `z_β` image bit for bit, every other within
+/// the collinear tolerance on `|λ̃_y|`; `|w − w_in|` and `|w|` on `C(x)` within the proposed bounds; the masses across
+/// the mass block.
 fn check_shapes(n: u32, s: &Shapes) {
     let n = n as usize;
     assert!(
-        s.pole.len() == n && s.equator.len() == n && s.clamp_image.len() == n,
+        s.pole.len() == n
+            && s.n() == n
+            && s.equator.len() == 2 * n
+            && s.round.len() == 2 * n
+            && s.exact.len() + s.line.len() == 2 * n,
         "the families' counts"
     );
-    assert_eq!(s.beta_bit, [0, n], "z_β's clamp bits by family");
-    assert_eq!(s.beta_image, [0, n], "z_β at its clamp image by family");
     assert!(
-        worst(&s.pole).0 <= POLE_BOUND && worst(&s.equator).0 <= EQUATOR_BOUND,
-        "a w on C(x) past its bound"
+        s.axis_exact() == n && s.exact.iter().all(|&i| i < 2 * n),
+        "an axis member is not judged bit for bit: {} of {n}",
+        s.axis_exact()
     );
-    let cap = (std::f64::consts::PI * 1e-6).sin();
-    let top = worst(&s.clamp_image).0;
     assert!(
-        top <= cap * (1.0 + 1e-9) && top > 0.99 * cap,
-        "D(E(x))'s |w| is not the clamp image: max {top:e} against sin(π·ε_z) = {cap:e}"
+        s.images[0] > 0 && s.images[1] > 0 && s.images[0] + s.images[1] == s.exact_at_image,
+        "the bit-for-bit members do not reach both z_β images: {:?}",
+        s.images
+    );
+    assert!(
+        s.orientations[0] > 0
+            && s.orientations[1] > 0
+            && s.orientations[0] + s.orientations[1] == n,
+        "the equilateral inputs are not both orientations: {:?}",
+        s.orientations
+    );
+    assert_eq!(s.beta_bit, [0, 0], "z_β's clamp bits by family");
+    assert_eq!(
+        s.exact_at_image,
+        s.exact.len(),
+        "a bit-for-bit member's z_β is not at its image"
+    );
+    assert!(
+        worst(&s.pole).0 <= POLE_BOUND
+            && worst(&s.equator).0 <= EQUATOR_BOUND
+            && worst(&s.line).0 <= COLLINEAR_TOL,
+        "a w or λ̃_y on C(x) past its bound"
     );
     let spread = |k: usize| {
         let r: Vec<f64> = s.masses.iter().map(|m| (m[k] / m[0]).ln()).collect();
         r.iter().any(|&x| x > 2.0) && r.iter().any(|&x| x < -2.0)
     };
     assert!(
-        s.masses.len() == n
+        s.masses.len() == 2 * n
             && s.masses
                 .iter()
                 .all(|m| (m.iter().sum::<f64>() - 1.0).abs() < 1e-15)
@@ -608,7 +659,7 @@ fn check_shapes(n: u32, s: &Shapes) {
 
 #[test]
 fn inspector_shapes() {
-    check_shapes(200, &shape_families(5, 200, 0, false));
+    check_shapes(200, &plain(200));
 }
 
 negative_control!(
@@ -616,7 +667,7 @@ negative_control!(
     "a family one short must fail",
     expected = "the families' counts",
     {
-        let mut s = shape_families(5, 200, 0, false);
+        let mut s = plain(200);
         s.pole.pop();
         check_shapes(200, &s)
     }
@@ -645,9 +696,8 @@ negative_control!(
 );
 
 /// The equator's `|w|` is read on `C(x)`, within its bound (RQ-624).
-fn check_equator_state(read: fn(&Shapes) -> &Vec<f64>) {
-    let s = shape_families(5, 200, 0, false);
-    let w = worst(read(&s)).0;
+fn check_equator_state(s: &Shapes) {
+    let w = worst(&s.equator).0;
     assert!(
         w <= EQUATOR_BOUND,
         "the equator's |w|, {w:e}, past its bound"
@@ -656,41 +706,73 @@ fn check_equator_state(read: fn(&Shapes) -> &Vec<f64>) {
 
 #[test]
 fn inspector_equator_state() {
-    check_equator_state(|s| &s.equator);
+    check_equator_state(&plain(200));
 }
 
 negative_control!(
     inspector_equator_state,
-    "|w| read on D(E(x)), the clamp image, must fail the equator's bound (RQ-624)",
+    "the collinear states 1000 ulps of 1 off the line must fail the equator's bound",
     expected = "past its bound",
-    check_equator_state(|s| &s.clamp_image)
+    check_equator_state(&shape_families(
+        5,
+        200,
+        ShapeControls {
+            off_line: 1000,
+            ..ShapeControls::default()
+        }
+    ))
 );
 
-/// The controls' families (RQ-624): `z_β` one ulp off its clamp image fails the bit-for-bit comparison, its bit still
-/// set; the collinear states `off_line` ulps of 1 off the line keep `z_β` at its clamp image, bit for bit, and are
-/// caught by `|w|` on `C(x)`, several times its bound; neither control moves the equilateral family.
+/// The controls' families (R-1018; R-176): each bit-for-bit member's `z_β` one ulp off fails the comparison; the
+/// collinear states `off_line` ulps of 1 off the line are caught by `|w|` on `C(x)`, several times its bound; `L⁻` read
+/// against `+1`, and `w` read as `|w|`, each put the `L⁻` inputs about 2 from `w_in`; a clamp on `β` sets every
+/// collinear state's bit; no control moves a family it does not name.
 fn check_shape_controls(off_line: u32) {
-    let plain = shape_families(5, 200, 0, false);
-    let nudged = shape_families(5, 200, 0, true);
-    assert_eq!(nudged.beta_bit, [0, 200], "the nudge moves the clamp bit");
-    assert_eq!(
-        nudged.beta_image,
-        [0, 0],
-        "a z_β one ulp off its clamp image is at it"
+    let base = plain(200);
+    let with = |c: ShapeControls| shape_families(5, 200, c);
+    assert!(
+        !base.exact.is_empty(),
+        "no collinear member is judged bit for bit"
     );
-    let lifted = shape_families(5, 200, off_line, false);
+    let nudged = with(ShapeControls {
+        beta_nudge: true,
+        ..ShapeControls::default()
+    });
     assert_eq!(
-        lifted.beta_image,
-        [0, 200],
-        "z_β leaves its clamp image inside the band"
+        nudged.exact_at_image, 0,
+        "a z_β one ulp off its image is at it"
     );
+    let lifted = with(ShapeControls {
+        off_line,
+        ..ShapeControls::default()
+    });
     let w = worst(&lifted.equator).0;
     assert!(
         w > 4.0 * EQUATOR_BOUND,
         "a state {off_line} ulps off the line is not caught: max |w| {w:e}"
     );
+    for pole in [PoleControl::PlusOne, PoleControl::Mirrors] {
+        let read = with(ShapeControls {
+            pole,
+            ..ShapeControls::default()
+        });
+        let top = worst(&read.pole).0;
+        assert!(
+            (top - 2.0).abs() < 1e-12 && read.equator == base.equator,
+            "the pole control {pole:?} does not put an L⁻ input 2 from w_in: max {top:e}"
+        );
+    }
+    let clamped = with(ShapeControls {
+        beta_clamp: true,
+        ..ShapeControls::default()
+    });
+    assert_eq!(
+        clamped.beta_bit,
+        [0, 400],
+        "a clamp on β does not set the collinear bits"
+    );
     assert!(
-        nudged.pole == plain.pole && lifted.pole == plain.pole,
+        nudged.pole == base.pole && lifted.pole == base.pole && clamped.pole == base.pole,
         "a control moves the equilateral family"
     );
 }
@@ -917,8 +999,8 @@ negative_control!(
     check_reports(1e-16)
 );
 
-/// The round trip's shape checks (REQ-VAL-022): judged under the proposed bounds, each line naming its check; each
-/// control fails its own check only, its line saying so; a control without shapes refused.
+/// The round trip's shape checks (REQ-VAL-022, R-1018): judged under the proposed bounds, each line naming its check;
+/// each control fails its own check only, its line saying so; a control without shapes refused.
 fn check_shape_judge(bounds: ShapeBounds) {
     let rc = config(ROUNDTRIP);
     let mut i = roundtrip_input(50, EncodeKind::Defaults, 0.0);
@@ -928,32 +1010,41 @@ fn check_shape_judge(bounds: ShapeBounds) {
     assert_eq!(pass.verdict, Verdict::Pass, "the shape checks fail E");
     let neg = &pass.negative_results;
     assert!(
-        neg.len() == 6
-            && neg[2]
-                .contains("clamp bit set in 101 of 101 collinear and 0 of 101 equilateral states")
-            && neg[2].ends_with("at its clamp image in 101 of 101 collinear states; passes")
-            && neg[3].starts_with("the pole's |w − 1| on C(x): 0 of 101 beyond 4.441e-16")
-            && neg[4].starts_with("the equator's |w| on C(x): 0 of 101 beyond 2.500e-13")
-            && neg[5].ends_with("proposed, provisional (REQ-VAL-121, R-71)"),
+        neg.len() == 9
+            && neg[2].contains("clamp bit set in 0 of 202 collinear and 0 of 101 equilateral states; passes")
+            && neg[3].starts_with(
+                "z_β bit for bit: 101 of 202 collinear members have λ̃_y exactly ±0 on C(x) (0 of 101 in a random \
+                 gauge, 101 of 101 on the axis), "
+            )
+            && neg[3].ends_with("; passes")
+            && neg[4].starts_with("the equilateral inputs: ")
+            && neg[5].starts_with("the pole's |w − w_in| on C(x): 0 of 101 beyond 4.441e-16")
+            && neg[6].starts_with("the equator's |w| on C(x): 0 of 202 beyond 2.500e-13")
+            && neg[7].starts_with("the collinear line's |λ̃_y| on C(x)")
+            && neg[8].ends_with("proposed, provisional (REQ-VAL-121, R-71)"),
         "the shape checks' lines: {neg:?}"
     );
     assert!(
-        pass.scatter.len() == 5
-            && pass.scatter[2].starts_with("|w − 1| on C(x), equal-mass equilateral")
+        pass.scatter.len() == 6
+            && pass.scatter[2].starts_with("|w − w_in| on C(x), equal-mass equilateral")
             && pass.scatter[3].starts_with("|w| on C(x), collinear: max ")
-            && pass.scatter[4].contains("not judged: the clamp image, sin2α·sin(π·ε_z): max 3.14"),
+            && pass.scatter[4].starts_with("|λ̃_y| on C(x), collinear")
+            && pass.scatter[5].starts_with("|w| on D(E(x)), collinear, reported, not judged"),
         "the shape scatter: {:?}",
         pass.scatter
     );
     let judge = |i: &RoundtripInput| InspectorRoundtripGate::judge(&rc, "t", i).unwrap();
+    let fails_only = |r: &validation::gate::report::GateReport, k: usize, note: &str| {
+        r.verdict == Verdict::Fail
+            && [2, 3, 5, 6, 7]
+                .iter()
+                .all(|&j| r.negative_results[j].ends_with("fails") == (j == k))
+            && r.negative_results[9].contains(note)
+    };
     i.beta_nudge = true;
     let r = judge(&i);
     assert!(
-        r.verdict == Verdict::Fail
-            && r.negative_results[2].ends_with("in 0 of 101 collinear states; fails")
-            && r.negative_results[3].contains("0 of 101 beyond")
-            && r.negative_results[4].contains("0 of 101 beyond")
-            && r.negative_results[6].contains("the bit-for-bit check must fail"),
+        fails_only(&r, 3, "the bit-for-bit check must fail"),
         "the nudge's lines: {:?}",
         r.negative_results
     );
@@ -962,29 +1053,76 @@ fn check_shape_judge(bounds: ShapeBounds) {
     let r = judge(&i);
     assert!(
         r.verdict == Verdict::Fail
-            && r.negative_results[2].ends_with("; passes")
-            && r.negative_results[4].contains("; the worst, ")
-            && r.negative_results[6].contains("moved 1000 ulps of 1 off the line"),
+            && r.negative_results[6].contains("; the worst, ")
+            && r.negative_results[9].contains("moved 1000 ulps of 1 off the line"),
         "the lift's lines: {:?}",
         r.negative_results
     );
     i.off_line = 0;
+    for (pole, note) in [
+        (PoleControl::PlusOne, "read against w_in = +1"),
+        (PoleControl::Mirrors, "a decoder that still mirrors"),
+    ] {
+        i.pole = pole;
+        let r = judge(&i);
+        assert!(
+            fails_only(&r, 5, note),
+            "the pole control {pole:?}'s lines: {:?}",
+            r.negative_results
+        );
+    }
+    i.pole = PoleControl::Own;
+    i.beta_clamp = true;
+    let r = judge(&i);
+    assert!(
+        fails_only(&r, 2, "a clamp on β"),
+        "the β clamp's lines: {:?}",
+        r.negative_results
+    );
+    i.beta_clamp = false;
     i.bounds = ShapeBounds::BelowMeasurement;
     let r = judge(&i);
     assert!(
         r.verdict == Verdict::Fail
-            && r.negative_results[2].ends_with("; passes")
-            && r.negative_results[3].ends_with("fails")
-            && r.negative_results[4].ends_with("fails")
-            && r.negative_results[5].contains("one ulp below its own measurement"),
+            && r.negative_results[5].ends_with("fails")
+            && r.negative_results[6].ends_with("fails")
+            && !r.negative_results[7].ends_with("fails")
+            && r.negative_results[8].contains("one ulp below its own measurement"),
         "the tightened bounds' lines: {:?}",
         r.negative_results
     );
+    i.bounds = ShapeBounds::CollinearBelowMeasurement;
+    let r = judge(&i);
+    assert!(
+        r.verdict == Verdict::Fail
+            && !r.negative_results[5].ends_with("fails")
+            && !r.negative_results[6].ends_with("fails")
+            && r.negative_results[7].ends_with("fails")
+            && r.negative_results[8].contains("the collinear tolerance one ulp below"),
+        "the tightened tolerance's lines: {:?}",
+        r.negative_results
+    );
     i.shapes = 0;
-    for (off_line, beta_nudge, bounds) in [
-        (1, false, ShapeBounds::Proposed),
-        (0, true, ShapeBounds::Proposed),
-        (0, false, ShapeBounds::BelowMeasurement),
+    for (off_line, beta_nudge, bounds, pole, beta_clamp) in [
+        (1, false, ShapeBounds::Proposed, PoleControl::Own, false),
+        (0, true, ShapeBounds::Proposed, PoleControl::Own, false),
+        (
+            0,
+            false,
+            ShapeBounds::BelowMeasurement,
+            PoleControl::Own,
+            false,
+        ),
+        (
+            0,
+            false,
+            ShapeBounds::CollinearBelowMeasurement,
+            PoleControl::Own,
+            false,
+        ),
+        (0, false, ShapeBounds::Proposed, PoleControl::PlusOne, false),
+        (0, false, ShapeBounds::Proposed, PoleControl::Mirrors, false),
+        (0, false, ShapeBounds::Proposed, PoleControl::Own, true),
     ] {
         let r = InspectorRoundtripGate::judge(
             &rc,
@@ -993,6 +1131,8 @@ fn check_shape_judge(bounds: ShapeBounds) {
                 off_line,
                 beta_nudge,
                 bounds,
+                pole,
+                beta_clamp,
                 ..i.clone()
             },
         );
@@ -1152,8 +1292,14 @@ negative_control!(
     })
 );
 
-/// `inside` is the open ball: a point on the sphere is outside, one an ulp within it inside.
+/// `inside` is the open ball: a point on the sphere is outside, one an ulp within it inside; `z_β` read on the circle
+/// (R-898), so `z_β = 2π − 0.1` is 0.1 from the centre.
 fn check_inside(f: fn([f64; 8], f64) -> bool) {
+    let tau = std::f64::consts::TAU;
+    assert!(
+        f([0.0, tau - 0.1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 1.0),
+        "z_β = 2π − 0.1, 0.1 from the centre on the circle, is outside the unit ball"
+    );
     let mut z = [0.0; 8];
     z[3] = 4.0;
     assert!(!f(z, 4.0), "a point on the sphere is inside");
@@ -1176,6 +1322,16 @@ negative_control!(
     expected = "a point on the sphere is inside",
     check_inside(|z, r| z_gap(z, [0.0; 8]) <= r)
 );
+
+mod inside_on_the_line {
+    use super::*;
+    negative_control!(
+        inspector_inside,
+        "the ball on ℝ⁸, z_β read on the line, must fail",
+        expected = "on the circle, is outside",
+        check_inside(|z, r| z.iter().map(|x| x * x).sum::<f64>().sqrt() < r)
+    );
+}
 
 /// One seed of the arm: its draws, the in-ball flags `‖E(x)‖ < radius` on the same draws, and the worst of each move
 /// over all of them and over the in-ball subset; a leaky `E` is read through (its own move moves `z` by order 1).
@@ -1241,7 +1397,9 @@ negative_control!(
 );
 
 /// The handles gate with the Randomise arm: a line per move after REQ-VAL-021's four, each over both seeds and the
-/// in-ball subset; the arm past REQ-VAL-021's bound, and the verdict REQ-VAL-021's own unless `fed`.
+/// in-ball subset; the verdict REQ-VAL-021's own unless `fed`, which the verdict's population catches whatever the
+/// arm's values (RQ-822 point 2). *Was (TASK-M2-57):* "the arm past REQ-VAL-021's bound", asserted first, so that
+/// feeding it would fail on its values; with `z_β` periodic (R-898) its maximum, 7.16×10⁻¹⁵, is within the bound.
 fn check_randomise_report(fed: bool) {
     let c = config(HANDLES);
     let mut i = handles_input(50, Leak::None);
@@ -1255,10 +1413,6 @@ fn check_randomise_report(fed: bool) {
         .flat_map(|&s| randomise_seed(s, 400, 4.0, 4.0, Leak::None).gaps)
         .flatten()
         .fold(0.0, f64::max);
-    assert!(
-        arm_worst > c.threshold.value,
-        "the arm, {arm_worst:e}, is within REQ-VAL-021's bound, so the test cannot tell"
-    );
     let r = InspectorHandlesGate::judge(&c, "t", &i).unwrap();
     assert_eq!(
         r.verdict,
@@ -1297,23 +1451,36 @@ negative_control!(
     check_randomise_report(true)
 );
 
-/// The control (REQ-VAL-193): the arm's maximum fed into REQ-VAL-021's verdict fails it, the line saying so; within
-/// the bound it would pass.
-fn check_fed(bound: f64) {
-    let mut c = config(HANDLES);
-    c.threshold.value = bound;
+/// The control (REQ-VAL-193): the arm's maximum fed into REQ-VAL-021's verdict fails it, at REQ-VAL-021's bound and
+/// with the arm's maximum within it, caught by the verdict's population at the arm's seed, the lines saying so
+/// (RQ-822 point 2); unfed, the same input passes. *Was (TASK-M2-57):* "within the bound it would pass", the control
+/// a bound of 1 above the arm's maximum.
+fn check_fed(fed: bool) {
+    let c = config(HANDLES);
     let mut i = handles_input(50, Leak::None);
     i.randomise = Some(RandomiseArm {
         seeds: vec![1],
         ics: 400,
-        fed: true,
+        fed,
     });
+    let arm_worst = randomise_seed(1, 400, 4.0, 4.0, Leak::None)
+        .gaps
+        .into_iter()
+        .flatten()
+        .fold(0.0, f64::max);
+    assert!(
+        arm_worst <= c.threshold.value,
+        "the arm, {arm_worst:e}, is past REQ-VAL-021's bound, so its values alone would fail it"
+    );
     let r = InspectorHandlesGate::judge(&c, "t", &i).unwrap();
+    let n = r.negative_results.len();
     assert!(
         r.verdict == Verdict::Fail
-            && r.negative_results
-                .last()
-                .unwrap()
+            && n >= 2
+            && r.negative_results[n - 2].contains(
+                "reads 400 draws of the Randomise distribution (seed 1) beside its 50 of g₀·D(z)"
+            )
+            && r.negative_results[n - 1]
                 .contains("fed into REQ-VAL-021's verdict at 1.600e-14 (R-176: it must fail)"),
         "the fed arm passes: {:?}",
         r.negative_results
@@ -1322,14 +1489,14 @@ fn check_fed(bound: f64) {
 
 #[test]
 fn inspector_randomise_fed() {
-    check_fed(1.6e-14);
+    check_fed(true);
 }
 
 negative_control!(
     inspector_randomise_fed,
-    "a bound above the arm's maximum must pass the fed arm",
+    "the same arm unfed must pass",
     expected = "the fed arm passes",
-    check_fed(1.0)
+    check_fed(false)
 );
 
 /// The handles gate refuses a Randomise arm with no seeds or no draws, before drawing.

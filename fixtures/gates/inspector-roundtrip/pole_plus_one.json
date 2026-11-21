@@ -1,0 +1,11 @@
+{
+  "description": "R-176 (R-1018), the equilateral line keeps the sign: the same draws, fewer of them, with every equilateral input read against w_in = +1, so each L⁻ input's |w − 1| on C(x), about 2, must fail the pole's bound.",
+  "seed": 1,
+  "samples": 2000,
+  "radius": 4.0,
+  "encode": "defaults",
+  "shift": 0.0,
+  "shapes": 2000,
+  "pole": "plus_one",
+  "expected": "fail"
+}

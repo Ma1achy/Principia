@@ -132,8 +132,8 @@ pub fn energy<R: LinkReal + PayloadReal>(d: &ICDescriptorOf<R>) -> R {
     d.K_0 + d.V_0
 }
 
-/// `π̂`, dd_decoder §3.2's image of π: the β link's generated literal, π rounded toward zero at f32 and π's nearest
-/// value at f64 (R-417), so `π̂ ≤ π` at each precision.
+/// `π̂`, dd_decoder §3.2's image of π: the retired β links' generated literal, π rounded toward zero at f32 and π's
+/// nearest value at f64 (R-417), so `π̂ ≤ π` at each precision; the encode's `β` reads it on the `−x` half-axis.
 #[inline]
 pub fn pi_image<R: LinkReal>() -> R {
     R::LIT_7

@@ -53,7 +53,7 @@ use kernel::encode::by_kind::{feasibility, invariants, Feasibility};
 use kernel::encode::SimplexClamp;
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{
-    Defaults, Link, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
+    Defaults, Link, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ, SoftmaxTanh,
     StickBreaking,
 };
 use kernel::stage::decode::DecodeUniforms;
@@ -63,7 +63,7 @@ use validation::prop::{check_with_seed, run};
 use validation::roundtrip::phys;
 
 type Sticks =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 fn sim(plane: Plane) -> SimConfig {
     SimConfig {
@@ -363,7 +363,7 @@ fn lock_set_nonlinear_centre_is_the_clicked_pixel() {
         centre: [0.375, 0.625],
         half: [0.125, 0.25],
     };
-    for (s, t) in [(0.3, 0.8), (0.9, 0.15), (0.5, 0.5), (0.0, 1.0)] {
+    for (s, t) in [(0.3, 0.8), (0.9, 0.15), (0.5, 0.5), (0.0, 1.0), (0.1, 0.2)] {
         for window in [SQUARE, zoomed] {
             check_chart_lock(&mixed(), &window, s, t, |_, re| *re, own_edits);
             check_chart_lock(&invariant_le(), &window, s, t, |_, re| *re, own_edits);
@@ -393,7 +393,11 @@ negative_control!(
     lock_set_nonlinear_frozen_controls,
     "z_locked taken whole from the ladder's round trip does not keep the frozen controls, so the rebuilt chart moves",
     expected = "is not the clicked pixel's",
-    check_chart_lock(&mixed(), &SQUARE, 0.3, 0.8, |_, re| *re, |lock| {
+    // At `(0.1, 0.2)`, where the round trip's few last-place steps in the frozen controls reach the decoded state. At
+    // `(0.3, 0.8)`, this control's first pixel, they no longer do: the periodic `β` adds `π/2` to `z_β`, which
+    // absorbs a last-place step of it, and the momentum links' `σ` absorbs theirs there, so the rebuilt chart decodes
+    // the clicked bits by chance and the control would not fail.
+    check_chart_lock(&mixed(), &SQUARE, 0.1, 0.2, |_, re| *re, |lock| {
         let z = engine::lookup::lookup::<Defaults, _, _>(
             &mixed(),
             &engine::lookup::Exact::Physical(lock.ic),
@@ -1498,7 +1502,8 @@ fn curve_tilt_requires_lock_refuses_a_saturated_control() {
         }),
         "a step past the clamp is not refused"
     );
-    // The configuration's links: `α` at 0 and `β` at `π` clamp.
+    // The configuration's links: `α` at 0 clamps; `β` at `π` does not, `periodic_beta` having no edge on the circle
+    // (R-865). Was: `β` at `π` clamped, under `sigmoid_beta`.
     let flat = at_point!(
         CurvePoint {
             alpha: 0.0,
@@ -1534,12 +1539,9 @@ fn curve_tilt_requires_lock_refuses_a_saturated_control() {
             mu2: 0.0,
         }
     );
-    assert_eq!(
-        curve_tangent::<Defaults>(&collinear, 0.0).map_err(|e| match e {
-            LockError::Saturated { controls } => named(controls),
-            other => panic!("{other:?}"),
-        }),
-        Err(vec![1])
+    assert!(
+        curve_tangent::<Defaults>(&collinear, 0.0).is_ok(),
+        "β at π, on the circle, is refused as saturated"
     );
     check_both_steps_clamp(<StickBreaking as SimplexClamp>::clamps::<f64>, |mu| {
         curve_tangent::<Sticks>(&ACROSS, mu)

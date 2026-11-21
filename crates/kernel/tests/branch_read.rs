@@ -4,8 +4,9 @@
 //! functions at the boundary of each comparison. Each test registers the control that must make it fail (R-176).
 
 use kernel::canon::{
-    axis_zero, canonicalise, com_frame, is_pole, mirror_input, mirror_side, pair_differences,
-    scaled_rho, skip_input, skip_taken, step_runs, wide_state, Canonical, MirrorInput, Wide,
+    axis_zero, canonicalise, com_frame, is_pole, pair_differences, scaled_rho, signs_input,
+    signs_of, skip_input, skip_taken, step_runs, wide_state, Canonical, LambdaSigns, SignsInput,
+    Wide,
 };
 use kernel::chart::burrau::{seed, seed_input, seed_of_sum};
 use kernel::chart::invariant::Invariant;
@@ -61,13 +62,13 @@ fn expected_canon(m: [f32; 3], r: [[f32; 2]; 3]) -> Vec<u32> {
     e.extend(wides(&[rho[0], rho[1], d02[0], d02[1]]));
     e.push(word(clamped));
     e.extend(wides(&rho));
-    let input = mirror_input(mass, rho, d02, d12);
-    e.push(word(mirror_side(&input)));
-    e.extend(wides(&[input.c, input.left, input.right]));
     for t in turned {
         e.push(word(axis_zero(t)));
         e.push(t.to_bits());
     }
+    let input = signs_input(mass, rho, d02, d12);
+    e.push(signs_of(&input).word());
+    e.extend(wides(&[input.cross, input.dot]));
     e
 }
 
@@ -83,6 +84,9 @@ fn states() -> Vec<Ic<f32>> {
         of([[0.3, 0.3], [0.3, 0.3], [-0.5, 0.75]]),
         of([[0.0, 0.0], [0.5, 0.0], [0.25, 0.5]]),
         of([[0.0, 0.0], [0.0, 0.5], [0.5, 0.25]]),
+        // Collinear, the terms of λ̃'s signs exact: body 2 behind the pair (the −x half-axis) and ahead of it.
+        of([[0.0, 0.0], [0.5, 0.0], [-0.75, 0.0]]),
+        of([[0.0, 0.0], [0.5, 0.0], [1.5, 0.0]]),
         canonicalise(&of([[0.1, 0.2], [0.7, -0.3], [-0.4, 0.9]])).ic,
     ]
 }
@@ -119,13 +123,24 @@ fn check_canon(transform: fn(&mut [u32])) {
         assert_eq!(got[read::SKIP_AT], word(c.rescaled), "the skip's outcome");
         assert_eq!(got[read::GUARD_AT], word(c.clamped), "the guard's outcome");
         assert_eq!(
-            got[read::MIRROR_AT],
-            word(c.mirrored),
-            "the mirror's outcome"
+            got[read::SIGNS_AT],
+            c.signs.word(),
+            "the outcome of λ̃'s signs is not C's"
+        );
+    }
+    // The states reach each of the signs' flags, and each one's absence: both halves, the axis, both sides of it.
+    let signs: Vec<u32> = states()
+        .iter()
+        .map(|s| canonicalise(s).signs.word())
+        .collect();
+    for bit in [1, 2, 4, 8] {
+        assert!(
+            signs.iter().any(|w| w & bit != 0) && signs.iter().any(|w| w & bit == 0),
+            "the states do not reach both values of bit {bit} of λ̃'s signs: {signs:?}"
         );
     }
     let flags = |f: fn(&Canonical<f32>) -> bool| states().iter().any(|s| f(&canonicalise(s)));
-    assert!(flags(|c| c.rescaled) && flags(|c| c.clamped) && flags(|c| c.mirrored));
+    assert!(flags(|c| c.rescaled) && flags(|c| c.clamped));
     assert!(flags(|c| !c.rescaled), "no state skipped step 0");
     let zero = |at: usize| {
         states().iter().any(|s| {
@@ -155,15 +170,16 @@ fn branch_read_the_layout_is_the_declared_one() {
         (read::SKIP_AT, 9),
         (read::COINCIDENCE_AT, 15),
         (read::GUARD_AT, 24),
-        (read::MIRROR_AT, 29),
-        (read::RHO_X_AT, 36),
-        (read::RHO_Y_AT, 38),
-        (read::CANON_WORDS, 40),
+        (read::RHO_X_AT, 29),
+        (read::RHO_Y_AT, 31),
+        // The slot of λ̃'s signs is last, after `rho_y`: an outcome word and two `Wide`s, so canon's words are 38.
+        (read::SIGNS_AT, 33),
+        (read::CANON_WORDS, 38),
+        (read::SIGNS_BITS, 4),
         (read::CANON_OPERANDS, 9),
         (read::SKIP_BITS, 5),
         (read::COINCIDENCE_BITS, 8),
         (read::GUARD_BITS, 4),
-        (read::MIRROR_BITS, 6),
         (read::AXIS_BITS, 1),
         (read::M01_AT, 0),
         (read::FEASIBILITY_AT, 8),
@@ -194,39 +210,68 @@ negative_control!(
     branch_read_the_layout_is_the_declared_one,
     "a word past the layout",
     expected = "the layout moved",
-    assert_eq!(read::CANON_WORDS + 1, 40, "the layout moved")
+    assert_eq!(read::CANON_WORDS + 1, 38, "the layout moved")
 );
 
-/// Step 3's decision as `mirror_side` states it, on hand-made sides: `c < 0` strictly, with the left side above the
-/// right. `c = 0` is no mirror whatever the sides. `mirror_input` itself never gives those sides at `c = 0`, its left
-/// side being `m₂c²`, a zero, below every other value; `side` is the decision under test.
-fn check_mirror_side(side: fn(&MirrorInput<f32>) -> bool) {
-    let (mass, x) = wide_state([0.5, 0.25, 0.25], [[-1.0, 0.0], [1.0, -0.0], [0.0; 2]]);
-    let [left, right] = [mass[0], mass[1]];
-    let at =
-        |c: Wide<f32>, left: Wide<f32>, right: Wide<f32>| side(&MirrorInput { c, left, right });
-    for zero in [x[0][1], x[1][1]] {
-        assert!(!at(zero, left, right), "c = 0 mirrored");
-    }
-    assert!(
-        at(x[0][0], left, right),
-        "c < 0 above the side did not mirror"
+/// The signs of `λ̃` as `signs_of` states them, on hand-made inputs, at the boundary of each comparison: a cross
+/// product below 0 is the lower half and nothing else, above 0 neither flag, and 0 is the
+/// axis and never the lower half; the dot product the same for `λ̃_x`; and the word is the four flags, read back.
+fn check_signs(of: fn(&SignsInput<f32>) -> LambdaSigns) {
+    // Wides of each sign and the zero: differences of exact coordinates.
+    let (_, x) = wide_state([0.25, 0.25, 0.5], [[1.0, 0.0], [0.5, 0.0], [1.5, -0.0]]);
+    let (rho, d02, _) = pair_differences(x);
+    let (negative, positive, zero, other_zero) = (rho[0], d02[0], rho[1], d02[1]);
+    assert_eq!(
+        [negative, positive, zero, other_zero].map(|w| f32::from_bits(w.words()[0])),
+        [-1.0, 1.0, 0.0, 0.0],
+        "the hand-made mantissas"
     );
-    assert!(!at(x[1][0], left, right), "c > 0 mirrored");
-    assert!(!at(x[0][0], right, left), "c < 0 below the side mirrored");
-    assert!(!at(x[0][0], left, left), "c < 0 on the side mirrored");
+    let at = |cross, dot| of(&SignsInput { cross, dot });
+    let flags = |s: LambdaSigns| [s.y_negative, s.y_zero, s.x_negative, s.x_zero];
+    assert_eq!(
+        flags(at(negative, positive)),
+        [true, false, false, false],
+        "a cross product below 0 is not the lower half alone"
+    );
+    assert_eq!(
+        flags(at(positive, negative)),
+        [false, false, true, false],
+        "a dot product below 0 is not λ̃_x < 0 alone"
+    );
+    for z in [zero, other_zero] {
+        assert_eq!(
+            flags(at(z, negative)),
+            [false, true, true, false],
+            "a zero cross product is not on the axis"
+        );
+        assert_eq!(
+            flags(at(positive, z)),
+            [false, false, false, true],
+            "a zero dot product is not λ̃_x = 0"
+        );
+        assert_eq!(flags(at(z, z)), [false, true, false, true], "the pole");
+    }
+    for word in 0..16 {
+        assert_eq!(LambdaSigns::of_word(word).word(), word, "the signs' word");
+    }
+    assert_eq!(at(negative, negative).word(), 1 | 4, "bits 0 and 2");
+    assert_eq!(at(zero, zero).word(), 2 | 8, "bits 1 and 3");
 }
 
 #[test]
-fn branch_read_mirror_side_at_the_boundary_of_c() {
-    check_mirror_side(mirror_side);
+fn branch_read_lambda_signs_at_the_boundary() {
+    check_signs(signs_of);
 }
 
 negative_control!(
-    branch_read_mirror_side_at_the_boundary_of_c,
-    "a decision that takes c = 0 as c < 0",
-    expected = "c = 0 mirrored",
-    check_mirror_side(|i| i.c.words()[0] & 0x7fff_ffff == 0 || mirror_side(i))
+    branch_read_lambda_signs_at_the_boundary,
+    "a decision that reads a zero cross product as the lower half, `≤ 0` for `< 0`, must fail",
+    expected = "a zero cross product is not on the axis",
+    check_signs(|i| {
+        let mut s = signs_of(i);
+        s.y_negative |= s.y_zero;
+        s
+    })
 );
 
 fn check_m01(m0: f32, m1: f32) {

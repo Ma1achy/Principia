@@ -25,8 +25,9 @@
 //! - REQ-VAL-017 on `C`, the canonicalisation the decode ends in (and encode starts from), alone on the GPU: generic
 //!   states with one light body far out, the case that once put a body's `r_y` 273.88 eps from f64 on lavapipe when
 //!   step 2 turned by `sin` and `cos` of a rounded angle, at every orientation and scale: each of the GPU's canonical
-//!   `m`, `r` and `p` within REQ-DEC-043's factor of `C` at f64 on the same widened inputs, `lookup_mirrored` and
-//!   `lookup_clamped` bitwise equal, and the canonical `ρ̃` on `+x` (REQ-DEC-002) (`qa_m224_gpu_canon_turn`).
+//!   `m`, `r` and `p` within REQ-DEC-043's factor of `C` at f64 on the same widened inputs, `lookup_clamped`
+//!   bitwise equal, and the canonical `ρ̃` on `+x` (REQ-DEC-002) (`qa_m224_gpu_canon_turn`). `C` has no mirror step, so
+//!   a lower-half state stays below its `ρ̃` on both and there is no mirror notice to compare.
 //!
 //! Tier B (parity_contract §2): the tags are compared bitwise, given the same inputs, at once, never accumulated (§3).
 //!
@@ -693,10 +694,10 @@ fn turn(v: [f64; 2], a: f64) -> [f64; 2] {
     [c * v[0] - s * v[1], s * v[0] + c * v[1]]
 }
 
-/// `C` on the GPU against `C` at f64 on the same inputs, widened: the notices bitwise equal; each of `m`, `r` and `p`
-/// within REQ-DEC-043's factor (`decode_f32_eps::error`, the decode's own measure); the GPU's `ρ̃ = r̃₁ − r̃₀` on `+x`,
-/// its `x` positive and its `y` within the factor (against f64's 0). `skew` is a control's defect: the f64 reference
-/// turned a further `skew` radians, a step 2 whose angle is off.
+/// `C` on the GPU against `C` at f64 on the same inputs, widened: `lookup_clamped` bitwise equal; each of `m`, `r`
+/// and `p` within REQ-DEC-043's factor (`decode_f32_eps::error`, the decode's own measure); the GPU's `ρ̃ = r̃₁ −
+/// r̃₀` on `+x`, its `x` positive and its `y` within the factor (against f64's 0). `skew` is a control's defect: the
+/// f64 reference turned a further `skew` radians, a step 2 whose angle is off.
 fn check_canon_turn(skew: f64) {
     let h = GpuHarness::new().expect("a GPU device");
     let f = factor();
@@ -709,9 +710,8 @@ fn check_canon_turn(skew: f64) {
     for (j, (x, gj)) in states.iter().zip(&g).enumerate() {
         let c = canonicalise(&widen(x));
         assert_eq!(
-            (gj.mirrored, gj.clamped),
-            (c.mirrored, c.clamped),
-            "state {j}: the GPU's (mirrored, clamped) differ from f64's"
+            gj.clamped, c.clamped,
+            "state {j}: the GPU's lookup_clamped differs from f64's"
         );
         let r64 = c.ic.r.map(|v| turn(v, skew));
         let p64 = c.ic.p.map(|v| turn(v, skew));

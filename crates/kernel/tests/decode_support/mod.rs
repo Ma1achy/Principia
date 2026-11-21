@@ -104,18 +104,31 @@ pub fn latent<R: P>(z: [f64; 8]) -> Latent<R> {
     Latent::new(at::<R, 8>(z))
 }
 
+/// The golden IC's `z` at `R`: `z = 0`, its `z_β` converted from `sigmoid_beta`, the link it was written under (R-898),
+/// `z_β′ = σ-link(0) − π/2 = π̂/2 − π̂/2 = 0` exactly under the offset link (R-1020), so `fixtures/golden_ic/z0.json`
+/// stands bit for bit. *Was (the identity link, 14 Nov 2026):* "`z_β = π̂·σ(0) = π̂/2`".
+pub fn golden_z<R: P>() -> Latent<R> {
+    latent::<R>([0.0; 8])
+}
+
+/// The offset link's constant at `R`, `c = π̂/2` (dd_decoder § 3.2, "The offset in floating point"; R-1020): half of
+/// R-417's image of π, exact, `fl↓(π/2)` at f32 (bits `0x3FC9_0FDA`), the nearest at f64.
+pub fn offset<R: P>() -> R {
+    R::LIT_7 / (R::one() + R::one())
+}
+
 // ── Selections ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The default selection with the `stick_breaking` mass link.
 pub type Stick =
-    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+    Select<StickBreaking, SigmoidAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 /// Every tanh link, with the `stick_breaking` mass link.
-pub type Tanhs = Select<StickBreaking, TanhAlpha, TanhBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
+pub type Tanhs = Select<StickBreaking, TanhAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 
 /// Every softsign link, with the default mass link.
 pub type Softsigns =
-    Select<SoftmaxTanh, SoftsignAlpha, SoftsignBeta, SoftsignQ, SoftsignQ, SoftsignQ, SoftsignQ>;
+    Select<SoftmaxTanh, SoftsignAlpha, PeriodicBeta, SoftsignQ, SoftsignQ, SoftsignQ, SoftsignQ>;
 
 /// A decode entry at `R`, behind a function pointer, so a control runs the same check on a broken one.
 pub type Entry<R> = fn(&Latent<R>) -> Decoded<R>;

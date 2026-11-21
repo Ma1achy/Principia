@@ -4,18 +4,22 @@
 //!
 //! Every expected state comes from an independent construction written here from the text:
 //! - [`qa_phys`], Part 4's norm `‖·‖_phys` as Part 4 states it (REQ-ENC-029);
-//! - [`qa_canon`], Part 6's canonical inverse policy in the normative order 1a → 0 → 1b → 2 → 3, every rigid
-//!   operation on the full state (positions and momenta), `φ = 0` at `ρ = 0` by a select (R-437), mirror iff
-//!   `λ̃_y < −δ_λ` (R-82), with its two classic bugs, a configuration-only mirror and a configuration-only rotation;
-//! - [`qa_gauge`], dd_encode §3.3's gauge action `r' = s·R(θ)·Π·r + a`, `p' = s^{−1/2}·R(θ)·Π·p + m·u`;
+//! - [`qa_canon`], Part 6's canonical inverse policy in the normative order 1a → 0 → 1b → 2, every rigid
+//!   operation on the full state (positions and momenta), `φ = 0` at `ρ = 0` by a select (R-437), and no mirror step:
+//!   a state below the `x`-axis stays there (TASK-M2-57 removed the decoder's mirror step; *was:* "→ 3 … mirror iff
+//!   `λ̃_y < −δ_λ` (R-82)"), with its classic bug, a configuration-only rotation;
+//! - [`qa_gauge`], dd_encode §3.3's gauge action `r' = s·R(θ)·Π·r + a`, `p' = s^{−1/2}·R(θ)·Π·p + m·u`, with the other
+//!   classic bug on the test's side, a mirror map `Π` that reflects the positions only;
 //! - Part 3's forward momentum link `q = q_max·(2σ(z) − 1)` and the Jacobi map `p₂ = p_λ`, `p₁ = p_ρ − (m₁/M₀₁)p_λ`,
 //!   `p₀ = −p₁ − p₂` (dd_decoder §3.4).
 //!
 //! The tests:
-//! - REQ-ENC-005, REQ-DEC-016 (`t3_qa_reference_canon`): random gauge on canonical states, both precisions:
-//!   `D(E(x)) = C(x)` against [`qa_canon`], masses within `ε_phys`, `lookup_mirrored` the gauge's parity, `λ = 1/s`,
-//!   `L_z = ±L_z,in·λ^{1/2}` with the sign `lookup_mirrored` gives, `E = E_in/λ`. Controls: a configuration-only mirror
-//!   and a configuration-only rotation fail the `L_z` check.
+//! - REQ-ENC-005, REQ-DEC-016 (`t3_qa_reference_canon`): random gauge `g` on canonical states `x₀`, on both halves of
+//!   the `β` circle, both precisions: `D(E(g·x₀)) = C(g·x₀)` against [`qa_canon`], masses within `ε_phys`, the half
+//!   `C` leaves the state in the one `g`'s parity put it in, `λ = 1/s`, `L_z = +L_z,in·λ^{1/2}` and so
+//!   `L_z(D(E(g·x₀))) = det(Π_g)·L_z(C(x₀))`, `E = E_in/λ` (*was:* "`lookup_mirrored` the gauge's parity …
+//!   `L_z = ±L_z,in·λ^{1/2}` with the sign `lookup_mirrored` gives"). Controls: a configuration-only rotation in `C`
+//!   fails the `L_z` check, and a mirror map reflecting the positions only fails the determinant's.
 //! - REQ-DEC-016, R-437 (`t3_qa_rho_zero`): the coincident inner pair at every sign of the zeros: `φ = 0`, the
 //!   rotation the identity, `lookup_clamped`, at both precisions.
 //! - REQ-ENC-001, REQ-ENC-004, REQ-ENC-018 (`encode_qa_golden_z0`, `encode_qa_burrau_345`): the golden pairs built from
@@ -35,19 +39,18 @@
 //! negative control (R-176).
 
 use kernel::canon::canonicalise;
+use kernel::decode::retired::convert;
 use kernel::decode::{self, Decoded, Ic, Latent};
 use kernel::encode::encode;
-use kernel::generated::links::Defaults;
+use kernel::generated::links::{Defaults, SigmoidBeta};
 use validation::negative_control;
 use validation::roundtrip::{eps_phys, widen, Precision};
 
 // ── Independent references ─────────────────────────────────────────────────────────────────────────────────────
 
-/// `q_max` (R-10, settled at 2), the momentum clamp `ε_q` and the configuration clamp `ε_z` (Part 3, 10⁻⁶), the
-/// mirror deadband `δ_λ` (R-82, 10⁻¹²).
+/// `q_max` (R-10, settled at 2) and the momentum clamp `ε_q` (Part 3, 10⁻⁶).
 const Q_MAX: f64 = 2.0;
 const EPS_Q: f64 = 1e-6;
-const DELTA_LAMBDA: f64 = 1e-12;
 
 /// A tiny deterministic generator (splitmix64), uniform draws on `[lo, hi)`.
 struct Rng(u64);
@@ -94,17 +97,19 @@ fn qa_phys(x: &Ic<f64>, xp: &Ic<f64>) -> f64 {
     worst
 }
 
-/// Which of `C`'s rigid operations act on the momenta (Part 1): the contract's `FULL`, both; the classic bugs leave
-/// the mirror (`.0`) or the rotation (`.1`) off the momenta.
+/// Which rigid operations act on the momenta (Part 1): the contract's `FULL`, both; the classic bugs leave the
+/// gauge's mirror map (`.0`, [`qa_gauge`]'s `Π`, on the test's side now that `C` has no mirror step) or `C`'s
+/// rotation (`.1`, [`qa_canon`]'s) off the momenta.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct Rigid(bool, bool);
 
 const FULL: Rigid = Rigid(true, true);
 
 /// `C(x)` by Part 6, in f64: 1a CoM subtraction; 0 rescale to `I = 1` (`r ← λr`, `p ← λ^{−1/2}p`, `λ = I_in^{−1/2}`);
-/// 1b boost removal (`pᵢ ← pᵢ − mᵢP/M`); 2 rotate by `R(−φ)`, `φ = atan2(ρ_y, ρ_x)`, `φ = 0` where `ρ = 0` (R-437);
-/// 3 mirror `y → −y` iff `λ̃_y < −δ_λ`. Returns the state, `λ`, and whether it mirrored.
-fn qa_canon(x: &Ic<f64>, rigid: Rigid) -> (Ic<f64>, f64, bool) {
+/// 1b boost removal (`pᵢ ← pᵢ − mᵢP/M`); 2 rotate by `R(−φ)`, `φ = atan2(ρ_y, ρ_x)`, `φ = 0` where `ρ = 0` (R-437).
+/// No step 3: `λ̃_y` keeps its sign. Returns the state, `λ`, and `λ̃_y`, whose sign is the half the state lies in
+/// (*was:* "3 mirror `y → −y` iff `λ̃_y < −δ_λ` … and whether it mirrored").
+fn qa_canon(x: &Ic<f64>, rigid: Rigid) -> (Ic<f64>, f64, f64) {
     let m = x.m;
     let mt: f64 = m.iter().sum();
     let mut r = x.r;
@@ -149,29 +154,28 @@ fn qa_canon(x: &Ic<f64>, rigid: Rigid) -> (Ic<f64>, f64, bool) {
     let m01 = m[0] + m[1];
     let lam_y = r[2][1] - (m[0] * r[0][1] + m[1] * r[1][1]) / m01;
     let mu_lam = m[2] * m01 / mt;
-    let mirrored = mu_lam.sqrt() * lam_y < -DELTA_LAMBDA;
-    if mirrored {
-        for i in 0..3 {
-            r[i][1] = -r[i][1];
-            if rigid.0 {
-                p[i][1] = -p[i][1];
-            }
-        }
-    }
-    (Ic { m, r, p }, lambda, mirrored)
+    (Ic { m, r, p }, lambda, mu_lam.sqrt() * lam_y)
 }
 
-/// dd_encode §3.3's gauge action on `x`.
-fn qa_gauge(x: &Ic<f64>, a: [f64; 2], u: [f64; 2], theta: f64, s: f64, mirror: bool) -> Ic<f64> {
+/// dd_encode §3.3's gauge action on `x`; `mirror_p` false is the half-mirror, `Π` on the positions only.
+fn qa_gauge(
+    x: &Ic<f64>,
+    a: [f64; 2],
+    u: [f64; 2],
+    theta: f64,
+    s: f64,
+    mirror: bool,
+    mirror_p: bool,
+) -> Ic<f64> {
     let (c, sn) = (theta.cos(), theta.sin());
-    let act = |v: [f64; 2], k: f64| {
+    let act = |v: [f64; 2], k: f64, mirror: bool| {
         let w = if mirror { [v[0], -v[1]] } else { v };
         [k * (c * w[0] - sn * w[1]), k * (sn * w[0] + c * w[1])]
     };
     let mut y = *x;
     for i in 0..3 {
-        let r = act(x.r[i], s);
-        let p = act(x.p[i], 1.0 / s.sqrt());
+        let r = act(x.r[i], s, mirror);
+        let p = act(x.p[i], 1.0 / s.sqrt(), mirror && mirror_p);
         y.r[i] = [r[0] + a[0], r[1] + a[1]];
         y.p[i] = [p[0] + x.m[i] * u[0], p[1] + x.m[i] * u[1]];
     }
@@ -260,40 +264,58 @@ fn bits<R: Precision>() -> u32 {
 
 const T3_SAMPLES: u32 = 1500;
 
-/// The T3 checks on input `x` (f64 view of what encode saw) and `back = D(E(x))`, with encode's `mirrored` and `λ`,
-/// against `C(x)` built by [`qa_canon`] as the contract has it.
-fn check_t3(
-    what: &str,
-    x: &Ic<f64>,
-    back: &Ic<f64>,
-    mirrored: bool,
+/// What T3 reads of one sample besides its states: encode's recorded `λ̃_y` and `λ`, the gauge's parity, and the
+/// canonical draw `x₀`'s `L_z` and `λ̃_y`.
+struct Sample {
+    lambda_t_y: f64,
     lambda: f64,
     parity: bool,
-    eps: f64,
-) {
-    let (c, lam_ref, mir_ref) = qa_canon(x, FULL);
-    // The half-mirror catch first (Part 8): |L_z| matches with its sign by lookup_mirrored.
-    let sign = if mirrored { -1.0 } else { 1.0 };
-    let want_l = sign * lz(x) * lam_ref.sqrt();
+    lz0: f64,
+    lambda_t_y0: f64,
+}
+
+/// The T3 checks on input `x = g·x₀` (f64 view of what encode saw) and `back = D(E(x))`, against `C(x)` built by
+/// [`qa_canon`] as the contract has it: `L_z` with its sign, `C` reversing no orientation, so `+L_z,in·λ^{1/2}`, and
+/// `det(Π_g)·L_z(C(x₀))` through the gauge; the state within `ε_phys`; the half, the reference's and the one the
+/// gauge's parity put `x₀` in, wherever `λ̃_y` is clear of the axis by `ε_phys`; `λ`, `E` and the masses.
+fn check_t3(what: &str, x: &Ic<f64>, back: &Ic<f64>, sample: &Sample, eps: f64) {
+    let (c, lam_ref, lty_ref) = qa_canon(x, FULL);
+    // The half-mirror catch first (Part 8): L_z matches with its sign, which nothing in C changes.
+    let want_l = lz(x) * lam_ref.sqrt();
     let (bl, be) = derived_bounds(&c, eps);
     let got_l = lz(back);
     assert!(
         (got_l - want_l).abs() <= bl,
-        "{what}: L_z of D(E(x)) is {got_l:e}, want {want_l:e} (sign by lookup_mirrored = {mirrored}), bound {bl:e}"
+        "{what}: L_z of D(E(x)) is {got_l:e}, want {want_l:e} (the input's × λ^½, its sign kept), bound {bl:e}"
+    );
+    // Through the gauge: Π negates L_z, and the scale's s·s^(−1/2) is undone by λ^(1/2); x₀ is its own C(x₀).
+    let det = if sample.parity { -1.0 } else { 1.0 };
+    let want_l0 = det * sample.lz0;
+    assert!(
+        (got_l - want_l0).abs() <= bl,
+        "{what}: L_z of D(E(g·x)) is {got_l:e}, against det(Π_g)·L_z(C(x)) = {want_l0:e}, bound {bl:e}"
     );
     let r = qa_phys(&c, back);
     assert!(
         r <= eps,
         "{what}: D(E(x)) is {r:.3e} from C(x) in ‖·‖_phys, beyond ε_phys {eps:.3e}"
     );
-    assert_eq!(
-        mirrored, mir_ref,
-        "{what}: lookup_mirrored against C's step 3"
-    );
-    assert_eq!(
-        mirrored, parity,
-        "{what}: lookup_mirrored against the gauge's parity"
-    );
+    if lty_ref.abs() > eps && sample.lambda_t_y0.abs() > eps {
+        assert_eq!(
+            sample.lambda_t_y < 0.0,
+            lty_ref < 0.0,
+            "{what}: the half C left the state in (λ̃_y = {:e}) against the reference's (λ̃_y = {lty_ref:e})",
+            sample.lambda_t_y
+        );
+        assert_eq!(
+            sample.lambda_t_y < 0.0,
+            (sample.lambda_t_y0 < 0.0) != sample.parity,
+            "{what}: the half C left the state in (λ̃_y = {:e}) against the gauge's parity on x₀'s (λ̃_y = {:e})",
+            sample.lambda_t_y,
+            sample.lambda_t_y0
+        );
+    }
+    let lambda = sample.lambda;
     assert!(
         (lambda / lam_ref - 1.0).abs() <= eps,
         "{what}: λ {lambda:e} against I_in^(−1/2) {lam_ref:e}"
@@ -315,13 +337,15 @@ fn check_t3(
 }
 
 /// T3 over random `g·x₀` at `R`, `x₀ = D(z)` with `z` on `[−4, 4]⁸` (every control well inside its clamp, so `x₀` is
-/// canonical and clear of the mirror's deadband); `g` with `s` on `2^[−3, 3)`, `θ` on `[−π, π)`, parity ½, offset on
-/// `s·[−2, 2)²`, boost on `s^{−1/2}·[−1, 1)²`. With `rigid` a bug, `back` is that bug's `C(x)` instead of `D(E(x))`.
+/// canonical; `z_β` over more than a period, so `x₀` lies in either half); `g` with `s` on `2^[−3, 3)`, `θ` on
+/// `[−π, π)`, parity ½, offset on `s·[−2, 2)²`, boost on `s^{−1/2}·[−1, 1)²`. With `rigid` a bug: the rotation's, `back`
+/// is that bug's `C(x)` instead of `D(E(x))`; the mirror's, `g`'s `Π` reflects the positions only. Returns the counts
+/// of mirroring gauges and of inputs whose canonical form is in the lower half.
 fn t3_run<R: Precision>(rigid: Rigid) -> (u32, u32) {
     let mut rng = Rng(0x5eed_2016);
     let eps = eps_phys::<R>();
-    let mut mirrored_n = 0;
-    let mut kept_n = 0;
+    let mut parity_n = 0;
+    let mut lower_n = 0;
     for i in 0..T3_SAMPLES {
         let z: [f64; 8] = std::array::from_fn(|_| rng.uniform(-4.0, 4.0));
         let x0 = widen(&dec::<f64>(z).ic);
@@ -333,44 +357,44 @@ fn t3_run<R: Precision>(rigid: Rigid) -> (u32, u32) {
             rng.uniform(-1.0, 1.0) / s.sqrt(),
             rng.uniform(-1.0, 1.0) / s.sqrt(),
         ];
-        let x = narrow::<R>(&qa_gauge(&x0, a, u, theta, s, parity));
+        let x = narrow::<R>(&qa_gauge(&x0, a, u, theta, s, parity, rigid.0));
         let xw = widen(&x);
         let e = encode::<Defaults, R>(&x);
-        let (back, mirrored) = if rigid == FULL {
-            (widen(&dec::<R>(e.z.z).ic), e.report.mirrored)
+        let back = if rigid.1 {
+            widen(&dec::<R>(e.z.z).ic)
         } else {
-            let (c, _, m) = qa_canon(&xw, rigid);
-            (c, m)
+            qa_canon(&xw, rigid).0
         };
-        if mirrored {
-            mirrored_n += 1;
-        } else {
-            kept_n += 1;
-        }
+        let sample = Sample {
+            lambda_t_y: e.canonical.lambda_t_y.into(),
+            lambda: e.report.lambda.into(),
+            parity,
+            lz0: lz(&x0),
+            lambda_t_y0: qa_canon(&x0, FULL).2,
+        };
+        parity_n += u32::from(parity);
+        lower_n += u32::from(sample.lambda_t_y < 0.0);
         let what = format!(
             "f{} sample {i} (s {s:e}, θ {theta}, parity {parity})",
             bits::<R>()
         );
-        check_t3(
-            &what,
-            &xw,
-            &back,
-            mirrored,
-            e.report.lambda.into(),
-            parity,
-            eps,
-        );
+        check_t3(&what, &xw, &back, &sample, eps);
     }
-    (mirrored_n, kept_n)
+    (parity_n, lower_n)
 }
 
 #[test]
 fn t3_qa_reference_canon() {
+    let quarter = T3_SAMPLES / 4;
     for (n, w) in [(t3_run::<f64>(FULL), 64), (t3_run::<f32>(FULL), 32)] {
         assert!(
-            n.0 >= T3_SAMPLES / 4 && n.1 >= T3_SAMPLES / 4,
-            "f{w}: the draws mirror {} and keep {}: both parities must be exercised",
-            n.0,
+            n.0 >= quarter && T3_SAMPLES - n.0 >= quarter,
+            "f{w}: {} of {T3_SAMPLES} gauges mirror: both parities must be exercised",
+            n.0
+        );
+        assert!(
+            n.1 >= quarter && T3_SAMPLES - n.1 >= quarter,
+            "f{w}: {} of {T3_SAMPLES} canonical forms lie in the lower half: both halves must be exercised",
             n.1
         );
     }
@@ -378,8 +402,8 @@ fn t3_qa_reference_canon() {
 
 negative_control!(
     t3_qa_reference_canon,
-    "a canonicaliser mirroring the positions only must fail the L_z check",
-    expected = "L_z of D(E(x))",
+    "a mirror map reflecting the positions only must fail the determinant's L_z check",
+    expected = "against det(Π_g)·L_z(C(x))",
     {
         t3_run::<f64>(Rigid(false, true));
     }
@@ -419,6 +443,7 @@ fn rho_zero<R: Precision>(phi_of: fn(&Ic<R>) -> f64) {
                 assert!(phi == 0.0, "{what}: φ = {phi:e}, not R-437's 0");
                 let c = canonicalise(&xr);
                 assert!(c.clamped, "{what}: lookup_clamped not raised at ρ = 0");
+                // Body 2 on either side of the pair: the reference takes no mirror, so C must not either.
                 let (want, _, _) = qa_canon(&widen(&xr), FULL);
                 let r = qa_phys(&want, &widen(&c.ic));
                 assert!(
@@ -489,8 +514,14 @@ fn golden_z0<R: Precision>(z0: [f64; 8]) {
         bits::<R>()
     );
     assert!(
-        !e.report.lookup_clamped() && !e.report.mirrored,
+        !e.report.lookup_clamped(),
         "f{}: the golden state is interior",
+        bits::<R>()
+    );
+    // Body 2 above the pair: the upper half, kept.
+    assert!(
+        Into::<f64>::into(e.canonical.lambda_t_y) > 0.0,
+        "f{}: the golden state left the upper half",
         bits::<R>()
     );
 }
@@ -522,8 +553,10 @@ fn burrau_345() -> Ic<f64> {
     }
 }
 
-/// Part 3's closed forms on `C(x)`: `z_α = logit(2α/π)`, `z_β = logit(β/π)`, `α = atan2(‖λ̃‖, ‖ρ̃‖)`,
-/// `β = atan2(|λ̃_y|, λ̃_x)`, the momenta `z = logit(½(q/q_max + 1))`, `z_μk = artanh(ln(mₖ/m₀)/μ_max)`, `μ_max = 5`.
+/// Part 3's closed forms on `C(x)`: `z_α = logit(2α/π)`, `z_β = β − π/2` (the periodic link's inverse; *was:*
+/// "`z_β = logit(β/π)`"), `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(λ̃_y, λ̃_x)`, the signed angle (*was:*
+/// "`atan2(|λ̃_y|, λ̃_x)`"; any of its values a period apart is the same state), the momenta
+/// `z = logit(½(q/q_max + 1))`, `z_μk = artanh(ln(mₖ/m₀)/μ_max)`, `μ_max = 5`.
 fn closed_form_z(x: &Ic<f64>) -> [f64; 8] {
     let (c, _, _) = qa_canon(x, FULL);
     let m = c.m;
@@ -535,7 +568,7 @@ fn closed_form_z(x: &Ic<f64>) -> [f64; 8] {
     ];
     let (wr, wl) = ((m[0] * m[1] / m01).sqrt(), (m[2] * m01).sqrt());
     let alpha = (wl * len(lam)).atan2(wr * len(rho));
-    let beta = (wl * lam[1]).abs().atan2(wl * lam[0]);
+    let beta = (wl * lam[1]).atan2(wl * lam[0]);
     let logit = |s: f64| (s / (1.0 - s)).ln();
     let pi = std::f64::consts::PI;
     let pl = c.p[2];
@@ -546,7 +579,7 @@ fn closed_form_z(x: &Ic<f64>) -> [f64; 8] {
     let zq = |q: f64| logit(0.5 * (q / Q_MAX + 1.0));
     [
         logit(2.0 * alpha / pi),
-        logit(beta / pi),
+        beta - pi / 2.0,
         zq(pr[0]),
         zq(pr[1]),
         zq(pl[0]),
@@ -642,7 +675,16 @@ fn encode_qa_burrau_345() {
         .iter()
         .find(|p| p["name"] == "burrau_345")
         .expect("the Burrau pair is listed");
-    let fz: [f64; 8] = std::array::from_fn(|k| pair["z"][k].as_f64().expect("a number"));
+    // The fixture's z was written under `sigmoid_beta`, the β link before TASK-M2-57: its z_β is converted on read to
+    // the periodic link's, the same β.
+    let fz: [f64; 8] = std::array::from_fn(|k| {
+        let z = pair["z"][k].as_f64().expect("a number");
+        if k == 1 {
+            convert::<SigmoidBeta, f64>(z)
+        } else {
+            z
+        }
+    });
     let r = qa_phys(&widen(&dec::<f64>(z).ic), &widen(&dec::<f64>(fz).ic));
     assert!(
         r <= eps_phys::<f64>(),

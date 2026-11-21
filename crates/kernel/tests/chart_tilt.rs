@@ -39,10 +39,11 @@ use kernel::chart::{
     Tilted, ValidationResult, REGISTRY,
 };
 use kernel::decode::invariant::{infeasible, no_construction};
+use kernel::decode::retired::convert;
 use kernel::decode::{self, config, mass, momentum, Decoded, Degenerate};
 use kernel::generated::links::{
-    Defaults, Link, LinkParams, LinkReal, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh,
-    SoftsignQ, TanhQ,
+    Defaults, Link, LinkParams, LinkReal, PeriodicBeta, Select, SigmoidAlpha, SigmoidBeta,
+    SigmoidQ, SoftmaxTanh, SoftsignQ, TanhQ,
 };
 use kernel::payload::PayloadReal;
 use kernel::Real;
@@ -4220,9 +4221,10 @@ fn own_sheet(tau: f64, x: u32, span: f64) -> Tilt<f64> {
 /// that is a system at `p` is refused. `default` is the control.
 fn check_own_mu_max(default: bool) {
     let refused = "a system at its own μ_max is refused";
+    // The frozen `z_β`, −0.5 under `sigmoid_beta` when this was written, converted to the periodic link (R-898).
     let line = Mapped::<_, Defaults>::new(
         InvariantLE(Invariant::<f64> {
-            z_cfg: [0.3, -0.5],
+            z_cfg: [0.3, convert::<SigmoidBeta, f64>(-0.5)],
             z_mass: [0.7, -0.4],
             k_max: 2.0,
             gamma_k: 1.5,
@@ -4407,7 +4409,7 @@ fn check_construction_targets(admit: bool) {
 }
 
 /// A selection whose momentum links are `tanh_q`, which keeps a `−0`.
-type TanhSel = Select<SoftmaxTanh, SigmoidAlpha, SigmoidBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
+type TanhSel = Select<SoftmaxTanh, SigmoidAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 
 #[test]
 fn tilt_every_chart_construction_targets() {

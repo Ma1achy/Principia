@@ -1,0 +1,95 @@
+{
+  "what": "TASK-M2-57: the differences from the baseline record that are accepted, each by name with its reason, none by a tolerance. The strict checks (kernel mirror_step_bitwise_presets_and_saved_charts, validation mirror_step_bitwise_goldens) pass when the lines that break their bit-for-bit condition are exactly the lines listed here, as the checks print them; a line not listed fails them, and a listed line that no longer occurs fails them too",
+  "presets_and_saved_charts": [
+    {
+      "line": "sim key, preset z_α × z_β: the beta link's id: recorded `sigmoid_beta`, now `periodic_beta`",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_α × z_β: plane.z0[z_β]: recorded 0.41, now 0.31757693755701344",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_q0 × z_q1: the beta link's id: recorded `sigmoid_beta`, now `periodic_beta`",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_q0 × z_q1: plane.z0[z_β]: recorded 0.5, now 0.3847173352672657",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_q2 × z_q3: the beta link's id: recorded `sigmoid_beta`, now `periodic_beta`",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_q2 × z_q3: plane.z0[z_β]: recorded 0.41, now 0.31757693755701344",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_μ1 × z_μ2: the beta link's id: recorded `sigmoid_beta`, now `periodic_beta`",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_μ1 × z_μ2: plane.z0[z_β]: recorded 0.41, now 0.31757693755701344",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_α × z_μ1: the beta link's id: recorded `sigmoid_beta`, now `periodic_beta`",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_α × z_μ1: plane.z0[z_β]: recorded 0.41, now 0.31757693755701344",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_q3 × z_μ1: the beta link's id: recorded `sigmoid_beta`, now `periodic_beta`",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, preset z_q3 × z_μ1: plane.z0[z_β]: recorded 0.41, now 0.31757693755701344",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key, every saved chart: the beta link's id: recorded `sigmoid_beta`, now `periodic_beta`",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    }
+  ],
+  "goldens": [
+    {
+      "name": "decode-preset/invariant_le",
+      "line": "decode-preset/invariant_le | β ∈ [0, π] | chart parameters: recorded \"[Vec4(0.4, -0.3, 0.2, -0.5), Vec4(1.0, 2.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0)]\", now \"[Vec4(0.4, -0.23386808, 0.2, -0.5), Vec4(1.0, 2.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0)]\"; 288 of 288 samples differ, words r0x r0y r1x r1y r2x r2y p0x p0y p1x p1y p2x p2y, largest 1815013168 ulp, 4.311968088404797e-9 in ‖·‖_phys, samples by largest word difference: 1 ulp 0, 2 ulp 0, 3 to 4 ulp 0, 5 to 16 ulp 0, more 288",
+      "reason": "accepted by the owner, 21 Nov 2026: \"Accept the three new goldens as they are; state the mirror step as the reason\". The golden stores its frozen z_β as an f32; converted to the periodic link (TASK-M2-57) it is the f32 nearest π·σ(−0.3f32) − π/2, −0.23386808, which moves β by −4.3e-9 against the decoder before the change, since no f32 holds the converted angle exactly. Its image is unchanged (0 pixels differ). Held bit for bit to accepted_golden_states.json, so any other change fails",
+      "against_the_decoder_before_the_change": {
+        "max_phys": "4.311968088404797e-9",
+        "delta_beta": "-4.3e-9",
+        "image": "0 pixels differ"
+      }
+    },
+    {
+      "name": "decode-preset/invariant_lk",
+      "line": "decode-preset/invariant_lk | β ∈ [0, π] | chart parameters: recorded \"[Vec4(0.4, -0.3, 0.2, -0.5), Vec4(1.0, 2.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0)]\", now \"[Vec4(0.4, -0.23386808, 0.2, -0.5), Vec4(1.0, 2.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0)]\"; 288 of 288 samples differ, words r0x r0y r1x r1y r2x r2y p0x p0y p1x p1y p2x p2y, largest 1815013168 ulp, 4.311968088404797e-9 in ‖·‖_phys, samples by largest word difference: 1 ulp 0, 2 ulp 0, 3 to 4 ulp 0, 5 to 16 ulp 0, more 288",
+      "reason": "accepted by the owner, 21 Nov 2026: \"Accept the three new goldens as they are; state the mirror step as the reason\". The golden stores its frozen z_β as an f32; converted to the periodic link (TASK-M2-57) it is the f32 nearest π·σ(−0.3f32) − π/2, −0.23386808, which moves β by −4.3e-9 against the decoder before the change, since no f32 holds the converted angle exactly. Its image is unchanged (0 pixels differ). Held bit for bit to accepted_golden_states.json, so any other change fails",
+      "against_the_decoder_before_the_change": {
+        "max_phys": "4.311968088404797e-9",
+        "delta_beta": "-4.3e-9",
+        "image": "0 pixels differ"
+      }
+    },
+    {
+      "name": "roundtrip-preset/invariant_le",
+      "line": "roundtrip-preset/invariant_le | β ∈ [0, π] | chart parameters: recorded \"[Vec4(0.4, -0.3, 0.2, -0.5), Vec4(1.0, 2.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0)]\", now \"[Vec4(0.4, -0.23386808, 0.2, -0.5), Vec4(1.0, 2.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0), Vec4(0.0, 0.0, 0.0, 0.0)]\"; 1152 of 1152 samples differ, words r0x r0y r1x r1y r2x r2y p0x p0y p1x p1y p2x p2y, largest 2874004854 ulp, 4.311968088404797e-9 in ‖·‖_phys, samples by largest word difference: 1 ulp 0, 2 ulp 0, 3 to 4 ulp 0, 5 to 16 ulp 0, more 1152",
+      "reason": "accepted by the owner, 21 Nov 2026: \"Accept the three new goldens as they are; state the mirror step as the reason\". The golden stores its frozen z_β as an f32; converted to the periodic link (TASK-M2-57) it is the f32 nearest π·σ(−0.3f32) − π/2, −0.23386808, which moves β by −4.3e-9 against the decoder before the change, since no f32 holds the converted angle exactly. Its image is unchanged (0 pixels differ). Held bit for bit to accepted_golden_states.json, so any other change fails",
+      "against_the_decoder_before_the_change": {
+        "max_phys": "4.311968088404797e-9",
+        "delta_beta": "-4.3e-9",
+        "image": "0 pixels differ"
+      }
+    }
+  ],
+  "goldens_sim_key": [
+    {
+      "line": "sim key.links.beta.id: recorded \"sigmoid_beta\", now \"periodic_beta\" (every golden)",
+      "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    }
+  ]
+}

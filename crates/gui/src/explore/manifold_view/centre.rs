@@ -18,6 +18,72 @@ use crate::explore::lock::GOLD;
 pub const VALUE_W: f32 = 58.0;
 /// The width of the locked offset's readout, in points (a look choice, R-390).
 pub const OFFSET_W: f32 = 64.0;
+/// The fewest and the most decimals the value field shows where they fit (a look choice).
+pub const DECIMALS: std::ops::RangeInclusive<usize> = 3..=6;
+
+/// `value` as the value field shows it, `fits` telling whether a text fits the field: egui's own reading at the most
+/// decimals, from [`DECIMALS`]' most down to none, that fits; past that the scientific form at the most digits that
+/// fits, and its shortest, at most seven characters ("-1e-308"), where none does. So the text is bounded for any value:
+/// a number box extends to its text, and a value of more digits than the field holds, which nothing rounds on its way
+/// here (a preset's base point, a typed number, a point off the slider's span), would push the field past its row's end.
+pub fn value_text(value: f64, fits: impl Fn(&str) -> bool) -> String {
+    let (least, most) = (*DECIMALS.start(), *DECIMALS.end());
+    for decimals in (0..=most).rev() {
+        let text =
+            egui::emath::format_with_decimals_in_range(value, least.min(decimals)..=decimals);
+        if fits(&text) {
+            return text;
+        }
+    }
+    (1..=3)
+        .rev()
+        .map(|digits| format!("{value:.digits$e}"))
+        .find(|text| fits(text))
+        .unwrap_or_else(|| format!("{value:.0e}"))
+}
+
+/// What a number box's text reads as, as egui's own parser reads it: whitespace dropped, a true minus a hyphen.
+fn parsed(text: &str) -> Option<f64> {
+    let plain: String = text
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .map(|c| if c == '−' { '-' } else { c })
+        .collect();
+    plain.parse().ok()
+}
+
+/// The value field of a slider row, [`VALUE_W`] wide whatever `value` is: its text is [`value_text`] measured in the
+/// field's own font. A number box writes its text back when it loses the focus, so the text it showed reads as the
+/// value it showed it for, digit for digit: a field clicked into and left, nothing typed, leaves the value as it was,
+/// however few digits fitted.
+fn value_field(ui: &mut Ui, height: f32, value: &mut f64) -> egui::Response {
+    let font = ui.style().drag_value_text_style.resolve(ui.style());
+    let width = VALUE_W - 2.0 * ui.spacing().button_padding.x;
+    let ctx = ui.ctx().clone();
+    let fits = move |text: &str| {
+        let galley = ctx.fonts_mut(|fonts| {
+            fonts.layout_no_wrap(text.to_owned(), font.clone(), egui::Color32::WHITE)
+        });
+        galley.size().x <= width
+    };
+    let (held, shown) = (*value, value_text(*value, &fits));
+    ui.add_sized(
+        [VALUE_W, height],
+        DragValue::new(value)
+            .speed(0.002)
+            // The decimals a drag or a key's step rounds to; the text is the formatter's.
+            .min_decimals(*DECIMALS.start())
+            .max_decimals(*DECIMALS.end())
+            .custom_formatter(move |v, _| value_text(v, &fits))
+            .custom_parser(move |text| {
+                if text == shown {
+                    Some(held)
+                } else {
+                    parsed(text)
+                }
+            }),
+    )
+}
 
 /// The span of a slider whose anchor is `anchor` (`None` while free).
 pub fn span(anchor: Option<f64>) -> (f64, f64) {
@@ -77,13 +143,7 @@ pub fn slider_row(
             Stroke::new(2.0, GOLD),
         );
     }
-    let field = line.add_sized(
-        [VALUE_W, rect.height() - 2.0],
-        DragValue::new(&mut moved)
-            .speed(0.002)
-            .min_decimals(3)
-            .max_decimals(6),
-    );
+    let field = value_field(&mut line, rect.height() - 2.0, &mut moved);
     if let Some(anchor) = anchor {
         line.add_sized(
             [OFFSET_W, rect.height()],
