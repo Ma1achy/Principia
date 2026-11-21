@@ -155,17 +155,20 @@ pub mod chart_validate;
 // validator, before resolution (chart_decoder_contract Part 5; TASK-M2-14): documented in the module itself.
 pub mod chart_authoring;
 
-// Navigation as chart construction: pan, slice, zoom and tilt as typed `SetField` edits of `SimConfig`'s `z₀`, `q₁` and
-// `q₂`, and the direction library (chart_decoder_contract Part 4; TASK-M2-22): documented in the module itself, whose
-// links resolve there.
+// Navigation's geometry, the plane's frame and the direction library (chart_decoder_contract Part 4; TASK-M2-22):
+// documented in the module itself, whose links resolve there.
 pub mod nav;
+
+// The chart-path object: a view a point in chart space and every edit a path through it, today's pan, zoom, slice,
+// tilt, lock, chart switch and Save view as chart its named families (TASK-M2-61): documented in the module itself.
+pub mod path;
 
 // Lookup, CPU-side: the exact and partial forms and the three-layer validation ladder (inverse_encode_contract Part 6;
 // TASK-M2-19): documented in the module itself, whose links resolve there.
 pub mod lookup;
 
-// The lock, CPU-side chart construction held in `SimConfig`: set, excursion, snap-back, unlock, lock validation and the
-// curve tangent tilt it allows (chart_decoder_contract Part 4, "The lock"; TASK-M2-23): documented in the module itself,
+// The lock, CPU-side chart construction held in `SimConfig`: its state, the excursion, lock validation and the curve
+// tangent tilt it allows, its edits the chart-path object's (chart_decoder_contract Part 4, "The lock"; TASK-M2-23): documented in the module itself,
 // whose links resolve there.
 pub mod lock;
 

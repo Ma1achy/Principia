@@ -15,6 +15,8 @@
 //!
 //! Every IC is read through the kernel's latent chart `Φ`, every edit applied through the real state store.
 
+mod path_shim;
+
 use engine::contract::canonical;
 use engine::contract::interface::EngineInterface;
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
@@ -27,14 +29,13 @@ use engine::contract::store::StateStore;
 use engine::nav::directions::{
     energy_at_fixed_lz, hidden, library, mass_away_from_burrau, morph, MorphInto, Unavailable,
 };
-use engine::nav::{
-    oblique, pan, slice, tilt_tangent, tilt_vector, zoom, BasisVector, ChartConstructor, NavError,
-};
+use engine::nav::{BasisVector, NavError};
 use kernel::chart::{Chart as _, Latent as LatentChart};
 use kernel::decode::decode;
 use kernel::decode::descriptor::{kinetic, potential};
 use kernel::decode::latent::Latent as Controls;
 use kernel::generated::links::{Defaults, Link, SoftmaxTanh};
+use path_shim::{oblique, pan, slice, tilt_tangent, tilt_vector, zoom, ChartConstructor};
 use validation::negative_control;
 
 // ---- helpers ----

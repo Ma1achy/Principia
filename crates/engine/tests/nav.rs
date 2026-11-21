@@ -12,6 +12,8 @@
 //! - `oblique_slice_record` (REQ-CHART-016): the export of an oblique slice carries `q₁, q₂`; two raw tilts give the
 //!   second, not the composition.
 
+mod path_shim;
+
 use engine::contract::canonical;
 use engine::contract::interface::EngineInterface;
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
@@ -25,10 +27,7 @@ use engine::nav::directions::{
     energy_at_fixed_lz, hidden, library, mass_away_from_burrau, morph, morph_source, MorphInto,
     Unavailable,
 };
-use engine::nav::{
-    oblique, off_plane, pan, slice, tilt_tangent, tilt_vector, zoom, BasisVector, ChartConstructor,
-    NavError,
-};
+use engine::nav::{off_plane, BasisVector, NavError};
 use kernel::chart::{Chart as _, Latent as LatentChart};
 use kernel::decode::descriptor::{kinetic, potential};
 use kernel::decode::latent::Latent as Controls;
@@ -36,6 +35,7 @@ use kernel::decode::{decode, invariant};
 use kernel::generated::links::{
     Defaults, Link, PeriodicBeta, Select, SigmoidAlpha, SigmoidQ, SoftmaxTanh, StickBreaking,
 };
+use path_shim::{oblique, pan, slice, tilt_tangent, tilt_vector, zoom, ChartConstructor};
 use validation::negative_control;
 
 /// `ê_k`.

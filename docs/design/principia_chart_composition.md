@@ -2300,6 +2300,21 @@ a vortex (physics note 2, P6), so the area factor there is large and V15's flag 
 pixel, R-82's pattern for the tie, a declared seam. A pair of charts whose bodies are labelled differently is blended
 by index: relabelling stays distinct, so the path is not a physical one.
 
+**The great circle's two degenerate cases, defined (REQ-CHART-213, R-72; TASK-M2-61, approved by physics review
+6002173203 of PR #24).** With `c = n̂_A·n̂_B` and `w = n̂_B − c·n̂_A`, `‖w‖` computed scaled (its largest component factored
+out, as `hypot`), so it underflows to 0 only where `w` is 0:
+- *The general circle:* `θ = atan2(‖w‖, c)`, `n̂(s) = cos(sθ)·n̂_A + sin(sθ)·w/‖w‖`, taken where `c ≥ 0` and `‖w‖ > 0`, and
+  where `c < 0` and `‖w‖ > √ε_64` (`ε_64` the f64 machine epsilon, `√ε_64 ≈ 1.49·10⁻⁸`). On the same side the error of
+  `w/‖w‖` is damped by `sin(sθ) ≈ s‖w‖`: measured at or below 2.6·10⁻¹⁶ against a 50-digit reference at every separation
+  from 10⁻⁶ down to 10⁻¹⁷.
+- *Equal ends,* `w = 0` with `c ≥ 0`: `n̂(s) = n̂_A` for `0 < s < 1`. Never NaN, not a seam.
+- *The antipodal tie,* `c < 0` and `‖w‖ ≤ √ε_64`, the threshold inclusive, so the tie falls on the antipodal side: `ê` the
+  coordinate axis of the shape sphere's `(n₁, n₂, n₃)` with the smallest `|n̂_A·ê|`, the lowest index on a tie;
+  `k̂ = (n̂_A × ê)/‖n̂_A × ê‖` (`‖n̂_A × ê‖ ≥ √(2/3)`); `n̂(s) = cos(πs)·n̂_A + sin(πs)·(k̂ × n̂_A)`. A pure function of
+  `n̂_A`, so of the pixel; each such pixel flagged `antipodal_tie`, a declared seam. Not symmetric under reversal (`B → A`
+  takes the circle of `n̂_B`), and its step between `s = 1 − ε` and `s = 1` is up to about `√ε_64`, inside the seam.
+- The ends are the end rule's (§ 17.4), never the formula's. TASK-M2-81 lowers the circle and the seam flag.
+
 ### 17.3 The constraint: bitwise through the mechanism
 
 The order: tilt, zoom, lock and Save-view-as-chart "reproduce bitwise through the general mechanism, a test per operation, or

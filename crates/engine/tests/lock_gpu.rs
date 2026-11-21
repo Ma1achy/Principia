@@ -6,6 +6,8 @@
 //!   `engine::lock::kernel_chart`, render bitwise identically through the decode stage; with an excursion the same
 //!   holds of the plane the excursion gives.
 
+mod path_shim;
+
 use std::path::Path;
 
 use engine::contract::fast_math::FastMath;
@@ -15,8 +17,9 @@ use engine::contract::sim_config::{
     SimConfig, Slice, SliceFrame, Window, Z_Q3,
 };
 use engine::decode_dispatch::{DecodeStage, Words};
-use engine::lock::{kernel_chart, set};
+use engine::lock::kernel_chart;
 use kernel::stage::decode::{flags, DecodeMode, LatentDefaults};
+use path_shim::set;
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 

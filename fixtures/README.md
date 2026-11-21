@@ -35,3 +35,4 @@ Two fixtures are produced at M3 and checked in here when they are, not transcrib
   under the legacy classifier (`docs/reference/prin-rs/src/outcome.rs`).
 - **BodyPlane** (R-166 (d)): M3 records the Python reference's output (`docs/reference/prin-rs/tools/xcheck`,
   `reference/*.py`).
+| `chart_composition/digest.json` | TASK-M2-61's bitwise baseline: each of today's view operations (pan, zoom, slice, raw tilt, the oblique slice, the lock and its edits, the chart switch's end views, Save view as chart, the gui's presets at their homes) digested as `crates/engine/tests/path_support/mod.rs` says, written from `main`'s code (at `e5dcb1a`) on the baseline commits `984fa5f` and `0d767b3` by `PRINCIPIA_BLESS_PATH_BASELINE=1 cargo test -p engine --test path_baseline` in a checkout of either, before the code it records was replaced; never rewritten since: `crates/engine/tests/path_bitwise.rs` holds the chart-path object to it. Not transcribed from prin-rs | — |

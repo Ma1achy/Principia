@@ -1,35 +1,22 @@
 //! The lock, CPU-side chart construction held in `SimConfig` (chart_decoder_contract Part 4, "The lock (projective
 //! microscope)" and "The lock's construction, defined"; render_gui_spec §G4; gui_state_contract §2; R-69; TASK-M2-23).
-//! Every gesture here computes typed [`SetField`] edits of `SimConfig`'s `z₀` and lock group, and nothing else: the
-//! lock is chart construction, so locking, unlocking and recentring are undoable through the contract's history, and
-//! no edit names `ViewUI`.
+//! The lock is chart construction, so locking, unlocking and recentring are undoable through the contract's history,
+//! and no edit names `ViewUI`.
 //!
-//! - **Setting the lock** on the affine chart ([`set`]): `z_locked = z₀ + (2s−1)q₁ + (2t−1)q₂`, the latent chart's own
-//!   `Φ` at the clicked pixel, CPU arithmetic with no readback; on a nonlinear chart ([`set_on_chart`]): `Φ` and `D`
-//!   replayed on the CPU at the pixel's chart point, lookup's ladder, the inverse-encode path, giving `z_locked` the
-//!   controls the chart's axes set and the pixel's own frozen controls the rest, bit for bit ([`FrozenControls`]), and
-//!   the chart's [`Window`] re-centred there. Either way the edits are the `SetField` on `z₀ = z_locked` (the
-//!   recentring, §G4) and the lock group's, and on a nonlinear chart the `SetField` on the window, held in `SimConfig`'s
-//!   chart group (R-69), one command sent under one history key, one undo entry (gui_state_contract §2, R-466;
-//!   `crate::contract::store::StateStore::set_field_under`), and the centre pixel, of the chart rebuilt on that `z₀`, decodes the clicked pixel's state bit for bit.
-//!   On a nonlinear chart `z_locked`'s own decode is within lookup's `ε_phys` of that state where the ladder clamps
-//!   none of the controls the axes set; where it clamps one, `z_locked` holds the clamp's image and the lock's notices
-//!   carry `lookup_clamped`.
-//! - **Anchor-preserving edits** (tilt, zoom, chart-mode switch) are basis edits (`crate::nav`) that turn about the pin
-//!   (render_gui_spec §G4; R-451; R-466 K5). At `δ = 0` the pin is the centre, so they keep `z₀` and the centre
-//!   `z(½,½) = z₀` ([`centre`]) is exactly constant through them; where `δ` has an in-plane part the pin is off-centre,
-//!   and the edit's `SetField` on `z₀` moves `z₀`, and with it `δ`.
+//! - **The lock's edits**, setting it on the affine or a nonlinear chart, snap-back, unlock, recentre and a slider's
+//!   move, are the chart-path object's (`crate::path`, TASK-M2-61): each is a segment of a named family, its formula in
+//!   `path::lock` and `path::family`. Here are the lock's state and what reads it: the affine chart's pixel ([`point`],
+//!   [`centre`]), the hidden coordinates a nonlinear chart freezes ([`FrozenControls`]), the re-based sliders
+//!   ([`slider`]), the kernel's chart ([`kernel_chart`]), lock validation and the curve tangent tilt.
 //! - **The excursion** `δ = z₀ − z_locked` ([`Lock::excursion`]) is held by the stored pair (the contract's definition):
-//!   a slice step or a slider move ([`move_slider`]) edits `z₀` alone, so `δ` accumulates it; each slider is re-based,
-//!   not frozen ([`slider`]), showing `z₀`'s value with the anchor's marked; snap-back ([`snap_back`]) is
-//!   `z₀ ← z_locked`, the stored anchor, bit for bit; unlock ([`unlock`]) clears the lock group and keeps
-//!   `(z₀, q₁, q₂)`.
+//!   a slice step or a slider move edits `z₀` alone, so `δ` accumulates it; each slider is re-based, not frozen
+//!   ([`slider`]), showing `z₀`'s value with the anchor's marked.
 //! - **Lock validation** on an invariant chart ([`validate`]): each pixel's `(L_z, y)` read at its own configuration,
 //!   tagged where layer 2 fails it, or `DEGENERATE` where its construction finds no seed, never dropped; one notice for
 //!   the view, the switch to the latent chart with a re-centre only where the lock's own centre has gone infeasible
-//!   (R-593; [`Report::offer`], [`recentre`]).
+//!   (R-593; [`Report::offer`]; its re-centre is a `crate::path` segment).
 //! - **A curve's tangent tilt needs a lock** ([`curve_tilt`]): `γ′(ν₀)` pulled back to the latent controls
-//!   ([`curve_tangent`]), refused where a link's inverse clamps, then `nav::tilt_tangent`.
+//!   ([`curve_tangent`]), refused where a link's inverse clamps, then the tilt formula (`crate::path::tilt_tangent`).
 //!
 //! **What the GPU knows: nothing** (Part 4). The kernel's chart is [`kernel_chart`]: `(z₀, q₁, q₂)` and nothing of the
 //! lock, so a locked and a free view of the same plane send the kernel the same uniform.
@@ -38,17 +25,16 @@ use kernel::chart::mixed::{Coordinate, Quantity};
 use kernel::chart::{
     Chart, Constraint, InvariantLE, InvariantLK, Latent as LatentChart, Mixed, ValidationResult,
 };
-use kernel::decode::Ic;
 use kernel::encode::blocks::clamps;
-use kernel::encode::by_kind::{fibre, ByKind, InvariantAxis, Lookup};
+use kernel::encode::by_kind::{fibre, InvariantAxis, Lookup};
 use kernel::encode::SimplexClamp;
 use kernel::generated::links::{Link, Selection};
 
 use crate::chart_authoring::{CurveMeta, CurvePoint};
-use crate::contract::set_field::{Edit, SetField, SimField};
 use crate::contract::sim_config::{Latent, Lock, Plane, SimConfig, LATENT_DIM};
-use crate::lookup::{self, Exact, Notices, Rejected, Tolerances};
-use crate::nav::{self, NavError};
+use crate::lookup::Rejected;
+use crate::nav::NavError;
+use crate::path::family::tilt_tangent;
 
 /// Why a lock gesture gives no edit.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -72,32 +58,11 @@ pub enum LockError {
 }
 
 /// [`LockError::NonFinite`] unless every value is finite.
-fn finite(values: &[f64]) -> Result<(), LockError> {
+pub(crate) fn finite(values: &[f64]) -> Result<(), LockError> {
     match values.iter().all(|x| x.is_finite()) {
         true => Ok(()),
         false => Err(LockError::NonFinite),
     }
-}
-
-/// A `SimConfig` edit, entering the undo history (R-69).
-fn edit(field: SimField) -> SetField {
-    SetField {
-        edit: Edit::Sim(field),
-        no_history: false,
-    }
-}
-
-/// The lock's edits at `z_locked`: the recentring, a `SetField` on `z₀` (§G4), then the lock group, flag and anchor.
-/// The pair is one command: the binding sends it in one frame under one history key, so the history keeps one entry
-/// and one undo restores both (gui_state_contract §2, "A command of several edits is one history entry"; R-466).
-fn lock_edits(z_locked: Latent) -> [SetField; 2] {
-    [
-        edit(SimField::Z0(z_locked)),
-        edit(SimField::Lock(Lock {
-            locked: true,
-            z_locked,
-        })),
-    ]
 }
 
 /// The latent chart of `plane`, `Φ(s, t) = z₀ + (2s−1)q₁ + (2t−1)q₂`.
@@ -118,16 +83,6 @@ pub fn point(plane: &Plane, s: f64, t: f64) -> Latent {
 /// The centre pixel `z(½, ½)`: `z₀` whatever the basis (Part 4), the point anchor-preserving edits keep.
 pub fn centre(plane: &Plane) -> Latent {
     point(plane, 0.5, 0.5)
-}
-
-/// Sets the lock at the affine chart's pixel `(s, t)` (Part 4, "Setting the lock"): `z_locked = z₀ + (2s−1)q₁ +
-/// (2t−1)q₂`, CPU arithmetic with no readback, as the recentring `SetField` on `z₀` and the lock group's, one command
-/// under one history key (gui_state_contract §2, R-466).
-pub fn set(plane: &Plane, s: f64, t: f64) -> Result<[SetField; 2], LockError> {
-    finite(&[s, t])?;
-    let z_locked = point(plane, s, t);
-    finite(&z_locked)?;
-    Ok(lock_edits(z_locked))
 }
 
 /// The view's window on a nonlinear chart's own parameters (the contract's definition), held in `SimConfig`'s chart
@@ -183,72 +138,6 @@ impl FrozenControls for InvariantLK<f64> {
     }
 }
 
-/// A lock set on a nonlinear chart.
-#[derive(Clone, Debug, PartialEq)]
-pub struct ChartLock {
-    /// The lock's one command (gui_state_contract §2, R-466): the recentring `SetField` on `z₀ = z_locked`, the lock
-    /// group's, and the `SetField` on `Chart.window` re-centring the window, sent under one history key, so one undo
-    /// restores `z₀`, the lock group and the window (R-69; REQ-SYS-011).
-    pub edits: [SetField; 3],
-    /// The window re-centred on the clicked chart point, its half-widths kept: the value of the command's window edit.
-    pub window: Window,
-    /// The clicked pixel's state, `D ∘ Φ` replayed on the CPU: the centre pixel's under the re-centred window.
-    pub ic: Ic<f64>,
-    /// The ladder's notices on the lock.
-    pub notices: Notices,
-}
-
-/// Sets the lock at the pixel `(s, t)` of `window` on the nonlinear `chart`, under the link selection `S` (the
-/// contract's definition): `Φ` and `D` replayed on the CPU at the pixel's chart point, which must pass `validate`
-/// (R-469); the state they decode through lookup's ladder, `norm` and `tol` its `‖·‖_phys` and tolerances, whose `z`
-/// gives `z_locked` the controls the chart's axes set, every other control the chart's frozen one, bit for bit, so the
-/// chart rebuilt on `z₀ = z_locked` decodes the clicked state at the window re-centred on the chart point, bit for bit.
-/// `z_locked`'s own decode is within `tol`'s `ε_phys` of that state where the ladder clamps none of the controls the
-/// axes set; where it clamps one, `z_locked` holds the clamp's image and [`ChartLock::notices`] carry `lookup_clamped`.
-/// The edits are one command under one history key (gui_state_contract §2, R-466).
-pub fn set_on_chart<S, C, N>(
-    chart: &C,
-    window: &Window,
-    s: f64,
-    t: f64,
-    norm: N,
-    tol: &Tolerances,
-) -> Result<ChartLock, LockError>
-where
-    S: Selection,
-    S::MassLink: SimplexClamp,
-    C: ByKind + FrozenControls,
-    f64: From<C::Param>,
-    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
-{
-    finite(&[s, t])?;
-    let [u, v] = window.at(s, t);
-    finite(&[u, v])?;
-    match chart.validate(u, v) {
-        ValidationResult::Valid => {}
-        refused => return Err(LockError::NotASystem(refused)),
-    }
-    let ic = chart.decode_at::<S, f64>(u, v).ic;
-    let locked = lookup::lookup::<S, C, N>(chart, &Exact::Physical(ic), norm, tol)
-        .map_err(LockError::Refused)?;
-    let (frozen, set) = (chart.frozen(), chart.set_by_axes());
-    let z_locked: Latent = std::array::from_fn(|k| match set[k] {
-        true => locked.z[k],
-        false => frozen[k],
-    });
-    let recentred = Window {
-        centre: [u, v],
-        half: window.half,
-    };
-    let [z0, lock] = lock_edits(z_locked);
-    Ok(ChartLock {
-        edits: [z0, lock, edit(SimField::Window(recentred))],
-        window: recentred,
-        ic,
-        notices: locked.notices,
-    })
-}
-
 /// One slider of the Slice centre, re-based to the anchor while locked, not frozen (Part 4, "Sliders are re-based").
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Slider {
@@ -269,35 +158,6 @@ pub fn slider(sim: &SimConfig, k: usize) -> Result<Slider, LockError> {
         anchor: locked.then_some(sim.lock.z_locked[k]),
         offset: sim.lock.excursion(&sim.plane.z0).map(|d| d[k]),
     })
-}
-
-/// Moves the slider of the control `k` to `value`: the `SetField` on `z₀` with that control set, the others kept. While
-/// locked it is an excursion along `ê_k` from the anchor, which it keeps.
-pub fn move_slider(sim: &SimConfig, k: usize, value: f64) -> Result<SetField, LockError> {
-    finite(&[value])?;
-    let mut z0 = sim.plane.z0;
-    *z0.get_mut(k).ok_or(LockError::NoSuchControl(k))? = value;
-    Ok(edit(SimField::Z0(z0)))
-}
-
-/// Snap-back: `δ → 0` exactly, the `SetField` on `z₀` setting it to the stored anchor, bit for bit.
-pub fn snap_back(sim: &SimConfig) -> Result<SetField, LockError> {
-    match sim.lock.locked {
-        true => Ok(edit(SimField::Z0(sim.lock.z_locked))),
-        false => Err(LockError::NotLocked),
-    }
-}
-
-/// Unlock: the lock group's `SetField`, flag and anchor cleared; `(z₀, q₁, q₂)` is not edited, so the view as it stands
-/// is the new free state.
-pub fn unlock(sim: &SimConfig) -> Result<SetField, LockError> {
-    match sim.lock.locked {
-        true => Ok(edit(SimField::Lock(Lock {
-            locked: false,
-            z_locked: [0.0; LATENT_DIM],
-        }))),
-        false => Err(LockError::NotLocked),
-    }
 }
 
 /// The chart the kernel receives for `sim` (Part 4, "What the GPU knows about all of this: nothing"): the latent chart
@@ -430,12 +290,6 @@ where
     }
 }
 
-/// The re-centre lock validation offers: the lock at the nearest feasible point, the `SetField` on `z₀` and the lock
-/// group's, one command under one history key (gui_state_contract §2, R-466).
-pub fn recentre(nearest: &Nearest) -> [SetField; 2] {
-    lock_edits(nearest.z)
-}
-
 // ── A curve axis's tangent tilt ────────────────────────────────────────────────────────────────────────────────────
 
 /// `softmax(0, μ₁, μ₂)`, the masses of the curve's mass logits (`CurvePoint`'s definition).
@@ -528,5 +382,5 @@ where
         return Err(LockError::NotLocked);
     }
     let tangent = curve_tangent::<S>(curve, nu0)?;
-    nav::tilt_tangent(&tangent, length, tau_deg, target).map_err(LockError::Nav)
+    tilt_tangent(&tangent, length, tau_deg, target).map_err(LockError::Nav)
 }

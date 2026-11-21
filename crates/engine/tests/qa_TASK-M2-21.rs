@@ -30,6 +30,8 @@
 //!
 //! Every view, window, pixel grid and parameter value here is test data, not a register constant (REQ-SYS-082).
 
+mod path_shim;
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -42,7 +44,6 @@ use engine::contract::sim_config::{
 };
 use engine::contract::store::StateStore;
 use engine::contract::view_state::{export, restore};
-use engine::lock::set_on_chart;
 use engine::lookup::Tolerances;
 use kernel::chart::invariant::Invariant;
 use kernel::chart::InvariantLK;
@@ -51,6 +52,7 @@ use kernel::generated::links::{
     Defaults, LinkParams, PeriodicBeta, Select, SoftsignAlpha, StickBreaking, TanhQ,
 };
 use ledger::links::{self as registry};
+use path_shim::set_on_chart;
 use proptest::prelude::*;
 use serde_json::Value;
 use validation::negative_control;
