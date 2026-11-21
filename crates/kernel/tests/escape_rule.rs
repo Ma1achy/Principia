@@ -1,6 +1,6 @@
 //! The selectable escape rule (`kernel::detect::escape_rule`; TASK-M3-34):
-//! - `escape_rule_closure_is_the_default`: the wrapper's default march is the closure rule's, bit for bit. Control: the
-//!   energy floor's march in its place.
+//! - `escape_rule_closure_is_the_default`: the wrapper's default march is the closure rule's, bit for bit, and so is
+//!   `DefaultRule`'s. Control: the energy floor's march in its place.
 //! - `escape_rule_energy_floor`: prin-rs's naive energy baseline on constructed states: a bound pair and an unbound third
 //!   body is that body's escape, an unbound pair a triple ejection, a third body bound by the total mass no escape.
 //!   Control: the outer test read with the pair's mass alone, which fires on that last state.
@@ -17,7 +17,8 @@ use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
 use kernel::detect::escape::{self, Verdict};
 use kernel::detect::escape_rule::{
-    distance_floor_test, energy_floor_test, Closure, DistanceFloor, EnergyFloor, EscapeRule,
+    distance_floor_test, energy_floor_test, Closure, DefaultRule, DistanceFloor, EnergyFloor,
+    EscapeRule,
 };
 use kernel::driver::advance::Cadence;
 use kernel::driver::cadence::WrapperCadence;
@@ -79,6 +80,7 @@ fn check_default<E: EscapeRule<f64>>() {
 #[test]
 fn escape_rule_closure_is_the_default() {
     check_default::<Closure<f64>>();
+    check_default::<DefaultRule<f64>>();
 }
 
 negative_control!(

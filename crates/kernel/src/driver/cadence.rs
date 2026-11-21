@@ -8,7 +8,7 @@
 //! detection, which sets the `done` flag on collision ([`Detector`]) and never breaks. A failure sets `done` too: the
 //! march ends on its first non-finite step (`super::failure`). **At each sampling point** of the occupant's grid ([`Cadence::sample`]: a completed
 //! macro-step, or a sync boundary under an occupant that owns its time mapping) the escape detector runs
-//! ([`escape::Detector`]; Part 7), on the state the step's cadence left, and sets `done` where it fires. A run on which
+//! ([`crate::detect::escape::Detector`]; Part 7), on the state the step's cadence left, and sets `done` where it fires. A run on which
 //! a collision has fired takes no escape test: the collision's is the earlier step.
 //!
 //! **Built from the run's IC** ([`WrapperCadence::with_radius`]): the projection's `M` and weights are formed once,
@@ -59,7 +59,6 @@ use super::project::ComProjection;
 use super::substep::Quantise;
 use super::wrapper::{monitored, WrapperReal};
 use crate::detect::collision::{CollisionRadius, Detector};
-use crate::detect::escape;
 use crate::detect::escape_rule::EscapeRule;
 use crate::detect::label::{Events, Fired};
 use crate::generated::links::LinkReal;
@@ -73,7 +72,7 @@ use crate::word::{state_cuts, CrossingDetector, CrossingHook, WordBuffer};
 /// run's `done` flag and the count of its calls. A run starts from [`WrapperCadence::with_radius`]: no call made, done
 /// only if its IC is inside `r_coll`.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct WrapperCadence<R, E = escape::Detector<R>> {
+pub struct WrapperCadence<R, E = crate::detect::escape_rule::DefaultRule<R>> {
     /// The COM projection, its `M` cached.
     projection: ComProjection<R>,
     /// The invariant monitor, its `E₀` and `L_{z,0}` stored.

@@ -1,6 +1,6 @@
 //! The escape rule, selectable as the integrators are (TASK-M3-34): a type the wrapper's cadence is generic over
 //! (`crate::driver::cadence::WrapperCadence<R, E>`), so a march names its rule as it names its occupant, and a build
-//! compiles only the rules it instantiates. The default is [`Closure`], today's detector.
+//! compiles only the rules it instantiates. The default is [`DefaultRule`], today's detector, [`Closure`].
 //!
 //! **The rules.**
 //! - [`Closure`]: the closure-and-`E_rel` rule (`super::escape`), unchanged.
@@ -57,6 +57,10 @@ pub trait EscapeRule<R: EscapeReal>: Copy + core::fmt::Debug + PartialEq {
 
 /// Today's rule: closure and `E_rel` (`super::escape`).
 pub type Closure<R> = Detector<R>;
+
+/// The default rule, the one a march that names none runs (`WrapperCadence`'s default, `integrate_detecting`): one name,
+/// so the default changes here alone.
+pub type DefaultRule<R> = Closure<R>;
 
 impl<R: EscapeReal> EscapeRule<R> for Detector<R> {
     #[inline]

@@ -91,7 +91,7 @@ pub fn integrate_ic<A: Advance>(
     degenerate: Option<Degenerate>,
     key: &MarchKey64,
 ) -> SimState64 {
-    integrate_ic_rule::<A, kernel::detect::escape_rule::Closure<f64>>(ic, degenerate, key)
+    integrate_ic_rule::<A, kernel::detect::escape_rule::DefaultRule<f64>>(ic, degenerate, key)
 }
 
 /// [`integrate_ic`] under the escape rule `E` (`kernel::detect::escape_rule`), selected as the occupant `A` is.

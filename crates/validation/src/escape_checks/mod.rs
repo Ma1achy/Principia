@@ -27,6 +27,8 @@ pub mod march;
 pub mod rebind;
 pub mod replay;
 pub mod revalidation;
+pub mod rules;
+pub mod rules_gate;
 pub mod tau_gap;
 pub mod window_ladder;
 

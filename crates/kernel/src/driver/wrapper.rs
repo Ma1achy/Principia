@@ -164,7 +164,9 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
     uniforms: &WrapperUniforms<R>,
     radius: CollisionRadius,
 ) -> SimStateBaseOf<R> {
-    integrate_detecting_rule::<A, R, crate::detect::escape::Detector<R>>(ic, uniforms, radius)
+    integrate_detecting_rule::<A, R, crate::detect::escape_rule::DefaultRule<R>>(
+        ic, uniforms, radius,
+    )
 }
 
 /// [`integrate_detecting`] under the escape rule `E` (`crate::detect::escape_rule`), selected as the occupant `A` is:
