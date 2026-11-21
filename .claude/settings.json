@@ -50,12 +50,6 @@
       "mcp__claude-code-remote__unsubscribe_pr_activity",
       "mcp__claude-code-remote__send_later",
       "mcp__claude-code-remote__delete_trigger"
-    ],
-    "deny": [
-      "Bash(git push --force*)",
-      "Bash(git push -f *)",
-      "Bash(git push * --force*)",
-      "Bash(git push * -f *)"
     ]
   }
 }
