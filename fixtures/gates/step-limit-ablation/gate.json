@@ -1,0 +1,8 @@
+{
+  "gate": "step-limit-ablation",
+  "inputs": ["az_none_subject.json", "az_limit_only.json", "az_all_three.json", "heggie_all_three.json"],
+  "measurement": {
+    "requirement": "REQ-INT-052",
+    "ruling": "R-163"
+  }
+}

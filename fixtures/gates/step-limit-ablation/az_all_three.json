@@ -1,0 +1,8 @@
+{
+  "description": "Aarseth-Zare's shipping step control over the wedge",
+  "occupant": "aarseth-zare",
+  "arm": "all three",
+  "raster": 64,
+  "crop": [48, 29, 16],
+  "expected": "pass"
+}

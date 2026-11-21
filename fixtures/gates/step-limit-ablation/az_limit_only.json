@@ -1,0 +1,8 @@
+{
+  "description": "The predictive limit alone removes both columns over the wedge",
+  "occupant": "aarseth-zare",
+  "arm": "limit only",
+  "raster": 64,
+  "crop": [48, 29, 16],
+  "expected": "pass"
+}
