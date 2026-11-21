@@ -58,10 +58,16 @@ pub fn angles<S: Selection, R: LinkReal>(z_cfg: [R; 2]) -> (R, R) {
     (alpha, beta)
 }
 
-/// The canonical-frame decode at `R̃ = 1`: `ρ̃ = cos α·(1, 0)` and `λ̃ = sin α·(cos β, sin β)`.
+/// The canonical-frame decode at `R̃ = 1`: `ρ̃ = cos α·(1, 0)` and `λ̃ = sin α·(cos β, sin β)`, `β` read on the circle
+/// ([`Real::on_circle`]) before `cos` and `sin` see it: the periodic `β` is any real number (dd_decoder §3.2), and a
+/// GPU's `cos` and `sin` are bounded only inside `[−π, π]` (`crate::circle`'s note). `α ∈ [0, π/2]` needs no reduction.
+///
+/// The plan is unclear here; chose to reduce at f32 only and leave f64 on the pinned libm because f64 runs only on the
+/// host, whose libm already reduces exactly, so f64's records keep their bits, and at f32 the reduction is exact too.
 #[inline]
 pub fn hyperspherical<R: LinkReal>(alpha: R, beta: R) -> ([R; 2], [R; 2]) {
     let sin_alpha = Real::sine(alpha);
+    let beta = Real::on_circle(beta);
     (
         [Real::cosine(alpha), R::zero()],
         [sin_alpha * Real::cosine(beta), sin_alpha * Real::sine(beta)],
