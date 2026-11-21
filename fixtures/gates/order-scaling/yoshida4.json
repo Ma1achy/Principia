@@ -1,0 +1,6 @@
+{
+  "description": "Yoshida-4, order 4: a ladder a factor 2^(1/4) apart, every rung in the asymptotic regime",
+  "occupant": "yoshida4",
+  "ladder": [400, 476, 566, 673, 800, 951, 1131],
+  "expected": "pass"
+}

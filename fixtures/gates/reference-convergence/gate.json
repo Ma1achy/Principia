@@ -1,0 +1,6 @@
+{
+  "gate": "reference-convergence",
+  "inputs": ["independence.json", "imports_kernel.json", "kernel_depends.json", "lagrange.json", "figure_eight.json", "precision_held.json", "ladder_spent.json", "one_rung.json"],
+  "threshold": { "value": 1e-20, "requirement": "REQ-VAL-025", "status": "confirmed" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-168" }
+}

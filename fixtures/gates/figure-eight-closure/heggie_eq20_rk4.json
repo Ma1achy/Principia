@@ -1,0 +1,8 @@
+{
+  "description": "Heggie under Eq. 20 × RK4 on the figure-eight: the same ladder and criteria as the default occupant.",
+  "stepper": "rk4",
+  "regularisation": "heggie-eq20",
+  "order_tolerance": 0.5,
+  "closure_bound": 1e-6,
+  "expected": "pass"
+}

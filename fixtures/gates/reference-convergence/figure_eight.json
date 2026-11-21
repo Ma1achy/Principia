@@ -1,0 +1,7 @@
+{
+  "kind": "converge",
+  "description": "the figure-eight from Simó's digits over its published period T = 6.32591398: the ladder converges, and the accepted run closes within 1e-6 (the ground-truth note's anchor; the published digits' own closure is 4.1e-8)",
+  "start": "figure_eight",
+  "truth_bound": 1e-6,
+  "expected": "pass"
+}

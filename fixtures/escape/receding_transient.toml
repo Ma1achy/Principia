@@ -1,0 +1,17 @@
+# An escape-detector fixture (integrator contract Part 7; plan/tasks/M3/TASK-M3-33.md, "the unit fixture of a close
+# encounter where E_rel goes briefly positive while receding and closure has not settled"). Units G = 1. Read by
+# crates/kernel/tests/escape_not_transient.rs: bodies 0 and 1 a circular binary of separation binary_a about their own
+# centre of mass, the line from body 0 to body 1 at binary_phase radians from +x; body 2 at distance d along +x from
+# the binary's centre of mass, moving along +x (receding) at sqrt(speed_squared); then the centre-of-mass frame.
+# Found by a scan of speed_squared over {4.0, 4.1, 4.2, 4.3, 4.5} and binary_phase over k*pi/8 under Heggie x RK4 at
+# Delta_sync = 0.1: body 2 has E_rel > 0 and recedes at the sync boundaries t = 0.1 to 0.5 (a window mark at 0.4
+# among them), then E_rel <= 0 at every boundary to t_end. Built from the contract, not transcribed from prin-rs.
+name = "receding_transient"
+m = [1.0, 1.0, 1.0]
+construction = "binary_third_phased"
+binary_a = 1.0
+binary_phase = 2.356194490192345
+d = 1.5
+speed_squared = 4.2
+t_end = 6.0
+fires = false

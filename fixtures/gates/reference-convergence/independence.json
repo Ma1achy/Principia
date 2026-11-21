@@ -1,0 +1,5 @@
+{
+  "kind": "independence",
+  "description": "the reference's source names only std and dashu_float, and neither kernel nor engine depends on the precision crates",
+  "expected": "pass"
+}

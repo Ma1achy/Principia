@@ -1,0 +1,7 @@
+{
+  "description": "KDK, symplectic: its energy error oscillates with no secular trend, and SUSPECT_ENERGY stays unlit",
+  "occupant": "kdk",
+  "claim": "bounded",
+  "suspect_energy": false,
+  "expected": "pass"
+}

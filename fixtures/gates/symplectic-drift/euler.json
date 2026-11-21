@@ -1,0 +1,7 @@
+{
+  "description": "Euler, the debug occupant: its energy error drifts secularly and lights SUSPECT_ENERGY, the pass condition",
+  "occupant": "euler",
+  "claim": "secular",
+  "suspect_energy": true,
+  "expected": "pass"
+}

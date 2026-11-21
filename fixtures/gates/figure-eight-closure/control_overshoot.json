@@ -1,0 +1,10 @@
+{
+  "description": "Control: the default occupant with the landing off (no clamp, no secant, no bisection), so each sync interval's last step overshoots its boundary by up to a step: dd_validation_orbits §0's first-order error, the one the gate exists to catch. It must fail.",
+  "stepper": "rk4",
+  "regularisation": "heggie-eq22",
+  "landing": false,
+  "order_tolerance": 0.5,
+  "closure_bound": 1e-6,
+  "control": true,
+  "expected": "fail"
+}

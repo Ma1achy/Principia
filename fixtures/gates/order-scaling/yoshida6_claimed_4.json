@@ -1,0 +1,7 @@
+{
+  "description": "The control: Yoshida-6 mislabelled as order 4 must fail",
+  "occupant": "yoshida6",
+  "ladder": [283, 336, 400, 476, 566, 673, 800],
+  "claimed_order": 4,
+  "expected": "fail"
+}

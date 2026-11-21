@@ -1,0 +1,8 @@
+{
+  "kind": "converge",
+  "description": "control: the figure-eight's ladder with every rung held at f64's 53 bits while the tolerance tightens: the 16-digit rung's precision cannot resolve its tolerance, so the ladder is refused before it can agree to 1e-20, below f64's rounding",
+  "start": "figure_eight",
+  "fixed_bits": 53,
+  "truth_bound": 1e-6,
+  "expected": "fail"
+}

@@ -1,0 +1,8 @@
+{
+  "description": "The re-bind test on config_stability (32 × 32 at its horizon 50 and r_coll 0.005, marched to 3·t_max): every escape the detector fires, read at the same five physical offsets, in canonical time as the measurement's own system had them, at the deep interior's centre pixel: none may re-bind, over at least 20 firings.",
+  "slice": "config_stability",
+  "n": 32,
+  "r_coll": null,
+  "rule": "detector",
+  "expected": "pass"
+}

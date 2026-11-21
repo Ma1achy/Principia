@@ -15,6 +15,9 @@ proptest = "1.11"
 # The gate runner reads `fixtures/gates/<gate>/` and writes its reports as JSON (TASK-M0-05).
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# The independent convergence reference's arbitrary-precision floats (`reference::brutus`, TASK-M3-25): MIT OR
+# Apache-2.0, pure Rust, and a dependency of this crate alone, never of the kernel it judges.
+dashu-float = { version = "=0.6.2", default-features = false, features = ["std"] }
 
 # The spawn helper signals a timed-out child's process group (R-217). rustix is already in the build, under tempfile.
 [target.'cfg(unix)'.dependencies]

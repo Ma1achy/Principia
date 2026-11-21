@@ -27,7 +27,11 @@
 //! with no GPU ([`MeasurementGate`]). What it measures runs under its flags, which assert nothing.
 
 pub mod ablation;
+pub mod figure_eight;
+pub mod lagrange;
+pub mod order_scaling;
 pub mod report;
+pub mod symplectic;
 
 use std::path::{Path, PathBuf};
 
@@ -42,6 +46,7 @@ use crate::decode_agreement::DecodeAgreementGate;
 use crate::decode_f32_eps::DecodeF32EpsGate;
 use crate::decode_sanity::DecodeSanityGate;
 use crate::eps_phys::EpsPhysGate;
+use crate::escape_checks::gate::{EscapeChecksGate, EscapeRebindGate};
 use crate::heggie::{HamiltonianFdGate, RadialCollisionGate};
 use crate::import::LiteratureImportGate;
 use crate::inspector::{InspectorHandlesGate, InspectorRoundtripGate};
@@ -99,6 +104,13 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &BenettinCalibrationGate,
     &RadialCollisionGate,
     &HamiltonianFdGate,
+    &EscapeChecksGate,
+    &EscapeRebindGate,
+    &figure_eight::FigureEightClosureGate,
+    &lagrange::ExactCasesGate,
+    &order_scaling::OrderScalingGate,
+    &symplectic::SymplecticDriftGate,
+    &crate::reference::brutus_gate::ReferenceConvergenceGate,
 ];
 
 /// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.
