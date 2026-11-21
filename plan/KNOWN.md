@@ -24,6 +24,15 @@ delete its line when it's done.
   `0.34 < m·D/(M·a) < 0.5` (the physics review's band: below it the far member's `E_rel < 0`, above it the heavy
   body is the farthest and is bound); the measured case is at 0.4, and 300 and 150 are 0.3 and 0.15. For the
   same reason, when a heavy single leaves a light pair the escape's `detail` can name a member of the pair.
+- **A stepper's collision test steps over `r_coll` inside one macro-step.** `N_sub` is chosen from the separation
+  at the macro-step's start (`crates/kernel/src/driver/wrapper.rs`, the `march` loop), so an encounter that begins
+  and ends inside one macro-step is taken in a few substeps that jump across `r_coll`, and the sample is labelled
+  `bounded` or `escape` instead of `collision`. Measured on 48 fuzzed ICs (`tests/terminal.rs`'s totality seed),
+  KDK at `N_max = 64`: at the production key (`dt_macro = 1e-3`, `r_coll = 1e-3`, 10 time units) 9 collisions,
+  against 18 at `dt = 2.5e-4` and 17 at `1e-4`, where the count has converged, so about half are missed. At
+  `r_coll = 0.01` over 30 time units: 1 at `dt = 0.02` (the same at `N_max = 3` and 64), 20 at 0.005 and 30 at
+  0.002. The engine's field marches Heggie, whose collision test runs after every regularised step, so the
+  shipped picture is less exposed; the steppers are the occupants affected.
 - **The inverse encode's T2 range.** `docs/contracts/principia_inverse_encode_contract.md` Part 1 still
   requires E's representative in `[0, 2π]`, but under the offset link `β = z_β + π/2` (which keeps z = 0 at
   the equilateral) the inverse returns β below π/2. The contract needs restating when the decoder's mirror

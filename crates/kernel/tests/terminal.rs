@@ -850,6 +850,7 @@ negative_control!(
 
 /// How a later dispatch reaches the stored sample.
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(not(feature = "controls"), allow(dead_code))]
 enum Again {
     /// The terminal latch's entry point, [`redispatch`].
     Redispatch,
@@ -857,6 +858,42 @@ enum Again {
     ResumeFinish,
     /// No latch: the march from the stored state and the cadence's write, as if it were still running.
     Unlatched,
+    /// The resumed march and the write of a cadence that drops the wrapper's report that the sample was handed back
+    /// ([`Cadence::latched`]).
+    DropsLatched,
+}
+
+/// The wrapper's cadence with the hand-back report ([`Cadence::latched`]) dropped, every other hook passed on.
+struct NoLatch<R>(WrapperCadence<R>);
+
+impl<R: P> Cadence<R> for NoLatch<R> {
+    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.0.after_step(state, geom);
+    }
+
+    fn done(&self) -> bool {
+        self.0.done()
+    }
+
+    fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
+        self.0.sample(state, index, quantum);
+    }
+
+    fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32 {
+        self.0.bucket_d2(r)
+    }
+
+    fn clock(&mut self, completed: u32) {
+        self.0.clock(completed);
+    }
+
+    fn resume(&mut self, stored: &SimStateBaseOf<R>) {
+        self.0.resume(stored);
+    }
+
+    fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R> {
+        self.0.finish(out)
+    }
 }
 
 /// A later dispatch of `stored` by `how`: a fresh cadence from the stored state, `carried` the buffer.
@@ -874,6 +911,12 @@ fn dispatch_again<R: P>(
     } else if let Again::ResumeFinish = how {
         let out = integrate_resumed_with::<Kdk, R, _>(&ic(s), key, &mut c, stored, 100);
         c.finish(out)
+    } else if let Again::DropsLatched = how {
+        let mut n = NoLatch(c);
+        let out = integrate_resumed_with::<Kdk, R, _>(&ic(s), key, &mut n, stored, 100);
+        let out = n.finish(out);
+        c = n.0;
+        out
     } else {
         // The latch bypassed: the march from the stored state, as if it were still running.
         let resumed = Ic {
@@ -891,7 +934,7 @@ fn dispatch_again<R: P>(
 /// that terminated it (the horizon's `bounded` has no event), and every `SimState` word is bit-identical on three
 /// later dispatches, under longer horizons for the two events, the carried buffer and the cadence untouched: through
 /// the latch's entry point and through the resumed march and the cadence's write.
-fn check_terminal_latch<R: P>(latched: bool) {
+fn check_terminal_latch<R: P>(control: Option<Again>) {
     let cases = [
         ("escape", expanding::<R>(), CollisionRadius::none(), 0.05),
         (
@@ -928,8 +971,8 @@ fn check_terminal_latch<R: P>(latched: bool) {
                 300 + 400 * k
             };
             let key = flat::<R>(dt, horizon, 2);
-            let how = if !latched {
-                Again::Unlatched
+            let how = if let Some(how) = control {
+                how
             } else if k % 2 == 0 {
                 Again::Redispatch
             } else {
@@ -967,16 +1010,27 @@ fn check_terminal_latch<R: P>(latched: bool) {
 
 #[test]
 fn terminal_latch() {
-    check_terminal_latch::<f32>(true);
-    check_terminal_latch::<f64>(true);
+    check_terminal_latch::<f32>(None);
+    check_terminal_latch::<f64>(None);
 }
 
 negative_control!(
     terminal_latch,
     "a later dispatch with no latch",
     expected = "changed the stored words",
-    check_terminal_latch::<f64>(false)
+    check_terminal_latch::<f64>(Some(Again::Unlatched))
 );
+
+mod drops_latched {
+    use super::*;
+
+    negative_control!(
+        terminal_latch,
+        "a resumed call whose cadence drops the hand-back report",
+        expected = "(DropsLatched) changed the stored words",
+        check_terminal_latch::<f64>(Some(Again::DropsLatched))
+    );
+}
 
 // ── detail_union ────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -1140,6 +1194,111 @@ fn grid_index(j: u32, samples: &[(u32, u32)]) -> u32 {
         .max()
         .unwrap_or(0)
 }
+
+/// For fuzzed ICs, each march cut at a fuzzed step and re-booted from its stored `SimState` with a fresh cadence
+/// (`forward` passes the wrapper's re-boot hook on, [`Cadence::resume`]): the segment's `t_dmin_step` is the macro-step
+/// index of the least `d²` the re-booted cadence saw, the re-boot state being step `cut`, and every grid index counts
+/// from the IC. Returns nothing; at least 3 segments' minimum must be the re-boot state itself.
+fn check_resumed_dmin(forward: bool) {
+    let mut g = Lcg(0x00D0_5EED);
+    let mut at_reboot = 0;
+    for n in 0..40 {
+        let s = fuzzed::<f64>(&mut g, if n % 2 == 0 { 0.4 } else { 1.5 });
+        let radius = CollisionRadius::from_r_coll(0.02);
+        let key = law::<f64>(0.01, 400, 16);
+        let cut = 1 + (g.next() * 200.0) as u32;
+        let zero = integrate_detecting::<Kdk, f64>(&ic(&s), &law(0.01, 0, 16), radius);
+        let mut first = WrapperCadence::with_radius(&s.m, &s.r, &s.p, radius);
+        let stored = integrate_resumed_with::<Kdk, f64, _>(&ic(&s), &key, &mut first, &zero, cut);
+        let stored = first.finish(stored);
+        if sd_state(stored.packed_a) != STATE_RUNNING {
+            continue;
+        }
+        let here = State {
+            m: s.m,
+            r: stored.r,
+            p: stored.p,
+        };
+        let mut c = Recording::new(&here, radius);
+        let out = if forward {
+            let out = integrate_resumed_with::<Kdk, f64, _>(&ic(&s), &key, &mut c, &stored, 100);
+            c.finish(out)
+        } else {
+            let mut n = NoResume(c);
+            let out = integrate_resumed_with::<Kdk, f64, _>(&ic(&s), &key, &mut n, &stored, 100);
+            let out = n.finish(out);
+            c = n.0;
+            out
+        };
+        if sd_state(out.packed_a) == STATE_SIM_FAILED {
+            continue;
+        }
+        let mut j_min = 0;
+        for (j, &d2) in c.d2.iter().enumerate() {
+            if d2 < c.d2[j_min] {
+                j_min = j;
+            }
+        }
+        let expected = c
+            .samples
+            .iter()
+            .filter(|(_, at)| *at <= j_min as u32)
+            .map(|(i, _)| *i)
+            .max()
+            .unwrap_or(cut);
+        if j_min == 0 {
+            at_reboot += 1;
+        }
+        assert_eq!(
+            tm_t_dmin_step(out.times),
+            expected,
+            "case {n}: the re-booted segment's t_dmin_step is not its argmin step (call {j_min}, cut {cut})"
+        );
+    }
+    println!("t_dmin_step_resumed: {at_reboot} segments whose minimum is the re-boot state");
+    assert!(at_reboot >= 3, "too few minima at the re-boot state");
+}
+
+/// A [`Recording`] cadence with the wrapper's re-boot hook dropped.
+struct NoResume(Recording<f64>);
+
+impl Cadence<f64> for NoResume {
+    fn after_step(&mut self, state: &mut State<f64>, geom: &mut Geom<f64>) {
+        self.0.after_step(state, geom);
+    }
+
+    fn done(&self) -> bool {
+        self.0.done()
+    }
+
+    fn sample(&mut self, state: &State<f64>, index: u32, quantum: f64) {
+        self.0.sample(state, index, quantum);
+    }
+
+    fn bucket_d2(&self, r: &[[f64; 2]; 3]) -> f32 {
+        self.0.bucket_d2(r)
+    }
+
+    fn clock(&mut self, completed: u32) {
+        self.0.clock(completed);
+    }
+
+    fn finish(&self, out: SimStateBaseOf<f64>) -> SimStateBaseOf<f64> {
+        self.0.finish(out)
+    }
+}
+
+#[test]
+fn t_dmin_step_resumed() {
+    check_resumed_dmin(true);
+}
+
+negative_control!(
+    t_dmin_step_resumed,
+    "a re-boot whose cadence drops the re-boot hook",
+    expected = "is not its argmin step",
+    check_resumed_dmin(false)
+);
 
 /// For fuzzed ICs and the three fixtures, run to the horizon or cut at a fuzzed step: `t_end_step` is the count of
 /// completed macro-steps (each a sampling point under KDK), an escape's is the macro-step it fired at, no step is taken

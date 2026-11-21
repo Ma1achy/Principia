@@ -59,7 +59,7 @@ use crate::detect::escape;
 use crate::detect::label::{Events, Fired};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
-use crate::payload::{sd_last_symbol, set_last_symbol, PayloadReal, SimStateBaseOf};
+use crate::payload::{sd_last_symbol, set_last_symbol, tm_t_end_step, PayloadReal, SimStateBaseOf};
 use crate::real::IeeeBits;
 use crate::word::{state_cuts, CrossingDetector, CrossingHook, WordBuffer};
 
@@ -304,12 +304,18 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
 
     /// The escape register of a re-booted march reloaded from `stored` ([`WrapperCadence::resume_escape`]), where
     /// `stored` holds one: a shape point is a unit vector, so a register of three zeros is a `SimState` the wrapper's
-    /// [`monitored`] never wrote, and the cadence keeps its own, the shape at the re-boot.
+    /// [`monitored`] never wrote, and the cadence keeps its own, the shape at the re-boot. The clock is set to the
+    /// stored `t_end_step`, and so is the step of the latch's first observation, the re-boot state: this cadence's
+    /// `d_min` latch starts there, not at the IC (its reload from `stored` is still the caller's).
     #[inline]
     fn resume(&mut self, stored: &SimStateBaseOf<R>)
     where
         R: PayloadReal,
     {
+        self.clock = tm_t_end_step(stored.times);
+        if self.dmin_at == 0 {
+            self.dmin_step = self.clock;
+        }
         let zero = R::default();
         let held =
             stored._nhat_lag_0 != zero || stored._nhat_lag_1 != zero || stored._nhat_lag_2 != zero;

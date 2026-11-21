@@ -528,6 +528,9 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
             closure_step: out.closure_step,
             _reserved: out._reserved,
             coll_floor_bits: out.coll_floor_bits,
+            _nhat_lag_0: out._nhat_lag_0,
+            _nhat_lag_1: out._nhat_lag_1,
+            _nhat_lag_2: out._nhat_lag_2,
             ..SimStateFTLEOf::default()
         }
     }
