@@ -497,7 +497,7 @@ fn simstate_floats(s: &SimStateFTLE) -> Vec<(String, f32)> {
 /// Checks REQ-PAY-024 on the first `n` samples of `set`:
 /// - every stored f32, of `SimStateFTLE` and `ICDescriptor`, is finite (no NaN, and no ±inf: R-271's one exception is
 ///   an f16);
-/// - `packed_b`'s two f16 halves, `dE_max` and `dLz_max`, are finite;
+/// - `packed_b`'s two `log16` halves, `dE_max` and `dLz_max`, read finite (every code does: [`check_every_drift_code`]);
 /// - `packed_a`'s bits 0–15 are the descriptor, whose reserved bits 10–15 are zero, so no f16 lands there;
 /// - `packed_a`'s bits 16–31, `d_min`, are never NaN or −inf, and are +inf only as exactly `0x7C00` on a `sim_failed` or
 ///   `decode_failed` sample or one whose `t_end_step` is 0.
@@ -541,18 +541,8 @@ fn check_stored(set: &mut Synthetic, n: u32) {
                 IC_MEMBERS[k]
             );
         }
-        for (h, what) in [
-            (s.packed_b as u16, "dE_max"),
-            ((s.packed_b >> 16) as u16, "dLz_max"),
-        ] {
-            // `log16` since R-632 (payload §2): every code is finite, NaN stored as 0.0.
-            let v = kernel::payload::log16_to_f32(h);
-            assert!(!v.is_nan(), "sample {i}: {what} holds NaN, {h:#06x}");
-            assert!(
-                v.is_finite(),
-                "sample {i}: {what} holds the non-finite {h:#06x}; only d_min may be +inf"
-            );
-        }
+        check_drift_half(i, "dE_max", s.packed_b, 0, pb_dE_max);
+        check_drift_half(i, "dLz_max", s.packed_b, 16, pb_dLz_max);
         let low = s.packed_a & 0xffff;
         assert_eq!(
             bits(low, 10, 6),
@@ -576,6 +566,30 @@ fn check_stored(set: &mut Synthetic, n: u32) {
                 tm_t_end_step(s.times)
             );
         }
+    }
+}
+
+/// Checks that the drift half `what` of sample `i`'s `packed_b` word `w` (bits `lo .. lo + 16`), read by `read`, is
+/// not NaN and is finite: only d_min may be +inf. `read` is the accessor the views use; the controls pass another.
+fn check_drift_half(i: u32, what: &str, w: u32, lo: u32, read: fn(u32) -> f32) {
+    let h = bits(w, lo, 16);
+    let v = read(w);
+    assert!(!v.is_nan(), "sample {i}: {what} holds NaN, {h:#06x}");
+    assert!(
+        v.is_finite(),
+        "sample {i}: {what} holds the non-finite {h:#06x}; only d_min may be +inf"
+    );
+}
+
+/// Checks [`check_drift_half`] on every one of the 2^16 patterns the half `what` (bits `lo .. lo + 16` of
+/// `packed_b`) can store, read by `read`, the other half zero.
+///
+/// The drift halves are `log16` codes (payload §2), and every code decodes to a finite value, so no stored bits can
+/// put a NaN or an infinity in them: a stored-value check cannot fail there, whatever a writer stores. This checks
+/// that construction over the whole code space; it fails the day a code decodes non-finite.
+fn check_every_drift_code(what: &str, lo: u32, read: fn(u32) -> f32) {
+    for h in 0..=u32::from(u16::MAX) {
+        check_drift_half(0, what, h << lo, lo, read);
     }
 }
 
@@ -649,32 +663,30 @@ negative_control!(
 #[test]
 fn qa_stored_values_no_nan_inf_not_in_de_max() {
     check_stored(&mut filled("forced_failure"), 8);
+    check_every_drift_code("dE_max", 0, pb_dE_max);
 }
 
 negative_control!(
     qa_stored_values_no_nan_inf_not_in_de_max,
-    "f16 +inf, 0x7C00, in dE_max's half (bits 0–15 of packed_b)",
+    "dE_max's half read as an f16 (bits 0–15 of packed_b, as before log16), where 0x7C00 is +inf",
     expected = "dE_max holds the non-finite 0x7c00",
     {
-        let mut set = filled("forced_failure");
-        set.sample(0).packed_b(0x7c00);
-        check_stored(&mut set, 8);
+        check_every_drift_code("dE_max", 0, |w| kernel::payload::unpack2x16float(w)[0]);
     }
 );
 
 #[test]
 fn qa_stored_values_no_nan_inf_not_in_dlz_max() {
     check_stored(&mut filled("forced_failure"), 8);
+    check_every_drift_code("dLz_max", 16, pb_dLz_max);
 }
 
 negative_control!(
     qa_stored_values_no_nan_inf_not_in_dlz_max,
-    "f16 +inf, 0x7C00, in dLz_max's half (bits 16–31 of packed_b)",
+    "dLz_max's half read as an f16 (bits 16–31 of packed_b, as before log16), where 0x7C00 is +inf",
     expected = "dLz_max holds the non-finite 0x7c00",
     {
-        let mut set = filled("forced_failure");
-        set.sample(1).packed_b(0x7c00 << 16);
-        check_stored(&mut set, 8);
+        check_every_drift_code("dLz_max", 16, |w| kernel::payload::unpack2x16float(w)[1]);
     }
 );
 
