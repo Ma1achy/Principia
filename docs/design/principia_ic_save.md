@@ -115,8 +115,8 @@ That needs a **state-in entry** beside `computeIC(chart, uv, simKey)`, since an 
 computeICState(state, simKey) → SimState     // one IC given as its full state, full f64
 ```
 
-the same integration `computeIC` runs after its decode, from the state given, on the CPU in f64 (RK45 under its
-tolerances, R-33), and the only other way into the engine the Inspector has. A picked IC still enters through
+the same integration `computeIC` runs after its decode, from the state given, on the CPU in f64 (the shared kernel's
+occupant at f64, the RK45 reference reported beside it), and the only other way into the engine the Inspector has. A picked IC still enters through
 `computeIC`.
 
 **The frame integrated is RQ-563's, ruled by R-589 (24 Oct 2026), option (a).** R-544 makes the shape sphere chart's
@@ -176,7 +176,7 @@ waits on RQ-564."
 
 *Export trajectory…* in the Inspector writes `<label>.traj.csv`:
 
-- **A `#` preamble** holds the IC record (§3.1); the integrator (RK45 at f64 and its tolerances, R-33); the outcome and
+- **A `#` preamble** holds the IC record (§3.1); the integrator (the shared kernel's occupant at f64, and the RK45 reference's tolerances beside it); the outcome and
   its `detail`, 0-based as the payload stores it, with its 1-based gloss (R-449); "incomplete: step budget" where that
   applies (`principia_scratchpad_pointer_channels.md` §3); and the line **"bodies are labelled 1-based (body1, body2,
   body3), as everywhere they are shown; the record's own fields above are 0-based (R-449)"**.

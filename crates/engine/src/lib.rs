@@ -185,6 +185,14 @@ pub mod forward_table;
 // documented in the module itself, whose links resolve there.
 pub mod field;
 
+// The Precision ring: computeIC, computeQuad, stepOnce and decodeOnly over the kernel at f64, and the Inspector's RK45
+// reference, held outside the occupant system (parity_contract §1; TASK-M3-19): documented in the module itself.
+pub mod precision;
+
+// The Inspector, engine-side: one type for the IC Inspector and the trajectory viewer, a clicked IC through the
+// Precision ring with its RK45 reference beside it (TASK-M3-19): documented in the module itself.
+pub mod inspector;
+
 /// Telemetry (dd_telemetry_and_tiers): the session-header probe that `prin profile` and the benchmark runner share
 /// (§2, §5; TASK-M0-19).
 pub mod telemetry {
