@@ -404,6 +404,8 @@ The stain graph, colour composition, legends, traces and contours on the real fi
 - Contours of any registered primitive (TASK-M7-72)
 - The five table debug views (TASK-M7-73)
 - The fragment table route: the GPU side of the backwards table, for Chart position and the presets (TASK-M7-74)
+- The escape-rule agreement view: how many escape rules agree on each pixel's outcome, and which one disagrees
+  (TASK-M7-75)
 - Stain mode layout: library drawer, canvas with Graph | Code, preview, Problems pane (02_stain.png) (TASK-M8-19)
 - Stain canvas: selection, wiring gestures, the node palette, node visuals (TASK-M8-20)
 - Stain node inspector: morphing editors, Advanced ▸ edit shader, Graph | Code, eject (TASK-M8-21)

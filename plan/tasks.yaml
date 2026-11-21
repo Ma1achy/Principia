@@ -1697,6 +1697,12 @@
   depends_on:
   - TASK-M2-92
   - TASK-M2-99
+- id: TASK-M7-75
+  milestone: C7
+  title: 'The escape-rule agreement view: how many escape rules agree on each pixel''s outcome, and which one disagrees'
+  depends_on:
+  - TASK-M3-34
+  - TASK-M7-35
 - id: TASK-M8-19
   milestone: C7
   title: 'Stain mode layout: library drawer, canvas with Graph | Code, preview, Problems pane (02_stain.png)'
