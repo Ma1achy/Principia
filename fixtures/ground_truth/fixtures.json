@@ -1,0 +1,75 @@
+{
+  "about": "The ground-truth suite's fixture set (validation_ground_truth_note, 'The fixture set'; TASK-M3-24): each start, its tier, its entry path, its source and the quantities asserted on it, with each criterion. Read by crates/validation/tests/ground_truth.rs (ground_truth_fixture_set), which holds the set to at least one fixture per tier and to the note's table. Times are canonical (G = 1, M = 1, I = 1) unless a unit is named. 'phys' is inverse_encode_contract Part 4's norm (validation::roundtrip::phys). Built from the contract and the papers cited, not transcribed from prin-rs.",
+  "fixtures": [
+    {
+      "name": "conservation_figure_eight",
+      "tier": 1,
+      "path": "A",
+      "source": "Noether: E, L_z and P are constants of the motion; the run is figure_eight's",
+      "construction": "figure_eight's march, read at its end: E by the RK45 reference's own formula, L_z and P summed here, never from the stored f16 latches",
+      "asserted": [
+        "|E − E0|/|E0| ≤ 1e-9",
+        "|L_z − L_z0| / Σ‖r_i‖‖p_i‖ ≤ 1e-11",
+        "‖ΣP − ΣP0‖ / max‖p_i‖ ≤ 1e-11"
+      ],
+      "reported": []
+    },
+    {
+      "name": "lagrange_equilateral",
+      "tier": 2,
+      "path": "A",
+      "source": "Lagrange 1772: the equilateral relative equilibrium, any masses, ω² = GM/a³ (dd_validation_orbits §1.3)",
+      "construction": "masses (0.2, 0.3, 0.5), side a = β^(−1/2) with β = m0m1 + m0m2 + m1m2 so I = 1, centre of mass at the origin, p_i = m_i ω ẑ × r_i; Yoshida-4, the default links, r_coll = 1e-3, half a turn, the macro-step landing on it",
+      "asserted": [
+        "CHECK 1: not clamped, residual ≤ ε_phys (REQ-ENC-024's register value at f64)",
+        "the pixel's decode equals CHECK 1's D(z) bit for bit",
+        "CHECK 2: phys(closed form at T, march at T) ≤ 1e-8"
+      ],
+      "reported": ["κ"]
+    },
+    {
+      "name": "euler_collinear",
+      "tier": 2,
+      "path": "B",
+      "source": "Euler 1767: the collinear relative equilibrium; at equal masses, the outer bodies at ∓a, ω² = 5m/(4a³) (dd_validation_orbits §1.3)",
+      "construction": "equal masses 1/3, the middle body labelled 2 at the origin (λ̃ = 0, the α = 0 pole), a = √(3/2) so I = 1, p_i = m_i ω ẑ × r_i; Yoshida-4, r_coll = 1e-3, half a turn, the macro-step landing on it",
+      "asserted": [
+        "the encode clamps it (lookup_clamped): it is Path B's",
+        "phys(closed form at T, march at T) ≤ 1e-8",
+        "the shape point at T is the Euler point E2, (1, 0, 0), each component within 1e-8",
+        "a start off the gauge is refused"
+      ],
+      "reported": []
+    },
+    {
+      "name": "figure_eight",
+      "tier": 3,
+      "path": "A",
+      "source": "Chenciner & Montgomery 2000, Ann. Math. 152, 881; Simó's digits: x1 = −x2 = (0.97000436, −0.24308753), x3 = 0, v3 = (−0.93240737, −0.86473146), v1 = v2 = −v3/2, G = 1, unit masses, T8 = 6.32591398",
+      "construction": "relabelled so the middle body is in the inner pair (bodies (x1, 0, −x1), velocities (v1, v3, v2)): the published labelling is on the α = 0 pole; to G = 1, Σm = 1 (velocities /√3), canonicalised; the period T8·√3·λ^(3/2); Yoshida-4, the default links, r_coll = 1e-3, the macro-step landing on the period",
+      "asserted": [
+        "CHECK 1: not clamped, residual ≤ ε_phys",
+        "the pixel's decode equals CHECK 1's D(z) bit for bit",
+        "CHECK 2, closure: phys(D(z), march at the period) ≤ 1e-6 (the RK45 reference's own closure, from the published digits, is 4.1e-8)",
+        "CHECK 2: phys(RK45 at the period, march at the period) ≤ 1e-8"
+      ],
+      "reported": ["κ", "the published labelling's residual, κ and clamp"]
+    },
+    {
+      "name": "burrau",
+      "tier": 4,
+      "path": "A",
+      "source": "Burrau 1913; Szebehely & Peters 1967, AJ 72, 876: masses (3, 4, 5) at rest at (1, 3), (−2, −1), (1, −1), G = 1; the lightest body escapes and the other two form a binary, disruption near t ≈ 60 in their units (dd_validation_orbits §1.5)",
+      "construction": "to G = 1, Σm = 1, canonicalised; one of their time units is √12·5^(−3/4) = 1.0360 canonical; Heggie × RK4 at the field backend's values, the default links, r_coll = 0 (BENCHMARK_R_COLL), to 100 of their time units",
+      "asserted": [
+        "CHECK 1: not clamped, residual ≤ ε_phys",
+        "CHECK 2: the march ends in escape, its escaper the lightest body (body 0 here)",
+        "CHECK 2: the escape fires between 50 and 100 of their time units",
+        "the RK45 reference at the horizon has the same escaper, read structurally (two-body energy positive, ten pair separations away)",
+        "the run's provenance carries r_coll = BENCHMARK_R_COLL",
+        "the march and the RK45 reference leave the lightest body unbound (its two-body energy about the other two positive at every later sample, sampled every 0.5 of their units from 50 to 70, then every 5 to 100) from a time in [60, 65] of their units, and it has escaped at 100 (entry_paths_burrau_ejects_on_time; the two label criteria above are ignored until TASK-M3-34)"
+      ],
+      "reported": ["the escape's time in their units", "the march's least separation d_min against the default r_coll = 1e-3"]
+    }
+  ]
+}

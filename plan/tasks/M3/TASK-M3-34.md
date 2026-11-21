@@ -45,6 +45,7 @@ The escape criterion is re-validated with R-29's `E_rel` against check 2's indep
 - Proposal: the convergence gate's region minimum, with its evidence from this task's convergence study (the region counts the M3 march declares and the scatter at which the conclusion stops holding); reviewer-checked, confirmed by the human at the M3 gate and recorded in decisions.md (REQ-VAL-168, R-273).
 - Proposal: the confirmed tau, inside the gap `tau-gap` measures, with the gap distributions as evidence and outcomes unchanged across its middle; reviewer-checked, confirmed by the human at the M3 gate and recorded in decisions.md (REQ-EVT-025).
 - `cargo xtask gate escape-window-ladder` — REQ-EVT-033's verify, with its control; proposal: the window and the range a carried window may take, with the ladder as evidence; reviewer-checked, confirmed by the human at the M3 gate and recorded in decisions.md (REQ-EVT-033).
+- `golden_anchors_burrau_integrator` and `entry_paths_burrau` un-ignored and passing.
 
 ## Notes
 - *Was: "Gap: the legacy t = 30 set (config chart, 'unbound and receding at t = 30') is a prin-rs dataset not in the repository; its regeneration recipe is not given."* RQ-103 ruled: R-166 (c) — the set isn't stored data; this task's harness regenerates it and checks it in under `fixtures/`.
