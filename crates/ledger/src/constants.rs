@@ -629,6 +629,32 @@ pub const BURRAU_THETA_LZ_K: ConstantBuilder = proposed(
     "M2",
 );
 
+/// `γ_K`, `Φ_θ,L_z`'s held-`K` warp exponent, `K = K_max·t^γ_K` with `K_max` the chart's calibrated `K` (chart_reference
+/// §4.5; R-833). REQ-CHART-141's proposal (R-71), provisional until the M2 gate (R-427): 1, the largest of `{1, 1.5, 2, 3}`
+/// under which the default view tilted 90° into the held `K` over the chart's whole `θ` range, the rail's whole
+/// `t₀ ± ½`, is bound at every pixel, as the chart's own `K` was chosen to make every one of its systems bound: on
+/// 32 × 32 pixels 1 keeps all bound (at the rail's end `K = 3K₀/2 = 0.1875` against the least `|U|`, 0.1952, at `θ_max`),
+/// 1.5 keeps 969, 2 keeps 898, 3 keeps 795. Its evidence is `engine/tests/curved_view.rs`, `held_k_calibration`
+/// (TASK-M2-63).
+pub const BURRAU_THETA_LZ_GAMMA_K: ConstantBuilder = proposed(
+    "burrau_theta_lz_gamma_k",
+    1.0,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-141",
+    "M2",
+);
+
+/// A latent slider's span, the length of its rail `[−1, 1]` (render_gui_spec § G2, "The slider span"; R-920): what a
+/// tilt into a latent control divides its hidden offset by (R-507 U1). A definition, not a calibration.
+pub const LATENT_SLIDER_SPAN: ConstantBuilder = chart(
+    "latent_slider_span",
+    2.0,
+    Citation::Corpus {
+        file: "docs/gui/principia_render_gui_spec.md",
+        section: "G2. Explore — the everyday view (`01_main.png`)",
+    },
+);
+
 /// `λ_L`, `Φ_θ,L_z`'s `L_z` range as a fraction of the feasible `√(2IK)`: `L_z ∈ [−λ_L·√(2IK), λ_L·√(2IK)]`
 /// (chart_reference §4.5). REQ-CHART-046's proposal (R-71), provisional until the M2 gate (R-427): 1, the whole feasible
 /// band, from the counter-rotating rigid rotation through `L_z = 0` to the co-rotating one, feasible at every pixel, the
@@ -1808,6 +1834,8 @@ pub const REGISTER: &[ConstantBuilder] = &[
     BURRAU_THETA_MAX,
     BURRAU_THETA_LZ_K,
     BURRAU_THETA_LZ_FRACTION,
+    BURRAU_THETA_LZ_GAMMA_K,
+    LATENT_SLIDER_SPAN,
     TAU_I,
     SINC_CUT,
     SINC_BOUND,
