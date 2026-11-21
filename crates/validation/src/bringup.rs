@@ -142,6 +142,8 @@ pub fn narrow(s: &SimStateFTLEOf<f64>) -> SimStateFTLE {
         _nhat_lag_0: s._nhat_lag_0 as f32,
         _nhat_lag_1: s._nhat_lag_1 as f32,
         _nhat_lag_2: s._nhat_lag_2 as f32,
+        _dmin_d2: s._dmin_d2,
+        _march_bits: s._march_bits,
         _tail: [],
     }
 }

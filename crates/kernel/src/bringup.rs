@@ -154,6 +154,8 @@ pub fn pattern<R: PatternReal>(i: u32) -> SimStateFTLEOf<R> {
         _nhat_lag_0: Default::default(),
         _nhat_lag_1: Default::default(),
         _nhat_lag_2: Default::default(),
+        _dmin_d2: 0,
+        _march_bits: 0,
         _tail: Default::default(),
     }
 }
@@ -218,6 +220,9 @@ pub fn write_words(i: u32, out: &mut [u32]) {
     out[at(offset_of!(SimStateFTLE, _nhat_lag_0))] = 0;
     out[at(offset_of!(SimStateFTLE, _nhat_lag_1))] = 0;
     out[at(offset_of!(SimStateFTLE, _nhat_lag_2))] = 0;
+    // The re-boot's registers (payload §1, "Payload purity"): zero, march state the pattern does not march.
+    out[at(offset_of!(SimStateFTLE, _dmin_d2))] = 0;
+    out[at(offset_of!(SimStateFTLE, _march_bits))] = 0;
 }
 
 /// The bring-up mode's compute entry point, one invocation per sample, at the workgroup size of the GPU harness (64):

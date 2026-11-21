@@ -8,7 +8,7 @@
 //! - REQ-PAY-028 (`truncated_word_validity_qa_gpu`): truncated words (sentinel 127 over random payloads) read
 //!   `fgw_reduced_length_valid` false, `sd_last_symbol_valid` false and retained prefix 76 on the GPU.
 //! - REQ-PAY-025 (`word_buffer_split_qa_layouts`): the stored WGSL `SimStateFTLE` / `SimStateBase` hold no `vec4<u32>`
-//!   and no word member, are 168 / 120 B at alignment 8 (payload §0: the word's removal is what drops the alignment from
+//!   and no word member, are 176 / 128 B at alignment 8 (payload §0: the word's removal is what drops the alignment from
 //!   16; 144 / 96 B before the collision floor's 8 B, payload §1, R-973, TASK-M3-71, and 152 / 104 B before the escape
 //!   rule's lagged n̂ register, three Reals in place of 4 B of padding, TASK-M3-12), and `word_buffer` is `array<vec4<u32>>` at a 16 B stride. The read-side `SimState` (lowering Part 3a) carries
 //!   `sample.word` by the lowering contract's own table, and is not stored, so it is not a stored `SimState` type.
@@ -261,7 +261,7 @@ fn check_layouts(source: &str) {
     let module = parse(source);
     let mut layouter = naga::proc::Layouter::default();
     layouter.update(module.to_ctx()).expect("layouts");
-    for (name, size) in [("SimStateFTLE", 168), ("SimStateBase", 120)] {
+    for (name, size) in [("SimStateFTLE", 176), ("SimStateBase", 128)] {
         let (h, t) = module
             .types
             .iter()

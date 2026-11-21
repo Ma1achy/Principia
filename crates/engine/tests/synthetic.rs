@@ -61,6 +61,9 @@ fn marked_simstate() -> SimStateFTLE {
         _nhat_lag_0: 36.0,
         _nhat_lag_1: 37.0,
         _nhat_lag_2: 38.0,
+        // the re-boot's two registers (payload §1, "Payload purity"; TASK-M3-21): a marker each
+        _dmin_d2: 0xc8c8_c8c8,
+        _march_bits: 0xd9d9_d9d9,
         ..SimStateFTLE::default()
     }
 }
@@ -91,6 +94,8 @@ fn simstate_marker(member: &str) -> u32 {
         "_nhat_lag_0" => 36.0f32.to_bits(),
         "_nhat_lag_1" => 37.0f32.to_bits(),
         "_nhat_lag_2" => 38.0f32.to_bits(),
+        "_dmin_d2" => 0xc8c8_c8c8,
+        "_march_bits" => 0xd9d9_d9d9,
         other => panic!("no marker for `{other}`"),
     }
 }

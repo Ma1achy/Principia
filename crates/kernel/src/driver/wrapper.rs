@@ -86,8 +86,11 @@
 //! readout ([`super::shape::Readout::load`]), and marches on; a march split into any number of resumed calls writes
 //! these fields bit-identically to one call (R-397's "however the march is split into dispatches"). The cadence is the
 //! caller's; the wrapper hands it the stored state before the first step ([`Cadence::resume`]), and the wrapper's own
-//! reloads the escape register from it. The monitor's latches and the collision detector's are still the caller's to
-//! resume. A stored sample that is finished is handed back word for word, never marched (`super::terminal`).
+//! reloads everything else it keeps across macro-steps from it: the escape register, the monitor, the collision
+//! detector with its exact `d_min` latch and floor codes, the `t_dmin_step` stamp and the regularised drift
+//! (`super::cadence`'s note, "A re-boot"). So a cadence built from the IC and the sim key alone, handed a stored state,
+//! marches on as the uncut march's own cadence would: the payload is a pure function of `(IC, sim key, t)`, however the
+//! march is split (scheduler_contract Part 1; `tests/payload_purity.rs`). A stored sample that is finished is handed back word for word, never marched (`super::terminal`).
 //!
 //! **The carried regularised state** ([`Carried`]; Part 2a): the wrapper passes the trajectory's buffer into every
 //! `ADVANCE` call ([`Advance::advance_carrying`]), so an occupant that registers once, Heggie or logH, registers at `t = 0` and
@@ -103,7 +106,7 @@ use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence, Reached};
 use super::cadence::{WordCadence, WrapperCadence};
 use super::carried::Carried;
 use super::failure::{self, Recorder};
-use super::latch::{persist_de_reg, Latches};
+use super::latch::{march_bits, persist_de_reg, Latches};
 use super::shape::{Readout, ReadoutReal};
 use super::substep::{NsubThresholds, Quantise, SubstepState};
 use super::welford::{self, Welford};
@@ -258,6 +261,10 @@ fn written<R: WrapperReal>(
         _nhat_lag_0: lag_0,
         _nhat_lag_1: lag_1,
         _nhat_lag_2: lag_2,
+        // The exact `d_min` latch and the floor's two codes and the drift's reported flag, which the f16 `d_min`,
+        // `coll_floor` and `dE_reg` do not hold exactly, for a re-boot to reload (payload §1, "Payload purity").
+        _dmin_d2: detector.latch().d2().to_bits(),
+        _march_bits: march_bits(detector.near_code(), detector.latched_code(), reg.seen()),
         ..out
     };
     if failure.fired {
@@ -312,8 +319,26 @@ pub fn integrate_carrying<A: Advance, R: WrapperReal, C: Cadence<R>>(
     cadence: &mut C,
     carried: &mut Carried<R>,
 ) -> SimStateBaseOf<R> {
+    integrate_carrying_for::<A, R, C>(ic, uniforms, cadence, carried, uniforms.horizon_steps)
+}
+
+/// [`integrate_carrying`] stopped after at most `steps` macro-steps, never past the horizon: a sample's first dispatch
+/// from its IC under a frame budget, which a later dispatch takes up ([`integrate_resumed_carrying`]). A march that
+/// stops short of the horizon is `running`; `steps = 0` is the sample at `t = 0`, its detectors run on the IC.
+#[inline]
+pub fn integrate_carrying_for<A: Advance, R: WrapperReal, C: Cadence<R>>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    cadence: &mut C,
+    carried: &mut Carried<R>,
+    steps: u32,
+) -> SimStateBaseOf<R> {
     *carried = Carried::unregistered();
-    let end = uniforms.horizon_steps;
+    let end = if steps < uniforms.horizon_steps {
+        steps
+    } else {
+        uniforms.horizon_steps
+    };
     march::<A, R, C, ()>(uniforms, cadence, &mut (), Start::fresh(ic), end, carried)
 }
 

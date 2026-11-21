@@ -110,7 +110,8 @@ pub fn latch<S: Stored, F: FnOnce(&S) -> S>(stored: &S, horizon_steps: u32, disp
 /// A later dispatch of the base tier's stored sample `stored` of `ic` under `uniforms` by the occupant `A`, for at
 /// most `steps` more macro-steps: `stored` word for word where it is finished, `carried` and `cadence` untouched;
 /// otherwise the resumed march ([`integrate_resumed_carrying`], which hands `cadence` the stored state) and the
-/// cadence's write ([`Cadence::finish`]). The cadence's monitor and `d_min` latch are the caller's to resume.
+/// cadence's write ([`Cadence::finish`]). The wrapper's cadence reloads what it keeps from `stored`, so a cadence built
+/// from `ic` and the sim key alone gives the uncut march's words (`super::cadence`'s note, "A re-boot").
 #[inline]
 pub fn redispatch<A: Advance, R: WrapperReal, C: Cadence<R>>(
     ic: &Ic<R>,

@@ -143,6 +143,8 @@ fn members<R: P>(b: &SimStateBaseOf<R>) -> Vec<u64> {
         _nhat_lag_0,
         _nhat_lag_1,
         _nhat_lag_2,
+        _dmin_d2,
+        _march_bits,
         _tail: _,
     } = *b;
     let mut v = bits6(&r);
@@ -170,6 +172,8 @@ fn members<R: P>(b: &SimStateBaseOf<R>) -> Vec<u64> {
             budget_bits,
             dE_reg,
             coll_floor_bits,
+            _dmin_d2,
+            _march_bits,
         ]
         .map(u64::from),
     );
@@ -203,6 +207,8 @@ fn ftle_members<R: P>(s: &SimStateFTLEOf<R>) -> Vec<u64> {
         _nhat_lag_0,
         _nhat_lag_1,
         _nhat_lag_2,
+        _dmin_d2,
+        _march_bits,
         _tail: _,
     } = *s;
     members(&SimStateBaseOf {
@@ -227,6 +233,8 @@ fn ftle_members<R: P>(s: &SimStateFTLEOf<R>) -> Vec<u64> {
         _nhat_lag_0,
         _nhat_lag_1,
         _nhat_lag_2,
+        _dmin_d2,
+        _march_bits,
         _tail: Default::default(),
     })
 }
@@ -326,6 +334,8 @@ fn check_write(write: Writer, failed: bool) {
         _nhat_lag_0: k(28),
         _nhat_lag_1: k(29),
         _nhat_lag_2: k(30),
+        _dmin_d2: 31,
+        _march_bits: 32,
         _tail: Default::default(),
     };
     let s = write(&shadow, out);

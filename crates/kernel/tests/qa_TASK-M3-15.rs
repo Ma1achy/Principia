@@ -434,7 +434,7 @@ negative_control!(
 );
 
 /// The binding's layout: the word buffer has a slot of its own, apart from SimState's; its entry is one 16 B
-/// `vec4<u32>`; SimState is 120 / 168 B at align 8 (with the collision floor's record, R-973, and the lagged n̂ register), so it holds no 16-aligned word member (payload §0).
+/// `vec4<u32>`; SimState is 128 / 176 B at align 8 (with the collision floor's record, R-973, the lagged n̂ register and the re-boot's two u32s), so it holds no 16-aligned word member (payload §0).
 fn check_layout(word_slot: (u32, u32), state_slot: (u32, u32), sizes: [(usize, usize); 3]) {
     assert_ne!(
         word_slot, state_slot,
@@ -447,13 +447,13 @@ fn check_layout(word_slot: (u32, u32), state_slot: (u32, u32), sizes: [(usize, u
     );
     assert_eq!(
         sizes[1],
-        (120, 8),
-        "SimStateBase is not 120 B at align 8 (no word member)"
+        (128, 8),
+        "SimStateBase is not 128 B at align 8 (no word member)"
     );
     assert_eq!(
         sizes[2],
-        (168, 8),
-        "SimStateFTLE is not 168 B at align 8 (no word member)"
+        (176, 8),
+        "SimStateFTLE is not 176 B at align 8 (no word member)"
     );
 }
 

@@ -772,12 +772,15 @@ const PAYLOAD_1: [&str; 19] = [
 
 /// Payload §1's `_`-named members, which no ledger entry reads, with their storage: the u16 pair's `_reserved` and
 /// the escape rule's lagged n̂ register, three `Real`s of march state after `coll_floor_bits` (TASK-M3-12; they took
-/// the place of the declared padding `_pad`).
-const RESERVED_1: [(&str, Storage); 4] = [
+/// the place of the declared padding `_pad`); and the re-boot's two u32s, `_dmin_d2` and `_march_bits` (payload §1,
+/// "Payload purity"; TASK-M3-21).
+const RESERVED_1: [(&str, Storage); 6] = [
     ("_reserved", Storage::U16),
     ("_nhat_lag_0", Storage::F32),
     ("_nhat_lag_1", Storage::F32),
     ("_nhat_lag_2", Storage::F32),
+    ("_dmin_d2", Storage::U32),
+    ("_march_bits", Storage::U32),
 ];
 
 /// Derived at read or removed from storage (payload §5's table and "Removed from storage entirely"; REQ-PAY-021,
@@ -1071,8 +1074,8 @@ fn stored(s: &Sample, tier: Tier) -> Vec<u32> {
     v.extend([s.s, s.theta, s.mean_y, s.c_ty, s.e_0, s.lz_0].map(f32::to_bits));
     // `budget_bits` and `dE_reg` zero after `total_substeps` (TASK-M3-41), then `closure_min` and the u16 pair
     v.extend([s.packed_a, s.packed_b, s.times, s.total, 0, 0, 0, 0]);
-    // `coll_floor_bits`, then `_nhat_lag_0..2` (payload §1)
-    v.extend([0, 0, 0, 0]);
+    // `coll_floor_bits`, then `_nhat_lag_0..2`, then the re-boot's `_dmin_d2` and `_march_bits` (payload §1)
+    v.extend([0, 0, 0, 0, 0, 0]);
     v
 }
 

@@ -12,6 +12,8 @@
 //! - `nsub_d2_quantised`: the square's floor at `2⁻⁴⁰`, the closest pair, and the f64 and f32 kernels' agreement on
 //!   positions whose f32 casts agree.
 //! - `nsub_live_readout` (REQ-INT-027), `saturated_sticky` (REQ-TOOL-033), `total_substeps_proxy` (REQ-TOOL-034).
+//!
+//! parity-tier: L (substep integer)
 
 use kernel::driver::nsub_table::{
     check_table, pack, threshold_bits, threshold_f64, thresholds, NsubConfig, NsubTableError,

@@ -35,9 +35,16 @@
 //! engine's fixtures state it (`engine::fixtures::Known::t_dmin_step`), and the IC's latch is step 0.
 //!
 //! **A re-boot** ([`Cadence::resume`]): the wrapper hands a resumed march's stored `SimState` to its cadence before the
-//! first step, and this cadence reloads the escape detector's lagged register and `E_0` from it, so a re-booted march
-//! tests escape as the uncut one does without the caller remembering to. The monitor's drift maxima and references and
-//! the collision detector's `d_min` latch are still the caller's to resume.
+//! first step, and this cadence reloads from it everything it keeps across macro-steps ([`WrapperCadence::reload`]), so a
+//! cadence built from the IC alone and re-booted marches on as the uncut march's own did, and stores the same words
+//! (scheduler_contract Part 1, the payload a pure function of `(IC, sim key, t)`; `tests/payload_purity.rs`): the
+//! escape detector's lagged register and `E_0`; the monitor's `E_0`, `L_{z,0}`, the drift maxima from `packed_b` and the
+//! last `ΔE` from `dE_reg`; the collision detector at the stored positions, so the first macro-step's `N_sub` bucket reads
+//! the stored state's `d²` and not the IC's, its `d_min` latch from the exact `_dmin_d2` (the f16 `d_min` rounds it, and
+//! a later `d²` between the two would be latched by one route and not the other) with `dmin_pair`, and the floor's two
+//! codes from `_march_bits`; `t_dmin_step`; the regularised drift's latches and whether one was reported
+//! (`_march_bits`); and the budget word's counts. A stored state the wrapper's write never wrote (its lagged register
+//! zero) reloads nothing but the counts.
 //!
 //! **One `d²` per step** (Part 7; REQ-EVT-004): the detector forms the projected state's pair separations once, and
 //! the collision test, the `dmin_pair` latch and the next macro-step's bucket ([`Cadence::bucket_d2`]) all read them.
@@ -53,7 +60,7 @@
 
 use super::advance::Cadence;
 use super::failure;
-use super::latch::RegularisedDrift;
+use super::latch::{march_latched, march_near, march_reported, RegularisedDrift};
 use super::monitor::Monitor;
 use super::project::ComProjection;
 use super::substep::Quantise;
@@ -63,10 +70,14 @@ use crate::detect::escape;
 use crate::detect::label::{Events, Fired};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
-use crate::payload::{sd_last_symbol, set_last_symbol, PayloadReal, SimStateBaseOf};
+use crate::payload::{
+    dr_dE_reg_final, dr_dE_reg_max, pb_dE_max, pb_dLz_max, sd_dmin_pair, sd_last_symbol,
+    set_last_symbol, tm_t_dmin_step, tm_t_end_step, PayloadReal, SimStateBaseOf,
+};
 use crate::real::IeeeBits;
 use crate::regularisation::budget::Signals;
 use crate::word::{state_cuts, CrossingDetector, CrossingHook, WordBuffer};
+use spirv_std::num_traits::NumCast;
 
 /// The wrapper's per-substep callback: the projection, the monitor and the detector, the hooks in Part 1's order, the
 /// run's `done` flag and the count of its calls. A run starts from [`WrapperCadence::with_radius`]: no call made, done
@@ -246,6 +257,42 @@ impl<R: WrapperReal> WrapperCadence<R> {
         );
     }
 
+    /// Takes up the monitor, the collision detector, the `t_dmin_step` stamp and the regularised drift of a march still
+    /// running from what its `SimState` `stored` holds (the module's note, "A re-boot").
+    #[inline]
+    pub fn reload(&mut self, stored: &SimStateBaseOf<R>) {
+        let wide = |x: f32| <R as NumCast>::from(x).unwrap_or_else(R::nan);
+        self.monitor = Monitor::resumed(
+            stored.E_0,
+            stored.Lz_0,
+            wide(dr_dE_reg_final(stored.dE_reg)),
+            wide(pb_dE_max(stored.packed_b)),
+            wide(pb_dLz_max(stored.packed_b)),
+        );
+        self.detector = Detector::resumed(
+            self.detector.radius(),
+            &stored.r,
+            f32::from_bits(stored._dmin_d2),
+            sd_dmin_pair(stored.packed_a),
+            march_near(stored._march_bits),
+            march_latched(stored._march_bits),
+        );
+        self.clock = tm_t_end_step(stored.times);
+        self.dmin_step = tm_t_dmin_step(stored.times);
+        self.dmin_pending = false;
+        // `dE_reg` holds the regularised drift only once one was reported; before that it holds the Cartesian drift,
+        // which the regularised latch must not start from.
+        self.regularised = if march_reported(stored._march_bits) {
+            RegularisedDrift::reloaded(
+                wide(dr_dE_reg_final(stored.dE_reg)),
+                wide(dr_dE_reg_max(stored.dE_reg)),
+                true,
+            )
+        } else {
+            RegularisedDrift::none()
+        };
+    }
+
     /// The COM projection after a `STEP` (integrator_contract Part 1, "COM projection and invariant monitoring"):
     /// `state`'s positions and momenta projected with the cached `M`, never its energy or `L_z` (REQ-INT-011), and
     /// `geom` re-formed at the projected positions, the force evaluation the next step reads and the monitor's
@@ -379,6 +426,7 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
             stored._nhat_lag_0 != zero || stored._nhat_lag_1 != zero || stored._nhat_lag_2 != zero;
         if held {
             self.resume_escape(stored);
+            self.reload(stored);
         }
         // The budget word's counts go on from the stored ones, so a march split at any persist boundary stores the
         // uncut march's word (R-603; `crate::regularisation::budget`).

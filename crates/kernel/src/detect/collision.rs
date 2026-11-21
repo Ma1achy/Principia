@@ -349,6 +349,31 @@ impl Detector {
         }
     }
 
+    /// The detector of a march re-booted at the stored positions `r` under `radius`, still running: the separations
+    /// formed there, the ones the next macro-step's bucket reads ([`Detector::last_d2`]), as the uncut march formed
+    /// them on the same state; the latch as stored, its least `d²` `d2` and its pair `pair`; and the floor's record,
+    /// `near` the largest code of a pair near firing and `latched` the code of the latch's pair and state. A stored
+    /// sample is running only where no collision fired, so the verdict is the stored state's, unfired.
+    #[inline]
+    pub fn resumed<R: Quantise>(
+        radius: CollisionRadius,
+        r: &[[R; 2]; 3],
+        d2: f32,
+        pair: u32,
+        near: u32,
+        latched: u32,
+    ) -> Self {
+        let s = Separations::of(r);
+        Detector {
+            radius,
+            last: s,
+            latch: DminLatch { d2, pair },
+            collision: classify(&s, &radius),
+            near,
+            latched,
+        }
+    }
+
     /// Observes the projected state at positions `r` after a `STEP`: its separations formed once, the latch raised and
     /// the collision tested. A fired verdict stays: a collision is terminal (Part 7).
     #[inline]

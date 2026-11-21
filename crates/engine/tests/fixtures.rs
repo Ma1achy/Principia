@@ -567,6 +567,22 @@ fn check_stored(set: &Synthetic, n: u32) {
                                 w <= 145,
                                 "sample {i}: `coll_floor_bits` {w:#x} is not a code with its reserved bits zero"
                             ),
+                            // The re-boot's exact `d_min` latch, an f32's bits (payload §1, "Payload purity"; TASK-M3-21): a
+                            // squared separation, so finite and non-negative; NaN never stored (R-79); 0 on a failed
+                            // sample.
+                            "_dmin_d2" => {
+                                let d2 = f32::from_bits(w);
+                                assert!(
+                                    d2.is_finite() && d2 >= 0.0,
+                                    "sample {i}: `_dmin_d2` stores {d2}, not a finite squared separation"
+                                );
+                            }
+                            // The re-boot's march bits (payload §2): two floor codes, 0 to 145 each, the reported flag at
+                            // bit 16, bits 17–31 zero.
+                            "_march_bits" => assert!(
+                                w >> 17 == 0 && (w & 0xff) <= 145 && ((w >> 8) & 0xff) <= 145,
+                                "sample {i}: `_march_bits` {w:#x} is not two floor codes and a flag"
+                            ),
                             other => panic!("`{name}.{other}`: no rule for this u32 member"),
                         }
                         0

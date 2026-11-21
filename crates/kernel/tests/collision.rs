@@ -20,6 +20,8 @@
 //! **Domain** (pitfalls §10): the detectors' decisions on the states given, which are identical on every backend given
 //! identical positions; the head-on and fly-by marches are KDK at f64, short, and what they show is the detector's
 //! reading of the march, not the march's accuracy.
+//!
+//! parity-tier: L (detector labels)
 
 use kernel::decode::degenerate::ALL;
 use kernel::decode::{decode, Degenerate, Ic};

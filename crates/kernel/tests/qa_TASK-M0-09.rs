@@ -45,6 +45,9 @@ fn section_1(ftle: bool) -> Vec<(&'static str, usize, &'static str)> {
         ("_nhat_lag_0", 4, "f32"),
         ("_nhat_lag_1", 4, "f32"),
         ("_nhat_lag_2", 4, "f32"),
+        // the re-boot's two registers (payload §1, "Payload purity"; TASK-M3-21)
+        ("_dmin_d2", 4, "u32"),
+        ("_march_bits", 4, "u32"),
     ]);
     rows
 }
@@ -95,7 +98,9 @@ fn ftle_actual() -> Vec<(&'static str, usize, &'static str)> {
         coll_floor_bits,
         _nhat_lag_0,
         _nhat_lag_1,
-        _nhat_lag_2
+        _nhat_lag_2,
+        _dmin_d2,
+        _march_bits
     )
 }
 
@@ -125,7 +130,9 @@ fn base_actual() -> Vec<(&'static str, usize, &'static str)> {
         coll_floor_bits,
         _nhat_lag_0,
         _nhat_lag_1,
-        _nhat_lag_2
+        _nhat_lag_2,
+        _dmin_d2,
+        _march_bits
     )
 }
 
@@ -203,8 +210,8 @@ fn doc(path: &str) -> String {
 }
 
 fn check_widths(ftle: (usize, usize), base: (usize, usize)) {
-    assert_eq!(ftle, (168, 8), "SimStateFTLE (size_of, align_of)");
-    assert_eq!(base, (120, 8), "SimStateBase (size_of, align_of)");
+    assert_eq!(ftle, (176, 8), "SimStateFTLE (size_of, align_of)");
+    assert_eq!(base, (128, 8), "SimStateBase (size_of, align_of)");
     let payload = doc("docs/design/principia_dd_simstate_payload.md");
     let render = doc("docs/contracts/principia_render_contract.md");
     let quotes = [

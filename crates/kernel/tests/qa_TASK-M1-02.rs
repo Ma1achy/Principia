@@ -724,13 +724,13 @@ fn check_split(word: (usize, usize), ftle: (usize, usize), base: (usize, usize))
     );
     assert_eq!(
         ftle,
-        (168, 8),
-        "SimStateFTLE is not 168 B at align 8 (payload §0)"
+        (176, 8),
+        "SimStateFTLE is not 176 B at align 8 (payload §0)"
     );
     assert_eq!(
         base,
-        (120, 8),
-        "SimStateBase is not 120 B at align 8 (payload §0)"
+        (128, 8),
+        "SimStateBase is not 128 B at align 8 (payload §0)"
     );
 }
 
@@ -755,7 +755,7 @@ struct InlineWord {
 negative_control!(
     word_buffer_split_qa_rust_sizes,
     "a SimState with the word inline must fail",
-    expected = "SimStateFTLE is not 168 B at align 8",
+    expected = "SimStateFTLE is not 176 B at align 8",
     {
         use std::mem::{align_of, size_of};
         check_split(

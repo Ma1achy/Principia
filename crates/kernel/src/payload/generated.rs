@@ -2,9 +2,9 @@
 
 /// The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger, computed at generation
 /// and never bumped by hand (R-36, R-63; `ledger::version`).
-pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x76e70670b6f511f9;
+pub const PAYLOAD_SCHEMA_VERSION: u64 = 0xf8f75db2f4abdcb1;
 
-/// `SimStateFTLE` at the `Real` `R`: 168 B aligned to 8 at f32, 304 B aligned to 8 at f64.
+/// `SimStateFTLE` at the `Real` `R`: 176 B aligned to 8 at f32, 312 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
 #[repr(C, align(8))]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -32,13 +32,15 @@ pub struct SimStateFTLEOf<R: PayloadReal> {
     pub _nhat_lag_0: R,
     pub _nhat_lag_1: R,
     pub _nhat_lag_2: R,
+    pub _dmin_d2: u32,
+    pub _march_bits: u32,
     pub _tail: R::SimStateFTLETail,
 }
 
-/// `SimStateFTLE` at f32, the GPU's instantiation (canonical_spec §1 item 3): 168 B.
+/// `SimStateFTLE` at f32, the GPU's instantiation (canonical_spec §1 item 3): 176 B.
 pub type SimStateFTLE = SimStateFTLEOf<f32>;
 
-/// `SimStateBase` at the `Real` `R`: 120 B aligned to 8 at f32, 208 B aligned to 8 at f64.
+/// `SimStateBase` at the `Real` `R`: 128 B aligned to 8 at f32, 216 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
 #[repr(C, align(8))]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -64,10 +66,12 @@ pub struct SimStateBaseOf<R: PayloadReal> {
     pub _nhat_lag_0: R,
     pub _nhat_lag_1: R,
     pub _nhat_lag_2: R,
+    pub _dmin_d2: u32,
+    pub _march_bits: u32,
     pub _tail: R::SimStateBaseTail,
 }
 
-/// `SimStateBase` at f32, the GPU's instantiation (canonical_spec §1 item 3): 120 B.
+/// `SimStateBase` at f32, the GPU's instantiation (canonical_spec §1 item 3): 128 B.
 pub type SimStateBase = SimStateBaseOf<f32>;
 
 /// `FreeGroupWord`: 16 B, aligned to 16 (dd_simstate_payload §1; dd_generation_root §3.3a, §3.6).
@@ -142,7 +146,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 4,
         real_align: 4,
         instantiated: true,
-        structs: [("SimStateFTLE", 168, 8), ("SimStateBase", 120, 8)],
+        structs: [("SimStateFTLE", 176, 8), ("SimStateBase", 128, 8)],
         descriptor: ("ICDescriptor", 64, 4),
     },
     PayloadLayout {
@@ -150,7 +154,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 8,
         real_align: 8,
         instantiated: true,
-        structs: [("SimStateFTLE", 304, 8), ("SimStateBase", 208, 8)],
+        structs: [("SimStateFTLE", 312, 8), ("SimStateBase", 216, 8)],
         descriptor: ("ICDescriptor", 112, 8),
     },
     PayloadLayout {
@@ -158,7 +162,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 16,
         real_align: 8,
         instantiated: false,
-        structs: [("SimStateFTLE", 576, 8), ("SimStateBase", 384, 8)],
+        structs: [("SimStateFTLE", 584, 8), ("SimStateBase", 392, 8)],
         descriptor: ("ICDescriptor", 208, 8),
     },
 ];

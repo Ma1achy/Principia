@@ -272,6 +272,9 @@ fn section_1(ftle: bool) -> Vec<(&'static str, Storage)> {
         ("_nhat_lag_0", Storage::F32),
         ("_nhat_lag_1", Storage::F32),
         ("_nhat_lag_2", Storage::F32),
+        // the re-boot's exact `d_min` latch and its march bits (payload §1, "Payload purity"; TASK-M3-21)
+        ("_dmin_d2", Storage::U32),
+        ("_march_bits", Storage::U32),
     ]);
     m
 }
