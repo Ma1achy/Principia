@@ -1,0 +1,6 @@
+{
+  "gate": "reversibility-xi",
+  "inputs": ["ttl_kdk_row1.json", "ttl_kdk_row3.json", "ttl_kdk_row4.json", "logh_kdk.json", "ttl_yoshida4.json", "ttl_rk4.json", "control_adaptive.json"],
+  "threshold": { "value": 1e-9, "requirement": "REQ-VAL-130", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-130" }
+}

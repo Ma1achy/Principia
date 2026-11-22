@@ -1,0 +1,7 @@
+{
+  "description": "logH-TTL × Yoshida-4: step-reversible but not run-reversible (run_reversible is the TTL leapfrog's alone), so the reversibility test refuses it.",
+  "orbit": "hristov_sol80_row1",
+  "stepper": "yoshida4",
+  "mode": "ttl",
+  "expected": "refused"
+}

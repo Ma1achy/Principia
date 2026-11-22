@@ -1,0 +1,7 @@
+{
+  "description": "logH-TTL × KDK, the run-reversible occupant, at one fixed fictitious step on Hristov et al.'s free-fall orbit sol_80.txt row 3: forward one period, reversed, back, reversed; ξ and the clock's return within the threshold.",
+  "orbit": "hristov_sol80_row3",
+  "stepper": "kdk",
+  "mode": "ttl",
+  "expected": "pass"
+}

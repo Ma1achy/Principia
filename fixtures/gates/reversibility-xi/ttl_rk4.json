@@ -1,0 +1,7 @@
+{
+  "description": "logH-TTL × RK4: step_reversible false, so neither route of the diagnostic binds it.",
+  "orbit": "hristov_sol80_row1",
+  "stepper": "rk4",
+  "mode": "ttl",
+  "expected": "refused"
+}

@@ -1,0 +1,9 @@
+{
+  "description": "Control: logH-TTL × KDK with each step sized from the state at its start (the state-dependent schedule integrator contract Part 6 names as breaking a run's reversal). The reversed run does not retrace the forward steps, so ξ reads the schedule's asymmetry. It must fail.",
+  "orbit": "hristov_sol80_row3",
+  "stepper": "kdk",
+  "mode": "ttl",
+  "schedule": "adaptive",
+  "control": true,
+  "expected": "fail"
+}

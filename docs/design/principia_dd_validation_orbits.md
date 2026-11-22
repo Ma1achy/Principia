@@ -107,6 +107,34 @@ orbit in a closed loop, but travel forward and backward along an open track."*
   non-reversible integrator will show itself immediately.
 - **12,409 of them.** A validation *suite*, not a validation *case*.
 
+**The reversibility measure `ξ`** (built in `crates/validation/src/reversibility.rs`, the gate `reversibility-xi`). From
+the start `z₀ = (rᵢ, pᵢ)`, `n` steps of one fixed fictitious step `h` forward, `n` the first count whose clock reaches
+the period `T`; the time-reversal map `(r, p, t, W) → (r, −p, −t, W)`; `n` steps of `h`; the map again, giving `z₂`:
+
+```text
+ξ_r = √( Σ mᵢ‖r₂ᵢ − r₀ᵢ‖² / I₀ ),    I₀ = Σ mᵢ‖r₀ᵢ − r_com‖²
+ξ_p = √( Σ ‖p₂ᵢ − p₀ᵢ‖²/mᵢ / (2U₀) ),  U₀ = Σ mᵢmⱼ/rᵢⱼ at the start
+ξ   = √( ξ_r² + ξ_p² )
+```
+
+Dimensionless and unchanged by the scale gauge; the momentum scale is the potential's, since a brake orbit starts with
+no kinetic energy. The clock's return `|t₂|/T` is read beside it. This is integrator contract Part 6's route (b): a
+fixed-step occupant, no step control, no landing, no COM projection, bound only where the profile has
+`step_reversible`, and the gate only where it has `run_reversible` (logH-TTL × KDK).
+
+**What a reversible occupant should read.** A fixed-step symmetric map composed with its reversal is the identity in
+exact arithmetic, whatever `h`, so `ξ` is round-off: it does not fall as `h` shrinks, and it is at most the `2n` steps'
+round-off, `2n·u` (`u = 2⁻⁵³`), times `A`, the orbit's own amplification of an error over the period, measured by
+perturbing the start. So `ρ = ξ/(2n·u·A) ≤ 1`. A non-reversible occupant reads its truncation error instead, which falls
+with `h` at its order (RK4's forward-and-back error at `h⁵`), and a state-dependent step schedule breaks the reversal
+whatever the stepper. Measured on three of Hristov et al.'s orbits (`sol_80.txt` rows 1, 3, 4, the least `T*`) at
+4096 nominal steps a period: logH-TTL × KDK reads `ξ` `1.9·10⁻⁸`, `8.6·10⁻¹⁰`, `7.3·10⁻⁷` and `ρ` at most `10⁻²`, with
+`A` `1.9·10⁶` to `3.6·10⁷` (these orbits are far from stable); logH-TTL × RK4 reads `ρ` `2.7` to `1.8·10⁷`.
+
+The gate judges the criterion written before its first run, `ξ ≤ 10⁻⁹` and `|t₂|/T ≤ 10⁻⁹` (`2n·u` with a factor of
+1000 for `A`). Its premise, `A ≤ 1000`, was measured wrong, so rows 1 and 4 fail it and are recorded as expected
+failures; whether `ρ ≤ 1` replaces it is the owner's call.
+
 ### 1.2 Figure-eight — the canonical closure test
 
 Moore 1993, Chenciner–Montgomery 2000. Equal masses, `L_z = 0`, stable to small perturbations
