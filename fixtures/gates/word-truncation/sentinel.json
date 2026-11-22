@@ -1,0 +1,6 @@
+{
+  "description": "The counter reads the length's sentinel: eight tight binaries, each turning more than 76 times, read every word truncated, and the ten gallery orbits, one period each, read none. Its report records the truncation rate over the reference charts at the production horizon.",
+  "counter": "sentinel",
+  "march": "wired",
+  "expected": "pass"
+}

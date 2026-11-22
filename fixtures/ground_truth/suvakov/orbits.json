@@ -1,0 +1,86 @@
+{
+ "about": "Gallery orbits for the word-calculus check (TASK-M3-30): the initial conditions, periods and free-group words of ten periodic orbits as printed in Table I of the source, numbers and words only. Units are the table's: G = 1, m1 = m2 = m3 = 1. Each orbit starts collinear with x1 = (-1, 0), x2 = (1, 0), x3 = (0, 0), v1 = v2 = (vx, vy), v3 = -2 (vx, vy); 'T' is the period. 'printed' is the word as the table prints it, 'word' the same word written out. The table's body 3 starts in the middle; the check puts it at our body 1 (symbolic_dynamics_contract section 1, 'The body map'). The same ten rows are in fixtures/crossings/prl_orbits.json's 'table_i' (TASK-M3-16), which the check holds this file to.",
+ "source": "M. Suvakov and V. Dmitrasinovic, 'Three Classes of Newtonian Three-Body Planar Periodic Orbits', Phys. Rev. Lett. 110, 114301 (2013), Table I. Only the published numbers and words are reproduced here, not the paper.",
+ "orbits": [
+  {
+   "name": "I.A.1 butterfly I",
+   "vx": 0.30689,
+   "vy": 0.12551,
+   "T": 6.2356,
+   "printed": "(ab)2(AB)2",
+   "word": "ababABAB"
+  },
+  {
+   "name": "I.A.2 butterfly II",
+   "vx": 0.39295,
+   "vy": 0.09758,
+   "T": 7.0039,
+   "printed": "(ab)2(AB)2",
+   "word": "ababABAB"
+  },
+  {
+   "name": "I.B.1 moth I",
+   "vx": 0.46444,
+   "vy": 0.39606,
+   "T": 14.8939,
+   "printed": "(baBABabABA)",
+   "word": "baBABabABA"
+  },
+  {
+   "name": "I.B.2 moth II",
+   "vx": 0.43917,
+   "vy": 0.45297,
+   "T": 28.6703,
+   "printed": "abABabABAbaBAbaBAB",
+   "word": "abABabABAbaBAbaBAB"
+  },
+  {
+   "name": "I.B.3 butterfly III",
+   "vx": 0.40592,
+   "vy": 0.23016,
+   "T": 13.8658,
+   "printed": "ababABAbabaBAB",
+   "word": "ababABAbabaBAB"
+  },
+  {
+   "name": "I.B.5 goggles",
+   "vx": 0.0833,
+   "vy": 0.12789,
+   "T": 10.4668,
+   "printed": "ababABBAbabaBAAB",
+   "word": "ababABBAbabaBAAB"
+  },
+  {
+   "name": "I.B.7 dragonfly",
+   "vx": 0.08058,
+   "vy": 0.58884,
+   "T": 21.271,
+   "printed": "bbABabABaaBAbaBA",
+   "word": "bbABabABaaBAbaBA"
+  },
+  {
+   "name": "II.B.1 yarn",
+   "vx": 0.55906,
+   "vy": 0.34919,
+   "T": 55.5018,
+   "printed": "(babABabaBA)3",
+   "word": "babABabaBAbabABabaBAbabABabaBA"
+  },
+  {
+   "name": "II.C.2a yin-yang I",
+   "vx": 0.51394,
+   "vy": 0.30474,
+   "T": 17.3284,
+   "printed": "ababABAbaBAB",
+   "word": "ababABAbaBAB"
+  },
+  {
+   "name": "II.C.2b yin-yang I",
+   "vx": 0.2827,
+   "vy": 0.32721,
+   "T": 10.9626,
+   "printed": "ababABAbaBAB",
+   "word": "ababABAbaBAB"
+  }
+ ]
+}
