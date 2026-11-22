@@ -159,6 +159,8 @@ pub const WRITERS: &[Writer] = &[
     w("dmin_pair", "driver/wrapper.rs", "written"),
     w("t_dmin_step", "driver/wrapper.rs", "written"),
     w("coll_floor", "driver/wrapper.rs", "written"),
+    // The Chazy latch's stored level (chazy drill-down §6; R-545; TASK-M7-35).
+    w("I_max", "driver/wrapper.rs", "written"),
     w("state", "detect/label.rs", "write"),
     w("detail", "detect/label.rs", "write"),
     w("d_min", "driver/latch.rs", "persist"),

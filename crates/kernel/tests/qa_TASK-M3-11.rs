@@ -16,7 +16,7 @@
 //!   `wrap(exit − decode(code))` and writes 0xFFFF, exactly ±π adds +π, an IC inside adds nothing at its first exit;
 //!   "inside" decided from the current state alone, agreeing with `√(n_u² + n_v²) < r_pole` written here and invariant
 //!   under any power-of-two scale of the configuration (R-547's "no subnormal intermediate"); and on a real march through
-//!   the disc, outside always 0xFFFF and descriptor bits 10–14 zero, bit 15 the departed bit's (R-545)
+//!   the disc, outside always 0xFFFF and descriptor bits 10–14 `I_max`'s level, never decreasing, bit 15 the departed bit's (R-545)
 //!   (`qa_m311_theta_hold_*`).
 //! - REQ-INT-089 (R-397): a march through the disc, and one from an IC inside it, at f32 and f64, as one call and as
 //!   k ∈ {2, 3, 7} resumed calls split on the entry step, strictly inside and on the exit step, each resume from the
@@ -107,6 +107,7 @@ fn stored<R: Prec>(s: SimStateBaseOf<R>) -> SimStateBaseOf<R> {
         f.saturated,
         f.dmin_pair,
         f.last_symbol,
+        f.i_max,
         f.departed,
         f.d_min,
         &DminCounters::new(),
@@ -1171,21 +1172,23 @@ fn passage_steps(side: &[bool]) -> (usize, usize) {
 
 /// The hold on a real march at `R` through the disc, and from an IC inside it: outside the disc `_reserved` is 0xFFFF
 /// at every step; the entry step's code is the previous step's longitude's; inside, `θ̃` and `_reserved` hold; the exit
-/// adds `wrap(exit − decode(code))` and writes 0xFFFF; descriptor bits 10–14 are zero at every step and bit 15 is the
-/// departed bit, set exactly from the first step whose chord to `n̂(0)` exceeds `δ_dep` (the hold writes none).
+/// adds `wrap(exit − decode(code))` and writes 0xFFFF; descriptor bits 10–14 are `I_max`'s level, which never
+/// decreases from one step to the next, and bit 15 is the departed bit, set exactly from the first step whose chord to
+/// `n̂(0)` exceeds `δ_dep` (the hold writes none of them).
 fn check_march_hold<R: Prec>(states: &[SimStateBaseOf<R>], ic: &Ic<R>) -> (usize, usize) {
     let side = sides(ic, states);
     let (entry, exit) = passage_steps(&side);
     let n0 = shape(ic.r, ic.m);
     let dd: R = delta_dep();
     let mut departed = false;
+    let mut level = 0;
     for (k, s) in states.iter().enumerate() {
-        assert_eq!(
-            s.packed_a & 0x7c00,
-            0,
-            "step {k}: descriptor bits 10–14 {:#x}",
+        assert!(
+            (s.packed_a & 0x7c00) >> 10 >= level,
+            "step {k}: descriptor bits 10–14 {:#x} below the last step's I_max level {level}",
             s.packed_a
         );
+        level = (s.packed_a & 0x7c00) >> 10;
         let n = shape(s.r, ic.m);
         let c: f64 = (0..3)
             .map(|i| (wide(n[i]) - wide(n0[i])).powi(2))

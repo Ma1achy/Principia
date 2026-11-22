@@ -43,6 +43,7 @@ struct SimState {
     saturated: bool,
     dmin_pair: u32,
     last_symbol: u32,
+    I_max: u32,
     departed: bool,
     d_min: f32,
     dE_max: f32,
@@ -279,6 +280,7 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f3
     out.saturated = sd_saturated(s_packed_a);
     out.dmin_pair = sd_dmin_pair(s_packed_a);
     out.last_symbol = sd_last_symbol(s_packed_a);
+    out.I_max = sd_I_max(s_packed_a);
     out.departed = sd_departed(s_packed_a);
     out.d_min = pa_d_min(s_packed_a);
     out.dE_max = pb_dE_max(s_packed_b);

@@ -60,6 +60,7 @@ pub struct SimState {
     pub saturated: bool,
     pub dmin_pair: u32,
     pub last_symbol: u32,
+    pub I_max: u32,
     pub departed: bool,
     pub d_min: f32,
     pub dE_max: f32,
@@ -225,6 +226,22 @@ pub fn Lz_drift(r: [[f32; 2]; 3], p: [[f32; 2]; 3], lz_0: f32) -> f32 {
     angular_momentum_z(r, p) - lz_0
 }
 
+/// The Chazy final-motion label at the playhead, its code `0..10` (`crate::chazy::Motion`; payload §5; chazy
+/// drill-down §5.1, R-442): derived at read, never stored, from the live state `r`, `p`, the `ICDescriptor`'s masses,
+/// `E_0`, the initial hyperradius `R_0 = √(I_0/M)` and the stored level of the latch `I_max` (descriptor bits 10–14,
+/// R-545), in live f32. `R_0` is the caller's, from the sample's decoded IC, as the masses are.
+#[inline]
+pub fn chazy_class(
+    r: [[f32; 2]; 3],
+    p: [[f32; 2]; 3],
+    m: [f32; 3],
+    e_0: f32,
+    r_0: f32,
+    i_max: u32,
+) -> u32 {
+    crate::chazy::chazy_class(m, r, p, e_0, r_0, i_max)
+}
+
 /// The energy-suspect threshold `τ_E` on the relative energy drift (dd_integrator §3.5; REQ-INT-085's proposal,
 /// provisional until the M3 gate): the constants register's `suspect_energy_threshold`.
 pub const SUSPECT_ENERGY_THRESHOLD: f32 = 0.00390625;
@@ -314,6 +331,7 @@ pub fn sim_state_from_ftle(
         saturated: sd_saturated(s.packed_a),
         dmin_pair: sd_dmin_pair(s.packed_a),
         last_symbol: sd_last_symbol(s.packed_a),
+        I_max: sd_I_max(s.packed_a),
         departed: sd_departed(s.packed_a),
         d_min: pa_d_min(s.packed_a),
         dE_max: pb_dE_max(s.packed_b),
@@ -393,6 +411,7 @@ pub fn sim_state_from_base(
         saturated: sd_saturated(s.packed_a),
         dmin_pair: sd_dmin_pair(s.packed_a),
         last_symbol: sd_last_symbol(s.packed_a),
+        I_max: sd_I_max(s.packed_a),
         departed: sd_departed(s.packed_a),
         d_min: pa_d_min(s.packed_a),
         dE_max: pb_dE_max(s.packed_b),

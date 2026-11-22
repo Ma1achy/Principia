@@ -146,6 +146,8 @@ fn section_2() -> Vec<(&'static str, &'static str, u32, u32, FieldType)> {
         ("saturated", "packed_a", 5, 1, UBits),
         ("dmin_pair", "packed_a", 6, 2, UBits),
         ("last_symbol", "packed_a", 8, 2, UBits),
+        // The Chazy latch's level (R-545; TASK-M7-35).
+        ("I_max", "packed_a", 10, 5, UBits),
         ("d_min", "packed_a", 16, 16, F16Pair),
         // the Cartesian drift latches in `dE_reg`'s `log16` form (R-632; TASK-M3-41)
         ("dE_max", "packed_b", 0, 16, Log16),
@@ -178,15 +180,17 @@ fn check_packed(ledger: &Ledger, rows: &[(&'static str, &'static str, u32, u32, 
             "`{name}` is not at payload §2's bits"
         );
     }
-    // Descriptor bits 10–14 are reserved (payload §2), and nothing else of packed_a is: bit 15 is R-37's departed bit
-    // (R-545).
+    // No bit of packed_a is reserved since R-545: 10–14 are `I_max`'s level, 15 R-37's departed bit.
     let a = ledger
         .words
         .iter()
         .find(|w| w.name == "packed_a")
         .expect("packed_a word");
     let reserved: Vec<(u32, u32)> = a.reserved.iter().map(|s| (s.offset, s.width)).collect();
-    assert_eq!(reserved, [(10, 5)], "packed_a's reserved bits");
+    assert!(
+        reserved.is_empty(),
+        "packed_a's reserved bits: {reserved:?}"
+    );
     for w in ["packed_a", "packed_b", "times", "coll_floor_bits"] {
         let bits = ledger.words.iter().find(|x| x.name == w).map(|x| x.bits);
         assert_eq!(bits, Some(32), "`{w}` is a u32 (payload §1)");
@@ -204,7 +208,11 @@ negative_control!(
     expected = "`dE_max` is not at payload §2's bits",
     check_packed(&layout(), &{
         let mut rows = section_2();
-        rows[6].2 = 16;
+        let at = rows
+            .iter()
+            .position(|r| r.0 == "dE_max")
+            .expect("dE_max's row");
+        rows[at].2 = 16;
         rows
     })
 );

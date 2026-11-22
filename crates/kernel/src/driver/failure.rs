@@ -32,9 +32,9 @@ use super::wrapper::WrapperReal;
 use crate::detect::label::{Fired, Label};
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    pack_dE_reg, pack_packed_b, set_coll_floor, set_d_min_unset, set_dmin_pair, set_t_dmin_step,
-    PayloadReal, SimStateBaseOf, SimStateFTLEOf, SD_DMIN_PAIR_SENTINEL, STATE_DECODE_FAILED,
-    STATE_SIM_FAILED,
+    pack_dE_reg, pack_packed_b, set_I_max, set_coll_floor, set_d_min_unset, set_dmin_pair,
+    set_t_dmin_step, PayloadReal, SimStateBaseOf, SimStateFTLEOf, SD_DMIN_PAIR_SENTINEL,
+    STATE_DECODE_FAILED, STATE_SIM_FAILED,
 };
 use crate::real::IeeeBits;
 
@@ -320,7 +320,11 @@ fn failed_words<R: PayloadReal>(
 ) -> SimStateBaseOf<R> {
     let labelled = Label { state, detail }.write(s.packed_a);
     SimStateBaseOf {
-        packed_a: set_dmin_pair(set_d_min_unset(labelled), SD_DMIN_PAIR_SENTINEL),
+        // `I_max`'s level 0, the fresh latch's (chazy drill-down §6; R-545): a failed sample has no motion to classify.
+        packed_a: set_I_max(
+            set_dmin_pair(set_d_min_unset(labelled), SD_DMIN_PAIR_SENTINEL),
+            0,
+        ),
         packed_b: pack_packed_b(0.0, 0.0),
         // The regularised drift's halves, 0.0 as `packed_b`'s (payload §2; R-605, TASK-M3-41).
         dE_reg: pack_dE_reg(0.0, 0.0),
@@ -338,7 +342,7 @@ fn failed_words<R: PayloadReal>(
 /// where all twelve are finite and 0.0 otherwise; `S` the failed mark ([`s_failed`]); `theta`, `mean_y`, `C_ty`,
 /// `E_0`, `Lz_0` and the lagged register as given where finite, 0.0 where not; `closure_min` as given unless NaN, `+∞`
 /// (unset) then. With the failed words: `d_min` unset, both drift halves 0.0, `dmin_pair` 3, `t_dmin_step` 0,
-/// `coll_floor` 0, `dE_reg` 0.0 in both halves, `_dmin_d2` and `_march_bits` 0. `t_end_step`, `total_substeps`, `budget_bits`, `saturated`, the departed
+/// `coll_floor` 0, `dE_reg` 0.0 in both halves, `_dmin_d2` and `_march_bits` 0, `I_max`'s level 0. `t_end_step`, `total_substeps`, `budget_bits`, `saturated`, the departed
 /// bit and `closure_step` are kept: the
 /// march's counts up to its failure. Writing it twice gives the same words.
 #[inline]

@@ -112,6 +112,7 @@ fn pack_store(w: u32, v: f32, frame: &DminCounters) -> u32 {
         sd_saturated(w),
         sd_dmin_pair(w),
         sd_last_symbol(w),
+        sd_I_max(w),
         sd_departed(w),
         v,
         frame,
@@ -221,14 +222,15 @@ negative_control!(
     )
 );
 
-/// Every bit of the low (descriptor) half, reserved bits 10–15 included: `set_d_min` stores only the `d_min` half and
+/// Every bit of the low (descriptor) half, `I_max`'s bits 10–14 and the departed bit 15 included: `set_d_min` stores only
+/// the `d_min` half and
 /// keeps the rest of the word as it was (payload §2).
 const ALL_LOWS: [u32; 3] = [0x0000, 0x03ff, 0xffff];
 
-/// The descriptor halves `pack_packed_a` can produce: it builds the word from its fields and zeroes the reserved bits
-/// 10–14 by design (payload §2), so a `pack_store` round-trip keeps only bits 0–9 and bit 15, R-37's departed bit
-/// (R-545).
-const FIELD_LOWS: [u32; 3] = [0x0000, 0x03ff, 0x83ff];
+/// The descriptor halves `pack_packed_a` can produce: it builds the word from its fields, and since R-545 every bit of
+/// the half is a field's (`I_max`'s level in 10–14, R-37's departed bit in 15), so a `pack_store` round-trip keeps all
+/// sixteen.
+const FIELD_LOWS: [u32; 3] = [0x0000, 0x03ff, 0xffff];
 
 /// In a release build `set_d_min` and `pack_packed_a` have no assertion and count into the frame pair their caller
 /// passes, exactly as the release packer does (R-288, R-294). In a debug build they assert first, so only their
@@ -282,11 +284,11 @@ negative_control!(
     )
 );
 
-// A second control for `set_d_min`'s check, in both builds: a store that drops the reserved bits 10–15 of the
-// descriptor half, as `pack_packed_a` does, so the full-strength descriptor check must fail.
+// A second control for `set_d_min`'s check, in both builds: a store that drops bits 10–15 of the descriptor half
+// (`I_max`'s level and the departed bit), so the full-strength descriptor check must fail.
 negative_control!(
     dmin_unset_qa_r288_set_d_min_keeps_reserved_bits,
-    "a d_min store that zeroes the reserved bits 10–15, so the descriptor-half check must fail",
+    "a d_min store that zeroes bits 10–15, so the descriptor-half check must fail",
     expected = "descriptor half kept",
     check_frame_packer_matches_release(|w, v, c| set_d_min(w, v, c) & !0xfc00, &ALL_LOWS)
 );
@@ -467,7 +469,7 @@ fn check_repack_counts_nothing(ctl: &dyn Fn(&PackedA, u32, &DminCounters) -> boo
     set_d_min_release(0, f32::NAN, &frame);
     set_d_min_release(0, -1.0, &frame);
     assert_eq!(pair(&frame), (1, 1), "the frame's own stores");
-    let good = pack_packed_a(1, 0, false, 2, 1, false, 0.5, &frame);
+    let good = pack_packed_a(1, 0, false, 2, 1, 0, false, 0.5, &frame);
     let expected = PackedA::unpack(good);
     for h in [
         0x7c01u32, 0x7e00, 0xfe00, 0xffff, 0x8001, 0xbc00, 0xfbff, 0xfc00,

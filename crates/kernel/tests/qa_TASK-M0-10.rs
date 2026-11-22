@@ -13,8 +13,8 @@ use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::*;
 use validation::negative_control;
 
-/// `pack_packed_a` over a fresh frame pair (R-294), which a valid `d_min` must leave at `(0, 0)` (R-288), its departed
-/// bit clear (bit 15, R-545; [`check_reserved_zero`] packs it set too).
+/// `pack_packed_a` over a fresh frame pair (R-294), which a valid `d_min` must leave at `(0, 0)` (R-288), `I_max`'s
+/// level 0 and its departed bit clear (bits 10–15, R-545; [`check_reserved_zero`] sets each too).
 fn pa(
     state: u32,
     detail: u32,
@@ -30,6 +30,7 @@ fn pa(
         saturated,
         dmin_pair,
         last_symbol,
+        0,
         false,
         d_min,
         &frame,
@@ -335,8 +336,9 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-015: with every field at its maximum, bits 10–14 are zero; the reserved list is 10–14. Bit 15 is R-37's
-// departed bit (R-545), a field.
+// REQ-PAY-015: with every other field at its maximum, `I_max`'s bits 10–14 are its level's alone and bit 15 the
+// departed bit's: no field spills into either. Both are fields since R-545 (10–14 the Chazy latch `I_max`, 15 R-37's
+// departed bit), so the reserved list is empty.
 
 /// Every combination of each field at 0 or its maximum, with the largest `d_min`s, leaves bits 10–14 zero through
 /// `pack`, and with the departed bit set too; so does every setter given u32::MAX over a zero word, the departed bit's
@@ -376,7 +378,12 @@ fn check_reserved_zero(pack: PackA, set: fn(&str, u32, u32) -> u32) {
 #[test]
 fn reserved_bits_qa_zero_with_every_field_at_max() {
     check_reserved_zero(pa, set);
-    assert_eq!(PACKED_A_RESERVED, [(10, 5)], "packed_a's reserved list");
+    assert!(
+        PACKED_A_RESERVED.is_empty(),
+        "packed_a's reserved list: {PACKED_A_RESERVED:?}"
+    );
+    // `I_max`'s setter given u32::MAX over a zero word writes exactly bits 10–14.
+    assert_eq!(set_I_max(0, u32::MAX), 0x7c00, "set_I_max(0, MAX)");
 }
 
 negative_control!(
@@ -432,7 +439,8 @@ fn check_every_flip(ctl: Ctl, e: &PackedA) {
     }
 }
 
-/// A field-by-field comparison after unpacking: it cannot see bits no accessor reads.
+/// A field-by-field comparison after unpacking, over the fields it was written for (`I_max`'s level, added since, is not
+/// among them): it cannot see bits no field it compares reads.
 #[cfg(feature = "controls")]
 fn fields_ctl(e: &PackedA, observed: u32) -> bool {
     let key = |p: PackedA| {
@@ -461,6 +469,7 @@ fn sample() -> PackedA {
         saturated: true,
         dmin_pair: 0,
         last_symbol: 3,
+        i_max: 0,
         departed: true,
         d_min: 0.75,
     }
@@ -476,15 +485,17 @@ fn roundtrip_ctl_qa_property_every_bit_of_every_word() {
         0u32..4,
         0u32..4,
         0u32..2,
+        0u32..32,
         1u32..=0x7c00,
     );
-    validation::prop::run(&fields, |(state, detail, sat, pair, sym, dep, h)| {
+    validation::prop::run(&fields, |(state, detail, sat, pair, sym, dep, level, h)| {
         let e = PackedA {
             state,
             detail,
             saturated: sat == 1,
             dmin_pair: pair,
             last_symbol: sym,
+            i_max: level,
             departed: dep == 1,
             d_min: pa_d_min(h << 16),
         };
@@ -496,7 +507,7 @@ fn roundtrip_ctl_qa_property_every_bit_of_every_word() {
 
 negative_control!(
     roundtrip_ctl_qa_property_every_bit_of_every_word,
-    "a field comparison cannot see reserved bit 10, so the every-flip check must fail",
+    "a field comparison that does not compare `I_max` cannot see bit 10, so the every-flip check must fail",
     expected = "the ctl passed with bit 10 flipped",
     check_every_flip(fields_ctl, &sample())
 );
