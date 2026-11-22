@@ -1,0 +1,8 @@
+{
+  "gate": "word-truncation",
+  "inputs": ["sentinel.json", "reduced_length.json", "unwired.json"],
+  "measurement": {
+    "requirement": "REQ-VAL-037",
+    "ruling": "R-71"
+  }
+}

@@ -33,6 +33,7 @@ pub mod order_scaling;
 pub mod report;
 pub mod reregistration;
 pub mod symplectic;
+pub mod word_calculus;
 
 use std::path::{Path, PathBuf};
 
@@ -156,6 +157,7 @@ pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[
     &reregistration::HeggieVsAzGate,
     &reregistration::ReregistrationDoublingGate,
     &reregistration::LogHFalsificationGate,
+    &word_calculus::WordTruncationGate,
 ];
 
 /// `gate.json`'s `measurement`: what it is measured under, in place of a threshold.

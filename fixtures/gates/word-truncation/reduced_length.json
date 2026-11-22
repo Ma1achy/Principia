@@ -1,0 +1,6 @@
+{
+  "description": "The control can fire: a counter that reads a reduced length above the cap, which no word holds, reads the spinning binaries as untruncated, and fails.",
+  "counter": "reduced_length",
+  "march": "wired",
+  "expected": "fail"
+}

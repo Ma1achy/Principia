@@ -1,0 +1,6 @@
+{
+  "description": "The control can fire: the same marches with no word buffer bound leave every word empty, so the spinning binaries read as untruncated, and it fails.",
+  "counter": "sentinel",
+  "march": "unwired",
+  "expected": "fail"
+}
