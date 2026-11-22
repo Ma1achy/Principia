@@ -403,6 +403,7 @@ fn needs(field: &str, tier: Tier) -> Option<(Vec<&'static str>, Vec<char>)> {
         | "saturated"
         | "dmin_pair"
         | "last_symbol"
+        | "I_max"
         | "departed"
         | "d_min"
         | "is_resolved_outcome"
@@ -873,6 +874,7 @@ fn check_not_stored(structs: &[Struct], entries: &[Entry]) {
     assert_eq!(
         in_a,
         [
+            "I_max",
             "d_min",
             "departed",
             "detail",

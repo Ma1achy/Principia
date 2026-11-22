@@ -4,17 +4,18 @@
 
 use ledger::gen::{self, rust};
 use ledger::layout;
-use ledger::schema::{Ledger, Location, Span};
+use ledger::schema::{Ledger, Location};
 use validation::negative_control;
 
 /// Payload §2's `packed_a`: `(field, first bit, width)`, the descriptor, R-37's departed bit at 15 (R-545), then
 /// `d_min`.
-const PACKED_A: [(&str, u32, u32); 7] = [
+const PACKED_A: [(&str, u32, u32); 8] = [
     ("state", 0, 3),
     ("detail", 3, 2),
     ("saturated", 5, 1),
     ("dmin_pair", 6, 2),
     ("last_symbol", 8, 2),
+    ("I_max", 10, 5),
     ("departed", 15, 1),
     ("d_min", 16, 16),
 ];
@@ -105,10 +106,10 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-015: bits 10–14 are listed as reserved (bit 15 the departed bit, R-545), and with payload §2's fields they
-// tile packed_a exactly.
+// REQ-PAY-015: since R-545 no bit of packed_a is reserved (10–14 `I_max`'s level, 15 the departed bit), and payload
+// §2's fields tile it exactly.
 
-/// `packed_a`'s reserved spans in `ledger` are exactly bits 10–14, and with its fields cover each of the 32 bits
+/// `packed_a` in `ledger` reserves no span, and its fields, each where the ledger places it, cover each of the 32 bits
 /// exactly once.
 fn check_reserved_tiling(ledger: &Ledger) {
     let word = ledger
@@ -116,18 +117,21 @@ fn check_reserved_tiling(ledger: &Ledger) {
         .iter()
         .find(|w| w.name == "packed_a")
         .expect("packed_a");
-    assert_eq!(
-        word.reserved,
-        [Span {
-            offset: 10,
-            width: 5
-        }],
-        "packed_a's reserved spans"
+    assert!(
+        word.reserved.is_empty(),
+        "packed_a's reserved spans: {:?}",
+        word.reserved
     );
     let mut cover = [0u32; 32];
     let spans = PACKED_A
         .iter()
-        .map(|&(_, o, w)| (o, w))
+        .filter_map(|&(name, o, w)| {
+            matches!(
+                location(ledger, name),
+                Some(Location::Packed { word: "packed_a", offset, width, .. }) if offset == o && width == w
+            )
+            .then_some((o, w))
+        })
         .chain(word.reserved.iter().map(|s| (s.offset, s.width)));
     for (o, w) in spans {
         for b in o..o + w {
@@ -136,7 +140,7 @@ fn check_reserved_tiling(ledger: &Ledger) {
     }
     assert_eq!(
         cover, [1; 32],
-        "packed_a's fields and reserved spans tile its 32 bits"
+        "packed_a's fields and reserved spans tile its 32 bits: {cover:?}"
     );
 }
 
@@ -147,14 +151,11 @@ fn reserved_bits_qa_ledger_reserves_exactly_10_to_15() {
 
 negative_control!(
     reserved_bits_qa_ledger_reserves_exactly_10_to_15,
-    "a ledger reserving no bits leaves 10–14 unaccounted, so the reserved check must fail",
-    expected = "packed_a's reserved spans",
+    "a ledger without `I_max` leaves 10–14 unaccounted, so the tiling check must fail",
+    expected = "tile its 32 bits",
     check_reserved_tiling(&{
         let mut l = layout();
-        l.words
-            .iter_mut()
-            .filter(|w| w.name == "packed_a")
-            .for_each(|w| w.reserved.clear());
+        l.entries.retain(|e| e.name != Some("I_max"));
         l
     })
 );

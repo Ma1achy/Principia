@@ -1,16 +1,16 @@
 //! The descriptor parity check, `roundtrip_ctl` (pitfalls §9; dd_generation_root §5 test 2): pack → unpack → repack,
 //! comparing whole raw `packed_a` words, never the unpacked fields. A check that compares unpacked fields cannot see a
 //! contaminated bit the unpack masks off, so it passes on a wrong answer (pitfalls §9); comparing raw words, it can
-//! fail on a contaminated value in any bit, the reserved bits 10–14 included.
+//! fail on a contaminated value in any bit, `I_max`'s bits 10–14 included.
 
 use super::{
-    pa_d_min, pack_packed_a, sd_departed, sd_detail, sd_dmin_pair, sd_last_symbol, sd_saturated,
-    sd_state, set_d_min_release, set_departed, set_detail, set_dmin_pair, set_last_symbol,
-    set_saturated, set_state, DminCounters,
+    pa_d_min, pack_packed_a, sd_I_max, sd_departed, sd_detail, sd_dmin_pair, sd_last_symbol,
+    sd_saturated, sd_state, set_I_max, set_d_min_release, set_departed, set_detail, set_dmin_pair,
+    set_last_symbol, set_saturated, set_state, DminCounters,
 };
 
-/// `packed_a`'s fields, as the generated accessors unpack them (payload §2): the `sample_descriptor` in bits 0–9 and
-/// 15, the departed bit (R-545), and `d_min` in bits 16–31.
+/// `packed_a`'s fields, as the generated accessors unpack them (payload §2): the `sample_descriptor` in bits 0–15, the
+/// Chazy latch `I_max`'s level in 10–14 and the departed bit in 15 (R-545), and `d_min` in bits 16–31.
 #[derive(Clone, Copy, Debug)]
 pub struct PackedA {
     pub state: u32,
@@ -18,6 +18,8 @@ pub struct PackedA {
     pub saturated: bool,
     pub dmin_pair: u32,
     pub last_symbol: u32,
+    /// `I_max`'s stored level (`crate::chazy::i_max_code`).
+    pub i_max: u32,
     pub departed: bool,
     pub d_min: f32,
 }
@@ -31,6 +33,7 @@ impl PackedA {
             saturated: sd_saturated(w),
             dmin_pair: sd_dmin_pair(w),
             last_symbol: sd_last_symbol(w),
+            i_max: sd_I_max(w),
             departed: sd_departed(w),
             d_min: pa_d_min(w),
         }
@@ -45,6 +48,7 @@ impl PackedA {
             self.saturated,
             self.dmin_pair,
             self.last_symbol,
+            self.i_max,
             self.departed,
             self.d_min,
             counters,
@@ -63,6 +67,7 @@ impl PackedA {
         let w = set_saturated(w, self.saturated);
         let w = set_dmin_pair(w, self.dmin_pair);
         let w = set_last_symbol(w, self.last_symbol);
+        let w = set_I_max(w, self.i_max);
         let w = set_departed(w, self.departed);
         set_d_min_release(w, self.d_min, scratch)
     }

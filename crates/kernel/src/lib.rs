@@ -7,6 +7,7 @@ pub mod bringup;
 pub mod burrau;
 pub mod canon;
 pub mod chart;
+pub mod chazy;
 pub mod circle;
 pub mod decode;
 pub mod detect;

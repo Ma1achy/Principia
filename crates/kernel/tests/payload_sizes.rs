@@ -1,5 +1,5 @@
 //! REQ-PAY-001's size facts on the generated payload: `ICDescriptor` is 64 B with its padding a declared member and no
-//! stored E₀, and descriptor bits 10–14 are zero, bit 15 being R-37's departed bit (R-545) (dd_generation_root §3.1,
+//! stored E₀, and descriptor bits 10–14 hold only `I_max`'s level, bit 15 being R-37's departed bit (R-545) (dd_generation_root §3.1,
 //! §3.6; R-86). With them, the word buffer's
 //! `fgw_*` accessors (payload §3's `.w` bit map) and payload §3's frozen continuation table as emitted to Rust,
 //! `continuation_index` with 3 in its four `next = inverse(prev)` cells (R-307), and total: an input out of range fails
@@ -74,11 +74,11 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-001: descriptor bits 10–14 are reserved, never written (generation-root §3.1, R-86); bit 15 is the departed
-// bit (R-545), a field, which the widest packing sets.
+// REQ-PAY-001: descriptor bits 10–14 hold only the Chazy latch `I_max`'s level and bit 15 the departed bit (R-545), each
+// a field; `packed_a` has no reserved span left (generation-root §3.1, R-86).
 
-/// `packed_a` with every field at its widest, as the generated packer writes it.
-fn packed_a_full() -> u32 {
+/// `packed_a` with every field at its widest, `I_max`'s level `i_max`, as the generated packer writes it.
+fn packed_a_full(i_max: u32) -> u32 {
     let counters = DminCounters::new();
     pack_packed_a(
         u32::MAX,
@@ -86,38 +86,46 @@ fn packed_a_full() -> u32 {
         true,
         u32::MAX,
         u32::MAX,
+        i_max,
         true,
         65504.0,
         &counters,
     )
 }
 
-/// Bits 10–14 of `w` are zero, and they are `packed_a`'s one reserved span.
-fn check_reserved(w: u32, reserved: &[(u32, u32)]) {
-    assert_eq!(
-        reserved,
-        [(10, 5)],
-        "packed_a's reserved span is bits 10–14"
+/// Bits 10–14 of `w` are `level`, no other field spilling into them, and `packed_a` declares no reserved span.
+fn check_reserved(w: u32, level: u32, reserved: &[(u32, u32)]) {
+    assert!(
+        reserved.is_empty(),
+        "packed_a declares no reserved span: {reserved:?}"
     );
     assert_eq!(
         extract(w, 10, 5),
-        0,
-        "descriptor bits 10–14 are zero: {w:#034b}"
+        level,
+        "descriptor bits 10–14 are I_max's level {level}: {w:#034b}"
     );
 }
 
 #[test]
 fn payload_sizes_descriptor_bits_10_to_14_are_zero() {
-    let w = packed_a_full();
-    println!("packed_a, every field at its widest: {w:#034b}");
-    check_reserved(w, &PACKED_A_RESERVED);
+    let w = packed_a_full(0);
+    println!("packed_a, every field at its widest, I_max level 0: {w:#034b}");
+    check_reserved(w, 0, &PACKED_A_RESERVED);
+    // `I_max` at its widest writes its five bits and no other.
+    let wide = packed_a_full(u32::MAX);
+    check_reserved(wide, 31, &PACKED_A_RESERVED);
+    assert_eq!(
+        wide & !0x7c00,
+        w & !0x7c00,
+        "I_max's write keeps every other bit"
+    );
 }
 
 negative_control!(
     payload_sizes_descriptor_bits_10_to_14_are_zero,
-    "a packed_a with bit 12 set must fail the reserved-bits check",
-    expected = "descriptor bits 10–14 are zero",
-    check_reserved(packed_a_full() | 1 << 12, &PACKED_A_RESERVED)
+    "a packed_a with bit 12 set beside level 0 must fail the bits check",
+    expected = "descriptor bits 10–14 are I_max's level 0",
+    check_reserved(packed_a_full(0) | 1 << 12, 0, &PACKED_A_RESERVED)
 );
 
 // ---------------------------------------------------------------------------------------------------------------

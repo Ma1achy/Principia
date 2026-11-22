@@ -65,13 +65,14 @@ use super::monitor::Monitor;
 use super::project::ComProjection;
 use super::substep::Quantise;
 use super::wrapper::{monitored, WrapperReal};
+use crate::chazy::{inertia, ImaxLatch};
 use crate::detect::collision::{CollisionRadius, Detector};
 use crate::detect::escape;
 use crate::detect::label::{Events, Fired};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    dr_dE_reg_final, dr_dE_reg_max, pb_dE_max, pb_dLz_max, sd_dmin_pair, sd_last_symbol,
+    dr_dE_reg_final, dr_dE_reg_max, pb_dE_max, pb_dLz_max, sd_I_max, sd_dmin_pair, sd_last_symbol,
     set_last_symbol, tm_t_dmin_step, tm_t_end_step, PayloadReal, SimStateBaseOf,
 };
 use crate::real::IeeeBits;
@@ -116,6 +117,8 @@ pub struct WrapperCadence<R> {
     signals: Signals,
     /// The regularised energy's drift latches (R-605).
     regularised: RegularisedDrift<R>,
+    /// The Chazy latch `I_max`, the greatest moment of inertia met, `I_0` at the IC (chazy drill-down §6).
+    i_max: ImaxLatch<R>,
 }
 
 impl<R: WrapperReal> WrapperCadence<R> {
@@ -166,6 +169,7 @@ impl<R: WrapperReal> WrapperCadence<R> {
             handed_back: false,
             signals: Signals::none(),
             regularised: RegularisedDrift::none(),
+            i_max: ImaxLatch::new(inertia(m, r)),
         }
     }
 
@@ -214,6 +218,13 @@ impl<R: WrapperReal> WrapperCadence<R> {
     #[inline]
     pub fn regularised(&self) -> &RegularisedDrift<R> {
         &self.regularised
+    }
+
+    /// The Chazy latch `I_max` so far (chazy drill-down §6; REQ-PAY-105): raised at every internal step, never by a
+    /// shadow's, which has its own cadence (`super::benettin`).
+    #[inline]
+    pub fn i_max(&self) -> &ImaxLatch<R> {
+        &self.i_max
     }
 
     /// The calls made so far, one per internal step taken.
@@ -325,6 +336,8 @@ impl<R: WrapperReal> WrapperCadence<R> {
         self.monitor(state, geom);
         self.failure
             .derived(self.invocations, self.monitor.non_finite());
+        // The Chazy latch, at every step, not every snapshot (chazy drill-down §6); a NaN `I` is never latched.
+        self.i_max.observe(inertia(&state.m, &state.r));
         let before = self.detector.latch();
         let fired = self.detector.fired();
         self.detector.observe(&state.r);
@@ -431,6 +444,8 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
         // The budget word's counts go on from the stored ones, so a march split at any persist boundary stores the
         // uncut march's word (R-603; `crate::regularisation::budget`).
         self.signals = Signals::reload(stored.budget_bits);
+        // The Chazy latch goes on from the stored level, its floor (chazy drill-down §6; REQ-PAY-105).
+        self.i_max.reload(sd_I_max(stored.packed_a));
     }
 
     #[inline]

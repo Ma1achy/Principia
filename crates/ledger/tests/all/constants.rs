@@ -747,7 +747,8 @@ negative_control!(
     }
 );
 
-/// Checks that `register` lists, for the M7 gate, exactly the diverging fields' `x₀`, `E_0`'s and `Lz_0`'s, each 1,
+/// Checks that `register` lists, for the M7 gate, exactly the diverging fields' `x₀`, `E_0`'s and `Lz_0`'s, and the Chazy
+/// classifier's four parameters (TASK-M7-35; REQ-EVT-028 to REQ-EVT-030), the `x₀` each 1,
 /// canonical-units, citing REQ-COL-066 (TASK-M7-05; dd_generation_root §3.8), and that [`DIVERGING_X0`] names each
 /// field's entry, `diverging_x0_<field>`.
 fn check_diverging_x0(register: &[ConstantBuilder]) {
@@ -756,7 +757,14 @@ fn check_diverging_x0(register: &[ConstantBuilder]) {
     }
     assert_eq!(
         provisional_until(register, "M7"),
-        ["diverging_x0_E_0", "diverging_x0_Lz_0"],
+        [
+            "diverging_x0_E_0",
+            "diverging_x0_Lz_0",
+            "chazy_epsilon",
+            "chazy_h_far",
+            "chazy_os_ratio",
+            "chazy_delta"
+        ],
         "the entries provisional until M7"
     );
     for name in ["diverging_x0_E_0", "diverging_x0_Lz_0"] {
