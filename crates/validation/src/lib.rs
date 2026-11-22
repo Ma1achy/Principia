@@ -39,6 +39,7 @@ pub mod paths;
 pub mod projection_parity;
 pub mod prop;
 pub mod reference;
+pub mod reversibility;
 pub mod roundtrip;
 pub mod roundtrip_preset;
 pub mod shape_roundtrip;

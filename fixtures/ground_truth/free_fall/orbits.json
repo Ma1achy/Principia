@@ -1,0 +1,31 @@
+{
+  "about": "Free-fall (brake) periodic orbits for the reversibility diagnostic (validation::reversibility, the gate reversibility-xi). Each row is copied digit for digit from Hristov, Hristova, Dmitrasinovic & Tanikawa, 'Three-body periodic collisionless equal-mass free-fall orbits revisited', Celestial Mechanics and Dynamical Astronomy 136, 7 (2024), doi:10.1007/s10569-023-10177-w, arXiv:2308.16159 (CC BY 4.0), database https://db2.fmi.uni-sofia.bg/3bodyfree/, file sol_80.txt (committed at docs/incoming/2026-10-27_hp_ics_freefall/data/sofia_3bodyfree/sol_80.txt, sha256 81dc1b70828fd5960dec57f64ac88f7945fa5c8eddf1cfb6ea33b3475c55373c), its 1-based line 'row'. Published by the authors; included as test data with citation; not ours.",
+  "convention": "G = 1, equal masses m = 1, all three bodies at rest at t = 0 at r1 = (-1/2, 0), r2 = (1/2, 0), r3 = (x, y). 'period' is T, the period; 'scaled_period' is T* = T |E|^(3/2), the database's ordering key. Checked on each row by validation::reversibility's tests: T* recomputed from (x, y, T) agrees with the file's to 1e-12 relative.",
+  "chosen": "The three rows of least T* that are distinct orbits: rows 1 and 2 of sol_80.txt share T* to all 80 digits (14.3613...), as do rows 4 and 5 (15.5834...): one orbit read at each of its two brake configurations, so rows 2 and 5 are left out. Row 3 is also the first self-dual solution (sd_80.txt row 1). Least T* first, because the shortest orbits take the fewest steps and are expected to amplify round-off least over one period.",
+  "orbits": [
+    {
+      "name": "hristov_sol80_row1",
+      "row": 1,
+      "x": "0.10081002830904082427844218070523286659240699496879953203913934800723433799827271e-3",
+      "y": "0.86410262957299614417440390118167191410496295381737905641441379527063012867644224e0",
+      "period": "0.27592315791656136782280882317399064943735160146444337330419594227123873363969875e1",
+      "scaled_period": "0.14361301848653203107026508191506541244623764792201148916857461013868920108499823e2"
+    },
+    {
+      "name": "hristov_sol80_row3",
+      "row": 3,
+      "x": "0.26853656879186094505164950733431843261439517898894499257398902866565041798877524e-2",
+      "y": "0.42051392341346323788698432377477460928503339680708604708619613123154051505200895e0",
+      "period": "0.17803915330283836111234811629291376034257424759817740575116356605248530022321484e1",
+      "scaled_period": "0.14571737413553345363987962673353442414716660305617876794968389862000911185853766e2"
+    },
+    {
+      "name": "hristov_sol80_row4",
+      "row": 4,
+      "x": "0.13664936741948646596696276419442176584997744589715077812360724472271414559828122e-2",
+      "y": "0.16960184365485965711924464801930339353701069745221095940572461309541304251353999e0",
+      "period": "0.14874034374340751927215339827790674782209657229152122561961272257741339282299027e1",
+      "scaled_period": "0.15583470416972024857327219803395328681034614805351060807097106605251471115510248e2"
+    }
+  ]
+}

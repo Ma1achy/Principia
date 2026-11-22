@@ -1,0 +1,7 @@
+{
+  "description": "A finding, recorded as an expected failure: logH-TTL × KDK at one fixed fictitious step on Hristov et al.'s free-fall orbit sol_80.txt row 4 reads ξ 7.3e-7, above the threshold, because the orbit amplifies an error by 3.6e7 over one period, where the threshold allowed 1000 (validation::reversibility's note). The reading is round-off, not a broken reversal: ρ = ξ/(2n·u·A) is reported at most 1e-2. The threshold is not moved; the owner decides the criterion.",
+  "orbit": "hristov_sol80_row4",
+  "stepper": "kdk",
+  "mode": "ttl",
+  "expected": "fail"
+}
