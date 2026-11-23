@@ -224,7 +224,9 @@ pub fn energy_floor_test<R: EscapeReal>(m: &[R; 3], r: &[[R; 2]; 3], p: &[[R; 2]
     if d2[1] < d2[0] {
         b = 1;
     }
-    if d2[2] < d2[if b == 1 { 1 } else { 0 }] {
+    // Constant indices only (the compile-discipline lint): the tightest pair so far, chosen by value.
+    let tightest = if b == 1 { d2[1] } else { d2[0] };
+    if d2[2] < tightest {
         b = 2;
     }
     let rel: [Relative<R>; 3] = relative(m, r, p);
