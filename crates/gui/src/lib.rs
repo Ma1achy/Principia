@@ -86,6 +86,7 @@ mod tests {
     mod mock_layout_splitters;
     mod mock_legend_keys;
     mod mock_live_drag;
+    mod lock_moves_no_view;
     mod mock_lock_badge;
     mod mock_manifold_resets;
     mod mock_manifold_sections;

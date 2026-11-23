@@ -36,18 +36,9 @@ pub fn anchor_text(z: &Latent) -> String {
     format!("z_locked ({})", parts.join(", "))
 }
 
-/// The badge's buttons' responses.
-pub struct Badge {
-    /// Unlock.
-    pub unlock: Response,
-    /// Centre on pin.
-    pub centre: Response,
-    /// Open in Inspector.
-    pub inspector: Response,
-}
-
-/// Draws the badge in `ui`: its text, then unlock, centre on pin and open in Inspector, each disabled while free.
-pub fn badge(ui: &mut Ui, lock: &Lock) -> Badge {
+/// Draws the badge in `ui`: its text, then unlock and open in Inspector, both disabled while free. Returns the two
+/// buttons' responses. Centre on pin is the badge's too, drawn on the line under it ([`centre_on_pin`]).
+pub fn badge(ui: &mut Ui, lock: &Lock) -> (Response, Response) {
     if lock.locked {
         Frame::new()
             .fill(BADGE_FILL)
@@ -60,13 +51,16 @@ pub fn badge(ui: &mut Ui, lock: &Lock) -> Badge {
         ui.label(RichText::new(UNLOCKED).monospace().weak());
     }
     let unlock = ui.add_enabled(lock.locked, Button::new(UNLOCK));
-    let centre = ui.add_enabled(lock.locked, Button::new(CENTRE_ON_PIN));
     let inspector = ui.add_enabled(lock.locked, Button::new(OPEN_INSPECTOR));
-    Badge {
-        unlock,
-        centre,
-        inspector,
-    }
+    (unlock, inspector)
+}
+
+/// Draws the badge's centre on pin in `ui`, disabled while free.
+///
+/// The plan is unclear here; chose to draw centre on pin and the setting on the line under the badge, before the
+/// anchor's value, because the badge's line holds no fourth button inside the panel's body at its width.
+pub fn centre_on_pin(ui: &mut Ui, lock: &Lock) -> Response {
+    ui.add_enabled(lock.locked, Button::new(CENTRE_ON_PIN))
 }
 
 /// Draws the gold reticle centred on `at`, over the figure `figure` and clipped to it.

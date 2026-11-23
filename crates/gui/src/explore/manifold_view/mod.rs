@@ -263,11 +263,11 @@ pub fn join(tree: &mut ScopeTree) {
     tree.register(Some(NAVIGATE), Scope::control(UNLOCK, "unlock"));
     tree.register(
         Some(NAVIGATE),
-        Scope::control(CENTRE_ON_PIN, lock::CENTRE_ON_PIN_TEXT),
+        Scope::control(OPEN_INSPECTOR, "open in Inspector"),
     );
     tree.register(
         Some(NAVIGATE),
-        Scope::control(OPEN_INSPECTOR, "open in Inspector"),
+        Scope::control(CENTRE_ON_PIN, lock::CENTRE_ON_PIN_TEXT),
     );
     tree.register(
         Some(NAVIGATE),

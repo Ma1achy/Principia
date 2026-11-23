@@ -27,8 +27,10 @@ pub const NOTE: &str = "sliders re-based to the anchor · moving one is an excur
 pub const FREE: &str = "free · K, or right-click › lock here, on the figure";
 /// The badge's centre on pin, as the keyboard names it.
 pub const CENTRE_ON_PIN_TEXT: &str = crate::explore::lock::CENTRE_ON_PIN;
-/// The setting's label (render_gui_spec §G4).
+/// The setting's name (render_gui_spec §G4): the keyboard's and the checkbox's hover text.
 pub const SETTING_TEXT: &str = "Centre on pin when locking";
+/// The setting's checkbox's label, beside centre on pin: "centre on pin ☐ when locking".
+pub const SETTING_SHORT: &str = "when locking";
 
 /// Locks at the figure's point `(s, t)` of `plane`, with `scratch`'s centre-on-pin setting: the engine's lock leaf
 /// ([`Class::Lock`]), its edits one command, one history entry. The leaf's pin is kept for centre on pin.
@@ -85,26 +87,29 @@ pub fn open_inspector(lock: &Lock, out: &mut Out) {
     }
 }
 
-/// Draws the badge in row `badge_row`, and the setting and the anchor's value in row `anchor_row`.
+/// Draws the badge in row `badge_row`, and centre on pin, the setting and the anchor's value in row `anchor_row`.
 pub fn show(ui: &mut Ui, badge_row: Rect, anchor_row: Rect, clip: Rect, panel: &mut Panel<'_>) {
     let lock = panel.snapshot.sim.lock.clone();
     let mut line = row_ui(ui, badge_row);
-    let buttons = badge(&mut line, &lock);
-    panel.place(UNLOCK, &buttons.unlock, clip);
-    panel.place(CENTRE_ON_PIN, &buttons.centre, clip);
-    panel.place(OPEN_INSPECTOR, &buttons.inspector, clip);
-    if buttons.unlock.clicked() {
+    let (unlock_button, inspector) = badge(&mut line, &lock);
+    panel.place(UNLOCK, &unlock_button, clip);
+    panel.place(OPEN_INSPECTOR, &inspector, clip);
+    if unlock_button.clicked() {
         unlock(&lock, panel.out);
     }
-    if buttons.centre.clicked() {
-        centre_on_pin(&panel.snapshot.sim, panel.scratch, panel.out);
-    }
-    if buttons.inspector.clicked() {
+    if inspector.clicked() {
         open_inspector(&lock, panel.out);
     }
     let mut line = row_ui(ui, anchor_row);
+    let centre = crate::explore::lock::centre_on_pin(&mut line, &lock);
+    panel.place(CENTRE_ON_PIN, &centre, clip);
+    if centre.clicked() {
+        centre_on_pin(&panel.snapshot.sim, panel.scratch, panel.out);
+    }
     let mut on = panel.scratch.centre_on_pin == CentreOnPin::On;
-    let setting = line.add(Checkbox::new(&mut on, RichText::new(SETTING_TEXT).small()));
+    let setting = line
+        .add(Checkbox::new(&mut on, RichText::new(SETTING_SHORT).small()))
+        .on_hover_text(SETTING_TEXT);
     panel.place(CENTRE_ON_PIN_SETTING, &setting, clip);
     if setting.changed() {
         toggle_setting(panel.scratch, panel.out);

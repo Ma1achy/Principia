@@ -222,19 +222,25 @@ fn check_same_leaf(zoom_row: ZoomRow) {
             );
         }
         for at in [(0.25, 0.75), (0.5, 0.5), (0.9, 0.1)] {
-            let (mut scratch, mut out) = (Scratch::default(), Out::default());
-            mv_lock::lock_at(&plane, at, &mut scratch, &mut out);
-            assert_eq!(
-                exact(&out.edits),
-                exact(&leaf_edits(leaf::lock(
-                    &affine(&plane),
-                    &Affine,
-                    at,
-                    CentreOnPin::On,
-                    &gate
-                ))),
-                "the lock at a point is not the lock leaf's"
-            );
+            for setting in [CentreOnPin::Off, CentreOnPin::On] {
+                let mut scratch = Scratch {
+                    centre_on_pin: setting,
+                    ..Scratch::default()
+                };
+                let mut out = Out::default();
+                mv_lock::lock_at(&plane, at, &mut scratch, &mut out);
+                assert_eq!(
+                    exact(&out.commands.concat()),
+                    exact(&leaf_edits(leaf::lock(
+                        &affine(&plane),
+                        &Affine,
+                        at,
+                        setting,
+                        &gate
+                    ))),
+                    "the lock at a point is not the lock leaf's"
+                );
+            }
         }
         for (d1, d2) in [(5.0, 0.0), (0.0, -2.5), (30.0, 12.0)] {
             let mut to = Angles::of(&view);
@@ -328,9 +334,14 @@ fn check_merge(reordered: bool) {
                     z_locked: z,
                 }),
             ];
-            let (mut scratch, mut out) = (Scratch::default(), Out::default());
+            // Main's lock re-centred: the lock with the centre-on-pin setting on, now off by default (TASK-M8-125).
+            let mut scratch = Scratch {
+                centre_on_pin: CentreOnPin::On,
+                ..Scratch::default()
+            };
+            let mut out = Out::default();
             mv_lock::lock_at(&plane, (s, t), &mut scratch, &mut out);
-            assert_eq!(exact(&out.edits), exact(&old));
+            assert_eq!(exact(&out.commands.concat()), exact(&old));
         }
     }
 }

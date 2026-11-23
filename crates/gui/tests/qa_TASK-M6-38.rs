@@ -988,6 +988,9 @@ fn check_navigate(texts: &[(String, Rect)], scopes: &[&str]) {
         "zoom",
         "unlock",
         "open in Inspector",
+        // The lock badge's centre on pin and its setting (TASK-M8-125).
+        "centre on pin",
+        "Centre on pin when locking",
         // Changed by TASK-M6-45's qa commit (R-466 K6, K15).
         "reset",
     ];

@@ -1,5 +1,5 @@
 //! `mock_lock_badge` (REQ-GUI-171; render_gui_spec §G2, §G4; chart_decoder_contract Part 4, "The lock"): K over a
-//! point of the mock's figure locks there and recentres on it; the gold reticle sits at the figure's centre; the
+//! point of the mock's figure locks there and leaves the view where it is; the gold reticle sits at that point; the
 //! compass carries the gold pin; the badge reads "● locked at z_locked" with the anchor's (fake) value; unlock emits the
 //! `SetField` that clears the lock; open in Inspector requests the Inspector window. Each check also runs on an input
 //! it must reject (R-176, through `rejects`).
@@ -93,7 +93,7 @@ fn gold_in(shot: &Shot, rect: egui::Rect) -> usize {
 }
 
 #[test]
-fn mock_lock_badge_k_over_a_point_locks_there_and_recentres() {
+fn mock_lock_badge_k_over_a_point_locks_there_and_leaves_the_view() {
     let mut rig = new_rig(false);
     let before = rig.app.snapshot().clone();
     let anchor = point(
@@ -110,20 +110,14 @@ fn mock_lock_badge_k_over_a_point_locks_there_and_recentres() {
         "at the point under the pointer: {:?}",
         after.sim.lock.z_locked
     );
-    assert!(
-        close(&after.sim.plane.z0, &anchor),
-        "and recentred on it: {:?}",
-        after.sim.plane.z0
-    );
     assert_eq!(
-        (after.sim.plane.q1, after.sim.plane.q2),
-        (before.sim.plane.q1, before.sim.plane.q2),
-        "the basis kept"
+        after.sim.plane, before.sim.plane,
+        "z₀ and the basis kept: locking does not move the view"
     );
     assert_eq!(
         after.history.undo_depth,
-        before.history.undo_depth + 2,
-        "the recentre and the lock, each undoable"
+        before.history.undo_depth + 1,
+        "the lock, undoable"
     );
     // Control: K with the pointer off the figure locks nothing.
     let mut off = new_rig(false);
@@ -139,24 +133,23 @@ fn mock_lock_badge_k_over_a_point_locks_there_and_recentres() {
 }
 
 #[test]
-fn mock_lock_badge_the_reticle_sits_at_the_centre() {
+fn mock_lock_badge_the_reticle_sits_at_the_pin() {
     let mut rig = new_rig(true);
     let figure = rig.layout.figure;
+    let pin = lock_point(figure);
     let unlocked = rig.shot();
     rig.lock();
     let snapshot = rig.app.snapshot().clone();
-    let at =
-        reticle_at(&snapshot.sim.lock, &snapshot.sim.plane, figure).expect("the reticle in view");
+    let at = reticle_at(&snapshot.sim.lock, &snapshot.sim.plane, rig.layout.field)
+        .expect("the reticle in view");
     assert!(
-        at.distance(figure.center()) < 1e-3,
-        "the reticle at {at:?}, the centre {:?}",
-        figure.center()
+        at.distance(pin) < 1e-3,
+        "the reticle at {at:?}, the point locked {pin:?}"
     );
-    // Its ring is drawn: gold about the centre, on the figure.
-    let ring =
-        egui::Rect::from_center_size(figure.center(), egui::Vec2::splat(2.0 * RETICLE_R + 4.0));
+    // Its ring is drawn: gold about the pin, on the figure.
+    let ring = egui::Rect::from_center_size(pin, egui::Vec2::splat(2.0 * RETICLE_R + 4.0));
     let locked = rig.shot();
-    assert!(gold_in(&locked, ring) > 40, "the gold ring at the centre");
+    assert!(gold_in(&locked, ring) > 40, "the gold ring at the pin");
     rejects("the figure before locking", || {
         assert!(gold_in(&unlocked, ring) > 40)
     });
@@ -301,7 +294,7 @@ fn mock_lock_badge_open_in_inspector_requests_the_inspector() {
 fn mock_lock_badge_the_reticle_is_a_ring_with_four_ticks() {
     let mut rig = new_rig(false);
     rig.lock();
-    let at = rig.layout.figure.center();
+    let at = lock_point(rig.layout.figure);
     let shapes = super::support::shapes(&mut rig.headless, &mut rig.app);
     let check = |shapes: &[egui::Shape], at: egui::Pos2| {
         let close = |a: egui::Pos2, b: egui::Pos2| (a - b).length() < 1e-3;
@@ -333,7 +326,7 @@ fn mock_lock_badge_the_reticle_is_a_ring_with_four_ticks() {
         }
     };
     check(&shapes, at);
-    rejects("the reticle off the centre", || {
+    rejects("the reticle off the pin", || {
         check(&shapes, at + egui::vec2(5.0, 0.0))
     });
 }

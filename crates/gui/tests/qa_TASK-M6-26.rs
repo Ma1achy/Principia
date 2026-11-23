@@ -466,7 +466,7 @@ fn qa_mock_manifold_view_every_value_emits_one_set_field_on_z0_or_basis() {
     });
 }
 
-// --- REQ-GUI-170 and §G4: K locks at the point, recentres, re-bases the sliders ------------------------------------
+// --- REQ-GUI-170 and §G4: K locks at the point, leaves the view, re-bases the sliders ------------------------------------
 
 /// The pointer's point in the figure the lock tests use: off centre in both directions.
 fn lock_point(figure: Rect) -> Pos2 {
@@ -481,8 +481,7 @@ fn locked_rig() -> (Rig<MockSide>, Snapshot) {
     (rig, before)
 }
 
-/// The lock after K over `at` on `before`'s chart: the anchor is the chart point under the pointer, the view recentred
-/// on it, the basis as it was.
+/// The lock after K over `at` on `before`'s chart: the anchor is the chart point under the pointer, the view as it was.
 fn check_lock(before: &Snapshot, after: &Snapshot, figure: Rect, at: Pos2) {
     let (s, t) = st(figure, at);
     let want = point(&before.sim.plane, s, t);
@@ -495,8 +494,8 @@ fn check_lock(before: &Snapshot, after: &Snapshot, figure: Rect, at: Pos2) {
         after.sim.lock.z_locked
     );
     assert_eq!(
-        after.sim.plane.z0, after.sim.lock.z_locked,
-        "the view is not recentred on the anchor"
+        after.sim.plane.z0, before.sim.plane.z0,
+        "locking moved the view (render_gui_spec §G4: it does not)"
     );
     assert_eq!(
         (after.sim.plane.q1, after.sim.plane.q2),
@@ -506,7 +505,7 @@ fn check_lock(before: &Snapshot, after: &Snapshot, figure: Rect, at: Pos2) {
 }
 
 #[test]
-fn qa_mock_lock_badge_k_locks_at_the_point_and_recentres() {
+fn qa_mock_lock_badge_k_locks_at_the_point_and_leaves_the_view() {
     let figure = layout().figure;
     let (mut rig, before) = locked_rig();
     let after = rig.snap();
@@ -516,7 +515,7 @@ fn qa_mock_lock_badge_k_locks_at_the_point_and_recentres() {
     rejects("the anchor of the point mirrored in t", || {
         check_lock(&before, &after, figure, flipped)
     });
-    // Lock and recentring are undoable (R-69): undoing everything K did returns the free view as it was.
+    // The lock is undoable (R-69): undoing everything K did returns the free view as it was.
     for _ in before.history.undo_depth..after.history.undo_depth {
         rig.app.undo();
         rig.idle(1);
@@ -539,20 +538,21 @@ fn gold_circles(shapes: &[egui::Shape]) -> Vec<Pos2> {
 
 fn check_marks(shapes: &[egui::Shape], layout: &Layout, locked: bool) {
     let circles = gold_circles(shapes);
-    let centre = layout.figure.center();
+    // Locking does not move the view (render_gui_spec §G4): the reticle stays at the point locked.
+    let centre = lock_point(layout.figure);
     let reticle = circles.iter().any(|c| (*c - centre).length() < 1.0);
     let pin = circles.iter().any(|c| layout.compass.contains(*c));
     assert_eq!(
         (reticle, pin),
         (locked, locked),
-        "locked {locked}: the gold reticle at the figure's centre {centre:?} and the gold pin in the compass \
+        "locked {locked}: the gold reticle at the point locked {centre:?} and the gold pin in the compass \
          {:?}: {circles:?}",
         layout.compass
     );
 }
 
 #[test]
-fn qa_mock_lock_badge_reticle_at_the_centre_and_pin_on_the_compass() {
+fn qa_mock_lock_badge_reticle_at_the_pin_and_pin_on_the_compass() {
     let lay = layout();
     let mut free = mock();
     let free_shapes = free.shapes();
