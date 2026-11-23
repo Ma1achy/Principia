@@ -196,6 +196,7 @@ fn constants_file(chart: &[Param], tunables: &[Tunable]) -> String {
     s.push_str(&coll_floor());
     s.push_str(&chazy());
     s.push_str(&sync_grid());
+    s.push_str(&escape_rules());
     s
 }
 
@@ -940,4 +941,18 @@ fn links_file(lits: &[f64], code: &str, names: &[&str], selection: &str) -> Stri
     s.push_str("];\n");
     s.push_str(selection);
     s
+}
+
+/// The escape rules' constants (`kernel::detect::escape_rule`; TASK-M3-34): the distance floor's reach
+/// `escape_distance_floor`, in units of `R_0`, one f64 read at the march's width, not hashed, since it gives no stored bit
+/// its meaning.
+fn escape_rules() -> String {
+    use crate::constants::ESCAPE_DISTANCE_FLOOR;
+    format!(
+        "\n/// The register's `escape_distance_floor` = {f:?}: the distance floor's reach in units of the initial hyperradius\n\
+         /// `R_0` (prin-rs's naive distance baseline; TASK-M3-34).\n\
+         pub const ESCAPE_DISTANCE_FLOOR: f64 = {f_lit};\n",
+        f = ESCAPE_DISTANCE_FLOOR.number(),
+        f_lit = literal(ESCAPE_DISTANCE_FLOOR.number(), "f64"),
+    )
 }

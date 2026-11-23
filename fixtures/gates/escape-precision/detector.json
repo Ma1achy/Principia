@@ -1,0 +1,6 @@
+{
+  "description": "On the re-validation set (config_stability, config_basin, deep_interior; 64 × 64 each), the escape detector's firings by T_h/2 whose check-2 truth is bound or another body's escape are counted: at most the threshold, 0, the measured precision 100.0%.",
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 64, "r_coll": 0.0 }],
+  "rule": "detector",
+  "expected": "pass"
+}

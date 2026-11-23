@@ -1,0 +1,6 @@
+{
+  "description": "Control: a rung far below the ladder, one sync quantum (0.125: every sampling point a mark), at which transients settle within the window; it visibly changes which trajectories fire and must fail.",
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 64, "r_coll": 0.0 }],
+  "window": 0.125,
+  "expected": "fail"
+}

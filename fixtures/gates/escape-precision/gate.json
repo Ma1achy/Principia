@@ -1,0 +1,6 @@
+{
+  "gate": "escape-precision",
+  "inputs": ["detector.json", "control_earlier_tau.json", "control_energy_receding.json"],
+  "threshold": { "value": 0, "requirement": "REQ-EVT-019", "status": "confirmed" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-123" }
+}

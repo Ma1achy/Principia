@@ -1880,7 +1880,8 @@ ruling RQ-708 (a)).
     inner pair is light and slow beside a heavy third body (`plan/KNOWN.md`).
   - **To re-measure:** precision, recall and the `tau` gap were measured before `E_rel` was fixed. Re-validate them with
     this `E_rel`, against check 2's independent ground truth (pitfalls §2.4), keeping the legacy `t = 30` set as a
-    comparison (R-95).
+    comparison (R-95). *Re-measured by TASK-M3-34: pitfalls §2.2's dated note; the gap is 1.9× by the claim's statistic,
+    not 383×, and `tau` stays provisional until the owner settles it.*
   - **After escape fires (R-31, R-95, R-103):** `state` reads `escape` and `t_end` is fixed. Time averages (FTLE's `S/T` and
     the like) freeze at `t_esc`. In production `done` is set when escape fires and the loop ends. The post-escape march
     for the checks of pitfalls §2.4 runs only in the validation harness, which keeps its own state; the payload never

@@ -179,6 +179,16 @@ construction. **Three tuned constants eliminated.**
 (7.04e-05 against 2.70e-02), stable across `t = 25–30`. Any value in the middle two orders gives the
 same answer.
 
+**Re-measured (TASK-M3-34, 21 Nov 2026), and the claim does not hold here.** With R-29's `E_rel`, Heggie × RK4, on
+64 × 64 of `config stability`, `config basin` and `deep interior`, against check 2's ground truth
+(`cargo xtask gate tau-gap`, `escape-revalidation`, `escape-precision`): the claim's statistic, each trajectory's median
+`|Δn̂|` over `t = 25–30`, is 2.74e-02 for escapers against 5.20e-02 for bound runs on the config chart (**1.90×**), 2.39×
+in `deep interior`. Escapes from a binary settle as `1/d`, not `1/t³`, so at `t = 25–30` most have not settled. No
+false positive fires at any `tau` up to 1.353e-02 (one bound trajectory sets that edge); at `tau = 1e-3` precision is
+100.0% and recall 3.4% (config) and 14.8% (`deep interior`) by `T_h/2`. The gap the rule decides on, from the median
+escaper's firing threshold to the first false positive, is 1.08× pooled. `tau` stays provisional at `1e-3` until the
+owner settles it.
+
 ### 2.3 The 96.3% recall is the right failure direction
 
 ~4% of genuine escapes have not settled enough to fire by `t = 30`. They fire later. **Late rather

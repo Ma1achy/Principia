@@ -1,0 +1,7 @@
+{
+  "description": "The escape detector as it is, on the config slices (config_stability at its r_coll 0.005, config_basin at r_coll 0; 64 × 64 each), against check 2's ground truth: pooled precision of the firings by T_h/2 at least the threshold over at least 20 decided firings, and the replay at the register's rule is the detector's own firing on every trajectory. Recall recorded.",
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }],
+  "truth": "check2",
+  "rule": "detector",
+  "expected": "pass"
+}

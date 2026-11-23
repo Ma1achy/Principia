@@ -8,7 +8,7 @@
 //! detection, which sets the `done` flag on collision ([`Detector`]) and never breaks. A failure sets `done` too: the
 //! march ends on its first non-finite step (`super::failure`). **At each sampling point** of the occupant's grid ([`Cadence::sample`]: a completed
 //! macro-step, or a sync boundary under an occupant that owns its time mapping) the escape detector runs
-//! ([`escape::Detector`]; Part 7), on the state the step's cadence left, and sets `done` where it fires. A run on which
+//! ([`crate::detect::escape::Detector`]; Part 7), on the state the step's cadence left, and sets `done` where it fires. A run on which
 //! a collision has fired takes no escape test: the collision's is the earlier step.
 //!
 //! **Built from the run's IC** ([`WrapperCadence::with_radius`]): the projection's `M` and weights are formed once,
@@ -67,7 +67,7 @@ use super::substep::Quantise;
 use super::wrapper::{monitored, WrapperReal};
 use crate::chazy::{inertia, ImaxLatch};
 use crate::detect::collision::{CollisionRadius, Detector};
-use crate::detect::escape;
+use crate::detect::escape_rule::EscapeRule;
 use crate::detect::label::{Events, Fired};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
@@ -84,15 +84,16 @@ use spirv_std::num_traits::NumCast;
 /// run's `done` flag and the count of its calls. A run starts from [`WrapperCadence::with_radius`]: no call made, done
 /// only if its IC is inside `r_coll`.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct WrapperCadence<R> {
+pub struct WrapperCadence<R, E = crate::detect::escape_rule::DefaultRule<R>> {
     /// The COM projection, its `M` cached.
     projection: ComProjection<R>,
     /// The invariant monitor, its `E₀` and `L_{z,0}` stored.
     monitor: Monitor<R>,
     /// The collision detector and the `dmin_pair` latch.
     detector: Detector,
-    /// The escape detector: the lagged shape register, the stored `E₀` and its verdict.
-    escape: escape::Detector<R>,
+    /// The escape rule (`crate::detect::escape_rule`): the closure detector by default, its lagged shape register, the
+    /// stored `E₀` and its verdict.
+    escape: E,
     /// The failure path's per-step detection: the first non-finite state or monitored quantity (`super::failure`).
     failure: failure::Detector,
     /// The calls so far.
@@ -141,6 +142,19 @@ impl<R: WrapperReal> WrapperCadence<R> {
         p: &[[R; 2]; 3],
         radius: CollisionRadius,
     ) -> Self {
+        Self::with_rule(m, r, p, radius)
+    }
+}
+
+impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
+    /// [`WrapperCadence::with_radius`] under the escape rule `E` (`crate::detect::escape_rule`), started on the IC.
+    #[inline]
+    pub fn with_rule(
+        m: &[R; 3],
+        r: &[[R; 2]; 3],
+        p: &[[R; 2]; 3],
+        radius: CollisionRadius,
+    ) -> Self {
         let detector = Detector::new(radius, r);
         let monitor = Monitor::new(m, r, p, &Geom::new(m, r));
         // An IC whose `E₀` or `L_{z,0}` is not finite fails before its first step, at ordinal 0: every drift of its run
@@ -156,7 +170,7 @@ impl<R: WrapperReal> WrapperCadence<R> {
             projection: ComProjection::new(m),
             monitor,
             detector,
-            escape: escape::Detector::new(m, r, monitor.e_0()),
+            escape: E::start(m, r, p, monitor.e_0()),
             failure: failed,
             invocations: 0,
             done: detector.fired() || failed.fired(),
@@ -227,6 +241,19 @@ impl<R: WrapperReal> WrapperCadence<R> {
         &self.i_max
     }
 
+    /// `I_max` as the escape rule reads it: the greater of the live maximum and the stored level's lower edge, so a
+    /// re-booted march reads at least what it stored (`crate::chazy::i_max_decode`).
+    #[inline]
+    pub fn i_max_now(&self) -> R {
+        let stored = crate::chazy::i_max_decode(self.i_max.code(), self.i_max.i_0());
+        let live = self.i_max.live();
+        if stored > live {
+            stored
+        } else {
+            live
+        }
+    }
+
     /// The calls made so far, one per internal step taken.
     #[inline]
     pub fn invocations(&self) -> u32 {
@@ -253,7 +280,7 @@ impl<R: WrapperReal> WrapperCadence<R> {
 
     /// The escape detector: its verdict and the lagged shape register.
     #[inline]
-    pub fn escape(&self) -> &escape::Detector<R> {
+    pub fn escape(&self) -> &E {
         &self.escape
     }
 
@@ -262,7 +289,7 @@ impl<R: WrapperReal> WrapperCadence<R> {
     /// which sampling points are window marks follows from their indices alone ([`escape::is_mark`]).
     #[inline]
     pub fn resume_escape(&mut self, stored: &SimStateBaseOf<R>) {
-        self.escape = escape::Detector::resumed(
+        self.escape.resume(
             [stored._nhat_lag_0, stored._nhat_lag_1, stored._nhat_lag_2],
             stored.E_0,
         );
@@ -324,7 +351,7 @@ impl<R: WrapperReal> WrapperCadence<R> {
     }
 }
 
-impl<R: WrapperReal> WrapperCadence<R> {
+impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
     /// The cadence's work after a `STEP` past the projection, on a state already projected: the call counted, the
     /// invariant accumulation ([`WrapperCadence::monitor`]) and terminal detection, which sets `done` on a collision.
     /// [`Cadence::after_step`] is the projection then this; the FTLE shadow's displacement form projects its own
@@ -354,7 +381,7 @@ impl<R: WrapperReal> WrapperCadence<R> {
     }
 }
 
-impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
+impl<R: WrapperReal, E: EscapeRule<R>> Cadence<R> for WrapperCadence<R, E> {
     /// The state the step left read for a failure before the projection, so a `±∞` is read as itself
     /// (`super::failure`), then the projection and [`WrapperCadence::watch`].
     #[inline]
@@ -378,8 +405,9 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
     fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
         let tie = self.detector.fired() && self.collision_at == self.invocations;
         if !self.escape.fired() && !self.failure.fired() && (!self.detector.fired() || tie) {
+            let i_max = self.i_max_now();
             self.escape
-                .sample(&state.m, &state.r, &state.p, index, quantum);
+                .sample(&state.m, &state.r, &state.p, index, quantum, i_max);
             if self.escape.fired() {
                 self.escape_at = self.invocations;
             }

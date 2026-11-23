@@ -1,0 +1,6 @@
+{
+  "gate": "escape-rules",
+  "inputs": ["default.json", "control_distance_floor.json"],
+  "threshold": { "value": 0, "requirement": "REQ-EVT-019", "status": "confirmed" },
+  "min_regions": { "value": null, "requirement": "REQ-EVT-025" }
+}
