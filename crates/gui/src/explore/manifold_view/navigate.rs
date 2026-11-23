@@ -176,7 +176,9 @@ pub fn figure(
     scratch: &mut Scratch,
     out: &mut Out,
 ) -> Option<[f64; 2]> {
-    let plane = &snapshot.sim.plane;
+    // Each gesture reads the plane the frame's sends before it leave ([`Out::now`]), so a key's tilt earlier in the
+    // frame and the wheel's zoom here both land.
+    let sim = &snapshot.sim;
     let response: Response = ui.interact(
         figure,
         egui::Id::new("figure gestures"),
@@ -185,7 +187,7 @@ pub fn figure(
     if response.dragged_by(egui::PointerButton::Primary) {
         let delta = response.drag_delta();
         if delta != egui::Vec2::ZERO {
-            out.edit(pan(plane, delta, field.size()), None, scratch);
+            out.edit(pan(&out.now(sim).plane, delta, field.size()), None, scratch);
         }
     }
     let typing = ui.ctx().text_edit_focused();
@@ -196,11 +198,12 @@ pub fn figure(
     if response.hovered() {
         let octaves = ui.input(|i| wheel_octaves(&i.events));
         if octaves != 0.0 {
-            out.edit(zoom_by(plane, octaves), None, scratch);
+            out.edit(zoom_by(&out.now(sim).plane, octaves), None, scratch);
         }
         if !typing && ui.input(|i| i.key_pressed(Key::K)) {
             if let Some(pos) = response.hover_pos() {
-                super::lock::lock_at(plane, figure_coords(field, pos), scratch, out);
+                let plane = out.now(sim).plane;
+                super::lock::lock_at(&plane, figure_coords(field, pos), scratch, out);
             }
         }
         if !typing && ui.input(|i| i.key_pressed(Key::P)) {
@@ -215,7 +218,8 @@ pub fn figure(
     response.context_menu(|ui| {
         if ui.button(super::lock::LOCK_HERE).clicked() {
             if let Some(at) = scratch.menu_at.take() {
-                super::lock::lock_at(plane, at, scratch, out);
+                let plane = out.now(sim).plane;
+                super::lock::lock_at(&plane, at, scratch, out);
             }
             ui.close();
         }
@@ -248,15 +252,9 @@ pub fn figure(
         let Base::Log2(base) = StepKind::ZoomLog2.base() else {
             unreachable!("the zoom's base step is in octaves")
         };
-        let mut plane = plane.clone();
+        // Each press on the plane the one before it leaves.
         for (sign, modifiers) in presses {
-            let edit = zoom_by(&plane, sign * base * multiplier(modifiers));
-            if let engine::contract::set_field::Edit::Sim(
-                engine::contract::set_field::SimField::Basis { q1, q2 },
-            ) = &edit.edit
-            {
-                (plane.q1, plane.q2) = (*q1, *q2);
-            }
+            let edit = zoom_by(&out.now(sim).plane, sign * base * multiplier(modifiers));
             out.edit(edit, None, scratch);
         }
     }

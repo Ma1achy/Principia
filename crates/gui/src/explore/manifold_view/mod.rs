@@ -928,50 +928,53 @@ pub fn commands_about_the_pin(
     edits: Vec<SetField>,
     sim: &engine::contract::sim_config::SimConfig,
 ) -> Vec<Vec<SetField>> {
-    let (mut plane, mut lock) = (sim.plane.clone(), sim.lock.clone());
+    let mut state = sim.clone();
     let mut out = Vec::with_capacity(edits.len());
     for edit in edits {
-        let mut command = Vec::with_capacity(2);
-        match &edit.edit {
-            Edit::Sim(SimField::Z0(z0)) => plane.z0 = *z0,
-            Edit::Sim(SimField::Lock(l)) => lock = l.clone(),
-            Edit::Sim(
-                SimField::Basis { q1, q2 }
-                | SimField::SliceFrame {
-                    basis: Some((q1, q2)),
-                    ..
-                },
-            ) => {
-                let pivot = lock
-                    .locked
-                    .then(|| chart_coords(&plane, &lock.z_locked))
-                    .flatten();
-                if let Some((s, t)) = pivot {
-                    let z0 = add(
-                        &add(&plane.z0, 2.0 * s - 1.0, &add(&plane.q1, -1.0, q1)),
-                        2.0 * t - 1.0,
-                        &add(&plane.q2, -1.0, q2),
-                    );
-                    if z0 != plane.z0 {
-                        command.push(z0_edit(z0));
-                        plane.z0 = z0;
-                    }
-                }
-                (plane.q1, plane.q2) = (*q1, *q2);
-            }
-            // The horizon, the window, the slice frame alone and the render fields leave the plane and the lock as they
-            // are.
-            Edit::Sim(
-                SimField::Horizon(_)
-                | SimField::Window(_)
-                | SimField::SliceFrame { basis: None, .. },
-            )
-            | Edit::Render(_) => {}
+        let command = turned(edit, &state.plane, &state.lock);
+        for e in &command {
+            written(&mut state, e);
         }
-        command.push(edit);
         out.push(command);
     }
     out
+}
+
+/// One edit's command, made against `plane` and `lock` as they stand: a basis edit, locked with the anchor off the
+/// centre, preceded by its recentring `SetField` on `z₀`; any other edit as it is.
+fn turned(edit: SetField, plane: &Plane, lock: &Lock) -> Vec<SetField> {
+    let pivot = lock
+        .locked
+        .then(|| chart_coords(plane, &lock.z_locked))
+        .flatten();
+    turned_about(edit, plane, pivot)
+}
+
+/// One edit's command on `plane`, turned about the chart point `pivot`: a basis edit, with a pivot, preceded by the
+/// `SetField` on `z₀` that keeps the plane's point at `pivot` where it is; any other edit, or none, as it is.
+pub fn turned_about(edit: SetField, plane: &Plane, pivot: Option<(f64, f64)>) -> Vec<SetField> {
+    let mut command = Vec::with_capacity(2);
+    if let Edit::Sim(
+        SimField::Basis { q1, q2 }
+        | SimField::SliceFrame {
+            basis: Some((q1, q2)),
+            ..
+        },
+    ) = &edit.edit
+    {
+        if let Some((s, t)) = pivot {
+            let z0 = add(
+                &add(&plane.z0, 2.0 * s - 1.0, &add(&plane.q1, -1.0, q1)),
+                2.0 * t - 1.0,
+                &add(&plane.q2, -1.0, q2),
+            );
+            if z0 != plane.z0 {
+                command.push(z0_edit(z0));
+            }
+        }
+    }
+    command.push(edit);
+    command
 }
 
 /// A `SetField` on the lock.
@@ -1038,13 +1041,24 @@ pub fn control_reached(control: Rect, top: f32) -> bool {
     control.max.y > top
 }
 
-/// What the panel, the compass and the figure ask for in one frame.
+/// Which of [`Out`]'s lists a route's send went to: [`Out::sends`] reads them back in the order the routes asked.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Sent {
+    /// The next of [`Out::edits`].
+    Edit,
+    /// The next of [`Out::commands`].
+    Command,
+}
+
+/// What the panel, the compass and the figure ask for in one frame. Every route of the frame reads the state the sends
+/// asked before it leave ([`Out::now`]), so two edits of one frame, a key's tilt and the wheel's zoom, both land, the
+/// second made on the first's plane, and a drag's frame folds on the state as it stands, not on its press.
 #[derive(Debug, Default, PartialEq)]
 pub struct Out {
-    /// The edits, in order: the app turns each basis edit about the pin while locked ([`commands_about_the_pin`]).
+    /// The edits, in order: the app turns each basis edit about the pin while locked ([`Out::sends`]).
     pub edits: Vec<SetField>,
-    /// Commands already turned about the pin, each sent as it is, one history entry: a compass drag's edit, made from
-    /// the plane where the drag began, not the frame's (R-458 F1).
+    /// Commands each sent as it is, one history entry: a lock's, a centre on pin's, and a compass drag's frame, made on
+    /// the state as it stands and turned about the pin's chart point read when the drag began (R-458 F1).
     pub commands: Vec<Vec<SetField>>,
     /// The resets' commands, also turned about the pin, each sent under a fresh key of its own: one history entry,
     /// whatever else the pointer holds (R-466 K10).
@@ -1057,6 +1071,10 @@ pub struct Out {
     pub focus: Option<ScopeId>,
     /// Whether a preference changed, so the GUI's settings are saved.
     pub save_settings: bool,
+    /// The order the edits and the commands were asked in, as [`Out::edit`], [`Out::command`], [`Out::send_edit`] and
+    /// [`Out::send_command`] record it. An edit or a command pushed onto its list directly is not in it, and is sent
+    /// after those that are, the edits first.
+    pub order: Vec<Sent>,
 }
 
 impl Out {
@@ -1065,27 +1083,106 @@ impl Out {
         if let Some(touch) = touch {
             scratch.compass.mode = touch;
         }
-        self.edits.push(edit);
+        self.send_edit(edit);
     }
 
     /// A command already turned about the pin, touching `touch`, recorded in `scratch`'s compass.
     pub fn command(&mut self, command: Vec<SetField>, touch: Touch, scratch: &mut Scratch) {
         scratch.compass.mode = touch;
+        self.send_command(command);
+    }
+
+    /// An edit, touching no mode: turned about the pin by the app, against the state the sends before it leave.
+    pub fn send_edit(&mut self, edit: SetField) {
+        self.edits.push(edit);
+        self.order.push(Sent::Edit);
+    }
+
+    /// A command, sent as it is, touching no mode.
+    pub fn send_command(&mut self, command: Vec<SetField>) {
         self.commands.push(command);
+        self.order.push(Sent::Command);
+    }
+
+    /// The commands the app sends for the frame's edits and commands, from `sim`, the snapshot's, in the order the
+    /// routes asked for them: each edit with its turn about the pin against the state the sends before it leave, one
+    /// command ([`commands_about_the_pin`]'s step), each command as it is. Those pushed onto a list directly follow,
+    /// the edits first.
+    pub fn sends(&self, sim: &SimConfig) -> Vec<Vec<SetField>> {
+        let mut state = sim.clone();
+        let mut out = Vec::with_capacity(self.edits.len() + self.commands.len());
+        let (mut edits, mut commands) = (self.edits.iter(), self.commands.iter());
+        let ordered = self.order.iter().filter_map(|sent| match sent {
+            Sent::Edit => edits.next().map(|e| (Sent::Edit, std::slice::from_ref(e))),
+            Sent::Command => commands.next().map(|c| (Sent::Command, c.as_slice())),
+        });
+        let ordered: Vec<_> = ordered.collect();
+        let rest = edits
+            .map(|e| (Sent::Edit, std::slice::from_ref(e)))
+            .chain(commands.map(|c| (Sent::Command, c.as_slice())));
+        for (sent, edits) in ordered.into_iter().chain(rest) {
+            let command = match sent {
+                Sent::Edit => edits
+                    .iter()
+                    .flat_map(|e| turned(e.clone(), &state.plane, &state.lock))
+                    .collect(),
+                Sent::Command => edits.to_vec(),
+            };
+            for edit in &command {
+                written(&mut state, edit);
+            }
+            out.push(command);
+        }
+        out
+    }
+
+    /// The state `sim`, the snapshot's, is in once the frame's sends so far are written: what each route of the frame
+    /// reads, so it folds on the state as it stands (the same-frame slips: a frame's keyboard tilt and wheel zoom both
+    /// land; a drag folds on the current state).
+    pub fn now(&self, sim: &SimConfig) -> SimConfig {
+        let mut state = sim.clone();
+        if self.edits.is_empty() && self.commands.is_empty() {
+            return state;
+        }
+        for edit in self.sends(sim).iter().flatten() {
+            written(&mut state, edit);
+        }
+        state
+    }
+}
+
+/// `sim` with `edit` written into it, as the state store writes it (`engine::contract::store::write`); a render edit
+/// leaves it as it is.
+fn written(sim: &mut SimConfig, edit: &SetField) {
+    match &edit.edit {
+        Edit::Sim(SimField::Z0(z0)) => sim.plane.z0 = *z0,
+        Edit::Sim(SimField::Basis { q1, q2 }) => (sim.plane.q1, sim.plane.q2) = (*q1, *q2),
+        Edit::Sim(SimField::Lock(lock)) => sim.lock = lock.clone(),
+        Edit::Sim(SimField::Window(window)) => sim.chart.window = *window,
+        Edit::Sim(SimField::Horizon(horizon)) => sim.horizon = horizon.clone(),
+        Edit::Sim(SimField::SliceFrame { frame, basis }) => {
+            sim.slice.frame = *frame;
+            if let Some((q1, q2)) = basis {
+                (sim.plane.q1, sim.plane.q2) = (*q1, *q2);
+            }
+        }
+        Edit::Render(_) => {}
     }
 }
 
 /// Enter on control `id`, as its click: the panel's, a section's reset and a target dropdown's entry picking that
 /// target among them, and the compass's Tilt and Slice.
 pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut Out) {
-    if compass::pick(id, &snapshot.sim, scratch, out) {
+    // Each route reads the state the frame's sends so far leave, not the snapshot's ([`Out::now`]).
+    let sim = &out.now(&snapshot.sim);
+    if compass::pick(id, sim, scratch, out) {
         return;
     }
     if let Some(section) = reset::Section::of(id) {
-        out.fresh.push(reset::command(&snapshot.sim, section));
+        out.fresh.push(reset::command(sim, section));
         return;
     }
-    let view = View::read(&snapshot.sim);
+    let view = View::read(sim);
     for (which, entries) in [(Target::X, TILT_X_ENTRIES), (Target::Y, TILT_Y_ENTRIES)] {
         if let Some(to) = entries.iter().position(|e| *e == id) {
             // A target dropdown is Tilt's: picking from it switches the compass to Tilt (R-458 F4).
@@ -1099,12 +1196,12 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
     match id {
         PRESET => {
             let next = view.preset.map_or(0, |p| (p + 1) % PRESETS.len());
-            out.edit(chart::preset_edit(&snapshot.sim, view, next), None, scratch);
+            out.edit(chart::preset_edit(sim, view, next), None, scratch);
         }
-        UNLOCK => lock::unlock(&snapshot.sim.lock, out),
-        CENTRE_ON_PIN => lock::centre_on_pin(&snapshot.sim, scratch, out),
+        UNLOCK => lock::unlock(&sim.lock, out),
+        CENTRE_ON_PIN => lock::centre_on_pin(sim, scratch, out),
         CENTRE_ON_PIN_SETTING => lock::toggle_setting(scratch, out),
-        OPEN_INSPECTOR => lock::open_inspector(&snapshot.sim.lock, out),
+        OPEN_INSPECTOR => lock::open_inspector(&sim.lock, out),
         BUILDER => out.windows.push(Window::ChartBuilder),
         _ => compass::activate(id, scratch),
     }
@@ -1112,7 +1209,9 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
 
 /// An adjustment of the arrows on one of the panel's values, the figure or the compass, in interaction mode.
 pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut Out) {
-    let plane = &snapshot.sim.plane;
+    // Each route reads the state the frame's sends so far leave, not the snapshot's ([`Out::now`]).
+    let sim = &out.now(&snapshot.sim);
+    let plane = &sim.plane;
     let step = adjust.delta();
     let (range, octaves, degrees, view_fraction) = match step {
         Base::OfRange(f) => (f, 0.0, 0.0, 0.0),
@@ -1132,11 +1231,11 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
         if let Some(i) = components.iter().position(|s| *s == id) {
             let (mut q1, mut q2) = (plane.q1, plane.q2);
             [&mut q1, &mut q2][which][i] += range * 2.0 * Q_HALF_RANGE;
-            out.edit(plane_edit(&snapshot.sim, (q1, q2)), None, scratch);
+            out.edit(plane_edit(sim, (q1, q2)), None, scratch);
             return;
         }
     }
-    let view = View::read(&snapshot.sim);
+    let view = View::read(sim);
     match id {
         CENTRE_U => out.edit(
             dispatch::one(
@@ -1168,7 +1267,7 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
             out.edit(edit, Some(Touch::Tilt), scratch);
         }
         crate::explore::FIGURE => navigate::pan_by_keys(adjust, plane, view_fraction, scratch, out),
-        crate::explore::COMPASS_VIEW => compass::adjust(adjust, &snapshot.sim, scratch, out),
+        crate::explore::COMPASS_VIEW => compass::adjust(adjust, sim, scratch, out),
         _ => {}
     }
 }

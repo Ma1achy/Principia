@@ -44,7 +44,7 @@ pub fn lock_at(plane: &Plane, at: (f64, f64), scratch: &mut Scratch, out: &mut O
         return;
     }
     scratch.pinned = Pinned::of(&leaf);
-    out.commands.push(leaf.edits().to_vec());
+    out.send_command(leaf.edits().to_vec());
 }
 
 /// Centre on pin, while locked: the engine's leaf ([`Class::CentreOnPin`]) on `sim`'s plane, one command.
@@ -63,7 +63,7 @@ pub fn centre_on_pin(sim: &SimConfig, scratch: &Scratch, out: &mut Out) {
         _ => true,
     });
     if moves {
-        out.commands.push(edits);
+        out.send_command(edits);
     }
 }
 
@@ -79,7 +79,7 @@ pub fn toggle_setting(scratch: &mut Scratch, out: &mut Out) {
 /// Unlock: the `SetField` that clears the lock, while it is set.
 pub fn unlock(lock: &Lock, out: &mut Out) {
     if lock.locked {
-        out.edits.push(lock_edit(Lock {
+        out.send_edit(lock_edit(Lock {
             locked: false,
             z_locked: [0.0; 8],
         }));

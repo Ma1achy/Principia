@@ -782,12 +782,11 @@ impl<S: EngineSide> App<S> {
         }
         // Locked, every basis edit turns about the pin (render_gui_spec §G4): the Manifold view's and the windows'. Each
         // is sent with its recentring as one command, one history entry.
-        out.edits.extend(window_edits);
-        let sim = &self.snapshot.sim;
-        for command in explore::manifold_view::commands_about_the_pin(out.edits, sim) {
-            self.send(command);
+        for edit in window_edits {
+            out.send_edit(edit);
         }
-        for command in std::mem::take(&mut out.commands) {
+        // In the order the routes asked, each against the state the sends before it leave (`Out::sends`).
+        for command in out.sends(&self.snapshot.sim) {
             self.send(command);
         }
         for command in std::mem::take(&mut out.fresh) {
@@ -889,10 +888,10 @@ impl<S: EngineSide> App<S> {
         if let Some(at) = pin {
             self.pin_at(at);
         }
-        // The compass takes its drag before the Manifold view is drawn, and the view reads the plane as the drag's
-        // edit leaves it, so its sliders show the drag's target in the frame the pointer moves, with the snapshot and
-        // the compass's readout (REQ-GUI-206).
-        let pending = explore::compass::take(
+        // The compass takes its drag before the Manifold view is drawn, and the view reads the state as the frame's
+        // edits leave it, the drag's among them, so its sliders show the drag's target in the frame the pointer moves,
+        // with the snapshot and the compass's readout (REQ-GUI-206).
+        explore::compass::take(
             ui,
             layout.compass,
             &self.snapshot.sim,
@@ -900,11 +899,11 @@ impl<S: EngineSide> App<S> {
             out,
         );
         let targeted;
-        let shown = if pending.is_empty() {
+        let shown = if out.edits.is_empty() && out.commands.is_empty() {
             &self.snapshot
         } else {
             let mut snapshot = self.snapshot.clone();
-            snapshot.sim.plane = explore::compass::after(&snapshot.sim.plane, &pending);
+            snapshot.sim = out.now(&snapshot.sim);
             targeted = snapshot;
             &targeted
         };
@@ -922,12 +921,11 @@ impl<S: EngineSide> App<S> {
             self.view.focus.mode = KeyMode::Navigation;
         }
         self.manifold.compass.hover = self.hover_sent;
-        let sim = &self.snapshot.sim;
+        let now = out.now(&self.snapshot.sim);
         explore::compass::show(
             ui,
             layout.compass,
-            sim,
-            &pending,
+            &now,
             &mut windows::Keys {
                 keyboard: &mut self.keyboard,
                 focused,
@@ -936,6 +934,7 @@ impl<S: EngineSide> App<S> {
             out,
         );
         let span = layout.span(true);
+        let sim = &self.snapshot.sim;
         explore::axis_labels::show(ui, layout.axis_x, layout.axis_y, canvas, &sim.plane, span);
         // The splitters' handles, after the panels, so they take the pointer at the boundaries; a double-click resets
         // one, and the layout is saved (R-462 J3, J5).
@@ -1298,7 +1297,7 @@ impl<S: EngineSide> App<S> {
                 }
                 Some(explore::COMPASS) => explore::compass::space(
                     &self.view.focus,
-                    &self.snapshot.sim,
+                    &out.now(&self.snapshot.sim),
                     &mut self.manifold,
                     out,
                 ),
