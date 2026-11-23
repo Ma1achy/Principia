@@ -167,6 +167,29 @@ pub struct Spec<R> {
     pub unguarded: bool,
 }
 
+impl<R> Spec<R> {
+    /// The settings, with any control-only field at its guarded default. Callers outside the kernel build a `Spec`
+    /// through this, not a struct literal: the `controls` field exists when the kernel's own feature is on, which a
+    /// dependent crate's feature does not track (cargo unifies the kernel's features across the build).
+    pub const fn new(
+        max_iterations: u32,
+        residual_tolerance: R,
+        optimality_tolerance: R,
+        conditioning_floor: R,
+        damping: Damping<R>,
+    ) -> Self {
+        Self {
+            max_iterations,
+            residual_tolerance,
+            optimality_tolerance,
+            conditioning_floor,
+            damping,
+            #[cfg(feature = "controls")]
+            unguarded: false,
+        }
+    }
+}
+
 /// The continuity test a continued frame is held to ([`follow`]), the caller's.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Continuity<R> {
