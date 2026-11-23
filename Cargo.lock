@@ -2128,9 +2128,12 @@ dependencies = [
  "libm",
  "num-bigint",
  "num-rational",
+ "proc-macro2",
  "proptest",
+ "quote",
  "serde_json",
  "spirv-std",
+ "syn 2.0.119",
  "validation",
 ]
 

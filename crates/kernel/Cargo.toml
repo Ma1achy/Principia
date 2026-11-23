@@ -36,6 +36,11 @@ serde_json = "1"
 # arithmetic, on the shipped f64 coefficients; num-rational and num-bigint are already in the build, under `num`.
 num-bigint = "0.4"
 num-rational = "0.4"
+# The compile-discipline lint (`tests/discipline_lint.rs`) parses the kernel's source with syn, already in the build under
+# serde's derive, prints an expression with quote, and names each finding's line through proc-macro2's span locations.
+syn = { version = "2", features = ["full", "visit"] }
+proc-macro2 = { version = "1", features = ["span-locations"] }
+quote = "1"
 
 # Under `controls`, each `negative_control!` in kernel's tests compiles as a test (R-176).
 [features]
@@ -47,6 +52,7 @@ measure-std-maths = []
 measure-perturb-sin = []
 
 # cargo-machete's `--with-metadata` mode reports `ledger` unused; it is the build-dependency R-185 requires
-# (systems_architecture §7.1), held in `build.rs` by `use ledger as _;` (TASK-M0-79).
+# (systems_architecture §7.1), held in `build.rs` by `use ledger as _;` (TASK-M0-79). proc-macro2 is the compile-discipline
+# lint's for its `span-locations` feature alone, which no source names.
 [package.metadata.cargo-machete]
-ignored = ["ledger"]
+ignored = ["ledger", "proc-macro2"]
