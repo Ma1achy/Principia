@@ -8,6 +8,7 @@
 //! free start. Every route here is a thin adapter onto the engine's leaf (`crate::dispatch`), holding no formula.
 
 use eframe::egui::{Checkbox, Rect, RichText, Ui};
+use engine::contract::set_field::{Edit, SimField};
 use engine::contract::sim_config::{Lock, Plane, SimConfig};
 use engine::contract::view_ui::Window;
 use engine::path::leaf::CentreOnPin;
@@ -56,7 +57,12 @@ pub fn centre_on_pin(sim: &SimConfig, scratch: &Scratch, out: &mut Out) {
         pin: Pinned::on(scratch.pinned.as_ref(), sim),
     };
     let edits = dispatch::send(&sim.plane, class);
-    if !edits.is_empty() {
+    // The pin at the centre already: `z₀ ← z₀` moves nothing, so it takes no history entry.
+    let moves = edits.iter().any(|e| match &e.edit {
+        Edit::Sim(SimField::Z0(z0)) => *z0 != sim.plane.z0,
+        _ => true,
+    });
+    if moves {
         out.commands.push(edits);
     }
 }

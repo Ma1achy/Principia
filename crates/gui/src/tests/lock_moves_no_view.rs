@@ -17,10 +17,15 @@
 //! - **The setting** is off by default: the panel's scratch, a new app, the default settings and an empty settings file.
 //!   On, K gives the state K then centre on pin gives, bit for bit, in one history entry where the two take two; one
 //!   undo returns the state before the lock bit for bit. Saved, it reads back on.
+//! - **A held pin goes stale.** The lock's own scratch, its leaf's pin held, after the excursion above: centre on pin
+//!   reads the pin from the snapshot, so `z₀` within 10⁻¹² of `z_locked + δ·e_q0` as above.
+//! - **The setting's checkbox**, clicked: K then centres the pin, `z₀ = z_locked`; the settings saved, a new app on the
+//!   same file reads it on.
 //! - **Zoom about the pin.** The wheel after an off-centre K keeps the anchor's chart point within 10⁻¹².
 //!
 //! **Controls**: a lock that re-centres (the setting on) fails the first; a centre on pin holding the GUI's own formula,
-//! `z₀ ← z_locked`, fails the excursion arm; the setting's two edits sent as two commands fail one history entry; the
+//! `z₀ ← z_locked`, fails the excursion arm; the stale leaf's pin handed in after the excursion fails the stale arm; an
+//! app not clicked fails the checkbox's arm; the setting's two edits sent as two commands fail one history entry; the
 //! wheel's zoom not turned about the pin fails the last.
 
 use eframe::egui::{self, Event, Key, Modifiers, MouseWheelUnit};
@@ -275,6 +280,13 @@ fn lock_moves_no_view_centre_on_pin() {
         reticle.distance(rig.layout.field.center()) < 1e-3,
         "{reticle:?}"
     );
+    // Again, the pin at the centre already: nothing moves, no history entry.
+    rig.centre_on_pin();
+    assert_eq!(
+        rig.snapshot().history.undo_depth,
+        centred.history.undo_depth,
+        "a centre on pin that moves nothing"
+    );
     rig.undo();
     assert_eq!(
         rig.snapshot().sim,
@@ -417,6 +429,7 @@ fn lock_moves_no_view_the_setting_is_lock_then_centre_on_pin_in_one_entry() {
     }
     split.frames(1);
     let depth = split.snapshot().history.undo_depth - start;
+    assert_eq!(depth, 2, "sent as two commands, two entries");
     rejects("the setting's edits as two commands", || {
         assert_eq!(depth, 1)
     });
@@ -476,4 +489,93 @@ fn lock_moves_no_view_the_lock_group_is_set_whole() {
         ),
         "{command:?}"
     );
+}
+
+#[test]
+fn lock_moves_no_view_a_held_pin_goes_stale() {
+    let sim = on(&planes()[0]);
+    for at in PINS {
+        let (command, scratch) = lock_command(&sim, at, CentreOnPin::Off);
+        assert!(scratch.pinned.is_some(), "the leaf's pin held");
+        let locked = applied(&sim, &command);
+        let value = locked.plane.z0[Q0] + DELTA;
+        let slid = applied(
+            &locked,
+            &dispatch::send(&locked.plane, Class::Control { k: Q0, value }),
+        );
+        let mut want = locked.lock.z_locked;
+        want[Q0] += DELTA;
+        let check = |edits: &[SetField]| {
+            let got = applied(&slid, edits).plane.z0;
+            let far = got
+                .iter()
+                .zip(&want)
+                .map(|(g, w)| (g - w).abs())
+                .fold(0.0, f64::max);
+            assert!(far <= 1e-12, "z₀ {got:?} is {far} from {want:?}");
+        };
+        let mut out = Out::default();
+        mv_lock::centre_on_pin(&slid, &scratch, &mut out);
+        assert_eq!(out.commands.len(), 1, "one command");
+        check(&out.commands[0]);
+        let stale = dispatch::send(
+            &slid.plane,
+            Class::CentreOnPin {
+                z_locked: slid.lock.z_locked,
+                pin: scratch.pinned.as_ref().map(|p| p.pin),
+            },
+        );
+        rejects("the stale leaf's pin", || check(&stale));
+    }
+}
+
+#[test]
+fn lock_moves_no_view_the_setting_s_checkbox() {
+    let dir =
+        std::env::temp_dir().join(format!("principia-gui-{}-lock-setting", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a scratch directory");
+    let path = dir.join(crate::settings::FILE);
+    let gui = || {
+        App::with_settings(
+            MockSide::new(MockEngine::frozen(), None),
+            FORMAT,
+            crate::settings::Store::at(&path),
+        )
+    };
+    let mut rig = Rig {
+        app: gui(),
+        h: headless(),
+        layout: Layout::new(headless().screen(), PIXELS_PER_POINT),
+    };
+    rig.frames(2);
+    assert_eq!(rig.app.manifold.centre_on_pin, CentreOnPin::Off, "off");
+    click(&mut rig.h, &mut rig.app, mv_lock::SETTING_SHORT);
+    rig.frames(1);
+    assert_eq!(
+        rig.app.manifold.centre_on_pin,
+        CentreOnPin::On,
+        "clicked on"
+    );
+    rig.press_k();
+    let snapped = rig.snapshot();
+    let centred = |s: &Snapshot| {
+        assert_eq!(
+            s.sim.plane.z0.map(f64::to_bits),
+            s.sim.lock.z_locked.map(f64::to_bits),
+            "K centred the pin"
+        )
+    };
+    centred(&snapped);
+    assert_eq!(
+        gui().manifold.centre_on_pin,
+        CentreOnPin::On,
+        "read back on"
+    );
+    // Control: an app whose checkbox was not clicked.
+    let mut plain = Rig::new(CentreOnPin::Off);
+    plain.press_k();
+    let left = plain.snapshot();
+    rejects("an app not clicked", || centred(&left));
+    let _ = std::fs::remove_dir_all(&dir);
 }
