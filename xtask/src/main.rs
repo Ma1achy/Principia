@@ -70,6 +70,10 @@ Commands:
                                   offscreen, compare it with its reference to the tolerance its requirement id
                                   gives, and write the difference image and summary under target/golden/ (R-110);
                                   --list loads and checks every case and lists it, opening no device
+  golden bodyplane [--propose | --record]
+                                  compare the kernel's body plane with the Python reference's recorded fixture,
+                                  fixtures/golden/bodyplane/ (TASK-M3-36); --propose prints the calibration, --record
+                                  re-records the fixture with python3 and numpy
   golden repro <suite>/<case> --vary <field>=<a>,<b>
                                   render two arms differing in exactly one field (a pair differing in more is
                                   refused), and report the RGB values along the case's lines and one column per

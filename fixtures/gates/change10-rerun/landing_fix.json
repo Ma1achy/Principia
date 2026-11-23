@@ -1,0 +1,5 @@
+{
+  "description": "The kernel's Aarseth–Zare with the landing fix (clamp, secant, bisection; R-998), driven interval by interval as dump_ref.py drives the patched NumPy reference, against its recorded dumps: at most 1e-13 at t ≤ 2, at most 1e-10 at t = 13, the same reference body at every sync boundary.",
+  "landing": "fix",
+  "expected": "pass"
+}

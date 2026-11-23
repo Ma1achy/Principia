@@ -42,15 +42,16 @@ use std::sync::Mutex;
 
 use kernel::chart::burrau::{self as nu_axis};
 use kernel::chart::burrau_acute::{decode_theta_k, decode_theta_lz};
+use kernel::chart::energy::{count, Count, Sides};
 use kernel::chart::invariant::{self, Invariant, InvariantBlocks, WarpReal};
 use kernel::chart::mixed::{
     Alpha, Beta, PLambdaX, PLambdaY, PRhoX, PRhoY, Quantity, ZAlpha, ZBeta, ZMu1, ZMu2, ZQ0, ZQ1,
     ZQ2, ZQ3,
 };
 use kernel::chart::{
-    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode, ChartOut,
-    Constraint, EuclidPlane, Float, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap,
-    ShapeSphere, ValidationResult,
+    BodyPlane, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode,
+    ChartOut, Constraint, EuclidPlane, Float, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed,
+    ShapeMap, ShapeSphere, ValidationResult,
 };
 use kernel::decode::invariant::{infeasible, Outcome};
 use kernel::decode::{self, Decoded};
@@ -708,6 +709,92 @@ where
     ));
 }
 
+/// The body plane's windows (TASK-M3-36): the five Burrau regions of `fixtures/slices.toml`, `(name, body, centre,
+/// half)`, and the edge set, a window of half-width 4 about the origin whose grid lands body 0 exactly on bodies 1 and
+/// 2 (`x = −4 + 8i/256` is `−2` at `i = 64` and `1` at `i = 160`, `y = −1` at `j = 96`, exact at f32 and f64), each
+/// a system. Measured: on body 1 (pair 0–1, `ρ = 0`) the decode keeps the collision exact, one collision pole; on body 2
+/// the shared Jacobi reconstruction leaves the pair `1.1e-16` apart (one ulp of `1/√2`), `V₀ = −9.4e14`, finite, so the
+/// sweep prints one pole, not two.
+const BODY_PLANE_SETS: [(&str, u32, [f64; 2], f64); 6] = [
+    ("near-field", 0, [1.0, 3.0], 0.05),
+    ("mid-field", 0, [1.0, 6.0], 0.05),
+    ("far", 0, [1.0, 13.0], 0.05),
+    ("body2 core", 2, [1.0, -1.0], 0.05),
+    ("deep interior", 0, [0.0, 0.0], 0.05),
+    ("edge set: through bodies 1 and 2", 0, [0.0, 0.0], 4.0),
+];
+
+/// The body plane at `R` for one of [`BODY_PLANE_SETS`]: Burrau's masses at `Σm = 1` and positions.
+fn body_plane<R: Q>(body: u32, centre: [f64; 2], half: f64) -> BodyPlane<R> {
+    use validation::gate::reregistration::{BURRAU_M, BURRAU_R};
+    BodyPlane {
+        body,
+        centre: centre.map(R::of),
+        half: R::of(half),
+        m: BURRAU_M.map(|m| R::of(m / 12.0)),
+        r: BURRAU_R.map(|p| p.map(R::of)),
+    }
+}
+
+/// The body plane at every set (TASK-M3-36; REQ-CHART-059). It is a `Φ` outside the `Chart` trait (`kernel::chart::
+/// body_plane`'s note), so its job runs [`sweep`]'s counts through its own `system`, `validate` and `decode`: the moved
+/// body's position in place of `z`.
+fn body_plane_jobs<R: Q>(jobs: &mut Vec<Job>)
+where
+    f64: From<R>,
+{
+    for (name, body, centre, half) in BODY_PLANE_SETS {
+        let set = format!("{name}: body {body}, centre {centre:?}, half {half}");
+        let chart = body_plane::<R>(body, centre, half);
+        jobs.push(Box::new(move || Report {
+            chart: "body plane",
+            name: chart.name().to_string(),
+            set: set.clone(),
+            precision: R::LABEL,
+            tally: sweep_body_plane(&chart),
+        }));
+    }
+}
+
+/// [`sweep`] for the body plane.
+fn sweep_body_plane<R: Q>(chart: &BodyPlane<R>) -> Tally
+where
+    f64: From<R>,
+{
+    let mut t = Tally::default();
+    for j in 0..=N {
+        for i in 0..=N {
+            let point = [i, j];
+            let (u, v) = (grid::<R>(i), grid::<R>(j));
+            if !finite(chart.position(u, v)) {
+                t.z_nonfinite.push(point);
+            }
+            if chart.validate(u.f(), v.f()) != ValidationResult::Valid {
+                t.forbidden.push(point);
+            }
+            let d = chart.decode::<R>(u, v);
+            let ic = d.ic;
+            if !finite(
+                ic.m.into_iter()
+                    .chain(ic.r.into_iter().flatten())
+                    .chain(ic.p.into_iter().flatten()),
+            ) {
+                t.state_nonfinite.push(point);
+            }
+            if let Some(reason) = d.degenerate {
+                *t.tags.entry(format!("{reason:?}")).or_default() += 1;
+            }
+            if d.descriptor.r_min_pair_0 == R::zero() {
+                t.collisions += 1;
+            }
+            if !d.descriptor.V_0.is_finite() {
+                t.v0_nonfinite += 1;
+            }
+        }
+    }
+    t
+}
+
 /// A latent coordinate's edge, `±710`: where each `Defaults` link's output rounds to its own limit, its value at
 /// `z = ±∞`, at f32 and at f64. The sigmoid links bind it: `σ(−x) = 1/(1 + eˣ)` is 0 only once `eˣ` overflows, past
 /// `ln f64::MAX ≈ 709.78` at f64 (88.72 at f32), and `σ(x)` rounds to 1 long before; `tanh_sat` clamps at 20, where
@@ -804,6 +891,7 @@ where
     invariant_jobs::<R>(jobs);
     burrau_jobs::<R>(jobs);
     mixed_jobs::<R>(jobs);
+    body_plane_jobs::<R>(jobs);
 }
 
 /// The gallery at f64 and at f32.
@@ -814,9 +902,10 @@ fn gallery() -> Vec<Job> {
     jobs
 }
 
-/// Every `Chart` implementation `kernel::chart` ships, by its `Chart::name`; BodyPlane, not built at M2, is
-/// REQ-CHART-059's (TASK-M3-36), and a Chart-builder chart RQ-372's.
-const SHIPPED: [&str; 11] = [
+/// Every `Chart` implementation `kernel::chart` ships, by its `Chart::name`, and the body plane, a `Φ` outside the
+/// trait (TASK-M3-36); a Chart-builder chart is RQ-372's.
+const SHIPPED: [&str; 12] = [
+    "BodyPlane",
     "Latent",
     "ShapeSphere",
     "InvariantLE",
@@ -1381,4 +1470,97 @@ negative_control!(
     "the latent edge ±8, where σ(8) = 0.99966, must fail the saturation check",
     expected = "links short of their limit at the latent edge",
     check_latent_edge(8.0)
+);
+
+// ── The body plane past the unit square (TASK-M3-36; REQ-CHART-059) ──────────────────────────────────────────────
+
+/// The side of the grid over `[−1, 2]²`: `u = −1 + 3k/96`, `k ∈ 0..=96`, exact at f32 and f64.
+const PAST: u32 = 96;
+
+/// The body plane over `[−1, 2]²` at every set, at `R`, its axes' types `sides`: every pixel must count as a system
+/// (`count` of the axes' types and `validate`), the decode finite, and the map affine, each moved coordinate's second
+/// difference along its own axis within 4 ulp of the window's largest coordinate and its cross difference exactly 0.
+fn check_past<R: Q>(sides: impl Fn(&BodyPlane<R>) -> [Sides; 2])
+where
+    f64: From<R>,
+{
+    let at = |k: u32| R::of(-1.0 + 3.0 * k as f64 / PAST as f64);
+    let mut faults = Vec::new();
+    for (name, body, centre, half) in BODY_PLANE_SETS {
+        let chart = body_plane::<R>(body, centre, half);
+        let types = sides(&chart);
+        let scale = centre[0].abs().max(centre[1].abs()) + 7.0 * half;
+        let tol = 4.0 * scale * (R::of(1.0).up().f() - 1.0);
+        let mut not_system = 0;
+        let mut nonfinite = 0;
+        let mut bent = 0.0f64;
+        for j in 0..=PAST {
+            for i in 0..=PAST {
+                let (u, v) = (at(i), at(j));
+                let valid = chart.validate(u.f(), v.f()) == ValidationResult::Valid;
+                if count(types, [u.f(), v.f()], valid) != Count::System {
+                    not_system += 1;
+                }
+                let ic = chart.decode::<R>(u, v).ic;
+                if !finite(
+                    ic.m.into_iter()
+                        .chain(ic.r.into_iter().flatten())
+                        .chain(ic.p.into_iter().flatten()),
+                ) {
+                    nonfinite += 1;
+                }
+                if (1..PAST).contains(&i) && (1..PAST).contains(&j) {
+                    let p = |a: u32, b: u32| chart.position(at(a), at(b)).map(|x| x.f());
+                    let c = p(i, j);
+                    let d2u = p(i + 1, j)[0] - 2.0 * c[0] + p(i - 1, j)[0];
+                    let d2v = p(i, j + 1)[1] - 2.0 * c[1] + p(i, j - 1)[1];
+                    let cross = [p(i + 1, j)[1] - c[1], p(i, j + 1)[0] - c[0]];
+                    bent = bent.max(d2u.abs()).max(d2v.abs());
+                    if cross != [0.0, 0.0] {
+                        bent = f64::INFINITY;
+                    }
+                }
+            }
+        }
+        println!(
+            "body plane {name} at {} over [−1, 2]²: not a system {not_system}, non-finite {nonfinite}, worst second difference {bent:.3e} (bound {tol:.3e})",
+            R::LABEL
+        );
+        if not_system > 0 {
+            faults.push(format!(
+                "{name} at {}: {not_system} pixels not a system",
+                R::LABEL
+            ));
+        }
+        if nonfinite > 0 {
+            faults.push(format!(
+                "{name} at {}: {nonfinite} non-finite decodes",
+                R::LABEL
+            ));
+        }
+        if bent.is_nan() || bent > tol {
+            faults.push(format!(
+                "{name} at {}: the map is not affine ({bent:e} > {tol:e})",
+                R::LABEL
+            ));
+        }
+    }
+    assert!(
+        faults.is_empty(),
+        "the body plane past [0,1]²: {}",
+        faults.join("; ")
+    );
+}
+
+#[test]
+fn gallery_sweep_unit_square_body_plane_past_the_square() {
+    check_past::<f64>(BodyPlane::extension);
+    check_past::<f32>(BodyPlane::extension);
+}
+
+negative_control!(
+    gallery_sweep_unit_square_body_plane_past_the_square,
+    "a body plane declaring a bounded axis must fail: its pixels past the edge are the domain's end, not systems",
+    expected = "pixels not a system",
+    check_past::<f64>(|_| [Sides { below: kernel::chart::energy::ExtensionType::Bounded, above: kernel::chart::energy::ExtensionType::Affine }, Sides::both(kernel::chart::energy::ExtensionType::Affine)])
 );

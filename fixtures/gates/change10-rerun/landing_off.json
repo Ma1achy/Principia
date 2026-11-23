@@ -1,0 +1,5 @@
+{
+  "description": "The control: the kernel without the landing fix (clamp, secant and bisection off: the overshoot change 10 removed) against the same patched reference must fail the same criteria, so the comparison can see the patch.",
+  "landing": "off",
+  "expected": "fail"
+}

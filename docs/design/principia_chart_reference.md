@@ -1261,6 +1261,26 @@ that bypasses the canonical-frame decode can fail layer 3, and its `validate` ch
 `BodyPlane` (today's slice) stays as a chart and must reproduce **bit-for-bit** — it is the
 Python cross-check's anchor.
 
+**`BodyPlane`'s `Φ`** (defined by TASK-M3-36; `kernel::chart::BodyPlane`). Parameters: the moved body `b`, the window's
+centre `(c_x, c_y)` and half-width `h`, the masses (`Σmᵢ = 1`) and the held positions. `Φ(u, v)` puts body `b` at
+`((c_x − h) + (2h)·u, (c_y − h) + (2h)·v)`, in that operation order, the other bodies at their held positions, every
+body at rest; the decode is `C` (CoM, `I = 1`, `ρ` onto `+x`, no mirror) and the rest-start blocks on the resulting
+Jacobi vectors. The map is affine on the whole plane: both axes extend affine on both sides, and every finite `(u, v)`
+is a system (a binary collision is a system with `V₀ = −∞`). `Φ` reproduces the reference's initial conditions, not a
+field at a common physical time: the decode's gauge gives each pixel its own length and time unit, so only gauge-free
+quantities (the shape vector, `E·√I/M^{5/2}`, `r_min/R`) compare across the two.
+
+**The reference it matches.** The Python reference imported at `docs/reference/prin-rs/reference/` (`tb.burrau_grid`,
+Burrau's masses `(3, 4, 5)` at `(1, 3)`, `(−2, −1)`, `(1, −1)`, at rest), its output recorded as the fixture
+`fixtures/golden/bodyplane/reference.tsv` by `crates/validation/xcheck/bodyplane_ref.py` over the five Burrau regions
+(9 × 9) and the cross-check's 3 × 3 window; `cargo xtask golden bodyplane` compares. Bitwise where the operation order
+is identical (the placement of the body at the reference's own position); otherwise within the stated tolerance: `Φ`'s
+pixel position against `numpy.linspace`'s node within 6 ulp of `max(|c ± h|)`, derived from the two orders' roundings;
+the gauge-free algebra within `1e-13`. The reference's shape vector takes `q = ρ̃_y λ̃_x − ρ̃_x λ̃_y`, so its `n₂` is
+this document's `−n₂` (R-14's standard cross): a convention, not a tolerance. `Φ` is bitwise today's slice (the
+re-registration gate's `ics`). The Python cross-check of the integrator is the change-10 re-run
+(`cargo xtask gate change10-rerun`; `principia_dd_predictability_horizon.md` §7.8).
+
 ### 5.2 Tests that can fail
 
 - **`Σpᵢ = 0`** to machine precision, every chart, random `(u,v)` — catches the crossed-mass
