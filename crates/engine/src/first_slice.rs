@@ -25,6 +25,10 @@
 //! type parameter. The wrapper's cadence labels collisions and escapes (`kernel::detect`); a march neither ends is
 //! `bounded` at the horizon, whatever the occupant.
 //!
+//! **The default occupant** ([`HeggieRk4`]): Heggie × RK4 under Eq. 22 (`kernel::regularisation::pairs::Pair::DEFAULT`),
+//! at the step-control values the CPU field marches with ([`FieldValues`], `crate::field::heggie_params`'s). KDK,
+//! which the first measurement ran on before this occupant was built, is the labelled stand-in beside it.
+//!
 //! **Domain** (pitfalls §10): a decode and a march from its record, the chart and the window held fixed.
 
 use kernel::chart::{InvariantLE, Latent, ShapeSphere};
@@ -34,6 +38,10 @@ use kernel::driver::advance::Advance;
 use kernel::driver::wrapper::{integrate_detecting, WrapperUniforms};
 use kernel::generated::links::Defaults;
 use kernel::payload::{sd_detail, sd_state, tm_t_end_step, SimStateBase};
+use kernel::regularisation::az::AzReal;
+use kernel::regularisation::heggie::{HgConfig, HgParams, DEFAULT_TIME};
+use kernel::regularisation::pairs::DefaultOccupant;
+use kernel::regularisation::sync::delta_sync;
 use kernel::stage::decode::{
     ic_words, sample_with, write_ic, DecodeOut, DecodeVariant, InvariantLEDefaults, LatentDefaults,
     ShapeSphereDefaults, UniformChart,
@@ -256,16 +264,50 @@ pub struct Outcome {
     pub t_end_step: u32,
 }
 
+/// Heggie's step-control values for the default occupant, at either width: at f32 the CPU field's
+/// (`crate::field::heggie_params`), which a test holds equal field by field.
+///
+/// The plan is unclear here: it names the default occupant, Heggie × RK4, but Heggie's step-control values are
+/// calibrations with no register entry. Chose the CPU field's values, because the first slice measures the records the
+/// field integrates, so its marches should be the field's own; f64's `tiny` is the reference `1e-300`.
+#[derive(Clone, Copy, Debug)]
+pub struct FieldValues;
+
+impl HgConfig for FieldValues {
+    fn params<R: AzReal>() -> HgParams<R> {
+        HgParams {
+            eta: R::at_width(0.01, 0.01),
+            delta_sync: delta_sync::<R>(),
+            tiny: R::at_width(1e-37, 1e-300),
+            predictive_f: R::at_width(0.02, 0.02),
+            step_budget_rate: R::at_width(4e4, 4e4),
+            n_min: 100_000,
+            clamp: true,
+            secant_tries: 4,
+            bisect_tries: 64,
+            time: DEFAULT_TIME,
+        }
+    }
+}
+
+/// The default occupant, Heggie × RK4 under Eq. 22, at the CPU field's values ([`FieldValues`]).
+pub type HeggieRk4 = DefaultOccupant<FieldValues>;
+
 /// The record `ic` integrated by the CPU reference at f32 under `key`'s loop values and collision threshold, the
-/// occupant `A`: the `SimState` it ends in. Escape is not labelled here: no detector writes `escape` until TASK-M3-12,
-/// so a march that is not a collision runs to the horizon `bounded`.
+/// occupant `A`: the `SimState` it ends in. The wrapper's cadence labels collision and escape; a march that ends in
+/// neither runs to the horizon `bounded`, unless a regularised march's budget ran out (`running`) or it went
+/// non-finite (`sim_failed`).
 pub fn march<A: Advance>(ic: &Ic<f32>, key: &MarchKey) -> SimStateBase {
     integrate_detecting::<A, f32>(ic, &key.loop_values, key.radius)
 }
 
 /// [`march`]'s [`Outcome`].
 pub fn outcome<A: Advance>(ic: &Ic<f32>, key: &MarchKey) -> Outcome {
-    let s = march::<A>(ic, key);
+    outcome_of(&march::<A>(ic, key))
+}
+
+/// The [`Outcome`] a march ended in at `s`, read from its words.
+pub fn outcome_of(s: &SimStateBase) -> Outcome {
     Outcome {
         state: sd_state(s.packed_a),
         detail: sd_detail(s.packed_a),

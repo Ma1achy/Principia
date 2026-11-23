@@ -22,28 +22,24 @@
 //! - `first_slice_feasibility_triple`: the re-plan's O7, the kernel's exact feasibility predicate against a plain
 //!   comparison on an f32 triple where the two disagree, each verdict reported.
 //!
-//! **Applied per R-369** (the measurement's design, its criterion unchanged):
-//! - the integrated arms run at the cap dispatch admits, `T = 200` (`T_HORIZON_MAX`, R-610), the longest a march may
-//!   run to end in another class, on every 16th sample across and up (a 16 × 16 sub-lattice of each quad), in a
-//!   release build: the report's run, `cargo nextest run --release -p engine --test first_slice --no-capture -E
-//!   'test(/first_slice_measure/)'`. The debug suite leaves them out, within its per-test limits, and proves the arm
-//!   can fire instead (`first_slice_arm_can_fire`). Each grid's arm is read by the physics review's criterion, written
-//!   before any run: the control's flip share is above 0 on at least one grid of each chart, and on a grid where it is
-//!   0 the arm is reported as uninformative at that horizon, not as "0 flips". Each march reads the key's collision
-//!   threshold, Part 3's default `r_coll = 1e-3` (`first_slice_march_collides`), so collision fires as dispatch's
-//!   integration would. Escape cannot register: nothing writes `escape` until TASK-M3-12's detector, so every march
-//!   that does not collide runs to the horizon `bounded`, whatever the occupant; where the arm stays uninformative,
-//!   that gap is its cause, not the dynamics. (An earlier run marched at `r_coll = 0`, where no collision fires,
-//!   and found every march bounded at `T = 4`, 50, 100 and 200; that reading is withdrawn.) At `T = 200` with
-//!   `r_coll = 1e-3`, the control registers flips on one grid of the latent chart (2^10 about the origin: classes 2
-//!   of 256 and `t_end_step` 3 of 256, against today's decode's 17 and 18 of 256) and one of the `(L_z, E)` chart
-//!   (home: 1 of 255 each, against 2 and 2 of 255), the only non-bounded outcomes collisions; on every other grid,
-//!   and every grid of the shape sphere, no march collided and every one ran to the horizon bounded, so the arm there
-//!   is uninformative, the escape gap its cause;
-//! - predicate (4) runs at `T = 4` on every 16th sample: equal records marching to equal states is bitwise, at any
-//!   horizon;
-//! - the integrated occupant is KDK, a stand-in for the default occupant, Heggie × RK4, which is not built (RQ-818 (closed by R-1027));
-//!   the default occupant's arms are TASK-M2-108's;
+//! **The integrated arms** (the measurement's design, its criterion unchanged): they run on the default occupant,
+//! Heggie × RK4 under Eq. 22 at the CPU field's values (`engine::first_slice::HeggieRk4`), and beside it on KDK, the
+//! stand-in the first measurement ran on before the default occupant was built, labelled so in the report. Both at
+//! the cap dispatch admits, `T = 200` (`T_HORIZON_MAX`), the longest a march may run to end in another class, on every
+//! 16th sample across and up (a 16 × 16 sub-lattice of each quad), in a release build: the report's run, `cargo test
+//! --release -p engine --test first_slice -- --nocapture first_slice_measure`. The debug suite leaves them out, within
+//! its per-test limits, and proves the arm can fire instead (`first_slice_arm_can_fire`). Each march reads the key's
+//! collision threshold, Part 3's default `r_coll = 1e-3` (`first_slice_march_collides`), and the wrapper's cadence
+//! labels escape (`first_slice_march_escapes`), so a march may end in collision, escape or bounded at the horizon (a
+//! regularised march also `running`, its budget spent, or `sim_failed`). **The horizon and each grid's criterion,
+//! written before the run:** `T = 200`; on each grid the arm is read against its control, never alone: the control's
+//! flip share is above 0 on at least one grid of each chart, and on a grid where it is 0 the arm is reported as
+//! uninformative at that horizon, not as "0 flips". The report also counts the control marches that ended in the
+//! narrowed record's very `SimState`, where the one-ulp nudge was lost in the march and could not flip.
+//!
+//! **Also** (the measurement's design):
+//! - predicate (4) runs at `T = 4` on every 16th sample, on the default occupant and on KDK: equal records marching to
+//!   equal states is bitwise, at any horizon;
 //! - a sample whose point the chart's `validate` does not find `Valid` (on the `(L_z, E)` chart's origin grids, the
 //!   rows below its floor `t = 0`, which validation projects to the floor) is not a state the system integrates: it is
 //!   counted in a bucket of its own and left out of every measure.
@@ -60,8 +56,8 @@ use std::path::PathBuf;
 use engine::contract::sim_uniforms::dt_macro_for;
 use engine::decode_dispatch::decode_only_with;
 use engine::first_slice::{
-    evaluate, forward_table, march, outcome, records, today, uniforms, MarchKey, Outcome, Quad,
-    SliceChart,
+    evaluate, forward_table, march, outcome, outcome_of, records, today, uniforms, FieldValues,
+    HeggieRk4, MarchKey, Outcome, Quad, SliceChart,
 };
 use kernel::chart::invariant::WarpReal;
 use kernel::chart::shape_sphere::{inverse_pole, inverse_pq};
@@ -72,9 +68,14 @@ use kernel::decode::invariant::{
 };
 use kernel::decode::{descriptor, Decoded, Ic};
 use kernel::detect::collision::CollisionRadius;
+use kernel::driver::advance::Advance;
 use kernel::generated::links::{Defaults, LinkReal};
 use kernel::occupant::kdk::Kdk;
-use kernel::payload::{PayloadReal, SimStateBase, STATE_COLLISION, STATE_DECODE_FAILED};
+use kernel::payload::{
+    PayloadReal, SimStateBase, STATE_BOUNDED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_ESCAPE,
+    STATE_RUNNING, STATE_SIM_FAILED,
+};
+use kernel::regularisation::heggie::{HgConfig, HgParams};
 use kernel::stage::decode::{ic_words, read_ic, tag, write_ic};
 use measure::{compare, identical_pairs, in_domain, Diff, COMPONENTS};
 use validation::first_slice::{Grid, Preset, GRIDS, SIDE};
@@ -418,7 +419,12 @@ fn state_bits(s: &SimStateBase) -> Vec<u32> {
 
 /// Records `a` and `b` of two runs, sample by sample on the sub-lattice, where equal, integrate to bitwise equal
 /// `SimState`s under `u`; `nudge` changes `b`'s record before its march (the control's).
-fn check_equal_march(a: &[u32], b: &[u32], size: [usize; 2], nudge: fn(Ic<f32>) -> Ic<f32>) {
+fn check_equal_march<A: Advance>(
+    a: &[u32],
+    b: &[u32],
+    size: [usize; 2],
+    nudge: fn(Ic<f32>) -> Ic<f32>,
+) {
     let u = uniforms(T).expect("T is a valid horizon");
     let mut marched = 0;
     for y in (0..size[1]).step_by(STRIDE) {
@@ -430,12 +436,12 @@ fn check_equal_march(a: &[u32], b: &[u32], size: [usize; 2], nudge: fn(Ic<f32>) 
             }
             marched += 1;
             assert_eq!(
-                state_bits(&march::<Kdk>(&ra, &u)),
-                state_bits(&march::<Kdk>(&nudge(rb), &u)),
+                state_bits(&march::<A>(&ra, &u)),
+                state_bits(&march::<A>(&nudge(rb), &u)),
                 "sample {i}: equal records integrated to different SimStates"
             );
             assert!(
-                outcome::<Kdk>(&ra, &u).t_end_step > 0,
+                outcome::<A>(&ra, &u).t_end_step > 0,
                 "sample {i}: the march took no macro-step"
             );
         }
@@ -443,27 +449,31 @@ fn check_equal_march(a: &[u32], b: &[u32], size: [usize; 2], nudge: fn(Ic<f32>) 
     assert!(marched > 0, "no equal records were integrated");
 }
 
-fn check_charts_march<C: Preset>(nudge: fn(Ic<f32>) -> Ic<f32>) {
+fn check_charts_march<C: Preset, A: Advance>(nudge: fn(Ic<f32>) -> Ic<f32>) {
     for grid in [GRIDS[0], GRIDS[2]] {
         let q = quad::<C>(grid);
-        check_equal_march(&host(&q), &host(&q), q.size, nudge);
+        check_equal_march::<A>(&host(&q), &host(&q), q.size, nudge);
     }
 }
 
+/// Predicate (4) on the default occupant, Heggie × RK4, and on KDK, the stand-in the first measurement ran on.
 #[test]
 fn first_slice_equal_records_integrate_equal() {
     std::thread::scope(|s| {
-        s.spawn(|| check_charts_march::<Latent<f32>>(|ic| ic));
-        s.spawn(|| check_charts_march::<ShapeSphere<f32>>(|ic| ic));
-        s.spawn(|| check_charts_march::<InvariantLE<f32>>(|ic| ic));
+        s.spawn(|| check_charts_march::<Latent<f32>, HeggieRk4>(|ic| ic));
+        s.spawn(|| check_charts_march::<ShapeSphere<f32>, HeggieRk4>(|ic| ic));
+        s.spawn(|| check_charts_march::<InvariantLE<f32>, HeggieRk4>(|ic| ic));
+        s.spawn(|| check_charts_march::<Latent<f32>, Kdk>(|ic| ic));
+        s.spawn(|| check_charts_march::<ShapeSphere<f32>, Kdk>(|ic| ic));
+        s.spawn(|| check_charts_march::<InvariantLE<f32>, Kdk>(|ic| ic));
     });
 }
 
 negative_control!(
     first_slice_equal_records_integrate_equal,
-    "one record's march moved by a float in one component must fail",
+    "one record's march on the default occupant moved by a float in one component must fail",
     expected = "equal records integrated to different SimStates",
-    check_charts_march::<Latent<f32>>(|ic| nudged(&ic, 3))
+    check_charts_march::<Latent<f32>, HeggieRk4>(|ic| nudged(&ic, 3))
 );
 
 // ── The measurement ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -619,11 +629,8 @@ struct Measured {
     dots: DotFlips,
     /// Neighbouring pairs with bitwise identical narrowed records, and with identical records of today's decode.
     pairs: [(usize, usize); 2],
-    /// The integrated arm: (records compared, outcome-class flips, `t_end_step` flips), today's against the narrowed,
-    /// then the control.
-    arms: [(usize, usize, usize); 2],
-    /// The outcome classes of the narrowed records' marches.
-    classes: BTreeMap<(u32, u32, u32), usize>,
+    /// The integrated arms on each of [`OCCUPANTS`], in its order.
+    arms: [Arms; 2],
     /// Where the differing records are listed.
     listing: PathBuf,
 }
@@ -652,18 +659,113 @@ fn nudged(ic: &Ic<f32>, k: usize) -> Ic<f32> {
     read_ic(&w, 0)
 }
 
-/// The march outcome of record `ic`, or `decode_failed` for a sample whose decode is `DEGENERATE`, which no march
-/// starts from.
-fn class(ic: &Ic<f32>, degenerate: bool, u: &engine::first_slice::MarchKey) -> Outcome {
+/// The march outcome of record `ic` on the occupant `A`, or `decode_failed` for a sample whose decode is `DEGENERATE`,
+/// which no march starts from.
+fn class<A: Advance>(ic: &Ic<f32>, degenerate: bool, u: &MarchKey) -> Outcome {
+    run::<A>(ic, degenerate, u).0
+}
+
+/// The total energy `Σ|p|²/2m − Σ m_i·m_j/r_ij` (`G = 1`) of masses `m` at `r` with momenta `p`, in f64.
+fn energy(m: [f32; 3], r: [[f32; 2]; 3], p: [[f32; 2]; 3]) -> f64 {
+    let w = |x: f32| f64::from(x);
+    let mut e = 0.0;
+    for i in 0..3 {
+        e += (w(p[i][0]).powi(2) + w(p[i][1]).powi(2)) / (2.0 * w(m[i]));
+        for j in i + 1..3 {
+            let d = (w(r[i][0]) - w(r[j][0])).hypot(w(r[i][1]) - w(r[j][1]));
+            e -= w(m[i]) * w(m[j]) / d;
+        }
+    }
+    e
+}
+
+/// [`class`] with the `SimState`'s words ([`state_bits`]) the march ended in and its energy error at its end,
+/// `|E − E₀|/max(|E₀|, 10⁻³)`, `E₀` the record's; none and 0 where no march starts.
+fn run<A: Advance>(ic: &Ic<f32>, degenerate: bool, u: &MarchKey) -> (Outcome, Vec<u32>, f64) {
     if degenerate {
-        Outcome {
+        let failed = Outcome {
             state: STATE_DECODE_FAILED,
             detail: 0,
             t_end_step: 0,
-        }
-    } else {
-        outcome::<Kdk>(ic, u)
+        };
+        return (failed, Vec::new(), 0.0);
     }
+    let s = march::<A>(ic, u);
+    let e0 = energy(ic.m, ic.r, ic.p);
+    let drift = (energy(ic.m, s.r, s.p) - e0).abs() / e0.abs().max(1e-3);
+    (outcome_of(&s), state_bits(&s), drift)
+}
+
+/// The occupants the integrated arms run on, in [`Measured::arms`]' order: the default occupant, then the stand-in
+/// the first measurement ran on before the default was built.
+const OCCUPANTS: [&str; 2] = [
+    "Heggie x RK4 (Eq. 22), the default occupant",
+    "KDK, the stand-in for the default occupant (the first measurement's)",
+];
+
+/// One class's marches: how many, the least and largest `t_end_step`, and each march's energy error at its end.
+type ClassTally = (usize, u32, u32, Vec<f64>);
+
+/// One occupant's integrated arms on one grid.
+#[derive(Default)]
+struct Arms {
+    /// (records compared, outcome-class flips, `t_end_step` flips): today's against the narrowed, then the control.
+    arms: [(usize, usize, usize); 2],
+    /// The control's marches that ended in the very `SimState` of the narrowed record's, bitwise: where the nudge was
+    /// lost in the march, so the control could not flip.
+    control_same: usize,
+    /// The outcome classes `(state, detail)` of the narrowed records' marches, with the least and largest
+    /// `t_end_step` of each, and the median and largest energy error at the march's end ([`run`]).
+    classes: BTreeMap<(u32, u32), ClassTally>,
+}
+
+/// The integrated arms on the occupant `A` over every `stride`th sample across and up of a quad of `size` (none at
+/// stride 0): each sample `inside` its chart's domain marched from its narrowed record, and where today's record
+/// differs, from today's and from the control's, the narrowed record one ulp up in one component.
+fn arms<A: Advance>(
+    narrowed: &[u32],
+    old: &[kernel::stage::decode::DecodeOut<f32>],
+    inside: &[bool],
+    failed: &[[bool; 2]],
+    size: [usize; 2],
+    stride: usize,
+) -> Arms {
+    let u = uniforms(t_arms()).expect("the arms' horizon is valid");
+    let mut out = Arms::default();
+    if stride == 0 {
+        return out;
+    }
+    for y in (0..size[1]).step_by(stride) {
+        for x in (0..size[0]).step_by(stride) {
+            let i = y * size[0] + x;
+            if !inside[i] {
+                continue;
+            }
+            let new = read_ic(narrowed, i);
+            let [degenerate, was] = failed[i];
+            let (base, base_bits, drift) = run::<A>(&new, degenerate, &u);
+            let entry = out.classes.entry((base.state, base.detail)).or_insert((
+                0,
+                u32::MAX,
+                0,
+                Vec::new(),
+            ));
+            entry.0 += 1;
+            entry.1 = entry.1.min(base.t_end_step);
+            entry.2 = entry.2.max(base.t_end_step);
+            entry.3.push(drift);
+            // The control moves the same records the comparison reads (those where the two decodes differ), so both
+            // arms' rates are of one population.
+            if thin_bits(&new) != thin_bits(&old[i].ic) {
+                tally(&mut out.arms[0], base, class::<A>(&old[i].ic, was, &u));
+                let (control, control_bits, _) =
+                    run::<A>(&nudged(&new, 3 + i % 12), degenerate, &u);
+                tally(&mut out.arms[1], base, control);
+                out.control_same += usize::from(!degenerate && control_bits == base_bits);
+            }
+        }
+    }
+    out
 }
 
 /// One arm's tally, (records, outcome-class flips, `t_end_step` flips): `other`'s outcome against `base`'s, the class
@@ -675,8 +777,9 @@ fn tally(arm: &mut (usize, usize, usize), base: Outcome, other: Outcome) {
 }
 
 /// One grid's measurement on chart `C` (the module's note), its selects read on `alter` of the quad's chart (the
-/// chart itself in the measurement; another in its control).
-fn measure_grid<C: Reads>(grid: Grid, alter: fn(C) -> C) -> Measured {
+/// chart itself in the measurement; another in its control), its integrated arms on every `stride`th sample across and
+/// up (none at stride 0).
+fn measure_grid<C: Reads>(grid: Grid, alter: fn(C) -> C, stride: usize) -> Measured {
     let q = quad::<C>(grid);
     let read = alter(q.chart);
     let table = forward_table(&q).expect("the physics kernel decodes");
@@ -738,34 +841,15 @@ fn measure_grid<C: Reads>(grid: Grid, alter: fn(C) -> C) -> Measured {
         identical_pairs(&narrowed, q.size, |i| inside[i]),
         identical_pairs(&old_records, q.size, |i| inside[i]),
     ];
-    let u = uniforms(t_arms()).expect("Part 3's default horizon is valid");
-    let mut arms = [(0, 0, 0); 2];
-    let mut classes = BTreeMap::new();
-    let lattice = if ARMS { q.size } else { [0, 0] };
-    for y in (0..lattice[1]).step_by(ARM_STRIDE) {
-        for x in (0..lattice[0]).step_by(ARM_STRIDE) {
-            let i = y * q.size[0] + x;
-            if !inside[i] {
-                continue;
-            }
-            let new = read_ic(&narrowed, i);
-            let [degenerate, was] = failed[i];
-            let base = class(&new, degenerate, &u);
-            *classes
-                .entry((base.state, base.detail, base.t_end_step))
-                .or_insert(0) += 1;
-            // The control moves the same records the comparison reads (those where the two decodes differ), so both
-            // arms' rates are of one population.
-            if thin_bits(&new) != thin_bits(&old[i].ic) {
-                tally(&mut arms[0], base, class(&old[i].ic, was, &u));
-                tally(
-                    &mut arms[1],
-                    base,
-                    class(&nudged(&new, 3 + i % 12), degenerate, &u),
-                );
-            }
-        }
-    }
+    let stride = if ARMS { stride } else { 0 };
+    let (default, stand_in) = std::thread::scope(|s| {
+        let d = s.spawn(|| arms::<HeggieRk4>(&narrowed, &old, &inside, &failed, q.size, stride));
+        let k = s.spawn(|| arms::<Kdk>(&narrowed, &old, &inside, &failed, q.size, stride));
+        (
+            d.join().expect("the default occupant's arms"),
+            k.join().expect("the stand-in's arms"),
+        )
+    });
     Measured {
         grid,
         outside: inside.iter().filter(|&&a| !a).count(),
@@ -775,8 +859,7 @@ fn measure_grid<C: Reads>(grid: Grid, alter: fn(C) -> C) -> Measured {
         examples,
         dots,
         pairs,
-        arms,
-        classes,
+        arms: [default, stand_in],
         listing,
     }
 }
@@ -811,8 +894,7 @@ fn share((a, b): (usize, usize)) -> String {
 /// registers no flip the arm is uninformative at this horizon, not "0 flips".
 fn arm_reading([(n0, c0, s0), (n1, c1, s1)]: [(usize, usize, usize); 2]) -> String {
     if n1 == 0 || c1 + s1 == 0 {
-        return "arm reading: the control registers no flip here, so the arm is uninformative at this horizon (escape \
-                unlabelled until TASK-M3-12)"
+        return "arm reading: the control registers no flip here, so the arm is uninformative at this horizon"
             .to_owned();
     }
     let rate = |a: usize, n: usize| a as f64 / n.max(1) as f64;
@@ -827,14 +909,29 @@ fn arm_reading([(n0, c0, s0), (n1, c1, s1)]: [(usize, usize, usize); 2]) -> Stri
     )
 }
 
-/// The report of chart `C`'s grids.
-fn report<C: SliceChart>(measured: &[Measured]) -> String {
+/// A class `(state, detail)` by name (payload §2).
+fn class_name((state, detail): (u32, u32)) -> String {
+    let name = match state {
+        STATE_ESCAPE => "escape",
+        STATE_BOUNDED => "bounded",
+        STATE_COLLISION => "collision",
+        STATE_RUNNING => "running",
+        STATE_SIM_FAILED => "sim_failed",
+        STATE_DECODE_FAILED => "decode_failed",
+        _ => "unknown",
+    };
+    format!("{name}/{detail}")
+}
+
+/// The report of chart `C`'s grids, the integrated arms on every `stride`th sample.
+fn report<C: SliceChart>(measured: &[Measured], stride: usize) -> String {
     let mut r = format!(
         "first slice, {}: the narrowed f64 records against today's f32 decode, {SIDE} x {SIDE} a grid; the \
-         integrated arms on KDK, a stand-in for the default occupant (RQ-818 (closed by R-1027); TASK-M2-108), T = {}, r_coll = \
-         Part 3's default 1e-3, escape unlabelled until TASK-M3-12 (a march that does not collide ends bounded), every \
-         {ARM_STRIDE}th sample across and up, a {} build\n  {SEED}\n",
+         integrated arms on {} and on {}, T = {}, r_coll = Part 3's default 1e-3, escape labelled by the wrapper's \
+         cadence, every {stride}th sample across and up, a {} build\n  {SEED}\n",
         C::NAME,
+        OCCUPANTS[0],
+        OCCUPANTS[1],
         t_arms(),
         if cfg!(debug_assertions) {
             "debug"
@@ -909,7 +1006,6 @@ fn report<C: SliceChart>(measured: &[Measured]) -> String {
             share(m.pairs[0]),
             share(m.pairs[1])
         );
-        let [(n0, c0, s0), (n1, c1, s1)] = m.arms;
         if !ARMS {
             let _ = writeln!(
                 r,
@@ -918,51 +1014,104 @@ fn report<C: SliceChart>(measured: &[Measured]) -> String {
             let _ = writeln!(r, "    differing records listed in {}", m.listing.display());
             continue;
         }
-        let _ = writeln!(
-            r,
-            "    integrated: today's against the narrowed, {n0} differing records: class flips {}, t_end_step flips {}; \
-             the control (one ulp in one component), the same {n1} records: class flips {}, t_end_step flips {}; classes \
-             (state, detail, t_end_step) of the narrowed: {:?}",
-            share((c0, n0)),
-            share((s0, n0)),
-            share((c1, n1)),
-            share((s1, n1)),
-            m.classes
-        );
-        let _ = writeln!(r, "    {}", arm_reading(m.arms));
+        for (name, a) in OCCUPANTS.iter().zip(&m.arms) {
+            let [(n0, c0, s0), (n1, c1, s1)] = a.arms;
+            let classes: Vec<String> = a
+                .classes
+                .iter()
+                .map(|(&k, (n, lo, hi, drift))| {
+                    let mut d = drift.clone();
+                    d.sort_by(f64::total_cmp);
+                    format!(
+                        "{} {n} (t_end_step {lo}..={hi}; |dE/E0| median {:.1e}, largest {:.1e})",
+                        class_name(k),
+                        d[d.len() / 2],
+                        d[d.len() - 1]
+                    )
+                })
+                .collect();
+            let _ = writeln!(r, "    integrated on {name}:");
+            let _ = writeln!(
+                r,
+                "      today's against the narrowed, {n0} differing records: class flips {}, t_end_step flips {}; the \
+                 control (one ulp in one component), the same {n1} records: class flips {}, t_end_step flips {}; \
+                 control marches ending in the narrowed record's SimState bitwise: {}",
+                share((c0, n0)),
+                share((s0, n0)),
+                share((c1, n1)),
+                share((s1, n1)),
+                share((a.control_same, n1))
+            );
+            let _ = writeln!(
+                r,
+                "      classes of the narrowed records' marches: {}",
+                classes.join(", ")
+            );
+            let _ = writeln!(r, "      {}", arm_reading(a.arms));
+        }
         let _ = writeln!(r, "    differing records listed in {}", m.listing.display());
     }
     r
 }
 
-fn measure_chart<C: Reads + Send + Sync>() {
-    let measured = each_grid(|g| measure_grid::<C>(g, |c| c));
-    println!("{}", report::<C>(&measured));
+fn measure_chart<C: Reads + Send + Sync>(stride: usize) {
+    let measured = each_grid(|g| measure_grid::<C>(g, |c| c, stride));
+    println!("{}", report::<C>(&measured, stride));
 }
 
 #[test]
 fn first_slice_measure_latent() {
-    measure_chart::<Latent<f32>>();
+    measure_chart::<Latent<f32>>(ARM_STRIDE);
 }
 
 #[test]
 fn first_slice_measure_shape_sphere() {
-    measure_chart::<ShapeSphere<f32>>();
+    measure_chart::<ShapeSphere<f32>>(ARM_STRIDE);
 }
 
 #[test]
 fn first_slice_measure_invariant_lz_e() {
-    measure_chart::<InvariantLE<f32>>();
+    measure_chart::<InvariantLE<f32>>(ARM_STRIDE);
 }
+
+/// The integrated arms' sub-lattice of the full-grid run: `FIRST_SLICE_ARM_STRIDE` if set, else 1, every sample.
+fn full_stride() -> usize {
+    std::env::var("FIRST_SLICE_ARM_STRIDE").ok().map_or(1, |s| {
+        s.parse().expect("FIRST_SLICE_ARM_STRIDE is a stride")
+    })
+}
+
+/// The measurement with the integrated arms on every sample of every grid (or every `FIRST_SLICE_ARM_STRIDE`th), all
+/// three charts. At stride 1 it is some 65 536 marches per occupant per grid, hours of CPU: `cargo test --release -p
+/// engine --test first_slice -- --ignored --nocapture first_slice_measure_full_grid`.
+#[test]
+#[ignore = "full grid: run on the Mac"]
+fn first_slice_measure_full_grid() {
+    let stride = full_stride();
+    measure_chart::<Latent<f32>>(stride);
+    measure_chart::<ShapeSphere<f32>>(stride);
+    measure_chart::<InvariantLE<f32>>(stride);
+}
+
+negative_control!(
+    first_slice_measure_full_grid,
+    "selects read on another chart's decode must fail",
+    expected = "the selects were read on another decode",
+    mismatched()
+);
 
 /// The measurement with its selects read on the latent preset's chart with `z₀`'s first component one f32 up: not
 /// the records' decode.
 #[cfg(feature = "controls")]
 fn mismatched() {
-    measure_grid::<Latent<f32>>(GRIDS[0], |mut c| {
-        c.z0[0] = c.z0[0].next_up();
-        c
-    });
+    measure_grid::<Latent<f32>>(
+        GRIDS[0],
+        |mut c| {
+            c.z0[0] = c.z0[0].next_up();
+            c
+        },
+        0,
+    );
 }
 
 negative_control!(
@@ -989,7 +1138,8 @@ negative_control!(
 // ── The integrated arm can fire ───────────────────────────────────────────────────────────────────────────────────────
 
 /// The arm registers a flip where the outcomes differ, and reads against its control: one record of the latent home
-/// quad marched at `T = 4`, bounded to the horizon, against the same sample's decode failed, which no march starts from
+/// quad marched on the default occupant at `T = 4`, bounded to the horizon (its 4000 macro-steps, each completed,
+/// whatever the occupant's own grid), against the same sample's decode failed, which no march starts from
 /// (`decode_failed`, at step 0), so a class flip and a `t_end_step` flip; two escapes of different bodies, a class flip
 /// at payload §2's grain, `(state, detail)`; and the reading uninformative where the control
 /// registers no flip, else both arms' rates.
@@ -997,8 +1147,8 @@ fn check_arm(tally: fn(&mut (usize, usize, usize), Outcome, Outcome)) {
     let u = uniforms(T).expect("T is a valid horizon");
     let q = <Latent<f32> as Preset>::quad(GRIDS[0], [1, 1]);
     let record = read_ic(&evaluate(&q).expect("the physics kernel decodes"), 0);
-    let marched = class(&record, false, &u);
-    let failed = class(&record, true, &u);
+    let marched = class::<HeggieRk4>(&record, false, &u);
+    let failed = class::<HeggieRk4>(&record, true, &u);
     let mut arm = (0, 0, 0);
     tally(&mut arm, marched, marched);
     tally(&mut arm, marched, failed);
@@ -1040,7 +1190,7 @@ negative_control!(
 /// The march fires the collision branch at the key's `r_coll`, Part 3's default `1e-3`: the latent home record with
 /// body 1 moved to `5·10⁻⁴` of body 0, inside `r_coll`, ends `collision` at step 0 (integrator_contract Part 5), where at
 /// `r_coll = 0` it would march on.
-fn check_collides(key: fn(MarchKey) -> MarchKey) {
+fn check_collides<A: Advance>(key: fn(MarchKey) -> MarchKey) {
     let u = uniforms(T).expect("T is a valid horizon");
     assert_eq!(
         u.radius,
@@ -1050,7 +1200,7 @@ fn check_collides(key: fn(MarchKey) -> MarchKey) {
     let q = <Latent<f32> as Preset>::quad(GRIDS[0], [1, 1]);
     let mut record = read_ic(&evaluate(&q).expect("the physics kernel decodes"), 0);
     record.r[1] = [record.r[0][0] + 5e-4, record.r[0][1]];
-    let got = outcome::<Kdk>(&record, &key(u));
+    let got = outcome::<A>(&record, &key(u));
     assert_eq!(
         (got.state, got.t_end_step),
         (STATE_COLLISION, 0),
@@ -1058,18 +1208,107 @@ fn check_collides(key: fn(MarchKey) -> MarchKey) {
     );
 }
 
+/// On the default occupant and on the stand-in.
 #[test]
 fn first_slice_march_collides() {
-    check_collides(|u| u);
+    check_collides::<HeggieRk4>(|u| u);
+    check_collides::<Kdk>(|u| u);
 }
 
 negative_control!(
     first_slice_march_collides,
-    "a march at r_coll = 0 must fail",
+    "a march on the default occupant at r_coll = 0 must fail",
     expected = "a record inside r_coll did not end in collision at step 0",
-    check_collides(|u| MarchKey {
+    check_collides::<HeggieRk4>(|u| MarchKey {
         radius: CollisionRadius::none(),
         ..u
+    })
+);
+
+// ── The march labels escape ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// Three equal bodies on an equilateral triangle of circumradius 1 about the origin, each moving straight out from it
+/// at `speed`: momenta summing to zero, and at a speed well past the escape speed every pair flies apart.
+fn spreading(speed: f32) -> Ic<f32> {
+    let dirs = [0.0f32, 2.0, 4.0].map(|k| {
+        let a = k * std::f32::consts::FRAC_PI_3;
+        [a.cos(), a.sin()]
+    });
+    let m = 1.0 / 3.0;
+    Ic {
+        m: [m; 3],
+        r: dirs,
+        p: dirs.map(|[x, y]| [m * speed * x, m * speed * y]),
+    }
+}
+
+/// The harness's march labels escape, so the arms can read an escape flip: three bodies spreading at speed 10 (each
+/// body's `E_rel = ½·100·(3/2)² − 1/1.5 > 0`, and the shape point fixed, the triangle growing self-similarly) end
+/// `escape` before `T = 4`, on the default occupant and on the stand-in.
+fn check_escapes(speed: f32) {
+    let u = uniforms(T).expect("T is a valid horizon");
+    let ic = spreading(speed);
+    for (name, got) in [
+        ("Heggie x RK4", outcome::<HeggieRk4>(&ic, &u)),
+        ("KDK", outcome::<Kdk>(&ic, &u)),
+    ] {
+        assert!(
+            got.state == STATE_ESCAPE && got.t_end_step < u.loop_values.horizon_steps,
+            "{name}: three spreading bodies did not end in escape before the horizon: state {} at t_end_step {}",
+            got.state,
+            got.t_end_step
+        );
+    }
+}
+
+#[test]
+fn first_slice_march_escapes() {
+    check_escapes(10.0);
+}
+
+negative_control!(
+    first_slice_march_escapes,
+    "three bodies released at rest, which fall together, must fail",
+    expected = "did not end in escape before the horizon",
+    check_escapes(0.0)
+);
+
+// ── The default occupant marches at the CPU field's values ──────────────────────────────────────────────────────────
+
+/// `values`, Heggie's step-control values at f32, are the CPU field's (`engine::field::heggie_params`), field by field.
+fn check_values(values: HgParams<f32>) {
+    let field = engine::field::heggie_params();
+    let words = |p: &HgParams<f32>| {
+        (
+            [
+                p.eta,
+                p.delta_sync,
+                p.tiny,
+                p.predictive_f,
+                p.step_budget_rate,
+            ]
+            .map(f32::to_bits),
+            (p.n_min, p.clamp, p.secant_tries, p.bisect_tries, p.time),
+        )
+    };
+    assert!(
+        words(&values) == words(&field),
+        "the default occupant's Heggie values are not the CPU field's"
+    );
+}
+
+#[test]
+fn first_slice_default_occupant_values() {
+    check_values(FieldValues::params::<f32>());
+}
+
+negative_control!(
+    first_slice_default_occupant_values,
+    "values with η doubled must fail",
+    expected = "the default occupant's Heggie values are not the CPU field's",
+    check_values(HgParams {
+        eta: 0.02,
+        ..FieldValues::params::<f32>()
     })
 );
 
