@@ -755,11 +755,11 @@ fn named(r: &FrameRecord) -> Result<View, PathError> {
 
 fn check_fence(between: Between) {
     let pan = Segment::pan(&view(), 0.25, -0.125).unwrap();
-    // R-474's latent tilt left the fence with TASK-M2-64, which builds its evaluator (`chart_path_consolidate`).
+    // R-474's latent tilt left the fence with TASK-M2-64, which builds its evaluator (`chart_path_consolidate`), and
+    // the state blend with TASK-M2-90 (`blend_chart`).
     for family in [
         engine::path::Family::WindowEase,
         engine::path::Family::PlaneRotation,
-        engine::path::Family::Blend(engine::path::BlendPath::BlockLine),
     ] {
         let mut record = pan.record(0.5).unwrap();
         record.family = family.clone();

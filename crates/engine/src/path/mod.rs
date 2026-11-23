@@ -14,10 +14,15 @@
 //! - Every route that edits a view calls its operation's one leaf ([`leaf`]), which passes the segment through the stop
 //!   ([`stop`]; REQ-CHART-060) before its edits are recorded (TASK-M2-64).
 //!
-//! **The fence** (R-863): the families are today's operations, and R-474's tilt of a latent view (TASK-M2-64). The
-//! blend, the plane rotation, several fields eased together, alignment and retiming are typed and refuse to be shown
+//! - A blend is a chart ([`Map::Blend`], [`blend`]; TASK-M2-90): the state blend of two views at a share, its ends
+//!   exact, an end itself a blend; its segment ([`Segment::blend`]) runs the share from `A` to `B`, and a pan, zoom
+//!   or turn of a blend view reaches both ends.
+//!
+//! **The fence** (R-863): the families are today's operations, R-474's tilt of a latent view (TASK-M2-64) and the
+//! state blend (TASK-M2-90). The plane rotation, several fields eased together, alignment and retiming are typed and refuse to be shown
 //! ([`PathError::NotBuilt`]) until their stage builds them; no special case is an if-branch outside a family.
 
+pub mod blend;
 pub mod curved;
 pub mod family;
 pub mod leaf;
@@ -111,7 +116,7 @@ impl KernelMap {
 }
 
 /// The map: a chart, named coordinates to a signed state. Maps are kernel values; the object never re-implements `Φ`.
-/// The composed map and the blend are stage 3's and later (sketch § 2).
+/// The composed map is stage 3's and later (sketch § 2).
 #[derive(Clone, Debug, PartialEq)]
 pub enum Map {
     /// The latent chart, `Φ = z₀ + (2s−1)q₁ + (2t−1)q₂`, its window the plane.
@@ -120,6 +125,8 @@ pub enum Map {
     Kernel(KernelMap),
     /// A saved chart, by value (Save view as chart).
     Saved(Box<Saved>),
+    /// The blend chart, by value: two views, a path and a share ([`blend::Blend`]).
+    Blend(Box<blend::Blend>),
 }
 
 /// The pin (chart_decoder_contract Part 4, "Setting the lock"): the locked pixel, by its screen address in the window's
@@ -230,6 +237,18 @@ impl View {
         }
     }
 
+    /// A view of the blend chart `blend`: its `SimConfig` its end `A`'s, a leaf's at the bottom of a nest, read for
+    /// the groups a blend does not own; no pin, tilt or pivot of its own (a lock on a blend is TASK-M2-65's).
+    pub fn blend(blend: blend::Blend) -> Self {
+        View {
+            sim: blend.a.sim.clone(),
+            map: Map::Blend(Box::new(blend)),
+            pin: None,
+            tilt: None,
+            pivot: None,
+        }
+    }
+
     /// A view of the registry chart `chart`.
     pub fn kernel<C: kernel::chart::Chart>(chart: &C, sim: SimConfig) -> Result<Self, PathError> {
         Ok(View {
@@ -327,6 +346,7 @@ impl View {
                 Saved::Oblique(_) => ViewWindow::Plane(&self.sim.plane),
                 Saved::Curved(_) => ViewWindow::Chart(&self.sim.chart.window),
             },
+            Map::Blend(blend) => blend.a.window(),
         }
     }
 
@@ -338,6 +358,7 @@ impl View {
             Map::Latent => Ok(&self.sim.plane),
             Map::Kernel(_) => Err(PathError::WrongMap),
             Map::Saved(_) => Err(saved_refused()),
+            Map::Blend(_) => Err(blend_refused()),
         }
     }
 
@@ -368,6 +389,12 @@ const TARGET_REFUSED: &str = "a target that is not one of the chart's hidden coo
 /// in the kernel's `Composed`); editing its window and saving it again are TASK-M2-55's.
 fn saved_refused() -> PathError {
     PathError::NotBuilt("an edit of a saved chart's view (TASK-M2-55)")
+}
+
+/// An edit of a blend view other than the pan, zoom and turn that reach both ends: a slice, a slider, a tilt and the
+/// lock of a blend are TASK-M2-65's and later.
+fn blend_refused() -> PathError {
+    PathError::NotBuilt("an edit of a blend other than its pan, zoom and turn")
 }
 
 /// `sim` after `edits`, each written as the state store writes it (`contract::store::write`).
@@ -439,7 +466,7 @@ pub enum TiltForm {
     },
 }
 
-/// A blend's path, by name: nothing outside the blend's evaluator assumes the default (R-943). Not built (stage 3).
+/// A blend's path, by name: nothing outside the blend's evaluator assumes the default (R-943).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BlendPath {
     /// The default path, block by block in each block's own geometry (design § 17.2).
@@ -543,8 +570,13 @@ pub enum Family {
     },
     /// § 17.7's geodesic between two planes: not built.
     PlaneRotation,
-    /// The state blend, its path named: not built (stage 3).
+    /// The state blend, its path named ([`Segment::blend`]): `B` stored, the interior the blend chart at `s`.
     Blend(BlendPath),
+    /// The turn of a blend view about its centre, `s·radians` ([`Segment::turn`]).
+    Turn {
+        /// The turn, in radians.
+        radians: f64,
+    },
 }
 
 // ── The segment ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -638,6 +670,9 @@ impl Segment {
             return Ok(self.b.clone());
         }
         let a = &self.a;
+        if let Some(view) = self.blend_frame(s)? {
+            return Ok(view);
+        }
         let mut pin = a.pin;
         let mut tilt = a.tilt;
         let edits = match &self.family {
@@ -687,7 +722,9 @@ impl Segment {
             Family::Cut { .. } | Family::Commit => return Ok(a.clone()),
             Family::WindowEase => return Err(PathError::NotBuilt("several fields eased together")),
             Family::PlaneRotation => return Err(PathError::NotBuilt("the plane rotation")),
-            Family::Blend(_) => return Err(PathError::NotBuilt("the state blend")),
+            Family::Blend(_) | Family::Turn { .. } => {
+                unreachable!("a blend's frame is blend_frame's")
+            }
         };
         if self.timing.retime.is_some() {
             return Err(PathError::NotBuilt("retiming"));
@@ -706,6 +743,39 @@ impl Segment {
             },
             _ => view,
         })
+    }
+
+    /// The frame at `0 < s < 1` where the segment is a blend's, `None` elsewhere: the blend chart at `s`
+    /// ([`Family::Blend`]), or an edit of a blend view, a pan, zoom or turn at its scaled parameter reaching both ends.
+    fn blend_frame(&self, s: f64) -> Result<Option<View>, PathError> {
+        let blended = matches!(self.family, Family::Blend(_) | Family::Turn { .. })
+            || matches!(self.a.map, Map::Blend(_));
+        if blended && self.timing.retime.is_some() {
+            return Err(PathError::NotBuilt("retiming"));
+        }
+        let blend = match (&self.family, &self.a.map) {
+            (Family::Blend(path), _) => {
+                return Ok(Some(View::blend(blend::Blend::new(
+                    self.a.clone(),
+                    self.b.clone(),
+                    *path,
+                    s,
+                )?)))
+            }
+            (Family::Turn { .. }, Map::Blend(blend)) => blend,
+            (Family::Turn { .. }, _) => return Err(PathError::WrongMap),
+            (_, Map::Blend(blend)) => blend,
+            _ => return Ok(None),
+        };
+        let at = match &self.family {
+            Family::Pan { ds, dt } => blend.pan(s * ds, s * dt)?,
+            Family::Zoom { octaves } => blend.zoom(family::octave_factor(s * octaves)?)?,
+            Family::ZoomFactor { k } => blend.zoom(k.powf(s))?,
+            Family::Turn { radians } => blend.turned(s * radians)?,
+            Family::Cut { .. } | Family::Commit => return Ok(Some(self.a.clone())),
+            _ => return Err(blend_refused()),
+        };
+        Ok(Some(View::blend(at)))
     }
 
     /// The frame shown at playback fraction `u`: the frame at `s = ease(u)`. The family never sees `u`.
@@ -735,6 +805,13 @@ impl Segment {
     /// On a kernel map the window's centre moves by `(2ds·h_u, 2dt·h_v)`, the pixel at `(½ + ds, ½ + dt)` becoming the
     /// centre ([`family::pan_window`]), the window shape's evaluator.
     pub fn pan(a: &View, ds: f64, dt: f64) -> Result<Self, PathError> {
+        if let Map::Blend(blend) = &a.map {
+            return Ok(Self::navigated(
+                a,
+                Family::Pan { ds, dt },
+                blend.pan(ds, dt)?,
+            ));
+        }
         let e = pan_edit(a, ds, dt)?;
         let seg = Self::of(a, Family::Pan { ds, dt }, vec![e]);
         Ok(seg.pinned(panned(a, ds, dt)))
@@ -744,6 +821,10 @@ impl Segment {
     /// `q₁, q₂ ×= 2^−octaves`, on a kernel map the window's half-widths, each by one common factor; where the pin is off
     /// the centre, the centre re-solved so the pinned pixel keeps its point ([`hold_plane`], [`hold_window`]).
     pub fn zoom(a: &View, octaves: f64) -> Result<Self, PathError> {
+        if let Map::Blend(blend) = &a.map {
+            let k = family::octave_factor(octaves)?;
+            return Ok(Self::navigated(a, Family::Zoom { octaves }, blend.zoom(k)?));
+        }
         let edits = zoomed(a, family::octave_factor(octaves)?)?;
         Ok(Self::of(a, Family::Zoom { octaves }, edits))
     }
@@ -752,8 +833,48 @@ impl Segment {
     /// itself, `q·k` (or a kernel map's half-widths times `k`), so a route that reads its zoom as a ratio of scales `σ′/σ`
     /// (the gui's zoom row) keeps its bits. [`NavError::DegeneratePlane`] for a factor 0 or not finite.
     pub fn zoom_factor(a: &View, k: f64) -> Result<Self, PathError> {
+        if let Map::Blend(blend) = &a.map {
+            return Ok(Self::navigated(a, Family::ZoomFactor { k }, blend.zoom(k)?));
+        }
         let edits = zoomed(a, k)?;
         Ok(Self::of(a, Family::ZoomFactor { k }, edits))
+    }
+
+    /// The turn of the blend view `a` by `radians` about its centre, held by the blend and applied to the address both
+    /// ends read ([`blend::Blend::turned`]). [`PathError::WrongMap`] on a view that is not a blend: neither window shape
+    /// turns today.
+    pub fn turn(a: &View, radians: f64) -> Result<Self, PathError> {
+        let Map::Blend(blend) = &a.map else {
+            return Err(PathError::WrongMap);
+        };
+        Ok(Self::navigated(
+            a,
+            Family::Turn { radians },
+            blend.turned(radians)?,
+        ))
+    }
+
+    /// The state blend from `a` to `b` on `path` (R-926 item 3, R-943): `B` stored; the frame at `0 < s < 1` the blend
+    /// chart at `s`, and the ends the stored views, `s` compared exactly (§ 17.4). Either end may itself be a blend.
+    pub fn blend(a: &View, b: &View, path: BlendPath) -> Self {
+        Segment {
+            a: a.clone(),
+            b: b.clone(),
+            family: Family::Blend(path),
+            edits: Vec::new(),
+            timing: Timing::default(),
+        }
+    }
+
+    /// The edit `family` of the blend view `a`, its `B` the blend `to`.
+    fn navigated(a: &View, family: Family, to: blend::Blend) -> Self {
+        Segment {
+            a: a.clone(),
+            b: View::blend(to),
+            family,
+            edits: Vec::new(),
+            timing: Timing::default(),
+        }
     }
 
     /// `B`'s pin set to `pin`.
@@ -774,8 +895,10 @@ impl Segment {
     /// A slider's move of the control `k` to `value` (Part 4, "Sliders are re-based"): `z₀[k] ← value`, from `A`'s own
     /// value. While locked it is an excursion from the anchor, which it keeps.
     pub fn control(a: &View, k: usize, value: f64) -> Result<Self, PathError> {
-        if let Map::Saved(_) = a.map {
-            return Err(saved_refused());
+        match a.map {
+            Map::Saved(_) => return Err(saved_refused()),
+            Map::Blend(_) => return Err(blend_refused()),
+            _ => {}
         }
         let e = family::control(&a.sim, k, value)?;
         let from = a.sim.plane.z0[k];
@@ -990,6 +1113,9 @@ impl Segment {
     /// ([`hold_plane`]); with the pin at the centre, and on a kernel map, whose hidden coordinates are `z₀`'s and whose
     /// window the lock did not move, `z₀ ← z_locked` by assignment. A cut labelled `SnapBack`.
     pub fn snap_back(a: &View) -> Result<Self, PathError> {
+        if let Map::Blend(_) = a.map {
+            return Err(blend_refused());
+        }
         if !a.sim.lock.locked {
             return Err(LockError::NotLocked.into());
         }
@@ -1010,6 +1136,9 @@ impl Segment {
 
     /// Unlock: the lock group cleared, `(z₀, q₁, q₂)` kept, the pin gone; a cut labelled `Unlock`.
     pub fn unlock(a: &View) -> Result<Self, PathError> {
+        if let Map::Blend(_) = a.map {
+            return Err(blend_refused());
+        }
         let e = lock::unlock(&a.sim)?;
         let mut seg = Self::of(a, cut(CutLabel::Unlock), vec![e]).pinned(None);
         seg.b.pivot = None;
@@ -1107,7 +1236,7 @@ impl Segment {
         let named = match &a.map {
             Map::Kernel(k) => *k == index,
             Map::Saved(saved) => matches!(**saved, Saved::Curved(c) if c.parent == index.registry),
-            Map::Latent => false,
+            Map::Latent | Map::Blend(_) => false,
         };
         if !named {
             return Err(PathError::WrongMap);
@@ -1230,6 +1359,7 @@ impl Segment {
             Family::Pan { ds, dt } => Some(Self::pan(a, *ds, *dt)?),
             Family::Zoom { octaves } => Some(Self::zoom(a, *octaves)?),
             Family::ZoomFactor { k } => Some(Self::zoom_factor(a, *k)?),
+            Family::Turn { radians } => Some(Self::turn(a, *radians)?),
             Family::Slice { d, t } => Some(Self::slice(a, d, *t)?),
             Family::Control { k, from, to } => {
                 (a.sim.plane.z0.get(*k).map(|x| x.to_bits()) == Some(from.to_bits()))
@@ -1361,6 +1491,7 @@ fn pan_edit(a: &View, ds: f64, dt: f64) -> Result<SetField, PathError> {
     }
     match (&a.map, a.window()) {
         (Map::Saved(_), _) => Err(saved_refused()),
+        (Map::Blend(_), _) => Err(blend_refused()),
         (_, ViewWindow::Plane(plane)) => Ok(family::pan(plane, ds, dt)?),
         (_, ViewWindow::Chart(window)) => Ok(family::edit(SimField::Window(family::pan_window(
             window, ds, dt,
@@ -1487,6 +1618,7 @@ fn about_pin(a: &View, change: SetField) -> Vec<SetField> {
 fn zoomed(a: &View, k: f64) -> Result<Vec<SetField>, PathError> {
     match (&a.map, a.window()) {
         (Map::Saved(_), _) => Err(saved_refused()),
+        (Map::Blend(_), _) => Err(blend_refused()),
         (_, ViewWindow::Plane(plane)) => Ok(about_pin(a, family::zoom_by(plane, k)?)),
         (_, ViewWindow::Chart(window)) => {
             let mut zoomed = family::zoom_window_by(window, k)?;
