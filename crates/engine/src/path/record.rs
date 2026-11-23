@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 
 use kernel::chart::saved::{Saved, WORDS};
 
-use super::{CurvedTilt, Family, KernelMap, Map, PathError, Pin, Pivot, Segment, View};
+use super::blend::Blend;
+use super::{BlendPath, CurvedTilt, Family, KernelMap, Map, PathError, Pin, Pivot, Segment, View};
 use crate::contract::sim_config::SimConfig;
 
 /// § 17.10's alignment `T`, in the window's similarity group: content, not timing. Typed, not built (stage 4).
@@ -23,12 +24,24 @@ pub struct Align {
     pub offset: [f64; 2],
 }
 
-/// The map as text: the saved chart by its words, in hex.
+/// The map as text: the saved chart by its words, in hex; a blend by its ends, its path, and its share and turn as
+/// IEEE bits in hex.
 #[derive(Serialize, Deserialize)]
 enum MapText {
     Latent,
     Kernel(KernelMap),
     Saved(Vec<String>),
+    Blend(Box<BlendText>),
+}
+
+/// A blend as text.
+#[derive(Serialize, Deserialize)]
+struct BlendText {
+    a: ViewText,
+    b: ViewText,
+    path: BlendPath,
+    s: String,
+    turn: String,
 }
 
 /// A view as text.
@@ -59,6 +72,13 @@ fn view_text(v: &View) -> ViewText {
         Map::Latent => MapText::Latent,
         Map::Kernel(k) => MapText::Kernel(*k),
         Map::Saved(saved) => MapText::Saved(saved.to_words().iter().map(|w| hex(*w)).collect()),
+        Map::Blend(blend) => MapText::Blend(Box::new(BlendText {
+            a: view_text(&blend.a),
+            b: view_text(&blend.b),
+            path: blend.path,
+            s: hex(blend.s()),
+            turn: hex(blend.turn()),
+        })),
     };
     ViewText {
         map,
@@ -81,6 +101,24 @@ fn view_of(t: ViewText) -> Result<View, PathError> {
             Map::Saved(Box::new(Saved::from_words(&words).ok_or_else(|| {
                 PathError::Record("a saved chart's words".into())
             })?))
+        }
+        MapText::Blend(text) => {
+            let BlendText {
+                a,
+                b,
+                path,
+                s,
+                turn,
+            } = *text;
+            let blend = Blend::new(view_of(a)?, view_of(b)?, path, unhex(&s)?)?;
+            let blend = match unhex(&turn)? {
+                turn if turn.to_bits() == 0 => blend,
+                turn => blend.turned(turn)?,
+            };
+            if blend.s().to_bits() != u64::from_str_radix(&s, 16).unwrap_or(u64::MAX) {
+                return Err(PathError::Record("a blend's share is not canonical".into()));
+            }
+            Map::Blend(Box::new(blend))
         }
     };
     Ok(View {

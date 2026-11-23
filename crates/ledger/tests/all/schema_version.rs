@@ -678,6 +678,10 @@ const COUNT_CAST: [&str; 1] = ["u32_range_end"];
 /// quad's table, which changes no bit the table holds, so it is not hashed.
 const SCHEDULING: [&str; 1] = ["forward_table_chunk"];
 
+/// The blend chart's (TASK-M2-90): the mass hold's step bound and the fold indicator's area floor, which decide a mid
+/// frame's state and flag, never what a stored bit means, so they are not hashed.
+const BLEND: [&str; 2] = ["blend_hold_steps", "fold_area_floor"];
+
 /// The Chazy classifier's parameters (TASK-M7-35; chazy drill-down §3.3): the classifier is derived at read, so they
 /// decide no stored bit's meaning and are not hashed. `I_max`'s levels need no register entry: they are exact powers
 /// of two above the IC's `I_0`.
@@ -729,6 +733,7 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || SAVED.contains(&k.name)
                 || COUNT_CAST.contains(&k.name)
                 || SCHEDULING.contains(&k.name)
+                || BLEND.contains(&k.name)
                 || CHAZY.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name

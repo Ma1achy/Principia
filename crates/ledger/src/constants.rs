@@ -408,6 +408,35 @@ pub const FORWARD_TABLE_CHUNK: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
+const COMPOSITION_HONESTY: Citation = Citation::Corpus {
+    file: "docs/design/principia_chart_composition.md",
+    section: "17.11 Honesty",
+};
+
+/// The blend's mass hold (TASK-M2-90; composition § 17.11, "Out of feasible", item 2): the most ulps the held `M₀₁` is
+/// stepped up from `ε_M01` until the decoder's guard passes. A loop's bound, not a tolerance: the guard's sum rounds
+/// once, so the lifted pair passes within a couple. Admissible as expressed in canonical units: a count, no unit.
+pub const BLEND_HOLD_STEPS: ConstantBuilder = ConstantBuilder {
+    name: "blend_hold_steps",
+    value: Some(Value::Exact(64.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(COMPOSITION_HONESTY),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// The signed fold indicator's area floor (TASK-M2-90; composition § 17.11, "The signed fold indicator on a blend
+/// chart"): `σ` is not defined where the probe's tangent plane, projected onto the reference's, keeps less than this
+/// share of its area. A ratio of areas, no unit; the definition's, under physics review.
+pub const FOLD_AREA_FLOOR: ConstantBuilder = ConstantBuilder {
+    name: "fold_area_floor",
+    value: Some(Value::Exact(1e-3)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(COMPOSITION_HONESTY),
+    relative_basis: None,
+    provisional: None,
+};
+
 /// A settled number of the chart (dd_decoder §3), admissible as expressed in canonical units (`G = M = I = 1`;
 /// philosophy §4.2), with its citation. The link registry reads it by name (dd_generation_root §3.9).
 const fn chart(name: &'static str, value: f64, citation: Citation) -> ConstantBuilder {
@@ -1852,6 +1881,8 @@ pub const REGISTER: &[ConstantBuilder] = &[
     F16_MIN_SUBNORMAL,
     U32_RANGE_END,
     FORWARD_TABLE_CHUNK,
+    BLEND_HOLD_STEPS,
+    FOLD_AREA_FLOOR,
     MU_MAX,
     Q_MAX,
     ALPHA_MIN,

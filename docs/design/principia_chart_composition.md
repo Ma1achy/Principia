@@ -2614,6 +2614,32 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
   natural one, a definition requirement (R-72; REQ-CHART-124, P7). Unsigned: a fold reads as a zero crossing, which a coarse grid
   can step over, and a generic surface in 8D never drops rank, so the Gram flag sees folds only where a frame stays in a
   two-dimensional subspace, as a pair-map morph does. So it's a flag and not a proof. Charts of different topology, the sphere against a plane, may pass through such frames; no such frame is forced (P5).
+- **The signed fold indicator on a blend chart** (TASK-M2-90; `engine::path::blend::fold_indicator`; for physics
+  review). It reads which side of a fold each probe is on, so a fold shows as a change of sign rather than as a zero
+  of the area, which a coarse grid can step over. On a frame at share `s`, on an `n × n` probe grid of pixel centres:
+  1. `Y(p)` is the forward map's blocks at the probe, `(μ₁, μ₂, n̂, p_ρ, p_λ)` ∈ ℝ⁹ (§ 17.2), Euclidean. These are the
+     coordinates the default path is defined in, and they carry no gauge: the canonical state's rotation jumps at
+     `ρ = 0`, and an indicator read on it would see that gauge jump as a fold. The mass-weighted metric on the `I = 1`
+     state stays the Gram flag's (above).
+  2. `J(p) = ∂Y/∂(u, v)` by central differences on the grid, one-sided at its edges.
+  3. The reference probe is the one of largest area `√det(JᵀJ)`, the lowest index on a tie. `E` is its tangent plane,
+     `J`'s columns there orthonormalised in order (`u`, then `v`).
+  4. `σ(p) = sign det(EᵀJ(p))`, the probe's tangent projected onto the reference's, with its orientation. `σ` is not
+     defined (0) where a probe in its stencil is blank, or where the projection keeps less than `10⁻³` of the probe's
+     own area, `|det(EᵀJ)| < 10⁻³·√det(JᵀJ)`: there the tangent plane is nearly orthogonal to the reference's and its
+     sign says nothing.
+  5. The **folded share** is the share of defined probes on the minority side, the sign fewer of them carry, so it
+     is at most ½ and does not depend on which side the reference falls. The share where
+     `σ` is undefined is reported beside it.
+
+  What it shows and what it does not. Where a frame stays in a two-dimensional subspace (a pair map, or a blend
+  toward a mirror image of its own end) `σ` is the sign of the true Jacobian, and the folded share is exact up to the
+  grid: the blend of a latent view and its mirror image (`q₁ → −q₁`) reads 0.500 at `s = ½`, and the blend of the
+  same view and its pan reads 0 (`blend_chart_fold_indicator`). Off such a subspace, a frame in 8D generically has no
+  fold, but its tangent plane can turn far from the reference's across the window, and `σ` then reads "turned past
+  90° from the reference", not "folded". So it is a flag of an orientation change against one reference, not a proof
+  of a fold, as the Gram flag is a flag. A global reversal (a frame that is its end's mirror image) is not a fold: `σ`
+  is relative to the frame's own reference, so it reads 0. O4 and O6 read the folded share by this indicator.
 - **Out of feasible.** Tagged, never dropped (contract, "tagged, never dropped"). **A blank can open mid-path**: at
   `E* = −0.3`, equal masses, 1,173 of 1,748 pixels feasible at both ends are infeasible at `s = ½`, since the blended shape
   has a higher `U`.
@@ -2634,7 +2660,11 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
      `m₁ : m₀` and lifts the light pair just to the allowed minimum, `M₀₁ = ε_M01`, the rest of the blend unchanged: a
      valid system, continuous in `s` and across pixels, equal to the plain blend where the dip begins and ends (R-943).
      How the lifted state sits against the guard, which fires strictly below `ε_M01`, is the building task's
-     definition under physics review. *Was (the bullet's title):* "a blank can open mid-path, and what the pixel shows
+     definition under physics review. *Defined (TASK-M2-90, for physics review):* the pair's ratio is the blended `e^{μ₁}`;
+     `M₀₁` is set to `ε_M01`, `m₀ = M₀₁/(1 + e^{μ₁})`, `m₁ = M₀₁ − m₀`, `m₂ = 1 − M₀₁`, and `M₀₁` is stepped up an ulp
+     at a time until the decoder's own test on those masses (`from_masses`: the one rounded sum, against `ε_M01`)
+     passes, at most a few ulps. So the lifted state is untagged, sits on the guard's passing side within a few ulps of
+     `ε_M01`, and is `max(M₀₁(s), ε_M01)` along the path to that rounding. The pixel is flagged `m01_held`. *Was (the bullet's title):* "a blank can open mid-path, and what the pixel shows
      is open (RQ-787)"; the account below is kept as it was written. The
      masses blend linearly in `μ_k = ln(m_k/m₀)`. Then `M₀₁ = g/(1 + g)` with `g(s) = e^{−μ₂(s)} + e^{μ₁(s) − μ₂(s)}`,
      a sum of exponentials of linear functions: convex in `s`, so it can dip below both ends. The physics review's
