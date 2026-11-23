@@ -212,6 +212,14 @@ default-filter = """
 """
 fail-fast = false
 
+# Each backend's `cos` near `π/2` against f64, relative to its value (TASK-M4-38): `engine`'s `cos_half_pi_gpu` needs no
+# kernel build, so it runs here, on every pull request's lavapipe, and `gpu_cos_near_half_pi` prints the worst relative
+# error per band of `cos x` on success, so the backend's numbers stay in the log. The Windows card runs it under
+# `win-gpu-kernel` below.
+[[profile.ci.overrides]]
+filter = "binary_id(=engine::cos_half_pi_gpu) & test(=gpu_cos_near_half_pi)"
+success-output = "immediate"
+
 # The tests that run cargo on the workspace's own target directory from xtask (the override above), among them the
 # screenshot runner's `gui` surface tests, which run gui's capture mode through `cargo run` (RQ-252), which CI's
 # `ci-workspace` job runs on a build of its own, beside the `ci` shards (R-372, REQ-SYS-078): the shards run from an
@@ -335,7 +343,8 @@ default-filter = """
 
 # `win-vulkan`'s gpu-kernel step: the `gpu-kernel` profile's list less `xtask::build_kernel`, whose one reported test
 # (above) can't be left out of a list of whole binaries; the job runs that binary's other tests in a step of their own,
-# under `win-asserted`. `xtask/tests/ci_self_hosted.rs` checks the list is gpu-kernel's less that one. TASK-M0-88.
+# under `win-asserted`. TASK-M0-88. One binary is added: `engine::cos_half_pi_gpu` needs no kernel build, so `ci` runs
+# it on lavapipe, and the card's Vulkan reaches it only here (TASK-M4-38).
 [profile.win-gpu-kernel]
 fail-fast = false
 default-filter = """
@@ -356,6 +365,7 @@ default-filter = """
     | binary_id(=engine::qa_TASK-M2-24_gpu)
     | binary_id(=engine::lock_gpu)
     | binary_id(=engine::arctan_gpu)
+    | binary_id(=engine::cos_half_pi_gpu)
     | binary_id(=engine::branch_read_gpu)
     | binary_id(=engine::first_slice_gpu)
     | binary_id(=validation::cross_backend_gpu)
@@ -378,6 +388,10 @@ success-output = "immediate"
 
 [[profile.win-gpu-kernel.overrides]]
 filter = "binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu)"
+success-output = "immediate"
+
+[[profile.win-gpu-kernel.overrides]]
+filter = "binary_id(=engine::cos_half_pi_gpu) & test(=gpu_cos_near_half_pi)"
 success-output = "immediate"
 
 # The GPU smoke set (R-909, the owner's CI model, item 1: "lavapipe GPU smoke set; Metal smoke set on
