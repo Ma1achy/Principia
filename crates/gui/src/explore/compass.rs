@@ -61,8 +61,8 @@ use crate::dispatch::{self, Class};
 use crate::explore::lock::GOLD;
 use crate::explore::manifold_view::tilt::{Angles, TILT_RANGE};
 use crate::explore::manifold_view::{
-    about_the_pin, add, axis, chart_coords, close_under_console, normal_edit, plane_edit, plane_s,
-    point, target_choices, target_edit, z0_edit, Out, Scratch, Target, Touch, View, AXES,
+    add, axis, chart_coords, close_under_console, normal_edit, plane_edit, plane_s, point,
+    target_choices, target_edit, turned_about, z0_edit, Out, Scratch, Target, Touch, View, AXES,
     Z0_HALF_RANGE,
 };
 use crate::explore::{
@@ -1210,11 +1210,19 @@ pub struct Drag {
     pub tau: (f64, f64),
     /// The slice's move along the drawn plane's normal since it started, in `z₀`'s units.
     pub amount: f64,
-    /// The plane `(z₀, q₁, q₂)` when it started: every frame's edit is made from it, as the one edit of the whole drag
-    /// so far, so a locked drag turns about the pin as it stood when the drag began (R-458 F1; R-451 B11).
+    /// The plane `(z₀, q₁, q₂)` when it started, which [`drag_edit`] reads. The app's frames do not: each folds the
+    /// frame's move onto the state as it stands ([`take`]), so an edit made during the drag is kept.
     pub start: (Latent, Latent, Latent),
     /// How a slice-mode drag reads the pointer, from the plane when it started (R-465).
     pub reading: Reading,
+    /// The anchor `z_locked` when it started, locked; none free.
+    pub anchor: Option<Latent>,
+    /// The plane's point at the anchor's chart point when it started, `z₀ + (2s−1)q₁ + (2t−1)q₂`: every frame turns
+    /// about its chart point on the frame's plane while the lock is the same (R-458 F1; R-451 B11). The drag's own frames
+    /// keep it at `(s, t)`, so they add up to the whole drag's whatever the frames' split; a pan or centre on pin moves
+    /// `z₀` in the plane and a zoom keeps the plane, so it follows the pin through either. None free, or where the plane
+    /// gave the anchor no chart point (a corner): the drag then passes as free.
+    pub pivot: Option<Latent>,
 }
 
 impl Drag {
@@ -1229,6 +1237,31 @@ impl Drag {
             amount: 0.0,
             start: (plane.z0, plane.q1, plane.q2),
             reading: reading(&gesture_view(&view, Touch::Slice, None)),
+            anchor: None,
+            pivot: None,
+        }
+    }
+
+    /// This drag, starting on `plane` under `lock`: its pin read there, the anchor's chart point.
+    pub fn pinned(self, plane: &Plane, lock: &Lock) -> Self {
+        let anchor = lock.locked.then_some(lock.z_locked);
+        Self {
+            anchor,
+            pivot: anchor
+                .and_then(|z| chart_coords(plane, &z))
+                .map(|(s, t)| point(plane, s, t)),
+            ..self
+        }
+    }
+
+    /// The chart point a frame of this drag turns about under `lock`, on `plane`: that of the point [`Drag::pivot`] read
+    /// when it began while the lock is the one it began under, else the anchor's (a lock set or moved during the drag).
+    pub fn pivot_under(&self, plane: &Plane, lock: &Lock) -> Option<(f64, f64)> {
+        let anchor = lock.locked.then_some(lock.z_locked);
+        if anchor == self.anchor {
+            self.pivot.and_then(|p| chart_coords(plane, &p))
+        } else {
+            anchor.and_then(|z| chart_coords(plane, &z))
         }
     }
 
@@ -1683,39 +1716,47 @@ pub fn current(rect: Rect, sim: &SimConfig, compass: &Compass) -> Drawing {
     drawn
 }
 
-/// Takes the compass's drag in `rect` this frame and returns its edit, the command it sends to `out`, empty where it
-/// sends none. It runs before anything showing the plane is drawn, so the Manifold view's sliders, the readout and the
-/// snapshot all read the drag's target in the frame the pointer moves (REQ-GUI-206); [`show`] then draws the compass.
-pub fn take(
-    ui: &Ui,
-    rect: Rect,
-    sim: &SimConfig,
-    scratch: &mut Scratch,
-    out: &mut Out,
-) -> Vec<SetField> {
+/// Takes the compass's drag in `rect` this frame and sends its edit to `out`, where the pointer's moves this frame move
+/// the drag's targets. It runs before anything showing the plane is drawn, so the Manifold view's sliders, the readout
+/// and the snapshot all read the drag's target in the frame the pointer moves (REQ-GUI-206); [`show`] then draws the
+/// compass.
+pub fn take(ui: &Ui, rect: Rect, sim: &SimConfig, scratch: &mut Scratch, out: &mut Out) {
     let square = square(rect);
-    let (plane, frame) = (&sim.plane, &sim.slice.frame);
     // In a grid view a drag does nothing (R-452 C1): the cube takes none.
-    let mut pending: Vec<SetField> = Vec::new();
     if scratch.compass.view == CompassView::Cube {
         let response = ui.interact(square, egui::Id::new("compass cube"), Sense::drag());
         if response.drag_started() {
-            scratch.compass.drag = Some(Drag::start(scratch.compass.mode, plane, frame));
+            let now = out.now(sim);
+            let drag = Drag::start(scratch.compass.mode, &now.plane, &now.slice.frame);
+            scratch.compass.drag = Some(drag.pinned(&now.plane, &now.lock));
         }
         // The frame's one edit, the pointer's moves this frame summed: sent when they move the drag's targets (R-458
-        // F1, F3). It is the drag's whole edit so far, made from the plane where it began and turned about the pin as
-        // it stood then, so it is sent as it is.
+        // F1, F3). It folds onto the state as it stands, the snapshot with the frame's sends before it ([`Out::now`]):
+        // the tilt step or the slice step by what the targets moved this frame, the compass's own step routes, so an
+        // edit made during the drag, a zoom, a key's tilt, is kept, not undone by the drag's next frame. It turns about
+        // the plane's point at the pin when the drag began ([`Drag::pivot_under`]), which a pan or a centre on pin made
+        // during the drag carries with the pin: the frames' turns then add up to the whole drag's, however the pointer's travel is split into frames, and a drag from a corner, where the anchor
+        // has no chart point, passes as free. The plan is unclear here; chose the compass's drag as the drag that folded
+        // on its press state, because the figure's drag already pans by each frame's travel on the snapshot.
         if let Some(mut drag) = scratch.compass.drag {
             let was = drag;
             drag.moved(response.drag_delta(), square);
             scratch.compass.drag = Some(drag);
             if drag != was {
-                let start = drag.start_plane();
-                if let Some(edit) = drag_edit(&start, frame, &drag) {
-                    let mut at_start = sim.clone();
-                    at_start.plane = start;
-                    pending = about_the_pin(vec![edit], &at_start);
-                    out.command(pending.clone(), drag.mode, scratch);
+                let now = out.now(sim);
+                let (plane, frame) = (&now.plane, &now.slice.frame);
+                let edit = match drag.mode {
+                    Touch::Tilt => Some(tilt(
+                        plane,
+                        frame,
+                        drag.tau.0 - was.tau.0,
+                        drag.tau.1 - was.tau.1,
+                    )),
+                    Touch::Slice => slice(plane, frame, drag.amount - was.amount),
+                };
+                if let Some(edit) = edit {
+                    let pivot = drag.pivot_under(plane, &now.lock);
+                    out.command(turned_about(edit, plane, pivot), drag.mode, scratch);
                 }
             }
         }
@@ -1725,10 +1766,10 @@ pub fn take(
     } else {
         scratch.compass.drag = None;
     }
-    pending
 }
 
-/// Draws the compass in `rect` and takes its buttons' clicks, `pending` the edit [`take`] sent this frame: the Cube
+/// Draws the compass in `rect`, `sim` the state the frame's sends leave ([`Out::now`]), the edit [`take`] sent this
+/// frame among them, and takes its buttons' clicks: the Cube
 /// view's cube, or the Plücker view's grid, its position readout and its cells' clicks, or the Jacobi and Shape views'
 /// grid, what it says under it and its cells' clicks; beside it the title, the Tilt and Slice buttons, the view buttons, the view's readout and
 /// its hint. That column never leaves the panel: past its foot it scrolls, by the wheel or the bar, which is drawn while
@@ -1738,7 +1779,6 @@ pub fn show(
     ui: &mut Ui,
     rect: Rect,
     sim: &SimConfig,
-    pending: &[SetField],
     keys: &mut Keys<'_>,
     scratch: &mut Scratch,
     out: &mut Out,
@@ -1756,7 +1796,7 @@ pub fn show(
     keys.keyboard.place(COMPASS_VIEW, square);
     let (plane, frame) = (&sim.plane, &sim.slice.frame);
     let view = scratch.compass.view;
-    let target = Shown::of(&after(plane, pending), frame);
+    let target = Shown::of(plane, frame);
     let dt = ui.input(|i| f64::from(i.unstable_dt));
     let shown = Shown::eased(scratch.compass.shown, target, dt);
     scratch.compass.shown = Some(shown);
@@ -1767,10 +1807,8 @@ pub fn show(
     let painter = ui.painter_at(rect);
     let (readout, hint) = match view {
         CompassView::Cube => {
-            // The readout reads the frame's target: the plane as this frame's edit leaves it.
-            let mut targeted = sim.clone();
-            targeted.plane = after(plane, pending);
-            let drawing = current(rect, &targeted, &scratch.compass);
+            // The readout reads the frame's target: `sim`, the plane as this frame's edits leave it.
+            let drawing = current(rect, sim, &scratch.compass);
             axis_buttons(ui, &drawing, sim, keys.keyboard, scratch, out);
             paint(&painter, &visuals, &drawing);
             if drawing.badge {

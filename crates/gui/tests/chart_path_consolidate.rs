@@ -17,23 +17,40 @@
 //! **`path_pin_kept`.** Locked off the centre, the compass's tilt and the wheel's zoom, turned about the pin as the app
 //! turns them (`about_the_pin`), keep the anchor at its chart point within 10⁻¹² (`mock_manifold_view`'s criterion).
 //!
+//! **`path_frame_batch_running`** (TASK-M8-129). A frame's keyboard tilt and wheel zoom both land: one frame of the
+//! mock app with → on the compass's cube and a notch of the wheel over the figure leaves `τ₁` at the key alone's and `σ`
+//! at the wheel alone's, unlocked and locked, the anchor kept. Controls: the two edits made on the snapshot's plane, as
+//! before, lose the key's tilt; the second edit dropped loses the wheel's zoom.
+//!
+//! **`path_drag_running`** (TASK-M8-129). A drag folds on the current state: a zoom sent during a compass tilt drag is
+//! kept, and the drag's tilt lands at its target, unlocked and locked, the anchor kept. Control: the drag's last frame
+//! folded on the press state loses the zoom.
+//!
 //! **Controls** (`path_control_*`): an adapter holding a formula of its own (the basis rebuilt from the view) is not the
 //! leaf's; a pan with one operation reordered is not the old pan; the slice leaf put in the compass's place is not its
 //! slice; the edits not turned about the pin move the anchor.
 
-use eframe::egui;
+use eframe::egui::{self, Key, Modifiers};
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
     SimConfig, Slice, SliceFrame, Window, Z_Q3,
 };
+use engine::contract::view_ui::KeyMode;
 use engine::path::leaf::{self, Affine, CentreOnPin, OnLatent, Scale};
 use engine::path::{stop, LatentTilt, TiltMap, TiltSpec, View as PathView};
+use gui::app::App;
+use gui::capture::{PIXELS_PER_POINT, SIZE};
 use gui::explore::compass;
 use gui::explore::manifold_view::tilt::Angles;
 use gui::explore::manifold_view::{
     self as mv, lock as mv_lock, navigate, Out, Scratch, Touch, View,
 };
+use gui::explore::{COMPASS, COMPASS_VIEW};
+use gui::headless::Headless;
+use gui::layout::Layout;
+use gui::mock::MockEngine;
+use gui::side::MockSide;
 
 // ── Fixtures ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -498,4 +515,592 @@ fn check_pin(turned: bool) {
             );
         }
     }
+}
+
+// ── path_frame_batch_running, path_drag_running: the same-frame slips (TASK-M8-129) ─────────────────────────────────
+
+/// The mock app on a fixed clock, at the capture's size, one frame drawn.
+fn mock_app() -> (App<MockSide>, Headless) {
+    let mut app = App::new(
+        MockSide::new(MockEngine::frozen(), None),
+        wgpu::TextureFormat::Rgba8Unorm,
+    );
+    let mut h = Headless::new(SIZE, PIXELS_PER_POINT);
+    let _ = h.frame(&mut app, Vec::new());
+    (app, h)
+}
+
+/// Sets the app's plane to `plane`, through the contract, and, with `lock`, locks it at the chart point `(0.3, 0.8)`;
+/// then the frames for the snapshot and the compass to settle.
+fn set_plane(app: &mut App<MockSide>, h: &mut Headless, plane: &Plane, lock: bool) {
+    app.set_field(z0_edit(plane.z0));
+    app.set_field(mv::basis_edit((plane.q1, plane.q2)));
+    if lock {
+        app.set_field(mv::lock_edit(Lock {
+            locked: true,
+            z_locked: mv::point(plane, 0.3, 0.8),
+        }));
+    }
+    for _ in 0..400 {
+        let _ = h.frame(app, Vec::new());
+        if !app.manifold.compass.moving {
+            return;
+        }
+    }
+    panic!("the compass did not come to rest");
+}
+
+/// The start plane: the mock's home, tilted by `(20°, −10°)` into the app's slice frame, `frame`.
+fn tilted_home(frame: &SliceFrame) -> Plane {
+    let home = Plane {
+        z0: gui::mock::MOCK_Z0,
+        q1: gui::mock::MOCK_Q1,
+        q2: gui::mock::MOCK_Q2,
+    };
+    applied(&home, &[compass::tilt(&home, frame, 20.0, -10.0)])
+}
+
+/// `(τ₁ in degrees, σ)` of `plane`, read in `frame`.
+fn tau1_sigma(plane: &Plane, frame: &SliceFrame) -> (f64, f64) {
+    let view = View::framed(plane, Some(frame));
+    (Angles::of(&view).tau1, view.scale)
+}
+
+/// The plane the app's snapshot holds.
+fn held(app: &App<MockSide>) -> Plane {
+    app.snapshot().sim.plane.clone()
+}
+
+fn key(key: Key, pressed: bool) -> egui::Event {
+    egui::Event::Key {
+        key,
+        physical_key: None,
+        pressed,
+        repeat: false,
+        modifiers: Modifiers::NONE,
+    }
+}
+
+/// One notch of the wheel, up: an eighth of an octave in ([`navigate::OCTAVES_PER_LINE`]).
+fn notch() -> egui::Event {
+    egui::Event::MouseWheel {
+        unit: egui::MouseWheelUnit::Line,
+        delta: egui::vec2(0.0, 1.0),
+        phase: egui::TouchPhase::Move,
+        modifiers: Modifiers::NONE,
+    }
+}
+
+/// The app with its plane at [`tilted_home`], locked with `lock`, the pointer over the figure's centre and the keyboard
+/// on the compass's cube in interaction mode, where → tilts `τ₁` by 1° (Tab ×5, Enter, Enter, as the compass's key tests
+/// reach it).
+fn batch_app(lock: bool) -> (App<MockSide>, Headless) {
+    let (mut app, mut h) = mock_app();
+    let frame = app.snapshot().sim.slice.frame;
+    set_plane(&mut app, &mut h, &tilted_home(&frame), lock);
+    for k in [Key::Tab; 5].into_iter().chain([Key::Enter, Key::Enter]) {
+        let _ = h.frame(&mut app, vec![key(k, true)]);
+        let _ = h.frame(&mut app, vec![key(k, false)]);
+    }
+    assert_eq!(
+        (app.view.focus.path.clone(), app.view.focus.mode),
+        (
+            vec![COMPASS.to_owned(), COMPASS_VIEW.to_owned()],
+            KeyMode::Interaction
+        ),
+        "the keyboard is not on the compass's cube"
+    );
+    let over = Layout::new(h.screen(), PIXELS_PER_POINT).figure.center();
+    let _ = h.frame(&mut app, vec![egui::Event::PointerMoved(over)]);
+    let _ = h.frame(&mut app, Vec::new());
+    (app, h)
+}
+
+/// One frame of `events` on the app [`batch_app`] makes, then its key's release; the plane it leaves, the plane it
+/// began on, and the app's sim then.
+fn batch(lock: bool, events: Vec<egui::Event>) -> (Plane, Plane, SimConfig) {
+    let (mut app, mut h) = batch_app(lock);
+    let (start, sim) = (held(&app), app.snapshot().sim.clone());
+    let _ = h.frame(&mut app, events);
+    let _ = h.frame(&mut app, vec![key(Key::ArrowRight, false)]);
+    let _ = h.frame(&mut app, Vec::new());
+    (held(&app), start, sim)
+}
+
+/// The criteria, fixed before the first run. From the start plane, read in the app's frame:
+/// - the key's tilt landed: `τ₁` is the key alone's, `start + 1°`, within 10⁻⁹°;
+/// - the wheel's zoom landed: `σ` is the wheel alone's, `σ·2^{−1/8}`, within 10⁻¹² relative;
+/// - locked, the anchor keeps its chart point `(s, t)` within 10⁻¹² per component (`path_pin_kept`'s criterion).
+fn check_batch(
+    after: &Plane,
+    start: &Plane,
+    sim: &SimConfig,
+    key_alone: &Plane,
+    wheel_alone: &Plane,
+) {
+    let frame = &sim.slice.frame;
+    let (tau, sigma) = tau1_sigma(after, frame);
+    let (tau_key, _) = tau1_sigma(key_alone, frame);
+    let (_, sigma_wheel) = tau1_sigma(wheel_alone, frame);
+    let (tau0, sigma0) = tau1_sigma(start, frame);
+    eprintln!(
+        "frame batch, locked {}: |τ₁ − key alone's| = {:.3e}°, |σ/σ_wheel − 1| = {:.3e}",
+        sim.lock.locked,
+        (tau - tau_key).abs(),
+        (sigma / sigma_wheel - 1.0).abs()
+    );
+    assert!(
+        (tau - tau_key).abs() <= 1e-9,
+        "the key's tilt did not land: τ₁ {tau}° against the key alone's {tau_key}° (from {tau0}°)"
+    );
+    assert!(
+        (sigma / sigma_wheel - 1.0).abs() <= 1e-12,
+        "the wheel's zoom did not land: σ {sigma} against the wheel alone's {sigma_wheel} (from {sigma0})"
+    );
+    if sim.lock.locked {
+        let (s, t) = mv::chart_coords(start, &sim.lock.z_locked).expect("a chart");
+        let at = mv::point(after, s, t);
+        let worst = at
+            .iter()
+            .zip(&sim.lock.z_locked)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0, f64::max);
+        eprintln!("  anchor: worst component {worst:.3e}");
+        assert!(
+            at.iter()
+                .zip(&sim.lock.z_locked)
+                .all(|(a, b)| (a - b).abs() <= 1e-12),
+            "the anchor left ({s}, {t}): {at:?} against {:?}",
+            sim.lock.z_locked
+        );
+    }
+}
+
+/// How the control arms make the frame's plane.
+#[derive(Clone, Copy, PartialEq)]
+enum Batch {
+    /// The app's frame, the key's → and the wheel's notch in one.
+    App,
+    /// Each edit made on the snapshot's plane, as the routes made them before the fix, sent as the app sends a frame's
+    /// edits: the wheel's basis overwrites the key's.
+    FromSnapshot,
+    /// The second edit of the frame dropped: the key's tilt alone.
+    SecondDropped,
+}
+
+fn check_frame_batch(how: Batch) {
+    for lock in [false, true] {
+        let (key_alone, _, _) = batch(lock, vec![key(Key::ArrowRight, true)]);
+        let (wheel_alone, _, _) = batch(lock, vec![notch()]);
+        let (both, start, sim) = batch(lock, vec![key(Key::ArrowRight, true), notch()]);
+        // Each alone moves what it moves, so the frame with both can't pass or fail for nothing.
+        let frame = &sim.slice.frame;
+        let ((tau0, sigma0), (tau_k, sigma_k), (tau_w, sigma_w)) = (
+            tau1_sigma(&start, frame),
+            tau1_sigma(&key_alone, frame),
+            tau1_sigma(&wheel_alone, frame),
+        );
+        assert!(
+            (tau_k - tau0 - 1.0).abs() <= 1e-9 && (sigma_k / sigma0 - 1.0).abs() <= 1e-12,
+            "locked {lock}: the key alone is not a 1° tilt: τ₁ {tau0} → {tau_k}, σ {sigma0} → {sigma_k}"
+        );
+        assert!(
+            (sigma_w / sigma0 - (-0.125f64).exp2()).abs() <= 1e-12 && (tau_w - tau0).abs() <= 1e-9,
+            "locked {lock}: the wheel alone is not an eighth of an octave: σ {sigma0} → {sigma_w}, τ₁ {tau0} → {tau_w}"
+        );
+        let after = match how {
+            Batch::App => both,
+            Batch::FromSnapshot => {
+                let edits = vec![
+                    compass::tilt(&start, frame, 1.0, 0.0),
+                    navigate::zoom_by(&start, 0.125),
+                ];
+                applied(&start, &mv::about_the_pin(edits, &sim))
+            }
+            Batch::SecondDropped => key_alone.clone(),
+        };
+        check_batch(&after, &start, &sim, &key_alone, &wheel_alone);
+    }
+}
+
+/// D19: a frame's keyboard tilt and wheel zoom both land, unlocked and locked off the centre.
+#[test]
+fn path_frame_batch_running() {
+    check_frame_batch(Batch::App);
+}
+
+#[test]
+#[should_panic(expected = "the key's tilt did not land")]
+fn path_frame_batch_running_control_made_on_the_snapshot() {
+    check_frame_batch(Batch::FromSnapshot);
+}
+
+#[test]
+#[should_panic(expected = "the wheel's zoom did not land")]
+fn path_frame_batch_running_control_second_edit_dropped() {
+    check_frame_batch(Batch::SecondDropped);
+}
+
+/// The pointer's moves of the compass drag, points from its press, frame by frame.
+const DRAG_PATH: [[f32; 2]; 4] = [[6.0, 0.0], [12.0, 0.0], [18.0, 0.0], [24.0, 0.0]];
+/// The frame after whose move a zoom lands mid-drag.
+const ZOOM_AFTER: usize = 1;
+/// The mid-drag zoom, in octaves.
+const MID_ZOOM: f64 = 0.5;
+
+fn button(pos: egui::Pos2, pressed: bool) -> egui::Event {
+    egui::Event::PointerButton {
+        pos,
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: Modifiers::NONE,
+    }
+}
+
+/// A tilt-mode drag on the compass's cube along [`DRAG_PATH`] from the plane [`tilted_home`], locked with `lock`, with a
+/// zoom by [`MID_ZOOM`] octaves sent through the contract after frame [`ZOOM_AFTER`], turned about the pin as the app
+/// turns it. Returns the plane it ends on, the drag as it ended (its targets), the start plane, and the sim it began on.
+fn drag(lock: bool) -> (Plane, compass::Drag, Plane, SimConfig) {
+    let (mut app, mut h) = mock_app();
+    let frame = app.snapshot().sim.slice.frame;
+    set_plane(&mut app, &mut h, &tilted_home(&frame), lock);
+    app.manifold.compass.mode = Touch::Tilt;
+    let (start, sim) = (held(&app), app.snapshot().sim.clone());
+    let square = compass::square(Layout::new(h.screen(), PIXELS_PER_POINT).compass);
+    let from = square.center();
+    let _ = h.frame(&mut app, vec![egui::Event::PointerMoved(from)]);
+    let _ = h.frame(&mut app, vec![button(from, true)]);
+    for (k, [dx, dy]) in DRAG_PATH.into_iter().enumerate() {
+        let _ = h.frame(
+            &mut app,
+            vec![egui::Event::PointerMoved(from + egui::vec2(dx, dy))],
+        );
+        if k == ZOOM_AFTER {
+            let now = app.snapshot().sim.clone();
+            for edit in mv::about_the_pin(vec![navigate::zoom_by(&now.plane, MID_ZOOM)], &now) {
+                app.set_field(edit);
+            }
+            // A still frame, the button held: the snapshot reads the zoom.
+            let _ = h.frame(&mut app, Vec::new());
+        }
+    }
+    let ended = app.manifold.compass.drag.expect("the drag in progress");
+    let last = from + egui::vec2(DRAG_PATH[3][0], DRAG_PATH[3][1]);
+    let _ = h.frame(&mut app, vec![button(last, false)]);
+    let _ = h.frame(&mut app, Vec::new());
+    (held(&app), ended, start, sim)
+}
+
+/// The criteria, fixed before the first run. Read in the app's frame:
+/// - the zoom made during the drag is kept: `σ` is the start's `·2^{−1/2}`, within 10⁻¹² relative;
+/// - the drag's tilt landed: `τ₁` is the drag's target, its start plus the pointer's travel, within 10⁻⁹°;
+/// - locked, the anchor keeps its chart point `(s, t)` within 10⁻¹² per component.
+fn check_drag(after: &Plane, ended: &compass::Drag, start: &Plane, sim: &SimConfig) {
+    let frame = &sim.slice.frame;
+    let (tau, sigma) = tau1_sigma(after, frame);
+    let (tau0, sigma0) = tau1_sigma(start, frame);
+    eprintln!(
+        "drag, locked {}: |σ/σ₀ − 2^−½| = {:.3e}, |τ₁ − target| = {:.3e}° (target {:.4}° from {:.4}°)",
+        sim.lock.locked,
+        (sigma / sigma0 - (-MID_ZOOM).exp2()).abs(),
+        (tau - ended.tau.0).abs(),
+        ended.tau.0,
+        tau0
+    );
+    assert!(
+        (tau0 - ended.from.0).abs() <= 1e-9 && ended.tau.0 - ended.from.0 > 1.0,
+        "the drag did not tilt: from {}° to {}° on a plane at {tau0}°",
+        ended.from.0,
+        ended.tau.0
+    );
+    assert!(
+        (sigma / sigma0 - (-MID_ZOOM).exp2()).abs() <= 1e-12,
+        "the zoom made during the drag was lost: σ {sigma} from {sigma0}"
+    );
+    assert!(
+        (tau - ended.tau.0).abs() <= 1e-9,
+        "the drag's tilt did not land: τ₁ {tau}° against its target {}°",
+        ended.tau.0
+    );
+    if sim.lock.locked {
+        let (s, t) = mv::chart_coords(start, &sim.lock.z_locked).expect("a chart");
+        let at = mv::point(after, s, t);
+        let worst = at
+            .iter()
+            .zip(&sim.lock.z_locked)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0, f64::max);
+        eprintln!("  anchor: worst component {worst:.3e}");
+        assert!(
+            at.iter()
+                .zip(&sim.lock.z_locked)
+                .all(|(a, b)| (a - b).abs() <= 1e-12),
+            "the anchor left ({s}, {t}): {at:?} against {:?}",
+            sim.lock.z_locked
+        );
+    }
+}
+
+fn check_drag_running(on_press: bool) {
+    for lock in [false, true] {
+        let (after, ended, start, sim) = drag(lock);
+        let after = match on_press {
+            false => after,
+            // The control: the drag's last frame folded on the press state, as the compass's drag was made before the
+            // fix, its edit from the plane where it began, turned about the pin as it stood then, sent over the state.
+            true => {
+                let edit = compass::drag_edit(&start, &sim.slice.frame, &ended).expect("a tilt");
+                let mut at_start = sim.clone();
+                at_start.plane = start.clone();
+                applied(&after, &mv::about_the_pin(vec![edit], &at_start))
+            }
+        };
+        check_drag(&after, &ended, &start, &sim);
+    }
+}
+
+/// D23: a drag folds on the current state: a zoom made during a compass drag is kept, and the drag's tilt lands.
+#[test]
+fn path_drag_running() {
+    check_drag_running(false);
+}
+
+#[test]
+#[should_panic(expected = "the zoom made during the drag was lost")]
+fn path_drag_running_control_folded_on_press() {
+    check_drag_running(true);
+}
+
+/// A frame that locks (K over the figure, a command) and then zooms (the wheel, an edit) sends them in that order, the
+/// zoom turned about the pin the lock just set: the anchor keeps its chart point within 10⁻¹² per component. `asked`
+/// false, the control, sends them as the app did before, the edits first and the commands after, so the zoom turns
+/// about no pin and the anchor leaves.
+fn check_lock_then_zoom(asked: bool) {
+    for (plane, frame) in planes() {
+        let mut sim = affine(&plane).sim;
+        sim.slice.frame = frame;
+        let mut scratch = Scratch::default();
+        let mut out = Out::default();
+        mv_lock::lock_at(&plane, (0.3, 0.8), &mut scratch, &mut out);
+        let now = out.now(&sim);
+        assert!(now.lock.locked, "the lock is not in the frame's state");
+        out.edit(navigate::zoom_by(&now.plane, 0.75), None, &mut scratch);
+        let sent = match asked {
+            true => out.sends(&sim),
+            false => {
+                let mut old = mv::commands_about_the_pin(out.edits.clone(), &sim);
+                old.extend(out.commands.clone());
+                old
+            }
+        };
+        let mut after = sim.clone();
+        after.plane = applied(&plane, &sent.concat());
+        let z_locked = now.lock.z_locked;
+        let (s, t) = mv::chart_coords(&plane, &z_locked).expect("a chart");
+        let at = mv::point(&after.plane, s, t);
+        assert!(
+            at.iter()
+                .zip(&z_locked)
+                .all(|(a, b)| (a - b).abs() <= 1e-12),
+            "the anchor left ({s}, {t}) under a zoom after the lock: {at:?} against {z_locked:?}"
+        );
+    }
+}
+
+#[test]
+fn path_frame_batch_running_lock_then_zoom() {
+    check_lock_then_zoom(true);
+}
+
+#[test]
+#[should_panic(expected = "the anchor left")]
+fn path_frame_batch_running_control_lock_sent_last() {
+    check_lock_then_zoom(false);
+}
+
+/// The anchor of the pin-held check: off the plane by 0.2 along the frame's `τ₁` target, the axis the drag turns `q₁`
+/// into, as a slider's excursion leaves it, at the chart point `(0.3, 0.8)` of `plane`.
+fn off_plane_anchor(plane: &Plane, frame: &SliceFrame) -> Latent {
+    add(
+        &mv::point(plane, 0.3, 0.8),
+        0.2,
+        &axis(frame.tilt_x as usize, 1.0),
+    )
+}
+
+/// The tilt frames of the pin-held check, in degrees of `τ₁` each.
+const PIN_STEPS: [f64; 8] = [3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5];
+
+/// The criterion, fixed before the first run: the plane's point at the anchor's chart point read at the press, `(s, t)`,
+/// is where it was at the press, within 10⁻¹² per component, so the drag's frames turn about one pin and its end does
+/// not depend on how the pointer's travel is split into frames.
+fn check_pin_held(after: &Plane, start: &Plane, anchor: &Latent) {
+    let (s, t) = mv::chart_coords(start, anchor).expect("a chart");
+    let (was, is) = (mv::point(start, s, t), mv::point(after, s, t));
+    let worst = was
+        .iter()
+        .zip(&is)
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0, f64::max);
+    eprintln!("pin held: worst component {worst:.3e} at ({s}, {t})");
+    assert!(
+        worst <= 1e-12,
+        "the drag's pin moved: worst component {worst:e} at ({s}, {t})"
+    );
+}
+
+/// A locked compass tilt drag, the anchor off the plane, in eight frames of [`PIN_STEPS`]'s travel. `reread` false: the
+/// app's drag. `reread` true, the control: the same frames each turned about the anchor's chart point read again on the
+/// frame's plane (`about_the_pin`), which drifts off the plane's point at the press.
+fn check_drag_pin(reread: bool) {
+    let (mut app, mut h) = mock_app();
+    let frame = app.snapshot().sim.slice.frame;
+    let start = tilted_home(&frame);
+    set_plane(&mut app, &mut h, &start, false);
+    let anchor = off_plane_anchor(&start, &frame);
+    let lock = Lock {
+        locked: true,
+        z_locked: anchor,
+    };
+    let after = match reread {
+        false => {
+            app.set_field(mv::lock_edit(lock));
+            let _ = h.frame(&mut app, Vec::new());
+            let _ = h.frame(&mut app, Vec::new());
+            app.manifold.compass.mode = Touch::Tilt;
+            let square = compass::square(Layout::new(h.screen(), PIXELS_PER_POINT).compass);
+            let from = square.center();
+            let _ = h.frame(&mut app, vec![egui::Event::PointerMoved(from)]);
+            let _ = h.frame(&mut app, vec![button(from, true)]);
+            let mut x = 0.0;
+            for d in PIN_STEPS {
+                x += (d / compass::DRAG_DEGREES * f64::from(square.width())) as f32;
+                let _ = h.frame(
+                    &mut app,
+                    vec![egui::Event::PointerMoved(from + egui::vec2(x, 0.0))],
+                );
+            }
+            let _ = h.frame(&mut app, vec![button(from + egui::vec2(x, 0.0), false)]);
+            let _ = h.frame(&mut app, Vec::new());
+            let after = held(&app);
+            assert!(
+                tau1_sigma(&after, &frame).0 - tau1_sigma(&start, &frame).0 > 30.0,
+                "the drag did not tilt"
+            );
+            after
+        }
+        true => {
+            let mut sim = app.snapshot().sim.clone();
+            sim.lock = lock;
+            for d in PIN_STEPS {
+                let edit = compass::tilt(&sim.plane, &frame, d, 0.0);
+                sim.plane = applied(&sim.plane, &mv::about_the_pin(vec![edit], &sim));
+            }
+            sim.plane
+        }
+    };
+    check_pin_held(&after, &start, &anchor);
+}
+
+#[test]
+fn path_drag_running_pin_held() {
+    check_drag_pin(false);
+}
+
+#[test]
+#[should_panic(expected = "the drag's pin moved")]
+fn path_drag_running_control_pin_reread() {
+    check_drag_pin(true);
+}
+
+/// The pan sent during the pin-follows check's drag, after this many of its frames.
+const PAN_AFTER: usize = 3;
+/// That pan, in the view's `[0,1]²` addresses.
+const MID_PAN: (f64, f64) = (0.1, -0.05);
+
+/// The criterion, fixed before the first run: after the drag, the anchor's chart point is where the mid-drag pan put it,
+/// within 10⁻¹² per coordinate: the drag's frames after the pan turn about the pin where it then is.
+fn check_pin_follows(after: &Plane, panned: (f64, f64), anchor: &Latent) {
+    let (s, t) = mv::chart_coords(after, anchor).expect("a chart");
+    let off = (s - panned.0).abs().max((t - panned.1).abs());
+    eprintln!("pin follows the pan: |Δ(s, t)| = {off:.3e} at {panned:?}");
+    assert!(
+        off <= 1e-12,
+        "the pin slid after the pan: ({s}, {t}) against {panned:?}"
+    );
+}
+
+/// A locked compass tilt drag of [`PIN_STEPS`], the anchor on the plane at `(0.3, 0.8)`, with a pan by [`MID_PAN`] sent
+/// after [`PAN_AFTER`] frames. `held_st` false: the app's drag. `held_st` true, the control: the same frames turned about
+/// the chart point `(s, t)` read at the press, which the pan leaves behind.
+fn check_drag_pan(held_st: bool) {
+    let (mut app, mut h) = mock_app();
+    let frame = app.snapshot().sim.slice.frame;
+    let start = tilted_home(&frame);
+    set_plane(&mut app, &mut h, &start, true);
+    let anchor = app.snapshot().sim.lock.z_locked;
+    let pan = |plane: &Plane| {
+        gui::dispatch::one(
+            plane,
+            gui::dispatch::Class::Pan {
+                ds: MID_PAN.0,
+                dt: MID_PAN.1,
+            },
+        )
+    };
+    let (after, panned) = match held_st {
+        false => {
+            app.manifold.compass.mode = Touch::Tilt;
+            let square = compass::square(Layout::new(h.screen(), PIXELS_PER_POINT).compass);
+            let from = square.center();
+            let _ = h.frame(&mut app, vec![egui::Event::PointerMoved(from)]);
+            let _ = h.frame(&mut app, vec![button(from, true)]);
+            let (mut x, mut panned) = (0.0, None);
+            for (k, d) in PIN_STEPS.into_iter().enumerate() {
+                x += (d / compass::DRAG_DEGREES * f64::from(square.width())) as f32;
+                let _ = h.frame(
+                    &mut app,
+                    vec![egui::Event::PointerMoved(from + egui::vec2(x, 0.0))],
+                );
+                if k + 1 == PAN_AFTER {
+                    app.set_field(pan(&held(&app)));
+                    let _ = h.frame(&mut app, Vec::new());
+                    panned = mv::chart_coords(&held(&app), &anchor);
+                }
+            }
+            let _ = h.frame(&mut app, vec![button(from + egui::vec2(x, 0.0), false)]);
+            let _ = h.frame(&mut app, Vec::new());
+            (held(&app), panned.expect("a chart after the pan"))
+        }
+        true => {
+            let st = mv::chart_coords(&start, &anchor);
+            let (mut plane, mut panned) = (start.clone(), None);
+            for (k, d) in PIN_STEPS.into_iter().enumerate() {
+                let edit = compass::tilt(&plane, &frame, d, 0.0);
+                plane = applied(&plane, &mv::turned_about(edit, &plane, st));
+                if k + 1 == PAN_AFTER {
+                    plane = applied(&plane, &[pan(&plane)]);
+                    panned = mv::chart_coords(&plane, &anchor);
+                }
+            }
+            (plane, panned.expect("a chart after the pan"))
+        }
+    };
+    let (s0, t0) = mv::chart_coords(&start, &anchor).expect("a chart");
+    assert!(
+        (panned.0 - s0).abs() > 0.01,
+        "the pan did not move the pin: {panned:?} from ({s0}, {t0})"
+    );
+    check_pin_follows(&after, panned, &anchor);
+}
+
+#[test]
+fn path_drag_running_pin_follows_a_pan() {
+    check_drag_pan(false);
+}
+
+#[test]
+#[should_panic(expected = "the pin slid after the pan")]
+fn path_drag_running_control_pin_held_at_press_st() {
+    check_drag_pan(true);
 }
