@@ -1,0 +1,2723 @@
+//! Paths under a lock (TASK-M2-65; design § 17.8; the chart-space model's § 5):
+//!
+//! - `path_lock_centre_holds`: under a lock whose target holds the anchor, the state at the pin is the stored anchor,
+//!   every word, on every frame, ends included, affine and nonlinear, `δ = 0` and `δ ≠ 0`, the pin off the centre and
+//!   at it. Control: the select removed.
+//! - `path_lock_centre_area`: the area factor of the frame's tangent at the pin stays within 0.5 of the ends' on swapped
+//!   and orthogonal planes. Control: offsets blended linearly. Reported: the free block line's area at `s = ½`.
+//! - `path_lock_centre_pin_record`: the pin's screen position stored in the lock's record and read back; an old lock on
+//!   a degenerate view takes the centre, labelled `assumed`; snap-back returns the stored anchor. Control: the probe
+//!   read at `(½, ½)` with an off-centre pin.
+//! - `path_lock_centre_drift`: a measurement, the pinned state's drift without the select, the number the lock's
+//!   tolerance is proposed from; it asserts only that each drift is within the tolerance in force.
+//!
+//! Each criterion is written before its run; `LOCK_TOLERANCE` (the ledger's `lock_tolerance`) is the one constant they
+//! read.
+
+use engine::contract::sim_config::{Latent, Plane, SimConfig, Window};
+use engine::lookup::Tolerances;
+use engine::path::anchor::{self, Anchor, LockedEnd, LOCK_TOLERANCE};
+use engine::path::blend::{Blend, Blocks, LatentLeaves, Leaves, Pixel};
+use engine::path::{BlendPath, FrameRecord, Map, PathError, Pin, Segment, View};
+use kernel::chart::mixed::{Alpha, ZMu1};
+use kernel::chart::Mixed;
+use kernel::decode::{Decoded, Ic};
+use kernel::generated::links::Defaults;
+use validation::negative_control;
+use validation::roundtrip::phys;
+
+mod path_shim;
+use path_shim::sim_of;
+
+// ── Fixtures ───────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The skewed latent plane of the path tests.
+fn plane_a() -> Plane {
+    Plane {
+        z0: [0.3, -0.0, 0.1, -0.2, 0.05, 0.0, 0.4, -0.25],
+        q1: [0.7, 0.2, -0.0, 0.1, 0.0, 0.0, 0.05, 0.0],
+        q2: [0.037, 0.333, 0.111, -0.074, 0.0, 0.037, 0.0, -0.0],
+    }
+}
+
+/// Another plane, every block moved.
+fn plane_b() -> Plane {
+    Plane {
+        z0: [-0.6, 0.45, -0.3, 0.25, 0.4, -0.15, -0.8, 0.6],
+        q1: [0.1, -0.9, 0.2, 0.0, -0.1, 0.05, 0.3, 0.0],
+        q2: [0.8, 0.1, 0.0, 0.2, 0.15, 0.0, -0.1, 0.4],
+    }
+}
+
+/// A unit control direction times `k`.
+fn e(i: usize, k: f64) -> Latent {
+    let mut v = [0.0; 8];
+    v[i] = k;
+    v
+}
+
+/// The frozen controls of the mixed chart's views.
+const FROZEN: Latent = [0.4, -0.3, 0.2, -0.1, 0.3, 0.15, 0.0, -0.4];
+
+/// The mixed chart `(z_μ1, α)` at the hidden controls `z0`.
+fn mixed(z0: Latent) -> Mixed<ZMu1, Alpha, f64> {
+    Mixed::new(z0, [-1.0, 1.0], [0.25, 1.3])
+}
+
+/// A view of the mixed chart through `window`, its hidden controls `FROZEN`.
+fn mixed_view(window: Window) -> View {
+    let mut sim: SimConfig = sim_of(&Plane {
+        z0: FROZEN,
+        ..plane_a()
+    });
+    sim.chart.window = window;
+    View::kernel(&mixed(FROZEN), sim).expect("the mixed chart is a registry chart")
+}
+
+/// The mixed chart's leaves, the chart rebuilt at each view's own hidden controls, `z₀`, so a slider's move shows.
+struct MixedLeaves;
+
+impl Leaves for MixedLeaves {
+    fn decode(&self, view: &View, [s, t]: [f64; 2]) -> Result<Decoded<f64>, PathError> {
+        if view.map != Map::Kernel(engine::path::KernelMap::of(&mixed(FROZEN))?) {
+            return Err(PathError::WrongMap);
+        }
+        // The test's own convention: a view whose horizontal mapping reads `linear` is of the mixed chart with its axes
+        // swapped, `(α, z_μ1)`, the same states in other chart coordinates; a view names its kernel map by registry
+        // index alone, and both are the registry's `Mixed`.
+        let [u, v] = view.sim.chart.window.at(s, t);
+        match view.sim.chart.mapping[0] {
+            engine::contract::sim_config::Mapping::Linear => {
+                decode_on(view, swapped(view.sim.plane.z0), u, v)
+            }
+            engine::contract::sim_config::Mapping::Warped => {
+                decode_on(view, mixed(view.sim.plane.z0), u, v)
+            }
+        }
+    }
+}
+
+/// The mixed chart `(α, z_μ1)`, the axes of [`mixed`] swapped.
+fn swapped(z0: Latent) -> Mixed<Alpha, ZMu1, f64> {
+    Mixed::new(z0, [0.25, 1.3], [-1.0, 1.0])
+}
+
+/// `chart`'s decode at `(u, v)` as `view` shows it: under its own tilt about its pin where it has one.
+fn decode_on<C>(view: &View, chart: C, u: f64, v: f64) -> Result<Decoded<f64>, PathError>
+where
+    C: kernel::chart::tilt::Tiltable<Param = f64>,
+{
+    match view.tilt.is_some_and(|t| !t.spec().untilted()) {
+        true => Ok(kernel::chart::Chart::decode::<Defaults, f64>(
+            &view.tilted(chart)?,
+            u,
+            v,
+        )),
+        false => Ok(kernel::chart::Chart::decode::<Defaults, f64>(&chart, u, v)),
+    }
+}
+
+/// The leaves of the tests' charts: the latent map, the mixed chart, the `(L_z, K)` chart and the exponential shape
+/// sphere.
+type AllLeaves = (
+    LatentLeaves<Defaults>,
+    (
+        MixedLeaves,
+        (
+            engine::path::blend::ChartLeaves<kernel::chart::InvariantLK<f64>, Defaults>,
+            engine::path::blend::ChartLeaves<kernel::chart::ShapeSphere<f64>, Defaults>,
+        ),
+    ),
+);
+
+fn leaves() -> AllLeaves {
+    (
+        LatentLeaves::new(),
+        (
+            MixedLeaves,
+            (
+                engine::path::blend::ChartLeaves::new(invariant_lk()).expect("a registry chart"),
+                engine::path::blend::ChartLeaves::new(exp_sphere()).expect("a registry chart"),
+            ),
+        ),
+    )
+}
+
+/// The `(L_z, K)` chart of the lock's tests, at a frozen configuration and masses.
+fn invariant_lk() -> kernel::chart::InvariantLK<f64> {
+    kernel::chart::InvariantLK(kernel::chart::invariant::Invariant {
+        z_cfg: [-0.2, 0.5],
+        z_mass: [0.1, 0.3],
+        k_max: 2.0,
+        gamma_k: 1.5,
+    })
+}
+
+/// The exponential shape sphere holding the masses and momenta of the affine lock's pinned latent point (`plane_a` at
+/// `(0.3, 0.65)`), centred off its shape: so it holds that state, at a chart point its re-solve must find.
+fn exp_sphere() -> kernel::chart::ShapeSphere<f64> {
+    let z = engine::lock::point(&plane_a(), 0.3, 0.65);
+    let n = [0.36, -0.48, 0.8];
+    let e1 = [0.8, 0.6, 0.0];
+    let e2 = [
+        n[1] * e1[2] - n[2] * e1[1],
+        n[2] * e1[0] - n[0] * e1[2],
+        n[0] * e1[1] - n[1] * e1[0],
+    ];
+    kernel::chart::ShapeSphere {
+        map: kernel::chart::ShapeMap::Exponential,
+        n0: n,
+        e1,
+        e2,
+        scale: 2.0,
+        inertia: 1.0,
+        phase: 0.0,
+        z_mass: [z[6], z[7]],
+        z_mom: [z[2], z[3], z[4], z[5]],
+    }
+}
+
+/// The latent view of `plane`, locked at `(s, t)` and recorded.
+fn locked_latent(plane: &Plane, (s, t): (f64, f64)) -> View {
+    let view = View::latent(sim_of(plane));
+    let locked = Segment::lock(&view, s, t).expect("a lock").b().clone();
+    anchor::record(&locked, &leaves()).expect("a recorded anchor")
+}
+
+/// The mixed view through `window`, locked at `(s, t)` on the chart and recorded.
+fn locked_mixed(window: Window, (s, t): (f64, f64)) -> View {
+    let view = mixed_view(window);
+    let tol = Tolerances::register(128.0 * f64::EPSILON);
+    let (seg, _) =
+        Segment::lock_on_chart::<Defaults, _, _>(&view, &mixed(FROZEN), (s, t), phys, &tol)
+            .expect("a lock on the mixed chart");
+    anchor::record(seg.b(), &leaves()).expect("a recorded anchor")
+}
+
+/// The mixed chart's home window and one panned and zoomed from it.
+fn home() -> Window {
+    Window {
+        centre: [0.1, 0.7],
+        half: [0.6, 0.3],
+    }
+}
+
+fn moved() -> Window {
+    Window {
+        centre: [-0.25, 0.85],
+        half: [0.45, 0.2],
+    }
+}
+
+/// A pixel's state; panics on a blank.
+fn state(pixel: Pixel) -> Decoded<f64> {
+    match pixel {
+        Pixel::State { decoded, .. } => *decoded,
+        Pixel::Blank(b) => panic!("a blank pixel: {b:?}"),
+    }
+}
+
+/// The words of a state, as the anchor stores them.
+fn words(ic: &Ic<f64>) -> [u64; 15] {
+    Anchor::of(ic, false).words
+}
+
+/// The pin's address of a locked view.
+fn pin(view: &View) -> [f64; 2] {
+    anchor::pin_address(view).expect("a locked view").0
+}
+
+/// The frames the tests read: `s = k/16`, ends included.
+fn shares() -> impl Iterator<Item = f64> {
+    (0..=16).map(|k| k as f64 / 16.0)
+}
+
+// ── path_lock_centre_holds ─────────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass: the target holds the anchor (`LockedEnd::Holds`), and at every frame `s = k/16`, ends included, the state at
+// the pin is the stored anchor, all fifteen words bit for bit.
+
+/// One hold pair: `a` locked and recorded, `b` the target as asked.
+struct Pair {
+    name: &'static str,
+    a: View,
+    b: View,
+}
+
+fn hold_pairs() -> Vec<Pair> {
+    let affine = |name, at, plane: Plane| Pair {
+        name,
+        a: locked_latent(&plane_a(), at),
+        b: View::latent(sim_of(&plane)),
+    };
+    // δ ≠ 0: a slice after the lock, then the lock's record taken again (the pin's current state).
+    let sliced = {
+        let a = locked_latent(&plane_a(), (0.3, 0.65));
+        let b = Segment::slice(&a, &e(5, 1.0), 0.15)
+            .expect("a slice")
+            .b()
+            .clone();
+        anchor::record(&b, &leaves()).expect("recorded again")
+    };
+    let mixed_sliced = {
+        let a = locked_mixed(home(), (0.35, 0.6));
+        let b = Segment::control(&a, 4, a.sim.plane.z0[4] + 0.2)
+            .expect("a slider's move")
+            .b()
+            .clone();
+        anchor::record(&b, &leaves()).expect("recorded again")
+    };
+    let moved_of = |v: &View| {
+        let mut b = v.clone();
+        b.sim.chart.window = moved();
+        b.pin = None;
+        b.anchor = None;
+        b.sim.lock.locked = false;
+        b
+    };
+    let invariant = {
+        let mut sim = sim_of(&plane_a());
+        sim.chart.window = Window::SQUARE;
+        let view = View::kernel(&invariant_lk(), sim).expect("a registry chart");
+        let tol = Tolerances::register(128.0 * f64::EPSILON);
+        let (seg, _) = Segment::lock_on_chart::<Defaults, _, _>(
+            &view,
+            &invariant_lk(),
+            (0.4, 0.55),
+            phys,
+            &tol,
+        )
+        .expect("a lock on the (L_z, K) chart");
+        anchor::record(seg.b(), &leaves()).expect("a recorded anchor")
+    };
+    let sphere = {
+        let mut sim = sim_of(&plane_a());
+        sim.chart.window = Window::SQUARE;
+        View::kernel(&exp_sphere(), sim).expect("a registry chart")
+    };
+    vec![
+        Pair {
+            name: "an invariant chart to latent (through z_locked, lookup's inverse)",
+            a: invariant,
+            b: View::latent(sim_of(&plane_b())),
+        },
+        Pair {
+            name: "latent to the exponential shape sphere (through the re-solve)",
+            a: locked_latent(&plane_a(), (0.3, 0.65)),
+            b: sphere,
+        },
+        affine("affine, pin at the centre", (0.5, 0.5), plane_b()),
+        affine("affine, pin off the centre", (0.3, 0.65), plane_b()),
+        Pair {
+            name: "affine, δ ≠ 0",
+            a: sliced,
+            b: View::latent(sim_of(&plane_b())),
+        },
+        Pair {
+            name: "nonlinear to latent",
+            a: locked_mixed(home(), (0.35, 0.6)),
+            b: View::latent(sim_of(&plane_b())),
+        },
+        Pair {
+            name: "nonlinear to nonlinear, another window",
+            b: moved_of(&locked_mixed(home(), (0.35, 0.6))),
+            a: locked_mixed(home(), (0.35, 0.6)),
+        },
+        Pair {
+            name: "nonlinear to nonlinear, δ ≠ 0",
+            b: moved_of(&mixed_sliced),
+            a: mixed_sliced,
+        },
+    ]
+}
+
+/// The segment of a hold pair; panics unless the target holds the anchor.
+fn held(p: &Pair) -> Segment {
+    let (seg, end) = Segment::locked_blend(&p.a, &p.b, BlendPath::BlockLine, &leaves(), phys, 64)
+        .unwrap_or_else(|e| panic!("{}: no locked path: {e:?}", p.name));
+    assert_eq!(
+        end,
+        LockedEnd::Holds,
+        "{}: the target does not hold",
+        p.name
+    );
+    seg
+}
+
+fn check_holds(p: &Pair, seg: &Segment, frame: impl Fn(View) -> View) {
+    let anchor = p.a.anchor.expect("recorded");
+    let at = pin(&p.a);
+    for s in shares() {
+        let view = frame(seg.frame(s).expect("a frame"));
+        let shown = state(anchor::state_at(&view, &leaves(), at).expect("a pixel"));
+        assert_eq!(
+            words(&shown.ic),
+            anchor.words,
+            "{}: the pin's words differ from the stored anchor at s = {s}",
+            p.name
+        );
+    }
+}
+
+#[test]
+fn path_lock_centre_holds() {
+    for p in hold_pairs() {
+        check_holds(&p, &held(&p), |v| v);
+    }
+}
+
+/// The frame with its lock's offset form `form`.
+#[cfg(feature = "controls")]
+fn with_form(view: View, form: anchor::OffsetForm) -> View {
+    match &view.map {
+        Map::Blend(blend) => View::blend((**blend).clone().with_form(form)),
+        _ => view,
+    }
+}
+
+negative_control!(
+    path_lock_centre_holds,
+    "the select removed: the pin shows the blend's own rounding of the anchor",
+    expected = "differ from the stored anchor",
+    for p in hold_pairs() {
+        let form = anchor::OffsetForm {
+            select: false,
+            ..Default::default()
+        };
+        check_holds(&p, &held(&p), |v| with_form(v, form));
+    }
+);
+
+// ── path_lock_centre_area ──────────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass: on swapped and on orthogonal planes, at `s = ¼, ½, ¾`, the area factor of the frame's tangent at the pin, `A_s`,
+// against the ends' interpolated geometrically, `A₀^{1−s}·A₁^s`, has `|A_s/(A₀^{1−s}A₁^s) − 1| < 0.5`. The tangent is
+// read off the blocks by a central difference of step `h = 2⁻¹⁶` in the address, the shape by the log map at the pin.
+
+/// The area factor of `view`'s tangent at `at`.
+fn area(view: &View, at: [f64; 2]) -> f64 {
+    let h = 2f64.powi(-16);
+    let base = Blocks::of(&state(anchor::state_at(view, &leaves(), at).expect("a pixel")).ic);
+    let col = |axis: usize| -> [f64; 9] {
+        let (mut p, mut m) = (at, at);
+        p[axis] += h;
+        m[axis] -= h;
+        let bp = Blocks::of(&state(anchor::state_at(view, &leaves(), p).expect("a pixel")).ic);
+        let bm = Blocks::of(&state(anchor::state_at(view, &leaves(), m).expect("a pixel")).ic);
+        let (op, om) = (anchor::log(&base, &bp), anchor::log(&base, &bm));
+        std::array::from_fn(|i| (op[i] - om[i]) / (2.0 * h))
+    };
+    let (u, v) = (col(0), col(1));
+    let dot = |a: &[f64; 9], b: &[f64; 9]| a.iter().zip(b).map(|(x, y)| x * y).sum::<f64>();
+    (dot(&u, &u) * dot(&v, &v) - dot(&u, &v) * dot(&u, &v))
+        .max(0.0)
+        .sqrt()
+}
+
+/// The swapped and orthogonal pairs, the pin at the centre and off it.
+fn area_pairs() -> Vec<(&'static str, Plane, Plane, (f64, f64))> {
+    let z0 = [0.2, 0.9, 0.1, -0.1, 0.05, 0.1, 0.1, -0.1];
+    let p = |q1, q2| Plane { z0, q1, q2 };
+    vec![
+        (
+            "swapped",
+            p(e(0, 0.6), e(1, 0.6)),
+            p(e(1, 0.6), e(0, 0.6)),
+            (0.5, 0.5),
+        ),
+        (
+            "swapped, pin off the centre",
+            p(e(0, 0.6), e(1, 0.6)),
+            p(e(1, 0.6), e(0, 0.6)),
+            (0.4, 0.6),
+        ),
+        (
+            "orthogonal",
+            p(e(0, 0.6), e(1, 0.6)),
+            p(e(2, 0.6), e(3, 0.6)),
+            (0.5, 0.5),
+        ),
+    ]
+}
+
+fn check_area(form: impl Fn(View) -> View) -> Vec<(String, f64)> {
+    let mut seen = Vec::new();
+    for (name, pa, pb, at) in area_pairs() {
+        let a = locked_latent(&pa, at);
+        let pair = Pair {
+            name,
+            a,
+            b: View::latent(sim_of(&pb)),
+        };
+        let seg = held(&pair);
+        let pin = pin(&pair.a);
+        let (a0, a1) = (area(seg.a(), pin), area(seg.b(), pin));
+        for s in [0.25, 0.5, 0.75] {
+            let view = form(seg.frame(s).expect("a frame"));
+            let ratio = area(&view, pin) / (a0.powf(1.0 - s) * a1.powf(s));
+            seen.push((format!("{name} at s = {s}"), ratio));
+            assert!(
+                (ratio - 1.0).abs() < 0.5,
+                "{name}: the area factor at the pin is {ratio} of the ends' at s = {s}"
+            );
+        }
+    }
+    seen
+}
+
+#[test]
+fn path_lock_centre_area() {
+    for (what, ratio) in check_area(|v| v) {
+        println!("path_lock_centre_area: {what}: A_s/(A₀^(1−s)A₁^s) = {ratio:.6}");
+    }
+    // Reported, not a gate: the free block line's area at s = ½ on the swapped planes, why the offset form exists.
+    let (_, pa, pb, _) = area_pairs().remove(0);
+    let free = Blend::new(
+        View::latent(sim_of(&pa)),
+        View::latent(sim_of(&pb)),
+        BlendPath::BlockLine,
+        0.5,
+    )
+    .expect("a blend");
+    let a0 = area(&View::latent(sim_of(&pa)), [0.5, 0.5]);
+    println!(
+        "path_lock_centre_area: the free block line on swapped planes at s = ½: {:.6} of the ends'",
+        area(&View::blend(free), [0.5, 0.5]) / a0
+    );
+}
+
+negative_control!(
+    path_lock_centre_area,
+    "offsets blended linearly: swapped planes squash to no area at s = ½",
+    expected = "the area factor at the pin is",
+    {
+        let form = anchor::OffsetForm {
+            transport: false,
+            ..Default::default()
+        };
+        check_area(|v| with_form(v, form));
+    }
+);
+
+// ── path_lock_centre_pin_record ────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass: (1) a lock off the centre, recorded, written in a frame record and read back, keeps its pin's address and its
+// anchor bit for bit, and its anchor is the state at that address; (2) an old lock with no pin on a degenerate plane
+// (`q₂ = q₁`) records its anchor at the centre, labelled `assumed`, and an old lock with no pin on a plane derives its
+// address from `z_locked`, not assumed; (3) after a slice, snap-back and recording again give the first anchor's words.
+
+fn check_pin_record(probe: impl Fn(&View) -> [f64; 2]) {
+    let a = locked_latent(&plane_a(), (0.3, 0.65));
+    let anchor = a.anchor.expect("recorded");
+    let record = FrameRecord {
+        a: a.clone(),
+        b: a.clone(),
+        family: engine::path::Family::Cut {
+            label: engine::path::CutLabel::Lock,
+        },
+        s_bits: 0,
+        align: None,
+        retime_hash: None,
+        anchor_words: None,
+    };
+    let back = FrameRecord::read(&record.to_bytes()).expect("the record reads back");
+    assert_eq!(back.a.pin, a.pin, "the pin's address does not read back");
+    assert_eq!(back.a.anchor, a.anchor, "the anchor does not read back");
+    let shown = state(anchor::state_at(&back.a, &leaves(), probe(&back.a)).expect("a pixel"));
+    let raw = state(Pixel::State {
+        decoded: Box::new(leaves().decode(&back.a, probe(&back.a)).expect("a decode")),
+        flags: Default::default(),
+    });
+    assert_eq!(
+        (words(&shown.ic), words(&raw.ic)),
+        (anchor.words, anchor.words),
+        "the state at the probe is not the recorded anchor"
+    );
+    // (2) Old locks: no pin stored.
+    let mut degenerate = View::latent(sim_of(&Plane {
+        q2: plane_a().q1,
+        ..plane_a()
+    }));
+    degenerate.sim.lock.locked = true;
+    degenerate.sim.lock.z_locked = plane_a().z0;
+    let r = anchor::record(&degenerate, &leaves()).expect("an old lock recorded");
+    assert_eq!(
+        (r.pin, r.anchor.map(|a| a.assumed)),
+        (Some(Pin::Centre), Some(true)),
+        "an old lock on a degenerate view does not take the centre, assumed"
+    );
+    let mut old = View::latent(sim_of(&plane_a()));
+    old.sim.lock.locked = true;
+    old.sim.lock.z_locked = engine::lock::point(&plane_a(), 0.3, 0.65);
+    let (address, assumed) = anchor::pin_address(&old).expect("locked");
+    assert!(
+        !assumed && (address[0] - 0.3).abs() < 1e-12 && (address[1] - 0.65).abs() < 1e-12,
+        "an old lock's address is not derived from z_locked: {address:?}, assumed {assumed}"
+    );
+    // (3) Snap-back.
+    let sliced = Segment::slice(&a, &e(5, 1.0), 0.15)
+        .expect("a slice")
+        .b()
+        .clone();
+    let back = Segment::snap_back(&sliced).expect("snap-back").b().clone();
+    let again = anchor::record(&back, &leaves()).expect("recorded again");
+    assert_eq!(
+        again.anchor.map(|x| x.words),
+        Some(anchor.words),
+        "snap-back does not return the stored anchor"
+    );
+}
+
+#[test]
+fn path_lock_centre_pin_record() {
+    check_pin_record(pin);
+}
+
+negative_control!(
+    path_lock_centre_pin_record,
+    "a probe at (½, ½) with an off-centre pin reads another state",
+    expected = "is not the recorded anchor",
+    check_pin_record(|_| [0.5, 0.5])
+);
+
+// ── path_lock_centre_drift ─────────────────────────────────────────────────────────────────────────────────────────
+//
+// A measurement. On each hold pair, at every frame `s = k/64`, the pin's state without the select (the offset form's
+// own value at the pin, the frame's `block_line(a, B(pin), s)`) against the stored anchor in `‖·‖_phys`, and the target's
+// own pin state against it; the worst of each, in units of `ε`, printed. Its assert is that each is within the tolerance
+// in force, the measurement's own fixture check.
+
+fn drift(p: &Pair, against: &Anchor) -> (f64, f64) {
+    let seg = held(p);
+    let at = pin(&p.a);
+    let anchor = against.ic();
+    let raw = |v: &View| leaves().decode(v, at).expect("a decode").ic;
+    let target = phys(&anchor, &raw(seg.b()));
+    let mut worst = 0.0f64;
+    for k in 1..64 {
+        let s = k as f64 / 64.0;
+        let view = seg.frame(s).expect("a frame");
+        let Map::Blend(blend) = &view.map else {
+            panic!("a mid frame is a blend")
+        };
+        let lock = blend.lock().expect("a locked blend");
+        assert!(lock.hold, "{}: a mid frame that does not hold", p.name);
+        let (line, _) = engine::path::blend::block_line(
+            &p.a.anchor.expect("recorded").blocks(),
+            &Blocks::of(&raw(&blend.b)),
+            s,
+        );
+        let (shown, _) = engine::path::blend::state_of(&line);
+        worst = worst.max(phys(&anchor, &shown.ic));
+    }
+    (worst, target)
+}
+
+fn check_drift(against: impl Fn(&Pair) -> Anchor) {
+    for p in hold_pairs() {
+        let (frames, target) = drift(&p, &against(&p));
+        println!(
+            "path_lock_centre_drift: {}: frames {:.3} ε, target's own pin {:.3} ε",
+            p.name,
+            frames / f64::EPSILON,
+            target / f64::EPSILON
+        );
+        assert!(
+            frames <= LOCK_TOLERANCE && target <= LOCK_TOLERANCE,
+            "{}: the pinned state drifts past the lock's tolerance: {frames:e}, {target:e}",
+            p.name
+        );
+    }
+}
+
+#[test]
+fn path_lock_centre_drift() {
+    check_drift(|p| p.a.anchor.expect("recorded"));
+}
+
+negative_control!(
+    path_lock_centre_drift,
+    "the drift read against another state, the anchor of a lock elsewhere",
+    expected = "drifts past the lock's tolerance",
+    check_drift(|_| locked_latent(&plane_a(), (0.7, 0.2))
+        .anchor
+        .expect("recorded"))
+);
+
+// ── The sliding anchor ─────────────────────────────────────────────────────────────────────────────────────────────
+
+use engine::path::blend::ChartLeaves;
+use kernel::chart::{Burrau, HeldLz, MassSimplex, RestStart};
+use ledger::constants::{EUCLID_NU_MAX, EUCLID_NU_MIN, GAMMA_K, K_MAX, MASS_SIMPLEX_EPS_M};
+
+/// The mass simplex at rest, `ν₀ = ½`: every momentum 0 and one shape, so it holds no anchor with momenta.
+fn simplex() -> RestStart<MassSimplex<f64>, f64> {
+    RestStart::new(MassSimplex {
+        nu0: 0.5,
+        eps_m: MASS_SIMPLEX_EPS_M.number(),
+    })
+}
+
+/// The `(ν, K)` Burrau chart at the register's defaults, holding `L_z = 0`.
+fn nu_k() -> HeldLz<Burrau<f64>, f64> {
+    HeldLz::new(Burrau {
+        nu_range: [EUCLID_NU_MIN.number(), EUCLID_NU_MAX.number()],
+        k_max: K_MAX.number(),
+        gamma_k: GAMMA_K.number(),
+    })
+}
+
+/// A constructed `B` (REQ-CHART-146's, where none of G9's pairs crosses a cut locus or ends): its state at the chart
+/// point `(u, v)` built from blocks about the anchor `a`, the masses `a`'s, the shape turned from `a`'s by
+/// `θ₁(1 − u)/2`, `p_ρ` moved by `P₂(1 + u)/2` and `p_λ` by `(κ(u² − 1), v)`. Along a slide the frame's pin state is
+/// `block_line(a, B(u, v), s)`, whose distance to `a` is `s²(P² + κ²(u²−1)² + v²) + chord(sθ)²`: the shape term's weight
+/// falls as `s` grows, so the minimiser moves with `s`.
+///
+/// - The cut locus (`κ = 3`, `θ₁ = 2.6`, `P₂ = √5.2`): two wells, `u ≈ 0.93` nearer at `s → 0` and `u ≈ −0.98` nearer at
+///   `s = 1`, equally near near `s ≈ 0.7`.
+/// - The ending (`κ = 0`, `θ₁ = 3`, `P₂ = 2`, no state where `u < 0.34`): one minimiser, at `u ≈ 0.385` as `s → 0` and
+///   `0.30` at `s = 1`, that runs into the edge of `B`'s states near `s ≈ 0.75`.
+#[derive(Clone, Copy)]
+struct Constructed {
+    a: Blocks,
+    theta: f64,
+    p: f64,
+    kappa: f64,
+    edge: f64,
+}
+
+impl Constructed {
+    fn cut_locus(a: &Anchor) -> Self {
+        Constructed {
+            a: a.blocks(),
+            theta: 2.6,
+            p: 5.2f64.sqrt(),
+            kappa: 3.0,
+            edge: f64::NEG_INFINITY,
+        }
+    }
+
+    fn ending(a: &Anchor) -> Self {
+        Constructed {
+            a: a.blocks(),
+            theta: 3.0,
+            p: 2.0,
+            kappa: 0.0,
+            edge: 0.34,
+        }
+    }
+
+    /// The blocks at `(u, v)`.
+    fn blocks(&self, u: f64, v: f64) -> Blocks {
+        let a = &self.a;
+        // A unit vector orthogonal to `n̂_a`, then `n̂_a` turned toward it.
+        let pick = if a.n[2].abs() < 0.9 {
+            [0.0, 0.0, 1.0]
+        } else {
+            [1.0, 0.0, 0.0]
+        };
+        let d = pick[0] * a.n[0] + pick[1] * a.n[1] + pick[2] * a.n[2];
+        let w: [f64; 3] = std::array::from_fn(|i| pick[i] - d * a.n[i]);
+        let nw = (w[0] * w[0] + w[1] * w[1] + w[2] * w[2]).sqrt();
+        let angle = self.theta * (1.0 - u) / 2.0;
+        Blocks {
+            mu: a.mu,
+            n: std::array::from_fn(|i| angle.cos() * a.n[i] + angle.sin() * w[i] / nw),
+            p_rho: [a.p_rho[0] + self.p * (1.0 + u) / 2.0, a.p_rho[1]],
+            p_lambda: [
+                a.p_lambda[0] + self.kappa * (u * u - 1.0),
+                a.p_lambda[1] + v,
+            ],
+        }
+    }
+}
+
+impl Leaves for Constructed {
+    fn decode(&self, view: &View, [s, t]: [f64; 2]) -> Result<Decoded<f64>, PathError> {
+        if view.map != Map::Kernel(engine::path::KernelMap::of(&mixed(FROZEN))?) {
+            return Err(PathError::WrongMap);
+        }
+        let [u, v] = view.sim.chart.window.at(s, t);
+        let (mut d, _) = engine::path::blend::state_of(&self.blocks(u, v));
+        if u < self.edge {
+            d.ic.m[0] = f64::NAN;
+        }
+        Ok(d)
+    }
+}
+
+/// The locked anchor of the slide tests: the skewed plane, pinned off the centre, a state with momenta.
+fn slide_anchor() -> View {
+    locked_latent(&plane_a(), (0.3, 0.65))
+}
+
+fn kernel_view<C: kernel::chart::Chart>(chart: &C, window: Window) -> View {
+    let mut sim = sim_of(&plane_a());
+    sim.chart.window = window;
+    View::kernel(chart, sim).expect("a registry chart")
+}
+
+/// The constructed `B`'s view: `u ∈ [−1, 2]`, `v ∈ [−1, 1]`.
+fn constructed_view() -> View {
+    kernel_view(
+        &mixed(FROZEN),
+        Window {
+            centre: [0.5, 0.0],
+            half: [1.5, 1.0],
+        },
+    )
+}
+
+/// The pin's state on each frame of `n` steps over `[0, 1]`, read through `frame`, as blocks.
+fn pin_track<L: Leaves>(
+    seg: &Segment,
+    leaves: &L,
+    at: [f64; 2],
+    n: usize,
+    frame: &dyn Fn(&Segment, f64) -> View,
+) -> Vec<[f64; 9]> {
+    (0..=n)
+        .map(|k| {
+            let view = frame(seg, k as f64 / n as f64);
+            Blocks::of(&state(anchor::state_at(&view, leaves, at).expect("a pixel")).ic).vector()
+        })
+        .collect()
+}
+
+/// The largest step between consecutive frames.
+fn largest_step(track: &[[f64; 9]]) -> f64 {
+    track
+        .windows(2)
+        .map(|w| {
+            (0..9)
+                .map(|i| (w[1][i] - w[0][i]).powi(2))
+                .sum::<f64>()
+                .sqrt()
+        })
+        .fold(0.0, f64::max)
+}
+
+/// G8's criterion: the largest step between frames falls to at most 0.6 of the previous each time the frame step is
+/// halved, twice over (16, 32 and 64 frames).
+fn check_continuous<L: Leaves>(
+    name: &str,
+    seg: &Segment,
+    leaves: &L,
+    at: [f64; 2],
+    frame: &dyn Fn(&Segment, f64) -> View,
+) {
+    let steps: Vec<f64> = [16, 32, 64]
+        .iter()
+        .map(|n| largest_step(&pin_track(seg, leaves, at, *n, frame)))
+        .collect();
+    println!("path_lock_centre_slide: {name}: largest steps at 16, 32, 64 frames: {steps:?}");
+    for w in steps.windows(2) {
+        assert!(
+            w[1] <= 0.6 * w[0],
+            "{name}: the slide jumps: its largest step {} does not fall to 0.6 of {} as the frame step halves",
+            w[1],
+            w[0]
+        );
+    }
+}
+
+/// The segment's own frame.
+fn own(seg: &Segment, s: f64) -> View {
+    seg.frame(s).expect("a frame")
+}
+
+// ── path_lock_centre_slide ─────────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass, on a rest `B` and a Burrau `B` (no cut locus on either): the target can't hold the anchor and the anchor slides
+// (`LockedEnd::Slides`, not labelled "not nearest"); at `s = 0` the pin shows the stored anchor bit for bit; at `s = 1`
+// it shows `B`'s nearest point to the anchor, the restart rule's minimiser: the same minimiser, its chart point within
+// the solver core's agreement `10⁻⁶·h` of the restart's (`h` the window's half-width), the distance of the two states in
+// `‖·‖_phys` reported; between, the slide is continuous by G8's criterion.
+//
+// The first criterion at `s = 1` was the two states within the lock's tolerance in `‖·‖_phys`. Its first run measured
+// 9.4·10⁻¹² (42 427 ε) on the rest chart: two solves of the same minimiser off `B`'s image (the anchor 0.53 from `B`)
+// agree only to the precision of the central-difference slopes they stop on, `ε^{2/3}`, and an optimality tolerance of
+// `10⁻¹⁴` makes the solve fail to converge at all. So the identity of the minimiser is asked as the solver core asks it.
+
+fn rest_and_burrau() -> Vec<(&'static str, Segment, LockedEnd, View)> {
+    let a = slide_anchor();
+    let rest = (
+        LatentLeaves::<Defaults>::new(),
+        ChartLeaves::<_, Defaults>::new(simplex()).expect("a chart"),
+    );
+    let burrau = (
+        LatentLeaves::<Defaults>::new(),
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let b_rest = kernel_view(&simplex(), Window::SQUARE);
+    let b_burrau = kernel_view(&nu_k(), Window::SQUARE);
+    let (s1, e1) = Segment::locked_blend(&a, &b_rest, BlendPath::BlockLine, &rest, phys, 64)
+        .expect("a locked path to the rest chart");
+    let (s2, e2) = Segment::locked_blend(&a, &b_burrau, BlendPath::BlockLine, &burrau, phys, 64)
+        .expect("a locked path to Burrau");
+    vec![("rest", s1, e1, b_rest), ("Burrau", s2, e2, b_burrau)]
+}
+
+fn check_slide(frame: &dyn Fn(&Segment, f64) -> View) {
+    let a = slide_anchor();
+    let at = pin(&a);
+    let anchor = a.anchor.expect("recorded");
+    let rest = (
+        LatentLeaves::<Defaults>::new(),
+        ChartLeaves::<_, Defaults>::new(simplex()).expect("a chart"),
+    );
+    let burrau = (
+        LatentLeaves::<Defaults>::new(),
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    for (name, seg, end, b) in rest_and_burrau() {
+        assert_eq!(
+            end,
+            LockedEnd::Slides { not_nearest: false },
+            "{name}: not a slide"
+        );
+        let leaves: &dyn Fn(&View, [f64; 2]) -> Decoded<f64> = &|v, x| match name {
+            "rest" => state(anchor::state_at(v, &rest, x).expect("a pixel")),
+            _ => state(anchor::state_at(v, &burrau, x).expect("a pixel")),
+        };
+        let first = leaves(&frame(&seg, 0.0), at);
+        assert_eq!(
+            words(&first.ic),
+            anchor.words,
+            "{name}: s = 0 is not the stored anchor"
+        );
+        let nearest = match name {
+            "rest" => anchor::nearest(&b, &rest, at, &anchor),
+            _ => anchor::nearest(&b, &burrau, at, &anchor),
+        }
+        .expect("a nearest point");
+        let end = frame(&seg, 1.0);
+        let last = leaves(&end, at);
+        let miss = phys(&nearest.ic, &last.ic);
+        let h = b.sim.chart.window.half[0]
+            .abs()
+            .max(b.sim.chart.window.half[1].abs());
+        let x = end.sim.chart.window.at(at[0], at[1]);
+        let apart = (x[0] - nearest.x[0]).hypot(x[1] - nearest.x[1]);
+        println!(
+            "path_lock_centre_slide: {name}: s = 1 against B's nearest point: chart points {apart:e} apart, states {:.3} ε; the anchor's distance to B {:.6}",
+            miss / f64::EPSILON,
+            phys(&anchor.ic(), &nearest.ic)
+        );
+        assert!(
+            apart <= 1e-6 * h,
+            "{name}: s = 1 is not B's nearest point: {apart:e} apart"
+        );
+        match name {
+            "rest" => check_continuous(name, &seg, &rest, at, frame),
+            _ => check_continuous(name, &seg, &burrau, at, frame),
+        }
+    }
+}
+
+#[test]
+fn path_lock_centre_slide() {
+    check_slide(&own);
+}
+
+negative_control!(
+    path_lock_centre_slide,
+    "a labelled jump where the anchor can't exist in B: A's frame until s = 1, then B",
+    expected = "the slide jumps",
+    check_slide(&|seg, s| match s < 1.0 {
+        true => seg.a().clone(),
+        false => seg.b().clone(),
+    })
+);
+
+#[test]
+fn path_lock_centre_slide_no_snap() {
+    check_slide(&own);
+}
+
+negative_control!(
+    path_lock_centre_slide_no_snap,
+    "an unlabelled snap to B's nearest point at one mid-path frame",
+    expected = "the slide jumps",
+    check_slide(&|seg, s| match s == 0.5 {
+        true => seg.b().clone(),
+        false => own(seg, s),
+    })
+);
+
+// ── path_lock_centre_slide_cut_locus ───────────────────────────────────────────────────────────────────────────────
+//
+// Pass, on the constructed cut-locus `B`: the anchor slides; at the first frame the followed minimiser is the nearest
+// (not labelled), it is labelled "not nearest" at `s = 1` and at every frame from the first one labelled on; at `s = 1`
+// the pin shows the followed minimiser, not `B`'s nearest point (the two states more than the lock's tolerance apart in
+// `‖·‖_phys`, and the followed one farther from the anchor); the slide is continuous by G8's criterion.
+
+fn cut_locus() -> (View, Constructed, Segment, LockedEnd) {
+    let a = slide_anchor();
+    let b = Constructed::cut_locus(&a.anchor.expect("recorded"));
+    let leaves = (LatentLeaves::<Defaults>::new(), b);
+    let (seg, end) = Segment::locked_blend(
+        &a,
+        &constructed_view(),
+        BlendPath::BlockLine,
+        &leaves,
+        phys,
+        64,
+    )
+    .expect("a locked path to the constructed B");
+    (a, b, seg, end)
+}
+
+fn check_cut_locus(frame: &dyn Fn(&Segment, f64) -> View) {
+    let (a, b, seg, end) = cut_locus();
+    let leaves = (LatentLeaves::<Defaults>::new(), b);
+    let at = pin(&a);
+    let anchor = a.anchor.expect("recorded");
+    assert_eq!(
+        end,
+        LockedEnd::Slides { not_nearest: true },
+        "the cut locus is not labelled"
+    );
+    let engine::path::Family::Slide { track, .. } = seg.family() else {
+        panic!("not a slide")
+    };
+    let first_on = track.nodes.iter().position(|n| n.not_nearest);
+    println!(
+        "path_lock_centre_slide_cut_locus: labelled \"not nearest\" from s = {:?}; the followed point at s = 1: {:?}",
+        first_on.map(|k| track.nodes[k].s),
+        track.nodes.last().map(|n| n.x)
+    );
+    let k = first_on.expect("a frame labelled not nearest");
+    assert!(
+        k > 0 && track.nodes[k..].iter().all(|n| n.not_nearest),
+        "the label is not on from the cut locus to the end"
+    );
+    let nearest =
+        anchor::nearest(&constructed_view(), &leaves, at, &anchor).expect("a nearest point");
+    let last = state(anchor::state_at(&frame(&seg, 1.0), &leaves, at).expect("a pixel"));
+    let (to_followed, to_nearest) = (
+        phys(&anchor.ic(), &last.ic),
+        phys(&anchor.ic(), &nearest.ic),
+    );
+    println!(
+        "path_lock_centre_slide_cut_locus: the anchor's distance to the followed point {to_followed:.6}, to B's nearest {to_nearest:.6}"
+    );
+    assert!(
+        phys(&nearest.ic, &last.ic) > LOCK_TOLERANCE && to_followed > to_nearest,
+        "s = 1 jumped to the nearer point at the cut locus"
+    );
+    check_continuous("cut locus", &seg, &leaves, at, frame);
+}
+
+#[test]
+fn path_lock_centre_slide_cut_locus() {
+    check_cut_locus(&own);
+}
+
+negative_control!(
+    path_lock_centre_slide_cut_locus,
+    "a jump to the nearer point at the cut locus: from the first frame labelled on, B placed at its nearest point",
+    expected = "jumped to the nearer point",
+    {
+        let (a, b, seg, _) = cut_locus();
+        let leaves = (LatentLeaves::<Defaults>::new(), b);
+        let at = pin(&a);
+        let near = anchor::nearest(&constructed_view(), &leaves, at, &a.anchor.expect("recorded"))
+            .expect("a nearest point");
+        let engine::path::Family::Slide { track, .. } = seg.family().clone() else {
+            panic!("not a slide")
+        };
+        let cut = track.nodes.iter().find(|n| n.not_nearest).map(|n| n.s).expect("labelled");
+        check_cut_locus(&|seg, s| match s >= cut {
+            true => {
+                let end = anchor::placed(&constructed_view(), at, near.x);
+                View::blend(
+                    Blend::new(seg.a().clone(), end, BlendPath::BlockLine, s).expect("a blend"),
+                )
+            }
+            false => own(seg, s),
+        })
+    }
+);
+
+// ── path_lock_centre_slide_ends ────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass, on the constructed ending `B`: the path stops (`LockedEnd::Ended { s }`, `0 < s < 1`, labelled "the followed
+// system ends here"); its last frame, the segment's `B`, is the blend at that `s`, its pin showing that frame's state;
+// the slide up to it is continuous by G8's criterion; and no frame of the segment reads the path past the stop.
+
+fn ending() -> (View, Constructed, Segment, LockedEnd) {
+    let a = slide_anchor();
+    let b = Constructed::ending(&a.anchor.expect("recorded"));
+    let leaves = (LatentLeaves::<Defaults>::new(), b);
+    let (seg, end) = Segment::locked_blend(
+        &a,
+        &constructed_view(),
+        BlendPath::BlockLine,
+        &leaves,
+        phys,
+        64,
+    )
+    .expect("a locked path to the constructed B");
+    (a, b, seg, end)
+}
+
+fn check_ends(frame: &dyn Fn(&Segment, f64) -> View) {
+    let (a, b, seg, end) = ending();
+    let leaves = (LatentLeaves::<Defaults>::new(), b);
+    let at = pin(&a);
+    let LockedEnd::Ended { s: stop } = end else {
+        panic!("the path does not stop: {end:?}")
+    };
+    println!("path_lock_centre_slide_ends: the followed system ends after s = {stop}");
+    assert!(
+        stop > 0.0 && stop < 1.0,
+        "the stop is not inside the path: {stop}"
+    );
+    let Map::Blend(last) = &seg.b().map else {
+        panic!("the last frame is not a blend")
+    };
+    assert_eq!(last.s(), stop, "the last frame is not the stop's");
+    // Frames past the stop: each frame of the segment reads the path at `s·stop`, so none reaches past it.
+    for k in 0..=16 {
+        let s = k as f64 / 16.0;
+        let view = frame(&seg, s);
+        let shown = anchor::state_at(&view, &leaves, at).expect("a pixel");
+        assert!(
+            matches!(shown, Pixel::State { .. }),
+            "the path runs on past the followed minimiser's end: no state at s = {s}"
+        );
+        if let Map::Blend(blend) = &view.map {
+            assert!(
+                blend.s() <= stop,
+                "the path runs on past the followed minimiser's end: s = {}",
+                blend.s()
+            );
+        }
+    }
+    check_continuous("ending", &seg, &leaves, at, frame);
+}
+
+#[test]
+fn path_lock_centre_slide_ends() {
+    check_ends(&own);
+}
+
+negative_control!(
+    path_lock_centre_slide_ends,
+    "the path running on past the followed minimiser's end: the blend carried on to s = 1",
+    expected = "runs on past the followed minimiser's end",
+    check_ends(&|seg, s| {
+        let Map::Blend(last) = &seg.b().map else {
+            panic!("not a blend")
+        };
+        View::blend(last.at(s).expect("a share"))
+    })
+);
+
+// ── path_lock_centre_slide_go_on ───────────────────────────────────────────────────────────────────────────────────
+//
+// Pass: going on from the stop needs the user's choice, which re-pins: from the stopped frame as it is, no locked path
+// can be built (it holds no anchor); recorded again, its anchor is the stopped frame's pin state, a new pin in the lock's
+// record, different from the first anchor; from it a locked path to the rest chart is built.
+
+fn check_go_on(repin: impl Fn(&View) -> View) {
+    let (a, b, seg, _) = ending();
+    let leaves = (LatentLeaves::<Defaults>::new(), b);
+    let stopped = seg.b().clone();
+    assert!(
+        matches!(
+            Segment::locked_blend(
+                &stopped,
+                &constructed_view(),
+                BlendPath::BlockLine,
+                &leaves,
+                phys,
+                8
+            ),
+            Err(PathError::NotBuilt(_))
+        ),
+        "going on from the stop without re-pinning"
+    );
+    let again = repin(&stopped);
+    let at = pin(&a);
+    let shown = state(anchor::state_at(&stopped, &leaves, at).expect("a pixel"));
+    assert!(
+        again.anchor.is_some_and(
+            |x| x.words == words(&shown.ic) && x.words != a.anchor.expect("recorded").words
+        ),
+        "going on from the stop without a new pin recorded"
+    );
+}
+
+#[test]
+fn path_lock_centre_slide_go_on() {
+    check_go_on(|v| {
+        let leaves = (
+            LatentLeaves::<Defaults>::new(),
+            Constructed::ending(&slide_anchor().anchor.expect("recorded")),
+        );
+        anchor::record(v, &leaves).expect("re-pinned")
+    });
+}
+
+negative_control!(
+    path_lock_centre_slide_go_on,
+    "going on from the stop with the first pin's record carried over",
+    expected = "without a new pin recorded",
+    check_go_on(|v| View {
+        anchor: slide_anchor().anchor,
+        ..v.clone()
+    })
+);
+
+// ── The arms that wait on other tasks ──────────────────────────────────────────────────────────────────────────────
+
+/// Region D's slide (F9): its arm is TASK-M2-68's, the region D chart pair not yet on main.
+#[test]
+#[ignore = "waits on TASK-M2-68"]
+fn path_lock_centre_slide_region_d() {
+    panic!("region D's chart pair is TASK-M2-68's");
+}
+
+negative_control!(
+    path_lock_centre_slide_region_d,
+    "waits on TASK-M2-68",
+    expected = "region D",
+    panic!("region D's chart pair is TASK-M2-68's")
+);
+
+/// A time-axis chart to an IC-only chart slides with no jump: TASK-M2-83's pair, not yet on main.
+#[test]
+#[ignore = "waits on TASK-M2-83"]
+fn path_lock_centre_slide_time_axis() {
+    panic!("the time-axis pair is TASK-M2-83's");
+}
+
+negative_control!(
+    path_lock_centre_slide_time_axis,
+    "waits on TASK-M2-83",
+    expected = "time-axis pair",
+    panic!("the time-axis pair is TASK-M2-83's")
+);
+
+// ── The owner's gate test: lock → morph A → B → tilt → slice → morph back ─────────────────────────────────────────
+
+use engine::path::LatentTilt;
+use kernel::chart::tilt::{TiltMap, TiltSpec};
+
+/// Where the morph is paused for the tilt and the slice.
+const MID: f64 = 0.4;
+
+/// One gate pair: its locked start, its target, and each end's own tilt and slice.
+struct Gate {
+    name: &'static str,
+    a: View,
+    b: View,
+    tilt_a: fn(&View) -> Segment,
+    tilt_b: fn(&View) -> Segment,
+    slice_a: fn(&View) -> Segment,
+    slice_b: fn(&View) -> Segment,
+}
+
+/// The latent frame `(e_a, e_b)` at the scale `σ`, untilted.
+fn frame_plane(z0: Latent, a: usize, b: usize, scale: f64) -> Plane {
+    Plane {
+        z0,
+        q1: e(a, scale),
+        q2: e(b, scale),
+    }
+}
+
+/// R-474's tilt of a latent end in its own frame `(e_a, e_b)`, Tip as sheet toward its hidden `x`, about the pin.
+fn latent_tilt(v: &View, a: u32, b: u32, x: u32) -> Segment {
+    let tilt = LatentTilt {
+        a,
+        b,
+        scale: 0.5,
+        from: [0.0, 0.0, 0.0],
+    };
+    let spec = TiltSpec {
+        tau1: 20.0,
+        tau2: 0.0,
+        map: TiltMap::Sheet,
+        x,
+        y: x,
+    };
+    Segment::latent_tilt(v, &tilt, &spec, 0.0).expect("a latent tilt")
+}
+
+/// The mixed chart's own tilt, toward its hidden `β` (`z[1]`), about the pin.
+fn mixed_tilt(v: &View) -> Segment {
+    let spec = TiltSpec {
+        tau1: 20.0,
+        tau2: 0.0,
+        map: TiltMap::Sheet,
+        x: 1,
+        y: 1,
+    };
+    Segment::curved_tilt(v, &mixed(v.sim.plane.z0), &spec).expect("a curved tilt")
+}
+
+const GATE_Z0: Latent = [0.25, 0.8, 0.1, -0.15, 0.05, 0.1, 0.2, -0.1];
+
+fn gates() -> Vec<Gate> {
+    let a_plane = frame_plane(GATE_Z0, 0, 1, 0.5);
+    let b_plane = frame_plane([-0.3, 0.5, 0.2, 0.1, -0.2, 0.15, -0.4, 0.3], 2, 3, 0.5);
+    let moved_of = |v: &View| {
+        let mut b = v.clone();
+        b.sim.chart.window = moved();
+        b.pin = None;
+        b.anchor = None;
+        b.sim.lock.locked = false;
+        b
+    };
+    let mixed_a = locked_mixed(home(), (0.35, 0.6));
+    vec![
+        Gate {
+            name: "affine",
+            a: locked_latent(&a_plane, (0.3, 0.65)),
+            b: View::latent(sim_of(&b_plane)),
+            tilt_a: |v| latent_tilt(v, 0, 1, 5),
+            tilt_b: |v| latent_tilt(v, 2, 3, 6),
+            slice_a: |v| Segment::slice(v, &e(4, 1.0), 0.2).expect("a slice"),
+            slice_b: |v| Segment::slice(v, &e(4, 1.0), 0.2).expect("a slice"),
+        },
+        Gate {
+            name: "nonlinear",
+            b: moved_of(&mixed_a),
+            a: mixed_a,
+            tilt_a: mixed_tilt,
+            tilt_b: mixed_tilt,
+            slice_a: |v| Segment::control(v, 4, v.sim.plane.z0[4] + 0.2).expect("a slider's move"),
+            slice_b: |v| Segment::control(v, 4, v.sim.plane.z0[4] + 0.2).expect("a slider's move"),
+        },
+    ]
+}
+
+/// The gate path's segments, in order: the morph to `MID`, the tilt, the slice and the morph back.
+struct Run {
+    segments: Vec<(&'static str, Segment, f64)>,
+}
+
+fn blend_of(v: &View) -> &Blend {
+    match &v.map {
+        Map::Blend(b) => b,
+        _ => panic!("not a blend view"),
+    }
+}
+
+fn run(g: &Gate) -> Run {
+    let (morph, end) = Segment::locked_blend(&g.a, &g.b, BlendPath::BlockLine, &leaves(), phys, 64)
+        .unwrap_or_else(|e| panic!("{}: no locked path: {e:?}", g.name));
+    assert_eq!(
+        end,
+        LockedEnd::Holds,
+        "{}: the target does not hold",
+        g.name
+    );
+    let v1 = morph.frame(MID).expect("the paused frame");
+    let blend = blend_of(&v1);
+    let tilt = Segment::on_ends(&v1, &(g.tilt_a)(&blend.a), &(g.tilt_b)(&blend.b))
+        .expect("the tilt mid-morph");
+    let v2 = tilt.b().clone();
+    let ends = blend_of(&v2);
+    let slice = Segment::locked_slice(&v2, &(g.slice_a)(&ends.a), &(g.slice_b)(&ends.b), &leaves())
+        .expect("the slice mid-morph");
+    let v3 = slice.b().clone();
+    let back = Segment::share(&v3, 0.0).expect("the morph back");
+    Run {
+        segments: vec![
+            ("morph", morph, MID),
+            ("tilt", tilt, 1.0),
+            ("slice", slice, 1.0),
+            ("back", back, 1.0),
+        ],
+    }
+}
+
+/// The state the frame `view` shows at `at`, and, on a locked mid frame that holds, what the pin would show without the
+/// select: the block line between the pinned state and `B`'s own pin state, rebuilt (the drift the select removes).
+fn pinned_and_unselected(view: &View, at: [f64; 2]) -> (Ic<f64>, Ic<f64>, Option<Ic<f64>>) {
+    let shown = state(anchor::state_at(view, &leaves(), at).expect("a pixel")).ic;
+    let Map::Blend(blend) = &view.map else {
+        return (shown, shown, None);
+    };
+    let a_pin = state(anchor::state_at(&blend.a, &leaves(), at).expect("a pixel")).ic;
+    let pinned = blend
+        .lock()
+        .and_then(|l| l.anchor)
+        .map_or(a_pin, |x| x.ic());
+    if blend.s() == 0.0 || blend.s() == 1.0 {
+        return (shown, pinned, None);
+    }
+    let b = match blend.rehold() {
+        true => {
+            anchor::rehold(&blend.a, &blend.b, &leaves(), blend.s())
+                .expect("re-held")
+                .0
+        }
+        false => blend.b.clone(),
+    };
+    let raw = leaves().decode(&b, at).expect("a decode").ic;
+    let (line, _) =
+        engine::path::blend::block_line(&Blocks::of(&pinned), &Blocks::of(&raw), blend.s());
+    (
+        shown,
+        pinned,
+        Some(engine::path::blend::state_of(&line).0.ic),
+    )
+}
+
+/// The drift measured along a gate run, frame by frame: the shown state against the pinned state, and without the
+/// select; `frames` frames per segment.
+fn check_round_trip(
+    g: &Gate,
+    run: &Run,
+    frames: usize,
+    frame: &dyn Fn(&Segment, f64) -> View,
+) -> Vec<f64> {
+    let at = pin(&g.a);
+    let mut unselected = Vec::new();
+    for (what, seg, upto) in &run.segments {
+        for k in 0..=frames {
+            let u = upto * k as f64 / frames as f64;
+            let view = frame(seg, u);
+            let (shown, pinned, raw) = pinned_and_unselected(&view, at);
+            let drift = phys(&pinned, &shown);
+            assert!(
+                drift <= LOCK_TOLERANCE,
+                "{}: {what} at u = {u}: the pin drifts {:.3} ε from the pinned state, past the lock's tolerance",
+                g.name,
+                drift / f64::EPSILON
+            );
+            if let Some(raw) = raw {
+                let d = phys(&pinned, &raw);
+                assert!(
+                    d <= LOCK_TOLERANCE,
+                    "{}: {what} at u = {u}: without the select the pin drifts {:.3} ε, past the lock's tolerance",
+                    g.name,
+                    d / f64::EPSILON
+                );
+                unselected.push(d);
+            }
+        }
+    }
+    unselected
+}
+
+/// R1: the return to `s = 0` after the mid-morph tilt and slice, bitwise the same tilt and slice applied directly to `A`
+/// about the pin, at every pixel of an 8² grid and the pin.
+fn check_r1(g: &Gate, run: &Run) {
+    let back = run.segments[3].1.b();
+    let direct = (g.slice_a)((g.tilt_a)(&g.a).b()).b().clone();
+    let direct = anchor::record(&direct, &leaves()).expect("recorded");
+    let mut probes: Vec<[f64; 2]> = (0..64)
+        .map(|k| {
+            [
+                (k % 8) as f64 / 8.0 + 1.0 / 16.0,
+                (k / 8) as f64 / 8.0 + 1.0 / 16.0,
+            ]
+        })
+        .collect();
+    probes.push(pin(&g.a));
+    for p in probes {
+        let x = state(anchor::state_at(back, &leaves(), p).expect("a pixel")).ic;
+        let y = state(anchor::state_at(&direct, &leaves(), p).expect("a pixel")).ic;
+        assert_eq!(
+            words(&x),
+            words(&y),
+            "{}: R1 fails: the return differs from the direct edit at {p:?}",
+            g.name
+        );
+    }
+    assert_eq!(
+        blend_of(back).a.bytes(),
+        direct.bytes(),
+        "{}: R1 fails: the return's view is not the direct edit's",
+        g.name
+    );
+}
+
+/// The worst, the median and the 95th percentile of `xs`, in units of `ε`.
+fn summary(xs: &[f64]) -> (f64, f64, f64) {
+    let mut v: Vec<f64> = xs.iter().map(|x| x / f64::EPSILON).collect();
+    v.sort_by(f64::total_cmp);
+    let at = |q: f64| v[((v.len() - 1) as f64 * q).round() as usize];
+    (v[v.len() - 1], at(0.5), at(0.95))
+}
+
+// Pass, on the affine and the nonlinear pair: on every frame of the morph to `s = 0.4`, the tilt mid-morph, the slice
+// mid-morph and the morph back (16 frames each), the state at the pin within the lock's tolerance of the pinned state in
+// `‖·‖_phys`; and R1, the return bitwise the direct tilt and slice of `A` about the pin. Reported, the measurement the
+// lock's tolerance is proposed from: the drift without the select, frame by frame (64 frames per segment), its worst,
+// median and 95th percentile per pair.
+#[test]
+fn path_lock_round_trip() {
+    for g in gates() {
+        let run = run(&g);
+        check_round_trip(&g, &run, 16, &own);
+        let drift = check_round_trip(&g, &run, 64, &own);
+        let (worst, median, p95) = summary(&drift);
+        println!(
+            "path_lock_round_trip: {}: the drift without the select over {} frames: worst {worst:.3} ε, median {median:.3} ε, 95th percentile {p95:.3} ε",
+            g.name,
+            drift.len()
+        );
+        check_r1(&g, &run);
+    }
+}
+
+negative_control!(
+    path_lock_round_trip,
+    "the lock dropped on a blend segment: the morph's frames blend the ends' own pins freely",
+    expected = "past the lock's tolerance",
+    for g in gates() {
+        let run = run(&g);
+        check_round_trip(&g, &run, 16, &|seg, u| {
+            let view = own(seg, u);
+            match &view.map {
+                Map::Blend(b) if b.s() > 0.0 && b.s() < 1.0 => {
+                    let mut a = b.a.clone();
+                    a.anchor = None;
+                    let mut bb = b.b.clone();
+                    bb.anchor = None;
+                    let b0 =
+                        Blend::new(a, g.b.clone(), BlendPath::BlockLine, b.s()).expect("a blend");
+                    View::blend(b0)
+                }
+                _ => view,
+            }
+        });
+    }
+);
+
+// ── path_mid_morph_tilt ────────────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass: the tilt mid-morph reaches both ends, each in its own hidden coordinates and tilt map: each end of the tilted
+// blend is, bit for bit, that end's own tilt about the pin; and the morph resumes from its parameter: the morph back's
+// first frame is the paused blend's share, and its frames run that share down to 0.
+
+fn check_own_coordinates(tilt_b: &dyn Fn(&View, &Gate) -> Segment) {
+    for g in gates() {
+        let (morph, _) =
+            Segment::locked_blend(&g.a, &g.b, BlendPath::BlockLine, &leaves(), phys, 64)
+                .expect("a path");
+        let v1 = morph.frame(MID).expect("paused");
+        let blend = blend_of(&v1);
+        let tilt =
+            Segment::on_ends(&v1, &(g.tilt_a)(&blend.a), &tilt_b(&blend.b, &g)).expect("the tilt");
+        let ends = blend_of(tilt.b());
+        assert_eq!(
+            ends.a.bytes(),
+            (g.tilt_a)(&blend.a).b().bytes(),
+            "{}: end A is not its own tilt",
+            g.name
+        );
+        assert_eq!(
+            ends.b.bytes(),
+            (g.tilt_b)(&blend.b).b().bytes(),
+            "{}: end B is not tilted in its own hidden coordinates",
+            g.name
+        );
+        assert_eq!(ends.s(), MID, "{}: the tilt moved the share", g.name);
+    }
+}
+
+#[test]
+fn path_mid_morph_tilt() {
+    check_own_coordinates(&|v, g| (g.tilt_b)(v));
+}
+
+negative_control!(
+    path_mid_morph_tilt,
+    "a hidden coordinate invented for the blend: B tilted by A's tilt, in A's coordinates",
+    expected = "not tilted in its own hidden coordinates",
+    check_own_coordinates(&|v, g| match g.name {
+        "affine" => latent_tilt(v, 0, 1, 5),
+        _ => {
+            let spec = TiltSpec {
+                tau1: 20.0,
+                tau2: 0.0,
+                map: TiltMap::Sheet,
+                x: 2,
+                y: 2,
+            };
+            Segment::curved_tilt(v, &mixed(v.sim.plane.z0), &spec).expect("a curved tilt")
+        }
+    })
+);
+
+fn check_resumes(frame: &dyn Fn(&Segment, f64) -> View) {
+    for g in gates() {
+        let run = run(&g);
+        let back = &run.segments[3].1;
+        for k in 0..=8 {
+            let u = k as f64 / 8.0;
+            let want = MID * (1.0 - u);
+            let got = blend_of(&frame(back, u)).s();
+            assert!(
+                (got - want).abs() <= 4.0 * f64::EPSILON,
+                "{}: the morph does not resume from its parameter: share {got} at u = {u}, not {want}",
+                g.name
+            );
+        }
+    }
+}
+
+#[test]
+fn path_mid_morph_tilt_resumes() {
+    check_resumes(&own);
+}
+
+negative_control!(
+    path_mid_morph_tilt_resumes,
+    "a morph restarted from s = 0",
+    expected = "does not resume from its parameter",
+    check_resumes(&|seg, u| {
+        let Map::Blend(b) = &seg.a().map else {
+            panic!("not a blend")
+        };
+        View::blend(b.at(u).expect("a share"))
+    })
+);
+
+// ── saved_file_stage2_conversion ───────────────────────────────────────────────────────────────────────────────────
+//
+// Pass: every stage-1 record of the fixtures (a free view, a lock on the affine chart off the centre, a lock on the
+// mixed chart, an old lock with no pin, a free morph frame whose ends are locked views) converts on load: each locked
+// view gains its lock's record, the converted record is stage 2's, and at every pixel of an 8² grid and at the pin each
+// converted view decodes to the same system as the old one within `ε_phys` in `‖·‖_phys`; a stage-2 record reads back
+// and writes again bit for bit; a stage-1 record's bytes are what stage 1 wrote (no version), a free record unchanged by
+// conversion. Read through `reader`, which the control replaces.
+
+fn stage1_records() -> Vec<(&'static str, FrameRecord)> {
+    let rec = |a: View, b: View| FrameRecord {
+        a,
+        b,
+        family: engine::path::Family::Cut {
+            label: engine::path::CutLabel::Lock,
+        },
+        s_bits: 0,
+        align: None,
+        retime_hash: None,
+        anchor_words: None,
+    };
+    let strip = |v: &View| View {
+        anchor: None,
+        ..v.clone()
+    };
+    let free = View::latent(sim_of(&plane_a()));
+    let affine = strip(&locked_latent(&plane_a(), (0.3, 0.65)));
+    let nonlinear = strip(&locked_mixed(home(), (0.35, 0.6)));
+    let mut old = View::latent(sim_of(&plane_a()));
+    old.sim.lock.locked = true;
+    old.sim.lock.z_locked = engine::lock::point(&plane_a(), 0.3, 0.65);
+    let morph = View::blend(
+        Blend::new(
+            affine.clone(),
+            View::latent(sim_of(&plane_b())),
+            BlendPath::BlockLine,
+            0.4,
+        )
+        .expect("a blend"),
+    );
+    vec![
+        ("free", rec(free.clone(), free)),
+        ("affine lock", rec(View::latent(sim_of(&plane_a())), affine)),
+        ("nonlinear lock", rec(mixed_view(home()), nonlinear)),
+        ("an old lock, no pin", rec(old.clone(), old)),
+        ("a morph frame of a locked view", rec(morph.clone(), morph)),
+    ]
+}
+
+/// The 8² grid and the pin of a view.
+fn probes(v: &View) -> Vec<[f64; 2]> {
+    let mut p: Vec<[f64; 2]> = (0..64)
+        .map(|k| {
+            [
+                (k % 8) as f64 / 8.0 + 1.0 / 16.0,
+                (k / 8) as f64 / 8.0 + 1.0 / 16.0,
+            ]
+        })
+        .collect();
+    if let Some((at, _)) = anchor::pin_address(v) {
+        p.push(at);
+    }
+    p
+}
+
+fn check_conversion(reader: &dyn Fn(&[u8]) -> Result<FrameRecord, PathError>) {
+    let eps_phys = Tolerances::register(0.0).eps_phys;
+    for (name, old) in stage1_records() {
+        let bytes = old.to_bytes();
+        assert_eq!(
+            old.version(),
+            engine::path::Version::One,
+            "{name}: not a stage-1 record"
+        );
+        assert!(
+            !String::from_utf8_lossy(&bytes).contains("\"version\""),
+            "{name}: stage 1's bytes carry a version"
+        );
+        let new = reader(&bytes)
+            .unwrap_or_else(|e| panic!("{name}: an old record does not convert on load: {e:?}"));
+        let locked = [&old.a, &old.b]
+            .iter()
+            .any(|v| v.sim.lock.locked && !matches!(v.map, Map::Blend(_)));
+        assert_eq!(
+            new.version() == engine::path::Version::Two,
+            locked,
+            "{name}: the converted record's version"
+        );
+        let mut worst = 0.0f64;
+        for (o, n) in [(&old.a, &new.a), (&old.b, &new.b)] {
+            for p in probes(n) {
+                let x = state(anchor::state_at(o, &leaves(), p).expect("old")).ic;
+                let y = state(anchor::state_at(n, &leaves(), p).expect("new")).ic;
+                worst = worst.max(phys(&x, &y));
+            }
+        }
+        println!(
+            "saved_file_stage2_conversion: {name}: the converted record's worst distance {:.3} ε",
+            worst / f64::EPSILON
+        );
+        assert!(
+            worst <= eps_phys,
+            "{name}: the converted record decodes to another system: {worst:e}"
+        );
+        let again = FrameRecord::read(&new.to_bytes()).expect("a stage-2 record reads");
+        assert_eq!(
+            again.to_bytes(),
+            new.to_bytes(),
+            "{name}: a stage-2 record does not read back bit for bit"
+        );
+        if !locked {
+            assert_eq!(
+                new.to_bytes(),
+                bytes,
+                "{name}: a free record changed in conversion"
+            );
+        }
+    }
+}
+
+#[test]
+fn saved_file_stage2_conversion() {
+    check_conversion(&|b| FrameRecord::read_converted(b, &leaves()));
+}
+
+/// `bytes` with `"version": 2` written in, as if stage 2 had written them.
+#[cfg(feature = "controls")]
+fn as_stage2(bytes: &[u8]) -> Vec<u8> {
+    let text = String::from_utf8(bytes.to_vec()).expect("utf-8");
+    text.replacen('{', "{\"version\":2,", 1).into_bytes()
+}
+
+negative_control!(
+    saved_file_stage2_conversion,
+    "an old record read as the new version",
+    expected = "does not convert on load",
+    check_conversion(&|b| FrameRecord::read_converted(&as_stage2(b), &leaves()))
+);
+
+// Pass: a record whose version is neither stage 1's (none) nor stage 2's (2) is refused, read either way.
+fn check_unknown(reader: &dyn Fn(&[u8]) -> Result<FrameRecord, PathError>) {
+    let (_, old) = stage1_records().remove(1);
+    let text = String::from_utf8(old.to_bytes()).expect("utf-8");
+    for v in [0, 1, 3, 99] {
+        let bytes = text.replacen('{', &format!("{{\"version\":{v},"), 1);
+        assert!(
+            reader(bytes.as_bytes()).is_err(),
+            "an unknown version, {v}, is accepted"
+        );
+    }
+}
+
+#[test]
+fn saved_file_stage2_conversion_unknown() {
+    check_unknown(&|b| FrameRecord::read_converted(b, &leaves()));
+}
+
+negative_control!(
+    saved_file_stage2_conversion_unknown,
+    "an unknown version accepted: the version dropped before reading",
+    expected = "is accepted",
+    check_unknown(&|b| {
+        let text = String::from_utf8(b.to_vec()).expect("utf-8");
+        let cut = text.find(',').expect("a field") + 1;
+        FrameRecord::read_converted(format!("{{{}", &text[cut..]).as_bytes(), &leaves())
+    })
+);
+
+// ── curved_pivot_chart_switch ──────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass: a lock at the centre of a tilted mixed view (a curved chart, its pivot record set), recorded; a switch to a named
+// target that holds the pinned state (the mixed chart through another window, tilted its own way) and back: on each
+// chart the pinned pixel's own decode (no select) is within the lock's tolerance of the pinned state in `‖·‖_phys`, the
+// lock's record unchanged bit for bit (the anchor's words), each switch labelled `SwitchHolds`; a switch to a named
+// target that can't hold it (the mass simplex at rest): labelled `SwitchSlides`, the pin showing the target's nearest
+// point to the pinned state (no select: its own decode, more than the tolerance from the anchor, within the solve's
+// agreement of the restart's point), the record unchanged.
+
+type SwitchLeaves = (
+    LatentLeaves<Defaults>,
+    (
+        MixedLeaves,
+        ChartLeaves<RestStart<MassSimplex<f64>, f64>, Defaults>,
+    ),
+);
+
+fn switch_leaves() -> SwitchLeaves {
+    (
+        LatentLeaves::new(),
+        (MixedLeaves, ChartLeaves::new(simplex()).expect("a chart")),
+    )
+}
+
+/// The tilted mixed view through `window`, its own tilt `tau` toward `β`.
+fn tilted_mixed(window: Window, tau: f64) -> View {
+    let v = mixed_view(window);
+    let spec = TiltSpec {
+        tau1: tau,
+        tau2: 0.0,
+        map: TiltMap::Sheet,
+        x: 1,
+        y: 1,
+    };
+    Segment::curved_tilt(&v, &mixed(FROZEN), &spec)
+        .expect("a tilt")
+        .b()
+        .clone()
+}
+
+/// The tilted mixed view locked at its centre and recorded: its pivot record set.
+fn pivoted_lock() -> View {
+    let v = tilted_mixed(home(), 20.0);
+    let tol = Tolerances::register(128.0 * f64::EPSILON);
+    let (seg, _) =
+        Segment::lock_on_chart::<Defaults, _, _>(&v, &mixed(FROZEN), (0.5, 0.5), phys, &tol)
+            .expect("a lock");
+    let locked = anchor::record(seg.b(), &switch_leaves()).expect("recorded");
+    assert!(
+        locked.pivot.is_some(),
+        "the lock on a tilted curved view sets no pivot record"
+    );
+    locked
+}
+
+/// The raw decode of `v` at its pin: the chart's own state there, the select not applied.
+fn raw_at_pin(v: &View) -> Ic<f64> {
+    switch_leaves().decode(v, pin(v)).expect("a decode").ic
+}
+
+fn check_switch(after: &dyn Fn(View, &View) -> View) {
+    let a = pivoted_lock();
+    let record = a.anchor.expect("recorded");
+    // The holder: the mixed chart with its axes swapped, through its own window, tilted its own way.
+    let holder = {
+        let mut v = tilted_mixed(moved(), -15.0);
+        v.sim.chart.mapping[0] = engine::contract::sim_config::Mapping::Linear;
+        v.sim.chart.window = Window {
+            centre: [0.75, 0.1],
+            half: [0.3, 0.6],
+        };
+        View {
+            pin: None,
+            anchor: None,
+            pivot: None,
+            ..v
+        }
+    };
+    let there = Segment::locked_switch(&a, &holder, &switch_leaves(), phys).expect("the switch");
+    let b = after(there.b().clone(), &a);
+    let back = Segment::locked_switch(&b, &a, &switch_leaves(), phys).expect("the switch back");
+    for (what, seg, v) in [("there", &there, &b), ("back", &back, back.b())] {
+        assert_eq!(
+            seg.family(),
+            &engine::path::Family::Cut {
+                label: engine::path::CutLabel::SwitchHolds
+            },
+            "{what}: not labelled as holding"
+        );
+        let miss = phys(&record.ic(), &raw_at_pin(v));
+        println!("curved_pivot_chart_switch: {what}: the pinned pixel's own decode {:.3} ε from the pinned state", miss / f64::EPSILON);
+        assert!(
+            miss <= LOCK_TOLERANCE,
+            "{what}: the pinned pixel does not decode the pinned state: {miss:e}"
+        );
+        assert_eq!(
+            v.anchor.map(|x| x.words),
+            Some(record.words),
+            "{what}: the lock's record changed"
+        );
+    }
+}
+
+#[test]
+fn curved_pivot_chart_switch() {
+    check_switch(&|b, _| b);
+}
+
+negative_control!(
+    curved_pivot_chart_switch,
+    "the pivot carried in chart coordinates across the switch",
+    expected = "does not decode the pinned state",
+    check_switch(&|b, a| View {
+        pivot: a.pivot,
+        ..b
+    })
+);
+
+fn check_switch_slides(claim: bool) {
+    let a = pivoted_lock();
+    let record = a.anchor.expect("recorded");
+    let rest = kernel_view(&simplex(), Window::SQUARE);
+    let seg = Segment::locked_switch(&a, &rest, &switch_leaves(), phys).expect("the switch");
+    assert_eq!(
+        seg.family(),
+        &engine::path::Family::Cut {
+            label: engine::path::CutLabel::SwitchSlides
+        },
+        "not labelled as sliding"
+    );
+    let mut b = seg.b().clone();
+    if claim {
+        b.anchor = b.anchor.map(|x| Anchor { slid: false, ..x });
+    }
+    assert_eq!(
+        b.anchor.map(|x| x.words),
+        Some(record.words),
+        "the lock's record changed"
+    );
+    let shown = state(anchor::state_at(&b, &switch_leaves(), pin(&b)).expect("a pixel")).ic;
+    let near = anchor::nearest(&rest, &switch_leaves(), pin(&a), &record).expect("a nearest point");
+    let (from_anchor, from_nearest) = (phys(&record.ic(), &shown), phys(&near.ic, &shown));
+    println!(
+        "curved_pivot_chart_switch_slides: the pin {from_anchor:.6} from the pinned state, {:.3} ε from the target's nearest point",
+        from_nearest / f64::EPSILON
+    );
+    assert!(
+        from_anchor > LOCK_TOLERANCE && from_nearest <= 1e-6,
+        "the pinned state is claimed on a target that can't hold it"
+    );
+}
+
+#[test]
+fn curved_pivot_chart_switch_slides() {
+    check_switch_slides(false);
+}
+
+negative_control!(
+    curved_pivot_chart_switch_slides,
+    "the pinned state claimed on a target that can't hold it",
+    expected = "claimed on a target that can't hold it",
+    check_switch_slides(true)
+);
+
+// ── saved_blend_tilt_slice ─────────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass, on the gate's affine and nonlinear pairs, under a lock and without: the frame at `s = 0.4` saved (a frame record)
+// and reopened, then tilted by 20° (each end its own tilt) and sliced by 0.1 of the slider span (each end in its own
+// hidden coordinates; under a lock `B` re-held), decodes at every pixel of an 8² grid and at the pin to the live morph's
+// states at `s = 0.4` after the same tilt and slice, bit for bit; without a lock each end has turned about its own
+// centre (each end bit for bit its own tilt with no pin); and the tilted frame saved and reopened again equals itself,
+// bytes and states.
+
+use engine::path::{SliderSpan, LATENT_SPAN};
+
+/// A frame `v` saved and reopened: written as a frame record and read back.
+fn saved(v: &View) -> View {
+    let record = FrameRecord {
+        a: v.clone(),
+        b: v.clone(),
+        family: engine::path::Family::Commit,
+        s_bits: 0,
+        align: None,
+        retime_hash: None,
+        anchor_words: None,
+    };
+    FrameRecord::read(&record.to_bytes())
+        .expect("the frame reads back")
+        .a
+}
+
+/// The paused frame of a gate pair, locked or free.
+fn paused(g: &Gate, locked: bool) -> View {
+    match locked {
+        true => {
+            let (morph, _) =
+                Segment::locked_blend(&g.a, &g.b, BlendPath::BlockLine, &leaves(), phys, 64)
+                    .expect("a path");
+            morph.frame(MID).expect("paused")
+        }
+        false => {
+            let free = |v: &View| {
+                let mut v = v.clone();
+                v.sim.lock = engine::contract::sim_config::Lock {
+                    locked: false,
+                    z_locked: [0.0; 8],
+                };
+                v.pin = None;
+                v.anchor = None;
+                v.pivot = None;
+                v
+            };
+            View::blend(
+                Blend::new(free(&g.a), free(&g.b), BlendPath::BlockLine, MID).expect("a blend"),
+            )
+        }
+    }
+}
+
+/// 0.1 of an end's slider span along its hidden `z[4]`: a latent end's slice, the mixed chart's slider.
+fn tenth_slice(v: &View) -> Segment {
+    match v.map {
+        Map::Latent => Segment::slice(v, &e(4, 1.0), 0.1 * LATENT_SPAN).expect("a slice"),
+        _ => {
+            let span = mixed(v.sim.plane.z0)
+                .slider_span(4)
+                .expect("a hidden coordinate");
+            Segment::control(v, 4, v.sim.plane.z0[4] + 0.1 * span).expect("a slider's move")
+        }
+    }
+}
+
+/// The tilt and the slice of a blend view, each to both ends.
+fn tilt_and_slice(g: &Gate, v: &View, locked: bool) -> Result<View, PathError> {
+    let ends = blend_of(v);
+    let tilted = Segment::on_ends(v, &(g.tilt_a)(&ends.a), &(g.tilt_b)(&ends.b))?
+        .b()
+        .clone();
+    let ends = blend_of(&tilted);
+    let (sa, sb) = (tenth_slice(&ends.a), tenth_slice(&ends.b));
+    Ok(match locked {
+        true => Segment::locked_slice(&tilted, &sa, &sb, &leaves())?
+            .b()
+            .clone(),
+        false => Segment::on_ends(&tilted, &sa, &sb)?.b().clone(),
+    })
+}
+
+fn states_of(v: &View, at: [f64; 2]) -> Vec<[u64; 15]> {
+    let mut p: Vec<[f64; 2]> = (0..64)
+        .map(|k| {
+            [
+                (k % 8) as f64 / 8.0 + 1.0 / 16.0,
+                (k / 8) as f64 / 8.0 + 1.0 / 16.0,
+            ]
+        })
+        .collect();
+    p.push(at);
+    p.iter()
+        .map(|x| words(&state(anchor::state_at(v, &leaves(), *x).expect("a pixel")).ic))
+        .collect()
+}
+
+fn check_saved_blend(
+    edit: &dyn Fn(&Gate, &View, bool) -> Result<View, PathError>,
+    turned_about: &dyn Fn(&Gate, &View) -> Segment,
+) {
+    for g in gates() {
+        for locked in [true, false] {
+            let what = format!("{}, {}", g.name, if locked { "locked" } else { "free" });
+            let live = paused(&g, locked);
+            let at = pin(&g.a);
+            let reopened = saved(&live);
+            assert_eq!(
+                reopened.bytes(),
+                live.bytes(),
+                "{what}: the saved frame does not reopen as itself"
+            );
+            let want = tilt_and_slice(&g, &live, locked).expect("the live edit");
+            let got = edit(&g, &reopened, locked)
+                .unwrap_or_else(|e| panic!("{what}: the reopened frame refuses the tilt: {e:?}"));
+            assert_eq!(
+                states_of(&got, at),
+                states_of(&want, at),
+                "{what}: the reopened frame's states are not the live morph's"
+            );
+            let again = saved(&got);
+            assert_eq!(
+                again.bytes(),
+                got.bytes(),
+                "{what}: the tilted frame does not reopen as itself"
+            );
+            assert_eq!(
+                states_of(&again, at),
+                states_of(&got, at),
+                "{what}: the tilted frame reopened decodes otherwise"
+            );
+            if !locked {
+                // Each end turned about its own centre: the tilt keeps the state at that end's own centre pixel, bit
+                // for bit, and the frame's own route tilts end B so.
+                let ends = blend_of(&live);
+                let routed = Segment::on_ends(&live, &(g.tilt_a)(&ends.a), &(g.tilt_b)(&ends.b))
+                    .expect("a tilt");
+                let turned = turned_about(&g, &ends.b).b().clone();
+                let centre = |v: &View| {
+                    words(&state(anchor::state_at(v, &leaves(), [0.5, 0.5]).expect("a pixel")).ic)
+                };
+                assert!(
+                    blend_of(routed.b()).b.bytes() == (g.tilt_b)(&ends.b).b().bytes()
+                        && centre(&turned) == centre(&ends.b)
+                        && centre(&blend_of(routed.b()).a) == centre(&ends.a),
+                    "{what}: end B has not turned about its own centre"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn saved_blend_tilt_slice() {
+    check_saved_blend(&|g, v, locked| tilt_and_slice(g, v, locked), &|g, b| {
+        (g.tilt_b)(b)
+    });
+}
+
+negative_control!(
+    saved_blend_tilt_slice,
+    "a tilt of the blended state's own encode: the reopened frame tilted as one latent plane, the ends' mean",
+    expected = "are not the live morph's",
+    check_saved_blend(
+        &|g, v, locked| {
+            let ends = blend_of(v);
+            let mean = |a: &Latent, b: &Latent| -> Latent { std::array::from_fn(|i| 0.5 * (a[i] + b[i])) };
+            let (pa, pb) = (&ends.a.sim.plane, &ends.b.sim.plane);
+            let one = View::latent(sim_of(&Plane { z0: mean(&pa.z0, &pb.z0), q1: mean(&pa.q1, &pb.q1), q2: mean(&pa.q2, &pb.q2) }));
+            let _ = (g, locked);
+            Ok(latent_tilt(&one, 0, 1, 5).b().clone())
+        },
+        &|g, b| (g.tilt_b)(b)
+    )
+);
+
+#[test]
+fn saved_blend_tilt_slice_refuses_nothing() {
+    check_saved_blend(&|g, v, locked| tilt_and_slice(g, v, locked), &|g, b| {
+        (g.tilt_b)(b)
+    });
+}
+
+negative_control!(
+    saved_blend_tilt_slice_refuses_nothing,
+    "the reopened frame refusing the tilt, as a blend view did before its ends were reached",
+    expected = "refuses the tilt",
+    check_saved_blend(
+        &|_, v, _| Segment::slice(v, &e(4, 1.0), 0.1).map(|s| s.b().clone()),
+        &|g, b| (g.tilt_b)(b)
+    )
+);
+
+#[test]
+fn saved_blend_tilt_slice_own_centres() {
+    check_saved_blend(&|g, v, locked| tilt_and_slice(g, v, locked), &|g, b| {
+        (g.tilt_b)(b)
+    });
+}
+
+negative_control!(
+    saved_blend_tilt_slice_own_centres,
+    "without a lock, both ends turned about one shared point: B's tilt about A's centre pixel's address",
+    expected = "has not turned about its own centre",
+    check_saved_blend(&|g, v, locked| tilt_and_slice(g, v, locked), &|g, b| {
+        let shared = View { pin: Some(Pin::at(b, 0.3, 0.65)), ..b.clone() };
+        (g.tilt_b)(&shared)
+    })
+);
+
+// ── path_lock_round_trip_slides ────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass, on a sliding pair (the affine lock to the mass simplex at rest, which holds no state with momenta): the gate's
+// path, lock → morph to `s = 0.4` (the anchor sliding) → tilt mid-morph (end A its own tilt about the pin; the rest
+// chart's end, untilted here, held as it is by a zoom of 0) → slice mid-morph (end A sliced, the rest chart's end placed
+// at its nearest point to A's new pinned state) → morph back; the pin's state continuous along the morph by G8's
+// criterion, and R1: the return to `s = 0` bitwise the direct tilt and slice of A about the pin.
+
+type RestLeaves = (
+    LatentLeaves<Defaults>,
+    ChartLeaves<RestStart<MassSimplex<f64>, f64>, Defaults>,
+);
+
+fn rest_leaves() -> RestLeaves {
+    (
+        LatentLeaves::new(),
+        ChartLeaves::new(simplex()).expect("a chart"),
+    )
+}
+
+fn check_round_trip_slides(frame: &dyn Fn(&Segment, f64) -> View) {
+    let a_plane = frame_plane(GATE_Z0, 0, 1, 0.5);
+    let a = locked_latent(&a_plane, (0.3, 0.65));
+    let at = pin(&a);
+    let rest = kernel_view(&simplex(), Window::SQUARE);
+    let (morph, end) =
+        Segment::locked_blend(&a, &rest, BlendPath::BlockLine, &rest_leaves(), phys, 64)
+            .expect("a locked path");
+    assert!(
+        matches!(end, LockedEnd::Slides { .. }),
+        "the rest chart holds the anchor: {end:?}"
+    );
+    // The morph, by G8's criterion, up to the pause: frames read along [0, MID].
+    let paused_track = |n: usize| -> Vec<[f64; 9]> {
+        (0..=n)
+            .map(|k| {
+                let v = frame(&morph, MID * k as f64 / n as f64);
+                Blocks::of(&state(anchor::state_at(&v, &rest_leaves(), at).expect("a pixel")).ic)
+                    .vector()
+            })
+            .collect()
+    };
+    let steps: Vec<f64> = [16, 32, 64]
+        .iter()
+        .map(|n| largest_step(&paused_track(*n)))
+        .collect();
+    println!("path_lock_round_trip_slides: largest steps at 16, 32, 64 frames: {steps:?}");
+    for w in steps.windows(2) {
+        assert!(
+            w[1] <= 0.6 * w[0],
+            "the slide jumps: {} against {}",
+            w[1],
+            w[0]
+        );
+    }
+    let v1 = morph.frame(MID).expect("paused");
+    let ends = blend_of(&v1);
+    let tilt_a = |v: &View| latent_tilt(v, 0, 1, 5);
+    let slice_a = |v: &View| Segment::slice(v, &e(4, 1.0), 0.2).expect("a slice");
+    let tilt = Segment::on_ends(
+        &v1,
+        &tilt_a(&ends.a),
+        &Segment::zoom(&ends.b, 0.0).expect("a zoom of 0"),
+    )
+    .expect("the tilt mid-morph");
+    let v2 = tilt.b().clone();
+    let ends = blend_of(&v2);
+    // The rest chart's end sliced in its own `z[4]`, a momentum control, which it holds at rest: its states do not move.
+    let slice_b =
+        Segment::control(&ends.b, 4, ends.b.sim.plane.z0[4] + 0.2).expect("a slider's move");
+    let slice = Segment::locked_slice(&v2, &slice_a(&ends.a), &slice_b, &rest_leaves());
+    let slice = match slice {
+        Ok(s) => s,
+        Err(e) => panic!("the slice mid-morph on a sliding pair: {e:?}"),
+    };
+    let back = Segment::share(slice.b(), 0.0).expect("the morph back");
+    let direct = anchor::record(slice_a(tilt_a(&a).b()).b(), &rest_leaves()).expect("recorded");
+    let mut probes: Vec<[f64; 2]> = (0..64)
+        .map(|k| {
+            [
+                (k % 8) as f64 / 8.0 + 1.0 / 16.0,
+                (k / 8) as f64 / 8.0 + 1.0 / 16.0,
+            ]
+        })
+        .collect();
+    probes.push(at);
+    for p in probes {
+        let x = state(anchor::state_at(back.b(), &rest_leaves(), p).expect("a pixel")).ic;
+        let y = state(anchor::state_at(&direct, &rest_leaves(), p).expect("a pixel")).ic;
+        assert_eq!(
+            words(&x),
+            words(&y),
+            "R1 fails on the sliding pair at {p:?}"
+        );
+    }
+}
+
+#[test]
+fn path_lock_round_trip_slides() {
+    check_round_trip_slides(&own);
+}
+
+negative_control!(
+    path_lock_round_trip_slides,
+    "a labelled jump on the sliding pair: A's frame until the pause, then the paused frame",
+    expected = "the slide jumps",
+    check_round_trip_slides(&|seg, s| match s < MID {
+        true => seg.a().clone(),
+        false => own(seg, s),
+    })
+);
+
+// ── path_lock_tolerance_sweep ──────────────────────────────────────────────────────────────────────────────────────
+//
+// A measurement, the inexact holds the lock's tolerance must cover: over an 8² grid of pins, (1) a lock on the `(L_z, K)`
+// chart, its target the latent chart re-centred on `z_locked` (lookup's inverse), and (2) a lock on the affine chart, its
+// target the exponential shape sphere holding that pin's masses and momenta, re-centred by the re-solve; each target's
+// own pin state against the pinned state in `‖·‖_phys`, its worst, median and 95th percentile printed. It asserts that
+// each is within the tolerance in force, the measurement's own fixture check.
+
+/// The exponential shape sphere holding the masses and momenta of the latent point `z`.
+fn sphere_for(z: &Latent) -> kernel::chart::ShapeSphere<f64> {
+    kernel::chart::ShapeSphere {
+        z_mass: [z[6], z[7]],
+        z_mom: [z[2], z[3], z[4], z[5]],
+        ..exp_sphere()
+    }
+}
+
+fn sweep(against: &dyn Fn(&Anchor) -> Ic<f64>) -> (Vec<f64>, Vec<f64>) {
+    let grid: Vec<(f64, f64)> = (0..64)
+        .map(|k| {
+            (
+                (k % 8) as f64 / 8.0 + 1.0 / 16.0,
+                (k / 8) as f64 / 8.0 + 1.0 / 16.0,
+            )
+        })
+        .collect();
+    let tol = Tolerances::register(128.0 * f64::EPSILON);
+    let mut invariant = Vec::new();
+    let mut sphere = Vec::new();
+    let mut skipped = Vec::new();
+    let mut sim = sim_of(&plane_b());
+    sim.chart.window = Window::SQUARE;
+    let lk = View::kernel(&invariant_lk(), sim.clone()).expect("a registry chart");
+    for &(s, t) in &grid {
+        // (1) The (L_z, K) chart to latent; a pin whose lock is refused (not a system there) is counted.
+        let locked =
+            Segment::lock_on_chart::<Defaults, _, _>(&lk, &invariant_lk(), (s, t), phys, &tol);
+        if locked.is_err() {
+            skipped.push((s, t));
+        }
+        if let Ok((seg, _)) = locked {
+            let a = anchor::record(seg.b(), &leaves()).expect("recorded");
+            let b = View::latent(sim_of(&plane_b()));
+            let (z0, _) = engine::path::hold_plane(&b.sim.plane, [s, t], &a.sim.lock.z_locked);
+            let mut held = b.clone();
+            held.sim.plane.z0 = z0;
+            let shown = leaves().decode(&held, [s, t]).expect("a decode").ic;
+            invariant.push(phys(&against(&a.anchor.expect("recorded")), &shown));
+        }
+        // (2) Latent to the exponential shape sphere.
+        let a = locked_latent(&plane_a(), (s, t));
+        let z = engine::lock::point(&plane_a(), s, t);
+        let leaves = (
+            LatentLeaves::<Defaults>::new(),
+            ChartLeaves::<_, Defaults>::new(sphere_for(&z)).expect("a chart"),
+        );
+        let mut sim = sim_of(&plane_a());
+        sim.chart.window = Window::SQUARE;
+        let b = View::kernel(&sphere_for(&z), sim).expect("a registry chart");
+        let anchor = a.anchor.expect("recorded");
+        let found = anchor::nearest(&b, &leaves, [s, t], &anchor).expect("a nearest point");
+        sphere.push(phys(&against(&anchor), &found.ic));
+    }
+    println!(
+        "path_lock_tolerance_sweep: (L_z, K) pins whose lock is refused: {} {skipped:?}",
+        skipped.len()
+    );
+    (invariant, sphere)
+}
+
+fn check_sweep(against: &dyn Fn(&Anchor) -> Ic<f64>) {
+    let (invariant, sphere) = sweep(against);
+    for (name, xs) in [
+        ("(L_z, K) to latent", &invariant),
+        ("latent to the exponential sphere", &sphere),
+    ] {
+        let (worst, median, p95) = summary(xs);
+        println!(
+            "path_lock_tolerance_sweep: {name}: {} pins, the target's own pin: worst {worst:.3} ε, median {median:.3} ε, 95th percentile {p95:.3} ε",
+            xs.len()
+        );
+        assert!(
+            xs.iter().all(|x| *x <= LOCK_TOLERANCE),
+            "{name}: a target's own pin is past the lock's tolerance: worst {worst:.3} ε"
+        );
+    }
+}
+
+#[test]
+fn path_lock_tolerance_sweep() {
+    check_sweep(&|a| a.ic());
+}
+
+negative_control!(
+    path_lock_tolerance_sweep,
+    "the targets read against another state, the anchor of a lock elsewhere",
+    expected = "past the lock's tolerance",
+    check_sweep(&|_| locked_latent(&plane_a(), (0.7, 0.2))
+        .anchor
+        .expect("recorded")
+        .ic())
+);
+
+// ── path_lock_round_trip_returns ───────────────────────────────────────────────────────────────────────────────────
+//
+// Pass (R1 on its own): the gate's return to `s = 0`, at every pixel of an 8² grid and at the pin, bitwise the direct tilt
+// and slice of A about the pin; read through `back`, which the control replaces.
+
+fn check_returns(back: &dyn Fn(&Segment) -> View) {
+    for g in gates() {
+        let run = run(&g);
+        let returned = back(&run.segments[3].1);
+        let direct = (g.slice_a)((g.tilt_a)(&g.a).b()).b().clone();
+        let direct = anchor::record(&direct, &leaves()).expect("recorded");
+        let mut probes: Vec<[f64; 2]> = (0..64)
+            .map(|k| {
+                [
+                    (k % 8) as f64 / 8.0 + 1.0 / 16.0,
+                    (k / 8) as f64 / 8.0 + 1.0 / 16.0,
+                ]
+            })
+            .collect();
+        probes.push(pin(&g.a));
+        for p in probes {
+            let x = state(anchor::state_at(&returned, &leaves(), p).expect("a pixel")).ic;
+            let y = state(anchor::state_at(&direct, &leaves(), p).expect("a pixel")).ic;
+            assert_eq!(
+                words(&x),
+                words(&y),
+                "{}: R1 fails: the return differs from the direct edit at {p:?}",
+                g.name
+            );
+        }
+    }
+}
+
+#[test]
+fn path_lock_round_trip_returns() {
+    check_returns(&|seg| seg.b().clone());
+}
+
+negative_control!(
+    path_lock_round_trip_returns,
+    "the return read just off s = 0, at a share of 2⁻²⁰",
+    expected = "R1 fails",
+    check_returns(&|seg| View::blend(blend_of(seg.b()).at(2f64.powi(-20)).expect("a share")))
+);
+
+// ── path_lock_centre_near_ends ─────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass, on the hold pairs with the pin off the centre and on swapped planes: off the pin, a locked frame just inside each
+// end shows that end's own pixels: at every pixel of an 8² grid, the frame at `s = 2⁻²⁰` within `10⁻⁴` of A's state in
+// `‖·‖_phys`, and at `s = 1 − 2⁻²⁰` within `10⁻⁴` of B's (re-centred) state; the offset form's transported frame and its
+// remainder both meet the ends.
+
+fn check_near_ends(form: &dyn Fn(View) -> View) {
+    let z0 = [0.2, 0.9, 0.1, -0.1, 0.05, 0.1, 0.1, -0.1];
+    let pairs = vec![
+        Pair {
+            name: "affine, pin off the centre",
+            a: locked_latent(&plane_a(), (0.3, 0.65)),
+            b: View::latent(sim_of(&plane_b())),
+        },
+        Pair {
+            name: "swapped",
+            a: locked_latent(
+                &Plane {
+                    z0,
+                    q1: e(0, 0.6),
+                    q2: e(1, 0.6),
+                },
+                (0.4, 0.6),
+            ),
+            b: View::latent(sim_of(&Plane {
+                z0,
+                q1: e(1, 0.6),
+                q2: e(0, 0.6),
+            })),
+        },
+    ];
+    let h = 2f64.powi(-20);
+    for p in pairs {
+        let seg = held(&p);
+        let at = pin(&p.a);
+        let mut worst = 0.0f64;
+        for k in 0..64 {
+            let c = [
+                (k % 8) as f64 / 8.0 + 1.0 / 16.0,
+                (k / 8) as f64 / 8.0 + 1.0 / 16.0,
+            ];
+            if c == at {
+                continue;
+            }
+            for (s, end) in [(h, seg.a()), (1.0 - h, seg.b())] {
+                let x = state(
+                    anchor::state_at(&form(seg.frame(s).expect("a frame")), &leaves(), c)
+                        .expect("a pixel"),
+                )
+                .ic;
+                let y = state(anchor::state_at(end, &leaves(), c).expect("a pixel")).ic;
+                worst = worst.max(phys(&x, &y));
+            }
+        }
+        println!(
+            "path_lock_centre_near_ends: {}: the worst distance to the nearer end {worst:e}",
+            p.name
+        );
+        assert!(
+            worst <= 1e-4,
+            "{}: a frame just inside an end does not show that end: {worst:e}",
+            p.name
+        );
+    }
+}
+
+#[test]
+fn path_lock_centre_near_ends() {
+    check_near_ends(&|v| v);
+}
+
+negative_control!(
+    path_lock_centre_near_ends,
+    "the transport run from B's frame to A's",
+    expected = "does not show that end",
+    check_near_ends(&|v| with_form(
+        v,
+        anchor::OffsetForm {
+            reversed: true,
+            ..Default::default()
+        }
+    ))
+);
+
+// ── path_lock_round_trip_slides_slice ──────────────────────────────────────────────────────────────────────────────
+//
+// Pass, on the sliding pair of `path_lock_round_trip_slides` (the affine lock to the mass simplex at rest), across the
+// slice mid-morph: no frame of the slice segment is labelled as holding the pinned state (the rest chart can't hold a
+// state with momenta), and the pin's state is continuous across the segment by G8's criterion (16, 32 and 64 frames),
+// the slide continuing rather than snapping. Read through `form`, which the control replaces.
+
+fn sliding_slice() -> (View, Segment) {
+    let a = locked_latent(&frame_plane(GATE_Z0, 0, 1, 0.5), (0.3, 0.65));
+    let rest = kernel_view(&simplex(), Window::SQUARE);
+    let (morph, _) =
+        Segment::locked_blend(&a, &rest, BlendPath::BlockLine, &rest_leaves(), phys, 64)
+            .expect("a locked path");
+    let v1 = morph.frame(MID).expect("paused");
+    let ends = blend_of(&v1);
+    let tilt = Segment::on_ends(
+        &v1,
+        &latent_tilt(&ends.a, 0, 1, 5),
+        &Segment::zoom(&ends.b, 0.0).expect("a zoom of 0"),
+    )
+    .expect("the tilt mid-morph");
+    let v2 = tilt.b().clone();
+    let ends = blend_of(&v2);
+    let slice_a = Segment::slice(&ends.a, &e(4, 1.0), 0.2).expect("a slice");
+    let slice_b =
+        Segment::control(&ends.b, 4, ends.b.sim.plane.z0[4] + 0.2).expect("a slider's move");
+    let slice = Segment::locked_slice(&v2, &slice_a, &slice_b, &rest_leaves())
+        .expect("the slice mid-morph");
+    (a, slice)
+}
+
+fn check_slide_through_slice(form: &dyn Fn(View, f64) -> View) {
+    let (a, slice) = sliding_slice();
+    let at = pin(&a);
+    let track = |n: usize| -> Vec<[f64; 9]> {
+        (0..=n)
+            .map(|k| {
+                let u = k as f64 / n as f64;
+                let v = form(slice.frame(u).expect("a frame"), u);
+                let held = blend_of(&v).holds(&rest_leaves()).expect("a hold");
+                assert!(
+                    !held,
+                    "a frame of the sliding pair's slice is labelled as holding the pinned state"
+                );
+                Blocks::of(&state(anchor::state_at(&v, &rest_leaves(), at).expect("a pixel")).ic)
+                    .vector()
+            })
+            .collect()
+    };
+    let steps: Vec<f64> = [16, 32, 64]
+        .iter()
+        .map(|n| largest_step(&track(*n)))
+        .collect();
+    println!("path_lock_round_trip_slides_slice: largest steps at 16, 32, 64 frames: {steps:?}");
+    for w in steps.windows(2) {
+        assert!(
+            w[1] <= 0.6 * w[0],
+            "the slide jumps across the slice: {} against {}",
+            w[1],
+            w[0]
+        );
+    }
+}
+
+#[test]
+fn path_lock_round_trip_slides_slice() {
+    check_slide_through_slice(&|v, _| v);
+}
+
+negative_control!(
+    path_lock_round_trip_slides_slice,
+    "the slice's frames forced to hold the pinned state, as the re-hold did before it checked",
+    expected = "labelled as holding",
+    check_slide_through_slice(&|v, _| with_form(
+        v,
+        anchor::OffsetForm {
+            forced_hold: true,
+            ..Default::default()
+        }
+    ))
+);
+
+// ── path_lock_centre_slide_nearest ─────────────────────────────────────────────────────────────────────────────────
+//
+// `path_lock_centre_slide`'s check again, to host the control of its `s = 1` assert: the end placed at another chart
+// point than B's nearest, which must fail it.
+
+#[test]
+fn path_lock_centre_slide_nearest() {
+    check_slide(&own);
+}
+
+negative_control!(
+    path_lock_centre_slide_nearest,
+    "s = 1 placed at another chart point of B, 0.1 of the window from its nearest point",
+    expected = "is not B's nearest point",
+    check_slide(&|seg, s| match s == 1.0 {
+        true => {
+            let b = seg.b();
+            let at = pin(b);
+            let x = b.sim.chart.window.at(at[0], at[1]);
+            let h = b.sim.chart.window.half;
+            anchor::place(b, at, [x[0] + 0.1 * h[0], x[1] + 0.1 * h[1]])
+        }
+        false => own(seg, s),
+    })
+);
+
+// ── path_lock_centre_latent_hold_checked ───────────────────────────────────────────────────────────────────────────
+//
+// Pass (physics review 6017434260, blocking 1): a lock on the mixed chart, a slider's move (an excursion, which leaves
+// `z_locked` stale), recorded again, then a locked morph to a latent target: either the path is refused, or, where it is
+// labelled as holding, the target's own decode at the pin (no select) is within the lock's tolerance of the stored
+// anchor in `‖·‖_phys`. The check runs on what `outcome` gives; the control gives the old behaviour, the target re-centred
+// on the stale `z_locked` and labelled as holding.
+
+/// A locked morph's outcome: its end `B` and how it met the anchor.
+type Outcome = Result<(View, LockedEnd), PathError>;
+
+fn check_latent_hold(outcome: &dyn Fn(&View, &View) -> Outcome) {
+    let a = locked_mixed(home(), (0.35, 0.6));
+    let moved = Segment::control(&a, 4, a.sim.plane.z0[4] + 0.2)
+        .expect("a slider's move")
+        .b()
+        .clone();
+    let a = anchor::record(&moved, &leaves()).expect("recorded again");
+    let target = View::latent(sim_of(&plane_b()));
+    match outcome(&a, &target) {
+        Ok((b, LockedEnd::Holds)) => {
+            let at = pin(&a);
+            let raw = leaves()
+                .decode(&View { anchor: None, ..b }, at)
+                .expect("a decode")
+                .ic;
+            let miss = phys(&a.anchor.expect("recorded").ic(), &raw);
+            assert!(
+                miss <= LOCK_TOLERANCE,
+                "labelled Holds while the target's own pin is {miss:e} from the pinned state"
+            );
+        }
+        Ok((_, end)) => println!("path_lock_centre_latent_hold_checked: {end:?}"),
+        Err(PathError::Refused(why)) => {
+            println!("path_lock_centre_latent_hold_checked: refused: {why}");
+            assert_eq!(
+                why, "the latent end does not hold the anchor's latent point",
+                "refused for another reason"
+            );
+        }
+        Err(e) => panic!("the locked morph failed otherwise than by refusing the hold: {e:?}"),
+    }
+}
+
+#[test]
+fn path_lock_centre_latent_hold_checked() {
+    check_latent_hold(&|a, b| {
+        Segment::locked_blend(a, b, BlendPath::BlockLine, &leaves(), phys, 64)
+            .map(|(seg, end)| (seg.b().clone(), end))
+    });
+}
+
+negative_control!(
+    path_lock_centre_latent_hold_checked,
+    "the old check, read through the select: the target re-centred on the stale z_locked and labelled as holding",
+    expected = "labelled Holds while",
+    check_latent_hold(&|a, b| {
+        let at = pin(a);
+        let mut out = b.clone();
+        out.sim.plane.z0 = engine::path::hold_plane(&b.sim.plane, at, &a.sim.lock.z_locked).0;
+        out.anchor = a.anchor;
+        out.sim.lock = a.sim.lock.clone();
+        out.pin = a.pin;
+        Ok((out, LockedEnd::Holds))
+    })
+);
+
+// ── path_lock_share_from_slice ─────────────────────────────────────────────────────────────────────────────────────
+//
+// Pass (code review 6017789955, blocking 1): on the sliding pair's slice, a morph resumed from a frame inside it (`s` of
+// the slice 0.5, resumed to a share of 0.9) shows the same states whether or not that frame was drawn first, bitwise at
+// the pin on the share's frames u = 0.25, 0.5 and 1; and a share frame saved and reopened shows the live one's state at
+// the pin bitwise. `at` builds the blend at a share; the control keeps the drawn frame's cached re-solve.
+
+fn check_share_from_slice(at: &dyn Fn(&Blend, f64) -> Blend) {
+    let (a, slice) = sliding_slice();
+    let pin_at = pin(&a);
+    let shown = slice.frame(0.5).expect("a frame");
+    state(anchor::state_at(&shown, &rest_leaves(), pin_at).expect("drawn"));
+    let fresh = slice.frame(0.5).expect("a frame");
+    let words_at =
+        |v: &View| words(&state(anchor::state_at(v, &rest_leaves(), pin_at).expect("a pixel")).ic);
+    for u in [0.25, 0.5, 1.0] {
+        let share = 0.4 + u * (0.9 - 0.4);
+        let live = View::blend(at(blend_of(&shown), share));
+        let cold = View::blend(at(blend_of(&fresh), share));
+        assert_eq!(
+            words_at(&live),
+            words_at(&cold),
+            "a resumed share differs by whether its frame was drawn first, u = {u}"
+        );
+        assert_eq!(
+            words_at(&saved(&live)),
+            words_at(&live),
+            "a saved share frame reopens otherwise, u = {u}"
+        );
+    }
+}
+
+#[test]
+fn path_lock_share_from_slice() {
+    check_share_from_slice(&|b, s| b.at(s).expect("a share"));
+}
+
+negative_control!(
+    path_lock_share_from_slice,
+    "the drawn frame's cached re-solve kept across the share",
+    expected = "differs by whether its frame was drawn first",
+    check_share_from_slice(&|b, s| b.at_keeping_cache(s).expect("a share"))
+);
+
+// ── path_lock_round_trip_slides_slice_continuous ───────────────────────────────────────────────────────────────────
+//
+// `path_lock_round_trip_slides_slice`'s check again, to host a control that reaches its continuity assert alone: one mid
+// frame of the slice with B snapped elsewhere (0.2 of the window from its nearest point), unlabelled as holding. (A snap
+// to the nearest point itself measured no jump here: at the share 0.4 it is near the slide's own placement.)
+
+#[test]
+fn path_lock_round_trip_slides_slice_continuous() {
+    check_slide_through_slice(&|v, _| v);
+}
+
+negative_control!(
+    path_lock_round_trip_slides_slice_continuous,
+    "an unlabelled snap of B at one mid frame of the slice, no hold",
+    expected = "the slide jumps across the slice",
+    check_slide_through_slice(&|v, u| {
+        if u != 0.5 {
+            return v;
+        }
+        let b = blend_of(&v);
+        let (a_end, b_end) = (b.a.clone(), b.b.clone());
+        let at = pin(&a_end);
+        let shown = state(anchor::state_at(&a_end, &rest_leaves(), at).expect("a pixel")).ic;
+        let near = anchor::nearest(&b_end, &rest_leaves(), at, &Anchor::of(&shown, false))
+            .expect("a nearest point");
+        let h = b_end.sim.chart.window.half;
+        let snapped = anchor::placed(&b_end, at, [near.x[0] + 0.2 * h[0], near.x[1] + 0.2 * h[1]]);
+        View::blend(b.with_ends(a_end, snapped).reholding(false))
+    })
+);

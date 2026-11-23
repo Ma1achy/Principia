@@ -57,3 +57,10 @@ delete its line when it's done.
   PR), and the WSL trust tests that need `ssh-keygen`.
 - **`xtask` has no `dx12` feature**, so the golden runner and the `cargo xtask` suites cannot select DX12; add it with
   the DX12 compute path (TASK-M0-85).
+- **The lock's gate test does not run every G9 pair through its tilt and slice** (TASK-M2-65, PR #59). It runs latent
+  to latent, the mixed chart to the mixed chart and latent to the mass simplex at rest (the rest chart's end untilted);
+  latent to the exponential shape sphere and the `(L_z, K)` chart to latent run only as locked morphs; a mixed or
+  invariant chart to a rest chart and to Burrau do not run through the gate at all. Region D and the time-axis pair
+  wait on TASK-M2-68 and TASK-M2-83 (ignored placeholders in `path_lock.rs`, whose controls are bare panics because
+  the controls lint needs one per test). The gui's chart switch under a lock still takes `Segment::chart_switch`'s
+  labelled jump; `Segment::locked_switch` needs the chart's leaves in the gui adapter.

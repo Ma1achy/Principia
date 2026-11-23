@@ -538,12 +538,13 @@ const PRESENTATION: [&str; 15] = [
 /// closure's departure threshold `delta_dep` (TASK-M3-11; REQ-VAL-055), which decides which value `closure_min`,
 /// `closure_step` and the departed bit take, not what their bits mean, as `r_pole` does for `θ̃`. None is among the
 /// entries §3.8 hashes ("The hash"), so none is hashed.
-const CALIBRATIONS: [&str; 17] = [
+const CALIBRATIONS: [&str; 18] = [
     "r_pole",
     "n_norm_tol",
     "shape_vec_js_tol",
     "shape_roundtrip_bound",
     "eps_phys",
+    "lock_tolerance",
     "decode_sanity",
     "zero_class",
     "literature_import_tol",
