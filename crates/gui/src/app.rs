@@ -247,6 +247,7 @@ impl<S: EngineSide> App<S> {
         let loaded = store.load();
         app.places = loaded.settings.places;
         app.splits = loaded.settings.layout;
+        app.manifold.centre_on_pin = loaded.settings.centre_on_pin;
         app.store = store;
         if let Some(line) = loaded.ignored {
             app.log_warning(line);
@@ -259,6 +260,7 @@ impl<S: EngineSide> App<S> {
         Settings {
             places: self.places.clone(),
             layout: self.splits,
+            centre_on_pin: self.manifold.centre_on_pin,
         }
     }
 
@@ -793,6 +795,9 @@ impl<S: EngineSide> App<S> {
         }
         for line in std::mem::take(&mut out.refusals) {
             self.log_warning(line);
+        }
+        if std::mem::take(&mut out.save_settings) {
+            self.save_settings();
         }
         // The windows asked for, each with the control that opened it: a click, Enter, or the Manifold view's and the
         // Trajectory panel's own openers.

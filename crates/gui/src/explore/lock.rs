@@ -1,7 +1,8 @@
 //! The lock's marks (render_gui_spec §G4; GUI_DESIGN_NOTES § "08 Lock"; 08_lock.png): the badge, "● locked at
-//! z_locked", with unlock and open in Inspector, which requests the Inspector window until TASK-M6-28 builds its frame;
-//! and the gold reticle on the figure at the anchor, which locking recentres the view on: the one mark the GUI draws
-//! on the figure besides the hover label (§G1, "the hover label and the lock reticle are the figure's own marks").
+//! z_locked", with unlock, centre on pin and open in Inspector, which requests the Inspector window until TASK-M6-28
+//! builds its frame; and the gold reticle on the figure at the pin, the pixel locked, where locking leaves it: the one
+//! mark the GUI draws on the figure besides the hover label (§G1, "the hover label and the lock reticle are the figure's
+//! own marks").
 //! Built here on the mock's lock (applied per R-369, review 5434766412 on PR #157); REQ-GUI-099 stays TASK-M8-07's.
 
 use eframe::egui::{
@@ -22,6 +23,8 @@ pub const UNLOCKED: &str = "○ not locked";
 pub const UNLOCK: &str = "unlock";
 /// The badge's open in Inspector.
 pub const OPEN_INSPECTOR: &str = "open in Inspector";
+/// The badge's centre on pin (R-866).
+pub const CENTRE_ON_PIN: &str = "centre on pin";
 /// The reticle's radius, in points (a look choice, R-390).
 pub const RETICLE_R: f32 = 14.0;
 /// The reticle's ticks' length beyond its circle, in points (a look choice, R-390).
@@ -33,9 +36,18 @@ pub fn anchor_text(z: &Latent) -> String {
     format!("z_locked ({})", parts.join(", "))
 }
 
-/// Draws the badge in `ui`: its text, then unlock and open in Inspector, both disabled while free. Returns the two
-/// buttons' responses.
-pub fn badge(ui: &mut Ui, lock: &Lock) -> (Response, Response) {
+/// The badge's buttons' responses.
+pub struct Badge {
+    /// Unlock.
+    pub unlock: Response,
+    /// Centre on pin.
+    pub centre: Response,
+    /// Open in Inspector.
+    pub inspector: Response,
+}
+
+/// Draws the badge in `ui`: its text, then unlock, centre on pin and open in Inspector, each disabled while free.
+pub fn badge(ui: &mut Ui, lock: &Lock) -> Badge {
     if lock.locked {
         Frame::new()
             .fill(BADGE_FILL)
@@ -48,8 +60,13 @@ pub fn badge(ui: &mut Ui, lock: &Lock) -> (Response, Response) {
         ui.label(RichText::new(UNLOCKED).monospace().weak());
     }
     let unlock = ui.add_enabled(lock.locked, Button::new(UNLOCK));
+    let centre = ui.add_enabled(lock.locked, Button::new(CENTRE_ON_PIN));
     let inspector = ui.add_enabled(lock.locked, Button::new(OPEN_INSPECTOR));
-    (unlock, inspector)
+    Badge {
+        unlock,
+        centre,
+        inspector,
+    }
 }
 
 /// Draws the gold reticle centred on `at`, over the figure `figure` and clipped to it.
@@ -76,7 +93,7 @@ pub fn reticle(ctx: &egui::Context, figure: Rect, at: Pos2) {
     }
 }
 
-/// Where the reticle goes on `figure`: the anchor's chart point, while locked and in view.
+/// Where the reticle goes on `figure`: the pin, the anchor's chart point, while locked and in view.
 pub fn reticle_at(
     lock: &Lock,
     plane: &engine::contract::sim_config::Plane,

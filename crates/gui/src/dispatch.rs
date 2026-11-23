@@ -10,7 +10,8 @@
 //! | The wheel, + / −, the zoom row | [`Class::Zoom`] | `leaf::zoom` |
 //! | A Slice centre slider, its arrows | [`Class::Control`] | `leaf::control` |
 //! | Tilt's sliders, their arrows, the compass's tilt step and drag | [`Class::Tilt`] | `leaf::tilt`, Lean each axis |
-//! | K, lock here | [`Class::Lock`] | `leaf::lock`, the centre-on-pin setting on |
+//! | K, lock here | [`Class::Lock`] | `leaf::lock`, with the centre-on-pin setting (off by default) |
+//! | The lock badge's centre on pin | [`Class::CentreOnPin`] | `leaf::centre_on_pin` |
 //!
 //! **Not merged: the compass's slice**, `z₀ + a·n` along the drawn normal. CI measured it 1.6·10⁻³ from the slice
 //! leaf's `z₀ + a·off_plane(n)` on a tilted plane, so the drawn normal is not normal to the plane in 8D there: a
@@ -18,21 +19,26 @@
 //! `path_slice_not_merged`), not patched around.
 //!
 //! **What stays in the gui.** Reading the basis into the panel's frame and angles (`manifold_view::View::framed`), and
-//! turning each basis edit about the pin (`manifold_view::about_the_pin`): the gui holds no pin of its own, it derives one
-//! from `z_locked`, and the engine's pin (`engine::path::Pin`) reaches the gui with the state store's adapter
-//! (TASK-M8-125). The plan is unclear here; chose to keep both as the gui's input reading, because moving the pin is that
-//! adapter's and the reading has no engine counterpart.
+//! turning each basis edit about the pin (`manifold_view::about_the_pin`): the gui reads the pin's address from the
+//! snapshot, `z_locked`'s chart point (`manifold_view::chart_coords`), so undo and redo carry it with the lock.
+//!
+//! **The pin centre on pin reads.** The engine's leaf moves `z₀` to the pin's held point (`engine::path::Pin`). The
+//! plan is unclear here; chose to hand it the pin the lock's own leaf returned while the snapshot's plane and lock are
+//! still the ones that leaf made ([`Pinned`]), and otherwise the engine's pin at the address read from the snapshot
+//! (`Pin::at`), because the history restores `SimConfig` alone, so a pin held outside it would go stale on undo, and
+//! the leaf's own pin makes lock then centre on pin the setting's one command bit for bit.
 
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{
-    Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice, SliceFrame, Window, Z_Q3,
+    Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
+    SimConfig, Slice, SliceFrame, Window, Z_Q3,
 };
 use engine::path::leaf::{self, Affine, CentreOnPin, OnLatent, Scale};
-use engine::path::{stop, LatentTilt, TiltMap, TiltSpec, View as PathView};
+use engine::path::leaf::Leaf;
+use engine::path::{stop, LatentTilt, Pin, TiltMap, TiltSpec, View as PathView};
 
 use crate::explore::manifold_view::tilt::Angles;
-use crate::explore::manifold_view::View;
+use crate::explore::manifold_view::{chart_coords, View};
 
 /// What a navigation route asks for, read from its input.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -65,12 +71,52 @@ pub enum Class {
         /// The angles asked for.
         to: Angles,
     },
-    /// The lock at the figure's point `(s, t)`, re-centred on it: the gui's lock is the lock with the centre-on-pin
-    /// setting on (render_gui_spec §G4).
+    /// The lock at the figure's point `(s, t)`: the view not moved, or, with the centre-on-pin setting on, the lock and
+    /// centre on pin in one command (render_gui_spec §G4).
     Lock {
         /// The point.
         at: (f64, f64),
+        /// The centre-on-pin setting, a preference.
+        setting: CentreOnPin,
     },
+    /// The lock badge's centre on pin: the pin brought to the window's centre, on the plane locked at `z_locked`.
+    CentreOnPin {
+        /// The anchor.
+        z_locked: Latent,
+        /// The pin, where the gui holds the lock leaf's own ([`Pinned::pin`]); else the engine's at the anchor's chart
+        /// point.
+        pin: Option<Pin>,
+    },
+}
+
+/// The pin a lock's leaf returned, with the plane and the lock that leaf made: still the pin while the snapshot's are
+/// these, bit for bit.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Pinned {
+    /// The plane the leaf made.
+    pub plane: Plane,
+    /// The lock the leaf made.
+    pub lock: Lock,
+    /// The leaf's pin.
+    pub pin: Pin,
+}
+
+impl Pinned {
+    /// The pin a lock's `leaf` returned, with its plane and lock.
+    pub fn of(leaf: &Leaf) -> Option<Self> {
+        let b = leaf.b();
+        b.pin.map(|pin| Pinned {
+            plane: b.sim.plane.clone(),
+            lock: b.sim.lock.clone(),
+            pin,
+        })
+    }
+
+    /// The pin, where `sim`'s plane and lock are the ones the leaf made.
+    pub fn on(this: Option<&Self>, sim: &SimConfig) -> Option<Pin> {
+        this.filter(|p| p.plane == sim.plane && p.lock == sim.lock)
+            .map(|p| p.pin)
+    }
 }
 
 /// The affine view of `plane` the leaves edit. The plan is unclear here; chose to build it from the plane alone, its
@@ -101,9 +147,14 @@ fn affine(plane: &Plane) -> PathView {
 }
 
 /// The edits `class` records on `plane`: its leaf's, one command, through the stop. None where the leaf refuses it (an
-/// input that is not finite, a target off the frame's hidden dimensions).
+/// input that is not finite, a target off the frame's hidden dimensions, centre on pin with no pin to read).
 pub fn send(plane: &Plane, class: Class) -> Vec<SetField> {
-    let view = affine(plane);
+    leaf(plane, class).map_or_else(Vec::new, |l| l.edits().to_vec())
+}
+
+/// The leaf `class` sends on `plane`, through the stop; none where it refuses the input.
+pub fn leaf(plane: &Plane, class: Class) -> Option<Leaf> {
+    let mut view = affine(plane);
     let gate = stop::affine();
     let leaf = match class {
         Class::Pan { ds, dt } => leaf::pan(&view, ds, dt, &gate),
@@ -130,9 +181,20 @@ pub fn send(plane: &Plane, class: Class) -> Vec<SetField> {
             };
             leaf::tilt(&view, &on, &spec, &gate)
         }
-        Class::Lock { at } => leaf::lock(&view, &Affine, at, CentreOnPin::On, &gate),
+        Class::Lock { at, setting } => leaf::lock(&view, &Affine, at, setting, &gate),
+        Class::CentreOnPin { z_locked, pin } => {
+            view.sim.lock = Lock {
+                locked: true,
+                z_locked,
+            };
+            view.pin = pin.or_else(|| {
+                let (s, t) = chart_coords(plane, &z_locked)?;
+                Some(Pin::at(&view, s, t))
+            });
+            leaf::centre_on_pin(&view, &Affine, &gate)
+        }
     };
-    leaf.map(|l| l.edits().to_vec()).unwrap_or_default()
+    leaf.ok()
 }
 
 /// The one edit `class` records on `plane`, for a route that sends one: the leaf's, or, where the leaf refuses it, the

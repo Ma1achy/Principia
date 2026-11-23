@@ -147,6 +147,10 @@ pub const ZOOM: ScopeId = "zoom";
 pub const UNLOCK: ScopeId = "lock_unlock";
 /// The lock badge's open in Inspector.
 pub const OPEN_INSPECTOR: ScopeId = "lock_inspector";
+/// The lock badge's centre on pin (render_gui_spec §G4).
+pub const CENTRE_ON_PIN: ScopeId = "lock_centre_on_pin";
+/// The setting Centre on pin when locking, beside the anchor.
+pub const CENTRE_ON_PIN_SETTING: ScopeId = "lock_centre_on_pin_setting";
 /// Navigate's reset, the last element of its sub-scope (R-466 K6).
 pub const RESET_NAVIGATE: ScopeId = "reset_navigate";
 /// Slice centre's eight sliders.
@@ -259,7 +263,15 @@ pub fn join(tree: &mut ScopeTree) {
     tree.register(Some(NAVIGATE), Scope::control(UNLOCK, "unlock"));
     tree.register(
         Some(NAVIGATE),
+        Scope::control(CENTRE_ON_PIN, lock::CENTRE_ON_PIN_TEXT),
+    );
+    tree.register(
+        Some(NAVIGATE),
         Scope::control(OPEN_INSPECTOR, "open in Inspector"),
+    );
+    tree.register(
+        Some(NAVIGATE),
+        Scope::control(CENTRE_ON_PIN_SETTING, lock::SETTING_TEXT),
     );
     tree.register(Some(NAVIGATE), Scope::control(RESET_NAVIGATE, reset::RESET));
     for (id, name) in SLIDERS.into_iter().zip(AXES) {
@@ -995,6 +1007,11 @@ pub struct Scratch {
     pub menu_at: Option<(f64, f64)>,
     /// The open console's top edge, this frame: what the basis editors and the popups are held against (R-463 K2).
     pub console_top: Option<f32>,
+    /// The centre-on-pin setting, **Centre on pin when locking** (render_gui_spec §G4): a preference, off by default,
+    /// kept with the GUI's settings, never undoable.
+    pub centre_on_pin: engine::path::leaf::CentreOnPin,
+    /// The pin the last lock's leaf returned, with the plane and lock it made ([`dispatch::Pinned`]).
+    pub pinned: Option<dispatch::Pinned>,
 }
 
 /// Closes the popup of `control`, open, once the console reaches the control: its layer is above the console's, so it
@@ -1038,6 +1055,8 @@ pub struct Out {
     pub refusals: Vec<String>,
     /// The scope the focus goes back to, off a basis editor the console has hidden.
     pub focus: Option<ScopeId>,
+    /// Whether a preference changed, so the GUI's settings are saved.
+    pub save_settings: bool,
 }
 
 impl Out {
@@ -1083,6 +1102,8 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
             out.edit(chart::preset_edit(&snapshot.sim, view, next), None, scratch);
         }
         UNLOCK => lock::unlock(&snapshot.sim.lock, out),
+        CENTRE_ON_PIN => lock::centre_on_pin(&snapshot.sim, scratch, out),
+        CENTRE_ON_PIN_SETTING => lock::toggle_setting(scratch, out),
         OPEN_INSPECTOR => lock::open_inspector(&snapshot.sim.lock, out),
         BUILDER => out.windows.push(Window::ChartBuilder),
         _ => compass::activate(id, scratch),
