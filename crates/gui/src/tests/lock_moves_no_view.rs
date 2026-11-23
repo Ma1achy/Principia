@@ -269,11 +269,18 @@ fn lock_moves_no_view_centre_on_pin() {
         locked.history.undo_depth + 1,
         "one undoable edit"
     );
-    let reticle = reticle_at(&centred.sim.lock, &centred.sim.plane, rig.layout.field)
-        .expect("shown");
-    assert!(reticle.distance(rig.layout.field.center()) < 1e-3, "{reticle:?}");
+    let reticle =
+        reticle_at(&centred.sim.lock, &centred.sim.plane, rig.layout.field).expect("shown");
+    assert!(
+        reticle.distance(rig.layout.field.center()) < 1e-3,
+        "{reticle:?}"
+    );
     rig.undo();
-    assert_eq!(rig.snapshot().sim, locked.sim, "undo restores the lock's view");
+    assert_eq!(
+        rig.snapshot().sim,
+        locked.sim,
+        "undo restores the lock's view"
+    );
     rejects("the view before centre on pin", || {
         assert_eq!(
             chart_coords(&locked.sim.plane, &locked.sim.lock.z_locked),
@@ -374,7 +381,10 @@ fn lock_moves_no_view_the_setting_is_off_by_default() {
     );
     assert_eq!(scratch.centre_on_pin, CentreOnPin::On, "Enter turns it on");
     assert!(out.save_settings, "and saves it");
-    assert!(out.edits.is_empty() && out.commands.is_empty(), "not undoable");
+    assert!(
+        out.edits.is_empty() && out.commands.is_empty(),
+        "not undoable"
+    );
 }
 
 #[test]

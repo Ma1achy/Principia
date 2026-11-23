@@ -33,8 +33,8 @@ use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
     SimConfig, Slice, SliceFrame, Window, Z_Q3,
 };
-use engine::path::leaf::{self, Affine, CentreOnPin, OnLatent, Scale};
 use engine::path::leaf::Leaf;
+use engine::path::leaf::{self, Affine, CentreOnPin, OnLatent, Scale};
 use engine::path::{stop, LatentTilt, Pin, TiltMap, TiltSpec, View as PathView};
 
 use crate::explore::manifold_view::tilt::Angles;
