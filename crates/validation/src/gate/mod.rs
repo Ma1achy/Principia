@@ -158,6 +158,7 @@ pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[
     &reregistration::ReregistrationDoublingGate,
     &reregistration::LogHFalsificationGate,
     &word_calculus::WordTruncationGate,
+    &crate::change10::Change10Gate,
 ];
 
 /// `gate.json`'s `measurement`: what it is measured under, in place of a threshold.

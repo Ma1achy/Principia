@@ -1536,9 +1536,55 @@ pub fn output_dir(root: &Path) -> PathBuf {
         .join("golden")
 }
 
-/// The suites under `<root>/fixtures/golden/`, sorted.
+/// The numeric goldens under `<root>/fixtures/golden/`: a recorded dump, not image cases, each run by its own command
+/// ([`bodyplane`]), so not an image suite.
+pub const NUMERIC: [&str; 1] = ["bodyplane"];
+
+/// The image suites under `<root>/fixtures/golden/`, sorted: every directory but the numeric goldens ([`NUMERIC`]).
 pub fn suites(root: &Path) -> Result<Vec<String>, String> {
-    subdirs(&root.join("fixtures/golden"))
+    Ok(subdirs(&root.join("fixtures/golden"))?
+        .into_iter()
+        .filter(|s| !NUMERIC.contains(&s.as_str()))
+        .collect())
+}
+
+/// The body plane's fixture, as its BASELINES.md row names it.
+pub const BODYPLANE_ROW: &str = "bodyplane/reference";
+
+/// `cargo xtask golden bodyplane [--propose | --record]` (TASK-M3-36): checks the fixture's SHA-256 against its
+/// BASELINES.md row (a fixture changes only with a row naming the PR that changed it), then runs validation's
+/// `golden_bodyplane` binary, which compares the kernel's body plane with the Python reference's recorded output; xtask
+/// reaches validation only as a dev-dependency, so it runs the binary, as `gate` does. `--record` re-records the
+/// fixture with python3 and numpy and skips the hash check, which the new row then has to satisfy.
+pub fn bodyplane(root: &Path, args: &[&str]) -> Result<(), String> {
+    if args != ["--record"] {
+        let baselines = fs::read_to_string(root.join("fixtures/golden/BASELINES.md"))
+            .map_err(|e| format!("BASELINES.md: {e}"))?;
+        let decisions = fs::read_to_string(root.join("docs/history/decisions.md"))
+            .map_err(|e| format!("decisions.md: {e}"))?;
+        let fixture = root.join("fixtures/golden/bodyplane/reference.tsv");
+        check_row(&baselines, &decisions, BODYPLANE_ROW, &fixture)?;
+    }
+    let status = std::process::Command::new(crate::deps::cargo())
+        .args(["run", "--quiet", "--manifest-path"])
+        .arg(root.join("Cargo.toml"))
+        .args([
+            "-p",
+            "validation",
+            "--bin",
+            "golden_bodyplane",
+            "--",
+            "--root",
+        ])
+        .arg(root)
+        .args(args)
+        .status()
+        .map_err(|e| format!("cannot run cargo run -p validation --bin golden_bodyplane: {e}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("golden bodyplane failed ({status})"))
+    }
 }
 
 fn subdirs(dir: &Path) -> Result<Vec<String>, String> {
@@ -1975,6 +2021,7 @@ pub fn cli(root: &Path, args: &[&str]) -> Result<(), String> {
             println!("{report}\nxtask golden: repro written to {}", dir.display());
             Ok(())
         }
+        ["bodyplane", rest @ ..] => bodyplane(root, rest),
         [suite] if !suite.starts_with('-') => run_suite(root, suite, &out).map(|_| ()),
         _ => Err(format!(
             "golden: unrecognised arguments: {}",

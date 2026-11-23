@@ -1,0 +1,8 @@
+{
+  "gate": "change10-rerun",
+  "inputs": ["landing_fix.json", "landing_off.json"],
+  "measurement": {
+    "requirement": "REQ-VAL-036",
+    "ruling": "R-35"
+  }
+}

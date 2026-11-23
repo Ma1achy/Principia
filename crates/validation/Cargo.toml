@@ -59,3 +59,9 @@ test = false
 [[bin]]
 name = "golden_harness"
 test = false
+
+# The body plane's numeric golden against the Python reference's fixture, which `cargo xtask golden bodyplane` runs as a
+# separate process, as it does `gate` (TASK-M3-36).
+[[bin]]
+name = "golden_bodyplane"
+test = false

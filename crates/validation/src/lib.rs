@@ -5,8 +5,10 @@
 pub mod arctan;
 pub mod az;
 pub mod bench;
+pub mod bodyplane;
 pub mod bringup;
 pub mod budget;
+pub mod change10;
 pub mod chazy;
 pub mod compare;
 pub mod control;

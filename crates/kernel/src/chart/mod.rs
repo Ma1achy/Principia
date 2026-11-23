@@ -70,6 +70,7 @@
 //! masses and momenta directly) keeps the defaults, which ignore the parameters, as a [`crate::generated::links::Link`]
 //! written outside the registry does.
 
+pub mod body_plane;
 pub mod burrau;
 pub mod burrau_acute;
 pub mod construction;
@@ -93,6 +94,7 @@ use core::fmt;
 /// test's among them, names the same trait (TASK-M2-32).
 pub use spirv_std::num_traits::Float;
 
+pub use body_plane::BodyPlane;
 pub use burrau::{Burrau, EuclidPlane};
 pub use burrau_acute::{BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz};
 pub use construction::{HeldK, HeldLz, RestStart};
@@ -117,6 +119,8 @@ use spirv_std::num_traits::FloatConst;
 /// and an energy chart under a mapping ([`Mapped`]) is its own chart's. A saved chart ([`Saved`]; R-475) is a chart
 /// of the registry too, not a name of its own: an oblique chart is `Latent`, and a curved one its parent's, under its
 /// saved and new tilts.
+///
+/// [`BodyPlane`] (today's slice) is a `Φ` outside the `Chart` trait, so not here (`body_plane`'s note).
 pub const REGISTRY: [&str; 11] = [
     "Latent",
     "ShapeSphere",
