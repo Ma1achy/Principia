@@ -42,7 +42,7 @@ png = "0.18"
 
 # Under `controls`, each `negative_control!` in engine's tests compiles as a test (R-176).
 [features]
-controls = []
+controls = ["kernel/controls"]
 # DX12, opt-in and off by default (R-862): local testing only, untested in CI. It adds wgpu's DX12 backend, which
 # builds on Windows only, at the version and backends above. engine selects no backend: `validation`'s and `gui`'s
 # features of the same name turn this one on. No required or hosted CI job builds it.

@@ -1101,6 +1101,20 @@ pub const EPS_PHYS: ConstantBuilder = proposed(
     "M2",
 );
 
+/// The lock's tolerance (TASK-M2-65; composition § 17.8; REQ-CHART-158), as `k` in `k·ε_R`, in `‖·‖_phys` (the norm
+/// `ε_phys` is stated in, inverse-encode Part 4): how far the state a locked view shows at its pin may drift from the
+/// pinned state along a locked path where the target holds it, and how close a chart's nearest point to the anchor must
+/// come for the chart to hold it. A calibration: proposed from the pinned state's drift along the gate test's path, on
+/// affine and nonlinear charts, confirmed by the owner at the M2 gate. It reads `ε_phys`'s 64, the lookup's own landing
+/// tolerance in the same norm, until the owner confirms TASK-M2-65's proposal or another value.
+pub const LOCK_TOLERANCE: ConstantBuilder = proposed(
+    "lock_tolerance",
+    64.0,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-158",
+    "M2",
+);
+
 /// Lookup's layer-3 tolerance, decode sanity: the CoM at the origin and `Σpᵢ = 0` within it, as `k` in `k·ε_R` on the
 /// residuals `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x`, `R_x` and `P_x` Part 4's extents (inverse-encode § "Chart-aware
 /// validation", layer 3; REQ-ENC-027): 16, so 16·2⁻⁵² ≈ 3.55e-15 at f64 and 16·2⁻²³ ≈ 1.91e-6 at f32. TASK-M2-19's
@@ -1931,6 +1945,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     SHAPE_VEC_JS_TOL,
     SHAPE_ROUNDTRIP_BOUND,
     EPS_PHYS,
+    LOCK_TOLERANCE,
     DECODE_SANITY,
     ZERO_CLASS,
     LITERATURE_IMPORT_TOL,

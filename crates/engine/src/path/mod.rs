@@ -22,6 +22,7 @@
 //! state blend (TASK-M2-90). The plane rotation, several fields eased together, alignment and retiming are typed and refuse to be shown
 //! ([`PathError::NotBuilt`]) until their stage builds them; no special case is an if-branch outside a family.
 
+pub mod anchor;
 pub mod blend;
 pub mod curved;
 pub mod family;
@@ -45,7 +46,7 @@ pub use curved::{held_k, CurvedTilt, Pivot, SliderSpan, LATENT_SPAN, NU0_SPAN};
 pub use family::{oblique, tilt_tangent, tilt_vector, Constructor};
 pub use kernel::chart::tilt::{TiltMap, TiltSpec};
 pub use lock::{hold_plane, hold_window, ChartLock, Held, Pivoted};
-pub use record::{Align, FrameRecord};
+pub use record::{Align, FrameRecord, Version};
 pub use stop::{Gate, Numbers};
 pub use timing::{Easing, MonotoneTable, Timing};
 
@@ -214,6 +215,9 @@ pub struct View {
     pub tilt: Option<CurvedTilt>,
     /// R-899's pivot record, set by a lock on a tilted curved view; `None` elsewhere.
     pub pivot: Option<Pivot>,
+    /// The lock's anchor, the pinned state stored by value ([`anchor::record`]); `None` while free and on a lock not
+    /// yet recorded.
+    pub anchor: Option<anchor::Anchor>,
 }
 
 /// The window `(c, Q)`, read from a view.
@@ -234,6 +238,7 @@ impl View {
             pin: None,
             tilt: None,
             pivot: None,
+            anchor: None,
         }
     }
 
@@ -246,6 +251,7 @@ impl View {
             pin: None,
             tilt: None,
             pivot: None,
+            anchor: None,
         }
     }
 
@@ -257,6 +263,7 @@ impl View {
             pin: None,
             tilt: None,
             pivot: None,
+            anchor: None,
         })
     }
 
@@ -380,6 +387,28 @@ fn untilted() -> CurvedTilt {
     }
 }
 
+/// The end a slide places: its stored `B`, or, where the followed minimiser ended and `B` is the last frame, that
+/// frame's own end `B`; its anchor dropped, since a frame's placement is not a pinned state of its own.
+fn slide_end(b: &View) -> &View {
+    match &b.map {
+        Map::Blend(blend) => &blend.b,
+        _ => b,
+    }
+}
+
+/// Whether an edit of `family` keeps the lock's recorded anchor: every edit that keeps the pinned state (a pan, a zoom
+/// or tilt about the pin, centre on pin, a save), and none that moves it on purpose (a slice, a slider's move, snap-back)
+/// or sets or clears the lock: after those the anchor is recorded again ([`anchor::record`]), the words the pin then
+/// shows (§ 17.8, "With an excursion").
+fn keeps_anchor(family: &Family) -> bool {
+    match family {
+        Family::Slice { .. } | Family::Control { .. } => false,
+        Family::Cut { label } => matches!(label, CutLabel::CentreOnPin),
+        Family::Stopped { requested, .. } => keeps_anchor(requested),
+        _ => true,
+    }
+}
+
 /// The kernel's refusal of a tilt whose target is not one of the chart's hidden coordinates.
 const TARGET_REFUSED: &str = "a target that is not one of the chart's hidden coordinates";
 
@@ -439,6 +468,12 @@ pub enum CutLabel {
     TiltReplaces,
     /// A fresh oblique plane put in place of the view's.
     Oblique,
+    /// A chart switch under a lock to a target that holds the pinned state: the target re-centred on it, the lock's
+    /// record carried unchanged ([`Segment::locked_switch`]).
+    SwitchHolds,
+    /// A chart switch under a lock to a target that can't hold the pinned state: the target placed at its nearest point
+    /// to it, which its pin shows, labelled; the lock's record carried unchanged for the way back.
+    SwitchSlides,
 }
 
 /// The raw tilt's two forms, each its own route; the targets are the segment's, the same at both ends.
@@ -572,6 +607,40 @@ pub enum Family {
     PlaneRotation,
     /// The state blend, its path named ([`Segment::blend`]): `B` stored, the interior the blend chart at `s`.
     Blend(BlendPath),
+    /// The state blend under a lock whose end `B` can't hold the anchor (§ 17.8; [`Segment::locked_blend`]): the anchor
+    /// slides along `track`, `B` placed at the track's chart point at each frame; the frame at `s` is the blend at
+    /// `s·end`, `end` the track's last frame, 1 unless the followed minimiser ended.
+    Slide {
+        /// The blend's path.
+        path: BlendPath,
+        /// The followed minimiser, frame by frame.
+        track: anchor::Track,
+    },
+    /// An edit of a blend view that goes to both ends (§ 17.8: a tilt mid-morph reaches both endpoint charts, each in its
+    /// own hidden coordinates and tilt map, about the pinned state), `a` end `A`'s family and `b` end `B`'s, the share
+    /// kept: the frame at `u` is the blend of each end's own frame at `u` ([`Segment::on_ends`]).
+    Ends {
+        /// End `A`'s edit.
+        a: Box<Family>,
+        /// End `B`'s edit.
+        b: Box<Family>,
+    },
+    /// A slice of a locked blend view mid-morph (§ 17.8): end `A` edited by `a` (a slice or a slider's move), end `B`
+    /// re-held to the state `A` then shows at the pin ([`Segment::locked_slice`]).
+    LockedSlice {
+        /// End `A`'s edit.
+        a: Box<Family>,
+        /// End `B`'s own edit, in its own hidden coordinates, before it is re-held.
+        b: Box<Family>,
+    },
+    /// The share of a blend view moved from `from` to `to`, its ends kept: a morph continued, or run back
+    /// ([`Segment::share`]).
+    Share {
+        /// The share at `A`.
+        from: f64,
+        /// The share at `B`.
+        to: f64,
+    },
     /// The turn of a blend view about its centre, `s·radians` ([`Segment::turn`]).
     Turn {
         /// The turn, in radians.
@@ -617,6 +686,7 @@ impl Segment {
         let b = View {
             map: a.map.clone(),
             sim: apply(&a.sim, &edits),
+            anchor: a.anchor.filter(|_| keeps_anchor(&family)),
             ..a.clone()
         };
         Segment {
@@ -722,8 +792,11 @@ impl Segment {
             Family::Cut { .. } | Family::Commit => return Ok(a.clone()),
             Family::WindowEase => return Err(PathError::NotBuilt("several fields eased together")),
             Family::PlaneRotation => return Err(PathError::NotBuilt("the plane rotation")),
-            Family::Blend(_) | Family::Turn { .. } => {
+            Family::Blend(_) | Family::Turn { .. } | Family::Slide { .. } => {
                 unreachable!("a blend's frame is blend_frame's")
+            }
+            Family::Ends { .. } | Family::LockedSlice { .. } | Family::Share { .. } => {
+                return Err(PathError::WrongMap)
             }
         };
         if self.timing.retime.is_some() {
@@ -735,6 +808,7 @@ impl Segment {
             pin,
             tilt,
             pivot: a.pivot,
+            anchor: a.anchor.filter(|_| keeps_anchor(&self.family)),
         };
         Ok(match self.family {
             Family::Slice { .. } | Family::Control { .. } => View {
@@ -748,12 +822,24 @@ impl Segment {
     /// The frame at `0 < s < 1` where the segment is a blend's, `None` elsewhere: the blend chart at `s`
     /// ([`Family::Blend`]), or an edit of a blend view, a pan, zoom or turn at its scaled parameter reaching both ends.
     fn blend_frame(&self, s: f64) -> Result<Option<View>, PathError> {
-        let blended = matches!(self.family, Family::Blend(_) | Family::Turn { .. })
-            || matches!(self.a.map, Map::Blend(_));
+        let blended = matches!(
+            self.family,
+            Family::Blend(_) | Family::Turn { .. } | Family::Slide { .. }
+        ) || matches!(self.a.map, Map::Blend(_));
         if blended && self.timing.retime.is_some() {
             return Err(PathError::NotBuilt("retiming"));
         }
         let blend = match (&self.family, &self.a.map) {
+            (Family::Slide { path, track }, _) => {
+                let at = s * track.end();
+                let end = anchor::placed(slide_end(&self.b), track.pin, track.at(at));
+                return Ok(Some(View::blend(blend::Blend::new(
+                    self.a.clone(),
+                    end,
+                    *path,
+                    at,
+                )?)));
+            }
             (Family::Blend(path), _) => {
                 return Ok(Some(View::blend(blend::Blend::new(
                     self.a.clone(),
@@ -768,6 +854,21 @@ impl Segment {
             _ => return Ok(None),
         };
         let at = match &self.family {
+            Family::Ends { a, b } => {
+                let ea =
+                    Self::reach(&blend.a, a)?.ok_or(PathError::NotBuilt("this edit of an end"))?;
+                let eb =
+                    Self::reach(&blend.b, b)?.ok_or(PathError::NotBuilt("this edit of an end"))?;
+                blend.with_ends(ea.frame(s)?, eb.frame(s)?)
+            }
+            Family::LockedSlice { a, b } => {
+                let ea =
+                    Self::reach(&blend.a, a)?.ok_or(PathError::NotBuilt("this edit of an end"))?;
+                let eb =
+                    Self::reach(&blend.b, b)?.ok_or(PathError::NotBuilt("this edit of an end"))?;
+                blend.with_ends(ea.frame(s)?, eb.frame(s)?).reholding(true)
+            }
+            Family::Share { from, to } => blend.at(from + s * (to - from))?,
             Family::Pan { ds, dt } => blend.pan(s * ds, s * dt)?,
             Family::Zoom { octaves } => blend.zoom(family::octave_factor(s * octaves)?)?,
             Family::ZoomFactor { k } => blend.zoom(k.powf(s))?,
@@ -864,6 +965,183 @@ impl Segment {
             edits: Vec::new(),
             timing: Timing::default(),
         }
+    }
+
+    /// The state blend from the locked view `a` to `b` on `path`, under the lock (§ 17.8; the chart-space model's
+    /// Theorems 7 and 8): `b` re-centred on `a`'s recorded anchor ([`anchor::recentre`]). Where it holds the anchor, a
+    /// blend whose frames show the stored words at the pin. Where it can't, the anchor slides ([`Family::Slide`]) over
+    /// `frames` frames: `B` the end placed at the followed minimiser, carrying its own pinned state as its anchor, or,
+    /// where the followed minimiser ends, the frame at the last `s` where it exists, a blend view pinned where `a` is,
+    /// with no anchor until the user goes on, which re-pins ([`anchor::record`]). `norm` is lookup's `‖·‖_phys`.
+    pub fn locked_blend<L, N>(
+        a: &View,
+        b: &View,
+        path: BlendPath,
+        leaves: &L,
+        norm: N,
+        frames: usize,
+    ) -> Result<(Self, anchor::LockedEnd), PathError>
+    where
+        L: blend::Leaves,
+        N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+    {
+        match anchor::recentre(a, b, leaves, norm, frames)? {
+            anchor::Recentred::Holds(b) => Ok((Self::blend(a, &b, path), anchor::LockedEnd::Holds)),
+            anchor::Recentred::Slides { end, track } => {
+                let (pin, _) = anchor::pin_address(a).ok_or(LockError::NotLocked)?;
+                let last = track.end();
+                let x = track.at(last);
+                let label = match track.ended {
+                    true => anchor::LockedEnd::Ended { s: last },
+                    false => anchor::LockedEnd::Slides {
+                        not_nearest: track.not_nearest(1.0),
+                    },
+                };
+                let placed = anchor::placed(&end, pin, x);
+                let b = match track.ended {
+                    false => {
+                        let mut b = placed;
+                        b.sim.lock = a.sim.lock.clone();
+                        b.pin = Some(Pin::at(&b, pin[0], pin[1]));
+                        let shown = anchor::decoded(anchor::state_at(&b, leaves, pin)?)?;
+                        b.anchor = Some(anchor::Anchor::of(&shown.ic, false));
+                        b
+                    }
+                    true => {
+                        let mut v = View::blend(blend::Blend::new(a.clone(), placed, path, last)?);
+                        v.pin = a.pin;
+                        v
+                    }
+                };
+                let seg = Segment {
+                    a: a.clone(),
+                    b,
+                    family: Family::Slide { path, track },
+                    edits: Vec::new(),
+                    timing: Timing::default(),
+                };
+                Ok((seg, label))
+            }
+        }
+    }
+
+    /// A chart switch under a lock (§ 17.8): the named target `b` re-centred on the pinned state, its pivot its own, the
+    /// lock's record (the anchor, the pin's address) carried from `a` unchanged. Where `b` holds the pinned state, a cut
+    /// labelled `SwitchHolds`, its pin showing the stored words; where it can't, `b` placed at its nearest point to it
+    /// (§ 17.8's definition), a cut labelled `SwitchSlides`, its pin showing that point and the record kept, marked
+    /// `slid`, so a switch back finds it. A switch has no interior, so no track is followed.
+    pub fn locked_switch<L, N>(a: &View, b: &View, leaves: &L, norm: N) -> Result<Self, PathError>
+    where
+        L: blend::Leaves,
+        N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+    {
+        let record = a.anchor.ok_or(PathError::NotBuilt(
+            "a locked chart switch from a view with no recorded anchor",
+        ))?;
+        let (pin, _) = anchor::pin_address(a).ok_or(LockError::NotLocked)?;
+        let target = View {
+            pivot: None,
+            anchor: None,
+            ..b.clone()
+        };
+        let (mut to, label) = match anchor::recentre(a, &target, leaves, &norm, 2) {
+            Ok(anchor::Recentred::Holds(v)) => (v, CutLabel::SwitchHolds),
+            Ok(anchor::Recentred::Slides { end, .. }) => {
+                let found = anchor::nearest(&end, leaves, pin, &record)?;
+                (anchor::place(&end, pin, found.x), CutLabel::SwitchSlides)
+            }
+            Err(e) => return Err(e),
+        };
+        to.sim.lock = a.sim.lock.clone();
+        to.pin = Some(match pin == [0.5, 0.5] {
+            true => Pin::Centre,
+            false => Pin::at(&to, pin[0], pin[1]),
+        });
+        to.anchor = Some(anchor::Anchor {
+            slid: label == CutLabel::SwitchSlides,
+            ..record
+        });
+        Ok(Self::cut(a, to, label))
+    }
+
+    /// The edit of the blend view `v` that goes to both ends (§ 17.8): `ea` an edit of its end `A`, `eb` of its end `B`,
+    /// each that end's own operation (a tilt about the pin in its own hidden coordinates and tilt map, a pan, a zoom);
+    /// `B` the blend at the same share of their ends. [`PathError::Join`] where an edit does not start at its end, bit for
+    /// bit; [`PathError::WrongMap`] off a blend view.
+    pub fn on_ends(v: &View, ea: &Segment, eb: &Segment) -> Result<Self, PathError> {
+        let Map::Blend(blend) = &v.map else {
+            return Err(PathError::WrongMap);
+        };
+        if ea.a.bytes() != blend.a.bytes() || eb.a.bytes() != blend.b.bytes() {
+            return Err(PathError::Join);
+        }
+        let to = blend.with_ends(ea.b.clone(), eb.b.clone());
+        Ok(Self::navigated(
+            v,
+            Family::Ends {
+                a: Box::new(ea.family.clone()),
+                b: Box::new(eb.family.clone()),
+            },
+            to,
+        ))
+    }
+
+    /// A slice of the locked blend view `v` mid-morph (§ 17.8): `ea`, a slice or a slider's move of its end `A`, `eb` the
+    /// same slice of end `B` in its own hidden coordinates, and `B` then re-held at every frame to the state `A` shows at
+    /// the pin ([`anchor::rehold`]); `B` the blend with both ends edited and `B` re-held, both ends' anchors the state
+    /// `A` shows at the pin. [`PathError::Join`] where an edit does not start at its end; [`PathError::WrongMap`] off a
+    /// blend view.
+    pub fn locked_slice<L: blend::Leaves>(
+        v: &View,
+        ea: &Segment,
+        eb: &Segment,
+        leaves: &L,
+    ) -> Result<Self, PathError> {
+        let Map::Blend(blend) = &v.map else {
+            return Err(PathError::WrongMap);
+        };
+        if ea.a.bytes() != blend.a.bytes() || eb.a.bytes() != blend.b.bytes() {
+            return Err(PathError::Join);
+        }
+        let slices = |f: &Family| matches!(f, Family::Slice { .. } | Family::Control { .. });
+        if !slices(&ea.family) || !slices(&eb.family) {
+            return Err(PathError::NotBuilt(
+                "a locked mid-morph slice of another edit",
+            ));
+        }
+        let a = anchor::record(&ea.b, leaves)?;
+        let (mut b, holds) = anchor::rehold(&a, &eb.b, leaves, blend.s())?;
+        // Where `B` can't hold `A`'s pinned state it carries no anchor: the frame slides, never claiming the words.
+        if holds {
+            b.anchor = a.anchor;
+            b.sim.lock = a.sim.lock.clone();
+            b.pin = a.pin;
+        }
+        Ok(Self::navigated(
+            v,
+            Family::LockedSlice {
+                a: Box::new(ea.family.clone()),
+                b: Box::new(eb.family.clone()),
+            },
+            blend.with_ends(a, b),
+        ))
+    }
+
+    /// The share of the blend view `v` moved to `to`, its ends kept: the morph continued from its parameter, or run back
+    /// to `A` at `to = 0`, whose frame is end `A`'s own pixels, the end rule. [`PathError::WrongMap`] off a blend view.
+    pub fn share(v: &View, to: f64) -> Result<Self, PathError> {
+        let Map::Blend(blend) = &v.map else {
+            return Err(PathError::WrongMap);
+        };
+        let to = parameter(to)?;
+        Ok(Self::navigated(
+            v,
+            Family::Share {
+                from: blend.s(),
+                to,
+            },
+            blend.at(to)?,
+        ))
     }
 
     /// The edit `family` of the blend view `a`, its `B` the blend `to`.
@@ -1329,6 +1607,7 @@ impl Segment {
                 pin: a.pin,
                 tilt: None,
                 pivot: a.pivot,
+                anchor: a.anchor,
             },
             family: Family::Commit,
             edits: Vec::new(),

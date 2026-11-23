@@ -2569,6 +2569,89 @@ path, since the anchor doesn't; what changes is the chart's tangent plane, per f
 morph, the same first-order part transported above, so a deep frame is the linearisation of the coarse frame over it. CPU work per
 frame, f64, not built, owed to the M6 task.
 
+**As built (TASK-M2-65; `engine::path::anchor`).** The anchor is the signed starting state, its fifteen `(m, r, p)` words,
+recorded from the state the pinned pixel shows (`anchor::record`); a locked view with a recorded anchor shows those words
+at its pin by a comparison of the address (the select), as a view on its own and as either end of a path, so the end rule
+and the anchor rule agree there. Each end of a locked morph is re-centred on the anchor; between them a pixel's offset
+from its end's pin state is taken by the log map (on `n̂`, additively on `μ` and the momenta), its first-order part
+carried along the geodesic between the two ends' tangent frames (§ 17.7's principal angles by `atan2`, the in-plane
+rotation the short way, an antipodal pair turned through a direction orthogonal to both, the triangular factor's diagonal
+interpolated geometrically, so the area at the pin moves monotonically from A's to B's), and only the remainder blended.
+Measured (`path_lock_centre_area`): the area factor at the pin within 10⁻⁶ of the geometric interpolation of the ends' on
+swapped and orthogonal planes; the free block line on swapped planes reaches area 0 at `s = ½`.
+
+**The nearest point in B, defined (TASK-M2-65; for physics review).**
+
+- *The anchor's coordinates.* The anchor `a` is read as the blend reads a state (§ 17.2): its blocks `(μ₁, μ₂)`, `n̂`,
+  `p_ρ`, `p_λ` off its canonical form.
+- *B's states at the pin.* The states B's view shows at the pin as its placement moves and nothing else does: on a latent
+  B, its centre `z₀`, all eight controls; on a kernel map, the chart point placed at the pin (the window's centre and, on a
+  tilted view, the pin's held point, about which the tilt turns). B's hidden coordinates are as B's view holds them, its
+  tilt kept: a lock moves no key.
+- *The distance.* `d(y, a)² = ‖μ_y − μ_a‖² + ‖n̂_y − n̂_a‖² + ‖p_ρ,y − p_ρ,a‖² + ‖p_λ,y − p_λ,a‖²`, unweighted, the shape by
+  its chord. Where B's placement moves the blocks it lets vary independently of those it holds fixed (the mass simplex
+  at rest: masses free, momenta held at 0), whatever B lets vary takes the anchor's value where B reaches it and what B
+  holds fixed is eased to B's value. On a chart whose axes couple a mass or the shape with a momentum (most mixed charts,
+  and the constructed charts below) the unweighted sum trades them off instead; weighting the terms in order, shape and
+  masses first, would keep them, and is the owner's choice.
+- *Holding.* B holds the anchor where its own state at the pin, read without the select, is within the lock's tolerance
+  of it in `‖·‖_phys`: on a kernel map at its nearest point, on a latent B at the anchor's latent point. B is then placed
+  there and the pin shows the stored words on every frame. A nonlinear start's pinned state after an excursion has no
+  latent point here (`z_locked` is stale), so a latent target refuses it.
+- *The slide.* Otherwise, by Theorem 8, the frame at `s` shows at the pin `block_line(a, B_x(s), s)`, `B_x` B placed at
+  `x`, and `x(s)` is a local minimiser of `d(block_line(a, B_x, s), a)` over B's placement. The shape term of that distance
+  is the chord of `s·θ`, so the shape's weight against the masses' and momenta's falls as `s` grows and the minimiser can
+  move with `s`. `x(s)` is taken at the first frame, `s = 1/64` (so the track's start depends on the frame count; its
+  limit as `s → 0`, the minimiser of `‖Δμ‖² + θ² + ‖Δp‖²` with the shape by its arc, would not), by the solver core's
+  restart rule, its seeds the window's point at the
+  pin, its centre, its edge midpoints and its corners (least residual, the lowest index on a tie), and followed from frame
+  to frame by the solver core's continued solve, held to G8's continuity criterion inside each frame. It is continuous by
+  that test; it is unique up to the restart's tie rule at the first frame. Two limits: "nearest" is nearest among the
+  minima the seeds reach, and the seeds are B's visible window's points, so another window of B can give another
+  nearest point for the same anchor; and the track is solved at the frames `s = k/64`, a frame between two of them
+  placing B on the straight line between their chart points, continuous but not itself a minimiser.
+- *A slice mid-morph.* B is re-solved at each frame of the slice from its own placement: where its nearest point to A's
+  new pinned state is within the lock's tolerance (a block distance) it holds it, and the pin shows the words; otherwise
+  it is placed at the slide's local minimiser at the blend's share, so the slide continues through the slice and no frame
+  claims to hold a state B can't. A morph resumed from a frame inside the slice re-solves B at each frame's own share, so
+  the slide continues there too, and the frame is a function of its record alone. A morph resumed from a paused slide
+  frame, or from the slice's end, holds B at the chart point it was paused at: its `s = 1` is
+  `block_line(a, B_{x(s₀)}, 1)`, B's state at that point, not the uninterrupted track's `x(1)`.
+- *`s = 1`.* Where no cut locus lies on the path, B's nearest point: the restart rule's minimiser at `s = 1`, which the
+  followed one equals to the solve's precision (measured: chart points 3·10⁻¹⁰ apart on the rest chart, 1.5·10⁻⁸ on the
+  `(ν, K)` Burrau chart, against an agreement of `10⁻⁶` of the window). Elsewhere the followed minimiser, labelled.
+- *"Not nearest".* A frame is labelled "not nearest" where the restart rule's minimiser at that frame has a residual below
+  the followed one's by more than the lock's tolerance. The margin is the lock's tolerance's value read as a residual in the
+  distance above (a block distance, not `‖·‖_phys`, though both are `ε`-scaled numbers on the canonical state); there is
+  no other constant. Measured: on the constructed cut-locus chart the anchor is 2.56 from the followed point and 1.66
+  from B's nearest in `‖·‖_phys` at `s = 1`, so any margin of rounding size labels the same frames there.
+- *"The followed system ends here".* The followed minimiser ends where the solver core's continued solve to the next frame
+  reports it ended: its continuity test fails at every depth (a jump that does not shrink as the frame halves), or a probe
+  inside the frame fails to converge (at a fold, or at the edge of B's states). Any failure of that solve fires the
+  label, a numerical one included, so the label does not tell a fold or an edge from a solver failure. The path stops at the last frame where it
+  exists, a blend view pinned where A is, with no recorded anchor; going on is the user's choice, which records a new
+  anchor at the stopped frame's pin (`anchor::record`).
+- *The pairs.* None of G9's pairs crosses a cut locus or ends: the slides to the mass simplex at rest and to the `(ν, K)`
+  Burrau chart follow one minimiser to `s = 1`, unlabelled. So both are run on constructed charts
+  (`path_lock_centre_slide_cut_locus`, `_ends`): one whose two wells swap at `s ≈ 0.70`, the followed one labelled "not
+  nearest" from there, and one whose minimiser runs into the edge of its states at `s ≈ 0.78`, where the path stops.
+- *The numerics.* Slopes by central differences, step `ε^{1/3}` of the window's half-width; first-order optimality
+  `10⁻⁸`, since the slopes are good to about `ε^{2/3}`; the continuity test's floor `10⁻⁷` and agreement `10⁻⁶` of the
+  window, its ratio 0.6 and depth 32. Both were set after failing runs (at `10⁻¹⁰` and `10⁻⁹`), from the slopes'
+  precision; a jump smaller than `10⁻⁷` of the window passes as continuous.
+
+**What `z_locked` still serves beside the stored state.** `z_locked` is the anchor's latent point where it has one. It
+re-bases the sliders (each slider's ghost mark and `δ = z₀ − z_locked`); snap-back re-solves the centre so the pin is
+`z_locked` again, and the words then recorded are the first anchor's bit for bit on the latent map; a chart-mode switch or
+morph to a latent chart re-centres that end so its pin is the anchor's latent point (`z_locked`, or the pin's held latent
+point after an excursion). On a nonlinear chart `z_locked` decodes the anchor only within `ε_phys`; what the pin shows is
+the stored state.
+
+**A tilt or slice mid-morph** (as built): a tilt reaches each end as that end's own tilt about the pin, in its own hidden
+coordinates and tilt map; a slice slices each end in its own hidden coordinates, then re-solves B's placement at every
+frame so B holds A's new pinned state; the morph resumes from its share. The return to `s = 0` is A's own frame, so it is
+the same tilt and slice applied to A directly, bit for bit (`path_lock_round_trip`).
+
 ### 17.9 Path shape and timing
 
 **Easing** is R-576's, untouched: `s = ease_k(u)`. **Path shape is separate**, a field of the segment beside easing and

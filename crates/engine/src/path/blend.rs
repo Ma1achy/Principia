@@ -63,6 +63,7 @@ use kernel::decode::{Decoded, Ic};
 use kernel::generated::links::Selection;
 use kernel::shape::shape;
 
+use super::anchor::{self, Anchor, OffsetForm};
 use super::{BlendPath, KernelMap, Map, PathError, Segment, View};
 use crate::contract::sim_config::Plane;
 
@@ -388,6 +389,16 @@ pub enum Forward {
     Blank(Blank),
 }
 
+/// A locked frame's pixel, before the state is built.
+enum Locked {
+    /// An end has no state.
+    Blank(Blank),
+    /// The select: the stored words.
+    Select(Box<Decoded<f64>>),
+    /// The blocks of the offset form or the slide's pin state, and the great circle's tie.
+    Blocks(Blocks, bool),
+}
+
 /// Whether a tagged end's state blends (§ 17.11's table): `M01_TINY` and `NO_QUALIFYING_SEED` never;
 /// `INVARIANT_INFEASIBLE` only off its overflow arm, where some momentum is not 0 (the module's note).
 fn blends(tag: Option<Degenerate>, ic: &Ic<f64>) -> bool {
@@ -470,8 +481,9 @@ pub fn state_of(blocks: &Blocks) -> (Decoded<f64>, bool) {
 // ── The blend chart ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The blend chart: the state blend of two views at the share `s` on a named path, turned by `turn` about the window's
-/// centre. An end may itself be a blend.
-#[derive(Clone, Debug, PartialEq)]
+/// centre. An end may itself be a blend. Two blends are equal by their ends, path, share, turn, lock and re-hold, not by
+/// the re-held `B` cached from a decode.
+#[derive(Clone, Debug)]
 pub struct Blend {
     /// The view at `s = 0`.
     pub a: View,
@@ -481,19 +493,152 @@ pub struct Blend {
     pub path: BlendPath,
     s: f64,
     turn: f64,
+    lock: Option<BlendLock>,
+    /// `B` is re-placed, at each decode, to hold the state `A` shows at the pin: a mid-morph slice under a lock moves
+    /// `A`'s pinned state, and `B` follows it ([`super::Segment::locked_slice`]).
+    rehold: bool,
+    /// `B` as re-placed, once per blend: computed at the first decode, with that decode's leaves, and kept for the
+    /// blend's later decodes, which are expected to pass the same leaves (a chart's parameters, from the caller).
+    reheld: std::sync::OnceLock<Result<(View, bool), PathError>>,
+}
+
+impl PartialEq for Blend {
+    fn eq(&self, other: &Self) -> bool {
+        self.a == other.a
+            && self.b == other.b
+            && self.path == other.path
+            && self.s.to_bits() == other.s.to_bits()
+            && self.turn.to_bits() == other.turn.to_bits()
+            && self.lock == other.lock
+            && self.rehold == other.rehold
+    }
+}
+
+/// A blend under a lock (§ 17.8): read from its ends, never stored apart from them. `A` is locked with a recorded anchor;
+/// `B` holds it where it carries the same anchor (re-centred on it), and otherwise is the slide's placement.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct BlendLock {
+    /// The pin's address.
+    pub pin: [f64; 2],
+    /// `A`'s anchor; `None` where `B` is re-held ([`Blend::reheld`]) and `A`'s pinned state moves with the frame: then the
+    /// state `A` shows at the pin.
+    pub anchor: Option<Anchor>,
+    /// Both ends hold the anchor: the pin takes the stored words.
+    pub hold: bool,
+    /// The offset form and the select.
+    pub form: OffsetForm,
+}
+
+impl BlendLock {
+    /// The lock of a blend from `a` to `b`: `None` unless `a` is locked with a recorded anchor, or locked with `B`
+    /// re-held to it (`rehold`).
+    fn of(a: &View, b: &View, rehold: bool) -> Option<Self> {
+        if !a.sim.lock.locked || (a.anchor.is_none() && !rehold) {
+            return None;
+        }
+        let (pin, _) = super::anchor::pin_address(a)?;
+        // A re-held `B`'s hold is decided at its decode ([`Blend::holds`]), not here.
+        let hold = !rehold
+            && a.anchor.is_some_and(|anchor| {
+                b.anchor.is_some_and(|x| x.same_state(&anchor) && !x.slid) && b.sim.lock.locked
+            });
+        Some(BlendLock {
+            pin,
+            anchor: a.anchor.filter(|_| !rehold),
+            hold,
+            form: OffsetForm::default(),
+        })
+    }
 }
 
 impl Blend {
     /// The blend of `a` and `b` at `s` on `path`, untilted. `s` is canonicalised (`−0` is `+0`); NaN or outside
-    /// `[0, 1]` is refused ([`PathError::Parameter`]).
+    /// `[0, 1]` is refused ([`PathError::Parameter`]). Where `a` is locked with a recorded anchor the blend is locked
+    /// ([`BlendLock`]): its pixels take the offset form about the pin.
     pub fn new(a: View, b: View, path: BlendPath, s: f64) -> Result<Self, PathError> {
         Ok(Blend {
+            lock: BlendLock::of(&a, &b, false),
             a,
             b,
             path,
             s: super::parameter(s)?,
             turn: 0.0,
+            rehold: false,
+            reheld: Default::default(),
         })
+    }
+
+    /// This blend with its ends `a` and `b` in place of its own, its share, path and turn kept, its lock read again.
+    pub fn with_ends(&self, a: View, b: View) -> Self {
+        Blend {
+            a,
+            b,
+            reheld: Default::default(),
+            ..self.clone()
+        }
+        .relocked()
+    }
+
+    /// This blend with `B` re-held to the state `A` shows at the pin (`true`), or not.
+    pub fn reholding(mut self, rehold: bool) -> Self {
+        self.rehold = rehold;
+        self.reheld = Default::default();
+        self.relocked()
+    }
+
+    /// Whether the frame holds the pinned state: its pin shows the stored words. A re-held `B`'s hold is its re-solve's
+    /// (`anchor::rehold`), read through `leaves`; `false` on a free blend.
+    pub fn holds<L: Leaves>(&self, leaves: &L) -> Result<bool, PathError> {
+        let Some(lock) = &self.lock else {
+            return Ok(false);
+        };
+        let held = self.end_b(leaves)?.1;
+        #[cfg(feature = "controls")]
+        let held = held || lock.form.forced_hold;
+        let _ = lock;
+        Ok(held)
+    }
+
+    /// Whether `B` is re-held to `A`'s pinned state.
+    pub fn rehold(&self) -> bool {
+        self.rehold
+    }
+
+    /// `B` as the frame reads it, and whether it holds the pinned state: re-held to `A`'s pinned state where
+    /// [`Blend::rehold`] ([`anchor::rehold`]), else `B` and the lock's own hold.
+    fn end_b<L: Leaves>(&self, leaves: &L) -> Result<(View, bool), PathError> {
+        if !self.rehold {
+            return Ok((self.b.clone(), self.lock.is_some_and(|l| l.hold)));
+        }
+        self.reheld
+            .get_or_init(|| anchor::rehold(&self.a, &self.b, leaves, self.s))
+            .clone()
+    }
+
+    /// This blend's lock read again from its ends, after an edit of them moved the pin; its form kept.
+    fn relocked(mut self) -> Self {
+        self.reheld = Default::default();
+        let form = self.lock.map(|l| l.form);
+        self.lock = BlendLock::of(&self.a, &self.b, self.rehold).map(|mut l| {
+            l.form = form.unwrap_or_default();
+            l
+        });
+        self
+    }
+
+    /// The lock, `None` on a free blend.
+    pub fn lock(&self) -> Option<&BlendLock> {
+        self.lock.as_ref()
+    }
+
+    /// This blend with its lock's offset form set to `form`: a control's switch (the select removed, offsets blended
+    /// linearly).
+    #[cfg(feature = "controls")]
+    pub fn with_form(mut self, form: OffsetForm) -> Self {
+        if let Some(lock) = &mut self.lock {
+            lock.form = form;
+        }
+        self
     }
 
     /// The share `s`.
@@ -507,7 +652,20 @@ impl Blend {
     }
 
     /// This blend at another share.
+    ///
+    /// A re-held `B` (a frame inside a slice mid-morph) depends on the share on a sliding pair, so its cached re-solve is
+    /// dropped: the blend at `s` re-solves at `s`, whether or not this blend was decoded first.
     pub fn at(&self, s: f64) -> Result<Self, PathError> {
+        Ok(Blend {
+            s: super::parameter(s)?,
+            reheld: Default::default(),
+            ..self.clone()
+        })
+    }
+
+    /// A control's switch: the blend at `s` keeping this blend's cached re-solve, as `at` did before it dropped it.
+    #[cfg(feature = "controls")]
+    pub fn at_keeping_cache(&self, s: f64) -> Result<Self, PathError> {
         Ok(Blend {
             s: super::parameter(s)?,
             ..self.clone()
@@ -540,13 +698,7 @@ impl Blend {
         leaves: &L,
         address: [f64; 2],
     ) -> Result<Pixel, PathError> {
-        match &view.map {
-            Map::Blend(blend) => blend.decode(leaves, address),
-            _ => Ok(Pixel::State {
-                decoded: Box::new(leaves.decode(view, address)?),
-                flags: Flags::default(),
-            }),
-        }
+        anchor::state_at(view, leaves, address)
     }
 
     /// Both ends' states at the frame's address, and whether either end's own pixel lies on an antipodal tie (a
@@ -587,6 +739,19 @@ impl Blend {
                 }),
             });
         }
+        if let Some(lock) = &self.lock {
+            return Ok(match self.locked(lock, leaves, address)? {
+                Locked::Blank(blank) => Forward::Blank(blank),
+                Locked::Select(d) => Forward::Point {
+                    blocks: Blocks::of(&d.ic),
+                    antipodal_tie: false,
+                },
+                Locked::Blocks(blocks, antipodal_tie) => Forward::Point {
+                    blocks,
+                    antipodal_tie,
+                },
+            });
+        }
         let ([a, b], ends_tie) = match self.carried(leaves, address)? {
             Ok(states) => states,
             Err(blank) => return Ok(Forward::Blank(blank)),
@@ -615,6 +780,14 @@ impl Blend {
             1.0 => return Self::end_pixel(&self.b, leaves, self.address(address)),
             _ => {}
         }
+        if let Some(lock) = &self.lock {
+            if let Locked::Select(decoded) = self.locked(lock, leaves, address)? {
+                return Ok(Pixel::State {
+                    decoded,
+                    flags: Flags::default(),
+                });
+            }
+        }
         Ok(match self.forward(leaves, address)? {
             Forward::Blank(blank) => Pixel::Blank(blank),
             Forward::Point {
@@ -633,6 +806,60 @@ impl Blend {
         })
     }
 
+    /// The locked frame's pixel at `address`, `0 < s < 1` (§ 17.8): at the pin, the stored words where both ends hold
+    /// the anchor (the select), else the frame's pin state, `block_line(a, b, s)` of the ends' pin states; elsewhere the
+    /// offset form about the frame's pin state ([`anchor::offset_pixel`]). Blank where an end has no state at the
+    /// pixel, at its pin or at its slope's probes.
+    fn locked<L: Leaves>(
+        &self,
+        lock: &BlendLock,
+        leaves: &L,
+        address: [f64; 2],
+    ) -> Result<Locked, PathError> {
+        let at = self.address(address);
+        let pin = lock.pin;
+        let blank = |end: End| {
+            Locked::Blank(Blank {
+                end,
+                why: NoState::Blank,
+            })
+        };
+        let a_pin = match anchor::state_at(&self.a, leaves, pin)? {
+            Pixel::State { decoded, .. } => *decoded,
+            Pixel::Blank(_) => return Ok(blank(End::A)),
+        };
+        let pinned = lock.anchor.unwrap_or_else(|| Anchor::of(&a_pin.ic, false));
+        let (end_b, holds) = self.end_b(leaves)?;
+        #[cfg(feature = "controls")]
+        let holds = holds || lock.form.forced_hold;
+        let xa = pinned.blocks();
+        let xb = match holds {
+            true => xa,
+            false => match anchor::state_at(&end_b, leaves, pin)? {
+                Pixel::State { decoded, .. } => Blocks::of(&decoded.ic),
+                Pixel::Blank(_) => return Ok(blank(End::B)),
+            },
+        };
+        let (base, tie) = match holds {
+            true => (xa, false),
+            false => anchor::slid(&xa, &xb, self.s),
+        };
+        if at.map(f64::to_bits) == pin.map(f64::to_bits) {
+            return Ok(match holds && lock.form.select {
+                true => Locked::Select(Box::new(anchor::selected(&pinned, &a_pin))),
+                false => Locked::Blocks(base, tie),
+            });
+        }
+        let Some(oa) = anchor::end_offsets(&self.a, leaves, pin, xa, at)? else {
+            return Ok(blank(End::A));
+        };
+        let Some(ob) = anchor::end_offsets(&end_b, leaves, pin, xb, at)? else {
+            return Ok(blank(End::B));
+        };
+        let (blocks, _) = anchor::offset_pixel(&oa, &ob, &base, pin, at, self.s, lock.form);
+        Ok(Locked::Blocks(blocks, tie))
+    }
+
     // ── Navigation: one pixel-space edit on both ends ──────────────────────────────────────────────────────────────
 
     /// The pan by `(ds, dt)` of the screen: each end panned by the pan turned by `turn` (the module's note).
@@ -648,7 +875,8 @@ impl Blend {
             a: pan_end(&self.a, ds, dt)?,
             b: pan_end(&self.b, ds, dt)?,
             ..self.clone()
-        })
+        }
+        .relocked())
     }
 
     /// The zoom by the factor `k` about the centre: each end's ([`Segment::zoom_factor`]).
@@ -657,7 +885,8 @@ impl Blend {
             a: zoom_end(&self.a, k)?,
             b: zoom_end(&self.b, k)?,
             ..self.clone()
-        })
+        }
+        .relocked())
     }
 
     /// The turn by `radians` about the centre, added to the blend's own.
