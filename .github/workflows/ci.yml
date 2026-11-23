@@ -68,6 +68,10 @@ jobs:
       - run: cargo xtask lint no-alloc
       - name: Every test has a registered negative control
         run: cargo xtask controls --list
+      # A struct field gated on the kernel's `controls` feature must not break a crate built with that feature on
+      # and its own off: cargo unifies the kernel's features, which is how main's gpu-kernel controls step went red.
+      - name: The engine builds with the kernel's controls on and its own off
+        run: cargo check -p engine --lib --locked --features kernel/controls
 
   test:
     name: test (${{ matrix.shard }}/3)

@@ -276,20 +276,18 @@ impl<L: Leaves> lock_solve::Family<f64, 9> for Slide<'_, L> {
 /// `10⁻¹⁰` of it was below the slopes' own error: measured on the Burrau chart, the follow then failed to converge at
 /// its second frame and the slide was tagged ended there.
 fn spec() -> Spec<f64> {
-    Spec {
-        max_iterations: 200,
-        residual_tolerance: LOCK_TOLERANCE,
-        optimality_tolerance: 1e-8,
-        conditioning_floor: 1e-12,
-        damping: Damping {
+    Spec::new(
+        200,
+        LOCK_TOLERANCE,
+        1e-8,
+        1e-12,
+        Damping {
             initial: 1e-3,
             increase: 10.0,
             decrease: 0.1,
             ceiling: 1e12,
         },
-        #[cfg(feature = "controls")]
-        unguarded: false,
-    }
+    )
 }
 
 /// The continuity test the followed minimiser is held to, in chart coordinates scaled by the window's half-width `h`:
