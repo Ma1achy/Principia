@@ -20,7 +20,7 @@ use crate::explore::manifold_view::depth::{
 use crate::explore::manifold_view::navigate::{
     figure_coords, magnification, pan, wheel_octaves, zoom_by,
 };
-use crate::explore::manifold_view::tilt::{Angles, ROTATION_RANGE, TILT_RANGE};
+use crate::explore::manifold_view::tilt::{Angles, LEAN_RANGE, ROTATION_RANGE};
 use crate::explore::manifold_view::{
     self as mv, activate, add, adjust, axis, basis_edit, chart_coords, dominant, in_plane,
     lock_edit, point, slice_axis, z0_edit, Out, Scratch, Touch, View, GAMMA, PRESETS, SLICE_AXIS,
@@ -32,6 +32,7 @@ use crate::keyboard::keymap::Direction;
 use crate::keyboard::scopes::{Adjust, Arrows};
 use crate::mock::{MockEngine, MOCK_Q1, MOCK_Q2, MOCK_Z0};
 use crate::side::MockSide;
+use engine::contract::sim_config::TiltMap;
 
 const NONE: Modifiers = Modifiers::NONE;
 
@@ -43,10 +44,18 @@ fn close(a: &Latent, b: &Latent, tol: f64) -> bool {
     a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
 }
 
-/// The `z₀` or basis a `SetField` sets; panics on any other edit.
-fn sim_field(edit: &SetField) -> &SimField {
+/// The `z₀` or basis a `SetField` sets; panics on any other edit. A tilt is one edit of the slice frame's angles carrying
+/// the basis, the frame's indices the mock's own: it sets the basis.
+fn sim_field(edit: &SetField) -> SimField {
+    let axis = u32::try_from(mv::SLICE_AXIS).expect("a latent index");
     match &edit.edit {
-        Edit::Sim(field @ (SimField::Z0(_) | SimField::Basis { .. })) => field,
+        Edit::Sim(field @ (SimField::Z0(_) | SimField::Basis { .. })) => field.clone(),
+        Edit::Sim(SimField::SliceFrame {
+            frame,
+            basis: Some((q1, q2)),
+        }) if (frame.normal, frame.tilt_x, frame.tilt_y) == (axis, axis, axis) => {
+            SimField::Basis { q1: *q1, q2: *q2 }
+        }
         other => panic!("not a SetField on z₀ or the basis: {other:?}"),
     }
 }
@@ -61,7 +70,7 @@ fn one_setfield_moving(out: &Out, plane: &Plane, what: &str) {
     );
     let edit = &out.edits[0];
     assert!(!edit.no_history, "{what}: undoable (R-69)");
-    match sim_field(edit) {
+    match &sim_field(edit) {
         SimField::Z0(z0) => assert_ne!(z0, &plane.z0, "{what}: z₀ moved"),
         SimField::Basis { q1, q2 } => {
             assert_ne!((q1, q2), (&plane.q1, &plane.q2), "{what}: the basis moved")
@@ -646,6 +655,7 @@ fn mock_manifold_view_a_view_round_trips_its_basis() {
                 tau1,
                 tau2,
                 gamma,
+                map: engine::contract::sim_config::TiltMap::Lean,
             };
             let (q1, q2) = view.basis();
             let back = View::framed(
@@ -691,6 +701,7 @@ fn mock_manifold_view_a_view_round_trips_its_basis() {
             tau1: 0.0,
             tau2: 0.0,
             gamma: 0.5,
+            map: engine::contract::sim_config::TiltMap::Lean,
         };
         let (q1, q2) = view.basis();
         assert_eq!(
@@ -923,24 +934,24 @@ fn mock_manifold_view_angles_turn_within_their_spans() {
         tau2: -89.5,
         gamma: 179.0,
     };
-    angles.turn(TAU1, 1.0);
-    angles.turn(mv::TAU2, -1.0);
-    angles.turn(GAMMA, 2.0);
+    angles.turn(TAU1, 1.0, TiltMap::Lean);
+    angles.turn(mv::TAU2, -1.0, TiltMap::Lean);
+    angles.turn(GAMMA, 2.0, TiltMap::Lean);
     assert_eq!(
         angles,
         Angles {
-            tau1: TILT_RANGE.1,
-            tau2: TILT_RANGE.0,
+            tau1: LEAN_RANGE.1,
+            tau2: LEAN_RANGE.0,
             gamma: ROTATION_RANGE.1
         }
     );
-    angles.turn(GAMMA, -400.0);
+    angles.turn(GAMMA, -400.0, TiltMap::Lean);
     assert_eq!(angles.gamma, ROTATION_RANGE.0);
-    angles.turn(TAU1, -10.0);
+    angles.turn(TAU1, -10.0, TiltMap::Lean);
     assert_eq!(angles.tau1, 80.0, "τ₁ only");
     assert_eq!(
         (angles.tau2, angles.gamma),
-        (TILT_RANGE.0, ROTATION_RANGE.0)
+        (LEAN_RANGE.0, ROTATION_RANGE.0)
     );
     assert_eq!(
         Angles {
@@ -962,6 +973,7 @@ fn mock_manifold_view_angles_turn_within_their_spans() {
         tau1: 0.0,
         tau2: 0.0,
         gamma: 0.0,
+        map: engine::contract::sim_config::TiltMap::Lean,
     };
     let turned = Angles {
         tau1: 90.0,
@@ -983,7 +995,7 @@ fn mock_manifold_view_angles_turn_within_their_spans() {
             tau2: 0.0,
             gamma: 0.0,
         };
-        a.turn(TAU1, 1.0);
+        a.turn(TAU1, 1.0, TiltMap::Lean);
         assert_eq!(a.tau1, 90.5);
     });
 }
@@ -1836,13 +1848,19 @@ fn after_an_excursion() -> Snapshot {
     snapshot
 }
 
-/// The plane `edits` leave, applied in order to `plane`.
+/// The plane `edits` leave, applied in order to `plane`: a tilt, the slice frame's angles with the basis, sets the basis.
 fn applied(plane: &Plane, edits: &[SetField]) -> Plane {
     let mut plane = plane.clone();
     for edit in edits {
         match &edit.edit {
             Edit::Sim(SimField::Z0(z0)) => plane.z0 = *z0,
-            Edit::Sim(SimField::Basis { q1, q2 }) => (plane.q1, plane.q2) = (*q1, *q2),
+            Edit::Sim(
+                SimField::Basis { q1, q2 }
+                | SimField::SliceFrame {
+                    basis: Some((q1, q2)),
+                    ..
+                },
+            ) => (plane.q1, plane.q2) = (*q1, *q2),
             _ => {}
         }
     }

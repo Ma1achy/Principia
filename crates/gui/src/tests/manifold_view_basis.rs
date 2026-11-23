@@ -29,6 +29,7 @@ const SPLIT: SliceFrame = SliceFrame {
     normal: Q3 as u32,
     tilt_x: Q3 as u32,
     tilt_y: MU1 as u32,
+    ..SliceFrame::along(0)
 };
 
 /// The two bases REQ-GUI-415 names, `Y` on `q₁` both: the first reads `σ = 0` with the fault, and the second is the one
@@ -640,6 +641,7 @@ fn manifold_view_basis_a_turned_view_keeps_its_reading() {
                         tau1,
                         tau2,
                         gamma,
+                        map: engine::contract::sim_config::TiltMap::Lean,
                     };
                     check_reads_back(v);
                     turned = Some(v);
@@ -739,6 +741,7 @@ fn bases_from(n: usize, component: impl Fn(u64) -> f64) -> Vec<((Latent, Latent)
                 normal: target(next()),
                 tilt_x: target(next()),
                 tilt_y: target(next()),
+                ..SliceFrame::along(0)
             };
             ((q1, q2), frame)
         })

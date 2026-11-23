@@ -17,7 +17,7 @@ use crate::app::App;
 use crate::capture::{PIXELS_PER_POINT, SIZE};
 use crate::cli::mock::{dispatch, MEASURED_LEAST_WINDOW, WINDOW_SIZE};
 use crate::explore::compass::{views, SLICE_BUTTON, TILT_BUTTON, TITLE};
-use crate::explore::manifold_view::{basis_edit, z0_edit};
+use crate::explore::manifold_view::z0_edit;
 use crate::explore::{COMPASS_JACOBI, COMPASS_PLUCKER, COMPASS_SHAPE, COMPASS_SLICE};
 use crate::headless::Headless;
 use crate::layout::{
@@ -43,7 +43,7 @@ fn default_at([w, h]: [u32; 2], scale: f32) -> Layout {
 
 #[test]
 fn layout_least_window_the_default_splits_meet_every_minimum() {
-    assert_eq!(LEAST_WINDOW, [1371.0, 817.0]);
+    assert_eq!(LEAST_WINDOW, [1412.0, 817.0]);
     for scale in SCALES {
         // The window's size is a whole number of pixels, the nearest to the least in points.
         let least = LEAST_WINDOW.map(|points| (points * scale).round() as u32);
@@ -74,13 +74,14 @@ fn layout_least_window_the_default_splits_meet_every_minimum() {
     rejects("the bottom row under its minimum", || {
         check_minimums(&under)
     });
-    // The panels that bind: a point short of each one's own least, the rounding apart, is under its minimum.
+    // The panels that bind: a point short of each one's own least, the rounding apart, is under its minimum. The compass
+    // two points short: a point short, at 1407, its edge rounds up to 346 at 3 pixels per point.
     let (wide, high) = (
         (MIN_COMPASS_W * 2160.0 / 531.0).ceil(),
         (MIN_TOP_H * 1350.0 / 977.0).ceil(),
     );
-    rejects("a window a point too narrow for the compass", || {
-        check_minimums(&Layout::new(window([wide - 1.0, LEAST_WINDOW[1]]), 3.0))
+    rejects("a window two points too narrow for the compass", || {
+        check_minimums(&Layout::new(window([wide - 2.0, LEAST_WINDOW[1]]), 3.0))
     });
     rejects("a window a point too low for the top row", || {
         check_minimums(&Layout::new(window([LEAST_WINDOW[0], high - 1.0]), 3.0))
@@ -240,7 +241,11 @@ fn compass_at(p: &Plane, button: Option<&str>, scale: f32) -> (App<MockSide>, He
     let (mut app, mut h) = (mock_app(), Headless::new(size, scale));
     let _ = h.frame(&mut app, Vec::new());
     app.set_field(z0_edit(p.z0));
-    app.set_field(basis_edit((p.q1, p.q2)));
+    // The planes here are Lean each axis's (`compass_support::view`), its corner among them: the frame says so.
+    app.set_field(crate::explore::manifold_view::frame_edit(
+        super::support::LEAN_FRAME,
+        Some((p.q1, p.q2)),
+    ));
     let _ = h.frame(&mut app, Vec::new());
     settle(&mut h, &mut app);
     if let Some(button) = button {
@@ -323,12 +328,15 @@ fn layout_least_window_the_compass_under_its_minimums_loses_the_readout() {
             PIXELS_PER_POINT,
             vec![
                 [240.0, 160.0],
-                [MIN_COMPASS_W - 12.0, MIN_BOTTOM_H],
+                // Narrower, at a height where the taller cube wraps the line where no plane is drawn (measured: 334
+                // wide loses it from 182 to 188 high at 1.5 pixels per point).
+                [MIN_COMPASS_W - 12.0, 184.0],
                 [MIN_COMPASS_W, MIN_BOTTOM_H - 4.0],
             ],
         ),
-        // A point narrower than the least and taller: the cube takes the column's last point of width.
-        (2.0, vec![[MIN_COMPASS_W - 2.0, 181.0]]),
+        // Two points narrower than the least and taller: the cube takes the column's last points of width (measured: 344
+        // wide at 191 high, at 2 pixels per point).
+        (2.0, vec![[MIN_COMPASS_W - 2.0, 191.0]]),
     ] {
         let (mut app, mut h) = compass_at(&p, button, scale);
         for size in sizes {

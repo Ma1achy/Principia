@@ -137,7 +137,13 @@ fn check_moved(before: &Layout, after: &Layout, splitter: Splitter, by: f32) {
 #[test]
 fn mock_layout_splitters_a_drag_moves_each_boundary_by_the_drag() {
     for splitter in Splitter::ALL {
-        for by in [-16.0, 24.0] {
+        // Each way, within the minimums: the compass opens 354 wide on the capture's window, 8 over its least.
+        let less = if splitter == Splitter::CompassTime {
+            -8.0
+        } else {
+            -16.0
+        };
+        for by in [less, 24.0] {
             let (mut app, mut h) = settled();
             let before = current(&h, &app);
             assert_eq!(before, Layout::new(h.screen(), h.pixels_per_point()));

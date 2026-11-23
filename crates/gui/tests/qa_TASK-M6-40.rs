@@ -24,7 +24,7 @@ use eframe::egui::accesskit::Role;
 use eframe::egui::{self, Color32, Event, Key, Modifiers, PointerButton, Pos2, Rect, Vec2};
 use engine::contract::log::Source;
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::{Lock, SliceFrame};
+use engine::contract::sim_config::{Lock, SliceFrame, TiltMap};
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{KeyMode, Mode};
 use gui::app::App;
@@ -84,11 +84,15 @@ fn close(a: &Z, b: &Z, tol: f64) -> bool {
     a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
 }
 
+/// The frame on `normal`, `x` and `y`, under Lean each axis: this file's map is Lean each axis, its ±90° slider ends with
+/// it, today's default being Tip as sheet.
 fn frame(normal: usize, x: usize, y: usize) -> SliceFrame {
     SliceFrame {
         normal: normal as u32,
         tilt_x: x as u32,
         tilt_y: y as u32,
+        tilt_map: TiltMap::Lean,
+        ..SliceFrame::along(0)
     }
 }
 
@@ -1055,9 +1059,13 @@ fn qa_cube_picking_d_sets_the_normal_and_retilts_a_following_target_in_one_entry
     rig.mode(COMPASS_SLICE);
     let (n, entries, before, after) = rig.pick(DEPTH_EDGE, MU1);
     check_one(n, entries);
+    // The frame stores the angles beside the basis: τ₁ = 20° kept.
     assert_eq!(
         after.sim.slice.frame,
-        frame(MU1, MU1, Q2),
+        SliceFrame {
+            tau1: 20.0,
+            ..frame(MU1, MU1, Q2)
+        },
         "the normal, X following it, Y its own"
     );
     let (q1, q2) = map(ALPHA, BETA, MU1, Q2, 20.0, 0.0, 0.0, 1.0);
@@ -1124,7 +1132,12 @@ fn qa_cube_the_third_axis_is_the_shown_targets_dropdown_in_tilt_mode() {
     assert_eq!((n, entries), (1, 1));
     let (_, q2) = map(ALPHA, BETA, Q3, Q2, 0.0, 15.0, 0.0, 1.0);
     let check_picked = |s: &Snapshot| {
-        assert_eq!(s.sim.slice.frame, frame(Q3, Q3, Q2), "Y alone");
+        // The frame stores the angles beside the basis: τ₂ = 15° kept.
+        let want = SliceFrame {
+            tau2: 15.0,
+            ..frame(Q3, Q3, Q2)
+        };
+        assert_eq!(s.sim.slice.frame, want, "Y alone");
         assert!(close(&s.sim.plane.q2, &q2, 1e-12));
     };
     check_picked(&after);

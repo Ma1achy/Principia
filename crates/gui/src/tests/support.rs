@@ -20,6 +20,13 @@ use crate::side::{EngineSide, MockSide, RealSide};
 /// §2).
 pub const SLICE_FRAME: SliceFrame = SliceFrame::along(Z_Q3);
 
+/// [`SLICE_FRAME`] under Lean each axis: the frame of a test that means the map the GUI had before Tip as sheet
+/// became the default, which keeps its assertions under it.
+pub const LEAN_FRAME: SliceFrame = SliceFrame {
+    tilt_map: engine::contract::sim_config::TiltMap::Lean,
+    ..SLICE_FRAME
+};
+
 /// The target format the tests' apps draw on.
 pub const FORMAT: wgpu::TextureFormat = crate::capture::FORMAT;
 

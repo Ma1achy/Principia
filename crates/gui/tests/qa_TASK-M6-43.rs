@@ -436,9 +436,10 @@ fn qa_m6_43_the_minimums_are_sizes() {
 #[test]
 fn qa_m6_43_a_drag_moves_each_boundary_by_the_drag_the_canvas_taking_the_rest() {
     for b in ALL {
-        // Within the slack every default leaves above its minimums at 1440 × 900 points (the smallest, the Manifold
-        // view's, is 20 points).
-        for by in [-12.0_f32, 12.0] {
+        // Within the slack every default leaves above its minimums at 1440 × 900 points: the compass's is 8 points
+        // since its least width became 346 (the "no plane drawn" line now names the map), the others' at least 20.
+        let less = if b == B::CompassTime { -8.0_f32 } else { -12.0 };
+        for by in [less, 12.0] {
             let (mut app, mut h) = fresh();
             let before = drawn(&app);
             drag_b(&mut h, &mut app, b, by);

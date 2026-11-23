@@ -11,7 +11,9 @@ use engine::contract::set_field::{Edit, SimField};
 use engine::contract::sim_config::{Latent, Links, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
 
 use super::compass_physical_views::{leaked, linear_a, missing};
-use super::compass_support::{app_at, compass_rect, plane, setfields, square, view, NARROW_PANEL};
+use super::compass_support::{
+    app_at, compass_rect, is_tilt, plane, setfields, square, view, NARROW_PANEL,
+};
 use super::support::{click_scope, press, rejects};
 use crate::app::App;
 use crate::capture::{PIXELS_PER_POINT, SIZE};
@@ -110,8 +112,11 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
                 .map(|e| e.message.clone())
                 .collect::<Vec<_>>(),
         );
-        check_steer_logged(&log, frame != start_frame);
-        if frame == start_frame {
+        // The frame moves where its indices do; its angles follow every steer that writes the basis.
+        let indices = |f: SliceFrame| (f.normal, f.tilt_x, f.tilt_y);
+        let took = indices(frame) != indices(start_frame);
+        check_steer_logged(&log, took);
+        if !took {
             basis_log.get_or_insert(log);
         } else {
             moved = Some(frame);
@@ -155,14 +160,19 @@ fn mock_compass_steer_physical_every_cell_on_the_fixture_lights() {
 /// Asserts a steer logged `(kinds, lines)`: one SetField, on the frame too where it `moved` the frame and on the
 /// basis alone where not, with its console line.
 fn check_steer_logged((kinds, lines): &(Vec<&'static str>, Vec<String>), moved: bool) {
-    let (kind, prefix) = if moved {
-        ("other", "SetField Slice.frame Plane.q1 Plane.q2 ")
-    } else {
-        ("basis", "SetField Plane.q1 Plane.q2 ")
+    // A basis steer is logged on the basis, or, where the stored angles follow it, as a tilt: the frame's angles with
+    // the basis, its indices kept (`is_tilt`).
+    let kind = if moved { "other" } else { "basis" };
+    let logged = |m: &str| {
+        if moved {
+            m.starts_with("SetField Slice.frame Plane.q1 Plane.q2 ") && !is_tilt(m)
+        } else {
+            m.starts_with("SetField Plane.q1 Plane.q2 ") || is_tilt(m)
+        }
     };
     assert_eq!(kinds, &[kind], "one SetField on the basis");
     assert!(
-        lines.iter().any(|m| m.starts_with(prefix)),
+        lines.iter().any(|m| logged(m)),
         "the steer logged in the console"
     );
 }
@@ -823,6 +833,7 @@ const fn slice_frame(normal: u32, tilt_x: u32, tilt_y: u32) -> SliceFrame {
         normal,
         tilt_x,
         tilt_y,
+        ..SliceFrame::along(0)
     }
 }
 

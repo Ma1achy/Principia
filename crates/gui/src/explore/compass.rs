@@ -54,14 +54,16 @@ use eframe::egui::{
     Ui, UiBuilder, Vec2,
 };
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
+use engine::contract::sim_config::{
+    Latent, Lock, Plane, SimConfig, SliceFrame, TiltMap, LATENT_DIM,
+};
 use engine::contract::view_ui::{Focus, KeyMode};
 
 use crate::dispatch::{self, Class};
 use crate::explore::lock::GOLD;
-use crate::explore::manifold_view::tilt::{Angles, TILT_RANGE};
+use crate::explore::manifold_view::tilt::{tilt_range, Angles};
 use crate::explore::manifold_view::{
-    add, axis, chart_coords, close_under_console, normal_edit, plane_edit, plane_s, point,
+    add, axis, chart_coords, close_under_console, norm, normal_edit, plane_edit, plane_s, point,
     target_choices, target_edit, turned_about, z0_edit, Out, Scratch, Target, Touch, View, AXES,
     Z0_HALF_RANGE,
 };
@@ -535,6 +537,8 @@ pub struct Drawing {
     pub numbers: Vec<Label>,
     /// The readout's lines.
     pub readout: Vec<String>,
+    /// The lines under the hint: [`axes_lines`].
+    pub axes: Vec<String>,
     /// The pin, in the cube's frame, while locked.
     pub pin: Option<P3>,
     /// What the third axis shows.
@@ -902,8 +906,9 @@ pub fn rotation_readout(view: &View) -> String {
 /// The readout of `mode` for `z₀` and `view` (R-451 B5): slice mode, "mode slice · plane ⟂ `<axis>`" untilted, the
 /// targets on a line of their own, or the tilt with a tilt set, then "`<axis>` = +0.25 of range", `<axis>` the slice
 /// normal; tilt mode, "mode tilt", the tilt and the rotation. Both targets are named with their angles in either mode
-/// (R-457 E6). Where `s < `[`DRAW_CUT`], a line "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)" (R-451
-/// B11).
+/// too. Where `s < `[`DRAW_CUT`], a line "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (Lean each axis)"
+/// (under Lean each axis only: Tip as sheet's basis is orthonormal). The warnings, the mirrored
+/// partner and the components are [`axes_lines`], drawn under the hint.
 pub fn readout(z0: &Latent, view: &View, mode: Touch) -> Vec<String> {
     readout_active(z0, view, mode, None)
 }
@@ -940,10 +945,135 @@ pub fn readout_active(
     if drawn_normal(&gesture_view(view, mode, active)).is_none() {
         let a = Angles::of(view);
         lines.push(format!(
-            "no plane drawn: s < 10⁻³ at τ₁ = {}°, τ₂ = {}° (RQ-340)",
+            "no plane drawn: s < 10⁻³ at τ₁ = {}°, τ₂ = {}° (Lean each axis)",
             signed(a.tau1, 1),
             signed(a.tau2, 1)
         ));
+    }
+    lines
+}
+
+/// The column's lines under the readout and its hint: Lean each axis's warnings ([`lean_warnings`]),
+/// past 90° of tip the mirrored partner ([`mirrored_line`]), last the components of the stored basis `(q₁, q₂)`
+/// ([`components`]). The plan is unclear here: it puts these lines in the readout, but the readout is what the bottom
+/// row's least height and the compass's least width hold whole, and five more lines fit neither, nor the artboard's
+/// window; chose a block of its own under the hint, in the column's scroll and outside what the focus on the compass
+/// element brings into view, because it keeps every least size as measured and the keys' readout and hint in view.
+pub fn axes_lines(view: &View, q1: &Latent, q2: &Latent) -> Vec<String> {
+    let mut lines = lean_warnings(view);
+    lines.extend(mirrored_line(view));
+    lines.extend(components(q1, q2));
+    lines
+}
+
+/// A term of a component line below this is omitted: what two decimals round to 0.00.
+pub const COMPONENT_CUT: f64 = 0.005;
+
+/// The unit vector `v/|v|` on the dimensions that carry it as the readout writes it: each term to two
+/// decimals, named as the cube's buttons name the dimensions, a term below [`COMPONENT_CUT`] omitted, "0" for none:
+/// "0.72 z_α − 0.28 z_β + 0.63 z_q3".
+pub fn component_text(v: &Latent) -> String {
+    let length = norm(v);
+    let mut text = String::new();
+    for (i, x) in v.iter().enumerate() {
+        let c = if length > 0.0 { x / length } else { 0.0 };
+        if c.abs() < COMPONENT_CUT {
+            continue;
+        }
+        let sign = match (text.is_empty(), c < 0.0) {
+            (true, false) => "",
+            (true, true) => "−",
+            (false, false) => " + ",
+            (false, true) => " − ",
+        };
+        text += &format!("{sign}{:.2} {}", c.abs(), AXES[i]);
+    }
+    if text.is_empty() {
+        "0".to_owned()
+    } else {
+        text
+    }
+}
+
+/// The readout's components of each screen axis under either map: "H = 0.72 z_α − 0.28 z_β + 0.63 z_q3"
+/// and "V = …", the unit vectors of the stored `q₁` and `q₂`, the basis the decoder reads: so a typed basis no angles
+/// give under the map shows its own axes, not the reading's.
+pub fn components(q1: &Latent, q2: &Latent) -> [String; 2] {
+    [
+        format!("H = {}", component_text(q1)),
+        format!("V = {}", component_text(q2)),
+    ]
+}
+
+/// The total tip `m = √(τ₁² + τ₂²)` of `(τ₁, τ₂)` in degrees and the angles the rotation is made with, wrapped in total
+/// tip past 180°, `τ·(m − 360)/m`: `(m, τ₁, τ₂)` of the wrapped angles.
+pub fn wrapped(tau1: f64, tau2: f64) -> (f64, f64, f64) {
+    let m = tau1.hypot(tau2);
+    if m > 180.0 {
+        let k = (m - 360.0) / m;
+        let (t1, t2) = (tau1 * k, tau2 * k);
+        (t1.hypot(t2), t1, t2)
+    } else {
+        (m, tau1, tau2)
+    }
+}
+
+/// The 180° partner of `(τ₁, τ₂)` in degrees: `τ′ = τ·(m − 180)/m` of the wrapped angles, the same plane,
+/// its basis mirrored; `None` at no tip.
+pub fn partner(tau1: f64, tau2: f64) -> Option<(f64, f64)> {
+    let (m, t1, t2) = wrapped(tau1, tau2);
+    (m > 0.0).then(|| {
+        let k = (m - 180.0) / m;
+        (t1 * k, t2 * k)
+    })
+}
+
+/// "same plane as (τ₁′, τ₂′), mirrored" where the tip is past 90°, `τ′` [`partner`]'s, one decimal,
+/// signed: under the rotation Tip as sheet makes, one target or one angle set. The comparison is the readout's alone and
+/// never written back. The plan is unclear here: with two targets and both angles set each axis turns on its own, and
+/// `τ·(m − 180)/m` is no partner of it; chose no line there, because the formula R4 gives is the rotation's.
+pub fn mirrored_line(view: &View) -> Option<String> {
+    let a = Angles::of(view);
+    let single = a.tau1 == 0.0 || a.tau2 == 0.0;
+    let rotation = single || (view.map == TiltMap::Sheet && view.x == view.y);
+    if !rotation {
+        return None;
+    }
+    let (m, _, _) = wrapped(a.tau1, a.tau2);
+    if m <= 90.0 {
+        return None;
+    }
+    let (p1, p2) = partner(a.tau1, a.tau2)?;
+    Some(format!(
+        "same plane as ({}°, {}°), mirrored",
+        signed(p1, 1),
+        signed(p2, 1)
+    ))
+}
+
+/// Lean each axis's warnings with one target: "dead zone: |τ₁| = 90°, τ₂ does not move the plane" (or
+/// with the indices swapped) where one displayed angle (one decimal) reads ±90.0°, and "axes at θ°", `cos θ = sin τ₁
+/// sin τ₂`, one decimal, where it does not read 90.0°. None under Tip as sheet, or with two targets, whose bases are
+/// orthonormal; the corner, both at ±90°, is the "no plane drawn" line.
+pub fn lean_warnings(view: &View) -> Vec<String> {
+    if view.map != TiltMap::Lean || view.x != view.y {
+        return Vec::new();
+    }
+    let a = Angles::of(view);
+    let right = |t: f64| format!("{:.1}", t.abs()) == "90.0";
+    let mut lines = Vec::new();
+    match (right(a.tau1), right(a.tau2)) {
+        (true, false) => lines.push("dead zone: |τ₁| = 90°, τ₂ does not move the plane".to_owned()),
+        (false, true) => lines.push("dead zone: |τ₂| = 90°, τ₁ does not move the plane".to_owned()),
+        _ => {}
+    }
+    let theta = (view.tau1.sin() * view.tau2.sin())
+        .clamp(-1.0, 1.0)
+        .acos()
+        .to_degrees();
+    let shown = format!("{theta:.1}");
+    if shown != "90.0" {
+        lines.push(format!("axes at {shown}°"));
     }
     lines
 }
@@ -1008,6 +1138,7 @@ pub fn drawing_of(
         labels: labels_showing(&iso, target, third),
         numbers: numbers(&iso, mode),
         readout: readout_active(&plane.z0, target, mode, active),
+        axes: axes_lines(target, &plane.q1, &plane.q2),
         pin: pin(plane, &drawn, lock),
         third,
         badge: badge_shown(target),
@@ -1206,8 +1337,10 @@ pub struct Drag {
     pub mode: Touch,
     /// `(τ₁, τ₂)` in degrees when it started.
     pub from: (f64, f64),
-    /// The tilt's targets `(τ₁, τ₂)` in degrees, each clamped to ±90° as the pointer moves.
+    /// The tilt's targets `(τ₁, τ₂)` in degrees, each clamped to [`Drag::range`] as the pointer moves.
     pub tau: (f64, f64),
+    /// The tilts' span under the map when it started: ±180° under Tip as sheet, ±90° under Lean each axis.
+    pub range: (f64, f64),
     /// The slice's move along the drawn plane's normal since it started, in `z₀`'s units.
     pub amount: f64,
     /// The plane `(z₀, q₁, q₂)` when it started, which [`drag_edit`] reads. The app's frames do not: each folds the
@@ -1229,11 +1362,12 @@ impl Drag {
     /// A drag in `mode` starting on `plane`, read with the slice frame `frame`.
     pub fn start(mode: Touch, plane: &Plane, frame: &SliceFrame) -> Self {
         let view = View::framed(plane, Some(frame));
-        let a = Angles::of(&view);
+        let a = Angles::read_framed(plane, frame);
         Self {
             mode,
             from: (a.tau1, a.tau2),
             tau: (a.tau1, a.tau2),
+            range: tilt_range(view.map),
             amount: 0.0,
             start: (plane.z0, plane.q1, plane.q2),
             reading: reading(&gesture_view(&view, Touch::Slice, None)),
@@ -1285,8 +1419,8 @@ impl Drag {
     }
 
     /// The pointer moved by `delta` over the cube's `square`: in tilt mode `τ₁` by the horizontal travel over the
-    /// width and `τ₂` by the vertical over the height, up raising it, [`DRAG_DEGREES`] across, each clamped to ±90°
-    /// (R-451 B3); in slice mode the travel as [`Reading`] reads it moves the slice, the cube's full width
+    /// width and `τ₂` by the vertical over the height, up raising it, [`DRAG_DEGREES`] across, each clamped to the map's
+    /// span; in slice mode the travel as [`Reading`] reads it moves the slice, the cube's full width
     /// ([`cube_width`]) the whole range `2·`[`Z0_HALF_RANGE`] (R-465).
     pub fn moved(&mut self, delta: Vec2, square: Rect) {
         let (x, y) = (f64::from(delta.x), f64::from(delta.y));
@@ -1294,7 +1428,7 @@ impl Drag {
             Touch::Tilt => {
                 let dx = x / f64::from(square.width());
                 let dy = y / f64::from(square.height());
-                let (lo, hi) = TILT_RANGE;
+                let (lo, hi) = self.range;
                 self.tau.0 = (self.tau.0 + dx * DRAG_DEGREES).clamp(lo, hi);
                 self.tau.1 = (self.tau.1 - dy * DRAG_DEGREES).clamp(lo, hi);
             }
@@ -1321,7 +1455,7 @@ pub fn drag_edit(plane: &Plane, frame: &SliceFrame, drag: &Drag) -> Option<SetFi
             let to = Angles {
                 tau1: drag.tau.0,
                 tau2: drag.tau.1,
-                gamma: Angles::of(&view).gamma,
+                gamma: Angles::read_framed(plane, frame).gamma,
             };
             Some(dispatch::one(plane, Class::Tilt { from: view, to }))
         }
@@ -1348,9 +1482,10 @@ pub fn slice(plane: &Plane, frame: &SliceFrame, amount: f64) -> Option<SetField>
 /// The tilt edit turning `τ₁` by `d1` and `τ₂` by `d2` degrees, within their span, each into its target.
 pub fn tilt(plane: &Plane, frame: &SliceFrame, d1: f64, d2: f64) -> SetField {
     let view = View::framed(plane, Some(frame));
-    let mut to = Angles::of(&view);
-    to.tau1 = (to.tau1 + d1).clamp(TILT_RANGE.0, TILT_RANGE.1);
-    to.tau2 = (to.tau2 + d2).clamp(TILT_RANGE.0, TILT_RANGE.1);
+    let mut to = Angles::read_framed(plane, frame);
+    let (lo, hi) = tilt_range(view.map);
+    to.tau1 = (to.tau1 + d1).clamp(lo, hi);
+    to.tau2 = (to.tau2 + d2).clamp(lo, hi);
     dispatch::one(plane, Class::Tilt { from: view, to })
 }
 
@@ -1713,6 +1848,7 @@ pub fn current(rect: Rect, sim: &SimConfig, compass: &Compass) -> Drawing {
         &sim.lock,
     );
     drawn.readout = readout_active(&sim.plane.z0, &target, compass.mode, active);
+    drawn.axes = axes_lines(&target, &sim.plane.q1, &sim.plane.q2);
     drawn
 }
 
@@ -1805,7 +1941,7 @@ pub fn show(
         ui.ctx().request_repaint();
     }
     let painter = ui.painter_at(rect);
-    let (readout, hint) = match view {
+    let (readout, hint, axes) = match view {
         CompassView::Cube => {
             // The readout reads the frame's target: `sim`, the plane as this frame's edits leave it.
             let drawing = current(rect, sim, &scratch.compass);
@@ -1825,7 +1961,7 @@ pub fn show(
                 Touch::Tilt => HINT_TILT,
                 Touch::Slice => HINT_SLICE,
             };
-            (drawing.readout, hint)
+            (drawing.readout, hint, drawing.axes)
         }
         CompassView::Plucker => {
             let read = View::read(sim);
@@ -1833,7 +1969,7 @@ pub fn show(
                 views::plucker_drawing_with(square, plane, read.d, scratch.compass.cursor);
             views::paint_plucker(&painter, &visuals, &drawing);
             cells(ui, &drawing, sim, scratch, out);
-            (vec![drawing.readout], views::PLUCKER_HELP)
+            (vec![drawing.readout], views::PLUCKER_HELP, Vec::new())
         }
         CompassView::Jacobi | CompassView::Shape => {
             let set = view.physical().expect("a physical view");
@@ -1860,7 +1996,7 @@ pub fn show(
                 physical::at_pole(decoder, set, &sim.links, &read_at(sim, &scratch.compass));
             under_grid(ui, square, place, at_pole, push.degenerate);
             let lines = vec![physical::readout(set, &push)];
-            (lines, physical::HELP)
+            (lines, physical::HELP, Vec::new())
         }
     };
     let text = Rect::from_min_max(
@@ -1926,6 +2062,9 @@ pub fn show(
             }
             if keys.focused.as_deref() == Some(COMPASS_VIEW) {
                 column.scroll_to_cursor(Some(egui::Align::BOTTOM));
+            }
+            for line in &axes {
+                column.label(RichText::new(line).small());
             }
         });
 }
@@ -2152,6 +2291,7 @@ pub fn record(drawing: &Drawing, square: Rect) -> serde_json::Value {
         "labels": labels(&drawing.labels),
         "numbers": labels(&drawing.numbers),
         "readout": drawing.readout,
+        "axes": drawing.axes,
         "pin": drawing.pin.map(rel),
         "badge": drawing.badge,
     })

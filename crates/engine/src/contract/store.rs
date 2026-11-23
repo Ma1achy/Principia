@@ -11,7 +11,7 @@ use crate::contract::legend::Legend;
 use crate::contract::log::{LogEntry, Severity, Source};
 use crate::contract::render_state::{NodeKind, Occupant, Overlays, RenderState, StainGraph};
 use crate::contract::set_field::{Edit, HistoryKey, RenderField, SetField, SimField};
-use crate::contract::sim_config::{Latent, SimConfig, SliceFrame};
+use crate::contract::sim_config::{Latent, SimConfig, SliceFrame, TiltMap};
 use crate::contract::snapshot::{self, FrameSummary, Precision, Snapshot, Tier};
 
 /// The real engine's state store (RQ-254).
@@ -109,11 +109,16 @@ fn latent(z: &Latent) -> String {
     format!("({})", parts.join(", "))
 }
 
-/// The slice frame as the log writes it: "(normal 5, tilt_x 5, tilt_y 6)", each a latent index.
+/// The slice frame as the log writes it: "(normal 5, tilt_x 5, tilt_y 6, tilt_map sheet, angles 150°, 150°)", each
+/// index a latent one, the angles as set.
 fn slice_frame(f: &SliceFrame) -> String {
+    let map = match f.tilt_map {
+        TiltMap::Sheet => "sheet",
+        TiltMap::Lean => "lean",
+    };
     format!(
-        "(normal {}, tilt_x {}, tilt_y {})",
-        f.normal, f.tilt_x, f.tilt_y
+        "(normal {}, tilt_x {}, tilt_y {}, tilt_map {map}, angles {}°, {}°)",
+        f.normal, f.tilt_x, f.tilt_y, f.tau1, f.tau2
     )
 }
 

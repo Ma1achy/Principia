@@ -24,6 +24,7 @@ fn view(tau1: f64, tau2: f64, sigma: f64) -> View {
         tau1,
         tau2,
         gamma: 45f64.to_radians(),
+        map: engine::contract::sim_config::TiltMap::Lean,
     }
 }
 

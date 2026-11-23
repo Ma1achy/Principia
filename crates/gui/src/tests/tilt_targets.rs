@@ -35,6 +35,7 @@ fn frame(normal: usize, x: usize, y: usize) -> SliceFrame {
         normal: index(normal),
         tilt_x: index(x),
         tilt_y: index(y),
+        ..SliceFrame::along(0)
     }
 }
 
@@ -154,6 +155,7 @@ fn tilt_targets_each_angle_tilts_into_its_own_target() {
         tau1: t1,
         tau2: t2,
         gamma: 0.0,
+        map: engine::contract::sim_config::TiltMap::Lean,
     };
     check_own_axes(v.basis(), (0, Z_Q3, t1), (1, Z_MU1, t2), scale);
     // Read back with its frame, the view is the same.
@@ -340,14 +342,21 @@ fn tilt_targets_a_pick_at_an_angle_re_tilts_in_one_entry() {
         tau1: 30f64.to_radians(),
         ..View::read(&mock_app().snapshot().sim)
     };
+    // The slice frame stores the angles as set beside the basis: τ₁ = 30°, kept through the pick.
+    let at30 = |f: SliceFrame| SliceFrame { tau1: 30.0, ..f };
     let (mut app, mut h) = app_at(&start);
     let before = state(&app);
-    assert_eq!(before.2, frame(Z_Q3, Z_Q3, Z_Q3));
+    assert_eq!(before.2, at30(frame(Z_Q3, Z_Q3, Z_Q3)));
     pick(&mut h, &mut app, 1, Z_Q2);
     assert_eq!(focus(&app).last(), Some(&TILT_X), "back on the dropdown");
     let after = state(&app);
     let into_q2 = View { x: Z_Q2, ..start };
-    check_entry(&before, &after, into_q2.basis(), frame(Z_Q3, Z_Q2, Z_Q3));
+    check_entry(
+        &before,
+        &after,
+        into_q2.basis(),
+        at30(frame(Z_Q3, Z_Q2, Z_Q3)),
+    );
     let (q1, _) = after.1;
     assert!(
         q1[Z_Q2] > 0.49 && q1[Z_Q3] == 0.0,
@@ -364,7 +373,7 @@ fn tilt_targets_a_pick_at_an_angle_re_tilts_in_one_entry() {
     // The controls: the pick as two entries, the frame then the basis; and the frame alone, not re-tilted.
     let (mut split, mut sh) = app_at(&start);
     let split_before = state(&split);
-    split.set_field(frame_edit(frame(Z_Q3, Z_Q2, Z_Q3), None));
+    split.set_field(frame_edit(at30(frame(Z_Q3, Z_Q2, Z_Q3)), None));
     split.set_field(basis_edit(into_q2.basis()));
     let _ = sh.frame(&mut split, Vec::new());
     let split_after = state(&split);
@@ -373,7 +382,7 @@ fn tilt_targets_a_pick_at_an_angle_re_tilts_in_one_entry() {
             &split_before,
             &split_after,
             into_q2.basis(),
-            frame(Z_Q3, Z_Q2, Z_Q3),
+            at30(frame(Z_Q3, Z_Q2, Z_Q3)),
         )
     });
     ctrl_z(&mut sh, &mut split);
@@ -383,7 +392,7 @@ fn tilt_targets_a_pick_at_an_angle_re_tilts_in_one_entry() {
     });
     let (mut flat, mut fh) = app_at(&start);
     let flat_before = state(&flat);
-    flat.set_field(frame_edit(frame(Z_Q3, Z_Q2, Z_Q3), None));
+    flat.set_field(frame_edit(at30(frame(Z_Q3, Z_Q2, Z_Q3)), None));
     let _ = fh.frame(&mut flat, Vec::new());
     let flat_after = state(&flat);
     rejects(
@@ -393,7 +402,7 @@ fn tilt_targets_a_pick_at_an_angle_re_tilts_in_one_entry() {
                 &flat_before,
                 &flat_after,
                 into_q2.basis(),
-                frame(Z_Q3, Z_Q2, Z_Q3),
+                at30(frame(Z_Q3, Z_Q2, Z_Q3)),
             )
         },
     );
@@ -447,7 +456,13 @@ fn tilt_targets_a_preset_taking_x_resets_it_and_the_angles() {
         ..View::read(&mock_app().snapshot().sim)
     };
     let (mut app, mut h) = app_at(&start);
-    assert_eq!(state(&app).2, frame(Z_Q3, Z_Q0, Z_Q3));
+    // The angles stored as set beside the basis, until the preset resets them.
+    let set = SliceFrame {
+        tau1: 30.0,
+        tau2: -10.0,
+        ..frame(Z_Q3, Z_Q0, Z_Q3)
+    };
+    assert_eq!(state(&app).2, set);
     let before = state(&app);
     keys(&mut h, &mut app, &NEXT_PRESET);
     let _ = h.frame(&mut app, Vec::new());

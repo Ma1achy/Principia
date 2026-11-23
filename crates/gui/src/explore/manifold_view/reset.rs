@@ -185,7 +185,7 @@ pub fn dimmed_because(sim: &SimConfig) -> &'static str {
 pub fn command(sim: &SimConfig, section: Section) -> Vec<SetField> {
     match Active::of(sim) {
         Some(active) if !active.at_home(sim, section) => {
-            about_the_pin(active.edits(sim, section), sim)
+            super::agreeing(about_the_pin(active.edits(sim, section), sim), sim)
         }
         _ => Vec::new(),
     }
@@ -197,7 +197,8 @@ pub fn home(sim: &SimConfig) -> Vec<SetField> {
     match Active::of(sim).filter(|_| home_enabled(sim)) {
         Some(active) => {
             let basis = active.basis(active.home.window, (0.0, 0.0, 0.0));
-            about_the_pin(vec![basis_edit(basis), z0_edit(active.home.base)], sim)
+            let edits = about_the_pin(vec![basis_edit(basis), z0_edit(active.home.base)], sim);
+            super::agreeing(edits, sim)
         }
         None => Vec::new(),
     }

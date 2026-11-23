@@ -144,6 +144,18 @@ struct Integrated {
     span: Option<([f64; 4], f64)>,
 }
 
+/// The sim key the mock integrates under: `sim` but for the slice frame, which no kernel reads, so an edit of it alone
+/// (a target picked at angle 0, the tilt map where the maps agree, the angles' record) re-integrates nothing
+/// (gui_state_contract §2).
+fn sim_key(sim: &SimConfig) -> SimConfig {
+    SimConfig {
+        slice: Slice {
+            frame: SliceFrame::along(Z_Q3),
+        },
+        ..sim.clone()
+    }
+}
+
 impl MockEngine {
     /// A mock at `t = 0.0`, its clock running.
     pub fn new() -> Self {
@@ -241,9 +253,10 @@ impl MockEngine {
     /// the sim key since the last span discards every quad first (R-406; R-462 J4; R-468 E3).
     pub fn show_span(&mut self, span: [f64; 4]) {
         let k = self.quad_scale();
-        if self.integrated.sim.as_ref() != Some(&self.sim) {
+        let key = sim_key(&self.sim);
+        if self.integrated.sim.as_ref() != Some(&key) {
             self.integrated = Integrated {
-                sim: Some(self.sim.clone()),
+                sim: Some(key),
                 ..Integrated::default()
             };
         } else if self.integrated.span == Some((span, k)) {

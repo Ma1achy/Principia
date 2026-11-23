@@ -252,7 +252,7 @@ fn check_no_slice(d: &Drawing, t1: f64, t2: f64) {
     assert!(!d.items.contains(&Item::Slice));
     assert_eq!(d.items.len(), 12, "the twelve edges alone");
     let line = format!(
-        "no plane drawn: s < 10⁻³ at τ₁ = {}°, τ₂ = {}° (RQ-340)",
+        "no plane drawn: s < 10⁻³ at τ₁ = {}°, τ₂ = {}° (Lean each axis)",
         compass::signed(t1, 1),
         compass::signed(t2, 1)
     );
@@ -287,9 +287,9 @@ fn compass_cross_section_corners_draw_no_slice() {
     }
     let v = view(90.0, 90.0, 45.0, 1.0);
     let d = compass::drawing(square172(), &plane(&v, [0.0; 3]), &v, Touch::Tilt, &free());
-    assert!(d
-        .readout
-        .contains(&"no plane drawn: s < 10⁻³ at τ₁ = +90.0°, τ₂ = +90.0° (RQ-340)".to_owned()));
+    assert!(d.readout.contains(
+        &"no plane drawn: s < 10⁻³ at τ₁ = +90.0°, τ₂ = +90.0° (Lean each axis)".to_owned()
+    ));
     // The controls: a polygon from the rounding normal of q₁ × q₂, the plane x + y = c; and the sine of the angle
     // between q₁ and q₂ as the test, which passes near a corner with γ = 45°.
     let (q1, q2) = frame_basis(&v);

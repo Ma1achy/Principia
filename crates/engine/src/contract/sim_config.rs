@@ -140,12 +140,25 @@ pub struct Slice {
     pub frame: SliceFrame,
 }
 
-/// The slice frame (gui_state_contract §2; R-457 E3, R-459): three latent dimension indices, in
-/// chart_decoder_contract Part 2's block order. `normal` is the slice normal, the compass cube's D axis, the dimension
-/// the slice moves through; `tilt_x` and `tilt_y` are the dimensions `τ₁` and `τ₂` tilt into. Like the lock it is chart
-/// construction, so it is undoable (R-69); no kernel reads it (the kernel reads `z₀`, `q₁`, `q₂`), so an edit of it
-/// alone re-integrates nothing. Each index is a `u32`, as every serialised index is (R-329).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+/// The slice frame (gui_state_contract §2): three latent dimension indices, in
+/// chart_decoder_contract Part 2's block order, the tilt map and the latent chart's two tilt angles as set. `normal` is
+/// the slice normal, the compass cube's D axis, the dimension the slice moves through; `tilt_x` and `tilt_y` are the
+/// dimensions `τ₁` and `τ₂` tilt into. Like the lock it is chart construction, so it is undoable; no kernel reads
+/// it (the kernel reads `z₀`, `q₁`, `q₂`), so an edit of it alone re-integrates nothing. Each index is a `u32`, as every
+/// serialised index is.
+///
+/// `tilt_map` is the map from `τ₁`, `τ₂` to the basis where both tilt into one target, Tip as sheet by default; a record
+/// with no such field, made before the map was recorded, reads as Lean each axis, the map it was made with.
+/// `tau1` and `tau2` are the angles as set, in degrees, always written: the basis is computed from them, and under Tip
+/// as sheet they may lie past ±90°. A record with none reads them as 0, and the reading rule below
+/// takes the basis's own angles where stored ones do not give it.
+///
+/// **The rule for a route that writes the basis other than through the angles** (gui_state_contract §2): the
+/// stored angles stand while they give the basis, on the frame's axes and targets under its map, at the basis's own
+/// scale and rotation, to rounding. A route that writes a basis they do not give (a typed component, a compass steer or
+/// pick, a preset, the Tilt reset, Home) writes, in the same history entry, the angles read back from the new basis.
+/// The reading is the GUI's (`gui::explore::manifold_view::View::read`).
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SliceFrame {
     /// The slice normal.
@@ -154,6 +167,50 @@ pub struct SliceFrame {
     pub tilt_x: u32,
     /// The dimension `τ₂` tilts the vertical axis `q₂` into.
     pub tilt_y: u32,
+    /// The tilt map where both angles tilt into one target: absent from an older record, Lean each axis.
+    #[serde(default = "TiltMap::absent")]
+    pub tilt_map: TiltMap,
+    /// `τ₁` as set, in degrees.
+    #[serde(default)]
+    pub tau1: f64,
+    /// `τ₂` as set, in degrees.
+    #[serde(default)]
+    pub tau2: f64,
+}
+
+/// The tilt map with one target and both angles set, serialised `sheet` or `lean`: the contract's copy
+/// of `kernel::chart::tilt::TiltMap`, which has no serialisation ([`TiltMap::kernel`]).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TiltMap {
+    /// "Tip as sheet": the plane turned rigidly by `m = √(τ₁² + τ₂²)` about the in-plane axis `(τ₂ e_a − τ₁ e_b)/m`.
+    #[default]
+    Sheet,
+    /// "Lean each axis": each screen axis a mix of its own coordinate and its target.
+    Lean,
+}
+
+impl TiltMap {
+    /// The map a record with no `tilt_map` reads as: Lean each axis, the one map before Tip as sheet was added.
+    pub fn absent() -> Self {
+        TiltMap::Lean
+    }
+
+    /// The kernel's map.
+    pub fn kernel(self) -> kernel::chart::tilt::TiltMap {
+        match self {
+            TiltMap::Sheet => kernel::chart::tilt::TiltMap::Sheet,
+            TiltMap::Lean => kernel::chart::tilt::TiltMap::Lean,
+        }
+    }
+
+    /// The map's name in the Tilt section's selector.
+    pub fn name(self) -> &'static str {
+        match self {
+            TiltMap::Sheet => "Tip as sheet",
+            TiltMap::Lean => "Lean each axis",
+        }
+    }
 }
 
 /// `z_q3`'s index, the GUI's slice axis before R-459 and the slice frame's default for a plane that does not show it
@@ -169,7 +226,27 @@ impl SliceFrame {
             normal: axis,
             tilt_x: axis,
             tilt_y: axis,
+            tilt_map: TiltMap::Sheet,
+            tau1: 0.0,
+            tau2: 0.0,
         }
+    }
+
+    /// The basis `(q₁, q₂)` the stored angles give on the axes `(e_a, e_b)` at the scale `σ` and the rotation `γ`
+    /// (radians), toward this frame's targets under its map: the kernel's `latent_basis`, the one construction the
+    /// decoder's basis edit and the engine's tilt leaf share. `None` where a target is one of `a`, `b`.
+    pub fn latent_basis(&self, a: u32, b: u32, scale: f64, gamma: f64) -> Option<(Latent, Latent)> {
+        use kernel::chart::tilt::{latent_basis, LatentFrame, TiltSpec};
+        latent_basis(
+            &LatentFrame { a, b, scale, gamma },
+            &TiltSpec {
+                tau1: self.tau1,
+                tau2: self.tau2,
+                map: self.tilt_map.kernel(),
+                x: self.tilt_x,
+                y: self.tilt_y,
+            },
+        )
     }
 }
 

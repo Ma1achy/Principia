@@ -20,7 +20,7 @@ use eframe::egui::{
 use engine::contract::sim_config::{Latent, Plane};
 
 use super::compass_support::{app_at, drawing, plane, square, view};
-use super::support::{nodes, nodes_of, press, rejects, Node, SLICE_FRAME};
+use super::support::{nodes, nodes_of, press, rejects, Node, LEAN_FRAME};
 use crate::app::App;
 use crate::explore::compass::{self, after, angle_text, drag_edit, signed, Drag};
 use crate::explore::manifold_view::tilt::Angles;
@@ -142,11 +142,11 @@ fn compass_drag(mode: Touch, step: Vec2) -> Trace {
     };
     // What the drag sets at `delta` from where it began, and what the slider and the readout should read then.
     let target = |delta: Vec2| -> (Plane, f64, String) {
-        let mut drag = Drag::start(mode, &start, &SLICE_FRAME);
+        let mut drag = Drag::start(mode, &start, &LEAN_FRAME);
         drag.moved(delta, sq);
         let target = after(
             &start,
-            &[drag_edit(&start, &SLICE_FRAME, &drag).expect("an edit")],
+            &[drag_edit(&start, &LEAN_FRAME, &drag).expect("an edit")],
         );
         let a = Angles::of(&View::of(&target));
         match mode {

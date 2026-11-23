@@ -596,27 +596,33 @@ fn mock_home_leaves_alone_everything_else() {
     rig.0.manifold.compass.mode = mv::Touch::Slice;
     let _ = rig.1.frame(&mut rig.0, Vec::new());
     let before = left(&rig);
+    let mut kept = left(&rig);
     assert_ne!(before.playhead.t, 0.0, "the playhead moved");
     assert_eq!(before.slice.frame.tilt_y as usize, MU1, "Y moved");
     click_button(&mut rig);
     let after = left(&rig);
-    assert_eq!(after, before);
+    // Home zeroes the tilt, so the stored angles beside the basis go to 0 with it; the rest is as it was.
+    (kept.slice.frame.tau1, kept.slice.frame.tau2) = (0.0, 0.0);
+    assert_eq!(after, kept);
     check_home(&Values::read(&rig.0, 0), 0);
     // Controls: a Home touching the playhead, a target, D or the layout fails.
     let mut wrong = left(&rig);
     wrong.playhead.t = 0.0;
-    rejects("a Home resetting the playhead", || {
-        assert_eq!(wrong, before)
-    });
+    rejects("a Home resetting the playhead", || assert_eq!(wrong, kept));
     let mut wrong = left(&rig);
     wrong.slice.frame.tilt_y = wrong.slice.frame.normal;
-    rejects("a Home resetting a target", || assert_eq!(wrong, before));
+    rejects("a Home resetting a target", || assert_eq!(wrong, kept));
     let mut wrong = left(&rig);
     wrong.slice.frame.normal = 3;
-    rejects("a Home resetting D", || assert_eq!(wrong, before));
+    rejects("a Home resetting D", || assert_eq!(wrong, kept));
     let mut wrong = left(&rig);
     wrong.splits = Default::default();
-    rejects("a Home resetting the layout", || assert_eq!(wrong, before));
+    rejects("a Home resetting the layout", || assert_eq!(wrong, kept));
+    let mut wrong = left(&rig);
+    wrong.slice.frame.tau1 = before.slice.frame.tau1;
+    rejects("a Home leaving the stored angles", || {
+        assert_eq!(wrong, kept)
+    });
 }
 
 #[test]

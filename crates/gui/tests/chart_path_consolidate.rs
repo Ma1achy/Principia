@@ -85,6 +85,14 @@ fn axis(i: usize, k: f64) -> Latent {
 }
 
 /// The planes: the mock's home, a zoomed preset, a tilted one, one tilted into two targets, and a skew basis.
+/// `frame` under Lean each axis: this file's tilts are Lean's, its leaf's map and its ±90° clamp.
+fn lean(frame: SliceFrame) -> SliceFrame {
+    SliceFrame {
+        tilt_map: engine::contract::sim_config::TiltMap::Lean,
+        ..frame
+    }
+}
+
 fn planes() -> Vec<(Plane, SliceFrame)> {
     let home = Plane {
         z0: gui::mock::MOCK_Z0,
@@ -92,11 +100,12 @@ fn planes() -> Vec<(Plane, SliceFrame)> {
         q2: gui::mock::MOCK_Q2,
     };
     let tilted = |x: u32, y: u32, tau: [f64; 2], scale: f64| {
-        let frame = SliceFrame {
+        let frame = lean(SliceFrame {
             normal: x,
             tilt_x: x,
             tilt_y: y,
-        };
+            ..SliceFrame::along(0)
+        });
         let view = View::framed(
             &Plane {
                 z0: home.z0,
@@ -122,14 +131,14 @@ fn planes() -> Vec<(Plane, SliceFrame)> {
         )
     };
     vec![
-        (home.clone(), SliceFrame::along(Z_Q3)),
+        (home.clone(), lean(SliceFrame::along(Z_Q3))),
         (
             Plane {
                 z0: [0.1, -0.0, 0.25, -0.5, 0.0, 0.125, -0.0, 0.3],
                 q1: axis(0, 0.0625),
                 q2: axis(1, 0.0625),
             },
-            SliceFrame::along(Z_Q3),
+            lean(SliceFrame::along(Z_Q3)),
         ),
         tilted(5, 5, [23.4, -11.0], 0.5),
         tilted(5, 7, [-40.0, 61.25], 0.25),
@@ -139,7 +148,7 @@ fn planes() -> Vec<(Plane, SliceFrame)> {
                 q1: [0.7, 0.2, -0.0, 0.1, 0.0, 0.0, 0.05, 0.0],
                 q2: [0.037, 0.333, 0.111, -0.074, 0.0, 0.037, 0.0, -0.0],
             },
-            SliceFrame::along(Z_Q3),
+            lean(SliceFrame::along(Z_Q3)),
         ),
     ]
 }
@@ -153,8 +162,30 @@ fn leaf_edits(l: Result<leaf::Leaf, engine::path::PathError>) -> Vec<SetField> {
     l.expect("the leaf takes it").edits().to_vec()
 }
 
-/// The engine's tilt leaf from `view`, read in its frame, to `to`.
+/// The engine's tilt leaf from `view`, read in its frame, to `to`: its basis, sent as the GUI sends a tilt, one edit of
+/// the slice frame's angles as set beside the basis.
 fn tilt_leaf(plane: &Plane, view: &View, to: Angles) -> Vec<SetField> {
+    tilt_leaf_basis(plane, view, to)
+        .into_iter()
+        .map(|edit| match edit.edit {
+            Edit::Sim(SimField::Basis { q1, q2 }) => SetField {
+                edit: Edit::Sim(SimField::SliceFrame {
+                    frame: SliceFrame {
+                        tau1: to.tau1,
+                        tau2: to.tau2,
+                        ..view.frame()
+                    },
+                    basis: Some((q1, q2)),
+                }),
+                ..edit
+            },
+            _ => edit,
+        })
+        .collect()
+}
+
+/// The engine's tilt leaf's own edits.
+fn tilt_leaf_basis(plane: &Plane, view: &View, to: Angles) -> Vec<SetField> {
     let at = Angles::of(view);
     let on = OnLatent {
         from: LatentTilt {
@@ -378,7 +409,13 @@ fn path_control_reordered() {
 
 fn basis_of(edit: &SetField) -> (Latent, Latent) {
     match &edit.edit {
-        Edit::Sim(SimField::Basis { q1, q2 }) => (*q1, *q2),
+        Edit::Sim(
+            SimField::Basis { q1, q2 }
+            | SimField::SliceFrame {
+                basis: Some((q1, q2)),
+                ..
+            },
+        ) => (*q1, *q2),
         other => panic!("not a basis edit: {other:?}"),
     }
 }

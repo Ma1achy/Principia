@@ -109,14 +109,14 @@ impl CompassCase {
     }
 
     /// The edits setting the case on `sim`'s chart: `z₀` with its components on `e_a`, `e_b` and the case's targets set to
-    /// 0 and on `e_d` to the case's, then the basis at the case's angles, its scale kept, and its frame, but for the
-    /// cases that pick `Y = z_μ1`, whose one edit sets the frame and the basis together.
+    /// 0 and on `e_d` to the case's, then one edit of the slice frame, its angles the case's as set and, for the cases
+    /// that pick it, `Y = z_μ1`, carrying the basis at the case's angles under the frame's map, its scale kept.
     pub fn edits(
         self,
         sim: &engine::contract::sim_config::SimConfig,
     ) -> [engine::contract::set_field::SetField; 2] {
         use crate::explore::manifold_view::tilt::Angles;
-        use crate::explore::manifold_view::{basis_edit, frame_edit, z0_edit, View, Z0_HALF_RANGE};
+        use crate::explore::manifold_view::{frame_edit, z0_edit, View, Z0_HALF_RANGE};
         let ((tau1, tau2, gamma), depth, _) = self.parameters();
         let mut view = View::read(sim);
         let picks = matches!(self, CompassCase::ThirdAxis | CompassCase::Badge);
@@ -133,12 +133,13 @@ impl CompassCase {
         z0[view.y] = 0.0;
         z0[view.d] = depth * Z0_HALF_RANGE;
         let basis = Angles { tau1, tau2, gamma }.apply(view).basis();
-        let edit = if picks {
-            frame_edit(view.frame(), Some(basis))
-        } else {
-            basis_edit(basis)
+        // The angles are stored as set beside the basis, one edit, as the Tilt section's sliders send them.
+        let frame = engine::contract::sim_config::SliceFrame {
+            tau1,
+            tau2,
+            ..view.frame()
         };
-        [z0_edit(z0), edit]
+        [z0_edit(z0), frame_edit(frame, Some(basis))]
     }
 }
 

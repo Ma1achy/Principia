@@ -90,6 +90,18 @@
     {
       "line": "sim key.links.beta.id: recorded \"sigmoid_beta\", now \"periodic_beta\" (every golden)",
       "reason": "the sim key holds the β link's id and, for a preset, its plane; the mirror step's removal (TASK-M2-57) gives β one new link, periodic_beta, and converts each stored z_β to it, so the key cannot be the record's. A difference by design, listed in the PR's section 2 and accepted with the change"
+    },
+    {
+      "line": "sim key.slice.frame.tau1: recorded absent, now 0.0 (every golden)",
+      "reason": "the sim key serialises the whole SimConfig, and the slice frame now records the tilt map and the angles as set (TASK-M6-48: a view saved before them reads as Lean each axis at 0); at the goldens' frame they are Tip as sheet at 0 and 0. No kernel reads the slice frame (the decode reads z0, q1, q2), so the goldens' pixels are unchanged; the key's text gains three fields. A difference by design, listed in TASK-M6-48's PR; NOT YET ACCEPTED by the owner"
+    },
+    {
+      "line": "sim key.slice.frame.tau2: recorded absent, now 0.0 (every golden)",
+      "reason": "the sim key serialises the whole SimConfig, and the slice frame now records the tilt map and the angles as set (TASK-M6-48: a view saved before them reads as Lean each axis at 0); at the goldens' frame they are Tip as sheet at 0 and 0. No kernel reads the slice frame (the decode reads z0, q1, q2), so the goldens' pixels are unchanged; the key's text gains three fields. A difference by design, listed in TASK-M6-48's PR; NOT YET ACCEPTED by the owner"
+    },
+    {
+      "line": "sim key.slice.frame.tilt_map: recorded absent, now \"sheet\" (every golden)",
+      "reason": "the sim key serialises the whole SimConfig, and the slice frame now records the tilt map and the angles as set (TASK-M6-48: a view saved before them reads as Lean each axis at 0); at the goldens' frame they are Tip as sheet at 0 and 0. No kernel reads the slice frame (the decode reads z0, q1, q2), so the goldens' pixels are unchanged; the key's text gains three fields. A difference by design, listed in TASK-M6-48's PR; NOT YET ACCEPTED by the owner"
     }
   ]
 }

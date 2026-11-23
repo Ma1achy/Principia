@@ -371,11 +371,28 @@ fn check_tilt_label(name: &str, r: &Value, edge: (P3, P3)) {
     );
 }
 
-/// The decoder's plane and its cross-section, computed apart (R-451's construction; points in (e_a, e_b, e_d)).
-fn decoder(t1: f64, t2: f64, g: f64) -> (P3, Vec<P3>) {
+/// The decoder's plane and its cross-section, computed apart (points in (e_a, e_b, e_d)): under Lean each axis its
+/// construction, `u₁ = cos τ₁ e_a + sin τ₁ e_d`, `u₂ = cos τ₂ e_b + sin τ₂ e_d`; under Tip as sheet, the default,
+/// `e_a` and `e_b` turned by `m = √(τ₁² + τ₂²)` about `k = (τ₂ e_a − τ₁ e_b)/m` (Rodrigues), the same as
+/// Lean's with one angle set.
+fn decoder(t1: f64, t2: f64, g: f64, sheet: bool) -> (P3, Vec<P3>) {
     let (t1, t2, g) = (t1.to_radians(), t2.to_radians(), g.to_radians());
-    let u1 = [t1.cos(), 0.0, t1.sin()];
-    let u2 = [0.0, t2.cos(), t2.sin()];
+    let (u1, u2) = if sheet && t1 != 0.0 && t2 != 0.0 {
+        let m = t1.hypot(t2);
+        let k = [t2 / m, -t1 / m, 0.0];
+        let turn = |v: P3| -> P3 {
+            let kv = k[0] * v[0] + k[1] * v[1] + k[2] * v[2];
+            let kxv = [
+                k[1] * v[2] - k[2] * v[1],
+                k[2] * v[0] - k[0] * v[2],
+                k[0] * v[1] - k[1] * v[0],
+            ];
+            std::array::from_fn(|i| v[i] * m.cos() + kxv[i] * m.sin() + k[i] * kv * (1.0 - m.cos()))
+        };
+        (turn([1.0, 0.0, 0.0]), turn([0.0, 1.0, 0.0]))
+    } else {
+        ([t1.cos(), 0.0, t1.sin()], [0.0, t2.cos(), t2.sin()])
+    };
     let q1: P3 = std::array::from_fn(|i| g.cos() * u1[i] + g.sin() * u2[i]);
     let q2: P3 = std::array::from_fn(|i| g.cos() * u2[i] - g.sin() * u1[i]);
     let n = [
@@ -417,6 +434,10 @@ fn qa_compass_golden_decoder_records_are_the_decoders_plane() {
     ] {
         check_decoder(case, t);
     }
+    // Control: the hexagon's record is Tip as sheet's plane, the app's default, not Lean each axis's.
+    rejects("the hexagon read as Lean each axis's plane", || {
+        check_decoder_as("mock_compass_cube_tilt_hex", (45.0, 45.0), false)
+    });
     // Control: the reference's axis-angle map at τ₁ = 30° tips the vertical normal, (sin τ, cos τ, 0), which the
     // decoder's tilt_rect normal is not.
     let r = json(&dir().join("decoder/mock_compass_cube_tilt_rect.json"));
@@ -427,10 +448,16 @@ fn qa_compass_golden_decoder_records_are_the_decoders_plane() {
     });
 }
 
-/// The decoder record of `case` is the decoder's plane at `(τ₁, τ₂)`, `γ = 0`, `z₀ = 0`, computed here.
+/// The decoder record of `case` is the decoder's plane at `(τ₁, τ₂)`, `γ = 0`, `z₀ = 0`, under the app's default map,
+/// Tip as sheet, computed here.
 fn check_decoder(case: &str, t: (f64, f64)) {
+    check_decoder_as(case, t, true)
+}
+
+/// [`check_decoder`] under Tip as sheet if `sheet`, else Lean each axis.
+fn check_decoder_as(case: &str, t: (f64, f64), sheet: bool) {
     let r = json(&dir().join("decoder").join(format!("{case}.json")));
-    let (n, pts) = decoder(t.0, t.1, 0.0);
+    let (n, pts) = decoder(t.0, t.1, 0.0, sheet);
     let got_n = p3(&r["normal"]);
     let sign = (got_n[0] * n[0] + got_n[1] * n[1] + got_n[2] * n[2]).signum();
     assert!(

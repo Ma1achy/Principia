@@ -9,7 +9,7 @@
 //! | A drag on the figure, the arrows on it, the centre `u`, `v` rows | [`Class::Pan`] | `leaf::pan` |
 //! | The wheel, + / −, the zoom row | [`Class::Zoom`] | `leaf::zoom` |
 //! | A Slice centre slider, its arrows | [`Class::Control`] | `leaf::control` |
-//! | Tilt's sliders, their arrows, the compass's tilt step and drag | [`Class::Tilt`] | `leaf::tilt`, Lean each axis |
+//! | Tilt's sliders, their arrows, the compass's tilt step and drag | [`Class::Tilt`] | `leaf::tilt`, the view's map |
 //! | K, lock here | [`Class::Lock`] | `leaf::lock`, with the centre-on-pin setting (off by default) |
 //! | The lock badge's centre on pin | [`Class::CentreOnPin`] | `leaf::centre_on_pin` |
 //!
@@ -35,7 +35,7 @@ use engine::contract::sim_config::{
 };
 use engine::path::leaf::Leaf;
 use engine::path::leaf::{self, Affine, CentreOnPin, OnLatent, Scale};
-use engine::path::{stop, LatentTilt, Pin, TiltMap, TiltSpec, View as PathView};
+use engine::path::{stop, LatentTilt, Pin, TiltSpec, View as PathView};
 
 use crate::explore::manifold_view::tilt::Angles;
 use crate::explore::manifold_view::{chart_coords, View};
@@ -63,8 +63,9 @@ pub enum Class {
         /// Its new value.
         value: f64,
     },
-    /// The tilt of the view `from`, read in its frame, to the angles `to` (degrees), each into its own target, under Lean
-    /// each axis, the gui's map (it offers no other yet).
+    /// The tilt of the view `from`, read in its frame, to the angles `to` (degrees), each into its own target, under the
+    /// view's map: one edit of the slice frame, its angles `to` as set, carrying the basis the leaf gives, so the
+    /// angles and the basis are undone together.
     Tilt {
         /// The view as read, its frame and its angles.
         from: View,
@@ -149,7 +150,33 @@ fn affine(plane: &Plane) -> PathView {
 /// The edits `class` records on `plane`: its leaf's, one command, through the stop. None where the leaf refuses it (an
 /// input that is not finite, a target off the frame's hidden dimensions, centre on pin with no pin to read).
 pub fn send(plane: &Plane, class: Class) -> Vec<SetField> {
-    leaf(plane, class).map_or_else(Vec::new, |l| l.edits().to_vec())
+    let edits = leaf(plane, class).map_or_else(Vec::new, |l| l.edits().to_vec());
+    match class {
+        Class::Tilt { from, to } => edits
+            .into_iter()
+            .map(|e| with_angles(e, &from, &to))
+            .collect(),
+        _ => edits,
+    }
+}
+
+/// A tilt leaf's edit of the basis as the edit of the slice frame `from`'s, its angles `to` as set, carrying that basis:
+/// one history entry. Any other edit as it is.
+fn with_angles(edit: SetField, from: &View, to: &Angles) -> SetField {
+    match edit.edit {
+        Edit::Sim(SimField::Basis { q1, q2 }) => SetField {
+            edit: Edit::Sim(SimField::SliceFrame {
+                frame: SliceFrame {
+                    tau1: to.tau1,
+                    tau2: to.tau2,
+                    ..from.frame()
+                },
+                basis: Some((q1, q2)),
+            }),
+            no_history: edit.no_history,
+        },
+        _ => edit,
+    }
 }
 
 /// The leaf `class` sends on `plane`, through the stop; none where it refuses the input.
@@ -175,7 +202,7 @@ pub fn leaf(plane: &Plane, class: Class) -> Option<Leaf> {
             let spec = TiltSpec {
                 tau1: to.tau1,
                 tau2: to.tau2,
-                map: TiltMap::Lean,
+                map: from.map.kernel(),
                 x: index(from.x),
                 y: index(from.y),
             };

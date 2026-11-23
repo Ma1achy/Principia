@@ -33,7 +33,7 @@ use engine::contract::conformance;
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::Source;
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::Plane;
+use engine::contract::sim_config::{Plane, SliceFrame, TiltMap};
 use engine::contract::snapshot::Snapshot;
 use gui::app::App;
 use gui::capture::{FORMAT, PIXELS_PER_POINT, SIZE};
@@ -245,6 +245,17 @@ fn mock() -> Rig {
         app: App::new(MockSide::new(MockEngine::frozen(), None), FORMAT),
         h: headless(),
     };
+    rig.idle(2);
+    // This file's decoder is Lean each axis, its ±90° slider ends with it: the rig's slice frame says
+    // so, today's default being Tip as sheet.
+    let frame = SliceFrame {
+        tilt_map: TiltMap::Lean,
+        ..rig.snap().sim.slice.frame
+    };
+    rig.app.set_field(SetField {
+        edit: Edit::Sim(SimField::SliceFrame { frame, basis: None }),
+        no_history: false,
+    });
     rig.idle(2);
     let p = rig.snap().sim.plane;
     for (q, k) in [(&p.q1, A), (&p.q2, B)] {

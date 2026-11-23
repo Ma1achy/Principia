@@ -1084,9 +1084,14 @@ fn mock_cube_third_axis_the_capture_cases_set_their_angles_targets_and_mode() {
         app.snapshot().history.undo_depth,
     );
     let mut set = Vec::new();
+    // The cases keep the app's map, Tip as sheet, the default; with two targets the basis is either map's.
+    let sheet = |v: View| View {
+        map: engine::contract::sim_config::TiltMap::Sheet,
+        ..v
+    };
     for (case, want) in [
-        (CompassCase::ThirdAxis, two(0.0, 15.0)),
-        (CompassCase::Badge, two(20.0, 15.0)),
+        (CompassCase::ThirdAxis, sheet(two(0.0, 15.0))),
+        (CompassCase::Badge, sheet(two(20.0, 15.0))),
     ] {
         let depth = app.snapshot().history.undo_depth;
         for edit in case.edits(&app.snapshot().sim) {
@@ -1119,6 +1124,12 @@ fn mock_cube_third_axis_the_capture_cases_set_their_angles_targets_and_mode() {
     }
     follow(&mut h, &mut app);
     let older = app.snapshot().sim.slice.frame;
+    // Its angles, all 0, are stored as set beside its basis: the targets and the normal stay the chart's.
+    let before = SliceFrame {
+        tau1: 0.0,
+        tau2: 0.0,
+        ..before
+    };
     check_frame_kept(older, before);
     rejects("a case that picks no target", || {
         assert_eq!(before, view(0.0, 0.0, 0.0, 1.0).frame())

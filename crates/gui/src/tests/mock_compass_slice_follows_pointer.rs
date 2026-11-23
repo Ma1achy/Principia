@@ -14,7 +14,7 @@ use eframe::egui::{self, Vec2};
 use engine::contract::sim_config::{Latent, Plane};
 
 use super::compass_support::{app_at, drag, drawing, plane, square, view, FRAME};
-use super::support::{rejects, SLICE_FRAME};
+use super::support::{rejects, LEAN_FRAME};
 use crate::app::App;
 use crate::explore::compass::{
     self, cube_width, drawn_normal, latent_normal, normal_on_screen, Iso, Reading, P3, VIEW_DIR,
@@ -190,7 +190,7 @@ fn mock_compass_slice_follows_pointer_tilted() {
         (s[0] - want[0]).abs() < 1e-3 && (s[1] - want[1]).abs() < 1e-3,
         "ŝ {s:?} not along (−1.183, 0.183)"
     );
-    let normal = latent_normal(&tilted, &SLICE_FRAME).expect("a plane");
+    let normal = latent_normal(&tilted, &LEAN_FRAME).expect("a plane");
     let half = 3f64.sqrt() * iso.s;
     let delta = along(s, half);
     let (before, after) = dragged(&mut app, &mut h, delta);
@@ -241,7 +241,7 @@ fn mock_compass_slice_follows_pointer_at_the_view_axis() {
     assert!(matches!(compass::reading(&v), Reading::Vertical(_)));
     // The side of the normal facing the viewer.
     let facing = if dot3(n, VIEW_DIR) > 0.0 { 1.0 } else { -1.0 };
-    let toward = latent_normal(&start, &SLICE_FRAME)
+    let toward = latent_normal(&start, &LEAN_FRAME)
         .expect("a plane")
         .map(|c| c * facing);
     let half = 3f64.sqrt() * iso.s;

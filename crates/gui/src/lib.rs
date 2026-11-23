@@ -112,4 +112,5 @@ mod tests {
     mod support;
     mod theme;
     mod tilt_targets;
+    mod two_tilt_maps;
 }

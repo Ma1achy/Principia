@@ -16,7 +16,7 @@ use super::compass_support::{
     app_at, check_painted, compass_rect, compass_shapes, drag, drawing, off_cube, on_slice,
     painted_edges, plane, setfields, settle, square, view,
 };
-use super::support::{focus, headless, mock_app, nodes, press, rejects, SLICE_FRAME};
+use super::support::{focus, headless, mock_app, nodes, press, rejects, LEAN_FRAME};
 use crate::app::App;
 use crate::explore::compass::{
     self, after, drag_edit, latent_normal, slice, tilt, Compass, Drag, Iso, DRAG_DEGREES,
@@ -49,7 +49,20 @@ fn tilted(t1: f64, t2: f64, g: f64) -> Plane {
 /// `τ₁`, `τ₂` in degrees of a basis edit made on `p`.
 fn angles_of(p: &Plane, edit: &SetField) -> (f64, f64) {
     match &edit.edit {
-        Edit::Sim(SimField::Basis { q1, q2 }) => {
+        // A tilt is one edit of the slice frame carrying the basis, its indices those of the frame it read.
+        Edit::Sim(
+            SimField::Basis { q1, q2 }
+            | SimField::SliceFrame {
+                basis: Some((q1, q2)),
+                frame:
+                    engine::contract::sim_config::SliceFrame {
+                        normal: 5,
+                        tilt_x: 5,
+                        tilt_y: 5,
+                        ..
+                    },
+            },
+        ) => {
             let v = View::of(&Plane {
                 z0: p.z0,
                 q1: *q1,
@@ -69,18 +82,18 @@ fn check_one(fields: &[&str], field: &str) {
 #[test]
 fn mock_compass_tilt_edit() {
     let p = tilted(0.0, 0.0, 0.0);
-    let (t1, t2) = angles_of(&p, &tilt(&p, &SLICE_FRAME, 10.0, -5.0));
+    let (t1, t2) = angles_of(&p, &tilt(&p, &LEAN_FRAME, 10.0, -5.0));
     assert!(
         (t1 - 10.0).abs() < 1e-9 && (t2 + 5.0).abs() < 1e-9,
         "({t1}, {t2})"
     );
-    let (t1, t2) = angles_of(&p, &tilt(&p, &SLICE_FRAME, 120.0, -120.0));
+    let (t1, t2) = angles_of(&p, &tilt(&p, &LEAN_FRAME, 120.0, -120.0));
     assert!(
         (t1 - 90.0).abs() < 1e-9 && (t2 + 90.0).abs() < 1e-9,
         "clamped: ({t1}, {t2})"
     );
     rejects("a tilt the other way", || {
-        let (t1, _) = angles_of(&p, &tilt(&p, &SLICE_FRAME, 10.0, 0.0));
+        let (t1, _) = angles_of(&p, &tilt(&p, &LEAN_FRAME, 10.0, 0.0));
         assert!((t1 + 10.0).abs() < 1e-9);
     });
 }
@@ -101,7 +114,7 @@ fn along_normal(p: &Plane, edit: &SetField) -> f64 {
     );
     dot(
         &delta,
-        &latent_normal(p, &SLICE_FRAME).expect("a drawn plane"),
+        &latent_normal(p, &LEAN_FRAME).expect("a drawn plane"),
     )
 }
 
@@ -117,7 +130,7 @@ fn check_along_normal(p: &Plane, edit: &SetField, amount: f64, tol: f64) {
 #[test]
 fn mock_compass_modes_the_normal_is_the_drawn_planes() {
     // Untilted, the normal is the hidden slice direction: the drag moves the slice step.
-    let n = latent_normal(&tilted(0.0, 0.0, 0.0), &SLICE_FRAME).expect("a plane");
+    let n = latent_normal(&tilted(0.0, 0.0, 0.0), &LEAN_FRAME).expect("a plane");
     let mut e_d = [0.0; 8];
     e_d[SLICE_AXIS] = 1.0;
     assert!(
@@ -130,19 +143,19 @@ fn mock_compass_modes_the_normal_is_the_drawn_planes() {
         (-89.0, 0.0, 90.0),
     ] {
         let p = tilted(t1, t2, g);
-        let ln = latent_normal(&p, &SLICE_FRAME).expect("a plane");
+        let ln = latent_normal(&p, &LEAN_FRAME).expect("a plane");
         assert!((norm(&ln) - 1.0).abs() < 1e-12, "unit");
         // The drawn plane's normal is the basis's own: q₁ and q₂ have no part along it.
         assert!(dot(&ln, &p.q1).abs() < 1e-12 && dot(&ln, &p.q2).abs() < 1e-12);
         check_along_normal(
             &p,
-            &slice(&p, &SLICE_FRAME, 0.3).expect("an edit"),
+            &slice(&p, &LEAN_FRAME, 0.3).expect("an edit"),
             0.3,
             1e-12,
         );
         check_along_normal(
             &p,
-            &slice(&p, &SLICE_FRAME, -0.05).expect("an edit"),
+            &slice(&p, &LEAN_FRAME, -0.05).expect("an edit"),
             -0.05,
             1e-12,
         );
@@ -152,7 +165,7 @@ fn mock_compass_modes_the_normal_is_the_drawn_planes() {
             along_normal(&p, &z0_edit(z0));
         });
         rejects("a slice-mode edit that tilts", || {
-            along_normal(&p, &tilt(&p, &SLICE_FRAME, 5.0, 0.0));
+            along_normal(&p, &tilt(&p, &LEAN_FRAME, 5.0, 0.0));
         });
     }
 }
@@ -173,18 +186,18 @@ fn along_s(p: &Plane, delta: egui::Vec2, square: Rect) -> f64 {
 fn mock_compass_modes_a_drag_edit_by_its_mode() {
     let p = tilted(20.0, -10.0, 15.0);
     let before = Angles::of(&View::of(&p));
-    let mut tilting = Drag::start(Touch::Tilt, &p, &SLICE_FRAME);
+    let mut tilting = Drag::start(Touch::Tilt, &p, &LEAN_FRAME);
     tilting.moved(egui::vec2(20.0, 10.0), SQUARE);
-    let (t1, t2) = angles_of(&p, &drag_edit(&p, &SLICE_FRAME, &tilting).expect("an edit"));
+    let (t1, t2) = angles_of(&p, &drag_edit(&p, &LEAN_FRAME, &tilting).expect("an edit"));
     let (w, h) = (f64::from(SQUARE.width()), f64::from(SQUARE.height()));
     assert!(
         (t1 - before.tau1 - 20.0 / w * DRAG_DEGREES).abs() < 1e-9
             && (t2 - before.tau2 + 10.0 / h * DRAG_DEGREES).abs() < 1e-9,
         "right raises τ₁, down lowers τ₂: ({t1}, {t2})"
     );
-    let mut slicing = Drag::start(Touch::Slice, &p, &SLICE_FRAME);
+    let mut slicing = Drag::start(Touch::Slice, &p, &LEAN_FRAME);
     slicing.moved(egui::vec2(-6.0, 9.0), SQUARE);
-    let edit = drag_edit(&p, &SLICE_FRAME, &slicing).expect("an edit");
+    let edit = drag_edit(&p, &LEAN_FRAME, &slicing).expect("an edit");
     let amount = along_s(&p, egui::vec2(-6.0, 9.0), SQUARE);
     check_along_normal(&p, &edit, amount, 1e-12);
     rejects(
@@ -193,8 +206,8 @@ fn mock_compass_modes_a_drag_edit_by_its_mode() {
     );
     // A drag with no travel sets the plane it started on: the edit sent every frame is the drag's target.
     for mode in [Touch::Tilt, Touch::Slice] {
-        let still = Drag::start(mode, &p, &SLICE_FRAME);
-        let moved = after(&p, &[drag_edit(&p, &SLICE_FRAME, &still).expect("an edit")]);
+        let still = Drag::start(mode, &p, &LEAN_FRAME);
+        let moved = after(&p, &[drag_edit(&p, &LEAN_FRAME, &still).expect("an edit")]);
         let close = |a: &Latent, b: &Latent| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-12);
         assert!(
             close(&moved.z0, &p.z0) && close(&moved.q1, &p.q1) && close(&moved.q2, &p.q2),
@@ -207,21 +220,21 @@ fn mock_compass_modes_a_drag_edit_by_its_mode() {
         other => panic!("a tilted plane reads along ŝ, not {other:?}"),
     };
     let across = egui::vec2((-sy * 30.0) as f32, (sx * 30.0) as f32);
-    let mut sideways = Drag::start(Touch::Slice, &p, &SLICE_FRAME);
+    let mut sideways = Drag::start(Touch::Slice, &p, &LEAN_FRAME);
     sideways.moved(across, SQUARE);
     assert!(
         sideways.amount.abs() < 1e-6,
         "a drag across ŝ: {}",
         sideways.amount
     );
-    let mut upright = Drag::start(Touch::Slice, &p, &SLICE_FRAME);
+    let mut upright = Drag::start(Touch::Slice, &p, &LEAN_FRAME);
     upright.moved(egui::vec2(0.0, 30.0), SQUARE);
     rejects(
         "a vertical slice drag that moves nothing (R-451 B3 as written)",
         || assert_eq!(upright.amount, 0.0),
     );
     rejects("a slice-mode drag that tilts", || {
-        along_normal(&p, &drag_edit(&p, &SLICE_FRAME, &tilting).expect("an edit"));
+        along_normal(&p, &drag_edit(&p, &LEAN_FRAME, &tilting).expect("an edit"));
     });
     // The plane after the edits, each on what the earlier leave; a lock edit moves no plane.
     let Edit::Sim(SimField::Z0(z0)) = edit.edit else {
@@ -578,7 +591,7 @@ fn mock_compass_modes_a_slice_drag_anywhere_moves_along_the_normal() {
         });
         assert_eq!(app.manifold.compass.mode, Touch::Slice);
         rejects("a slice-mode drag that tilts", || {
-            along_normal(&before, &tilt(&before, &SLICE_FRAME, 5.0, 0.0));
+            along_normal(&before, &tilt(&before, &LEAN_FRAME, 5.0, 0.0));
         });
         rejects(
             "a slice move along the depth axis on a tilted plane",
@@ -614,11 +627,11 @@ fn mock_compass_modes_the_drag_applies_its_plane_every_frame() {
         let _ = h.frame(&mut app, events);
     }
     // The edit is applied while the pointer is held: the contract holds the drag's target (R-458 F1).
-    let mut d = Drag::start(Touch::Slice, &before, &SLICE_FRAME);
+    let mut d = Drag::start(Touch::Slice, &before, &LEAN_FRAME);
     d.moved(delta, sq);
     let shown = after(
         &before,
-        &[drag_edit(&before, &SLICE_FRAME, &d).expect("an edit")],
+        &[drag_edit(&before, &LEAN_FRAME, &d).expect("an edit")],
     );
     let held = app.snapshot().clone();
     assert_eq!(
@@ -672,7 +685,7 @@ fn mock_compass_modes_locked_a_slice_drag_leaves_the_anchor_along_the_normal() {
     assert!(snapshot.sim.lock.locked, "still locked");
     assert_eq!(snapshot.sim.lock.z_locked, anchor, "the anchor kept");
     // The excursion is along the normal through the anchor.
-    let n = latent_normal(&before, &SLICE_FRAME).expect("a plane");
+    let n = latent_normal(&before, &LEAN_FRAME).expect("a plane");
     let on_line = |z0: &Latent| {
         let offset = add(z0, -1.0, &anchor);
         let along = dot(&offset, &n);
@@ -963,6 +976,7 @@ fn mock_compass_keys_adjust_steps_by_the_mode() {
             direction,
         };
         let mut sim = super::support::state(0.0).0;
+        sim.slice.frame = LEAN_FRAME;
         sim.plane = p.clone();
         compass::adjust(&a, &sim, &mut scratch, &mut out);
         out.edits

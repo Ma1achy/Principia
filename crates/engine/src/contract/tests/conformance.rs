@@ -370,6 +370,7 @@ fn framed_store() -> StateStore {
                 normal: 7,
                 tilt_x: 0,
                 tilt_y: 6,
+                ..SliceFrame::along(0)
             },
             basis: None,
         }),
@@ -415,6 +416,7 @@ fn check_frame_line(message: &str) {
             normal: 0,
             tilt_x: 4,
             tilt_y: 6,
+            ..SliceFrame::along(0)
         },
     );
     assert!(
@@ -444,7 +446,8 @@ fn conformance_slice_frame_line_any_wording() {
                 SliceFrame {
                     normal: 0,
                     tilt_x: 4,
-                    tilt_y: 6
+                    tilt_y: 6,
+                    ..SliceFrame::along(0)
                 }
             ),
             "{wrong:?} read as the edit"
@@ -470,6 +473,7 @@ fn check_turned(by: u32) {
                     normal,
                     tilt_x,
                     tilt_y,
+                    ..SliceFrame::along(0)
                 };
                 let t = conformance::turned(f, by);
                 for (i, was) in [(t.normal, normal), (t.tilt_x, tilt_x), (t.tilt_y, tilt_y)] {
@@ -507,6 +511,7 @@ fn store_logs_and_undoes_a_slice_frame_edit() {
         normal: 0,
         tilt_x: 4,
         tilt_y: 6,
+        ..SliceFrame::along(0)
     };
     let (q1, q2) = ([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0; 8]);
     store.set_field(SetField {
@@ -525,9 +530,9 @@ fn store_logs_and_undoes_a_slice_frame_edit() {
     assert_eq!(
         messages,
         [
-            "SetField Slice.frame (normal 5, tilt_x 5, tilt_y 5) → (normal 0, tilt_x 4, tilt_y 6)",
-            "SetField Slice.frame Plane.q1 Plane.q2 (normal 0, tilt_x 4, tilt_y 6) (0, 0, 0, 0, 0, 0, 0, 0) \
-             (0, 0, 0, 0, 0, 0, 0, 0) → (normal 5, tilt_x 5, tilt_y 5) (1, 0, 0, 0, 0, 0, 0, 0) \
+            "SetField Slice.frame (normal 5, tilt_x 5, tilt_y 5, tilt_map sheet, angles 0°, 0°) → (normal 0, tilt_x 4, tilt_y 6, tilt_map sheet, angles 0°, 0°)",
+            "SetField Slice.frame Plane.q1 Plane.q2 (normal 0, tilt_x 4, tilt_y 6, tilt_map sheet, angles 0°, 0°) (0, 0, 0, 0, 0, 0, 0, 0) \
+             (0, 0, 0, 0, 0, 0, 0, 0) → (normal 5, tilt_x 5, tilt_y 5, tilt_map sheet, angles 0°, 0°) (1, 0, 0, 0, 0, 0, 0, 0) \
              (0, 0, 0, 0, 0, 0, 0, 0)",
         ]
     );
@@ -559,7 +564,7 @@ validation::negative_control!(
                 no_history: false,
             },
         ),
-        "SetField Slice.frame (normal 5, tilt_x 5, tilt_y 5) → (normal 0, tilt_x 0, tilt_y 6)"
+        "SetField Slice.frame (normal 5, tilt_x 5, tilt_y 5, tilt_map sheet, angles 0°, 0°) → (normal 0, tilt_x 0, tilt_y 6)"
     )
 );
 
