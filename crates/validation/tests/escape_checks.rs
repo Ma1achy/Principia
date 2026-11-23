@@ -165,7 +165,14 @@ fn synthetic(t_h: f64, d: impl Fn(f64) -> f64, e: f64, stop: Stop) -> PostEscape
         .map(|k| {
             let t = f64::from(k) / 8.0;
             Point {
+                index: k,
                 t,
+                n: [0.0, 0.0, 1.0],
+                candidate: kernel::detect::escape::Escaper {
+                    found: e > 0.0,
+                    body: 2,
+                },
+                ionised: false,
                 d: [0.5, 0.5, d(t)],
                 e_rel: [-1.0, -1.0, e],
             }
@@ -177,6 +184,8 @@ fn synthetic(t_h: f64, d: impl Fn(f64) -> f64, e: f64, stop: Stop) -> PostEscape
         points,
         marks: Vec::<Mark>::new(),
         stop,
+        quantum: 0.125,
+        snapshot: None,
     }
 }
 

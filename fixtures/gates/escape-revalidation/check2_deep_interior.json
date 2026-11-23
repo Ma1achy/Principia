@@ -1,0 +1,7 @@
+{
+  "description": "The escape detector as it is, on deep_interior (64 × 64, r_coll 0), against check 2's ground truth, as check2_config.json.",
+  "populations": [{ "slice": "deep_interior", "n": 64, "r_coll": 0.0 }],
+  "truth": "check2",
+  "rule": "detector",
+  "expected": "pass"
+}

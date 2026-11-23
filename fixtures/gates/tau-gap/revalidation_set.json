@@ -1,0 +1,6 @@
+{
+  "description": "A recorded finding, not a control: the register's tau against the gap measured on the re-validation set (config_stability at its r_coll, config_basin and deep_interior at r_coll 0; 64 × 64 each, Heggie × RK4, marched past escape to 3·t_max). The criterion, written before the run: the gap exists (L < U), tau lies in its middle half in log tau, and across that middle half no false positive and no label change other than an escape gained. Measured (TASK-M3-34): L 1.2501e-2, U 1.3530e-2, U/L 1.082, and the provisional 1e-3 lies below it, so it fails until the owner settles tau; the expected outcome records that verdict.",
+  "populations": [{ "slice": "config_stability", "n": 64, "r_coll": null }, { "slice": "config_basin", "n": 64, "r_coll": 0.0 }, { "slice": "deep_interior", "n": 64, "r_coll": 0.0 }],
+  "tau": null,
+  "expected": "fail"
+}
