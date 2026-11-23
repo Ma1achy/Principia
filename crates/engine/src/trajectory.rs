@@ -65,7 +65,7 @@ pub trait Provider {
 /// Below `2⁵²` the rounded quotient's floor is within one of that `k` (the division and the product `k·Δ` each round
 /// once, by at most half a unit of the quotient's last place), so the search starts two below it and only climbs,
 /// `fl(k·Δ)` being monotone in `k`. Refused past `2⁵²`, where `k·Δ` no longer tells neighbouring indices apart.
-fn last_at_or_before(dt: f64, t: f64) -> Result<u64, Refused> {
+pub(crate) fn last_at_or_before(dt: f64, t: f64) -> Result<u64, Refused> {
     let guess = (t / dt).floor();
     if guess >= (1u64 << 52) as f64 {
         return Err(Refused::Grid);

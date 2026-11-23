@@ -171,6 +171,31 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
     monitored(out, &cadence)
 }
 
+/// [`integrate_detecting`] stopped at the sample's own stop index `k_stop`, a macro-step index on the same grid as the
+/// horizon: the march takes at most `k_stop` macro-steps and never passes the horizon, so `k_stop ≥ horizon_steps` is
+/// [`integrate_detecting`] bit for bit. Nothing in the march reads the horizon but its last step, so a sample stopped
+/// at `k_stop` below it holds the words of a run whose horizon is `k_stop`, its state label aside: `running` here, as
+/// the wrapper labels any march stopped short of the horizon, where that run is `bounded`. The time coordinate's stop
+/// (`engine::time_coordinate`) reads that `running` at `t_end_step = k_stop` as "reached its time".
+#[inline]
+pub fn integrate_detecting_to<A: Advance, R: WrapperReal>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    radius: CollisionRadius,
+    k_stop: u32,
+) -> SimStateBaseOf<R> {
+    let mut cadence = WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius);
+    let mut carried = Carried::unregistered();
+    let out = integrate_carrying_for::<A, R, WrapperCadence<R>>(
+        ic,
+        uniforms,
+        &mut cadence,
+        &mut carried,
+        k_stop,
+    );
+    monitored(out, &cadence)
+}
+
 /// `out` with the monitored fields of the run `cadence` followed (Part 1, "COM projection and invariant monitoring";
 /// payload §1, §2): `E_0` and `Lz_0` as stored before the loop, and `packed_b` holding `dE_max = max|ΔE|` and
 /// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed in the `log16` form (R-632); `dE_reg`, the regularised drift's

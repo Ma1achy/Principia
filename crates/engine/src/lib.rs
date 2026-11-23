@@ -81,6 +81,10 @@ pub mod synthetic;
 
 pub mod trajectory;
 
+/// Time as the map's last coordinate: the playhead the window's centre along it, a pixel's time to an integer boundary
+/// index, read through the trajectory interface (TASK-M2-91).
+pub mod time_coordinate;
+
 /// The samples' chart classification, CPU-side: whether chart_decoder_contract Part 3 hatches a sample's chart point
 /// as forbidden, from the chart's `validate` and `Chart::map`, which the outcome view reads as `ctx.validity.forbidden`
 /// (REQ-COL-102; R-26, R-446; TASK-M2-32).
