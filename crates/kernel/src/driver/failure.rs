@@ -71,19 +71,16 @@ pub fn regularised(size_finite: bool, nan: bool) -> u32 {
 /// (gpu_determinism_note § "The discipline", rule 4).
 #[inline]
 pub fn state_bits<R: IeeeBits>(r: &[[R; 2]; 3], p: &[[R; 2]; 3]) -> (bool, bool) {
-    let (mut bad, mut nan) = (false, false);
-    let mut i = 0;
-    while i < 3 {
-        let mut j = 0;
-        while j < 2 {
-            let (a, b) = (r[i][j], p[i][j]);
-            bad = bad || a.non_finite_bits() || b.non_finite_bits();
-            nan = nan || a.nan_bits() || b.nan_bits();
-            j += 1;
-        }
-        i += 1;
-    }
-    (bad, nan)
+    // Unrolled over the six rows at constant indices: a runtime index lowers to a bounds check, a multi-level exit
+    // (gpu_determinism_note § "The discipline", rule 5; `tests/discipline_lint.rs`).
+    let row = |(bad, nan): (bool, bool), [a, b]: [R; 2]| {
+        (
+            bad || a.non_finite_bits() || b.non_finite_bits(),
+            nan || a.nan_bits() || b.nan_bits(),
+        )
+    };
+    let rs = row(row(row((false, false), r[0]), r[1]), r[2]);
+    row(row(row(rs, p[0]), p[1]), p[2])
 }
 
 /// The cause read on the state `(r, p)`: [`DETAIL_NAN`] for a NaN in it, else [`DETAIL_INF`] for a `±∞`, else
@@ -359,7 +356,7 @@ pub fn sim_failed<R: WrapperReal>(s: SimStateBaseOf<R>, detail: u32) -> SimState
         C_ty: finite_or(s.C_ty, zero),
         E_0: finite_or(s.E_0, zero),
         Lz_0: finite_or(s.Lz_0, zero),
-        closure_min: number_or(s.closure_min, R::infinity()),
+        closure_min: number_or(s.closure_min, zero.or_pos_inf(true)),
         _nhat_lag_0: finite_or(s._nhat_lag_0, zero),
         _nhat_lag_1: finite_or(s._nhat_lag_1, zero),
         _nhat_lag_2: finite_or(s._nhat_lag_2, zero),
@@ -375,7 +372,7 @@ pub fn sim_failed<R: WrapperReal>(s: SimStateBaseOf<R>, detail: u32) -> SimState
 pub fn decode_failed<R: WrapperReal>(detail: u32) -> SimStateBaseOf<R> {
     let blank = SimStateBaseOf {
         S: s_failed::<R>(),
-        closure_min: R::infinity(),
+        closure_min: R::default().or_pos_inf(true),
         closure_step: 0,
         _reserved: NO_REFERENCE as u16,
         ..SimStateBaseOf::default()

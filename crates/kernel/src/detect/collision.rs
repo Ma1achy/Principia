@@ -77,15 +77,16 @@ pub fn floor_of_code(code: u32) -> f32 {
 /// [`floor_code_of_exponent`]. Pair `k` is the side opposite body `k`.
 #[inline]
 pub fn floor_codes<R: Quantise>(r: &[[R; 2]; 3]) -> [u32; 3] {
-    let e = |b: usize| {
-        let (x, y) = (r[b][0].quantise().exponent(), r[b][1].quantise().exponent());
+    // Each body's row is passed whole, so every index is a constant (gpu_determinism_note § "The discipline", rule 5).
+    let e = |rb: [R; 2]| {
+        let (x, y) = (rb[0].quantise().exponent(), rb[1].quantise().exponent());
         if x > y {
             x
         } else {
             y
         }
     };
-    let (e0, e1, e2) = (e(0), e(1), e(2));
+    let (e0, e1, e2) = (e(r[0]), e(r[1]), e(r[2]));
     let max = |a: i32, b: i32| if a > b { a } else { b };
     [
         floor_code_of_exponent(max(e1, e2)),
