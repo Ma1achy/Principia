@@ -705,12 +705,14 @@ fn qa_mock_compass_modes_a_slice_drag_anywhere_moves_along_the_normal() {
 fn qa_mock_compass_modes_locked_a_slice_drag_is_an_excursion_along_the_normal_through_the_anchor() {
     let frame = compass_frame();
     let mut rig = tilted();
+    // The lock and centre on pin in one command, the setting on (render_gui_spec §G4): the anchor at the centre.
+    rig.app.manifold.centre_on_pin = engine::path::leaf::CentreOnPin::On;
     rig.lock();
     let anchor = rig.snap().sim.lock.z_locked;
     assert_eq!(
         rig.snap().sim.plane.z0,
         anchor,
-        "the lock recentres on the anchor"
+        "the lock with centre on pin centres on the anchor"
     );
     let shapes = rig.shapes();
     rig.click(button_at(&shapes, "Slice"));

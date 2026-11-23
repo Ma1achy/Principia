@@ -944,7 +944,18 @@ fn qa_mock_compass_steer_latent_every_cell_steers_once_and_undoes_exactly() {
         rig.click(cell_at(i, j));
         let after = rig.snap();
         let what = format!("a click on ({i}, {j})");
-        assert_eq!(rig.applied() - n0, 1, "{what}: SetFields");
+        // The pin off the centre (locking does not move the view, render_gui_spec §G4), the steer's basis edit is sent
+        // with its z₀ re-solved about the pin: one command, one history entry, of one SetField or two.
+        assert!(
+            matches!(rig.applied() - n0, 1 | 2),
+            "{what}: SetFields {}",
+            rig.applied() - n0
+        );
+        assert_eq!(
+            after.history.undo_depth,
+            before.history.undo_depth + 1,
+            "{what}: one history entry"
+        );
         assert_eq!(rig.undo_depth(), d0 + 1, "{what}: undo depth");
         assert!(rig.app.console().len() > rows0, "{what}: nothing logged");
         logged.push(
@@ -1026,7 +1037,18 @@ fn qa_mock_compass_steer_latent_locked_keeps_the_anchor() {
         rig.click(cell_at(i, j));
         let after = rig.snap();
         let what = format!("locked, a click on ({i}, {j})");
-        assert_eq!(rig.applied() - n0, 1, "{what}: SetFields");
+        // The pin off the centre (locking does not move the view, render_gui_spec §G4), the steer's basis edit is sent
+        // with its z₀ re-solved about the pin: one command, one history entry, of one SetField or two.
+        assert!(
+            matches!(rig.applied() - n0, 1 | 2),
+            "{what}: SetFields {}",
+            rig.applied() - n0
+        );
+        assert_eq!(
+            after.history.undo_depth,
+            before.history.undo_depth + 1,
+            "{what}: one history entry"
+        );
         assert_eq!(after.sim.lock, lock0, "{what}: the anchor moved");
         lights(&after.sim.plane, i, j, &what);
         // The plane turns about the pin: the anchor stays on it.

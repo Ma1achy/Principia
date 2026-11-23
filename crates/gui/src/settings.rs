@@ -1,5 +1,6 @@
-//! The GUI's own settings, kept across sessions (R-461 I4; R-462 J5): each window's place, by its name, and the panel
-//! layout, each splitter's place and the console's height (R-463 K1). Never the contract (gui_state_contract §2): not undoable, never read by the engine.
+//! The GUI's own settings, kept across sessions (R-461 I4; R-462 J5): each window's place, by its name, the panel
+//! layout, each splitter's place and the console's height (R-463 K1), and the preference Centre on pin when locking
+//! (render_gui_spec §G4). Never the contract (gui_state_contract §2): not undoable, never read by the engine.
 //!
 //! **How they are stored** (TASK-M6-42's choice): one JSON file, `gui_settings.json`, in a `principia` directory under
 //! the platform's config directory ([`platform_path`]), written by the `serde_json` the crate already depends on and
@@ -7,8 +8,8 @@
 //! feature's crates and keep egui's memory as well. The file is
 //! `{"windows": {"<name>": {"x": …, "y": …, "w": …, "h": …}, …}, "layout": {"<splitter>": …, …, "console_top": …}}`,
 //! each place in points, each splitter a fraction of the window's width, or height (`crate::layout::Splits`), and
-//! `console_top` the console's top edge, a fraction of the window's height; one the file does not name is at its
-//! default, as `console_top` is never written until the edge is dragged. It is written each time a window's move or resize ends, a splitter's drag ends, a
+//! `console_top` the console's top edge, a fraction of the window's height; `"lock": {"centre_on_pin": true}` with the
+//! preference on, written only then; one the file does not name is at its default, as `console_top` is never written until the edge is dragged. It is written each time a window's move or resize ends, a splitter's drag ends, a
 //! splitter is reset and the layout is reset, and as the console's height is dragged or reset, through a file beside it renamed over it, so a write cut short leaves
 //! the last one.
 //!
@@ -18,6 +19,7 @@
 use std::path::{Path, PathBuf};
 
 use eframe::egui::{pos2, vec2, Rect};
+use engine::path::leaf::CentreOnPin;
 use serde_json::{json, Map, Value};
 
 use crate::layout::{Splits, Splitter};
@@ -29,6 +31,12 @@ pub const FILE: &str = "gui_settings.json";
 /// The console's top edge's name in the file's layout (R-463 K1).
 pub const CONSOLE_TOP: &str = "console_top";
 
+/// The lock's preferences' name in the file.
+pub const LOCK: &str = "lock";
+
+/// Centre on pin when locking's name in the file's lock object.
+pub const CENTRE_ON_PIN: &str = "centre_on_pin";
+
 /// The directory under the platform's config directory that holds it.
 pub const DIR: &str = "principia";
 
@@ -39,6 +47,8 @@ pub struct Settings {
     pub places: Places,
     /// Each splitter's place (R-462 J5).
     pub layout: Splits,
+    /// Centre on pin when locking (render_gui_spec §G4), off by default.
+    pub centre_on_pin: CentreOnPin,
 }
 
 impl Settings {
@@ -58,9 +68,12 @@ impl Settings {
         if let Some(top) = self.layout.console_top() {
             layout.insert(CONSOLE_TOP.to_owned(), json!(top));
         }
+        let mut root = json!({ "windows": windows, "layout": layout });
+        if self.centre_on_pin == CentreOnPin::On {
+            root[LOCK] = json!({ CENTRE_ON_PIN: true });
+        }
         let mut text =
-            serde_json::to_string_pretty(&json!({ "windows": windows, "layout": layout }))
-                .expect("a JSON value of finite numbers serialises");
+            serde_json::to_string_pretty(&root).expect("a JSON value of finite numbers serialises");
         text.push('\n');
         text
     }
@@ -103,9 +116,22 @@ impl Settings {
             }
             layout.set_console_top(fraction(CONSOLE_TOP)?);
         }
+        let mut centre_on_pin = CentreOnPin::Off;
+        if let Some(lock) = root.get(LOCK) {
+            let on = lock
+                .as_object()
+                .ok_or("`lock` is not an object")?
+                .get(CENTRE_ON_PIN)
+                .map(|v| v.as_bool().ok_or("`centre_on_pin` is not true or false"))
+                .transpose()?;
+            if on == Some(true) {
+                centre_on_pin = CentreOnPin::On;
+            }
+        }
         Ok(Self {
             places: Places::remembered(rects),
             layout,
+            centre_on_pin,
         })
     }
 }

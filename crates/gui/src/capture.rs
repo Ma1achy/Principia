@@ -158,7 +158,7 @@ pub fn hover_point(figure: egui::Rect) -> egui::Pos2 {
     )
 }
 
-/// Where the `lock` step locks, `(s, t)` of the figure, `t` Y-up: off the centre, so the recentring shows.
+/// Where the `lock` step locks, `(s, t)` of the figure, `t` Y-up: off the centre, so the pin shows where it was pressed.
 pub const LOCK_AT: (f32, f32) = (0.35, 0.6);
 
 /// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25), the Manifold view's

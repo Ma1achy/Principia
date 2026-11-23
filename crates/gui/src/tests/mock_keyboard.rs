@@ -1859,6 +1859,8 @@ fn mock_keyboard_manifold_view_scopes() {
         mv::ZOOM,
         mv::UNLOCK,
         mv::OPEN_INSPECTOR,
+        mv::CENTRE_ON_PIN,
+        mv::CENTRE_ON_PIN_SETTING,
         mv::RESET_NAVIGATE,
     ];
     let tilt = [
