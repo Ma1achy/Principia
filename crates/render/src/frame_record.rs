@@ -627,6 +627,13 @@ impl RenderLoop {
         self.clock.finish(timer)
     }
 
+    /// The colour stage alone, untimed and unrecorded: the current stain into the fresh layer ([`Layers::fresh`]), or
+    /// the layer cleared and why, for a caller that places the layer itself (`crate::stain_view`). It polls the cache,
+    /// so a finished compile swaps in first.
+    pub fn draw_stain(&mut self, inputs: &FrameInputs) -> Result<(), String> {
+        self.colour(inputs)
+    }
+
     /// The colour stage: the stain into the fresh layer, or the layer cleared and why.
     fn colour(&mut self, inputs: &FrameInputs) -> Result<(), String> {
         self.cache.poll();

@@ -134,13 +134,6 @@ pub fn render(
         usage: wgpu::TextureUsages::RENDER_ATTACHMENT.union(wgpu::TextureUsages::COPY_SRC),
         view_formats: &[],
     });
-    let row = (target.width * size).div_ceil(ROW_ALIGN) * ROW_ALIGN;
-    let readback = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("headless readback"),
-        size: u64::from(row) * u64::from(target.height),
-        usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
-        mapped_at_creation: false,
-    });
     let view = texture.create_view(&Default::default());
     checked(device, "the headless draw", || {
         let mut encoder = device.create_command_encoder(&Default::default());
@@ -167,6 +160,38 @@ pub fn render(
             }
             pass.draw(0..3, 0..1);
         }
+        queue.submit([encoder.finish()]);
+    })?;
+    read_back(device, queue, &texture, target)
+}
+
+/// Reads `texture`, a `target`-sized texture of its format made with `COPY_SRC`, back to the CPU, waiting for the GPU:
+/// rows from the top, unpadded. The read every offscreen render here ends with ([`render`],
+/// `crate::stain_view::StainView::render`).
+pub fn read_back(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    texture: &wgpu::Texture,
+    target: Target,
+) -> Result<Image, String> {
+    let size = texel_size(target.format) as u32;
+    if target.width == 0 || target.height == 0 || size == 0 {
+        return Err(format!("{target:?} has no texel to read back"));
+    }
+    let extent = wgpu::Extent3d {
+        width: target.width,
+        height: target.height,
+        depth_or_array_layers: 1,
+    };
+    let row = (target.width * size).div_ceil(ROW_ALIGN) * ROW_ALIGN;
+    let readback = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("headless readback"),
+        size: u64::from(row) * u64::from(target.height),
+        usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
+        mapped_at_creation: false,
+    });
+    checked(device, "the readback copy", || {
+        let mut encoder = device.create_command_encoder(&Default::default());
         encoder.copy_texture_to_buffer(
             texture.as_image_copy(),
             wgpu::TexelCopyBufferInfo {

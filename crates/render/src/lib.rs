@@ -50,6 +50,10 @@
 //! the FTLE carries in its legend line, and its switch, which falls silent once REQ-INT-076's confirmed values are
 //! recorded ([`ftle_provisional`]).
 //!
+//! The stain view (the real field's stain, C1): a `w × h` field's stored records drawn through a stain graph by the
+//! pipeline cache into a layer, a sample a texel, then placed in the caller's viewport by one fixed pass, as the GUI's
+//! field is ([`stain_view`]).
+//!
 //! The image embedding lives here too (`embed`): its record format, tiled writer, read searches and majority-vote
 //! reader. The plan layout names no export crate.
 
@@ -75,4 +79,5 @@ pub mod presets;
 pub mod print;
 pub mod raster;
 pub mod registry;
+pub mod stain_view;
 pub mod structural;

@@ -15,6 +15,10 @@ use crate::pipeline_cache::bytes;
 /// spec's 4 bytes a pixel for the render-sized targets).
 pub const LAYER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
+/// [`LAYER_FORMAT`] without its sRGB conversion: a layer's texels' stored bytes, sRGB-encoded, read as they are. Every
+/// layer may be viewed so ([`Layers::fresh_encoded`]).
+pub const ENCODED_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
+
 /// The most weights a blur pass takes, the centre's and one per tap out from it: the uniform block's capacity, a blur
 /// radius of at most 15 render pixels, not the radius. The radius is REQ-RENDER-079, an R-71 calibration requirement
 /// (caching contract Part 5) owned by TASK-M5-26 and confirmed by the human at the M5 gate; until then the weights,
@@ -266,26 +270,35 @@ impl Compositor {
     /// The render-sized layers, `width` × `height`, and the bind groups the blur and the composite read them through.
     pub fn layers(&self, device: &wgpu::Device, width: u32, height: u32) -> Layers {
         let texture = |label: &str| {
-            device
-                .create_texture(&wgpu::TextureDescriptor {
-                    label: Some(label),
-                    size: wgpu::Extent3d {
-                        width,
-                        height,
-                        depth_or_array_layers: 1,
-                    },
-                    mip_level_count: 1,
-                    sample_count: 1,
-                    dimension: wgpu::TextureDimension::D2,
-                    format: LAYER_FORMAT,
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                        | wgpu::TextureUsages::TEXTURE_BINDING
-                        | wgpu::TextureUsages::COPY_SRC,
-                    view_formats: &[],
-                })
-                .create_view(&Default::default())
+            device.create_texture(&wgpu::TextureDescriptor {
+                label: Some(label),
+                size: wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: LAYER_FORMAT,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | wgpu::TextureUsages::TEXTURE_BINDING
+                    | wgpu::TextureUsages::COPY_SRC,
+                view_formats: &[ENCODED_FORMAT],
+            })
         };
-        let (fresh, backdrop, scratch) = (texture("fresh"), texture("backdrop"), texture("blur"));
+        let view = |t: &wgpu::Texture| t.create_view(&Default::default());
+        let fresh_texture = texture("fresh");
+        let fresh_encoded = fresh_texture.create_view(&wgpu::TextureViewDescriptor {
+            label: Some("fresh, encoded"),
+            format: Some(ENCODED_FORMAT),
+            ..Default::default()
+        });
+        let (fresh, backdrop, scratch) = (
+            view(&fresh_texture),
+            view(&texture("backdrop")),
+            view(&texture("blur")),
+        );
         let blur_buffer = |label: &str| {
             device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some(label),
@@ -331,6 +344,7 @@ impl Compositor {
             width,
             height,
             fresh,
+            fresh_encoded,
             backdrop,
             scratch,
             blur_buffers: [across, down],
@@ -412,6 +426,7 @@ pub struct Layers {
     width: u32,
     height: u32,
     fresh: wgpu::TextureView,
+    fresh_encoded: wgpu::TextureView,
     backdrop: wgpu::TextureView,
     scratch: wgpu::TextureView,
     blur_buffers: [wgpu::Buffer; 2],
@@ -429,6 +444,12 @@ impl Layers {
     /// The fresh layer, which the colour pass draws.
     pub fn fresh(&self) -> &wgpu::TextureView {
         &self.fresh
+    }
+
+    /// The fresh layer viewed as [`ENCODED_FORMAT`]: its stored bytes, sRGB-encoded, read unconverted, for a pass that
+    /// writes them unchanged to a target that is not sRGB-typed (`crate::stain_view`).
+    pub fn fresh_encoded(&self) -> &wgpu::TextureView {
+        &self.fresh_encoded
     }
 
     /// The backdrop.
