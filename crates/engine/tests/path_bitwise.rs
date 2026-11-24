@@ -18,13 +18,9 @@
 //! the plane of `q` and the target) in the raw tilt family's place; a path triple `(A, B, family, s)` in a zoom's sim
 //! key. Each must fail.
 //!
-//! **Not on Windows.** The plan is unclear here; chose to leave this file out on Windows because the baseline holds the
-//! bits of std's `exp2` (the zoom) and `sin_cos` (the tilt), which are the platform's own libm, not the kernel's pinned
-//! one, and the file was written on Linux glibc: MSVC's CRT may differ in a last bit, which would be a platform
-//! difference in today's code, not a change of behaviour. macOS is not measured; it runs there.
-
-// Not on Windows: the baseline holds Linux glibc's `exp2` and `sin_cos` bits (the note above); it runs on hosted Linux.
-#![cfg(not(windows))]
+//! **Every platform.** Every transcendental the chart path calls rounds correctly (`engine::exact`) or is the pinned
+//! pure-software libm's, as the kernel's are, never the platform's own, so the digests are the same bits on Linux, macOS
+//! and Windows; the Windows runner runs this file too (`.config/nextest.toml`'s `win-gpu-kernel`).
 
 mod path_shim;
 mod path_support;
@@ -1129,7 +1125,7 @@ fn geodesic(
     };
     let q_hat = unit(&q)?;
     let t_perp = unit(&axpy(target, -dot(target, &q_hat), &q_hat))?;
-    let (sin, cos) = tau_deg.to_radians().sin_cos();
+    let (sin, cos) = engine::exact::sin_cos(tau_deg.to_radians());
     let turned: engine::contract::sim_config::Latent =
         std::array::from_fn(|i| length * (cos * q_hat[i] + sin * t_perp[i]));
     let kept_hat = unit(&kept)?;

@@ -751,7 +751,7 @@ impl Segment {
                 vec![pan_edit(a, s * ds, s * dt)?]
             }
             Family::Zoom { octaves } => zoomed(a, family::octave_factor(s * octaves)?)?,
-            Family::ZoomFactor { k } => zoomed(a, k.powf(s))?,
+            Family::ZoomFactor { k } => zoomed(a, crate::exact::pow(*k, s))?,
             Family::Slice { d, t } => vec![family::slice(a.plane()?, d, s * t)?],
             Family::Control { k, from, to } => {
                 vec![family::control(&a.sim, *k, from + s * (to - from))?]
@@ -871,7 +871,7 @@ impl Segment {
             Family::Share { from, to } => blend.at(from + s * (to - from))?,
             Family::Pan { ds, dt } => blend.pan(s * ds, s * dt)?,
             Family::Zoom { octaves } => blend.zoom(family::octave_factor(s * octaves)?)?,
-            Family::ZoomFactor { k } => blend.zoom(k.powf(s))?,
+            Family::ZoomFactor { k } => blend.zoom(crate::exact::pow(*k, s))?,
             Family::Turn { radians } => blend.turned(s * radians)?,
             Family::Cut { .. } | Family::Commit => return Ok(Some(self.a.clone())),
             _ => return Err(blend_refused()),

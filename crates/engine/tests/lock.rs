@@ -1237,9 +1237,9 @@ negative_control!(
 
 // ---- curve_tilt_requires_lock (REQ-CHART-007) ----
 
-/// `softmax(0, μ₁, μ₂)`.
+/// `softmax(0, μ₁, μ₂)`, through the chart path's correctly rounded `exp`, as the engine's.
 fn softmax(mu1: f64, mu2: f64) -> [f64; 3] {
-    let e = [1.0, mu1.exp(), mu2.exp()];
+    let e = [1.0, engine::exact::exp(mu1), engine::exact::exp(mu2)];
     let s = e[0] + e[1] + e[2];
     e.map(|x| x / s)
 }
@@ -1369,7 +1369,8 @@ fn curve_tilt_requires_lock() {
 fn check_mass_step() {
     let nu = 0.37;
     let (p, d) = (nu_embed(nu), (NU_CURVE.tangent)(nu));
-    let h = f64::EPSILON.cbrt() * (1.0 + p.mu1.hypot(p.mu2)) / d.mu1.hypot(d.mu2);
+    let h = engine::exact::cbrt(f64::EPSILON) * (1.0 + engine::exact::hypot(p.mu1, p.mu2))
+        / engine::exact::hypot(d.mu1, d.mu2);
     let at = |k: f64| {
         let m = softmax(p.mu1 + k * d.mu1, p.mu2 + k * d.mu2);
         <SoftmaxTanh as Link<2, 3>>::inverse(m)
