@@ -441,17 +441,39 @@ impl<R: AzReal> HgSystem<R> {
         ]
     }
 
-    /// The Cartesian state of `(q, p)` (Part 2b; Heggie Eqs. 10, 12): `rᵢ = (mⱼqₖ − mₖqⱼ)/M`, the momenta
-    /// `mᵢvᵢ = pₖ − pⱼ`, in the centre-of-mass frame.
+    /// The Cartesian state of `(q, p)` (Part 2b; Heggie Eqs. 10, 12): the relative positions closed by size
+    /// ([`HgSystem::closed`]), then `rᵢ = (mⱼq̃ₖ − mₖq̃ⱼ)/M`, the momenta `mᵢvᵢ = pₖ − pⱼ`, in the centre-of-mass frame.
+    ///
+    /// **Why closed.** The march carries all three `qᵢ`, and their sum `c = q₀ + q₁ + q₂` is zero only in exact
+    /// arithmetic: `Σq̇ᵢ ≡ 0`, so nothing in the dynamics takes out what the march's rounding puts in, and at f32 it grows
+    /// to 1e-2 by `t = 150` on this app's views. [`HgSystem::cartesian`] on the `qᵢ` as marched gives each separation
+    /// `qᵢ − (mᵢ/M)c`, a third of the gap on a tight pair of 1e-2 whatever its size, which misreads the pair's escape
+    /// test and fakes collisions. Shared by size, the gap lands on the long separations, whose own rounding is that size.
+    /// The march never reads its image, so the trajectory is unchanged.
     #[inline]
     pub fn image(&self, q: &HgQ<R>, p: &HgP<R>) -> State<R> {
         let (qv, pv) = self.phys(q, p);
-        self.cartesian(&qv, &pv)
+        self.cartesian(&closed(&qv, self.closure_weights(q)), &pv)
+    }
+
+    /// The weights [`closed`] shares the closure gap by at the regularised positions `q`: `wᵢ = Rᵢ/S`, `Rᵢ = |Qᵢ|² = |qᵢ|`,
+    /// `S = R₀ + R₁ + R₂` floored at `TINY` (Eq. 22's `S`), each separation's share in proportion to its size.
+    ///
+    /// The plan is unclear here (it offers `|qᵢ|²/Σ|qⱼ|²` or `|qᵢ|/Σ|qⱼ|`, to be measured); chose `|qᵢ|/Σ|qⱼ|` because, on
+    /// one sync interval's rounding marched at f32 against f64 from the same state over the view's 444 escape samples,
+    /// the two leave the same corrected error (99th percentile 7.15e-6 and 7.10e-6 of each separation), and this one
+    /// needs no floor beyond `S`'s, where the squares would need their own and underflow first at f32.
+    #[inline]
+    pub fn closure_weights(&self, q: &HgQ<R>) -> [R; 3] {
+        let r = rr(q);
+        let s = self.s_floored(r);
+        [r[0] / s, r[1] / s, r[2] / s]
     }
 
     /// The Cartesian state of the relative positions and momenta `(qv, pv)`, [`HgSystem::image`]'s second half, linear
     /// in them: `rᵢ = (mⱼqₖ − mₖqⱼ)/M` and `mᵢvᵢ = pₖ − pⱼ`. The FTLE shadow's displacement reads it on the relative
-    /// displacements ([`super::heggie_joint::cartesian`]).
+    /// displacements, closed as the image closes ([`super::heggie_joint::cartesian`]). On relative positions whose sum
+    /// `c` is not zero, the separation of pair `i` it gives is `qᵢ − (mᵢ/M)c`.
     #[inline]
     pub fn cartesian(&self, qv: &[V<R>; 3], pv: &[V<R>; 3]) -> State<R> {
         let [m0, m1, m2] = self.m;
@@ -467,6 +489,20 @@ impl<R: AzReal> HgSystem<R> {
             p: [sub(pv[2], pv[1]), sub(pv[0], pv[2]), sub(pv[1], pv[0])],
         }
     }
+}
+
+/// The relative vectors `v` closed by the weights `w`: `ṽᵢ = vᵢ − wᵢ·(v₀ + v₁ + v₂)`. With `Σwᵢ = 1` the result sums to
+/// zero up to rounding, so [`HgSystem::cartesian`] gives each separation as `ṽᵢ`. Linear in `v` for fixed `w`: the image
+/// closes the march's positions with [`HgSystem::closure_weights`], and the FTLE shadow closes its displacements with
+/// the same weights frozen at the sample's state ([`super::heggie_joint::cartesian`]). No branch, no index but constants.
+#[inline]
+pub fn closed<R: AzReal>(v: &[V<R>; 3], w: [R; 3]) -> [V<R>; 3] {
+    let c = add(add(v[0], v[1]), v[2]);
+    [
+        sub(v[0], scale(w[0], c)),
+        sub(v[1], scale(w[1], c)),
+        sub(v[2], scale(w[2], c)),
+    ]
 }
 
 /// A registration: the system with its frozen `h`, and the regularised state at `t = 0`.
