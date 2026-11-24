@@ -1,6 +1,6 @@
-//! The FTLE shadow's joint step (R-974, RQ-793 (a); dd_integrator §3.8; integrator_contract Part 2, Part 2a;
+//! The FTLE shadow's joint step (dd_integrator §3.8; integrator_contract Part 2, Part 2a;
 //! `kernel::occupant::Stepper::joint_step`, `kernel::driver::advance::Advance::advance_joint`,
-//! `kernel::physics::difference`; TASK-M3-72):
+//! `kernel::physics::difference`):
 //! - `joint_step_sample_bitwise`: every stepper's joint step leaves the sample's state and force evaluation exactly
 //!   its `STEP`'s, bit for bit, in both forms of the force difference, at f32 and f64, on states of several orbits and
 //!   seeded random states.
@@ -13,12 +13,12 @@
 //!   to f64 rounding where `δr` is not small.
 //! - `joint_step_difference_not_finite`, `force_difference_not_finite`: the two checks' reductions keep a non-finite
 //!   value, a NaN displacement or difference reading as an infinite residual or error, a failure, never as agreement
-//!   (Totality, R-47).
+//!   (Totality).
 //! - `joint_march_replays_sample`: a stepper's joint march, under a cadence that projects the sample as the wrapper's
 //!   does, leaves the sample's state that of its `ADVANCE` under the wrapper's cadence, bit for bit, macro-step by
 //!   macro-step.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176).
+//! Each test has a registered negative control naming the panic it expects.
 
 use kernel::driver::advance::{Advance, AdvanceParams, JointCadence};
 use kernel::driver::cadence::WrapperCadence;
@@ -209,7 +209,7 @@ impl ForceDifference for NotFinite {
 }
 
 /// The larger of `acc` and `v`, a non-finite `v` counting as infinite: `f64::max` drops a NaN, and no reduction
-/// discards a non-finite sample silently (Totality, R-47; R-538).
+/// discards a non-finite sample silently (Totality).
 fn worst(acc: f64, v: f64) -> f64 {
     if v.is_finite() {
         acc.max(v)

@@ -1,10 +1,9 @@
-//! qa's tests for TASK-M2-37, fix round 5: the warped mass ratio's range over drawn slices and asks, past the seed
-//! file's fixed grid (chart_reference §2.1: "Warped, `q(t) = q₀·(q₁/q₀)^t`, geometric, over `[q₀, q₁]`: the part of the
-//! asked range the link realises at `m_c` and at its active parameters. A chart decoded at `f32` holds `m_c` narrowed to
-//! `f32` [...] so the range is the part realised at `m_c` both as held and as narrowed, and where those share no ratio
-//! [...] the chart is not offered"). Written from that paragraph, with the realised set scanned by an oracle of the
-//! test's own; each test has its negative control (R-176).
-//!
+//! qa's tests of the warped mass ratio's range over drawn slices and asks, past the seed file's fixed grid
+//! (chart_reference §2.1: "Warped, `q(t) = q₀·(q₁/q₀)^t`, geometric, over `[q₀, q₁]`: the part of the asked range the
+//! link realises at `m_c` and at its active parameters. A chart decoded at `f32` holds `m_c` narrowed to `f32` [...] so
+//! the range is the part realised at `m_c` both as held and as narrowed, and where those share no ratio [...] the chart
+//! is not offered"). Written from that paragraph, with the realised set scanned by an oracle of the test's own; each
+//! test has its negative control.
 //! Drawn: mass controls uniform on `[−12, 12]²` (a third of them on `[−7, −4]²`, where a held mass lies near 1), every
 //! ordered body pair, under `softmax_tanh` at `μ_max` drawn over its allowed range and under `stick_breaking`. Asks, for
 //! each slice: a sliver about one scanned realised ratio, 0.002 wide in `ln q`; a range holding one end of the scanned

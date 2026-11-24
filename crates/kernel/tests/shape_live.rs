@@ -1,5 +1,5 @@
 //! The live shape readout's map, `kernel::driver::shape::shape`, the one the wrapper derives each macro-step from the
-//! positions and masses alone (dd_integrator §3.7, §5 test 9; R-14; REQ-INT-042):
+//! positions and masses alone (dd_integrator §3.7, §5 test 9):
 //! - `shape_identities`: `‖n‖ = 1` on random configurations under random masses; the equilateral triangle at equal
 //!   masses is a pole, `n_w = +1` anticlockwise and `−1` clockwise, turned, scaled and moved; a collinear configuration
 //!   is on the equator, `n_w = 0`; and `n` agrees with the IC Inspector's `shapePoint` on 5,000 random ICs
@@ -7,8 +7,8 @@
 //!   after the mirror fold (the inspector canonicalises to `w ≥ 0`, so `w` is compared in magnitude). Each at f64, and
 //!   the identities at f32 too.
 //!
-//! The tolerances of the identities are multiples of the precision's epsilon (applied per R-369, a test decision, as
-//! `shape_sphere.rs`'s); the inspector's is the register's `shape_vec_js_tol` (R-427).
+//! The tolerances of the identities are multiples of the precision's epsilon, as `shape_sphere.rs`'s; the inspector's
+//! is the register's `shape_vec_js_tol`.
 
 use std::path::Path;
 
@@ -29,7 +29,7 @@ impl Unit for SplitMix {
     }
 }
 
-/// `shape_vec_js_tol` (REQ-CHART-049).
+/// The register's `shape_vec_js_tol`, the inspector comparison's tolerance.
 const JS_TOL: f64 = SHAPE_VEC_JS_TOL.number();
 
 /// The map under test, at f64: the readout's, or a control's.

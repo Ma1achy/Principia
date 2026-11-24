@@ -1,6 +1,6 @@
-//! qa's tests for TASK-M2-40, written from the two requirements it closes, each with its negative control (R-176).
+//! qa's tests for saving a tilted view as a chart and tilting it again, each with its negative control.
 //!
-//! - REQ-CHART-073 (R-475 S2, S3, L5; R-477 C8): a latent view at `τ = (30°, 20°)` saved as the oblique chart
+//! - Saving a tilted view: a latent view at `τ = (30°, 20°)` saved as the oblique chart
 //!   `(z₀, q₁, q₂)`, the stored vectors exactly, reopened (through the serialisation) decodes bit-identically at every
 //!   pixel of a 33 × 33 grid, under both tilt maps (control: re-orthonormalising `q₁`, `q₂` is not bitwise under Lean);
 //!   a shape-sphere view tilted 25° into a momentum control saved and reopened at zero tilt likewise, on both shape
@@ -9,20 +9,22 @@
 //!   params refused (control: the saved parent itself reopens); a further tilt into a second
 //!   momentum control decodes as the block form `(R ⊕ 1)·(1 ⊕ R′)` applied to `(u, v, 0, 0)` to 1 ulp (controls: the
 //!   3 × 3 product `R·R′` feeding `d′` into `R`'s third input, and the order `R′·R`, each fail).
-//! - REQ-CHART-077 (R-513 Q1 to Q3): a shape-sphere view tilted `τ = (25°, 0)` into a momentum control, saved, then
+//! - Tilting a saved view again: a shape-sphere view tilted `τ = (25°, 0)` into a momentum control, saved, then
 //!   tilted `τ′ = (0, 20°)` into the same control decodes as `R·R′·(u, v, 0)` to 1 ulp at every pixel of a 33 × 33
 //!   grid at zoom 1 and zoom 4 alike; the same tilt into a second control is the block form; at `τ′ = 0` the saved
 //!   view bit for bit (controls: the offsets added, `d + d′`, and the order `R′·R`, each fail; a hair of tilt is not
 //!   bitwise). Beyond the verify's fixture: a saved Tip-as-sheet tilt with both angles set (Rodrigues' `R`, written here
-//!   from R-474 K1, not read from the kernel), and Q1's per-target rule with two new targets, one the saved one.
+//!   from the Tip-as-sheet definition, not read from the kernel), and the per-target rule (a new offset on the saved
+//!   target feeds `R`'s third input, one on another control is added to that control) with two new targets, one the
+//!   saved one.
 //!
-//! Every expected placement is computed here from the rulings' words: `R` and `R′` as 3 × 3 (or 4 × 4) rotations in
-//! the scaled space `(a, b, d̃)`, the hidden offset in units of its slider span (R-507 U1, R-513 Q2), each pixel's
-//! offset `(ũ, ṽ)` from the view's centre (R-473 J7), the view reopened at the saved centre. The decode is checked to be
+//! Every expected placement is computed here from the specification's words, not read from the kernel: `R` and `R′`
+//! as 3 × 3 (or 4 × 4) rotations in the scaled space `(a, b, d̃)`, the hidden offset in units of its slider span, each
+//! pixel's offset `(ũ, ṽ)` from the view's centre, the view reopened at the saved centre. The decode is checked to be
 //! the parent's own at the placed `(a, b)` with the control moved by the placed offset, bit for bit.
 //!
 //! "To 1 ulp" is read at the scale of the computation: `|got − want| ≤ ε·max(|want|, Σ|terms|)`, the terms being the
-//! products the rotations sum, fixed before the run (R-649).
+//! products the rotations sum, fixed before the run.
 
 use kernel::chart::saved::Saved;
 use kernel::chart::tilt::{latent_basis, Hidden, LatentFrame};
@@ -98,7 +100,7 @@ fn mag(m: &M3, x: [f64; 3]) -> [f64; 3] {
     std::array::from_fn(|i| (0..3).map(|k| (m[i][k] * x[k]).abs()).sum())
 }
 
-/// A single tilt `τ₁` of the horizontal axis into the target (R-473: `R·e_a = cos τ₁ e_a + sin τ₁ e_X`), the rotation in
+/// A single tilt `τ₁` of the horizontal axis into the target (`R·e_a = cos τ₁ e_a + sin τ₁ e_X`), the rotation in
 /// the `(a, d)` plane.
 fn r_tau1(t: f64) -> M3 {
     let (s, c) = sc(t);
@@ -111,7 +113,7 @@ fn r_tau2(t: f64) -> M3 {
     [[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]]
 }
 
-/// Tip as sheet, one target, both angles set (R-474 K1): the rotation by `m = √(τ₁² + τ₂²)` about the in-plane axis
+/// Tip as sheet, one target, both angles set: the rotation by `m = √(τ₁² + τ₂²)` about the in-plane axis
 /// `k = (τ₂ e_a − τ₁ e_b)/m`, Rodrigues' `R = I cos m + [k]× sin m + k kᵀ (1 − cos m)`.
 fn r_sheet(t1: f64, t2: f64) -> M3 {
     let m = (t1 * t1 + t2 * t2).sqrt();
@@ -205,7 +207,7 @@ fn check_decode<T: kernel::chart::tilt::Placement<f64>>(
 enum Rule {
     /// The requirement: `R′` first, the new offset on the saved target into `R`'s third input, any other added.
     Ruled,
-    /// RQ-403's option (a): `R` on `(u′, v′, 0)`, the new offset added to the saved one.
+    /// The obvious-but-wrong rule: `R` on `(u′, v′, 0)`, the new offset added to the saved one.
     OffsetsAdded,
     /// The order `R′·R`.
     Reversed,
@@ -293,7 +295,7 @@ fn check_composition(saved: TiltSpec, r: M3, new: TiltSpec, r_new: M3, rule: Rul
     println!("saved {saved:?}, new {new:?}: worst {worst} ulp");
 }
 
-// ── REQ-CHART-077: a new tilt into the saved target composes the rotations ──────────────────────────────────────────
+// ── a new tilt into the saved target composes the rotations ─────────────────────────────────────────────────────────
 
 const SAVED_25: TiltSpec = TiltSpec {
     tau1: 25.0,
@@ -448,7 +450,7 @@ negative_control!(
     check_separates(&[(Rule::OffsetsAdded, X2)])
 );
 
-// ── REQ-CHART-073: into a second control, the block form ────────────────────────────────────────────────────────────
+// ── into a second control, the block form ───────────────────────────────────────────────────────────────────────────
 
 fn new_second() -> TiltSpec {
     spec(0.0, 20.0, TiltMap::Sheet, X2, X2)
@@ -499,7 +501,7 @@ mod second_reversed {
     );
 }
 
-/// R-513 Q1 per target: a new two-target tilt (`τ′₁` into the saved target, `τ′₂` into a second control) feeds `R`'s
+/// Per target: a new two-target tilt (`τ′₁` into the saved target, `τ′₂` into a second control) feeds `R`'s
 /// third input with the saved target's new offset and adds the other's to its own control. `fed_other` feeds the
 /// second control's offset into `R` too (a control).
 fn check_two_new(fed_other: bool) {
@@ -558,7 +560,7 @@ negative_control!(
     check_two_new(true)
 );
 
-// ── Reopened at zero tilt, bitwise (S3, C8, R-513 Q3) ─────────────────────────────────────────────────────────────
+// ── Reopened at zero tilt, bitwise ────────────────────────────────────────────────────────────────────────────────
 
 /// How the reopened chart is formed: as saved, or with one of the saved parts lost (each a control).
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -568,7 +570,7 @@ struct Reopen {
     /// The saved tilt dropped.
     tilt_lost: bool,
     /// The slice centre's hidden values dropped from the definition (the parent saved with its controls reset to 0),
-    /// the chart then opened from the definition alone (R-475 L5: the parent saved by id and params; R-483 H3).
+    /// the chart then opened from the definition alone (the parent is saved by id and params).
     centre_lost: bool,
 }
 
@@ -686,7 +688,7 @@ mod curved_centre_lost {
     );
 }
 
-// ── REQ-CHART-073: the parent saved by id and params ───────────────────────────────────────────────────────────
+// ── the parent saved by id and params ──────────────────────────────────────────────────────────────────────────
 
 /// What the saved definition is reopened on: a parent whose params differ from the saved one's in one field, or (the
 /// control) the saved parent itself.
@@ -702,9 +704,9 @@ enum Other {
     Same,
 }
 
-/// R-475 L5 saves the parent by id and params, so a definition reopened on a chart with other params is not the saved
-/// view and is refused, never decoded as if it were (REQ-CHART-073). The saved parent opens from the definition alone
-/// and equals the parent it was saved from, field for field.
+/// The parent is saved by id and params, so a definition reopened on a chart with other params is not the saved view
+/// and is refused, never decoded as if it were. The saved parent opens from the definition alone and equals the
+/// parent it was saved from, field for field.
 fn refused(other: Other) -> bool {
     let parent = sphere(ShapeMap::Spherical);
     let chart = Saved::curved(&parent, SAVED_25, S, [SPAN, SPAN]).expect("saves");
@@ -757,7 +759,7 @@ mod other_parent_same {
     );
 }
 
-// ── REQ-CHART-073: the latent view saved as the oblique chart ───────────────────────────────────────────────────────
+// ── the latent view saved as the oblique chart ──────────────────────────────────────────────────────────────────────
 
 /// Gram–Schmidt on `(q₁, q₂)`, each normalised: the re-orthonormalisation the requirement forbids.
 fn orthonormalise(q1: [f64; 8], q2: [f64; 8]) -> ([f64; 8], [f64; 8]) {
@@ -839,8 +841,8 @@ const KINDS_AS_SAVED: Kinds = Kinds {
     latent_for_curved: false,
 };
 
-/// A latent view saves as an oblique chart, never as a curved chart on the latent parent (REQ-CHART-073: the latent
-/// view saved as the oblique chart `(z₀, q₁, q₂)`); a curved view never reads as an oblique one.
+/// A latent view saves as an oblique chart `(z₀, q₁, q₂)`, never as a curved chart on the latent parent; a curved
+/// view never reads as an oblique one.
 fn check_kinds(case: Kinds) {
     let view = Latent {
         z0: [0.0; 8],

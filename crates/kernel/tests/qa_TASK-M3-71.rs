@@ -1,21 +1,20 @@
-//! QA tests for TASK-M3-71, written from REQ-EVT-035 and the definition it asks for (integrator contract Part 7,
-//! "The floor's record, defined"; R-954, R-973), not from the implementation:
+//! QA tests for the collision floor's record, written from its definition (integrator contract Part 7, "The floor's
+//! record, defined"), not from the implementation:
 //! - A pair's floor at a state is the f32 spacing at the pair's largest coordinate, each position cast to f32 first:
 //!   `2^c`, `c = clamp(e − 23, −40, 104)`, `e` the largest exponent field of the pair's four coordinates, stored as
-//!   the code `c + 41`. Pair `k` is the side opposite body `k` (R-22). The floor varies with the pair's own
+//!   the code `c + 41`. Pair `k` is the side opposite body `k`. The floor varies with the pair's own
 //!   coordinates, not the third body's.
 //! - The record is the largest code over every pair near firing at every state the test reads, until it fires
 //!   (`d_quant < r_coll + floor`, strictly, in squared form), and over the `d_min` state, the state and pair the latch
 //!   holds when the sample is written (so a later, closer `d_min` state replaces the earlier one's code).
 //! - The bring-up mode's f32 writer writes the record's word, `coll_floor_bits`, as 0 (code 0, "not recorded";
 //!   colour_composition Appendix A's row), and the three words after it as 0 too, so a reused buffer keeps no stale
-//!   word: they were the record's padding `_pad` and are, since TASK-M3-12, the escape rule's lagged n̂ register
-//!   `_nhat_lag_0..2`, which the pattern leaves at zero.
+//!   word: they are the escape rule's lagged n̂ register `_nhat_lag_0..2`, which the pattern leaves at zero.
 //!
 //! Every figure below is exact in f32: the separations are whole multiples of the spacing at their coordinates, and
 //! `r_coll` is a multiple of a power of two whose square f32 holds exactly.
 //!
-//! Each test has its negative controls (R-176): a floor or a record built by a rule the definition rules out.
+//! Each test has its negative controls: a floor or a record built by a rule the definition rules out.
 
 use kernel::detect::collision::{floor_codes, CollisionRadius, Detector};
 use validation::negative_control;
@@ -31,7 +30,7 @@ fn p2(e: i32) -> f64 {
 // A pair's floor.
 // ---------------------------------------------------------------------------------------------------------------
 
-/// Each pair's floor code at the positions `r`, by R-22 pair id.
+/// Each pair's floor code at the positions `r`, by pair id (pair `k` opposite body `k`).
 type Codes = fn(&Pos) -> [u32; 3];
 
 /// The cases, each with its expected codes worked by hand from the definition.
@@ -303,8 +302,7 @@ negative_control!(
 
 // ---------------------------------------------------------------------------------------------------------------
 // The bring-up mode's f32 writer: the record's word (colour_composition Appendix A's `coll_floor_bits` row; payload
-// §2, code 0 "not recorded", reserved bits 8–31 zero) and the lagged n̂ register's three words after it, which stand
-// where the record's `_pad` did (TASK-M3-12).
+// §2, code 0 "not recorded", reserved bits 8–31 zero) and the lagged n̂ register's three words after it.
 // ---------------------------------------------------------------------------------------------------------------
 
 /// The word index, within a sample, of `SimStateFTLE`'s `coll_floor_bits` and of the three members after it, the

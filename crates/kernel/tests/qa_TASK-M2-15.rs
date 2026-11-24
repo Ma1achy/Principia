@@ -1,51 +1,46 @@
-//! QA tests for TASK-M2-15, written from the requirements, not the implementation: encode `E = (block inverses) ∘ C`
+//! QA tests for encode, written from the requirements, not the implementation: encode `E = (block inverses) ∘ C`
 //! on the CPU at f64 and f32. The GPU side is `engine`'s `qa_TASK-M2-15_gpu`.
 //!
-//! **No mirror step** (TASK-M2-57): the decoder's mirror step is removed and latent `β` is a periodic angle over the
-//! full circle, `β = z_β + π/2`, so a state below the `x`-axis encodes to `β ∈ (π, 2π)` and raises no notice of its
-//! own. The tests whose subject was the mirror's quotient are restated to that, each with its *was*.
+//! **No mirror step**: the decoder has no mirror step and latent `β` is a periodic angle over the full circle,
+//! `β = z_β + π/2`, so a state below the `x`-axis encodes to `β ∈ (π, 2π)` and raises no notice of its own.
 //!
-//! - REQ-ENC-007, REQ-ENC-003 (`encode_qa_m215_block_inverses`): the forward mates of inverse-encode Part 3 /
-//!   dd_encode §3.1 are written here from the docs (softmax ∘ μ_max·tanh, `α = (π/2)σ`, `β = z_β + π/2` (*was:*
-//!   "`β = πσ`"), `q = q_max(2σ − 1)`, the Jacobi map of dd_decoder §3.2 and the momentum table of §3.1), never taken
-//!   from the kernel. Fuzzed interior `z`, `z_β` on both halves of the circle, put through that forward map and a
-//!   random gauge element `g` of dd_encode §3.3 (translation, boost, rotation, scale `s` with `p` scaled by
-//!   `s^(−1/2)`, and the mirror on positions *and* momenta), encodes back to `z`, or where `g` mirrors to the
-//!   mirrored `z` (`z_β → π − z_β`, `z_q1` and `z_q3` negated: the equivariance), `z_β` read on the circle, and its
-//!   decode is the canonical state in physical units (Part 4), reflected where `g` mirrors. The controls: the
-//!   half-mirror §3.3 names, positions only; and an encode with the mirror step left in.
-//! - REQ-ENC-007, REQ-ENC-014 (`encode_qa_m215_clamp_iff`): each `q` component and each mass ratio is driven across its
-//!   clamp: the control's bit and `lookup_clamped` are set iff the inverse's argument lies outside the clamp interval
-//!   (`|q| > q_max(1 − 2ε_q)`, the `s` clamp; `|μ| > (1 − ε_μ)μ_max`), `|q| > q_max` always clamped and flagged, the
-//!   clamped `z` finite and on the clamp's image.
-//! - REQ-ENC-007 (`encode_qa_m215_beta_quotient`): `β` alone (R-437): the signed angle on `[0, 2π̂]`, so `β(x, −y)` is
-//!   `2π̂ − β(x, y)`, the mirror's image, off the axis and the same bits on it (*was:* "`β(x, −y)` and `β(x, y)` have
-//!   the same bits (`abs`, the mirror's quotient), `β ∈ [0, π̂]`"), at or below `π̂` above the axis and at or above it below (f32 to one ulp there), `(±0, ±0)`
-//!   gives `+0`, the `−x` half-axis `π̂` at each precision (the nearest value at f64, rounded toward zero at f32;
-//!   R-417), never `atan2`'s negative values.
-//! - REQ-ENC-007 (`encode_qa_m215_collinear_beta`): dd_encode §5 test 10 at the three Euler collinear central
-//!   configurations of masses `(0.2, 0.3, 0.5)` (solved here by bisection on Euler's condition, so no landmark sits on
-//!   the pole), with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`: `β` at π or at 0 on the circle (just below `2π̂` for body 2 on
-//!   `+x` below the axis), nothing clamped, and the decode keeping `λ̃_y`'s sign (*was:* the four inputs folded to one
-//!   `z` with `lookup_clamped`); and the pole landmark `m₀ = m₁` on its own.
-//! - REQ-DEC-014 (`encode_qa_m215_exact_poles`): `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components:
-//!   no NaN, identical on repeat and across the zeros' signs, `lookup_clamped` set, `β` and `φ` R-437's `+0`, and the
-//!   CPU-f32 instantiation agreeing with CPU-f64 (angles, notices, decoded state).
-//! - REQ-ENC-014 (`encode_qa_m215_notices`): a canonical input raises no notice; its mirror image, in the other half,
-//!   raises none either and stays in that half (*was:* "a mirrored one only `lookup_mirrored`"); an out-of-range
-//!   momentum only `lookup_clamped`.
-//! - REQ-SYS-015 (`encode_qa_m215_no_wgsl_decode`): no checked-in `.wgsl` file carries the decode's or encode's link
-//!   formulae (the verify detail's grep, including `.wgsl`): the fragment decode/encode can only be the translation's
-//!   output. *Amended by qa for TASK-M2-25 (R-116, REQ-COL-006; exception applied per R-369 on PR #303):* R-116's
-//!   translated snippets, `crates/render/wgsl/decode.wgsl` and `crates/render/wgsl/encode.wgsl`, are checked in, and
-//!   naga writes the encode's inverse `tanh` as the WGSL builtin `atanh`. Those two paths alone, and only while each
-//!   carries `cargo xtask build-kernel`'s GENERATED header, may hold the WGSL builtin [`TRANSLATION_BUILTINS`]; every
-//!   other token stays forbidden in them, and every token in every other `.wgsl` file.
+//! - `encode_qa_m215_block_inverses`: the forward mates of inverse-encode Part 3 / dd_encode §3.1 are written here from
+//!   the docs (softmax ∘ μ_max·tanh, `α = (π/2)σ`, `β = z_β + π/2`, `q = q_max(2σ − 1)`, the Jacobi map of dd_decoder
+//!   §3.2 and the momentum table of §3.1), never taken from the kernel. Fuzzed interior `z`, `z_β` on both halves of
+//!   the circle, put through that forward map and a random gauge element `g` of dd_encode §3.3 (translation, boost,
+//!   rotation, scale `s` with `p` scaled by `s^(−1/2)`, and the mirror on positions *and* momenta), encodes back to
+//!   `z`, or where `g` mirrors to the mirrored `z` (`z_β → π − z_β`, `z_q1` and `z_q3` negated: the equivariance),
+//!   `z_β` read on the circle, and its decode is the canonical state in physical units (Part 4), reflected where `g`
+//!   mirrors. The controls: the half-mirror §3.3 names, positions only; and an encode with the mirror step left in.
+//! - `encode_qa_m215_clamp_iff`: each `q` component and each mass ratio is driven across its clamp: the control's bit
+//!   and `lookup_clamped` are set iff the inverse's argument lies outside the clamp interval (`|q| > q_max(1 − 2ε_q)`,
+//!   the `s` clamp; `|μ| > (1 − ε_μ)μ_max`), `|q| > q_max` always clamped and flagged, the clamped `z` finite and on
+//!   the clamp's image.
+//! - `encode_qa_m215_beta_quotient`: `β` alone: the signed angle on `[0, 2π̂]`, so `β(x, −y)` is `2π̂ − β(x, y)`, the
+//!   mirror's image, off the axis and the same bits on it, at or below `π̂` above the axis and at or above it below
+//!   (f32 to one ulp there), `(±0, ±0)` gives `+0`, the `−x` half-axis `π̂` at each precision (the nearest value at
+//!   f64, rounded toward zero at f32), never `atan2`'s negative values.
+//! - `encode_qa_m215_collinear_beta`: dd_encode §5 test 10 at the three Euler collinear central configurations of
+//!   masses `(0.2, 0.3, 0.5)` (solved here by bisection on Euler's condition, so no landmark sits on the pole), with
+//!   `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`: `β` at π or at 0 on the circle (just below `2π̂` for body 2 on `+x` below the
+//!   axis), nothing clamped, and the decode keeping `λ̃_y`'s sign; and the pole landmark `m₀ = m₁` on its own.
+//! - `encode_qa_m215_exact_poles`: `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components: no NaN,
+//!   identical on repeat and across the zeros' signs, `lookup_clamped` set, `β` and `φ` exactly `+0`, and the CPU-f32
+//!   instantiation agreeing with CPU-f64 (angles, notices, decoded state).
+//! - `encode_qa_m215_notices`: a canonical input raises no notice; its mirror image, in the other half, raises none
+//!   either and stays in that half; an out-of-range momentum only `lookup_clamped`.
+//! - `encode_qa_m215_no_wgsl_decode`: no checked-in `.wgsl` file carries the decode's or encode's link formulae (a
+//!   grep, including `.wgsl`): the fragment decode/encode can only be the translation's output. The exception: the
+//!   translated snippets of the shared Rust source, `crates/render/wgsl/decode.wgsl` and
+//!   `crates/render/wgsl/encode.wgsl`, are checked in, and naga writes the encode's inverse `tanh` as the WGSL builtin
+//!   `atanh`. Those two paths alone, and only while each carries `cargo xtask build-kernel`'s GENERATED header, may
+//!   hold the WGSL builtin [`TRANSLATION_BUILTINS`]; every other token stays forbidden in them, and every token in
+//!   every other `.wgsl` file.
 //!
-//! **Tolerances** (applied per R-369, test decisions): f64 rounding bounds, each the precision's epsilon times the
-//! conditioning the docs give (`d logit/ds = 1/(s(1 − s))`, `d artanh/dt = 1/(1 − t²)`, Part 4) times the input's
-//! magnitude after the gauge, with headroom; stated at each constant. `ε_phys` is uncalibrated (REQ-ENC-024), so the
-//! "within `ε_phys`" components of test 10 are held to a rounding bound, tighter than any calibrated `ε_phys` can be.
+//! **Tolerances** (test decisions): f64 rounding bounds, each the precision's epsilon times the conditioning the docs
+//! give (`d logit/ds = 1/(s(1 − s))`, `d artanh/dt = 1/(1 − t²)`, Part 4) times the input's magnitude after the gauge,
+//! with headroom; stated at each constant. `ε_phys` is uncalibrated, so the "within `ε_phys`" components of test 10 are
+//! held to a rounding bound, tighter than any calibrated `ε_phys` can be.
 //!
 //! **Domain** (pitfalls §10): encode alone, on states held fixed; no trajectory.
 
@@ -60,7 +55,7 @@ use kernel::encode::{encode, Encoded};
 use kernel::generated::links::Defaults;
 use validation::negative_control;
 
-// R-10, inverse-encode Part 3, R-82.
+// The link constants and `δ_λ`, inverse-encode Part 3.
 const MU_MAX: f64 = 5.0;
 const Q_MAX: f64 = 2.0;
 const EPS_MU: f64 = 1e-6;
@@ -291,7 +286,7 @@ negative_control!(
     check_folds_keep_nan(f64::max)
 );
 
-// ── REQ-ENC-007: each block recovers z, under the gauge ───────────────────────────────────────────────────────────
+// ── Each block recovers z, under the gauge ────────────────────────────────────────────────────────────────────────
 
 /// `x` with every `rᵢ` and every `pᵢ` reflected in the `x`-axis: the mirror map `Π` on the full state.
 fn mirror_image(x: &Ic<f64>) -> Ic<f64> {
@@ -450,7 +445,7 @@ negative_control!(
     check_block_inverses_f32(2000, 0x2150_0002, 2e-3)
 );
 
-// ── REQ-ENC-007 / REQ-ENC-014: the clamps, iff ────────────────────────────────────────────────────────────────────
+// ── The clamps, iff ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The canonical state of interior masses and angles with Jacobi momenta `q = (p_ρx, p_ρy, p_λx, p_λy)`.
 fn with_q(q: [f64; 4]) -> Ic<f64> {
@@ -556,9 +551,9 @@ negative_control!(
     check_clamp_iff(true)
 );
 
-// ── REQ-ENC-007: β alone (R-437; the signed angle over the full circle) ───────────────────────────────────────────
+// ── β alone (the signed angle over the full circle) ───────────────────────────────────────────────────────────────
 
-/// f32's π̂: the image of π rounded toward zero (R-417).
+/// f32's π̂: the image of π rounded toward zero.
 fn pi_hat_f32() -> f32 {
     let nearest = PI as f32;
     if f64::from(nearest) > PI {
@@ -692,7 +687,7 @@ mod beta_raw_atan2 {
     );
 }
 
-// ── REQ-ENC-007: dd_encode §5 test 10 ─────────────────────────────────────────────────────────────────────────────
+// ── dd_encode §5 test 10 ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// Euler's collinear central configuration of masses `m` with body `order[1]` in the middle: positions on a line,
 /// `x[order[0]] = 0`, `x[order[1]] = 1`, `x[order[2]] = 1 + t`, `t` solving `(a₃ − a₂)/t = a₂ − a₁` (accelerations
@@ -897,7 +892,7 @@ fn check_pole_landmark(tamper: bool) {
         };
         let mut e = enc64(&x);
         if tamper && y == 0.0 {
-            // atan2(−0, −0) = −π: the value R-437's select exists to avoid.
+            // atan2(−0, −0) = −π: the value the select to `+0` at the pole exists to avoid.
             e.blocks.beta = (-0.0f64).atan2(-0.0);
         }
         let b = e.blocks.beta;
@@ -962,7 +957,7 @@ fn encode_qa_m215_collinear_beta_pole() {
     check_pole_landmark(false);
 }
 
-// ── REQ-DEC-014: the exact α-poles ────────────────────────────────────────────────────────────────────────────────
+// ── The exact α-poles ─────────────────────────────────────────────────────────────────────────────────────────────
 
 const ZEROS: [f64; 2] = [0.0, -0.0];
 
@@ -1142,7 +1137,7 @@ negative_control!(
     check_poles("λ̃ = 0", &lambda_pole_states(), 0.0, false, Some(5))
 );
 
-// ── REQ-ENC-014: the notices ──────────────────────────────────────────────────────────────────────────────────────
+// ── The notices ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A canonical input raises no notice; nor does its mirror image, which the encode leaves in its own half (`λ̃_y`'s
 /// sign reversed from the input's, `β` on the other side of `π̂`), there being no mirror step to report (*was:* "a
@@ -1203,7 +1198,7 @@ negative_control!(
     check_notices(mirror_left_in)
 );
 
-// ── REQ-SYS-015: no hand-written WGSL decode or encode ────────────────────────────────────────────────────────────
+// ── No hand-written WGSL decode or encode ─────────────────────────────────────────────────────────────────────────
 
 /// The decode's and encode's link formulae and constants, as a WGSL transcription would name them.
 const DECODE_TOKENS: [&str; 10] = [
@@ -1247,21 +1242,21 @@ fn wgsl_files(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// R-116's translated snippets (TASK-M2-25), by their path under the repository root: checked-in build outputs of the
-/// rust-gpu → SPIR-V → WGSL translation, which `cargo xtask build-kernel` refuses to find edited by hand.
+/// The translated snippets of the shared source, by their path under the repository root: checked-in build outputs of
+/// the rust-gpu → SPIR-V → WGSL translation, which `cargo xtask build-kernel` refuses to find edited by hand.
 const TRANSLATED_SNIPPETS: [&str; 2] = [
     "crates/render/wgsl/decode.wgsl",
     "crates/render/wgsl/encode.wgsl",
 ];
 
 /// The WGSL builtins among `DECODE_TOKENS` that naga's translation emits for the shared source's own calls (the encode's
-/// inverse `tanh`): allowed in a [`TRANSLATED_SNIPPETS`] file only (R-116 forces it).
+/// inverse `tanh`): allowed in a [`TRANSLATED_SNIPPETS`] file only, where the translation emits it.
 const TRANSLATION_BUILTINS: [&str; 1] = ["atanh"];
 
 /// The header `cargo xtask build-kernel` writes on every translated snippet.
 const TRANSLATION_HEADER: &str = "// GENERATED by `cargo xtask build-kernel`";
 
-/// Whether `path` names one of R-116's translated snippets and `text` carries the translation's header.
+/// Whether `path` names one of the translated snippets and `text` carries the translation's header.
 fn is_translated_snippet(path: &str, text: &str) -> bool {
     let path = path.replace('\\', "/");
     TRANSLATED_SNIPPETS

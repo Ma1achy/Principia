@@ -1,17 +1,19 @@
-//! Substep control (TASK-M3-03; dd_integrator §3.3, integrator_contract Part 3 and Part 4, R-502, R-86):
-//! - `nsub_table_host` (REQ-INT-091): the host generator's bits for every configuration of
+//! Substep control (dd_integrator §3.3, integrator_contract Part 3 and Part 4). The `N_sub` thresholds are generated
+//! per sim key on the host with a pinned pure-software libm, shipped as exact f32 bits and read by constant index:
+//! - `nsub_table_host`: the host generator's bits for every configuration of
 //!   `fixtures/gates/nsub-table/tables.json` equal the reference script's correctly rounded bits, or, at an entry the
 //!   fixture lists, one of its two neighbours and the generator's own rounding; `N_max = L_max + 1` and `N_max = 0`
 //!   are refused with the typed error, as are an `r_sub` or `γ_sub` not finite and positive, a table that rises, and a
 //!   threshold below `N_max` that is not a normal f32; the packing into `SimUniforms`' rows.
-//! - `nsub_default_table_bitwise` (REQ-INT-092): the host generator at the default sim key reproduces the checked-in
+//! - `nsub_default_table_bitwise`: the host generator at the default sim key reproduces the checked-in
 //!   build-time table bit for bit.
-//! - `nsub_bucket_tree` (REQ-INT-028, at the unit level): at every threshold, its value and its two f32 neighbours, the
-//!   generated tree's `N_sub` is the table's own count `min(1 + #{m : d² < THR[m]}, N_max)`; `d² = THR[n]` is bucket
-//!   `n`, the f32 below it `n + 1`; `0`, `+∞` and NaN.
+//! - `nsub_bucket_tree` (the substep law at the unit level): at every threshold, its value and its two f32
+//!   neighbours, the generated tree's `N_sub` is the table's own count `min(1 + #{m : d² < THR[m]}, N_max)`;
+//!   `d² = THR[n]` is bucket `n`, the f32 below it `n + 1`; `0`, `+∞` and NaN.
 //! - `nsub_d2_quantised`: the square's floor at `2⁻⁴⁰`, the closest pair, and the f64 and f32 kernels' agreement on
 //!   positions whose f32 casts agree.
-//! - `nsub_live_readout` (REQ-INT-027), `saturated_sticky` (REQ-TOOL-033), `total_substeps_proxy` (REQ-TOOL-034).
+//! - `nsub_live_readout`: the live `N_sub` readout; `saturated_sticky`: saturated is sticky and set iff
+//!   `N_sub == N_max` occurred; `total_substeps_proxy`: `total_substeps` and its log proxy.
 //!
 //! parity-tier: L (substep integer)
 
@@ -50,7 +52,7 @@ fn above(x: f32) -> f32 {
     f32::from_bits(x.to_bits() + 1)
 }
 
-// ── REQ-INT-091: the host generator against the independent reference ───────────────────────────────────────────
+// ── The host generator against the independent reference ────────────────────────────────────────────────────────
 
 /// One configuration of the fixture: the sim key, its correctly rounded bits, and its listed exceptions
 /// `(n, correctly rounded, other)`.
@@ -460,7 +462,7 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-092: the default sim key reproduces the build-time table ────────────────────────────────────────────
+// ── The default sim key reproduces the build-time table ─────────────────────────────────────────────────────────
 
 fn check_default(build_time: &[u32; L]) {
     let got = threshold_bits(&NsubConfig::DEFAULT).expect("the default sim key generates");
@@ -495,7 +497,7 @@ negative_control!(
     }
 );
 
-// ── The tree (REQ-INT-028 at the unit level) ─────────────────────────────────────────────────────────────────────
+// ── The tree, the substep law at the unit level ──────────────────────────────────────────────────────────────────
 
 /// The table's own count: `min(1 + #{m : d2 < THR[m]}, n_max)`.
 fn count(bits: &[u32; L], d2: f32, n_max: u32) -> u32 {
@@ -630,7 +632,7 @@ negative_control!(
     check_d2(|x| x * x)
 );
 
-// ── REQ-INT-027: the live N_sub readout ─────────────────────────────────────────────────────────────────────────
+// ── The live N_sub readout ──────────────────────────────────────────────────────────────────────────────────────
 
 /// Each macro-step's readout equals the bucket value used for it: `(used, read)` per step.
 fn check_readout(steps: &[(u32, u32)]) {
@@ -699,7 +701,7 @@ negative_control!(
     }
 );
 
-// ── REQ-TOOL-033: saturated is sticky and set iff N_sub == N_max occurred ───────────────────────────────────────
+// ── Saturated is sticky and set iff N_sub == N_max occurred ─────────────────────────────────────────────────────
 
 /// Per step `(N_sub, saturated)`: the flag is set exactly from the first step at `n_max` on.
 fn check_sticky(steps: &[(u32, bool)], n_max: u32) {
@@ -758,7 +760,7 @@ negative_control!(
     check_sticky(&[(64, true), (1, false)], 64)
 );
 
-// ── REQ-TOOL-034: total_substeps and its log proxy ──────────────────────────────────────────────────────────────
+// ── total_substeps and its log proxy ────────────────────────────────────────────────────────────────────────────
 
 /// `⌊log₂ t⌋` by halving, 0 for `t ≤ 1`.
 fn floor_log2(mut t: u32) -> u32 {

@@ -1,11 +1,11 @@
-//! QA tests for TASK-M0-14's generic `ICDescriptor`, written from REQ-PAY-017 ("the payload width must be a function
-//! of the Real type, never hardcoded to f32: `SimState` and `ICDescriptor` both (R-313; R-86's 64 B is
-//! `ICDescriptor`'s f32 instantiation)"; verify: instantiate for f32 and f64 and the DoubleF64 stub row, widths from
-//! `size_of::<Real>()`, the layout generated per precision, 64 B with declared padding at f32) and REQ-PAY-087's
+//! QA tests for the generic `ICDescriptor`, written from the rule that the payload width is a function of the `Real`
+//! type, never hardcoded to f32, for `SimState` and `ICDescriptor` both, the descriptor's 64 B being its f32
+//! instantiation (checked by instantiating for f32 and f64 and the DoubleF64 stub row, widths from
+//! `size_of::<Real>()`, the layout generated per precision, 64 B with declared padding at f32), and from the layout's
 //! definition in dd_generation_root §3.6 ("Layout at a `Real` of `w` bytes": the twelve fields, in §3.6's order, are
 //! `Real`s at `k·w`; `_pad`, four u32s, 16 B, at `12w`; aligned to `Real`'s alignment; size `12w + 16`, the declared
 //! `_tail` empty; the table's 64 B / 112 B / 208 B rows). Every offset and size below is §3.6's text, not the
-//! generated file's. Each test registers a negative control (R-176).
+//! generated file's. Each test registers a negative control.
 
 use std::any::{Any, TypeId};
 use std::mem::{align_of, offset_of, size_of, size_of_val};
@@ -150,9 +150,8 @@ fn check_layout(what: &str, got: Built, want: Built) {
     );
 }
 
-/// REQ-PAY-087 / REQ-PAY-017 / R-313: every member of `ICDescriptor` at f32 and at f64 sits where §3.6 puts it, each
-/// field a `Real` of that width, the padding four u32s, the tail empty; 64 B aligned to 4 at f32 (R-86), 112 B
-/// aligned to 8 at f64.
+/// Every member of `ICDescriptor` at f32 and at f64 sits where §3.6 puts it, each field a `Real` of that width, the
+/// padding four u32s, the tail empty; 64 B aligned to 4 at f32, 112 B aligned to 8 at f64.
 #[test]
 fn qa_descriptor_layout_is_generation_root_3_6() {
     check_layout(
@@ -193,7 +192,7 @@ negative_control!(
     )
 );
 
-/// R-86: the members, `_pad` and `_tail` included, fill the struct: no implicit padding at either instantiation.
+/// The members, `_pad` and `_tail` included, fill the struct: no implicit padding at either instantiation.
 fn check_no_implicit_padding(what: &str, b: &Built) {
     let sum: usize = b.0.iter().map(|m| m.2).sum();
     assert_eq!(
@@ -221,7 +220,7 @@ negative_control!(
     }
 );
 
-/// R-313 "R-86's 64 B is its f32 instantiation": the f32 `ICDescriptor` is the generic struct at f32, not a separate
+/// The descriptor's 64 B is its f32 instantiation: the f32 `ICDescriptor` is the generic struct at f32, not a separate
 /// declaration, and an f64 value not representable at f32 survives in the f64 descriptor's fields (they are stored at
 /// the `Real`'s width, so `E₀ = K_0 + V_0` can be formed at it).
 fn check_f32_is_the_instantiation(f32_named: TypeId) {
@@ -281,7 +280,7 @@ fn check_rows(rows: &[Row]) {
     }
 }
 
-/// REQ-PAY-017 / REQ-PAY-087: the generated rows carry `ICDescriptor`'s layout per precision, f32, f64 and the
+/// The generated rows carry `ICDescriptor`'s layout per precision, f32, f64 and the
 /// DoubleF64 stub (16 B aligned to 8): §3.6's table, 64 B, 112 B and 208 B; the instantiated rows are the types'.
 #[test]
 fn qa_descriptor_rows_are_the_width_function() {

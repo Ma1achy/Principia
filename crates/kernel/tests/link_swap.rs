@@ -1,21 +1,21 @@
-//! Link swap (REQ-CHART-033; dd_generation_root §4, seam 2/8, and §2; dd_decoder §4, seams 2, 8 and 13; dd_encode §2
-//! and §4, seam 2/13; R-113: the sim key's change and the re-integration are REQ-CHART-052's, TASK-M4-08): decode and
-//! encode consume only the registry's link functions and inverses, the provenance records each block's link, and a
-//! link swap swaps both directions together.
+//! Link swap (dd_generation_root §4, seam 2/8, and §2; dd_decoder §4, seams 2, 8 and 13; dd_encode §2 and §4, seam
+//! 2/13; the sim key's change and the re-integration on a swap are not tested here): decode and encode consume only the
+//! registry's link functions and inverses, the provenance records each block's link, and a link swap swaps both
+//! directions together.
 //!
-//! - `link_swap_t2_registry_inverses` (a property under `validation::prop`, `CASES` = 256, REQ-VAL-151): under the
+//! - `link_swap_t2_registry_inverses` (a property under `validation::prop`, `CASES` = 256): under the
 //!   default selection and two others, T2 holds in physical units, `‖x − D(E(x))‖_phys ≤ ε_phys` at `x = D(z)`, and
 //!   every control encode returns is its registry entry's own inverse of the intermediate it read, bit for bit.
 //! - `link_swap_swaps_both_directions`: swapping one block's link (α's `sigmoid_alpha` for `tanh_alpha`, and every
-//!   block with a second link at once, `β` having one, R-919) changes the provenance in that block and no other, as the kernel records it, the selection's link
-//!   ids (`Selection::LINK_IDS`, each its entry's `Link::NAME`); the encode's control of that block changes and no
-//!   other, bit for bit; T2 holds after the swap; and a swap of one direction only, encode under the old link and
-//!   decode under the new, misses `ε_phys`. The provenance as `SimConfig`'s `Links` records it (R-483) and its
-//!   canonical text is the other half, `crates/validation/tests/link_swap.rs`: `kernel` takes no dependency on `engine`
-//!   (systems_architecture §7, R-185, R-187).
+//!   block with a second link at once, `β` having one) changes the provenance in that block and no other, as the
+//!   kernel records it, the selection's link ids (`Selection::LINK_IDS`, each its entry's `Link::NAME`); the encode's
+//!   control of that block changes and no other, bit for bit; T2 holds after the swap; and a swap of one direction
+//!   only, encode under the old link and decode under the new, misses `ε_phys`. The provenance as `SimConfig`'s
+//!   `Links` records it and its canonical text is the other half, `crates/validation/tests/link_swap.rs`: `kernel`
+//!   takes no dependency on `engine` (systems_architecture §7).
 //!
 //! The samples are latent `z` with every control in `[−1.5, 1.5]`, clear of every link's clamp; the box is test data,
-//! not a register constant (REQ-SYS-082).
+//! not a register constant.
 
 use kernel::decode::{decode, Ic, Latent};
 use kernel::encode::{encode, Encoded, SimplexClamp};
@@ -33,7 +33,7 @@ type AlphaSwapped =
     Select<SoftmaxTanh, TanhAlpha, PeriodicBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
 
 /// Every block that has a second link swapped: the edge-reaching simplex, softsign for `α`, tanh for the momenta; `β`
-/// keeps its one link, the periodic one (R-919 Q1 (c)). *Was (TASK-M2-57):* "tanh for `β` and the momenta".
+/// keeps its one link, the periodic one.
 type AllSwapped = Select<StickBreaking, SoftsignAlpha, PeriodicBeta, TanhQ, TanhQ, TanhQ, TanhQ>;
 
 /// The latent box the samples come from.

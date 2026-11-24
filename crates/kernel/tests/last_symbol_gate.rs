@@ -1,5 +1,5 @@
 //! `last_symbol`'s gate (payload §2, §6): the generated `sd_last_symbol_valid` of the word's stored length, which the
-//! generated `last_symbol` debug view hatches on (TASK-M1-12), holds for a nonempty word that is not truncated.
+//! generated `last_symbol` debug view hatches on, holds for a nonempty word that is not truncated.
 
 use kernel::payload::sd_last_symbol_valid;
 use validation::negative_control;

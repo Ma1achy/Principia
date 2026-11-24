@@ -64,8 +64,8 @@ fn vectors<R: PayloadReal>(name: &str, v: &[[R; 2]; 3], f: &mut dyn FnMut(String
     }
 }
 
-/// The 16-bit halves the packed words hold: `d_min` binary16, the drifts `log16` (payload §2; R-605, R-632), each read
-/// back to f32 and tested for NaN on its bits.
+/// The 16-bit halves the packed words hold: `d_min` binary16, the drifts `log16` (payload §2), each read back
+/// to f32 and tested for NaN on its bits.
 fn halves(packed_a: u32, packed_b: u32, de_reg: u32, f: &mut dyn FnMut(String, bool)) {
     let log16 = |h: u32| kernel::payload::log16_to_f32(h as u16).is_nan();
     f("packed_a.d_min".into(), f16_nan(packed_a >> 16));

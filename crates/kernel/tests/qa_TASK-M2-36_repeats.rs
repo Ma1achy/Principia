@@ -1,18 +1,19 @@
-//! qa's tests for TASK-M2-36's second round, written from R-655 and REQ-CHART-090, each with its negative control
-//! (R-176):
+//! qa's tests for the repeats of a tilted shape-sphere view, written from chart_decoder_contract's lattice of repeats
+//! on a tilted view and chart_reference §3.3's count on `r = π`, each with its negative control:
 //!
-//! - `qa_lattice_orbits` (R-655; chart_decoder_contract § "Repeats and the canonical point"; R-408): for each stored
-//!   tilt with a generator, `w = (k₀, 2j₀)` is worked by hand from `N_a·k + 2·N_b·j = 0` (the ruling's ratios: `τ₁/τ₂`,
-//!   `tan τ₁/tan τ₂`, `t`'s period). The window's step that moves `(a, b)` by `w` is solved from R's columns, written
+//! - `qa_lattice_orbits` (chart_decoder_contract § "Repeats and the canonical point", the lattice of repeats on a
+//!   tilted view, each system counted once at its canonical point): for each stored tilt with a generator,
+//!   `w = (k₀, 2j₀)` is worked by hand from `N_a·k + 2·N_b·j = 0` (the contract's ratios: `τ₁/τ₂`, `tan τ₁/tan τ₂`,
+//!   `t`'s period). The window's step that moves `(a, b)` by `w` is solved from R's columns, written
 //!   here from the contract's formulas, and it must leave every hidden offset fixed. Along a whole orbit every pixel
 //!   decodes one system, exactly one is counted, it lies in the strip `|offset along w| ≤ |w|/2`, and a pixel in the
 //!   square is that one. A unit step in `s`, no lattice vector, stays a second system, counted.
 //! - `qa_lattice_where_there_is_none`: the rule's other branches, decided exactly on the stored angles. One ulp off a
 //!   generator's ratio folds nothing, `N_a = 0` alone folds `s` and not `t + 2`, two targets with both offsets moving
-//!   fold nothing, RQ-471's corner folds nothing, `N_a = N_b = 0` folds past the square, and the exponential map,
-//!   bounded past its square, has no repeats.
-//! - `qa_antipode_per_offset` (REQ-CHART-090; chart_reference §3.3 "Pixels on `r = π` under a tilt"): `counted_total`
-//!   over pixels on the circle is the number of distinct `d`, in any walk order, the closed form of `d` telling which;
+//!   fold nothing, Lean each axis's one-target corner `|τ₁| = |τ₂| = 90°` (ray-degenerate) folds nothing,
+//!   `N_a = N_b = 0` folds past the square, and the exponential map, bounded past its square, has no repeats.
+//! - `qa_antipode_per_offset` (chart_reference §3.3 "Pixels on `r = π` under a tilt"): `counted_total` over pixels on
+//!   the circle is the number of distinct `d`, in any walk order, the closed form of `d` telling which;
 //!   once together at `N_a = N_b = 0` by the stored angles; no tolerance on `d` elsewhere.
 
 use kernel::chart::shape_sphere::PixelCount;
@@ -126,7 +127,8 @@ fn offsets(v: &View, p: [f64; 2]) -> [f64; 2] {
     [shift.dx, shift.dy]
 }
 
-/// Whether `p` is counted: by the kernel, or under `no_lattice` by R-554 L3's rule alone (the control).
+/// Whether `p` is counted: by the kernel, or under `no_lattice` by the per-axis pole-map rule alone, with no lattice
+/// of repeats (the control).
 fn counted(v: &View, p: [f64; 2], no_lattice: bool) -> bool {
     if no_lattice {
         let [a, b] = v.at(p[0], p[1]).0;
@@ -138,7 +140,7 @@ fn counted(v: &View, p: [f64; 2], no_lattice: bool) -> bool {
     }
 }
 
-/// The hand-worked generators (R-655's cases), `w = (k₀, 2j₀)`.
+/// The hand-worked generators (the contract's cases of the lattice of repeats), `w = (k₀, 2j₀)`.
 fn generators() -> Vec<(TiltSpec, [f64; 2])> {
     vec![
         // N_b = 0 alone: t's period.
@@ -176,7 +178,8 @@ fn bases() -> Vec<[f64; 2]> {
         .collect()
 }
 
-/// R-655 along whole orbits. `no_lattice` counts with R-554 L3's rule alone (the control).
+/// The lattice of repeats along whole orbits. `no_lattice` counts with the per-axis pole-map rule alone (the
+/// control).
 fn check_orbits(no_lattice: bool) {
     for (s, w) in generators() {
         let v = spherical(&s);
@@ -284,7 +287,8 @@ fn check_none(tolerance: bool) {
         assert_eq!(v.pixel(q[0], q[1]), Some(PixelCount::System), "{s:?}");
         assert!(gap(&v, CENTRE, q) > DIFFERENT, "{s:?}");
     }
-    // RQ-471's corner: no fold at all, anywhere in or past the square.
+    // Lean each axis's one-target corner, |τ₁| = |τ₂| = 90°, ray-degenerate: no fold at all, anywhere in or past the
+    // square.
     for s in [lean(90.0, 90.0), lean(-90.0, 90.0)] {
         let v = spherical(&s);
         for [p, q] in bases() {
@@ -293,7 +297,7 @@ fn check_none(tolerance: bool) {
             assert_eq!(v.pixel(far[0], far[1]), Some(PixelCount::System), "{s:?}");
         }
     }
-    // N_a = N_b = 0: the pole maps and both periods, as R-554 L3 has it.
+    // N_a = N_b = 0: the pole maps and both periods.
     let v = spherical(&sheet(108.0, 144.0));
     assert_eq!(v.pixel(0.5, 0.5), Some(PixelCount::System));
     assert_eq!(v.pixel(0.5, 8.0), None);
@@ -329,7 +333,7 @@ negative_control!(
 /// The tally under test: the kernel's, or a control's.
 #[derive(Clone, Copy)]
 struct Tally {
-    /// One boolean across the view, the count before REQ-CHART-090.
+    /// One boolean across the view: every pixel on `r = π` counted as one system, whatever its `d`.
     shared: bool,
     /// `d` compared with a tolerance, which §3.3 forbids.
     tolerant: bool,
@@ -377,7 +381,7 @@ fn assert_on_circle(v: &View, points: &[[f64; 2]]) {
     }
 }
 
-/// REQ-CHART-090, from §3.3's paragraph.
+/// The count of pixels on `r = π` under a tilt, one per distinct `d`, from §3.3's paragraph.
 fn check_antipode(how: Tally) {
     // τ₁ = ±90°: the top and bottom edges' centres, for every u, with d = span·sin τ₁·(u − ½) by the closed form.
     for sign in [1.0, -1.0] {

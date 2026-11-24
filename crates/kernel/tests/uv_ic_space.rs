@@ -1,5 +1,5 @@
 //! UV addressing and IC space (coordinate conventions note, "The three coordinate spaces"; chart_decoder_contract
-//! Part 3; R-83; REQ-SYS-014; TASK-M2-22): the view's addresses are unsigned, `[0,1]²`, and the latent chart's
+//! Part 3): the view's addresses are unsigned, `[0,1]²`, and the latent chart's
 //! placement `z(s,t) = z₀ + (2s−1)·q₁ + (2t−1)·q₂` puts them into IC space signed and centred on `z₀`, the scale in `q`.
 //!
 //! - UV `(½, ½)` is `z₀`, whatever the basis;
@@ -20,7 +20,7 @@ const CENTRES: [Z; 4] = [
     [-5.0, 2.5, -0.75, 4.0, -3.0, 0.0, -1.25, 6.0],
 ];
 
-/// An oblique basis, zoomed: the scale lives in `q` (R-83).
+/// An oblique basis, zoomed: the scale lives in `q`.
 fn basis() -> (Z, Z) {
     (
         [0.3, -0.1, 0.2, 0.0, 0.05, -0.4, 0.1, 0.2],

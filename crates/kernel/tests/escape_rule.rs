@@ -1,4 +1,4 @@
-//! The selectable escape rule (`kernel::detect::escape_rule`; TASK-M3-34):
+//! The selectable escape rule (`kernel::detect::escape_rule`):
 //! - `escape_rule_fewbody_is_the_default`: the wrapper's default march is the Fewbody rule's (escape-live-label's pick),
 //!   bit for bit, and so is `DefaultRule`'s. Control: the energy floor's march in its place.
 //! - `escape_rule_energy_floor`: prin-rs's naive energy baseline on constructed states: a bound pair and an unbound third

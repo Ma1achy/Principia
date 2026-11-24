@@ -1,12 +1,12 @@
 //! The word buffer's append and decode (`kernel::word`) and the generated word accessors' Rust target
 //! (`kernel::payload`), against payload §3's rules computed here independently: the mixed-radix `W` by its Horner
 //! recurrence in u128, and free reduction by a stack (dd_simstate_payload §3, §6; dd_generation_root §3.3, §3.3a).
-//! - REQ-PAY-023: random freely-reduced words up to 76 symbols pack as payload §3 lays them out and decode back; a push
+//! - Random freely-reduced words up to 76 symbols pack as payload §3 lays them out and decode back; a push
 //!   at 76 symbols truncates the word to length 127, `fgw_truncated`, the retained prefix 76 (`word_roundtrip`).
-//! - REQ-PAY-029: `decode(append(s))` is the freely reduced `s` for random streams up to 76 symbols, and for fixed ones
+//! - `decode(append(s))` is the freely reduced `s` for random streams up to 76 symbols, and for fixed ones
 //!   (`word_decode_reduced`); a decode replaying a corrupted continuation-table entry, or one dropping a base-3 digit,
 //!   fails it (pitfalls §9).
-//! - REQ-PAY-028, REQ-PAY-033 on the Rust target: the truncated fixture word (`fixtures/words/truncated.txt`) and the
+//! - On the Rust target: the truncated fixture word (`fixtures/words/truncated.txt`) and the
 //!   accessors at lengths 0, 1, 76 and 127; `ledger/tests/all/word_accessors.rs` holds the WGSL target to the same.
 //! - The two targets' `fgw_symbol` and accessors agree on the GPU (`word_accessors_rust_and_wgsl_agree`).
 //!
@@ -107,7 +107,7 @@ fn reduced_word(raw: &[u32]) -> Vec<u32> {
     out
 }
 
-// ── word_roundtrip (REQ-PAY-023) ─────────────────────────────────────────────────────────────────────────────────────
+// ── word_roundtrip ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Each freely-reduced word in `words` (up to 76 symbols), appended from empty, is payload §3's packing of it, reads its
 /// length through every accessor, decodes back, and gives each symbol by `fgw_symbol`; `prev` is its last symbol and
@@ -334,7 +334,7 @@ negative_control!(
     )
 );
 
-// ── word_decode_reduced (REQ-PAY-029) ─────────────────────────────────────────────────────────────────────────────────
+// ── word_decode_reduced ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Each stream of `streams` (any symbols, up to 76), appended from empty, decodes as its free reduction ([`reduce`]),
 /// its length that reduction's; `prev` and `last_symbol` are its last symbol.
@@ -474,7 +474,7 @@ negative_control!(
     check_decode_reduced(|w| replay(w, continuation_symbol, 1, 3), &fixed_streams())
 );
 
-// ── fgw_decode and fgw_symbol agree on every word (R-321) ─────────────────────────────────────────────────────────────
+// ── fgw_decode and fgw_symbol agree on every word ─────────────────────────────────────────────────────────────
 
 /// [`fgw_decode`] collected, at most one symbol past `w`'s retained prefix, so a decode that never ends fails rather
 /// than hangs.
@@ -485,7 +485,7 @@ fn decode_any(w: [u32; 4]) -> Vec<u32> {
 }
 
 /// Each word of `words`, any `[u32; 4]` (its `d₀` above 3 included, which `fgw_append` never writes), decodes to
-/// `fgw_symbol` at each `k` of its retained prefix: the symbol values are total and masked (R-321).
+/// `fgw_symbol` at each `k` of its retained prefix: the symbol values are total and masked.
 fn check_decode_agrees(decode: Decode, words: &[[u32; 4]]) {
     for &w in words {
         let by_k: Vec<u32> = (0..fgw_retained_prefix_length(w))
@@ -524,7 +524,7 @@ fn out_of_range_words() -> Vec<[u32; 4]> {
 }
 
 /// Any `[u32; 4]`, every bit of `W` arbitrary, at any `length_raw`, 0…127: payload §3's 0…76 and 127, truncated, and
-/// the 77…126 it leaves unused, which the decode reads as `fgw_symbol` does (R-321).
+/// the 77…126 it leaves unused, which the decode reads as `fgw_symbol` does.
 fn any_words() -> impl Strategy<Value = Vec<[u32; 4]>> {
     proptest::collection::vec((any::<[u32; 4]>(), 0u32..=127), 1..16)
         .prop_map(|draws| draws.iter().map(|&(w, n)| with_length(w, n)).collect())
@@ -599,7 +599,7 @@ negative_control!(
     check_decode_agrees(decode_wrapping, &long_words())
 );
 
-// ── The truncated fixture word and the accessors at 0, 1, 76, 127 (REQ-PAY-028, REQ-PAY-033) ─────────────────────────
+// ── The truncated fixture word and the accessors at 0, 1, 76, 127 ────────────────────────────────────────────────────
 
 /// `fixtures/words/truncated.txt`: the stream, the packed word and the retained prefix.
 struct Fixture {
@@ -743,7 +743,7 @@ negative_control!(
     })
 );
 
-// ── The word buffer's element (REQ-PAY-025, Rust) ─────────────────────────────────────────────────────────────────────
+// ── The word buffer's element (Rust) ─────────────────────────────────────────────────────────────────────
 
 /// The element is `size` bytes aligned to `align`, and no `SimState` variant's fields, by their derived `Debug`
 /// (`debugs`), name the word.

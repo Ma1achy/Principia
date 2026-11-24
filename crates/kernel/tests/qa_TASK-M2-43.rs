@@ -1,6 +1,6 @@
-//! QA tests for TASK-M2-43, written from the requirements it closes (REQ-CHART-081, REQ-CHART-082's M2 half under
-//! R-579, REQ-ENC-034) and their sources (R-544; chart_reference §3, §3.1, §3.3; chart_decoder_contract Parts 1, 2, 5;
-//! inverse_encode_contract Parts 4, 5, 6), not from the implementation.
+//! QA tests for the signed shape-sphere chart: its decode over both hemispheres, the mirror test's decode half, and
+//! the signed encode, written from their sources (chart_reference §3, §3.1, §3.3; chart_decoder_contract Parts 1, 2,
+//! 5; inverse_encode_contract Parts 4, 5, 6), not from the implementation.
 //!
 //! Every expected value comes from an independent construction: [`reference_n`], chart_reference §3.1's map written
 //! from the text on §0.2's mass-weighted Jacobi vectors; [`sphere_point`] and [`exp_point`], §3.3's two chart maps
@@ -8,47 +8,46 @@
 //! with the pair together (§3.4's placement); [`jacobi_momenta`], §0.3's Jacobi-to-particle map inverted by hand; [`pi`],
 //! the mirror through the `x`-axis, `y → −y` on every `rᵢ` and `pᵢ`.
 //!
-//! - REQ-CHART-081 (`shape_sphere_signed_decode_qa`): over random masses, held momenta, `I` and `φ_f`, at pixels of both
-//!   hemispheres, the poles and the equator included, under both chart maps: the decoded state's shape is the signed
-//!   `n(θ, φ)` within REQ-CHART-053's bound; it is canonical in CoM, boost, scale and rotation (`Σmᵢrᵢ = 0`, `Σpᵢ = 0`,
-//!   `I = 1`, `ρ` on `+x`) with `λ̃_y` of `n₂`'s sign; its masses are `m_fixed`; its Jacobi momenta are `D_mom`'s
-//!   `p_fixed` at `(θ, φ)` and at `(θ, π − φ)`. At f32 the pole rows decode to the pole's own sign, `L⁻` at `t = 0`
-//!   (a sign, no tolerance). Controls: the retired mirror step run on the decode, a held momentum mirrored below the equator,
-//!   and `Φ`'s state handed over without `C`, each fail.
-//! - REQ-CHART-082, M2 half (`shape_sphere_mirror_test_qa`): the held coordinates classified (released from rest, and
-//!   `p_fixed` with zero `y`-components, mirror-equivariant; a held `p_λ,y ≠ 0` or `p_ρ,y ≠ 0`, "does not apply"),
-//!   the case said; `Π·x`, the kernel's `Π` (`kernel::canon::reflect`) on each decoded state, every `rᵢ` and `pᵢ`
-//!   reflected bit for bit (`to_bits`), `L_z` negated by value and the shape's `w` negated bitwise where nonzero; in the
-//!   equivariant case, each pixel pair's shapes mirror images within REQ-CHART-053's bound at every pixel, and its
-//!   states within `ε_phys` in `‖·‖_phys` on the pixels farther than [`DELTA`] from each binary-collision landmark.
-//!   Controls: the retired mirror step left in, a momentum rule turning `p_x` below the equator, the symmetry asserted where it
-//!   does not apply, the state comparison at `BC₀₁`'s pixel `(½, ½)` of the odd grid, and a configuration-only `Π` on a
-//!   state with `p_y ≠ 0`, each fail. The run arms are REQ-CHART-085's (R-579).
-//! - REQ-ENC-034 (`encode_shape_sphere_signed_qa`): a random state and its mirror image are placed at their own signed
-//!   shapes, `n₂` of opposite signs, `n(u′, v′)` the mirror of `n(u, v)`; decode then lookup returns the pixel on both
-//!   hemispheres, both maps; T1 under the mirror is an equivariance, for `z` and for every chart's coordinates, the
-//!   shape sphere's included: `E(Π·x)` is `E(x)` mirrored, `z_β → π̂ − z_β` on the circle and the momenta's
-//!   `y`-controls negated, to [`T1_EPS`] (the encode no longer folds `Π·x` back onto `x`, so `E(Π·x) = E(x)`, which
-//!   this test asserted bitwise while it did, is now false); a lower-hemisphere state with `p_y ≠ 0`, the slice's,
-//!   under a proper gauge, lands on the chart, decodes back within `ε_phys` with `L_z`'s sign kept, and its mirror
-//!   goes to latent `z` unless the slice holds its momenta. Controls: a lookup with the mirror step left in, T1 as the
-//!   invariance on `z` and on the shape sphere's coordinates, and a landing against `C(x)` with the mirror step left
-//!   in, each fail.
+//! - The signed decode (`shape_sphere_signed_decode_qa`): over random masses, held momenta, `I` and `φ_f`, at pixels
+//!   of both hemispheres, the poles and the equator included, under both chart maps: the decoded state's shape is the
+//!   signed `n(θ, φ)` within the shape round-trip bound; it is canonical in CoM, boost, scale and rotation
+//!   (`Σmᵢrᵢ = 0`, `Σpᵢ = 0`, `I = 1`, `ρ` on `+x`) with `λ̃_y` of `n₂`'s sign; its masses are `m_fixed`; its Jacobi
+//!   momenta are `D_mom`'s `p_fixed` at `(θ, φ)` and at `(θ, π − φ)`. At f32 the pole rows decode to the pole's own
+//!   sign, `L⁻` at `t = 0` (a sign, no tolerance). Controls: a mirror step run on the decode, a held momentum mirrored
+//!   below the equator, and `Φ`'s state handed over without `C`, each fail.
+//! - The mirror test, its decode half (`shape_sphere_mirror_test_qa`): the held coordinates classified (released from
+//!   rest, and `p_fixed` with zero `y`-components, mirror-equivariant; a held `p_λ,y ≠ 0` or `p_ρ,y ≠ 0`, "does not
+//!   apply"), the case said; `Π·x`, the kernel's `Π` (`kernel::canon::reflect`) on each decoded state, every `rᵢ` and
+//!   `pᵢ` reflected bit for bit (`to_bits`), `L_z` negated by value and the shape's `w` negated bitwise where nonzero;
+//!   in the equivariant case, each pixel pair's shapes mirror images within the shape round-trip bound at every pixel,
+//!   and its states within `ε_phys` in `‖·‖_phys` on the pixels farther than [`DELTA`] from each binary-collision
+//!   landmark. Controls: a mirror step left in, a momentum rule turning `p_x` below the equator, the symmetry asserted
+//!   where it does not apply, the state comparison at `BC₀₁`'s pixel `(½, ½)` of the odd grid, and a
+//!   configuration-only `Π` on a state with `p_y ≠ 0`, each fail. The mirror test's arms on integrated runs are not
+//!   here: they need a march.
+//! - The signed encode (`encode_shape_sphere_signed_qa`): a random state and its mirror image are placed at their own
+//!   signed shapes, `n₂` of opposite signs, `n(u′, v′)` the mirror of `n(u, v)`; decode then lookup returns the pixel
+//!   on both hemispheres, both maps; T1 under the mirror is an equivariance, for `z` and for every chart's
+//!   coordinates, the shape sphere's included: `E(Π·x)` is `E(x)` mirrored, `z_β → π̂ − z_β` on the circle and the
+//!   momenta's `y`-controls negated, to [`T1_EPS`] (the encode does not fold `Π·x` back onto `x`, so
+//!   `E(Π·x) = E(x)` is false); a lower-hemisphere state with `p_y ≠ 0`, the slice's, under a proper gauge, lands on
+//!   the chart, decodes back within `ε_phys` with `L_z`'s sign kept, and its mirror goes to latent `z` unless the
+//!   slice holds its momenta. Controls: a lookup with the mirror step left in, T1 as the invariance on `z` and on the
+//!   shape sphere's coordinates, and a landing against `C(x)` with the mirror step left in, each fail.
 //!
-//! - REQ-ENC-004's T2 on the shape sphere (`t2_per_chart_shape_sphere_qa`): on a grid of both hemispheres, the
-//!   equator's row included but for the latent chart's two poles on it, `D(E(x))`, the free decode of `x`'s `z`, is `x` itself within `ε_phys`: a lower-hemisphere
-//!   state encodes to `β ∈ (π, 2π)` and decodes back to itself, not to its mirror image (inverse_encode_contract
-//!   Part 1's T2). (While the encode mirrored, `D(E(x))` was `Π·x` below the equator, and this test asserted that.)
-//!   Control: T2 against `Π·x` on the lower hemisphere, the retired fold, fails.
+//! - T2 on the shape sphere (`t2_per_chart_shape_sphere_qa`): on a grid of both hemispheres, the equator's row
+//!   included but for the latent chart's two poles on it, `D(E(x))`, the free decode of `x`'s `z`, is `x` itself
+//!   within `ε_phys`: a lower-hemisphere state encodes to `β ∈ (π, 2π)` and decodes back to itself, not to its mirror
+//!   image (inverse_encode_contract Part 1's T2). Control: T2 against `Π·x` on the lower hemisphere, a fold onto the
+//!   upper hemisphere, fails.
 //!
-//! **Tolerances.** Shapes against REQ-CHART-053's `shape_roundtrip_bound`; states in REQ-ENC-024's `ε_phys` under
-//! REQ-ENC-029's `‖·‖_phys` ([`phys`]); the canonical section's identities and the held momenta to [`CANON_TOL`], a few
-//! roundings of the turn and scale relative to the state's size (applied per R-369, a test decision); bit-level claims
-//! bitwise.
+//! **Tolerances.** Shapes against the shape round-trip bound, `shape_roundtrip_bound`; states in `ε_phys` under
+//! `‖·‖_phys` ([`phys`]); the canonical section's identities and the held momenta to [`CANON_TOL`], a few roundings of
+//! the turn and scale relative to the state's size (a test decision); bit-level claims bitwise.
 //!
 //! **Domain** (pitfalls §10): the decode and encode on states held fixed; no trajectory.
 //!
-//! Each test has registered negative controls (R-176).
+//! Each test has registered negative controls.
 
 #[cfg(feature = "controls")]
 use kernel::canon::canonicalise;
@@ -69,11 +68,11 @@ use validation::SHAPE_ROUNDTRIP_BOUND;
 const PI: f64 = std::f64::consts::PI;
 const EPS: f64 = f64::EPSILON;
 
-/// REQ-CHART-053's `shape_roundtrip_bound` (R-181), provisional until M2.
+/// The shape round-trip bound, `shape_roundtrip_bound` (provisional).
 const ROUNDTRIP: f64 = SHAPE_ROUNDTRIP_BOUND.number();
 
 /// The canonical section's identities and the held momenta: the decode's turn, scale and `C`'s undoing of them, a few
-/// roundings each, relative to the state's size (applied per R-369, a test decision).
+/// roundings each, relative to the state's size (a test decision).
 const CANON_TOL: f64 = 64.0 * EPS;
 
 type Pos = [[f64; 2]; 3];
@@ -216,7 +215,7 @@ fn kernel_decode(c: &ShapeSphere<f64>, u: f64, v: f64) -> Ic<f64> {
     c.decode::<Defaults, f64>(u, v).ic
 }
 
-/// `Φ`'s state, the decode's blocks joined before any canonicalisation (R-178).
+/// `Φ`'s state, the decode's blocks joined before any canonicalisation.
 #[cfg(feature = "controls")]
 fn phi_state(c: &ShapeSphere<f64>, u: f64, v: f64) -> Ic<f64> {
     let d = c.decode::<Defaults, f64>(u, v);
@@ -235,7 +234,7 @@ fn folded(x: &Ic<f64>) -> Ic<f64> {
     reflect(&c.ic, c.lambda_t_y < 0.0)
 }
 
-// ── REQ-CHART-081: the signed decode ───────────────────────────────────────────────────────────────────────────────
+// ── the signed decode ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The decode on random charts of both maps, at random pixels and, for the spherical map, every fifth draw on a pole
 /// row (`t = 0`, `t = 1`) or the equator (`t = ½`), with `BC₀₁`'s pixel `(½, ½)` among them: the shape is the signed
@@ -431,7 +430,7 @@ mod signed_skipping_c {
     );
 }
 
-// ── REQ-CHART-082, M2 half (R-579): the mirror test ────────────────────────────────────────────────────────────────
+// ── the mirror test, its decode half ───────────────────────────────────────────────────────────────────────────────
 
 /// The case the mirror test is in.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -442,7 +441,7 @@ enum Case {
     DoesNotApply,
 }
 
-/// Classifies what the chart holds fixed (R-544 item 5): the masses are mirror-invariant, so `p_fixed` decides.
+/// Classifies what the chart holds fixed: the masses are mirror-invariant, so `p_fixed` decides.
 fn classify(c: &ShapeSphere<f64>) -> Case {
     let h = held(c);
     if h[0][1] == 0.0 && h[1][1] == 0.0 {
@@ -459,7 +458,7 @@ const GRID: u32 = 33;
 /// The state comparison's chordal distance from each binary-collision landmark. At `I = 1` near `BC₀₁`,
 /// `‖ρ̃‖² = (1 + n₀)/2` and the chordal distance `d` has `d² = 2(1 + n₀)`, so `‖ρ̃‖ = d/2`; `λ̃`'s direction is
 /// conditioned as `ulp/‖ρ̃‖` (§3.2), so a rounding-level difference in `n̂` turns the state by up to `2·ulp/d`. At
-/// `δ = 1/8` that is `16 ulp ≤ ε_phys = 64 ulp` (REQ-ENC-024): `ulp/δ`-scale `≤ ε_phys` is `δ`'s reason. Applied to all
+/// `δ = 1/8` that is `16 ulp ≤ ε_phys = 64 ulp`: `ulp/δ`-scale `≤ ε_phys` is `δ`'s reason. Applied to all
 /// three landmarks.
 const DELTA: f64 = 1.0 / 8.0;
 
@@ -470,12 +469,12 @@ fn kernel_pi(x: &Ic<f64>) -> Ic<f64> {
     reflect(x, true)
 }
 
-/// The mirror test on `chart` (REQ-CHART-082's M2 half): classifies the chart and reports the case. On every decoded
-/// state of the grid, `mirror(x)` against [`pi`]: the masses and every `rᵢ`, `pᵢ` bit for bit, `L_z` negated by value,
-/// the shape's `n₀`, `n₁` bitwise and `w` negated bitwise where nonzero, by value at zero; Π's own property, checked in
-/// both cases. In the equivariant case, or with `assert_anyway`, each pair's shapes `n(Π·decode(θ, φ))` and
-/// `n(decode(θ, π − φ))` within REQ-CHART-053's bound, and the pair's states within `ε_phys` in `‖·‖_phys` where `n̂`
-/// is farther than `delta` from each landmark. Returns the case and the worst state residual in `ε`.
+/// The mirror test's decode half on `chart`: classifies the chart and reports the case. On every decoded state of the
+/// grid, `mirror(x)` against [`pi`]: the masses and every `rᵢ`, `pᵢ` bit for bit, `L_z` negated by value, the shape's
+/// `n₀`, `n₁` bitwise and `w` negated bitwise where nonzero, by value at zero; Π's own property, checked in both
+/// cases. In the equivariant case, or with `assert_anyway`, each pair's shapes `n(Π·decode(θ, φ))` and
+/// `n(decode(θ, π − φ))` within the shape round-trip bound, and the pair's states within `ε_phys` in `‖·‖_phys` where
+/// `n̂` is farther than `delta` from each landmark. Returns the case and the worst state residual in `ε`.
 fn mirror_test(
     chart: &ShapeSphere<f64>,
     decode: DecodeFn,
@@ -680,7 +679,7 @@ mod mirror_configuration_only {
     );
 }
 
-// ── REQ-ENC-034: the signed lookup, T1, and the landing ────────────────────────────────────────────────────────────
+// ── the signed encode: the lookup, T1, and the landing ─────────────────────────────────────────────────────────────
 
 /// A generic state: masses in `[0.2, 1]` normalised, positions and momenta in `[−1, 1]²`.
 fn generic(rng: &mut SplitMix) -> Ic<f64> {
@@ -744,7 +743,7 @@ fn straddling(z_mom: [f64; 4]) -> ShapeSphere<f64> {
 /// The held momentum of the landing tests, `p_y ≠ 0` in both Jacobi momenta.
 const SLICE_MOM: [f64; 4] = [0.3, -0.5, -0.2, 0.4];
 
-/// `lookup` on random states and their mirror images: each placed at its own signed shape within REQ-CHART-053's
+/// `lookup` on random states and their mirror images: each placed at its own signed shape within the shape round-trip
 /// bound, `n₂` of opposite signs, `n(u′, v′)` the mirror `(n₀, n₁, −n₂)` of `n(u, v)`.
 fn check_lookup(lookup: LookupFn) -> u32 {
     let chart = lookup_chart(SLICE_MOM);
@@ -772,8 +771,8 @@ fn check_lookup(lookup: LookupFn) -> u32 {
     lower
 }
 
-/// Decode then lookup on `chart`: every pixel of an interior grid, both hemispheres, returns a point within
-/// REQ-CHART-053's bound of itself, on its own side of the equator where `|n₂|` is above a few roundings. Returns the
+/// Decode then lookup on `chart`: every pixel of an interior grid, both hemispheres, returns a point within the shape
+/// round-trip bound of itself, on its own side of the equator where `|n₂|` is above a few roundings. Returns the
 /// lower-hemisphere pixels visited.
 fn check_decode_lookup(chart: &ShapeSphere<f64>) -> u32 {
     let mut lower = 0;
@@ -1088,7 +1087,7 @@ mod signed_landing_mirrored {
     );
 }
 
-// ── REQ-ENC-004: T2 on the shape sphere ────────────────────────────────────────────────────────────────────────────
+// ── T2 on the shape sphere ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// The state T2 compares `D(E(x))` with: `x` itself on both hemispheres, or a control's.
 type ReferenceFn = fn(&Ic<f64>, f64) -> Ic<f64>;
