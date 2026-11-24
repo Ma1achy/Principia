@@ -618,8 +618,9 @@ impl<R: WrapperReal, F: ShadowForm> CoMarch<R> for Benettin<R, F> {
 
 /// The FTLE tier's integration of `ic` under the sim key's `uniforms`, collision threshold `radius` and Benettin
 /// values `params` by the occupant `A`, the shadow in the form `F`: the sample's march as
-/// [`super::wrapper::integrate_detecting`] runs it, bit for bit, with its shadow marched beside it, written into the
-/// `SimState`'s `r_sh`, `p_sh` and `S` ([`Benettin::write`]). Also returns the shadow.
+/// [`super::wrapper::integrate_detecting_rule`] runs it under the default rule and `stop_on_escape`, bit for bit, with
+/// its shadow marched beside it, written into the `SimState`'s `r_sh`, `p_sh` and `S` ([`Benettin::write`]). Also
+/// returns the shadow.
 ///
 /// `stop_on_escape` is the sim key's stop option (`super::cadence`'s note): off, the default, the escape label is live
 /// and the march, its shadow and `S` go on to the horizon; on, the first label ends the march there, so `S` and `T`

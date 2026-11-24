@@ -1,0 +1,10 @@
+patchwork: config_stability (fixtures/slices.toml; the latent chart at f64 as the file gives it), r_coll 5e-3; its r_esc is not read by the default rule, 64 x 64, T = 50, Heggie x RK4 at f64, the default escape rule; stop option vs Live
+  Live: escape 1134, collision 1020, of 4096 pixels
+  Stop: escape 1134, collision 1020, of 4096 pixels
+  Harness: escape 1134, collision 1020, of 4096 pixels
+  one variable (stop vs live every word off escape; harness = live state, theta, t_end; class changes only escape -> collision): holds
+  seams: 0 seam pairs of 1759 stratum-boundary pairs (fires above 8 and 1% of the boundaries): none
+  t_end of the stop arm's 1134 escape-terminated pixels: 115 distinct values of at most 125 (the escape window's marks over T = 50) (not ~32 strata: more than 48); largest stratum 17
+  |theta(stop) - theta(Live)| over the stop arm's 1134 escape pixels, radians: p50 1.816e-2 p90 4.436e-2 p99 6.566e-2 max 9.211e-2; 10 exactly 0
+  per-pixel colour difference (theta, largest channel, 8-bit steps): 0.2488 of pixels differ; p50 0 p90 3 p99 6 p99.9 8 max 10
+  tolerance Tolerance { max_dtheta: 0.1, max_step: 16 }: max |dtheta| 9.2106e-2 rad (<= 0.1), max colour step 10 (<= 16), escapes stop 1134 live 1134 (equal): within

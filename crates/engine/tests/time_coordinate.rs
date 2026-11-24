@@ -19,7 +19,7 @@ use kernel::decode::Ic;
 use kernel::driver::advance::Advance;
 use kernel::driver::wrapper::{integrate_detecting, integrate_detecting_to};
 use kernel::occupant::rk4::Rk4;
-use kernel::payload::{sd_state, set_state, SimStateBase, STATE_BOUNDED};
+use kernel::payload::{sd_state, set_state, SimStateBase, STATE_BOUNDED, STATE_ESCAPE};
 use kernel::regularisation::az::AzReal;
 use kernel::regularisation::heggie::{HgConfig, HgParams, DEFAULT_TIME};
 use kernel::regularisation::pairs::DefaultOccupant;
@@ -649,8 +649,9 @@ fn starts(size: [usize; 2]) -> Vec<Ic<f32>> {
 }
 
 /// C1's columns under the occupant `A`: the eight starts across the start view's middle row, and the first four
-/// starts of a 16 × 16 scan of the view whose whole march to `T` ends in a terminal (escape, collision or a failure)
-/// before it, so that rows past a terminal are compared too.
+/// starts of a 16 × 16 scan of the view whose whole march to `T` ends in a terminal (a collision or a failure) before
+/// it, so that rows past a terminal are compared too. An escape is no terminal: with the stop option off its label is
+/// live and the march goes on.
 fn columns<A: Advance>(key: &MarchKey) -> Vec<Ic<f32>> {
     let mut out = starts([8, 1]);
     out.extend(
@@ -658,7 +659,8 @@ fn columns<A: Advance>(key: &MarchKey) -> Vec<Ic<f32>> {
             .into_iter()
             .filter(|ic| {
                 let s = integrate_detecting::<A, f32>(ic, &key.loop_values, key.radius);
-                sd_state(s.packed_a) != STATE_BOUNDED
+                let state = sd_state(s.packed_a);
+                state != STATE_BOUNDED && state != STATE_ESCAPE
             })
             .take(4),
     );
@@ -673,6 +675,7 @@ struct C1 {
     differing: usize,
     fields: Vec<&'static str>,
     reached: usize,
+    live_escape: usize,
     terminal: usize,
 }
 
@@ -732,14 +735,18 @@ fn c1<A: Advance>(key: &MarchKey, stop_of: StopOf, offset: u32) -> C1 {
             if offset > 0 {
                 continue;
             }
-            let label = stop_label(&stopped, stop, horizon);
-            if sd_state(reference.packed_a) == STATE_BOUNDED {
+            let label = stop_label(&stopped, stop, horizon, false);
+            // With the stop option off the escape label is live, so a reference that ends `escape` at its horizon
+            // carries the label there, not an outcome: the stopped sample reached its time, as a `bounded` one did.
+            let state = sd_state(reference.packed_a);
+            if state == STATE_BOUNDED || state == STATE_ESCAPE {
                 assert_eq!(
                     label,
                     StopLabel::ReachedItsTime,
-                    "row {j}: a sample stopped at its time is not labelled so"
+                    "row {j}: a sample stopped at its time is not labelled so (reference state {state})"
                 );
                 found.reached += 1;
+                found.live_escape += usize::from(state == STATE_ESCAPE);
             } else {
                 assert_eq!(
                     label,
@@ -762,8 +769,9 @@ fn check_c1<A: Advance>(name: &str, stop_of: StopOf, offset: u32) {
     let key = uniforms(T).unwrap();
     let found = c1::<A>(&key, stop_of, offset);
     println!(
-        "measured: C1 on {name}: {} rows, {} differing {:?}; {} reached their time, {} past a terminal",
-        found.rows, found.differing, found.fields, found.reached, found.terminal
+        "measured: C1 on {name}: {} rows, {} differing {:?}; {} reached their time ({} on a live escape label), {} past a \
+         terminal",
+        found.rows, found.differing, found.fields, found.reached, found.live_escape, found.terminal
     );
     if offset > 0 {
         assert!(

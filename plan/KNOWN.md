@@ -80,3 +80,6 @@ delete its line when it's done.
   wait on TASK-M2-68 and TASK-M2-83 (ignored placeholders in `path_lock.rs`, whose controls are bare panics because
   the controls lint needs one per test). The gui's chart switch under a lock still takes `Segment::chart_switch`'s
   labelled jump; `Segment::locked_switch` needs the chart's leaves in the gui adapter.
+- **The GPU path does not read the stop option** (`SimUniforms::stop_on_escape`): neither the dispatch nor the WGSL
+  kernel carries it, so the CPU and GPU fields agree today only because `SimConfig` cannot set it. The GPU path must
+  read it before `SimConfig` can set it, or the two fields will disagree.
