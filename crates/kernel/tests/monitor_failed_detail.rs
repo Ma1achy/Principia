@@ -1,5 +1,5 @@
 //! The monitor's failure mark at its edges (`kernel::driver::{monitor::latched, failure::Detector}`; payload §2,
-//! `sim_failed`'s `detail`; TASK-M3-05, TASK-M3-18):
+//! `sim_failed`'s `detail`):
 //! - `invariant_monitor_failed_detail_walks_every_component`: the cause the cadence's per-step detection reads on a
 //!   state reads each of `r`'s and `p`'s twelve components, and the walk finishes, within a bound of its own: a loop
 //!   that stops advancing fails this test where it would otherwise run to the mutants job's timeout.

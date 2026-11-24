@@ -1,13 +1,13 @@
-//! Energy normalisation `η_E` (`kernel::decode::energy_norm`; dd_decoder §3.7; REQ-DEC-024, REQ-DEC-041), each check
-//! at the f64 and the f32 instantiation natively (R-265):
+//! Energy normalisation `η_E` (`kernel::decode::energy_norm`; dd_decoder §3.7), each check at the f64 and the
+//! f32 instantiation natively:
 //! - `energy_normalisation_sets_target`: with `E*` set and `η_E` applied, the decoded energy `K_0 + V_0` equals `E*`,
 //!   over fuzzed `z` and every registered link; every decode takes dd_decoder §3.7's outcome for its `E*`, `V_0`, rest
 //!   and separation; an untouched outcome leaves the momenta bit for bit; no outcome stores NaN.
-//! - `energy_normalisation_off`: `None`, or a chart that forbids it, leaves the decode bit for bit (R-25); through a
+//! - `energy_normalisation_off`: `None`, or a chart that forbids it, leaves the decode bit for bit; through a
 //!   chart, its own flag decides.
 //! - `energy_normalisation_chart_flag`: through [`energy_norm::decode_chart`], a chart's own
 //!   `forbids_energy_normalisation` decides whether `η_E` applies (chart_reference §0.6).
-//! - `energy_normalisation_zero_target`: `E* = 0` is a target, the energy set to 0, never "off" (R-25).
+//! - `energy_normalisation_zero_target`: `E* = 0` is a target, the energy set to 0, never "off".
 //! - `energy_normalisation_rest_start`: at `K₀ = 0`, `E* = U` is at the target, untagged; `E* > U` is
 //!   `DEGENERATE(ENERGY_UNSCALABLE)`; `E* < U` is `DEGENERATE(ENERGY_INFEASIBLE)`; the momenta stay 0.
 //! - `energy_normalisation_infeasible`: `E* < U` with moving bodies is `DEGENERATE(ENERGY_INFEASIBLE)`, the momenta
@@ -18,13 +18,13 @@
 //!   each component of each body counts toward `s`.
 //! - `energy_normalisation_keeps_earlier_tag`: a decode the mass block tagged keeps `M01_TINY`.
 //!
-//! **The tolerances** (applied per R-369: test bounds from the operation count, not calibrated values). The scaled
-//! `K = Σ η²p̂ᵢ²/2mᵢ` is formed from `Δ = E* − U` in eight roundings, each relative to its operand (`p̂ = p/s`, the
-//! square and the sum of each body's components, the division by `2mᵢ`, the sum over bodies, `Δ/K̂`, the `sqrt` and
-//! `η·p̂`), and `K + U` in one more, so `|E − E*| ≤` [`ENERGY_EPS`]` · eps · (K + |U| + |E*|)`, nine. The same bound
-//! holds each scaled component to one factor `η` (three roundings, plus `η`'s own read-off), relative to the largest.
-//! The worst seen of each is printed: over runs, under 2 eps for the energy and under 1 for the one factor, at f64
-//! and f32.
+//! **The tolerances** (the plan sets none; this test bounds them from the operation count, not calibrated values).
+//! The scaled `K = Σ η²p̂ᵢ²/2mᵢ` is formed from `Δ = E* − U` in eight roundings, each relative to its operand
+//! (`p̂ = p/s`, the square and the sum of each body's components, the division by `2mᵢ`, the sum over bodies,
+//! `Δ/K̂`, the `sqrt` and `η·p̂`), and `K + U` in one more, so `|E − E*| ≤` [`ENERGY_EPS`]` · eps · (K + |U| + |E*|)`,
+//! nine. The same bound holds each scaled component to one factor `η` (three roundings, plus `η`'s own read-off),
+//! relative to the largest. The worst seen of each is printed: over runs, under 2 eps for the energy and under 1 for
+//! the one factor, at f64 and f32.
 
 mod decode_support;
 
@@ -104,7 +104,7 @@ fn tag_of(o: Outcome) -> Option<Degenerate> {
     }
 }
 
-// ── energy_normalisation_sets_target (REQ-DEC-024) ──────────────────────────────────────────────────────────────
+// ── energy_normalisation_sets_target ────────────────────────────────────────────────────────────────────────────
 
 /// A target relative to the decode's `U`: `U + t·|U|`, `t` in `[−1, 4]`, or exactly 0.
 fn target() -> impl Strategy<Value = Option<f64>> {
@@ -275,7 +275,7 @@ mod sets_target_skewed {
     );
 }
 
-// ── energy_normalisation_off (REQ-DEC-024, R-25) ────────────────────────────────────────────────────────────────
+// ── energy_normalisation_off ────────────────────────────────────────────────────────────────────────────────────
 
 /// Checks that `entry` under `None`, and under a target on a chart that forbids it, gives the plain decode bit for
 /// bit, with the outcome `Off`.
@@ -445,7 +445,7 @@ negative_control!(
     check_chart_flag::<f64>(chart_flag_ignored::<f64>)
 );
 
-// ── energy_normalisation_zero_target (REQ-DEC-024, R-25) ────────────────────────────────────────────────────────
+// ── energy_normalisation_zero_target ────────────────────────────────────────────────────────────────────────────
 
 /// Checks that `Some(0)` at the moving `z` is scaled, its energy 0 to the tolerance, and its momenta moved from the
 /// plain decode's.
@@ -482,7 +482,7 @@ fn energy_normalisation_zero_target() {
     }
 }
 
-/// `Some(0)` read as off, the bug R-25 rules out.
+/// `Some(0)` read as off: the bug this guards against, since `E* = 0` is a target.
 #[cfg(feature = "controls")]
 fn zero_as_off<R: P>(z: &Latent<R>, e: Option<R>) -> (Decoded<R>, Outcome) {
     let e = e.filter(|e| e.f() != 0.0);
@@ -496,7 +496,7 @@ negative_control!(
     check_zero::<f64>(zero_as_off::<f64>, MOVING)
 );
 
-// ── energy_normalisation_rest_start (REQ-DEC-041) ───────────────────────────────────────────────────────────────
+// ── energy_normalisation_rest_start ─────────────────────────────────────────────────────────────────────────────
 
 /// The rest start: the golden IC's `z = 0`, and a configuration away from it with `z_q = 0`.
 const RESTS: [[f64; 8]; 2] = [[0.0; 8], [0.7, -1.2, 0.0, 0.0, 0.0, 0.0, 0.5, -0.3]];
@@ -598,7 +598,7 @@ negative_control!(
     check_rest::<f64>(rest_untagged::<f64>)
 );
 
-// ── energy_normalisation_infeasible (REQ-DEC-041) ───────────────────────────────────────────────────────────────
+// ── energy_normalisation_infeasible ─────────────────────────────────────────────────────────────────────────────
 
 /// Checks, at the moving `z`, that `E* = U` scales to rest, untagged, its energy `U`; that the value below `U` is
 /// `Infeasible`, tagged, its momenta untouched; and that the value above `U` scales.
@@ -689,7 +689,7 @@ mod infeasible_clamped {
     );
 }
 
-// ── energy_normalisation_collision_pole (REQ-DEC-041, R-436) ────────────────────────────────────────────────────
+// ── energy_normalisation_collision_pole ─────────────────────────────────────────────────────────────────────────
 
 /// Checks that `norm` at a separation of 0, `V_0 = −∞`, is `Unscalable` and leaves the momenta, for each target, and
 /// that the decode at f64's collision pole is so tagged.
@@ -713,7 +713,7 @@ fn check_collision<R: P>(norm: Norm<R>) {
 
 /// A `z` at f64's collision pole: `α` saturated at the image of π/2, where the emitted `r₀` and `r₁` coincide
 /// (dd_decoder §3.6), found by a grid search over `β` and the masses; its `z_β`, −8 under `sigmoid_beta`, converted to
-/// the periodic link at f64 (R-898, R-1020: `L(−8) − π/2`, rounded once, the same `β` to rounding).
+/// the periodic link at f64 (`L(−8) − π/2`, rounded once, the same `β` to rounding).
 fn pole() -> [f64; 8] {
     let mut z = [60.0, -8.0, 1.0, -0.5, 0.3, 0.7, 0.0, 0.5];
     z[1] = kernel::decode::retired::convert::<SigmoidBeta, f64>(z[1]);
@@ -753,7 +753,7 @@ negative_control!(
     check_collision::<f64>(no_pole::<f64>)
 );
 
-// ── energy_normalisation_underflow (REQ-DEC-041) ────────────────────────────────────────────────────────────────
+// ── energy_normalisation_underflow ──────────────────────────────────────────────────────────────────────────────
 
 /// An IC with equal masses and a triangle, its momenta `p`.
 fn ic_with<R: P>(p: [[f64; 2]; 3]) -> Ic<R> {
@@ -830,7 +830,7 @@ negative_control!(
     check_underflow::<f64>(rounded_rest::<f64>, 1e-170)
 );
 
-// ── energy_normalisation_keeps_earlier_tag (REQ-DEC-041) ────────────────────────────────────────────────────────
+// ── energy_normalisation_keeps_earlier_tag ──────────────────────────────────────────────────────────────────────
 
 /// Checks that a `z` the mass block tags `M01_TINY` keeps that tag under an infeasible and an unscalable target.
 fn check_earlier<R: P>(entry: Entry<R>) {
