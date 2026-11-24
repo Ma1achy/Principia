@@ -1,22 +1,22 @@
-//! Physical-quantity axes warped by default, a linear mapping an option per axis, the warp per pixel (R-471, R-506,
-//! R-508; chart_reference §2.1, §5.4; `kernel::chart::energy`, `kernel::chart::physical`):
-//! - `energy_axes_warped_*` (REQ-CHART-067): every chart with an energy-type axis validates every pixel of a 65 × 65
-//!   grid over `[0,1]²`, its decode feasible; the existing charts are bitwise their own under the default mapping; a
-//!   lone `E` axis decodes `E = U + K_max·t^γ_K`; the warp's `t` axis continues past `t = 1` and is bounded below
-//!   `t = 0`, its `s` axis bounded, and R-408 counts it so; a mass-ratio axis keeps every pixel's masses positive and
+//! Physical-quantity axes warped by default, a linear mapping an option per axis, the warp per pixel
+//! (chart_reference §2.1, §5.4; `kernel::chart::energy`, `kernel::chart::physical`):
+//! - `energy_axes_warped_*`: every chart with an energy-type axis validates every pixel of a 65 × 65 grid over
+//!   `[0,1]²`, its decode feasible; the existing charts are bitwise their own under the default mapping; a lone `E`
+//!   axis decodes `E = U + K_max·t^γ_K`; the warp's `t` axis continues past `t = 1` and is bounded below `t = 0`, its
+//!   `s` axis bounded, and the area statistics count it so; a mass-ratio axis keeps every pixel's masses positive and
 //!   summing to 1.
-//! - `energy_axis_linear_option_*` (REQ-CHART-068): under the linear option `(L_z, E)`'s corners past the parabola are
-//!   not a system, never integrated, never warned; the row `t = 1`, the point `(½, 0)` and `L_z = 0` on the column
-//!   `s = ½` agree with the warp; R-408's count makes those pixels forbidden; a mass-ratio axis's non-positive ratio is
-//!   not a system.
-//! - `energy_warp_per_pixel_*` (REQ-CHART-069): `(L_z, K)` and `(L_z, E)` tilted into a mass logit and into a shape
+//! - `energy_axis_linear_option_*`: under the linear option `(L_z, E)`'s corners past the parabola are not a system,
+//!   never integrated, never warned; the row `t = 1`, the point `(½, 0)` and `L_z = 0` on the column `s = ½` agree
+//!   with the warp; the area statistics count those pixels forbidden; a mass-ratio axis's non-positive ratio is not a
+//!   system.
+//! - `energy_warp_per_pixel_*`: `(L_z, K)` and `(L_z, E)` tilted into a mass logit and into a shape
 //!   control validate every pixel, at its own `U`, `I` and masses; untilted, bitwise the chart's.
-//! - `pe_axis_*` (REQ-CHART-070): no chart offers `PE`.
-//! - `physical_axis_warps_*` (REQ-CHART-070): the virial ratio and the mass ratio warp as chart_reference §2.1 writes,
+//! - `pe_axis_*`: no chart offers `PE`.
+//! - `physical_axis_warps_*`: the virial ratio and the mass ratio warp as chart_reference §2.1 writes,
 //!   the mass ratio under `stick_breaking` and under `softmax_tanh` at both ends of `μ_max`'s range.
 //!
-//! `K_max` and `γ_K` are REQ-CHART-044's placeholders (R-71), `validation::{K_MAX, GAMMA_K}`. Each test registers its
-//! negative control (R-176).
+//! `K_max` and `γ_K` are the invariant-chart warp's placeholder defaults, not yet calibrated,
+//! `validation::{K_MAX, GAMMA_K}`. Each test registers its negative control.
 
 use kernel::chart::energy::{
     count, decode_rule, decoder_bug_warning, extension, written, Count, ExtensionType, Mapped,
@@ -46,9 +46,10 @@ use validation::{negative_control, tunables, GAMMA_K, K_MAX};
 
 /// The grid side: 65 × 65 points `i/64` over `[0,1]²`, its edges included.
 const N: u32 = 65;
-/// `|K(p) − K*|` in units of `eps·K*`, at most (REQ-DEC-046, proposed; `chart_invariant.rs`).
+/// `|K(p) − K*|` in units of `eps·K*`, at most (dd_decoder test 8's tolerance, proposed;
+/// `chart_invariant.rs`).
 const TOL_K: f64 = 8.0;
-/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (REQ-DEC-046, proposed).
+/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (dd_decoder test 8's tolerance, proposed).
 const TOL_L: f64 = 4.0;
 /// A mass ratio's decode against its axis value, relative: the realisation's `ε_μ`, the link clamp
 /// (chart_decoder_contract § "Three hard requirements on any registered link", item 2; `MixedMassRatio::realised`).
@@ -108,7 +109,7 @@ fn lone<Q: EnergyAxis>(held: f64, mapping: Mapping) -> MixedEnergy<Alpha, Q, Def
     MixedEnergy::new(Z0, [0.2, 1.3], k_max(), gamma_k(), held, mapping)
 }
 
-// ── REQ-CHART-067: every pixel of [0,1]² a system ─────────────────────────────────────────────────────────────────────
+// ── Every pixel of [0,1]² a system ────────────────────────────────────────────────────────────────────────────────────
 
 /// Every point of the 65 × 65 grid over `[0,1]²` validates and decodes to a system: `at(u, v)` gives `validate`'s
 /// result and the decode's `DEGENERATE` tag.
@@ -216,7 +217,8 @@ negative_control!(
 );
 
 /// A lone `L_z` axis decodes its line of the warp at the held `K`: `K(p) = K` and `L_z(p) = (2t − 1)·L_max(K)`, each
-/// within REQ-DEC-046's tolerances, at every pixel of the grid; `line(t)` is the line's `2t − 1` as the check reads it.
+/// within dd_decoder test 8's tolerances, at every pixel of the grid; `line(t)` is the line's `2t − 1` as the check
+/// reads it.
 fn check_lone_lz(line: fn(f64) -> f64) {
     let held = k_max();
     let chart = lone::<AxisLz>(held, Mapping::Warped);
@@ -404,7 +406,7 @@ negative_control!(
 );
 
 /// A lone `E` axis decodes `E = U + K_max·t^γ_K`, `U` the pixel's own potential (which varies along `α`): `K(p)` is
-/// `K_max·t^γ_K` and `L_z(p)` the held 0, each within REQ-DEC-046's tolerances.
+/// `K_max·t^γ_K` and `L_z(p)` the held 0, each within dd_decoder test 8's tolerances.
 fn check_lone_e(chart: &MixedEnergy<Alpha, AxisE, Defaults, f64>) {
     let eps = f64::EPSILON;
     let mut potentials = Vec::new();
@@ -555,7 +557,7 @@ negative_control!(
     check_physical_values(false)
 );
 
-/// A lone physical axis's check over `[−¼, 1¼]²` (R-26; R-407, R-508): the vertical axis clamped past each bounded
+/// A lone physical axis's check over `[−¼, 1¼]²`: the vertical axis clamped past each bounded
 /// side, as its declared types say, the horizontal `α` clamped to its domain; a point that moved is `Clamp`, naming
 /// `α`'s domain where `α` moved and `vertical` otherwise, onto a system; a warped chart refuses nothing in the window, a
 /// linear one only points whose construction fails. A non-finite coordinate is refused, naming its axis.
@@ -661,7 +663,7 @@ negative_control!(
     check_lone_past(Constraint::KNonNegative)
 );
 
-// ── R-508: the t axis continues past t = 1, bounded below t = 0; s bounded ────────────────────────────────────────────
+// ── The t axis continues past t = 1, bounded below t = 0; s bounded ───────────────────────────────────────────────────
 
 /// The `t` axis declared `sides` against what its formula `k(t)` decodes past each edge: past an affine side every
 /// pixel is a system the square does not draw, `K` finite and above `K_max` (past `t = 1`) or outside `[0, K_max]`
@@ -682,9 +684,9 @@ fn check_t_sides(name: &str, sides: Sides, k: impl Fn(f64) -> f64, valid: impl F
     }
 }
 
-/// R-508 on `(L_z, K)`, `(L_z, E)` and `(ν, K)` at the warp's `γ_K = gamma`: declared types, the `t > 1` side
-/// decoding `K = K_max·t^γ_K` and validating, the `s` axis refused past either edge. `below` overrides the `t` axis's
-/// declared below side (the control).
+/// The warp's sides on `(L_z, K)`, `(L_z, E)` and `(ν, K)` at the warp's `γ_K = gamma`: declared types, the `t > 1`
+/// side decoding `K = K_max·t^γ_K` and validating, the `s` axis refused past either edge. `below` overrides the `t`
+/// axis's declared below side (the control).
 fn check_r508(gamma: f64, below: Option<ExtensionType>) {
     let inv = Invariant {
         gamma_k: gamma,
@@ -758,7 +760,7 @@ fn check_r508(gamma: f64, below: Option<ExtensionType>) {
     }
 }
 
-/// R-408's count through the warp's types on `(L_z, E)` (R-508; R-506 W4), at each edge and just past it: `s` past
+/// The area statistics' count through the warp's types on `(L_z, E)`, at each edge and just past it: `s` past
 /// either edge and `t < 0` are the domain's end, `t > 1` is counted, a system or forbidden by `validate`, and the edges
 /// themselves are inside; a periodic or pole-crossing side alone is not counted, and a bounded one beside it wins.
 fn check_warped_count(sides: [Sides; 2]) {
@@ -837,7 +839,7 @@ negative_control!(
     check_r508(1.5, Some(ExtensionType::Affine))
 );
 
-// ── R-506: the mass ratio through the mass link ───────────────────────────────────────────────────────────────────────
+// ── The mass ratio through the mass link ──────────────────────────────────────────────────────────────────────────────
 
 /// Every pixel of the grid over `[lo, hi]²` decodes masses positive and summing to 1, `masses(u, v)` the decoded masses.
 fn check_simplex(name: &str, lo: f64, hi: f64, masses: impl Fn(f64, f64) -> [f64; 3]) {
@@ -882,7 +884,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-068: the linear option ──────────────────────────────────────────────────────────────────────────────────
+// ── The linear option ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// On `(L_z, E)` under the linear option: a pixel is not a system exactly where `|L_z| > √(2I(E − U))`, there are
 /// some (the parabola's corners), each is never integrated (its decode `DEGENERATE(INVARIANT_INFEASIBLE)`,
@@ -934,7 +936,7 @@ struct Projection<'a> {
     wide: Constraint,
 }
 
-/// Over `[−¼, 1¼]²`, the check of a mapped invariant chart with a linear axis (R-26): a valid point is feasible; any
+/// Over `[−¼, 1¼]²`, the check of a mapped invariant chart with a linear axis: a valid point is feasible; any
 /// other is projected to `t = max(t, 0)` and, past the parabola, a warped `L_z` clamped to `s`'s edge and a linear one
 /// moved to a feasible `s` on its own side on the parabola, [`OFF_EDGE`] further out infeasible (at `t = 0`, `K = 0`,
 /// that is `½`); the constraint named is `low` where `t` moved, else `wide`. A non-finite coordinate is refused,
@@ -1064,7 +1066,7 @@ negative_control!(
     }
 );
 
-/// The pixels both mappings share, untilted (R-471 H4): the row `t = 1` and the point `(½, 0)` decode to the same
+/// The pixels both mappings share, untilted: the row `t = 1` and the point `(½, 0)` decode to the same
 /// state, bit for bit, and the column `s = ½` has `L_z = 0` under both; `extra` adds points the check asserts equal
 /// too (the control's centre).
 fn check_shared(extra: &[[f64; 2]]) {
@@ -1112,8 +1114,8 @@ negative_control!(
     check_shared(&[[0.5, 0.5]])
 );
 
-/// R-408's count over the window `[−¼, 1¼]²` of `(L_z, E)` under the linear option, through `sides`: every pixel is
-/// counted (both axes affine) and exactly those `validate` refuses are forbidden (B1).
+/// The area statistics' count over the window `[−¼, 1¼]²` of `(L_z, E)` under the linear option, through `sides`:
+/// every pixel is counted (both axes affine) and exactly those `validate` refuses are forbidden.
 fn check_linear_count(sides: [Sides; 2]) {
     let chart = Mapped::<_, Defaults>::new(InvariantLE(invariant()), mapped_all(Mapping::Linear));
     let (mut forbidden, mut refused, mut total) = (0, 0, 0);
@@ -1224,7 +1226,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-069: the warp per pixel under a tilt ────────────────────────────────────────────────────────────────────
+// ── The warp per pixel under a tilt ───────────────────────────────────────────────────────────────────────────────────
 
 /// The view's centre, in the chart's own parameters.
 const CENTRE: [f64; 2] = [0.5, 0.5];
@@ -1320,7 +1322,7 @@ impl InvariantOf for InvariantLK<f64> {
     }
 }
 
-/// The tilts REQ-CHART-069 names: a single `τ` into each target and `(30°, 20°)` under both maps.
+/// The tilts checked: a single `τ` into each target and `(30°, 20°)` under both maps.
 fn tilts(x: u32) -> Vec<TiltSpec> {
     let mut all: Vec<TiltSpec> = [10.0, 45.0, 80.0]
         .iter()
@@ -1464,7 +1466,7 @@ negative_control!(
     }
 );
 
-/// The hidden coordinates a tilt may target on the physical-quantity mixed-axis charts (R-473 J1): every control but
+/// The hidden coordinates a tilt may target on the physical-quantity mixed-axis charts: every control but
 /// the other axis's and the physical axis's block, the momenta for an energy axis, the masses for the mass ratio; a
 /// slice sets one only where it is hidden. `momenta` and `masses` are the blocks the check reads as written.
 fn check_hidden(momenta: [u32; 4], masses: [u32; 2]) {
@@ -1506,7 +1508,7 @@ negative_control!(
     check_hidden([2, 3, 4, 6], [6, 7])
 );
 
-/// A mapped `(L_z, K)` chart's check at a tilt's `(a, b)`, a mass logit shifted (R-473 J1, E3): `want` at each point,
+/// A mapped `(L_z, K)` chart's check at a tilt's `(a, b)`, a mass logit shifted: `want` at each point,
 /// under each mapping with one axis linear. A warped axis is refused past its bounded side, naming its constraint;
 /// past a linear one the construction's exact test decides; a non-finite coordinate names the axis it is on.
 fn check_shifted(want: &[([Mapping; 2], [f64; 2], Option<Constraint>)]) {
@@ -1660,7 +1662,7 @@ negative_control!(
     )
 );
 
-// ── REQ-CHART-070: PE, the virial ratio and the mass ratio ────────────────────────────────────────────────────────────
+// ── PE, the virial ratio and the mass ratio ───────────────────────────────────────────────────────────────────────────
 
 /// No chart offers `PE` (`written` refuses it, and its extension with it); every other quantity is written.
 fn check_pe(written: impl Fn(Quantity) -> Result<(), Refused>) {
@@ -1764,7 +1766,7 @@ fn virial(
     MixedEnergy::virial(Z0, [0.2, 1.3], asked, gamma_k(), 0.0, mapping)
 }
 
-/// The virial ratio over its own asked range `[Q_lo, Q_hi]` (R-471 H4; chart_reference §2.1): warped, every pixel of
+/// The virial ratio over its own asked range `[Q_lo, Q_hi]` (chart_reference §2.1): warped, every pixel of
 /// `[0,1]²` validates and decodes `2K/|U| = Q₀ + (Q_hi − Q₀)·t^γ_K`, `Q₀ = max(Q_lo, 0)`, a range reaching below 0
 /// decoding as its feasible part, bit for bit; linear, `Q_lo + (Q_hi − Q_lo)·t`, its pixels with `Q < 0` refused and
 /// `Q = 0` a system; a range not increasing and finite, or warped with `Q_hi ≤ 0`, builds no chart. `want` gives the
@@ -1876,7 +1878,7 @@ negative_control!(
     check_virial_range(|[_, hi], mapping, t| virial_want([0.0, hi], mapping, t))
 );
 
-// ── A warped `t` axis at a held `L_z ≠ 0`: the floor (the owner's ruling of 4 Nov 2026 on RQ-683) ───────────────────
+// ── A warped `t` axis at a held `L_z ≠ 0`: the floor ────────────────────────────────────────────────────────────────
 
 /// The held values of the floor's tests, either sign, a tiny one and one past `K_max`'s own `L_max`.
 const HELD_LZ: [f64; 6] = [0.3, -0.3, 1.0e-300, 0.1, 1.7, 40.0];
@@ -2146,8 +2148,8 @@ negative_control!(
     check_bottom_rows(Mapping::Linear)
 );
 
-/// Past the square: below `t = 0` a warped `t` axis clamps to the floor, past `t = 1` it continues on `K`, `KE` and `E`
-/// (R-508), and the virial ratio is bounded past both edges.
+/// Past the square: below `t = 0` a warped `t` axis clamps to the floor, past `t = 1` it continues on `K`, `KE` and
+/// `E`, and the virial ratio is bounded past both edges.
 fn check_held_sides(held: f64, want: fn(f64) -> f64) {
     let moved = |v: f64| ValidationResult::Clamp {
         u: 0.5,
@@ -2378,8 +2380,8 @@ negative_control!(
     check_unrepresentable(0.3)
 );
 
-/// The linear option at a held `L_z ≠ 0` keeps its fixed values (the owner's ruling, E2): `K* = K_max·t`, no floor, the
-/// row `t = 0` not a system (blank, R-470) and the top row one, on `K`, `KE`, `E` and, at a held `L_z` its top row
+/// The linear option at a held `L_z ≠ 0` keeps its fixed values: `K* = K_max·t`, no floor, the
+/// row `t = 0` not a system (blank) and the top row one, on `K`, `KE`, `E` and, at a held `L_z` its top row
 /// clears, the virial ratio; `mapping` is the chart's. A warped `L_z` axis is as it was: `K` the held value, no floor added.
 fn check_linear_held(mapping: Mapping) {
     fn axis<Q: EnergyAxis>(held: f64, mapping: Mapping) {
@@ -2852,7 +2854,7 @@ fn range_as_held(chart: &RatioChart, asked: [f64; 2], p: &LinkParams<f64>) -> [f
     })
 }
 
-/// A chart narrowed to `f32` holds its pixels at a held mass near 1 (R-506, R-471 E3): on slices with `m_c` above 0.95,
+/// A chart narrowed to `f32` holds its pixels at a held mass near 1: on slices with `m_c` above 0.95,
 /// `softmax_tanh` at `μ_max = 5`, every one of 257 rows is realised on the chart as `with_params` narrows it. `range`
 /// is the range taken from the chart `new` builds, its own or a control's.
 fn check_narrowed(range: NarrowedRange) {
@@ -2909,7 +2911,7 @@ enum Formula {
 }
 
 /// The mass-ratio axis on `[0.05, 20]` of each body pair, under `stick_breaking` and under `softmax_tanh` at both ends
-/// of `μ_max`'s range (REQ-GEN-038's, `validation::tunables`) and at its default: every pixel of `[0,1]²` validates and
+/// of `μ_max`'s calibrated range (`validation::tunables`) and at its default: every pixel of `[0,1]²` validates and
 /// decodes masses positive, summing to 1, with the ratio `q(t)` and the third body's mass at the held `m_c`.
 fn check_mass_ratio(formula: Formula) {
     let range = tunables()
@@ -3086,7 +3088,7 @@ negative_control!(
     check_reach(1.0 + 1e-9)
 );
 
-/// A mass-ratio chart's check over `[−¼, 1¼]²` (R-26; R-506 W3, W4): warped, `t` clamped to `[0, 1]`; linear, a ratio
+/// A mass-ratio chart's check over `[−¼, 1¼]²`: warped, `t` clamped to `[0, 1]`; linear, a ratio
 /// the link does not realise, or at or below 0, refused; `α` clamped to its domain; a point that moved is `Clamp` onto a
 /// realised ratio, naming the axis domain. A non-finite coordinate is refused.
 fn check_ratio_past(mapping: Mapping, clamps_up: bool) {

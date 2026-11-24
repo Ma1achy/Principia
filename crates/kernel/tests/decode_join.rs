@@ -1,21 +1,20 @@
 //! The decoder's free path joined (`kernel::decode`; dd_decoder §2, §3.4, §5), each check at the f64 and the f32
-//! instantiation natively (R-265):
+//! instantiation natively:
 //! - `decode_factorised`: the entry calls mass → config → momentum → derived invariants, each stage reading its own
-//!   `z` slice and the stages before it, and no block's output moves with a later block's controls (REQ-DEC-001).
-//! - `decode_block_layout`: `z` with one block non-zero moves only that block's physical outputs (REQ-DEC-003).
+//!   `z` slice and the stages before it, and no block's output moves with a later block's controls.
+//! - `decode_block_layout`: `z` with one block non-zero moves only that block's physical outputs.
 //! - `decode_momentum`: `Σpᵢ = 0` on fuzzed `z` with unequal masses, the particle momenta conjugate to `ρ` and `λ`;
-//!   `z_q = 0` gives rest; `|qₖ| ≤ q_max` (REQ-DEC-019, PIT-9).
-//! - `decode_no_mass_unweighting`: an unequal-mass fixture matches dd_decoder §3.4's formula, with no unweighting
-//!   (REQ-DEC-030, R-28).
-//! - `decode_block_independence`: decoder test 2, each block's controls perturbed alone (REQ-DEC-026).
-//! - `decode_ranges`: decoder test 3, the closed ranges at f32 and f64, every registered link (REQ-DEC-027, R-417).
-//! - `golden_ic`: `z = 0` decodes to the golden IC, every value against `fixtures/golden_ic/z0.json` (REQ-VAL-018;
-//!   under the offset link `z = 0` is the old golden's `z` converted, R-1020).
+//!   `z_q = 0` gives rest; `|qₖ| ≤ q_max` (PIT-9).
+//! - `decode_no_mass_unweighting`: an unequal-mass fixture matches dd_decoder §3.4's formula, with no unweighting.
+//! - `decode_block_independence`: decoder test 2, each block's controls perturbed alone.
+//! - `decode_ranges`: decoder test 3, the closed ranges at f32 and f64, every registered link.
+//! - `golden_ic`: `z = 0` decodes to the golden IC, every value against `fixtures/golden_ic/z0.json` (the
+//!   offset link `β = z_β + c` keeps the golden IC at `z = 0`).
 //! - `chart_landmarks_lagrange_euler`: Lagrange's equilateral triangle at `z = 0`, Euler's collinear states at
 //!   `z_β = −π/2` (`β = 0`, body 2 on the `+x` side) and `z_β = π/2` (`β = π̂`, on the `−x` side), interior points of
-//!   the periodic `β` reached exactly (REQ-VAL-020, R-1020, R-898).
+//!   the periodic `β` reached exactly.
 //!
-//! **REQ-DEC-045's proposal** (R-71; unconfirmed until the M2 gate): dd_decoder test 1's `Σpᵢ = 0` holds to
+//! **The proposed tolerance** (unconfirmed until the M2 gate): dd_decoder test 1's `Σpᵢ = 0` holds to
 //! [`SUM_P_EPS`] = 4 `eps`, componentwise, relative to `Σᵢ‖pᵢ‖`, at both precisions (`eps` = 2.2×10⁻¹⁶ at f64, 1.2×10⁻⁷
 //! at f32), over every `z` of the domain, saturation included, every registered link. The evidence, 200 runs at the
 //! fixed seeds `PROPTEST_RNG_SEED` = 1 … 200 (the fixed grid in each, and 256 fuzzed `z` drawn with unequal masses), as
@@ -42,7 +41,7 @@ use kernel::generated::links::*;
 use kernel::payload::ICDescriptorOf;
 use validation::negative_control;
 
-// ── decode_factorised (REQ-DEC-001) ─────────────────────────────────────────────────────────────────────────────
+// ── decode_factorised ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// A stage of the decode.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -244,7 +243,7 @@ mod config_slice {
     );
 }
 
-// ── decode_block_layout (REQ-DEC-003) ───────────────────────────────────────────────────────────────────────────
+// ── decode_block_layout ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// The block a latent index belongs to: config `z[0:2]`, momentum `z[2:6]`, mass `z[6:8]`.
 fn block_of(k: usize) -> &'static str {
@@ -328,14 +327,14 @@ negative_control!(
     check_layout::<f64>(mass_first::<f64>)
 );
 
-// ── decode_momentum (REQ-DEC-019) ───────────────────────────────────────────────────────────────────────────────
+// ── decode_momentum ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-045's proposal: `|Σpᵢ| ≤ SUM_P_EPS · eps · Σᵢ‖pᵢ‖` (the module's header).
+/// The proposed tolerance: `|Σpᵢ| ≤ SUM_P_EPS · eps · Σᵢ‖pᵢ‖` (the module's header).
 const SUM_P_EPS: f64 = 4.0;
 
 /// The conjugacy residuals' bound, in `eps` relative to `‖p_ρ‖ + ‖p_λ‖`: `μ_ρ(p₁/m₁ − p₀/m₀) = p_ρ` and
-/// `p₀ + p₁ = −p_λ`, the two relations dd_decoder §3.4's map encodes (REQ-DEC-044's neighbour: a few roundings of
-/// the map, the divisions and the reduced mass).
+/// `p₀ + p₁ = −p_λ`, the two relations dd_decoder §3.4's map encodes (a tolerance of the same kind as dd_decoder
+/// test 1's identities: a few roundings of the map, the divisions and the reduced mass).
 const CONJUGATE_EPS: f64 = 4.0;
 
 /// A momentum block at `R`, behind a function pointer, so a control runs the same check on a broken one.
@@ -513,10 +512,10 @@ mod swapped_factors {
     );
 }
 
-// ── decode_no_mass_unweighting (REQ-DEC-030) ────────────────────────────────────────────────────────────────────
+// ── decode_no_mass_unweighting ──────────────────────────────────────────────────────────────────────────────────
 
-/// The fixture's tolerance on each particle momentum, in `eps` relative to `‖p_ρ‖ + ‖p_λ‖` (REQ-DEC-044's neighbour:
-/// the link's and the map's round-off, and `z`'s own rounding to `R`).
+/// The fixture's tolerance on each particle momentum, in `eps` relative to `‖p_ρ‖ + ‖p_λ‖` (a tolerance of the same
+/// kind as dd_decoder test 1's identities: the link's and the map's round-off, and `z`'s own rounding to `R`).
 const FIXTURE_EPS: f64 = 8.0;
 
 /// The fixture: the Burrau masses `(3, 4, 5)`, body 0 the reference, so `m = (5, 4, 3)/12`, and four momentum controls.
@@ -569,7 +568,7 @@ fn decode_no_mass_unweighting() {
 }
 
 /// A block that unweights the Jacobi momenta by the reduced masses, `p_ρ√μ_ρ` and `p_λ√μ_λ`, before the map: the step
-/// R-28 rules out.
+/// dd_decoder §3.4's formula does not take.
 #[cfg(feature = "controls")]
 fn unweighted<R: P>(z: [R; 4], masses: &Masses<R>) -> Momentum<R> {
     let q = momentum::controls::<Defaults, R>(z);
@@ -592,7 +591,7 @@ negative_control!(
     check_fixture(unweighted::<f64>)
 );
 
-// ── decode_block_independence (REQ-DEC-026) ─────────────────────────────────────────────────────────────────────
+// ── decode_block_independence ───────────────────────────────────────────────────────────────────────────────────
 
 /// Each block's intermediate values, compared bit for bit: mass `(m, M₀₁)`, config `(α, β, ρ̃, λ̃)`, momentum
 /// `(q, p_ρ, p_λ)`.
@@ -718,13 +717,12 @@ negative_control!(
     check_independence_all(&[coupled::<f64>], &[coupled::<f32>])
 );
 
-// ── decode_ranges (REQ-DEC-027) ─────────────────────────────────────────────────────────────────────────────────
+// ── decode_ranges ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Checks decoder test 3 at `z` for the entry `run`: `α ∈ [0, π/2]`, compared in f64 at the exact bound
 /// (`FRAC_PI_2` is the greatest f64 at or below it, so `≤` against it is `≤` against the exact bound); `β = z_β + c`
-/// bit for bit at `R`, `c` the offset ([`offset`]), the periodic link having no range to close (R-898, R-1020;
-/// dd_decoder §3.2); `|qₖ| ≤ q_max`; every mass in the open simplex `(0, 1)`. *Was (TASK-M2-57):* "`β ∈ [0, π]`,
-/// compared in f64 at the exact bounds".
+/// bit for bit at `R`, `c` the offset ([`offset`]), the periodic link having no range to close
+/// (dd_decoder §3.2); `|qₖ| ≤ q_max`; every mass in the open simplex `(0, 1)`.
 fn check_ranges<R: P>(name: &str, run: Entry<R>, z: [f64; 8]) {
     let zl = latent::<R>(z);
     let d = run(&zl);
@@ -752,8 +750,8 @@ fn check_ranges<R: P>(name: &str, run: Entry<R>, z: [f64; 8]) {
     }
 }
 
-/// Past the underflow threshold the lower `α`-pole is reached exactly, `β = z_β + c` far out as near (R-898, R-1020),
-/// and saturated `qₖ` reach `±q_max` (R-417).
+/// Past the underflow threshold the lower `α`-pole is reached exactly, `β = z_β + c` far out as near,
+/// and saturated `qₖ` reach `±q_max`.
 fn check_saturation<R: P>(name: &str, run: Entry<R>) {
     let q_max = <f64 as ChartConstants>::Q_MAX;
     for far in [1e30, 1e38] {
@@ -795,7 +793,8 @@ fn decode_ranges() {
     check_ranges_all(&selections::<f64>(), &selections::<f32>());
 }
 
-/// `β = π̂·σ(z)` with `π̂` the f32 nearest to π, `0x4049_0FDB`, above π: TASK-M2-30's round-to-nearest constant.
+/// `β = π̂·σ(z)` with `π̂` the f32 nearest to π, `0x4049_0FDB`, above π: the round-to-nearest constant,
+/// not the kernel's `fl↓(π)`.
 #[cfg(feature = "controls")]
 struct NearestPi;
 
@@ -835,10 +834,11 @@ negative_control!(
     )
 );
 
-// ── golden_ic (REQ-VAL-018) ─────────────────────────────────────────────────────────────────────────────────────
+// ── golden_ic ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The golden IC's non-descriptor values' tolerance, in `eps` relative to `max(1, |v|)`, the decoder's unit scale
-/// (`I = 1`): REQ-DEC-044's neighbour, the few roundings of the blocks from `z = 0`.
+/// (`I = 1`): a tolerance of the same kind as dd_decoder test 1's identities, the few roundings of the blocks from
+/// `z = 0`.
 const GOLDEN_EPS: f64 = 4.0;
 
 /// Each fixture value but the descriptor's, read from `d`, by the fixture's name.
@@ -897,7 +897,7 @@ fn golden_value<R: P>(d: &Decoded<R>, name: &str) -> Option<f64> {
 }
 
 /// Checks `run`'s decode of the golden `z` ([`golden_z`]) against every value of the fixture at `R`: the descriptor's
-/// fields within REQ-PAY-095's ulps (bit-exact for those 0 at rest), its derived `E₀` as `V_0`, the rest within
+/// fields within their calibrated ulps (bit-exact for those 0 at rest), its derived `E₀` as `V_0`, the rest within
 /// [`GOLDEN_EPS`].
 fn check_golden<R: P>(run: Entry<R>, worst: &Worst) {
     let g = golden();
@@ -984,7 +984,7 @@ negative_control!(
     )
 );
 
-// ── chart_landmarks_lagrange_euler (REQ-VAL-020) ────────────────────────────────────────────────────────────────
+// ── chart_landmarks_lagrange_euler ──────────────────────────────────────────────────────────────────────────────
 
 /// `(r₁ − r₀) × (r₂ − r₀)`, twice the triangle's signed area, in f64.
 fn area2<R: P>(ic: &Ic<R>) -> f64 {
@@ -1022,14 +1022,11 @@ fn check_euler<R: P>(run: Entry<R>, z_beta: R, want: R, side: f64, bound: f64) {
     assert!(flat <= bound, "{at} is not collinear: area/r_min² = {flat}");
 }
 
-/// Checks the landmarks under `run` (REQ-VAL-020, R-1020): `z = 0` is Lagrange's equilateral triangle, its three sides
+/// Checks the landmarks under `run`: `z = 0` is Lagrange's equilateral triangle, its three sides
 /// `√3` within [`GOLDEN_EPS`]; `z_β = −c` gives `β = 0` exactly, body 2 on the `+x` side, every body on the x axis,
 /// collinear exactly; `z_β = c` gives `β = π̂` exactly (`c + c = π̂`), body 2 on the `−x` side, collinear to `sin π̂`,
 /// π's rounding at `R`, its area relative to `r_min²` within [`GOLDEN_EPS`] `eps` of 0; `c` the offset ([`offset`]),
-/// so each is an interior point of the periodic `β`, reached with no underflow and no edge. *Was (14 Nov 2026, the
-/// identity link):* "the golden `z` … is Lagrange's …; `z_β = 0` gives `β = 0` exactly …; `z_β → π̂` from below
-/// approaches Euler's collinear line at `β = π̂`, `β = z_β` non-decreasing"; before that, "`z_β` past the underflow
-/// threshold gives `β = 0` exactly …; `z_β → +large` approaches Euler's collinear line at `β → π` from below".
+/// so each is an interior point of the periodic `β`, reached with no underflow and no edge.
 fn check_landmarks<R: P>(run: Entry<R>) {
     // The collinear states first: a σ-type link, or the offset's nearest f32, the controls, fail there.
     let c = offset::<R>();

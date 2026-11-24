@@ -1,12 +1,12 @@
 //! Kind 4, the Burrau family's encode (`kernel::encode::curve`; inverse_encode_contract Part 5 kind 4; dd_encode §3.1,
-//! §3.4, §5 tests 5 and 7; R-24, R-27; TASK-M2-18), at f64 and at the f32 instantiation natively:
+//! §3.4, §5 tests 5 and 7), at f64 and at the f32 instantiation natively:
 //! - `encode_burrau_on_curve`: dd_encode §5 test 5: the physical `(3, 4, 5)`, under a random gauge, encodes to the
 //!   masses `(5, 4, 3)/12`, the right angle at body 0, `ν = sec θ − tan θ = ½` and the coupling `μ₁ = log(b/c)`,
-//!   `μ₂ = log(a/c)`; decoded back on the Euclid plane it is the same triangle to `ε_phys` (REQ-ENC-011).
+//!   `μ₂ = log(a/c)`; decoded back on the Euclid plane it is the same triangle to `ε_phys`.
 //! - `encode_curve_projection_*`: dd_encode §5 test 7: on the curve the argmin and the closed form agree on `ν`, and
 //!   the closed form lands, the argmin bypassed; off it `d(ν*)` is reported, the latent fallback is taken beyond the
 //!   tolerance and satisfies T2; within it the point is projected; the tolerance's edges; and the calibration's
-//!   evidence, `fixtures/gates/curve_projection/` (REQ-ENC-017, REQ-ENC-026).
+//!   evidence, `fixtures/gates/curve_projection/`.
 //! - `encode_curve_composition_*`: kind 4 composed with Part 6 step 4 (dd_encode §3.1, "The composition"): a state
 //!   with `d(ν(θ))` and `d(ν*)` beyond the tolerance falls back to latent `z` though its decode at the closed form is
 //!   within `ε_phys`; a state within the tolerance of `ν*` only lands at `ν*`, not at `ν(θ)`.
@@ -14,17 +14,16 @@
 //!   exactly.
 //! - `encode_projection_metric_bruteforce`: off-curve fixtures: `ν*` minimises the shape sphere's chordal ⊕ the mass
 //!   simplex's Euclidean distance at unit weights, against a brute-force search under the test's own metric, built from
-//!   the positions by `kernel::shape::shape`, not from the encode's Jacobi vectors (REQ-ENC-020). Its control, the
+//!   the positions by `kernel::shape::shape`, not from the encode's Jacobi vectors. Its control, the
 //!   same search under another weighting, is the one that shows the projection test can fail (PIT-3).
 //! - `encode_burrau_fold`: on a folded chart an input at `θ > π/4`, the leg-swapped twin of a fold shape, is not
 //!   relabelled: it falls back to latent `z`, flagged `past_fold`; on the full-range Euclid plane the twin, the mirror
-//!   image of `γ(ν′)`, falls back to latent `z` too, and its mirror lands at `ν′` (R-865); the flag reaches the caller
-//!   in the curve encode (REQ-ENC-022, dd_encode §3.1). *Was (TASK-M2-57):* "on the full-range Euclid plane the twin
-//!   is its own chart point".
+//!   image of `γ(ν′)`, falls back to latent `z` too, and its mirror lands at `ν′`; the flag reaches the caller in the
+//!   curve encode (dd_encode §3.1).
 //! - `encode_burrau_fold_hemispheres`: dd_encode §3.1 on a full-range `ν` chart, past the fold: the input on the
-//!   embed's hemisphere lands at `ν′`, the mirror twin on the other falls back to latent `z`, both flagged (R-865).
+//!   embed's hemisphere lands at `ν′`, the mirror twin on the other falls back to latent `z`, both flagged.
 //! - `encode_burrau_fold_twin_off_curve`: the twin's curve encode does not report it on the curve, its shape point's
-//!   `w` signed; its control reads `|w|` (R-865).
+//!   `w` signed; its control reads `|w|`.
 //! - `encode_burrau_by_kind`: every Burrau chart's state, under a random gauge, lands back on its chart at its own
 //!   point through `by_kind::encode_into_within` at the curve tolerance, `encode_into` being it at `tol = 0`; past the
 //!   curve axis's edge the axis places nothing.
@@ -32,10 +31,10 @@
 //!   edges, the search's edges and its NaN start, the span test, the fold's isosceles tie, and the flat guards; and the
 //!   search's golden ratio, correctly rounded at both widths.
 //!
-//! **Tolerances** (applied per R-369, test decisions): the round trips are held to `ε_phys` (REQ-ENC-024, proposed by
-//! the `encode-eps-phys` gate, provisional until the M2 gate) in inverse-encode Part 4's `‖·‖_phys`
+//! **Tolerances** (test decisions): the round trips are held to `ε_phys` (proposed by the `encode-eps-phys` gate,
+//! provisional until the M2 gate) in inverse-encode Part 4's `‖·‖_phys`
 //! (`validation::roundtrip::phys`); the projection's tolerance is [`curve_tol`], `k·ε_R` at the proposal of
-//! `fixtures/gates/curve_projection/measurement.toml` (REQ-ENC-026, provisional until the M2 gate); the closed form's
+//! `fixtures/gates/curve_projection/measurement.toml` (provisional until the M2 gate); the closed form's
 //! scalars to [`scalar_tol`], 16 `ε_R`.
 //!
 //! **Domain** (pitfalls §10): encode alone, on states held fixed; no trajectory.
@@ -67,7 +66,7 @@ use validation::negative_control;
 use validation::roundtrip::{eps_phys, phys, trip, widen, Precision};
 use validation::{BURRAU_THETA_MAX, BURRAU_THETA_MIN, GAMMA_K, K_MAX};
 
-/// The proposed `k` of the projection's tolerance `k·ε_R` (REQ-ENC-026), the fixture's `k_curve`.
+/// The proposed `k` of the projection's tolerance `k·ε_R`, the fixture's `k_curve`.
 const K_CURVE: f64 = 128.0;
 
 /// The projection's tolerance at `R`: [`K_CURVE`]`·ε_R`.
@@ -108,7 +107,7 @@ fn burrau(nu: f64) -> Ic<f64> {
     }
 }
 
-/// `x` under a random gauge without the mirror: `Π·x` is another system, which `C` no longer folds back (R-865).
+/// `x` under a random gauge without the mirror: `Π·x` is another system, which `C` does not fold back.
 fn gauged(x: &Ic<f64>, rng: &mut SplitMix) -> Ic<f64> {
     Gauge {
         mirror: false,
@@ -125,7 +124,7 @@ fn euclid<R: Precision>() -> EuclidPlane<R> {
     }
 }
 
-/// `Φ_θ,K` at the register's proposed `θ` range and warp (REQ-CHART-044, REQ-CHART-045).
+/// `Φ_θ,K` at the register's proposed `θ` range and warp.
 fn theta_k<R: Precision>() -> BurrauThetaK<R> {
     BurrauThetaK {
         theta_range: [
@@ -484,7 +483,7 @@ negative_control!(
     check_edges::<f64>(23, true)
 );
 
-// ── The calibration's evidence (REQ-ENC-026) ───────────────────────────────────────────────────────────────────────
+// ── The calibration's evidence ─────────────────────────────────────────────────────────────────────────────────────
 
 /// The evidence directory.
 const DIR: &str = "fixtures/gates/curve_projection";
@@ -941,11 +940,10 @@ negative_control!(
     check_holds(5.0)
 );
 
-// ── The metric against a brute-force search (REQ-ENC-020) ──────────────────────────────────────────────────────────
+// ── The metric against a brute-force search ────────────────────────────────────────────────────────────────────────
 
-/// The test's own metric at mass weight `w`: the shape point of the positions by `kernel::shape::shape`, `w` signed
-/// (R-865), its chordal distance squared, plus `w` times the masses' Euclidean distance squared. *Was (TASK-M2-57):*
-/// "`w` as `|w|`".
+/// The test's own metric at mass weight `w`: the shape point of the positions by `kernel::shape::shape`, `w` signed,
+/// its chordal distance squared, plus `w` times the masses' Euclidean distance squared.
 fn own_d2(x: &Ic<f64>, nu: f64, w: f64) -> f64 {
     let y = burrau(nu);
     let (a, b) = (shape(x.r, x.m), shape(y.r, y.m));
@@ -970,7 +968,7 @@ const FIXTURES: [(f64, f64, f64, f64); 8] = [
 /// Two far states, `d² > 1`, whose `d²` has a second local minimum on the Euclid span (found by a random search, 2 in
 /// 200 000, under the metric's `|w|`): a search that leaves the best grid point's two cells can settle in the other
 /// basin. Both are lower-half states; [`fixture`] takes their mirror images, on the upper hemisphere, where the signed
-/// `w` (R-865) reads them as `|w|` read the states themselves, so their two basins stand.
+/// `w` reads them as `|w|` read the states themselves, so their two basins stand.
 const FAR: [Ic<f64>; 2] = [
     Ic {
         m: [0.6590993899962303, 0.260895262143094, 0.08000534786067577],
@@ -1063,7 +1061,7 @@ negative_control!(
     }
 );
 
-// ── The fold (REQ-ENC-022) ─────────────────────────────────────────────────────────────────────────────────────────
+// ── The fold ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `x` with bodies 1 and 2 exchanged: the leg swap, a relabelling.
 fn swapped(x: &Ic<f64>) -> Ic<f64> {
@@ -1079,9 +1077,8 @@ fn swapped(x: &Ic<f64>) -> Ic<f64> {
 /// back to latent `z`, by `encode_into_within` and by the projection both, the flag in the curve encode it reports; at
 /// rest (`v = 0`) the twin is the mirror image of `γ(ν′)`, `ν′` its closed form's `ν`: on the full-range Euclid plane
 /// it falls back to latent `z`, flagged, its curve encode not reporting it on the curve ([`check_twin_off_curve`]),
-/// and its mirror `Π·twin` lands at `ν′`, flagged too (R-865: `C` no longer folds the mirror back). When `twin` is
-/// false the twin is replaced by the state itself, for the control. *Was (TASK-M2-57):* "at rest (`v = 0`) the twin is
-/// the full-range Euclid plane's own chart point, flagged too".
+/// and its mirror `Π·twin` lands at `ν′`, flagged too (`C` does not fold the mirror back). When `twin` is
+/// false the twin is replaced by the state itself, for the control.
 fn check_fold<R: Precision>(u: f64, v: f64, rng: &mut SplitMix, twin: bool)
 where
     f64: From<R>,
@@ -1175,7 +1172,7 @@ where
     );
 }
 
-/// [`state_point`] with `w` read as `|w|`, the encode's form before R-865: the control's defect.
+/// [`state_point`] with `w` read as `|w|`, which identifies a state with its mirror image: the control's defect.
 #[cfg(feature = "controls")]
 fn folded_point<R: Precision>(ic: &Ic<R>) -> Point<R> {
     let p = state_point(ic);
@@ -1205,7 +1202,7 @@ negative_control!(
 );
 
 /// The twins of [`encode_burrau_fold`]'s rest states, at f64 and f32, are off the curve under [`state_point`]'s signed
-/// `w` (R-865).
+/// `w`.
 #[test]
 fn encode_burrau_fold_twin_off_curve() {
     let chart = theta_k::<f64>();
