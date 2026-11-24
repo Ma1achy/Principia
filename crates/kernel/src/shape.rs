@@ -33,7 +33,8 @@
 //! - **`wrap`'s `d`**, in [`wrap`]: `longitude(n) − reference`, a difference of two `atan2` longitudes, against `π`
 //!   (`d > π`) and `−π` (`d ≤ −π`). This is the one transcendental deciding a branch, and the unwrap rule requires
 //!   it: θ̃ adds the principal value of the longitude difference, into (−π, π], exactly ±π giving +π (dd_integrator
-//!   §3.7), and no form of that rule avoids a sign decision at the ±π tie. The longitude is [`shape`]'s normalised point's.
+//!   §3.7), and no form of that rule avoids a sign decision at the ±π tie. The longitude is [`shape`]'s normalised
+//!   point's.
 //!
 //! **The map on the Jacobi vectors and the landmarks** (chart_reference §3.1, §3.4).
 //! [`shape_vec`] is §3.1's forward map written on the mass-weighted Jacobi vectors `ρ̃`, `λ̃` themselves, the form the
