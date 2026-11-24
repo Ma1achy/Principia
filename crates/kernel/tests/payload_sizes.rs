@@ -178,7 +178,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// Payload §3's frozen continuation table, as emitted to Rust; the WGSL half is not checked here.
+// Payload §3's frozen continuation table, as emitted to Rust; the WGSL half is `qa_TASK-M0-13.rs`'s.
 
 /// Payload §3's arrays, as written there.
 const INVERSE_3: [u32; 4] = [1, 0, 3, 2];

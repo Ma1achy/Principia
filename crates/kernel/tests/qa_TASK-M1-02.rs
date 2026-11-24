@@ -20,7 +20,7 @@
 //! - `word_accessor_names_qa_*`: the Rust accessors at lengths 0, 1, 76 and 127, and the reduced
 //!   crossing count equals `fgw_reduced_length` when valid.
 //! - `word_buffer_split_qa_*`: the stored Rust word element is exactly 16 B; the stored `SimState`
-//!   variants are 168 / 120 B, aligned to 8, not 16 (payload §0).
+//!   variants are 176 / 128 B, aligned to 8, not 16 (payload §0).
 //!
 //! Each check takes the implementation under test as function pointers; its negative control runs the same
 //! check on a variant with one fault.

@@ -21,7 +21,7 @@
 //! - `shape_landmarks`: the shape map's landmarks (dd_integrator §3.7).
 //!
 //! Each runs at f64 and, where its path is exact at f32, at f32 too. `r_pole` is a calibration, read from
-//! the constants register. Each check takes the step it
+//! the constants register: provisional until M3. Each check takes the step it
 //! tests as an argument, so its control runs the same check on a faulty one.
 
 use std::f64::consts::{FRAC_PI_2, PI, TAU};

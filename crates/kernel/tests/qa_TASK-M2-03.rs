@@ -30,9 +30,9 @@
 //!   collinear antiparallel IC; on canonical decodes `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β`, the two
 //!   angles compared on the circle (`β` runs over the whole line, `rho_angle` over `(−π, π]`).
 //!
-//! **Tolerances.** The golden IC's fields (calibrated): 4 ulps from the exact value
-//! rounded to the precision. `Σpᵢ` (calibrated): `|Σpᵢ|` per component
-//! within `4·eps·Σ‖pᵢ‖`. The unit scale: `I − 1` within 8 eps. The checks of a formula against
+//! **Tolerances.** The golden IC's fields (calibrated; proposed, pending the M2 gate): 4 ulps from the exact value
+//! rounded to the precision. `Σpᵢ` (calibrated; proposed, pending the M2 gate): `|Σpᵢ|` per component
+//! within `4·eps·Σ‖pᵢ‖`. The unit scale (proposed): `I − 1` within 8 eps. The checks of a formula against
 //! an f64 evaluation have no calibration requirement: each bound is the round-off of the operations the formula names,
 //! derived beside its constant.
 
