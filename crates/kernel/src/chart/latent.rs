@@ -1,4 +1,4 @@
-//! `Latent { z0, q1, q2 }`, the latent chart (chart_reference §1.1, §5.1; chart_decoder_contract Part 3; R-83): the
+//! `Latent { z0, q1, q2 }`, the latent chart (chart_reference §1.1, §5.1; chart_decoder_contract Part 3): the
 //! affine slice
 //!
 //! ```text
@@ -10,19 +10,19 @@
 //! (coordinate note, "The three coordinate spaces"). It is the general case: an axis-aligned slice (`q₁ = ê_i`,
 //! `q₂ = ê_j`) and an oblique one (any orthonormal pair) are both instances.
 //!
-//! **The scale lives in `q`** (R-83): zoom is a common scale on `q₁` and `q₂` ([`Latent::zoomed`]), and the chart has
+//! **The scale lives in `q`**: zoom is a common scale on `q₁` and `q₂` ([`Latent::zoomed`]), and the chart has
 //! no per-axis factor; its fields are `z0`, `q1` and `q2` and nothing else.
 //!
-//! **No decode here** (REQ-CHART-015): `Φ` only places `z`; the masses, configuration and momenta come from the
+//! **No decode here**: `Φ` only places `z`; the masses, configuration and momenta come from the
 //! shared decoder ([`fn@crate::chart::decode`]).
 //!
-//! **Validation** (R-26): the latent chart adds no constraint beyond the hypercube (inverse_encode_contract §
+//! **Validation**: the latent chart adds no constraint beyond the hypercube (inverse_encode_contract §
 //! "Chart-aware validation", layer 2 lists none for it), and layer 1 is the encode path's, never a pixel's
-//! (chart_decoder_contract Part 3, R-407), so its layer-2 check accepts every `(u, v)`. Layer 3, decode sanity, holds
+//! (chart_decoder_contract Part 3), so its layer-2 check accepts every `(u, v)`. Layer 3, decode sanity, holds
 //! by the shared decoder's construction (chart_reference §5.1): the masses are positive under every registered mass
-//! link (§0.1), the CoM is at the origin (§0.2) and `Σpᵢ = 0` (§0.3), the residuals rounding within REQ-ENC-027's
-//! tolerance. So `validate` is `Valid` at every `(u, v)`. Both axes are affine past `[0,1]²` (chart_reference §5.4):
-//! the formula continues.
+//! link (§0.1), the CoM is at the origin (§0.2) and `Σpᵢ = 0` (§0.3), the residuals rounding within layer 3's
+//! calibrated decode-sanity tolerance. So `validate` is `Valid` at every `(u, v)`. Both axes are affine past
+//! `[0,1]²` (chart_reference §5.4): the formula continues.
 
 use spirv_std::num_traits::Float;
 
@@ -43,7 +43,7 @@ pub struct Latent<P> {
 }
 
 impl<P: Float> Latent<P> {
-    /// The chart zoomed by `k` about its centre (R-83): `q₁` and `q₂` scaled by the one common factor `k`, `z₀` kept.
+    /// The chart zoomed by `k` about its centre: `q₁` and `q₂` scaled by the one common factor `k`, `z₀` kept.
     #[inline]
     pub fn zoomed(&self, k: P) -> Self {
         Latent {
@@ -111,7 +111,7 @@ impl<P: Copy> Chart for Latent<P> {
     }
 
     /// The shared decoder on `Φ`'s `z`, the mass and momentum links at the tunable parameters `p` (`crate::chart`'s
-    /// note; R-481 G4).
+    /// note).
     #[inline]
     fn decode_params<S, R>(&self, u: R, v: R, p: &LinkParams<R>) -> Decoded<R>
     where

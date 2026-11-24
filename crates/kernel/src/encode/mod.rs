@@ -1,11 +1,11 @@
 //! Encode `E`, physical state → `z` (inverse-encode contract Parts 1, 3 and 6; dd_encode §1–§3): the quotient map onto
-//! the decode's canonical section, in the same shared source as the decode, inverted (dd_decoder §1; R-116):
+//! the decode's canonical section, in the same shared source as the decode, inverted (dd_decoder §1):
 //!
 //! ```text
 //! E  =  (block inverses) ∘ C
 //! ```
 //!
-//! [`encode`] runs `C` (`crate::canon`: 1a CoM → 0 scale → 1b boost → 2 rotate, R-23; no mirror step, R-865), then the block
+//! [`encode`] runs `C` (`crate::canon`: 1a CoM → 0 scale → 1b boost → 2 rotate; no mirror step), then the block
 //! inverses ([`blocks`]: config, momentum and mass, each through the selection's registry link inverse), and reports
 //! what it discarded ([`report`]).
 //! [`by_kind`] then encodes into the active chart, axis by axis by kind, and lands in latent `z` where the chart does
@@ -13,21 +13,20 @@
 //! off-curve projection and the fold.
 //! [`ingest`] is the ground-truth import's (Part 7): `z`, the physical residual `‖D(z) − C(x)‖_phys` and `κ(x)`.
 //!
-//! **T1, constant on the continuous gauge orbits and equivariant under the mirror** (Part 1; dd_encode §3.3; R-865):
+//! **T1, constant on the continuous gauge orbits and equivariant under the mirror** (Part 1; dd_encode §3.3):
 //! translation and boost are removed by `C`'s 1a and 1b, rotation by step 2, scale by step 0. The mirror `Π` is no gauge
 //! direction: `E(Π·x)` is the mirrored `z`, `β → 2π − β` (reduced to `[0, 2π)`, so `β = 0` stays 0; on the control, `z_β → π − z_β`), the momentum
 //! controls `z_q1` and `z_q3` (the `y` components of `p_ρ` and `p_λ`) negated by the odd momentum links, `L_z`
-//! negated. *Was:* "the mirror by step 3, with R-82's deterministic tie: `|λ̃_y| ≤ δ_λ` is no mirror … RQ-360 holds T1
-//! there for the mirror"
+//! negated.
 //!
-//! **One source** (REQ-SYS-015; R-116): the block inverses are the registry's (`crate::generated::links`), the Jacobi
+//! **One source**: the block inverses are the registry's (`crate::generated::links`), the Jacobi
 //! map is the decoder's run backwards, and `C` is the decode's. The fragment WGSL encode is never written by hand: it is
 //! generated from this source by the rust-gpu → SPIR-V → WGSL translation, as `crate::stage::encode`'s compute entry
 //! point already is.
 //!
-//! **At the exact `α`-poles** (REQ-DEC-014; R-21, R-133, R-437): at `‖λ̃‖ = 0`, `α = 0` and `β`'s select gives 0; at
+//! **At the exact `α`-poles** (dd_decoder §3.2): at `‖λ̃‖ = 0`, `α = 0` and `β`'s select gives 0; at
 //! `‖ρ̃‖ = 0`, `α = π/2` and `C`'s `φ` is 0 by its own select. Each gives a deterministic `z`, no NaN, and raises
-//! `lookup_clamped`: `s_α` is 0 or 1, and the `α` link's inverse clamps it; at `ρ = 0` `C` raises it too (R-13).
+//! `lookup_clamped`: `s_α` is 0 or 1, and the `α` link's inverse clamps it; at `ρ = 0` `C` raises it too.
 
 pub mod blocks;
 pub mod by_kind;
@@ -72,7 +71,7 @@ where
 }
 
 /// [`encode`] at the tunable parameters `p`: the block inverses and their clamp tests, encode's layer 1, at the active
-/// `μ_max` and `q_max` (R-481 A2, G4; REQ-DEC-048).
+/// `μ_max` and `q_max`.
 #[inline]
 pub fn encode_at<S, R>(ic: &Ic<R>, p: &LinkParams<R>) -> Encoded<R>
 where

@@ -1,7 +1,7 @@
-//! `MassSimplex { nu0, eps_m }`, the ternary mass plot (chart_reference §4.4's mass-simplex relaxation, §4.5;
-//! REQ-CHART-026): the geometry fixed at `ν₀`, the masses swept over the simplex, the bodies at rest.
+//! `MassSimplex { nu0, eps_m }`, the ternary mass plot (chart_reference §4.4's mass-simplex relaxation, §4.5):
+//! the geometry fixed at `ν₀`, the masses swept over the simplex, the bodies at rest.
 //!
-//! **The map** (§4.5, 0-based, R-22). `(u, v)` goes to the simplex by the shear `x = u`, `y = (1 − u)·v`, with
+//! **The map** (§4.5, 0-based). `(u, v)` goes to the simplex by the shear `x = u`, `y = (1 − u)·v`, with
 //! `m₀ = 1 − x − y`, `m₁ = x`, `m₂ = y`, then toward the barycentre by the interior buffer `ε_m` ([`masses`]):
 //! `m ← (1 − 3ε_m)·m + ε_m·(1, 1, 1)`, whose default `10⁻⁴` is the register's `mass_simplex_eps_m`. In `[0,1]²` the raw
 //! masses are `≥ 0` at either precision (`1 − x − y` is formed as `(1 − u) − (1 − u)·v`, a float minus at most itself),
@@ -25,7 +25,7 @@
 //! masses vary with `(u, v)`, so the chart declares `requires_per_pixel_mass`, and its masses come only from its own
 //! decode.
 //!
-//! **Validation** (R-26; inverse_encode_contract layers 2 and 3). Layer 2 is the mass simplex narrowed by the buffer,
+//! **Validation** (inverse_encode_contract layers 2 and 3). Layer 2 is the mass simplex narrowed by the buffer,
 //! buffered `mᵢ ≥ ε_m`, which is exactly raw `mᵢ ≥ 0`; it is decided on the raw masses' signs, exactly (`m₁ = u`,
 //! `m₂ = (1 − u)·v`, `m₀ = (1 − u)·(1 − v)`, each sign that of a product of two exactly signed differences), so the
 //! feasible set is `[0,1]²` and the edge `u = 1`, and nothing past `[0,1]²` is let through by rounding the buffer. A
