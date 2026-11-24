@@ -26,6 +26,10 @@
 //! and a finite step budget (Part 3's starting rate, 4·10⁴ steps per unit time, floored at 10⁵ steps), because those
 //! are the values the gate measures Heggie at, and a march with no budget can stall one sample.
 //!
+//! **The stored records** ([`record`]): beside each outcome the CPU backend keeps the sample's whole stored record, the
+//! payload a stain's read side unpacks (its `SimState`, word and `ICDescriptor`), written from the same march
+//! ([`Stored`], [`FieldBackend::stored`]).
+//!
 //! **Where it runs**: on the engine's shared CPU worker pool (`crate::pool`), which leaves a core free and returns
 //! the samples in index order, so the field is the same bit for bit on any worker count.
 //!
@@ -34,18 +38,9 @@
 use kernel::chart::Latent;
 use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
-use kernel::detect::t0::t0;
-use kernel::driver::cadence::WrapperCadence;
-use kernel::driver::wrapper::monitored;
 use kernel::generated::links::Defaults;
-use kernel::occupant::rk4::Rk4;
 use kernel::occupant::State;
-use kernel::payload::{
-    sd_detail, sd_state, set_detail, set_state, SimStateBaseOf, STATE_BOUNDED, STATE_RUNNING,
-    STATE_SIM_FAILED,
-};
-use kernel::regularisation::az::{End, ExplicitTest};
-use kernel::regularisation::heggie::{march, HgParams, DEFAULT_TIME};
+use kernel::regularisation::heggie::{HgParams, DEFAULT_TIME};
 use kernel::regularisation::sync::{boundary_at_or_before, delta_sync};
 use render::colour::outcome::{shown, Shown, K, SWATCHES};
 
@@ -53,6 +48,10 @@ use crate::compute::ComputeError;
 use crate::contract::sim_config::{SimConfig, Window};
 use crate::decode_dispatch::decode_only_with;
 use crate::first_slice::{narrow, uniforms, Quad};
+
+pub mod record;
+
+pub use record::{Record, RecordBytes, Stored};
 
 /// How one sample ends: its outcome class's `state` and `detail` (payload §2).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -132,6 +131,20 @@ pub trait FieldBackend: Send + Sync {
         window: Window,
         size: [usize; 2],
     ) -> Result<Field, ComputeError>;
+
+    /// The field with each sample's stored record ([`Stored`]); an error where this backend keeps no records, as
+    /// the default does.
+    fn stored(
+        &self,
+        sim: &SimConfig,
+        window: Window,
+        size: [usize; 2],
+    ) -> Result<Stored, ComputeError> {
+        let _ = (sim, window, size);
+        Err(ComputeError(
+            "this field backend keeps no stored records".into(),
+        ))
+    }
 }
 
 /// The CPU backend: the module's note. Blocking, on the engine's shared worker pool (`crate::pool::shared`).
@@ -196,38 +209,7 @@ pub fn outcome_stopping(
     params: &HgParams<f32>,
     stop_on_escape: bool,
 ) -> Outcome {
-    let start = t0(ic, degenerate, &radius);
-    if start.state != STATE_RUNNING {
-        return Outcome {
-            state: start.state,
-            detail: start.detail,
-        };
-    }
-    let mut cadence =
-        WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius).stopping_on_escape(stop_on_escape);
-    let state = State {
-        m: ic.m,
-        r: ic.r,
-        p: ic.p,
-    };
-    let out = march::<Rk4, f32, _, _>(&state, k_target, params, &mut cadence, &mut ExplicitTest);
-    let (code, detail) = match out.count.end {
-        End::NonFinite => (STATE_SIM_FAILED, failed_detail(&out.state)),
-        End::Exhausted => (STATE_RUNNING, 0),
-        End::Done | End::Marching if out.boundary >= k_target => (STATE_BOUNDED, 0),
-        End::Done | End::Marching => (STATE_RUNNING, 0),
-    };
-    let base = SimStateBaseOf::<f32> {
-        r: out.state.r,
-        p: out.state.p,
-        packed_a: set_detail(set_state(0, code), detail),
-        ..SimStateBaseOf::default()
-    };
-    let labelled = monitored(base, &cadence);
-    Outcome {
-        state: sd_state(labelled.packed_a),
-        detail: sd_detail(labelled.packed_a),
-    }
+    record::sample(ic, degenerate, radius, k_target, params, stop_on_escape).outcome
 }
 
 /// `sim_failed`'s detail for a march that ended at `s` (payload §2): 0 for a NaN in the state, else 1 for a `±∞`,
@@ -252,6 +234,15 @@ impl FieldBackend for Cpu {
     ) -> Result<Field, ComputeError> {
         self.field_on(crate::pool::shared()?, sim, window, size)
     }
+
+    fn stored(
+        &self,
+        sim: &SimConfig,
+        window: Window,
+        size: [usize; 2],
+    ) -> Result<Stored, ComputeError> {
+        self.stored_on(crate::pool::shared()?, sim, window, size)
+    }
 }
 
 impl Cpu {
@@ -263,6 +254,37 @@ impl Cpu {
         window: Window,
         size: [usize; 2],
     ) -> Result<Field, ComputeError> {
+        Ok(self.marched_on(pool, sim, window, size)?.field)
+    }
+
+    /// [`FieldBackend::stored`] on the workers of `pool`: the same records, bit for bit, on any pool. An error, beside
+    /// [`Cpu::field_on`]'s, where the march targets more sync boundaries than `t_end_step`'s 16 bits hold (a horizon
+    /// past `65535·Δ_sync`), as the counts would wrap.
+    pub fn stored_on(
+        &self,
+        pool: &crate::pool::Pool,
+        sim: &SimConfig,
+        window: Window,
+        size: [usize; 2],
+    ) -> Result<Stored, ComputeError> {
+        let stored = self.marched_on(pool, sim, window, size)?;
+        if stored.read.horizon_steps > 0xffff {
+            return Err(ComputeError(format!(
+                "the horizon {} is {} sync boundaries, past the 65535 a stored step count holds",
+                sim.horizon.t, stored.read.horizon_steps
+            )));
+        }
+        Ok(stored)
+    }
+
+    /// The field and its records, the counts unchecked.
+    fn marched_on(
+        &self,
+        pool: &crate::pool::Pool,
+        sim: &SimConfig,
+        window: Window,
+        size: [usize; 2],
+    ) -> Result<Stored, ComputeError> {
         let key = uniforms(sim.horizon.t).map_err(|e| ComputeError(format!("{e:?}")))?;
         let params = heggie_params();
         let k_target = boundaries(sim.horizon.t, &params);
@@ -275,28 +297,45 @@ impl Cpu {
             kernel_variant: sim.kernel_variant,
             ..quad.sim_key()
         };
-        let sample = |i: usize| -> Result<Outcome, ComputeError> {
+        let sample = |i: usize| -> Result<(Outcome, Record), ComputeError> {
             let out = decode_only_with::<Latent<f32>, Defaults>(
                 &quad.chart,
                 quad.uv(i),
                 &decode_key,
                 None,
             )?;
-            Ok(outcome_stopping(
+            let s = record::sample(
                 &narrow(&out.ic),
                 out.degenerate,
                 key.radius,
                 k_target,
                 &params,
                 key.stop_on_escape,
+            );
+            Ok((
+                s.outcome,
+                Record {
+                    sim: s.sim,
+                    word: s.word,
+                    ic: record::narrow_descriptor(&out.descriptor),
+                },
             ))
         };
-        let outcomes = pool.map(quad.len(), sample)?;
-        Ok(Field { size, outcomes })
+        let (outcomes, records) = pool.map(quad.len(), sample)?.into_iter().unzip();
+        Ok(Stored {
+            field: Field { size, outcomes },
+            records,
+            read: record::read_params(k_target, &params),
+        })
     }
 }
 
 /// The field through the CPU backend: [`Cpu`]'s [`FieldBackend::field`].
 pub fn field(sim: &SimConfig, window: Window, size: [usize; 2]) -> Result<Field, ComputeError> {
     Cpu.field(sim, window, size)
+}
+
+/// The field with each sample's stored record through the CPU backend: [`Cpu`]'s [`FieldBackend::stored`].
+pub fn stored(sim: &SimConfig, window: Window, size: [usize; 2]) -> Result<Stored, ComputeError> {
+    Cpu.stored(sim, window, size)
 }
