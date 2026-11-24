@@ -721,7 +721,7 @@ pub struct LhCount<R> {
     pub closings: u32,
     /// The most halvings one landing took.
     pub most_bisections: u32,
-    /// The most steps taken in one interval, for the record.
+    /// The most steps taken in one interval, for the record only: the budget is cumulative, with no cap per interval.
     pub largest_interval: u32,
     /// The largest physical step.
     pub dt_max: DtMax<R>,

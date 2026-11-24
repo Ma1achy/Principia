@@ -39,8 +39,9 @@ impl PackedA {
         }
     }
 
-    /// The raw word, by the generated packer (reserved bits zero; `d_min` canonicalised, a NaN as the unset value and a
-    /// negative as the floor), counting into `counters`, the caller's frame pair.
+    /// The raw word, by the generated packer (reserved bits zero; `d_min` canonicalised: a NaN or `+∞` as the unset
+    /// value, a negative or a value below f16's least subnormal as the floor), counting into `counters`, the caller's
+    /// frame pair.
     pub fn pack(&self, counters: &DminCounters) -> u32 {
         pack_packed_a(
             self.state,

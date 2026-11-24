@@ -2,12 +2,13 @@
 //! - `real_pinned_bits`: at f64 each method gives the pinned libm's result, bit for bit, and the bits recorded here
 //!   from libm 0.2.16 on the Mac, on fixed inputs, so that on every machine the f64 path is the pinned library and
 //!   the pinned library gives the Mac's bits, but for a NaN, compared as NaN: libm forms an out-of-domain NaN by a
-//!   hardware `0/0`, so its sign and payload are the target's (records never hold one); `sine_cosine` is `(sine, cosine)` and `sinc` `sine(r)/r`. Every
-//!   function's inputs hold at least one where the Mac's platform library and libm differ (marked in the table, found
-//!   by a sweep of 10⁶ inputs per function), and `sine`'s four: at `0xc021cb0947a686b4` and `0xbfe2b074a5ac7510` libm's
-//!   `sin` is correctly rounded and the Mac's is not, at `0xc023fa30a11813de` and `0xc0155b4e049f4aee` the Mac's is and
-//!   libm's is not (checked at 200 bits with mpmath), so a correctly rounded platform `sin`, as glibc's, differs too.
-//!   So a method left on std fails here. Its control is that method, `sine` on `f64::sin`.
+//!   hardware `0/0`, so its sign and payload are the target's (records never hold one); `sine_cosine` is
+//!   `(sine, cosine)` and `sinc` `sine(r)/r`. Every function's inputs hold at least one where the Mac's platform
+//!   library and libm differ (marked in the table, found by a sweep of 10⁶ inputs per function), and `sine`'s four: at
+//!   `0xc021cb0947a686b4` and `0xbfe2b074a5ac7510` libm's `sin` is correctly rounded and the Mac's is not, at
+//!   `0xc023fa30a11813de` and `0xc0155b4e049f4aee` the Mac's is and libm's is not (checked at 200 bits with mpmath), so
+//!   a correctly rounded platform `sin`, as glibc's, differs too. So a method left on std fails here. Its control is
+//!   that method, `sine` on `f64::sin`.
 //! - `real_pinned_bits_f32`: at f32, the GPU's precision, each method is `num_traits::Float`'s, unchanged (only
 //!   the f64 path is pinned); `arctan2` and `sinc` are the kernel's own, held by their own tests. Its control,
 //!   `exp_minus_one` as `exp(x) − 1`, loses `x` near 0.

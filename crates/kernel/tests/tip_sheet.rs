@@ -14,7 +14,8 @@
 //! to drawing past the edge) takes no pixel past the edge; a draw that blanks every pixel outside the square blanks
 //! one past `t = 1`. Each fails.
 //!
-//! Until the chart addendum's N14 lands the built charts draw as today: past a bounded edge, blank.
+//! Declared edge kinds (unfold, clamp, saturate) for these edges are planned, not built, so a pixel past a bounded edge
+//! draws blank.
 
 use kernel::chart::invariant::Invariant;
 use kernel::chart::tilt::Tiltable;
@@ -30,7 +31,7 @@ use validation::{negative_control, GAMMA_K, K_MAX};
 const TARGET: u32 = 6;
 /// A latent slider's span: the hidden offset's unit.
 const SPAN: f64 = 2.0;
-/// The two tilts the requirement names, `(τ₁, τ₂)` in degrees.
+/// The test's two tilts, `(τ₁, τ₂)` in degrees: over the two, each of the three cases past the edge arises.
 const TAUS: [[f64; 2]; 2] = [[30.0, 12.4], [-45.0, 77.9]];
 /// The grid's points per side.
 const N: u32 = 65;

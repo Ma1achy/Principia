@@ -1130,7 +1130,7 @@ negative_control!(
 // ── Selection ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `ids` are dd_decoder §3's defaults, in `Selection`'s order: mass = softmax ∘ `μ_max·tanh`, `α` = sigmoid, `β` =
-/// `periodic_beta` (not sigmoid), free momentum = sigmoid.
+/// `periodic_beta` (not `sigmoid_beta`), free momentum = sigmoid.
 fn check_defaults(ids: [&str; 7]) {
     assert_eq!(
         ids,

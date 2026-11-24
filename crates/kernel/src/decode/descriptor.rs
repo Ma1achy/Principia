@@ -195,8 +195,9 @@ pub fn cross_dot<R: LinkReal>(rho: [R; 2], lambda: [R; 2]) -> (R, R) {
 
 /// `rho_angle` of the configuration block's own `ρ̃` and `λ̃`, `Φ`'s vectors (dd_decoder §3.6): [`angle`] of
 /// their cross and dot products. At the `α = 0` pole `Φ`'s `λ̃` is `±0`, so the pole's case gives 0 on every backend,
-/// where the positions' `λ` would be `C`'s rounding residue. No decode mirrors (`C` has no mirror step, and every
-/// chart's configuration is canonical by construction), so no sign is turned.
+/// where the positions' `λ` would be `C`'s rounding residue. No decode mirrors (`C`, which the shape sphere and
+/// body-plane charts run, has no mirror step, and every other chart's configuration is canonical by construction), so
+/// no sign is turned.
 #[inline]
 pub fn config_angle<R: LinkReal>(config: &Config<R>) -> R {
     let (cross, dot) = cross_dot(config.rho_t, config.lambda_t);

@@ -544,9 +544,9 @@ fn reach_softsign() -> f64 {
 const REACH_LINE: f64 = 700.0;
 
 /// The docs' fifteen entries: §3.9's six rows, registered once per block codomain, the two mass-link definitions
-/// (softmax_tanh and stick-breaking), and the periodic `β` link. The three bounded `β` rows map onto `retired_beta` (*was:* "beta"): conversion sources, onto
-/// the interval they always had. `periodic_beta` maps onto `beta`, a periodic angle with no bound, so its kind here is
-/// the line's: every finite control gives a finite angle, with no clamp.
+/// (softmax_tanh and stick-breaking), and the periodic `β` link. The three bounded `β` rows map onto `retired_beta`:
+/// conversion sources, onto the interval they always had. `periodic_beta` maps onto `beta`, a periodic angle with no
+/// bound, so its kind here is the line's: every finite control gives a finite angle, with no clamp.
 fn specs() -> Vec<Spec> {
     let alpha = Kind::Interval(ALPHA_MIN, HALF_PI - ALPHA_MIN);
     let beta = Kind::Interval(0.0, PI);

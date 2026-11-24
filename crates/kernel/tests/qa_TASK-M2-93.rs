@@ -19,11 +19,12 @@
 //! - `qa_m293_seed_conversion_seam`: the task's seam measurement, as written: rows of the `(L_z, E)` chart tilted
 //!   toward `z_α` across `z_α = 0`, `‖Δv‖_m` between neighbouring pixels, the criterion "the pair across the line is no
 //!   larger than the largest neighbouring difference within 8 pixels of it on either side". Its control, the legacy
-//!   largest-norm rule, must fail it, else the result is void; that is asserted. That criterion under the seed in force
-//!   is printed with its outcome, not asserted: it is not the seam check, and asserting it fails under the seed in
-//!   force. The check, asserted, is the measurement's explanation, from outside the code: the pair across the line over
-//!   its largest neighbour is exactly the ratio of the chord lengths of the decoded `α` steps (a seam-free start moves
-//!   only with its configuration), so no seed term is present.
+//!   largest-norm rule, must fail it, else the result is void; that is asserted. Under the seed in force that
+//!   criterion is printed with its outcome, not asserted: it is not the seam check, and asserting it would fail. The
+//!   check, asserted, is the measurement's explanation, from outside the code: the pair across the line over its
+//!   largest neighbour is exactly the ratio of the chord lengths of the decoded `α` steps (a seam-free start moves only
+//!   with its configuration), so no seed term is present. Its per-pair form, each neighbouring pair's step against
+//!   `√(2K*)·2 sin(|Δα|/2)` to a relative 1e-9, is `tests/seed.rs`'s `seed_conversion_seam`.
 //! - `qa_m293_seed_conversion_lagrange`: at the invariant charts' default pin, `z = 0`, the masses are
 //!   equal and the configuration equilateral; every pixel starts homographic and its accelerations are `−κ·rᵢ` with one
 //!   `κ` for all three bodies, so the start is an exact homographic orbit and its break-up is set by rounding (labelled

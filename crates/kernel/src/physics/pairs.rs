@@ -15,8 +15,8 @@
 
 use crate::Real;
 
-/// The three pairs' separations `dₖ = rⱼ − rᵢ`, by pair id `k`, `(i, j) = (1, 2), (2, 0), (0, 1)`, with each one's `d²`, `‖dₖ‖`
-/// and `‖dₖ‖³`. Built only by [`PairGeom::new`], so each is the one computation its readers share.
+/// The three pairs' separations `dₖ = rⱼ − rᵢ`, by pair id `k`, `(i, j) = (1, 2), (2, 0), (0, 1)`, with each one's
+/// `d²`, `‖dₖ‖` and `‖dₖ‖³`. Built only by [`PairGeom::new`], so each is the one computation its readers share.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PairGeom<R> {
     sep: [[R; 2]; 3],

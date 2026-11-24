@@ -1672,7 +1672,7 @@ condition_test!(
 
 /// The dt ladder. The plan is unclear here (it names no ladder); chose `10⁻¹` and `10⁻²` above the default
 /// macro-step, `dt_macro = 10⁻³` (dd_integrator §2), and `10⁻³/64`, the smallest substep at the default `dt_macro` and
-/// `N_max = 64`.
+/// `N_max = 64`, because they reach two decades above the default macro-step and down to its smallest substep.
 const DT_LADDER: [f64; 4] = [1e-1, 1e-2, 1e-3, 1e-3 / 64.0];
 
 /// The criterion, `step_reversal_tol` (provisional), in units of the precision's epsilon.

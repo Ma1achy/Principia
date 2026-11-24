@@ -8,15 +8,15 @@
 //! `ω = √(1/(3√3))`; Burrau 3:4:5, masses `(3, 4, 5)/12` at `(1, 3)`, `(−2, −1)`, `(1, −1)`, at rest. Each is also
 //! taken through a gauge element (a turn, an offset, a boost and a rescale), so `C` meets a foreign frame.
 //!
-//! **What is checked** (the plan leaves these details open; they are this test's choices): the result is `E(x)`, the
+//! **What is checked** (this test's choices): the result is `E(x)`, the
 //! free decode of its `z`, the residual Part 4's norm from `C(x)` to `D(z)`, within `ε_phys` (the register's value)
 //! with no control clamped (the figure-eight's published start is collinear with body 3 at the inner pair's centre of
 //! mass, the `α = 0` pole: it raises `lookup_clamped` and its `κ` is large, as Part 4 says it must), and `κ(x)` is
 //! `σ_max(J_E(x)·W⁻¹)`, the encode's weighted Jacobian at the input itself, checked against an independent oracle:
 //! `σ²·(1 + δ)` less the Gram matrix `(J_E·W⁻¹)(J_E·W⁻¹)ᵀ` is positive definite and `σ²·(1 − δ)` less it is not
 //! (Cholesky), `δ = 10⁻⁶`; and Part 4's bound `‖E(x̃) − z‖₂ ≤ κ(x)·‖W(x̃ − x)‖₂ ≤ 3·κ(x)·‖x̃ − x‖_phys` on states `x̃`
-//! moved off `x` along every component, off the canonical section as well as along it (the physics review of PR #294,
-//! P1: the section's tangent alone, `1/σ_min(W·J_D)`, does not bound a move of `m₀` at masses `(0.05, 0.15, 0.8)`).
+//! moved off `x` along every component, off the canonical section as well as along it (the section's tangent alone,
+//! `1/σ_min(W·J_D)`, does not bound a move of `m₀` at masses `(0.05, 0.15, 0.8)`).
 
 use kernel::decode::{self, Ic, Latent};
 use kernel::encode::encode;

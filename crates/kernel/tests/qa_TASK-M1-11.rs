@@ -34,8 +34,8 @@ use validation::negative_control;
 /// One macro-step of `θ̃` at f64: `kernel::shape::theta_step`, or a control's faulty one.
 type Step = fn(Theta<f64>, [f64; 3], [f64; 3], f64) -> Theta<f64>;
 
-/// The calibrated `r_pole`, 0.01 (provisional), and two radii either side of it: the rule is stated for any radius, so
-/// each passage test runs at each.
+/// `r_pole`'s provisional calibration value, 0.01, and two radii either side of it: the rule is stated for any radius,
+/// so each passage test runs at each.
 const RADII: [f64; 3] = [1e-3, 1e-2, 0.1];
 
 /// The wrap, written from the rule's words: `d − 2πk` in (−π, π], closed at +π, open at −π.

@@ -4,9 +4,9 @@
 //! from the implementation:
 //! - `qa_m368_seam_non_finite_latches`, `qa_m368_seam_exhausted_latches`: a terminal "still latches at the step it
 //!   fires on, and the copy's march ends there" (that section's bullet). A scripted occupant, through the wrapper,
-//!   ends its march at its fourth call, after three completed calls whose steps were never `N_sub`: the run stops at once (no
-//!   further call), `t_end_step = 3`, the Welford co-moments those of exactly the three completed states, the state
-//!   the one the occupant latched; non-finite is `sim_failed` with detail 2 (a finite state, payload §2), a spent
+//!   ends its march at its fourth call, after three completed calls whose steps were never `N_sub`: the run stops at
+//!   once (no further call), `t_end_step = 3`, the Welford co-moments those of exactly the three completed states, the
+//!   state the one the occupant latched; non-finite is `sim_failed` with detail 2 (a finite state, payload §2), a spent
 //!   budget `running`.
 //! - `qa_m368_seam_failed_over_collision`: `sim_failed` takes precedence: a march that ends non-finite on the step a
 //!   collision fires stays `sim_failed` through the monitored write, `dmin_pair` its sentinel; the same step reported

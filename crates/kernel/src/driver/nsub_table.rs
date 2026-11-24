@@ -5,9 +5,9 @@
 //! `e = −1/γ_sub`, `p = pow(n, e)`, `s = r_sub·p`, `s·s`, each rounded once, the `pow` [`libm::pow`]: libm 0.2.16,
 //! exact in `Cargo.lock`, built with `force-soft-floats`, plain Rust over IEEE f64 arithmetic, so neither a platform
 //! libm nor a compiler intrinsic nor an architecture's instruction computes it, and the native and the wasm hosts give
-//! the same bits. The f64 value is then rounded once to f32, and only its bits are
-//! shipped. `cargo xtask codegen` evaluates the default sim key's table in the same order on its own path
-//! (`ledger::gen::nsub`), and the two agree bit for bit (`tests/nsub.rs`, `nsub_default_table_bitwise`).
+//! the same bits by construction (no test runs the table on a wasm host). The f64 value is then rounded once to f32,
+//! and only its bits are shipped. `cargo xtask codegen` evaluates the default sim key's table in the same order on its
+//! own path (`ledger::gen::nsub`), and the two agree bit for bit (`tests/nsub.rs`, `nsub_default_table_bitwise`).
 //!
 //! **Refusals** ([`NsubTableError`]), never a truncation: an `N_max` below 1 or above `L_max`, the table's maximum
 //! length; an `r_sub` or `γ_sub` that is not finite and positive, for which the law has no

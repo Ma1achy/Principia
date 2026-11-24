@@ -24,8 +24,8 @@
 //!   `K* = L_z²/2I + line`, at its own `U`, `I` and masses. Control: the potential read once at the centre.
 //! - `qa_energy_axis_linear_option_floor_by_value`: under the linear option at a held `L_z ≠ 0`, no floor: `K`, `KE`,
 //!   `E` and virial pixels keep their fixed values, those with `K* < L_z²/2I` refused, `DEGENERATE` (never integrated),
-//!   forbidden in the area count (only validity failures are) and unwarned, the rest systems at exactly those
-//!   values. Control: the warped chart.
+//!   forbidden in the area count (the count forbids only validity failures) and unwarned, the rest systems at exactly
+//!   those values. Control: the warped chart.
 //! - `qa_energy_axis_linear_option_floor_edge`: on the boundary, exactly representable (`L_z = ½`, `K* = ⅛`), a linear
 //!   pixel is a system and the float below it is not; the warped chart at `t = 0` decodes that same `K*`. Control: the
 //!   float below read as a system.
@@ -491,8 +491,9 @@ negative_control!(
 // ── Past the square ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The warped `t` axis on the floor past its edges (exceeding `K_max` at the top is intended: `K_max` is a range, and
-/// the `t > 1` side continues, drawn and counted as an affine side). Its top row exceeds `K_max`; to `t = 1.5` every
-/// pixel validates, a counted system, at `K* = L_z²/2I + K_max·t^γ_K` (or, the control, `t` capped at 1); below
+/// the `t > 1` side continues, its pixels counted as an affine side's systems). Its top row exceeds `K_max`; to
+/// `t = 1.5` every pixel validates, a counted system, at `K* = L_z²/2I + K_max·t^γ_K` (or, the control, `t` capped
+/// at 1); below
 /// `t = 0` the axis is bounded, and its clamp lands on the bottom row, itself a system.
 fn check_past(cap: bool) {
     fn axis<Q: EnergyAxis>(cap: bool) {

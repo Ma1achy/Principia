@@ -12,9 +12,9 @@
 //!   `I = 1` on every chart, at both precisions, including the decodes `η_E` rescales, whose momenta are not the
 //!   momentum block's (`qa_m224_identities_every_decode`). Tolerances: the proposed ones,
 //!   as `kernel/tests/decode_blocks.rs` and `decode_join.rs` state them (4 eps for `Σm`, CoM and `Σp`; 8 eps for `I`).
-//! - dd_decoder §3.7, "It must be disabled" on the invariant-momentum charts, and (`None` is off, `Some(0)` a real
-//!   target): the decode stage, `sample_with`, leaves a forbidding chart's decode untouched, bit for bit, under every
-//!   `Some(E*)`, and the energy uniform row carries `Some(0)` as on and `None` as off
+//! - dd_decoder §3.7, "It must be disabled" on the invariant-momentum charts, and the switch's rule (`None` is off,
+//!   `Some(0)` a real target): the decode stage, `sample_with`, leaves a forbidding chart's decode untouched, bit for
+//!   bit, under every `Some(E*)`, and the energy uniform row carries `Some(0)` as on and `None` as off
 //!   (`qa_m224_eta_switch`).
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.

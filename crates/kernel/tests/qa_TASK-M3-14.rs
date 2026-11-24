@@ -33,17 +33,17 @@
 //! - `qa_m314_delta0_direction` (§3.8): `x'₀ = x₀ + ‖δ₀‖·u` with `u = (+½,0 | −½,+½ | 0,−½)` on the
 //!   positions and no momentum, each component one rounding, bit for bit at f32 and f64 for any state and masses;
 //!   `‖u‖ = 1` and `Σu = 0`; the shadow a sample starts with is that offset.
-//! - `qa_m314_lagrange_exponent` (the validation's ground truth): the known exponent of Lagrange's equilateral orbit is the
-//!   largest real part of the roots of `s⁴ + s² + (27/4)β = 0` (Routh), computed here from the roots, and 0 in the
-//!   stable case `27β < 1`.
+//! - `qa_m314_lagrange_exponent` (the validation's ground truth): the known exponent of Lagrange's equilateral orbit is
+//!   the largest real part of the roots of `s⁴ + s² + (27/4)β = 0` (Routh), computed here from the roots, and 0 in
+//!   the stable case `27β < 1`.
 //! - `qa_m314_forms_one_map`: the payload's form stays the absolute one (`integrate_ftle` is
 //!   `integrate_ftle_with::<Absolute>`, bit for bit, at f32) until payload §8's criterion says otherwise; both forms'
 //!   start and reset are checked by `qa_m314_delta0_direction` and `qa_m314_renormalise`.
 //!
 //! **Tolerances.** Rounding bounds are `RND = 64` eps relative (as `qa_TASK-M2-13`), widened where a difference of two
 //! nearby states loses digits: a state component `x` carrying an offset of size `δ₀` keeps `δ₀`'s relative precision
-//! only to `ε·|x|/δ₀`. The dd test 10 tolerance is the proposed one (`PROPOSED_TOLERANCE`, calibrated,
-//! pending the gate), applied to its own measure of change.
+//! only to `ε·|x|/δ₀`. The dd test 10 tolerance is the proposed one (`PROPOSED_TOLERANCE`, set by the validation's
+//! calibration sweep, to be confirmed at the M3 gate), applied to its own measure of change.
 //!
 //! **Domain** (pitfalls §10): Yoshida-4, `r_coll = 0` (no terminal fires), the orbits `validation::measure::benettin`
 //! defines; each test bounds its march by the sim key's `horizon_steps`.

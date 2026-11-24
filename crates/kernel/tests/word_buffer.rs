@@ -612,7 +612,8 @@ fn period_uniforms(t: f64) -> WrapperUniforms<f64> {
 
 /// Each orbit, marched by the wrapper for one period: the cadence runs at every accepted substep, the word-buffer
 /// writes equal the crossings a replay over those same substeps counts, and are not none; the word and `last_symbol`
-/// hold them. Reading the published class from this march is checked elsewhere, against the literature's classes.
+/// hold them. Reading the published class from this march is checked against the literature's classes by the
+/// validation's word-calculus gate (`validation/tests/word_calculus.rs`).
 fn check_on_the_march(march: WordMarch) {
     for orbit in prl_orbits() {
         let name = orbit["name"].as_str().expect("name");

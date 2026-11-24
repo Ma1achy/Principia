@@ -615,7 +615,8 @@ const NEW_SPAN: [f64; 2] = [0.7, 3.0];
 /// With unequal spans, each offset is scaled by the span named for it, at every pixel of the window about the
 /// view's centre and a panned one, to one ulp: an offset out of `R` on a saved target by that target's saved span,
 /// whatever span the new tilt names for it, and a new offset on another target by the new tilt's span for it; a
-/// control no tilt names, span 0, never moves. Each route's spans are written out per control. `swap` builds the chart with the saved and new spans exchanged (the control).
+/// control no tilt names, span 0, never moves. Each route's spans are written out per control. `swap` builds the chart
+/// with the saved and new spans exchanged (the control).
 fn check_spans(swap: bool) {
     let (built_saved, built_new) = if swap {
         (NEW_SPAN, SAVED_SPAN)
