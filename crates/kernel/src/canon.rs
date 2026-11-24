@@ -7,11 +7,11 @@
 //! ```text
 //! 1a COM     r ← r − R_com                         R_com = Σ mᵢrᵢ  (M = 1)
 //! 0  SCALE   I_in = Σ mᵢ‖rᵢ‖² in the CoM frame;  r ← r/√I_in,  p ← I_in^{1/4}·p;  λ = I_in^{−1/2} recorded;
-//!            lookup_rescaled exactly when step 0 ran:
+//!            lookup_rescaled exactly when step 0 ran (R-547):
 //!            |I_in − 1| ≤ τ_I → skipped (λ = 1, r and p unchanged);  else in two steps, by a power of two, then by
 //!            the remainder;  the bodies coincident (I_in = 0) → divisor 1, λ = 1, p = 0
 //! 1b BOOST   p ← p − mᵢ·P_tot                      P_tot = Σ pᵢ    (M = 1)
-//! 2  ROTATE  φ = atan2(ρ_y, ρ_x), ρ = r₁ − r₀;  R(−φ) on every rᵢ and pᵢ;  ρ = 0 → lookup_clamped, φ = +0
+//! 2  ROTATE  φ = atan2(ρ_y, ρ_x), ρ = r₁ − r₀;  R(−φ) on every rᵢ and pᵢ;  ρ = 0 → lookup_clamped (R-13), φ = +0
 //!            R(−φ)'s cos φ and sin φ formed as ρ/‖ρ‖, the same in exact arithmetic (rotation)
 //! ```
 //! CoM subtraction precedes the `I` computation because `I` is CoM-frame-defined.
