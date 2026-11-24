@@ -29,7 +29,8 @@
 //!   `STEP` signature, coerced to function pointers, take no chart and no neighbour state; a batch of ICs integrated
 //!   forwards and backwards gives each IC the same bits. Control: two different ICs are caught as different.
 //!
-//! **Domain** (pitfalls §10): the wrapper's loop and its cadence, on short horizons from decoded ICs; it shows the loop's and the seam's behaviour, not the physics of a trajectory.
+//! **Domain** (pitfalls §10): the wrapper's loop and its cadence, on short horizons from decoded ICs; it shows the
+//! loop's and the seam's behaviour, not the physics of a trajectory.
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
