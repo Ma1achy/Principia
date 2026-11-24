@@ -1,25 +1,25 @@
 //! The stepper occupants of the integrator's swappable `STEP` slot and their capability profile (integrator_contract
 //! Part 2, Part 2a; dd_integrator §2, §3.2).
 //!
-//! **A closed, build-time set** (canonical_spec §1 item 4; gui_state_contract §3, §5; REQ-INT-005). Each occupant is a
+//! **A closed, build-time set** (canonical_spec §1 item 4; gui_state_contract §3, §5). Each occupant is a
 //! Rust type implementing [`Stepper`], generic over the kernel's float type and monomorphised by the compiler; the set
 //! is the enums [`Occupant`] (the production steppers), [`DebugOccupant`] (Euler) and [`Selection`], one of either. No
 //! code path compiles, loads or interprets an occupant at run time, and there is no user-authored compute occupant: a
 //! new stepper is a new type here and a new build.
 //!
-//! **The capability profile** (Part 2; REQ-INT-013): every occupant advertises a [`CapabilityProfile`], `{order,
-//! force_evals, symplectic, step_reversible, run_reversible, owns_time_mapping}` (R-19, R-500; the re-registration
-//! field is Part 2b's, added with the regularisations), and downstream features read the profile, never the occupant's
+//! **The capability profile** (Part 2): every occupant advertises a [`CapabilityProfile`], `{order,
+//! force_evals, symplectic, step_reversible, run_reversible, owns_time_mapping}` (the re-registration field is
+//! Part 2b's), and downstream features read the profile, never the occupant's
 //! name: [`CapabilityProfile::drift_reads_dynamics`] for energy drift, [`CapabilityProfile::reversibility_diagnostic`]
 //! and [`CapabilityProfile::reversibility_test`] for reversal, and [`CapabilityProfile::error_exponent`],
 //! [`CapabilityProfile::force_evaluations`] and [`CapabilityProfile::ftle_confidence`] for the `total_substeps_log2`
-//! complexity proxy and FTLE confidence, Part 2's definition (REQ-INT-078). [`table`] is the Part 2 / Part 2a table and
+//! complexity proxy and FTLE confidence, Part 2's definition. [`table`] is the Part 2 / Part 2a table and
 //! each occupant's default tier binding.
 //!
 //! **One `STEP`** (`fn step(state, dt, geom)`): an occupant takes a [`State`], `(m, r, p)` (the canonicalise seam's;
 //! core design seam 5), a step `dt`, and the force evaluation at the state's positions, [`Geom`], and returns the state
 //! one step on with the force evaluation at its positions, which the next step and the wrapper's monitoring read
-//! (REQ-PERF-001: each evaluation's pairwise distances computed once). So an occupant's [`Geom::new`] calls per step
+//! (each evaluation's pairwise distances computed once). So an occupant's [`Geom::new`] calls per step
 //! are its profile's `force_evals`. A step holds no data-dependent branch, no loop and no runtime index (integrator_contract
 //! Part 2c);
 //! its numbers are the generated [`StepperCoefficients`] (the constants register's, dd_generation_root §3.8) and the
@@ -41,7 +41,7 @@ use crate::physics::PairGeom;
 use crate::regularisation::form::Form;
 use crate::Real;
 
-/// The float type a stepper runs at: the kernel's [`Real`] (f32 on the GPU, f64 on the CPU; R-265), with `1` and the
+/// The float type a stepper runs at: the kernel's [`Real`] (f32 on the GPU, f64 on the CPU), with `1` and the
 /// steppers' coefficients.
 pub trait StepReal: Real + One + StepperCoefficients {}
 
@@ -59,7 +59,7 @@ pub struct State<R> {
 }
 
 /// One force evaluation at a state's positions: their pairwise geometry and the accelerations read from it
-/// (dd_integrator §3.1). The geometry is the one the energy and `r_min` read (REQ-PERF-001).
+/// (dd_integrator §3.1). The geometry is the one the energy and `r_min` read.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Geom<R> {
     /// The pairwise geometry of the positions.
@@ -80,7 +80,7 @@ impl<R: Real> Geom<R> {
     }
 }
 
-/// What an occupant advertises (integrator_contract Part 2, Part 2a; R-19, R-500), read by every feature whose meaning
+/// What an occupant advertises (integrator_contract Part 2, Part 2a), read by every feature whose meaning
 /// depends on the occupant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CapabilityProfile {
@@ -94,14 +94,14 @@ pub struct CapabilityProfile {
     /// returns the state to rounding level, with no wrapper projection or substepping (dd_integrator §5, test 3).
     pub step_reversible: bool,
     /// Whether the bound occupant's whole run is time-symmetric, as the reversibility test binds it: logH's TTL time
-    /// mode only (R-162).
+    /// mode only.
     pub run_reversible: bool,
     /// Whether the occupant, not the wrapper, maps its steps to physical time (Part 2a): true for the regularised
     /// compositions.
     pub owns_time_mapping: bool,
 }
 
-/// FTLE confidence (integrator_contract Part 2, REQ-INT-078): whether the occupant's own error leaves the exponent
+/// FTLE confidence (integrator_contract Part 2): whether the occupant's own error leaves the exponent
 /// unbiased in kind, whether the trajectory reached the integration floor, and the error exponent the substep law's
 /// fixed step-to-timescale ratio is raised to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -124,13 +124,13 @@ impl CapabilityProfile {
         self.symplectic
     }
 
-    /// Whether the occupant may serve Part 6's reversibility diagnostic, either route: `step_reversible` (R-500).
+    /// Whether the occupant may serve Part 6's reversibility diagnostic, either route: `step_reversible`.
     #[inline]
     pub const fn reversibility_diagnostic(&self) -> bool {
         self.step_reversible
     }
 
-    /// Whether the occupant is the one the reversibility test binds: `run_reversible` (R-162, R-500).
+    /// Whether the occupant is the one the reversibility test binds: `run_reversible`.
     #[inline]
     pub const fn reversibility_test(&self) -> bool {
         self.run_reversible
@@ -175,14 +175,14 @@ impl CapabilityProfile {
 /// A stepper occupant: one `STEP` and its profile.
 pub trait Stepper {
     /// The occupant's capability profile (integrator_contract Part 2): interface data, what the occupant advertises
-    /// at the seam, not a register constant (REQ-SYS-082).
+    /// at the seam, not a register constant.
     fn profile() -> CapabilityProfile;
 
     /// The state `s` one step `dt` on, and the force evaluation at its positions; `geom` is the force evaluation at
     /// `s`'s positions, `Geom::new(&s.m, &s.r)`.
     fn step<R: StepReal>(s: &State<R>, dt: R, geom: &Geom<R>) -> (State<R>, Geom<R>);
 
-    /// The joint step of the FTLE shadow's displacement form (R-974, RQ-793 (a); dd_integrator §3.8; integrator_contract
+    /// The joint step of the FTLE shadow's displacement form (dd_integrator §3.8; integrator_contract
     /// Part 2): `s` one step `dt` on with the force evaluation at its positions, exactly [`Stepper::step`]'s, bit for
     /// bit, and the displacement `delta` (the shadow less the sample; its masses are not read) advanced through the same
     /// stages, each stage's force difference formed by `D` from that stage's pair separations
@@ -215,7 +215,7 @@ pub trait Stepper {
 }
 
 /// The production steppers (integrator_contract Part 2): the occupants a tier binds by default or a user selects.
-/// Euler is not one of them (REQ-INT-015).
+/// Euler is not one of them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Occupant {
     /// The KDK leapfrog ([`kdk::Kdk`]).
@@ -261,7 +261,7 @@ impl Occupant {
 }
 
 /// The debug occupants: reachable only through [`Selection::Debug`], never a tier default or a production option
-/// (integrator_contract Part 2, "Euler is kept deliberately, as a debug occupant"; REQ-INT-015).
+/// (integrator_contract Part 2, "Euler is kept deliberately, as a debug occupant").
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DebugOccupant {
     /// Explicit Euler ([`euler::Euler`]), whose secular energy drift tests the diagnostic plumbing.

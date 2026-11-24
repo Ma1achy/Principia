@@ -3,15 +3,17 @@
 //! unwrapped by adding each step's principal-value delta. `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = θ̃ < 0` are
 //! derived at read from `θ̃` (dd_simstate_payload §5; the read side's `orbit_count` and `retrograde`).
 //!
-//! **The start and the poles (R-389, R-392).** `θ̃` starts at 0 whatever `n(0)`'s longitude. Inside the pole disc,
+//! **The start and the poles.** `θ̃` starts at 0 whatever `n(0)`'s longitude. Inside the pole disc,
 //! polar radius `√(n_u² + n_v²) < r_pole`, the longitude is not trusted: `θ̃` holds, with the last longitude outside the
 //! disc frozen as its reference, and on exit adds `wrap(exit longitude − reference)`. A difference of exactly ±π, per
 //! step or on exit, adds +π: the wrap's interval is (−π, π]. An IC that starts inside the disc has no reference, so its
-//! first exit adds nothing and `θ̃` counts from the exit longitude. `r_pole` is a calibration (R-71, REQ-INT-086), so
+//! first exit adds nothing and `θ̃` counts from the exit longitude. `r_pole` is a calibration, so
 //! it is passed in, as a sim-key value, never a constant here.
 //!
-//! **The branch inputs** (R-34; gpu_determinism_note, "The discipline", rules 1, 2 and 6). Two floats decide a branch
-//! here, each built in a fixed form so that every backend takes the same path:
+//! **The branch inputs** (gpu_determinism_note, "The discipline", rules 1, 2 and 6). The pole disc's test has two
+//! forms, and only the march's, on `Wide`s, is built so that every backend takes the same path: the float form's
+//! explicit `fma` is not fused on every backend (CI's lavapipe rounds the product, then the add), so the march never
+//! branches on it. With `wrap`'s `d`, the branch inputs are:
 //! - **The disc's squared radius**, [`DiscInput`]: `ρ²_I` against `r_pole²·I²`, `r_pole² = r_pole·r_pole` (one
 //!   multiply), strict `<`, so a point at exactly `r_pole` is outside ([`in_disc`]). The test is homogeneous in the
 //!   point, so the kernel decides it on the point scaled by `M₀₁ = m₀ + m₁`, built from the positions and masses by
@@ -21,7 +23,7 @@
 //!   products is an explicit `fma`, every other operation a lone one. [`theta_step_config`] steps on it; for a given
 //!   shape point, [`point_disc_input`] is the point's own `(fma(v, v, u·u), fma(w, w, fma(v, v, u·u)))`, which
 //!   [`theta_step`] uses.
-//! - **The march's disc test**, [`config_in_disc`] (R-547; REQ-INT-088): the same test on the same scaled point, every
+//! - **The march's disc test**, [`config_in_disc`]: the same test on the same scaled point, every
 //!   quantity a `crate::canon` `Wide`, a mantissa in `[1, 2)` and an integer exponent, its operations the products,
 //!   sums and differences `crate::canon`'s module note proves: no float it rounds is subnormal or overflows, for any
 //!   configuration whose coordinates and masses are 0 or normal, whatever their scale or spread, and each rounds alike
@@ -31,19 +33,21 @@
 //!   first. The march decides "inside the hold" by it, on the current state at every macro-step and at a resume
 //!   (`crate::driver::shape`); [`disc_input`]'s float form stays for the synthetic paths of [`theta_step_config`].
 //! - **`wrap`'s `d`**, in [`wrap`]: `longitude(n) − reference`, a difference of two `atan2` longitudes, against `π`
-//!   (`d > π`) and `−π` (`d ≤ −π`). This is the one transcendental deciding a branch, and R-389 mandates it: θ̃ adds
-//!   the principal value of the longitude difference, into (−π, π], exactly ±π giving +π (dd_integrator §3.7), and no
-//!   form of that rule avoids a sign decision at the ±π tie. The longitude is [`shape`]'s normalised point's.
+//!   (`d > π`) and `−π` (`d ≤ −π`). This is the one transcendental deciding a branch, and the unwrap rule requires
+//!   it: θ̃ adds the principal value of the longitude difference, into (−π, π], exactly ±π giving +π (dd_integrator
+//!   §3.7), and no form of that rule avoids a sign decision at the ±π tie. The longitude is [`shape`]'s normalised
+//!   point's.
 //!
-//! **The map on the Jacobi vectors and the landmarks** (chart_reference §3.1, §3.4; R-14, R-50; TASK-M2-08).
+//! **The map on the Jacobi vectors and the landmarks** (chart_reference §3.1, §3.4).
 //! [`shape_vec`] is §3.1's forward map written on the mass-weighted Jacobi vectors `ρ̃`, `λ̃` themselves, the form the
 //! shape-sphere chart's closed-form inverse (§3.2, `crate::chart::shape_sphere`) inverts; [`weighted_jacobi`] takes a
 //! configuration to them. [`shape`] is the same map on the positions, kept in its own operation order because the
 //! WGSL read side mirrors it operation for operation (`ledger::gen::read`). [`landmarks`] are the binary collisions and
 //! the Lagrange poles, each `n` of a configuration of that kind under the current masses through [`shape`], never a
-//! hard-coded point (dd_integrator §3.7; chart_reference §3.4). The Euler landmarks are TASK-M7-09's (R-126).
+//! hard-coded point (dd_integrator §3.7; chart_reference §3.4). The Euler landmarks are not here: they belong to the
+//! physics site generators.
 //!
-//! Generic over the kernel's `Real`, f32 on the GPU and f64 natively (R-265). The float functions are called through
+//! Generic over the kernel's `Real`, f32 on the GPU and f64 natively. The float functions are called through
 //! `Float`, as the read side calls them: the rust-gpu toolchain's `core` has no inherent `f32` math.
 
 use spirv_std::num_traits::{Float, FloatConst};
@@ -56,11 +60,11 @@ use crate::real::IeeeBits;
 use crate::Real;
 
 /// The shape-sphere point `n = (u, v, w)/I` of the configuration `r` (each body's position) with masses `m`, by
-/// Montgomery's map from the mass-weighted Jacobi vectors (dd_integrator §3.7; chart_reference §0.2, §3.1; R-14):
+/// Montgomery's map from the mass-weighted Jacobi vectors (dd_integrator §3.7; chart_reference §0.2, §3.1):
 /// `ρ = r₁ − r₀` and `λ = r₂ − r₀₁`, `r₀₁` the pair's centre of mass, weighted as `ρ̃ = √μ_ρ ρ` and `λ̃ = √μ_λ λ`
 /// with `μ_ρ = m₀m₁/M₀₁` and `μ_λ = m₂M₀₁` (`M = 1`, chart_reference §0.2); then `u = ‖ρ̃‖² − ‖λ̃‖²`, `v = 2 ρ̃·λ̃`,
-/// `w = 2 ρ̃ ∧ λ̃` (the standard cross, R-14) and `I = ‖ρ̃‖² + ‖λ̃‖²`. The collision of bodies 0 and 1 is
-/// `(−1, 0, 0)`; `L⁺`, the triangle 0 → 1 → 2 anticlockwise, is `(0, 0, 1)` at equal masses (RQ-355).
+/// `w = 2 ρ̃ ∧ λ̃` (the standard cross) and `I = ‖ρ̃‖² + ‖λ̃‖²`. The collision of bodies 0 and 1 is
+/// `(−1, 0, 0)`; `L⁺`, the triangle 0 → 1 → 2 anticlockwise, is `(0, 0, 1)` at equal masses.
 #[inline]
 pub fn shape<R: Real + Float>(r: [[R; 2]; 3], m: [R; 3]) -> [R; 3] {
     let two = R::one() + R::one();
@@ -82,11 +86,11 @@ pub fn shape<R: Real + Float>(r: [[R; 2]; 3], m: [R; 3]) -> [R; 3] {
     [(a - b) / i, two * p / i, two * q / i]
 }
 
-/// `shape_vec`, chart_reference §3.1's forward map on the mass-weighted Jacobi vectors (R-14): `a = ‖ρ̃‖²`,
+/// `shape_vec`, chart_reference §3.1's forward map on the mass-weighted Jacobi vectors: `a = ‖ρ̃‖²`,
 /// `b = ‖λ̃‖²`, `I = a + b`, `p = ρ̃ₓλ̃ₓ + ρ̃_yλ̃_y`, `q = ρ̃ₓλ̃_y − ρ̃_yλ̃ₓ` (the standard cross, `ρ̃ ∧ λ̃`), and
 /// `n = ((a − b)/I, 2p/I, 2q/I)`, a unit vector since `(a − b)² + 4p² + 4q² = I²`. `ρ̃ = 0` (the collision of bodies 0
 /// and 1) is `(−1, 0, 0)`; `L⁺`, the equilateral triangle with bodies 0 → 1 → 2 anticlockwise, has `w > 0`, and is
-/// `(0, 0, 1)` at equal masses (RQ-355).
+/// `(0, 0, 1)` at equal masses.
 #[inline]
 pub fn shape_vec<R: Real + Float>(rho_t: [R; 2], lambda_t: [R; 2]) -> [R; 3] {
     let two = R::one() + R::one();
@@ -119,24 +123,23 @@ pub fn weighted_jacobi<R: Real + Float>(r: [[R; 2]; 3], m: [R; 3]) -> ([R; 2], [
 }
 
 /// The shape sphere's collision and Lagrange landmarks under one set of masses (chart_reference §3.4; dd_integrator
-/// §3.7; R-14, R-50): each the `n` of a configuration of its kind, through [`shape`].
+/// §3.7): each the `n` of a configuration of its kind, through [`shape`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Landmarks<R> {
-    /// The binary collisions, by pair id (R-22): `bc[k]` is the collision of the side opposite body `k`, so `bc[0]` is
+    /// The binary collisions, by pair id: `bc[k]` is the collision of the side opposite body `k`, so `bc[0]` is
     /// `BC₁₂`, `bc[1]` is `BC₂₀` and `bc[2]` is `BC₀₁`, always `(−1, 0, 0)`. Every one lies on the equator, `w = 0`.
     pub bc: [[R; 3]; 3],
-    /// `L⁺`, the equilateral triangle with bodies 0 → 1 → 2 anticlockwise: `(0, 0, +1)` at equal masses (RQ-355).
+    /// `L⁺`, the equilateral triangle with bodies 0 → 1 → 2 anticlockwise: `(0, 0, +1)` at equal masses.
     pub l_plus: [R; 3],
     /// `L⁻`, the equilateral triangle with bodies 0 → 1 → 2 clockwise, `L⁺`'s mirror: `(0, 0, −1)` at equal masses.
     pub l_minus: [R; 3],
 }
 
-/// The landmarks of the masses `m` (`Σmᵢ = 1`), computed from the shape map, never hard-coded (R-14, R-50): a binary
+/// The landmarks of the masses `m` (`Σmᵢ = 1`), computed from the shape map, never hard-coded: a binary
 /// collision is `n` at a configuration with that pair coincident, `(0, 0)`, and the third body at `(1, 0)`; `L±` is `n`
 /// at the unit equilateral triangle `r₀ = (0, 0)`, `r₁ = (1, 0)`, `r₂ = (½, ±√3/2)`. Each point is the same for every
 /// configuration of its kind, as `n` quotients translation, rotation and scale. The collisions move with the masses
-/// (mass-weighted, R-50); so do `L±`, at `w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`, the poles at equal masses only
-/// (RQ-355).
+/// (mass-weighted); so do `L±`, at `w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`, the poles at equal masses only.
 #[inline]
 pub fn landmarks<R: Real + Float>(m: [R; 3]) -> Landmarks<R> {
     let zero = R::zero();
@@ -167,8 +170,9 @@ pub struct DiscInput<R> {
     pub i2: R,
 }
 
-/// The disc input of the configuration `r` with masses `m`, the shape point scaled by `M₀₁`, in its fixed form: no
-/// division, no `sqrt`, every sum of products an explicit `fma` (the module's list; R-34).
+/// The disc input of the configuration `r` with masses `m`, the shape point scaled by `M₀₁`, in its float form: no
+/// division, no `sqrt`, every sum of products an explicit `fma` (the module's list). Not the same on every backend, so
+/// for the synthetic paths only; the march decides with [`config_in_disc`].
 #[inline]
 pub fn disc_input<R: Real + Float>(r: [[R; 2]; 3], m: [R; 3]) -> DiscInput<R> {
     let two = R::one() + R::one();
@@ -201,7 +205,7 @@ pub fn point_disc_input<R: Real + Float>(n: [R; 3]) -> DiscInput<R> {
     }
 }
 
-/// Whether the point of disc input `d` lies inside the pole disc, polar radius below `r_pole` (R-389): its longitude
+/// Whether the point of disc input `d` lies inside the pole disc, polar radius below `r_pole`: its longitude
 /// is not trusted there. `ρ²_I < r_pole·r_pole·I²`, strict: a point at exactly `r_pole` is outside.
 #[inline]
 pub fn in_disc<R: Real + Float>(d: DiscInput<R>, r_pole: R) -> bool {
@@ -221,7 +225,7 @@ pub fn in_pole_disc<R: Real + Float>(n: [R; 3], r_pole: R) -> bool {
 }
 
 /// `d`, a difference of two longitudes in [−2π, 2π], wrapped into (−π, π]: the principal value, so exactly ±π gives
-/// +π (R-389). `d` is a branch input, R-389's (see the module's list).
+/// +π. `d` is a branch input (see the module's list).
 #[inline]
 pub fn wrap<R: Real + Float + FloatConst>(d: R) -> R {
     let pi = R::PI();
@@ -236,8 +240,8 @@ pub fn wrap<R: Real + Float + FloatConst>(d: R) -> R {
 }
 
 /// The unwrapped phase's running state: `θ̃` itself, and the longitude frozen on entering the pole disc, which a
-/// step out of the disc differences against (R-389). `frozen` is meaningful only when `has_frozen`, which entering the
-/// disc from outside sets; an IC that starts inside the disc has none (R-392).
+/// step out of the disc differences against. `frozen` is meaningful only when `has_frozen`, which entering the
+/// disc from outside sets; an IC that starts inside the disc has none.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Theta<R> {
     /// `θ̃`, the net turning since the IC.
@@ -249,8 +253,8 @@ pub struct Theta<R> {
 }
 
 impl<R: Real + Float> Theta<R> {
-    /// `θ̃(0) = 0`, whatever `n(0)`'s longitude (R-389), with no frozen longitude. The first step's reference is
-    /// `n(0)`'s longitude when `n(0)` lies outside the disc; when it lies inside, there is none (R-392).
+    /// `θ̃(0) = 0`, whatever `n(0)`'s longitude, with no frozen longitude. The first step's reference is
+    /// `n(0)`'s longitude when `n(0)` lies outside the disc; when it lies inside, there is none.
     #[inline]
     pub fn start() -> Self {
         Theta {
@@ -300,7 +304,7 @@ pub fn theta_step_config<R: Real + Float + FloatConst>(
 }
 
 /// One macro-step of `θ̃`, from the shape point `n_prev` before the step to `n` after it, with whether each lies inside
-/// the pole disc decided (dd_integrator §3.7; R-389, R-392). The reference is the last trusted longitude: `n_prev`'s
+/// the pole disc decided (dd_integrator §3.7). The reference is the last trusted longitude: `n_prev`'s
 /// when it lies outside the disc, otherwise the one frozen on entering.
 /// - `n` inside the disc: no delta; on entering (`n_prev` outside) `n_prev`'s longitude is frozen, and while inside the
 ///   frozen one is kept.
@@ -339,7 +343,7 @@ pub fn theta_step_held<R: Real + Float + FloatConst>(
 }
 
 /// Whether the configuration `r` with masses `m` lies inside the pole disc, `ρ²_I < r_pole²·I²` on the point scaled by
-/// `M₀₁` (the module's list; R-389, R-547): the march's disc test, every quantity a `Wide`, so no intermediate is
+/// `M₀₁` (the module's list): the march's disc test, every quantity a `Wide`, so no intermediate is
 /// subnormal and every IEEE backend decides it alike. With `ρ = r₁ − r₀` and `Λ = m₀(r₂ − r₀) + m₁(r₂ − r₁)`,
 /// `U = m₀m₁‖ρ‖² − m₂‖Λ‖²`, `ρ²_I = U² + 4m₀m₁m₂(ρ·Λ)²` and `I² = ρ²_I + 4m₀m₁m₂(ρ×Λ)²`, [`disc_input`]'s
 /// quantities in exact arithmetic. Strict, as [`in_disc`]: a point exactly at `r_pole` is outside. Coordinates and

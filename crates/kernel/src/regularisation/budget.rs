@@ -1,27 +1,27 @@
-//! The regularised integration floor's step budget and its two counted signals (integrator_contract Part 6; R-563,
-//! R-564, R-603, R-604; payload §1, §2's `budget_bits`).
+//! The regularised integration floor's step budget and its two counted signals (integrator_contract Part 6;
+//! payload §1, §2's `budget_bits`).
 //!
-//! **The budget is a rate** (R-564, R-604): a copy's running total of steps since `t = 0`, every stepper call and
+//! **The budget is a rate**: a copy's running total of steps since `t = 0`, every stepper call and
 //! landing retake counted, is checked at every step against `max(N_min, step_budget_rate · t)`, `t` its physical time
-//! since `t = 0` ([`over_allowance`]). The rate is steps per unit physical time per copy (REQ-INT-103) and `N_min`
-//! protects a close encounter early in the run, before `rate · t` has grown (REQ-INT-108); both are calibrations,
+//! since `t = 0` ([`over_allowance`]). The rate is steps per unit physical time per copy and `N_min`
+//! protects a close encounter early in the run, before `rate · t` has grown; both are calibrations,
 //! proposed by `cargo xtask gate step-budget --propose`. Each regularised occupant (Aarseth–Zare, Heggie, logH) runs the
 //! check in its own march and ends it [`crate::driver::advance::Reached::Exhausted`]; the running total crosses its
 //! seam calls in the trajectory's carried buffer ([`crate::driver::carried::Carried::steps`]), so a march split into
 //! calls spends its budget at the step one call does.
 //!
-//! **Exhaustion is undetermined, never an outcome** (R-563, R-603): the copy stops, its `state` as it stood
+//! **Exhaustion is undetermined, never an outcome**: the copy stops, its `state` as it stood
 //! (`running`), and `budget_bits`'s sticky `budget_exhausted` bit is set. A sample with it set is finished: a later
 //! dispatch hands it back word for word and never marches it on ([`crate::driver::terminal::finished`]), since its
 //! remedy is finer steps as an explicit re-run, and its footprint is never discarded, treated as resolved or split.
 //!
-//! **The two counted signals** (Part 6; R-563, R-603): the separation floor (`TINY` bound a separation of the step's
+//! **The two counted signals** (Part 6): the separation floor (`TINY` bound a separation of the step's
 //! state) and the entry-cap hit (the per-step size asked for more than the interval's entry size), each counted once
 //! per step the march sizes and reported through [`crate::driver::advance::Cadence::signals`]. They never end the
 //! march. [`Signals`] holds the two counts live and writes them into `budget_bits`; `saturated` (descriptor bit 5) is
-//! set when either has fired (R-603).
+//! set when either has fired.
 //!
-//! **The word's layout** (payload §2; REQ-PAY-110, a definition this task writes): bit 0 `budget_exhausted`, bits 1–15
+//! **The word's layout** (payload §2): bit 0 `budget_exhausted`, bits 1–15
 //! the floor hits, bits 16–30 the entry-cap hits, bit 31 reserved. Each count saturates at its width's greatest value,
 //! `2¹⁵ − 1`, which then reads "at least that many". The plan is unclear here (it fixes the word, not the split); chose
 //! two 15-bit counts, because a count declared `[0, 2¹⁶ − 1]` is the generator's step index, drawn on
@@ -29,7 +29,7 @@
 //! early on a long run all the same (measured on Heggie × RK4: about half of all steps hit the entry cap on
 //! dd_integrator §5's tests 2 and 7), so it reads "at least 32767" there, and the floor's are rare. Saturation is exact across a
 //! resume: `min(min(a, M) + b, M) = min(a + b, M)`, so a march split at any persist boundary stores the uncut march's
-//! word. The sums are written out by hand, not with `saturating_add`, which rust-gpu does not implement (R-169).
+//! word. The sums are written out by hand, not with `saturating_add`, which rust-gpu does not implement.
 
 use crate::driver::advance::Count;
 use crate::payload::{
@@ -60,7 +60,7 @@ fn floored<R: PartialOrd>(x: R, floor: R) -> R {
     }
 }
 
-/// R-604's budget for any regularised occupant: whether the running total `steps` exceeds `max(n_min, rate·t)` at
+/// The step budget for any regularised occupant: whether the running total `steps` exceeds `max(n_min, rate·t)` at
 /// physical time `t`. An allowance that is not a number, read on its bits, spends the budget too, so that the march
 /// stays bounded (Part 2c rule 3).
 #[inline]
@@ -120,7 +120,7 @@ impl Signals {
         self.cap_hits = add_saturating(self.cap_hits, u32::from(cap_hit), cap_hits_max());
     }
 
-    /// Whether either signal has fired: R-603's condition for `saturated`.
+    /// Whether either signal has fired: the condition for `saturated`.
     #[inline]
     pub fn fired(&self) -> bool {
         self.floor_hits > 0 || self.cap_hits > 0
@@ -150,7 +150,7 @@ pub fn latch_exhausted(budget_bits: u32, exhausted: bool) -> u32 {
 }
 
 /// Whether a stored sample's step budget ran out: its `budget_bits`'s sticky bit (payload §2). Such a sample is
-/// undetermined: finished, never a physical outcome, and its footprint never resolved (R-603; payload §2, "An
+/// undetermined: finished, never a physical outcome, and its footprint never resolved (payload §2, "An
 /// unusable copy").
 #[inline]
 pub fn exhausted(budget_bits: u32) -> bool {

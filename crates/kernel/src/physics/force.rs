@@ -1,10 +1,11 @@
-//! The three-body force, dd_integrator §3.1, with `G = 1` (REQ-INT-036):
+//! The three-body force, dd_integrator §3.1, with `G = 1`:
 //!
 //! ```text
 //! aᵢ = Σ_{j≠i} mⱼ (rⱼ − rᵢ) / ‖rⱼ − rᵢ‖³        (3 pairs; ‖·‖³ shared with r_min)
 //! ```
 //!
-//! read from a [`PairGeom`]. Pair `k = (i, j)` (R-22: `(1, 2), (2, 0), (0, 1)`) contributes `uₖ = dₖ/‖dₖ‖³` once:
+//! read from a [`PairGeom`]. Pair `k = (i, j)` (`(1, 2), (2, 0), (0, 1)`, the side opposite body `k`) contributes
+//! `uₖ = dₖ/‖dₖ‖³` once:
 //! `+mⱼuₖ` to `aᵢ` and `−mᵢuₖ` to `aⱼ`, since `rᵢ − rⱼ = −dₖ`. So `a₀ = m₁u₂ − m₂u₁`, `a₁ = m₂u₀ − m₀u₂` and
 //! `a₂ = m₀u₁ − m₁u₀`.
 

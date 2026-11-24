@@ -1,5 +1,5 @@
 //! Branch-cut crossing detection, run at every accepted substep (integrator contract Part 5, the branch-cut bullet and
-//! its τ tie rule, REQ-INT-079; dd_simstate_payload §3): each cut's signed distance at the substep's two endpoints, the
+//! its τ tie rule; dd_simstate_payload §3): each cut's signed distance at the substep's two endpoints, the
 //! half-open count, the order by crossing fraction `τ` with the cut ID as the tie-break, and the crossings, in that
 //! order, appended to the word through [`super::on_substep`].
 //!
@@ -14,7 +14,7 @@
 //! - [`CrossingDetector`] carries the last accepted endpoint's distances between substeps, so each endpoint is shared
 //!   by the two substeps that meet there and an endpoint on a cut is counted once.
 //!
-//! **The cuts** (symbolic_dynamics_contract §1; RQ-632, option (a)): the collision equator's segments with body 0
+//! **The cuts** (symbolic_dynamics_contract §1): the collision equator's segments with body 0
 //! between (`a`, from `P₀₁` to `P₀₂`) and with body 2 between (`b`, from `P₁₂` to `P₀₂`). Both share one signed
 //! function, `d = −((r₁ − r₀) × (r₂ − r₀))`, negative on `L⁺`'s hemisphere, so a generator crosses from `L⁺`'s
 //! hemisphere into `L⁻`'s; the gates are §1's segment classifier, [`between`]: cut `a`'s is open where body 0 is
@@ -22,7 +22,7 @@
 //! The gates being exclusive, one substep crosses at most one of these cuts, so the `τ`-sort never meets two of them;
 //! it stays defined for cuts with distinct distances.
 //!
-//! **The branch inputs** (R-547; integrator contract Part 4). `d` and the three squared separations the classifier
+//! **The branch inputs** (integrator contract Part 4). `d` and the three squared separations the classifier
 //! compares are formed as `crate::canon` forms its branch inputs: each coordinate taken in as a mantissa in `[1, 2)`
 //! and an integer exponent, the differences, the products ([`IeeeBits::product`]'s pattern) and the sums formed on
 //! those, so no intermediate is subnormal and every IEEE backend rounds them alike. The comparisons are on those
@@ -166,9 +166,9 @@ pub fn substep_crossings<T: IeeeBits>(
     out
 }
 
-/// Which body lies between the other two at positions `r`, §1's segment classifier (REQ-PAY-113): the body opposite the
-/// longest side, the `k` whose pair's squared separation `r²ₖ` is the greatest (pair `k` the side opposite body `k`,
-/// R-22), the lowest `k` on a tie. On the collision equator it is the body between the other two. The `r²ₖ` are formed
+/// Which body lies between the other two at positions `r`, §1's segment classifier: the body opposite the
+/// longest side, the `k` whose pair's squared separation `r²ₖ` is the greatest (pair `k` the side opposite body `k`),
+/// the lowest `k` on a tie. On the collision equator it is the body between the other two. The `r²ₖ` are formed
 /// and compared as the module's note says, so the choice is the same on every IEEE backend given the same `r`.
 #[inline]
 pub fn between<R: LinkReal + IeeeBits>(r: &[[R; 2]; 3]) -> u32 {

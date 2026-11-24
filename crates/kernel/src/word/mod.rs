@@ -1,6 +1,6 @@
 //! The word buffer's append and decode (dd_simstate_payload §3; dd_generation_root §3.3, §3.3a): the free-group word
 //! of one sample, one `vec4<u32>` in the cold word buffer at the sample's own index, as `[u32; 4]`. Shared source, no
-//! float in it, so the same at f32 and f64 (R-265).
+//! float in it, so the same at f32 and f64.
 //!
 //! The word packs a freely-reduced word in the four generators `a = 0, A = 1, b = 2, B = 3` as the mixed-radix integer
 //! `W` of payload §3's Horner recurrence, `W₁ = d₀`, `W_{k+1} = 3·W_k + e_k`: `d₀` the first symbol, each `e_k` the digit
@@ -82,7 +82,7 @@ impl Iterator for FgwDecode {
 /// is popped by depth, `length − 1` times, each digit pushed onto a second integer, and the residue is `d₀`; the
 /// iterator replays the digits forward from it. O(length), sequential, not random-access.
 ///
-/// Total, as [`crate::payload::fgw_symbol`] is, and equal to it at every `k` of any `[u32; 4]` (R-321): `d₀` is masked
+/// Total, as [`crate::payload::fgw_symbol`] is, and equal to it at every `k` of any `[u32; 4]`: `d₀` is masked
 /// `& 3`, and on a `length_raw` of 78…126, which payload §3 leaves unused, at most 77 digits are popped and the rest,
 /// all zero, are counted rather than pushed, so the second integer never overflows.
 #[inline]
@@ -101,7 +101,7 @@ pub fn fgw_decode(w: [u32; 4]) -> FgwDecode {
         i += 1;
     }
     // The residue is `d₀`, a symbol code on any word `fgw_append` writes, but the decode takes any `[u32; 4]`: masked
-    // as `fgw_symbol` masks it, unasserted, so the two agree on every word and no out-of-range symbol exists (R-321).
+    // as `fgw_symbol` masks it, unasserted, so the two agree on every word and no out-of-range symbol exists.
     FgwDecode {
         digits,
         zeros: length - popped,
