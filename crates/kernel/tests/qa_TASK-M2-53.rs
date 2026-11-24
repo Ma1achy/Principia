@@ -66,7 +66,7 @@ impl Draws {
     }
 }
 
-/// `sin r/r` at f64, the requirement's reference.
+/// `sin r/r` at f64, the spec's reference.
 fn truth(r: f32) -> f64 {
     let r = f64::from(r);
     r.sin() / r

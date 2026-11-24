@@ -517,9 +517,8 @@ fn check_scaled<R: P>(x: &Ic<f64>, s: f64, c: &Canonical<R>, at: &str) -> [f64; 
     // E_canon = √I_in·E_in and L_z,canon = L_z,in/I_in^{1/4}: with I_in = s²I₀, E_in = E₀/s, L_z,in = L₀/√s.
     // In the input's rest frame (CoM at the origin, `Σp = 0`), where steps 1a and 1b leave `E` and `L_z` alone.
     let x0 = rest(&widen(&narrow::<R>(x)));
-    // `L_z` keeps its sign on either half: `C` takes no mirror, so nothing reverses it (was: "a mirrored output has its
-    // `L_z` reversed"). The half itself is the input's: `λ̃_y`'s sign is that of `ρ × (r₂ − r₀)`, which [`generic`]
-    // keeps past 0.05 in magnitude, at every scale.
+    // `L_z` keeps its sign on either half: `C` takes no mirror, so nothing reverses it. The half itself is the
+    // input's: `λ̃_y`'s sign is that of `ρ × (r₂ − r₀)`, which [`generic`] keeps past 0.05 in magnitude, at every scale.
     let cross = (x.r[1][0] - x.r[0][0]) * (x.r[2][1] - x.r[0][1])
         - (x.r[1][1] - x.r[0][1]) * (x.r[2][0] - x.r[0][0]);
     let lty: f64 = c.lambda_t_y.into();
@@ -754,8 +753,7 @@ fn exact_branch_inputs(x: &Ic<f32>) -> ([f64; 2], f64) {
 
 /// `C` on `x` against its exact branch inputs `(ρ, λ̃_y)`: `lookup_clamped` iff `ρ = 0`; `φ` within 4 eps of
 /// `atan2(ρ_y, ρ_x)`; the half kept, `C`'s recorded `λ̃_y` negative iff the exact `λ̃_y` is (only where `λ̃_y` is
-/// clear of 0 by `10⁻³·δ_λ`; *was:* "the mirror iff `λ̃_y < −δ_λ` (only where `λ̃_y` is clear of `−δ_λ` by `10⁻³`)");
-/// every output finite at `I = 1`. The worst `φ` error, in f32 eps.
+/// clear of 0 by `10⁻³·δ_λ`); every output finite at `I = 1`. The worst `φ` error, in f32 eps.
 fn check_exact_branches(c: &Canonical<f32>, exact: ([f64; 2], f64), at: &str) -> f64 {
     let (rho, lty) = exact;
     let pole = rho[0] == 0.0 && rho[1] == 0.0;

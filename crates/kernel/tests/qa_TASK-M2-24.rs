@@ -1,4 +1,4 @@
-//! QA tests for the decode's failure tags, written from the requirements, not from the implementation:
+//! QA tests for the decode's failure tags, written from the spec, not from the implementation:
 //! - The cause set (dd_decoder §2, "The `DEGENERATE` cause set"; payload §2, "`detail` failure enum"): the
 //!   closed set is exactly the five reasons dd_decoder §2 names, each recorded as `decode_failed` (state 5) with the
 //!   table's detail code, none writing 0 (the non-finite output); each tag word the stage writes round-trips and every

@@ -70,7 +70,7 @@ fn hand_lz(r: &V, p: &V) -> f64 {
     (0..3).map(|i| r[i][0] * p[i][1] - r[i][1] * p[i][0]).sum()
 }
 
-/// `(R_com, P_com)`, written out from the requirement's statement.
+/// `(R_com, P_com)`, written out from the spec's statement.
 fn hand_com(m: &[f64; 3], r: &V, p: &V) -> ([f64; 2], [f64; 2]) {
     let total: f64 = m.iter().sum();
     let mean = |k: usize| (0..3).map(|i| m[i] * r[i][k]).sum::<f64>() / total;

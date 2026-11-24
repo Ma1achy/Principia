@@ -756,7 +756,7 @@ negative_control!(
     check_saturate(|hits| kernel::payload::set_cap_hits(0, hits))
 );
 
-// ── A terminal on the step the budget runs out (physics review 6003366749 of PR #32, B1) ───────────────────────────
+// ── A terminal on the step the budget runs out ──────────────────────────────────────────────────────────────────────
 
 /// A cadence that is done from its `at`-th kept step on: a terminal firing on that step.
 struct DoneAt {

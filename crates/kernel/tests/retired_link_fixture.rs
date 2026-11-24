@@ -7,7 +7,7 @@
 //! **Its pixels** span `z_β`: for each link, 257 values, `z_β` the link's own inverse (at f64) of `β = π·k/258`,
 //! `k = 1 … 257`, `π` the f64 nearest, at [`OTHER`], the fixture's other latent coordinates. The f32 state decodes the
 //! same `z` rounded to nearest f32, coordinate by coordinate. Every number is written as its IEEE bits in hex, so the
-//! file stays small (code review 5836647705 of PR #469): a state is its fifteen words `m₀ m₁ m₂ r₀ₓ r₀ᵧ … p₂ᵧ`
+//! file stays small: a state is its fifteen words `m₀ m₁ m₂ r₀ₓ r₀ᵧ … p₂ᵧ`
 //! concatenated, sixteen hex digits each at f64 and eight at f32.
 //!
 //! - `retired_link_fixture_write` (ignored): writes the file. It is run once, on the baseline commit, and never again
