@@ -1,4 +1,4 @@
-//! The first slice's record comparisons (TASK-M2-86; REQ-DEC-057), which `first_slice` (today's CPU f32 decode) and
+//! The first slice's record comparisons, which `first_slice` (today's CPU f32 decode) and
 //! `first_slice_gpu` (the GPU decode stage) both measure the narrowed f64 records against: each component's difference
 //! in f32 ulps at `max(1, |x|)`, `x` the narrowed record's value, and the share of neighbouring sample pairs whose
 //! records are bitwise identical. Measured and reported, never asserted.

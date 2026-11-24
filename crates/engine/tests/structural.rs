@@ -1,12 +1,12 @@
-//! The structural presets and sets (`engine::structural`, `engine::synthetic`; TASK-M1-13):
-//! - REQ-RENDER-024: the graph holding the boundary overlay serialises, loads back to an equal graph with an equal
+//! The structural presets and sets (`engine::structural`, `engine::synthetic`):
+//! - the graph holding the boundary overlay serialises, loads back to an equal graph with an equal
 //!   render key, and the overlay's width, opacity, colour and level are its params (`boundary_overlay_roundtrip`);
-//! - REQ-TOOL-026: every structural view, and the overlays after it, is a graph that lowers and assembles
+//! - every structural view, and the overlays after it, is a graph that lowers and assembles
 //!   (`structural_presets_*`), whose colour node is found under the overlays; the structural sets cover every quad
 //!   state, and a priority of each sign, at depths 3 and 20 with their deep_zoom §1 frames (`structural_sets_*`);
 //!   each view's colour occupant is the registry's own `debug/<id>` source (`structural_presets_view_occupant_*`).
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use engine::stain::{NodeId, NodeKind, Occupant, StainGraph};
 use engine::structural::{boundaries, colour_node, overlay, view, Level, VIEWS};

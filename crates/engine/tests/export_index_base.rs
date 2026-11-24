@@ -1,10 +1,9 @@
-//! The export decoder's index bases (dd_generation_root §3.8; R-449; REQ-GEN-036): the generated decoder
+//! The export decoder's index bases (dd_generation_root §3.8): the generated decoder
 //! (`engine::export`, from `ledger::gen::export`) keeps the body and pair ids 0-based, as the payload holds them, and its
 //! schema says so, "body index, 0-based" for each body-indexed field and "pair id, 0-based; pair k is the side opposite
 //! body k" for `detail` under collision and for `dmin_pair`, from each ledger entry's index-base key
 //! (`ledger::schema::IndexBase`), not written by hand; an exported collision of bodies 0 and 1 writes `detail` 2 and an escape of body 0 writes 0; and a
-//! body- or pair-indexed ledger entry without the text fails generation. Each test has a registered negative control
-//! (R-176).
+//! body- or pair-indexed ledger entry without the text fails generation. Each test has a registered negative control.
 
 use engine::export::{decode, INDEX_BASES};
 use kernel::payload::*;
@@ -12,9 +11,9 @@ use ledger::gen::{export, generate, GenError};
 use ledger::schema::{IndexBase, Ledger};
 use validation::negative_control;
 
-/// R-449's words for a body index.
+/// The schema's words for a body index.
 const BODY: &str = "body index, 0-based";
-/// R-449's words for a pair id.
+/// The schema's words for a pair id.
 const PAIR: &str = "pair id, 0-based; pair k is the side opposite body k";
 
 /// The body- and pair-indexed fields and the bases each must state: the masses and the stored vectors a body index,

@@ -98,7 +98,7 @@ fn depths(s: &Snapshot) -> (u32, u32) {
     (s.history.undo_depth, s.history.redo_depth)
 }
 
-// --- REQ-GUI-166: the real engine passes every case, none skipped -------------------------------------------------
+// --- The real engine passes every case, none skipped --------------------------------------------------------------
 
 /// The suite, run on the real engine's store from initial playhead `t0`, passes, and reports every case of the one
 /// case list as run.
@@ -140,7 +140,7 @@ negative_control!(
     check_real_engine_passes(|| Broken::new(Rule::NoHistoryEntersHistory))
 );
 
-// --- REQ-GUI-166: a non-conforming double fails, naming the case ----------------------------------------------------
+// --- A non-conforming double fails, naming the case -----------------------------------------------------------------
 
 /// The one rule a double breaks.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -610,7 +610,7 @@ negative_control!(
     check_fails_naming(Rule::None)
 );
 
-// --- R-52, R-69, R-101: the real engine's history -------------------------------------------------------------------
+// --- The real engine's history --------------------------------------------------------------------------------------
 
 /// Two edits, two undos, two redos; undo and redo past the ends do nothing; a new undoable edit clears redo; a
 /// no-history edit leaves both depths as they were.
@@ -676,7 +676,7 @@ negative_control!(
     check_history(&mut Broken::new(Rule::NoHistoryEntersHistory))
 );
 
-// --- REQ-GUI-176 / RQ-243: the real engine's frame summary is absent ------------------------------------------------
+// --- The real engine's frame summary is absent ----------------------------------------------------------------------
 
 fn check_frame_absent(s: &Snapshot) {
     let f = &s.frame;
@@ -708,7 +708,7 @@ negative_control!(
     }
 );
 
-// --- REQ-GUI-177: the log entry -------------------------------------------------------------------------------------
+// --- The log entry --------------------------------------------------------------------------------------------------
 
 fn now_ms() -> u64 {
     SystemTime::now()

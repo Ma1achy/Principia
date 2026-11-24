@@ -1,8 +1,6 @@
-//! qa's test for TASK-M0-16's surfaces (gui_state_contract §1, §2; R-133; R-71): the five surfaces are declared in
-//! the engine crate, `pub` from its `contract` module, and carry no default: a default would be a value the corpus
-//! does not give (R-71), and the task's Deliverables say "no defaults". Its control, registered with
-//! `negative_control!` since the engine crate took the `controls` feature (TASK-M0-17, R-176): a type with a default
-//! must trip the same check.
+//! qa's test for the contract surfaces (gui_state_contract §1, §2): the five surfaces are declared in the engine crate,
+//! `pub` from its `contract` module, and carry no default: a default would be a value the corpus does not give. Its
+//! control, registered with `negative_control!`: a type with a default must trip the same check.
 
 use std::marker::PhantomData;
 
