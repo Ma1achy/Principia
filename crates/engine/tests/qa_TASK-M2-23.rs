@@ -1,14 +1,12 @@
-//! QA's tests for TASK-M2-23, the lock, written from the requirements it closes (REQ-GUI-004..007, REQ-SYS-012,
-//! REQ-CHART-010, REQ-CHART-007) and chart_decoder_contract Part 4, "The lock (projective microscope)", not from the
-//! implementation. Each reads a pixel through the kernel's own chart maps and decode, the edits through the real state
-//! store, and checks against an answer computed here by other means: the affine formula by hand, the clicked state
-//! decoded through the latent decode within `ε_phys` (REQ-ENC-024), the parabola `K ≥ L_z²/2I` with `I` the moment of
-//! inertia about the centre of mass computed here, and the tangent pushed forward through the links' `forward` against
+//! QA's tests for the lock, written from chart_decoder_contract Part 4, "The lock (projective microscope)", not from
+//! the implementation. Each reads a pixel through the kernel's own chart maps and decode, the edits through the real
+//! state store, and checks against an answer computed here by other means: the affine formula by hand, the clicked
+//! state decoded through the latent decode within `ε_phys`, the parabola `K ≥ L_z²/2I` with `I` the moment of inertia
+//! about the centre of mass computed here, and the tangent pushed forward through the links' `forward` against
 //! `γ′(ν₀)` and the softmax's analytic derivative.
 //!
-//! The anchor's invariance (REQ-GUI-005, a property) runs under `validation::prop::run`, `CASES` cases (REQ-VAL-151),
-//! its control through `check_with_seed` at a fixed seed; the other random draws are a fixed-seed SplitMix64 over
-//! `CASES`-scaled cases.
+//! The anchor's invariance, a property, runs under `validation::prop::run`, `CASES` cases, its control through
+//! `check_with_seed` at a fixed seed; the other random draws are a fixed-seed SplitMix64 over `CASES`-scaled cases.
 
 mod path_shim;
 
@@ -91,7 +89,7 @@ fn sim(plane: Plane) -> SimConfig {
         },
         plane,
         slice: Slice {
-            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            // The slice frame, at its defaults: the normal and both targets z_q3.
             frame: engine::contract::sim_config::SliceFrame::along(
                 engine::contract::sim_config::Z_Q3,
             ),
@@ -186,8 +184,8 @@ fn lock_pair(edits: &[SetField; 2]) -> (Latent, Lock) {
 }
 
 /// A nonlinear chart's lock command as `(z₀, lock group, window)`, asserting it is the recentring on `z₀`, the lock
-/// group's edit, then the `SetField` on `Chart.window` (TASK-M2-21: the window is chart construction in `SimConfig`'s
-/// chart group, R-69, and joins the lock's one command, R-466).
+/// group's edit, then the `SetField` on `Chart.window` (the window is chart construction in `SimConfig`'s chart group,
+/// and joins the lock's one command).
 fn chart_command(edits: &[SetField; 3]) -> (Latent, Lock, Window) {
     let (z0, group) = lock_pair(&[edits[0].clone(), edits[1].clone()]);
     match &edits[2].edit {
@@ -196,12 +194,12 @@ fn chart_command(edits: &[SetField; 3]) -> (Latent, Lock, Window) {
     }
 }
 
-/// The register's tolerances (REQ-ENC-024's `ε_phys`, REQ-ENC-027's sanity, REQ-ENC-036's zero band).
+/// The register's tolerances (`ε_phys`, the CoM and `Σpᵢ` residuals' sanity bound, and the zero-class band).
 fn tol() -> Tolerances {
     Tolerances::register(f64::EPSILON)
 }
 
-// ---- REQ-GUI-004: setting the lock ----
+// ---- Setting the lock ----
 
 /// Locks `plane` at `(s, t)` with `lock`, and checks: `z_locked` is `z₀ + (2s−1)q₁ + (2t−1)q₂` to the rounding of its
 /// three products and two sums; the recentring is a `SetField` on `z₀ = z_locked`; after it the centre pixel's IC is
@@ -270,7 +268,7 @@ negative_control!(
 /// Locks the nonlinear `chart` at the pixel `(s, t)` of `window` and checks: `Φ` and `D` replayed on the CPU, so the
 /// lock's state is the chart's own decode at the clicked chart point; the window is re-centred there, its zoom kept,
 /// so the centre pixel decodes the clicked state; `z_locked` is the inverse-encode of that state, decoding back to it
-/// within `ε_phys` (REQ-ENC-024); the edits are `z₀ = z_locked` then the lock group; through the store the free
+/// within `ε_phys`; the edits are `z₀ = z_locked` then the lock group; through the store the free
 /// latent centre `z(½,½)` is `z_locked` bit for bit; and the chart rebuilt on that post-lock `z₀` by `rebuild` (its
 /// hidden coordinates `z₀`'s, chart_reference §2.1) decodes the clicked state bit for bit at the re-centred window's
 /// centre (the contract: "the rebuilt chart's centre pixel decodes the clicked state bit for bit").
@@ -466,7 +464,7 @@ negative_control!(
 );
 
 /// A lock at a chart point the chart's `validate` refuses sets nothing, and one at a point it passes is set, on
-/// `(L_z, K)` (R-469); `verdict` is the domain the expectation is read from.
+/// `(L_z, K)`; `verdict` is the domain the expectation is read from.
 fn check_refusals(verdict: fn(f64, f64) -> ValidationResult) {
     let chart = lk();
     // The window reaches past the chart's square, where the fan's edge refuses points.
@@ -516,7 +514,7 @@ negative_control!(
     check_refusals(|u, v| lk().validate(u, v - 0.3))
 );
 
-// ---- REQ-GUI-005: tilt, zoom, chart switch keep the anchor; the excursion; snap-back ----
+// ---- Tilt, zoom, chart switch keep the anchor; the excursion; snap-back ----
 
 /// One random anchor-preserving gesture: a raw tilt of one basis vector, a tilt pair, a zoom, or a chart switch
 /// (to an axis-aligned pair or to an oblique plane through the centre).
@@ -696,7 +694,7 @@ negative_control!(
     .ok())
 );
 
-// ---- REQ-GUI-006: re-based sliders; unlock keeps the state ----
+// ---- Re-based sliders; unlock keeps the state ----
 
 /// Locks, then moves random sliders with `mover`: each move changes `z₀[k]` alone, to the value moved to, so `δ`
 /// changes along `ê_k` alone; the slider shows that value live, re-based as anchor + δ, with the anchor marked; then
@@ -802,10 +800,10 @@ negative_control!(
         .expect("a slider"))
 );
 
-// ---- REQ-GUI-007: SimConfig fields and SetFields, never ViewUI ----
+// ---- SimConfig fields and SetFields, never ViewUI ----
 
-/// Each edit is an undoable `SimConfig` edit of `z₀`, the lock group or, on a nonlinear chart, the chart group's window
-/// (TASK-M2-21): none is a render-state (ViewUI) edit.
+/// Each edit is an undoable `SimConfig` edit of `z₀`, the lock group or, on a nonlinear chart, the chart group's
+/// window: none is a render-state (ViewUI) edit.
 fn check_sim_only(edits: &[SetField]) {
     for e in edits {
         assert!(!e.no_history, "{e:?} skips the history");
@@ -882,7 +880,7 @@ negative_control!(
     }])
 );
 
-// ---- REQ-SYS-012: the kernel's chart is the plane's, whatever the lock ----
+// ---- The kernel's chart is the plane's, whatever the lock ----
 
 fn plane_chart_bits(p: &Plane) -> Vec<u32> {
     p.z0.iter()
@@ -962,7 +960,7 @@ negative_control!(
     })
 );
 
-// ---- REQ-CHART-010 (R-593): lock validation on a tilted (L_z, E) view ----
+// ---- Lock validation on a tilted (L_z, E) view ----
 
 fn le(z_cfg: [f64; 2]) -> InvariantLE<f64> {
     InvariantLE(Invariant {
@@ -1105,11 +1103,11 @@ fn check_tag(what: &str, p: &Pixel<InvariantLE<f64>>, tag: &Tag) -> bool {
 }
 
 /// Checks `validator`'s report on `pixels` with the lock's own `centre`, and `offer`'s notice on it, against the
-/// parabola and the nearest valid point computed here (inverse_encode_contract § "The nearest valid point"; R-593):
+/// parabola and the nearest valid point computed here (inverse_encode_contract § "The nearest valid point"):
 /// one tag per pixel in order, none dropped, each checked by [`check_tag`], and the centre's likewise; no notice where
 /// nothing is tagged infeasible, else one notice for the view; its re-centre present exactly where the centre is
 /// infeasible at `K* > 0`, and then the centre's own nearest point, `L_z ← sign(L_z)√(2IK*)` at the centre's `K*`,
-/// within lookup's `ε_phys` (REQ-ENC-024) of `max(1, ·)`, never another tagged pixel's. Returns the number of pixels
+/// within lookup's `ε_phys` of `max(1, ·)`, never another tagged pixel's. Returns the number of pixels
 /// tagged and the notice.
 fn check_validation(
     pixels: &[Pixel<InvariantLE<f64>>],
@@ -1184,8 +1182,8 @@ fn check_validation(
     (tagged, notice)
 }
 
-/// A first tagged pixel's nearest point, offered as the re-centre whatever the centre: RQ-572's option (b)-like
-/// offer, which R-593 does not take.
+/// The control's wrong offer: a first tagged pixel's nearest point, offered as the re-centre whatever the centre, where
+/// the re-centre is offered only for an infeasible centre, and is then the centre's own nearest point.
 #[cfg(feature = "controls")]
 fn first_tagged(report: &Report) -> Option<Notice> {
     report.offer().map(|_| Notice {
@@ -1263,7 +1261,7 @@ negative_control!(
     }
 );
 
-/// R-593: an untilted, feasible view at `δ = 0` is given no notice.
+/// An untilted, feasible view at `δ = 0` is given no notice.
 #[test]
 fn qa_lock_validation_feasible_view_no_notice() {
     let (flat, c) = view(0.0, 0.0, 0.0);
@@ -1283,7 +1281,7 @@ negative_control!(
     }
 );
 
-/// R-593: a tilt alone at `δ = 0` tags pixels but leaves the centre, the anchor, feasible: one notice, the switch to
+/// A tilt alone at `δ = 0` tags pixels but leaves the centre, the anchor, feasible: one notice, the switch to
 /// the latent chart, and no re-centre, though the tagged pixels have nearest points.
 #[test]
 fn qa_lock_validation_tilt_offers_only_the_switch() {
@@ -1304,7 +1302,7 @@ negative_control!(
     }
 );
 
-/// R-593: an excursion along `+z_α` carries the centre past the parabola at `K* > 0`: one notice, its re-centre the
+/// An excursion along `+z_α` carries the centre past the parabola at `K* > 0`: one notice, its re-centre the
 /// centre's own nearest feasible point, not another tagged pixel's.
 #[test]
 fn qa_lock_validation_excursion_recentres_the_centre() {
@@ -1333,7 +1331,7 @@ negative_control!(
     }
 );
 
-/// R-593: an excursion along `−E` to just below the centre's potential, `K* < 0` at `L_z ≠ 0`, leaves the centre tagged
+/// An excursion along `−E` to just below the centre's potential, `K* < 0` at `L_z ≠ 0`, leaves the centre tagged
 /// with no nearest point (inverse_encode_contract § "A qualitatively different IC"), while pixels on the tilt's
 /// low-potential side keep one: one notice, only the switch.
 #[test]
@@ -1383,7 +1381,7 @@ negative_control!(
     }
 );
 
-// ---- REQ-CHART-007: the curve's tangent tilt needs a lock and reads γ′(ν₀) ----
+// ---- The curve's tangent tilt needs a lock and reads γ′(ν₀) ----
 
 fn softmax(mu: [f64; 2]) -> [f64; 3] {
     let e = [1.0, mu[0].exp(), mu[1].exp()];
@@ -1550,7 +1548,7 @@ negative_control!(
     check_still(&NU_CURVE)
 );
 
-// ---- REQ-CHART-007, REQ-CHART-089: the tangent is refused, naming the controls, where a link's inverse clamps ----
+// ---- The tangent is refused, naming the controls, where a link's inverse clamps ----
 
 thread_local! {
     /// The point and tangent [`HELD`] holds at every `ν`.

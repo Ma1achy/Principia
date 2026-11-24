@@ -1,31 +1,30 @@
-//! QA tests for TASK-M2-14, written from the requirements it closes (REQ-CHART-004, -006, -011, -012, -014, -035,
-//! REQ-SYS-013) and their sources (chart_decoder_contract § "The four axis kinds — a closed set", Part 5, design axioms;
-//! chart_reference §4.5; render_gui_spec §G7; lowering_contract Part 5; R-25, R-26, R-27, R-141, R-157, R-544), not from
-//! the implementation.
+//! QA tests for chart validation and the chart descriptors, written from their sources (chart_decoder_contract § "The
+//! four axis kinds — a closed set", Part 5, design axioms; chart_reference §4.5; render_gui_spec §G7; lowering_contract
+//! Part 5), not from the implementation.
 //!
-//! - `qa_m214_well_posedness_*` (REQ-CHART-011): the fixtures 2 swept + 6 frozen and 1 swept + annotation + 7 frozen are
+//! - `qa_m214_well_posedness_*`: the fixtures 2 swept + 6 frozen and 1 swept + annotation + 7 frozen are
 //!   accepted, on several block placements and with the annotation axis on either side; a double-written block and an
 //!   under-determined block are each refused, in each of the ways Part 5 names (slice, residual convention, chart
 //!   convention, curve embed, annotation axis counted as a DOF); and, exhaustively over every pair of swept
 //!   coordinates and every subset of frozen coordinates, the validator accepts exactly the one slice that determines
 //!   all 8 DOF once. A count-only validator (8 pins, whichever) is the exhaustive test's control.
-//! - `qa_m214_validator_invariant_downstream_*` (REQ-CHART-006): an invariant axis is accepted where every block it
+//! - `qa_m214_validator_invariant_downstream_*`: an invariant axis is accepted where every block it
 //!   depends on is upstream of the sector it solves into, and refused where any is the sector itself or downstream;
 //!   two invariants swept into one sector (`(L_z, E)`, `(L_z, K)`) solve jointly, one alone does not.
-//! - `qa_m214_chart_descriptors_*` (REQ-CHART-014, REQ-CHART-012): every registered chart returns its descriptors and
-//!   validates; the shape sphere's spherical map is bijective, the whole sphere, each pixel its own system (R-544), its
-//!   exponential map's cap bijective too, here one straddling the equator (R-503, R-544; REQ-CHART-075); a `ν`-axis
-//!   chart is `DoubleCover` exactly when its range straddles the leg swap's fixed point `√2 − 1` (chart_reference §4.5,
-//!   R-157), the default Euclid range among them;
+//! - `qa_m214_chart_descriptors_*`: every registered chart returns its descriptors and
+//!   validates; the shape sphere's spherical map is bijective, the whole sphere, each pixel its own system, its
+//!   exponential map's cap bijective too, here one straddling the equator; a `ν`-axis chart is `DoubleCover` exactly
+//!   when its range straddles the leg swap's fixed point `√2 − 1` (chart_reference §4.5), the default Euclid range
+//!   among them;
 //!   feasibility, coupling and annotation are as each chart's axes say; `E` and `L_z` are `conserved_along_flow`, `K`
 //!   is not; each axis carries the metadata of its kind.
-//! - `qa_m214_physical_axis_nonlinear` (REQ-CHART-035): a physical-quantity axis makes the chart nonlinear, and the
+//! - `qa_m214_physical_axis_nonlinear`: a physical-quantity axis makes the chart nonlinear, and the
 //!   decode path then goes through `Φ`.
-//! - `qa_m214_validate_before_resolve` (REQ-SYS-013): every invalid chart, including one under a forbidden energy
-//!   override (R-25: every `Some`, `Some(0)` included), is refused by validation, so resolve, which takes only a
+//! - `qa_m214_validate_before_resolve`: every invalid chart, including one under a forbidden energy override
+//!   (every `Some`, `Some(0)` included), is refused by validation, so resolve, which takes only a
 //!   validated chart, never sees it; a valid one resolves to its own chart with the uniforms its kinds demand.
 //!
-//! Each test has its negative control (R-176, REQ-VAL-147).
+//! Each test has its negative control.
 
 use std::cell::Cell;
 
@@ -198,7 +197,7 @@ fn verdict(c: Hand) -> Result<ValidatedChart<Hand>, Refusal> {
     validate(c, None)
 }
 
-// ── REQ-CHART-011: the two accepted fixtures ───────────────────────────────────────────────────────────────────────
+// ── Well-posedness: the two accepted fixtures ──────────────────────────────────────────────────────────────────────
 
 fn check_accepted(c: Hand, swept: u32, frozen: u32, label: &str) {
     let v = verdict(c).unwrap_or_else(|r| panic!("a well-posed fixture is refused: {r}"));
@@ -312,7 +311,7 @@ negative_control!(
     )
 );
 
-// ── REQ-CHART-011: exhaustive "exactly once" ──────────────────────────────────────────────────────────────────────
+// ── Well-posedness: exhaustive "exactly once" ─────────────────────────────────────────────────────────────────────
 
 /// A pass under check: whether it accepts the chart.
 type Accepts = fn(Hand) -> bool;
@@ -385,7 +384,7 @@ negative_control!(
     check_exactly_once(count_only)
 );
 
-// ── REQ-CHART-011: a double-written block, refused ─────────────────────────────────────────────────────────────────
+// ── Well-posedness: a double-written block, refused ────────────────────────────────────────────────────────────────
 
 fn double_written_fixtures() -> Vec<(&'static str, Hand)> {
     let mass_derived = |pins| {
@@ -469,7 +468,7 @@ negative_control!(
     check_double_written("2 + 6", two_six(ZAlpha, Z_Q0))
 );
 
-// ── REQ-CHART-011: an under-determined block, refused ──────────────────────────────────────────────────────────────
+// ── Well-posedness: an under-determined block, refused ─────────────────────────────────────────────────────────────
 
 fn check_under_determined(what: &str, c: Hand, block: Block) {
     match verdict(c) {
@@ -588,7 +587,7 @@ negative_control!(
     ))
 );
 
-// ── REQ-CHART-014 / Part 5: the declared flags agree with the axes ─────────────────────────────────────────────────
+// ── Part 5: the declared flags agree with the axes ─────────────────────────────────────────────────────────────────
 
 fn check_flag_refused(what: &str, c: Hand) {
     assert!(
@@ -651,7 +650,7 @@ negative_control!(
     check_flag_refused("well-declared", one_invariant())
 );
 
-// ── REQ-CHART-006: downstream, and the joint solve ─────────────────────────────────────────────────────────────────
+// ── Invariant axes: downstream, and the joint solve ────────────────────────────────────────────────────────────────
 
 /// An invariant `E` solved into `sector`, reading `deps`, on an otherwise well-posed chart.
 fn invariant_chart(sector: Block, deps: BlockTouch) -> Hand {
@@ -773,7 +772,7 @@ negative_control!(
     check_joint(one_invariant(), true)
 );
 
-// ── REQ-CHART-014: the registered charts' descriptors ──────────────────────────────────────────────────────────────
+// ── The registered charts' descriptors ─────────────────────────────────────────────────────────────────────────────
 
 /// What each registered chart declares, from the corpus: system_image, feasibility, annotation, the blocks its curve
 /// ties and the collisions flagged.
@@ -881,12 +880,12 @@ fn qa_m214_chart_descriptors_registered() {
         },
         plain(Bijective, false),
     );
-    // R-544: the shape sphere's spherical map is bijective, the whole sphere, each pixel its own system. The
-    // exponential map's value is its cap's (R-503, R-544; REQ-CHART-075): `shape`'s n₀ = ŷ lies on the equator and
-    // e₁ = ŵ, so its cap straddles it, and with no fold each pixel is its own system: bijective.
+    // The shape sphere's spherical map is bijective, the whole sphere, each pixel its own system. The exponential
+    // map's value is its cap's: `shape`'s n₀ = ŷ lies on the equator and e₁ = ŵ, so its cap straddles it, and with no
+    // fold each pixel is its own system: bijective.
     check_descriptor(shape(ShapeMap::Spherical), plain(Bijective, false));
     check_descriptor(shape(ShapeMap::Exponential), plain(Bijective, false));
-    // R-27, R-157, chart_reference §4.5: a ν-axis chart is DoubleCover where its range straddles √2 − 1, the default
+    // chart_reference §4.5: a ν-axis chart is DoubleCover where its range straddles √2 − 1, the default
     // range among them; on one side, bijective.
     check_descriptor(euclid(FULL), euclid_expect(DoubleCover));
     check_descriptor(euclid([0.40, 0.43]), euclid_expect(DoubleCover));
@@ -946,7 +945,7 @@ negative_control!(
     check_descriptor(euclid([0.42, 0.9]), euclid_expect(SystemImage::DoubleCover))
 );
 
-// ── REQ-CHART-012: conserved_along_flow, and each axis's metadata ──────────────────────────────────────────────────
+// ── conserved_along_flow, and each axis's metadata ─────────────────────────────────────────────────────────────────
 
 /// Every invariant axis of the charts: `E` and `L_z` conserved along the flow, `K` not.
 fn check_conserved(axes: &[AxisDescriptor], rule: fn(InvariantQuantity) -> Option<bool>) {
@@ -1141,7 +1140,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-035: a physical-quantity axis makes the chart nonlinear ──────────────────────────────────────────────
+// ── A physical-quantity axis makes the chart nonlinear ─────────────────────────────────────────────────────────────
 
 fn plane() -> Plane {
     Plane {
@@ -1275,7 +1274,7 @@ negative_control!(
     )
 );
 
-// ── REQ-SYS-013: validation before resolution ──────────────────────────────────────────────────────────────────────
+// ── Validation before resolution ───────────────────────────────────────────────────────────────────────────────────
 
 /// A validation pass under check.
 type Pass<C> = fn(C, Option<f64>) -> Result<ValidatedChart<C>, Refusal>;
@@ -1318,7 +1317,7 @@ fn qa_m214_validate_before_resolve() {
     for c in bad {
         check_unreachable(real_pass, c, None);
     }
-    // R-25: the (L_z, E) and (L_z, K) charts under any energy override, Some(0) included.
+    // The (L_z, E) and (L_z, K) charts take no energy override: any `Some`, Some(0) included, is refused.
     for e in [Some(0.0), Some(-0.0), Some(-1.25), Some(3.0)] {
         check_unreachable(real_pass, InvariantLE(invariant_params()), e);
         check_unreachable(real_pass, InvariantLK(invariant_params()), e);

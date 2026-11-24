@@ -1,34 +1,33 @@
-//! QA tests for TASK-M2-21, written from the requirements (REQ-SYS-011, REQ-SYS-083, REQ-SYS-084; R-482 C6; R-483 X1,
-//! X2, H1, H2; gui_state_contract §2, R-69, R-96, R-466), not from the implementation. Each test registers its
-//! negative control (R-176).
+//! QA tests for the view record and its links, written from the spec (gui_state_contract §2), not from the
+//! implementation. Each test registers its negative control.
 //!
-//! - `qa_viewstate_tilted_nonlinear_roundtrip` (REQ-SYS-011): a tilted view (its basis on no coordinate axis), every
+//! - `qa_viewstate_tilted_nonlinear_roundtrip`: a tilted view (its basis on no coordinate axis), every
 //!   block's link off its default (but `β`'s, which has the one link, `periodic_beta`), a non-default `q_max` and a
 //!   nonlinear chart's window off the square is exported and reloaded; the reloaded `SimConfig` is the exported one
 //!   bitwise, field by field, `z` at every pixel of a 33 × 33 grid is bitwise the same, as is the window's chart
 //!   point, the link ids and parameter values are identical, and the state each pixel decodes to under the reloaded
 //!   links at the reloaded parameter is bitwise the same and differs from the state at the default parameter (so the
-//!   parameter carries meaning). Control (C6): the record with the parameter stripped does not reproduce the view.
-//! - `qa_viewstate_roundtrip_property` (REQ-SYS-011, "any chart … restores exactly"): over random planes, windows and
+//!   parameter carries meaning). Control: the record with the parameter stripped does not reproduce the view.
+//! - `qa_viewstate_roundtrip_property` ("any chart … restores exactly"): over random planes, windows and
 //!   parameter values across the whole finite `f64` range (normal and subnormal, both signs), the record reloads
-//!   bitwise. Signed zero is excluded: RFC 8785 writes `-0` as `0` (R-318), noted in the review.
-//! - `qa_viewstate_refuses_unread_links` (R-483: an unknown or changed link is refused, never substituted; R-482 C6):
+//!   bitwise. Signed zero is excluded: RFC 8785 writes `-0` as `0`.
+//! - `qa_viewstate_refuses_unread_links` (an unknown or changed link is refused, never substituted):
 //!   a record whose link id is unknown, on the wrong block's codomain, a retired `β` link's, missing, or whose
 //!   parameters are missing, extra or renamed, or whose block is missing, is refused; none is read back under a
 //!   default.
-//! - `qa_links_filled` (REQ-SYS-083): the canonical text's `links` object, parsed, has exactly the four blocks, each
+//! - `qa_links_filled`: the canonical text's `links` object, parsed, has exactly the four blocks, each
 //!   exactly `{id, params}`, the ids the registry slots' defaults and the parameters each entry's tunables at their
 //!   register defaults (`ledger::links`), and a non-default link or parameter serialises differently. The grep half: no
 //!   struct field in the crates' sources outside `Links` holds a link id or a link parameter value.
-//! - `qa_links_written_in_full` (REQ-SYS-084): at the defaults every block's id and every tunable parameter is written;
+//! - `qa_links_written_in_full`: at the defaults every block's id and every tunable parameter is written;
 //!   no serde attribute in `sim_config.rs` skips or defaults a field; removing any one parameter or id is refused.
-//! - `qa_lock_window_undo` (REQ-SYS-011's `lock_window_undo` clause; R-69, R-466): a lock on a nonlinear chart sent as
+//! - `qa_lock_window_undo` (the `lock_window_undo` clause): a lock on a nonlinear chart sent as
 //!   one command under one history key is one history entry: one undo restores `z₀`, the lock group and the window
 //!   bitwise, one redo sets all three again, and a second lock under a fresh key is a second entry.
 //! - `qa_history_key_drag` (gui_state_contract §2, "A drag coalesces into one history entry"): a drag's entry has its
 //!   before at the drag's start and its after at the last value sent; an edit under a new key closes it.
 //!
-//! Every view, window, pixel grid and parameter value here is test data, not a register constant (REQ-SYS-082).
+//! Every view, window, pixel grid and parameter value here is test data, not a register constant.
 
 mod path_shim;
 
@@ -61,8 +60,8 @@ use validation::roundtrip::phys;
 
 // ---- shared ----
 
-/// The four blocks of `Links` and the registry slot whose codomain each takes (R-479 E1: the momenta row is the four
-/// momentum controls', the first's slot naming the codomain).
+/// The four blocks of `Links` and the registry slot whose codomain each takes (the momenta row is the four momentum
+/// controls', the first's slot naming the codomain).
 const BLOCKS: [(&str, &str); 4] = [
     ("mass", "mass"),
     ("alpha", "alpha"),
@@ -81,7 +80,7 @@ fn sim(plane: Plane, window: Window, links: Links) -> SimConfig {
         },
         plane,
         slice: Slice {
-            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            // The slice frame, at its defaults: the normal and both targets z_q3.
             frame: engine::contract::sim_config::SliceFrame::along(
                 engine::contract::sim_config::Z_Q3,
             ),
@@ -120,7 +119,7 @@ fn slot(name: &str) -> registry::Slot {
         .expect("a registry slot")
 }
 
-/// `entry`'s tunable parameters at their register defaults, from the registry (dd_generation_root §3.9; R-481).
+/// `entry`'s tunable parameters at their register defaults, from the registry (dd_generation_root §3.9).
 fn tunable_defaults(entry: &str) -> BTreeMap<String, f64> {
     registry::tunables()
         .iter()
@@ -136,7 +135,7 @@ fn choice(id: &str) -> LinkChoice {
     }
 }
 
-/// The non-default value used for `q_max`: halfway from its default to the top of its allowed range (R-481).
+/// The non-default value used for `q_max`: halfway from its default to the top of its allowed range.
 fn q_max_off() -> f64 {
     let t = registry::tunables()
         .iter()
@@ -223,7 +222,7 @@ fn config_bits(s: &SimConfig) -> ConfigBits {
     (f, links, s.lock.locked, s.horizon.t.to_bits())
 }
 
-// ---- qa_viewstate_tilted_nonlinear_roundtrip (REQ-SYS-011; R-482 C6) ----
+// ---- qa_viewstate_tilted_nonlinear_roundtrip ----
 
 fn check_reproduces(view: &SimConfig, record: &str) {
     let back = restore(record)
@@ -316,7 +315,7 @@ negative_control!(
     }
 );
 
-// ---- qa_viewstate_roundtrip_property (REQ-SYS-011) ----
+// ---- qa_viewstate_roundtrip_property ----
 
 /// Any finite, nonzero `f64`, normal or subnormal, of either sign.
 fn any_f64() -> impl Strategy<Value = f64> {
@@ -395,7 +394,7 @@ negative_control!(
     }
 );
 
-// ---- qa_viewstate_refuses_unread_links (R-483; R-482 C6) ----
+// ---- qa_viewstate_refuses_unread_links ----
 
 /// `edit` applied to the default view's record as JSON gives a record that is refused.
 fn check_refused(what: &str, edit: impl Fn(&mut Value)) {
@@ -465,7 +464,7 @@ negative_control!(
     })
 );
 
-// ---- qa_links_filled (REQ-SYS-083) ----
+// ---- qa_links_filled ----
 
 /// The `links` object of `sim`'s canonical text, checked block by block against `links`: exactly four blocks, each
 /// exactly `{id, params}`, with `links`' ids and parameter values bitwise.
@@ -624,7 +623,7 @@ fn link_fields(text: &str, tunables: &[&str]) -> Vec<(usize, String)> {
 fn qa_links_one_place() {
     let tunables: Vec<&str> = registry::tunables().iter().map(|t| t.param).collect();
     // The registry itself (`ledger`) defines the links and does not hold a choice of one; `kernel::generated` is the
-    // kernel's uniform the parameters are read into per dispatch (R-481 G7), not a record.
+    // kernel's uniform the parameters are read into per dispatch, not a record.
     let mut files = Vec::new();
     for c in std::fs::read_dir(crates_dir()).unwrap() {
         let src = c.unwrap().path().join("src");
@@ -665,7 +664,7 @@ negative_control!(
     }
 );
 
-// ---- qa_links_written_in_full (REQ-SYS-084) ----
+// ---- qa_links_written_in_full ----
 
 fn check_full(text: &str) {
     let v: Value = serde_json::from_str(text).unwrap();
@@ -775,7 +774,7 @@ negative_control!(
     }
 );
 
-// ---- qa_lock_window_undo (REQ-SYS-011; R-69, R-466) ----
+// ---- qa_lock_window_undo ----
 
 fn lk() -> InvariantLK<f64> {
     InvariantLK(Invariant {
@@ -891,7 +890,7 @@ negative_control!(
     })
 );
 
-// ---- qa_history_key_drag (gui_state_contract §2, R-96) ----
+// ---- qa_history_key_drag (gui_state_contract §2) ----
 
 fn horizon(t: f64) -> SetField {
     SetField {

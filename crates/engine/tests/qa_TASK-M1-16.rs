@@ -1,6 +1,7 @@
 //! QA's tests for the slice-plane UV, written from colour_composition §3 and deep_zoom §1, not from the implementation:
-//! `ctx.chart.slice_uv` is the sample's position in the slice plane's own frame, `c + h·(2·ctx.quad.uv − 1)` with `c` and `h` its quad's centre and half-width as the CPU gives them, a vec2 in
-//! [0, 1]², Y-up, unchanged by in-plane pan and zoom, and never a screen-relative position.
+//! `ctx.chart.slice_uv` is the sample's position in the slice plane's own frame, `c + h·(2·ctx.quad.uv − 1)` with `c`
+//! and `h` its quad's centre and half-width as the CPU gives them, a vec2 in [0, 1]², Y-up, unchanged by in-plane pan
+//! and zoom, and never a screen-relative position.
 //!
 //! `ctx.quad.uv` is taken at the pixel, as colour_composition §3 defines it, from the pixel's place in its quad, with
 //! tiles of 1, 2 and 4 pixels so every value stays dyadic.
