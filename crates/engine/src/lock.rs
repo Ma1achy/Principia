@@ -1,10 +1,10 @@
 //! The lock, CPU-side chart construction held in `SimConfig` (chart_decoder_contract Part 4, "The lock (projective
-//! microscope)" and "The lock's construction, defined"; render_gui_spec §G4; gui_state_contract §2; R-69; TASK-M2-23).
+//! microscope)" and "The lock's construction, defined"; render_gui_spec §G4; gui_state_contract §2).
 //! The lock is chart construction, so locking, unlocking and recentring are undoable through the contract's history,
 //! and no edit names `ViewUI`.
 //!
 //! - **The lock's edits**, setting it on the affine or a nonlinear chart, snap-back, unlock, recentre and a slider's
-//!   move, are the chart-path object's (`crate::path`, TASK-M2-61): each is a segment of a named family, its formula in
+//!   move, are the chart-path object's (`crate::path`): each is a segment of a named family, its formula in
 //!   `path::lock` and `path::family`. Here are the lock's state and what reads it: the affine chart's pixel ([`point`],
 //!   [`centre`]), the hidden coordinates a nonlinear chart freezes ([`FrozenControls`]), the re-based sliders
 //!   ([`slider`]), the kernel's chart ([`kernel_chart`]), lock validation and the curve tangent tilt.
@@ -14,7 +14,7 @@
 //! - **Lock validation** on an invariant chart ([`validate`]): each pixel's `(L_z, y)` read at its own configuration,
 //!   tagged where layer 2 fails it, or `DEGENERATE` where its construction finds no seed, never dropped; one notice for
 //!   the view, the switch to the latent chart with a re-centre only where the lock's own centre has gone infeasible
-//!   (R-593; [`Report::offer`]; its re-centre is a `crate::path` segment).
+//!   ([`Report::offer`]; its re-centre is a `crate::path` segment).
 //! - **A curve's tangent tilt needs a lock** ([`curve_tilt`]): `γ′(ν₀)` pulled back to the latent controls
 //!   ([`curve_tangent`]), refused where a link's inverse clamps, then the tilt formula (`crate::path::tilt_tangent`).
 //!
@@ -46,7 +46,7 @@ pub enum LockError {
     NotLocked,
     /// A slider index past the eight latent controls.
     NoSuchControl(usize),
-    /// The clicked chart point fails the chart's `validate` (R-469): it is not a system, and a lock there is refused.
+    /// The clicked chart point fails the chart's `validate`: it is not a system, and a lock there is refused.
     NotASystem(ValidationResult),
     /// Lookup's ladder refused the clicked state (inverse_encode_contract § "Chart-aware validation").
     Refused(Rejected),
@@ -86,7 +86,7 @@ pub fn centre(plane: &Plane) -> Latent {
 }
 
 /// The view's window on a nonlinear chart's own parameters (the contract's definition), held in `SimConfig`'s chart
-/// group (R-69; REQ-SYS-011).
+/// group.
 pub use crate::contract::sim_config::Window;
 
 /// A nonlinear chart's hidden coordinates (the contract's definition; `principia_chart_reference.md` §2.1: "Untilted,
@@ -208,7 +208,7 @@ pub enum Tag {
         failed: Constraint,
         nearest: Option<Nearest>,
     },
-    /// The construction's seed rule found no seed (R-82): the pixel's `DEGENERATE` label.
+    /// The construction's seed rule found no seed: the pixel's `DEGENERATE` label.
     Degenerate,
 }
 
@@ -222,7 +222,7 @@ pub struct Report {
 }
 
 /// The one notice lock validation gives a view with a pixel tagged infeasible (inverse_encode_contract § "Lock
-/// validation"; R-593): it always offers the switch to the latent chart, where the lock is valid, the latent chart
+/// validation"): it always offers the switch to the latent chart, where the lock is valid, the latent chart
 /// having no layer-2 constraint, and the re-centre only where the lock's own centre has gone infeasible.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Notice {
@@ -240,7 +240,7 @@ impl Report {
             .count()
     }
 
-    /// The offer (R-593): no notice where neither a pixel nor the centre is tagged infeasible; else one notice for the
+    /// The offer: no notice where neither a pixel nor the centre is tagged infeasible; else one notice for the
     /// view, never one per pixel, offering the switch to the latent chart and, only where the lock's own centre is
     /// tagged infeasible with a nearest feasible point, the re-centre there. The other tagged pixels' nearest points
     /// stay in their tags and are not offered.

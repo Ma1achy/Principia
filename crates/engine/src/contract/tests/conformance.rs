@@ -1,6 +1,5 @@
-//! The conformance suite against the real engine's state store (REQ-GUI-166; R-390, RQ-254), and the store's own
-//! log entries and frame summary (REQ-GUI-176, REQ-GUI-177; gui_state_contract §2). A non-conforming double must fail
-//! the suite, named by the case it breaks.
+//! The conformance suite against the real engine's state store, and the store's own log entries and frame summary
+//! (gui_state_contract §2). A non-conforming double must fail the suite, named by the case it breaks.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -488,7 +487,7 @@ fn check_turned(by: u32) {
 }
 
 /// The slice frame case edits to `turned(frame, 1)` and then `turned(frame, 2)`: from any frame, each is a frame of
-/// latent dimensions differing from it in every index, so each edit is a real change (R-457 E3).
+/// latent dimensions differing from it in every index, so each edit is a real change.
 #[test]
 fn conformance_turned_changes_every_index() {
     check_turned(1);
@@ -756,7 +755,7 @@ validation::negative_control!(
 );
 
 /// The store's snapshot carries its contract entries, each stamped with the time it was logged and naming the edit;
-/// its frame summary is all `None` until a frame loop fills it (RQ-243).
+/// its frame summary is all `None` until a frame loop fills it.
 fn check_store_entries(store: &mut StateStore) {
     let start = now_ms();
     store.set_field(playhead(1.5, false));
@@ -1114,7 +1113,7 @@ validation::negative_control!(
 );
 
 // ----- History keys (gui_state_contract §2, "A drag coalesces into one history entry", "A command of several edits is
-// one history entry"; R-96, R-466) -----
+// one history entry") -----
 
 /// A `z₀` edit with the first control at `x`, undoable.
 fn z0_at(x: f64) -> SetField {
@@ -1228,7 +1227,7 @@ validation::negative_control!(
     check_keys(|st, edit, _| st.set_field(edit))
 );
 
-/// View › Debug view's edit (R-467 D5; gui_state_contract §2): the store writes `debug_view`, logs it as
+/// View › Debug view's edit (gui_state_contract §2): the store writes `debug_view`, logs it as
 /// "SetField DebugView before → after", one undo entry per toggle, and undo restores it, the sim key untouched.
 fn check_debug_view_edit(mut store: StateStore) {
     let sim = store.snapshot().sim;
@@ -1277,7 +1276,7 @@ validation::negative_control!(
     })
 );
 
-/// A drag's lines (gui_state_contract §2; R-458 F1): edits of `z₀` and the basis under one key, sent with `send`, log
+/// A drag's lines (gui_state_contract §2): edits of `z₀` and the basis under one key, sent with `send`, log
 /// nothing until the key ends, then one line per field, in the order first set, each from the field's value before the
 /// first edit of it to the last value sent; an undo after it logs nothing more.
 fn check_drag_lines(send: fn(&mut StateStore, SetField, HistoryKey)) {

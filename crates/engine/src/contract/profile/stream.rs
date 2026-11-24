@@ -1,4 +1,4 @@
-//! The streaming writer (telemetry §5, R-341): the header line first, flushed at once, then each frame record as the
+//! The streaming writer (telemetry §5): the header line first, flushed at once, then each frame record as the
 //! session produces it, flushed by a [`Flush`] policy, then the summary line, last. It writes the lines [`write`]
 //! writes, compact and in the same order, and refuses what [`write`] refuses, so a session it finishes leaves the
 //! same file [`write`] would. It keeps no frame record once the record is written.
@@ -14,9 +14,9 @@ use super::{
 };
 
 /// When the streaming writer flushes its frame lines: at the `frames`-th frame written since the last flush, or at
-/// the first frame written once `interval` has passed since it, whichever comes first (R-341). The clock is the
-/// caller's: each frame is written with the instant it completed. `prin profile` flushes by R-341's policy, every 60
-/// frames or 1 s; the values are the caller's, so none is a numeric constant of the engine crate.
+/// the first frame written once `interval` has passed since it, whichever comes first. The clock is the caller's: each
+/// frame is written with the instant it completed. `prin profile` flushes every 60 frames or 1 s; the values are the
+/// caller's, so none is a numeric constant of the engine crate.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Flush {
     /// The frame lines written since the last flush that make a flush due.
@@ -32,11 +32,11 @@ impl Flush {
     }
 }
 
-/// A schema v1 file being written as its session runs (R-341). [`Stream::start`] writes the header line and flushes
-/// it, so a session that stops before its first frame flush still leaves a valid trace, a header line alone (R-298);
+/// A schema v1 file being written as its session runs. [`Stream::start`] writes the header line and flushes it, so a
+/// session that stops before its first frame flush still leaves a valid trace, a header line alone;
 /// [`Stream::frame`] writes one frame record and flushes when [`Flush`] says it is due; [`Stream::finish`] writes the
-/// summary line and flushes. A session that stops before [`Stream::finish`] leaves the incomplete session R-298 and
-/// R-299 define, which [`read`](super::read) reports "session incomplete".
+/// summary line and flushes. A session that stops before [`Stream::finish`] leaves an incomplete session, a file with
+/// no summary line, which [`read`](super::read) reports "session incomplete".
 ///
 /// Give it a buffered writer (a `BufWriter` over a `File`, say): it writes each line in pieces, and only its flushes
 /// say when the bytes must reach the writer's destination.
@@ -94,7 +94,7 @@ impl<W: Write> Stream<W> {
         Ok(())
     }
 
-    /// Writes the summary line, last, flushes, and gives the writer back (R-286, R-298).
+    /// Writes the summary line, last, flushes, and gives the writer back.
     pub fn finish(
         mut self,
         leak_flags: &Option<Vec<Summary>>,

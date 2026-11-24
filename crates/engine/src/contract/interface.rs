@@ -1,6 +1,6 @@
-//! The interface the GUI calls (gui_state_contract §1, §2; R-390; RQ-254): apply a `SetField`, read the latest
+//! The interface the GUI calls (gui_state_contract §1, §2): apply a `SetField`, read the latest
 //! snapshot, and request undo and redo. The events are read from the snapshot, which carries the log entries
-//! accumulated since the previous one (RQ-245). Everything crossing it is plain data: no handle into engine state
+//! accumulated since the previous one. Everything crossing it is plain data: no handle into engine state
 //! is ever given out. The real engine implements it with [`StateStore`](crate::contract::store::StateStore); the gui
 //! crate's mock engine is a test double of it. Both pass [`conformance`](crate::contract::conformance).
 
@@ -11,15 +11,15 @@ use crate::contract::snapshot::Snapshot;
 /// (gui_state_contract §1).
 pub trait EngineInterface {
     /// Applies one typed edit (gui_state_contract §2). Unless it is marked "no history", it enters the contract's one
-    /// undo history and clears the redo history (R-52, R-69, R-101). Each applied edit logs one `info` entry from
+    /// undo history and clears the redo history. Each applied edit logs one `info` entry from
     /// `contract` (render_gui_spec §G12).
     fn set_field(&mut self, edit: SetField);
 
-    /// Applies `edit` under the history key `key` (gui_state_contract §2, "A drag coalesces into one history entry";
-    /// R-96, R-458 F1, R-466): as [`EngineInterface::set_field`], but the edits sent under one key, one after another,
-    /// are one history entry, its before each field's value at the first of them and its after the last value sent,
-    /// logged once, when the entry closes ([`EngineInterface::end_key`], an edit under another key or none, an undo or
-    /// a redo), one line per field it set. An edit marked "no history" enters no entry and leaves the open one open.
+    /// Applies `edit` under the history key `key` (gui_state_contract §2, "A drag coalesces into one history entry"):
+    /// as [`EngineInterface::set_field`], but the edits sent under one key, one after another, are one history entry,
+    /// its before each field's value at the first of them and its after the last value sent, logged once, when the
+    /// entry closes ([`EngineInterface::end_key`], an edit under another key or none, an undo or a redo), one line per
+    /// field it set. An edit marked "no history" enters no entry and leaves the open one open.
     ///
     /// The default applies the edit as `set_field` does, an entry of its own: a double that keeps no history keys. An
     /// engine overrides it, and the conformance suite's key cases check that it does.
@@ -34,12 +34,12 @@ pub trait EngineInterface {
     fn end_key(&mut self, _key: HistoryKey) {}
 
     /// The latest snapshot. It carries the log entries accumulated since the previous call, which this call hands
-    /// over, so each entry is in exactly one snapshot (RQ-245).
+    /// over, so each entry is in exactly one snapshot.
     fn snapshot(&mut self) -> Snapshot;
 
-    /// Requests undo: steps back through the latest undoable edit, if there is one (R-52).
+    /// Requests undo: steps back through the latest undoable edit, if there is one.
     fn undo(&mut self);
 
-    /// Requests redo: reapplies the latest undone edit, if there is one (R-52).
+    /// Requests redo: reapplies the latest undone edit, if there is one.
     fn redo(&mut self);
 }

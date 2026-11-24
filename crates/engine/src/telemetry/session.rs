@@ -1,8 +1,8 @@
-//! The session-header probe (telemetry §2, "Per session, once"; §5, "The session header"; TASK-M0-19), used by
+//! The session-header probe (telemetry §2, "Per session, once"; §5, "The session header"), used by
 //! `prin profile` and by the benchmark runner, so both write the same header.
 //!
 //! The GPU's fields come only from the [`Adapter`] the run already opened for its own work, as the harness that opened
-//! it reports it; this module opens nothing. A run that opened none gets R-308's form: `backend.api` "none", and
+//! it reports it; this module opens nothing. A run that opened none gets the no-GPU form: `backend.api` "none", and
 //! `backend.driver`, `device.gpu`, `device.gpu_cores`, `device.memory` and `precision` null. The CPU and the build are
 //! written as always. Every run is headless, so `display` is null (telemetry §2).
 
@@ -47,15 +47,15 @@ pub enum AdapterMemory {
 pub struct Host {
     /// The CPU model.
     pub cpu: String,
-    /// The cores this process may use (`std::thread::available_parallelism`, R-329).
+    /// The cores this process may use (`std::thread::available_parallelism`).
     pub cpu_cores_available: u32,
-    /// The machine's own core count, where cheaply reported (R-329).
+    /// The machine's own core count, where cheaply reported.
     pub cpu_cores_total: Option<u32>,
     /// The machine's physical RAM, in bytes, where reported.
     pub ram_bytes: Option<u64>,
 }
 
-/// macOS's `sysctl`, by its full path, so the probe never depends on the run's PATH (R-329). Elsewhere it doesn't
+/// macOS's `sysctl`, by its full path, so the probe never depends on the run's PATH. Elsewhere it doesn't
 /// exist, and the probes fall through to /proc.
 const SYSCTL: &str = "/usr/sbin/sysctl";
 
@@ -163,12 +163,12 @@ pub fn git_commit(dir: &Path) -> String {
         .unwrap_or_else(|| "unknown".to_owned())
 }
 
-/// The session header (telemetry §5). The GPU's fields come only from `adapter`; with none, R-308's form. Unified
+/// The session header (telemetry §5). The GPU's fields come only from `adapter`; with none, the no-GPU form. Unified
 /// memory is recorded as its own variant, the machine's RAM, never as VRAM (telemetry §2). The f64 rate is recorded as
 /// unavailable, `null`: no backend the harness opens reports one (telemetry §2). A headless run has no display.
 /// Fails when an adapter is given and the machine's RAM is not reported, rather than write a size it doesn't know.
-/// The compute fast-math setting recorded is the default, off, the one every run asks for until the sim key carries it
-/// (TASK-M4-08); [`header_with_fast_math`] records another.
+/// The compute fast-math setting recorded is the default, off, the one every run asks for until the sim key carries
+/// it; [`header_with_fast_math`] records another.
 pub fn header(
     adapter: Option<&Adapter>,
     host: &Host,
@@ -180,7 +180,7 @@ pub fn header(
 
 /// [`header`], recording `fast_math` as the compute setting asked for, and each shader stage's mode as compiled under
 /// it on the adapter's API ([`compiled_modes`], what the compute entry point and wgpu's own path compile); with no
-/// adapter, no stage was compiled, and `compiled` is null (R-297, R-308; telemetry §5).
+/// adapter, no stage was compiled, and `compiled` is null (telemetry §5).
 pub fn header_with_fast_math(
     adapter: Option<&Adapter>,
     host: &Host,

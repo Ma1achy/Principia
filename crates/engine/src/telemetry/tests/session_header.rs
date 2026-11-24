@@ -1,8 +1,8 @@
-//! The session header (telemetry §2, "Per session, once"; §5; REQ-TOOL-001, REQ-TOOL-121): it holds every §2 session
-//! field; unified memory is its own field, never VRAM, and a discrete adapter records its VRAM; the f64 rate is
-//! recorded as unavailable and a headless run's display is null (§2); a run that opened no GPU gets R-308's form. Each
-//! test registers the control that must make it fail (R-176). Its helpers' numbers (the hosts' cores and memory) are
-//! test inputs, not register constants (REQ-SYS-082).
+//! The session header (telemetry §2, "Per session, once"; §5): it holds every §2 session field; unified memory is its
+//! own field, never VRAM, and a discrete adapter records its VRAM; the f64 rate is recorded as unavailable and a
+//! headless run's display is null (§2); a run that opened no GPU gets the no-GPU form (`backend.api` "none", the GPU's
+//! fields null). Each test registers the control that must make it fail. Its helpers' numbers (the hosts' cores and
+//! memory) are test inputs, not register constants.
 
 use serde_json::{Map, Value};
 
@@ -86,7 +86,7 @@ const FIELDS: [&str; 16] = [
 ];
 
 /// Every §2 field is present; from an opened adapter the GPU's model, driver, memory and precision are filled; the f64
-/// rate is recorded as unavailable and the headless display as null (REQ-TOOL-121).
+/// rate is recorded as unavailable and the headless display as null.
 fn check_every_field(v: &Value) {
     for path in FIELDS {
         at(v, path);
@@ -186,7 +186,7 @@ validation::negative_control!(
     })
 );
 
-/// With no adapter: R-308's form, the CPU written as always.
+/// With no adapter: the no-GPU form, `backend.api` "none" and the GPU's fields null, the CPU written as always.
 fn check_no_gpu(write: Writer) {
     let v = written(write, None);
     assert_eq!(
@@ -291,7 +291,7 @@ validation::negative_control!(
 /// `sysctl hw.ncpu`'s output, /proc/cpuinfo, and the core count they give.
 type TotalCase<'a> = (Option<&'a [u8]>, Option<&'a str>, Option<u32>);
 
-/// `total` reads the machine's core count (R-329): `sysctl hw.ncpu` first, then /proc/cpuinfo's `processor` entries,
+/// `total` reads the machine's core count: `sysctl hw.ncpu` first, then /proc/cpuinfo's `processor` entries,
 /// else `None`.
 fn check_cpu_total(total: fn(Option<&[u8]>, Option<&str>) -> Option<u32>) {
     let cpuinfo = "processor\t: 0\nmodel name\t: X\n\nprocessor\t: 1\nmodel name\t: X\n";
