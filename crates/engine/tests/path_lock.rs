@@ -4151,7 +4151,8 @@ fn slide_stop(
     let norm = |v: [f64; 9]| v.iter().map(|x| x * x).sum::<f64>().sqrt();
     let rounding = norm(std::array::from_fn(|i| main[i] - offset[i])) / norm(offset);
     // The slopes' error at the stop: main's three-point difference of main's residual against a five-point one of the
-    // offset formed directly, relative to the latter (`‖·‖` over both columns).
+    // offset formed directly at the same step, `ε^{1/3}·h` (which agrees with itself to about `1e-11` there), relative
+    // to the latter (`‖·‖` over both columns).
     let value = |x: [f64; 2], cancelling: bool| -> Option<[f64; 9]> {
         let v = anchor::placed(&b, pin(&a), x);
         let own = Blocks::of(&decoded_ic(anchor::state_at(&v, &burrau, pin(&a)).ok()?)?);
@@ -4193,7 +4194,7 @@ fn slide_stop(
     ];
     let slope_error = match (
         slopes(true, &three, f64::EPSILON.cbrt() * half),
-        slopes(false, &five, f64::EPSILON.powf(0.2) * half),
+        slopes(false, &five, f64::EPSILON.cbrt() * half),
     ) {
         (Some(j3), Some(j5)) => {
             let n =
