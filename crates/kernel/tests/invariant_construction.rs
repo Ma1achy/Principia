@@ -1,38 +1,38 @@
-//! The invariant-momentum construction (`kernel::decode::invariant`; chart_reference §2.2; dd_decoder §3.4, §5 test 8;
-//! REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-046), each check at the f64 and the f32 instantiation natively (R-265):
+//! The invariant-momentum construction (`kernel::decode::invariant`; chart_reference §2.2; dd_decoder §3.4, §5 test 8),
+//! each check at the f64 and the f32 instantiation natively:
 //! - `invariant_construction_targets`: the decoder's `construct`, over random `(u, v)` through §2.1's warp and a grid
 //!   of `(L_z, K*)`, near `K* → K_min` included, at fixed decoded configurations with unequal masses (PIT-9), and over
 //!   20 random warp pairs at each of 20 000 fuzzed decoded configurations: `Σpᵢ = 0`, `L_z(p) = L_z` and `K(p) = K*`,
-//!   within the proposed tolerances ([`TOL_P`], [`TOL_L`], [`TOL_K`]; REQ-DEC-046), whose worst residuals it prints,
+//!   within the proposed tolerances ([`TOL_P`], [`TOL_L`], [`TOL_K`]), whose worst residuals it prints,
 //!   with the worst `|I_c − 1|` (decoder test 8; chart_reference §5.2).
 //! - `invariant_construction_feasibility_exact`: `infeasible(I, K*, L_z)` is `2·I·K* < L_z²` in exact arithmetic, against
 //!   an integer reference, over near-boundary triples at every scale, subnormals included, sparse-bit triples whose
 //!   difference lands in each limb column, the exponent cases `E = −4 … 4`, zeros and signs; an f32 triple widened to
-//!   f64 takes the same branch (REQ-DEC-022).
+//!   f64 takes the same branch.
 //! - `invariant_construction_infeasible_tagged`: a pair with `K* < L_z²/2` is `Infeasible`, exactly on that inequality
 //!   (`K* = L_z²/2` is feasible with `a = 0`, one ulp below is not), labelled `decode_failed`/3, never dropped or NaN,
-//!   its momenta the rigid rotation; it takes precedence over `DEGENERATE` (REQ-DEC-022, REQ-DEC-040).
+//!   its momenta the rigid rotation; it takes precedence over `DEGENERATE`.
 //! - `invariant_construction_projection`: `project` removes a field's CoM drift and angular momentum, and takes a
 //!   pure drift and a pure rigid rotation to 0.
 //! - `invariant_construction_binade`: each operand's sign, zero flag and `s·2^e` read from its bits, exactly,
 //!   subnormals included, and the limbs of `s`, each on its grid, summing to `s`.
 //! - `invariant_construction_entries`: the two compute entry points, called natively, write what the construction gives.
 //! - `seed_selection_largest`: where several seeds qualify the largest-norm one is taken, not the first, on a dyadic
-//!   fixture and on decoded configurations against an independent transcription of §2.2 (REQ-DEC-021).
-//! - `seed_selection_tie`: an exact tie of norms keeps the earlier seed (REQ-DEC-021).
+//!   fixture and on decoded configurations against an independent transcription of §2.2.
+//! - `seed_selection_tie`: an exact tie of norms keeps the earlier seed.
 //! - `seed_selection_fallback`: with the primary seed degenerate (`ρ = 0`) a fallback is taken, not `DEGENERATE`.
 //! - `seed_selection_degenerate`: `DEGENERATE` fires only where no seed has `‖w⁽²⁾‖²_m > ε_w`, `ε_w` itself not
 //!   qualifying and the next float above it qualifying, at every seed position.
-//! - `seed_selection_decoded`: on decoded configurations the decoder's seed is R-82's decided on `z_α`, the same at f32
-//!   and f64 for one input at `z_α = 0` and either side of it, subnormals included, never `DEGENERATE`, the rule on
-//!   §2.2's norms wherever they are apart, the momenta agreeing across the precisions; every registered α link maps
-//!   `z_α = 0` to `π/4` and each sign to its side (REQ-DEC-021; dd_decoder §5 test 12).
+//! - `seed_selection_decoded`: on decoded configurations `construct`'s seed is the largest-norm rule's decided on
+//!   `z_α`, the same at f32 and f64 for one input at `z_α = 0` and either side of it, subnormals included, never
+//!   `DEGENERATE`, the rule on §2.2's norms wherever they are apart, the momenta agreeing across the precisions; every
+//!   registered α link maps `z_α = 0` to `π/4` and each sign to its side (dd_decoder §5 test 12).
 //!
 //! The seed rule's own tests (`seed_selection_largest`, `_tie`, `_fallback`, `_degenerate`) run `choose` and
 //! `construct_by_norms` on fixtures, configurations not from the canonical decode, where `ρ = 0` and the coincident
 //! configuration are reachable.
 //!
-//! **The tolerances** (REQ-DEC-046, proposed per R-71, for the human to confirm at the M2 gate): each residual is in
+//! **The tolerances** (proposed, to be confirmed at the M2 gate): each residual is in
 //! units of the precision's `eps` times its scale: `|Σpᵢ|` of `Σ|pᵢ|`, `|L_z(p) − L_z|` of `|L_z| + √(2K*)` (the rigid
 //! part and the mixed part, `|L(w)| ≤ √I‖w‖_m = 1`), and `|K(p) − K*|` of `K*`. The residuals are formed in f64 from the
 //! construction's output, so at f32 they measure the f32 construction alone. **The bound on `K`:** the construction
@@ -58,11 +58,11 @@ use spirv_std::glam::UVec3;
 use validation::decode_f32_eps::SplitMix;
 use validation::negative_control;
 
-/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|`, at most (REQ-DEC-046, proposed).
+/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|`, at most (proposed).
 const TOL_P: f64 = 4.0;
-/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (REQ-DEC-046, proposed).
+/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (proposed).
 const TOL_L: f64 = 4.0;
-/// `|K(p) − K*|` in units of `eps·K*`, at most (REQ-DEC-046, proposed).
+/// `|K(p) − K*|` in units of `eps·K*`, at most (proposed).
 const TOL_K: f64 = 8.0;
 
 // ── Precisions and the exact reference ──────────────────────────────────────────────────────────────────────────
@@ -1267,9 +1267,9 @@ fn seed_controls() -> Vec<[f32; 4]> {
     out
 }
 
-/// On decoded configurations, `b32` and `b64` take R-82's seed decided on `z_α`, `(ρ, 0)` where `z_α ≤ 0`, the same at
-/// f32 and f64 for one input, never `DEGENERATE`; it is the rule on §2.2's independently transcribed norms wherever
-/// those are apart; and the momenta agree across the precisions to f32's rounding, not at a fork's O(1).
+/// On decoded configurations, `b32` and `b64` take the largest-norm rule's seed decided on `z_α`, `(ρ, 0)` where
+/// `z_α ≤ 0`, the same at f32 and f64 for one input, never `DEGENERATE`; it is the rule on §2.2's independently
+/// transcribed norms wherever those are apart; and the momenta agree across the precisions to f32's rounding, not at a fork's O(1).
 fn check_decoded(b32: Decoded<f32>, b64: Decoded<f64>) {
     let (lz, k) = (0.375, 0.75);
     for z in seed_controls() {

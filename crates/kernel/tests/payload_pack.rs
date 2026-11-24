@@ -1,13 +1,12 @@
-//! The generated pack/unpack/insert accessors against dd_simstate_payload §1, §2 and §6 (REQ-PAY-004, REQ-PAY-012,
-//! REQ-PAY-014, REQ-PAY-015, REQ-PAY-018, REQ-GEN-005, REQ-PAY-092): the descriptor's bit ranges, the packed words'
-//! raw bits, the state codes, the reserved bits, `roundtrip_ctl` over every bit (pitfalls §9), the binary16
-//! conversion, and `d_min`'s unset value and subnormal floor (R-271).
+//! The generated pack/unpack/insert accessors against dd_simstate_payload §1, §2 and §6: the descriptor's bit ranges,
+//! the packed words' raw bits, the state codes, the reserved bits, `roundtrip_ctl` over every bit (pitfalls §9), the
+//! binary16 conversion, and `d_min`'s unset value and subnormal floor.
 
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::*;
 use validation::negative_control;
 
-// The `d_min` packer counts into the caller's frame pair (R-288, R-294). The tests that don't read the counts pass
+// The `d_min` packer counts into the caller's frame pair. The tests that don't read the counts pass
 // each pack a fresh pair, as a caller starting a frame does, through these two.
 
 /// [`set_d_min`] into a fresh frame pair.
@@ -15,8 +14,8 @@ fn set_d_min_frame(w: u32, v: f32) -> u32 {
     set_d_min(w, v, &DminCounters::new())
 }
 
-/// [`pack_packed_a`] into a fresh frame pair, `I_max`'s level 0 and the departed bit clear (bits 10–15, R-545; their
-/// own tests set them).
+/// [`pack_packed_a`] into a fresh frame pair, `I_max`'s level 0 and the departed bit clear (bits 10–15; their own
+/// tests set them).
 fn pack_a(
     state: u32,
     detail: u32,
@@ -39,7 +38,7 @@ fn pack_a(
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-004: the `sd_*` accessors, over payload §2's table.
+// The `sd_*` accessors, over payload §2's table.
 
 /// Payload §2's descriptor table: `(field, first bit, width)`.
 const TABLE: [(&str, u32, u32); 5] = [
@@ -119,7 +118,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-012: the packed words' bit diagrams (payload §2).
+// The packed words' bit diagrams (payload §2).
 
 /// Each `(word, packed, expected)` packs to the expected raw bits.
 fn check_raw(cases: &[(&str, u32, u32)]) {
@@ -130,8 +129,8 @@ fn check_raw(cases: &[(&str, u32, u32)]) {
 
 /// Payload §2's diagrams at known values: `packed_a` = d_min 1.0 (f16 0x3c00) | state 2, detail 1, saturated,
 /// dmin_pair 2, last_symbol 3 (2 + 8 + 32 + 128 + 768 = 0x3aa); `packed_b` = dLz_max 2.0 | dE_max 0.5 in the `log16`
-/// form (R-632; payload §2): 2.0's f32 bits `0x4000_0000 >> 15 = 0x8000`, less the base `0x1F00`, plus 1, is `0x6101`,
-/// and 0.5's `0x7E00` gives `0x5F01` (0x4000 and 0x3800 in binary16 before R-632); `times` = t_dmin_step 0xabcd | t_end_step 0x1234.
+/// form (payload §2): 2.0's f32 bits `0x4000_0000 >> 15 = 0x8000`, less the base `0x1F00`, plus 1, is `0x6101`, and
+/// 0.5's `0x7E00` gives `0x5F01`; `times` = t_dmin_step 0xabcd | t_end_step 0x1234.
 fn known() -> [(&'static str, u32, u32); 3] {
     [
         ("packed_a", pack_a(2, 1, true, 2, 3, 1.0), 0x3c00_03aa),
@@ -171,7 +170,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-014: the state codes and their predicates (payload §2, §6).
+// The state codes and their predicates (payload §2, §6).
 
 /// `(code, resolved outcome, running, failed, finished)`: 0–2 resolved; 3 running; 4–5 failed; 6–7 reserved, decoded
 /// as finished and untrusted.
@@ -218,8 +217,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-015, REQ-PAY-106: `packed_a` has no reserved bits left: 10–14 are the Chazy latch `I_max`'s level and 15
-// R-37's departed bit (R-545).
+// `packed_a` has no reserved bits left: 10–14 are the Chazy latch `I_max`'s level and 15 the departed bit.
 
 /// `packed_a` with every field at its maximum, `I_max`'s level 31 and the departed bit set.
 fn full_a() -> u32 {
@@ -255,7 +253,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-018: `roundtrip_ctl` fails on a contaminated value in any bit (pitfalls §9).
+// `roundtrip_ctl` fails on a contaminated value in any bit (pitfalls §9).
 
 /// `ctl` passes on the clean word and fails on each of its 32 single-bit flips.
 fn check_flips(ctl: fn(&PackedA, u32) -> bool, expected: &PackedA) {
@@ -401,7 +399,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-GEN-005: f16 pairs through the `pack2x16float` / `unpack2x16float` equivalents.
+// f16 pairs through the `pack2x16float` / `unpack2x16float` equivalents.
 
 /// Half an f16 ULP at `x`: 2⁻¹¹·|x| rounded down to a power of two for a normal, 2⁻²⁵ for a subnormal; so within
 /// f16 epsilon (2⁻¹⁰) relative, or its subnormal step.
@@ -510,7 +508,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-092: `d_min`'s unset value and subnormal floor (R-271).
+// `d_min`'s unset value and subnormal floor.
 
 /// `d_min`'s bits in `w`.
 fn d_min_bits(w: u32) -> u32 {
@@ -524,9 +522,9 @@ fn check_d_min(cases: &[(&str, u32, u32)]) {
     }
 }
 
-/// A failed sample (sim_failed, written unset); an unstepped sample (running, written unset: R-271's value before the
-/// first step, written by bits, not seeded as an f32 +∞); an f32 +∞ given to the packer, R-271's unset value, tested
-/// by its bits; 1e-9, 0.0 and 2⁻²⁵ below the smallest subnormal; 2⁻²⁴ itself; and 1.0 and 65504 as normals.
+/// A failed sample (sim_failed, written unset); an unstepped sample (running, written unset: the value before the first
+/// step, written by bits, not seeded as an f32 +∞); an f32 +∞ given to the packer, the unset value, tested by its
+/// bits; 1e-9, 0.0 and 2⁻²⁵ below the smallest subnormal; 2⁻²⁴ itself; and 1.0 and 65504 as normals.
 fn d_min_cases() -> Vec<(&'static str, u32, u32)> {
     vec![
         (
@@ -604,9 +602,9 @@ negative_control!(
     )
 );
 
-// R-281: the packer never stores NaN (R-79) and never silently rewrites a negative value. Each is a `debug_assert!`
+// The packer never stores NaN and never silently rewrites a negative value. Each is a `debug_assert!`
 // failure; in release a NaN stores the unset bits and a negative value clamps to the floor, and each case increments
-// its telemetry counter, `dmin_nan_unset` or `dmin_negative_floored` (R-288; telemetry §2).
+// its telemetry counter, `dmin_nan_unset` or `dmin_negative_floored` (telemetry §2).
 
 /// The release packer counting into a scratch pair, as a `fn(u32, f32) -> u32` for the checks below.
 fn release_scratch(w: u32, v: f32) -> u32 {
@@ -718,7 +716,7 @@ fn check_release(set: fn(u32, f32) -> u32, inputs: &[u32], want: u32) {
 #[test]
 fn dmin_unset_release_nan_stores_the_unset_bits() {
     check_release(release_scratch, &NANS, 0x7c00);
-    // −0.0 is a zero distance, not a negative value: the floor, silently (R-271).
+    // −0.0 is a zero distance, not a negative value: the floor, silently.
     check_release(release_scratch, &[0x8000_0000], 0x0001);
     check_release(set_d_min_frame, &[0x8000_0000], 0x0001);
 }
@@ -750,10 +748,10 @@ negative_control!(
     )
 );
 
-// R-288: the counters. `dmin_nan_unset` counts the packs that stored a NaN as unset, `dmin_negative_floored` the packs
+// The counters. `dmin_nan_unset` counts the packs that stored a NaN as unset, `dmin_negative_floored` the packs
 // that clamped a negative value to the floor (telemetry §2), in release builds as well as debug ones; a valid value and
-// `roundtrip_ctl`'s repack count neither (RQ-171 option (a)). R-294: they belong to the frame, never to a static: the
-// packer's caller passes in its frame's pair and reads it back.
+// `roundtrip_ctl`'s repack count neither. They belong to the frame, never to a static: the packer's caller passes in
+// its frame's pair and reads it back.
 
 /// A counter packer: `set_d_min`'s and `set_d_min_release`'s signature.
 type Counted = fn(u32, f32, &DminCounters) -> u32;
@@ -901,7 +899,7 @@ const CONTAMINATED_D_MIN: [u32; 6] = [0x7e00, 0xfe00, 0xbc00, 0x8001, 0xfbff, 0x
 
 /// A caller's frame: it packs `expected` into its pair, then runs `ctl` on every contaminated word. `ctl` fails on each
 /// (its repack writes the unset bits or the floor, not the observed bits), and the frame's pair stays as the caller
-/// left it: the check observes, it does not store (R-288; R-294).
+/// left it: the check observes, it does not store.
 fn check_roundtrip_uncounted(ctl: &dyn Fn(&PackedA, u32, &DminCounters) -> bool) {
     let frame = DminCounters::new();
     let good = pack_packed_a(2, 1, true, 0, 3, 17, true, 1.0, &frame);
@@ -922,7 +920,7 @@ fn check_roundtrip_uncounted(ctl: &dyn Fn(&PackedA, u32, &DminCounters) -> bool)
 
 #[test]
 fn dmin_unset_counter_roundtrip_repack_counts_nothing() {
-    // `roundtrip_ctl` takes no pair, so it cannot reach the caller's frame (R-294).
+    // `roundtrip_ctl` takes no pair, so it cannot reach the caller's frame.
     check_roundtrip_uncounted(&|expected, observed, _| roundtrip_ctl(expected, observed));
 }
 
@@ -939,7 +937,7 @@ negative_control!(
 );
 
 /// Two frames, each with its own pair: the stores made in one frame are read back from that frame's pair alone, and
-/// a new frame's pair starts at zero, so no count leaks between frames through shared state (R-294). Each frame's
+/// a new frame's pair starts at zero, so no count leaks between frames through shared state. Each frame's
 /// packs count into its own pair, or into `shared` where one is given (a control's program-wide pair).
 fn check_frames_separate(set: Counted, shared: Option<&DminCounters>) {
     let frames = [DminCounters::new(), DminCounters::new()];
@@ -1058,7 +1056,7 @@ negative_control!(
     check_fraction(|w, h| tm_t_dmin_step(w) as f32 / h as f32, tm_t_dmin_step)
 );
 
-// R-300: `DminCounters`' fields are private; its methods increment each counter, read the pair and reset it, and the
+// `DminCounters`' fields are private; its methods increment each counter, read the pair and reset it, and the
 // workers of a frame share `&DminCounters`.
 
 /// `nan` and `neg`, called `n_nan` and `n_neg` times on a fresh pair, move only their own counter, one per call.
