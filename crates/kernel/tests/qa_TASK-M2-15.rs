@@ -4,43 +4,43 @@
 //! **No mirror step**: the decoder has no mirror step and latent `β` is a periodic angle over the full circle,
 //! `β = z_β + π/2`, so a state below the `x`-axis encodes to `β ∈ (π, 2π)` and raises no notice of its own.
 //!
-//! - `encode_qa_m215_block_inverses`: the forward mates of inverse-encode Part 3 / dd_encode §3.1 are written here
-//!   from the docs (softmax ∘ μ_max·tanh, `α = (π/2)σ`, `β = z_β + π/2`, `q = q_max(2σ − 1)`, the Jacobi map of
-//!   dd_decoder §3.2 and the momentum table of §3.1), never taken from the kernel. Fuzzed interior `z`, `z_β` on both halves of the circle, put through that forward map and a
-//!   random gauge element `g` of dd_encode §3.3 (translation, boost, rotation, scale `s` with `p` scaled by
-//!   `s^(−1/2)`, and the mirror on positions *and* momenta), encodes back to `z`, or where `g` mirrors to the
-//!   mirrored `z` (`z_β → π − z_β`, `z_q1` and `z_q3` negated: the equivariance), `z_β` read on the circle, and its
-//!   decode is the canonical state in physical units (Part 4), reflected where `g` mirrors. The controls: the
-//!   half-mirror §3.3 names, positions only; and an encode with the mirror step left in.
-//! - `encode_qa_m215_clamp_iff`: each `q` component and each mass ratio is driven across its
-//!   clamp: the control's bit and `lookup_clamped` are set iff the inverse's argument lies outside the clamp interval
-//!   (`|q| > q_max(1 − 2ε_q)`, the `s` clamp; `|μ| > (1 − ε_μ)μ_max`), `|q| > q_max` always clamped and flagged, the
-//!   clamped `z` finite and on the clamp's image.
+//! - `encode_qa_m215_block_inverses`: the forward mates of inverse-encode Part 3 / dd_encode §3.1 are written here from
+//!   the docs (softmax ∘ μ_max·tanh, `α = (π/2)σ`, `β = z_β + π/2`, `q = q_max(2σ − 1)`, the Jacobi map of dd_decoder
+//!   §3.2 and the momentum table of §3.1), never taken from the kernel. Fuzzed interior `z`, `z_β` on both halves of
+//!   the circle, put through that forward map and a random gauge element `g` of dd_encode §3.3 (translation, boost,
+//!   rotation, scale `s` with `p` scaled by `s^(−1/2)`, and the mirror on positions *and* momenta), encodes back to
+//!   `z`, or where `g` mirrors to the mirrored `z` (`z_β → π − z_β`, `z_q1` and `z_q3` negated: the equivariance),
+//!   `z_β` read on the circle, and its decode is the canonical state in physical units (Part 4), reflected where `g`
+//!   mirrors. The controls: the half-mirror §3.3 names, positions only; and an encode with the mirror step left in.
+//! - `encode_qa_m215_clamp_iff`: each `q` component and each mass ratio is driven across its clamp: the control's bit
+//!   and `lookup_clamped` are set iff the inverse's argument lies outside the clamp interval (`|q| > q_max(1 − 2ε_q)`,
+//!   the `s` clamp; `|μ| > (1 − ε_μ)μ_max`), `|q| > q_max` always clamped and flagged, the clamped `z` finite and on
+//!   the clamp's image.
 //! - `encode_qa_m215_beta_quotient`: `β` alone: the signed angle on `[0, 2π̂]`, so `β(x, −y)` is `2π̂ − β(x, y)`, the
 //!   mirror's image, off the axis and the same bits on it, at or below `π̂` above the axis and at or above it below
 //!   (f32 to one ulp there), `(±0, ±0)` gives `+0`, the `−x` half-axis `π̂` at each precision (the nearest value at
 //!   f64, rounded toward zero at f32), never `atan2`'s negative values.
-//! - `encode_qa_m215_collinear_beta`: dd_encode §5 test 10 at the three Euler collinear central
-//!   configurations of masses `(0.2, 0.3, 0.5)` (solved here by bisection on Euler's condition, so no landmark sits on
-//!   the pole), with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`: `β` at π or at 0 on the circle (just below `2π̂` for body 2 on
-//!   `+x` below the axis), nothing clamped, and the decode keeping `λ̃_y`'s sign; and the pole landmark `m₀ = m₁` on
-//!   its own.
-//! - `encode_qa_m215_exact_poles`: `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components:
-//!   no NaN, identical on repeat and across the zeros' signs, `lookup_clamped` set, `β` and `φ` exactly `+0`, and the
+//! - `encode_qa_m215_collinear_beta`: dd_encode §5 test 10 at the three Euler collinear central configurations of
+//!   masses `(0.2, 0.3, 0.5)` (solved here by bisection on Euler's condition, so no landmark sits on the pole), with
+//!   `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`: `β` at π or at 0 on the circle (just below `2π̂` for body 2 on `+x` below the
+//!   axis), nothing clamped, and the decode keeping `λ̃_y`'s sign; and the pole landmark `m₀ = m₁` on
+//! its own. - `encode_qa_m215_exact_poles`: `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components: no
+//! NaN, identical on repeat and across the zeros' signs, `lookup_clamped` set, `β` and `φ` exactly `+0`, and the
 //!   CPU-f32 instantiation agreeing with CPU-f64 (angles, notices, decoded state).
 //! - `encode_qa_m215_notices`: a canonical input raises no notice; its mirror image, in the other half, raises none
 //!   either and stays in that half; an out-of-range momentum only `lookup_clamped`.
 //! - `encode_qa_m215_no_wgsl_decode`: no checked-in `.wgsl` file carries the decode's or encode's link formulae (a
 //!   grep, including `.wgsl`): the fragment decode/encode can only be the translation's output. The exception: the
 //!   translated snippets of the shared Rust source, `crates/render/wgsl/decode.wgsl` and
-//!   `crates/render/wgsl/encode.wgsl`, are checked in, and naga writes the encode's inverse `tanh` as the WGSL builtin `atanh`. Those two paths alone, and only while each
-//!   carries `cargo xtask build-kernel`'s GENERATED header, may hold the WGSL builtin [`TRANSLATION_BUILTINS`]; every
+//!   `crates/render/wgsl/encode.wgsl`, are checked in, and naga writes the encode's inverse `tanh` as the WGSL builtin
+//!   `atanh`. Those two paths alone, and only while each carries `cargo xtask build-kernel`'s GENERATED header, may
+//!   hold the WGSL builtin [`TRANSLATION_BUILTINS`]; every
 //!   other token stays forbidden in them, and every token in every other `.wgsl` file.
 //!
-//! **Tolerances** (test decisions): f64 rounding bounds, each the precision's epsilon times the
-//! conditioning the docs give (`d logit/ds = 1/(s(1 − s))`, `d artanh/dt = 1/(1 − t²)`, Part 4) times the input's
-//! magnitude after the gauge, with headroom; stated at each constant. `ε_phys` is uncalibrated, so the
-//! "within `ε_phys`" components of test 10 are held to a rounding bound, tighter than any calibrated `ε_phys` can be.
+//! **Tolerances** (test decisions): f64 rounding bounds, each the precision's epsilon times the conditioning the docs
+//! give (`d logit/ds = 1/(s(1 − s))`, `d artanh/dt = 1/(1 − t²)`, Part 4) times the input's magnitude after the gauge,
+//! with headroom; stated at each constant. `ε_phys` is uncalibrated, so the "within `ε_phys`" components of test 10 are
+//! held to a rounding bound, tighter than any calibrated `ε_phys` can be.
 //!
 //! **Domain** (pitfalls §10): encode alone, on states held fixed; no trajectory.
 

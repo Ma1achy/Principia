@@ -1128,8 +1128,7 @@ negative_control!(
 
 /// States reaching the notices: at `I_in = 0.75`, so `lookup_rescaled`, alone, on a lower-half state, with
 /// `lookup_clamped`, and with both; and at `I = 1` to under an eps, so no `lookup_rescaled`, alone and on a lower-half
-/// state. A lower-half state raises no notice of its own: bit 1, once `lookup_mirrored`, is never
-/// set.
+/// state. A lower-half state raises no notice of its own: bit 1 is never set.
 fn notice_states() -> [Ic<f32>; 6] {
     let plain = Ic {
         m: [0.25f32, 0.25, 0.5],
