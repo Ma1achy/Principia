@@ -1,5 +1,5 @@
 //! Terminal states, their precedence and the terminal latch (`kernel::detect::label`, `kernel::driver::terminal`,
-//! the wrapper's cadence; integrator_contract Part 1, Part 7; payload §2, §5; plan/tasks/M3/TASK-M3-17.md).
+//! the wrapper's cadence; integrator_contract Part 1, Part 7; payload §2, §5).
 //!
 //! The fixtures are built here, in the centre-of-mass frame, at `G = 1` and unit masses unless stated:
 //! - **expanding**: an equilateral triangle of side 10, each body moving radially outward at speed 1 (the escape

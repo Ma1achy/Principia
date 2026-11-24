@@ -1,10 +1,10 @@
 //! The regularised integration floor's step budget (`kernel::regularisation::budget`; integrator_contract Part 6;
-//! R-563, R-564, R-603, R-604; payload §2's `budget_bits`):
-//! - `budget_undetermined_*` (REQ-INT-101): a Heggie × RK4 copy that runs out of its budget stops `running`, its sticky
+//! payload §2's `budget_bits`):
+//! - `budget_undetermined_*`: a Heggie × RK4 copy that runs out of its budget stops `running`, its sticky
 //!   `budget_exhausted` bit set and `saturated` with it, its state kept, never a physical outcome; a later dispatch
 //!   hands it back word for word, never marching it on; and through `integrate_with` over many macro-steps the budget
 //!   binds on the copy's cumulative step total, never on one call's.
-//! - `budget_rate_*` (REQ-INT-102): the allowance is `max(N_min, rate · t)`, `N_min` holding an early encounter whose
+//! - `budget_rate_*`: the allowance is `max(N_min, rate · t)`, `N_min` holding an early encounter whose
 //!   `rate · t` is still small; and it is checked every step, so a march overruns its allowance by at most one step and
 //!   that step's landing retakes, never by the rest of a sync interval.
 //!
@@ -147,7 +147,7 @@ fn words<R: P>(s: &SimStateBaseOf<R>) -> String {
     )
 }
 
-// ── budget_undetermined (REQ-INT-101) ──────────────────────────────────────────────────────────────────────────
+// ── budget_undetermined ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// Asserts what an exhausted copy stores and how a later dispatch treats it: `stored`, `Tight`'s run, is `running`, its
 /// `budget_exhausted` bit set, `saturated` set (its entry-cap signal fired), short of the horizon, its state finite;
@@ -485,7 +485,7 @@ negative_control!(
     check_cumulative_rated::<Composed<Rk4, Heggie<FloorAlone>>>()
 );
 
-// ── budget_rate (REQ-INT-102) ──────────────────────────────────────────────────────────────────────────────────
+// ── budget_rate ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// An allowance rule: `(steps, t, rate, n_min)` in, whether the budget is spent out.
 type Rule = fn(u32, f64, f64, u32) -> bool;
@@ -557,7 +557,7 @@ fn march(rate: f64, n_min: u32) -> (u32, f64, bool) {
     (out.count.steps, out.t, out.count.end == End::Exhausted)
 }
 
-// ── The budget and the predictive step limit compose (TASK-M3-31's limit on by default) ────────────────────────────
+// ── The budget and the predictive step limit compose (the limit is on by default) ─────────────────────────────────
 
 /// A watch that counts the steps the march sizes, one per step it takes outside a landing's retakes.
 #[derive(Default)]
