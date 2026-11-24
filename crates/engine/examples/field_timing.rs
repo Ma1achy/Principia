@@ -109,6 +109,15 @@ fn summary(s: &engine::field::Stored) {
             .collect::<Vec<_>>()
     );
     let reads: Vec<_> = s.records.iter().map(|r| r.read(&s.read)).collect();
+    let labelled = reads
+        .iter()
+        .zip(&s.field.outcomes)
+        .filter(|(r, o)| (r.state, r.detail) == (o.state, o.detail))
+        .count();
+    println!(
+        "records reading their outcome: {labelled} of {}",
+        reads.len()
+    );
     let show = |name: &str, mut v: Vec<f64>| {
         let zeros = v.iter().filter(|x| **x == 0.0).count();
         v.sort_by(f64::total_cmp);

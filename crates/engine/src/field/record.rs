@@ -9,8 +9,10 @@
 //! buffers' bytes, each member at the ledger's offset for it (`crate::synthetic`'s writers, `ledger::gen::rust::offsets`).
 //!
 //! **Where each stored value comes from**: the field's own march, Heggie × RK4 over the sync grid (the field module's
-//! note), written as the kernel's wrapper writes it, field for field, so a record is what the GPU's producer would
-//! store for the same march:
+//! note), each field written by the kernel's own writer for it, as the wrapper writes it. It is not the wrapper's record
+//! bit for bit: the wrapper counts macro-steps and takes a Welford sample at each, where the field's march has only
+//! sync boundaries ("The grid the counts are on", below), so `t_end_step`, `t_dmin_step`, `closure_step`, `mean_y` and
+//! `C_ty` are the same quantities on another grid:
 //! - the state `(r, p)` where the march stopped, and the label, from the march as the field read its outcome;
 //! - the monitored and detected fields, `E_0`, `Lz_0`, `saturated`, `dmin_pair`, `d_min`, `I_max`, `dE_max`,
 //!   `dLz_max`, `dE_reg`, `floor_hits`, `cap_hits`, `coll_floor` and the lagged shape register, from the wrapper's own
@@ -314,6 +316,10 @@ pub struct Boundaries {
     diffusion: Welford<f32>,
     readout: Readout<f32>,
     completed: u32,
+    /// The positions the last step left, before the cadence's COM projection: the march's own image of its regularised
+    /// state, which it returns as the state it stands on (`HgAdvanced::state`), so the samples are taken on the state
+    /// the record stores and the wrapper's readout reads.
+    image: [[f32; 2]; 3],
 }
 
 impl Boundaries {
@@ -324,6 +330,7 @@ impl Boundaries {
             diffusion: Welford::default(),
             readout: Readout::fresh(ic.r, ic.m),
             completed: 0,
+            image: ic.r,
         }
     }
 
@@ -358,6 +365,7 @@ pub struct Sampling<'a, C> {
 impl<C: Cadence<f32>> Cadence<f32> for Sampling<'_, C> {
     #[inline]
     fn after_step(&mut self, state: &mut State<f32>, geom: &mut Geom<f32>) {
+        self.at.image = state.r;
         self.inner.after_step(state, geom);
     }
 
@@ -367,8 +375,9 @@ impl<C: Cadence<f32>> Cadence<f32> for Sampling<'_, C> {
     }
 
     /// A sync boundary landed on, `index`: `inner`'s sample, then, unless the run has failed (a failed step completes
-    /// nothing, as under the wrapper), the boundary completed, its Welford sample and shape readout taken on the state
-    /// at it with `h = quantum`; then `inner`'s clock at the boundaries completed, so a `d_min` latched on the landing
+    /// nothing, as under the wrapper), the boundary completed, its Welford sample and shape readout taken with
+    /// `h = quantum` on the positions the landing step left before the projection (the march's own image, which it
+    /// returns and the record stores, bit for bit; `inner` reads the projected state); then `inner`'s clock at the boundaries completed, so a `d_min` latched on the landing
     /// step is stamped with this boundary, as the wrapper stamps the macro-step a latch completed.
     #[inline]
     fn sample(&mut self, state: &State<f32>, index: u32, quantum: f32) {
@@ -378,8 +387,8 @@ impl<C: Cadence<f32>> Cadence<f32> for Sampling<'_, C> {
             at.completed = index;
             at.diffusion =
                 at.diffusion
-                    .update(welford::y(state.r, at.m, at.readout.n_0), index, quantum);
-            at.readout.after_macro(state.r, at.m, index);
+                    .update(welford::y(at.image, at.m, at.readout.n_0), index, quantum);
+            at.readout.after_macro(at.image, at.m, index);
         }
         self.inner.clock(self.at.completed);
     }

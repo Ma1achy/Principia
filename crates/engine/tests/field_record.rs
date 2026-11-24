@@ -15,10 +15,14 @@
 //!   counts renormalisations, and over the view the values the march computes (`t_end_step`, `theta`, `t_dmin_step`,
 //!   `total_substeps`, the word's length) are not all zero;
 //! - **settled at dispatch**: a start already inside `r_coll` reads `collision` with its pair, `t_end_step` 0, and a
-//!   degenerate decode reads `decode_failed` with its detail.
+//!   degenerate decode reads `decode_failed` with its detail;
+//! - **a failed decode through the field** (the plane's mass coordinate NaN): each record reads `decode_failed`, every
+//!   count 0, and holds the decode stage's own descriptor, narrowed once;
+//! - **the shape readout beside the wrapper's**: on an 8 × 8 zero view, every record whose outcome the kernel's wrapper
+//!   (`first_slice::march::<HeggieRk4>`) shares has the wrapper's `theta`, bit for bit.
 //!
 //! Each has a control arm: a word swapped, the rows flipped, one record changed under the other worker count, the shadow's
-//! failed mark replaced by a finite sum, the computed values zeroed.
+//! failed mark replaced by a finite sum, the computed values zeroed, the descriptor zeroed, `theta` moved by one ulp.
 
 use std::num::NonZeroUsize;
 use std::sync::OnceLock;
@@ -586,4 +590,157 @@ negative_control!(
     "the bodies started outside r_coll: the start is marched",
     expected = "does not store its collision at t_end_step 0",
     check_settled(0.5)
+);
+
+// ── The shape readout beside the wrapper's ──────────────────────────────────────────────────────────────────────────
+
+/// The samples of an 8 × 8 zero view the field's records and the kernel's wrapper (`first_slice::march::<HeggieRk4>`,
+/// the default occupant at the field's values) both mark with the same outcome, and each one's `theta` from both.
+fn thetas() -> &'static Vec<(f32, f32)> {
+    static THETAS: OnceLock<Vec<(f32, f32)>> = OnceLock::new();
+    THETAS.get_or_init(|| {
+        let s = Cpu
+            .stored_on(&pool(3), &zero_view(), Window::SQUARE, [8, 8])
+            .expect("the 8 x 8 records");
+        let quad = Quad {
+            chart: engine::field::latent(&zero_view()),
+            window: Window::SQUARE,
+            size: [8, 8],
+        };
+        let key = quad.sim_key();
+        let march_key = uniforms(HORIZON).expect("the horizon");
+        (0..quad.len())
+            .filter_map(|i| {
+                let out = engine::decode_dispatch::decode_only_with::<
+                    Latent<f32>,
+                    kernel::generated::links::Defaults,
+                >(&quad.chart, quad.uv(i), &key, None)
+                .expect("the decode");
+                let w = engine::first_slice::march::<engine::first_slice::HeggieRk4>(
+                    &narrow(&out.ic),
+                    &march_key,
+                );
+                let o = s.field.outcomes[i];
+                let same = (
+                    kernel::payload::sd_state(w.packed_a),
+                    kernel::payload::sd_detail(w.packed_a),
+                ) == (o.state, o.detail);
+                same.then_some((s.records[i].sim.theta, w.theta))
+            })
+            .collect()
+    })
+}
+
+/// Each record's `theta` is the wrapper's, bit for bit: the shape readout sampled on the sync grid, on the march's own
+/// image, sees the states the wrapper's macro-step readout sees under Heggie, which stands still between boundaries.
+fn check_theta(pairs: &[(f32, f32)]) {
+    assert!(
+        !pairs.is_empty(),
+        "no sample's outcome agrees with the wrapper's"
+    );
+    for (i, (field, wrapper)) in pairs.iter().enumerate() {
+        assert_eq!(
+            field.to_bits(),
+            wrapper.to_bits(),
+            "sample {i}'s theta {field} is not the wrapper's {wrapper}"
+        );
+    }
+}
+
+#[test]
+fn every_records_theta_is_the_wrappers() {
+    println!("theta compared on {} of 64 samples", thetas().len());
+    check_theta(thetas());
+}
+
+negative_control!(
+    every_records_theta_is_the_wrappers,
+    "one record's theta moved by one unit in the last place, as a readout on the projected state gave it",
+    expected = "is not the wrapper's",
+    check_theta(&{
+        let mut t = thetas().clone();
+        t[0].0 = f32::from_bits(t[0].0.to_bits() + 1);
+        t
+    })
+);
+
+// ── A failed decode, through the field ──────────────────────────────────────────────────────────────────────────────
+
+/// The zero view with `z₀`'s mass coordinate `z[6]` NaN: every sample's decode fails (`decode_failed`, non-finite
+/// decode output), 2 × 2 samples.
+fn failed_view() -> Stored {
+    let mut sim = zero_view();
+    sim.plane.z0[6] = f64::NAN;
+    Cpu.stored_on(&pool(1), &sim, Window::SQUARE, [2, 2])
+        .expect("the failed view's records")
+}
+
+/// Every sample of `stored` a failed decode: its record reads `decode_failed` with its outcome's detail, every count
+/// 0, no FTLE, the word unbound to its empty value, and its `ICDescriptor` the decode stage's own for that IC, narrowed
+/// once (what the GPU's decode stage writes from the same source), the masses NaN as the decode left them.
+fn check_failed(stored: &Stored) {
+    let mut sim = zero_view();
+    sim.plane.z0[6] = f64::NAN;
+    let quad = Quad {
+        chart: engine::field::latent(&sim),
+        window: Window::SQUARE,
+        size: [2, 2],
+    };
+    let key = quad.sim_key();
+    for (i, (record, outcome)) in stored
+        .records
+        .iter()
+        .zip(&stored.field.outcomes)
+        .enumerate()
+    {
+        let out = engine::decode_dispatch::decode_only_with::<
+            Latent<f32>,
+            kernel::generated::links::Defaults,
+        >(&quad.chart, quad.uv(i), &key, None)
+        .expect("the decode");
+        let s = record.read(&stored.read);
+        assert_eq!(
+            (
+                outcome.state,
+                s.state,
+                s.detail,
+                s.t_end_step,
+                s.total_substeps
+            ),
+            (
+                STATE_DECODE_FAILED,
+                STATE_DECODE_FAILED,
+                outcome.detail,
+                0,
+                0
+            ),
+            "sample {i} does not store its failed decode"
+        );
+        assert!(!s.ftle_valid && s.ftle.is_nan(), "sample {i} reads an FTLE");
+        let expected = engine::field::record::narrow_descriptor(&out.descriptor);
+        let b = |d: &kernel::payload::ICDescriptor| {
+            [d.m0, d.m1, d.m2, d.K_0, d.V_0, d.r_min_pair_0, d.rho_angle].map(f32::to_bits)
+        };
+        assert_eq!(
+            b(&record.ic),
+            b(&expected),
+            "sample {i}'s descriptor is not the decode's"
+        );
+    }
+}
+
+#[test]
+fn a_failed_decode_stores_the_decodes_descriptor() {
+    check_failed(&failed_view());
+}
+
+negative_control!(
+    a_failed_decode_stores_the_decodes_descriptor,
+    "the descriptor left at its zero, a plausible IC",
+    expected = "is not the decode's",
+    check_failed(&{
+        let mut s = failed_view();
+        s.records[0].ic = Default::default();
+        s
+    })
 );
