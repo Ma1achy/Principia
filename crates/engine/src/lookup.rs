@@ -1,4 +1,4 @@
-//! Lookup, CPU-side (inverse_encode_contract Part 6, "Lookup" and § "Chart-aware validation"; R-13; TASK-M2-19): an
+//! Lookup, CPU-side (inverse_encode_contract Part 6, "Lookup" and § "Chart-aware validation"): an
 //! entered initial condition encoded into the active chart, validated by the three layers in order, and locked.
 //!
 //! **The forms** (Part 6, "Lookup"):
@@ -11,7 +11,7 @@
 //!   (masses equal, `⅓` each, or the Burrau system's on a Burrau chart ([`Fill`]); the configuration the Burrau
 //!   triangle at the locked `ν`, or `ν = ½`, on a Burrau chart, else its latent controls 0; the momenta at rest), then
 //!   the same encode, ladder and lock, and a slice through the lock spanning the unspecified controls ([`Slice`];
-//!   Part 6, "The partial specification's blocks and slice basis", REQ-ENC-031).
+//!   Part 6, "The partial specification's blocks and slice basis").
 //!
 //! **The masses** (Part 6, "The physical form's masses"): the section's unit of mass is `M = Σmᵢ = 1`, so an entry of
 //! mass `M` is carried to it by the change of mass unit with `G = 1` and the length unit kept, `mᵢ ← mᵢ/M`,
@@ -20,36 +20,38 @@
 //! `M = 1`; the partial form's default masses are `⅓` each, or the Burrau system's.
 //!
 //! **The ladder** ([`Layer`]; § "Chart-aware validation", in order):
-//! 1. **Hypercube bounds** in the controls' clamp space (§ "Layer 1's space and bounds", REQ-ENC-023): a control fails
-//!    iff the block inverse clamped it, its `lookup_clamped` bit; so does the coincident inner pair (R-13). The remedy
+//! 1. **Hypercube bounds** in the controls' clamp space (§ "Layer 1's space and bounds"): a control fails
+//!    iff the block inverse clamped it, its `lookup_clamped` bit; so does the coincident inner pair. The remedy
 //!    is the clamp, the moved controls shown ([`Moved`]), unless it changes the class of `L_z` or `E`
 //!    ([`Class`]; § "A qualitatively different IC"), which is rejected. The zero class is a band that absorbs
 //!    rounding only, relative to the bound on each value's rounding on the entered state's extents ([`Classes`],
-//!    [`Extents`]; § "The zero class in floating point", REQ-ENC-036), so a physically zero `L_z` or `E` has one class
+//!    [`Extents`]; § "The zero class in floating point"), so a physically zero `L_z` or `E` has one class
 //!    whatever its rounding; the clamped state is classed by the rule, from each clamp's move in closed form, not by
-//!    its decoded value ([`moves`], [`after`]; § "The class a clamp moves", REQ-ENC-038). A state whose entered `L_z` or `E` is not finite (the coincident pair's
-//!    `U = −∞`) has no class to change there, so its clamp stands: there is no coincident-bodies rejection (R-13).
-//! 2. **Chart feasibility**, on a chart landing: the chart's own `validate` at its point (R-26), whose project and clamp
+//!    its decoded value ([`moves`], [`after`]; § "The class a clamp moves"). A state whose entered `L_z` or `E` is not
+//!    finite (the coincident pair's `U = −∞`) has no class to change there, so its clamp stands: there is no
+//!    coincident-bodies rejection.
+//! 2. **Chart feasibility**, on a chart landing: the chart's own `validate` at its point, whose project and clamp
 //!    move the lock to the point it gives and whose reject is the lookup's. A latent landing has no layer-2 constraint.
 //! 3. **Decode sanity** of the lock as a pixel decodes it, the chart's decode at a chart landing, else the free decode
-//!    of `z` ([`sanity`]): every mass positive, and the CoM and `Σpᵢ` within the tolerance, REQ-ENC-027's calibration
-//!    (R-71), proposed by the `decode-sanity` gate. Neither a projection nor a clamp is defined for it, so it rejects.
+//!    of `z` ([`sanity`]): every mass positive, and the CoM and `Σpᵢ` within the tolerance, a calibration proposed by
+//!    the `decode-sanity` gate. Neither a projection nor a clamp is defined for it, so it rejects.
 //!
 //! A rejection names its layer and its constraint ([`Rejected`]). An entry that is not finite, or masses that are not
 //! positive, or `(m, n)` or a triple that is no Pythagorean one, is refused before the ladder ([`Layer::Entry`]).
 //!
-//! **CPU-side only**: every branch here runs at f64 on the CPU and has no GPU counterpart, so R-547's discipline for a
-//! branch input that must agree across backends does not bind them. The kernel's encode it calls keeps its own.
+//! **CPU-side only**: every branch here runs at f64 on the CPU and has no GPU counterpart, so the discipline for a
+//! branch input that must agree across backends (the GPU determinism note) does not bind them. The kernel's encode it
+//! calls keeps its own.
 //!
 //! **The active values** (chart_reference §0.1, "every chart reads the active value"; chart_decoder_contract §
-//! "Tunable parameters": the encode's clamps and its layer-1 range check read it; R-481 G4; REQ-DEC-048): the ladder
+//! "Tunable parameters": the encode's clamps and its layer-1 range check read it): the ladder
 //! runs at the tunable parameters `p` ([`lookup_params`], [`lookup_partial_params`], [`moves_within_params`]), the
 //! raw form's decode, the encode, layer 1's clamps, layer 2's check and layer 3's decode all at the active `μ_max` and
 //! `q_max`, so a momentum past the active `q_max` is clamped and flagged `lookup_clamped`, never decoded silently at
 //! another. The forms without them are these at `LinkParams::DEFAULT`.
 //!
-//! **`lookup_rescaled`** carries `λ` ([`Notices::lambda`]); whether it is raised, `τ_I`'s skip, is TASK-M2-47's
-//! (REQ-ENC-014, R-547), so no raised flag is formed here, as `C` forms none.
+//! **`lookup_rescaled`** carries `λ` ([`Notices::lambda`]); whether it is raised, `τ_I`'s skip, is the kernel encode's
+//! (`kernel::encode::report::Report::rescaled`), so no raised flag is formed here.
 
 use std::fmt;
 
@@ -123,7 +125,7 @@ where
     const BURRAU: bool = true;
 }
 
-/// `‖x′ − x‖_phys` (inverse-encode Part 4, REQ-ENC-029), `x` the reference state and `x′` the one measured against it,
+/// `‖x′ − x‖_phys` (inverse-encode Part 4), `x` the reference state and `x′` the one measured against it,
 /// both on the canonical section: the largest of `|m′ᵢ − mᵢ|`, `‖r′ᵢ − rᵢ‖/R_x` and `‖p′ᵢ − pᵢ‖/P_x` over the three
 /// bodies, with `R_x = max(1, maxⱼ‖rⱼ‖)` and `P_x = max(1, maxⱼ‖pⱼ‖)` the reference's extent in each block. A NaN
 /// anywhere gives NaN, which no tolerance admits: a NaN in `x` or `x′` makes its difference NaN (`f64::max` drops it
@@ -156,14 +158,13 @@ pub fn phys(x: &Ic<f64>, x_prime: &Ic<f64>) -> f64 {
 /// The tolerances lookup passes and applies, at f64.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Tolerances {
-    /// `ε_phys`, Part 6 step 4's landing test (REQ-ENC-024).
+    /// `ε_phys`, Part 6 step 4's landing test.
     pub eps_phys: f64,
-    /// Kind 4's curve tolerance (REQ-ENC-026).
+    /// Kind 4's curve tolerance.
     pub curve_tol: f64,
-    /// Layer 3's tolerance on the CoM and `Σpᵢ` residuals ([`residuals`]; REQ-ENC-027).
+    /// Layer 3's tolerance on the CoM and `Σpᵢ` residuals ([`residuals`]).
     pub sanity: f64,
-    /// Layer 1's zero-class band, relative to the bound on each value's rounding ([`Classes`], [`Moves`]; REQ-ENC-036,
-    /// REQ-ENC-037).
+    /// Layer 1's zero-class band, relative to the bound on each value's rounding ([`Classes`], [`Moves`]).
     pub zero_class: f64,
 }
 
@@ -196,7 +197,7 @@ pub struct Slice {
 pub struct Moved {
     /// Bit `k` set iff layer 1 clamped `z[k]`.
     pub controls: u32,
-    /// The inner pair coincided, `ρ̃ = 0` (R-13).
+    /// The inner pair coincided, `ρ̃ = 0`.
     pub coincident: bool,
     /// Which chart coordinates, `u` and `v`, layer 2's clamp moved.
     pub chart: [bool; 2],
@@ -211,12 +212,12 @@ pub struct Notices {
     pub projected: Option<Constraint>,
     /// Layer 2's clamp, naming the constraint the entry failed.
     pub clamped: Option<Constraint>,
-    /// `λ`, `lookup_rescaled`'s value. (`lookup_mirrored` went with `C`'s mirror step, R-865.)
+    /// `λ`, `lookup_rescaled`'s value.
     pub lambda: f64,
     /// `M`, the entered masses' sum, the mass unit the entry was carried from to the section's `M = 1` (Part 6, "The
-    /// physical form's masses"): with `λ`, the multiply-back's factor (REQ-ENC-014).
+    /// physical form's masses"): with `λ`, the multiply-back's factor.
     pub mass: f64,
-    /// A curve chart's fold flag (`kernel::encode::curve`; REQ-ENC-022).
+    /// A curve chart's fold flag (`kernel::encode::curve`).
     pub past_fold: bool,
 }
 
@@ -302,7 +303,7 @@ fn refuse(layer: Layer, failed: Failed) -> Rejected {
 }
 
 /// The entered state's extents in the canonical units, the magnitudes `C` rounds from (§ "The zero class in floating
-/// point", REQ-ENC-036): `R = λ·maxᵢ‖rᵢ‖` and `P = λ^{−1/2}·maxᵢ‖pᵢ‖` of the entry, `λ = I_in^{−1/2}`, before its
+/// point"): `R = λ·maxᵢ‖rᵢ‖` and `P = λ^{−1/2}·maxᵢ‖pᵢ‖` of the entry, `λ = I_in^{−1/2}`, before its
 /// translation, boost, rotation and rescale.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Extents {
@@ -327,7 +328,7 @@ impl Extents {
     }
 }
 
-/// A state's two classifying constants and their scales (§ "The zero class in floating point", REQ-ENC-036).
+/// A state's two classifying constants and their scales (§ "The zero class in floating point").
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Classes {
     /// `L_z = Σ rᵢ × pᵢ`.
@@ -416,7 +417,7 @@ pub fn changed(before: &Classes, after: &Classes, band: f64) -> Option<Class> {
     }
 }
 
-/// The clamped state's classes by the rule (§ "The class a clamp moves", REQ-ENC-038), not by its decoded value: a
+/// The clamped state's classes by the rule (§ "The class a clamp moves"), not by its decoded value: a
 /// constant in class 0 at `band` is 0 but for rounding, so after the clamp it is the move alone at the move's scale;
 /// any other is its value on the clamped parameters at that value's scale.
 pub fn after(before: &Classes, moves: &Moves, band: f64) -> Classes {
@@ -439,7 +440,7 @@ pub fn after(before: &Classes, moves: &Moves, band: f64) -> Classes {
     }
 }
 
-/// What layer 1's clamps move (§ "The class a clamp moves", REQ-ENC-038): the change of `L_z` and of `E` from the
+/// What layer 1's clamps move (§ "The class a clamp moves"): the change of `L_z` and of `E` from the
 /// entered state's parameters to the clamped ones, in exact arithmetic on those parameters, and the scale each is
 /// zero within.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -612,7 +613,7 @@ impl Dual {
 }
 
 /// [`Moves`] of the encoded `e` under its clamps, `z` the clamped controls, `ext` the entry's extents, under `S`
-/// (§ "The class a clamp moves", REQ-ENC-038; dd_decoder §3.1, §3.2, §3.4). The entered state's parameters are the
+/// (§ "The class a clamp moves"; dd_decoder §3.1, §3.2, §3.4). The entered state's parameters are the
 /// block inverses': `α`, `β`, the masses and the Jacobi momenta `q = (p_ρ, p_λ)` in the canonical frame. A clamped
 /// control takes its link's value at its clamped `z`; every other keeps its own. With `M₀₁ = m₀ + m₁`,
 /// `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`, `a = ‖ρ‖ = cos α/√μ_ρ` and `b = ‖λ‖ = sin α/√μ_λ`:
@@ -626,11 +627,11 @@ pub fn moves<S: Selection>(e: &kernel::encode::Encoded<f64>, z: &[f64; 8], ext: 
     moves_within::<S>(e, z, ext, ZERO_CLASS.number() * f64::EPSILON)
 }
 
-/// [`moves`], the `α = 0` pole read at the zero-class band `pole` (§ "The class a clamp moves", "At the `α = 0`
-/// pole"; R-591, closing RQ-565): where `b` is 0 within `pole` of its bound, `β` is undefined, so each
-/// move is its worst case over every direction of `λ` after the clamp, the one of largest magnitude, and each value
-/// after it the one of the range nearest the other side of its value before: for `L_z` the directions along
-/// `±(q₃, −q₂)`, where `λ × p_λ = ±b·‖p_λ‖`, and for `E` those with `cos β = ±1` or `r₀₂ = r₁₂`, the extremes of `U`.
+/// [`moves`], the `α = 0` pole read at the zero-class band `pole` (§ "The class a clamp moves", "At the `α = 0` pole"):
+/// where `b` is 0 within `pole` of its bound, `β` is undefined, so each move is its worst case over every direction of
+/// `λ` after the clamp, the one of largest magnitude, and each value after it the one of the range nearest the other
+/// side of its value before: for `L_z` the directions along `±(q₃, −q₂)`, where `λ × p_λ = ±b·‖p_λ‖`, and for `E` those
+/// with `cos β = ±1` or `r₀₂ = r₁₂`, the extremes of `U`.
 pub fn moves_within<S: Selection>(
     e: &kernel::encode::Encoded<f64>,
     z: &[f64; 8],
@@ -798,7 +799,7 @@ pub fn sanity(x: &Ic<f64>, tol: f64) -> Option<Constraint> {
     }
 }
 
-/// The order the slice basis takes unspecified controls in (Part 6, REQ-ENC-031): `z_α`, `z_β`, then `z_μ1`, `z_μ2`,
+/// The order the slice basis takes unspecified controls in (Part 6): `z_α`, `z_β`, then `z_μ1`, `z_μ2`,
 /// then `z_q0 … z_q3`.
 pub const ORDER: [Coordinate; 8] = [
     Coordinate::ZAlpha,
