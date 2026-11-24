@@ -1,18 +1,17 @@
-//! The headless run: the scenario registry, the frame loop and the JSON Lines write (telemetry §5, R-286).
+//! The headless run: the scenario registry, the frame loop and the JSON Lines write (telemetry §5).
 //!
-//! The run streams its trace (R-341): the header line first, flushed at once, then each frame record as the scenario
-//! produces it, flushed at the 60th frame since the last flush or once 1 s has passed since it, whichever comes first,
-//! then the summary line when the session ends. It keeps no frame record once the record is written, so its memory
-//! does not grow with `--frames`; a run killed mid-session leaves an incomplete session, which the reader reports
-//! "session incomplete" (R-298, R-299).
+//! The run streams its trace: the header line first, flushed at once, then each frame record as the scenario produces
+//! it, flushed at the 60th frame since the last flush or once 1 s has passed since it, whichever comes first, then the
+//! summary line when the session ends. It keeps no frame record once the record is written, so its memory does not
+//! grow with `--frames`; a run killed mid-session leaves an incomplete session, which the reader reports "session
+//! incomplete".
 //!
-//! A scenario is fixed and deterministic (render_gui_spec § "Profiler"): the same name and frame count give the same
-//! frame count and the same scope and event sequence. M0 registers `synthetic_frames` (R-113); `deep_zoom_03` is
-//! defined and registered in M5.
+//! A scenario is fixed and deterministic: the same name and frame count give the same frame count and the same scope
+//! and event sequence. `synthetic_frames` is the only one registered.
 //!
-//! No M0 scenario does GPU work, so no run opens a GPU adapter, and the header is the no-GPU form: `backend.api`
-//! "none" and the GPU's fields null (telemetry §5, R-308). A run never opens an adapter only to fill the header: the
-//! header probe, [`session_header`], takes the adapter the run already opened, if any.
+//! No scenario does GPU work, so no run opens a GPU adapter, and the header is the no-GPU form: `backend.api` "none"
+//! and the GPU's fields null. A run never opens an adapter only to fill the header: the header probe,
+//! [`session_header`], takes the adapter the run already opened, if any.
 
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -59,27 +58,27 @@ pub(crate) fn find(name: &str) -> Option<&'static Scenario> {
 }
 
 /// How a run reaches the GPU: calling it opens an adapter. A run calls it only when its scenario does GPU work, never
-/// to fill the header (R-308).
+/// to fill the header.
 pub(crate) type AdapterRequest<'a> = dyn FnMut() -> Result<OpenAdapter, String> + 'a;
 
-/// A GPU adapter a run opened. M0's `prin` links no GPU API, so no adapter can be opened and this type has no value;
-/// the first scenario that does GPU work (M5) gives it one, and [`session_header`] fills the GPU's fields from it.
+/// A GPU adapter a run opened. `prin` links no GPU API, so no adapter can be opened and this type has no value; the
+/// first scenario that does GPU work gives it one, and [`session_header`] fills the GPU's fields from it.
 pub(crate) enum OpenAdapter {}
 
-/// `prin`'s GPU at M0: it links no GPU API, so a request is refused.
+/// `prin`'s GPU: it links no GPU API, so every request is refused.
 fn no_gpu_api() -> Result<OpenAdapter, String> {
     Err("prin links no GPU API at M0, so it cannot open a GPU adapter".to_owned())
 }
 
-/// R-341's flush: the frame lines are flushed at the 60th frame since the last flush, or once 1 s has passed since it,
-/// whichever comes first. The header line is flushed as soon as it is written (R-341, applied per R-204, accepted by
-/// R-346), and the summary line when the session ends.
+/// The flush policy: the frame lines are flushed at the 60th frame since the last flush, or once 1 s has passed since
+/// it, whichever comes first. The header line is flushed as soon as it is written, and the summary line when the
+/// session ends.
 pub(crate) const FLUSH: Flush = Flush {
     frames: 60,
     interval: Duration::from_secs(1),
 };
 
-/// Where a run's trace goes, as the run produces it (R-341): the header line when the scenario begins, each frame
+/// Where a run's trace goes, as the run produces it: the header line when the scenario begins, each frame
 /// record as it completes, and the summary line when the session ends. It holds the writer and the flush state, never
 /// a frame record.
 pub(crate) struct Out<'a> {
@@ -87,7 +86,7 @@ pub(crate) struct Out<'a> {
     frames: u32,
     /// The trace's name in an error: its path.
     name: String,
-    /// The clock the flush policy reads, the caller's (R-341).
+    /// The clock the flush policy reads, the caller's.
     clock: &'a mut dyn FnMut() -> Instant,
     /// When the frame lines are flushed: [`FLUSH`].
     flush: Flush,
@@ -124,7 +123,7 @@ impl<'a> Out<'a> {
     }
 
     /// Writes the header line and flushes it. The GPU's fields come only from `adapter`, the one the run opened for
-    /// its own work, if any (R-308). Called once, before any frame.
+    /// its own work, if any. Called once, before any frame.
     pub(crate) fn begin(&mut self, adapter: Option<&OpenAdapter>) -> Result<(), String> {
         let OutState::Waiting(writer) = std::mem::replace(&mut self.state, OutState::Done) else {
             return Err(format!(
@@ -139,8 +138,8 @@ impl<'a> Out<'a> {
         Ok(())
     }
 
-    /// Writes `record` as the next frame line, flushing when R-341's policy says a flush is due. Nothing of the record
-    /// is kept.
+    /// Writes `record` as the next frame line, flushing when the flush policy says a flush is due. Nothing of the
+    /// record is kept.
     pub(crate) fn frame(&mut self, record: &FrameRecord) -> Result<(), String> {
         let OutState::Streaming(stream) = &mut self.state else {
             return Err(format!(
@@ -152,8 +151,8 @@ impl<'a> Out<'a> {
         stream.frame(record, now).map_err(|e| self.cannot_write(e))
     }
 
-    /// Ends the session: the summary line, last, and a flush. The summaries are `null` until the task closing
-    /// REQ-TOOL-100 defines them (telemetry §5).
+    /// Ends the session: the summary line, last, and a flush. Both summaries are `null`: telemetry §5 does not define
+    /// their entries yet.
     pub(crate) fn finish(mut self) -> Result<(), String> {
         let OutState::Streaming(stream) = std::mem::replace(&mut self.state, OutState::Done) else {
             return Err(format!(
@@ -172,7 +171,7 @@ impl<'a> Out<'a> {
     }
 }
 
-/// `prin profile --scenario NAME --frames N --json PATH`: runs the scenario, streaming its trace to PATH (R-341).
+/// `prin profile --scenario NAME --frames N --json PATH`: runs the scenario, streaming its trace to PATH.
 pub(crate) fn main(name: &str, frames: u32, path: &Path) -> Result<ExitCode, String> {
     let scenario = find(name).ok_or_else(|| {
         let names: Vec<&str> = SCENARIOS.iter().map(|s| s.name).collect();
@@ -196,9 +195,9 @@ pub(crate) fn main(name: &str, frames: u32, path: &Path) -> Result<ExitCode, Str
     Ok(ExitCode::SUCCESS)
 }
 
-/// The run's full configuration (telemetry §5, R-309): `{"scenario": NAME, "frames": N, "sim": SimConfig, "render":
-/// RenderState}`, the two structs as the M0 contract skeleton holds them, each in the canonical serialisation. `frames`
-/// is a u32, so it is a JSON number (R-327, R-322).
+/// The run's full configuration (telemetry §5): `{"scenario": NAME, "frames": N, "sim": SimConfig, "render":
+/// RenderState}`, the two structs as [`skeleton`] holds them, each in the canonical serialisation. `frames` is a u32,
+/// so it is a JSON number; only a u64 is written as a string.
 fn config(scenario: &str, frames: u32) -> Result<Map<String, Value>, String> {
     let (sim, render) = skeleton();
     let mut config = Map::new();
@@ -209,9 +208,9 @@ fn config(scenario: &str, frames: u32) -> Result<Map<String, Value>, String> {
     Ok(config)
 }
 
-/// `SimConfig` and `RenderState` as a scenario leaves them: each group named and empty (TASK-M0-16), but for the
-/// plane and the lock, whose fields (R-390) a scenario sets nothing in, all zero and unlocked, and the stain graph,
-/// the backbone alone (gui_state_contract §2).
+/// `SimConfig` and `RenderState` as a scenario leaves them: the plane all zero, the lock unlocked, the horizon and the
+/// playhead at 0, the empty groups empty, the rest as their constructors give them, and the stain graph the backbone
+/// alone (gui_state_contract §2).
 pub(crate) fn skeleton() -> (SimConfig, RenderState) {
     let sim = SimConfig {
         chart: Chart {
@@ -256,7 +255,7 @@ fn canonical_value<T: serde::Serialize>(value: &T) -> Result<Value, String> {
 
 /// The session header (telemetry §5), from the probe `prin profile` shares with the benchmark runner
 /// (`engine::telemetry::session`). The GPU's fields come only from `adapter`, the adapter the run already opened for its
-/// own work; with none, the header is the no-GPU form (R-308). M0's `prin` can open none ([`OpenAdapter`] has no value).
+/// own work; with none, the header is the no-GPU form. `prin` can open none ([`OpenAdapter`] has no value).
 pub(crate) fn session_header(
     adapter: Option<&OpenAdapter>,
     config: Map<String, Value>,
@@ -282,13 +281,13 @@ const CHILD: &str = "synthetic_step";
 /// The event the integrate stage emits at the start of each frame.
 const EVENT: &str = "synthetic_frame";
 
-/// `synthetic_frames` (R-113, REQ-TOOL-006): no physics. Each frame runs the four batch stages; each stage one scope
-/// with one child scope, and the integrate stage one event, so every frame has the same scopes and events in the same
-/// order. The scopes do no work of their own: their times, measured wall clock, are the instrumentation's own cost,
-/// which a profile carries in every scenario (telemetry §5.5: the overhead must be small enough to leave on). Nothing is integrated,
-/// reduced or uploaded, so the counts are 0; the camera and the playhead do not move; and no memory is tracked. A
-/// headless run is a batch render: no present stage (telemetry §5.5). It does no GPU work, so it never asks `gpu`.
-/// Each frame goes to `out` as it completes, and is not kept (R-341).
+/// `synthetic_frames`: no physics. Each frame runs the four batch stages; each stage one scope with one child scope,
+/// and the integrate stage one event, so every frame has the same scopes and events in the same order. The scopes do
+/// no work of their own: their times, measured wall clock, are the instrumentation's own cost, which a profile carries
+/// in every scenario and which must stay small enough to leave on (telemetry §5.5). Nothing is integrated, reduced or
+/// uploaded, so the counts are 0; the camera and the playhead do not move; and no memory is tracked. A headless run is
+/// a batch render: no present stage (telemetry §5.5). It does no GPU work, so it never asks `gpu`. Each frame goes to
+/// `out` as it completes, and is not kept.
 fn synthetic_frames(
     frames: u32,
     _gpu: &mut AdapterRequest<'_>,
@@ -411,7 +410,7 @@ mod tests {
     }
 
     /// Runs `run` for three frames against a spy: it asks for no GPU adapter, and the header it writes is the no-GPU
-    /// form (R-308).
+    /// form.
     fn check_requests_no_adapter(run: ScenarioRun) {
         // A spy for the GPU: it counts the requests, and opens nothing.
         let mut requests = 0u32;
@@ -467,7 +466,7 @@ mod tests {
         check_milliseconds(|start| start.elapsed().as_secs_f64(), 5)
     );
 
-    /// M0's GPU refuses every request, saying why: `prin` links no GPU API.
+    /// `prin`'s GPU refuses every request, saying why: `prin` links no GPU API.
     fn check_refuses(request: fn() -> Result<OpenAdapter, String>) {
         match request() {
             Err(why) => assert!(
@@ -536,7 +535,7 @@ mod tests {
         flushes
     }
 
-    /// The run flushes its frame lines at the 60th frame since the last flush (R-341): 150 frames 1 ms apart flush at
+    /// The run flushes its frame lines at the 60th frame since the last flush: 150 frames 1 ms apart flush at
     /// lines 61 and 121, after the header's flush on line 1; the summary line, line 152, is flushed last.
     fn check_run_sixty(out: impl for<'a> Fn(Out<'a>) -> Out<'a>) {
         let got = run_flushes(150, Duration::from_millis(1), out);
@@ -561,7 +560,7 @@ mod tests {
         ))
     );
 
-    /// The run flushes its frame lines once 1 s has passed since the last flush (R-341): 10 frames 300 ms apart flush
+    /// The run flushes its frame lines once 1 s has passed since the last flush: 10 frames 300 ms apart flush
     /// at the 4th and 8th frames (lines 5 and 9); the summary line, line 12, is flushed last.
     fn check_run_one_second(out: impl for<'a> Fn(Out<'a>) -> Out<'a>) {
         let got = run_flushes(10, Duration::from_millis(300), out);

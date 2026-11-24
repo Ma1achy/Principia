@@ -1,23 +1,21 @@
-//! QA tests for TASK-M0-18, `prin profile`, written from the requirements it closes:
+//! `prin profile`, tested from telemetry §5 and render_gui_spec § "Profiler":
 //!
-//! - REQ-TOOL-002 (`profile_file`): one JSON Lines file, each line against its schema v1 definition, the header with
-//!   the build hash and the config `{"scenario", "frames", "sim", "render"}` in the canonical serialisation (R-309,
-//!   gui_state_contract §2), read back;
-//! - REQ-TOOL-006 (`profile_scenario`): the synthetic scenario twice gives the same frame count and scope / event
-//!   sequence; an unregistered name is refused;
-//! - REQ-TOOL-007 and REQ-TOOL-119 (`profile_diff`): a 6% p95 rise in one scope exits non-zero at 5% and zero at 10%,
-//!   for each kind of scope render_gui_spec § "Profiler" puts in the scope set, by its statistic and missing-scope rule;
-//!   and R-323's three rules: the threshold compares exactly (100 -> 107 at 7% is no regression), a NEW with no frame
-//!   records exits 2, and a cut-off or incomplete trace prints "session incomplete" and the bytes dropped (R-298,
-//!   R-299), compared and exiting as usual;
-//! - REQ-TOOL-139 (`profile_show`): `--pretty` prints each line indented, parsing to the file's values; without it the
-//!   file's bytes print unchanged;
-//! - REQ-TOOL-144 (`profile_no_gpu`): the synthetic header's no-GPU form (R-308, R-311), the run opening no GPU adapter,
-//!   and the typed reader and `profile_v1.json` accepting that header and still rejecting an `api` outside the five.
+//! - the file: one JSON Lines file, each line against its schema v1 definition, the header with the build hash and
+//!   the config `{"scenario", "frames", "sim", "render"}` in the canonical serialisation (gui_state_contract §2), read
+//!   back;
+//! - the scenario: the synthetic scenario twice gives the same frame count and scope / event sequence; an
+//!   unregistered name is refused;
+//! - the diff: a 6% p95 rise in one scope exits non-zero at 5% and zero at 10%, for each kind of scope in the scope
+//!   set, by its statistic and missing-scope rule; the threshold compares exactly (100 -> 107 at 7% is no
+//!   regression), a NEW with no frame records exits 2, and a cut-off or incomplete trace prints "session incomplete"
+//!   and the bytes dropped, compared and exiting as usual;
+//! - show: `--pretty` prints each line indented, parsing to the file's values; without it the file's bytes print
+//!   unchanged;
+//! - the no-GPU header: the synthetic header's no-GPU form, the run opening no GPU adapter, and the typed reader and
+//!   `profile_v1.json` accepting that header and still rejecting an `api` outside the five.
 //!
-//! Every fixture is built here from telemetry §5's keys, not copied from the implementation's. Each test has its
-//! negative control (R-176).
-// The file name `qa_TASK-M0-18` gives a crate name that is not snake case.
+//! Every fixture is built here from telemetry §5's keys, not copied from the implementation's.
+// The file name gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::path::Path;
@@ -41,9 +39,8 @@ fn prin(args: &[&str]) -> Output {
         .expect("cannot run prin")
 }
 
-/// A fresh path in this test target's scratch directory.
 /// A fresh scratch file path, one per call (the process id and a per-process count): deleted when the test passes,
-/// kept with its path printed when it fails (R-342).
+/// kept with its path printed when it fails.
 fn scratch(name: &str) -> Scratch {
     Scratch::new(&format!("qa_TASK-M0-18_{name}"))
 }
@@ -85,7 +82,7 @@ fn validator(place: &str) -> jsonschema::Validator {
     jsonschema::validator_for(&schema).expect("profile_v1.json does not compile")
 }
 
-/// Whether a JSON text has whitespace outside its strings (R-286: each line compact).
+/// Whether a JSON text has whitespace outside its strings (each line must be compact).
 fn loose(text: &str) -> bool {
     let mut in_string = false;
     let mut escaped = false;
@@ -152,15 +149,13 @@ fn raw_member<'a>(object_text: &'a str, key: &str) -> &'a str {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-TOOL-002: the file (`profile_file`)
+// The file
 
-/// The text the canonical serialisation, JCS (R-318), gives the M0 skeleton's config for `frames` frames of
-/// `synthetic_frames`: every object's members sorted (for these ASCII keys UTF-16 order is byte order: `frames`,
-/// `render`, `scenario`, `sim`, as telemetry §5 lists them), no whitespace, the frame count a number. The groups are
-/// gui_state_contract §2's, each named and empty at M0 (TASK-M0-16), but for the plane and the lock, whose
-/// fields (R-390) a scenario leaves all zero and unlocked, the stain graph, the backbone alone (§2), and, since
-/// TASK-M6-46, the debug view, off at launch (gui_state_contract §2), and, since TASK-M6-48, the slice frame's
-/// tilt map, Tip as sheet, and its two angles as set, 0.
+/// The text the canonical serialisation, JCS, gives the skeleton's config for `frames` frames of `synthetic_frames`:
+/// every object's members sorted (for these ASCII keys UTF-16 order is byte order: `frames`, `render`, `scenario`,
+/// `sim`, as telemetry §5 lists them), no whitespace, the frame count a number. The groups are gui_state_contract
+/// §2's as a scenario leaves them: the plane all zero, the lock unlocked, the horizon and the playhead at 0, the stain
+/// graph the backbone alone, the debug view off, and the slice frame's tilt map Tip as sheet, its two angles 0.
 fn expected_config_text(frames: u64) -> String {
     format!(
         concat!(
@@ -171,8 +166,9 @@ fn expected_config_text(frames: u64) -> String {
             "\"priority_heatmap\":false,\"refine_flagged\":false,\"split_merge_activity\":false,",
             "\"substep_cap_hits\":false,\"substep_density\":false,\"t_end_contours\":false,\"tile_bounds\":false}},",
             "\"palette\":{{}},\"playhead\":{{\"t\":0}},",
-            // The stain graph's default, gui_state_contract §2: the backbone alone, the combiner (its occupant M1's
-            // pass-through) wired to OUT's port 0, as `{ nodes, wires }` in id order, each member sorted (JCS).
+            // The stain graph's default, gui_state_contract §2: the backbone alone, the combiner (its occupant the
+            // built-in pass-through) wired to OUT's port 0, as `{ nodes, wires }` in id order, each member sorted
+            // (JCS).
             "\"stain_graph\":{{\"nodes\":[",
             "{{\"id\":0,\"kind\":\"combiner\",\"occupant\":{{\"builtin\":\"pass_through\"}},\"params\":{{}}}},",
             "{{\"id\":1,\"kind\":\"out\",\"occupant\":\"none\",\"params\":{{}}}}],",
@@ -189,7 +185,7 @@ fn expected_config_text(frames: u64) -> String {
 }
 
 /// `text` is JSON Lines with `frames` frame lines: every line newline-ended, compact, an object validating against
-/// its place's schema v1 definition, in the order header, frames, summary (telemetry §5, R-286).
+/// its place's schema v1 definition, in the order header, frames, summary (telemetry §5).
 fn check_json_lines(text: &str, frames: usize) {
     assert!(text.ends_with('\n'), "the file's last line has no newline");
     let lines: Vec<&str> = text.split_terminator('\n').collect();
@@ -261,7 +257,7 @@ fn head_commit() -> Option<String> {
 }
 
 /// The header line carries the build hash and, as `config`, the canonical text of
-/// `{"scenario", "frames", "sim", "render"}` (telemetry §5, R-309). In a git checkout the hash is the checkout's
+/// `{"scenario", "frames", "sim", "render"}` (telemetry §5). In a git checkout the hash is the checkout's
 /// commit; outside one, the header still carries a non-empty `build.commit`.
 fn check_header(text: &str, frames: u64, commit: Option<&str>) {
     let line = text.lines().next().expect("an empty file");
@@ -366,7 +362,7 @@ validation::negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-TOOL-006: the scenario (`profile_scenario`)
+// The scenario
 
 /// A trace's structure without its times: per frame, each stage's scope paths, GPU pass names and event names, in
 /// order.
@@ -502,7 +498,7 @@ validation::negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-TOOL-007 and REQ-TOOL-119: the diff (`profile_diff`)
+// The diff
 
 /// A header line for a GPU session; the diff fixtures' frames carry a GPU pass.
 fn gpu_header_line() -> Value {
@@ -886,8 +882,8 @@ validation::negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// R-323 (REQ-TOOL-119, `profile_diff`): the threshold compares exactly; a NEW with no frames exits 2; a cut-off or
-// incomplete trace says "session incomplete" with the bytes dropped (R-298, R-299), its comparison unchanged.
+// The diff's edge rules: the threshold compares exactly; a NEW with no frames exits 2; a cut-off or incomplete trace
+// says "session incomplete" with the bytes dropped, its comparison unchanged.
 
 /// The base times with the reduce stage's ms `ms` in every frame, so its p95 is exactly `ms`.
 fn reduce_at(ms: f64) -> Times {
@@ -902,7 +898,7 @@ fn next_up(v: f64) -> f64 {
 }
 
 /// A p95 rising from `base` to exactly P% above it, P as written, is not a regression at `--threshold P`; one ulp
-/// more is. Decided exactly, not in rounded floating-point arithmetic (R-323).
+/// more is. Decided exactly, not in rounded floating-point arithmetic.
 fn check_exact(base: f64, new: f64, threshold: &str) {
     check_passes(
         &reduce_at(base),
@@ -920,7 +916,7 @@ fn check_exact(base: f64, new: f64, threshold: &str) {
 
 #[test]
 fn qa_profile_diff_threshold_is_exact() {
-    // R-323's case: 100 -> 107 is a rise of exactly 7%. In floating point, (107 - 100) / 100 * 100 is
+    // 100 -> 107 is a rise of exactly 7%. In floating point, (107 - 100) / 100 * 100 is
     // 7.000000000000001, above 7.
     check_exact(100.0, 107.0, "7%");
     check_exact(100.0, 107.0, "7");
@@ -961,7 +957,7 @@ fn split_trace(text: &str) -> (String, Vec<String>, String) {
     )
 }
 
-/// NEW has no frame records: the diff exits 2 and says NEW has no frames (R-323).
+/// NEW has no frame records: the diff exits 2 and says NEW has no frames.
 fn check_no_frames_exits_2(new: &str, what: &str) {
     let out = diff(&trace(&base_times()), new, "5%");
     let text = format!(
@@ -1015,7 +1011,7 @@ validation::negative_control!(
 const CUT: usize = 173;
 
 /// A trace's text as a session that ended before its summary line: with `cut`, the next frame's line cut off after
-/// `CUT` bytes follows the last whole frame line, with no newline (R-298, R-299).
+/// `CUT` bytes follows the last whole frame line, with no newline.
 fn incomplete(text: &str, cut: bool) -> String {
     let (header, frames, _) = split_trace(text);
     let mut out = format!("{header}\n{}\n", frames.join("\n"));
@@ -1149,9 +1145,8 @@ fn qa_profile_diff_incomplete_trace_says_so_and_compares_bytes() {
     );
 }
 
-/// R-299: a malformed line that ends in a newline stays an error: the diff exits 2. A cut-off line after the summary
-/// line is not: that file is a complete session, read and compared, its dropped bytes stated without "session
-/// incomplete" (R-356, R-358; changed by qa for TASK-M0-51, R-290).
+/// A malformed line that ends in a newline stays an error: the diff exits 2. A cut-off line after the summary line is
+/// not: that file is a complete session, read and compared, its dropped bytes stated without "session incomplete".
 #[test]
 fn qa_profile_diff_cut_line_with_newline_is_unreadable() {
     let base = trace(&base_times());
@@ -1186,7 +1181,7 @@ validation::negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-TOOL-139: show (`profile_show`)
+// Show
 
 /// A trace whose text exercises the printer: strings with escapes and brackets, numbers in exponent form.
 fn show_fixture() -> String {
@@ -1325,11 +1320,10 @@ validation::negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-TOOL-144: the no-GPU header (`profile_no_gpu`)
+// The no-GPU header
 
-/// The synthetic header is the no-GPU form (R-308, R-311): `backend.api` "none"; `backend.driver`, `device.gpu`,
-/// `device.gpu_cores`, `device.memory` and `precision` present and null; `device.cpu` and `device.cpu_cores_available`
-/// written as always (R-329).
+/// The synthetic header is the no-GPU form: `backend.api` "none"; `backend.driver`, `device.gpu`, `device.gpu_cores`,
+/// `device.memory` and `precision` present and null; `device.cpu` and `device.cpu_cores_available` written as always.
 fn check_no_gpu(header_line: &str) {
     let line: Value = serde_json::from_str(header_line).unwrap();
     let h = &line["header"];
@@ -1430,8 +1424,7 @@ fn with_load_log(cmd: &mut Command) -> Output {
     cmd.timed_output().expect("the child ran")
 }
 
-/// `out`'s loader log shows images loaded, and none is a GPU driver's: the process opened no GPU adapter (R-308,
-/// REQ-TOOL-144).
+/// `out`'s loader log shows images loaded, and none is a GPU driver's: the process opened no GPU adapter.
 fn check_opened_no_adapter(out: &Output, what: &str) {
     let log = String::from_utf8_lossy(&out.stderr);
     let loaded: Vec<&str> = log
@@ -1455,8 +1448,7 @@ fn check_opened_no_adapter(out: &Output, what: &str) {
     );
 }
 
-/// `prin profile --scenario synthetic_frames` runs and writes its trace, and opens no GPU adapter (REQ-TOOL-144:
-/// "the synthetic_frames run requests no GPU adapter").
+/// `prin profile --scenario synthetic_frames` runs and writes its trace, and opens no GPU adapter.
 #[test]
 fn qa_profile_no_gpu_run_requests_no_adapter() {
     let path = scratch("no_adapter.jsonl");

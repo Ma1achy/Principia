@@ -1,9 +1,7 @@
-//! QA test for TASK-M0-44 at `prin profile`'s file, written from REQ-TOOL-141 ("the session header of every profiler
-//! and benchmark file must record the compute shaders' fast-math setting as asked for") and telemetry §5's `fast_math`
-//! row: the setting is off by default (REQ-SYS-074), and `compiled` is present and null for a session that opens no GPU
-//! (R-308; "an absent value is null, never a missing key"). The synthetic scenario opens no GPU (R-308, R-311). The test
-//! registers its negative control (R-176).
-// The file name `qa_TASK-M0-44` gives a crate name that is not snake case.
+//! `prin profile`'s header records the compute shaders' fast-math setting as asked for (telemetry §5's `fast_math`
+//! row): off by default, and `compiled` present and null for a session that opens no GPU ("an absent value is null,
+//! never a missing key"). The synthetic scenario opens no GPU. Written from telemetry §5, not from the code's output.
+// The file name gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::process::Command;

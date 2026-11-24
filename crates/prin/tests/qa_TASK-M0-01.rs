@@ -1,4 +1,4 @@
-//! QA tests for TASK-M0-01: `crates/prin/` is a binary stub answering `prin --help` (task deliverables).
+//! `prin --help` succeeds and prints the usage; an unknown argument is refused.
 #![allow(non_snake_case)]
 
 #[path = "support/qa_m0_01.rs"]

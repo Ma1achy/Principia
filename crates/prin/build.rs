@@ -1,6 +1,6 @@
-//! Stamps the build's provenance into `prin` for the profiler header's `build` (telemetry §5: the header carries the
-//! build hash, or the file cannot be interpreted later): the commit `git rev-parse HEAD` names, the cargo profile and
-//! the enabled features. A build outside a git checkout, where git cannot name the commit, stamps `unknown`.
+//! Stamps the build's provenance into `prin` for the profiler header's `build`, without which a trace cannot be
+//! interpreted later: the commit `git rev-parse HEAD` names, the cargo profile and the enabled features. A build
+//! outside a git checkout, where git cannot name the commit, stamps `unknown`.
 
 use std::env;
 use std::process::Command;

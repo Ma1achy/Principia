@@ -1,6 +1,6 @@
-//! `prin profile show PATH [--pretty]` (telemetry §5, R-286): a trace's lines are compact, never pretty-printed in
-//! the file; pretty-printing is on demand, here. Without `--pretty`, the file's lines unchanged; with it, each line
-//! indented for reading, its keys, their order and its numbers' text exactly as in the file.
+//! `prin profile show PATH [--pretty]`: a trace's lines are compact, never pretty-printed in the file; pretty-printing
+//! is on demand, here. Without `--pretty`, the file's lines unchanged; with it, each line indented for reading, its
+//! keys, their order and its numbers' text exactly as in the file.
 
 use std::fs;
 use std::io::Write;
@@ -9,9 +9,8 @@ use std::process::ExitCode;
 
 use engine::contract::profile::{self, Session, Trace};
 
-/// `prin profile show PATH [--pretty]`. The file is read as schema v1 first, so only a trace prints. A last line cut
-/// off as its session stopped (R-299), which the reader drops, is not pretty-printed; the bytes dropped are stated on
-/// stderr, by [`notice`].
+/// `prin profile show PATH [--pretty]`. The file is read as schema v1 first, so only a trace prints. A cut-off last
+/// line, which the reader drops, is not pretty-printed; the bytes dropped are stated on stderr, by [`notice`].
 pub(crate) fn main(path: &Path, pretty: bool) -> Result<ExitCode, String> {
     let bytes = fs::read(path)
         .map_err(|e| format!("prin profile show: cannot read {}: {e}", path.display()))?;
@@ -39,8 +38,7 @@ pub(crate) fn main(path: &Path, pretty: bool) -> Result<ExitCode, String> {
 }
 
 /// The notice for a trace whose reader dropped a cut-off last line, `None` when it dropped nothing. An incomplete
-/// session is "session incomplete" (R-298, R-299); a complete one, its cut-off line after the summary line, states
-/// the bytes alone (R-356, R-358; the words applied per R-204, accepted by R-363).
+/// session is "session incomplete"; a complete one, its cut-off line after the summary line, states the bytes alone.
 fn notice(trace: &Trace) -> Option<String> {
     match (trace.dropped_bytes, trace.session) {
         (0, _) => None,

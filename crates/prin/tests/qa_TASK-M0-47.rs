@@ -1,6 +1,5 @@
-//! QA tests for TASK-M0-47 (REQ-TOOL-147) on `prin profile` itself, written from the requirement's statement and
-//! verify detail, R-341, R-286, R-298, R-299 and telemetry §5 ("`prin profile` streams its trace", "A session that
-//! ended before its summary line", "A line cut off at the end"), not from the implementation:
+//! `prin profile` streams its trace (telemetry §5: "`prin profile` streams its trace", "A session that ended before
+//! its summary line", "A line cut off at the end"):
 //!
 //! - a completed run's trace is a complete session: the header, the frames from 0, the summary line last, the same file
 //!   `profile::write` gives for what `read` returns (for 0, 1, 60, 61 and 125 frames);
@@ -9,9 +8,10 @@
 //! - a run whose trace cannot be written fails, and says which trace (telemetry §5: a writer "fails rather than write").
 //!
 //! The flush policy itself is tested on the engine's streaming writer, in `crates/engine/tests/qa_TASK-M0-47_stream.rs`.
-//! Each test has its negative control (R-176). The memory bound ("must not grow with `--frames`") is the perf
-//! reviewer's, at two measured frame counts (R-341, applied per R-204, accepted by R-346); no threshold is set here.
-// The file name `qa_TASK-M0-47` gives a crate name that is not snake case.
+//! The memory bound (no growth with `--frames`) is not asserted here: it is checked at review, as the run's peak memory
+//! at two frame counts, one 100 times the other. Expected values are written from telemetry §5, not from the code's
+//! output.
+// The file name gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::fs;
@@ -72,7 +72,7 @@ fn ms(n: u64) -> Duration {
     Duration::from_millis(n)
 }
 
-/// A completed run's trace is a complete session (R-286, R-298, R-341): the header line first, the frames from 0 in
+/// A completed run's trace is a complete session: the header line first, the frames from 0 in
 /// order, the summary line `{"leak_flags": null, "hot_paths": null}` last and newline-terminated, and the file is the
 /// one `profile::write` gives for what `read` returns.
 fn check_complete(bytes: &[u8], frames: u32) {
@@ -145,11 +145,11 @@ fn watch(path: std::path::PathBuf, running: Arc<AtomicBool>) -> thread::JoinHand
     })
 }
 
-/// A run of a frame count it cannot finish, `prin profile --frames 4294967295`, stopped by the spawn helper (R-214)
-/// once it has run for `after`; then what it left. The trace grew while the run ran; the reader returns the header
-/// (the run's own config) and the frames from 0 in order; the session is incomplete with "session incomplete"; and
-/// the bytes after the last newline are dropped and counted, unless they are one whole frame record still waiting for
-/// its newline (R-299: a complete JSON last line is read as any last line is).
+/// A run of a frame count it cannot finish, `prin profile --frames 4294967295`, stopped by the spawn helper once it
+/// has run for `after`; then what it left. The trace grew while the run ran; the reader returns the header (the run's
+/// own config) and the frames from 0 in order; the session is incomplete with "session incomplete"; and the bytes
+/// after the last newline are dropped and counted, unless they are one whole frame record still waiting for its
+/// newline (a complete JSON last line is read as any last line is).
 fn check_killed(run: impl Fn(&Path) -> Command) {
     for after in [ms(700), ms(1500), ms(3000)] {
         let path = scratch("killed.jsonl");

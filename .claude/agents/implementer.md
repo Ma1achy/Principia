@@ -16,8 +16,8 @@ You build one task. Read the task, the spec sections it names, and the code you'
 - While working: `cargo check` and your crate's tests. Before the PR: the relevant tests, `cargo fmt`, and
   `cargo clippy --workspace --all-targets -- -D warnings`. On the Mac, compile through the job queue.
 - The code is the source of truth. If the plan or spec is unclear, wrong or has a gap, do the sensible thing
-  and leave one comment there ("The plan is unclear here; chose X because Y."), then carry on. No history, no
-  ruling ids. Change a doc only when it would otherwise mislead.
+  and leave one line there ("The plan is unclear here; chose X because Y."), then carry on. Comments follow
+  CLAUDE.md's Comments section. Change a doc only when it would otherwise mislead.
 - Open the PR from `task/<id>`: what changed, why, the test output pasted, and a screenshot if the
   app looks different.
 - On a fix round, fix only the blocking findings named.

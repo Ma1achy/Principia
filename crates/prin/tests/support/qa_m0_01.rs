@@ -1,6 +1,6 @@
-//! The helper and checks `qa_TASK-M0-01.rs` shares with its controls in `qa_TASK-M0-01_controls.rs`, so each control
-//! runs the check it controls, not a copy of it (REQ-VAL-157; R-215). A `tests/*.rs` file is a crate of its own, so
-//! each includes this file with `#[path]`; every item here is used by both.
+//! The helper and checks the `prin --help` tests share with their controls, so each control runs the check it
+//! controls, not a copy of it. A `tests/*.rs` file is a crate of its own, so each includes this file with `#[path]`;
+//! every item here is used by both.
 
 use std::process::{Command, Output};
 use validation::spawn::Spawn;

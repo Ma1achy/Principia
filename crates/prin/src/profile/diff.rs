@@ -1,11 +1,10 @@
-//! `prin profile diff BASE NEW --threshold P%` (render_gui_spec § "Profiler", "What `prin profile diff` compares",
-//! REQ-TOOL-119): for each scope, the p95 of its per-frame ms in BASE and in NEW; a regression where NEW's p95 is more
-//! than P% above BASE's, decided exactly (R-323). It exits 1 when any scope regresses, 0 when none does, and 2 when a
-//! file cannot be read or either file has no frame records (R-323, R-328). A trace that is an incomplete session, its
-//! last line perhaps cut off, is compared as usual, and the diff says so first: "session incomplete", with the bytes
-//! the reader dropped (R-323, R-298, R-299). A complete trace whose cut-off last line follows its summary line is
-//! compared as any complete trace, and the diff first states the bytes dropped after the summary line, without
-//! "session incomplete" (R-356, R-358), so nothing is compared silently.
+//! `prin profile diff BASE NEW --threshold P%` (render_gui_spec § "Profiler", "What `prin profile diff` compares"):
+//! for each scope, the p95 of its per-frame ms in BASE and in NEW; a regression where NEW's p95 is more than P% above
+//! BASE's, decided exactly. It exits 1 when any scope regresses, 0 when none does, and 2 when a file cannot be read or
+//! either file has no frame records. A trace that is an incomplete session, its last line perhaps cut off, is compared
+//! as usual, and the diff says so first: "session incomplete", with the bytes the reader dropped. A complete trace
+//! whose cut-off last line follows its summary line is compared as any complete trace, and the diff first states the
+//! bytes dropped after the summary line, without "session incomplete", so nothing is compared silently.
 //!
 //! The scopes: the frame (`frame_ms`), each stage by its key (`stage_ms`, in the frames where it is not null), each CPU
 //! scope by its stage and the names from the stage down to it, and each GPU pass by its stage and name. A scope that
@@ -55,7 +54,7 @@ impl fmt::Display for Key {
     }
 }
 
-/// `--threshold P%`: P as the decimal written, `numerator / 10^scale`, so the regression test is exact (R-323).
+/// `--threshold P%`: P as the decimal written, `numerator / 10^scale`, so the regression test is exact.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Threshold {
     /// P's digits, the point dropped.
@@ -194,10 +193,10 @@ fn compare_scaled(x: u128, k: i32, y: u128) -> Ordering {
 }
 
 /// Whether NEW's p95 `new` regresses on BASE's `base` by more than the threshold P: `(new − base) / base × 100 > P`,
-/// or, from a BASE of 0, `new > 0` (render_gui_spec § "Profiler"). Decided exactly, not by rounded floating-point
-/// arithmetic (R-323): as `100 · 10^s · new > (100 · 10^s + p) · base`, P being p / 10^s and each p95 the double it
-/// is, so 100 → 107 at 7% is a rise of exactly 7%, and not a regression. Each p95 is a duration, never negative: the
-/// reader refuses a negative ms (telemetry §5).
+/// or, from a BASE of 0, `new > 0`. Decided exactly, not by rounded floating-point arithmetic: as
+/// `100 · 10^s · new > (100 · 10^s + p) · base`, P being p / 10^s and each p95 the double it is, so 100 → 107 at 7% is
+/// a rise of exactly 7%, and not a regression. Each p95 is a duration, never negative: the reader refuses a negative
+/// ms.
 fn regresses(base: f64, new: f64, threshold: &Threshold) -> bool {
     let unit = 100 * 10u128.pow(threshold.scale);
     let (new_m, new_e) = parts(new);
@@ -261,10 +260,10 @@ fn read(path: &Path) -> Result<Trace, String> {
     })
 }
 
-/// The notice for a trace, empty when it needs none. An incomplete session (R-298): "session incomplete", and the
-/// bytes of a cut-off last line the reader dropped (R-299), 0 when none was; its frames are still compared (R-323). A
-/// complete session whose cut-off last line follows its summary line: the bytes dropped, without "session incomplete"
-/// (R-356, R-358; the words applied per R-204, accepted by R-363). A complete trace that dropped nothing: none.
+/// The notice for a trace, empty when it needs none. An incomplete session: "session incomplete", and the bytes of a
+/// cut-off last line the reader dropped, 0 when none was; its frames are still compared. A complete session whose
+/// cut-off last line follows its summary line: the bytes dropped, without "session incomplete". A complete trace that
+/// dropped nothing: none.
 fn notice(name: &str, trace: &Trace) -> String {
     match (trace.session, trace.dropped_bytes) {
         (Session::Incomplete, n) => {
@@ -277,8 +276,8 @@ fn notice(name: &str, trace: &Trace) -> String {
     }
 }
 
-/// The refusal for a trace with no frame records, which has no p95 to compare: exit 2 (R-323, R-328). The trace's
-/// notice comes first, as it does before a comparison, so dropped bytes are always reported (R-358).
+/// The refusal for a trace with no frame records, which has no p95 to compare: exit 2. The trace's notice comes first,
+/// as it does before a comparison, so dropped bytes are always reported.
 fn no_frames(name: &str, path: &Path, trace: &Trace) -> Option<String> {
     if !trace.frames.is_empty() {
         return None;
@@ -291,7 +290,7 @@ fn no_frames(name: &str, path: &Path, trace: &Trace) -> Option<String> {
 }
 
 /// `prin profile diff BASE NEW --threshold P%`. A BASE or NEW with no frame records has nothing to compare, and is an
-/// error, exit 2 (R-323, R-328).
+/// error, exit 2.
 pub(crate) fn main(base: &Path, new: &Path, threshold: &Threshold) -> Result<ExitCode, String> {
     let (base_trace, new_trace) = (read(base)?, read(new)?);
     if let Some(why) = no_frames("BASE", base, &base_trace) {
@@ -309,7 +308,7 @@ pub(crate) fn main(base: &Path, new: &Path, threshold: &Threshold) -> Result<Exi
     })
 }
 
-/// The tests' scratch guard (R-342), shared with the crate's integration tests.
+/// The tests' scratch guard, shared with the crate's integration tests.
 #[cfg(test)]
 #[path = "../../../validation/tests/support/scratch.rs"]
 mod scratch;
@@ -383,7 +382,7 @@ mod tests {
         check_parts(|x| (u128::from(x.to_bits()), 0))
     );
 
-    /// R-323's exact test, at ties, from zero and between subnormal p95s.
+    /// The exact regression test, at ties, from zero and between subnormal p95s.
     fn check_regresses(regresses: fn(f64, f64, &Threshold) -> bool) {
         let cases: [(f64, f64, &str, bool); 9] = [
             (100.0, 107.0, "7%", false),
@@ -442,7 +441,7 @@ mod tests {
     const BASE: &str = include_str!("../../tests/fixtures/profile/base.jsonl");
 
     /// A fresh scratch file holding `text`, under the system temp folder; deleted when the test passes, kept when it
-    /// fails (R-342).
+    /// fails.
     fn scratch(name: &str, text: &str) -> Scratch {
         let path = Scratch::new(&format!("prin-diff-unit-{name}"));
         std::fs::write(&path, text).expect("the scratch file is written");
@@ -452,7 +451,7 @@ mod tests {
     type Diff = fn(&Path, &Path, &Threshold) -> Result<ExitCode, String>;
 
     /// A NEW with no frame records is refused; the refusal says "session incomplete" when NEW is an incomplete
-    /// session, and not when it is complete (R-323).
+    /// session, and not when it is complete.
     fn check_no_frames_notice(diff: Diff, tag: &str) {
         let lines: Vec<&str> = BASE.lines().collect();
         let (header, summary) = (lines[0], lines[lines.len() - 1]);
@@ -496,8 +495,8 @@ mod tests {
     );
 
     /// A BASE with no frame records is refused, exit 2, as an empty NEW is: with nothing in BASE the gate could never
-    /// fail (R-328, physics's finding 2). Both the header-only (incomplete) and header-plus-summary (complete) cases;
-    /// an incomplete BASE's notice comes first.
+    /// fail. Both the header-only (incomplete) and header-plus-summary (complete) cases; an incomplete BASE's notice
+    /// comes first.
     fn check_no_frames_base(diff: Diff, tag: &str) {
         let lines: Vec<&str> = BASE.lines().collect();
         let (header, summary) = (lines[0], lines[lines.len() - 1]);

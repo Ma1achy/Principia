@@ -1,9 +1,8 @@
-//! QA tests for TASK-M0-18, written from REQ-TOOL-119's definition in render_gui_spec § "Profiler", "A file with no
-//! frames (R-323; BASE applied per R-204)": a BASE trace with no frame records has no p95 to compare, so
+//! A BASE trace with no frame records has no p95 to compare (render_gui_spec § "Profiler", "A file with no frames"), so
 //! `prin profile diff` exits 2, as it does for a file it cannot read, and says that BASE has no frame records. Both a
-//! complete BASE (header and summary) and an incomplete one (header alone, or its only frame line cut off). Each test
-//! has its negative control (R-176).
-// The file name `qa_TASK-M0-18_base` gives a crate name that is not snake case.
+//! complete BASE (header and summary) and an incomplete one (header alone, or its only frame line cut off). Written
+//! from render_gui_spec, not from the code's output.
+// The file name gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::process::{Command, Output};
@@ -21,9 +20,8 @@ fn prin(args: &[&str]) -> Output {
         .expect("cannot run prin")
 }
 
-/// A fresh path in this test target's scratch directory.
 /// A fresh scratch file path, one per call (the process id and a per-process count): deleted when the test passes,
-/// kept with its path printed when it fails (R-342).
+/// kept with its path printed when it fails.
 fn scratch(name: &str) -> Scratch {
     Scratch::new(&format!("qa_TASK-M0-18_base_{name}"))
 }

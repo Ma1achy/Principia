@@ -1,17 +1,16 @@
-//! qa's tests for TASK-M0-51, `prin profile show` and `prin profile diff` on a complete trace whose cut-off last line
-//! follows its summary line, written from the requirement it closes, not from the implementation:
+//! `prin profile show` and `prin profile diff` on a complete trace whose cut-off last line follows its summary line
+//! (render_gui_spec § "Profiler", "A cut-off or incomplete trace"):
 //!
-//! - REQ-TOOL-148 (R-356, R-358): both commands always state that file's dropped bytes, and neither calls the session
-//!   incomplete; the diff states the bytes first, then compares the file as a complete trace, so nothing is compared
-//!   silently; the bytes come before a refusal for no frame records too (render_gui_spec § "Profiler", "A cut-off or
-//!   incomplete trace"). The notices' words are R-358's, accepted by R-363: the diff's "<BASE|NEW>: <n> bytes of a
-//!   cut-off line after the summary line dropped", show's "prin profile show: the line after the summary line was cut
-//!   off, and its <n> bytes are not shown pretty". Neither prints a notice when no bytes were dropped.
-//! - R-323, R-298, R-299, as R-358 keeps them: a session that ended before its summary line, its last line cut off,
-//!   still gets "session incomplete" and its bytes, from both commands.
+//! - both commands always state that file's dropped bytes, and neither calls the session incomplete; the diff states
+//!   the bytes first, then compares the file as a complete trace, so nothing is compared silently; the bytes come
+//!   before a refusal for no frame records too. The notices: the diff's "<BASE|NEW>: <n> bytes of a cut-off line
+//!   after the summary line dropped", show's "prin profile show: the line after the summary line was cut off, and its
+//!   <n> bytes are not shown pretty". Neither prints a notice when no bytes were dropped.
+//! - a session that ended before its summary line, its last line cut off, still gets "session incomplete" and its
+//!   bytes, from both commands.
 //!
-//! Every fixture is built here from telemetry §5's keys. Each test has its negative control (R-176).
-// The file name `qa_TASK-M0-51` gives a crate name that is not snake case.
+//! Every fixture is built here from telemetry §5's keys.
+// The file name gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::path::Path;
@@ -36,7 +35,7 @@ fn s(path: &Path) -> &str {
     path.to_str().expect("a UTF-8 path")
 }
 
-/// A scratch file holding `bytes`: deleted when the test passes, kept with its path printed when it fails (R-342).
+/// A scratch file holding `bytes`: deleted when the test passes, kept with its path printed when it fails.
 fn write(name: &str, bytes: &[u8]) -> Scratch {
     let path = Scratch::new(&format!("qa_TASK-M0-51_{name}"));
     std::fs::write(&path, bytes).expect("cannot write a scratch file");
