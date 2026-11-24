@@ -1,6 +1,6 @@
 //! A stain node's ports (render_gui_spec Part II §3, §3.1, §6): typed, directional connection points. A wire carries
 //! one of three types, `field` (a ctx field), `vec3` (a colour) or `f32` (a lightness) ([`PortType`]), and a `field`
-//! is tagged with a subtype ([`Subtype`]): `scalar`, `vector`, `categorical` or `point⟨q⟩` (R-542). The subtype is a
+//! is tagged with a subtype ([`Subtype`]): `scalar`, `vector`, `categorical` or `point⟨q⟩`. The subtype is a
 //! tag the inspector reads, never a gate: a wire attaches when the out-port's type is the in-port's, whatever the
 //! subtypes ([`Port::accepts`], §6).
 //!
@@ -19,7 +19,7 @@ pub enum Direction {
     Out,
 }
 
-/// A chart quotient a `point⟨q⟩` field lies on (render_gui_spec Part II §3; R-542).
+/// A chart quotient a `point⟨q⟩` field lies on (render_gui_spec Part II §3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Quotient {
     Sphere,
@@ -29,7 +29,7 @@ pub enum Quotient {
 }
 
 /// A `field`'s subtype (render_gui_spec Part II §3): `scalar`, `vector`, `categorical`, or `point⟨q⟩`, a position on
-/// the quotient `q` (R-542). A tag, never a wire gate (§6).
+/// the quotient `q`. A tag, never a wire gate (§6).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Subtype {
     Scalar,

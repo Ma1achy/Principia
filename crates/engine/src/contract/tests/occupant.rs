@@ -1,9 +1,8 @@
-//! The occupant algebra's expression tree (colour_composition §1; REQ-COL-011): a tree with an `f32` node feeding a
-//! `vec3` root type-checks; an `f32` root in the colour slot fails type-checking; a duplicated id, a wrong input count
-//! and an input of the wrong type are refused; and a checked tree lowers to one generated function per node. The
-//! operations here are the tests' own, each a call into the shared WGSL library: the algebra's are TASK-M7-05 to -10's.
-//! Each test registers its negative control (R-176). Its helpers' numbers are test inputs, not register constants
-//! (REQ-SYS-082).
+//! The occupant algebra's expression tree (colour_composition §1): a tree with an `f32` node feeding a `vec3` root
+//! type-checks; an `f32` root in the colour slot fails type-checking; a duplicated id, a wrong input count and an input
+//! of the wrong type are refused; and a checked tree lowers to one generated function per node. The operations here
+//! are the tests' own, each a call into the shared WGSL library, not the algebra's. Each test registers its negative
+//! control. Its helpers' numbers are test inputs, not register constants.
 
 use render::codegen::{self, schema::MapParam, Arg, Call, Param};
 

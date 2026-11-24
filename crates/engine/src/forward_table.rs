@@ -1,7 +1,6 @@
-//! The per-quad forward-table builder on the CPU (R-926 item 6; R-935, RQ-766 (a); REQ-DEC-059; TASK-M2-89): a
-//! quad's forward table, one exact node per sample, each node the chart's f64 evaluation at the sample
-//! (`decode_only_with`, the CPU's evaluation, R-926 item 5), narrowed once to `Ic<f32>` and written with `write_ic` as
-//! the record the integrator reads, the samples evaluated on threads.
+//! The per-quad forward-table builder on the CPU: a quad's forward table, one exact node per sample, each node the
+//! chart's f64 evaluation at the sample (`decode_only_with`, the CPU's evaluation), narrowed once to `Ic<f32>` and
+//! written with `write_ic` as the record the integrator reads, the samples evaluated on threads.
 //!
 //! **The work on threads** ([`build_with`]): the records are cut into chunks of [`CHUNK`] samples, the last one
 //! shorter, and chunk `c` goes to worker `c mod n` of `n` threads, each worker filling its own chunks in order, so no
@@ -9,7 +8,7 @@
 //! bitwise the per-sample evaluation's, whatever the thread count. A worker stops at its first failing sample, and the
 //! builder returns the failure at the lowest sample index, the one an evaluation sample by sample meets first.
 //!
-//! **Applied per R-369** (implementation choices that change no result, written before any run): the chunk is 1024
+//! **Implementation choices** (they change no result): the chunk is 1024
 //! samples, the register's `forward_table_chunk`; the assignment is interleaved and fixed, not taken from a shared
 //! queue; a worker is spawned only for a lane that has a chunk; the records' buffer is allocated once, zeroed, at the
 //! table's size.
@@ -27,7 +26,7 @@ use crate::compute::ComputeError;
 use crate::decode_dispatch::decode_only_with;
 use crate::first_slice::{narrow, Quad, SliceChart};
 
-/// The samples a chunk of the table holds, the unit one thread fills at a time (applied per R-369, the module's note):
+/// The samples a chunk of the table holds, the unit one thread fills at a time (the module's note):
 /// the register's `forward_table_chunk`.
 pub const CHUNK: usize = FORWARD_TABLE_CHUNK.number() as usize;
 

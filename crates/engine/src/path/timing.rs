@@ -1,4 +1,4 @@
-//! A segment's timing (R-901; the chart-space model's Theorem 5; export contract Part 3): when its frames are shown,
+//! A segment's timing (the chart-space model's Theorem 5; export contract Part 3): when its frames are shown,
 //! never what they show. A frame at playback fraction `u` is the segment's frame at `s = ease(u)`, and the family never
 //! sees `u`, so easing cannot move a keyframe or change a frame's content.
 
@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use super::PathError;
 
-/// A monotone easing curve with `e(0) = 0` and `e(1) = 1` exactly. Which curves are offered, and the default, are
-/// TASK-M8-31's (REQ-TOOL-197). The plan is unclear here; chose `Linear` and a pinned monotone table, the form any such
-/// curve is sampled into, because Theorem 5's test needs one curve that is not the identity and no curve is chosen yet.
+/// A monotone easing curve with `e(0) = 0` and `e(1) = 1` exactly. The plan is unclear here; chose `Linear` and a
+/// pinned monotone table, the form any such curve is sampled into, because Theorem 5's test needs one curve that is not
+/// the identity and the plan has not yet chosen which curves are offered or the default.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub enum Easing {
     /// `e(u) = u`.

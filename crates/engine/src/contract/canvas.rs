@@ -1,8 +1,8 @@
-//! The canvas, the one sanctioned exception to the data boundary (gui_state_contract §1; RQ-247): the engine side's
+//! The canvas, the one sanctioned exception to the data boundary (gui_state_contract §1): the engine side's
 //! `wgpu` context, which egui-wgpu is built from so it paints onto the same surface in-process (render_gui_spec §G1),
 //! and the figure, drawn into the app's render pass. No state rides on it. It is a second trait, kept apart from the
 //! data contract ([`EngineInterface`](crate::contract::interface::EngineInterface)) and outside the conformance suite;
-//! the gui crate's mock engine implements it, and the real engine's implementation is TASK-M8-05's (REQ-GUI-070).
+//! the gui crate's mock and real sides implement it.
 
 /// The engine side's `wgpu` context, handed to the app once, at startup (gui_state_contract §1).
 #[derive(Clone, Debug)]
@@ -17,7 +17,7 @@ pub struct CanvasContext {
     pub queue: wgpu::Queue,
 }
 
-/// The canvas the engine side provides (RQ-247).
+/// The canvas the engine side provides.
 pub trait Canvas: Send + Sync {
     /// The `wgpu` context egui-wgpu is built from.
     fn context(&self) -> &CanvasContext;
@@ -26,10 +26,10 @@ pub trait Canvas: Send + Sync {
     fn draw_figure(&self, pass: &mut wgpu::RenderPass<'_>, format: wgpu::TextureFormat);
 }
 
-/// The hatch a canvas draws a forbidden pixel with, past the chart's `[0,1]²` (R-407's fallback;
-/// chart_decoder_contract § "Past the unit square — each axis's extension type (R-407)"): the render contract's
+/// The hatch a canvas draws a forbidden pixel with, past the chart's `[0,1]²` (the universal fallback;
+/// chart_decoder_contract § "Past the unit square — each axis's extension type"): the render contract's
 /// `debug_invalid(frag_xy)` (Part 5), re-exported from where it is generated, so a canvas outside the render crate's
-/// assembler, the mock's (TASK-M6-30), draws the one hatch the corpus defines rather than a copy of it.
+/// assembler, the mock's, draws the one hatch the corpus defines rather than a copy of it.
 pub mod hatch {
     /// The shared prelude's WGSL at a tier, which defines `debug_invalid(frag_xy)` (linear RGB) and the sRGB transfer
     /// both ways, `srgb_to_linear` and `linear_to_srgb`; its uniform block's binding, which a module including it

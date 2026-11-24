@@ -1,6 +1,6 @@
-//! The stop in the edit path (REQ-CHART-060, REQ-CHART-168; R-469 P2, A1 to A3; chart_decoder_contract § "Navigation
-//! stops at the edge"): every navigation edit passes through the kernel's one generic rule,
-//! [`kernel::chart::nav::nav_stop`], before it is recorded, and the history holds the value it accepts.
+//! The stop in the edit path (chart_decoder_contract § "Navigation stops at the edge"): every navigation edit passes
+//! through the kernel's one generic rule, [`kernel::chart::nav::nav_stop`], before it is recorded, and the history
+//! holds the value it accepts.
 //!
 //! - **The field the stop moves** ([`Numbers`]): a view's numbers, `z₀`, `q₁`, `q₂`, a kernel map's window
 //!   `{centre, half}` and a curved view's tilt angles `(τ₁, τ₂)`, in one vector. An edit moves it along the straight line

@@ -1,11 +1,10 @@
 //! `SimConfig`, the sim key (gui_state_contract §2): a change to it re-integrates. Each field is one group §2
-//! lists; each group's fields come from the contract that owns them, added by the requirements that need them
-//! (R-133). At M0 a group is named and empty; the plane and the lock gained theirs with the dev GUI's Manifold view
-//! (R-390, "Contract fields").
+//! lists; each group's fields come from the contract that owns them, added by the requirements that need them; until
+//! then a group is named and empty. The plane's and the lock's serve the dev GUI's Manifold view.
 //!
 //! `SimConfig` and its groups serialise in the one canonical serialisation, [`canonical`](super::canonical)
-//! (gui_state_contract §2, R-309), JCS (R-318): an object keyed by its field names, an empty group as `{}`. That text is
-//! the ViewState record ([`view_state`](super::view_state); R-483 H2).
+//! (gui_state_contract §2), JCS: an object keyed by its field names, an empty group as `{}`. That text is the
+//! ViewState record ([`view_state`](super::view_state)).
 
 use std::collections::BTreeMap;
 
@@ -24,14 +23,14 @@ pub struct SimConfig {
     pub plane: Plane,
     /// The slice values.
     pub slice: Slice,
-    /// The lock flag, the `z_locked` anchor and the `δ` excursion; lock is chart construction (R-69).
+    /// The lock flag, the `z_locked` anchor and the `δ` excursion; lock is chart construction.
     pub lock: Lock,
-    /// Each block's link id and tunable parameter values (R-483 X1).
+    /// Each block's link id and tunable parameter values.
     pub links: Links,
     /// The integrator occupant.
     pub integrator: Integrator,
     /// The kernel variant: physics, or colour_composition Appendix A's bring-up mode, "the only sim-key item" of
-    /// colour_composition §0 (RQ-221). A change re-integrates, as for any sim-key field (caching contract Part 2).
+    /// colour_composition §0. A change re-integrates, as for any sim-key field (caching contract Part 2).
     pub kernel_variant: KernelVariant,
     /// `T`, `dt`, the thresholds and `eps`.
     pub horizon: Horizon,
@@ -43,11 +42,11 @@ pub struct SimConfig {
 }
 
 /// Chart id and params (gui_state_contract §2). The view's window on a nonlinear chart's own parameters is chart
-/// construction among them, held here (R-69; chart_decoder_contract Part 4, "The lock's construction, defined";
-/// REQ-SYS-011), so the ViewState record restores it and one undo of a lock restores it with `z₀` and the lock group.
-/// Each physical-quantity axis's mapping is a chart param too, a sim key (R-471 E2, H7; R-506; REQ-CHART-068): a change
-/// re-integrates, and the canonical serialisation, so the ViewState record and the export's sidecar, carry it. The
-/// other chart params join with the requirements that need them (R-133).
+/// construction among them, held here (chart_decoder_contract Part 4, "The lock's construction, defined"), so the
+/// ViewState record restores it and one undo of a lock restores it with `z₀` and the lock group. Each
+/// physical-quantity axis's mapping is a chart param too, a sim key: a change re-integrates, and the canonical
+/// serialisation, so the ViewState record and the export's sidecar, carry it. The other chart params join with the
+/// requirements that need them.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Chart {
@@ -58,7 +57,7 @@ pub struct Chart {
     pub mapping: [Mapping; 2],
 }
 
-/// How a physical-quantity axis maps `[0, 1]` onto its quantity (R-471 E1, E2; R-506): chart_reference §2.1's warp,
+/// How a physical-quantity axis maps `[0, 1]` onto its quantity: chart_reference §2.1's warp,
 /// the default, or affine onto the warp's range at the slice centre. Serialised `warped` or `linear`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -120,7 +119,7 @@ pub const LATENT_DIM: usize = std::mem::size_of::<Latent>() / std::mem::size_of:
 
 /// `z₀`, `q₁`, `q₂` (gui_state_contract §2): the affine slice `z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂`
 /// (chart_decoder_contract Part 3). The view state is this triple: navigation edits it and nothing else (Part 4).
-/// Added for the dev GUI's Manifold view (R-390, "Contract fields"); TASK-M2-22 keeps its requirements.
+/// The dev GUI's Manifold view edits it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Plane {
@@ -132,7 +131,7 @@ pub struct Plane {
     pub q2: Latent,
 }
 
-/// Slice values (gui_state_contract §2): the slice frame, added for the dev GUI's Tilt section (R-457).
+/// Slice values (gui_state_contract §2): the slice frame, which the dev GUI's Tilt section edits.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Slice {
@@ -213,14 +212,14 @@ impl TiltMap {
     }
 }
 
-/// `z_q3`'s index, the GUI's slice axis before R-459 and the slice frame's default for a plane that does not show it
+/// `z_q3`'s index, the slice frame's default for a plane that does not show it
 /// (gui_state_contract §2; chart_decoder_contract Part 2: `z[2:6]` is the momentum block, `z_q3` its last), read from
 /// the register.
 pub const Z_Q3: u32 = SLICE_AXIS_Z_Q3.number() as u32;
 
 impl SliceFrame {
     /// The frame with the normal and both targets along `axis`: gui_state_contract §2's defaults, all three the slice
-    /// axis, so the targets give the one shared target the GUI tilted into before R-457.
+    /// axis, so the two targets are one shared target.
     pub const fn along(axis: u32) -> Self {
         Self {
             normal: axis,
@@ -250,12 +249,13 @@ impl SliceFrame {
     }
 }
 
-/// Lock flag, `z_locked` anchor, `δ` excursion (gui_state_contract §2; R-69): the lock is CPU-side chart
-/// construction (chart_decoder_contract Part 4, "The lock"). The flag and the anchor are added for the dev GUI's lock
-/// (R-390, "Contract fields"). The excursion is held by the stored pair, `δ = z₀ − z_locked` ([`Lock::excursion`]),
-/// the anchor stored, not re-derived (chart_decoder_contract Part 4, "The lock's construction, defined"; R-72): a slice
-/// step or a slider move edits `z₀` alone, snap-back clears the hidden part of `δ` (the pin, held in the view beside
-/// this group, unmoved: `engine::path::Pin`), and `δ` has no field of its own that could disagree with `z₀`. TASK-M2-23 keeps the lock's requirements (`crate::lock`).
+/// Lock flag, `z_locked` anchor, `δ` excursion (gui_state_contract §2): the lock is CPU-side chart construction
+/// (chart_decoder_contract Part 4, "The lock"). The flag and the anchor serve the dev GUI's lock. The excursion is
+/// held by the stored pair, `δ = z₀ − z_locked` ([`Lock::excursion`]), the anchor stored, not re-derived
+/// (chart_decoder_contract Part 4, "The lock's construction, defined"): a slice step or a slider move edits `z₀`
+/// alone, snap-back clears the hidden part of `δ` (the pin, held in the view beside this group, unmoved:
+/// `engine::path::Pin`), and `δ` has no field of its own that could disagree with `z₀`. The lock's own logic is
+/// `crate::lock`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Lock {
@@ -273,11 +273,11 @@ impl Lock {
     }
 }
 
-/// The links (gui_state_contract §2; R-483 X1, H1; R-106: the chart's per-block registry entries): one choice per row
-/// of the Decoder window, the four momentum controls sharing the Momenta row's (R-479 E1). It is the one place the link
+/// The links (gui_state_contract §2; the chart's per-block registry entries): one choice per row of the Decoder
+/// window, the four momentum controls sharing the Momenta row's. It is the one place the link
 /// ids and their parameter values live; every destination reads them through the canonical serialisation. Every block
-/// and every parameter is written even at its default: no field here has `skip_serializing_if` or a serde default
-/// (R-483 X2). A text is read only if each block names a registry entry onto that block's codomain and lists exactly
+/// and every parameter is written even at its default: no field here has `skip_serializing_if` or a serde default.
+/// A text is read only if each block names a registry entry onto that block's codomain and lists exactly
 /// that entry's tunable parameters ([`Links::check`]), so a record with a parameter stripped is refused, never read
 /// under a default.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -293,7 +293,7 @@ pub struct Links {
     pub momenta: LinkChoice,
 }
 
-/// One block's link (R-483 H1): `id` the registry entry's name, `params` each tunable parameter of that entry with its
+/// One block's link: `id` the registry entry's name, `params` each tunable parameter of that entry with its
 /// value (`{"mu_max":5}`), a map, `{}` for an entry with none.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -358,7 +358,7 @@ fn at_defaults(id: &str) -> LinkChoice {
 }
 
 impl Links {
-    /// The default links, each block's slot default (dd_decoder §3), at its parameters' defaults (R-481 A2).
+    /// The default links, each block's slot default (dd_decoder §3), at its parameters' defaults.
     pub fn defaults() -> Links {
         let [mass, alpha, beta, momenta] = BLOCKS.map(|(_, s)| at_defaults(slot(s).default));
         Links {
@@ -370,7 +370,7 @@ impl Links {
     }
 
     /// The links of the selection `S`, at its parameters' defaults; `Err` where the four momentum controls' links
-    /// differ, which one Momenta row cannot hold (R-479 E1).
+    /// differ, which one Momenta row cannot hold.
     pub fn of<S: Selection>() -> Result<Links, String> {
         let [mass, alpha, beta, q0, q1, q2, q3] = S::LINK_IDS;
         if [q1, q2, q3].iter().any(|q| *q != q0) {
@@ -396,8 +396,8 @@ impl Links {
         ]
     }
 
-    /// `Ok` if each block names a registry entry onto its slot's codomain (REQ-GEN-013) and lists exactly that entry's
-    /// tunable parameters, none missing and none extra (R-483 X2); otherwise each problem, naming its block.
+    /// `Ok` if each block names a registry entry onto its slot's codomain and lists exactly that entry's
+    /// tunable parameters, none missing and none extra; otherwise each problem, naming its block.
     pub fn check(&self) -> Result<(), String> {
         let mut bad = Vec::new();
         for ((block, choice), (_, s)) in self.blocks().into_iter().zip(BLOCKS) {
@@ -421,7 +421,7 @@ impl Links {
         }
     }
 
-    /// The tunable parameters the kernel's `_at` functions read (R-481 G7): `mu_max` from the mass block's choice and
+    /// The tunable parameters the kernel's `_at` functions read: `mu_max` from the mass block's choice and
     /// `q_max` from the momenta's. A parameter the chosen entry does not take is read by no link of that block, and
     /// is left at its default.
     pub fn link_params(&self) -> LinkParams<f64> {
@@ -441,8 +441,8 @@ impl Links {
 #[serde(deny_unknown_fields)]
 pub struct Integrator {}
 
-/// The kernel variant, each a baked kernel (lowering Part 3, "Compute side"; R-41): the physics kernel, or the one
-/// debug mode, colour_composition Appendix A's bring-up mode (R-75; `kernel::bringup`).
+/// The kernel variant, each a baked kernel (lowering Part 3, "Compute side"): the physics kernel, or the one debug
+/// mode, colour_composition Appendix A's bring-up mode (`kernel::bringup`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum KernelVariant {
@@ -452,9 +452,9 @@ pub enum KernelVariant {
     BringUp,
 }
 
-/// `T`/`dt`/thresholds/`eps` (gui_state_contract §2). The horizon `T` was added for the dev GUI's Time, whose scrubber
-/// spans `[0, T]` (R-404's `TimeStep`), and its hover label, "at t of t_max" (render_gui_spec §G2) (R-390, "Contract
-/// fields"); `dt`, the thresholds and `eps` join with the requirements that need them (R-133).
+/// `T`/`dt`/thresholds/`eps` (gui_state_contract §2). The horizon `T` serves the dev GUI's Time, whose scrubber spans
+/// `[0, T]` (its `TimeStep`), and its hover label, "at t of t_max" (render_gui_spec §G2); `dt`, the thresholds and
+/// `eps` join with the requirements that need them.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Horizon {

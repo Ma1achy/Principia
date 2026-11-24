@@ -1,9 +1,9 @@
-//! The dispatch of the kernel's bring-up mode (colour_composition Appendix A; R-75; `kernel::bringup`) over the
+//! The dispatch of the kernel's bring-up mode (colour_composition Appendix A; `kernel::bringup`) over the
 //! synthetic harness's flat layout ([`render::raster::Grid`]): the sim key's kernel variant
 //! ([`KernelVariant`](crate::contract::sim_config::KernelVariant)) selects the baked kernel, and the bring-up kernel
 //! writes its known pattern into the `SimState` buffer, one sample per index. [`native`](crate::bringup::native) runs
 //! the shared source natively at f64; [`gpu`](crate::bringup::gpu) dispatches its f32 SPIR-V build, translated to
-//! WGSL by `cargo xtask build-kernel`, through the compute entry point (R-297), and reads the buffer back. Each returns
+//! WGSL by `cargo xtask build-kernel`, through the compute entry point, and reads the buffer back. Each returns
 //! the stored `SimState`s; a test reads them through the generated unpack (`kernel::payload::sim_state_from_ftle`).
 
 use kernel::bringup::{max_samples, pattern, words_per_sample};

@@ -1,11 +1,11 @@
 //! The CPU validation pass's view-level check (chart_decoder_contract Part 5, `forbids_energy_normalisation`;
-//! inverse_encode_contract § "Chart-aware validation"; dd_decoder §3.7; chart_reference §0.6; R-25, R-124;
-//! REQ-CHART-031): a view, a chart and its energy target `E*`, is refused before anything decodes when
+//! inverse_encode_contract § "Chart-aware validation"; dd_decoder §3.7; chart_reference §0.6): a view, a chart and its
+//! energy target `E*`, is refused before anything decodes when
 //! - the chart forbids energy normalisation (`(L_z, E)` and `(L_z, K)`, `kernel::chart::invariant`) and the view sets
-//!   any target: every `Some(E*)`, `Some(0)` included, since `E* = 0` is a real target and "off" is `None` (R-25), and
+//!   any target: every `Some(E*)`, `Some(0)` included, since `E* = 0` is a real target and "off" is `None`, and
 //!   a non-finite one as well; or
 //! - the target is not finite, on a chart that allows it: dd_decoder §3.7 reads `E*` as "the view's finite value", so
-//!   a NaN or infinite target never reaches the decode (applied per R-369, physics review 5535371186 of PR #216).
+//!   a NaN or infinite target never reaches the decode.
 //!
 //! The forbidding chart is checked first, so its refusal names the flag whatever the target. A view that passes is
 //! decoded as dd_decoder §3.7 says: `None` leaves the momenta untouched, and on a chart that allows `η_E` the outcome at
@@ -18,7 +18,7 @@ use kernel::chart::Chart;
 /// Why the validation pass refuses a view.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Refusal {
-    /// The chart `chart` forbids energy normalisation and the view sets the target `e_star` (R-25).
+    /// The chart `chart` forbids energy normalisation and the view sets the target `e_star`.
     ForbidsEnergyNormalisation { chart: String, e_star: f64 },
     /// The view's target `e_star` on the chart `chart` is not finite (dd_decoder §3.7).
     NonFiniteTarget { chart: String, e_star: f64 },

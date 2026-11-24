@@ -1,16 +1,16 @@
-//! The direction library (chart_decoder_contract Part 4, "Tilt" and "Directions are axis kinds"; REQ-GUI-003,
-//! REQ-CHART-009, REQ-CHART-051): the directions a slice steps along and a tilt rotates toward.
+//! The direction library (chart_decoder_contract Part 4, "Tilt" and "Directions are axis kinds"): the directions a
+//! slice steps along and a tilt rotates toward.
 //!
 //! - **The six orthogonal to the plane** ([`hidden`]): the raw latent directions `ê_k` with the plane projected out,
 //!   orthonormalised. Constant vectors, needing no anchor.
 //! - **The named compound directions**, each a unit latent vector evaluated at the chart centre `z₀` and recomputed
-//!   whenever it changes, as Part 4's "Their latent vectors" defines them (R-72): [`mass_away_from_burrau`],
+//!   whenever it changes, as Part 4's "Their latent vectors" defines them: [`mass_away_from_burrau`],
 //!   [`energy_at_fixed_lz`] and the Burrau-to-unconstrained [`morph`]. [`library`] evaluates them all at one plane.
 //!
 //! None of it reaches the kernel (Part 4, "What the GPU knows"): the directions are read from the shared CPU decode
 //! (`kernel::decode`) and the selected links, and a gesture along one is an edit of `z₀` or the basis.
 //!
-//! **The active values** (chart_reference §0.1; R-481 G4; REQ-DEC-048): the named directions read the mass link's
+//! **The active values** (chart_reference §0.1): the named directions read the mass link's
 //! inverse and the momentum links' log-dets, so each has a form at the tunable parameters `p`
 //! ([`mass_away_from_burrau_params`], [`energy_at_fixed_lz_params`], [`morph_params`], [`library_params`]) that reads
 //! the active `μ_max` and `q_max`; the forms without them are these at `LinkParams::DEFAULT`.
@@ -116,9 +116,9 @@ pub fn mass_away_from_burrau_params<S: Selection>(
 /// The energy increase at fixed `L_z` at the centre `z0`, under the link selection `S` (Part 4, "Their latent
 /// vectors"): in the momentum block, the velocity with its rigid rotation projected out, `δv = v − (L_z/I)·J r`
 /// (chart_reference §2.2's projection), or §2.2's seed direction `w` where `‖δv‖²_m ≤ ε_w·‖v‖²_m`, the seed in force,
-/// the expansion `w = r/√I` (R-934), so on the `(L_z, K)` construction's image it stays that axis's tangent; as Jacobi momenta,
-/// pulled back through each momentum link's derivative `exp(log_det)`, normalised. Unavailable where a derivative
-/// underflows to 0.
+/// the expansion `w = r/√I`, so on the `(L_z, K)` construction's image it stays that axis's tangent; as Jacobi
+/// momenta, pulled back through each momentum link's derivative `exp(log_det)`, normalised. Unavailable where a
+/// derivative underflows to 0.
 pub fn energy_at_fixed_lz<S: Selection>(z0: &Latent) -> Result<Latent, Unavailable> {
     energy_at_fixed_lz_params::<S>(z0, &LinkParams::DEFAULT)
 }

@@ -1,17 +1,16 @@
-//! The first slice (R-926 items 5 and 6; R-935, RQ-766 (a); REQ-DEC-057, REQ-PERF-120; TASK-M2-86): one real chart
-//! at a time put through the route R-926 rules, against today's decode. The CPU evaluates the chart in f64 at each
-//! sample, the quad's forward table is the `Ic<f64>` of each sample, one exact node per sample (RQ-766 (a)), each node
-//! is narrowed once to `Ic<f32>` and written with `write_ic` as the record the integrator reads, and the CPU reference
-//! integrates the records at f32. No new type: today's charts, today's [`Window`] (the latent chart's window its plane
-//! `(z₀, q₁, q₂)`), today's record layout (`kernel::stage::decode::ic_words`). No backwards table, no slopes, no blend,
-//! no time coordinate, no shader.
+//! The first slice: one real chart at a time put through the forward-table route, against today's decode. The CPU
+//! evaluates the chart in f64 at each sample, the quad's forward table is the `Ic<f64>` of each sample, one exact node
+//! per sample, each node is narrowed once to `Ic<f32>` and written with `write_ic` as the record the integrator reads,
+//! and the CPU reference integrates the records at f32. No new type: today's charts, today's [`Window`] (the latent
+//! chart's window its plane `(z₀, q₁, q₂)`), today's record layout (`kernel::stage::decode::ic_words`). No backwards
+//! table, no slopes, no blend, no time coordinate, no shader.
 //!
 //! **The charts** ([`SliceChart`]): the latent chart (`kernel::chart::latent`), the shape sphere under its exponential
 //! map (`kernel::chart::shape_sphere`) and the `(L_z, E)` chart (`kernel::chart::invariant`'s [`InvariantLE`], which
 //! `kernel::chart::energy`'s `Mapped` wraps, warped on both axes, bit for bit), each held at f32, the precision today's
 //! decode and the GPU's uniform read; the CPU's f64 evaluation reads the parameters widened, never narrowed
-//! (`decode_only_with`), so the f64 route and today's f32 decode start from the same chart (R-649: like for like).
-//! Their parameters and REQ-DEC-057's grids are the measurement's, `validation::first_slice`.
+//! (`decode_only_with`), so the f64 route and today's f32 decode start from the same chart: like for like.
+//! Their parameters and grids are the measurement's, `validation::first_slice`.
 //!
 //! **A quad** ([`Quad`]): a chart, today's [`Window`] on it, and its samples; sample `(x, y)` of a `w × h` quad is the
 //! window's point at `s = (x + ½)/w`, `t = (y + ½)/h`. The latent chart's window is its plane, so its quad's window is
@@ -161,7 +160,7 @@ impl SliceChart for InvariantLE<f32> {
     const NAME: &'static str = "invariant-lz-e";
 }
 
-/// The quad's forward table (R-926 item 6; RQ-766 (a)): the CPU's f64 evaluation at each sample, `decode_only_with`
+/// The quad's forward table: the CPU's f64 evaluation at each sample, `decode_only_with`
 /// at the sample's `(u, v)` under the quad's sim key, `η_E` off; one exact node per sample, the `Ic<f64>`.
 pub fn forward_table<C: SliceChart>(quad: &Quad<C>) -> Result<Vec<Ic<f64>>, ComputeError> {
     // Sized once, not grown by doubling: a doubling `collect` of a 1920 × 1080 table left the reallocations' blocks
@@ -172,7 +171,7 @@ pub fn forward_table<C: SliceChart>(quad: &Quad<C>) -> Result<Vec<Ic<f64>>, Comp
 }
 
 /// [`forward_table`] written into `table`, which is cleared first and keeps its capacity: the same nodes, in a buffer
-/// the caller reuses (the bench's split of the timed work, REQ-PERF-120).
+/// the caller reuses (the bench's split of the timed work).
 pub fn forward_table_into<C: SliceChart>(
     quad: &Quad<C>,
     table: &mut Vec<Ic<f64>>,
@@ -213,7 +212,7 @@ pub fn records_into(table: &[Ic<f64>], out: &mut Vec<u32>) {
     }
 }
 
-/// The slice's CPU evaluation of `quad`: its forward table, then its records. What REQ-PERF-120 times.
+/// The slice's CPU evaluation of `quad`: its forward table, then its records. What the first-slice bench times.
 pub fn evaluate<C: SliceChart>(quad: &Quad<C>) -> Result<Vec<u32>, ComputeError> {
     Ok(records(&forward_table(quad)?))
 }
@@ -243,7 +242,7 @@ pub struct MarchKey {
     pub stop_on_escape: bool,
 }
 
-/// The sim key with horizon `t` and every other field Part 3's default, `dt_macro` the horizon's (R-132), as dispatch
+/// The sim key with horizon `t` and every other field Part 3's default, `dt_macro` the horizon's, as dispatch
 /// validates it: its [`MarchKey`]; dispatch's refusal for a horizon it refuses.
 pub fn uniforms(t: f64) -> Result<MarchKey, DispatchError> {
     march_key(&SimUniforms {

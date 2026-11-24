@@ -1,11 +1,10 @@
 //! `SetField`, the typed edit `setField(path, value)` (gui_state_contract §1, §2): the only way in. A GUI emits it
-//! as plain data and never mutates engine state directly. Every `SimConfig` and `RenderState` edit is undoable
-//! (R-69); `ViewUI` is never read by the engine, so no edit reaches it. The paths are added with the fields they
-//! name (R-133): the first is the playhead's, `RenderField::Playhead` (RQ-243); the navigation paths, `z₀`, the basis
-//! and the lock, came with the dev GUI's Manifold view, the overlay set and the hover with its Overlays menu and
-//! hover label, the horizon with its Run window, the stain graph with its Stain editor, the slice frame with the
-//! Tilt section's target dropdowns (R-390, "Contract fields"; R-457), and the debug view with View › Debug view
-//! (R-467 D5).
+//! as plain data and never mutates engine state directly. Every `SimConfig` and `RenderState` edit is undoable;
+//! `ViewUI` is never read by the engine, so no edit reaches it. The paths are added with the fields they name: the
+//! playhead's, `RenderField::Playhead`; the navigation paths, `z₀`, the basis and the lock, for the dev GUI's Manifold
+//! view; the overlay set and the hover for its Overlays menu and hover label; the horizon for its Run window; the stain
+//! graph for its Stain editor; the slice frame for the Tilt section's target dropdowns; and the debug view for View ›
+//! Debug view.
 
 use crate::contract::render_state::{Hover, Overlays, Playhead, StainGraph};
 use crate::contract::sim_config::{Horizon, Latent, Lock, SliceFrame, Window};
@@ -15,14 +14,14 @@ use crate::contract::sim_config::{Horizon, Latent, Lock, SliceFrame, Window};
 pub struct SetField {
     /// The field edited, and its new value.
     pub edit: Edit,
-    /// Marked "no history": the edit does not enter undo, as the playback clock's playhead advance (R-101).
+    /// Marked "no history": the edit does not enter undo, as the playback clock's playhead advance.
     pub no_history: bool,
 }
 
 /// A history key (gui_state_contract §2, "A drag coalesces into one history entry" and "A command of several edits is
-/// one history entry"; R-96, R-466): the edits sent under one key, one after another, are one history entry, its before
-/// each field's value at the first of them and its after the last value sent; an edit under another key, or under
-/// none, closes the entry. A drag sends every frame's edit under its own key; a command of several edits (a lock, a
+/// one history entry"): the edits sent under one key, one after another, are one history entry, its before each
+/// field's value at the first of them and its after the last value sent; an edit under another key, or under none,
+/// closes the entry. A drag sends every frame's edit under its own key; a command of several edits (a lock, a
 /// section reset, Home) sends them in one frame under one fresh key.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HistoryKey(pub u64);
@@ -36,7 +35,7 @@ pub enum Edit {
     Render(RenderField),
 }
 
-/// A `SimConfig` field with its value (gui_state_contract §2; R-133). Navigation is chart construction: pan and
+/// A `SimConfig` field with its value (gui_state_contract §2). Navigation is chart construction: pan and
 /// slice edit `z₀`, zoom, tilt and rotation the basis (chart_decoder_contract Part 4), each gesture one edit.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SimField {
@@ -49,16 +48,16 @@ pub enum SimField {
         /// The new `q₂`.
         q2: Latent,
     },
-    /// The lock group: locking and unlocking, undoable (R-69).
+    /// The lock group: locking and unlocking, undoable.
     Lock(Lock),
-    /// `Chart.window`, a nonlinear chart's view window: chart construction, undoable (R-69); a lock on a nonlinear
+    /// `Chart.window`, a nonlinear chart's view window: chart construction, undoable; a lock on a nonlinear
     /// chart re-centres it in the lock's one command (chart_decoder_contract Part 4, "The lock's construction,
-    /// defined"; R-466).
+    /// defined").
     Window(Window),
-    /// The horizon `T`, a sim key, undoable (R-69): the Run window's `T_horizon`, in `[50, 200]` (render_gui_spec §G5,
-    /// R-132; gui_state_contract §2).
+    /// The horizon `T`, a sim key, undoable: the Run window's `T_horizon`, in `[50, 200]` (render_gui_spec §G5;
+    /// gui_state_contract §2).
     Horizon(Horizon),
-    /// `Slice.frame`, the slice normal and the two tilt targets, undoable (R-69; R-457 E3), with the basis where the
+    /// `Slice.frame`, the slice normal and the two tilt targets, undoable, with the basis where the
     /// same pick changes it: a pick that changes both is one edit, so one history entry, and undo restores both
     /// (gui_state_contract §2).
     SliceFrame {
@@ -69,19 +68,18 @@ pub enum SimField {
     },
 }
 
-/// A `RenderState` field with its value (gui_state_contract §2; R-133).
+/// A `RenderState` field with its value (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq)]
 pub enum RenderField {
-    /// The playhead `t` (RQ-243): the GUI's no-history clock advance (R-101) and a scrub (R-96) both write it.
+    /// The playhead `t`: the GUI's no-history clock advance and a scrub both write it.
     Playhead(Playhead),
     /// The overlay set (gui_state_contract §2): a toggle of Overlays ▾, or "all off", is one edit of the whole set.
     Overlays(Overlays),
-    /// The cursor over the figure (gui_state_contract §2), always sent marked "no history" (R-101).
+    /// The cursor over the figure (gui_state_contract §2), always sent marked "no history".
     Hover(Hover),
     /// The stain graph (gui_state_contract §2, §5): an edit of the Stain editor (picking a node's occupant, a param)
-    /// is one edit of the whole graph, undoable (R-69).
+    /// is one edit of the whole graph, undoable.
     StainGraph(StainGraph),
-    /// View › Debug view, on or off (gui_state_contract §2; R-467 D5): one edit per toggle, undoable as an Overlays ▾
-    /// toggle is (R-69).
+    /// View › Debug view, on or off (gui_state_contract §2): one edit per toggle, undoable as an Overlays ▾ toggle is.
     DebugView(bool),
 }

@@ -1,6 +1,6 @@
 //! The axis metadata (chart_decoder_contract § "The four axis kinds — a closed set", Part 5's "Per-axis metadata the
-//! validator needs"; REQ-CHART-004, REQ-CHART-012): the decoder's three blocks, the closed set of four axis kinds, and
-//! the axis descriptor carrying every field Part 5 lists.
+//! validator needs"): the decoder's three blocks, the closed set of four axis kinds, and the axis descriptor carrying
+//! every field Part 5 lists.
 
 use kernel::chart::mixed::Coordinate;
 use kernel::chart::{AxisMeta, BlockTouch};
@@ -230,8 +230,7 @@ pub struct Residual {
 /// A point of a kind-4 axis's embed (chart_decoder_contract § "The four axis kinds", row 4: "`ν → (α,β,μ₁,μ₂)`"): the
 /// configuration angles `α`, `β` of chart_reference §0.2's canonical-frame decode and the mass logits `μ₁`, `μ₂` of
 /// §0.1, `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`. These are the decoder's quantities ahead of its links, so the embed and
-/// its tangent hold under any link selection; the pullback to the latent `z` through the selected links is the tilt's
-/// (TASK-M2-23, REQ-CHART-007).
+/// its tangent hold under any link selection; the pullback to the latent `z` through the selected links is the tilt's.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CurvePoint {
     /// `α`, `‖ρ̃‖ = cos α` at `R̃ = 1`.

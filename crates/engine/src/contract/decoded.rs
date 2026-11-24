@@ -1,7 +1,7 @@
-//! The state the integrator starts from, as the compass's physical views read it (R-550; deep_zoom §2, "The latent
+//! The state the integrator starts from, as the compass's physical views read it (deep_zoom §2, "The latent
 //! Jacobian"; dd_decoder §3.2): the decoder's CPU f64 path at a latent point, in the canonical frame and the scale gauge
 //! it decodes to, read after `η_E`. A pure function of its arguments, crossing nothing: the GUI differentiates it through
-//! the contract, the only part of the engine it may read (R-185, R-390).
+//! the contract, the only part of the engine it may read.
 
 use kernel::decode::{energy_norm, Latent as KernelLatent};
 use kernel::encode::blocks::jacobi;
@@ -32,7 +32,7 @@ pub struct State {
     pub l_z: f64,
 }
 
-/// The decoded state at `z` under `links`' tunable parameters with the energy target `e_star` (`None` is off, R-25).
+/// The decoded state at `z` under `links`' tunable parameters with the energy target `e_star` (`None` is off).
 /// The link ids are the defaults': a selection is a compile-time type (`kernel::generated::links::Selection`), and no
 /// surface of the dev GUI chooses another yet.
 pub fn state(z: &Latent, links: &Links, e_star: Option<f64>) -> State {
@@ -58,13 +58,13 @@ fn dot2(a: [f64; 2], b: [f64; 2]) -> f64 {
     a[0] * b[0] + a[1] * b[1]
 }
 
-/// The 2-D cross product, `a ∧ b` (R-14).
+/// The 2-D cross product, `a ∧ b`.
 fn cross2(a: [f64; 2], b: [f64; 2]) -> f64 {
     a[0] * b[1] - a[1] * b[0]
 }
 
-/// The state on the shape sphere (chart_reference §3.1; R-14) with its rates at `t = 0`, from `ρ̃̇ = p_ρ/√μ_ρ` and
-/// `λ̃̇ = p_λ/√μ_λ` (RQ-343 (b)). At a pole the azimuth and the angles' rates, which the sphere does not define there, are
+/// The state on the shape sphere (chart_reference §3.1) with its rates at `t = 0`, from `ρ̃̇ = p_ρ/√μ_ρ` and
+/// `λ̃̇ = p_λ/√μ_λ`. At a pole the azimuth and the angles' rates, which the sphere does not define there, are
 /// 0: the poles are the chart's singularities, the steer refusing there.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Sphere {

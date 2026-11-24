@@ -1,11 +1,11 @@
-//! The canonical serialisation, JCS (RFC 8785; gui_state_contract §2, R-309, R-318, R-322; REQ-TOOL-145): RFC 8785's
-//! published test vectors byte for byte, its number samples, −0.0 written `0`, a u64 field always a string and every
-//! other number a number, each form of serde's data model, the refusals, and the skeleton's `SimConfig` and
-//! `RenderState`. Each test registers its negative control (R-176).
+//! The canonical serialisation, JCS (RFC 8785; gui_state_contract §2): RFC 8785's published test vectors byte for
+//! byte, its number samples, −0.0 written `0`, a u64 field always a string and every other number a number, each form
+//! of serde's data model, the refusals, and the skeleton's `SimConfig` and `RenderState`. Each test registers its
+//! negative control.
 //!
 //! The vectors in `jcs/` are RFC 8785's published test data (its Appendix I, the JCS development portal's
 //! `testdata/input` and `testdata/output`), each output the canonical form of its input. The number samples are RFC 8785
-//! Appendix B, Table 1. Its helpers' numbers are test inputs, not register constants (REQ-SYS-082).
+//! Appendix B, Table 1. Its helpers' numbers are test inputs, not register constants.
 
 use serde::ser::{SerializeMap, Serializer};
 use serde::Serialize;
@@ -240,7 +240,7 @@ validation::negative_control!(
 );
 
 /// Every value's text reads back to the same double: 20 000 finite bit patterns from a fixed generator. (−0.0 reads
-/// back as 0, which R-318 accepts.)
+/// back as 0, as JCS writes it `0`; these 20 000 draws include no ±0.0.)
 fn check_read_back(format: impl Fn(f64) -> String) {
     let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
     let mut checked = 0;
@@ -275,7 +275,7 @@ validation::negative_control!(
     check_read_back(|v| format!("{v:.5e}"))
 );
 
-// ----- R-322: a u64 field is always a string; every other number a number -----
+// ----- A u64 field is always a string; every other number a number -----
 
 /// A seed and other numeric fields, declared out of key order.
 #[derive(Serialize)]

@@ -1,19 +1,17 @@
-//! The ViewState record and `SimConfig`'s links (REQ-SYS-011, REQ-SYS-083, REQ-SYS-084; chart_decoder_contract Part
-//! 2.5, "Integrity: the link is part of the experiment"; R-482 C6; R-483 X1, X2, H1, H2). Each test registers its
-//! negative control (R-176).
+//! The ViewState record and `SimConfig`'s links (chart_decoder_contract Part 2.5, "Integrity: the link is part of the
+//! experiment"). Each test registers its negative control.
 //!
 //! - `viewstate_roundtrip`: a tilted view, with a non-default link, a non-default link parameter and a nonlinear
 //!   chart's window off the square, is exported and restored, and reproduces bitwise: the record's text, `z` at every
 //!   pixel of the plane, the chart point at every pixel of the window, each block's link id and parameter values, and
-//!   the state each pixel decodes to under the restored links. Control (C6): the same record with the parameter stripped
+//!   the state each pixel decodes to under the restored links. Control: the same record with the parameter stripped
 //!   does not reproduce.
 //! - `links_filled`: `Links` has the four blocks, each an id and its parameters, and the canonical text of a
 //!   `SimConfig` names each; a non-default link serialises differently from the default.
 //! - `links_written_in_full`: at the defaults the text names every block's id and every parameter, no field of the
 //!   links is skipped or defaulted by serde, and a text with one parameter removed is refused.
 //!
-//! The test inputs (the plane, the window, `μ_max = 4`, the pixel grid) are test data, not register constants
-//! (REQ-SYS-082).
+//! The test inputs (the plane, the window, `μ_max = 4`, the pixel grid) are test data, not register constants.
 
 use std::collections::BTreeMap;
 
@@ -197,7 +195,7 @@ validation::negative_control!(
     }
 );
 
-// ----- links_filled (REQ-SYS-083) -----
+// ----- links_filled -----
 
 /// The canonical text of `links`, as `SimConfig`'s text carries it.
 fn links_text(links: &Links) -> String {
@@ -284,7 +282,7 @@ validation::negative_control!(
     check_filled(&tilted_view(), &Links::defaults())
 );
 
-// ----- links_written_in_full (REQ-SYS-084) -----
+// ----- links_written_in_full -----
 
 /// The default links' text, every block's id and every parameter.
 const FULL: &str = r#""links":{"alpha":{"id":"sigmoid_alpha","params":{}},"beta":{"id":"periodic_beta","params":{}},"mass":{"id":"softmax_tanh","params":{"mu_max":5}},"momenta":{"id":"sigmoid_q","params":{"q_max":2}}}"#;
@@ -360,7 +358,7 @@ fn links_written_in_full() {
         &edit(alpha, r#""id":"periodic_beta","params":{}"#),
         "periodic_beta",
     );
-    // A retired `β` link, a conversion source only, no block's (R-919 Q1 (c)).
+    // A retired `β` link, a conversion source only, no block's.
     check_refused(
         &edit(
             r#""beta":{"id":"periodic_beta","params":{}}"#,

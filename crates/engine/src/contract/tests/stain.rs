@@ -1,27 +1,27 @@
-//! The stain graph model (render_gui_spec Part II §3 to §7, §15; gui_state_contract §5; colour_composition §9.4; R-64,
-//! R-52, R-546): its node kinds' ports, its fixed singletons, its wire rules and its serialisation with `RenderState`,
-//! and the custom-stop ramp. Each test registers its negative control (R-176).
+//! The stain graph model (render_gui_spec Part II §3 to §7, §15; gui_state_contract §5; colour_composition §9.4): its
+//! node kinds' ports, its fixed singletons, its wire rules and its serialisation with `RenderState`, and the
+//! custom-stop ramp. Each test registers its negative control.
 //!
-//! - `stain_node_kinds` (REQ-GUI-021): each kind's in-ports and out-ports are §3.1's row.
-//! - `stain_backbone_singletons` (REQ-GUI-022): adding, deleting or duplicating `OUT` or the combiner is refused, and
+//! - `stain_node_kinds`: each kind's in-ports and out-ports are §3.1's row.
+//! - `stain_backbone_singletons`: adding, deleting or duplicating `OUT` or the combiner is refused, and
 //!   the graph always holds one of each.
-//! - `stain_wires_acyclic` (REQ-GUI-023, a property): over random wire sequences the graph stays acyclic, every
+//! - `stain_wires_acyclic` (a property): over random wire sequences the graph stays acyclic, every
 //!   accepted wire type-checks, and a wire that would close a cycle is refused.
-//! - `stain_wire_types` (REQ-GUI-025): `vec3 → f32` and `field → vec3` are refused and change nothing; matching drops
+//! - `stain_wire_types`: `vec3 → f32` and `field → vec3` are refused and change nothing; matching drops
 //!   attach; a categorical field drops onto a gradient colour node.
-//! - `stain_port_arity` (REQ-GUI-026): a second wire on an in-port replaces the first; an out-port feeds five.
-//! - `stain_renderstate_roundtrip` (REQ-GUI-016): a graph round-trips through `RenderState`; picking an occupant is one
+//! - `stain_port_arity`: a second wire on an in-port replaces the first; an out-port feeds five.
+//! - `stain_renderstate_roundtrip`: a graph round-trips through `RenderState`; picking an occupant is one
 //!   `SetField`, one undo entry.
-//! - `stain_custom_stop_ramp` (REQ-COL-140): a ramp round-trips through `RenderState` and evaluates as §9.4 defines it,
+//! - `stain_custom_stop_ramp`: a ramp round-trips through `RenderState` and evaluates as §9.4 defines it,
 //!   interpolated in OKLab, clamped, or wrapped where cyclic.
-//! - `stain_ramp_wrap_is_finite` (REQ-COL-140, a property): a cyclic ramp's wrap holds at stops on or a hair from the
+//! - `stain_ramp_wrap_is_finite` (a property): a cyclic ramp's wrap holds at stops on or a hair from the
 //!   ends, and every finite `t` on a valid cyclic ramp gives a finite colour within its stops' colours.
-//! - `stain_custom_stop_ramp_ab_bound` (REQ-COL-140): a stop's OKLab `a` and `b` at `±1` are accepted and give a
+//! - `stain_custom_stop_ramp_ab_bound`: a stop's OKLab `a` and `b` at `±1` are accepted and give a
 //!   finite colour at every `t`; one ulp past, or the opposite-sign `f64::MAX` extremes, are refused.
-//! - `stain_custom_stop_ramp_endpoints_exact` (REQ-COL-140): the interpolation is exact at its ends, where the cyclic
+//! - `stain_custom_stop_ramp_endpoints_exact`: the interpolation is exact at its ends, where the cyclic
 //!   wrap's `u` rounds to 1.
 //!
-//! The graphs, fields, ramps and `t` values are test inputs, not register constants (REQ-SYS-082).
+//! The graphs, fields, ramps and `t` values are test inputs, not register constants.
 
 use std::collections::BTreeSet;
 
@@ -104,7 +104,7 @@ fn wire(g: &StainGraph, from: NodeId, to: NodeId, port: u32) -> StainGraph {
     accepted(g, StainEdit::Wire { from, to, port })
 }
 
-// ----- stain_node_kinds (REQ-GUI-021) -----
+// ----- stain_node_kinds -----
 
 /// A port in `direction` of type `ty`.
 fn port(direction: Direction, ty: PortType, subtype: Option<Subtype>) -> Port {
@@ -207,7 +207,7 @@ validation::negative_control!(
     }
 );
 
-// ----- stain_backbone_singletons (REQ-GUI-022) -----
+// ----- stain_backbone_singletons -----
 
 /// Checks that `edit` is refused as a fixed singleton's `action`.
 fn check_singleton(g: &StainGraph, edit: StainEdit, action: Action) {
@@ -289,7 +289,7 @@ validation::negative_control!(
     }
 );
 
-// ----- stain_wires_acyclic (REQ-GUI-023) -----
+// ----- stain_wires_acyclic -----
 
 /// Whether `wires` (from, to) hold a cycle: the test's own depth-first search.
 fn cyclic(wires: &[(NodeId, NodeId)]) -> bool {
@@ -470,7 +470,7 @@ validation::negative_control!(
     }
 );
 
-// ----- stain_wire_types (REQ-GUI-025) -----
+// ----- stain_wire_types -----
 
 /// Checks that wiring `from` → `to`.`port` is refused as a type mismatch and changes nothing, the graph's own
 /// `connect` included.
@@ -626,7 +626,7 @@ validation::negative_control!(
     }
 );
 
-// ----- stain_port_arity (REQ-GUI-026) -----
+// ----- stain_port_arity -----
 
 /// Checks that `g` has `want` wires into `to`.`port`, the first from `from`.
 fn check_arity(g: &StainGraph, (to, port, from): (NodeId, u32, NodeId), want: usize) {
@@ -710,7 +710,7 @@ validation::negative_control!(
     }
 );
 
-// ----- stain_renderstate_roundtrip (REQ-GUI-016) -----
+// ----- stain_renderstate_roundtrip -----
 
 fn sim() -> SimConfig {
     SimConfig {
@@ -1033,7 +1033,7 @@ validation::negative_control!(
     }
 );
 
-// ----- stain_custom_stop_ramp (REQ-COL-140) -----
+// ----- stain_custom_stop_ramp -----
 
 /// `a + u (b − a)`, per component.
 fn mix(a: [f64; 3], b: [f64; 3], u: f64) -> [f64; 3] {
@@ -1337,7 +1337,7 @@ validation::negative_control!(
     }
 );
 
-// ----- stain_ramp_wrap_is_finite (REQ-COL-140) -----
+// ----- stain_ramp_wrap_is_finite -----
 
 /// Checks that `got`, the ramp of `stops` at `t`, is a colour, each component finite and within the stops' own range.
 fn check_within(stops: &[Stop], t: f64, got: Option<[f64; 3]>) {
@@ -1457,7 +1457,7 @@ validation::negative_control!(
     }
 );
 
-// ----- stain_custom_stop_ramp_ab_bound (REQ-COL-140) -----
+// ----- stain_custom_stop_ramp_ab_bound -----
 
 /// Two stops at 0 and 1, the second's OKLab `a` and `b` as given.
 fn ab_stops(a: f64, b: f64) -> Vec<Stop> {
@@ -1528,7 +1528,7 @@ validation::negative_control!(
     check_ab_refused(1.0, 0.0)
 );
 
-// ----- stain_custom_stop_ramp_endpoints_exact (REQ-COL-140) -----
+// ----- stain_custom_stop_ramp_endpoints_exact -----
 
 /// Checks that `got`, a ramp's colour at `t`, is `want` exactly.
 fn check_exact(got: Option<[f64; 3]>, t: f64, want: [f64; 3]) {

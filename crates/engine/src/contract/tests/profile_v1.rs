@@ -1,13 +1,11 @@
-//! Profiler schema v1 (R-56; dd_telemetry_and_tiers §5, "Profiler schema v1: the keys and the nesting"): a written
-//! trace validates against the checked-in JSON Schema, has exactly the five stages at the top and every scope beneath
-//! one of them (REQ-TOOL-005), and parses as telemetry §2's frame record with the nested sections beneath
-//! (REQ-TOOL-008). The file is JSON Lines (R-286): the header line, one frame record per line, then the summary line,
-//! each line validated against the schema's definition for its place. A session that ended before its summary line
-//! reads, its summaries absent with "session incomplete" (R-298); a last line cut off before its newline is dropped,
-//! and the bytes dropped are stated (R-299); after the summary line, the session is complete, with its bytes dropped
-//! (R-356, R-358). Each test registers the control that must make it
-//! fail (R-176). Its helpers' numbers (the traces' timings, counts and display) are test inputs, not register constants
-//! (REQ-SYS-082).
+//! Profiler schema v1 (dd_telemetry_and_tiers §5, "Profiler schema v1: the keys and the nesting"): a written trace
+//! validates against the checked-in JSON Schema, has exactly the five stages at the top and every scope beneath one of
+//! them, and parses as telemetry §2's frame record with the nested sections beneath. The file is JSON Lines: the
+//! header line, one frame record per line, then the summary line, each line validated against the schema's definition
+//! for its place. A session that ended before its summary line reads, its summaries absent with "session incomplete";
+//! a last line cut off before its newline is dropped, and the bytes dropped are stated; after the summary line, the
+//! session is complete, with its bytes dropped. Each test registers the control that must make it fail. Its helpers'
+//! numbers (the traces' timings, counts and display) are test inputs, not register constants.
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -27,7 +25,7 @@ use crate::contract::profile::{
 /// The five stages' keys, in telemetry §2's order.
 const FIVE: [&str; 5] = ["integrate", "reduce", "colour", "upload", "present"];
 
-/// A frame record's keys: telemetry §2's, with R-288's two counters, then `stages` and `live_memory`.
+/// A frame record's keys: telemetry §2's, with the two `d_min` counters, then `stages` and `live_memory`.
 const FRAME_KEYS: [&str; 15] = [
     "frame",
     "frame_ms",
@@ -535,7 +533,7 @@ fn quadtree_scope() -> Value {
     json!({"name": "quadtree", "start_ms": 0.0, "ms": 1.0, "children": []})
 }
 
-// ----- REQ-TOOL-005 -----
+// ----- The five stages at the top, every scope beneath one of them -----
 
 #[test]
 fn profile_v1_stages_written_trace_validates() {
@@ -613,7 +611,7 @@ validation::negative_control!(
     check_rejected(&written(&interactive()), "a valid trace")
 );
 
-// ----- REQ-TOOL-008 -----
+// ----- A superset of telemetry §2's frame record -----
 
 #[test]
 fn profile_v1_superset_parses_as_telemetry_frame_record() {
@@ -664,7 +662,7 @@ validation::negative_control!(
     check_reads_back(&interactive(), &bytes(&batch()))
 );
 
-// ----- JSON Lines (R-286): the header line, one compact frame record per line, the summary line -----
+// ----- JSON Lines: the header line, one compact frame record per line, the summary line -----
 
 /// The file is the header line, one compact line per frame record, then the summary line, each ended by a newline:
 /// every line is the compact JSON of what its place holds, so nothing is pretty-printed.
@@ -720,7 +718,7 @@ validation::negative_control!(
 
 /// The reader and the schema both reject a file whose lines are out of their places; the reader accepts a file of no
 /// frames, and a last line without its newline, as JSON Lines allows. A file without its summary line is
-/// `profile_v1_superset_truncated_trace_reads`'s (R-298).
+/// `profile_v1_superset_truncated_trace_reads`'s.
 fn check_lines_in_place(file: &[u8]) {
     let base = lines(file);
     let n = base.len();
@@ -794,7 +792,7 @@ validation::negative_control!(
     })
 );
 
-// ----- a session that ended before its summary line (R-298) -----
+// ----- a session that ended before its summary line -----
 
 /// The interactive trace with a leak flag and a hot-path summary, so that absent summaries can't pass for `null` ones.
 fn summarised() -> Trace {
@@ -832,7 +830,7 @@ fn incomplete_line_errors(lines: &[Value]) -> Vec<String> {
 /// `read_with` reads `trace`'s file cut before its summary line, as a crashed or still-running session leaves it: the
 /// header and frames come back, the session is incomplete, and both summaries are absent with "session incomplete".
 /// So does the file cut after its first frame, without its last newline, and the header line alone. The writer writes
-/// the incomplete trace back as the same file. A last line cut off inside its object is the `cut_off` tests' (R-299).
+/// the incomplete trace back as the same file. A last line cut off inside its object is the `cut_off` tests'.
 fn check_truncated_trace(
     read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
     trace: &Trace,
@@ -936,7 +934,7 @@ validation::negative_control!(
     )
 );
 
-// ----- a last line cut off before its newline (R-299) -----
+// ----- a last line cut off before its newline -----
 
 /// The summarised trace, each frame's first event carrying a detail of two-byte characters, so that a cut can fall
 /// inside a character.
@@ -977,7 +975,7 @@ fn check_summaries_incomplete(got: &Trace, what: &str) {
 }
 
 /// `read_with` reads `trace`'s file cut at every byte inside every line after the header, before that line's newline:
-/// the cut part is dropped (R-299), the frames before it come back, the session is incomplete with both summaries
+/// the cut part is dropped, the frames before it come back, the session is incomplete with both summaries
 /// absent as "session incomplete", the trace states the bytes dropped, and it is written back as the lines before the
 /// cut. A file whose only line, the header line, is cut off is rejected, and the error states the bytes.
 fn check_cut_off_last_line_dropped(
@@ -1140,7 +1138,7 @@ validation::negative_control!(
 );
 
 /// `read_with` rejects a line cut off inside its object that ends in a newline, as the last line or with lines after
-/// it: only a last line with no newline after it is dropped (R-299).
+/// it: only a last line with no newline after it is dropped.
 fn check_terminated_malformed_line_rejected(
     read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
     trace: &Trace,
@@ -1183,12 +1181,12 @@ validation::negative_control!(
     )
 );
 
-// ----- a cut-off last line after the summary line (R-356, R-358) -----
+// ----- a cut-off last line after the summary line -----
 
 /// `read_with` reads `trace`'s whole file followed by a last line cut off at every byte inside a frame-record-shaped
 /// line and inside a summary-shaped line: the cut part is dropped, the header, every frame and both summaries come
-/// back, the session is complete, the trace states the bytes dropped, and it is written back as the whole file
-/// (R-356, R-358). The header-only cut and every other cut-off case are the tests above (R-299).
+/// back, the session is complete, the trace states the bytes dropped, and it is written back as the whole file. The
+/// header-only cut and every other cut-off case are the tests above.
 fn check_cut_off_after_summary(
     read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
     trace: &Trace,
@@ -1261,7 +1259,8 @@ validation::negative_control!(
     "a reader that parses every line with one after it as a frame record must fail",
     expected = "the reader rejected the file with a cut-off line after its summary",
     {
-        /// TASK-M0-17's reader: every line after the header with one after it parsed as a frame record, then the file read.
+        /// The broken reader: every line after the header with one after it parsed as a frame record, then the file
+        /// read.
         fn every_line_before_the_last_a_frame(file: &[u8]) -> Result<Trace, serde_json::Error> {
             let lines: Vec<&[u8]> = file.split_inclusive(|b| *b == b'\n').collect();
             for (i, line) in lines.iter().enumerate().take(lines.len() - 1).skip(1) {
@@ -1280,7 +1279,7 @@ validation::negative_control!(
 
 /// `read_with` rejects a line after `trace`'s frames that is neither the summary line nor a frame record, the
 /// summary line gone, and the error names its place: "the last" when it is the file's last line, "the last before a
-/// cut-off line" when a cut-off line follows it (R-299, R-356).
+/// cut-off line" when a cut-off line follows it.
 fn check_neither_last_line_place(
     read_with: impl Fn(&[u8]) -> Result<Trace, serde_json::Error>,
     trace: &Trace,
@@ -1324,7 +1323,7 @@ validation::negative_control!(
     )
 );
 
-// ----- the precomputed summaries (REQ-TOOL-100's place in the file) -----
+// ----- the precomputed summaries (their place in the file) -----
 
 /// The interactive trace, as written, with a leak flag and a hot-path summary at the file's top.
 fn with_summaries() -> Value {
@@ -1896,9 +1895,9 @@ validation::negative_control!(
     })
 );
 
-// ----- TASK-M0-18: the no-GPU header (R-308), config's canonical text (R-309), the percentile -----
+// ----- The no-GPU header, config's canonical text, the percentile -----
 
-/// A session that opened no GPU (R-308): `api` "none", and the GPU's fields `None`.
+/// A session that opened no GPU: `api` "none", and the GPU's fields `None`.
 fn no_gpu() -> Trace {
     let mut trace = batch();
     trace.header.device.gpu = None;
@@ -1960,7 +1959,7 @@ validation::negative_control!(
     }
 );
 
-/// The header line carries `config` as `expected`, its canonical text, JCS (gui_state_contract §2, R-318).
+/// The header line carries `config` as `expected`, its canonical text, JCS (gui_state_contract §2).
 fn check_config_text(file: &[u8], expected: &str) {
     let first = std::str::from_utf8(file.split(|b| *b == b'\n').next().unwrap()).unwrap();
     assert!(
@@ -2042,7 +2041,7 @@ validation::negative_control!(
     check_percentile(|s, _| s.iter().copied().reduce(f64::max))
 );
 
-// ----- R-329: the core counts, `cpu_cores_available` and `cpu_cores_total` -----
+// ----- The core counts, `cpu_cores_available` and `cpu_cores_total` -----
 
 /// `doc`'s device has `cpu_cores_available` and `cpu_cores_total` (as `total`), not `cpu_cores`, and both the reader
 /// and the JSON Schema accept it.

@@ -1,5 +1,5 @@
 //! The structural presets (colour_composition §6, "§F structural views → `ctx.quad` presets"; debug_tooling_plan §F;
-//! render_gui_spec §12.1; TASK-M1-13): in-code stain graphs, as the coordinate presets are (RQ-215).
+//! render_gui_spec §12.1): in-code stain graphs, as the coordinate presets are.
 //!
 //! - [`view`]: a structural debug view, `frag/debug/<id>.wgsl` (`s_depth`, `s_state`, `s_impurity`, …), a colour
 //!   occupant reading `ctx.quad`, fed the zero source its input does not read, into the pass-through combiner and
@@ -9,7 +9,7 @@
 //!   mid-grey (render_gui_spec §13), which the overlay draws over.
 //! - [`overlay`]: a post appended to a graph's chain, before `OUT`: the boundary overlay over any view, or the
 //!   built-in fallback tint (`fallback_tint`) and pending hatch (`pending_hatch`), the post occupants that read
-//!   `ctx.quad` (RQ-239).
+//!   `ctx.quad`.
 //!
 //! [`view`]: crate::structural::view
 //! [`boundaries`]: crate::structural::boundaries

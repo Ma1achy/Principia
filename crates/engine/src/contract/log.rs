@@ -1,4 +1,4 @@
-//! The log entry (gui_state_contract §2, R-72; RQ-245): plain data, carried GUI-sized in the snapshot as the entries
+//! The log entry (gui_state_contract §2): plain data, carried GUI-sized in the snapshot as the entries
 //! accumulated since the previous snapshot, so no membrane crossing is added (systems_architecture §6, invariant 10).
 //! The console lists them (render_gui_spec §G12) and the footer counts them.
 
@@ -7,7 +7,7 @@
 pub struct LogEntry {
     /// How bad it is.
     pub severity: Severity,
-    /// When it was logged: the wall-clock time, in milliseconds since the Unix epoch, UTC. A u64 (R-329).
+    /// When it was logged: the wall-clock time, in milliseconds since the Unix epoch, UTC. A u64.
     pub at: u64,
     /// What logged it.
     pub source: Source,

@@ -4,37 +4,37 @@
 //! (`ledger::constants`), and its owner the wrapper's loop bound, substepper, detector or monitor. Dispatch holds a
 //! `SimUniforms` to its limits ([`crate::dispatch::validate`]).
 //!
-//! **The horizon** (Part 5; R-132, R-575, R-610). `T_horizon` is physical time in canonical units, default 50, raised
+//! **The horizon** (Part 5). `T_horizon` is physical time in canonical units, default 50, raised
 //! or lowered within `[0.4, 200]`, and `dt_macro = max(10⁻³, T/65535)`, so `⌈T/dt_macro⌉ ≤ 65535` at every `T` and the
-//! u16 step indices of `times` stay exact (R-86). Both are carried, `dt_macro` as [`dt_macro_for`] gives it for `T`
+//! u16 step indices of `times` stay exact. Both are carried, `dt_macro` as [`dt_macro_for`] gives it for `T`
 //! ([`SimUniforms::with_horizon`]); dispatch checks the pair as carried.
 //!
-//! **The `N_sub` thresholds** (R-502; dd_integrator §3.3). `SimUniforms` carries the table TASK-M3-03's host generator
+//! **The `N_sub` thresholds** (dd_integrator §3.3). `SimUniforms` carries the table the host generator
 //! (`kernel::driver::nsub_table`) produces from its `r_sub`, `gamma_sub` and `N_max`, as exact f32 bit patterns of the
 //! table's maximum length, `L_max`, laid out as the kernel reads them ([`NsubThresholds`]). The table is derived, so it
 //! adds nothing to the sim key ([`SimUniforms::sim_key_bytes`]). [`SimUniforms::with_substep_law`] regenerates it with
 //! the three values; the default carries the build-time table, which the host generator reproduces bit for bit at the
-//! default config (REQ-INT-092).
+//! default config.
 //!
-//! **Collision and softening** (dd_generation_root §3.7, "Open"; REQ-SYS-018). `r_coll` is nonzero by default and
+//! **Collision and softening** (dd_generation_root §3.7, "Open"). `r_coll` is nonzero by default and
 //! `epsilon` 0 by default and optional, both lengths in canonical units (`√I = 1`), so gauge-covariant, and both fixed
 //! at `t = 0`: each is one number, constant across the dispatch, and there is no co-moving option, since a co-moving
 //! length makes the Hamiltonian time-dependent. Softened gravity is a different force law at any `epsilon`, so a run
 //! with `epsilon > 0` is tagged ([`Softening`]) in its provenance and on its sim key, and never pooled with an
-//! unsoftened run. No force law takes `epsilon` yet and the corpus does not define one (RQ-627), so dispatch refuses
+//! unsoftened run. No force law takes `epsilon` yet and the corpus does not define one, so dispatch refuses
 //! any `epsilon` other than 0 ([`crate::dispatch::validate`]); the field, its tag and its sim-key byte stay.
 //!
-//! **The units** (Part 5; R-668). `g` and `m_total` are carried and on the sim key, and the kernel runs only at `G = 1`
+//! **The units** (Part 5). `g` and `m_total` are carried and on the sim key, and the kernel runs only at `G = 1`
 //! and `M = 1`, so dispatch refuses any other value of either ([`crate::dispatch::validate`]): a source in another `G`
 //! or total mass is converted at the import boundary. The fields and their sim-key bytes stay.
 //!
-//! **The sync quantum** (Part 2a § "The sync grid is a fixed quantum of physical time"; R-565). `delta_sync`, `Δ_sync`,
+//! **The sync quantum** (Part 2a § "The sync grid is a fixed quantum of physical time"). `delta_sync`, `Δ_sync`,
 //! the regularised occupants' sync grid, is a constant of the build, the register's `delta_sync`, which the kernel's
 //! marches read (`kernel::regularisation::sync`). It is carried and on the sim key, so a change to it re-integrates, and
 //! dispatch refuses any other value, as it does `g` and `m_total`: the kernel cannot march on another grid.
 //!
-//! **Benettin's `n_renorm` and `δ₀`** (dd_integrator §3.8) have no value yet: they are REQ-INT-076's calibration, which
-//! the task that needs them proposes. Until then each is `None`, and `Default` gives no number for them.
+//! **Benettin's `n_renorm` and `δ₀`** (dd_integrator §3.8) have no value yet: they await a calibration, which the task
+//! that needs them proposes. Until then each is `None`, and `Default` gives no number for them.
 
 use kernel::driver::nsub_table::{pack, thresholds, NsubConfig, NsubTableError};
 use kernel::driver::substep::NsubThresholds;
@@ -45,14 +45,14 @@ use ledger::constants::{
 };
 
 /// The wrapper's loop parameters (integrator_contract Part 3), with the `N_sub` threshold table generated from three
-/// of them (R-502).
+/// of them.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SimUniforms {
-    /// `T_horizon`, when to stop, physical time (Part 5): default 50, within `[0.4, 200]` (R-610).
+    /// `T_horizon`, when to stop, physical time (Part 5): default 50, within `[0.4, 200]`.
     pub t_horizon: f64,
-    /// `dt_macro`, the base macro-step: `max(10⁻³, T/65535)` for the carried `T` ([`dt_macro_for`]; R-132).
+    /// `dt_macro`, the base macro-step: `max(10⁻³, T/65535)` for the carried `T` ([`dt_macro_for`]).
     pub dt_macro: f64,
-    /// `N_max`, the substep cap per macro-step: default 64, user-adjustable, at most the table's maximum length (R-502).
+    /// `N_max`, the substep cap per macro-step: default 64, user-adjustable, at most the table's maximum length.
     pub n_max: u32,
     /// `r_sub`, the substep law's length: default 0.05.
     pub r_sub: f64,
@@ -60,12 +60,12 @@ pub struct SimUniforms {
     pub gamma_sub: f64,
     /// `r_coll`, the collision threshold, a length in canonical units: default `10⁻³`, nonzero, user-exposed (Part 7).
     pub r_coll: f64,
-    /// `tau`, the escape settling threshold on `|Δn̂|`: `10⁻³`, provisional (R-173) until REQ-EVT-025 confirms it.
+    /// `tau`, the escape settling threshold on `|Δn̂|`: `10⁻³`, provisional until the owner settles it.
     pub tau: f64,
-    /// The escape window `|Δn̂|` is taken over, in time units: 0.4, provisional (R-29). The horizon's floor (R-610).
+    /// The escape window `|Δn̂|` is taken over, in time units: 0.4, provisional. The horizon's floor.
     pub escape_window: f64,
     /// `Δ_sync`, the regularised occupants' sync quantum, physical time: the register's 1/8, a constant of the build;
-    /// dispatch refuses any other value (R-565).
+    /// dispatch refuses any other value.
     pub delta_sync: f64,
     /// `r_close`, the close-encounter counting distance: default 0.01.
     pub r_close: f64,
@@ -73,17 +73,17 @@ pub struct SimUniforms {
     pub eps_e: f64,
     /// `eps_L`, the relative angular momentum drift's floor at rest starts: default `10⁻⁶`.
     pub eps_l: f64,
-    /// `G`, 1: dispatch refuses any other value (R-668).
+    /// `G`, 1: dispatch refuses any other value.
     pub g: f64,
-    /// `M_total`, 1: dispatch refuses any other value (R-668).
+    /// `M_total`, 1: dispatch refuses any other value.
     pub m_total: f64,
     /// `epsilon`, the optional softening length, canonical and fixed at `t = 0`: default 0, unsoftened.
     pub epsilon: f64,
-    /// `n_renorm`, Benettin's renormalisation interval in macro-steps: `None` until REQ-INT-076 calibrates it.
+    /// `n_renorm`, Benettin's renormalisation interval in macro-steps: `None` until it is calibrated.
     pub n_renorm: Option<u32>,
-    /// `δ₀`, Benettin's initial separation: `None` until REQ-INT-076 calibrates it.
+    /// `δ₀`, Benettin's initial separation: `None` until it is calibrated.
     pub delta0: Option<f64>,
-    /// The `N_sub` thresholds `THR[1] … THR[L_max]` for `r_sub` and `gamma_sub`, f32 bit patterns (R-502).
+    /// The `N_sub` thresholds `THR[1] … THR[L_max]` for `r_sub` and `gamma_sub`, f32 bit patterns.
     pub thresholds: NsubThresholds,
     /// `stop_on_escape`: whether the first escape label stops the march and stays (`kernel::driver::cadence`'s note).
     /// Off by default: the escape label is live at the playhead.
@@ -119,11 +119,11 @@ impl Default for SimUniforms {
     }
 }
 
-/// `dt_macro` for the horizon `t`: `max(10⁻³, t/65535)` (R-132), rounded to f64, and raised by one ulp where the
+/// `dt_macro` for the horizon `t`: `max(10⁻³, t/65535)`, rounded to f64, and raised by one ulp where the
 /// f64 quotient `t/dt_macro` would otherwise round above 65535.
 ///
-/// R-132 makes `⌈T/dt_macro⌉ ≤ 65535` hold at every `T`, which it does in exact arithmetic; dispatch evaluates it in
-/// f64 ([`horizon_steps`]), where `t/65535` rounded down to the nearest f64 can give a quotient one ulp above 65535,
+/// The formula makes `⌈T/dt_macro⌉ ≤ 65535` hold at every `T`, which it does in exact arithmetic; dispatch evaluates it
+/// in f64 ([`horizon_steps`]), where `t/65535` rounded down to the nearest f64 can give a quotient one ulp above 65535,
 /// and a ceiling of 65536, for about one `T` in seven above 65.535 (65.538 is one). The one ulp, a relative change of
 /// at most `2⁻⁵²`, restores the bound: with `dt ≥ (t/65535)(1 − 2⁻⁵³)` raised by an ulp, at least `dt·2⁻⁵³`, the exact
 /// quotient is within `65535·2⁻¹⁰⁶` of 65535, far inside half its ulp, so it rounds to 65535 exactly. Where the floor
@@ -177,7 +177,7 @@ impl SimUniforms {
     }
 
     /// `self` with the substep law `r_sub`, `gamma_sub` and `n_max`, and the table the host generator produces from
-    /// them, or the generator's refusal (R-502): an `n_max` below 1 or above the table's maximum length, an `r_sub` or
+    /// them, or the generator's refusal: an `n_max` below 1 or above the table's maximum length, an `r_sub` or
     /// `gamma_sub` not finite and positive, or a table the comparison tree cannot read.
     pub fn with_substep_law(
         self,
@@ -209,7 +209,7 @@ impl SimUniforms {
     }
 
     /// Whether the run is softened: [`Softening::Softened`] where `epsilon > 0`. Dispatch refuses every `epsilon`
-    /// other than 0 until softened gravity is built (RQ-627).
+    /// other than 0 until softened gravity is built.
     pub fn softening(&self) -> Softening {
         if self.epsilon > 0.0 {
             Softening::Softened
@@ -221,8 +221,8 @@ impl SimUniforms {
     /// `SimUniforms`' contribution to the sim key's bytes: each field in declaration order, a float by its f64 bits
     /// and an integer as a u32, big-endian; an optional field as a presence byte, 0 or 1, then its value when present;
     /// then `stop_on_escape` as a byte, 0 or 1; and last the softening tag, [`Softening`] as a byte. The threshold
-    /// table is derived from `r_sub`, `gamma_sub` and `N_max`, so it adds nothing (R-502). The sim key's full
-    /// composition is REQ-SCHED-007's (M4).
+    /// table is derived from `r_sub`, `gamma_sub` and `N_max`, so it adds nothing. The sim key's full composition is
+    /// defined by the caching contract (Parts 1 and 2), not by this function.
     pub fn sim_key_bytes(&self) -> Vec<u8> {
         let mut out = Vec::new();
         for x in [self.t_horizon, self.dt_macro] {

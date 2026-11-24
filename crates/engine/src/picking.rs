@@ -1,12 +1,12 @@
 //! Pointer picking (principia_coordinate_conventions_note.md, "Code paths that must honour the single convention",
-//! path 2; trajectory_viewing §1; REQ-GUI-001; TASK-M1-07): a canvas event, Y-down from the top-left, flipped by the
+//! path 2; trajectory_viewing §1): a canvas event, Y-down from the top-left, flipped by the
 //! convention's one flip ([`render::coords::frag_uv`], the Rust twin of the render's) to the post-flip UV, Y-up, before
 //! the picked quad or `z` is computed from it. Lock, hover and click-inspect all call [`pick`]; the GUI (M8) calls it
 //! too, so it inherits the convention rather than re-deriving it.
 //!
-//! At M1 a pick reports the UV, the quad of the flat grid the screen is drawn over and the screen's single
-//! `ctx.chart.z`; the per-pixel `z = z₀ + (2s − 1)·q₁ + (2t − 1)·q₂` arrives with `SimConfig.plane` in M2, through
-//! this same function (RQ-216).
+//! A pick reports the UV, the quad of the flat grid the screen is drawn over and the screen's single `ctx.chart.z`.
+//! The per-pixel `z = z₀ + (2s − 1)·q₁ + (2t − 1)·q₂` from `SimConfig.plane` is not computed here yet; it belongs in
+//! this same function.
 //!
 //! [`pick`]: crate::picking::pick
 
