@@ -20,8 +20,9 @@
 //! split form, so a backend that fuses or contracts rounds it alike, with a floor below which a square is 0, so that no
 //! partial product is subnormal (gpu_determinism_note rules 2 and 6); the two squares are added once, and the
 //! least of the three pairs' sums is taken by comparison. This form is not proved here on every backend, Metal and
-//! lavapipe with their flushing and fusing; here it is checked on the CPU, at f64 and at f32. Don't form a square as an explicit `fma(dy, dy, dx*dx)`: not every backend fuses an explicit `fma`, so the
-//! bucket would differ between backends.
+//! lavapipe with their flushing and fusing; here it is checked on the CPU, at f64 and at f32. Don't form a square as an
+//! explicit `fma(dy, dy, dx*dx)`: not every backend fuses an explicit `fma`, so the bucket would differ between
+//! backends.
 //!
 //! **The record** ([`SubstepState`]). Per macro-step the live `N_sub` (render Part 5's animated effort view), the exact
 //! u32 `total_substeps = Σ N_sub` and the sticky `saturated`, set when `N_sub == N_max` occurs and never cleared

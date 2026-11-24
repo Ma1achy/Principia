@@ -2,7 +2,7 @@
 //! 5): per sample, `(u, v) → Φ → D → (m, r, p)`, in the kernel, monomorphised per chart and link set, and the
 //! `ICDescriptor` written post-decode and pre-integration.
 //!
-//! **Monomorphised, never interpreted** (REQ-CHART-001, REQ-DEC-007; lowering Part 3, "Compute side"). [`sample`] is
+//! **Monomorphised, never interpreted** (lowering Part 3, "Compute side"). [`sample`] is
 //! generic over the chart `C` and the link selection `S`: each `(C, S)` is its own compiled variant, a
 //! [`DecodeVariant`], whose compute entry point is a concrete `#[spirv(compute)]` wrapper ([`latent_defaults`],
 //! [`latent_stick_breaking`], [`invariant_le_defaults`], [`invariant_lk_defaults`], and the charts whose masses vary per
@@ -16,10 +16,10 @@
 //! and `q₂` for the latent chart, the slice values among `z₀`'s components, are the dispatch's uniform
 //! ([`DecodeUniforms::chart`], [`UniformChart`]), so a navigation edit writes the uniform and recompiles nothing.
 //!
-//! **`η_E`** ([`DecodeUniforms::energy`], [`energy`], [`target`]; dd_decoder §3.7, R-25; lowering Part 3): the energy
+//! **`η_E`** ([`DecodeUniforms::energy`], [`energy`], [`target`]; dd_decoder §3.7; lowering Part 3): the energy
 //! target `E*` is a chart parameter, an invariant target, so a uniform, never a baked variant, and its explicit off
 //! switch is a uniform flag beside it: the energy row's `x`, bit 0, on (1) or off (0), and its `y`, `E*`'s f32 bits.
-//! Off is the `None` of [`sample_with`]'s `Option`, and `Some(0)` is a real target (R-25). The rescale runs through the
+//! Off is the `None` of [`sample_with`]'s `Option`, and `Some(0)` is a real target. The rescale runs through the
 //! shared [`energy_norm`] after the chart's own decode, between the momentum block and the derived invariants, on a chart
 //! that allows it; on one that forbids it ([`crate::chart::Chart::forbids_energy_normalisation`]) the target is read as
 //! `None`, as chart-aware validation refuses such a view before anything decodes. The decode-only dispatch
@@ -30,10 +30,10 @@
 //! linearised (1) (scheduler_contract Part 5, `QuadRequest.flags`; deep_zoom §2). It is read from the uniform, so the
 //! branch on it is uniform over the dispatch, and the dispatch is one quad's: a per-quad, workgroup-uniform flag, not a
 //! runtime axis-kind interpreter (lowering Part 3's note). Only the full path exists here; the linearised path, `x₀ +
-//! J_D·δ`, lands in M6 (REQ-DEC-033), and until then a linearised quad writes nothing and the host refuses to dispatch
+//! J_D·δ`, is not built: a linearised quad writes nothing and the host refuses to dispatch
 //! one (`engine::decode_dispatch`).
 //!
-//! **The seam** (seam 3; REQ-DEC-005). [`DecodeOut::ic`], the canonical `(m, r, p)` ([`Ic`]), is the stage's only output
+//! **The seam** (seam 3). [`DecodeOut::ic`], the canonical `(m, r, p)` ([`Ic`]), is the stage's only output
 //! to the integrator side, written to a buffer of its own that holds `(m, r, p)` and nothing else ([`write_ic`]): no
 //! chart, chart id or chart parameter is in it. The descriptor and the `DEGENERATE` tag go to the payload side's buffers
 //! ([`write_descriptor`], [`tag`]).
@@ -67,7 +67,7 @@ pub struct DecodeUniforms {
     pub chart: [Vec4; 6],
     /// `x`: the quad's flags word, bit 0 `DECODE_MODE` ([`decode_mode`]); `y`, `z`, `w`: zero, padding to 16 bytes.
     pub flags: UVec4,
-    /// `η_E`'s target ([`energy`], [`target`]): `x` bit 0 the switch, 1 on and 0 off (R-25); `y` the bits of the f32
+    /// `η_E`'s target ([`energy`], [`target`]): `x` bit 0 the switch, 1 on and 0 off; `y` the bits of the f32
     /// `E*`, read only where the switch is on; `z`, `w`: zero, padding to 16 bytes.
     pub energy: UVec4,
 }
@@ -119,8 +119,8 @@ pub fn flags(mode: DecodeMode) -> u32 {
     }
 }
 
-/// A chart whose parameters the decode stage reads from its uniform ([`DecodeUniforms::chart`]), held at f32 (R-118,
-/// chart_reference §5.1: the kernel's uniform holds them at f32), and which it decodes by its own [`ChartDecode`].
+/// A chart whose parameters the decode stage reads from its uniform ([`DecodeUniforms::chart`]), held at f32
+/// (chart_reference §5.1: the kernel's uniform holds them at f32), and which it decodes by its own [`ChartDecode`].
 pub trait UniformChart: Chart<Param = f32> + ChartDecode + Sized {
     /// The chart whose parameters are `rows`.
     fn from_uniform(rows: &[Vec4; 6]) -> Self;
@@ -393,7 +393,7 @@ fn map_word(map: ShapeMap) -> f32 {
 /// The shape sphere's uniform: rows 0–2 `(n₀, s)`, `(e₁, I)` and `(e₂, φ_f)`, row 3 `z₀`'s momentum block, row 4
 /// `(z_μ1, z_μ2, map, 0)`, the map's word 0 spherical and any other exponential (`map_word`), row 5 zero. The map is a
 /// chart parameter (chart_reference §3.3, "state which is used"), so a uniform, as `DECODE_MODE` is, its branch uniform
-/// over the dispatch and taken before the decode (applied per R-369, TASK-M2-24).
+/// over the dispatch and taken before the decode.
 impl UniformChart for ShapeSphere<f32> {
     #[inline]
     fn from_uniform(r: &[Vec4; 6]) -> Self {
@@ -578,7 +578,7 @@ where
 /// The decode stage at `(u, v)` toward the energy target `e_star`: `D ∘ Φ` through the shared decoder, the chart's own
 /// ([`ChartDecode`]), then `η_E` through the shared [`energy_norm::apply_shared`] where the chart allows it (dd_decoder §3.7;
 /// the module's note), under the chart `C` and the selection `S`, at the float type `R`: f32 in the kernel ([`entry`])
-/// and f64 on the CPU (`engine::decode_dispatch::decode_only_with`), from this one source (R-118, R-265). `None` is off,
+/// and f64 on the CPU (`engine::decode_dispatch::decode_only_with`), from this one source. `None` is off,
 /// and leaves the chart's decode untouched, bit for bit.
 #[inline]
 pub fn sample_with<C, S, R>(chart: &C, u: R, v: R, e_star: Option<R>) -> DecodeOut<R>
@@ -615,7 +615,7 @@ pub fn descriptor_words() -> usize {
 /// The tag word of `degenerate`: 0 for none, 1 for `M01_TINY`, 2 for `ENERGY_INFEASIBLE`, 3 for `ENERGY_UNSCALABLE`, 4
 /// for `INVARIANT_INFEASIBLE`, 5 for `NO_QUALIFYING_SEED`: one word for each member of the closed set
 /// ([`crate::decode::degenerate::ALL`]). It is this dispatch's readback, not payload §2's `decode_failed` detail code,
-/// which is [`Degenerate::detail`] (dd_decoder §2's map, REQ-DEC-038).
+/// which is [`Degenerate::detail`] (dd_decoder §2's map).
 #[inline]
 pub fn tag(degenerate: Option<Degenerate>) -> u32 {
     match degenerate {
@@ -946,9 +946,9 @@ pub fn shape_sphere_defaults(
 
 /// The descriptor writer alone, on given `(m, r, p)`: invocation `i` reads sample `i` of `ic`, as [`write_ic`] wrote it,
 /// and writes its `ICDescriptor`, [`descriptor::describe`] at f32, at sample `i` of `descriptors`: the decode stage's
-/// own producer, on inputs the f32 decode need not reach, so that a test can read the pole values the GPU stores (R-436).
+/// own producer, on inputs the f32 decode need not reach, so that a test can read the pole values the GPU stores.
 /// With no configuration block, its `rho_angle` is read from the positions; a decode reads it from the configuration
-/// block's `(ρ̃, λ̃)` (R-628).
+/// block's `(ρ̃, λ̃)`.
 /// A pair separation of exactly 0 is one: dd_decoder §3.6 measured the collision pole at f64, where `cos α` at the image
 /// of π/2 falls under the rounding of `r₀₁`; at f32, a sweep of the defaults at saturated `α` (`z_α` from 17 to 200,
 /// `z_β` on `[−12, 12]`, both mass controls on `[−3, 3]`) found no pair separation of 0.
@@ -967,7 +967,7 @@ pub fn describe(
 /// dd_generation_root §3.9's `tanh` operator alone ([`tanh_sat`]), one invocation per word: `output[i]` is the
 /// operator at the f32 `input[i]`, and an invocation past the input writes nothing. It is not a decode: it lets a test
 /// read the operator as the GPU evaluates it, its range included, at arguments the decode reaches only through the
-/// links that use it (R-72; REQ-DEC-047).
+/// links that use it.
 #[spirv(compute(threads(64)))]
 pub fn link_tanh(
     #[spirv(global_invocation_id)] id: UVec3,

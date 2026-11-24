@@ -1,15 +1,16 @@
-//! The read-back of canon's and the decode's branches (TASK-M4-27; R-690; parity contract § 4, "The driver condition"):
+//! The read-back of canon's and the decode's branches (parity contract § 4, "The driver condition"):
 //! one compute entry for canon and one for each decode variant, `stage_branch_read_*`, each emitting, per sample, every
 //! branch's outcome and, for a branch input of kind `+ and ×`, the expression's own operands and the input's bits, both
-//! sides of a comparison, a `Wide`'s mantissa and exponent both. The levels of R-690's test are judged on operands, bits
-//! and outcome from one compiled entry, so all three come from here. It is a module of its own, not a `stage_decode_`
-//! entry, because `decode_cross_backend_registry` takes every one of those for a decode variant it must run.
+//! sides of a comparison, a `Wide`'s mantissa and exponent both. The levels of the cross-backend branch test are judged
+//! on operands, bits and outcome from one compiled entry, so all three come from here. It is a module of its own, not a
+//! `stage_decode_` entry, because `decode_cross_backend_registry` takes every one of those for a decode variant it must
+//! run.
 //!
 //! **No parity-only physics.** Each branch's input and decision is a function its production site calls too
 //! (`crate::canon`'s [`skip_input`](canon::skip_input) and [`signs_input`](canon::signs_input), `mass::m01_input`,
 //! `invariant::feasibility_input` and `invariant::doubling_input`, decided by `invariant::construction_short` as
-//! `no_construction` decides them, the descriptor's poles; `invariant::alpha_sign` and `burrau::seed_input` are R-82's
-//! legacy option's, which no production decode takes since R-934, so their slots are never present). The CPU's
+//! `no_construction` decides them, the descriptor's poles; `invariant::alpha_sign` and `burrau::seed_input` are the
+//! legacy largest-norm rule's, which no production decode takes, so their slots are never present). The CPU's
 //! f32 record calls these same `write_*` functions, and the arbiter evaluates a branch input through them, at f32, at
 //! given operands, so there is no second copy of any form.
 //!
@@ -18,7 +19,7 @@
 //! outcome and input bits. A decode branch has a `present` word first, 0 where the variant has no such branch or `η_E`
 //! is off; its operands are the entry's own emitted values, `decode/mass.rs`'s the masses it emitted. A branch of kind
 //! `other operation` (division, `√`, `sin`, `cos`, `atan2`, or a value reached through them) emits its outcome alone.
-//! A kind is the expression's own, read at its own operands (R-690): `rho_angle`'s cross and dot are `+`, `−` and `×` on
+//! A kind is the expression's own, read at its own operands: `rho_angle`'s cross and dot are `+`, `−` and `×` on
 //! the emitted `ρ̃`, `λ̃`, however those were reached, so their slots are of the first kind.
 //!
 //! **The module.** These entries are built with the rest of the kernel, and `cargo xtask build-kernel` parts them into
@@ -145,28 +146,29 @@ pub struct DecodeRead {
     pub m01: DecodeSlot<M01Operands, M01Bits>,
     /// `INVARIANT_INFEASIBLE`'s slot.
     pub feasibility: DecodeSlot<FeasibilityOperands, FeasibilityBits>,
-    /// The seed on `z_α`'s slot, R-82's legacy rule's; its outcome is the seed's word. Never present since the seed in
-    /// force, the expansion, has no seed branch (R-934): kept so the words' layout, and records made before, read alike.
+    /// The seed on `z_α`'s slot, the legacy largest-norm rule's; its outcome is the seed's word. Never present since
+    /// the seed in force, the expansion, has no seed branch: kept so the words' layout, and records made before, read
+    /// alike.
     pub alpha_seed: DecodeSlot<OneOperand, SeedBits>,
-    /// The seed on `ν`'s slot, R-82's legacy rule's; its outcome is the seed's word. Never present, as `alpha_seed`.
+    /// The seed on `ν`'s slot, the legacy rule's; its outcome is the seed's word. Never present, as `alpha_seed`.
     pub nu_seed: DecodeSlot<OneOperand, SeedBits>,
     /// `ENERGY_INFEASIBLE`'s slot.
     pub energy_infeasible: OtherSlot,
     /// `ENERGY_UNSCALABLE`'s slot.
     pub energy_unscalable: OtherSlot,
-    /// `rho_ratio`'s pole's slot (R-436).
+    /// `rho_ratio`'s pole's slot.
     pub ratio_pole: OtherSlot,
-    /// `V_0`'s pole's slot (R-436).
+    /// `V_0`'s pole's slot.
     pub collision_pole: OtherSlot,
-    /// `virial_ratio`'s pole's slot (R-436).
+    /// `virial_ratio`'s pole's slot.
     pub virial_pole: OtherSlot,
-    /// `rho_angle`'s `ρ̃ × λ̃ = 0` slot (R-437).
+    /// `rho_angle`'s `ρ̃ × λ̃ = 0` slot.
     pub cross_zero: AngleSlot,
-    /// `rho_angle`'s `ρ̃ · λ̃ = 0` slot (R-437).
+    /// `rho_angle`'s `ρ̃ · λ̃ = 0` slot.
     pub dot_zero: AngleSlot,
     /// `rho_angle`'s `ρ̃ · λ̃ < 0` slot.
     pub dot_negative: AngleSlot,
-    /// The shape sphere inverse's `p = q = 0` slot (R-437).
+    /// The shape sphere inverse's `p = q = 0` slot.
     pub sphere_pole: OtherSlot,
 }
 
@@ -345,7 +347,7 @@ pub fn write_feasibility(out: &mut [u32], at: usize, k: f32, lz: f32) {
     out[at + 8] = <f32 as ExactSign>::doubling_limit() as u32;
 }
 
-/// Writes the slot of R-82's legacy seed on `z_α` from word `at` of `out` (no production decode takes it, R-934).
+/// Writes the slot of the legacy rule's seed on `z_α` from word `at` of `out` (no production decode takes it).
 #[inline]
 pub fn write_alpha_seed(out: &mut [u32], at: usize, z_alpha: f32) {
     let (negative, zero) = alpha_sign(z_alpha);
@@ -356,7 +358,7 @@ pub fn write_alpha_seed(out: &mut [u32], at: usize, z_alpha: f32) {
     out[at + 4] = word(zero);
 }
 
-/// Writes the slot of R-82's legacy seed on `ν` from word `at` of `out` (no production decode takes it, R-934).
+/// Writes the slot of the legacy rule's seed on `ν` from word `at` of `out` (no production decode takes it).
 #[inline]
 pub fn write_nu_seed(out: &mut [u32], at: usize, nu: f32) {
     let (s, e) = seed_input(nu);
@@ -408,8 +410,7 @@ fn write_other(out: &mut [u32], at: usize, c: bool) {
 
 /// What a chart's decode reads beyond the shared blocks, at f32: its construction's targets, and the shape sphere
 /// inverse's `p`, `q`; each flag is false on a chart with no such thing. The values are those its production decode
-/// forms. The construction has no seed input: it runs under the seed in force, the expansion, one seed with no choice
-/// (R-934).
+/// forms. The construction has no seed input: it runs under the seed in force, the expansion, one seed with no choice.
 #[derive(Clone, Copy)]
 pub struct ChartReads {
     /// The chart runs the invariant-momentum construction.

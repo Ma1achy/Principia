@@ -1,8 +1,8 @@
-//! The two drifts as a reader takes them (integrator_contract Part 1; R-566, R-605; payload §5; render_gui_spec G2,
+//! The two drifts as a reader takes them (integrator_contract Part 1; payload §5; render_gui_spec G2,
 //! the energy-drift readout): which drift a reader reads, the diagnostics' event filter on the Cartesian one, and the
 //! readout's "stopped at event" status for a run that stopped at an event.
 //!
-//! **The regularised drift is the one read** (R-605): the suspect predicates and the drift view read `dE_reg`
+//! **The regularised drift is the one read**: the suspect predicates and the drift view read `dE_reg`
 //! (`drift_suspect` reads `dE_reg_max`); with regularisation off `dE_reg` holds the Cartesian drift, the two energies
 //! being one. **The Cartesian drift is diagnostic only**, and read only from a run that did not stop at an event
 //! ([`cartesian_drift_readable`]): at a close approach it is a cancellation of two large terms, wrong exactly where a run
@@ -17,10 +17,10 @@
 
 use super::{sd_state, STATE_COLLISION, STATE_ESCAPE};
 
-/// The energy-drift readout's words for a run that stopped at an event (R-605).
+/// The energy-drift readout's words for a run that stopped at an event.
 pub const STOPPED_AT_EVENT: &str = "stopped at event";
 
-/// What the energy-drift readout says of a sample beside its drift (R-605).
+/// What the energy-drift readout says of a sample beside its drift.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DriftReadout {
     /// The run stopped at an event (escape or collision): the drift is drawn as now, the readout says so.
@@ -57,7 +57,7 @@ pub fn stopped_at_event(packed_a: u32) -> bool {
     s == STATE_ESCAPE || s == STATE_COLLISION
 }
 
-/// The diagnostics' event filter (R-566, R-605): whether the Cartesian drift `dE_max` of the descriptor `packed_a`'s run
+/// The diagnostics' event filter: whether the Cartesian drift `dE_max` of the descriptor `packed_a`'s run
 /// may be read as a diagnostic: never for a run that stopped at an event, and never for a failed one, whose latches
 /// hold the failed-state values (payload §1).
 #[inline]
