@@ -1,27 +1,27 @@
-//! The live shape readout and the unwrapped phase `θ̃` (`kernel::shape`; dd_integrator §3.7; R-389, R-392), on
-//! synthetic `n(t)` paths (REQ-INT-001; R-113: a real circulating orbit is REQ-INT-082's, M3):
+//! The live shape readout and the unwrapped phase `θ̃` (`kernel::shape`; dd_integrator §3.7), on
+//! synthetic `n(t)` paths, not a real orbit:
 //! - `theta_unwrap_circulating`: paths circulating the `w` axis, both ways, from starting longitudes on both sides of
 //!   the ±π cut, accumulate with no 2π jump; `orbit_count` is the path's completed turns and `retrograde` its
 //!   direction, by the read side's own derivations; the hold never fires on them.
-//! - `theta_unwrap_starts_at_zero`: `θ̃(0) = 0` whatever `n(0)`'s longitude (R-389).
+//! - `theta_unwrap_starts_at_zero`: `θ̃(0) = 0` whatever `n(0)`'s longitude.
 //! - `theta_unwrap_pole_passage`: a path through the pole disc adds nothing inside and exactly `wrap(exit − stored)` on
-//!   exit, the stored longitude the last one outside; a run ending inside adds nothing for that passage (R-389).
+//!   exit, the stored longitude the last one outside; a run ending inside adds nothing for that passage.
 //! - `theta_unwrap_exact_pi`: a per-step difference, and an exit-minus-stored difference, of exactly ±π each add +π;
-//!   the wrap's edges either side of ±π (R-389).
+//!   the wrap's edges either side of ±π.
 //! - `theta_unwrap_pole_boundary`: a point at exactly `r_pole` is outside, the next float below it inside.
-//! - `theta_unwrap_pole_disc_squared`: the disc's branch input, `fma(v, v, u·u)` against `r_pole²·I²` (R-34): exactly
+//! - `theta_unwrap_pole_disc_squared`: the disc's branch input, `fma(v, v, u·u)` against `r_pole²·I²`: exactly
 //!   `r_pole²` is outside, the next float below it inside, at f32 and f64, normalised and unnormalised.
 //! - `theta_unwrap_disc_input`: the kernel's disc input from the configuration, with no division and no `sqrt`, is the
 //!   shape point's at equal and unequal masses; exactly on its squared edge a configuration is outside, one float
-//!   inward inside, at f32 and f64 (R-34).
+//!   inward inside, at f32 and f64.
 //! - `theta_unwrap_ic_inside`: an IC inside the disc leaves `θ̃` at 0 at its first exit and counts from the exit
-//!   longitude; a later passage adds `wrap(exit − stored)` (R-392).
-//! - `theta_unwrap_r_pole_evidence`: REQ-INT-086's evidence, the longitude's round-off against `ρ = √(n_u² + n_v²)` at
-//!   f32 and f64, measured against an exact reference, and the proposed `r_pole`'s error.
-//! - `shape_landmarks`: the shape map's landmarks (R-14; dd_integrator §3.7).
+//!   longitude; a later passage adds `wrap(exit − stored)`.
+//! - `theta_unwrap_r_pole_evidence`: the evidence for `r_pole`, the longitude's round-off against `ρ = √(n_u² + n_v²)`
+//!   at f32 and f64, measured against an exact reference, and the proposed `r_pole`'s error.
+//! - `shape_landmarks`: the shape map's landmarks (dd_integrator §3.7).
 //!
-//! Each runs at f64 and, where its path is exact at f32, at f32 too. `r_pole` is REQ-INT-086's calibration, read from
-//! the constants register: confirmed at the M1 gate and provisional until M3 (R-433). Each check takes the step it
+//! Each runs at f64 and, where its path is exact at f32, at f32 too. `r_pole` is a calibration, read from
+//! the constants register. Each check takes the step it
 //! tests as an argument, so its control runs the same check on a faulty one.
 
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
@@ -35,8 +35,7 @@ use kernel::Real;
 use spirv_std::num_traits::{Float, FloatConst};
 use validation::negative_control;
 
-/// The pole radius, the constants register's `r_pole` (REQ-INT-086; confirmed at the M1 gate, provisional until M3,
-/// R-433), read from there rather than defined here.
+/// The pole radius, the constants register's `r_pole`, read from there rather than defined here.
 const R_POLE: f64 = validation::R_POLE.number();
 
 /// The step arc on the sphere of every synthetic path here stays below `π·r_pole`, about 0.031 rad, where it passes
@@ -75,8 +74,8 @@ fn run<R: Real + Float>(step: Step<R>, path: &[[R; 3]], r_pole: R) -> Vec<R> {
     out
 }
 
-/// The principal value of `d` as R-389 defines it, written here independently of `kernel::shape::wrap`: `d − 2πk`
-/// in (−π, π], so exactly ±π gives +π.
+/// The principal value of `d` as dd_integrator §3.7 defines it, written here independently of `kernel::shape::wrap`:
+/// `d − 2πk` in (−π, π], so exactly ±π gives +π.
 fn principal(d: f64) -> f64 {
     let k = ((d - PI) / TAU).ceil();
     let r = d - k * TAU;
@@ -536,7 +535,7 @@ fn on_rho2<R: Ulp>(rho2: R) -> [R; 3] {
     panic!("no point has ρ²_I = {rho2:?} exactly")
 }
 
-/// The disc's squared edge (R-34): a point with `ρ²_I` exactly `r_pole²` (`I² = 1`) is outside, and one with `ρ²_I`
+/// The disc's squared edge: a point with `ρ²_I` exactly `r_pole²` (`I² = 1`) is outside, and one with `ρ²_I`
 /// the next float below it is inside; both the same scaled by 16, as a multiple of the point.
 fn check_squared_edge<R: Ulp>(disc: fn([R; 3], R) -> bool) {
     let r_pole: R = real(R_POLE);
@@ -598,7 +597,7 @@ mod squared_edge_control {
     );
 }
 
-// ── The disc's input from the configuration (R-34) ──────────────────────────────────────────────────────────────
+// ── The disc's input from the configuration ──────────────────────────────────────────────────────────────
 
 /// The mass sets the configuration's disc input is checked at: equal (`M₀₁ = 2/3`), and two unequal, `M₀₁ = 3/4` and
 /// `M₀₁ = 0.7`.
@@ -823,7 +822,7 @@ negative_control!(
     check_edge::<f64>(closed_disc_step)
 );
 
-// ── An IC inside the disc (R-392) ───────────────────────────────────────────────────────────────────────────────────
+// ── An IC inside the disc ───────────────────────────────────────────────────────────────────────────────────
 
 /// An IC at longitude 2.0 inside the disc, a wander inside, a first exit along the meridian at `lon_exit`, a turn and
 /// a half east at polar radius 0.3, and a second pole passage. `θ̃` is 0 throughout and at the first exit, then
@@ -872,8 +871,8 @@ fn theta_unwrap_ic_inside() {
     }
 }
 
-/// A step that, at an IC-inside first exit, differences against the IC's longitude (RQ-225's option 2, which R-392
-/// rejects).
+/// A step that, at an IC-inside first exit, differences against the IC's longitude, not the
+/// longitude at the first exit: the wrong count.
 #[cfg(feature = "controls")]
 fn from_ic_step(theta: Theta<f64>, n_prev: [f64; 3], n: [f64; 3], r_pole: f64) -> Theta<f64> {
     let theta = if theta.has_frozen || theta.theta != 0.0 {
@@ -895,7 +894,7 @@ negative_control!(
     check_ic_inside(from_ic_step, 0.0)
 );
 
-// ── REQ-INT-086's evidence: the longitude's round-off against ρ ─────────────────────────────────────────────────────
+// ── The `r_pole` evidence: the longitude's round-off against ρ ────────────────────────────────────────────────
 
 /// A small deterministic generator (splitmix64), so the evidence is the same every run.
 struct Mix(u64);
@@ -1030,7 +1029,7 @@ fn measure(
 
 /// The evidence's claims, at both precisions: in every decade of ρ holding samples, the error is at most `4·ε/ρ`; and
 /// in every decade below 10⁻², at least `ε/(4ρ)`, so the measurement sees the round-off it bounds and grows as 1/ρ
-/// (pitfalls §3, "check the measurement can fire"). The table is the evidence REQ-INT-086 asks for.
+/// (pitfalls §3, "check the measurement can fire"). The table is the evidence for `r_pole`.
 fn check_evidence(rows: &[Row]) {
     eprintln!("ρ decade        n f32   max err f32   C f32     n f64   max err f64   C f64   (err ≤ C·ε/ρ)");
     for r in rows {
@@ -1097,7 +1096,7 @@ negative_control!(
     check_evidence(&measure(unweighted::<f32>, unweighted::<f64>))
 );
 
-// ── The shape map's landmarks (R-14) ────────────────────────────────────────────────────────────────────────────────
+// ── The shape map's landmarks ────────────────────────────────────────────────────────────────────────────────
 
 /// The landmarks for equal masses: the collision of 0 and 1 at (−1, 0, 0), of 1 and 2 at (1/2, √3/2, 0), of 2 and 0
 /// at (1/2, −√3/2, 0); `L⁺`, 0 → 1 → 2 anticlockwise, at (0, 0, 1), `L⁻` at (0, 0, −1); a rotated, translated and
@@ -1151,7 +1150,7 @@ fn shape_landmarks() {
     check_landmarks(shape::<f64>);
 }
 
-/// The shape map with `w` negated: the earlier convention, which put `L⁺` at the opposite pole (R-14).
+/// The shape map with `w` negated, which puts `L⁺` at the opposite pole.
 #[cfg(feature = "controls")]
 fn negated_cross(r: [[f64; 2]; 3], m: [f64; 3]) -> [f64; 3] {
     let n = shape(r, m);

@@ -17,7 +17,7 @@
 //! - `owns_time_mapping_composed`: over every stepper × regularisation pair, selected or composed as a type,
 //!   `owns_time_mapping == (regularisation != none)`, whatever the regularisation's own profile says, and the rest of
 //!   the composed profile is the pair's; its control reports the stepper's flag for a Heggie pair. The
-//!   kinds not built yet are stood in for by stubs here; Aarseth–Zare's own arm is in `qa_TASK-M3-68.rs`.
+//!   kinds not built yet are stood in for by stubs here; Aarseth–Zare's own arm is with its integrator's tests.
 //! - `no_usable_step_sentinel`: a trajectory with no step, or with every step unusable, reports the explicit sentinel,
 //!   not `0.0`; a zero step reads apart from it; the `2.209e128` overflow is reported as itself at f64 and is skipped
 //!   and counted at f32, where it is `+∞`; the fold is reseeded from the first usable step; its control is the fold
