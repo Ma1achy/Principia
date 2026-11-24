@@ -94,7 +94,8 @@ pub struct Playhead {
 /// reads it to integrate the cursor's IC and draw its hover trace (trajectory_viewing §3), and the snapshot carries
 /// that IC's sample ([`Sample`](crate::contract::sample::Sample)). Its `SetField` path is
 /// [`RenderField::Hover`](crate::contract::set_field::RenderField::Hover), always marked "no history": a hover is
-/// never undoable, as playback is not. The dev GUI's hover label and Trajectory panel read it.
+/// never undoable, as playback is not. The dev GUI writes it; its hover label and Trajectory panel read the `Sample`
+/// built from it.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Hover {
