@@ -650,7 +650,8 @@ negative_control!(
 );
 
 /// The linear arm of the held `K`: the bare chart's tilt, and [`HeldK`]'s in linear mode, by value, blank where
-/// infeasible; the warped mode's clamp at `t = 0` does not apply in linear mode.
+/// infeasible: this test reads a cell with no construction as refused, not clamped as the warped mode clamps at
+/// `t = 0`.
 fn check_held_k(ctl: Ctl) {
     let span = 2.0;
     for centre_k in [0.5, 0.3] {
