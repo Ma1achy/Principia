@@ -1,15 +1,14 @@
-//! The kernel's `atan2` at each `Real`, [`crate::Real::arctan2`] (RQ-628, decided by the orchestrator per R-369,
-//! option (a); REQ-ENC-024, R-297, R-116): at f64, the CPU's alone, the pinned libm's `atan2` (`libm = "=0.2.16"`,
-//! `force-soft-floats`; R-991), so every machine gives the same bits; at f32, the GPU's precision, [`atan2_f32`], the
-//! kernel's own, in integer arithmetic.
+//! The kernel's `atan2` at each `Real`, [`crate::Real::arctan2`]: at f64, the CPU's alone, the
+//! pinned libm's `atan2` (`libm = "=0.2.16"`, `force-soft-floats`), so every machine gives the same bits; at f32, the
+//! GPU's precision, [`atan2_f32`], the kernel's own, in integer arithmetic.
 //!
-//! **Why the kernel has its own.** The fragment's ROUNDTRIP preset runs the encode as the backend compiles it (R-297),
+//! **Why the kernel has its own.** The fragment's ROUNDTRIP preset runs the encode as the backend compiles it,
 //! and WGSL bounds `atan2` only to 4096 ULP: lavapipe's, Mesa's lowering, is off by about `2·10⁻⁵` relative to
 //! `π/2 − α` near `π/2`. The decode rebuilds `‖ρ̃‖` from `cos α`, so an absolute error in the encode's `α` near `π/2`
-//! returns as a relative error in `ρ̃` larger by `1/cos α`, past `ε_phys` for a light body (RQ-628). So the encode's
+//! returns as a relative error in `ρ̃` larger by `1/cos α`, past `ε_phys` for a light body. So the encode's
 //! angles at f32 (`crate::encode::blocks`'s `α` and `β`, `crate::encode::by_kind`'s spherical and exponential
 //! inverses) and the shape sphere decode's `β` (`crate::chart::shape_sphere::inverse`) take this module's `atan2`, never
-//! the backend's. The callers' selects at the poles (R-437) are theirs, unchanged.
+//! the backend's. The callers' selects at the poles are theirs, unchanged.
 //!
 //! **Integer arithmetic, so every backend gives the CPU's bits.** [`atan2_f32`] reads its operands' bits and computes
 //! in 32-bit integers alone, two words where it needs 64 bits (WGSL has no u64): shifts, comparisons, selects and
@@ -18,7 +17,7 @@
 //! fractions of `crate::generated::arctan`, summed by the generator in integer arithmetic. So the GPU's f32 `atan2`, as
 //! Metal and lavapipe compile it, is the CPU's f32 `atan2`, bit for bit, and its accuracy is the CPU's.
 //!
-//! **Accuracy** (the bound RQ-628's decision sets: no worse than libm's `atan2f`, the arithmetic `ε_phys` was
+//! **Accuracy** (the bound it must meet: no worse than libm's `atan2f`, the arithmetic `ε_phys` was
 //! calibrated on). The result is the f32 nearest a value within about `2⁻³⁷` relative of `atan2(y, x)`: its error
 //! is at most about 0.50002 ULP of the f32 nearest the exact value, and it differs from that nearest f32 only where the
 //! exact value lies within that `2⁻³⁷` of the midpoint between two f32s. The kernel's tests sweep it exhaustively against
@@ -43,7 +42,7 @@
 //! **Special values**, IEEE's: `atan2(±0, x)` is `±0` for `x` positive or `+0` and `±π` for `x` negative or `−0`;
 //! `atan2(y, ±0)` is `±π/2` for `y ≠ 0`; an infinite operand gives the limit (`±π/2`, `±0` or `±π`, and `±π/4` or
 //! `±3π/4` for two); a NaN operand gives NaN. The kernel never forms `±∞` (`crate::real`'s note), and its callers select
-//! their poles (R-437); these hold so that the function is total.
+//! their poles; these hold so that the function is total.
 
 use crate::generated::arctan::{ATAN_EIGHTHS, ATAN_SERIES, HALF_PI, PI};
 

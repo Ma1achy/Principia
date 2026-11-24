@@ -1,7 +1,7 @@
-//! The Burrau family's discrete side (chart_reference §4.1, §4.2; REQ-CHART-021, REQ-SYS-016): Euclid's
+//! The Burrau family's discrete side (chart_reference §4.1, §4.2): Euclid's
 //! parametrisation of the primitive Pythagorean triples, the Burrau convention's masses, positions and Jacobi vectors
 //! for a right triangle of sides `(a, b, c)`, and the translation of the family's 1-based body numbers into the
-//! project's 0-based indices (R-22).
+//! project's 0-based indices.
 //!
 //! **Euclid's parametrisation** ([`euclid`]; §4.1): for coprime `m > n > 0` with `m − n` odd,
 //!
@@ -30,12 +30,12 @@
 //! the formulae once: the triple ([`Triple::burrau`]) and the continuous `ν` axis (`crate::chart::burrau::embed`)
 //! both evaluate them.
 //!
-//! **Body indices are 0-based** (R-22; [`from_literature`], [`pair_id`]). The family is written 1-based in its
+//! **Body indices are 0-based** ([`from_literature`], [`pair_id`]). The family is written 1-based in its
 //! literature form (bodies 1–3, inner pair 1–2; chart_reference's indexing note), and that numbering is translated
 //! here, at the boundary: body `k` of that form is body `k − 1`, so its inner pair `1–2` is the pair `(0, 1)`, pair id
 //! 2, pair id `k` naming the side opposite body `k` (payload §2's pair-id map). Nothing in this module shows a body
-//! number to a person; what a person reads goes through the one display function (R-449, REQ-GUI-188), whose numbers
-//! are not the usual literature's either (RQ-335).
+//! number to a person; what a person reads goes through the one display function, whose numbers are not
+//! the usual literature's either.
 
 use spirv_std::num_traits::{Float, NumCast};
 
@@ -52,7 +52,7 @@ pub enum Convention {
 /// The convention every Burrau system in this crate is stated in: the normalised one.
 pub const CONVENTION: Convention = Convention::Normalised;
 
-/// What [`CONVENTION`] says, in words, for a chart's label: no digit in it, so no body number (R-449).
+/// What [`CONVENTION`] says, in words, for a chart's label: no digit in it, so no body number.
 pub const CONVENTION_STATEMENT: &str =
     "Burrau convention, normalised: right angle at the origin, sides divided by \
      the hypotenuse, each mass its opposite side over the perimeter, so the masses sum to one";
@@ -149,7 +149,7 @@ pub fn from_literature(k: u32) -> Option<u32> {
     }
 }
 
-/// The pair id of the 0-based bodies `i` and `j` (R-22; payload §2): the side opposite the third body, `3 − i − j`;
+/// The pair id of the 0-based bodies `i` and `j` (payload §2): the side opposite the third body, `3 − i − j`;
 /// `None` unless `i` and `j` are two distinct bodies of `0, 1, 2`.
 pub fn pair_id(i: u32, j: u32) -> Option<u32> {
     if i < 3 && j < 3 && i != j {
