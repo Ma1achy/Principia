@@ -636,7 +636,8 @@ fn canonicaliser_seam_sweep() {
     );
 }
 
-/// The control's wrong forms of `C`'s branch inputs on `x`, plain floats: the CoM and `I_in` as explicit `fma`s,
+/// Wrong forms of `C`'s branch inputs on `x`, for the controls (`C` builds them exactly, `kernel::canon`'s "The branch
+/// inputs"): the CoM and `I_in` as explicit `fma`s,
 /// `fma(m₂, x₂, fma(m₁, x₁, m₀x₀))` and `fma(m₂, ‖c₂‖², fma(m₁, ‖c₁‖², m₀‖c₀‖²))` with `‖c‖² = fma(c_x, c_x, c_y²)`;
 /// the pair differences as lone f32 subtractions; and the select on `I_in = 0`. Each `fma` is fused or, as CI's lavapipe evaluates it, a rounded product and an add (`fused`), and
 /// every result is flushed to zero where subnormal or not (`flush`), as Metal does.
