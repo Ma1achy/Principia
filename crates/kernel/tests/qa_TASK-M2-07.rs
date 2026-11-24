@@ -1,46 +1,45 @@
-//! QA tests for TASK-M2-07, written from the requirements and their sources, not from the implementation: `C`
+//! QA tests for canonicalisation, written from the requirements and their sources, not from the implementation: `C`
 //! (`kernel::canon::canonicalise`) and the scale gauge (`kernel::canon::scale_gauge`) on the CPU, the shared source's
-//! f64 and f32 instantiations (R-265). The GPU-f32 build is the implementer's `engine/tests/canon_gpu.rs`.
+//! f64 and f32 instantiations. The GPU-f32 build is the implementer's `engine/tests/canon_gpu.rs`.
 //!
 //! Every expected value here comes from an independent construction: a canonical representative built from
 //! dd_decoder §3.2's Jacobi reconstruction, the gauge group action of dd_encode §3.3, a plain f64 reference of
 //! dd_encode §3.2's steps 1a → 0 → 1b → 2 written from the text ([`reference`]), and chart_reference §4.2's Burrau
 //! construction.
 //!
-//! **`C` takes no mirror** (TASK-M2-57): the decoder's mirror step is removed and latent `β` runs over the full
-//! circle, so a state below the `x`-axis stays there. The tests whose subject was the mirror are restated to that: a
-//! lower-half state keeps `λ̃_y < 0` through `C`, and each one's control is a `C` with the mirror step left in. *Was:*
-//! "mirrors iff `Π` did", "the mirror is the test `λ̃_y < −δ_λ`", "`L_z` flips sign with `lookup_mirrored`".
-//! - REQ-DEC-002, REQ-ENC-015 (`qa_m207_gauge_quotient`): for a canonical representative `x` and a random gauge
+//! **`C` takes no mirror**: the decoder has no mirror step and latent `β` runs over the full circle, so a state below
+//! the `x`-axis stays there. The tests on the lower half check that: a lower-half state keeps `λ̃_y < 0` through `C`,
+//! and each one's control is a `C` with a mirror step left in.
+//! - `qa_m207_gauge_quotient`: for a canonical representative `x` and a random gauge
 //!   `g = (a, u, θ, s, Π)`, `C(g·x)` lies on the section (CoM 0, `Σp = 0`, `ρ̃` on `+x`, `I = 1`, `λ̃_y` of either
 //!   sign), equals `x` where `Π` is off and `x`'s reflection where it is on (so `λ̃_y` keeps the sign the gauge left
 //!   it), records `I_in = s²` (the CoM-frame `I`, not the origin's) and `λ = 1/s`, and `C` is idempotent; at f64 and
 //!   f32.
-//! - REQ-DEC-002 (`qa_m207_reference`): on arbitrary physical states, `C` agrees with the f64 reference of the ordered
+//! - `qa_m207_reference`: on arbitrary physical states, `C` agrees with the f64 reference of the ordered
 //!   procedure, its notice and the half its output lies in included; both halves are reached.
-//! - REQ-DEC-017 (`qa_m207_deadband_tilde`): `C` reads no `δ_λ`: states with `λ̃_y = k·δ_λ`, `k` straddling `±1`, the
-//!   old deadband's edges, and 0, under rotations, translations, boosts, scales and `Π`, at masses where
+//! - `qa_m207_deadband_tilde`: `C` reads no `δ_λ`: states with `λ̃_y = k·δ_λ`, `k` straddling `±1`, where a mirror
+//!   deadband's edges would be, and 0, under rotations, translations, boosts, scales and `Π`, at masses where
 //!   `|λ_y| > δ_λ > |λ̃_y|`, leave `C` with the `λ̃_y` they entered with, its sign kept; the same output twice; f32 on
 //!   states whose steps are exact there.
 //! - dd_encode §5 test 3's half-mirror catch (`qa_m207_mirror_full_state`): `C` keeps `L_z`'s sign on either half
 //!   (`L_canon = +L_in/I_in^{1/4}`), and the mirror map `Π` on the full state, every `rᵢ` and every `pᵢ`, negates it:
 //!   `L_z(C(g·x)) = det(Π_g)·L_z(C(x))`.
-//! - REQ-DEC-018 (`qa_m207_noop_extreme`): dd_decoder §5 test 5 on decodes at the extreme finite `z` (each control at
+//! - `qa_m207_noop_extreme`: dd_decoder §5 test 5 on decodes at the extreme finite `z` (each control at
 //!   `±10³⁰` and at the precision's largest finite value, `z_β` among them, so on both halves), at f32 and f64: the
 //!   half kept, rotation angle ≈ 0, the state unchanged to rounding, the same result twice.
-//! - REQ-DEC-023 (`qa_m207_scale_gauge_powers`): dd_decoder §3.5 component by component, `rᵢ/ℓ` and `√ℓ·pᵢ` (the
+//! - `qa_m207_scale_gauge_powers`: dd_decoder §3.5 component by component, `rᵢ/ℓ` and `√ℓ·pᵢ` (the
 //!   asymmetric powers chart_reference §0.5 warns of), `I = 1`, the identity on canonical output, idempotent, and the
 //!   same map as `C`'s step 0.
-//! - REQ-ENC-006 (`qa_m207_burrau_scale_step`): chart_reference §4.2's Burrau (3,4,5) state, built here, at 2× the
+//! - `qa_m207_burrau_scale_step`: chart_reference §4.2's Burrau (3,4,5) state, built here, at 2× the
 //!   canonical scale, checked against `fixtures/states/burrau_2x.json`: `I_in = 4`, `λ = 1/2`, `r ← r/2`, `p ← √2·p`,
 //!   `E_canon = 2·E_in`, `L_canon = L_in/√2`, and the timing factor `I_in^{3/4}` read off the dynamics: velocities scale
 //!   by `λ·I_in^{3/4}` and accelerations by `λ·I_in^{3/2}`, the similarity `t ← t/I_in^{3/4}` of inverse-encode Part 2.
-//! - REQ-ENC-016 (`qa_m207_coincident_pole`): `ρ = 0` with `I_in > 0`, components `(+0, +0)`, `(−0, +0)` and
-//!   `(+0, −0)`, raises `lookup_clamped` with `φ = +0` by its bits and the identity rotation (R-13, R-437), at f64 and
-//!   f32; at `I_in = 0` (RQ-296 holds the state there) only the flag and `φ` are asserted; a `ρ` off 0 does not clamp.
+//! - `qa_m207_coincident_pole`: `ρ = 0` with `I_in > 0`, components `(+0, +0)`, `(−0, +0)` and `(+0, −0)`, raises
+//!   `lookup_clamped` with `φ = +0` by its bits and the identity rotation, at f64 and f32; at `I_in = 0` (where the
+//!   spec leaves the state open) only the flag and `φ` are asserted; a `ρ` off 0 does not clamp.
 //!
-//! **Not asserted** (held open): when `lookup_rescaled` is raised (RQ-295), and `C`'s state and `λ` at `I_in = 0`
-//! (RQ-296).
+//! **Not asserted** (the spec leaves them open): when `lookup_rescaled` is raised, and `C`'s state and `λ` at
+//! `I_in = 0`.
 //!
 //! **Tolerances.** Each is an exact identity checked to rounding: a multiple of the precision's epsilon from the
 //! number of rounded operations on the path (CoM, rescale, unboost, the rotation from `atan2`/`sin`/`cos`), times the
@@ -49,7 +48,7 @@
 //!
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::path::Path;
 
@@ -243,8 +242,8 @@ fn act(g: &Gauge, x: &Ic<f64>) -> Ic<f64> {
 
 /// The ordered procedure of dd_encode §3.2 written from its text, at f64, `M` kept general: 1a `r ← r − R_com`;
 /// 0 `I_in = Σmᵢ‖rᵢ‖²`, `r ← r/√I_in`, `p ← I_in^{1/4}·p`, `λ = I_in^{−1/2}`; 1b `p ← p − mᵢP_tot/M`; 2 rotate by
-/// `−φ`, `φ = atan2(ρ_y, ρ_x)` and 0 at `ρ = 0` (R-437), `lookup_clamped` there (R-13). There is no step 3: the state
-/// keeps the half `λ̃_y` puts it in (*was:* "3 mirror the full state iff `λ̃_y < −δ_λ`"). Defined for `I_in > 0`.
+/// `−φ`, `φ = atan2(ρ_y, ρ_x)` and 0 at `ρ = 0`, `lookup_clamped` there. There is no step 3: the state keeps the half
+/// `λ̃_y` puts it in, with no mirror. Defined for `I_in > 0`.
 struct Reference {
     ic: Ic<f64>,
     i_in: f64,
@@ -311,7 +310,7 @@ fn reference(x: &Ic<f64>) -> Reference {
     }
 }
 
-// ── qa_m207_gauge_quotient (REQ-DEC-002, REQ-ENC-015) ───────────────────────────────────────────────────────────
+// ── qa_m207_gauge_quotient ──────────────────────────────────────────────────────────────────────────────────────
 
 /// The quotient's tolerance, in eps: on `I_in` and `λ`, and on the output state over its conditioning `κ`
 /// ([`quotient`]).
@@ -469,7 +468,7 @@ fn qa_m207_gauge_quotient() {
     quotient_at::<f32>("f32");
 }
 
-/// `C` with step 0's `I` taken about the origin, before step 1a: the order R-23 forbids.
+/// `C` with step 0's `I` taken about the origin, before step 1a: the wrong order, since `I_in` is the CoM-frame `I`.
 #[cfg(feature = "controls")]
 fn origin_inertia(x: &Ic<f64>) -> Canonical<f64> {
     let mut c = canonicalise(x);
@@ -496,7 +495,7 @@ negative_control!(
     }
 );
 
-// ── qa_m207_reference (REQ-DEC-002) ─────────────────────────────────────────────────────────────────────────────
+// ── qa_m207_reference ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// Arbitrary physical states: masses ≥ 0.05 before normalising, positions and momenta in `[−5, 5]`, the inner pair at
 /// least 0.5 apart so the rotation is well conditioned, and `|λ̃_y|` of the reference's frame away from 0, where the
@@ -810,7 +809,7 @@ mod full_state_half_mirror {
     );
 }
 
-// ── qa_m207_deadband_tilde (REQ-DEC-017) ────────────────────────────────────────────────────────────────────────
+// ── qa_m207_deadband_tilde ──────────────────────────────────────────────────────────────────────────────────────
 
 /// The `k` of `λ̃_y = k·δ_λ`: straddling `±1` and inside, with 0.
 const KS: [f64; 9] = [-3.0, -1.1, -0.9, -0.5, 0.0, 0.5, 0.9, 1.1, 3.0];
@@ -955,7 +954,7 @@ mod deadband_lambda_y_test {
     );
 }
 
-// ── qa_m207_noop_extreme (REQ-DEC-018) ──────────────────────────────────────────────────────────────────────────
+// ── qa_m207_noop_extreme ────────────────────────────────────────────────────────────────────────────────────────
 
 /// The no-op's tolerance on the state, in eps: step 1a's and step 0's rounding on a state already at CoM 0, `I = 1`.
 const NOOP_EPS: f64 = 8.0;
@@ -1061,7 +1060,7 @@ negative_control!(
     }
 );
 
-// ── qa_m207_scale_gauge_powers (REQ-DEC-023) ────────────────────────────────────────────────────────────────────
+// ── qa_m207_scale_gauge_powers ──────────────────────────────────────────────────────────────────────────────────
 
 const GAUGE_EPS: f64 = 16.0;
 
@@ -1147,7 +1146,7 @@ negative_control!(
     }
 );
 
-// ── qa_m207_burrau_scale_step (REQ-ENC-006) ─────────────────────────────────────────────────────────────────────
+// ── qa_m207_burrau_scale_step ───────────────────────────────────────────────────────────────────────────────────
 
 /// chart_reference §4.2 at `(m, n) = (2, 1)`: `a = 3`, `b = 4`, `c = 5`, `r₀ = 0`, `r₁ = (a/c, 0)`, `r₂ = (0, b/c)`,
 /// `m = (c, b, a)/(a + b + c)`; its CoM-frame `I`.
@@ -1312,7 +1311,7 @@ negative_control!(
     }
 );
 
-// ── qa_m207_coincident_pole (REQ-ENC-016) ───────────────────────────────────────────────────────────────────────
+// ── qa_m207_coincident_pole ─────────────────────────────────────────────────────────────────────────────────────
 
 /// States with `ρ = 0` exactly after steps 1a and 0, `I_in > 0`, named by `ρ`'s zeros: `r₀ = r₁` bit for bit gives
 /// `(+0, +0)`; `r₀ = (+0, 0)`, `r₁ = (−0, 0)` with body 2 on the y axis keeps `R_com,x = +0`, so `ρ_x = −0 − (+0) = −0`;
@@ -1348,7 +1347,7 @@ fn poles() -> Vec<(&'static str, Ic<f64>)> {
     ]
 }
 
-/// At `ρ = 0`: `lookup_clamped`, `φ = +0` by its bits, and the output the reference's with no rotation (R-437:
+/// At `ρ = 0`: `lookup_clamped`, `φ = +0` by its bits, and the output the reference's with no rotation (`φ = 0`:
 /// `R(−φ)` the identity), which takes no mirror; at precision `R`.
 fn pole<R: P>(c: Canon<R>, name: &str, x: &Ic<f64>) -> Result<(), String> {
     let xr = narrow::<R>(x);
@@ -1384,7 +1383,7 @@ fn qa_m207_coincident_pole() {
         pole::<f64>(canonicalise, name, &x).unwrap();
         pole::<f32>(canonicalise, name, &x).unwrap();
     }
-    // I_in = 0, every body at one point (RQ-296 holds the state and λ): only the flag and φ.
+    // I_in = 0, every body at one point (the spec leaves the state and λ open there): only the flag and φ.
     for (sx, sy) in [(0.0, 0.0), (-0.0, 0.0), (0.0, -0.0), (-0.0, -0.0)] {
         let x = Ic {
             m: [0.2, 0.3, 0.5],

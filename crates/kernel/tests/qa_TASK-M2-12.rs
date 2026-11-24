@@ -1,19 +1,19 @@
-//! QA tests for TASK-M2-12, written from the requirements (chart_reference §2, §2.1, §2.2, §5.2; REQ-CHART-017,
-//! REQ-CHART-031), not from the implementation. Each check runs at the f64 and the f32 instantiation of the one source,
-//! natively (R-265).
+//! QA tests for the invariant charts' warp, written from the requirements (chart_reference §2, §2.1, §2.2, §5.2), not
+//! from the implementation. Each check runs at the f64 and the f32 instantiation of the one source, natively.
 //! - `qa_m212_warp_follows_section_2_1` (f64), `qa_m212_warp_follows_section_2_1_f32`: the targets are §2.1's warp, `K(t) = K_max·t^γ_K`, `L_max(t) = √(2·I·K(t))`
 //!   (`I = 1` on the canonical-frame decode, §2.2), `L_z(s, t) = (2s − 1)·L_max(t)`, and on `(L_z, E)` the axis is
 //!   `E(t) = U + K(t)`, against an independent f64 transcription; over random `K_max > 0`, `γ_K ≥ 1` (non-integer
 //!   included) and `(s, t) ∈ [0,1]²`.
-//! - `qa_m212_warp_feasible_lz_e`, `qa_m212_warp_feasible_lz_k`: REQ-CHART-017's property (chart_reference §5.2): no `(u, v) ∈ [0,1]²` produces
-//!   `K* < K_min`, on both charts, over random frozen configurations and masses, `K_max`, `γ_K`, with the square's
-//!   edges and corners drawn on purpose. Checked twice: the construction's own outcome through the chart's decode is
+//! - `qa_m212_warp_feasible_lz_e`, `qa_m212_warp_feasible_lz_k`: the feasibility property (chart_reference §5.2):
+//!   no `(u, v) ∈ [0,1]²` produces `K* < K_min`, on both charts, over random frozen configurations and masses,
+//!   `K_max`, `γ_K`, with the square's edges and corners drawn on purpose. Checked twice: the construction's own
+//!   outcome through the chart's decode is
 //!   never `Infeasible`, and `2·K* ≥ L_z²` holds exactly, decided here without rounding (an f32 product is exact in
 //!   f64; an f64 square is split error-free by `fma`). The chart fixes geometry and mass (§2): every pixel's masses
 //!   and positions equal, bit for bit, those of the chart's centre pixel.
 //! - `qa_m212_warp_reaches_the_parabola`: the warp maps the square *onto* the feasible interior (§2.1): the edge
 //!   columns `s ∈ {0, 1}` lie on the parabola `|L_z| = √(2K)` to rounding, the centre column on `L_z = 0`, and the row
-//!   `t = 0` at the apex `(L_z, K) = (0, 0)`, the rest start; just past `s = 1` the decode is infeasible (§2.1, R-407:
+//!   `t = 0` at the apex `(L_z, K) = (0, 0)`, the rest start; just past `s = 1` the decode is infeasible (§2.1:
 //!   `|2s − 1| > 1` gives `K* < K_min`), so the square's edge is the parabola, not inside it.
 //! - `qa_m212_flags`: both invariant charts declare `forbids_energy_normalisation`, and the latent chart does not
 //!   (§0.6, §5.1).
@@ -25,7 +25,7 @@
 //!
 //! **Domain** (pitfalls §10): the stateless decode, its inputs held fixed; no trajectory.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176, R-212).
+//! Each test has a registered negative control naming the panic it expects.
 
 use std::fmt::Debug;
 
@@ -303,7 +303,7 @@ fn check_feasible<R: Q>(decode: Decode<R>, warp: Warp<R>, chart: &str) {
         check_pixel::<R>(decode, warp, &c, R::of(u), R::of(v), chart);
         Ok(())
     });
-    // The registered defaults (REQ-CHART-044's proposal), on a grid with every edge and corner.
+    // The registered defaults, on a grid with every edge and corner.
     let k_max = validation::K_MAX.number();
     let gamma_k = validation::GAMMA_K.number();
     let n = 65;
@@ -446,7 +446,7 @@ fn check_reaches<R: Q>(warp: Warp<R>, decode: Decode<R>) {
                     ctx(t)
                 );
             }
-            // Just past s = 1 the decode is infeasible (§2.1, R-407).
+            // Just past s = 1 the decode is infeasible (§2.1).
             let (_, outcome) = decode(&c, R::of(1.01), R::of(t));
             assert!(
                 outcome == Outcome::Infeasible,

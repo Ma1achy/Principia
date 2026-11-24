@@ -1,50 +1,44 @@
 //! Canonicalisation `C` and the scale gauge on the CPU, at f64 and f32, the one source's two instantiations
-//! (`kernel::canon`; TASK-M2-07). The GPU-f32 build's checks are `engine/tests/canon_gpu.rs`.
+//! (`kernel::canon`). The GPU-f32 build's checks are `engine/tests/canon_gpu.rs`.
 //! - `canonicalise_section`: on random physical states, the output has CoM at the origin, zero total momentum, `ρ̃` on
-//!   `+x` and `I = 1`, `λ̃_y` of either sign (no mirror step, R-865; *was:* "`λ̃_y ≥ −δ_λ`"), and `C` is idempotent
-//!   (REQ-DEC-002).
+//!   `+x` and `I = 1`, `λ̃_y` of either sign (no mirror step), and `C` is idempotent.
 //! - `canonical_noop`: dd_decoder §5 test 5, `C` on canonical-frame decodes of fuzzed and saturated `z` leaves them
-//!   unchanged, and at the `λ̃_y = 0` seam gives the same result twice (REQ-DEC-018).
+//!   unchanged, and at the `λ̃_y = 0` seam gives the same result twice.
 //! - `scale_gauge`: dd_decoder §5 test 10, the identity on canonical output; on a scaled input, `I = 1` and `E`, `L_z`
-//!   transformed per the inverse-encode contract's table (REQ-DEC-023).
+//!   transformed per the inverse-encode contract's table.
 //! - `scale_step`: dd_encode §5 test 4 on `fixtures/states/burrau_2x.json`: `I_in = 4·I_canon`, `λ = 1/2`,
-//!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}`, `lookup_rescaled` raised
-//!   (REQ-ENC-006).
+//!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}`, `lookup_rescaled` raised.
 //! - `scale_step_skip`: step 0 on canonical-frame decodes of fuzzed and saturated `z` is skipped, `λ = 1` and `r`, `p`
-//!   bit for bit as they entered it, no `lookup_rescaled`, its measured `|I_in − 1|` printed (REQ-ENC-035's evidence);
-//!   at `|I_in − 1| = τ_I` and one ulp inside it, on either side of 1, skipped, and one ulp outside it run, with
-//!   `lookup_rescaled` (REQ-ENC-006, R-547).
+//!   bit for bit as they entered it, no `lookup_rescaled`, its measured `|I_in − 1|` printed; at `|I_in − 1| = τ_I` and
+//!   one ulp inside it, on either side of 1, skipped, and one ulp outside it run, with `lookup_rescaled`.
 //! - `scale_step_range`: states with the bodies apart from far below to far above `I_in`'s float range at each
 //!   precision leave step 0 and `C` at `I = 1` to rounding, every output finite, `lookup_rescaled` and no
 //!   `lookup_clamped`; the coincident bodies, at the origin and off it, keep the select: divisor 1, `λ = 1`, `p = 0`,
-//!   `lookup_clamped`, `φ = +0` (REQ-ENC-006, R-547).
+//!   `lookup_clamped`, `φ = +0`.
 //! - `canon_lambda_t_y`: `λ̃_y` as `C` reads it is the decoder's own `λ̃_y` on canonical decodes, `z_β` over the full
 //!   circle, at each precision.
-//! - `canon_no_mirror`: `C` takes no mirror (R-865): on turned, scaled, translated and mirrored states `λ̃_y = k·δ_λ`
-//!   either side of the old deadband's edges and on generic states, `C`'s output keeps the input's `λ̃_y` sign, raises
-//!   no clamp and is deterministic (REQ-DEC-017, REQ-DEC-002). *Was (TASK-M2-57):* `canon_mirror_deadband`,
-//!   `canon_mirror_decision_edges`, `canon_mirror_decision_near`, `canon_mirror_extreme_scales`,
-//!   `canon_mirror_scale_invariance`, `canon_mirror_exact_terms` and `canon_mirror_subnormal_difference`, the mirror
-//!   decision's tests, gone with it.
-//! - `canon_product_fusion_proof`: the f32 product `C`'s wide arithmetic is built from (the mirror decision's, before
-//!   TASK-M2-57) rounds the same fused or not at each of its contractible sites, on 200 000 pairs (REQ-DEC-002).
+//! - `canon_no_mirror`: `C` takes no mirror: on turned, scaled, translated and mirrored states `λ̃_y = k·δ_λ` either
+//!   side of `k = ±1`, where a mirror decision at `±δ_λ` would fall, and on generic states, `C`'s output keeps the
+//!   input's `λ̃_y` sign, raises no clamp and is deterministic.
+//! - `canon_product_fusion_proof`: the f32 product `C`'s wide arithmetic is built from rounds the same fused or not at
+//!   each of its contractible sites, on 200 000 pairs.
 //! - `canon_pow2_bits`: the bit-formed powers of two and exponents `C`'s wide arithmetic's integer exponents are read
 //!   with.
 //! - `canon_rotation`: step 2's turn `(cos φ, sin φ)`, formed as `ρ/‖ρ‖` ([`canon::rotation`]): `(1, +0)` at `ρ = 0`
-//!   for every sign of the zeros (R-437), and elsewhere within 2 eps of `ρ/‖ρ‖`, in value and in the direction it
-//!   leaves `ρ` in, from the least subnormal to the greatest finite `ρ` at each precision (REQ-DEC-002).
+//!   for every sign of the zeros, and elsewhere within 2 eps of `ρ/‖ρ‖`, in value and in the direction it leaves `ρ`
+//!   in, from the least subnormal to the greatest finite `ρ` at each precision.
 //! - `canon_rotation_angle`: step 2's recorded `φ` ([`canon::rotation_angle`]) is IEEE's `atan2(ρ_y, ρ_x)` bit for bit
 //!   on random `ρ`, `±π/2` where `ρ_x` is either zero and `ρ_y ≠ 0`, `+0` at the pole, and `C`'s recorded `φ`, at
-//!   each precision (REQ-ENC-016; R-437, pitfalls §11).
+//!   each precision (pitfalls §11).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
 //!   state's `C` in its word layout, notices included (`lookup_rescaled` among them), and nothing past the last state.
-//! - `gvn_reproducer`: RQ-299's standalone reproducer (`fixtures/gvn_repro`), built under cargo with the workspace's
-//!   host flags, `-Zmir-enable-passes=-GVN` among them, prints 0.5 at opt-level 1, 2 and 3; its control, built on the
-//!   pin with no flags, prints −0.5 (R-547, REQ-TOOL-188). With `stage_canon_native` at `--release`, the native build
-//!   without MIR GVN.
+//! - `gvn_reproducer`: the standalone reproducer of the pinned nightly's MIR GVN miscompile (`fixtures/gvn_repro`),
+//!   built under cargo with the workspace's host flags, `-Zmir-enable-passes=-GVN` among them, prints 0.5 at opt-level
+//!   1, 2 and 3; its control, built on the pin with no flags, prints −0.5. With `stage_canon_native` at `--release`,
+//!   the native build without MIR GVN.
 //!
-//! **Tolerances** (applied per R-369: a test decision, as dd_decoder §5 test 1's "precision-appropriate tolerance"),
-//! each a multiple of the precision's epsilon, set from the worst case these tests measure and print, with headroom.
+//! **Tolerances** (a test decision, as dd_decoder §5 test 1's "precision-appropriate tolerance"), each a multiple of
+//! the precision's epsilon, set from the worst case these tests measure and print, with headroom.
 //!
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory.
 
@@ -179,7 +173,7 @@ fn state_error(a: &Ic<f64>, b: &Ic<f64>, eps: f64) -> f64 {
     worst
 }
 
-// ── canonicalise_section (REQ-DEC-002) ──────────────────────────────────────────────────────────────────────────
+// ── canonicalise_section ────────────────────────────────────────────────────────────────────────────────────────
 
 /// The section's tolerances, in the precision's epsilon: the CoM relative to `Σmᵢ‖rᵢ‖` plus the input's CoM offset
 /// in output units, `λ‖R_com‖`, which step 1a subtracts with its rounding; `Σpᵢ` relative to `Σ‖pᵢ‖` plus the input's
@@ -370,14 +364,14 @@ negative_control!(
     }
 );
 
-// ── canonical_noop (REQ-DEC-018) ────────────────────────────────────────────────────────────────────────────────
+// ── canonical_noop ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The no-op's tolerance, per [`state_error`], in eps: what step 1a's CoM and step 0's rescale move by rounding.
 const NOOP_EPS: f64 = 4.0;
 
 /// The `z` the no-op runs on: 4096 fuzzed on `[−4, 4]⁸`; each component alone at `±30` and `±1000`, the others fuzzed
 /// on `[−2, 2]`; `(z_α, z_β)` together at every pair of `{±30, ±1000}`, the rest fuzzed; and `z_β` on the
-/// `λ̃_y = 0` seam, at `0`, `±π` and `±2π` as f32 (the collinear shapes, `β` periodic since TASK-M2-57), the rest
+/// `λ̃_y = 0` seam, at `0`, `±π` and `±2π` as f32 (the collinear shapes, `β` periodic), the rest
 /// fuzzed.
 fn noop_z() -> Vec<[f32; 8]> {
     let mut rng = SplitMix::new(11);
@@ -400,7 +394,7 @@ fn noop_z() -> Vec<[f32; 8]> {
             out.push(z);
         }
     }
-    // `β` at the half-axes and a period on, `z_β = β − c` under the offset link (R-1020), `c` f32's `fl↓(π/2)`.
+    // `β` at the half-axes and a period on, `z_β = β − c` under the offset link, `c` f32's `fl↓(π/2)`.
     let pi = std::f32::consts::PI;
     let c = f32::from_bits(0x3FC9_0FDA);
     for b in [0.0f32, -0.0, pi, -pi, 2.0 * pi, -2.0 * pi] {
@@ -414,7 +408,7 @@ fn noop_z() -> Vec<[f32; 8]> {
 }
 
 /// Test 5 on one decode `x` and `C(x)`: the rotation angle 0 and the state unchanged within [`NOOP_EPS`], so no
-/// mirror, on either half of `β` (R-865); the measured error.
+/// mirror, on either half of `β`; the measured error.
 fn check_noop<R: Precision>(x: &Ic<R>, out: &Canonical<R>, at: &str) -> f64 {
     assert!(
         out.phi == R::zero(),
@@ -473,7 +467,7 @@ negative_control!(
     }
 );
 
-// ── scale_gauge (REQ-DEC-023) ───────────────────────────────────────────────────────────────────────────────────
+// ── scale_gauge ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The scale gauge's tolerances, in eps: the identity on canonical output, per [`state_error`]; `I − 1` on a scaled
 /// input; `E` and `L_z` against the table, relative.
@@ -569,7 +563,7 @@ negative_control!(
     }
 );
 
-// ── scale_step (REQ-ENC-006) ────────────────────────────────────────────────────────────────────────────────────
+// ── scale_step ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `fixtures/states/burrau_2x.json`: its state and its stated `I_in` and scale.
 fn burrau_2x() -> (Ic<f64>, f64, f64) {
@@ -690,7 +684,7 @@ negative_control!(
     }
 );
 
-// ── scale_step_skip (REQ-ENC-006, REQ-ENC-035) ──────────────────────────────────────────────────────────────────
+// ── scale_step_skip ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Steps 1a and 0 as a function of the state: [`scale_step`], or a control's.
 type Step<R> = fn(&Ic<R>) -> Scaled<R>;
@@ -866,7 +860,7 @@ negative_control!(
     }
 );
 
-// ── scale_step_range (REQ-ENC-006) ──────────────────────────────────────────────────────────────────────────────
+// ── scale_step_range ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Bodies apart at the scale `k`, masses `(¼, ¼, ½)`, with momenta, one of them zero in `x`.
 fn spread<R: Precision>(k: f64) -> Ic<R> {
@@ -1134,8 +1128,8 @@ negative_control!(
 
 /// States reaching the notices: at `I_in = 0.75`, so `lookup_rescaled`, alone, on a lower-half state, with
 /// `lookup_clamped`, and with both; and at `I = 1` to under an eps, so no `lookup_rescaled`, alone and on a lower-half
-/// state. A lower-half state raises no notice of its own: bit 1, `lookup_mirrored`, is retired (R-865; *was:* "with
-/// `lookup_mirrored`").
+/// state. A lower-half state raises no notice of its own: bit 1, once `lookup_mirrored`, is never
+/// set.
 fn notice_states() -> [Ic<f32>; 6] {
     let plain = Ic {
         m: [0.25f32, 0.25, 0.5],
@@ -1260,7 +1254,7 @@ negative_control!(
     }
 );
 
-// ── canon_no_mirror (REQ-DEC-017, REQ-DEC-002; R-865) ─────────────────────────────────────────────────────────────
+// ── canon_no_mirror ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The tolerance on `λ̃_y` against the decoder's, absolute (`|λ̃| ≤ 1`), in eps.
 const LAMBDA_T_EPS: f64 = 4.0;
@@ -1307,10 +1301,11 @@ fn gauged(m: [f64; 3], t: f64, mirror: bool, theta: f64, s: f64) -> [[f64; 2]; 3
     })
 }
 
-/// `C` takes no mirror (R-865): on [`gauged`]'s states, `λ̃_y = k·δ_λ` for `k` either side of the old deadband's
-/// edges and well past them, under masses with `m₂/M₀₁` of 1.5 and of 3/7, turned, scaled, translated and mirrored, at
-/// `I_in ≠ 1`; and on generic states, whose `λ̃_y` lies anywhere: `canon`'s output keeps the sign of the input's own
-/// `λ̃_y` (`t`, or `−t` where the input is mirrored), raises no notice besides `λ`'s, and is the same twice.
+/// `C` takes no mirror: on [`gauged`]'s states, `λ̃_y = k·δ_λ` for `k` either side of `±1`, where a mirror decision at
+/// `±δ_λ` would fall, and well past them, under masses with `m₂/M₀₁` of 1.5 and of 3/7, turned, scaled, translated and
+/// mirrored, at `I_in ≠ 1`; and on generic states, whose `λ̃_y` lies anywhere: `canon`'s output keeps the sign of the
+/// input's own `λ̃_y` (`t`, or `−t` where the input is mirrored), raises no notice besides `λ`'s, and is the same
+/// twice.
 fn check_no_mirror(canon: fn(&Ic<f64>) -> Canonical<f64>) {
     let d = <f64 as ChartConstants>::DELTA_LAMBDA;
     let mut states = Vec::new();
@@ -1415,7 +1410,7 @@ negative_control!(
     })
 );
 
-// ── canon_product_fusion_proof (REQ-DEC-002) ───────────────────────────────────────────────────────────────────
+// ── canon_product_fusion_proof ─────────────────────────────────────────────────────────────────────────────────
 
 /// The f32 [`IeeeBits::product`]'s four partial products and its fixed sum, written out with each of its two
 /// contractible sites `x·y + z` fused or not as `fuse` says.
@@ -1509,7 +1504,7 @@ negative_control!(
     check_pow2::<f32>(|e| f32::from_bits(((e - 127) as u32) << 23), -126, 127)
 );
 
-// ── canon_rotation (REQ-DEC-002) ────────────────────────────────────────────────────────────────────────────────
+// ── canon_rotation ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A step-2 turn: `ρ ↦ (cos φ, sin φ)`.
 type Turn<R> = fn([R; 2]) -> (R, R);
@@ -1557,7 +1552,7 @@ fn check_turn<R: Precision>(turn: Turn<R>, rho: [R; 2], tol: f64) -> f64 {
     dc.max(dy)
 }
 
-/// Step 2's turn ([`canon::rotation`]): at `ρ = 0`, `(1, +0)` exactly for every sign of the zeros (R-437); elsewhere
+/// Step 2's turn ([`canon::rotation`]): at `ρ = 0`, `(1, +0)` exactly for every sign of the zeros; elsewhere
 /// `ρ/‖ρ‖` to `tol` eps, in value and in direction, on 64 directions at every power of two from the least subnormal to
 /// the greatest exponent, at the format's greatest value and with the components at opposite ends of the range. The
 /// worst, in eps.
@@ -1605,14 +1600,14 @@ fn canon_rotation() {
     eprintln!("canon_rotation: worst {w32:.2} eps at f32, {w64:.2} at f64 (bound 2)");
 }
 
-// ── canon_rotation_angle (REQ-ENC-016; R-437, pitfalls §11) ─────────────────────────────────────────────────────
+// ── canon_rotation_angle (pitfalls §11) ─────────────────────────────────────────────────────────────────────────
 
 /// A step-2 angle: `ρ ↦ φ`.
 type Angle<R> = fn([R; 2]) -> R;
 
 /// Step 2's recorded `φ` ([`canon::rotation_angle`]) at `R`: IEEE's `atan2(ρ_y, ρ_x)`, bit for bit, on 4096 random `ρ`
 /// over every quadrant; `±π/2` on `ρ_y`'s side, IEEE's `atan2(ρ_y, +0)`'s bits, where `ρ_x` is either zero and
-/// `ρ_y ≠ 0` (pitfalls §11); `+0` at the pole, every sign of the zeros (R-437); and `C`'s recorded `φ` is it.
+/// `ρ_y ≠ 0` (pitfalls §11); `+0` at the pole, every sign of the zeros; and `C`'s recorded `φ` is it.
 fn check_angle<R: Precision>(angle: Angle<R>) {
     let f = |v: R| -> f64 { v.into() };
     let bits = |v: R| f(v).to_bits();
@@ -1703,7 +1698,7 @@ negative_control!(
     {
         check_rotation::<f32>(
             |rho| {
-                // Off by 10⁻⁶ away from the pole, where R-437's φ = 0 is kept.
+                // Off by 10⁻⁶ away from the pole, where the pole's φ = 0 is kept.
                 let phi = canon::rotation_angle(rho);
                 let phi = if phi == 0.0 { phi } else { phi + 1e-6 };
                 (phi.cos(), phi.sin())
@@ -1715,14 +1710,14 @@ negative_control!(
     }
 );
 
-// ── gvn_reproducer (REQ-TOOL-188) ───────────────────────────────────────────────────────────────────────────────
+// ── gvn_reproducer ──────────────────────────────────────────────────────────────────────────────────────────────
 
-/// `fixtures/gvn_repro`, RQ-299's standalone reproducer (R-547), built by the cargo that runs these tests from the
-/// fixture's own directory, so the workspace's `.cargo/config.toml` and `rust-toolchain.toml` apply, at `opt_level`,
-/// and run: what it printed. With `host_flags`, the build takes the workspace's host flags, the config's, any rustflags
-/// in the environment removed; without, none, an empty CARGO_ENCODED_RUSTFLAGS overriding every rustflags table in the
-/// config. Each opt-level and set of flags has a target directory of its own, so a concurrent build of another never
-/// replaces the binary run.
+/// `fixtures/gvn_repro`, the standalone reproducer of the pinned nightly's MIR GVN miscompile, built by the cargo that
+/// runs these tests from the fixture's own directory, so the workspace's `.cargo/config.toml` and `rust-toolchain.toml`
+/// apply, at `opt_level`, and run: what it printed. With `host_flags`, the build takes the workspace's host flags, the
+/// config's, any rustflags in the environment removed; without, none, an empty CARGO_ENCODED_RUSTFLAGS overriding every
+/// rustflags table in the config. Each opt-level and set of flags has a target directory of its own, so a concurrent
+/// build of another never replaces the binary run.
 fn gvn_repro(opt_level: u8, host_flags: bool) -> String {
     use std::process::Command;
     use validation::spawn::Spawn;
@@ -1755,7 +1750,7 @@ fn gvn_repro(opt_level: u8, host_flags: bool) -> String {
     String::from_utf8_lossy(&output.stdout).trim().to_owned()
 }
 
-/// RQ-299's reproducer, built with the workspace's host flags or with none ([`gvn_repro`]), prints 0.5 at opt-level 1,
+/// The GVN reproducer, built with the workspace's host flags or with none ([`gvn_repro`]), prints 0.5 at opt-level 1,
 /// 2 and 3, where the pin's MIR GVN miscompiles it to −0.5.
 fn check_gvn_repro(host_flags: bool) {
     for opt_level in [1, 2, 3] {
