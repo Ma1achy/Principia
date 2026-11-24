@@ -14,6 +14,9 @@
 //!   quad-local offset `u − c`, each component normalised by its bound `h = 2^−(ℓ+1)` to [−1, 1] and mapped to
 //!   `(x + 1)/2`, `u`'s in R and `v`'s in G, B = 0 (REQ-TOOL-153; debug_tooling_plan §F).
 //!
+//! And the stain the real app opens on, the outcome palette's ([`outcome`](crate::presets::outcome)), and a debug view's
+//! own graph ([`view`](crate::presets::view)).
+//!
 //! [`uv_screen`]: crate::presets::uv_screen
 //! [`uv_quad`]: crate::presets::uv_quad
 //! [`coordinate_view`]: crate::presets::coordinate_view
@@ -48,10 +51,30 @@ fn source(what: &str, value: &str) -> String {
 
 /// The graph: `source` into `colour`, `colour` into the pass-through combiner's colour port.
 fn graph(source: String, colour: String) -> Result<StainGraph, GraphError> {
+    chain(Occupant::Custom(source), Occupant::Custom(colour))
+}
+
+/// The outcome stain, the one the real app opens on: the sample's `state` into the outcome palette's colour
+/// (colour_composition §1.4), passed through.
+pub fn outcome() -> Result<StainGraph, GraphError> {
+    chain(
+        Occupant::Field("state".to_owned()),
+        Occupant::Builtin(render::colour::outcome::ID.to_owned()),
+    )
+}
+
+/// The debug view whose colour is the WGSL `colour`, wired as the catalogue wires it (`render::registry::view_nodes`):
+/// the zero source into the colour, passed through.
+pub fn view(colour: &str) -> Result<StainGraph, GraphError> {
+    graph(render::registry::ZERO_SOURCE.to_owned(), colour.to_owned())
+}
+
+/// The graph of a source `source` into a colour `colour`, that into the pass-through combiner's colour port.
+fn chain(source: Occupant, colour: Occupant) -> Result<StainGraph, GraphError> {
     let combiner = NodeId(0);
     let mut g = StainGraph::new();
-    let s = g.add(NodeKind::Source, Occupant::Custom(source))?;
-    let c = g.add(NodeKind::Colour, Occupant::Custom(colour))?;
+    let s = g.add(NodeKind::Source, source)?;
+    let c = g.add(NodeKind::Colour, colour)?;
     g.connect(s, c, 0)?;
     g.connect(c, combiner, 0)?;
     Ok(g)

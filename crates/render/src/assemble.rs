@@ -536,7 +536,7 @@ pub fn field_subtype(field: &str) -> Result<Subtype, AssembleError> {
 
 /// The WGSL `occupant` gives a node of `kind`, or `None` for the identity: a built-in's file and a custom's text alike,
 /// the built-in source generated from its field. An occupant the slot does not take is refused.
-fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>, AssembleError> {
+pub fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>, AssembleError> {
     let refuse = |what: &str| {
         Err(AssembleError::Occupant(format!(
             "a {} node does not take {what}",

@@ -16,7 +16,8 @@ use engine::contract::legend::SWATCHES;
 use engine::contract::render_state::{NodeKind, Occupant};
 
 use super::{
-    canvas, choices, edited, params, Out, Page, Scratch, CHOICE_IDS, EDIT_WGSL, PARAM_IDS, REVERT,
+    canvas, choices, edited, params, whole, Out, Page, Scratch, CHOICE_IDS, EDIT_WGSL, PARAM_IDS,
+    REVERT,
 };
 use crate::keyboard::scopes::ScopeId;
 use crate::windows::Keys;
@@ -161,7 +162,12 @@ fn inspector(
         ui.label(RichText::new("▾ Params").strong());
         for (i, (name, value, lo, hi)) in ps.into_iter().enumerate().take(PARAM_IDS.len()) {
             let mut v = value;
-            let slider = ui.add(Slider::new(&mut v, lo..=hi).text(name.as_str()));
+            let slider = Slider::new(&mut v, lo..=hi).text(name.as_str());
+            let slider = ui.add(if whole(g, id, &name) {
+                slider.integer()
+            } else {
+                slider
+            });
             keys.place(PARAM_IDS[i], &slider);
             // Live: each frame the value changes, one `SetField` of the graph, the drag's frames one history entry
             // under the pointer's hold's key (R-458 F2).

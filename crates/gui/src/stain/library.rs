@@ -1,7 +1,8 @@
 //! The library drawer (render_gui_spec Part II §1; GUI_DESIGN_NOTES § "02 Stain"; 02_stain.png): collapsible, left;
 //! the catalogue's groups, each collapsible, its rows filtered by the filter, the stain loaded highlighted, and New,
 //! Rename, Import and Export. Its rows are the engine side's content; selecting one highlights it. Loading a whole
-//! graph from a row (§11) and the four buttons are TASK-M8-19's, so the buttons are drawn disabled.
+//! graph from a row (§11) is the content's, where it has one for the row; the four buttons are drawn
+//! disabled, with nothing behind them yet.
 
 use std::collections::BTreeSet;
 

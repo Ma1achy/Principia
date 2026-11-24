@@ -100,6 +100,11 @@ impl Bytes {
     }
 }
 
+/// The grid of a row of `samples` one-sample quads: a flat field's records, one after another.
+pub fn row(samples: u32) -> Result<Grid, String> {
+    Grid::new([samples, 1], 1, 0, 1).map_err(|e| e.to_string())
+}
+
 impl Synthetic {
     /// A flat layout: `grid`'s quads all at quadtree depth `depth`, tiling the slice from its bottom-left corner
     /// ([`Synthetic::flat_at`] with the origin `(0, 0)`).

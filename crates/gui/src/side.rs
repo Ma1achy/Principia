@@ -6,10 +6,11 @@
 //! drawn at the placement the app gives, the shown figure's rect in the viewport, so with the egui layer hidden it fills
 //! the window (R-406); the Chart builder's quick render and the preview never take that placement.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use engine::contract::canvas::Canvas;
 use engine::contract::interface::EngineInterface;
+use engine::contract::log::{Severity, Source};
 use engine::contract::profile::Trace;
 use engine::contract::render_state::RenderState;
 use engine::contract::sample::Sample;
@@ -130,11 +131,12 @@ impl FigureView {
 }
 
 /// The real engine's data contract and, when one is open, its canvas, which shows the field `engine::field` computed
-/// for the sim key it started on (`crate::real`); no time source and no trace: its frame loop is TASK-M8-05's, its
-/// telemetry stream TASK-M8-27's and TASK-M8-28's.
+/// for the sim key it started on (`crate::real`), and its stain's content, the store's graph through the real assembler
+/// (`crate::real::stain`). It has no time source and no trace: no frame loop, no telemetry stream.
 pub struct RealSide {
     store: StateStore,
     canvas: Option<Arc<crate::real::RealCanvas>>,
+    stain: Mutex<crate::real::stain::Compiler>,
 }
 
 impl RealSide {
@@ -143,6 +145,7 @@ impl RealSide {
         Self {
             store: StateStore::new(sim, render),
             canvas: None,
+            stain: Mutex::default(),
         }
     }
 
@@ -155,7 +158,25 @@ impl RealSide {
         Self {
             store: StateStore::new(sim, render),
             canvas: Some(canvas),
+            stain: Mutex::default(),
         }
+    }
+
+    /// How many times the stain has been assembled.
+    pub fn assemblies(&self) -> u64 {
+        self.compiler().assemblies()
+    }
+
+    /// The canvas, told the stain to draw first: the store's graph as last compiled.
+    fn stained(&self) -> Option<Arc<crate::real::RealCanvas>> {
+        let canvas = self.canvas.clone()?;
+        let graph = self.compiler().drawn(&self.store.render().stain_graph);
+        canvas.set_stain(graph);
+        Some(canvas)
+    }
+
+    fn compiler(&self) -> MutexGuard<'_, crate::real::stain::Compiler> {
+        self.stain.lock().expect("the stain's lock")
     }
 }
 
@@ -170,15 +191,15 @@ impl EngineSide for RealSide {
         false
     }
 
-    /// The canvas, the field over the whole viewport, when one is open.
+    /// The canvas, the field over the whole viewport, when one is open, in the stain as last compiled.
     fn canvas(&self) -> Option<Arc<dyn Canvas>> {
-        self.canvas.clone().map(|c| c as Arc<dyn Canvas>)
+        Some(self.stained()? as Arc<dyn Canvas>)
     }
 
     /// The canvas, told the placement first, so it draws the field into the shown figure's rect; past `[0,1]²` the
     /// canvas background (the fill past it, REQ-GUI-180, is TASK-M8-05's).
     fn figure(&self, placement: Placement) -> Option<Arc<dyn Canvas>> {
-        let canvas = self.canvas.clone()?;
+        let canvas = self.stained()?;
         canvas.set_placement(placement);
         Some(Arc::new(crate::real::FigureCanvas(canvas)) as Arc<dyn Canvas>)
     }
@@ -202,18 +223,42 @@ impl EngineSide for RealSide {
         None
     }
 
-    /// None: the real engine's Stain content is TASK-M7-24's and TASK-M8-19's.
     fn stain_content(&self) -> Option<crate::stain::Content> {
-        None
+        let drawn = self
+            .canvas
+            .as_ref()
+            .map(|c| c.reported())
+            .unwrap_or_default();
+        let graph = &self.store.render().stain_graph;
+        Some(self.compiler().content(graph, &drawn))
     }
 
-    /// None: the real engine's Stain preview is TASK-M8-05's.
+    /// The canvas, the field over the preview's whole rect, in the stain as last compiled: the figure's own picture.
     fn preview(&self) -> Option<Arc<dyn Canvas>> {
-        None
+        self.canvas()
     }
 
-    /// Nothing: the real engine's compile is TASK-M7-24's.
-    fn recompile(&mut self) {}
+    /// Compiles the store's graph, logging what came of it from the stain.
+    fn recompile(&mut self) {
+        use crate::real::stain::Outcome;
+        let outcome = self.compiler().compile(&self.store.render().stain_graph);
+        let (severity, line) = match outcome {
+            Outcome::Assembled(ms) => (Severity::Info, format!("stain recompiled · {ms:.1} ms")),
+            Outcome::Cached => (
+                Severity::Info,
+                "stain recompiled · cached, its code unchanged".to_owned(),
+            ),
+            // A warning, not an error: an error opens the console over the editor, whose Problems pane has it already.
+            Outcome::Failed(why) => (
+                Severity::Warn,
+                format!(
+                    "stain does not compile: {}",
+                    why.lines().next().unwrap_or_default()
+                ),
+            ),
+        };
+        self.store.log(severity, Source::Stain, line);
+    }
 
     /// None: the real engine's `computeIC` and its Trajectory panel are TASK-M8-10's and TASK-M8-11's.
     fn compute_ic(&mut self, _ic: &Latent, _at: [f64; 2]) -> Option<Sample> {

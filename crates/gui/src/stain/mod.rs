@@ -22,7 +22,7 @@ pub mod preview;
 pub mod problems;
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use eframe::egui::{pos2, Rect, Ui, UiBuilder};
 use engine::contract::canvas::Canvas;
@@ -58,7 +58,19 @@ pub struct Content {
     pub fields: &'static [&'static str],
     /// The combiner's built-in occupants, each its id and name.
     pub combiners: &'static [(&'static str, &'static str)],
+    /// A colour node's built-in occupants, each its id and name.
+    pub colours: &'static [(&'static str, &'static str)],
+    /// The whole graph each library row loads (§11), by its place in the library; none for a row only selected.
+    pub graphs: &'static [Option<StainGraph>],
 }
+
+/// The combiner's built-in occupants, with their names (render_gui_spec Part II §3.1: Replace-L / Multiply; M1's
+/// pass-through).
+pub const COMBINERS: [(&str, &str); 3] = [
+    ("multiply", "Multiply"),
+    ("replace_l", "Replace-L"),
+    ("pass_through", "Pass-through"),
+];
 
 /// One group of the library.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -152,63 +164,17 @@ pub const NODE_IDS: [ScopeId; 32] = [
     "stain_node_30",
     "stain_node_31",
 ];
-/// The library's rows' scopes, by their place in the library.
-pub const ROW_IDS: [ScopeId; 32] = [
-    "stain_lib_row_0",
-    "stain_lib_row_1",
-    "stain_lib_row_2",
-    "stain_lib_row_3",
-    "stain_lib_row_4",
-    "stain_lib_row_5",
-    "stain_lib_row_6",
-    "stain_lib_row_7",
-    "stain_lib_row_8",
-    "stain_lib_row_9",
-    "stain_lib_row_10",
-    "stain_lib_row_11",
-    "stain_lib_row_12",
-    "stain_lib_row_13",
-    "stain_lib_row_14",
-    "stain_lib_row_15",
-    "stain_lib_row_16",
-    "stain_lib_row_17",
-    "stain_lib_row_18",
-    "stain_lib_row_19",
-    "stain_lib_row_20",
-    "stain_lib_row_21",
-    "stain_lib_row_22",
-    "stain_lib_row_23",
-    "stain_lib_row_24",
-    "stain_lib_row_25",
-    "stain_lib_row_26",
-    "stain_lib_row_27",
-    "stain_lib_row_28",
-    "stain_lib_row_29",
-    "stain_lib_row_30",
-    "stain_lib_row_31",
-];
+/// `count` scopes, `<stem>0`, `<stem>1`, …
+fn ids(stem: &str, count: usize) -> Vec<ScopeId> {
+    (0..count).map(|k| intern(&format!("{stem}{k}"))).collect()
+}
+
+/// The library's rows' scopes, by their place in the library: more than the registry holds, so every row is reached.
+pub static ROW_IDS: LazyLock<Vec<ScopeId>> = LazyLock::new(|| ids("stain_lib_row_", 512));
 /// The library's groups' headings' scopes.
-pub const GROUP_IDS: [ScopeId; 8] = [
-    "stain_lib_group_0",
-    "stain_lib_group_1",
-    "stain_lib_group_2",
-    "stain_lib_group_3",
-    "stain_lib_group_4",
-    "stain_lib_group_5",
-    "stain_lib_group_6",
-    "stain_lib_group_7",
-];
-/// The inspector's choices' scopes: a source's fields, the combiner's occupants.
-pub const CHOICE_IDS: [ScopeId; 8] = [
-    "stain_insp_choice_0",
-    "stain_insp_choice_1",
-    "stain_insp_choice_2",
-    "stain_insp_choice_3",
-    "stain_insp_choice_4",
-    "stain_insp_choice_5",
-    "stain_insp_choice_6",
-    "stain_insp_choice_7",
-];
+pub static GROUP_IDS: LazyLock<Vec<ScopeId>> = LazyLock::new(|| ids("stain_lib_group_", 32));
+/// The inspector's choices' scopes: a source's fields, a colour's and the combiner's occupants.
+pub static CHOICE_IDS: LazyLock<Vec<ScopeId>> = LazyLock::new(|| ids("stain_insp_choice_", 256));
 /// The inspector's params' scopes, by their place in the node's schema.
 pub const PARAM_IDS: [ScopeId; 8] = [
     "stain_insp_param_0",
@@ -351,8 +317,8 @@ pub fn node_order(g: &StainGraph, canvas: &canvas::Canvas) -> Vec<NodeId> {
     ids.into_iter().map(|(id, _)| id).collect()
 }
 
-/// The inspector's choices for node `n`: a source's fields, the combiner's occupants; each the occupant it sets and
-/// its label.
+/// The inspector's choices for node `n`: a source's fields, a colour's and the combiner's occupants; each the occupant
+/// it sets and its label.
 pub fn choices(
     n: &engine::contract::render_state::Node,
     content: &Content,
@@ -365,6 +331,11 @@ pub fn choices(
             .collect(),
         NodeKind::Combiner => content
             .combiners
+            .iter()
+            .map(|(id, name)| (Occupant::Builtin((*id).to_owned()), *name))
+            .collect(),
+        NodeKind::Colour => content
+            .colours
             .iter()
             .map(|(id, name)| (Occupant::Builtin((*id).to_owned()), *name))
             .collect(),
@@ -386,6 +357,18 @@ pub fn params(g: &StainGraph, id: NodeId) -> Vec<(String, f64, f64, f64)> {
             Some((u.name, value, lo, hi))
         })
         .collect()
+}
+
+/// Whether node `id`'s uniform `name` takes whole numbers only, so a slider's and an arrow's values are rounded to one.
+pub fn whole(g: &StainGraph, id: NodeId, name: &str) -> bool {
+    g.uniforms(id).unwrap_or_default().iter().any(|u| {
+        u.name == name
+            && matches!(
+                u.ty,
+                engine::contract::render_state::UniformType::I32
+                    | engine::contract::render_state::UniformType::U32
+            )
+    })
 }
 
 /// The children `parent` should have, each a scope, for the graph, the content and the editor's state.
@@ -499,7 +482,18 @@ pub fn activate(
             s.library.closed.insert(group);
         }
     } else if let Some(k) = ROW_IDS.iter().position(|r| *r == id) {
-        s.library.selected = content.and_then(|c| library::row(c, k));
+        // A row with a graph loads it, replacing the graph wholesale (§11), and its highlight is then the loaded
+        // stain's; any other row is only selected.
+        match content.and_then(|c| c.graphs.get(k)?.as_ref()) {
+            Some(load) => {
+                s.library.selected = None;
+                out.edits.extend(edited(g, |g| {
+                    *g = load.clone();
+                    Ok(())
+                }));
+            }
+            None => s.library.selected = content.and_then(|c| library::row(c, k)),
+        }
     } else if id == EDIT_WGSL {
         s.view = View::Node;
     } else if id == AUTO_RECOMPILE {
@@ -534,7 +528,11 @@ pub fn adjust(adjust: &Adjust, s: &Scratch, g: &StainGraph, out: &mut Out) {
     let Base::OfRange(share) = adjust.delta() else {
         return;
     };
-    let next = (value + share * (hi - lo)).clamp(lo, hi);
+    let mut step = share * (hi - lo);
+    if whole(g, node, &name) && step != 0.0 {
+        step = step.signum() * step.abs().round().max(1.0);
+    }
+    let next = (value + step).clamp(lo, hi);
     out.edits
         .extend(edited(g, |g| g.set_param(node, &name, vec![next])));
 }

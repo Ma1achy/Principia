@@ -168,6 +168,8 @@ pub struct App<S: EngineSide> {
     last_key: u64,
     /// Whether the hold edited the stain graph with auto-recompile on: it recompiles once, at the release.
     recompile_at_release: bool,
+    /// Whether an undo or a redo was requested since the snapshot was last read.
+    stepped: bool,
     format: wgpu::TextureFormat,
 }
 
@@ -235,6 +237,7 @@ impl<S: EngineSide> App<S> {
             hold: None,
             last_key: 0,
             recompile_at_release: false,
+            stepped: false,
             format,
         }
     }
@@ -359,6 +362,7 @@ impl<S: EngineSide> App<S> {
         self.side.engine().undo();
         self.clock.resync();
         self.reread = true;
+        self.stepped = true;
     }
 
     /// Requests redo, rereading the snapshot next frame.
@@ -366,12 +370,20 @@ impl<S: EngineSide> App<S> {
         self.side.engine().redo();
         self.clock.resync();
         self.reread = true;
+        self.stepped = true;
     }
 
     /// Reads a snapshot: its entries join the console and the counts; an error among them opens the console, taking
-    /// no focus (§G3; §G12; R-405).
+    /// no focus (§G3; §G12). After an undo or a redo that changed the stain graph, auto-recompile recompiles it, as an
+    /// edit of it does.
     fn read(&mut self) {
-        self.snapshot = self.side.engine().snapshot();
+        let before = std::mem::replace(&mut self.snapshot, self.side.engine().snapshot());
+        if std::mem::take(&mut self.stepped)
+            && self.stain.auto_recompile
+            && before.render.stain_graph != self.snapshot.render.stain_graph
+        {
+            self.side.recompile();
+        }
         if absorb(&self.snapshot, &mut self.console, &mut self.counts) {
             self.console_auto_opened |= !self.console_open;
             self.console_open = true;
@@ -711,9 +723,9 @@ impl<S: EngineSide> App<S> {
         if stain_edited && self.stain.auto_recompile && self.hold.is_some() && !stain_out.recompile
         {
             self.recompile_at_release = true;
-        } else if stain_out.recompile || (stain_edited && self.stain.auto_recompile) {
-            self.side.recompile();
         }
+        let recompile = stain_out.recompile
+            || (stain_edited && self.stain.auto_recompile && self.hold.is_none());
         explore::footer::show(
             ui,
             layout.footer,
@@ -779,6 +791,10 @@ impl<S: EngineSide> App<S> {
         self.apply(&ctx, actions);
         for edit in edits {
             self.send(vec![edit]);
+        }
+        // After the frame's edits, so it is the edited graph that is compiled.
+        if recompile {
+            self.side.recompile();
         }
         // Locked, every basis edit turns about the pin (render_gui_spec §G4): the Manifold view's and the windows'. Each
         // is sent with its recentring as one command, one history entry.

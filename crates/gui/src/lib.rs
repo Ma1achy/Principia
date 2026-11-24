@@ -108,6 +108,8 @@ mod tests {
     mod present_fills_window_mock;
     mod reachability;
     mod real_field;
+    mod real_stain;
+    mod real_stain_drawn;
     mod scope_tab_order_mock;
     mod support;
     mod theme;

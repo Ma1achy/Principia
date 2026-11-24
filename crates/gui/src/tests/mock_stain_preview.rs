@@ -30,7 +30,7 @@ const OUTCOME: NodeId = NodeId(2);
 const LATE_FADE: NodeId = NodeId(5);
 
 /// `app` on the Stain page, two frames drawn.
-fn on_stain(mut app: App<MockSide>) -> (App<MockSide>, Headless) {
+pub(super) fn on_stain<S: EngineSide>(mut app: App<S>) -> (App<S>, Headless) {
     app.view.mode = Mode::Stain;
     let mut h = headless();
     for _ in 0..2 {
@@ -40,7 +40,7 @@ fn on_stain(mut app: App<MockSide>) -> (App<MockSide>, Headless) {
 }
 
 /// Clicks node `id`'s title on the canvas, selecting it.
-fn select(app: &mut App<MockSide>, h: &mut Headless, id: NodeId) {
+pub(super) fn select<S: EngineSide>(app: &mut App<S>, h: &mut Headless, id: NodeId) {
     let ppp = h.pixels_per_point();
     let origin = Regions::new(&Layout::new(h.screen(), ppp), ppp, false)
         .canvas
@@ -60,16 +60,16 @@ fn select(app: &mut App<MockSide>, h: &mut Headless, id: NodeId) {
     assert_eq!(app.stain.selected(), Some(id), "the node selected");
 }
 
-fn graph(app: &App<MockSide>) -> &StainGraph {
+pub(super) fn graph<S: EngineSide>(app: &App<S>) -> &StainGraph {
     &app.snapshot().render.stain_graph
 }
 
-fn depth(app: &App<MockSide>) -> u32 {
+pub(super) fn depth<S: EngineSide>(app: &App<S>) -> u32 {
     app.snapshot().history.undo_depth
 }
 
 /// The console's messages from row `from` on.
-fn logged(app: &App<MockSide>, from: usize) -> Vec<String> {
+pub(super) fn logged<S: EngineSide>(app: &App<S>, from: usize) -> Vec<String> {
     app.console()[from..]
         .iter()
         .map(|e| e.message.clone())
@@ -77,9 +77,9 @@ fn logged(app: &App<MockSide>, from: usize) -> Vec<String> {
 }
 
 /// An edit's three marks: the graph changed as `changed` says, one more step of undo, and its `SetField` logged.
-fn check_one_edit(
+pub(super) fn check_one_edit<S: EngineSide>(
     before: (&StainGraph, u32, usize),
-    app: &App<MockSide>,
+    app: &App<S>,
     changed: impl Fn(&StainGraph) -> bool,
 ) {
     let (g0, d0, rows) = before;

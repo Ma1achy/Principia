@@ -44,14 +44,17 @@ pub mod contract {
     pub use ledger::display;
 
     /// The stain (gui_state_contract §5; render_gui_spec Part II §3 to §7; R-64): the graph, its nodes' typed ports,
-    /// its typed edits and the colour nodes' custom-stop ramp (TASK-M7-11), and a stain node's colour occupant as the
-    /// occupant algebra's typed expression tree (colour_composition §1; TASK-M7-03).
+    /// its typed edits and the colour nodes' custom-stop ramp, a stain node's colour occupant as the occupant algebra's
+    /// typed expression tree (colour_composition §1), and what the Stain editor shows of a graph: its assembled code and
+    /// the library.
     pub mod stain {
+        pub mod assembled;
         pub mod edit;
         pub mod graph;
         pub mod occupant;
         pub mod ports;
         pub mod ramp;
+        pub mod view;
     }
 
     #[cfg(test)]
