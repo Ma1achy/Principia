@@ -1,36 +1,36 @@
 //! The Benettin FTLE shadow (`kernel::driver::benettin`; dd_integrator §2, §3.4, §3.8, §5 tests 10 and 11;
-//! integrator_contract Part 5; payload §5; TASK-M3-14):
-//! - `shadow_not_in_pool` (dd test 11; REQ-INT-035): the FTLE tier's sample is the base tier's, bit for bit, and the
+//! integrator_contract Part 5; payload §5):
+//! - `shadow_not_in_pool` (dd test 11): the FTLE tier's sample is the base tier's, bit for bit, and the
 //!   state it gives the colour/spread pool is its own `(r, p)`, never the shadow's, which a scrambled shadow leaves
 //!   unchanged; the read side's sample agrees.
-//! - `shadow_own_projection` (REQ-INT-039): the sample and its shadow, whose roundoff differs (unequal masses, so the
+//! - `shadow_own_projection`: the sample and its shadow, whose roundoff differs (unequal masses, so the
 //!   shadow's CoM starts off the origin), each project with their own `R_com`; the shadow's FTLE is bit for bit that of
 //!   a reference that marches the shadow apart through its own cadence, and differs from one where the shadow inherits
 //!   the sample's projection.
-//! - `benettin_ftle` (dd test 10; REQ-INT-043): halving `‖δ₀‖` and doubling `n_renorm` leave `λ_T` within the proposed
-//!   tolerance (REQ-INT-076's) on the Kepler-embedded orbit and the Burrau IC at f32 and f64; `λ_T ≈ 0` on the
+//! - `benettin_ftle` (dd test 10): halving `‖δ₀‖` and doubling `n_renorm` leave `λ_T` within the proposed
+//!   tolerance on the Kepler-embedded orbit and the Burrau IC at f32 and f64; `λ_T ≈ 0` on the
 //!   Kepler-embedded orbit (it falls as `T` doubles) and large on Burrau (at least five times it); a read between renormalisation boundaries is not biased low; the read is
 //!   NaN without a completed renormalisation or on a failed sample, and agrees with the generated read side at f32.
-//! - `delta0_direction` (REQ-INT-077): the shadow starts at §3.8's offset, bit for bit: `‖δ₀‖·u` on the positions, one
+//! - `delta0_direction`: the shadow starts at §3.8's offset, bit for bit: `‖δ₀‖·u` on the positions, one
 //!   rounding each, no momentum moved.
 //! - `shadow_lockstep`: where the sample's `done` cuts a macro-step short, the shadow stops at the same substep, and that
 //!   macro-step, not completed, is not counted towards a renormalisation; in each form, the displacement forms' joint
 //!   march included.
-//! - `shadow_forms_agree` (REQ-VAL-038's forms; R-974): at f64, where rounding is far below the separation, both
+//! - `shadow_forms_agree`: at f64, where rounding is far below the separation, both
 //!   displacement forms, (a1) and (a2), marched by the joint step, read the absolute form's `λ_T`, to rounding: the
 //!   joint step is the same discrete map's separation, formed another way.
-//! - `shadow_terminal_only_watches` (R-972, RQ-791 case B, option (d)): at a nonzero `r_coll` that only the shadow
+//! - `shadow_terminal_only_watches`: at a nonzero `r_coll` that only the shadow
 //!   comes inside, the shadow's detector fires and the shadow marches on, bit for bit as at `r_coll = 0`; the sample is
 //!   untouched and its FTLE valid and finite.
-//! - `shadow_failed_sum` (R-972, RQ-791 case C, option (a)): at a nonzero `r_coll`, a shadow whose sum goes non-finite
-//!   stores the failed-state values, never NaN (R-79): `S` the mark `s_failed` and `r_sh`, `p_sh` the sample's own;
+//! - `shadow_failed_sum`: at a nonzero `r_coll`, a shadow whose sum goes non-finite
+//!   stores the failed-state values, never NaN: `S` the mark `s_failed` and `r_sh`, `p_sh` the sample's own;
 //!   `ftle_valid` is false and `ftle` NaN, in the kernel's read and the generated read side; the sample is untouched.
-//! - `shadow_tiny_delta0_finite` (R-972's mark, its boundary): a finite finalised sum is not marked where `δ·δ₀`
+//! - `shadow_tiny_delta0_finite` (the mark's boundary): a finite finalised sum is not marked where `δ·δ₀`
 //!   would underflow, and `‖δ₀‖ = 0` is.
 //!
 //! **Domain** (pitfalls §10): Yoshida-4, the steppers' march at `r_coll = 0`, so no terminal fires, but for the two
-//! R-972 tests, which run the close pair at a nonzero `r_coll`; the orbits are `validation::measure::benettin`'s,
-//! which the calibration gate runs.
+//! shadow-terminal tests, which run the close pair at a nonzero `r_coll`; the orbits are
+//! `validation::measure::benettin`'s, which the calibration gate runs.
 
 use std::cell::RefCell;
 
@@ -97,7 +97,7 @@ where
     (ic_at::<R>(&orbit.ic), sim_key::<R>(t))
 }
 
-// ── shadow_not_in_pool (dd test 11; REQ-INT-035) ─────────────────────────────────────────────────────────────────
+// ── shadow_not_in_pool (dd test 11) ──────────────────────────────────────────────────────────────────────────────
 
 /// The pool member a sample gives, by `member`.
 type Member<R> = fn(&SimStateFTLEOf<R>) -> ([[R; 2]; 3], [[R; 2]; 3]);
@@ -438,7 +438,7 @@ negative_control!(
     )
 );
 
-// ── shadow_own_projection (REQ-INT-039) ─────────────────────────────────────────────────────────────────────────
+// ── shadow_own_projection ───────────────────────────────────────────────────────────────────────────────────────
 
 /// `R_com` and `P_com` of a state as its projection forms them.
 type Com<R> = ([R; 2], [R; 2]);
@@ -657,7 +657,7 @@ where
     }
 }
 
-/// REQ-INT-039 on `orbit` at `R`: the kernel's shadow against `reference`'s.
+/// The own-projection check on `orbit` at `R`: the kernel's shadow against `reference`'s.
 fn check_own_projection<R: P>(orbit: &Orbit, reference: &Marched<R>)
 where
     f64: AsR<R>,
@@ -744,7 +744,7 @@ negative_control!(
     }
 );
 
-// ── benettin_ftle (dd test 10; REQ-INT-043) ─────────────────────────────────────────────────────────────────────
+// ── benettin_ftle (dd test 10) ──────────────────────────────────────────────────────────────────────────────────
 
 /// A read of the FTLE from a finished run: its `S`, `δ`, `δ₀`, completed macro-steps and `dt_macro`.
 type Read = fn(f64, f64, f64, u32, f64) -> f64;
@@ -882,7 +882,7 @@ fn benettin_ftle() {
         );
         assert_eq!(mine.to_bits(), read.ftle.to_bits());
         assert_eq!(completed_renorms(horizon, n_renorm) > 0, valid);
-        // A failed sample reads NaN whatever its renormalisations (R-254).
+        // A failed sample reads NaN whatever its renormalisations.
         let failed = SimStateFTLEOf {
             packed_a: set_state(s.packed_a, STATE_SIM_FAILED),
             ..s
@@ -898,7 +898,7 @@ negative_control!(
     check_between_boundaries(plain)
 );
 
-// ── delta0_direction (REQ-INT-077) ──────────────────────────────────────────────────────────────────────────────
+// ── delta0_direction ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// §3.8's direction `u`: the position offsets of bodies 0, 1, 2 in units of `‖δ₀‖`; the momenta take none.
 const U: [[f64; 2]; 3] = [[0.5, 0.0], [-0.5, 0.5], [0.0, -0.5]];
@@ -1071,7 +1071,7 @@ fn check_lockstep_in<F: ShadowForm>(form: &str, full: bool) {
     );
 }
 
-/// Each form in turn: the displacement forms march by the joint step (R-974), stopped by their own count as the
+/// Each form in turn: the displacement forms march by the joint step, stopped by their own count as the
 /// absolute form is.
 fn check_lockstep(full: bool) {
     check_lockstep_in::<Displacement<Plain>>("(a1)", full);
@@ -1091,7 +1091,7 @@ negative_control!(
     check_lockstep(true)
 );
 
-// ── shadow_forms_agree (REQ-VAL-038's forms) ────────────────────────────────────────────────────────────────────
+// ── shadow_forms_agree ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// Each displacement form's `λ_T` at `scale·‖δ₀‖` against the absolute form's at `‖δ₀‖`, at f64, on `orbit`.
 fn check_forms(orbit: &Orbit, scale: f64) {
@@ -1137,7 +1137,7 @@ negative_control!(
     )
 );
 
-// ── shadow_terminal_only_watches (R-972; RQ-791 case B, option (d)) ────────────────────────────────────────────────
+// ── shadow_terminal_only_watches ───────────────────────────────────────────────────────────────────────────────────
 
 /// An FTLE-tier run of the shadow at f64: the sample's `SimState` and the shadow.
 type Run = fn(
@@ -1157,9 +1157,9 @@ fn kernel_run(
     integrate_ftle_with::<Yoshida4, f64, Absolute>(ic, key, radius, params, false)
 }
 
-/// The close pair's Benettin values for the R-972 tests: `‖δ₀‖ = 10⁻³`, which brings the shadow's pair about `‖δ₀‖`
-/// closer than the sample's (`u` moves body 0 by `+½` and body 1 by `−½` along the pair's axis), renormalised every
-/// 10 macro-steps.
+/// The close pair's Benettin values for the shadow-terminal tests: `‖δ₀‖ = 10⁻³`, which brings the shadow's pair about
+/// `‖δ₀‖` closer than the sample's (`u` moves body 0 by `+½` and body 1 by `−½` along the pair's axis), renormalised
+/// every 10 macro-steps.
 fn pair_params() -> BenettinParams<f64> {
     BenettinParams {
         delta_0: 1e-3,
@@ -1182,7 +1182,7 @@ fn least_d2(ic: &Ic<f64>, key: &WrapperUniforms<f64>) -> (f32, f32) {
 /// At a nonzero `r_coll²` between the shadow's least `d²` and the sample's, only the shadow comes inside: its
 /// detector fires, and under `run` it marches on through, its `S`, `r_sh` and `p_sh` bit for bit those at
 /// `r_coll = 0`; the sample's fields are the base tier's at that `r_coll`, not a collision, and its FTLE valid and
-/// finite (R-972).
+/// finite.
 fn check_only_watches(run: Run) {
     let ic = close_pair();
     let key = sim_key::<f64>(1.0);
@@ -1222,8 +1222,8 @@ fn shadow_terminal_only_watches() {
     check_only_watches(kernel_run);
 }
 
-/// A co-march that stops the shadow at its own terminal, as before R-972: once its detector has fired, the shadow
-/// takes no more macro-steps.
+/// A co-march that stops the shadow at its own terminal (the wrong behaviour this guards against): once its detector
+/// has fired, the shadow takes no more macro-steps.
 #[cfg(feature = "controls")]
 struct Frozen(Benettin<f64, Absolute>);
 
@@ -1256,7 +1256,7 @@ negative_control!(
     })
 );
 
-// ── shadow_failed_sum (R-972; RQ-791 case C, option (a)) ───────────────────────────────────────────────────────────
+// ── shadow_failed_sum ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The close pair at a nonzero `r_coll` that neither the sample nor the shadow comes inside (`r_coll = 0.01`, the pair
 /// at 0.03), its shadow at `‖δ₀‖ = 0`, so `δ = 0` and the sum goes non-finite (`ln(0/0)`): at the first
@@ -1292,7 +1292,7 @@ fn failed_runs(write: Writer) -> Vec<(u32, SimStateFTLEOf<f64>, SimStateBaseOf<f
         .collect()
 }
 
-/// A shadow whose sum went non-finite stores the failed-state values (R-79, R-972): `S` the mark [`s_failed`] and
+/// A shadow whose sum went non-finite stores the failed-state values: `S` the mark [`s_failed`] and
 /// `r_sh`, `p_sh` the sample's own `r`, `p`, so no stored field is NaN; the sample's fields are the base tier's; and
 /// the kernel's read is NaN, `ftle_valid` false.
 fn check_failed_sum(write: Writer) {
@@ -1408,7 +1408,7 @@ negative_control!(
     })
 );
 
-// ── shadow_tiny_delta0_finite (R-972's mark, its boundary) ────────────────────────────────────────────────────────
+// ── shadow_tiny_delta0_finite (the mark's boundary) ───────────────────────────────────────────────────────────────
 
 /// Whether a shadow's finalised sum is finite beside the state `x`.
 type SumFinite = fn(&Benettin<f64, Absolute>, &State<f64>) -> bool;
