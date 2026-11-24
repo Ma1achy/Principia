@@ -4612,8 +4612,8 @@ fn check_rehold_slide_stall(pins: &[[f64; 2]], logged: bool) {
     use engine::path::anchor::probe::Switches;
     let main = main_slide();
     for (name, sw) in [
-        ("main's residual", main),
-        ("the offset formed directly", Switches::default()),
+        ("main's slide", main),
+        ("the slide as now", Switches::default()),
     ] {
         let mut refused = 0;
         let mut opt: Vec<f64> = Vec::new();
@@ -4649,6 +4649,14 @@ fn check_rehold_slide_stall(pins: &[[f64; 2]], logged: bool) {
 fn path_lock_rehold_slide_stall() {
     check_rehold_slide_stall(&sweep_pins(SWEEP_SIDE), true);
 }
+
+negative_control!(
+    path_lock_rehold_slide_stall,
+    "the solves not logged, at (7/15, 4/5), refused at the slice under main's slide: its refusal has no failed solve to \
+     read",
+    expected = "a slice refusal with no failed re-hold slide solve in its log",
+    check_rehold_slide_stall(&[grid_pin(7, 12)], false)
+);
 
 negative_control!(
     path_lock_slide_stall,
