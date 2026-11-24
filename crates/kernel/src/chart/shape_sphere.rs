@@ -1,88 +1,89 @@
-//! `ShapeSphere`, the shape-sphere chart (chart_reference §3, §5.1; chart_decoder_contract Part 1; R-14):
+//! `ShapeSphere`, the shape-sphere chart (chart_reference §3, §5.1; chart_decoder_contract Part 1):
 //! `Φ_S²(u, v) = (n(θ, φ), m_fixed, p_fixed)`, the masses and momenta held and only the shape varying.
 //!
-//! **The chart map** (§3.3; R-12, R-14, R-117), one of two, named by [`ShapeMap`]:
+//! **The chart map** (§3.3), one of two, named by [`ShapeMap`]:
 //! - [`ShapeMap::Spherical`], [`spherical`]: `θ = 2π·s` (the azimuth in the `(u, v)` plane, the horizontal axis),
 //!   `φ = π·(1 − t)` (the polar angle from `+w`, the vertical axis, `L⁺` at the top) and
-//!   `n = (sin φ cos θ, sin φ sin θ, cos φ)`, over the full `φ ∈ [0, π]` with no polar buffer (R-12). `(s, t)` is the
-//!   chart's `(u, v)`, bottom-left origin and Y-up (REQ-SYS-009).
+//!   `n = (sin φ cos θ, sin φ sin θ, cos φ)`, over the full `φ ∈ [0, π]` with no polar buffer. `(s, t)` is the
+//!   chart's `(u, v)`, bottom-left origin and Y-up.
 //! - [`ShapeMap::Exponential`], [`exponential`], the nonlinear chart: `n = cos(r)·n₀ + sin(r)·d/‖d‖` with
 //!   `d = (2u − 1)·s·e₁ + (2v − 1)·s·e₂`, `r = ‖d‖`, about the orthonormal frame `(n₀, e₁, e₂)`; written
 //!   `cos(r)·n₀ + (sin r/r)·d`, `sin r/r` selected as its limit 1 at `r = 0`, so `d = 0` gives `n₀` exactly, and at
-//!   f32 read from no backend `sin` near 0 (R-696; "The f32 sinc", below).
+//!   f32 read from no backend `sin` near 0 ("The f32 sinc", below).
 //!
 //! **The closed-form inverse** (§3.2; [`inverse`]): `a = I(1 + n₀)/2`, `b = I(1 − n₀)/2`, `p = I·n₁/2`,
 //! `q = I·n₂/2`, `ρ̃ = √a·(cos φ_f, sin φ_f)`, `λ̃ = √b·(cos ψ, sin ψ)`, `ψ = φ_f + atan2(q, p)`, the standard-cross
-//! sign (§3.1, R-14). At `n₀ = ±1`, `p = q = 0` and the `atan2` term is R-437's defined 0 for every sign of the zeros,
+//! sign (§3.1). At `n₀ = ±1`, `p = q = 0` and the `atan2` term is the defined 0 for every sign of the zeros,
 //! selected, never `atan2(0, 0)`, so `ψ = φ_f`. [`place`] then unweights and reconstructs per §0.2 through the shared
 //! [`config::reconstruct`].
 //!
 //! **The smaller of `a` and `b`** is evaluated as `I(n₁² + n₂²)/(2(1 + |n₀|))`, equal to `I(1 − |n₀|)/2` on the unit
-//! sphere, `1 − n₀² = n₁² + n₂²` (chart_reference §3.2; applied per R-369, TASK-M2-08); the larger is §3.2's own,
+//! sphere, `1 − n₀² = n₁² + n₂²` (chart_reference §3.2); the larger is §3.2's own,
 //! `I(1 + |n₀|)/2`. Near `n₀ = ±1`, `n₀ = cos r` rounds to `±1` once the polar radius `r` is below about `10⁻⁸`, so
 //! `1 − |n₀|` loses `r` entirely while `n₁` and `n₂` keep it: as written, the round trip misses by up to `r` there,
 //! about `10⁻⁸`. Through `n₁² + n₂²` it keeps `ab = p² + q²` to rounding, and both are non-negative for any `n`, with
 //! the divisor at least 1.
 //!
-//! **The held values** (chart_reference §3, "The held values", R-72, REQ-CHART-048). `m_fixed` is the slice pin `z₀`'s
+//! **The held values** (chart_reference §3, "The held values"). `m_fixed` is the slice pin `z₀`'s
 //! mass block through the shared `D_mass`, and `p_fixed` its momentum block through the shared `D_mom`, both under the
 //! chart's link selection; `z₀`'s configuration block is not held, the shape replacing it. `p_fixed` is a body-frame
-//! momentum, the Jacobi momenta relative to the frame with `ρ̃` on `+x`, unmirrored, `λ̃` in either half-plane (R-544;
-//! R-538 J9), and `Φ` expresses it in the gauge of the configuration it builds, the inverse of the gauge the decode then
+//! momentum, the Jacobi momenta relative to the frame with `ρ̃` on `+x`, unmirrored, `λ̃` in either half-plane, and
+//! `Φ` expresses it in the gauge of the configuration it builds, the inverse of the gauge the decode then
 //! removes, decided on that configuration ([`held_momentum`]): turned by `C`'s angle `φ = atan2(ρ_y, ρ_x)`, its cosine
 //! and sine formed as `C` forms them ([`canon::rotation`]), and scaled by `I^{−1/4}`, never mirrored. So the decode's
 //! state has masses `m_fixed` and momenta `p_fixed` at every pixel of both hemispheres, to rounding, and the pixels
 //! `(θ, φ)` and `(θ, π − φ)` are mirror images of each other exactly where `p_fixed` is its own mirror image, its
-//! `y`-components zero (released from rest included), and otherwise two different systems (R-544 items 2 and 5). `I`
+//! `y`-components zero (released from rest included), and otherwise two different systems. `I`
 //! and `φ_f` are gauge: they change `Φ`'s output, not the decode's, except at `ρ = 0` (`BC₀₁`), `C`'s seam, where
-//! R-437's `φ = 0` leaves `φ_f` in the decode's configuration. Their defaults are `I = 1` and `φ_f = 0`, at which `Φ`'s
-//! configuration is already on the decode's section, `I = 1` and `ρ̃` on `+x`, on either hemisphere.
+//! `C`'s defined `φ = 0` leaves `φ_f` in the decode's configuration. Their defaults are `I = 1` and `φ_f = 0`, at which
+//! `Φ`'s configuration is already on the decode's section, `I = 1` and `ρ̃` on `+x`, on either hemisphere.
 //!
-//! **Into the shared decoder** (REQ-CHART-015, REQ-CHART-081). The chart sets the configuration explicitly, which
+//! **Into the shared decoder.** The chart sets the configuration explicitly, which
 //! `ChartOut`'s latent controls cannot carry, so it overrides [`Chart::decode`]: the shared decoder's blocks run in its
 //! order, `D_mass` on `z₀`'s mass block, [`place`] in place of `D_cfg`, `D_mom` on `z₀`'s momentum block placed by
-//! [`held_momentum`]; then the one shared `C` ([`canon::canonicalise`], its scale included; it has no mirror step, R-865,
+//! [`held_momentum`]; then the one shared `C` ([`canon::canonicalise`], its scale included; it has no mirror step,
 //! so the shape sphere takes the one decode path every chart takes) on the joined state, and the shared descriptor of its output. So the decode's `ic` has its CoM
 //! at the origin and at rest, `I = 1`, `ρ̃` on `+x` and `λ̃_y` keeping its sign: the system whose signed `n̂` is the
-//! pixel's (R-544), `G = M = I = 1`, which crosses to the integrator, and its descriptor that state's (dd_decoder §2,
+//! pixel's, `G = M = I = 1`, which crosses to the integrator, and its descriptor that state's (dd_decoder §2,
 //! §3.6), while its `config` and `momentum` stay the blocks' outputs in `Φ`'s gauge. No pixel is folded onto another.
-//! `Φ` alone, without `C`, is [`place`] (R-178's round trip). [`Chart::map`] hands over the held blocks with the
+//! `Φ` alone, without `C`, is [`place`], for the round trip. [`Chart::map`] hands over the held blocks with the
 //! configuration block 0: every `D ∘ Φ` entry, [`fn@crate::chart::decode`] and [`crate::decode::energy_norm::decode_chart`],
 //! goes through [`Chart::decode`], and the configuration block of `map`'s latent is never decoded.
 //!
 //! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): five, each between values already computed:
 //! `r = 0` in [`exponential`] (`sin r/r → 1`), the sinc's cut at f32 ([`sinc_of`]), `n₀ ≥ 0` in [`inverse`] (both forms
-//! give `I/2` at `n₀ = 0`), R-437's `p = q = 0` in [`inverse`] (the defined 0), and `p = 0` in [`inverse`], a `−0` taken
+//! give `I/2` at `n₀ = 0`), `p = q = 0` in [`inverse`] (the defined 0), and `p = 0` in [`inverse`], a `−0` taken
 //! as `+0` before `atan2(q, p)`. At `r = 0`, `n₀ ≥ 0` and `p = 0` a backend fork moves the output by rounding only. At
-//! the sinc's cut it moves `k` by a bounded amount that is not rounding: on the CPU both forms are within REQ-DEC-054's
-//! bound of `sin r/r`, but on a backend `sin` has only WGSL's absolute `2⁻¹¹`, so a conforming fork reaches `2⁻¹¹/c`,
-//! `2⁻⁹` relative at `c = 1/4`, about 16 600 f32 eps, and no more. R-437's is not continuous, for `rho_angle`:
-//! `atan2(q, p)` has no limit at `p = q = 0`, so a backend that reaches that pole where another stops short of it moves
-//! `ψ`, and so `rho_angle`, by an angle, not by rounding (RQ-687: on the RTX 2080 SUPER a `sin(r)` of 0 at `r ≈ 10⁻⁷`
-//! gave `k = 0`, so `p = q = 0` exactly, and `rho_angle` moved by π/2). So what feeds that select must keep `n₁` and
-//! `n₂` nonzero where they are: [`exponential`]'s `k` reads no backend `sin` near 0 at f32 (R-696, below).
+//! the sinc's cut it moves `k` by a bounded amount that is not rounding: on the CPU both forms are within the
+//! calibrated bound of `sin r/r`, but on a backend `sin` has only WGSL's absolute `2⁻¹¹`, so a conforming fork reaches
+//! `2⁻¹¹/c`, `2⁻⁹` relative at `c = 1/4`, about 16 600 f32 eps, and no more. The `p = q = 0` select is not continuous,
+//! for `rho_angle`: `atan2(q, p)` has no limit at `p = q = 0`, so a backend that reaches that pole where another stops
+//! short of it moves `ψ`, and so `rho_angle`, by an angle, not by rounding (on the RTX 2080 SUPER a `sin(r)` of 0 at
+//! `r ≈ 10⁻⁷` gave `k = 0`, so `p = q = 0` exactly, and `rho_angle` moved by π/2). So what feeds that select must keep
+//! `n₁` and `n₂` nonzero where they are: [`exponential`]'s `k` reads no backend `sin` near 0 at f32 (below).
 //!
-//! **The f32 sinc** (R-696, RQ-687's option (b); REQ-DEC-053, REQ-DEC-054). WGSL bounds `sin` by an absolute error only,
+//! **The f32 sinc.** WGSL bounds `sin` by an absolute error only,
 //! so near 0, where `sin r` is that small, a backend may return 0. `exponential`'s `sin r/r` is gated as
-//! [`crate::arctan`] gates `atan2`, by [`Real::sinc`]: at f64, the CPU's alone, `sin(r)/r`, the pinned libm's `sin`
-//! (R-991); at f32, [`sinc_f32`], below the cut `r² < SINC_CUT2_F32` the series `1 − r²/3! + r⁴/5! − r⁶/7!` in `r²` alone, and
+//! [`crate::arctan`] gates `atan2`, by [`Real::sinc`]: at f64, the CPU's alone, `sin(r)/r`, the pinned libm's `sin`;
+//! at f32, [`sinc_f32`], below the cut `r² < SINC_CUT2_F32` the series `1 − r²/3! + r⁴/5! − r⁶/7!` in `r²` alone, and
 //! `sin(r)/r` from there up. The form has a cut because one with none would be the kernel's own `sin` at every `r`,
-//! RQ-687's option (a), deferred to M4 (R-696). `cos(r)` stays the backend's. `r²` is the `‖d‖²` of `d`'s `fma` chain
+//! which is not built. `cos(r)` stays the backend's. `r²` is the `‖d‖²` of `d`'s `fma` chain
 //! (`square`). That select chooses between two forms of one continuous value and writes no tag, so it need not agree
-//! across backends, and R-547's rule for a branch input that must does not bind it: the chain gives no such agreement.
+//! across backends, and the rule for a branch input that must agree (gpu_determinism_note rule 6) does not bind it: the
+//! chain gives no such agreement.
 //!
-//! **`p = −0`** (applied per R-369, TASK-M2-43; pitfalls §11). The point's `n₁ = sin φ·sin θ` is `−0` wherever one
+//! **`p = −0`** (pitfalls §11). The point's `n₁ = sin φ·sin θ` is `−0` wherever one
 //! factor is a zero and the other negative: on the `L⁺` row (`t = 1`, `φ = +0`) for every `s ∈ (½, 1)`, where
 //! `sin θ < 0` at any precision, and at `s = ½`, where f32's `π` lies above π so `sin θ` rounds below 0; and at the
 //! `L⁻` pixel `(0, 0)` at f32, where `sin(π_f32) < 0` meets `sin 0 = +0`. Metal's `atan2` at its default math mode
 //! (naga passes the call through) gives `atan2(q, −0)` with `q ≠ 0` the opposite sign of `π/2` to IEEE's, which puts
-//! `λ̃` on the other side of `ρ̃`: `L⁻`'s shape at `L⁺`'s pixel, and `L⁺`'s at `L⁻`'s. `C`'s mirror hid it while the
-//! decode folded (R-141); with step 3 not taken (R-544) it is the decode's output, so the zero's sign is cleared by a
+//! `λ̃` on the other side of `ρ̃`: `L⁻`'s shape at `L⁺`'s pixel, and `L⁺`'s at `L⁻`'s. `C` has no mirror step to
+//! hide it, so it is the decode's output, and the zero's sign is cleared by a
 //! select on `p` against 0, as the encode's `spherical_inverse` clears `n₁`'s, and `decode_cross_backend_continuous`
 //! is its guard, since a fast-math compiler may fold the select. `atan2(q, +0)` is the CPU's `atan2(q, −0)`, so the
 //! CPU's value is unchanged, bit for bit.
 //!
-//! **Validation** (inverse_encode_contract § "Chart-aware validation"; R-26). Layer 2's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`
+//! **Validation** (inverse_encode_contract § "Chart-aware validation"). Layer 2's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`
 //! are the point's own azimuth and polar angle, which every point of S² has: past `[0,1]²` the spherical map's θ is
 //! periodic and its φ pole-crossing, so its pixels there are systems `[0,1]²` holds (chart_reference §5.4), and the
 //! exponential map's are points of S² as well, its bounded axes hatched by their declaration, not by `validate`.
@@ -93,15 +94,15 @@
 //! bound has no constant of its own.
 //!
 //! **`system_image` and the label** ([`ShapeSphere::system_image`], [`ShapeSphere::label`]; chart_decoder_contract
-//! Part 5; chart_reference §3.3; R-503, R-544; REQ-CHART-002, REQ-CHART-075, REQ-CHART-078). The chart is the whole
+//! Part 5; chart_reference §3.3). The chart is the whole
 //! sphere, each pixel its own system, so both maps are bijective, and the label names no hemisphere and flags no
 //! redundancy. The exponential map's value is its cap's, computed at f64 on the CPU as `validate` is:
 //! [`ShapeSphere::exp_pixel`] reads each pixel's computed `r`, its own system below π whichever hemisphere it lies in,
-//! the one system `−n₀` on π, counted once together (REQ-CHART-078), and the domain's end past π (R-503);
+//! the one system `−n₀` on π, counted once together, and the domain's end past π;
 //! [`ShapeSphere::exp_counted_total`] counts a grid of pixel centres by it. These are the untilted chart's values, and a
-//! tilted view's too (R-544: no mirror pair to fold at any tilt).
+//! tilted view's too (no mirror pair to fold at any tilt).
 //!
-//! **The projection** ([`Projection`]; chart_reference §3.3; REQ-RENDER-026, REQ-CHART-047): a display remap of the
+//! **The projection** ([`Projection`]; chart_reference §3.3): a display remap of the
 //! spherical map's render, not a chart map, so never on the sim key: equirectangular by default, the display point the
 //! chart point; or Hammer's equal-area projection, [`hammer_inverse`] from a display point to the chart point it shows,
 //! none outside its 2:1 ellipse, and [`hammer_forward`] back.
@@ -157,7 +158,7 @@ pub struct ShapeSphere<P> {
 }
 
 /// The spherical map at `(s, t)`, with `pi` the float type's π: `θ = 2π·s`, `φ = π·(1 − t)`,
-/// `n = (sin φ cos θ, sin φ sin θ, cos φ)` (chart_reference §3.3, R-14).
+/// `n = (sin φ cos θ, sin φ sin θ, cos φ)` (chart_reference §3.3).
 #[inline]
 pub fn spherical<F: Float + Real>(s: F, t: F, pi: F) -> [F; 3] {
     let theta = (pi + pi) * s;
@@ -172,7 +173,7 @@ pub fn spherical<F: Float + Real>(s: F, t: F, pi: F) -> [F; 3] {
 
 /// The exponential map at `(u, v)` about the frame `(n0, e1, e2)` with extent `scale`: `d = (2u − 1)·s·e₁ +
 /// (2v − 1)·s·e₂`, `r = ‖d‖`, `n = cos(r)·n₀ + (sin r/r)·d`, `sin r/r` selected as 1 at `r = 0` (chart_reference §3.3)
-/// and otherwise [`Real::sinc`], which at f32 reads no backend `sin` near 0 (R-696).
+/// and otherwise [`Real::sinc`], which at f32 reads no backend `sin` near 0.
 #[inline]
 pub fn exponential<F: Float + Real>(
     n0: [F; 3],
@@ -194,15 +195,15 @@ pub fn exponential<F: Float + Real>(
 }
 
 /// `sin r/r` at f32, [`Real::sinc`]'s f32 form, with `square` the `r²` the caller formed: [`sinc_of`] on the backend's
-/// `sin(r)`, computed either way, as a select's operands are, and read only from the cut up (R-696).
+/// `sin(r)`, computed either way, as a select's operands are, and read only from the cut up.
 #[inline]
 pub fn sinc_f32(r: f32, square: f32) -> f32 {
     sinc_of(Real::sine(r), r, square)
 }
 
 /// `sin r/r` at f32 from `sin_r`, the backend's `sin(r)`: the series `1 − r²/3! + r⁴/5! − r⁶/7!` in `square`, `r²`, where
-/// `square < SINC_CUT2_F32`, so `sin_r` is not read there, and `sin_r/r` from the cut up (the module's note; R-696). The
-/// cut and the bound on both forms are REQ-DEC-054's, provisional until the M2 gate.
+/// `square < SINC_CUT2_F32`, so `sin_r` is not read there, and `sin_r/r` from the cut up (the module's note). The
+/// cut and the bound on both forms are calibrations, provisional, held in the constants register.
 #[inline]
 pub fn sinc_of(sin_r: f32, r: f32, square: f32) -> f32 {
     let [c1, c2, c3] = SINC_SERIES_F32;
@@ -249,7 +250,7 @@ pub struct Inverse<R> {
     pub lambda_t: [R; 2],
     /// `α = atan2(√b, √a)`, so `‖ρ̃‖ = √I·cos α`, as the canonical-frame decode's α; not a pole, `a + b = I > 0`.
     pub alpha: R,
-    /// `β = ψ − φ_f`, the `atan2(q, p)` term: `λ̃`'s angle from `ρ̃`, in `(−π, π]`, and R-437's 0 at `n₀ = ±1`.
+    /// `β = ψ − φ_f`, the `atan2(q, p)` term: `λ̃`'s angle from `ρ̃`, in `(−π, π]`, and the defined 0 at `n₀ = ±1`.
     pub beta: R,
 }
 
@@ -261,15 +262,15 @@ pub fn inverse_pq<R: Real + Float>(n: [R; 3], inertia: R) -> [R; 2] {
     [select(p == R::zero(), R::zero(), p), inertia * n[2] / two]
 }
 
-/// [`inverse`]'s pole, R-437's `p = q = 0`.
+/// [`inverse`]'s pole, `p = q = 0`.
 #[inline]
 pub fn inverse_pole<R: Real + Float>(p: R, q: R) -> bool {
     (p == R::zero()) & (q == R::zero())
 }
 
 /// The closed-form inverse of chart_reference §3.2 at the point `n` (a unit vector), the moment of inertia `inertia`
-/// and the fibre phase `phase`, the smaller of `a` and `b` through `n₁² + n₂²` (the module's notes; R-437 at the
-/// poles). `β`'s `atan2(q, p)` is [`crate::arctan`]'s (RQ-628); `α`'s is `Float`'s.
+/// and the fibre phase `phase`, the smaller of `a` and `b` through `n₁² + n₂²` (the module's notes, the defined 0 at
+/// the poles). `β`'s `atan2(q, p)` is [`crate::arctan`]'s; `α`'s is `Float`'s.
 #[inline]
 pub fn inverse<R: Real + Float>(n: [R; 3], inertia: R, phase: R) -> Inverse<R> {
     let one = R::one();
@@ -310,7 +311,7 @@ pub fn place<R: LinkReal>(n: [R; 3], inertia: R, phase: R, masses: &Masses<R>) -
 }
 
 /// `p_fixed`, `D_mom` on `z_mom` under `S`, in the gauge of `config` (the module's notes): each Jacobi momentum turned
-/// by `C`'s angle on `config` and scaled by `I^{−1/4}`, unmirrored at every pixel (R-544), and the particle momenta
+/// by `C`'s angle on `config` and scaled by `I^{−1/4}`, unmirrored at every pixel, and the particle momenta
 /// rebuilt from them by the shared [`momentum::to_particles`]. The controls `q` are `D_mom`'s.
 #[inline]
 pub fn held_momentum<S: Selection, R: LinkReal + PayloadReal>(
@@ -398,7 +399,7 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     }
 
     /// `D ∘ Φ` with the configuration set explicitly (the module's notes): mass → [`place`] → [`held_momentum_at`],
-    /// then `C` on the joined state ([`canon::canonicalise`], no mirror step, R-544, R-865) and the descriptor
+    /// then `C` on the joined state ([`canon::canonicalise`], no mirror step) and the descriptor
     /// of its output. The `ic` keeps the pixel's signed shape; `config` and `momentum` are the blocks' outputs, in `Φ`'s
     /// gauge. The mass and momentum links read the tunable parameters `p`.
     #[inline]
@@ -493,7 +494,7 @@ impl<P: Copy + FloatConst> ShapeSphere<P> {
 }
 
 impl<P: Copy + FloatConst> Hidden for ShapeSphere<P> {
-    /// The four momentum controls and the two mass logits, `2..8`: the axes write the configuration (R-473 J1).
+    /// The four momentum controls and the two mass logits, `2..8`: the axes write the configuration.
     fn hidden(&self, k: u32) -> bool {
         (2..8).contains(&k)
     }
@@ -523,16 +524,16 @@ impl<P: Copy + FloatConst> Tiltable for ShapeSphere<P> {
     }
 }
 
-// ── `system_image`, the label, and the exponential map's cap and count (R-503, R-544) ─────────────────────────────
+// ── `system_image`, the label, and the exponential map's cap and count ────────────────────────────────────────────
 
-/// How one pixel of the exponential map counts (chart_reference §3.3; R-503, R-544; REQ-CHART-075, REQ-CHART-078).
+/// How one pixel of the exponential map counts (chart_reference §3.3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PixelCount {
-    /// `r < π`: its own system, counted once, whichever hemisphere it lies in (R-544).
+    /// `r < π`: its own system, counted once, whichever hemisphere it lies in.
     System,
-    /// On `r = π`, the one point `−n₀`: its pixels are one system and count once together (REQ-CHART-078).
+    /// On `r = π`, the one point `−n₀`: its pixels are one system and count once together.
     Antipode,
-    /// Past `r = π`: the domain's end, not a system, out of the count and the total (R-503).
+    /// Past `r = π`: the domain's end, not a system, out of the count and the total.
     DomainEnd,
 }
 
@@ -559,12 +560,12 @@ where
         )
     }
 
-    /// The chart's `system_image` (chart_decoder_contract Part 5; chart_reference §3.3; R-544): bijective on either
+    /// The chart's `system_image` (chart_decoder_contract Part 5; chart_reference §3.3): bijective on either
     /// map. The spherical map is the whole sphere, each pixel its own system, θ's period and the poles its axis types
-    /// (R-407), not a fold. The exponential map's value is its cap's, `[0,1]²`'s pixels with `r ≤ π`: each pixel with
+    /// not a fold. The exponential map's value is its cap's, `[0,1]²`'s pixels with `r ≤ π`: each pixel with
     /// `r < π` its own system, its mirror `w → −w` another, whether the cap lies in one hemisphere or straddles the
-    /// equator; the pixels on `r = π` one system, counted once ([`ShapeSphere::exp_pixel`], REQ-CHART-078), an
-    /// identification of measure zero and not a fold; past `r = π` the domain's end, no system (R-503). So no frame or
+    /// equator; the pixels on `r = π` one system, counted once ([`ShapeSphere::exp_pixel`]), an
+    /// identification of measure zero and not a fold; past `r = π` the domain's end, no system. So no frame or
     /// extent gives another value: the cap decides which pixels are systems and how many there are
     /// ([`ShapeSphere::exp_counted_total`]), never a multiplicity.
     pub fn system_image(&self) -> SystemImage {
@@ -572,7 +573,7 @@ where
     }
 
     /// The quotient the chart covers, in words, for its [`ChartLabel`]: the whole sphere, or the exponential map's cap,
-    /// each pixel its own system, with no hemisphere named and no redundancy flagged (R-544; REQ-CHART-002).
+    /// each pixel its own system, with no hemisphere named and no redundancy flagged.
     pub fn quotient(&self) -> &'static str {
         match self.map {
             ShapeMap::Spherical => "the whole sphere, pole to pole: each pixel its own system",
@@ -592,7 +593,7 @@ where
         }
     }
 
-    /// How the exponential map's pixel at `(u, v)` counts (chart_reference §3.3; R-503, R-544): past `r = π` the
+    /// How the exponential map's pixel at `(u, v)` counts (chart_reference §3.3): past `r = π` the
     /// domain's end; on it the antipode's one system; else its own system, in either hemisphere.
     pub fn exp_pixel(&self, u: f64, v: f64) -> PixelCount {
         let r = self.exp_at(u, v).1;
@@ -607,7 +608,7 @@ where
 
     /// The counted total of the exponential map over the `nx` × `ny` pixels of `[0,1]²`, each at its centre
     /// ([`pixel_centre`]): one per [`PixelCount::System`] pixel, plus one where any pixel lies on `r = π`, the one
-    /// system `−n₀` (REQ-CHART-078); the domain's end adds none.
+    /// system `−n₀`; the domain's end adds none.
     pub fn exp_counted_total(&self, nx: u32, ny: u32) -> u64 {
         let mut total = 0u64;
         let mut antipode = false;
@@ -624,7 +625,7 @@ where
     }
 }
 
-// ── The projection: a display remap of the spherical map's render (REQ-RENDER-026, REQ-CHART-047) ──────────────────
+// ── The projection: a display remap of the spherical map's render ──────────────────────────────────────────────────
 
 /// The shape sphere's display projection (chart_reference §3.3, "Projection" and "The equal-area projection is
 /// Hammer's"): a display remap of the spherical map's render, never on the sim key; equirectangular by default.

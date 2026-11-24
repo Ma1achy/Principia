@@ -1,8 +1,8 @@
-//! Navigation stops at the edge (R-469 P2, A1 to A3, A6; chart_decoder_contract § "The operation table", "Navigation
-//! stops at the edge"; REQ-CHART-060): one generic rule over the [`Chart`] trait and `validate`, [`nav_stop`], which
-//! no chart writes for itself. The edit path applies it to every navigation edit (REQ-GUI-243).
+//! Navigation stops at the edge (chart_decoder_contract § "The operation table", "Navigation stops at the edge"): one
+//! generic rule over the [`Chart`] trait and `validate`, [`nav_stop`], which no chart writes for itself. The edit path
+//! applies it to every navigation edit.
 //!
-//! **The centre** (A1). An edit is accepted only while the view's centre passes the chart's `validate`, its layers 2
+//! **The centre.** An edit is accepted only while the view's centre passes the chart's `validate`, its layers 2
 //! and 3, at the active link parameters ([`Chart::validate_params`]). The centre is the view's centre pixel: on an
 //! affine chart `(½, ½)`, where `z(½, ½) = z₀`; on a curved one the centre of the chart's own parameters, with the
 //! slice centre's hidden coordinates. The caller names it beside the chart ([`View`]). A centre whose `Φ` fails counts
@@ -23,7 +23,7 @@
 //! `L_z` and `K` are read by their charts' `validate`, which decodes at them. Either way it is the one edge, the last
 //! centre that is a system, reported by the check that finds it.
 //!
-//! **The path** (A3). The edited field moves along the straight line from the accepted value to the requested one,
+//! **The path.** The edited field moves along the straight line from the accepted value to the requested one,
 //! `from + λ·(to − from)` for `λ ∈ [0, 1]`, `to` itself at `λ = 1`, so a component the edit leaves alone keeps its
 //! value exactly ([`Field`]); between finite ends whose difference overflows it is `(1 − λ)·from + λ·to`, finite. A requested value that passes is taken. One that fails stops the edit at the last valid
 //! value along the path, found by bisection on `λ`: each step halves the interval between the two ends' f64 bit
@@ -32,7 +32,7 @@
 //! ([`Check`]): the constraint `validate` names and its layer ([`Constraint::layer`]), or `Φ`. No tolerance is
 //! introduced.
 //!
-//! **A lock** (A2) sets the centre to a chosen point. It has no path: it is accepted if that point passes, and
+//! **A lock** sets the centre to a chosen point. It has no path: it is accepted if that point passes, and
 //! refused, the centre unchanged, if it does not ([`Edit::Lock`]).
 //!
 //! **Tilt and zoom** are edits like the others. They are anchor-preserving, so the centre they ask for is the one
@@ -41,12 +41,12 @@
 //! **An accepted value that fails** cannot anchor a bisection (no edit through this stop reaches one): an edit from it
 //! is taken where its requested value passes, and refused otherwise, the value unchanged.
 //!
-//! CPU-side and f64, as `validate` is (R-26): the edit path's, never the kernel's.
+//! CPU-side and f64, as `validate` is: the edit path's, never the kernel's.
 
 use super::{Chart, Constraint, ValidationResult};
 use crate::generated::links::LinkParams;
 
-/// A field a navigation edit moves (A3): `z₀` for a pan or a slice on the latent chart, the centre of a curved
+/// A field a navigation edit moves: `z₀` for a pan or a slice on the latent chart, the centre of a curved
 /// chart's own parameters, a hidden coordinate's value at the slice centre, a chart parameter, a tilt's angles.
 pub trait Field: Copy {
     /// The value at the fraction `lambda` of the straight line from `self` to `to`: `self + λ·(to − self)`, with
@@ -94,7 +94,7 @@ pub enum Edit<V> {
     Lock { from: V, to: V },
 }
 
-/// A view at an edited value: the chart and its centre `(u, v)`, the point `validate` reads (A1).
+/// A view at an edited value: the chart and its centre `(u, v)`, the point `validate` reads.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct View<C> {
     /// The chart, with its slice centre and tilt.
@@ -103,7 +103,7 @@ pub struct View<C> {
     pub centre: [f64; 2],
 }
 
-/// The check that stopped an edit (A5): what `validate` names, or `Φ`.
+/// The check that stopped an edit: what `validate` names, or `Φ`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Check {
     /// The centre fails `validate` on this constraint.
@@ -161,7 +161,7 @@ pub struct Stop<V> {
     pub stopped: Option<Check>,
 }
 
-/// What fails at a view's centre (A1): `Φ`, where there is no view or `Φ` there is not finite ([`Chart::phi_finite`]),
+/// What fails at a view's centre: `Φ`, where there is no view or `Φ` there is not finite ([`Chart::phi_finite`]),
 /// a block the chart builds outside `map` included, else
 /// `validate`'s constraint at `p`; none where the centre passes.
 fn centre<C>(view: Option<View<C>>, p: &LinkParams<f64>) -> Option<Check>

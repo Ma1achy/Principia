@@ -1,10 +1,10 @@
 //! Ground-truth ingestion (inverse-encode contract Parts 4 and 7; validation ground-truth note § "New demands this
-//! places on the inverse-encode contract"; REQ-VAL-014, REQ-ENC-025): a foreign physical state is canonicalised and
+//! places on the inverse-encode contract"): a foreign physical state is canonicalised and
 //! encoded, and the result exposes, beside `z`, the two diagnostics Part 7 asks for:
 //!
 //! - **the physical residual** `‖D(z) − C(x)‖_phys` ([`Ingested::residual`]), the bug signal: `D(z)`, the free decode
 //!   of the `z` encode returned, measured from `C(x)`, the canonical representative of the input, in Part 4's norm,
-//!   which the caller passes, as `super::by_kind::encode_into` takes it (REQ-ENC-029);
+//!   which the caller passes, as `super::by_kind::encode_into` takes it;
 //! - **the conditioning number** `κ(x) = ‖J_E(x)·W⁻¹‖₂` ([`Ingested::kappa`], [`kappa`]), Part 4's definition: `J_E`
 //!   the encode's 8 × 15 Jacobian at the input `x` itself, on the canonical section or off it (the eight controls
 //!   against the three masses, positions and momenta), `W` the weight of `‖·‖_phys` at `x` (1 on a mass, `1/R_x` on a
@@ -136,7 +136,7 @@ where
 const BETA: usize = crate::chart::mixed::Coordinate::ZBeta as usize;
 
 /// `δ(a, b) = a − b − 2π·round((a − b)/2π)`, the signed difference of two `z_β` on the circle, in `[−π, π]`, evaluated
-/// at f64 (dd_decoder § 3.2, "The distance between two `z_β`"; R-898).
+/// at f64 (dd_decoder § 3.2, "The distance between two `z_β`").
 pub fn delta<R: Float>(a: R, b: R) -> R {
     let tau = core::f64::consts::TAU;
     let (a, b) = (

@@ -1,4 +1,4 @@
-//! The Burrau-family charts (chart_reference §4.3, §4.5; REQ-CHART-022, REQ-CHART-023, REQ-CHART-013): the continuous
+//! The Burrau-family charts (chart_reference §4.3, §4.5): the continuous
 //! `ν` axis, its embed `γ : ν → (configuration, masses)`, the `(ν, K)` chart ([`Burrau`]) and the Euclid plane
 //! ([`EuclidPlane`]). Each is an ordinary chart map into the shared decoder: no Burrau-specific integrator or renderer
 //! (§4.5).
@@ -19,24 +19,24 @@
 //! [`Chart::decode`] with [`decode_plane`], so every entry decodes it so. The `(ν, K)` chart's decode is [`decode()`],
 //! whose construction needs the exact-sign arithmetic ([`ExactSign`], [`WarpReal`]) that every payload float type has
 //! ([`crate::real::IeeeBits`]'s bound); it overrides [`Chart::decode`] with it, and its [`super::ChartDecode`] calls it
-//! too, so every entry decodes its per-pixel masses, never the free decode of the zero vector (REQ-DEC-006).
+//! too, so every entry decodes its per-pixel masses, never the free decode of the zero vector.
 //!
-//! **The `(ν, K)` chart** ([`Burrau`]; §4.3, §4.5; R-113). `ν(u) = ν_min + (ν_max − ν_min)·u`, and `K` from §2's
-//! construction at `K(v) = K_max·v^γ_K`, the invariant charts' warp, its `K_max` and `γ_K` REQ-CHART-044's
-//! ([`super::invariant::kinetic`]). `L_z = 0`: the chart is §4.5's bifurcation strip `Φ_strip,K = Φ_θ,K`, which takes
-//! `(L_z = 0, K(v))`, with `ν` in place of `θ`. So `K_min = 0` and every `v ≥ 0` is feasible. Energy is fixed by the
-//! construction, so the chart forbids `η_E` (chart_reference §0.6; R-25).
+//! **The `(ν, K)` chart** ([`Burrau`]; §4.3, §4.5). `ν(u) = ν_min + (ν_max − ν_min)·u`, and `K` from §2's
+//! construction at `K(v) = K_max·v^γ_K`, the invariant charts' warp, its `K_max` and `γ_K` the constants
+//! register's ([`super::invariant::kinetic`]). `L_z = 0`: the chart is §4.5's bifurcation strip `Φ_strip,K = Φ_θ,K`,
+//! which takes `(L_z = 0, K(v))`, with `ν` in place of `θ`. So `K_min = 0` and every `v ≥ 0` is feasible. Energy is
+//! fixed by the construction, so the chart forbids `η_E` (chart_reference §0.6).
 //!
-//! **The seed** (R-934): the construction runs under the seed in force, the expansion `w = r/√I`
-//! ([`crate::decode::invariant::construct_expansion`]), one seed with no choice, so no seam at `ν = 1/3`. **R-82's rule,
-//! the named legacy option, is decided on `ν`** ([`seed`], [`decode_lz_seeded`]; R-82, R-34). The embed's configuration
-//! is a canonical-frame one at `I = 1`, so the construction's four seed norms are `cos²α`, `sin²α` and twice `cos²α·sin²α`
-//! ([`crate::decode::invariant`]'s note): R-82 takes `(ρ, 0)` where `cos²α ≥ sin²α`, else `(0, λ)`. On the embed
-//! `‖λ̃‖²/‖ρ̃‖² = b(a² + (b+c)²)/(a·c·(a+b+c)) = 2ν/(1 − ν)`, so `(ρ, 0)` is taken exactly where `3ν ≤ 1`. That is
-//! decided on `ν`'s own value, exactly ([`seed`]: `3ν` as an exact sum of two floats), not on the computed norms, which
-//! would fork near `ν = 1/3` where the seeds are orthogonal: one `ν` takes one seed at every precision and on every
-//! backend that keeps its additions correctly rounded and unreassociated. `ν = 1/3` is `(m, n) = (3, 1)`, the
-//! leg-swapped classical triangle, where the legacy rule's seam lies (R-934 declares it).
+//! **The seed**: the construction runs under the seed in force, the expansion `w = r/√I`
+//! ([`crate::decode::invariant::construct_expansion`]), one seed with no choice, so no seam at `ν = 1/3`. **The
+//! largest-norm rule, the named legacy option, is decided on `ν`** ([`seed`], [`decode_lz_seeded`]). The embed's
+//! configuration is a canonical-frame one at `I = 1`, so the construction's four seed norms are `cos²α`, `sin²α` and
+//! twice `cos²α·sin²α` ([`crate::decode::invariant`]'s note): that rule takes `(ρ, 0)` where `cos²α ≥ sin²α`, else
+//! `(0, λ)`. On the embed `‖λ̃‖²/‖ρ̃‖² = b(a² + (b+c)²)/(a·c·(a+b+c)) = 2ν/(1 − ν)`, so `(ρ, 0)` is taken exactly where
+//! `3ν ≤ 1`. That is decided on `ν`'s own value, exactly ([`seed`]: `3ν` as an exact sum of two floats), not on the
+//! computed norms, which would fork near `ν = 1/3` where the seeds are orthogonal: one `ν` takes one seed at every
+//! precision and on every backend that keeps its additions correctly rounded and unreassociated. `ν = 1/3` is
+//! `(m, n) = (3, 1)`, the leg-swapped classical triangle, where the legacy rule's seam lies, a declared seam.
 //!
 //! **The Euclid plane** ([`EuclidPlane`]; §4.5; chart_decoder_contract Part 5). `m(u) = m_min·(m_max/m_min)^u` and
 //! `ν(v) = ν_min + (ν_max − ν_min)·v` (defaults `[1, 32]` and `[1/32, 31/32]`, the constants register's
@@ -46,18 +46,18 @@
 //! primitive-triple overlays ([`EuclidPlane::lattice`]), touching no block. The chart is a 1-swept family rendered in
 //! 2D, well-posed as 1 + 7, and [`super::admit_statistic`] refuses a 2D density across it.
 //!
-//! **`system_image`** ([`nu_image`]; chart_reference §4.5; R-27, R-104, R-157). A `ν`-axis chart is
+//! **`system_image`** ([`nu_image`]; chart_reference §4.5). A `ν`-axis chart is
 //! [`SystemImage::DoubleCover`], the quotient "shape × labelling", where its `ν` range reaches both leg orderings,
 //! `ν_min < √2 − 1 < ν_max`: the leg swap `ν ↦ (1 − ν)/(1 + ν)` has the isosceles triangle `√2 − 1` as its fixed point,
 //! so such a range holds some shape twice, as two labelled systems. The Euclid plane's default range does. A range on
 //! one side of `√2 − 1` is bijective. Each chart's [`ChartLabel`] shows it, and `super::admit_shape_fraction` refuses a
 //! shape fraction on a `DoubleCover` chart.
 //!
-//! **Validation** (R-26; chart_reference §5.1). Layer 2 is `ν ∈ (0, 1)` ([`Constraint::BurrauNu`]); outside it a side
+//! **Validation** (chart_reference §5.1). Layer 2 is `ν ∈ (0, 1)` ([`Constraint::BurrauNu`]); outside it a side
 //! is zero or negative, so a mass is, and clamping `ν` onto the open interval's ends would give such a system, a
 //! qualitatively different IC: rejected. On `(ν, K)`, `v < 0` (`K < 0`, and no real `v^γ_K` for a non-integer `γ_K`)
 //! is projected to `v = 0`, the rest start ([`Constraint::KNonNegative`]); `v > 1` is feasible (`K > K_max`) and valid,
-//! the axis's extension type being TASK-M2-11's (REQ-CHART-055). Layer 3, decode sanity: the masses are positive at
+//! the axis's extension type being chart_reference §5.4's. Layer 3, decode sanity: the masses are positive at
 //! every `ν ∈ (0, 1)` (`2ν > 0`, and `1 − ν² > 0` rounds to a positive float below 1), and the CoM and `Σpᵢ` are those
 //! of a finite decode, which the reconstruction and the construction put at 0 within rounding, so the f64 decode is
 //! checked for finiteness. Its positions fail only where `ν` is so small that `μ_ρ = m₀m₁/M₀₁` underflows to 0 (f64
@@ -106,9 +106,10 @@ pub fn acute_angle<R: Float + Real>(nu: R) -> R {
     Real::arctangent2(R::one() - nu * nu, nu + nu)
 }
 
-/// The seed R-82's legacy rule takes on the embed at `ν`: `(ρ, 0)` where `3ν ≤ 1`, else `(0, λ)` (the module's note). `3ν`
-/// is formed exactly as `s + e`, `s = 2ν + ν` rounded and `e` its error by the two-sum, and `3ν ≤ 1` is `s < 1`, or
-/// `s = 1` and `e ≤ 0`: only additions, subtractions and comparisons, so one `ν` takes one seed on every backend.
+/// The seed the legacy largest-norm rule takes on the embed at `ν`: `(ρ, 0)` where `3ν ≤ 1`, else `(0, λ)` (the
+/// module's note). `3ν` is formed exactly as `s + e`, `s = 2ν + ν` rounded and `e` its error by the two-sum, and
+/// `3ν ≤ 1` is `s < 1`, or `s = 1` and `e ≤ 0`: only additions, subtractions and comparisons, so one `ν` takes one seed
+/// on every backend.
 #[inline]
 pub fn seed<R: Float>(nu: R) -> Seed {
     let (s, e) = seed_input(nu);
@@ -206,7 +207,7 @@ impl<R: LinkReal + PayloadReal> Blocks<R> for RestBlocks<R> {
 pub struct BurrauBlocks<R> {
     /// The system the embed gave.
     system: System<R>,
-    /// The construction's seed: [`Seed::Expansion`], or R-82's legacy rule's, [`seed`]'s.
+    /// The construction's seed: [`Seed::Expansion`], or the legacy largest-norm rule's, [`seed`]'s.
     seed: Seed,
     /// The target `L_z`.
     lz: R,
@@ -334,7 +335,7 @@ pub fn nu_image(nu_range: [f64; 2]) -> SystemImage {
 }
 
 /// The quotient a Burrau chart of `image` covers, in words, for its [`ChartLabel`] (chart_reference §4.5): "shape ×
-/// labelling" for `DoubleCover`, else "shape only". No digit, so no body number (R-449).
+/// labelling" for `DoubleCover`, else "shape only". No digit, so no body number.
 #[inline]
 pub fn quotient(image: SystemImage) -> &'static str {
     match image {
@@ -357,7 +358,7 @@ pub fn label(name: &str, image: SystemImage) -> ChartLabel<'_> {
 
 // ── The (ν, K) chart ───────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The `(ν, K)` chart (chart_reference §4.3, §4.5, §5.1's `Burrau { nu_range, k_range }`; R-113): `ν(u)` on
+/// The `(ν, K)` chart (chart_reference §4.3, §4.5, §5.1's `Burrau { nu_range, k_range }`): `ν(u)` on
 /// `nu_range`, `K(v) = K_max·v^γ_K`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Burrau<P> {
@@ -496,7 +497,7 @@ where
     }
 
     /// [`decode()`] at `(u, v)`, the construction's outcome dropped, as [`super::ChartDecode::decode_at`] decodes it:
-    /// the masses follow `ν(u)` (REQ-DEC-006). `S` is not read, as there.
+    /// the masses follow `ν(u)`. `S` is not read, as there.
     #[inline]
     fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
@@ -526,7 +527,7 @@ where
 }
 
 /// [`decode()`] with the construction at the held `L_z = lz` in place of 0, the chart's hidden coordinate, and `K* = k`
-/// in place of `K(v)`, the row its mode gives (R-633, R-708; `super::construction`).
+/// in place of `K(v)`, the row its mode gives (`super::construction`).
 #[inline]
 pub fn decode_lz<R, P>(chart: &Burrau<P>, u: R, lz: R, k: R) -> (Decoded<R>, Outcome)
 where
@@ -537,8 +538,8 @@ where
 }
 
 /// [`decode_lz`] under `seeding`: [`Seeding::Expansion`] is the chart's own decode, the seed in force;
-/// [`Seeding::LargestNorm`] is R-82's named legacy option, its seed [`seed`]`(ν)`, its seam at `ν = 1/3` declared
-/// (R-934).
+/// [`Seeding::LargestNorm`] is the named legacy option, its seed [`seed`]`(ν)`, its seam at `ν = 1/3`
+/// declared.
 #[inline]
 pub fn decode_lz_seeded<R, P>(
     chart: &Burrau<P>,
@@ -674,7 +675,7 @@ where
     f64: From<P>,
 {
     /// The chart's `system_image`, [`nu_image`] of its `ν` range (the module's note): `DoubleCover` at the default
-    /// range, the full-range chart of R-27 and R-157.
+    /// range, the full-range chart.
     #[inline]
     pub fn system_image(&self) -> SystemImage {
         nu_image(self.nu_range.map(<f64 as From<P>>::from))

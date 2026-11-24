@@ -1,7 +1,7 @@
 //! The six charts that hold a block by a physical construction, with that construction's physical parameters as their
 //! hidden coordinates, tilted and sliced by value, a held `K` in warped mode tilted in its warp coordinate instead
-//! (R-633, ruling RQ-603, amending R-473 J1; R-708, R-709, R-720; chart_decoder_contract § "Tilt (basis edit)", "Tilt on
-//! every chart"; chart_reference §4.5, "Hidden coordinates under tilt and slice").
+//! (chart_decoder_contract § "Tilt (basis edit)", "Tilt on every chart"; chart_reference §4.5, "Hidden coordinates
+//! under tilt and slice").
 //!
 //! **Which coordinates** (chart_reference §4.5's table). A hidden coordinate is named by an index, as on the latent
 //! charts ([`super::tilt`]'s note): a momentum control by its latent index `2..6`, and a physical value by an index of
@@ -17,10 +17,10 @@
 //!   leaves `(0, 1)` has a zero or negative side, so it is refused ([`Constraint::BurrauNu`]).
 //! - **The `(ν, K)` chart and `Φ_θ,K`, the strip `Φ_strip,K` the same map** ([`HeldLz`]) hold `L_z`, 0 untilted;
 //!   **`Φ_θ,L_z`** holds `K`, its own parameter `k` ([`HeldK`]). The momenta are §2.2's construction at the tilted value,
-//!   the chart's axes through its map at the slice centre exactly (R-473 T2), each chart by its energy axis's mapping
-//!   ([`Mapping`], R-471's two modes; R-708), below.
+//!   the chart's axes through its map at the slice centre exactly, each chart by its energy axis's mapping
+//!   ([`Mapping`], warped or linear), below.
 //!
-//! **Warped mode, the default** (R-708, R-720). Every pixel inside the chart's square is a system under every tilt.
+//! **Warped mode, the default.** Every pixel inside the chart's square is a system under every tilt.
 //! - The held `L_z` moves by value in both modes, `L_z + d`, tilted and sliced alike, with no sign constraint. The `K`
 //!   axis takes the pixel's own held `L_z` as its floor, `K = L_z²/2I + K_max·t^γ_K` ([`k_floor`], which holds the bottom
 //!   row feasible through the rounding), past `K_max` at the top if the floor takes it there.
@@ -30,14 +30,14 @@
 //!   untilted self bit for bit. `K_max` and `γ_K` are [`HeldK`]'s inputs: `Φ_θ,L_z` has no `K` axis of its own to read
 //!   them from.
 //! - **`t₀ + d < 0` arises** wherever a tilt's `d` passes `−t₀`, and at a non-integer `γ_K` the warp has no real value
-//!   there, so the coordinate clamps at `t = 0` (R-709): `K = 0`, `L_z = 0`, the rest start at the pixel's own shape, a
+//!   there, so the coordinate clamps at `t = 0`: `K = 0`, `L_z = 0`, the rest start at the pixel's own shape, a
 //!   real system. No mirror. The pixel is flagged ([`Tiltable::held_at_floor`]).
 //!
-//! **Linear mode, the option per axis** (R-471 E2). Rows keep fixed physical values, `K(b) = K_max·b` and `L_z + d` on
+//! **Linear mode, the option per axis.** Rows keep fixed physical values, `K(b) = K_max·b` and `L_z + d` on
 //! the first charts, and `L_z(b)`, the band of the centre's `K`, and `K + d` on `Φ_θ,L_z`, whose tilt is that of the bare
 //! chart. A slice moves the centre, so there `L_z(b)`'s band follows the sliced `K`.
 //!
-//! **The refused cell** (R-633, read per cell by R-636; chart_reference §2.2's terminal case), the linear arm's. Where
+//! **The refused cell**, read per cell (chart_reference §2.2's terminal case), the linear arm's. Where
 //! the tilted value leaves no momentum construction, `K < L_z²/2I`, decided by the construction's exact test
 //! ([`infeasible`], `I = 1`), the cell is no system: its decode carries `DEGENERATE(INVARIANT_INFEASIBLE)`, the tilted
 //! view's `validate` refuses it ([`Constraint::KAboveLzBound`]) and its area weight is 0
@@ -693,7 +693,7 @@ where
     }
 
     /// The check ahead of the refusal: warped, `warp`, the chart's own; linear, its axes alone, the chart's layer 3
-    /// decoding the warp's line, not the row, which [`HeldLz::refused_at`] reads (R-471 E2).
+    /// decoding the warp's line, not the row, which [`HeldLz::refused_at`] reads.
     fn row_check(
         &self,
         u: f64,
@@ -798,7 +798,7 @@ impl<C: LzChart<Param = P>, P: WarpReal> Tiltable for HeldLz<C, P>
 where
     f64: From<P>,
 {
-    /// The construction at `L_z + d`, by value in both modes (R-720), and the row's `K*` at it.
+    /// The construction at `L_z + d`, by value in both modes, and the row's `K*` at it.
     #[inline]
     fn decode_shifted<S, R>(&self, u: R, v: R, shift: &Shift<R>, _p: &LinkParams<R>) -> Decoded<R>
     where
@@ -913,7 +913,7 @@ pub struct HeldK<P> {
     pub k_max: P,
     /// `γ_K ≥ 1`, the warp's exponent.
     pub gamma_k: P,
-    /// The `L_z` axis's mapping, the chart's mode (R-708).
+    /// The `L_z` axis's mapping, the chart's mode.
     pub mapping: Mapping,
 }
 
@@ -948,7 +948,7 @@ where
     }
 
     /// The pixel's own `K` at the offset `d`: `K₀` itself at `d = 0`, else `K_max·t^γ_K` at `t = t₀ + d`, clamped at
-    /// `t = 0` (R-709), never mirrored.
+    /// `t = 0`, never mirrored.
     #[inline]
     fn warped_k<R: WarpReal + From<P>>(&self, d: R) -> R {
         let wide = <R as From<P>>::from;
@@ -1101,7 +1101,7 @@ where
         }
     }
 
-    /// Warped, where `t₀ + d < 0` at `R`: the coordinate `HeldK::warped_k` clamps at `t = 0` (R-709).
+    /// Warped, where `t₀ + d < 0` at `R`: the coordinate `HeldK::warped_k` clamps at `t = 0`.
     fn held_at_floor<R>(&self, shift: &Shift<R>) -> bool
     where
         R: LinkReal + PayloadReal + From<P>,

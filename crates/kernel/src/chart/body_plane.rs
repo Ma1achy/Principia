@@ -1,4 +1,4 @@
-//! The body plane (chart_reference §5.1; REQ-VAL-119, REQ-CHART-059): today's slice kept as a chart. One body's position
+//! The body plane (chart_reference §5.1): today's slice kept as a chart. One body's position
 //! sweeps a square window, the other two stay at their held positions, every body at rest, the masses held.
 //!
 //! **`Φ`.** `Φ(u, v)` puts body `body` at `p(u, v) = ((c_x − h) + (2h)·u, (c_y − h) + (2h)·v)`, `(c_x, c_y)` the
