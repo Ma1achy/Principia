@@ -43,7 +43,7 @@
 //! chose them, as `canon.rs`'s). `shape_landmarks_mass_weighted`'s is `8ε·κ`, scaled by `shape`'s condition number
 //! `κ` at each draw: a collision configuration is an ill-conditioned input, `|ρ|` small against the positions, and
 //! the error is `shape`'s rounding on it, not the landmark's; the worst error over 600,000 draws is `3.8 ε·κ`
-//! (physics review 5897335433; the plan sets no bound, this test chose it).
+//! (the plan sets no bound; this test chose it).
 
 use std::path::Path;
 

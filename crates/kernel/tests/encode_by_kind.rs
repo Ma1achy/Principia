@@ -100,8 +100,8 @@ fn point(rng: &mut SplitMix) -> (f64, f64) {
     (uniform(rng, 0.1, 0.9), uniform(rng, 0.1, 0.9))
 }
 
-/// `chart`'s decode at `(u, v)`, under a random gauge without the mirror: `Π·x` is another system, which `C` no longer
-/// folds back, landing on the chart only where the chart holds it.
+/// `chart`'s decode at `(u, v)`, under a random gauge without the mirror: `Π·x` is another system, which `C` does not
+/// fold back, landing on the chart only where the chart holds it.
 fn gauged<C: ChartDecode<Param = f64>>(chart: &C, u: f64, v: f64, rng: &mut SplitMix) -> Ic<f64> {
     let x = chart.decode_at::<Defaults, f64>(u, v).ic;
     Gauge {

@@ -412,8 +412,8 @@ fn is_rotation(w: &[u32], of: &[u32]) -> bool {
 }
 
 /// The ten orbits marched at `dt` through `integrate_word` with Table I's middle body at `middle`: each reads its
-/// published word, cyclically, or with its inverse or the `(a, b) ↔ (A, B)`
-/// exchange.
+/// published word, cyclically, or with its inverse, the `(a, b) ↔ (A, B)`
+/// exchange, or both.
 fn check_published(dt: f64, middle: usize) {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),

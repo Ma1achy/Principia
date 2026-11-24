@@ -155,7 +155,7 @@ fn circle(a: f64, b: f64) -> f64 {
     d.min(TAU - d)
 }
 
-/// The hold's exit wrap, written from its definition: into (−π, π], exactly ±π giving +π.
+/// The longitude wrap, written from its definition: into (−π, π], exactly ±π giving +π.
 fn wrap64(d: f64) -> f64 {
     let mut d = d;
     while d > PI {
@@ -1036,7 +1036,8 @@ type Disc<R> = fn([[R; 2]; 3], [R; 3], R) -> bool;
 /// The march's disc test at `R` against `√(n_u² + n_v²) < r_pole` written here, on near-pole configurations whose
 /// radius is at least 2% from `r_pole` (beyond `R`'s round-off of the radius); and invariant under every power-of-two
 /// scale `2^k`, `k` over `scales`, which commutes exactly with every operation unless an intermediate underflows or
-/// overflows (none may: a branch input must agree across backends). Returns the counts inside and outside.
+/// overflows (none does: the invariance is asserted, and a branch input may have no subnormal intermediate). Returns
+/// the counts inside and outside.
 fn check_disc<R: Prec>(test: Disc<R>, scales: std::ops::RangeInclusive<i32>) -> (usize, usize) {
     let rp: R = r_pole();
     let rp64 = wide(rp);

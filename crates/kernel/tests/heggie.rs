@@ -26,7 +26,7 @@
 //!   RK4, each through its time-reversal map, on its full state, at the reversibility criterion inside its domain: each
 //!   residual and verdict printed, each verdict against the pair's profile; at the same `dt`, Cartesian RK4 and
 //!   an asymmetric Yoshida-4 (`w₁, w₁, w₀`) read not reversible. Controls: a profile with one flag flipped, and a
-//!   measurement set with one built occupant left out (its Heggie and Aarseth–Zare arms).
+//!   measurement set with one built occupant left out (the set's Heggie and Aarseth–Zare arms).
 
 use std::cell::RefCell;
 

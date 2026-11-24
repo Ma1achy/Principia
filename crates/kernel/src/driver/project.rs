@@ -23,10 +23,10 @@
 //! **One written operation order, on the parity surface** (Part 5). The projection is part of the
 //! deterministic step, on CPU-f64, CPU-f32 and the GPU alike, in CoM-frame particle coordinates: no Jacobi vector is
 //! formed here, nor anywhere in the step (the chart's Jacobi coordinates become particles once, at decode). Each
-//! component is formed in this order, with every product that meets an addition written as an explicit `fma`, so a
-//! backend that contracts a multiply and an add and one that does not round the same (gpu_determinism_note
-//! § "The discipline", rules 2 and 6; not every backend fuses an explicit `fma`:
-//! lavapipe does not):
+//! component is formed in this order, with every product that meets an addition written as an explicit `fma`, so no
+//! compiler is left to choose whether to contract it. A backend that fuses an explicit `fma` rounds it once; one that
+//! does not (CI's lavapipe) rounds the product, then the add (gpu_determinism_note § "The discipline", rule 6), so the
+//! projection's words agree across backends to rounding, not bit for bit, like every continuous word:
 //!
 //! ```text
 //! S      = fma(m₂, x₂, fma(m₁, x₁, m₀·x₀))       the mass-weighted sum, body 0 first

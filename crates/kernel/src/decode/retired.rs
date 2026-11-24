@@ -1,8 +1,8 @@
 //! The retired `β` links and the conversion into the periodic `β` (dd_decoder §3.2).
 //!
 //! Latent `β` is a periodic angle with one link, `periodic_beta`, the offset onto the angle: `β = z_β + π/2`
-//! read modulo `2π` by the decode's `cos β` and `sin β`. The three bounded links older records stored `z_β` under,
-//! `sigmoid_beta`, `tanh_beta` and `softsign_beta`, onto `β ∈ [0, π]`, are no block's link: their
+//! read modulo `2π` by the decode's `cos β` and `sin β`. The three bounded links under which older records stored
+//! `z_β` (`sigmoid_beta`, `tanh_beta` and `softsign_beta`, onto `β ∈ [0, π]`) are no block's link: their
 //! codomain, `RetiredBeta`, is no slot's, so no [`Selection`](crate::generated::links::Selection) names one. Their
 //! forward maps stay, as conversion sources only:
 //! - **Conversion** ([`convert`], [`converted`]): a stored `z_β` made under the retired link `L` becomes the periodic

@@ -887,7 +887,7 @@ fn crossings<R: P>() -> Vec<[R; 2]> {
     out
 }
 
-/// The contraction exposure (qa F1): written `m₀ + m₁`, `M₀₁` under `stick_breaking` reaches a shader compiler
+/// The contraction exposure: written `m₀ + m₁`, `M₀₁` under `stick_breaking` reaches a shader compiler
 /// inlined as `m₀ + t₇·t₁₃`, which a contracting backend may fuse to `fma(t₇, t₁₃, m₀)`. At every onset crossing
 /// ([`crossings`]), `form`'s tag must be the emitted masses' one rounded sum's. The replica `stick_parts` is checked
 /// against the generated forward bit for bit. Returns how many of the points the fused form flips: the hazard the

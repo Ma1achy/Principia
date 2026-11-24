@@ -96,7 +96,7 @@ pub fn target(row: UVec4) -> Option<f32> {
 pub enum DecodeMode {
     /// The full nonlinear decode, `D ∘ Φ` (0).
     Full,
-    /// The linearised decode `x₀ + J_D·δ` (1), deep_zoom §2; M6.
+    /// The linearised decode `x₀ + J_D·δ` (1), deep_zoom §2; not built (the module's note).
     Linearised,
 }
 
@@ -766,7 +766,7 @@ pub fn read_descriptor(words: &[u32], i: usize) -> ICDescriptor {
 /// pair `uv[2i], uv[2i + 1]`, decoded through `V`'s chart, its parameters read from `uniforms`, toward the energy target
 /// the uniform's energy row holds ([`target`], [`sample_with`]), and its `(m, r, p)`, tag and descriptor written at
 /// sample `i` of `ic`, `tags` and `descriptors`. Invocations past the last sample write
-/// nothing, and so does a linearised quad, whose path lands in M6 (the module's note).
+/// nothing, and so does a linearised quad, whose path is not built (the module's note).
 #[inline]
 pub fn entry<V: DecodeVariant>(
     i: u32,

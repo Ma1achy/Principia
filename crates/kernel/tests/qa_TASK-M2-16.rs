@@ -674,7 +674,7 @@ fn encode_qa_burrau_345() {
         .iter()
         .find(|p| p["name"] == "burrau_345")
         .expect("the Burrau pair is listed");
-    // The fixture's z was written under `sigmoid_beta`, the older β link: its z_β is converted on read to
+    // The fixture's z was written under `sigmoid_beta`, a retired β link: its z_β is converted on read to
     // the periodic link's, the same β.
     let fz: [f64; 8] = std::array::from_fn(|k| {
         let z = pair["z"][k].as_f64().expect("a number");

@@ -24,8 +24,8 @@
 //!   `K* = L_z²/2I + line`, at its own `U`, `I` and masses. Control: the potential read once at the centre.
 //! - `qa_energy_axis_linear_option_floor_by_value`: under the linear option at a held `L_z ≠ 0`, no floor: `K`, `KE`,
 //!   `E` and virial pixels keep their fixed values, those with `K* < L_z²/2I` refused, `DEGENERATE` (never integrated),
-//!   forbidden in the area count (only validity failures are) and unwarned, the rest systems at exactly those
-//!   values. Control: the warped chart.
+//!   forbidden in the area count (the count forbids only validity failures) and unwarned, the rest systems at exactly
+//!   those values. Control: the warped chart.
 //! - `qa_energy_axis_linear_option_floor_edge`: on the boundary, exactly representable (`L_z = ½`, `K* = ⅛`), a linear
 //!   pixel is a system and the float below it is not; the warped chart at `t = 0` decodes that same `K*`. Control: the
 //!   float below read as a system.

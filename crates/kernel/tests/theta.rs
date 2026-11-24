@@ -597,7 +597,7 @@ mod squared_edge_control {
     );
 }
 
-// ── The disc's input from the configuration ──────────────────────────────────────────────────────────────
+// ── The disc's input from the configuration ─────────────────────────────────────────────────────────────────────────
 
 /// The mass sets the configuration's disc input is checked at: equal (`M₀₁ = 2/3`), and two unequal, `M₀₁ = 3/4` and
 /// `M₀₁ = 0.7`.
@@ -822,7 +822,7 @@ negative_control!(
     check_edge::<f64>(closed_disc_step)
 );
 
-// ── An IC inside the disc ───────────────────────────────────────────────────────────────────────────────────
+// ── An IC inside the disc ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// An IC at longitude 2.0 inside the disc, a wander inside, a first exit along the meridian at `lon_exit`, a turn and
 /// a half east at polar radius 0.3, and a second pole passage. `θ̃` is 0 throughout and at the first exit, then
@@ -894,7 +894,7 @@ negative_control!(
     check_ic_inside(from_ic_step, 0.0)
 );
 
-// ── The `r_pole` evidence: the longitude's round-off against ρ ────────────────────────────────────────────────
+// ── The `r_pole` evidence: the longitude's round-off against ρ ──────────────────────────────────────────────────────
 
 /// A small deterministic generator (splitmix64), so the evidence is the same every run.
 struct Mix(u64);
@@ -1096,7 +1096,7 @@ negative_control!(
     check_evidence(&measure(unweighted::<f32>, unweighted::<f64>))
 );
 
-// ── The shape map's landmarks ────────────────────────────────────────────────────────────────────────────────
+// ── The shape map's landmarks ───────────────────────────────────────────────────────────────────────────────────────
 
 /// The landmarks for equal masses: the collision of 0 and 1 at (−1, 0, 0), of 1 and 2 at (1/2, √3/2, 0), of 2 and 0
 /// at (1/2, −√3/2, 0); `L⁺`, 0 → 1 → 2 anticlockwise, at (0, 0, 1), `L⁻` at (0, 0, −1); a rotated, translated and

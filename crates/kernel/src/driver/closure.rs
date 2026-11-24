@@ -29,7 +29,7 @@
 //! the departed bit clear, and so never reads it either.
 //!
 //! **Parity tier.** The departed bit and `closure_step` follow from the float chord, so they are Tier N/S with
-//! `closure_min`, not Tier B (parity contract § "Tier B"; 17 Nov 2026, `plan/DECISIONS-LOG.md`).
+//! `closure_min`, not Tier B (parity contract § "Tier B").
 
 use super::welford::chord2;
 use crate::real::IeeeBits;

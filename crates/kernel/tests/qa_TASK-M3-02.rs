@@ -8,7 +8,7 @@
 //!   cost, the error exponent and FTLE confidence), each read from the profile.
 //! - The constants: the shipped constants parse from dd_integrator §3.2's printed digits; Yoshida-4's `w₁` is the
 //!   correctly rounded f64 of `1/(2 − 2^{1/3})`, checked exactly; `w₀` is bitwise `1 − 2w₁` and `w₀ + 2w₁ == 1.0`;
-//!   Yoshida-6's `w₀ = 1 − 2(w₁ + w₂ + w₃)`; the kicks are `(d_{i−1} + dᵢ)/2`; controls: earlier printed digits that
+//!   Yoshida-6's `w₀ = 1 − 2(w₁ + w₂ + w₃)`; the kicks are `(d_{i−1} + dᵢ)/2`; controls: printed digits that
 //!   are not correctly rounded, and `w₁`'s f64 neighbour.
 //! - The citation: the Yoshida blocks carry Yoshida (1990)'s citation, Yoshida-6 its Table 1, solution A; the negative
 //!   weights are Yoshida-4's `w₀` and Yoshida-6's `w₁`.

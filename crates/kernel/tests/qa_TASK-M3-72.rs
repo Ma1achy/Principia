@@ -15,7 +15,7 @@
 //!   is below the sample's; at an `r_coll` between the two it fires, and the shadow marches on, its `r_sh`, `p_sh`
 //!   and `S` bit for bit those at `r_coll = 0`, the sample's fields the base tier's and its FTLE finite (it only
 //!   watches). Control: a detector that read the sample's `x` (its least `d²` the sample's own) fails.
-//! - `qa_m372_displacement_is_chosen` (the default, (a1), which a pre-registered measurement chose): `Displacement`
+//! - `qa_m372_displacement_is_chosen` (the default, (a1)): `Displacement`
 //!   with no parameter is `Displacement<Plain>`. Control: `Displacement<CancellationFree>` fails.
 //!
 //! **Domain** (pitfalls §10): Yoshida-4, the `shadow-form` gate's occupant, at `r_coll = 0` except in the detector test.

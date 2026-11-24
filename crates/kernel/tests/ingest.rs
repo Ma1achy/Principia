@@ -15,8 +15,8 @@
 //! `σ_max(J_E(x)·W⁻¹)`, the encode's weighted Jacobian at the input itself, checked against an independent oracle:
 //! `σ²·(1 + δ)` less the Gram matrix `(J_E·W⁻¹)(J_E·W⁻¹)ᵀ` is positive definite and `σ²·(1 − δ)` less it is not
 //! (Cholesky), `δ = 10⁻⁶`; and Part 4's bound `‖E(x̃) − z‖₂ ≤ κ(x)·‖W(x̃ − x)‖₂ ≤ 3·κ(x)·‖x̃ − x‖_phys` on states `x̃`
-//! moved off `x` along every component, off the canonical section as well as along it (the physics review of PR #294,
-//! P1: the section's tangent alone, `1/σ_min(W·J_D)`, does not bound a move of `m₀` at masses `(0.05, 0.15, 0.8)`).
+//! moved off `x` along every component, off the canonical section as well as along it (the section's tangent alone,
+//! `1/σ_min(W·J_D)`, does not bound a move of `m₀` at masses `(0.05, 0.15, 0.8)`).
 
 use kernel::decode::{self, Ic, Latent};
 use kernel::encode::encode;

@@ -1,4 +1,4 @@
-//! Cross-chart consistency (C1): one state reached through two charts, a shape-sphere pixel and the latent
+//! Cross-chart consistency: one state reached through two charts, a shape-sphere pixel and the latent
 //! pixel its decoded state encodes to, gives the same `z` and state, and then the same payload and outcome.
 //!
 //! **The pair.** A pixel `(u, v)` of the shape sphere decodes to the canonical state `x` (`ShapeSphere`'s own decode,
