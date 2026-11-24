@@ -1,7 +1,7 @@
-//! The trajectory interface (chart_composition § 18.7; R-918, R-919 F18; REQ-CHART-173; TASK-M2-82): M2's maths that
-//! reads a trajectory reads it through a [`Provider`], never through the integrator, so that it is tested against
-//! trajectories known exactly, and the real integrator plugs in after M2 (TASK-M3-67) with no change to that maths. It
-//! is a CPU, engine-side interface: the horizon is an argument of each [`Trajectory`], never a uniform.
+//! The trajectory interface (chart_composition § 18.7): the maths that reads a trajectory reads it through a
+//! [`Provider`], never through the integrator, so that it is tested against trajectories known exactly, and the real
+//! integrator ([`Integrated`]) plugs in with no change to that maths. It is a CPU, engine-side interface: the horizon
+//! is an argument of each [`Trajectory`], never a uniform.
 //!
 //! **What a provider gives** for a signed start state `(m, r, p)` in the scale gauge and a horizon `T`:
 //! - **the boundary grid**: integer boundary indices `k = 0, 1, …` at the quantum `Δ` the provider declares, boundary
@@ -12,7 +12,7 @@
 //!   reads the terminal state ([`Trajectory::state`] holds it);
 //! - **purity**: the same bits for the same `(start, T, k)`, in any order of reads and after any other read.
 //!
-//! **The fixtures** (R-919 F18), each a provider of exactly one start ([`FigureEight::start`], [`Lagrange::start`]),
+//! **The fixtures**, each a provider of exactly one start ([`FigureEight::start`], [`Lagrange::start`]),
 //! refusing any other bit pattern:
 //! - [`Lagrange`], the equilateral homographic solution (dd_validation_orbits § 1.3) in closed form at any masses:
 //!   bodies `rᵢ(t) = z(t)·cᵢ`, `pᵢ(t) = mᵢ·ż(t)·cᵢ` in complex arithmetic, `cᵢ` the start's positions and `z` the
@@ -397,7 +397,7 @@ impl Lagrange {
     }
 
     /// The closed form's state at the time `t`, on or off the grid, before any collision: what an integrated row at
-    /// `t` is measured against (TASK-M3-67).
+    /// `t` is measured against.
     pub fn at(&self, t: f64) -> Ic<f64> {
         let (z, zdot) = self.orbit(t);
         bodies(self.start.m, self.start.r, z, zdot)
@@ -426,8 +426,8 @@ impl Provider for Lagrange {
     }
 
     /// Boundary 0 is the start, by definition. At and past the collision's boundary the terminal state is the state at
-    /// the last boundary before it (RQ-757: the closed form's own state at `t_c` has every body at the centre of mass
-    /// and its momenta unbounded; decided per R-369 as RQ-757's option (a) by the physics review, code concurring).
+    /// the last boundary before it, not the closed form's own state at `t_c`, which has every body at the centre of
+    /// mass and its momenta unbounded.
     fn state(&self, start: &Ic<f64>, k: u64) -> Result<Ic<f64>, Refused> {
         own(start, &self.start)?;
         let k = match self.collision_index()? {
@@ -443,9 +443,9 @@ impl Provider for Lagrange {
     }
 }
 
-/// The default integrator as a provider (§ 18.7; TASK-M3-67): Heggie × RK4 at f32, the CPU field's own march
+/// The default integrator as a provider (§ 18.7): Heggie × RK4 at f32, the CPU field's own march
 /// ([`crate::field::marched`]) at the field's step-control values ([`crate::field::heggie_params`]), on the sync grid,
-/// its quantum the register's fixed `Δ_sync` (R-565), the same for every horizon. Boundary `k` is the state the march
+/// its quantum the register's fixed `Δ_sync`, the same for every horizon. Boundary `k` is the state the march
 /// to boundary `k` lands on, at `t = k·Δ_sync` exactly, and every read marches again from `t = 0`: the march sizes its
 /// steps from `Δ_sync` and its budget from the time elapsed, never from its target, so the march to `k` is the prefix
 /// of every longer one, and a read is pure.
@@ -458,8 +458,8 @@ impl Provider for Lagrange {
 /// **The terminal** is what ends the march short of the cap, the sim key's horizon ([`Integrated::last`]; `terminal`
 /// takes no horizon, so the provider holds its own): a collision, a non-finite step (`sim_failed`) or a spent step
 /// budget (`running`, undetermined), each latched where it fired, at the first boundary at or after it; a start the
-/// dispatch-time label settles (`kernel::detect::t0`) at boundary 0. The task predates the live escape label: with the
-/// stop option off, the default, an escape ends no march and is no terminal; its class is the label at the horizon
+/// dispatch-time label settles (`kernel::detect::t0`) at boundary 0. With the stop option off, the default, an escape
+/// ends no march and is no terminal; its class is the label at the horizon
 /// ([`Integrated::outcome`]). Under the stop option the first escape label is a terminal like a collision.
 #[derive(Clone, Copy, Debug)]
 pub struct Integrated {

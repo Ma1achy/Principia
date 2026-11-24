@@ -1,11 +1,11 @@
-//! The compute-pipeline entry point (R-297; REQ-SYS-074): every compute pipeline is created here, through
-//! [`pipeline`], under an explicit fast-math setting ([`FastMath`], off by default). The harness's
-//! dispatches go through it now, and the kernel's variant table later (TASK-M4-06). `cargo xtask lint
-//! compute-pipelines` fails on a compute pipeline created anywhere else, and on a passthrough module anywhere else.
+//! The compute-pipeline entry point: every compute pipeline is created here, through [`pipeline`], under an explicit
+//! fast-math setting ([`FastMath`], off by default). The harness's dispatches go through it, and the kernel's variant
+//! table, not yet built, must too. `cargo xtask lint compute-pipelines` fails on a compute pipeline created anywhere
+//! else, and on a passthrough module anywhere else.
 //!
-//! What each backend compiles (parity contract §4, R-297's Applied note):
+//! What each backend compiles (parity contract §4):
 //! - **Metal, setting off:** wgpu 30 compiles MSL with the default `MTLCompileOptions`, which has fast-math on, and
-//!   offers no switch (R-296's Result). So the module is translated to MSL here, with naga, wgpu's own translator, and
+//!   offers no switch. So the module is translated to MSL here, with naga, wgpu's own translator, and
 //!   given an in-source math-mode pragma, `#pragma METAL fp math_mode(safe)`, with the standard library's math functions
 //!   taken in their precise forms: fast-math off. It is loaded through wgpu's passthrough, for this compute pipeline
 //!   only. Vertex and fragment pipelines, the display, keep wgpu's own path, and may keep fast-math on.
@@ -14,7 +14,7 @@
 //!   compiles the same way: the compute stage is compiled off whatever the setting, and the session header records
 //!   both (telemetry §5).
 //!
-//! [`compiled_modes`] states the same per backend, and the session header records it (TASK-M0-19's probe).
+//! [`compiled_modes`] states the same per backend, and the session header records it (`crate::telemetry::session`).
 //!
 //! [`pipeline`]: crate::compute::pipeline
 //! [`FastMath`]: crate::contract::fast_math::FastMath
@@ -36,9 +36,9 @@ pub const FAST_MATH_OFF_PRELUDE: &str =
 
 /// The mode each shader stage is compiled with on `api` when the compute setting is `setting`: what
 /// [`pipeline`] does for the compute stage, and what wgpu's own path does for the display stages
-/// (R-297; telemetry §5). `None` for a session that opens no GPU (R-308). On Metal, compute follows the setting and
+/// (telemetry §5). `None` for a session that opens no GPU. On Metal, compute follows the setting and
 /// the display stages compile with fast-math on (wgpu's default); on Vulkan, every stage compiles off; on a backend
-/// that gives no fast-math control and doesn't say, each is unknown (R-303).
+/// that gives no fast-math control and doesn't say, each is unknown.
 pub fn compiled_modes(api: Api, setting: FastMath) -> Option<CompiledModes> {
     let all = |mode| CompiledModes {
         compute: mode,
@@ -294,7 +294,7 @@ fn msl_source(
         resources.insert(br, target);
     }
     let options = msl::Options {
-        // MSL 3.2, the first with the math-mode pragma: macOS 15's, the hosted runner's (R-186).
+        // MSL 3.2, the first with the math-mode pragma: macOS 15's, the hosted runner's.
         lang_version: (3, 2),
         per_entry_point_map: msl::EntryPointResourceMap::from([(
             entry.to_owned(),
@@ -380,13 +380,13 @@ thread_local! {
 }
 
 /// The compute pipelines [`pipeline`] has been asked to create on this thread, each a shader module and its pipeline,
-/// whether or not the creation succeeded: what a caller reads to show that an edit created none (REQ-DEC-007, a
+/// whether or not the creation succeeded: what a caller reads to show that an edit created none (a
 /// uniform edit recompiles nothing). Per thread, so that tests running side by side do not count each other's.
 pub fn pipelines_created() -> u64 {
     CREATED.with(Cell::get)
 }
 
-/// Creates the compute pipeline for `shader` on `device` under the fast-math `setting` (R-297). On Metal with the
+/// Creates the compute pipeline for `shader` on `device` under the fast-math `setting`. On Metal with the
 /// setting off, the module is compiled from our own MSL with fast-math off and loaded through wgpu's passthrough; the
 /// device must have [`required_features`]. Otherwise wgpu's own path builds it. Either way wgpu validates the WGSL as
 /// it does any module, and an error, from the WGSL, the translation or wgpu, is returned, not raised on the device.

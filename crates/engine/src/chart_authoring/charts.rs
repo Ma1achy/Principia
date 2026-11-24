@@ -1,4 +1,4 @@
-//! Each registered chart's descriptors (chart_decoder_contract Part 5; chart_reference §5.1's charts; REQ-CHART-014):
+//! Each registered chart's descriptors (chart_decoder_contract Part 5; chart_reference §5.1's charts):
 //! the axes, slice and conventions, `system_image`, `has_feasibility_boundary`, `coupling` and annotation of every
 //! chart in `kernel::chart`, and the Burrau family's two curves, `ν` and the acute angle `θ`, with their tangents.
 //!
@@ -12,15 +12,14 @@
 //!
 //! **The conventions.** A Burrau rest start and the mass plot set every momentum 0; on the invariant charts and the
 //! strips the construction's deterministic seed pins the momentum block's two DOF the two invariants leave
-//! (chart_reference §2.2, R-82).
+//! (chart_reference §2.2).
 //!
-//! **`system_image`** (R-27, R-104, R-157, R-544). The shape sphere's spherical map is bijective: the chart is the whole
-//! sphere, each pixel its own system, θ's period and the poles its axis types (R-407), not a fold (R-544). Its
-//! exponential map's value is its cap's, bijective whether or not the cap straddles the equator, its pixels on `r = π`
-//! one system and past `r = π` the domain's end (R-503, R-544; REQ-CHART-075, REQ-CHART-078;
-//! `kernel::chart::shape_sphere`). The `ν`-axis charts are `DoubleCover` where their
-//! range reaches both leg orderings and bijective otherwise (`kernel::chart::burrau`); the acute-angle charts fold the
-//! swap out and are bijective. Every other chart is bijective: its decode takes distinct points to distinct systems.
+//! **`system_image`.** The shape sphere's spherical map is bijective: the chart is the whole sphere, each pixel its own
+//! system, θ's period and the poles its axis types, not a fold. Its exponential map's value is its cap's, bijective
+//! whether or not the cap straddles the equator, its pixels on `r = π` one system and past `r = π` the domain's end
+//! (`kernel::chart::shape_sphere`). The `ν`-axis charts are `DoubleCover` where their range reaches both leg orderings
+//! and bijective otherwise (`kernel::chart::burrau`); the acute-angle charts fold the swap out and are bijective. Every
+//! other chart is bijective: its decode takes distinct points to distinct systems.
 
 use kernel::burrau::System;
 use kernel::chart::burrau::embed;
@@ -222,7 +221,7 @@ where
     ShapeSphere<P>: Chart,
 {
     /// The shape's two angles, kind 2 in the configuration, each the other's residual; `z₀`'s mass and momentum blocks
-    /// held. The chart's own `system_image`, bijective on either map, the exponential map's its cap's (R-503, R-544).
+    /// held. The chart's own `system_image`, bijective on either map, the exponential map's its cap's.
     fn descriptor(&self) -> ChartDescriptor {
         let (h, v) = match self.map {
             ShapeMap::Spherical => ("θ, the azimuth", "φ, the polar angle"),
@@ -469,7 +468,7 @@ where
 }
 
 /// An energy-type axis of a mixed-axis chart (`kernel::chart::physical`): its kind-3 quantity, its name, and the
-/// invariant the chart holds beside it. The virial ratio is not kind 3 (R-471 H3) and has no descriptor here.
+/// invariant the chart holds beside it. The virial ratio is not kind 3 and has no descriptor here.
 pub trait EnergyInvariant: EnergyAxis {
     /// The kind-3 quantity.
     const INVARIANT: InvariantQuantity;
@@ -533,7 +532,7 @@ where
     MixedMassRatio<A, S, P>: Chart,
 {
     /// `A`, kind 1 or 2, and the mass ratio, kind 2 in the masses, its residual the third body's mass held; the other
-    /// controls held (R-506 W3).
+    /// controls held.
     fn descriptor(&self) -> ChartDescriptor {
         let ratio = AxisDescriptor::derived(
             "q = m_b/m_a",
@@ -560,7 +559,7 @@ impl<C: Authored, S> Authored for Mapped<C, S>
 where
     Mapped<C, S>: Chart,
 {
-    /// The chart's own: a mapping changes what an axis's `[0, 1]` reaches, not what it pins (R-471 E2).
+    /// The chart's own: a mapping changes what an axis's `[0, 1]` reaches, not what it pins.
     fn descriptor(&self) -> ChartDescriptor {
         self.chart.descriptor()
     }
