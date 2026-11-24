@@ -86,3 +86,6 @@ delete its line when it's done.
   of first-order optimality, or the continuity test fails, and the failing frame moves toward the 2nd as the frame count
   grows (124 of the 132 ending pins at 256 frames). At 9, the slice mid-morph's re-hold refuses: its slide solve stalls
   the same way.
+- **The GPU path does not read the stop option** (`SimUniforms::stop_on_escape`): neither the dispatch nor the WGSL
+  kernel carries it, so the CPU and GPU fields agree today only because `SimConfig` cannot set it. The GPU path must
+  read it before `SimConfig` can set it, or the two fields will disagree.

@@ -1587,8 +1587,9 @@ pub fn bodyplane(root: &Path, args: &[&str]) -> Result<(), String> {
     }
 }
 
-/// `cargo xtask golden patchwork [--propose] [--n <n>]` and `cargo xtask golden stop-on-escape [--propose] [--n <n>]`
-/// (pitfalls §1; TASK-M3-35): the stop images on the app's zero view, CPU payloads at f64, not an image suite. Runs
+/// `cargo xtask golden patchwork [--propose] [--n <n>] [--view <zero | config_stability>]` and `cargo xtask golden
+/// stop-on-escape` with the same arguments (pitfalls §1; TASK-M3-35): the stop images on the app's zero view (or
+/// `config_stability`, written to the same folder), CPU payloads at f64, not an image suite. Runs
 /// validation's `stop_images` binary in release (xtask reaches validation only as a separate process, as `gate`
 /// does), which writes the images, the `t_end` histogram and its report under `target/golden/<which>/` and fails on
 /// any failed check (`validation::stop_images`'s note).

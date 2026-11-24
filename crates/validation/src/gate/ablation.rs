@@ -62,7 +62,7 @@ pub struct Slice {
 }
 
 /// The numbers of `[name]`'s line `key = …` in `text` (a `slices.toml`): a scalar, or an array's elements.
-fn numbers(text: &str, name: &str, key: &str) -> Result<Vec<f64>, String> {
+pub fn numbers(text: &str, name: &str, key: &str) -> Result<Vec<f64>, String> {
     let section = format!("[{name}]");
     let mut lines = text.lines().skip_while(|l| l.trim() != section);
     lines
