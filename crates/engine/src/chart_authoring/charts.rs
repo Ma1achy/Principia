@@ -47,17 +47,38 @@ use crate::contract::sim_config::LATENT_DIM;
 /// and `μ₂ = ln(m₂/m₀)`, and with `ρ̃ = √μ_ρ·ρ`, `λ̃ = √μ_λ·λ` (`μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂·M₀₁`), `α = atan2(‖λ̃‖, ‖ρ̃‖)`,
 /// the scale gauge `R̃ = 1` dividing out, and `β = atan2(λ̃_y, λ̃_x)`. The embed's `ρ` lies on `+x` and `λ_y > 0`, so
 /// the canonical frame holds and `β ∈ (0, π)`.
+///
+/// Its `hypot`, `atan2` and `ln` round correctly (`crate::exact`), so the embed has the same bits on every platform.
 pub fn nu_embed(nu: f64) -> CurvePoint {
+    nu_embed_by(nu, &EXACT)
+}
+
+/// The maths [`nu_embed`] calls: `hypot`, `atan2` and `ln`.
+struct EmbedMaths {
+    hypot: fn(f64, f64) -> f64,
+    atan2: fn(f64, f64) -> f64,
+    ln: fn(f64) -> f64,
+}
+
+/// The correctly rounded ones.
+const EXACT: EmbedMaths = EmbedMaths {
+    hypot: crate::exact::hypot,
+    atan2: crate::exact::atan2,
+    ln: crate::exact::ln,
+};
+
+/// [`nu_embed`] through `f`: [`EXACT`] there, other maths in its test's control.
+fn nu_embed_by(nu: f64, f: &EmbedMaths) -> CurvePoint {
     let System { m, rho, lambda, .. } = embed(nu);
     let m01 = m[0] + m[1];
     let (mu_rho, mu_lambda) = (m[0] * m[1] / m01, m[2] * m01);
-    let rho_t = mu_rho.sqrt() * rho[0].hypot(rho[1]);
+    let rho_t = mu_rho.sqrt() * (f.hypot)(rho[0], rho[1]);
     let lambda_t = [mu_lambda.sqrt() * lambda[0], mu_lambda.sqrt() * lambda[1]];
     CurvePoint {
-        alpha: lambda_t[0].hypot(lambda_t[1]).atan2(rho_t),
-        beta: lambda_t[1].atan2(lambda_t[0]),
-        mu1: (m[1] / m[0]).ln(),
-        mu2: (m[2] / m[0]).ln(),
+        alpha: (f.atan2)((f.hypot)(lambda_t[0], lambda_t[1]), rho_t),
+        beta: (f.atan2)(lambda_t[1], lambda_t[0]),
+        mu1: (f.ln)(m[1] / m[0]),
+        mu2: (f.ln)(m[2] / m[0]),
     }
 }
 
@@ -83,7 +104,7 @@ pub fn theta_embed(theta: f64) -> CurvePoint {
 /// `γ'(ν(θ))·ν'(θ)`, its tangent: `ν'(θ) = −1/(1 + sin θ)`.
 pub fn theta_tangent(theta: f64) -> CurvePoint {
     let t = nu_tangent(nu_of(theta));
-    let k = -1.0 / (1.0 + theta.sin());
+    let k = -1.0 / (1.0 + crate::exact::sin(theta));
     CurvePoint {
         alpha: t.alpha * k,
         beta: t.beta * k,
@@ -543,4 +564,75 @@ where
     fn descriptor(&self) -> ChartDescriptor {
         self.chart.descriptor()
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `ν` and the correctly rounded embed there, `(α, β, μ₁, μ₂)` as bits, each step's exact value from mpmath. At `0.01`
+    /// and `0.3`, the curve tilt's centre, macOS's own `hypot` gives `α` an ulp off (measured on an M3 Pro); at `0.3` the
+    /// pinned libm's does too.
+    const EMBEDS: [(f64, [u64; 4]); 2] = [
+        (
+            0.01,
+            [
+                0x3fc2_1273_c5df_de7d,
+                0x4002_c501_caa8_02d7,
+                0xc00f_4c07_24c6_285f,
+                0xbf2a_36e2_ec93_94c1,
+            ],
+        ),
+        (
+            0.3,
+            [
+                0x3fe7_e697_e0d5_1e19,
+                0x4000_8495_326f_4bf2,
+                0xbfe3_1aa6_b4e1_13d9,
+                0xbfc7_1a3e_3b7f_0904,
+            ],
+        ),
+    ];
+
+    /// Panics unless `embed` at each `ν` of [`EMBEDS`] is its bits.
+    fn check(embed: impl Fn(f64) -> CurvePoint) {
+        for (nu, want) in EMBEDS {
+            let p = embed(nu);
+            let got = [p.alpha, p.beta, p.mu1, p.mu2].map(f64::to_bits);
+            assert!(
+                got == want,
+                "the nu curve's embed is not correctly rounded at {nu}: {got:x?}, want {want:x?}"
+            );
+        }
+    }
+
+    /// The control's maths: on macOS the platform's own; elsewhere, where it may be exact here, the pinned libm's.
+    #[cfg(feature = "controls")]
+    const INEXACT: EmbedMaths = if cfg!(target_os = "macos") {
+        EmbedMaths {
+            hypot: f64::hypot,
+            atan2: f64::atan2,
+            ln: f64::ln,
+        }
+    } else {
+        EmbedMaths {
+            hypot: libm::hypot,
+            atan2: libm::atan2,
+            ln: libm::log,
+        }
+    };
+
+    /// **The criterion**, written before the run: the `ν` curve's embed at each `ν` of [`EMBEDS`] is its bits exactly,
+    /// on every platform.
+    #[test]
+    fn nu_embed_exact_bits() {
+        check(nu_embed);
+    }
+
+    validation::negative_control!(
+        nu_embed_exact_bits,
+        "the platform's maths in the nu curve's embed (macOS), or the pinned libm's (elsewhere)",
+        expected = "the nu curve's embed is not correctly rounded",
+        check(|nu| nu_embed_by(nu, &INEXACT))
+    );
 }

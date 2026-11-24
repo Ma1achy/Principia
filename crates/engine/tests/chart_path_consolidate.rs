@@ -42,7 +42,7 @@
 //! fails, and so does `ε_phys` at a sixty-fourth; the zoom row sent as octaves fails the merge; a stopped pan's pin
 //! re-read at its address leaves the clicked state.
 
-// Not on Windows: the tilt's old route is std's `sin_cos`, the platform's libm (path_bitwise's note).
+// Not on Windows: the tilt's old route here is std's `sin_cos`, the platform's libm.
 #![cfg(not(windows))]
 
 mod path_support;
@@ -177,7 +177,7 @@ mod old {
 
     /// `navigate::zoom_by`: the basis times `2^−octaves`.
     pub fn zoom_by(plane: &Plane, octaves: f64) -> (Latent, Latent) {
-        let k = (-octaves).exp2();
+        let k = engine::exact::exp2(-octaves);
         (plane.q1.map(|x| x * k), plane.q2.map(|x| x * k))
     }
 

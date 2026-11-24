@@ -144,10 +144,10 @@ pub fn energy_at_fixed_lz_params<S: Selection>(
     let jacobi = |c: usize| (m[0] * dp[1][c] - m[1] * dp[0][c]) / masses.m01;
     let dq = [jacobi(0), jacobi(1), dp[2][0], dp[2][1]];
     let slopes = [
-        <S::Q0Link as Link<1, 1>>::log_det_at([z0[2]], params).exp(),
-        <S::Q1Link as Link<1, 1>>::log_det_at([z0[3]], params).exp(),
-        <S::Q2Link as Link<1, 1>>::log_det_at([z0[4]], params).exp(),
-        <S::Q3Link as Link<1, 1>>::log_det_at([z0[5]], params).exp(),
+        crate::exact::exp(<S::Q0Link as Link<1, 1>>::log_det_at([z0[2]], params)),
+        crate::exact::exp(<S::Q1Link as Link<1, 1>>::log_det_at([z0[3]], params)),
+        crate::exact::exp(<S::Q2Link as Link<1, 1>>::log_det_at([z0[4]], params)),
+        crate::exact::exp(<S::Q3Link as Link<1, 1>>::log_det_at([z0[5]], params)),
     ];
     if slopes.contains(&0.0) {
         return Err(Unavailable::SaturatedMomentum);

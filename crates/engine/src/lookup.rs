@@ -285,7 +285,11 @@ pub struct Extents {
 impl Extents {
     /// The extents of the entry `x`, whose canonical form has `λ = lambda`.
     pub fn entered(x: &Ic<f64>, lambda: f64) -> Extents {
-        let extent = |v: &[[f64; 2]; 3]| v.iter().map(|w| w[0].hypot(w[1])).fold(0.0, f64::max);
+        let extent = |v: &[[f64; 2]; 3]| {
+            v.iter()
+                .map(|w| libm::hypot(w[0], w[1]))
+                .fold(0.0, f64::max)
+        };
         Extents {
             r: lambda * extent(&x.r),
             p: extent(&x.p) / lambda.sqrt(),
@@ -315,7 +319,7 @@ impl Classes {
     /// `x`'s constants and their scales, `x` the canonical form of an entry of extents `ext`.
     pub fn within(x: &Ic<f64>, ext: &Extents) -> Classes {
         let inv = invariants(x);
-        let norm = |v: [f64; 2]| v[0].hypot(v[1]);
+        let norm = |v: [f64; 2]| libm::hypot(v[0], v[1]);
         // To first order: each position rounded by `R`, each momentum by `P`, and the rescale, `I_in` read from
         // positions rounded by `R`, scaling every vector by `1 + R`.
         let rescale = 1.0 + ext.r;
@@ -473,18 +477,18 @@ impl Dual {
         };
         (
             one(
-                t.cos(),
-                t.sin(),
-                u.cos(),
-                u.sin(),
-                -2.0 * mean.sin() * half.sin(),
+                libm::cos(t),
+                libm::sin(t),
+                libm::cos(u),
+                libm::sin(u),
+                -2.0 * libm::sin(mean) * libm::sin(half),
             ),
             one(
-                t.sin(),
-                t.cos(),
-                u.sin(),
-                u.cos(),
-                2.0 * mean.cos() * half.sin(),
+                libm::sin(t),
+                libm::cos(t),
+                libm::sin(u),
+                libm::cos(u),
+                2.0 * libm::cos(mean) * libm::sin(half),
             ),
         )
     }
@@ -666,12 +670,12 @@ pub fn moves_within_params<S: Selection>(
         // `β` before is kept as encoded; after the clamp, `λ`'s direction `(c, s)` is a unit vector, rounded once.
         let toward = |c: f64, s: f64| {
             at(
-                Dual::param(beta.cos(), c, true, 1.0),
-                Dual::param(beta.sin(), s, true, 1.0),
+                Dual::param(libm::cos(beta), c, true, 1.0),
+                Dual::param(libm::sin(beta), s, true, 1.0),
             )
         };
         let (q2, q3) = (qs[2].w, qs[3].w);
-        let n = q2.hypot(q3);
+        let n = libm::hypot(q2, q3);
         let (c, s) = if n > 0.0 {
             (q3 / n, -q2 / n)
         } else {
@@ -735,10 +739,14 @@ fn worst(range: &[Dual]) -> Worst {
 /// Layer 3's residuals of `x` (§ "Decode sanity"): `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x`, each sum in body order, `R_x` and
 /// `P_x` Part 4's extents, the largest `‖rⱼ‖` and `‖pⱼ‖` floored at 1.
 pub fn residuals(x: &Ic<f64>) -> (f64, f64) {
-    let extent = |v: &[[f64; 2]; 3]| v.iter().map(|w| w[0].hypot(w[1])).fold(1.0, f64::max);
+    let extent = |v: &[[f64; 2]; 3]| {
+        v.iter()
+            .map(|w| libm::hypot(w[0], w[1]))
+            .fold(1.0, f64::max)
+    };
     let sum = |w: [f64; 3], v: &[[f64; 2]; 3]| {
         let axis = |k: usize| w[0] * v[0][k] + w[1] * v[1][k] + w[2] * v[2][k];
-        axis(0).hypot(axis(1))
+        libm::hypot(axis(0), axis(1))
     };
     (
         sum(x.m, &x.r) / extent(&x.r),

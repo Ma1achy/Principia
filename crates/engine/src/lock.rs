@@ -292,10 +292,17 @@ where
 
 // ── A curve axis's tangent tilt ────────────────────────────────────────────────────────────────────────────────────
 
-/// `softmax(0, μ₁, μ₂)`, the masses of the curve's mass logits (`CurvePoint`'s definition).
+/// `softmax(0, μ₁, μ₂)`, the masses of the curve's mass logits (`CurvePoint`'s definition). Its `exp` rounds correctly
+/// (`crate::exact`), as every transcendental of [`curve_tangent`]: the platforms' own differ in a last bit, which the
+/// central difference there amplifies, so the tangent tilt had other bits on macOS than on Linux.
 fn masses(mu: [f64; 2]) -> [f64; 3] {
+    masses_by(mu, crate::exact::exp)
+}
+
+/// [`masses`] with `exp` as its exponential: the correctly rounded one there, another in its test's control.
+fn masses_by(mu: [f64; 2], exp: fn(f64) -> f64) -> [f64; 3] {
     let top = mu[0].max(mu[1]).max(0.0);
-    let e = [(-top).exp(), (mu[0] - top).exp(), (mu[1] - top).exp()];
+    let e = [exp(-top), exp(mu[0] - top), exp(mu[1] - top)];
     let sum = e[0] + e[1] + e[2];
     e.map(|x| x / sum)
 }
@@ -316,17 +323,18 @@ where
     finite(&[p.alpha, p.beta, p.mu1, p.mu2, d.alpha, d.beta, d.mu1, d.mu2])?;
     let [z_alpha] = <S::AlphaLink as Link<1, 1>>::inverse([p.alpha]);
     let [z_beta] = <S::BetaLink as Link<1, 1>>::inverse([p.beta]);
-    let slope_alpha = <S::AlphaLink as Link<1, 1>>::log_det([z_alpha]).exp();
-    let slope_beta = <S::BetaLink as Link<1, 1>>::log_det([z_beta]).exp();
+    let slope_alpha = crate::exact::exp(<S::AlphaLink as Link<1, 1>>::log_det([z_alpha]));
+    let slope_beta = crate::exact::exp(<S::BetaLink as Link<1, 1>>::log_det([z_beta]));
     let dmu = [d.mu1, d.mu2];
-    let size = dmu[0].hypot(dmu[1]);
+    let size = crate::exact::hypot(dmu[0], dmu[1]);
     let masses_at = |k: f64| masses([p.mu1 + k * dmu[0], p.mu2 + k * dmu[1]]);
     let mut mass_clamps = <S::MassLink as SimplexClamp>::clamps(masses([p.mu1, p.mu2]));
     // A curve that moves no mass has a mass tangent of 0, with no step to take.
     let dz_mass = match size == 0.0 {
         true => [0.0; 2],
         false => {
-            let h = f64::EPSILON.cbrt() * (1.0 + p.mu1.hypot(p.mu2)) / size;
+            let h =
+                crate::exact::cbrt(f64::EPSILON) * (1.0 + crate::exact::hypot(p.mu1, p.mu2)) / size;
             let (m_hi, m_lo) = (masses_at(h), masses_at(-h));
             mass_clamps |= <S::MassLink as SimplexClamp>::clamps(m_hi)
                 | <S::MassLink as SimplexClamp>::clamps(m_lo);
@@ -383,4 +391,66 @@ where
     }
     let tangent = curve_tangent::<S>(curve, nu0)?;
     tilt_tangent(&tangent, length, tau_deg, target).map_err(LockError::Nav)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Mass logits and their masses, as bits, each `exp`'s exact value from mpmath: at the first the pinned libm's `exp`
+    /// gives the third mass an ulp off, at the second macOS's own gives the second mass an ulp off (measured on an M3
+    /// Pro).
+    const MASSES: [([u64; 2], [u64; 3]); 2] = [
+        (
+            [0xc005_eb85_1eb8_51ec, 0xc009_51eb_851e_b852],
+            [
+                0x3fec_e99f_2278_844a,
+                0x3fad_decd_edbe_5c0f,
+                0x3fa3_873f_eab9_5f54,
+            ],
+        ),
+        (
+            [0xbffa_4dd2_f1a9_fbe8, 0x3ffe_624d_d2f1_a9fc],
+            [
+                0x3fc0_4261_7e8a_7b8e,
+                0x3f99_2190_8f8f_1b4a,
+                0x3feb_265b_1be0_e843,
+            ],
+        ),
+    ];
+
+    /// Panics unless `masses` at each logit pair of [`MASSES`] are its bits.
+    fn check(masses: fn([f64; 2]) -> [f64; 3]) {
+        for (mu, want) in MASSES {
+            let got = masses(mu.map(f64::from_bits)).map(f64::to_bits);
+            assert!(
+                got == want,
+                "the curve's masses are not correctly rounded: {got:x?}, want {want:x?}"
+            );
+        }
+    }
+
+    /// The control's exponential: on macOS the platform's own; elsewhere, where it may be exact here, the pinned libm's.
+    #[cfg(feature = "controls")]
+    fn inexact_exp(x: f64) -> f64 {
+        if cfg!(target_os = "macos") {
+            x.exp()
+        } else {
+            libm::exp(x)
+        }
+    }
+
+    /// **The criterion**, written before the run: the curve's masses at each pair of [`MASSES`] are its bits exactly, on
+    /// every platform.
+    #[test]
+    fn curve_masses_exact_bits() {
+        check(masses);
+    }
+
+    validation::negative_control!(
+        curve_masses_exact_bits,
+        "the platform's exp in the curve's masses (macOS), or the pinned libm's (elsewhere)",
+        expected = "the curve's masses are not correctly rounded",
+        check(|mu| masses_by(mu, inexact_exp))
+    );
 }

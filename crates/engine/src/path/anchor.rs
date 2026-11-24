@@ -335,7 +335,7 @@ pub struct Nearest {
 /// The step of a central difference in chart coordinates: `ε^{1/3}` of the window's half-width.
 fn step(view: &View) -> f64 {
     let h = view.sim.chart.window.half;
-    f64::EPSILON.cbrt() * h[0].abs().max(h[1].abs())
+    crate::exact::cbrt(f64::EPSILON) * h[0].abs().max(h[1].abs())
 }
 
 /// The nearest point in the kernel map's end `view` to `anchor` (§ 17.8's definition): the chart point placed at the pin
@@ -896,7 +896,7 @@ pub fn transport(ja: &[Tangent; 2], jb: &[Tangent; 2], s: f64) -> [Tangent; 2] {
     let f = (m[0][0] - m[1][1]) / 2.0;
     let g = (m[1][0] + m[0][1]) / 2.0;
     let h = (m[1][0] - m[0][1]) / 2.0;
-    let (qq, rr) = (e.hypot(h), f.hypot(g));
+    let (qq, rr) = (crate::exact::hypot(e, h), crate::exact::hypot(f, g));
     let sigma = [qq + rr, qq - rr];
     let (a1, a2) = (libm::atan2(g, f), libm::atan2(h, e));
     let (theta, phi) = ((a2 - a1) / 2.0, (a2 + a1) / 2.0);
@@ -935,7 +935,7 @@ pub fn transport(ja: &[Tangent; 2], jb: &[Tangent; 2], s: f64) -> [Tangent; 2] {
         std::array::from_fn(|k| cw * g_at[0][k] + sw * g_at[1][k]),
         std::array::from_fn(|k| -sw * g_at[0][k] + cw * g_at[1][k]),
     ];
-    let geo = |x: f64, y: f64| x.powf(1.0 - s) * y.powf(s);
+    let geo = |x: f64, y: f64| crate::exact::pow(x, 1.0 - s) * crate::exact::pow(y, s);
     let r11 = geo(ra[0], rb[0]);
     let r12 = ra[1] + s * (rb[1] - ra[1]);
     let r22 = geo(ra[2], rb[2]);
@@ -1000,7 +1000,7 @@ pub(crate) fn end_offsets<L: Leaves>(
             Pixel::Blank(_) => None,
         })
     };
-    let h = f64::EPSILON.cbrt();
+    let h = crate::exact::cbrt(f64::EPSILON);
     let mut j = [[0.0; 9]; 2];
     for (axis, col) in j.iter_mut().enumerate() {
         let (mut plus, mut minus) = (pin, pin);

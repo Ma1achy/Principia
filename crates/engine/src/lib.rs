@@ -163,6 +163,9 @@ pub mod chart_authoring;
 // documented in the module itself, whose links resolve there.
 pub mod nav;
 
+// The chart path's correctly rounded maths: the same bits on every platform (documented in the module itself).
+pub mod exact;
+
 // The chart-path object: a view a point in chart space and every edit a path through it, today's pan, zoom, slice,
 // tilt, lock, chart switch and Save view as chart its named families (TASK-M2-61): documented in the module itself.
 pub mod path;

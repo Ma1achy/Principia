@@ -50,7 +50,7 @@ pub(crate) fn slice(plane: &Plane, d: &Latent, t: f64) -> Result<SetField, NavEr
 /// The factor `2^−octaves` of a zoom by `octaves`; [`NavError::DegeneratePlane`] where it is 0 or not finite.
 pub(crate) fn octave_factor(octaves: f64) -> Result<f64, NavError> {
     finite(&[octaves])?;
-    factor(&(-octaves).exp2())
+    factor(&crate::exact::exp2(-octaves))
 }
 
 /// `k` itself where it is a factor a zoom can take: finite and not 0.
@@ -111,7 +111,7 @@ fn angle(tau_deg: f64) -> Result<(f64, f64), NavError> {
     if !(-90.0..=90.0).contains(&tau_deg) {
         return Err(NavError::TauOutOfRange);
     }
-    let (sin, cos) = tau_deg.to_radians().sin_cos();
+    let (sin, cos) = crate::exact::sin_cos(tau_deg.to_radians());
     Ok((cos, sin))
 }
 

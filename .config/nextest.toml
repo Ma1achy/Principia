@@ -375,7 +375,10 @@ default-filter = """
     | binary_id(=validation::qa_TASK-M2-25_gpu)
     | binary_id(=xtask::qa_TASK-M0-14)
     | binary_id(=xtask::fragment_wgsl)
+    | binary_id(=engine::path_bitwise)
 """
+# Beyond gpu-kernel's list, `engine::path_bitwise`, no GPU test: the chart path's digests bit for bit against the
+# baseline recorded on Linux, so the same bits are checked on Windows too; the `ci` profile runs it on Linux.
 
 # The three measurements gpu-kernel shows on success, shown here too, so the card's numbers stay in its log.
 [[profile.win-gpu-kernel.overrides]]
