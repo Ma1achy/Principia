@@ -1,4 +1,4 @@
-//! The fragment words' generated layout (`kernel::generated::fragment_words`, from `ledger::fragment`; TASK-M2-25)
+//! The fragment words' generated layout (`kernel::generated::fragment_words`, from `ledger::fragment`)
 //! against the kernel's own types: each part as long as what the entry point writes there.
 
 use kernel::generated::fragment_words::*;

@@ -1,9 +1,9 @@
-//! qa's tests for TASK-M2-37, chart_reference §2.1's floor at its two far ends, "the floor is the least normal float
+//! qa's tests for chart_reference §2.1's floor at its two far ends, "the floor is the least normal float
 //! §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded, raised one float where it rounded
 //! below, and never subnormal" and "a held `L_z` whose `L_z²` has no finite float at the chart's own precision has no
 //! floor, and every pixel of that chart is not a system, §2.2's exact test labelling it and `validate` agreeing at that
 //! precision". Written from that paragraph; the floats are recomputed exactly, not by the code under test. Each test
-//! has its negative control (R-176).
+//! has its negative control.
 //!
 //! - `qa_energy_axes_warped_floor_exact_f32` and `_f64`: the floor against an exact oracle: `f64` holds an `f32`'s
 //!   square exactly, and `BigUint` an `f64`'s, over a stride of every binade and the floats around the square's underflow
@@ -15,7 +15,8 @@
 //! - `qa_energy_axes_warped_floor_no_value`: a held `L_z` that is no number has no floor either: every axis refuses
 //!   every pixel, at both precisions, with no panic. Control: a finite spin, a system at every pixel.
 //!
-//! **Values.** `K_max` and `γ_K` are REQ-CHART-044's placeholders (R-71). Every slice, range and held value is test data.
+//! **Values.** `K_max` and `γ_K` are the invariant-chart warp's placeholder defaults, not calibrated ones. Every
+//! slice, range and held value is test data.
 
 use kernel::chart::energy::{Mapping, Quantity};
 use kernel::chart::invariant::{k_floor, WarpReal};

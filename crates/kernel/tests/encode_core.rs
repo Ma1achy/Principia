@@ -1,27 +1,25 @@
-//! Encode `E = (block inverses) ∘ C` on the CPU, at f64 and f32, the one source's two instantiations (`kernel::encode`;
-//! TASK-M2-15). The GPU-f32 build's checks are `engine/tests/encode_gpu.rs`.
+//! Encode `E = (block inverses) ∘ C` on the CPU, at f64 and f32, the one source's two instantiations
+//! (`kernel::encode`). The GPU-f32 build's checks are `engine/tests/encode_gpu.rs`.
 //! - `encode_block_inverses`: forward substituted into inverse for fuzzed interior `z`, under the default links and
 //!   under a second selection: the Jacobi map, `α` and `β` recover the decoder's own, and each block recovers its `z`;
-//!   a `|q| > q_max` input sets `lookup_clamped` (REQ-ENC-007).
+//!   a `|q| > q_max` input sets `lookup_clamped`.
 //! - `encode_clamp_edges`: each control's clamp bit at its edge, one step either side, for every link of both
-//!   selections; a clamped input's `z` is the clamp's image; the simplex corner gives no NaN (REQ-ENC-007, REQ-ENC-014).
-//! - `encode_collinear_beta`: dd_encode §5 test 10 (R-438) at the Euler landmarks, `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`,
-//!   and the pole landmark on its own (REQ-ENC-007).
-//! - `encode_t1_gauge`: dd_encode §5 test 2, T1 as the equivariance (R-865): `E(g·x) = E(x)` over random `g` per
-//!   §3.3, the mirrored `E(x)` where `g` mirrors, on interior states, across the `λ̃_y = 0` seam, and the old tie twice
-//!   (REQ-ENC-003). *Was:* "`E(g·x) = E(x)` over random `g` per §3.3, deadband states under turns, and the mirror tie
-//!   twice".
-//! - `encode_t1_full_state_mirror`: `E(Π·x)` is the mirrored `E(x)` with `Π` on every `rᵢ` and `pᵢ` (REQ-ENC-003,
-//!   REQ-DEC-016).
-//! - `encode_notices`: canonical inputs raise no notice, `lookup_rescaled` included (step 0 skipped within `τ_I`,
-//!   R-547); each operation forced alone raises exactly its own, `lookup_rescaled` with its `λ` (REQ-ENC-014).
+//!   selections; a clamped input's `z` is the clamp's image; the simplex corner gives no NaN.
+//! - `encode_collinear_beta`: dd_encode §5 test 10 at the Euler landmarks, `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, and
+//!   the pole landmark on its own.
+//! - `encode_t1_gauge`: dd_encode §5 test 2, T1 as the equivariance: `E(g·x) = E(x)` over random `g` per §3.3,
+//!   the mirrored `E(x)` where `g` mirrors, on interior states, across the `λ̃_y = 0` seam, and the old tie twice.
+//! - `encode_t1_full_state_mirror`: `E(Π·x)` is the mirrored `E(x)` with `Π` on every `rᵢ` and `pᵢ`.
+//! - `encode_notices`: canonical inputs raise no notice, `lookup_rescaled` included (step 0 skipped within `τ_I`);
+//!   each operation forced alone raises exactly its own, `lookup_rescaled` with its `λ`.
 //! - `stage_encode_native`: the compute entry points `kernel::stage::encode::{encode, beta}`, called natively, write
 //!   each sample's encode and `β` in their word layout, and nothing past the last sample.
 //!
-//! **Tolerances** (applied per R-369: a test decision, as dd_decoder §5 test 1's "precision-appropriate tolerance"),
-//! each a multiple of the precision's epsilon, set from the worst case these tests measure and print, with headroom.
+//! **Tolerances.** The plan is unclear here (dd_decoder §5 test 1 asks only for a "precision-appropriate tolerance");
+//! chose each a multiple of the precision's epsilon, set from the worst case these tests measure and print, with
+//! headroom.
 //! `z` is compared only on the interior, `|z| ≤ 4`, where `d logit/ds` and `d artanh/dt` are bounded (dd_encode §3.5).
-//! `ε_phys` (REQ-ENC-024) is not yet calibrated; test 10's "within `ε_phys`" components are held to a multiple of the
+//! `ε_phys` is not yet calibrated; test 10's "within `ε_phys`" components are held to a multiple of the
 //! precision's epsilon, tighter than any round-trip tolerance over interior `z`.
 //!
 //! **Domain** (pitfalls §10): encode alone, on states held fixed; no trajectory.
@@ -134,7 +132,7 @@ fn out_bits<R: P>(e: &Encoded<R>) -> Vec<u64> {
 /// The interior span of the fuzzed controls: `|z| ≤ 4`, inside every clamp (the module's note).
 const SPAN: f64 = 4.0;
 
-// ── encode_block_inverses (REQ-ENC-007) ─────────────────────────────────────────────────────────────────────────
+// ── encode_block_inverses ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// The worst errors of the forward-into-inverse check, in eps: the Jacobi map, `α` and `β`, then `z`'s config,
 /// momentum and mass blocks.
@@ -159,8 +157,8 @@ fn err<R: P>(a: R, b: R, scale: f64) -> f64 {
     (a.f() - b.f()).abs() / (scale * R::eps())
 }
 
-/// [`err`] on the circle: `a − b` reduced by whole periods `2π̂` first, `z_β` and `z_β + 2π` being one state (R-898),
-/// the decoder's `z_β` anywhere on the line and the encode's representative in `[−π̂/2, 3π̂/2]` (R-1020).
+/// [`err`] on the circle: `a − b` reduced by whole periods `2π̂` first, `z_β` and `z_β + 2π` being one state, the
+/// decoder's `z_β` anywhere on the line and the encode's representative in `[−π̂/2, 3π̂/2]`.
 fn circ_err<R: P>(a: R, b: R, scale: f64) -> f64 {
     let t = (R::LIT_7 + R::LIT_7).f();
     let d = a.f() - b.f();
@@ -389,7 +387,7 @@ negative_control!(
     }
 );
 
-// ── encode_clamp_edges (REQ-ENC-007, REQ-ENC-014) ───────────────────────────────────────────────────────────────
+// ── encode_clamp_edges ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// `L`'s clamp bit at the ends of the range the decode reaches, `lo` and `hi`, and one step past each: clear on the
 /// range, set past it, at the codomain's ends and at a NaN. And the bit agrees with the inverse's own clamp outside a
@@ -449,10 +447,10 @@ where
     (lo, hi)
 }
 
-/// `periodic_beta`, `β`'s one link since TASK-M2-57 (R-919 Q1 (c)): the offset `β = z_β + c`, `c = π̂/2` (R-1020), its
-/// inverse `β − c` and its forward `z_β + c` each one rounding at `R`, with no clamp on the period `[0, 2π̂]` the
-/// encode's `β` lies in, its ends included; outside it, and at a NaN, the bit is set, which the encode's `β` never
-/// reaches. At the landmarks the offset is exact: `0 ↦ −c`, `π̂ ↦ c` and back.
+/// `periodic_beta`, `β`'s one link: the offset `β = z_β + c`, `c = π̂/2`, its inverse `β − c` and its forward `z_β + c`
+/// each one rounding at `R`, with no clamp on the period `[0, 2π̂]` the encode's `β` lies in, its ends included; outside
+/// it, and at a NaN, the bit is set, which the encode's `β` never reaches. At the landmarks the offset is exact:
+/// `0 ↦ −c`, `π̂ ↦ c` and back.
 fn check_periodic<R: P>() {
     let (a, b) = <Beta as Ends>::ends::<R>();
     let c = R::LIT_7 / (R::one() + R::one());
@@ -502,8 +500,8 @@ fn edges_at<R: P>() {
     check_edges::<SoftsignQ, R>("softsign_q");
 }
 
-/// The ends the codomains give: `α`'s `α_min` and the registry's `π/2`, `β`'s one period, 0 and `2π̂` (R-898; *was:*
-/// "0 and `π̂`"), the momenta's `±q_max`.
+/// The ends the codomains give: `α`'s `α_min` and the registry's `π/2`, `β`'s one period, 0 and `2π̂`, the momenta's
+/// `±q_max`.
 fn check_ends<R: P>() {
     let pi = R::LIT_7;
     let cases = [
@@ -774,7 +772,7 @@ negative_control!(
     }
 );
 
-// ── encode_collinear_beta (REQ-ENC-007; dd_encode §5 test 10, R-438) ────────────────────────────────────────────
+// ── encode_collinear_beta (dd_encode §5 test 10) ─────────────────────────────────────────────────────────────────
 
 /// The collinear central configuration with bodies `order = [left, middle, right]` on the x axis under masses `m`:
 /// the middle body's place `t ∈ (0, 1)` between the outer ones at 0 and 1, by bisection on Euler's condition that each
@@ -863,11 +861,10 @@ struct RoundTrip {
 const ROUND_TRIP_EPS: f64 = 64.0;
 
 /// Test 10 at one landmark off the pole: `ρ̃`, `λ̃_x` of the landmark at `I = 1`, body 2's `side` the sign of `λ̃_x`.
-/// Under the signed encode (dd_encode §3.2; R-865, R-898): `±0` give `π̂` (side `−x`) or `+0` (`+x`) exactly by the
-/// selects; `+1e-13` a `β` just above 0 or just below π, `−1e-13` one just below `2π̂` or just above π, never near
-/// `−π`; `z_β` is `β − π̂/2` (R-1020's offset link, one rounding) and nothing is clamped; and `decode(encode(x))` keeps the side and `λ̃` within rounding,
-/// `λ̃_y`'s sign wherever `|λ̃_y|` is past that rounding, the rest within rounding. *Was (TASK-M2-57):* the four inputs
-/// encoded to one `z` with `lookup_clamped`, `λ̃_y` folded by `|λ̃_y|` (R-438).
+/// Under the signed encode (dd_encode §3.2): `±0` give `π̂` (side `−x`) or `+0` (`+x`) exactly by the selects; `+1e-13`
+/// a `β` just above 0 or just below π, `−1e-13` one just below `2π̂` or just above π, never near `−π`; `z_β` is
+/// `β − π̂/2` (the offset link, one rounding) and nothing is clamped; and `decode(encode(x))` keeps the side and `λ̃`
+/// within rounding, `λ̃_y`'s sign wherever `|λ̃_y|` is past that rounding, the rest within rounding.
 fn check_landmark<R: P>(
     m: [f64; 3],
     rho_t: [f64; 2],
@@ -916,7 +913,7 @@ fn check_landmark<R: P>(
                 );
             }
         }
-        // `z_β = β − c` under the offset link, `c = π̂/2` (R-1020), one rounding.
+        // `z_β = β − c` under the offset link, `c = π̂/2`, one rounding.
         let c = R::LIT_7 / (R::one() + R::one());
         assert_eq!(
             e.z.z[1].bits(),
@@ -972,10 +969,10 @@ fn check_landmark<R: P>(
 
 /// Test 10's pole landmark on its own: `m₀ = m₁`, body 2 in the middle, at the inner pair's centre of mass, so `λ̃ = 0`
 /// exactly. `λ̃_y = ±0` gives `β = 0` by the select; `λ̃_y = +1e-13` with `λ̃_x = 0` gives `β = π/2` as `atan2`
-/// computes it at the precision, and `−1e-13` the lower half's `−π/2 + 2π̂` (the signed encode, R-865); each sets
+/// computes it at the precision, and `−1e-13` the lower half's `−π/2 + 2π̂` (the signed encode); each sets
 /// `lookup_clamped` (`α` at its pole), gives no NaN, and the same bits twice.
 ///
-/// The masses are `(¼, ¼, ½)` (applied per R-369, a test decision): every product `C` and the Jacobi map form of a
+/// The masses are `(¼, ¼, ½)`: every product `C` and the Jacobi map form of a
 /// mass and a coordinate is then exact, so `C`'s CoM is 0 and `λ̃_x` stays exactly 0 through the encode. With masses
 /// such as `(0.3, 0.3, 0.4)`, `C`'s `fma` CoM leaves a residual of about `1e-17` in `λ̃_x`, and `β = atan2(1e-13, 1e-17)`
 /// is `π/2` only to about `1e-4`, `β` being ill-conditioned at the pole: the landmark is no longer on it.
@@ -1016,7 +1013,7 @@ fn check_pole<R: P>() {
             "the pole encodes differently twice at {at}"
         );
     }
-    // `β` at `λ̃ = 0` itself, each sign of each zero: 0 by the select (R-437), never `atan2(+0, −0) = π`.
+    // `β` at `λ̃ = 0` itself, each sign of each zero: 0 by the select, never `atan2(+0, −0) = π`.
     for lambda_t in [
         [R::zero(), R::zero()],
         [-R::zero(), R::zero()],
@@ -1060,11 +1057,10 @@ fn collinear_at<R: P>() -> RoundTrip {
 
 /// Just off the `−x` half-axis, `λ̃_y = ±1e-13` and `±1e-9`: the true `β` is within `10⁻¹³` of π, which a
 /// round-to-nearest f32 `atan2` returns as f32's nearest π, above `π̂`; above the axis `β` is then `π̂` by the select,
-/// never above it (C8/Q5; dd_encode §3.1); below it, the lower half's `atan2(λ̃_y, λ̃_x) + 2π̂` (the signed encode,
-/// R-865; *was:* "at either sign of `λ̃_y`", `β` reading `|λ̃_y|`). glibc's `atan2f` returns f32's π here; Apple's returns `π̂`, so on
-/// macOS the select is not reached and this checks only the bound. At f64, `π̂` is f64's nearest π, which `atan2` never
-/// exceeds. Below
-/// `π̂`, as at `λ̃_y = 1e-6`, `β` is `atan2`'s own value.
+/// never above it (C8/Q5; dd_encode §3.1); below it, the lower half's `atan2(λ̃_y, λ̃_x) + 2π̂` (the signed encode).
+/// glibc's `atan2f` returns f32's π here; Apple's returns `π̂`, so on macOS the select is not reached and this checks
+/// only the bound. At f64, `π̂` is f64's nearest π, which `atan2` never exceeds. Below `π̂`, as at `λ̃_y = 1e-6`, `β`
+/// is `atan2`'s own value.
 fn check_near_half_axis<R: P>() {
     let pi = R::LIT_7;
     for (x, y) in [
@@ -1125,7 +1121,7 @@ negative_control!(
     }
 );
 
-// ── encode_t1_gauge (REQ-ENC-003; dd_encode §5 test 2, §3.3) ────────────────────────────────────────────────────
+// ── encode_t1_gauge (dd_encode §5 test 2, §3.3) ─────────────────────────────────────────────────────────────────
 
 /// `β`'s period at `R`, `2π̂`.
 fn tau<R: P>() -> f64 {
@@ -1133,7 +1129,7 @@ fn tau<R: P>() -> f64 {
 }
 
 /// `|a − b|` over `z`, each control's difference over `1 + |b|`, in eps; `z_β`'s on the circle, the difference reduced
-/// by whole periods `2π̂` (R-898: `z_β` and `z_β + 2π` are one state).
+/// by whole periods `2π̂` (`z_β` and `z_β + 2π` are one state).
 fn z_gap_to<R: P>(a: &[R; 8], b: &[R; 8]) -> f64 {
     let t = tau::<R>();
     a.iter()
@@ -1149,9 +1145,9 @@ fn z_gap_to<R: P>(a: &[R; 8], b: &[R; 8]) -> f64 {
         .fold(0.0, worse)
 }
 
-/// The mirrored `z` (dd_encode §3.3, R-865, R-1020): `z_β → π̂ − z_β` under the offset link (`β → 2π − β`, and
+/// The mirrored `z` (dd_encode §3.3): `z_β → π̂ − z_β` under the offset link (`β → 2π − β`, and
 /// `2c = π̂`), compared on the circle, the momentum controls of `p_ρ,y` and `p_λ,y` (`z_q1`, `z_q3`) negated, every
-/// other control as it is. *Was (14 Nov 2026, the identity link):* "`z_β → 2π̂ − z_β`".
+/// other control as it is.
 fn mirrored<R: P>(z: &[R; 8]) -> [R; 8] {
     let mut out = *z;
     out[1] = R::LIT_7 - z[1];
@@ -1181,7 +1177,7 @@ fn kappa(g: &Gauge) -> f64 {
 type Enc<R> = fn(&Ic<R>) -> Encoded<R>;
 
 /// T1 on one state and one `g`, under the encode `enc`: `E(g·x)` agrees with `E(x)`, or with the mirrored `E(x)`
-/// where `g` mirrors (the equivariance, R-865), to [`T1_EPS`] times `g`'s [`kappa`]; `λ` scales as `1/s`. Returns the
+/// where `g` mirrors (the equivariance), to [`T1_EPS`] times `g`'s [`kappa`]; `λ` scales as `1/s`. Returns the
 /// `z` gap over `κ`, in eps.
 fn check_t1<R: P>(enc: Enc<R>, x: &Ic<f64>, g: &Gauge) -> f64 {
     let ex = enc(&ic_of(x));
@@ -1258,8 +1254,7 @@ fn t1_seam(seed: u64) -> f64 {
 
 /// The old tie, at each precision: masses `(¼, ¼, ½)`, `r₀ = r₁ = (−1, a)`, `r₂ = (1, −a)`, at rest, so that `λ̃_y`
 /// is `−a` exactly and body 2 on the `+x` side: at `a = ±δ_λ` and one step past, the encode keeps `λ̃_y`'s side, `β`
-/// just below `2π̂` where `λ̃_y < 0` and just above 0 where `λ̃_y > 0`, the same bits twice. *Was (TASK-M2-57):* "at
-/// `a = δ_λ`, `λ̃_y = −δ_λ`, no mirror, the same bits twice; one step past, a mirror."
+/// just below `2π̂` where `λ̃_y < 0` and just above 0 where `λ̃_y > 0`, the same bits twice.
 fn check_tie<R: P>() {
     let tie = |a: R| -> Ic<R> {
         let (q, h, one) = (R::of(0.25), R::of(0.5), R::one());
@@ -1353,10 +1348,10 @@ negative_control!(
     })
 );
 
-// ── encode_notices (REQ-ENC-014) ────────────────────────────────────────────────────────────────────────────────
+// ── encode_notices ──────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The notices `e` raised: `(lookup_clamped, lookup_rescaled)`, and `λ`; `lookup_mirrored` is retired with the mirror
-/// step (R-865).
+/// The notices `e` raised: `(lookup_clamped, lookup_rescaled)`, and `λ`; there is no `lookup_mirrored`: the encode has
+/// no mirror step.
 fn raised<R: P>(e: &Encoded<R>) -> ((bool, bool), f64) {
     (
         (e.report.lookup_clamped(), e.report.lookup_rescaled()),
@@ -1365,7 +1360,7 @@ fn raised<R: P>(e: &Encoded<R>) -> ((bool, bool), f64) {
 }
 
 /// One forced operation's notices: `want`, `(lookup_clamped, lookup_rescaled)`, and `λ`, exactly 1
-/// where `lookup_rescaled` is not raised (step 0 skipped, R-547), else within 16 eps of `lambda`.
+/// where `lookup_rescaled` is not raised (step 0 skipped), else within 16 eps of `lambda`.
 fn check_notice<R: P>(name: &str, x: &Ic<R>, want: (bool, bool), lambda: f64) {
     let (got, l) = raised(&encode::<Defaults, R>(x));
     assert_eq!(
@@ -1416,7 +1411,7 @@ fn notices_at<R: P>(seed: u64) {
         mirror: true,
         ..Gauge::identity()
     };
-    // A mirrored state raises nothing: no mirror step, and bit 1 of the notices word never set (R-865).
+    // A mirrored state raises nothing: no mirror step, and bit 1 of the notices word never set.
     let lower = ic_of::<R>(&mirrored.act(&x));
     check_notice("mirrored", &lower, (false, false), 1.0);
     assert_eq!(
@@ -1550,7 +1545,7 @@ fn stage_encode_native() {
         p: [[0.0; 2]; 3],
     });
     check_stage(&states);
-    // The notices word's bits, and its round trip through the words; bit 1 never set (R-865).
+    // The notices word's bits, and its round trip through the words; bit 1 never set.
     for (coincident, rescaled, controls) in [
         (true, false, 0),
         (false, true, 0),

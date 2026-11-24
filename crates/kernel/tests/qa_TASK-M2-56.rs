@@ -1,21 +1,20 @@
-//! qa's tests for TASK-M2-56, written from REQ-CHART-149 (R-895, ruling RQ-746 (a); R-513 Q1 to Q3; R-474), each with
-//! its negative control (R-176).
+//! qa's tests for composing a new tilt with a saved one, written from the requirement, each with its negative
+//! control.
 //!
-//! REQ-CHART-149: a new tilt of a saved curved chart into its own saved target, the saved tilt Lean each axis with one
-//! target and both angles set, composes as R-513's `R·R′` literally, `R = [û₁ û₂ t̂]`, `t̂ = û₁ × û₂` normalised, its
-//! sign toward `+e_X`; at the edge of Lean's range (`|τ₁|` or `|τ₂|` = 90° with the other set) `t̂` takes the cross
-//! product's own sign; at `|τ₁| = |τ₂| = 90°` no composition is made; the saved target is offered (R-513 Q3).
+//! A new tilt of a saved curved chart into its own saved target, the saved tilt Lean each axis with one target and both
+//! angles set, composes as `R·R′` literally, `R = [û₁ û₂ t̂]`, `t̂ = û₁ × û₂` normalised, its sign toward `+e_X`; at
+//! the edge of Lean's range (`|τ₁|` or `|τ₂|` = 90° with the other set) `t̂` takes the cross product's own sign; at
+//! `|τ₁| = |τ₂| = 90°` no composition is made; the saved target is offered.
 //!
-//! Every expected placement is computed here from the rulings' words, never read from the kernel: Lean each axis's
+//! Every expected placement is computed here from the spec's words, never read from the kernel: Lean each axis's
 //! columns with one target `û₁ = (cos τ₁, 0, sin τ₁)`, `û₂ = (0, cos τ₂, sin τ₂)` in the scaled `(a, b, d̃_X)`
-//! (R-474 R2; chart_decoder_contract § "Tilt (basis edit)"), `t̂` their cross product normalised, `R′` the new tilt's
-//! own map, the hidden offset in units of its slider span (R-507 U1, R-513 Q2), each pixel's offset from the view's
-//! centre (R-473 J7). The decode is checked to be the parent's own at the placed `(a, b)` with the control moved by the
-//! placed offset, bit for bit.
+//! (chart_decoder_contract § "Tilt (basis edit)"), `t̂` their cross product normalised, `R′` the new tilt's own map,
+//! the hidden offset in units of its slider span, each pixel's offset from the view's centre. The decode is checked to
+//! be the parent's own at the placed `(a, b)` with the control moved by the placed offset, bit for bit.
 //!
-//! Tolerances: R-895's pixel is given to four decimals, so it is met to half a unit of the fourth, `5e-5`; the grid is
-//! met "to 1 ulp", read as `|got − want| ≤ ε·max(|want|, Σ|terms|)`, the terms the products the matrices sum, fixed
-//! before the run (R-649).
+//! Tolerances: the worked example's pixel is given to four decimals, so it is met to half a unit of the fourth, `5e-5`;
+//! the grid is met "to 1 ulp", read as `|got − want| ≤ ε·max(|want|, Σ|terms|)`, the terms the products the matrices
+//! sum, fixed before the run.
 
 use kernel::chart::saved::Saved;
 use kernel::chart::tilt::Hidden;
@@ -44,7 +43,7 @@ fn spec(tau1: f64, tau2: f64, map: TiltMap, x: u32, y: u32) -> TiltSpec {
     }
 }
 
-/// `(sin, cos)` of an angle in degrees, through the pinned libm the kernel's f64 path takes (R-991), so the reference
+/// `(sin, cos)` of an angle in degrees, through the pinned libm the kernel's f64 path takes, so the reference
 /// is the same on every machine.
 fn sc(deg: f64) -> (f64, f64) {
     let r = deg.to_radians();
@@ -107,8 +106,8 @@ fn dot(p: [f64; 3], q: [f64; 3]) -> f64 {
 /// How the saved Lean `R`'s third column is formed (the ruling, or a control).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Normal {
-    /// R-895: `û₁ × û₂` normalised, its sign toward `+e_X`; where its `e_X` entry is 0 in exact arithmetic (the edge),
-    /// the cross product's own sign.
+    /// The specified normal: `û₁ × û₂` normalised, its sign toward `+e_X`; where its `e_X` entry is 0 in exact
+    /// arithmetic (the edge), the cross product's own sign.
     Ruled,
     /// The opposite sign.
     Flipped,
@@ -147,7 +146,7 @@ fn r_tau2(t: f64) -> M3 {
     [[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]]
 }
 
-/// Tip as sheet, one target, both angles set (R-474 K1): Rodrigues' rotation by `m = √(τ₁² + τ₂²)` about
+/// Tip as sheet, one target, both angles set: Rodrigues' rotation by `m = √(τ₁² + τ₂²)` about
 /// `k = (τ₂ e_a − τ₁ e_b)/m`.
 fn r_sheet(t1: f64, t2: f64) -> M3 {
     let m = (t1 * t1 + t2 * t2).sqrt();
@@ -280,7 +279,7 @@ fn check_grid(saved: TiltSpec, new: New, how: Normal) {
     println!("saved {saved:?}, new {:?}: worst {worst} ulp", new.spec());
 }
 
-// ── R-895's pixel ───────────────────────────────────────────────────────────────────────────────────────────────────
+// ── The worked example's pixel ──────────────────────────────────────────────────────────────────────────────────────
 
 const SAVED: TiltSpec = TiltSpec {
     tau1: 30.0,
@@ -297,8 +296,8 @@ const NEW: TiltSpec = TiltSpec {
     y: X,
 };
 
-/// R-895's pixel: `(u, v) = (0.3, 0.7)` from the centre placed at `(Δa, Δb, d̃_X) = want` to the four decimals given,
-/// the other controls untouched, under either map for the single new angle (R-474 R2: a single angle is the same
+/// The worked example's pixel: `(u, v) = (0.3, 0.7)` from the centre placed at `(Δa, Δb, d̃_X) = want` to the four
+/// decimals given, the other controls untouched, under either map for the single new angle (a single angle is the same
 /// turn under both).
 fn check_pixel(want: [f64; 3]) {
     for map in [TiltMap::Sheet, TiltMap::Lean] {
@@ -403,7 +402,7 @@ negative_control!(
     check_edge(Normal::Flipped)
 );
 
-// ── RQ-471's corner: no composition ─────────────────────────────────────────────────────────────────────────────────
+// ── The corner `|τ₁| = |τ₂| = 90°`: no composition ──────────────────────────────────────────────────────────────────
 
 /// At `|τ₁| = |τ₂| = 90°` a new tilt into the saved target is not composed, alone or as one of two new targets.
 /// `near` moves the saved angles a hair off the corner, where a frame exists (the control).
@@ -465,8 +464,8 @@ negative_control!(
 
 // ── The fixtures separate the controls ──────────────────────────────────────────────────────────────────────────────
 
-/// Each control's `R` places some pixel of R-895's fixture, and of the edge's, far more than 1 ulp off the ruled one, so
-/// no control can pass by accident of the fixture. `rules` lists the controls checked.
+/// Each control's `R` places some pixel of the worked example's fixture, and of the edge's, far more than 1 ulp off
+/// the specified one, so no control can pass by accident of the fixture. `rules` lists the controls checked.
 fn check_separates(rules: &[Normal]) {
     for (t1, t2) in [(30.0, 40.0), (90.0, 40.0), (-50.0, -90.0)] {
         let ruled = r_lean(t1, t2, Normal::Ruled);

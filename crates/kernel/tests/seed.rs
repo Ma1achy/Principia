@@ -1,20 +1,21 @@
-//! The momentum seed (R-934, amending R-82; chart_reference §2.2, dd_decoder §2, §3.4; REQ-DEC-021, REQ-DEC-060).
+//! The momentum seed: the expansion `w = r/√I` in force, the largest-norm rule kept as a named legacy option
+//! (chart_reference §2.2, dd_decoder §2, §3.4).
 //!
-//! **`seed_selection`** (REQ-DEC-021): under the seed in force the construction takes the expansion `w = r/√I`
+//! **`seed_selection`**: under the seed in force the construction takes the expansion `w = r/√I`
 //! ([`construct_expansion`]) on every configuration, and `NO_QUALIFYING_SEED` is unreachable for `I > 0`, at every
-//! scale a float holds, subnormal positions included; under R-82's rule, the named legacy option, a fixture where
-//! several seeds qualify takes the largest, not the first, an exact tie the earlier, `ρ = 0` a fallback, not
+//! scale a float holds, subnormal positions included; under the largest-norm rule, the named legacy option, a fixture
+//! where several seeds qualify takes the largest, not the first, an exact tie the earlier, `ρ = 0` a fallback, not
 //! `DEGENERATE`, and `DEGENERATE` fires only where no seed has `‖w⁽²⁾‖²_m > ε_w`.
 //!
-//! **`seed_conversion`** (REQ-DEC-060): every chart image that runs the construction, the invariant charts, their
-//! linear option, the lone energy axes beside `α` and the Burrau family's `K` and `L_z` charts, starts every pixel from
-//! a homographic state `vᵢ = (ω·J + λ)·rᵢ`, `λ = a/√I ≥ 0`, which is `w = r/√I` read off the decoded `(m, r, p)` with no
-//! knowledge of the chart: the conversion each golden of these charts records. The seam measurement, on the kernel's
-//! `(L_z, E)` chart tilted toward `z_α` so the line `z_α = 0` crosses the window, is judged by the explanation identity,
-//! written before any run: every neighbouring pair of pixels, the pair across the line included, differs in decoded
-//! velocity by `‖Δv‖_m = √(2K*)·2 sin(|Δα|/2)`, the configuration's own motion, to a relative 10⁻⁹. The control is the
-//! same measurement under R-82's legacy rule, which must fail the identity at the pair across the line on every row
-//! (else the result is void); its jump there is predicted to be `2√(K* − K_min)` (printed beside it, no threshold
+//! **`seed_conversion`**: every chart image that runs the construction, the invariant charts, their linear option, the
+//! lone energy axes beside `α` and the Burrau family's `K` and `L_z` charts, starts every pixel from a homographic
+//! state `vᵢ = (ω·J + λ)·rᵢ`, `λ = a/√I ≥ 0`, which is `w = r/√I` read off the decoded `(m, r, p)` with no knowledge of
+//! the chart: the conversion each golden of these charts records. The seam measurement, on the kernel's `(L_z, E)`
+//! chart tilted toward `z_α` so the line `z_α = 0` crosses the window, is judged by the explanation identity, written
+//! before any run: every neighbouring pair of pixels, the pair across the line included, differs in decoded velocity by
+//! `‖Δv‖_m = √(2K*)·2 sin(|Δα|/2)`, the configuration's own motion, to a relative 10⁻⁹. The control is the same
+//! measurement under the legacy largest-norm rule, which must fail the identity at the pair across the line on every
+//! row (else the result is void); its jump there is predicted to be `2√(K* − K_min)` (printed beside it, no threshold
 //! reading it). The criterion first written, no pair across the line differing by more than the largest neighbouring
 //! difference within 8 pixels of it on either side, is still printed and judges nothing: it does not hold though there
 //! is no seam, an explained divergence, the step across the line being `1 + h²/4` times its neighbours at `h = 1/64`
@@ -23,7 +24,7 @@
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory. Every loop is over a fixed grid.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176, R-212).
+//! Each test has a registered negative control naming the panic it expects.
 
 use std::f64::consts::FRAC_PI_4;
 
@@ -459,7 +460,7 @@ negative_control!(
 
 // ── seed_selection_legacy ───────────────────────────────────────────────────────────────────────────────────────
 
-/// R-82's legacy rule, the named option (REQ-DEC-021's clauses): `rule` on the seeds' norms. Several qualify: a decoded
+/// The legacy largest-norm rule, the named option: `rule` on the seeds' norms. Several qualify: a decoded
 /// configuration at `α > π/4` (`z_α = 1`), where every norm is above `ε_w` and `(0, λ)` is the largest, takes it, not
 /// the first; an exact tie keeps the earlier seed; `ρ = 0` takes a fallback, not `DEGENERATE`; and over scales down
 /// to all-zero positions, `DEGENERATE` fires exactly where no norm is above `ε_w`.
@@ -556,7 +557,7 @@ fn seed_selection_legacy() {
     check_legacy(choose::<f64>);
 }
 
-/// The first seed above `ε_w`, in seed order: not R-82's rule.
+/// The first seed above `ε_w`, in seed order: not the largest-norm rule.
 #[cfg(feature = "controls")]
 fn first(norms: [f64; 4]) -> Option<Seed> {
     let seeds = [Seed::Rho, Seed::Lambda, Seed::JRho, Seed::JLambda];
@@ -576,7 +577,7 @@ negative_control!(
 mod legacy_tie {
     use super::*;
 
-    /// The largest, an exact tie taking the later seed: not R-82's rule.
+    /// The largest, an exact tie taking the later seed: not the legacy rule, which keeps the earlier.
     fn later(norms: [f64; 4]) -> Option<Seed> {
         let seeds = [Seed::Rho, Seed::Lambda, Seed::JRho, Seed::JLambda];
         let eps = <f64 as ChartConstants>::EPS_W;
@@ -601,7 +602,7 @@ mod legacy_tie {
 mod legacy_fallback {
     use super::*;
 
-    /// The primary seed or none: not R-82's rule.
+    /// The primary seed or none: not the largest-norm rule.
     fn primary(norms: [f64; 4]) -> Option<Seed> {
         let largest = choose(norms);
         (norms[0] > <f64 as ChartConstants>::EPS_W).then_some(largest?)
@@ -619,7 +620,7 @@ mod legacy_fallback {
 mod legacy_threshold {
     use super::*;
 
-    /// The rule at a threshold of 0 in place of `ε_w`: not R-82's rule.
+    /// The rule at a threshold of 0 in place of `ε_w`: not the largest-norm rule.
     fn any(norms: [f64; 4]) -> Option<Seed> {
         let shifted = norms.map(|n| n + <f64 as ChartConstants>::EPS_W);
         choose(shifted).filter(|_| norms.iter().any(|n| *n > 0.0))
@@ -908,8 +909,8 @@ negative_control!(
 /// A construction with its seed named: masses, configuration, seed, `L_z`, `K*`.
 type Named = fn(&Masses<f64>, &Config<f64>, Seed, f64, f64) -> Construction<f64>;
 
-/// R-82's legacy option, each seed named: `build` at each of the four takes that seed, feasible, and the four `w`
-/// differ pairwise, on a decoded configuration where all four qualify.
+/// The legacy largest-norm option, each seed named: `build` at each of the four takes that seed, feasible, and the four
+/// `w` differ pairwise, on a decoded configuration where all four qualify.
 fn check_legacy_seeds(build: Named) {
     let (masses, config) = decoded::<f64>([0.3, -0.5, 0.2, 0.1]);
     let seeds = [Seed::Rho, Seed::Lambda, Seed::JRho, Seed::JLambda];
@@ -958,8 +959,8 @@ negative_control!(
 
 // ── seed_selection_legacy_chart ─────────────────────────────────────────────────────────────────────────────────
 
-/// The `(L_z, E)` chart's decode under `seeding` at the decode preset's pin is R-82's legacy construction, decided on
-/// the pin's `z_α`, on a grid where `K* > K_min`.
+/// The `(L_z, E)` chart's decode under `seeding` at the decode preset's pin is the legacy largest-norm construction,
+/// decided on the pin's `z_α`, on a grid where `K* > K_min`.
 fn check_legacy_chart(seeding: Seeding) {
     let le = InvariantLE(invariant_at::<f64>(PINS[1]));
     let mut counted = 0;
@@ -1193,8 +1194,8 @@ fn seed_conversion_charts() {
 }
 
 #[cfg(feature = "controls")]
-/// The images under R-82's legacy rule, the named option: the `(L_z, E)` chart at the decode preset's pin and the
-/// `(ν, K)` chart across `ν = 1/3`.
+/// The images under the legacy largest-norm rule, the named option: the `(L_z, E)` chart at the decode preset's pin and
+/// the `(ν, K)` chart across `ν = 1/3`.
 fn legacy_images() -> Vec<Image> {
     let le = InvariantLE(invariant_at::<f64>(PINS[1]));
     let nu_k = Burrau {

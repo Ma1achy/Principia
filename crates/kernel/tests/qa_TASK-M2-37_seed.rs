@@ -1,9 +1,8 @@
-//! qa's tests for TASK-M2-37, fix round 4: the warped mass ratio's range when the slice centre's own ratio is not
+//! qa's tests for the warped mass ratio's range when the slice centre's own ratio is not
 //! realised (chart_reference §2.1: "Warped, `q(t) = q₀·(q₁/q₀)^t`, geometric, over `[q₀, q₁]`: the part of the asked range
 //! the link realises at `m_c` and at its active parameters", "A ratio is realised when the link's inverse followed by
 //! its forward returns its masses `(m_a, m_b, m_c)`, `m_c` at its held value, each to within `ε_μ`, relative"). Written
-//! from that paragraph, the realised set scanned by an oracle of the test's own; each test has its negative control
-//! (R-176).
+//! from that paragraph, the realised set scanned by an oracle of the test's own; each test has its negative control.
 //!
 //! The slices reach the clamps: mass controls `{±10, ±4, ±1.5, 0}²` beside a fixed `z_β` slice, every ordered body
 //! pair, under `softmax_tanh` at both ends of `μ_max`'s allowed range and at its default, and under `stick_breaking`,
@@ -11,7 +10,7 @@
 //!
 //! - `qa_seed_offers_a_realised_range`: an asked range holding a realised interval at least 0.2 wide in `ln q` has a
 //!   chart. Control: a build that gives up on an unrealised centre. A narrower interval is not asserted: a chart over
-//!   it is of no use, and REQ-CHART-070 lets a chart be refused.
+//!   it is of no use, and a chart may be refused (no chart offers an axis whose warp is not written).
 //! - `qa_seed_range_is_the_realised_part`: a ratio of the asked range the oracle finds realised is inside the warped
 //!   chart's `[q₀, q₁]`, and `[q₀, q₁]` lies inside the asked range. Control: a range cut short.
 //! - `qa_seed_every_pixel`: each of 65 rows validates and decodes the three masses of `q(t)` at the held `m_c`, each to

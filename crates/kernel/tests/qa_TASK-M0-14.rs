@@ -1,9 +1,8 @@
-//! QA tests for TASK-M0-14, written from REQ-PAY-017 ("the payload width must be a function of the Real type, never
-//! hardcoded to f32"; verify: instantiate for f32 and f64 and the DoubleF64 stub row, widths derive from
-//! `size_of::<Real>()`, layout generated per precision) and REQ-PAY-087's definition in dd_simstate_payload §1 ("The
-//! payload as a function of `Real`", "The f64 layout", "The DoubleF64 stub row"), with R-86 (padding declared, never
-//! implicit). Every offset and size below is §1's text, not the generated file's. Each test registers a negative
-//! control (R-176).
+//! QA tests for the payload's width, written from the requirement ("the payload width must be a function of the Real
+//! type, never hardcoded to f32"; verify: instantiate for f32 and f64 and the DoubleF64 stub row, widths derive from
+//! `size_of::<Real>()`, layout generated per precision) and its definition in dd_simstate_payload §1 ("The payload as
+//! a function of `Real`", "The f64 layout", "The DoubleF64 stub row"), with padding declared, never implicit. Every
+//! offset and size below is §1's text, not the generated file's. Each test registers a negative control.
 
 use std::any::TypeId;
 use std::mem::{align_of, offset_of, size_of, size_of_val};
@@ -77,14 +76,10 @@ fn base_layout<R: PayloadReal>() -> (Vec<(&'static str, usize)>, usize, usize) {
     (offsets, size_of::<S<R>>(), align_of::<S<R>>())
 }
 
-/// dd_simstate_payload §1's f32 `SimStateFTLE` (the WGSL block: 48 + 48 + 16 + 8 + 12 + 4 + 8 + 8 + 4 + 12 + 8 = 176 B
-/// with the re-boot's `_dmin_d2` and `_march_bits` at 168 and 172, TASK-M3-21; 168 B before them,
-/// with the budget word and the regularised drift at 136 and 140, TASK-M3-41, the rest 8 B later than the 160 B form
-/// before them, which was
-/// aligned to 8, the last 16 B the collision floor's record, `coll_floor_bits` at 144, §1's recheck on the collision
-/// floor's record, R-973, TASK-M3-71, and the escape rule's lagged n̂ register, `_nhat_lag_0..2` at 148, 152 and 156,
-/// three Reals in place of the 4 B of padding that stood at 148, TASK-M3-12; 152 B before the register, 144 B before
-/// the record).
+/// dd_simstate_payload §1's f32 `SimStateFTLE` (the WGSL block: 48 + 48 + 16 + 8 + 12 + 4 + 8 + 8 + 4 + 12 + 8 = 176 B,
+/// aligned to 8): the budget word and the regularised drift at 136 and 140, the collision floor's record
+/// `coll_floor_bits` at 152, the escape rule's lagged n̂ register `_nhat_lag_0..2` at 156, 160 and 164, and the
+/// re-boot's `_dmin_d2` and `_march_bits` at 168 and 172.
 const FTLE_F32: ([usize; 25], usize, usize) = (
     [
         0, 24, 48, 72, 96, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 148, 150,
@@ -93,9 +88,8 @@ const FTLE_F32: ([usize; 25], usize, usize) = (
     176,
     8,
 );
-/// §1's f32 `SimStateBase`: the same less the 48 B shadow, 128 B with the re-boot's two u32s at 120 and 124 (120 B
-/// before them; 112 B before the two words, with `_nhat_lag_0..2` at 100,
-/// 104 and 108; 104 B before the lagged register, 96 B before the collision floor's record).
+/// §1's f32 `SimStateBase`: the same less the 48 B shadow, 128 B: `coll_floor_bits` at 104, `_nhat_lag_0..2` at 108,
+/// 112 and 116, the re-boot's two u32s at 120 and 124.
 const BASE_F32: ([usize; 23], usize, usize) = (
     [
         0, 24, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84, 88, 92, 96, 100, 102, 104, 108, 112, 116,
@@ -104,12 +98,10 @@ const BASE_F32: ([usize; 23], usize, usize) = (
     128,
     8,
 );
-/// §1 "The f64 layout": `SimStateFTLE` at `r` 0 … `budget_bits` 256, `dE_reg` 260 (TASK-M3-41), `_reserved` 274,
-/// `coll_floor_bits` 276, ending on the 8 B boundary at 280, the lagged register at 280, 288 and 296, the struct
-/// 304 B with an empty `_tail` (296 B before the two words: `_reserved` 266, `coll_floor_bits` 268, which ends on the 8 B
-/// boundary at 272, so the lagged register's three f64s follow it with no hole, `_nhat_lag_0..2` at 272, 280 and 288,
-/// and the struct ends at 296 B, aligned to 8, with an empty `_tail` (280 B with `_pad` at 272 and a 4 B `_tail` at
-/// 276 before the register; 272 B before the collision floor's record).
+/// §1 "The f64 layout": `SimStateFTLE` at `r` 0 … `budget_bits` 256, `dE_reg` 260, `_reserved` 274,
+/// `coll_floor_bits` 276, which ends on the 8 B boundary at 280, so the lagged register's three f64s follow it with no
+/// hole, `_nhat_lag_0..2` at 280, 288 and 296; the re-boot's two u32s at 304 and 308, and the struct 312 B, aligned to
+/// 8, with an empty `_tail`.
 const FTLE_F64: ([usize; 25], usize, usize) = (
     [
         0, 48, 96, 144, 192, 200, 208, 216, 224, 232, 240, 244, 248, 252, 256, 260, 264, 272, 274,
@@ -118,10 +110,9 @@ const FTLE_F64: ([usize; 25], usize, usize) = (
     312,
     8,
 );
-/// §1 "The f64 layout": `SimStateBase` "the same less `r_sh` and `p_sh`, 96 B earlier from `S`": 208 B with the two
-/// words at 160 and 164 (TASK-M3-41; before them `coll_floor_bits`
-/// at 172, `_nhat_lag_0..2` at 176, 184 and 192, 200 B with an empty `_tail` (184 B with a 4 B `_tail` at 180 before
-/// the lagged register; 176 B before the collision floor's record).
+/// §1 "The f64 layout": `SimStateBase` "the same less `r_sh` and `p_sh`, 96 B earlier from `S`": 216 B, the budget
+/// word and the regularised drift at 160 and 164, `coll_floor_bits` at 180, `_nhat_lag_0..2` at 184, 192 and 200, the
+/// re-boot's two u32s at 208 and 212, and an empty `_tail`.
 const BASE_F64: ([usize; 23], usize, usize) = (
     [
         0, 48, 96, 104, 112, 120, 128, 136, 144, 148, 152, 156, 160, 164, 168, 176, 178, 180, 184,
@@ -146,7 +137,7 @@ fn check_layout<const N: usize>(
     );
 }
 
-/// REQ-PAY-087 / REQ-PAY-017: every member offset, the size and the alignment of both structs at f32 (§1's WGSL
+/// Every member offset, the size and the alignment of both structs at f32 (§1's WGSL
 /// block, unchanged by genericity) and at f64 (§1 "The f64 layout").
 #[test]
 fn qa_payload_layouts_at_f32_and_f64_are_payload_s1() {
@@ -154,9 +145,8 @@ fn qa_payload_layouts_at_f32_and_f64_are_payload_s1() {
     check_layout("SimStateBase<f32>", base_layout::<f32>(), BASE_F32);
     check_layout("SimStateFTLE<f64>", ftle_layout::<f64>(), FTLE_F64);
     check_layout("SimStateBase<f64>", base_layout::<f64>(), BASE_F64);
-    // The declared tail sits where §1 puts it: after the lagged register, at the end at both widths (it is empty at
-    // both since the register took the place of `_pad`; it was 4 B at 276 and 180 at f64 before), after the re-boot's two
-    // u32s (TASK-M3-21).
+    // The declared tail sits where §1 puts it: after the lagged register and the re-boot's two u32s, at the end, empty
+    // at both widths.
     assert_eq!(
         [
             offset_of!(SimStateFTLEOf<f64>, _tail),
@@ -240,7 +230,8 @@ fn base_member_sizes<R: PayloadReal>() -> Vec<(&'static str, usize)> {
     ]
 }
 
-/// R-86: the members, the declared tail included, fill the struct: no implicit padding at `what`'s precision.
+/// Padding is declared, never implicit: the members, the declared tail included, fill the struct, with no implicit
+/// padding at `what`'s precision.
 fn check_no_implicit_padding(what: &str, members: &[(&'static str, usize)], size: usize) {
     let sum: usize = members.iter().map(|(_, s)| s).sum();
     assert_eq!(
@@ -251,9 +242,8 @@ fn check_no_implicit_padding(what: &str, members: &[(&'static str, usize)], size
     );
 }
 
-/// R-86 and §1 "Layout at a `Real` of `w` bytes": the tail padding each width needs is declared, `(size − end)/4`
-/// u32s, empty at f32 and, since the lagged register's three Reals replaced the 4 B `_pad`, empty at f64 too (one u32
-/// there before, TASK-M3-12); nothing is implicit at either instantiation.
+/// §1 "Layout at a `Real` of `w` bytes": the tail padding each width needs is declared, never implicit,
+/// `(size − end)/4` u32s, empty at f32 and at f64; nothing is implicit at either instantiation.
 #[test]
 fn qa_payload_padding_is_declared_at_every_instantiation() {
     check_no_implicit_padding(
@@ -350,7 +340,7 @@ fn check_scaling(
     }
 }
 
-/// REQ-PAY-017: the width is a function of the `Real`: from f32 to f64 exactly §1's float members double and the
+/// The width is a function of the `Real`: from f32 to f64 exactly §1's float members double and the
 /// packed words, counter and u16s keep their widths; the f32 structs are the generic ones at f32, not a separate
 /// hardcoded declaration.
 #[test]
@@ -368,7 +358,7 @@ fn qa_payload_width_follows_the_real() {
         size_of::<f64>(),
     );
     // The fixed-width members hold §1's widths: u32 words and counter, u16 step index and reserve, and the
-    // collision floor's u32 record (R-973).
+    // collision floor's u32 record.
     let fixed: Vec<(&str, usize)> = ftle_member_sizes::<f64>()
         .into_iter()
         .filter(|(n, _)| !FOLLOWS_REAL.contains(n) && *n != "_tail")
@@ -413,10 +403,9 @@ negative_control!(
 );
 
 /// §1 "Layout at a `Real` of `w` bytes": a struct storing `reals` `Real`s, the lagged register's three among them,
-/// ends at `reals·w + 40` with the re-boot's two u32s last (TASK-M3-21; `reals·w + 32` before them) (24 B of u32s, the budget word and the regularised drift among them, TASK-M3-41, 4 B of
-/// u16s and the collision floor's 4 B record; `reals·w + 24` before the two words; `(reals − 3)·w + 28`
-/// before the register replaced the record's 4 B of padding, TASK-M3-12, and `(reals − 3)·w + 20` before the record,
-/// R-973) and is aligned to 8 or to the `Real`'s alignment if greater.
+/// ends at `reals·w + 40` (32 B of u32s, the budget word, the regularised drift and the re-boot's two last among
+/// them, 4 B of u16s and the collision floor's 4 B record) and is aligned to 8 or to the `Real`'s alignment if
+/// greater.
 fn s1_size(reals: usize, w: usize, align: usize) -> usize {
     (reals * w + 40).next_multiple_of(align.max(8))
 }
@@ -443,11 +432,8 @@ fn check_rows(rows: &[Row]) {
     }
 }
 
-/// REQ-PAY-017 / REQ-PAY-087: the generated precision rows are f32, f64 and the DoubleF64 stub (a pair of f64s, 16 B
-/// aligned to 8; §1 "The DoubleF64 stub row"); each row's sizes are §1's function of its width (584 B and 392 B for
-/// DoubleF64 with the re-boot's two u32s, TASK-M3-21; 576 B and 384 B before them, with the budget word and the regularised drift, TASK-M3-41; 568 B and 376 B before them, with the
-/// lagged register's three Reals in place of 4 B of padding; 528 B and 336 B before it, with the
-/// collision floor's 8 B; 520 B and 328 B before that); and the
+/// The generated precision rows are f32, f64 and the DoubleF64 stub (a pair of f64s, 16 B aligned to 8; §1 "The
+/// DoubleF64 stub row"); each row's sizes are §1's function of its width (584 B and 392 B for DoubleF64); and the
 /// instantiated rows are the instantiated types' sizes.
 #[test]
 fn qa_payload_rows_are_the_width_function() {

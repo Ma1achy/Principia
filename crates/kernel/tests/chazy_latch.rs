@@ -1,5 +1,5 @@
-//! The Chazy latch `I_max` in the march (chazy drill-down §6; REQ-PAY-105, REQ-PAY-106) and the live-playhead property
-//! (§3.1, §12.2 item 9; REQ-VAL-187), on CPU-f64 through the wrapper and its own cadence.
+//! The Chazy latch `I_max` in the march (chazy drill-down §6) and the live-playhead property (§3.1, §12.2 item 9), on
+//! CPU-f64 through the wrapper and its own cadence.
 //!
 //! - `chazy_i_max_latch_*`: the live latch equals the offline maximum of `I` at every internal step, never decreases,
 //!   is `I_0` before the first step; a march split at persist boundaries stores the uncut march's level; two ensemble
@@ -132,7 +132,7 @@ fn watched(ic: &Ic<f64>, steps: u32) -> (SimStateBaseOf<f64>, Watching) {
     (c.finish(out), c)
 }
 
-// ── The latch equals the offline maximum at every step (REQ-PAY-105) ─────────────────────────────────────────────
+// ── The latch equals the offline maximum at every step ───────────────────────────────────────────────────────────
 
 /// Pass criterion, written before the run: at every internal step the latch is within `10⁻¹²` relative of the offline
 /// maximum of `I` over the IC and every step so far; it never decreases, bit for bit; before the first step it is
@@ -187,7 +187,7 @@ negative_control!(
     check_offline_maximum(|(i, _)| i)
 );
 
-// ── Persist boundaries: one uninterrupted latch (REQ-PAY-105) ───────────────────────────────────────────────────
+// ── Persist boundaries: one uninterrupted latch ─────────────────────────────────────────────────────────────────
 
 /// The march of `ic` for `total` macro-steps split at `cuts`, each segment resumed from the last one's stored state
 /// with a fresh cadence (as a persist boundary leaves it); `drop_level` clears the stored `I_max` bits before each
@@ -273,7 +273,7 @@ negative_control!(
     check_persist(true)
 );
 
-// ── Two ensemble copies carry their own latches (REQ-PAY-105) ───────────────────────────────────────────────────
+// ── Two ensemble copies carry their own latches ─────────────────────────────────────────────────────────────────
 
 /// Two copies of one sample, the second's third body nudged by `10⁻³` in velocity, as an ensemble's jittered copies
 /// are: each copy's march has its own cadence and latch.
@@ -319,7 +319,7 @@ negative_control!(
     check_copies(true)
 );
 
-// ── The stored level (REQ-PAY-106) ──────────────────────────────────────────────────────────────────────────────
+// ── The stored level ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Pass criterion: level 0 decodes to `I_0` exactly; each level's decoded value is its lower edge, `I_0 · 2^(c/2)`,
 /// within `4` ulps at f64 and f32; a value just above a level's lower edge and just below the next's both read that
@@ -388,7 +388,7 @@ negative_control!(
     })
 );
 
-// ── The quantisation's effect on OS-candidate, measured (REQ-PAY-106) ───────────────────────────────────────────
+// ── The quantisation's effect on OS-candidate, measured ─────────────────────────────────────────────────────────
 
 /// The OS-candidate states of a draw: equal masses at rest in a random configuration (free fall, `E < 0`), classified
 /// with `I` at the configuration and a latch `I_max = f · I` for `f` across the `os_ratio` boundary; the exact latch
@@ -430,7 +430,7 @@ fn os_effect(decode: fn(u32, f64) -> f64) -> (usize, usize, usize) {
 }
 
 /// Pass criterion: the stored level never makes an OS-candidate the exact latch does not (`extra = 0`), since it
-/// decodes to its level's lower edge; the counts are reported (REQ-PAY-106's measurement).
+/// decodes to its level's lower edge; the counts are reported, the measurement the spec asks for.
 fn check_os_effect(decode: fn(u32, f64) -> f64) {
     let (exact, quantised, extra) = os_effect(decode);
     println!(
@@ -456,7 +456,7 @@ negative_control!(
     check_os_effect(|c, i_0| i_max_decode(c + 1, i_0))
 );
 
-// ── The live-playhead property (REQ-VAL-187) ────────────────────────────────────────────────────────────────────
+// ── The live-playhead property ──────────────────────────────────────────────────────────────────────────────────
 
 /// Random ICs for the property: equal masses or not, positions in a box, momenta small or none, so the draw spans
 /// free fall, bound interplay and prompt escape. Deterministic.

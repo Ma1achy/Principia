@@ -1,15 +1,12 @@
-//! The acute-angle Burrau charts and the strips (`kernel::chart::burrau_acute`; chart_reference §4.5, §5.1; R-27,
-//! R-104, R-157), each decode check at the f64 and the f32 instantiation natively (R-118, R-265):
+//! The acute-angle Burrau charts and the strips (`kernel::chart::burrau_acute`; chart_reference §4.5, §5.1), each
+//! decode check at the f64 and the f32 instantiation natively:
 //! - `burrau_theta_*`: `ν(θ) = sec θ − tan θ` inverts `θ(ν)` on `(0, π/4]`; `Φ_θ,K`'s momenta are §2's construction at
 //!   `L_z = 0`, `K(v)`; `Φ_θ,L_z` holds `K` fixed and sweeps `L_z` over `[−λ_L·√(2K), λ_L·√(2K)]`, feasible at its
-//!   edges; the register's proposed defaults lie inside the fold; validation (R-26), the flags, names and axes
-//!   (REQ-CHART-024).
+//!   edges; the register's proposed defaults lie inside the fold; validation, the flags, names and axes.
 //! - `burrau_delta_m_strip_*`: the `v = 0` row's masses are the Burrau masses and the `v = 1` row's `m_target`, the
-//!   default target equal masses; the triangle is the Burrau one under the blended masses, at rest; validation
-//!   (REQ-CHART-027).
+//!   default target equal masses; the triangle is the Burrau one under the blended masses, at rest; validation.
 //! - `burrau_quotients_*`: the full-range Euclid chart is `DoubleCover` and the acute-angle charts bijective, their
-//!   values differ and are shown in the chart labels, and the shape-fraction guard refuses the full-range chart
-//!   (REQ-CHART-025).
+//!   values differ and are shown in the chart labels, and the shape-fraction guard refuses the full-range chart.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 
@@ -38,11 +35,11 @@ use validation::{
     BURRAU_THETA_MIN, EUCLID_M_MAX, EUCLID_M_MIN, EUCLID_NU_MAX, EUCLID_NU_MIN, GAMMA_K, K_MAX,
 };
 
-/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|`, at most (REQ-DEC-046, proposed; `invariant_construction.rs`).
+/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|`, at most (the proposed tolerance, as in `invariant_construction.rs`).
 const TOL_P: f64 = 4.0;
-/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (REQ-DEC-046, proposed).
+/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (proposed).
 const TOL_L: f64 = 4.0;
-/// `|K(p) − K*|` in units of `eps·K*`, at most (REQ-DEC-046, proposed).
+/// `|K(p) − K*|` in units of `eps·K*`, at most (proposed).
 const TOL_K: f64 = 8.0;
 
 /// A precision under test.
@@ -58,7 +55,7 @@ impl Q for f32 {
     const LABEL: &'static str = "f32";
 }
 
-/// The register's proposed `θ` range (REQ-CHART-045), at `R`.
+/// The register's proposed `θ` range, at `R`.
 fn theta_range<R: Q>() -> [R; 2] {
     [
         R::of(BURRAU_THETA_MIN.number()),
@@ -66,7 +63,7 @@ fn theta_range<R: Q>() -> [R; 2] {
     ]
 }
 
-/// `Φ_θ,K` at the register's defaults: the proposed `θ` range and the warp's `K_max`, `γ_K` (REQ-CHART-044).
+/// `Φ_θ,K` at the register's defaults: the proposed `θ` range and the warp's `K_max`, `γ_K`.
 fn theta_k<R: Q>() -> BurrauThetaK<R> {
     BurrauThetaK {
         theta_range: theta_range(),
@@ -75,7 +72,7 @@ fn theta_k<R: Q>() -> BurrauThetaK<R> {
     }
 }
 
-/// `Φ_θ,L_z` at the register's defaults (REQ-CHART-045, REQ-CHART-046).
+/// `Φ_θ,L_z` at the register's defaults.
 fn theta_lz<R: Q>() -> BurrauThetaLz<R> {
     BurrauThetaLz {
         theta_range: theta_range(),
@@ -129,7 +126,7 @@ fn invariants<R: Q>(d: &Decoded<R>) -> ([f64; 2], f64, f64, f64) {
 /// The edge coordinates every check runs at, with the fuzz between them.
 const EDGES: [f64; 6] = [0.0, 1.0, 0.5, 0.25, 0.75, 0.999];
 
-// ── burrau_theta (REQ-CHART-024) ─────────────────────────────────────────────────────────────────────────────────
+// ── burrau_theta ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The `ν(θ)` under check.
 type NuOf = fn(f64) -> f64;
@@ -196,9 +193,8 @@ negative_control!(
 type ThetaKDecode<R> = fn(&BurrauThetaK<R>, R, R) -> (Decoded<R>, Outcome);
 
 /// `Φ_θ,K` at `(u, v)` is the shared blocks with §2's construction at `L_z = 0`, `K* = K(v)`: its masses the embed's at
-/// `ν(θ(u))`, its momenta [`construct_seeded`]'s with the seed in force, [`Seed::Expansion`] (R-934), bit for bit, the
-/// outcome feasible; and
-/// they meet `L_z(p) = 0`, `K(p) = K*` and `Σpᵢ = 0` within REQ-DEC-046's tolerances.
+/// `ν(θ(u))`, its momenta [`construct_seeded`]'s with the seed in force, [`Seed::Expansion`], bit for bit, the
+/// outcome feasible; and they meet `L_z(p) = 0`, `K(p) = K*` and `Σpᵢ = 0` within the tolerances above.
 fn check_theta_k<R: Q>(dec: ThetaKDecode<R>, u: f64, v: f64) {
     let chart = theta_k::<R>();
     let (u, v) = (R::of(u), R::of(v));
@@ -282,10 +278,9 @@ negative_control!(
 /// A `Φ_θ,L_z` decode under check.
 type ThetaLzDecode<R> = fn(&BurrauThetaLz<R>, R, R) -> (Decoded<R>, Outcome);
 
-/// `Φ_θ,L_z` at `(u, v)` holds `K` fixed: `K(p) = K` at every `v`, `L_z(p) = L_z(v) = (2v − 1)·λ_L·L_max(K)`, `Σpᵢ = 0`,
-/// within REQ-DEC-046's tolerances; its momenta are [`construct_seeded`]'s at `(L_z(v), K)` with the seed in force
-/// (R-934), the outcome feasible, the
-/// edges `v ∈ {0, 1}` included, where `L_z = ∓λ_L·L_max(K)`, and `L_max(K)² ≤ 2K`.
+/// `Φ_θ,L_z` at `(u, v)` holds `K` fixed: `K(p) = K` at every `v`, `L_z(p) = L_z(v) = (2v − 1)·λ_L·L_max(K)`,
+/// `Σpᵢ = 0`, within the tolerances above; its momenta are [`construct_seeded`]'s at `(L_z(v), K)` with the seed in
+/// force, the outcome feasible, the edges `v ∈ {0, 1}` included, where `L_z = ∓λ_L·L_max(K)`, and `L_max(K)² ≤ 2K`.
 fn check_theta_lz<R: Q>(dec: ThetaLzDecode<R>, chart: &BurrauThetaLz<R>, u: f64, v: f64) {
     let (u, v) = (R::of(u), R::of(v));
     let (d, outcome) = dec(chart, u, v);
@@ -457,7 +452,7 @@ negative_control!(
     )
 );
 
-/// Validation (R-26) on the acute-angle charts: inside `[0,1]²` every point is `Valid`; `θ ∉ (0, π/4]` and a non-finite
+/// Validation on the acute-angle charts: inside `[0,1]²` every point is `Valid`; `θ ∉ (0, π/4]` and a non-finite
 /// `u` are rejected (`BurrauTheta`), `θ = π/4` and a `θ` one float above 0 valid; `Φ_θ,K`'s `v < 0` is projected to
 /// `v = 0` (`KNonNegative`), `v > 1` valid; `Φ_θ,L_z`'s infeasible `v` is projected to the band's edge
 /// (`KAboveLzBound`), the feasible band past `[0, 1]` at `λ_L < 1` valid; a non-finite `v` rejected naming the vertical
@@ -732,7 +727,7 @@ negative_control!(
     check_flags([true, false, false], "")
 );
 
-// ── burrau_delta_m_strip (REQ-CHART-027) ─────────────────────────────────────────────────────────────────────────
+// ── burrau_delta_m_strip ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The masses under check, `(chart, u, v) → m(u, v)`.
 type Blend<R> = fn(&BurrauThetaDeltaM<R>, R, R) -> [R; 3];
@@ -940,7 +935,7 @@ negative_control!(
     )
 );
 
-/// Validation (R-26) on the δm strip: inside `[0,1]²` every point is `Valid`; past it the blend continues, valid while
+/// Validation on the δm strip: inside `[0,1]²` every point is `Valid`; past it the blend continues, valid while
 /// every mass is positive (`v = 2` toward equal masses) and rejected where one is zero or negative (`MassPositive`;
 /// `v = 4`, `v = −3`, and either side of the `v` where `m₀` reaches 0); `θ ∉ (0, π/4]` and a non-finite `u` rejected
 /// (`BurrauTheta`), a non-finite `v` naming `MassPositive`; a `θ` so small that `ν` rounds to 1, at `v = 0`, rejected
@@ -1010,7 +1005,7 @@ negative_control!(
     })
 );
 
-// ── burrau_quotients (REQ-CHART-025) ─────────────────────────────────────────────────────────────────────────────
+// ── burrau_quotients ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The `system_image` values and labels: the Euclid plane at its default range and the `(ν, K)` chart on it are
 /// `DoubleCover`, the acute-angle charts bijective, so the two shape charts' values differ; a `ν` range reaching both

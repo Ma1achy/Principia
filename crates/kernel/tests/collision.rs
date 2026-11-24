@@ -1,21 +1,20 @@
 //! The collision detector, the dispatch-time pass and the `dmin_pair` latch (`kernel::detect`; integrator_contract
-//! Part 5, Part 7; dd_integrator §3.6; payload §2; R-13, R-22, R-60):
+//! Part 5, Part 7; dd_integrator §3.6; payload §2):
 //! - `t0_detectors_*`: at dispatch, before the first step, an IC inside `r_coll` is `collision` at `t_end_step = 0`, an
 //!   IC already escaping is not an escape at `t = 0`, and `decode_failed` is the decoder's failure only: a non-finite
-//!   decode output (any one of its fifteen values) or a `DEGENERATE` tag (REQ-EVT-002).
+//!   decode output (any one of its fifteen values) or a `DEGENERATE` tag.
 //! - `collision_detector_*`: dd test 6, a head-on pair collides with its 0-based pair id, the side opposite the third
 //!   body, for each of the three pairs; two pairs inside `r_coll` in one step is `detail = 3`, never a binary label;
 //!   the test is strict at `d² = r_coll²`; the threshold is `r_coll²` rounded once to f32, and for `r_coll > 0` a square
-//!   below f32's least normal raised to it, so coincident bodies collide under every positive `r_coll` (REQ-EVT-003).
+//!   below f32's least normal raised to it, so coincident bodies collide under every positive `r_coll`.
 //! - `collision_shared_separation`: the bucket reads the detector's `d²` of the step, the same bits as the substep law's
-//!   own form, so one computation serves both (REQ-EVT-004).
+//!   own form, so one computation serves both.
 //! - `collision_t0_lookup`: a decoded IC with a pair inside `r_coll` is `COLLISION_T0` with the opposite-side pair id
-//!   and `t_event = 0`, and the same IC entered via lookup is not rejected and gets the same label (REQ-EVT-009).
+//!   and `t_event = 0`, and the same IC entered via lookup is not rejected and gets the same label.
 //! - `lookup_t0_collision_dispatch`: a lookup fixture with bodies within the default `r_coll`, entered off the canonical
-//!   gauge, reaches dispatch and is labelled `collision`, `t_end_step = 0` (REQ-ENC-033).
+//!   gauge, reaches dispatch and is labelled `collision`, `t_end_step = 0`.
 //! - `dmin_pair_latch*`: on a fly-by, `dmin_pair` is the pair of least separation over the run, neither the IC's nor
-//!   the last state's closest; a run whose cadence latches nothing keeps the sentinel 3; a failed run writes 3
-//!   (REQ-PAY-047).
+//!   the last state's closest; a run whose cadence latches nothing keeps the sentinel 3; a failed run writes 3.
 //!
 //! **Domain** (pitfalls §10): the detectors' decisions on the states given, which are identical on every backend given
 //! identical positions; the head-on and fly-by marches are KDK at f64, short, and what they show is the detector's
@@ -72,13 +71,13 @@ fn uniforms(h: u32) -> WrapperUniforms<f64> {
     }
 }
 
-/// The f64 distance of each R-22 pair of `r`, pair `k` the side opposite body `k`: the test's own reference.
+/// The f64 distance of each pair of `r`, pair `k` the side opposite body `k` (0-based): the test's own reference.
 fn distances(r: &[[f64; 2]; 3]) -> [f64; 3] {
     let d = |a: [f64; 2], b: [f64; 2]| (b[0] - a[0]).hypot(b[1] - a[1]);
     [d(r[1], r[2]), d(r[2], r[0]), d(r[0], r[1])]
 }
 
-/// The third body of the pair `(a, b)`, whose index is the pair's R-22 id.
+/// The third body of the pair `(a, b)`, whose index is the pair's id.
 fn third(a: usize, b: usize) -> usize {
     3 - a - b
 }

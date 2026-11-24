@@ -1,21 +1,21 @@
 //! The COM projection and the invariant monitor (`kernel::driver::{project, monitor, cadence}`; integrator_contract
-//! Part 1, "COM projection and invariant monitoring"; dd_integrator §3.4, §3.5, §5 test 7; TASK-M3-05), and the drift
+//! Part 1, "COM projection and invariant monitoring"; dd_integrator §3.4, §3.5, §5 test 7), and the drift
 //! suspect predicates read at read time (payload §5; the generated read side):
 //! - `com_projection_*`: after one macro-step through the wrapper from a state with a CoM offset and a bulk momentum,
-//!   `R_com` and `P_com` are zero to rounding, every occupant, f32 and f64 (REQ-INT-010); the projection weighs by the
-//!   masses its cadence cached, not the state's, so `M` is formed once (REQ-INT-010), and it moves only `r` and `p`
-//!   (REQ-INT-011).
+//!   `R_com` and `P_com` are zero to rounding, every occupant, f32 and f64; the projection weighs by the masses its
+//!   cadence cached, not the state's, so `M` is formed once, and it moves only `r` and `p`.
 //! - `invariant_monitor_*`: on a rest start (`E₀ ≠ 0`, `L_{z,0} = 0`) the floored relative forms are finite; a synthetic
-//!   spike-then-recover trace latches `max|ΔE| ≫ |ΔE_final|` (REQ-INT-012).
+//!   spike-then-recover trace latches `max|ΔE| ≫ |ΔE_final|`.
 //! - `drift_suspect_read_time_*`: the payload stores no suspect bit; the predicates are the read side's, over the
-//!   stored latches; Euler lights `SUSPECT_ENERGY` on every rest start of a grid and on dd tests 2 and 7 (REQ-INT-040).
+//!   stored latches; Euler lights `SUSPECT_ENERGY` on every rest start of a grid and on dd tests 2 and 7.
 //! - `close_encounter_drift_shape`: dd test 7's close-encounter IC (`validation::drift::close_encounter`) shows the
-//!   stored `max|ΔE|` at least ten times the final drift read from the stored state (REQ-VAL-033).
+//!   stored `max|ΔE|` at least ten times the final drift read from the stored state.
 //!
-//! **Domain** (pitfalls §10): "`≫`" is read as at least ten times (applied per R-369). "Everywhere" is the rest starts
-//! of the grid below and dd tests 2 and 7: Euler's relative drift there is at least 2.9 at the default horizon, while
+//! **Domain** (pitfalls §10): the plan is unclear on "`≫`"; chose at least ten times, one order of magnitude.
+//! "Everywhere" is the bound, interacting states where Euler's secular drift has the horizon to act: the rest starts
+//! of the grid below and dd tests 2 and 7. Euler's relative drift there is at least 2.9 at the default horizon, while
 //! over latent cubes with momentum it can fall to 10⁻⁷ on a fast, unbound start that barely interacts, below any
-//! threshold that leaves the symplectic occupants unlit on test 2 (R-660, RQ-626 (a)).
+//! threshold that leaves the symplectic occupants unlit on test 2.
 //!
 //! parity-tier: N (drift)
 
@@ -81,7 +81,7 @@ where
     }
 }
 
-// ── The COM projection (REQ-INT-010, REQ-INT-011) ────────────────────────────────────────────────────────────────
+// ── The COM projection ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// A cadence that does nothing: the march with no projection, the control's.
 #[cfg(feature = "controls")]
@@ -320,7 +320,7 @@ negative_control!(
     }
 );
 
-// ── The invariant monitor (REQ-INT-012) ──────────────────────────────────────────────────────────────────────────
+// ── The invariant monitor ────────────────────────────────────────────────────────────────────────────────────────
 
 /// The rest start of the IC `z` decodes to: its masses and positions, every momentum 0.
 fn rest_start(z: [f64; 8]) -> Ic<f64> {
@@ -497,7 +497,7 @@ negative_control!(
     check_helpers(|x| x, larger)
 );
 
-// ── The drift suspect predicates, read at read time (REQ-INT-040) ────────────────────────────────────────────────
+// ── The drift suspect predicates, read at read time ──────────────────────────────────────────────────────────────
 
 /// Asserts that none of `names`, the payload's stored struct members, packed words and stored entries, is a suspect
 /// bit: none names `suspect`.
@@ -509,8 +509,9 @@ fn check_no_suspect_bits(names: &[String]) {
 
 /// The payload's stored names, by the read side's own generated writers and packed-word accessors: the base struct's
 /// members as its `Debug` prints them, and `set_` writers of `crates/kernel/src/payload/generated.rs`, whose every stored
-/// sub-field has one. `kernel` never reads the ledger itself (R-185), so the source generated from it stands in;
-/// `crates/validation/tests/drift_proposals.rs`'s `drift_suspect_no_stored_bit_in_the_ledger` reads the ledger.
+/// sub-field has one. `kernel` never reads the ledger itself (it is a build-dependency only), so the source generated
+/// from it stands in; `crates/validation/tests/drift_proposals.rs`'s `drift_suspect_no_stored_bit_in_the_ledger`
+/// reads the ledger.
 fn stored_names() -> Vec<String> {
     let base = format!("{:?}", SimStateBase::default());
     let mut names: Vec<String> = base
@@ -609,10 +610,9 @@ fn lit<A: Stepper>(name: &str, fixture: &Fixture) {
     check_lit(name, &out, m, A::profile().symplectic);
 }
 
-/// Euler lights `SUSPECT_ENERGY` everywhere (REQ-INT-040), read as its bound, interacting states, where its secular
-/// drift has the horizon to act: the 8 × 8 rest starts of [`rest_grid`] and dd tests 2 and 7. Over the whole latent
-/// cube it does not (a sample that separates early stays under the threshold), so R-660 confirms RQ-626's
-/// option (a).
+/// Euler lights `SUSPECT_ENERGY` everywhere, read as its bound, interacting states, where its secular drift has the
+/// horizon to act: the 8 × 8 rest starts of [`rest_grid`] and dd tests 2 and 7. Over the whole latent cube it does not
+/// (a sample that separates early stays under the threshold), so "everywhere" means those states, not the cube.
 #[test]
 fn drift_suspect_read_time_euler_everywhere() {
     for z in rest_grid() {
@@ -634,7 +634,7 @@ negative_control!(
     lit::<Kdk>("KDK on test 2", &figure_eight())
 );
 
-// ── dd test 7: the drift shape (REQ-VAL-033) ─────────────────────────────────────────────────────────────────────
+// ── dd test 7: the drift shape ───────────────────────────────────────────────────────────────────────────────────
 
 /// The run of `A` at `R` from `fixture`: the stored `max|ΔE|`, the f16 latch, and the final drift read from the
 /// stored state at f32, `H(r, p) − E_0` by the read side's `energy_drift`, with the live latches beside them.
@@ -900,7 +900,7 @@ negative_control!(
     })
 );
 
-// ── A non-finite measurement is kept (R-47; philosophy §4.3; payload §1, §2; R-79, R-271) ────────────────────────────
+// ── A non-finite measurement is kept (philosophy §4.3; payload §1, §2) ───────────────────────────────────────────────
 
 /// Asserts the maximum's latch at its arms: raised, kept, a NaN or `∞` taking a finite maximum and staying past every
 /// later value.

@@ -1,5 +1,5 @@
-//! QA tests for TASK-M3-68's terminal on the landing step of a call's own target boundary (PR #502), written from
-//! integrator contract Part 2a § "The sync grid is a fixed quantum of physical time (R-565)" ("a terminal event …
+//! QA tests for a terminal on the landing step of a call's own target boundary, written from integrator contract
+//! Part 2a § "The sync grid is a fixed quantum of physical time" ("a terminal event …
 //! still latches at the step it fires on, and the copy's march ends there"; "ADVANCE … advances to the latest boundary
 //! at or before `t_target`"), Part 2a's exact step-index timing invariant (`t_end_step` the completed-macro-step count,
 //! latched at a terminal) and payload §4 (one Welford sample per completed macro-step), not from the implementation:
@@ -11,7 +11,7 @@
 //!   step earlier, short of that boundary, completes only two: bitwise the run with a horizon of two macro-steps, its
 //!   state that of the step it fired on.
 //!
-//! The negative control (R-176) runs the same check with a seam that reads every call whose cadence is done as short of
+//! The negative control runs the same check with a seam that reads every call whose cadence is done as short of
 //! its target: the third macro-step is then dropped and the check fails.
 
 use std::fmt::Debug;
@@ -102,9 +102,8 @@ impl<R> Cadence<R> for DoneAfter {
 }
 
 /// Aarseth–Zare test values (test inputs, not the calibrations): `η = 0.01`, `Δ_sync = 1/8` (exact in binary), the
-/// reference's `TINY` (R-953), R-160's `f = 0.02`, a budget that does not bind, the clamp and the landing's retakes on
-/// (the secant's 4, the bisection's 64, Part 2b). Changed by TASK-M3-76: the `|R₃|` floor is `TINY` (R-999), and the
-/// landing takes no tolerance (R-998); *was* `r3_floor` `0` / `1e-300` and `land_eps_rel` `1e-5` / `1e-14`.
+/// reference's `TINY`, which also floors `|R₃|`, the predictive limit's `f = 0.02`, a budget that does not bind, the
+/// clamp and the landing's retakes on (the secant's 4, the bisection's 64, Part 2b). The landing takes no tolerance.
 struct Grid;
 
 impl AzConfig for Grid {

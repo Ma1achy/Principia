@@ -1,17 +1,17 @@
-//! TASK-M2-57's baseline of the saved charts (REQ-DEC-055; R-865, R-898): the saved charts the kernel's own saved-chart
+//! The baseline of the saved charts for the mirror step's removal: the saved charts the kernel's own saved-chart
 //! tests build (`tests/saved_chart.rs`: a latent view saved as the oblique chart under each tilt map, and a
 //! shape-sphere view saved as a curved chart under three tilts), and a curved chart on the `(L_z, E)` chart, whose
-//! frozen `z_cfg` holds a `z_β`; recorded through the decoder of the task's baseline commit, before the decoder
+//! frozen `z_cfg` holds a `z_β`; recorded through the decoder of the baseline commit, before the decoder
 //! changes, in `fixtures/mirror_step_baseline/saved_charts.json`. For each: its words (`Saved::to_words`, the saved
-//! file's content, IEEE bits in hex), its sim key (the default links; a saved chart carries none, R-478) and its IC
+//! file's content, IEEE bits in hex), its sim key (the default links; a saved chart carries none) and its IC
 //! words: at the centres of a 9 × 9 grid, the f64 decoded state `(m, r, p)` of the saved view and the angle `β` of
 //! `λ̃` from `ρ̃` in `[0, 2π)`, each as IEEE bits in hex.
 //!
 //! - `mirror_step_baseline_write_saved` (ignored): writes the file, once, on the baseline commit.
-//! - `saved_chart_converted_against_baseline` (R-898; REQ-DEC-055): each saved chart's words, the old version, loaded
-//!   and converted from `sigmoid_beta` (`Saved::load`, unpinned), its view decoded at every recorded pixel under the
-//!   periodic link, against the baseline's state within REQ-ENC-024's `ε_phys` in `‖·‖_phys`; the count bit for bit
-//!   printed. Control: the charts converted from `tanh_beta` fail.
+//! - `saved_chart_converted_against_baseline`: each saved chart's words, the old version, loaded and converted from
+//!   `sigmoid_beta` (`Saved::load`, unpinned), its view decoded at every recorded pixel under the periodic link,
+//!   against the baseline's state within `ε_phys`, the proposed physical-units round-trip tolerance, in `‖·‖_phys`;
+//!   the count bit for bit printed. Control: the charts converted from `tanh_beta` fail.
 
 use std::path::{Path, PathBuf};
 
@@ -211,7 +211,7 @@ fn mirror_step_baseline_write_saved() {
     .expect("writes");
 }
 
-// ── saved_chart_converted_against_baseline (R-898; REQ-DEC-055) ─────────────────────────────────────────────────
+// ── saved_chart_converted_against_baseline ──────────────────────────────────────────────────────────────────────
 
 /// The baseline, read.
 fn baseline() -> Value {
@@ -251,9 +251,9 @@ fn view(saved: &Saved, u: f64, v: f64) -> Decoded<f64> {
     }
 }
 
-/// The conversion test on the baseline's saved charts (R-898): each one's words, the old version, loaded
-/// (`Saved::load`) with `pinned`, its view decoded at every recorded pixel under the periodic link, against the
-/// baseline's state within REQ-ENC-024's `ε_phys` in `‖·‖_phys`. Returns the pixels compared and those bit for bit.
+/// The conversion test on the baseline's saved charts: each one's words, the old version, loaded (`Saved::load`) with
+/// `pinned`, its view decoded at every recorded pixel under the periodic link, against the baseline's state within
+/// `ε_phys` in `‖·‖_phys`. Returns the pixels compared and those bit for bit.
 fn check_saved(pinned: Option<RetiredLink>) -> (usize, usize) {
     let file = baseline();
     let (mut n, mut bitwise) = (0, 0);

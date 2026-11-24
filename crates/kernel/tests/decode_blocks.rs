@@ -1,29 +1,28 @@
 //! The decoder's first two blocks (`kernel::decode`; dd_decoder §3.1, §3.2, §5), each run at the f64 and the f32
-//! instantiation natively (R-265), over the default selection and the `stick_breaking` mass link:
-//! - `decode_latent_layout`: the latent type is 8 controls, config `z[0:2]`, momentum `z[2:6]`, mass `z[6:8]`
-//!   (REQ-SYS-010).
+//! instantiation natively, over the default selection and the `stick_breaking` mass link:
+//! - `decode_latent_layout`: the latent type is 8 controls, config `z[0:2]`, momentum `z[2:6]`, mass `z[6:8]`.
 //! - `decode_mass_equal_at_zero`, `decode_mass_burrau`, `decode_mass_sum`: `z_μ = 0` gives `(⅓, ⅓, ⅓)`; the Burrau
-//!   point `μ₁ = log(b/c)`, `μ₂ = log(a/c)` gives `(c, b, a)/(a+b+c)`; `Σmᵢ = 1` on fuzzed `z` (REQ-DEC-010).
+//!   point `μ₁ = log(b/c)`, `μ₂ = log(a/c)` gives `(c, b, a)/(a+b+c)`; `Σmᵢ = 1` on fuzzed `z`.
 //! - `decode_m01_tiny_iff`, `decode_m01_tiny_boundary`, `decode_m01_tiny_reachable`, `decode_m01_tiny_measurement`:
 //!   decoder test 4. The tag fires exactly on `M₀₁ < ε` over fuzzed `z_μ`, saturation included, and nowhere else in
 //!   the mass block; tagged outputs are finite and kept; the fire branch is driven by mass inputs below ε and by
-//!   `stick_breaking`'s corner; the reachable `M₀₁` range is the checked-in measurement, `fixtures/gates/m01_tiny/`
-//!   (REQ-DEC-011, REQ-DEC-039). `decode_m01_tiny_contraction`: at `stick_breaking`'s bisected onset crossings, the
-//!   tag reads the emitted masses' one rounded sum, which fusing `m₀ + t₇·t₁₃` would flip (R-34).
+//!   `stick_breaking`'s corner; the reachable `M₀₁` range is the checked-in measurement, `fixtures/gates/m01_tiny/`.
+//!   `decode_m01_tiny_contraction`: at `stick_breaking`'s bisected onset crossings, the tag reads the emitted masses'
+//!   one rounded sum, which fusing `m₀ + t₇·t₁₃` would flip.
 //! - `decode_config_golden`, `decode_config_sphere`: `z = 0` gives `α = π/4`, `β = π/2`, `‖ρ̃‖ = ‖λ̃‖`;
-//!   `‖ρ̃‖² + ‖λ̃‖² = 1` and `ρ̃` on `+x` on fuzzed `z` (REQ-DEC-012).
+//!   `‖ρ̃‖² + ‖λ̃‖² = 1` and `ρ̃` on `+x` on fuzzed `z`.
 //! - `decode_reconstruct_identities`, `decode_reconstruct_inverse`: `r₁ − r₀ = ρ`, total CoM `= 0` and
 //!   `I = Σmᵢ‖rᵢ‖² = 1` on fuzzed `z`; decoder test 6, `(α, β, R̃ = 1)` recovered from the emitted `(m, rᵢ)` through
-//!   §3.2's definitions (REQ-DEC-013).
-//! - `decode_alpha_orientation`: decoder test 9 (REQ-DEC-015).
-//! - `units_dimensionless`: `G = 1`, and decoded ICs have total mass 1 and `I = 1` (REQ-INT-002).
+//!   §3.2's definitions.
+//! - `decode_alpha_orientation`: decoder test 9.
+//! - `units_dimensionless`: `G = 1`, and decoded ICs have total mass 1 and `I = 1`.
 //!
-//! **Tolerances** (REQ-DEC-044's calibration, R-71: the values here are the proposal, with the measured residuals as
-//! evidence, unconfirmed until the M2 gate). Each is a multiple of the precision's machine epsilon `eps`
-//! (2.2×10⁻¹⁶ at f64, 1.2×10⁻⁷ at f32), the same multiple at both, over every `z` of the domain below, saturation
-//! included. Test 1's `Σmᵢ`, `CoM` and `I` and test 6 are measured here; `Σpᵢ = 0` waits for the momentum block
-//! (TASK-M2-03) and test 8 for the invariant construction (TASK-M2-09). Each test prints its worst residual, in units
-//! of `eps`, so the evidence re-measures with `--nocapture`.
+//! **Tolerances** (calibrated, not given by the spec: the values here are proposed, with the measured residuals below
+//! as their evidence). Each is a multiple of the precision's machine epsilon `eps` (2.2×10⁻¹⁶ at f64, 1.2×10⁻⁷ at
+//! f32), the same multiple at both, over every `z` of the domain below, saturation included. Test 1's `Σmᵢ`, `CoM`
+//! and `I` and test 6 are measured here; `Σpᵢ = 0` and test 8 belong to the momentum block and the invariant
+//! construction, and are tested with them. Each test prints its worst residual, in units of `eps`, so the evidence
+//! re-measures with `--nocapture`.
 //!
 //! The evidence, 200 runs at the fixed seeds `PROPTEST_RNG_SEED` = 1 … 200 (the fixed grid in each, and 256 fuzzed
 //! `z`): each quantity's worst residual per run, as the range across runs, and the worst after 50, 100 and 200 runs.
@@ -132,7 +131,7 @@ fn both<R: P>() -> [(&'static str, Dec<R>); 2] {
 // ── The domain ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A control drawn from the centre, the transition into saturation, deep saturation, or anywhere up to 10³⁸ in
-/// magnitude: every finite `z` is accepted (R-407), and the widest draws stay finite at f32.
+/// magnitude: every finite `z` is accepted, and the widest draws stay finite at f32.
 fn control() -> impl Strategy<Value = f64> {
     prop_oneof![
         -2.0f64..=2.0,
@@ -317,8 +316,8 @@ negative_control!(
     check_equal_at_zero(dec::<WithMass<ReferenceOne>, f64>())
 );
 
-/// The Burrau tolerance on each mass, in `eps` (REQ-DEC-044's neighbour; the masses' round-off through `tanh`,
-/// `exp` and the normalisation, and `z`'s own rounding to `R`).
+/// The Burrau tolerance on each mass, in `eps` (a calibrated value, beside the decoder tolerances; the masses'
+/// round-off through `tanh`, `exp` and the normalisation, and `z`'s own rounding to `R`).
 const BURRAU_EPS: f64 = 4.0;
 
 /// The Burrau point of `(a, b, c)`: `μ₁ = log(b/c)`, `μ₂ = log(a/c)`, so `z_μk = artanh(μₖ/μ_max)`, gives masses
@@ -388,7 +387,7 @@ negative_control!(
     check_burrau(dec::<WithMass<ReferenceTwo>, f64>(), &Worst::default())
 );
 
-/// `Σmᵢ = 1` to [`SUM_EPS`], REQ-DEC-044's proposal for test 1's mass identity.
+/// `Σmᵢ = 1` to [`SUM_EPS`], the proposed tolerance for test 1's mass identity.
 const SUM_EPS: f64 = 4.0;
 
 /// `Σmᵢ = 1` within [`SUM_EPS`] on every `z` of the domain, for each decoder of `decs`.
@@ -853,7 +852,7 @@ fn block_m01<R: P>(z: [R; 2]) -> R {
 /// The lines `z₁ ∈ [6.3, 20.3]` the onset crossings are bisected on.
 const LINES: u32 = 20_000;
 
-/// The onset crossings at `R` (TASK-M2-02): on each of [`LINES`] lines `z₁ ∈ [6.3, 20.3]`, `z₀ ∈ [0, 30]` bisected at
+/// The onset crossings at `R`: on each of [`LINES`] lines `z₁ ∈ [6.3, 20.3]`, `z₀ ∈ [0, 30]` bisected at
 /// `R` to the adjacent pair where `stick_breaking`'s emitted masses' one rounded sum crosses ε, where one rounding
 /// decides the tag. Both points of every pair, `2·LINES` in all.
 fn crossings<R: P>() -> Vec<[R; 2]> {
@@ -888,7 +887,7 @@ fn crossings<R: P>() -> Vec<[R; 2]> {
     out
 }
 
-/// The contraction exposure (R-34; qa F1): written `m₀ + m₁`, `M₀₁` under `stick_breaking` reaches a shader compiler
+/// The contraction exposure (qa F1): written `m₀ + m₁`, `M₀₁` under `stick_breaking` reaches a shader compiler
 /// inlined as `m₀ + t₇·t₁₃`, which a contracting backend may fuse to `fma(t₇, t₁₃, m₀)`. At every onset crossing
 /// ([`crossings`]), `form`'s tag must be the emitted masses' one rounded sum's. The replica `stick_parts` is checked
 /// against the generated forward bit for bit. Returns how many of the points the fused form flips: the hazard the
@@ -954,9 +953,9 @@ fn block_masses<R: P>(z: [R; 2]) -> Masses<R> {
     (dec::<Stick, R>().mass)(z)
 }
 
-/// Decoder test 4 at the onset crossings (REQ-DEC-011; R-547): at every point of [`crossings`] at `R`, the block's
+/// Decoder test 4 at the onset crossings: at every point of [`crossings`] at `R`, the block's
 /// (`masses`) `M₀₁` is the emitted masses' one rounded sum `m₀ + m₁`, bit for bit, and its tag is that sum's
-/// `M₀₁ < ε`. Returns how many points the superseded form flips, evaluated as a backend that folds the `×1` of
+/// `M₀₁ < ε`. Returns how many points the fused form flips, evaluated as a backend that folds the `×1` of
 /// `fma(m₁, 1, m₀)` and contracts the add evaluates it: `fma(t₇, t₁₃, m₀)`, fused (dd_decoder §3.1, "Its premise").
 fn check_one_sum<R: P>(masses: fn([R; 2]) -> Masses<R>) -> usize {
     let eps = mass::m01_epsilon::<R>();
@@ -1029,7 +1028,7 @@ fn mass_at<R: P>(e: i32, frac: f64) -> R {
     R::of((1.0 + frac) * 2f64.powi(e))
 }
 
-/// `M₀₁`'s form on mass pairs set directly (REQ-DEC-011; R-547; the module note of `kernel::decode::mass`): the
+/// `M₀₁`'s form on mass pairs set directly (the module note of `kernel::decode::mass`): the
 /// block's `M₀₁` is `m₀ + m₁`, one rounding, bit for bit, and its tag `m₀ + m₁ < ε`, over pairs whose exponents span
 /// `R`'s range down to its subnormals; pairs whose exponents differ by 59, 60, 61 and more (the alignment's cap); the
 /// sum at a tie of round-half-even; and the sum at `ε` and one float either side of it.
@@ -1128,8 +1127,8 @@ negative_control!(
 /// The tolerance of `‖ρ̃‖ = ‖λ̃‖` at the golden IC and of `‖ρ̃‖² + ‖λ̃‖² = 1`, in `eps`.
 const SPHERE_EPS: f64 = 4.0;
 
-/// `z = 0`: `α = π/4` and `β = π/2` (`(π/2)·½`, and `0 + π̂/2` under the offset link, R-1020, each exact at `R`),
-/// `‖ρ̃‖ = ‖λ̃‖`, `I = 1`.
+/// `z = 0`: `α = π/4` and `β = π/2` (`(π/2)·½`, and `0 + π̂/2` under the offset link `β = z_β + π/2`, each exact
+/// at `R`), `‖ρ̃‖ = ‖λ̃‖`, `I = 1`.
 fn check_golden<R: P>(d: Dec<R>) {
     let half = R::one() / R::of(2.0);
     let m = (d.mass)([R::zero(), R::zero()]);
@@ -1240,7 +1239,7 @@ negative_control!(
 
 // ── Reconstruction ──────────────────────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-044's proposals for test 1, in `eps`: the CoM relative to the size of its terms, `Σmᵢ‖rᵢ‖`; `I − 1`; and
+/// The proposed tolerances for test 1, in `eps`: the CoM relative to the size of its terms, `Σmᵢ‖rᵢ‖`; `I − 1`; and
 /// `r₁ − r₀ = ρ` relative to the largest of `‖r₀‖`, `‖r₁‖` and `‖ρ‖`, the size of the subtraction's operands (near
 /// `α = π/2`, `ρ → 0` while `r₀` and `r₁` stay near `r₀₁`, so the difference's round-off is relative to them).
 const COM_EPS: f64 = 4.0;
@@ -1340,7 +1339,7 @@ negative_control!(
     )
 );
 
-/// REQ-DEC-044's proposals for test 6, in `eps`: `|Δα|` and `|R̃ − 1|`, and `sin α·|Δβ|`, β's error as an arc on the
+/// The proposed tolerances for test 6, in `eps`: `|Δα|` and `|R̃ − 1|`, and `sin α·|Δβ|`, β's error as an arc on the
 /// sphere (β is undefined at `α = 0`, where `λ̃ = 0`).
 const INVERSE_EPS: f64 = 8.0;
 
@@ -1388,7 +1387,7 @@ fn decode_reconstruct_inverse() {
 }
 
 /// The angle between the recovered `β`, `atan2`'s in `(−π, π]`, and the decoder's `b`, wrapped into `[0, π]`: latent
-/// `β` is periodic, `β = z_β + π/2` read modulo `2π` (R-898, R-1020), so `b` may lie anywhere on the line, `±1e38` included, and the
+/// `β` is periodic, `β = z_β + π/2` read modulo `2π`, so `b` may lie anywhere on the line, `±1e38` included, and the
 /// difference is taken between the two points on the circle, `b` read through its own `cos` and `sin` as the decoder
 /// reads it, never by subtracting `b` itself, whose size would swallow `atan2`'s value.
 fn wrapped(recovered: f64, b: f64) -> f64 {

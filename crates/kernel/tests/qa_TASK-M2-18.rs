@@ -1,18 +1,18 @@
-//! QA's tests for TASK-M2-18, the Burrau encode (inverse_encode_contract Part 5 kind 4; dd_encode §3.1, §3.4, §5
-//! tests 5 and 7; R-24, R-27), written from the requirements, not from the implementation:
-//! - REQ-ENC-011: the physical `(3, 4, 5)` triangle, legs 3 and 4 at their own size, each mass its opposite side,
+//! QA's tests for the Burrau encode (inverse_encode_contract Part 5 kind 4; dd_encode §3.1, §3.4, §5 tests 5 and 7),
+//! written from the requirements, not from the implementation:
+//! - The physical `(3, 4, 5)` triangle, legs 3 and 4 at their own size, each mass its opposite side,
 //!   `(5, 4, 3)/12`, under random gauges: the right angle recovered, `θ = arctan(3/4)`, `ν = sec θ − tan θ = ½`, the
 //!   coupling `μ₁ = log(b/c)`, `μ₂ = log(a/c)` holding, and the decode back at the chart point the same triangle to
 //!   `ε_phys`; across the family, the closed form inverts `θ(ν)`; and a state whose masses break the coupling is
 //!   reported, by the size of the break, and does not land on the curve.
-//! - REQ-ENC-017: on the curve the argmin and the closed form agree on `ν`; off it `d(ν*)` is reported as the test's
+//! - The projection: on the curve the argmin and the closed form agree on `ν`; off it `d(ν*)` is reported as the test's
 //!   own metric gives it at `ν*`, the latent fallback is taken beyond the tolerance, never a curve landing, and the
 //!   fallback's `z` satisfies T2 (`‖D(z) − C(x)‖_phys ≤ ε_phys`).
-//! - REQ-ENC-020: the projected point minimises the shape sphere's chordal ⊕ the mass simplex's Euclidean distance at
+//! - The metric: the projected point minimises the shape sphere's chordal ⊕ the mass simplex's Euclidean distance at
 //!   unit weights, against a brute-force search under the test's own metric, built from the raw positions with its
 //!   own Jacobi weighting and shape map (chart_reference §3.1, §4.2), not from the kernel's. Its control is the same
 //!   search under another weighting.
-//! - REQ-ENC-022: on a folded chart the leg-swapped twin (bodies 1 and 2 exchanged) is not relabelled: it falls back to
+//! - The fold: on a folded chart the leg-swapped twin (bodies 1 and 2 exchanged) is not relabelled: it falls back to
 //!   latent `z`, flagged `past_fold`; the isosceles triangle is not past the fold. Exchanging two bodies reverses the
 //!   triangle's orientation, so the twin is the mirror image of the curve point at `ν′ = (1 − ν)/(1 + ν)`, on the other
 //!   hemisphere of the shape sphere from the curve, and the encode no longer folds a mirror image back: on the
@@ -27,8 +27,8 @@
 //!   `ν*` is the span's edge exactly, flagged.
 //!
 //! **Tolerances.** The curve tolerance is `k·ε_R` with `k` read from the calibration fixture
-//! `fixtures/gates/curve_projection/measurement.toml` (REQ-ENC-026, provisional until the M2 gate); physical
-//! round trips are held to `ε_phys` (REQ-ENC-024, provisional until the M2 gate) in Part 4's `‖·‖_phys`. The closed
+//! `fixtures/gates/curve_projection/measurement.toml` (provisional); physical round trips are held to `ε_phys`
+//! (provisional) in Part 4's `‖·‖_phys`. The closed
 //! form's scalars (`θ`, `ν` and the coupling, each O(1) and Lipschitz in the positions at O(1)) are held to `ε_phys`
 //! too. The brute-force comparison allows only the rounding of one `d²` evaluation, 16 `ε` relative.
 //!
@@ -104,7 +104,7 @@ fn own_point(x: &Ic<f64>) -> ([f64; 3], [f64; 3]) {
     )
 }
 
-/// `d²(ν)` under weights `(1, w)` on the shape and mass terms; R-24's metric is `w = 1`.
+/// `d²(ν)` under weights `(1, w)` on the shape and mass terms; the encode's projection metric is `w = 1`.
 fn own_d2(x: &Ic<f64>, nu: f64, w: f64) -> f64 {
     let (n, m) = own_point(x);
     let (ng, mg) = own_point(&family(nu, 1.0));
@@ -149,7 +149,7 @@ fn mirror_image(x: &Ic<f64>) -> Ic<f64> {
     .act(x)
 }
 
-/// REQ-ENC-026's proposed `k`, read from its calibration fixture, not chosen here.
+/// The proposed curve-tolerance `k`, read from its calibration fixture, not chosen here.
 fn k_curve() -> f64 {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -214,7 +214,7 @@ fn check_t2<R: Precision>(e: &Encoded<R>, what: &str) {
     );
 }
 
-// ── REQ-ENC-011: the physical (3, 4, 5) ────────────────────────────────────────────────────────────────────────────
+// ── The physical (3, 4, 5) ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// dd_encode §5 test 5 on the physical triangle with legs `(a, b)` at their own size, expecting `ν = nu`, under a
 /// random gauge without the mirror, at `R`.
@@ -386,7 +386,7 @@ negative_control!(
     check_broken_coupling([5.0 / 12.0, 4.0 / 12.0, 3.0 / 12.0])
 );
 
-// ── REQ-ENC-017: the projection, dd_encode §5 test 7 ───────────────────────────────────────────────────────────────
+// ── The projection, dd_encode §5 test 7 ────────────────────────────────────────────────────────────────────────────
 
 /// On the curve: the argmin and the closed form agree on `ν` to the curve tolerance, and the closed form lands.
 fn check_on_curve<R: Precision>(nu: f64, rng: &mut SplitMix, offset: f64)
@@ -557,7 +557,7 @@ negative_control!(
     check_within(0.0)
 );
 
-// ── REQ-ENC-020: the metric against a brute-force search ───────────────────────────────────────────────────────────
+// ── The metric against a brute-force search ────────────────────────────────────────────────────────────────────────
 
 /// Off-curve fixtures: the shape of one curve point with the masses of another (so the shape and the mass terms pull
 /// `ν*` apart and the weighting decides it), and random off-curve states.
@@ -656,7 +656,7 @@ negative_control!(
     check_past_span(0.2)
 );
 
-// ── REQ-ENC-022: the fold ──────────────────────────────────────────────────────────────────────────────────────────
+// ── The fold ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// On the folded `Φ_θ,K`: the original at `ν` lands at its own `θ`, not past the fold; its leg-swapped twin (bodies 1
 /// and 2 exchanged) is flagged `past_fold`, is not relabelled onto the chart and falls back to latent `z` satisfying

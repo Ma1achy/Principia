@@ -1,30 +1,30 @@
-//! QA tests for TASK-M0-10's R-281/R-288/R-294 clauses of REQ-PAY-092, written from the requirement's statement and
-//! verify detail, R-281, R-288, R-294 and telemetry §2, not from the implementation:
+//! QA tests for the `d_min` store's counters, written from the requirement and telemetry §2, not from the
+//! implementation:
 //!
 //! - through the release path a NaN `d_min` stores the unset bits `0x7C00` and increments `dmin_nan_unset`; a negative
 //!   `d_min` stores the floor `0x0001` and increments `dmin_negative_floored`; each case increments its own counter
 //!   once and the other not at all, and a valid value increments neither;
 //! - the counters are atomic u32s (telemetry §2), so concurrent packers sharing one frame's pair lose no count;
-//! - the counters belong to the frame, never a static (R-294): the packer's caller passes in its frame's pair and reads
+//! - the counters belong to the frame, never a static: the packer's caller passes in its frame's pair and reads
 //!   it back, so two frames' pairs hold their own counts, and in a release build `set_d_min` and the word packer
-//!   `pack_packed_a` count into the pair their caller passes ("counted in release builds too; that's their purpose",
-//!   R-288); in a debug build they assert first (R-281);
-//! - `roundtrip_ctl`'s repack is an observation, not a store: it counts into no frame (R-288's applied note, R-294);
-//! - the kernel holds no mutable static (R-294);
+//!   `pack_packed_a` count into the pair their caller passes ("counted in release builds too; that's their purpose");
+//!   in a debug build they assert first;
+//! - `roundtrip_ctl`'s repack is an observation, not a store: it counts into no frame;
+//! - the kernel holds no mutable static;
 //! - the pair's fields are private, reached through its increment, read and reset methods, and workers share
-//!   `&DminCounters` (R-300): a frame's owner that resets its pair and reuses it for the next frame reads back only
+//!   `&DminCounters`: a frame's owner that resets its pair and reuses it for the next frame reads back only
 //!   that frame's counts.
 //!
 //! "Negative" is IEEE 754's: a value that compares below zero. −0.0 compares equal to +0.0, so it is a zero distance,
-//! stored as the floor by R-271 and counted by neither. Each test has a registered negative control (R-176).
+//! stored as the floor and counted by neither. Each test has a registered negative control.
 
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::*;
 use validation::negative_control;
 
-/// `(dmin_nan_unset, dmin_negative_floored)` as the frame's caller reads them back (R-294), cross-checked against the
+/// `(dmin_nan_unset, dmin_negative_floored)` as the frame's caller reads them back, cross-checked against the
 /// two atomics as the pair's `Debug` shows them by name, so a `read` that swaps or drops a counter is caught wherever
-/// this is called. The fields are private (R-300), so `Debug` is the only view of them besides `read`.
+/// this is called. The fields are private, so `Debug` is the only view of them besides `read`.
 fn pair(c: &DminCounters) -> (u32, u32) {
     let direct = (
         debug_field(c, "dmin_nan_unset"),
@@ -57,9 +57,9 @@ fn d_min_half(w: u32) -> u32 {
     w >> 16
 }
 
-/// What R-271/R-281 require for an f32 input: `(stored f16 bits, counts it adds)`, from the IEEE classification of
+/// What the store requires for an f32 input: `(stored f16 bits, counts it adds)`, from the IEEE classification of
 /// the input alone. Only the classes this file's inputs use are listed; a valid value's stored bits are given where
-/// they are fixed by R-271 (floor, unset) or exact in binary16.
+/// they are fixed (the floor `0x0001`, the unset `0x7C00`) or exact in binary16.
 fn required(bits: u32) -> (u32, (u32, u32)) {
     let v = f32::from_bits(bits);
     if v.is_nan() {
@@ -104,7 +104,7 @@ const STREAM: [u32; 16] = [
 
 type Counted = fn(u32, f32, &DminCounters) -> u32;
 
-/// `pack_packed_a` as a `d_min` store over `w`'s descriptor half, counting into the caller's `frame` (R-294).
+/// `pack_packed_a` as a `d_min` store over `w`'s descriptor half, counting into the caller's `frame`.
 fn pack_store(w: u32, v: f32, frame: &DminCounters) -> u32 {
     pack_packed_a(
         sd_state(w),
@@ -185,7 +185,7 @@ negative_control!(
 );
 
 /// A frame that stored `nans` NaNs and `negs` negatives through the release packer reads back `(nans, negs)` through
-/// `read`, the caller's read-back (R-294).
+/// `read`, the caller's read-back.
 fn check_read(read: fn(&DminCounters) -> (u32, u32), nans: u32, negs: u32) {
     let c = DminCounters::new();
     for _ in 0..nans {
@@ -227,13 +227,13 @@ negative_control!(
 /// keeps the rest of the word as it was (payload §2).
 const ALL_LOWS: [u32; 3] = [0x0000, 0x03ff, 0xffff];
 
-/// The descriptor halves `pack_packed_a` can produce: it builds the word from its fields, and since R-545 every bit of
-/// the half is a field's (`I_max`'s level in 10–14, R-37's departed bit in 15), so a `pack_store` round-trip keeps all
+/// The descriptor halves `pack_packed_a` can produce: it builds the word from its fields, and every bit of the half
+/// is a field's (`I_max`'s level in 10–14, the `departed` bit in 15), so a `pack_store` round-trip keeps all
 /// sixteen.
 const FIELD_LOWS: [u32; 3] = [0x0000, 0x03ff, 0xffff];
 
 /// In a release build `set_d_min` and `pack_packed_a` have no assertion and count into the frame pair their caller
-/// passes, exactly as the release packer does (R-288, R-294). In a debug build they assert first, so only their
+/// passes, exactly as the release packer does. In a debug build they assert first, so only their
 /// valid inputs are exercised here, and those leave the frame's pair at zero. `lows` are the descriptor halves the
 /// store must keep.
 fn check_frame_packer_matches_release(set: Counted, lows: &[u32]) {
@@ -317,7 +317,7 @@ negative_control!(
 );
 
 /// Debug builds: `store` (with the caller's frame pair) trips its `debug_assert!` for a NaN and for a negative `d_min`
-/// (R-281), so storage never silently holds either.
+/// so storage never silently holds either.
 #[cfg(debug_assertions)]
 fn check_debug_asserts(store: Counted) {
     for v in [f32::NAN, -1.0, -f32::MIN_POSITIVE, f32::NEG_INFINITY] {
@@ -345,7 +345,7 @@ negative_control!(
     check_debug_asserts(set_d_min_release)
 );
 
-/// Threads sharing one frame's pair, owned by the caller (R-294), each storing `PER_THREAD` NaNs and as many
+/// Threads sharing one frame's pair, owned by the caller, each storing `PER_THREAD` NaNs and as many
 /// negatives through `set`, leave exactly `THREADS × PER_THREAD` in each counter: an atomic u32 loses no increment
 /// (telemetry §2).
 fn check_concurrent(set: Counted) {
@@ -393,7 +393,7 @@ negative_control!(
     })
 );
 
-/// Two frames, each with its own pair from its caller (R-294): frame 0 stores two NaNs and one negative, frame 1 one
+/// Two frames, each with its own pair from its caller: frame 0 stores two NaNs and one negative, frame 1 one
 /// NaN and three negatives, interleaved store by store. Each frame reads back its own counts, and a third, new frame
 /// starts at zero (a frame's counts are its own, never carried over).
 fn check_frames_separate(set: Counted) {
@@ -463,7 +463,7 @@ negative_control!(
 
 /// `ctl` fails every word whose `d_min` bits hold a value the packer would count (f16 NaNs, negatives) and passes the
 /// clean word, while the caller's frame, which has counted one NaN and one negative of its own, still reads `(1, 1)`:
-/// the check counts into no frame (R-288, R-294). `ctl` gets the frame so the control can misuse it.
+/// the check counts into no frame. `ctl` gets the frame so the control can misuse it.
 fn check_repack_counts_nothing(ctl: &dyn Fn(&PackedA, u32, &DminCounters) -> bool) {
     let frame = DminCounters::new();
     set_d_min_release(0, f32::NAN, &frame);
@@ -506,8 +506,8 @@ negative_control!(
     })
 );
 
-/// The kernel's sources hold no `static` item (R-294: "No mutable statics in the kernel"; an atomic in a plain
-/// `static` is the vetoed shape, so every `static` item counts, not only `static mut`), nor a `thread_local!`. A token
+/// The kernel's sources hold no `static` item ("No mutable statics in the kernel"; an atomic in a plain `static`
+/// is the forbidden shape, so every `static` item counts, not only `static mut`), nor a `thread_local!`. A token
 /// scan: line comments are dropped, and `'static` is a lifetime, not an item.
 fn static_items(path: &str, src: &str) -> Vec<String> {
     let mut found = Vec::new();
@@ -577,7 +577,7 @@ negative_control!(
     }
 );
 
-/// R-300: the owner of a frame's pair reuses it for the next frame by resetting it. Frame 1 stores two NaNs and one
+/// The owner of a frame's pair reuses it for the next frame by resetting it. Frame 1 stores two NaNs and one
 /// negative through `set` and reads back `(2, 1)`; after `reset` the pair reads `(0, 0)`; frame 2 stores one NaN and
 /// three negatives and reads back `(1, 3)`, its own counts only, none carried over from frame 1.
 fn check_reset_reuse(set: Counted, reset: fn(&mut DminCounters)) {

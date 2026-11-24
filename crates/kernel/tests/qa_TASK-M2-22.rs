@@ -1,5 +1,5 @@
-//! QA's tests for TASK-M2-22, REQ-SYS-014 (coordinate conventions note, "The three coordinate spaces"; chart_decoder
-//! contract Part 3; R-83), written from the requirement: the view's addresses stay unsigned `[0,1]²`, and IC space is
+//! QA's tests for the coordinate spaces (coordinate conventions note, "The three coordinate spaces"; chart_decoder
+//! contract Part 3), written from the spec: the view's addresses stay unsigned `[0,1]²`, and IC space is
 //! signed and centred on `z₀` by the placement `z₀ + (2s−1)·q₁ + (2t−1)·q₂`.
 //!
 //! - UV `(½, ½)` is `z₀` and UV `(0, 0)` is `z₀ − q₁ − q₂`, at every centre and basis, at f64 and at f32;

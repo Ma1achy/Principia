@@ -1,7 +1,7 @@
-//! The generated links' tunable parameters (R-481; dd_generation_root §3.9, "Tunable parameters"): the parametrised
-//! functions at `LinkParams::DEFAULT` bitwise today's (REQ-GEN-040, R-482 C2), the log-det at non-default values
-//! against the forward's finite-differenced volume factor (REQ-GEN-039, C5), and decode and encode at the active
-//! values (REQ-DEC-048).
+//! The generated links' tunable parameters (dd_generation_root §3.9, "Tunable parameters"): the parametrised
+//! functions at `LinkParams::DEFAULT` bitwise their at-default functions and registry trees, the log-det at
+//! non-default values against the forward's finite-differenced volume factor, and decode and encode at the active
+//! values.
 
 use kernel::decode::{decode, decode_at, momentum, Latent};
 use kernel::encode::{encode, encode_at, SimplexClamp};
@@ -236,7 +236,7 @@ negative_control!(
     check_generated_text(&links_rs().replace("p.mu_max", "R::MU_MAX"))
 );
 
-// ── REQ-GEN-039: the log-det at the active values ───────────────────────────────────────────────────────────────
+// ── The log-det at the active values ────────────────────────────────────────────────────────────────────────────
 
 /// The Richardson-extrapolated central difference of `f` along control `k` at `x`, `(4D(h) − D(2h))/3` at `h` = 10⁻⁴:
 /// its error is `O(h⁴)` where `f` is smooth, which softsign is not at 0 (C¹ but not C², dd_generation_root §3.9).
@@ -359,7 +359,7 @@ negative_control!(
     }
 );
 
-// ── REQ-DEC-048: decode and encode at the active values ─────────────────────────────────────────────────────────
+// ── Decode and encode at the active values ──────────────────────────────────────────────────────────────────────
 
 /// A latent `z` whose `q₀` control decodes to 1.8 under the defaults, the rest interior.
 fn z_at_1_8() -> [f64; 8] {

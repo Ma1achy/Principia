@@ -1,30 +1,29 @@
-//! The gallery sweep (R-467 clause 7, D11 and F5 as revised on physics review 5585225466 of PR #253; REQ-CHART-058):
-//! every chart `kernel::chart` ships, at the parameter sets TASK-M2-35 names, swept over a 257 × 257 grid on `[0,1]²`,
-//! `u = i/256` and `v = j/256` for `i, j ∈ 0..=256`, its edges and corners included, through the kernel's own chart
-//! map, `validate` and decode, the code the GPU kernel monomorphises (R-313), run on the CPU at f64 and at the f32
-//! instantiation (the chart held at f32 and mapped and decoded at f32; `validate` is the CPU-side f64 check, R-26).
+//! The gallery sweep: every chart `kernel::chart` ships, at the parameter sets named below, swept over a 257 × 257 grid
+//! on `[0,1]²`, `u = i/256` and `v = j/256` for `i, j ∈ 0..=256`, its edges and corners included, through the kernel's
+//! own chart map, `validate` and decode, the code the GPU kernel monomorphises, run on the CPU at f64 and at the f32
+//! instantiation (the chart held at f32 and mapped and decoded at f32; `validate` is the CPU-side f64 check).
 //!
 //! **What a pixel is counted as** (chart_decoder_contract Part 3 and Part 5; inverse_encode_contract § "Chart-aware
-//! validation"; R-446, R-467 F5):
+//! validation"):
 //! - **forbidden**: `validate(u, v)` is not `Valid`, a failure of layer 2 or layer 3. `Chart::map` returns a value at
 //!   every point, so a map that fails is a panic, which fails the test, or a non-finite output, counted next;
 //! - **non-finite**: a chart output `z` or a decoded `(m, r, p)` component that is not finite, and on a mixed-axis chart
 //!   a decoder control `Mixed::controls` (its map leaves a derived axis's coordinate frozen; its decode reads the link's
 //!   inverse there, which the forward links would saturate to a finite state);
 //! - **`INVARIANT_INFEASIBLE`**: the construction's (chart_reference §2.2) `Outcome::Infeasible`, on a chart whose
-//!   decode runs it: `(L_z, E)`, `(L_z, K)`, `(ν, K)`, `Φ_θ,K`, `Φ_θ,L_z` and the `K` strip. Asserted 0 (F5 as revised);
-//! - **the other tags**, printed only (R-446: a tag never marks a pixel forbidden): the decode's `DEGENERATE` reason
+//!   decode runs it: `(L_z, E)`, `(L_z, K)`, `(ν, K)`, `Φ_θ,K`, `Φ_θ,L_z` and the `K` strip. Asserted 0;
+//! - **the other tags**, printed only (a tag never marks a pixel forbidden): the decode's `DEGENERATE` reason
 //!   (`Decoded::degenerate`) and the construction's seed-rule `DEGENERATE` (`Outcome::Degenerate`);
 //! - **collision poles**, printed only: the grid points whose decoded configuration has an exact binary collision,
-//!   `r_min_pair_0 = 0`, where `V₀` and `E₀` are R-436's defined `−∞`, a `t = 0` collision and a system (R-13, R-60),
-//!   outside the non-finite count (physics review P5). The count of non-finite `V₀` is printed beside it.
+//!   `r_min_pair_0 = 0`, where `V₀` and `E₀` are defined as `−∞`, a `t = 0` collision and a system, outside the
+//!   non-finite count. The count of non-finite `V₀` is printed beside it.
 //!
 //! **The parameter sets** (no chart has a `Default`, physics review P4): the register's value where it holds one, read
 //! from it (`validation`'s re-export of `ledger::constants`), and where that value is a pending calibration the one the
-//! chart ships today, each said so at its use. One set per chart sits at the edge of the admissible space (R-467 D11):
+//! chart ships today, each said so at its use. One set per chart sits at the edge of the admissible space:
 //! `γ_K = 1`, `λ_L = 1`, a mixed-axis range at its link's closed codomain edge.
 //!
-//! **The control arm** (R-467 D11; pitfalls §9, a check whose reachable output set holds the failure it guards
+//! **The control arm** (pitfalls §9, a check whose reachable output set holds the failure it guards
 //! against): an absolute-energy `(L_z, E)` test chart, whose forbidden set the sweep reports exactly and which fails
 //! the gallery check; a warp with `L_max` one ulp too large, which fires `INVARIANT_INFEASIBLE` on the `s ∈ {0, 1}`
 //! columns; and a test chart non-finite on one column, which the sweep catches as non-finite.
@@ -32,7 +31,7 @@
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory. Bounded by the grid: every chart
 //! runs 257² points at each precision, and nothing loops on data.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176, R-212).
+//! Each test has a registered negative control naming the panic it expects.
 
 use std::collections::BTreeMap;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
@@ -67,7 +66,7 @@ use validation::{
 /// The grid's divisions per axis: 257 points, `0, 1/256, …, 1`, each exact at f32 and f64.
 const N: u32 = 256;
 
-/// The sweep's worker threads, at most (R-228's four).
+/// The sweep's worker threads, at most.
 const WORKERS: usize = 4;
 
 /// The `γ_K` of the edge set: the least admissible exponent (chart_reference §2.1, "`γ_K ≥ 1`").
@@ -139,7 +138,7 @@ fn inward<R: Q>(range: [f64; 2]) -> [R; 2] {
     [lo, hi]
 }
 
-/// The seeded draws (TASK-M2-35's "one seeded draw"): SplitMix64 from a fixed seed, uniform on `[−1, 1]`, drawn at
+/// The seeded draws: SplitMix64 from a fixed seed, uniform on `[−1, 1]`, drawn at
 /// f64 and narrowed, so that the f64 and f32 charts hold one draw.
 struct Draw(u64);
 
@@ -189,7 +188,7 @@ struct Tally {
     construction: bool,
     /// The points the construction found infeasible, `INVARIANT_INFEASIBLE`.
     infeasible: Vec<Point>,
-    /// The points the construction's seed rule found `DEGENERATE` (R-82).
+    /// The points the construction's seed rule found `DEGENERATE`.
     seed_degenerate: u32,
     /// The decode's `DEGENERATE` reasons, by name, and their counts.
     tags: BTreeMap<String, u32>,
@@ -274,7 +273,7 @@ fn sweep<R: Q, C: Chart<Param = R>>(
 /// One chart's sweep at one parameter set and precision.
 #[derive(Clone, Debug)]
 struct Report {
-    /// The gallery's name for the chart (R-467 D11's list).
+    /// The gallery's name for the chart.
     chart: &'static str,
     /// The chart's `Chart::name`.
     name: String,
@@ -339,7 +338,7 @@ fn first(points: &[Point]) -> String {
 }
 
 /// What the gallery check finds wrong with one report: forbidden pixels, non-finite outputs or states, and
-/// `INVARIANT_INFEASIBLE` on a chart whose decode runs the construction (R-467 D11, F5).
+/// `INVARIANT_INFEASIBLE` on a chart whose decode runs the construction.
 fn faults(r: &Report) -> Vec<String> {
     let t = &r.tally;
     let at = format!("{} {} at {}", r.chart, r.set, r.precision);
@@ -562,8 +561,8 @@ fn lk_decode<R: Q>(chart: &InvariantLK<R>, u: R, v: R) -> (Decoded<R>, Option<Ou
     (d, Some(o))
 }
 
-/// The warp's parameter sets: `K_max` and `γ_K` the register's (REQ-CHART-044, proposed, provisional until the M2
-/// gate: the values the charts ship today, 1 and 2), and the edge set `γ_K = 1`.
+/// The warp's parameter sets: `K_max` and `γ_K` the register's (a pending calibration: the values the charts ship
+/// today, 1 and 2), and the edge set `γ_K = 1`.
 fn warp_sets() -> [(f64, f64, &'static str); 2] {
     [
         (
@@ -626,8 +625,8 @@ where
     (d, Some(o))
 }
 
-/// The register's proposed acute-angle range (REQ-CHART-045, proposed, provisional until the M2 gate: the range the
-/// charts ship today), each end an f32, so both precisions hold the same numbers.
+/// The register's proposed acute-angle range (a pending calibration: the range the charts ship today), each end an f32,
+/// so both precisions hold the same numbers.
 fn theta_range<R: Q>() -> [R; 2] {
     [
         R::of(BURRAU_THETA_MIN.number()),
@@ -640,13 +639,13 @@ fn nu_range<R: Q>() -> [R; 2] {
     [R::of(EUCLID_NU_MIN.number()), R::of(EUCLID_NU_MAX.number())]
 }
 
-/// The mass simplex's `ν₀` (TASK-M2-35): the classical triangle.
+/// The mass simplex's `ν₀`: the classical triangle.
 const MASS_SIMPLEX_NU0: f64 = 0.5;
 
 /// The Burrau family and the mass simplex: the Euclid plane on the register's `m ∈ [1, 32]`, `ν ∈ [1/32, 31/32]`;
 /// `(ν, K)` on the same `ν` range at each warp set; `Φ_θ,K` and the strip `Φ_strip,K` (one map, chart_reference §4.5)
-/// at each warp set; `Φ_θ,L_z` at the register's `K = 1/8` and `λ_L = 1` (REQ-CHART-046, proposed, provisional until
-/// the M2 gate: the values the chart ships today; `λ_L = 1` is also the edge set); `Φ_θ,δm` and the strip `Φ_strip,δm`
+/// at each warp set; `Φ_θ,L_z` at the register's `K = 1/8` and `λ_L = 1` (a pending calibration: the values the
+/// chart ships today; `λ_L = 1` is also the edge set); `Φ_θ,δm` and the strip `Φ_strip,δm`
 /// (one map) at the equal-mass target; the mass simplex at the register's `ε_m = 10⁻⁴` and `ν₀ = 1/2`.
 fn burrau_jobs<R: Q>(jobs: &mut Vec<Job>)
 where
@@ -709,7 +708,7 @@ where
     ));
 }
 
-/// The body plane's windows (TASK-M3-36): the five Burrau regions of `fixtures/slices.toml`, `(name, body, centre,
+/// The body plane's windows: the five Burrau regions of `fixtures/slices.toml`, `(name, body, centre,
 /// half)`, and the edge set, a window of half-width 4 about the origin whose grid lands body 0 exactly on bodies 1 and
 /// 2 (`x = −4 + 8i/256` is `−2` at `i = 64` and `1` at `i = 160`, `y = −1` at `j = 96`, exact at f32 and f64), each
 /// a system. Measured: on body 1 (pair 0–1, `ρ = 0`) the decode keeps the collision exact, one collision pole; on body 2
@@ -736,7 +735,7 @@ fn body_plane<R: Q>(body: u32, centre: [f64; 2], half: f64) -> BodyPlane<R> {
     }
 }
 
-/// The body plane at every set (TASK-M3-36; REQ-CHART-059). It is a `Φ` outside the `Chart` trait (`kernel::chart::
+/// The body plane at every set. It is a `Φ` outside the `Chart` trait (`kernel::chart::
 /// body_plane`'s note), so its job runs [`sweep`]'s counts through its own `system`, `validate` and `decode`: the moved
 /// body's position in place of `z`.
 fn body_plane_jobs<R: Q>(jobs: &mut Vec<Job>)
@@ -872,7 +871,7 @@ macro_rules! mixed_pairs {
 }
 
 /// The mixed-axis charts: every pair of the module's fourteen axes, the eight latent coordinates and the six derived
-/// quantities, that set two coordinates (R-467 D11's "each pair the module defines"): 85 charts.
+/// quantities, that set two coordinates ("each pair the module defines"): 85 charts.
 fn mixed_jobs<R: Q>(jobs: &mut Vec<Job>)
 where
     f64: From<R>,
@@ -903,7 +902,7 @@ fn gallery() -> Vec<Job> {
 }
 
 /// Every `Chart` implementation `kernel::chart` ships, by its `Chart::name`, and the body plane, a `Φ` outside the
-/// trait (TASK-M3-36); a Chart-builder chart is RQ-372's.
+/// trait; a Chart-builder chart is not swept here.
 const SHIPPED: [&str; 12] = [
     "BodyPlane",
     "Latent",
@@ -919,7 +918,7 @@ const SHIPPED: [&str; 12] = [
     "Mixed",
 ];
 
-/// The gallery check (R-467 D11): sweeps every job, prints each report's line, and asserts that no report has a fault.
+/// The gallery check: sweeps every job, prints each report's line, and asserts that no report has a fault.
 fn check_gallery(jobs: Vec<Job>) -> Vec<Report> {
     let reports = run(jobs);
     for r in &reports {
@@ -966,7 +965,7 @@ negative_control!(
 
 // ── The control arm ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The control arm's absolute-energy `(L_z, E)` chart (R-467 D11): the configuration and mass controls held, as on
+/// The control arm's absolute-energy `(L_z, E)` chart: the configuration and mass controls held, as on
 /// the invariant charts, and both axes absolute, `L_z = L_lo + s·(L_hi − L_lo)` and `E = E_lo + t·(E_hi − E_lo)` over
 /// fixed ranges, not relative to the slice's reach as chart_reference §2.1's warp is. The slice's potential `U` lies
 /// inside the energy range, so the chart holds both `E < U` rows and, above `U`, pixels outside the parabola.
@@ -1087,7 +1086,7 @@ where
 }
 
 /// The control chart swept with `validate` in place of its own reports exactly layer 2's forbidden set, `E < U`
-/// included, and so fails the gallery check (R-467 D11).
+/// included, and so fails the gallery check.
 fn check_absolute<R: Q>(validate: Validate<AbsoluteLE<R>>)
 where
     f64: From<R>,
@@ -1385,7 +1384,7 @@ fn unsaturated<R: Q>(x: f64) -> Vec<String> {
             <<S as Selection>::AlphaLink as Link<1, 1>>::forward([edge]),
             <<S as Selection>::AlphaLink as Link<1, 1>>::forward([limit]),
         ));
-        // No `β`: the periodic link, the offset onto the angle, has no limit to reach (R-898, R-1020).
+        // No `β`: the periodic link, the offset onto the angle (`β = z_β + π/2`), has no limit to reach.
         for (name, at, lim) in [
             (
                 "q0",
@@ -1472,7 +1471,7 @@ negative_control!(
     check_latent_edge(8.0)
 );
 
-// ── The body plane past the unit square (TASK-M3-36; REQ-CHART-059) ──────────────────────────────────────────────
+// ── The body plane past the unit square ──────────────────────────────────────────────────────────────────────────
 
 /// The side of the grid over `[−1, 2]²`: `u = −1 + 3k/96`, `k ∈ 0..=96`, exact at f32 and f64.
 const PAST: u32 = 96;
