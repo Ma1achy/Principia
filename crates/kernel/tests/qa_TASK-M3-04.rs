@@ -1,4 +1,4 @@
-//! QA's tests written from the requirements and integrator_contract Part 1's loop, not from the implementation. The
+//! QA tests written from the requirements and integrator_contract Part 1's loop, not from the implementation. The
 //! oracle is this file's own transcription of Part 1's pseudocode (`contract_loop`): `macro` from 0 while
 //! `macro < horizon_steps and not done`, `N_sub` from the substep law on the quantised `d²` of the state the macro-step
 //! starts from, an inner `while s < N_sub and not done` of `STEP` at `dt_macro / N_sub` with the cadence after each.
