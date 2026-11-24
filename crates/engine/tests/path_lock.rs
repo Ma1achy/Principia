@@ -5362,3 +5362,89 @@ negative_control!(
     expected = "are not one state",
     check_first_choice(&[grid_pin(9, 0)], 0.5)
 );
+
+// ── path_lock_edge_reading: a direct failure read as an end only at B's edge ────────────────────────────────────────
+//
+// `anchor::slide` reads a frame whose own solve fails as an end only where its Gauss–Newton step leaves `B`'s states
+// (`leaves_states`); the fix leaves no failed follow on Burrau to read, so the rule is checked on main's stalls: every
+// Burrau pin at 64, 128 and 256 frames under main's slide with failures read as now (`main_slide`, `failed_is_end`
+// off). Criterion, written before it ran: every pin whose first failed follow is a direct solve's failure (not the
+// continuity test's `Ended`) is refused with `FollowFailed`, and none of them returns a track that ends (Burrau's
+// minimisers sit about 0.01 from its mass edge, so a stalled step there could read as leaving `B`'s states). Control:
+// main's reading of every failed follow as an end.
+
+#[cfg(feature = "controls")]
+fn check_edge_reading(failed_is_end: bool, pins: &[[f64; 2]]) {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let sw = Switches {
+        failed_is_end,
+        ..main_slide()
+    };
+    let (mut direct, mut refused, mut misread) = (0, 0, Vec::new());
+    for &at in pins {
+        let Ok(a) = try_locked_mixed(home(), (at[0], at[1])) else {
+            continue;
+        };
+        let anchor_ = a.anchor.expect("an anchor");
+        for n in [64usize, 128, 256] {
+            let (out, log) = probe::with(sw, || anchor::slide(&b, &burrau, pin(&a), &anchor_, n));
+            let Some(first) = log
+                .iter()
+                .find(|x| x.what == "follow" && !x.report.converged())
+            else {
+                continue;
+            };
+            if matches!(
+                first.report.status,
+                kernel::chart::lock_solve::Status::Failed(
+                    kernel::chart::lock_solve::Failure::Ended
+                )
+            ) {
+                continue;
+            }
+            direct += 1;
+            match out {
+                Err(PathError::FollowFailed { .. }) => refused += 1,
+                other => misread.push(format!(
+                    "({:.4}, {:.4}) at {n}: {:?} read as {:?}",
+                    at[0],
+                    at[1],
+                    first.report.status,
+                    other.map(|t| (t.ended, t.end()))
+                )),
+            }
+        }
+    }
+    println!(
+        "path_lock_edge_reading: {direct} slides whose first failed follow is a direct failure; {refused} refused as FollowFailed; {} read otherwise",
+        misread.len()
+    );
+    for m in &misread {
+        println!("  {m}");
+    }
+    assert!(direct > 0, "no direct failure to read");
+    assert!(
+        misread.is_empty(),
+        "a direct failure read as an end: {} of {direct}",
+        misread.len()
+    );
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "about a minute in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_edge_reading --exact --include-ignored --nocapture"]
+fn path_lock_edge_reading() {
+    check_edge_reading(false, &sweep_pins(SWEEP_SIDE));
+}
+
+negative_control!(
+    path_lock_edge_reading,
+    "every failed follow read as an end, main's reading, at (0, 0)",
+    expected = "a direct failure read as an end",
+    check_edge_reading(true, &[[0.0, 0.0]])
+);
