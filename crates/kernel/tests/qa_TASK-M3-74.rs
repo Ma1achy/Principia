@@ -5,8 +5,8 @@
 //! shadow is an absolute one, marched here on its own by RK4 under its own frozen energy `h + δh` (§3.8, "The
 //! displacement"), so the tests read the shadow's physical time from a trajectory, not from the displacement's own
 //! bookkeeping:
-//! - `qa_m374_same_time_bitwise`: on a joint-step run of each fixture, at f32 and f64, under Eq. 22 (the default,
-//!   Heggie's) and Eq. 20, with a constant `Δτ` (so the clocks move apart by the time transformation alone), renormalised
+//! - `qa_m374_same_time_bitwise`: on a joint-step run of each fixture, at f32 and f64, under Eq. 22 (the default)
+//!   and Eq. 20, with a constant `Δτ` (so the clocks move apart by the time transformation alone), renormalised
 //!   every 25 steps: at every renormalisation the shadow's elapsed physical time since the previous one equals the
 //!   sample's, bitwise (§3.8: the resynchronisation sets `δt ← 0` exactly, so the shadow lands on the sample's `t`),
 //!   and the clocks were apart before it (the measurement can fire). Control: the shadow advanced by the

@@ -1,10 +1,10 @@
-//! QA tests for TASK-M2-35, written from REQ-CHART-058 (R-467 clause 7, D11 and F5 as revised; chart_reference §2.1
-//! "no pixel is infeasible by construction"; chart_decoder_contract Part 5; inverse_encode_contract § "Chart-aware
-//! validation"), not from the implementation. They add three angles to the implementer's grid sweep:
+//! QA tests that no pixel of a chart is infeasible, written from the spec (chart_reference §2.1 "no pixel is infeasible
+//! by construction"; chart_decoder_contract Part 5; inverse_encode_contract § "Chart-aware validation"), not from the
+//! implementation. They add three angles to the implementer's grid sweep:
 //! - `qa_m235_stage_entry_sweep`: the 257 × 257 grid on `[0,1]²`, edges and corners included, through the kernel's own
 //!   entry path at f32: each chart the decode stage is built for, at the task's parameter sets, read back from its f32
 //!   uniform (`UniformChart::from_uniform(uniform())`, as the kernel reads it) and decoded by `stage::decode::sample`,
-//!   the function the GPU kernel monomorphises (R-313): 0 forbidden (`validate` on the uniform-read chart), 0 non-finite
+//!   the function the GPU kernel monomorphises: 0 forbidden (`validate` on the uniform-read chart), 0 non-finite
 //!   `(m, r, p)`, and on the warp charts 0 `INVARIANT_INFEASIBLE`.
 //! - `qa_m235_warp_off_grid`: the warp's claim is for every point of `[0,1]²`, not only the grid's: on `(L_z, E)`,
 //!   `(L_z, K)`, `(ν, K)`, `Φ_θ,K` and `Φ_θ,L_z` at each warp set (`γ_K` the register's and the edge `γ_K = 1`), at f64
@@ -15,12 +15,12 @@
 //!   exact edges and the floats next to them, the decoder controls `Mixed::controls`, the decoded `(m, r, p)` are
 //!   finite and `validate` is `Valid`, at f64 and f32.
 //!
-//! **Thresholds**: none; every assertion is a count of 0 or a set equality (REQ-CHART-058). Parameter sets are the
-//! register's (`validation`'s re-export of `ledger::constants`) and TASK-M2-35's named values.
+//! **Thresholds**: none; every assertion is a count of 0 or a set equality. Parameter sets are the register's
+//! (`validation`'s re-export of `ledger::constants`) and the values named here.
 //!
 //! **Domain** (pitfalls §10): the stateless decode, inputs fixed; no trajectory. Bounded: fixed point counts.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176, R-212).
+//! Each test has a registered negative control naming the panic it expects.
 
 use kernel::chart::burrau as nu_axis;
 use kernel::chart::burrau_acute::{decode_theta_k, decode_theta_lz};
@@ -43,7 +43,7 @@ use validation::{
     MASS_SIMPLEX_EPS_M,
 };
 
-/// Grid divisions per axis: 257 points `k/256`, REQ-CHART-058's grid.
+/// Grid divisions per axis: 257 points `k/256`.
 const N: u32 = 256;
 
 /// Seeded uniform points per chart in the off-grid test.
@@ -111,7 +111,7 @@ fn state_finite<R: Q>(d: &Decoded<R>) -> bool {
         .all(|x| x.is_finite())
 }
 
-/// The warp sets: `K_max`, `γ_K` the register's (REQ-CHART-044, proposed: the values the charts ship today), and the
+/// The warp sets: `K_max`, `γ_K` the register's (the values the charts ship with), and the
 /// edge set `γ_K = 1` (chart_reference §2.1, `γ_K ≥ 1`).
 fn warp_sets() -> [(f64, f64); 2] {
     [(K_MAX.number(), GAMMA_K.number()), (K_MAX.number(), 1.0)]

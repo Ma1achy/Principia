@@ -20,9 +20,9 @@
 //!   toward `z_α` across `z_α = 0`, `‖Δv‖_m` between neighbouring pixels, the criterion "the pair across the line is no
 //!   larger than the largest neighbouring difference within 8 pixels of it on either side". Its control, the legacy
 //!   largest-norm rule, must fail it, else the result is void; that is asserted. That criterion under the seed in force
-//!   is printed with its outcome, not asserted. What is asserted is the measurement's explanation, from outside the code: the pair across the line over its largest neighbour is exactly the ratio of
-//!   the chord lengths of the decoded `α` steps (a seam-free start moves only with its configuration), so no seed term
-//!   is present.
+//!   is printed with its outcome, not asserted. What is asserted is the measurement's explanation, from outside the
+//!   code: the pair across the line over its largest neighbour is exactly the ratio of the chord lengths of the
+//!   decoded `α` steps (a seam-free start moves only with its configuration), so no seed term is present.
 //! - `qa_m293_seed_conversion_lagrange`: at the invariant charts' default pin, `z = 0`, the masses are
 //!   equal and the configuration equilateral; every pixel starts homographic and its accelerations are `−κ·rᵢ` with one
 //!   `κ` for all three bodies, so the start is an exact homographic orbit and its break-up is set by rounding (labelled
@@ -141,8 +141,8 @@ fn wide2<R: Q>(v: [[R; 2]; 3]) -> [[f64; 2]; 3] {
     v.map(|x| x.map(Q::f))
 }
 
-/// The fixtures' controls: random over `z_α ∈ [−4, 4]` (both sides of the legacy rule's seed choice), `z_β`, unequal masses, plus `z_α`
-/// at and beside 0.
+/// The fixtures' controls: random over `z_α ∈ [−4, 4]` (both seeds the legacy largest-norm rule picks), `z_β`, unequal
+/// masses, plus `z_α` at and beside 0.
 fn controls() -> Vec<[f64; 4]> {
     let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
     let mut zs: Vec<[f64; 4]> = (0..160)
@@ -175,8 +175,8 @@ fn legacy_rule<R: Q>(m: &Masses<R>, c: &Config<R>, za: R, lz: R, k: R) -> Constr
     construct_with(m, c, Seeding::LargestNorm, za, lz, k)
 }
 
-/// dd_decoder §3.4 with the expansion seed: `w = r/√I`, `pᵢ = mᵢ(ω·J rᵢ + a·wᵢ)`, `ω = L_z/I`, `a = √(2(K* − L_z²/(2I)))`, from the
-/// configuration's own `I`; seed the expansion, outcome feasible.
+/// dd_decoder §3.4 with the expansion seed: `w = r/√I`, `pᵢ = mᵢ(ω·J rᵢ + a·wᵢ)`, `ω = L_z/I`,
+/// `a = √(2(K* − L_z²/(2I)))`, from the configuration's own `I`; seed the expansion, outcome feasible.
 fn check_in_force<R: Q>(build: Build<R>) {
     let mut rng = Rng(0x1234_5678_9abc_def1);
     let mut checked = 0;

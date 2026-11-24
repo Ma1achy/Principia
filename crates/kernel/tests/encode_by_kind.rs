@@ -1,28 +1,28 @@
 //! Encode into the active chart by axis kind (`kernel::encode::by_kind`; inverse_encode_contract Parts 5 and 6; dd_encode
-//! §3.1, §4 "fibre", §5 test 6; TASK-M2-17):
+//! §3.1, §4 "fibre", §5 test 6):
 //! - `encode_axis_kinds_raw_latent`, `_derived`, `_invariant`: a state the chart decodes, under a random gauge, lands
 //!   back on the chart at its own point, through kind 1 (latent charts, axis-aligned and oblique), kind 2 (mixed
 //!   charts, the ternary mass plot, the shape sphere under both maps, its lower hemisphere at its own signed point under
-//!   gauges without the mirror, R-544) and kind 3 (both invariant charts), at unequal masses (PIT-9) (REQ-ENC-008).
+//!   gauges without the mirror) and kind 3 (both invariant charts), at unequal masses (PIT-9).
 //! - `encode_shape_sphere_signed`: the shape sphere's lookup places a state at its signed `n̂`, a state and its mirror
 //!   at `(θ, φ)` and `(θ, π − φ)`; decode then lookup returns the pixel on both hemispheres; T1, mirror-equivariant
-//!   (R-865), for `z` and every chart, the shape sphere included, to float tolerance; a lower-hemisphere state whose
-//!   momenta are the slice's lands and decodes back to itself, its mirror to latent `z` (R-544; REQ-ENC-034).
-//! - `encode_axis_kinds_annotation`: an annotation axis gives no coordinate and is not compared (REQ-ENC-008).
+//!   (dd_encode §3.3), for `z` and every chart, the shape sphere included, to float tolerance; a lower-hemisphere state
+//!   whose momenta are the slice's lands and decodes back to itself, its mirror to latent `z`.
+//! - `encode_axis_kinds_annotation`: an annotation axis gives no coordinate and is not compared.
 //! - `encode_axis_kinds_unaligned`: a state off every chart, another point of the invariant fibre among them, lands in
-//!   latent `z`, `E(x)`'s own (REQ-ENC-008).
+//!   latent `z`, `E(x)`'s own.
 //! - `encode_axis_kinds_primitives`: each kind's reading at its boundaries: every coordinate's component and derived
 //!   value, a dependent plane, the warp's inverse at rest, a NaN residual and the tolerance's edge.
 //! - `encode_invariant_reuses_decode`: an entered `(L_z, E)` or `(L_z, K)` and the clicked pixel give one `z`, at f64
-//!   and f32, the edges included (REQ-ENC-009).
+//!   and f32, the edges included.
 //! - `encode_infeasible_invariant`, `_feasibility`, `_degenerate`: dd_encode §5 test 6, feasibility before the
 //!   construction, project or reject by the contract's metric and criterion, flagged, never NaN; the seed rule's
-//!   `DEGENERATE` is the pixel path's (REQ-ENC-010, REQ-ENC-030).
+//!   `DEGENERATE` is the pixel path's.
 //! - `encode_residual_convention`: `m₀ = 0.4` under hold-`m₁:m₂` and hold-`m₁ = m₂` gives two `z`, each round-tripping
-//!   only under its own convention (REQ-CHART-005).
+//!   only under its own convention.
 //!
-//! **The norm and tolerance** (applied per R-369, a test decision): [`encode_into`] takes Part 4's `‖·‖_phys`
-//! (REQ-ENC-029) and `ε_phys` (REQ-ENC-024) from its caller. Here the norm is [`norm`], the largest difference of any
+//! **The norm and tolerance** (this test's choice): [`encode_into`] takes Part 4's `‖·‖_phys` and `ε_phys` from its
+//! caller. Here the norm is [`norm`], the largest difference of any
 //! mass, position or momentum component, and the tolerance `1e-9` at f64, far above the residual of a state on the
 //! chart (printed) and far below that of one off it; coordinates and `z` are compared on the
 //! interior, where the links are well conditioned (dd_encode §3.5).
@@ -101,7 +101,7 @@ fn point(rng: &mut SplitMix) -> (f64, f64) {
 }
 
 /// `chart`'s decode at `(u, v)`, under a random gauge without the mirror: `Π·x` is another system, which `C` no longer
-/// folds back (R-865), landing on the chart only where the chart holds it.
+/// folds back, landing on the chart only where the chart holds it.
 fn gauged<C: ChartDecode<Param = f64>>(chart: &C, u: f64, v: f64, rng: &mut SplitMix) -> Ic<f64> {
     let x = chart.decode_at::<Defaults, f64>(u, v).ic;
     Gauge {
@@ -232,7 +232,7 @@ fn encode_axis_kinds_derived() {
     // The edge u = 1, where the shear's v is not read: it lands at v = 0.
     let x = simplex.decode_at::<Defaults, f64>(1.0, 0.7).ic;
     check_lands(&simplex, &x, (1.0, 0.0), 1e-12);
-    // The shape sphere: each hemisphere lands at its own signed point (R-544), under gauges without the mirror, whose
+    // The shape sphere: each hemisphere lands at its own signed point, under gauges without the mirror, whose
     // image is another system there (`encode_shape_sphere_signed`).
     let sphere = shape_sphere(ShapeMap::Spherical);
     let upper = |r: &mut SplitMix| (uniform(r, 0.1, 0.9), uniform(r, 0.55, 0.95));
@@ -244,7 +244,7 @@ fn encode_axis_kinds_derived() {
 }
 
 /// Decodes `chart` at the points `pick` draws and checks each, under a random gauge without the mirror, lands at the
-/// same point: the shape sphere's point is the signed `n̂`, so the mirror's image is another system (R-544).
+/// same point: the shape sphere's point is the signed `n̂`, so the mirror's image is another system.
 fn sweep_proper<C: ByKind<Param = f64>>(
     chart: &C,
     seed: u64,
@@ -883,8 +883,8 @@ where
                 );
             };
             for j in 0..8 {
-                // `z_β` on the circle (R-898): the construction keeps the frozen `z_β`, the pixel's encode the angle's
-                // representative in `[−π̂/2, 3π̂/2]` under the offset link (R-1020).
+                // `z_β` on the circle (its link is periodic): the construction keeps the frozen `z_β`, the pixel's
+                // encode the angle's representative in `[−π̂/2, 3π̂/2]` under the offset link.
                 let mut d = z[j].f() - pixel[j].f();
                 if j == 1 {
                     let t = (R::LIT_7 + R::LIT_7).f();
@@ -911,10 +911,10 @@ where
 }
 
 /// The worst `z` disagreement a precision allows, in eps of `1 + |z|`: the pixel path's `C` and block inverses against
-/// the entered path's frozen controls (applied per R-369, a test decision set over the measured worst, printed).
+/// the entered path's frozen controls (a test's choice, set over the measured worst, printed).
 const REUSE_EPS: f64 = 64.0;
 
-/// The bound on `|Δz|/(1 + |z|)` per `√|ΔK*|` at the parabola's edge (applied per R-369, as `REUSE_EPS`): `dz/da` is
+/// The bound on `|Δz|/(1 + |z|)` per `√|ΔK*|` at the parabola's edge (a test's choice, as `REUSE_EPS`): `dz/da` is
 /// bounded on the interior of the momentum links, and `|Δa| ≤ √(2|ΔK*|)`.
 const EDGE: f64 = 2.0;
 
@@ -1459,7 +1459,7 @@ negative_control!(
     }
 );
 
-// ── The shape sphere's signed point (R-544; REQ-ENC-034) ───────────────────────────────────────────────────────────
+// ── The shape sphere's signed point ────────────────────────────────────────────────────────────────────────────────
 
 /// A lookup onto the shape sphere: the chart point `(u, v)` of an encoded state.
 type Lookup2 = fn(&ShapeSphere<f64>, &Encoded<f64>) -> (f64, f64);
@@ -1512,7 +1512,7 @@ fn straddling() -> ShapeSphere<f64> {
 }
 
 /// `lookup` on random generic states and their mirrors: `x` and `Π·x` land at `(θ, φ)` and `(θ, π − φ)`, `n₂` of
-/// opposite signs, each the state's own signed shape within `shape_roundtrip_bound` (REQ-CHART-053).
+/// opposite signs, each the state's own signed shape within `shape_roundtrip_bound`.
 fn check_signed_points(lookup: Lookup2) {
     let chart = sphere_holding(SLICE);
     let mut r = rng(0x0544);
@@ -1564,13 +1564,13 @@ fn check_decode_lookup(chart: &ShapeSphere<f64>, lookup: Lookup2) -> usize {
     lower
 }
 
-/// `2π̂`, the period of `z_β` (R-898).
+/// `2π̂`, the period of `z_β`.
 fn tau() -> f64 {
     let pi = <f64 as kernel::generated::links::Literals>::LIT_7;
     pi + pi
 }
 
-/// `E(x)` mirrored (dd_encode §3.3, R-865): what `E(Π·x)` is. `z_β → π̂ − z_β` (R-1020's offset link: `β → 2π̂ − β`,
+/// `E(x)` mirrored (dd_encode §3.3): what `E(Π·x)` is. `z_β → π̂ − z_β` (the offset link: `β → 2π̂ − β`,
 /// `2c = π̂`), `z_q1` and `z_q3` negated, and the
 /// intermediates every chart reads with them: `β`, the Jacobi coordinates' `y` components, `C(x)` under `Π`, `φ` and
 /// `λ̃_y` negated.
@@ -1626,8 +1626,8 @@ fn check_t1<C: ByKind<Param = f64>>(name: &str, chart: &C, xs: &[Ic<f64>], want:
     }
 }
 
-/// T1 for `z` and every chart under the mirror (R-865; REQ-ENC-034): `E(Π·x)` is `want(E(x))`, `z_β` compared on the
-/// circle (R-898), every other control and every chart's point within [`T1_EPS`].
+/// T1 for `z` and every chart under the mirror: `E(Π·x)` is `want(E(x))`, `z_β` compared on the circle, every other
+/// control and every chart's point within [`T1_EPS`].
 fn check_t1_others(xs: &[Ic<f64>], want: Want) {
     let tau = tau();
     for x in xs {
