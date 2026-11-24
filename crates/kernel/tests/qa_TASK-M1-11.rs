@@ -1,19 +1,20 @@
-//! QA tests for TASK-M1-11, written from the requirements it closes, not from the code:
-//! - REQ-INT-001 (dd_integrator §3.7; R-389; R-392): `θ̃` is a running accumulator adding the principal-value delta
+//! QA tests for the shape-sphere winding `θ̃`, the shape map and the bring-up variant, written from the spec, not
+//! from the code:
+//! - `θ̃` (dd_integrator §3.7) is a running accumulator adding the principal-value delta
 //!   of `atan2(n_v, n_u)` each step, `θ̃(0) = 0` whatever `n(0)`'s longitude; below the pole radius it holds with a
 //!   frozen reference (the last longitude outside), adding `wrap(exit − stored)` into (−π, π] on exit; a difference of
 //!   exactly ±π, per step or on exit, adds +π; an IC inside the disc adds nothing at its first exit and counts from the
 //!   exit longitude; `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = θ̃ < 0` derived at read (payload §5).
-//! - The shape map `n` (dd_integrator §3.7; chart_reference §0.2, §3.1; R-14), checked against chart_reference §0.2's
+//! - The shape map `n` (dd_integrator §3.7; chart_reference §0.2, §3.1), checked against chart_reference §0.2's
 //!   canonical-frame decode, whose `n` is `(cos 2α, sin 2α cos β, sin 2α sin β)` by §3.1's forward map, and the
 //!   landmarks §3.7 lists.
-//! - REQ-TOOL-013 (R-41, R-75): the kernel's debug variants are exactly the bring-up variant, a baked variant selected
-//!   by type that reads nothing but the sample's index; its output decodes through the normal unpack path to
-//!   colour_composition Appendix A's pattern (REQ-TOOL-123), written here from Appendix A's table.
+//! - The kernel's debug variants are exactly the bring-up variant, a baked variant selected by type that reads nothing
+//!   but the sample's index; its output decodes through the normal unpack path to colour_composition Appendix A's
+//!   pattern, written here from Appendix A's table.
 //!
-//! Every test whose name holds `theta_unwrap` or `debug_variants` runs under the task's acceptance commands. `r_pole`
-//! is REQ-INT-086's calibration, 0.01, confirmed at the M1 gate and provisional until M3 (R-433): the rule's tests run
-//! at several radii, that value among them, since R-389's rule holds whatever its value. Each test has its negative control (R-176).
+//! Every test whose name holds `theta_unwrap` or `debug_variants` runs under the acceptance commands. `r_pole` is a
+//! calibration value, 0.01: the rule's tests run at several radii, that value among them, since the rule holds
+//! whatever its value. Each test has its negative control.
 // The file name `qa_TASK-M1-11` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -33,11 +34,11 @@ use validation::negative_control;
 /// One macro-step of `θ̃` at f64: `kernel::shape::theta_step`, or a control's faulty one.
 type Step = fn(Theta<f64>, [f64; 3], [f64; 3], f64) -> Theta<f64>;
 
-/// REQ-INT-086's `r_pole`, 0.01 (confirmed at the M1 gate, provisional until M3, R-433), and two radii either side of
-/// it: R-389's rule is stated for any radius, so each passage test runs at each.
+/// The calibrated `r_pole`, 0.01, and two radii either side of it: the rule is stated for any radius, so each passage
+/// test runs at each.
 const RADII: [f64; 3] = [1e-3, 1e-2, 0.1];
 
-/// R-389's wrap, written from its words: `d − 2πk` in (−π, π], closed at +π, open at −π.
+/// The wrap, written from the rule's words: `d − 2πk` in (−π, π], closed at +π, open at −π.
 fn principal(d: f64) -> f64 {
     let mut x = d;
     while x > PI {
@@ -54,7 +55,7 @@ fn lon(n: [f64; 3]) -> f64 {
     n[1].atan2(n[0])
 }
 
-/// The polar radius `√(n_u² + n_v²)` (R-389).
+/// The polar radius `√(n_u² + n_v²)`.
 fn rho(n: [f64; 3]) -> f64 {
     (n[0] * n[0] + n[1] * n[1]).sqrt()
 }
@@ -76,7 +77,7 @@ fn run(step: Step, path: &[[f64; 3]], r_pole: f64) -> Vec<f64> {
     out
 }
 
-/// `θ̃` after each point of `path`, by R-389's and R-392's rule as the ruling words it: start at 0; a point inside
+/// `θ̃` after each point of `path`, by the rule as dd_integrator §3.7 words it: start at 0; a point inside
 /// `ρ < r_pole` adds nothing, and on entering, the last longitude outside is stored; a point outside adds the wrapped
 /// difference from the last trusted longitude (the previous point's, or the stored one on exit); with no trusted
 /// longitude yet (an IC inside, at its first exit), nothing.
@@ -264,7 +265,7 @@ mod circulating_hold_control {
     );
 }
 
-// ----- θ̃(0) = 0 (R-389) -----
+// ----- θ̃(0) = 0 -----
 
 /// From each starting longitude, `θ̃(0) = 0`, and one step east by 0.25 rad gives `θ̃ = 0.25`: the start's longitude
 /// is never counted. `start` builds the state from `n(0)`.
@@ -304,7 +305,7 @@ negative_control!(
     })
 );
 
-// ----- The pole passage (R-389) -----
+// ----- The pole passage -----
 
 /// A pole passage: a spiral in from polar radius 0.3 at `l_in` (the longitude turning as it closes, so the last point
 /// outside is not at the spiral's earlier longitudes), first point inside at another longitude, a wander inside
@@ -498,7 +499,7 @@ mod passage_controls {
     }
 }
 
-// ----- The exact-π case (R-389) -----
+// ----- The exact-π case -----
 
 /// Each step, and each pole passage, whose longitude difference is exactly ±π at f64 adds exactly +π.
 fn check_exact_pi(step: Step) {
@@ -631,7 +632,7 @@ mod exact_pi_control {
 
 // ----- The disc's edge -----
 
-/// `ρ = r_pole` exactly is outside (the disc is `ρ < r_pole`, R-389): a step to it adds its delta.
+/// `ρ = r_pole` exactly is outside (the disc is `ρ < r_pole`): a step to it adds its delta.
 fn check_edge(step: Step) {
     let r_pole = 0.5;
     let w = (0.75f64).sqrt();
@@ -658,7 +659,7 @@ negative_control!(
     check_edge(|t, a, b, r| theta_step(t, a, b, r * (1.0 + 1e-12)))
 );
 
-// ----- An IC inside the disc (R-392) -----
+// ----- An IC inside the disc -----
 
 /// An IC inside the disc at longitude `l_ic` (or on the pole itself), a wander inside, a first exit at `l_exit`, one
 /// and a quarter turns east outside, and a second passage: `θ̃` is 0 through the first exit, then follows the rule
@@ -710,8 +711,8 @@ fn qa_theta_unwrap_ic_inside() {
     }
 }
 
-/// A step that, at an IC-inside first exit, adds the wrapped difference from the IC's longitude (RQ-225's option 2,
-/// which R-392 rejects).
+/// A step that, at an IC-inside first exit, adds the wrapped difference from the IC's longitude, which the rule
+/// rejects: an IC inside the disc has no trusted longitude.
 #[cfg(feature = "controls")]
 fn from_ic(t: Theta<f64>, a: [f64; 3], b: [f64; 3], r: f64) -> Theta<f64> {
     if !t.has_frozen && rho(a) < r && rho(b) >= r && t.theta == 0.0 {
@@ -800,7 +801,7 @@ negative_control!(
     })
 );
 
-// ----- The shape map (dd_integrator §3.7; chart_reference §0.2, §3.1; R-14) -----
+// ----- The shape map (dd_integrator §3.7; chart_reference §0.2, §3.1) -----
 
 /// chart_reference §0.2's canonical-frame decode at `(α, β)` with masses `m` (summing to 1), then rotated by `g`,
 /// scaled by `sc` and translated by `t`: the bodies' positions.
@@ -932,12 +933,12 @@ mod shape_weight_control {
     );
 }
 
-// ----- The bring-up variant (REQ-TOOL-013; Appendix A; REQ-TOOL-123) -----
+// ----- The bring-up variant (colour_composition Appendix A) -----
 
 /// Appendix A's pattern for sample `i`, from its table: the 31 real slots `32·i + k` in the ledger's member order, and
 /// `packed_a`, `packed_b`, `times`, `total_substeps`, `closure_step`, `_reserved` as words. `packed_a`'s bits by the
 /// payload's §2 layout: `state` 0–2, `detail` 3–4, `saturated` 5, `dmin_pair` 6–7, `last_symbol` 8–9, reserved 10–15
-/// zero, `d_min` 16–31 unset, f16 +∞ (`0x7c00`, R-271).
+/// zero, `d_min` 16–31 unset, f16 +∞ (`0x7c00`).
 struct Expected {
     reals: [f64; 31],
     packed_a: u32,
@@ -1132,7 +1133,7 @@ fn check_variant(f64_writer: fn(u32) -> SimStateFTLEOf<f64>, f32_writer: fn(u32)
 
 #[test]
 fn qa_debug_variants_exactly_the_bring_up_mode() {
-    // R-75: one debug mode; UV, DECODE and ROUNDTRIP are not kernel variants.
+    // One debug mode; UV, DECODE and ROUNDTRIP are not kernel variants.
     assert_eq!(
         VARIANTS.len(),
         1,
@@ -1156,7 +1157,7 @@ fn qa_debug_variants_exactly_the_bring_up_mode() {
             "`{name}` is a kernel variant (R-75)"
         );
     }
-    // R-41: selected by its type, baked; the writer's inputs are the sample's index alone (and the output buffer), so
+    // Selected by its type, baked; the writer's inputs are the sample's index alone (and the output buffer), so
     // no flags word, `DEBUG_MODE` bit or uniform can reach it. A signature change fails this at compile time.
     let _native: fn(u32) -> SimStateFTLEOf<f64> = pattern::<f64>;
     let _words: fn(u32, &mut [u32]) = write_words;

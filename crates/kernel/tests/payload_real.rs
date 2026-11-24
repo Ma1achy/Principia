@@ -1,5 +1,5 @@
-//! The payload as a function of the `Real` (REQ-PAY-017; philosophy §7.1, §7.7; dd_simstate_payload §1;
-//! dd_generation_root §3.6; R-313): the `SimState` structs and `ICDescriptor` instantiated at f32 and f64, every width
+//! The payload as a function of the `Real` (philosophy §7.1, §7.7; dd_simstate_payload §1; dd_generation_root §3.6):
+//! the `SimState` structs and `ICDescriptor` instantiated at f32 and f64, every width
 //! derived from `size_of::<Real>()`, and the layout generated per precision, the DoubleF64 stub row included.
 
 use std::mem::{align_of, offset_of, size_of, size_of_val};
@@ -20,9 +20,8 @@ fn row(real: &str) -> PayloadLayout {
 
 /// A `SimState` struct's size at a `Real` of `w` bytes, from dd_simstate_payload §1's member list: `reals` members
 /// of the `Real` (6 per vec2 group, one per f32 scalar, the lagged n̂ register's three among them), then 24 B of
-/// packed words and counters (the budget word and the regularised drift's 8 B among them, TASK-M3-41), 4 B of u16s and the collision floor's 4 B record (R-973; 8 B with its padding before
-/// the register took the padding's place, TASK-M3-12) and the re-boot's two u32s' 8 B (TASK-M3-21), the whole rounded up
-/// to 8.
+/// packed words and counters (the budget word and the regularised drift's 8 B among them), 4 B of u16s, the collision
+/// floor's 4 B record and the re-boot's two u32s' 8 B, the whole rounded up to 8.
 fn width(reals: usize, w: usize) -> usize {
     (reals * w + 24 + 4 + 4 + 8).next_multiple_of(8)
 }
@@ -109,7 +108,7 @@ fn check_instantiated<R: PayloadReal>(row: &PayloadLayout) {
 }
 
 /// `ICDescriptorOf<R>`'s twelve fields are each one `R`, its declared padding keeps its 16 B, and its size and
-/// alignment are `row`'s `descriptor` and §3.6's width at `size_of::<R>()` (R-313).
+/// alignment are `row`'s `descriptor` and §3.6's width at `size_of::<R>()`.
 fn check_descriptor<R: PayloadReal>(row: &PayloadLayout) {
     let w = size_of::<R>();
     let d = ICDescriptorOf::<R>::default();
@@ -162,7 +161,7 @@ fn check_descriptor<R: PayloadReal>(row: &PayloadLayout) {
 
 #[test]
 fn payload_real_generic() {
-    // The rows, f32 first, and which are instantiated: f32 and f64 only (R-265); DoubleF64 is a stub row.
+    // The rows, f32 first, and which are instantiated: f32 and f64 only; DoubleF64 is a stub row.
     let rows: Vec<(&str, bool)> = PAYLOAD_LAYOUTS
         .iter()
         .map(|r| (r.real, r.instantiated))
@@ -180,10 +179,8 @@ fn payload_real_generic() {
         (176, 128)
     );
     // dd_simstate_payload §1's f64 layout: members at their offsets, the budget word and the regularised drift after
-    // `total_substeps` (TASK-M3-41), `coll_floor_bits` ending on the 8 B boundary at 280 so the lagged register's f64s
-    // follow with no hole, the re-boot's two u32s at 304 and 308 (TASK-M3-21), and an empty declared tail at the end,
-    // 312 (304 before the re-boot's two u32s; 296 before the budget word and the drift; a 4 B tail at 276 before the
-    // register).
+    // `total_substeps`, `coll_floor_bits` ending on the 8 B boundary at 280 so the lagged register's f64s follow with
+    // no hole, the re-boot's two u32s at 304 and 308, and an empty declared tail at the end, 312.
     let f64_offsets = [
         offset_of!(SimStateFTLEOf<f64>, S),
         offset_of!(SimStateFTLEOf<f64>, packed_a),
@@ -222,7 +219,7 @@ fn payload_real_generic() {
     assert_eq!([dd.structs[0].1, dd.structs[1].1], [584, 392]);
 }
 
-/// `ICDescriptor` as a function of the `Real` (R-313; dd_generation_root §3.6), run with `payload_real_generic` by the
+/// `ICDescriptor` as a function of the `Real` (dd_generation_root §3.6), run with `payload_real_generic` by the
 /// acceptance filter: instantiated at f32 and f64, every width from `size_of::<Real>()`, the DoubleF64 stub row by the
 /// width function alone.
 #[test]
@@ -230,7 +227,7 @@ fn payload_real_generic_descriptor() {
     check_descriptor::<f32>(&row("f32"));
     check_descriptor::<f64>(&row("f64"));
     let dd = row("DoubleF64");
-    // ICDescriptor (dd_generation_root §3.6; R-313): 64 B at f32 (R-86), 112 B at f64, 208 B at the DoubleF64 stub.
+    // ICDescriptor (dd_generation_root §3.6): 64 B at f32, 112 B at f64, 208 B at the DoubleF64 stub.
     assert_eq!(
         size_of::<ICDescriptor>(),
         64,

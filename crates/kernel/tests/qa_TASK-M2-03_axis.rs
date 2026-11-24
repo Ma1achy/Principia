@@ -1,7 +1,7 @@
-//! QA tests for TASK-M2-03's `rho_angle` on the axis and at the pole (REQ-PAY-088), written from dd_decoder §3.6's
-//! case-by-case definition and R-417's `π̂`, not from the implementation:
+//! QA tests for `rho_angle` on the axis and at the pole, written from dd_decoder §3.6's case-by-case definition and
+//! the generated image of π, `π̂`, not from the implementation:
 //! - `π̂` is §3.2's image of π: π rounded toward zero at f32 (f32's nearest π lies above π, so it is that value's
-//!   predecessor) and π's nearest value at f64 (R-417);
+//!   predecessor) and π's nearest value at f64;
 //! - **antiparallel** (`ρ × λ = 0`, `ρ · λ < 0`): exactly `π̂`, whatever the sign of the zero `ρ × λ`
 //!   (`qa_m2_03_axis_antiparallel`);
 //! - **parallel, or the pole** (`ρ × λ = 0`, `ρ · λ ≥ 0`): exactly 0, the poles where a −0 `ρ · λ` would make the CPU's
@@ -10,7 +10,7 @@
 //!   `π̂` and one just below it, which stands for −π, read as `π̂`; every value of a sweep through the half turn lies
 //!   in `(−π̂, π̂]` and within the round-off of the angle (`qa_m2_03_rho_angle_half_turn`).
 //!
-//! Each check runs at f64 and f32 (R-265). Each negative control (R-176) runs the same check on a descriptor whose
+//! Each check runs at f64 and f32. Each negative control runs the same check on a descriptor whose
 //! `rho_angle` is the bare `atan2(ρ × λ, ρ · λ)` at the precision, the value §3.6 says is not taken on the axis.
 
 use kernel::decode::descriptor::describe;
@@ -24,7 +24,7 @@ trait Fp: LinkReal + PayloadReal + std::fmt::Debug + Copy + PartialEq + 'static 
     fn of(x: f64) -> Self;
     fn f(self) -> f64;
     fn bits(self) -> u64;
-    /// `π̂` (R-417), written here from the rule, not read from the code.
+    /// `π̂`, written here from the rule, not read from the code.
     fn pi_hat() -> Self;
 }
 
