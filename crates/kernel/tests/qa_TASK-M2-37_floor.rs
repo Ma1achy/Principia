@@ -1,9 +1,9 @@
-//! qa's tests for TASK-M2-37, the owner's ruling of 4 Nov 2026 on RQ-683 ("same rule for a single energy axis at held
-//! spin", the rule being RQ-678's: warped, every pixel a system on the additive floor `K = L_z²/2I + K_max·t^γ`,
-//! exceeding `K_max` at the top; linear, rows keep fixed physical values and infeasible cells are "not a system";
-//! "the warped mode must not blank the bottom row"), as chart_reference §2.1 writes it. Written from the ruling and
-//! that paragraph, not from the implementation; every decode is read back through the physics, recomputed here from
-//! `(m, r, p)` ([`phys`]); each test has its negative control (R-176). `qa_TASK-M2-37.rs`'s
+//! QA tests for a single energy axis at held spin, which follows the same rule as the energy pair: warped, every
+//! pixel a system on the additive floor `K = L_z²/2I + K_max·t^γ`, exceeding `K_max` at the top; linear, rows keep
+//! fixed physical values and infeasible cells are "not a system"; the warped mode must not blank the bottom row; as
+//! chart_reference §2.1 writes it. Written from that rule and that paragraph, not from the implementation; every
+//! decode is read back through the physics, recomputed here from `(m, r, p)` ([`phys`]); each test has its negative
+//! control. `qa_TASK-M2-37.rs`'s
 //! `qa_energy_axes_warped_held_lz_floored` holds the 65 × 65 grid at the held `L_z = ±0.3`; this file holds the rest.
 //!
 //! - `qa_energy_axes_warped_floor_bottom_row` and `_f32`: on a sweep of held `L_z` over every binade the floor's square
@@ -19,18 +19,19 @@
 //!   Control: `K*` capped at the top row's.
 //! - `qa_energy_axes_warped_floor_links`: every pixel a system beside `z_β` and `z_μ₁`, under `stick_breaking` and
 //!   `softmax_tanh` at both ends of `μ_max`'s allowed range. Control: the line with no floor.
-//! - `qa_energy_warp_per_pixel_floor_tilted`: the lone axes tilted into their hidden coordinates at REQ-CHART-069's
-//!   angles: every pixel whose `(a, b)` lie in the square validates and meets `K* = L_z²/2I + line`, at its own `U`,
-//!   `I` and masses. Control: the potential read once at the centre.
+//! - `qa_energy_warp_per_pixel_floor_tilted`: the lone axes tilted into their hidden coordinates at the per-pixel
+//!   warp's angles ([`tilts`]): every pixel whose `(a, b)` lie in the square validates and meets
+//!   `K* = L_z²/2I + line`, at its own `U`, `I` and masses. Control: the potential read once at the centre.
 //! - `qa_energy_axis_linear_option_floor_by_value`: under the linear option at a held `L_z ≠ 0`, no floor: `K`, `KE`,
 //!   `E` and virial pixels keep their fixed values, those with `K* < L_z²/2I` refused, `DEGENERATE` (never integrated),
-//!   forbidden in R-408's count and unwarned, the rest systems at exactly those values. Control: the warped chart.
+//!   forbidden in the area count (only validity failures are) and unwarned, the rest systems at exactly those
+//!   values. Control: the warped chart.
 //! - `qa_energy_axis_linear_option_floor_edge`: on the boundary, exactly representable (`L_z = ½`, `K* = ⅛`), a linear
 //!   pixel is a system and the float below it is not; the warped chart at `t = 0` decodes that same `K*`. Control: the
 //!   float below read as a system.
 //!
-//! **Values.** `K_max` and `γ_K` are REQ-CHART-044's placeholders (R-71), `validation::{K_MAX, GAMMA_K}`. `K` and `L_z`
-//! are held to REQ-DEC-046's proposed tolerances (8 and 4 eps, as `qa_TASK-M2-37.rs`), plus [`RND`], this file's own
+//! **Values.** `K_max` and `γ_K` are the register's placeholders, `validation::{K_MAX, GAMMA_K}`. `K` and `L_z`
+//! are held to the decode's proposed tolerances (8 and 4 eps, as `qa_TASK-M2-37.rs`), plus [`RND`], this file's own
 //! re-evaluation's rounding. A pixel within 64 eps of the boundary is not judged by value (as `qa_TASK-M2-37.rs`);
 //! [`qa_energy_axis_linear_option_floor_edge`] judges the boundary exactly. Every slice, range, angle and held value
 //! is test data.
@@ -48,15 +49,15 @@ use kernel::payload::PayloadReal;
 use validation::{negative_control, tunables, GAMMA_K, K_MAX};
 
 const EPS: f64 = f64::EPSILON;
-/// `K`'s tolerance, REQ-DEC-046's proposed.
+/// `K`'s tolerance, in eps, the decode's proposed one.
 const TOL_K: f64 = 8.0;
-/// `L_z`'s tolerance, REQ-DEC-046's proposed.
+/// `L_z`'s tolerance, in eps, the decode's proposed one.
 const TOL_L: f64 = 4.0;
 /// The rounding of this file's own re-evaluation of `K` and `L_z`.
 const RND: f64 = 16.0;
 /// The boundary's margin: a pixel this close, relative, to `K* = L_z²/2I` is not judged by value.
 const MARGIN: f64 = 64.0 * EPS;
-/// The grid's side (REQ-CHART-067's).
+/// The grid's side.
 const N: u32 = 65;
 /// The held `L_z` (test data).
 const HELD: f64 = 0.3;
@@ -489,10 +490,10 @@ negative_control!(
 
 // ── Past the square ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The warped `t` axis on the floor past its edges (the ruling: "exceeding K_max at the top is fine; K_max is a range,
-/// per R-508's t>1 continuation"). Its top row exceeds `K_max`; to `t = 1.5` every pixel validates, a counted system, at
-/// `K* = L_z²/2I + K_max·t^γ_K` (or, the control, `t` capped at 1); below `t = 0` the axis is bounded, and its clamp
-/// lands on the bottom row, itself a system.
+/// The warped `t` axis on the floor past its edges (exceeding `K_max` at the top is intended: `K_max` is a range, and
+/// the `t > 1` side continues, drawn and counted as an affine side). Its top row exceeds `K_max`; to `t = 1.5` every
+/// pixel validates, a counted system, at `K* = L_z²/2I + K_max·t^γ_K` (or, the control, `t` capped at 1); below
+/// `t = 0` the axis is bounded, and its clamp lands on the bottom row, itself a system.
 fn check_past(cap: bool) {
     fn axis<Q: EnergyAxis>(cap: bool) {
         let name = format!("{:?}", Q::QUANTITY);
@@ -628,7 +629,7 @@ fn spec(tau1: f64, tau2: f64, map: TiltMap, x: u32) -> TiltSpec {
     }
 }
 
-/// REQ-CHART-069's angles, into the target `x`.
+/// The tilt angles for the per-pixel energy warp, into the target `x`.
 fn tilts(x: u32) -> Vec<TiltSpec> {
     let mut all = Vec::new();
     for t in [10.0, 45.0, 80.0] {
@@ -706,8 +707,8 @@ negative_control!(
 // ── The linear option ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A lone `Q` at the held `L_z = held` read as the linear option: `K*` is `value` at `(t, U, U₀)`, with no floor. Each
-/// pixel with `K* < L_z²/2I`, at its own `I`, is not a system: refused, its decode `DEGENERATE`, forbidden in R-408's
-/// count. Every other is a system at that `K*`, a counted one, so a row keeps its physical value. Both occur.
+/// pixel with `K* < L_z²/2I`, at its own `I`, is not a system: refused, its decode `DEGENERATE`, forbidden in the
+/// area count. Every other is a system at that `K*`, a counted one, so a row keeps its physical value. Both occur.
 fn check_value_axis<Q: EnergyAxis>(
     chart: &MixedEnergy<ZMu1, Q, Defaults, f64>,
     held: f64,
