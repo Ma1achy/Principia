@@ -17,7 +17,8 @@
 //!   cadence through `kernel::driver::wrapper::monitored`, as the field already ran it;
 //! - `t_dmin_step`, stamped by that cadence's clock, which the march's sync boundaries drive here ([`Boundaries`]);
 //! - the word and `last_symbol`, from the word's crossing cadence (`kernel::driver::cadence::WordCadence`) wrapped
-//!   around the wrapper's, as `kernel::driver::producer::produce` wraps it;
+//!   around the wrapper's, as `kernel::driver::producer::produce` wraps it (in [`Stored`] only: the plain field, whose
+//!   records are not kept, runs without it, as it is most of a record's cost; [`sample`]);
 //! - the shape readout (`theta`, `_reserved`, `closure_min`, `closure_step`, `departed`) and the Welford co-moments
 //!   (`mean_y`, `C_ty`), taken at each sync boundary the march lands on ([`Boundaries`]);
 //! - `t_end_step`, the sync boundaries completed; `total_substeps`, the steps the cadence followed
@@ -55,8 +56,8 @@ use kernel::occupant::{Geom, State};
 use kernel::payload::{
     fgw_pack, pack_times, sd_detail, sd_state, set_d_min_unset, set_detail, set_dmin_pair,
     set_state, FreeGroupWord, ICDescriptor, ICDescriptorOf, ReadParams, SimState, SimStateBaseOf,
-    SimStateFTLE, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_DECODE_FAILED, STATE_RUNNING,
-    STATE_SIM_FAILED,
+    SimStateFTLE, FGW_UNBOUND, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_DECODE_FAILED,
+    STATE_RUNNING, STATE_SIM_FAILED,
 };
 use kernel::regularisation::az::{End, ExplicitTest};
 use kernel::regularisation::budget::latch_exhausted;
@@ -199,7 +200,9 @@ pub struct Sampled {
 
 /// The sample `ic`, decoded with the tag `degenerate`, marched by Heggie × RK4 at f32 over `k_target` sync boundaries
 /// with `params` under the collision threshold `radius` and the stop option `stop_on_escape` (the field module's
-/// note), and what it stores (the module's note).
+/// note), and what it stores (the module's note). With `word` false the word's crossing cadence is not run and the
+/// word stored is the unbound one, `FGW_UNBOUND`, which every word-derived predicate reads as invalid, `last_symbol`
+/// among them: the field's outcomes need no word, and its cadence is most of a record's cost.
 pub fn sample(
     ic: &Ic<f32>,
     degenerate: Option<Degenerate>,
@@ -207,8 +210,13 @@ pub fn sample(
     k_target: u32,
     params: &HgParams<f32>,
     stop_on_escape: bool,
+    word: bool,
 ) -> Sampled {
-    let empty = fgw_pack([0; 4], 0);
+    let empty = if word {
+        fgw_pack([0; 4], 0)
+    } else {
+        FGW_UNBOUND
+    };
     let start = t0(ic, degenerate, &radius);
     if start.state == STATE_DECODE_FAILED {
         return Sampled {
@@ -251,13 +259,18 @@ pub fn sample(
         r: ic.r,
         p: ic.p,
     };
-    let (out, last_symbol) = {
+    let (out, last_symbol) = if word {
         let mut word_cadence = WordCadence::new(&mut cadence, &ic.r, 0, &mut words[..]);
         let out = {
             let mut sampling = boundaries.around(&mut word_cadence);
             march::<Rk4, f32, _, _>(&state, k_target, params, &mut sampling, &mut ExplicitTest)
         };
         (out, word_cadence.mirror_last_symbol(0))
+    } else {
+        let mut sampling = boundaries.around(&mut cadence);
+        let out =
+            march::<Rk4, f32, _, _>(&state, k_target, params, &mut sampling, &mut ExplicitTest);
+        (out, 0)
     };
     let (code, detail) = match out.count.end {
         End::NonFinite => (STATE_SIM_FAILED, super::failed_detail(&out.state)),

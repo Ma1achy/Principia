@@ -209,7 +209,16 @@ pub fn outcome_stopping(
     params: &HgParams<f32>,
     stop_on_escape: bool,
 ) -> Outcome {
-    record::sample(ic, degenerate, radius, k_target, params, stop_on_escape).outcome
+    record::sample(
+        ic,
+        degenerate,
+        radius,
+        k_target,
+        params,
+        stop_on_escape,
+        false,
+    )
+    .outcome
 }
 
 /// `sim_failed`'s detail for a march that ended at `s` (payload §2): 0 for a NaN in the state, else 1 for a `±∞`,
@@ -254,7 +263,7 @@ impl Cpu {
         window: Window,
         size: [usize; 2],
     ) -> Result<Field, ComputeError> {
-        Ok(self.marched_on(pool, sim, window, size)?.field)
+        Ok(self.marched_on(pool, sim, window, size, false)?.field)
     }
 
     /// [`FieldBackend::stored`] on the workers of `pool`: the same records, bit for bit, on any pool. An error, beside
@@ -267,7 +276,7 @@ impl Cpu {
         window: Window,
         size: [usize; 2],
     ) -> Result<Stored, ComputeError> {
-        let stored = self.marched_on(pool, sim, window, size)?;
+        let stored = self.marched_on(pool, sim, window, size, true)?;
         if stored.read.horizon_steps > 0xffff {
             return Err(ComputeError(format!(
                 "the horizon {} is {} sync boundaries, past the 65535 a stored step count holds",
@@ -277,13 +286,14 @@ impl Cpu {
         Ok(stored)
     }
 
-    /// The field and its records, the counts unchecked.
+    /// The field and its records, the counts unchecked, the words marched where `word` (`record::sample`).
     fn marched_on(
         &self,
         pool: &crate::pool::Pool,
         sim: &SimConfig,
         window: Window,
         size: [usize; 2],
+        word: bool,
     ) -> Result<Stored, ComputeError> {
         let key = uniforms(sim.horizon.t).map_err(|e| ComputeError(format!("{e:?}")))?;
         let params = heggie_params();
@@ -311,6 +321,7 @@ impl Cpu {
                 k_target,
                 &params,
                 key.stop_on_escape,
+                word,
             );
             Ok((
                 s.outcome,
