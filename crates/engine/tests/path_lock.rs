@@ -4384,3 +4384,274 @@ negative_control!(
     expected = "a failed follow read as an end",
     check_failed_follow(true)
 );
+
+// ── path_lock_rehold_slide_stall: the slice refusals' measurement ───────────────────────────────────────────────────
+//
+// PR #72's 9 refusals at the slice mid-morph on mixed to Burrau, measured then in a scratch run, committed here: at each
+// of the sweep's 256 pins, the Burrau pair's gate path at 16 frames per segment, with the slide's residual formed as
+// main formed it (and a failed follow read as an end, as main read it) and as it is formed now. Per pin refused at the
+// slice: each `"rehold slide"` solve that failed, its `s`, status and optimality. A measurement: it fails only if a
+// slice refusal has no failed re-hold slide solve in its log (the log would then not be the refusal's).
+
+/// The Burrau pair's gate path at `at` under `switches`: the slice's refusal, if any, and the re-hold slide solves that
+/// failed (`s`, status, optimality).
+#[cfg(feature = "controls")]
+#[allow(clippy::type_complexity)]
+fn rehold_slide_stalls(
+    at: [f64; 2],
+    switches: engine::path::anchor::probe::Switches,
+    logged: bool,
+) -> (
+    Option<String>,
+    Vec<(f64, kernel::chart::lock_solve::Status, f64)>,
+) {
+    use engine::path::anchor::probe;
+    let run = || tolerance_window(&[at], &[4], SWEEP_FRAMES, &|x| x).1;
+    let (refusals, log) = match logged {
+        true => probe::with(switches, run),
+        false => (probe::with(switches, run).0, Vec::new()),
+    };
+    let slice = refusals
+        .into_iter()
+        .find(|r| r.2 == "the slice mid-morph")
+        .map(|r| r.3);
+    let failed = log
+        .iter()
+        .filter(|x| x.what == "rehold slide" && !x.report.converged())
+        .map(|x| (x.s, x.report.status, x.report.optimality))
+        .collect();
+    (slice, failed)
+}
+
+#[cfg(feature = "controls")]
+fn check_rehold_slide_stall(pins: &[[f64; 2]], logged: bool) {
+    use engine::path::anchor::probe::Switches;
+    let main = Switches {
+        cancelling: true,
+        failed_is_end: true,
+        ..Switches::default()
+    };
+    for (name, sw) in [
+        ("main's residual", main),
+        ("the offset formed directly", Switches::default()),
+    ] {
+        let mut refused = 0;
+        let mut opt: Vec<f64> = Vec::new();
+        for &at in pins {
+            let (slice, failed) = rehold_slide_stalls(at, sw, logged);
+            let Some(why) = slice else { continue };
+            refused += 1;
+            println!(
+                "path_lock_rehold_slide_stall: {name}: ({:.4}, {:.4}) refused at the slice ({why}); failed re-hold slide solves (s, status, optimality): {failed:?}",
+                at[0], at[1]
+            );
+            assert!(
+                !failed.is_empty(),
+                "a slice refusal with no failed re-hold slide solve in its log"
+            );
+            opt.extend(failed.iter().map(|f| f.2));
+        }
+        print!("path_lock_rehold_slide_stall: {name}: {refused} pins refused at the slice");
+        match opt.is_empty() {
+            true => println!(),
+            false => println!(
+                "; the failed solves' optimality min {:.2e}, max {:.2e} (the spec's 1e-8)",
+                quantile(&mut opt, 0.0),
+                quantile(&mut opt, 1.0)
+            ),
+        }
+    }
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "a few minutes: cargo test -p engine --features controls --test path_lock -- path_lock_rehold_slide_stall --exact --include-ignored --nocapture"]
+fn path_lock_rehold_slide_stall() {
+    check_rehold_slide_stall(&sweep_pins(SWEEP_SIDE), true);
+}
+
+// ── path_lock_slide_follows_sweep: criteria F1, F2 and F4 ────────────────────────────────────────────────────────────
+//
+// As written above, before the fix ran. At the sweep's 256 pins: mixed to Burrau re-centred at 64, 128 and 256 frames
+// (F1: no follow fails; F2: every stop an `Ended` at all three counts, its last frame's `s` within 1/64 of the 64-frame
+// count's and past the first frame at each), and mixed to the rest chart and to Burrau at 64 frames against main's
+// residual and main's reading of a failed follow (F4: every slide that reached `s = 1` on main reaches it again, with
+// the same `not_nearest` at `s = 1`, every node within `10⁻⁶·h` of main's). Prints the per-pin table and the tallies.
+
+/// A slide's outcome at one pin: its track (ended or through), or the refusal.
+type SlideOutcome = Result<anchor::Track, PathError>;
+
+/// Mixed locked at `at`, re-centred on `b` through `leaves` over `frames` frames: the slide's outcome (`None` where the
+/// lock refuses or `b` holds).
+fn slide_outcome<L: Leaves>(
+    at: [f64; 2],
+    b: &View,
+    leaves: &L,
+    frames: usize,
+) -> Option<SlideOutcome> {
+    let a = try_locked_mixed(home(), (at[0], at[1])).ok()?;
+    match anchor::recentre(&a, b, leaves, phys, frames) {
+        Ok(anchor::Recentred::Slides { track, .. }) => Some(Ok(track)),
+        Ok(anchor::Recentred::Holds(_)) => None,
+        Err(e) => Some(Err(e)),
+    }
+}
+
+fn show_outcome(o: &Option<SlideOutcome>) -> String {
+    match o {
+        None => "holds or no lock".into(),
+        Some(Ok(t)) if t.ended => format!("ends, last s = {:.6}", t.end()),
+        Some(Ok(t)) => format!("through, not nearest {}", t.not_nearest(1.0)),
+        Some(Err(e)) => format!("{e:?}"),
+    }
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "about 20 minutes: cargo test -p engine --features controls --test path_lock -- path_lock_slide_follows_sweep --exact --include-ignored --nocapture"]
+fn path_lock_slide_follows_sweep() {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let rest = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(simplex()).expect("a chart"),
+    );
+    let b_burrau = kernel_view(&nu_k(), Window::SQUARE);
+    let b_rest = kernel_view(&simplex(), Window::SQUARE);
+    let h = b_burrau.sim.chart.window.half[0]
+        .abs()
+        .max(b_burrau.sim.chart.window.half[1].abs());
+    let h_rest = b_rest.sim.chart.window.half[0]
+        .abs()
+        .max(b_rest.sim.chart.window.half[1].abs());
+    let main = Switches {
+        cancelling: true,
+        failed_is_end: true,
+        ..Switches::default()
+    };
+    let mut f1: Vec<String> = Vec::new();
+    let mut f2: Vec<String> = Vec::new();
+    let mut f4: Vec<String> = Vec::new();
+    let (mut through, mut ends, mut failed) = (0, 0, 0);
+    let mut worst_node = 0.0f64;
+    println!(
+        "| pin | Burrau, main at 64 | at 64 | at 128 | at 256 | rest, main at 64 | rest at 64 |"
+    );
+    println!("|---|---|---|---|---|---|---|");
+    for at in sweep_pins(SWEEP_SIDE) {
+        let (main_b, _) = probe::with(main, || slide_outcome(at, &b_burrau, &burrau, 64));
+        let (main_r, _) = probe::with(main, || slide_outcome(at, &b_rest, &rest, 64));
+        let now: Vec<Option<SlideOutcome>> = [64, 128, 256]
+            .iter()
+            .map(|&n| slide_outcome(at, &b_burrau, &burrau, n))
+            .collect();
+        let now_r = slide_outcome(at, &b_rest, &rest, 64);
+        println!(
+            "| ({:.4}, {:.4}) | {} | {} | {} | {} | {} | {} |",
+            at[0],
+            at[1],
+            show_outcome(&main_b),
+            show_outcome(&now[0]),
+            show_outcome(&now[1]),
+            show_outcome(&now[2]),
+            show_outcome(&main_r),
+            show_outcome(&now_r)
+        );
+        let pin_name = format!("({:.4}, {:.4})", at[0], at[1]);
+        // F1 and F2, Burrau at 64, 128 and 256.
+        if now.iter().any(|o| matches!(o, Some(Err(_)))) {
+            failed += 1;
+            f1.push(format!(
+                "{pin_name}: {:?}",
+                now.iter().map(show_outcome).collect::<Vec<_>>()
+            ));
+        } else if now.iter().any(|o| matches!(o, Some(Ok(t)) if t.ended)) {
+            ends += 1;
+            let s64 = match &now[0] {
+                Some(Ok(t)) if t.ended => Some(t.end()),
+                _ => None,
+            };
+            let true_end = s64.is_some_and(|s64| {
+                now.iter().zip([64.0, 128.0, 256.0]).all(|(o, n)| {
+                    matches!(o, Some(Ok(t)) if t.ended && (t.end() - s64).abs() <= 1.0 / 64.0 && t.end() > 1.0 / n)
+                })
+            });
+            if !true_end {
+                f2.push(format!(
+                    "{pin_name}: {:?}",
+                    now.iter().map(show_outcome).collect::<Vec<_>>()
+                ));
+            }
+        } else if now.iter().all(|o| matches!(o, Some(Ok(_)))) {
+            through += 1;
+        }
+        // F4: what went through on main goes through the same way.
+        for (name, before, after, hh) in [
+            ("Burrau", &main_b, &now[0], h),
+            ("rest", &main_r, &now_r, h_rest),
+        ] {
+            let Some(Ok(tb)) = before else { continue };
+            if tb.ended {
+                continue;
+            }
+            match after {
+                Some(Ok(ta))
+                    if !ta.ended
+                        && ta.not_nearest(1.0) == tb.not_nearest(1.0)
+                        && ta.nodes.len() == tb.nodes.len() =>
+                {
+                    let d = ta
+                        .nodes
+                        .iter()
+                        .zip(&tb.nodes)
+                        .map(|(x, y)| {
+                            ((x.x[0] - y.x[0]).powi(2) + (x.x[1] - y.x[1]).powi(2)).sqrt()
+                        })
+                        .fold(0.0f64, f64::max);
+                    worst_node = worst_node.max(d / hh);
+                    if d > 1e-6 * hh {
+                        f4.push(format!(
+                            "{name} {pin_name}: a node {:.3e}·h from main's",
+                            d / hh
+                        ));
+                    }
+                }
+                other => f4.push(format!(
+                    "{name} {pin_name}: through on main, now {}",
+                    show_outcome(other)
+                )),
+            }
+        }
+    }
+    println!("path_lock_slide_follows_sweep: Burrau: {through} pins through at all three counts, {ends} that end, {failed} with a failed follow");
+    println!(
+        "path_lock_slide_follows_sweep: F4: the largest node distance from main's {:.3e}·h",
+        worst_node
+    );
+    println!("path_lock_slide_follows_sweep: F1 failures: {}", f1.len());
+    for x in &f1 {
+        println!("  {x}");
+    }
+    println!("path_lock_slide_follows_sweep: F2 failures: {}", f2.len());
+    for x in &f2 {
+        println!("  {x}");
+    }
+    println!("path_lock_slide_follows_sweep: F4 failures: {}", f4.len());
+    for x in &f4 {
+        println!("  {x}");
+    }
+    assert!(f1.is_empty(), "F1: {} pins' follows fail", f1.len());
+    assert!(
+        f2.is_empty(),
+        "F2: {} stops that are not true ends",
+        f2.len()
+    );
+    assert!(
+        f4.is_empty(),
+        "F4: {} slides that went through before do not now",
+        f4.len()
+    );
+}
