@@ -79,5 +79,6 @@ pub mod presets;
 pub mod print;
 pub mod raster;
 pub mod registry;
+pub mod resolve;
 pub mod stain_view;
 pub mod structural;
