@@ -3,11 +3,11 @@
 //!   closed set is exactly the five reasons dd_decoder §2 names, each recorded as `decode_failed` (state 5) with the
 //!   table's detail code, none writing 0 (the non-finite output); each tag word the stage writes round-trips and every
 //!   other word is refused (`qa_m224_cause_set_is_the_tables`).
-//! - Every pixel labelled (chart_reference §0.7, "No pixel is ever rejected"): on every chart of the registry, fuzzed `(u, v)` on
-//!   `[0,1]²`, at f32 and f64, `η_E` off and toward real targets (`Some(0)` among them, a real target): every pixel's decode is
-//!   kept, its `(m, r, p)` finite and its descriptor free of NaN; a tagged pixel's label is `decode_failed` with its
-//!   reason's code, and the `η_E` tags fire exactly where dd_decoder §3.7's ordered cases call for them, read from the
-//!   decode with `η_E` off (`qa_m224_every_pixel_labelled`).
+//! - Every pixel labelled (chart_reference §0.7, "No pixel is ever rejected"): on every chart of the registry, fuzzed
+//!   `(u, v)` on `[0,1]²`, at f32 and f64, `η_E` off and toward real targets (`Some(0)` among them): every pixel's
+//!   decode is kept, its `(m, r, p)` finite and its descriptor free of NaN; a tagged pixel's label is `decode_failed`
+//!   with its reason's code, and the `η_E` tags fire exactly where dd_decoder §3.7's ordered cases call for them, read
+//!   from the decode with `η_E` off (`qa_m224_every_pixel_labelled`).
 //! - The identities (dd_decoder §5 test 1, "every decode"; chart_reference §5.2): `Σmᵢ = 1`, CoM `= 0`, `Σpᵢ = 0` and
 //!   `I = 1` on every chart, at both precisions, including the decodes `η_E` rescales, whose momenta are not the
 //!   momentum block's (`qa_m224_identities_every_decode`). Tolerances: the proposed ones,

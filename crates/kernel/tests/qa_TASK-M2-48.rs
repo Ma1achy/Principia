@@ -10,7 +10,7 @@
 //!   `z₁ ∈ [6.3, 20.3]`, bisected here on the oracle's tag, at f32 and f64, the block's `M₀₁` and tag are the
 //!   oracle's at every point, while the superseded `fma(m₁, 1, m₀)` with its `×1` folded and its add contracted,
 //!   `fma(t₇, t₁₃, m₀)` fused, gives a different tag at one point at least (`qa_m48_crossings_fused_flips`).
-//! - dd_decoder §3.1's "flushing or not": a flushing backend emits a subnormal mass as 0; the block's tag on the flushed
+//! - Flushing or not (dd_decoder §3.1): a flushing backend emits a subnormal mass as 0; the block's tag on the flushed
 //!   masses is its tag on the kept ones, at f32 and f64 (`qa_m48_flush_keeps_tag`).
 //!
 //! **Domain** (pitfalls §10): the mass block alone on the CPU, its inputs held fixed; no trajectory. The GPU half is
@@ -377,7 +377,7 @@ negative_control!(
 
 // ── Flushing or not ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// dd_decoder §3.1's "flushing or not": a flushing backend emits each subnormal mass as 0. On masses mixing zero,
+/// Flushing or not (dd_decoder §3.1): a flushing backend emits each subnormal mass as 0. On masses mixing zero,
 /// subnormal and normal values, at and around `ε`, `form`'s tag on the flushed masses is its tag on the kept ones, and
 /// on the kept ones it is the oracle's.
 fn check_flush<R: Fp>(form: Form<R>) {

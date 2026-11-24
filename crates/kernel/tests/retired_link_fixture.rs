@@ -1,7 +1,8 @@
-//! The retired-link fixture, `fixtures/retired_beta_links/pre_m2_57.json` (dd_decoder, "How a stored
-//! value converts"; dd_image_embedding, "A record made under a retired `β` link"): for each of `sigmoid_beta`, `tanh_beta` and `softsign_beta` as the `β`
-//! link, the pixels' latent coordinates, the four blocks' links and each pixel's decoded starting state `(m, r, p)` as
-//! bits, at f64 and at f32, written through the baseline commit's decoder, the last with these links as the `β` link.
+//! The retired-link fixture, `fixtures/retired_beta_links/pre_m2_57.json` (dd_decoder, "How a stored value
+//! converts"; dd_image_embedding, "A record made under a retired `β` link"): for each of `sigmoid_beta`, `tanh_beta`
+//! and `softsign_beta` as the `β` link, the pixels' latent coordinates, the four blocks' links and each pixel's
+//! decoded starting state `(m, r, p)` as bits, at f64 and at f32, written through the baseline commit's decoder, the
+//! last with these links as the `β` link.
 //!
 //! **Its pixels** span `z_β`: for each link, 257 values, `z_β` the link's own inverse (at f64) of `β = π·k/258`,
 //! `k = 1 … 257`, `π` the f64 nearest, at [`OTHER`], the fixture's other latent coordinates. The f32 state decodes the

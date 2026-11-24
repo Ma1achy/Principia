@@ -10,8 +10,8 @@
 //!   `rho_angle` is within `4ε₃₂` of `Φ`'s f64 angle (physics measured at most `1.6·10⁻⁷` rad).
 //!
 //! Control: `rho_angle` read from the f32 decode's re-centred positions (`descriptor::describe`, which reads
-//! positions, not `Φ`'s vectors), held to `Φ`'s f64 angle by the same check, is far from it near the pole: `C`'s rounding residue in `λ`
-//! swamps `λ̃` there.
+//! positions, not `Φ`'s vectors), held to `Φ`'s f64 angle by the same check, is far from it near the pole: `C`'s
+//! rounding residue in `λ` swamps `λ̃` there.
 
 use kernel::chart::{Chart, ShapeMap, ShapeSphere};
 use kernel::decode::descriptor::{angle, config_angle};

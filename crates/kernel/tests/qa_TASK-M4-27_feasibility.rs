@@ -1,4 +1,4 @@
-//! QA (TASK-M4-27; REQ-VAL-347): the read-back's `INVARIANT_INFEASIBLE` outcome is the decision the production
+//! QA: the read-back's `INVARIANT_INFEASIBLE` outcome is the decision the production
 //! decode takes. The task's deliverable: "No parity-only physics: each branch's input and decision move into a function
 //! that its production site and the entry both call, with no change of behaviour". The decode's construction decides
 //! `INVARIANT_INFEASIBLE` by `no_construction(K*, L_z)`: `K* < L_z²/2`, or a `K*` with no finite `2K*`

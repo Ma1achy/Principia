@@ -1,9 +1,8 @@
-//! QA's tests for TASK-M3-08 (REQ-INT-121): Heggie's regularised system built to integrator_contract Part 2b § "Heggie:
-//! the equations, the time transformations, the maps and the step control (transcribed)", § "The time-reversal maps
-//! (REQ-INT-095)", and Part 1 § "COM projection and invariant monitoring" (R-160, R-161, R-566); and the energies
-//! Aarseth–Zare's march reports (R-566).
+//! QA's tests for Heggie's regularised system, built to integrator_contract Part 2b § "Heggie: the equations, the time
+//! transformations, the maps and the step control (transcribed)", § "The time-reversal maps", and Part 1 § "COM
+//! projection and invariant monitoring"; and the energies Aarseth–Zare's march reports.
 //!
-//! Written from the requirement and the contract, not from the implementation. Every anchor is computed here, outside
+//! Written from the contract, not from the implementation. Every anchor is computed here, outside
 //! the code under test:
 //! - `qa_m308_round_trip`: random Cartesian states at unequal masses, registered and returned, give back the state; the
 //!   relative vectors `qᵢ = rⱼ − rₖ`, `Rᵢ = |Qᵢ|² = |qᵢ|`, Eq. 8b's `pᵢ = (mⱼvⱼ − mₖvₖ)/3`, the clock at `0`, the
@@ -23,13 +22,14 @@
 //!   equations (`Q̇` odd in `P`, `Ṗ` and `ṫ` even), its image the ordinary time reversal; control: a map negating `Q`.
 //! - `qa_m308_flow_sums`: the flow's sums on known values, the clock included; and `rates` equals `(q_rate, p_rate)`;
 //!   control: a weighted sum with the weights `1, 1, 1, 1`.
-//! - `qa_m308_default_eq22`: the default time transformation is Eq. 22 (R-161); control: Eq. 20 as the default.
+//! - `qa_m308_default_eq22`: the default time transformation is Eq. 22; control: Eq. 20 as the default.
 //! - `qa_m308_az_energy_reported`: Aarseth–Zare's march reports its first registration's `E` bitwise and the
 //!   regularised energy where it ended, against the Cartesian energy of the end state computed here; `0`, `0` where no
 //!   interval was marched; control: the end state's registration read for the first.
 //!
 //! The comparisons other than the finite difference are identities, checked at f64 round-off (`ROUND`, a few hundred
-//! ulps on O(1) quantities); the finite difference's step and tolerance are REQ-INT-121's.
+//! ulps on O(1) quantities); the finite difference's step and tolerance are given
+//! values (`FD_STEP`, `FD_TOL`), not derived here.
 
 use kernel::driver::advance::Cadence;
 use kernel::occupant::rk4::Rk4;
@@ -42,9 +42,9 @@ use validation::negative_control;
 
 /// The f64 round-off bound for the identities (relative, on O(1) quantities).
 const ROUND: f64 = 1e-12;
-/// REQ-INT-121's finite-difference step.
+/// The finite-difference step.
 const FD_STEP: f64 = 1e-6;
-/// REQ-INT-121's finite-difference tolerance.
+/// The finite-difference tolerance.
 const FD_TOL: f64 = 1e-8;
 /// A floor far below every separation drawn here, so it never acts outside the floor test.
 const TINY: f64 = 1e-300;
@@ -235,7 +235,7 @@ fn check_round_trip(turn: bool) {
                 assert!(rel(ri, dist(s.r[j], s.r[k])) < ROUND, "R{i} is not |q{i}|");
             }
 
-            // The registered h and the regularised energy are the Cartesian energy (Part 1, R-566).
+            // The registered h and the regularised energy are the Cartesian energy (Part 1).
             let e = cartesian_energy(&s);
             assert!(
                 rel(reg.system.h, e) < ROUND,
@@ -605,7 +605,7 @@ negative_control!(
 
 // ── The time-reversal map ──────────────────────────────────────────────────────────────────────────────────────
 
-/// `map` is the time-reversal map (Part 2b, REQ-INT-095): an involution, `Q` kept, `P` and `t` negated, bitwise; the
+/// `map` is the time-reversal map (Part 2b): an involution, `Q` kept, `P` and `t` negated, bitwise; the
 /// equations reversed under it (`Q̇(Q, −P) = −Q̇(Q, P)`, `Ṗ(Q, −P) = Ṗ(Q, P)`, `ṫ` unchanged), under both
 /// transformations; and its image the ordinary time reversal, positions kept and Cartesian momenta negated.
 fn check_reversal(map: impl Fn(&HgQ<f64>, &HgP<f64>) -> (HgQ<f64>, HgP<f64>)) {
@@ -786,7 +786,7 @@ negative_control!(
     check_flow(1.0)
 );
 
-// ── The default time transformation (R-161) ─────────────────────────────────────────────────────────────────────
+// ── The default time transformation ─────────────────────────────────────────────────────────────────────────────
 
 fn check_default(want: HeggieTime) {
     assert_eq!(
@@ -807,7 +807,7 @@ negative_control!(
     check_default(HeggieTime::Eq20)
 );
 
-// ── Aarseth–Zare's reported energies (R-566) ─────────────────────────────────────────────────────────────────────
+// ── Aarseth–Zare's reported energies ─────────────────────────────────────────────────────────────────────────────
 
 struct Quiet;
 
@@ -818,7 +818,7 @@ impl<R> Cadence<R> for Quiet {
     }
 }
 
-/// Aarseth–Zare's step control at f64 at test values: the reference's `TINY` (R-953) and the landing bisection's 64
+/// Aarseth–Zare's step control at f64 at test values: the reference's `TINY` and the landing bisection's 64
 /// halvings (Part 2b, step 6), a budget that does not bind.
 fn az_params() -> AzParams<f64> {
     AzParams {
