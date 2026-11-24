@@ -1,47 +1,35 @@
-//! Each sample's stored record: the payload a stain's read side unpacks, kept by the CPU field beside its outcome, so
-//! the records can go straight into the fragment's payload-side buffers (`render::bind`).
+//! Each sample's stored record, the payload a stain's read side unpacks, in the layout of the fragment's payload-side
+//! buffers (`render::bind`).
 //!
-//! **What a record is** ([`Record`]): the three per-sample members of the four buffers `render::bind::buffers` binds in
-//! group 1 (the fourth, `RenderQuad`, is per quad, not per sample): the `SimState` as the full tier's stored variant,
-//! `SimStateFTLE`; the sample's free-group word; and its `ICDescriptor`. The read side unpacks one into the read-side
-//! `SimState` with `kernel::payload::sim_state_from_ftle` ([`Record::read`]), the CPU twin of the shader's
-//! `sample_read`, at [`Stored::read`]'s values and the full tier, word bound ([`TIER`]). [`Stored::bytes`] is the three
-//! buffers' bytes, each member at the ledger's offset for it (`crate::synthetic`'s writers, `ledger::gen::rust::offsets`).
+//! **A record** ([`Record`]) is the three per-sample elements of the group-1 buffers: the `SimState` as the full tier's
+//! `SimStateFTLE`, the free-group word and the `ICDescriptor`. [`Record::read`] unpacks one with
+//! `kernel::payload::sim_state_from_ftle`, the CPU form of the shader's `sample_read`, at [`Stored::read`] and [`TIER`].
+//! [`Stored::bytes`] lays the records out at the ledger's offsets (`crate::synthetic`'s writers).
 //!
-//! **Where each stored value comes from**: the field's own march, Heggie × RK4 over the sync grid (the field module's
-//! note), each field written by the kernel's own writer for it, as the wrapper writes it. It is not the wrapper's record
-//! bit for bit: the wrapper counts macro-steps and takes a Welford sample at each, where the field's march has only
-//! sync boundaries ("The grid the counts are on", below), so `t_end_step`, `t_dmin_step`, `closure_step`, `mean_y` and
-//! `C_ty` are the same quantities on another grid:
-//! - the state `(r, p)` where the march stopped, and the label, from the march as the field read its outcome;
-//! - the monitored and detected fields, `E_0`, `Lz_0`, `saturated`, `dmin_pair`, `d_min`, `I_max`, `dE_max`,
-//!   `dLz_max`, `dE_reg`, `floor_hits`, `cap_hits`, `coll_floor` and the lagged shape register, from the wrapper's own
-//!   cadence through `kernel::driver::wrapper::monitored`, as the field already ran it;
-//! - `t_dmin_step`, stamped by that cadence's clock, which the march's sync boundaries drive here ([`Boundaries`]);
-//! - the word and `last_symbol`, from the word's crossing cadence (`kernel::driver::cadence::WordCadence`) wrapped
-//!   around the wrapper's, as `kernel::driver::producer::produce` wraps it (in [`Stored`] only: the plain field, whose
-//!   records are not kept, runs without it, as it is most of a record's cost; [`sample`]);
+//! **Where each value comes from**: the field's own march, Heggie × RK4 over the sync grid, each field written by the
+//! kernel's writer for it:
+//! - `(r, p)` where the march stopped, and the label, from the march;
+//! - the monitored and detected fields (`E_0`, `Lz_0`, `saturated`, `dmin_pair`, `d_min`, `I_max`, `dE_max`, `dLz_max`,
+//!   `dE_reg`, `floor_hits`, `cap_hits`, `coll_floor`, the lagged shape register), from the wrapper's cadence through
+//!   `kernel::driver::wrapper::monitored`;
+//! - `t_dmin_step`, from that cadence's clock, driven at each sync boundary ([`Sampling`]);
+//! - the word and `last_symbol`, from `kernel::driver::cadence::WordCadence` around the wrapper's cadence, in
+//!   [`Stored`] only ([`sample`]'s `word`);
 //! - the shape readout (`theta`, `_reserved`, `closure_min`, `closure_step`, `departed`) and the Welford co-moments
-//!   (`mean_y`, `C_ty`), taken at each sync boundary the march lands on ([`Boundaries`]);
-//! - `t_end_step`, the sync boundaries completed; `total_substeps`, the steps the cadence followed
-//!   (`HgCount::accepted`, what Heggie's seam reports as substeps); `budget_exhausted`, where the step budget ran out;
-//! - the `ICDescriptor`, the decode's own, narrowed once from f64 as the IC is.
+//!   (`mean_y`, `C_ty`), at each sync boundary landed on ([`Boundaries`]);
+//! - `t_end_step`, the boundaries completed; `total_substeps`, `HgCount::accepted`; `budget_exhausted`, where the step
+//!   budget ran out;
+//! - the `ICDescriptor`, the decode's, narrowed once from f64.
 //!
-//! None of these wrapping cadences changes the march: each only reads the state and passes every call on, so the
-//! field's outcomes are the march's as before, bit for bit.
+//! Each wrapping cadence only reads the state and passes every call on.
 //!
-//! **The one value with no march behind it**: the FTLE. Heggie owns its time mapping, and its joint march with the
-//! Benettin shadow is not built (`kernel::driver::producer`'s note), so the record holds the payload's own form for that,
-//! the failed shadow (`kernel::driver::failure::failed_shadow`): `S` the failed mark (`S_FAILED_BITS`), `r_sh` and
-//! `p_sh` the sample's own `r` and `p`. The read side reads `ftle_valid` false and `ftle` the canonical NaN, never a
-//! number. `ensemble_spread` is not stored (it is a footprint's, not a sample's), and the read side reads it NaN.
+//! **FTLE**: no shadow is marched under Heggie, so the record holds the failed shadow
+//! (`kernel::driver::failure::failed_shadow`): `S` the failed mark, `r_sh` and `p_sh` the sample's own `r` and `p`;
+//! the read side reads `ftle_valid` false and `ftle` NaN. `ensemble_spread` is not stored; it reads NaN.
 //!
-//! **The grid the counts are on.** The plan is unclear here: the payload's step counts (`t_end_step`, `t_dmin_step`,
-//! `closure_step`, the Welford `n`) are macro-steps of `dt_macro` under the wrapper, while the field's march stands
-//! only on sync boundaries of `Δ_sync`. Chose the sync grid: each count is the sync boundaries completed, and
-//! [`Stored::read`] carries `dt_macro = Δ_sync` and `horizon_steps` the boundary the march targets, so `t_end_fraction`,
-//! the diffusion slope's `h` and every step index read in physical time correctly, because these are the march's own
-//! sampling points and no macro-step grid exists in it to count.
+//! **The grid the counts are on**: the step counts (`t_end_step`, `t_dmin_step`, `closure_step`, the Welford `n`) count
+//! sync boundaries, and [`Stored::read`] carries `dt_macro = Δ_sync` and `horizon_steps` the boundary the march targets.
+//! The plan is unclear here; chose the sync grid because the march has no macro-step grid to count.
 
 use kernel::decode::{Degenerate, Ic};
 use kernel::detect::collision::CollisionRadius;
@@ -154,8 +142,7 @@ impl Stored {
 }
 
 /// The read side's values for records marched over `k_target` sync boundaries of `params`' `Δ_sync` (the module's
-/// note): `dt_macro` is `Δ_sync` and `horizon_steps` is `k_target`. No shadow is marched, so no renormalisation
-/// completes (`n_renorm` 0) and `delta_0` is never read (`ftle` is invalid on every record).
+/// note): `dt_macro` is `Δ_sync`, `horizon_steps` is `k_target`, `n_renorm` 0 and `delta_0` unused (no shadow).
 pub fn read_params(k_target: u32, params: &HgParams<f32>) -> ReadParams {
     ReadParams {
         dt_macro: params.delta_sync,
@@ -165,7 +152,8 @@ pub fn read_params(k_target: u32, params: &HgParams<f32>) -> ReadParams {
     }
 }
 
-/// The decode's `ICDescriptor`, narrowed once from f64 to f32 member by member, as the IC is (`crate::first_slice::narrow`).
+/// The decode's `ICDescriptor`, narrowed once from f64 to f32 member by member. The plan is unclear here; chose to
+/// narrow the f64 decode's because the field decodes at f64 and narrows the IC the same way.
 pub fn narrow_descriptor(d: &ICDescriptorOf<f64>) -> ICDescriptor {
     let n = |x: f64| x as f32;
     ICDescriptor {
@@ -203,8 +191,7 @@ pub struct Sampled {
 /// The sample `ic`, decoded with the tag `degenerate`, marched by Heggie × RK4 at f32 over `k_target` sync boundaries
 /// with `params` under the collision threshold `radius` and the stop option `stop_on_escape` (the field module's
 /// note), and what it stores (the module's note). With `word` false the word's crossing cadence is not run and the
-/// word stored is the unbound one, `FGW_UNBOUND`, which every word-derived predicate reads as invalid, `last_symbol`
-/// among them: the field's outcomes need no word, and its cadence is most of a record's cost.
+/// word stored is `FGW_UNBOUND`, which every word-derived predicate, `last_symbol`'s among them, reads as invalid.
 pub fn sample(
     ic: &Ic<f32>,
     degenerate: Option<Degenerate>,
@@ -316,9 +303,9 @@ pub struct Boundaries {
     diffusion: Welford<f32>,
     readout: Readout<f32>,
     completed: u32,
-    /// The positions the last step left, before the cadence's COM projection: the march's own image of its regularised
-    /// state, which it returns as the state it stands on (`HgAdvanced::state`), so the samples are taken on the state
-    /// the record stores and the wrapper's readout reads.
+    /// The positions the last step left, before the cadence's COM projection: the march's image of its regularised
+    /// state, the one it returns (`HgAdvanced::state`) and the record stores. Don't take the samples on the state
+    /// `sample` is handed instead: that one is projected, and `theta` would then differ from the wrapper's by an ulp.
     image: [[f32; 2]; 3],
 }
 
@@ -374,11 +361,10 @@ impl<C: Cadence<f32>> Cadence<f32> for Sampling<'_, C> {
         self.inner.done()
     }
 
-    /// A sync boundary landed on, `index`: `inner`'s sample, then, unless the run has failed (a failed step completes
-    /// nothing, as under the wrapper), the boundary completed, its Welford sample and shape readout taken with
-    /// `h = quantum` on the positions the landing step left before the projection (the march's own image, which it
-    /// returns and the record stores, bit for bit; `inner` reads the projected state); then `inner`'s clock at the boundaries completed, so a `d_min` latched on the landing
-    /// step is stamped with this boundary, as the wrapper stamps the macro-step a latch completed.
+    /// A sync boundary landed on, `index`: `inner`'s sample; then, unless the run has failed, the boundary completed
+    /// and its Welford sample and shape readout taken with `h = quantum` on the unprojected positions ([`Boundaries`]'s
+    /// `image`); then `inner`'s clock at the boundaries completed, so a `d_min` latched on the landing step is stamped
+    /// with this boundary.
     #[inline]
     fn sample(&mut self, state: &State<f32>, index: u32, quantum: f32) {
         self.inner.sample(state, index, quantum);

@@ -2,7 +2,7 @@
 //! back through the ledger's CPU read side as the shader reads them.
 //!
 //! The view is the app's zero view (`gui::real::capture_view`): the latent chart `z_α × z_β` over its default window,
-//! `z₀` at the origin, horizon 50, here at 16 × 16 samples. The pass criteria, each written before the run:
+//! `z₀` at the origin, horizon 50, here at 16 × 16 samples. The pass criteria:
 //! - **the label**: every record, unpacked by `kernel::payload::sim_state_from_ftle` from the bytes the buffers hold,
 //!   reads the field's own outcome, `state` and `detail` equal, on every sample;
 //! - **the march's own values**: on every sample the march ran to an end it did not fail on, the stored `r` and `p`,
@@ -631,8 +631,7 @@ fn thetas() -> &'static Vec<(f32, f32)> {
     })
 }
 
-/// Each record's `theta` is the wrapper's, bit for bit: the shape readout sampled on the sync grid, on the march's own
-/// image, sees the states the wrapper's macro-step readout sees under Heggie, which stands still between boundaries.
+/// Each record's `theta` is the wrapper's, bit for bit.
 fn check_theta(pairs: &[(f32, f32)]) {
     assert!(
         !pairs.is_empty(),
@@ -655,7 +654,7 @@ fn every_records_theta_is_the_wrappers() {
 
 negative_control!(
     every_records_theta_is_the_wrappers,
-    "one record's theta moved by one unit in the last place, as a readout on the projected state gave it",
+    "one record's theta moved by one unit in the last place",
     expected = "is not the wrapper's",
     check_theta(&{
         let mut t = thetas().clone();
@@ -677,7 +676,7 @@ fn failed_view() -> Stored {
 
 /// Every sample of `stored` a failed decode: its record reads `decode_failed` with its outcome's detail, every count
 /// 0, no FTLE, the word unbound to its empty value, and its `ICDescriptor` the decode stage's own for that IC, narrowed
-/// once (what the GPU's decode stage writes from the same source), the masses NaN as the decode left them.
+/// once, the masses NaN as the decode left them.
 fn check_failed(stored: &Stored) {
     let mut sim = zero_view();
     sim.plane.z0[6] = f64::NAN;

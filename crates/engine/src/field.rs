@@ -267,8 +267,7 @@ impl Cpu {
     }
 
     /// [`FieldBackend::stored`] on the workers of `pool`: the same records, bit for bit, on any pool. An error, beside
-    /// [`Cpu::field_on`]'s, where the march targets more sync boundaries than `t_end_step`'s 16 bits hold (a horizon
-    /// past `65535·Δ_sync`), as the counts would wrap.
+    /// [`Cpu::field_on`]'s, where the march targets more than 65535 sync boundaries, `t_end_step`'s 16 bits.
     pub fn stored_on(
         &self,
         pool: &crate::pool::Pool,
