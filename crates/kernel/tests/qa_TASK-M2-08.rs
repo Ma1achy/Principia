@@ -41,14 +41,14 @@
 //! - Provenance (`shape_vec_qa_fixture_provenance`): the fixture names the `.nvmrc` Node version and the inspector as
 //!   its source.
 //!
-//! **Not asserted** (held open): `L±` off the poles at unequal masses; only `L⁺`'s orientation, `w > 0`, is
-//! asserted there.
+//! **Not asserted**: where `L±` sit at unequal masses (chart_reference: `w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`,
+//! the poles only at equal masses); only `L⁺`'s orientation, `w > 0`, is asserted there.
 //!
 //! **Tolerances.** The agreement of `n` computed by two routes (the inspector's, the closed-form collision points', the
 //! statement's reference) is the register's `shape_vec_js_tol`; the round trip and the fold, which
 //! recover a point of the sphere from `Φ`'s configuration, are within the register's `shape_roundtrip_bound`.
-//! The chart map's own identities are a multiple of ε from the handful of rounded operations on their path (the plan
-//! sets no bound for them; this test chose that multiple). Exact values (`(−1, 0, 0)` at `ρ̃ = 0`, `n₀` at `d = 0`,
+//! The chart map's own identities are a multiple of ε from the handful of rounded operations on their path (this test's
+//! choice of multiple). Exact values (`(−1, 0, 0)` at `ρ̃ = 0`, `n₀` at `d = 0`,
 //! `+0` at the poles) are asserted exactly.
 //!
 //! **Domain** (pitfalls §10): the map, the chart and `C` on states held fixed; no trajectory.
@@ -1096,13 +1096,13 @@ mod fold_moves_section {
 // ── dd_decoder §2, §3.5: the decode hands the integrator C(Φ), nothing mirrored, canonical ─────────────────────────
 
 /// The canonical section's identities (`I = 1`, the CoM, `ρ_y`, `Σp`) and §3.5's scalings of `E` and `L_z`: `C`'s
-/// rotation and scale, a few roundings each, against the state's own size (the plan sets no bound;
-/// this test chose it).
+/// rotation and scale, a few roundings each, against the state's own size (dd_decoder §5
+/// test 1 asks for a precision-appropriate tolerance; this test chose it).
 const CANON_TOL: f64 = 64.0 * EPS;
 
 /// `|n₂|` above which `λ̃_y`'s sign is asserted to be `n₂`'s: with `ρ` on `+x`, `n₂ = 2ρ̃ₓλ̃_y` at `I = 1` (§3.1), so the
-/// two share a sign; at `n₂` within a few roundings of 0 the sign is the rounding's (the plan sets no
-/// bound; this test chose it).
+/// two share a sign; at `n₂` within a few roundings of 0 the sign is the rounding's (this test's
+/// choice).
 const SIGN_FLOOR: f64 = CANON_TOL;
 
 /// `(com, I, E, L_z, size, L_z's scale)` of a state: the mass-weighted moment of inertia about the CoM, §3.6's
@@ -1412,8 +1412,8 @@ negative_control!(
 );
 
 /// Random masses, ratios up to `e⁸`: `BC₀₁ = (−1, 0, 0)` exactly; every collision on `w = 0`, unit, at the
-/// mass-weighted point [`analytic_bc`]; and `L⁺`'s `w > 0` (its orientation only: `L±`
-/// off the poles at unequal masses is held open).
+/// mass-weighted point [`analytic_bc`]; and `L⁺`'s `w > 0` (its orientation only; its
+/// `w` at unequal masses is not asserted).
 fn check_mass_weighted(of: LandmarksFn) -> f64 {
     let mut rng = SplitMix::new(0x2050);
     let mut worst: f64 = 0.0;

@@ -18,7 +18,8 @@
 //!   each component of each body counts toward `s`.
 //! - `energy_normalisation_keeps_earlier_tag`: a decode the mass block tagged keeps `M01_TINY`.
 //!
-//! **The tolerances** (the plan sets none; this test bounds them from the operation count, not calibrated values).
+//! **The tolerances** (dd_decoder §3.7 asks for `K₀ = E* − U` to rounding; this test bounds the rounding from the
+//! operation count, not calibrated values).
 //! The scaled `K = Σ η²p̂ᵢ²/2mᵢ` is formed from `Δ = E* − U` in eight roundings, each relative to its operand
 //! (`p̂ = p/s`, the square and the sum of each body's components, the division by `2mᵢ`, the sum over bodies,
 //! `Δ/K̂`, the `sqrt` and `η·p̂`), and `K + U` in one more, so `|E − E*| ≤` [`ENERGY_EPS`]` · eps · (K + |U| + |E*|)`,

@@ -8,7 +8,7 @@
 //! `ω = √(1/(3√3))`; Burrau 3:4:5, masses `(3, 4, 5)/12` at `(1, 3)`, `(−2, −1)`, `(1, −1)`, at rest. Each is also
 //! taken through a gauge element (a turn, an offset, a boost and a rescale), so `C` meets a foreign frame.
 //!
-//! **What is checked** (the plan leaves these details open; they are this test's choices): the result is `E(x)`, the
+//! **What is checked** (this test's choices): the result is `E(x)`, the
 //! free decode of its `z`, the residual Part 4's norm from `C(x)` to `D(z)`, within `ε_phys` (the register's value)
 //! with no control clamped (the figure-eight's published start is collinear with body 3 at the inner pair's centre of
 //! mass, the `α = 0` pole: it raises `lookup_clamped` and its `κ` is large, as Part 4 says it must), and `κ(x)` is

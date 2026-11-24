@@ -39,11 +39,10 @@
 //!   negative `x`-axis, the `±π` tie, `ρ` on the axis and through zero) and on real runs, negated under `Π`.
 //!
 //! **Tolerances.** The inspector's and the round trip's are the register's. The others are multiples of the
-//! precision's epsilon, set from the worst case each test measures, with headroom (the plan sets none; this test
-//! chose them, as `canon.rs`'s). `shape_landmarks_mass_weighted`'s is `8ε·κ`, scaled by `shape`'s condition number
-//! `κ` at each draw: a collision configuration is an ill-conditioned input, `|ρ|` small against the positions, and
-//! the error is `shape`'s rounding on it, not the landmark's; the worst error over 600,000 draws is `3.8 ε·κ`
-//! (the plan sets no bound; this test chose it).
+//! precision's epsilon, set from the worst case each test measures, with headroom (this test's choice, as
+//! `canon.rs`'s). `shape_landmarks_mass_weighted`'s is `8ε·κ` (this test's choice), scaled by `shape`'s condition
+//! number `κ` at each draw: a collision configuration is an ill-conditioned input, `|ρ|` small against the positions,
+//! and the error is `shape`'s rounding on it, not the landmark's; the worst error over 600,000 draws is `3.8 ε·κ`.
 
 use std::path::Path;
 

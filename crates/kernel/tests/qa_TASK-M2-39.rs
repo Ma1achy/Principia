@@ -64,7 +64,7 @@ enum Fault {
     BlankTop,
 }
 
-/// The frozen controls and the warp's parameters, at the warp's proposed defaults.
+/// The frozen controls, and the warp's parameters at their proposed defaults.
 fn invariant() -> Invariant<f64> {
     Invariant {
         z_cfg: [0.15, -0.25],
