@@ -55,7 +55,7 @@ use kernel::encode::{encode, Encoded};
 use kernel::generated::links::Defaults;
 use validation::negative_control;
 
-// The link constants, inverse-encode Part 3.
+// The link constants and `δ_λ`, inverse-encode Part 3.
 const MU_MAX: f64 = 5.0;
 const Q_MAX: f64 = 2.0;
 const EPS_MU: f64 = 1e-6;

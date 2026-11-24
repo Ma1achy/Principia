@@ -35,11 +35,11 @@
 //!   `E_canon = 2·E_in`, `L_canon = L_in/√2`, and the timing factor `I_in^{3/4}` read off the dynamics: velocities scale
 //!   by `λ·I_in^{3/4}` and accelerations by `λ·I_in^{3/2}`, the similarity `t ← t/I_in^{3/4}` of inverse-encode Part 2.
 //! - `qa_m207_coincident_pole`: `ρ = 0` with `I_in > 0`, components `(+0, +0)`, `(−0, +0)` and `(+0, −0)`, raises
-//!   `lookup_clamped` with `φ = +0` by its bits and the identity rotation, at f64 and f32; at `I_in = 0` (where the
-//!   spec leaves the state open) only the flag and `φ` are asserted; a `ρ` off 0 does not clamp.
+//!   `lookup_clamped` with `φ = +0` by its bits and the identity rotation, at f64 and f32; at `I_in = 0` only the flag
+//!   and `φ` are asserted; a `ρ` off 0 does not clamp.
 //!
-//! **Not asserted** (the spec leaves them open): when `lookup_rescaled` is raised, and `C`'s state and `λ` at
-//! `I_in = 0`.
+//! **Not asserted here:** when `lookup_rescaled` is raised, and `C`'s state and `λ` at `I_in = 0` (divisor 1, `λ = 1`,
+//! `p = 0` in inverse-encode Part 6); `canon.rs`'s `scale_step_skip` and `scale_step_range` check them.
 //!
 //! **Tolerances.** Each is an exact identity checked to rounding: a multiple of the precision's epsilon from the
 //! number of rounded operations on the path (CoM, rescale, unboost, the rotation from `atan2`/`sin`/`cos`), times the
@@ -1383,7 +1383,7 @@ fn qa_m207_coincident_pole() {
         pole::<f64>(canonicalise, name, &x).unwrap();
         pole::<f32>(canonicalise, name, &x).unwrap();
     }
-    // I_in = 0, every body at one point (the spec leaves the state and λ open there): only the flag and φ.
+    // I_in = 0, every body at one point: only the flag and φ (canon.rs's `scale_step_range` checks the state and λ).
     for (sx, sy) in [(0.0, 0.0), (-0.0, 0.0), (0.0, -0.0), (-0.0, -0.0)] {
         let x = Ic {
             m: [0.2, 0.3, 0.5],
