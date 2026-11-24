@@ -20,9 +20,10 @@
 //!   toward `z_α` across `z_α = 0`, `‖Δv‖_m` between neighbouring pixels, the criterion "the pair across the line is no
 //!   larger than the largest neighbouring difference within 8 pixels of it on either side". Its control, the legacy
 //!   largest-norm rule, must fail it, else the result is void; that is asserted. That criterion under the seed in force
-//!   is printed with its outcome, not asserted. What is asserted is the measurement's explanation, from outside the
-//!   code: the pair across the line over its largest neighbour is exactly the ratio of the chord lengths of the
-//!   decoded `α` steps (a seam-free start moves only with its configuration), so no seed term is present.
+//!   is printed with its outcome, not asserted: the plan is unclear here on how to read the criterion under that seed;
+//!   chose to report it rather than let a test settle the reading. What is asserted is the measurement's explanation,
+//!   from outside the code: the pair across the line over its largest neighbour is exactly the ratio of the chord
+//!   lengths of the decoded `α` steps (a seam-free start moves only with its configuration), so no seed term is present.
 //! - `qa_m293_seed_conversion_lagrange`: at the invariant charts' default pin, `z = 0`, the masses are
 //!   equal and the configuration equilateral; every pixel starts homographic and its accelerations are `−κ·rᵢ` with one
 //!   `κ` for all three bodies, so the start is an exact homographic orbit and its break-up is set by rounding (labelled

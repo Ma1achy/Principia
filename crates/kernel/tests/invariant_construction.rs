@@ -32,7 +32,7 @@
 //! `construct_by_norms` on fixtures, configurations not from the canonical decode, where `ρ = 0` and the coincident
 //! configuration are reachable.
 //!
-//! **The tolerances** (proposed, to be confirmed at the M2 gate): each residual is in
+//! **The tolerances** (proposed): each residual is in
 //! units of the precision's `eps` times its scale: `|Σpᵢ|` of `Σ|pᵢ|`, `|L_z(p) − L_z|` of `|L_z| + √(2K*)` (the rigid
 //! part and the mixed part, `|L(w)| ≤ √I‖w‖_m = 1`), and `|K(p) − K*|` of `K*`. The residuals are formed in f64 from the
 //! construction's output, so at f32 they measure the f32 construction alone. **The bound on `K`:** the construction

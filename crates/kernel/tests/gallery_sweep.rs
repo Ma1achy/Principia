@@ -66,7 +66,7 @@ use validation::{
 /// The grid's divisions per axis: 257 points, `0, 1/256, …, 1`, each exact at f32 and f64.
 const N: u32 = 256;
 
-/// The sweep's worker threads, at most: four, the test threads a build here is given.
+/// The sweep's worker threads, at most.
 const WORKERS: usize = 4;
 
 /// The `γ_K` of the edge set: the least admissible exponent (chart_reference §2.1, "`γ_K ≥ 1`").
