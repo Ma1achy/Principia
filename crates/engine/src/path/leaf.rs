@@ -1,7 +1,6 @@
-//! One leaf per operation (TASK-M2-64): the entry points every route that edits a view calls, the engine's and the
-//! gui's alike. Each builds the operation's segment by its family's constructor and passes it through the stop
-//! ([`super::stop`]; REQ-CHART-060, REQ-CHART-168) before anything is recorded, so the edits a leaf returns, which the
-//! history holds, are the value the stop accepted.
+//! One leaf per operation: the entry points every route that edits a view calls, the engine's and the gui's alike.
+//! Each builds the operation's segment by its family's constructor and passes it through the stop ([`super::stop`])
+//! before anything is recorded, so the edits a leaf returns, which the history holds, are the value the stop accepted.
 //!
 //! | Operation | Leaf | Family | Through the stop as |
 //! |---|---|---|---|
@@ -9,7 +8,7 @@
 //! | Zoom | [`zoom`] | `Zoom` in octaves, or `ZoomFactor` by a ratio of scales, on the plane or a kernel map's window | a path |
 //! | Slice | [`slice`] | `Slice` | a path |
 //! | A slider's move | [`control`] | `Control` | a path |
-//! | Tilt | [`tilt`] | R-474's map on a latent view ([`OnLatent`]) or a curved one ([`OnCurved`]), one target or two | a path |
+//! | Tilt | [`tilt`] | the active tilt map (Tip as sheet or Lean each axis) on a latent view ([`OnLatent`]) or a curved one ([`OnCurved`]), one target or two | a path |
 //! | Lock | [`lock`] | `Cut` `Lock`, or `LockRecentre` with the centre-on-pin setting on | a lock: taken or refused |
 //! | Centre on pin | [`centre_on_pin`] | `Cut` `CentreOnPin` | a lock |
 //! | Snap-back | [`snap_back`] | `Cut` `SnapBack` | a lock |
@@ -139,8 +138,8 @@ pub fn control(a: &View, k: usize, value: f64, gate: &dyn Gate) -> Result<Leaf, 
     Ok(through(Segment::control(a, k, value)?, gate, Kind::Path))
 }
 
-/// What a tilt turns: a latent view's frame or a curved view's chart. One tilt leaf over both, each R-474 map with one
-/// target or two read from the [`TiltSpec`].
+/// What a tilt turns: a latent view's frame or a curved view's chart. One tilt leaf over both, either tilt map (Tip as
+/// sheet or Lean each axis) with one target or two read from the [`TiltSpec`].
 pub trait TiltOn {
     /// The tilt of `a` to `spec`.
     fn segment(&self, a: &View, spec: &TiltSpec) -> Result<Segment, PathError>;
@@ -274,7 +273,7 @@ where
 }
 
 /// The lock at the pixel `at` of `a` on `on`, with the centre-on-pin `setting`: through the stop as a lock, taken where
-/// its view's centre passes and refused otherwise (R-469 A2).
+/// its view's centre passes and refused otherwise.
 pub fn lock(
     a: &View,
     on: &dyn Locate,

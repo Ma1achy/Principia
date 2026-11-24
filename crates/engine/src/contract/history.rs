@@ -1,14 +1,13 @@
-//! The contract's one undo/redo history (R-52; gui_state_contract §2), kept the same way by every engine: the real
+//! The contract's one undo/redo history (gui_state_contract §2), kept the same way by every engine: the real
 //! engine's [`StateStore`](crate::contract::store::StateStore) and the gui crate's mock both hold one, as both apply an
 //! edit through [`write`](crate::contract::store::write).
 //!
 //! An edit under no history key is one entry, logged when it is applied. A drag sends every frame's edit under its own
 //! [`HistoryKey`], and a command of several edits sends them under one fresh key: the edits sent under one key, one
 //! after another, are one entry, its before each field's value at the first of them and its after the last value sent,
-//! and the entry is logged once, when it closes, one `SetField <path> <before> → <after>` line per field it set (R-96,
-//! R-458 F1, R-466). The entry closes when its key ends (the GUI's end of the drag), at an edit under another key or
-//! none, and at an undo or a redo. An edit marked "no history" enters no entry, is logged as it is applied, and leaves
-//! the open entry open (R-101).
+//! and the entry is logged once, when it closes, one `SetField <path> <before> → <after>` line per field it set. The
+//! entry closes when its key ends (the GUI's end of the drag), at an edit under another key or none, and at an undo or
+//! a redo. An edit marked "no history" enters no entry, is logged as it is applied, and leaves the open entry open.
 
 use crate::contract::set_field::{Edit, HistoryKey, SetField};
 use crate::contract::store::{edit_path, edit_value, set_field_message};
@@ -139,7 +138,7 @@ impl History {
         lines
     }
 
-    /// The undo history's depth, as the snapshot's u32 (R-329), saturating.
+    /// The undo history's depth, as the snapshot's u32, saturating.
     pub fn undo_depth(&self) -> u32 {
         u32::try_from(self.undo.len()).unwrap_or(u32::MAX)
     }

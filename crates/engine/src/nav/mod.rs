@@ -1,7 +1,7 @@
-//! Navigation's geometry (chart_decoder_contract Part 4; chart_reference §1.1; TASK-M2-22): the plane's frame, the part
-//! of a vector off the plane, the vector arithmetic, and the direction library ([`directions`]) a slice steps along and
-//! a tilt turns toward. Navigation itself, pan, slice, zoom, the raw tilts and the oblique plane, is the chart-path
-//! object's (`crate::path`, TASK-M2-61): each gesture is a segment of a named family, and its formula lives there.
+//! Navigation's geometry (chart_decoder_contract Part 4; chart_reference §1.1): the plane's frame, the part of a vector
+//! off the plane, the vector arithmetic, and the direction library ([`directions`]) a slice steps along and a tilt
+//! turns toward. Navigation itself, pan, slice, zoom, the raw tilts and the oblique plane, is the chart-path object's
+//! (`crate::path`): each gesture is a segment of a named family, and its formula lives there.
 
 pub mod directions;
 
@@ -18,7 +18,7 @@ pub enum NavError {
     ZeroVector,
     /// `q₁` and `q₂` do not span a plane: one is 0, or they are parallel.
     DegeneratePlane,
-    /// The morph's source: neither basis vector has a configuration component (Part 4, REQ-CHART-051).
+    /// The morph's source: neither basis vector has a configuration component (Part 4).
     NoConfiguration,
     /// A named direction is unavailable at this centre ([`directions::Unavailable`]).
     Unavailable(directions::Unavailable),
@@ -60,7 +60,7 @@ pub(crate) fn unit(a: &Latent) -> Result<Latent, NavError> {
 
 /// `a / ‖a‖` for an `a` left by cancelling terms of size `size`: [`NavError::ZeroVector`] where `‖a‖ ≤ √ε·size`, `ε`
 /// the f64 machine epsilon, below which the direction would keep fewer than half its digits, rounding rather than
-/// geometry (applied per R-369: the conditioning guard of a Gram–Schmidt step and of the tilt's sum).
+/// geometry (the conditioning guard of a Gram–Schmidt step and of the tilt's sum).
 pub(crate) fn unit_of(a: &Latent, size: f64) -> Result<Latent, NavError> {
     if !a.iter().all(|x| x.is_finite()) {
         return Err(NavError::NonFinite);
