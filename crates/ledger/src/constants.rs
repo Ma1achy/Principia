@@ -1115,6 +1115,19 @@ pub const LOCK_TOLERANCE: ConstantBuilder = proposed(
     "M2",
 );
 
+/// The lock's re-solve's residual target (`path::anchor`'s solver settings), as `k` in `k·ε_R`, in the block
+/// coordinates the solve minimises in: where a nearest-point, re-hold or slide solve stops as on the image. Below
+/// `lock_tolerance`, so a hold is never judged at the point its solve stopped. A calibration: twice the worst residual
+/// the re-hold and nearest-point solves stop at with no target (their floor, 14.7 `ε`, the exponential sphere's
+/// re-hold), on the lock sweep's hold pairs at its 16 × 16 pins, rounded up to a power of two (PR #72).
+pub const LOCK_SOLVE_TOLERANCE: ConstantBuilder = proposed(
+    "lock_solve_tolerance",
+    32.0,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-158",
+    "M2",
+);
+
 /// Lookup's layer-3 tolerance, decode sanity: the CoM at the origin and `Σpᵢ = 0` within it, as `k` in `k·ε_R` on the
 /// residuals `‖Σmᵢrᵢ‖/R_x` and `‖Σpᵢ‖/P_x`, `R_x` and `P_x` Part 4's extents (inverse-encode § "Chart-aware
 /// validation", layer 3; REQ-ENC-027): 16, so 16·2⁻⁵² ≈ 3.55e-15 at f64 and 16·2⁻²³ ≈ 1.91e-6 at f32. TASK-M2-19's
@@ -1964,6 +1977,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     SHAPE_ROUNDTRIP_BOUND,
     EPS_PHYS,
     LOCK_TOLERANCE,
+    LOCK_SOLVE_TOLERANCE,
     DECODE_SANITY,
     ZERO_CLASS,
     LITERATURE_IMPORT_TOL,

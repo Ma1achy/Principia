@@ -288,7 +288,7 @@ enum Stand {
 /// provisional until the M3 gate, citing REQ-VAL-055 (R-37, R-427); and the sync quantum `delta_sync`, provisional until
 /// the M3 gate, citing REQ-INT-080, its calibration (TASK-M3-40); and the escape window `escape_window`, provisional
 /// until the M3 gate, citing REQ-EVT-033, its ladder's calibration (R-698; TASK-M3-34).
-const TABLE: [(&str, Stand); 50] = [
+const TABLE: [(&str, Stand); 51] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -312,6 +312,8 @@ const TABLE: [(&str, Stand); 50] = [
     ("eps_phys", Stand::Until("M2", "REQ-ENC-024")),
     // The lock's tolerance, proposed by TASK-M2-65 from the pinned state's drift (REQ-CHART-158).
     ("lock_tolerance", Stand::Until("M2", "REQ-CHART-158")),
+    // The lock's re-solve's residual target, proposed by PR #72 from the solves' floor.
+    ("lock_solve_tolerance", Stand::Until("M2", "REQ-CHART-158")),
     ("decode_sanity", Stand::Until("M2", "REQ-ENC-027")),
     ("zero_class", Stand::Until("M2", "REQ-ENC-037")),
     ("literature_import_tol", Stand::Until("M2", "REQ-VAL-120")),

@@ -1353,7 +1353,7 @@ fn pinned_and_unselected(view: &View, at: [f64; 2]) -> (Ic<f64>, Ic<f64>, Option
     }
     let b = match blend.rehold() {
         true => {
-            anchor::rehold(&blend.a, &blend.b, &leaves(), blend.s())
+            anchor::rehold(&blend.a, &blend.b, &leaves(), phys, blend.s())
                 .expect("re-held")
                 .0
         }
@@ -2758,6 +2758,32 @@ negative_control!(
 // chose a slice the sphere can follow (it holds the masses and momenta fixed and moves only the shape), so the pair
 // stays a hold pair through the slice and its re-held frames are measured as holds.
 
+// ── The rerun with the re-hold fixed: its criteria, written before it ran ────────────────────────────────────────────
+//
+// The two fixes: the solver's residual target decoupled from `LOCK_TOLERANCE` (a tighter target of its own), and
+// `anchor::rehold` deciding its hold in `‖·‖_phys` as `anchor::recentre` does. Main's run (PR #69): worst 65.825 ε, the
+// sphere's re-held slice frames; 124 refusals, all mixed to Burrau. The criteria:
+//
+// - **C1, the solver target from its floor.** With the residual target at 0, the residual each hold solve stops at (the
+//   re-hold's and the nearest point's, on the hold pairs at the sweep's pins) is its floor. The target is the smallest
+//   power of two in `ε` at or above twice the worst floor. Pass: it is below `LOCK_TOLERANCE` (64 ε); if not, the target
+//   goes to the owner, not into the code.
+// - **C2, no hold lost.** At that target, no hold pair (affine, nonlinear, the sphere, `(L_z, K)` to latent) refuses or
+//   has a frame that slides: a hold decided in `‖·‖_phys` must not turn a frame main held into a slide, since a sliding
+//   frame reads 0 here and would hide it.
+// - **C3, the worst and its distribution**, reported per pair, the target's own pin included. Every holding frame is now
+//   within `LOCK_TOLERANCE` in `‖·‖_phys` by construction; the number that matters is how far under.
+// - **C4, a fixed point.** `T` = the rule's output at 64. Rerun with `LOCK_TOLERANCE` set to `T` (a local edit of the
+//   ledger, reverted, as PR #69 did). Pass: the rule gives `T` again there, and nothing the sweep holds at 64 refuses
+//   or slides at `T`.
+// - **C5, the slides unchanged.** The rest and Burrau pairs' refusal count and per-pin readings as on main, the
+//   shared solver settings notwithstanding; any change is listed.
+// - **C6, the Burrau refusals' cause.** Each ended slide's failure kind (the follow's continuity test or a probe,
+//   `Ended`; or the frame's direct solve, `Stalled`, `IterationCap`, `IllConditioned`), its `s` and the first frame's
+//   residual, tabulated. A correct end is a continuity ending whose `s` holds as the frame count doubles (within a
+//   frame); an end that is a direct solve's failure, or whose `s` moves with the frame count, is a failed follow, a
+//   defect.
+
 /// The grid's side: pins at `k/(SWEEP_SIDE − 1)`, corners and edges included.
 const SWEEP_SIDE: usize = 16;
 
@@ -2920,7 +2946,7 @@ fn sweep_frame<L: Leaves>(
     let holds = blend.holds(leaves).map_err(|e| format!("{e:?}"))?;
     let b = match blend.rehold() {
         true => {
-            anchor::rehold(&blend.a, &blend.b, leaves, s)
+            anchor::rehold(&blend.a, &blend.b, leaves, phys, s)
                 .map_err(|e| format!("{e:?}"))?
                 .0
         }
@@ -3017,11 +3043,11 @@ fn try_locked_latent(plane: &Plane, (s, t): (f64, f64)) -> Result<View, String> 
     anchor::record(locked.b(), &leaves()).map_err(|e| format!("{e:?}"))
 }
 
-/// The sweep over `side × side` pins on every pair in `pairs` (indices into [`SWEEP_PAIRS`]): each pair's readings by
-/// pin, and the refusals.
+/// The sweep over `pins` on every pair in `pairs` (indices into [`SWEEP_PAIRS`]): each pair's readings by pin, and the
+/// refusals.
 #[allow(clippy::type_complexity)]
 fn tolerance_window(
-    side: usize,
+    pins: &[[f64; 2]],
     pairs: &[usize],
     frames: usize,
     against: &dyn Fn(Ic<f64>) -> Ic<f64>,
@@ -3115,7 +3141,7 @@ fn tolerance_window(
     );
     let mut readings: Vec<Vec<([f64; 2], PinReading)>> = pairs.iter().map(|_| Vec::new()).collect();
     let mut refusals: Vec<Refusal> = Vec::new();
-    for at in sweep_pins(side) {
+    for &at in pins {
         let st = (at[0], at[1]);
         for (slot, &p) in pairs.iter().enumerate() {
             let name = SWEEP_PAIRS[p];
@@ -3231,18 +3257,31 @@ fn quantile(xs: &mut [f64], q: f64) -> f64 {
     xs[((xs.len() - 1) as f64 * q).round() as usize]
 }
 
-/// The sweep's check (the criterion above): prints the table and each pair's map of per-pin worsts.
+/// The sweep's check (the criterion above) on the `side × side` grid: prints the table and each pair's map of per-pin
+/// worsts.
 fn check_tolerance_window(
     side: usize,
     pairs: &[usize],
     frames: usize,
     against: &dyn Fn(Ic<f64>) -> Ic<f64>,
 ) {
-    let (readings, refusals) = tolerance_window(side, pairs, frames, against);
+    check_tolerance(&sweep_pins(side), side, pairs, frames, against)
+}
+
+/// The sweep's check on `pins`, the map drawn on the `side × side` grid (none where `side` is 0).
+fn check_tolerance(
+    pins: &[[f64; 2]],
+    side: usize,
+    pairs: &[usize],
+    frames: usize,
+    against: &dyn Fn(Ic<f64>) -> Ic<f64>,
+) {
+    let (readings, refusals) = tolerance_window(pins, pairs, frames, against);
     let eps = f64::EPSILON;
     let mut worst_anywhere = 0.0f64;
     println!(
-        "path_lock_tolerance_window: {side} × {side} pins, {frames} frames per segment; drift in ε (f64), per pin its worst over its frames"
+        "path_lock_tolerance_window: {} pins, {frames} frames per segment; drift in ε (f64), per pin its worst over its frames",
+        pins.len()
     );
     println!(
         "| pair | pins read | frames hold / slide | max | p99 | median | worst at (pin, segment, u) | by segment, max | target's own pin: max, p99, median | its max at |"
@@ -3302,7 +3341,7 @@ fn check_tolerance_window(
         );
         worst_anywhere = worst_anywhere.max(max).max(own);
     }
-    for (slot, &p) in pairs.iter().enumerate() {
+    for (slot, &p) in pairs.iter().enumerate().filter(|_| side > 1) {
         println!(
             "path_lock_tolerance_window: {}: per pin, the worst of its drift and its target's own pin (ε), rows t = 1 down to 0, columns s = 0 to 1; '-' a refusal",
             SWEEP_PAIRS[p]
@@ -3346,14 +3385,15 @@ fn check_tolerance_window(
     );
 }
 
-// Pass: the criterion above, on the 16 × 16 grid, every pair. Over 2 minutes in a debug build, so ignored in CI's shards;
-// run it with `CARGO_PROFILE_TEST_DEBUG=0 cargo test -p engine --test path_lock -- path_lock_tolerance_window --exact
-// --include-ignored --nocapture`. Its siblings below run in CI on the window's corners. It fails today, on both arms: at
-// 124 of 256 pins the mixed chart to Burrau's followed minimiser ends before the pause (`anchor::slide` reads a failed
-// follow as an end), and the sphere's re-held slice frames are labelled holding at up to 65.8 ε in `‖·‖_phys`, past the
-// 64 in force (`anchor::rehold` holds by the solver's block residual, and the solve stops at the tolerance itself).
+// Pass: the criterion above, on the 16 × 16 grid, every pair. About 6 minutes in a debug build, so ignored in CI's
+// shards; run it with `CARGO_PROFILE_TEST_DEBUG=0 cargo test -p engine --test path_lock -- path_lock_tolerance_window
+// --exact --include-ignored --nocapture`. Its siblings below run in CI on the window's corners. It fails today on its
+// refusal arm only, at 124 of 256 pins on mixed to Burrau: at 115 the followed minimiser "ends" before the pause, every
+// one a failed follow (`anchor::slide` reads one as an end; C6, `path_lock_burrau_ends`), and at 9 the slice's re-hold
+// finds no slide minimiser (its solve stalls). Its tolerance arm passes since the re-hold decides in `‖·‖_phys` with its
+// own solver target: worst 34.244 ε, the sphere's re-held slice frames.
 #[test]
-#[ignore = "over 2 minutes, and fails today (mixed to Burrau ends before the pause; the sphere's re-hold past the tolerance): cargo test -p engine --test path_lock -- path_lock_tolerance_window --exact --include-ignored --nocapture"]
+#[ignore = "about 6 minutes, and fails today (mixed to Burrau's follow fails before the pause at 124 pins): cargo test -p engine --test path_lock -- path_lock_tolerance_window --exact --include-ignored --nocapture"]
 fn path_lock_tolerance_window() {
     check_tolerance_window(SWEEP_SIDE, &[0, 1, 2, 3, 4, 5], SWEEP_FRAMES, &|x| x);
 }
@@ -3364,6 +3404,29 @@ negative_control!(
      corners; Burrau left out, whose followed minimiser ends before the pause there and is counted as a refusal first)",
     expected = "past the lock's tolerance",
     check_tolerance_window(2, &[0, 1, 2, 3, 5], 4, &|mut x| {
+        x.m[0] += 2f64.powi(-40);
+        x
+    })
+);
+
+// ── path_lock_tolerance_window_fine: the re-solving pairs at 64 frames ──────────────────────────────────────────────
+//
+// Criterion C7, added to the rerun's before it ran: 16 frames per segment gave lower bounds on the sphere's re-hold
+// (PR #69: 65.8 ε at 16, 66.6 at 64), so the two hold pairs whose `B` re-solves (nonlinear; latent to the exponential
+// sphere) are swept again at 64 frames per segment on the 16 × 16 pins. Pass: the sweep's own criterion (no refusal,
+// every reading within the tolerance in force), and the rule's output there is the 16-frame sweep's (C4's `T`, 128).
+
+#[test]
+#[ignore = "about a minute: cargo test -p engine --test path_lock -- path_lock_tolerance_window_fine --exact --include-ignored --nocapture"]
+fn path_lock_tolerance_window_fine() {
+    check_tolerance_window(SWEEP_SIDE, &[1, 2], 64, &|x| x);
+}
+
+negative_control!(
+    path_lock_tolerance_window_fine,
+    "the drift read against another state: every stored state moved by 2⁻⁴⁰ in its first mass (on the window's corners)",
+    expected = "past the lock's tolerance",
+    check_tolerance_window(2, &[1, 2], 64, &|mut x| {
         x.m[0] += 2f64.powi(-40);
         x
     })
@@ -3444,4 +3507,503 @@ negative_control!(
         x.m[0] = f64::NAN;
         x
     })
+);
+
+// ── path_lock_solve_floor: criterion C1's measurement ──────────────────────────────────────────────────────────────
+//
+// Criterion C1 above, measured: on the two hold pairs whose ends re-solve (nonlinear, mixed to mixed; latent to the
+// exponential sphere) at the sweep's 16 × 16 pins and 16 frames per segment, each nearest-point and re-hold solve is
+// run again from its own seeds with a residual target of 0 (`probe::Switches::floor`), and the residual it stops at is
+// its floor. The path itself runs as on main (the old target, `LOCK_TOLERANCE`, and the old block-residual hold), so the
+// same solves run as on main. A "hold solve" is one whose solve at the old target converged within `LOCK_TOLERANCE`:
+// a solve whose target is off `B`'s image stops at the projection distance, which is no floor. Pass: the target the
+// rule gives from the worst floor (the smallest power of two in `ε` at or above twice it, `proposal`) is below
+// `LOCK_TOLERANCE`.
+
+/// One hold solve under the floor switch: which, its residual at the old target, and its floor's report.
+#[cfg(feature = "controls")]
+type FloorSolve = (&'static str, f64, kernel::chart::lock_solve::Report<f64>);
+
+/// One pair's solves at `pins` under the floor switch: each hold solve, the count left out and the refusals.
+#[cfg(feature = "controls")]
+fn solve_floors(pins: &[[f64; 2]], pair: usize) -> (Vec<FloorSolve>, usize, usize) {
+    use engine::path::anchor::probe::{self, Switches};
+    let switches = Switches {
+        target: Some(LOCK_TOLERANCE),
+        block_hold: true,
+        floor: true,
+        ..Switches::default()
+    };
+    let ((_, refusals), log) = probe::with(switches, || {
+        tolerance_window(pins, &[pair], SWEEP_FRAMES, &|x| x)
+    });
+    let mut out = Vec::new();
+    let mut left_out = 0;
+    for w in log.windows(2) {
+        let (solve, floor) = (&w[0], &w[1]);
+        let paired = matches!(
+            (solve.what, floor.what),
+            ("nearest", "nearest floor") | ("rehold", "rehold floor")
+        );
+        if !paired {
+            continue;
+        }
+        match solve.report.converged() && solve.report.residual <= LOCK_TOLERANCE {
+            true => out.push((solve.what, solve.report.residual, floor.report)),
+            false => left_out += 1,
+        }
+    }
+    (out, left_out, refusals.len())
+}
+
+/// C1 at `pins`: the floor read where `floor`, else (the control) the residual each solve stopped at, at the old target.
+#[cfg(feature = "controls")]
+fn check_solve_floor(pins: &[[f64; 2]], floor: bool) {
+    let eps = f64::EPSILON;
+    let mut worst = 0.0f64;
+    for pair in [1, 2] {
+        let (solves, left_out, refusals) = solve_floors(pins, pair);
+        for what in ["nearest", "rehold"] {
+            let mut kinds: Vec<(String, usize, u32)> = Vec::new();
+            for (_, _, r) in solves.iter().filter(|x| x.0 == what) {
+                let k = format!("{:?}", r.status);
+                match kinds.iter_mut().find(|(v, _, _)| *v == k) {
+                    Some((_, n, it)) => {
+                        *n += 1;
+                        *it = (*it).max(r.iterations);
+                    }
+                    None => kinds.push((k, 1, r.iterations)),
+                }
+            }
+            let worst = solves
+                .iter()
+                .filter(|x| x.0 == what)
+                .max_by(|a, b| a.2.residual.total_cmp(&b.2.residual));
+            println!(
+                "path_lock_solve_floor: {}: {what}: the floor solves stop (status, count, most iterations): {kinds:?}; the worst floor's: {:?}",
+                SWEEP_PAIRS[pair],
+                worst.map(|x| (x.2.residual / eps, x.2.status, x.2.iterations, x.2.optimality))
+            );
+        }
+        let solves: Vec<_> = solves
+            .into_iter()
+            .map(|(w, at, f)| (w, at, if floor { f.residual } else { at }))
+            .collect();
+        for what in ["nearest", "rehold"] {
+            let mut floors: Vec<f64> = solves
+                .iter()
+                .filter(|x| x.0 == what)
+                .map(|x| x.2 / eps)
+                .collect();
+            let mut in_force: Vec<f64> = solves
+                .iter()
+                .filter(|x| x.0 == what)
+                .map(|x| x.1 / eps)
+                .collect();
+            if floors.is_empty() {
+                println!(
+                    "path_lock_solve_floor: {}: {what}: no hold solve",
+                    SWEEP_PAIRS[pair]
+                );
+                continue;
+            }
+            assert!(
+                floors.iter().all(|f| f.is_finite()),
+                "a floor that is not finite"
+            );
+            let max = quantile(&mut floors, 1.0);
+            println!(
+                "path_lock_solve_floor: {}: {what}: {} hold solves; floor max {max:.3} ε, p99 {:.3}, median {:.3}; at the old target: max {:.3}, median {:.3}",
+                SWEEP_PAIRS[pair],
+                floors.len(),
+                quantile(&mut floors, 0.99),
+                quantile(&mut floors, 0.5),
+                quantile(&mut in_force, 1.0),
+                quantile(&mut in_force, 0.5),
+            );
+            worst = worst.max(max);
+        }
+        println!(
+            "path_lock_solve_floor: {}: {left_out} solves left out (not within the tolerance at the old target); {refusals} refusals",
+            SWEEP_PAIRS[pair]
+        );
+    }
+    let target = proposal(worst);
+    println!(
+        "path_lock_solve_floor: the worst floor {worst:.3} ε; the target (the smallest power of two at or above twice it) {target} ε; the lock's tolerance {} ε",
+        LOCK_TOLERANCE / eps
+    );
+    assert!(
+        target * eps < LOCK_TOLERANCE,
+        "the solver's target from its floor, {target} ε, is not below the lock's tolerance"
+    );
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "about 20 seconds: cargo test -p engine --features controls --test path_lock -- path_lock_solve_floor --exact --include-ignored --nocapture"]
+fn path_lock_solve_floor() {
+    check_solve_floor(&sweep_pins(SWEEP_SIDE), true);
+}
+
+negative_control!(
+    path_lock_solve_floor,
+    "the residual each solve stopped at, at the old target, read as its floor (main's stopping point), at the sphere's \
+     worst pin (0.8, 0.6)",
+    expected = "is not below the lock's tolerance",
+    check_solve_floor(&[grid_pin(12, 9)], false)
+);
+
+// ── path_lock_burrau_ends: criterion C6's measurement ──────────────────────────────────────────────────────────────
+//
+// Criterion C6 above, measured: at each of the sweep's 16 × 16 pins, mixed to Burrau's locked morph at 64 frames (the
+// sweep's track), and where its followed minimiser ends, again at 128 and 256. Per ended pin: the failure's kind at each
+// frame count (the follow's own report: `Ended` is the continuity test or a probe inside the frame; `Stalled`,
+// `IterationCap`, `IllConditioned`, `NonFinite` the frame's direct solve), its `s`, and the first frame's residual. A
+// correct end is an `Ended` whose `s` holds within one frame of 64 as the frame count doubles; any other is a failed
+// follow, a defect. A measurement: it prints the table and the count of each verdict, and fails only if a pin that
+// ends at 64 has no failed follow in its log (the log would then not be the slide's).
+
+/// The followed minimiser's end on mixed to Burrau at `at` over `frames` frames: `None` where it does not end, else the
+/// failed follow's status and `s`, the first frame's residual, and the failed follow's optimality and residual.
+#[cfg(feature = "controls")]
+fn burrau_end(at: [f64; 2], frames: usize) -> Option<BurrauEnd> {
+    burrau_end_logged(at, frames, true)
+}
+
+/// [`burrau_end`], the solves logged where `logged` (the control's switch: with no log, an end has no cause to read).
+#[cfg(feature = "controls")]
+fn burrau_end_logged(at: [f64; 2], frames: usize, logged: bool) -> Option<BurrauEnd> {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let a = try_locked_mixed(home(), (at[0], at[1])).ok()?;
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let run = || Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, frames);
+    let (out, log) = match logged {
+        true => probe::with(Switches::default(), run),
+        false => (run(), Vec::new()),
+    };
+    let (_, end) = out.ok()?;
+    let LockedEnd::Ended { .. } = end else {
+        return None;
+    };
+    let first = log
+        .iter()
+        .find(|x| x.what == "slide first")
+        .map_or(f64::NAN, |x| x.report.residual);
+    let failed = log
+        .iter()
+        .find(|x| x.what == "follow" && !x.report.converged())
+        .expect("an ended slide's failed follow in the log");
+    Some((
+        failed.report.status,
+        failed.s,
+        first,
+        failed.report.optimality,
+        failed.report.residual,
+    ))
+}
+
+/// A Burrau end: the failed follow's status and `s`, the first frame's residual, the failed follow's optimality
+/// (`‖P r‖/‖r‖`, against the spec's `10⁻⁸`) and residual.
+#[cfg(feature = "controls")]
+type BurrauEnd = (kernel::chart::lock_solve::Status, f64, f64, f64, f64);
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "about a minute: cargo test -p engine --features controls --test path_lock -- path_lock_burrau_ends --exact --include-ignored --nocapture"]
+fn path_lock_burrau_ends() {
+    let eps = f64::EPSILON;
+    let mut verdicts: Vec<(&str, usize)> = Vec::new();
+    let mut kinds: Vec<(String, usize)> = Vec::new();
+    let mut frames_at: Vec<(usize, usize)> = Vec::new();
+    let mut optimality: Vec<f64> = Vec::new();
+    println!("| pin | at 64: kind, s, optimality | at 128: kind, s, optimality | at 256: kind, s, optimality | first frame's residual (ε) | verdict |");
+    println!("|---|---|---|---|---|---|");
+    for at in sweep_pins(SWEEP_SIDE) {
+        let Some(e64) = burrau_end(at, 64) else {
+            continue;
+        };
+        let e128 = burrau_end(at, 128);
+        let e256 = burrau_end(at, 256);
+        let show = |e: &Option<BurrauEnd>| match e {
+            Some((k, s, _, o, _)) => format!("{k:?}, {s:.6}, {o:.2e}"),
+            None => "does not end".into(),
+        };
+        let ended = |e: &Option<BurrauEnd>| {
+            matches!(
+                e,
+                Some((
+                    kernel::chart::lock_solve::Status::Failed(
+                        kernel::chart::lock_solve::Failure::Ended
+                    ),
+                    _,
+                    _,
+                    _,
+                    _
+                ))
+            )
+        };
+        let holds =
+            |e: &Option<BurrauEnd>| e.is_some_and(|(_, s, ..)| (s - e64.1).abs() <= 1.0 / 64.0);
+        let verdict = match ended(&Some(e64)) && ended(&e128) && ended(&e256) {
+            true if holds(&e128) && holds(&e256) => "a correct end",
+            true => "a failed follow: its s moves with the frame count",
+            false => "a failed follow: a direct solve's failure, or no end at a finer count",
+        };
+        println!(
+            "| ({:.4}, {:.4}) | {} | {} | {} | {:.3} | {verdict} |",
+            at[0],
+            at[1],
+            show(&Some(e64)),
+            show(&e128),
+            show(&e256),
+            e64.2 / eps
+        );
+        match verdicts.iter_mut().find(|(v, _)| *v == verdict) {
+            Some((_, n)) => *n += 1,
+            None => verdicts.push((verdict, 1)),
+        }
+        let kind = format!("{:?}", e64.0);
+        let frame = (e64.1 * 64.0).round() as usize;
+        match frames_at.iter_mut().find(|(f, _)| *f == frame) {
+            Some((_, n)) => *n += 1,
+            None => frames_at.push((frame, 1)),
+        }
+        optimality.push(e64.3);
+        match kinds.iter_mut().find(|(v, _)| *v == kind) {
+            Some((_, n)) => *n += 1,
+            None => kinds.push((kind, 1)),
+        }
+    }
+    println!("path_lock_burrau_ends: by kind at 64 frames: {kinds:?}");
+    println!("path_lock_burrau_ends: verdicts: {verdicts:?}");
+
+    frames_at.sort();
+    println!("path_lock_burrau_ends: the failed frame's index at 64 frames (k in s = k/64), and how many: {frames_at:?}");
+    if !optimality.is_empty() {
+        println!(
+            "path_lock_burrau_ends: the failed follow's optimality at 64 frames: min {:.2e}, median {:.2e}, max {:.2e} (the spec's tolerance 1e-8)",
+            quantile(&mut optimality, 0.0),
+            quantile(&mut optimality, 0.5),
+            quantile(&mut optimality, 1.0)
+        );
+    }
+}
+
+// ── path_lock_rehold_target: the solver's own target ───────────────────────────────────────────────────────────────
+//
+// The re-hold's solve stops at its own target (`anchor::SOLVE_TOLERANCE`, 32 ε from C1), not at the lock's tolerance,
+// so a frame it holds is not held at the tolerance it is judged by. At the pin where main read its worst, latent to the
+// exponential sphere at (0.8, 0.6) (65.825 ε, the slice's first step), the gate path at 16 frames per segment. Pass: no
+// frame of the hold pair slides or is refused, and every reading is within `LOCK_TOLERANCE` in `‖·‖_phys`. Control:
+// the solver's target set back to `LOCK_TOLERANCE` (main's), under which that pin's re-held frames stop short of the
+// pinned state and, decided in `‖·‖_phys`, slide.
+
+/// The sweep's pin `(k/15, j/15)`.
+fn grid_pin(k: usize, j: usize) -> [f64; 2] {
+    sweep_pins(SWEEP_SIDE)[j * SWEEP_SIDE + k]
+}
+
+#[test]
+fn path_lock_rehold_target() {
+    check_tolerance(&[grid_pin(12, 9)], 0, &[2], SWEEP_FRAMES, &|x| x);
+}
+
+negative_control!(
+    path_lock_rehold_target,
+    "the solver's residual target set back to the lock's tolerance, main's",
+    expected = "a correct lock should hold",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            target: Some(LOCK_TOLERANCE),
+            ..Switches::default()
+        };
+        probe::with(switches, || {
+            check_tolerance(&[grid_pin(12, 9)], 0, &[2], SWEEP_FRAMES, &|x| x)
+        });
+    }
+);
+
+// ── path_lock_rehold_norm: the hold decided in the norm ────────────────────────────────────────────────────────────
+//
+// `anchor::rehold` decides its hold as `anchor::recentre` does: the re-placed `B`'s own state at the pin against `A`'s
+// pinned state, in the norm it is given, against `LOCK_TOLERANCE`. The nonlinear pair (mixed to mixed) at (0.8, 0.6),
+// the slice mid-morph at its middle frame. Pass: in `‖·‖_phys` it holds, its own state within the tolerance; in a norm
+// that reads every state twice the tolerance further off, it does not hold (the frame slides). Control: the hold decided
+// by the solver's block residual (main's rule), which never reads the norm and holds the frame either way.
+
+/// The nonlinear pair's slice mid-morph at `at`: the gate path's third segment.
+fn nonlinear_slice(at: [f64; 2]) -> Segment {
+    let tilt_mixed = |v: &View| {
+        let spec = TiltSpec {
+            tau1: 20.0,
+            tau2: 0.0,
+            map: TiltMap::Sheet,
+            x: 1,
+            y: 1,
+        };
+        Segment::curved_tilt(v, &mixed(v.sim.plane.z0), &spec)
+    };
+    let slider_z4 = |v: &View| Segment::control(v, 4, v.sim.plane.z0[4] + 0.2);
+    let a = try_locked_mixed(home(), (at[0], at[1])).expect("the lock");
+    let mut b = a.clone();
+    b.sim.chart.window = moved();
+    b.pin = None;
+    b.anchor = None;
+    b.sim.lock.locked = false;
+    let c = SweepCase {
+        a,
+        b,
+        should_hold: true,
+        edits: Some([&tilt_mixed, &tilt_mixed, &slider_z4, &slider_z4]),
+    };
+    let (_, segments) = sweep_path(&c, &leaves()).expect("the gate path");
+    segments
+        .into_iter()
+        .find(|(w, _, _)| *w == "slice")
+        .expect("the slice")
+        .1
+}
+
+fn check_rehold_norm() {
+    let at = grid_pin(12, 9);
+    let view = nonlinear_slice(at)
+        .frame(0.5)
+        .expect("the slice's middle frame");
+    let blend = blend_of(&view);
+    let s = blend.s();
+    let (b, held) =
+        anchor::rehold(&blend.a, &blend.b, &leaves(), phys, s).expect("the re-hold in ‖·‖_phys");
+    let shown = match anchor::state_at(&blend.a, &leaves(), at).expect("A's pin") {
+        Pixel::State { decoded, .. } => decoded.ic,
+        Pixel::Blank(b) => panic!("A's pin is blank: {b:?}"),
+    };
+    let own = leaves().decode(&b, at).expect("B's own pin").ic;
+    let d = phys(&shown, &own);
+    println!(
+        "path_lock_rehold_norm: s = {s}: held {held}, B's own pin {:.3} ε from A's",
+        d / f64::EPSILON
+    );
+    assert!(held, "the re-hold does not hold a frame B can hold");
+    assert!(
+        d <= LOCK_TOLERANCE,
+        "a held frame's own pin is {:.3} ε off",
+        d / f64::EPSILON
+    );
+    let far = |x: &Ic<f64>, y: &Ic<f64>| phys(x, y) + 2.0 * LOCK_TOLERANCE;
+    let (_, held) =
+        anchor::rehold(&blend.a, &blend.b, &leaves(), far, s).expect("the re-hold's slide");
+    assert!(!held, "the re-hold holds a frame its norm refuses");
+}
+
+/// The affine pair's slice mid-morph at `at` (latent to latent): the gate path's third segment.
+fn affine_slice(at: [f64; 2]) -> Segment {
+    let tilt = |a: u32, b: u32, x: u32| {
+        move |v: &View| {
+            let spec = TiltSpec {
+                tau1: 20.0,
+                tau2: 0.0,
+                map: TiltMap::Sheet,
+                x,
+                y: x,
+            };
+            let tilt = LatentTilt {
+                a,
+                b,
+                scale: 0.5,
+                from: [0.0, 0.0, 0.0],
+            };
+            Segment::latent_tilt(v, &tilt, &spec, 0.0)
+        }
+    };
+    let (tilt_a, tilt_b) = (tilt(0, 1, 5), tilt(2, 3, 6));
+    let slice_e4 = |v: &View| Segment::slice(v, &e(4, 1.0), 0.2);
+    let affine_a = frame_plane(GATE_Z0, 0, 1, 0.5);
+    let affine_b = frame_plane([-0.3, 0.5, 0.2, 0.1, -0.2, 0.15, -0.4, 0.3], 2, 3, 0.5);
+    let c = SweepCase {
+        a: try_locked_latent(&affine_a, (at[0], at[1])).expect("the lock"),
+        b: View::latent(sim_of(&affine_b)),
+        should_hold: true,
+        edits: Some([&tilt_a, &tilt_b, &slice_e4, &slice_e4]),
+    };
+    let (_, segments) = sweep_path(&c, &leaves()).expect("the gate path");
+    segments
+        .into_iter()
+        .find(|(w, _, _)| *w == "slice")
+        .expect("the slice")
+        .1
+}
+
+/// The latent branch: a latent `B` held where its own pin is within the tolerance, refused where the norm says not.
+fn check_rehold_norm_latent() {
+    let view = affine_slice(grid_pin(12, 9))
+        .frame(0.5)
+        .expect("the slice's middle frame");
+    let blend = blend_of(&view);
+    let s = blend.s();
+    let (_, held) = anchor::rehold(&blend.a, &blend.b, &leaves(), phys, s)
+        .expect("the latent re-hold in ‖·‖_phys");
+    assert!(held, "the latent re-hold does not hold a frame B can hold");
+    let far = |x: &Ic<f64>, y: &Ic<f64>| phys(x, y) + 2.0 * LOCK_TOLERANCE;
+    match anchor::rehold(&blend.a, &blend.b, &leaves(), far, s) {
+        Err(PathError::Refused(_)) => {}
+        other => panic!(
+            "the latent re-hold holds a frame its norm refuses: {:?}",
+            other.map(|x| x.1)
+        ),
+    }
+}
+
+#[test]
+fn path_lock_rehold_norm() {
+    check_rehold_norm();
+    check_rehold_norm_latent();
+}
+
+negative_control!(
+    path_lock_rehold_norm,
+    "the hold decided by the solver's block residual, main's rule",
+    expected = "the re-hold holds a frame its norm refuses",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            block_hold: true,
+            ..Switches::default()
+        };
+        probe::with(switches, check_rehold_norm);
+    }
+);
+
+// The latent branch on its own, under the same switch: main held a latent `B` unchecked.
+#[test]
+fn path_lock_rehold_norm_latent() {
+    check_rehold_norm_latent();
+}
+
+negative_control!(
+    path_lock_rehold_norm_latent,
+    "a latent end held unchecked, main's rule",
+    expected = "the latent re-hold holds a frame its norm refuses",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            block_hold: true,
+            ..Switches::default()
+        };
+        probe::with(switches, check_rehold_norm_latent);
+    }
+);
+
+negative_control!(
+    path_lock_burrau_ends,
+    "the solves not logged: an end at (0, 0), whose followed minimiser ends at 64 frames, has no failed follow to read",
+    expected = "an ended slide's failed follow in the log",
+    {
+        burrau_end_logged([0.0, 0.0], 64, false);
+    }
 );

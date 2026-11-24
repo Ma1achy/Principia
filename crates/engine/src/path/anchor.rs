@@ -35,6 +35,88 @@ use super::{hold_window, Map, PathError, Pin, PinPoint, View, ViewWindow};
 /// The lock's tolerance in `‖·‖_phys`: `lock_tolerance·ε_R` at f64 (REQ-CHART-158, a calibration).
 pub const LOCK_TOLERANCE: f64 = ledger::constants::LOCK_TOLERANCE.number() * f64::EPSILON;
 
+/// The re-solve's own residual target, `‖r‖` in block coordinates: `lock_solve_tolerance·ε_R` at f64, below the lock's
+/// tolerance, so a solve stopping at its target is not already at the tolerance its hold is judged by (from the solves'
+/// measured floor: the sweep's criterion C1, `path_lock.rs`).
+pub const SOLVE_TOLERANCE: f64 = ledger::constants::LOCK_SOLVE_TOLERANCE.number() * f64::EPSILON;
+
+/// A control's and a measurement's reach into the re-solve, on this thread only: the solver's residual target replaced,
+/// the re-hold's hold decided by the block residual as it was before it was decided in `‖·‖_phys`, and each solve the
+/// re-solve runs logged with its report.
+#[cfg(feature = "controls")]
+pub mod probe {
+    use core::cell::{Cell, RefCell};
+    use kernel::chart::lock_solve::Report;
+
+    /// One solve the re-solve ran: which (`"nearest"`, `"rehold"`, `"rehold slide"`, `"slide first"`, `"follow"`), its
+    /// frame's `s` (0 where it has none) and its report.
+    #[derive(Clone, Copy, Debug)]
+    pub struct Solve {
+        /// Which solve.
+        pub what: &'static str,
+        /// Its frame's `s`.
+        pub s: f64,
+        /// Its report.
+        pub report: Report<f64>,
+    }
+
+    /// The switches, set for one call of [`with`].
+    #[derive(Clone, Copy, Debug, Default)]
+    pub struct Switches {
+        /// The solver's residual target in place of [`super::SOLVE_TOLERANCE`].
+        pub target: Option<f64>,
+        /// The re-hold's hold decided as it was before it was decided in the norm: a kernel map's by the block residual
+        /// against the lock's tolerance, a latent end's held unchecked.
+        pub block_hold: bool,
+        /// The solver's first-order optimality tolerance in place of [`super::spec`]'s `10⁻⁸`: a diagnostic's one
+        /// variable changed.
+        pub optimality: Option<f64>,
+        /// Each nearest-point and re-hold solve also run again from the same seeds with a residual target of 0, its
+        /// report logged as `"nearest floor"` or `"rehold floor"`: where the solve stops when nothing stops it early,
+        /// its floor. The path itself goes on with the solve at its own target.
+        pub floor: bool,
+    }
+
+    thread_local! {
+        static SWITCHES: Cell<Switches> = Cell::new(Switches::default());
+        static LOG: RefCell<Option<Vec<Solve>>> = const { RefCell::new(None) };
+    }
+
+    /// `f` run with `switches` set and every solve logged; the switches cleared after.
+    pub fn with<T>(switches: Switches, f: impl FnOnce() -> T) -> (T, Vec<Solve>) {
+        SWITCHES.with(|c| c.set(switches));
+        LOG.with(|l| *l.borrow_mut() = Some(Vec::new()));
+        let out = f();
+        SWITCHES.with(|c| c.set(Switches::default()));
+        let log = LOG.with(|l| l.borrow_mut().take()).unwrap_or_default();
+        (out, log)
+    }
+
+    pub(super) fn switches() -> Switches {
+        SWITCHES.with(Cell::get)
+    }
+
+    pub(super) fn log(what: &'static str, s: f64, report: &Report<f64>) {
+        LOG.with(|l| {
+            if let Some(v) = l.borrow_mut().as_mut() {
+                v.push(Solve {
+                    what,
+                    s,
+                    report: *report,
+                });
+            }
+        });
+    }
+}
+
+/// A solve logged for [`probe`]; nothing without the `controls` feature.
+#[inline]
+fn logged(what: &'static str, s: f64, report: &Report<f64>) {
+    #[cfg(feature = "controls")]
+    probe::log(what, s, report);
+    let _ = (what, s, report);
+}
+
 /// The lock's anchor: the signed starting state, stored as its words, and whether the pin it was recorded at
 /// was assumed at the centre because no address could be derived.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -270,16 +352,30 @@ impl<L: Leaves> lock_solve::Family<f64, 9> for Slide<'_, L> {
 }
 
 /// The solver core's settings for the lock's re-solve. The plan is unclear here; chose the solver core's own test
-/// settings (`lock_solver_core`), its residual tolerance the lock's, because the re-solve is that solve on the blocks,
-/// with one change: first-order optimality to `10⁻⁸`, not `10⁻¹⁰`, because the slopes here are central differences,
+/// settings (`lock_solver_core`), because the re-solve is that solve on the blocks, its residual target
+/// [`SOLVE_TOLERANCE`], below the lock's tolerance so a hold is never judged at the point the solve stopped, and
+/// first-order optimality to `10⁻⁸`, not `10⁻¹⁰`, because the slopes here are central differences,
 /// good to about `ε^{2/3} ≈ 4·10⁻¹¹`, and near the start of a slide the residual is small (it grows as `s`), so
 /// `10⁻¹⁰` of it was below the slopes' own error: measured on the Burrau chart, the follow then failed to converge at
 /// its second frame and the slide was tagged ended there.
 fn spec() -> Spec<f64> {
+    #[cfg(feature = "controls")]
+    let target = probe::switches().target.unwrap_or(SOLVE_TOLERANCE);
+    #[cfg(not(feature = "controls"))]
+    let target = SOLVE_TOLERANCE;
+    spec_at(target)
+}
+
+/// [`spec`] with the residual target `target`.
+fn spec_at(target: f64) -> Spec<f64> {
+    #[cfg(feature = "controls")]
+    let optimality = probe::switches().optimality.unwrap_or(1e-8);
+    #[cfg(not(feature = "controls"))]
+    let optimality = 1e-8;
     Spec::new(
         200,
-        LOCK_TOLERANCE,
-        1e-8,
+        target,
+        optimality,
         1e-12,
         Damping {
             initial: 1e-3,
@@ -361,6 +457,12 @@ pub fn nearest<L: Leaves>(
         weight: [1.0; 9],
     };
     let report = lock_solve::restart(&placed, &target, &seeds(view, pin), &spec());
+    logged("nearest", 0.0, &report);
+    #[cfg(feature = "controls")]
+    if probe::switches().floor {
+        let floor = lock_solve::restart(&placed, &target, &seeds(view, pin), &spec_at(0.0));
+        logged("nearest floor", 0.0, &floor);
+    }
     if !report.converged() {
         return Err(PathError::Refused("the re-solve found no nearest point"));
     }
@@ -608,6 +710,7 @@ pub fn slide<L: Leaves>(
     };
     let s1 = 1.0 / frames as f64;
     let first = restart(s1);
+    logged("slide first", s1, &first);
     if !first.converged() {
         return Err(PathError::Refused("the re-solve found no nearest point"));
     }
@@ -621,6 +724,7 @@ pub fn slide<L: Leaves>(
         let s = k as f64 / frames as f64;
         let last = nodes[nodes.len() - 1];
         let report = lock_solve::follow(&family, &target, last.s, last.x, s, &spec, &cont);
+        logged("follow", s, &report);
         match report.status {
             Status::Converged(_) => nodes.push(Node {
                 s,
@@ -639,25 +743,54 @@ pub fn slide<L: Leaves>(
 // ── A mid-morph slice: `B` re-held ─────────────────────────────────────────────────────────────────────────────────
 
 /// `b` re-placed to hold the state `a` shows at its pin (a mid-morph slice under a lock moved it), on a blend at share
-/// `s`, and whether it holds it. A latent `b` by [`hold_plane`] at `a`'s pinned latent point, where `a` is latent: it
-/// holds. A kernel map's `b`: first the nearest point to that state, solved from `b`'s own placement at the pin (the
-/// chart point its pin shows); `b` holds where that point's blocks are within the lock's tolerance of the state's
-/// (a block distance: no `‖·‖_phys` norm reaches a frame's decode). Where it can't hold, the anchor slides: `b` placed at
-/// the local minimiser of the frame's pin-state distance, `d(block_line(a, B_x, s), a)` (§ 17.8's slide), solved from
-/// the same placement, so a slice of a sliding pair continues its slide rather than snapping to `b`'s nearest point.
+/// `s`, and whether it holds it. Placed first where it would hold: a latent `b` by [`hold_plane`] at `a`'s pinned
+/// latent point, where `a` is latent; a kernel map's `b` at the nearest point to that state, solved from `b`'s own
+/// placement at the pin (the chart point its pin shows). It holds, as [`recentre`] decides, where the state the placed
+/// `b` shows at the pin is within the lock's tolerance of `a`'s pinned state in `norm`, its own decode read through
+/// `leaves`, never the select. A latent `b` that does not is refused, as [`recentre`] refuses it. Where a kernel map's
+/// `b` can't hold, the anchor slides: `b` placed at the local minimiser of the frame's pin-state distance,
+/// `d(block_line(a, B_x, s), a)` (§ 17.8's slide), solved from the same placement, so a slice of a sliding pair
+/// continues its slide rather than snapping to `b`'s nearest point.
 /// The plan is unclear here (a slice mid-morph goes to each end "in its own hidden coordinates ... about the pinned
 /// state"); chose to slice each end in its own hidden coordinates and then re-solve `b`'s placement this way, because
 /// the lock is the path's: both ends show one pinned state where `b` can, and the slide where it can't.
 /// [`PathError::NotBuilt`] for a latent `b` with a nonlinear `a`, whose pinned state has no latent point here;
 /// [`PathError::Refused`] where neither solve converges.
-pub fn rehold<L: Leaves>(
+pub fn rehold<L, N>(
     a: &View,
     b: &View,
     leaves: &L,
+    norm: N,
     s: f64,
-) -> Result<(View, bool), PathError> {
+) -> Result<(View, bool), PathError>
+where
+    L: Leaves,
+    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+{
     let (pin, _) = pin_address(a).ok_or(PathError::Lock(crate::lock::LockError::NotLocked))?;
     let shown = decoded(state_at(a, leaves, pin)?)?;
+    // The placed `b`'s own state at the pin against `a`'s pinned state, in `norm` (as `recentre`): its anchor dropped,
+    // so the select can't show the stored words in its place.
+    let within = |v: &View| -> Result<bool, PathError> {
+        let own = View {
+            anchor: None,
+            ..v.clone()
+        };
+        let at = leaves.decode(&own, pin)?;
+        Ok(norm(&shown.ic, &at.ic) <= LOCK_TOLERANCE)
+    };
+    let latent = |out: View| -> Result<(View, bool), PathError> {
+        #[cfg(feature = "controls")]
+        if probe::switches().block_hold {
+            return Ok((out, true));
+        }
+        match within(&out)? {
+            true => Ok((out, true)),
+            false => Err(PathError::Refused(
+                "the latent end does not hold the pinned state",
+            )),
+        }
+    };
     let (mut out, holds) = match (b.window(), a.pin, a.window()) {
         (
             ViewWindow::Plane(plane),
@@ -669,12 +802,12 @@ pub fn rehold<L: Leaves>(
         ) => {
             let mut out = b.clone();
             out.sim.plane.z0 = hold_plane(plane, pin, &z).0;
-            (out, true)
+            latent(out)?
         }
         (ViewWindow::Plane(plane), _, ViewWindow::Plane(ap)) => {
             let mut out = b.clone();
             out.sim.plane.z0 = hold_plane(plane, pin, &crate::lock::point(ap, pin[0], pin[1])).0;
-            (out, true)
+            latent(out)?
         }
         (ViewWindow::Plane(_), _, _) => {
             return Err(PathError::NotBuilt(
@@ -701,8 +834,22 @@ pub fn rehold<L: Leaves>(
                 weight: [1.0; 9],
             };
             let near = lock_solve::solve(&placed, &target, seed, &spec());
-            if near.converged() && near.residual <= LOCK_TOLERANCE {
-                (place(b, pin, near.x), true)
+            logged("rehold", s, &near);
+            #[cfg(feature = "controls")]
+            if probe::switches().floor {
+                let floor = lock_solve::solve(&placed, &target, seed, &spec_at(0.0));
+                logged("rehold floor", s, &floor);
+            }
+            let held = place(b, pin, near.x);
+            // A decode that fails at the nearest point holds nothing there: the anchor slides.
+            let holds = near.converged() && within(&held).unwrap_or(false);
+            #[cfg(feature = "controls")]
+            let holds = match probe::switches().block_hold {
+                true => near.converged() && near.residual <= LOCK_TOLERANCE,
+                false => holds,
+            };
+            if holds {
+                (held, true)
             } else {
                 let family = Slide {
                     placed,
@@ -710,6 +857,7 @@ pub fn rehold<L: Leaves>(
                 };
                 let frame = lock_solve::Frame { family: &family, s };
                 let slid = lock_solve::solve(&frame, &target, seed, &spec());
+                logged("rehold slide", s, &slid);
                 if !slid.converged() {
                     return Err(PathError::Refused("the re-solve found no minimiser"));
                 }
