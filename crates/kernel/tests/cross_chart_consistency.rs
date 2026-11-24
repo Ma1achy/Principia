@@ -266,6 +266,7 @@ fn payload(d: &Decoded<f64>) -> Payload {
         },
         0,
         &mut words[..],
+        false,
     );
     // SAFETY: `SimStateFTLE` is `repr(C)` with no padding, its two `u16` members adjacent in one 4-byte slot (payload §1;
     // `qa_TASK-M0-13.rs` reads it as 44 words), so all its bytes are initialised.

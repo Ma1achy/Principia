@@ -196,14 +196,19 @@ pub fn integrate_detecting_rule<A: Advance, R: WrapperReal, E: EscapeRule<R>>(
 /// at `k_stop` below it holds the words of a run whose horizon is `k_stop`, its state label aside: `running` here, as
 /// the wrapper labels any march stopped short of the horizon, where that run is `bounded`. The time coordinate's stop
 /// (`engine::time_coordinate`) reads that `running` at `t_end_step = k_stop` as "reached its time".
+///
+/// `stop_on_escape` is the sim key's stop option ([`integrate_detecting_rule`]'s): on, a first escape label before
+/// `k_stop` ends the march there and stays, as it ends the run to the horizon.
 #[inline]
 pub fn integrate_detecting_to<A: Advance, R: WrapperReal>(
     ic: &Ic<R>,
     uniforms: &WrapperUniforms<R>,
     radius: CollisionRadius,
     k_stop: u32,
+    stop_on_escape: bool,
 ) -> SimStateBaseOf<R> {
-    let mut cadence = WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius);
+    let mut cadence =
+        WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius).stopping_on_escape(stop_on_escape);
     let mut carried = Carried::unregistered();
     let out = integrate_carrying_for::<A, R, WrapperCadence<R>>(
         ic,

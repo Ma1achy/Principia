@@ -15,11 +15,10 @@ Pitfalls §1 stays fixed: the controlled experiment renders the config slice, co
 "shipping termination behaviour" and the stop_on_escape "on" images here are the option that brings it back,
 `stop_on_escape = true` (`SimUniforms::stop_on_escape` on the sim key, `MarchKey64::stop_on_escape`, the wrapper
 cadence's mode);
-the default (live) march is the "integrate everything" image. Today the option reaches the f64 Precision ring
-(`MarchKey64`), the CPU field backend's `outcome_stopping` and the inspector; `SimConfig` does not carry it yet, so the
-GUI cannot set it; the first slice, the time
-coordinate's stop, the producer and the FTLE entry still march live whatever the key says, so this task threads it there
-first.
+the default (live) march is the "integrate everything" image. The option reaches every march path: the f64 Precision
+ring (`MarchKey64`), the CPU field backend, the inspector, the first slice (`first_slice::MarchKey`), the time
+coordinate's stop (`integrate_detecting_to`), the producer and the FTLE entry. `SimConfig` does not carry it yet, so the
+GUI cannot set it.
 
 ## References
 - `docs/read_first/principia_01_pitfalls.md` § "1. THE PATCHWORK — the longest-running one, and the most instructive"

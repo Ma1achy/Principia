@@ -47,6 +47,7 @@ pub mod roundtrip_preset;
 pub mod shape_roundtrip;
 pub mod shape_scene;
 pub mod spawn;
+pub mod stop_images;
 pub mod structural_scene;
 pub mod suspect;
 

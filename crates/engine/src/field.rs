@@ -282,12 +282,13 @@ impl Cpu {
                 &decode_key,
                 None,
             )?;
-            Ok(outcome(
+            Ok(outcome_stopping(
                 &narrow(&out.ic),
                 out.degenerate,
                 key.radius,
                 k_target,
                 &params,
+                key.stop_on_escape,
             ))
         };
         let outcomes = pool.map(quad.len(), sample)?;

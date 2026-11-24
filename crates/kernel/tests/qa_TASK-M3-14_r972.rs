@@ -284,8 +284,13 @@ fn coincident_runs() -> Vec<(BenettinParams<f32>, SimStateFTLE)> {
                 delta_0: UNRESOLVED_DELTA_0,
                 n_renorm,
             };
-            let (s, _) =
-                integrate_ftle_with::<Yoshida4, f32, Absolute>(&ic, &key(), small_radius(), params);
+            let (s, _) = integrate_ftle_with::<Yoshida4, f32, Absolute>(
+                &ic,
+                &key(),
+                small_radius(),
+                params,
+                false,
+            );
             (params, s)
         })
         .collect()
@@ -358,8 +363,13 @@ fn check_aggregate_drops(read: Reader) {
         .into_iter()
         .map(|(delta_0, n_renorm)| {
             let params = BenettinParams { delta_0, n_renorm };
-            let (s, _) =
-                integrate_ftle_with::<Yoshida4, f32, Absolute>(&ic, &key(), small_radius(), params);
+            let (s, _) = integrate_ftle_with::<Yoshida4, f32, Absolute>(
+                &ic,
+                &key(),
+                small_radius(),
+                params,
+                false,
+            );
             (s, read_params(&params))
         })
         .collect();

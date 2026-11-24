@@ -18,14 +18,13 @@ serde_json = "1"
 # The independent convergence reference's arbitrary-precision floats (`reference::brutus`, TASK-M3-25): MIT OR
 # Apache-2.0, pure Rust, and a dependency of this crate alone, never of the kernel it judges.
 dashu-float = { version = "=0.6.2", default-features = false, features = ["std"] }
+# The stop images (`stop_images`) are written as PNGs, and `tests/debug_scenes.rs` reads the debug-views references,
+# with the png crate render and xtask already use.
+png = "0.18"
 
 # The spawn helper signals a timed-out child's process group (R-217). rustix is already in the build, under tempfile.
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1", features = ["process", "std"] }
-
-# `tests/debug_scenes.rs` reads the debug-views references, PNGs, with the png crate render and xtask already use.
-[dev-dependencies]
-png = "0.18"
 
 # Under `controls`, each `negative_control!` in this crate's tests compiles as a test (REQ-VAL-147, R-176).
 [features]

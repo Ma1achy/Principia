@@ -1587,6 +1587,37 @@ pub fn bodyplane(root: &Path, args: &[&str]) -> Result<(), String> {
     }
 }
 
+/// `cargo xtask golden patchwork [--propose] [--n <n>]` and `cargo xtask golden stop-on-escape [--propose] [--n <n>]`
+/// (pitfalls §1; TASK-M3-35): the stop images on the app's zero view, CPU payloads at f64, not an image suite. Runs
+/// validation's `stop_images` binary in release (xtask reaches validation only as a separate process, as `gate`
+/// does), which writes the images, the `t_end` histogram and its report under `target/golden/<which>/` and fails on
+/// any failed check (`validation::stop_images`'s note).
+pub fn stop_images(root: &Path, which: &str, args: &[&str], out: &Path) -> Result<(), String> {
+    let dir = out.join(which);
+    let status = std::process::Command::new(crate::deps::cargo())
+        .args(["run", "--release", "--quiet", "--manifest-path"])
+        .arg(root.join("Cargo.toml"))
+        .args([
+            "-p",
+            "validation",
+            "--bin",
+            "stop_images",
+            "--",
+            which,
+            "--out",
+        ])
+        .arg(&dir)
+        .args(args)
+        .status()
+        .map_err(|e| format!("cannot run cargo run -p validation --bin stop_images: {e}"))?;
+    if status.success() {
+        println!("xtask golden {which}: written to {}", dir.display());
+        Ok(())
+    } else {
+        Err(format!("golden {which} failed ({status})"))
+    }
+}
+
 fn subdirs(dir: &Path) -> Result<Vec<String>, String> {
     let mut names: Vec<String> = fs::read_dir(dir)
         .map_err(|e| format!("{}: {e}", dir.display()))?
@@ -2022,6 +2053,9 @@ pub fn cli(root: &Path, args: &[&str]) -> Result<(), String> {
             Ok(())
         }
         ["bodyplane", rest @ ..] => bodyplane(root, rest),
+        [which @ ("patchwork" | "stop-on-escape"), rest @ ..] => {
+            stop_images(root, which, rest, &out)
+        }
         [suite] if !suite.starts_with('-') => run_suite(root, suite, &out).map(|_| ()),
         _ => Err(format!(
             "golden: unrecognised arguments: {}",

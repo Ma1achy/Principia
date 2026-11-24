@@ -20,10 +20,11 @@
 //! **Today's decode** ([`today`]): the same source at f32 (`kernel::stage::decode::sample_with::<…, f32>`), at the
 //! sample's `(u, v)` rounded once to f32, as the decode stage's dispatch takes it.
 //!
-//! **The integration** ([`outcome`]): `kernel::driver::wrapper::integrate_detecting` at f32 under a horizon's
-//! validated loop values and the key's collision threshold, Part 3's default `r_coll` ([`uniforms`]), the occupant a
-//! type parameter. The wrapper's cadence labels collisions and escapes (`kernel::detect`); a march neither ends is
-//! `bounded` at the horizon, whatever the occupant.
+//! **The integration** ([`outcome`]): `kernel::driver::wrapper::integrate_detecting_rule` at f32 under the default
+//! escape rule, a horizon's validated loop values, the key's collision threshold, Part 3's default `r_coll`, and the
+//! key's stop option ([`uniforms`], [`march_key`]), the occupant a type parameter. The wrapper's cadence labels
+//! collisions and escapes (`kernel::detect`), the escape label live unless the stop option is on; a march neither ends
+//! is `bounded` at the horizon, whatever the occupant.
 //!
 //! **The default occupant** ([`HeggieRk4`]): Heggie × RK4 under Eq. 22 (`kernel::regularisation::pairs::Pair::DEFAULT`),
 //! at the step-control values the CPU field marches with ([`FieldValues`], `crate::field::heggie_params`'s). KDK,
@@ -34,8 +35,9 @@
 use kernel::chart::{InvariantLE, Latent, ShapeSphere};
 use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
+use kernel::detect::escape_rule::DefaultRule;
 use kernel::driver::advance::Advance;
-use kernel::driver::wrapper::{integrate_detecting, WrapperUniforms};
+use kernel::driver::wrapper::{integrate_detecting_rule, WrapperUniforms};
 use kernel::generated::links::Defaults;
 use kernel::payload::{sd_detail, sd_state, tm_t_end_step, SimStateBase};
 use kernel::regularisation::az::AzReal;
@@ -227,7 +229,8 @@ pub fn today<C: SliceChart>(quad: &Quad<C>) -> Vec<DecodeOut<f32>> {
         .collect()
 }
 
-/// What a march reads from the sim key, as dispatch validates it: the f32 loop values and the collision threshold.
+/// What a march reads from the sim key, as dispatch validates it: the f32 loop values, the collision threshold and the
+/// stop option.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MarchKey {
     /// The loop values at f32 ([`crate::dispatch::validate::Validated::wrapper_uniforms_f32`]).
@@ -235,20 +238,29 @@ pub struct MarchKey {
     /// The collision threshold of the key's `r_coll` ([`crate::dispatch::validate::Validated::collision_radius`]),
     /// Part 3's default `r_coll = 1e-3`: the collision branch fires as dispatch's integration would.
     pub radius: CollisionRadius,
+    /// Whether the first escape label stops the march ([`crate::dispatch::validate::Validated::stop_on_escape`]): off,
+    /// the default, the label is live; on, the first label ends the march and stays (`kernel::driver::cadence`'s note).
+    pub stop_on_escape: bool,
 }
 
 /// The sim key with horizon `t` and every other field Part 3's default, `dt_macro` the horizon's (R-132), as dispatch
 /// validates it: its [`MarchKey`]; dispatch's refusal for a horizon it refuses.
 pub fn uniforms(t: f64) -> Result<MarchKey, DispatchError> {
-    let key = SimUniforms {
+    march_key(&SimUniforms {
         t_horizon: t,
         dt_macro: dt_macro_for(t),
         ..SimUniforms::default()
-    };
-    let valid = validate(&key)?;
+    })
+}
+
+/// The [`MarchKey`] of the sim key `key` as dispatch validates it: its f32 loop values, collision threshold and stop
+/// option; dispatch's refusal for a key it refuses.
+pub fn march_key(key: &SimUniforms) -> Result<MarchKey, DispatchError> {
+    let valid = validate(key)?;
     Ok(MarchKey {
         loop_values: valid.wrapper_uniforms_f32(),
         radius: valid.collision_radius(),
+        stop_on_escape: valid.stop_on_escape(),
     })
 }
 
@@ -294,11 +306,16 @@ impl HgConfig for FieldValues {
 pub type HeggieRk4 = DefaultOccupant<FieldValues>;
 
 /// The record `ic` integrated by the CPU reference at f32 under `key`'s loop values and collision threshold, the
-/// occupant `A`: the `SimState` it ends in. The wrapper's cadence labels collision and escape; a march that ends in
-/// neither runs to the horizon `bounded`, unless a regularised march's budget ran out (`running`) or it went
-/// non-finite (`sim_failed`).
+/// occupant `A`: the `SimState` it ends in. The wrapper's cadence labels collision and escape, the escape label live
+/// unless the key's stop option is on, when the first label ends the march; a march that ends in neither runs to the
+/// horizon `bounded`, unless a regularised march's budget ran out (`running`) or it went non-finite (`sim_failed`).
 pub fn march<A: Advance>(ic: &Ic<f32>, key: &MarchKey) -> SimStateBase {
-    integrate_detecting::<A, f32>(ic, &key.loop_values, key.radius)
+    integrate_detecting_rule::<A, f32, DefaultRule<f32>>(
+        ic,
+        &key.loop_values,
+        key.radius,
+        key.stop_on_escape,
+    )
 }
 
 /// [`march`]'s [`Outcome`].

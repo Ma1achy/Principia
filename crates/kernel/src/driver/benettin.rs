@@ -620,27 +620,36 @@ impl<R: WrapperReal, F: ShadowForm> CoMarch<R> for Benettin<R, F> {
 /// values `params` by the occupant `A`, the shadow in the form `F`: the sample's march as
 /// [`super::wrapper::integrate_detecting`] runs it, bit for bit, with its shadow marched beside it, written into the
 /// `SimState`'s `r_sh`, `p_sh` and `S` ([`Benettin::write`]). Also returns the shadow.
+///
+/// `stop_on_escape` is the sim key's stop option (`super::cadence`'s note): off, the default, the escape label is live
+/// and the march, its shadow and `S` go on to the horizon; on, the first label ends the march there, so `S` and `T`
+/// freeze at the label (pitfalls §2.4's dilution cannot happen). The shadow's own cadence only projects and watches for
+/// a collision, so the option is the sample's cadence's alone.
 #[inline]
 pub fn integrate_ftle_with<A: Advance, R: WrapperReal, F: ShadowForm>(
     ic: &Ic<R>,
     uniforms: &WrapperUniforms<R>,
     radius: CollisionRadius,
     params: BenettinParams<R>,
+    stop_on_escape: bool,
 ) -> (SimStateFTLEOf<R>, Benettin<R, F>) {
-    let mut cadence = WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius);
+    let mut cadence =
+        WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius).stopping_on_escape(stop_on_escape);
     let mut shadow = Benettin::<R, F>::new(ic, radius, params);
     let out = integrate_with_co::<A, R, _, _>(ic, uniforms, &mut cadence, &mut shadow);
     let out = monitored(out, &cadence);
     (shadow.write(out), shadow)
 }
 
-/// [`integrate_ftle_with`] in the payload's form, [`Absolute`]: the FTLE tier's `SimState`.
+/// [`integrate_ftle_with`] in the payload's form, [`Absolute`], under the stop option `stop_on_escape`: the FTLE tier's
+/// `SimState`.
 #[inline]
 pub fn integrate_ftle<A: Advance, R: WrapperReal>(
     ic: &Ic<R>,
     uniforms: &WrapperUniforms<R>,
     radius: CollisionRadius,
     params: BenettinParams<R>,
+    stop_on_escape: bool,
 ) -> SimStateFTLEOf<R> {
-    integrate_ftle_with::<A, R, Absolute>(ic, uniforms, radius, params).0
+    integrate_ftle_with::<A, R, Absolute>(ic, uniforms, radius, params, stop_on_escape).0
 }

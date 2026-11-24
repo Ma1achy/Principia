@@ -161,8 +161,13 @@ fn shadow_after_run() -> (State<f64>, State<f64>) {
         delta_0: 3e-3,
         n_renorm: 50,
     };
-    let (out, b) =
-        integrate_ftle_with::<Yoshida4, f64, Displacement>(&ic, &key, CollisionRadius::none(), prm);
+    let (out, b) = integrate_ftle_with::<Yoshida4, f64, Displacement>(
+        &ic,
+        &key,
+        CollisionRadius::none(),
+        prm,
+        false,
+    );
     assert!(
         tm_t_end_step(out.times) > 100,
         "fixture: the run is too short"
@@ -315,9 +320,10 @@ fn check_watches(sample_d2: f32, shadow_d2: f32) {
         &key,
         CollisionRadius::none(),
         pair_params(),
+        false,
     );
     let (s, b) =
-        integrate_ftle_with::<Yoshida4, f64, Displacement>(&ic, &key, radius, pair_params());
+        integrate_ftle_with::<Yoshida4, f64, Displacement>(&ic, &key, radius, pair_params(), false);
     assert!(
         b.cadence().detector().fired(),
         "the shadow's detector did not fire at an r_coll only the shadow comes inside"

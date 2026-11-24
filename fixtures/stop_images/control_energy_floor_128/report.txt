@@ -1,0 +1,2 @@
+control: per-pixel colour difference (theta) against the live arm: 0.1370 of pixels differ; p50 0 p90 15 p99 69 p99.9 99 max 199
+control (the stop arm under the energy floor), 128 x 128: 118 seam pairs of 530 stratum-boundary pairs: SEAM STRUCTURE (the check fires, as it must); t_end of 2286 escape-terminated pixels takes 107 values (152.4 s)

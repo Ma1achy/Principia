@@ -696,6 +696,7 @@ fn failure_is_measurement_at_step_zero() {
                 delta_0: 1e-4,
                 n_renorm: 4,
             },
+            false,
         );
         assert_eq!(nans(&[ftle]), vec![], "{name}: the FTLE tier");
         assert_eq!(
@@ -1025,6 +1026,7 @@ fn no_nan_in_storage_real_payloads() {
                     delta_0: 1e-4,
                     n_renorm: 4,
                 },
+                false,
             ));
         }
     }

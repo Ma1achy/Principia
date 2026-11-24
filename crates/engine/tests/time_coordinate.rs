@@ -703,7 +703,8 @@ fn c1<A: Advance>(key: &MarchKey, stop_of: StopOf, offset: u32) -> C1 {
     let mut found = C1::default();
     for ic in columns::<A>(key) {
         let whole = integrate_detecting::<A, f32>(&ic, &key.loop_values, key.radius);
-        let at_top = integrate_detecting_to::<A, f32>(&ic, &key.loop_values, key.radius, horizon);
+        let at_top =
+            integrate_detecting_to::<A, f32>(&ic, &key.loop_values, key.radius, horizon, false);
         assert_eq!(
             words(&whole, false),
             words(&at_top, false),
@@ -713,7 +714,8 @@ fn c1<A: Advance>(key: &MarchKey, stop_of: StopOf, offset: u32) -> C1 {
             let t = axis.time.target(0.5, centre(j, ROWS)).unwrap();
             let m = stop_of(t, key, 0);
             let stop = stop_of(t, key, offset);
-            let stopped = integrate_detecting_to::<A, f32>(&ic, &key.loop_values, key.radius, stop);
+            let stopped =
+                integrate_detecting_to::<A, f32>(&ic, &key.loop_values, key.radius, stop, false);
             let mut at_m = key.loop_values;
             at_m.horizon_steps = m;
             let reference = integrate_detecting::<A, f32>(&ic, &at_m, key.radius);

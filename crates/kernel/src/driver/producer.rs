@@ -32,7 +32,8 @@ use crate::word::WordBuffer;
 
 /// The stored sample of `ic`, tagged `degenerate` by the decoder or not, under the sim key's `uniforms`, collision
 /// threshold `radius` and Benettin values `params`, by the occupant `A`: the FTLE tier's `SimState`, with the sample's
-/// word written at `index` in `words`.
+/// word written at `index` in `words`, under the sim key's stop option `stop_on_escape` (`super::cadence`'s note: off,
+/// the default, the escape label is live; on, the first label ends the march and stays, the word and `S` with it).
 ///
 /// - An IC [`t0`] labels `decode_failed` is never marched: its `SimState` is [`decode_failed`]'s, the shadow the failed
 ///   one ([`failed_shadow`]), and its word empty.
@@ -54,6 +55,7 @@ pub fn produce<A, R, B>(
     params: BenettinParams<R>,
     index: usize,
     words: &mut B,
+    stop_on_escape: bool,
 ) -> SimStateFTLEOf<R>
 where
     A: Advance,
@@ -66,7 +68,8 @@ where
     if start.state == STATE_DECODE_FAILED {
         return failed_shadow(decode_failed::<R>(start.detail));
     }
-    let mut cadence = WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius);
+    let mut cadence =
+        WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius).stopping_on_escape(stop_on_escape);
     if A::OWN_SAMPLING {
         // The plan is unclear here: it asks for every field written, but the shadow's joint march under an occupant
         // that owns its time mapping is not built (`super::wrapper::CoMarch`'s note), and the absolute shadow marched
