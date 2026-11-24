@@ -396,6 +396,13 @@ impl Lagrange {
         }
     }
 
+    /// The closed form's state at the time `t`, on or off the grid, before any collision: what an integrated row at
+    /// `t` is measured against (TASK-M3-67).
+    pub fn at(&self, t: f64) -> Ic<f64> {
+        let (z, zdot) = self.orbit(t);
+        bodies(self.start.m, self.start.r, z, zdot)
+    }
+
     /// The boundary at which the collapse latches: the first at or after `t_c`.
     fn collision_index(&self) -> Result<Option<u64>, Refused> {
         self.collapse()
@@ -433,5 +440,195 @@ impl Provider for Lagrange {
         let (z, zdot) = self.orbit(k as f64 * self.quantum);
         let c = self.start.r;
         Ok(bodies(self.start.m, c, z, zdot))
+    }
+}
+
+/// The default integrator as a provider (§ 18.7; TASK-M3-67): Heggie × RK4 at f32, the CPU field's own march
+/// ([`crate::field::marched`]) at the field's step-control values ([`crate::field::heggie_params`]), on the sync grid,
+/// its quantum the register's fixed `Δ_sync` (R-565), the same for every horizon. Boundary `k` is the state the march
+/// to boundary `k` lands on, at `t = k·Δ_sync` exactly, and every read marches again from `t = 0`: the march sizes its
+/// steps from `Δ_sync` and its budget from the time elapsed, never from its target, so the march to `k` is the prefix
+/// of every longer one, and a read is pure.
+///
+/// **The start is the field's record.** The plan is unclear here on the width; chose the field's f32, because the
+/// outcome a row ends in is then the class the app draws: the provider takes only a start an f32 holds exactly
+/// ([`Integrated::held`] rounds a state once, as the field narrows a decoded IC), so row 0 is the start, bit for bit,
+/// and every row is a state the march stood on, widened exactly.
+///
+/// **The terminal** is what ends the march short of the cap, the sim key's horizon ([`Integrated::last`]; `terminal`
+/// takes no horizon, so the provider holds its own): a collision, a non-finite step (`sim_failed`) or a spent step
+/// budget (`running`, undetermined), each latched where it fired, at the first boundary at or after it; a start the
+/// dispatch-time label settles (`kernel::detect::t0`) at boundary 0. The task predates the live escape label: with the
+/// stop option off, the default, an escape ends no march and is no terminal; its class is the label at the horizon
+/// ([`Integrated::outcome`]). Under the stop option the first escape label is a terminal like a collision.
+#[derive(Clone, Copy, Debug)]
+pub struct Integrated {
+    params: kernel::regularisation::heggie::HgParams<f32>,
+    radius: kernel::detect::collision::CollisionRadius,
+    stop_on_escape: bool,
+    last: u32,
+}
+
+impl Integrated {
+    /// The provider of the sim key with horizon `horizon` and every other field the default (`first_slice::uniforms`):
+    /// its collision threshold and stop option, and the field's step-control values; refused ([`Refused::Horizon`])
+    /// where dispatch refuses the horizon.
+    pub fn new(horizon: f64) -> Result<Self, Refused> {
+        let key = crate::first_slice::uniforms(horizon).map_err(|_| Refused::Horizon)?;
+        Self::with(
+            crate::field::heggie_params(),
+            key.radius,
+            key.stop_on_escape,
+            horizon,
+        )
+    }
+
+    /// The provider at `params`, `radius` and `stop_on_escape`, capped at the last boundary at or before `horizon` on
+    /// `params`' grid; refused where the horizon or the quantum is not one.
+    pub fn with(
+        params: kernel::regularisation::heggie::HgParams<f32>,
+        radius: kernel::detect::collision::CollisionRadius,
+        stop_on_escape: bool,
+        horizon: f64,
+    ) -> Result<Self, Refused> {
+        if !(horizon.is_finite() && horizon >= 0.0) {
+            return Err(Refused::Horizon);
+        }
+        let dt = f64::from(params.delta_sync);
+        if !(dt.is_finite() && dt > 0.0) {
+            return Err(Refused::Grid);
+        }
+        // The field's own cap, so that `outcome` is the field's march to the horizon's boundary.
+        let last = crate::field::boundaries(horizon, &params);
+        Ok(Self {
+            params,
+            radius,
+            stop_on_escape,
+            last,
+        })
+    }
+
+    /// The cap: the last boundary the provider marches to, the sim key's horizon's.
+    pub fn last(&self) -> u32 {
+        self.last
+    }
+
+    /// `state` rounded once to f32, as the field narrows a decoded IC (`first_slice::narrow`), and widened exactly: a
+    /// start the provider takes.
+    pub fn held(state: &Ic<f64>) -> Ic<f64> {
+        widen(&crate::first_slice::narrow(state))
+    }
+
+    /// The outcome class the field draws for `start`, tagged `degenerate` by its decode or not: its march to the cap's
+    /// label (`crate::field::Outcome`), the dispatch-time label where that settles it. (The rows take no tag: a start
+    /// a decode tagged is one the field never marches, and the interface's rows are of marched states.)
+    pub fn outcome(
+        &self,
+        start: &Ic<f64>,
+        degenerate: Option<kernel::decode::Degenerate>,
+    ) -> Result<crate::field::Outcome, Refused> {
+        Ok(self.run(&narrowed(start)?, degenerate, self.last).outcome)
+    }
+
+    fn run(
+        &self,
+        ic: &Ic<f32>,
+        degenerate: Option<kernel::decode::Degenerate>,
+        k: u32,
+    ) -> crate::field::Marched {
+        crate::field::marched(
+            ic,
+            degenerate,
+            self.radius,
+            k,
+            &self.params,
+            self.stop_on_escape,
+        )
+    }
+}
+
+/// `ic` widened exactly.
+fn widen(ic: &Ic<f32>) -> Ic<f64> {
+    Ic {
+        m: ic.m.map(f64::from),
+        r: ic.r.map(|v| v.map(f64::from)),
+        p: ic.p.map(|v| v.map(f64::from)),
+    }
+}
+
+/// `start` at f32, refused where an f32 does not hold it exactly.
+fn narrowed(start: &Ic<f64>) -> Result<Ic<f32>, Refused> {
+    let ic = crate::first_slice::narrow(start);
+    match same_bits(&widen(&ic), start) {
+        true => Ok(ic),
+        false => Err(Refused::Start),
+    }
+}
+
+/// The terminal's index from where Heggie's march ended (`kernel::regularisation::heggie::march_on`): `boundary`, the
+/// last boundary it counted, `clock`, the interval clock of the state it latched (`HgQ::t`, physical time since that
+/// boundary), and `end`, why it stopped. The first boundary at or after the latch:
+/// - `clock` 0, a latch at an interval's entry, before any step: `boundary`;
+/// - `0 < clock < Δ_sync`, a latch between boundaries: `boundary + 1`;
+/// - `clock` at `Δ_sync`, a latch on a landing step: `boundary` where the march counted that landing (a terminal,
+///   `End::Done`), `boundary + 1` where it did not (a budget spent on the landing step leaves it uncounted).
+///
+/// Decided on the clock, never on the absolute time `k·Δ_sync + clock` at f32, which rounds a clock under half an ulp
+/// of `k·Δ_sync` back onto the boundary (1.9·10⁻⁶ at `t ≈ 50`) and would put the index one boundary early.
+pub fn latched_index(
+    boundary: u32,
+    clock: f32,
+    delta_sync: f32,
+    end: kernel::regularisation::az::End,
+) -> u64 {
+    use kernel::regularisation::az::End;
+    let past = clock > 0.0 && (clock < delta_sync || end != End::Done);
+    u64::from(boundary) + u64::from(past)
+}
+
+impl Provider for Integrated {
+    fn quantum(&self) -> f64 {
+        f64::from(self.params.delta_sync)
+    }
+
+    fn terminal(&self, start: &Ic<f64>) -> Result<Option<Terminal>, Refused> {
+        use kernel::regularisation::az::End;
+        let marched = self.run(&narrowed(start)?, None, self.last);
+        let index = match marched.end {
+            None => 0,
+            Some(out) if out.count.end == End::Marching => return Ok(None),
+            Some(out) => {
+                latched_index(out.boundary, out.q.t, self.params.delta_sync, out.count.end)
+            }
+        };
+        let o = marched.outcome;
+        match (State::from_code(o.state), Detail::from_code(o.detail)) {
+            (Some(state), Some(detail)) => Ok(Some(Terminal {
+                index,
+                state,
+                detail,
+            })),
+            _ => unreachable!("the field's label is a payload state and detail"),
+        }
+    }
+
+    /// The state the march to boundary `k` stands on; at or past a terminal's index, the state it latched; refused past
+    /// the cap.
+    fn state(&self, start: &Ic<f64>, k: u64) -> Result<Ic<f64>, Refused> {
+        let ic = narrowed(start)?;
+        if k > u64::from(self.last) {
+            return Err(Refused::PastHorizon {
+                k,
+                last: u64::from(self.last),
+            });
+        }
+        Ok(match self.run(&ic, None, k as u32).end {
+            Some(out) => Ic {
+                m: start.m,
+                r: out.state.r.map(|v| v.map(f64::from)),
+                p: out.state.p.map(|v| v.map(f64::from)),
+            },
+            None => *start,
+        })
     }
 }

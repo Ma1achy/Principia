@@ -505,6 +505,12 @@ impl Tally {
 
 /// The bounds' scale and `ε_phys`'s: 1, or a control's sixty-fourth.
 fn check_conversion(bound_scale: f64, phys_scale: f64) {
+    conversion(bound_scale, phys_scale);
+}
+
+/// [`check_conversion`], returning every changed case, its view before and after: the one-axis pans' and the tilts'.
+fn conversion(bound_scale: f64, phys_scale: f64) -> Vec<(Plane, Plane)> {
+    let mut cases = Vec::new();
     let gate = stop::affine();
     let mut r = Mix(SEED ^ 2);
     let mut keys = Tally::default();
@@ -546,6 +552,13 @@ fn check_conversion(bound_scale: f64, phys_scale: f64) {
                     );
                     keys.changed += 1;
                 }
+            }
+            if !same(&was, &now) {
+                let at = |z0: Latent| Plane {
+                    z0,
+                    ..plane.clone()
+                };
+                cases.push((at(was), at(now)));
             }
             keys.cases += 1;
         }
@@ -609,23 +622,30 @@ fn check_conversion(bound_scale: f64, phys_scale: f64) {
         tilts.cases += 1;
         if changed {
             tilts.changed += 1;
-            tilts.physical(
-                &Plane {
+            let (old, new) = (
+                Plane {
                     q1: w1,
                     q2: w2,
                     ..plane.clone()
                 },
-                &Plane {
+                Plane {
                     q1: n1,
                     q2: n2,
                     ..plane.clone()
                 },
-                phys_scale,
             );
+            tilts.physical(&old, &new, phys_scale);
+            cases.push((old, new));
         }
     }
     keys.report("a one-axis pan, in ulps", "0: a signed zero");
     tilts.report("the tilt, in ε·σ", "8");
+    cases
+}
+
+/// Whether `a` and `b` are the same bits.
+fn same(a: &Latent, b: &Latent) -> bool {
+    bits(a) == bits(b)
 }
 
 /// The plane's scale as the gui reads it on an axis-free basis: `|q₁|`.
@@ -654,6 +674,104 @@ mod physical {
         check_conversion(1.0, 1.0 / 64.0)
     );
 }
+
+// ── path_canonical_conversion_outcome ─────────────────────────────────────────────────────────────────────────────
+//
+// The outcome-class arm (TASK-M3-67), on integrated runs: every changed case of `path_canonical_conversion` (the one-axis
+// pans and the tilts), at every pixel of its 3 × 3 probe, the old view's decoded state against the new one's, each
+// decoded at f64, the state rounded once to f32, then marched by the default occupant, Heggie × RK4, to the default
+// horizon `T = 50` (`engine::trajectory::Integrated`), the dispatch-time label first. (Not the field's record bit for
+// bit: the field narrows the plane to f32 before it decodes; the march is the field's.) The class is the
+// field's `(state, detail)`, the escaping body and the colliding pair included.
+//
+// Pass, written before the run: no pixel outside the excluded set ends in another class. The excluded set is the stated
+// landmarks', as the physical arm's: a pixel whose old or new decoded configuration is within `δ` of a binary collision.
+// A pixel whose two records are the same f32 bits ends in one class by the march's purity
+// (`trajectory_interface_integrator_reads_order_free`) and is counted, not re-marched; every other pixel is marched
+// both ways. Reported: the cases, the pixels, the excluded (and of them, those whose records differ), the same records
+// and the pairs marched.
+//
+// Control: a conversion that moves the view, `z₀` a quarter along its first coordinate, flips a class.
+
+/// What the outcome arm read.
+#[derive(Default, Debug)]
+struct Classes {
+    cases: usize,
+    pixels: usize,
+    excluded: usize,
+    /// The excluded pixels whose two records are not the same bits: excluded and actually moved.
+    excluded_moved: usize,
+    same_record: usize,
+    marched: usize,
+}
+
+/// The decoded state and its tag at the pixel `(s, t)` of `plane`.
+fn decoded(plane: &Plane, s: f64, t: f64) -> (Ic<f64>, Option<kernel::decode::Degenerate>) {
+    let d = decode::<Defaults, f64>(&Controls::new(old::point(plane, s, t)));
+    (d.ic, d.degenerate)
+}
+
+/// Every case of `cases`, its new view through `convert`, compared by class at the probe.
+fn check_classes(cases: &[(Plane, Plane)], convert: &dyn Fn(&Plane) -> Plane) -> Classes {
+    use engine::trajectory::Integrated;
+    let provider = Integrated::new(50.0).expect("the default horizon");
+    let mut c = Classes::default();
+    for (old, new) in cases {
+        let new = convert(new);
+        c.cases += 1;
+        for s in path_support::PROBE {
+            for t in path_support::PROBE {
+                c.pixels += 1;
+                let ((a, ta), (b, tb)) = (decoded(old, s, t), decoded(&new, s, t));
+                if collision_ratio(&a) <= delta() || collision_ratio(&b) <= delta() {
+                    c.excluded += 1;
+                    let moved = !engine::trajectory::same_bits(
+                        &Integrated::held(&a),
+                        &Integrated::held(&b),
+                    );
+                    c.excluded_moved += usize::from(moved || ta != tb);
+                    continue;
+                }
+                let (ha, hb) = (Integrated::held(&a), Integrated::held(&b));
+                if engine::trajectory::same_bits(&ha, &hb) && ta == tb {
+                    c.same_record += 1;
+                    continue;
+                }
+                c.marched += 1;
+                let class = |h: &Ic<f64>, tag| provider.outcome(h, tag).expect("a held start");
+                let (x, y) = (class(&ha, ta), class(&hb, tb));
+                assert_eq!(
+                    x, y,
+                    "a converted view's pixel ({s}, {t}) ends in another class"
+                );
+            }
+        }
+    }
+    println!("path_canonical_conversion_outcome: {c:?}");
+    c
+}
+
+#[test]
+fn path_canonical_conversion_outcome() {
+    let c = check_classes(&conversion(1.0, 1.0), &|p| p.clone());
+    assert!(
+        c.cases > 0 && c.pixels > c.excluded,
+        "the arm read no pixel"
+    );
+}
+
+negative_control!(
+    path_canonical_conversion_outcome,
+    "a conversion that moves the view flips a class",
+    expected = "ends in another class",
+    {
+        check_classes(&conversion(1.0, 1.0), &|p| {
+            let mut moved = p.clone();
+            moved.z0[0] += 0.25;
+            moved
+        });
+    }
+);
 
 // ── path_pin_kept ─────────────────────────────────────────────────────────────────────────────────────────────────
 
