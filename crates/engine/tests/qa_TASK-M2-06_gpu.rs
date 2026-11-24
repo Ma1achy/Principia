@@ -11,11 +11,11 @@
 //!   8(a)), the descriptor's fields in dd_decoder §3.6's ranges (test 3's `β` as the GPU can show it, on the whole
 //!   circle, `rho_angle` within `(−π̂, π̂]`), test 4's tag (`M01_TINY` exactly where the GPU's own `m₀ + m₁ < ε_M01`),
 //!   and test 12's tag clause, the GPU's tag the same source's natively at f32 (`qa_m206_gpu_saturated_controls`). A
-//!   descriptor field is non-finite only at its pole, stored as computed. No `(m, r, p)` value is held to an eps factor
-//!   there: test 12 scopes its tolerance to "the golden IC and fuzzed interiors", the `decode-f32-eps` gate's domain is
-//!   the defaults at `|zₖ| ≤ 2` (`validation::decode_f32_eps`), and the corpus gives no factor for saturated controls,
-//!   so the differences from the native f32 and the f64 decodes, and the tags that differ from f64's, are printed, not
-//!   asserted.
+//!   descriptor field is non-finite only at its pole, where its value is selected, never divided. No `(m, r, p)` value
+//!   is held to an eps factor there: test 12 scopes its tolerance to "the golden IC and fuzzed interiors", the
+//!   `decode-f32-eps` gate's domain is the defaults at `|zₖ| ≤ 2` (`validation::decode_f32_eps`), and the corpus gives
+//!   no factor for saturated controls, so the differences from the native f32 and the f64 decodes, and the tags that
+//!   differ from f64's, are printed, not asserted.
 //! - The `tanh` bound on the GPU: §3.9's `tanh` operator as the kernel evaluates it (`stage_decode_link_tanh`), past
 //!   `tanh_sat`, is in `[−1, 1]`, of its argument's sign, and the operator's own bits at `±tanh_sat`, its clamp's
 //!   definition (`qa_m206_gpu_saturated_tanh_bound`).

@@ -46,7 +46,7 @@ fn in_force<R: Q>(chart: &InvariantLE<f32>, u: R, v: R, d: &Decoded<R>) -> u32 {
     seed_word(construct_expansion(&d.masses, &d.config, t.lz, t.k).seed)
 }
 
-/// The legacy largest-norm rule, decided on `z_α`'s sign: the reader the first slice used before the fix.
+/// The legacy largest-norm rule, decided on `z_α`'s sign: the control's reader.
 #[cfg(feature = "controls")]
 fn legacy<R: Q>(chart: &InvariantLE<f32>, u: R, v: R, _d: &Decoded<R>) -> u32 {
     use kernel::chart::Chart;
@@ -160,8 +160,8 @@ mod legacy_seed {
 /// The first slice's measurement, as committed.
 const FIRST_SLICE: &str = include_str!("first_slice.rs");
 
-/// The first slice's `(L_z, E)` reads and its `SEED` before the fix: the legacy rule named in force
-/// and read for the seed select.
+/// The control's first slice: its `(L_z, E)` reads and its `SEED` with the legacy rule named in force and read for the
+/// seed select.
 #[cfg(feature = "controls")]
 const BEFORE: &str = r#"
 const SEED: &str = "seed in force: R-82's rule, the largest-norm seed decided on z_α's sign; R-934's w = r/√I not yet \

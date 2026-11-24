@@ -11,9 +11,9 @@ use ledger::gen::{export, generate, GenError};
 use ledger::schema::{IndexBase, Ledger};
 use validation::negative_control;
 
-/// The schema's words for a body index.
+/// The words the generated decoder states for a body index.
 const BODY: &str = "body index, 0-based";
-/// The schema's words for a pair id.
+/// The words the generated decoder states for a pair id.
 const PAIR: &str = "pair id, 0-based; pair k is the side opposite body k";
 
 /// The body- and pair-indexed fields and the bases each must state: the masses and the stored vectors a body index,
