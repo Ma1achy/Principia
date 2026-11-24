@@ -1,0 +1,6 @@
+{
+  "description": "SP-1: the Burrau rest start through Path A, Heggie × RK4 at r_coll = 0, read structurally at t_max = 65 of S&P's units (binary plus the lightest body escaping); the escape label and its t_end window on the march to 100. The threshold is the window's upper edge.",
+  "occupant": "heggie-rk4",
+  "t_max": 65.0,
+  "expected": "pass"
+}

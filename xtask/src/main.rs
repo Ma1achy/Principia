@@ -65,6 +65,10 @@ Commands:
                                   is not its expected one (TASK-M0-05); --list lists the gates and runs none; what
                                   follows a measurement gate's name is its flags, cross-backend-branches' --write-inputs,
                                   --record <file> [--cpu-f32] [--hardware-label <label>] and --compare <records>
+                                  gate replication --target <id> [--propose | --render] scores an external target:
+                                  PASS, EXPLAINED DIVERGENCE or UNEXPLAINED, exiting 0 on each; it fails on an unknown
+                                  id or a target whose control does not fire. gate burrau-smoke runs SP-1; --target
+                                  SP-2 and --target PL-8a run the other Burrau anchors, --propose after one its proposal
   golden (<suite> | --all | --list)
                                   render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
                                   offscreen, compare it with its reference to the tolerance its requirement id

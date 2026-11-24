@@ -1,0 +1,6 @@
+{
+  "description": "Control: Yoshida-4 unregularised in place of the default occupant does not resolve Burrau's encounters, so SP-1 must fail.",
+  "occupant": "yoshida4",
+  "t_max": 65.0,
+  "expected": "fail"
+}
