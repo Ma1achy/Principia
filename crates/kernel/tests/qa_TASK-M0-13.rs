@@ -1,21 +1,22 @@
-//! QA tests for TASK-M0-13, run on the GPU: the checked-in generated WGSL (`payload_unpack.wgsl`) reads synthetic,
-//! hand-filled buffers with known values (debug_tooling_plan "Principle") and is compared with the stored Rust layout
-//! and with the corpus's numbers, not with the implementation's.
-//! - REQ-PAY-091 (payload §1; R-343): the bytes of a Rust `SimStateFTLE`, `SimStateBase` and `ICDescriptor` (the
+//! QA tests of the payload's WGSL unpack layer, run on the GPU: the checked-in generated WGSL (`payload_unpack.wgsl`)
+//! reads synthetic, hand-filled buffers with known values (debug_tooling_plan "Principle") and is compared with the
+//! stored Rust layout and with the corpus's numbers, not with the implementation's.
+//! - The stored layout (payload §1): the bytes of a Rust `SimStateFTLE`, `SimStateBase` and `ICDescriptor` (the
 //!   authoritative stored layout, lowering Part 2), read through the WGSL structs, give each named member's value; a
 //!   second element shows the array stride; `closure_step_reserved` is `closure_step | _reserved << 16` and
 //!   `closure_step(w)` returns the Rust `closure_step`, ignoring bits 16–31; `PAYLOAD_SCHEMA_VERSION`'s `.x`/`.y` are
 //!   the Rust `u64`'s low/high 32 bits.
-//! - REQ-RENDER-001 (render contract Part 5; payload §2, §3, §6; R-343, R-271): every u32 accessor zero-extends (the
+//! - The accessors (render contract Part 5; payload §2, §3, §6): every u32 accessor zero-extends (the
 //!   u32 overload of `extractBits`: the i32 one sign-extends) at payload §2's bit positions, including fields that
 //!   reach bit 31; `pa_d_min_is_unset` is true exactly when bits 16–31 are 0x7c00 (f16 +inf), whatever the low half,
 //!   and false for −inf, NaN, 65504 and the subnormal; it agrees with the Rust writer `set_d_min_unset`; the binding
-//!   constants are R-343's 1/0 and 1/1 and the Rust ones.
-//! - REQ-PAY-016 (payload §3; R-307, R-321, R-324): the WGSL table functions give payload §3's frozen cells for every
+//!   constants are 1/0 and 1/1 (`SimStateFTLE` at `@group(1) @binding(0)`, the word buffer at `@binding(1)`) and the
+//!   Rust ones.
+//! - The continuation tables (payload §3): the WGSL table functions give payload §3's frozen cells for every
 //!   symbol input (masked `& 3`) and digit (clamped `min(d, 2)`), and compose: `continuation_index(prev,
 //!   continuation_symbol(prev, e)) == e` and `predecessor_symbol(continuation_symbol(prev, e), e) == prev`.
 //!
-//! Each test has a registered negative control (R-176): the generated text with one rule broken.
+//! Each test has a registered negative control: the generated text with one rule broken.
 
 use std::path::Path;
 
@@ -71,16 +72,16 @@ fn ftle(seed: u32) -> SimStateFTLE {
         closure_min: f(seed + 34),
         closure_step: 0x8000 | (seed as u16 * 7 + 3),
         _reserved: 0xc000 | (seed as u16 * 5 + 1),
-        // the collision floor's record (R-973; TASK-M3-71), then the escape rule's lagged n̂ register, three Reals in
-        // place of the record's 4 B of declared padding (TASK-M3-12)
+        // the collision floor's record, then the escape rule's lagged n̂ register, three Reals in place of the record's
+        // 4 B of declared padding
         coll_floor_bits: u(seed + 35),
         _nhat_lag_0: f(seed + 36),
         _nhat_lag_1: f(seed + 37),
         _nhat_lag_2: f(seed + 38),
-        // the re-boot's two registers (payload §1, "Payload purity"; TASK-M3-21)
+        // the re-boot's two registers (payload §1, "Payload purity")
         _dmin_d2: u(seed + 39),
         _march_bits: u(seed + 40),
-        // the declared tail padding at f32 is [u32; 0] (R-313, R-86)
+        // the declared tail padding at f32 is [u32; 0]
         _tail: [],
     }
 }
@@ -159,21 +160,15 @@ fn t_struct(@builtin(global_invocation_id) id: vec3<u32>) {{
 }
 
 fn ftle_words(s: &SimStateFTLE) -> [u32; 44] {
-    // SimStateFTLE is repr(C), all members 4-byte or wider with no padding: its 176 B are 44 initialised words (168 B
-    // and 42 words before the re-boot's two registers, TASK-M3-21; 160 B
-    // and 40 words before the budget word and the regularised drift, TASK-M3-41; 152 B and 38 words before the lagged n̂ register replaced 4 B of padding, TASK-M3-12; 144 B and 36 words before
-    // the collision floor's 8 B, TASK-M3-71).
+    // SimStateFTLE is repr(C), all members 4-byte or wider with no padding: its 176 B are 44 initialised words.
     unsafe { std::mem::transmute::<SimStateFTLE, [u32; 44]>(*s) }
 }
 
 fn check_ftle(generated: &str) {
     let states = [ftle(0), ftle(40)];
     let mut input: Vec<u32> = states.iter().flat_map(ftle_words).collect();
-    // the kernel writes 45 words per element, one more than the 44 stored (43 and 42 before the re-boot's two
-    // registers, TASK-M3-21; 41 and 40 before the budget word and the
-    // regularised drift, TASK-M3-41; 38 and 38 before the lagged n̂ register,
-    // TASK-M3-12; 37 and 36 before the collision floor's record, TASK-M3-71): pad the input, whose length is the
-    // output's, by the two words the two elements need.
+    // the kernel writes 45 words per element, one more than the 44 stored: pad the input, whose length
+    // is the output's, by the two words the two elements need.
     input.extend([0, 0]);
     let got = run(
         generated,
@@ -377,7 +372,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// closure_step(w): bits 0–15, bits 16–31 ignored (R-343).
+// closure_step(w): bits 0–15, bits 16–31 ignored.
 
 fn check_closure_step(generated: &str) {
     let mut ws: Vec<u32> = Vec::new();
@@ -419,7 +414,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// The u32 accessors at payload §2/§3's bit positions, zero-extended (REQ-RENDER-001's u32 extractBits).
+// The u32 accessors at payload §2/§3's bit positions, zero-extended (the u32 overload of extractBits).
 
 /// Payload §2/§3/§6, by bit position: (accessor call on `x`, expected from `x`).
 type Expect = fn(u32) -> u32;
@@ -457,7 +452,7 @@ const ACCESSORS: [(&str, Expect); 18] = [
     ("select(0u, 1u, sd_last_symbol_valid(x))", |x| {
         (x >= 1 && x != 127) as u32
     }),
-    // floor(log2 total), 0 for a total ≤ 1 (render contract Part 5, R-86).
+    // floor(log2 total), 0 for a total ≤ 1 (render contract Part 5).
     ("total_substeps_log2(x)", |x| {
         if x <= 1 {
             0
@@ -584,7 +579,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// Schema version halves and binding constants, read on the GPU (REQ-PAY-091, REQ-RENDER-001; R-343).
+// Schema version halves and binding constants, read on the GPU.
 
 fn check_constants(generated: &str) {
     let kernel = "@group(0) @binding(0) var<storage, read> a: array<u32>;
@@ -662,7 +657,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// The continuation tables (REQ-PAY-016): payload §3's frozen cells, masked and clamped, and their composition.
+// The continuation tables: payload §3's frozen cells, masked and clamped, and their composition.
 
 const INV: [u32; 4] = [1, 0, 3, 2];
 const CONT: [[u32; 4]; 3] = [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2, 1, 0]];
@@ -729,9 +724,9 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// f16 pairs read through core unpack2x16float (REQ-RENDER-001): on a device opened with no features (so no
+// f16 pairs read through core unpack2x16float: on a device opened with no features (so no
 // shader-f16), `pa_d_min` reads the high half as a binary16 value; `pb_dE_max` the low and `pb_dLz_max` the high, in the
-// `log16` form since R-632 (payload §2), each bit-identical to the Rust `log16_to_f32`, and so are `dE_reg`'s halves.
+// `log16` form (payload §2), each bit-identical to the Rust `log16_to_f32`, and so are `dE_reg`'s halves.
 
 /// IEEE 754 binary16 `h` as f32, for normal and zero halves (sign, 5-bit exponent biased 15, 10-bit mantissa).
 fn half(h: u32) -> f32 {

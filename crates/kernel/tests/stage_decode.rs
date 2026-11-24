@@ -1,6 +1,6 @@
-//! The decode stage's host-side plumbing and its body, natively (`kernel::stage::decode`; TASK-M2-06):
+//! The decode stage's host-side plumbing and its body, natively (`kernel::stage::decode`):
 //! - `stage_uniform_roundtrip`: the latent chart's parameters through the uniform's rows and back, each component in
-//!   its slot (REQ-DEC-007: the chart's parameters are the uniform).
+//!   its slot (the chart's parameters are the uniform).
 //! - `stage_uniform_charts`: the acute Burrau strips' and the shape sphere's parameters, under both maps, through the
 //!   uniform and back, each parameter distinct, so a swapped or dropped slot reads back otherwise.
 //! - `stage_decode_mode_bits`: `DECODE_MODE` is bit 0 of the flags word, full 0 and linearised 1, and no other bit
@@ -8,11 +8,11 @@
 //! - `stage_tag_words`: the readback's tag words, none 0, `M01_TINY` 1, `ENERGY_INFEASIBLE` 2, `ENERGY_UNSCALABLE` 3,
 //!   `INVARIANT_INFEASIBLE` 4 and `NO_QUALIFYING_SEED` 5, and every other word refused.
 //! - `stage_energy_row`: the energy target's row, `(1, E*'s bits, 0, 0)` on and zero off, read back as the same
-//!   `Option`, its switch bit 0 of `x` alone (dd_decoder §3.7, R-25: `η_E`'s off switch is a uniform flag).
+//!   `Option`, its switch bit 0 of `x` alone (dd_decoder §3.7: `η_E`'s off switch is a uniform flag).
 //! - `stage_words_roundtrip`: a sample's `(m, r, p)` and `ICDescriptor` written as words and read back, at its index,
 //!   every other sample's words untouched.
 //! - `stage_entry_native`: the stage's body, compiled natively at f32, writes each sample's decode, the chart read from
-//!   the uniform; under `DECODE_MODE` linearised, and past the last sample, it writes nothing (REQ-DEC-005, REQ-DEC-007).
+//!   the uniform; under `DECODE_MODE` linearised, and past the last sample, it writes nothing.
 //! - `stage_entry_points`: the three compute entry points, called natively, write each sample's decode under their link
 //!   set, or its descriptor, and nothing at the sample count.
 //! - `stage_chart_entry_points`: the acute Burrau strips' and the shape sphere's compute entry points, called natively,
@@ -411,7 +411,7 @@ fn check_entry(run: fn(&Latent<f32>, u32) -> Written) {
         q2: [0.0, 0.2, 0.0, -0.1, 0.1, 0.0, 0.2, 0.0],
     };
     // Both sides' inputs go through `black_box`, so neither can be folded at compile time and both call the run-time
-    // libm, as in `check_wrapper` (measure run 40187630582, TASK-M2-49; physics review 5643532550 P1).
+    // libm, as in `check_wrapper`.
     let (ic, tags, d) = run(black_box(&chart), flags(DecodeMode::Full));
     for (i, uv) in [[0.25f32, 0.75], [0.5, 0.5], [1.0, 0.0]].iter().enumerate() {
         let want =
@@ -503,7 +503,7 @@ fn check_entry_points((defaults, stick, describe_entry): Entries) {
     };
     let uv = [0.2f32, 0.7, 0.6, 0.3];
     // Both sides' inputs go through `black_box`, so neither can be folded at compile time and both call the run-time
-    // libm, as in `check_wrapper` (measure run 40187630582, TASK-M2-49; physics review 5643532550 P1).
+    // libm, as in `check_wrapper`.
     let expect = |i: usize| {
         (
             black_box(&chart),
@@ -619,7 +619,7 @@ fn check_wrapper<V: DecodeVariant>(wrapper: Wrapper, chart: &V::Chart) {
     let (mut ic, mut tags, mut d) = buffers(2);
     // Both sides' inputs go through `black_box`, so neither can be folded at compile time and both call the run-time
     // libm: at the release profile LLVM folds f32 `tanh` on literal inputs, and glibc 2.39's `tanhf(0.3)` differs from
-    // the folded value by 1 ulp (measure run 40187630582, TASK-M2-49).
+    // the folded value by 1 ulp.
     for i in 0..2 {
         wrapper(
             UVec3::new(i, 0, 0),
@@ -726,7 +726,7 @@ fn check_link_tanh(entry: fn(UVec3, &[f32], &mut [f32])) {
     let input = [0.5f32, -3.0, 25.0];
     let mut output = [f32::MAX; 4];
     // Both sides' inputs go through `black_box`, so neither can be folded at compile time and both call the run-time
-    // libm, as in `check_wrapper` (measure run 40187630582, TASK-M2-49; physics review 5643532550 P1).
+    // libm, as in `check_wrapper`.
     for i in 0..4 {
         entry(UVec3::new(i, 0, 0), black_box(&input), &mut output);
     }

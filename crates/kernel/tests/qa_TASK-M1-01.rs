@@ -1,35 +1,35 @@
-//! QA tests for TASK-M1-01, the Rust target of the read side (`kernel::payload`'s generated `read_side.rs`, for the
+//! QA tests for the Rust target of the read side (`kernel::payload`'s generated `read_side.rs`, for the
 //! kernel and the host), written from the requirements and their sources, not from the implementation: hand-filled
 //! stored structs read through `sim_state_from_ftle` / `sim_state_from_base` and compared with references computed
 //! here in f64 from the corpus's formulas.
-//! - REQ-PAY-021: `ftle = (S + ln(δ/δ₀)) / (n·dt_macro)`, the partial renorm interval finalised (payload §5; integrator
+//! - The FTLE: `ftle = (S + ln(δ/δ₀)) / (n·dt_macro)`, the partial renorm interval finalised (payload §5; integrator
 //!   dd §3.4's Benettin, `δ = ‖x' − x‖` over `(r, p)`), never plain `S/t`.
-//! - REQ-PAY-022 / REQ-PAY-026: both stored variants unpack into the one `SimState`; with FTLE baked out `ftle` reads
+//! - The two variants: both stored variants unpack into the one `SimState`; with FTLE baked out `ftle` reads
 //!   the canonical quiet NaN and `ftle_valid` is false; every other member reads the same from both variants.
-//! - REQ-PAY-027 (property): `total_substeps`, an exact u32 sum of `N_sub` stored and read back at a random resume
-//!   step, equals the uninterrupted sum (`horizon_steps × N_max ≤ 2³²−1`, payload §2's dispatch guarantee); the proxy is
-//!   ⌊log₂ total⌋ for totals ≥ 2 and 0 for 0 and 1, over all of u32.
-//! - REQ-PAY-030 (R-245): `diffusion = C_ty / C_tt(n)`, `C_tt(n) = h²·n(n²−1)/12`, `n` the sample's own `t_end_step`;
+//! - The substep total (property): `total_substeps`, an exact u32 sum of `N_sub` stored and read back at a random
+//!   resume step, equals the uninterrupted sum (`horizon_steps × N_max ≤ 2³²−1`, payload §2's dispatch guarantee); the
+//!   proxy is ⌊log₂ total⌋ for totals ≥ 2 and 0 for 0 and 1, over all of u32.
+//! - The diffusion: `diffusion = C_ty / C_tt(n)`, `C_tt(n) = h²·n(n²−1)/12`, `n` the sample's own `t_end_step`;
 //!   NaN and invalid for `n < 2`.
-//! - REQ-PAY-031 (payload §5; R-246; RQ-203 option 2): `energy_drift = H(r, p) − E_0`, `Lz_drift = L_z(r, p) − Lz_0`
-//!   (integrator dd §3.5, `G = 1`; decoder dd §3.6), the masses the read's argument: hand-computed configurations,
-//!   exact in f32, and an f64 reference over random configurations.
-//! - REQ-PAY-032 (R-254): `ftle_valid`'s truth table over tier × state × n × completed renorms; `ftle` NaN exactly when
+//! - The current drifts, derived at the read (payload §5): `energy_drift = H(r, p) − E_0`,
+//!   `Lz_drift = L_z(r, p) − Lz_0` (integrator dd §3.5, `G = 1`; decoder dd §3.6), the masses the read's argument:
+//!   hand-computed configurations, exact in f32, and an f64 reference over random configurations.
+//! - `ftle_valid`: its truth table over tier × state × n × completed renorms; `ftle` NaN exactly when
 //!   it is false.
-//! - REQ-RENDER-013 / REQ-RENDER-077: lowering Part 3a's `0x7FC00000` and unbound word `(0, 0, 0, 0xFE000000)`, which
+//! - An absent tier: lowering Part 3a's `0x7FC00000` and unbound word `(0, 0, 0, 0xFE000000)`, which
 //!   reads as truncated, so no word-derived predicate reads it as valid.
-//! - REQ-RENDER-019: `tm_*_fraction(w, 0) == 0`; `(65535, 65535)` → 1.0 exactly.
+//! - The time fractions: `tm_*_fraction(w, 0) == 0`; `(65535, 65535)` → 1.0 exactly.
 //!
 //! Rust's f32 `+ − × / sqrt` are correctly rounded and `ln` is within 1 ULP, so an f32 result is within
 //! `ops · u · Σ|terms|` of the f64 value of the same f32 inputs, `u = 2⁻²⁴`, `ops` the rounded operations counted at each
-//! use (first-order forward error). Each check takes the read as a function; its negative control (R-176) runs the
+//! use (first-order forward error). Each check takes the read as a function; its negative control runs the
 //! same check on a read with one fault.
 
 use kernel::payload::*;
 use proptest::prelude::*;
 use validation::{negative_control, prop};
 
-/// Lowering Part 3a's values, as the contract writes them (R-72; REQ-RENDER-077).
+/// Lowering Part 3a's values, as the contract writes them.
 const QNAN: u32 = 0x7FC0_0000;
 const UNBOUND: [u32; 4] = [0, 0, 0, 0xFE00_0000];
 const U: f64 = 1.0 / 16_777_216.0;
@@ -186,7 +186,7 @@ fn ftle_ref(s: &SimStateFTLE, a: &Args) -> (f64, f64) {
     )
 }
 
-/// payload §6 / R-254: the tier on, not failed (state ≥ 4), n > 0 and n / n_renorm > 0.
+/// payload §6: the tier on, not failed (state ≥ 4), n > 0 and n / n_renorm > 0.
 fn ftle_valid_ref(s: &SimStateFTLE, has_ftle: bool, a: &Args) -> bool {
     let n = n_of(s);
     has_ftle && (s.packed_a & 7) < 4 && n > 0 && n / a.params.n_renorm > 0
@@ -198,7 +198,7 @@ fn near(got: f32, want: f64, mag: f64, ops: u32) -> bool {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-021
+// The FTLE, finalised
 
 fn check_ftle_finalised(read: Read) {
     let a = Args::default();
@@ -239,7 +239,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-032 / REQ-PAY-022 / REQ-PAY-026
+// `ftle_valid`'s truth table and the two variants
 
 fn check_truth_table(read: Read) {
     for n_renorm in [1u32, 16] {
@@ -312,7 +312,7 @@ negative_control!(
 
 /// The two variants of one state read the same in every member but `ftle`, `ftle_valid` and the shadow `r_sh`,
 /// `p_sh`; the no-FTLE read's `ftle` is lowering Part 3a's NaN and `ftle_valid` false, whatever the state. The shadow
-/// is the FTLE tier's stored state (payload §1): RQ-228 has the read side read it from the stored shadow at the FTLE
+/// is the FTLE tier's stored state (payload §1): the read side reads it from the stored shadow at the FTLE
 /// tier and as NaN at the base tier, where it is absent (lowering Part 3a: "tier features degrade by NaN, not by
 /// struct shape"), so it is left out of the cross-variant comparison, as `ftle` is, and checked on its own here.
 fn check_one_type(read: Read) {
@@ -380,7 +380,7 @@ negative_control!(
     })
 );
 
-/// RQ-228: a base tier whose shadow reads the stored-looking zero, not NaN, fails.
+/// A base tier whose shadow reads the stored-looking zero, not NaN, fails.
 #[cfg(feature = "controls")]
 mod qa_pay026_rust_both_variants_read_one_type_shadow {
     use super::*;
@@ -400,7 +400,7 @@ mod qa_pay026_rust_both_variants_read_one_type_shadow {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-RENDER-013 / REQ-RENDER-077
+// An absent tier
 
 fn check_tier_absent(read: Read) {
     let s = sample();
@@ -462,7 +462,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-027
+// The substep total and its proxy
 
 /// ⌊log₂ t⌋ for t ≥ 2, 0 for 0 and 1, by repeated halving.
 fn log2_ref(t: u32) -> u32 {
@@ -588,7 +588,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-030
+// The diffusion
 
 fn check_diffusion(read: Read) {
     let a = Args::default();
@@ -656,7 +656,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-RENDER-019
+// The time fractions
 
 fn check_fractions(read: Read) {
     for (te, td, h) in [
@@ -716,7 +716,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-031: the current drifts (RQ-203 option 2), and orbit_count / retrograde.
+// The current drifts, derived at the read, and orbit_count / retrograde.
 
 fn hamiltonian(r: [[f32; 2]; 3], p: [[f32; 2]; 3], m: [f32; 3]) -> (f64, f64) {
     let f = f64::from;
