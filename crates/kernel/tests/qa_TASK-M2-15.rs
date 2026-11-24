@@ -23,10 +23,10 @@
 //! - `encode_qa_m215_collinear_beta`: dd_encode §5 test 10 at the three Euler collinear central configurations of
 //!   masses `(0.2, 0.3, 0.5)` (solved here by bisection on Euler's condition, so no landmark sits on the pole), with
 //!   `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`: `β` at π or at 0 on the circle (just below `2π̂` for body 2 on `+x` below the
-//!   axis), nothing clamped, and the decode keeping `λ̃_y`'s sign; and the pole landmark `m₀ = m₁` on
-//! its own. - `encode_qa_m215_exact_poles`: `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components: no
-//! NaN, identical on repeat and across the zeros' signs, `lookup_clamped` set, `β` and `φ` exactly `+0`, and the
-//!   CPU-f32 instantiation agreeing with CPU-f64 (angles, notices, decoded state).
+//!   axis), nothing clamped, and the decode keeping `λ̃_y`'s sign; and the pole landmark `m₀ = m₁` on its own.
+//! - `encode_qa_m215_exact_poles`: `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components: no NaN,
+//!   identical on repeat and across the zeros' signs, `lookup_clamped` set, `β` and `φ` exactly `+0`, and the CPU-f32
+//!   instantiation agreeing with CPU-f64 (angles, notices, decoded state).
 //! - `encode_qa_m215_notices`: a canonical input raises no notice; its mirror image, in the other half, raises none
 //!   either and stays in that half; an out-of-range momentum only `lookup_clamped`.
 //! - `encode_qa_m215_no_wgsl_decode`: no checked-in `.wgsl` file carries the decode's or encode's link formulae (a
@@ -34,8 +34,8 @@
 //!   translated snippets of the shared Rust source, `crates/render/wgsl/decode.wgsl` and
 //!   `crates/render/wgsl/encode.wgsl`, are checked in, and naga writes the encode's inverse `tanh` as the WGSL builtin
 //!   `atanh`. Those two paths alone, and only while each carries `cargo xtask build-kernel`'s GENERATED header, may
-//!   hold the WGSL builtin [`TRANSLATION_BUILTINS`]; every
-//!   other token stays forbidden in them, and every token in every other `.wgsl` file.
+//!   hold the WGSL builtin [`TRANSLATION_BUILTINS`]; every other token stays forbidden in them, and every token in
+//!   every other `.wgsl` file.
 //!
 //! **Tolerances** (test decisions): f64 rounding bounds, each the precision's epsilon times the conditioning the docs
 //! give (`d logit/ds = 1/(s(1 − s))`, `d artanh/dt = 1/(1 − t²)`, Part 4) times the input's magnitude after the gauge,
@@ -1242,8 +1242,8 @@ fn wgsl_files(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// The translated snippets of the shared source, by their path under the repository root: checked-in build outputs of the
-/// rust-gpu → SPIR-V → WGSL translation, which `cargo xtask build-kernel` refuses to find edited by hand.
+/// The translated snippets of the shared source, by their path under the repository root: checked-in build outputs of
+/// the rust-gpu → SPIR-V → WGSL translation, which `cargo xtask build-kernel` refuses to find edited by hand.
 const TRANSLATED_SNIPPETS: [&str; 2] = [
     "crates/render/wgsl/decode.wgsl",
     "crates/render/wgsl/encode.wgsl",
