@@ -78,8 +78,8 @@ pub trait Real:
 
     /// `atan2(self, x)` where the f32 path keeps the backend's: `num_traits::Float`'s by default, so at f32 the GPU's own
     /// `atan2`, unchanged; at f64 on the host the pinned libm's `atan2`, as [`Real::arctan2`]'s (the module's note).
-    /// The other callers take it, so their f32 bits stay the backend's; the encode's angles and the shape sphere
-    /// decode's `β` take [`Real::arctan2`].
+    /// Callers whose f32 bits may stay the backend's take it; those that need the CPU's bits on every backend take
+    /// [`Real::arctan2`].
     #[inline]
     fn arctangent2(self, x: Self) -> Self
     where
