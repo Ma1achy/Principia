@@ -3682,13 +3682,8 @@ fn burrau_end_logged(at: [f64; 2], frames: usize, logged: bool) -> Option<Burrau
     let a = try_locked_mixed(home(), (at[0], at[1])).ok()?;
     let b = kernel_view(&nu_k(), Window::SQUARE);
     let run = || Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, frames);
-    // Main's slide (its residual and slopes, and a failed follow read as an end), so the control's pin ends as on main.
-    let main = Switches {
-        cancelling: true,
-        three_point: true,
-        failed_is_end: true,
-        ..Switches::default()
-    };
+    // Main's slide, so the control's pin ends as on main.
+    let main = main_slide();
     let (out, log) = match logged {
         true => probe::with(Switches::default(), run),
         false => (probe::with(main, run).0, Vec::new()),
@@ -4216,18 +4211,53 @@ fn decoded_ic(pixel: Pixel) -> Option<Ic<f64>> {
     }
 }
 
+/// Main's slide, emulated through the probe: its residual and slopes, a failed follow read as an end, and `recentre`'s
+/// hold on `placed_at`'s decode.
+#[cfg(feature = "controls")]
+fn main_slide() -> engine::path::anchor::probe::Switches {
+    engine::path::anchor::probe::Switches {
+        cancelling: true,
+        three_point: true,
+        failed_is_end: true,
+        placed_at_hold: true,
+        ..Default::default()
+    }
+}
+
+/// The diagnosis's premise: under `switches` the slide at `at` stops as PR #72 measured main's at (0, 0), its follow
+/// stalling at the 2nd of 64 frames.
+#[cfg(feature = "controls")]
+fn check_reproduces(at: [f64; 2], switches: engine::path::anchor::probe::Switches) {
+    let stop = slide_stop(at, 64, switches).expect("a lock");
+    assert!(
+        matches!(
+            stop,
+            Some((
+                2,
+                kernel::chart::lock_solve::Report {
+                    status: kernel::chart::lock_solve::Status::Failed(
+                        kernel::chart::lock_solve::Failure::Stalled
+                    ),
+                    ..
+                },
+                ..
+            ))
+        ),
+        "main's stall not reproduced at ({}, {}): {stop:?}",
+        at[0],
+        at[1]
+    );
+}
+
+// Its check, before the measurement: D0's switches reproduce PR #72's stall at (0, 0). Control: the slide as it is now,
+// which goes through there.
 #[cfg(feature = "controls")]
 #[test]
 #[ignore = "a few minutes: cargo test -p engine --features controls --test path_lock -- path_lock_slide_stall --exact --include-ignored --nocapture"]
 fn path_lock_slide_stall() {
     use engine::path::anchor::probe::Switches;
-    let main = Switches {
-        cancelling: true,
-        three_point: true,
-        failed_is_end: true,
-        placed_at_hold: true,
-        ..Switches::default()
-    };
+    let main = main_slide();
+    check_reproduces([0.0, 0.0], main);
     let runs: [(&str, Switches); 6] = [
         ("D0 main", main),
         (
@@ -4527,7 +4557,8 @@ negative_control!(
 // PR #72's 9 refusals at the slice mid-morph on mixed to Burrau, measured then in a scratch run, committed here: at each
 // of the sweep's 256 pins, the Burrau pair's gate path at 16 frames per segment, with the slide's residual formed as
 // main formed it (and a failed follow read as an end, as main read it) and as it is formed now. Per pin refused at the
-// slice: each `"rehold slide"` solve that failed, its `s`, status and optimality. A measurement: it fails only if a
+// slice: each `"rehold slide"` solve that failed, its `s`, status and optimality (main's run emulated through the probe,
+// `main_slide`: `recentre`'s old hold decode included). A measurement: it fails only if a
 // slice refusal has no failed re-hold slide solve in its log (the log would then not be the refusal's).
 
 /// The Burrau pair's gate path at `at` under `switches`: the slice's refusal, if any, and the re-hold slide solves that
@@ -4563,11 +4594,7 @@ fn rehold_slide_stalls(
 #[cfg(feature = "controls")]
 fn check_rehold_slide_stall(pins: &[[f64; 2]], logged: bool) {
     use engine::path::anchor::probe::Switches;
-    let main = Switches {
-        cancelling: true,
-        failed_is_end: true,
-        ..Switches::default()
-    };
+    let main = main_slide();
     for (name, sw) in [
         ("main's residual", main),
         ("the offset formed directly", Switches::default()),
@@ -4606,6 +4633,13 @@ fn check_rehold_slide_stall(pins: &[[f64; 2]], logged: bool) {
 fn path_lock_rehold_slide_stall() {
     check_rehold_slide_stall(&sweep_pins(SWEEP_SIDE), true);
 }
+
+negative_control!(
+    path_lock_slide_stall,
+    "the slide as it is now in place of main's, at (0, 0), where it goes through",
+    expected = "main's stall not reproduced",
+    check_reproduces([0.0, 0.0], engine::path::anchor::probe::Switches::default())
+);
 
 // ── path_lock_slide_follows_sweep: criteria F1, F2 and F4 ────────────────────────────────────────────────────────────
 //
@@ -4650,7 +4684,27 @@ fn show_outcome(o: &Option<SlideOutcome>) -> String {
 #[test]
 #[ignore = "about 20 minutes: cargo test -p engine --features controls --test path_lock -- path_lock_slide_follows_sweep --exact --include-ignored --nocapture"]
 fn path_lock_slide_follows_sweep() {
-    use engine::path::anchor::probe::{self, Switches};
+    check_slide_follows(&sweep_pins(SWEEP_SIDE));
+}
+
+negative_control!(
+    path_lock_slide_follows_sweep,
+    "the slide as main formed it (its residual and slopes; a failed follow refused as now), at (0, 0)",
+    expected = "F1: 1 pins' follows fail",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            failed_is_end: false,
+            ..main_slide()
+        };
+        probe::with(switches, || check_slide_follows(&[[0.0, 0.0]]));
+    }
+);
+
+/// F1, F2 and F4 at `pins`.
+#[cfg(feature = "controls")]
+fn check_slide_follows(pins: &[[f64; 2]]) {
+    use engine::path::anchor::probe;
     let burrau = (
         MixedLeaves,
         ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
@@ -4667,11 +4721,7 @@ fn path_lock_slide_follows_sweep() {
     let h_rest = b_rest.sim.chart.window.half[0]
         .abs()
         .max(b_rest.sim.chart.window.half[1].abs());
-    let main = Switches {
-        cancelling: true,
-        failed_is_end: true,
-        ..Switches::default()
-    };
+    let main = main_slide();
     let mut f1: Vec<String> = Vec::new();
     let mut f2: Vec<String> = Vec::new();
     let mut f4: Vec<String> = Vec::new();
@@ -4681,7 +4731,7 @@ fn path_lock_slide_follows_sweep() {
         "| pin | Burrau, main at 64 | at 64 | at 128 | at 256 | rest, main at 64 | rest at 64 |"
     );
     println!("|---|---|---|---|---|---|---|");
-    for at in sweep_pins(SWEEP_SIDE) {
+    for &at in pins {
         let (main_b, _) = probe::with(main, || slide_outcome(at, &b_burrau, &burrau, 64));
         let (main_r, _) = probe::with(main, || slide_outcome(at, &b_rest, &rest, 64));
         let now: Vec<Option<SlideOutcome>> = [64, 128, 256]

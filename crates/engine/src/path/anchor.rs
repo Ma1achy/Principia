@@ -112,13 +112,23 @@ pub mod probe {
         static LOG: RefCell<Option<Vec<Solve>>> = const { RefCell::new(None) };
     }
 
-    /// `f` run with `switches` set and every solve logged; the switches cleared after.
+    /// `f` run with `switches` set and every solve logged; the switches and log in force before restored after, `f`
+    /// panicking or not, so a call nests inside another.
     pub fn with<T>(switches: Switches, f: impl FnOnce() -> T) -> (T, Vec<Solve>) {
-        SWITCHES.with(|c| c.set(switches));
-        LOG.with(|l| *l.borrow_mut() = Some(Vec::new()));
+        struct Restore(Switches, Option<Vec<Solve>>);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                SWITCHES.with(|c| c.set(self.0));
+                LOG.with(|l| *l.borrow_mut() = self.1.take());
+            }
+        }
+        let restore = Restore(
+            SWITCHES.with(|c| c.replace(switches)),
+            LOG.with(|l| l.borrow_mut().replace(Vec::new())),
+        );
         let out = f();
-        SWITCHES.with(|c| c.set(Switches::default()));
         let log = LOG.with(|l| l.borrow_mut().take()).unwrap_or_default();
+        drop(restore);
         (out, log)
     }
 
