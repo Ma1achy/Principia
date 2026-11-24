@@ -1,6 +1,6 @@
 //! QA tests for the seed on the first slice (`crates/engine/tests/first_slice.rs`, the first slice's measurement),
-//! written from the decoder's seed rule (the seed in force is the expansion `w = r/√I` on every pixel, the largest-norm
-//! rule decided on `z_α`'s sign the named legacy option) and the rule that the first slice names and reads the seed in
+//! written from the decoder's seed rule (the seed in force is the expansion `w = r/√I` on every pixel; the largest-norm
+//! rule, decided on `z_α`'s sign, is the named legacy option) and the rule that the first slice names and reads the seed in
 //! force.
 //!
 //! - `qa_m293_first_slice_seed_select_is_the_decodes`: the `(L_z, E)` chart's "seed" select must be the seed the

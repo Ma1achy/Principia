@@ -128,7 +128,7 @@ negative_control!(
 /// `dt_of` gives `dt_macro` for `T` as `max(10⁻³, T/65535)`: exactly 10⁻³ at T = 0.4, 0.5, 10 and 50, exactly
 /// `200/65535` at T = 200, and `T/65535` above `T = 65.535`. Where the quotient is taken in f64 the macro-step may sit
 /// one ulp above the rounded quotient, no more, which is the least that keeps `⌈T/dt⌉ ≤ 65535` evaluable in f64
-/// at every horizon; never below it, which would give 65536 steps.
+/// at every horizon in `[0.4, 200]`; never below it, which would give 65536 steps.
 fn check_dt_macro(dt_of: &dyn Fn(f64) -> f64) {
     for t in [0.4, 0.5, 10.0, 50.0, 65.0] {
         assert_eq!(dt_of(t), 1e-3, "dt_macro at T = {t} is not 10⁻³");
@@ -563,7 +563,7 @@ negative_control!(
 
 /// No force law takes `epsilon` and the specs define no softened gravity, so `dispatch` refuses every `epsilon > 0`
 /// (down to the least subnormal) as a softening refusal carrying that `epsilon`, whose reason names `epsilon` and the
-/// ruling id the assertion looks for, and launches nothing; `epsilon = 0` launches once. A run
+/// id the assertion looks for, and launches nothing; `epsilon = 0` launches once. A run
 /// dispatched with `epsilon > 0` would come back Newtonian under the `softened` tag.
 fn check_positive_epsilon_refused(rule_dispatch: &CountedDispatch) {
     let r_coll = SimUniforms::default().r_coll;

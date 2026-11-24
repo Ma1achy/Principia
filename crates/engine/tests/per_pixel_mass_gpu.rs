@@ -11,7 +11,8 @@
 //! three outputs and nothing else, so no `SimUniforms.m[3]` can reach it. The masses a uniform could carry would sit in
 //! words the chart's layout leaves unread ([`unread`]: every chart word the chart's `from_uniform` drops, and the flags
 //! word's padding), so the check writes a garbage mass triple, a negative mass, one past f32's range and a NaN, into
-//! every one of them. Outcomes are decode-time only until the integrator lands (M3, M4): the `DEGENERATE` labels and the descriptor.
+//! every one of them. Outcomes are decode-time only until the integrator lands (M3, M4): the `DEGENERATE` labels and
+//! the descriptor.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 

@@ -7,8 +7,7 @@
 //! under it at f64 and f32 over fuzzed `z`. Every quantity asserted is computed here from the contract's own formulas
 //! (the masses carried to `M = 1` with the momenta by `M^{3/2}`, Burrau's sides, `ν = sec θ − tan θ`, `q = (p_ρ, p_λ)`,
 //! `L_z`, `E`, `‖Σmᵢrᵢ‖/R_x`). Each test registers its negative control. The mass unit (Part 6, "The physical form's
-//! masses") and layer 1's zero class (§ "The zero class in floating point",
-//! and its band `k`) are tested at the end.
+//! masses") and layer 1's zero class (§ "The zero class in floating point", and its band `k`) are tested at the end.
 
 use engine::lookup::{
     after, changed, lookup, lookup_partial, moves, residuals, sanity, Class, Classes, Exact,

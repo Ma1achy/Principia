@@ -1,4 +1,5 @@
-//! QA tests for the contract conformance suite on the engine side, written from the requirements, not from the implementation:
+//! QA tests for the contract conformance suite on the engine side, written from the requirements, not from the
+//! implementation:
 //!
 //! - The suite: "One contract conformance suite, defined once beside the contract in the engine crate, must run every
 //!   one of its cases against both the mock engine and the real engine's implementation of the contract, none skipped
