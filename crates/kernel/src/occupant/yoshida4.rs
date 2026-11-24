@@ -2,7 +2,7 @@
 //! steps, `KDK(w₁·dt) ∘ KDK(w₀·dt) ∘ KDK(w₁·dt)`, with drift sequence `d = [w₁, w₀, w₁]` and kick sequence
 //! `c = [w₁/2, (w₀+w₁)/2, (w₀+w₁)/2, w₁/2]` ([`super::kdk::sequence3`]).
 //!
-//! **The coefficients** (R-501, R-515). *Citation:* Yoshida, H. (1990), "Construction of higher order symplectic
+//! **The coefficients.** *Citation:* Yoshida, H. (1990), "Construction of higher order symplectic
 //! integrators", *Phys. Lett. A* 150, 262–268: the fourth-order symmetric triple composition, its weights in closed
 //! form, `w₁ = 1 / (2 − 2^{1/3})` and `w₀ = −2^{1/3}·w₁`. The shipped digits are dd_integrator §3.2's:
 //!
@@ -14,7 +14,7 @@
 //! `w₁` is the constants register's `yoshida4_w1`; `w₀` and the kicks are derived from it in f64 and generated into
 //! [`StepperCoefficients`](super::StepperCoefficients) (`YOSHIDA4_*`), which this block reads. The negative middle
 //! weight `w₀` does not break reversal at a fixed step: the composition is symmetric, so it is step-reversible
-//! (R-500; dd_integrator §5, test 3).
+//! (dd_integrator §5, test 3).
 
 use super::kdk::{joint_sequence3, sequence3};
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};

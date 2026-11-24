@@ -11,7 +11,7 @@
 //! is given. KDK is `d = [1]`, `c = [1/2, 1/2]`; [`sequence3`] and [`sequence7`] are the three- and seven-drift
 //! compositions, written out stage by stage so that every coefficient is read at a constant index.
 //!
-//! **The joint step** (R-974; [`Stepper::joint_step`]): each stage's sample state is the plain stage's, bit for bit,
+//! **The joint step** ([`Stepper::joint_step`]): each stage's sample state is the plain stage's, bit for bit,
 //! and the displacement `δ = (δr, δp)` takes the same kick and drift, linear in it, the kick's force replaced by the
 //! force difference at the stage's positions ([`ForceDifference::accel`]):
 //!

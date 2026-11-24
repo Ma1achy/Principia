@@ -9,7 +9,7 @@
 //!
 //! `k₁` reads the force evaluation it is given; `k₂`, `k₃` and `k₄` take one each, and the end state the fourth.
 //!
-//! **The joint step** (R-974; [`Stepper::joint_step`]): the sample's stages are the step's, bit for bit
+//! **The joint step** ([`Stepper::joint_step`]): the sample's stages are the step's, bit for bit
 //! (`stages`), and the displacement `δy = (δr, δp)` takes the same tableau, linear in it, each `δkᵢ = (δp/m, m·Δa)`
 //! read at the stage's displaced state, the force difference `Δa` at the stage's positions
 //! ([`ForceDifference::accel`]):

@@ -31,9 +31,11 @@
 //! **The notices.** [`Canonical`] carries `λ` and `lookup_rescaled` (step 0 ran) and `lookup_clamped`, each raised iff
 //! its operation did (seam 8). [`Canonical::signs`] is no notice: nothing was discarded.
 //!
-//! **Step 0** ([`scale_step`]; dd_encode §3.2; inverse-encode contract Parts 2 and 6). Three cases, chosen by selects on its branch inputs (below), every one computed:
+//! **Step 0** ([`scale_step`]; dd_encode §3.2; inverse-encode contract Parts 2 and 6).
+//! Three cases, chosen by selects on its branch inputs (below), every one computed:
 //! - **Skipped** where `|I_in − 1| ≤ τ_I`, `τ_I` the register's `tau_i` eps of the precision ([`IeeeBits::TAU_I`]):
-//!   `λ = 1`, `r` and `p` leave the step bit for bit as they entered it, and `lookup_rescaled` is not raised. A canonical input, at `I = 1` only to rounding, raises no notice.
+//!   `λ = 1`, `r` and `p` leave the step bit for bit as they entered it, and `lookup_rescaled` is not raised.
+//!   A canonical input, at `I = 1` only to rounding, raises no notice.
 //! - **Run** elsewhere, the bodies apart, in two steps: `I_in = s·2^{4q}` with `q` an integer and `s` in `[1, 16)`
 //!   (`I_in`'s mantissa times `2^b`, `b` the low two bits of its exponent), so `√I_in = √s·2^{2q}` and
 //!   `I_in^{1/4} = √√s·2^q`: first by the power of two, `r·2^{−2q}` and `p·2^q`, exact (an integer added to an
@@ -773,9 +775,9 @@ pub fn reflect<R: LinkReal>(ic: &Ic<R>, flip: bool) -> Ic<R> {
     }
 }
 
-/// `C`: `ic` onto the canonical section, in the normative order (the module's note): 1a, 0, 1b and 2, so the state is at its
-/// CoM, at rest, at `I = 1` with `ρ̃` on `+x`, and `λ̃_y` keeps its sign; the signs of `λ̃` are decided on `ic` and
-/// recorded, the state not moved for them. `ic.m` is positive with `Σmᵢ = 1`.
+/// `C`: `ic` onto the canonical section, in the normative order (the module's note): 1a, 0, 1b and 2, so the state is
+/// at its CoM, at rest, at `I = 1` with `ρ̃` on `+x`, and `λ̃_y` keeps its sign; the signs of `λ̃` are decided on `ic`
+/// and recorded, the state not moved for them. `ic.m` is positive with `Σmᵢ = 1`.
 #[inline]
 pub fn canonicalise<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
     let m = ic.m;

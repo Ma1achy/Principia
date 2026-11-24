@@ -1,21 +1,21 @@
 //! `PairGeom`, the pairwise geometry of three bodies, computed once per force evaluation and read by the force, the
-//! potential term of `E` and `r_min` (dd_integrator §3.1: "‖·‖³ shared with r_min"; REQ-INT-036, REQ-PERF-001).
+//! potential term of `E` and `r_min` (dd_integrator §3.1: "‖·‖³ shared with r_min").
 //!
-//! The pairs are indexed by R-22's pair id: pair `k` is the side opposite body `k`, `(i, j) = (1, 2), (2, 0), (0, 1)`
+//! The pairs are indexed by pair id: pair `k` is the side opposite body `k`, `(i, j) = (1, 2), (2, 0), (0, 1)`
 //! for `k = 0, 1, 2` (`i = k + 1`, `j = k + 2`, mod 3), the order `burrau::pair_id` and `shape::Landmarks::bc` use and
 //! dd_simstate_payload §2's `detail` and `dmin_pair` read. Pair `k`'s separation is `dₖ = rⱼ − rᵢ`.
 //!
-//! **`d²` is a branch input** (R-34's enumeration): [`PairGeom::closest`] compares it here, and the driver's collision
+//! **`d²` is a branch input**: [`PairGeom::closest`] compares it here, and the driver's collision
 //! test `d² < r_coll²` and its `N_sub` bucket will read the same `d²`. So it is built in the fixed form the
 //! determinism discipline gives, a lone subtract, a lone multiply and an explicitly written `fma(dy, dy, dx·dx)`
 //! through [`RealOps::fma`](crate::real::RealOps::fma), never a plain `dx·dx + dy·dy` a backend may contract or not
-//! (gpu_determinism_note § "The discipline", rules 2 and 6; integrator_contract Part 4; dd_integrator §3.3; R-34).
-//! Whether every backend fuses an explicit `fma` is RQ-298's open question; this `d²` is held with the other `fma`-built
-//! branch inputs under its "applied meanwhile".
+//! (gpu_determinism_note § "The discipline", rules 2 and 6; integrator_contract Part 4; dd_integrator §3.3).
+//! Whether every backend fuses an explicit `fma` is an open question; until it is settled, this `d²` is held with the
+//! other `fma`-built branch inputs under the same interim rule.
 
 use crate::Real;
 
-/// The three pairs' separations `dₖ = rⱼ − rᵢ`, by R-22 pair id `k`, `(i, j) = (1, 2), (2, 0), (0, 1)`, with each one's `d²`, `‖dₖ‖`
+/// The three pairs' separations `dₖ = rⱼ − rᵢ`, by pair id `k`, `(i, j) = (1, 2), (2, 0), (0, 1)`, with each one's `d²`, `‖dₖ‖`
 /// and `‖dₖ‖³`. Built only by [`PairGeom::new`], so each is the one computation its readers share.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PairGeom<R> {
@@ -78,7 +78,7 @@ impl<R: Real> PairGeom<R> {
         self.cube
     }
 
-    /// The closest pair's R-22 id: the least `d²`, the lowest pair id of a tie. A comparison of `d²`, not of `‖·‖`
+    /// The closest pair's id: the least `d²`, the lowest pair id of a tie. A comparison of `d²`, not of `‖·‖`
     /// (Part 2c rule 2), from pair 0 rather than from an infinity (rule 4), with constant indices only: rust-gpu bounds
     /// checks a runtime index with a multi-level exit (gpu_determinism_note § "The discipline", rule 5).
     #[inline]
