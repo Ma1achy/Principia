@@ -22,14 +22,15 @@
 //! **The target index** ([`TimedPlane::index_at`]): a pixel's time `t` maps to the greatest `k` with `k·Δ ≤ t`, `Δ` the
 //! grid's quantum, the trajectory interface's own arithmetic. A sample's stop index `k_stop` is that index narrowed to
 //! the record's `u32` ([`TimedPlane::stop_index`]); the integrator takes it as its per-sample stop
-//! (`kernel::driver::wrapper::integrate_detecting_to`), and a sample stopped there "reached its time" ([`stop_label`]).
+//! (`kernel::driver::wrapper::integrate_detecting_to`), and a sample stopped there "reached its time" ([`stop_label`]):
+//! `running` there, or, with the stop option off, a live escape label there.
 //!
 //! **The zoom along time floors at one boundary** ([`TimedPlane::zoom`]): nothing finer than a boundary exists short of
 //! a build constant, so a zoom in stops where a pixel's step along time reaches one boundary.
 
 use kernel::decode::Ic;
 use kernel::payload::{
-    bb_budget_exhausted, sd_state, tm_t_end_step, SimStateBaseOf, STATE_RUNNING,
+    bb_budget_exhausted, sd_state, tm_t_end_step, SimStateBaseOf, STATE_ESCAPE, STATE_RUNNING,
 };
 use kernel::regularisation::sync::boundary_of_step;
 
@@ -451,26 +452,38 @@ impl TimedPlane {
 /// How a sample stopped at its own stop index reads: "reached its time" where it stopped there short of the horizon,
 /// otherwise the payload's own label.
 ///
-/// The plan is unclear here; chose to read "reached its time" from the payload (`running` at `t_end_step = k_stop`,
-/// below the horizon) and not to add a sixth state to the payload's state enum, because that enum is generated from the
-/// ledger and read by every consumer, the GPU's included, and the per-sample stop is not yet in the GPU record; the
-/// label here is the engine's until the record carries `k_stop`.
+/// The plan is unclear here; chose to read "reached its time" from the payload and the sim key's stop option, and not
+/// to add a sixth state to the payload's state enum, because that enum is generated from the ledger and read by every
+/// consumer, the GPU's included, and the per-sample stop is not yet in the GPU record; the label here is the engine's
+/// until the record carries `k_stop`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StopLabel {
-    /// The sample stopped at its own stop index, short of the horizon, with no other outcome.
+    /// The sample stopped at its own stop index, short of the horizon, with no final outcome: `running`, or, with the
+    /// stop option off, a live escape label (it may still change past `k_stop`).
     ReachedItsTime,
     /// The payload's state code (`sd_state`).
     Payload(u32),
 }
 
-/// The label of `stopped`, a sample marched to its stop index `k_stop` under a horizon of `horizon_steps`.
+/// The label of `stopped`, a sample marched to its stop index `k_stop` under a horizon of `horizon_steps` with the sim
+/// key's stop option `stop_on_escape` (`kernel::driver::wrapper::integrate_detecting_to`'s).
+///
+/// A march that stopped at `t_end_step = k_stop` below the horizon, its budget not spent, reached its time when it is
+/// `running` there, or, with the stop option off, when it is `escape` there: off, the escape label is live, re-read at
+/// every window mark and free to change, and the march never ends on it, so an escape at `k_stop` is the label the
+/// sample carries at its time, not an outcome. With the option on, the first label ends the march and stays, so an
+/// escape is final wherever it stands. The plan is unclear here for a first label landing exactly on `k_stop` under the
+/// option; chose final, because the label stays from the step it fires whatever the stop index, as it would at any
+/// earlier step.
 pub fn stop_label<R: kernel::payload::PayloadReal>(
     stopped: &SimStateBaseOf<R>,
     k_stop: u32,
     horizon_steps: u32,
+    stop_on_escape: bool,
 ) -> StopLabel {
     let state = sd_state(stopped.packed_a);
-    if state == STATE_RUNNING
+    let not_final = state == STATE_RUNNING || (state == STATE_ESCAPE && !stop_on_escape);
+    if not_final
         && k_stop < horizon_steps
         && tm_t_end_step(stopped.times) == k_stop
         && !bb_budget_exhausted(stopped.budget_bits)

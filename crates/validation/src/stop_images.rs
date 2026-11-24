@@ -9,6 +9,10 @@
 //! config slice (`config_stability`), the brief the app's zero view; chose the zero view because the brief is the later
 //! word and the images are meant to be the app's own.
 //!
+//! `--view config_stability` takes the same images on the slice the task file names ([`View`]): its chart and `r_coll`
+//! from `fixtures/slices.toml`, every other sim-key field as the zero view's. It is a measurement, reported and never
+//! blocked on, and the tolerance is not set from it.
+//!
 //! **The arms** ([`Arm`]), each pixel decoded once at f64 (`engine::precision::decode_only`) and marched by the
 //! default occupant, Heggie × RK4 at the CPU field's values (`engine::first_slice::HeggieRk4`), through the Precision
 //! ring (`engine::precision::integrate_ic_rule`):
@@ -38,9 +42,10 @@
 //!   when such pairs number more than [`SEAM_FLOOR`] and more than [`SEAM_FRACTION`] of the stratum-boundary pairs.
 //! - [`strata`]: the `t_end` histogram of the stop arm's escape-terminated pixels is not ~32 strata: more than
 //!   [`STRATA_FLOOR`] distinct values, decided only on at least [`STRATA_POPULATION`] such pixels.
-//! - [`difference`]: the per-pixel colour difference, the largest per-channel step in 8 bits, compared with the
-//!   tolerance [`TOLERANCE`]. The tolerance is a proposal (`--propose`), measured on this view by this code: checking
-//!   the same view against it is circular until the owner confirms it.
+//! - [`tolerance_failures`]: the golden tolerance [`TOLERANCE`], in the imaged quantity: `|θ̃(stop) − θ̃(reference)|`
+//!   over the stop arm's escape pixels, the largest at most [`Tolerance::max_dtheta`]; the largest per-pixel colour
+//!   step ([`difference`]) at most [`Tolerance::max_step`], a cross-check; and the stop arm's escape count equal to the
+//!   live arm's. Its basis is in [`TOLERANCE`]'s note; the energy-floor control must fail it.
 
 use std::fmt::Write as _;
 use std::path::Path;
@@ -87,25 +92,118 @@ pub const STRATA_FLOOR: usize = 48;
 /// The escape-terminated pixels the strata check needs before it decides.
 pub const STRATA_POPULATION: usize = 64;
 
-/// The golden tolerance on the per-pixel colour difference (`REQ-EVT-023`, a calibration): at most `fraction` of the
-/// pixels may differ at all, and none by more than `max_step` 8-bit steps in any channel. Proposed by
-/// `cargo xtask golden stop-on-escape --propose` on this view; not yet confirmed (the module's note).
+/// The golden tolerance (`REQ-EVT-023`, a calibration) between the stop arm and the reference arm, in the imaged
+/// quantity: `θ̃`, the quantity the patchwork was found in (pitfalls §1.3), with the colour step only as a cross-check.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Tolerance {
-    /// The largest per-channel step any pixel may differ by.
+    /// The largest `|θ̃(stop) − θ̃(reference)|`, radians, over the stop arm's escape pixels (the unwound longitudes'
+    /// difference, not reduced mod 2π: a stop that freezes `θ̃` a whole turn early is a whole turn off).
+    pub max_dtheta: f64,
+    /// The largest per-channel 8-bit step of any pixel's colour, the cross-check.
     pub max_step: u8,
-    /// The largest fraction of pixels that may differ at all.
-    pub fraction: f64,
 }
 
-/// The proposed tolerance (the module's note), for both experiments: `--propose`'s measurement on this view, the
-/// larger of the 64 × 64 and 128 × 128 runs (at most 363 of 4096 pixels differ, 0.0886, none by more than 7 steps; #70). It is
-/// a proposal, not yet confirmed by the owner, and checking this view against it is circular: it guards against a
-/// later change, not this one.
-pub const TOLERANCE: Option<Tolerance> = Some(Tolerance {
-    max_step: 7,
-    fraction: 363.0 / 4096.0,
-});
+/// The tolerance, for both experiments, with its basis (written before any run under it, #74):
+/// - `max_dtheta` 0.1 rad: the physics review's figure on #70, about twice the largest `|Δθ̃|` #70 measured on the app's
+///   zero view (0.046 rad at 64 × 64, over 434 escape pixels), and far below what freezing `θ̃` mid-encounter does (the
+///   energy-floor control's colour steps reach 199 of 255, which is `θ̃` moved by a large part of a turn). It is the
+///   physical claim the stop option rests on (pitfalls §1.6: freezing a converged quantity is nearly a no-op), stated in
+///   that quantity.
+/// - `max_step` 16: the colour cross-check, with headroom over the 7 steps #70 measured. 16 steps is a sixteenth of the
+///   range, half [`HARD_EDGE`]: a pixel that moves this far is past what a converged `θ̃` can move it.
+/// - the escape counts: the stop arm's escape count equals the live arm's (in place of #70's fraction of pixels
+///   differing, which only counted the escape pixels). With the one-variable check holding, a difference would be a
+///   stop-arm escape the live arm ends in a collision.
+///
+/// It is a proposal, for the owner's second look at the checkpoint. Every leg fails on a NaN, and a view with no escape
+/// pixel fails it: there is nothing to measure.
+pub const TOLERANCE: Tolerance = Tolerance {
+    max_dtheta: 0.1,
+    max_step: 16,
+};
+
+/// What the tolerance reads off one comparison of the stop arm with a reference arm ([`measure`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Measured {
+    /// The stop arm's escape pixels.
+    pub stop_escapes: usize,
+    /// The live arm's escape pixels.
+    pub live_escapes: usize,
+    /// The largest `|θ̃(stop) − θ̃(reference)|` over the stop arm's escape pixels; NaN where there are none.
+    pub max_dtheta: f64,
+    /// The largest per-channel colour step of any pixel between the two `θ̃` images.
+    pub max_step: u8,
+}
+
+/// The tolerance's measurement of the stop arm against `reference` on `pixels`.
+pub fn measure(pixels: &[Pixel], reference: Arm) -> Measured {
+    let count = |arm: Arm| {
+        pixels
+            .iter()
+            .filter(|p| sd_state(p.arm(arm).packed_a) == STATE_ESCAPE)
+            .count()
+    };
+    let dtheta: Vec<f64> = pixels
+        .iter()
+        .filter(|p| sd_state(p.stop.packed_a) == STATE_ESCAPE)
+        .map(|p| (p.stop.theta - p.arm(reference).theta).abs())
+        .collect();
+    let max_dtheta = if dtheta.iter().any(|d| d.is_nan()) {
+        f64::NAN
+    } else {
+        dtheta.iter().copied().fold(f64::NAN, f64::max)
+    };
+    let max_step = pixels
+        .iter()
+        .map(|p| step(theta_colour(&p.stop), theta_colour(p.arm(reference))))
+        .max()
+        .unwrap_or(0);
+    Measured {
+        stop_escapes: count(Arm::Stop),
+        live_escapes: count(Arm::Live),
+        max_dtheta,
+        max_step,
+    }
+}
+
+/// Each leg of `tolerance` that `m` fails, named; empty where it holds. A NaN `|Δθ̃|`, or none at all, fails.
+pub fn tolerance_failures(m: &Measured, tolerance: Tolerance) -> Vec<String> {
+    let mut failures = Vec::new();
+    if m.stop_escapes == 0 {
+        failures.push(
+            "the stop arm labels no pixel escape: the tolerance has nothing to measure".to_owned(),
+        );
+    } else if m.max_dtheta.is_nan() || m.max_dtheta > tolerance.max_dtheta {
+        failures.push(format!(
+            "|theta(stop) - theta(reference)| reaches {:.4e} rad over the escape pixels, above {} rad",
+            m.max_dtheta, tolerance.max_dtheta
+        ));
+    }
+    if m.max_step > tolerance.max_step {
+        failures.push(format!(
+            "the colour cross-check: a pixel's colour moves {} steps, above {}",
+            m.max_step, tolerance.max_step
+        ));
+    }
+    if m.stop_escapes != m.live_escapes {
+        failures.push(format!(
+            "the stop arm labels {} pixels escape, the live arm {}",
+            m.stop_escapes, m.live_escapes
+        ));
+    }
+    failures
+}
+
+/// The most distinct `t_end` values the stop arm's escapes can take on the view's regularised occupant: the escape
+/// window's marks (`kernel::detect::escape::is_mark`) among the sync boundaries up to the horizon, since every rule is
+/// tested only there (`kernel::detect::escape_rule`'s note).
+pub fn strata_ceiling(horizon: f64) -> usize {
+    let sync: f64 = kernel::regularisation::sync::delta_sync();
+    let last = kernel::regularisation::sync::boundary_at_or_before(horizon, sync);
+    (1..=last as u32)
+        .filter(|&j| kernel::detect::escape::is_mark(j, sync))
+        .count()
+}
 
 /// Which march a pixel's record comes from (the module's note).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -128,12 +226,111 @@ pub enum Rule {
     EnergyFloor,
 }
 
-/// The sim key of the view under the stop option `stop`, validated as dispatch validates it, as the Precision ring's
+/// Which view the stop images are taken on (the module's note).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum View {
+    /// The app's zero view, the default.
+    Zero,
+    /// `config_stability` (`fixtures/slices.toml`), the slice the task file names: a measurement, reported and never
+    /// blocked on.
+    ConfigStability,
+}
+
+impl View {
+    /// The command's word.
+    pub fn word(self) -> &'static str {
+        match self {
+            View::Zero => "zero",
+            View::ConfigStability => "config_stability",
+        }
+    }
+
+    /// The view named `word`.
+    pub fn parse(word: &str) -> Result<View, String> {
+        match word {
+            "zero" => Ok(View::Zero),
+            "config_stability" => Ok(View::ConfigStability),
+            other => Err(format!("unknown view {other:?} (zero | config_stability)")),
+        }
+    }
+
+    /// The view's chart and collision radius. `config_stability`'s are read from `fixtures/slices.toml`: its chart at
+    /// f64 as the file gives it (`gate::ablation::latent_slice`, the window folded into the plane) and its `r_coll`;
+    /// its `r_esc` is not a sim-key field and the default rule reads none, so it is not used.
+    pub fn spec(self) -> Result<ViewSpec, String> {
+        match self {
+            View::Zero => Ok(ViewSpec {
+                view: self,
+                chart: None,
+                r_coll: SimUniforms::default().r_coll,
+            }),
+            View::ConfigStability => {
+                let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/slices.toml");
+                let text = std::fs::read_to_string(&path)
+                    .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+                let slice = crate::gate::ablation::latent_slice(&text, "config_stability")?;
+                if slice.horizon != HORIZON {
+                    return Err(format!(
+                        "config_stability's horizon {} is not the stop images' {HORIZON}",
+                        slice.horizon
+                    ));
+                }
+                let r_coll =
+                    match crate::gate::ablation::numbers(&text, "config_stability", "r_coll")?
+                        .as_slice()
+                    {
+                        [r] => *r,
+                        other => {
+                            return Err(format!(
+                                "config_stability's r_coll {other:?} is not one number"
+                            ))
+                        }
+                    };
+                Ok(ViewSpec {
+                    view: self,
+                    chart: Some(slice.chart),
+                    r_coll,
+                })
+            }
+        }
+    }
+}
+
+/// A view's chart and collision radius ([`View::spec`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ViewSpec {
+    /// The view.
+    pub view: View,
+    /// The slice's chart at f64; `None` on the zero view, whose chart is [`quad`]'s, exact at f32.
+    pub chart: Option<Latent<f64>>,
+    /// The collision radius `r_coll`.
+    pub r_coll: f64,
+}
+
+impl ViewSpec {
+    /// The report's description of the view.
+    pub fn describe(&self) -> String {
+        match self.view {
+            View::Zero => format!(
+                "the app's zero view (z_alpha x z_beta, zero tilts, zero slice offsets), r_coll {:e}",
+                self.r_coll
+            ),
+            View::ConfigStability => format!(
+                "config_stability (fixtures/slices.toml; the latent chart at f64 as the file gives it), r_coll {:e}; \
+                 its r_esc is not read by the default rule",
+                self.r_coll
+            ),
+        }
+    }
+}
+
+/// The sim key of `view` under the stop option `stop`, validated as dispatch validates it, as the Precision ring's
 /// march key.
-pub fn key(stop: bool) -> Result<MarchKey64, String> {
+pub fn key(view: &ViewSpec, stop: bool) -> Result<MarchKey64, String> {
     let valid = validate(&SimUniforms {
         t_horizon: HORIZON,
         dt_macro: dt_macro_for(HORIZON),
+        r_coll: view.r_coll,
         stop_on_escape: stop,
         ..SimUniforms::default()
     })
@@ -145,7 +342,7 @@ pub fn key(stop: bool) -> Result<MarchKey64, String> {
     })
 }
 
-/// The view's quad, `n × n` samples (the module's note).
+/// The zero view's quad, `n × n` samples (the module's note).
 pub fn quad(n: usize) -> Quad<Latent<f32>> {
     let mut q1 = [0.0f32; 8];
     let mut q2 = [0.0f32; 8];
@@ -162,8 +359,24 @@ pub fn quad(n: usize) -> Quad<Latent<f32>> {
     }
 }
 
+/// `view`'s quad, `n × n` samples: the zero view's, or the slice's chart narrowed to f32 for the quad's sim key and
+/// sample points (the decode reads the f64 chart; [`render`]).
+pub fn view_quad(view: &ViewSpec, n: usize) -> Quad<Latent<f32>> {
+    let mut q = quad(n);
+    if let Some(c) = &view.chart {
+        let narrow = |v: [f64; 8]| v.map(|x| x as f32);
+        q.chart = Latent {
+            z0: narrow(c.z0),
+            q1: narrow(c.q1),
+            q2: narrow(c.q2),
+        };
+    }
+    q
+}
+
 /// The production cadence under the stop option, with escape no longer ending the march (the harness's march, the
-/// module's note): every hook forwarded, `done` reporting only a collision or a failure.
+/// module's note): `done` reports only a collision or a failure, and every other hook is forwarded.
+/// It forwards only what [`harness`] needs (`finish`, `escape_final`, `resume` and `latched` keep their defaults), so it is no cadence for `integrate_word` or a resumed entry.
 pub struct PastLabel<E: EscapeRule<f64>>(pub WrapperCadence<f64, E>);
 
 impl<E: EscapeRule<f64>> Cadence<f64> for PastLabel<E> {
@@ -249,15 +462,18 @@ impl Pixel {
     }
 }
 
-/// The view at `n × n`, every pixel marched three ways, row by row from the bottom left; the stop arm under `rule`
+/// `view` at `n × n`, every pixel marched three ways, row by row from the bottom left; the stop arm under `rule`
 /// (the default, or the energy floor as the control). Pixels are marched on every core.
-pub fn render(n: usize, rule: Rule) -> Result<Vec<Pixel>, String> {
-    let q = quad(n);
+pub fn render(view: &ViewSpec, n: usize, rule: Rule) -> Result<Vec<Pixel>, String> {
+    let q = view_quad(view, n);
     let decode_key = q.sim_key();
-    let (live, stop) = (key(false)?, key(true)?);
+    let (live, stop) = (key(view, false)?, key(view, true)?);
     crate::escape_checks::march::parallel(q.len(), |i| {
-        let out = decode_only::<Latent<f32>, Defaults>(&q.chart, q.uv(i), &decode_key)
-            .map_err(|e| format!("pixel {i}: {e:?}"))?;
+        let out = match &view.chart {
+            None => decode_only::<Latent<f32>, Defaults>(&q.chart, q.uv(i), &decode_key),
+            Some(c) => decode_only::<Latent<f64>, Defaults>(c, q.uv(i), &decode_key),
+        }
+        .map_err(|e| format!("pixel {i}: {e:?}"))?;
         let (ic, deg) = (&out.ic, out.degenerate);
         Ok(Pixel {
             live: integrate_ic_rule::<HeggieRk4, DefaultRule<f64>>(ic, deg, &live),
@@ -526,16 +742,17 @@ pub struct Report {
     pub distribution: (f64, [u8; 5]),
 }
 
-/// Runs `experiment` on `pixels` (`n × n`), writing its images under `out`; with `propose`, the tolerance is proposed
-/// rather than checked.
+/// Runs `experiment` on `pixels` (`n × n`), writing its images under `out`; with `propose`, the tolerance is measured and
+/// reported but not checked.
 pub fn run(
+    view: &ViewSpec,
     experiment: Experiment,
     n: usize,
     pixels: &[Pixel],
     out: Option<&Path>,
     propose: bool,
 ) -> Result<Report, String> {
-    let horizon_steps = key(false)?.loop_values.horizon_steps;
+    let horizon_steps = key(view, false)?.loop_values.horizon_steps;
     let image = |arm: Arm, f: &dyn Fn(&SimState64) -> [u8; 3]| -> Image {
         pixels.iter().map(|p| f(p.arm(arm))).collect()
     };
@@ -566,9 +783,9 @@ pub fn run(
     let w = &mut text;
     let _ = writeln!(
         w,
-        "{}: the app's zero view (z_alpha x z_beta, zero tilts, zero slice offsets), {n} x {n}, T = {HORIZON}, \
-         Heggie x RK4 at f64, the default escape rule; stop option vs {:?}",
+        "{}: {}, {n} x {n}, T = {HORIZON}, Heggie x RK4 at f64, the default escape rule; stop option vs {:?}",
         experiment.word(),
+        view.describe(),
         reference
     );
     let count = |arm: Arm, state: u32| {
@@ -603,9 +820,11 @@ pub fn run(
     );
     let _ = writeln!(
         w,
-        "  t_end of the stop arm's {} escape-terminated pixels: {} distinct values ({}); largest stratum {}",
+        "  t_end of the stop arm's {} escape-terminated pixels: {} distinct values of at most {} (the escape window's \
+         marks over T = {HORIZON}) ({}); largest stratum {}",
         hist.iter().map(|(_, c)| c).sum::<usize>(),
         hist.len(),
+        strata_ceiling(HORIZON),
         match &strata_result {
             Ok(_) => format!("not ~32 strata: more than {STRATA_FLOOR}"),
             Err(e) => e.clone(),
@@ -643,26 +862,22 @@ pub fn run(
          p99 {} p99.9 {} max {}",
         differ, q[0], q[1], q[2], q[3], q[4]
     );
-    if propose {
-        let _ = writeln!(
-            w,
-            "  proposed tolerance (REQ-EVT-023): at most {:.4} of pixels differ, none by more than {} steps \
-             (this view's own measurement: checking this view against it is circular until confirmed)",
-            differ, q[4]
-        );
-    } else {
-        match TOLERANCE {
-            Some(t) if differ <= t.fraction && q[4] <= t.max_step => {
-                let _ = writeln!(w, "  within the tolerance {t:?}");
-            }
-            Some(t) => failures.push(format!(
-                "the per-pixel colour difference ({differ:.4} of pixels, max {}) is outside the tolerance {t:?}",
-                q[4]
-            )),
-            None => failures.push(
-                "no tolerance is recorded (REQ-EVT-023 is uncalibrated): run with --propose".to_owned(),
-            ),
-        }
+    let m = measure(pixels, reference);
+    let legs = tolerance_failures(&m, TOLERANCE);
+    let _ = writeln!(
+        w,
+        "  tolerance {TOLERANCE:?}: max |dtheta| {:.4e} rad (<= {}), max colour step {} (<= {}), escapes stop {} live {} \
+         (equal): {}",
+        m.max_dtheta,
+        TOLERANCE.max_dtheta,
+        m.max_step,
+        TOLERANCE.max_step,
+        m.stop_escapes,
+        m.live_escapes,
+        if legs.is_empty() { "within".to_owned() } else { format!("OUTSIDE ({})", legs.join("; ")) }
+    );
+    if !propose {
+        failures.extend(legs);
     }
     if let Some(dir) = out {
         std::fs::create_dir_all(dir)
