@@ -1,15 +1,15 @@
-//! QA's tests for TASK-M1-04 on the engine's stain-graph type, written from the requirements:
-//! - REQ-RENDER-009 (render contract Part 2; render_gui_spec Part II §4, §6; R-64): no edit and no loaded graph can
+//! QA's tests on the engine's stain-graph type, written from the specs:
+//! - render contract Part 2; render_gui_spec Part II §4, §6: no edit and no loaded graph can
 //!   reorder the backbone, feed post back into colour, close a cycle or add or delete the fixed singletons; a refused
 //!   edit leaves the graph as it was (`qa_stain_graph_*`);
-//! - REQ-RENDER-075 (lowering Part 5; render contract Part 3): two constructions of one graph, ids and order of
+//! - lowering Part 5; render contract Part 3: two constructions of one graph, ids and order of
 //!   construction different and dead nodes added, have one form and one fragment key and render key; params move the
 //!   render key and never the fragment key; a param left at its default is the default; both keys are the 64-bit FNV-1a
 //!   of their texts, and the render text is JCS (`qa_canonical_hash_*`);
-//! - REQ-GEN-027 (gui_state_contract §3): a param outside its declared range, or of no declared uniform, is refused
+//! - gui_state_contract §3: a param outside its declared range, or of no declared uniform, is refused
 //!   (`qa_declaration_*`).
 //!
-//! Every test has its negative control (R-176).
+//! Every test has its negative control.
 
 use engine::stain::{NodeId, NodeKind, Occupant, StainGraph};
 use serde_json::Value;
@@ -97,7 +97,7 @@ fn backward() -> StainGraph {
     g
 }
 
-// ── REQ-RENDER-009 on the editable graph ───────────────────────────────────────────────────────────────────────────
+// ── The backbone's rules on the editable graph ───────────────────────────────────────────────────────────────────────
 
 type Edit = Box<dyn Fn(&mut StainGraph, &Built) -> Result<(), engine::stain::GraphError>>;
 
@@ -238,7 +238,7 @@ negative_control!(
     check_loaded_refused(|b| serde_json::json!({"from": b.colour.0, "to": COMBINER.0, "port": 0}))
 );
 
-// ── REQ-RENDER-075: the canonical form's keys ──────────────────────────────────────────────────────────────────────
+// ── The canonical form's keys ────────────────────────────────────────────────────────────────────────────────────────
 
 /// FNV-1a, 64-bit, from its definition (offset basis 0xcbf29ce484222325, prime 0x100000001b3).
 fn fnv1a64(bytes: &[u8]) -> u64 {
@@ -399,7 +399,7 @@ negative_control!(
     check_render_text(1.0, r#""params":{"gain":[1.0]}"#)
 );
 
-// ── REQ-GEN-027: params are values of the schema ──────────────────────────────────────────────────────────────────
+// ── Params are values of the schema ──────────────────────────────────────────────────────────────────────────────────
 
 fn check_params_refused(cases: &[(&str, Vec<f64>)]) {
     for (name, value) in cases {

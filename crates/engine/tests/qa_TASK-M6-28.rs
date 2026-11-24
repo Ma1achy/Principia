@@ -1,15 +1,15 @@
-//! QA tests for TASK-M6-28 on the engine side, written from the contract, not from the implementation:
+//! QA tests for the horizon on the engine side, written from the contract, not from the implementation:
 //!
 //! - gui_state_contract §2, "Time, the overlay set, the hover…": `SimConfig`'s horizon is `Horizon { t: f64 }`; "Its
-//!   `SetField` path is `SimField::Horizon`, the whole `Horizon` in one edit, a sim key and undoable (R-69) … logged
-//!   as \"SetField Horizon.t before → after\"; the Run window's `T_horizon` sends it (R-390, \"Contract fields\")".
+//!   `SetField` path is `SimField::Horizon`, the whole `Horizon` in one edit, a sim key and undoable … logged as
+//!   \"SetField Horizon.t before → after\"; the Run window's `T_horizon` sends it".
 //! - gui_state_contract §2, "The log entry": every engine logs each `SetField` it applies as one `info` entry from
-//!   `contract`, "(no history)" added for an edit so marked; R-52, R-69, R-101: one undo history, and an edit marked
-//!   "no history" never enters it.
-//! - REQ-GUI-166: the conformance suite, defined once beside the contract, holds a case for each path (R-390,
-//!   "Contract fields"), and a double that drops the horizon's edits fails it, naming that case.
+//!   `contract`, "(no history)" added for an edit so marked; there is one undo history, and an edit
+//!   marked "no history" never enters it.
+//! - The conformance suite, defined once beside the contract, holds a case for each path, and a double that drops the
+//!   horizon's edits fails it, naming that case.
 //!
-//! Each check is run on the real engine's `StateStore`, and its control (R-176) runs the same check on a store that
+//! Each check is run on the real engine's `StateStore`, and its control runs the same check on a store that
 //! drops the horizon's edits, or on an input that differs in the one respect the contract turns on.
 // The file name `qa_TASK-M6-28` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
@@ -27,7 +27,7 @@ use engine::contract::snapshot::Snapshot;
 use engine::contract::store::StateStore;
 use validation::negative_control;
 
-/// A `SimConfig` at the default horizon, `T = 50` (render_gui_spec §G5; R-132), with every other field set off its
+/// A `SimConfig` at the default horizon, `T = 50` (render_gui_spec §G5), with every other field set off its
 /// zero so an edit that touches another field shows.
 fn sim() -> SimConfig {
     SimConfig {
@@ -41,7 +41,7 @@ fn sim() -> SimConfig {
             q2: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         },
         slice: Slice {
-            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            // The slice frame, at its defaults: the normal and both targets z_q3.
             frame: engine::contract::sim_config::SliceFrame::along(
                 engine::contract::sim_config::Z_Q3,
             ),
@@ -90,7 +90,7 @@ impl EngineInterface for DropsHorizon {
             self.0.set_field(edit);
         }
     }
-    // The history key's methods (R-458 F1), forwarded as `set_field` is, so the suite's key cases run on the store.
+    // The history key's methods, forwarded as `set_field` is, so the suite's key cases run on the store.
     fn set_field_under(&mut self, edit: SetField, key: HistoryKey) {
         if !matches!(edit.edit, Edit::Sim(SimField::Horizon(_))) {
             self.0.set_field_under(edit, key);

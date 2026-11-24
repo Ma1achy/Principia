@@ -1,15 +1,14 @@
-//! The named synthetic fixture set's accessor tests (`engine::fixtures`; debug tooling plan, "Principle"; TASK-M1-14),
+//! The named synthetic fixture set's accessor tests (`engine::fixtures`; debug tooling plan, "Principle"),
 //! paired with its renders, the golden suite `m1-synthetic`:
-//! - REQ-TOOL-018: each fixture's samples read back through the generated accessors as the values written, the
+//! - each fixture's samples read back through the generated accessors as the values written, the
 //!   descriptor's fields, `d_min`'s bits, the step count, the word and the current energy drift
 //!   (`fixtures_accessors_*`);
 //! - PIT-9: the adversarial descriptor's raw words are compared whole, so a contaminated reserved bit, which every
 //!   accessor masks, fails the check (`fixtures_adversarial_*`);
-//! - REQ-PAY-024: no stored value of the fixtures is NaN, and the only non-finite one is `d_min`'s unset f16 `+inf`,
-//!   `0x7C00` in bits 16–31 of `packed_a`, held only by a failed sample or one before its first step (R-79, R-271;
-//!   `stored_values_no_nan`).
+//! - no stored value of the fixtures is NaN, and the only non-finite one is `d_min`'s unset f16 `+inf`, `0x7C00` in
+//!   bits 16–31 of `packed_a`, held only by a failed sample or one before its first step (`stored_values_no_nan`).
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use engine::fixtures::{self, Known, NAMES, UNSET};
 use engine::synthetic::Synthetic;
@@ -247,7 +246,7 @@ negative_control!(
 );
 
 /// Checks that each escape of `rows` outside the adversarial descriptor comes once the settling window could complete:
-/// escape needs a full window of history (payload §2, R-29), 0.4 time units, so at least 40 steps at the harness's
+/// escape needs a full window of history (payload §2), 0.4 time units, so at least 40 steps at the harness's
 /// `dt_macro` 0.01.
 fn check_escape_window(name: &str, rows: &[Known]) {
     for (i, k) in (0u32..).zip(rows) {
@@ -384,9 +383,8 @@ negative_control!(
 );
 
 /// Checks each adversarial sample's raw `packed_a` whole against the packing of the fields it holds
-/// (`roundtrip_ctl`), and any reserved bit clear (since R-545 `packed_a` has none: bits 10–14 are `I_max`'s level, 0 in
-/// these samples, and 15 the departed bit): a raw-word comparison, which a bit a field check masks still fails
-/// (pitfalls §9).
+/// (`roundtrip_ctl`), and any reserved bit clear (`packed_a` has none: bits 10–14 are `I_max`'s level, 0 in these
+/// samples, and 15 the departed bit): a raw-word comparison, which a bit a field check masks still fails (pitfalls §9).
 fn check_raw_words(set: &Synthetic, want: &[Known]) {
     for (i, k) in (0u32..).zip(want) {
         let w = set.simstate(i).packed_a;
@@ -443,7 +441,7 @@ fn check_masked(bit: u32) {
 
 #[test]
 fn fixtures_adversarial_reserved_bits_are_masked_by_the_unpack() {
-    // `packed_a` has no reserved span since R-545; bits 10–14, `I_max`'s level, are the ones the compared fields mask.
+    // `packed_a` has no reserved span; bits 10–14, `I_max`'s level, are the ones the compared fields mask.
     assert!(PACKED_A_RESERVED.is_empty(), "packed_a's reserved spans");
     for bit in 10..15 {
         check_masked(bit);
@@ -464,7 +462,7 @@ fn f32_at(bytes: &[u8], at: usize) -> f32 {
 
 /// Checks the f16 half `h` of the word `member`, at `bits` of sample `i`: never NaN, and finite but where it is
 /// `d_min`'s half holding the unset `+inf`, `0x7C00` exactly, on a failed sample (`failed`: `sim_failed` or
-/// `decode_failed`) or one before its first step (`t_end_step == 0`, no step completed; R-271).
+/// `decode_failed`) or one before its first step (`t_end_step == 0`, no step completed).
 fn check_half(
     i: u32,
     member: &str,
@@ -559,20 +557,19 @@ fn check_stored(set: &Synthetic, n: u32) {
                                     check_drift_half(i, m.name, bits, h, log16_to_f32);
                                 }
                             }
-                            // The budget word: a flag and two counts, its reserved bit 31 zero (payload §2; R-603).
+                            // The budget word: a flag and two counts, its reserved bit 31 zero (payload §2).
                             "budget_bits" => assert!(
                                 w >> 31 == 0,
                                 "sample {i}: `budget_bits` {w:#x} has its reserved bit set"
                             ),
                             "times" | "total_substeps" => {}
-                            // The collision floor's code, 0 to 145, its reserved bits zero (payload §2; R-973).
+                            // The collision floor's code, 0 to 145, its reserved bits zero (payload §2).
                             "coll_floor_bits" => assert!(
                                 w <= 145,
                                 "sample {i}: `coll_floor_bits` {w:#x} is not a code with its reserved bits zero"
                             ),
-                            // The re-boot's exact `d_min` latch, an f32's bits (payload §1, "Payload purity"; TASK-M3-21): a
-                            // squared separation, so finite and non-negative; NaN never stored (R-79); 0 on a failed
-                            // sample.
+                            // The re-boot's exact `d_min` latch, an f32's bits (payload §1, "Payload purity"): a
+                            // squared separation, so finite and non-negative; NaN never stored; 0 on a failed sample.
                             "_dmin_d2" => {
                                 let d2 = f32::from_bits(w);
                                 assert!(
@@ -704,7 +701,7 @@ negative_control!(
 );
 
 /// Checks that a failed sample's latches are the defined failed-state values: `dE_max = dLz_max = 0.0` and `d_min`
-/// unset (payload §1; R-271).
+/// unset (payload §1).
 fn check_failed_state(set: &Synthetic, want: &[Known]) {
     for (i, k) in (0u32..).zip(want) {
         if !k.failed() {

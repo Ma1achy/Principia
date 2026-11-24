@@ -1,9 +1,9 @@
 //! The lookup ladder and the named directions at the active link parameters (chart_reference §0.1, "every chart reads
 //! the active value"; chart_decoder_contract § "Tunable parameters": the encode's clamps and its layer-1 range check;
-//! inverse_encode_contract § "Chart-aware validation"; R-481 G4; REQ-DEC-048): a looked-up momentum past the active
+//! inverse_encode_contract § "Chart-aware validation"): a looked-up momentum past the active
 //! `q_max` is clamped and flagged `lookup_clamped`, a raw `z` is decoded at the active values, a mixed chart's lock
 //! decodes to its axes' values, the named directions read the active `μ_max`, and the outcome view's hatch
-//! (REQ-COL-102) reads the chart's check at the active `q_max`; at the defaults every form is today's, bit for bit.
+//! reads the chart's check at the active `q_max`; at the defaults every form is today's, bit for bit.
 
 use engine::chart_class::{fill, fill_params, forbidden, forbidden_params};
 use engine::contract::sim_config::Plane;
@@ -241,7 +241,7 @@ negative_control!(
     check_nav(&D)
 );
 
-// ── The hatch (REQ-COL-102) ─────────────────────────────────────────────────────────────────────────────────────────
+// ── The hatch ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 type Wide = Mixed<PRhoX, PLambdaY, f64>;
 

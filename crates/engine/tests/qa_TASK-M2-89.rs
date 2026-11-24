@@ -1,11 +1,11 @@
-//! QA's tests for TASK-M2-89, the per-quad forward-table builder, written from REQ-DEC-059's statement and verify
-//! detail ("a quad's forward table must be built on the CPU from `decode_only_with` on threads and narrowed once,
-//! bitwise equal to the per-sample evaluation (R-926 item 6), one exact node per sample (R-935, under RQ-766 (a))"):
+//! QA's tests for the per-quad forward-table builder, written from its spec ("a quad's forward table must be built on
+//! the CPU from `decode_only_with` on threads and narrowed once, bitwise equal to the per-sample evaluation, one exact
+//! node per sample"):
 //!
-//! - `qa_m2_89_table_is_per_sample_evaluation`: on each chart of the first slice and each of REQ-DEC-057's grids, at
+//! - `qa_m2_89_table_is_per_sample_evaluation`: on each chart of the first slice and each of its grids (`GRIDS`), at
 //!   quad shapes the implementer's test does not use (one sample, one column, one row, a nearly whole chunk, an odd
 //!   non-square quad) and thread counts it does not use (5, 7, every core, 64), `build`'s records equal word for word
-//!   the first slice's own per-sample evaluation (`engine::first_slice::evaluate`, TASK-M2-86's), and each record equals
+//!   the first slice's own per-sample evaluation (`engine::first_slice::evaluate`), and each record equals
 //!   the sample decoded alone at its f64 point, narrowed by `as`, written alone into its own buffer;
 //! - `qa_m2_89_every_component_narrowed_once`: every one of a node's components, including values that round, overflow
 //!   to infinity and fall in the f32 subnormals, lands in its own word as the single f64-to-f32 rounding of its value;
@@ -15,7 +15,7 @@
 //! - `qa_m2_89_first_failing_sample`: over pseudo-random failing sets, sample counts and thread counts, the builder
 //!   returns the error of the lowest failing index, the one an evaluation sample by sample meets first.
 //!
-//! Each test has its negative control (R-176), run under `--features controls`.
+//! Each test has its negative control, run under `--features controls`.
 //!
 //! **Domain** (pitfalls §10): one quad's evaluation, its chart, window and sim key held fixed; the synthetic tests hold
 //! the node function fixed.

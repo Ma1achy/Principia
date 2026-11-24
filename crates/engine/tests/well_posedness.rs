@@ -1,19 +1,18 @@
 //! The chart authoring layer (`engine::chart_authoring`; chart_decoder_contract § "The four axis kinds", Part 5;
-//! lowering contract Part 5; render_gui_spec §G7; TASK-M2-14):
-//! - `well_posedness_*` (REQ-CHART-011): 2 swept + 6 frozen and 1 swept + annotation + 7 frozen are accepted; a
+//! lowering contract Part 5; render_gui_spec §G7):
+//! - `well_posedness_*`: 2 swept + 6 frozen and 1 swept + annotation + 7 frozen are accepted; a
 //!   double-written block, an under-determined block, a direction written twice, a pin in a curve's tied blocks, a
 //!   chart with no swept axis and a declared flag the axes contradict are each refused.
-//! - `validator_invariant_downstream_*` (REQ-CHART-006): an invariant axis whose dependency set is not upstream of its
+//! - `validator_invariant_downstream_*`: an invariant axis whose dependency set is not upstream of its
 //!   sector is refused; `(L_z, E)` solves jointly.
-//! - `pe_axis_refused_by_validator` (REQ-CHART-070): a `PE` axis is refused, chart_reference §2.1 writing no warp for it.
-//! - `chart_descriptors_*` (REQ-CHART-014, REQ-CHART-012): every registered chart returns its descriptors and passes;
-//!   the shape sphere's spherical map bijective (R-544) and its exponential map's cap bijective, inside one hemisphere
-//!   or straddling the equator (R-503, R-544; REQ-CHART-075), the full-range Burrau (Euclid) chart `DoubleCover`
-//!   (R-157); `E` and `L_z` are
-//!   `conserved_along_flow`, `K` is not; each curve's tangent is its embed's derivative.
-//! - `physical_axis_nonlinear` (REQ-CHART-035): a physical-quantity axis makes the chart nonlinear, and the decode path
+//! - `pe_axis_refused_by_validator`: a `PE` axis is refused, chart_reference §2.1 writing no warp for it.
+//! - `chart_descriptors_*`: every registered chart returns its descriptors and passes; the shape sphere's spherical
+//!   map bijective and its exponential map's cap bijective, inside one hemisphere or straddling the equator, the
+//!   full-range Burrau (Euclid) chart `DoubleCover`; `E` and `L_z` are `conserved_along_flow`, `K` is not; each
+//!   curve's tangent is its embed's derivative.
+//! - `physical_axis_nonlinear`: a physical-quantity axis makes the chart nonlinear, and the decode path
 //!   then calls `Φ`.
-//! - `validate_before_resolve` (REQ-SYS-013): resolve takes only a validated chart, and an invalid one is refused first.
+//! - `validate_before_resolve`: resolve takes only a validated chart, and an invalid one is refused first.
 
 use std::cell::Cell;
 use std::f64::consts::FRAC_PI_4;
@@ -189,7 +188,7 @@ fn check_refused<C: Authored>(chart: C, expected: Refusal) {
     }
 }
 
-// ── REQ-CHART-011 ──────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Well-posedness ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 #[test]
 fn well_posedness_two_swept_six_frozen_accepted() {
@@ -828,7 +827,7 @@ negative_control!(
     check_refused(one_annotation_seven(), Refusal::NoSweptAxis)
 );
 
-// ── REQ-CHART-006 ──────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Invariant axes downstream of their sector ──────────────────────────────────────────────────────────────────────
 
 /// An invariant `q` into `sector`, reading `depends_on`, beside `z_q0`, with the rest pinned around it.
 fn invariant_chart(sector: Block, depends_on: BlockTouch) -> Probe {
@@ -986,10 +985,10 @@ fn two_sectors(config: InvariantQuantity) -> Probe {
     )
 }
 
-// ── REQ-CHART-070 ──────────────────────────────────────────────────────────────────────────────────────────────────
+// ── The PE axis ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A `PE` axis is refused by the well-posedness validator: chart_reference §2.1 writes no warp for it, so no chart
-/// offers it (R-471 H2). The same chart with a `K` axis in its place passes, so the refusal is the quantity's.
+/// offers it. The same chart with a `K` axis in its place passes, so the refusal is the quantity's.
 #[test]
 fn pe_axis_refused_by_validator() {
     check_refused(
@@ -1010,7 +1009,7 @@ negative_control!(
     )
 );
 
-// ── REQ-CHART-014, REQ-CHART-012 ───────────────────────────────────────────────────────────────────────────────────
+// ── Chart descriptors ──────────────────────────────────────────────────────────────────────────────────────────────
 
 fn burrau(nu_range: [f64; 2]) -> Burrau<f64> {
     Burrau {
@@ -1093,8 +1092,8 @@ fn check_registered<C: Authored>(chart: C, swept: u32, image: SystemImage) -> Ch
 fn chart_descriptors_registered_charts() {
     let bij = SystemImage::Bijective;
     check_registered(latent(e(0), e(6)), 2, bij);
-    // The shape sphere's spherical map is bijective, the whole sphere (R-544). The exponential map's value is its
-    // cap's (R-503, R-544): about L⁺ at s = 0.5 the cap lies in w ≥ 0; about a point of the equator it straddles, each
+    // The shape sphere's spherical map is bijective, the whole sphere. The exponential map's value is its
+    // cap's: about L⁺ at s = 0.5 the cap lies in w ≥ 0; about a point of the equator it straddles, each
     // pixel its own system either way.
     check_registered(shape(ShapeMap::Spherical), 2, bij);
     check_registered(shape(ShapeMap::Exponential), 2, bij);
@@ -1105,7 +1104,7 @@ fn chart_descriptors_registered_charts() {
         ..shape(ShapeMap::Exponential)
     };
     check_registered(straddling, 2, bij);
-    // The full-range Burrau charts are DoubleCover (R-27, R-157); a one-sided range is bijective.
+    // The full-range Burrau charts are DoubleCover; a one-sided range is bijective.
     let euclid_full = check_registered(euclid(EUCLID_NU), 1, SystemImage::DoubleCover);
     assert!(euclid_full.annotation);
     check_registered(euclid([0.5, 0.9]), 1, bij);
@@ -1134,7 +1133,7 @@ fn chart_descriptors_registered_charts() {
         bij,
     );
     assert_eq!(raw.kind(), ChartKind::Affine);
-    // The physical-quantity mixed-axis charts and a mapped chart (TASK-M2-37): a lone E solves into the momenta, the
+    // The physical-quantity mixed-axis charts and a mapped chart: a lone E solves into the momenta, the
     // mass ratio is kind 2 in the masses, and a mapping leaves the descriptor the chart's own.
     let energy = check_registered(
         MixedEnergy::<ZMu1, AxisE, Defaults, f64>::new(
@@ -1398,7 +1397,7 @@ negative_control!(
     check_tangent(theta_embed, nu_tangent, &[0.5])
 );
 
-// ── REQ-CHART-035 ──────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Physical-quantity axes ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// The decode path under check.
 type Path<C> = fn(&ValidatedChart<C>, f64, f64) -> Decoded<f64>;
@@ -1551,7 +1550,7 @@ negative_control!(
     )
 );
 
-// ── REQ-SYS-013 ────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Validate before resolve ────────────────────────────────────────────────────────────────────────────────────────
 
 /// `chart` reaches resolve, with the uniform needs `(curve_tangent, invariant_targets)`, only once validated; refused
 /// under `e_star` where the chart forbids it.
@@ -1586,7 +1585,7 @@ fn validate_before_resolve() {
     let mut chart = two_six();
     chart.descriptor.slice.pop();
     assert!(validate(chart, None).is_err());
-    // A forbidding chart with a target is refused before resolve, Some(0) included (R-25).
+    // A forbidding chart with a target is refused before resolve, Some(0) included.
     check_resolve(InvariantLE(invariant_params()), (false, true), Some(0.0));
 }
 

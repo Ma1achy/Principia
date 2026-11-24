@@ -1,4 +1,4 @@
-//! The saved-file conversion's outcome-class arm, on integrated runs (TASK-M3-67): `saved_file_stage2_outcome`.
+//! The saved-file conversion's outcome-class arm, on integrated runs: `saved_file_stage2_outcome`.
 //!
 //! Every stage-1 record of `saved_file_stage2_conversion`'s fixtures (a free view, a lock on the affine chart off the
 //! centre, a lock on the mixed chart, an old lock with no pin, a free morph frame whose ends are locked views), rebuilt

@@ -1,8 +1,9 @@
-//! `ctx.chart.slice_uv` is the sample's position in the slice plane (R-394; REQ-COL-063; colour_composition §3):
+//! `ctx.chart.slice_uv` is the sample's position in the slice plane (colour_composition §3):
 //! `c + h·(2·ctx.quad.uv − 1)` from its quad's centre and half-width, deep_zoom §1's `u = c + h·(2t − 1)`, stable under
-//! in-plane pan and zoom (R-97), never a screen or view position. Drawn through the module harness over flat sets at
+//! in-plane pan and zoom, never a screen or view position. Drawn through the module harness over flat sets at
 //! depth 5 from the slice's cell (7, 2), on a 3 × 2 grid, whose columns and rows differ and whose quads are not the
-//! slice's tiling from 0: the one place the grid-tiling reading R-394 did not choose differs from the slice plane's.
+//! slice's tiling from 0: the one place the grid-tiling reading, which the lane does not use, differs from the slice
+//! plane's.
 //! - `chart_slice_uv_reads_the_quad_frame_on_an_offset_grid`: the quad in column `i`, row `j` reads
 //!   `((7 + i + ½)/32, (2 + j + ½)/32)` at its centre, `c ± h` at its corners, Y-up, and `c + h·(2·quad.uv − 1)` at
 //!   each of its pixels;
@@ -15,9 +16,8 @@
 //! through the harness's own `lanes(rc, r)` on a raster whose quad is the pixel's and whose `quad_uv` is the probe:
 //! the same fill expression, at another `quad.uv`. Every value is dyadic, so exact in f32.
 //!
-//! The negative controls (R-176) put the two lanes REQ-COL-063 names in its place: the grid tiling TASK-M1-06 filled,
-//! `(quad_xy + quad.uv) / quads`, and the slice-plane formula with the grid's columns and rows swapped in the index of
-//! its quad's frame.
+//! The negative controls put two wrong lanes in its place: the grid tiling, `(quad_xy + quad.uv) / quads`, and the
+//! slice-plane formula with the grid's columns and rows swapped in the index of its quad's frame.
 
 use std::collections::HashMap;
 
@@ -56,7 +56,7 @@ const N: u32 = 4;
 enum Lane {
     /// `l.chart.slice_uv`, and the harness's `lanes(rc, r)` at a probe `quad.uv`.
     Harness,
-    /// TASK-M1-06's grid tiling, `(vec2<f32>(quad_xy) + quad_uv) / vec2<f32>(quads)`: the view reading.
+    /// The grid tiling, `(vec2<f32>(quad_xy) + quad_uv) / vec2<f32>(quads)`: the view reading.
     #[cfg(feature = "controls")]
     Tiling,
     /// `c + h·(2·quad_uv − 1)` from the frame of the quad whose index takes the grid's columns and rows swapped,

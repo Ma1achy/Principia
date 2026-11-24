@@ -1,4 +1,4 @@
-//! The Precision ring's four entry points called natively (parity_contract §1; TASK-M3-19): `computeIC` returns a
+//! The Precision ring's four entry points called natively (parity_contract §1): `computeIC` returns a
 //! full-f64 `SimState`, the wrapper's own integration at f64; `computeQuad` returns the quad's samples, each
 //! `computeIC`'s; `stepOnce` takes one `STEP` of any bound stepper, the same step the wrapper's seam takes, of the
 //! occupant's order; `decodeOnly` returns `(m, r, p, ICDescriptor)` from the decode stage's source at f64.

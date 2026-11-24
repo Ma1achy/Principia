@@ -1,4 +1,4 @@
-//! Time as the map's last coordinate (TASK-M2-91; `engine::time_coordinate`): the playhead is the window's centre along
+//! Time as the map's last coordinate (`engine::time_coordinate`): the playhead is the window's centre along
 //! time; a tilt toward time at 90° is the time axis at its home extent; a target time maps to the latest boundary at
 //! or before it, in integers; the zoom along time floors at one boundary; a pixel's state is read through the
 //! trajectory interface; and the measurement of chart_composition § 18.5's C1 with per-sample stops: every row's words

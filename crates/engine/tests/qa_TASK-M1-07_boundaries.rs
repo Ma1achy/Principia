@@ -1,10 +1,10 @@
-//! QA tests for TASK-M1-07, REQ-GUI-001 at quad boundaries: picking flips canvas coordinates the same way as the render
-//! before computing the picked quad. The raster puts each pixel in the quad whose half-open Y-up interval
+//! QA tests for picking at quad boundaries: picking flips canvas coordinates the same way as the render before
+//! computing the picked quad. The raster puts each pixel in the quad whose half-open Y-up interval
 //! [j/q, (j + 1)/q) holds it, so a click exactly on a quad edge, in canvas units, is in the quad above it (or right of
 //! it), and the canvas's top and right edges in the last row and column. Checked over many canvas sizes, quad counts
 //! and every interior edge, with the expected quad derived in exact integers, not from the implementation.
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use engine::picking::{pick, Pick, Screen};
 use render::raster::Grid;

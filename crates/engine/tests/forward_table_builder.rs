@@ -1,8 +1,8 @@
-//! The per-quad forward-table builder (REQ-DEC-059; R-926 item 6; R-935, RQ-766 (a); TASK-M2-89): a quad's table built
-//! from `decode_only_with` on threads, narrowed once, is bitwise equal to the per-sample evaluation.
+//! The per-quad forward-table builder: a quad's table built from `decode_only_with` on threads, narrowed once, is
+//! bitwise equal to the per-sample evaluation.
 //!
 //! - `forward_table_builder_bitwise_per_sample`: on each chart of the first slice (the latent chart, the shape sphere's
-//!   exponential map, the `(L_z, E)` chart) and each of REQ-DEC-057's grids, at a size whose last chunk is short and a
+//!   exponential map, the `(L_z, E)` chart) and each of its grids (`GRIDS`), at a size whose last chunk is short and a
 //!   size of whole chunks, the builder's records on 1, 2, 3 and 8 threads equal, word for word, the records formed here
 //!   sample by sample: `decode_only_with` at the sample, each component rounded to f32 by `as`, written with `write_ic`.
 //! - `forward_table_builder_threads_by_chunk`: the work is on threads, chunk `c` of `CHUNK` samples on worker `c mod n`,

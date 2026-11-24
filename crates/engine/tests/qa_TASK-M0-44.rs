@@ -1,12 +1,12 @@
-//! QA tests for TASK-M0-44's session header, written from REQ-TOOL-141 ("the session header of every profiler and
+//! QA tests for the profile's session header, written from its requirement ("the session header of every profiler and
 //! benchmark file must record the compute shaders' fast-math setting as asked for (the sim key's) and each shader
 //! stage's fast-math mode — compute, vertex and fragment — as compiled on the running backend"; verify: on Metal with
 //! the default setting it reads setting off, compute off, vertex and fragment on; with the setting on, setting on and
 //! compute on; on lavapipe with the setting on, setting on and compute off; a header missing the setting or a stage
 //! fails to parse), from telemetry §5's `fast_math` row (setting "off"/"on"; each stage "off"/"on"/"unknown";
-//! `compiled` null for a session that opens no GPU, R-308) and from R-297's Applied note (Vulkan compiles every stage
+//! `compiled` null for a session that opens no GPU) and from the backend's behaviour (Vulkan compiles every stage
 //! without fast-math). The header is checked as the v1 file carries it: written by `profile::write`, read back by
-//! `profile::read`, and validated against `profile_v1.json`. Each test registers its negative control (R-176).
+//! `profile::read`, and validated against `profile_v1.json`. Each test registers its negative control.
 // The file name `qa_TASK-M0-44` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -275,7 +275,7 @@ negative_control!(
     check_rejected(&[("nothing removed", |_| {})])
 );
 
-/// The forms telemetry §5 allows parse: a stage "unknown" (R-303) and `compiled` null.
+/// The forms telemetry §5 allows parse: a stage "unknown" and `compiled` null.
 fn check_allowed(edits: &[Edit]) {
     for (name, edit) in edits {
         assert_eq!(

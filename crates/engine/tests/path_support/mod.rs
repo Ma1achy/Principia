@@ -1,4 +1,4 @@
-//! What the chart-path tests share (TASK-M2-61): how a view's result is digested into words, and the stored baseline
+//! What the chart-path tests share: how a view's result is digested into words, and the stored baseline
 //! `fixtures/chart_composition/digest.json` those digests are compared with.
 //!
 //! **A digest** is one line of text per case, every number in it exact:

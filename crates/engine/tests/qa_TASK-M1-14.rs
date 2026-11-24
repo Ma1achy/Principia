@@ -2,14 +2,16 @@
 //! the implementation:
 //!
 //! - The debug tooling plan ("Principle", "Synthetic-first"): the named synthetic fixtures (a set `state`, a known
-//!   escaper, a ramp in `energy_drift`, a bitwise-adversarial descriptor, a forced-failure sample) hold what they name, and the generated accessors return the stored values, checked against payload §2's bit layout decoded here
-//!   by hand (`qa_m1_14_accessors_*`, `qa_m1_14_fixture_*`).
-//! - No stored NaN: no stored value of the synthetic and forced-failure samples is NaN, and the only non-finite stored value is `d_min`'s unset f16 +inf, `0x7C00` in bits 16–31 of `packed_a`, held
-//!   only by a failed sample (`sim_failed` or `decode_failed`, payload §2) or one before its first step
-//!   (`t_end_step == 0`, payload §2 `times`: "initial: 0"). The scanner below is this file's own, written from payload
-//!   §1 and §2; each misplacement (wrong half, wrong word, wrong sign, wrong sample, f32 +inf) is a control
-//!   (`qa_stored_values_no_nan_*`). The grep half of the verify: generated Rust and WGSL decide no validity by
-//!   `isnan` (`qa_m1_14_no_isnan_in_generated_validity_logic`).
+//!   escaper, a ramp in `energy_drift`, a bitwise-adversarial descriptor, a forced-failure sample) hold what they name,
+//!   and the generated accessors return the stored values, checked against payload §2's bit layout decoded here by hand
+//!   (`qa_m1_14_accessors_*`, `qa_m1_14_fixture_*`).
+//! - No stored NaN: no stored value of the synthetic and forced-failure samples is NaN, and the only non-finite stored
+//!   value is `d_min`'s unset f16 +inf, `0x7C00` in bits 16–31 of `packed_a`, held only by a failed sample
+//!   (`sim_failed` or `decode_failed`, payload §2) or one before its first step (`t_end_step == 0`, payload §2 `times`:
+//!   "initial: 0"). The scanner below is this file's own, written from payload §1 and §2; each misplacement (wrong
+//!   half, wrong word, wrong sign, wrong sample, f32 +inf) is a control (`qa_stored_values_no_nan_*`). The grep half of
+//!   the verify: generated Rust and WGSL decide no validity by `isnan`
+//!   (`qa_m1_14_no_isnan_in_generated_validity_logic`).
 //!
 //! Each test registers its negative control.
 
@@ -498,8 +500,8 @@ fn simstate_floats(s: &SimStateFTLE) -> Vec<(String, f32)> {
 }
 
 /// Checks that no stored value is NaN, on the first `n` samples of `set`:
-/// - every stored f32, of `SimStateFTLE` and `ICDescriptor`, is finite (no NaN, and no ±inf: the one exception, `d_min`'s
-///   unset +inf, is an f16);
+/// - every stored f32, of `SimStateFTLE` and `ICDescriptor`, is finite (no NaN, and no ±inf: the one exception,
+///   `d_min`'s unset +inf, is an f16);
 /// - `packed_b`'s two `log16` halves, `dE_max` and `dLz_max`, read finite (every code does: [`check_every_drift_code`]);
 /// - `packed_a`'s bits 0–15 are the descriptor, whose reserved bits 10–15 are zero, so no f16 lands there;
 /// - `packed_a`'s bits 16–31, `d_min`, are never NaN or −inf, and are +inf only as exactly `0x7C00` on a `sim_failed` or

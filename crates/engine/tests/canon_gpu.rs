@@ -34,7 +34,8 @@
 //! - `canonicaliser_noop_gpu`: dd_decoder §5 test 5 on the GPU, `C` on the GPU's own canonical-frame decodes, saturated
 //!   controls included, turns by 0 and moves nothing beyond rounding; and on 65 536
 //!   more GPU decodes over a wider `z`, step 0 is skipped on every one, no `lookup_rescaled`, `λ = 1`, their measured
-//!   `|I_in − 1|` printed, the evidence on the GPU that step 0 is skipped on canonical-frame decodes.
+//!   `|I_in − 1|` printed: the GPU's evidence for the step-0 skip tolerance `τ_I`, and that `lookup_rescaled` fires
+//!   only where step 0 rescales.
 //!
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory. **PIT-10:** the cross-backend branch claim
 //! is for identical inputs. The backends' recorded `λ̃_y` and `φ` can differ in their last bits (WGSL's `√`, `/` and
@@ -147,7 +148,7 @@ fn bits(c: &Canonical<f32>) -> Vec<u32> {
 
 const EPS32: f64 = f32::EPSILON as f64;
 
-// ── canonicaliser_mirror_tie (REQ-DEC-017) ──────────────────────────────────────────────────────────────────────
+// ── canonicaliser_mirror_tie ────────────────────────────────────────────────────────────────────────────────────
 
 /// A tie state, masses `(¼, ¼, ½)`, `r₀ = r₁ = (−1, a)`, `r₂ = (1, −a)`, at rest: its CoM is exactly 0, `I = 1`
 /// exactly, `ρ = 0`, so step 2 is the identity (`lookup_clamped`, `φ = 0`), `Λ = M₀₁r₂ − m₀r₀ − m₁r₁ = (1, −a)` and
@@ -178,7 +179,7 @@ fn axis_tie(a: f64) -> Ic<f64> {
 }
 
 /// The tie's `a` values, so `λ̃_y = −a`: `±δ_λ`, one step either side of each, `±2δ_λ`, and `±0`, straddling the band
-/// the retired mirror step read (R-865).
+/// `|λ̃_y| ≤ δ_λ` a mirror step would read.
 fn tie_cases<R: LinkReal>(up: fn(R) -> R, down: fn(R) -> R) -> Vec<R> {
     let d = R::DELTA_LAMBDA;
     let two = d + d;
@@ -197,7 +198,7 @@ fn tie_cases<R: LinkReal>(up: fn(R) -> R, down: fn(R) -> R) -> Vec<R> {
 }
 
 /// The tie on one backend's outputs: for each case `a` and its `C`, the recorded `λ̃_y` is `−a` exactly (`λ̃_y`, not
-/// `λ_y = −2a`), steps 0 and 2 were the identity, and no mirror was taken (R-865): `r₂ = (1, −a)` comes out as it went
+/// `λ_y = −2a`), steps 0 and 2 were the identity, and no mirror was taken: `r₂ = (1, −a)` comes out as it went
 /// in, so `λ̃_y`'s sign is the input's.
 fn check_tie<R: LinkReal + Into<f64> + std::fmt::LowerExp>(
     cases: &[R],
@@ -372,8 +373,8 @@ fn check_branches(gpu: &[Canonical<f32>], cpu: &[Canonical<f32>], what: &str) {
     check_forks(&a, &b, what);
 }
 
-/// The mirror step left in (R-865 retired it), for the controls: `c`'s state reflected where its recorded `λ̃_y` is
-/// below `−δ_λ`, as step 3 did, the record as it was.
+/// A mirror step, which `C` must not take, for the controls: `c`'s state reflected where its recorded `λ̃_y` is below
+/// `−δ_λ`, the record left as it is.
 #[cfg(feature = "controls")]
 fn mirror_left_in<R: LinkReal>(mut c: Canonical<R>) -> Canonical<R> {
     c.ic = kernel::canon::reflect(&c.ic, c.lambda_t_y < -R::DELTA_LAMBDA);
@@ -399,7 +400,7 @@ negative_control!(
     }
 );
 
-// ── canonicaliser_seam_sweep (REQ-DEC-017, REQ-ENC-016) ─────────────────────────────────────────────────────────
+// ── canonicaliser_seam_sweep ────────────────────────────────────────────────────────────────────────────────────
 
 /// The sweep's size.
 const SWEEP: usize = 20_000;
@@ -635,7 +636,7 @@ fn canonicaliser_seam_sweep() {
     );
 }
 
-/// The superseded forms of `C`'s branch inputs on `x` (R-547 replaces them): the CoM and `I_in` as explicit `fma`s,
+/// The control's wrong forms of `C`'s branch inputs on `x`, plain floats: the CoM and `I_in` as explicit `fma`s,
 /// `fma(m₂, x₂, fma(m₁, x₁, m₀x₀))` and `fma(m₂, ‖c₂‖², fma(m₁, ‖c₁‖², m₀‖c₀‖²))` with `‖c‖² = fma(c_x, c_x, c_y²)`;
 /// the pair differences as lone f32 subtractions; and the select on `I_in = 0`. Each `fma` is fused or, as CI's lavapipe evaluates it, a rounded product and an add (`fused`), and
 /// every result is flushed to zero where subnormal or not (`flush`), as Metal does.
@@ -669,10 +670,11 @@ fn superseded(x: &Ic<f32>, fused: bool, flush_subnormals: bool) -> Branches {
     }
 }
 
-/// The superseded form of the signs of `λ̃` (to TASK-M2-57's physics review the encode's `β` compared these floats
-/// with 0): the rotated `λ̃ = (λ̃_x, λ̃_y)`, step 2's `R(−φ)` on step 0's output and `kernel::canon::lambda_t_axis`'s
-/// arithmetic, each `fma` fused or a rounded product and an add (`fused`), every result flushed to zero where
-/// subnormal or not (`flush_subnormals`). Step 0's output and the turn are the kernel's own, the same on both arms.
+/// The control's wrong form of the signs of `λ̃`, the rotated floats compared with 0 rather than the signs `C` decides
+/// on its input: the rotated `λ̃ = (λ̃_x, λ̃_y)`, step 2's `R(−φ)` on step 0's output and
+/// `kernel::canon::lambda_t_axis`'s arithmetic, each `fma` fused or a rounded product and an add (`fused`), every
+/// result flushed to zero where subnormal or not (`flush_subnormals`). Step 0's output and the turn are the kernel's
+/// own, the same on both arms.
 /// Fused and unflushed, its `λ̃_y` is `C`'s recorded one, bit for bit.
 #[cfg(feature = "controls")]
 fn plain_lambda_t(x: &Ic<f32>, fused: bool, flush_subnormals: bool) -> [f32; 2] {
@@ -709,7 +711,7 @@ negative_control!(
     }
 );
 
-// ── canonicaliser_seam_sweep_beta (REQ-DEC-002; dd_encode §3.2, "The signed encode of β") ──────────────────────
+// ── canonicaliser_seam_sweep_beta (dd_encode §3.2, "The signed encode of β") ───────────────────────────────────
 
 /// `2^e` at f32, `e` in the normal range.
 fn pow2(e: i32) -> f32 {
@@ -884,7 +886,7 @@ negative_control!(
     }
 );
 
-// ── canonicaliser_scale_invariance (REQ-DEC-017) ───────────────────────────────────────────────────────────────
+// ── canonicaliser_scale_invariance ─────────────────────────────────────────────────────────────────────────────
 
 /// Generic f64 states, random masses, positions and momenta, `λ̃_y` anywhere.
 fn generic(n: usize) -> Vec<Ic<f64>> {
@@ -922,7 +924,7 @@ fn scaled32(x: &Ic<f64>, k: f64) -> Ic<f32> {
     })
 }
 
-/// `C(x)`'s side of the seam ([`below`]): the input's as rotated, `C` having no mirror step (R-865).
+/// `C(x)`'s side of the seam ([`below`]): the input's as rotated, `C` having no mirror step.
 fn lower<R: LinkReal + IeeeBits>(x: &Ic<R>) -> bool {
     below(&canonicalise(x))
 }
@@ -991,7 +993,7 @@ negative_control!(
     }
 );
 
-// ── canonicaliser_hierarchy (REQ-DEC-017) ───────────────────────────────────────────────────────────────────────
+// ── canonicaliser_hierarchy ─────────────────────────────────────────────────────────────────────────────────────
 
 /// The inner pair's separation over the outer distance.
 const RATIOS: [f64; 6] = [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8];
@@ -1036,7 +1038,7 @@ type Outs<'a> = &'a dyn Fn(&[Ic<f32>]) -> Vec<Canonical<f32>>;
 
 /// One backend's `C`, `outs`, on `states`, against CPU-f32's on identical inputs: the same guard, skip and select
 /// ([`check_forks`]); and where `axis`, on `+x`, where `λ̃_y`'s offset survives the rounding to f32, the output's `λ̃_y`
-/// negative ([`below`]), its sign as rotated: no mirror (R-865). The number whose sign is checked.
+/// negative ([`below`]), its sign as rotated: no mirror. The number whose sign is checked.
 fn check_kept(outs: Outs, states: &[Ic<f32>], axis: bool, name: &str, what: &str) -> usize {
     let got = outs(states);
     let cpu: Vec<Canonical<f32>> = states.iter().map(canonicalise).collect();
@@ -1123,13 +1125,13 @@ fn flush(x: f32) -> f32 {
     }
 }
 
-// ── canonicaliser_hierarchy_edge (REQ-DEC-017) ─────────────────────────────────────────────────────────────────
+// ── canonicaliser_hierarchy_edge ───────────────────────────────────────────────────────────────────────────────
 
 /// The inner pair's half-separation over the outer distance, as powers of two.
 const EDGE_RATIOS: [i32; 4] = [-12, -15, -20, -40];
 
-/// `m₂c² − δ_λ²·M₀₁·‖ρ‖²·d²` at f64 on f64 inputs: positive where `|λ̃_y| > δ_λ`, the retired deadband's edge (R-865)
-/// the states straddle.
+/// `m₂c² − δ_λ²·M₀₁·‖ρ‖²·d²` at f64 on f64 inputs: positive where `|λ̃_y| > δ_λ`, the edge of the
+/// band `|λ̃_y| ≤ δ_λ` the states straddle.
 fn edge_side(m: [f64; 3], r: [[f64; 2]; 3]) -> f64 {
     let diff = |a: [f64; 2], b: [f64; 2]| [b[0] - a[0], b[1] - a[1]];
     let (rho, d02, d12) = (diff(r[0], r[1]), diff(r[0], r[2]), diff(r[1], r[2]));
@@ -1231,7 +1233,7 @@ negative_control!(
     }
 );
 
-// ── canonicaliser_canonicalise_order (REQ-ENC-015) ──────────────────────────────────────────────────────────────
+// ── canonicaliser_canonicalise_order ────────────────────────────────────────────────────────────────────────────
 
 /// A gauge transform `g = (a, u, θ, s, Π)` of dd_encode §3.3: `rᵢ' = s·R(θ)·Π·rᵢ + a`, `pᵢ' = s^{−1/2}·R(θ)·Π·pᵢ + mᵢu`.
 #[derive(Clone, Copy, Debug)]
@@ -1287,7 +1289,7 @@ const ORDER_EPS: f64 = 16.0;
 const ORDER_I_EPS: f64 = 16.0;
 
 /// Test for one backend's `c = C(g·x)`: `I_in` is the CoM-frame `s²·I(x) = s²`, not `Σmᵢ‖rᵢ'‖²` about the origin; and
-/// the output is `x`, or `Π·x` where `g` takes `Π` (`C` has no mirror step, R-865), within `tol` eps. The worst output
+/// the output is `x`, or `Π·x` where `g` takes `Π` (`C` has no mirror step), within `tol` eps. The worst output
 /// error, in eps.
 fn check_order(g: &Gauge, x: &Ic<f64>, c: &Canonical<f64>, eps: f64, at: &str) -> f64 {
     let di = (c.i_in - g.s * g.s).abs() / (g.s * g.s * eps);
@@ -1365,7 +1367,7 @@ negative_control!(
     }
 );
 
-// ── canonicaliser_coincident_inner_pair (REQ-ENC-016) ───────────────────────────────────────────────────────────
+// ── canonicaliser_coincident_inner_pair ─────────────────────────────────────────────────────────────────────────
 
 /// States whose inner pair coincides, `r₀ = r₁` bit for bit, the third body elsewhere, with momenta.
 fn coincident() -> Vec<Ic<f64>> {
@@ -1408,7 +1410,7 @@ fn signed_poles() -> Vec<(&'static str, Ic<f64>)> {
     .to_vec()
 }
 
-/// `φ` at the pole is `+0`, bit for bit, whatever the signs of `ρ`'s zeros (R-437).
+/// `φ` at the pole is `+0`, bit for bit, whatever the signs of `ρ`'s zeros.
 fn check_pole_phi(phi: f64, at: &str) {
     assert_eq!(
         phi.to_bits(),
@@ -1417,7 +1419,7 @@ fn check_pole_phi(phi: f64, at: &str) {
     );
 }
 
-/// The identity rotation at the pole: `C`'s output is the CoM-frame state over `√I`, no mirror (R-865), within `tol`
+/// The identity rotation at the pole: `C`'s output is the CoM-frame state over `√I`, no mirror, within `tol`
 /// eps.
 fn check_identity(x: &Ic<f64>, c: &Canonical<f64>, eps: f64, at: &str) {
     let com = [0, 1].map(|k| (0..3).map(|i| x.m[i] * x.r[i][k]).sum::<f64>());
@@ -1467,7 +1469,7 @@ fn canonicaliser_coincident_inner_pair() {
             &format!("GPU-f32 {at}"),
         );
     }
-    // ρ = (±0, ±0) exactly, at I_in = 0 (RQ-296 holds C's state there; the guard and φ are R-13's and R-437's).
+    // ρ = (±0, ±0) exactly, at I_in = 0, the bodies coincident: the guard raises lookup_clamped and φ = +0.
     let poles = signed_poles();
     let narrow_poles: Vec<Ic<f32>> = poles.iter().map(|(_, x)| narrow(x)).collect();
     let gpu_poles = gpu(&h, &narrow_poles);
@@ -1526,9 +1528,9 @@ negative_control!(
     }
 );
 
-// ── canonicaliser_phi_signed_zero (REQ-ENC-016; pitfalls §11) ───────────────────────────────────────────────────
+// ── canonicaliser_phi_signed_zero (pitfalls §11) ────────────────────────────────────────────────────────────────
 
-/// `φ`'s limit off `±π/2`, in f32 eps of `π/2` (applied per R-369, a test tolerance): a backend reading `ρ_x = −0`'s
+/// `φ`'s limit off `±π/2`, in f32 eps of `π/2` (a test tolerance): a backend reading `ρ_x = −0`'s
 /// sign turns `φ` by `π`, `2²³` eps; WGSL's `atan2` is not correctly rounded, and 4 eps leaves it room.
 const SIGNED_ZERO_EPS: f64 = 4.0;
 
@@ -1624,7 +1626,7 @@ negative_control!(
     }
 );
 
-// ── canonicaliser_noop_gpu (REQ-DEC-018) ────────────────────────────────────────────────────────────────────────
+// ── canonicaliser_noop_gpu ──────────────────────────────────────────────────────────────────────────────────────
 
 /// The GPU no-op's tolerance, per [`state_error`], in f32 eps.
 const NOOP_GPU_EPS: f64 = 4.0;
@@ -1666,7 +1668,7 @@ fn noop_batches() -> Vec<Batch> {
 }
 
 /// Test 5 on one GPU decode `x` and its GPU `C`: `φ = 0` and the state unchanged within [`NOOP_GPU_EPS`], so no
-/// mirror (R-865); the error.
+/// mirror; the error.
 fn check_noop_gpu(x: &Ic<f32>, c: &Canonical<f32>, at: &str) -> f64 {
     assert!(
         c.phi == 0.0,
@@ -1745,7 +1747,7 @@ fn wide_batches() -> Vec<Batch> {
         .collect()
 }
 
-/// Step 0 skipped by the GPU's `C` on a canonical-frame decode: no `lookup_rescaled`, `λ = 1` exactly (R-547). The
+/// Step 0 skipped by the GPU's `C` on a canonical-frame decode: no `lookup_rescaled`, `λ = 1` exactly. The
 /// decode's `|I_in − 1|`, in f32 eps.
 fn check_skip_gpu(c: &Canonical<f32>, at: &str) -> f64 {
     assert!(

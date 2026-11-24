@@ -1,9 +1,8 @@
-//! QA tests for TASK-M0-18's canonical serialisation of `SimConfig` and `RenderState` (REQ-TOOL-145, R-309), written
-//! from its definition in `principia_gui_state_contract.md` §2 as R-318 and R-322 rule it: JCS, RFC 8785 — members
-//! sorted by their names' UTF-16 code units, no whitespace, its string escaping and its number format, checked on the
-//! RFC's own published vectors; −0.0 written `0`; a u64 field always a JSON string of its decimal digits, every other
-//! number a JSON number; equal state is equal text and every value reads back exactly. Each test has its negative
-//! control (R-176).
+//! QA tests for the canonical serialisation of `SimConfig` and `RenderState`, written from its definition in
+//! `principia_gui_state_contract.md` §2: JCS, RFC 8785 — members sorted by their names' UTF-16 code units, no
+//! whitespace, its string escaping and its number format, checked on the RFC's own published vectors; −0.0 written `0`;
+//! a u64 field always a JSON string of its decimal digits, every other number a JSON number; equal state is equal text
+//! and every value reads back exactly. Each test has its negative control.
 // The file name `qa_TASK-M0-18` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -30,7 +29,7 @@ fn sim() -> SimConfig {
             q2: [0.0; 8],
         },
         slice: Slice {
-            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            // The slice frame, at its defaults: the normal and both targets z_q3.
             frame: engine::contract::sim_config::SliceFrame::along(
                 engine::contract::sim_config::Z_Q3,
             ),
@@ -59,15 +58,13 @@ fn render() -> RenderState {
     }
 }
 
-/// The M0 skeleton's canonical text, by §2's rules: its groups' names in byte order, each group `{}` but for the
-/// plane and the lock (R-390), whose members are in byte order too, all zero and unlocked, and, since TASK-M6-27, the
-/// horizon's `t`, the hover's `at` (null) and the overlay set's fourteen toggles, all off, each in byte order (R-390),
-/// and, since TASK-M6-29, the stain graph's default, the backbone alone, the combiner (M1's pass-through) wired to
-/// OUT's port 0, as `{ nodes, wires }` in id order, each member in byte order (gui_state_contract §2), and, since
-/// TASK-M6-46, the debug view, off at launch, `debug_view` sorting first (R-467 D5; gui_state_contract §2), and, since
-/// TASK-M2-37, the chart's axis mappings, both `warped` by default, `mapping` sorting before `window` (R-471 E2;
-/// REQ-CHART-068), and, since TASK-M6-48, the slice frame's tilt map, Tip as sheet by default, and its two angles as set,
-/// 0, `tau1` and `tau2` sorting before `tilt_map`.
+/// The M0 skeleton's canonical text, by §2's rules: its groups' names in byte order, each group `{}` but for those
+/// with members, whose members are in byte order too: the plane and the lock, all zero and unlocked; the horizon's `t`,
+/// the hover's `at` (null) and the overlay set's fourteen toggles, all off; the stain graph's default, the backbone
+/// alone, the combiner (M1's pass-through) wired to OUT's port 0, as `{ nodes, wires }` in id order (gui_state_contract
+/// §2); the debug view, off at launch, `debug_view` sorting first; the chart's axis mappings, both `warped` by default,
+/// `mapping` sorting before `window`; and the slice frame's tilt map, Tip as sheet by default, and its two angles as
+/// set, 0, `tau1` and `tau2` sorting before `tilt_map`.
 const SIM_TEXT: &str =
     "{\"chart\":{\"mapping\":[\"warped\",\"warped\"],\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}},\"collision\":{},\"horizon\":{\"t\":0},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"periodic_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\
@@ -264,7 +261,7 @@ validation::negative_control!(
 );
 
 /// JCS's number format (RFC 8785 §3.2.2.3, ECMAScript's Number-to-String), by RFC 8785 Appendix B's published
-/// table: each IEEE 754 bit pattern and the text JCS writes for it. Both zeros write `0` (R-318: −0.0 serialises as 0).
+/// table: each IEEE 754 bit pattern and the text JCS writes for it. Both zeros write `0` (−0.0 serialises as 0).
 const RFC8785_NUMBERS: &[(u64, &str)] = &[
     (0x0000000000000000, "0"),
     (0x8000000000000000, "0"),
@@ -321,7 +318,7 @@ fn qa_canonical_float_layout() {
     // RFC 8785 Appendix B, through a struct field as the state's floats are written, and as JSON data.
     check_rfc8785_numbers(field_text);
     check_rfc8785_numbers(|v| canonical::json_to_string(&serde_json::json!(v)).unwrap());
-    // −0.0 writes 0, as f64 and as f32 (R-318).
+    // −0.0 writes 0, as f64 and as f32.
     assert_eq!(canonical::to_string(&-0.0f64).unwrap(), "0");
     assert_eq!(canonical::to_string(&-0.0f32).unwrap(), "0");
     // An f32 is the f64 it widens to, exactly, written in JCS's format.
@@ -455,7 +452,7 @@ validation::negative_control!(
     )
 );
 
-/// R-322: a u64 field is always a JSON string of its decimal digits, whatever its value (0, 1, 2^53, 2^53 + 1,
+/// A u64 field is always a JSON string of its decimal digits, whatever its value (0, 1, 2^53, 2^53 + 1,
 /// u64::MAX), at any depth and inside an Option; every other integer field is a JSON number, whatever its value. A
 /// field's type never depends on its value.
 #[derive(Serialize)]
@@ -535,7 +532,7 @@ fn qa_canonical_integers() {
             int,
         );
     }
-    // The exact text at 0 and at 2^53 + 1 (R-322's cases), members in JCS order.
+    // The exact text at 0 and at 2^53 + 1, members in JCS order.
     assert_eq!(
         canonical::to_string(&seeded(0, 0)).unwrap(),
         "{\"byte\":0,\"count\":0,\"half\":0,\"maybe_seed\":\"0\",\"nested\":{\"seed\":\"0\",\"steps\":0},\

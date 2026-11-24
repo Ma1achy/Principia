@@ -1,23 +1,22 @@
-//! Encode `E` on the GPU (`kernel::stage::encode`, `engine::decode_dispatch::{encode_gpu, beta_gpu}`; TASK-M2-15): the
-//! kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively, read back and checked against the same source on
-//! the CPU at f64 and f32. CI runs this file in the `gpu-kernel` job, after `cargo xtask build-kernel`, and on Metal and
-//! lavapipe.
+//! Encode `E` on the GPU (`kernel::stage::encode`, `engine::decode_dispatch::{encode_gpu, beta_gpu}`): the kernel's f32
+//! build, `target/spirv/kernel.wgsl`, dispatched natively, read back and checked against the same source on the CPU at
+//! f64 and f32. CI runs this file in the `gpu-kernel` job, after `cargo xtask build-kernel`, and on Metal and lavapipe.
 //! - `encode_beta_half_axis`: `β` on the `−x` half-axis, `λ̃_y = ±0` and `λ̃_x < 0`, is `π̂` by the select, never
 //!   `atan2`'s value, on CPU-f64, CPU-f32 and GPU-f32, `±0` operands included; at `λ̃ = (±0, ±0)` it is 0; and collinear
-//!   states with body 2 on the `−x` side encode on the GPU as on the CPU (R-438; REQ-ENC-007).
+//!   states with body 2 on the `−x` side encode on the GPU as on the CPU.
 //! - `encode_beta_collinear_residue`: collinear states in random gauge, whose rotated `λ̃_y` is a rounding residue of
 //!   either sign, subnormal residues included: where the terms of `C`'s decision are exact the GPU's `β` is `+0` or
 //!   `π̂`, the CPU's bits; where the state is collinear only to rounding the GPU's `β` is on the side CPU-f32's `C`
-//!   decided, never across the seam's two values, 0 and `2π̂` (dd_encode §3.2, "The signed encode of `β`"; REQ-DEC-002).
+//!   decided, never across the seam's two values, 0 and `2π̂` (dd_encode §3.2, "The signed encode of `β`").
 //! - `encode_beta_signed_zero`: `λ̃_x = ±0` with `λ̃_y ≠ 0`: `β` is `π/2` where `λ̃_y > 0` and `3π/2` where `λ̃_y < 0`,
-//!   the signed encode (R-865), on CPU-f64, CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `beta`'s
-//!   select (pitfalls §11; REQ-ENC-007).
+//!   the signed encode, on CPU-f64, CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `beta`'s select
+//!   (pitfalls §11).
 //! - `encode_exact_poles`: configurations with `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, `±0` components included: no NaN,
 //!   the output identical on repeat, bit for bit, and on CPU-f64, CPU-f32 and GPU-f32 to the precision (`z` against
 //!   CPU-f32's, the angles and the decoded state against CPU-f64's), the notices identical, and `lookup_clamped` set, the
-//!   encode clamp flag (R-133; REQ-DEC-014).
+//!   encode clamp flag.
 //!
-//! **Tolerances** (applied per R-369, a test decision): `z` and the angles agree across backends to [`AGREE_EPS`] f32
+//! **Tolerances** (a test decision): `z` and the angles agree across backends to [`AGREE_EPS`] f32
 //! eps over `1 + |z|`, set from the worst case measured on Metal and lavapipe, each printed with its backend, with
 //! headroom: WGSL's `atan2`, `log` and `√` are not correctly rounded, so the backends' last bits can differ; the selects
 //! and notices are compared exactly.
@@ -70,8 +69,8 @@ fn narrow(ic: &Ic<f64>) -> Ic<f32> {
 
 const EPS32: f64 = f32::EPSILON as f64;
 
-/// The cross-backend limit on `z`, the angles and the decoded state, in f32 eps over `1 + |x|` (R-85, R-110; applied per
-/// R-369, a test tolerance). Measured worst, each backend's whole run, by [`Worst::check`]'s print:
+/// The cross-backend limit on `z`, the angles and the decoded state, in f32 eps over `1 + |x|` (a test tolerance).
+/// Measured worst, each backend's whole run, by [`Worst::check`]'s print:
 /// - Metal: 0.5 (`encode_beta_half_axis`) and 1.3 (`encode_exact_poles`) on an Apple M3 Pro, locally; 2.0 and 1.7 on
 ///   CI's Apple Paravirtual device (`gpu-metal`, run 38972849213).
 /// - lavapipe: 21.1 (output 0, `z_α`, at the half-axis states) and 22.4 (output 1, `z_β`, at the turned `‖ρ̃‖ = 0` pole,
@@ -85,7 +84,7 @@ const EPS32: f64 = f32::EPSILON as f64;
 const AGREE_EPS: f64 = 64.0;
 
 /// One encode's comparable outputs at any precision: `z`, `α`, `β`, and the notices `(coincident, clamped controls)`
-/// (no mirror notice: `C` has no mirror step, R-865).
+/// (no mirror notice: `C` has no mirror step).
 #[derive(Clone, Debug, PartialEq)]
 struct Out {
     values: Vec<f64>,
@@ -205,7 +204,7 @@ fn check_physical(a: &Out, b: &Out, what: &str, worst: &mut Worst) {
     }
 }
 
-// ── encode_beta_half_axis (REQ-ENC-007; R-438) ──────────────────────────────────────────────────────────────────
+// ── encode_beta_half_axis ───────────────────────────────────────────────────────────────────────────────────────
 
 /// The `−x` half-axis's operands, `λ̃_y` each sign of zero, `λ̃_x` from `−1` to the smallest normal.
 fn half_axis() -> Vec<[f32; 2]> {
@@ -328,7 +327,7 @@ negative_control!(
     }
 );
 
-// ── encode_beta_collinear_residue (REQ-DEC-002; dd_encode §3.2, "The signed encode of β") ──────────────────────
+// ── encode_beta_collinear_residue (dd_encode §3.2, "The signed encode of β") ────────────────────────────────────
 
 /// `2^e` at f32, `e` in the normal range.
 fn pow2(e: i32) -> f32 {
@@ -557,9 +556,9 @@ negative_control!(
     }
 );
 
-// ── encode_beta_signed_zero (REQ-ENC-007; pitfalls §11) ─────────────────────────────────────────────────────────
+// ── encode_beta_signed_zero (pitfalls §11) ──────────────────────────────────────────────────────────────────────
 
-/// `β`'s limit off `π/2` or `3π/2`, in f32 eps of it (applied per R-369, a test tolerance): a backend reading
+/// `β`'s limit off `π/2` or `3π/2`, in f32 eps of it (a test tolerance): a backend reading
 /// `λ̃_x = −0`'s sign turns `β` by `π`, `2²³` eps; WGSL's `atan2` is not correctly rounded, and 4 eps leaves it room.
 const SIGNED_ZERO_EPS: f64 = 4.0;
 
@@ -574,7 +573,7 @@ fn y_axis() -> Vec<[f32; 2]> {
     pairs
 }
 
-/// `β` is `π/2` where `λ̃_y > 0` and `3π/2` where `λ̃_y < 0`, the signed encode (R-865), within [`SIGNED_ZERO_EPS`]
+/// `β` is `π/2` where `λ̃_y > 0` and `3π/2` where `λ̃_y < 0`, the signed encode, within [`SIGNED_ZERO_EPS`]
 /// `eps` of it at each operand; returns the worst miss in `eps`.
 fn check_y_axis<R: LinkReal>(betas: &[R], pairs: &[[f32; 2]], eps: f64, backend: &str) -> f64 {
     assert_eq!(
@@ -665,7 +664,7 @@ negative_control!(
     }
 );
 
-// ── encode_exact_poles (REQ-DEC-014; R-133, R-437) ──────────────────────────────────────────────────────────────
+// ── encode_exact_poles ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// States at the exact `α`-poles, masses `(¼, ¼, ½)`, every product of a mass and a coordinate exact, so `C` keeps
 /// them on the pole: `‖λ̃‖ = 0`, body 2 at the inner pair's centre of mass, `r₀ = (−1, ±0)`, `r₁ = (1, ±0)`,

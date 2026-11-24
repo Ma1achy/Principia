@@ -1,8 +1,7 @@
-//! QA tests for TASK-M1-11's engine side, written from REQ-TOOL-015 (colour_composition Appendix A; R-75; RQ-221):
-//! enabling the bring-up variant writes the known pattern into the payload, read back through the generated unpack, and
-//! it changes the sim key; and from REQ-TOOL-013: UV, DECODE and ROUNDTRIP are not kernel variants. The pattern is
-//! REQ-TOOL-123's, transcribed here from Appendix A's table, not from the writer. Each test has its negative control
-//! (R-176).
+//! QA tests for the bring-up mode's engine side, written from colour_composition Appendix A: enabling the bring-up
+//! variant writes the known pattern into the payload, read back through the generated unpack, and it changes the sim
+//! key; and UV, DECODE and ROUNDTRIP are not kernel variants. The pattern is Appendix A's, transcribed here from its
+//! table, not from the writer. Each test has its negative control.
 // The file name `qa_TASK-M1-11` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -25,7 +24,7 @@ use validation::negative_control;
 /// Sample `i`'s pattern at f32, built member by member from Appendix A's table: real slot `k` (ledger member order,
 /// `r[b][c]` at `2b + c`) holds `32·i + k`; `packed_a` by the payload's §2 bits (`state` 0–2 = `i mod 6`, `detail`
 /// 3–4 = `⌊i/2⌋ mod 4`, `saturated` 5 = `⌊i/8⌋ mod 2`, `dmin_pair` 6–7 = `⌊i/16⌋ mod 4`, `last_symbol` 8–9 =
-/// `⌊i/64⌋ mod 4`, reserved 10–15 zero, `d_min` 16–31 unset, f16 +∞ = `0x7c00`, R-271); `packed_b = 0`; `times`
+/// `⌊i/64⌋ mod 4`, reserved 10–15 zero, `d_min` 16–31 unset, f16 +∞ = `0x7c00`); `packed_b = 0`; `times`
 /// `t_end_step = j` low, `t_dmin_step = 65535 − j` high, `j = i mod 2¹⁶`; `total_substeps = i`; `closure_step = j`;
 /// `_reserved = 0`.
 fn appendix_a(i: u32) -> SimStateFTLE {
@@ -275,7 +274,7 @@ negative_control!(
     check_words(|i, out| write_words(i + 1, out), 5)
 );
 
-// ----- The sim key (RQ-221; caching contract Parts 1–2) -----
+// ----- The sim key (caching contract Parts 1–2) -----
 
 /// The sim key with the kernel variant `v`, every other group as at M0.
 fn config(v: KernelVariant) -> SimConfig {
@@ -290,7 +289,7 @@ fn config(v: KernelVariant) -> SimConfig {
             q2: [0.0; 8],
         },
         slice: Slice {
-            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            // The slice frame, at its defaults: the normal and both targets z_q3.
             frame: engine::contract::sim_config::SliceFrame::along(
                 engine::contract::sim_config::Z_Q3,
             ),
@@ -310,7 +309,7 @@ fn config(v: KernelVariant) -> SimConfig {
 
 /// The sim key's canonical text with the bring-up mode differs from the physics one's, each reads back to its own
 /// variant, and a key naming any other variant, or none, is refused: UV, DECODE and ROUNDTRIP are not kernel
-/// variants (R-75).
+/// variants.
 fn check_sim_key(physics: &str, bring_up: &str) {
     assert!(
         physics != bring_up,

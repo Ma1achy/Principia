@@ -1,5 +1,5 @@
-//! QA's tests for TASK-M3-06, fix round 2 (physics review of PR #348, F3 and F4), each with its negative control
-//! (R-176): `tau`, `eps_E` and `eps_L` must be finite and positive. Part 7's escape test `|Δn̂| < tau` is strict, so
+//! QA's tests for the escape and drift thresholds, each with its negative control: `tau`, `eps_E` and `eps_L` must be
+//! finite and positive. Part 7's escape test `|Δn̂| < tau` is strict, so
 //! at `tau = 0` escape never fires; `eps_E` and `eps_L` are the floors under the relative drifts'
 //! denominators, `δE = ΔE / max(ε_E, |E₀|)` (dd_integrator §3.5), so a floor not positive gives `0/0` at `E₀ = 0`.
 //!

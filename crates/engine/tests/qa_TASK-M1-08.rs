@@ -1,19 +1,19 @@
-//! QA tests for TASK-M1-08's host export decoder (`engine::export`; render contract Part 5 (c), "the CPU (Rust host)
-//! export decoder"; RQ-217), written from the requirements and the payload doc, not from the implementation:
-//! - REQ-GEN-010 / REQ-TOOL-020: the decoder decodes every ledger field, one member per `ledger::layout().entries`
+//! QA tests for the host export decoder (`engine::export`; render contract Part 5 (c), "the CPU (Rust host) export
+//! decoder"), written from the requirements and the payload doc, not from the implementation:
+//! - The decoder decodes every ledger field, one member per `ledger::layout().entries`
 //!   entry, in the ledger's order, and nothing else.
 //! - Each decoded value is the one a hand-filled sample stores, its packed fields placed by hand at payload §2's bits
 //!   (`packed_a`: state 0–2, detail 3–4, saturated 5, dmin_pair 6–7, last_symbol 8–9, `d_min` f16 16–31; `packed_b`:
 //!   `dE_max` f16 0–15, `dLz_max` f16 16–31; `times`: `t_end_step` 0–15, `t_dmin_step` 16–31; the word's `.w`: `payload`
 //!   0–24, `length` 25–31, payload §3), its f16 values ones whose binary16 bits are known (0.5 = 0x3800, 0.25 = 0x3400,
 //!   2.0 = 0x4000); a vector flat, slot `j` at `2j`, `2j + 1` (dd_generation_root §3.8); the shadow the stored shadow
-//!   (RQ-228); the twelve `ICDescriptor` fields the stored descriptor's (RQ-227); the derived fields payload §5's
+//!   (not the state); the twelve `ICDescriptor` fields the stored descriptor's; the derived fields payload §5's
 //!   formulas computed here in f64: `ftle = (S + ln(δ/δ₀))/(n·dt)`, `energy_drift = H(r, p) − E_0`,
-//!   `Lz_drift = L_z(r, p) − Lz_0`, `diffusion = C_ty / (h²·n(n²−1)/12)` (R-245, R-246).
+//!   `Lz_drift = L_z(r, p) − Lz_0`, `diffusion = C_ty / (h²·n(n²−1)/12)`.
 //!
-//! The f32 bound on a derived value is TASK-M1-01 qa's first-order forward error, `ops · u · Σ|terms|`, `u = 2⁻²⁴`,
-//! with its operation counts (`ftle` 40, the drifts 30, `diffusion` 10). Each test has a registered negative control
-//! (R-176).
+//! The f32 bound on a derived value is `qa_TASK-M1-01.rs`'s first-order forward error, `ops · u · Σ|terms|`,
+//! `u = 2⁻²⁴`, with its operation counts (`ftle` 40, the drifts 30, `diffusion` 10). Each test has a registered
+//! negative control.
 
 use engine::export::{decode, Decoded};
 use kernel::payload::*;
@@ -51,7 +51,7 @@ fn sample() -> Sample {
         E_0: -3.25,
         Lz_0: 1.5,
         packed_a,
-        // dE_max 0.25 and dLz_max 2.0 in the `log16` form (R-632; payload §2): 0x3400 and 0x4000 in binary16 before.
+        // dE_max 0.25 and dLz_max 2.0 in the `log16` form (payload §2), not their binary16 bits 0x3400 and 0x4000.
         packed_b: 0x5e01 | (0x6101 << 16),
         times: 30 | (7 << 16),
         total_substeps: 1000,
@@ -174,7 +174,7 @@ negative_control!(
 /// `d` is `x` decoded: each field the value `x` stores at its place, or its payload §5 formula.
 fn check_values(x: &Sample, d: &Decoded) {
     let s = &x.s;
-    // Stored scalars and vectors (payload §1), flat (§3.8); the shadow as stored (RQ-228).
+    // Stored scalars and vectors (payload §1), flat (§3.8); the shadow as stored, not the state.
     assert_eq!(d.r.map(f32::to_bits), flat(s.r), "r");
     assert_eq!(d.p.map(f32::to_bits), flat(s.p), "p");
     assert_eq!(
@@ -222,7 +222,7 @@ fn check_values(x: &Sample, d: &Decoded) {
         assert_eq!(got, want, "{name} is {got}, not {want}");
     }
     assert!(d.saturated, "saturated is not the stored bit");
-    // The twelve ICDescriptor fields as stored (RQ-227).
+    // The twelve ICDescriptor fields as stored.
     let ic = &x.ic;
     for (name, got, want) in [
         ("m0", d.m0, ic.m0),
@@ -290,7 +290,7 @@ negative_control!(
     }
 );
 
-/// RQ-228: a decoder reading the state for the shadow is caught.
+/// A decoder reading the state for the shadow is caught.
 #[cfg(feature = "controls")]
 mod qa_gen010_decoder_values_are_the_stored_and_derived_shadow {
     use super::*;
