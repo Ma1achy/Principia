@@ -315,8 +315,8 @@ impl<V: DecodeVariant> DecodeStage<V> {
     }
 
     /// Decodes `uv` with `chart` under `mode` toward the energy target `e_star` (`None` off), on the GPU: each point's
-    /// `(m, r, p)`, `ICDescriptor` and `DEGENERATE` tag, in order. The linearised decoder is not built, so
-    /// `DecodeMode::Linearised` is refused; a tag word the kernel never writes, a sample it left
+    /// `(m, r, p)`, `ICDescriptor` and `DEGENERATE` tag, in order. The linearised decode (deep_zoom §2) is not run
+    /// here, so `DecodeMode::Linearised` is refused; a tag word the kernel never writes, a sample it left
     /// unwritten among them, is an error.
     pub fn run_with(
         &self,

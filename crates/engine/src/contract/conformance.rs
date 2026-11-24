@@ -431,7 +431,7 @@ pub(crate) fn turned(f: SliceFrame, by: u32) -> SliceFrame {
 /// `after`'s, each in the frame's field order (normal, tilt_x, tilt_y), as integers among its other text.
 /// gui_state_contract §2 has each applied `SetField` logged "naming the field's path and its values before and after"
 /// and gives no wording for the slice frame. The plan is unclear here; chose to check the path and the values only,
-/// because any wording an engine chooses names them, so an engine words the line as it likes.
+/// because that is what §2 asks of every line, so an engine words the line as it likes.
 pub(crate) fn names_frames(message: &str, before: SliceFrame, after: SliceFrame) -> bool {
     let Some((_, rest)) = message.split_once("Slice.frame") else {
         return false;

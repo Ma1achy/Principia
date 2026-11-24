@@ -59,8 +59,9 @@ pub(crate) fn unit(a: &Latent) -> Result<Latent, NavError> {
 }
 
 /// `a / ‖a‖` for an `a` left by cancelling terms of size `size`: [`NavError::ZeroVector`] where `‖a‖ ≤ √ε·size`, `ε`
-/// the f64 machine epsilon, below which the direction would keep fewer than half its digits, rounding rather than
-/// geometry (the conditioning guard of a Gram–Schmidt step and of the tilt's sum).
+/// the f64 machine epsilon, the conditioning guard of a Gram–Schmidt step and of the tilt's sum. The plan is unclear
+/// here; chose `√ε·size` because below it the direction would keep fewer than half its digits, rounding rather than
+/// geometry.
 pub(crate) fn unit_of(a: &Latent, size: f64) -> Result<Latent, NavError> {
     if !a.iter().all(|x| x.is_finite()) {
         return Err(NavError::NonFinite);

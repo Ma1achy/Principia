@@ -8,7 +8,7 @@
 //! bitwise the per-sample evaluation's, whatever the thread count. A worker stops at its first failing sample, and the
 //! builder returns the failure at the lowest sample index, the one an evaluation sample by sample meets first.
 //!
-//! **Implementation choices** (they change no result, and were fixed before any run): the chunk is 1024
+//! **Implementation choices** (they change no result): the chunk is 1024
 //! samples, the register's `forward_table_chunk`; the assignment is interleaved and fixed, not taken from a shared
 //! queue; a worker is spawned only for a lane that has a chunk; the records' buffer is allocated once, zeroed, at the
 //! table's size.

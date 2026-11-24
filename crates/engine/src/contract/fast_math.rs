@@ -1,7 +1,7 @@
 //! The compute shaders' fast-math setting, and each shader stage's fast-math mode as compiled (parity contract §4). The
 //! setting is the one the project sets and records: off by default, on only as an opt-in optimisation, never inherited
-//! silently from a backend. It is to be carried on the sim key, in the embedded record and in the GUI; the session
-//! header records it with each stage's compiled mode (telemetry §5).
+//! silently from a backend. The sim key does not carry it yet; the session header records it with each stage's
+//! compiled mode (telemetry §5).
 
 use serde::{Deserialize, Deserializer, Serialize};
 

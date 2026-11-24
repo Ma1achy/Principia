@@ -40,8 +40,7 @@
 //! positive, or `(m, n)` or a triple that is no Pythagorean one, is refused before the ladder ([`Layer::Entry`]).
 //!
 //! **CPU-side only**: every branch here runs at f64 on the CPU and has no GPU counterpart, so the discipline for a
-//! branch input that must agree across backends (the GPU determinism note) does not bind them. The kernel's encode it
-//! calls keeps its own.
+//! branch input that must agree across backends does not bind them. The kernel's encode it calls keeps its own.
 //!
 //! **The active values** (chart_reference §0.1, "every chart reads the active value"; chart_decoder_contract §
 //! "Tunable parameters": the encode's clamps and its layer-1 range check read it): the ladder
