@@ -79,8 +79,7 @@ impl PackedA {
 /// agree (pitfalls §9).
 ///
 /// The check is an observation, not a store, so it takes no frame's counters: both packs count into a scratch pair
-/// local to the call, which is dropped. The plan is unclear here (it does not say whether a check's packs count); chose
-/// not to count them, because the check stores nothing.
+/// local to the call, which is dropped.
 pub fn roundtrip_ctl(expected: &PackedA, observed: u32) -> bool {
     let scratch = DminCounters::new();
     let packed = expected.pack(&scratch);

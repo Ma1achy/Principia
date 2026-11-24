@@ -25,8 +25,8 @@
 //! formed here, nor anywhere in the step (the chart's Jacobi coordinates become particles once, at decode). Each
 //! component is formed in this order, with every product that meets an addition written as an explicit `fma`, so a
 //! backend that contracts a multiply and an add and one that does not round the same (gpu_determinism_note
-//! § "The discipline", rules 2 and 6; whether every backend fuses an explicit `fma` is still open: lavapipe does
-//! not):
+//! § "The discipline", rules 2 and 6; not every backend fuses an explicit `fma`:
+//! lavapipe does not):
 //!
 //! ```text
 //! S      = fma(m₂, x₂, fma(m₁, x₁, m₀·x₀))       the mass-weighted sum, body 0 first

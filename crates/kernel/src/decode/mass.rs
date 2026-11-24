@@ -9,14 +9,15 @@
 //! strip) enters at [`from_masses`], which applies the same test, so the tag is the block's whatever produced the
 //! simplex point.
 //!
-//! **ε = ε_M01 = 10⁻⁵** ([`m01_epsilon`]), the chart constant (dd_decoder §3.1). The plan leaves ε to calibration;
-//! chose 10⁻⁵ because it sits in a measured gap (pitfalls §3), `fixtures/gates/m01_tiny/`: at `μ_max = 5` the reachable
-//! `M₀₁` floors are `stick_breaking`'s pile-up at `ε_μ − ε_μ²/4` in the `m₂ → 1` corner, below ε; and the ternary
-//! plot's `2ε_m = 2×10⁻⁴` and `softmax_tanh`'s `(1 + e^−μ_max)/(1 + e^−μ_max + e^μ_max) ≈ 6.74×10⁻³`, above it. So
-//! `stick_breaking`'s saturated corner fires with a tenfold margin at both precisions, `softmax_tanh` and the ternary
-//! plot never fire, and the tag's onset lies where `M₀₁` still changes with `z` at f32 resolution: the formula, not
-//! rounding, places it, and f64 and f32 agree on it to about 10⁻⁷ in `z`. (Don't set ε = ε_μ: the onset then sits 2 f32
-//! ulps above the corner's floor, so f64 and f32, or two f32 backends' `tanh`, disagree over a band of `z`.)
+//! **ε = ε_M01 = 10⁻⁵** ([`m01_epsilon`]), the chart constant (dd_decoder §3.1). The plan is unclear here (it leaves
+//! ε to calibration); chose 10⁻⁵ because it sits in a measured gap (pitfalls §3), `fixtures/gates/m01_tiny/`:
+//! at `μ_max = 5` the reachable `M₀₁` floors are `stick_breaking`'s pile-up at `ε_μ − ε_μ²/4` in the `m₂ → 1` corner,
+//! below ε; and the ternary plot's `2ε_m = 2×10⁻⁴` and `softmax_tanh`'s `(1 + e^−μ_max)/(1 + e^−μ_max + e^μ_max) ≈
+//! 6.74×10⁻³`, above it. So `stick_breaking`'s saturated corner fires with a tenfold margin at both precisions,
+//! `softmax_tanh` and the ternary plot never fire, and the tag's onset lies where `M₀₁` still changes with `z` at f32
+//! resolution: the formula, not rounding, places it, and f64 and f32 agree on it to about 10⁻⁷ in `z`. (Don't set ε =
+//! ε_μ: the onset then sits 2 f32 ulps above the corner's floor, so f64 and f32, or two f32 backends' `tanh`, disagree
+//! over a band of `z`.)
 //!
 //! **The branch input** (dd_decoder §3.1, §5 test 12; gpu_determinism_note rules 1, 2 and 6): `M₀₁` is the one rounded
 //! sum of the two masses the block emits, `round(m₀ + m₁)`, compared strictly against the compile-time constant ε.

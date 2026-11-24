@@ -28,7 +28,7 @@
 //! sample, and a reserved state code, which a decoder reads as untrusted ([`crate::payload::sd_is_failed`]), holds the
 //! defined failed-state values whatever its latches held: 0.0 in `dE_max` and `dLz_max`, and `d_min` its unset value,
 //! f16 `+∞` (bits `0x7C00`), written by [`crate::payload::set_d_min_unset`], never left to the generated struct's
-//! `Default`, whose zero `packed_a` would read `d_min` as `0x0000`, a value payload §1 says never appears. A valid
+//! `Default`, whose zero `packed_a` would read `d_min` as `0x0000`, a value a valid sample never stores. A valid
 //! sample's `d_min` is unset only before its first observation; a start already collided is a collision at `t = 0`
 //! whose least separation is observed on the IC and stored, never the unset value.
 //!

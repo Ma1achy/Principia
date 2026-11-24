@@ -21,13 +21,12 @@
 //! moves the minimum.
 //!
 //! **Before departure** the registers hold the minimum of an empty set: `closure_min` `+∞` and `closure_step` 0, the
-//! departed bit clear. The plan is unclear here (it gives no stored value for a sample that has not departed); chose
-//! `+∞` because `d_min`'s unset value is `+∞`, and a reader tells the case by the departed bit. The march never forms
-//! or compares against that `+∞` (gpu_determinism_note § "The discipline", rule 4): before departure the in-march
-//! minimum is a finite placeholder, never read, the minimum is decided by the departed flag until the first departed
-//! sample takes it, and the stored `+∞` is formed from its bits where the sample has not departed, when it is stored
-//! (`IeeeBits::or_pos_inf`, as `driver::latch` forms `d_min`'s). A resumed march reloads that stored `+∞` with the
-//! departed bit clear, and so never reads it either.
+//! departed bit clear, as `d_min`'s unset value is `+∞`, and a reader tells the case by the departed bit. The march
+//! never forms or compares against that `+∞` (gpu_determinism_note § "The discipline", rule 4): before departure the
+//! in-march minimum is a finite placeholder, never read, the minimum is decided by the departed flag until the first
+//! departed sample takes it, and the stored `+∞` is formed from its bits where the sample has not departed, when it is
+//! stored (`IeeeBits::or_pos_inf`, as `driver::latch` forms `d_min`'s). A resumed march reloads that stored `+∞` with
+//! the departed bit clear, and so never reads it either.
 //!
 //! **Parity tier.** The departed bit and `closure_step` follow from the float chord, so they are Tier N/S with
 //! `closure_min`, not Tier B (parity contract § "Tier B"; 17 Nov 2026, `plan/DECISIONS-LOG.md`).
