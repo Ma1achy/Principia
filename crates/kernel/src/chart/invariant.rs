@@ -148,7 +148,7 @@ fn lower<R: WarpReal>(k: R, l: R) -> R {
 
 /// `L_max = √(2·I·K)` at `I = 1`, held to `L_max² ≤ 2K` exactly where `sqrt` lies within four ulps of the exact root:
 /// the rounded root, stepped down while the exact test still finds it infeasible, four steps at most (the module's
-/// note: the CPU's is correctly rounded; a GPU's by `decode_cross_backend`).
+/// note: the CPU's is correctly rounded; a GPU's is checked by `decode_cross_backend`).
 #[inline]
 pub fn l_max<R: WarpReal>(k: R) -> R {
     let root = Float::sqrt(k + k);
