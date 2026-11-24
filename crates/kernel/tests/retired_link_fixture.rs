@@ -1,7 +1,7 @@
-//! The retired-link fixture, `fixtures/retired_beta_links/pre_m2_57.json` (R-921; TASK-M2-57; REQ-TOOL-172's
-//! retired-link arm, read by TASK-M7-45): for each of `sigmoid_beta`, `tanh_beta` and `softsign_beta` as the `β`
+//! The retired-link fixture, `fixtures/retired_beta_links/pre_m2_57.json` (dd_decoder, "How a stored
+//! value converts"; dd_image_embedding, "A record made under a retired `β` link"): for each of `sigmoid_beta`, `tanh_beta` and `softsign_beta` as the `β`
 //! link, the pixels' latent coordinates, the four blocks' links and each pixel's decoded starting state `(m, r, p)` as
-//! bits, at f64 and at f32, written through the decoder of TASK-M2-57's baseline commit, before any link changes.
+//! bits, at f64 and at f32, written through the baseline commit's decoder, the last with these links as the `β` link.
 //!
 //! **Its pixels** span `z_β`: for each link, 257 values, `z_β` the link's own inverse (at f64) of `β = π·k/258`,
 //! `k = 1 … 257`, `π` the f64 nearest, at [`OTHER`], the fixture's other latent coordinates. The f32 state decodes the
@@ -10,8 +10,8 @@
 //! concatenated, sixteen hex digits each at f64 and eight at f32.
 //!
 //! - `retired_link_fixture_write` (ignored): writes the file. It is run once, on the baseline commit, and never again
-//!   through any later decoder (R-921; the task's bounded extension aside, which also runs the baseline commit's
-//!   decoder).
+//!   through any later decoder (a bounded extension of the fixture, the one exception, also runs the baseline
+//!   commit's decoder).
 //! - `retired_link_fixture_decodes_bitwise`: the fixture's first arm, every pixel decoded through its retained retired
 //!   link (`kernel::decode::retired::decode_retired`, the one decode with the link's forward in front) equals the
 //!   fixture's state bit for bit: at f64 on every platform, and at f32 on the platform the fixture was written on
@@ -30,7 +30,7 @@
 //! - `retired_link_fixture_conversion_changes_bits`: the second arm, for each of the three links, at least one pixel
 //!   whose `z_β`, converted to the periodic link (`kernel::decode::retired::convert`, at f64, the stored precision) and
 //!   decoded under the defaults, differs from the fixture's state in at least one bit, at f64 or at f32 (the converted
-//!   `z` rounded to f32), over the fixture's 257 pixels, the first write's budget (TASK-M2-57's acceptance). No link is
+//!   `z` rounded to f32), over the fixture's 257 pixels, the first write's budget. No link is
 //!   listed as having none ([`NONE_CHANGED`]). Controls: a fixture holding only the pixels where conversion is exact,
 //!   for a link not so listed, fails; a listed link with a pixel where conversion changes a bit fails.
 
@@ -283,7 +283,7 @@ negative_control!(
 // ── The second arm: conversion changes a bit ─────────────────────────────────────────────────────────────────────
 
 /// The links listed as having no pixel within the budget whose converted decode changes a bit, each with its
-/// REVIEW_QUEUE entry (TASK-M2-57's acceptance): none. Such a link's arm runs the other way, no pixel changing a bit,
+/// REVIEW_QUEUE entry: none. Such a link's arm runs the other way, no pixel changing a bit,
 /// reported and never counted as passing.
 const NONE_CHANGED: [&str; 0] = [];
 
