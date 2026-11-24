@@ -3387,13 +3387,11 @@ fn check_tolerance(
 
 // Pass: the criterion above, on the 16 × 16 grid, every pair. About 6 minutes in a debug build, so ignored in CI's
 // shards; run it with `CARGO_PROFILE_TEST_DEBUG=0 cargo test -p engine --test path_lock -- path_lock_tolerance_window
-// --exact --include-ignored --nocapture`. Its siblings below run in CI on the window's corners. It fails today on its
-// refusal arm only, at 124 of 256 pins on mixed to Burrau: at 115 the followed minimiser "ends" before the pause, every
-// one a failed follow (`anchor::slide` reads one as an end; C6, `path_lock_burrau_ends`), and at 9 the slice's re-hold
-// finds no slide minimiser (its solve stalls). Its tolerance arm passes since the re-hold decides in `‖·‖_phys` with its
-// own solver target: worst 34.244 ε, the sphere's re-held slice frames.
+// --exact --include-ignored --nocapture` (about 2 minutes with `--release`, the same bits). Its siblings below run in CI
+// on the window's corners. It passes since the solver's polish is judged on `‖P r‖` (PR #79): no refusal (main: 124 on
+// mixed to Burrau, failed follows), and the worst reading 34.244 ε, the sphere's re-held slice frames.
 #[test]
-#[ignore = "about 6 minutes, and fails today (mixed to Burrau's follow fails before the pause at 124 pins): cargo test -p engine --test path_lock -- path_lock_tolerance_window --exact --include-ignored --nocapture"]
+#[ignore = "about 6 minutes: cargo test -p engine --test path_lock -- path_lock_tolerance_window --exact --include-ignored --nocapture"]
 fn path_lock_tolerance_window() {
     check_tolerance_window(SWEEP_SIDE, &[0, 1, 2, 3, 4, 5], SWEEP_FRAMES, &|x| x);
 }
@@ -3401,7 +3399,8 @@ fn path_lock_tolerance_window() {
 negative_control!(
     path_lock_tolerance_window,
     "the drift read against another state: every stored state moved by 2⁻⁴⁰ in its first mass (on the window's \
-     corners; Burrau left out, whose followed minimiser ends before the pause there and is counted as a refusal first)",
+     corners; Burrau left out, as when its followed minimiser ended before the pause there and was counted as a refusal \
+     first)",
     expected = "past the lock's tolerance",
     check_tolerance_window(2, &[0, 1, 2, 3, 5], 4, &|mut x| {
         x.m[0] += 2f64.powi(-40);
@@ -4093,6 +4092,12 @@ negative_control!(
 // - **Reported:** how many of the 124 become pins the sweep reads through, true ends, or remaining failures; C1's floor
 //   rerun and the sizing rule's value and its margins. `LOCK_TOLERANCE` (64) and `lock_solve_tolerance` (32) are not
 //   changed here; proposed values go to the owner.
+//
+// **Read** (PR #79 carries the output): the cause is the solver's polish, judged on `‖Jᵀr‖` while convergence reads
+// `‖P r‖` (M2; D6 no stop where D0 has 132). With it alone fixed, F1, F2 and F4 pass at 64, 128 and 256 frames (all 256
+// Burrau pins go through, no end, every node within `1.85·10⁻⁷·h` of main's), and F5: the whole sweep refuses nothing,
+// every other pair's row and per-pin map identical to main's. D1's and D4's changes are not the cause and are not taken
+// (with them, F4 fails at 29 mirror ties, `path_lock_slide_first_choice`).
 
 // ── path_lock_slide_stall: the diagnosis (D0–D3 above) ─────────────────────────────────────────────────────────────
 
@@ -4432,17 +4437,15 @@ negative_control!(
 // exactly the shown state's distance and ∞ elsewhere, so only a hold judged on the shown state holds. Pass: the end
 // holds. Control: the hold judged on `placed_at`'s decode, main's, slides.
 
+/// The sphere pair's leaves: latent and the exponential shape sphere.
+type SphereLeaves = (
+    LatentLeaves<Defaults>,
+    ChartLeaves<kernel::chart::ShapeSphere<f64>, Defaults>,
+);
+
 /// The sphere pair at the first pin where `place`'s and `placed_at`'s decodes differ: the locked start, the end, the
 /// leaves and the shown state's distance from the anchor.
-fn recentre_case() -> (
-    View,
-    View,
-    (
-        LatentLeaves<Defaults>,
-        ChartLeaves<kernel::chart::ShapeSphere<f64>, Defaults>,
-    ),
-    f64,
-) {
+fn recentre_case() -> (View, View, SphereLeaves, f64) {
     let sphere_a = frame_plane(GATE_Z0, 0, 2, 0.5);
     let mut pins = sweep_pins(SWEEP_SIDE);
     pins.rotate_left(9 * SWEEP_SIDE + 12);
