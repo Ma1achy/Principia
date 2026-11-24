@@ -518,7 +518,8 @@ fn check_scaled<R: P>(x: &Ic<f64>, s: f64, c: &Canonical<R>, at: &str) -> [f64; 
     // In the input's rest frame (CoM at the origin, `Σp = 0`), where steps 1a and 1b leave `E` and `L_z` alone.
     let x0 = rest(&widen(&narrow::<R>(x)));
     // `L_z` keeps its sign on either half: `C` takes no mirror, so nothing reverses it. The half itself is the
-    // input's: `λ̃_y`'s sign is that of `ρ × (r₂ − r₀)`, which [`generic`] keeps past 0.05 in magnitude, at every scale.
+    // input's: `λ̃_y`'s sign is that of `ρ × (r₂ − r₀)`, which [`generic`] keeps past 0.05 in magnitude, at every
+    // scale.
     let cross = (x.r[1][0] - x.r[0][0]) * (x.r[2][1] - x.r[0][1])
         - (x.r[1][1] - x.r[0][1]) * (x.r[2][0] - x.r[0][0]);
     let lty: f64 = c.lambda_t_y.into();
