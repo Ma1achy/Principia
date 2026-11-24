@@ -650,7 +650,8 @@ pub struct AzCount<R> {
     pub closings: u32,
     /// The most halvings one landing took (Part 2b, step 6).
     pub most_bisections: u32,
-    /// The most steps taken in one interval, for the record (the bound on steps per sync interval).
+    /// The most steps taken in one interval, for the record only: the budget is cumulative, with no cap
+    /// per interval.
     pub largest_interval: u32,
     /// The largest physical step (Part 2b, step 8; Part 2c).
     pub dt_max: DtMax<R>,

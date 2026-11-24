@@ -59,7 +59,7 @@
 //! the identity on CPU-f64 and GPU-f32 alike. Only the exact `ρ = 0` reaches `lookup_clamped` here; a near-zero `ρ` is
 //! the validation ladder's.
 //!
-//! **The branch inputs** (these override the determinism note's rules 2 and 6). Five branches must
+//! **The branch inputs** (gpu_determinism_note § "The discipline", rules 2 and 6). Five branches must
 //! agree across backends: step 0's skip, its coincidence select, step 2's guard `ρ = 0`, where `ρ_x` or `ρ_y` is
 //! 0 in step 2's turn and angle, and the signs of `λ̃_x` and `λ̃_y` that choose the encode's case of `β`
 //! (dd_encode §3.2, "The signed encode of `β`"). Each is built only from operations every IEEE backend rounds

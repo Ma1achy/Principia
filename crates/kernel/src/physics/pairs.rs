@@ -5,13 +5,13 @@
 //! for `k = 0, 1, 2` (`i = k + 1`, `j = k + 2`, mod 3), the order `burrau::pair_id` and `shape::Landmarks::bc` use and
 //! dd_simstate_payload §2's `detail` and `dmin_pair` read. Pair `k`'s separation is `dₖ = rⱼ − rᵢ`.
 //!
-//! **`d²` is a branch input**: [`PairGeom::closest`] compares it here, and the driver's collision
-//! test `d² < r_coll²` and its `N_sub` bucket will read the same `d²`. So it is built in the fixed form the
-//! determinism discipline gives, a lone subtract, a lone multiply and an explicitly written `fma(dy, dy, dx·dx)`
-//! through [`RealOps::fma`](crate::real::RealOps::fma), never a plain `dx·dx + dy·dy` a backend may contract or not
-//! (gpu_determinism_note § "The discipline", rules 2 and 6; integrator_contract Part 4; dd_integrator §3.3).
-//! Whether every backend fuses an explicit `fma` is an open question; until it is settled, this `d²` is held with the
-//! other `fma`-built branch inputs under the same interim rule.
+//! **This `d²` is not a branch input that agrees across backends.** It is a lone subtract, a lone multiply and an
+//! explicit `fma(dy, dy, dx·dx)` through [`RealOps::fma`](crate::real::RealOps::fma), and [`PairGeom::closest`]
+//! compares it here; but an explicit `fma` is not fused on every backend (CI's lavapipe rounds the product, then the
+//! add), so it is not the form a cross-backend branch input needs (gpu_determinism_note § "The discipline", rules 2
+//! and 6; integrator_contract Part 4; dd_integrator §3.3). The collision test `d² < r_coll²`, the `dmin_pair` latch
+//! and the `N_sub` bucket read the position-quantised `d²` of `crate::detect::collision` instead; don't make a branch
+//! that must agree across backends read this one.
 
 use crate::Real;
 

@@ -43,7 +43,7 @@
 //! WGSL read side mirrors it operation for operation (`ledger::gen::read`). [`landmarks`] are the binary collisions and
 //! the Lagrange poles, each `n` of a configuration of that kind under the current masses through [`shape`], never a
 //! hard-coded point (dd_integrator §3.7; chart_reference §3.4). The Euler landmarks are not here: they belong to the
-//! physics site generators, not yet built.
+//! physics site generators.
 //!
 //! Generic over the kernel's `Real`, f32 on the GPU and f64 natively. The float functions are called through
 //! `Float`, as the read side calls them: the rust-gpu toolchain's `core` has no inherent `f32` math.
