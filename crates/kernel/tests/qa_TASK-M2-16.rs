@@ -1,42 +1,41 @@
-//! QA tests for TASK-M2-16, written from the requirements and their sources, not from the implementation: the encode
+//! QA tests written from the requirements and their sources, not from the implementation: the encode
 //! contract's theorems T2 and T3 in physical units (inverse-encode contract Parts 1, 3, 4, 6 and 8; dd_encode §3.2,
 //! §3.5 and §5; dd_decoder §3.3, §3.4).
 //!
 //! Every expected state comes from an independent construction written here from the text:
-//! - [`qa_phys`], Part 4's norm `‖·‖_phys` as Part 4 states it (REQ-ENC-029);
+//! - [`qa_phys`], Part 4's norm `‖·‖_phys` as Part 4 states it;
 //! - [`qa_canon`], Part 6's canonical inverse policy in the normative order 1a → 0 → 1b → 2, every rigid
-//!   operation on the full state (positions and momenta), `φ = 0` at `ρ = 0` by a select (R-437), and no mirror step:
-//!   a state below the `x`-axis stays there (TASK-M2-57 removed the decoder's mirror step; *was:* "→ 3 … mirror iff
-//!   `λ̃_y < −δ_λ` (R-82)"), with its classic bug, a configuration-only rotation;
+//!   operation on the full state (positions and momenta), `φ = 0` at `ρ = 0` by a select, and no mirror step:
+//!   a state below the `x`-axis stays there, with its classic bug, a configuration-only rotation;
 //! - [`qa_gauge`], dd_encode §3.3's gauge action `r' = s·R(θ)·Π·r + a`, `p' = s^{−1/2}·R(θ)·Π·p + m·u`, with the other
 //!   classic bug on the test's side, a mirror map `Π` that reflects the positions only;
 //! - Part 3's forward momentum link `q = q_max·(2σ(z) − 1)` and the Jacobi map `p₂ = p_λ`, `p₁ = p_ρ − (m₁/M₀₁)p_λ`,
 //!   `p₀ = −p₁ − p₂` (dd_decoder §3.4).
 //!
 //! The tests:
-//! - REQ-ENC-005, REQ-DEC-016 (`t3_qa_reference_canon`): random gauge `g` on canonical states `x₀`, on both halves of
+//! - T3 against the reference (`t3_qa_reference_canon`): random gauge `g` on canonical states `x₀`, on both halves of
 //!   the `β` circle, both precisions: `D(E(g·x₀)) = C(g·x₀)` against [`qa_canon`], masses within `ε_phys`, the half
 //!   `C` leaves the state in the one `g`'s parity put it in, `λ = 1/s`, `L_z = +L_z,in·λ^{1/2}` and so
 //!   `L_z(D(E(g·x₀))) = det(Π_g)·L_z(C(x₀))`, `E = E_in/λ` (*was:* "`lookup_mirrored` the gauge's parity …
 //!   `L_z = ±L_z,in·λ^{1/2}` with the sign `lookup_mirrored` gives"). Controls: a configuration-only rotation in `C`
 //!   fails the `L_z` check, and a mirror map reflecting the positions only fails the determinant's.
-//! - REQ-DEC-016, R-437 (`t3_qa_rho_zero`): the coincident inner pair at every sign of the zeros: `φ = 0`, the
+//! - `ρ = 0` (`t3_qa_rho_zero`): the coincident inner pair at every sign of the zeros: `φ = 0`, the
 //!   rotation the identity, `lookup_clamped`, at both precisions.
-//! - REQ-ENC-001, REQ-ENC-004, REQ-ENC-018 (`encode_qa_golden_z0`, `encode_qa_burrau_345`): the golden pairs built from
+//! - Golden pairs (`encode_qa_golden_z0`, `encode_qa_burrau_345`): the golden pairs built from
 //!   the text: `z = 0`'s equilateral triangle on the unit circle, and Burrau's physical (3, 4, 5) at rest, its `z` by
 //!   Part 3's closed forms; the scale step at 2× (`λ = ½`, `E_canon = 2·E_in`, dd_encode §5 test 4).
-//! - REQ-DEC-029, REQ-ENC-004 (`t2_qa_qmax_no_cap`): decode applies no per-body cap (a body's `|p|` above `q_max` is
+//! - No per-body cap (`t2_qa_qmax_no_cap`): decode applies no per-body cap (a body's `|p|` above `q_max` is
 //!   kept, the Jacobi map of `q` alone); `|qₖ| ≤ q_max` at any `z`; clamp-adjacent momentum controls set their
 //!   `lookup_clamped` bit and interior ones hold T2 within `ε_phys`. Control: the rejected cap fails the check.
-//! - REQ-VAL-013 (`conditioning_qa_physical_space`): `z_q0` near its clamp, `d logit/ds ~ 10⁵`: the physical residual
+//! - Conditioning (`conditioning_qa_physical_space`): `z_q0` near its clamp, `d logit/ds ~ 10⁵`: the physical residual
 //!   passes `ε_phys`, a naive `z` residual exceeds it.
 //!
-//! **Tolerances.** `ε_phys` alone (REQ-ENC-024, calibrated: `validation::roundtrip::eps_phys`, the register's `k`
+//! **Tolerances.** `ε_phys` alone (calibrated: `validation::roundtrip::eps_phys`, the register's `k`
 //! times the precision's ε, asserted in `validation/tests/qa_TASK-M2-16.rs`); a derived quantity (`L_z`, `E`) is held
 //! to the first-order change a state within `ε_phys` in `‖·‖_phys` can make to it. No other tolerance is set.
 //!
 //! **Domain** (pitfalls §10): encode and decode on states held fixed; no trajectory. Each test has a registered
-//! negative control (R-176).
+//! negative control.
 
 use kernel::canon::canonicalise;
 use kernel::decode::retired::convert;
@@ -48,7 +47,7 @@ use validation::roundtrip::{eps_phys, widen, Precision};
 
 // ── Independent references ─────────────────────────────────────────────────────────────────────────────────────
 
-/// `q_max` (R-10, settled at 2) and the momentum clamp `ε_q` (Part 3, 10⁻⁶).
+/// `q_max` (settled at 2) and the momentum clamp `ε_q` (Part 3, 10⁻⁶).
 const Q_MAX: f64 = 2.0;
 const EPS_Q: f64 = 1e-6;
 
@@ -106,7 +105,7 @@ struct Rigid(bool, bool);
 const FULL: Rigid = Rigid(true, true);
 
 /// `C(x)` by Part 6, in f64: 1a CoM subtraction; 0 rescale to `I = 1` (`r ← λr`, `p ← λ^{−1/2}p`, `λ = I_in^{−1/2}`);
-/// 1b boost removal (`pᵢ ← pᵢ − mᵢP/M`); 2 rotate by `R(−φ)`, `φ = atan2(ρ_y, ρ_x)`, `φ = 0` where `ρ = 0` (R-437).
+/// 1b boost removal (`pᵢ ← pᵢ − mᵢP/M`); 2 rotate by `R(−φ)`, `φ = atan2(ρ_y, ρ_x)`, `φ = 0` where `ρ = 0`.
 /// No step 3: `λ̃_y` keeps its sign. Returns the state, `λ`, and `λ̃_y`, whose sign is the half the state lies in
 /// (*was:* "3 mirror `y → −y` iff `λ̃_y < −δ_λ` … and whether it mirrored").
 fn qa_canon(x: &Ic<f64>, rigid: Rigid) -> (Ic<f64>, f64, f64) {
@@ -260,7 +259,7 @@ fn bits<R: Precision>() -> u32 {
     }
 }
 
-// ── T3 against the reference C (REQ-ENC-005, REQ-DEC-016) ────────────────────────────────────────────────────────
+// ── T3 against the reference C ───────────────────────────────────────────────────────────────────────────────────
 
 const T3_SAMPLES: u32 = 1500;
 
@@ -422,7 +421,7 @@ mod t3_qa_config_only_rotation {
     }
 }
 
-// ── ρ = 0, every sign of its zeros (REQ-DEC-016, R-437) ─────────────────────────────────────────────────────────
+// ── ρ = 0, every sign of its zeros ──────────────────────────────────────────────────────────────────────────────
 
 /// The coincident inner pair at `R`: `r₀ = r₁ = (±0, ±0)`, body 2 off the pair, nonzero momenta. `C` takes `φ = 0`
 /// (its rotation the identity: the result is [`qa_canon`]'s, whose `φ` is the select's 0) and raises `lookup_clamped`;
@@ -482,7 +481,7 @@ negative_control!(
     rho_zero::<f64>(|_| std::f64::consts::PI)
 );
 
-// ── Golden pairs (dd_encode §5; REQ-ENC-001, REQ-ENC-004, REQ-ENC-018) ────────────────────────────────────────────
+// ── Golden pairs (dd_encode §5) ───────────────────────────────────────────────────────────────────────────────────
 
 /// `z = 0`'s golden state, by dd_decoder §5 / Part 1's section: equal masses, the equilateral triangle on the unit
 /// circle (side √3), `ρ̃` on `+x`, body 2 above, at rest, `I = 1`.
@@ -675,7 +674,7 @@ fn encode_qa_burrau_345() {
         .iter()
         .find(|p| p["name"] == "burrau_345")
         .expect("the Burrau pair is listed");
-    // The fixture's z was written under `sigmoid_beta`, the β link before TASK-M2-57: its z_β is converted on read to
+    // The fixture's z was written under `sigmoid_beta`, the older β link: its z_β is converted on read to
     // the periodic link's, the same β.
     let fz: [f64; 8] = std::array::from_fn(|k| {
         let z = pair["z"][k].as_f64().expect("a number");
@@ -714,11 +713,11 @@ negative_control!(
     }
 );
 
-// ── q_max alone bounds the momenta; no per-body cap (REQ-DEC-029, REQ-ENC-004) ──────────────────────────────────
+// ── q_max alone bounds the momenta; no per-body cap ─────────────────────────────────────────────────────────────
 
 const QMAX_SAMPLES: u32 = 3000;
 
-/// The rejected cap (philosophy §8.2, R-11): every body's `|p|` capped at `q_max`, then the total momentum re-imposed.
+/// The rejected cap (philosophy §8.2): every body's `|p|` capped at `q_max`, then the total momentum re-imposed.
 #[cfg(feature = "controls")]
 fn capped(x: Ic<f64>) -> Ic<f64> {
     let mut y = x;
@@ -841,7 +840,7 @@ negative_control!(
     }
 );
 
-// ── Conditioning: physical, never z (REQ-VAL-013) ────────────────────────────────────────────────────────────────
+// ── Conditioning: physical, never z ──────────────────────────────────────────────────────────────────────────────
 
 /// `z` with `z_q0 = t`, near its clamp, the other controls fixed inside: at `R`, `1/(s(1 − s))` is ~10⁵ (between
 /// 10^4.5 and 10^5.5, the input's definition), the sample is unclamped, its physical residual is within `ε_phys` and its

@@ -1,36 +1,35 @@
-//! QA's tests for TASK-M3-04, written from the requirements it closes and integrator_contract Part 1's loop, not from
-//! the implementation. The oracle is this file's own transcription of Part 1's pseudocode (`contract_loop`): `macro`
-//! from 0 while `macro < horizon_steps and not done`, `N_sub` from the substep law on the quantised `d²` of the state
-//! the macro-step starts from (TASK-M3-03's, a Need), an inner `while s < N_sub and not done` of `STEP` at
-//! `dt_macro / N_sub` with the cadence after each. Every occupant (Euler, KDK, Yoshida-4, Yoshida-6, RK4), f64 and f32.
+//! QA's tests written from the requirements and integrator_contract Part 1's loop, not from the implementation. The
+//! oracle is this file's own transcription of Part 1's pseudocode (`contract_loop`): `macro` from 0 while
+//! `macro < horizon_steps and not done`, `N_sub` from the substep law on the quantised `d²` of the state the macro-step
+//! starts from, an inner `while s < N_sub and not done` of `STEP` at `dt_macro / N_sub` with the cadence after each.
+//! Every occupant (Euler, KDK, Yoshida-4, Yoshida-6, RK4), f64 and f32.
 //!
-//! - REQ-INT-007 (`qa_same_spec_twice`): the same IC and sim key integrated twice, with other ICs integrated between,
+//! - Determinism (`qa_same_spec_twice`): the same IC and sim key integrated twice, with other ICs integrated between,
 //!   give bit-identical `SimState`s. Control: a sim key one ulp of `dt_macro` away is caught as a different render.
-//! - REQ-INT-008, REQ-INT-038, REQ-INT-022 (`qa_wrapper_is_contract_loop`): `integrate` equals the contract loop bit
+//! - The wrapper is the contract loop (`qa_wrapper_is_contract_loop`): `integrate` equals the contract loop bit
 //!   for bit (state, `total_substeps`, `t_end_step` the completed macro-steps, `bounded`, `saturated`), for every
 //!   occupant through the one loop, stopped by `done` or not. `t_end_step` is `step_count`, the completed macro-steps
 //!   (integrator_contract Part 5, "Exact step-index timing invariant"; payload §2; generation_root's `t_end_step` row):
 //!   a macro-step `done` cut short is begun, not completed. Controls: the oracle run with another occupant is caught,
 //!   and so is the begun count in place of the completed one on a run stopped mid-macro-step.
-//! - REQ-INT-008 (`qa_seam4_trace_shared`): the wrapper's calls into `ADVANCE`, `(t_now, t_target, dt_macro, N_sub)`,
-//!   are identical across occupants where the table forces `N_sub`, while their end states differ (only the stepper's
-//!   arithmetic changes). Control: a trace from another horizon is caught.
-//! - REQ-INT-009, REQ-INT-022, REQ-INT-053 (`qa_cadence_once_per_step`): steps are counted by the stepper itself, not by
+//! - The seam-4 trace (`qa_seam4_trace_shared`): the wrapper's calls into `ADVANCE`,
+//!   `(t_now, t_target, dt_macro, N_sub)`, are identical across occupants where the table forces `N_sub`, while their
+//!   end states differ (only the stepper's arithmetic changes). Control: a trace from another horizon is caught.
+//! - One callback per step (`qa_cadence_once_per_step`): steps are counted by the stepper itself, not by
 //!   the cadence; the cadence's calls equal them and the reported `total_substeps` equals them. Controls: an occupant
 //!   that skips the callback once, and one that over-reports its substeps, are both caught.
-//! - REQ-INT-038 (`qa_horizon_integer_count`): at `N_sub = 1`, the run takes exactly `horizon_steps` macro-steps for
+//! - The horizon (`qa_horizon_integer_count`): at `N_sub = 1`, the run takes exactly `horizon_steps` macro-steps for
 //!   horizons up to 65535, whatever `dt_macro`. Control: a count off by one is caught.
-//! - REQ-INT-020 (`qa_advance_is_nsub_steps`): for KDK, Yoshida-4 and Yoshida-6 (and the other steppers),
+//! - `ADVANCE` (`qa_advance_is_nsub_steps`): for KDK, Yoshida-4 and Yoshida-6 (and the other steppers),
 //!   `ADVANCE(t, t+1)` at `N_sub` equals `N_sub` `STEP` calls at `dt_macro / N_sub`, bit for bit, at any grid index `t`.
 //!   Control: `N_sub − 1` steps is caught.
-//! - REQ-INT-053 (`qa_steppers_do_not_own_time`): every stepper, regularisation none, reports `owns_time_mapping` false.
-//! - REQ-INT-025, REQ-SCHED-003 (`qa_seam3_charts_same_kernel`, `qa_visit_order_free`): samples of several charts,
+//! - Time (`qa_steppers_do_not_own_time`): every stepper, regularisation none, reports `owns_time_mapping` false.
+//! - The IC alone drives the kernel (`qa_seam3_charts_same_kernel`, `qa_visit_order_free`): samples of several charts,
 //!   decoded at fuzzed `(u, v)`, integrate to the contract loop's bits on their `(m, r, p)` alone; the entry point and the
 //!   `STEP` signature, coerced to function pointers, take no chart and no neighbour state; a batch of ICs integrated
 //!   forwards and backwards gives each IC the same bits. Control: two different ICs are caught as different.
 //!
-//! **Domain** (pitfalls §10): the wrapper's loop with its cadence hooks still empty (TASK-M3-05, -09, -12 fill them), on
-//! short horizons from decoded ICs; it shows the loop's and the seam's behaviour, not the physics of a trajectory.
+//! **Domain** (pitfalls §10): the wrapper's loop and its cadence, on short horizons from decoded ICs; it shows the loop's and the seam's behaviour, not the physics of a trajectory.
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
@@ -387,7 +386,7 @@ fn check_against_loop<R: Q>(who: &str, got: &SimStateBaseOf<R>, want: &Oracle<R>
     );
 }
 
-// ── REQ-INT-007: the same spec twice ───────────────────────────────────────────────────────────────────────────
+// ── The same spec twice ────────────────────────────────────────────────────────────────────────────────────────
 
 fn check_same_render<R: Q>(who: &str, a: &SimStateBaseOf<R>, b: &SimStateBaseOf<R>) {
     assert_eq!(
@@ -435,7 +434,7 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-008 / 022 / 038: the wrapper is the contract loop ──────────────────────────────────────────────────
+// ── The wrapper is the contract loop ───────────────────────────────────────────────────────────────────────────
 
 fn against_loop<S: Stepper, R: Q>(
     name: &str,
@@ -522,7 +521,7 @@ mod horizon_one_longer {
     );
 }
 
-// ── REQ-INT-008: the seam-4 trace is shared ────────────────────────────────────────────────────────────────────
+// ── The seam-4 trace is shared ─────────────────────────────────────────────────────────────────────────────────
 
 type Trace = Vec<(u32, u32, u64, u32)>;
 
@@ -594,7 +593,7 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-009 / 022 / 053: one callback per internal step, honestly reported ─────────────────────────────────
+// ── One callback per internal step, honestly reported ──────────────────────────────────────────────────────────
 
 fn check_cadence(who: &str, taken: u32, calls: u32, reported: u32) {
     assert_eq!(
@@ -660,7 +659,7 @@ mod overreport {
     );
 }
 
-// ── REQ-INT-038: the horizon is an integer count ───────────────────────────────────────────────────────────────
+// ── The horizon is an integer count ────────────────────────────────────────────────────────────────────────────
 
 fn check_macros(who: &str, horizon: u32, t_end: u32, steps: u32) {
     assert_eq!(t_end, horizon, "{who}: t_end_step is not horizon_steps");
@@ -705,7 +704,7 @@ negative_control!(
     check_macros("control", 10, 9, 9)
 );
 
-// ── REQ-INT-020: ADVANCE is N_sub STEP calls ───────────────────────────────────────────────────────────────────
+// ── ADVANCE is N_sub STEP calls ────────────────────────────────────────────────────────────────────────────────
 
 fn check_advance<R: Q>(who: &str, got: &Advanced<R>, want: &(State<R>, Geom<R>), n: u32) {
     assert_eq!(
@@ -788,7 +787,7 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-053: steppers, regularisation none, do not own time ────────────────────────────────────────────────
+// ── Steppers, regularisation none, do not own time ─────────────────────────────────────────────────────────────
 
 fn check_owns(who: &str, p: CapabilityProfile) {
     assert!(
@@ -821,7 +820,7 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-025 / REQ-SCHED-003: the IC alone drives the kernel ────────────────────────────────────────────────
+// ── The IC alone drives the kernel ─────────────────────────────────────────────────────────────────────────────
 
 /// The entry point and the occupant's `STEP` as function pointers: their types name no chart, neighbour or parent
 /// state, only the decoded IC and the sim key's uniforms, and `(m, r, p)`, `dt` and the force evaluation.
