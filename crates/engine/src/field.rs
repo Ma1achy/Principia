@@ -12,10 +12,10 @@
 //! non-finite is `sim_failed`. **Escape** is the cadence's too (`kernel::detect::escape_rule`): at each sync boundary
 //! that is a window mark the escape rule re-reads its label, live by default, so the sample is `escape` where the last
 //! mark's label is one, its `detail` the escaper's body index or 3, a triple ejection; under the stop option
-//! ([`outcome_stopping`]) the first label ends the march there and stays. The default rule fires only once the shape
-//! point has settled: soon
-//! for bodies that all fly apart, late for an escaper leaving a binary, whose phase keeps the shape point turning
-//! (`plan/KNOWN.md`).
+//! ([`outcome_stopping`]) the first label ends the march there and stays. The default rule is Fewbody's termination
+//! test (`kernel::detect::escape_rule::Fewbody`): it names the escape of the body outside the bound pair of least
+//! Kepler `a` once that body is unbound from the pair, receding, and the pair's tidal ratio from it is below the
+//! register's `δ`; with no bound pair, a triple ejection where every pair recedes and `E_0 > 0`.
 //!
 //! **The sync grid** is the register's `Δ_sync` (`kernel::regularisation::sync`), and the march stops on the latest
 //! boundary at or before the horizon ([`boundaries`]), never past it (integrator_contract Part 2a; R-565).
