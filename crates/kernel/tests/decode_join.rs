@@ -897,7 +897,7 @@ fn golden_value<R: P>(d: &Decoded<R>, name: &str) -> Option<f64> {
 }
 
 /// Checks `run`'s decode of the golden `z` ([`golden_z`]) against every value of the fixture at `R`: the descriptor's
-/// fields within their calibrated ulps (bit-exact for those 0 at rest), its derived `E₀` as `V_0`, the rest within
+/// fields within their proposed ulp tolerances (bit-exact for those 0 at rest), its derived `E₀` as `V_0`, the rest within
 /// [`GOLDEN_EPS`].
 fn check_golden<R: P>(run: Entry<R>, worst: &Worst) {
     let g = golden();

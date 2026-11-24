@@ -1,5 +1,5 @@
 //! QA tests for `rho_angle` on the axis and at the pole, written from dd_decoder §3.6's case-by-case definition and
-//! the generated image of π, `π̂`, not from the implementation:
+//! §3.2's image of π, `π̂`, not from the implementation:
 //! - `π̂` is §3.2's image of π: π rounded toward zero at f32 (f32's nearest π lies above π, so it is that value's
 //!   predecessor) and π's nearest value at f64;
 //! - **antiparallel** (`ρ × λ = 0`, `ρ · λ < 0`): exactly `π̂`, whatever the sign of the zero `ρ × λ`

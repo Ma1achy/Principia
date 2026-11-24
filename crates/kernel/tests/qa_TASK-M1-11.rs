@@ -13,8 +13,8 @@
 //!   pattern, written here from Appendix A's table.
 //!
 //! Every test whose name holds `theta_unwrap` or `debug_variants` runs under the acceptance commands. `r_pole` is a
-//! calibration value, 0.01: the rule's tests run at several radii, that value among them, since the rule holds
-//! whatever its value. Each test has its negative control.
+//! provisional calibration value, 0.01: the rule's tests run at several radii, that value among them, since the rule
+//! holds whatever its value. Each test has its negative control.
 // The file name `qa_TASK-M1-11` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -34,8 +34,8 @@ use validation::negative_control;
 /// One macro-step of `θ̃` at f64: `kernel::shape::theta_step`, or a control's faulty one.
 type Step = fn(Theta<f64>, [f64; 3], [f64; 3], f64) -> Theta<f64>;
 
-/// The calibrated `r_pole`, 0.01, and two radii either side of it: the rule is stated for any radius, so each passage
-/// test runs at each.
+/// The calibrated `r_pole`, 0.01 (provisional), and two radii either side of it: the rule is stated for any radius, so
+/// each passage test runs at each.
 const RADII: [f64; 3] = [1e-3, 1e-2, 0.1];
 
 /// The wrap, written from the rule's words: `d − 2πk` in (−π, π], closed at +π, open at −π.

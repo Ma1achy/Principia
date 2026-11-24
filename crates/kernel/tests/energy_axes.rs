@@ -15,8 +15,7 @@
 //! - `physical_axis_warps_*`: the virial ratio and the mass ratio warp as chart_reference §2.1 writes,
 //!   the mass ratio under `stick_breaking` and under `softmax_tanh` at both ends of `μ_max`'s range.
 //!
-//! `K_max` and `γ_K` are the invariant-chart warp's placeholder defaults, not yet calibrated,
-//! `validation::{K_MAX, GAMMA_K}`. Each test registers its negative control.
+//! `K_max` and `γ_K` are the invariant-chart warp's proposed defaults, `validation::{K_MAX, GAMMA_K}`. Each test registers its negative control.
 
 use kernel::chart::energy::{
     count, decode_rule, decoder_bug_warning, extension, written, Count, ExtensionType, Mapped,
@@ -2911,7 +2910,7 @@ enum Formula {
 }
 
 /// The mass-ratio axis on `[0.05, 20]` of each body pair, under `stick_breaking` and under `softmax_tanh` at both ends
-/// of `μ_max`'s calibrated range (`validation::tunables`) and at its default: every pixel of `[0,1]²` validates and
+/// of `μ_max`'s declared range (`validation::tunables`) and at its default: every pixel of `[0,1]²` validates and
 /// decodes masses positive, summing to 1, with the ratio `q(t)` and the third body's mass at the held `m_c`.
 fn check_mass_ratio(formula: Formula) {
     let range = tunables()
