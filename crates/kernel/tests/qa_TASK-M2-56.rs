@@ -12,9 +12,9 @@
 //! the hidden offset in units of its slider span, each pixel's offset from the view's centre. The decode is checked to
 //! be the parent's own at the placed `(a, b)` with the control moved by the placed offset, bit for bit.
 //!
-//! Tolerances: the worked example's pixel is given to four decimals, so it is met to half a unit of the fourth, `5e-5`; the grid is
-//! met "to 1 ulp", read as `|got − want| ≤ ε·max(|want|, Σ|terms|)`, the terms the products the matrices sum, fixed
-//! before the run.
+//! Tolerances: the worked example's pixel is given to four decimals, so it is met to half a unit of the fourth, `5e-5`;
+//! the grid is met "to 1 ulp", read as `|got − want| ≤ ε·max(|want|, Σ|terms|)`, the terms the products the matrices
+//! sum, fixed before the run.
 
 use kernel::chart::saved::Saved;
 use kernel::chart::tilt::Hidden;
@@ -106,8 +106,8 @@ fn dot(p: [f64; 3], q: [f64; 3]) -> f64 {
 /// How the saved Lean `R`'s third column is formed (the ruling, or a control).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Normal {
-    /// The specified normal: `û₁ × û₂` normalised, its sign toward `+e_X`; where its `e_X` entry is 0 in exact arithmetic (the edge),
-    /// the cross product's own sign.
+    /// The specified normal: `û₁ × û₂` normalised, its sign toward `+e_X`; where its `e_X` entry is 0 in exact
+    /// arithmetic (the edge), the cross product's own sign.
     Ruled,
     /// The opposite sign.
     Flipped,
@@ -296,9 +296,9 @@ const NEW: TiltSpec = TiltSpec {
     y: X,
 };
 
-/// The worked example's pixel: `(u, v) = (0.3, 0.7)` from the centre placed at `(Δa, Δb, d̃_X) = want` to the four decimals given,
-/// the other controls untouched, under either map for the single new angle (a single angle is the same turn under
-/// both).
+/// The worked example's pixel: `(u, v) = (0.3, 0.7)` from the centre placed at `(Δa, Δb, d̃_X) = want` to the four
+/// decimals given, the other controls untouched, under either map for the single new angle (a single angle is the same
+/// turn under both).
 fn check_pixel(want: [f64; 3]) {
     for map in [TiltMap::Sheet, TiltMap::Lean] {
         let new = TiltSpec { map, ..NEW };
@@ -402,7 +402,7 @@ negative_control!(
     check_edge(Normal::Flipped)
 );
 
-// ── The corner `|τ₁| = |τ₂| = 90°`: no composition─────────────────────────────────────────────────────────────────────────
+// ── The corner `|τ₁| = |τ₂| = 90°`: no composition ──────────────────────────────────────────────────────────────────
 
 /// At `|τ₁| = |τ₂| = 90°` a new tilt into the saved target is not composed, alone or as one of two new targets.
 /// `near` moves the saved angles a hair off the corner, where a frame exists (the control).

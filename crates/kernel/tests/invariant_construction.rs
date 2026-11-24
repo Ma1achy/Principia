@@ -1269,7 +1269,8 @@ fn seed_controls() -> Vec<[f32; 4]> {
 
 /// On decoded configurations, `b32` and `b64` take the largest-norm rule's seed decided on `z_α`, `(ρ, 0)` where
 /// `z_α ≤ 0`, the same at f32 and f64 for one input, never `DEGENERATE`; it is the rule on §2.2's independently
-/// transcribed norms wherever those are apart; and the momenta agree across the precisions to f32's rounding, not at a fork's O(1).
+/// transcribed norms wherever those are apart; and the momenta agree across the precisions to f32's rounding, not at
+/// a fork's O(1).
 fn check_decoded(b32: Decoded<f32>, b64: Decoded<f64>) {
     let (lz, k) = (0.375, 0.75);
     for z in seed_controls() {
