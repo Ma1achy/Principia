@@ -1,8 +1,7 @@
-//! The read-back's dispatchers (`engine::decode_dispatch`; TASK-M4-27; REQ-VAL-347), on the session's adapter: that the
+//! The read-back's dispatchers (`engine::decode_dispatch`), on the session's adapter: that the
 //! words come back at their stride, canon's operands the input's bits, a sample with every branch's `present` word as the
 //! chart and `η_E` say, and an empty input no dispatch. Whether the backends agree is a measurement, `cargo xtask gate
-//! cross-backend-branches`, and no test here reads a rate (R-649). Each test registers the control that must make it fail
-//! (R-176).
+//! cross-backend-branches`, and no test here reads a rate. Each test registers the control that must make it fail.
 
 use std::path::Path;
 

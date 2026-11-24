@@ -1,4 +1,4 @@
-//! The engine's side of the bring-up mode (colour_composition Appendix A; REQ-TOOL-015; R-75; RQ-221):
+//! The engine's side of the bring-up mode (colour_composition Appendix A):
 //! - `bringup_pattern_native`: enabling the bring-up mode on the sim key and dispatching the f64 native variant over
 //!   the synthetic flat layout writes Appendix A's pattern, read back on the CPU through the generated unpack; the
 //!   physics variant is not built (M1), and is refused.

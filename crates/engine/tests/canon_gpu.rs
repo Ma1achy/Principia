@@ -1,41 +1,40 @@
-//! Canonicalisation `C` on the GPU (`kernel::stage::canon`, `engine::decode_dispatch::canonicalise_gpu`; TASK-M2-07): the
+//! Canonicalisation `C` on the GPU (`kernel::stage::canon`, `engine::decode_dispatch::canonicalise_gpu`): the
 //! kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively, read back and checked against the same source on
 //! the CPU at f64 and f32. CI runs this file in the `gpu-kernel` job, after `cargo xtask build-kernel`, and on Metal.
 //! - `canonicaliser_mirror_tie`: states at `ρ = 0` whose steps 1a, 0, 1b and 2 are exact no-ops, so `λ̃_y` is exactly
-//!   `±δ_λ`, its neighbours at each precision, `±2δ_λ` and `±0`: `C` takes no mirror (R-865), `λ̃_y` and `r₂` come out
+//!   `±δ_λ`, its neighbours at each precision, `±2δ_λ` and `±0`: `C` takes no mirror, `λ̃_y` and `r₂` come out
 //!   as rotated, the same output twice, on CPU-f64, CPU-f32 and GPU-f32; the test reads `λ̃_y`, not `λ_y`. Turned,
-//!   translated and boosted ties take the same branches on CPU-f32 and GPU-f32, every one (REQ-DEC-017).
+//!   translated and boosted ties take the same branches on CPU-f32 and GPU-f32, every one.
 //! - `canonicaliser_seam_sweep`: the guard, step 0's coincidence select and its `τ_I` skip agree
 //!   bit for bit between CPU-f32 and GPU-f32 on collinear f32 states at random angles, all at the `λ̃_y = 0` seam,
 //!   some with `ρ = 0`; on states with `|I_in − 1|` at `τ_I` and one ulp either side of it, above 1 and below; on
 //!   states with normal coordinates and subnormal pair differences; and on states with the bodies apart far below and
-//!   above `I_in`'s float range, and coincident, where the GPU's output is finite and at `I = 1` (REQ-DEC-002,
-//!   REQ-DEC-017, REQ-ENC-006, REQ-ENC-016).
+//!   above `I_in`'s float range, and coincident, where the GPU's output is finite and at `I = 1`.
 //! - `canonicaliser_seam_sweep_beta`: the case of the encode's `β`, the signs of `λ̃_x` and `λ̃_y` that `C` decides on
 //!   its input and records, equal bit for bit between CPU-f32 and GPU-f32 over collinear states in random gauge whose
 //!   rotated `λ̃_y` is a rounding residue of either sign, subnormal residues included: the sweep's seam states and
 //!   states whose terms of the decision are exact, where both backends must read the axis. Every other test's
-//!   branches carry the case too (REQ-DEC-002).
+//!   branches carry the case too.
 //! - `canonicaliser_scale_invariance`: 2000 generic states scaled by powers of two from `2^−60` to `2^60` and by
 //!   `1e-8` to `1e18`: GPU-f32 leaves `λ̃_y` on CPU-f32's side and the f64 one at every scale, and its notices at a
-//!   power of two are those at `2⁰` (REQ-DEC-017).
+//!   power of two are those at `2⁰`.
 //! - `canonicaliser_hierarchy`: hierarchical collinear states, the inner pair `10⁻³` to `10⁻⁸` of the outer distance,
 //!   `λ̃_y` at `−δ_λ` and `−2δ_λ`: GPU-f32 takes CPU-f32's guard, skip and select, and on `+x` keeps `λ̃_y` negative,
-//!   no mirror, where Metal flushes subnormals (REQ-DEC-017).
+//!   no mirror, where Metal flushes subnormals.
 //! - `canonicaliser_hierarchy_edge`: states within 30 f32 steps of the retired deadband's edge, the inner pair `2^−12`
 //!   to `2^−40` of the outer distance, on `+x` and turned: GPU-f32 takes CPU-f32's guard, skip and select on every
-//!   one, and on `+x` keeps `λ̃_y` negative (REQ-DEC-017).
+//!   one, and on `+x` keeps `λ̃_y` negative.
 //! - `canonicaliser_canonicalise_order`: an off-CoM, boosted, scaled, rotated state, mirrored or not: `I` is the
 //!   CoM-frame one, and the output is the canonical representative, mirrored where `Π` is taken (`C` has no mirror
-//!   step, R-865), on both backends (REQ-ENC-015).
+//!   step), on both backends.
 //! - `canonicaliser_coincident_inner_pair`: `ρ = 0` raises `lookup_clamped` with `φ = +0` and the identity rotation on
-//!   CPU-f64 and GPU-f32, `ρ = (±0, ±0)` included; a `ρ` one step off 0 does not (REQ-ENC-016, R-13, R-437).
+//!   CPU-f64 and GPU-f32, `ρ = (±0, ±0)` included; a `ρ` one step off 0 does not.
 //! - `canonicaliser_phi_signed_zero`: `ρ_x = −0` exactly with `ρ_y ≠ 0`: `φ` is `±π/2` on `ρ_y`'s side on CPU-f64,
-//!   CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `rotation_angle`'s select (pitfalls §11; REQ-ENC-016).
+//!   CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `rotation_angle`'s select (pitfalls §11).
 //! - `canonicaliser_noop_gpu`: dd_decoder §5 test 5 on the GPU, `C` on the GPU's own canonical-frame decodes, saturated
-//!   controls included, turns by 0 and moves nothing beyond rounding (REQ-DEC-018); and on 65 536
+//!   controls included, turns by 0 and moves nothing beyond rounding; and on 65 536
 //!   more GPU decodes over a wider `z`, step 0 is skipped on every one, no `lookup_rescaled`, `λ = 1`, their measured
-//!   `|I_in − 1|` printed (REQ-ENC-014, REQ-ENC-035's evidence on the GPU).
+//!   `|I_in − 1|` printed, the evidence on the GPU that step 0 is skipped on canonical-frame decodes.
 //!
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory. **PIT-10:** the cross-backend branch claim
 //! is for identical inputs. The backends' recorded `λ̃_y` and `φ` can differ in their last bits (WGSL's `√`, `/` and

@@ -1,7 +1,7 @@
 //! The stain graph (`engine::stain`; gui_state_contract §5; render_gui_spec Part II §3, §4, §6, §13): its edits, each
 //! checked and atomic; its serialised form, checked when read; and its canonical form (lowering contract Part 5;
-//! render contract Part 3; REQ-RENDER-075). The assembler's own tests (`crates/render/tests/assemble.rs`) cover the
-//! lowering; these cover the graph type the engine defines. Each test registers its negative control (R-176).
+//! render contract Part 3). The assembler's own tests (`crates/render/tests/assemble.rs`) cover the
+//! lowering; these cover the graph type the engine defines. Each test registers its negative control.
 
 use engine::stain::{
     Canonical, GraphError, NodeId, NodeKind, Occupant, PortType, StainGraph, UniformType, Wire,
@@ -656,7 +656,7 @@ negative_control!(
     check_params(2.5, true)
 );
 
-/// The canonical text of a source into a colour of `colour` is the engine's JCS (gui_state_contract §2, R-318) of the
+/// The canonical text of a source into a colour of `colour` is the engine's JCS (gui_state_contract §2) of the
 /// form's value with the colour's text `written`: the assembler writes the text, and the two serialisers agree.
 fn check_jcs(colour: &str, written: &str) {
     let mut g = StainGraph::new();

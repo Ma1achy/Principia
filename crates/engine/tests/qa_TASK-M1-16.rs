@@ -1,6 +1,5 @@
-//! QA's tests for TASK-M1-16, written from REQ-COL-063 (colour_composition §3; deep_zoom §1; R-97; R-394), not from
-//! the implementation: `ctx.chart.slice_uv` is the sample's position in the slice plane's own frame,
-//! `c + h·(2·ctx.quad.uv − 1)` with `c` and `h` its quad's centre and half-width as the CPU gives them, a vec2 in
+//! QA's tests for the slice-plane UV, written from colour_composition §3 and deep_zoom §1, not from the implementation:
+//! `ctx.chart.slice_uv` is the sample's position in the slice plane's own frame, `c + h·(2·ctx.quad.uv − 1)` with `c` and `h` its quad's centre and half-width as the CPU gives them, a vec2 in
 //! [0, 1]², Y-up, unchanged by in-plane pan and zoom, and never a screen-relative position.
 //!
 //! `ctx.quad.uv` is taken at the pixel, as colour_composition §3 defines it, from the pixel's place in its quad, with
@@ -15,7 +14,7 @@
 //! - `qa_slice_uv_from_the_cpu_frames_at_the_slice_edges`: through the harness's own f64 frames, the depth-0 quad reads
 //!   `slice_uv = quad.uv`, and a depth-3 grid at the slice's top-right corner reads `(cell + t)/8`, reaching up to 1.
 //!
-//! Negative controls (R-176): the screen position `ctx.screen.uv`, the grid tiling `(quad_xy + quad.uv) / quads`, a
+//! Negative controls: the screen position `ctx.screen.uv`, the grid tiling `(quad_xy + quad.uv) / quads`, a
 //! Y-down reading of the frame, and another quad's frame each fail.
 
 use engine::synthetic::Synthetic;
@@ -105,7 +104,7 @@ fn position(frame: [f64; 4], t: [f64; 2]) -> [f32; 2] {
     [0, 1].map(|k| (frame[k] + frame[k + 2] * (2.0 * t[k] - 1.0)) as f32)
 }
 
-/// `ctx.quad.uv` at pixel `(x, y)` from the pixel geometry alone (colour_composition §3, R-72: `quad.uv = (vec2(i, j) +
+/// `ctx.quad.uv` at pixel `(x, y)` from the pixel geometry alone (colour_composition §3: `quad.uv = (vec2(i, j) +
 /// tile.uv) / N`, `tile.uv` the pixel centre's position in its tile, Y-up from the bottom-left): the pixel centre's
 /// position in its quad's `N · tile_px` pixel square, the framebuffer's rows counted from the top.
 fn t_of(grid: Grid, x: u32, y: u32) -> [f64; 2] {
@@ -203,7 +202,7 @@ negative_control!(
     hand_filled("l.screen.uv")
 );
 
-/// The grid tiling, `(quad_xy + quad.uv) / quads`, the view reading R-394 did not choose.
+/// The grid tiling, `(quad_xy + quad.uv) / quads`: a view reading, not the slice plane's frame `slice_uv` must be.
 #[cfg(feature = "controls")]
 const TILING: &str = "(vec2<f32>(vec2<u32>(l.quad.index % ctx_uniforms.quads.x, l.quad.index / \
                       ctx_uniforms.quads.x)) + l.quad.uv) / vec2<f32>(ctx_uniforms.quads)";
