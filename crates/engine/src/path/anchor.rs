@@ -102,6 +102,9 @@ pub mod probe {
         /// The slide's slopes by the three-point central difference, as main took them, in place of the five-point one
         /// (both at `ε^{1/3}` of the window's half-width).
         pub three_point: bool,
+        /// The solver's polishing step accepted where `‖P r‖²` falls, in place of `‖Jᵀr‖²`: a diagnostic's one variable
+        /// changed (`lock_solve::Spec::polish_projected`).
+        pub polish_projected: bool,
         /// `recentre`'s hold decided on the nearest point's own decode (`placed_at`'s window), as main decided it, in
         /// place of the decode of the view it returns (`place`'s).
         pub placed_at_hold: bool,
@@ -473,7 +476,8 @@ fn spec_at(target: f64) -> Spec<f64> {
     let ceiling = probe::switches().ceiling.unwrap_or(1e12);
     #[cfg(not(feature = "controls"))]
     let ceiling = 1e12;
-    Spec::new(
+    #[allow(unused_mut)]
+    let mut spec = Spec::new(
         200,
         target,
         optimality,
@@ -484,6 +488,39 @@ fn spec_at(target: f64) -> Spec<f64> {
             decrease: 0.1,
             ceiling,
         },
+    );
+    #[cfg(feature = "controls")]
+    {
+        spec.polish_projected = probe::switches().polish_projected;
+    }
+    spec
+}
+
+/// One frame of the slide on `b` toward `anchor` at `s`, solved directly from `seed` with the re-solve's settings (and
+/// the probe's switches): a measurement's reach into the follow's own solve.
+#[cfg(feature = "controls")]
+pub fn slide_frame<L: Leaves>(
+    b: &View,
+    leaves: &L,
+    pin: [f64; 2],
+    anchor: &Anchor,
+    s: f64,
+    seed: [f64; 2],
+) -> Report<f64> {
+    let family = Slide {
+        placed: Placed {
+            view: b,
+            leaves,
+            pin,
+            step: step(b),
+        },
+        anchor: anchor.blocks(),
+    };
+    lock_solve::solve(
+        &lock_solve::Frame { family: &family, s },
+        &family.target(),
+        seed,
+        &spec(),
     )
 }
 

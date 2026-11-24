@@ -4581,7 +4581,7 @@ fn rehold_slide_stalls(
     };
     let slice = refusals
         .into_iter()
-        .find(|r| r.2 == "the slice mid-morph")
+        .find(|r| matches!(r.2, "the slice mid-morph" | "slice"))
         .map(|r| r.3);
     let failed = log
         .iter()
@@ -4857,3 +4857,291 @@ fn check_slide_follows(pins: &[[f64; 2]]) {
         f4.len()
     );
 }
+
+// ── path_lock_line_offset: the slide's residual is the frame's offset ───────────────────────────────────────────────
+//
+// `blend::line_offset(a, b, s)` is `block_line(a, b, s) − a`, formed without the cancellation: the slide solves on it,
+// the frames show `block_line`. On each of the great circle's branches (general with `a·b ≥ 0` and `< 0`, `b = a`, the
+// antipodal tie and a near-tie inside `√ε`) at `s` from `10⁻³` to 0.9, with masses and momenta moved too. Pass: every
+// component within `16·ε·max(1, |a|, |b|)` of `block_line(a, b, s) − a`, whose own rounding is `ε·|a|`. Control: the
+// offset taken at `1 − s`.
+
+fn check_line_offset(offset: &dyn Fn(&Blocks, &Blocks, f64) -> [f64; 9]) {
+    let unit = |v: [f64; 3]| {
+        let n = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+        v.map(|x| x / n)
+    };
+    let a = Blocks {
+        mu: [0.3, -0.7],
+        n: unit([0.2, -0.5, 0.8]),
+        p_rho: [1.1, -0.4],
+        p_lambda: [-0.6, 0.9],
+    };
+    let tilt = |n: [f64; 3]| Blocks {
+        mu: [0.1, 0.4],
+        n,
+        p_rho: [-0.2, 0.5],
+        p_lambda: [0.7, 1.3],
+    };
+    let near_tie = unit([-a.n[0] + 1e-9, -a.n[1], -a.n[2]]);
+    let cases = [
+        ("general, a·b ≥ 0", tilt(unit([0.4, -0.1, 0.9]))),
+        ("general, a·b < 0", tilt(unit([-0.6, 0.7, -0.2]))),
+        ("b = a", tilt(a.n)),
+        ("the antipodal tie", tilt(a.n.map(|x| -x))),
+        ("a near-tie", tilt(near_tie)),
+    ];
+    for (name, b) in &cases {
+        for s in [1e-3, 1.0 / 64.0, 0.25, 0.5, 0.9] {
+            let line = engine::path::blend::block_line(&a, b, s).0.vector();
+            let av = a.vector();
+            let got = offset(&a, b, s);
+            let scale = av
+                .iter()
+                .chain(&b.vector())
+                .fold(1.0f64, |m, x| m.max(x.abs()));
+            for i in 0..9 {
+                let want = line[i] - av[i];
+                assert!(
+                    (got[i] - want).abs() <= 16.0 * f64::EPSILON * scale,
+                    "the slide's residual is not the frame's offset: {name}, s = {s}, component {i}: {} against {want}",
+                    got[i]
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn path_lock_line_offset() {
+    check_line_offset(&engine::path::blend::line_offset);
+}
+
+negative_control!(
+    path_lock_line_offset,
+    "the offset taken at 1 − s",
+    expected = "the slide's residual is not the frame's offset",
+    check_line_offset(&|a, b, s| engine::path::blend::line_offset(a, b, 1.0 - s))
+);
+
+// ── path_lock_slide_follows: the follow converges at a slide's first frames ─────────────────────────────────────────
+//
+// The fix's guard in CI (criteria F1 and F2, at two of the pins PR #72's C6 measured stalling at the 2nd frame: (0, 0)
+// and (1/15, 0)). Mixed to Burrau at 64 and 256 frames. Pass: no follow fails (`FollowFailed`), and where the slide ends
+// it ends at the same `s` within 1/64 at both counts, past the first frame. Control: the slide as main formed it (its
+// residual and its slopes), whose follow fails at the 2nd frame.
+
+fn check_slide_follows_at(pins: &[[f64; 2]]) {
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    for &at in pins {
+        let a = try_locked_mixed(home(), (at[0], at[1])).expect("a lock");
+        let ends: Vec<Option<f64>> = [64usize, 256]
+            .iter()
+            .map(|&n| {
+                let end = Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, n)
+                    .map(|x| x.1);
+                println!(
+                    "path_lock_slide_follows: ({}, {}) at {n} frames: {end:?}",
+                    at[0], at[1]
+                );
+                match end {
+                    Ok(LockedEnd::Ended { s }) => {
+                        assert!(s > 1.0 / n as f64, "an end at the first frame: {s}");
+                        Some(s)
+                    }
+                    Ok(_) => None,
+                    Err(e) => panic!(
+                        "the follow failed at ({}, {}), {n} frames: {e:?}",
+                        at[0], at[1]
+                    ),
+                }
+            })
+            .collect();
+        if let [Some(s64), Some(s256)] = ends[..] {
+            assert!(
+                (s64 - s256).abs() <= 1.0 / 64.0,
+                "an end that moves with the frame count: {s64} at 64, {s256} at 256"
+            );
+        }
+        assert!(
+            ends[0].is_some() == ends[1].is_some(),
+            "an end at one frame count and not the other: {ends:?}"
+        );
+    }
+}
+
+#[test]
+fn path_lock_slide_follows() {
+    check_slide_follows_at(&[[0.0, 0.0], [1.0 / 15.0, 0.0]]);
+}
+
+negative_control!(
+    path_lock_slide_follows,
+    "the slide's residual and slopes as main formed them",
+    expected = "the follow failed",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            failed_is_end: false,
+            ..main_slide()
+        };
+        probe::with(switches, || check_slide_follows_at(&[[0.0, 0.0]]));
+    }
+);
+
+// ── path_lock_slide_margins: the margins, measured where the follow still fails ─────────────────────────────────────
+//
+// D5's fix as first committed (the offset formed directly; five-point slopes at `ε^{1/3}·h`) still fails at the first
+// frames at 128 and 256 frames: the F-sweep's first nine rows were read before that run was stopped. At these Burrau
+// minimisers the window is `[0, 1]²` and the point sits at `u ≈ −0.03`, about 0.01 from `B`'s mass edge, where `μ₁` is
+// log-steep (`|∂B/∂u| ≈ 250`) and `B` barely moves along `v` (`|∂B/∂v| ≈ 0.09`): `JᵀJ`'s conditioning ≈ 1e-7. So the
+// margins are measured directly, not by counting stops, at six frames where the follow fails now (the frame's `s` and
+// the last converged point before it, under the current slide). Predictions, written before the run:
+//
+// - **M1, the optimality floor:** the frame's solve from the last point with tolerance 0 stops (its least optimality)
+//   within 3× of `1e-8` (3e-9 to 3e-8): the solve is precision-limited, not lost.
+// - **M2, the polish's acceptance:** `lock_solve::polish` accepts a step where `‖Jᵀr‖²` falls, while convergence is
+//   judged on the scale-invariant `‖P r‖² = gᵀ(JᵀJ)⁻¹g`; with columns 2000× apart, `‖Jᵀr‖²` is the steep column's and
+//   its rounding hides the weak one. With the polish accepting where `‖P r‖²` falls instead (one variable), if this is
+//   the cause the floor falls at least 10× at every point.
+// - **M3, the scatter:** solves of the frame from seeds `10⁻⁶·h` apart (and from the restart rule's point) converge to
+//   points spread by more than the continuity test's floor, `10⁻⁷·h`, where the follow ended: the test reads scatter as
+//   travel.
+
+/// The six frames: pin, frame count.
+#[cfg(feature = "controls")]
+const MARGIN_CASES: [([f64; 2], usize); 6] = [
+    ([0.0, 0.0], 64),
+    ([0.0, 0.0], 256),
+    ([1.0 / 15.0, 0.0], 128),
+    ([2.0 / 15.0, 0.0], 64),
+    ([3.0 / 15.0, 0.0], 64),
+    ([6.0 / 15.0, 0.0], 64),
+];
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "about a minute: cargo test -p engine --features controls --test path_lock -- path_lock_slide_margins --exact --include-ignored --nocapture"]
+fn path_lock_slide_margins() {
+    measure_margins(&MARGIN_CASES, true);
+}
+
+/// The margins at `cases`, the slide's solves logged where `logged` (the control's switch: with no log, there is no
+/// failed follow to measure at).
+#[cfg(feature = "controls")]
+fn measure_margins(cases: &[([f64; 2], usize)], logged: bool) {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let h = b.sim.chart.window.half[0]
+        .abs()
+        .max(b.sim.chart.window.half[1].abs());
+    let mut read = 0;
+    for &(at, frames) in cases {
+        let a = try_locked_mixed(home(), (at[0], at[1])).expect("a lock");
+        let anchor_ = a.anchor.expect("an anchor");
+        let (out, log) = probe::with(Switches::default(), || {
+            anchor::slide(&b, &burrau, pin(&a), &anchor_, frames)
+        });
+        let log = match logged {
+            true => log,
+            false => Vec::new(),
+        };
+        let Some(k) = log
+            .iter()
+            .position(|x| x.what == "follow" && !x.report.converged())
+        else {
+            println!(
+                "path_lock_slide_margins: ({:.4}, {:.4}) at {frames}: no failed follow ({:?})",
+                at[0],
+                at[1],
+                out.map(|t| t.ended)
+            );
+            continue;
+        };
+        let failed = log[k];
+        let prev = log[..k]
+            .iter()
+            .rev()
+            .find(|x| matches!(x.what, "follow" | "slide first") && x.report.converged())
+            .expect("a converged frame before it");
+        let (s, x) = (failed.s, prev.report.x);
+        let frame = |sw: Switches, seed: [f64; 2], at_s: f64| {
+            probe::with(sw, || {
+                anchor::slide_frame(&b, &burrau, pin(&a), &anchor_, at_s, seed)
+            })
+            .0
+        };
+        let floor = Switches {
+            target: Some(0.0),
+            optimality: Some(0.0),
+            ..Switches::default()
+        };
+        let m1 = frame(floor, x, s);
+        let m2 = frame(
+            Switches {
+                polish_projected: true,
+                ..floor
+            },
+            x,
+            s,
+        );
+        let spread = |at_s: f64| {
+            let seeds = [
+                x,
+                [x[0] + 1e-6 * h, x[1]],
+                [x[0], x[1] + 1e-6 * h],
+                [x[0] - 1e-6 * h, x[1] - 1e-6 * h],
+            ];
+            let got: Vec<[f64; 2]> = seeds
+                .iter()
+                .map(|&seed| frame(Switches::default(), seed, at_s))
+                .filter(|r| r.converged())
+                .map(|r| r.x)
+                .collect();
+            let mut d = 0.0f64;
+            for p in &got {
+                for q in &got {
+                    d = d.max(((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2)).sqrt());
+                }
+            }
+            (got.len(), d / h)
+        };
+        let (n_prev, d_prev) = spread(prev.s);
+        let (n_s, d_s) = spread(s);
+        println!(
+            "path_lock_slide_margins: ({:.4}, {:.4}) at {frames}, s = {s:.6} ({:?}, opt {:.2e}, cond {:.2e}): M1 floor {:.2e} ({:?}, it {}); M2 floor {:.2e} ({:?}, it {}); M3 spread/h at the last frame {d_prev:.2e} ({n_prev} of 4 converged), at s {d_s:.2e} ({n_s} of 4); the travel/h of the last frame {:.2e}; the continuity floor/h 1e-7",
+            at[0],
+            at[1],
+            failed.report.status,
+            failed.report.optimality,
+            failed.report.conditioning,
+            m1.optimality,
+            m1.status,
+            m1.iterations,
+            m2.optimality,
+            m2.status,
+            m2.iterations,
+            prev.report.travel / h,
+        );
+        read += 1;
+    }
+    assert!(
+        read > 0,
+        "no failed follow to measure at any of the six frames"
+    );
+}
+
+negative_control!(
+    path_lock_slide_margins,
+    "the slide's solves not logged, at (0, 0) at 64 frames, where its follow fails: nothing to measure",
+    expected = "no failed follow to measure",
+    measure_margins(&MARGIN_CASES[..1], false)
+);

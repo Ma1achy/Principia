@@ -165,6 +165,10 @@ pub struct Spec<R> {
     /// termination test catches that hang. Per call, so tests running beside it are untouched.
     #[cfg(feature = "controls")]
     pub unguarded: bool,
+    /// Under the `controls` feature only: `true` accepts a polishing step where `‖P r‖² = gᵀ(JᵀJ)⁻¹g` falls, in place
+    /// of `‖Jᵀr‖²`, a diagnostic's one variable changed. Per call.
+    #[cfg(feature = "controls")]
+    pub polish_projected: bool,
 }
 
 impl<R> Spec<R> {
@@ -186,6 +190,8 @@ impl<R> Spec<R> {
             damping,
             #[cfg(feature = "controls")]
             unguarded: false,
+            #[cfg(feature = "controls")]
+            polish_projected: false,
         }
     }
 }
@@ -452,12 +458,19 @@ fn polish<R: Real + Float, const N: usize, M: Map<R, N>>(
     p: &Point<R>,
     h: [R; 3],
     evaluations: &mut u32,
+    #[cfg(feature = "controls")] scaled: bool,
 ) -> Option<Point<R>> {
+    #[cfg(feature = "controls")]
+    let falls = |q: &Point<R>| match scaled {
+        true => projected(q) < projected(p),
+        false => gradient_squared(q) < gradient_squared(p),
+    };
+    #[cfg(not(feature = "controls"))]
+    let falls = |q: &Point<R>| gradient_squared(q) < gradient_squared(p);
     let mut attempt = |m: [R; 3]| {
         let delta = step(m, R::default(), p.g)?;
         *evaluations += 1;
-        evaluate(map, y, w, [p.x[0] + delta[0], p.x[1] + delta[1]])
-            .filter(|q| gradient_squared(q) < gradient_squared(p))
+        evaluate(map, y, w, [p.x[0] + delta[0], p.x[1] + delta[1]]).filter(|q| falls(q))
     };
     attempt(h).or_else(|| if h == p.a { None } else { attempt(p.a) })
 }
@@ -609,7 +622,16 @@ where
             if mu > ceiling || (guarded && !finite(mu)) {
                 // After a polishing step μ starts again from its floor, so where the cost can be resolved again
                 // the next step is a damped one, accepted on the cost.
-                let polished = polish(map, y, w, &p, h, &mut evaluations);
+                let polished = polish(
+                    map,
+                    y,
+                    w,
+                    &p,
+                    h,
+                    &mut evaluations,
+                    #[cfg(feature = "controls")]
+                    spec.polish_projected,
+                );
                 if polished.is_some() {
                     mu = floor;
                 }
