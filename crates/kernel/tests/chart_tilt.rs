@@ -1305,7 +1305,7 @@ fn spherical(s: &TiltSpec) -> Tilted<ShapeSphere<f64>, f64> {
 }
 
 /// Whether the pixel at `(u, v)` is counted: by [`Tilted::pixel`], or under `old` by the pole-map rule alone, with
-/// no lattice, which takes a repeat past θ's period iff `N_a = 0` and over a pole iff `N_a = N_b = 0`, and no lattice.
+/// no lattice, which takes a repeat past θ's period iff `N_a = 0` and over a pole iff `N_a = N_b = 0`.
 fn counted(view: &Tilted<ShapeSphere<f64>, f64>, u: f64, v: f64, old: bool) -> bool {
     if old {
         let [a, b] = view.at(u, v).0;
@@ -2030,8 +2030,8 @@ fn tilt_every_chart_maps_agree() {
     assert!(!spec(1.0, 0.0, TiltMap::Sheet, 2, 2).untilted());
 }
 
-/// Rodrigues' rotation by `m` about `k = (τ₂ e_a − τ₁ e_b)/m`, written out here independently of the kernel, at
-/// the angles as passed (no wrap).
+/// Rodrigues' rotation by `m` about `k = (τ₂ e_a − τ₁ e_b)/m`, written out here from the spec, independently of the
+/// kernel, at the angles as passed (no wrap).
 fn rodrigues(t1: f64, t2: f64) -> [[f64; 4]; 2] {
     let m = Float::sqrt(t1 * t1 + t2 * t2);
     let (sm, cm) = sc(m);

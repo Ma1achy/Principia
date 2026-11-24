@@ -10,7 +10,7 @@
 //! - `mirror_step_baseline_write_saved` (ignored): writes the file, once, on the baseline commit.
 //! - `saved_chart_converted_against_baseline`: each saved chart's words, the old version, loaded and converted from
 //!   `sigmoid_beta` (`Saved::load`, unpinned), its view decoded at every recorded pixel under the periodic link,
-//!   against the baseline's state within `ε_phys`, the calibrated physical-units round-trip tolerance, in `‖·‖_phys`;
+//!   against the baseline's state within `ε_phys`, the proposed physical-units round-trip tolerance, in `‖·‖_phys`;
 //!   the count bit for bit printed. Control: the charts converted from `tanh_beta` fail.
 
 use std::path::{Path, PathBuf};

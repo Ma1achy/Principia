@@ -111,8 +111,8 @@ fn state_finite<R: Q>(d: &Decoded<R>) -> bool {
         .all(|x| x.is_finite())
 }
 
-/// The warp sets: `K_max`, `γ_K` the register's (the values the charts ship with), and the
-/// edge set `γ_K = 1` (chart_reference §2.1, `γ_K ≥ 1`).
+/// The warp sets: `K_max`, `γ_K` the register's (proposed, not yet calibrated: the values the charts ship with), and
+/// the edge set `γ_K = 1` (chart_reference §2.1, `γ_K ≥ 1`).
 fn warp_sets() -> [(f64, f64); 2] {
     [(K_MAX.number(), GAMMA_K.number()), (K_MAX.number(), 1.0)]
 }

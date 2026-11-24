@@ -27,8 +27,8 @@
 //!   `ν*` is the span's edge exactly, flagged.
 //!
 //! **Tolerances.** The curve tolerance is `k·ε_R` with `k` read from the calibration fixture
-//! `fixtures/gates/curve_projection/measurement.toml` (provisional until the M2 gate); physical round trips are held
-//! to `ε_phys` (provisional until the M2 gate) in Part 4's `‖·‖_phys`. The closed
+//! `fixtures/gates/curve_projection/measurement.toml` (provisional); physical round trips are held to `ε_phys`
+//! (provisional) in Part 4's `‖·‖_phys`. The closed
 //! form's scalars (`θ`, `ν` and the coupling, each O(1) and Lipschitz in the positions at O(1)) are held to `ε_phys`
 //! too. The brute-force comparison allows only the rounding of one `d²` evaluation, 16 `ε` relative.
 //!
