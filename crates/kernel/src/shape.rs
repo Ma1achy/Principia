@@ -10,8 +10,10 @@
 //! first exit adds nothing and `θ̃` counts from the exit longitude. `r_pole` is a calibration, so
 //! it is passed in, as a sim-key value, never a constant here.
 //!
-//! **The branch inputs** (gpu_determinism_note, "The discipline", rules 1, 2 and 6). Two floats decide a branch
-//! here, each built in a fixed form so that every backend takes the same path:
+//! **The branch inputs** (gpu_determinism_note, "The discipline", rules 1, 2 and 6). The pole disc's test has two
+//! forms, and only the march's, on `Wide`s, is built so that every backend takes the same path: the float form's
+//! explicit `fma` is not fused on every backend (CI's lavapipe rounds the product, then the add), so the march never
+//! branches on it. With `wrap`'s `d`, the branch inputs are:
 //! - **The disc's squared radius**, [`DiscInput`]: `ρ²_I` against `r_pole²·I²`, `r_pole² = r_pole·r_pole` (one
 //!   multiply), strict `<`, so a point at exactly `r_pole` is outside ([`in_disc`]). The test is homogeneous in the
 //!   point, so the kernel decides it on the point scaled by `M₀₁ = m₀ + m₁`, built from the positions and masses by
@@ -168,8 +170,9 @@ pub struct DiscInput<R> {
     pub i2: R,
 }
 
-/// The disc input of the configuration `r` with masses `m`, the shape point scaled by `M₀₁`, in its fixed form: no
-/// division, no `sqrt`, every sum of products an explicit `fma` (the module's list).
+/// The disc input of the configuration `r` with masses `m`, the shape point scaled by `M₀₁`, in its float form: no
+/// division, no `sqrt`, every sum of products an explicit `fma` (the module's list). Not the same on every backend, so
+/// for the synthetic paths only; the march decides with [`config_in_disc`].
 #[inline]
 pub fn disc_input<R: Real + Float>(r: [[R; 2]; 3], m: [R; 3]) -> DiscInput<R> {
     let two = R::one() + R::one();

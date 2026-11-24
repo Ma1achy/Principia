@@ -116,7 +116,7 @@
 //!   a state whose `Wide` terms are exact gets its exact sign and its exact zero. `C` moves no coordinate for it (no
 //!   mirror): only `crate::encode::blocks::beta_at`'s selects read it, and they give `atan2` operands of the decided
 //!   signs. Don't compare the rotated floats `λ̃_x`, `λ̃_y` ([`lambda_t_axis`]: an `fma`, a division and a `√`)
-//!   with 0 for `β`: their signs at a collinear state differ between backends.
+//!   with 0 for `β`: their signs at a collinear state can differ between backends.
 //!
 //! The cross-backend claim is for identical inputs only (PIT-10). A state with a subnormal coordinate is itself read
 //! differently by a flushing GPU, before `C` runs; on a backend that keeps subnormals, the CPU's, such a coordinate is
