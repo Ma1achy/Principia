@@ -1,5 +1,5 @@
-//! The chart-path object's own properties (TASK-M2-61; design § 17.4, § 17.5, § 17.9; the chart-space model's Theorems
-//! 4 and 5; export contract Part 3), each against the direct operation's bits:
+//! The chart-path object's own properties (design § 17.4, § 17.5, § 17.9; the chart-space model's Theorems 4 and 5;
+//! export contract Part 3), each against the direct operation's bits:
 //!
 //! - `path_ends_bitwise`: a segment's frame at `s = 0` is `A` and at `s = 1` is `B`, the stored views, bit for bit, `−0`
 //!   is `+0`, and NaN or `s` outside `[0, 1]` is refused. Control: an end through the family's arithmetic, `from + 1·(to
@@ -400,8 +400,8 @@ fn check_timing(show: Shown) {
             "{name}: easing moved B"
         );
     }
-    // The segment's timing is the one representation a live path, a saved path and an export read (R-901): it reads
-    // back bit for bit. No saved-path or export format exists in stage 1 to read it from yet.
+    // The segment's timing is the one representation a live path, a saved path and an export read: it reads back
+    // bit for bit. No saved-path or export format exists in stage 1 to read it from yet.
     let timing = Timing {
         easing: easing.clone(),
         retime: None,
@@ -743,7 +743,7 @@ negative_control!(
 
 // ── path_fence_not_built ───────────────────────────────────────────────────────────────────────────────────────────
 //
-// Stage 1's fence (R-863): a family stage 1 types and does not build refuses every frame between its ends. Read from a
+// Stage 1's fence: a family stage 1 types and does not build refuses every frame between its ends. Read from a
 // record, since no constructor builds one. Control: the blend's frame taken as `A`, as a cut's is.
 
 /// The frame a record names between its ends.
@@ -755,8 +755,8 @@ fn named(r: &FrameRecord) -> Result<View, PathError> {
 
 fn check_fence(between: Between) {
     let pan = Segment::pan(&view(), 0.25, -0.125).unwrap();
-    // R-474's latent tilt left the fence with TASK-M2-64, which builds its evaluator (`chart_path_consolidate`), and
-    // the state blend with TASK-M2-90 (`blend_chart`).
+    // The latent tilt and the state blend are built, so not fenced: `chart_path_consolidate` and `blend_chart` test
+    // them.
     for family in [
         engine::path::Family::WindowEase,
         engine::path::Family::PlaneRotation,
@@ -852,9 +852,9 @@ negative_control!(
 
 // ── path_jump_under_lock_labelled ──────────────────────────────────────────────────────────────────────────────────
 //
-// A chart switch from a locked view is a cut labelled `JumpUnderLock`, its non-conformance with R-849 stated until
-// stage 2's sliding anchor; from a free view it is labelled `ChartSwitch`. Control: the switch from a locked view
-// taken from its free copy.
+// A chart switch from a locked view is a cut labelled `JumpUnderLock`, its non-conformance with the lock's rule (under
+// the lock a chart path never jumps: its anchor slides to the nearest point) stated until stage 2's sliding anchor;
+// from a free view it is labelled `ChartSwitch`. Control: the switch from a locked view taken from its free copy.
 
 /// The view a switch starts from, given the locked one.
 type StartFrom = fn(&View) -> View;

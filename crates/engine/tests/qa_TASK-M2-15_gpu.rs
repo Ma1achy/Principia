@@ -1,29 +1,27 @@
-//! QA tests for TASK-M2-15 on the GPU, written from the requirements: encode's selects and notices at the poles and on
-//! the `−x` half-axis, GPU-f32 against the same source on CPU-f32 and CPU-f64, on identical inputs. The CPU side is
-//! `kernel`'s `qa_TASK-M2-15`.
-//! - REQ-DEC-014 (`encode_qa_m215_gpu_poles`): `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components: no
-//!   NaN, two dispatches bit-identical, the notices identical to CPU-f32's and CPU-f64's, `lookup_clamped` set, `β`
-//!   R-437's `+0` at `λ̃ = 0`, and `α`, `β` within f32 rounding of CPU-f64's.
-//! - REQ-ENC-007 (`encode_qa_m215_gpu_half_axis`): `β` on given operands (R-437, R-438): `(x < 0, ±0)` gives π̂
-//!   (f32's image of π, rounded toward zero, R-417) with CPU-f32's bits, `(±0, ±0)` gives `+0`; the encode is signed,
-//!   so `β ∈ [0, π̂]` on and above the `x`-axis and `β ∈ [2π̂ − π, 2π̂]` below it (π here f32's nearest, `atan2`'s
-//!   largest value), and `β(x, −y)` is `β(x, y)`'s mirror image, `2π̂ − β(x, y)`, within 4 f32 eps of `2π̂`, the CPU
-//!   side's bound (also `encode_qa_m215_gpu_mirror_image`, whose control is the unsigned encode); and collinear
-//!   states with body 2 on the `−x` side, `λ̃_y = ±0`, encode on the GPU with `β = π̂` and no `lookup_clamped`, the
-//!   circle having no edge there.
+//! QA tests for the encode on the GPU: encode's selects and notices at the poles and on the `−x` half-axis, GPU-f32
+//! against the same source on CPU-f32 and CPU-f64, on identical inputs. The CPU side is `kernel`'s `qa_TASK-M2-15`.
+//! - `encode_qa_m215_gpu_poles`: `‖λ̃‖ = 0` and `‖ρ̃‖ = 0` exactly, every sign of the zero components: no NaN, two
+//!   dispatches bit-identical, the notices identical to CPU-f32's and CPU-f64's, `lookup_clamped` set, `β` `+0` at
+//!   `λ̃ = 0`, and `α`, `β` within f32 rounding of CPU-f64's.
+//! - `encode_qa_m215_gpu_half_axis`: `β` on given operands: `(x < 0, ±0)` gives π̂ (f32's image of π, rounded toward
+//!   zero) with CPU-f32's bits, `(±0, ±0)` gives `+0`; the encode is signed, so `β ∈ [0, π̂]` on and above the `x`-axis
+//!   and `β ∈ [2π̂ − π, 2π̂]` below it (π here f32's nearest, `atan2`'s largest value), and `β(x, −y)` is `β(x, y)`'s
+//!   mirror image, `2π̂ − β(x, y)`, within 4 f32 eps of `2π̂`, the CPU side's bound (also
+//!   `encode_qa_m215_gpu_mirror_image`, whose control is the unsigned encode); and collinear states with body 2 on the
+//!   `−x` side, `λ̃_y = ±0`, encode on the GPU with `β = π̂` and no `lookup_clamped`, the circle having no edge there.
 //!
 //! The test names carry `encode_` so CI's Metal and lavapipe steps select them. The binary reads
 //! `target/spirv/kernel.wgsl`, which `cargo xtask build-kernel` writes. Operands are normal or zero: a subnormal may be
 //! flushed on the GPU, which the requirements do not cover.
 //!
-//! **Tolerances** (applied per R-369, test decisions): an angle `atan2` computes compares within WGSL's stated accuracy
-//! for `atan2`, 4096 ULP of an f32 result ([`ATAN2_TOL`]), so a backend that meets the WGSL spec passes, Metal and
-//! lavapipe alike; the selects (`+0`, `π̂`) and the notices compare exactly.
+//! **Tolerances**: an angle `atan2` computes compares within WGSL's stated accuracy for `atan2`, 4096 ULP of an f32
+//! result ([`ATAN2_TOL`]), so a backend that meets the WGSL spec passes, Metal and lavapipe alike; the selects (`+0`,
+//! `π̂`) and the notices compare exactly.
 //!
 //! **Domain** (pitfalls §10): encode alone, on states held fixed; no trajectory. **PIT-10:** each state is one
 //! `Ic<f32>` handed to every backend.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::f64::consts::{FRAC_PI_2, PI};
 use std::path::Path;
@@ -53,7 +51,7 @@ fn gpu_beta(h: &GpuHarness, pairs: &[[f32; 2]]) -> Vec<f32> {
     beta_gpu(h.device(), h.queue(), &wgsl(), pairs, FastMath::default()).expect("the β dispatch")
 }
 
-/// f32's π̂: the image of π rounded toward zero (R-417).
+/// f32's π̂: the image of π rounded toward zero.
 fn pi_hat() -> f32 {
     let nearest = PI as f32;
     if f64::from(nearest) > PI {
@@ -218,9 +216,9 @@ negative_control!(
 );
 
 /// Just off the `−x` half-axis, `λ̃_y = ±|λ̃_x|·2⁻ᵏ`: the true `β` is below π by about `2⁻ᵏ`, under half an f32 ulp of
-/// π for `k ≥ 23`, so an `atan2` that rounds to nearest returns f32's nearest π, above π̂; `β ∈ [0, π̂]` (REQ-ENC-007,
-/// R-417, R-438) must hold there too. Each pair comes with its mirror image, below the axis, whose `β` is `2π̂` less
-/// `atan2`'s value: at least `2π̂` less f32's nearest π, one step under π̂.
+/// π for `k ≥ 23`, so an `atan2` that rounds to nearest returns f32's nearest π, above π̂; `β ∈ [0, π̂]` must hold
+/// there too. Each pair comes with its mirror image, below the axis, whose `β` is `2π̂` less `atan2`'s value: at least
+/// `2π̂` less f32's nearest π, one step under π̂.
 fn near_half_axis() -> Vec<[f32; 2]> {
     let mut v = Vec::new();
     for e in [-6, -1, 0, 3] {

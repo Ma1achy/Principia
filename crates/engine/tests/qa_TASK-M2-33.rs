@@ -1,14 +1,14 @@
-//! QA tests for TASK-M2-33 (REQ-GEN-036; R-449, R-22; dd_generation_root §3.8), written from the requirement, not
-//! from the implementation:
+//! QA tests for the export's index bases (dd_generation_root §3.8), written from the requirement, not from the
+//! implementation:
 //!
 //! - The export decoder keeps the internal 0-based ids: a sample packed with a collision of bodies `a` and `b` exports
-//!   `detail` = the pair opposite the third body, `3 − a − b` (R-22, worked here from the rule, not the ledger's pair
+//!   `detail` = the pair opposite the third body, `3 − a − b` (worked here from the rule, not the ledger's pair
 //!   map), so bodies 0 and 1 write 2; an escape of body `k` exports `k`, body 0 writing 0; `dmin_pair` exports its pair
 //!   id and its unset 3 (`qa_m2_33_export_ids_*`).
 //! - The generated decoder states the base of each body- or pair-indexed field §3.8 names (`detail` under escape and
 //!   collision, `dmin_pair`, `m0 m1 m2`, and the per-body vectors), in its schema and in the member's doc, with
-//!   R-449's words: "body index, 0-based" and "pair id, 0-based; pair k is the side opposite body k"; `detail` both
-//!   (`qa_m2_33_export_header_*`).
+//!   the required words: "body index, 0-based" and "pair id, 0-based; pair k is the side opposite body k"; `detail`
+//!   both (`qa_m2_33_export_header_*`).
 //! - The header is generated from the ledger, not hand-written: the checked-in decoder is byte-for-byte what the
 //!   ledger's generator emits now (`qa_m2_33_export_generated_*`).
 //! - A ledger entry marked body- or pair-indexed (its §3.8 index-base key) without the text fails generation, naming
@@ -18,7 +18,7 @@
 //!   new name, and any other per-body or per-pair field marked indexed without the text is refused too
 //!   (`qa_m2_33_export_key_*`).
 //!
-//! Each test has its negative control (R-176).
+//! Each test has its negative control.
 // The file name `qa_TASK-M2-33` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -28,7 +28,7 @@ use ledger::gen::{export, generate, GenError};
 use ledger::schema::{EntryBuilder, IndexBase, Indexed, Ledger, Location};
 use validation::negative_control;
 
-/// R-449's words.
+/// The words the decoder must state for each base.
 const BODY: &str = "body index, 0-based";
 const PAIR: &str = "pair id, 0-based; pair k is the side opposite body k";
 
@@ -55,7 +55,7 @@ fn export_of(state: u32, detail: u32, dmin_pair: u32) -> Decoded {
     decode(&s, [0; 4], &ICDescriptor::default(), &params)
 }
 
-/// R-22: the pair of bodies `a` and `b` is the side opposite the third body, so its id is the third body's index.
+/// The pair of bodies `a` and `b` is the side opposite the third body, so its id is the third body's index.
 fn pair_id(a: u32, b: u32) -> u32 {
     3 - a - b
 }
@@ -117,7 +117,7 @@ negative_control!(
 
 // ── The header states the base ──────────────────────────────────────────────────────────────────────────────────────
 
-/// §3.8's body- and pair-indexed fields the decoder holds, with the bases R-449 asks of each.
+/// §3.8's body- and pair-indexed fields the decoder holds, with the bases each must state.
 const INDEXED: [(&str, &[&str]); 9] = [
     ("detail", &[BODY, PAIR]),
     ("dmin_pair", &[PAIR]),
@@ -318,11 +318,11 @@ negative_control!(
 
 // ── The check follows the entry's key ───────────────────────────────────────────────────────────────────────────────
 
-/// REQ-GEN-036's "any per-body or per-pair field": the check reads each entry's own key. `p_sh` renamed `qa_p_sh_moved`
+/// "Any per-body or per-pair field": the check reads each entry's own key. `p_sh` renamed `qa_p_sh_moved`
 /// (and so read by the derived fields that read it) keeps its key: with its text, renaming adds no refusal naming it; with a text that drops "0-based", a refusal names
 /// it under the new name. A field no list names, `q_mass`, marked body-indexed without the text is refused; marked
-/// with R-449's words it generates. `detail`'s key narrowed to a body index while its text states only the pair base
-/// is refused (the kind decides which bases the text must state).
+/// with the required words it generates. `detail`'s key narrowed to a body index while its text states only the pair
+/// base is refused (the kind decides which bases the text must state).
 fn check_key(gen: impl Fn(&Ledger) -> Result<(), GenError>) {
     let renamed = |text: Option<&'static str>| {
         let mut l = layout_with("p_sh", |e| {

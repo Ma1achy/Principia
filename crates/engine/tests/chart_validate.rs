@@ -1,5 +1,4 @@
-//! The CPU validation pass's view-level check (`engine::chart_validate`; chart_reference §0.6, §5.2; dd_decoder §3.7;
-//! R-25, R-124; REQ-CHART-031):
+//! The CPU validation pass's view-level check (`engine::chart_validate`; chart_reference §0.6, §5.2; dd_decoder §3.7):
 //! - `forbids_energy_normalisation_lz_e`: a view combining `(L_z, E)` with an `E*` override is refused, for `Some(0)`
 //!   and `Some(−0)` as for any other `Some(E*)`, finite or not, and the refusal names the flag; `None` passes.
 //! - `forbids_energy_normalisation_lz_k`: the same for `(L_z, K)`.
@@ -69,7 +68,7 @@ fn forbids_energy_normalisation_lz_e() {
     check_forbidding(validate_view, &InvariantLE(invariant()));
 }
 
-/// A pass that reads `Some(0)` as "off", the R-25 hazard.
+/// A pass that reads `Some(0)` as "off". It is wrong: `E* = 0` is a real target, and only `None` is off.
 #[cfg(feature = "controls")]
 fn zero_is_off<C: Chart>(chart: &C, e: Option<f64>) -> Result<(), Refusal> {
     match e {

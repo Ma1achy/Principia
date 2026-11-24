@@ -1,8 +1,8 @@
-//! The samples' chart classification, CPU-side (REQ-COL-102; colour_composition §3; TASK-M2-32): `chart_class`
-//! classifies a chart point inside `[0,1]²`, its edges included, as forbidden where `validate` returns anything but
-//! `Valid` or `Φ` (`Chart::map`) fails to evaluate, and refuses a point outside the square, the extension types' (TASK-M8-05);
-//! `fill` writes each sample's classification into a synthetic set, whose bytes carry it as one bit per sample
-//! (`render::bind::chart_words`). Each test registers its negative control (R-176).
+//! The samples' chart classification, CPU-side (colour_composition §3): `chart_class` classifies a chart point inside
+//! `[0,1]²`, its edges included, as forbidden where `validate` returns anything but `Valid` or `Φ` (`Chart::map`) fails
+//! to evaluate, and refuses a point outside the square, the extension types'; `fill` writes each sample's
+//! classification into a synthetic set, whose bytes carry it as one bit per sample (`render::bind::chart_words`). Each
+//! test registers its negative control.
 
 use engine::chart_class::{fill, forbidden};
 use engine::synthetic::Synthetic;
@@ -50,8 +50,9 @@ fn walled(z0: [f64; 8], result: ValidationResult) -> Walled {
     }
 }
 
-/// Checks `classify` against REQ-COL-102 on the walled chart: inside the square, its edges included, forbidden exactly
-/// past the wall, for each non-`Valid` result, and wherever `Φ` gives a non-finite component; `None` just outside.
+/// Checks `classify` against colour_composition §3 on the walled chart: inside the square, its edges included,
+/// forbidden exactly past the wall, for each non-`Valid` result, and wherever `Φ` gives a non-finite component; `None`
+/// just outside.
 fn check(classify: &dyn Fn(&Walled, f64, f64) -> Option<bool>) {
     let open = walled([0.0; 8], REJECT);
     for (u, v) in [(0.0, 0.0), (0.0, 1.0), (0.5, 0.5), (0.25, 0.0), (0.25, 1.0)] {

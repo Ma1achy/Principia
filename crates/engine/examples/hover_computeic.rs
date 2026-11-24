@@ -1,4 +1,4 @@
-//! `cargo xtask bench hover-computeic` (TASK-M3-20): one hover trajectory, `computeIC` at the horizon `t = 50` on one
+//! `cargo xtask bench hover-computeic`: one hover trajectory, `computeIC` at the horizon `t = 50` on one
 //! core, timed against a 60 fps frame, 16.7 ms. A measurement: it reports, and never fails on the number.
 //!
 //! **Which IC.** The plan is unclear here: "a typical IC" is not defined. Chose the IC a hover meets first: the app's

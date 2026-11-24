@@ -1,4 +1,4 @@
-//! The trajectory interface's tests re-run with the default integrator as provider (TASK-M3-67): Heggie × RK4 at f32,
+//! The trajectory interface's tests re-run with the default integrator as provider: Heggie × RK4 at f32,
 //! the field's own march, on the fixed sync quantum `Δ_sync = 1/8` ([`Integrated`]). Every test is named
 //! `trajectory_interface_integrator_*`, each pass criterion written here before its run:
 //! - `_rows_read_the_march`: a row reads the provider's state bit for bit; row 0 is the start; row `k` is the state the

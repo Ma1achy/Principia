@@ -1,8 +1,7 @@
 //! The kernel's own f32 `atan2` on the GPU (`kernel::arctan`, `kernel::stage::encode::arctangent`,
-//! `engine::decode_dispatch::arctan2_gpu`; RQ-628, decided by the orchestrator per R-369, option (a)): the kernel's f32
-//! build, `target/spirv/kernel.wgsl`, dispatched natively under the default fast-math setting, Metal's fast-math on
-//! (R-297), as the backend compiles it. CI runs this file in the `gpu-kernel` job, after `cargo xtask build-kernel`, on
-//! lavapipe and Metal.
+//! `engine::decode_dispatch::arctan2_gpu`): the kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively
+//! under the default fast-math setting, Metal's fast-math on, as the backend compiles it. CI runs this file in the
+//! `gpu-kernel` job, after `cargo xtask build-kernel`, on lavapipe and Metal.
 //!
 //! The function is integer arithmetic alone (`kernel::arctan`'s note), so the GPU's result is the CPU's, bit for bit, and
 //! the CPU's sweeps (`crates/kernel/tests/arctan.rs`) hold for it. Each test checks that identity, and prints the GPU's
@@ -10,7 +9,7 @@
 //! - `arctan_gpu_is_cpu`: the special values' pairs, every 1021st `t ∈ [0, 1]` of the reduced sweep, 2¹⁸ plane pairs
 //!   and the round trip's `(sin α, cos α)` for every 1021st `α ∈ [0, π/2]`, the decode's f32 `sin` and `cos` the CPU's.
 //! - `arctan_gpu_exhaustive`, ignored: every f32 `t ∈ [0, 1]` and every round trip, in dispatches of 65535 × 64
-//!   pairs, minutes on Metal (applied per R-369: too slow for CI; run locally with `cargo test -p engine --test
+//!   pairs, minutes on Metal (too slow for CI; run locally with `cargo test -p engine --test
 //!   arctan_gpu -- --ignored`).
 
 use std::path::{Path, PathBuf};

@@ -1,25 +1,25 @@
 //! The lock (chart_decoder_contract Part 4, "The lock (projective microscope)" and "The lock's construction, defined";
-//! render_gui_spec §G4; R-69; TASK-M2-23): each gesture's typed `SetField` edits, applied through the real state store,
-//! and every pixel read through the kernel's own chart maps and decode.
+//! render_gui_spec §G4): each gesture's typed `SetField` edits, applied through the real state store, and every pixel
+//! read through the kernel's own chart maps and decode.
 //!
-//! - `lock_set` (REQ-GUI-004): on the affine chart and on two nonlinear charts, the centre pixel's IC after the lock is
+//! - `lock_set`: on the affine chart and on two nonlinear charts, the centre pixel's IC after the lock is
 //!   the clicked pixel's, bit for bit, the nonlinear chart rebuilt on the post-lock `z₀`; a lock at a point `validate`
 //!   refuses sets nothing.
-//! - `lock_anchor_invariance` (REQ-GUI-005): a property under `validation::prop` (`CASES` = 256, REQ-VAL-151): random
+//! - `lock_anchor_invariance`: a property under `validation::prop` (`CASES` = 256): random
 //!   tilts, zooms and chart switches leave the centre IC bitwise constant; an excursion moves it, and snap-back
 //!   restores the stored anchor bitwise.
-//! - `lock_sliders` (REQ-GUI-006): a slider moved while locked is an excursion along its control, re-based on the
+//! - `lock_sliders`: a slider moved while locked is an excursion along its control, re-based on the
 //!   anchor; unlock leaves the free state the last locked one.
-//! - `lock_setfields` (REQ-GUI-007): every lock gesture emits undoable `SetField`s on `SimConfig`'s lock group and `z₀`,
+//! - `lock_setfields`: every lock gesture emits undoable `SetField`s on `SimConfig`'s lock group and `z₀`,
 //!   and on a nonlinear chart its window.
-//! - `lock_kernel_uniform_identical` (REQ-SYS-012): the kernel's uniform has no lock field, and a locked and a free
+//! - `lock_kernel_uniform_identical`: the kernel's uniform has no lock field, and a locked and a free
 //!   view of one plane give it bitwise; the GPU half is `lock_gpu.rs`.
-//! - `lock_infeasible_tilt` (REQ-CHART-010): a tilt of a locked `(L_z, E)` view past the parabola tags the pixels it
+//! - `lock_infeasible_tilt`: a tilt of a locked `(L_z, E)` view past the parabola tags the pixels it
 //!   carries out, and lock validation gives one notice: the switch to the latent chart, with a re-centre to the
-//!   centre's own nearest feasible point only where an excursion carried the centre out (R-593).
-//! - `curve_tilt_requires_lock` (REQ-CHART-007): a curve axis's tangent tilt is refused free, and locked it reads
+//!   centre's own nearest feasible point only where an excursion carried the centre out.
+//! - `curve_tilt_requires_lock`: a curve axis's tangent tilt is refused free, and locked it reads
 //!   `γ′(ν₀)` pulled back to the latent controls; it is refused, naming the controls, where a link's inverse clamps.
-//! - `lock_window_undo` (REQ-SYS-011; R-69, R-466; TASK-M2-21): a nonlinear chart's window is held in `SimConfig`'s
+//! - `lock_window_undo`: a nonlinear chart's window is held in `SimConfig`'s
 //!   chart group, and the lock's command, `z₀`, the lock group and the re-centred window sent under one history key, is
 //!   one history entry: one undo restores all three, and one redo sets them again.
 
@@ -167,7 +167,7 @@ fn tol() -> Tolerances {
     Tolerances::register(128.0 * f64::EPSILON)
 }
 
-// ---- lock_set (REQ-GUI-004) ----
+// ---- lock_set ----
 
 /// Locks the affine `plane` at `(s, t)` through the store with `lock`, and checks that the centre pixel's IC is the
 /// clicked pixel's, bit for bit, and the lock group's anchor is `z(s, t)`.
@@ -437,7 +437,7 @@ fn lk() -> InvariantLK<f64> {
     })
 }
 
-/// A lock at a chart point `validate` refuses sets nothing (R-469): the `(L_z, E)` chart's edge `s = 1` is a system,
+/// A lock at a chart point `validate` refuses sets nothing: the `(L_z, E)` chart's edge `s = 1` is a system,
 /// one float past it is not.
 #[test]
 fn lock_set_refuses_a_point_that_is_not_a_system() {
@@ -500,7 +500,7 @@ negative_control!(
     }
 );
 
-// ---- lock_anchor_invariance (REQ-GUI-005) ----
+// ---- lock_anchor_invariance ----
 
 /// `ê_k`.
 fn e(k: usize) -> Latent {
@@ -666,7 +666,7 @@ negative_control!(
     at_seed(anchor_preserving, |s| unlock(s).expect("locked"))
 );
 
-// ---- lock_sliders (REQ-GUI-006) ----
+// ---- lock_sliders ----
 
 /// Locks, moves each slider in `moves` through `mover`, checking each is an excursion along its control from the
 /// anchor, re-based on it; then unlocks and checks the free state is the last locked one.
@@ -749,7 +749,7 @@ negative_control!(
     })
 );
 
-// ---- lock_setfields (REQ-GUI-007) ----
+// ---- lock_setfields ----
 
 /// Each edit is an undoable `SimConfig` edit of `z₀`, the lock group or, on a nonlinear chart, the window, and the
 /// store records it.
@@ -798,8 +798,8 @@ fn lock_setfields() {
         z: [0.1; 8],
     };
     check_setfields(&recentre(&nearest));
-    // Undoable (R-69). The lock is one command, sent under one history key as one undo entry (gui_state_contract §2,
-    // R-466; `lock_window_undo`); sent here under none, it undoes edit by edit, and under a key the second undo finds
+    // Undoable. The lock is one command, sent under one history key as one undo entry (gui_state_contract §2;
+    // `lock_window_undo`); sent here under none, it undoes edit by edit, and under a key the second undo finds
     // nothing left of the lock.
     st.undo();
     st.undo();
@@ -832,7 +832,7 @@ negative_control!(
     }])
 );
 
-// ---- lock_kernel_uniform_identical (REQ-SYS-012) ----
+// ---- lock_kernel_uniform_identical ----
 
 /// The decode uniform's words for `chart`.
 fn uniform_bits(chart: &LatentChart<f32>) -> Vec<u32> {
@@ -916,7 +916,7 @@ negative_control!(
     }
 );
 
-// ---- lock_infeasible_tilt (REQ-CHART-010) ----
+// ---- lock_infeasible_tilt ----
 
 /// The `(L_z, E)` chart frozen at the hidden coordinate `z_α`, the rest of [`invariant_le`]'s.
 fn le_at(z_alpha: f64) -> InvariantLE<f64> {
@@ -927,8 +927,8 @@ fn le_at(z_alpha: f64) -> InvariantLE<f64> {
 
 /// The locked `(L_z, E)` view's pixels, its range mapped linearly: the anchor `(L₀, E₀)`, `n × n` pixels at window
 /// offsets `x, y ∈ [−1, 1]`, half-widths `(h_l, h_e)`, the horizontal axis tilted by `tau` degrees into the hidden
-/// `z_α`, `span` its units (R-473's single-angle rotation: `(a, d) = (cos τ·x, sin τ·x)`), and the centre moved by an
-/// excursion `ex` along `z_α`. `own` reads each pixel at its own `z_α`, as lock validation must; otherwise at the
+/// `z_α`, `span` its units (the tilt's single-angle rotation: `(a, d) = (cos τ·x, sin τ·x)`), and the centre moved by
+/// an excursion `ex` along `z_α`. `own` reads each pixel at its own `z_α`, as lock validation must; otherwise at the
 /// anchor's. Returns the pixels and the centre pixel's index.
 fn tilted_view(tau: f64, ex: f64, own: bool) -> (Vec<Pixel<InvariantLE<f64>>>, usize) {
     let anchor = invariant_le();
@@ -1021,7 +1021,7 @@ negative_control!(
     check_infeasible_tilt(false)
 );
 
-/// Checks the offer, `offer`, of a locked view (R-593): untilted, no notice; tilted, many pixels tagged and the centre
+/// Checks the offer, `offer`, of a locked view: untilted, no notice; tilted, many pixels tagged and the centre
 /// the anchor, one notice offering only the switch to the latent chart; tilted with an excursion that carries the
 /// centre out, one notice offering the re-centre to the centre's own nearest feasible point, a lock there.
 fn check_offer(offer: fn(&Report) -> Option<Notice>) {
@@ -1086,7 +1086,8 @@ negative_control!(
     "an offer of a tagged pixel's nearest point, not the centre's, re-centres a tilt whose centre is the anchor",
     expected = "a tilt alone, the centre the anchor, is not offered only the switch",
     {
-        /// The per-pixel offer R-593 refuses, as one notice: the first tagged pixel's nearest feasible point.
+        /// The per-pixel offer, which lock validation never makes, as one notice: the first tagged pixel's nearest
+        /// feasible point.
         fn first_tagged(report: &Report) -> Option<Notice> {
             let first = report.tags.iter().find_map(|t| match t {
                 Tag::Infeasible { nearest, .. } => Some(*nearest),
@@ -1235,7 +1236,7 @@ negative_control!(
     }
 );
 
-// ---- curve_tilt_requires_lock (REQ-CHART-007) ----
+// ---- curve_tilt_requires_lock ----
 
 /// `softmax(0, μ₁, μ₂)`, through the chart path's correctly rounded `exp`, as the engine's.
 fn softmax(mu1: f64, mu2: f64) -> [f64; 3] {
@@ -1507,8 +1508,7 @@ fn curve_tilt_requires_lock_refuses_a_saturated_control() {
         }),
         "a step past the clamp is not refused"
     );
-    // The configuration's links: `α` at 0 clamps; `β` at `π` does not, `periodic_beta` having no edge on the circle
-    // (R-865). Was: `β` at `π` clamped, under `sigmoid_beta`.
+    // The configuration's links: `α` at 0 clamps; `β` at `π` does not, `periodic_beta` having no edge on the circle.
     let flat = at_point!(
         CurvePoint {
             alpha: 0.0,
@@ -1617,13 +1617,12 @@ negative_control!(
     })
 );
 
-// ---- lock_window_undo (REQ-SYS-011; TASK-M2-21) ----
+// ---- lock_window_undo ----
 
 /// How a lock's command reaches the store.
 type Send = fn(&mut StateStore, [SetField; 3]);
 
-/// The command as the binding sends it: every edit in one frame under one fresh history key (gui_state_contract §2,
-/// R-466).
+/// The command as the binding sends it: every edit in one frame under one fresh history key (gui_state_contract §2).
 fn one_key(st: &mut StateStore, edits: [SetField; 3]) {
     for e in edits {
         st.set_field_under(e, HistoryKey(1));

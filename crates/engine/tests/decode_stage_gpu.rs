@@ -1,21 +1,20 @@
-//! The kernel's decode stage on the GPU (`kernel::stage::decode`, `engine::decode_dispatch`; TASK-M2-06), its f32 build,
+//! The kernel's decode stage on the GPU (`kernel::stage::decode`, `engine::decode_dispatch`), its f32 build,
 //! `target/spirv/kernel.wgsl`, dispatched natively through the compute entry point, read back and checked against the
 //! same source at f64 (`decode_only`). CI runs this file in the `gpu-kernel` job, after `cargo xtask build-kernel`.
 //! - `decode_stage_identities`: dd_decoder §5 tests 1–4 on the kernel's actual output, the `(m, r, p)` the integrator
-//!   reads, over the golden IC, fuzzed interiors and saturated controls (REQ-DEC-005).
+//!   reads, over the golden IC, fuzzed interiors and saturated controls.
 //! - `decode_uniforms_no_recompile`: editing `z₀`, `q₁`, `q₂` and a slice value changes the decode and creates no
-//!   pipeline (REQ-DEC-007).
-//! - `decode_stage_descriptor`: the GPU `ICDescriptor` against the f64 decode's, within REQ-DEC-043's factor; at the
-//!   poles, the GPU stores the bits the f64 decode does (REQ-TOOL-030, R-436).
+//!   pipeline.
+//! - `decode_stage_descriptor`: the GPU `ICDescriptor` against the f64 decode's, within the `decode-f32-eps` gate's
+//!   factor; at the poles, the GPU stores the bits the f64 decode does.
 //! - `decode_stage_rho_angle_signed_zero`: `ρ · λ = −0` exactly with `ρ × λ ≠ 0`: `rho_angle` is `±π/2` on CPU-f64,
-//!   CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `angle`'s select (pitfalls §11; REQ-TOOL-030).
-//! - `decode_stage_mode`: `DECODE_MODE` linearised writes nothing in the kernel and is refused by the host until M6
-//!   (REQ-DEC-007).
+//!   CPU-f32 and GPU-f32, Metal's `atan2(y, −0)` sign kept out by `angle`'s select (pitfalls §11).
+//! - `decode_stage_mode`: `DECODE_MODE` linearised writes nothing in the kernel and is refused by the host until M6.
 //! - `decode_only_sim_key`: `decode_only` is the stage's source at f64, from the chart's parameters widened, and only
 //!   the physics kernel decodes.
 //! - `decode_stage_tanh_range`: dd_generation_root §3.9's `tanh` operator as the GPU evaluates it
 //!   (`stage_decode_link_tanh`) stays in `[−1, 1]`, never NaN, at every f32 of `±[9, tanh_sat]`, where Metal's own
-//!   `tanh` returns 1 + 2⁻²³ at about 1.5% of them, and past the bound, where Metal's fails (R-72; REQ-DEC-047).
+//!   `tanh` returns 1 + 2⁻²³ at about 1.5% of them, and past the bound, where Metal's fails.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 
@@ -123,9 +122,9 @@ fn identity_batches() -> Vec<Batch> {
     b
 }
 
-// ── decode_stage_identities (REQ-DEC-005) ───────────────────────────────────────────────────────────────────────
+// ── decode_stage_identities ─────────────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-044's and REQ-DEC-045's proposals for test 1, in f32 eps (`kernel/tests/decode_blocks.rs`,
+/// The proposed bounds for test 1, in f32 eps (`kernel/tests/decode_blocks.rs`,
 /// `decode_join.rs`): `Σmᵢ − 1`; the CoM relative to `Σmᵢ‖rᵢ‖`; `Σpᵢ` relative to `Σ‖pᵢ‖`; `I − 1`.
 const SUM_EPS: f64 = 4.0;
 const COM_EPS: f64 = 4.0;
@@ -165,7 +164,7 @@ fn check_identities(ic: &Ic<f32>, at: &str) {
 }
 
 /// Test 3 on one output, in the canonical frame: `ρ̃` on `+x` (`r₁ − r₀` with `y` exactly 0, `x ≥ 0`), `λ̃_y` of either
-/// sign (no mirror step, R-865); `α ∈ [0, π/2]` as `rho_mag = cos α` and `lambda_mag = sin α` on `[0, 1]`, each read
+/// sign (no mirror step); `α ∈ [0, π/2]` as `rho_mag = cos α` and `lambda_mag = sin α` on `[0, 1]`, each read
 /// back from the emitted `(m, r)`, so to the reconstruction's rounding, the `I = 1` bound [`INERTIA_EPS`]; `β` as
 /// `rho_angle` on `[−π̂, π̂]`, exactly, its value selected (dd_decoder §3.6's `(−π, π]`); and `|p_λ| = |(q₂, q₃)| ≤
 /// q_max`. *Was:* `λ̃_y ≥ 0` and `rho_angle` on `[0, π̂]`, under the mirror step.
@@ -318,7 +317,7 @@ negative_control!(
     }
 );
 
-// ── decode_uniforms_no_recompile (REQ-DEC-007) ──────────────────────────────────────────────────────────────────
+// ── decode_uniforms_no_recompile ────────────────────────────────────────────────────────────────────────────────
 
 /// A navigation step: the chart before it and the chart after.
 type Edit = fn(&mut Latent<f32>);
@@ -395,9 +394,10 @@ negative_control!(
     }
 );
 
-// ── decode_stage_descriptor (REQ-TOOL-030) ──────────────────────────────────────────────────────────────────────
+// ── decode_stage_descriptor ─────────────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-043's factor, as `fixtures/gates/decode-f32-eps/gate.json` proposes it (provisional until the M2 gate).
+/// The `decode-f32-eps` gate's factor, as `fixtures/gates/decode-f32-eps/gate.json` proposes it (provisional until the
+/// M2 gate).
 fn factor() -> f64 {
     let text = std::fs::read_to_string(root().join("fixtures/gates/decode-f32-eps/gate.json"))
         .expect("gate.json");
@@ -592,9 +592,9 @@ negative_control!(
     }
 );
 
-// ── decode_stage_rho_angle_signed_zero (REQ-TOOL-030; pitfalls §11) ─────────────────────────────────────────────
+// ── decode_stage_rho_angle_signed_zero (pitfalls §11) ───────────────────────────────────────────────────────────
 
-/// `rho_angle`'s limit off `±π/2`, in f32 eps of `π/2` (applied per R-369, a test tolerance): a backend reading
+/// `rho_angle`'s limit off `±π/2`, in f32 eps of `π/2` (a test tolerance): a backend reading
 /// `ρ · λ = −0`'s sign turns it by `π`, `2²³` eps; WGSL's `atan2` is not correctly rounded, and 4 eps leaves it room.
 const SIGNED_ZERO_EPS: f64 = 4.0;
 
@@ -728,7 +728,7 @@ negative_control!(
     }
 );
 
-// ── decode_stage_mode (REQ-DEC-007) ─────────────────────────────────────────────────────────────────────────────
+// ── decode_stage_mode ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// Under `flag`, the kernel's words for three points: every tag still [`UNWRITTEN`] and every `(m, r, p)` word still
 /// the NaN fill under the linearised flag; every one written under the full.

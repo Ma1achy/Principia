@@ -1,16 +1,16 @@
-//! qa's tests for TASK-M0-51, written from the requirement it closes, not from the implementation:
+//! qa's tests for reading a trace whose last line is cut off, written from telemetry §5, not from the implementation:
 //!
-//! - REQ-TOOL-148 (R-356, R-358; telemetry §5 "A line cut off at the end"): a last line with no newline after it that
+//! - After the summary line (telemetry §5 "A line cut off at the end"): a last line with no newline after it that
 //!   is not one complete JSON value, following the summary line, is dropped and its bytes reported in
 //!   `Trace::dropped_bytes`; the header line, the frames and the summary line are kept, `leak_flags` and `hot_paths`
 //!   are read from it, and the session is complete. There is no third session state.
-//! - R-299, as R-356 keeps it: a file whose only line is a cut-off header line stays an error that states its bytes; a
+//! - Every other cut-off case: a file whose only line is a cut-off header line stays an error that states its bytes; a
 //!   cut-off line after the header line or a frame record is an incomplete session with its bytes stated; a malformed
 //!   line that ends in a newline stays an error, wherever it is, after the summary line included; a last line with no
 //!   newline that is one complete JSON value is read as any last line is, so after the summary line it is an error.
 //!
 //! The fixture is hand-written from telemetry §5's keys and laid out as JSON Lines here. Each test registers the
-//! control that must make it fail (R-176).
+//! control that must make it fail.
 // The file name `qa_TASK-M0-51` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -129,7 +129,7 @@ fn whole(lines: &[String]) -> Trace {
     t
 }
 
-// ----- REQ-TOOL-148: a cut-off line after the summary line -----
+// ----- A cut-off line after the summary line -----
 
 /// `bytes` is `lines`' whole file followed by a `dropped`-byte cut-off last line: it reads as the complete trace the
 /// whole file is, the header, every frame and both summaries, the session complete and `dropped` bytes stated.
@@ -247,7 +247,7 @@ validation::negative_control!(
     }
 );
 
-// ----- R-299 as R-356 keeps it: every other cut-off case -----
+// ----- Every other cut-off case -----
 
 /// A file whose only line is the header line cut after `cut` bytes is an error, and the error states the bytes.
 fn check_cut_header_alone(cut: usize) {
@@ -281,7 +281,7 @@ validation::negative_control!(
 );
 
 /// The first `keep` lines, then a cut-off frame-record-shaped line. After the header line or a frame record: dropped, its bytes stated, the session
-/// incomplete and both summaries absent with "session incomplete" (R-299, unchanged by R-356).
+/// incomplete and both summaries absent with "session incomplete".
 fn check_incomplete_with_dropped(keep: usize) {
     let lines = lines(3);
     let mut bytes = file(&lines[..keep]);

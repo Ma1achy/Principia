@@ -1,5 +1,5 @@
-//! QA tests for TASK-M1-07, written from REQ-GUI-001 and REQ-TOOL-027 (coordinate note, path 2 and "The catch";
-//! debug_tooling_plan §F's picking cross-check), not from the implementation:
+//! QA tests for picking, written from the coordinate note (path 2 and "The catch") and debug_tooling_plan §F's
+//! picking cross-check, not from the implementation:
 //! - a click at each known corner, through `engine::picking::pick`, the function the GUI will call, reports that
 //!   corner's UV (top-left → v ≈ 1, bottom-left → v ≈ 0), the quad there and the screen's `ctx.chart.z`, on a canvas
 //!   whose size is not the target's;
@@ -7,7 +7,7 @@
 //!   draws at that pixel, and the quad whose deep_zoom §1 frame (the harness's c ± h) holds that UV, so picking and
 //!   the render read the one flip.
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use engine::picking::{pick, Pick, Screen};
 use engine::presets::uv_screen;
@@ -133,7 +133,7 @@ fn rg(image: &Image, x: u32, y: u32) -> [f64; 2] {
     })
 }
 
-/// Four f32 ulps at 1: the render's UV, rounded to f32 with fast-math division (R-297). A pixel is 1/24 of the UV.
+/// Four f32 ulps at 1: the render's UV, rounded to f32 with fast-math division. A pixel is 1/24 of the UV.
 const UV_TOL: f64 = 4.0 * f32::EPSILON as f64;
 
 /// At every pixel's centre, in canvas units, the pick's UV is the one the GPU drew there, and its quad's frame

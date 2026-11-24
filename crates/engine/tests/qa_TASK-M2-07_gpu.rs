@@ -1,19 +1,19 @@
-//! QA tests for TASK-M2-07 on the GPU, written from the requirements: `C`'s branch decisions on CPU-f32 and GPU-f32
-//! on identical inputs. The CPU side is `kernel`'s `qa_TASK-M2-07`.
-//! - REQ-DEC-017, REQ-ENC-015, REQ-ENC-016; R-34, R-84; dd_decoder §5 test 12 ("the degenerate/feasibility branch tags
-//!   are bit-identical across all backends"): for every state fed to both, the `ρ = 0` guard (`lookup_clamped`) is the
-//!   same on CPU-f32 and GPU-f32, with no condition on the intermediate values agreeing first (pitfalls §9: a check
-//!   conditioned on the bits agreeing masks the fork). `C` has no mirror step, so there is no mirror branch to
-//!   compare: in its place, on the generic states, where `λ̃_y` is far above rounding, each backend's output lies on
-//!   the same side of its `ρ̃`, the input's as rotated. On the collinear and the band-straddling states `λ̃_y` is a
-//!   rounding residue, of either sign on CPU-f32 (asserted), which `C` records and does not branch on, so there this
-//!   file compares the guard and the rescale's skip alone: a narrowing against the mirror fork these two families
-//!   were built for. What reads the residue's sign now is the encode's `β`, and its agreement between CPU-f32 and
-//!   the GPU on such states is `canon_gpu`'s seam sweep's and `encode_gpu`'s. The states: collinear configurations at random angles, where
-//!   `λ̃_y` is rounding alone; turned states straddling the band the old mirror step read, `λ̃_y = k·δ_λ`; coincident
-//!   inner pairs, `r₀ = r₁`, at random places, and `ρ = (±0, ±0)`; and generic states
-//!   (`canonicaliser_qa_m207_branches_agree`). The GPU gives the same words twice (`canonicaliser_qa_m207_twice`).
-//! - REQ-DEC-017 (`canonicaliser_qa_m207_edge_range`): hierarchical states, the inner pair down to `2^−40` of the
+//! QA tests for the canonicaliser `C` on the GPU: `C`'s branch decisions on CPU-f32 and GPU-f32 on identical inputs.
+//! The CPU side is `kernel`'s `qa_TASK-M2-07`.
+//! - dd_decoder §5 test 12 ("the degenerate/feasibility branch tags are bit-identical across all backends"): for every
+//!   state fed to both, the `ρ = 0` guard (`lookup_clamped`) is the same on CPU-f32 and GPU-f32, with no condition on
+//!   the intermediate values agreeing first (pitfalls §9: a check conditioned on the bits agreeing masks the fork). `C`
+//!   has no mirror step, so there is no mirror branch to compare: in its place, on the generic states, where `λ̃_y` is
+//!   far above rounding, each backend's output lies on the same side of its `ρ̃`, the input's as rotated. On the
+//!   collinear and the band-straddling states `λ̃_y` is a rounding residue, of either sign on CPU-f32 (asserted), which
+//!   `C` records and does not branch on, so there this file compares the guard and the rescale's skip alone: a
+//!   narrowing against the mirror fork these two families were built for. What reads the residue's sign now is the
+//!   encode's `β`, and its agreement between CPU-f32 and the GPU on such states is `canon_gpu`'s seam sweep's and
+//!   `encode_gpu`'s. The states: collinear configurations at random angles, where `λ̃_y` is rounding alone; turned
+//!   states straddling the band the old mirror step read, `λ̃_y = k·δ_λ`; coincident inner pairs, `r₀ = r₁`, at random
+//!   places, and `ρ = (±0, ±0)`; and generic states (`canonicaliser_qa_m207_branches_agree`). The GPU gives the same
+//!   words twice (`canonicaliser_qa_m207_twice`).
+//! - `canonicaliser_qa_m207_edge_range`: hierarchical states, the inner pair down to `2^−40` of the
 //!   outer distance, at `λ̃_y = ∓k·δ_λ` with `k` `10⁻³` either side of 1, under exact quarter turns, reflections and
 //!   power-of-two scales up to `2^±60` (`I_in` a finite normal f32): GPU-f32 and CPU-f32 each leave `λ̃_y` on the
 //!   input's side, below `ρ̃` on every unreflected state and above it on every reflected one, whichever side of the
@@ -26,7 +26,7 @@
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory. **PIT-10:** the claim is for identical
 //! inputs; every state here is one `Ic<f32>` handed to both backends.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::path::Path;
 
@@ -357,7 +357,7 @@ negative_control!(
     }
 );
 
-// ── canonicaliser_qa_m207_edge_range (REQ-DEC-017; round 4) ─────────────────────────────────────────────────────
+// ── canonicaliser_qa_m207_edge_range ────────────────────────────────────────────────────────────────────────────
 
 /// The `k` of `λ̃_y = −k·δ_λ`: inside the band the old mirror step read and outside it, `10⁻³` either side of 1.
 const EDGE_KS: [f64; 4] = [0.5, 1.0 - 1e-3, 1.0 + 1e-3, 2.0];
@@ -410,7 +410,7 @@ fn edge_variant(x: &Ic<f32>, q: usize, flip: bool, e: i32) -> Ic<f32> {
 
 /// `x`, scaled from `unscaled` by a power of two, kept every coordinate and pair difference a finite normal (or a 0
 /// where `unscaled` had one), and its CoM-frame `I_in` is a finite normal f32: the scaling was exact, the state is in
-/// the decision's domain, and the GPU does no arithmetic on `∞` (R-436).
+/// the decision's domain, and the GPU does no arithmetic on `∞`.
 fn edge_in_range(x: &Ic<f32>, unscaled: &Ic<f32>) -> bool {
     let values = |r: [[f32; 2]; 3]| {
         let mut out: Vec<f32> = r.iter().flatten().copied().collect();

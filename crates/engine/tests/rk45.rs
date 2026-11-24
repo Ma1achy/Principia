@@ -1,4 +1,4 @@
-//! The Inspector's RK45 reference (`engine::precision::rk45`; TASK-M3-19): Dormand–Prince 5(4) in f64, adaptive, held
+//! The Inspector's RK45 reference (`engine::precision::rk45`): Dormand–Prince 5(4) in f64, adaptive, held
 //! outside the occupant system.
 //!
 //! Pass criteria, fixed before the first run:

@@ -1,39 +1,40 @@
-//! QA tests for TASK-M2-24 on the GPU, written from the requirements, not from the implementation: the decode stage,
+//! QA tests for the decode stage on the GPU, written from the specs, not from the implementation: the decode stage,
 //! `target/spirv/kernel.wgsl` (`cargo xtask build-kernel`), dispatched natively, against the same source at f64
 //! (`decode_only_with`, parity_contract §1). They need the built kernel, so they belong to the `gpu-kernel` profile
 //! with `decode_cross_backend`.
-//! - REQ-VAL-017 (dd_decoder §5 test 12: "the degenerate/feasibility branch tags are bit-identical across all
-//!   backends"; chart_reference §2.2): the feasibility tag is reached on the GPU, not only its absence. On the invariant
-//!   charts, at points past the warp's square in `s`, where `K* < L_z²/2` (chart_reference §5.2: inside `[0,1]²` the
-//!   warp keeps every pixel feasible), and on the `(ν, K)` chart, the GPU writes `INVARIANT_INFEASIBLE` exactly where
-//!   the f64 decode does, on identical f32 `(u, v)` and parameters, and the momenta of each infeasible pixel are finite,
-//!   kept, never dropped (`qa_m224_gpu_feasibility_tag`). The grid stays in the chart's domain, `t ≥ 0`: below `t = 0`
-//!   the warp's `K(t) = K_max·t^γ_K` has no real value (chart_reference §2.1, §5.4: bounded there, blank, never
-//!   decoded), and dd_decoder §2 claims finite outputs only inside the domain.
-//! - REQ-VAL-017 on the charts the stage gained in the fix round (`BurrauThetaK`, `BurrauThetaLz`, `BurrauThetaDeltaM`,
+//! - The feasibility tag (dd_decoder §5 test 12: "the degenerate/feasibility branch tags are bit-identical across all
+//!   backends"; chart_reference §2.2): the feasibility tag is reached on the GPU, not only its absence. On the
+//!   invariant charts, at points past the warp's square in `s`, where `K* < L_z²/2` (chart_reference §5.2: inside
+//!   `[0,1]²` the warp keeps every pixel feasible), and on the `(ν, K)` chart, the GPU writes `INVARIANT_INFEASIBLE`
+//!   exactly where the f64 decode does, on identical f32 `(u, v)` and parameters, and the momenta of each infeasible
+//!   pixel are finite, kept, never dropped (`qa_m224_gpu_feasibility_tag`). The grid stays in the chart's domain,
+//!   `t ≥ 0`: below `t = 0` the warp's `K(t) = K_max·t^γ_K` has no real value (chart_reference §2.1, §5.4: bounded
+//!   there, blank, never decoded), and dd_decoder §2 claims finite outputs only inside the domain.
+//! - The tag and the continuous values on the further charts (`BurrauThetaK`, `BurrauThetaLz`, `BurrauThetaDeltaM`,
 //!   `ShapeSphere` under both maps), each with parameters other than the defaults, so a misplaced uniform slot decodes
 //!   another chart: on `[0,1]²`'s interior, off the shape sphere's `n₀ = ±1` poles, the GPU's 27 continuous values
-//!   within REQ-DEC-043's factor (`decode-f32-eps`'s gate.json) of the f64 decode and its tag bitwise equal; on
+//!   within the `decode-f32-eps` gate's factor (its gate.json) of the f64 decode and its tag bitwise equal; on
 //!   `Φ_θ,L_z` past its affine `L_z` edges (chart_reference §5.4: the formula continues, `L_z² > 2IK` infeasible), the
 //!   GPU and the f64 decode both write `INVARIANT_INFEASIBLE` at the same pixels, the outputs finite
 //!   (`qa_m224_gpu_new_charts`).
-//! - dd_decoder §3.7, "It must be disabled" on the invariant-momentum charts, and R-25 (`None` is off, `Some(0)` a real
-//!   target): on the GPU, a forbidding chart's decode under every `Some(E*)` is its decode with `η_E` off, word for word,
-//!   the `(θ, K)` and `(θ, L_z)` strips among them; on the latent chart and the shape sphere `Some(0)` rescales, and on
-//!   the δm strip, a rest start, `Some(0)` above its `V₀ < 0` is `ENERGY_UNSCALABLE` (`qa_m224_gpu_eta_switch`).
+//! - dd_decoder §3.7, "It must be disabled" on the invariant-momentum charts, and the `η_E` switch (`None` is off,
+//!   `Some(0)` a real target): on the GPU, a forbidding chart's decode under every `Some(E*)` is its decode with `η_E`
+//!   off, word for word, the `(θ, K)` and `(θ, L_z)` strips among them; on the latent chart and the shape sphere
+//!   `Some(0)` rescales, and on the δm strip, a rest start, `Some(0)` above its `V₀ < 0` is `ENERGY_UNSCALABLE`
+//!   (`qa_m224_gpu_eta_switch`).
 //!
-//! - REQ-VAL-017 on `C`, the canonicalisation the decode ends in (and encode starts from), alone on the GPU: generic
-//!   states with one light body far out, the case that once put a body's `r_y` 273.88 eps from f64 on lavapipe when
-//!   step 2 turned by `sin` and `cos` of a rounded angle, at every orientation and scale: each of the GPU's canonical
-//!   `m`, `r` and `p` within REQ-DEC-043's factor of `C` at f64 on the same widened inputs, `lookup_clamped`
-//!   bitwise equal, and the canonical `ρ̃` on `+x` (REQ-DEC-002) (`qa_m224_gpu_canon_turn`). `C` has no mirror step, so
-//!   a lower-half state stays below its `ρ̃` on both and there is no mirror notice to compare.
+//! - `C`, the canonicalisation the decode ends in (and encode starts from), alone on the GPU: generic states with one
+//!   light body far out, the case that once put a body's `r_y` 273.88 eps from f64 on lavapipe when step 2 turned by
+//!   `sin` and `cos` of a rounded angle, at every orientation and scale: each of the GPU's canonical `m`, `r` and `p`
+//!   within the `decode-f32-eps` gate's factor of `C` at f64 on the same widened inputs, `lookup_clamped` bitwise
+//!   equal, and the canonical `ρ̃` on `+x` (`qa_m224_gpu_canon_turn`). `C` has no mirror step, so a lower-half state
+//!   stays below its `ρ̃` on both and there is no mirror notice to compare.
 //!
 //! Tier B (parity_contract §2): the tags are compared bitwise, given the same inputs, at once, never accumulated (§3).
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::path::{Path, PathBuf};
 
@@ -92,7 +93,7 @@ fn frozen(rng: &mut Rng) -> Invariant<f32> {
 }
 
 /// A grid of `s ∈ [−0.75, 1.75]` by `t ∈ [0, 1.75]`: inside the warp's square, past it in `s` on both sides and past
-/// `t = 1`, where the warp continues (R-508). Never below `t = 0`, outside the chart's domain: there `t^γ_K` has no real
+/// `t = 1`, where the warp continues. Never below `t = 0`, outside the chart's domain: there `t^γ_K` has no real
 /// value (chart_reference §2.1, §5.4), the pixel is blank and never decoded, and a backend's `pow` of a negative base
 /// is undefined (WGSL), NaN on lavapipe.
 fn grid() -> Vec<[f32; 2]> {
@@ -118,7 +119,7 @@ fn gpu<V: DecodeVariant>(
         .expect("the decode dispatch")
 }
 
-// ── REQ-VAL-017: the feasibility tag on the GPU ─────────────────────────────────────────────────────────────────
+// ── the feasibility tag on the GPU ──────────────────────────────────────────────────────────────────────────────
 
 /// The GPU's and the f64 decode's tags at each point, compared bitwise; returns how many points each tagged
 /// `INVARIANT_INFEASIBLE`. `drop` is a control's defect: the GPU's feasibility tag read as none.
@@ -232,9 +233,9 @@ negative_control!(
     check_feasibility(true)
 );
 
-// ── REQ-VAL-017 on the fix round's variants ─────────────────────────────────────────────────────────────────────
+// ── the further charts on the GPU ───────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-043's factor, `decode-f32-eps`'s threshold (provisional until the M2 gate).
+/// The `decode-f32-eps` gate's factor, its threshold (provisional until the M2 gate).
 fn factor() -> f64 {
     validation::gate::config(&root(), "decode-f32-eps")
         .expect("decode-f32-eps's gate.json")
@@ -243,7 +244,7 @@ fn factor() -> f64 {
 }
 
 /// The GPU's decodes of `chart` at `uv` toward `e` against the f64 decodes of `reference` at the same widened point
-/// and target: the tag bitwise equal, each of the 27 continuous values within `f` eps (REQ-DEC-043's measure,
+/// and target: the tag bitwise equal, each of the 27 continuous values within `f` eps (the gate's measure,
 /// `validation::decode_f32_eps::error`). Returns the worst, in eps.
 fn agree<V>(
     h: &GpuHarness,
@@ -317,7 +318,7 @@ fn sphere(rng: &mut Rng, map: ShapeMap) -> ShapeSphere<f32> {
 }
 
 /// The points of `uv` at least `10⁻²` from the shape sphere's `n₀ = ±1` poles, where `ρ̃ = 0` (`BC₀₁`) or `λ̃ = 0`
-/// amplify a rounding of the point (chart_reference §3.2; R-436, R-437), outside REQ-DEC-043's domain.
+/// amplify a rounding of the point (chart_reference §3.2), outside the domain the `decode-f32-eps` gate measures.
 fn off_poles(c: &ShapeSphere<f32>, uv: Vec<[f32; 2]>) -> Vec<[f32; 2]> {
     uv.into_iter()
         .filter(|p| 1.0 - c.point::<f64>(f64::from(p[0]), f64::from(p[1]))[0].abs() > 1e-2)
@@ -502,7 +503,7 @@ negative_control!(
     check_theta_lz(true)
 );
 
-// ── dd_decoder §3.7 / R-25: the switch on the GPU ───────────────────────────────────────────────────────────────
+// ── dd_decoder §3.7: the `η_E` switch on the GPU ────────────────────────────────────────────────────────────────
 
 fn words(o: &[DecodeOut<f32>]) -> String {
     format!(
@@ -628,7 +629,7 @@ negative_control!(
     check_switch(true)
 );
 
-// ── REQ-VAL-017 on `C`: step 2's turn on the GPU ────────────────────────────────────────────────────────────────
+// ── `C`: step 2's turn on the GPU ───────────────────────────────────────────────────────────────────────────────
 
 /// `n` generic f32 states with a light body far out: the light body (index cycling 0, 1, 2) of mass `10^[−3.5, −2]`
 /// at distance `[4, 40]` from the origin, the two heavy ones placed in `[−1, 1]²`, momenta in `[−0.5, 0.5]²`; the
@@ -694,10 +695,10 @@ fn turn(v: [f64; 2], a: f64) -> [f64; 2] {
     [c * v[0] - s * v[1], s * v[0] + c * v[1]]
 }
 
-/// `C` on the GPU against `C` at f64 on the same inputs, widened: `lookup_clamped` bitwise equal; each of `m`, `r`
-/// and `p` within REQ-DEC-043's factor (`decode_f32_eps::error`, the decode's own measure); the GPU's `ρ̃ = r̃₁ −
-/// r̃₀` on `+x`, its `x` positive and its `y` within the factor (against f64's 0). `skew` is a control's defect: the
-/// f64 reference turned a further `skew` radians, a step 2 whose angle is off.
+/// `C` on the GPU against `C` at f64 on the same inputs, widened: `lookup_clamped` bitwise equal; each of `m`, `r` and
+/// `p` within the `decode-f32-eps` gate's factor (`decode_f32_eps::error`, the decode's own measure); the GPU's
+/// `ρ̃ = r̃₁ − r̃₀` on `+x`, its `x` positive and its `y` within the factor (against f64's 0). `skew` is a control's
+/// defect: the f64 reference turned a further `skew` radians, a step 2 whose angle is off.
 fn check_canon_turn(skew: f64) {
     let h = GpuHarness::new().expect("a GPU device");
     let f = factor();

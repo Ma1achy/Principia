@@ -1,49 +1,48 @@
-//! QA tests for TASK-M2-06 on the GPU, written from the requirements, not from the implementation: the kernel's decode
+//! QA tests for the decode stage on the GPU, written from the specs, not from the implementation: the kernel's decode
 //! stage, `target/spirv/kernel.wgsl` (`cargo xtask build-kernel`), dispatched natively and read back, against the same
 //! source at f64 (`decode_only`, parity_contract §1). They need the built kernel, so they belong to the `gpu-kernel`
 //! profile with `decode_stage_gpu`.
-//! - REQ-DEC-047 (the verify detail: "the decode stage's range and identities holding on the GPU at saturated
-//!   controls"; Metal's `tanh` fails from 43.671875, 0 and then NaN): every latent component at once at ±43.671875,
-//!   ±44, ±44.5, ±10³, ±10⁴, ±10³⁰ and ±f32::MAX, in random sign patterns and one component at a time, through both compiled
-//!   variants (the defaults, whose mass link `softmax_tanh` reads `tanh`, and `stick_breaking`, which reads it too):
-//!   every `(m, r, p)` word finite, no NaN anywhere, dd_decoder §5 test 1's identities within REQ-DEC-044's and
-//!   REQ-DEC-045's proposals, the masses on the simplex (each positive, at most 1: dd_generation_root §5 test 8(a)), the
-//!   descriptor's fields in dd_decoder §3.6's ranges (test 3's `β` as the GPU can show it, on the whole circle,
-//!   `rho_angle` within `(−π̂, π̂]`), test 4's tag (`M01_TINY` exactly where the GPU's own `m₀ + m₁ < ε_M01`), and
-//!   test 12's tag clause, the GPU's tag the same source's natively at f32 (`qa_m206_gpu_saturated_controls`). A
-//!   descriptor field is
-//!   non-finite only at its pole, as R-436 selects it. No `(m, r, p)` value is held to an eps factor there: test 12
-//!   scopes its tolerance to "the golden IC and fuzzed interiors", REQ-DEC-043's domain is the defaults at `|zₖ| ≤ 2`
-//!   (`validation::decode_f32_eps`), and the corpus gives no factor for saturated controls, so the differences from
-//!   the native f32 and the f64 decodes, and the tags that differ from f64's, are printed, not asserted.
-//! - REQ-DEC-047's bound on the GPU: §3.9's `tanh` operator as the kernel evaluates it (`stage_decode_link_tanh`), past
+//! - Saturated controls (the decode stage's range and identities holding on the GPU at saturated controls; Metal's
+//!   `tanh` fails from 43.671875, 0 and then NaN): every latent component at once at ±43.671875, ±44, ±44.5, ±10³,
+//!   ±10⁴, ±10³⁰ and ±f32::MAX, in random sign patterns and one component at a time, through both compiled variants
+//!   (the defaults, whose mass link `softmax_tanh` reads `tanh`, and `stick_breaking`, which reads it too): every
+//!   `(m, r, p)` word finite, no NaN anywhere, dd_decoder §5 test 1's identities within the proposed bounds
+//!   (`SUM_M_EPS` and its neighbours), the masses on the simplex (each positive, at most 1: dd_generation_root §5 test
+//!   8(a)), the descriptor's fields in dd_decoder §3.6's ranges (test 3's `β` as the GPU can show it, on the whole
+//!   circle, `rho_angle` within `(−π̂, π̂]`), test 4's tag (`M01_TINY` exactly where the GPU's own `m₀ + m₁ < ε_M01`),
+//!   and test 12's tag clause, the GPU's tag the same source's natively at f32 (`qa_m206_gpu_saturated_controls`). A
+//!   descriptor field is non-finite only at its pole, where its value is selected, never divided. No `(m, r, p)` value
+//!   is held to an eps factor there: test 12 scopes its tolerance to "the golden IC and fuzzed interiors", the
+//!   `decode-f32-eps` gate's domain is the defaults at `|zₖ| ≤ 2` (`validation::decode_f32_eps`), and the corpus gives
+//!   no factor for saturated controls, so the differences from the native f32 and the f64 decodes, and the tags that
+//!   differ from f64's, are printed, not asserted.
+//! - The `tanh` bound on the GPU: §3.9's `tanh` operator as the kernel evaluates it (`stage_decode_link_tanh`), past
 //!   `tanh_sat`, is in `[−1, 1]`, of its argument's sign, and the operator's own bits at `±tanh_sat`, its clamp's
 //!   definition (`qa_m206_gpu_saturated_tanh_bound`).
-//! - REQ-DEC-047's window on this backend: the GPU's own `tanh`, the compute entry point's path, measured on a sweep;
+//! - The `tanh` window on this backend: the GPU's own `tanh`, the compute entry point's path, measured on a sweep;
 //!   `tanh_sat` lies below the first argument where it fails as Metal's does, non-finite or not of its argument's sign
 //!   (0 included), and it has not failed at `±tanh_sat` (`qa_m206_gpu_tanh_window`).
-//! - REQ-TOOL-030 / R-436: the descriptor writer on the GPU at each pole, each pair's collision and all three bodies,
-//!   `‖λ̃‖ = 0`, and one step off each: `V_0` `−∞`'s bits, `virial_ratio` `+0`'s, `rho_ratio` `+∞`'s exactly where the
-//!   GPU's own `‖λ̃‖` is 0 and the quotient elsewhere, the f64 descriptor's bits at the poles
-//!   (`qa_m206_gpu_pole_bits`).
-//! - REQ-DEC-007: a sequence of navigation edits (pan, zoom, tilt, slice, a component to the domain's edge) creates no
-//!   pipeline, and after each the GPU's decode is the f64 decode of the edited chart within REQ-DEC-043's factor, every
-//!   decoded `|zₖ| ≤ 2`, its domain, so each edit reached the kernel through the uniform
-//!   (`qa_m206_gpu_edits_reach_the_kernel`); `DECODE_MODE` is bit 0 of the flags word on the GPU, the other 31
-//!   bits ignored (`qa_m206_gpu_decode_mode_bit0`).
-//! - REQ-DEC-007 / REQ-CHART-001: the link set is baked per variant: the same chart and points through the two entry
-//!   points decode differently, each sample nearer its own selection's f64 decode than the other's, and the defaults'
-//!   within REQ-DEC-043's factor of theirs (its domain is the defaults; the corpus gives `stick_breaking` none)
+//! - The poles: the descriptor writer on the GPU at each pole, each pair's collision and all three bodies, `‖λ̃‖ = 0`,
+//!   and one step off each: `V_0` `−∞`'s bits, `virial_ratio` `+0`'s, `rho_ratio` `+∞`'s exactly where the GPU's own
+//!   `‖λ̃‖` is 0 and the quotient elsewhere, the f64 descriptor's bits at the poles (`qa_m206_gpu_pole_bits`).
+//! - Uniform edits: a sequence of navigation edits (pan, zoom, tilt, slice, a component to the domain's edge) creates
+//!   no pipeline, and after each the GPU's decode is the f64 decode of the edited chart within the `decode-f32-eps`
+//!   gate's factor, every decoded `|zₖ| ≤ 2`, its domain, so each edit reached the kernel through the uniform
+//!   (`qa_m206_gpu_edits_reach_the_kernel`); `DECODE_MODE` is bit 0 of the flags word on the GPU, the other 31 bits
+//!   ignored (`qa_m206_gpu_decode_mode_bit0`).
+//! - The link set is baked per variant: the same chart and points through the two entry points decode differently, each
+//!   sample nearer its own selection's f64 decode than the other's, and the defaults' within the `decode-f32-eps`
+//!   gate's factor of theirs (its domain is the defaults; the corpus gives `stick_breaking` none)
 //!   (`qa_m206_gpu_variants_baked`).
-//! - REQ-DEC-043: the gate fails on its checked-in perturbed input, its verdict turns at its threshold, and refuses the
-//!   inputs that measure nothing (`qa_m206_gate_*`).
+//! - The `decode-f32-eps` gate: it fails on its checked-in perturbed input, its verdict turns at its threshold, and
+//!   refuses the inputs that measure nothing (`qa_m206_gate_*`).
 //!
 //! Tier N (parity_contract §2): each comparison feeds both pipelines the same f32 inputs, widened for f64, and compares
 //! at once, never accumulating (§3).
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::path::{Path, PathBuf};
 
@@ -83,18 +82,18 @@ fn harness() -> GpuHarness {
 
 const EPS: f64 = f32::EPSILON as f64;
 
-/// The gate's configuration as checked in: REQ-DEC-043's proposed factor (provisional until the M2 gate).
+/// The gate's configuration as checked in: the proposed factor (provisional until the M2 gate).
 fn config() -> GateConfig {
     validation::gate::config(&root(), "decode-f32-eps").expect("gate.json")
 }
 
-/// REQ-DEC-043's factor, in f32 eps.
+/// The `decode-f32-eps` gate's factor, in f32 eps.
 fn factor() -> f64 {
     config().threshold.value
 }
 
-/// REQ-DEC-044's proposals for test 1 (`crates/kernel/tests/decode_blocks.rs`' header): `Σmᵢ − 1` 4 eps, the CoM 4
-/// eps of `Σmᵢ‖rᵢ‖`, `I − 1` 8 eps; REQ-DEC-045's for `Σpᵢ`: 4 eps of `Σ‖pᵢ‖`.
+/// The proposed bounds for test 1 (`crates/kernel/tests/decode_blocks.rs`' header): `Σmᵢ − 1` 4 eps, the CoM 4 eps of
+/// `Σmᵢ‖rᵢ‖`, `I − 1` 8 eps; `Σpᵢ` 4 eps of `Σ‖pᵢ‖`.
 const SUM_M_EPS: f64 = 4.0;
 const COM_EPS: f64 = 4.0;
 const INERTIA_EPS: f64 = 8.0;
@@ -144,7 +143,7 @@ fn mrp<R: Copy + Into<f64>>(ic: &Ic<R>) -> [f64; 15] {
     v
 }
 
-// ── Saturated controls (REQ-DEC-047, REQ-DEC-005) ───────────────────────────────────────────────────────────────
+// ── Saturated controls ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// The worst `(m, r, p)` differences seen: the GPU against the same source at f32 natively (the backend's share), and
 /// the GPU against f64 (f32's own conditioning included), and the tags the f32 and f64 decodes disagree on.
@@ -157,19 +156,19 @@ struct Report {
     tag_differs: usize,
 }
 
-/// The f32 image of π the descriptor's `rho_angle` stays within, `fl↓(π)` (dd_decoder §3.6; R-417).
+/// The f32 image of π the descriptor's `rho_angle` stays within, `fl↓(π)` (dd_decoder §3.6).
 const PI_HAT: f32 = f32::from_bits(0x4049_0FDA);
 
 /// One GPU output `g` at saturation, against the same source at f32 natively, `n`, and at f64, `c`: the `(m, r, p)`
-/// words finite; no NaN in the descriptor, and a non-finite descriptor field only at its pole (R-436); test 1 within
-/// REQ-DEC-044/045; the masses on the simplex, each positive and at most 1 (dd_generation_root §5 test 8(a)); the
+/// words finite; no NaN in the descriptor, and a non-finite descriptor field only at its pole; test 1 within the
+/// proposed bounds; the masses on the simplex, each positive and at most 1 (dd_generation_root §5 test 8(a)); the
 /// descriptor's fields in dd_decoder §3.6's ranges (`q_mass` in `(0, 1]`, `rho_angle` in `(−π̂, π̂]`, the magnitudes,
 /// `r_min_pair_0`, `K_0` and `virial_ratio` at least 0, `V_0` at most 0); `M01_TINY` exactly where the GPU's own
-/// `m₀ + m₁ < ε_M01` (dd_decoder §5 test 4); and the GPU's tag the native f32 decode's (test 12's tag clause).
-/// The `(m, r, p)` differences from the native f32 and the f64 decodes are recorded, not asserted: REQ-DEC-043's factor
-/// holds on its own domain, the defaults at `|zₖ| ≤ 2`, and the corpus gives none at saturation, where f32's own
-/// rounding dominates (the bodies of a tiny pair sit at `|r| ≈ 10³`, where `sin β` at β's f32 image of π is `10⁻⁷` of
-/// it).
+/// `m₀ + m₁ < ε_M01` (dd_decoder §5 test 4); and the GPU's tag the native f32 decode's (test 12's tag clause). The
+/// `(m, r, p)` differences from the native f32 and the f64 decodes are recorded, not asserted: the `decode-f32-eps`
+/// gate's factor holds on its own domain, the defaults at `|zₖ| ≤ 2`, and the corpus gives none at saturation, where
+/// f32's own rounding dominates (the bodies of a tiny pair sit at `|r| ≈ 10³`, where `sin β` at β's f32 image of π is
+/// `10⁻⁷` of it).
 fn check_saturated(
     g: &DecodeOut<f32>,
     n: &DecodeOut<f32>,
@@ -350,7 +349,7 @@ negative_control!(
     }
 );
 
-// ── The operator's bound on the GPU (REQ-DEC-047) ──────────────────────────────────────────────────────────────
+// ── The operator's bound on the GPU ────────────────────────────────────────────────────────────────────────────
 
 /// Past `tanh_sat`: Metal's onset 43.671875, the saturated magnitudes, and the bound itself, each signed.
 fn bound_arguments(t: f32) -> Vec<f32> {
@@ -414,7 +413,7 @@ negative_control!(
     }
 );
 
-// ── The GPU's own tanh against tanh_sat (REQ-DEC-047) ───────────────────────────────────────────────────────────
+// ── The GPU's own tanh against tanh_sat ─────────────────────────────────────────────────────────────────────────
 
 const TANH_WGSL: &str = r"
 @group(0) @binding(0) var<storage, read> xs: array<f32>;
@@ -497,8 +496,8 @@ fn sweep() -> Vec<f32> {
 }
 
 /// Where `ys = tanh(xs)` on the GPU: `t` lies below the least `|x|` at which the GPU's `tanh` fails as Metal's was
-/// measured to (REQ-DEC-047: 0, then NaN), a non-finite value or one not of its argument's sign, 0 included (`tanh`
-/// is odd and 0 only at 0), and at `±t` it has not failed. No accuracy factor is asserted: REQ-DEC-043's is the
+/// measured to (0, then NaN), a non-finite value or one not of its argument's sign, 0 included (`tanh` is odd and 0
+/// only at 0), and at `±t` it has not failed. No accuracy factor is asserted: the `decode-f32-eps` gate's is the
 /// decode's, on its own domain.
 fn check_tanh_window(t: f32, xs: &[f32], ys: &[f32]) {
     let fails = |x: f32, y: f32| x != 0.0 && (!y.is_finite() || y * x.signum() <= 0.0);
@@ -549,7 +548,7 @@ negative_control!(
     }
 );
 
-// ── The poles on the GPU (REQ-TOOL-030, R-436) ─────────────────────────────────────────────────────────────────
+// ── The poles on the GPU ───────────────────────────────────────────────────────────────────────────────────────
 
 /// Equal masses at `r`, momenta summing to 0.
 fn ic32(r: [[f32; 2]; 3]) -> Ic<f32> {
@@ -700,7 +699,7 @@ negative_control!(
     }
 );
 
-// ── Edits reach the kernel through the uniform, and create no pipeline (REQ-DEC-007) ───────────────────────────
+// ── Edits reach the kernel through the uniform, and create no pipeline ─────────────────────────────────────────
 
 type Edit = (&'static str, fn(&mut Latent<f32>));
 
@@ -721,7 +720,7 @@ const EDITS: [Edit; 8] = [
 const POINTS: [[f32; 2]; 5] = [[0.5, 0.5], [0.1, 0.2], [0.9, 0.3], [0.2, 0.8], [0.7, 0.7]];
 
 /// After each edit, `run`'s decode of the chart is the f64 decode of the edited chart, value by value within
-/// `factor`, every decoded `|zₖ| ≤ 2` (REQ-DEC-043's domain), and no pipeline was created since the first decode.
+/// `factor`, every decoded `|zₖ| ≤ 2` (the gate's domain), and no pipeline was created since the first decode.
 fn check_edits(run: &mut dyn FnMut(&Latent<f32>) -> Vec<DecodeOut<f32>>, factor: f64) {
     let mut chart = Latent {
         z0: [0.2, 0.1, -0.3, 0.4, 0.0, 0.3, -0.2, 0.1],
@@ -861,7 +860,7 @@ negative_control!(
     check_flags(2, &[0, 2])
 );
 
-// ── The link set is baked per variant (REQ-DEC-007, REQ-CHART-001) ─────────────────────────────────────────────
+// ── The link set is baked per variant ──────────────────────────────────────────────────────────────────────────
 
 /// The worst of `g`'s `(m, r, p)` values' differences from `c`'s, in f32 eps (the gate's measure).
 fn worst_eps(g: &DecodeOut<f32>, c: &DecodeOut<f64>) -> f64 {
@@ -873,7 +872,7 @@ fn worst_eps(g: &DecodeOut<f32>, c: &DecodeOut<f64>) -> f64 {
 }
 
 /// The same chart and points through the two entries: they differ; each sample is nearer its own selection's f64
-/// decode than the other selection's; and the defaults' is within `factor` of theirs (REQ-DEC-043's domain is the
+/// decode than the other selection's; and the defaults' is within `factor` of theirs (the gate's domain is the
 /// defaults at `|zₖ| ≤ 2`, which `interior` stays in; the corpus gives `stick_breaking` no factor).
 fn check_variants(a: &[DecodeOut<f32>], b: &[DecodeOut<f32>], batches: &[Batch], factor: f64) {
     let (fa, fb) = (
@@ -934,7 +933,7 @@ negative_control!(
     }
 );
 
-// ── The gate (REQ-DEC-043) ─────────────────────────────────────────────────────────────────────────────────────
+// ── The `decode-f32-eps` gate ──────────────────────────────────────────────────────────────────────────────────
 
 /// The checked-in input `name`, without its `"expected"`, which must be `want`: the runner's own outcome for it.
 fn fixture(name: &str, want: &str) -> Input {

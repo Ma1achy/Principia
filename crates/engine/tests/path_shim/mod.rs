@@ -1,4 +1,4 @@
-//! Today's operations as the tests written before the chart-path object (TASK-M2-61) call them, each now run through
+//! Today's operations as the tests written before the chart-path object call them, each now run through
 //! the object: a pan, a zoom, a slice, a raw tilt, a lock, a slider's move, snap-back, unlock and the re-centre are each
 //! a `engine::path::Segment` built by its constructor, and the edits it records are what these return. The operations'
 //! old routes are gone; these keep the earlier tests' signatures so that every one of them now tests the object.

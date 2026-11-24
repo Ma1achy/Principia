@@ -1,4 +1,4 @@
-//! The CPU worker pool (`engine::pool`; TASK-M3-20).
+//! The CPU worker pool (`engine::pool`).
 //!
 //! - `pool_reserve_default`: by default the pool leaves at least one core free, `1 ≤ size ≤ available − 1` on every
 //!   core count from 2 to 512, one worker on one core; and the pool the process builds has that size.

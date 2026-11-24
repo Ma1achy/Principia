@@ -1,4 +1,4 @@
-//! QA tests for TASK-M1-13 (REQ-TOOL-026), written from debug_tooling_plan §F's table and the registry rule
+//! QA tests for the structural views' occupants, written from debug_tooling_plan §F's table and the registry rule
 //! (gui_state_contract §3: the fragment registry is the scanned filesystem; colour_composition §6: a structural view
 //! is a `ctx.quad` preset, `frag/debug/<id>.wgsl`), not from `engine::structural`:
 //!
@@ -8,7 +8,7 @@
 //!   fraction, priority, cache age, ancestor gap) and no other row's member, so one view's shader standing in for
 //!   another's is caught on the CPU, without a GPU.
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use std::path::{Path, PathBuf};
 

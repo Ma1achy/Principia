@@ -1,5 +1,5 @@
-//! Save view as chart on curved views, the pivot record at a centred pin, and tilts into the held `ν₀`, `L_z` and `K`
-//! (TASK-M2-63), through the chart-path object.
+//! Save view as chart on curved views, the pivot record at a centred pin, and tilts into the held `ν₀`, `L_z` and `K`,
+//! through the chart-path object.
 //!
 //! **The criteria**, written before the first run:
 //! - `saved_curved_view`: a shape-sphere view through a zoomed, off-centre window, tilted into a mass logit by
@@ -19,24 +19,25 @@
 //!   `curved_pivot_never_pinned`: a never-pinned tilted view's placement is the kernel's tilt about the window's centre, bit
 //!   for bit, at every grid pixel, and a view with neither tilt nor record writes stage 1's bytes; control: a record
 //!   placed on a never-pinned view moves it.
-//! - `held_span_tilt` (R-920's predicates, chart_reference §4.5): at a single 90° tilt in the zoom-1 window, at every
-//!   probe pixel, the decoded hidden value equals the sibling axis's at the same `u`: `ν₀` the Euclid plane's
-//!   `ν(u) = ν_min + (ν_max − ν_min)·u`, read off the decoded triangle; the held `L_z` `√(2K_max)·(2u − 1)`, the decoded
-//!   `L_z`; the held `K` `K_max·(t₀ + u − ½)^γ_K`, the decoded `K`; each within `1e-12·(1 + |value|)`. Controls: a span
-//!   of 2, and a span read at the view's centre (the held `L_z`'s `2√(2K)` at the centre row's `K`), fail. A pan at fixed
-//!   `τ` leaves each span bitwise unchanged; control: the centre-read span moves. A saved tilted chart reopens bitwise
-//!   with its stored span at every probe pixel; control: reopened at the latent span 2 it does not.
-//! - `held_k_calibration` (R-833, REQ-CHART-141), the proposal set by measurement: `K_max = K₀`, the chart's calibrated
-//!   `K` (R-833), so `t₀ = 1` exactly; and `γ_K` the largest of the candidates `{1, 1.5, 2, 3}` under which every pixel of
-//!   the default view tilted 90° into the held `K` (the zoom-1 square, the rail's whole extent `t₀ ± ½`, the chart's whole
-//!   `θ` range) is a bound system, `E = K + U < 0`, as the chart's own `K₀` was chosen to make every one of its systems
-//!   bound (the register's `burrau_theta_lz_k`); the largest because it is nearest the `γ_K = 2` every other warped `K`
-//!   axis uses. Under the proposal no pixel of the default view tilted 15°, 30°, 45°, 60° or 90° is held at the floor or
-//!   refused. Printed, measurements: each candidate's bound share at 90°, and the share of the default 30° view's
-//!   pixels each other value moves (its decoded `K` off the proposal's by more than 1 %). Control: the invariant
-//!   charts' `γ_K = 2` put in its place.
-//!   `held_span_tilt_spans`: R-920's table, value by value, a mixed chart's frozen control's 2 among them; control:
-//!   every span read as a latent slider's 2.
+//! - `held_span_tilt` (the held coordinates' slider spans, chart_reference §4.5): at a single 90° tilt in the zoom-1
+//!   window, at every probe pixel, the decoded hidden value equals the sibling axis's at the same `u`: `ν₀` the Euclid
+//!   plane's `ν(u) = ν_min + (ν_max − ν_min)·u`, read off the decoded triangle; the held `L_z` `√(2K_max)·(2u − 1)`,
+//!   the decoded `L_z`; the held `K` `K_max·(t₀ + u − ½)^γ_K`, the decoded `K`; each within `1e-12·(1 + |value|)`.
+//!   Controls: a span of 2, and a span read at the view's centre (the held `L_z`'s `2√(2K)` at the centre row's `K`),
+//!   fail. A pan at fixed `τ` leaves each span bitwise unchanged; control: the centre-read span moves. A saved tilted
+//!   chart reopens bitwise with its stored span at every probe pixel; control: reopened at the latent span 2 it does
+//!   not.
+//! - `held_k_calibration`, the proposal set by measurement: `K_max = K₀`, the chart's calibrated `K`, so `t₀ = 1`
+//!   exactly; and `γ_K` the largest of the candidates `{1, 1.5, 2, 3}` under which every pixel of the default view
+//!   tilted 90° into the held `K` (the zoom-1 square, the rail's whole extent `t₀ ± ½`, the chart's whole `θ` range) is
+//!   a bound system, `E = K + U < 0`, as the chart's own `K₀` was chosen to make every one of its systems bound (the
+//!   register's `burrau_theta_lz_k`); the largest because it is nearest the `γ_K = 2` every other warped `K` axis uses.
+//!   Under the proposal no pixel of the default view tilted 15°, 30°, 45°, 60° or 90° is held at the floor or refused.
+//!   Printed, measurements: each candidate's bound share at 90°, and the share of the default 30° view's pixels each
+//!   other value moves (its decoded `K` off the proposal's by more than 1 %). Control: the invariant charts' `γ_K = 2`
+//!   put in its place.
+//!   `held_span_tilt_spans`: the slider spans' table (chart_reference §4.5), value by value, a mixed chart's frozen
+//!   control's 2 among them; control: every span read as a latent slider's 2.
 //! - `curved_tilt_frames`: the curved tilt family's interior frames, its record round trip, and a non-finite angle
 //!   refused (its criterion beside it).
 
@@ -535,7 +536,7 @@ negative_control!(
 /// Which span the tilt carries.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Span {
-    /// R-920's, through the object.
+    /// The held coordinate's slider span (chart_reference §4.5), through the object.
     Object,
     /// A latent slider's span, 2.
     #[cfg(feature = "controls")]

@@ -1,12 +1,12 @@
-//! The first slice's GPU arm (TASK-M2-86; REQ-DEC-057): the narrowed f64 records of `engine::first_slice` against the
+//! The first slice's GPU arm: the narrowed f64 records of `engine::first_slice` against the
 //! decode stage on this machine's GPU (`DecodeStage::run`, `target/spirv/kernel.wgsl`, which `cargo xtask build-kernel`
 //! writes), on each chart's grids, per component in f32 ulps at `max(1, |x|)`; the samples whose `DEGENERATE` tag
 //! differs; and the share of neighbouring sample pairs whose GPU records are bitwise identical. Measured and reported,
-//! never asserted: REQ-DEC-057's arm is the Mac's Metal, and the report names the adapter it ran on. Run with
+//! never asserted: the arm that counts is the Mac's Metal, and the report names the adapter it ran on. Run with
 //! `--no-capture` to read it. A sample outside the chart's domain (the chart's `validate` does not find its point
 //! `Valid`) is counted and left out, as `first_slice` leaves it out.
 //!
-//! What it asserts is that the comparison is like for like (R-649): the GPU decodes the very chart the CPU's f64
+//! What it asserts is that the comparison is like for like: the GPU decodes the very chart the CPU's f64
 //! evaluation reads widened, its parameters through the decode stage's uniform unchanged, at the same `(u, v)` rounded
 //! once to f32 as today's CPU f32 decode takes them.
 //!

@@ -1,4 +1,4 @@
-//! The physical-quantity axes' mapping on the sim key (R-471 E2, H7; R-506; REQ-CHART-068; TASK-M2-37):
+//! The physical-quantity axes' mapping on the sim key (`warped` by default, `linear` an option per axis):
 //! - `energy_axis_linear_option_sim_key`: each axis's `warped | linear` mapping is a field of `SimConfig`'s chart
 //!   group, `warped` by default; switching either axis's mapping changes the sim key and its canonical text, which
 //!   names it, and the text reads back to the same key.

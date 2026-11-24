@@ -1,5 +1,5 @@
-//! Only the validator builds a `ValidatedChart` (`engine::chart_authoring`; lowering contract Part 5; REQ-SYS-013;
-//! TASK-M2-14): `validated_chart_only_from_validate` checks that `fixtures/validated_chart`, which builds one with a
+//! Only the validator builds a `ValidatedChart` (`engine::chart_authoring`; lowering contract Part 5):
+//! `validated_chart_only_from_validate` checks that `fixtures/validated_chart`, which builds one with a
 //! struct literal outside the crate, fails to compile, and fails only for the literal's private fields (E0451). Its
 //! control builds the same chart through `validate`, which compiles, so the check fails.
 
@@ -24,7 +24,8 @@ fn root() -> PathBuf {
 const FORGED: &str = "ValidatedChart { chart, descriptor, solves: Vec::new() } // FORGED";
 
 /// `cargo check` on a copy of `fixtures/validated_chart`, its forging line replaced by `body`, in a directory and a
-/// target directory of `own`'s (R-224), each kept across runs and written only where it changed (R-231).
+/// target directory of `own`'s, so a test and its control never build in one directory, each kept across runs and
+/// written only where it changed.
 fn check_fixture(own: &str, body: &str) -> Output {
     let fixture = root().join("fixtures/validated_chart");
     let read = |file: &str| std::fs::read_to_string(fixture.join(file)).unwrap();

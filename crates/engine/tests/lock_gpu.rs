@@ -1,8 +1,8 @@
-//! The lock on the GPU's decode stage (chart_decoder_contract Part 4, "What the GPU knows about all of this: nothing";
-//! TASK-M2-23): the kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively. CI runs this file in the
+//! The lock on the GPU's decode stage (chart_decoder_contract Part 4, "What the GPU knows about all of this: nothing"):
+//! the kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively. CI runs this file in the
 //! `gpu-kernel` job, after `cargo xtask build-kernel`.
 //!
-//! - `lock_kernel_uniform_identical_gpu` (REQ-SYS-012): a locked and a free view of the same `(z₀, q₁, q₂)`, through
+//! - `lock_kernel_uniform_identical_gpu`: a locked and a free view of the same `(z₀, q₁, q₂)`, through
 //!   `engine::lock::kernel_chart`, render bitwise identically through the decode stage; with an excursion the same
 //!   holds of the plane the excursion gives.
 

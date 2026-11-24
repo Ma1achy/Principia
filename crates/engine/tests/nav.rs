@@ -1,15 +1,15 @@
-//! Navigation as chart construction (chart_decoder_contract Part 4; chart_reference §1.1; TASK-M2-22): each gesture
-//! is a typed `SetField` edit of `SimConfig`'s plane, applied here through the real state store, and every pixel's IC
-//! is read through the kernel's latent chart `Φ`.
+//! Navigation as chart construction (chart_decoder_contract Part 4; chart_reference §1.1): each gesture is a typed
+//! `SetField` edit of `SimConfig`'s plane, applied here through the real state store, and every pixel's IC is read
+//! through the kernel's latent chart `Φ`.
 //!
-//! - `nav_ops` (REQ-GUI-002): a slice moves every pixel's IC by the identical hidden step; a pan keeps the plane; a
+//! - `nav_ops`: a slice moves every pixel's IC by the identical hidden step; a pan keeps the plane; a
 //!   zoom keeps `z₀`.
-//! - `tilt` (REQ-GUI-003): `τ = 0` leaves `q`, `τ = ±90°` gives `±d_target`, `+30°` and `−30°` differ, a curve axis
+//! - `tilt`: `τ = 0` leaves `q`, `τ = ±90°` gives `±d_target`, `+30°` and `−30°` differ, a curve axis
 //!   tilts its tangent at the centre, and the six directions orthogonal to the plane; a pair tilt holds `τ₁` and `τ₂`
 //!   together, and re-tilting one replaces its own tilt.
-//! - `named_directions` (REQ-CHART-009, REQ-CHART-051): the library returns the three named vectors, the energy vector
+//! - `named_directions`: the library returns the three named vectors, the energy vector
 //!   moves with the centre, and the morph keeps the anchor through the §4.6 persistence sweep.
-//! - `oblique_slice_record` (REQ-CHART-016): the export of an oblique slice carries `q₁, q₂`; two raw tilts give the
+//! - `oblique_slice_record`: the export of an oblique slice carries `q₁, q₂`; two raw tilts give the
 //!   second, not the composition.
 
 mod path_shim;
@@ -144,7 +144,7 @@ fn burrau_centre() -> Latent {
     [0.3, -0.2, 0.1, -0.2, 0.3, 0.05, z6, z7]
 }
 
-// ---- nav_ops (REQ-GUI-002) ----
+// ---- nav_ops ----
 
 /// Every pixel's IC moved from `before` to `after` by `step`, and `step` is orthogonal to `before`'s plane.
 fn check_same_hidden_step(before: &Plane, after: &Plane, step: &Latent) {
@@ -353,7 +353,7 @@ negative_control!(
     check_refused(1.01 * f64::EPSILON.sqrt())
 );
 
-// ---- tilt (REQ-GUI-003) ----
+// ---- tilt ----
 
 #[test]
 fn tilt_zero_leaves_q_unchanged() {
@@ -787,7 +787,7 @@ negative_control!(
     }
 );
 
-// ---- named_directions (REQ-CHART-009, REQ-CHART-051) ----
+// ---- named_directions ----
 
 /// The Burrau-centred plane: a configuration axis and a momentum axis, zoomed.
 fn burrau_plane() -> Plane {
@@ -906,7 +906,7 @@ negative_control!(
 
 /// The pull-back, through the default momentum links, of the `(L_z, K)` construction's momenta at `(lz, k)`, minus
 /// `z0`'s momentum controls, normalised: the construction's latent chord from `z0`, under the seed in force, the
-/// expansion `w = r/√I` (R-934), or under R-82's named legacy option, decided on `z_α`, where `legacy`.
+/// expansion `w = r/√I`, or under the named legacy option (the largest-norm seed), decided on `z_α`, where `legacy`.
 fn construction_chord(z0: &Latent, lz: f64, k: f64, legacy: bool) -> Latent {
     let d = decode::<Defaults, f64>(&Controls::new(*z0));
     let c = if legacy {
@@ -956,7 +956,7 @@ negative_control!(
         z[0] = -0.4;
         z[2..6].fill(0.0);
         let d = energy_at_fixed_lz::<Defaults>(&z).expect("d_E at rest");
-        // R-82's legacy option at z_α = −0.4 takes (ρ, 0), not the expansion r/√I.
+        // The legacy option at z_α = −0.4 takes (ρ, 0), not the expansion r/√I.
         check_seed_direction(&d, &construction_chord(&z, 0.0, 1e-12, true));
     }
 );
@@ -1263,7 +1263,7 @@ negative_control!(
     )
 );
 
-// ---- oblique_slice_record (REQ-CHART-016) ----
+// ---- oblique_slice_record ----
 
 /// The export of `sim` records `plane`'s `q₁` and `q₂` exactly.
 fn check_recorded(sim: &SimConfig, plane: &Plane) {

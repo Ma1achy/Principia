@@ -1,5 +1,5 @@
 //! The collision test's floor, recorded with the run (integrator contract Part 7, "The floor's record, defined";
-//! dd_simstate_payload §2, `coll_floor_bits`, and §5; R-954, R-973; REQ-EVT-035):
+//! dd_simstate_payload §2, `coll_floor_bits`, and §5):
 //! - `r_coll_floor_recorded`: a run through dispatch, the kernel's wrapper and the export decoder, its bodies a binary
 //!   whose coordinates stay in `[1, 2)` in `|x|`, where the f32 spacing is `2⁻²³`. At the default `r_coll` = 10⁻³ the
 //!   output records that `r_coll` lies above the floor; at `2⁻²⁶`, below the spacing, that it lies below; at 0, that

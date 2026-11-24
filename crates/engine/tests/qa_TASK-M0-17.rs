@@ -1,30 +1,30 @@
-//! qa's tests for TASK-M0-17, written from the requirements it closes and from the definition REQ-TOOL-120 asks for
+//! qa's tests for the profiler's v1 trace, written from its requirements and from its definition
 //! (dd_telemetry_and_tiers §5, "Profiler schema v1: the keys and the nesting"), not from the implementation:
 //!
-//! - REQ-TOOL-005: a trace validates against the v1 JSON Schema; the top level has exactly the five stages
+//! - A trace validates against the v1 JSON Schema; the top level has exactly the five stages
 //!   (integrate / reduce / colour / upload / present); every other scope has one of them as its ancestor; the finer
 //!   categories (quadtree, stain + style, IC decode, readback, egui) are scopes nested under the five, and a scope beside
 //!   them is not v1.
-//! - REQ-TOOL-008: a profiler dump parses as telemetry §2's frame record (read here into qa's own §2-only struct, with
-//!   R-288's two counters) and contains the nested sections: scopes, GPU passes, allocations, events.
-//! - REQ-TOOL-120: the §5 key names and nesting; "exactly the keys listed, all required: an absent value is `null`";
+//! - A profiler dump parses as telemetry §2's frame record (read here into qa's own §2-only struct, with the two
+//!   d_min counters) and contains the nested sections: scopes, GPU passes, allocations, events.
+//! - The §5 key names and nesting; "exactly the keys listed, all required: an absent value is `null`";
 //!   the ranges; the three cross-field rules; the writer fails rather than write a value outside the definition; the
 //!   reader rejects it; the four stated reader/schema exceptions.
-//! - R-286: the file is JSON Lines — the header line first, one compact frame record per line, the summary line last;
+//! - The file is JSON Lines — the header line first, one compact frame record per line, the summary line last;
 //!   a blank line or a misplaced line is not v1; a last line without its newline is accepted. The JSON Schema checks
 //!   each line against its place's `$defs` entry: `header_line`, `frame`, `summary_line` (§5).
-//! - R-298 (amends R-286): a trace with no final summary line, a crashed or still-running session, is valid: its last
+//! - A trace with no final summary line, a crashed or still-running session, is valid: its last
 //!   line is a frame record, or the header line when no frame was recorded. The reader returns the frames, reports
-//!   `leak_flags` and `hot_paths` as absent with "session incomplete", and never rejects the file for it (REQ-TOOL-008).
-//! - R-299 (amends R-298): a last line with no newline after it that doesn't parse (is not one complete JSON value) is
+//!   `leak_flags` and `hot_paths` as absent with "session incomplete", and never rejects the file for it.
+//! - A last line with no newline after it that doesn't parse (is not one complete JSON value) is
 //!   dropped: the reader reads the lines before it, reports the session incomplete and states how many bytes it
 //!   dropped; an unterminated last line that parses is read as any last line is; a malformed line ending in a newline
-//!   stays an error (REQ-TOOL-008, telemetry §5 "A line cut off at the end").
-//! - R-288: the frame record carries `dmin_nan_unset` and `dmin_negative_floored`, each a u32 count (§5's ranges).
+//!   stays an error (telemetry §5 "A line cut off at the end").
+//! - The frame record carries `dmin_nan_unset` and `dmin_negative_floored`, each a u32 count (§5's ranges).
 //!
 //! The fixture is hand-written JSON, filled with known values from the §5 definition and laid out as JSON Lines here,
 //! so the reader and the schema are both tested against a file the writer did not produce. Each test registers its
-//! control (R-176).
+//! control.
 
 use std::collections::BTreeSet;
 
@@ -92,7 +92,7 @@ fn frame(index: u64, present: bool, camera_delta: f64) -> Value {
 }
 
 /// The trace as one logical object (edited by JSON pointer), which [`jsonl`] lays out as §5's lines. It is not the
-/// file: the file is JSON Lines (R-286).
+/// file: the file is JSON Lines.
 fn interactive() -> Value {
     json!({
         "schema": "principia-profile-v1",
@@ -132,7 +132,7 @@ fn edited(pointer: &str, value: Value) -> Value {
     doc
 }
 
-// ----- the file's lines (R-286; §5 "The file") -----
+// ----- the file's lines (§5 "The file") -----
 
 /// §5's places: the header line `{schema, header}`, one frame record per line, the summary line
 /// `{leak_flags, hot_paths}`. Each is paired with the `$defs` entry §5 names for its place. A key the logical object
@@ -170,7 +170,7 @@ fn lines_of(text: &str) -> Vec<&str> {
 
 /// §5's place for line `i` of `n`, whose value is `line`: the first is the header line, and one between is a frame
 /// record. The last, after the header, is the summary line, or a frame record in a session that ended before its
-/// summary line (R-298, §5: "Each line is checked against the definition for the place it holds, so the last line is a
+/// summary line (§5: "Each line is checked against the definition for the place it holds, so the last line is a
 /// `frame` (or the `header_line`)"). A last line that is not a summary line is held to `frame`, so a last line that is
 /// neither fails.
 fn place(i: usize, n: usize, line: &Value) -> &'static str {
@@ -214,7 +214,7 @@ fn schema_accepts(doc: &Value) -> bool {
 }
 
 /// A file's text checked line by line (§5: "the schema checks the file line by line, each line against the
-/// definition for its place"). A line that is not JSON fails. The header line alone is a file (R-298).
+/// definition for its place"). A line that is not JSON fails. The header line alone is a file.
 fn schema_accepts_file(text: &str) -> bool {
     let lines = lines_of(text);
     let n = lines.len();
@@ -282,7 +282,7 @@ fn check_reader_only(text: &str, what: &str) {
     );
 }
 
-/// Only the reader sees these, the file's layout (R-286): its lines' places, blank lines, the newline.
+/// Only the reader sees these, the file's layout: its lines' places, blank lines, the newline.
 fn check_reader_rejects_file(text: &str, what: &str) {
     assert!(
         !reader_accepts(text),
@@ -379,7 +379,7 @@ fn check_five_in_order(text: &str) {
     }
 }
 
-/// qa's own telemetry §2 frame record: only the §2 fields, with R-288's two counters, and whatever else the dump
+/// qa's own telemetry §2 frame record: only the §2 fields, with the two d_min counters, and whatever else the dump
 /// carries is ignored.
 #[derive(Deserialize)]
 struct S2Frame {
@@ -494,7 +494,7 @@ fn check_write_refuses(doc: &Value, what: &str) {
     );
 }
 
-/// No whitespace outside a JSON string: the line is compact, not pretty-printed (R-286).
+/// No whitespace outside a JSON string: the line is compact, not pretty-printed.
 fn is_compact(line: &str) -> bool {
     let (mut in_str, mut esc) = (false, false);
     for c in line.chars() {
@@ -523,7 +523,7 @@ fn keys(v: &Value) -> BTreeSet<&str> {
         .collect()
 }
 
-// ----- REQ-TOOL-005 -----
+// ----- The trace validates against the v1 JSON Schema -----
 
 #[test]
 fn qa_m017_hand_written_trace_validates() {
@@ -833,7 +833,7 @@ validation::negative_control!(
     )
 );
 
-// ----- REQ-TOOL-008 -----
+// ----- A dump parses as telemetry §2's frame record -----
 
 #[test]
 fn qa_m017_dump_parses_as_telemetry_s2_with_the_nested_sections() {
@@ -855,7 +855,7 @@ validation::negative_control!(
     )
 );
 
-// ----- REQ-TOOL-120: the four stated exceptions, and the repeated keys that keep the last copy -----
+// ----- The four stated exceptions, and the repeated keys that keep the last copy -----
 
 #[test]
 fn qa_m017_the_four_reader_only_exceptions() {
@@ -985,7 +985,7 @@ validation::negative_control!(
     )
 );
 
-// ----- REQ-TOOL-120: the writer fails rather than write what the definition excludes -----
+// ----- The writer fails rather than write what the definition excludes -----
 
 #[test]
 fn qa_m017_writer_refuses_what_v1_excludes() {
@@ -1105,9 +1105,9 @@ validation::negative_control!(
     check_write_refuses(&interactive(), "a valid trace")
 );
 
-// ----- R-286: the file is JSON Lines -----
+// ----- The file is JSON Lines -----
 
-/// What the writer writes (§5 "The file", R-286): every line compact and ended by a newline; the header line first,
+/// What the writer writes (§5 "The file"): every line compact and ended by a newline; the header line first,
 /// exactly `schema` and `header`; one frame record per line, in the session's order; the summary line last, exactly
 /// `leak_flags` and `hot_paths`; every nullable key present; each count a JSON integer.
 fn check_written_shape(text: &str, frames: usize) {
@@ -1205,7 +1205,7 @@ validation::negative_control!(
     check_written_shape(&format!("{}\n", interactive()), 3)
 );
 
-/// Each line of the writer's output is compact: R-286's "one compact frame record per line", never pretty-printed.
+/// Each line of the writer's output is compact: "one compact frame record per line", never pretty-printed.
 fn check_compact(text: &str) {
     for line in lines_of(text) {
         assert!(is_compact(line), "a line is not compact: {line}");
@@ -1237,7 +1237,7 @@ validation::negative_control!(
 );
 
 /// §5: "A line that is not the object its place calls for, or a blank line among them, is not schema v1." A file that
-/// ends before its summary line is not among them since R-298: it is `qa_m017_a_session_without_its_summary_line_reads`'s.
+/// ends before its summary line is not among them: it is `qa_m017_a_session_without_its_summary_line_reads`'s.
 /// Only the summary line may be missing: a last line that is neither the summary line nor a frame record is still
 /// not v1.
 #[test]
@@ -1340,7 +1340,7 @@ fn qa_m017_reader_rejects_a_misplaced_blank_or_missing_line() {
             "a summary line with a schema key",
             true,
         ),
-        // R-298 makes only the summary line optional; these still are not v1.
+        // Only the summary line is optional; these are not v1.
         (
             join(&[head, f0, f1, ""]),
             "a blank line where the summary line would be",
@@ -1393,7 +1393,7 @@ validation::negative_control!(
     check_reader_rejects_file(&jsonl(&interactive()), "a valid file")
 );
 
-// ----- R-298: a session that ended before its summary line -----
+// ----- A session that ended before its summary line -----
 
 /// The interactive fixture with a leak flag and a hot-path summary on its summary line, so that summaries absent for
 /// "session incomplete" cannot pass for `null` ones.
@@ -1417,7 +1417,7 @@ fn cut_summary(text: &str) -> String {
     first_lines(text, lines_of(text).len() - 1)
 }
 
-/// R-298: `text` reads as a session that ended before its summary line, holding the first `frames` of `doc`'s frames.
+/// `text` reads as a session that ended before its summary line, holding the first `frames` of `doc`'s frames.
 /// The reader returns the header and those frames and reports `leak_flags` and `hot_paths` as absent with "session
 /// incomplete"; the schema accepts each line in the place it holds.
 fn check_incomplete(text: &str, doc: &Value, frames: usize, what: &str) {
@@ -1637,7 +1637,7 @@ fn summary_entries() -> Option<Vec<serde_json::Map<String, Value>>> {
         .clone()])
 }
 
-/// R-298 in the writer: an incomplete session is written as the file it left, the header line and the frame lines
+/// In the writer: an incomplete session is written as the file it left, the header line and the frame lines
 /// with no summary line, and reads back as the same trace; one whose `leak_flags` or `hot_paths` is set is refused.
 #[test]
 fn qa_m017_writer_writes_an_incomplete_session_as_it_ended() {
@@ -1710,7 +1710,7 @@ fn check_reads_as(text: &str, expected: &Trace, what: &str) {
     assert_eq!(&got, expected, "the reader read {what} differently");
 }
 
-/// §5 (R-286): "a reader also accepts a last line without [its newline], as JSON Lines allows"; a session with no
+/// §5: "a reader also accepts a last line without [its newline], as JSON Lines allows"; a session with no
 /// frame is the header line then the summary line; frames read in the session's order.
 #[test]
 fn qa_m017_reader_accepts_what_json_lines_allows() {
@@ -1760,7 +1760,7 @@ validation::negative_control!(
     )
 );
 
-// ----- R-288: the two d_min counters -----
+// ----- The two d_min counters -----
 
 #[test]
 fn qa_m017_frame_record_carries_the_dmin_counters() {
@@ -1811,7 +1811,7 @@ validation::negative_control!(
     )
 );
 
-// ----- REQ-TOOL-120: "one entry for each type" (by_kind) and "one entry per kind and pool" (allocations) -----
+// ----- "One entry for each type" (by_kind) and "one entry per kind and pool" (allocations) -----
 
 fn check_duplicate_refused(doc: &Value, what: &str) {
     assert!(
@@ -1864,7 +1864,7 @@ validation::negative_control!(
     check_duplicate_refused(&interactive(), "one entry per kind and pool")
 );
 
-// ----- REQ-TOOL-120: "all required: an absent value is `null`, never a missing key" -----
+// ----- "All required: an absent value is `null`, never a missing key" -----
 
 /// Removes the key at `pointer` (its last segment) from its parent object.
 fn without(mut doc: Value, pointer: &str) -> Value {
@@ -1969,11 +1969,11 @@ validation::negative_control!(
     }
 );
 
-// ----- R-298 through `Trace`'s own serde form (not the file) -----
+// ----- An incomplete session through `Trace`'s own serde form (not the file) -----
 
 /// `Trace`'s own serde form (its doc: "one object with the five keys (and `session` when incomplete)"): a complete
 /// trace is the five keys, and an incomplete one keeps its incompleteness through the form, so a trace passed on in it
-/// still reports its summaries absent with "session incomplete", not as `null` ones (R-298).
+/// still reports its summaries absent with "session incomplete", not as `null` ones.
 fn check_serde_form_keeps_the_session(complete: &Trace, incomplete: &Trace) {
     let form = serde_json::to_value(complete).expect("the complete trace does not serialise");
     assert_eq!(
@@ -2024,7 +2024,7 @@ validation::negative_control!(
     }
 );
 
-// ----- R-299: a last line cut off before its newline -----
+// ----- A last line cut off before its newline -----
 
 /// The file a session leaves when it stops `cut` bytes into line `keep` (counted from 0) of `text`: the first `keep`
 /// lines, each ended by its newline, then the first `cut` bytes of the next line with no newline after them.
@@ -2040,7 +2040,7 @@ fn cut_into(text: &str, keep: usize, cut: usize) -> Vec<u8> {
     out
 }
 
-/// R-299: `bytes` reads as the lines before its cut-off last line, holding the first `frames` of `doc`'s frames: the
+/// `bytes` reads as the lines before its cut-off last line, holding the first `frames` of `doc`'s frames: the
 /// cut-off line is dropped and `dropped` bytes are stated, the session is incomplete, and `leak_flags` and `hot_paths`
 /// are absent with "session incomplete". Apart from the count, the trace is the one the kept lines alone read as.
 fn check_cut_off(bytes: &[u8], doc: &Value, frames: usize, dropped: usize, what: &str) {
@@ -2186,8 +2186,8 @@ validation::negative_control!(
     }
 );
 
-/// R-299: a last line with no newline that is one complete JSON value was written whole, and is read as any last line
-/// is (R-298's rules unchanged): nothing is dropped.
+/// A last line with no newline that is one complete JSON value was written whole, and is read as any last line is:
+/// nothing is dropped.
 #[test]
 fn qa_m017_r299_an_unterminated_last_line_that_parses_is_read() {
     let doc = summarised();
@@ -2260,9 +2260,9 @@ fn check_bytes_rejected(bytes: &[u8], what: &str) {
     );
 }
 
-/// R-299 and telemetry §5: a line ending in a newline that is not the object its place calls for is an error wherever
+/// Telemetry §5: a line ending in a newline that is not the object its place calls for is an error wherever
 /// it is, the same cut-off piece included; a cut-off line after the summary line is dropped, the summary line and the
-/// frames kept and the session complete (R-356, R-358); a file whose only line is cut off has no header line, and the
+/// frames kept and the session complete; a file whose only line is cut off has no header line, and the
 /// error states the bytes.
 #[test]
 fn qa_m017_r299_a_malformed_line_ending_in_a_newline_is_an_error() {
@@ -2306,7 +2306,7 @@ fn qa_m017_r299_a_malformed_line_ending_in_a_newline_is_an_error() {
         }
     }
     // A cut-off line after the summary line is dropped and its bytes stated; the header line, the frames and the
-    // summary line are kept, and the session is complete (R-356, R-358; changed by qa for TASK-M0-51, R-290).
+    // summary line are kept, and the session is complete.
     let mut after = full.clone().into_bytes();
     after.extend_from_slice(&lines[1].as_bytes()[..20]);
     let got = read(&after[..]).unwrap_or_else(|e| {

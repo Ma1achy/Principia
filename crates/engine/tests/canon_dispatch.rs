@@ -1,4 +1,4 @@
-//! The canonicalise dispatch's host-side check (`engine::decode_dispatch::check_canon_samples`; TASK-M2-07):
+//! The canonicalise dispatch's host-side check (`engine::decode_dispatch::check_canon_samples`):
 //! - `canon_dispatch_check_samples`: a dispatch covers `n` states within the device's workgroup count and the output
 //!   buffer's binding size, `canon_words()` per state, each limit met exactly and refused one past it.
 
