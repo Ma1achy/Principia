@@ -5,13 +5,13 @@
 //! | Family | Formula | Edit |
 //! |---|---|---|
 //! | `Pan` | [`pan`], [`pan_window`] | `z₀ += 2ds·q₁ + 2dt·q₂` (chart_decoder_contract Part 4, "Pan") |
-//! | `Zoom` | [`octave_factor`], then [`zoom_by`], [`zoom_window_by`] | `q₁, q₂ ×= 2^−octaves`, or a kernel map's half-widths, log-stepped (Part 4, "Zoom"; R-83) |
+//! | `Zoom` | [`octave_factor`], then [`zoom_by`], [`zoom_window_by`] | `q₁, q₂ ×= 2^−octaves`, or a kernel map's half-widths, log-stepped (Part 4, "Zoom") |
 //! | `ZoomFactor` | [`zoom_by`], [`zoom_window_by`] | `q₁, q₂ ×= k`, `k` a ratio of scales: the zoom row's form, bit for bit |
 //! | `Slice` | [`slice`] | `z₀ += t·off_plane(d)` (Part 4, "Slice") |
 //! | `Control` | [`control`] | `z₀[k] ← value`, no projection (Part 4, "Sliders are re-based") |
 //! | `RawTilt` | [`Constructor::tilt`], [`Constructor::tilt_pair`] | `q′ = ‖q‖·normalise(cos τ·q̂ + sin τ·d̂)` from the committed plane (Part 4, "Tilt"; chart_reference §1.1) |
 //!
-//! **The scale lives in `q`** (R-83): a zoomed basis vector is `k·q̂`, and a tilt keeps each basis vector's length, so a
+//! **The scale lives in `q`**: a zoomed basis vector is `k·q̂`, and a tilt keeps each basis vector's length, so a
 //! tilt neither resets the zoom nor gives the two axes different scales. **Raw tilts replace rather than compose**
 //! (chart_reference §1.1): the [`Constructor`] holds the committed plane each raw tilt starts from.
 
@@ -22,7 +22,7 @@ use crate::nav::{
     axpy, finite, frame, norm, off_plane, scaled, unit, unit_of, BasisVector, NavError,
 };
 
-/// A `SimConfig` edit, entering the undo history (R-69).
+/// A `SimConfig` edit, entering the undo history.
 pub(crate) fn edit(field: SimField) -> SetField {
     SetField {
         edit: Edit::Sim(field),

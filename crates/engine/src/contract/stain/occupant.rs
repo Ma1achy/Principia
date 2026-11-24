@@ -9,8 +9,8 @@
 //! WGSL for the one assembler.
 //!
 //! A node's operation is a [`Primitive`]: what it outputs, what it takes and the library call it lowers to. The
-//! occupant algebra's operations, the families' and the combinators' node variants, are TASK-M7-05 to -10's, each a
-//! [`Primitive`]; the tree, its type-checker and its lowering are the same for every one.
+//! occupant algebra's operations, the families' and the combinators' node variants, are each a [`Primitive`]; the
+//! tree, its type-checker and its lowering are the same for every one.
 
 use std::collections::BTreeSet;
 use std::fmt;

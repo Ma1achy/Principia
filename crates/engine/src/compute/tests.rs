@@ -1,7 +1,7 @@
-//! The compute-pipeline entry point (R-297; REQ-SYS-074): the per-backend modes the session header records, the path
+//! The compute-pipeline entry point: the per-backend modes the session header records, the path
 //! each backend and setting take, the passthrough's MSL (fast-math off first, the buffers at wgpu's indices, their
 //! sizes beside them), the interface it is built from, and a dispatch through it on the run's GPU, its buffers and their
-//! sizes bound. Each test registers the control that must make it fail (R-176).
+//! sizes bound. Each test registers the control that must make it fail.
 
 use super::*;
 
@@ -68,7 +68,7 @@ fn modes(compute: StageMode, display: StageMode) -> Option<CompiledModes> {
 }
 
 /// Metal: compute follows the setting, the display stages on; Vulkan: every stage off, whatever the setting; DX12 and
-/// WebGPU: unknown; no GPU: nothing compiled (R-297, R-303, R-308).
+/// WebGPU: unknown; no GPU: nothing compiled.
 fn check_modes(modes_of: Modes) {
     use StageMode::{Off, On, Unknown};
     for (api, setting, want) in [

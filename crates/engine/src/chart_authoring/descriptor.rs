@@ -1,4 +1,4 @@
-//! The per-chart descriptors (chart_decoder_contract Part 5, "Per-chart descriptors"; REQ-CHART-014): what a chart
+//! The per-chart descriptors (chart_decoder_contract Part 5, "Per-chart descriptors"): what a chart
 //! declares beside its two axes — its slice, its conventions, `system_image`, `has_feasibility_boundary`, `coupling`
 //! and the annotation flag — and the [`Authored`] trait every chart the validator takes implements.
 
@@ -52,7 +52,7 @@ impl Frozen {
 }
 
 /// A chart-level convention pinning `pins` DOF of `block` (Part 5's "conventions"): the rest start's zero momenta, or
-/// the invariant construction's deterministic seed (chart_reference §2.2, R-82).
+/// the invariant construction's deterministic seed (chart_reference §2.2).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Convention {
     /// The block.

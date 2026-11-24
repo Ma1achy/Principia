@@ -63,7 +63,7 @@ pub struct ChartLock {
 }
 
 /// The lock at the pixel `(s, t)` of `window` on the nonlinear `chart`, under the link selection `S` (the contract's
-/// definition): `Φ` and `D` replayed on the CPU at the pixel's chart point, which must pass `validate` (R-469); the
+/// definition): `Φ` and `D` replayed on the CPU at the pixel's chart point, which must pass `validate`; the
 /// state they decode through lookup's ladder, `norm` and `tol` its `‖·‖_phys` and tolerances, whose `z` gives
 /// `z_locked` the controls the chart's axes set, every other control the chart's frozen one, bit for bit. The edit is the
 /// lock group's alone: the window is not re-centred, so the pinned pixel is the clicked pixel of the same chart through
@@ -122,7 +122,7 @@ pub(crate) fn unlock(sim: &SimConfig) -> Result<SetField, LockError> {
 }
 
 /// The re-centre lock validation offers: the lock at the nearest feasible point, the `SetField` on `z₀` and the lock
-/// group's, one command under one history key (gui_state_contract §2, R-466). It moves the view by design: it is an
+/// group's, one command under one history key (gui_state_contract §2). It moves the view by design: it is an
 /// offered action, the view brought to the nearest feasible point.
 pub(crate) fn recentre(nearest: &Nearest) -> [SetField; 2] {
     [edit(SimField::Z0(nearest.z)), lock_group(nearest.z)]
@@ -274,7 +274,7 @@ pub fn hold_window(window: &Window, [s, t]: [f64; 2], target: &[f64; 2]) -> ([f6
 /// at `point + R·(u − at)` with hidden offsets `d0 + R_d·(u − at)`, the tilt's own [`Tilt::offsets`]. The pin, at `at`,
 /// is placed at `point + R·0`: its own chart point and hidden offsets, bit for bit wherever adding a zero is exact (every
 /// value but `−0`). At `at = point = c`, the window's centre, and `d0 = [−0, −0]` it is the kernel's [`Tilt`] about the
-/// centre bit for bit (`x + (−0) = x` for every `x`). `d0` is R-899's pivot record's hidden offset ([`super::Pivot`]):
+/// centre bit for bit (`x + (−0) = x` for every `x`). `d0` is the pivot record's hidden offset ([`super::Pivot`]):
 /// zero by value at a centred pin, the only lock on a tilted curved view built; a lock off its centre and the untilt
 /// need a non-zero one.
 #[derive(Clone, Copy, Debug, PartialEq)]

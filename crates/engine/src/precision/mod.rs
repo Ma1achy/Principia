@@ -106,7 +106,7 @@ pub fn integrate_ic_rule<A: Advance, E: kernel::detect::escape_rule::EscapeRule<
     let start = t0(ic, degenerate, &key.radius);
     if start.state == STATE_DECODE_FAILED {
         // `(r, p)` keep the IC as decoded, non-finite values included, as the wrapper's own `sim_failed` write keeps its
-        // march's; the failure path's defined failed-state contents (TASK-M3-18) must reach this write too.
+        // march's; the failure path's defined failed-state contents, not yet built, must reach this write too.
         // Written as the wrapper writes a march's own label: `d_min` unset and `dmin_pair` its sentinel, since no
         // separation was observed (payload §1, "Failed-state contents are defined"); every other field its initial 0.
         let labelled = start.packed_a(0);

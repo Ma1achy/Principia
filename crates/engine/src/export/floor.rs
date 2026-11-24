@@ -1,5 +1,5 @@
 //! The flag an output reads from the collision test's floor (integrator contract Part 7, "The floor's record,
-//! defined"; dd_simstate_payload §2, `coll_floor_bits`, and §5; R-954, R-973; REQ-EVT-035).
+//! defined"; dd_simstate_payload §2, `coll_floor_bits`, and §5).
 //!
 //! The payload stores, per sample, `coll_floor`: the largest floor the collision test met over its near-firing states
 //! and the `d_min` state, as the code `c + 41` of the floor `2^c`, 1 to 145, with 0 "not recorded". The flag is not

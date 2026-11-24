@@ -4,8 +4,7 @@
 //! timing changes no frame's content (Theorem 5).
 //!
 //! **The serialisation.** The plan is unclear here; chose JSON with every float written exactly (serde_json's
-//! `float_roundtrip`) and the saved chart's words and `s` as IEEE bits in hex, not the canonical JCS text (R-309),
-//! because JCS writes `−0` as `0` and a record must give back the bits the end rule compares.
+//! `float_roundtrip`) and the saved chart's words and `s` as IEEE bits in hex, not the canonical JCS text, because JCS writes `−0` as `0` and a record must give back the bits the end rule compares.
 
 use serde::{Deserialize, Serialize};
 

@@ -1,4 +1,4 @@
-//! `contract::decoded` (R-550; dd_decoder §3.2, §3.4): the state the compass's physical views read is the decoder's own,
+//! `contract::decoded` (dd_decoder §3.2, §3.4): the state the compass's physical views read is the decoder's own,
 //! its Jacobi momenta conjugate to its bodies' at unequal masses and read after `η_E`.
 
 use kernel::decode::{energy_norm, Latent as KernelLatent};

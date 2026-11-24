@@ -1,7 +1,7 @@
-//! The stain editor's edits (render_gui_spec Part II §4, §6, §7; gui_state_contract §5; R-52): add, delete,
+//! The stain editor's edits (render_gui_spec Part II §4, §6, §7; gui_state_contract §5): add, delete,
 //! duplicate, wire, unwire and reorder, picking a node's occupant and setting its params and ramp, each a typed
 //! [`StainEdit`]. [`apply`] checks one against a graph and, accepted, returns the one [`SetField`] that writes the
-//! edited graph, `RenderField::StainGraph`, undoable (R-52, R-69); refused, it returns the reason ([`Refusal`]) and
+//! edited graph, `RenderField::StainGraph`, undoable; refused, it returns the reason ([`Refusal`]) and
 //! the graph is as it was.
 //!
 //! - `OUT` and the combiner are fixed singletons: adding, deleting or duplicating one is refused (§4, §7).
@@ -152,8 +152,7 @@ impl From<GraphError> for Refusal {
     }
 }
 
-/// Checks `edit` against `graph`: accepted, the one `SetField` writing the edited graph, undoable (R-52); refused,
-/// why.
+/// Checks `edit` against `graph`: accepted, the one `SetField` writing the edited graph, undoable; refused, why.
 pub fn apply(graph: &StainGraph, edit: &StainEdit) -> Result<SetField, Refusal> {
     let mut next = graph.clone();
     match edit {

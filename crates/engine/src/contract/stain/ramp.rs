@@ -1,4 +1,4 @@
-//! The custom-stop ramp (colour_composition §9.4, "The custom-stop ramp"; R-72, R-546; REQ-COL-140): the gradient
+//! The custom-stop ramp (colour_composition §9.4, "The custom-stop ramp"): the gradient
 //! editor's "custom stops, cyclic" (render_gui_spec Part II §9), a `colour` node's ramp of `t ∈ [0, 1]` to a colour.
 //!
 //! - **Stops.** Two or more, each a position in `[0, 1]` and an OKLab colour `(L, a, b)`, `L` in `[0, 1]`, `a` and `b`
@@ -173,7 +173,7 @@ fn lerp(a: [f64; 3], b: [f64; 3], u: f64) -> [f64; 3] {
     [0, 1, 2].map(|i| a[i] * (1.0 - u) + b[i] * u)
 }
 
-/// OKLab to linear sRGB (dd_colouring §3.1; R-51): delegates to the render crate's one source of the conversion,
+/// OKLab to linear sRGB (dd_colouring §3.1): delegates to the render crate's one source of the conversion,
 /// `render::colour::space::oklab_to_linear` over its `OKLAB` coefficients, so the two cannot drift apart.
 pub fn oklab_to_linear(lab: [f64; 3]) -> [f64; 3] {
     render::colour::space::oklab_to_linear(lab)
