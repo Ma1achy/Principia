@@ -80,3 +80,8 @@ delete its line when it's done.
   wait on TASK-M2-68 and TASK-M2-83 (ignored placeholders in `path_lock.rs`, whose controls are bare panics because
   the controls lint needs one per test). The gui's chart switch under a lock still takes `Segment::chart_switch`'s
   labelled jump; `Segment::locked_switch` needs the chart's leaves in the gui adapter.
+- **The lock's tolerance sweep fails today** (`path_lock_tolerance_window`, ignored; PR #69). Two engine defects, in
+  `path/anchor.rs`: `rehold` holds by the solver's block residual, and its solve stops at `LOCK_TOLERANCE` itself
+  (`spec()`), so the sphere's re-held frames are labelled holding up to 65.8 ε off in `‖·‖_phys`; and `slide` reads any
+  failed follow as "ended", which ends mixed to Burrau before `s = 0.4` at 124 of 256 pins. The tolerance is confirmed
+  from a rerun once both are fixed.

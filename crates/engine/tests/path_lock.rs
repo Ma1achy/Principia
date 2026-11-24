@@ -2721,3 +2721,727 @@ negative_control!(
         View::blend(b.with_ends(a_end, snapped).reholding(false))
     })
 );
+
+// ── path_lock_tolerance_window: the lock's tolerance over the whole window on the gate's pairs ────────────────────────
+//
+// A measurement, the evidence the lock's tolerance is confirmed from. Its criterion, written before its first run:
+//
+// - **The proposal** is the smallest power of two, in units of `ε` (f64), at or above twice the worst drift measured
+//   anywhere in the sweep ([`proposal`]). The test prints it; it does not set `LOCK_TOLERANCE`, which the owner confirms.
+// - **No refusals a correct lock should hold:** on every pin, every pair runs through without an error, and a pair whose
+//   target holds the pinned state holds it on every frame (its `Blend::holds` true, the select showing the stored words).
+//   Every refusal is listed with its pin, its stage and its reason, and the test fails on any.
+// - **The fixture check:** every drift is within the tolerance in force, as the gate test asks.
+//
+// The sweep: pins on a 16 × 16 grid of the window's addresses `k/15`, its corners and edges included; on each pair, the
+// gate path at each pin (lock there, the morph to `s = 0.4`, the tilt mid-morph, the slice mid-morph, the morph back),
+// every frame of each segment (`FRAMES` per segment) read at the pin. What is read:
+//
+// - **A frame that holds** (`Blend::holds`): the drift without the select, the frame's `block_line(pinned, B(pin), s)` of
+//   the pinned state and `B`'s own decode at the pin (re-held, on a slice's frames), rebuilt into a state, against the
+//   pinned state in `‖·‖_phys`; and `B`'s own decode at the pin against it (the target's own pin).
+// - **A frame that slides:** the pin's shown state against the slide's prescribed state, `block_line(pinned, B_x(pin), s)`
+//   with `B_x` the frame's placement of `B`, in `‖·‖_phys`. The frame's pin is built by that same formula, so this
+//   reads 0 unless the pin's pixel is built otherwise; it is reported, not argued.
+// - **An end** (`s = 0`, `A` itself): `A`'s own decode at the pin against the stored anchor.
+//
+// The pairs (the gate's G9 list): affine (latent to latent) and nonlinear (mixed chart to mixed chart), the gate test's
+// own; latent to the exponential shape sphere; the mixed chart to the mass simplex at rest and to Burrau, both sliding.
+// One extra row, the `(L_z, K)` chart to latent, the pair PR #59's worst number (3.509 ε) came from, runs the morph only:
+// its latent end can't be re-held to a nonlinear start's pinned state (`anchor::rehold` refuses, `NotBuilt`), so it takes
+// no slice, and its frames run the whole morph, `s` from 0 to 1.
+//
+// The plan is unclear here (which tilt and slice a kernel map's end takes); chose `path_lock_round_trip_slides`' own:
+// a kernel map's end read through `ChartLeaves`, which refuses a tilted curved view, takes a zoom of 0 for its tilt and a
+// slider's move of `z[4]` for its slice (its states do not move), so only `A` is tilted. On the sphere pair `A` is the
+// latent frame `(e₀, e₂)`, tilted toward `z[5]` and sliced along `e₁`, a shape control: the plan is unclear here too;
+// chose a slice the sphere can follow (it holds the masses and momenta fixed and moves only the shape), so the pair
+// stays a hold pair through the slice and its re-held frames are measured as holds.
+
+/// The grid's side: pins at `k/(SWEEP_SIDE − 1)`, corners and edges included.
+const SWEEP_SIDE: usize = 16;
+
+/// The frames read per segment of the gate path. The plan is unclear here ("every frame of the morph", which has no
+/// fixed count); chose the gate test's own check of 16 (17 frames, ends included) rather than its 64-frame measurement,
+/// because 256 pins × six pairs at 64 would take over 20 minutes in a debug build (16 takes about 8½).
+const SWEEP_FRAMES: usize = 16;
+
+/// The criterion's rule: the smallest power of two, in units of `ε`, at or above twice `worst` (itself in `ε`); 1 where
+/// the worst is 0.
+fn proposal(worst: f64) -> f64 {
+    let mut k = 1.0;
+    while k < 2.0 * worst {
+        k *= 2.0;
+    }
+    k
+}
+
+/// The pins: a `side × side` grid of the window's addresses, its corners and edges included.
+fn sweep_pins(side: usize) -> Vec<[f64; 2]> {
+    let at = |k: usize| k as f64 / (side - 1) as f64;
+    (0..side * side)
+        .map(|k| [at(k % side), at(k / side)])
+        .collect()
+}
+
+/// What a pair's path ends in at one pin.
+#[derive(Default)]
+struct PinReading {
+    /// The worst drift over the pin's frames, with its segment and `u`.
+    worst: (f64, &'static str, f64),
+    /// The target's own pin at its worst over the pin's holding frames, with its segment and `u`.
+    own: (f64, &'static str, f64),
+    /// The worst drift in each segment.
+    segments: Vec<(&'static str, f64)>,
+    /// Frames read that hold, and that slide.
+    holds: usize,
+    slides: usize,
+}
+
+impl PinReading {
+    fn take(&mut self, drift: f64, own: f64, what: &'static str, u: f64) {
+        if drift > self.worst.0 {
+            self.worst = (drift, what, u);
+        }
+        if own > self.own.0 {
+            self.own = (own, what, u);
+        }
+        match self.segments.iter_mut().find(|(w, _)| *w == what) {
+            Some((_, x)) => *x = x.max(drift),
+            None => self.segments.push((what, drift)),
+        }
+    }
+}
+
+/// One refusal: the pair, the pin, the stage and the reason.
+type Refusal = (&'static str, [f64; 2], &'static str, String);
+
+/// One gate step: an end's edit, fallible.
+type EndEdit<'a> = &'a dyn Fn(&View) -> Result<Segment, PathError>;
+
+/// One pair of the sweep at one pin: the locked start, the target, whether the target should hold, the ends' tilts and
+/// slices (`None`: the morph only, over `[0, 1]`).
+struct SweepCase<'a> {
+    a: View,
+    b: View,
+    should_hold: bool,
+    edits: Option<[EndEdit<'a>; 4]>,
+}
+
+/// One segment of the gate path: its name, the segment and how far it runs.
+type GateSegment = (&'static str, Segment, f64);
+
+/// The segments of the gate path at one pin, or the morph alone: `(name, segment, upto)`.
+fn sweep_path<L: Leaves>(
+    c: &SweepCase,
+    leaves: &L,
+) -> Result<(LockedEnd, Vec<GateSegment>), (&'static str, String)> {
+    let (morph, end) = Segment::locked_blend(&c.a, &c.b, BlendPath::BlockLine, leaves, phys, 64)
+        .map_err(|e| ("the locked morph", format!("{e:?}")))?;
+    let Some([tilt_a, tilt_b, slice_a, slice_b]) = c.edits else {
+        return Ok((end, vec![("morph", morph, 1.0)]));
+    };
+    if let LockedEnd::Ended { s } = end {
+        if s < MID {
+            return Err((
+                "the locked morph",
+                format!("ended at s = {s}, before the pause"),
+            ));
+        }
+    }
+    let err = |what: &'static str| move |e: PathError| (what, format!("{e:?}"));
+    let v1 = morph.frame(MID).map_err(err("the pause"))?;
+    let ends = blend_of(&v1);
+    let tilt = Segment::on_ends(
+        &v1,
+        &tilt_a(&ends.a).map_err(err("A's tilt"))?,
+        &tilt_b(&ends.b).map_err(err("B's tilt"))?,
+    )
+    .map_err(err("the tilt mid-morph"))?;
+    let v2 = tilt.b().clone();
+    let ends = blend_of(&v2);
+    let slice = Segment::locked_slice(
+        &v2,
+        &slice_a(&ends.a).map_err(err("A's slice"))?,
+        &slice_b(&ends.b).map_err(err("B's slice"))?,
+        leaves,
+    )
+    .map_err(err("the slice mid-morph"))?;
+    let back = Segment::share(slice.b(), 0.0).map_err(err("the morph back"))?;
+    Ok((
+        end,
+        vec![
+            ("morph", morph, MID),
+            ("tilt", tilt, 1.0),
+            ("slice", slice, 1.0),
+            ("back", back, 1.0),
+        ],
+    ))
+}
+
+/// One frame read at the pin `at`, against `against` (the stored state the drift is read from, the control's switch):
+/// `(holds, drift, the target's own pin)`; `None` on an end. A holding frame whose select does not show the pinned
+/// state is an error.
+fn sweep_frame<L: Leaves>(
+    view: &View,
+    leaves: &L,
+    at: [f64; 2],
+    against: &dyn Fn(Ic<f64>) -> Ic<f64>,
+) -> Result<(bool, f64, f64), String> {
+    let pixel = |v: &View| match anchor::state_at(v, leaves, at) {
+        Ok(Pixel::State { decoded, .. }) => Ok(decoded.ic),
+        Ok(Pixel::Blank(b)) => Err(format!("a blank pin: {b:?}")),
+        Err(e) => Err(format!("{e:?}")),
+    };
+    let raw = |v: &View| {
+        leaves
+            .decode(v, at)
+            .map(|d| d.ic)
+            .map_err(|e| format!("{e:?}"))
+    };
+    let shown = pixel(view)?;
+    let Map::Blend(blend) = &view.map else {
+        // An end: its own decode at the pin against its stored anchor.
+        let stored = view.anchor.map_or(shown, |x| x.ic());
+        return Ok((true, phys(&against(stored), &raw(view)?), 0.0));
+    };
+    let pinned = match blend.lock().and_then(|l| l.anchor) {
+        Some(x) => x.ic(),
+        None => pixel(&blend.a)?,
+    };
+    let s = blend.s();
+    if s == 0.0 || s == 1.0 {
+        let end = blend.end(match s == 0.0 {
+            true => engine::path::blend::End::A,
+            false => engine::path::blend::End::B,
+        });
+        return Ok((true, phys(&against(pinned), &raw(end)?), 0.0));
+    }
+    let holds = blend.holds(leaves).map_err(|e| format!("{e:?}"))?;
+    let b = match blend.rehold() {
+        true => {
+            anchor::rehold(&blend.a, &blend.b, leaves, s)
+                .map_err(|e| format!("{e:?}"))?
+                .0
+        }
+        false => blend.b.clone(),
+    };
+    let own = raw(&b)?;
+    let (line, _) = engine::path::blend::block_line(&Blocks::of(&pinned), &Blocks::of(&own), s);
+    let line = engine::path::blend::state_of(&line).0.ic;
+    match holds {
+        true => {
+            if words(&shown) != words(&pinned) {
+                return Err("a holding frame's pin is not the pinned state".into());
+            }
+            Ok((
+                true,
+                phys(&against(pinned), &line),
+                phys(&against(pinned), &own),
+            ))
+        }
+        false => Ok((false, phys(&line, &shown), 0.0)),
+    }
+}
+
+/// One pair at one pin: the reading, or the refusal.
+fn sweep_case<L: Leaves>(
+    c: &SweepCase,
+    leaves: &L,
+    at: [f64; 2],
+    frames: usize,
+    against: &dyn Fn(Ic<f64>) -> Ic<f64>,
+) -> Result<PinReading, (&'static str, String)> {
+    let (end, segments) = sweep_path(c, leaves)?;
+    if c.should_hold && end != LockedEnd::Holds {
+        return Err((
+            "the locked morph",
+            format!("the target does not hold: {end:?}"),
+        ));
+    }
+    let mut r = PinReading::default();
+    for (what, seg, upto) in &segments {
+        for k in 0..=frames {
+            let u = upto * k as f64 / frames as f64;
+            let view = seg
+                .frame(u)
+                .map_err(|e| (*what, format!("frame u = {u}: {e:?}")))?;
+            let (holds, drift, own) = sweep_frame(&view, leaves, at, against)
+                .map_err(|e| (*what, format!("u = {u}: {e}")))?;
+            // A non-finite reading is a refusal, never dropped: `phys` returns NaN where a state has one, and the
+            // reductions below compare with `>`, which a NaN never passes.
+            if !drift.is_finite() || !own.is_finite() {
+                return Err((
+                    *what,
+                    format!("u = {u}: a non-finite drift ({drift}, the target's own pin {own})"),
+                ));
+            }
+            if c.should_hold && !holds {
+                return Err((*what, format!("u = {u}: a frame of a hold pair slides")));
+            }
+            match holds {
+                true => r.holds += 1,
+                false => r.slides += 1,
+            }
+            r.take(drift, own, what, u);
+        }
+    }
+    Ok(r)
+}
+
+/// The sweep's pair names, in the table's order.
+const SWEEP_PAIRS: [&str; 7] = [
+    "affine (latent to latent)",
+    "nonlinear (mixed to mixed)",
+    "latent to the exponential sphere",
+    "mixed to the rest chart (slides)",
+    "mixed to Burrau (slides)",
+    "(L_z, K) to latent (morph only)",
+    "the control's: latent to the rest chart, asked to hold",
+];
+
+/// The mixed view through `window`, locked at `(s, t)` on the chart and recorded; the refusal's reason where it fails.
+fn try_locked_mixed(window: Window, (s, t): (f64, f64)) -> Result<View, String> {
+    let view = mixed_view(window);
+    let tol = Tolerances::register(128.0 * f64::EPSILON);
+    let (seg, _) =
+        Segment::lock_on_chart::<Defaults, _, _>(&view, &mixed(FROZEN), (s, t), phys, &tol)
+            .map_err(|e| format!("{e:?}"))?;
+    anchor::record(seg.b(), &leaves()).map_err(|e| format!("{e:?}"))
+}
+
+/// The latent view of `plane`, locked at `(s, t)` and recorded; the refusal's reason where it fails.
+fn try_locked_latent(plane: &Plane, (s, t): (f64, f64)) -> Result<View, String> {
+    let view = View::latent(sim_of(plane));
+    let locked = Segment::lock(&view, s, t).map_err(|e| format!("{e:?}"))?;
+    anchor::record(locked.b(), &leaves()).map_err(|e| format!("{e:?}"))
+}
+
+/// The sweep over `side × side` pins on every pair in `pairs` (indices into [`SWEEP_PAIRS`]): each pair's readings by
+/// pin, and the refusals.
+#[allow(clippy::type_complexity)]
+fn tolerance_window(
+    side: usize,
+    pairs: &[usize],
+    frames: usize,
+    against: &dyn Fn(Ic<f64>) -> Ic<f64>,
+) -> (Vec<Vec<([f64; 2], PinReading)>>, Vec<Refusal>) {
+    let tilt_affine = |v: &View| {
+        let spec = TiltSpec {
+            tau1: 20.0,
+            tau2: 0.0,
+            map: TiltMap::Sheet,
+            x: 5,
+            y: 5,
+        };
+        let tilt = LatentTilt {
+            a: 0,
+            b: 1,
+            scale: 0.5,
+            from: [0.0, 0.0, 0.0],
+        };
+        Segment::latent_tilt(v, &tilt, &spec, 0.0)
+    };
+    let tilt_affine_b = |v: &View| {
+        let spec = TiltSpec {
+            tau1: 20.0,
+            tau2: 0.0,
+            map: TiltMap::Sheet,
+            x: 6,
+            y: 6,
+        };
+        let tilt = LatentTilt {
+            a: 2,
+            b: 3,
+            scale: 0.5,
+            from: [0.0, 0.0, 0.0],
+        };
+        Segment::latent_tilt(v, &tilt, &spec, 0.0)
+    };
+    let tilt_sphere_a = |v: &View| {
+        let spec = TiltSpec {
+            tau1: 20.0,
+            tau2: 0.0,
+            map: TiltMap::Sheet,
+            x: 5,
+            y: 5,
+        };
+        let tilt = LatentTilt {
+            a: 0,
+            b: 2,
+            scale: 0.5,
+            from: [0.0, 0.0, 0.0],
+        };
+        Segment::latent_tilt(v, &tilt, &spec, 0.0)
+    };
+    let tilt_mixed = |v: &View| {
+        let spec = TiltSpec {
+            tau1: 20.0,
+            tau2: 0.0,
+            map: TiltMap::Sheet,
+            x: 1,
+            y: 1,
+        };
+        Segment::curved_tilt(v, &mixed(v.sim.plane.z0), &spec)
+    };
+    let no_tilt = |v: &View| Segment::zoom(v, 0.0);
+    let slice_e4 = |v: &View| Segment::slice(v, &e(4, 1.0), 0.2);
+    let slice_e1 = |v: &View| Segment::slice(v, &e(1, 1.0), 0.2);
+    let slider_z4 = |v: &View| Segment::control(v, 4, v.sim.plane.z0[4] + 0.2);
+    let affine_a = frame_plane(GATE_Z0, 0, 1, 0.5);
+    let affine_b = frame_plane([-0.3, 0.5, 0.2, 0.1, -0.2, 0.15, -0.4, 0.3], 2, 3, 0.5);
+    let sphere_a = frame_plane(GATE_Z0, 0, 2, 0.5);
+    let moved_of = |v: &View| {
+        let mut b = v.clone();
+        b.sim.chart.window = moved();
+        b.pin = None;
+        b.anchor = None;
+        b.sim.lock.locked = false;
+        b
+    };
+    let tol = Tolerances::register(128.0 * f64::EPSILON);
+    let lk = {
+        let mut sim = sim_of(&plane_b());
+        sim.chart.window = Window::SQUARE;
+        View::kernel(&invariant_lk(), sim).expect("a registry chart")
+    };
+    let rest = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(simplex()).expect("a chart"),
+    );
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let mut readings: Vec<Vec<([f64; 2], PinReading)>> = pairs.iter().map(|_| Vec::new()).collect();
+    let mut refusals: Vec<Refusal> = Vec::new();
+    for at in sweep_pins(side) {
+        let st = (at[0], at[1]);
+        for (slot, &p) in pairs.iter().enumerate() {
+            let name = SWEEP_PAIRS[p];
+            let outcome = match p {
+                0 => try_locked_latent(&affine_a, st)
+                    .map_err(|e| ("the lock", e))
+                    .and_then(|a| {
+                        let c = SweepCase {
+                            a,
+                            b: View::latent(sim_of(&affine_b)),
+                            should_hold: true,
+                            edits: Some([&tilt_affine, &tilt_affine_b, &slice_e4, &slice_e4]),
+                        };
+                        sweep_case(&c, &leaves(), at, frames, against)
+                    }),
+                1 => try_locked_mixed(home(), st)
+                    .map_err(|e| ("the lock", e))
+                    .and_then(|a| {
+                        let c = SweepCase {
+                            b: moved_of(&a),
+                            a,
+                            should_hold: true,
+                            edits: Some([&tilt_mixed, &tilt_mixed, &slider_z4, &slider_z4]),
+                        };
+                        sweep_case(&c, &leaves(), at, frames, against)
+                    }),
+                2 => try_locked_latent(&sphere_a, st)
+                    .map_err(|e| ("the lock", e))
+                    .and_then(|a| {
+                        let sphere = sphere_for(&engine::lock::point(&sphere_a, at[0], at[1]));
+                        let leaves = (
+                            LatentLeaves::<Defaults>::new(),
+                            ChartLeaves::<_, Defaults>::new(sphere).expect("a chart"),
+                        );
+                        let c = SweepCase {
+                            a,
+                            b: kernel_view(&sphere, Window::SQUARE),
+                            should_hold: true,
+                            edits: Some([&tilt_sphere_a, &no_tilt, &slice_e1, &slider_z4]),
+                        };
+                        sweep_case(&c, &leaves, at, frames, against)
+                    }),
+                3 | 4 => try_locked_mixed(home(), st)
+                    .map_err(|e| ("the lock", e))
+                    .and_then(|a| {
+                        let edits: [EndEdit; 4] = [&tilt_mixed, &no_tilt, &slider_z4, &slider_z4];
+                        match p {
+                            3 => sweep_case(
+                                &SweepCase {
+                                    a,
+                                    b: kernel_view(&simplex(), Window::SQUARE),
+                                    should_hold: false,
+                                    edits: Some(edits),
+                                },
+                                &rest,
+                                at,
+                                frames,
+                                against,
+                            ),
+                            _ => sweep_case(
+                                &SweepCase {
+                                    a,
+                                    b: kernel_view(&nu_k(), Window::SQUARE),
+                                    should_hold: false,
+                                    edits: Some(edits),
+                                },
+                                &burrau,
+                                at,
+                                frames,
+                                against,
+                            ),
+                        }
+                    }),
+                6 => try_locked_latent(&affine_a, st)
+                    .map_err(|e| ("the lock", e))
+                    .and_then(|a| {
+                        let c = SweepCase {
+                            a,
+                            b: kernel_view(&simplex(), Window::SQUARE),
+                            should_hold: true,
+                            edits: None,
+                        };
+                        sweep_case(&c, &rest_leaves(), at, frames, against)
+                    }),
+                _ => Segment::lock_on_chart::<Defaults, _, _>(&lk, &invariant_lk(), st, phys, &tol)
+                    .map_err(|e| ("the lock", format!("{e:?}")))
+                    .and_then(|(seg, _)| {
+                        anchor::record(seg.b(), &leaves())
+                            .map_err(|e| ("the lock", format!("{e:?}")))
+                    })
+                    .and_then(|a| {
+                        let c = SweepCase {
+                            a,
+                            b: View::latent(sim_of(&plane_b())),
+                            should_hold: true,
+                            edits: None,
+                        };
+                        sweep_case(&c, &leaves(), at, frames, against)
+                    }),
+            };
+            match outcome {
+                Ok(r) => readings[slot].push((at, r)),
+                Err((stage, why)) => refusals.push((name, at, stage, why)),
+            }
+        }
+    }
+    (readings, refusals)
+}
+
+/// The `q` quantile of `xs` (sorted in place), nearest rank.
+fn quantile(xs: &mut [f64], q: f64) -> f64 {
+    xs.sort_by(f64::total_cmp);
+    xs[((xs.len() - 1) as f64 * q).round() as usize]
+}
+
+/// The sweep's check (the criterion above): prints the table and each pair's map of per-pin worsts.
+fn check_tolerance_window(
+    side: usize,
+    pairs: &[usize],
+    frames: usize,
+    against: &dyn Fn(Ic<f64>) -> Ic<f64>,
+) {
+    let (readings, refusals) = tolerance_window(side, pairs, frames, against);
+    let eps = f64::EPSILON;
+    let mut worst_anywhere = 0.0f64;
+    println!(
+        "path_lock_tolerance_window: {side} × {side} pins, {frames} frames per segment; drift in ε (f64), per pin its worst over its frames"
+    );
+    println!(
+        "| pair | pins read | frames hold / slide | max | p99 | median | worst at (pin, segment, u) | by segment, max | target's own pin: max, p99, median | its max at |"
+    );
+    println!("|---|---|---|---|---|---|---|---|---|---|");
+    for (slot, &p) in pairs.iter().enumerate() {
+        let rs = &readings[slot];
+        if rs.is_empty() {
+            println!("| {} | 0 | | | | | | | | |", SWEEP_PAIRS[p]);
+            continue;
+        }
+        let mut per_pin: Vec<f64> = rs.iter().map(|(_, r)| r.worst.0 / eps).collect();
+        let max = quantile(&mut per_pin, 1.0);
+        let p99 = quantile(&mut per_pin, 0.99);
+        let median = quantile(&mut per_pin, 0.5);
+        let (at, r) = rs
+            .iter()
+            .max_by(|x, y| x.1.worst.0.total_cmp(&y.1.worst.0))
+            .expect("a reading");
+        let mut owns: Vec<f64> = rs.iter().map(|(_, r)| r.own.0 / eps).collect();
+        let own = quantile(&mut owns, 1.0);
+        let (own_at, own_r) = rs
+            .iter()
+            .max_by(|x, y| x.1.own.0.total_cmp(&y.1.own.0))
+            .expect("a reading");
+        let mut segs: Vec<(&str, f64)> = Vec::new();
+        for (_, r) in rs {
+            for &(w, x) in &r.segments {
+                match segs.iter_mut().find(|(v, _)| *v == w) {
+                    Some((_, y)) => *y = y.max(x),
+                    None => segs.push((w, x)),
+                }
+            }
+        }
+        let segs: Vec<String> = segs
+            .iter()
+            .map(|(w, x)| format!("{w} {:.3}", x / eps))
+            .collect();
+        let (holds, slides) = rs
+            .iter()
+            .fold((0, 0), |(h, s), (_, r)| (h + r.holds, s + r.slides));
+        println!(
+            "| {} | {} | {holds} / {slides} | {max:.3} | {p99:.3} | {median:.3} | ({:.4}, {:.4}), {}, u = {:.4} | {} | {own:.3}, {:.3}, {:.3} | ({:.4}, {:.4}), {}, u = {:.4} |",
+            SWEEP_PAIRS[p],
+            rs.len(),
+            at[0],
+            at[1],
+            r.worst.1,
+            r.worst.2,
+            segs.join("; "),
+            quantile(&mut owns, 0.99),
+            quantile(&mut owns, 0.5),
+            own_at[0],
+            own_at[1],
+            own_r.own.1,
+            own_r.own.2
+        );
+        worst_anywhere = worst_anywhere.max(max).max(own);
+    }
+    for (slot, &p) in pairs.iter().enumerate() {
+        println!(
+            "path_lock_tolerance_window: {}: per pin, the worst of its drift and its target's own pin (ε), rows t = 1 down to 0, columns s = 0 to 1; '-' a refusal",
+            SWEEP_PAIRS[p]
+        );
+        for row in (0..side).rev() {
+            let line: Vec<String> = (0..side)
+                .map(|col| {
+                    let at = [
+                        col as f64 / (side - 1) as f64,
+                        row as f64 / (side - 1) as f64,
+                    ];
+                    readings[slot]
+                        .iter()
+                        .find(|(x, _)| *x == at)
+                        .map_or("   -".into(), |(_, r)| {
+                            format!("{:4.1}", r.worst.0.max(r.own.0) / eps)
+                        })
+                })
+                .collect();
+            println!("  {}", line.join(" "));
+        }
+    }
+    println!(
+        "path_lock_tolerance_window: the worst drift anywhere {worst_anywhere:.3} ε; the proposal (the smallest power of two at or above twice it) {} ε; the tolerance in force {} ε",
+        proposal(worst_anywhere),
+        LOCK_TOLERANCE / eps
+    );
+    println!("path_lock_tolerance_window: refusals: {}", refusals.len());
+    for (pair, at, stage, why) in &refusals {
+        println!("  {pair} at ({:.4}, {:.4}), {stage}: {why}", at[0], at[1]);
+    }
+    assert!(
+        refusals.is_empty(),
+        "the sweep refused {} locks a correct lock should hold, the first: {:?}",
+        refusals.len(),
+        refusals.first()
+    );
+    assert!(
+        worst_anywhere * eps <= LOCK_TOLERANCE,
+        "a drift of {worst_anywhere:.3} ε is past the lock's tolerance in force"
+    );
+}
+
+// Pass: the criterion above, on the 16 × 16 grid, every pair. Over 2 minutes in a debug build, so ignored in CI's shards;
+// run it with `CARGO_PROFILE_TEST_DEBUG=0 cargo test -p engine --test path_lock -- path_lock_tolerance_window --exact
+// --include-ignored --nocapture`. Its siblings below run in CI on the window's corners. It fails today, on both arms: at
+// 124 of 256 pins the mixed chart to Burrau's followed minimiser ends before the pause (`anchor::slide` reads a failed
+// follow as an end), and the sphere's re-held slice frames are labelled holding at up to 65.8 ε in `‖·‖_phys`, past the
+// 64 in force (`anchor::rehold` holds by the solver's block residual, and the solve stops at the tolerance itself).
+#[test]
+#[ignore = "over 2 minutes, and fails today (mixed to Burrau ends before the pause; the sphere's re-hold past the tolerance): cargo test -p engine --test path_lock -- path_lock_tolerance_window --exact --include-ignored --nocapture"]
+fn path_lock_tolerance_window() {
+    check_tolerance_window(SWEEP_SIDE, &[0, 1, 2, 3, 4, 5], SWEEP_FRAMES, &|x| x);
+}
+
+negative_control!(
+    path_lock_tolerance_window,
+    "the drift read against another state: every stored state moved by 2⁻⁴⁰ in its first mass (on the window's \
+     corners; Burrau left out, whose followed minimiser ends before the pause there and is counted as a refusal first)",
+    expected = "past the lock's tolerance",
+    check_tolerance_window(2, &[0, 1, 2, 3, 5], 4, &|mut x| {
+        x.m[0] += 2f64.powi(-40);
+        x
+    })
+);
+
+// ── path_lock_tolerance_window_refusals ────────────────────────────────────────────────────────────────────────────
+//
+// The sweep's refusal count on its own, to host a control that reaches it: the window's four corners on the three hold
+// pairs of the gate path, 4 frames per segment. Pass: no refusal. Control: a target that can't hold (the rest chart)
+// asked to hold, which must be counted.
+
+#[test]
+fn path_lock_tolerance_window_refusals() {
+    check_tolerance_window(2, &[0, 1, 2], 4, &|x| x);
+}
+
+negative_control!(
+    path_lock_tolerance_window_refusals,
+    "a target that can't hold asked to hold: latent to the rest chart",
+    expected = "a correct lock should hold",
+    check_tolerance_window(2, &[0, 6], 4, &|x| x)
+);
+
+// ── path_lock_tolerance_rule ───────────────────────────────────────────────────────────────────────────────────────
+//
+// The criterion's rule at its boundaries. Pass: the smallest power of two at or above twice the worst: 0 → 1, 0.5 → 1,
+// just above 0.5 → 2, PR #59's 3.509 → 8, 4 → 8, just above 4 → 16, 32 → 64. Control: four times the worst, PR #59's
+// rule, which gives 16 at 3.509 (it first fails at 0.5, giving 2 for 1).
+
+fn check_rule(rule: &dyn Fn(f64) -> f64) {
+    let above = |x: f64| f64::from_bits(x.to_bits() + 1);
+    for (worst, want) in [
+        (0.0, 1.0),
+        (0.5, 1.0),
+        (above(0.5), 2.0),
+        (3.509, 8.0),
+        (4.0, 8.0),
+        (above(4.0), 16.0),
+        (32.0, 64.0),
+    ] {
+        assert_eq!(
+            rule(worst),
+            want,
+            "the rule gives {} at a worst of {worst}",
+            rule(worst)
+        );
+    }
+}
+
+#[test]
+fn path_lock_tolerance_rule() {
+    check_rule(&proposal);
+}
+
+negative_control!(
+    path_lock_tolerance_rule,
+    "PR #59's rule, four times the worst",
+    expected = "the rule gives",
+    check_rule(&|w| proposal(2.0 * w))
+);
+
+// ── path_lock_tolerance_window_finite ──────────────────────────────────────────────────────────────────────────────
+//
+// The sweep's non-finite readings on their own, to host a control that reaches them: the window's four corners on the
+// three hold pairs, 4 frames per segment. Pass: every reading finite, no refusal. Control: every stored state read with a
+// NaN first mass, whose drift `phys` returns as NaN; it must be counted as a refusal, not dropped by the reductions.
+
+#[test]
+fn path_lock_tolerance_window_finite() {
+    check_tolerance_window(2, &[0, 1, 2], 4, &|x| x);
+}
+
+negative_control!(
+    path_lock_tolerance_window_finite,
+    "every stored state read with a NaN first mass",
+    expected = "a non-finite drift",
+    check_tolerance_window(2, &[0, 1, 2], 4, &|mut x| {
+        x.m[0] = f64::NAN;
+        x
+    })
+);
