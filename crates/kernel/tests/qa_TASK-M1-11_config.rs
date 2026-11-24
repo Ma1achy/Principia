@@ -1,16 +1,16 @@
-//! QA tests for TASK-M1-11, second round: `θ̃`'s pole hold stepped from the configuration, the form the kernel steps
+//! QA tests, second round: `θ̃`'s pole hold stepped from the configuration, the form the kernel steps
 //! by (`theta_step_config`), written from the requirements, not from the code:
-//! - REQ-INT-001 (dd_integrator §3.7; R-389; R-392): `θ̃` starts at 0, adds the principal-value delta of
+//! - The unwrap (dd_integrator §3.7): `θ̃` starts at 0, adds the principal-value delta of
 //!   `atan2(n_v, n_u)` each step, and inside the pole disc `√(n_u² + n_v²) < r_pole` holds with the last longitude
 //!   outside frozen, adding `wrap(exit − stored)` on exit; an IC inside adds nothing at its first exit. The disc is
 //!   strict: a point at exactly `r_pole` is outside, and one a hair inside is held.
-//! - REQ-INT-086 (R-389): the hold fires on a pole passage and never on a path circulating the `w` axis away from the
-//!   poles, at the shared kernel's two precisions, f32 and f64 (R-265).
+//! - The pole hold: the hold fires on a pole passage and never on a path circulating the `w` axis away from the
+//!   poles, at the shared kernel's two precisions, f32 and f64.
 //!
 //! The configurations are chart_reference §0.2's canonical-frame decode of a chosen shape point, rotated, scaled and
 //! translated, so the rule is evaluated on the chosen point `n` itself, never on the code's `shape`. Masses sum to 1
 //! (`M = 1`, chart_reference §0.2). Every test name holds `theta_unwrap`, so `cargo test -p kernel theta_unwrap` runs
-//! it. Each test has its negative control (R-176).
+//! it. Each test has its negative control.
 // The file name `qa_TASK-M1-11_config` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -21,9 +21,9 @@ use kernel::shape::{disc_input, in_disc, theta_step_held};
 use kernel::shape::{shape, theta_step_config, Theta};
 use validation::negative_control;
 
-// ----- The rule, written from R-389 and R-392 -----
+// ----- The rule, written from its statement: the pole hold, and an IC inside the disc -----
 
-/// R-389's wrap: `d − 2πk` in (−π, π].
+/// The rule's wrap: `d − 2πk` in (−π, π].
 fn principal(d: f64) -> f64 {
     let mut x = d;
     while x > PI {
@@ -51,7 +51,7 @@ fn pt(l: f64, r: f64, north: bool) -> [f64; 3] {
     [r * l.cos(), r * l.sin(), if north { w } else { -w }]
 }
 
-/// `θ̃` after each point of a path of shape points, by R-389's and R-392's words.
+/// `θ̃` after each point of a path of shape points, by the rule's words.
 fn expected(path: &[[f64; 3]], r_pole: f64) -> Vec<f64> {
     let mut theta = 0.0;
     let mut trusted: Option<f64> = (rho(path[0]) >= r_pole).then(|| lon(path[0]));
@@ -166,7 +166,7 @@ fn tol32(r_pole: f64) -> f64 {
     2.0 * 64.0 * eps / (1.01 * r_pole) + 150.0 * 20.0 * eps
 }
 
-/// The radii the f64 paths run at: REQ-INT-086's proposal is among them, and R-389's rule holds at any radius.
+/// The radii the f64 paths run at: the proposed `r_pole` is among them, and the rule holds at any radius.
 const RADII: [f64; 3] = [1e-3, 1e-2, 0.1];
 
 /// At f32 the longitude near `r_pole = 10⁻³` carries `~10⁻⁴` of round-off, which is the calibration's evidence, not
@@ -221,7 +221,7 @@ fn passage(l_in: f64, l_out: f64, r_pole: f64, north: bool) -> (Vec<[f64; 3]>, u
     (path, last_out, first_out)
 }
 
-/// An IC inside the disc (R-392): inside at `l_ic`, a wander inside, out at `l_exit`, then on.
+/// An IC inside the disc: inside at `l_ic`, a wander inside, out at `l_exit`, then on.
 fn ic_inside(l_ic: f64, l_exit: f64, r_pole: f64, north: bool) -> (Vec<[f64; 3]>, usize) {
     let mut path = vec![pt(l_ic, 0.5 * r_pole, north)];
     for k in 1..10 {
@@ -342,7 +342,7 @@ mod config_paths_equal_masses {
     );
 }
 
-// ----- The same at f32, the GPU's precision (R-265) -----
+// ----- The same at f32, the GPU's precision -----
 
 /// The f32 configuration step on the same paths, against the rule within [`tol32`]: the hold fires on the passages and
 /// never on the circulating paths at f32 too.
@@ -452,7 +452,7 @@ mod disc_property_radius {
 
 // ----- The exact edge: at r_pole is outside, a hair inside is held -----
 
-// A configuration whose shape point lies exactly on the circle of polar radius 1/2, every quantity of R-389's
+// A configuration whose shape point lies exactly on the circle of polar radius 1/2, every quantity of the hold's
 // squared test exact at f32 and f64. Masses (3/4, 1/8, 1/8), so M₀₁ = 7/8 and μ_ρμ_λ = m₀m₁m₂ = 3/256 (M = 1). Bodies
 // at (0, 0), (14, 0) and (2, 8): ρ = r₁ − r₀ = (14, 0) and M₀₁λ = M₀₁r₂ − (m₀r₀ + m₁r₁) = (7/4, 7) − (7/4, 0) = (0, 7),
 // so ρ ⟂ λ (n_v = 0). Scaled by M₀₁: u = m₀m₁‖ρ‖² − m₂‖M₀₁λ‖² = (3/32)·196 − 49/8 = 49/4 and w = 2√(3/256)·(14·7),

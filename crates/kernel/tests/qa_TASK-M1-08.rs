@@ -1,8 +1,8 @@
-//! QA tests for TASK-M1-08 on the Rust read side (`kernel::payload`'s generated `read_side.rs`), written from RQ-228
+//! QA tests on the Rust read side (`kernel::payload`'s generated `read_side.rs`), written from the shadow's read rule
 //! and lowering Part 3a, not from the implementation: the read-side `SimState` carries the Benettin shadow `r_sh` and
 //! `p_sh` at every tier; the FTLE tier reads the stored shadow, every component bit for bit, over any stored bits; the
-//! base tier, which stores no shadow, reads every component as the canonical quiet NaN `0x7FC00000` (R-72), whatever
-//! else it stores. Each test has a registered negative control (R-176).
+//! base tier, which stores no shadow, reads every component as the canonical quiet NaN `0x7FC00000`, whatever
+//! else it stores. Each test has a registered negative control.
 
 use kernel::payload::*;
 use proptest::prelude::*;
@@ -102,7 +102,7 @@ fn flat(v: [[f32; 2]; 3]) -> [u32; 6] {
     [v[0][0], v[0][1], v[1][0], v[1][1], v[2][0], v[2][1]].map(f32::to_bits)
 }
 
-/// RQ-228: at the FTLE tier the shadow reads as stored, bit for bit; at the base tier every component is the canonical
+/// At the FTLE tier the shadow reads as stored, bit for bit; at the base tier every component is the canonical
 /// quiet NaN.
 fn check_shadow(reads: Reads, sh: [u32; 12], rest: [u32; 12]) -> Result<(), TestCaseError> {
     let s = stored(&sh, &rest);
