@@ -835,6 +835,7 @@ cyclically; there are no reference body and no special pair (`system.rs:1-6`).
 
 **Back to the Cartesian state** (`system.rs:121-135`; Heggie Eqs. (10), (12)): `rᵢ = (mⱼqₖ − mₖqⱼ)/M` and
 `vᵢ = (pₖ − pⱼ)/mᵢ`, in the centre-of-mass frame; the Cartesian momenta are `mᵢvᵢ = pₖ − pⱼ`.
+The image first closes the marched positions, `q̃ᵢ = qᵢ − wᵢ(q₀ + q₁ + q₂)` with `wᵢ = Rᵢ/S`, and builds `rᵢ` from `q̃`.
 
 **Regularisation and its return** (`system.rs:137-168`). `Qᵢ` is the conditioned Levi-Civita inverse of `qᵢ` (the
 default, `lc_stable`, `system.rs:38-39`, `:143`) and `Pᵢ = 2L(Qᵢ)ᵀpᵢ` (Heggie Eq. (19) inverted with `L(u)ᵀL(u) = |u|²I`).

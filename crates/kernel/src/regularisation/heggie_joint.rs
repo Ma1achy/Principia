@@ -21,7 +21,7 @@
 
 use super::az::{add, dot, floored, lmul, ltmul, scale, sub, two, AzReal, V};
 use super::form::{rk4_joint, Flow};
-use super::heggie::{HgP, HgQ, HgSystem};
+use super::heggie::{closed, HgP, HgQ, HgSystem};
 use crate::occupant::State;
 
 /// The FTLE shadow's displacement under Heggie: the shadow less the sample in Heggie's variables, and in its frozen
@@ -137,7 +137,11 @@ pub fn joint_step<R: AzReal>(
 /// `δx = J·δy` (§3.8): the Jacobian of the return to the Cartesian state ([`HgSystem::image`]) at the sample's `(q, p)`
 /// applied to the displacement, `δqᵢ = 2L(Qᵢ)δQᵢ`, `δpᵢ = (δWᵢ − 2pᵢ·δR̃ᵢ)/(2R̃ᵢ)` with `δWᵢ = L(δQᵢ)Pᵢ + L(Qᵢ)δPᵢ`,
 /// `R̃ᵢ = max(Rᵢ, TINY)` and `δR̃ᵢ` the floor's own derivative (`2Qᵢ·δQᵢ` where `Rᵢ` is not below `TINY`, `0` where it
-/// is), then [`HgSystem::cartesian`]. Linear in `δy`, read at the sample's state alone; `δt` and `δh` are not read.
+/// is), then closed as the image closes its positions, `δq̃ᵢ = δqᵢ − wᵢ·Σδqⱼ` with the sample's weights `wᵢ = Rᵢ/S` held
+/// fixed ([`super::heggie::closed`], [`HgSystem::closure_weights`]), then [`HgSystem::cartesian`]. Linear in `δy`, read at
+/// the sample's state alone; `δt` and `δh` are not read. The weights' own derivative is left out: its term is
+/// `δwᵢ·c`, first order in the displacement and in the closure gap `c`, a relative error of about `|c|/S` in the
+/// read-out.
 #[inline]
 pub fn cartesian<R: AzReal>(
     system: &HgSystem<R>,
@@ -166,7 +170,10 @@ pub fn cartesian<R: AzReal>(
     let (q0, p0) = one(q.q[0], p.p[0], d.q.q[0], d.p.p[0], pv[0]);
     let (q1, p1) = one(q.q[1], p.p[1], d.q.q[1], d.p.p[1], pv[1]);
     let (q2, p2) = one(q.q[2], p.p[2], d.q.q[2], d.p.p[2], pv[2]);
-    system.cartesian(&[q0, q1, q2], &[p0, p1, p2])
+    system.cartesian(
+        &closed(&[q0, q1, q2], system.closure_weights(q)),
+        &[p0, p1, p2],
+    )
 }
 
 /// The resynchronisation in Heggie's variables (§3.8): `δy ← δy − F(y)·(δt/g(y))`, `F` the sample's rates in `τ`,
