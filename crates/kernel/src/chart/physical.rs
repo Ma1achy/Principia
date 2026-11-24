@@ -576,7 +576,7 @@ where
             .0
     }
 
-    /// The check on `z₀` shifted: the pixel's own `U`, `I` and masses (E3).
+    /// The check on `z₀` shifted: the pixel's own `U`, `I` and masses.
     fn validate_shifted(
         &self,
         a: f64,

@@ -46,7 +46,7 @@
 use super::{Chart, Constraint, ValidationResult};
 use crate::generated::links::LinkParams;
 
-/// A field a navigation edit moves (A3): `z₀` for a pan or a slice on the latent chart, the centre of a curved
+/// A field a navigation edit moves: `z₀` for a pan or a slice on the latent chart, the centre of a curved
 /// chart's own parameters, a hidden coordinate's value at the slice centre, a chart parameter, a tilt's angles.
 pub trait Field: Copy {
     /// The value at the fraction `lambda` of the straight line from `self` to `to`: `self + λ·(to − self)`, with
@@ -94,7 +94,7 @@ pub enum Edit<V> {
     Lock { from: V, to: V },
 }
 
-/// A view at an edited value: the chart and its centre `(u, v)`, the point `validate` reads (A1).
+/// A view at an edited value: the chart and its centre `(u, v)`, the point `validate` reads.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct View<C> {
     /// The chart, with its slice centre and tilt.
@@ -103,7 +103,7 @@ pub struct View<C> {
     pub centre: [f64; 2],
 }
 
-/// The check that stopped an edit (A5): what `validate` names, or `Φ`.
+/// The check that stopped an edit: what `validate` names, or `Φ`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Check {
     /// The centre fails `validate` on this constraint.
@@ -161,7 +161,7 @@ pub struct Stop<V> {
     pub stopped: Option<Check>,
 }
 
-/// What fails at a view's centre (A1): `Φ`, where there is no view or `Φ` there is not finite ([`Chart::phi_finite`]),
+/// What fails at a view's centre: `Φ`, where there is no view or `Φ` there is not finite ([`Chart::phi_finite`]),
 /// a block the chart builds outside `map` included, else
 /// `validate`'s constraint at `p`; none where the centre passes.
 fn centre<C>(view: Option<View<C>>, p: &LinkParams<f64>) -> Option<Check>

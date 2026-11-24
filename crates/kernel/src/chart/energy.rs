@@ -550,7 +550,7 @@ where
 
 /// A mapped invariant chart's `validate` at a tilt's `(a, b)` with its hidden offsets `shift`, not every axis warped:
 /// the warp's bounded sides refused (below `t = 0`, past `s`'s edges), then the construction's exact test on the
-/// pixel's own decode under `S`, its `U` the pixel's (E3). [`super::tilt::Tilted::validate`] refuses every failure.
+/// pixel's own decode under `S`, its `U` the pixel's. [`super::tilt::Tilted::validate`] refuses every failure.
 fn invariant_validate_shifted<S: Selection, P: Copy>(
     inv: &Invariant<P>,
     mapping: [Mapping; 2],

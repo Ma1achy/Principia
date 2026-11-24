@@ -1,77 +1,76 @@
-//! Tilt and slice on every chart (R-473 T1 to T6, J1 to J8; R-474 K1 to K3; R-507 U1, U2; R-554, ruling RQ-471 (a);
-//! R-633; chart_decoder_contract Part 4, § "Tilt (basis edit)", "Tilt on every chart"): the path, and the charts that
-//! hold their blocks by latent controls; those that hold one by a physical construction are `super::construction`'s.
+//! Tilt and slice on every chart (chart_decoder_contract Part 4, § "Tilt (basis edit)", "Tilt on every chart"): the
+//! path, and the charts that hold their blocks by latent controls; those that hold one by a physical construction are
+//! `super::construction`'s.
 //!
 //! **The rotation** ([`TiltSpec::columns`]). The stored angles `τ₁`, `τ₂` (degrees, as set), the targets `X`, `Y` and
 //! the map give `R`'s two columns `R·e_a` and `R·e_b` in the space `(a, b, d_X, d_Y)`:
 //! - **Lean each axis** ([`TiltMap::Lean`]): `û₁ = cos τ₁ e_a + sin τ₁ e_X`, `û₂ = cos τ₂ e_b + sin τ₂ e_Y`; with
-//!   `X ≠ Y` it is the contract's two-target form, `(cos τ₁·u, cos τ₂·v, sin τ₁·u, sin τ₂·v)`, which both maps give
-//!   (R-474 R2, K2).
+//!   `X ≠ Y` it is the contract's two-target form, `(cos τ₁·u, cos τ₂·v, sin τ₁·u, sin τ₂·v)`, which both maps give.
 //! - **Tip as sheet** ([`TiltMap::Sheet`], the default), with one target and both angles set: `m = √(τ₁² + τ₂²)`, the
-//!   rotation by `m` about the in-plane axis `k = (τ₂ e_a − τ₁ e_b)/m` (Rodrigues, R-474 K1). Past `m = 180°` the angles
+//!   rotation by `m` about the in-plane axis `k = (τ₂ e_a − τ₁ e_b)/m` (Rodrigues). Past `m = 180°` the angles
 //!   are wrapped in total tip, `τ·(m − 360)/m`, and the one path then runs on the wrapped angles, so a view stored at
-//!   `m` and one stored at the wrap's output turn alike, bit for bit; never folded onto the 180° partner (R-474 R3,
-//!   K4). A single tilt is the same under both maps (R2), so it takes Lean's closed form under either, and the two give
+//!   `m` and one stored at the wrap's output turn alike, bit for bit; never folded onto the 180° partner. A single
+//!   tilt is the same under both maps, so it takes Lean's closed form under either, and the two give
 //!   bitwise the same columns there.
 //!
-//! **On a curved chart** ([`Tilted`]; R-473 T2, J3, J5; R-507 U1). A pixel at chart point `(u, v)` is offset from the
+//! **On a curved chart** ([`Tilted`]). A pixel at chart point `(u, v)` is offset from the
 //! view's centre `c` by `(ũ, ṽ) = (u − c_u, v − c_v)`. The chart's `[0,1]` along each axis is the parameter span its
 //! preset's window covers at zoom 1, so `(ũ, ṽ)` is already in units of each axis's full range at zoom 1 and its scale
 //! takes no arithmetic. `(Δa, Δb, d̃_X, d̃_Y) = ũ·R·e_a + ṽ·R·e_b`; the chart's own parameters are `(a, b) = c + (Δa, Δb)`,
 //! through its map exactly, and each hidden offset is scaled back by its target's slider span, `d = span·d̃`, and added
 //! to that hidden coordinate's value at the slice centre ([`Shift`], [`Tiltable::decode_shifted`]). No unit reads the
 //! zoom: a zoom changes only which `(u, v)` the window shows. The centre pixel has `(ũ, ṽ) = (0, 0)`, so `(a, b) = c`
-//! and `d = 0` there: the tilt is anchor-preserving (J7). `R`, the hidden indices and the spans are the chart's params,
-//! computed on the CPU from the stored angles and the map ([`Tilt::new`]); a tilt edits them, a sim key (R-92).
+//! and `d = 0` there: the tilt is anchor-preserving. `R`, the hidden indices and the spans are the chart's params,
+//! computed on the CPU from the stored angles and the map ([`Tilt::new`]); a tilt edits them, a sim key.
 //!
-//! **Untilted, no tilt path** (J6, C2). At `τ₁ = τ₂ = 0` under either map [`Tilt::on`] is false, and every entry of
+//! **Untilted, no tilt path.** At `τ₁ = τ₂ = 0` under either map [`Tilt::on`] is false, and every entry of
 //! [`Tilted`] is the chart's own, bit for bit, with no arithmetic of the tilt's.
 //!
-//! **Hidden coordinates** ([`Hidden`], [`Tiltable`]; R-473 J1, J2, J8; R-633). On these charts a hidden coordinate is a
+//! **Hidden coordinates** ([`Hidden`], [`Tiltable`]). On these charts a hidden coordinate is a
 //! latent control of a block the axes do not write, or on a mixed-axis chart a control its axes leave frozen, named by
 //! its index in the decoder's block layout (`0..8`): the shape sphere's four momentum controls and two mass logits, an
 //! invariant chart's two configuration controls and two mass logits, a mixed chart's six frozen controls. Its `d` is
 //! added to that control, the link's pre-image, never to the physical value, so a mass tilt keeps every pixel's masses
-//! positive and summing to 1 (T3, C7). The index is the chart's to read, so a chart whose hidden coordinate is a
-//! physical value (R-633's construction charts, R-554 L5's `p_λ`) names it with an index of its own and adds `d` to that
-//! value in its own [`Tiltable::decode_shifted`]: the path is this one. A cell whose tilted physical value leaves no
-//! system is refused ([`Tiltable::refusal`]): the view's `validate` rejects it and its area weight is 0
-//! ([`Tilted::weight`]). A held energy clamped at its floor is a system, and flagged ([`Tilted::held_at_floor`], R-709).
+//! positive and summing to 1. The index is the chart's to read, so a chart whose hidden coordinate is a
+//! physical value (the construction charts, the shape sphere's `p_λ`) names it with an index of its own and adds `d` to
+//! that value in its own [`Tiltable::decode_shifted`]: the path is this one. A cell whose tilted physical value leaves
+//! no system is refused ([`Tiltable::refusal`]): the view's `validate` rejects it and its area weight is 0
+//! ([`Tilted::weight`]). A held energy clamped at its floor is a system, and flagged ([`Tilted::held_at_floor`]).
 //! What is said of a pixel's decode is said at that decode's precision: the flag at the decode's own, and a refusal at
 //! f64 and at the chart's own, [`Tilted::weight`] and [`Chart::validate_params`] reading both. Only [`Tilted::pixel`]'s
 //! count stays at f64: it counts the view's pixels, not a decode's output.
-//! Slicing sets a hidden coordinate's value at the centre ([`Hidden::sliced`], T6); on these charts every value of a
+//! Slicing sets a hidden coordinate's value at the centre ([`Hidden::sliced`]); on these charts every value of a
 //! latent control is a system, so no slice reaches an edge.
 //!
-//! **On the latent chart** the tilt is the decoder's basis edit, with no scale (T2; R-507 U2): [`latent_basis`], the
+//! **On the latent chart** the tilt is the decoder's basis edit, with no scale: [`latent_basis`], the
 //! columns placed on the axes `e_a`, `e_b` and the targets, turned by `γ` and scaled by `σ` as the GUI's `View::basis`
-//! does (R-474 K1).
+//! does.
 //!
-//! **Past the square** (R-472 X3, X3a; R-512). The chart's own map and `validate` run on the tilted `(a, b)`, so its
+//! **Past the square.** The chart's own map and `validate` run on the tilted `(a, b)`, so its
 //! axes' types act there exactly as on an untilted chart, and nothing is written per chart; `d` needs no type. A repeat
 //! (past a period, over a pole) is the same system only where the type group's map leaves `d` unchanged, decided
-//! exactly on the stored angles ([`TiltSpec::normal_zero`]; R-554 L3): past θ's period iff `N_a = 0`, at every `b`,
+//! exactly on the stored angles ([`TiltSpec::normal_zero`]): past θ's period iff `N_a = 0`, at every `b`,
 //! the spherical map repeating in `s` for every `t`; over a pole iff `N_a = 0` and `N_b = 0`. The spherical map also
 //! repeats every 2 in `t`, so a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers `(k, j) ≠ 0` keeps `d`
 //! and is the same system as `(s, t)`: that lattice of repeats is folded too, each system counted once at its canonical
-//! point ([`TiltSpec::strip`], [`Strip`]; R-655, ruling RQ-631 (a)). Elsewhere the view is affine along that axis, and
+//! point ([`TiltSpec::strip`], [`Strip`]). Elsewhere the view is affine along that axis, and
 //! the shape sphere's pixel there is a system of its own ([`Tilted::pixel`]).
 //!
-//! **Past the edge inside the window** (R-512, ruling RQ-402, F1 and F2). Under Tip as sheet with one target and both
+//! **Past the edge inside the window.** Under Tip as sheet with one target and both
 //! angles set the rotation can take a window pixel's own `(a, b)` out of the chart's square. That pixel is past the
 //! chart's edge, exactly as past the window: [`Tilted`]'s [`Chart::validate`] runs the chart's check on `(a, b)`, so
 //! past a bounded edge (a warped `L_z`'s `s` on either side, the warp's `t < 0`) it is refused, not a system, and draws
-//! blank (R-470), and past the energy warp's continuing `t > 1` side (R-508 V2) it is that side's system, decoded at
-//! `(a, b)` with its hidden offset. The window is not scaled and Tip as sheet is not withheld (F2). The chart
-//! addendum's N14 brings R-932's declared kinds to these edges; until then they draw as written here.
+//! blank, and past the energy warp's continuing `t > 1` side it is that side's system, decoded at
+//! `(a, b)` with its hidden offset. The window is not scaled and Tip as sheet is not withheld. Declared
+//! edge kinds (unfold, clamp, saturate) for these edges are planned, not built; until then they draw as written here.
 //!
-//! **The rank-losing corner** (R-554, ruling RQ-471 (a); R-474 R7). Under Lean each axis with one target at
+//! **The rank-losing corner.** Under Lean each axis with one target at
 //! `|τ₁| = |τ₂| = 90°`, decided exactly on the stored angles, the window maps onto one line of systems: the chart
 //! reports `ray-degenerate`, applies no fold, weights every pixel's area 0, and every share is undefined ([`share`]).
 //! Elsewhere the per-pixel area weight is Lean's Gram factor `√(|û₁|²|û₂|² − (û₁·û₂)²)` with one target, and 1 under
-//! Tip as sheet or with two targets, whose bases are orthonormal. The shape sphere has no fold at any tilt (R-544,
-//! R-613): its tilted view is bijective, each of its system pixels counted once and its pixels on `r = π` once per
-//! distinct hidden offset (REQ-CHART-090; [`Tilted::counted_total`]).
+//! Tip as sheet or with two targets, whose bases are orthonormal. The shape sphere has no fold at any tilt: its tilted
+//! view is bijective, each of its system pixels counted once and its pixels on `r = π` once per distinct hidden offset
+//! ([`Tilted::counted_total`]).
 
 use core::marker::PhantomData;
 
@@ -85,14 +84,14 @@ use crate::generated::links::{Defaults, LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
 use crate::Real;
 
-/// `|τ|` at the dead zone of Lean each axis, in degrees: the register's `tilt_right_angle` (R-474 R8).
+/// `|τ|` at the dead zone of Lean each axis, in degrees: the register's `tilt_right_angle`.
 const RIGHT_ANGLE: f64 = crate::generated::constants::TILT_RIGHT_ANGLE;
-/// The total tip past which Tip as sheet wraps, in degrees: the register's `tilt_half_turn` (R-474 R3).
+/// The total tip past which Tip as sheet wraps, in degrees: the register's `tilt_half_turn`.
 const HALF_TURN: f64 = crate::generated::constants::TILT_HALF_TURN;
-/// A whole turn, in degrees: the register's `tilt_turn` (R-474 R3).
+/// A whole turn, in degrees: the register's `tilt_turn`.
 const TURN: f64 = crate::generated::constants::TILT_TURN;
 
-/// The tilt map with one target and both angles set (R-474 R1, R5): recorded as `tilt_map=sheet|lean`.
+/// The tilt map with one target and both angles set: recorded as `tilt_map=sheet|lean`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum TiltMap {
     /// "Tip as sheet", the nav cube's axis-angle map, the default.
@@ -118,7 +117,7 @@ pub struct TiltSpec {
 }
 
 impl TiltSpec {
-    /// Whether both stored angles are 0: the chart takes no tilt path (J6).
+    /// Whether both stored angles are 0: the chart takes no tilt path.
     #[inline]
     pub fn untilted(&self) -> bool {
         self.tau1 == 0.0 && self.tau2 == 0.0
@@ -130,7 +129,7 @@ impl TiltSpec {
         self.x != self.y
     }
 
-    /// RQ-471's corner, decided exactly on the stored angles: Lean each axis, one target, `|τ₁| = |τ₂| = 90°`.
+    /// The rank-losing corner, decided exactly on the stored angles: Lean each axis, one target, `|τ₁| = |τ₂| = 90°`.
     #[inline]
     pub fn rank_loss(&self) -> bool {
         self.map == TiltMap::Lean
@@ -154,17 +153,17 @@ impl TiltSpec {
     }
 
     /// `R·e_X` and `R·e_Y` in `(a, b, d_X, d_Y)`: where the tilt sends an offset on each target, the inputs a saved
-    /// chart's new tilt feeds it (R-513 Q1; `super::saved`).
+    /// chart's new tilt feeds it (`super::saved`).
     /// - With two targets, each axis turned toward its own: `(−sin τ₁, 0, cos τ₁, 0)` and `(0, −sin τ₂, 0, cos τ₂)`.
     /// - Tip as sheet with one target and both angles set, Rodrigues' image of `e_X`: `(k_b sin m, −k_a sin m, cos m, 0)`,
     ///   its first two entries read off the columns, `R_aX = −R_Xa` and `R_bX = −R_Xb` exactly (the axis `k` lies in the
     ///   plane, `k_X = 0`), and `cos m` at the total tip, which a wrap by 360° leaves unchanged.
     /// - Lean each axis with one target and both angles set, whose skewed columns are no rotation's: the saved plane's
-    ///   unit normal `t̂ = (û₁ × û₂)/|û₁ × û₂|`, its sign toward `+e_X`, so `R = [û₁ û₂ t̂]` (R-895, ruling RQ-746 (a)).
+    ///   unit normal `t̂ = (û₁ × û₂)/|û₁ × û₂|`, its sign toward `+e_X`, so `R = [û₁ û₂ t̂]`.
     ///   The cross product is `(−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)` and its length the Gram factor; where
     ///   its `e_X` entry is not negative, at the edge of Lean's range (`|τ₁|` or `|τ₂|` = 90° with the other set)
-    ///   included, `t̂` takes the cross product's own sign. At RQ-471's corner, `|τ₁| = |τ₂| = 90°`, there is no frame
-    ///   (R-554's `ray-degenerate`): `None`.
+    ///   included, `t̂` takes the cross product's own sign. At the rank-losing corner, `|τ₁| = |τ₂| = 90°`, there is no
+    ///   frame (`ray-degenerate`): `None`.
     /// - A single angle under either map, the turn in its own axis's plane: `(−sin τ₁, 0, cos τ₁, 0)` for `τ₁`,
     ///   `(0, −sin τ₂, cos τ₂, 0)` for `τ₂`; untilted, `e_X`.
     ///
@@ -194,15 +193,15 @@ impl TiltSpec {
     }
 
     /// `[N_a = 0, N_b = 0]` for chart_reference §3.3's normal `N ∝ (R·e_a) × (R·e_b)`, decided exactly on the stored
-    /// angles from each map's closed form (R-554 L3): whether the view's hidden offsets keep their value as `a`, or `b`,
+    /// angles from each map's closed form: whether the view's hidden offsets keep their value as `a`, or `b`,
     /// moves, so that a repeat along that axis is the same system.
     /// - Untilted, `[true, true]`.
-    /// - At RQ-471's corner, `[false, false]`: there is no normal, and no fold is applied (R-554, ruling RQ-471 (a)).
+    /// - At the rank-losing corner, `[false, false]`: there is no normal, and no fold is applied.
     /// - With two targets, per hidden offset, `d_X = sin τ₁·u` and `d_Y = sin τ₂·v`: `[sin τ₁ = 0, sin τ₂ = 0]`, each
     ///   angle in `{0, ±180}`.
     /// - Tip as sheet with one target and both angles set, `N_a = −τ₁ sin m/m` and `N_b = −τ₂ sin m/m`: both at
     ///   `m == 180` exactly, neither elsewhere.
-    /// - Otherwise Lean's closed form, which a single angle takes under either map (R-474 R2):
+    /// - Otherwise Lean's closed form, which a single angle takes under either map:
     ///   `N ∝ (−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)`.
     pub fn normal_zero(&self) -> [bool; 2] {
         let sin_zero = |t: f64| t == 0.0 || Float::abs(t) == HALF_TURN;
@@ -220,12 +219,12 @@ impl TiltSpec {
         }
     }
 
-    /// The lattice of repeats past `t`'s period 2 (R-655, ruling RQ-631 (a); chart_decoder_contract § "Repeats and the
-    /// canonical point"): where the integers `(k, j)` with `N_a·k + 2·N_b·j = 0` are the multiples of one generator
+    /// The lattice of repeats past `t`'s period 2 (chart_decoder_contract § "Repeats and the canonical
+    /// point"): where the integers `(k, j)` with `N_a·k + 2·N_b·j = 0` are the multiples of one generator
     /// `(k₀, j₀)` with `j₀ ≠ 0`, the canonical strip of `w = (k₀, 2j₀)`; `None` where there is none, decided exactly on the
     /// stored angles, never by a tolerance on a computed `N`.
-    /// - `N_a = 0` (θ's period, with the pole maps where `N_b = 0` too) and RQ-471's corner (no fold): `None`, the rule
-    ///   of [`TiltSpec::normal_zero`] governing.
+    /// - `N_a = 0` (θ's period, with the pole maps where `N_b = 0` too) and the rank-losing corner (no fold): `None`,
+    ///   the rule of [`TiltSpec::normal_zero`] governing.
     /// - `N_b = 0` alone: `t`'s period, `w = (0, 2)`, under either map and with one target or two.
     /// - Two targets, both offsets moving: `None`, `d_X` moving with `a` alone and `d_Y` with `b` alone.
     /// - Tip as sheet with both angles set: `N_a/N_b = τ₁/τ₂`, a ratio of two doubles and so always rational; `w` is
@@ -249,7 +248,7 @@ impl TiltSpec {
         }
     }
 
-    /// Each pixel's area weight: 0 at the corner, Lean's Gram factor with one target, 1 otherwise (R-474 R7; R-554).
+    /// Each pixel's area weight: 0 at the corner, Lean's Gram factor with one target, 1 otherwise.
     pub fn area_weight(&self) -> f64 {
         if self.rank_loss() {
             0.0
@@ -278,9 +277,9 @@ fn image(rank_loss: bool, untilted: SystemImage) -> SystemImage {
 }
 
 /// The canonical strip of a lattice of repeats generated by `w = (k₀, 2j₀)` in the chart's `(a, b)`, `j₀ ≠ 0`
-/// ([`TiltSpec::strip`]; R-655): a chart point is its own canonical point iff its offset from the square's centre
+/// ([`TiltSpec::strip`]): a chart point is its own canonical point iff its offset from the square's centre
 /// `(½, ½)` along `w` lies in `[−|w|/2, |w|/2)`. Each orbit of the lattice has exactly one point in it, and the square
-/// lies inside it, since `|k₀| + 2|j₀| < k₀² + 4j₀²` (applied per R-369).
+/// lies inside it, since `|k₀| + 2|j₀| < k₀² + 4j₀²`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Strip {
     /// The unit vector along `w`.
@@ -393,7 +392,7 @@ fn sign(same: bool) -> f64 {
 /// At `p/q = ±1` it is `τ₁ ≡ ±τ₂` (mod 180°); otherwise its four terms are distinct, it has no vanishing part of two
 /// (that would make `u` or `v` real), and by Mann's theorem (1965) a minimal vanishing sum of four roots of unity has
 /// sixth roots for its ratios, so `τ₁` and `τ₂` are multiples of 30°: the ratio is `±3` or `±1/3`, one angle `≡ ±30°`
-/// and the other `≡ ±60°` (R-655).
+/// and the other `≡ ±60°`.
 fn lean_ratio(tau1: f64, tau2: f64) -> Option<[f64; 2]> {
     if congruent(tau1, tau2) {
         Some([1.0, 1.0])
@@ -462,9 +461,9 @@ fn gram([u1, u2]: [[f64; 4]; 2]) -> f64 {
     Float::sqrt(x * x + y * y + z * z)
 }
 
-/// One-target Lean's unit normal `t̂ = (û₁ × û₂)/|û₁ × û₂|` in `(a, b, d_X, d_Y)`, its sign toward `+e_X` (R-895):
+/// One-target Lean's unit normal `t̂ = (û₁ × û₂)/|û₁ × û₂|` in `(a, b, d_X, d_Y)`, its sign toward `+e_X`:
 /// the cross product's components as [`gram`] forms them, divided by [`gram`]'s length, and negated where the `e_X`
-/// entry is negative. The columns must not be RQ-471's corner, where the length is no frame's.
+/// entry is negative. The columns must not be the rank-losing corner, where the length is no frame's.
 fn lean_normal(columns: [[f64; 4]; 2]) -> [f64; 4] {
     let [u1, u2] = columns;
     let cross = [-(u1[2] * u2[1]), -(u1[0] * u2[2]), u1[0] * u2[1]];
@@ -474,7 +473,7 @@ fn lean_normal(columns: [[f64; 4]; 2]) -> [f64; 4] {
     [unit(cross[0]), unit(cross[1]), unit(cross[2]), 0.0]
 }
 
-/// A share of an area statistic: `part` of `total`, undefined (`None`) where the total is 0, never 0 (R-554 L2).
+/// A share of an area statistic: `part` of `total`, undefined (`None`) where the total is 0, never 0.
 #[inline]
 pub fn share(part: f64, total: f64) -> Option<f64> {
     if total == 0.0 {
@@ -501,14 +500,14 @@ pub struct LatentFrame {
 }
 
 impl LatentFrame {
-    /// Whether the latent dimension `k` is a hidden coordinate of the frame: one of the six off its axes (R-457).
+    /// Whether the latent dimension `k` is a hidden coordinate of the frame: one of the six off its axes.
     #[inline]
     pub fn hidden(&self, k: u32) -> bool {
         k < 8 && k != self.a && k != self.b
     }
 
     /// The latent chart sliced along the hidden dimension `k` to `value`: `z₀`'s component `k` set, nothing else; `None`
-    /// where `k` is not hidden (T6).
+    /// where `k` is not hidden.
     pub fn sliced(
         &self,
         chart: &super::Latent<f64>,
@@ -523,7 +522,7 @@ impl LatentFrame {
     }
 }
 
-/// The tilted basis `(q₁, q₂)` of a latent view (T2, the basis edit; R-474 K1): `û₁ = R e_a`, `û₂ = R e_b` placed on
+/// The tilted basis `(q₁, q₂)` of a latent view (the basis edit): `û₁ = R e_a`, `û₂ = R e_b` placed on
 /// `e_a`, `e_b` and the targets, then `q₁ = σ(cos γ û₁ + sin γ û₂)` and `q₂ = σ(cos γ û₂ − sin γ û₁)`, as the GUI's
 /// `View::basis`. `None` where a target is not one of the frame's hidden dimensions.
 pub fn latent_basis(frame: &LatentFrame, spec: &TiltSpec) -> Option<([f64; 8], [f64; 8])> {
@@ -558,14 +557,14 @@ pub fn latent_basis(frame: &LatentFrame, spec: &TiltSpec) -> Option<([f64; 8], [
 
 // ── A curved chart's tilt ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// A curved chart's tilt params (J5): computed on the CPU from the stored angles and the map, sent with the chart's.
+/// A curved chart's tilt params: computed on the CPU from the stored angles and the map, sent with the chart's.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Tilt<P> {
-    /// Whether a tilt path is taken: false at `τ₁ = τ₂ = 0`, where the chart is its own (J6).
+    /// Whether a tilt path is taken: false at `τ₁ = τ₂ = 0`, where the chart is its own.
     pub on: bool,
     /// Whether `x` and `y` are two targets, each with its own offset.
     pub two: bool,
-    /// Whether the view loses rank, RQ-471's corner ([`TiltSpec::rank_loss`]).
+    /// Whether the view loses rank, the rank-losing corner ([`TiltSpec::rank_loss`]).
     pub rank_loss: bool,
     /// The view's centre `c`, in the chart's own parameters.
     pub centre: [P; 2],
@@ -575,13 +574,13 @@ pub struct Tilt<P> {
     pub x: u32,
     /// `τ₂`'s target.
     pub y: u32,
-    /// The targets' slider spans: each hidden offset's unit (R-507 U1).
+    /// The targets' slider spans: each hidden offset's unit.
     pub span: [P; 2],
     /// Each pixel's area weight ([`TiltSpec::area_weight`]).
     pub weight: P,
     /// `[N_a = 0, N_b = 0]` ([`TiltSpec::normal_zero`]): where a repeat along each axis is the same system.
     pub normal_zero: [bool; 2],
-    /// The lattice of repeats past `t`'s period 2 and its canonical strip ([`TiltSpec::strip`]; R-655).
+    /// The lattice of repeats past `t`'s period 2 and its canonical strip ([`TiltSpec::strip`]).
     pub strip: Option<Strip>,
 }
 
@@ -664,7 +663,7 @@ impl<R: Float> Shift<R> {
 
 impl<P: Copy> Tilt<P> {
     /// `(Δa, Δb, d_X, d_Y) = ũ·R·e_a + ṽ·R·e_b` for the offsets `(ũ, ṽ)` from the centre, each hidden offset scaled by
-    /// its slider span (R-507 U1).
+    /// its slider span.
     #[inline]
     pub fn offsets<R: Float + From<P>>(&self, du: R, dv: R) -> [R; 4] {
         let w = <R as From<P>>::from;
@@ -729,7 +728,7 @@ pub fn shift_controls<R: Float>(z: [R; 8], shift: &Shift<R>) -> [R; 8] {
     ]
 }
 
-/// A chart's hidden coordinates and its slice (R-473 J1, T6; the module's note).
+/// A chart's hidden coordinates and its slice (the module's note).
 pub trait Hidden: Chart + Sized {
     /// Whether the index `k` names one of the chart's hidden coordinates.
     fn hidden(&self, k: u32) -> bool;
@@ -749,10 +748,10 @@ pub trait Tiltable: Hidden {
         R: LinkReal + PayloadReal + From<Self::Param>;
 
     /// The check at the chart point `(a, b)` with `shift` added to the hidden coordinates at the slice centre, at the
-    /// tunable parameters `p`: by default the chart's own at `(a, b)`, where the axes' types act (X3a), every value of a
-    /// latent control being a system; a chart whose hidden coordinate is a physical value adds [`Tiltable::refusal`]
-    /// (R-633), and a chart whose feasibility reads the pixel's own decode, a linear energy axis (R-471 E2, E3;
-    /// `super::energy::Mapped`), overrides it.
+    /// tunable parameters `p`: by default the chart's own at `(a, b)`, where the axes' types act, every value of a
+    /// latent control being a system; a chart whose hidden coordinate is a physical value adds [`Tiltable::refusal`],
+    /// and a chart whose feasibility reads the pixel's own decode, a linear energy axis (`super::energy::Mapped`),
+    /// overrides it.
     fn validate_shifted(
         &self,
         a: f64,
@@ -764,7 +763,7 @@ pub trait Tiltable: Hidden {
     }
 
     /// The constraint the cell at `(a, b)` fails with `shift` added, a cell its tilted physical value leaves no system
-    /// (R-633: `K < L_z²/2I` on the Burrau charts), refused, its area weight 0; none on a latent control.
+    /// (`K < L_z²/2I` on the Burrau charts), refused, its area weight 0; none on a latent control.
     fn refusal(&self, _a: f64, _b: f64, _shift: &Shift<f64>) -> Option<Constraint> {
         None
     }
@@ -783,7 +782,7 @@ pub trait Tiltable: Hidden {
         None
     }
 
-    /// Whether `shift` takes a held energy's warp coordinate below `t = 0`, so that it is clamped at its floor (R-709),
+    /// Whether `shift` takes a held energy's warp coordinate below `t = 0`, so that it is clamped at its floor,
     /// read at `R`, the decode's own precision, so that it answers as [`Tiltable::decode_shifted`] clamps; false on every
     /// chart but a warped held `K`.
     fn held_at_floor<R>(&self, _shift: &Shift<R>) -> bool
@@ -795,9 +794,9 @@ pub trait Tiltable: Hidden {
 }
 
 /// Where a view places each pixel: the chart point `(a, b)` and the hidden offsets of the pixel at `(u, v)`. A
-/// [`Tilt`] is one; a saved chart's composed tilts are another (`super::saved`; R-475, R-513).
+/// [`Tilt`] is one; a saved chart's composed tilts are another (`super::saved`).
 pub trait Placement<P> {
-    /// Whether a tilt path is taken: false where the view is the chart's own, with no arithmetic of the tilt's (J6).
+    /// Whether a tilt path is taken: false where the view is the chart's own, with no arithmetic of the tilt's.
     fn on(&self) -> bool;
 
     /// The chart point `(a, b)` of the pixel at `(u, v)` and its hidden offsets, on the tilt path.
@@ -966,7 +965,7 @@ where
     }
 
     /// The chart's check on the tilted `(a, b)` with the pixel's hidden offsets ([`Tiltable::validate_shifted`]), where
-    /// its axes' types act (X3a); a failure is reported as refused, since a projected or clamped `(a, b)` names no point
+    /// its axes' types act; a failure is reported as refused, since a projected or clamped `(a, b)` names no point
     /// of the tilted view.
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         self.validate_params(u, v, &LinkParams::DEFAULT)
@@ -1025,7 +1024,7 @@ where
 {
     /// The area weight of the pixel at `(u, v)`: the tilt's ([`TiltSpec::area_weight`]), or 0 where a refusal leaves the
     /// cell no system: [`Tiltable::refusal`] at f64, or [`Tiltable::refusal_own`] on the placement at the chart's own
-    /// precision (R-633). The rule: weight reads refusals, which read no link, and no more. It takes no [`LinkParams`], no
+    /// precision. The rule: weight reads refusals, which read no link, and no more. It takes no [`LinkParams`], no
     /// non-test caller exists to give them, and it must not read a default it wasn't given, so layer 3 on the decode and
     /// the chart's own axis check stay [`Chart::validate_params`]'s. So at a domain end [`Chart::validate_params`] can
     /// reject a pixel whose weight stays the tilt's, where the end is only the chart's check's, as at `Φ_θ,K`'s `θ` past the
@@ -1045,7 +1044,7 @@ where
     f64: From<P>,
 {
     /// Whether the pixel at `(u, v)` is a system whose held energy is clamped at its floor, "held at floor" in the
-    /// Inspector and the sidecar (R-709): a clamped offset alone is no pixel to flag past the chart's edge, which no
+    /// Inspector and the sidecar: a clamped offset alone is no pixel to flag past the chart's edge, which no
     /// system draws. The pixel comes in the type it was decoded at: `R` places it and reads the clamp, as
     /// [`Chart::decode_params`] does, so the flag is that decode's, the f32 and f64 decodes of one pixel able to clamp
     /// differently. [`Chart::validate`] at the defaults is exact here: the only chart that flags, a warped held `K`,
@@ -1085,14 +1084,15 @@ where
     }
 }
 
-// ── The tilted shape sphere: one-to-one at every tilt (R-544, R-613) ──────────────────────────────────────────────────
+// ── The tilted shape sphere: one-to-one at every tilt
+// ─────────────────────────────────────────────────────────────────
 
 impl<P: Copy + FloatConst> Tilted<ShapeSphere<P>, P>
 where
     f64: From<P>,
 {
-    /// The tilted view's `system_image`: bijective on either map at every tilt, no mirror pair folded (R-544, R-613),
-    /// `ray-degenerate` at RQ-471's corner.
+    /// The tilted view's `system_image`: bijective on either map at every tilt, no mirror pair folded,
+    /// `ray-degenerate` at the rank-losing corner.
     pub fn system_image(&self) -> SystemImage {
         self.tilt.system_image(self.chart.system_image())
     }
@@ -1100,15 +1100,15 @@ where
     /// How the tilted view's pixel at `(u, v)` counts, from its tilted `(a, b)`.
     /// - Inside the chart's square the spherical map's point is its own system, and the exponential map's counts as its
     ///   cap says.
-    /// - Past the square the exponential map's bounded axes end the domain (R-512).
+    /// - Past the square the exponential map's bounded axes end the domain.
     /// - Past the square on the spherical map, the pixel is a repeat, not counted (`None`), only where the type group's
-    ///   map leaves the hidden offset `d` unchanged (chart_decoder_contract § "Repeats and the canonical point"; R-554
-    ///   L3): past θ's period, iff `N_a = 0`, at every `b`, the map being periodic in `s` for every `t`; over a pole,
+    ///   map leaves the hidden offset `d` unchanged (chart_decoder_contract § "Repeats and the canonical point"):
+    ///   past θ's period, iff `N_a = 0`, at every `b`, the map being periodic in `s` for every `t`; over a pole,
     ///   iff `N_a = 0` and `N_b = 0`, decided exactly on the stored angles ([`TiltSpec::normal_zero`]); and in the
     ///   lattice of repeats past `t`'s period 2, a pixel `(s + k, t + 2j)` with `N_a·k + 2·N_b·j = 0` for integers
-    ///   `(k, j) ≠ 0`, iff it lies outside its canonical strip ([`TiltSpec::strip`]; R-655, ruling RQ-631 (a)).
+    ///   `(k, j) ≠ 0`, iff it lies outside its canonical strip ([`TiltSpec::strip`]).
     ///   Elsewhere the view is affine along that axis, its primary range unbounded, and the pixel is a system of its
-    ///   own, counted (R-512 F1, F3).
+    ///   own, counted.
     pub fn pixel(&self, u: f64, v: f64) -> Option<PixelCount> {
         let ([a, b], _) = self.at(u, v);
         let a_in = (0.0..=1.0).contains(&a);
@@ -1127,7 +1127,7 @@ where
 
     /// The counted total over the pixels at `points`: each system pixel once, no pixel folded onto another, a repeat
     /// that keeps `d` not at all ([`Tilted::pixel`]), and the pixels on `r = π`, which share the shape `−n₀`, once per
-    /// distinct hidden offset (chart_reference §3.3; REQ-CHART-078, REQ-CHART-090). The kernel has no allocator, so each
+    /// distinct hidden offset (chart_reference §3.3). The kernel has no allocator, so each
     /// such pixel is compared with the ones before it, which only those few pixels pay for.
     pub fn counted_total<I>(&self, points: I) -> u64
     where
@@ -1154,7 +1154,7 @@ where
 
     /// Whether two pixels have the same hidden offsets: always where `N_a = N_b = 0`, decided exactly on the stored
     /// angles, the view adding no `d` that varies, whatever rounding leaves in the computed offsets; elsewhere the
-    /// offsets as computed, compared exactly (chart_reference §3.3; REQ-CHART-090).
+    /// offsets as computed, compared exactly (chart_reference §3.3).
     fn same_offsets(&self, [u, v]: [f64; 2], [p, q]: [f64; 2]) -> bool {
         if self.tilt.normal_zero == [true, true] {
             return true;
