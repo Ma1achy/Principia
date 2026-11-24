@@ -937,7 +937,7 @@ negative_control!(
 );
 
 /// `check` refuses every `epsilon` other than 0, positive, negative, NaN and ±∞, each as [`DispatchError::Softening`]
-/// with its reason: no force law takes `epsilon` yet, so a run with one would come back Newtonian under the
+/// with its reason: no force law takes `epsilon`, so a run with one would come back Newtonian under the
 /// `softened` tag. `epsilon = 0` is accepted.
 fn check_epsilon_refused(check: &Check) {
     let neg_least = -f64::from_bits(1);
@@ -1412,7 +1412,7 @@ fn check_horizon_lowered(check: &Check) {
 }
 
 /// `check` refuses no `T` in `[0.4, 200]` (a grid of 0.05, its ends and their neighbours inside, and both sides of
-/// 65.535), and refuses 0.39, 0, −1 and the f64 just below 0.4 with the floor's reason (below one escape window the
+/// 65.535), and refuses 0.39, 0, −1 and the f64 just below 0.4 with the floor's reason (below one closure window the
 /// escape arm cannot fire), and the f64 just above 200.
 fn check_horizon_floor(check: &Check) {
     let mut ts: Vec<f64> = (8..=4000).map(|k| f64::from(k) * 0.05).collect();
