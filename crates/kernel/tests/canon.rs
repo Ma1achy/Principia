@@ -20,8 +20,8 @@
 //! - `canon_no_mirror`: `C` takes no mirror: on turned, scaled, translated and mirrored states `λ̃_y = k·δ_λ` either
 //!   side of `k = ±1`, where a mirror decision at `±δ_λ` would fall, and on generic states, `C`'s output keeps the
 //!   input's `λ̃_y` sign, raises no clamp and is deterministic.
-//! - `canon_product_fusion_proof`: the f32 product `C`'s wide arithmetic is built from rounds the same fused or not at
-//!   each of its contractible sites, on 200 000 pairs.
+//! - `canon_product_fusion_proof`: the f32 product that `C`'s wide arithmetic is built from rounds the same fused or
+//!   not at each of its contractible sites, on 200 000 pairs.
 //! - `canon_pow2_bits`: the bit-formed powers of two and exponents `C`'s wide arithmetic's integer exponents are read
 //!   with.
 //! - `canon_rotation`: step 2's turn `(cos φ, sin φ)`, formed as `ρ/‖ρ‖` ([`canon::rotation`]): `(1, +0)` at `ρ = 0`

@@ -13,8 +13,8 @@
 //! - The default table (`qa_nsub_default_table_bitwise`): at `r_sub = 0.05`, `γ_sub = 1.5`, `N_max = 64` the host
 //!   generator reproduces the checked-in build-time table bit for bit, and that table is the oracle's.
 //! - The substep count (`qa_nsub_bucket_*`): `N_sub` equals the specification
-//!   `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)`, evaluated exactly (`⌈y⌉ > n` iff `(r_sub²/d²)^a > n^{2b}`), for every `d²` sampled at and straddling
-//!   every edge and drawn across the range, at the default sim key and at sim keys with `r_sub`, `γ_sub` and `N_max`
+//!   `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)`, evaluated exactly (`⌈y⌉ > n` iff `(r_sub²/d²)^a > n^{2b}`), for
+//!   every `d²` sampled at and straddling every edge and drawn across the range, at the default sim key and at sim keys with `r_sub`, `γ_sub` and `N_max`
 //!   each changed (a non-power-of-two `N_max` among them); the only `d²` where it may differ are the edges themselves,
 //!   an f32 threshold rounded below its exact edge, where the f32 rounding of `THR[n]` decides. The CPU-f64 and CPU-f32
 //!   legs take the same `d²`, bit for bit, so the same `N_sub` (0 forks); domain: identical inputs per macro-step

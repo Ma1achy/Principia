@@ -793,8 +793,8 @@ fn decode_ranges() {
     check_ranges_all(&selections::<f64>(), &selections::<f32>());
 }
 
-/// `β = π̂·σ(z)` with `π̂` the f32 nearest to π, `0x4049_0FDB`, above π: the round-to-nearest constant,
-/// not the kernel's `fl↓(π)`.
+/// `β = π̂·σ(z)` with `π̂` the f32 nearest to π, `0x4049_0FDB`, above π: a round-to-nearest constant, the
+/// control's defect.
 #[cfg(feature = "controls")]
 struct NearestPi;
 
