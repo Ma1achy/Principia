@@ -1,6 +1,6 @@
 //! Aarseth–Zare, the regularisation occupant of integrator_contract Part 2b § "Aarseth–Zare: the equations, the
 //! reference body, the Levi-Civita inverse and the step control (transcribed)" (Aarseth & Zare 1974, Celest. Mech.
-//! 10, 185; R-160, R-927, R-953). Planar, `G = 1`.
+//! 10, 185). Planar, `G = 1`.
 //!
 //! **Two pairs about a reference body, re-registered at every sync boundary.** At each boundary the reference body `a`
 //! is re-chosen from the Cartesian state ([`reference_body`]: the body not in the longest of the pairs `(0,1)`,
@@ -11,42 +11,42 @@
 //! reference body ([`AzCount::switches`]).
 //!
 //! **The Levi-Civita inverse is the conditioned branch** ([`lc_inverse`]): the larger component is computed directly and
-//! the smaller derived from it, so its accuracy does not depend on the configuration's orientation (REQ-INT-044). The
+//! the smaller derived from it, so its accuracy does not depend on the configuration's orientation. The
 //! unstable form it replaces is kept, [`lc_inverse_unstable`], only to measure what it loses. Their guards compare with
-//! the floor `TINY`, Part 2c rule 1's one exception (R-953).
+//! the floor `TINY`, Part 2c rule 1's one exception.
 //!
-//! **The step control** ([`march`]), `driver.rs`'s as Part 2b transcribes it, on the fixed sync grid `t = k·Δ_sync`
-//! (R-565): the interval `dt_left` is `Δ_sync`, the entry size `dτ_entry = η·dt_left/(max(A₀, TINY)·max(B₀, TINY))`;
+//! **The step control** ([`march`]), `driver.rs`'s as Part 2b transcribes it, on the fixed sync grid `t = k·Δ_sync`:
+//! the interval `dt_left` is `Δ_sync`, the entry size `dτ_entry = η·dt_left/(max(A₀, TINY)·max(B₀, TINY))`;
 //! each step's size the least of the finite, positive constraints `c₀ = η·dt_left/ab`, `c₁ = dτ_entry` and the
-//! predictive limit `c₂ = f·d_min/(P_max·ab)` on the relative momenta `P₁, P₂` (R-953), `ab` the floored `A·B`; then
+//! predictive limit `c₂ = f·d_min/(P_max·ab)` on the relative momenta `P₁, P₂`, `ab` the floored `A·B`; then
 //! the landing clamp `dτ = min(dτ, max(dt_left − t_s, 0)/ab)`; one step of the stepper; the landing ([`AzParams`]'s
 //! `secant_tries` secant retakes, then up to `bisect_tries` halvings, each a counted step), which keeps a step that ends
-//! the clock at or short of the boundary, never past it, so that the state lands with its clock (R-998); and the exit,
+//! the clock at or short of the boundary, never past it, so that the state lands with its clock; and the exit,
 //! when the interval clock reaches the boundary, the state is not finite (tested explicitly on its bits, step 7: the guard that catches a non-finite entry size, the doubly
 //! degenerate state among them), or the step budget is spent. The floor signal (`A < TINY` or `B < TINY`) and the
-//! entry-cap hit (`c₀ > c₁`) are counted, non-terminal signals (Part 6, R-563). Each step's physical increment is fed
+//! entry-cap hit (`c₀ > c₁`) are counted, non-terminal signals (Part 6). Each step's physical increment is fed
 //! to the trajectory's `dt_max` ([`super::dt_max`]; step 8).
 //!
 //! **No precision-dependent constant in a branch** (Part 2c rule 1). The interval skip of step 1 (`SYNC_EPS`) is an
-//! integer test on the grid's boundary index; the landing takes no tolerance (R-998): its branches compare the interval
+//! integer test on the grid's boundary index; the landing takes no tolerance: its branches compare the interval
 //! clock with `dt_left`, a step size with the bracket's ends, and integer counts with their caps. `TINY` is the one
-//! excepted floor, and the equations of motion floor `|R₃|` at it (R-999).
+//! excepted floor, and the equations of motion floor `|R₃|` at it.
 //!
-//! **The step budget** (Part 6; R-604): a copy's running total of steps, every RK4 call and secant retake counted,
+//! **The step budget** (Part 6): a copy's running total of steps, every RK4 call and secant retake counted,
 //! is checked at every step against `max(N_min, step_budget_rate·t)`, `t` its physical time since `t = 0`; a copy that
-//! exceeds it ends undetermined, never run on. Read at the boundaries, it is REQ-INT-054's bound (R-953), which adds no
-//! behaviour. The running total crosses calls in [`AzCount`]; the seam's call ([`Regularisation::advance`]) starts one
-//! at `t_now`, the payload's budget word being TASK-M3-41's (R-603).
+//! exceeds it ends undetermined, never run on. Read at the boundaries, it is the bound on steps per sync interval,
+//! which adds no behaviour. The running total crosses calls in [`AzCount`]; the seam's call
+//! ([`Regularisation::advance`]) starts one at `t_now`; the payload's budget word is [`super::budget`]'s.
 //!
 //! **The stepper slot under Aarseth–Zare** is [`AzStepper`]: every stepper fills it through its form on the
 //! regularised system ([`super::form`]), RK4's profile `symplectic: false` (Part 2a's table), and a time-transformed
 //! leapfrog in Mikkola–Tanikawa form fills it as a type of its own, with Part 2a's row for the pair (order 2, one
 //! evaluation, symplectic, step-reversible, not run-reversible, owning its time mapping); its equations are not in the
-//! corpus and none is built (R-162; REQ-INT-024).
+//! corpus and none is built.
 //!
-//! The values the step control reads (`η`, `Δ_sync`, `TINY`, `N_min`, the budget's rate) are calibrations (R-71:
-//! REQ-INT-080, REQ-INT-105, REQ-INT-108, REQ-INT-103), and the landing's two integer caps are Part 2b's, so the
-//! occupant reads them from its [`AzConfig`], never from a literal here.
+//! The values the step control reads (`η`, `Δ_sync`, `TINY`, `N_min`, the budget's rate) are calibrations, and the
+//! landing's two integer caps are Part 2b's, so the occupant reads them from its [`AzConfig`], never from a literal
+//! here.
 
 use core::marker::PhantomData;
 
@@ -140,7 +140,7 @@ pub(super) fn two<R: AzReal>() -> R {
     R::one() + R::one()
 }
 
-/// Whether `x` is finite, on its bits (Part 2c; R-114).
+/// Whether `x` is finite, on its bits (Part 2c).
 #[inline]
 pub(super) fn finite<R: AzReal>(x: R) -> bool {
     !x.non_finite_bits()
@@ -164,7 +164,7 @@ fn halves<R: AzReal>(r: V<R>) -> (R, R) {
     (a, b)
 }
 
-/// The conditioned Levi-Civita inverse, `u` from `R` (Part 2b, the default; REQ-INT-044): on `x ≥ 0`, `u₀ = a` and
+/// The conditioned Levi-Civita inverse, `u` from `R` (Part 2b, the default): on `x ≥ 0`, `u₀ = a` and
 /// `u₁ = y/(2a)` if `a > TINY`, otherwise `b`; on `x < 0`, `u₁ = −b` if `y < 0`, otherwise `b`, and `u₀ = y/(2u₁)` if
 /// `|u₁| > TINY`, otherwise `a`. Both give `u₀ ≥ 0`.
 #[inline]
@@ -201,7 +201,7 @@ pub fn lc_inverse_unstable<R: AzReal>(r: V<R>, tiny: R) -> V<R> {
 /// compared by their `d²` ([`PairGeom::d2`]), comparison-only (Part 2c rule 2), which orders them as their distances.
 #[inline]
 pub fn reference_body<R: AzReal>(r: &[[R; 2]; 3]) -> u32 {
-    // R-22's pair ids: d2[2] is (0,1), d2[1] is (2,0), d2[0] is (1,2).
+    // Pair ids: d2[2] is (0,1), d2[1] is (2,0), d2[0] is (1,2).
     let d2 = PairGeom::new(r).d2();
     let mut longest = d2[2];
     let mut a = 2;
@@ -288,7 +288,7 @@ pub struct AzSystem<R> {
     pub k: [R; 3],
     /// The physical energy `E`, held through the interval.
     pub e: R,
-    /// The floor `TINY`, which also floors `|R₃|` in the equations of motion (R-999).
+    /// The floor `TINY`, which also floors `|R₃|` in the equations of motion.
     pub tiny: R,
 }
 
@@ -299,15 +299,14 @@ impl<R: AzReal> AzSystem<R> {
         (dot(q.u1, q.u1), dot(q.u2, q.u2))
     }
 
-    /// `|R₃| = |R₂ − R₁|` as the equations of motion read it: floored at `TINY`, the working precision's (Part 2b;
-    /// R-999).
+    /// `|R₃| = |R₂ − R₁|` as the equations of motion read it: floored at `TINY`, the working precision's (Part 2b).
     #[inline]
     pub fn r3(&self, q: &AzQ<R>) -> R {
         floored(norm(sub(lc(q.u2), lc(q.u1))), self.tiny)
     }
 
     /// The relative positions and momenta `(R₁, R₂, P₁, P₂)`: `R = L(u)u`, `P₁ = L₁p₁/(2A)`, `P₂ = L₂p₂/(2B)`, `A` and
-    /// `B` floored at `TINY` (Part 2b; R-953).
+    /// `B` floored at `TINY` (Part 2b).
     #[inline]
     pub fn phys(&self, q: &AzQ<R>, p: &AzP<R>) -> [V<R>; 4] {
         let (a, b) = Self::ab(q);
@@ -321,7 +320,7 @@ impl<R: AzReal> AzSystem<R> {
         ]
     }
 
-    /// The regularised energy of `(q, p)` (integrator_contract Part 1, R-566; REQ-INT-104): the physical energy of the
+    /// The regularised energy of `(q, p)` (integrator_contract Part 1): the physical energy of the
     /// relative positions and momenta the regularised state gives ([`AzSystem::phys`]), each separation floored at
     /// `TINY`, read from the regularised coordinates and momenta, never through the Cartesian return.
     #[inline]
@@ -357,7 +356,7 @@ impl<R: AzReal> AzSystem<R> {
 
 /// The physical energy at the relative positions and momenta `[R₁, R₂, P₁, P₂]` (Part 2b, "Coordinates and mass
 /// factors"): `E = |P₁|²/(2μ₁) + P₁·P₂/m_a + |P₂|²/(2μ₂) − m_a m_b/|R₁| − m_a m_c/|R₂| − m_b m_c/|R₃|`, each `|Rᵢ|`
-/// floored at `TINY` (`system.rs`'s `energy_phys`; R-953).
+/// floored at `TINY` (`system.rs`'s `energy_phys`).
 #[inline]
 fn energy_of<R: AzReal>(mabc: [R; 3], mu: [R; 2], [r1, r2, p1, p2]: [V<R>; 4], tiny: R) -> R {
     let [ma, mb, mc] = mabc;
@@ -442,7 +441,7 @@ impl<R: AzReal> Flow<R> for AzSystem<R> {
     }
 
     /// `dp₁/dτ = −∂Γ/∂u₁` and `dp₂/dτ = −∂Γ/∂u₂` (Part 2b), `A` and `B` unfloored and `|R₃|` floored at `TINY`
-    /// ([`AzSystem::r3`]; R-999):
+    /// ([`AzSystem::r3`]):
     ///
     /// ```text
     /// ∂Γ/∂u₁ = u₁|p₂|²/(4μ₂) + L(p₁)ᵀ(L₂p₂)/(4m_a) − 2m_a m_c u₁ − m_b m_c (2u₁B/|R₃| + 2(A·B/|R₃|³) L₁ᵀR₃) − 2E·B·u₁
@@ -548,7 +547,7 @@ impl<R: AzReal> Flow<R> for AzSystem<R> {
 
 // ── The stepper slot ───────────────────────────────────────────────────────────────────────────────────────────
 
-/// The stepper slot under Aarseth–Zare (REQ-INT-024): a step `h` in fictitious time on the regularised system, and the
+/// The stepper slot under Aarseth–Zare: a step `h` in fictitious time on the regularised system, and the
 /// pair's profile. Every [`Stepper`] fills it through its form ([`super::form::Form`]); a time-transformed leapfrog in
 /// Mikkola–Tanikawa form fills it as a type of its own, its profile Part 2a's row for the pair.
 pub trait AzStepper {
@@ -587,27 +586,27 @@ impl<S: Stepper> AzStepper for S {
 /// [`AzConfig`].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AzParams<R> {
-    /// The step factor `η` (REQ-INT-080, a calibration).
+    /// The step factor `η` (a calibration).
     pub eta: R,
-    /// The sync quantum `Δ_sync`, the interval `dt_left` (R-565; REQ-INT-080, a calibration).
+    /// The sync quantum `Δ_sync`, the interval `dt_left` (a calibration).
     pub delta_sync: R,
-    /// The floor `TINY` (Part 3, Part 6; REQ-INT-105, a calibration).
+    /// The floor `TINY` (Part 3, Part 6; a calibration).
     pub tiny: R,
-    /// The predictive limit's `f` (R-160: 0.02); the limit is off where it is not positive.
+    /// The predictive limit's `f` (Part 2b: 0.02); the limit is off where it is not positive.
     pub predictive_f: R,
-    /// The step budget's rate, steps per unit physical time per copy (R-564; REQ-INT-103, a calibration).
+    /// The step budget's rate, steps per unit physical time per copy (a calibration).
     pub step_budget_rate: R,
-    /// The step budget's floor `N_min` (R-604; REQ-INT-108, a calibration).
+    /// The step budget's floor `N_min` (a calibration).
     pub n_min: u32,
     /// Whether the landing clamp is on (Part 2b, step 3; the default). Off only to measure the closure without the
-    /// landing fix (REQ-INT-049).
+    /// landing fix.
     pub clamp: bool,
     /// The landing secant's most retakes (Part 2b, step 6: `land_max_iters`, 4); `0` turns it off.
     pub secant_tries: u32,
     /// The landing bisection's most halvings (Part 2b, step 6: 64). With this `0`, whatever `secant_tries` is, a step
     /// past the boundary is kept (the secant's last retake, where it takes any), the clock set to the boundary while the
-    /// state stays overshot: a setting only for measuring what R-998 forbids (REQ-INT-119's control), never the
-    /// occupant's.
+    /// state stays overshot: a setting only for measuring an overshot landing (the no-tolerance landing's control),
+    /// never the occupant's.
     pub bisect_tries: u32,
 }
 
@@ -619,7 +618,7 @@ pub enum End {
     /// The state was not finite at the explicit test (Part 2b, step 7): the copy stopped, its state latched at the
     /// last finite one.
     NonFinite,
-    /// The step budget was spent (R-604): the copy is undetermined, never run on.
+    /// The step budget was spent: the copy is undetermined, never run on.
     Exhausted,
     /// The cadence's `done` ended the march: a terminal fired (Part 1).
     Done,
@@ -628,7 +627,7 @@ pub enum End {
 /// One trajectory's counts across its march, carried from call to call.
 #[derive(Clone, Copy, Debug)]
 pub struct AzCount<R> {
-    /// The running total of steps since `t = 0`, every stepper call and secant retake counted (R-604's).
+    /// The running total of steps since `t = 0`, every stepper call and secant retake counted.
     pub steps: u32,
     /// The steps the cadence followed: those the march kept, the secant's last retake in place of its others.
     pub accepted: u32,
@@ -647,7 +646,7 @@ pub struct AzCount<R> {
     /// The steps that carried the interval clock past `2·dt_left` (Part 2b, step 7).
     pub overshoots: u32,
     /// The intervals whose landing ended short of the boundary, so that the march closed it with a further clamped
-    /// step (Part 2b, step 6; R-998).
+    /// step (Part 2b, step 6).
     pub closings: u32,
     /// The most halvings one landing took (Part 2b, step 6).
     pub most_bisections: u32,
@@ -658,7 +657,7 @@ pub struct AzCount<R> {
     /// The last registration's reference body; `3` before the first.
     pub reference: u32,
     /// The energy `E` of the trajectory's first registration, at `t = 0`, against which its regularised energy drifts
-    /// (integrator_contract Part 1, "The regularised energies, defined"; R-566); meaningful only where `referenced`.
+    /// (integrator_contract Part 1, "The regularised energies, defined"); meaningful only where `referenced`.
     pub e_ref: R,
     /// Whether `e_ref` holds the first registration's `E`: false until the march's first registration.
     pub referenced: bool,
@@ -714,10 +713,10 @@ pub struct AzAdvanced<R> {
     /// The trajectory's counts.
     pub count: AzCount<R>,
     /// The energy `E` of the march's first registration: the physical energy at its start, against which its
-    /// regularised energy drifts (integrator_contract Part 1, R-566). `0` where no interval was marched.
+    /// regularised energy drifts (integrator_contract Part 1). `0` where no interval was marched.
     pub registered: R,
     /// The regularised energy where the march ended ([`AzSystem::energy`] of its last interval's regularised state;
-    /// integrator_contract Part 1, R-566; REQ-INT-104). `0` where no interval was marched.
+    /// integrator_contract Part 1). `0` where no interval was marched.
     pub regularised: R,
 }
 
@@ -808,7 +807,7 @@ fn size<R: AzReal>(c0: R, c1: R, c2: R) -> (R, bool) {
 }
 
 /// The predictive limit (Part 2b, step 4): `f·d_min/(P_max·ab)`, `d_min = min(|R₁|, |R₂|, |R₂ − R₁|)` and
-/// `P_max = max(|P₁|, |P₂|, |P₂ − P₁|)` on the relative momenta (R-953). Where `f ≤ 0`, the denominator is not
+/// `P_max = max(|P₁|, |P₂|, |P₂ − P₁|)` on the relative momenta. Where `f ≤ 0`, the denominator is not
 /// positive, or `d_min` or the denominator is not finite, the value is not finite or not positive, so step 3's usable
 /// test drops it and the limit is off.
 #[inline]
@@ -820,11 +819,11 @@ fn predictive<R: AzReal>(system: &AzSystem<R>, q: &AzQ<R>, p: &AzP<R>, f: R, ab:
     f * d_min / (p_max * ab)
 }
 
-/// R-604's budget for any regularised occupant ([`super::budget`]), named here too for the callers that took it from
+/// The step budget for any regularised occupant ([`super::budget`]), named here too for the callers that took it from
 /// this module.
 pub use super::budget::over_allowance;
 
-/// Whether the running total `steps` exceeds Aarseth–Zare's budget `max(N_min, rate·t)` at physical time `t` (R-604):
+/// Whether the running total `steps` exceeds Aarseth–Zare's budget `max(N_min, rate·t)` at physical time `t`:
 /// [`over_allowance`] at its values.
 #[inline]
 pub fn over_budget<R: AzReal>(steps: u32, t: R, params: &AzParams<R>) -> bool {
@@ -896,7 +895,7 @@ pub fn entry_size<R: AzReal>(q: &AzQ<R>, params: &AzParams<R>) -> R {
     params.eta * params.delta_sync / (floored(a0, params.tiny) * floored(b0, params.tiny))
 }
 
-/// One landing's retakes (Part 2b, step 6; R-998), from the saved state `(q, p)` whose step `h` gave `(q1, p1)` past the
+/// One landing's retakes (Part 2b, step 6), from the saved state `(q, p)` whose step `h` gave `(q1, p1)` past the
 /// boundary `dt_left`: the secant on `t(h)`, at most `secant_tries` retakes, stopping where a retake ends the clock on
 /// the boundary, its increment is not finite or not positive, or the tries are spent; then, where the last retake is
 /// still past, a bisection on `h` between `0` (the saved state) and that retake's step, at most `bisect_tries` halvings, stopping where a halving
@@ -986,7 +985,7 @@ struct Interval<R> {
 
 /// Marches one sync interval from the registration's `(q, p)` at boundary `k` (Part 2b, the step control, steps 2 to 8),
 /// the cadence after every kept step on its Cartesian image, the counts in `count`. The interval lands when a kept
-/// step ends the clock at or past the boundary, with no tolerance (R-998); with the landing's retakes on, a kept step
+/// step ends the clock at or past the boundary, with no tolerance; with the landing's retakes on, a kept step
 /// never ends past it, so the state's own clock is the boundary's.
 #[inline]
 fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
@@ -1033,12 +1032,10 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
             landed = q.t >= dt_left;
             // `done` is read before the landing: a terminal that fires on the landing step ends the march there, its
             // state latched, never marched on into the next interval (Part 2a § "The sync grid is a fixed quantum of
-            // physical time (R-565)": "a terminal event … still latches at the step it fires on"; code review
-            // 5880407311 of PR #502, F2). The landing itself still counts ([`Interval::landed`]): the boundary is
-            // reached, its time exact, and the march then ends (physics review 5880652590, P3; code review 5880701680,
-            // F3).
+            // physical time": "a terminal event … still latches at the step it fires on"). The landing itself still
+            // counts ([`Interval::landed`]): the boundary is reached, its time exact, and the march then ends.
             // A terminal is read before the budget: one found on a step the budget allowed is the copy's outcome, and a
-            // copy never stores a terminal beside `budget_exhausted` (payload §2; R-603).
+            // copy never stores a terminal beside `budget_exhausted` (payload §2).
             if cadence.done() {
                 count.end = End::Done;
                 go = false;
@@ -1099,7 +1096,7 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     }
 }
 
-/// Aarseth–Zare's march over the sync grid (R-565): from the Cartesian `state` at boundary `k_now` to boundary
+/// Aarseth–Zare's march over the sync grid: from the Cartesian `state` at boundary `k_now` to boundary
 /// `k_target`, registering at each boundary, with the stepper `S`, the watch `watch` (its finiteness test) and the
 /// trajectory's counts `count` carried in. A copy whose march has ended is not marched again. On a landing the time is the boundary's,
 /// `k·Δ_sync`, exactly.
@@ -1171,7 +1168,7 @@ pub trait AzConfig {
 pub struct AarsethZare<C>(PhantomData<C>);
 
 impl<C: AzConfig> AarsethZare<C> {
-    /// `ADVANCE` in physical time (Part 2a; R-565): from `state` at the latest boundary at or before `t_now` to the
+    /// `ADVANCE` in physical time (Part 2a): from `state` at the latest boundary at or before `t_now` to the
     /// latest boundary at or before `t_target`, never stopping between boundaries but where the march ends, its
     /// counts `count` carried in.
     #[inline]
@@ -1220,8 +1217,7 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
 
     /// The seam's `ADVANCE` with how the march ended: a landing on the boundary at or before `t_target`
     /// is the target reached, whatever the steps it took (Part 2a, Cost 2), and a march ended non-finite or by its
-    /// budget ends the run, latched where it stopped (Part 2a § "The sync grid is a fixed quantum of physical time
-    /// (R-565)").
+    /// budget ends the run, latched where it stopped (Part 2a § "The sync grid is a fixed quantum of physical time").
     #[inline]
     fn advance_reaching<S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
         state: &State<R>,
@@ -1237,7 +1233,7 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
     }
 
     /// The seam's `ADVANCE` with the trajectory's buffer: Aarseth–Zare keeps no regularised state of its own there; it
-    /// carries its running step total, which its budget reads (R-604), so a march split into calls spends its budget
+    /// carries its running step total, which its budget reads, so a march split into calls spends its budget
     /// at the same step as one call (Part 2a § "The sync grid is a fixed quantum of physical time": live march,
     /// catch-up and re-boot reach the same state), and adds to its count the registrations this call made at a sync
     /// boundary after `t = 0` (Part 2b, "The profile gains a field"): every registration of the call but one at
@@ -1255,7 +1251,7 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
         let seed = AzCount {
             steps: carried.steps,
             // The `E` of the first registration, the reference its regularised energy drifts against across calls
-            // (Part 1, R-566), in Heggie's frozen-energy slot `x[12]`, held once `registered` is set; Aarseth–Zare
+            // (Part 1), in Heggie's frozen-energy slot `x[12]`, held once `registered` is set; Aarseth–Zare
             // keeps no other number there.
             e_ref: carried.x[12],
             referenced: carried.registered == 1,

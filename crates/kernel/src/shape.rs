@@ -31,9 +31,9 @@
 //!   first. The march decides "inside the hold" by it, on the current state at every macro-step and at a resume
 //!   (`crate::driver::shape`); [`disc_input`]'s float form stays for the synthetic paths of [`theta_step_config`].
 //! - **`wrap`'s `d`**, in [`wrap`]: `longitude(n) − reference`, a difference of two `atan2` longitudes, against `π`
-//!   (`d > π`) and `−π` (`d ≤ −π`). This is the one transcendental deciding a branch, and the unwrap rule requires it: θ̃ adds
-//!   the principal value of the longitude difference, into (−π, π], exactly ±π giving +π (dd_integrator §3.7), and no
-//!   form of that rule avoids a sign decision at the ±π tie. The longitude is [`shape`]'s normalised point's.
+//!   (`d > π`) and `−π` (`d ≤ −π`). This is the one transcendental deciding a branch, and the unwrap rule requires
+//!   it: θ̃ adds the principal value of the longitude difference, into (−π, π], exactly ±π giving +π (dd_integrator
+//!   §3.7), and no form of that rule avoids a sign decision at the ±π tie. The longitude is [`shape`]'s normalised point's.
 //!
 //! **The map on the Jacobi vectors and the landmarks** (chart_reference §3.1, §3.4).
 //! [`shape_vec`] is §3.1's forward map written on the mass-weighted Jacobi vectors `ρ̃`, `λ̃` themselves, the form the
