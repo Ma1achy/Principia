@@ -15,7 +15,8 @@
 //! - `physical_axis_warps_*`: the virial ratio and the mass ratio warp as chart_reference §2.1 writes,
 //!   the mass ratio under `stick_breaking` and under `softmax_tanh` at both ends of `μ_max`'s range.
 //!
-//! `K_max` and `γ_K` are the invariant-chart warp's proposed defaults, `validation::{K_MAX, GAMMA_K}`. Each test registers its negative control.
+//! `K_max` and `γ_K` are the invariant-chart warp's proposed defaults, `validation::{K_MAX, GAMMA_K}`. Each test
+//! registers its negative control.
 
 use kernel::chart::energy::{
     count, decode_rule, decoder_bug_warning, extension, written, Count, ExtensionType, Mapped,
