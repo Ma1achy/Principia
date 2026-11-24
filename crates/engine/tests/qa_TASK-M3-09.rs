@@ -1,11 +1,11 @@
-//! QA tests for TASK-M3-09 on dispatch's side, written from the requirements (R-13, R-113; integrator_contract Part 5,
-//! Part 7):
+//! QA tests for the collision threshold `r_coll` on dispatch's side, written from the requirements (integrator_contract
+//! Part 5, Part 7):
 //!
-//! - REQ-ENC-033 (`qa_lookup_t0_collision_dispatch`): a looked-up IC with bodies within the default `r_coll`, entered
+//! - `qa_lookup_t0_collision_dispatch`: a looked-up IC with bodies within the default `r_coll`, entered
 //!   in an arbitrary gauge (scaled, rotated, translated, boosted), is not rejected by lookup, reaches dispatch under
 //!   the validated default sim key and its own threshold, and is labelled `collision` with the pair inside, at
 //!   `t_end_step = 0`, having taken no step.
-//! - REQ-EVT-004, "`r_coll` a recorded parameter carried on every output" (`qa_r_coll_on_the_sim_key`): two sim keys
+//! - "`r_coll` a recorded parameter carried on every output" (`qa_r_coll_on_the_sim_key`): two sim keys
 //!   that differ only in `r_coll` have different sim-key bytes, and each hands the kernel its own threshold.
 //!
 //! **Domain** (pitfalls §10): one IC, held fixed; the march is KDK at f64 and takes no step.
@@ -21,7 +21,8 @@ use kernel::occupant::kdk::Kdk;
 use kernel::payload::{sd_detail, sd_state, tm_t_end_step, STATE_COLLISION};
 use validation::negative_control;
 
-/// The f64 distance of each pair `k` of `r` by R-22's map: pair 0 = (1, 2), pair 1 = (2, 0), pair 2 = (0, 1).
+/// The f64 distance of each pair `k` of `r`, pair `k` opposite body `k`: pair 0 = (1, 2), pair 1 = (2, 0),
+/// pair 2 = (0, 1).
 fn dist(r: &[[f64; 2]; 3]) -> [f64; 3] {
     let d = |a: usize, b: usize| (r[a][0] - r[b][0]).hypot(r[a][1] - r[b][1]);
     [d(1, 2), d(2, 0), d(0, 1)]
@@ -153,7 +154,7 @@ negative_control!(
 
 /// Dispatch accepts the slider's tiny and large `r_coll` (Part 7, "all valid") and hands the kernel a threshold under
 /// which an IC within `r_coll` is `collision` at t = 0: two coincident-in-f32 bodies at every tiny positive `r_coll`
-/// (one pair), every pair of the lookup fixture at a large one (`detail = 3`) (REQ-EVT-002, REQ-EVT-003).
+/// (one pair), every pair of the lookup fixture at a large one (`detail = 3`).
 fn check_extremes(rule: fn(&SimUniforms) -> Validated) {
     let with = |r_coll: f64| {
         rule(&SimUniforms {

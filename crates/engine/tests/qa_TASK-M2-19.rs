@@ -1,15 +1,14 @@
-//! QA's tests for TASK-M2-19, written from the requirements it closes, not from `engine::lookup`'s code: the exact
-//! and partial forms of lookup and the lock and slice they give (REQ-ENC-012; inverse_encode_contract Part 6,
-//! "Lookup", and REQ-ENC-031's slice rule, "The partial specification's blocks and slice basis"), the validation
-//! ladder with its clamp, its rejection naming the class a clamp would change, and layer 3's residuals (REQ-ENC-013;
-//! § "Chart-aware validation", "Layer 1's space and bounds", "Layer 3's tolerance", "A qualitatively different IC"),
-//! exactly coincident bodies never rejected, the inner pair clamped and an outer pair a state as it is (REQ-ENC-019;
-//! R-13, R-113), and the decode-sanity tolerance's claim that decode's residuals sit under it at f64 and f32 over
-//! fuzzed `z` (REQ-ENC-027). Every quantity asserted is computed here from the contract's own formulas (the masses
-//! carried to `M = 1` with the momenta by `M^{3/2}`, Burrau's sides, `ν = sec θ − tan θ`, `q = (p_ρ, p_λ)`, `L_z`,
-//! `E`, `‖Σmᵢrᵢ‖/R_x`). Each test registers its negative control (R-176). The mass unit (Part 6, "The physical form's
+//! QA's tests for lookup, written from its requirements, not from `engine::lookup`'s code: the exact and partial forms
+//! of lookup and the lock and slice they give (inverse_encode_contract Part 6, "Lookup", and its slice rule, "The
+//! partial specification's blocks and slice basis"), the validation ladder with its clamp, its rejection naming the
+//! class a clamp would change, and layer 3's residuals (§ "Chart-aware validation", "Layer 1's space and bounds",
+//! "Layer 3's tolerance", "A qualitatively different IC"), exactly coincident bodies never rejected, the inner pair
+//! clamped and an outer pair a state as it is, and the decode-sanity tolerance's claim that decode's residuals sit
+//! under it at f64 and f32 over fuzzed `z`. Every quantity asserted is computed here from the contract's own formulas
+//! (the masses carried to `M = 1` with the momenta by `M^{3/2}`, Burrau's sides, `ν = sec θ − tan θ`, `q = (p_ρ, p_λ)`,
+//! `L_z`, `E`, `‖Σmᵢrᵢ‖/R_x`). Each test registers its negative control. The mass unit (Part 6, "The physical form's
 //! masses", physics review 5630998530 of PR #284, P1) and layer 1's zero class (§ "The zero class in floating point",
-//! REQ-ENC-036, and its band `k`, REQ-ENC-037) are tested at the end.
+//! and its band `k`) are tested at the end.
 
 use engine::lookup::{
     after, changed, lookup, lookup_partial, moves, residuals, sanity, Class, Classes, Exact,
@@ -26,12 +25,12 @@ use validation::roundtrip::{charts, phys};
 
 type Outcome = Result<Locked, Rejected>;
 
-/// `q_max`, settled (R-10; inverse_encode_contract Part 3), the default link parameter.
+/// `q_max`, settled (inverse_encode_contract Part 3), the default link parameter.
 const Q_MAX: f64 = 2.0;
 /// `ε_q`, the momentum clamp (Part 3 quotes `ε_z = 10⁻⁶` for `s`, and the momentum clamp is the same interval).
 const EPS_Q: f64 = 1e-6;
 
-/// The curve tolerance REQ-ENC-026 proposes, `k = 128` at f64; only the Burrau chart reads it.
+/// The proposed curve tolerance, `k = 128` at f64; only the Burrau chart reads it.
 fn tol() -> Tolerances {
     Tolerances::register(128.0 * f64::EPSILON)
 }
@@ -69,7 +68,7 @@ fn decoded<C: kernel::encode::by_kind::ByKind<Param = f64>>(chart: &C, lock: &Lo
     }
 }
 
-/// `ε_phys`, the register's `k` times f64's epsilon (REQ-ENC-024).
+/// `ε_phys`, the register's `k` times f64's epsilon.
 fn eps_phys() -> f64 {
     EPS_PHYS.number() * f64::EPSILON
 }
@@ -130,7 +129,7 @@ impl Rng {
     }
 }
 
-// ── REQ-ENC-012: the exact forms ───────────────────────────────────────────────────────────────────────────────────
+// ── Lookup: the exact forms ────────────────────────────────────────────────────────────────────────────────────────
 
 /// The lock's decoded state is a Burrau system (chart_reference §4.1–4.2): the masses proportional to the sides
 /// `(a, b, c)` of the given triangle, each body opposite the side its mass is proportional to, at rest, and its CoM at
@@ -531,13 +530,13 @@ mod momenta_kept {
     );
 }
 
-// ── REQ-ENC-012, REQ-ENC-031: the partial form and its slice ──────────────────────────────────────────────────────
+// ── Lookup: the partial form and its slice ────────────────────────────────────────────────────────────────────────
 
 fn unit(k: usize) -> [f64; 8] {
     std::array::from_fn(|n| if n == k { 1.0 } else { 0.0 })
 }
 
-/// The slice REQ-ENC-031's rule gives (Part 6): the first two unspecified controls in the order `z_α, z_β`, then
+/// The slice Part 6's rule gives: the first two unspecified controls in the order `z_α, z_β`, then
 /// `z_μ1, z_μ2`, then `z_q0 … z_q3`, in the block layout `z_α, z_β | z_q0 … z_q3 | z_μ1, z_μ2`; none when every block
 /// is given.
 fn rule(masses: bool, positions: bool, momenta: bool, order: [usize; 8]) -> Option<(usize, usize)> {
@@ -663,7 +662,7 @@ negative_control!(
     check_partial_burrau(&[(Some(0.2), 0.5)])
 );
 
-// ── REQ-ENC-013: the ladder ────────────────────────────────────────────────────────────────────────────────────────
+// ── The validation ladder ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// The free Jacobi momenta `q = (p_ρ, p_λ)` (Part 3): `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p_λ`.
 fn jacobi_q(x: &Ic<f64>) -> [f64; 4] {
@@ -849,7 +848,7 @@ negative_control!(
     check_sanity(0.5)
 );
 
-/// Bodies within `r_coll` (10⁻³ by default) but apart pass lookup unrejected (§ "Chart-aware validation", R-13).
+/// Bodies within `r_coll` (10⁻³ by default) but apart pass lookup unrejected (§ "Chart-aware validation").
 fn check_within(seps: &[f64]) {
     for &sep in seps {
         for (i, j) in [(0, 1), (1, 2), (0, 2)] {
@@ -876,7 +875,7 @@ negative_control!(
     check_within(&[f64::NAN])
 );
 
-// ── REQ-ENC-019: exactly coincident bodies ─────────────────────────────────────────────────────────────────────────
+// ── Exactly coincident bodies ──────────────────────────────────────────────────────────────────────────────────────
 
 /// Bodies `i` and `j` exactly coincident, at rest and moving, and moving with `L_z = 0` on a line.
 fn coincident_pair(i: usize, j: usize) -> Vec<(String, Ic<f64>)> {
@@ -899,7 +898,7 @@ fn coincident_pair(i: usize, j: usize) -> Vec<(String, Ic<f64>)> {
 }
 
 /// The coincidences the section cannot represent: the inner pair, bodies 0 and 1 (`ρ = 0`), and all three. Lookup
-/// locks each, with `lookup_clamped`, and never rejects (R-13: "no coincident-bodies rejection branch").
+/// locks each, with `lookup_clamped`, and never rejects: there is no coincident-bodies rejection branch.
 fn coincident_states() -> Vec<(String, Ic<f64>)> {
     let mut out = coincident_pair(0, 1);
     let mut all = some_state();
@@ -985,7 +984,7 @@ negative_control!(
     check_outer_coincident(&outer_states(0, 1))
 );
 
-// ── REQ-ENC-027: decode's residuals under the proposed tolerance ──────────────────────────────────────────────────
+// ── Decode's residuals under the proposed tolerance ───────────────────────────────────────────────────────────────
 
 /// The largest CoM and `Σpᵢ` residual, in units of the precision's epsilon, of decode over `n` fuzzed `z` on
 /// `[−16, 16]⁸` and its corners, at f64 and f32, each residual computed at f64 from the decoded values.
@@ -1051,7 +1050,7 @@ negative_control!(
     check_decode_residuals(1e-6)
 );
 
-// ── REQ-ENC-012: the mass unit (Part 6, "The physical form's masses"; physics review 5630998530 of PR #284, P1) ────
+// ── Lookup: the mass unit (Part 6, "The physical form's masses"; physics review 5630998530 of PR #284, P1) ─────────
 
 /// `K/|U|` of `x` (`G = 1`), each from its own definition.
 fn virial(x: &Ic<f64>) -> f64 {
@@ -1238,7 +1237,7 @@ negative_control!(
     check_partial_mass_unit([1.0; 3])
 );
 
-// ── REQ-ENC-036: the zero class in floating point ─────────────────────────────────────────────────────────────────
+// ── The zero class in floating point ──────────────────────────────────────────────────────────────────────────────
 
 /// The entered state's extents as the contract defines them (§ "The zero class in floating point"):
 /// `R = λ·maxᵢ‖rᵢ‖` and `P = λ^{−1/2}·maxᵢ‖pᵢ‖` of the entry, before `C`'s translation, boost, rotation and rescale.
@@ -1315,7 +1314,7 @@ fn proper_image(rng: &mut Rng, x: &Ic<f64>, span: f64, octaves: f64) -> Ic<f64> 
 }
 
 /// `Extents::entered` gives the contract's `R` and `P`, and `Classes::within` gives `L_z`, `E` and the contract's
-/// bounds `S_{L_z}` and `S_E` on the entered extents (REQ-ENC-036), at 64 gauge images of fuzzed states, each with
+/// bounds `S_{L_z}` and `S_E` on the entered extents, at 64 gauge images of fuzzed states, each with
 /// its own offset, boost and scale. `drop_p` leaves the boost's term `P` out of the expected bounds.
 fn check_class_bounds(drop_p: bool) {
     let mut rng = Rng(0x2E80_0036);
@@ -1462,7 +1461,7 @@ negative_control!(
 
 /// [`q1_start`]'s balanced state, `L_z = 0` in exact arithmetic (`a·q₁` cancelled by `b·q₂`) and a rounding of either
 /// sign as entered, with `q₁` past `q_max`, entered at 64 orientations, each with its own offset, boost, scale and
-/// mass unit: one physical state, so one verdict (REQ-ENC-036). `q₁`'s clamp moves `L_z` off 0 by `a·Δq`, a change of
+/// mass unit: one physical state, so one verdict. `q₁`'s clamp moves `L_z` off 0 by `a·Δq`, a change of
 /// the sense of rotation, so that verdict is a layer-1 rejection naming `L_z`'s class. (A collinear state moving
 /// along its line, this check's first subject, clamps nothing under the periodic `β`, whose circle has no edge at
 /// the line, so it would lock at any band and tell the bands apart no longer.)
@@ -1524,7 +1523,7 @@ negative_control!(
     check_one_verdict(0.0)
 );
 
-// ── REQ-ENC-038: the class a clamp moves ───────────────────────────────────────────────────────────────────────────
+// ── The class a clamp moves ────────────────────────────────────────────────────────────────────────────────────────
 
 /// `σ`, the default links' logistic (inverse_encode_contract Part 3).
 fn sigma(z: f64) -> f64 {
@@ -1627,7 +1626,7 @@ fn collinear(t: f64) -> Ic<f64> {
     canonical_state([0.5, 0.3, 0.2], 0.8, 0.0, [0.4, 0.0, t, 0.0])
 }
 
-/// The collinear starts with `p_λ ≠ 0`, however small (REQ-ENC-038's `t = 10⁻⁴, 10⁻⁶, 10⁻⁸`): each encodes with no
+/// The collinear starts with `p_λ ≠ 0`, however small (`t = 10⁻⁴, 10⁻⁶, 10⁻⁸`): each encodes with no
 /// control clamped and locks in every gauge with no control moved, so its `L_z = 0` is kept. Under the bounded `β`
 /// link these were rejected: the line was that link's edge, and its clamp turned `λ` off the line and `L_z` off 0.
 fn check_beta_line_moving(starts: &[(String, Ic<f64>)]) {
@@ -1980,7 +1979,7 @@ negative_control!(
     check_closed_forms(-1.0)
 );
 
-// ── REQ-ENC-037: the band's k against the rounding, each measurement on its own ───────────────────────────────────
+// ── The band's k against the rounding, each measurement on its own ────────────────────────────────────────────────
 
 /// `C`'s rounding of `L_z` and `E` against its bound, in units of `ε`, over gauge images of `n` fuzzed states (offset
 /// and boost on `[−8, 8)²`, any rotation, scale `2^[−12, 12]`, either parity): two images of one state are one
@@ -2030,7 +2029,7 @@ fn measure_gauge(n: usize, canonical_only: bool) -> f64 {
     worst
 }
 
-/// `k` is at least 4× above `C`'s measured rounding against its bound (REQ-ENC-037's first measurement).
+/// `k` is at least 4× above `C`'s measured rounding against its bound (the band's first measurement).
 fn check_gauge_k(k: f64, canonical_only: bool) {
     let worst = measure_gauge(1 << 13, canonical_only);
     println!("zero_class: C's rounding {worst:.3e} ε of its bound; k = {k:e}");
@@ -2140,8 +2139,8 @@ fn measure_moves(n: usize, by_difference: bool) -> (f64, usize) {
     (worst, pairs)
 }
 
-/// `k` is at least 4× above the moves' and after-values' measured rounding against their bounds (REQ-ENC-037's
-/// second measurement).
+/// `k` is at least 4× above the moves' and after-values' measured rounding against their bounds (the band's second
+/// measurement).
 fn check_moves_k(k: f64, by_difference: bool) {
     let n = 1 << 12;
     let (worst, pairs) = measure_moves(n, by_difference);
@@ -2168,7 +2167,7 @@ negative_control!(
     check_moves_k(ZERO_CLASS.number(), true)
 );
 
-// ── REQ-ENC-038: the α = 0 pole (R-591) ─────────────────────────────────────────────────────────────────────────────
+// ── The α = 0 pole ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Masses for the pole starts: unequal (so `U`'s gradient in `λ` at the pole is not 0) and equal.
 const POLE_MASSES: [[f64; 3]; 2] = [[0.5, 0.3, 0.2], [1.0 / 3.0; 3]];
@@ -2193,7 +2192,7 @@ fn pole_verdicts(x: &Ic<f64>) -> Vec<Result<(), String>> {
         .collect()
 }
 
-/// R-591: at the pole a clamp of `α` with `p_λ ≠ 0` is rejected in every gauge, naming `L_z`'s class and `α` among the
+/// At the pole a clamp of `α` with `p_λ ≠ 0` is rejected in every gauge, naming `L_z`'s class and `α` among the
 /// controls, whatever `p_λ`'s direction (along `ρ`, across it, between) and however small above rounding, bound or
 /// unbound, equal masses or not.
 fn check_pole_rejected(t: f64) {
@@ -2242,7 +2241,7 @@ negative_control!(
     check_pole_rejected(0.0)
 );
 
-/// R-591: at the pole a clamp of `α` with `p_λ = 0` is accepted in every gauge, boosts included (where `p_λ` is 0
+/// At the pole a clamp of `α` with `p_λ = 0` is accepted in every gauge, boosts included (where `p_λ` is 0
 /// only within its rounding), bound or unbound, the inner pair breathing either way; one physical state, one verdict.
 fn check_pole_accepted(t: f64) {
     for m in POLE_MASSES {

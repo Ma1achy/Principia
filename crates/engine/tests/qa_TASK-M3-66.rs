@@ -1,7 +1,7 @@
-//! QA's tests for TASK-M3-66, written from REQ-SYS-096 and integrator_contract Part 5 (R-668), each with its negative
-//! control (R-176). The kernel runs only at `G = 1` and `M = 1`: dispatch refuses a `SimUniforms` whose `g` or `m_total`
-//! is not 1, NaN and ±∞ included, with a typed reason naming the field and its value, as it refuses `ε ≠ 0`; a source
-//! in another `G` or total mass is converted at the import boundary, never carried to the kernel.
+//! QA's tests for the units refusal, written from the requirement and integrator_contract Part 5, each with its
+//! negative control. The kernel runs only at `G = 1` and `M = 1`: dispatch refuses a `SimUniforms` whose `g` or
+//! `m_total` is not 1, NaN and ±∞ included, with a typed reason naming the field and its value, as it refuses `ε ≠ 0`;
+//! a source in another `G` or total mass is converted at the import boundary, never carried to the kernel.
 //!
 //! Every name starts `units_refusal` so that the acceptance command runs it. What these add to the task's own tests:
 //! - the two values next to 1 are refused at f64, where a check at the kernel's f32 reads both as 1;
@@ -533,7 +533,7 @@ negative_control!(
     .sim_key_bytes())
 );
 
-// ── The import boundary (R-668): what dispatch refuses, import converts or refuses ───────────────────────────────
+// ── The import boundary: what dispatch refuses, import converts or refuses ───────────────────────────────────────
 
 /// A generic start with its total mass `m_total`, its constant `g`, and its velocities multiplied by `speed`.
 fn start(g: f64, m_total: f64, speed: f64) -> Start {

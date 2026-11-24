@@ -1,13 +1,13 @@
-//! QA tests for TASK-M6-35's `engine::contract::decoded`, written from R-550, R-14 and REQ-GUI-199, against the
-//! particles the decoder itself hands the integrator:
+//! QA tests for `engine::contract::decoded`, written from the specs (the shape-sphere map is chart_reference §3.1's),
+//! against the particles the decoder itself hands the integrator:
 //!
 //! - the state is the one after `η_E`: its Hamiltonian, summed here over the particles and in Jacobi form, is `E*`;
 //! - the Jacobi momenta and `L_z` are the particles' own (chart_reference §0.3);
-//! - `θ, φ` are R-14's and the rates are `d/dt` at `t = 0` of the mass-weighted `ρ̃, λ̃`, here by moving the particles
-//!   at `ṙ = p/m` and differencing R-14's map, never through the code's formula.
+//! - `θ, φ` are the shape-sphere map's and the rates are `d/dt` at `t = 0` of the mass-weighted `ρ̃, λ̃`, here by
+//!   moving the particles at `ṙ = p/m` and differencing that map, never through the code's formula.
 //!
-//! Each check runs its control (R-176) through [`rejects`], and each test has one that `cargo xtask controls` runs, by
-//! `negative_control!` (REQ-VAL-147, R-199).
+//! Each check runs its control through [`rejects`], and each test has one that `cargo xtask controls` runs, by
+//! `negative_control!`.
 // The file name `qa_TASK-M6-35` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -73,7 +73,7 @@ fn weighted(m: &[f64; 3], r: &P) -> ([f64; 2], [f64; 2]) {
     )
 }
 
-/// `(θ, φ, R, sin φ)` by R-14: `u = |ρ̃|² − |λ̃|²`, `v = 2ρ̃·λ̃`, `w = 2ρ̃∧λ̃`, over `I`.
+/// `(θ, φ, R, sin φ)` by the shape-sphere map: `u = |ρ̃|² − |λ̃|²`, `v = 2ρ̃·λ̃`, `w = 2ρ̃∧λ̃`, over `I`.
 fn r14(rho: [f64; 2], lambda: [f64; 2]) -> (f64, f64, f64, f64) {
     let (a, b) = (
         rho[0] * rho[0] + rho[1] * rho[1],
@@ -148,7 +148,7 @@ negative_control!(
     }
 );
 
-/// `(θ̇, φ̇, Ṙ)` by a central difference in `t` of R-14's map over particles moving at `ṙ = p/m`.
+/// `(θ̇, φ̇, Ṙ)` by a central difference in `t` of the shape-sphere map over particles moving at `ṙ = p/m`.
 fn rates_by_motion(m: &[f64; 3], r: &P, p: &P) -> (f64, f64, f64) {
     let dt = 1e-6;
     let at = |t: f64| -> (f64, f64, f64, f64) {
@@ -241,7 +241,7 @@ fn fill(rho_t: [f64; 2], lambda_t: [f64; 2]) -> State {
     }
 }
 
-/// R-14's landmarks on hand-filled states, through `sphere`: `L⁺` at `w = +1`, the 0–1 collision at
+/// The shape sphere's landmarks on hand-filled states, through `sphere`: `L⁺` at `w = +1`, the 0–1 collision at
 /// `n = (−1, 0, 0)`, `φ` from `+w`.
 fn check_landmarks(sphere: impl Fn(&State) -> Sphere) {
     let root = std::f64::consts::FRAC_1_SQRT_2;

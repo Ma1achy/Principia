@@ -1,4 +1,4 @@
-//! QA's tests for TASK-M2-82 (REQ-CHART-173; chart_composition § 18.7; R-918, R-919 F18), written from the
+//! QA's tests for the trajectory interface (chart_composition § 18.7), written from the
 //! requirement's statement and verify detail and § 18.7's table, not from the implementation. Every test is named
 //! `trajectory_interface_qa_*`, so the task's acceptance filter `cargo test -p engine trajectory_interface` runs it.
 //!
@@ -12,10 +12,11 @@
 //!   apocentre at half the Kepler period at `(1 + e)/(1 − e)` times the side, back at the start after one period;
 //! - the homothetic member: the collapse time `π/√(8μ)` from the measured side, the rows before it on QA's own radial
 //!   Kepler solution (`|z| = cos²β`, `β + sin β cos β = √(2μ)·t`), the terminal at the first boundary at or after
-//!   `t_c`, kind collision (triple), held, still falling (RQ-757 open: the held state's value is not asserted);
+//!   `t_c`, kind collision (triple), held, still falling (the held state's value is not asserted here;
+//!   `qa_TASK-M2-82_refusals.rs` asserts it);
 //! - the figure-eight: every boundary row its start bitwise, its quantum `T₈` carried to the sim's units, its start
 //!   `validation`'s, and the constants `ledger`'s with the corpus's digits;
-//! - controls (R-176): a row one boundary off, a terminal not held, a read depending on an earlier read, a figure-eight
+//! - controls: a row one boundary off, a terminal not held, a read depending on an earlier read, a figure-eight
 //!   not read from `ledger`'s constants, a state not a rigid rotation, a terminal at the wrong index.
 
 use std::f64::consts::{PI, TAU};

@@ -1,4 +1,4 @@
-//! The blend chart (TASK-M2-90; design § 17.2, § 17.4, § 17.11; R-926 item 3, R-936, R-943, R-944, R-975):
+//! The blend chart (design § 17.2, § 17.4, § 17.11):
 //!
 //! - `blend_chart_ends_bitwise`: `s = 0` and `s = 1` are the ends' own pixels bit for bit, through the chart and
 //!   through its segment. Control: the ends taken by the block line.
@@ -10,10 +10,11 @@
 //! - `blend_chart_exposed`: the f64 forward map and decode, as placement and `computeIC` call them. Control: the
 //!   decode read against the forward map at another share.
 //! - `blend_chart_collision_disc`: a path through the shape sphere's binary collision point gives a small disc of
-//!   collisions at `t = 0`, pair and least separation recorded, never blank and never `decode_failed` (R-933).
+//!   collisions at `t = 0`, pair and least separation recorded, never blank and never `decode_failed`.
 //!   Control: the disc blanked.
 //! - `blend_chart_m01_arm1`, `blend_chart_m01_arm2`: a path whose `M₀₁` dips below `ε_M01` between two valid ends
-//!   holds the masses (R-975), with the controls the task names. Control: the blend without the hold.
+//!   holds the masses (the light pair's blended ratio kept, `M₀₁` lifted just to `ε_M01`), with the controls the task
+//!   names. Control: the blend without the hold.
 //! - `blend_chart_fold_indicator`: § 17.11's signed fold indicator reads the fold of a blend toward its mirror image
 //!   and none on an unfolded blend. Control: the unsigned indicator.
 //! - `blend_chart_round_trip`: an end's state rebuilt from its blocks, non-zero momenta, and the blend just off `s = 0`
@@ -1365,7 +1366,7 @@ negative_control!(
 // Both ends hold `E* = −0.1` (the decoder's `η_E`), two latent planes at equal masses (their mass block 0, where most
 // shapes have `U < E*`); the state blend at `s = ½` holds nothing, and its
 // miss `|E − E*|` over the pixels feasible at both ends is reported, median and worst, against § 17.6's 0.054 median
-// and 2.1 worst. Mid-morph frames never claim held values (R-850). Asserted only that the ends hold `E*` to `1e-9`, so
+// and 2.1 worst. Mid-morph frames never claim held values. Asserted only that the ends hold `E*` to `1e-9`, so
 // the miss is the blend's own, and that some pixels are measured.
 
 const E_STAR: f64 = -0.1;

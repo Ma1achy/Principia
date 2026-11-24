@@ -100,7 +100,7 @@ const ARM_STRIDE: usize = 16;
 /// runs the comparison, the selects and the pairs, and proves the arm can fire (`first_slice_arm_can_fire`).
 const ARMS: bool = !cfg!(debug_assertions);
 
-/// The seed in force, named in the report.
+/// The seed in force, named in the report (the task's deliverable).
 const SEED: &str = "seed in force: R-934's expansion w = r/√I on every pixel, no seed branch; R-82's rule, the \
                     largest-norm seed decided on z_α's sign, is the named legacy option, not run here";
 
@@ -483,8 +483,8 @@ trait Q: LinkReal + PayloadReal + WarpReal + From<f32> + Into<f64> {}
 impl Q for f32 {}
 impl Q for f64 {}
 
-/// The branch selects compared, in the order [`Selects`] holds them: the `DEGENERATE` tag; the descriptor's poles
-/// and `rho_angle`'s three, the last its upper/lower select; the shape sphere inverse's hemisphere (its upper/lower
+/// The branch selects compared, in the order [`Selects`] holds them: the `DEGENERATE` tag; the descriptor's poles;
+/// `rho_angle`'s three, the last its upper/lower select; the shape sphere inverse's hemisphere (its upper/lower
 /// select) and its `p = q = 0` pole; the `(L_z, E)` chart's feasibility and its seed, the seed the decode in force
 /// takes: the expansion `w = r/√I`, word 5, where `I > 0`, else none, word 4 (its only select; the largest-norm rule,
 /// decided on `z_α`'s sign, is the named legacy option and is not read). Today's decode has no sheet select (the

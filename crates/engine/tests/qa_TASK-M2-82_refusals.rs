@@ -1,15 +1,15 @@
-//! QA's tests for TASK-M2-82's re-check (REQ-CHART-173; chart_composition § 18.7; R-918, R-919 F18; RQ-757 decided
-//! per R-369 as option (a)), written from the requirement and RQ-757's outcome, not from the implementation. Every test
-//! is named `trajectory_interface_qa_*`, so the task's acceptance filter `cargo test -p engine trajectory_interface`
+//! QA's further tests of the trajectory interface (chart_composition § 18.7): its refusals and the collapse's held
+//! terminal, written from the requirement and the rule for the held state, not from the implementation. Every test is
+//! named `trajectory_interface_qa_*`, so the task's acceptance filter `cargo test -p engine trajectory_interface`
 //! runs it.
 //!
 //! - `_inputs_give_a_grid`: the Lagrange fixture's inputs are accepted exactly where QA's own reading of the member
 //!   makes them one (masses finite and positive, an elliptic `e` in `(0, 1)`, the divisions finite and positive), and
 //!   every accepted fixture gives the requirement's interface: a finite, positive quantum, a trajectory over a horizon
 //!   of a few quanta, and finite rows, the same bits for the same inputs from a second construction;
-//! - `_homothetic_holds_last_finite_row`: RQ-757's option (a), the collapse's terminal holds the state at the last
+//! - `_homothetic_holds_last_finite_row`: the collapse's terminal holds the state at the last
 //!   boundary before `t_c`, so every row from the terminal's index on is that row's bits;
-//! - controls (R-176): an inadmissible input taken for admissible, a row not finite, and the held state compared with a
+//! - controls: an inadmissible input taken for admissible, a row not finite, and the held state compared with a
 //!   row two boundaries before the terminal.
 
 use engine::trajectory::{same_bits, Lagrange, Member, Provider, Refused, Trajectory};

@@ -1,18 +1,18 @@
-//! QA tests for TASK-M5-01 on the engine side: the generated `QuadReduction` as the engine compiles it, and
-//! `QuadMeta`. Written from the requirements and dd_generation_root §3.7 ("Size", "Bin width (R-410)", "Layout and
+//! QA tests for the quad reduction on the engine side: the generated `QuadReduction` as the engine compiles it, and
+//! `QuadMeta`. Written from the requirements and dd_generation_root §3.7 ("Size", "Bin width", "Layout and
 //! §3.8 entries", "Not reduction fields", the temporal-accumulators sentinel paragraph), not from the implementation:
-//! - REQ-PAY-089 / REQ-PAY-077: 44 four-byte slots, 176 B, aligned to 4, no padding: `class_histogram` bins at slots
+//! - 44 four-byte slots, 176 B, aligned to 4, no padding: `class_histogram` bins at slots
 //!   0–31, the packed words `qr_w0` … `qr_w8` at slots 32–40, then `running_mean_divergence`, `first_divergence_t`,
 //!   `coherence` at slots 41–43. The u8-binned struct §3.7 used to describe (80 B) is the control.
-//! - REQ-PAY-075 (R-410): each bin is a u32 and counts Extreme's provisional 16² × 16 = 4096 copies and 2³² − 1 without
+//! - Each bin is a u32 and counts Extreme's provisional 16² × 16 = 4096 copies and 2³² − 1 without
 //!   wrapping; §3.7's former u8 bin wraps at Medium's 16² × 2 = 512.
-//! - REQ-PAY-077: each packed member's accessor reads exactly its bits of its word, as §3.7's table places them; an f16
-//!   member reads its binary16 value widened to f32 (R-312, R-317), checked against binary16 values whose bits are known.
-//! - REQ-PAY-094: `first_divergence_t`'s sentinel is +∞, f32 bits 0x7f80_0000, tested by its bits, never NaN.
-//! - REQ-REF-007 / REQ-REF-008: the struct's members are exactly the 13 above (no `spread_t_end`, no CPU metadata);
+//! - Each packed member's accessor reads exactly its bits of its word, as §3.7's table places them; an f16
+//!   member reads its binary16 value widened to f32, checked against binary16 values whose bits are known.
+//! - `first_divergence_t`'s sentinel is +∞, f32 bits 0x7f80_0000, tested by its bits, never NaN.
+//! - The struct's members are exactly the 13 above (no `spread_t_end`, no CPU metadata);
 //!   `QuadMeta` carries `priority`, `cache_age`, `lifecycle`, `compute_cost_ms` and `gentime`.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::mem::{align_of, offset_of, size_of};
 
@@ -132,7 +132,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-075 (R-410): the bin counts N² × (E+1) copies without wrapping.
+// The bin counts N² × (E+1) copies without wrapping.
 
 /// Counts `copies` footprint copies into one bin, one at a time as a histogram does, by `add` (the bin type's wrapping
 /// add); the bin must read `copies` afterwards.
@@ -157,7 +157,7 @@ fn store_in_bin(copies: u64) {
     assert_eq!(u64::from(q.class_histogram[k]), copies);
 }
 
-/// Extreme (provisional, R-137): N = 16 samples per quad side, E = 15, so N² × (E+1) copies per quad.
+/// Extreme (provisional): N = 16 samples per quad side, E = 15, so N² × (E+1) copies per quad.
 const EXTREME: u64 = 16 * 16 * 16;
 /// Medium: N = 16, E = 1.
 const MEDIUM: u64 = 16 * 16 * 2;
@@ -171,7 +171,7 @@ fn qa_quad_reduction_histogram_capacity_u32_bins() {
     count_into(0u32, 1u32, u32::wrapping_add, MEDIUM);
     store_in_bin(EXTREME);
     store_in_bin(BOUND);
-    // One past the bound is the first count a u32 bin cannot hold; dispatch refuses it (R-410).
+    // One past the bound is the first count a u32 bin cannot hold; dispatch refuses it.
     let q = QuadReduction::default();
     assert_eq!(
         q.class_histogram[0].wrapping_add(u32::MAX).wrapping_add(1),
@@ -198,7 +198,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-077: the packed accessors read §3.7's bits.
+// The packed accessors read §3.7's bits.
 
 /// A packed member's accessor, unsigned bits or an f16 widened to f32.
 #[derive(Clone, Copy)]
@@ -349,7 +349,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-094: `first_divergence_t`'s sentinel, +∞ by its bits.
+// `first_divergence_t`'s sentinel, +∞ by its bits.
 
 fn check_sentinel(bits: u32, is_sentinel: fn(f32) -> bool) {
     assert_eq!(
@@ -403,7 +403,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-REF-007, REQ-REF-008: the GPU struct's members are exactly §3.7's; the CPU metadata lives in `QuadMeta`.
+// The GPU struct's members are exactly §3.7's; the CPU metadata lives in `QuadMeta`.
 
 /// The names `Debug` prints for a value's fields, in order: `Name { a: …, b: … }`, nested values skipped.
 fn field_names(debug: &str) -> Vec<String> {
@@ -434,8 +434,8 @@ fn field_names(debug: &str) -> Vec<String> {
     names
 }
 
-/// Not `QuadReduction` members: the conditional `spread_t_end` (REQ-REF-007), the CPU quad metadata in both spellings
-/// (REQ-REF-008), the omitted `id`, the per-footprint latch and the dropped trend member (§3.7).
+/// Not `QuadReduction` members: the conditional `spread_t_end`, the CPU quad metadata in both spellings,
+/// the omitted `id`, the per-footprint latch and the dropped trend member (§3.7).
 const NOT_MEMBERS: [&str; 13] = [
     "spread_t_end",
     "priority",

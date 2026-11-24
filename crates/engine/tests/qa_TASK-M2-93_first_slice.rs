@@ -1,15 +1,16 @@
-//! QA tests for TASK-M2-93 on the first slice (`crates/engine/tests/first_slice.rs`, TASK-M2-86's measurement), written
-//! from REQ-DEC-021 (R-934: the seed in force is the expansion `w = r/√I` on every pixel, R-82's largest-norm rule the
-//! named legacy option) and the task's deliverable that the first slice names and reads the seed in force.
+//! QA tests for the seed on the first slice (`crates/engine/tests/first_slice.rs`, the first slice's measurement),
+//! written from the decoder's seed rule (the seed in force is the expansion `w = r/√I` on every pixel, the largest-norm
+//! rule decided on `z_α`'s sign the named legacy option) and the rule that the first slice names and reads the seed in
+//! force.
 //!
-//! - `qa_m293_first_slice_seed_select_is_the_decodes` (REQ-DEC-021): the `(L_z, E)` chart's "seed" select must be the
-//!   seed the decode in force takes. On the first slice's `(L_z, E)` preset, over every grid of REQ-DEC-057 at f64 and
-//!   f32, the select's reader (the same expression as the first slice's) is checked against the decode itself: the seed
-//!   it names, rebuilt with `construct_seeded`, gives the decode's own momenta bit for bit, and is the expansion (word
-//!   5) wherever `I > 0`. Its control reads R-82's legacy rule (`z_α`'s sign) and must fail.
-//! - `qa_m293_first_slice_names_the_seed_in_force` (the task's deliverable): the first slice's source reads its seed
-//!   select from `construct_expansion`, never from R-82's rule (`alpha_sign`, `seed_of_sign`, `decode_seeded`,
-//!   `LargestNorm`), and its report names R-934's expansion as the seed in force. The select is test-harness code in
+//! - `qa_m293_first_slice_seed_select_is_the_decodes`: the `(L_z, E)` chart's "seed" select must be the seed the
+//!   decode in force takes. On the first slice's `(L_z, E)` preset, over each of its grids at f64 and f32, the
+//!   select's reader (the same expression as the first slice's) is checked against the decode itself: the seed it
+//!   names, rebuilt with `construct_seeded`, gives the decode's own momenta bit for bit, and is the expansion (word 5)
+//!   wherever `I > 0`. Its control reads the legacy largest-norm rule (`z_α`'s sign) and must fail.
+//! - `qa_m293_first_slice_names_the_seed_in_force`: the first slice's source reads its seed select from
+//!   `construct_expansion`, never from the legacy rule (`alpha_sign`, `seed_of_sign`, `decode_seeded`,
+//!   `LargestNorm`), and its report names the expansion as the seed in force. The select is test-harness code in
 //!   another test target, which no other target can call, so this binds the reader checked above to that file. Its
 //!   control is the first slice's lines as they read before the fix, which must fail it.
 //!
@@ -18,7 +19,7 @@
 //!
 //! **Domain** (pitfalls §10): the stateless decode on the first slice's preset; no trajectory.
 //!
-//! Each test registers the negative control that must make it fail (R-176).
+//! Each test registers the negative control that must make it fail.
 
 use engine::first_slice::Quad;
 use kernel::chart::invariant::WarpReal;
@@ -45,7 +46,7 @@ fn in_force<R: Q>(chart: &InvariantLE<f32>, u: R, v: R, d: &Decoded<R>) -> u32 {
     seed_word(construct_expansion(&d.masses, &d.config, t.lz, t.k).seed)
 }
 
-/// R-82's legacy rule, decided on `z_α`'s sign: the reader the first slice used before the fix.
+/// The legacy largest-norm rule, decided on `z_α`'s sign: the reader the first slice used before the fix.
 #[cfg(feature = "controls")]
 fn legacy<R: Q>(chart: &InvariantLE<f32>, u: R, v: R, _d: &Decoded<R>) -> u32 {
     use kernel::chart::Chart;
@@ -159,7 +160,7 @@ mod legacy_seed {
 /// The first slice's measurement, as committed.
 const FIRST_SLICE: &str = include_str!("first_slice.rs");
 
-/// The first slice's `(L_z, E)` reads and its `SEED` before the fix (PR #547's physics P1): R-82's rule named in force
+/// The first slice's `(L_z, E)` reads and its `SEED` before the fix: the legacy rule named in force
 /// and read for the seed select.
 #[cfg(feature = "controls")]
 const BEFORE: &str = r#"

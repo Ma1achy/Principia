@@ -1,27 +1,27 @@
-//! qa's tests for TASK-M7-12 through the editor's graph (REQ-GUI-027, REQ-RENDER-072, REQ-COL-025, REQ-GUI-024;
-//! R-814: the crate that holds `StainGraph`), written from the requirements and their sources, render_gui_spec
-//! Part II §4, §5, §7 and §13 and colour_composition §4.1 and §4.2, not from the implementation. The assembler's own
+//! qa's tests for the stain editor through its graph, in the crate that holds `StainGraph`, written from the
+//! requirements and their sources, render_gui_spec Part II §4, §5, §7 and §13 and colour_composition §4.1 and §4.2,
+//! not from the implementation. The assembler's own
 //! tests are `crates/render/tests/qa_TASK-M7-12.rs`.
 //!
 //! Every graph here is built and changed by the typed edits alone (`StainEdit` through `apply`), lowered, rendered
 //! through the assembler's total entry point and drawn on the GPU:
-//! - REQ-GUI-027: the colour node of a two-slot graph deleted, the draw is the greyscale of the brightness, under
+//! - The colour node of a two-slot graph deleted, the draw is the greyscale of the brightness, under
 //!   Multiply (`white · B`) and under Replace-L (`OKLab(L = B, 0, 0)`);
-//! - REQ-RENDER-072: every one of the 64 sets of free nodes deleted from a full graph, one node at a time, each
+//! - Every one of the 64 sets of free nodes deleted from a full graph, one node at a time, each
 //!   state renders as a graph, never the fallback and never an error, and draws. This is
 //!   exhaustive over deletions and bounded; the random edit sequences are the implementer's property;
-//! - REQ-COL-025: 8 posts are taken into the chain and a 9th is refused; moving a post in the chain, and inserting
+//! - 8 posts are taken into the chain and a 9th is refused; moving a post in the chain, and inserting
 //!   one, change the draw to the new order's;
-//! - REQ-GUI-024: picking a source's field sets its out-port's subtype, vector for the shape `n`, and a source has no
+//! - Picking a source's field sets its out-port's subtype, vector for the shape `n`, and a source has no
 //!   in-port.
 //!
 //! Exactness: the sample's values and the occupants' constants are exact in binary and every occupant is a product or
 //! a swizzle, so a draw is compared with its mirror bit for bit. The one colour that goes through OKLab, Replace-L's
-//! `OKLab(L = B, 0, 0)`, is compared in linear sRGB within REQ-COL-049's round-trip tolerance, read from
-//! `fixtures/gates/oklab-roundtrip/gate.json` (provisional, R-182): an achromatic OKLab `(L, 0, 0)` is linear `L³` on
+//! `OKLab(L = B, 0, 0)`, is compared in linear sRGB within the OKLab round-trip tolerance, read from
+//! `fixtures/gates/oklab-roundtrip/gate.json` (provisional): an achromatic OKLab `(L, 0, 0)` is linear `L³` on
 //! each channel, by Ottosson's matrices, whose rows from LMS sum to 1.
 //!
-//! Every check takes its subject as an argument, and its negative control runs it on a wrong one (R-176).
+//! Every check takes its subject as an argument, and its negative control runs it on a wrong one.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -113,7 +113,7 @@ fn bits(c: [f32; 3]) -> [u32; 3] {
     c.map(f32::to_bits)
 }
 
-/// REQ-COL-049's round-trip tolerance, read from the gate's configuration, with its requirement checked.
+/// The OKLab round-trip tolerance, read from the gate's configuration, with the requirement it names checked.
 fn tolerance() -> f64 {
     let root = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."));
     let config =
@@ -196,7 +196,7 @@ fn halve_r([r, g, b]: [f32; 3]) -> [f32; 3] {
     [r * 0.5, g, b]
 }
 
-// ── REQ-GUI-027: the colour node deleted, the output is the greyscale of the brightness ──────────────────────────
+// ── The colour node deleted, the output is the greyscale of the brightness ───────────────────────────────────────
 
 /// The two-slot graph's free nodes.
 #[derive(Clone, Copy, Debug)]
@@ -272,7 +272,7 @@ negative_control!(
     check_delete(|ids| ids.brightness)
 );
 
-// ── REQ-RENDER-072: every state deletion reaches renders ─────────────────────────────────────────────────────────
+// ── Every state deletion reaches renders ─────────────────────────────────────────────────────────────────────────
 
 /// A full graph: a source of `n` into a colour, a source of `ftle` into a brightness and into the second post's
 /// field in, Multiply, and two posts. With it, its six free nodes.
@@ -388,7 +388,7 @@ negative_control!(
     })
 );
 
-// ── REQ-COL-025: at most 8 posts, in declaration order, with insert and reorder ──────────────────────────────────
+// ── At most 8 posts, in declaration order, with insert and reorder ───────────────────────────────────────────────
 
 /// A colour of `n` through the pass-through combiner: the graph a chain is built on.
 fn chain_base() -> StainGraph {
@@ -547,7 +547,7 @@ negative_control!(
     check_reorder(1)
 );
 
-// ── REQ-GUI-024: a source's one param, its field, sets its out-port's subtype ────────────────────────────────────
+// ── A source's one param, its field, sets its out-port's subtype ─────────────────────────────────────────────────
 
 /// A source whose field is picked, each of `cases` in turn: it has no in-port (render_gui_spec §3.1) and one `field`
 /// out-port, whose subtype is the picked field's (§5), and the in-port of the colour it feeds reads the same.

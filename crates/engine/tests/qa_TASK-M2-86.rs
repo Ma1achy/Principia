@@ -1,5 +1,4 @@
-//! QA's tests for TASK-M2-86, the first slice, written from REQ-DEC-057's statement and verify detail (R-926 items 5
-//! and 6; R-935's RQ-766 (a)):
+//! QA's tests for the first slice's records, written from the requirement's statement and its verify detail:
 //! - predicate (3), "each narrowed component is the correctly rounded value of its f64 evaluation (within half an f32
 //!   ulp of it)": `narrow` against an exact midpoint oracle, round to nearest, ties to even, over every f64 bit
 //!   pattern, the f32 subnormals, the overflow edge, signed zeros and NaN (`qa_m2_86_narrow_*`);
@@ -14,9 +13,9 @@
 //!   about an O(1) point (each latent coordinate 0.7) and about the chart's origin", read through each chart's own map
 //!   (`qa_m2_86_grids_*`).
 //!
-//! The record and SimState checks run on small quads (REQ-DEC-057's grids at fewer samples) and a short horizon to keep
+//! The record and SimState checks run on small quads (the required grids at fewer samples) and a short horizon to keep
 //! the debug suite within its limits; the predicates are per sample, so the sample count does not change what they
-//! assert. Every test has its negative control (R-176).
+//! assert. Every test has its negative control.
 //!
 //! **Domain** (pitfalls §10): each decode at its fixed chart and window; each march from its record alone.
 
@@ -32,7 +31,7 @@ use proptest::prelude::*;
 use validation::first_slice::{Centre, Grid, Preset, GRIDS, POINT, SIDE};
 use validation::negative_control;
 
-/// The record checks' quads: REQ-DEC-057's grids at this many samples across and up.
+/// The record checks' quads: the required grids at this many samples across and up.
 const SMALL: [usize; 2] = [24, 16];
 
 /// The march checks' horizon.
@@ -517,7 +516,7 @@ negative_control!(
 
 // ── The grids: 256 × 256, home, 2¹⁰ and 2²⁰ about the O(1) point and about the origin ────────────────────────────────
 
-/// REQ-DEC-057's five grids, each once.
+/// The five required grids, each once.
 fn check_grid_list(grids: &[Grid]) {
     assert_eq!(SIDE, 256, "a quad's side");
     let mut want = vec![
@@ -568,7 +567,7 @@ fn check_latent(quad: fn(Grid) -> Quad<Latent<f32>>) {
             Centre::Origin => [0.0; 8],
         };
         assert_eq!(mid, want, "{}: the latent quad's middle", g.name());
-        // R-83: the zoom is one common scale on q₁ and q₂, exact at f32 for a power of two.
+        // The zoom is one common scale on q₁ and q₂, exact at f32 for a power of two.
         let k = f64::powi(2.0, -(g.zoom as i32)) as f32;
         assert_eq!(
             q.chart.q1,
