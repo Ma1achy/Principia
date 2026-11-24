@@ -14,7 +14,7 @@
 //!   `0·q` is `+0`, each to `+0`, a difference of 0 in value. Criterion: the components that change are exactly those
 //!   predicted, and each is a signed zero.
 //! - the tilt (Tilt's sliders, the arrows on `τ₁`, `τ₂`, `γ`, the compass's step and drag), the gui's `View::basis` on
-//!   std's `sin_cos`, is now the lean-each-axis tilt (`Family::R474Tilt`) through `kernel::chart::tilt::latent_basis`,
+//!   std's `sin_cos`, is now the Lean each axis tilt (`Family::R474Tilt`) through `kernel::chart::tilt::latent_basis`,
 //!   the kernel's pinned `sin` and `cos`. Each within 1 ulp of the value, at most 1, so `|Δq_i| ≤ 8ε·σ` per component
 //!   (four products of terms off by `ε` at most, and the rounding of two sums). Criterion: every component within
 //!   `8ε·σ`.
@@ -1095,7 +1095,7 @@ enum Interior {
     FromZero,
 }
 
-/// The lean-each-axis tilt (`Family::R474Tilt`) of a latent view against `kernel::chart::tilt::latent_basis` called
+/// The Lean each axis tilt (`Family::R474Tilt`) of a latent view against `kernel::chart::tilt::latent_basis` called
 /// directly: `B` and the interior frames at `s = ¼, ½, ¾`, the angles lerped, under both maps, one target and two, `z₀`
 /// untouched. Criterion: bit for bit.
 fn check_r474(interior: Interior) {

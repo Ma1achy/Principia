@@ -34,8 +34,7 @@
 //! - `canonicaliser_noop_gpu`: dd_decoder §5 test 5 on the GPU, `C` on the GPU's own canonical-frame decodes, saturated
 //!   controls included, turns by 0 and moves nothing beyond rounding; and on 65 536
 //!   more GPU decodes over a wider `z`, step 0 is skipped on every one, no `lookup_rescaled`, `λ = 1`, their measured
-//!   `|I_in − 1|` printed: the GPU's evidence for the step-0 skip tolerance `τ_I`, and that `lookup_rescaled` fires
-//!   only where step 0 rescales.
+//!   `|I_in − 1|` printed: the GPU's evidence for the step-0 skip tolerance `τ_I`.
 //!
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory. **PIT-10:** the cross-backend branch claim
 //! is for identical inputs. The backends' recorded `λ̃_y` and `φ` can differ in their last bits (WGSL's `√`, `/` and
@@ -636,8 +635,8 @@ fn canonicaliser_seam_sweep() {
     );
 }
 
-/// Wrong forms of `C`'s branch inputs on `x`, for the controls (`C` builds them exactly, `kernel::canon`'s "The branch
-/// inputs"): the CoM and `I_in` as explicit `fma`s,
+/// Wrong forms of `C`'s branch inputs on `x`, for the controls (`C` builds none from an `fma`: `kernel::canon`'s
+/// "The branch inputs"): the CoM and `I_in` as explicit `fma`s,
 /// `fma(m₂, x₂, fma(m₁, x₁, m₀x₀))` and `fma(m₂, ‖c₂‖², fma(m₁, ‖c₁‖², m₀‖c₀‖²))` with `‖c‖² = fma(c_x, c_x, c_y²)`;
 /// the pair differences as lone f32 subtractions; and the select on `I_in = 0`. Each `fma` is fused or, as CI's lavapipe evaluates it, a rounded product and an add (`fused`), and
 /// every result is flushed to zero where subnormal or not (`flush`), as Metal does.
