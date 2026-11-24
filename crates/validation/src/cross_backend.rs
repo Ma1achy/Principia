@@ -2846,6 +2846,9 @@ fn run_compare(root: &Path, files: &[&str]) -> Result<(), String> {
 }
 
 #[cfg(test)]
+mod probe;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
