@@ -219,10 +219,10 @@ negative_control!(
 
 // ── ic_descriptor_definitions ───────────────────────────────────────────────────────────────────────────────────
 
-/// The definitions' tolerance, in `eps` of each field's scale (below), the kind of dd_decoder tests 1 and 6's
-/// tolerances: the formula's few roundings at `R` against the same formula in f64 on the same `(m, r, p)`. Over 200
-/// runs at the seeds 1 … 200 the worst was 2.3 `eps` for a field, the rotated IC included, and 5.2 for the canonical
-/// frame's `rho_mag² + lambda_mag² = 1`, at f32.
+/// The definitions' tolerance, in `eps` of each field's scale (below), a per-precision tolerance like dd_decoder
+/// tests 1 and 6's: the formula's few roundings at `R` against the same formula in f64 on the same `(m, r, p)`. Over
+/// 200 runs at the seeds 1 … 200 the worst was 2.3 `eps` for a field, the rotated IC included, and 5.2 for the
+/// canonical frame's `rho_mag² + lambda_mag² = 1`, at f32.
 const DEFINITION_EPS: f64 = 16.0;
 
 /// A descriptor computed at `R`, behind a function pointer, so a control runs the same check on a broken one.
