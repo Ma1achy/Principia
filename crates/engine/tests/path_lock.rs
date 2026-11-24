@@ -4216,8 +4216,6 @@ fn decoded_ic(pixel: Pixel) -> Option<Ic<f64>> {
 #[cfg(feature = "controls")]
 fn main_slide() -> engine::path::anchor::probe::Switches {
     engine::path::anchor::probe::Switches {
-        cancelling: true,
-        three_point: true,
         polish_unscaled: true,
         failed_is_end: true,
         placed_at_hold: true,
@@ -4264,7 +4262,7 @@ fn path_lock_slide_stall() {
         (
             "D1 the offset formed directly",
             Switches {
-                cancelling: false,
+                offset: true,
                 ..main
             },
         ),
@@ -4285,30 +4283,30 @@ fn path_lock_slide_stall() {
         (
             "D4 five-point slopes",
             Switches {
-                three_point: false,
+                five_point: true,
                 ..main
             },
         ),
         (
             "D5 the offset formed directly and five-point slopes",
             Switches {
-                cancelling: false,
-                three_point: false,
+                offset: true,
+                five_point: true,
                 ..main
             },
         ),
         (
-            "D6 the polish judged on ‖P r‖ alone",
+            "D6 the polish judged on ‖P r‖ alone (the fix)",
             Switches {
                 polish_unscaled: false,
                 ..main
             },
         ),
         (
-            "D7 all three (the fix)",
+            "D7 all three",
             Switches {
-                cancelling: false,
-                three_point: false,
+                offset: true,
+                five_point: true,
                 polish_unscaled: false,
                 ..main
             },
@@ -4711,6 +4709,43 @@ fn path_lock_slide_follows_sweep() {
     check_slide_follows(&sweep_pins(SWEEP_SIDE));
 }
 
+// The same criteria with D7's three changes (the polish's, the offset formed directly and five-point slopes), the fix as
+// it stood when this sweep first ran: a measurement, reported, not a criterion of the fix. It fails F4 at 29 pins, each
+// a mirror tie (`path_lock_slide_first_choice`); the polish alone, the fix as it is, passes every criterion.
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "a few minutes in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_follows_sweep_three --exact --include-ignored --nocapture"]
+fn path_lock_slide_follows_sweep_three() {
+    use engine::path::anchor::probe;
+    probe::with(three_changes(), || {
+        check_slide_follows(&sweep_pins(SWEEP_SIDE))
+    });
+}
+
+/// D7's three changes: the polish's (in force), the slide's residual formed directly and its slopes five-point.
+#[cfg(feature = "controls")]
+fn three_changes() -> engine::path::anchor::probe::Switches {
+    engine::path::anchor::probe::Switches {
+        offset: true,
+        five_point: true,
+        ..Default::default()
+    }
+}
+
+negative_control!(
+    path_lock_slide_follows_sweep_three,
+    "main's polish too, at (0, 0)",
+    expected = "F1: 1 pins' follows fail",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            failed_is_end: false,
+            ..main_slide()
+        };
+        probe::with(switches, || check_slide_follows(&[[0.0, 0.0]]));
+    }
+);
+
 negative_control!(
     path_lock_slide_follows_sweep,
     "the slide as main formed it (its residual and slopes; a failed follow refused as now), at (0, 0)",
@@ -5078,6 +5113,8 @@ fn measure_margins(cases: &[([f64; 2], usize)], logged: bool) {
         let anchor_ = a.anchor.expect("an anchor");
         // Where D5's slide (the residual and slopes fixed, the polish as main's) failed, the frames M1–M3 were taken at.
         let d5 = Switches {
+            offset: true,
+            five_point: true,
             polish_unscaled: true,
             ..Switches::default()
         };
@@ -5114,6 +5151,8 @@ fn measure_margins(cases: &[([f64; 2], usize)], logged: bool) {
         let floor = Switches {
             target: Some(0.0),
             optimality: Some(0.0),
+            offset: true,
+            five_point: true,
             ..Switches::default()
         };
         let m1 = frame(
@@ -5134,7 +5173,7 @@ fn measure_margins(cases: &[([f64; 2], usize)], logged: bool) {
             ];
             let got: Vec<[f64; 2]> = seeds
                 .iter()
-                .map(|&seed| frame(Switches::default(), seed, at_s))
+                .map(|&seed| frame(d5, seed, at_s))
                 .filter(|r| r.converged())
                 .map(|r| r.x)
                 .collect();
@@ -5176,4 +5215,146 @@ negative_control!(
     "the slide's solves not logged, at (0, 0) at 64 frames, where its follow fails: nothing to measure",
     expected = "no failed follow to measure",
     measure_margins(&MARGIN_CASES[..1], false)
+);
+
+// ── path_lock_slide_first_choice: F4's 29 pins, read ────────────────────────────────────────────────────────────────
+//
+// F4 failed at 29 Burrau pins when the fix was D7's three changes (`path_lock_slide_follows_sweep_three`): each goes
+// through as on main, on a track about `2h` from main's. A measurement of why, written before it ran: at each, the
+// first frame's restart rule (`"slide first"`) under main's solve and under the three changes, its kept seed's index and
+// residual; and main's solve from the three changes' kept seed. If main's choice is a stall's artefact, the three
+// changes' kept point has the lower residual, and main's solve from that seed stalled short of converging there.
+//
+// Read: the prediction is refuted. At all 29 the two kept points are mirror images in `v`, `(u, −v)` and `(u, v)`, their
+// residuals equal to a few `10⁻¹⁵` (relative) and their states at the pin within `2.3·10⁻⁸` of each other in the
+// blocks; main's solve from the other seed converges there too (at 27; `IllConditioned` at 2). On Burrau the first
+// frame's minimiser comes as a mirror pair, and the restart rule's strict "least residual" picks between the two by
+// rounding, on main as under the three changes. The polish alone, the fix as it is, leaves every pick as main's (F4
+// passes). Its check, written after that run: at each of the 29 the two points show the same state (within `10⁻⁶` in
+// the blocks) and their residuals agree within `10⁻¹²` (relative). Control: main's first point set against the three
+// changes' at another frame (`s = 1/2`), a different state.
+
+/// At each of `pins`: main's first point against the three changes' at the frame `other` (the first, `1/64`, but for the
+/// control): the largest distance between their states in the blocks, and between their residuals (relative).
+#[cfg(feature = "controls")]
+fn first_choice(pins: &[[f64; 2]], other: f64) -> (f64, f64) {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let (mut far, mut unequal) = (0.0f64, 0.0f64);
+    for &at in pins {
+        let a = try_locked_mixed(home(), (at[0], at[1])).expect("a lock");
+        let anchor_ = a.anchor.expect("an anchor");
+        let frame = |sw: Switches, at_s: f64| {
+            let (_, log) = probe::with(sw, || anchor::slide(&b, &burrau, pin(&a), &anchor_, 64));
+            log.into_iter()
+                .find(|x| match at_s == 1.0 / 64.0 {
+                    true => x.what == "slide first",
+                    false => x.what == "follow" && x.s == at_s,
+                })
+                .expect("a frame")
+                .report
+        };
+        let (m, n) = (
+            frame(main_slide(), 1.0 / 64.0),
+            frame(three_changes(), other),
+        );
+        let index = |r: &kernel::chart::lock_solve::Report<f64>| match r.branch {
+            kernel::chart::lock_solve::Branch::Restart { index, .. } => index,
+            _ => u32::MAX,
+        };
+        let seed = match n.branch {
+            kernel::chart::lock_solve::Branch::Restart { seed, .. } => seed,
+            _ => n.x,
+        };
+        let (from_seed, _) = probe::with(main_slide(), || {
+            anchor::slide_frame(&b, &burrau, pin(&a), &anchor_, 1.0 / 64.0, seed)
+        });
+        let blocks_at = |x: [f64; 2]| {
+            let v = anchor::placed(&b, pin(&a), x);
+            Blocks::of(&state(anchor::state_at(&v, &burrau, pin(&a)).expect("a state")).ic).vector()
+        };
+        let (bm, bn) = (blocks_at(m.x), blocks_at(n.x));
+        let apart = (0..9).map(|i| (bm[i] - bn[i]).powi(2)).sum::<f64>().sqrt();
+        let rel = ((m.residual - n.residual) / m.residual).abs();
+        println!(
+            "path_lock_slide_first_choice: ({:.4}, {:.4}): main keeps seed {} at {:?}, r = {:.6e}; the three changes keep seed {} at {:?}, r = {:.6e}; main's solve from that seed {:?}; residuals {rel:.3e} apart (relative), states {apart:.3e} in the blocks",
+            at[0],
+            at[1],
+            index(&m),
+            m.x,
+            m.residual,
+            index(&n),
+            n.x,
+            n.residual,
+            from_seed.status,
+        );
+        far = far.max(apart);
+        unequal = unequal.max(rel);
+    }
+    println!(
+        "path_lock_slide_first_choice: at {} pins, the states at most {far:.3e} apart, the residuals {unequal:.3e}",
+        pins.len()
+    );
+    (far, unequal)
+}
+
+#[cfg(feature = "controls")]
+fn check_first_choice(pins: &[[f64; 2]], other: f64) {
+    let (far, unequal) = first_choice(pins, other);
+    assert!(
+        far <= 1e-6 && unequal <= 1e-12,
+        "main's first point and the three changes' are not one state: {far:.3e} apart, residuals {unequal:.3e}"
+    );
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "seconds in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_first_choice --exact --include-ignored --nocapture"]
+fn path_lock_slide_first_choice() {
+    let pins: Vec<[f64; 2]> = [
+        (9, 0),
+        (14, 0),
+        (15, 0),
+        (14, 1),
+        (11, 2),
+        (14, 2),
+        (11, 3),
+        (11, 4),
+        (12, 4),
+        (14, 4),
+        (11, 5),
+        (12, 5),
+        (13, 5),
+        (12, 6),
+        (12, 7),
+        (13, 7),
+        (10, 8),
+        (11, 10),
+        (12, 10),
+        (11, 11),
+        (11, 12),
+        (12, 12),
+        (13, 12),
+        (10, 13),
+        (12, 13),
+        (10, 14),
+        (14, 14),
+        (10, 15),
+        (12, 15),
+    ]
+    .iter()
+    .map(|&(k, j)| grid_pin(k, j))
+    .collect();
+    check_first_choice(&pins, 1.0 / 64.0);
+}
+
+negative_control!(
+    path_lock_slide_first_choice,
+    "main's first point set against the three changes' at s = 1/2, a different state, at (0.6, 0)",
+    expected = "are not one state",
+    check_first_choice(&[grid_pin(9, 0)], 0.5)
 );

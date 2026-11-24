@@ -290,7 +290,7 @@ pub fn block_line(a: &Blocks, b: &Blocks, s: f64) -> (Blocks, bool) {
 /// `cos sθ − 1 = −2 sin²(sθ/2)`, on [`great_circle`]'s branches (its tie included). The same function as
 /// `block_line(a, b, s).vector() − a.vector()` in exact arithmetic; in floating point that difference carries an
 /// absolute rounding of `ε|a|` against a value of size `s|b − a|`, which grows as `1/s` relative to it, and this does
-/// not. The lock's slide solves on it (`anchor`'s `Slide`).
+/// not. The lock's slide solves on it under its probe's `offset` (a diagnostic: `path_lock_slide_stall`'s D1).
 pub fn line_offset(a: &Blocks, b: &Blocks, s: f64) -> [f64; 9] {
     let n = {
         let (a, b) = (a.n, b.n);

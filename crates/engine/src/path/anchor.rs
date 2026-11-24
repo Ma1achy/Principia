@@ -28,7 +28,7 @@ use kernel::chart::lock_solve::{self, Continuity, Damping, Failure, Report, Spec
 use kernel::decode::descriptor;
 use kernel::decode::{Decoded, Ic};
 
-use super::blend::{block_line, line_offset, Blocks, Leaves, Pixel};
+use super::blend::{block_line, Blocks, Leaves, Pixel};
 use super::lock::hold_plane;
 use super::{hold_window, Map, PathError, Pin, PinPoint, View, ViewWindow};
 
@@ -88,9 +88,10 @@ pub mod probe {
         /// report logged as `"nearest floor"` or `"rehold floor"`: where the solve stops when nothing stops it early,
         /// its floor. The path itself goes on with the solve at its own target.
         pub floor: bool,
-        /// The slide's residual formed as main formed it, `block_line(a, B_x, s) − a` by subtracting the anchor back
-        /// off the frame's state (its target the anchor), in place of [`crate::path::blend::line_offset`] (target 0).
-        pub cancelling: bool,
+        /// The slide's residual formed directly, [`crate::path::blend::line_offset`] (target 0), in place of the frame's
+        /// state less the anchor (`block_line(a, B_x, s)` against the target `a`): a diagnostic's one variable changed
+        /// (`path_lock_slide_stall`'s D1; not the stall's cause, so not taken).
+        pub offset: bool,
         /// The damping's ceiling in place of [`super::spec`]'s `10¹²`: a diagnostic's one variable changed.
         pub ceiling: Option<f64>,
         /// Each follow's direct solve seeded at the restart rule's point at its own frame, not at the last frame's
@@ -99,9 +100,10 @@ pub mod probe {
         /// A follow whose direct solve fails read as the followed minimiser's end, as main read it, in place of
         /// [`crate::path::PathError::FollowFailed`].
         pub failed_is_end: bool,
-        /// The slide's slopes by the three-point central difference, as main took them, in place of the five-point one
-        /// (both at `ε^{1/3}` of the window's half-width).
-        pub three_point: bool,
+        /// The slide's slopes by a five-point central difference, in place of the three-point one, both at `ε^{1/3}` of
+        /// the window's half-width: a diagnostic's one variable changed (`path_lock_slide_stall`'s D4; not the stall's
+        /// cause, so not taken).
+        pub five_point: bool,
         /// The solver's polishing step accepted where `‖Jᵀr‖²` falls, as main's did, in place of `‖P r‖²`
         /// (`lock_solve::Spec::polish_unscaled`).
         pub polish_unscaled: bool,
@@ -384,53 +386,46 @@ struct Slide<'a, L> {
 }
 
 impl<L> Slide<'_, L> {
-    /// The target the family's value is solved toward: 0, its value being the frame's offset from the anchor.
+    /// The target the family's value is solved toward: the anchor (0 under the probe's `offset`, its value then the
+    /// frame's offset from the anchor).
     fn target(&self) -> Target<f64, 9> {
         #[cfg(feature = "controls")]
-        if probe::switches().cancelling {
+        if probe::switches().offset {
             return Target {
-                value: self.anchor.vector(),
+                value: [0.0; 9],
                 weight: [1.0; 9],
             };
         }
         Target {
-            value: [0.0; 9],
+            value: self.anchor.vector(),
             weight: [1.0; 9],
         }
     }
 }
 
 impl<L: Leaves> lock_solve::Family<f64, 9> for Slide<'_, L> {
-    /// The frame's pin state's offset from the anchor, `block_line(a, B_x, s) − a`, formed directly
-    /// ([`line_offset`]): near `s = 0` that offset is of size `s`, and the frame's state less the anchor would carry
-    /// the anchor's own rounding against it (measured, `path_lock_slide_stall`: the follow stalled at the slide's
-    /// first frames).
     fn value(&self, s: f64, x: [f64; 2]) -> Option<[f64; 9]> {
         let b = self.placed.blocks(x)?;
         #[cfg(feature = "controls")]
-        if probe::switches().cancelling {
-            return Some(block_line(&self.anchor, &b, s).0.vector());
+        if probe::switches().offset {
+            return Some(super::blend::line_offset(&self.anchor, &b, s));
         }
-        Some(line_offset(&self.anchor, &b, s))
+        Some(block_line(&self.anchor, &b, s).0.vector())
     }
 
-    /// Five-point central differences ([`five_point`]) at the three-point difference's step, `ε^{1/3}` of the window's
-    /// half-width. Measured where the slides stalled (`path_lock_slide_stall`'s D0 and D4): the three-point difference's
-    /// truncation there is about `1.5·10⁻⁷` of the slopes on Burrau and `4·10⁻⁸` on the rest chart (it falls 4× as the
-    /// step halves), not the `ε^{2/3}` rounding it was taken to be, and the follow's first-order optimality, `10⁻⁸`,
-    /// can't be reached through it; the five-point difference at the same step agrees with itself to about `10⁻¹¹`, and
-    /// its stencil, `±2` steps, stays as narrow (a wider step, `ε^{1/5}`, crossed the rest chart's curvature and failed).
     fn jacobian(&self, s: f64, x: [f64; 2]) -> Option<[[f64; 9]; 2]> {
         #[cfg(feature = "controls")]
-        if probe::switches().three_point {
-            return lock_solve::central_difference(|p| self.value(s, p), x, self.placed.step);
+        if probe::switches().five_point {
+            return five_point(|p| self.value(s, p), x, self.placed.step);
         }
-        five_point(|p| self.value(s, p), x, self.placed.step)
+        lock_solve::central_difference(|p| self.value(s, p), x, self.placed.step)
     }
 }
 
 /// The five-point central difference of `value` at `x`, step `h` per coordinate: `(f(x−2h) − 8f(x−h) + 8f(x+h) −
-/// f(x+2h))/12h`, its truncation `O(h⁴)` against the three-point difference's `O(h²)`, its rounding `O(ε/h)` as theirs.
+/// f(x+2h))/12h`, its truncation `O(h⁴)` against the three-point difference's `O(h²)`, its rounding `O(ε/h)` as theirs:
+/// the probe's `five_point`.
+#[cfg(feature = "controls")]
 fn five_point(
     value: impl Fn([f64; 2]) -> Option<[f64; 9]>,
     x: [f64; 2],
@@ -456,8 +451,9 @@ fn five_point(
 /// [`SOLVE_TOLERANCE`], below the lock's tolerance so a hold is never judged at the point the solve stopped, and
 /// first-order optimality to `10⁻⁸`, not `10⁻¹⁰`, because the slopes here are central differences: measured on the
 /// Burrau chart, at `10⁻¹⁰` the follow failed to converge at its second frame and the slide was tagged ended there. (The
-/// three-point difference was taken then to be good to `ε^{2/3}`; measured, its truncation reaches `10⁻⁷` of the slopes
-/// near the slide's minimisers, which is why the slide's own slopes are now five-point, [`five_point`].)
+/// three-point difference was taken then to be good to `ε^{2/3}`; measured near the slide's minimisers on Burrau its
+/// truncation is about `1.5·10⁻⁷` of the slopes. What stalled the follow at `10⁻⁸` was not that but the solver's polish
+/// judging its steps on `‖Jᵀr‖`, now on `‖P r‖`: `lock_solve::polish`, and `path_lock_slide_stall`'s D6.)
 fn spec() -> Spec<f64> {
     #[cfg(feature = "controls")]
     let target = probe::switches().target.unwrap_or(SOLVE_TOLERANCE);
