@@ -1,11 +1,10 @@
 //! QA tests for the shape sphere's `system_image` on the authoring side, written from chart_decoder_contract Part 5's
 //! `system_image`, not from the implementation.
 //!
-//! - `qa_m243_chart_descriptors_spherical_bijective`: the shape sphere chart under the spherical map is the
-//!   whole sphere, each pixel its own system, so its `system_image` is `Bijective`, whatever its held masses, momenta,
-//!   `I` and `φ_f`; the descriptor validates. Its control reads the map as 2-to-1 over its φ hemispheres, `NToOne(2)`,
-//!   which must fail. The exponential map's value, taken from its cap, is tested elsewhere
-//!   and is not asserted here.
+//! - `qa_m243_chart_descriptors_spherical_bijective`: the shape sphere chart under the spherical map is the whole
+//!   sphere, each pixel its own system, so its `system_image` is `Bijective`, whatever its held masses, momenta, `I`
+//!   and `φ_f`; the descriptor validates. Its control reads the map as 2-to-1 over its φ hemispheres, `NToOne(2)`,
+//!   which must fail. The exponential map's value, taken from its cap, is tested elsewhere and is not asserted here.
 //!
 //! Each test has its negative control.
 
