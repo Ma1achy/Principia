@@ -1,28 +1,28 @@
-//! QA tests for TASK-M2-05 (the `Chart` trait, `ValidationResult` and the latent affine chart), written from the
-//! requirements and chart_reference §1.1, §5.1, §5.2 and §5.4, chart_decoder_contract Part 3, inverse_encode_contract
-//! § "Chart-aware validation" and R-26, R-83, R-118, not from the implementation. Each check runs behind a function
-//! pointer or a generic, so its negative control (R-176) runs the same check on a deliberately broken variant.
+//! QA tests for the `Chart` trait, `ValidationResult` and the latent affine chart, written from chart_reference
+//! §1.1, §5.1, §5.2 and §5.4, chart_decoder_contract Part 3 and inverse_encode_contract § "Chart-aware validation",
+//! not from the implementation. Each check runs behind a function pointer or a generic, so its negative control runs
+//! the same check on a deliberately broken variant.
 //!
-//! - REQ-CHART-003, R-83: on dyadic `z₀, q₁, q₂` and dyadic `(u, v)`, where every product and sum is exact at f32 and
+//! - The affine slice: on dyadic `z₀, q₁, q₂` and dyadic `(u, v)`, where every product and sum is exact at f32 and
 //!   f64, `Φ(u, v) = z₀ + (2u − 1)q₁ + (2v − 1)q₂` componentwise and exactly, over `[0,1]²` and past every edge
 //!   (§5.4: the latent axes are affine, the formula continues), at f64 parameters mapped at f64, f32 at f32 and f32
 //!   widened to f64; zoom by `k` keeps `z₀`, scales `q₁` and `q₂` by the one `k`, and so maps every pixel to
 //!   `z₀ + k·((2u − 1)q₁ + (2v − 1)q₂)`; the chart's storage is exactly `z₀, q₁, q₂` (no `s_u`, `s_v`).
-//! - REQ-CHART-030, REQ-CHART-050: the slice `q₁ = ê_α, q₂ = ê_β` is a direct `(α, β)` sweep: at every pixel the
+//! - The axis-aligned slice: the slice `q₁ = ê_α, q₂ = ê_β` is a direct `(α, β)` sweep: at every pixel the
 //!   chart's decode equals, bitwise, the shared decoder applied to `z₀` with `z_α = z₀_α + (2u − 1)` and
 //!   `z_β = z₀_β + (2v − 1)`, and its `α`, `β` are the selection's α and β links of those two controls; and, as a sweep
 //!   of `(α, β)` alone, the masses and momenta are `z₀`'s at every pixel, `α` depends on `u` only and rises with it,
 //!   `β` on `v` only and rises with it, and the centre pixel is `D(z₀)`. Under every registered link family.
-//! - REQ-CHART-028: a probe chart written here implements the trait's four methods; a generic over `Chart` reaches all
+//! - The trait: a probe chart written here implements the trait's four methods; a generic over `Chart` reaches all
 //!   four; `map` from the one source runs at f32 and f64; `validate` takes f64; the dump header stamps the chart's own
 //!   `name()` (the probe's, not a constant); `forbids_energy_normalisation` defaults to false and an override is read.
-//! - REQ-CHART-015: `chart::decode` is `D ∘ Φ` through the shared decoder, for a chart that is not the latent one.
-//! - REQ-CHART-043, R-26: the four `ValidationResult` variants, each failure naming its failed constraint, round-trip
+//! - The shared decode: `chart::decode` is `D ∘ Φ` through the shared decoder, for a chart that is not the latent one.
+//! - Validation: the four `ValidationResult` variants, each failure naming its failed constraint, round-trip
 //!   through a chart's `validate`; the latent chart's `validate` is `Valid` at every pixel inside and past `[0,1]²`,
 //!   and its decoded masses there are positive (layer 3's mass check holds where `Valid` is returned).
 //!
 //! **Tolerances.** None: every assertion is exact (`==`), on values chosen so the arithmetic is exact, or on bitwise
-//! equality the definition (chart_reference §5.2, REQ-CHART-050) states.
+//! equality the definition (chart_reference §5.2) states.
 
 use kernel::chart::{self, Chart, ChartOut, Constraint, Latent, ValidationResult};
 use kernel::decode::{self, Decoded};
@@ -96,7 +96,7 @@ fn chart_at<R: Fp>(z0: [f64; 8], q1: [f64; 8], q2: [f64; 8]) -> Latent<R> {
     }
 }
 
-// ── REQ-CHART-003: the affine slice ─────────────────────────────────────────────────────────────────────────────
+// ── The affine slice ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `Φ` of a latent chart held at `P`, evaluated at `F`, behind a function pointer.
 type MapFn<P, F> = fn(&Latent<P>, F, F) -> [F; 8];
@@ -135,7 +135,7 @@ fn qa_latent_map_is_the_affine_slice() {
     check_affine_all(real_map, real_map, real_map);
 }
 
-/// A map with a per-axis factor on the horizontal axis (`s_u = 2`), which R-83 removed.
+/// A map with a per-axis factor on the horizontal axis (`s_u = 2`), which the latent chart does not have.
 #[cfg(feature = "controls")]
 fn per_axis_map<P: Copy, F: Float + From<P>>(c: &Latent<P>, u: F, v: F) -> [F; 8] {
     let half = F::one() / (F::one() + F::one());
@@ -214,7 +214,7 @@ negative_control!(
     }
 );
 
-/// The chart's storage is exactly three latent vectors, so it has no `s_u`, `s_v` (R-83). The struct literal in
+/// The chart's storage is exactly three latent vectors, so it has no `s_u`, `s_v`. The struct literal in
 /// [`chart_at`] names exactly `z0`, `q1`, `q2`; the size check also fails if a field is added beside them.
 fn check_storage(sizes: &[(usize, usize)]) {
     for &(got, want) in sizes {
@@ -248,7 +248,7 @@ negative_control!(
     check_storage(&[(core::mem::size_of::<WithScales>(), 3 * 8 * 8)])
 );
 
-// ── REQ-CHART-030, REQ-CHART-050: the axis-aligned slice is the direct (α, β) sweep ─────────────────────────────
+// ── The axis-aligned slice is the direct (α, β) sweep ─────────────────────────────────────────────────────────
 
 fn e(k: usize) -> [f64; 8] {
     let mut v = [0.0; 8];
@@ -384,7 +384,7 @@ mod zoomed_sweep {
     );
 }
 
-// ── REQ-CHART-028, REQ-CHART-015, REQ-CHART-043: the trait, through a chart that is not the latent one ─────────
+// ── The trait, through a chart that is not the latent one ─────────────────────────────────────────────────────
 
 /// A probe chart: a fixed `z` (any `(u, v)` maps to it), its own name, forbids energy normalisation, and a `validate`
 /// that returns each `ValidationResult` variant on its own region.
@@ -597,7 +597,7 @@ mod trait_validate_control {
     );
 }
 
-/// `chart::decode` is the shared decoder on `Φ`'s output, for a chart that is not the latent one (REQ-CHART-015).
+/// `chart::decode` is the shared decoder on `Φ`'s output, for a chart that is not the latent one.
 fn check_shared_decode(dec: fn(&Probe<f64>, f64, f64) -> Decoded<f64>) {
     for z in CENTRES {
         let p = Probe { z };
@@ -623,7 +623,7 @@ negative_control!(
     check_shared_decode(chart::decode::<Tanhs, f64, Probe<f64>>)
 );
 
-// ── R-26: the latent chart's validate, and layer 3 where it says Valid ─────────────────────────────────────────
+// ── The latent chart's validate, and layer 3 where it says Valid ───────────────────────────────────────────────
 
 type LatentValidate = fn(&Latent<f64>, f64, f64) -> ValidationResult;
 

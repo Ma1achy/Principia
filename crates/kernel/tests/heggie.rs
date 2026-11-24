@@ -59,8 +59,8 @@ fn v<R: AzReal>(x: f64) -> R {
     R::at_width(x as f32, x)
 }
 
-/// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8`, the reference's `TINY`, the predictive limit's `f = 0.02`, a budget
-/// that does not bind, and the landing in force (Part 2b, Heggie's step 8: the clamp, the secant's 4 retakes and the
+/// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8`, the reference's `TINY`, the predictive limit's
+/// `f = 0.02`, a budget that does not bind, and the landing in force (Part 2b, Heggie's step 8: the clamp, the secant's 4 retakes and the
 /// bisection's 64 halvings), under `time`. Test inputs, not calibrations.
 fn params<R: AzReal>(time: HeggieTime) -> HgParams<R> {
     HgParams {
