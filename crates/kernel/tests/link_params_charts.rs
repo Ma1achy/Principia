@@ -1,6 +1,6 @@
 //! The charts at the active link parameters (chart_reference §0.1, "every chart reads the active value";
-//! chart_decoder_contract § "Three hard requirements on any registered link", "Tunable parameters"; R-481 G4;
-//! REQ-DEC-048): a mixed chart's derived axes, their domains and its decode; the latent, shape-sphere and invariant
+//! chart_decoder_contract § "Three hard requirements on any registered link", "Tunable parameters"): a
+//! mixed chart's derived axes, their domains and its decode; the latent, shape-sphere and invariant
 //! charts' decodes and the energy-normalised one; and encode by kind, the `m₀` axis's residual, the fibre's clamp bits
 //! (layer 1) and the chart landing, each at a non-default `μ_max` or `q_max`, and each bitwise today's at the defaults.
 

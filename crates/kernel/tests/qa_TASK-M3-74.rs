@@ -1,23 +1,22 @@
-//! QA's tests for TASK-M3-74 (REQ-VAL-355): the FTLE shadow's joint step on Heggie × RK4 keeps the sample and its
-//! shadow at the same physical time at every renormalisation, as dd_integrator §3.8, "Heggie × RK4's joint step and its
-//! displacement", defines it (R-974, R-72).
+//! QA's tests that the FTLE shadow's joint step on Heggie × RK4 keeps the sample and its shadow at the same physical
+//! time at every renormalisation, as dd_integrator §3.8, "Heggie × RK4's joint step and its displacement", defines it.
 //!
-//! Written from REQ-VAL-355's statement and verify and §3.8's definition, not from the implementation. The reference
+//! Written from §3.8's definition, not from the implementation. The reference
 //! shadow is an absolute one, marched here on its own by RK4 under its own frozen energy `h + δh` (§3.8, "The
 //! displacement"), so the tests read the shadow's physical time from a trajectory, not from the displacement's own
 //! bookkeeping:
 //! - `qa_m374_same_time_bitwise`: on a joint-step run of each fixture, at f32 and f64, under Eq. 22 (the default,
-//!   R-161) and Eq. 20, with a constant `Δτ` (so the clocks move apart by the time transformation alone), renormalised
+//!   Heggie's) and Eq. 20, with a constant `Δτ` (so the clocks move apart by the time transformation alone), renormalised
 //!   every 25 steps: at every renormalisation the shadow's elapsed physical time since the previous one equals the
 //!   sample's, bitwise (§3.8: the resynchronisation sets `δt ← 0` exactly, so the shadow lands on the sample's `t`),
-//!   and the clocks were apart before it (the measurement can fire). Control, REQ-VAL-355's: the shadow advanced by the
+//!   and the clocks were apart before it (the measurement can fire). Control: the shadow advanced by the
 //!   sample's `Δτ` alone, an absolute shadow restarted at each renormalisation and marched by the same `Δτ`s; its
 //!   elapsed `t` drifts from the sample's.
 //! - `qa_m374_same_time_order`: what lands on the sample's `t` is the shadow's state there: at f64, the resynchronised
 //!   `J·δy` at each renormalisation against the absolute shadow brought to the sample's `t` (Newton on its clock),
 //!   less the sample. §3.8 states the resynchronisation and `J` to first order, dropping second-order terms, so the
 //!   relative miss is `O(δ)`: the test asserts the observed order in `δ₀` over a decade, `≥ 0.8` (first order is 1).
-//!   Control, REQ-VAL-355's: the reference read from the `Δτ`-alone shadow, not brought to the sample's `t`; its miss is
+//!   Control: the reference read from the `Δτ`-alone shadow, not brought to the sample's `t`; its miss is
 //!   `ẋ·δt`, first order in `δ` itself, so the relative miss does not fall with `δ₀`.
 
 use kernel::occupant::State;
@@ -178,7 +177,7 @@ const PHYS_STEP0: f64 = 1e-3;
 enum Shadow {
     /// The joint step's: the sample's clock plus the renormalised displacement's `δt`.
     Joint,
-    /// REQ-VAL-355's control: an absolute shadow restarted at each renormalisation from `y + δy` and advanced by the
+    /// The control: an absolute shadow restarted at each renormalisation from `y + δy` and advanced by the
     /// sample's `Δτ` alone.
     #[cfg(feature = "controls")]
     DtauAlone,

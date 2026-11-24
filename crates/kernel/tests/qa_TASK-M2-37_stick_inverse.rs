@@ -1,7 +1,7 @@
-//! qa's tests for TASK-M2-37, fix round 8: `stick_breaking`'s inverse as dd_generation_root §3.9 now writes it, without
+//! qa's tests for `stick_breaking`'s inverse as dd_generation_root §3.9 writes it, without
 //! cancellation against 1, read from that paragraph and not from the tree; and the clamp test that goes with it
 //! (`encode::blocks`, "The clamp tests": "the test is the clamp's, bit for bit"; inverse-encode Part 3, "the inverse is by
-//! construction lossy and *says so*"). Each test has its negative control (R-176).
+//! construction lossy and *says so*"). Each test has its negative control.
 //!
 //! - `qa_stick_inverse_is_the_table`: §3.9, "That is the table's inverse [...] cancelled by hand": over the simplex, its
 //!   clamps included, the registry's inverse is `artanh(clamp(2v − 1, ±(1 − ε_μ)²)/(1 − ε_μ))`, `v = m₁ + m₂` and

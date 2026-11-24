@@ -1,10 +1,10 @@
-//! QA's tests for TASK-M2-38's `Φ` arm on chart-parameter edits and far pans, written from REQ-CHART-060 ("accept a
-//! pan, slice, zoom, tilt, lock or chart-parameter edit only if the chart's centre … still passes validate's layers 2
-//! and 3, a centre whose Φ fails counting as failing"), not from the implementation.
+//! QA's tests for the navigation stop's `Φ` arm on chart-parameter edits and far pans, written from the stop's rule
+//! ("accept a pan, slice, zoom, tilt, lock or chart-parameter edit only if the chart's centre … still passes validate's
+//! layers 2 and 3, a centre whose Φ fails counting as failing"), not from the implementation.
 //!
 //! The oracle is the decode at the accepted centre, never the chart's own report: what the stop accepts must decode to
 //! a three-body system, every mass positive and finite, every position and momentum finite, and no `DEGENERATE`
-//! reason (a degenerate decode is "not a system", R-469). Probes:
+//! reason (a degenerate decode is "not a system"). Probes:
 //! - **Chart-parameter edits on the shape sphere**: the inertia, the phase, the extent, the held mass and momentum
 //!   blocks, each edited from a valid value toward ordinary, huge (up to `f64::MAX`), zero and negative targets.
 //! - **Chart-parameter edits on the invariant charts**: `K_max` and `γ_K`, toward huge, zero and negative targets.
@@ -211,7 +211,7 @@ fn shape_params(disabled: bool) {
             &SCALARS,
             disabled,
         );
-        // R-469: an inertia of zero or below is no configuration, and toward f64::MAX the configuration overflows.
+        // An inertia of zero or below is no configuration, and toward f64::MAX the configuration overflows.
         assert!(inertia.0 > 0, "{map:?}: no inertia target is not a system");
         add(inertia);
         add(edits(
@@ -387,7 +387,7 @@ fn pans(disabled: bool) {
     ];
     let bad: u32 = runs.iter().map(|r| r.0).sum();
     let held: u32 = runs.iter().map(|r| r.1).sum();
-    // R-469: the invariant construction past the overflow edge is no system; a pan straight up reaches it.
+    // The invariant construction past the overflow edge is no system; a pan straight up reaches it.
     assert!(
         bad > 0,
         "no invariant pan target is not a system: the probe never reached the edge"

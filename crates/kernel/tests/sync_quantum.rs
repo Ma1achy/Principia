@@ -20,7 +20,7 @@
 //! - `sync_quantum_bitwise_collision_t_end`: the march's `t_end` there is the firing step's time, strictly between the
 //!   boundary before it and the one after. Control: `t_end` held back to the previous boundary.
 //! - `sync_quantum_bitwise_budget`: on a step budget that runs out after a few boundaries, live calls by a frame end
-//!   where one call ends, bitwise: the running step total crosses the calls in the carried buffer (R-604), for
+//!   where one call ends, bitwise: the running step total crosses the calls in the carried buffer, for
 //!   Aarseth–Zare too. Control: a seam that starts the total afresh at each call.
 //!
 //! Each number a check reads is printed.
@@ -166,7 +166,7 @@ quantum!(
     0.1
 );
 quantum!(
-    /// The value Aarseth–Zare's REQ-INT-080 proposal picks in its own test, 0.2.
+    /// The value Aarseth–Zare's proposed sync-quantum calibration picks in its own test, 0.2.
     Fifth,
     0.2
 );
@@ -362,7 +362,7 @@ impl<R: P> Cadence<R> for Colliding {
 
 // ── The seam ───────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// A horizon: `T` and its macro-step, `dt_macro = max(10⁻³, T/65535)` (R-132; `engine::contract::sim_uniforms::
+/// A horizon: `T` and its macro-step, `dt_macro = max(10⁻³, T/65535)` (`engine::contract::sim_uniforms::
 /// dt_macro_for`, whose one-ulp raise neither horizon here needs).
 #[derive(Clone, Copy, Debug)]
 struct Horizon {

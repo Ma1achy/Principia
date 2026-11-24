@@ -1,30 +1,29 @@
-//! QA tests for TASK-M2-93, written from REQ-DEC-021 and REQ-DEC-060 (statement and verify detail), R-934, R-82 and
-//! the sources they cite (chart_reference §2.2, dd_decoder §3.4), not from the implementation.
+//! QA tests for the momentum seed of the construction (the expansion seed `w = r/√I` in force, the largest-norm rule
+//! kept as a named legacy option) and its conversion of every chart image, written from the requirements and the
+//! sources they cite (chart_reference §2.2, dd_decoder §3.4), not from the implementation.
 //!
-//! - `qa_m293_seed_selection_in_force` (REQ-DEC-021): under the seed in force the construction's direction is
+//! - `qa_m293_seed_selection_in_force`: under the seed in force the construction's direction is
 //!   `w = r/√I` and its momenta are `pᵢ = mᵢ(ω·J rᵢ + a·rᵢ/√I)`, `ω = L_z/I`, `a = √(2(K* − L_z²/(2I)))`, the whole
 //!   prediction formed here from the configuration's own `I` and the targets (dd_decoder §3.4's formula), at f64 and
 //!   f32, over decoded configurations on both sides of `z_α = 0`.
-//! - `qa_m293_seed_selection_unreachable` (REQ-DEC-021): `NO_QUALIFYING_SEED` is unreachable for `I > 0`, at every
-//!   scale a float holds (subnormal to near overflow, f64 and f32), and `w` stays `r/√I` there; the control is R-82's
-//!   rule on the same configurations, which does reach it at a small scale (its `ε_w` is absolute).
-//! - `qa_m293_legacy_*` (REQ-DEC-021, R-82 as the named legacy option): several seeds qualify → the largest, not the
+//! - `qa_m293_seed_selection_unreachable`: `NO_QUALIFYING_SEED` is unreachable for `I > 0`, at every scale a float
+//!   holds (subnormal to near overflow, f64 and f32), and `w` stays `r/√I` there; the control is the legacy
+//!   largest-norm rule on the same configurations, which does reach it at a small scale (its `ε_w` is absolute).
+//! - `qa_m293_legacy_*` (the largest-norm rule, the named legacy option): several seeds qualify → the largest, not the
 //!   first; an exact tie → the earlier; `ρ = 0` (bodies 0 and 1 coincident) → a fallback, not `DEGENERATE`;
 //!   `DEGENERATE` exactly where no norm is strictly above `ε_w`.
-//! - `qa_m293_seed_conversion_every_chart` (REQ-DEC-060): on every chart image that runs the construction (the
+//! - `qa_m293_seed_conversion_every_chart`: on every chart image that runs the construction (the
 //!   invariant charts at three pins, f64 and f32, their linear mapping, the mixed-energy α × E and α × K, the Burrau
 //!   `(ν, K)`, `θ × K` and `θ × L_z` charts), every untagged pixel is homographic and expanding, read off the decoded
 //!   `(m, r, p)` with no knowledge of the chart: `v = ω·J r + λ·r`, `ω = L/I`, `λ = +√(2(K − L²/(2I))/I)`.
-//! - `qa_m293_seed_conversion_seam` (REQ-DEC-060): the task's seam measurement, as written: rows of the `(L_z, E)`
-//!   chart tilted toward `z_α` across `z_α = 0`, `‖Δv‖_m` between neighbouring pixels, the criterion "the pair across
-//!   the line is no larger than the largest neighbouring difference within 8 pixels of it on either side". Its control,
-//!   R-82's legacy rule, must fail it, else the result is void; that is asserted. The criterion under the seed in force
-//!   is printed with its outcome, not asserted: RQ-820 (closed by R-1022; queued by this PR) holds the reading of the
-//!   criterion for the owner, and a test does not fill the gap (qa checklist §8). What is asserted is the measurement's
-//!   explanation, from outside the code: the pair across the line over its largest neighbour is exactly the ratio of
+//! - `qa_m293_seed_conversion_seam`: the task's seam measurement, as written: rows of the `(L_z, E)` chart tilted
+//!   toward `z_α` across `z_α = 0`, `‖Δv‖_m` between neighbouring pixels, the criterion "the pair across the line is no
+//!   larger than the largest neighbouring difference within 8 pixels of it on either side". Its control, the legacy
+//!   largest-norm rule, must fail it, else the result is void; that is asserted. That criterion under the seed in force
+//!   is printed with its outcome, not asserted. What is asserted is the measurement's explanation, from outside the code: the pair across the line over its largest neighbour is exactly the ratio of
 //!   the chord lengths of the decoded `α` steps (a seam-free start moves only with its configuration), so no seed term
 //!   is present.
-//! - `qa_m293_seed_conversion_lagrange` (REQ-DEC-060): at the invariant charts' default pin, `z = 0`, the masses are
+//! - `qa_m293_seed_conversion_lagrange`: at the invariant charts' default pin, `z = 0`, the masses are
 //!   equal and the configuration equilateral; every pixel starts homographic and its accelerations are `−κ·rᵢ` with one
 //!   `κ` for all three bodies, so the start is an exact homographic orbit and its break-up is set by rounding (labelled
 //!   so in the output).
@@ -35,7 +34,7 @@
 //!
 //! **Domain** (pitfalls §10): the stateless decode, its inputs held fixed; no trajectory.
 //!
-//! Each test registers the negative control that must make it fail (R-176, R-212).
+//! Each test registers the negative control that must make it fail.
 
 use std::f64::consts::FRAC_PI_4;
 
@@ -142,7 +141,7 @@ fn wide2<R: Q>(v: [[R; 2]; 3]) -> [[f64; 2]; 3] {
     v.map(|x| x.map(Q::f))
 }
 
-/// The fixtures' controls: random over `z_α ∈ [−4, 4]` (both seeds of R-82's rule), `z_β`, unequal masses, plus `z_α`
+/// The fixtures' controls: random over `z_α ∈ [−4, 4]` (both sides of the legacy rule's seed choice), `z_β`, unequal masses, plus `z_α`
 /// at and beside 0.
 fn controls() -> Vec<[f64; 4]> {
     let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
@@ -176,7 +175,7 @@ fn legacy_rule<R: Q>(m: &Masses<R>, c: &Config<R>, za: R, lz: R, k: R) -> Constr
     construct_with(m, c, Seeding::LargestNorm, za, lz, k)
 }
 
-/// dd_decoder §3.4 under R-934: `w = r/√I`, `pᵢ = mᵢ(ω·J rᵢ + a·wᵢ)`, `ω = L_z/I`, `a = √(2(K* − L_z²/(2I)))`, from the
+/// dd_decoder §3.4 with the expansion seed: `w = r/√I`, `pᵢ = mᵢ(ω·J rᵢ + a·wᵢ)`, `ω = L_z/I`, `a = √(2(K* − L_z²/(2I)))`, from the
 /// configuration's own `I`; seed the expansion, outcome feasible.
 fn check_in_force<R: Q>(build: Build<R>) {
     let mut rng = Rng(0x1234_5678_9abc_def1);
@@ -330,7 +329,7 @@ negative_control!(
     check_unreachable::<f64>(plain_legacy, &[-24])
 );
 
-// ── qa_m293_legacy_* (R-82's rule, the named legacy option) ───────────────────────────────────────────────────────
+// ── qa_m293_legacy_* (the largest-norm rule, the named legacy option) ─────────────────────────────────────────────
 
 /// A seed rule on the four seeds' `‖w⁽²⁾‖²_m`, in seed order `(ρ,0), (0,λ), (Jρ,0), (0,Jλ)`.
 type Rule = fn([f64; 4]) -> Option<Seed>;
@@ -361,7 +360,7 @@ fn qa_m293_legacy_largest() {
     check_largest(choose::<f64>);
 }
 
-/// The first qualifying seed, R-82's rule mis-read.
+/// The first qualifying seed: the largest-norm rule mis-read.
 #[cfg(feature = "controls")]
 fn first(norms: [f64; 4]) -> Option<Seed> {
     let seeds = [Seed::Rho, Seed::Lambda, Seed::JRho, Seed::JLambda];

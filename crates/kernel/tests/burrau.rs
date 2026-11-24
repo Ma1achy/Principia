@@ -1,23 +1,23 @@
 //! The Burrau family (`kernel::burrau`, `kernel::chart::burrau`; chart_reference §4.1–§4.5, §5.2; chart_decoder_contract
-//! Part 5; R-22), each check at the f64 and the f32 instantiation natively (R-118, R-265):
+//! Part 5), each check at the f64 and the f32 instantiation natively:
 //! - `burrau_euclid_*`: Euclid's parametrisation gives `(3, 4, 5)` at `(2, 1)` and the §4.1 table's rows, a triple only
 //!   at a primitive `(m, n)`; the normalised Burrau convention's masses `(c, b, a)/(a+b+c)`, `(5, 4, 3)/12` at `(2, 1)`,
 //!   positions and Jacobi vectors `ρ = (a/c, 0)`, `λ = (−ab/(c(b+c)), b/c)`; the table's angles and `a/b`; the charts
-//!   state the normalised convention (REQ-CHART-021).
+//!   state the normalised convention.
 //! - `burrau_nu_continuous_*`: the embed's masses, positions and Jacobi vectors, and the decoded IC, are continuous in
 //!   `ν`; the primitive triples' `ν = n/m` reproduce the discrete family; the `(ν, K)` chart's momenta are §2's
-//!   construction at `L_z = 0`, `K(v)`, under the seed in force, the expansion (R-934); R-82's legacy rule's seed is
-//!   decided exactly on `ν` (REQ-CHART-022).
+//!   construction at `L_z = 0`, `K(v)`, under the seed in force, the expansion; the legacy seed rule's seed is decided
+//!   exactly on `ν`.
 //! - `euclid_plane_*`: varying `u` at fixed `v` gives identical ICs; the overlay marks exactly the primitive-triple
-//!   lattice points; `m(u)` and `ν(v)` are §4.5's maps (REQ-CHART-023).
+//!   lattice points; `m(u)` and `ν(v)` are §4.5's maps.
 //! - `annotation_axis_*`: the Euclid plane's `m` axis is annotation-only and the decoder ignores it; the chart is a
-//!   1-swept family; a 2D density across it is refused (REQ-CHART-013).
+//!   1-swept family; a 2D density across it is refused.
 //! - `body_indices_*`: the collision of bodies 0 and 1 is pair id 2 by the payload's pair-id map; the family's 1-based
 //!   numbering translates to 0-based; `ICDescriptor`'s fields are `m0 m1 m2`; `(3, 4, 5)` loads with masses
-//!   `(5, 4, 3)/12` (REQ-SYS-016).
+//!   `(5, 4, 3)/12`.
 //! - `burrau_nu_half_*`: the `ν = 1/2` decode against the `(2, 1)` construction and the classical configuration within
-//!   REQ-VAL-118's proposed tolerance, and the checked-in measurement, `fixtures/gates/burrau_nu_half/` (REQ-VAL-016).
-//! - `burrau_chart_*`: validation (R-26) and the charts' flags and names.
+//!   the register's proposed tolerance, and the checked-in measurement, `fixtures/gates/burrau_nu_half/`.
+//! - `burrau_chart_*`: validation and the charts' flags and names.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 
@@ -50,11 +50,12 @@ use validation::{
     EUCLID_NU_MAX, EUCLID_NU_MIN, GAMMA_K, K_MAX,
 };
 
-/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|`, at most (REQ-DEC-046, proposed; `invariant_construction.rs`).
+/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|`, at most (the invariant construction's proposed tolerance;
+/// `invariant_construction.rs`).
 const TOL_P: f64 = 4.0;
-/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (REQ-DEC-046, proposed).
+/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (proposed).
 const TOL_L: f64 = 4.0;
-/// `|K(p) − K*|` in units of `eps·K*`, at most (REQ-DEC-046, proposed).
+/// `|K(p) − K*|` in units of `eps·K*`, at most (proposed).
 const TOL_K: f64 = 8.0;
 
 /// A precision under test.
@@ -94,7 +95,7 @@ fn plane<R: Q>() -> EuclidPlane<R> {
     }
 }
 
-/// The `(ν, K)` chart on the Euclid plane's `ν` range, under the register's warp defaults (REQ-CHART-044, proposed).
+/// The `(ν, K)` chart on the Euclid plane's `ν` range, under the register's proposed warp defaults.
 fn nu_k<R: Q>() -> Burrau<R> {
     Burrau {
         nu_range: [R::of(EUCLID_NU_MIN.number()), R::of(EUCLID_NU_MAX.number())],
@@ -133,7 +134,7 @@ fn at_rest<R: Q>(system: System<R>) -> Decoded<R> {
     decode_with(&mut RestBlocks::new(system), &Latent::new([R::zero(); 8]))
 }
 
-// ── burrau_euclid (REQ-CHART-021) ───────────────────────────────────────────────────────────────────────────────
+// ── burrau_euclid ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A row of §4.1's table.
 type Row = ((u32, u32), (u64, u64, u64), (f64, f64), f64);
@@ -318,7 +319,7 @@ negative_control!(
 );
 
 /// The convention stated: the crate's and both charts' are the normalised one, and its statement says so, with no
-/// digit (so no body number, R-449).
+/// digit (so no body number).
 fn check_convention(stated: Convention, statement: &str) {
     assert_eq!(
         stated,
@@ -355,7 +356,7 @@ negative_control!(
     check_convention(Convention::Historical, CONVENTION_STATEMENT)
 );
 
-// ── burrau_nu_continuous (REQ-CHART-022) ────────────────────────────────────────────────────────────────────────
+// ── burrau_nu_continuous ────────────────────────────────────────────────────────────────────────────────────────
 
 /// A map of `ν` to a list of quantities, under check for continuity.
 type Curve = fn(f64) -> Vec<f64>;
@@ -494,9 +495,9 @@ type NuKDecode<R> = fn(&Burrau<R>, R, R) -> (Decoded<R>, Outcome);
 
 /// The `(ν, K)` chart's decode at `(u, v)` is the shared blocks with §2's construction: its momenta are
 /// [`construct_seeded`]'s on the decoded masses and configuration at `L_z = 0`, `K* = K(v)`, the seed in force,
-/// [`Seed::Expansion`] (R-934), bit for bit, its outcome feasible; they meet `Σpᵢ = 0`, `L_z(p) = 0` and `K(p) = K*`
-/// within REQ-DEC-046's tolerances; and away from `ν = 1/3` the seed R-82's legacy rule decides on `ν` ([`seed`]) is
-/// the one it takes on the computed norms ([`choose`]).
+/// [`Seed::Expansion`], bit for bit, its outcome feasible; they meet `Σpᵢ = 0`, `L_z(p) = 0` and `K(p) = K*` within
+/// the tolerances above; and away from `ν = 1/3` the seed the legacy seed rule decides on `ν` ([`seed`]) is the one it
+/// takes on the computed norms ([`choose`]).
 fn check_construction<R: Q>(dec: NuKDecode<R>, u: f64, v: f64) {
     let chart = nu_k::<R>();
     let (u, v) = (R::of(u), R::of(v));
@@ -746,7 +747,7 @@ negative_control!(
     })
 );
 
-// ── euclid_plane (REQ-CHART-023) ────────────────────────────────────────────────────────────────────────────────
+// ── euclid_plane ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A decode of the Euclid plane at `(u, v)` under check.
 type PlaneDecode<R> = fn(&EuclidPlane<R>, R, R) -> Decoded<R>;
@@ -929,7 +930,7 @@ negative_control!(
     })
 );
 
-// ── annotation_axis (REQ-CHART-013) ─────────────────────────────────────────────────────────────────────────────
+// ── annotation_axis ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The Euclid plane's metadata: `m` annotation-only, touching no block; `ν` swept, writing the configuration and the
 /// masses; the chart a 1-swept family; per-value statistics along `ν` admitted, along `m` and a 2D density refused.
@@ -1084,7 +1085,7 @@ negative_control!(
     })
 );
 
-// ── body_indices (REQ-SYS-016) ──────────────────────────────────────────────────────────────────────────────────
+// ── body_indices ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `pair_id` is the payload's pair-id map: pair `k` is `pair_bodies()[k]`, either order, and no pair of a body with
 /// itself or past body 2; the collision of bodies 0 and 1 is pair 2.
@@ -1180,7 +1181,7 @@ negative_control!(
     })
 );
 
-// ── burrau_nu_half (REQ-VAL-016, REQ-VAL-118) ───────────────────────────────────────────────────────────────────
+// ── burrau_nu_half ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The classical configuration through `C` (chart_reference §4.2, §0.4, §0.5): the masses `(5, 4, 3)` in units of
 /// their total (`M = 1`), each its opposite side, on the 3-4-5 triangle with the right angle at the origin, scaled by
@@ -1226,7 +1227,7 @@ fn plane_half<R: Q>() -> Decoded<R> {
     decode_plane(&c, R::of(0.5))
 }
 
-/// Each residual within REQ-VAL-118's proposed tolerance (the register's `burrau_nu_half_tol`, provisional until M2).
+/// Each residual within the proposed tolerance (the register's `burrau_nu_half_tol`, provisional).
 fn check_nu_half<R: Q>(nu_half: fn() -> Decoded<R>) {
     let tol = BURRAU_NU_HALF_TOL.number();
     for (what, d) in residuals(nu_half) {
@@ -1380,7 +1381,7 @@ negative_control!(
     )
 );
 
-// ── The charts' validation, flags and names (R-26, R-25) ────────────────────────────────────────────────────────
+// ── The charts' validation, flags and names ─────────────────────────────────────────────────────────────────────
 
 /// `validate` on both charts: `Valid` inside `[0,1]²` and on `(ν, K)` above it; `ν ∉ (0, 1)` and non-finite
 /// coordinates rejected; `(ν, K)`'s `v < 0` projected to `v = 0`; a subnormal `ν`, whose decode is not finite,
