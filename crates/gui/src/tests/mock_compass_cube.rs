@@ -14,7 +14,7 @@ use engine::contract::set_field::{Edit, SimField};
 use engine::contract::sim_config::{Lock, Plane};
 
 use super::compass_support::{app_at, drag, drawing, on_slice, plane, setfields, settle, view};
-use super::support::{rejects, SLICE_FRAME};
+use super::support::{rejects, LEAN_FRAME};
 use crate::capture::{self, CompassCase, Step};
 use crate::explore::compass::{
     self, after, clip, drag_edit, ease, ease_factor, face_shade, fill_shade, grid, latent_normal,
@@ -256,6 +256,16 @@ fn mock_compass_cube_readout_per_mode() {
             "mode tilt",
             "τ₁ → z_q3 +30.0° · τ₂ → z_q3 -12.5°",
             "γ +45.0°"
+        ]
+    );
+    // Under the hint, Lean each axis's angle between the axes and each screen axis's components.
+    let (q1, q2) = v.basis();
+    assert_eq!(
+        compass::axes_lines(&v, &q1, &q2),
+        [
+            "axes at 96.2°",
+            "H = 0.65 z_α + 0.73 z_β + 0.21 z_q3",
+            "V = −0.58 z_α + 0.66 z_β − 0.48 z_q3"
         ]
     );
     let slice = compass::readout(&p.z0, &v, Touch::Slice);
@@ -514,19 +524,19 @@ fn mock_compass_cube_drags_at_the_references_rates() {
     let half = 3f64.sqrt() * Iso::fit(sq).s;
     let s_hat = [-(3f64.sqrt()) / 2.0, 0.5];
     let along = |k: f64| vec2((s_hat[0] * k) as f32, (s_hat[1] * k) as f32);
-    let mut d = Drag::start(Touch::Slice, &flat, &SLICE_FRAME);
+    let mut d = Drag::start(Touch::Slice, &flat, &LEAN_FRAME);
     d.moved(along(half), sq);
     assert!((d.amount - Z0_HALF_RANGE).abs() < 1e-6, "{}", d.amount);
-    let edit = drag_edit(&flat, &SLICE_FRAME, &d).expect("an edit");
+    let edit = drag_edit(&flat, &LEAN_FRAME, &d).expect("an edit");
     assert!(matches!(edit.edit, Edit::Sim(SimField::Z0(_))));
     let moved = after(&flat, &[edit]);
-    let n = latent_normal(&flat, &SLICE_FRAME).expect("a normal");
+    let n = latent_normal(&flat, &LEAN_FRAME).expect("a normal");
     // The drag travels in f32 points, so the move is H to the pointer's precision, and exactly `amount` along the normal.
     for ((m, z), n) in moved.z0.iter().zip(&flat.z0).zip(&n) {
         assert!((m - z - d.amount * n).abs() < 1e-12);
         assert!((m - z - Z0_HALF_RANGE * n).abs() < 1e-6);
     }
-    let mut across = Drag::start(Touch::Slice, &flat, &SLICE_FRAME);
+    let mut across = Drag::start(Touch::Slice, &flat, &LEAN_FRAME);
     across.moved(
         vec2((s_hat[1] * half) as f32, (-s_hat[0] * half) as f32),
         sq,
@@ -536,7 +546,7 @@ fn mock_compass_cube_drags_at_the_references_rates() {
         "a drag across ŝ: {}",
         across.amount
     );
-    let mut right = Drag::start(Touch::Slice, &flat, &SLICE_FRAME);
+    let mut right = Drag::start(Touch::Slice, &flat, &LEAN_FRAME);
     right.moved(vec2(half as f32, 0.0), sq);
     assert!(
         right.amount < 0.0,
@@ -548,9 +558,9 @@ fn mock_compass_cube_drags_at_the_references_rates() {
     });
     // At a corner point the compass draws no plane, and a slice drag sends nothing.
     let corner = plane(&view(90.0, 90.0, 0.0, 1.0), [0.0; 3]);
-    let mut at_corner = Drag::start(Touch::Slice, &corner, &SLICE_FRAME);
+    let mut at_corner = Drag::start(Touch::Slice, &corner, &LEAN_FRAME);
     at_corner.moved(along(half), sq);
-    assert_eq!(drag_edit(&corner, &SLICE_FRAME, &at_corner), None);
+    assert_eq!(drag_edit(&corner, &LEAN_FRAME, &at_corner), None);
     // The control: z₀ moved H along the rounding normal of q₁ × q₂, the plane x + y = c.
     let (q1, q2) = compass::frame_basis(&View::of(&corner));
     let rounding = [
@@ -562,11 +572,11 @@ fn mock_compass_cube_drags_at_the_references_rates() {
     let along = compass::lift(rounding.map(|x| x / len), &View::of(&corner));
     let rounded: [f64; 8] = std::array::from_fn(|i| corner.z0[i] + Z0_HALF_RANGE * along[i]);
     rejects("a corner slice drag along the rounding normal", || {
-        let edit = drag_edit(&corner, &SLICE_FRAME, &at_corner).expect("an edit");
+        let edit = drag_edit(&corner, &LEAN_FRAME, &at_corner).expect("an edit");
         assert_eq!(after(&corner, &[edit]).z0, rounded)
     });
     // Tilt: the full width is 180°, clamped at 90°; a quarter of the height up is +45° to τ₂.
-    let mut t = Drag::start(Touch::Tilt, &flat, &SLICE_FRAME);
+    let mut t = Drag::start(Touch::Tilt, &flat, &LEAN_FRAME);
     t.moved(vec2(172.0, 0.0), sq);
     assert_eq!(t.tau, (90.0, 0.0));
     rejects("an unclamped tilt drag", || assert_eq!(t.tau.0, 180.0));
@@ -577,7 +587,7 @@ fn mock_compass_cube_drags_at_the_references_rates() {
     assert_eq!(t.tau, (0.0, 0.0));
     let back = after(
         &flat,
-        &[drag_edit(&flat, &SLICE_FRAME, &t).expect("an edit")],
+        &[drag_edit(&flat, &LEAN_FRAME, &t).expect("an edit")],
     );
     let a = Angles::of(&View::of(&back));
     assert!(
@@ -586,9 +596,9 @@ fn mock_compass_cube_drags_at_the_references_rates() {
     );
     // γ kept through a tilt.
     let turned = plane(&view(0.0, 0.0, 30.0, 1.0), [0.0; 3]);
-    let mut t = Drag::start(Touch::Tilt, &turned, &SLICE_FRAME);
+    let mut t = Drag::start(Touch::Tilt, &turned, &LEAN_FRAME);
     t.moved(vec2(43.0, 0.0), sq);
-    let edit = drag_edit(&turned, &SLICE_FRAME, &t).expect("a tilt");
+    let edit = drag_edit(&turned, &LEAN_FRAME, &t).expect("a tilt");
     let a = Angles::of(&View::of(&after(&turned, &[edit])));
     assert!(
         (a.tau1 - 45.0).abs() < 1e-9 && (a.gamma - 30.0).abs() < 1e-9,
@@ -610,8 +620,8 @@ fn mock_compass_cube_easing() {
     );
     assert_eq!(ease(0.0, 4.0 * EASE_SNAP, 0.5), 2.0 * EASE_SNAP);
     // γ the short way round: 170° to −170° passes 180°.
-    let from = Shown::of(&plane(&view(0.0, 0.0, 170.0, 1.0), [0.0; 3]), &SLICE_FRAME);
-    let to = Shown::of(&plane(&view(0.0, 0.0, -170.0, 1.0), [0.0; 3]), &SLICE_FRAME);
+    let from = Shown::of(&plane(&view(0.0, 0.0, 170.0, 1.0), [0.0; 3]), &LEAN_FRAME);
+    let to = Shown::of(&plane(&view(0.0, 0.0, -170.0, 1.0), [0.0; 3]), &LEAN_FRAME);
     let k = ease_factor(1.0 / 60.0);
     let next = Shown::eased(Some(from), to, 1.0 / 60.0);
     let want = 170f64.to_radians() + 20f64.to_radians() * k;
@@ -626,11 +636,11 @@ fn mock_compass_cube_easing() {
     // The tilts and the point, at dt = 1/60 s and at the cap: a headless frame of 0.125 s eases as 0.05 s.
     let flat = Shown::of(
         &plane(&view(0.0, 0.0, 0.0, 1.0), [0.0, 0.0, 0.0]),
-        &SLICE_FRAME,
+        &LEAN_FRAME,
     );
     let tilted = Shown::of(
         &plane(&view(30.0, -20.0, 0.0, 1.0), [0.2, 0.0, 0.5]),
-        &SLICE_FRAME,
+        &LEAN_FRAME,
     );
     for (dt, k) in [(1.0 / 60.0, k), (0.125, ease_factor(0.05))] {
         let next = Shown::eased(Some(flat), tilted, dt);
@@ -710,7 +720,11 @@ fn captured(case: CompassCase) -> (serde_json::Value, serde_json::Value) {
     );
     let rec = rec.expect("a record on 01_main");
     let ((t1, t2, g), depth, mode) = case.parameters();
-    let v = view(t1, t2, g, 1.0);
+    // The capture runs the app at launch, under Tip as sheet, the default map.
+    let v = View {
+        map: engine::contract::sim_config::TiltMap::Sheet,
+        ..view(t1, t2, g, 1.0)
+    };
     let layout = crate::layout::Layout::new(
         super::support::headless().screen(),
         capture::PIXELS_PER_POINT,
@@ -745,6 +759,8 @@ fn check_polygon(rec: &serde_json::Value, want: &[P3]) {
 #[test]
 fn mock_compass_cube_capture_records_each_case_at_rest() {
     let t = 30f64.to_radians().tan();
+    let m = (45.0 * 2f64.sqrt()).to_radians();
+    let k = 1.0 - m.cos() / (m.sin() / 2f64.sqrt());
     let cases: [(CompassCase, Vec<P3>, &str); 4] = [
         (
             CompassCase::Slice,
@@ -776,15 +792,17 @@ fn mock_compass_cube_capture_records_each_case_at_rest() {
             ],
             "mode tilt",
         ),
+        // Tip as sheet, the default: the turn by m = 45√2° about (e_a − e_b)/√2, normal
+        // (−sin m/√2, −sin m/√2, cos m), so the plane meets the edge (−1, y, −1) at y = 1 − cos m/(sin m/√2).
         (
             CompassCase::TiltHex,
             vec![
                 [1.0, -1.0, 0.0],
-                [1.0, 0.0, 1.0],
-                [0.0, 1.0, 1.0],
+                [1.0, -k, 1.0],
+                [-k, 1.0, 1.0],
                 [-1.0, 1.0, 0.0],
-                [-1.0, 0.0, -1.0],
-                [0.0, -1.0, -1.0],
+                [-1.0, k, -1.0],
+                [k, -1.0, -1.0],
             ],
             "mode tilt",
         ),
@@ -799,8 +817,8 @@ fn mock_compass_cube_capture_records_each_case_at_rest() {
     // The control: the hexagon case recorded while the compass still eases, a few frames from flat.
     let (rec, _) = captured(CompassCase::TiltHex);
     let flat = view(0.0, 0.0, 0.0, 1.0);
-    let mut shown = Shown::of(&plane(&flat, [0.0; 3]), &SLICE_FRAME);
-    let target = Shown::of(&plane(&view(45.0, 45.0, 0.0, 1.0), [0.0; 3]), &SLICE_FRAME);
+    let mut shown = Shown::of(&plane(&flat, [0.0; 3]), &LEAN_FRAME);
+    let target = Shown::of(&plane(&view(45.0, 45.0, 0.0, 1.0), [0.0; 3]), &LEAN_FRAME);
     for _ in 0..3 {
         shown = Shown::eased(Some(shown), target, 0.125);
     }
@@ -838,6 +856,7 @@ fn mock_compass_cube_case_edits_set_the_frame_and_keep_the_rest() {
     ] {
         let ((t1, t2, g), depth, _) = case.parameters();
         let mut sim = super::support::state(0.0).0;
+        sim.slice.frame = LEAN_FRAME;
         sim.plane = start.clone();
         let set = after(&start, &case.edits(&sim));
         let sv = View::of(&set);

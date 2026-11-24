@@ -140,6 +140,7 @@ fn view(
         tau1: t1.to_radians(),
         tau2: t2.to_radians(),
         gamma: g.to_radians(),
+        map: engine::contract::sim_config::TiltMap::Lean,
     }
 }
 
@@ -412,6 +413,7 @@ fn frame(normal: usize, x: usize, y: usize) -> SliceFrame {
         normal: normal as u32,
         tilt_x: x as u32,
         tilt_y: y as u32,
+        ..SliceFrame::along(0)
     }
 }
 
@@ -629,7 +631,12 @@ fn check_retilt(n: usize, entries: i64, before: &Snapshot, after: &Snapshot) {
     );
     assert_eq!(after.sim.plane.q2, before.sim.plane.q2, "q₂ moved");
     assert_eq!(after.sim.plane.z0, before.sim.plane.z0, "z₀ moved");
-    assert_eq!(after.sim.slice.frame, frame(Q3, Q2, Q3));
+    // The frame stores the angles beside the basis: τ₁ = 30° kept.
+    let want = SliceFrame {
+        tau1: 30.0,
+        ..frame(Q3, Q2, Q3)
+    };
+    assert_eq!(after.sim.slice.frame, want);
 }
 
 /// One undo restores the basis and X = z_q3.
@@ -695,15 +702,17 @@ fn qa_tilt_targets_a_change_at_a_zero_angle_edits_the_frame_alone() {
     let entry = rig.scope("tilt τ₁ into", AXES[Q2]);
     rig.focus(entry);
     let (n, entries, before, after) = gesture(&mut rig, |r| r.key(Key::Enter, NONE));
-    check_frame_alone(n, entries, &before, &after, frame(Q3, Q2, Q3));
+    // The frame stores the angles beside the basis: τ₂ = 25° kept.
+    let at25 = |f: SliceFrame| SliceFrame { tau2: 25.0, ..f };
+    check_frame_alone(n, entries, &before, &after, at25(frame(Q3, Q2, Q3)));
     // Controls: a zero-angle change that also edits the basis; one of two entries.
     let mut moved = after.clone();
     moved.sim.plane.q1 = add(&moved.sim.plane.q1, 1e-3, &e(Q2, 1.0));
     rejects("a zero-angle change editing the basis", || {
-        check_frame_alone(n, entries, &before, &moved, frame(Q3, Q2, Q3))
+        check_frame_alone(n, entries, &before, &moved, at25(frame(Q3, Q2, Q3)))
     });
     rejects("a zero-angle change of two entries", || {
-        check_frame_alone(2, 2, &before, &after, frame(Q3, Q2, Q3))
+        check_frame_alone(2, 2, &before, &after, at25(frame(Q3, Q2, Q3)))
     });
     // The log names the slice frame alone, not the plane (gui_state_contract §2's path).
     let line = rig
@@ -884,9 +893,13 @@ fn qa_tilt_targets_a_chart_basis_edit_taking_the_normal_moves_it() {
     let (n, entries, _, after) = type_component(&mut rig, q3, "1");
     assert_eq!((n, entries), (1, 1), "typing q₂'s z_q3");
     assert_eq!(after.sim.plane.q2[Q3], 1.0, "q₂ {:?}", after.sim.plane.q2);
+    // The frame stores the angles the typed basis reads, τ₂ = 45°.
     assert_eq!(
         after.sim.slice.frame,
-        frame(Q3, Q3, Q3),
+        SliceFrame {
+            tau2: 45.0,
+            ..frame(Q3, Q3, Q3)
+        },
         "a plane that does not take the normal moved it"
     );
     let (n, entries, before, after) = type_component(&mut rig, beta, "0");
@@ -911,9 +924,13 @@ fn qa_tilt_targets_a_chart_basis_edit_taking_the_normal_moves_it() {
     rig.key(Key::Z, Modifiers::CTRL);
     let undone = rig.snap();
     assert_eq!(undone.sim.plane, before.sim.plane, "one Ctrl+Z: the basis");
+    // Back to the frame the first typed edit left, its angles the ones that basis reads.
     assert_eq!(
         undone.sim.slice.frame,
-        frame(Q3, Q3, Q3),
+        SliceFrame {
+            tau2: 45.0,
+            ..frame(Q3, Q3, Q3)
+        },
         "one Ctrl+Z: the normal and the targets"
     );
 }
@@ -1111,8 +1128,17 @@ fn qa_mock_manifold_sections_slice_centre_eight_sliders_each_number_box_edits_it
 fn check_tilt(scopes: &[&str]) {
     assert_eq!(
         scopes,
-        // The reset last: changed by TASK-M6-45's qa commit (R-466 K6, K15).
-        ["τ₁", "tilt τ₁ into", "τ₂", "tilt τ₂ into", "γ", "reset"],
+        // The reset last: changed by TASK-M6-45's qa commit. The map selector after γ.
+        [
+            "τ₁",
+            "tilt τ₁ into",
+            "τ₂",
+            "tilt τ₂ into",
+            "γ",
+            "Tip as sheet",
+            "Lean each axis",
+            "reset"
+        ],
         "Tilt's widgets"
     );
 }
@@ -1184,8 +1210,13 @@ fn qa_mock_manifold_sections_tilt_has_tau1_tau2_gamma_with_number_boxes_and_noth
         !tilt.iter().any(|(t, _)| t.to_lowercase().contains("step")),
         "a step in Tilt"
     );
-    // τ₁'s number box, typed: τ₁ = 40° into z_μ2, from τ₁ = τ₂ = 10°, γ = 0.
-    tilted(&mut rig, frame(Q3, MU2, MU2), 10.0, 10.0);
+    // τ₁'s number box, typed: τ₁ = 40° into z_μ2, from τ₁ = τ₂ = 10°, γ = 0. One target, both angles set: under Lean
+    // each axis, this file's map.
+    let lean = SliceFrame {
+        tilt_map: engine::contract::sim_config::TiltMap::Lean,
+        ..frame(Q3, MU2, MU2)
+    };
+    tilted(&mut rig, lean, 10.0, 10.0);
     let tilt = section_texts(&rig.texts(), "Tilt");
     let label = tilt.iter().find(|(t, _)| t == "τ₁").unwrap().1;
     let boxed = tilt
@@ -1341,7 +1372,21 @@ fn qa_tilt_targets_a_retilt_keeps_the_other_angle_gamma_and_the_scale() {
         );
     };
     check(&after.sim.plane);
-    assert_eq!(after.sim.slice.frame, frame(Q3, Q2, Q3));
+    // The frame stores the angles beside the basis, read back from the basis set above: 30° and 20° to
+    // rounding.
+    let f = after.sim.slice.frame;
+    assert_eq!(
+        SliceFrame {
+            tau1: 0.0,
+            tau2: 0.0,
+            ..f
+        },
+        frame(Q3, Q2, Q3)
+    );
+    assert!(
+        (f.tau1 - 30.0).abs() < 1e-9 && (f.tau2 - 20.0).abs() < 1e-9,
+        "{f:?}"
+    );
     // Control: the re-tilt that drops γ.
     let mut no_gamma = after.sim.plane.clone();
     (no_gamma.q1, no_gamma.q2) = (scaled(&u1, s), scaled(&u2, s));

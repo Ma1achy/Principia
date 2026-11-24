@@ -27,7 +27,7 @@
 use eframe::egui::{self, Event, Modifiers, PointerButton, Pos2, Rect};
 use engine::contract::log::Source;
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::{Lock, Plane};
+use engine::contract::sim_config::{Lock, Plane, SliceFrame, TiltMap};
 use engine::contract::snapshot::Snapshot;
 use gui::app::App;
 use gui::capture::{FORMAT, PIXELS_PER_POINT, SIZE};
@@ -595,7 +595,7 @@ fn qa_compass_cross_section_the_cut_near_the_corners() {
 fn no_plane_line(readout: &[String], t1: f64, t2: f64) -> bool {
     let sign = |v: f64| if v >= 0.0 { "+" } else { "-" };
     let want = format!(
-        "no plane drawn: s < 10⁻³ at τ₁ = {}{:.1}°, τ₂ = {}{:.1}° (RQ-340)",
+        "no plane drawn: s < 10⁻³ at τ₁ = {}{:.1}°, τ₂ = {}{:.1}° (Lean each axis)",
         sign(t1),
         t1.abs(),
         sign(t2),
@@ -717,6 +717,17 @@ fn mock() -> Rig {
         app: App::new(MockSide::new(MockEngine::frozen(), None), FORMAT),
         h: headless(),
     };
+    rig.idle(2);
+    // This file's decoder is Lean each axis, its ±90° clamp and B11's corners with it: the rig's slice frame
+    // says so, today's default being Tip as sheet.
+    let frame = SliceFrame {
+        tilt_map: TiltMap::Lean,
+        ..rig.snap().sim.slice.frame
+    };
+    rig.app.set_field(SetField {
+        edit: Edit::Sim(SimField::SliceFrame { frame, basis: None }),
+        no_history: false,
+    });
     rig.idle(2);
     // The default chart is z_α × z_β (§G2): q₁ along e_a, q₂ along e_b.
     let p = rig.snap().sim.plane;
@@ -1409,7 +1420,7 @@ fn qa_mock_compass_cube_no_slice_painted_at_a_corner_and_the_pin_kept_when_locke
     assert!(
         texts
             .iter()
-            .any(|(t, _)| t.contains("no plane drawn") && t.contains("(RQ-340)")),
+            .any(|(t, _)| t.contains("no plane drawn") && t.contains("(Lean each axis)")),
         "the readout does not say no plane is drawn: {texts:?}"
     );
     // Control: the same checks on a drawn plane, (90°, 89.9°), fail.

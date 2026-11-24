@@ -50,6 +50,7 @@ fn frame(normal: usize, x: usize, y: usize) -> SliceFrame {
         normal: index(normal),
         tilt_x: index(x),
         tilt_y: index(y),
+        ..SliceFrame::along(0)
     }
 }
 
@@ -568,7 +569,11 @@ fn turn_key(app: &App<MockSide>, id: &'static str, degrees: f64) -> Vec<SetField
 /// `γ = −30°`, whose [`View::basis`] is the stored one with `z_β`'s components negated.
 #[test]
 fn mock_cube_axis_buttons_a_swapped_pair_stays_editable_through_the_full_rotation() {
-    let default = frame(Z_Q3, Z_Q3, Z_Q3);
+    // The views wanted are Lean each axis's (the helper `view`), both angles set at the end: the frame is Lean's too.
+    let default = SliceFrame {
+        tilt_map: engine::contract::sim_config::TiltMap::Lean,
+        ..frame(Z_Q3, Z_Q3, Z_Q3)
+    };
     let pair = (Z_BETA, Z_ALPHA);
     let (mut app, mut h) = app_with((0.0, 0.0, 0.0), 1.0, default);
     let unswapped = texts(&h, &app);
@@ -1066,6 +1071,8 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
         }
         v
     };
+    // G3 is Lean each axis's rule, its angles within ±90°: under Tip as sheet, to ±180°, the basis as typed is a tilt of
+    // 126.9° past the pole and reads so. The frames here are Lean's.
     let in_frame = |f: SliceFrame, q1: &[(usize, f64)], q2: &[(usize, f64)]| {
         View::framed(
             &Plane {
@@ -1073,7 +1080,10 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
                 q1: vector(q1),
                 q2: vector(q2),
             },
-            Some(&f),
+            Some(&SliceFrame {
+                tilt_map: engine::contract::sim_config::TiltMap::Lean,
+                ..f
+            }),
         )
     };
     let (q1, q2) = ([(Z_ALPHA, -0.6), (Z_Q3, 0.8)], [(Z_BETA, 1.0)]);
@@ -1375,7 +1385,11 @@ fn check_d_picked(
     after: &(u32, Plane, SliceFrame),
     q1: &Latent,
 ) {
-    assert_eq!(after.2, frame(Z_MU1, Z_MU1, Z_Q2), "X followed; Y kept");
+    let want = SliceFrame {
+        tau1: 20.0,
+        ..frame(Z_MU1, Z_MU1, Z_Q2)
+    };
+    assert_eq!(after.2, want, "X followed; Y kept");
     let off = q1
         .iter()
         .zip(&after.1.q1)
@@ -1500,9 +1514,19 @@ fn mock_cube_axis_buttons_the_third_axis_dropdown_picks_the_target_it_shows() {
 /// Asserts the third axis's pick of `z_q2` from the frame `(z_q3, z_q3, z_μ1)`, by `framed` the frame each pick sets,
 /// moves the target or the normal the button shows, and only it.
 fn check_routed(framed: &dyn Fn(Shows, usize) -> SliceFrame) {
-    assert_eq!(framed(Shows::X, Z_Q2), frame(Z_Q3, Z_Q2, Z_MU1), "X's");
-    assert_eq!(framed(Shows::Y, Z_Q2), frame(Z_Q3, Z_Q3, Z_Q2), "Y's");
-    assert_eq!(framed(Shows::Normal, Z_Q2), frame(Z_Q2, Z_Q2, Z_MU1), "D's");
+    // At τ₁ = 20°, τ₂ = 15°, stored beside the basis and kept by the pick.
+    let set = |f: SliceFrame| SliceFrame {
+        tau1: 20.0,
+        tau2: 15.0,
+        ..f
+    };
+    assert_eq!(framed(Shows::X, Z_Q2), set(frame(Z_Q3, Z_Q2, Z_MU1)), "X's");
+    assert_eq!(framed(Shows::Y, Z_Q2), set(frame(Z_Q3, Z_Q3, Z_Q2)), "Y's");
+    assert_eq!(
+        framed(Shows::Normal, Z_Q2),
+        set(frame(Z_Q2, Z_Q2, Z_MU1)),
+        "D's"
+    );
 }
 
 #[test]

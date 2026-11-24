@@ -19,7 +19,7 @@
 use eframe::egui::{self, Event, PointerButton, Pos2};
 use engine::contract::log::Source;
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::{Lock, Plane, SimConfig};
+use engine::contract::sim_config::{Lock, Plane, SimConfig, SliceFrame, TiltMap};
 use gui::app::App;
 use gui::capture::{FORMAT, PIXELS_PER_POINT, SIZE};
 use gui::explore::compass;
@@ -109,6 +109,7 @@ fn view(t1: f64, t2: f64, gamma: f64, sigma: f64) -> View {
         tau1: t1.to_radians(),
         tau2: t2.to_radians(),
         gamma: gamma.to_radians(),
+        map: engine::contract::sim_config::TiltMap::Lean,
     }
 }
 
@@ -662,8 +663,17 @@ impl Rig {
             .collect()
     }
 
-    /// The plane set to `p`, locked at `anchor`, straight on the engine.
+    /// The plane set to `p`, locked at `anchor`, straight on the engine. The corners and this file's planes are Lean each
+    /// axis's: the slice frame says so, today's default being Tip as sheet.
     fn set(&mut self, p: &Plane, anchor: Z) {
+        let frame = SliceFrame {
+            tilt_map: TiltMap::Lean,
+            ..self.app.snapshot().sim.slice.frame
+        };
+        self.app.set_field(SetField {
+            edit: Edit::Sim(SimField::SliceFrame { frame, basis: None }),
+            no_history: false,
+        });
         self.app.set_field(z0_edit(p.z0));
         self.app.set_field(basis_edit((p.q1, p.q2)));
         self.app.set_field(lock_edit(Lock {
@@ -720,8 +730,9 @@ fn qa_app_locked_tilt_drag_at_a_corner_sends_no_z0_edit() {
                 rig.tilt_drag(-12.0 * t1.signum() as f32);
                 let new: Vec<String> = rig.applied()[before..].to_vec();
                 assert_eq!(new.len(), 1, "{what}: one SetField: {new:?}");
+                // A tilt is one edit of the slice frame's angles with the basis.
                 assert!(
-                    new[0].starts_with("SetField Plane.q1 Plane.q2 "),
+                    new[0].starts_with("SetField Slice.frame Plane.q1 Plane.q2 "),
                     "{what}: the basis edit: {new:?}"
                 );
                 let sim = &rig.app.snapshot().sim;
@@ -765,8 +776,9 @@ fn qa_app_locked_tilt_drag_inside_the_disc_turns_about_the_pin() {
             "{what}: a z₀ edit and the basis edit: {new:?}"
         );
         assert!(new[0].starts_with("SetField Plane.z0 "), "{what}: {new:?}");
+        // A tilt is one edit of the slice frame's angles with the basis.
         assert!(
-            new[1].starts_with("SetField Plane.q1 Plane.q2 "),
+            new[1].starts_with("SetField Slice.frame Plane.q1 Plane.q2 "),
             "{what}: {new:?}"
         );
         let after = rig.app.snapshot().sim.plane.clone();

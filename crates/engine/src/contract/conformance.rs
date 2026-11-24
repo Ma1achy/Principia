@@ -426,6 +426,7 @@ pub(crate) fn turned(f: SliceFrame, by: u32) -> SliceFrame {
         normal: next(f.normal),
         tilt_x: next(f.tilt_x),
         tilt_y: next(f.tilt_y),
+        ..f
     }
 }
 

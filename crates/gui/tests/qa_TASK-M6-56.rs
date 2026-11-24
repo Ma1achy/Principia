@@ -46,6 +46,7 @@ const SPLIT: SliceFrame = SliceFrame {
     normal: Q3 as u32,
     tilt_x: Q3 as u32,
     tilt_y: MU1 as u32,
+    ..SliceFrame::along(0)
 };
 
 /// One target, `X = Y = z_q3`: there is no wrong vector.
@@ -53,6 +54,7 @@ const SHARED: SliceFrame = SliceFrame {
     normal: Q3 as u32,
     tilt_x: Q3 as u32,
     tilt_y: Q3 as u32,
+    ..SliceFrame::along(0)
 };
 
 type Basis = (Latent, Latent);
@@ -110,6 +112,7 @@ fn outside_ignored((q1, q2): &Basis, frame: SliceFrame) -> View {
         tau1: 0.0,
         tau2: 0.0,
         gamma: 0.0,
+        map: engine::contract::sim_config::TiltMap::Lean,
     }
 }
 
@@ -227,6 +230,7 @@ fn wrong_vector_failures(read: &dyn Fn(Basis, SliceFrame) -> View) -> Vec<String
             normal: x as u32,
             tilt_x: x as u32,
             tilt_y: y as u32,
+            ..SliceFrame::along(0)
         };
         let off = |i: &usize| *i != x && *i != y;
         for (a, b) in (0..LATENT_DIM)
@@ -372,6 +376,7 @@ fn manifold_view_basis_a_view_of_the_map_reads_back_at_every_angle() {
                         tau1,
                         tau2,
                         gamma,
+                        map: engine::contract::sim_config::TiltMap::Lean,
                     };
                     let again = read(view.basis(), SPLIT);
                     assert_eq!(
@@ -496,6 +501,7 @@ fn fuzzed(n: usize) -> Vec<(Basis, SliceFrame)> {
             normal: (next() >> 32) as u32 % LATENT_DIM as u32,
             tilt_x: (next() >> 32) as u32 % LATENT_DIM as u32,
             tilt_y: (next() >> 32) as u32 % LATENT_DIM as u32,
+            ..SliceFrame::along(0)
         };
         if mv::plane_s(&basis.0, &basis.1) > 1e-3 {
             out.push((basis, frame));
@@ -684,6 +690,7 @@ fn manifold_view_basis_the_other_preset_frames_count_too() {
         normal: MU2 as u32,
         tilt_x: MU2 as u32,
         tilt_y: Q3 as u32,
+        ..SliceFrame::along(0)
     };
     let basis = (sum(&[(ALPHA, 0.6), (Q3, 0.8)]), e(BETA, 1.0));
     check_frame(&read(basis, other), (Q3, BETA), 1.0);

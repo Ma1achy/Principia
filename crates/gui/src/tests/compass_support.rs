@@ -11,7 +11,7 @@ use crate::explore::compass::{
     self, edge_colour, plane_colour, Drawing, Item, Label, CORNERS, EDGES, GRID_WIDTH, LABEL_SIZE,
     NUMBER_SIZE, OUTLINE_WIDTH, P3,
 };
-use crate::explore::manifold_view::{basis_edit, z0_edit, View, PRESETS, SLICE_AXIS};
+use crate::explore::manifold_view::{z0_edit, View, PRESETS, SLICE_AXIS};
 use crate::headless::Headless;
 use crate::mock::MOCK_Z0;
 use crate::side::MockSide;
@@ -37,6 +37,7 @@ pub fn view(tau1: f64, tau2: f64, gamma: f64, sigma: f64) -> View {
         tau1: tau1.to_radians(),
         tau2: tau2.to_radians(),
         gamma: gamma.to_radians(),
+        map: engine::contract::sim_config::TiltMap::Lean,
     }
 }
 
@@ -76,7 +77,11 @@ pub fn app_at(p: &Plane) -> (App<MockSide>, Headless) {
     let mut h = headless();
     let _ = h.frame(&mut app, Vec::new());
     app.set_field(z0_edit(p.z0));
-    app.set_field(basis_edit((p.q1, p.q2)));
+    // The views here are Lean each axis's ([`view`]): the frame says so, with the basis, one edit.
+    app.set_field(crate::explore::manifold_view::frame_edit(
+        super::support::LEAN_FRAME,
+        Some((p.q1, p.q2)),
+    ));
     let _ = h.frame(&mut app, Vec::new());
     settle(&mut h, &mut app);
     (app, h)
@@ -124,7 +129,21 @@ pub fn drag(h: &mut Headless, app: &mut App<MockSide>, from: Pos2, delta: egui::
     }
 }
 
-/// The `SetField`s the mock logged since row `from` of the console, by their paths.
+/// Whether the log line `m` is a tilt's: one edit of the slice frame carrying the basis, the frame's indices the same
+/// before and after, only its angles or its map changed (the angles are stored beside the basis).
+pub fn is_tilt(m: &str) -> bool {
+    let Some(rest) = m.strip_prefix("SetField Slice.frame Plane.q1 Plane.q2 ") else {
+        return false;
+    };
+    let indices: Vec<&str> = rest
+        .match_indices("(normal ")
+        .filter_map(|(i, _)| rest[i..].split(", tilt_map").next())
+        .collect();
+    matches!(indices[..], [before, after] if before == after)
+}
+
+/// The `SetField`s the mock logged since row `from` of the console, by their paths; a tilt, an edit of the slice
+/// frame's angles carrying the basis ([`is_tilt`]), counts as the basis.
 pub fn setfields(app: &App<MockSide>, from: usize) -> Vec<&'static str> {
     app.console()[from..]
         .iter()
@@ -132,7 +151,7 @@ pub fn setfields(app: &App<MockSide>, from: usize) -> Vec<&'static str> {
             let m = e.message.as_str();
             if m.starts_with("SetField Plane.z0 ") {
                 Some("z0")
-            } else if m.starts_with("SetField Plane.q1 Plane.q2 ") {
+            } else if m.starts_with("SetField Plane.q1 Plane.q2 ") || is_tilt(m) {
                 Some("basis")
             } else if m.starts_with("SetField ") {
                 Some("other")

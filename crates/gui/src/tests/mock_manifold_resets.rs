@@ -158,6 +158,7 @@ impl Values {
             tau1: 0.0,
             tau2: 0.0,
             gamma: 0.0,
+            map: engine::contract::sim_config::TiltMap::Lean,
         };
         Self::of(p, &home.base, &view)
     }
@@ -229,7 +230,12 @@ fn mock_manifold_resets_each_returns_its_section_alone() {
             let after = Values::read(&rig.0, p);
             check_reset(section, &before, &after, &home);
             let left = &rig.0.snapshot().sim;
-            assert_eq!(left.slice, sim.slice, "the targets and H, V, D kept");
+            // The stored angles follow the basis: the Tilt reset zeroes them, the others keep them.
+            let mut kept = sim.slice.clone();
+            if section == Section::Tilt {
+                (kept.frame.tau1, kept.frame.tau2) = (0.0, 0.0);
+            }
+            assert_eq!(left.slice, kept, "the targets and H, V, D kept");
 
             // Controls, on what a GUI with the fault would leave.
             rejects("a reset that does nothing", || {

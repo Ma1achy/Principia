@@ -30,7 +30,9 @@ use std::f64::consts::{FRAC_PI_2, PI};
 use eframe::egui::{accesskit::Role, pos2, vec2, Event, Key, Modifiers, PointerButton, Pos2};
 use eframe::egui::{Rect, Shape};
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
+use engine::contract::sim_config::{
+    Latent, Lock, Plane, SimConfig, SliceFrame, TiltMap, LATENT_DIM,
+};
 use engine::contract::view_ui::{KeyMode, Mode, Window};
 use gui::app::App;
 use gui::capture::{self, PIXELS_PER_POINT, SIZE};
@@ -138,12 +140,30 @@ fn e1_basis(
 }
 
 /// `edits` applied to `sim`: a reset and Home may edit only `z₀` and the basis, so any other field panics here, which
-/// also holds the targets, H, V and D still.
+/// also holds the targets, H, V and D still. The slice frame's angles, stored beside the basis, follow it in the same
+/// edit: an edit of the frame that changes nothing else carries the basis.
 fn apply(sim: &mut SimConfig, edits: &[SetField]) {
     for edit in edits {
         match &edit.edit {
             Edit::Sim(SimField::Z0(z0)) => sim.plane.z0 = *z0,
             Edit::Sim(SimField::Basis { q1, q2 }) => {
+                sim.plane.q1 = *q1;
+                sim.plane.q2 = *q2;
+            }
+            Edit::Sim(SimField::SliceFrame {
+                frame,
+                basis: Some((q1, q2)),
+            }) if SliceFrame {
+                tau1: 0.0,
+                tau2: 0.0,
+                ..*frame
+            } == SliceFrame {
+                tau1: 0.0,
+                tau2: 0.0,
+                ..sim.slice.frame
+            } =>
+            {
+                sim.slice.frame = *frame;
                 sim.plane.q1 = *q1;
                 sim.plane.q2 = *q2;
             }
@@ -178,10 +198,14 @@ fn pose(
         q1,
         q2,
     };
+    // The basis is Lean each axis's, its angles stored as set beside it.
     sim.slice.frame = SliceFrame {
         normal: u32::try_from(slice_axis(a, b)).expect("an index"),
         tilt_x: u32::try_from(x).expect("an index"),
         tilt_y: u32::try_from(y).expect("an index"),
+        tilt_map: TiltMap::Lean,
+        tau1: angles.0.to_degrees(),
+        tau2: angles.1.to_degrees(),
     };
     sim
 }

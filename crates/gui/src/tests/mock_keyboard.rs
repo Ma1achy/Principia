@@ -1711,7 +1711,7 @@ fn mock_keyboard_eframe_hook_takes_the_keys() {
 }
 
 /// The Manifold view's four sections: the panel inside a 12-point margin, below a 40-point title, each section as
-/// tall as its rows (5, 7, 9, 6), 6-point gaps between; a row is 22 points where the panel has room, and the panel's
+/// tall as its rows (5, 7, 9, 7: Tilt's last the tilt map), 6-point gaps between; a row is 22 points where the panel has room, and the panel's
 /// share where it has not.
 #[test]
 fn mock_keyboard_manifold_sections() {
@@ -1721,7 +1721,7 @@ fn mock_keyboard_manifold_sections() {
         (52.0, 110.0),
         (168.0, 154.0),
         (328.0, 198.0),
-        (532.0, 132.0),
+        (532.0, 154.0),
     ]
     .map(|(y, h)| egui::Rect::from_min_size(egui::pos2(12.0, y), egui::vec2(336.0, h)));
     assert_eq!(got, want);
@@ -1730,10 +1730,10 @@ fn mock_keyboard_manifold_sections() {
         crate::explore::manifold_sections(moved),
         want.map(|r| r.translate(egui::vec2(100.0, 50.0)))
     );
-    // Short of room, the rows share what is left: 616 points, less the title and the gaps, over 27 rows.
+    // Short of room, the rows share what is left: 616 points, less the title and the gaps, over 28 rows.
     let short = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(360.0, 640.0));
     let h = crate::explore::manifold_view::row_height(short);
-    assert_eq!(h, (616.0 - 40.0 - 18.0) / 27.0);
+    assert_eq!(h, (616.0 - 40.0 - 18.0) / 28.0);
     let bottom = crate::explore::manifold_sections(short)[3].max.y;
     assert!(
         (bottom - (12.0 + 616.0)).abs() < 1e-3,
@@ -1869,6 +1869,8 @@ fn mock_keyboard_manifold_view_scopes() {
         mv::TAU2,
         mv::TILT_Y,
         mv::GAMMA,
+        mv::TILT_MAP_SHEET,
+        mv::TILT_MAP_LEAN,
         mv::RESET_TILT,
     ];
     let slice_centre: Vec<_> = mv::SLIDERS

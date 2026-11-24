@@ -308,21 +308,40 @@ fn check_refused(text: &str, param: &str) {
     }
 }
 
+/// No serde attribute in `src` (sim_config.rs) skips or defaults a field, but the slice frame's map and angles: a view
+/// saved before they were recorded reopens under Lean each axis at the angles its basis reads, the one reading of an
+/// absent field the contract gives. Any link field, or any other, defaulted fails.
+fn check_no_defaulted_field(src: &str) {
+    const ABSENT_READS: [&str; 3] = ["pub tilt_map: TiltMap,", "pub tau1: f64,", "pub tau2: f64,"];
+    let lines: Vec<&str> = src.lines().collect();
+    for (i, line) in lines.iter().enumerate() {
+        if !line.trim_start().starts_with("#[serde") {
+            continue;
+        }
+        let field = lines[i + 1..]
+            .iter()
+            .map(|l| l.trim())
+            .find(|l| !l.starts_with("#[") && !l.starts_with("///"))
+            .unwrap_or("");
+        assert!(
+            !(line.contains("skip") || line.contains("default")) || ABSENT_READS.contains(&field),
+            "sim_config.rs has `{line}` on `{field}`: a link field may be skipped or defaulted"
+        );
+    }
+}
+
 #[test]
 fn links_written_in_full() {
     let sim = config(tilted_view().plane, Window::SQUARE, Links::defaults());
     let text = export(&sim).expect("a canonical text");
     check_full(&text);
-    // No serde attribute in sim_config.rs skips or defaults a field.
-    let attributes = include_str!("../sim_config.rs")
-        .lines()
-        .filter(|l| l.trim_start().starts_with("#[serde"));
-    for line in attributes {
-        assert!(
-            !line.contains("skip") && !line.contains("default"),
-            "sim_config.rs has `{line}`: a link field may be skipped or defaulted"
-        );
-    }
+    check_no_defaulted_field(include_str!("../sim_config.rs"));
+    // Control: a defaulted link field in the same file is refused.
+    let defaulted = "    #[serde(default)]\n    pub mass: LinkChoice,\n";
+    let refused = std::panic::catch_unwind(|| {
+        check_no_defaulted_field(&format!("{}{defaulted}", include_str!("../sim_config.rs")))
+    });
+    assert!(refused.is_err(), "a defaulted link field passed the scan");
     let edit = |from: &str, to: &str| {
         let edited = text.replace(from, to);
         assert_ne!(edited, text, "the test's edit `{from}` changed nothing");

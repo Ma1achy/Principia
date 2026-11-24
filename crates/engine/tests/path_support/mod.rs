@@ -115,9 +115,13 @@ pub fn after(sim: &SimConfig, edits: &[SetField]) -> SimConfig {
     out
 }
 
-/// FNV-1a 64 of `sim`'s canonical serialisation.
+/// FNV-1a 64 of `sim`'s canonical serialisation. The slice frame's map and angles came after the
+/// baseline was recorded; at their values in `SliceFrame::along`, Tip as sheet at 0° and 0°, they are left out of the
+/// text, so a frame that holds nothing new hashes as it did then, and any other value of them still changes the key.
 pub fn key(sim: &SimConfig) -> u64 {
-    fnv(canonical::to_string(sim).expect("canonical").as_bytes())
+    let text = canonical::to_string(sim).expect("canonical");
+    let text = text.replacen(r#""tau1":0,"tau2":0,"tilt_map":"sheet","#, "", 1);
+    fnv(text.as_bytes())
 }
 
 /// `ic`'s words, in order.

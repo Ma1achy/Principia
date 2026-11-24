@@ -147,6 +147,13 @@ fn rig(scale: f32) -> Rig {
     let mut app = App::new(MockSide::new(MockEngine::new(), None), gui::capture::FORMAT);
     let mut h = Headless::new(size, scale);
     let _ = h.frame(&mut app, Vec::new());
+    // The planes here are Lean each axis's (`tilted`), the widest readout its corner's line where no plane is drawn:
+    // the slice frame says so, today's default being Tip as sheet.
+    let frame = engine::contract::sim_config::SliceFrame {
+        tilt_map: engine::contract::sim_config::TiltMap::Lean,
+        ..app.snapshot().sim.slice.frame
+    };
+    app.set_field(gui::explore::manifold_view::frame_edit(frame, None));
     let _ = h.frame(&mut app, Vec::new());
     (app, h)
 }
@@ -232,6 +239,7 @@ fn tilted(tau1: f64, tau2: f64, gamma: f64) -> View {
         tau1: tau1.to_radians(),
         tau2: tau2.to_radians(),
         gamma: gamma.to_radians(),
+        map: engine::contract::sim_config::TiltMap::Lean,
     }
 }
 
@@ -383,40 +391,42 @@ fn no_plane_shows(scale: f32, size: [f32; 2]) -> impl FnOnce() {
     move || check_whole(&output, panel, &text, &format!("{size:?} at {scale}"))
 }
 
-/// `MIN_BOTTOM_H`'s doc: the widest readout's last row shows at [`MIN_COMPASS_W`] from 169 up at 1 and 1.5 pixels per
-/// point, and from 171 at 2. A point under, it doesn't.
+/// `MIN_BOTTOM_H`'s doc: the widest readout's last row shows 336 wide from 169 up at 1 and 1.5 pixels per point, and
+/// from 171 at 2. A point under, it doesn't. (Measured 336 wide, the least width before the line named the map;
+/// the least width since, [`MIN_COMPASS_W`], only widens the column.)
 #[test]
 fn qa_m6_55_min_bottom_h_is_what_its_doc_measured() {
     for (scale, from) in [(1.0, 169.0), (1.5, 169.0), (2.0, 171.0)] {
-        no_plane_shows(scale, [MIN_COMPASS_W, from])();
+        no_plane_shows(scale, [336.0, from])();
         rejects(
             &format!("a point under {from} at {scale}"),
-            no_plane_shows(scale, [MIN_COMPASS_W, from - 1.0]),
+            no_plane_shows(scale, [336.0, from - 1.0]),
         );
     }
     const { assert!(MIN_BOTTOM_H >= 171.0) };
 }
 
-/// `MIN_COMPASS_W`'s doc: at scales 1 to 3 the same line shows from 335 up at every height from `MIN_BOTTOM_H` to 197;
-/// at 334 wide and 181 high, at 2, it leaves the view, and at 172 high it does from 325 down.
+/// `MIN_COMPASS_W`'s doc, the line citing "(Lean each axis)": at every scale offered the same line shows from
+/// 346 up at every height from `MIN_BOTTOM_H` to 197; at 344 wide and 191 high, at 2, it leaves the view, and at 336
+/// wide and 183 high, at 1.
 #[test]
 fn qa_m6_55_min_compass_w_is_what_its_doc_measured() {
     for scale in OFFERED {
         let mut high = MIN_BOTTOM_H;
         while high <= 197.0 {
-            no_plane_shows(scale, [335.0, high])();
+            no_plane_shows(scale, [346.0, high])();
             high += 1.0;
         }
     }
     rejects(
-        "334 wide and 181 high, at 2",
-        no_plane_shows(2.0, [334.0, 181.0]),
+        "344 wide and 191 high, at 2",
+        no_plane_shows(2.0, [344.0, 191.0]),
     );
     rejects(
-        "325 wide at the least height",
-        no_plane_shows(2.0, [325.0, 172.0]),
+        "336 wide and 183 high, at 1",
+        no_plane_shows(1.0, [336.0, 183.0]),
     );
-    const { assert!(MIN_COMPASS_W >= 335.0) };
+    const { assert!(MIN_COMPASS_W >= 346.0) };
 }
 
 /// `MIN_BOTTOM_H`'s doc: the physical views' help ends in view from 191 up, 195 at 2, and a point under that it doesn't,

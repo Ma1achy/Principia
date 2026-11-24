@@ -11,13 +11,16 @@ the record into the page. `--dump-dom` reads the record back; `--screenshot` tak
 reference's drawing is reimplemented here: the record is its own canvas calls, and its own `P`, `crossSection` and
 `planeSpec` for the corners and the polygon.
 
-The decoder's plane is computed here apart from the code under test: `View::basis`'s construction (`u1 = cos t1 e_a +
-sin t1 e_d`, `u2 = cos t2 e_b + sin t2 e_d`, turned by g), its normal `q1 x q2`, through z0's point 0, and the polygon
-by intersecting the plane with the cube's twelve edges and ordering the crossings by angle round their centroid in the
-orthonormalised (q1, q2).
+The decoder's plane is computed here apart from the code under test: `View::basis`'s construction under the default
+map, Tip as sheet: with both angles set into the one target, the rotation by m = sqrt(t1^2 + t2^2) about the
+in-plane axis k = (t2 e_a - t1 e_b)/m by Rodrigues' formula, `u1 = R e_a`, `u2 = R e_b`; with one angle set, Lean each
+axis's closed form, which a single tilt is under either map (`u1 = cos t1 e_a + sin t1 e_d`, `u2 = cos t2 e_b + sin t2
+e_d`); then turned by g. Its normal `q1 x q2`, through z0's point 0, and the polygon by intersecting the plane with the
+cube's twelve edges and ordering the crossings by angle round their centroid in the orthonormalised (q1, q2).
 
 Run from the repo root: `python3 -I fixtures/screenshot/01_main/compass/make_reference.py`. It writes
-`reference/<run>.json` and `reference/<run>.png` for each run, and `decoder/<case>.json` for each tilt case.
+`reference/<run>.json` and `reference/<run>.png` for each run, and `decoder/<case>.json` for each tilt case. With
+`--decoder` it writes the decoder records alone, running no browser.
 """
 
 import hashlib
@@ -169,11 +172,25 @@ def run_reference(name, mode, depth, tau1, tau2, html, scratch):
     return record
 
 
+def rodrigues(v, k, m):
+    """v turned by m radians about the unit axis k: v cos m + (k x v) sin m + k (k . v)(1 - cos m)."""
+    kv = sum(a * b for a, b in zip(k, v))
+    kxv = (k[1] * v[2] - k[2] * v[1], k[2] * v[0] - k[0] * v[2], k[0] * v[1] - k[1] * v[0])
+    return tuple(v[i] * math.cos(m) + kxv[i] * math.sin(m) + k[i] * kv * (1.0 - math.cos(m)) for i in range(3))
+
+
 def decoder_plane(tau1, tau2, gamma):
-    """View::basis's plane at (tau1, tau2, gamma) degrees, sigma 1, through z0's point 0, in the frame (e_a, e_b, e_d)."""
+    """View::basis's plane at (tau1, tau2, gamma) degrees, sigma 1, both angles into e_d under Tip as sheet, through
+    z0's point 0, in the frame (e_a, e_b, e_d)."""
     t1, t2, g = (math.radians(x) for x in (tau1, tau2, gamma))
-    u1 = (math.cos(t1), 0.0, math.sin(t1))
-    u2 = (0.0, math.cos(t2), math.sin(t2))
+    if t1 != 0.0 and t2 != 0.0:
+        m = math.hypot(t1, t2)
+        k = (t2 / m, -t1 / m, 0.0)
+        u1 = rodrigues((1.0, 0.0, 0.0), k, m)
+        u2 = rodrigues((0.0, 1.0, 0.0), k, m)
+    else:
+        u1 = (math.cos(t1), 0.0, math.sin(t1))
+        u2 = (0.0, math.cos(t2), math.sin(t2))
     q1 = tuple(math.cos(g) * a + math.sin(g) * b for a, b in zip(u1, u2))
     q2 = tuple(math.cos(g) * b - math.sin(g) * a for a, b in zip(u1, u2))
     n = (q1[1] * q2[2] - q1[2] * q2[1], q1[2] * q2[0] - q1[0] * q2[2], q1[0] * q2[1] - q1[1] * q2[0])
@@ -217,14 +234,15 @@ def main():
     made = {
         "reference": "docs/gui/reference/principia_nav_cube.html",
         "sha256": digest,
-        "browser": version(),
+        "browser": version() if "--decoder" not in sys.argv[1:] else None,
         "how": "make_reference.py: the reference run headless, its state set to the run, one draw() recorded",
         "square_points": SIDE,
     }
     os.makedirs(os.path.join(HERE, "reference"), exist_ok=True)
     os.makedirs(os.path.join(HERE, "decoder"), exist_ok=True)
+    runs = {} if "--decoder" in sys.argv[1:] else RUNS
     with tempfile.TemporaryDirectory() as scratch:
-        for name, (mode, depth, tau1, tau2) in RUNS.items():
+        for name, (mode, depth, tau1, tau2) in runs.items():
             record = run_reference(name, mode, depth, tau1, tau2, html, scratch)
             record["made"] = dict(made, parameters={"mode": mode, "depth": depth, "tau1": tau1, "tau2": tau2,
                                                     "names": NAMES})

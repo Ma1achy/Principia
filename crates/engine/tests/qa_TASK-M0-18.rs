@@ -66,11 +66,12 @@ fn render() -> RenderState {
 /// OUT's port 0, as `{ nodes, wires }` in id order, each member in byte order (gui_state_contract §2), and, since
 /// TASK-M6-46, the debug view, off at launch, `debug_view` sorting first (R-467 D5; gui_state_contract §2), and, since
 /// TASK-M2-37, the chart's axis mappings, both `warped` by default, `mapping` sorting before `window` (R-471 E2;
-/// REQ-CHART-068).
+/// REQ-CHART-068), and, since TASK-M6-48, the slice frame's tilt map, Tip as sheet by default, and its two angles as set,
+/// 0, `tau1` and `tau2` sorting before `tilt_map`.
 const SIM_TEXT: &str =
     "{\"chart\":{\"mapping\":[\"warped\",\"warped\"],\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]}},\"collision\":{},\"horizon\":{\"t\":0},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"periodic_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\
-\"plane\":{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]},\"quality\":{},\"slice\":{\"frame\":{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5}}}";
+\"plane\":{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]},\"quality\":{},\"slice\":{\"frame\":{\"normal\":5,\"tau1\":0,\"tau2\":0,\"tilt_map\":\"sheet\",\"tilt_x\":5,\"tilt_y\":5}}}";
 const RENDER_TEXT: &str = "{\"debug_view\":false,\"hover\":{\"at\":null},\
 \"overlays\":{\"burrau_lattice\":false,\"class_edges\":false,\"depth_colouring\":false,\"energy_drift\":false,\
 \"forbidden_region\":false,\"grid\":false,\"nan_invalid_pixels\":false,\"priority_heatmap\":false,\
@@ -124,7 +125,7 @@ validation::negative_control!(
     "the declaration-order text must fail the canonical-text check",
     expected = "is not its groups in byte order",
     check_skeleton(
-        "{\"chart\":{\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]},\"mapping\":[\"warped\",\"warped\"]},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{\"frame\":{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5}},\
+        "{\"chart\":{\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]},\"mapping\":[\"warped\",\"warped\"]},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{\"frame\":{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5,\"tilt_map\":\"sheet\",\"tau1\":0,\"tau2\":0}},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"periodic_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\"integrator\":{},\
 \"kernel_variant\":\"physics\",\"horizon\":{\"t\":0},\"collision\":{},\"quality\":{}}",
         RENDER_TEXT

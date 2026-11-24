@@ -48,20 +48,22 @@ pub const MIN_TOP_H: f32 = 590.0;
 pub const MIN_CANVAS_W: f32 = 240.0;
 /// The bottom row's least height, in points: the compass's cube, its buttons and its widest readout, and Time's
 /// transport, whole in one view (J2; R-705). The widest readout is tilt mode's with its line where no plane is drawn, in
-/// any view (measured at [`MIN_COMPASS_W`]: its last row shows from 169 up at 1 and 1.5 pixels per point, from 171 at 2;
+/// any view (measured 336 wide, a wider compass only widening the column: its last row shows from 169 up at 1 and 1.5 pixels per point, from 171 at 2;
 /// the tilted Plücker line and the physical views' widest, a stretch in scientific form, show well under this). The
 /// hint or help under the readout need not be whole here: the column scrolls inside the panel, and the focus on the
-/// compass element brings its end into view (measured at [`MIN_COMPASS_W`], at 1 and 1.5 pixels per point: the Jacobi
+/// compass element brings its end into view (measured 336 wide, at 1 and 1.5 pixels per point: the Jacobi
 /// view's help is whole at this height and 173, leaves the view from 174, the taller cube narrowing the column until
 /// its readout wraps to two rows, and returns from 191; the Shape view's ends in view only from 191; at 2 pixels per
 /// point both only from 195; and the longest column, under the readout just named, from 203, 207 at 2).
 pub const MIN_BOTTOM_H: f32 = 172.0;
 /// The compass's least width, in points: its cube, its buttons beside it and its widest readout, whole in one view (J2;
 /// R-705). The same readout as [`MIN_BOTTOM_H`]'s decides it, at every height the bottom row can take, since a taller
-/// cube narrows the column until it reaches half this width (measured, at scales 1 to 3: from 335 up its last row
-/// shows at every height from [`MIN_BOTTOM_H`] to the artboard's window's 197; at 334 wide and 181 high, at 2 pixels per
-/// point, it leaves the view, and at 172 high it does from 325 down).
-pub const MIN_COMPASS_W: f32 = 336.0;
+/// cube narrows the column until it reaches half this width. Measured with the line where no plane is drawn citing
+/// "(Lean each axis)", widths 330 to 372 in steps of 2, every height from [`MIN_BOTTOM_H`] to the artboard's
+/// window's 197, at 1, 1.5 and 2 pixels per point: its last row leaves the view up to 340 wide at 1 and 1.5 pixels per
+/// point (at 336, from 183 high) and up to 344 at 2, and shows from 346 up at every height, at every scale offered
+/// (1 to 3, `qa_m6_55_min_compass_w_is_what_its_doc_measured`).
+pub const MIN_COMPASS_W: f32 = 346.0;
 /// Time's least width, in points: its transport row, the speed slider and its value, whole (J2; measured: the speed's
 /// value passes the edge below 336).
 pub const MIN_TIME_W: f32 = 340.0;

@@ -32,7 +32,9 @@ use eframe::egui::{
     UiBuilder,
 };
 use engine::contract::set_field::{Edit, SetField, SimField};
-use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig, SliceFrame, LATENT_DIM};
+use engine::contract::sim_config::{
+    Latent, Lock, Plane, SimConfig, SliceFrame, TiltMap, LATENT_DIM,
+};
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::Window;
 
@@ -176,6 +178,10 @@ pub const TAU2: ScopeId = "tau2";
 pub const TILT_Y: ScopeId = "tilt_y";
 /// The rotation `γ`.
 pub const GAMMA: ScopeId = "gamma";
+/// The tilt map's radio "Tip as sheet", after `γ`.
+pub const TILT_MAP_SHEET: ScopeId = "tilt_map_sheet";
+/// The tilt map's radio "Lean each axis".
+pub const TILT_MAP_LEAN: ScopeId = "tilt_map_lean";
 /// Tilt's reset, the last element of its sub-scope (R-466 K6).
 pub const RESET_TILT: ScopeId = "reset_tilt";
 /// `τ₁`'s dropdown's entries, one per latent dimension; it holds the six [`target_choices`] offers.
@@ -188,8 +194,8 @@ pub const TILT_Y_ENTRIES: [ScopeId; LATENT_DIM] = [
 ];
 
 /// The rows each section takes, header included: Chart 5; Navigate 7 (centre, zoom, depth, precision, the lock badge
-/// and its anchor); Slice centre 9; Tilt 6 (`τ₁` and its target, `τ₂` and its target, `γ`).
-pub const SECTION_ROWS: [usize; 4] = [5, 7, 9, 6];
+/// and its anchor); Slice centre 9; Tilt 7 (`τ₁` and its target, `τ₂` and its target, `γ`, the tilt map).
+pub const SECTION_ROWS: [usize; 4] = [5, 7, 9, 7];
 /// The height the Manifold view's title and subtitle take above its sections, in points.
 pub const TITLE_H: f32 = 40.0;
 /// The gap between the sections, in points.
@@ -286,6 +292,14 @@ pub fn join(tree: &mut ScopeTree) {
     tree.register(Some(TILT), Scope::value(TAU2, "τ₂", Angle));
     tree.register(Some(TILT), Scope::menu(TILT_Y, "tilt τ₂ into"));
     tree.register(Some(TILT), Scope::value(GAMMA, "γ", Angle));
+    tree.register(
+        Some(TILT),
+        Scope::control(TILT_MAP_SHEET, TiltMap::Sheet.name()),
+    );
+    tree.register(
+        Some(TILT),
+        Scope::control(TILT_MAP_LEAN, TiltMap::Lean.name()),
+    );
     tree.register(Some(TILT), Scope::control(RESET_TILT, reset::RESET));
     for (key, action) in SHORTCUTS {
         tree.register_shortcut(key, action);
@@ -465,6 +479,43 @@ fn tilted_axes(
     (keeps_more && !misplaced(i, j)).then_some((i, j))
 }
 
+/// The frame's three hidden dimensions `[d, X, Y]` on the axes `(a, b)`: each as the frame holds it, or as the slice axis
+/// where it is one of `a`, `b` or no latent dimension, or with no frame ([`slice_axis`]).
+fn hidden_on(frame: Option<&SliceFrame>, a: usize, b: usize) -> [usize; 3] {
+    let axis = slice_axis(a, b);
+    let on = |i: Option<u32>| {
+        i.and_then(|i| usize::try_from(i).ok())
+            .filter(|&i| i < LATENT_DIM && i != a && i != b)
+            .unwrap_or(axis)
+    };
+    [
+        on(frame.map(|f| f.normal)),
+        on(frame.map(|f| f.tilt_x)),
+        on(frame.map(|f| f.tilt_y)),
+    ]
+}
+
+/// What of a basis may differ from the one a view's angles give and the angles still stand, as [`READS_BACK`] measures
+/// it: an angle off by about 10⁻¹² rad, the resets' home tolerance, so an angle the resets tell from 0 is never hidden
+/// by stored angles that no longer give the basis; rounding, a few ulps, is far below it.
+pub const STANDS: f64 = 1e-24;
+
+/// How far, in degrees, a reading's angle may be from the stored one and still be it: the rounding of reading an angle
+/// off a basis, `atan2` of components each within a few ulps, about 10⁻¹⁴°, with room.
+pub const ANGLE_READS_BACK: f64 = 1e-9;
+
+/// `radians` in degrees as stored: the value to 10⁻⁹° where that value turns back into exactly `radians`, so an angle set
+/// as 150° and held in radians writes back 150°, not `150.00000000000003`; else `radians.to_degrees()`.
+pub fn degrees(radians: f64) -> f64 {
+    let raw = radians.to_degrees();
+    let round = (raw * 1e9).round() / 1e9;
+    if round.to_radians() == radians {
+        round + 0.0
+    } else {
+        raw
+    }
+}
+
 /// The rotation `γ` of `q1`, `q2` as the axes `(a, b)` read it, and the two turned back by it: `(γ, σ u₁, σ u₂)` for a
 /// basis [`View::basis`] gives, whose `σ u₁` is on `e_a` and `e_X` alone and `σ u₂` on `e_b` and `e_Y` alone.
 fn turned_back(a: usize, b: usize, q1: &Latent, q2: &Latent) -> (f64, Latent, Latent) {
@@ -503,6 +554,8 @@ pub struct View {
     pub tau2: f64,
     /// The rotation `γ`, in radians.
     pub gamma: f64,
+    /// The tilt map with one target and both angles set: Tip as sheet, the default, or Lean each axis.
+    pub map: TiltMap,
 }
 
 impl View {
@@ -535,22 +588,24 @@ impl View {
     /// having both as typed (R-705). Such a basis reads in its dominant axes' frame, whatever the sign of its determinant and
     /// whichever way round its axes lie. A mirrored basis whose swapped order reads it back is no such basis: it is in the
     /// map's image, and `tilted_axes` keeps it there.
+    ///
+    /// With a frame, the map is the frame's and its stored angles are read as [`View::stood`] reads them: as set, where
+    /// they give the basis. With none there is no stored map or angles, and the view is the reading's own, Lean each
+    /// axis, whose image the reading reads ([`View::of`]).
     pub fn framed(plane: &Plane, frame: Option<&SliceFrame>) -> Self {
+        let read = Self::reading(plane, frame);
+        match frame {
+            None => read,
+            Some(f) => Self::stood(plane, f, read),
+        }
+    }
+
+    /// The reading of `plane`'s basis on `frame`'s axes and targets as Lean each axis reads it, each angle in
+    /// `[−90°, 90°]`: what [`View::framed`] read before the tilt map, its map Lean each axis.
+    fn reading(plane: &Plane, frame: Option<&SliceFrame>) -> Self {
         let (q1, q2) = (&plane.q1, &plane.q2);
         let total = dot(q1, q1) + dot(q2, q2);
-        let hidden = |a: usize, b: usize| -> [usize; 3] {
-            let axis = slice_axis(a, b);
-            let on = |i: Option<u32>| {
-                i.and_then(|i| usize::try_from(i).ok())
-                    .filter(|&i| i < LATENT_DIM && i != a && i != b)
-                    .unwrap_or(axis)
-            };
-            [
-                on(frame.map(|f| f.normal)),
-                on(frame.map(|f| f.tilt_x)),
-                on(frame.map(|f| f.tilt_y)),
-            ]
-        };
+        let hidden = |a: usize, b: usize| hidden_on(frame, a, b);
         let holds = |a: usize, b: usize| -> bool {
             let [_, x, y] = hidden(a, b);
             (0..LATENT_DIM)
@@ -654,12 +709,26 @@ impl View {
             tau1: sin1.atan2(cos1) + 0.0,
             tau2: sin2.atan2(cos2) + 0.0,
             gamma: gamma + 0.0,
+            map: TiltMap::Lean,
         }
     }
 
     /// The basis `(q₁, q₂)` of this view: `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_Y`, turned by `γ`
     /// and scaled by `σ` (R-457 E1).
+    ///
+    /// Under Tip as sheet with one target and both angles set it is the kernel's rotation by `m = √(τ₁² + τ₂²)` about
+    /// `(τ₂ e_a − τ₁ e_b)/m`, wrapped in total tip past 180° ([`SliceFrame::latent_basis`]): the one
+    /// case where the maps differ (R2). Every other view takes Lean each axis's arithmetic, bit for bit as before.
     pub fn basis(&self) -> (Latent, Latent) {
+        if self.sheet() {
+            let index = |i: usize| u32::try_from(i).unwrap_or(u32::MAX);
+            if let Some(basis) =
+                self.frame()
+                    .latent_basis(index(self.a), index(self.b), self.scale, self.gamma)
+            {
+                return basis;
+            }
+        }
         let (s1, c1) = self.tau1.sin_cos();
         let (s2, c2) = self.tau2.sin_cos();
         let (sg, cg) = self.gamma.sin_cos();
@@ -670,14 +739,169 @@ impl View {
         (q1, q2)
     }
 
-    /// The slice frame this view is read with.
+    /// Whether the maps differ on this view and it takes Tip as sheet's rotation: the map Tip as sheet, one target, both
+    /// angles set.
+    pub fn sheet(&self) -> bool {
+        self.map == TiltMap::Sheet && self.x == self.y && self.tau1 != 0.0 && self.tau2 != 0.0
+    }
+
+    /// The slice frame this view is read with: its normal, targets and map, and its angles in degrees ([`degrees`]).
     pub fn frame(&self) -> SliceFrame {
         let index = |i: usize| u32::try_from(i).expect("a latent index");
         SliceFrame {
             normal: index(self.d),
             tilt_x: index(self.x),
             tilt_y: index(self.y),
+            tilt_map: self.map,
+            tau1: degrees(self.tau1),
+            tau2: degrees(self.tau2),
         }
+    }
+
+    /// Whether this view gives `plane`'s basis, to rounding: the squared difference within [`STANDS`] of the basis's
+    /// squared length.
+    pub fn gives(&self, plane: &Plane) -> bool {
+        let total = dot(&plane.q1, &plane.q1) + dot(&plane.q2, &plane.q2);
+        lost(self, &plane.q1, &plane.q2, &|_| true) <= STANDS * total
+    }
+
+    /// `read`, the reading of `plane`'s basis on `frame`, with the frame's map, and the frame's stored angles where they
+    /// stand (the rule in `SliceFrame`'s note): `read` itself where it gives the basis at the stored angles, to
+    /// rounding, so a view the reading holds keeps its bits; else the view at the stored angles, as set, on the axes
+    /// that give the basis, at its own scale and rotation ([`View::at_angles`]). Where they do not stand, the basis's own
+    /// angles: the reading where it gives the basis and the maps agree on it, else, under Tip as sheet with one target,
+    /// the angles its normal reads ([`View::sheet_read`]), else the reading, a basis no angles give.
+    fn stood(plane: &Plane, frame: &SliceFrame, read: Self) -> Self {
+        let read = Self {
+            map: frame.tilt_map,
+            ..read
+        };
+        let stored = (frame.tau1, frame.tau2);
+        let near = |rad: f64, deg: f64| (rad.to_degrees() - deg).abs() <= ANGLE_READS_BACK;
+        let holds = read.gives(plane);
+        if holds && near(read.tau1, stored.0) && near(read.tau2, stored.1) {
+            return read;
+        }
+        if stored.0.is_finite() && stored.1.is_finite() {
+            if let Some(view) = Self::at_angles(plane, frame, &read, stored) {
+                return view;
+            }
+        }
+        // Where the maps differ on the reading, several angles give one basis under Tip as sheet; its own read-back,
+        // the normal's, keeps the reading's `γ` where it can, so it comes first.
+        if holds && !read.sheet() {
+            return read;
+        }
+        Self::sheet_read(plane, frame, &read).unwrap_or(read)
+    }
+
+    /// The axes `(a, b)` a view of `plane` on `frame` may lie on: the reading's, then the two the basis has anything on
+    /// off the targets, either way round (past 90° of tip the determinant on them is negative).
+    fn candidates(plane: &Plane, frame: &SliceFrame, read: &Self) -> Vec<(usize, usize)> {
+        let target =
+            |i: usize| i64::from(frame.tilt_x) == i as i64 || i64::from(frame.tilt_y) == i as i64;
+        let on: Vec<usize> = (0..LATENT_DIM)
+            .filter(|&i| !target(i) && (plane.q1[i] != 0.0 || plane.q2[i] != 0.0))
+            .collect();
+        let mut out = vec![(read.a, read.b)];
+        if let [i, j] = on[..] {
+            for pair in [(i, j), (j, i)] {
+                if !out.contains(&pair) {
+                    out.push(pair);
+                }
+            }
+        }
+        out
+    }
+
+    /// The view of `plane` on `frame` at the angles `(τ₁, τ₂)` in degrees, on the first of the [`View::candidates`] axes
+    /// where it gives the basis: its scale `σ` and rotation `γ` the least-squares fit of `q₁ = σ(cos γ û₁ + sin γ û₂)`,
+    /// `q₂ = σ(cos γ û₂ − sin γ û₁)` to the map's untilted columns `û₁`, `û₂` at those angles. `None` where none gives it.
+    fn at_angles(
+        plane: &Plane,
+        frame: &SliceFrame,
+        read: &Self,
+        (t1, t2): (f64, f64),
+    ) -> Option<Self> {
+        Self::candidates(plane, frame, read)
+            .into_iter()
+            .find_map(|(a, b)| {
+                let [d, x, y] = hidden_on(Some(frame), a, b);
+                let preset = if (a, b) == (read.a, read.b) {
+                    read.preset
+                } else {
+                    PRESETS.iter().position(|&p| p == (a, b)).filter(|_| {
+                        [frame.normal, frame.tilt_x, frame.tilt_y]
+                            .into_iter()
+                            .all(|i| usize::try_from(i).is_ok_and(|i| i != a && i != b))
+                    })
+                };
+                let unit = Self {
+                    preset,
+                    a,
+                    b,
+                    d,
+                    x,
+                    y,
+                    scale: 1.0,
+                    tau1: t1.to_radians(),
+                    tau2: t2.to_radians(),
+                    gamma: 0.0,
+                    map: frame.tilt_map,
+                };
+                let (u1, u2) = unit.basis();
+                let (q1, q2) = (&plane.q1, &plane.q2);
+                let norms = dot(&u1, &u1) + dot(&u2, &u2);
+                let c = (dot(q1, &u1) + dot(q2, &u2)) / norms;
+                let s = (dot(q1, &u2) - dot(q2, &u1)) / norms;
+                let view = Self {
+                    scale: c.hypot(s),
+                    gamma: s.atan2(c) + 0.0,
+                    ..unit
+                };
+                view.gives(plane).then_some(view)
+            })
+    }
+
+    /// Tip as sheet's read-back with one target: on each of the [`View::candidates`] axes whose 3-space `(e_a, e_b, e_X)`
+    /// holds the basis, its normal `n = q₁ × q₂` is `R e_X = (−τ₁ sin m/m, −τ₂ sin m/m, cos m)`, so the total tip is
+    /// `m = atan2(|(n_a, n_b)|, n_X)` in `[0°, 180°]` and `(τ₁, τ₂) = −m (n_a, n_b)/|(n_a, n_b)|`; the view at those angles
+    /// where it gives the basis ([`View::at_angles`]); of those the one with the least `|γ|`, the first on a tie: past 90°
+    /// of tip the axes either way round give the basis, the swapped ones at `180° − m` and `γ` turned by 180°, and the
+    /// reading, which picks its axes by the determinant's sign, would read the swapped. `None` under Lean each axis,
+    /// with two targets, at `m = 0` or 180° (no direction), or where no axes give it.
+    fn sheet_read(plane: &Plane, frame: &SliceFrame, read: &Self) -> Option<Self> {
+        if frame.tilt_map != TiltMap::Sheet || frame.tilt_x != frame.tilt_y {
+            return None;
+        }
+        let (q1, q2) = (&plane.q1, &plane.q2);
+        let fits = Self::candidates(plane, frame, read)
+            .into_iter()
+            .filter_map(|(a, b)| {
+                let [_, x, _] = hidden_on(Some(frame), a, b);
+                if (0..LATENT_DIM)
+                    .any(|i| ![a, b, x].contains(&i) && (q1[i] != 0.0 || q2[i] != 0.0))
+                {
+                    return None;
+                }
+                let n = [
+                    q1[b] * q2[x] - q1[x] * q2[b],
+                    q1[x] * q2[a] - q1[a] * q2[x],
+                    q1[a] * q2[b] - q1[b] * q2[a],
+                ];
+                let side = n[0].hypot(n[1]);
+                if side == 0.0 {
+                    return None;
+                }
+                let m = side.atan2(n[2]).to_degrees();
+                let angles = (-m * n[0] / side, -m * n[1] / side);
+                let only = Self { a, b, ..*read };
+                Self::at_angles(plane, frame, &only, angles).filter(|v| (v.a, v.b) == (a, b))
+            });
+        fits.fold(None, |best: Option<Self>, v| match best {
+            Some(b) if b.gamma.abs() <= v.gamma.abs() => Some(b),
+            _ => Some(v),
+        })
     }
 
     /// The zoom, in log₂: `−log₂ σ`. Absolute, as the depth readout counts it; the zoom row reads [`View::zoom_row`].
@@ -745,6 +969,31 @@ pub fn plane_s(q1: &Latent, q2: &Latent) -> f64 {
 /// its own sine test beside it.
 pub(crate) fn spans_no_plane(plane: &Plane) -> bool {
     plane_s(&plane.q1, &plane.q2) < PLANE_S_CUT
+}
+
+/// How far apart two planes may be and still be one: the squared distance of each unit basis vector from the other
+/// plane, the floating point's noise with room (the comparison is of planes, not of a calibrated quantity).
+pub const SAME_PLANE: f64 = 1e-20;
+
+/// Whether the bases `p` and `q` span the same plane, compared up to sign: each unit vector of one lies in
+/// the span of the other, so a mirrored basis or a turned one is the same plane. `false` where either spans no plane.
+/// A readout's comparison: nothing it compares is written back.
+pub fn same_plane(p: (&Latent, &Latent), q: (&Latent, &Latent)) -> bool {
+    let within = |v: &Latent, (a, b): (&Latent, &Latent)| -> Option<f64> {
+        let plane = Plane {
+            z0: [0.0; LATENT_DIM],
+            q1: *a,
+            q2: *b,
+        };
+        let n = norm(v);
+        let unit = v.map(|x| x / n);
+        let (s, t) = chart_coords(&plane, &unit)?;
+        let back = point(&plane, s, t);
+        Some(back.iter().zip(&unit).map(|(x, y)| (x - y).powi(2)).sum())
+    };
+    [(p.0, q), (p.1, q), (q.0, p), (q.1, p)]
+        .into_iter()
+        .all(|(v, plane)| norm(v) > 0.0 && within(v, plane).is_some_and(|d| d <= SAME_PLANE))
 }
 
 /// The in-plane coordinates of `z` along `q̂₁` and `q̂₂`, the unit basis directions: the `(u, v)` with `z`'s projection
@@ -884,6 +1133,7 @@ pub fn frame_on(frame: SliceFrame, a: usize, b: usize) -> SliceFrame {
         normal,
         tilt_x: target(frame.tilt_x),
         tilt_y: target(frame.tilt_y),
+        ..frame
     }
 }
 
@@ -1128,6 +1378,7 @@ impl Out {
                     .collect(),
                 Sent::Command => edits.to_vec(),
             };
+            let command = agreeing(command, &state);
             for edit in &command {
                 written(&mut state, edit);
             }
@@ -1148,6 +1399,61 @@ impl Out {
             written(&mut state, edit);
         }
         state
+    }
+}
+
+/// `command`, made against `sim`, with each edit that writes the basis carrying the angles that give it (the rule
+/// in `SliceFrame`'s note): where the stored angles no longer give the basis the edit leaves, the edit becomes one of the
+/// slice frame with the angles read back from that basis ([`tilt::Angles::read`]), carrying the basis, in the same
+/// history entry; any other edit, or one the stored angles still give, as it is. Each edit is read against the state the
+/// earlier ones leave.
+///
+/// The plan is unclear here: a basis no angles give under the map (a typed component off the frame, or under Tip as
+/// sheet a basis on one target that is no rigid turn) has no angles that give it. Chose to store the read-back angles
+/// then, the reading the panel shows, because the basis is the decoder's and is kept as written; a tilt from there
+/// replaces the basis by the one its angles give, as a tilt from such a basis did before the map.
+pub fn agreeing(command: Vec<SetField>, sim: &SimConfig) -> Vec<SetField> {
+    let mut state = sim.clone();
+    command
+        .into_iter()
+        .map(|edit| {
+            let edit = agreed(edit, &state);
+            written(&mut state, &edit);
+            edit
+        })
+        .collect()
+}
+
+/// [`agreeing`]'s step on one edit against `state`.
+fn agreed(edit: SetField, state: &SimConfig) -> SetField {
+    let (frame, basis, carried) = match &edit.edit {
+        Edit::Sim(SimField::Basis { q1, q2 }) => (state.slice.frame, (*q1, *q2), true),
+        Edit::Sim(SimField::SliceFrame {
+            frame,
+            basis: Some(basis),
+        }) => (*frame, *basis, true),
+        Edit::Sim(SimField::SliceFrame { frame, basis: None }) => {
+            (*frame, (state.plane.q1, state.plane.q2), false)
+        }
+        _ => return edit,
+    };
+    let mut next = state.clone();
+    next.slice.frame = frame;
+    (next.plane.q1, next.plane.q2) = basis;
+    let read = tilt::Angles::read(&next);
+    if read.tau1.to_bits() == frame.tau1.to_bits() && read.tau2.to_bits() == frame.tau2.to_bits() {
+        return edit;
+    }
+    SetField {
+        edit: Edit::Sim(SimField::SliceFrame {
+            frame: SliceFrame {
+                tau1: read.tau1,
+                tau2: read.tau2,
+                ..frame
+            },
+            basis: carried.then_some(basis),
+        }),
+        no_history: edit.no_history,
     }
 }
 
@@ -1194,6 +1500,16 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
         }
     }
     match id {
+        TILT_MAP_SHEET | TILT_MAP_LEAN => {
+            let map = if id == TILT_MAP_SHEET {
+                TiltMap::Sheet
+            } else {
+                TiltMap::Lean
+            };
+            if let Some(edit) = tilt::map_edit(sim, map) {
+                out.edit(edit, Some(Touch::Tilt), scratch);
+            }
+        }
         PRESET => {
             let next = view.preset.map_or(0, |p| (p + 1) % PRESETS.len());
             out.edit(chart::preset_edit(sim, view, next), None, scratch);
@@ -1261,8 +1577,8 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
         ),
         ZOOM => out.edit(navigate::zoom_by(plane, octaves), None, scratch),
         TAU1 | TAU2 | GAMMA => {
-            let mut to = tilt::Angles::of(&view);
-            to.turn(id, degrees);
+            let mut to = tilt::Angles::read(sim);
+            to.turn(id, degrees, view.map);
             let edit = dispatch::one(plane, Class::Tilt { from: view, to });
             out.edit(edit, Some(Touch::Tilt), scratch);
         }

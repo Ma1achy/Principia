@@ -123,11 +123,26 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
     Part 4), default `Sheet`. It is chart construction, as the targets are: undoable, one history entry, sending the
     basis with it where the basis changes; serialised as `tilt_map=sheet|lean`; a state, saved view or export with no
     such field, from before R-474, reads as `Lean`, the map it was made with.
-  - *8 Nov 2026 (R-896, RQ-747 (a)):* the slice frame also stores the latent chart's two tilt angles as set, beside
-    `tilt_map` (`SliceFrame` gains the two angles; their field names are TASK-M6-48's), always written: chart construction,
-    undone in the same history entry as the basis, carried in saved views and exports (R-474 R5); the rotation is computed
-    from them (R-474 R3, K3). The rule for a route that writes the basis other than through the angles is a definition
-    TASK-M6-48 writes here (R-72; REQ-GUI-430).
+  - The slice frame also stores the latent chart's two tilt angles as set, beside `tilt_map`: `SliceFrame { normal,
+    tilt_x, tilt_y, tilt_map, tau1, tau2 }`, `tau1` and `tau2` in degrees, always written (a record with none reads them
+    as 0, and the rule below takes the basis's own angles there): chart construction, undone in the same history entry
+    as the basis, carried in saved views and exports; the rotation is computed from them, wrapped only in total tip at
+    360°, and the sliders show the angles set, never a read-back past 180°. A tilt sends one `SetField` on the slice
+    frame carrying the angles asked for and the basis the tilt leaf gives.
+  - **The rule for a route that writes the basis other than through the angles** (the typed basis, the compass's
+    steers and picks, the presets, the Tilt reset, Home, a zoom, a target or normal pick, the map's choice): the stored
+    angles stand while they give the basis, on the frame's axes and targets under its map, at the basis's own scale and
+    rotation, to rounding (squared difference within 10⁻²⁴ of the basis's squared length, an angle off by about
+    10⁻¹² rad, the resets' home tolerance). A route whose basis they no
+    longer give writes, in the same `SetField` and so the same history entry, the angles read back from the new basis:
+    the GUI's reading where it gives the basis and the maps agree on it, else under Tip as sheet with one target the
+    angles its normal gives (`m = atan2(|(n_a, n_b)|, n_X)` in `[0°, 180°]`, `(τ₁, τ₂) = −m (n_a, n_b)/|(n_a, n_b)|`),
+    on the axes either way round, the one with the least `|γ|` (past 90° of tip the swapped axes give the basis too, at
+    `180° − m`, `γ` turned by 180°), else the reading. A basis no angles give under the map (a typed component off the frame, or under Tip as sheet a
+    basis on one target that is no rigid turn) keeps the reading's angles beside it, as the panel shows them; the basis
+    is the decoder's and is kept as written, and a tilt from there replaces it by the one its angles give. The rule is
+    applied where the GUI sends (`Out::sends` and the resets' commands), so no engine edit sees a stale pair. *(Under
+    physics review.)*
   - A curved chart's tilt (R-473) is part of `SimConfig`'s chart params: the angles, the targets (indices of its hidden
     coordinates) and the map, from which the CPU computes the rotation `R` the kernel reads. A sim key.
   - Each energy-type axis's mapping, `warped | linear` (R-471), is part of `SimConfig`'s chart params, a sim key,

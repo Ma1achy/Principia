@@ -687,6 +687,28 @@ fn check_full(text: &str) {
     }
 }
 
+/// No serde attribute in `src` skips or defaults a field, but the slice frame's `tilt_map`, `tau1` and `tau2`.
+fn check_no_defaulted_field(src: &str) {
+    let lines: Vec<&str> = src.lines().collect();
+    for (i, l) in lines.iter().enumerate() {
+        if !l.trim_start().starts_with("#[serde") {
+            continue;
+        }
+        let field = lines[i + 1..]
+            .iter()
+            .map(|l| l.trim())
+            .find(|l| !l.starts_with("#[") && !l.starts_with("///"))
+            .unwrap_or("");
+        let slice_frame =
+            ["pub tilt_map: TiltMap,", "pub tau1: f64,", "pub tau2: f64,"].contains(&field);
+        assert!(
+            slice_frame || (!l.contains("skip_serializing") && !l.contains("default")),
+            "sim_config.rs has `{}`",
+            l.trim()
+        );
+    }
+}
+
 #[test]
 fn qa_links_written_in_full() {
     let mut view = tilted();
@@ -698,19 +720,16 @@ fn qa_links_written_in_full() {
         text.contains("\"mu_max\"") && text.contains("\"q_max\""),
         "the links are not written in full: {text}"
     );
-    // No serde attribute in the file defining Links and LinkChoice skips or defaults a field.
+    // No serde attribute in the file defining Links and LinkChoice skips or defaults a field, but the slice frame's map
+    // and angles, which a view saved before them reads as Lean each axis at 0: no link field.
     let src =
         std::fs::read_to_string(crates_dir().join("engine/src/contract/sim_config.rs")).unwrap();
-    for l in src
-        .lines()
-        .filter(|l| l.trim_start().starts_with("#[serde"))
-    {
-        assert!(
-            !l.contains("skip_serializing") && !l.contains("default"),
-            "sim_config.rs has `{}`",
-            l.trim()
-        );
-    }
+    check_no_defaulted_field(&src);
+    let defaulted = format!("{src}    #[serde(default)]\n    pub mass: LinkChoice,\n");
+    assert!(
+        std::panic::catch_unwind(|| check_no_defaulted_field(&defaulted)).is_err(),
+        "a defaulted link field passed the scan"
+    );
     // Removing any one parameter, or any one block's id, is refused.
     let v: Value = serde_json::from_str(&text).unwrap();
     for (name, _) in BLOCKS {

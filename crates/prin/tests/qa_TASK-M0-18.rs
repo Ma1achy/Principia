@@ -159,7 +159,8 @@ fn raw_member<'a>(object_text: &'a str, key: &str) -> &'a str {
 /// `render`, `scenario`, `sim`, as telemetry §5 lists them), no whitespace, the frame count a number. The groups are
 /// gui_state_contract §2's, each named and empty at M0 (TASK-M0-16), but for the plane and the lock, whose
 /// fields (R-390) a scenario leaves all zero and unlocked, the stain graph, the backbone alone (§2), and, since
-/// TASK-M6-46, the debug view, off at launch (R-467 D5; gui_state_contract §2).
+/// TASK-M6-46, the debug view, off at launch (gui_state_contract §2), and, since TASK-M6-48, the slice frame's
+/// tilt map, Tip as sheet, and its two angles as set, 0.
 fn expected_config_text(frames: u64) -> String {
     format!(
         concat!(
@@ -181,7 +182,7 @@ fn expected_config_text(frames: u64) -> String {
             "\"kernel_variant\":\"physics\",\"links\":{{\"alpha\":{{\"id\":\"sigmoid_alpha\",\"params\":{{}}}},\"beta\":{{\"id\":\"periodic_beta\",\"params\":{{}}}},\"mass\":{{\"id\":\"softmax_tanh\",\"params\":{{\"mu_max\":5}}}},\"momenta\":{{\"id\":\"sigmoid_q\",\"params\":{{\"q_max\":2}}}}}},",
             "\"lock\":{{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]}},",
             "\"plane\":{{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]}},",
-            "\"quality\":{{}},\"slice\":{{\"frame\":{{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5}}}}}}}}"
+            "\"quality\":{{}},\"slice\":{{\"frame\":{{\"normal\":5,\"tau1\":0,\"tau2\":0,\"tilt_map\":\"sheet\",\"tilt_x\":5,\"tilt_y\":5}}}}}}}}"
         ),
         frames
     )
