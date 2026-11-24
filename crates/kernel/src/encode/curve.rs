@@ -29,8 +29,8 @@
 //!
 //! **The landing on the curve** ([`project`], kind 4 (a) and (b)): on the curve where `ν(θ)` lies in the span and
 //! `d(ν(θ)) ≤ tol`, the argmin bypassed; else projected to `ν*` where `d(ν*) ≤ tol`; else latent `z`, `E(x)`'s, always
-//! available (Part 6 case 3). `d` is reported in every case. `tol` is the caller's, a tolerance still to calibrate,
-//! proposed with its evidence in `fixtures/gates/curve_projection/`.
+//! available (Part 6 case 3). `d` is reported in every case. `tol` is the caller's, a proposed tolerance, provisional,
+//! with its evidence in `fixtures/gates/curve_projection/`.
 //!
 //! **Past the span's edge, and the fold** (dd_encode §3.1, §3.4). The curve axis of every Burrau chart,
 //! `ν`, or `θ` on the acute-angle charts, is bounded (chart_reference §5.4): past its edge the chart shows no system.

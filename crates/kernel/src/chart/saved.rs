@@ -51,7 +51,7 @@
 //! [`PARAMS`] words ([`ParentParams`]): its form, which of its registry entry's charts it is, then its params, the
 //! rest `+0`. A word list that is not one of these, or holds a non-finite value, reads as `None`; params that are not
 //! the named parent's are refused on reopening. The plan is unclear on this layout; chose the kernel's own, because
-//! the export format (the embedded payload and the exported view state) names what a saved chart carries, not how.
+//! chart_reference §1.1 and the export format name what a saved chart carries, not how its words are laid out.
 //!
 //! **The version, and an old file converted on load.** Kinds 0 and 1
 //! are the same layouts written before latent `β` became periodic, their `z_β` made under a retired `β` link
@@ -63,8 +63,8 @@
 //! other parent stores a latent `z_β`. A definition whose plane runs along `z_β`, which the retired link made curved
 //! in the periodic coordinate, is refused rather than approximated by a plane: an oblique chart
 //! with `q₁[1]` or `q₂[1]` nonzero, a mixed chart with a raw `z_β` axis, a curved chart tilted into `z_β`.
-//! The plan is unclear here; chose to refuse rather than approximate, because an approximated chart would not decode
-//! the saved view.
+//! A plane's components along `z_β` are directions, which the link cannot convert: such a plane is redefined in the
+//! new coordinates, not converted (dd_decoder §3.2, "How a stored value converts").
 //!
 //! **The parent's params** ([`ParentParams`]): each value field in declaration order, an enum as its index in
 //! declaration order ([`Mapping`], [`ShapeMap`]), a body or other index as itself; each type-level parameter as a

@@ -49,7 +49,11 @@
 //!
 //! **The branch inputs** (gpu_determinism_note, "The discipline", rules 1, 2, 4 and 6). The kernel builds this
 //! module to f32 SPIR-V, so every float that decides a branch or a select is built in a fixed form, every sum of
-//! products an explicit `fma`, and no `±∞` or NaN literal is written. Each divisor a select guards is itself selected
+//! products an explicit `fma`, and no `±∞` or NaN literal is written. An explicit `fma` stops one compiler contracting
+//! where another does not, but it does not make a branch input agree across backends (rule 6: lavapipe rounds the
+//! product, then the add, and Metal flushes subnormals), so the `fma`-built inputs below, the Gram determinant and
+//! `‖n⊥‖²`, can fork between backends near their thresholds; rule 6's form is `IeeeBits::product`'s, as `super::curve`
+//! builds its distances. Each divisor a select guards is itself selected
 //! as 1 there, so no `x/0` is formed:
 //! - **The landing**, in [`encode_into`]: the caller's norm against the caller's `ε_phys`, `d ≤ ε_phys`, so a NaN `d`
 //!   lands in latent `z`; `placed`'s finiteness test on each coordinate.

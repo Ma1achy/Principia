@@ -29,7 +29,7 @@
 //! **Feasibility is inherited** (inverse_encode_contract § "Chart-aware validation", layer 2: "Mixed-axis charts inherit
 //! both axes' constraints"). Each axis has its own check, and the chart's is their conjunction: a latent coordinate
 //! takes any finite `z`, which the decoder accepts, and a derived quantity must lie in its domain, its link's
-//! codomain, closed (`α ∈ [0, π/2]`, `β ∈ [0, π]`, each momentum component in `[−q_max, q_max]`;
+//! codomain, closed (`α ∈ [0, π/2]`, `β ∈ [0, 2π̂]`, one period, each momentum component in `[−q_max, q_max]`;
 //! [`Constraint::AxisDomain`]). A value past its domain is clamped onto it, the coordinate snapped to where the axis
 //! meets the edge, as layer 1 clamps an input past the decoder's range (`lookup_clamped`), and `moved` says which axes
 //! moved; a non-finite coordinate, or an axis whose range has no width to clamp along, is rejected. Layer 3 holds by the
