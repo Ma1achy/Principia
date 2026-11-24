@@ -1,26 +1,26 @@
-//! QA tests for TASK-M3-14's R-972 arms (RQ-791 (d) + (a)), written from REQ-INT-039's verify and REQ-PAY-032's clause,
-//! at f32, the payload's precision, read through the generated read side (`sim_state_from_ftle`) as the fragment's twin.
-//! Each name carries `shadow_own_projection`, so the task's acceptance command for REQ-INT-039,
-//! `cargo test -p kernel shadow_own_projection`, runs them.
+//! QA tests for the shadow's own projection: a collision only the shadow sees, and a shadow that starts on its sample,
+//! whose failed sum marks `ftle` invalid. At f32, the payload's precision, read through the generated read side
+//! (`sim_state_from_ftle`) as the fragment's twin. Each name carries `shadow_own_projection`, so
+//! `cargo test -p kernel shadow_own_projection` runs them.
 //!
-//! - `qa_m314_shadow_own_projection_shadow_only_collision` (REQ-INT-039, R-972 (d)): at a nonzero `r_coll` that only the
+//! - `qa_m314_shadow_own_projection_shadow_only_collision`: at a nonzero `r_coll` that only the
 //!   shadow comes inside, the shadow's detector fires, and every stored field (the sample's and the shadow's `r_sh`,
 //!   `p_sh`, `S`) is bit for bit that of the same run with the shadow's collision test removed; the sample is no
 //!   collision; the shadow renormalised; `ftle_valid` stays true and `ftle` finite. Control: a shadow whose collision
 //!   ends its march.
-//! - `qa_m314_shadow_own_projection_coincident_shadow` (REQ-INT-039, REQ-PAY-032, R-972 (a), R-79): a shadow whose
+//! - `qa_m314_shadow_own_projection_coincident_shadow`: a shadow whose
 //!   `‖δ₀‖` is below f32's resolution at the sample's state starts on the sample, so `δ = 0` and its sum is `−∞`, at the
 //!   first renormalisation or only in the finalised sum: a healthy sample (bitwise the base tier's) stores no NaN or
 //!   infinity, its `S` is `S_FAILED_BITS`; `ftle_valid` is false and `ftle` NaN. Control: the mark read as valid
-//!   (`ftle_valid` without R-972's clause).
-//! - `qa_m314_shadow_own_projection_aggregate_drops` (REQ-INT-039, REQ-PAY-032, R-255): a mean over `ftle` taken by
+//!   (`ftle_valid` without its clause on `S`).
+//! - `qa_m314_shadow_own_projection_aggregate_drops`: a mean over `ftle` taken by
 //!   `ftle_valid` over healthy samples and the failed-sum one equals the healthy samples' mean and counts them only.
 //!   Control: the same mean where the mark is read as valid.
 //!
 //! **Domain** (pitfalls §10): Yoshida-4 at f32, the close pair at separation 0.03 over the sim key at `t = 1`, `r_coll`
 //! a nonzero radius placed between the sample's and the shadow's least separations, or below both.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176).
+//! Each test has a registered negative control naming the panic it expects.
 
 use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
@@ -79,7 +79,7 @@ fn generated(s: &SimStateFTLE, rp: &ReadParams) -> (f32, bool) {
     (read.ftle, read.ftle_valid)
 }
 
-/// `ftle_valid` as before R-972, its clause on `S` dropped (the control's reader): the mark read as a sum.
+/// `ftle_valid` with its clause on `S` dropped (the control's reader): the mark read as a sum.
 #[cfg(feature = "controls")]
 fn without_clause(s: &SimStateFTLE, rp: &ReadParams) -> (f32, bool) {
     let n = tm_t_end_step(s.times);
@@ -149,7 +149,7 @@ fn run(
     (shadow.write(out), shadow.cadence().detector().fired())
 }
 
-// ── qa_m314_shadow_own_projection_shadow_only_collision (REQ-INT-039; R-972 (d)) ──────────────────────────────────
+// ── qa_m314_shadow_own_projection_shadow_only_collision ──────────────────────────────────────────────────────────
 
 fn pair_params() -> BenettinParams<f32> {
     BenettinParams {
@@ -252,7 +252,7 @@ negative_control!(
     })
 );
 
-// ── qa_m314_shadow_own_projection_coincident_shadow (REQ-INT-039, REQ-PAY-032; R-972 (a), R-79) ──────────────────
+// ── qa_m314_shadow_own_projection_coincident_shadow ──────────────────────────────────────────────────────────────
 
 /// `‖δ₀‖ = 10⁻¹²`: each offset component, `±5·10⁻¹³`, is far below half an ulp of the pair's positions (`ulp(0.015) ≈
 /// 9.3·10⁻¹⁰`), so the shadow starts on the sample.
@@ -344,7 +344,7 @@ negative_control!(
     check_coincident_shadow(without_clause)
 );
 
-// ── qa_m314_shadow_own_projection_aggregate_drops (REQ-INT-039, REQ-PAY-032; R-255) ─────────────────────────────
+// ── qa_m314_shadow_own_projection_aggregate_drops ────────────────────────────────────────────────────────────────
 
 /// The mean of `ftle` over the samples whose `ftle_valid` holds, and how many there are.
 fn mean_by_validity(samples: &[(SimStateFTLE, ReadParams)], read: Reader) -> (f64, usize) {
