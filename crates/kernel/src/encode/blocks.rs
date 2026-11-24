@@ -1,4 +1,4 @@
-//! The block inverses (inverse-encode contract Part 3; dd_encode §3.1; REQ-ENC-007), each with its forward mate in
+//! The block inverses (inverse-encode contract Part 3; dd_encode §3.1), each with its forward mate in
 //! `crate::decode`, on a state `C` has put on the canonical section:
 //!
 //! ```text
@@ -15,9 +15,9 @@
 //! `momentum::to_particles`), `α` and `β` ([`alpha`], [`beta`]), and the clamp tests ([`clamps`], [`SimplexClamp`]).
 //! `M₀₁` is the mass block's one rounding, `fma(m₁, 1, m₀)` (`mass::from_masses`).
 //!
-//! **`β`** ([`beta_at`], [`beta`]; R-437, R-865, R-898; dd_encode §3.1, §3.2). `C` has no mirror step, so `λ̃_y` keeps
+//! **`β`** ([`beta_at`], [`beta`]; dd_encode §3.1, §3.2). `C` has no mirror step, so `λ̃_y` keeps
 //! its sign and `β` is the signed angle of `λ̃` from `+x`, reduced to one period, `[0, 2π̂]`: a state above the `x`-axis
-//! reads `β ∈ (0, π)`, one below it `β ∈ (π, 2π]`, `π̂` being R-417's image of π (`descriptor::pi_image`) and
+//! reads `β ∈ (0, π)`, one below it `β ∈ (π, 2π]`, `π̂` being the registry's image of π (`descriptor::pi_image`) and
 //! `τ̂ = 2π̂`, exact.
 //!
 //! **The case is not read off the floats.** A collinear state's rotated `λ̃_y` is a rounding residue whose sign turns
@@ -29,7 +29,7 @@
 //! - `λ̃_y` decided 0 elsewhere, the `+x` half-axis and the `α = 0` pole: `+0`, never `atan2(0, 0)`;
 //! - `λ̃_y` decided below 0, the lower half: `τ̂ − a`, in `(π, 2π̂]` to rounding;
 //! - `λ̃_y` decided above 0: `a` where it is above 0, `π̂` where it is above `π̂` (near the `−x` half-axis an f32
-//!   `atan2` that rounds to nearest gives f32's nearest π, above `π̂`; C8/Q5, dd_encode §3.1), and `+0` where it is not
+//!   `atan2` that rounds to nearest gives f32's nearest π, above `π̂`; dd_encode §3.1), and `+0` where it is not
 //!   above 0.
 //!
 //! `a = atan2(|λ̃_y|, x′)` is the angle from `+x` on the decided side, in `[0, π]`: `x′` is `|λ̃_x|` with the decided
@@ -47,15 +47,11 @@
 //! (`LambdaSigns::of_floats`): exact on those operands, for a caller with no state `C` saw. [`invert_at`], given a
 //! state and no decision, decides on that state as `C` would (`crate::canon::lambda_signs`).
 //!
-//! *Was (to TASK-M2-57's physics review):* every case chosen by comparing the rotated float `λ̃_x`, `λ̃_y` with 0.
+//! `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole on the section, where `‖ρ̃‖² + ‖λ̃‖² = I = 1`; its operands are both 0 only
+//! where `C` could not reach `I = 1`, all three bodies coinciding, which keeps `C`'s select (divisor 1, `λ = 1`,
+//! `p = 0`, `lookup_clamped`, `φ = +0`).
 //!
-//! *Was (R-438):* "`β = atan2(|λ̃_y|, λ̃_x)`
-//! ∈ [0, π]: `C`'s deadband leaves `λ̃_y ∈ [−δ_λ, 0]` unmirrored (R-82), and `β ∈ [0, π]` holds because `β` reads
-//! `|λ̃_y|`". `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole on the
-//! section, where `‖ρ̃‖² + ‖λ̃‖² = I = 1`; its operands are both 0 only where `C` could not reach `I = 1`, all three
-//! bodies coinciding, which keeps `C`'s select (divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0`; R-547).
-//!
-//! **The clamp tests** (`lookup_clamped`, REQ-ENC-014; inverse-encode Parts 3 and 6). A control's bit is set iff its
+//! **The clamp tests** (`lookup_clamped`; inverse-encode Parts 3 and 6). A control's bit is set iff its
 //! input lay outside what its link's inverse takes unclamped:
 //! - **A bounded or symmetric control** (`α`, `β`, the four `q`; [`clamps`]): the input `v` lies outside the closed
 //!   range the decode reaches from the clamped controls, `[f(f⁻¹(a)), f(f⁻¹(b))]`, `f` the link's forward, `f⁻¹` its
@@ -75,7 +71,7 @@
 //!   few ulps short of the edge, moving `z` only by rounding, and is no clamp to flag. The outer clamp of `N(v)/N(w)`
 //!   likewise holds an exact corner, which [`guard`] keeps out, and on the open simplex moves only rounding.
 //!
-//! **The simplex corner** (registry note, TASK-M2-01 qa (c)): the simplex inverses divide `0` by `0` at an exact
+//! **The simplex corner** (the registry's note): the simplex inverses divide `0` by `0` at an exact
 //! corner, which SPIR-V's `FMax` leaves undefined. So a mass that is not positive is selected as the smallest positive
 //! normal before the inverse and its clamp test ([`guard`]): every ratio is then finite, and a mass on an edge or
 //! corner is clamped and flagged. The section's masses are positive (inverse-encode Part 6, "Mass simplex").
@@ -125,7 +121,7 @@ pub struct Jacobi<R> {
 
 /// The Jacobi coordinates of `ic` (dd_decoder §3.2, §3.4; inverse-encode Part 3): `ρ = r₁ − r₀`,
 /// `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`, each weighted by its reduced mass's root, and `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p₂`, with
-/// no mass unweighting of the momenta (R-28). `Σpᵢ = 0` is consumed, not assumed: `p₀` is not read. `λ̃` is
+/// no mass unweighting of the momenta. `Σpᵢ = 0` is consumed, not assumed: `p₀` is not read. `λ̃` is
 /// [`lambda_t_axis`] on each axis, the arithmetic `C`'s recorded `λ̃_y` reads.
 #[inline]
 pub fn jacobi<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Jacobi<R> {
@@ -148,7 +144,7 @@ pub fn jacobi<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Jacobi<R> {
 }
 
 /// `α = atan2(‖λ̃‖, ‖ρ̃‖)`, on `[0, π/2]` (no pole on the section, the module's note). `atan2` is
-/// [`crate::arctan`]'s (RQ-628): at f32 the kernel's own, so the fragment's `α` is the CPU's, bit for bit.
+/// [`crate::arctan`]'s: at f32 the kernel's own, so the fragment's `α` is the CPU's, bit for bit.
 #[inline]
 pub fn alpha<R: LinkReal>(rho_t: [R; 2], lambda_t: [R; 2]) -> R {
     Real::arctan2(norm(lambda_t), norm(rho_t))
@@ -157,7 +153,7 @@ pub fn alpha<R: LinkReal>(rho_t: [R; 2], lambda_t: [R; 2]) -> R {
 /// `β` of `λ̃` at the decided `signs` of its components (the module's note): `π̂` on the `−x` half-axis and `+0` on the
 /// `+x` half-axis and at the `α = 0` pole, with no `atan2`; elsewhere `a = atan2(|λ̃_y|, x′)`, `x′` being `|λ̃_x|` with
 /// the decided sign, read as `τ̂ − a` below the axis and as `a`, held to `[+0, π̂]`, above it. A NaN operand gives NaN.
-/// `atan2` is [`crate::arctan`]'s (RQ-628), as [`alpha`]'s.
+/// `atan2` is [`crate::arctan`]'s, as [`alpha`]'s.
 #[inline]
 pub fn beta_at<R: LinkReal + IeeeBits>(lambda_t: [R; 2], signs: LambdaSigns) -> R {
     let zero = R::zero();
@@ -177,8 +173,8 @@ pub fn beta_at<R: LinkReal + IeeeBits>(lambda_t: [R; 2], signs: LambdaSigns) -> 
     select(x.nan_bits() | y.nan_bits(), nan, decided)
 }
 
-/// `β` of a given `λ̃` alone: [`beta_at`] at the operands' own signs, each compared with 0, which `±0` pass alike
-/// (R-437). In `[0, 2π̂]`: `atan2(λ̃_y, λ̃_x)`, `+ τ̂` below the `x`-axis.
+/// `β` of a given `λ̃` alone: [`beta_at`] at the operands' own signs, each compared with 0, which `±0` pass alike. In
+/// `[0, 2π̂]`: `atan2(λ̃_y, λ̃_x)`, `+ τ̂` below the `x`-axis.
 #[inline]
 pub fn beta<R: LinkReal + IeeeBits>(lambda_t: [R; 2]) -> R {
     beta_at(lambda_t, LambdaSigns::of_floats(lambda_t))
@@ -197,8 +193,8 @@ pub trait Ends {
     }
 }
 
-/// `α`'s `[α_min, π/2 − α_min]` (dd_decoder §3.2, R-21), read as `α_min` and the registry's literal `π/2`
-/// (`LIT_6`, R-417's image, rounded toward zero at f32), which lies at or past the upper end for every `α_min ≥ 0`.
+/// `α`'s `[α_min, π/2 − α_min]` (dd_decoder §3.2), read as `α_min` and the registry's literal `π/2`
+/// (`LIT_6`, rounded toward zero at f32), which lies at or past the upper end for every `α_min ≥ 0`.
 impl Ends for Alpha {
     #[inline]
     fn ends<R: LinkReal>() -> (R, R) {
@@ -206,8 +202,8 @@ impl Ends for Alpha {
     }
 }
 
-/// `β`'s one period, `[0, τ̂]`, `τ̂ = 2π̂`: the circle has no clamp, and the periodic link, the offset onto it
-/// (R-1020), has no edge, so every `β` [`beta`] reads lies in the range and `z_β`'s clamp bit is never set (R-898; REQ-DEC-056).
+/// `β`'s one period, `[0, τ̂]`, `τ̂ = 2π̂`: the circle has no clamp, and the periodic link, the offset onto it,
+/// has no edge, so every `β` [`beta`] reads lies in the range and `z_β`'s clamp bit is never set.
 impl Ends for Beta {
     #[inline]
     fn ends<R: LinkReal>() -> (R, R) {
@@ -216,7 +212,7 @@ impl Ends for Beta {
     }
 }
 
-/// The momenta's `[−q_max, q_max]`, at the active `q_max` (R-10's default; R-481 A2, G4).
+/// The momenta's `[−q_max, q_max]`, at the active `q_max`.
 impl Ends for Momentum {
     #[inline]
     fn ends<R: LinkReal>() -> (R, R) {
@@ -242,8 +238,7 @@ where
 }
 
 /// [`clamps`] at the tunable parameters `p`: the ends, the forward and the inverse at the active values, so a momentum
-/// past the active `q_max` is clamped and flagged, encode's layer 1 (inverse-encode § "Chart-aware validation"; R-481
-/// G4).
+/// past the active `q_max` is clamped and flagged, encode's layer 1 (inverse-encode § "Chart-aware validation").
 #[inline]
 pub fn clamps_at<L, R>(v: R, p: &LinkParams<R>) -> bool
 where
@@ -277,7 +272,7 @@ pub trait SimplexClamp: Link<2, 3> {
 }
 
 /// `μₖ = log(mₖ/m₀)` against `±(1 − ε_μ)·μ_max` (inverse-encode Part 3), as the registry's inverse forms both, at the
-/// active `μ_max` (R-481 G4).
+/// active `μ_max`.
 impl SimplexClamp for SoftmaxTanh {
     #[inline]
     fn clamps<R: LinkReal>(m: [R; 3]) -> u32 {
@@ -306,8 +301,8 @@ fn stick_clamps<R: LinkReal>(v: R, w: R) -> bool {
     !(((two * v - shift) >= floor) & ((two * w - shift) >= floor))
 }
 
-/// Each of the two clamps of the registry's R-72 entry, as its inverse forms them: `(v, w) = (m₁ + m₂, m₀)`, then
-/// `(m₂, m₁)`.
+/// Each of the two clamps of the registry's stick-breaking entry, as its inverse forms them: `(v, w) = (m₁ + m₂, m₀)`,
+/// then `(m₂, m₁)`.
 impl SimplexClamp for StickBreaking {
     #[inline]
     fn clamps<R: LinkReal>(m: [R; 3]) -> u32 {
@@ -356,8 +351,8 @@ where
     invert_at::<S, R>(ic, &LinkParams::DEFAULT)
 }
 
-/// [`invert`] at the tunable parameters `p`: each inverse and each clamp test at the active `μ_max` and `q_max`
-/// (R-481 A2, G4; REQ-DEC-048). `β`'s case is decided on `ic` itself, as `C` decides it on its input
+/// [`invert`] at the tunable parameters `p`: each inverse and each clamp test at the active `μ_max` and `q_max`.
+/// `β`'s case is decided on `ic` itself, as `C` decides it on its input
 /// (`crate::canon::lambda_signs`); [`invert_decided_at`] takes a decision already made.
 #[inline]
 pub fn invert_at<S, R>(ic: &Ic<R>, p: &LinkParams<R>) -> Inverted<R>

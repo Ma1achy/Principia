@@ -1,5 +1,5 @@
-//! Kind 4, the coupled curve: the Burrau family's encode (inverse_encode_contract Part 5 kind 4; dd_encode §3.1, §3.4;
-//! R-24, R-27; REQ-ENC-011, REQ-ENC-017, REQ-ENC-020, REQ-ENC-022). The family's systems lie on the embed
+//! Kind 4, the coupled curve: the Burrau family's encode (inverse_encode_contract Part 5 kind 4; dd_encode §3.1, §3.4).
+//! The family's systems lie on the embed
 //! `γ : ν ↦ (configuration, masses)` (`crate::chart::burrau::embed`), and encode reads `ν` off `C(x)` two ways.
 //!
 //! **(a) On the curve, the closed form** ([`closed_form`]). `C(x)`'s triangle has legs `a = ‖r₁ − r₀‖`,
@@ -10,18 +10,18 @@
 //! differences. Whether `x` is on the curve is decided by the projection metric at `ν(θ)` (below): its mass term is 0
 //! exactly where the coupling holds and the triangle is `γ(ν)`'s.
 //!
-//! **(b) Off the curve, the projection** ([`nearest`]; dd_encode §3.4; R-24). `ν* = argmin_ν d²(ν)` with
+//! **(b) Off the curve, the projection** ([`nearest`]; dd_encode §3.4). `ν* = argmin_ν d²(ν)` with
 //!
 //! ```text
 //! d²(ν) = ‖n(α, β) − n(α_γ(ν), β_γ(ν))‖² + ‖m − m_γ(ν)‖²
 //! ```
 //!
 //! the shape sphere's chordal distance ⊕ the mass simplex's Euclidean one, unit weights. `n(α, β)` is `C(x)`'s shape
-//! point, `crate::shape::shape_vec` of its mass-weighted Jacobi vectors, `w` signed ([`state_point`]): `C` no longer
-//! mirrors (R-865), so a lower-half state's point is on the lower hemisphere, the mirror image of the upper one's, a
+//! point, `crate::shape::shape_vec` of its mass-weighted Jacobi vectors, `w` signed ([`state_point`]): `C` does not
+//! mirror, so a lower-half state's point is on the lower hemisphere, the mirror image of the upper one's, a
 //! distinct system that is not on the curve; the embed's points are on the upper hemisphere by construction (`ρ̃` on
-//! `+x`, `λ̃_y > 0` for `ν ∈ (0, 1)`). *Was:* "`w` read as `|w|` as `β` reads `|λ̃_y|` (R-438), so the point is on the
-//! upper hemisphere where the embed's are". `n(α_γ(ν), β_γ(ν))` is the embed's, through the same Jacobi weighting and
+//! `+x`, `λ̃_y > 0` for `ν ∈ (0, 1)`).
+//! `n(α_γ(ν), β_γ(ν))` is the embed's, through the same Jacobi weighting and
 //! the same map ([`curve_point`]). The search runs over the chart's own `ν` span ([`CurveChart::nu_span`]): a grid of
 //! [`GRID`] + 1 points, the span's edges included, then golden-section steps ([`GOLDEN_STEPS`], a fixed count) inside
 //! the best grid point's two neighbouring cells, and `ν*` the better of the two searches, so an edge minimum is the
@@ -29,15 +29,15 @@
 //!
 //! **The landing on the curve** ([`project`], kind 4 (a) and (b)): on the curve where `ν(θ)` lies in the span and
 //! `d(ν(θ)) ≤ tol`, the argmin bypassed; else projected to `ν*` where `d(ν*) ≤ tol`; else latent `z`, `E(x)`'s, always
-//! available (Part 6 case 3). `d` is reported in every case. `tol` is the caller's, REQ-ENC-026's calibration (R-71),
+//! available (Part 6 case 3). `d` is reported in every case. `tol` is the caller's, a calibrated tolerance,
 //! proposed with its evidence in `fixtures/gates/curve_projection/`.
 //!
-//! **Past the span's edge, and the fold** (dd_encode §3.1, §3.4; REQ-ENC-022). The curve axis of every Burrau chart,
+//! **Past the span's edge, and the fold** (dd_encode §3.1, §3.4). The curve axis of every Burrau chart,
 //! `ν`, or `θ` on the acute-angle charts, is bounded (chart_reference §5.4): past its edge the chart shows no system.
-//! (`K` continues past `t = 1`, R-508, and `L_z` and δm are affine: those axes are read unbounded.) So a `ν` past the
+//! (`K` continues past `t = 1`, and `L_z` and δm are affine: those axes are read unbounded.) So a `ν` past the
 //! span is no chart point: the closed form does not land there, and the search does not leave the span. An input at
 //! `θ > π/4` on a folded chart is the leg-swapped twin of a fold shape, bodies 1 and 2 exchanged, a distinct labelled
-//! system (R-27): encode does not relabel it. Its closed-form `ν` is below `√2 − 1`, past the fold's end, and it falls
+//! system: encode does not relabel it. Its closed-form `ν` is below `√2 − 1`, past the fold's end, and it falls
 //! back to latent `z`, unless the fold's end is within `tol` of it; [`ClosedForm::past_fold`] flags it.
 //!
 //! **Into the active chart** ([`ByKind`] for the Burrau charts; dd_encode §3.1, "The composition"). Kind 4 supplies the
@@ -49,10 +49,11 @@
 //! against latent, as for every chart: `d` does not see the momentum. A chart landing needs both. The curve encode,
 //! `past_fold` among it, goes to the caller in `ChartEncoded::curve`; `by_kind::encode_into` is `tol = 0`, where
 //! rounding alone puts `d > 0` on the curve and a curve chart places essentially no state, so the lookup calls the
-//! `_within` forms at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4). The δm strip, whose masses
-//! leave the curve's off its `v = 0` row, reads `θ` off the triangle alone; the projection does not apply there.
+//! `_within` forms at the calibrated curve-projection tolerance (inverse_encode_contract Part 6, step 4). The δm strip,
+//! whose masses leave the curve's off its `v = 0` row, reads `θ` off the triangle alone; the projection does not apply
+//! there.
 //!
-//! **The branch inputs** (gpu_determinism_note, "The discipline"; the human's ruling on RQ-298, 21 Oct 2026: a branch
+//! **The branch inputs** (gpu_determinism_note, "The discipline": a branch
 //! input that must agree across backends is built only from operations every IEEE backend rounds alike, with no
 //! intermediate that can be subnormal, `IeeeBits::product`'s form the pattern). Every distance a comparison reads is a
 //! squared distance or a squared length built by [`sq`]: a difference below [`floor`], `2^⌊e/4⌋` for the precision's
@@ -112,15 +113,14 @@ pub const GOLDEN_STEPS: u32 = constants::CURVE_GOLDEN_STEPS;
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Point<R> {
     /// The shape point, `w` signed: on the upper hemisphere for the embed's points, on the lower for a lower-half
-    /// state (R-865).
+    /// state.
     pub n: [R; 3],
     /// The masses.
     pub m: [R; 3],
 }
 
 /// The metric's point of the state `ic` (the module's note): its shape point by the encode's Jacobi weighting
-/// (`super::blocks::jacobi`) and `crate::shape::shape_vec`, `w` signed (R-865), and its masses. *Was:* "`w` as
-/// `|w|`".
+/// (`super::blocks::jacobi`) and `crate::shape::shape_vec`, `w` signed, and its masses.
 #[inline]
 pub fn state_point<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Point<R> {
     let j = blocks::jacobi(ic);
@@ -155,7 +155,7 @@ pub fn sq<R: IeeeBits + Float>(x: R) -> R {
     x.product(x)
 }
 
-/// `d²` between `x` and `y` (R-24): `Σ (nₖ − n′ₖ)² + Σ (mᵢ − m′ᵢ)²`, unit weights, each square [`sq`], added in that
+/// `d²` between `x` and `y`: `Σ (nₖ − n′ₖ)² + Σ (mᵢ − m′ᵢ)²`, unit weights, each square [`sq`], added in that
 /// order.
 #[inline]
 pub fn distance2<R: IeeeBits + Float>(x: &Point<R>, y: &Point<R>) -> R {
@@ -182,7 +182,7 @@ pub struct ClosedForm<R> {
     pub nu: R,
     /// The coupling's differences, `(log(m₁/m₀) − log(b/c), log(m₂/m₀) − log(a/c))`: both 0 on the curve.
     pub coupling: [R; 2],
-    /// `θ > π/4`, decided as `a² > b²`: past the fold, the leg-swapped labelling (REQ-ENC-022).
+    /// `θ > π/4`, decided as `a² > b²`: past the fold, the leg-swapped labelling.
     pub past_fold: bool,
 }
 
@@ -243,7 +243,7 @@ fn better<R: Float>(best: (R, R), candidate: (R, R)) -> (R, R) {
 
 /// `ν*`, the curve's nearest point to `x` over `span = [lo, hi]`, `lo ≤ hi` (the module's note): the grid, then the
 /// golden section inside the best grid point's neighbouring cells, and the better of the two. The one source of the
-/// curve axis's nearest point: every consumer calls it (R-542).
+/// curve axis's nearest point: every consumer calls it.
 pub fn nearest<R: LinkReal + IeeeBits>(x: &Point<R>, span: [R; 2]) -> Projection<R> {
     let [lo, hi] = span;
     let one = R::one();
@@ -418,7 +418,8 @@ where
     f64: From<P>,
 {
     /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
-    /// uses [`ByKind::coords_within`] at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
+    /// uses [`ByKind::coords_within`] at the calibrated curve-projection tolerance (inverse_encode_contract Part 6,
+    /// step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
         S: Selection,
@@ -468,7 +469,8 @@ where
     f64: From<P>,
 {
     /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
-    /// uses [`ByKind::coords_within`] at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
+    /// uses [`ByKind::coords_within`] at the calibrated curve-projection tolerance (inverse_encode_contract Part 6,
+    /// step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
         S: Selection,
@@ -519,7 +521,8 @@ where
     f64: From<P>,
 {
     /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
-    /// uses [`ByKind::coords_within`] at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
+    /// uses [`ByKind::coords_within`] at the calibrated curve-projection tolerance (inverse_encode_contract Part 6,
+    /// step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
         S: Selection,
@@ -573,7 +576,8 @@ where
     f64: From<P>,
 {
     /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
-    /// uses [`ByKind::coords_within`] at REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
+    /// uses [`ByKind::coords_within`] at the calibrated curve-projection tolerance (inverse_encode_contract Part 6,
+    /// step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
         S: Selection,
