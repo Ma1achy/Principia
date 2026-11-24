@@ -1,13 +1,13 @@
-//! `prin profile` (render_gui_spec § "Profiler", "For agents, the same data structured"; telemetry §5):
+//! `prin profile` (render_gui_spec § "Profiler"; the file format is telemetry §5):
 //!
 //! - `prin profile --scenario NAME --frames N --json PATH` runs a registered, fixed, deterministic scenario headless
-//!   and writes one profiler schema v1 file, JSON Lines (R-286) — [`run`];
+//!   and writes one profiler schema v1 file, JSON Lines — [`run`];
 //! - `prin profile diff BASE NEW --threshold P%` exits non-zero when NEW regresses on BASE by more than P% in any
-//!   scope's p95 (REQ-TOOL-119) — [`diff`];
-//! - `prin profile show PATH [--pretty]` prints a trace, each line indented with `--pretty` (R-286) — [`show`].
+//!   scope's p95 — [`diff`];
+//! - `prin profile show PATH [--pretty]` prints a trace, each line indented with `--pretty` — [`show`].
 //!
 //! Exit status: 0 on success (and on a diff with no regression), 1 on a regression, 2 on a usage or read error, or a
-//! diff whose BASE or NEW has no frame records (R-323, R-328).
+//! diff whose BASE or NEW has no frame records.
 
 mod diff;
 mod run;
@@ -27,7 +27,7 @@ pub struct ProfileArgs {
     /// The registered scenario to run: synthetic_frames.
     #[arg(long, required = true, value_name = "NAME")]
     scenario: Option<String>,
-    /// How many frames to run: a u32, so the header writes it as a JSON number (R-327).
+    /// How many frames to run: a u32, so the header writes it as a JSON number.
     #[arg(long, required = true, value_name = "N")]
     frames: Option<u32>,
     /// Where to write the trace: profiler schema v1, JSON Lines.

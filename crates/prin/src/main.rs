@@ -1,8 +1,7 @@
-//! `prin`, the command-line interface (systems_architecture §7.1: depends on `engine`).
+//! `prin`, the command-line interface, built on `engine`.
 //!
 //! `prin profile` runs a registered scenario headless and writes profiler schema v1, `prin profile diff` compares two
-//! traces, and `prin profile show` prints one (render_gui_spec § "Profiler", "For agents, the same data structured";
-//! TASK-M0-18).
+//! traces, and `prin profile show` prints one.
 
 mod profile;
 

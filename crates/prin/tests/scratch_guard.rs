@@ -1,4 +1,4 @@
-//! The scratch guard (REQ-VAL-178, R-342) in prin's tests: its tests, shared with the other crates'.
+//! The scratch guard's own tests, shared with the other crates', run in prin's tests.
 
 #[path = "../../validation/tests/support/scratch.rs"]
 mod scratch;

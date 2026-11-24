@@ -1,6 +1,5 @@
-//! Negative controls for qa's tests in `qa_TASK-M0-01.rs` (REQ-VAL-153; R-199, R-209): each runs its test's check,
-//! called from the shared module its test calls too (REQ-VAL-157; R-215), on the other argument, which the check must
-//! reject, so the test can fail (philosophy §4.4).
+//! Negative controls for the `prin --help` tests: each runs its test's check, from the support module its test calls
+//! too, on the other argument, which the check must reject, so the test can fail.
 #![cfg(feature = "controls")]
 
 #[path = "support/qa_m0_01.rs"]

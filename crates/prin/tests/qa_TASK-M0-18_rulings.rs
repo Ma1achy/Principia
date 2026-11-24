@@ -1,17 +1,15 @@
-//! QA tests for TASK-M0-18 from the rulings of 1 Oct 2026, written from their text and telemetry §5, not from the
-//! implementation:
+//! `prin profile`'s frame count and the header's core counts, written from telemetry §5, not from the code's output:
 //!
-//! - R-327: the frame count is a u32, so the header's `config.frames` is a JSON number (R-322 makes only a u64 field a
+//! - the frame count is a u32, so the header's `config.frames` is a JSON number (only a u64 field is written as a
 //!   string); `prin profile --frames N` with N past u32 is refused, a usage error (exit 2), and writes no trace.
-//! - R-329: the header's device has `cpu_cores_available` (the cores this process may use) and `cpu_cores_total` (the
+//! - the header's device has `cpu_cores_available` (the cores this process may use) and `cpu_cores_total` (the
 //!   machine's count, or `null` where the platform doesn't report it cheaply), each a count of at most 2^32 − 1, and
-//!   every key present (telemetry §5: an absent value is `null`); the old `cpu_cores` key is not schema v1, for the
-//!   typed reader or for `profile_v1.json`; the typed writer writes a `None` total as a present `null`.
+//!   every key present (an absent value is `null`); a `cpu_cores` key is not schema v1, for the typed reader or for
+//!   `profile_v1.json`; the typed writer writes a `None` total as a present `null`.
 //!
-//! R-328 (either file with no frame records exits 2) is covered by qa_TASK-M0-18_base.rs (BASE) and
-//! qa_TASK-M0-18.rs's `qa_profile_diff_new_without_frames_exits_2` (NEW). Each test here has its negative control
-//! (R-176).
-// The file name `qa_TASK-M0-18_rulings` gives a crate name that is not snake case.
+//! A BASE or NEW with no frame records is tested by `qa_profile_diff_base_without_frames_exits_2` and
+//! `qa_profile_diff_new_without_frames_exits_2`.
+// The file name gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
 use std::path::Path;
@@ -32,9 +30,8 @@ fn prin(args: &[&str]) -> Output {
         .expect("cannot run prin")
 }
 
-/// A fresh path in this test target's scratch directory.
 /// A fresh scratch file path, one per call (the process id and a per-process count): deleted when the test passes,
-/// kept with its path printed when it fails (R-342).
+/// kept with its path printed when it fails.
 fn scratch(name: &str) -> Scratch {
     Scratch::new(&format!("qa_TASK-M0-18_rulings_{name}"))
 }
@@ -78,9 +75,9 @@ fn validator(place: &str) -> jsonschema::Validator {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// R-327: the frame count
+// The frame count
 
-/// The header line's `config.frames` is the frame count as a JSON number, an integer, never a string (R-327, R-322).
+/// The header line's `config.frames` is the frame count as a JSON number, an integer, never a string.
 fn check_frames_number(head: &Value, frames: u32) {
     let got = &head["header"]["config"]["frames"];
     assert!(
@@ -142,7 +139,7 @@ validation::negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// R-329: the core counts
+// The core counts
 
 /// A run's device has `cpu_cores_available`, the cores this process may use, and `cpu_cores_total`, the machine's
 /// count (at least the available ones) or null, both within u32, and no `cpu_cores`. macOS and Linux report the
@@ -215,7 +212,7 @@ validation::negative_control!(
     }
 );
 
-/// A complete header-only trace, written by hand from telemetry §5 and R-329, with `device` as given.
+/// A complete header-only trace, written by hand from telemetry §5, with `device` as given.
 fn header_line(device: Value) -> Value {
     json!({
         "schema": "principia-profile-v1",

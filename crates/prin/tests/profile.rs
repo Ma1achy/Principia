@@ -1,6 +1,5 @@
-//! `prin profile` (TASK-M0-18): the file it writes (REQ-TOOL-002, R-286), the canonical serialisation of its config
-//! (REQ-TOOL-145, R-309), the registered scenario (REQ-TOOL-006, R-113), the diff (REQ-TOOL-007, REQ-TOOL-119), `show`
-//! (REQ-TOOL-139) and the no-GPU header (REQ-TOOL-144, R-308). Each test registers its negative control (R-176).
+//! `prin profile`: the file it writes, the canonical serialisation of its config, the registered scenario, the diff,
+//! `show`, the no-GPU header and the streamed trace.
 
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
@@ -31,7 +30,7 @@ fn prin(args: &[&str]) -> Output {
         .expect("prin does not run")
 }
 
-/// A fresh path in the tests' scratch directory; deleted when the test passes, kept when it fails (R-342).
+/// A fresh path in the tests' scratch directory; deleted when the test passes, kept when it fails.
 fn scratch(name: &str) -> Scratch {
     Scratch::new(&format!("profile-{name}"))
 }
@@ -122,8 +121,9 @@ fn fixture() -> String {
     .expect("the base trace fixture is missing")
 }
 
-/// The M0 skeleton's `SimConfig` and `RenderState` (TASK-M0-16): every group named and empty, but for the plane
-/// and the lock (R-390), all zero and unlocked, and the stain graph, the backbone alone (gui_state_contract §2).
+/// The skeleton `SimConfig` and `RenderState` a scenario leaves: the plane all zero, the lock unlocked, the horizon and
+/// the playhead at 0, the empty groups empty, the rest as their constructors give them, and the stain graph the
+/// backbone alone (gui_state_contract §2).
 fn skeleton() -> (SimConfig, RenderState) {
     (
         SimConfig {
@@ -161,9 +161,9 @@ fn skeleton() -> (SimConfig, RenderState) {
     )
 }
 
-// ----- profile_file: the written file (REQ-TOOL-002, R-286) -----
+// ----- profile_file: the written file -----
 
-/// The file is JSON Lines (telemetry §5, R-286): the header line, one compact line per frame, then the summary line,
+/// The file is JSON Lines (telemetry §5): the header line, one compact line per frame, then the summary line,
 /// each ended by a newline and each valid against its schema v1 line type; and the typed reader accepts it.
 fn check_json_lines(text: &str, frames: usize) {
     let lines = lines_of(text);
@@ -242,7 +242,7 @@ fn expected_commit() -> String {
 }
 
 /// The header line holds the build hash and the config `{"scenario", "frames", "sim", "render"}`, as text in the
-/// canonical serialisation, `SimConfig` and `RenderState` as the M0 skeleton serialises them (R-309); the two read
+/// canonical serialisation, `SimConfig` and `RenderState` as the skeleton serialises them; the two read
 /// back to the skeleton.
 fn check_provenance(header_line: &str, frames: u32, commit: &str) {
     let head: Value = serde_json::from_str(header_line).expect("the header line is not JSON");
@@ -365,7 +365,7 @@ validation::negative_control!(
     ))
 );
 
-// ----- profile_file: the canonical serialisation, JCS (REQ-TOOL-145, R-309, R-318, R-322) -----
+// ----- profile_file: the canonical serialisation, JCS -----
 //
 // JCS itself (RFC 8785's test vectors, its number format, the refusals) is engine's `canonical_jcs`; here, the
 // config's state serialises to the same bytes each time, in JCS's member order, a seed (u64) as a string.
@@ -435,7 +435,7 @@ validation::negative_control!(
     }
 );
 
-// ----- profile_scenario: the registered synthetic scenario (REQ-TOOL-006, R-113) -----
+// ----- profile_scenario: the registered synthetic scenario -----
 
 /// Each frame's scopes and events, in order: a scope as `stage/name/.../name`, an event as `stage!name`.
 fn sequence(text: &str) -> Vec<Vec<String>> {
@@ -686,7 +686,7 @@ validation::negative_control!(
     }
 );
 
-// ----- profile_diff (REQ-TOOL-007, REQ-TOOL-119) -----
+// ----- profile_diff -----
 
 /// `text` with every `integrate/quadtree` scope's ms multiplied by `factor`, so its p95 rises by `factor`.
 fn raised(text: &str, factor: f64) -> String {
@@ -1002,7 +1002,7 @@ fn scope_set_trace() -> String {
     ])
 }
 
-/// The diff's scope set and statistic (render_gui_spec § "Profiler", REQ-TOOL-119): the frame, the five stages (present
+/// The diff's scope set and statistic (render_gui_spec § "Profiler"): the frame, the five stages (present
 /// only where not null), each CPU scope by its path, each GPU pass; a scope twice in a frame summed; the p95 of two
 /// samples the larger.
 fn check_scope_set(stdout: &str) {
@@ -1095,9 +1095,9 @@ validation::negative_control!(
     })
 );
 
-// ----- profile_diff: R-323's rules -----
+// ----- profile_diff: exactness, no frames, cut-off traces -----
 
-/// The threshold compares exactly (R-323): a p95 of 100 → 107 is a rise of exactly 7%, so not a regression at
+/// The threshold compares exactly: a p95 of 100 → 107 is a rise of exactly 7%, so not a regression at
 /// `--threshold 7%`, though `(107 − 100) / 100 × 100` in doubles is 7.000000000000001; and it is one at 6.99%.
 fn check_exact(code: impl Fn(&Path, &Path, &str) -> Option<i32>) {
     let (base, new) = (one_frame(100.0, 0.0), one_frame(107.0, 0.0));
@@ -1136,8 +1136,7 @@ validation::negative_control!(
     })
 );
 
-/// A NEW with no frame records exits 2, as an unreadable file does, and says why (R-323); so does a BASE with none
-/// (R-328, physics's finding 2).
+/// A NEW with no frame records exits 2, as an unreadable file does, and says why; so does a BASE with none.
 fn check_no_frames(base: &Path, new: &Path) {
     let out = diff(base, new, "5%");
     assert_eq!(
@@ -1179,7 +1178,7 @@ validation::negative_control!(
     }
 );
 
-/// A cut-off or incomplete NEW (R-323, R-298, R-299): the diff prints "session incomplete" and the bytes dropped, then
+/// A cut-off or incomplete NEW: the diff prints "session incomplete" and the bytes dropped, then
 /// compares NEW's frames as usual, so the exit code is the comparison's.
 fn check_incomplete(new_text: &str, dropped: usize) {
     let base = write_scratch("base.jsonl", &fixture());
@@ -1252,7 +1251,7 @@ validation::negative_control!(
     check_change_text("frame: 2 -> 2.5  REGRESSION", "")
 );
 
-// ----- profile_show (REQ-TOOL-139, R-286) -----
+// ----- profile_show -----
 
 fn show(path: &Path, pretty: bool) -> Output {
     let mut args = vec!["profile", "show", path_str(path)];
@@ -1333,7 +1332,7 @@ validation::negative_control!(
     }
 );
 
-/// A trace whose last line was cut off (R-299): `show` prints the whole file unchanged, and with `--pretty` the lines
+/// A trace whose last line was cut off: `show` prints the whole file unchanged, and with `--pretty` the lines
 /// before the cut, stating the bytes dropped on stderr; for a whole file (`cut` empty), it states nothing.
 fn check_cut_off(file: &str, cut: &str, plain: &Output, pretty: &Output) {
     assert_eq!(
@@ -1384,18 +1383,18 @@ validation::negative_control!(
     }
 );
 
-// ----- a cut-off line after the summary line (REQ-TOOL-148, R-356, R-358) -----
+// ----- a cut-off line after the summary line -----
 
 /// A summary-shaped line cut off before its end.
 const CUT_SUMMARY: &str = r#"{"leak_flags":null,"hot_pa"#;
 
-/// The notice `show` gives a complete trace whose cut-off last line follows its summary line (R-363's words).
+/// The notice `show` gives a complete trace whose cut-off last line follows its summary line.
 const SHOW_AFTER_SUMMARY: &str = "prin profile show: the line after the summary line was cut off";
 
 /// `run` (`prin profile show`, plain or `--pretty`) on the fixture, a complete trace, followed by a cut-off frame-shaped
 /// or summary-shaped line: the plain output is the file unchanged, the pretty output the header, frames and summary
 /// line, and the notice states the bytes dropped after the summary line, not "session incomplete". On the fixture cut
-/// off before its summary line, the notice still says "session incomplete" (R-356, R-358).
+/// off before its summary line, the notice still says "session incomplete".
 fn check_show_after_summary(run: impl Fn(&Path, bool) -> Output) {
     let file = fixture();
     for cut in [CUT, CUT_SUMMARY] {
@@ -1441,7 +1440,7 @@ validation::negative_control!(
     "a notice keyed on dropped bytes alone must fail the check",
     expected = "calls a complete trace with a cut-off line after its summary",
     {
-        /// `prin profile show` with TASK-M0-18's notice: "session incomplete" whenever the reader dropped bytes.
+        /// `prin profile show` with the wrong notice: "session incomplete" whenever the reader dropped bytes.
         fn show_keyed_on_dropped_bytes(path: &Path, pretty: bool) -> Output {
             let mut out = show(path, pretty);
             let trace = profile::read(
@@ -1463,7 +1462,7 @@ validation::negative_control!(
     }
 );
 
-/// The diff's notice for a complete trace whose cut-off last line follows its summary line (R-363's words).
+/// The diff's notice for a complete trace whose cut-off last line follows its summary line.
 fn after_summary_notice(name: &str, dropped: usize) -> String {
     format!("{name}: {dropped} bytes of a cut-off line after the summary line dropped\n")
 }
@@ -1472,7 +1471,7 @@ fn after_summary_notice(name: &str, dropped: usize) -> String {
 /// again (BASE and NEW swapped) as BASE: for that file, the bytes dropped after the summary line come first, without
 /// "session incomplete", then the same comparison and exit code as for the uncut file. With no frame records, the
 /// bytes come before the refusal, exit 2. A trace cut off before its summary line still gets "session incomplete" and
-/// its bytes (R-358, R-323).
+/// its bytes.
 fn check_diff_after_summary(run: impl Fn(&Path, &Path, &str) -> Output) {
     let base = write_scratch("base.jsonl", &fixture());
     let whole = raised(&fixture(), 1.06);
@@ -1546,8 +1545,8 @@ validation::negative_control!(
     "a notice keyed on an incomplete session alone must fail the check",
     expected = "the diff does not state NEW's",
     {
-        /// `prin profile diff` with TASK-M0-18's notices: printed for an incomplete session alone, so none for a complete trace
-        /// with a cut-off line after its summary.
+        /// `prin profile diff` with the wrong notices: printed for an incomplete session alone, so none for a complete
+        /// trace with a cut-off line after its summary.
         fn diff_notice_keyed_on_incomplete(base: &Path, new: &Path, threshold: &str) -> Output {
             let drop_after_summary = |text: &[u8]| -> Vec<u8> {
                 String::from_utf8_lossy(text)
@@ -1565,7 +1564,7 @@ validation::negative_control!(
     }
 );
 
-// ----- profile_no_gpu (REQ-TOOL-144, R-308) -----
+// ----- profile_no_gpu -----
 
 /// The CPU model as the system names it: `sysctl machdep.cpu.brand_string` (macOS), else the first `model name` in
 /// /proc/cpuinfo (Linux), else `unknown`.
@@ -1618,8 +1617,9 @@ fn check_no_gpu_header(header_line: &str) {
     check_core_counts(&header["device"]);
 }
 
-/// The device's core counts (R-329): `cpu_cores_available` is what `std::thread::available_parallelism` reports;
-/// `cpu_cores_total` is the machine's count, at least that, and is reported on macOS and Linux; `cpu_cores` is gone.
+/// The device's core counts: `cpu_cores_available` is what `std::thread::available_parallelism` reports;
+/// `cpu_cores_total` is the machine's count, at least that, and is reported on macOS and Linux; there is no
+/// `cpu_cores` key.
 fn check_core_counts(device: &Value) {
     assert!(
         device.get("cpu_cores").is_none(),
@@ -1663,7 +1663,7 @@ validation::negative_control!(
     }))
 );
 
-/// `prin profile --frames N` takes a u32 (R-327): a count past u32 is refused as a usage error.
+/// `prin profile --frames N` takes a u32: a count past u32 is refused as a usage error.
 fn check_frames_refused(n: &str) {
     let path = scratch("past_u32.jsonl");
     let out = prin(&[
@@ -1757,7 +1757,7 @@ validation::negative_control!(
 );
 
 /// On macOS the header's `device.cpu` and `device.cpu_cores_total` are filled whatever the run's PATH: `sysctl` is
-/// called by its full path, so a PATH without /usr/sbin still gives both (telemetry §5, R-329).
+/// called by its full path, so a PATH without /usr/sbin still gives both.
 #[cfg(target_os = "macos")]
 fn check_cpu_fields_filled(header_line: &str) {
     let head: Value = serde_json::from_str(header_line).expect("the header line is not JSON");
@@ -1819,11 +1819,11 @@ validation::negative_control!(
     ))
 );
 
-// ----- the streamed trace (TASK-M0-47: REQ-TOOL-147, R-341) -----
+// ----- the streamed trace -----
 
-/// `prin profile` streams its trace (R-341): the header line first, flushed at once, each frame record as it
-/// completes, flushed at the 60th frame since the last flush or once 1 s has passed since it, and the summary line
-/// last; a run killed mid-session leaves a trace the reader reads as "session incomplete" (R-298, R-299).
+/// `prin profile` streams its trace: the header line first, flushed at once, each frame record as it completes,
+/// flushed at the 60th frame since the last flush or once 1 s has passed since it, and the summary line last; a run
+/// killed mid-session leaves a trace the reader reads as "session incomplete".
 mod stream {
     use super::*;
 
@@ -1839,7 +1839,7 @@ mod stream {
         Absent, Flush, FrameRecord, SchemaId, Session, SessionHeader, Stream, Trace,
     };
 
-    /// R-341's flush: every 60 frames or 1 s, whichever comes first.
+    /// The flush policy: every 60 frames or 1 s, whichever comes first.
     const R341: Flush = Flush {
         frames: 60,
         interval: Duration::from_secs(1),
@@ -1980,9 +1980,8 @@ mod stream {
         })
     );
 
-    /// The header line is flushed as soon as it is written, before any frame (R-341, applied per R-204, accepted by
-    /// R-346); the summary line is written last and flushed; and the finished file is the one `profile::write` writes
-    /// for the same trace, line for line.
+    /// The header line is flushed as soon as it is written, before any frame; the summary line is written last and
+    /// flushed; and the finished file is the one `profile::write` writes for the same trace, line for line.
     fn check_header_and_summary(recorder: Recorder) {
         let (header, frame) = sample();
         let now = Instant::now();
@@ -2145,11 +2144,11 @@ mod stream {
         command
     }
 
-    /// Runs `run` until the spawn helper kills it (R-214: every test's child goes through it), watching its trace,
-    /// and checks what the killed run left: the trace grew while the run ran; the reader returns the header and the
-    /// frames from 0 in order, reports the session incomplete with "session incomplete", and drops a cut-off last line,
-    /// stating its bytes (REQ-TOOL-147, R-341, R-298, R-299). A run is stopped after 0.5 s, then 1 s, then 2 s, until
-    /// its trace held a frame line before it was stopped, so a slow start on a loaded machine is not a failure.
+    /// Runs `run` until the spawn helper kills it (every test's child goes through it), watching its trace, and
+    /// checks what the killed run left: the trace grew while the run ran; the reader returns the header and the frames
+    /// from 0 in order, reports the session incomplete with "session incomplete", and drops a cut-off last line,
+    /// stating its bytes. A run is stopped after 0.5 s, then 1 s, then 2 s, until its trace held a frame line before
+    /// it was stopped, so a slow start on a loaded machine is not a failure.
     fn check_killed(run: impl Fn(&Path) -> Command) {
         for after in [ms(500), ms(1000), ms(2000)] {
             let path = scratch("killed.jsonl");
