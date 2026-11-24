@@ -30,6 +30,9 @@
 //! payload a stain's read side unpacks (its `SimState`, word and `ICDescriptor`), written from the same march
 //! ([`Stored`], [`FieldBackend::stored`]).
 //!
+//! **Supersampling** ([`ensemble`]): each sample marched as `E + 1` copies jittered within its footprint, each with its
+//! own record ([`Supersampled`], [`Cpu::supersampled_on`]); copy 0 is the field above.
+//!
 //! **Where it runs**: on the engine's shared CPU worker pool (`crate::pool`), which leaves a core free and returns
 //! the samples in index order, so the field is the same bit for bit on any worker count.
 //!
@@ -49,8 +52,10 @@ use crate::contract::sim_config::{SimConfig, Window};
 use crate::decode_dispatch::decode_only_with;
 use crate::first_slice::{narrow, uniforms, Quad};
 
+pub mod ensemble;
 pub mod record;
 
+pub use ensemble::Supersampled;
 pub use record::{Record, RecordBytes, Stored};
 
 /// How one sample ends: its outcome class's `state` and `detail` (payload §2).
@@ -322,6 +327,26 @@ impl Cpu {
         size: [usize; 2],
         word: bool,
     ) -> Result<Stored, ComputeError> {
+        let (outcomes, records, read) = self.copies_on(pool, sim, window, size, word, 0)?;
+        Ok(Stored {
+            field: Field { size, outcomes },
+            records,
+            read,
+        })
+    }
+
+    /// Every copy `0..=e` of every sample marched, copy-major ([`Supersampled`]'s layout): element `k·w·h + i` is copy
+    /// `k` of sample `i`, at the chart point [`ensemble::point`] gives it. One job per element, so the work scales by
+    /// `e + 1` and the worker count changes no bit.
+    fn copies_on(
+        &self,
+        pool: &crate::pool::Pool,
+        sim: &SimConfig,
+        window: Window,
+        size: [usize; 2],
+        word: bool,
+        e: u32,
+    ) -> Result<(Vec<Outcome>, Vec<Record>, kernel::payload::ReadParams), ComputeError> {
         let key = uniforms(sim.horizon.t).map_err(|e| ComputeError(format!("{e:?}")))?;
         let params = heggie_params();
         let k_target = boundaries(sim.horizon.t, &params);
@@ -334,10 +359,11 @@ impl Cpu {
             kernel_variant: sim.kernel_variant,
             ..quad.sim_key()
         };
-        let sample = |i: usize| -> Result<(Outcome, Record), ComputeError> {
+        let n = quad.len();
+        let sample = |j: usize| -> Result<(Outcome, Record), ComputeError> {
             let out = decode_only_with::<Latent<f32>, Defaults>(
                 &quad.chart,
-                quad.uv(i),
+                ensemble::point(&quad, j % n, (j / n) as u32),
                 &decode_key,
                 None,
             )?;
@@ -359,11 +385,33 @@ impl Cpu {
                 },
             ))
         };
-        let (outcomes, records) = pool.map(quad.len(), sample)?.into_iter().unzip();
-        Ok(Stored {
-            field: Field { size, outcomes },
+        let (outcomes, records) = pool.map(n * (e as usize + 1), sample)?.into_iter().unzip();
+        Ok((outcomes, records, record::read_params(k_target, &params)))
+    }
+
+    /// The field of `e + 1` copies per sample ([`Supersampled`]) on the workers of `pool`: copy 0 is
+    /// [`Cpu::stored_on`]'s records, bit for bit, and the same on any pool. Refused as [`Cpu::stored_on`] is.
+    pub fn supersampled_on(
+        &self,
+        pool: &crate::pool::Pool,
+        sim: &SimConfig,
+        window: Window,
+        size: [usize; 2],
+        e: u32,
+    ) -> Result<Supersampled, ComputeError> {
+        let (outcomes, records, read) = self.copies_on(pool, sim, window, size, true, e)?;
+        if read.horizon_steps > 0xffff {
+            return Err(ComputeError(format!(
+                "the horizon {} is {} sync boundaries, past the 65535 a stored step count holds",
+                sim.horizon.t, read.horizon_steps
+            )));
+        }
+        Ok(Supersampled {
+            copies: e,
+            size,
+            outcomes,
             records,
-            read: record::read_params(k_target, &params),
+            read,
         })
     }
 }
@@ -376,4 +424,15 @@ pub fn field(sim: &SimConfig, window: Window, size: [usize; 2]) -> Result<Field,
 /// The field with each sample's stored record through the CPU backend: [`Cpu`]'s [`FieldBackend::stored`].
 pub fn stored(sim: &SimConfig, window: Window, size: [usize; 2]) -> Result<Stored, ComputeError> {
     Cpu.stored(sim, window, size)
+}
+
+/// The field of `e + 1` copies per sample through the CPU backend, on the engine's shared worker pool
+/// ([`Cpu::supersampled_on`]).
+pub fn supersampled(
+    sim: &SimConfig,
+    window: Window,
+    size: [usize; 2],
+    e: u32,
+) -> Result<Supersampled, ComputeError> {
+    Cpu.supersampled_on(crate::pool::shared()?, sim, window, size, e)
 }
