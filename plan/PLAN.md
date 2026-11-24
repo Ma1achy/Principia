@@ -185,7 +185,7 @@ The non-visual validation runs alongside C2, never instead of it.
 - The escape label live by default (the selected rule's label at the playhead, free to change as the march goes on),
   stopping at the first label an option (`stop_on_escape`, off by default, on the sim key); every escape rule re-scored
   at playheads 5 to 200 in both modes, the escaping body counted, on wider cases (periodic orbits, a stable triple, a
-  positive-energy slice); the default rule picked from those numbers (escape-live-label)
+  positive-energy slice); the default rule picked from those numbers (TASK-M3-80)
 - The patchwork regression and the stop_on_escape images (TASK-M3-35)
 - Cross-implementation checks: BodyPlane bit-for-bit and the change-10 re-run (TASK-M3-36)
 - Cross-chart consistency: the same state through the shape sphere and the latent chart gives the same z, payload

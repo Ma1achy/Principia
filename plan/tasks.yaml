@@ -703,8 +703,9 @@
   title: 'Escape re-validation: precision, recall and the tau gap'
   depends_on:
   - TASK-M3-33
-- id: escape-live-label
+- id: TASK-M3-80
   milestone: C3
+  status: done
   title: The escape label live by default, stop at the first label an option, every rule re-scored with the body counted
   depends_on:
   - TASK-M3-34
