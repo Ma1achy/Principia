@@ -1,26 +1,27 @@
-//! Tilt and slice on every chart of the registry (`kernel::chart::tilt`, `kernel::chart::construction`; R-473, R-474,
-//! R-507, R-544, R-554, R-613, R-633; chart_decoder_contract Part 4, § "Tilt (basis edit)"):
-//! - `tilt_every_chart_*` (REQ-CHART-062's arms, C2): on the five charts that hold their blocks by latent controls,
+//! Tilt and slice on every chart of the registry (`kernel::chart::tilt`, `kernel::chart::construction`;
+//! chart_decoder_contract Part 4, § "Tilt (basis edit)"):
+//! - `tilt_every_chart_*`: on the five charts that hold their blocks by latent controls,
 //!   untilted under both maps, no tilt path and a decode bitwise the chart's; `(a, b, d) = R·(u, v, 0)` to 1 ulp, `a`,
 //!   `b` through the chart's own map and `d` on the control; the centre fixed under every tilt; the latent chart's basis
 //!   edit; the tilted shape sphere bijective, each pixel counted once; the f32 instantiation. On the six that hold a
-//!   block by a construction (`tilt_every_chart_construction_*`, R-633): `d = 0` bitwise the untilted chart, `ν₀` moved
+//!   block by a construction (`tilt_every_chart_construction_*`): `d = 0` bitwise the untilted chart, `ν₀` moved
 //!   by `d` with the masses kept, a rest start's momenta `D_mom` of the control from 0, the held `L_z` or `K` §2.2's
-//!   construction at the tilted value under each of R-471's modes (R-708): warped, the default, no cell refused, the
-//!   bottom row included, the held `L_z` by value at both signs of `d` (R-720), the held `K` in its warp coordinate and
-//!   clamped at `t = 0` (R-709); linear, rows at fixed values, the refused cells no system and weighted 0. RQ-471's
-//!   corner `ray-degenerate` over the whole registry, unfolded, weighted 0, its shares undefined.
-//! - `tilt_mass_logits` (REQ-CHART-063, C7): the shape sphere tilted into each mass logit keeps every mass positive,
+//!   construction at the tilted value under each of the energy axes' two modes: warped, the default, no cell refused,
+//!   the bottom row included, the held `L_z` by value at both signs of `d`, the held `K` in its warp coordinate and
+//!   clamped at `t = 0`; linear, rows at fixed values, the refused cells no system and weighted 0. The rank-losing
+//!   corner (Lean each axis, one target, `|τ₁| = |τ₂| = 90°`) `ray-degenerate` over the whole registry, unfolded,
+//!   weighted 0, its shares undefined.
+//! - `tilt_mass_logits`: the shape sphere tilted into each mass logit keeps every mass positive,
 //!   the three summing to 1.
-//! - `tilt_units` (REQ-CHART-064, R-507): the tilted axis's direction in the chart's parameters is the same at every
+//! - `tilt_units`: the tilted axis's direction in the chart's parameters is the same at every
 //!   zoom; the latent chart's tilt is the basis edit, unscaled.
-//! - `slice_every_chart` (REQ-CHART-065's arms over the whole registry, T6): a slice moves one hidden control, the
+//! - `slice_every_chart` (over the whole registry): a slice moves one hidden control, the
 //!   decode at the centre following the link, never a stop on the five; on the six, a slice moves only that held value,
-//!   `ν₀`, the held `L_z` or `K`, or one momentum control, the held `L_z` by value at both signs (R-720). A slice past
-//!   the edge stopping is REQ-CHART-060's.
-//! - `tilted_extension` (REQ-CHART-066, X3): the types act on the tilted `(a, b)`.
+//!   `ν₀`, the held `L_z` or `K`, or one momentum control, the held `L_z` by value at both signs. A slice past
+//!   the edge stopping is the navigation stop's, not tested here.
+//! - `tilted_extension`: the types act on the tilted `(a, b)`.
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use kernel::chart::burrau_acute;
 use kernel::chart::construction::{
@@ -50,7 +51,7 @@ use kernel::Real;
 use std::io::Write;
 use validation::negative_control;
 
-/// The five charts that hold their blocks by latent controls (R-633's split).
+/// The five charts that hold their blocks by latent controls.
 const FIVE: [&str; 5] = [
     "Latent",
     "ShapeSphere",
@@ -58,7 +59,7 @@ const FIVE: [&str; 5] = [
     "InvariantLK",
     "Mixed",
 ];
-/// The six charts that hold a block by a physical construction (R-633), in the registry's order.
+/// The six charts that hold a block by a physical construction, in the registry's order.
 const SIX: [&str; 6] = [
     "Burrau",
     "EuclidPlane",
@@ -71,7 +72,7 @@ const SIX: [&str; 6] = [
 const CENTRE: [f64; 2] = [0.37, 0.61];
 /// The targets' slider spans: the Slice centre slider's range, `[−1, 1]`.
 const SPAN: [f64; 2] = [2.0, 2.0];
-/// The grid side of REQ-CHART-062's untilted arm.
+/// The grid side of the untilted arm.
 const N: u32 = 33;
 
 type Mx = Mixed<Alpha, PRhoX, f64>;
@@ -433,8 +434,8 @@ fn columns_from_squares(t1: f64, t2: f64) -> [[f64; 4]; 2] {
     ]
 }
 
-/// Tip as sheet at angles whose squares underflow is still the small rotation they name (R-474 K1), and the view keeps
-/// its centre (R-473 J7): to first order `R·e_a = e_a + τ₁ e_X` and `R·e_b = e_b + τ₂ e_X`, `τ` in radians. The arms take
+/// Tip as sheet at angles whose squares underflow is still the small rotation they name, and the view keeps its
+/// centre: to first order `R·e_a = e_a + τ₁ e_X` and `R·e_b = e_b + τ₂ e_X`, `τ` in radians. The arms take
 /// a sum of squares of 0, a subnormal one, a mixed pair, the least double, the exact boundary `2⁻¹⁰²²` and the least
 /// sum above it. A sum exactly at `2⁻¹⁰²²` is normal, so it keeps the formula bit for bit, at a pair whose hypotenuse
 /// rounds one ulp below `2⁻⁵¹¹`. `squares` puts the columns taken straight from the squares into the view (the control).
@@ -711,9 +712,9 @@ fn dot(p: [f64; 8], q: [f64; 8]) -> f64 {
 }
 
 /// The latent chart's tilt is the basis edit: a single tilt under Lean each axis is `σ(cos τ e_a + sin τ e_X)`,
-/// bitwise, the same under Tip as sheet; two targets each axis toward its own; Tip as sheet at 45°/45° R-474 R9's
-/// readout; `m` and its wrap bitwise equal; Tip as sheet orthonormal past 90°, and Lean each axis not (`lean`, the
-/// control, checks Lean's skew as Tip as sheet's).
+/// bitwise, the same under Tip as sheet; two targets each axis toward its own; Tip as sheet at 45°/45° the tilted
+/// axis's worked values (`readout`); `m` and its wrap bitwise equal; Tip as sheet orthonormal past 90°, and Lean each
+/// axis not (`lean`, the control, checks Lean's skew as Tip as sheet's).
 fn check_basis_edit(lean_as_sheet: bool) {
     let (s, c) = sc(30.0);
     let mut want = [0.0; 8];
@@ -799,7 +800,7 @@ negative_control!(
 );
 
 /// Under a turned, zoomed frame the basis edit is `q₁ = σ(cos γ û₁ + sin γ û₂)`, `q₂ = σ(cos γ û₂ − sin γ û₁)`, with
-/// `û₁`, `û₂` the rotation's columns placed on `e_a`, `e_b` and the targets (R-473 T2, R-507 U2). `turn` is the sign
+/// `û₁`, `û₂` the rotation's columns placed on `e_a`, `e_b` and the targets. `turn` is the sign
 /// the check gives `γ` (the control's is −1, the frame turned the other way).
 fn check_turned(turn: f64) {
     for (gamma, scale) in [(0.7, 0.5), (-2.1, 1.75), (std::f64::consts::FRAC_PI_2, 0.3)] {
@@ -851,10 +852,10 @@ negative_control!(
     }
 );
 
-/// The offsets `(Δa, Δb, d_X, d_Y) = ũ·R·e_a + ṽ·R·e_b`, each hidden offset times its target's slider span (R-473 T2,
-/// R-507 U1), against the maps' closed forms: two targets `(cos τ₁ ũ, cos τ₂ ṽ, σ_X sin τ₁ ũ, σ_Y sin τ₂ ṽ)`, Lean each
-/// axis with one target `(cos τ₁ ũ, cos τ₂ ṽ, σ_X (sin τ₁ ũ + sin τ₂ ṽ), 0)`, Tip as sheet with one target its
-/// rotation's columns. `span` is the spans the check expects (the control's are swapped).
+/// The offsets `(Δa, Δb, d_X, d_Y) = ũ·R·e_a + ṽ·R·e_b`, each hidden offset times its target's slider span, against the
+/// maps' closed forms: two targets `(cos τ₁ ũ, cos τ₂ ṽ, σ_X sin τ₁ ũ, σ_Y sin τ₂ ṽ)`, Lean each axis with one target
+/// `(cos τ₁ ũ, cos τ₂ ṽ, σ_X (sin τ₁ ũ + sin τ₂ ṽ), 0)`, Tip as sheet with one target its rotation's columns. `span` is
+/// the spans the check expects (the control's are swapped).
 fn check_offsets(span: [f64; 2]) {
     let spans = [2.0, 0.5];
     let (t1, t2) = (30.0, -45.0);
@@ -918,7 +919,7 @@ negative_control!(
     }
 );
 
-// ── The tilted shape sphere: bijective, every pixel counted once (R-544, R-613) ───────────────────────────────────────
+// ── The tilted shape sphere: bijective, every pixel counted once ─────────────────────────────────────────────────────
 
 /// The shape sphere's tilted arms: into a momentum control at `τ₂ = 30°`, at `τ₁ = 30°`, Tip as sheet at 108°/144°
 /// (`m = 180°`) and Lean each axis at 90°/30°.
@@ -1045,7 +1046,7 @@ fn wide_cap(tilt: &TiltSpec) -> Tilted<ShapeSphere<f64>, f64> {
 }
 
 /// A tilted view's pixels on `r = π` count once per distinct hidden offset, and once together where `N_a = N_b = 0`
-/// (chart_reference §3.3, REQ-CHART-090). `shared` counts them with one boolean across the view (the control).
+/// (chart_reference §3.3). `shared` counts them with one boolean across the view (the control).
 fn check_antipode_by_offset(shared: bool) {
     let count = |view: &Tilted<ShapeSphere<f64>, f64>, points: &[[f64; 2]]| {
         if shared {
@@ -1123,9 +1124,9 @@ negative_control!(
     }
 );
 
-/// The tilted spherical map's pixels past the square: a repeat is uncounted only where the map keeps `d` (R-554 L3;
-/// chart_decoder_contract § "Repeats and the canonical point"), else the view is affine there and each pixel is a
-/// system of its own, counted (R-512 F1, F3). Arms:
+/// The tilted spherical map's pixels past the square: a repeat is uncounted only where the map keeps `d`
+/// (chart_decoder_contract § "Repeats and the canonical point"), else the view is affine there and each pixel is a
+/// system of its own, counted. Arms:
 /// - `check_pole`'s view, `τ₂ = 30°` into a momentum control about `[0.4, 0.85]`: `N_b ≠ 0`, so each pixel past the
 ///   pole is counted, and the count over the window is every pixel;
 /// - `τ₁ = 30°` past θ's period: `N_a ≠ 0`, counted;
@@ -1222,8 +1223,8 @@ negative_control!(
 
 /// `τ₂ = 30°` alone (`N_a = 0`, `N_b ≠ 0`) about `[0.9, 0.85]`, a window past θ's period and the pole at once: the
 /// spherical map repeats in `s` for every `t`, so a pixel past θ's period is a repeat, uncounted, wherever its `b` lies,
-/// and one past the pole alone is affine, counted (R-554 L3; chart_decoder_contract § "Repeats and the canonical
-/// point"; R-408). The count is the window less its pixels with `a` outside `[0, 1]`.
+/// and one past the pole alone is affine, counted (chart_decoder_contract § "Repeats and the canonical point"). The
+/// count is the window less its pixels with `a` outside `[0, 1]`.
 ///
 /// `old` counts with the rule that applied θ's period only with `b` in `[0, 1]` (the control).
 fn check_period_and_pole(old: bool) {
@@ -1296,15 +1297,15 @@ negative_control!(
     }
 );
 
-// ── The lattice of repeats past t's period 2 (R-655, ruling RQ-631 (a)) ───────────────────────────────────────────────
+// ── The lattice of repeats past t's period 2 ─────────────────────────────────────────────────────────────────────────
 
 /// The spherical map tilted by `s` about the square's centre into a momentum control.
 fn spherical(s: &TiltSpec) -> Tilted<ShapeSphere<f64>, f64> {
     Tilted::new(sphere(ShapeMap::Spherical), Tilt::new(s, [0.5, 0.5], SPAN)).unwrap()
 }
 
-/// Whether the pixel at `(u, v)` is counted: by [`Tilted::pixel`], or under `old` by the round-2 rule, R-554 L3's
-/// alone, which takes a repeat past θ's period iff `N_a = 0` and over a pole iff `N_a = N_b = 0`, and no lattice.
+/// Whether the pixel at `(u, v)` is counted: by [`Tilted::pixel`], or under `old` by the pole-map rule alone, with
+/// no lattice, which takes a repeat past θ's period iff `N_a = 0` and over a pole iff `N_a = N_b = 0`, and no lattice.
 fn counted(view: &Tilted<ShapeSphere<f64>, f64>, u: f64, v: f64, old: bool) -> bool {
     if old {
         let [a, b] = view.at(u, v).0;
@@ -1332,8 +1333,8 @@ fn ic_gap(x: &Decoded<f64>, y: &Decoded<f64>) -> f64 {
 }
 
 /// Over `window`, each pixel and its partner `shift` away in the window's `(u, v)`, whose `(a, b)` lies `w` away: the
-/// two decode the same system, to rounding, and exactly one of them is counted (R-408, R-655). `old` counts with the
-/// round-2 rule (the control).
+/// two decode the same system, to rounding, and exactly one of them is counted. `old` counts with the pole-map rule
+/// alone (the control).
 fn check_pairs(
     view: &Tilted<ShapeSphere<f64>, f64>,
     window: &[[f64; 2]],
@@ -1605,8 +1606,8 @@ fn rounded_dir(t1: f64, t2: f64) -> [f64; 2] {
     [t2 / len, -t1 / len]
 }
 
-/// The strip's `dir` at Tip as sheet's subnormal angles, given in ulps of `2⁻¹⁰⁷⁴`, is a unit vector along `(τ₂, −τ₁)`
-/// (R-655). A length that rounds to exactly `2⁻¹⁰²²` is a normal length, so `dir` divides by it as it stands, at a pair
+/// The strip's `dir` at Tip as sheet's subnormal angles, given in ulps of `2⁻¹⁰⁷⁴`, is a unit vector along `(τ₂, −τ₁)`.
+/// A length that rounds to exactly `2⁻¹⁰²²` is a normal length, so `dir` divides by it as it stands, at a pair
 /// whose true length is below that by ≈0.4 of the grid. `rounded` keeps the rounded length throughout (the control).
 fn check_subnormal_dir(rounded: bool) {
     let ulp = f64::from_bits;
@@ -1652,7 +1653,7 @@ negative_control!(
 );
 
 /// At `τ₁ = τ₂ = 2⁻¹⁰⁷⁴` under Tip as sheet, `w = (2, −2)`, `|w|/2 = √2`: of the orbit `(1.4, −0.4) + j·w` the point with
-/// its offset along `w` in `[−√2, √2)` is `(1.4, −0.4)`, and the orbit is counted once there (R-655). `rounded` judges
+/// its offset along `w` in `[−√2, √2)` is `(1.4, −0.4)`, and the orbit is counted once there. `rounded` judges
 /// the orbit with the rounded length's `dir` (the control).
 fn check_subnormal_orbit(rounded: bool) {
     let t = f64::from_bits(1);
@@ -1694,7 +1695,7 @@ negative_control!(
     }
 );
 
-/// `[N_a = 0, N_b = 0]` on the stored angles (R-554 L3), at each arm's boundary.
+/// `[N_a = 0, N_b = 0]` on the stored angles, at each arm's boundary.
 fn check_normal_zero(cases: &[(TiltSpec, [bool; 2])]) {
     for (s, want) in cases {
         assert_eq!(s.normal_zero(), *want, "N = 0 under {s:?}");
@@ -1703,9 +1704,9 @@ fn check_normal_zero(cases: &[(TiltSpec, [bool; 2])]) {
     }
 }
 
-/// The arms: untilted; a single angle under either map (Lean's closed form), at 0, ±180 and between; Lean with both set,
-/// at the dead zone `|τ| = 90`; RQ-471's corner, no normal; Tip as sheet at `m == 180` and beside it; two targets per
-/// offset.
+/// The arms: untilted; a single angle under either map (Lean's closed form), at 0, ±180 and between; Lean with both
+/// set, at the dead zone `|τ| = 90`; the rank-losing corner, no normal; Tip as sheet at `m == 180` and beside it; two
+/// targets per offset.
 fn normal_zero_cases() -> Vec<(TiltSpec, [bool; 2])> {
     let one = |t1, t2, map| spec(t1, t2, map, 2, 2);
     let two = |t1, t2, map| spec(t1, t2, map, 2, 3);
@@ -1758,7 +1759,7 @@ negative_control!(
     }
 );
 
-// ── RQ-471's corner over the registry's five (R-554) ──────────────────────────────────────────────────────────────────
+// ── The rank-losing corner over the registry's five ──────────────────────────────────────────────────────────────────
 
 /// What a chart reports for a stored tilt: its `system_image`, each pixel's area weight and a share.
 struct Report {
@@ -2029,8 +2030,8 @@ fn tilt_every_chart_maps_agree() {
     assert!(!spec(1.0, 0.0, TiltMap::Sheet, 2, 2).untilted());
 }
 
-/// Rodrigues' rotation by `m` about `k = (τ₂ e_a − τ₁ e_b)/m`, written out here as R-474 K1 gives it, at the angles
-/// as passed (no wrap).
+/// Rodrigues' rotation by `m` about `k = (τ₂ e_a − τ₁ e_b)/m`, written out here independently of the kernel, at
+/// the angles as passed (no wrap).
 fn rodrigues(t1: f64, t2: f64) -> [[f64; 4]; 2] {
     let m = Float::sqrt(t1 * t1 + t2 * t2);
     let (sm, cm) = sc(m);
@@ -2044,7 +2045,7 @@ fn rodrigues(t1: f64, t2: f64) -> [[f64; 4]; 2] {
 
 /// Tip as sheet's columns with one target and both angles set: the rotation at the stored angles up to a total tip of
 /// 180°, `m = 180°` itself unwrapped and never folded (its tilted-axis component keeps the sign of `τ₁`), and past it
-/// the rotation at the wrapped angles `τ·(m − 360)/m` (R-474 R3, K1). `wrap_at` is the tip past which the check
+/// the rotation at the wrapped angles `τ·(m − 360)/m`. `wrap_at` is the tip past which the check
 /// expects the wrap (the control's is 0, every tilt wrapped).
 fn check_rotation(wrap_at: f64) {
     for (t1, t2) in [
@@ -2155,7 +2156,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-063: the mass tilt in logits ────────────────────────────────────────────────────────────────────────────
+// ── The mass tilt in logits ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// The shape sphere tilted into each mass logit at τ ∈ {15°, 45°, 89°, 135°}, as `τ₁` and as `τ₂`, over a 65 × 65
 /// grid: every pixel's masses positive and summing to 1 within 4 ulp. `physical` adds `d` to `m₁` instead (the control).
@@ -2200,7 +2201,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-064: the units (R-507) ──────────────────────────────────────────────────────────────────────────────────
+// ── The units ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The tilted horizontal axis's direction in the chart's parameters, `d` per unit of `a`, at the window's edge at zoom
 /// 1 and zoom 4, from the shape sphere tilted 30° into a momentum control. `half_width` takes the offsets in units of
@@ -2263,7 +2264,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-065: slice on the five ──────────────────────────────────────────────────────────────────────────────────
+// ── Slice on the five ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The decode at the centre of `chart` sliced to `value` on `k` follows the link's forward map on that block.
 fn check_follows<C: Hidden<Param = f64>>(chart: &C, sliced: &C, k: u32, controls: [f64; 8]) {
@@ -2439,7 +2440,7 @@ mod slice_momenta {
     );
 }
 
-// ── REQ-CHART-066: the extension after the tilt ───────────────────────────────────────────────────────────────────────
+// ── The extension after the tilt ──────────────────────────────────────────────────────────────────────────────────────
 
 /// The shape sphere tilted 30° into a momentum control, its centre near the top: each pixel past `t = 1` decodes as
 /// the chart at its tilted `(a, b)`, which is the pole-crossing rule's image `(a + ½, 2 − b)`. `before` applies the
@@ -2617,10 +2618,10 @@ negative_control!(
     }
 );
 
-// ── R-633: the six charts that hold a block by a construction ─────────────────────────────────────────────────────────
+// ── The six charts that hold a block by a construction ────────────────────────────────────────────────────────────────
 
-/// `ν₀`'s slider span, a test's own: the corpus gives none (R-507 U1 names the slider span as the unit; the span of the
-/// physical hidden coordinates is queued), so the kernel takes it as an input.
+/// `ν₀`'s slider span. The plan is unclear here (it names the slider span as the unit but gives none for the physical
+/// hidden coordinates); chose a test's own, which the kernel takes as an input.
 const NU_SPAN: f64 = 0.4;
 /// The held `L_z`'s slider span, a test's own (as `NU_SPAN`).
 const LZ_SPAN: f64 = 2.0;
@@ -2679,7 +2680,7 @@ fn held_k() -> HeldK<f64> {
     HeldK::new(theta_lz(), 1.0, 1.5)
 }
 
-/// `chart` under the linear option, R-471 E2.
+/// `chart` under the linear option.
 fn linear<C>(chart: HeldLz<C, f64>) -> HeldLz<C, f64> {
     HeldLz {
         mapping: Mapping::Linear,
@@ -2748,8 +2749,8 @@ macro_rules! for_six {
     }};
 }
 
-/// The mass simplex's decode `d` as the pre-R-633 reading has it: its configuration's `(α, β)`, so `z_α`, held at the
-/// centre's value `centre` across the window, under the pixel's own masses.
+/// The mass simplex's decode `d` with its configuration's `(α, β)`, so `z_α`, held at the centre's value `centre`
+/// across the window, under the pixel's own masses: a latent hold in place of the chart's construction.
 fn held_alpha(d: &Decoded<f64>, centre: &Decoded<f64>) -> Decoded<f64> {
     let (rho_t, lambda_t) = config::hyperspherical(centre.config.alpha, centre.config.beta);
     let (rho, lambda, r) = config::reconstruct(&d.masses, rho_t, lambda_t);
@@ -2762,8 +2763,8 @@ fn held_alpha(d: &Decoded<f64>, centre: &Decoded<f64>) -> Decoded<f64> {
 }
 
 /// `d = 0` into the hidden coordinate `x`: the decode with a zero offset, the chart untilted under both maps and the
-/// view at `τ = 0`, each bit for bit the registered chart `own`'s over a 33 × 33 grid. `pre` reads the mass simplex as
-/// the pre-R-633 reading does, `z_α` held at the centre's value (the control).
+/// view at `τ = 0`, each bit for bit the registered chart `own`'s over a 33 × 33 grid. `pre` reads the mass simplex
+/// with `z_α` held at the centre's value, a latent hold in place of its construction (the control).
 fn check_zero<C, O>(chart: C, own: O, x: u32, span: f64, pre: bool)
 where
     C: Tiltable<Param = f64> + ChartDecode + Copy,
@@ -2976,7 +2977,7 @@ fn check_refused<C: Tiltable<Param = f64> + Copy>(
     );
 }
 
-/// The linear arm on the three Burrau charts (R-708): rows at `K_max·b` or on the centre's band, a held value by value.
+/// The linear arm on the three Burrau charts: rows at `K_max·b` or on the centre's band, a held value by value.
 fn check_burrau_refused(alter: Refused) {
     let c = linear(nu_k());
     check_refused(c, HELD_LZ, LZ_SPAN, |_, b, d| (d, c.chart.k_max * b), alter);
@@ -3203,7 +3204,7 @@ mod warped_lz_sign {
 
 /// Warped, a tilt into the held `K₀` of `Φ_θ,L_z` under the warp `(k_max, gamma)`: no cell refused, the held `K ≥ 0`, the pixel's
 /// `K = K_max·t^γ_K` at `t = t₀ + d` and the band at it. Where `t₀ + d < 0` the pixel is clamped at `t = 0`: a real
-/// system, the rest start at its own shape, flagged, never mirrored (R-709). The clamped pixels and the pixels counted.
+/// system, the rest start at its own shape, flagged, never mirrored. The clamped pixels and the pixels counted.
 fn check_warped_k(k0: f64, k_max: f64, gamma: f64, alter: Warped) -> (usize, usize) {
     let chart = HeldK::new(
         BurrauThetaLz {
@@ -3285,7 +3286,7 @@ fn tilt_every_chart_construction_warped_k() {
     let [high, low] = check_warped_k_all(Warped::AsBuilt);
     assert_eq!(high.0, 0, "no pixel clamped at K₀ = 0.9");
     assert!(low.0 > 100, "the clamp arises: {low:?}");
-    // R-709's report, written past the harness's capture so that the test output shows it.
+    // The clamped-pixel share, written past the harness's capture so that the test output shows it.
     writeln!(
         std::io::stderr(),
         "R-709 clamped-pixel share: K₀ = 0.9: {}/{}; K₀ = 0.01: {}/{} = {:.4}",
@@ -3686,9 +3687,9 @@ negative_control!(
     }
 );
 
-/// The linear rows off the warp's line: at `v = 1e200` the row is `K = 1e200`, a system on R-471 E2's affine axis, where
-/// the warp's `K_max·v^γ_K` overflows. The check reads the row's decode, keeping the axes' layers; warped, the pixel is
-/// the line's and refused. `warp_line` reads the chart's own check instead (the control).
+/// The linear rows off the warp's line: at `v = 1e200` the row is `K = 1e200`, a system on the linear option's affine
+/// axis, where the warp's `K_max·v^γ_K` overflows. The check reads the row's decode, keeping the axes' layers; warped,
+/// the pixel is the line's and refused. `warp_line` reads the chart's own check instead (the control).
 fn off_warp_line<C>(chart: C, warp_line: bool)
 where
     C: LzChart<Param = f64>,
@@ -4221,7 +4222,7 @@ fn own_sheet(tau: f64, x: u32, span: f64) -> Tilt<f64> {
 /// that is a system at `p` is refused. `default` is the control.
 fn check_own_mu_max(default: bool) {
     let refused = "a system at its own μ_max is refused";
-    // The frozen `z_β`, −0.5 under `sigmoid_beta` when this was written, converted to the periodic link (R-898).
+    // The frozen `z_β`: −0.5 under `sigmoid_beta`, converted to the periodic link.
     let line = Mapped::<_, Defaults>::new(
         InvariantLE(Invariant::<f64> {
             z_cfg: [0.3, convert::<SigmoidBeta, f64>(-0.5)],
@@ -4762,7 +4763,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-065 on the six: a slice moves only that held value ────────────────────────────────────────────────────
+// ── Slice on the six: a slice moves only that held value ────────────────────────────────────────────────────────────
 
 /// Every hidden coordinate of a rest start sliced: only that held value moves, and the decode at the centre follows,
 /// a momentum control through `D_mom` under the chart's masses, `ν₀` the triangle's; any other index is refused.
@@ -4819,8 +4820,8 @@ fn slice_rest<C: RestChart<Param = f64> + Held<f64>>(
 }
 
 /// The held `L_z` sliced to each sign, past the untilted band too: only it moves, and the decode at the centre is §2.2's
-/// construction at `L_z₀ + d` by value and the row's `K`: warped, the floor plus the warp's line, linear, `K_max·t`
-/// (R-720). `warp` moves the held `L_z` in a warp coordinate instead (the control).
+/// construction at `L_z₀ + d` by value and the row's `K`: warped, the floor plus the warp's line, linear, `K_max·t`.
+/// `warp` moves the held `L_z` in a warp coordinate instead (the control).
 fn slice_lz<C: LzChart<Param = f64> + PartialEq + std::fmt::Debug>(
     chart: HeldLz<C, f64>,
     warp: bool,
