@@ -70,6 +70,8 @@
 //! masses and momenta directly) keeps the defaults, which ignore the parameters, as a [`crate::generated::links::Link`]
 //! written outside the registry does.
 
+#[cfg(not(target_arch = "spirv"))]
+pub mod band;
 pub mod body_plane;
 pub mod burrau;
 pub mod burrau_acute;
