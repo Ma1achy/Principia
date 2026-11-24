@@ -1,19 +1,20 @@
-//! Under Tip as sheet a window pixel whose own `(a, b)` leave the chart's square is past the edge (R-512, ruling
-//! RQ-402, F1; REQ-CHART-076; chart_decoder_contract § "Tilt (basis edit)"; chart_reference §2.1):
+//! Under Tip as sheet a window pixel whose own `(a, b)` leave the chart's square is past the edge
+//! (chart_decoder_contract § "Tilt (basis edit)"; chart_reference §2.1):
 //! - `tip_sheet_in_window`: on the `(L_z, K)` chart, warped, tilted into one target (a mass logit) under Tip as sheet at
 //!   `τ = (30°, 12.4°)` and `(−45°, 77.9°)`, over a 65 × 65 grid of the window at zoom 1 about the centre `(½, ½)`:
 //!   every pixel whose `(a, b)` lie in the square validates and is drawn; every pixel whose `(a, b)` leave it past an
 //!   `s` edge or below `t = 0`, a bounded edge, is not a system and draws the background (the chart classification's
-//!   `forbidden`, which a presentation view draws blank, R-470); every pixel past `t = 1` with `s ∈ [0, 1]`, the warp's
-//!   continuing side (R-508 V2), is a system, drawn, and decodes bit-identically to the untilted chart sliced to that
+//!   `forbidden`, which a presentation view draws blank); every pixel past `t = 1` with `s ∈ [0, 1]`, the warp's
+//!   continuing side, is a system, drawn, and decodes bit-identically to the untilted chart sliced to that
 //!   pixel's hidden value, the slice centre plus its `d`, at the same `(a, b)`. Each of the three cases past the edge
 //!   arises over the two tilts. Run on the chart and on its warped [`Mapped`] form, the dispatch's.
 //!
-//! Its negative controls (R-176): a draw that reads the chart at the window point, the types acting before the tilt,
-//! colours a pixel past a bounded edge; a window scaled to keep every `(a, b)` in the square (RQ-402's option (b))
-//! takes no pixel past the edge; a draw that blanks every pixel outside the square blanks one past `t = 1`. Each fails.
+//! Its negative controls: a draw that reads the chart at the window point, the types acting before the tilt,
+//! colours a pixel past a bounded edge; a window scaled to keep every `(a, b)` in the square (the alternative
+//! to drawing past the edge) takes no pixel past the edge; a draw that blanks every pixel outside the square blanks
+//! one past `t = 1`. Each fails.
 //!
-//! Until the chart addendum's N14 lands the built charts draw as today (R-932): past a bounded edge, blank.
+//! Until the chart addendum's N14 lands the built charts draw as today: past a bounded edge, blank.
 
 use kernel::chart::invariant::Invariant;
 use kernel::chart::tilt::Tiltable;
@@ -27,9 +28,9 @@ use validation::{negative_control, GAMMA_K, K_MAX};
 
 /// The hidden coordinate both angles tilt into: the first mass logit, `z[6]`.
 const TARGET: u32 = 6;
-/// A latent slider's span (R-920): the hidden offset's unit.
+/// A latent slider's span: the hidden offset's unit.
 const SPAN: f64 = 2.0;
-/// The two tilts REQ-CHART-076 names, `(τ₁, τ₂)` in degrees.
+/// The two tilts the requirement names, `(τ₁, τ₂)` in degrees.
 const TAUS: [[f64; 2]; 2] = [[30.0, 12.4], [-45.0, 77.9]];
 /// The grid's points per side.
 const N: u32 = 65;
@@ -37,8 +38,8 @@ const N: u32 = 65;
 /// Whether a window pixel is drawn blank: `Some(true)` blank, `Some(false)` drawn, `None` unclassified.
 type Draw<C> = fn(&Tilted<C, f64>, f64, f64) -> Option<bool>;
 
-/// The chart's frozen part: the configuration and mass controls and the warp's two parameters, REQ-CHART-044's
-/// placeholders (R-71).
+/// The chart's frozen part: the configuration and mass controls and the warp's two parameters, the register's
+/// placeholders.
 fn invariant() -> Invariant<f64> {
     Invariant {
         z_cfg: [0.2, -0.3],
@@ -53,7 +54,7 @@ fn bits(d: &Decoded<f64>) -> String {
     format!("{d:?}")
 }
 
-/// The chart's real draw: the chart classification of the window pixel through the tilted view (R-470).
+/// The chart's real draw: the chart classification of the window pixel through the tilted view.
 fn drawn<C: Tiltable<Param = f64>>(view: &Tilted<C, f64>, u: f64, v: f64) -> Option<bool> {
     forbidden(view, u, v)
 }
@@ -81,8 +82,9 @@ struct Tally {
     top: u32,
 }
 
-/// R-512 F1 on `chart` at each of [`TAUS`] under Tip as sheet into [`TARGET`], over the window scaled by `scale` about
-/// its centre `(½, ½)` (1 the window at zoom 1), each pixel drawn by `draw`; then each case past the edge arises.
+/// The past-the-edge rule on `chart` at each of [`TAUS`] under Tip as sheet into [`TARGET`], over the window scaled
+/// by `scale` about its centre `(½, ½)` (1 the window at zoom 1), each pixel drawn by `draw`; then each case past the
+/// edge arises.
 fn check<C>(chart: C, scale: f64, draw: Draw<C>)
 where
     C: Tiltable<Param = f64> + Copy,

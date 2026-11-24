@@ -1,24 +1,22 @@
 //! The read side's Rust target (lowering Part 3a; payload §4–§6), `kernel::payload`'s generated `read_side.rs`, for the
 //! kernel and the host: the same properties `ledger/tests/all/derived.rs` checks on the WGSL target, each test named with
 //! `rust` after its requirement's filter, and the two targets' parity on the GPU (`read_side_parity`).
-//! - REQ-PAY-021: `ftle` equals a reference with the partial renorm interval finalised (`derived_not_stored`).
-//! - REQ-PAY-022: with FTLE baked out, `ftle` reads NaN and `ftle_valid` is false (`ftle_baked_out`).
-//! - REQ-PAY-026: both variants unpack into the one `SimState`; with the tier off, `ftle` reads NaN
-//!   (`read_type_both_tiers`).
-//! - REQ-PAY-027: a resumed `total_substeps` equals the uninterrupted sum; the proxy is ⌊log₂⌋ over all of u32
-//!   (`total_substeps_resume`).
-//! - REQ-PAY-030: `diffusion` is NaN and invalid for `n < 2`; a latched sample uses its own `n` (`diffusion_slope`).
-//! - REQ-PAY-032: `ftle_valid`'s truth table (`ftle_valid_truth_table`), with R-972's clause: false where `S` is the
+//! - `derived_not_stored`: `ftle` equals a reference with the partial renorm interval finalised.
+//! - `ftle_baked_out`: with FTLE baked out, `ftle` reads NaN and `ftle_valid` is false.
+//! - `read_type_both_tiers`: both variants unpack into the one `SimState`; with the tier off, `ftle` reads NaN.
+//! - `total_substeps_resume`: a resumed `total_substeps` equals the uninterrupted sum; the proxy is ⌊log₂⌋ over all
+//!   of u32.
+//! - `diffusion_slope`: `diffusion` is NaN and invalid for `n < 2`; a latched sample uses its own `n`.
+//! - `ftle_valid_truth_table`: `ftle_valid`'s truth table, with the failed-sum clause: false where `S` is the
 //!   mark of a shadow whose sum went non-finite, `S_FAILED_BITS`, and only there (`ftle_valid_rust_false_on_the_failed_sum`,
 //!   `s_failed_bits_are_f32_max`).
-//! - REQ-RENDER-013: the tier-absent reads are lowering Part 3a's bits (`tier_absent_nan_bits`).
-//! - REQ-RENDER-019: the time fractions at a zero horizon and at it (`time_fraction`).
-//! - REQ-PAY-031: the current drifts `energy_drift = H(r, p) − E_0` and `Lz_drift = L_z(r, p) − Lz_0`, computed at read
-//!   (payload §5; dd_generation_root §3.8), against hand-computed configurations and an f64 host reference, and the
-//!   two targets' agreement on them on the GPU (`current_drift`).
-//! - REQ-VAL-010's `n`: the read side's shape point, `kernel::shape::shape` in Rust and its WGSL transcription, each
-//!   within a running error bound of an f64 reference of the same map, and the two within the sum on the GPU
-//!   (`shape_twin`; TASK-M1-12).
+//! - `tier_absent_nan_bits`: the tier-absent reads are lowering Part 3a's bits.
+//! - `time_fraction`: the time fractions at a zero horizon and at it.
+//! - `current_drift`: the current drifts `energy_drift = H(r, p) − E_0` and `Lz_drift = L_z(r, p) − Lz_0`,
+//!   computed at read (payload §5; dd_generation_root §3.8), against hand-computed configurations and an f64 host
+//!   reference, and the two targets' agreement on them on the GPU.
+//! - `shape_twin`: the read side's shape point `n`, `kernel::shape::shape` in Rust and its WGSL transcription, each
+//!   within a running error bound of an f64 reference of the same map, and the two within the sum on the GPU.
 //!
 //! Each check takes the read as a function, so its control runs the same check on a read with one fault and shows it
 //! fails (pitfalls §9).
@@ -30,7 +28,7 @@ use proptest::prelude::*;
 use validation::gpu::GpuHarness;
 use validation::{negative_control, prop};
 
-/// Lowering Part 3a's canonical quiet NaN and unbound word (R-72; REQ-RENDER-077).
+/// Lowering Part 3a's canonical quiet NaN and unbound word.
 const QNAN: u32 = 0x7fc0_0000;
 const UNBOUND: [u32; 4] = [0, 0, 0, 0xfe00_0000];
 
@@ -203,7 +201,7 @@ fn close(got: f32, want: f64, bound: f64) -> bool {
     (f64::from(got) - want).abs() <= bound
 }
 
-// ── derived_not_stored (REQ-PAY-021) ──────────────────────────────────────────────────────────────────────────────
+// ── derived_not_stored ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Each case's `ftle`, through `read`, against [`ftle_reference`].
 fn check_ftle_reference(read: Read, cases: &[Case]) {
@@ -314,7 +312,7 @@ negative_control!(
     )
 );
 
-// ── ftle_baked_out (REQ-PAY-022) ──────────────────────────────────────────────────────────────────────────────────
+// ── ftle_baked_out ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A sample with every other `ftle_valid` clause true, read from `SimStateBase`: `ftle` is the canonical quiet NaN and
 /// `ftle_valid` false.
@@ -347,11 +345,11 @@ negative_control!(
     })
 );
 
-// ── read_type_both_tiers (REQ-PAY-026) ────────────────────────────────────────────────────────────────────────────
+// ── read_type_both_tiers ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// One case read from each variant gives one `SimState` (the type is the same by construction): every member but
 /// `ftle`, `ftle_valid` and the shadow agrees, and the variant without the shadow reads `ftle` and every component of
-/// `r_sh` and `p_sh` as the canonical quiet NaN (lowering Part 3a; RQ-228).
+/// `r_sh` and `p_sh` as the canonical quiet NaN (lowering Part 3a).
 fn check_both_tiers(read: Read) {
     let on = marching(40, 50.0);
     let off = Case {
@@ -422,9 +420,9 @@ negative_control!(
     })
 );
 
-// ── total_substeps_resume (REQ-PAY-027) ───────────────────────────────────────────────────────────────────────────
+// ── total_substeps_resume ─────────────────────────────────────────────────────────────────────────────────────────
 
-/// ⌊log₂ total⌋ for a total ≥ 2, 0 for 0 and 1 (payload §6; R-86).
+/// ⌊log₂ total⌋ for a total ≥ 2, 0 for 0 and 1 (payload §6).
 fn log2_reference(total: u32) -> u32 {
     if total > 1 {
         total.ilog2()
@@ -535,9 +533,9 @@ negative_control!(
     check_proxy(|t| 32 - t.saturating_sub(1).leading_zeros(), &[3])
 );
 
-// ── diffusion_slope (REQ-PAY-030) ─────────────────────────────────────────────────────────────────────────────────
+// ── diffusion_slope ───────────────────────────────────────────────────────────────────────────────────────────────
 
-/// At `n` = 0 and 1, `diffusion` is the canonical quiet NaN and `diffusion_slope_valid` false (R-245).
+/// At `n` = 0 and 1, `diffusion` is the canonical quiet NaN and `diffusion_slope_valid` false.
 fn check_diffusion_invalid(read: Read) {
     for n in [0, 1] {
         let got = read(&at_step(marching(40, 50.0), n));
@@ -643,11 +641,11 @@ negative_control!(
     )
 );
 
-// ── ftle_valid_truth_table (REQ-PAY-032) ──────────────────────────────────────────────────────────────────────────
+// ── ftle_valid_truth_table ────────────────────────────────────────────────────────────────────────────────────────
 
 /// Every tier, state code 0–7, `n`, `n_renorm` and `S` (a sum, or the mark `S_FAILED_BITS`) of the table:
 /// `ftle_valid` is the tier on, the state not failed, `n > 0`, `n / n_renorm > 0` (none when `n_renorm` is 0) and `S`
-/// not the mark (R-972); `ftle` is the canonical quiet NaN exactly when it is false (R-254); and the state predicates
+/// not the mark; `ftle` is the canonical quiet NaN exactly when it is false; and the state predicates
 /// follow the code (payload §6).
 fn check_truth_table(read: Read) {
     for tier in [true, false] {
@@ -713,7 +711,7 @@ fn ftle_valid_rust_false_on_the_failed_sum() {
 }
 
 /// A sample valid on every other clause (the FTLE tier, bounded, step 40, `n_renorm` 16): with `S` the mark
-/// `S_FAILED_BITS`, `ftle_valid` is false and `ftle` the canonical quiet NaN (R-972, R-254); with `S` the largest
+/// `S_FAILED_BITS`, `ftle_valid` is false and `ftle` the canonical quiet NaN; with `S` the largest
 /// finite value below it, or a plain sum, it is valid and `ftle` not NaN: the clause is the mark's bits alone.
 fn check_failed_sum(read: Read) {
     for (bits, marked) in [
@@ -757,7 +755,7 @@ fn s_failed_bits_are_f32_max() {
     check_s_failed_bits(S_FAILED_BITS);
 }
 
-/// The mark `S_FAILED_BITS` is `f32::MAX`'s bits, a finite value, never NaN (R-79, R-972).
+/// The mark `S_FAILED_BITS` is `f32::MAX`'s bits, a finite value, never NaN.
 fn check_s_failed_bits(bits: u32) {
     let v = f32::from_bits(bits);
     assert!(
@@ -798,7 +796,7 @@ negative_control!(
     check_accessor_tier(|s, _, n, r, sum| ftle_valid(s, true, n, r, sum))
 );
 
-// ── tier_absent_nan_bits (REQ-RENDER-013) ─────────────────────────────────────────────────────────────────────────
+// ── tier_absent_nan_bits ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// A no-FTLE read's `ftle`, and `ensemble_spread` at E = 0, are the canonical quiet NaN's bits, and an unbound word
 /// reads the unbound word; at E ≥ 1 and with the word bound, the values pass through. The generated constants are
@@ -864,7 +862,7 @@ negative_control!(
     })
 );
 
-// ── time_fraction (REQ-RENDER-019) ────────────────────────────────────────────────────────────────────────────────
+// ── time_fraction ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `(t_end_step, t_dmin_step, horizon_steps)` and the expected fractions.
 type FractionCase = (u32, u32, u32, f32, f32);
@@ -876,7 +874,7 @@ const FRACTIONS: [FractionCase; 4] = [
     (1000, 0, 1000, 1.0, 0.0),
 ];
 
-/// Each case's fractions, bit for bit: 0 at a zero horizon, exactly 1.0 at it (payload §2, §6; R-361).
+/// Each case's fractions, bit for bit: 0 at a zero horizon, exactly 1.0 at it (payload §2, §6).
 fn check_fractions(read: Read, fractions: &[FractionCase]) {
     for &(end, dmin, horizon, e, d) in fractions {
         let mut c = marching(40, 50.0);
@@ -983,7 +981,7 @@ fn wgsl_module() -> String {
 }
 
 /// Each case's members 0–25 read on the GPU through the WGSL read side's `sample_read` at the full tier, the one the
-/// checked-in files declare (R-343): every case is read from `SimStateFTLE` with the word bound.
+/// checked-in files declare: every case is read from `SimStateFTLE` with the word bound.
 fn wgsl_reads(gpu: &GpuHarness, cases: &[Case]) -> Vec<Vec<u32>> {
     let (mut sel, mut ftle, mut word, mut args) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
     for (i, c) in (0u32..).zip(cases) {
@@ -1149,7 +1147,7 @@ negative_control!(
     )
 );
 
-// ── current_drift (REQ-PAY-031) ───────────────────────────────────────────────────────────────────────────────────
+// ── current_drift ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The host reference of the current drifts' terms in f64, from the stored f32 values, in CoM-frame particle
 /// coordinates with `G = 1` (integrator dd §3.5; decoder dd §3.6): `[K, V, L_z]`, `K = Σᵢ ‖pᵢ‖²/2mᵢ`,
@@ -1391,7 +1389,7 @@ negative_control!(
     )
 );
 
-// ── shape_twin: the read side's `n`, Rust and WGSL (dd_generation_root §3.8; TASK-M1-12) ─────────────────────────
+// ── shape_twin: the read side's `n`, Rust and WGSL (dd_generation_root §3.8) ─────────────────────────────────────
 
 /// `derived_entry.wgsl`'s selectors of `n`'s three components.
 const N_MEMBERS: [u32; 3] = [28, 29, 30];

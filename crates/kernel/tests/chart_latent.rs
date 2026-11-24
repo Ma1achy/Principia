@@ -1,17 +1,19 @@
 //! The `Chart` trait and the latent chart (`kernel::chart`; chart_reference §1.1, §5.1, §5.2), each check at the f64
-//! and the f32 instantiation of `map` natively (R-118, R-265): a chart held at f64 mapped at f64, as on the CPU, and
+//! and the f32 instantiation of `map` natively: a chart held at f64 mapped at f64, as on the CPU, and
 //! one held at f32 mapped at f32, as in the kernel.
 //! - `latent_affine_centre_and_corners`: `z(½, ½) = z₀` and the corners are `z₀ ± q₁ ± q₂`, each component exactly,
 //!   over fixed and fuzzed `z₀, q₁, q₂`. The chart is built by a struct literal of `z0`, `q1` and `q2` alone, which
-//!   compiles only while those are its only fields: it has no `s_u`, `s_v` (REQ-CHART-003, R-83).
+//!   compiles only while those are its only fields: it has no `s_u`, `s_v`: the slice
+//!   scale lives in `q₁`, `q₂`.
 //! - `latent_affine_zoom_common_factor`: zoom scales `q₁` and `q₂` by one common factor and keeps `z₀`
-//!   (REQ-CHART-003, R-83).
+//!   (the slice scale lives in `q`).
 //! - `latent_axis_aligned_equals_alpha_beta`: the slice `q₁ = ê_α`, `q₂ = ê_β` through the shared decoder equals,
 //!   pixel by pixel and bitwise, the direct `(α, β)` sweep of chart_reference §5.2, its ICs built from `(α, β)`
-//!   through §0.2, under every registered link (REQ-CHART-030, REQ-CHART-050).
+//!   through §0.2, under every registered link.
 //! - `latent_validate_accepts_every_point`: the latent chart's `validate` is `Valid` inside `[0,1]²` and past it
-//!   (R-26; inverse_encode_contract § "Chart-aware validation": layer 2 adds nothing for it).
-//! - `latent_name_in_dump_header`: the dump header carries the chart's name (REQ-CHART-028).
+//!   (every chart declares its domain; inverse_encode_contract § "Chart-aware validation": layer 2 adds nothing for
+//!   it).
+//! - `latent_name_in_dump_header`: the dump header carries the chart's name.
 //! - `latent_allows_energy_normalisation`: the latent chart does not forbid energy normalisation (chart_reference
 //!   §0.6).
 
@@ -62,7 +64,7 @@ fn over_charts(check: impl Fn([f64; 8], [f64; 8], [f64; 8])) {
     });
 }
 
-// ── latent_affine_centre_and_corners (REQ-CHART-003) ──────────────────────────────────────────────────────────
+// ── latent_affine_centre_and_corners ──────────────────────────────────────────────────────────────────────────
 
 /// `map(½, ½) = z₀` and each corner `(u, v) ∈ {0, 1}²` is `z₀ + (2u − 1)q₁ + (2v − 1)q₂`, componentwise and exactly.
 fn check_corners<R: P>(map: Map<R>, z0: [f64; 8], q1: [f64; 8], q2: [f64; 8]) {
@@ -113,7 +115,7 @@ negative_control!(
     check_corners_both(half_scale::<f64>, half_scale::<f32>)
 );
 
-// ── latent_affine_zoom_common_factor (REQ-CHART-003) ──────────────────────────────────────────────────────────
+// ── latent_affine_zoom_common_factor ──────────────────────────────────────────────────────────────────────────
 
 /// A zoom at `R`, behind a function pointer.
 type Zoom<R> = fn(&Latent<R>, R) -> Latent<R>;
@@ -171,7 +173,7 @@ negative_control!(
     check_zoom_both(per_axis::<f64>, per_axis::<f32>)
 );
 
-// ── latent_axis_aligned_equals_alpha_beta (REQ-CHART-030, REQ-CHART-050) ──────────────────────────────────────
+// ── latent_axis_aligned_equals_alpha_beta ─────────────────────────────────────────────────────────────────────
 
 /// `ê_k`.
 fn basis(k: usize) -> [f64; 8] {
@@ -259,7 +261,7 @@ negative_control!(
     check_axis_aligned_all(basis(1), basis(0))
 );
 
-// ── latent_validate_accepts_every_point (R-26) ────────────────────────────────────────────────────────────────
+// ── latent_validate_accepts_every_point ───────────────────────────────────────────────────────────────────────
 
 /// A chart's `validate`, behind a function pointer.
 type Validate = fn(&Latent<f64>, f64, f64) -> ValidationResult;
@@ -308,7 +310,7 @@ negative_control!(
     check_validate(unit_square)
 );
 
-// ── latent_name_in_dump_header (REQ-CHART-028) ────────────────────────────────────────────────────────────────
+// ── latent_name_in_dump_header ────────────────────────────────────────────────────────────────────────────────
 
 /// A dump-header writer, behind a function pointer.
 type Header = fn(&mut String, &Latent<f64>) -> core::fmt::Result;

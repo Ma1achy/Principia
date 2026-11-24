@@ -1,41 +1,42 @@
-//! QA tests for TASK-M3-11, written from the requirements it closes and their sources, not from the implementation:
-//! - REQ-INT-042 (dd_integrator §3.7, §5 test 9; R-14): the live shape point `n = (u, v, w)/I` from mass-weighted
+//! QA tests of the shape point, `θ̃` and the closure registers, written from the requirements and their sources,
+//! not from the implementation:
+//! - The shape identities (dd_integrator §3.7, §5 test 9): the live shape point `n = (u, v, w)/I` from mass-weighted
 //!   Jacobi coordinates. A reference written here from §3.7's formula, checked against §3.7's own landmark table
 //!   (`b̂₀₁ = (−1, 0, 0)`, `b̂₁₂ = (½, √3/2, 0)`, `b̂₂₀ = (½, −√3/2, 0)`, `L⁺` the anticlockwise equilateral at `w = +1`);
 //!   `‖n‖ = 1`, equilateral `w = ±1`, collinear `w = 0`; the kernel's `shape` against the reference and against the IC
 //!   Inspector's `shapePoint` on its two checked-in fixtures (5,000 + 500 ICs) after the mirror fold, to f64 round-off,
 //!   the register's `shape_vec_js_tol` (`qa_m311_shape_*`).
-//! - REQ-PAY-055: the shape helper and the readout's per-step entry take positions and masses, never momenta: a
+//! - Positions only: the shape helper and the readout's per-step entry take positions and masses, never momenta: a
 //!   compile-time signature check (`qa_m311_shape_takes_no_momenta`).
-//! - REQ-INT-087 (payload §2 `_reserved`; R-397): every code round-trips, decode lies in (−π, π), the encode's error is
+//! - The code (payload §2 `_reserved`): every code round-trips, decode lies in (−π, π), the encode's error is
 //!   at most `π/65535 + 4·ulp_Real(2π)` over every code's midpoints and the edge longitudes and never yields 0xFFFF; a
 //!   truncating encode fails the bound and an encode without the `N → 0` wrap yields the sentinel
 //!   (`qa_m311_theta_ref_code_*`).
-//! - REQ-INT-088 (dd_integrator §3.7; payload §2; R-389, R-392, R-397, R-547): the hold's lifecycle on hand-built
+//! - The hold's lifecycle (dd_integrator §3.7; payload §2): the hold's lifecycle on hand-built
 //!   points: fresh 0xFFFF, entry writes the code of the last longitude outside, inside holds, exit adds
 //!   `wrap(exit − decode(code))` and writes 0xFFFF, exactly ±π adds +π, an IC inside adds nothing at its first exit;
 //!   "inside" decided from the current state alone, agreeing with `√(n_u² + n_v²) < r_pole` written here and invariant
-//!   under any power-of-two scale of the configuration (R-547's "no subnormal intermediate"); and on a real march through
-//!   the disc, outside always 0xFFFF and descriptor bits 10–14 `I_max`'s level, never decreasing, bit 15 the departed bit's (R-545)
-//!   (`qa_m311_theta_hold_*`).
-//! - REQ-INT-089 (R-397): a march through the disc, and one from an IC inside it, at f32 and f64, as one call and as
+//!   under any power-of-two scale of the configuration (a branch input every backend must decide alike, so no
+//!   subnormal intermediate); and on a real march through the disc, outside always 0xFFFF and descriptor bits 10–14
+//!   `I_max`'s level, never decreasing, bit 15 the departed bit's (`qa_m311_theta_hold_*`).
+//! - The split: a march through the disc, and one from an IC inside it, at f32 and f64, as one call and as
 //!   k ∈ {2, 3, 7} resumed calls split on the entry step, strictly inside and on the exit step, each resume from the
 //!   stored `SimState` with `packed_a` put through the generated unpack and pack: `θ̃`'s bits, `_reserved` and the
 //!   closure registers identical; a control holding the reference unquantised within a dispatch fails
 //!   (`qa_m311_theta_resume_split_*`).
-//! - REQ-PAY-043, REQ-PAY-056 (payload § "Why closure is here"; dd_validation_orbits §6; R-37, R-545): on the
+//! - The closure registers (payload § "Why closure is here"; dd_validation_orbits §6): on the
 //!   figure-eight (Chenciner & Montgomery's published IC and period, dd_integrator §5 test 2) the stored registers after
 //!   every step equal the offline minimum of `|n̂(t) − n̂(0)|` over the stored shape path from the first sample that
 //!   exceeds `δ_dep`, and the argmin step; the return is at the period the orbit's symmetry predicts (`T/2` from the
 //!   Euler configuration the published IC starts in, `T` from a generic phase); synthetic paths whose closest approach
 //!   is before departure ignore it, and a chord of exactly `δ_dep` does not depart (`qa_m311_closure_*`).
-//! - REQ-INT-082 (dd_integrator §5 test 8; R-580): a rotating figure-eight; `θ̃` against a hand count of the signed
+//! - `θ̃` on a real orbit (dd_integrator §5 test 8): a rotating figure-eight; `θ̃` against a hand count of the signed
 //!   crossings of the three binary-collision half-meridians, with no `atan2`; `orbit_count` against that count at a
 //!   step where it is unambiguous; the mirror run's `θ̃` and `retrograde` bitwise equal and `L_z` bitwise opposite at every
 //!   step, `|L_z| > 0.01`; controls: `θ̃` with its sense reversed fails the direction only, `retrograde` from `L_z`,
 //!   `θ̃` from `w`, and a positions-only mirror each fail (`qa_m311_theta_unwrap_*`).
 //!
-//! Each test has its registered negative control (R-176).
+//! Each test has its registered negative control.
 // The file name `qa_TASK-M3-11` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -154,7 +155,7 @@ fn circle(a: f64, b: f64) -> f64 {
     d.min(TAU - d)
 }
 
-/// R-389's wrap written from its words: into (−π, π], exactly ±π giving +π.
+/// The hold's exit wrap, written from its definition: into (−π, π], exactly ±π giving +π.
 fn wrap64(d: f64) -> f64 {
     let mut d = d;
     while d > PI {
@@ -247,7 +248,7 @@ fn moved(r: [[f64; 2]; 3], a: f64, k: f64, t: [f64; 2]) -> [[f64; 2]; 3] {
     r.map(|[x, y]| [k * (c * x - s * y) + t[0], k * (s * x + c * y) + t[1]])
 }
 
-// ── REQ-INT-042: the shape identities and the inspector ──────────────────────────────────────────────────────────
+// ── The shape identities and the inspector ───────────────────────────────────────────────────────────────────────
 
 /// A shape map under test at f64: the kernel's, or a control's.
 type Map = fn([[f64; 2]; 3], [f64; 3]) -> [f64; 3];
@@ -518,7 +519,7 @@ negative_control!(
     }
 );
 
-// ── REQ-PAY-055: positions only ──────────────────────────────────────────────────────────────────────────────────
+// ── Positions only ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The readout's per-step entry: the readout, the positions, the masses and the step.
 type AfterMacro = fn(&mut Readout<f64>, [[f64; 2]; 3], [f64; 3], u32);
@@ -564,7 +565,7 @@ fn equilateral_tilted() -> [[f64; 2]; 3] {
     [[-0.5, 0.0], [0.5, 0.0], [0.1, 0.4]]
 }
 
-// ── REQ-INT-087: the code ────────────────────────────────────────────────────────────────────────────────────────
+// ── The code ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// An encode under test at `R`.
 type Encode<R> = fn(R) -> u32;
@@ -672,7 +673,7 @@ fn step_ulp<R: Prec>(x: R, dir: i64) -> R {
     }
 }
 
-/// REQ-INT-087's code at `R` with `enc` as the encode: every code round-trips and decodes into (−π, π) within round-off
+/// The code at `R` with `enc` as the encode: every code round-trips and decodes into (−π, π) within round-off
 /// of `c·2π/65535` (less 2π above π); over the sweep the encode is never 0xFFFF, small negatives encode to 0, and the
 /// decoded code is within `π/65535 + 4·ulp_Real(2π)` of the longitude, mod 2π. Returns the worst error.
 fn check_code<R: Prec>(enc: Encode<R>) -> f64 {
@@ -779,7 +780,7 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-088: the hold's lifecycle ────────────────────────────────────────────────────────────────────────────
+// ── The hold's lifecycle ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// Equal masses, the fixtures' (the landmarks of §3.7 are at equal masses).
 const MASSES: [f64; 3] = [1.0 / 3.0; 3];
@@ -804,7 +805,8 @@ fn readout<R: Prec>(r: [[f64; 2]; 3]) -> Readout<R> {
     Readout::fresh(r.map(|v| v.map(real)), MASSES.map(real))
 }
 
-/// The lifecycle on hand-built points at `R` (each assertion R-389's, R-392's or payload §2's words).
+/// The lifecycle on hand-built points at `R` (each assertion dd_integrator §3.7's or payload §2's
+/// words).
 fn check_lifecycle<R: Prec>() {
     let tol = 8.0 * ulp_tau::<R>();
     // Fresh: 0xFFFF and θ̃ = 0, outside and inside alike.
@@ -1034,7 +1036,7 @@ type Disc<R> = fn([[R; 2]; 3], [R; 3], R) -> bool;
 /// The march's disc test at `R` against `√(n_u² + n_v²) < r_pole` written here, on near-pole configurations whose
 /// radius is at least 2% from `r_pole` (beyond `R`'s round-off of the radius); and invariant under every power-of-two
 /// scale `2^k`, `k` over `scales`, which commutes exactly with every operation unless an intermediate underflows or
-/// overflows (R-547: none does). Returns the counts inside and outside.
+/// overflows (none may: a branch input must agree across backends). Returns the counts inside and outside.
 fn check_disc<R: Prec>(test: Disc<R>, scales: std::ops::RangeInclusive<i32>) -> (usize, usize) {
     let rp: R = r_pole();
     let rp64 = wide(rp);
@@ -1116,7 +1118,7 @@ negative_control!(
     }
 );
 
-// ── the passage fixtures (REQ-INT-088 on a march, REQ-INT-089) ─────────────────────────────────────────────────
+// ── the passage fixtures (the hold on a march, the split) ──────────────────────────────────────────────────────
 
 const PASS_DT: f64 = 0.002;
 const PASS_STEPS: u32 = 200;
@@ -1250,7 +1252,8 @@ fn check_march_holds<R: Prec>() {
         let states = path(&ic, PASS_DT, PASS_STEPS);
         let (entry, exit) = check_march_hold(&states, &ic);
         assert!(exit > entry + 2, "the passage is {entry} → {exit}");
-        // R-547: whether a state is inside agrees with the radius written here, away from the edge.
+        // A branch input built alike on every backend: whether a state is inside agrees with the radius written here,
+        // away from the edge.
         for (k, s) in states.iter().enumerate() {
             let r = s.r.map(|v| v.map(wide));
             let rad = pole_radius(r, MASSES);
@@ -1288,7 +1291,7 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-089: the split ───────────────────────────────────────────────────────────────────────────────────────
+// ── The split ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A march under test: `ic`'s march to `horizon` as calls ending at `splits` then at the horizon; the stored state
 /// at the end of each call.
@@ -1390,7 +1393,8 @@ fn qa_m311_theta_resume_split() {
 }
 
 /// The control's march: the kernel's states, but `θ̃` replayed from the stored shape path with the reference held
-/// unquantised within a call (only a resume quantises it), the R-397 fault.
+/// unquantised within a call (only a resume quantises it): the fault that makes one call
+/// and a split run disagree.
 #[cfg(feature = "controls")]
 fn unquantised_split(ic: &Ic<f64>, horizon: u32, splits: &[u32]) -> Vec<SimStateBaseOf<f64>> {
     let states = path(ic, PASS_DT, horizon);
@@ -1434,7 +1438,7 @@ negative_control!(
     }
 );
 
-// ── REQ-PAY-043, REQ-PAY-056: the closure registers ──────────────────────────────────────────────────────────────
+// ── The closure registers ────────────────────────────────────────────────────────────────────────────────────────
 
 /// The figure-eight's published IC and period (Chenciner & Montgomery 2000, Simó's digits; dd_integrator §5 test 2),
 /// in `G = 1`, `mᵢ = 1`: `x₁ = −x₂`, `x₃ = 0`, `v₁ = v₂ = −v₃/2`.
@@ -1636,7 +1640,7 @@ fn kernel_sample(c: Closure<f64>, n: [f64; 3], n0: [f64; 3], step: u32, dd: f64)
     c.sample(n, n0, step, dd)
 }
 
-/// Synthetic paths (payload § "Why closure is here"; R-37): the chords, in order, `1e-9` and `1e-6` (the closest
+/// Synthetic paths (payload § "Why closure is here"): the chords, in order, `1e-9` and `1e-6` (the closest
 /// approach, before departure), `0.01`, then `0.5` (departure), `0.2`, `3e-3` at step 6, `0.4`, `5e-3`: the registers
 /// end at `3e-3`, step 6, departed; and departure stays latched when the chord falls back below `δ_dep`. A chord of
 /// exactly `δ_dep` does not depart ("first exceeded"), one just above does.
@@ -1696,7 +1700,7 @@ negative_control!(
 
 #[test]
 fn qa_m311_departed_is_bit_15() {
-    // R-545: the departed bit is sample_descriptor bit 15, alone.
+    // The departed bit is sample_descriptor bit 15, alone.
     assert_eq!(set_departed(0, true), 0x8000);
     assert_eq!(set_departed(u32::MAX, false), !0x8000u32);
     assert!(sd_departed(0x8000) && !sd_departed(0x7fff) && !sd_departed(!0x8000u32));
@@ -1709,7 +1713,7 @@ negative_control!(
     assert_eq!(set_departed(0, true), 0x4000, "assertion")
 );
 
-// ── REQ-INT-082: θ̃ on a real orbit ───────────────────────────────────────────────────────────────────────────────
+// ── θ̃ on a real orbit ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The rotation added to the figure-eight: `L_z = ω·Σmr² = 0.03 · ⅔ = 0.02`.
 const OMEGA: f64 = 0.03;
@@ -1790,8 +1794,8 @@ fn hand_count(path: &[[f64; 3]]) -> Vec<i64> {
     out
 }
 
-/// R-580's test 8 at `R`. The run of the rotating figure-eight and its mirror `how`, sampled every step. Checked in
-/// this order, so that a reversed sense fails the direction only:
+/// dd_integrator §5 test 8 at `R`. The run of the rotating figure-eight and its mirror `how`, sampled every step.
+/// Checked in this order, so that a reversed sense fails the direction only:
 /// 1. no 2π jumps: every step's change in `θ̃` is below π in magnitude;
 /// 2. the mirror pair: `θ̃` and `retrograde` bitwise identical and `L_z` bitwise opposite at every step, `|L_z| >
 ///    LZ_BOUND`;
@@ -1903,7 +1907,7 @@ negative_control!(
     }
 );
 
-// R-580's three further controls, each on its own test of the same check at f64 (one control per test, R-176).
+// Test 8's three further controls, each on its own test of the same check at f64 (one control per test).
 
 #[test]
 fn qa_m311_theta_unwrap_mirror_retrograde() {

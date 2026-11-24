@@ -1,36 +1,35 @@
-//! QA tests for TASK-M2-10, written from the requirements (REQ-CHART-021, REQ-CHART-022, REQ-CHART-023,
-//! REQ-CHART-013, REQ-SYS-016, REQ-VAL-016; chart_reference §4.1–§4.5, §2.2, §5.2; chart_decoder_contract Part 5;
-//! R-22), not from the implementation. Each check runs at the f64 and the f32 instantiation of the one source,
-//! natively (R-265).
-//! - `qa_m210_euclid_*` (REQ-CHART-021): Euclid's map against a brute force (every primitive triple with `c ≤ 400`
+//! QA tests of the Burrau charts, written from the requirements (chart_reference §4.1–§4.5, §2.2, §5.2;
+//! chart_decoder_contract Part 5), not from the implementation. Each check runs at the f64 and the f32 instantiation
+//! of the one source, natively.
+//! - `qa_m210_euclid_*`: Euclid's map against a brute force (every primitive triple with `c ≤ 400`
 //!   arises from exactly one `(m, n)`, up to the leg swap); §4.1's table rows; the normalised Burrau system checked
 //!   *geometrically*: right angle at body 0 at the origin, hypotenuse 1, each mass proportional to the side opposite its
 //!   body, `Σm = 1`, and `ρ`, `λ` the Jacobi vectors by their definition (`ρ = r₁ − r₀`, `λ = r₂ − CoM₀₁`) as well as
 //!   §4.2's closed forms; the convention stated is the normalised one.
-//! - `qa_m210_nu_*` (REQ-CHART-022): the `ν` embed at every primitive `ν = n/m` (`m ≤ 40`) reproduces the discrete
+//! - `qa_m210_nu_*`: the `ν` embed at every primitive `ν = n/m` (`m ≤ 40`) reproduces the discrete
 //!   family; `θ(ν) = arctan((1 − ν²)/(2ν))` and is the triangle's own acute angle at body 2; continuity of positions,
 //!   masses and Jacobi vectors (embed and decoded IC) by a constant-free refinement test (a jump survives refinement,
 //!   a continuous function's increments shrink with the step); the `(ν, K)` chart's momenta are §2.2's construction
 //!   (`Σp = 0`, `L_z = 0`, `K(p) = K_max·v^γ_K`), its configuration the rest decode's, and its seed the expansion
-//!   `w = r/√I` (R-934, `pᵢ = mᵢλrᵢ`); R-82's largest-norm seed, the named legacy option, decided exactly at `3ν = 1`
+//!   `w = r/√I` (`pᵢ = mᵢλrᵢ`); the largest-norm seed, the named legacy option, decided exactly at `3ν = 1`
 //!   (checked in integer arithmetic) and visible in the legacy decode's momenta's direction.
-//! - `qa_m210_plane_*` (REQ-CHART-023): `m(u)`, `ν(v)` and their defaults; varying `u` at fixed `v` gives bitwise
+//! - `qa_m210_plane_*`: `m(u)`, `ν(v)` and their defaults; varying `u` at fixed `v` gives bitwise
 //!   identical ICs, through every decode entry; the plane decodes `ν(v)` at rest with Burrau masses; the overlay marks
 //!   exactly the primitive lattice points by brute force, at their `(u, v)`.
-//! - `qa_m210_annotation_*` (REQ-CHART-013): the `m` axis is annotation-only; a 2D density on the plane is refused, a
+//! - `qa_m210_annotation_*`: the `m` axis is annotation-only; a 2D density on the plane is refused, a
 //!   per-value statistic along `ν` admitted, along `m` refused; the chart is labelled a 1-swept family; the `(ν, K)`
 //!   chart, with no annotation axis, admits a density; the decoder ignores `u` even when it is not finite.
-//! - `qa_m210_body_indices` (REQ-SYS-016): pair id `k` names the side opposite body `k` (pair 0 = (1, 2), 1 = (2, 0),
+//! - `qa_m210_body_indices`: pair id `k` names the side opposite body `k` (pair 0 = (1, 2), 1 = (2, 0),
 //!   2 = (0, 1)), so bodies 0 and 1 collide as pair 2, carried through `sample_descriptor`'s `dmin_pair` bits; the
 //!   literature's bodies 1–3 are 0–2; `ICDescriptor`'s `m0 m1 m2` of `(3, 4, 5)` are `(5, 4, 3)/12`, body 0 at the
 //!   right angle.
-//! - `qa_m210_nu_half` (REQ-VAL-016): `ν = 1/2` (the plane and the `(ν, K)` chart at `K = 0`) against the `(2, 1)`
+//! - `qa_m210_nu_half`: `ν = 1/2` (the plane and the `(ν, K)` chart at `K = 0`) against the `(2, 1)`
 //!   construction and against the classical configuration canonicalised *here*, by hand (CoM `(1, 1)`, `I = 5`,
-//!   `ℓ = √5` in historical units), within REQ-VAL-118's proposed tolerance.
+//!   `ℓ = √5` in historical units), within the proposed `burrau_nu_half_tol`.
 //! - `qa_m210_validate`: `ν ∉ (0, 1)` is refused naming the Burrau constraint (chart_reference §5.1).
 //!
-//! **Tolerances.** REQ-VAL-016's is REQ-VAL-118's (the register's `burrau_nu_half_tol`, proposed). The construction's
-//! `Σp`, `L_z` and `K` residuals are REQ-DEC-046's proposed per-precision tolerances (`TOL_P`, `TOL_L`, `TOL_K`, as
+//! **Tolerances.** `ν = 1/2`'s is the register's `burrau_nu_half_tol`, proposed. The construction's `Σp`, `L_z` and
+//! `K` residuals are the momentum construction's proposed per-precision tolerances (`TOL_P`, `TOL_L`, `TOL_K`, as
 //! `invariant_construction.rs` states them). The remaining bounds are rounding bounds of the few operations each formula
 //! writes, every quantity of magnitude at most 1 with derivatives in `ν` at most 2 on `(0, 1)` (§4.3's rational
 //! functions): `RND = 32` eps absolute. Continuity has no constant: the refinement ratio `1/4` sits between a continuous
@@ -39,7 +38,7 @@
 //!
 //! **Domain** (pitfalls §10): the stateless decode, its inputs held fixed; no trajectory.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176, R-212).
+//! Each test has a registered negative control naming the panic it expects.
 
 use std::fmt::Debug;
 
@@ -64,11 +63,11 @@ use validation::{
 
 /// Rounding bound, in eps, absolute, for a quantity of magnitude ≤ 1 (the module's note).
 const RND: f64 = 32.0;
-/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|` (REQ-DEC-046, proposed).
+/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|` (proposed).
 const TOL_P: f64 = 4.0;
-/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))` (REQ-DEC-046, proposed).
+/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))` (proposed).
 const TOL_L: f64 = 4.0;
-/// `|K(p) − K*|` in units of `eps·K*` (REQ-DEC-046, proposed).
+/// `|K(p) − K*|` in units of `eps·K*` (proposed).
 const TOL_K: f64 = 8.0;
 
 // ── Precisions ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -171,7 +170,7 @@ fn w2<R: Q>(v: [R; 2]) -> [f64; 2] {
     [v[0].f(), v[1].f()]
 }
 
-// ── qa_m210_euclid (REQ-CHART-021) ──────────────────────────────────────────────────────────────────────────────
+// ── qa_m210_euclid ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Euclid's map: a triple exactly at primitive `(m, n)` with `a = m² − n²`, `b = 2mn`, `c = m² + n²`; §4.1's rows;
 /// every primitive triple with `c ≤ 400` from exactly one `(m, n)`, legs in either order.
@@ -364,7 +363,7 @@ negative_control!(
     )
 );
 
-// ── qa_m210_nu (REQ-CHART-022) ──────────────────────────────────────────────────────────────────────────────────
+// ── qa_m210_nu ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The system's quantities as one list: masses, positions, `ρ`, `λ`.
 fn flat<R: Q>(s: &System<R>) -> Vec<f64> {
@@ -544,8 +543,8 @@ fn lz_k<R: Q>(ic: &Ic<R>) -> (f64, f64) {
 /// A `(ν, K)` decode under check: the decode and the construction's outcome.
 type NuKDecode<R> = fn(&Burrau<R>, R, R) -> (Decoded<R>, Outcome);
 
-/// The `(ν, K)` chart at `(u, v)`: §2.2's construction at `L_z = 0`, `K* = K_max·v^γ_K` (R-113, §4.5's `K(v)`), on the
-/// rest decode's masses and configuration, its seed the expansion `w = r/√I` (R-934); under R-82's rule, the named
+/// The `(ν, K)` chart at `(u, v)`: §2.2's construction at `L_z = 0`, `K* = K_max·v^γ_K` (§4.5's `K(v)`), on the
+/// rest decode's masses and configuration, its seed the expansion `w = r/√I`; under the largest-norm rule, the named
 /// legacy option, the larger mass-weighted Jacobi norm, `(ρ, 0)` on a tie, decided exactly at `3ν = 1`.
 fn check_construction<R: Q>(dec: NuKDecode<R>, u: f64, v: f64) {
     let c = nu_k::<R>();
@@ -590,7 +589,7 @@ fn check_construction<R: Q>(dec: NuKDecode<R>, u: f64, v: f64) {
         (rest.ic.m, rest.ic.r),
         "K moves the configuration or the masses"
     );
-    // The seed in force (R-934): the expansion w = r/√I, so at L_z = 0 every body's velocity is λ·rᵢ, one λ = √(2K*/I)
+    // The seed in force: the expansion w = r/√I, so at L_z = 0 every body's velocity is λ·rᵢ, one λ = √(2K*/I)
     // for all three, I the configuration's own.
     if k_star > 0.0 {
         let r = d.ic.r.map(w2);
@@ -607,7 +606,7 @@ fn check_construction<R: Q>(dec: NuKDecode<R>, u: f64, v: f64) {
             );
         }
     }
-    // R-82's rule, the named legacy option (R-934): its largest mass-weighted Jacobi norm, from the decoded
+    // The largest-norm rule, the named legacy option: its largest mass-weighted Jacobi norm, from the decoded
     // configuration (the norms of (ρ, 0) and (0, λ) are ‖ρ̃‖² and ‖λ̃‖²), decided exactly at the tie 3ν = 1; and in the
     // legacy decode's momenta's direction: (ρ, 0) moves only the inner pair (p₂ = 0), (0, λ) moves bodies 0 and 1
     // together (v₀ = v₁).
@@ -706,7 +705,7 @@ negative_control!(
     check_construction::<f64>(half_k, 0.3, 0.8)
 );
 
-// ── qa_m210_plane (REQ-CHART-023) ───────────────────────────────────────────────────────────────────────────────
+// ── qa_m210_plane ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The plane's maps and defaults: `m(u) = m_min·(m_max/m_min)^u` on `[1, 32]`, `ν(v)` linear on `[1/32, 31/32]`.
 fn check_maps(m_of: &dyn Fn(f64) -> f64, nu_of: &dyn Fn(f64) -> f64) {
@@ -885,7 +884,7 @@ negative_control!(
     )
 );
 
-// ── qa_m210_annotation (REQ-CHART-013) ──────────────────────────────────────────────────────────────────────────
+// ── qa_m210_annotation ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// The plane's axes: `m` annotation-only, a 2D density refused, a per-value statistic along `ν` admitted and along
 /// `m` refused; labelled a 1-swept family rendered in 2D.
@@ -951,7 +950,7 @@ negative_control!(
     })
 );
 
-// ── qa_m210_body_indices (REQ-SYS-016) ──────────────────────────────────────────────────────────────────────────
+// ── qa_m210_body_indices ────────────────────────────────────────────────────────────────────────────────────────
 
 /// Pair id `k` names the side opposite body `k`: pair 0 = (1, 2), 1 = (2, 0), 2 = (0, 1), in either order, and the
 /// collision of bodies 0 and 1 is pair 2 through the payload's map and `sample_descriptor`'s `dmin_pair` bits.
@@ -1023,7 +1022,7 @@ negative_control!(
     check_pairs(|i, j| (i < 3 && j < 3 && i != j).then(|| i.min(j)))
 );
 
-// ── qa_m210_nu_half (REQ-VAL-016) ───────────────────────────────────────────────────────────────────────────────
+// ── qa_m210_nu_half ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The classical configuration in the canonical section, by hand: masses `(5, 4, 3)/12` on `r₀ = (0, 0)`,
 /// `r₁ = (3, 0)`, `r₂ = (0, 4)` (historical units). CoM `(1, 1)`; `ρ = (3, 0)` already on `+x`, `λ_y > 0`, so no
@@ -1040,8 +1039,8 @@ fn classical() -> ([f64; 3], [[f64; 2]; 3]) {
     )
 }
 
-/// The `ν = 1/2` decode against the `(2, 1)` construction and the classical configuration, each within REQ-VAL-118's
-/// tolerance, componentwise on the canonical `(m, r, p)`, in eps.
+/// The `ν = 1/2` decode against the `(2, 1)` construction and the classical configuration, each within
+/// `burrau_nu_half_tol`, componentwise on the canonical `(m, r, p)`, in eps.
 fn check_nu_half<R: Q>(d: &Decoded<R>) {
     let tol = BURRAU_NU_HALF_TOL.number();
     let flat_ic = |m: [f64; 3], r: [[f64; 2]; 3], p: [[f64; 2]; 3]| -> Vec<f64> {
@@ -1137,7 +1136,7 @@ negative_control!(
     ))
 );
 
-// ── qa_m210_validate (R-26; chart_reference §5.1) ───────────────────────────────────────────────────────────────
+// ── qa_m210_validate (chart_reference §5.1) ─────────────────────────────────────────────────────────────────────
 
 /// `ν ∉ (0, 1)` is refused naming the Burrau charts' constraint; inside, `(u, v)` in the square is valid.
 fn check_validate<C: Chart>(c: &C, outside: [(f64, f64); 2], inside: (f64, f64)) {

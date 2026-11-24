@@ -1,4 +1,4 @@
-//! The dτ mode of Heggie's and Aarseth–Zare's step control (`step_size_in`; the watches' `PER_STEP`; TASK-M3-31): the
+//! The dτ mode of Heggie's and Aarseth–Zare's step control (`step_size_in`; the watches' `PER_STEP`): the
 //! step-limit ablation's `dtau` switch (pitfalls §8).
 //!
 //! Criteria, written before the run: on the registered figure-eight, with the limit and the clamp off and an entry size

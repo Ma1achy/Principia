@@ -1,8 +1,6 @@
-//! QA tests for TASK-M2-07, round 4, written from the requirement, not from the implementation: `C`
-//! (`kernel::canon::canonicalise`) takes no mirror and reads no `δ_λ` (REQ-DEC-017; dd_decoder §3.3, dd_encode §3.2),
-//! on hierarchical states at the precision's whole exponent range, either side of the old deadband's edge, at f64
-//! and f32. *Was (before TASK-M2-57 removed the decoder's mirror step):* "R-82's one mirror test holds … near the
-//! deadband's edge".
+//! QA tests written from the requirement, not from the implementation: `C` (`kernel::canon::canonicalise`) takes no
+//! mirror and reads no `δ_λ` (dd_decoder §3.3, dd_encode §3.2), on hierarchical states at the precision's whole
+//! exponent range, either side of the old deadband's edge, at f64 and f32.
 //!
 //! - `qa_m207_edge_range`: states whose inner pair is `2^j` of the outer distance (`j` down to −40 at f32, −500 at
 //!   f64), built with `λ̃_y = −k·δ_λ` exactly in f64 and rounded to the precision, `k` either side of 1 by `10⁻³`, and
@@ -19,7 +17,7 @@
 //!
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory.
 //!
-//! Its negative controls (R-176): `C` with the mirror step left in, which changes the sign for `k > 1`; and the half
+//! Its negative controls: `C` with the mirror step left in, which changes the sign for `k > 1`; and the half
 //! read in plain floats off the input, the sign of `ρ × (M₀₁r₂ − m₀r₀ − m₁r₁)`, which underflows on the scaled states
 //! at f32.
 
@@ -255,7 +253,6 @@ negative_control!(
 );
 
 /// The half in plain floats, read off the input: `c < 0`, `c = ρ × (M₀₁r₂ − m₀r₀ − m₁r₁)`, whose sign is `λ̃_y`'s.
-/// *Was:* R-82's whole test in plain floats, this with `m₂c² > δ_λ²·M₀₁·‖ρ‖²·I_in`.
 #[cfg(feature = "controls")]
 fn plain(x: &Ic<f32>) -> bool {
     let (m, r) = (x.m, x.r);

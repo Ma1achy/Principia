@@ -1,5 +1,5 @@
-//! QA's tests for TASK-M2-38's `Φ` arm, written from REQ-CHART-060 ("a centre whose Φ fails counting as failing"),
-//! not from the implementation.
+//! QA's tests for the chart stop's `Φ` arm, written from the requirement ("a centre whose Φ fails counting as
+//! failing"), not from the implementation.
 //!
 //! `Φ` is what the chart builds at its centre, the configuration the decode returns. The oracle here is that decode
 //! itself, never the chart's own finiteness report: every centre the stop accepts must decode to finite masses,

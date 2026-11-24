@@ -1,20 +1,21 @@
-//! QA tests for TASK-M3-02, written from the requirements it closes, not from the implementation:
-//! - REQ-INT-014: the occupant table, transcribed here from integrator_contract Part 2 and Part 2a, against what each
+//! QA tests of the integrator's occupants and their constants, written from the requirements, not from the
+//! implementation:
+//! - The occupant table, transcribed here from integrator_contract Part 2 and Part 2a, against what each
 //!   built occupant advertises and binds by default; controls: Yoshida-4 `step_reversible` false, KDK
 //!   `run_reversible` true.
-//! - REQ-INT-015: Euler is in no tier default and no production list, and is the debug selection's.
-//! - REQ-INT-013, REQ-INT-078: the profile's readers return Part 2's definition (drift, the two reversibility gates,
+//! - Euler is in no tier default and no production list, and is the debug selection's.
+//! - The profile's readers return Part 2's definition (drift, the two reversibility gates,
 //!   cost, the error exponent and FTLE confidence), each read from the profile.
-//! - REQ-INT-037: the shipped constants parse from dd_integrator §3.2's printed digits; Yoshida-4's `w₁` is the
-//!   correctly rounded f64 of `1/(2 − 2^{1/3})`, checked exactly; `w₀` is bitwise `1 − 2w₁` and `w₀ + 2w₁ == 1.0`
-//!   (R-515); Yoshida-6's `w₀ = 1 − 2(w₁ + w₂ + w₃)`; the kicks are `(d_{i−1} + dᵢ)/2`; controls: RQ-405's interim
-//!   digits, and `w₁`'s f64 neighbour.
-//! - REQ-INT-056: the Yoshida blocks carry Yoshida (1990)'s citation, Yoshida-6 its Table 1, solution A; the negative
+//! - The constants: the shipped constants parse from dd_integrator §3.2's printed digits; Yoshida-4's `w₁` is the
+//!   correctly rounded f64 of `1/(2 − 2^{1/3})`, checked exactly; `w₀` is bitwise `1 − 2w₁` and `w₀ + 2w₁ == 1.0`;
+//!   Yoshida-6's `w₀ = 1 − 2(w₁ + w₂ + w₃)`; the kicks are `(d_{i−1} + dᵢ)/2`; controls: earlier printed digits that
+//!   are not correctly rounded, and `w₁`'s f64 neighbour.
+//! - The citation: the Yoshida blocks carry Yoshida (1990)'s citation, Yoshida-6 its Table 1, solution A; the negative
 //!   weights are Yoshida-4's `w₀` and Yoshida-6's `w₁`.
-//! - REQ-INT-090: the order conditions, evaluated exactly in rational arithmetic on the shipped f64 constants, the
+//! - The order conditions, evaluated exactly in rational arithmetic on the shipped f64 constants, the
 //!   nested fifth-order one by an independent BCH expansion in the free algebra truncated at weight 5; and the
 //!   convergence order on a Kepler-embedded fixture of qa's own, with the 4th-significant-digit controls.
-//! - REQ-VAL-032, REQ-VAL-191: dd §5 test 3 per dt over a dense grid of `dt/τ` inside the criterion's domain, on qa's
+//! - Step reversibility: dd §5 test 3 per dt over a dense grid of `dt/τ` inside the criterion's domain, on qa's
 //!   own fixtures, at f64 and f32: KDK, Yoshida-4 and Yoshida-6 at or below `step_reversal_tol`, and the asymmetric
 //!   controls (RK4, and Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`) above it at each dt, not only on the
 //!   worst residual, over the closed domain `[edge, step_reversal_edge_max]` at 16 points per decade with both edges,
@@ -40,7 +41,7 @@ use validation::{
     STEP_REVERSAL_TOL,
 };
 
-// ── REQ-INT-014, REQ-INT-015: the table ──────────────────────────────────────────────────────────────────────────
+// ── The table ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A default binding as Part 2 / Part 2a's last column gives it.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -157,7 +158,7 @@ fn advertised() -> Vec<(CapabilityProfile, Default_, bool)> {
         .collect()
 }
 
-/// The advertised rows equal qa's transcription; the five steppers are built and AZ + TTL is not (R-168).
+/// The advertised rows equal qa's transcription; the five steppers are built and AZ + TTL is not.
 fn check_table(rows: &[(CapabilityProfile, Default_, bool)]) {
     assert_eq!(rows.len(), SPEC.len(), "the table has {} rows", rows.len());
     for (spec, (profile, default, _)) in SPEC.iter().zip(rows) {
@@ -194,7 +195,7 @@ fn qa_occupant_profiles_equal_part_2() {
     assert_eq!(Occupant::Yoshida6.profile(), by_name["Yoshida-6"]);
     assert_eq!(Occupant::Rk4.profile(), by_name["RK4"]);
     assert_eq!(DebugOccupant::Euler.profile(), by_name["Euler"]);
-    // Exactly one run-reversible occupant exists, logH's TTL mode (R-162), which is not a stepper: none here.
+    // Exactly one run-reversible occupant exists, logH's TTL mode, which is not a stepper: none here.
     assert!(SPEC.iter().all(|s| !s.5));
 }
 
@@ -224,7 +225,7 @@ mod kdk_run_reversible {
 }
 
 /// Each tier's default stepper is Part 2's (KDK Potato–Low, Yoshida-4 Medium–High, Yoshida-6 Ultra–Extreme), and no
-/// tier default and no production occupant is Euler; Euler is the debug selection (REQ-INT-015).
+/// tier default and no production occupant is Euler; Euler is the debug selection.
 fn check_defaults(default: impl Fn(Tier) -> Selection, production: &[Selection]) {
     let euler = DebugOccupant::Euler.profile();
     for t in Tier::ALL {
@@ -306,7 +307,7 @@ mod euler_default {
     );
 }
 
-// ── REQ-INT-013, REQ-INT-078: the readers ────────────────────────────────────────────────────────────────────────
+// ── The readers ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// What Part 2 says a feature reads from a profile, written from its text: drift is a dynamics diagnostic on a
 /// symplectic occupant; the reversibility diagnostic gates on `step_reversible`, the reversibility test on
@@ -348,7 +349,7 @@ fn check_readers(exponent: impl Fn(&CapabilityProfile) -> u32) {
 #[test]
 fn qa_capability_profile_readers() {
     check_readers(|p| p.order);
-    // Part 2 carries the definition the readers implement (REQ-INT-078).
+    // Part 2 carries the definition the readers implement.
     let contract = include_str!("../../../docs/contracts/principia_integrator_contract.md");
     let part2 = contract
         .split("## Part 2 — Occupants and the capability profile")
@@ -372,7 +373,7 @@ negative_control!(
     check_readers(|p| p.force_evals)
 );
 
-// ── REQ-INT-037: the constants ───────────────────────────────────────────────────────────────────────────────────
+// ── The constants ────────────────────────────────────────────────────────────────────────────────────────────────
 
 fn parse(s: &str) -> f64 {
     s.replace('−', "-").parse().expect("a printed digit string")
@@ -383,7 +384,7 @@ fn q(x: f64) -> BigRational {
     BigRational::from_float(x).expect("finite")
 }
 
-/// Yoshida-4's identity of R-515: `w₀` bitwise `1 − 2w₁` and `w₀ + 2w₁` exactly 1 in f64.
+/// Yoshida-4's identity: `w₀` bitwise `1 − 2w₁` and `w₀ + 2w₁` exactly 1 in f64.
 fn check_y4_identity(w1: f64, w0: f64) {
     assert_eq!(
         w0.to_bits(),
@@ -545,7 +546,7 @@ mod y6_w3_digit {
     );
 }
 
-// ── REQ-INT-056: the citation ────────────────────────────────────────────────────────────────────────────────────
+// ── The citation ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `source` carries Yoshida (1990)'s citation, and `extra`.
 fn check_citation(what: &str, source: &str, extra: &str) {
@@ -586,7 +587,7 @@ fn qa_yoshida6_published() {
         include_str!("../src/occupant/yoshida4.rs"),
         "1 / (2 − 2^{1/3})",
     );
-    // The section that prints the digits carries it too (R-501).
+    // The section that prints the digits carries it too.
     let dd = include_str!("../../../docs/design/principia_dd_integrator.md");
     let s32 = dd
         .split("### 3.2 Occupants")
@@ -594,7 +595,7 @@ fn qa_yoshida6_published() {
         .and_then(|s| s.split("### 3.3").next())
         .expect("§3.2");
     check_citation("dd §3.2", s32, "Table 1, solution A");
-    // The negative weight's label (R-57): Yoshida-4's w₀ and Yoshida-6's w₁, the others positive.
+    // The negative weight's label: Yoshida-4's w₀ and Yoshida-6's w₁, the others positive.
     const {
         assert!(f64::YOSHIDA4_W0 < 0.0 && f64::YOSHIDA4_W1 > 0.0);
         assert!(f64::YOSHIDA6_W1 < 0.0);
@@ -618,9 +619,9 @@ negative_control!(
     )
 );
 
-// ── REQ-INT-090: the order conditions, exactly ───────────────────────────────────────────────────────────────────
+// ── The order conditions, exactly ────────────────────────────────────────────────────────────────────────────────
 
-/// The Yoshida-4 bound and the Yoshida-6 bound (REQ-INT-090).
+/// The Yoshida-4 bound and the Yoshida-6 bound on the order conditions' residuals.
 const Y4_BOUND: f64 = 3e-15;
 const Y6_BOUND: f64 = 5e-14;
 
@@ -994,7 +995,7 @@ fn shipped<R: Pr>(o: Selection, s: &State<R>, dt: R) -> State<R> {
     o.step(s, dt, &Geom::new(&s.m, &s.r)).0
 }
 
-// ── REQ-INT-090: the convergence order (dd §5 test 1a) ───────────────────────────────────────────────────────────
+// ── The convergence order (dd §5 test 1a) ────────────────────────────────────────────────────────────────────────
 
 /// qa's Kepler-embedded fixture: bodies 0 and 1, masses 0.6 and 0.4, on a Kepler orbit of semi-major axis 1 and
 /// eccentricity 0.6 started at apocentre about their centre of mass, and body 2 of mass `10⁻¹²` (`m₂ → ε`) at rest
@@ -1149,9 +1150,9 @@ order_control!(
     6.0
 );
 
-// ── REQ-VAL-032, REQ-VAL-191: dd §5 test 3, per dt ───────────────────────────────────────────────────────────────
+// ── dd §5 test 3, per dt ─────────────────────────────────────────────────────────────────────────────────────────
 
-/// The criterion, `k` in `k·ε_R` (REQ-VAL-191, provisional until M3).
+/// The criterion, `k` in `k·ε_R` (provisional until M3).
 const TOL: f64 = STEP_REVERSAL_TOL.number();
 
 /// qa's fixtures, none of them the implementer's: a hierarchical triple (a tight 0–1 binary, the third orbiting it),
@@ -1311,7 +1312,7 @@ impl Rule {
     }
 }
 
-/// How `τ` is read: the step's (the criterion's, REQ-VAL-191), or the start state's positions alone (as it was read
+/// How `τ` is read: the step's (the criterion's), or the start state's positions alone (as it was read
 /// before qa review Q2, for the control).
 #[derive(Clone, Copy, PartialEq)]
 enum Tau {
@@ -1396,7 +1397,7 @@ fn residual<R: Pr>(step: &dyn Fn(&State<R>, R) -> State<R>, s: &State<R>, dt: R)
     rel(&negate(&step(&negate(&step(s, dt)), dt)), s) / R::EPS
 }
 
-/// The domain's upper edge, `step_reversal_edge_max` (REQ-VAL-191, provisional until M3), at both precisions.
+/// The domain's upper edge, `step_reversal_edge_max` (provisional until M3), at both precisions.
 fn edge_max() -> f64 {
     STEP_REVERSAL_EDGE_MAX.number()
 }
@@ -1419,8 +1420,8 @@ fn grid(edge: f64) -> Vec<f64> {
     grid_to(edge, edge_max(), 16.0)
 }
 
-/// The domain's lower edge at `R`: `step_reversal_edge_f64` or `step_reversal_edge_f32` (REQ-VAL-191, provisional
-/// until M3).
+/// The domain's lower edge at `R`: `step_reversal_edge_f64` or `step_reversal_edge_f32` (provisional until
+/// M3).
 fn edge<R: Pr>() -> f64 {
     if R::EPS == f64::EPSILON {
         STEP_REVERSAL_EDGE_F64.number()
@@ -1504,7 +1505,7 @@ const NOT_ABOVE: &str = "a control reads not above";
 const EXCEEDS: &str = "a step-reversible occupant's residual exceeds";
 
 /// The asymmetric controls read above `step_reversal_tol` at each `dt` inside the domain, `τ` each control's own
-/// step's, at f64 and f32 (physics's request): the per-dt form of REQ-VAL-191's "the asymmetric controls above it at
+/// step's, at f64 and f32 (physics's request): the per-dt form of the criterion's "the asymmetric controls above it at
 /// the same dt".
 #[test]
 fn qa_step_reversibility_controls_per_dt() {
@@ -1559,7 +1560,7 @@ fn reversible_at<R: Pr>(ratios: &[f64], tau: Tau) -> Vec<String> {
 }
 
 /// KDK, Yoshida-4 and Yoshida-6 return each fixture within `step_reversal_tol` at each `dt` inside the domain, `τ` the
-/// step's, at f64 and f32, negative weights included (REQ-VAL-032).
+/// step's, at f64 and f32, negative weights included.
 #[test]
 fn qa_step_reversibility_per_dt() {
     let mut f = reversible_at::<f64>(&grid(edge::<f64>()), Tau::Step);
@@ -1593,7 +1594,7 @@ fn top<R: Pr>() -> Vec<f64> {
 /// The domain's top decade ([`top`]): where a
 /// step's stages carry a pair closer than the start's positions show (Burrau's start at rest, the approaches; qa reviews
 /// Q1 and Q2), KDK, Yoshida-4 and Yoshida-6 return each fixture within `step_reversal_tol`, `τ` the step's, at f64 and
-/// f32 (REQ-VAL-032, REQ-VAL-191).
+/// f32.
 #[test]
 fn qa_step_reversibility_upper_edge() {
     // The fixtures reach what the start's `τ` misses: on Burrau's start and the approaches, each step at the upper

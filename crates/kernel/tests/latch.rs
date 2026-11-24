@@ -1,21 +1,20 @@
-//! The monotone latches and their packing, `d_min` f16 and the drift maxima `log16` since R-632 (`kernel::driver::latch`;
-//! payload §1, §2; render_contract Part 5,
-//! "Unpack layer"; R-271, R-933):
+//! The monotone latches and their packing, `d_min` f16 and the drift maxima `log16` (`kernel::driver::latch`;
+//! payload §1, §2; render_contract Part 5, "Unpack layer"):
 //! - `f16_pack_clamp_*`: values beyond ±65504 pack to the finite 65504, never `+∞`; a failed state (`sim_failed`,
 //!   `decode_failed` and the reserved codes) packs 0.0 in `dE_max` and `dLz_max` and the unset bits `0x7C00` in `d_min`,
 //!   whatever its latches held; a valid state's `d_min` is unset only before its first observation, an observed `+∞`
-//!   included, and a zero separation packs as the least subnormal, never 0.0 (REQ-PAY-041).
+//!   included, and a zero separation packs as the least subnormal, never 0.0.
 //! - `latch_across_persist`: a sample resumed across many persist boundaries, its latches reloaded from the payload at
 //!   each, stores the f16 of the one f32 latch over the whole run, bit for bit, on synthetic sequences and on a
-//!   march's own measurements (REQ-PAY-044).
+//!   march's own measurements.
 //! - `f16_clamp_fuzz`: on inputs that include ±10⁶, ±∞ and NaN, a valid state's halves are finite and the clamp of the
-//!   live latch; a failed state's are exactly 0.0 and `0x7C00`, tested by the bits (REQ-PAY-045).
+//!   live latch; a failed state's are exactly 0.0 and `0x7C00`, tested by the bits.
 //! - `latch_live_f32`: the latches' accessors give the live f32 values, never their f16 packing, which is what the
-//!   march's decisions read (REQ-PAY-044, REQ-INT-045).
+//!   march's decisions read.
 //! - `latches_vs_offline`: the latches a march stores equal the f16 of the offline least separation and greatest
-//!   drifts over its whole recorded trajectory, the IC included (REQ-PAY-050).
+//!   drifts over its whole recorded trajectory, the IC included.
 //! - `latch_t0_collision_d_min`: a start already collided is a collision at `t = 0` that stores its least separation
-//!   as `d_min`, never the unset value (R-933).
+//!   as `d_min`, never the unset value.
 //!
 //! **Domain** (pitfalls §10): the packing of whatever values the latches hold, and the latches' agreement with an
 //! offline reduction of the same measurements. The marches are short KDK runs from decoded latents and the
@@ -77,7 +76,7 @@ fn finite16(h: u16) -> bool {
     h & 0x7c00 != 0x7c00
 }
 
-// ── f16_pack_clamp (REQ-PAY-041) ─────────────────────────────────────────────────────────────────────────────────
+// ── f16_pack_clamp ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The states a decoder reads as untrusted: `sim_failed`, `decode_failed` and the reserved codes 6 and 7.
 const FAILED: [u32; 4] = [STATE_SIM_FAILED, STATE_DECODE_FAILED, 6, 7];
@@ -86,7 +85,7 @@ const FAILED: [u32; 4] = [STATE_SIM_FAILED, STATE_DECODE_FAILED, 6, 7];
 const VALID: [u32; 4] = [STATE_ESCAPE, STATE_BOUNDED, STATE_COLLISION, STATE_RUNNING];
 
 /// Asserts `pack`'s clamp on each valid state: every `d_min` beyond ±65504 packs as 65504 (bits `0x7BFF`), finite; the
-/// drift maxima, in the `log16` form since R-632, pack as their own `log16` codes, which decode finite, saturating at
+/// drift maxima, in the `log16` form, pack as their own `log16` codes, which decode finite, saturating at
 /// the form's greatest; a value inside the range as its own f16 or `log16`, a zero separation as the least subnormal
 /// and an unobserved `d_min` as unset, with the descriptor's low 16 bits kept.
 fn check_valid(pack: Persist) {
@@ -177,7 +176,7 @@ fn f16_pack_clamp_valid() {
 }
 
 /// A packer with no clamp: `d_min`'s half, where its live value is past ±65504, converted as it is, every other half
-/// as [`persist`] packs it, so it differs from the writer in the clamp alone. The drift halves are `log16` since R-632,
+/// as [`persist`] packs it, so it differs from the writer in the clamp alone. The drift halves are `log16`,
 /// which saturates by its own form and takes no clamp.
 #[cfg(feature = "controls")]
 fn unclamped(l: &Latches, a: u32) -> (u32, u32) {
@@ -223,7 +222,7 @@ negative_control!(
 );
 
 /// Asserts that an observed separation of `+∞` packs as the finite 65504 under `pack`, not as the unset value, which
-/// is a valid state's only before its first observation (R-271).
+/// is a valid state's only before its first observation.
 fn check_observed_infinity(pack: Persist) {
     let (a, _) = pack(&latches(f32::INFINITY, 0.0, 0.0), descriptor(STATE_BOUNDED));
     assert_eq!(
@@ -252,7 +251,7 @@ negative_control!(
     })
 );
 
-// ── latch_live_f32 (REQ-PAY-044, REQ-INT-045) ───────────────────────────────────────────────────────────────────
+// ── latch_live_f32 ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The live values a reader `get` gives of latches: `(d_min, dE_max, dLz_max)`.
 type Live = fn(&Latches) -> (f32, f32, f32);
@@ -307,7 +306,7 @@ negative_control!(
     })
 );
 
-// ── f16_clamp_fuzz (REQ-PAY-045) ─────────────────────────────────────────────────────────────────────────────────
+// ── f16_clamp_fuzz ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// An input value: often one of the edges (±10⁶, ±∞, NaN, ±65504 and its rounding edge, ±0, the subnormal floor),
 /// otherwise any f32.
@@ -333,7 +332,7 @@ fn value() -> impl Strategy<Value = f32> {
     ]
 }
 
-/// The `log16` bits of a valid state's drift maximum `x` (R-632), NaN as 0.0: the oracle for a drift half. The form
+/// The `log16` bits of a valid state's drift maximum `x`, NaN as 0.0: the oracle for a drift half. The form
 /// saturates at its greatest code, so it takes no clamp.
 fn drift_bits(x: f32) -> u16 {
     if x.is_nan() {
@@ -436,7 +435,7 @@ negative_control!(
     fuzz(unclamped)
 );
 
-// ── latch_across_persist (REQ-PAY-044) ───────────────────────────────────────────────────────────────────────────
+// ── latch_across_persist ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// A resume: the latches a sample continues from at a persist boundary, from its persisted words.
 type Resume = fn(u32, u32) -> Latches;
@@ -535,7 +534,7 @@ negative_control!(
     }
 );
 
-// ── latches_vs_offline (REQ-PAY-050) ─────────────────────────────────────────────────────────────────────────────
+// ── latches_vs_offline ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// A state's positions and momenta.
 type Phase<R> = ([[R; 2]; 3], [[R; 2]; 3]);
@@ -703,7 +702,7 @@ negative_control!(
     }
 );
 
-// ── latch_t0_collision_d_min (R-933) ─────────────────────────────────────────────────────────────────────────────
+// ── latch_t0_collision_d_min ─────────────────────────────────────────────────────────────────────────────────────
 
 /// Equal masses, bodies 0 and 1 `5·10⁻⁴` apart, body 2 far: inside the default `r_coll = 10⁻³`, pair 2.
 fn collided() -> Ic<f64> {

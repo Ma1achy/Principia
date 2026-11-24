@@ -1,40 +1,40 @@
-//! qa's tests for TASK-M2-37, written from the four requirements it closes and chart_reference §2.1, each with its
-//! negative control (R-176). Every decode is read back through the physics, not the chart's own targets: the masses,
+//! QA tests written from the energy axes' four requirements and chart_reference §2.1, each with its negative
+//! control. Every decode is read back through the physics, not the chart's own targets: the masses,
 //! `U = −Σ mᵢmⱼ/rᵢⱼ`, `I`, `K = Σ|pᵢ|²/2mᵢ` and `L_z` about the centre of mass are recomputed here from the decoded
 //! `(m, r, p)` ([`phys`]), and each is held to the formula §2.1 writes for the axis.
 //!
-//! - `qa_energy_axes_warped_*` (REQ-CHART-067): every pixel of a 65 × 65 grid over `[0,1]²` validates and decodes to
+//! - `qa_energy_axes_warped_*`: every pixel of a 65 × 65 grid over `[0,1]²` validates and decodes to
 //!   the system §2.1's warp names, on `(L_z, K)`, `(L_z, E)` (bare and under a mapping with both axes warped), the
 //!   Burrau family's `(ν, K)` and `(θ, K)`, and a lone `K`, `KE`, `E`, `L_z` and virial axis beside a mass logit
-//!   that moves `U`; a lone `E` decodes `E = U + K_max·t^γ_K` at the pixel's own `U`; R-508: on `(L_z, K)`, `(L_z, E)`
-//!   and `(ν, K)` a window reaching `t = 1.5` decodes the warp continued (`K > K_max`) and validates, the `t` axis
-//!   affine past 1 and bounded below 0, `s` bounded past both edges; a mass-ratio axis keeps every pixel's masses
-//!   positive and summing to 1; under a mapping with every axis warped, an invariant chart decodes and checks as the
-//!   chart, bitwise, over `[−¼, 1¼]²` at `γ_K = 2` and `3/2` ("bit-identical to before"; its control reads the mapped
-//!   chart's rule path in place, which differs below `t = 0` at `γ_K = 3/2`). Controls (the verify's): a lone `E`
-//!   mapped linearly onto `[U₀, U₀ + K_max]` fails at the corners; a lone `L_z` warp taken at the wrong held `K`
-//!   leaves the feasible region; a `t` axis declared affine below 0 decodes a non-system there (γ_K = 3/2) or the fold
-//!   of the `t > 0` side (γ_K = 2).
-//! - `qa_energy_axis_linear_option_*` (REQ-CHART-068): `(L_z, E)` under the linear option: exactly the corners past
+//!   that moves `U`; a lone `E` decodes `E = U + K_max·t^γ_K` at the pixel's own `U`; the `t > 1` side continues: on
+//!   `(L_z, K)`, `(L_z, E)` and `(ν, K)` a window reaching `t = 1.5` decodes the warp continued (`K > K_max`) and
+//!   validates, the `t` axis affine past 1 and bounded below 0, `s` bounded past both edges; a mass-ratio axis keeps
+//!   every pixel's masses positive and summing to 1; under a mapping with every axis warped, an invariant chart decodes
+//!   and checks as the chart, bitwise, over `[−¼, 1¼]²` at `γ_K = 2` and `3/2` ("bit-identical to before"; its control
+//!   reads the mapped chart's rule path in place, which differs below `t = 0` at `γ_K = 3/2`). Controls (the verify's):
+//!   a lone `E` mapped linearly onto `[U₀, U₀ + K_max]` fails at the corners; a lone `L_z` warp taken at the wrong held
+//!   `K` leaves the feasible region; a `t` axis declared affine below 0 decodes a non-system there (γ_K = 3/2) or the
+//!   fold of the `t > 0` side (γ_K = 2).
+//! - `qa_energy_axis_linear_option_*`: `(L_z, E)` under the linear option: exactly the corners past
 //!   `|L_z| = √(2I(E − U))` are not a system, their decodes `DEGENERATE` (never integrated), none warns, and each is
 //!   projected by `validate` onto a feasible point (the navigation stop); untilted, the row `t = 1` and the point
 //!   `(½, 0)` decode to the same state under both mappings, `L_z = 0` on `s = ½` under both, and the centre differs
-//!   (γ_K = 2); R-408's count makes the corners forbidden and the linear axis affine past its edge; a linear mass ratio
-//!   draws its non-positive ratios blank. Controls: a warped chart's would-be corners are integrated, a warning that
-//!   fires on a linear chart, the centre asserted equal, and the warped extension types.
-//! - `qa_energy_warp_per_pixel_*` (REQ-CHART-069): `(L_z, K)`, `(L_z, E)` and a lone `E` tilted into a mass logit and
+//!   (γ_K = 2); the area count ([`count`]) makes the corners forbidden and the linear axis affine past its edge; a
+//!   linear mass ratio draws its non-positive ratios blank. Controls: a warped chart's would-be corners are integrated,
+//!   a warning that fires on a linear chart, the centre asserted equal, and the warped extension types.
+//! - `qa_energy_warp_per_pixel_*`: `(L_z, K)`, `(L_z, E)` and a lone `E` tilted into a mass logit and
 //!   into a shape control at a single `τ ∈ {10°, 45°, 80°}` and at `(30°, 20°)` under Lean each axis validate every
 //!   pixel and meet each pixel's own targets; under Tip as sheet at `(30°, 20°)` every pixel whose `(a, b)` lie in the
 //!   square does; untilted the tilted chart is the chart, bitwise. Control: the warp computed once at the centre
 //!   (`E = U₀ + K(t)`, `K* = E − U`) leaves pixels with `K < L_z²/2I`.
-//! - `qa_pe_axis_*`, `qa_physical_axis_warps_*` (REQ-CHART-070): `PE` has no written warp and no extension type; the
+//! - `qa_pe_axis_*`, `qa_physical_axis_warps_*`: `PE` has no written warp and no extension type; the
 //!   virial ratio warps as `Q_max·t^γ_K`, `K* = Q·|U|/2` at the pixel's `U`, bounded past both edges; the mass ratio
 //!   warps geometrically through the active link, every pixel validating under `stick_breaking` and under
 //!   `softmax_tanh` at both ends of `μ_max`'s allowed range. Controls: a virial `K*` read at the centre's `U`, and a
 //!   ratio warp written for `softmax_tanh` at `μ_max = 5` alone. (The validator's refusal is the engine's qa file.)
 //!
-//! **Values.** `K_max` and `γ_K` are REQ-CHART-044's placeholders (R-71), `validation::{K_MAX, GAMMA_K}`. The decode's
-//! `K` and `L_z` residuals are REQ-DEC-046's proposed tolerances (8 and 4 eps, as `qa_TASK-M2-09.rs` states them),
+//! **Values.** `K_max` and `γ_K` are placeholders, `validation::{K_MAX, GAMMA_K}`. The decode's
+//! `K` and `L_z` residuals are the decode's proposed tolerances (8 and 4 eps, as `qa_TASK-M2-09.rs` states them),
 //! plus [`RND`], the rounding of this file's own f64 re-evaluation of `K` and `L_z` (a few products and a three-term
 //! sum per quantity, bounded by 16 eps of the terms' absolute sum). A mass ratio is held to `ε_μ`, relative
 //! (chart_reference §2.1: "realised … to within `ε_μ`"), a mass sum to 4 eps. Every slice centre, range, `Q_max`, held
@@ -63,9 +63,9 @@ use kernel::generated::links::{
 use validation::{negative_control, tunables, GAMMA_K, K_MAX};
 
 const EPS: f64 = f64::EPSILON;
-/// `|K(p) − K*|` in units of `eps·K*` (REQ-DEC-046, proposed).
+/// `|K(p) − K*|` in units of `eps·K*` (the decode's proposed tolerance).
 const TOL_K: f64 = 8.0;
-/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))` (REQ-DEC-046, proposed).
+/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))` (the decode's proposed tolerance).
 const TOL_L: f64 = 4.0;
 /// This file's own re-evaluation rounding, eps of the terms' absolute sum (the module's note).
 const RND: f64 = 16.0;
@@ -184,7 +184,8 @@ struct Pixels<'a> {
 }
 
 /// Every point of `points` validates, decodes to a finite, non-`DEGENERATE` system, its targets are feasible
-/// (`K* ≥ 0`, `L_z² ≤ 2IK*` at the pixel's own `I`) and the decode meets them to REQ-DEC-046's tolerance.
+/// (`K* ≥ 0`, `L_z² ≤ 2IK*` at the pixel's own `I`) and the decode meets them to the decode's proposed tolerance
+/// ([`TOL_K`], [`TOL_L`]).
 fn check_pixels(c: &Pixels, points: &[[f64; 2]]) {
     let name = c.name;
     let decoded: Vec<_> = points
@@ -318,7 +319,7 @@ fn theta_k(gamma: f64) -> BurrauThetaK<f64> {
     }
 }
 
-// ── REQ-CHART-067 ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Energy axes, warped ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Every chart with an energy-type axis, warped, its every pixel of `[0,1]²` its warp's system. `lone_e` is the
 /// mapping of the lone `E` axis (the default `Warped`; the control's `Linear`, mapped onto `[U₀, U₀ + K_max]`).
@@ -444,10 +445,10 @@ negative_control!(
     check_lone_e(true)
 );
 
-/// R-508 on `(L_z, K)`, `(L_z, E)` and `(ν, K)`: a window reaching `t = 1.5` decodes the warp's formula continued and
-/// validates; the declared types are §2.1's (`t` bounded below 0 and affine past 1, `s` bounded); past `s`'s edges and
-/// below `t = 0` the check does not pass the point, and R-408 counts the affine side's pixels as systems. `cap` caps
-/// the expected `t` at 1, the control's bounded `t > 1` side.
+/// The `t > 1` side continues, on `(L_z, K)`, `(L_z, E)` and `(ν, K)`: a window reaching `t = 1.5` decodes the warp's
+/// formula continued and validates; the declared types are §2.1's (`t` bounded below 0 and affine past 1, `s` bounded);
+/// past `s`'s edges and below `t = 0` the check does not pass the point, and the area count counts the affine side's
+/// pixels as systems. `cap` caps the expected `t` at 1, the control's bounded `t > 1` side.
 fn check_t_continues(cap: bool) {
     let g = gamma_k();
     let pts = grid([0.0, 1.0], [0.0, 1.5]);
@@ -664,7 +665,7 @@ negative_control!(
     check_ratio_simplex(Mapping::Linear, [-3.0, 4.0], false)
 );
 
-// ── REQ-CHART-068 ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── The linear option ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `(L_z, E)` under the mapping `mapping`, read as the linear option: `E = U₀ + K_max·t`, `L_z = (2s − 1)·√(2I₀K_max)`,
 /// `I₀ = 1`, and a pixel is past the parabola where `L_z² > 2I₀(E − U₀)`. Each such corner pixel is not a system:
@@ -803,7 +804,7 @@ negative_control!(
     check_shared(&[[0.5, 0.5]])
 );
 
-/// R-408's count over a window `[−¼, 1¼]²` on `(L_z, E)` under the linear option, with the sides `sides`: every pixel
+/// The area count over a window `[−¼, 1¼]²` on `(L_z, E)` under the linear option, with the sides `sides`: every pixel
 /// past the parabola is forbidden (in the count and the total), every other a system, none the domain's end.
 fn check_linear_count(sides: [Sides; 2]) {
     let chart = Mapped::<_, Defaults>::new(InvariantLE(inv(gamma_k())), [Mapping::Linear; 2]);
@@ -898,7 +899,7 @@ negative_control!(
     check_ratio_blank(Mapping::Warped)
 );
 
-// ── REQ-CHART-069 ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── The warp per pixel ───────────────────────────────────────────────────────────────────────────────────────────────
 
 const CENTRE: [f64; 2] = [0.5, 0.5];
 const SPAN: [f64; 2] = [2.0, 2.0];
@@ -1060,7 +1061,7 @@ negative_control!(
     check_untilted(1e-6)
 );
 
-// ── REQ-CHART-070 ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── PE and the other physical axes ───────────────────────────────────────────────────────────────────────────────────
 
 /// `PE` has no warp written and no extension type under either mapping; every other quantity has both.
 fn check_pe(offered: Quantity) {
@@ -1261,8 +1262,8 @@ enum MappedRead {
 }
 
 /// Every axis warped, a mapped invariant chart is the chart, bitwise, over a window past every edge of the square, at
-/// `γ_K = gamma`, through its decode and its rule path (REQ-CHART-067: "the existing charts' decodes are bit-identical
-/// to before untilted").
+/// `γ_K = gamma`, through its decode and its rule path (the requirement: "the existing charts' decodes are
+/// bit-identical to before untilted").
 fn check_mapped_is_own(gamma: f64, read: MappedRead) {
     let warped = [Mapping::Warped; 2];
     let lk = InvariantLK(inv(gamma));
@@ -1327,10 +1328,9 @@ fn config_i<Q: EnergyAxis>(u: f64, t: f64) -> f64 {
 }
 
 /// A lone `Q` axis at the held `L_z = held` (chart_reference §2.1, "A warped `t` axis at a held `L_z ≠ 0` stands on the
-/// floor"; the owner's ruling of 4 Nov 2026 on RQ-683; R-471 E1, R-506 W1), under `mapping` at `gamma`: warped, every
-/// pixel of `[0,1]²` validates, decodes §2.1's `K* = L_z²/2I + line`, the pixel's own `I`, and the held `L_z`, and R-408's
-/// count makes each a system. `line` is §2.1's line at `(t, U)`, which alone reaches `K* < L_z²/2I` inside the square,
-/// so the floor has ground.
+/// floor"), under `mapping` at `gamma`: warped, every pixel of `[0,1]²` validates, decodes §2.1's
+/// `K* = L_z²/2I + line`, the pixel's own `I`, and the held `L_z`, and the area count makes each a system. `line` is
+/// §2.1's line at `(t, U)`, which alone reaches `K* < L_z²/2I` inside the square, so the floor has ground.
 fn check_floored_axis<Q: EnergyAxis>(
     held: f64,
     mapping: Mapping,
@@ -1464,11 +1464,12 @@ fn virial_on(
     MixedEnergy::virial(Z0, RANGE, asked, gamma_k(), 0.0, mapping)
 }
 
-/// The virial ratio keeps its own asked range `[Q_lo, Q_hi]` (R-471 H4; chart_reference §2.1's paragraph): warped,
+/// The virial ratio keeps its own asked range `[Q_lo, Q_hi]` (chart_reference §2.1's paragraph): warped,
 /// `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`, `Q₀ = max(Q_lo, 0)`, every pixel of `[0,1]²` validating and decoding
 /// `K* = Q·|U|/2` at the pixel's own `U`, bounded past both edges; linear, `Q_lo + (Q_hi − Q_lo)·t`, affine, its
-/// pixels with `Q < 0` refused and R-408-forbidden, the others decoding their `K*`; a warped range with `Q_hi ≤ 0` is
-/// offered by no chart. `want` is the ratio the test asserts at `(asked, mapping, t)` (§2.1's; the control's).
+/// pixels with `Q < 0` refused and forbidden in the area count, the others decoding their `K*`; a warped range with
+/// `Q_hi ≤ 0` is offered by no chart. `want` is the ratio the test asserts at `(asked, mapping, t)` (§2.1's; the
+/// control's).
 fn check_virial_asked(want: fn([f64; 2], Mapping, f64) -> f64) {
     for (asked, mapping) in [
         ([0.4, 1.5], Mapping::Warped),

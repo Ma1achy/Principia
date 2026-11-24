@@ -1,5 +1,4 @@
-//! qa for TASK-M3-72: (a1)'s precision floor, as dd_integrator §3.8 states it (R-974, R-72; REQ-VAL-038), written
-//! from the definition, not from the code.
+//! qa for (a1)'s precision floor, as dd_integrator §3.8 states it, written from the definition, not from the code.
 //! - `qa_m372_a1_floor` (§3.8 "(a1)'s precision floor"): at f32, where each pair's displacement `eₖ` lies below half
 //!   the rounding step of its separation `dₖ` (`‖eₖ‖ ≲ ε‖dₖ‖/2`), `dₖ + eₖ` rounds to `dₖ` and (a1)'s difference is
 //!   exactly 0, per pair and in the accelerations' change: the shadow drifts force-free. Checked at displacements of
@@ -41,7 +40,8 @@ fn displacements(size: f32, seed: &mut u64) -> [[f32; 2]; 3] {
     ]
 }
 
-/// Pair `k`'s displacement `eₖ = δrⱼ − δrᵢ`, R-22's `(i, j) = (1, 2), (2, 0), (0, 1)`.
+/// Pair `k`'s displacement `eₖ = δrⱼ − δrᵢ`, under the pair convention `(i, j) = (1, 2), (2, 0),
+/// (0, 1)`.
 fn pair_e(dr: &[[f32; 2]; 3]) -> [[f32; 2]; 3] {
     [
         [dr[2][0] - dr[1][0], dr[2][1] - dr[1][1]],

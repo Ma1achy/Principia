@@ -1,4 +1,4 @@
-//! Ground-truth ingestion (inverse-encode contract Parts 4 and 7; REQ-VAL-014, REQ-ENC-025; TASK-M2-20): foreign
+//! Ground-truth ingestion (inverse-encode contract Parts 4 and 7): foreign
 //! states, the Lagrange equilateral, the figure-eight and the Burrau rest start, each in its published frame, are
 //! ingested, and the result carries `z`, the physical residual `‖D(z) − C(x)‖_phys` and `κ(x)`.
 //!
@@ -8,15 +8,15 @@
 //! `ω = √(1/(3√3))`; Burrau 3:4:5, masses `(3, 4, 5)/12` at `(1, 3)`, `(−2, −1)`, `(1, −1)`, at rest. Each is also
 //! taken through a gauge element (a turn, an offset, a boost and a rescale), so `C` meets a foreign frame.
 //!
-//! **What is checked** (applied per R-369, the test's decisions): the result is `E(x)`, the free decode of its `z`, the
-//! residual Part 4's norm from `C(x)` to `D(z)`, within `ε_phys` (REQ-ENC-024's register value) with no control clamped
-//! (the figure-eight's published start is collinear with body 3 at the inner pair's centre of mass, the `α = 0` pole:
-//! it raises `lookup_clamped` and its `κ` is large, as Part 4 says it must), and `κ(x)` is `σ_max(J_E(x)·W⁻¹)`, the
-//! encode's weighted Jacobian at the input itself, checked against an independent oracle: `σ²·(1 + δ)` less the Gram
-//! matrix `(J_E·W⁻¹)(J_E·W⁻¹)ᵀ` is positive definite and `σ²·(1 − δ)` less it is not (Cholesky), `δ = 10⁻⁶`; and Part
-//! 4's bound `‖E(x̃) − z‖₂ ≤ κ(x)·‖W(x̃ − x)‖₂ ≤ 3·κ(x)·‖x̃ − x‖_phys` on states `x̃` moved off `x` along every
-//! component, off the canonical section as well as along it (the physics review of PR #294, P1: the section's tangent
-//! alone, `1/σ_min(W·J_D)`, does not bound a move of `m₀` at masses `(0.05, 0.15, 0.8)`).
+//! **What is checked** (the plan leaves these details open; they are this test's choices): the result is `E(x)`, the
+//! free decode of its `z`, the residual Part 4's norm from `C(x)` to `D(z)`, within `ε_phys` (the register's value)
+//! with no control clamped (the figure-eight's published start is collinear with body 3 at the inner pair's centre of
+//! mass, the `α = 0` pole: it raises `lookup_clamped` and its `κ` is large, as Part 4 says it must), and `κ(x)` is
+//! `σ_max(J_E(x)·W⁻¹)`, the encode's weighted Jacobian at the input itself, checked against an independent oracle:
+//! `σ²·(1 + δ)` less the Gram matrix `(J_E·W⁻¹)(J_E·W⁻¹)ᵀ` is positive definite and `σ²·(1 − δ)` less it is not
+//! (Cholesky), `δ = 10⁻⁶`; and Part 4's bound `‖E(x̃) − z‖₂ ≤ κ(x)·‖W(x̃ − x)‖₂ ≤ 3·κ(x)·‖x̃ − x‖_phys` on states `x̃`
+//! moved off `x` along every component, off the canonical section as well as along it (the physics review of PR #294,
+//! P1: the section's tangent alone, `1/σ_min(W·J_D)`, does not bound a move of `m₀` at masses `(0.05, 0.15, 0.8)`).
 
 use kernel::decode::{self, Ic, Latent};
 use kernel::encode::encode;
@@ -890,7 +890,7 @@ negative_control!(
     check_weights(&extents().0, 0.5, 4.0)
 );
 
-// ── κ on the encode's seam (TASK-M2-57; physics reviews 5907871580 and 5908031552 of PR #533, P7) ─────────────────
+// ── κ on the encode's seam ────────────────────────────────────────────────────────────────────────────────────────
 
 /// The seam state's momentum controls `z_q0 … z_q3`, fixed and recorded: through `sigmoid_q` at `q_max = 2` they give
 /// `(p_ρ, p_λ)` with no component zero and none above 1 in size ([`seam_state`] asserts it).
@@ -903,7 +903,7 @@ const SEAM_TURN: f64 = 0.7;
 const ETA: f64 = 1e-3;
 
 /// The encode's seam state turned by `β = offset` and put in the recorded turn: equal masses, `α = π/4`, `β = offset`
-/// (`z_α = 0`, `z_β = −π/2 + offset` under the offset link, R-1020), `I = 1`, momenta from [`SEAM_Z_Q`].
+/// (`z_α = 0`, `z_β = −π/2 + offset` under the offset link), `I = 1`, momenta from [`SEAM_Z_Q`].
 fn seam_state(offset: f64) -> Ic<f64> {
     let c = std::f64::consts::FRAC_PI_2;
     let z = [
@@ -932,7 +932,7 @@ fn seam_state(offset: f64) -> Ic<f64> {
 }
 
 /// `(J_E(x)·W⁻¹)ᵀ` as [`weighted_encode_jacobian`] forms it, but with `z_β`'s differences taken on the line, `a − b`:
-/// the control's Jacobian (R-176).
+/// the control's Jacobian.
 #[cfg(feature = "controls")]
 fn line_jacobian(x: &Ic<f64>) -> [Phys<f64>; 8] {
     let w = weights(x);
@@ -975,7 +975,7 @@ fn seam_kappas(jac: fn(&Ic<f64>) -> [Phys<f64>; 8]) -> (f64, [f64; 2]) {
     )
 }
 
-/// The criterion written before the test ran (TASK-M2-57's acceptance, R-649): `κ` at the seam finite, and within a
+/// The criterion written before the test ran: `κ` at the seam finite, and within a
 /// relative `10⁻²` of `κ` at each off-seam state.
 fn check_seam(seam: f64, off: [f64; 2]) {
     assert!(

@@ -1,29 +1,29 @@
-//! QA tests for TASK-M3-16, branch-cut crossing detection and the τ tie rule, written from the requirements and the
+//! QA tests for branch-cut crossing detection and the τ tie rule, written from the requirements and the
 //! contract text, not from the implementation. Every expectation comes from a model written here:
-//! - REQ-INT-031, REQ-INT-047 (`qa_m316_tau_against_the_formula`): the crossing order against the statement's own
+//! - `qa_m316_tau_against_the_formula`: the crossing order against the statement's own
 //!   `τ = d₀/(d₀ − d₁)`, as exact rationals over integer distances, and unchanged when a cut's distances are scaled by a
 //!   power of two (`τ` does not depend on the scale), over the whole exponent range.
-//! - REQ-INT-046, REQ-INT-047 (`qa_m316_tau_is_chronological`): `τ` is the crossing's time: one substep's order equals
+//! - `qa_m316_tau_is_chronological`: `τ` is the crossing's time: one substep's order equals
 //!   the order the same straight segment gives when subdivided; and the segment run backwards reads the inverse symbols
 //!   in the reverse order.
-//! - REQ-INT-079 (`qa_m316_tie_tolerance_is_the_working_precision`): the tolerance is the working precision's rounding
+//! - `qa_m316_tie_tolerance_is_the_working_precision`: the tolerance is the working precision's rounding
 //!   of the two products (integrator contract Part 5, "The tie tolerance").
-//! - REQ-INT-048 (`qa_m316_half_open_literal`): the statement's literal rule, `d < 0` then `d ≥ 0` and the reverse, on
+//! - `qa_m316_half_open_literal`: the statement's literal rule, `d < 0` then `d ≥ 0` and the reverse, on
 //!   each of two independent cuts, over marches of arbitrary doubles with zeros among them.
-//! - REQ-INT-031, REQ-INT-047 (`qa_m316_double_crossing_reaches_the_word`): a double crossing is appended to the word in
+//! - `qa_m316_double_crossing_reaches_the_word`: a double crossing is appended to the word in
 //!   `τ` order through the hook, one load and one store per crossing, none on a quiet substep.
-//! - REQ-PAY-070, REQ-PAY-113 (`qa_m316_syzygy_known_answers`): hand-worked collinear configurations of §1, from
+//! - `qa_m316_syzygy_known_answers`: hand-worked collinear configurations of §1, from
 //!   positions: each segment, each sense, an endpoint exactly on the equator, and the gate at the non-negative endpoint.
-//! - REQ-PAY-113 (`qa_m316_cuts_invariances`): `d` and the classifier read positions only: translation, rotation, scale
+//! - `qa_m316_cuts_invariances`: `d` and the classifier read positions only: translation, rotation, scale
 //!   over the whole exponent range; exchanging bodies 0 and 2 negates `d` and exchanges the gates.
-//! - REQ-PAY-070 (`qa_m316_march_reversed_reads_the_inverse`): a march run backwards reads the inverse word, symbol by
+//! - `qa_m316_march_reversed_reads_the_inverse`: a march run backwards reads the inverse word, symbol by
 //!   symbol, endpoints on the equator included, which is what the gate at the non-negative endpoint is for.
-//! - REQ-PAY-070 (`qa_m316_prl_fixture_against_appendix_c`): the fixture's published words against Table I's printed
+//! - `qa_m316_prl_fixture_against_appendix_c`: the fixture's published words against Table I's printed
 //!   form; §1's stated tally of symmetries; the kernel's word against Appendix C's digit reading (`a = 12, A = 21,
 //!   b = 32, B = 23`, `11 = 22 = 33 = empty`) done separately here by plain arithmetic; and §1's claim for the other
 //!   outer-body order.
 //!
-//! Each check takes the code under test as a function, so its negative control (R-176) runs the same check on a faulty
+//! Each check takes the code under test as a function, so its negative control runs the same check on a faulty
 //! one.
 
 use kernel::payload::{fgw_length_raw, FreeGroupWord, FGW_NO_SYMBOL};

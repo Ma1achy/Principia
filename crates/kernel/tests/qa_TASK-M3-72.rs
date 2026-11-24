@@ -1,5 +1,5 @@
-//! qa for TASK-M3-72: the displacement form of the FTLE shadow as dd_integrator §3.8 defines it (R-974, R-72;
-//! REQ-VAL-038), written from the definition, not from the code.
+//! qa for the displacement form of the FTLE shadow as dd_integrator §3.8 defines it, written from the definition, not
+//! from the code.
 //! - `qa_m372_start_exact` (§3.8 "Start"): the displacement form starts at `δ⃗₀ = ‖δ₀‖·u`, each component exact
 //!   (`±‖δ₀‖/2` on the positions `u` moves, zero elsewhere), so `x₀ + δ⃗₀` is the offset `offset(x₀, ‖δ₀‖)` bit for bit;
 //!   at f32 and f64, at ‖δ₀‖ = 3e-3, 1e-5 and 1e-20 (far below half an ulp of the state, where `x'₀ − x₀` would be
@@ -10,13 +10,13 @@
 //!   linear map as `x`. `u` puts the shadow's CoM `‖δ₀‖·(m₀ − m₁, m₁ − m₂)/(2M)` off the sample's at the start, so a
 //!   projection of `x` alone leaves it there. Control: the unprojected start, `offset(x₀, ‖δ₀‖)`, fails. A state NaN
 //!   on one position or momentum axis, centred on the other, fails too (`qa_m372_own_com_reads_every_*_axis`).
-//! - `qa_m372_detector_watches_shadow` (§3.8 "Its energy and collision test"; R-972 (d)): in the displacement form the
+//! - `qa_m372_detector_watches_shadow` (§3.8 "Its energy and collision test"): in the displacement form the
 //!   shadow's detector reads `x + δ⃗`, not `x`: on a close pair that `u` brings closer, its least `d²` at `r_coll = 0`
 //!   is below the sample's; at an `r_coll` between the two it fires, and the shadow marches on, its `r_sh`, `p_sh`
 //!   and `S` bit for bit those at `r_coll = 0`, the sample's fields the base tier's and its FTLE finite (it only
 //!   watches). Control: a detector that read the sample's `x` (its least `d²` the sample's own) fails.
-//! - `qa_m372_displacement_is_chosen` (TASK-M3-72's recorded choice, rule 3: (a1)): `Displacement` with no parameter
-//!   is `Displacement<Plain>`. Control: `Displacement<CancellationFree>` fails.
+//! - `qa_m372_displacement_is_chosen` (the default, (a1), which a pre-registered measurement chose): `Displacement`
+//!   with no parameter is `Displacement<Plain>`. Control: `Displacement<CancellationFree>` fails.
 //!
 //! **Domain** (pitfalls §10): Yoshida-4, the `shadow-form` gate's occupant, at `r_coll = 0` except in the detector test.
 
@@ -264,7 +264,7 @@ negative_control!(
     }
 );
 
-// ── qa_m372_detector_watches_shadow (§3.8; R-972 (d)) ──────────────────────────────────────────────────────────────
+// ── qa_m372_detector_watches_shadow (§3.8) ─────────────────────────────────────────────────────────────────────────
 
 /// A close pair, bodies 0 and 1 at separation 0.03 on the x axis in a near-circular orbit, body 2 far off: `u` moves
 /// body 0 by `+½‖δ₀‖` and body 1 by `−½‖δ₀‖` along the pair's axis, so the shadow's pair starts `‖δ₀‖` closer.

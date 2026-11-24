@@ -1,22 +1,22 @@
-//! QA's tests for TASK-M2-38, written from REQ-CHART-060 and REQ-CHART-061 (R-469 P2, A1 to A3, A6; R-471; R-477 C6;
-//! R-512), not from the implementation.
+//! QA's tests of the navigation stop and the chart-aware validation, written from the requirements, not from the
+//! implementation.
 //!
-//! - **The edge to the bit** (REQ-CHART-060, A3): on a chart written here, one `nav_stop` has never seen (so the rule
+//! - **The edge to the bit**: on a chart written here, one `nav_stop` has never seen (so the rule
 //!   is generic over the `Chart` trait and `validate`, no chart carrying its own), whose `validate` fails past a wall
 //!   placed at a chosen f64, a path whose fraction `λ` equals the coordinate stops at exactly the last valid f64, the
 //!   next f64 failing, within 62 steps, for walls from the smallest subnormal to the f64 just below 1, and for walls
-//!   drawn at random over the bit patterns of `(0, 1)`. Control: a bisection that halves `λ` itself (the corrected
-//!   reading, physics review F4) misses a wall at small `λ`.
-//! - **The report's layer** (A5, inverse_encode_contract § "Chart-aware validation"): layer 3 for decode sanity, layer
+//!   drawn at random over the bit patterns of `(0, 1)`. Control: a bisection that halves `λ` itself, not its bit
+//!   pattern, misses a wall at small `λ`.
+//! - **The report's layer** (inverse_encode_contract § "Chart-aware validation"): layer 3 for decode sanity, layer
 //!   2 for every chart-feasibility constraint, none where `Φ` fails; a centre with no view or a non-finite `Φ` counts
-//!   as failing (A1).
-//! - **The lock** (A2): refused on a pixel that is not a system, the centre unchanged; taken on one that is.
-//! - **The latent chart** (A6): nothing stops, at any `z₀` or zoom.
-//! - **Tilt** (A2): anchor-preserving, it passes with no centre edit, even from a centre on the edge.
-//! - **The fuzz** (REQ-CHART-061, C6): seeded pans and locks through the stop on the charts whose centres can leave the
+//!   as failing.
+//! - **The lock**: refused on a pixel that is not a system, the centre unchanged; taken on one that is.
+//! - **The latent chart**: nothing stops, at any `z₀` or zoom.
+//! - **Tilt**: anchor-preserving, it passes with no centre edit, even from a centre on the edge.
+//! - **The fuzz**: seeded pans and locks through the stop on the charts whose centres can leave the
 //!   manifold (the linear `(L_z, E)` and `(L_z, K)` charts, the mass simplex), 1000 per chart, the centre validating
 //!   after every edit and the stop binding; control: the stop disabled reaches an invalid centre.
-//! - **The 65 × 65 grid** (C6, R-471): warped, every pixel of the invariant charts validates, untilted and under Lean
+//! - **The 65 × 65 grid**: warped, every pixel of the invariant charts validates, untilted and under Lean
 //!   each axis; linear, infeasible pixels appear and each is classified not a system. Control: the linear grid read
 //!   as all valid fails.
 
@@ -33,7 +33,7 @@ use validation::{negative_control, GAMMA_K, K_MAX, MASS_SIMPLEX_EPS_M};
 
 const P: LinkParams<f64> = LinkParams::DEFAULT;
 
-/// R-469 A3: the f64s of `[0, 1]` number fewer than 2⁶², so at most 62 halvings of their bit patterns' interval.
+/// The f64s of `[0, 1]` number fewer than 2⁶², so at most 62 halvings of their bit patterns' interval.
 const MAX_STEPS: u32 = 62;
 
 // ── A seeded generator (SplitMix64) ───────────────────────────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ fn wall_view(w: Wall) -> impl Fn(f64) -> Option<View<Wall>> {
     }
 }
 
-/// REQ-CHART-060's stop, checked against the chart alone: on the path at its `λ`; its centre validates; where it
+/// The navigation stop, checked against the chart alone: on the path at its `λ`; its centre validates; where it
 /// stopped, the next f64 above `λ` fails with the check reported, within 62 steps; where it did not, the value asked
 /// for, taken whole.
 fn assert_stop<V, C>(
@@ -577,9 +577,9 @@ negative_control!(
     check_tilt(0.05)
 );
 
-// ── REQ-CHART-061: the fuzz ───────────────────────────────────────────────────────────────────────────────────────
+// ── The fuzz ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// ≥ 1000 edits per chart (REQ-CHART-061's verify).
+/// ≥ 1000 edits per chart, as the requirement's verification asks.
 const EDITS: u32 = 1000;
 
 /// Seeded pans (three in four) and locks from a valid centre to one drawn over `[−0.5, 1.5]²`, each through the stop,
@@ -691,7 +691,7 @@ negative_control!(
     check_fuzz(true)
 );
 
-// ── REQ-CHART-061: the 65 × 65 grid, warped and linear ────────────────────────────────────────────────────────────
+// ── The 65 × 65 grid, warped and linear ───────────────────────────────────────────────────────────────────────────
 
 const N: u32 = 65;
 
@@ -718,7 +718,7 @@ fn check_grid(linear_all_valid: bool) {
     }
     all_valid("(L_z, E) warped", &le(Mapping::Warped));
     all_valid("(L_z, K) warped", &lk(Mapping::Warped));
-    // Under Lean each axis with one target every grid pixel stays in the square (R-512), so all must validate.
+    // Under Lean each axis with one target every grid pixel stays in the square, so all must validate.
     for (t1, t2) in [(30.0, -45.0), (-80.0, 10.0), (60.0, 0.0)] {
         let spec = TiltSpec {
             tau1: t1,

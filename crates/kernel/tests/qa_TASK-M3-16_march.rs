@@ -1,19 +1,21 @@
-//! QA tests for TASK-M3-16's wiring, the detector on a real march, written from the requirements and contract §1, not
-//! from the implementation. Path A does not apply: these ICs enter the wrapper directly, as physical `(m, r, p)`.
-//! - REQ-INT-046 (`qa_m316_rotations_inside_a_macro_step`): a close pair turning several times per macro-step, so several
+//! QA tests for the branch-cut detector's wiring, the detector on a real march, written from the requirements and
+//! contract §1, not from the implementation. Path A does not apply: these ICs enter the wrapper directly, as
+//! physical `(m, r, p)`.
+//! - `qa_m316_rotations_inside_a_macro_step`: a close pair turning several times per macro-step, so several
 //!   crossings fall inside one macro-step of a real march. Hand-worked from §1, with `u` the pair's separation and the
 //!   third body far along it: `d` follows `u`'s sine; one of the pair's two alignments per turn has an outer body of the
 //!   pair between, and appends one letter, the other has body 1 between and appends none. So `n` turns read one letter
 //!   `n` times, its sense fixed by the sense of rotation, and `n` is Kepler's count.
-//! - REQ-PAY-042, REQ-INT-046 (`qa_m316_word_leaves_the_run_alone`): every occupant, at the sample's own index, against
+//! - `qa_m316_word_leaves_the_run_alone`: every occupant, at the sample's own index, against
 //!   an unwired run: the state and every descriptor bit but `last_symbol` unchanged, the neighbours untouched, and the
 //!   word the one a literal reading of §1, in plain float arithmetic here, gives over the same substeps.
-//! - REQ-PAY-048 through the wrapper (`qa_m316_march_truncates`): past 76 letters the word holds the truncation
-//!   sentinel and its retained prefix.
-//! - REQ-PAY-070's cross-check on the kernel's own substeps (`qa_m316_march_reads_the_published_class`): the ten orbits
-//!   of Table I at the finer step REQ-VAL-043's note records as reading all ten. REQ-VAL-043 itself is TASK-M3-30's.
+//! - The word's truncation through the wrapper (`qa_m316_march_truncates`): past 76 letters the word holds the
+//!   truncation sentinel and its retained prefix.
+//! - The published-class cross-check on the kernel's own substeps (`qa_m316_march_reads_the_published_class`): the ten
+//!   orbits of Table I at the finer step the word-calculus test's note records as reading all ten. That word-calculus
+//!   test itself is not here.
 //!
-//! Each check takes the march as a function, so its negative control (R-176) runs the same check on a faulty one.
+//! Each check takes the march as a function, so its negative control runs the same check on a faulty one.
 
 use kernel::decode::Ic;
 use kernel::driver::advance::{Advance, Cadence};
@@ -318,7 +320,8 @@ negative_control!(
 // ── Detection only at the macro-step: the control the rotation exists for ────────────────────────────────────────────
 
 /// The detector fed only each macro-step's last state, read from the run's own substeps: the "once per macro-step"
-/// REQ-INT-046 forbids, with its letters through §1's literal reading into the word.
+/// detection the payload design forbids (dd_simstate_payload), with its letters through §1's literal reading into
+/// the word.
 #[cfg(feature = "controls")]
 fn per_macro_step(ic: &Ic<f64>, u: &WrapperUniforms<f64>, words: &mut [FreeGroupWord]) -> u32 {
     use kernel::word::{state_cuts, CrossingDetector, CrossingHook};
@@ -409,7 +412,8 @@ fn is_rotation(w: &[u32], of: &[u32]) -> bool {
 }
 
 /// The ten orbits marched at `dt` through `integrate_word` with Table I's middle body at `middle`: each reads its
-/// published word, cyclically, or with R-630 item 5's inverse and exchange.
+/// published word, cyclically, or with its inverse or the `(a, b) ↔ (A, B)`
+/// exchange.
 fn check_published(dt: f64, middle: usize) {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -457,7 +461,7 @@ fn check_published(dt: f64, middle: usize) {
     }
 }
 
-/// The step is REQ-VAL-043's note's, which records all ten reading there.
+/// The step is the word-calculus test's note's, which records all ten reading there.
 #[test]
 fn qa_m316_march_reads_the_published_class() {
     check_published(2.5e-4, 1);

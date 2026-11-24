@@ -1,10 +1,10 @@
-//! QA's tests for TASK-M2-38's stop on an edit whose finite ends lie more than `f64::MAX` apart, written from
-//! REQ-CHART-060 ("an edit that would cross must stop at the last valid value along its own path, found by bisection on
-//! the edit's fraction λ ∈ [0, 1] … until the two ends are adjacent f64 values (at most 62 steps), the valid end
-//! kept, and must report the layer and the constraint that stopped it"), not from the implementation.
+//! QA's tests for the chart edit's stop on an edit whose finite ends lie more than `f64::MAX` apart, written from the
+//! edit-stop requirement ("an edit that would cross must stop at the last valid value along its own path, found by
+//! bisection on the edit's fraction λ ∈ [0, 1] … until the two ends are adjacent f64 values (at most 62 steps), the
+//! valid end kept, and must report the layer and the constraint that stopped it"), not from the implementation.
 //!
-//! The probe is the shape sphere's inertia, a system at every positive value tried here and none at a negative one
-//! (R-469), edited from a huge positive value to a huge negative one, the two finite and their difference past
+//! The probe is the shape sphere's inertia, a system at every positive value tried here and none at a negative one,
+//! edited from a huge positive value to a huge negative one, the two finite and their difference past
 //! `f64::MAX`. The path is the straight segment between them; it crosses zero at `λ* = from / (from − to)`, strictly
 //! inside `(0, 1)`, and every value before the crossing is positive. The oracle is that geometry and the decode at the
 //! accepted value, never the path the implementation computes:
@@ -100,7 +100,7 @@ const ENDS: [(f64, f64); 4] = [
     (2e306, -f64::MAX),
 ];
 
-/// What REQ-CHART-060 asks of the stop of an inertia edit `from → to` across zero.
+/// What the edit-stop requirement asks of the stop of an inertia edit `from → to` across zero.
 fn assert_last_valid(name: &str, map: ShapeMap, from: f64, to: f64, phase: f64, s: &Stop<f64>) {
     let bound = 4.0 * f64::EPSILON * from.abs() + 4.0 * f64::EPSILON * to.abs();
     assert!(
