@@ -1,11 +1,11 @@
-//! Profiler schema v1 (R-56): a superset of telemetry §2, in JSON. At the top level, §2's frame record and its five
+//! Profiler schema v1: a superset of telemetry §2, in JSON. At the top level, §2's frame record and its five
 //! stages; beneath them, nested scopes, GPU passes, allocations and events. The keys and the nesting are
-//! dd_telemetry_and_tiers §5, "Profiler schema v1: the keys and the nesting" (REQ-TOOL-120, R-72); the JSON Schema is
+//! dd_telemetry_and_tiers §5, "Profiler schema v1: the keys and the nesting"; the JSON Schema is
 //! [`SCHEMA_V1`].
 //!
 //! [`FrameRecord`] is the measurement struct, always compiled: the reporting is toggleable, the measurement is not
 //! (telemetry §5.5). It and the types beneath it are `render::frame_record`'s, re-exported here: the render loop fills
-//! it (TASK-M1-05; render never depends on engine, systems_architecture §7.1). The engine writes it, `prin` reads and
+//! it (render never depends on engine, systems_architecture §7.1). The engine writes it, `prin` reads and
 //! writes it, and the dev GUI's profiler reads it.
 
 use std::collections::HashSet;
@@ -41,9 +41,9 @@ pub enum SchemaId {
 
 /// One profiler trace: the session header, the frame records, then the precomputed summaries (telemetry §5).
 ///
-/// The file is JSON Lines (R-286), which [`write()`] writes and [`read()`] reads: the header line
+/// The file is JSON Lines, which [`write()`] writes and [`read()`] reads: the header line
 /// `{"schema", "header"}`, one frame record per line, then the summary line `{"leak_flags", "hot_paths"}`. A session
-/// that ended before its summary line, a crash or a session still running, is [`Session::Incomplete`] (R-298). This
+/// that ended before its summary line, a crash or a session still running, is [`Session::Incomplete`]. This
 /// type's own serde form, one object with the five keys (and `session` when incomplete, `dropped_bytes` when not 0),
 /// is not the file.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -61,15 +61,15 @@ pub struct Trace {
     /// The precomputed hot-path summaries; `None` when not precomputed.
     #[serde(deserialize_with = "nullable")]
     pub hot_paths: Option<Vec<Summary>>,
-    /// Whether the file has its summary line (R-298). Not a key of the file: the summary line's presence is. An
+    /// Whether the file has its summary line. Not a key of the file: the summary line's presence is. An
     /// incomplete session's `leak_flags` and `hot_paths` are `None`, and [`Trace::leak_flags`] and
     /// [`Trace::hot_paths`] give the reason.
     #[serde(default, skip_serializing_if = "Session::is_complete")]
     pub session: Session,
-    /// The bytes of a last line cut off before its newline, not one complete JSON value, which [`read`] dropped
-    /// (R-299): the part of a line the session was writing when it stopped. 0 when nothing was dropped. Not a key of
+    /// The bytes of a last line cut off before its newline, not one complete JSON value, which [`read`] dropped:
+    /// the part of a line the session was writing when it stopped. 0 when nothing was dropped. Not a key of
     /// the file. A trace that dropped bytes is [`Session::Incomplete`] when the line before them is a frame record or
-    /// the header line, and [`Session::Complete`] when it is the summary line (R-356, R-358): a complete trace may
+    /// the header line, and [`Session::Complete`] when it is the summary line: a complete trace may
     /// have dropped bytes.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub dropped_bytes: u64,
@@ -79,7 +79,7 @@ fn is_zero(n: &u64) -> bool {
     *n == 0
 }
 
-/// Whether a session ended with its summary line (R-298, telemetry §5).
+/// Whether a session ended with its summary line (telemetry §5).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Session {
@@ -103,7 +103,7 @@ impl Session {
 pub enum Absent {
     /// The summary line holds `null`: they were not precomputed.
     NotPrecomputed,
-    /// There is no summary line: the session is incomplete (R-298).
+    /// There is no summary line: the session is incomplete.
     SessionIncomplete,
 }
 
@@ -117,14 +117,13 @@ impl fmt::Display for Absent {
 }
 
 impl Trace {
-    /// The precomputed leak flags, or why there are none: "session incomplete" when the file has no summary line
-    /// (R-298).
+    /// The precomputed leak flags, or why there are none: "session incomplete" when the file has no summary line.
     pub fn leak_flags(&self) -> Result<&[Summary], Absent> {
         self.summary(&self.leak_flags)
     }
 
     /// The precomputed hot-path summaries, or why there are none: "session incomplete" when the file has no summary
-    /// line (R-298).
+    /// line.
     pub fn hot_paths(&self) -> Result<&[Summary], Absent> {
         self.summary(&self.hot_paths)
     }
@@ -138,13 +137,13 @@ impl Trace {
     }
 }
 
-/// One leak flag or hot-path summary (render_gui_spec § "Profiler"): a JSON object whose keys the task closing
-/// REQ-TOOL-100 defines. Until then, any object.
+/// One leak flag or hot-path summary (render_gui_spec § "Profiler"): a JSON object whose keys are not defined yet;
+/// until they are, any object.
 pub type Summary = serde_json::Map<String, serde_json::Value>;
 
 /// The session header: telemetry §2's per-session fields, and the full config §5 requires.
 ///
-/// A session that opens no GPU (R-308) writes [`Api::None`] and `None` for the GPU's own fields: `backend.driver`,
+/// A session that opens no GPU writes [`Api::None`] and `None` for the GPU's own fields: `backend.driver`,
 /// `device.gpu`, `device.gpu_cores`, `device.memory` and `precision`. A run never opens a GPU adapter only to fill the
 /// header.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -154,11 +153,11 @@ pub struct SessionHeader {
     pub device: Device,
     /// The graphics API and the driver.
     pub backend: Backend,
-    /// f32 and f64 support, and the reported f64 rate; `None` for a session that opens no GPU (R-308).
+    /// f32 and f64 support, and the reported f64 rate; `None` for a session that opens no GPU.
     #[serde(deserialize_with = "nullable")]
     pub precision: Option<Precision>,
     /// The compute shaders' fast-math setting asked for, and each stage's mode as compiled; `compiled` is `None` for a
-    /// session that opens no GPU (R-297, R-308).
+    /// session that opens no GPU.
     pub fast_math: FastMathRecord,
     /// The build's provenance.
     pub build: Build,
@@ -166,13 +165,13 @@ pub struct SessionHeader {
     #[serde(deserialize_with = "nullable")]
     pub display: Option<Display>,
     /// The run's full configuration, a JSON object (telemetry §5, "Self-contained"), written in the canonical
-    /// serialisation, JCS (gui_state_contract §2, R-309, R-318). A `prin profile` run's is
+    /// serialisation, JCS (gui_state_contract §2). A `prin profile` run's is
     /// `{"scenario": NAME, "frames": N, "sim": SimConfig, "render": RenderState}`.
     #[serde(serialize_with = "canonical_config")]
     pub config: serde_json::Map<String, serde_json::Value>,
 }
 
-/// Writes the header's `config` as its canonical text, JCS (gui_state_contract §2, R-309, R-318), so the key order and
+/// Writes the header's `config` as its canonical text, JCS (gui_state_contract §2), so the key order and
 /// the number format are JCS's, not the JSON writer's.
 fn canonical_config<S: Serializer>(
     config: &serde_json::Map<String, serde_json::Value>,
@@ -188,20 +187,20 @@ fn canonical_config<S: Serializer>(
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Device {
-    /// The GPU model; `None` for a session that opens no GPU (R-308).
+    /// The GPU model; `None` for a session that opens no GPU.
     #[serde(deserialize_with = "nullable")]
     pub gpu: Option<String>,
     /// The CPU model.
     pub cpu: String,
-    /// The CPU cores this process may use, as `std::thread::available_parallelism` reports them (R-329).
+    /// The CPU cores this process may use, as `std::thread::available_parallelism` reports them.
     pub cpu_cores_available: u32,
-    /// The machine's own CPU core count; `None` where the platform doesn't report it cheaply (R-329).
+    /// The machine's own CPU core count; `None` where the platform doesn't report it cheaply.
     #[serde(deserialize_with = "nullable")]
     pub cpu_cores_total: Option<u32>,
     /// The GPU's core count; `None` when not reported.
     #[serde(deserialize_with = "nullable")]
     pub gpu_cores: Option<u32>,
-    /// VRAM or unified memory; `None` for a session that opens no GPU (R-308).
+    /// VRAM or unified memory; `None` for a session that opens no GPU.
     #[serde(deserialize_with = "nullable")]
     pub memory: Option<Memory>,
 }
@@ -230,12 +229,12 @@ pub enum Memory {
 pub struct Backend {
     /// The graphics API.
     pub api: Api,
-    /// The driver version; `None` for a session that opens no GPU (R-308).
+    /// The driver version; `None` for a session that opens no GPU.
     #[serde(deserialize_with = "nullable")]
     pub driver: Option<String>,
 }
 
-/// The graphics APIs telemetry §2 names, and `none` for a session that opens no GPU (telemetry §5, R-308).
+/// The graphics APIs telemetry §2 names, and `none` for a session that opens no GPU (telemetry §5).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Api {
@@ -247,7 +246,7 @@ pub enum Api {
     Dx12,
     /// WebGPU.
     Webgpu,
-    /// No GPU: the session opened none, and the GPU's fields are `null` (R-308).
+    /// No GPU: the session opened none, and the GPU's fields are `null`.
     None,
 }
 
@@ -332,13 +331,13 @@ struct SummaryLine {
     hot_paths: Option<Vec<Summary>>,
 }
 
-/// Writes `trace` as schema v1: JSON Lines (R-286), the header line, one compact frame record per line, then the
+/// Writes `trace` as schema v1: JSON Lines, the header line, one compact frame record per line, then the
 /// summary line, never pretty-printed; pretty-printing is on demand, `prin profile show --pretty` or `jq` (telemetry §5). A value outside its range (a negative ms,
 /// NaN or an infinity), a frame with one `present` null and the other not, a pool whose `bytes` is not the sum of its
 /// `by_kind` bytes, or two entries for one type in a pool's `by_kind` or for one kind and pool in a stage's
-/// `allocations` is an error, and nothing is written. An incomplete session (R-298) is written without its summary
+/// `allocations` is an error, and nothing is written. An incomplete session is written without its summary
 /// line, as a session that ended before it leaves the file, and its `leak_flags` and `hot_paths` must be `None`; the
-/// bytes a reader dropped (R-299) are gone, so they are not written, whether the trace is complete or not (R-356).
+/// bytes a reader dropped are gone, so they are not written, whether the trace is complete or not.
 ///
 /// The writer is buffered here and flushed before `write` returns, so a plain `File` costs no more than a `BufWriter`.
 pub fn write<W: io::Write>(trace: &Trace, writer: W) -> Result<(), serde_json::Error> {
@@ -388,17 +387,16 @@ fn write_line<W: io::Write, T: Serialize>(
 /// place. An error names the line, from 1.
 ///
 /// A file that ends before its summary line, its last line a frame record or the header line, is a session that
-/// crashed or is still running (R-298). It reads: the header and frames are returned, the trace is
+/// crashed or is still running. It reads: the header and frames are returned, the trace is
 /// [`Session::Incomplete`], and [`Trace::leak_flags`] and [`Trace::hot_paths`] report "session incomplete".
 ///
-/// A last line with no newline after it that is not one complete JSON value was cut off as the session stopped
-/// (R-299). It is dropped, the lines before it are the trace, and [`Trace::dropped_bytes`] states how many bytes were
-/// dropped. When the line before it is a frame record or the header line, the trace is [`Session::Incomplete`]. When
-/// the line before it is the summary line, the summary line and the frames are kept, `leak_flags` and `hot_paths` are
-/// read from it, and the trace is [`Session::Complete`], with its dropped bytes (R-356, R-358): a complete trace may
-/// have dropped bytes. A last line with no newline that is complete JSON is read as any last line is, and a malformed
-/// line that ends in a newline is an error. A file whose only line is cut off has no header line, and is an error that
-/// states the bytes.
+/// A last line with no newline after it that is not one complete JSON value was cut off as the session stopped. It is
+/// dropped, the lines before it are the trace, and [`Trace::dropped_bytes`] states how many bytes were dropped. When
+/// the line before it is a frame record or the header line, the trace is [`Session::Incomplete`]. When the line before
+/// it is the summary line, the summary line and the frames are kept, `leak_flags` and `hot_paths` are read from it, and
+/// the trace is [`Session::Complete`], with its dropped bytes: a complete trace may have dropped bytes. A last line
+/// with no newline that is complete JSON is read as any last line is, and a malformed line that ends in a newline is an
+/// error. A file whose only line is cut off has no header line, and is an error that states the bytes.
 ///
 /// The reader is buffered here, so a plain `File` costs no more than a `BufReader`.
 pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
@@ -406,9 +404,8 @@ pub fn read<R: io::Read>(reader: R) -> Result<Trace, serde_json::Error> {
 }
 
 /// Reads the lines from `reader`. Each line after the header is held until the next arrives: a line with one after it
-/// is a frame record, and the last is the summary line or, in an incomplete session, a frame record (R-298). A cut-off
-/// last line is dropped, and the line before it is read as the last (R-299, R-356): the summary line or a frame
-/// record.
+/// is a frame record, and the last is the summary line or, in an incomplete session, a frame record. A cut-off last
+/// line is dropped, and the line before it is read as the last: the summary line or a frame record.
 pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json::Error> {
     let mut line = Vec::new();
     let mut held = Vec::new();
@@ -433,16 +430,16 @@ pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json:
         dropped_bytes: 0,
     };
     if !next_line(&mut reader, &mut held)? {
-        // The header line alone: a session that recorded no frame and ended before its summary line (R-298).
+        // The header line alone: a session that recorded no frame and ended before its summary line.
         trace.session = Session::Incomplete;
         return Ok(trace);
     }
     let mut number = 2;
     while next_line(&mut reader, &mut line)? {
         if cut_off(&line) {
-            // The part of a line the session was writing when it stopped (R-299): dropped. It has no newline, so it
+            // The part of a line the session was writing when it stopped: dropped. It has no newline, so it
             // is the file's last, and the held line before it is the trace's last: the summary line or a frame
-            // record (R-356).
+            // record.
             trace.dropped_bytes = line.len() as u64;
             break;
         }
@@ -454,7 +451,7 @@ pub(crate) fn read_lines<R: BufRead>(mut reader: R) -> Result<Trace, serde_json:
         number += 1;
     }
     if cut_off(&held) {
-        // Line 2 cut off (R-299): dropped, the header line the last.
+        // Line 2 cut off: dropped, the header line the last.
         trace.dropped_bytes = held.len() as u64;
         trace.session = Session::Incomplete;
         return Ok(trace);
@@ -495,7 +492,7 @@ fn next_line<R: BufRead>(reader: &mut R, line: &mut Vec<u8>) -> Result<bool, ser
     Ok(n > 0)
 }
 
-/// Whether `line` was cut off as its session stopped (R-299): it has no newline after it, so it is the file's last,
+/// Whether `line` was cut off as its session stopped: it has no newline after it, so it is the file's last,
 /// and it is not one complete JSON value. A compact JSON object cut anywhere before its closing brace never is.
 fn cut_off(line: &[u8]) -> bool {
     line.last() != Some(&b'\n') && serde_json::from_slice::<serde_json::Value>(line).is_err()
@@ -707,7 +704,7 @@ fn non_negative(path: &At, value: f64) -> Result<(), String> {
 
 /// The `percent`-th percentile of `samples` by nearest rank: the samples sorted ascending, the ⌈percent · n / 100⌉-th,
 /// counted from 1, and the smallest for 0; `None` when there are no samples. Integer arithmetic, so p95 of 20 samples is
-/// exactly the 19th. `prin profile diff` compares per-scope p95 with it (render_gui_spec § "Profiler", REQ-TOOL-119),
+/// exactly the 19th. `prin profile diff` compares per-scope p95 with it (render_gui_spec § "Profiler"),
 /// and the interactive path's percentiles are to use it too: one percentile code (telemetry §5.5).
 ///
 /// # Panics

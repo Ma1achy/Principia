@@ -1,11 +1,10 @@
 //! The one canonical serialisation of [`SimConfig`](super::sim_config::SimConfig) and
-//! [`RenderState`](super::render_state::RenderState): JCS, RFC 8785 (gui_state_contract §2, R-309, R-318, R-322;
-//! REQ-TOOL-145). Equal state is equal text: no whitespace between tokens, every object's members sorted by their
-//! names' UTF-16 code units at every depth, strings escaped as RFC 8785 §3.2.2.2 gives, and numbers in ECMAScript's
-//! Number-to-String format (§3.2.2.3), so −0.0 is written `0`. A u64 field (a seed, say) is always written as a JSON
-//! string of its decimal digits, whatever its value; every other number is a JSON number, so a field's type never
-//! depends on its value (R-322). The profiler header's `config`, snapshot JSON, share links and pxpack all carry this
-//! text.
+//! [`RenderState`](super::render_state::RenderState): JCS, RFC 8785 (gui_state_contract §2). Equal state is equal text:
+//! no whitespace between tokens, every object's members sorted by their names' UTF-16 code units at every depth,
+//! strings escaped as RFC 8785 §3.2.2.2 gives, and numbers in ECMAScript's Number-to-String format (§3.2.2.3), so −0.0
+//! is written `0`. A u64 field (a seed, say) is always written as a JSON string of its decimal digits, whatever its
+//! value; every other number is a JSON number, so a field's type never depends on its value. The profiler header's
+//! `config`, snapshot JSON, share links and pxpack all carry this text.
 
 use std::fmt;
 
@@ -31,7 +30,7 @@ impl ser::Error for Error {
     }
 }
 
-/// `value` in the canonical serialisation (gui_state_contract §2): JCS, a u64 field written as a string (R-322).
+/// `value` in the canonical serialisation (gui_state_contract §2): JCS, a u64 field written as a string.
 pub fn to_string<T: Serialize + ?Sized>(value: &T) -> Result<String, Error> {
     value.serialize(Canonical)
 }
@@ -257,7 +256,7 @@ impl ser::Serializer for Canonical {
     fn serialize_u32(self, v: u32) -> Result<String, Error> {
         format_f64(f64::from(v))
     }
-    /// A u64 field (a seed, say) is always a JSON string of its decimal digits, whatever its value (R-322).
+    /// A u64 field (a seed, say) is always a JSON string of its decimal digits, whatever its value.
     fn serialize_u64(self, v: u64) -> Result<String, Error> {
         Ok(quote(&v.to_string()))
     }
