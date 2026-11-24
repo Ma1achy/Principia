@@ -1,17 +1,17 @@
 //! `Real`, the float type the kernel is generic over (canonical_spec §1 item 2; lowering Part 2): f32 for the GPU build,
-//! f64 for the CPU build, and no other instantiation (R-265). The payload's widths are a function of it, never
+//! f64 for the CPU build, and no other instantiation. The payload's widths are a function of it, never
 //! hardcoded to f32 (philosophy §7.1, §7.7; dd_simstate_payload §1).
 //!
-//! **The poles' `±∞`** ([`IeeeBits`]; R-436; dd_decoder §3.6, "Each producer selects its pole value"). WGSL lets an
+//! **The poles' `±∞`** ([`IeeeBits`]; dd_decoder §3.6, "Each producer selects its pole value"). WGSL lets an
 //! implementation assume there are no infinities (gpu_determinism_note § "The discipline", rule 4), so a producer never
 //! forms `±∞` by `1/0` or by arithmetic on `∞`, and never by an infinite literal: it selects the integer pattern's bits,
 //! then bitcasts them ([`IeeeBits::or_pos_inf`], [`IeeeBits::or_neg_inf`]: `0x7F80_0000` and `0xFF80_0000` at f32,
-//! `0x7FF0_0000_0000_0000` and `0xFFF0_0000_0000_0000` at f64), as R-271's packer writes `d_min`'s `+∞`. The select is on
+//! `0x7FF0_0000_0000_0000` and `0xFFF0_0000_0000_0000` at f64), as `d_min`'s packer writes its `+∞`. The select is on
 //! the integer bits, so the value it discards is never read as a float, and no infinite float constant is left for a
 //! shader compiler to fold. `self`'s bits are taken before the choice, so that both of its operands are computed and the
 //! kernel's WGSL has a `select`, not a branch (gpu_determinism_note's discipline). A stored value is tested on its bits, an exponent field of all ones
-//! ([`IeeeBits::non_finite_bits`]), as R-114's NaN guard is, never by `isinf` or a comparison with the largest finite
-//! value. The payload's float types have them ([`crate::payload::PayloadReal`]'s bound): f32 and f64.
+//! ([`IeeeBits::non_finite_bits`]), as the kernel's NaN guard is, never by `isinf` or a comparison with the largest
+//! finite value. The payload's float types have them ([`crate::payload::PayloadReal`]'s bound): f32 and f64.
 //!
 //! **What `Real` gives the physics layer** (integrator_contract Part 2c, "Rules the new kernel must hold by
 //! construction"): the four operations and negation, [`RealOps::fma`], [`RealOps::square_root`] and the comparisons
@@ -25,9 +25,9 @@
 //! ([`crate::generated::links::LinkReal`]) also carries, so that a call on a type bounded by both is not ambiguous; the
 //! transcendentals are named apart from `Float`'s for the same reason (`sine` for `sin`, `logarithm` for `ln`).
 //!
-//! **The pinned maths library** (R-991, REQ-CHART-212). Every f64 transcendental the CPU chart evaluator reaches is a
+//! **The pinned maths library**. Every f64 transcendental the CPU chart evaluator reaches is a
 //! method of [`Real`], and at f64 on the host each is the pinned pure-software libm's (`libm = "=0.2.16"` with
-//! `force-soft-floats`, as `Cargo.toml` pins it for the `N_sub` table, R-502): `sin`, `cos`, `tan`, `asin`, `acos`,
+//! `force-soft-floats`, as `Cargo.toml` pins it for the `N_sub` table): `sin`, `cos`, `tan`, `asin`, `acos`,
 //! `atan2`, `exp`, `expm1`, `log`, `log1p`, `pow`, `hypot`, `cbrt`, `sinh`, `cosh`, `tanh` and `atanh`, `sin_cos` its
 //! `sin` and `cos`. No platform maths library, compiler intrinsic or architecture-specific instruction computes them,
 //! so the f64 evaluation, and every record narrowed from it, has the same bits on every machine (the Mac, Linux,
@@ -36,7 +36,7 @@
 //! for [`Real::arctan2`] and [`Real::sinc`], the kernel's own. `crates/kernel/tests/transcendental_pin.rs` fails on a
 //! `Float::` or inherent transcendental anywhere in the evaluator's source outside this file's `Real` items.
 //!
-//! Two features, off in every build but the measurement's (`cargo xtask measure libm-pin`, R-991), change the f64 path:
+//! Two features, off in every build but the measurement's (`cargo xtask measure libm-pin`), change the f64 path:
 //! `measure-std-maths` puts it back on `num_traits::Float`, the platform's library, the path before the pin, and
 //! `measure-perturb-sin` moves [`Real::sine`]'s result one ulp up, the measurement's control.
 
@@ -45,7 +45,7 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 
 use spirv_std::num_traits::Float;
 
-/// A float type the one kernel source is instantiated at: f32 on the GPU, f64 on the CPU (R-265).
+/// A float type the one kernel source is instantiated at: f32 on the GPU, f64 on the CPU.
 pub trait Real:
     Copy
     + Default
@@ -64,11 +64,10 @@ pub trait Real:
     const NAME: &'static str;
 
     /// `atan2(self, x)`, the angle of the point `(x, self)`, in `[−π, π]`, for a type that is also a `Float`:
-    /// `num_traits::Float`'s by default; at f64 on the host the pinned libm's `atan2` (R-991; the module's note); and at
+    /// `num_traits::Float`'s by default; at f64 on the host the pinned libm's `atan2` (the module's note); and at
     /// f32, the GPU's precision, the kernel's own, [`crate::arctan::atan2_f32`], in integer arithmetic, so every backend
-    /// gives the CPU's bits (RQ-628, decided by the orchestrator per R-369, option (a)). The encode's angles and the shape
-    /// sphere decode's `β` call it, so the precision chooses it through `crate::generated::links::LinkReal`, whose bound
-    /// holds `Real`.
+    /// gives the CPU's bits. The encode's angles and the shape sphere decode's `β` call it, so the precision chooses it
+    /// through `crate::generated::links::LinkReal`, whose bound holds `Real`.
     #[inline]
     fn arctan2(self, x: Self) -> Self
     where
@@ -78,9 +77,9 @@ pub trait Real:
     }
 
     /// `atan2(self, x)` where the f32 path keeps the backend's: `num_traits::Float`'s by default, so at f32 the GPU's own
-    /// `atan2`, unchanged; at f64 on the host the pinned libm's `atan2`, as [`Real::arctan2`]'s (R-991; the module's
-    /// note). The callers that took `Float::atan2` before the pin take it, so no f32 bit moves; those RQ-628 gates take
-    /// [`Real::arctan2`].
+    /// `atan2`, unchanged; at f64 on the host the pinned libm's `atan2`, as [`Real::arctan2`]'s (the module's note).
+    /// The other callers take it, so their f32 bits stay the backend's; the encode's angles and the shape sphere
+    /// decode's `β` take [`Real::arctan2`].
     #[inline]
     fn arctangent2(self, x: Self) -> Self
     where
@@ -92,7 +91,7 @@ pub trait Real:
     /// `sin r/r` at `r = self`, nonzero, for a type that is also a `Float`, with `_square` the `r²` the caller formed
     /// before its square root: [`Real::sine`]`(r)/r` by default, so `r²` is not read, at f64 on the host the pinned
     /// libm's `sin` through it; and at f32, the GPU's precision, [`crate::chart::shape_sphere::sinc_f32`], which reads no
-    /// backend `sin` near 0 (R-696). The shape sphere's exponential map calls it, as [`Real::arctan2`] is gated.
+    /// backend `sin` near 0. The shape sphere's exponential map calls it, as [`Real::arctan2`] is gated.
     #[inline]
     fn sinc(self, _square: Self) -> Self
     where
@@ -295,9 +294,9 @@ impl Real for f32 {
     }
 }
 
-/// The f64 path: on the host each transcendental the pinned libm's (R-991; the module's note), [`Real::sinc`] and
+/// The f64 path: on the host each transcendental the pinned libm's (the module's note), [`Real::sinc`] and
 /// [`Real::sine_cosine`] the defaults, through [`Real::sine`] and [`Real::cosine`]. Each override is gated off the SPIR-V
-/// target, where the pinned libm is not built and the kernel instantiates f32 alone (R-265), and off under
+/// target, where the pinned libm is not built and the kernel instantiates f32 alone, and off under
 /// `measure-std-maths`, the measurement's path before the pin; there every method is the default, `num_traits::Float`'s,
 /// on the host the platform's maths library. Under `measure-perturb-sin`, the measurement's control, [`Real::sine`]'s
 /// result is moved one ulp up, its bit pattern plus one.
@@ -420,9 +419,9 @@ impl Real for f64 {
 /// `Float`'s constants (its epsilon, largest value, infinity) stay out of reach of code bounded by `Real` alone (the
 /// module's note).
 pub trait RealOps: Sized {
-    /// `self·a + b`, the fused multiply-add, rounded once. R-34 requires it, written explicitly, at every branch input
-    /// that consumes multi-op arithmetic (gpu_determinism_note § "The discipline", rules 2 and 6), as `d²` is built in
-    /// [`crate::physics::pairs`]. Whether every GPU backend fuses it is RQ-298's open question.
+    /// `self·a + b`, the fused multiply-add, rounded once. The determinism discipline requires it, written explicitly,
+    /// at every branch input that consumes multi-op arithmetic (gpu_determinism_note § "The discipline", rules 2 and
+    /// 6), as `d²` is built in [`crate::physics::pairs`]. Whether every GPU backend fuses it is an open question.
     fn fma(self, a: Self, b: Self) -> Self;
 
     /// `√self`: correctly rounded on the CPU, not guaranteed so on a GPU backend, so no branch decides on it (Part 2c
@@ -442,7 +441,7 @@ impl<T: Float> RealOps for T {
     }
 }
 
-/// The IEEE 754 bit patterns a producer selects at a pole, and the stored value's bit test (R-436; the module's note).
+/// The IEEE 754 bit patterns a producer selects at a pole, and the stored value's bit test (the module's note).
 /// A float type with them has the exact constructions' bit-level steps too ([`crate::chart::invariant::WarpReal`] and
 /// its [`crate::decode::invariant::ExactSign`]), f32 and f64 alike, so that a chart's [`crate::chart::Chart::decode`],
 /// at a payload float type, may run its construction (the Burrau chart's).
@@ -471,7 +470,7 @@ pub trait IeeeBits: Real + crate::chart::invariant::WarpReal {
 
     /// `|self|`'s significand, read from the bits: its fraction field under the exponent field of `1`, so in `[1, 2)`,
     /// with `|self| = significand · 2^exponent` for a normal `self` (exact, no arithmetic). The sign is dropped. Used
-    /// where a product must be formed with no subnormal intermediate (R-547; `crate::word::crossing`).
+    /// where a product must be formed with no subnormal intermediate (`crate::word::crossing`).
     fn significand(self) -> Self;
 
     /// `self·b`, rounded the same on every backend, whether it contracts or fuses or not. At f32, the GPU's precision,
@@ -488,7 +487,7 @@ pub trait IeeeBits: Real + crate::chart::invariant::WarpReal {
     /// `crate::encode::curve::nearest`'s step.
     const INV_PHI: Self;
 
-    /// `τ_I`, step 0's skip tolerance (R-547; dd_encode §3.2; `crate::canon`): step 0 is skipped where
+    /// `τ_I`, step 0's skip tolerance (dd_encode §3.2; `crate::canon`): step 0 is skipped where
     /// `|I_in − 1| ≤ τ_I`. The register's `tau_i`, in eps of the precision, times the precision's eps, which the
     /// generator writes as each width's exact value (`TAU_I_F32`, `TAU_I_F64`). A constant, so every backend compares
     /// against the same bits.

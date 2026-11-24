@@ -1,5 +1,5 @@
 //! The sync grid: the regularised occupants' fixed quantum of physical time (integrator_contract Part 2a § "The sync
-//! grid is a fixed quantum of physical time"; R-565).
+//! grid is a fixed quantum of physical time").
 //!
 //! **One grid.** The boundaries are `t = k·Δ_sync`, `Δ_sync` the register's `delta_sync` ([`delta_sync`]), the same for
 //! every run, independent of the horizon `T` and of frame timing; never `t_max / n_sync`. A boundary's time is one
@@ -16,7 +16,7 @@
 //! entry size and step limit read it, and Aarseth–Zare's `dt_left` is `Δ_sync` (`az::march`, `heggie::march`,
 //! `logh::march`, each taking it from its configuration's `delta_sync`).
 //!
-//! The unregularised occupants' macro-step grid, `dt_macro = max(10⁻³, T/65535)`, is not this grid (R-602).
+//! The unregularised occupants' macro-step grid, `dt_macro = max(10⁻³, T/65535)`, is not this grid.
 
 use super::az::AzReal;
 use crate::driver::advance::Width;
