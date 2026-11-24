@@ -438,7 +438,7 @@ pub fn physics_key() -> engine::contract::sim_config::SimConfig {
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },
-        collision: Collision {},
+        collision: Collision::default(),
         quality: Quality {},
     }
 }

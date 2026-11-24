@@ -17,10 +17,15 @@
 //! Pass criteria are written in each test before it was run.
 //!
 //! parity-tier: L (detector labels)
+//!
+//! **The stop option.** Every cadence here runs with `stop_on_escape` on: these tests pin the march that ends at the
+//! first escape label and keeps it, which is that option since the label became live by default
+//! (`kernel::driver::cadence`'s note; the live label's own tests are `tests/escape_live.rs`).
 
 use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
 use kernel::detect::escape::is_mark;
+use kernel::detect::escape_rule::Closure;
 use kernel::detect::label::{precedence, Events, Fired, Label};
 use kernel::driver::advance::Cadence;
 use kernel::driver::benettin::{completed_renorms, ftle_read, Absolute, Benettin, BenettinParams};
@@ -30,8 +35,8 @@ use kernel::driver::nsub_table::{thresholds, NsubConfig};
 use kernel::driver::substep::{NsubThresholds, Quantise};
 use kernel::driver::terminal::{finished, latch, redispatch};
 use kernel::driver::wrapper::{
-    integrate_detecting, integrate_resumed_with, integrate_with, integrate_with_co, monitored,
-    WrapperReal, WrapperUniforms,
+    integrate_detecting, integrate_detecting_rule, integrate_resumed_with, integrate_with,
+    integrate_with_co, monitored, WrapperReal, WrapperUniforms,
 };
 use kernel::generated::nsub_thresholds::NSUB_TABLE_ROWS;
 use kernel::occupant::kdk::Kdk;
@@ -190,7 +195,7 @@ fn name(state: u32) -> &'static str {
 /// stepper) and the sampling point escape fired at. `latched: false` reads `done` as never set, a loop that does not
 /// exit on a terminal; `clocked: false` drops the wrapper's macro-step clock.
 struct Recording<R> {
-    inner: WrapperCadence<R>,
+    inner: WrapperCadence<R, Closure<R>>,
     d2: Vec<f32>,
     samples: Vec<(u32, u32)>,
     escaped_at: Option<u32>,
@@ -200,7 +205,8 @@ struct Recording<R> {
 
 impl<R: P> Recording<R> {
     fn new(s: &State<R>, radius: CollisionRadius) -> Self {
-        let inner = WrapperCadence::with_radius(&s.m, &s.r, &s.p, radius);
+        let inner = WrapperCadence::<R, Closure<R>>::with_rule(&s.m, &s.r, &s.p, radius)
+            .stopping_on_escape(true);
         Recording {
             d2: vec![inner.detector().last().min()],
             inner,
@@ -306,7 +312,7 @@ impl<R: P> Cadence<R> for Poisoned<R> {
 fn check_bounded(horizon_steps: u32, cut: u32) {
     let s = bound::<f64>();
     let zero = integrate_detecting::<Kdk, f64>(&ic(&s), &flat(0.01, 0, 1), CollisionRadius::none());
-    let mut c = WrapperCadence::new(&s.m, &s.r, &s.p);
+    let mut c = WrapperCadence::new(&s.m, &s.r, &s.p).stopping_on_escape(true);
     let out = integrate_resumed_with::<Kdk, f64, _>(
         &ic(&s),
         &flat(0.01, horizon_steps, 1),
@@ -330,7 +336,7 @@ fn check_nan(at: u32) {
         (expanding::<f64>(), CollisionRadius::none()),
     ] {
         let mut c = Poisoned {
-            inner: WrapperCadence::with_radius(&s.m, &s.r, &s.p, radius),
+            inner: WrapperCadence::with_radius(&s.m, &s.r, &s.p, radius).stopping_on_escape(true),
             calls: 0,
             at,
         };
@@ -349,7 +355,7 @@ fn check_cap(stop_on_cap: bool) {
     let s = bound::<f64>();
     let key = flat::<f64>(0.01, 200, 2);
     let mut c = CapStop {
-        inner: WrapperCadence::new(&s.m, &s.r, &s.p),
+        inner: WrapperCadence::new(&s.m, &s.r, &s.p).stopping_on_escape(true),
         table: key.thresholds,
         n_max: key.n_max,
         stop: stop_on_cap,
@@ -452,7 +458,7 @@ fn check_nmax_cap(stop_on_cap: bool) {
     let s = near_singular::<f64>();
     let key = law::<f64>(0.01, 2000, 4);
     let mut c = CapStop {
-        inner: WrapperCadence::new(&s.m, &s.r, &s.p),
+        inner: WrapperCadence::new(&s.m, &s.r, &s.p).stopping_on_escape(true),
         table: key.thresholds,
         n_max: key.n_max,
         stop: stop_on_cap,
@@ -616,7 +622,7 @@ fn cadence_labels<R: P>(rule: Rule) -> Vec<(u32, u32)> {
     let quantum: R = real(0.05);
     assert!(is_mark(8, quantum));
     let mut labels = Vec::new();
-    let mut tie = WrapperCadence::with_radius(&s0.m, &s0.r, &s0.p, radius);
+    let mut tie = WrapperCadence::with_radius(&s0.m, &s0.r, &s0.p, radius).stopping_on_escape(true);
     let s = step(&mut tie, &close);
     tie.sample(&s, 8, quantum);
     let e = tie.events();
@@ -624,7 +630,8 @@ fn cadence_labels<R: P>(rule: Rule) -> Vec<(u32, u32)> {
         e.collision.fired && e.escape.fired && e.collision.at == e.escape.at,
         "the cadence did not read the tie: {e:?}"
     );
-    let mut later = WrapperCadence::with_radius(&s0.m, &s0.r, &s0.p, radius);
+    let mut later =
+        WrapperCadence::with_radius(&s0.m, &s0.r, &s0.p, radius).stopping_on_escape(true);
     let s = step(&mut later, &apart);
     later.sample(&s, 8, quantum);
     assert!(later.done(), "escape did not set `done`");
@@ -697,7 +704,12 @@ fn cadence_labels<R: P>(rule: Rule) -> Vec<(u32, u32)> {
         (expanding::<R>(), CollisionRadius::none()),
         (head_on::<R>(), CollisionRadius::from_r_coll(0.1)),
     ] {
-        let out = integrate_detecting::<Kdk, R>(&ic(&s), &flat(0.05, 200, 4), radius);
+        let out = integrate_detecting_rule::<Kdk, R, Closure<R>>(
+            &ic(&s),
+            &flat(0.05, 200, 4),
+            radius,
+            true,
+        );
         labels.push((sd_state(out.packed_a), sd_detail(out.packed_a)));
         labels.push((tm_t_end_step(out.times), 0));
     }
@@ -925,7 +937,8 @@ fn dispatch_again<R: P>(
     carried: &mut Carried<R>,
     how: Again,
 ) -> (SimStateBaseOf<R>, u32) {
-    let mut c = WrapperCadence::with_radius(&s.m, &stored.r, &stored.p, radius);
+    let mut c =
+        WrapperCadence::with_radius(&s.m, &stored.r, &stored.p, radius).stopping_on_escape(true);
     let out = if let Again::Redispatch = how {
         redispatch::<Kdk, R, _>(&ic(s), key, &mut c, stored, carried, 100)
     } else if let Again::ResumeFinish = how {
@@ -973,7 +986,8 @@ fn check_terminal_latch<R: P>(control: Option<Again>) {
             stored.packed_a,
             stored.times,
             stored.budget_bits,
-            300
+            300,
+            true
         ));
         if what != "bounded" {
             let e = c.inner.events();
@@ -1346,7 +1360,7 @@ fn check_totality<R: P>(labelled: bool) {
     let mut saturated = 0;
     for n in 0..48 {
         let s = fuzzed::<R>(&mut g, [0.2, 0.8, 2.0][n % 3]);
-        let mut c = WrapperCadence::with_radius(&s.m, &s.r, &s.p, radius);
+        let mut c = WrapperCadence::with_radius(&s.m, &s.r, &s.p, radius).stopping_on_escape(true);
         let out = integrate_with::<Kdk, R, _>(&ic(&s), &key, &mut c);
         let out = if labelled { c.finish(out) } else { out };
         let state = sd_state(out.packed_a);
@@ -1410,7 +1424,7 @@ negative_control!(
 
 /// The wrapper's cadence with escape never tested: the march past escape, as a dispatch that ignored the latch would
 /// run it (validation's harness march is of this kind, on its own state).
-struct PastEscape<R>(WrapperCadence<R>);
+struct PastEscape<R>(WrapperCadence<R, Closure<R>>);
 
 impl<R: P> Cadence<R> for PastEscape<R> {
     fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
@@ -1537,7 +1551,7 @@ fn check_freeze(read: Read, latched: bool) {
     for k in 1..=3u32 {
         let later = horizon + 2000 * k;
         let again = if latched {
-            latch(&stored, later, |_| ftle_run(later, true).0)
+            latch(&stored, later, true, |_| ftle_run(later, true).0)
         } else {
             ftle_run(later, true).0
         };

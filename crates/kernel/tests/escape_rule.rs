@@ -1,6 +1,6 @@
 //! The selectable escape rule (`kernel::detect::escape_rule`; TASK-M3-34):
-//! - `escape_rule_closure_is_the_default`: the wrapper's default march is the closure rule's, bit for bit, and so is
-//!   `DefaultRule`'s. Control: the energy floor's march in its place.
+//! - `escape_rule_fewbody_is_the_default`: the wrapper's default march is the Fewbody rule's (escape-live-label's pick),
+//!   bit for bit, and so is `DefaultRule`'s. Control: the energy floor's march in its place.
 //! - `escape_rule_energy_floor`: prin-rs's naive energy baseline on constructed states: a bound pair and an unbound third
 //!   body is that body's escape, an unbound pair a triple ejection, a third body bound by the total mass no escape.
 //!   Control: the outer test read with the pair's mass alone, which fires on that last state.
@@ -23,8 +23,8 @@ use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
 use kernel::detect::escape::{self, Verdict};
 use kernel::detect::escape_rule::{
-    chazy_test, distance_floor_test, energy_floor_test, Chazy, Closure, DefaultRule, DistanceFloor,
-    EnergyFloor, EscapeRule,
+    chazy_test, distance_floor_test, energy_floor_test, Chazy, DefaultRule, DistanceFloor,
+    EnergyFloor, EscapeRule, Fewbody,
 };
 use kernel::driver::advance::Cadence;
 use kernel::driver::cadence::WrapperCadence;
@@ -75,7 +75,8 @@ fn bits(s: &SimStateBaseOf<f64>) -> String {
 fn check_default<E: EscapeRule<f64>>() {
     let ic = state(3.0, 1.2, 2.0);
     let own = integrate_detecting::<Kdk, f64>(&ic, &key(300), CollisionRadius::none());
-    let rule = integrate_detecting_rule::<Kdk, f64, E>(&ic, &key(300), CollisionRadius::none());
+    let rule =
+        integrate_detecting_rule::<Kdk, f64, E>(&ic, &key(300), CollisionRadius::none(), false);
     assert_eq!(
         bits(&own),
         bits(&rule),
@@ -84,13 +85,13 @@ fn check_default<E: EscapeRule<f64>>() {
 }
 
 #[test]
-fn escape_rule_closure_is_the_default() {
-    check_default::<Closure<f64>>();
+fn escape_rule_fewbody_is_the_default() {
+    check_default::<Fewbody<f64>>();
     check_default::<DefaultRule<f64>>();
 }
 
 negative_control!(
-    escape_rule_closure_is_the_default,
+    escape_rule_fewbody_is_the_default,
     "the energy floor's march in the default's place",
     expected = "the default march is not this rule's",
     check_default::<EnergyFloor<f64>>()
@@ -264,21 +265,23 @@ negative_control!(
 
 // ── A re-booted march ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The march of `ic` under `E` cut at step `cut`, before its firing at the mark `t = 0.4` or later, re-booted from its
-/// `SimState` with a fresh cadence under `F` started on the IC, as the wrapper's re-boot is (the stored state is handed to
-/// it by [`Cadence::resume`]), and run to step `end`, against the uncut march under `E`.
+/// The march of `ic` under `E` with the stop option on, cut at step `cut`, before its firing at the mark `t = 0.4` or
+/// later, re-booted from its `SimState` with a fresh cadence under `F` started on the IC, as the wrapper's re-boot is (the
+/// stored state is handed to it by [`Cadence::resume`]), and run to step `end`, against the uncut march under `E`. The
+/// live label's re-boot is `tests/escape_live.rs`'s.
 fn check_resumed<E: EscapeRule<f64>, F: EscapeRule<f64>>(ic: &Ic<f64>, cut: u32) {
     let end = 120;
     let none = CollisionRadius::none();
-    let uncut = integrate_detecting_rule::<Kdk, f64, E>(ic, &key(end), none);
+    let uncut = integrate_detecting_rule::<Kdk, f64, E>(ic, &key(end), none, true);
     assert_eq!(
         sd_state(uncut.packed_a),
         STATE_ESCAPE,
         "the uncut march fires"
     );
     assert!(tm_t_end_step(uncut.times) > cut);
-    let stored = integrate_detecting_rule::<Kdk, f64, E>(ic, &key(cut), none);
-    let mut cadence = WrapperCadence::<f64, F>::with_rule(&ic.m, &ic.r, &ic.p, none);
+    let stored = integrate_detecting_rule::<Kdk, f64, E>(ic, &key(cut), none, true);
+    let mut cadence =
+        WrapperCadence::<f64, F>::with_rule(&ic.m, &ic.r, &ic.p, none).stopping_on_escape(true);
     let out =
         integrate_resumed_with::<Kdk, f64, _>(ic, &key(end), &mut cadence, &stored, end - cut);
     let resumed = cadence.finish(out);
@@ -313,7 +316,10 @@ negative_control!(
     escape_rule_resumed_is_uncut,
     "the re-boot under the closure rule",
     expected = "the re-booted march is not the uncut one",
-    check_resumed::<EnergyFloor<f64>, Closure<f64>>(&state(3.0, 1.2, 2.0), 20)
+    check_resumed::<EnergyFloor<f64>, kernel::detect::escape_rule::Closure<f64>>(
+        &state(3.0, 1.2, 2.0),
+        20
+    )
 );
 
 /// The energy floor storing no shape register, as the rules other than the closure rule first did: a re-boot then reads
@@ -339,6 +345,9 @@ impl EscapeRule<f64> for NoRegister {
         i_max: f64,
     ) {
         self.0.sample(m, r, p, index, quantum, i_max);
+    }
+    fn hold(&mut self, detail: u32) {
+        self.0.hold(detail);
     }
     fn fired(&self) -> bool {
         self.0.fired()

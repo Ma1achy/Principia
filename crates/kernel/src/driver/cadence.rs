@@ -7,9 +7,17 @@
 //! ([`WrapperCadence::monitor`]; TASK-M3-05) and the failure path's read of its energy and `L_z`, and terminal
 //! detection, which sets the `done` flag on collision ([`Detector`]) and never breaks. A failure sets `done` too: the
 //! march ends on its first non-finite step (`super::failure`). **At each sampling point** of the occupant's grid ([`Cadence::sample`]: a completed
-//! macro-step, or a sync boundary under an occupant that owns its time mapping) the escape detector runs
-//! ([`crate::detect::escape::Detector`]; Part 7), on the state the step's cadence left, and sets `done` where it fires. A run on which
-//! a collision has fired takes no escape test: the collision's is the earlier step.
+//! macro-step, or a sync boundary under an occupant that owns its time mapping) the escape rule runs
+//! ([`crate::detect::escape_rule`]; Part 7), on the state the step's cadence left. A run on which a collision has fired
+//! takes no escape test: the collision's is the earlier step.
+//!
+//! **The escape label is live by default** ([`WrapperCadence::stop_on_escape`] off): the rule re-reads its label at
+//! every window mark, it ends nothing, and the label the wrapper writes is the last mark's. A collision stays terminal,
+//! and one that follows a live escape label takes the sample. The plan is unclear here (it makes collision terminal and
+//! the escape label live, and says nothing of a collision after an escape label); chose the collision because the
+//! escape label was the rule's reading of a motion still going on, and the collision is what that motion did. With
+//! the option on, the first label sets `done` and stays: no later sample reads the rule, and a collision on that
+//! point's own step ties to the collision, as before.
 //!
 //! **Built from the run's IC** ([`WrapperCadence::with_radius`]): the projection's `M` and weights are formed once,
 //! there ([`ComProjection`]; Part 1, "with `M` constant (computed once and cached)"), `E₀`, `L_{z,0}` are evaluated
@@ -72,8 +80,9 @@ use crate::detect::label::{Events, Fired};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    dr_dE_reg_final, dr_dE_reg_max, pb_dE_max, pb_dLz_max, sd_I_max, sd_dmin_pair, sd_last_symbol,
-    set_last_symbol, tm_t_dmin_step, tm_t_end_step, PayloadReal, SimStateBaseOf,
+    dr_dE_reg_final, dr_dE_reg_max, pb_dE_max, pb_dLz_max, sd_I_max, sd_detail, sd_dmin_pair,
+    sd_last_symbol, sd_state, set_last_symbol, tm_t_dmin_step, tm_t_end_step, PayloadReal,
+    SimStateBaseOf, STATE_ESCAPE,
 };
 use crate::real::IeeeBits;
 use crate::regularisation::budget::Signals;
@@ -120,6 +129,8 @@ pub struct WrapperCadence<R, E = crate::detect::escape_rule::DefaultRule<R>> {
     regularised: RegularisedDrift<R>,
     /// The Chazy latch `I_max`, the greatest moment of inertia met, `I_0` at the IC (chazy drill-down §6).
     i_max: ImaxLatch<R>,
+    /// Whether the first escape label stops the march and stays (the option, off by default: the module's note).
+    stop_on_escape: bool,
 }
 
 impl<R: WrapperReal> WrapperCadence<R> {
@@ -184,7 +195,31 @@ impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
             signals: Signals::none(),
             regularised: RegularisedDrift::none(),
             i_max: ImaxLatch::new(inertia(m, r)),
+            stop_on_escape: false,
         }
+    }
+
+    /// This cadence with the stop option `stop` (the module's note): on, the first escape label stops the march and
+    /// stays; off, the default, the label is live. Set before the first step.
+    #[inline]
+    pub fn stopping_on_escape(mut self, stop: bool) -> Self {
+        self.stop_on_escape = stop;
+        self.done = self.terminal();
+        self
+    }
+
+    /// Whether the first escape label stops the march (the module's note).
+    #[inline]
+    pub fn stop_on_escape(&self) -> bool {
+        self.stop_on_escape
+    }
+
+    /// Whether a terminal has fired: a collision, a failure, or an escape label under the stop option.
+    #[inline]
+    fn terminal(&self) -> bool {
+        self.detector.fired()
+            || self.failure.fired()
+            || (self.stop_on_escape && self.escape.fired())
     }
 
     /// Whether the run was a finished stored sample handed back ([`Cadence::latched`]), which [`monitored`] leaves as
@@ -195,7 +230,9 @@ impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
     }
 
     /// The run's terminal events for its label ([`crate::detect::label::precedence`]): the failure, the collision and the
-    /// escape, each with the step ordinal it fired on and its `detail`. The horizon is the wrapper's to add.
+    /// escape, each with the step ordinal it fired on and its `detail`. The horizon is the wrapper's to add. A live
+    /// escape label (the stop option off) is the last mark's, its ordinal that of the mark it took this label on, and
+    /// a collision takes the sample over it (the module's note).
     #[inline]
     pub fn events(&self) -> Events {
         let collision = if self.detector.fired() {
@@ -203,7 +240,7 @@ impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
         } else {
             Fired::none()
         };
-        let escape = if self.escape.fired() {
+        let escape = if self.escape.fired() && (self.stop_on_escape || !self.detector.fired()) {
             Fired::at(self.escape_at, self.escape.verdict().detail)
         } else {
             Fired::none()
@@ -293,6 +330,11 @@ impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
             [stored._nhat_lag_0, stored._nhat_lag_1, stored._nhat_lag_2],
             stored.E_0,
         );
+        // A live label the stored sample carries, until the next mark re-reads it (`crate::detect::escape_rule`'s
+        // note): a stored escape reaches a re-boot only with the stop option off (`super::terminal::finished`).
+        if sd_state(stored.packed_a) == STATE_ESCAPE {
+            self.escape.hold(sd_detail(stored.packed_a));
+        }
     }
 
     /// Takes up the monitor, the collision detector, the `t_dmin_step` stamp and the regularised drift of a march still
@@ -377,7 +419,7 @@ impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
         if self.detector.fired() && !fired {
             self.collision_at = self.invocations;
         }
-        self.done = self.detector.fired() || self.escape.fired() || self.failure.fired();
+        self.done = self.terminal();
     }
 }
 
@@ -396,23 +438,32 @@ impl<R: WrapperReal, E: EscapeRule<R>> Cadence<R> for WrapperCadence<R, E> {
         self.done
     }
 
-    /// The escape test at a sampling point, on a run nothing ended before this point's state; `done` where it fires.
-    /// A collision that fired on this point's own step is a tie, not an earlier event: the test runs on that state as
-    /// well, and the label settles the tie ([`crate::detect::label::precedence`]). Where that point is a window mark
-    /// the lagged register takes its shape, so a collision on a mark stores the mark's register, which a run that ended
-    /// on a collision never reads again.
+    /// The escape test at a sampling point, on a run nothing ended before this point's state; under the stop option, on
+    /// a run whose label has not yet fired, and `done` where it fires. A collision that fired on this point's own step is
+    /// a tie, not an earlier event: the test runs on that state as well, and the label settles the tie
+    /// ([`crate::detect::label::precedence`]). Where that point is a window mark the lagged register takes its shape, so
+    /// a collision on a mark stores the mark's register, which a run that ended on a collision never reads again. The
+    /// escape's ordinal is the mark's on which the label became the one it is.
     #[inline]
     fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
         let tie = self.detector.fired() && self.collision_at == self.invocations;
-        if !self.escape.fired() && !self.failure.fired() && (!self.detector.fired() || tie) {
+        let open = !self.stop_on_escape || !self.escape.fired();
+        if open && !self.failure.fired() && (!self.detector.fired() || tie) {
             let i_max = self.i_max_now();
+            let before = self.escape.verdict();
             self.escape
                 .sample(&state.m, &state.r, &state.p, index, quantum, i_max);
-            if self.escape.fired() {
+            let after = self.escape.verdict();
+            if after.fired && (!before.fired || after.detail != before.detail) {
                 self.escape_at = self.invocations;
             }
         }
-        self.done = self.detector.fired() || self.escape.fired() || self.failure.fired();
+        self.done = self.terminal();
+    }
+
+    #[inline]
+    fn escape_final(&self) -> bool {
+        self.stop_on_escape
     }
 
     #[inline]
@@ -596,5 +647,10 @@ impl<R: LinkReal + IeeeBits, C: Cadence<R>, B: WordBuffer + ?Sized> Cadence<R>
         R: Quantise,
     {
         self.inner.bucket_d2(r)
+    }
+
+    #[inline]
+    fn escape_final(&self) -> bool {
+        self.inner.escape_final()
     }
 }

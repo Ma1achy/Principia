@@ -21,13 +21,11 @@ delete its line when it's done.
   Burrau (PR #29, TASK-M3-24) is an instance: the march and the RK45 reference both leave the lightest body unbound
   from `t ≈ 59.6` of Szebehely & Peters' units, but the chord's envelope is `≈ 0.85/d` (log–log slope `−0.97`
   against the escaper's distance `d`), so the escape label fires at `t = 157.6` at `tau = 1e-3`, in `[50, 100]` from
-  `tau = 3e-3` (96.5) and by 65 only from about `5e-2`, which has false positives. Two tests stay ignored until `tau`
-  is settled or the default escape rule changes: `golden_anchors_burrau_integrator` (kernel) and `entry_paths_burrau`
-  (validation); `entry_paths_burrau_ejects_on_time` holds the physics meanwhile. The escape rule is selectable
-  (`kernel::detect::escape_rule`); against a continued-run truth on the same fixtures and Burrau
-  (`cargo xtask gate escape-rules --propose`), only closure and Fewbody (validation-only) made no wrong commit; Chazy
-  made 121, 46 of them naming the wrong body, so closure stays the default. Fewbody labels Burrau correctly at 77.2,
-  and 3630 trajectories correctly against closure's 826; moving it into the kernel is the owner's call (PR #49).
+  `tau = 3e-3` (96.5) and by 65 only from about `5e-2`, which has false positives. Since escape-live-label the default
+  rule is Fewbody, the label live: Burrau's first label is at 77.2 naming body 0 and its live label at the horizon is the
+  same, so the two Burrau label tests run again. Under the live label the closure rule flickers: on a single escape
+  from a binary its chord crosses `tau` with the binary's phase, so its live label switched 23,991 times on 1,820 of
+  the re-score's trajectories and stays correct on 1,128 of 7,450 escape truths.
 - **The escape rule fires on a bound system with a light, slow inner pair.** `E_rel` tests one body against the
   other two as if they were one mass, whether or not they are the bound pair. Measured: masses
   `(0.001, 0.001, 1)`, the light pair on a circle of separation 1, the heavy body at 400 on a circular orbit;

@@ -422,13 +422,24 @@ fn check_burrau<A: Advance>(occupant: &'static str, r_coll: f64) {
         Some(lightest),
         "the Burrau march's own end state has not ejected the lightest body"
     );
-    tiers::check_burrau_label(s, key.loop_values.dt_macro, scale, start.m);
+    // The label's time is the stop option's first label; the label at the horizon is the live march's (the default).
+    let stop_key = engine::precision::MarchKey64 {
+        stop_on_escape: true,
+        ..key
+    };
+    let stopped =
+        path_a::run::<Defaults, A>(&x, &stop_key, horizon, ("burrau", occupant, "defaults"))
+            .expect("the forward leg");
+    tiers::check_burrau_live(
+        &stopped.forward.state,
+        s,
+        key.loop_values.dt_macro,
+        scale,
+        start.m,
+    );
 }
 
-// Ignored until the owner settles tau: at the provisional 1e-3 the label fires at 157.6 of S&P's units; at any tau from
-// 3e-3 to the measured false-positive edge 1.353e-2 it fires in [50, 100] (`cargo xtask gate tau-gap --propose`).
 #[test]
-#[ignore = "Burrau: under the default (closure) rule at tau = 1e-3 the escape label fires at t = 157.6, outside [50, 100]; neither the measured tau gap nor the escape-rules measurement (TASK-M3-34) settled a change, so the owner decides; plan/KNOWN.md"]
 fn entry_paths_burrau() {
     check_burrau::<DefaultOccupant>("Heggie × RK4 (field backend's values)", BENCHMARK_R_COLL);
 }

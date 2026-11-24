@@ -54,9 +54,9 @@
 //! they are the forms Part 4 already writes, and kept each decision in its own function for that task to replace. A
 //! value that is not finite fires nothing: the chord is tested on its bits, and a NaN energy fails its comparison.
 //!
-//! **After it fires** the verdict stays, the run's `done` flag is set by the cadence that holds the detector
-//! (`crate::driver::cadence::WrapperCadence`), and the label is written when the loop ends, by time against a collision
-//! ([`crate::detect::label`]).
+//! **After it fires** the label is live by default: the next mark re-reads it, and the label written when the loop ends
+//! is the last mark's ([`crate::detect::label`]). With the cadence's stop option on
+//! (`crate::driver::cadence::WrapperCadence`), the first firing sets the run's `done` flag and stays.
 
 use spirv_std::num_traits::Float;
 
@@ -334,17 +334,25 @@ impl<R: EscapeReal> Detector<R> {
     }
 
     /// The occupant's sampling point `index` on its grid of `quantum`, physical time `index · quantum`, at the state
-    /// `(m, r, p)`: where it is a window mark ([`is_mark`]) and nothing has fired, the escape test against the
-    /// register ([`test`]), and then the register takes the state's shape point. Any other point is not read.
+    /// `(m, r, p)`: where it is a window mark ([`is_mark`]), the escape test against the register ([`test`]), the label
+    /// until the next mark, fired or not (the label is live: `crate::detect::escape_rule`'s note), and then the register
+    /// takes the state's shape point. Any other point is not read. A march that stops at the first label stops calling
+    /// this once it has fired (`crate::driver::cadence::WrapperCadence`).
     #[inline]
     pub fn sample(&mut self, m: &[R; 3], r: &[[R; 2]; 3], p: &[[R; 2]; 3], index: u32, quantum: R) {
-        if !self.verdict.fired && is_mark(index, quantum) {
+        if is_mark(index, quantum) {
             self.verdict = test(m, r, p, self.n_lag, self.e_0);
             self.n_lag = shape(*r, *m);
         }
     }
 
-    /// Whether escape has fired, which sets the run's `done` flag.
+    /// Takes up a label a re-booted march stored, `verdict`, until the next mark re-reads it.
+    #[inline]
+    pub fn hold(&mut self, verdict: Verdict) {
+        self.verdict = verdict;
+    }
+
+    /// Whether the label is an escape at this playhead; under the stop option it sets the run's `done` flag.
     #[inline]
     pub fn fired(&self) -> bool {
         self.verdict.fired

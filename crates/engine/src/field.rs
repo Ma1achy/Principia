@@ -9,9 +9,11 @@
 //! wrapper's own cadence watching every step, so the collision detector, the projection and the invariant monitor run
 //! as they do under any occupant (`WrapperCadence`, labelled by `monitored`). A march that reaches the horizon is
 //! `bounded`; one whose step budget ran out is `running` (undetermined, as the wrapper labels it); one that went
-//! non-finite is `sim_failed`. **Escape** is the cadence's too (`kernel::detect::escape`): at each sync boundary that
-//! is a window mark the escape test runs, and where it fires the march ends there and the sample is `escape`, its
-//! `detail` the escaper's body index or 3, a triple ejection. It fires only once the shape point has settled: soon
+//! non-finite is `sim_failed`. **Escape** is the cadence's too (`kernel::detect::escape_rule`): at each sync boundary
+//! that is a window mark the escape rule re-reads its label, live by default, so the sample is `escape` where the last
+//! mark's label is one, its `detail` the escaper's body index or 3, a triple ejection; under the stop option
+//! ([`outcome_stopping`]) the first label ends the march there and stays. The default rule fires only once the shape
+//! point has settled: soon
 //! for bodies that all fly apart, late for an escaper leaving a binary, whose phase keeps the shape point turning
 //! (`plan/KNOWN.md`).
 //!
@@ -181,6 +183,19 @@ pub fn outcome(
     k_target: u32,
     params: &HgParams<f32>,
 ) -> Outcome {
+    outcome_stopping(ic, degenerate, radius, k_target, params, false)
+}
+
+/// [`outcome`] under the stop option `stop_on_escape` (`SimUniforms::stop_on_escape`; `kernel::driver::cadence`'s
+/// note): off, the escape label is live and the march goes on to `k_target`; on, the first label ends it and stays.
+pub fn outcome_stopping(
+    ic: &Ic<f32>,
+    degenerate: Option<kernel::decode::degenerate::Degenerate>,
+    radius: CollisionRadius,
+    k_target: u32,
+    params: &HgParams<f32>,
+    stop_on_escape: bool,
+) -> Outcome {
     let start = t0(ic, degenerate, &radius);
     if start.state != STATE_RUNNING {
         return Outcome {
@@ -188,7 +203,8 @@ pub fn outcome(
             detail: start.detail,
         };
     }
-    let mut cadence = WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius);
+    let mut cadence =
+        WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius).stopping_on_escape(stop_on_escape);
     let state = State {
         m: ic.m,
         r: ic.r,

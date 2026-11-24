@@ -95,7 +95,7 @@ fn view(t: f64) -> SimConfig {
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t },
-        collision: Collision {},
+        collision: Collision::default(),
         quality: Quality {},
     }
 }

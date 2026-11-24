@@ -850,6 +850,7 @@ fn check_collision_softening(u: &SimUniforms) {
         n_renorm: _,
         delta0: _,
         thresholds: _,
+        stop_on_escape: _,
     } = *u;
     assert!(r_coll > 0.0, "r_coll is {r_coll}, not nonzero by default");
     assert_eq!(
@@ -870,9 +871,21 @@ fn check_collision_softening(u: &SimUniforms) {
     let plain = u.sim_key_bytes();
     assert_eq!(
         plain.len(),
-        2 * 8 + 4 + 12 * 8 + 1 + 1 + 1,
+        2 * 8 + 4 + 12 * 8 + 1 + 1 + 1 + 1,
         "the sim key's bytes"
     );
+    // The stop option (escape-live-label) is on the sim key: off by default, its byte before the softening tag.
+    assert!(
+        !u.stop_on_escape,
+        "the escape label stops the march by default"
+    );
+    let stopping = SimUniforms {
+        stop_on_escape: true,
+        ..*u
+    }
+    .sim_key_bytes();
+    assert_ne!(stopping, plain, "the stop option is off the sim key");
+    assert_eq!(stopping.len(), plain.len(), "the stop option's byte");
     assert_eq!(plain.last(), Some(&0), "the unsoftened run's sim-key tag");
     for eps in [1e-3, f64::MIN_POSITIVE] {
         let soft = SimUniforms { epsilon: eps, ..*u };

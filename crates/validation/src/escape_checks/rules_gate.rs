@@ -6,6 +6,10 @@
 //! It passes where the rule's wrong commits, pooled over the populations and (with `burrau`) the anchor, are at most the
 //! gate's threshold, 0.
 //!
+//! **`--live [--n <n>] [--dump <path>]`**: every rule re-scored with the label live and under the stop option, at the
+//! playheads, the body counted, on #49's fixtures and Burrau and the wider cases, and the default's pick
+//! (`super::live`, whose criteria were written before the run).
+//!
 //! **`--propose [--dump <path>]`**: the table, per fixture and pooled, and the pick (the PR's rule, written before the run): among the
 //! eligible rules with zero wrong commits pooled over every fixture and Burrau, the smallest pooled median time to the
 //! first correct label, a tie to the most correct commits; with none, the closure rule stays.
@@ -25,6 +29,9 @@ use super::GroundTruthOccupant;
 
 /// The gate's name.
 pub const NAME: &str = "escape-rules";
+
+/// The fixtures' size for `--live`'s run of record (`super::live`), as #49's.
+pub const LIVE_N: usize = 64;
 
 /// The Burrau anchor's evaluation horizon, Szebehely & Peters' units: three of its horizons, as every fixture's.
 pub const BURRAU_T_EVAL: f64 = 3.0 * BURRAU_HORIZON;
@@ -185,8 +192,28 @@ impl Gate for EscapeRulesGate {
                 println!("{}", propose()?);
                 std::fs::write(path, dump()?).map_err(|e| format!("{NAME}: {path}: {e}"))
             }
+            ["--live"] => {
+                println!("{}", super::live::report(LIVE_N)?);
+                println!("#49's table on the same marches (the first label):\n{}", propose()?);
+                Ok(())
+            }
+            ["--live", "--n", n] | ["--live", "--n", n, "--dump", _] => {
+                let n: usize = n.parse().map_err(|e| format!("{NAME}: --n {n}: {e}"))?;
+                println!("{}", super::live::report(n)?);
+                if let [.., "--dump", path] = args {
+                    std::fs::write(path, super::live::dump(n)?)
+                        .map_err(|e| format!("{NAME}: {path}: {e}"))?;
+                }
+                Ok(())
+            }
+            ["--live", "--dump", path] => {
+                println!("{}", super::live::report(LIVE_N)?);
+                println!("#49's table on the same marches (the first label):\n{}", propose()?);
+                std::fs::write(path, super::live::dump(LIVE_N)?)
+                    .map_err(|e| format!("{NAME}: {path}: {e}"))
+            }
             _ => Err(format!(
-                "{NAME}: unrecognised flags `{}`; use `--propose [--dump <path>]`",
+                "{NAME}: unrecognised flags `{}`; use `--propose [--dump <path>]` or `--live [--n <n>] [--dump <path>]`",
                 args.join(" ")
             )),
         }

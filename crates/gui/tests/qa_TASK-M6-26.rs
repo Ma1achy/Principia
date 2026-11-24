@@ -1222,7 +1222,7 @@ fn real_app_at_depth(octaves: f64) -> Rig<RealSide> {
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },
-        collision: Collision {},
+        collision: Collision::default(),
         quality: Quality {},
     };
     let render = RenderState {

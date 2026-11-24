@@ -199,6 +199,15 @@ pub trait Cadence<R> {
     {
     }
 
+    /// Whether an escape label is final under this cadence: the stop option (`super::cadence::WrapperCadence`'s
+    /// `stop_on_escape`), so a stored escape short of the horizon is finished (`super::terminal::finished`). A cadence
+    /// that holds no escape rule keeps escape final, as every label but `running` and a short `bounded` is; one that wraps
+    /// another passes it on.
+    #[inline]
+    fn escape_final(&self) -> bool {
+        true
+    }
+
     /// The stored state the wrapper was asked to march on is finished, and was handed back as it is
     /// (`super::terminal`): a cadence that writes into the `SimState` ([`Cadence::finish`]) must leave it so. One that
     /// writes nothing ignores it; one that wraps another passes it on.

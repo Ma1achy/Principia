@@ -21,7 +21,9 @@
 //! and `T` part of the sim key, and says nothing of a `bounded` state read under a longer `T`); chose to march it on
 //! because under that key it has not reached its horizon, so it is not terminal there, and a march extended to a
 //! longer horizon is how the readout and validation's δ-dependence measurement continue one (`tests/readout.rs`,
-//! `validation::measure::delta_dep`). Escape, collision, `sim_failed` and `decode_failed` are final under any key.
+//! `validation::measure::delta_dep`). Collision, `sim_failed` and `decode_failed` are final under any key. An escape is
+//! final under the stop option (`super::cadence::WrapperCadence`'s `stop_on_escape`); with the option off, the default,
+//! the escape label is live and an escape short of the horizon marches on as a short `bounded` does.
 //!
 //! The post-escape march that pitfalls §2.4's checks need runs only in the validation harness, on its own state; the
 //! payload never sees it.
@@ -32,7 +34,7 @@ use super::wrapper::{integrate_resumed_carrying, WrapperReal, WrapperUniforms};
 use crate::decode::Ic;
 use crate::payload::{
     sd_state, tm_t_end_step, PayloadReal, SimStateBaseOf, SimStateFTLEOf, STATE_BOUNDED,
-    STATE_RUNNING,
+    STATE_ESCAPE, STATE_RUNNING,
 };
 use crate::regularisation::budget::exhausted;
 
@@ -81,25 +83,40 @@ impl<R: PayloadReal> Stored for SimStateFTLEOf<R> {
 }
 
 /// Whether a stored sample, its `packed_a`, `times` and `budget_bits`, is finished under a sim key of `horizon_steps`
-/// (the module's note): any `state` but `running`, except `bounded` short of the horizon; and a `running` sample whose
-/// step budget ran out, the sticky `budget_exhausted` bit set, which is undetermined and never marched on: its remedy
-/// is finer steps as an explicit re-run (R-603; `crate::regularisation::budget`).
+/// (the module's note): any `state` but `running`, except `bounded` short of the horizon, and `escape` short of it where
+/// the escape label is not final (`escape_final`, the stop option off); and a `running` sample whose step budget ran
+/// out, the sticky `budget_exhausted` bit set, which is undetermined and never marched on: its remedy is finer steps as
+/// an explicit re-run (R-603; `crate::regularisation::budget`).
 #[inline]
-pub fn finished(packed_a: u32, times: u32, budget_bits: u32, horizon_steps: u32) -> bool {
+pub fn finished(
+    packed_a: u32,
+    times: u32,
+    budget_bits: u32,
+    horizon_steps: u32,
+    escape_final: bool,
+) -> bool {
     let s = sd_state(packed_a);
-    exhausted(budget_bits)
-        || (s != STATE_RUNNING && !(s == STATE_BOUNDED && tm_t_end_step(times) < horizon_steps))
+    let short = tm_t_end_step(times) < horizon_steps;
+    let open = s == STATE_BOUNDED || (s == STATE_ESCAPE && !escape_final);
+    exhausted(budget_bits) || (s != STATE_RUNNING && !(open && short))
 }
 
-/// A later dispatch of the stored sample `stored` under a sim key of `horizon_steps`: `stored` itself, every word,
-/// where it is finished ([`finished`]), and otherwise what `dispatch` makes of it.
+/// A later dispatch of the stored sample `stored` under a sim key of `horizon_steps`, its escape label final or not
+/// (`escape_final`): `stored` itself, every word, where it is finished ([`finished`]), and otherwise what `dispatch`
+/// makes of it.
 #[inline]
-pub fn latch<S: Stored, F: FnOnce(&S) -> S>(stored: &S, horizon_steps: u32, dispatch: F) -> S {
+pub fn latch<S: Stored, F: FnOnce(&S) -> S>(
+    stored: &S,
+    horizon_steps: u32,
+    escape_final: bool,
+    dispatch: F,
+) -> S {
     if finished(
         stored.packed_a(),
         stored.times(),
         stored.budget_bits(),
         horizon_steps,
+        escape_final,
     ) {
         *stored
     } else {
@@ -126,6 +143,7 @@ pub fn redispatch<A: Advance, R: WrapperReal, C: Cadence<R>>(
         stored.times,
         stored.budget_bits,
         uniforms.horizon_steps,
+        cadence.escape_final(),
     ) {
         *stored
     } else {

@@ -265,7 +265,13 @@ where
         "{name}: the FTLE tier does not store the base tier's budget word and regularised drift"
     );
     assert!(
-        finished(ftle.packed_a, ftle.times, budget_bits, key.horizon_steps),
+        finished(
+            ftle.packed_a,
+            ftle.times,
+            budget_bits,
+            key.horizon_steps,
+            true
+        ),
         "{name}: the FTLE tier's exhausted copy reads as unfinished"
     );
 }

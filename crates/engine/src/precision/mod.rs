@@ -51,18 +51,20 @@ use crate::first_slice::{Quad, SliceChart};
 /// The full-f64 `SimState` (payload §1) the Precision ring returns.
 pub type SimState64 = SimStateBaseOf<f64>;
 
-/// What a march at f64 reads from the sim key, as dispatch validates it: the loop values at f64 and the collision
-/// threshold.
+/// What a march at f64 reads from the sim key, as dispatch validates it: the loop values at f64, the collision
+/// threshold and the stop option.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MarchKey64 {
     /// The loop values at f64 ([`crate::dispatch::validate::Validated::wrapper_uniforms_f64`]).
     pub loop_values: WrapperUniforms<f64>,
     /// The collision threshold ([`crate::dispatch::validate::Validated::collision_radius`]).
     pub radius: CollisionRadius,
+    /// Whether the first escape label stops the march ([`crate::dispatch::validate::Validated::stop_on_escape`]).
+    pub stop_on_escape: bool,
 }
 
-/// `sim_key`'s march values at f64: its horizon `T`, `dt_macro` the horizon's, every other loop value Part 3's
-/// default, validated as dispatch validates it; dispatch's refusal as an error.
+/// `sim_key`'s march values at f64: its horizon `T`, `dt_macro` the horizon's, every other loop value Part 3's default
+/// (the stop option off), validated as dispatch validates it; dispatch's refusal as an error.
 pub fn march_key(sim_key: &SimConfig) -> Result<MarchKey64, ComputeError> {
     let t = sim_key.horizon.t;
     let uniforms = SimUniforms {
@@ -74,6 +76,7 @@ pub fn march_key(sim_key: &SimConfig) -> Result<MarchKey64, ComputeError> {
     Ok(MarchKey64 {
         loop_values: valid.wrapper_uniforms_f64(),
         radius: valid.collision_radius(),
+        stop_on_escape: valid.stop_on_escape(),
     })
 }
 
@@ -114,7 +117,7 @@ pub fn integrate_ic_rule<A: Advance, E: kernel::detect::escape_rule::EscapeRule<
             ..SimState64::default()
         };
     }
-    integrate_detecting_rule::<A, f64, E>(ic, &key.loop_values, key.radius)
+    integrate_detecting_rule::<A, f64, E>(ic, &key.loop_values, key.radius, key.stop_on_escape)
 }
 
 /// parity_contract §1's `computeICState(state, simKey) → SimState`: one IC given as its state, `(m, r, p)` in the

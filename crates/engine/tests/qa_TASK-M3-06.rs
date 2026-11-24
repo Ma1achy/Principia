@@ -449,6 +449,7 @@ fn every_field(epsilon: f64, r_coll: f64) -> SimUniforms {
         n_renorm: d.n_renorm,
         delta0: d.delta0,
         thresholds: d.thresholds,
+        stop_on_escape: d.stop_on_escape,
     }
 }
 

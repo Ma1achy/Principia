@@ -306,6 +306,12 @@ impl Validated {
         }
     }
 
+    /// The accepted `stop_on_escape`: whether the first escape label stops the march (`kernel::driver::cadence`'s
+    /// note), the wrapper cadence's mode.
+    pub fn stop_on_escape(&self) -> bool {
+        self.uniforms.stop_on_escape
+    }
+
     /// The kernel's collision threshold for the accepted `r_coll` (integrator_contract Part 7): `r_coll²` rounded once
     /// to f32 (`kernel::detect::collision::CollisionRadius::from_r_coll`), the same at f64 and f32, so the collision
     /// branch reads the sim key's value on every pipeline. `r_coll` itself stays on the sim key

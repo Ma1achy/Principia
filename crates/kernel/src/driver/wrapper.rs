@@ -56,9 +56,10 @@
 //! `d_min` unset, so a run whose cadence latches nothing keeps them, and carries `t_dmin_step` from where it started;
 //! [`monitored`] writes the cadence's `t_dmin_step`, the macro-step index of the latched least `d²`
 //! ([`WrapperCadence::dmin_step`]), which the wrapper's clock stamps ([`Cadence::clock`]). [`monitored`] writes the
-//! escape detector's too ([`crate::detect::escape`]): where escape fired before any collision, `state` `escape` and its
-//! `detail`, the escaper's body index or 3, over `running` or `bounded` (an escape that fires on the horizon's own
-//! boundary is an escape); and the lagged shape register, `_nhat_lag_0`, `_1`, `_2` (payload §1), which a re-boot
+//! escape rule's too ([`crate::detect::escape_rule`]): where the rule's label is an escape, `state` `escape` and its
+//! `detail`, the escaper's body index or 3, over `running` or `bounded` (an escape on the horizon's own boundary is an
+//! escape): the live label at the march's end by default, a collision taking the sample over it, or under the stop
+//! option the first label, which ended the march, before any collision (`super::cadence`'s note); and the lagged shape register, `_nhat_lag_0`, `_1`, `_2` (payload §1), which a re-boot
 //! hands back to its cadence ([`Cadence::resume`]). The escape test runs at the occupant's sampling
 //! points ([`Cadence::sample`]): the wrapper reports each completed macro-step under an occupant that marches the
 //! macro-step grid, and an occupant that owns its time mapping reports its sync boundaries from inside its march
@@ -168,19 +169,23 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
     radius: CollisionRadius,
 ) -> SimStateBaseOf<R> {
     integrate_detecting_rule::<A, R, crate::detect::escape_rule::DefaultRule<R>>(
-        ic, uniforms, radius,
+        ic, uniforms, radius, false,
     )
 }
 
-/// [`integrate_detecting`] under the escape rule `E` (`crate::detect::escape_rule`), selected as the occupant `A` is:
-/// the wrapper's cadence holds `E` in place of the closure detector, and nothing else changes.
+/// [`integrate_detecting`] under the escape rule `E` (`crate::detect::escape_rule`), selected as the occupant `A` is,
+/// and the stop option `stop_on_escape` (`super::cadence`'s note: off, the default, the escape label is live; on, the
+/// first label stops the march and stays): the wrapper's cadence holds `E` in place of the default rule, and nothing
+/// else changes.
 #[inline]
 pub fn integrate_detecting_rule<A: Advance, R: WrapperReal, E: EscapeRule<R>>(
     ic: &Ic<R>,
     uniforms: &WrapperUniforms<R>,
     radius: CollisionRadius,
+    stop_on_escape: bool,
 ) -> SimStateBaseOf<R> {
-    let mut cadence = WrapperCadence::<R, E>::with_rule(&ic.m, &ic.r, &ic.p, radius);
+    let mut cadence = WrapperCadence::<R, E>::with_rule(&ic.m, &ic.r, &ic.p, radius)
+        .stopping_on_escape(stop_on_escape);
     let out = integrate_with::<A, R, WrapperCadence<R, E>>(ic, uniforms, &mut cadence);
     monitored(out, &cadence)
 }
@@ -470,6 +475,7 @@ pub fn integrate_resumed_carrying<A: Advance, R: WrapperReal, C: Cadence<R>>(
         stored.times,
         stored.budget_bits,
         uniforms.horizon_steps,
+        cadence.escape_final(),
     ) {
         cadence.latched();
         *stored

@@ -139,14 +139,22 @@ negative_control!(
 
 fn check_default(rule: RuleId) {
     let pop = config_stability(16, 50.0);
-    let (ic, key) = (pop.ics[104], pop.keys[104]);
-    let own = engine::precision::integrate_ic::<GroundTruthOccupant>(&ic, None, &key);
-    let named = rules::production::<GroundTruthOccupant>(&ic, &key, rule);
-    assert_eq!(
-        format!("{own:?}"),
-        format!("{named:?}"),
-        "RuleId::DEFAULT is not the kernel's DefaultRule"
-    );
+    let ic = pop.ics[104];
+    // Both modes: live, two rules can end on the same label at the horizon; under the stop option their first labels'
+    // times differ (found when the energy floor's control stopped failing under the live default).
+    for stop_on_escape in [false, true] {
+        let key = engine::precision::MarchKey64 {
+            stop_on_escape,
+            ..pop.keys[104]
+        };
+        let own = engine::precision::integrate_ic::<GroundTruthOccupant>(&ic, None, &key);
+        let named = rules::production::<GroundTruthOccupant>(&ic, &key, rule);
+        assert_eq!(
+            format!("{own:?}"),
+            format!("{named:?}"),
+            "RuleId::DEFAULT is not the kernel's DefaultRule (stop option {stop_on_escape})"
+        );
+    }
 }
 
 #[test]

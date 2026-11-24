@@ -2,11 +2,16 @@
 //! each read at the escape window's marks as production reads it, scored by its first commit against prin-rs's
 //! continued-run truth. The pass criteria and the default's pick are the PR's, written before the run of record.
 //!
-//! **One march, every rule.** [`RuleHarness`] wraps the production cadence (`WrapperCadence`, the closure rule) and
-//! forwards every hook, so the march is production's to the step; it never ends on an escape. At every sampling point
-//! it hands the state to each rule's own detector, the kernel's type for a kernel rule (`kernel::detect::escape_rule`),
-//! through the trait production calls, so a rule's commit here is the one a production march under that rule would
-//! end on. [`same_as_production`] checks that per rule against `engine::precision::integrate_ic_rule`.
+//! **One march, every rule, both modes.** [`RuleHarness`] wraps the production cadence (`WrapperCadence`, the default
+//! rule) and forwards every hook, so the march is production's to the step; it never ends on an escape. At every
+//! sampling point it hands the state to each rule's own kernel type (`kernel::detect::escape_rule`) through the trait
+//! production calls, and records the rule's label each time it changes ([`Measured::labels`]): the live label, the
+//! default mode's. The first label is the stop option's: under it production ends there and the label stays, and the
+//! march up to that point is the same march, so a rule's first label here ([`Measured::commits`]) is the one a
+//! production march under the option ends on. [`same_as_production`] checks both against
+//! `engine::precision::integrate_ic_rule`. Fewbody is the kernel's port; validation's reference
+//! (`crate::chazy::fewbody_resolved`, [`fewbody_reference`]) is read beside it at every mark and every mark where the
+//! two differ is counted ([`Measured::fewbody_check`]).
 //!
 //! **The truth** ([`truth`]; prin-rs `examples/chazy_probe.rs::truth` at `57a7f5e`, ported). The march goes on past the
 //! evaluation horizon `T_eval`, a record kept every [`SERIES_EVERY`] time units, until the motion is unambiguously
@@ -18,8 +23,12 @@
 //!   decided as the kernel decides it, `kernel::detect::escape_rule::pair_bound`) and the escaper's two separations'
 //!   least `β > 0.5`, HE (`> 0.85`) or PE, escaper the most separated body;
 //! - otherwise no escape, split as prin-rs splits it into B-stable (Mardling–Aarseth on the last state, the body most
-//!   separated from its pair outside, `kernel::chazy::ma_stable`) and unresolved ([`Measured::b_stable`]). Both score
-//!   the same, since a commit on either is wrong; the table counts the commits on unresolved truths apart.
+//!   separated from its pair outside, `kernel::chazy::ma_stable`) and unresolved ([`Measured::b_stable`]). #49's table
+//!   ([`score`]) scores both as wrong and counts the unresolved apart; the live scoring (`super::live`) reports a label
+//!   on an unresolved truth apart, neither right nor wrong.
+//!
+//! A case whose truth is known by construction (a periodic orbit, a Mardling–Aarseth stable triple) is
+//! [`Truth::Bound`], set by its case and not read from the record.
 //!
 //! A march a collision, a failure or a spent budget ended is censored.
 //!
@@ -31,7 +40,7 @@ use kernel::chazy::{ma_stable, most_separated, others, Playhead};
 use kernel::decode::Ic;
 use kernel::detect::escape::{is_mark, Verdict};
 use kernel::detect::escape_rule::{
-    pair_bound, Chazy, Closure, DistanceFloor, EnergyFloor, EscapeRule, ShapeLag,
+    pair_bound, Chazy, Closure, DistanceFloor, EnergyFloor, EscapeRule, Fewbody,
 };
 use kernel::driver::advance::{Advance, Cadence};
 use kernel::driver::cadence::WrapperCadence;
@@ -65,7 +74,7 @@ pub enum RuleId {
     DistanceFloor,
     /// prin-rs's Chazy final-motion classifier, live (`kernel::detect::escape_rule::Chazy`).
     Chazy,
-    /// Fewbody's termination test, the literature reference ([`Fewbody`]).
+    /// Fewbody's termination test (`kernel::detect::escape_rule::Fewbody`, the port of the reference).
     Fewbody,
 }
 
@@ -80,7 +89,7 @@ impl RuleId {
     ];
 
     /// The rule `kernel::detect::escape_rule::DefaultRule` names (kept equal to it by `escape_rules_default_is_the_kernels`).
-    pub const DEFAULT: RuleId = RuleId::Closure;
+    pub const DEFAULT: RuleId = RuleId::Fewbody;
 
     /// The rule's name in the table.
     pub fn name(self) -> &'static str {
@@ -93,21 +102,10 @@ impl RuleId {
         }
     }
 
-    /// Whether the rule may be the default (the PR's pick rule): a kernel rule. Fewbody's core is validation's alone,
-    /// f64 and outside the kernel, so it is the reference, never the default.
+    /// Whether the rule may be the default: every rule is a kernel rule since Fewbody's port.
     pub fn eligible(self) -> bool {
-        self != RuleId::Fewbody
+        true
     }
-}
-
-/// Fewbody's termination test as an escape rule, validation's alone (the reference; `kernel::detect::escape_rule`'s
-/// note): at every window mark, `crate::chazy::fewbody_resolved` at the register's `δ` on the state; its H a triple
-/// ejection, its HE the escape of the third body `k` (the one outside its least-`a` bound pair), B-stable and
-/// unresolved nothing, the run going on.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Fewbody {
-    verdict: Verdict,
-    lag: ShapeLag<f64>,
 }
 
 /// A fired verdict on `escaper`, a triple ejection where `triple`.
@@ -128,15 +126,27 @@ fn verdict_of(escaper: usize, triple: bool) -> Verdict {
     }
 }
 
-/// Fewbody's test on the state `(m, r, p)` (the [`Fewbody`] note); `None` where it reads no escape.
-pub fn fewbody_test(m: &[f64; 3], r: &[[f64; 2]; 3], p: &[[f64; 2]; 3]) -> Option<Verdict> {
+/// The reference's verdict on the state `(m, r, p)`: `crate::chazy::fewbody_resolved` at the register's `δ`, its H a
+/// triple ejection of the body most separated from its pair, its HE the escape of the third body `k` (the one outside
+/// its least-`a` bound pair), B-stable and unresolved `None`. The kernel's [`Fewbody`] is its port.
+pub fn fewbody_reference(m: &[f64; 3], r: &[[f64; 2]; 3], p: &[[f64; 2]; 3]) -> Option<Verdict> {
+    fewbody_reference_at(m, r, p, CHAZY_DELTA)
+}
+
+/// [`fewbody_reference`] at the tidal tolerance `delta` in place of the register's.
+pub fn fewbody_reference_at(
+    m: &[f64; 3],
+    r: &[[f64; 2]; 3],
+    p: &[[f64; 2]; 3],
+    delta: f64,
+) -> Option<Verdict> {
     use crate::chazy::{fewbody_resolved, Reference, PAIRS};
     let s = crate::chazy::State {
         m: *m,
         r: *r,
         v: std::array::from_fn(|k| [p[k][0] / m[k], p[k][1] / m[k]]),
     };
-    match fewbody_resolved(&s, CHAZY_DELTA) {
+    match fewbody_resolved(&s, delta) {
         Reference::H => {
             let ph = Playhead::from_momenta(*m, *r, *p, s.energy(), 1.0, 1.0);
             Some(verdict_of(most_separated(&ph), true))
@@ -159,52 +169,6 @@ pub fn fewbody_test(m: &[f64; 3], r: &[[f64; 2]; 3], p: &[[f64; 2]; 3]) -> Optio
     }
 }
 
-impl EscapeRule<f64> for Fewbody {
-    fn start(m: &[f64; 3], r: &[[f64; 2]; 3], _p: &[[f64; 2]; 3], _e_0: f64) -> Self {
-        Fewbody {
-            verdict: Verdict {
-                fired: false,
-                escaper: DETAIL_ESCAPE_BODY_0,
-                detail: DETAIL_ESCAPE_BODY_0,
-            },
-            lag: ShapeLag::new(m, r),
-        }
-    }
-
-    fn resume(&mut self, n_lag: [f64; 3], _e_0: f64) {
-        self.lag = ShapeLag(n_lag);
-    }
-
-    fn sample(
-        &mut self,
-        m: &[f64; 3],
-        r: &[[f64; 2]; 3],
-        p: &[[f64; 2]; 3],
-        index: u32,
-        quantum: f64,
-        _i_max: f64,
-    ) {
-        if !self.verdict.fired && is_mark(index, quantum) {
-            if let Some(v) = fewbody_test(m, r, p) {
-                self.verdict = v;
-            }
-            self.lag.mark(m, r, index, quantum);
-        }
-    }
-
-    fn fired(&self) -> bool {
-        self.verdict.fired
-    }
-
-    fn verdict(&self) -> Verdict {
-        self.verdict
-    }
-
-    fn lagged(&self) -> [f64; 3] {
-        self.lag.0
-    }
-}
-
 /// Every rule's detector, started on the IC.
 #[derive(Clone, Copy, Debug)]
 struct Rules {
@@ -212,7 +176,7 @@ struct Rules {
     energy: EnergyFloor<f64>,
     distance: DistanceFloor<f64>,
     chazy: Chazy<f64>,
-    fewbody: Fewbody,
+    fewbody: Fewbody<f64>,
 }
 
 impl Rules {
@@ -226,7 +190,8 @@ impl Rules {
         }
     }
 
-    /// Each rule at the sampling point with the cadence's `I_max`, and the verdicts that fired on it, by rule.
+    /// Each rule at the sampling point with the cadence's `I_max`, and each rule's label after it, by rule: live, every
+    /// rule re-reading its label at every mark.
     fn sample(
         &mut self,
         s: &State<f64>,
@@ -241,9 +206,6 @@ impl Rules {
             q: f64,
             i_max: f64,
         ) -> Option<Verdict> {
-            if e.fired() {
-                return None;
-            }
             e.sample(&s.m, &s.r, &s.p, i, q, i_max);
             e.fired().then(|| e.verdict())
         }
@@ -310,12 +272,24 @@ pub enum End {
     Censored,
 }
 
+/// A rule's label changes: each the time it took the label and the label, `None` no escape; the label at `t = 0` is
+/// `None` and not recorded.
+pub type Labels = Vec<(f64, Option<Commit>)>;
+
+/// Whether two labels are the same label: both none, or both an escape with the same `detail` (the escaper's body, or
+/// 3, a triple ejection, which names no body). A change of body is a change of label.
+pub fn same_label(a: Option<Commit>, b: Option<Commit>) -> bool {
+    a.map(|c| c.detail) == b.map(|c| c.detail)
+}
+
 /// The production cadence with escape ending nothing, every rule read at every sampling point, and the truth's record
 /// (the module's note).
 pub struct RuleHarness {
     inner: WrapperCadence<f64>,
     rules: Rules,
     commits: [Option<(f64, Commit)>; 5],
+    labels: [Labels; 5],
+    fewbody_check: (u32, u32),
     series: Vec<Record>,
     next_record: f64,
     t_eval: f64,
@@ -332,6 +306,8 @@ impl RuleHarness {
             inner,
             rules: Rules::start(ic, e_0),
             commits: [None; 5],
+            labels: Default::default(),
+            fewbody_check: (0, 0),
             series: Vec::new(),
             next_record: SERIES_EVERY,
             t_eval,
@@ -359,16 +335,25 @@ impl Cadence<f64> for RuleHarness {
             .rules
             .sample(state, index, quantum, self.inner.i_max_now());
         for (k, v) in fired.into_iter().enumerate() {
-            if let (None, Some(v)) = (self.commits[k], v) {
-                self.commits[k] = Some((
-                    t,
-                    Commit {
-                        index,
-                        escaper: v.escaper,
-                        detail: v.detail,
-                    },
-                ));
+            let label = v.map(|v| Commit {
+                index,
+                escaper: v.escaper,
+                detail: v.detail,
+            });
+            let last = self.labels[k].last().and_then(|(_, l)| *l);
+            if !same_label(last, label) {
+                self.labels[k].push((t, label));
             }
+            if let (None, Some(c)) = (self.commits[k], label) {
+                self.commits[k] = Some((t, c));
+            }
+        }
+        if is_mark(index, quantum) {
+            let port = self.rules.fewbody.verdict();
+            let port = port.fired.then_some(port.detail);
+            let reference = fewbody_reference(&state.m, &state.r, &state.p).map(|v| v.detail);
+            self.fewbody_check.0 += 1;
+            self.fewbody_check.1 += u32::from(port != reference);
         }
         if t >= self.next_record {
             let rec = record(&state.m, &state.r, t);
@@ -408,6 +393,8 @@ pub enum Truth {
     Escape(u32),
     /// No escape by `T_truth`: B-stable or unresolved.
     NoEscape,
+    /// Bound by construction (a periodic orbit, a Mardling–Aarseth stable triple): set by its case.
+    Bound,
     /// A collision, a failure or a spent budget ended it.
     Censored,
 }
@@ -472,6 +459,12 @@ pub struct Measured {
     pub b_stable: bool,
     /// The record's last entry and its growth exponents ([`exponents`]), for the per-trajectory listing.
     pub last_record: Option<(Record, [f64; 3])>,
+    /// Each rule's live label changes over the whole continued run ([`Labels`]).
+    pub labels: [Labels; 5],
+    /// The marks at which the kernel's Fewbody was read beside the reference, and how many of them the two differ on.
+    pub fewbody_check: (u32, u32),
+    /// The record of the continued run ([`record`] every [`SERIES_EVERY`]), for the cases that read it.
+    pub series: Vec<Record>,
 }
 
 /// The run of `ic` by `A` under `key` with its horizon extended to `truth_steps` macro-steps, its evaluation horizon
@@ -523,6 +516,9 @@ pub fn measure<A: Advance>(
         t_end,
         b_stable,
         last_record: exponents(&h.series),
+        labels: h.labels,
+        fewbody_check: h.fewbody_check,
+        series: h.series,
     }
 }
 
@@ -587,7 +583,7 @@ pub fn judge(commit: &Commit, truth: Truth) -> Option<bool> {
     let triple = commit.detail == DETAIL_ESCAPE_ALL_THREE_TRIPLE_EJECTION;
     match truth {
         Truth::Censored => None,
-        Truth::NoEscape => Some(false),
+        Truth::NoEscape | Truth::Bound => Some(false),
         Truth::Dispersal => Some(triple),
         Truth::Escape(b) => Some(!triple && commit.escaper == b),
     }
@@ -649,7 +645,7 @@ pub fn census(runs: &[Measured]) -> String {
     let neg = runs.iter().filter(|r| r.e_0 < 0.0).count();
     format!(
         "{} trajectories ({} with E < 0): truth dispersal {}, single escape {}, no escape {} (B-stable {}, unresolved \
-         {}), censored {}; continued runs ended asymptotic {}, at T_truth {}",
+         {}), bound by construction {}, censored {}; continued runs ended asymptotic {}, at T_truth {}",
         runs.len(),
         neg,
         count(&|t| *t == Truth::Dispersal),
@@ -657,6 +653,7 @@ pub fn census(runs: &[Measured]) -> String {
         count(&|t| *t == Truth::NoEscape),
         runs.iter().filter(|r| r.truth == Truth::NoEscape && r.b_stable).count(),
         runs.iter().filter(|r| r.truth == Truth::NoEscape && !r.b_stable).count(),
+        count(&|t| *t == Truth::Bound),
         count(&|t| *t == Truth::Censored),
         runs.iter().filter(|r| r.end == End::Asymptotic).count(),
         runs.iter().filter(|r| r.end == End::Horizon).count(),
@@ -676,13 +673,15 @@ pub fn production<A: Advance>(
         RuleId::EnergyFloor => integrate_ic_rule::<A, EnergyFloor<f64>>(ic, None, key),
         RuleId::DistanceFloor => integrate_ic_rule::<A, DistanceFloor<f64>>(ic, None, key),
         RuleId::Chazy => integrate_ic_rule::<A, Chazy<f64>>(ic, None, key),
-        RuleId::Fewbody => integrate_ic_rule::<A, Fewbody>(ic, None, key),
+        RuleId::Fewbody => integrate_ic_rule::<A, Fewbody<f64>>(ic, None, key),
     }
 }
 
-/// Whether the harness's commit under `rule` on `ic` under `key` is the production march's under `production` (the
-/// same rule, unless a control says otherwise), to the horizon `horizon_steps`: production fires escape on the macro-step
-/// holding the harness's sampling point with the same `detail`, or neither fires. `Err` says where they part.
+/// Whether the harness under `rule` on `ic` under `key` is the production march under `production` (the same rule,
+/// unless a control says otherwise), to the horizon `horizon_steps`, in both modes. Under the stop option: production
+/// ends in escape on the macro-step holding the harness's first label with the same `detail`, or neither labels an
+/// escape. Live, the default: production's label at the horizon is the harness's last label by then, an escape with the
+/// same `detail` or none, a collision where the harness's march met one. `Err` says where they part.
 pub fn same_as_production<A: Advance>(
     ic: &Ic<f64>,
     key: &MarchKey64,
@@ -690,31 +689,61 @@ pub fn same_as_production<A: Advance>(
     production: RuleId,
     horizon_steps: u32,
 ) -> Result<(), String> {
-    use kernel::payload::{sd_detail, sd_state, tm_t_end_step, STATE_ESCAPE};
+    use kernel::payload::{sd_detail, sd_state, tm_t_end_step, STATE_COLLISION, STATE_ESCAPE};
     let mut k = *key;
     k.loop_values.horizon_steps = horizon_steps;
     let t_h = f64::from(horizon_steps) * k.loop_values.dt_macro;
-    let out = self::production::<A>(ic, &k, production);
     let m = measure::<A>(ic, &k, t_h, horizon_steps);
     let idx = RuleId::ALL.iter().position(|&r| r == rule).expect("a rule");
-    let production = (sd_state(out.packed_a) == STATE_ESCAPE).then(|| {
+    let stopped = self::production::<A>(
+        ic,
+        &MarchKey64 {
+            stop_on_escape: true,
+            ..k
+        },
+        production,
+    );
+    let first = (sd_state(stopped.packed_a) == STATE_ESCAPE).then(|| {
         (
-            f64::from(tm_t_end_step(out.times)) * k.loop_values.dt_macro,
-            sd_detail(out.packed_a),
+            f64::from(tm_t_end_step(stopped.times)) * k.loop_values.dt_macro,
+            sd_detail(stopped.packed_a),
         )
     });
     let harness = m.commits[idx].map(|(t, c)| (t, c.detail));
-    match (production, harness) {
-        (None, None) => Ok(()),
+    match (first, harness) {
+        (None, None) => {}
         (Some((tp, dp)), Some((th, dh)))
-            if dp == dh && (tp - th).abs() <= k.loop_values.dt_macro =>
-        {
-            Ok(())
+            if dp == dh && (tp - th).abs() <= k.loop_values.dt_macro => {}
+        (p, h) => {
+            return Err(format!(
+                "{}: under the stop option production ends in {p:?} (time, detail), the harness's first label is {h:?}",
+                rule.name()
+            ))
         }
-        (p, h) => Err(format!(
-            "{}: production ends in {p:?} (time, detail), the harness commits {h:?}",
+    }
+    let live = self::production::<A>(
+        ic,
+        &MarchKey64 {
+            stop_on_escape: false,
+            ..k
+        },
+        production,
+    );
+    let state = sd_state(live.packed_a);
+    let label = (state == STATE_ESCAPE).then(|| sd_detail(live.packed_a));
+    let collided = m.end == End::Censored && state == STATE_COLLISION;
+    let last = m.labels[idx]
+        .iter()
+        .take_while(|(t, _)| *t <= t_h)
+        .last()
+        .and_then(|(_, l)| l.map(|c| c.detail));
+    if collided || label == last {
+        Ok(())
+    } else {
+        Err(format!(
+            "{}: live, production's label at the horizon is {label:?} (state {state}), the harness's last label {last:?}",
             rule.name()
-        )),
+        ))
     }
 }
 

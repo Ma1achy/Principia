@@ -23,6 +23,7 @@ pub mod check2;
 pub mod check3;
 pub mod convergence_study;
 pub mod gate;
+pub mod live;
 pub mod march;
 pub mod rebind;
 pub mod replay;
