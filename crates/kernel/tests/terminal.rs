@@ -853,6 +853,7 @@ negative_control!(
 
 /// How a later dispatch reaches the stored sample.
 #[derive(Clone, Copy, Debug)]
+#[cfg_attr(not(feature = "controls"), allow(dead_code))]
 enum Again {
     /// The terminal latch's entry point, [`redispatch`].
     Redispatch,
@@ -860,6 +861,59 @@ enum Again {
     ResumeFinish,
     /// No latch: the march from the stored state and the cadence's write, as if it were still running.
     Unlatched,
+    /// The resumed march and the write of a cadence that drops the wrapper's report that the sample was handed back
+    /// ([`Cadence::latched`]).
+    DropsLatched,
+}
+
+/// The wrapper's cadence with the hand-back report ([`Cadence::latched`]) dropped, every other hook passed on.
+#[cfg_attr(not(feature = "controls"), allow(dead_code))]
+struct NoLatch<R>(WrapperCadence<R>);
+
+impl<R: P> Cadence<R> for NoLatch<R> {
+    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.0.after_step(state, geom);
+    }
+
+    fn done(&self) -> bool {
+        self.0.done()
+    }
+
+    fn sample(&mut self, state: &State<R>, index: u32, quantum: R) {
+        self.0.sample(state, index, quantum);
+    }
+
+    fn signals(&mut self, floored: bool, cap_hit: bool) {
+        self.0.signals(floored, cap_hit);
+    }
+
+    fn regularised_drift(&mut self, drift: R) {
+        self.0.regularised_drift(drift);
+    }
+
+    fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32 {
+        self.0.bucket_d2(r)
+    }
+
+    fn clock(&mut self, completed: u32) {
+        self.0.clock(completed);
+    }
+
+    fn resume(&mut self, stored: &SimStateBaseOf<R>) {
+        self.0.resume(stored);
+    }
+
+    fn non_finite(&mut self, detail: u32) {
+        self.0.non_finite(detail);
+    }
+
+    fn failure(&self) -> Fired {
+        self.0.failure()
+    }
+
+    fn finish(&self, out: SimStateBaseOf<R>) -> SimStateBaseOf<R> {
+        self.0.finish(out)
+    }
 }
 
 /// A later dispatch of `stored` by `how`: a fresh cadence from the stored state, `carried` the buffer.
@@ -877,6 +931,12 @@ fn dispatch_again<R: P>(
     } else if let Again::ResumeFinish = how {
         let out = integrate_resumed_with::<Kdk, R, _>(&ic(s), key, &mut c, stored, 100);
         c.finish(out)
+    } else if let Again::DropsLatched = how {
+        let mut n = NoLatch(c);
+        let out = integrate_resumed_with::<Kdk, R, _>(&ic(s), key, &mut n, stored, 100);
+        let out = n.finish(out);
+        c = n.0;
+        out
     } else {
         // The latch bypassed: the march from the stored state, as if it were still running.
         let resumed = Ic {
@@ -894,7 +954,7 @@ fn dispatch_again<R: P>(
 /// that terminated it (the horizon's `bounded` has no event), and every `SimState` word is bit-identical on three
 /// later dispatches, under longer horizons for the two events, the carried buffer and the cadence untouched: through
 /// the latch's entry point and through the resumed march and the cadence's write.
-fn check_terminal_latch<R: P>(latched: bool) {
+fn check_terminal_latch<R: P>(control: Option<Again>) {
     let cases = [
         ("escape", expanding::<R>(), CollisionRadius::none(), 0.05),
         (
@@ -936,8 +996,8 @@ fn check_terminal_latch<R: P>(latched: bool) {
                 300 + 400 * k
             };
             let key = flat::<R>(dt, horizon, 2);
-            let how = if !latched {
-                Again::Unlatched
+            let how = if let Some(how) = control {
+                how
             } else if k % 2 == 0 {
                 Again::Redispatch
             } else {
@@ -975,16 +1035,27 @@ fn check_terminal_latch<R: P>(latched: bool) {
 
 #[test]
 fn terminal_latch() {
-    check_terminal_latch::<f32>(true);
-    check_terminal_latch::<f64>(true);
+    check_terminal_latch::<f32>(None);
+    check_terminal_latch::<f64>(None);
 }
 
 negative_control!(
     terminal_latch,
     "a later dispatch with no latch",
     expected = "changed the stored words",
-    check_terminal_latch::<f64>(false)
+    check_terminal_latch::<f64>(Some(Again::Unlatched))
 );
+
+mod drops_latched {
+    use super::*;
+
+    negative_control!(
+        terminal_latch,
+        "a resumed call whose cadence drops the hand-back report",
+        expected = "(DropsLatched) changed the stored words",
+        check_terminal_latch::<f64>(Some(Again::DropsLatched))
+    );
+}
 
 // ── detail_union ────────────────────────────────────────────────────────────────────────────────────────────────────
 
