@@ -99,6 +99,9 @@ pub mod probe {
         /// A follow whose direct solve fails read as the followed minimiser's end, as main read it, in place of
         /// [`crate::path::PathError::FollowFailed`].
         pub failed_is_end: bool,
+        /// The slide's slopes by the three-point central difference, as main took them, in place of the five-point one
+        /// (both at `ε^{1/3}` of the window's half-width).
+        pub three_point: bool,
         /// `recentre`'s hold decided on the nearest point's own decode (`placed_at`'s window), as main decided it, in
         /// place of the decode of the view it returns (`place`'s).
         pub placed_at_hold: bool,
@@ -398,18 +401,50 @@ impl<L: Leaves> lock_solve::Family<f64, 9> for Slide<'_, L> {
         Some(line_offset(&self.anchor, &b, s))
     }
 
+    /// Five-point central differences ([`five_point`]) at the three-point difference's step, `ε^{1/3}` of the window's
+    /// half-width. Measured where the slides stalled (`path_lock_slide_stall`'s D0 and D4): the three-point difference's
+    /// truncation there is about `1.5·10⁻⁷` of the slopes on Burrau and `4·10⁻⁸` on the rest chart (it falls 4× as the
+    /// step halves), not the `ε^{2/3}` rounding it was taken to be, and the follow's first-order optimality, `10⁻⁸`,
+    /// can't be reached through it; the five-point difference at the same step agrees with itself to about `10⁻¹¹`, and
+    /// its stencil, `±2` steps, stays as narrow (a wider step, `ε^{1/5}`, crossed the rest chart's curvature and failed).
     fn jacobian(&self, s: f64, x: [f64; 2]) -> Option<[[f64; 9]; 2]> {
-        lock_solve::central_difference(|p| self.value(s, p), x, self.placed.step)
+        #[cfg(feature = "controls")]
+        if probe::switches().three_point {
+            return lock_solve::central_difference(|p| self.value(s, p), x, self.placed.step);
+        }
+        five_point(|p| self.value(s, p), x, self.placed.step)
     }
+}
+
+/// The five-point central difference of `value` at `x`, step `h` per coordinate: `(f(x−2h) − 8f(x−h) + 8f(x+h) −
+/// f(x+2h))/12h`, its truncation `O(h⁴)` against the three-point difference's `O(h²)`, its rounding `O(ε/h)` as theirs.
+fn five_point(
+    value: impl Fn([f64; 2]) -> Option<[f64; 9]>,
+    x: [f64; 2],
+    h: f64,
+) -> Option<[[f64; 9]; 2]> {
+    let mut out = [[0.0; 9]; 2];
+    for (axis, column) in out.iter_mut().enumerate() {
+        let at = |k: f64| {
+            let mut p = x;
+            p[axis] = x[axis] + k * h;
+            value(p)
+        };
+        let (m2, m1, p1, p2) = (at(-2.0)?, at(-1.0)?, at(1.0)?, at(2.0)?);
+        for i in 0..9 {
+            column[i] = ((m2[i] - p2[i]) + 8.0 * (p1[i] - m1[i])) / (12.0 * h);
+        }
+    }
+    Some(out)
 }
 
 /// The solver core's settings for the lock's re-solve. The plan is unclear here; chose the solver core's own test
 /// settings (`lock_solver_core`), because the re-solve is that solve on the blocks, its residual target
 /// [`SOLVE_TOLERANCE`], below the lock's tolerance so a hold is never judged at the point the solve stopped, and
-/// first-order optimality to `10⁻⁸`, not `10⁻¹⁰`, because the slopes here are central differences,
-/// good to about `ε^{2/3} ≈ 4·10⁻¹¹`, and near the start of a slide the residual is small (it grows as `s`), so
-/// `10⁻¹⁰` of it was below the slopes' own error: measured on the Burrau chart, the follow then failed to converge at
-/// its second frame and the slide was tagged ended there.
+/// first-order optimality to `10⁻⁸`, not `10⁻¹⁰`, because the slopes here are central differences: measured on the
+/// Burrau chart, at `10⁻¹⁰` the follow failed to converge at its second frame and the slide was tagged ended there. (The
+/// three-point difference was taken then to be good to `ε^{2/3}`; measured, its truncation reaches `10⁻⁷` of the slopes
+/// near the slide's minimisers, which is why the slide's own slopes are now five-point, [`five_point`].)
 fn spec() -> Spec<f64> {
     #[cfg(feature = "controls")]
     let target = probe::switches().target.unwrap_or(SOLVE_TOLERANCE);
@@ -742,7 +777,9 @@ where
 /// The slide's track over `frames` frames (`s = k/frames`): the minimiser of the frame's pin state's block distance to
 /// the anchor, at the first frame by the restart rule, then followed frame to frame (`lock_solve::follow`), each frame
 /// labelled "not nearest" where the restart rule finds a point whose residual is below the followed one's by more than
-/// the lock's tolerance; it ends at the last frame before the followed minimiser ends (`Failure::Ended`).
+/// the lock's tolerance; it ends at the last frame before the followed minimiser ends (`Failure::Ended`, or a frame
+/// whose direct solve fails with its step leaving `B`'s states, [`leaves_states`]). [`PathError::FollowFailed`] where a
+/// frame's solve fails anywhere else: the solver's failure, never read as an end.
 pub fn slide<L: Leaves>(
     b: &View,
     leaves: &L,
@@ -825,11 +862,48 @@ pub fn slide<L: Leaves>(
                 ended = true;
                 break;
             }
-            // The frame's own solve failed: the follow failed, which says nothing of where the minimiser ends.
-            Status::Failed(failure) => return Err(PathError::FollowFailed { s, failure }),
+            // The frame's own solve failed. Where its step from the last frame's point leaves `B`'s states, the
+            // minimiser has run into their edge, an end the direct solve meets as a stall; anywhere else the follow
+            // failed, which says nothing of where the minimiser ends.
+            // The plan is unclear here (it defines an ending by the continuity test, and a direct solve's failure not at
+            // all); chose this, because the constructed ending's minimiser runs into the edge of `B`'s states and its
+            // direct solve stalls there, its step leaving them, while the slide's stalls at its first frames (PR #72's
+            // C6) were short steps inside them.
+            Status::Failed(failure) => match leaves_states(&family, &target, s, last.x) {
+                true => {
+                    ended = true;
+                    break;
+                }
+                false => return Err(PathError::FollowFailed { s, failure }),
+            },
         }
     }
     Ok(Track { pin, nodes, ended })
+}
+
+/// Whether the Gauss–Newton step at the frame `s` from `x` (the point the follow converged at, the frame before) leaves
+/// the family's states: its value, or its slopes, not finite at `x` or at `x + δ`, `JᵀJδ = −Jᵀr`. Where the followed
+/// minimiser runs into the edge of `B`'s states the step toward it does; where a solve stalls on its own precision the
+/// step is a short one inside them.
+fn leaves_states<F: lock_solve::Family<f64, 9>>(
+    family: &F,
+    target: &Target<f64, 9>,
+    s: f64,
+    x: [f64; 2],
+) -> bool {
+    let (Some(v), Some(j)) = (family.value(s, x), family.jacobian(s, x)) else {
+        return true;
+    };
+    let r: [f64; 9] = core::array::from_fn(|i| target.weight[i] * (v[i] - target.value[i]));
+    let dot = |p: &[f64; 9], q: &[f64; 9]| (0..9).map(|i| p[i] * q[i]).sum::<f64>();
+    let (a11, a12, a22) = (dot(&j[0], &j[0]), dot(&j[0], &j[1]), dot(&j[1], &j[1]));
+    let (g1, g2) = (dot(&j[0], &r), dot(&j[1], &r));
+    let det = a11 * a22 - a12 * a12;
+    let d = [(a12 * g2 - a22 * g1) / det, (a12 * g1 - a11 * g2) / det];
+    if !(det > 0.0 && d.iter().all(|x| x.is_finite())) {
+        return false;
+    }
+    family.value(s, [x[0] + d[0], x[1] + d[1]]).is_none()
 }
 
 // ── A mid-morph slice: `B` re-held ─────────────────────────────────────────────────────────────────────────────────

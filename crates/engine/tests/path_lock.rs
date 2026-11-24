@@ -3682,9 +3682,16 @@ fn burrau_end_logged(at: [f64; 2], frames: usize, logged: bool) -> Option<Burrau
     let a = try_locked_mixed(home(), (at[0], at[1])).ok()?;
     let b = kernel_view(&nu_k(), Window::SQUARE);
     let run = || Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, frames);
+    // Main's slide (its residual and slopes, and a failed follow read as an end), so the control's pin ends as on main.
+    let main = Switches {
+        cancelling: true,
+        three_point: true,
+        failed_is_end: true,
+        ..Switches::default()
+    };
     let (out, log) = match logged {
         true => probe::with(Switches::default(), run),
-        false => (run(), Vec::new()),
+        false => (probe::with(main, run).0, Vec::new()),
     };
     let (_, end) = out.ok()?;
     let LockedEnd::Ended { .. } = end else {
@@ -4001,7 +4008,8 @@ negative_control!(
 
 negative_control!(
     path_lock_burrau_ends,
-    "the solves not logged: an end at (0, 0), whose followed minimiser ends at 64 frames, has no failed follow to read",
+    "the solves not logged: an end at (0, 0), whose followed minimiser ends at 64 frames under main's slide, has no \
+     failed follow to read",
     expected = "an ended slide's failed follow in the log",
     {
         burrau_end_logged([0.0, 0.0], 64, false);
@@ -4038,6 +4046,41 @@ negative_control!(
 //   of `r` or of either coordinate), so its scaling is not varied; `JᵀJ`'s conditioning at each stop is tabulated, to
 //   see whether a null direction (as `s → 0`) is present.
 //
+// **D0–D3 read** (`path_lock_slide_stall`): D0 reproduces PR #72's C6 exactly (132 stops, 71 `Stalled`, 61 `Ended`, the
+// same frames). D1 misses its prediction as the whole cause (121 stops, 74 `Stalled`, 47 `Ended`), but its stops no
+// longer pile at the 2nd frame (9 there against 43) and its worst optimality falls from 2.22e-7 to 2.59e-8: the
+// cancellation is the part that moves the stop toward `s = 0`. D2 changes nothing (132, bit for bit the same table).
+// D3 has no stop, but it seeds each frame at the restart rule's own minimiser there, so the frame's direct solve does
+// not move and the continuity test passes on a zero step: it shows a minimiser exists at every frame, and bypasses the
+// test rather than passing it. Read, not varied: `JᵀJ`'s conditioning at the stops is 2.5e-7 to 1e-5, a near-null
+// direction, through which the slopes' error reaches the optimality measure amplified by about `1/√conditioning`
+// (`‖P r‖² = gᵀ(JᵀJ)⁻¹g`): central differences are good to about `ε^{2/3} ≈ 4e-11`, and `4e-11/√2.5e-7 ≈ 8e-8`, the
+// stalls' range. Two more runs, one variable each, predictions written before they ran:
+//
+// - **D4, the slopes** (a five-point central difference at its own step `ε^{1/5}·h`, good to about `ε^{4/5} ≈ 3e-13`,
+//   main's residual form). Prediction: the stops fall well below D0's, those left at the first frames (≤ 6), where
+//   main's cancelling form still costs `1/s`.
+//   *Changed before D4 ran in this test, after a scratch probe at three pins (reported in PR #79):* the step `ε^{1/5}·h`
+//   failed the rest chart's slide at (0, 0), which main takes through, and measuring the slopes at the stops showed why
+//   and what the stall's slope error is: the three-point difference at `ε^{1/3}·h` is off by `1.5e-7` (Burrau) and
+//   `4e-8` (rest) relative, falling 4× per halving of the step, so truncation, not the `ε^{2/3}` rounding assumed; the
+//   five-point difference at the same step `ε^{1/3}·h` agrees with itself to about `1e-11`, and a wider stencil meets
+//   the rest chart's curvature. D4 and D5 take the five-point difference at `ε^{1/3}·h`; the predictions stand.
+// - **D5, both** (D1's residual and D4's slopes). Prediction: no `Stalled`, and no `Ended` before the 7th frame; any
+//   stop left is at a fixed `s`, for F2 to judge.
+//
+// **Added before any fix run was read** (the first F-sweep run was stopped unread when the suite showed this): the
+// constructed ending (`path_lock_centre_slide_ends`), a true end at the edge of `B`'s states, arrives as the frame's
+// direct solve stalling (`Stalled` at `s = 51/64`), not as `Ended`. So a direct solve's failure is classified by
+// `anchor::leaves_states`: where the frame's Gauss–Newton step from the last frame's point leaves `B`'s states, the
+// minimiser has run into their edge, an end; any other direct failure is `FollowFailed`. (Two first forms, an end
+// wherever a bisection of the frame stepped toward the failure, with and without this test, were replaced before any
+// sweep ran: the first read main's spurious stall at (0, 0) as an end in `path_lock_failed_follow`, and at the
+// constructed edge no bisected half converges at all, so "stepped toward" picks the wrong one of the two.) F1 reads
+// "no slide stops on `FollowFailed`"; F2 is judged on every stop whatever its tag, and also asks that the brackets
+// `[k/n, (k+1)/n]` of the last good frame at 64, 128 and 256 share a point (an end drifting toward 0 by less than a
+// frame per count fails it).
+//
 // **The fix's criteria** (on the cause D1–D3 find; the runs `path_lock_slide_follows_sweep` and the sweeps below):
 //
 // - **F1, no stall and no spurious continuity failure.** On mixed to Burrau at the sweep's 256 pins, at 64, 128 and 256
@@ -4059,10 +4102,11 @@ negative_control!(
 // ── path_lock_slide_stall: the diagnosis (D0–D3 above) ─────────────────────────────────────────────────────────────
 
 /// Where a slide on mixed to Burrau stops: the frame count, the stop's frame index `k` (`s = k/frames`), the failed
-/// solve's report, and the residual's relative rounding there (`‖r_main − r‖/‖r‖`, main's cancelling form against the
-/// offset formed directly), or `None` where the slide reaches `s = 1`.
+/// solve's report, the residual's relative rounding there (`‖r_main − r‖/‖r‖`, main's cancelling form against the
+/// offset formed directly) and main's slopes' relative error there (its three-point difference against a five-point one
+/// of the offset formed directly), or `None` where the slide reaches `s = 1`.
 #[cfg(feature = "controls")]
-type SlideStop = Option<(usize, kernel::chart::lock_solve::Report<f64>, f64)>;
+type SlideStop = Option<(usize, kernel::chart::lock_solve::Report<f64>, f64, f64)>;
 
 /// Mixed to Burrau's locked morph at `at` over `frames` frames under `switches`: where its slide stops (any solve in the
 /// slide that fails: the first frame's restart, a follow, or, read as main read it, a follow ending). `Err` where the
@@ -4106,7 +4150,70 @@ fn slide_stop(
     let offset = engine::path::blend::line_offset(&anchor, &own, failed.s);
     let norm = |v: [f64; 9]| v.iter().map(|x| x * x).sum::<f64>().sqrt();
     let rounding = norm(std::array::from_fn(|i| main[i] - offset[i])) / norm(offset);
-    Ok(Some((k, failed.report, rounding)))
+    // The slopes' error at the stop: main's three-point difference of main's residual against a five-point one of the
+    // offset formed directly, relative to the latter (`‖·‖` over both columns).
+    let value = |x: [f64; 2], cancelling: bool| -> Option<[f64; 9]> {
+        let v = anchor::placed(&b, pin(&a), x);
+        let own = Blocks::of(&decoded_ic(anchor::state_at(&v, &burrau, pin(&a)).ok()?)?);
+        Some(match cancelling {
+            true => {
+                let line = engine::path::blend::block_line(&anchor, &own, failed.s)
+                    .0
+                    .vector();
+                let a = anchor.vector();
+                std::array::from_fn(|i| line[i] - a[i])
+            }
+            false => engine::path::blend::line_offset(&anchor, &own, failed.s),
+        })
+    };
+    let half = b.sim.chart.window.half[0]
+        .abs()
+        .max(b.sim.chart.window.half[1].abs());
+    let x = failed.report.x;
+    let slopes = |cancelling: bool, k: &[(f64, f64)], h: f64| -> Option<[[f64; 9]; 2]> {
+        let mut out = [[0.0; 9]; 2];
+        for (axis, col) in out.iter_mut().enumerate() {
+            for &(at, w) in k {
+                let mut p = x;
+                p[axis] += at * h;
+                let v = value(p, cancelling)?;
+                for i in 0..9 {
+                    col[i] += w * v[i] / h;
+                }
+            }
+        }
+        Some(out)
+    };
+    let three = [(1.0, 0.5), (-1.0, -0.5)];
+    let five = [
+        (-2.0, 1.0 / 12.0),
+        (-1.0, -8.0 / 12.0),
+        (1.0, 8.0 / 12.0),
+        (2.0, -1.0 / 12.0),
+    ];
+    let slope_error = match (
+        slopes(true, &three, f64::EPSILON.cbrt() * half),
+        slopes(false, &five, f64::EPSILON.powf(0.2) * half),
+    ) {
+        (Some(j3), Some(j5)) => {
+            let n =
+                |j: &[[f64; 9]; 2]| (j[0].iter().chain(&j[1]).map(|x| x * x).sum::<f64>()).sqrt();
+            let d: [[f64; 9]; 2] =
+                std::array::from_fn(|c| std::array::from_fn(|i| j3[c][i] - j5[c][i]));
+            n(&d) / n(&j5)
+        }
+        _ => f64::NAN,
+    };
+    Ok(Some((k, failed.report, rounding, slope_error)))
+}
+
+/// A pixel's state, `None` on a blank one.
+#[cfg(feature = "controls")]
+fn decoded_ic(pixel: Pixel) -> Option<Ic<f64>> {
+    match pixel {
+        Pixel::State { decoded, .. } => Some(decoded.ic),
+        Pixel::Blank(_) => None,
+    }
 }
 
 #[cfg(feature = "controls")]
@@ -4116,10 +4223,12 @@ fn path_lock_slide_stall() {
     use engine::path::anchor::probe::Switches;
     let main = Switches {
         cancelling: true,
+        three_point: true,
         failed_is_end: true,
+        placed_at_hold: true,
         ..Switches::default()
     };
-    let runs: [(&str, Switches); 4] = [
+    let runs: [(&str, Switches); 6] = [
         ("D0 main", main),
         (
             "D1 the offset formed directly",
@@ -4142,6 +4251,21 @@ fn path_lock_slide_stall() {
                 ..main
             },
         ),
+        (
+            "D4 five-point slopes",
+            Switches {
+                three_point: false,
+                ..main
+            },
+        ),
+        (
+            "D5 the offset formed directly and five-point slopes",
+            Switches {
+                cancelling: false,
+                three_point: false,
+                ..main
+            },
+        ),
     ];
     let pins = sweep_pins(SWEEP_SIDE);
     let mut table: Vec<([f64; 2], Vec<SlideStop>)> = Vec::new();
@@ -4154,12 +4278,21 @@ fn path_lock_slide_stall() {
             table.push((*at, row));
         }
     }
-    let cell = |x: &SlideStop| match x {
+    let cell = |x: &SlideStop| {
+        match x {
         None => "reaches 1".to_string(),
-        Some((k, r, rounding)) => format!(
-            "{:?} at k = {k}, opt {:.2e}, cond {:.2e}, it {}, r {:.2e}, rounding {:.1e}",
-            r.status, r.optimality, r.conditioning, r.iterations, r.residual, rounding
+        Some((k, r, rounding, slope)) => format!(
+            "{:?} at k = {k}, opt {:.2e}, cond {:.2e}, it {}, r {:.2e}, rounding {:.1e}, slopes {:.1e} (/√cond {:.1e})",
+            r.status,
+            r.optimality,
+            r.conditioning,
+            r.iterations,
+            r.residual,
+            rounding,
+            slope,
+            slope / r.conditioning.sqrt()
         ),
+    }
     };
     println!(
         "| pin | {} |",
@@ -4181,7 +4314,9 @@ fn path_lock_slide_stall() {
         let mut rounding: Vec<f64> = Vec::new();
         let mut cond: Vec<f64> = Vec::new();
         for (_, row) in &table {
-            let Some((k, r, ro)) = &row[i] else { continue };
+            let Some((k, r, ro, _)) = &row[i] else {
+                continue;
+            };
             let kind = format!("{:?}", r.status);
             match kinds.iter_mut().find(|(v, _)| *v == kind) {
                 Some((_, n)) => *n += 1,
@@ -4339,8 +4474,9 @@ negative_control!(
 //
 // Criterion F3. `anchor::slide` reads a follow whose frame's own solve fails (`Stalled`, `IterationCap`,
 // `IllConditioned`, `NonFinite`) as the solver's failure, `PathError::FollowFailed`, never as the followed minimiser's
-// end (`LockedEnd::Ended`, the continuity test's). Mixed to Burrau at (0, 0), 64 frames, its residual formed as main
-// formed it (`probe::Switches::cancelling`), under which its follow stalls at the 2nd frame (PR #72's C6). Pass: the
+// end (`LockedEnd::Ended`, the continuity test's). Mixed to Burrau at (0, 0), 64 frames, its residual and slopes formed
+// as main formed them (`probe::Switches::cancelling` and `three_point`), under which its follow stalls at the 2nd frame
+// (PR #72's C6). Pass: the
 // locked morph is refused with `FollowFailed`. Control: a failed follow read as an end, main's, gives `Ended`.
 
 #[cfg(feature = "controls")]
@@ -4354,6 +4490,7 @@ fn check_failed_follow(failed_is_end: bool) {
     let b = kernel_view(&nu_k(), Window::SQUARE);
     let switches = Switches {
         cancelling: true,
+        three_point: true,
         failed_is_end,
         ..Switches::default()
     };
@@ -4479,10 +4616,12 @@ fn path_lock_rehold_slide_stall() {
 // the same `not_nearest` at `s = 1`, every node within `10⁻⁶·h` of main's). Prints the per-pin table and the tallies.
 
 /// A slide's outcome at one pin: its track (ended or through), or the refusal.
+#[cfg(feature = "controls")]
 type SlideOutcome = Result<anchor::Track, PathError>;
 
 /// Mixed locked at `at`, re-centred on `b` through `leaves` over `frames` frames: the slide's outcome (`None` where the
 /// lock refuses or `b` holds).
+#[cfg(feature = "controls")]
 fn slide_outcome<L: Leaves>(
     at: [f64; 2],
     b: &View,
@@ -4497,6 +4636,7 @@ fn slide_outcome<L: Leaves>(
     }
 }
 
+#[cfg(feature = "controls")]
 fn show_outcome(o: &Option<SlideOutcome>) -> String {
     match o {
         None => "holds or no lock".into(),
@@ -4579,6 +4719,18 @@ fn path_lock_slide_follows_sweep() {
                     matches!(o, Some(Ok(t)) if t.ended && (t.end() - s64).abs() <= 1.0 / 64.0 && t.end() > 1.0 / n)
                 })
             });
+            // The brackets `[s_n, s_n + 1/n]` of the last good frame share a point.
+            let shared = now
+                .iter()
+                .zip([64.0, 128.0, 256.0])
+                .filter_map(|(o, n)| match o {
+                    Some(Ok(t)) => Some((t.end(), t.end() + 1.0 / n)),
+                    _ => None,
+                })
+                .fold((f64::NEG_INFINITY, f64::INFINITY), |(lo, hi), (a, b)| {
+                    (lo.max(a), hi.min(b))
+                });
+            let true_end = true_end && shared.0 <= shared.1;
             if !true_end {
                 f2.push(format!(
                     "{pin_name}: {:?}",
