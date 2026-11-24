@@ -4055,3 +4055,332 @@ negative_control!(
 // - **Reported:** how many of the 124 become pins the sweep reads through, true ends, or remaining failures; C1's floor
 //   rerun and the sizing rule's value and its margins. `LOCK_TOLERANCE` (64) and `lock_solve_tolerance` (32) are not
 //   changed here; proposed values go to the owner.
+
+// ── path_lock_slide_stall: the diagnosis (D0–D3 above) ─────────────────────────────────────────────────────────────
+
+/// Where a slide on mixed to Burrau stops: the frame count, the stop's frame index `k` (`s = k/frames`), the failed
+/// solve's report, and the residual's relative rounding there (`‖r_main − r‖/‖r‖`, main's cancelling form against the
+/// offset formed directly), or `None` where the slide reaches `s = 1`.
+#[cfg(feature = "controls")]
+type SlideStop = Option<(usize, kernel::chart::lock_solve::Report<f64>, f64)>;
+
+/// Mixed to Burrau's locked morph at `at` over `frames` frames under `switches`: where its slide stops (any solve in the
+/// slide that fails: the first frame's restart, a follow, or, read as main read it, a follow ending). `Err` where the
+/// lock itself refuses.
+#[cfg(feature = "controls")]
+fn slide_stop(
+    at: [f64; 2],
+    frames: usize,
+    switches: engine::path::anchor::probe::Switches,
+) -> Result<SlideStop, String> {
+    use engine::path::anchor::probe;
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let a = try_locked_mixed(home(), (at[0], at[1]))?;
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let (_, log) = probe::with(switches, || {
+        Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, frames)
+    });
+    let Some(failed) = log
+        .iter()
+        .find(|x| matches!(x.what, "slide first" | "follow") && !x.report.converged())
+    else {
+        return Ok(None);
+    };
+    let k = (failed.s * frames as f64).round() as usize;
+    // The residual at the stop, both ways: the frame's state less the anchor, and the offset formed directly.
+    let anchor = a.anchor.expect("a recorded anchor").blocks();
+    let placed = anchor::placed(&b, pin(&a), failed.report.x);
+    let own = Blocks::of(
+        &state(anchor::state_at(&placed, &burrau, pin(&a)).map_err(|e| format!("{e:?}"))?).ic,
+    );
+    let main: [f64; 9] = {
+        let line = engine::path::blend::block_line(&anchor, &own, failed.s)
+            .0
+            .vector();
+        let a = anchor.vector();
+        std::array::from_fn(|i| line[i] - a[i])
+    };
+    let offset = engine::path::blend::line_offset(&anchor, &own, failed.s);
+    let norm = |v: [f64; 9]| v.iter().map(|x| x * x).sum::<f64>().sqrt();
+    let rounding = norm(std::array::from_fn(|i| main[i] - offset[i])) / norm(offset);
+    Ok(Some((k, failed.report, rounding)))
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "a few minutes: cargo test -p engine --features controls --test path_lock -- path_lock_slide_stall --exact --include-ignored --nocapture"]
+fn path_lock_slide_stall() {
+    use engine::path::anchor::probe::Switches;
+    let main = Switches {
+        cancelling: true,
+        failed_is_end: true,
+        ..Switches::default()
+    };
+    let runs: [(&str, Switches); 4] = [
+        ("D0 main", main),
+        (
+            "D1 the offset formed directly",
+            Switches {
+                cancelling: false,
+                ..main
+            },
+        ),
+        (
+            "D2 the damping's ceiling 1e16",
+            Switches {
+                ceiling: Some(1e16),
+                ..main
+            },
+        ),
+        (
+            "D3 each follow seeded by the restart rule at its frame",
+            Switches {
+                restart_seed: true,
+                ..main
+            },
+        ),
+    ];
+    let pins = sweep_pins(SWEEP_SIDE);
+    let mut table: Vec<([f64; 2], Vec<SlideStop>)> = Vec::new();
+    for at in &pins {
+        let row: Vec<SlideStop> = runs
+            .iter()
+            .map(|(_, sw)| slide_stop(*at, 64, *sw).unwrap_or(None))
+            .collect();
+        if row.iter().any(|x| x.is_some()) {
+            table.push((*at, row));
+        }
+    }
+    let cell = |x: &SlideStop| match x {
+        None => "reaches 1".to_string(),
+        Some((k, r, rounding)) => format!(
+            "{:?} at k = {k}, opt {:.2e}, cond {:.2e}, it {}, r {:.2e}, rounding {:.1e}",
+            r.status, r.optimality, r.conditioning, r.iterations, r.residual, rounding
+        ),
+    };
+    println!(
+        "| pin | {} |",
+        runs.iter().map(|r| r.0).collect::<Vec<_>>().join(" | ")
+    );
+    println!("|---|{}", "---|".repeat(runs.len()));
+    for (at, row) in &table {
+        println!(
+            "| ({:.4}, {:.4}) | {} |",
+            at[0],
+            at[1],
+            row.iter().map(cell).collect::<Vec<_>>().join(" | ")
+        );
+    }
+    for (i, (name, _)) in runs.iter().enumerate() {
+        let mut kinds: Vec<(String, usize)> = Vec::new();
+        let mut frames: Vec<(usize, usize)> = Vec::new();
+        let mut opt: Vec<f64> = Vec::new();
+        let mut rounding: Vec<f64> = Vec::new();
+        let mut cond: Vec<f64> = Vec::new();
+        for (_, row) in &table {
+            let Some((k, r, ro)) = &row[i] else { continue };
+            let kind = format!("{:?}", r.status);
+            match kinds.iter_mut().find(|(v, _)| *v == kind) {
+                Some((_, n)) => *n += 1,
+                None => kinds.push((kind, 1)),
+            }
+            match frames.iter_mut().find(|(f, _)| f == k) {
+                Some((_, n)) => *n += 1,
+                None => frames.push((*k, 1)),
+            }
+            opt.push(r.optimality);
+            rounding.push(*ro);
+            cond.push(r.conditioning);
+        }
+        frames.sort();
+        let stops = opt.len();
+        println!(
+            "path_lock_slide_stall: {name}: {stops} stops; by kind {kinds:?}; by frame {frames:?}"
+        );
+        if stops > 0 {
+            println!(
+                "path_lock_slide_stall: {name}: optimality min {:.2e}, median {:.2e}, max {:.2e}; the residual's rounding min {:.1e}, median {:.1e}, max {:.1e}; conditioning min {:.2e}, median {:.2e}",
+                quantile(&mut opt, 0.0),
+                quantile(&mut opt, 0.5),
+                quantile(&mut opt, 1.0),
+                quantile(&mut rounding, 0.0),
+                quantile(&mut rounding, 0.5),
+                quantile(&mut rounding, 1.0),
+                quantile(&mut cond, 0.0),
+                quantile(&mut cond, 0.5),
+            );
+        }
+    }
+}
+
+// ── path_lock_solve_below_lock: the re-solve's target below the lock's tolerance ────────────────────────────────────
+//
+// `anchor::SOLVE_TOLERANCE < LOCK_TOLERANCE`, so a hold is never judged at the point its solve stopped (PR #72's
+// review). The engine also asserts it at compile time, through the same `anchor::solve_below_lock`. Pass: it holds of
+// the constants in force. Control: the target set to the lock's tolerance (main before PR #72) fails.
+
+fn check_solve_below_lock(solve: f64) {
+    assert!(
+        anchor::solve_below_lock(solve, LOCK_TOLERANCE),
+        "the re-solve's target {} ε is not below the lock's tolerance {} ε",
+        solve / f64::EPSILON,
+        LOCK_TOLERANCE / f64::EPSILON
+    );
+}
+
+#[test]
+fn path_lock_solve_below_lock() {
+    check_solve_below_lock(anchor::SOLVE_TOLERANCE);
+}
+
+negative_control!(
+    path_lock_solve_below_lock,
+    "the re-solve's target set to the lock's tolerance, as before PR #72",
+    expected = "is not below the lock's tolerance",
+    check_solve_below_lock(LOCK_TOLERANCE)
+);
+
+// ── path_lock_recentre_place: recentre judges the state its view shows ──────────────────────────────────────────────
+//
+// `anchor::recentre` decides a kernel map's hold on the state the view it returns shows at the pin (`place`'s window,
+// its own decode), as `rehold` does, not on the nearest-point solve's own decode through `placed_at`'s window, which
+// differs from it by up to 7.3 ε on the sphere (PR #72). Latent to the exponential sphere, at the first of the sweep's
+// pins (row by row from (0.8, 0.6)) where the two decodes differ in `‖·‖_phys` from the anchor: a norm that reads 0 at
+// exactly the shown state's distance and ∞ elsewhere, so only a hold judged on the shown state holds. Pass: the end
+// holds. Control: the hold judged on `placed_at`'s decode, main's, slides.
+
+/// The sphere pair at the first pin where `place`'s and `placed_at`'s decodes differ: the locked start, the end, the
+/// leaves and the shown state's distance from the anchor.
+fn recentre_case() -> (
+    View,
+    View,
+    (
+        LatentLeaves<Defaults>,
+        ChartLeaves<kernel::chart::ShapeSphere<f64>, Defaults>,
+    ),
+    f64,
+) {
+    let sphere_a = frame_plane(GATE_Z0, 0, 2, 0.5);
+    let mut pins = sweep_pins(SWEEP_SIDE);
+    pins.rotate_left(9 * SWEEP_SIDE + 12);
+    for at in pins {
+        let Ok(a) = try_locked_latent(&sphere_a, (at[0], at[1])) else {
+            continue;
+        };
+        let sphere = sphere_for(&engine::lock::point(&sphere_a, at[0], at[1]));
+        let leaves = (
+            LatentLeaves::<Defaults>::new(),
+            ChartLeaves::<_, Defaults>::new(sphere).expect("a chart"),
+        );
+        let b = kernel_view(&sphere, Window::SQUARE);
+        let anchor = a.anchor.expect("a recorded anchor");
+        let Ok(found) = anchor::nearest(&b, &leaves, at, &anchor) else {
+            continue;
+        };
+        let shown = View {
+            anchor: None,
+            ..anchor::place(&b, at, found.x)
+        };
+        let Ok(own) = leaves.decode(&shown, at) else {
+            continue;
+        };
+        let (d_shown, d_solver) = (phys(&anchor.ic(), &own.ic), phys(&anchor.ic(), &found.ic));
+        if d_shown != d_solver && d_shown <= LOCK_TOLERANCE {
+            println!(
+                "path_lock_recentre_place: at ({:.4}, {:.4}): the shown state {:.3} ε from the anchor, the solver's own decode {:.3} ε",
+                at[0],
+                at[1],
+                d_shown / f64::EPSILON,
+                d_solver / f64::EPSILON
+            );
+            return (a, b, leaves, d_shown);
+        }
+    }
+    panic!("no pin where the two decodes differ");
+}
+
+fn check_recentre_place() {
+    let (a, b, leaves, d_shown) = recentre_case();
+    let only_shown = |x: &Ic<f64>, y: &Ic<f64>| match phys(x, y) == d_shown {
+        true => 0.0,
+        false => f64::INFINITY,
+    };
+    let out = anchor::recentre(&a, &b, &leaves, only_shown, 4);
+    assert!(
+        matches!(out, Ok(anchor::Recentred::Holds(_))),
+        "recentre judged a state its view does not show: {:?}",
+        out.map(|r| matches!(r, anchor::Recentred::Holds(_)))
+    );
+}
+
+#[test]
+fn path_lock_recentre_place() {
+    check_recentre_place();
+}
+
+negative_control!(
+    path_lock_recentre_place,
+    "the hold judged on the nearest-point solve's own decode (placed_at's window), main's",
+    expected = "recentre judged a state its view does not show",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            placed_at_hold: true,
+            ..Switches::default()
+        };
+        probe::with(switches, check_recentre_place);
+    }
+);
+
+// ── path_lock_failed_follow: a failed follow is refused, not read as an end ─────────────────────────────────────────
+//
+// Criterion F3. `anchor::slide` reads a follow whose frame's own solve fails (`Stalled`, `IterationCap`,
+// `IllConditioned`, `NonFinite`) as the solver's failure, `PathError::FollowFailed`, never as the followed minimiser's
+// end (`LockedEnd::Ended`, the continuity test's). Mixed to Burrau at (0, 0), 64 frames, its residual formed as main
+// formed it (`probe::Switches::cancelling`), under which its follow stalls at the 2nd frame (PR #72's C6). Pass: the
+// locked morph is refused with `FollowFailed`. Control: a failed follow read as an end, main's, gives `Ended`.
+
+#[cfg(feature = "controls")]
+fn check_failed_follow(failed_is_end: bool) {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let a = try_locked_mixed(home(), (0.0, 0.0)).expect("a lock");
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let switches = Switches {
+        cancelling: true,
+        failed_is_end,
+        ..Switches::default()
+    };
+    let (out, _) = probe::with(switches, || {
+        Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, 64)
+    });
+    let out = out.map(|(_, end)| end);
+    println!("path_lock_failed_follow: {out:?}");
+    assert!(
+        !matches!(out, Ok(LockedEnd::Ended { .. })),
+        "a failed follow read as an end: {out:?}"
+    );
+    assert!(
+        matches!(out, Err(PathError::FollowFailed { .. })),
+        "the failed follow not refused as one: {out:?}"
+    );
+}
+
+#[cfg(feature = "controls")]
+#[test]
+fn path_lock_failed_follow() {
+    check_failed_follow(false);
+}
+
+negative_control!(
+    path_lock_failed_follow,
+    "a failed follow read as the followed minimiser's end, main's",
+    expected = "a failed follow read as an end",
+    check_failed_follow(true)
+);

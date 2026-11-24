@@ -77,6 +77,14 @@ pub enum PathError {
     Easing,
     /// The kernel refused the operation.
     Refused(&'static str),
+    /// A slide's follow failed at the frame `s`: the frame's own solve did not converge (`failure`), so where the
+    /// followed minimiser ends is not known. Refused as the solver's failure, never read as the path's end.
+    FollowFailed {
+        /// The frame whose solve failed.
+        s: f64,
+        /// How it failed.
+        failure: kernel::chart::lock_solve::Failure,
+    },
     /// A record's bytes that do not read back.
     Record(String),
 }

@@ -285,6 +285,61 @@ pub fn block_line(a: &Blocks, b: &Blocks, s: f64) -> (Blocks, bool) {
     (blocks, tie)
 }
 
+/// `block_line(a, b, s) − a` as one vector in [`Blocks::vector`]'s order, formed without subtracting `a` back off: `s(b − a)`
+/// on `μ` and the momenta, and on `n̂` the great circle's own offset, `(cos sθ − 1)·a + sin sθ·ŵ` with
+/// `cos sθ − 1 = −2 sin²(sθ/2)`, on [`great_circle`]'s branches (its tie included). The same function as
+/// `block_line(a, b, s).vector() − a.vector()` in exact arithmetic; in floating point that difference carries an
+/// absolute rounding of `ε|a|` against a value of size `s|b − a|`, which grows as `1/s` relative to it, and this does
+/// not. The lock's slide solves on it (`anchor`'s `Slide`).
+pub fn line_offset(a: &Blocks, b: &Blocks, s: f64) -> [f64; 9] {
+    let n = {
+        let (a, b) = (a.n, b.n);
+        let c = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        let w = [b[0] - c * a[0], b[1] - c * a[1], b[2] - c * a[2]];
+        let norm = scaled_norm(w);
+        let general = match c >= 0.0 {
+            true => norm > 0.0,
+            false => norm > f64::EPSILON.sqrt(),
+        };
+        let turn = |angle: f64, dir: [f64; 3]| -> [f64; 3] {
+            let half = libm::sin(angle / 2.0);
+            let (cosm1, sin) = (-2.0 * half * half, libm::sin(angle));
+            std::array::from_fn(|i| cosm1 * a[i] + sin * dir[i])
+        };
+        if general {
+            let theta = libm::atan2(norm, c);
+            turn(s * theta, w.map(|x| x / norm))
+        } else if c >= 0.0 {
+            [0.0; 3]
+        } else {
+            let mut axis = 0;
+            for i in 1..3 {
+                if a[i].abs() < a[axis].abs() {
+                    axis = i;
+                }
+            }
+            let mut e = [0.0; 3];
+            e[axis] = 1.0;
+            let k = cross(a, e);
+            let k_norm = scaled_norm(k);
+            let k = k.map(|x| x / k_norm);
+            turn(core::f64::consts::PI * s, cross(k, a))
+        }
+    };
+    let d = |x: f64, y: f64| s * (y - x);
+    [
+        d(a.mu[0], b.mu[0]),
+        d(a.mu[1], b.mu[1]),
+        n[0],
+        n[1],
+        n[2],
+        d(a.p_rho[0], b.p_rho[0]),
+        d(a.p_rho[1], b.p_rho[1]),
+        d(a.p_lambda[0], b.p_lambda[0]),
+        d(a.p_lambda[1], b.p_lambda[1]),
+    ]
+}
+
 /// The masses `softmax(0, μ₁, μ₂)`, by the shared entry for a chart that sets masses, so the guard's own test applies.
 pub fn masses_of(mu: [f64; 2]) -> Masses<f64> {
     let top = 0.0_f64.max(mu[0]).max(mu[1]);

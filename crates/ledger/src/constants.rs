@@ -1119,7 +1119,10 @@ pub const LOCK_TOLERANCE: ConstantBuilder = proposed(
 /// coordinates the solve minimises in: where a nearest-point, re-hold or slide solve stops as on the image. Below
 /// `lock_tolerance`, so a hold is never judged at the point its solve stopped. A calibration: twice the worst residual
 /// the re-hold and nearest-point solves stop at with no target (their floor, 14.7 `ε`, the exponential sphere's
-/// re-hold), on the lock sweep's hold pairs at its 16 × 16 pins, rounded up to a power of two (PR #72).
+/// re-hold), on the lock sweep's hold pairs at its 16 × 16 pins, rounded up to a power of two (PR #72). Measured on
+/// two pairs only, the two whose ends re-solve (mixed to mixed; latent to the exponential shape sphere): a hold pair on
+/// another chart whose solves' floor is above it would show as frames that slide where they should hold, not as an
+/// error, so a new hold pair needs its floor measured (`path_lock_solve_floor`).
 pub const LOCK_SOLVE_TOLERANCE: ConstantBuilder = proposed(
     "lock_solve_tolerance",
     32.0,
