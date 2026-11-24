@@ -1,24 +1,24 @@
-//! The named synthetic fixture set (debug tooling plan, "Principle": "Synthetic-first"; TASK-M1-14): CPU-filled
+//! The named synthetic fixture set (debug tooling plan, "Principle": "Synthetic-first"): CPU-filled
 //! samples with known values, written into a [`Synthetic`](crate::synthetic::Synthetic) set for the accessor tests to
 //! read back and the golden suite `m1-synthetic` to render (`validation::golden_scene`). Each fixture is eight
 //! samples, one row of [`Known`](crate::fixtures::Known) values each, so the tests assert on the same table the fill
 //! writes:
 //! - `set_state`: each `state` code set, 0–5 and the reserved 6 and 7 (payload §2), on samples otherwise plain;
-//! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape the settling window allows,
-//!   at step 40 (R-29's 0.4 window at the harness's `dt_macro` 0.01), beside a bounded, a colliding and a running
-//!   sample;
+//! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape the settling window allows, at
+//!   step 40 (the escape rule's 0.4 settling window at the harness's `dt_macro` 0.01), beside a bounded, a colliding
+//!   and a running sample;
 //! - `energy_drift_ramp`: one configuration whose current energy drift `H(r, p) − E_0` (payload §5) rises in even
 //!   steps across the row;
 //! - `adversarial_descriptor`: `packed_a` written whole, its descriptor bits all clear, all set and alternating, each
 //!   field at its extremes beside neighbours at theirs, its reserved bits 10–15 clear, and `d_min`'s half bit patterns
-//!   of its own: the largest finite f16, the smallest subnormal, the unset `+inf` (R-271) and alternating bits;
+//!   of its own: the largest finite f16, the smallest subnormal, the unset `+inf` and alternating bits;
 //! - `forced_failure`: `sim_failed` and `decode_failed` samples of each failure category, holding the defined
-//!   failed-state values, `dE_max = dLz_max = 0.0` and `d_min` unset, `+inf` (payload §1; R-79, R-271).
+//!   failed-state values, `dE_max = dLz_max = 0.0` and `d_min` unset, `+inf` (payload §1).
 //!
 //! No stored value of the set is NaN, and its only non-finite stored value is `d_min`'s unset `+inf`, held only by a
-//! failed sample or one before its first step (R-271; `engine/tests/fixtures.rs`, `stored_values_no_nan`). Every
-//! value here is fixture data: a hand-chosen harness value the tests assert on (debug_tooling_plan §F; the M1
-//! fixtures), not a register constant (REQ-SYS-082).
+//! failed sample or one before its first step (`engine/tests/fixtures.rs`, `stored_values_no_nan`). Every value here is
+//! fixture data: a hand-chosen harness value the tests assert on (debug_tooling_plan §F; the M1 fixtures), not a
+//! register constant.
 
 use kernel::payload::{
     angular_momentum_z, f16_bits_to_f32, f32_to_f16_bits, fgw_pack, hamiltonian,
@@ -37,7 +37,7 @@ pub const NAMES: [&str; 5] = [
     "forced_failure",
 ];
 
-/// `d_min`'s unset f16 bits, `+inf` (R-271), as [`Known::d_min`] holds them.
+/// `d_min`'s unset f16 bits, `+inf`, as [`Known::d_min`] holds them.
 pub const UNSET: u16 = kernel::payload::PA_D_MIN_UNSET as u16;
 
 /// What one sample of a fixture holds, as written.
@@ -81,7 +81,7 @@ impl Known {
     }
 
     /// Its `dE_max` and `dLz_max`: the failed-state `0.0` on a failed sample (payload §1), else a latch above the
-    /// current drift, as a march leaves it. Fixture data, as [`known`]'s table is (REQ-SYS-082).
+    /// current drift, as a march leaves it. Fixture data, as [`known`]'s table is.
     pub fn drift_max(&self) -> (f32, f32) {
         if self.failed() {
             (0.0, 0.0)
@@ -141,7 +141,7 @@ fn adversarial(
 }
 
 /// The fixture `name`'s eight samples, or why not. Fixture data, the known values the tests assert on: interface data
-/// between the fill and its readers, not register constants (REQ-SYS-082).
+/// between the fill and its readers, not register constants.
 pub fn known(name: &str) -> Result<Vec<Known>, String> {
     // The f16 bits of `d_min`'s valid values. A collision's, `d0006`, is below the default `r_coll` = 10⁻³
     // (integrator contract Part 7): its `d_min` is the separation that crossed `r_coll` (dd_integrator §3.6).
@@ -163,7 +163,7 @@ pub fn known(name: &str) -> Result<Vec<Known>, String> {
             plain(STATE_ESCAPE, 1, 250, 2, d4),
             plain(STATE_ESCAPE, 2, 515, 0, d6),
             plain(STATE_ESCAPE, 3, 999, 1, d9),
-            // The earliest escape: escape needs a full settling window (payload §2, R-29), 0.4 time units, 40 steps
+            // The earliest escape: escape needs a full settling window (payload §2), 0.4 time units, 40 steps
             // at the harness's `dt_macro` 0.01.
             plain(STATE_ESCAPE, 1, 40, 0, d17),
             plain(STATE_BOUNDED, 0, 1000, 2, d1),
@@ -209,7 +209,7 @@ pub fn known(name: &str) -> Result<Vec<Known>, String> {
 type Bodies = [[f32; 2]; 3];
 
 /// The configuration every fixture's samples share: positions and momenta in the CoM frame, each summing to zero, and
-/// the shadow's positions, 10⁻⁶ ahead of the state in body 0's x. Fixture data, as [`known`]'s table is (REQ-SYS-082).
+/// the shadow's positions, 10⁻⁶ ahead of the state in body 0's x. Fixture data, as [`known`]'s table is.
 fn configuration() -> (Bodies, Bodies, Bodies) {
     (
         [[0.6, -0.2], [-0.45, 0.55], [-0.15, -0.35]],

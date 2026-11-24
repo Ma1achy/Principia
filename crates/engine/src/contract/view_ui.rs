@@ -1,7 +1,6 @@
 //! `ViewUI`, pure UI (gui_state_contract §2): the GUI's own scratch state, never read by the engine; it is the
-//! firewall line, and a polished GUI may define its own. Its edits are not undoable (R-69). Each field is one group
-//! §2 lists; a group's fields come with the requirements that need them, and until then it is named and empty
-//! (R-133).
+//! firewall line, and a polished GUI may define its own. Its edits are not undoable. Each field is one group §2
+//! lists; a group's fields come with the requirements that need them, and until then it is named and empty.
 
 /// Pure UI state (gui_state_contract §2) — never read by the engine.
 pub struct ViewUI {
@@ -19,21 +18,21 @@ pub struct ViewUI {
     pub inspector: Inspector,
     /// The open windows.
     pub windows: Windows,
-    /// Linked views for side by side (v2, R-106).
+    /// Linked views for side by side (v2).
     pub linked_views: LinkedViews,
-    /// The playback transport: play/pause/speed/loop; not undoable, not on the sim key (R-96).
+    /// The playback transport: play/pause/speed/loop; not undoable, not on the sim key.
     pub transport: Transport,
-    /// The mode the mode switch shows, Explore or Stain (render_gui_spec §G2; RQ-249).
+    /// The mode the mode switch shows, Explore or Stain (render_gui_spec §G2).
     pub mode: Mode,
-    /// How the figure fills the window with the egui layer hidden, Extend or Fit (R-468 E4): kept for the session, each
+    /// How the figure fills the window with the egui layer hidden, Extend or Fit: kept for the session, each
     /// launch starting at Extend; never undoable.
     pub f3_fill: F3Fill,
 }
 
-/// How the figure fills the window with the egui layer hidden, by F3 or in present mode (R-468; render_gui_spec §G1).
+/// How the figure fills the window with the egui layer hidden, by F3 or in present mode (render_gui_spec §G1).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum F3Fill {
-    /// More of the field at the same scale (R-406).
+    /// More of the field at the same scale.
     #[default]
     Extend,
     /// The view's square scaled to the window's shorter side, centred, the rest the canvas background.
@@ -48,7 +47,7 @@ pub struct DebugCategories {}
 
 /// Keyboard focus scope (gui_state_contract §2): the path of the focused scope through the GUI's tree of scopes
 /// (render_gui_spec §G3), each a scope id the GUI defines, from a big scope down; empty when no scope has focus. The
-/// keyboard's mode is held with it (R-409 A5): never undoable, and never read by the engine.
+/// keyboard's mode is held with it: never undoable, and never read by the engine.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Focus {
     /// The scope ids, outermost first.
@@ -57,7 +56,7 @@ pub struct Focus {
     pub mode: KeyMode,
 }
 
-/// The keyboard's two modes (render_gui_spec §G3, "Two modes: navigation and interaction"; R-409).
+/// The keyboard's two modes (render_gui_spec §G3, "Two modes: navigation and interaction").
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum KeyMode {
     /// The arrows move between siblings; the ring is orange. Every landing is in it.
@@ -108,11 +107,11 @@ pub enum Window {
     Inspector,
 }
 
-/// Linked views for side by side (gui_state_contract §2; v2, R-106).
+/// Linked views for side by side (gui_state_contract §2; v2).
 pub struct LinkedViews {}
 
-/// Playback transport: play/pause/speed/loop (gui_state_contract §2; R-96, R-101). The GUI's clock reads it and
-/// advances the playhead through a no-history `SetField` while playing (R-101; RQ-246).
+/// Playback transport: play/pause/speed/loop (gui_state_contract §2). The GUI's clock reads it and advances the
+/// playhead through a no-history `SetField` while playing.
 pub struct Transport {
     /// Play (`true`) or pause (`false`).
     pub playing: bool,
@@ -120,7 +119,7 @@ pub struct Transport {
     pub speed: f64,
 }
 
-/// The mode switch's mode (render_gui_spec §G2, "the mode switch **Explore / Stain**"; RQ-249).
+/// The mode switch's mode (render_gui_spec §G2, "the mode switch **Explore / Stain**").
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
     /// The everyday view (§G2).

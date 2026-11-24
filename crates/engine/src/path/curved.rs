@@ -1,4 +1,4 @@
-//! A curved view's own tilt, its pivot record and its slider spans (TASK-M2-63; chart_decoder_contract Part 4, "Tilt
+//! A curved view's own tilt, its pivot record and its slider spans (chart_decoder_contract Part 4, "Tilt
 //! (basis edit)" and "How the pin is held"; chart_reference §4.5, "The slider spans of the held coordinates"; render_gui_spec
 //! § G2, "The slider span").
 //!
@@ -10,7 +10,7 @@
 //!   position, its address in the window's `[0,1]²`, stored, not re-derived. Every later tilt and zoom turns about it: the
 //!   pixel at the stored address is placed at the stored point with the stored offsets ([`super::Pivoted`], the kernel's
 //!   tilt with the pivot's origin and offset).
-//! - **The slider spans** ([`SliderSpan`]): R-920's, fixed per chart from its home window, never read from the view, so
+//! - **The slider spans** ([`SliderSpan`]): fixed per chart from its home window, never read from the view, so
 //!   a pan, a zoom, a slice or a lock leaves them as they are.
 
 use kernel::chart::construction::{LzChart, RestChart, HELD_K, HELD_LZ, NU0};
@@ -26,14 +26,14 @@ use ledger::constants::{
 };
 use serde::{Deserialize, Serialize};
 
-/// A latent slider's span (render_gui_spec § G2; R-920): its rail `[−1, 1]`, the register's `latent_slider_span`.
+/// A latent slider's span (render_gui_spec § G2): its rail `[−1, 1]`, the register's `latent_slider_span`.
 pub const LATENT_SPAN: f64 = LATENT_SLIDER_SPAN.number();
 
-/// `Φ_θ,L_z`'s held-`K` warp, `K_max` (R-833, REQ-CHART-141): the chart's calibrated `K`, the register's
+/// `Φ_θ,L_z`'s held-`K` warp, `K_max`: the chart's calibrated `K`, the register's
 /// `burrau_theta_lz_k`, so the preset's `t₀ = (K₀/K_max)^(1/γ_K)` is 1 exactly.
 pub const HELD_K_K_MAX: f64 = BURRAU_THETA_LZ_K.number();
 
-/// `Φ_θ,L_z`'s held-`K` warp, `γ_K` (R-833, REQ-CHART-141): the register's `burrau_theta_lz_gamma_k`, set by measurement
+/// `Φ_θ,L_z`'s held-`K` warp, `γ_K`: the register's `burrau_theta_lz_gamma_k`, set by measurement
 /// (`curved_view`'s `held_k_calibration`, its criterion written first).
 pub const HELD_K_GAMMA_K: f64 = BURRAU_THETA_LZ_GAMMA_K.number();
 
@@ -55,7 +55,7 @@ pub struct CurvedTilt {
     pub x: u32,
     /// `τ₂`'s target.
     pub y: u32,
-    /// The targets' slider spans (R-507 U1, R-920).
+    /// The targets' slider spans.
     pub span: [f64; 2],
 }
 
@@ -103,12 +103,12 @@ impl CurvedTilt {
     }
 }
 
-/// R-899's pivot record: the pinned state and the pin's screen position, held in a tilted curved view.
+/// The pivot record: the pinned state and the pin's screen position, held in a tilted curved view.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Pivot {
     /// The pin's screen position, its address in the window's `[0,1]²`.
     pub address: [f64; 2],
-    /// Whether the address was assumed at the centre because none could be derived (R-899); a click's is not.
+    /// Whether the address was assumed at the centre because none could be derived; a click's is not.
     pub assumed: bool,
     /// The pinned state's chart point `(a, b)`.
     pub point: [f64; 2],
@@ -116,8 +116,8 @@ pub struct Pivot {
     pub d0: [f64; 2],
 }
 
-/// R-920's slider span of a chart's hidden coordinate: a length, fixed per chart from its home window, that R-507 U1
-/// divides a tilt's hidden offset by. Never read from a view.
+/// The slider span of a chart's hidden coordinate: a length, fixed per chart from its home window, that a tilt's hidden
+/// offset is divided by. Never read from a view.
 pub trait SliderSpan: Hidden {
     /// The span of the hidden coordinate `k`; `None` where `k` is not one of the chart's.
     fn slider_span(&self, k: u32) -> Option<f64>;
@@ -157,7 +157,7 @@ where
     MixedEnergy<A, Q, S, f64>: Hidden,
 {
     /// Its frozen latent controls'. Its held value is no hidden coordinate here: on a lone virial axis it has no
-    /// chart-constant `K_max`, and its span is TASK-M8-48's (RQ-701).
+    /// chart-constant `K_max`, and its own span is not defined yet.
     fn slider_span(&self, k: u32) -> Option<f64> {
         latent_span(self, k)
     }

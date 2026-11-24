@@ -1,4 +1,4 @@
-//! The contract conformance suite (R-390; RQ-254): defined once, beside the interface, and run against every engine
+//! The contract conformance suite: defined once, beside the interface, and run against every engine
 //! that implements it — the real engine in engine's tests, the mock in gui's. Every case runs on both and none is
 //! skipped for either; a case joins the suite only when both can run it. Its first cases are the state semantics both
 //! engines run without a frame loop. Each case runs on a fresh engine, and reads the state it starts from, so it
@@ -19,7 +19,7 @@ pub struct Case {
     pub check: fn(&mut dyn EngineInterface) -> Result<(), String>,
 }
 
-/// The suite's case list (RQ-254).
+/// The suite's case list.
 pub const CASES: &[Case] = &[
     Case {
         name: "set_field_shows_in_next_snapshot",
@@ -120,7 +120,7 @@ fn set_field_shows_in_next_snapshot(engine: &mut dyn EngineInterface) -> Result<
     )
 }
 
-/// Undo restores the edited field and redo reapplies it, each moving one entry between the two histories (R-52).
+/// Undo restores the edited field and redo reapplies it, each moving one entry between the two histories.
 fn undo_and_redo_restore_and_reapply(engine: &mut dyn EngineInterface) -> Result<(), String> {
     let first = engine.snapshot();
     let (t0, h0) = (t_of(&first), first.history);
@@ -152,7 +152,7 @@ fn undo_and_redo_restore_and_reapply(engine: &mut dyn EngineInterface) -> Result
 }
 
 /// An edit marked "no history" changes the field and leaves both histories as they were, the redo history still
-/// reapplying the edit it holds (R-101).
+/// reapplying the edit it holds.
 fn no_history_edit_leaves_history_unchanged(
     engine: &mut dyn EngineInterface,
 ) -> Result<(), String> {
@@ -178,8 +178,7 @@ fn no_history_edit_leaves_history_unchanged(
     )
 }
 
-/// Each applied `SetField` logs one `info` entry from `contract`, seen in the next snapshot and in no later one
-/// (RQ-245, RQ-254).
+/// Each applied `SetField` logs one `info` entry from `contract`, seen in the next snapshot and in no later one.
 fn each_applied_set_field_logs_one_contract_info(
     engine: &mut dyn EngineInterface,
 ) -> Result<(), String> {
@@ -210,9 +209,8 @@ fn shifted(v: Latent, d: f64) -> Latent {
     v.map(|x| x + d)
 }
 
-/// The navigation paths (R-390, "Contract fields"): an edit of `z₀`, of the basis and of the lock each shows in the
-/// next snapshot and touches nothing else of the plane or the lock, and undo restores them in turn (R-69: navigation
-/// and lock are undoable).
+/// The navigation paths: an edit of `z₀`, of the basis and of the lock each shows in the next snapshot and touches
+/// nothing else of the plane or the lock, and undo restores them in turn (navigation and lock are undoable).
 fn navigation_edits_show_and_undo(engine: &mut dyn EngineInterface) -> Result<(), String> {
     let first = engine.snapshot().sim;
     let (plane, lock) = (first.plane.clone(), first.lock.clone());
@@ -259,9 +257,8 @@ fn navigation_edits_show_and_undo(engine: &mut dyn EngineInterface) -> Result<()
     expect("z₀ after undo", engine.snapshot().sim.plane.z0, plane.z0)
 }
 
-/// The overlay set and the hover (R-390, "Contract fields"): an overlay toggle shows in the next snapshot, enters the
-/// history and is undone (R-69); a hover, marked "no history", shows and leaves the history as it was (R-101), and
-/// moving off the figure clears it.
+/// The overlay set and the hover: an overlay toggle shows in the next snapshot, enters the history and is undone; a
+/// hover, marked "no history", shows and leaves the history as it was, and moving off the figure clears it.
 fn overlay_and_hover_edits_show(engine: &mut dyn EngineInterface) -> Result<(), String> {
     let first = engine.snapshot();
     let (overlays, h0) = (first.render.overlays.clone(), first.history);
@@ -310,7 +307,7 @@ fn overlay_and_hover_edits_show(engine: &mut dyn EngineInterface) -> Result<(), 
     )
 }
 
-/// The horizon's path (R-390, "Contract fields"; gui_state_contract §2): an edit of `T` shows in the next snapshot,
+/// The horizon's path (gui_state_contract §2): an edit of `T` shows in the next snapshot,
 /// touches nothing else of the `SimConfig`, enters the history, logs "SetField Horizon.t before → after", and undo
 /// restores it.
 fn horizon_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(), String> {
@@ -364,7 +361,7 @@ fn horizon_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(),
     )
 }
 
-/// The stain graph's path (R-390, "Contract fields"; gui_state_contract §2, §5): an edit of the graph, a source added,
+/// The stain graph's path (gui_state_contract §2, §5): an edit of the graph, a source added,
 /// shows in the next snapshot, touches nothing else of the `RenderState`, enters the history, logs "SetField
 /// StainGraph before → after", and undo restores it.
 fn stain_graph_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(), String> {
@@ -432,9 +429,9 @@ pub(crate) fn turned(f: SliceFrame, by: u32) -> SliceFrame {
 
 /// Whether the log line `message` names the path `Slice.frame` and, after it, the frame `before`'s indices and then
 /// `after`'s, each in the frame's field order (normal, tilt_x, tilt_y), as integers among its other text.
-/// gui_state_contract §2 has each applied `SetField` logged "naming the field's path and its values before and after";
-/// it gives no wording for the slice frame, so the case checks the path and the values only, and an engine words the
-/// line as it likes (applied per R-369, qa review F1 of PR #320).
+/// gui_state_contract §2 has each applied `SetField` logged "naming the field's path and its values before and after"
+/// and gives no wording for the slice frame. The plan is unclear here; chose to check the path and the values only,
+/// because any wording an engine chooses names them, so an engine words the line as it likes.
 pub(crate) fn names_frames(message: &str, before: SliceFrame, after: SliceFrame) -> bool {
     let Some((_, rest)) = message.split_once("Slice.frame") else {
         return false;
@@ -448,7 +445,7 @@ pub(crate) fn names_frames(message: &str, before: SliceFrame, after: SliceFrame)
         .all(|want| numbers.any(|n| n == want))
 }
 
-/// The slice frame's path (R-457 E3; gui_state_contract §2): an edit of the frame alone shows in the next snapshot,
+/// The slice frame's path (gui_state_contract §2): an edit of the frame alone shows in the next snapshot,
 /// touches nothing else of the `SimConfig`, enters the history and logs a line naming `Slice.frame` with the frame
 /// before and after ([`names_frames`]); an edit of the frame with the basis writes both as one history entry; and one
 /// undo each restores them, the frame and the basis together.
@@ -534,7 +531,7 @@ fn slice_frame_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result
     )
 }
 
-/// A history key (gui_state_contract §2, "A drag coalesces into one history entry"; R-96, R-458 F1, R-466): the edits
+/// A history key (gui_state_contract §2, "A drag coalesces into one history entry"): the edits
 /// of a drag, each sent under its key, are one history entry, its before the value at the drag's start and its after
 /// the last value sent, a no-history edit between them leaving it open; a command of several edits under one key is one
 /// entry too, one undo restoring each field it set; an edit under another key closes the entry; undo and redo step
@@ -638,7 +635,7 @@ fn contract_lines(snapshot: &Snapshot) -> Vec<String> {
         .collect()
 }
 
-/// A drag's log (gui_state_contract §2: "the console logs it once, when the drag ends"; R-458 F1): the edits under a
+/// A drag's log (gui_state_contract §2: "the console logs it once, when the drag ends"): the edits under a
 /// key log nothing while it is open, a no-history edit between them logging its own line at once; its end logs one
 /// "SetField <path> <before> → <after>" line, the value at the drag's start and the last sent, and a second end
 /// nothing; an edit under no key closes an open entry, its line logged before the edit's own.
