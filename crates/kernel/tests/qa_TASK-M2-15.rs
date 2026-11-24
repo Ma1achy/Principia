@@ -1250,8 +1250,7 @@ const TRANSLATED_SNIPPETS: [&str; 2] = [
 ];
 
 /// The WGSL builtins among `DECODE_TOKENS` that naga's translation emits for the shared source's own calls (the encode's
-/// inverse `tanh`): allowed in a [`TRANSLATED_SNIPPETS`] file only, where the translation
-/// emits it.
+/// inverse `tanh`): allowed in a [`TRANSLATED_SNIPPETS`] file only, where the translation emits it.
 const TRANSLATION_BUILTINS: [&str; 1] = ["atanh"];
 
 /// The header `cargo xtask build-kernel` writes on every translated snippet.
