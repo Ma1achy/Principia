@@ -4218,6 +4218,7 @@ fn main_slide() -> engine::path::anchor::probe::Switches {
     engine::path::anchor::probe::Switches {
         cancelling: true,
         three_point: true,
+        polish_unscaled: true,
         failed_is_end: true,
         placed_at_hold: true,
         ..Default::default()
@@ -4258,7 +4259,7 @@ fn path_lock_slide_stall() {
     use engine::path::anchor::probe::Switches;
     let main = main_slide();
     check_reproduces([0.0, 0.0], main);
-    let runs: [(&str, Switches); 6] = [
+    let runs: [(&str, Switches); 8] = [
         ("D0 main", main),
         (
             "D1 the offset formed directly",
@@ -4293,6 +4294,22 @@ fn path_lock_slide_stall() {
             Switches {
                 cancelling: false,
                 three_point: false,
+                ..main
+            },
+        ),
+        (
+            "D6 the polish judged on ‖P r‖ alone",
+            Switches {
+                polish_unscaled: false,
+                ..main
+            },
+        ),
+        (
+            "D7 all three (the fix)",
+            Switches {
+                cancelling: false,
+                three_point: false,
+                polish_unscaled: false,
                 ..main
             },
         ),
@@ -4504,8 +4521,8 @@ negative_control!(
 //
 // Criterion F3. `anchor::slide` reads a follow whose frame's own solve fails (`Stalled`, `IterationCap`,
 // `IllConditioned`, `NonFinite`) as the solver's failure, `PathError::FollowFailed`, never as the followed minimiser's
-// end (`LockedEnd::Ended`, the continuity test's). Mixed to Burrau at (0, 0), 64 frames, its residual and slopes formed
-// as main formed them (`probe::Switches::cancelling` and `three_point`), under which its follow stalls at the 2nd frame
+// end (`LockedEnd::Ended`, the continuity test's). Mixed to Burrau at (0, 0), 64 frames, its slide solved as main solved
+// it (`main_slide`: its residual, its slopes and the polish's acceptance), under which its follow stalls at the 2nd frame
 // (PR #72's C6). Pass: the
 // locked morph is refused with `FollowFailed`. Control: a failed follow read as an end, main's, gives `Ended`.
 
@@ -4519,10 +4536,9 @@ fn check_failed_follow(failed_is_end: bool) {
     let a = try_locked_mixed(home(), (0.0, 0.0)).expect("a lock");
     let b = kernel_view(&nu_k(), Window::SQUARE);
     let switches = Switches {
-        cancelling: true,
-        three_point: true,
         failed_is_end,
-        ..Switches::default()
+        placed_at_hold: false,
+        ..main_slide()
     };
     let (out, _) = probe::with(switches, || {
         Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, 64)
@@ -5008,6 +5024,11 @@ negative_control!(
 //   judged on the scale-invariant `‖P r‖² = gᵀ(JᵀJ)⁻¹g`; with columns 2000× apart, `‖Jᵀr‖²` is the steep column's and
 //   its rounding hides the weak one. With the polish accepting where `‖P r‖²` falls instead (one variable), if this is
 //   the cause the floor falls at least 10× at every point.
+// - **Then D6 and D7** (`path_lock_slide_stall`, one more variable each, predictions written after M1–M3 were read and
+//   before D6 and D7 ran): D6, the polish
+//   judged on `‖P r‖` alone (main's residual and slopes): if M2 holds, the `Stalled` stops fall well below D0's, the
+//   ones left at the first frames, where main's residual still cancels; D7, all three: no `Stalled`, and no `Ended`
+//   before the 7th frame.
 // - **M3, the scatter:** solves of the frame from seeds `10⁻⁶·h` apart (and from the restart rule's point) converge to
 //   points spread by more than the continuity test's floor, `10⁻⁷·h`, where the follow ended: the test reads scatter as
 //   travel.
@@ -5047,9 +5068,12 @@ fn measure_margins(cases: &[([f64; 2], usize)], logged: bool) {
     for &(at, frames) in cases {
         let a = try_locked_mixed(home(), (at[0], at[1])).expect("a lock");
         let anchor_ = a.anchor.expect("an anchor");
-        let (out, log) = probe::with(Switches::default(), || {
-            anchor::slide(&b, &burrau, pin(&a), &anchor_, frames)
-        });
+        // Where D5's slide (the residual and slopes fixed, the polish as main's) failed, the frames M1–M3 were taken at.
+        let d5 = Switches {
+            polish_unscaled: true,
+            ..Switches::default()
+        };
+        let (out, log) = probe::with(d5, || anchor::slide(&b, &burrau, pin(&a), &anchor_, frames));
         let log = match logged {
             true => log,
             false => Vec::new(),
@@ -5084,15 +5108,15 @@ fn measure_margins(cases: &[([f64; 2], usize)], logged: bool) {
             optimality: Some(0.0),
             ..Switches::default()
         };
-        let m1 = frame(floor, x, s);
-        let m2 = frame(
+        let m1 = frame(
             Switches {
-                polish_projected: true,
+                polish_unscaled: true,
                 ..floor
             },
             x,
             s,
         );
+        let m2 = frame(floor, x, s);
         let spread = |at_s: f64| {
             let seeds = [
                 x,

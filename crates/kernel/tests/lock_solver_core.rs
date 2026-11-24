@@ -70,7 +70,7 @@ fn spec64() -> Spec<f64> {
         #[cfg(feature = "controls")]
         unguarded: false,
         #[cfg(feature = "controls")]
-        polish_projected: false,
+        polish_unscaled: false,
     }
 }
 
@@ -90,7 +90,7 @@ fn spec32() -> Spec<f32> {
         #[cfg(feature = "controls")]
         unguarded: false,
         #[cfg(feature = "controls")]
-        polish_projected: false,
+        polish_unscaled: false,
     }
 }
 
@@ -112,7 +112,7 @@ fn spec<R: P>() -> Spec<R> {
             #[cfg(feature = "controls")]
             unguarded: false,
             #[cfg(feature = "controls")]
-            polish_projected: false,
+            polish_unscaled: false,
         }
     } else {
         let s = spec32();
@@ -130,7 +130,7 @@ fn spec<R: P>() -> Spec<R> {
             #[cfg(feature = "controls")]
             unguarded: false,
             #[cfg(feature = "controls")]
-            polish_projected: false,
+            polish_unscaled: false,
         }
     }
 }

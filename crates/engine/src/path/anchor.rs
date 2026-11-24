@@ -102,9 +102,9 @@ pub mod probe {
         /// The slide's slopes by the three-point central difference, as main took them, in place of the five-point one
         /// (both at `ε^{1/3}` of the window's half-width).
         pub three_point: bool,
-        /// The solver's polishing step accepted where `‖P r‖²` falls, in place of `‖Jᵀr‖²`: a diagnostic's one variable
-        /// changed (`lock_solve::Spec::polish_projected`).
-        pub polish_projected: bool,
+        /// The solver's polishing step accepted where `‖Jᵀr‖²` falls, as main's did, in place of `‖P r‖²`
+        /// (`lock_solve::Spec::polish_unscaled`).
+        pub polish_unscaled: bool,
         /// `recentre`'s hold decided on the nearest point's own decode (`placed_at`'s window), as main decided it, in
         /// place of the decode of the view it returns (`place`'s).
         pub placed_at_hold: bool,
@@ -491,7 +491,7 @@ fn spec_at(target: f64) -> Spec<f64> {
     );
     #[cfg(feature = "controls")]
     {
-        spec.polish_projected = probe::switches().polish_projected;
+        spec.polish_unscaled = probe::switches().polish_unscaled;
     }
     spec
 }
