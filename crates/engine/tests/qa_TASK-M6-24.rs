@@ -1,21 +1,21 @@
-//! QA tests for TASK-M6-24 on the engine side, written from the requirements, not from the implementation:
+//! QA tests for the contract conformance suite on the engine side, written from the requirements, not from the implementation:
 //!
-//! - REQ-GUI-166: "One contract conformance suite, defined once beside the contract in the engine crate, must run every
+//! - The suite: "One contract conformance suite, defined once beside the contract in the engine crate, must run every
 //!   one of its cases against both the mock engine and the real engine's implementation of the contract, none skipped
 //!   for either, and both must pass it"; verify: "a deliberately non-conforming double fails it, naming the case".
-//!   The task's four cases (RQ-254): a `SetField` shows in the next snapshot; undo and redo restore and reapply it; a
+//!   Its four cases: a `SetField` shows in the next snapshot; undo and redo restore and reapply it; a
 //!   no-history edit leaves the history unchanged; each applied `SetField` logs one `info` entry from `contract`, seen
 //!   in the next snapshot.
-//! - REQ-GUI-177: the log entry `{ severity: error | warn | info, at, source: stain | integrator | quadtree | contract |
+//! - The log entry `{ severity: error | warn | info, at, source: stain | integrator | quadtree | contract |
 //!   app, message }`, carried in the snapshot as the entries accumulated since the previous snapshot; "each applied
 //!   SetField logged by both engines as an info entry from contract". gui_state_contract §2 gives the message's form,
 //!   "SetField Playhead.t 0 → 1.5", with "(no history)" added for an edit so marked, and `at` as milliseconds since
 //!   the Unix epoch.
-//! - REQ-GUI-176 / RQ-243: the real engine's frame summary is absent until TASK-M8-05 wires its frame loop.
-//! - R-52, R-69, R-101: one undo history; an edit marked "no history" never enters it.
+//! - The real engine's frame summary is absent: the real engine has no frame loop to fill it yet.
+//! - One undo history; an edit marked "no history" never enters it.
 //!
 //! The suite's strength is tested by breaking one rule at a time in a double around the real engine's store: each
-//! broken rule must fail the suite, and the failure must name exactly the cases that fail. Each test's control (R-176)
+//! broken rule must fail the suite, and the failure must name exactly the cases that fail. Each test's control
 //! feeds the same check an input differing in the one respect the requirement turns on.
 // The file name `qa_TASK-M6-24` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
@@ -50,7 +50,7 @@ fn sim() -> SimConfig {
             q2: [0.0; 8],
         },
         slice: Slice {
-            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            // The slice frame, at its defaults: the normal and both targets z_q3.
             frame: engine::contract::sim_config::SliceFrame::along(
                 engine::contract::sim_config::Z_Q3,
             ),
@@ -171,13 +171,11 @@ enum Rule {
     LogsTwice,
 }
 
-/// A double of the interface, written here from the rules (R-52, R-69, R-101; RQ-245), breaking `rule`.
-/// It holds the playhead and, since R-390's navigation paths, the plane and the lock, and, since its overlay set and
-/// hover, those two, and, since its Run window's horizon (TASK-M6-28), the horizon, and, since its Stain editor
-/// (TASK-M6-29), the stain graph, and, since `SimConfig`'s chart group holds a nonlinear chart's window (TASK-M2-21), the
-/// window, and, since the Tilt section's targets (TASK-M6-38, R-457 E3), the slice frame; each history entry is the edit
-/// restoring the value before and the edit itself, and, since a drag coalesces into one entry (gui_state_contract §2,
-/// R-96, R-458 F1, TASK-M6-39), the edits sent under one history key one after another, its before each field's value
+/// A double of the interface, written here from the rules, breaking `rule`.
+/// It holds the playhead, the plane and the lock, the overlay set and hover, the Run window's horizon, the stain graph,
+/// the window `SimConfig`'s chart group holds for a nonlinear chart, and the Tilt section's slice frame; each history
+/// entry is the edit restoring the value before and the edit itself, and, as a drag coalesces into one entry
+/// (gui_state_contract §2), the edits sent under one history key one after another, its before each field's value
 /// at the first and its after the last, logged once, one line per field, when the entry closes (the key's end, an edit
 /// under another key or none, an undo or a redo).
 struct Broken {
@@ -260,7 +258,7 @@ impl Broken {
             Edit::Render(RenderField::DebugView(on)) => Edit::Render(RenderField::DebugView(
                 std::mem::replace(&mut self.debug_view, *on),
             )),
-            // gui_state_contract §2: the slice frame, with the basis where the same pick changes it, one edit (R-457 E3).
+            // gui_state_contract §2: the slice frame, with the basis where the same pick changes it, one edit.
             Edit::Sim(SimField::SliceFrame { frame, basis }) => Edit::Sim(SimField::SliceFrame {
                 frame: std::mem::replace(&mut self.frame, *frame),
                 basis: basis.map(|(q1, q2)| {

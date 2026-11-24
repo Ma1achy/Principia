@@ -1,12 +1,13 @@
-//! QA tests for TASK-M2-43 on the authoring side, written from REQ-CHART-014's verify as R-544 amends it and from
-//! chart_decoder_contract Part 5's `system_image`, not from the implementation.
+//! QA tests for the shape sphere's `system_image` on the authoring side, written from chart_decoder_contract Part 5's
+//! `system_image`, not from the implementation.
 //!
-//! - `qa_m243_chart_descriptors_spherical_bijective` (REQ-CHART-014, R-544): the shape sphere chart under the spherical
-//!   map is the whole sphere, each pixel its own system, so its `system_image` is `Bijective`, whatever its held masses,
-//!   momenta, `I` and `φ_f`; the descriptor validates. Its control reads the map as R-141's `NToOne(2)`, which must
-//!   fail. The exponential map's value is TASK-M2-28's (REQ-CHART-075) and is not asserted here.
+//! - `qa_m243_chart_descriptors_spherical_bijective`: the shape sphere chart under the spherical map is the
+//!   whole sphere, each pixel its own system, so its `system_image` is `Bijective`, whatever its held masses, momenta,
+//!   `I` and `φ_f`; the descriptor validates. Its control reads the map as 2-to-1 over its φ hemispheres, `NToOne(2)`,
+//!   which must fail. The exponential map's value, taken from its cap, is tested elsewhere
+//!   and is not asserted here.
 //!
-//! Each test has its negative control (R-176).
+//! Each test has its negative control.
 
 use engine::chart_authoring::{validate, Authored};
 use kernel::chart::{ShapeMap, ShapeSphere, SystemImage};

@@ -1,7 +1,7 @@
 //! The kernel's own f32 `atan2` on the GPU (`kernel::arctan`, `kernel::stage::encode::arctangent`,
 //! `engine::decode_dispatch::arctan2_gpu`): the kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively
-//! under the default fast-math setting, Metal's fast-math on, as the backend compiles it. CI runs this file in the `gpu-kernel` job, after `cargo xtask build-kernel`, on
-//! lavapipe and Metal.
+//! under the default fast-math setting, Metal's fast-math on, as the backend compiles it. CI runs this file in the
+//! `gpu-kernel` job, after `cargo xtask build-kernel`, on lavapipe and Metal.
 //!
 //! The function is integer arithmetic alone (`kernel::arctan`'s note), so the GPU's result is the CPU's, bit for bit, and
 //! the CPU's sweeps (`crates/kernel/tests/arctan.rs`) hold for it. Each test checks that identity, and prints the GPU's

@@ -1,7 +1,7 @@
-//! QA tests for TASK-M2-41, the chart side of REQ-DEC-048, written from the requirement, not from the implementation:
-//! "Everything that reads `mu_max` or `q_max` by name must read the active value: the link trees, the codomain's
-//! bounds (host-side checks …) …; the register constants must keep their values as the defaults" (R-481 G4;
-//! chart_decoder_contract § "Three hard requirements on any registered link", the output in its codomain;
+//! QA tests for the chart side of the adjustable link parameters, written from the requirement, not from the
+//! implementation: "Everything that reads `mu_max` or `q_max` by name must read the active value: the link trees, the
+//! codomain's bounds (host-side checks …) …; the register constants must keep their values as the defaults"
+//! (chart_decoder_contract § "Three hard requirements on any registered link", the output in its codomain;
 //! inverse_encode_contract § "Chart-aware validation", layer 2).
 //!
 //! - `qa_m241_charts_bounded`: every chart that decodes through the links (latent, shape sphere, both invariant charts,
@@ -16,7 +16,7 @@
 //!
 //! **Domain** (pitfalls §10): stateless decodes and checks at fixed chart points; no trajectory.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use engine::chart_class::{forbidden, forbidden_params};
 use kernel::chart::invariant::Invariant;

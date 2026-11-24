@@ -1,7 +1,6 @@
-//! The synthetic payload harness's CPU side (TASK-M1-06; debug tooling plan step 0b): the bytes it uploads are the
+//! The synthetic payload harness's CPU side (debug tooling plan step 0b): the bytes it uploads are the
 //! generated structs' layouts, member for member at the ledger's offsets, and its setters write through the generated
-//! pack routines, so the generated accessors read back what was set (REQ-TOOL-014). Each test registers its negative
-//! control (R-176).
+//! pack routines, so the generated accessors read back what was set. Each test registers its negative control.
 
 use engine::synthetic::{ic_words, simstate_base_words, simstate_words, Synthetic, QUAD_WORDS};
 use kernel::payload::{
@@ -50,18 +49,18 @@ fn marked_simstate() -> SimStateFTLE {
         packed_b: 0xb2b2_b2b2,
         times: 0xc3c3_c3c3,
         total_substeps: 0xd4d4_d4d4,
-        // the budget word and the regularised drift (payload §1; TASK-M3-41): a marker each
+        // the budget word and the regularised drift (payload §1): a marker each
         budget_bits: 0xf6f6_f6f6,
         dE_reg: 0xa7a7_a7a7,
         closure_min: 35.0,
         closure_step: 0x1234,
         _reserved: 0x5678,
         coll_floor_bits: 0xe5e5_e5e5,
-        // the escape rule's lagged n̂ register, three Reals where the 4 B `_pad` stood (TASK-M3-12): a marker each
+        // the escape rule's lagged n̂ register, three Reals where the 4 B `_pad` stood: a marker each
         _nhat_lag_0: 36.0,
         _nhat_lag_1: 37.0,
         _nhat_lag_2: 38.0,
-        // the re-boot's two registers (payload §1, "Payload purity"; TASK-M3-21): a marker each
+        // the re-boot's two registers (payload §1, "Payload purity"): a marker each
         _dmin_d2: 0xc8c8_c8c8,
         _march_bits: 0xd9d9_d9d9,
         ..SimStateFTLE::default()
@@ -153,7 +152,7 @@ negative_control!(
     }
 );
 
-/// The no-FTLE tier's stored variant (lowering Part 3a; TASK-M1-19): `SimStateBase`, the sample less its shadow.
+/// The no-FTLE tier's stored variant (lowering Part 3a): `SimStateBase`, the sample less its shadow.
 #[test]
 fn synthetic_base_bytes_match_the_generated_base_layout() {
     check_layout(
@@ -413,8 +412,7 @@ negative_control!(
 );
 
 /// The counts made into `counted`'s counter pair, one NaN stored unset and two negatives floored, read back from
-/// `read`'s: the set holds one pair, across reads, as the frame's owner reads its pair back after the packs (R-288,
-/// R-294).
+/// `read`'s: the set holds one pair, across reads, as the frame's owner reads its pair back after the packs.
 fn check_one_pair(counted: &Synthetic, read: &Synthetic) {
     counted.counters().increment_nan_unset();
     counted.counters().increment_negative_floored();

@@ -1,12 +1,11 @@
-//! qa's tests for TASK-M2-37's engine side, written from REQ-CHART-068 and REQ-CHART-070, each with its negative control
-//! (R-176):
+//! qa's tests for the energy-type axes' engine side, written from their requirements, each with its negative control:
 //!
-//! - `qa_energy_axis_linear_option_sim_key` (REQ-CHART-068: "a chart parameter (warped | linear) in SimConfig, a sim
-//!   key"; R-471: "recorded in the view state and the sidecar"): each axis's mapping defaults to `warped`; switching
-//!   either axis to `linear` changes the `SimConfig` and its canonical text, the sim key's serialisation, which names
-//!   the mapping; the ViewState record (`view_state::export`) carries it and restores the same key. Control: a
-//!   "switch" that keeps the mapping keeps the key.
-//! - `qa_pe_axis_refused_by_validator` (REQ-CHART-070: "a chart offering PE … is refused by the well-posedness
+//! - `qa_energy_axis_linear_option_sim_key` (the requirement: "a chart parameter (warped | linear) in SimConfig, a sim
+//!   key", "recorded in the view state and the sidecar"): each axis's mapping defaults to `warped`; switching either
+//!   axis to `linear` changes the `SimConfig` and its canonical text, the sim key's serialisation, which names the
+//!   mapping; the ViewState record (`view_state::export`) carries it and restores the same key. Control: a "switch"
+//!   that keeps the mapping keeps the key.
+//! - `qa_pe_axis_refused_by_validator` (the requirement: "a chart offering PE … is refused by the well-posedness
 //!   validator"; chart_reference §2.1, "The `PE` axis: no chart offers it"): a chart declaring a `PE` axis is refused
 //!   for its warp, wherever its other declarations stand. Control: the same chart with a `K` axis in its place is not
 //!   refused for its warp.
@@ -143,7 +142,7 @@ negative_control!(
     check_keys(|[h, _]| [h, Mapping::Warped])
 );
 
-// ── REQ-CHART-070 ──────────────────────────────────────────────────────────────────────────────────────────────────
+// ── The PE axis refused ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A chart whose descriptor is the test's; the validator reads only the descriptor.
 #[derive(Clone, Debug)]

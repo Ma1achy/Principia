@@ -1,7 +1,7 @@
-//! The first slice (TASK-M2-86; REQ-DEC-057; R-926 items 5 and 6, R-935's RQ-766 (a)): the latent chart, the shape
+//! The first slice: the latent chart, the shape
 //! sphere's exponential map and the `(L_z, E)` chart through the CPU's f64 evaluation, the per-quad forward table, the
 //! narrowed records and the CPU reference integrator, against today's CPU f32 decode (`sample_with::<…, f32>`), on
-//! REQ-DEC-057's grids (`engine::first_slice::GRIDS`). The GPU decode stage's arm is `first_slice_gpu`.
+//! the first slice's grids (`validation::first_slice::GRIDS`). The GPU decode stage's arm is `first_slice_gpu`.
 //!
 //! **The predicates, PASS required:**
 //! - `first_slice_records_are_write_ic` (1): the host-written records of each quad equal `write_ic` of the same
@@ -15,7 +15,7 @@
 //! the report): per grid, the narrowed f64 records against today's f32 decode per component in f32 ulps at
 //! `max(1, |x|)`; the branch selects that differ between the two; on the `(L_z, E)` chart, the same split by whether the
 //! sample's neighbourhood crosses one of the chart's kinks; the share of neighbouring sample pairs whose narrowed records
-//! are bitwise identical; and the integrated arm with its control arm, the chaos baseline (R-84). What each asserts is
+//! are bitwise identical; and the integrated arm with its control arm, the chaos baseline. What each asserts is
 //! that the measurement is like for like: the selects are read on the very decode the record came from, at each
 //! precision. Every differing record is listed with its size in a file under the test's target directory.
 //!
@@ -81,13 +81,13 @@ use measure::{compare, identical_pairs, in_domain, Diff, COMPONENTS};
 use validation::first_slice::{Grid, Preset, GRIDS, SIDE};
 use validation::negative_control;
 
-/// Predicate (4)'s horizon (applied per R-369; the module's note).
+/// Predicate (4)'s horizon (the module's note).
 const T: f64 = 4.0;
 
 /// Predicate (4)'s sub-lattice: every `STRIDE`th sample across and up.
 const STRIDE: usize = 16;
 
-/// The integrated arms' horizon: the cap dispatch admits, `T_HORIZON_MAX` (R-610), the longest a march may run to end
+/// The integrated arms' horizon: the cap dispatch admits, `T_HORIZON_MAX`, the longest a march may run to end
 /// in another class (the module's note).
 fn t_arms() -> f64 {
     ledger::constants::T_HORIZON_MAX.number()
@@ -100,16 +100,16 @@ const ARM_STRIDE: usize = 16;
 /// runs the comparison, the selects and the pairs, and proves the arm can fire (`first_slice_arm_can_fire`).
 const ARMS: bool = !cfg!(debug_assertions);
 
-/// The seed in force, named in the report (the task's deliverable).
+/// The seed in force, named in the report.
 const SEED: &str = "seed in force: R-934's expansion w = r/√I on every pixel, no seed branch; R-82's rule, the \
                     largest-norm seed decided on z_α's sign, is the named legacy option, not run here";
 
-/// The quad of `grid` on the chart `C`, REQ-DEC-057's 256 × 256.
+/// The quad of `grid` on the chart `C`, 256 × 256.
 fn quad<C: Preset>(grid: Grid) -> Quad<C> {
     C::quad(grid, [SIDE, SIDE])
 }
 
-/// `f(grid)` on each of REQ-DEC-057's grids, side by side, in [`GRIDS`]' order.
+/// `f(grid)` on each of the first slice's grids, side by side, in [`GRIDS`]' order.
 fn each_grid<T: Send>(f: impl Fn(Grid) -> T + Sync) -> Vec<T> {
     let f = &f;
     std::thread::scope(|s| {
@@ -159,7 +159,7 @@ fn check_addressing(at: fn(&Quad<InvariantLE<f32>>, i64, i64) -> [f64; 2]) {
     let u = uniforms(T).expect("T is a valid horizon");
     assert_eq!(u.loop_values.horizon_steps, 4000, "T = 4's steps");
     assert_eq!(u.loop_values.dt_macro, 1e-3, "T = 4's dt_macro");
-    // Past 65.535 the horizon's own dt_macro rises above the floor (R-132), so it is the horizon's, not a default's.
+    // Past 65.535 the horizon's own dt_macro rises above the floor, so it is the horizon's, not a default's.
     let long = uniforms(100.0).expect("T = 100 is a valid horizon");
     assert_eq!(
         (long.loop_values.dt_macro, long.loop_values.horizon_steps),
@@ -484,10 +484,10 @@ impl Q for f32 {}
 impl Q for f64 {}
 
 /// The branch selects compared, in the order [`Selects`] holds them: the `DEGENERATE` tag; the descriptor's poles
-/// (R-436); `rho_angle`'s three (R-437), the last its upper/lower select; the shape sphere inverse's hemisphere (its
-/// upper/lower select) and its `p = q = 0` pole (R-437); the `(L_z, E)` chart's feasibility and its seed, the seed the
-/// decode in force takes: R-934's `w = r/√I`, word 5, where `I > 0`, else none, word 4 (its only select; R-82's rule,
-/// decided on `z_α`'s sign, is the named legacy option and is not read). Today's decode has no sheet select (R-937's
+/// and `rho_angle`'s three, the last its upper/lower select; the shape sphere inverse's hemisphere (its upper/lower
+/// select) and its `p = q = 0` pole; the `(L_z, E)` chart's feasibility and its seed, the seed the decode in force
+/// takes: the expansion `w = r/√I`, word 5, where `I > 0`, else none, word 4 (its only select; the largest-norm rule,
+/// decided on `z_α`'s sign, is the named legacy option and is not read). Today's decode has no sheet select (the
 /// second sheet is not built).
 const SELECTS: [&str; 11] = [
     "tag",
@@ -544,7 +544,7 @@ impl Reads for InvariantLE<f32> {
 
     /// The feasibility edge `s ∈ {0, 1}`, the floor `t = 0` and the line `z_α = 0` (the frozen control, the same at
     /// every sample): crossed where the neighbourhood's range of `u`, of `v` or `z_α` holds it. `z_α = 0` is not a seam
-    /// of the seed in force: it is R-82's legacy seed's seam and the `α` link's widest step (RQ-820 (closed by R-1022)).
+    /// of the seed in force: it is the legacy largest-norm seed's seam and the `α` link's widest step.
     fn kinked(q: &Quad<Self>, x: usize, y: usize) -> bool {
         let (x, y) = (x as i64, y as i64);
         let pts = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)].map(|(dx, dy)| q.at(x + dx, y + dy));
@@ -890,7 +890,7 @@ fn share((a, b): (usize, usize)) -> String {
     format!("{a} of {b} ({:.4})", a as f64 / b.max(1) as f64)
 }
 
-/// The integrated arm's reading on one grid: read against the control's flips, never alone (R-84); where the control
+/// The integrated arm's reading on one grid: read against the control's flips, never alone; where the control
 /// registers no flip the arm is uninformative at this horizon, not "0 flips".
 fn arm_reading([(n0, c0, s0), (n1, c1, s1)]: [(usize, usize, usize); 2]) -> String {
     if n1 == 0 || c1 + s1 == 0 {

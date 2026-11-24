@@ -1,13 +1,12 @@
-//! QA tests for TASK-M0-19's session-header probe (`engine::telemetry::session`), written from REQ-TOOL-001 ("Each
+//! QA tests for the session-header probe (`engine::telemetry::session`), written from the session header's rule ("Each
 //! session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend
 //! and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display
 //! (resolution, refresh, DPI scale)"; verify: every field present, unified memory recorded separately from VRAM), from
-//! REQ-TOOL-121's definition as dd_telemetry_and_tiers §2 now states it (the f64 rate recorded as unavailable, `null`;
-//! a headless session's display `null`; unified memory sized as the machine's RAM; the GPU's core count `null`), and
-//! from R-308 (a session that opens no GPU writes `backend.api` "none", and `backend.driver`, `device.gpu`,
+//! dd_telemetry_and_tiers §2's definition (the f64 rate recorded as unavailable, `null`; a headless session's display
+//! `null`; unified memory sized as the machine's RAM; the GPU's core count `null`), and
+//! from the no-GPU case (a session that opens no GPU writes `backend.api` "none", and `backend.driver`, `device.gpu`,
 //! `device.gpu_cores`, `device.memory` and `precision` null, the CPU written as always). The header is checked as the
-//! v1 file carries it: written by `profile::write`, read back by `profile::read`. Each test has its negative control
-//! (R-176).
+//! v1 file carries it: written by `profile::write`, read back by `profile::read`. Each test has its negative control.
 // The file name `qa_TASK-M0-19` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -128,7 +127,7 @@ const SESSION_FIELDS: [&str; 15] = [
     "display",
 ];
 
-// ---- REQ-TOOL-001: every field, each from its source ----------------------------------------------------------------
+// ---- Every field, each from its source ----------------------------------------------------------------
 
 fn check_every_field(write: Writer) {
     for a in [unified(), discrete()] {
@@ -246,7 +245,7 @@ negative_control!(
     })
 );
 
-// ---- REQ-TOOL-001: unified memory in its own field, never as VRAM ----------------------------------------------------
+// ---- Unified memory in its own field, never as VRAM ----------------------------------------------------
 
 fn check_unified(write: Writer) {
     let h = on_file(write, Some(&unified()));
@@ -354,7 +353,7 @@ negative_control!(
     })
 );
 
-// ---- REQ-TOOL-121: the f64 rate unavailable, a headless display null, the GPU's cores null ---------------------------
+// ---- The f64 rate unavailable, a headless display null, the GPU's cores null ---------------------------
 
 fn check_definition(write: Writer) {
     for a in [unified(), discrete()] {
@@ -408,7 +407,7 @@ negative_control!(
     })
 );
 
-// ---- R-308: no GPU opened, the GPU's fields null, the CPU and build written --------------------------------------------
+// ---- No GPU opened, the GPU's fields null, the CPU and build written --------------------------------------------
 
 fn check_no_gpu(write: Writer) {
     let h = on_file(write, None);

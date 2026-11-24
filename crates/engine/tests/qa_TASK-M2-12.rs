@@ -1,8 +1,7 @@
-//! QA tests for TASK-M2-12, written from REQ-CHART-031 (chart_reference §0.6, §5.1, §5.2; dd_decoder §3.7;
-//! chart_decoder_contract Part 5; inverse_encode_contract § "Chart-aware validation"; R-25, applied by R-124), not from
-//! the implementation.
+//! QA tests for the chart-aware validation pass, written from chart_reference §0.6, §5.1, §5.2, dd_decoder §3.7,
+//! chart_decoder_contract Part 5 and inverse_encode_contract § "Chart-aware validation", not from the implementation.
 //! - `qa_m212_refuses_every_override`: the CPU validation pass refuses a view combining `(L_z, E)` or `(L_z, K)` with
-//!   an energy-normalisation override, for every `Some(E*)`: `Some(0)` (R-25: the override is the `Option` being
+//!   an energy-normalisation override, for every `Some(E*)`: `Some(0)` (the override is the `Option` being
 //!   `Some`; "off" is `None`), `Some(−0)`, the frozen configuration's own `U` and `U + K` (the energies the chart
 //!   itself spans, which a reader might take for harmless), and random finite targets, at several frozen
 //!   configurations and warp parameters. The refusal is the flag's, naming the chart. `None` passes.
@@ -10,8 +9,8 @@
 //!   `η_E`, passes `Some(0)` and the same finite targets. Without this, a pass refusing every `Some` would satisfy the
 //!   first test.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176, R-212): a pass reading the old
-//! docs' "non-zero `E*`" (letting `Some(0)` through), and a pass refusing every target on every chart.
+//! Each test has a registered negative control naming the panic it expects: a pass refusing only a
+//! non-zero `E*` (letting `Some(0)` through), and a pass refusing every target on every chart.
 
 use engine::chart_validate::{validate_view, Refusal};
 use kernel::chart::invariant::Invariant;

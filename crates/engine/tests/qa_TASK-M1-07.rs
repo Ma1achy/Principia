@@ -1,5 +1,5 @@
-//! QA tests for picking, written from the coordinate note (path 2 and "The catch") and
-//! debug_tooling_plan §F's picking cross-check), not from the implementation:
+//! QA tests for picking, written from the coordinate note (path 2 and "The catch") and debug_tooling_plan §F's
+//! picking cross-check, not from the implementation:
 //! - a click at each known corner, through `engine::picking::pick`, the function the GUI will call, reports that
 //!   corner's UV (top-left → v ≈ 1, bottom-left → v ≈ 0), the quad there and the screen's `ctx.chart.z`, on a canvas
 //!   whose size is not the target's;

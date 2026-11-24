@@ -1,20 +1,21 @@
-//! QA's tests for TASK-M3-06, written from the requirements it closes, each with its negative control (R-176):
+//! QA's tests for the default `SimUniforms`, the u16 step limit, softening and the horizon's range, written from the
+//! requirements, each with its negative control:
 //!
-//! - REQ-INT-026: the default `SimUniforms` is integrator_contract Part 3's table, value by value as the statement
+//! - The default `SimUniforms` is integrator_contract Part 3's table, value by value as the statement
 //!   lists it, and `dt_macro = max(10⁻³, T/65535)`, `T/65535` above `T = 65.535`.
-//! - REQ-PAY-037: dispatch refuses `⌈T/dt_macro⌉ = 65536` (and more), accepts 65535, launches nothing it refuses,
+//! - Dispatch refuses `⌈T/dt_macro⌉ = 65536` (and more), accepts 65535, launches nothing it refuses,
 //!   asserts `horizon_steps × N_max ≤ 2³² − 1` at its exact edge, and `t_end_step` of a sample run to the horizon is
 //!   the latched step count, 65535 included.
-//! - REQ-PAY-040: `t_end_step` in bits 0–15 and `t_dmin_step` in bits 16–31, each bit in its own place, exact, and the
+//! - `t_end_step` in bits 0–15 and `t_dmin_step` in bits 16–31, each bit in its own place, exact, and the
 //!   display fraction read through the dispatched `horizon_steps` uniform.
-//! - REQ-SYS-018: `r_coll` nonzero and `epsilon` 0 by default; one fixed number each, no co-moving option; a run with
+//! - `r_coll` nonzero and `epsilon` 0 by default; one fixed number each, no co-moving option; a run with
 //!   `epsilon` other than 0 never reads as an unsoftened one, in its tag or its sim key; and, until softened gravity
-//!   is defined and built (RQ-627), dispatch refuses every `epsilon > 0` with its reason and launches nothing.
+//!   is defined and built, dispatch refuses every `epsilon > 0` with its reason and launches nothing.
 //! - The physics review of PR #348 (F2): a NaN, infinite or negative `r_coll`, `tau` or `r_close`, or a non-finite
 //!   `eps_E` or `eps_L`, is refused through `dispatch` and launches nothing.
-//! - REQ-INT-081: `T_horizon ∈ [0.4, 200]` is accepted everywhere, swept densely and at its edges, with
-//!   `⌈T/dt_macro⌉ ≤ 65535`; below 0.4 is refused with R-610's reason; above 200 is refused.
-//! - The binding half of REQ-INT-028 (R-502): the table a changed-law `SimUniforms` carries realises that law's
+//! - `T_horizon ∈ [0.4, 200]` is accepted everywhere, swept densely and at its edges, with
+//!   `⌈T/dt_macro⌉ ≤ 65535`; below 0.4 is refused with the floor's reason; above 200 is refused.
+//! - The table a changed-law `SimUniforms` carries realises that law's
 //!   `N_sub = clamp(⌈(r_sub/r_min)^γ_sub⌉, 1, N_max)`, and `N_max = L_max + 1` is refused, launching nothing.
 
 use std::cell::Cell;
@@ -64,10 +65,10 @@ impl Rng {
     }
 }
 
-// ── REQ-INT-026: Part 3's defaults ──────────────────────────────────────────────────────────────────────────────
+// ── Part 3's defaults ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// `u` holds the statement's values: `T_horizon` 50, `dt_macro` 10⁻³, `N_max` 64, `r_sub` 0.05, `gamma_sub` 1.5,
-/// `r_coll` set (nonzero, REQ-SYS-018), `tau` set, the 0.4 escape window, `r_close` 0.01, `eps_E` = `eps_L` = 10⁻⁶,
+/// `r_coll` set (nonzero), `tau` set, the 0.4 escape window, `r_close` 0.01, `eps_E` = `eps_L` = 10⁻⁶,
 /// `G` = `M_total` = 1, `epsilon` 0.
 fn check_part3_defaults(u: &SimUniforms) {
     let exact = [
@@ -124,10 +125,10 @@ negative_control!(
     })
 );
 
-/// `dt_of` gives `dt_macro` for `T` as R-132's `max(10⁻³, T/65535)`: exactly 10⁻³ at T = 0.4, 0.5, 10 and 50, exactly
+/// `dt_of` gives `dt_macro` for `T` as `max(10⁻³, T/65535)`: exactly 10⁻³ at T = 0.4, 0.5, 10 and 50, exactly
 /// `200/65535` at T = 200, and `T/65535` above `T = 65.535`. Where the quotient is taken in f64 the macro-step may sit
 /// one ulp above the rounded quotient, no more, which is the least that keeps `⌈T/dt⌉ ≤ 65535` evaluable in f64
-/// (REQ-INT-081); never below it, which would give 65536 steps.
+/// at every horizon; never below it, which would give 65536 steps.
 fn check_dt_macro(dt_of: &dyn Fn(f64) -> f64) {
     for t in [0.4, 0.5, 10.0, 50.0, 65.0] {
         assert_eq!(dt_of(t), 1e-3, "dt_macro at T = {t} is not 10⁻³");
@@ -162,7 +163,7 @@ negative_control!(
     check_dt_macro(&|t| t / 65535.0)
 );
 
-// ── REQ-PAY-037: the u16 limit and the latched t_end_step ───────────────────────────────────────────────────────
+// ── The u16 limit and the latched t_end_step ────────────────────────────────────────────────────────────────────
 
 /// `rule` refuses every `(T, dt_macro)` whose `⌈T/dt_macro⌉` is 65536 or more, with the typed horizon-steps refusal,
 /// and accepts 65535: binary-exact pairs (no rounding in the quotient) and a decimal `dt_macro`, each with `T` in the
@@ -366,7 +367,7 @@ negative_control!(
     })
 );
 
-// ── REQ-PAY-040: times as exact u16 step indices ────────────────────────────────────────────────────────────────
+// ── Times as exact u16 step indices ─────────────────────────────────────────────────────────────────────────────
 
 /// `pack` puts each bit of `t_end_step` at bits 0–15 and of `t_dmin_step` at 16–31, nothing else, and the accessors and
 /// setters read and write each half without touching the other; the display fractions are the index over the
@@ -424,7 +425,7 @@ negative_control!(
     check_times(&|end: u32, dmin: u32| pack_times(dmin, end))
 );
 
-// ── REQ-SYS-018: collision and softening ────────────────────────────────────────────────────────────────────────
+// ── Collision and softening ─────────────────────────────────────────────────────────────────────────────────────
 
 /// Every field of `SimUniforms`, named, with no `..`: a co-moving switch or a time-dependent softening added to the
 /// struct stops this compiling. `epsilon` and `r_coll` are each one `f64`, fixed for the dispatch.
@@ -463,7 +464,7 @@ fn check_no_comoving(debug: &str) {
 
 /// `r_coll` nonzero and `epsilon` 0 by default and unsoftened, untagged; every `epsilon > 0` (down to the least
 /// subnormal) is tagged in provenance, and its sim key differs from the unsoftened key and from another `epsilon`'s.
-/// Whether dispatch accepts such a key is `check_positive_epsilon_refused`'s: it refuses it (RQ-627).
+/// Whether dispatch accepts such a key is `check_positive_epsilon_refused`'s: it refuses it.
 fn check_softening_tag(of: &dyn Fn(f64) -> SimUniforms) {
     let d = of(0.0);
     assert!(d.r_coll > 0.0, "r_coll is not nonzero by default");
@@ -560,9 +561,9 @@ negative_control!(
     })
 );
 
-/// The physics review of PR #348 (F1; RQ-627): no force law takes `epsilon` and the corpus defines no softened
-/// gravity, so `dispatch` refuses every `epsilon > 0` (down to the least subnormal) as a softening refusal carrying
-/// that `epsilon`, whose reason names `epsilon` and RQ-627, and launches nothing; `epsilon = 0` launches once. A run
+/// No force law takes `epsilon` and the specs define no softened gravity, so `dispatch` refuses every `epsilon > 0`
+/// (down to the least subnormal) as a softening refusal carrying that `epsilon`, whose reason names `epsilon` and the
+/// ruling id the assertion looks for, and launches nothing; `epsilon = 0` launches once. A run
 /// dispatched with `epsilon > 0` would come back Newtonian under the `softened` tag.
 fn check_positive_epsilon_refused(rule_dispatch: &CountedDispatch) {
     let r_coll = SimUniforms::default().r_coll;
@@ -709,9 +710,9 @@ negative_control!(
     })
 );
 
-// ── REQ-INT-081: the horizon's range ─────────────────────────────────────────────────────────────────────────────
+// ── The horizon's range ──────────────────────────────────────────────────────────────────────────────────────────
 
-/// The reason R-610 gives for a horizon below the floor.
+/// The reason given for a horizon below the floor.
 const BELOW_FLOOR: &str = "below one closure window (0.4) the escape arm cannot fire";
 
 /// `rule`, at the default sim key with the horizon `T` set by the settings, accepts every `T` in `[0.4, 200]`: the
@@ -793,8 +794,8 @@ negative_control!(
     })
 );
 
-/// `rule` refuses `T` below the floor, 0.39, 0, −1, the f64 just below 0.4 and the least positive, each with R-610's
-/// reason; and `T` above the cap, the f64 just above 200 and 1000, and `T` not a number or infinite.
+/// `rule` refuses `T` below the floor, 0.39, 0, −1, the f64 just below 0.4 and the least positive, each with the
+/// floor's reason; and `T` above the cap, the f64 just above 200 and 1000, and `T` not a number or infinite.
 fn check_range_refused(rule: &Rule) {
     for t in [0.39, 0.0, -1.0, 0.4f64.next_down(), f64::from_bits(1), -0.0] {
         match rule(&at(t)) {
@@ -840,10 +841,10 @@ negative_control!(
     })
 );
 
-// ── R-502: the table SimUniforms carries realises its law ───────────────────────────────────────────────────────
+// ── The table SimUniforms carries realises its law ──────────────────────────────────────────────────────────────
 
-/// `table` for `(r_sub, gamma_sub, n_max)` gives `N_sub = clamp(⌈(r_sub/r_min)^γ⌉, 1, N_max)` (REQ-INT-028's
-/// specification) at every sampled `r_min` whose `(r_sub/r_min)^γ` is not within `4γ` f32 ulps (relative) of a whole
+/// `table` for `(r_sub, gamma_sub, n_max)` gives `N_sub = clamp(⌈(r_sub/r_min)^γ⌉, 1, N_max)`, the specified law, at
+/// every sampled `r_min` whose `(r_sub/r_min)^γ` is not within `4γ` f32 ulps (relative) of a whole
 /// number: there the f32 rounding of the threshold and of `d²` (each half an ulp of `d²`, `γ/2` ulps of the power) may
 /// decide either side.
 fn check_table_realises_law(table: &NsubThresholds, r_sub: f64, gamma: f64, n_max: u32) {

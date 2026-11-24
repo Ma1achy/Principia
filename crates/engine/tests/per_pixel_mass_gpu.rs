@@ -1,18 +1,17 @@
 //! Masses always come from the decode, on the GPU (`kernel::stage::decode`, `engine::decode_dispatch`; lowering Part 3,
-//! "Mass source"; dd_decoder §2; TASK-M2-13): the kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively
+//! "Mass source"; dd_decoder §2): the kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively
 //! through each decode entry point of a chart with `requires_per_pixel_mass`, read back and checked against the same
 //! source at f64 (`decode_only`). CI runs this file in the `gpu-kernel` job, after `cargo xtask build-kernel`.
 //! - `per_pixel_mass_garbage_uniform`: for the ternary mass plot, the `(ν, K)` chart, the Euclid plane, the mixed chart
 //!   `(z_μ1, α)` and the latent chart with a mass direction, garbage masses written into every word of the decode
 //!   stage's uniform that is not the chart's own parameters leave the per-pixel decoded masses, the `ICDescriptor`s and
-//!   the decode labels bit-identical; the masses vary per pixel and are the f64 decode's (REQ-DEC-006).
+//!   the decode labels bit-identical; the masses vary per pixel and are the f64 decode's.
 //!
-//! **What "garbage `SimUniforms.m[3]`" is here.** `SimUniforms` (TASK-M3-06) is not built yet, and the decode stage binds
-//! its own uniform, its `(u, v)` buffer and its three outputs and nothing else, so no `SimUniforms.m[3]` can reach it.
-//! The masses a uniform could carry would sit in words the chart's layout leaves unread ([`unread`]: every chart word
-//! the chart's `from_uniform` drops, and the flags word's padding), so the check writes a garbage mass triple, a
-//! negative mass, one past f32's range and a NaN, into every one of them. Outcomes are decode-time only until the
-//! integrator lands (M3, M4): the `DEGENERATE` labels and the descriptor.
+//! **What "garbage `SimUniforms.m[3]`" is here.** The decode stage binds its own uniform, its `(u, v)` buffer and its
+//! three outputs and nothing else, so no `SimUniforms.m[3]` can reach it. The masses a uniform could carry would sit in
+//! words the chart's layout leaves unread ([`unread`]: every chart word the chart's `from_uniform` drops, and the flags
+//! word's padding), so the check writes a garbage mass triple, a negative mass, one past f32's range and a NaN, into
+//! every one of them. Outcomes are decode-time only until the integrator lands (M3, M4): the `DEGENERATE` labels and the descriptor.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 
