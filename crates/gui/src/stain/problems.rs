@@ -1,7 +1,6 @@
 //! The Problems pane (render_gui_spec Part II §1, §10; GUI_DESIGN_NOTES § "02 Stain"; 02_stain.png), under the canvas
 //! beside the code: "Problems · n", the compile status, the problems and the notes, auto-recompile and Recompile. The
-//! status, the problems and the notes are the engine side's; Recompile asks it to recompile. The compile itself, its
-//! errors and the last-valid fallback are TASK-M7-24's.
+//! status, the problems and the notes are the engine side's; Recompile asks it to recompile.
 
 use eframe::egui::{self, vec2, Color32, Rect, RichText, Ui, UiBuilder};
 
@@ -37,7 +36,13 @@ pub fn show(
     pane.label(RichText::new(heading(content)).heading());
     pane.add_space(6.0);
     if let Some(c) = content {
-        pane.label(RichText::new(&c.compiled).monospace().color(COMPILED));
+        // Green while it compiled; a status that names a failure reads as one.
+        let status = if c.problems.is_empty() {
+            COMPILED
+        } else {
+            visuals.warn_fg_color
+        };
+        pane.label(RichText::new(&c.compiled).monospace().color(status));
         for problem in &c.problems {
             pane.label(
                 RichText::new(problem)

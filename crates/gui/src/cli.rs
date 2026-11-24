@@ -30,7 +30,7 @@ pub mod real {
     use crate::app::{window_title, App};
     use crate::capture;
     use crate::layout::LEAST_WINDOW;
-    use crate::real::{capture_view, compute, start, RealCanvas, FIELD_SIZE};
+    use crate::real::{capture_view, payload, start, RealCanvas, FIELD_SIZE};
     use crate::settings::Store;
     use crate::side::{EngineSide, RealSide};
 
@@ -64,7 +64,7 @@ pub mod real {
     }
 
     /// The real side at its start state ([`start`]), its [`FIELD_SIZE`] field computed on the CPU, blocking, and its
-    /// canvas open with the field uploaded: what the app's window opens on.
+    /// canvas open on its records: what the app's window opens on.
     pub fn open() -> Result<(RealSide, Arc<RealCanvas>), String> {
         open_at(start(), &Cpu, FIELD_SIZE)
     }
@@ -79,7 +79,7 @@ pub mod real {
     }
 
     /// The real side at the state `(sim, render)`, the field of `sim` at `size` samples computed through `backend`,
-    /// blocking, and its canvas open with the field uploaded.
+    /// blocking, and its canvas open on its records.
     fn open_at(
         (sim, render): (SimConfig, RenderState),
         backend: &dyn FieldBackend,
@@ -88,13 +88,13 @@ pub mod real {
         let [w, h] = size;
         eprintln!("gui: computing the {w}×{h} field");
         let begun = std::time::Instant::now();
-        let field = compute(backend, &sim, size)?;
+        let payload = payload(backend, &sim, size)?;
         eprintln!(
             "gui: the field took {:.1} s: {:?}",
             begun.elapsed().as_secs_f64(),
-            field.histogram()
+            payload.field.histogram()
         );
-        let canvas = Arc::new(RealCanvas::open(&field)?);
+        let canvas = Arc::new(RealCanvas::of(payload)?);
         Ok((RealSide::with_canvas(sim, render, canvas.clone()), canvas))
     }
 

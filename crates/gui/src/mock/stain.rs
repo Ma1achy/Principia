@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 
 use engine::contract::render_state::{NodeId, NodeKind, Occupant, StainGraph};
 
-use crate::stain::{Content, Group};
+use crate::stain::{Content, Group, COMBINERS};
 
 /// The source of the outcome class: the payload's `state` (02_stain.png's "Outcome state").
 pub const OUTCOME_FIELD: &str = "state";
@@ -30,14 +30,6 @@ fn brightness(ctx: Ctx) -> f32 {
     return mix(1.0, fade, clamp(ctx.inputs[0].x / 50.0, 0.0, 1.0));
 }
 ";
-
-/// The combiner's built-in occupants, with their names (render_gui_spec Part II §3.1: Replace-L / Multiply; M1's
-/// pass-through).
-pub const COMBINERS: [(&str, &str); 3] = [
-    ("multiply", "Multiply"),
-    ("replace_l", "Replace-L"),
-    ("pass_through", "Pass-through"),
-];
 
 /// The fields the mock offers a source (placeholder content: a few of the payload's read-side fields).
 pub const SOURCE_FIELDS: [&str; 5] = ["state", "t_end_step", "ftle", "d_min", "energy_drift"];
@@ -276,5 +268,7 @@ pub fn content(g: &StainGraph) -> Content {
         notes: vec![NOTE.to_owned()],
         fields: &SOURCE_FIELDS,
         combiners: &COMBINERS,
+        colours: &[],
+        graphs: &[],
     }
 }

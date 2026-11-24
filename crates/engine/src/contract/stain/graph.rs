@@ -64,6 +64,19 @@ impl From<NodeKind> for Kind {
     }
 }
 
+impl From<Kind> for NodeKind {
+    fn from(k: Kind) -> NodeKind {
+        match k {
+            Kind::Source => NodeKind::Source,
+            Kind::Colour => NodeKind::Colour,
+            Kind::Brightness => NodeKind::Brightness,
+            Kind::Combiner => NodeKind::Combiner,
+            Kind::Post => NodeKind::Post,
+            Kind::Out => NodeKind::Out,
+        }
+    }
+}
+
 /// What occupies a node (render contract Part 2; gui_state_contract §5): None, a built-in source's field, a built-in
 /// occupant's id, or a custom occupant's WGSL.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -601,6 +614,12 @@ impl StainGraph {
             });
         }
         Ok((order, Stain::new(nodes)?))
+    }
+
+    /// The graph as the assembler takes it, every node ([`StainGraph::lower`]), with each node's id, in the stain's
+    /// order: the pipeline cache's node keys, which its per-node last-valid state and its params are kept by.
+    pub fn keyed(&self) -> Result<(Vec<NodeId>, Stain), GraphError> {
+        self.lowered()
     }
 
     /// The graph as the assembler takes it ([`Stain`]); it assembles its canonical form.

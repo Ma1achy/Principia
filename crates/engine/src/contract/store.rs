@@ -34,6 +34,21 @@ impl StateStore {
         }
     }
 
+    /// The render key as it stands, to read without taking the log ([`EngineInterface::snapshot`] hands it over).
+    pub fn render(&self) -> &RenderState {
+        &self.render
+    }
+
+    /// Logs `message` from `source`.
+    pub fn log(&mut self, severity: Severity, source: Source, message: String) {
+        self.log.push(LogEntry {
+            severity,
+            at: now_ms(),
+            source,
+            message,
+        });
+    }
+
     /// Writes `edit` into the state and returns the value it replaced, as an edit restoring it.
     fn write(&mut self, edit: Edit) -> Edit {
         write(&mut self.sim, &mut self.render, edit)
@@ -49,12 +64,7 @@ impl StateStore {
     /// Logs each of `lines` as one `info` entry from `contract`.
     fn log_lines(&mut self, lines: Vec<String>) {
         for message in lines {
-            self.log.push(LogEntry {
-                severity: Severity::Info,
-                at: now_ms(),
-                source: Source::Contract,
-                message,
-            });
+            self.log(Severity::Info, Source::Contract, message);
         }
     }
 }
