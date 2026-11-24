@@ -1,5 +1,5 @@
-//! The invariant monitor (integrator_contract Part 1, "COM projection and invariant monitoring"; dd_integrator §3.5;
-//! REQ-INT-012): the energy and `L_z` are monitored, never restored (REQ-INT-011).
+//! The invariant monitor (integrator_contract Part 1, "COM projection and invariant monitoring"; dd_integrator §3.5):
+//! the energy and `L_z` are monitored, never restored.
 //!
 //! **Before the loop** ([`Monitor::new`]) it evaluates and stores, on the IC,
 //!
@@ -9,7 +9,7 @@
 //!
 //! **After each `STEP`, post-projection** ([`Monitor::update`]) it evaluates `E(t)` and `L_z(t)` and accumulates
 //! `ΔE_final = E(t) − E₀`, `max|ΔE|`, `ΔL_z final = L_z(t) − L_{z,0}` and `max|ΔL_z|`, the worst deviation so far. The
-//! energy reads the force evaluation's pairwise distances ([`crate::physics::energy`]; REQ-PERF-001), so its marginal
+//! energy reads the force evaluation's pairwise distances ([`crate::physics::energy`]), so its marginal
 //! cost is the kinetic term and two comparisons.
 //!
 //! **The relative forms** ([`relative`]) divide by a floor, `δ_E = ΔE / max(ε_E, |E₀|)` and
@@ -20,7 +20,7 @@
 //! reads is formed at read from them (payload §5; the generated read side's `suspect_energy`).
 //!
 //! **Final and max, both** (dd_integrator §3.5): the shape of the drift is the diagnostic. A spike that recovers before
-//! the run ends, close-encounter stress, shows as `max|ΔE| ≫ |ΔE_final|` (dd_integrator §5 test 7; REQ-VAL-033); a
+//! the run ends, close-encounter stress, shows as `max|ΔE| ≫ |ΔE_final|` (dd_integrator §5 test 7); a
 //! secular drift as the two near equal.
 //!
 //! **Latches in the working precision.** The maxima are held at `Real` during the march, the live values, and packed to
@@ -56,9 +56,9 @@ pub fn larger<R: Real>(a: R, b: R) -> R {
 }
 
 /// The running maximum `a` raised by the magnitude `b`: a non-finite value stays. A comparison with NaN is false, so a
-/// plain larger would keep its old value past a NaN and a failed sample would read as healthy (R-47; philosophy §4.3);
+/// plain larger would keep its old value past a NaN and a failed sample would read as healthy (philosophy §4.3);
 /// here a non-finite `a` stays and a non-finite `b` replaces a finite `a`, each tested on its bits before any comparison
-/// (R-538; gpu_determinism_note § "The discipline", rule 4; [`IeeeBits::non_finite_bits`]), since WGSL may assume no NaN
+/// (gpu_determinism_note § "The discipline", rule 4; [`IeeeBits::non_finite_bits`]), since WGSL may assume no NaN
 /// or infinity. It chooses a display latch and the failure mark, which no trajectory reads (parity contract: `dE_max`,
 /// `dLz_max` are Tier N/S).
 #[inline]

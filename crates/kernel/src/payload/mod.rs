@@ -5,8 +5,8 @@
 //! read-side `SimState`, fixed across tiers, its derived accessors and each stored variant's unpack into it (lowering
 //! Part 3a).
 //! [`roundtrip`] holds the descriptor parity check, `roundtrip_ctl` (pitfalls §9); [`counters`] the `d_min` packer's
-//! per-frame telemetry counters, which the packer's caller passes in (R-281, R-288, R-294); [`drift`] which drift a
-//! reader reads and the energy-drift readout's "stopped at event" (R-566, R-605).
+//! per-frame telemetry counters, which the packer's caller passes in; [`drift`] which drift a
+//! reader reads and the energy-drift readout's "stopped at event".
 
 pub mod counters;
 pub mod drift;

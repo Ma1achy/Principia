@@ -1,4 +1,4 @@
-//! The latent control vector `z ∈ ℝ⁸` (chart_decoder_contract Part 1, Part 2; chart_reference §1; REQ-SYS-010):
+//! The latent control vector `z ∈ ℝ⁸` (chart_decoder_contract Part 1, Part 2; chart_reference §1):
 //! exactly `2 config ⊕ 4 momentum ⊕ 2 mass`, the masses inside it, and no coordinate on a gauge direction. Rotation
 //! and scale are fixed by the canonical-frame decode (ρ̃ on +x, R̃ = 1, [`crate::decode::config`]), translation and
 //! boost by the reconstruction's CoM, so no control is spent on any of them.

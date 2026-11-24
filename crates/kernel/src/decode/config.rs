@@ -1,11 +1,11 @@
-//! `D_cfg`, the configuration block (dd_decoder §3.2; chart_reference §0.2; REQ-DEC-012, REQ-DEC-013, REQ-DEC-015):
+//! `D_cfg`, the configuration block (dd_decoder §3.2; chart_reference §0.2):
 //! the two controls `z[0:2]` through the selection's α and β links, the canonical-frame hyperspherical decode, then
-//! unweighting and reconstruction. Under the default links, `α = (π/2)·σ(z_α)` (`α_min = 0`, R-21) and
-//! `β = z_β + π/2`, the periodic link, the offset onto the angle so that `z = 0` stays the golden IC (R-1020), a latent
-//! angle over the full circle read modulo `2π` by `cos β` and `sin β` (R-898, R-919 Q1 (c)). *Was:* "`β = π·σ(z_β)`".
+//! unweighting and reconstruction. Under the default links, `α = (π/2)·σ(z_α)` (`α_min = 0`) and
+//! `β = z_β + π/2`, the periodic link, the offset onto the angle so that `z = 0` stays the golden IC, a latent
+//! angle over the full circle read modulo `2π` by `cos β` and `sin β`.
 //!
-//! **Canonical frame** (rotation and scale gauged by construction, so no latent coordinate is spent on them;
-//! REQ-SYS-010): `ρ̃ = R̃ cos α·(1, 0)`, `λ̃ = R̃ sin α·(cos β, sin β)`, `R̃ = 1`, so `I = ‖ρ̃‖² + ‖λ̃‖² = 1`.
+//! **Canonical frame** (rotation and scale gauged by construction, so no latent coordinate is spent on them):
+//! `ρ̃ = R̃ cos α·(1, 0)`, `λ̃ = R̃ sin α·(cos β, sin β)`, `R̃ = 1`, so `I = ‖ρ̃‖² + ‖λ̃‖² = 1`.
 //! `‖ρ̃‖ = cos α`: **small α is a large inner-pair separation**, and `α → π/2` a tight inner pair with a distant third
 //! body (dd_decoder §3.2's orientation gotcha; decoder test 9).
 //!
@@ -14,16 +14,16 @@
 //! `M₀₁r₀₁ + m₂r₂ = 0` identically, and `I = Σmᵢ‖rᵢ‖² = 1`. `M₀₁` is the mass block's, the same rounded sum its tag
 //! tested.
 //!
-//! **What is a link here** (REQ-CHART-033): α and β come only from the selection's generated links. The block's own
+//! **What is a link here**: α and β come only from the selection's generated links. The block's own
 //! `cos α`, `sin α`, `cos β`, `sin β` and the unweighting's `√μ_ρ`, `√μ_λ` are the decoder's formula (§3.2), not
 //! registry links: they map no control onto a constrained parameter, and no link entry or inverse is re-derived by
 //! them.
 //!
-//! **No guard** (REQ-DEC-028): finite `z` keeps `α` off the exact poles in exact arithmetic. In floating point the
-//! range is closed, `α ∈ [0, π/2]` (R-417, dd_decoder §3.2): `α = 0` is reached where the link's output underflows, at
+//! **No guard**: finite `z` keeps `α` off the exact poles in exact arithmetic. In floating point the
+//! range is closed, `α ∈ [0, π/2]` (dd_decoder §3.2): `α = 0` is reached where the link's output underflows, at
 //! f32 and f64, by the link's own rounding. `β` has no range to close: every finite `z_β` is an angle. Nothing here clamps, excludes or lands
 //! on a pole, and the poles are fenced downstream (the collision detector, the conditioning readout, the saturation
-//! flags; R-21).
+//! flags).
 
 use spirv_std::num_traits::Float;
 

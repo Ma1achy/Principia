@@ -1,5 +1,5 @@
-//! The fragment's decode, encode and shape map, as entry points the translation exports (R-116; colour_composition §3,
-//! "Fragment-side recompute"; REQ-COL-006, REQ-SYS-085): each compiles, from this one source, through rust-gpu →
+//! The fragment's decode, encode and shape map, as entry points the translation exports (colour_composition §3,
+//! "Fragment-side recompute"): each compiles, from this one source, through rust-gpu →
 //! SPIR-V → naga, and `cargo xtask build-kernel` lifts its body out of the kernel's WGSL into a fragment snippet
 //! (`crates/render/wgsl/decode.wgsl`, `crates/render/wgsl/encode.wgsl`, `crates/ledger/wgsl/shape.wgsl`), with its
 //! storage words made the snippet's private words and its uniform rebound in the fragment's context group. No snippet
@@ -14,19 +14,19 @@
 //! - The decode ([`decode_latent_defaults`] and the other charts' wrappers, [`decode_at`]): `(u, v)` at
 //!   [`DECODE_UV`]; out, the chart's `Φ` output `z` ([`DECODE_Z`]; `Chart::map`'s `ChartOut.z`), whether it is a latent
 //!   ([`DECODE_Z_LATENT`]: 1 on the latent chart, whose `Φ` produces the 8-D latent, 0 on every other chart, whose `Φ`
-//!   does not; colour_composition §3, REQ-COL-057), the canonical `(m, r, p)` ([`DECODE_IC`], the decode stage's word
+//!   does not; colour_composition §3), the canonical `(m, r, p)` ([`DECODE_IC`], the decode stage's word
 //!   order), the twelve `ICDescriptor` fields ([`DECODE_DESCRIPTOR`]), the tag word ([`DECODE_TAG`],
 //!   `crate::stage::decode::tag`) and whether the decode lands on `C`'s section ([`DECODE_ON_SECTION`],
 //!   [`FragmentChart::ON_SECTION`]). The chart's parameters, the flags word and the energy target are the decode stage's
 //!   uniform ([`DecodeUniforms`]), read as the stage reads them, so the fragment decodes the pixel as the stage did.
 //! - The descriptor alone ([`describe`]): `(m, r, p)` in, the twelve fields out, so a test reaches the producers' pole
-//!   selects (R-436) on states no decode reaches at f32.
+//!   selects on states no decode reaches at f32.
 //! - The encode ([`encode()`]): `(m, r, p)` in, the default links' encode out in `crate::stage::encode`'s word order,
 //!   then `C`'s canonical `(m, r, p)` ([`ENCODE_CANON`]), the state `D(E(x))` returns (Part 1's T3).
 //! - The shape map ([`shape`]): `r` and `m` in, `n` out (`crate::shape::shape`, the read side's `shape()`).
 //! - The free decode ([`decode_free`]): a latent `z` in ([`FREE_Z`]); the shared decoder's canonical `(m, r, p)`
 //!   ([`FREE_IC`]) and tag word ([`FREE_TAG`]) out, under the default links: the ROUNDTRIP preset's second `D`, of the
-//!   encode's `z` (inverse-encode contract Part 8; TASK-M2-26), as `crate::encode::ingest` and the T2 round trip decode
+//!   encode's `z` (inverse-encode contract Part 8), as `crate::encode::ingest` and the T2 round trip decode
 //!   it.
 
 use spirv_std::spirv;
@@ -44,15 +44,14 @@ use crate::stage::decode::{sample_with, tag, target, DecodeMode, DecodeUniforms,
 /// `cargo xtask build-kernel`'s glue reads too.
 pub use crate::generated::fragment_words::*;
 
-/// Whether a chart's `Φ` produces the 8-D latent `z` (colour_composition §3; REQ-COL-057): the latent chart's does,
+/// Whether a chart's `Φ` produces the 8-D latent `z` (colour_composition §3): the latent chart's does,
 /// `z₀ + (2u − 1)·q₁ + (2v − 1)·q₂`; every other chart's hands the decoder its own output, and its `ChartOut.z` holds
 /// only the latent blocks it carries (zeros elsewhere), no latent.
 ///
 /// And whether its decode lands on `C`'s section (inverse-encode contract Part 1): every chart's does, the shape
-/// sphere's too since TASK-M2-57 took `C`'s mirror step out (R-865; before then the shape sphere decoded with `C`'s
-/// step 3 not taken, so a lower-hemisphere pixel was off the section, R-544). The ROUNDTRIP preset measures its round
-/// trip against the decoded state on the section and against `C` of it off it (Part 4, "One norm for every round
-/// trip"; TASK-M2-26).
+/// sphere's too: `C` has no mirror step, so a lower-hemisphere pixel is on the section. The ROUNDTRIP preset measures
+/// its round trip against the decoded state on the section and against `C` of it off it (Part 4, "One norm for every
+/// round trip").
 pub trait FragmentChart: UniformChart {
     /// `true` where `Φ`'s `z` is the 8-D latent.
     const Z_IS_LATENT: bool;
@@ -251,9 +250,9 @@ pub fn decode_burrau_theta_k_defaults(
     decode_at::<BurrauThetaK<f32>, Defaults>(uniforms, words);
 }
 
-/// The descriptor alone, [`descriptor::describe`] at f32 on the `(m, r, p)` its words hold: the producers' pole selects
-/// (R-436), as the fragment decode forms them. With no configuration block, its `rho_angle` is read from the positions;
-/// the fragment decode reads it from the configuration block's `(ρ̃, λ̃)` (R-628).
+/// The descriptor alone, [`descriptor::describe`] at f32 on the `(m, r, p)` its words hold: the producers' pole
+/// selects, as the fragment decode forms them. With no configuration block, its `rho_angle` is read from the positions;
+/// the fragment decode reads it from the configuration block's `(ρ̃, λ̃)`.
 #[spirv(compute(threads(1)))]
 pub fn describe(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] words: &mut [u32; DESCRIBE_WORDS],

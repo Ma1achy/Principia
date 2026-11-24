@@ -1,6 +1,6 @@
-//! The `ICDescriptor`, what the IC *is* (dd_decoder §3.6; dd_generation_root §3.6; REQ-PAY-034): filled at the decode
+//! The `ICDescriptor`, what the IC *is* (dd_decoder §3.6; dd_generation_root §3.6): filled at the decode
 //! stage, post-decode and pre-integration, from the decoded `(m, r, p)` and, for `rho_angle`, the configuration block's
-//! own `(ρ̃, λ̃)` (R-628), so every chart's IC is described alike (dd_decoder §2: the canonical `(m, r, p)` is the one
+//! own `(ρ̃, λ̃)`, so every chart's IC is described alike (dd_decoder §2: the canonical `(m, r, p)` is the one
 //! seam). Its twelve fields, in the generated struct's order:
 //!
 //! ```text
@@ -16,13 +16,13 @@
 //! r_min_pair_0   min_{i<j} ‖rᵢ − rⱼ‖
 //! ```
 //!
-//! The six fields after the masses are REQ-PAY-088's definitions, written into dd_decoder §3.6 by this task (R-72).
-//! `E₀` is derived at read, `K_0 + V_0` ([`energy`]), never stored (R-86). The struct follows `Real` (R-313): the
+//! The six fields after the masses are dd_decoder §3.6's definitions.
+//! `E₀` is derived at read, `K_0 + V_0` ([`energy`]), never stored. The struct follows `Real`: the
 //! f32 instantiation is the GPU's 64 B, the f64 the CPU's 112 B; `_pad` is declared padding, written zero.
 //!
 //! `2mᵢ` and `2K₀` are formed as the sums `mᵢ + mᵢ` and `K₀ + K₀`, which are exact at any `Real`.
 //!
-//! **The poles' values are selected, never divided** (R-436; dd_decoder §3.6, "Each producer selects its pole value").
+//! **The poles' values are selected, never divided** (dd_decoder §3.6, "Each producer selects its pole value").
 //! The descriptor follows `Real`, so the GPU's decode stage forms it at f32, where WGSL lets an implementation assume
 //! there are no infinities: a GPU-computed `1/0`, or arithmetic on `∞`, is not pinned to `±∞`. So each pole value is
 //! chosen by comparing its divisor with 0 and a select ([`IeeeBits`]), the `±∞` written as its integer pattern's bits:
@@ -80,7 +80,7 @@ fn closest<R: LinkReal>(d: [R; 3]) -> R {
 }
 
 /// `V₀ = −Σ_{i<j} mᵢmⱼ/dᵢⱼ` of the masses `m` and the separations `d`, `−∞`'s bits where the closest, `d_min`, is 0
-/// (R-436; the module's note).
+/// (the module's note).
 #[inline]
 fn potential_of<R: LinkReal + IeeeBits>(m: [R; 3], d: [R; 3], d_min: R) -> R {
     let [m0, m1, m2] = m;
@@ -88,52 +88,52 @@ fn potential_of<R: LinkReal + IeeeBits>(m: [R; 3], d: [R; 3], d_min: R) -> R {
     sum.or_neg_inf(collision_pole(d_min))
 }
 
-/// `V₀`'s pole: the closest pair separation is 0 (R-436).
+/// `V₀`'s pole: the closest pair separation is 0.
 #[inline]
 pub fn collision_pole<R: LinkReal>(d_min: R) -> bool {
     d_min == R::zero()
 }
 
-/// `virial_ratio`'s pole: `V₀` is non-finite, tested on its bits (R-436).
+/// `virial_ratio`'s pole: `V₀` is non-finite, tested on its bits.
 #[inline]
 pub fn virial_pole<R: LinkReal + IeeeBits>(v: R) -> bool {
     v.non_finite_bits()
 }
 
-/// `rho_ratio`'s pole: `‖λ̃‖ = 0` (R-436).
+/// `rho_ratio`'s pole: `‖λ̃‖ = 0`.
 #[inline]
 pub fn ratio_pole<R: LinkReal>(lambda_mag: R) -> bool {
     lambda_mag == R::zero()
 }
 
 /// The potential energy `V₀ = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖`, `G = 1`: `−∞`'s bits wherever a pair separation is 0, selected,
-/// not divided (R-436).
+/// not divided.
 #[inline]
 pub fn potential<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> R {
     let d = separations(ic.r);
     potential_of(ic.m, d, closest(d))
 }
 
-/// `virial_ratio = 2K₀/|V₀|` of `k = K₀` and `v = V₀`: 0 where `V₀` is non-finite, tested on its bits (R-436).
+/// `virial_ratio = 2K₀/|V₀|` of `k = K₀` and `v = V₀`: 0 where `V₀` is non-finite, tested on its bits.
 #[inline]
 pub fn virial<R: LinkReal + IeeeBits>(k: R, v: R) -> R {
     select(virial_pole(v), R::zero(), (k + k) / Float::abs(v))
 }
 
-/// `rho_ratio = ‖ρ̃‖/‖λ̃‖` of `rho_mag` and `lambda_mag`: `+∞`'s bits where `‖λ̃‖ = 0`, selected, not divided (R-436).
+/// `rho_ratio = ‖ρ̃‖/‖λ̃‖` of `rho_mag` and `lambda_mag`: `+∞`'s bits where `‖λ̃‖ = 0`, selected, not divided.
 #[inline]
 pub fn ratio<R: LinkReal + IeeeBits>(rho_mag: R, lambda_mag: R) -> R {
     (rho_mag / lambda_mag).or_pos_inf(ratio_pole(lambda_mag))
 }
 
-/// The derived `E₀ = K_0 + V_0`, formed at `Real` width from the stored fields (R-86; dd_generation_root §3.6).
+/// The derived `E₀ = K_0 + V_0`, formed at `Real` width from the stored fields (dd_generation_root §3.6).
 #[inline]
 pub fn energy<R: LinkReal + PayloadReal>(d: &ICDescriptorOf<R>) -> R {
     d.K_0 + d.V_0
 }
 
 /// `π̂`, dd_decoder §3.2's image of π: the retired β links' generated literal, π rounded toward zero at f32 and π's
-/// nearest value at f64 (R-417), so `π̂ ≤ π` at each precision; the encode's `β` reads it on the `−x` half-axis.
+/// nearest value at f64, so `π̂ ≤ π` at each precision; the encode's `β` reads it on the `−x` half-axis.
 #[inline]
 pub fn pi_image<R: LinkReal>() -> R {
     R::LIT_7
@@ -166,13 +166,13 @@ pub fn angle<R: LinkReal>(cross: R, dot: R) -> R {
     select(cross_zero(cross), on_axis, off_axis)
 }
 
-/// [`angle`]'s axis: `ρ × λ = 0` (R-437).
+/// [`angle`]'s axis: `ρ × λ = 0`.
 #[inline]
 pub fn cross_zero<R: LinkReal>(cross: R) -> bool {
     cross == R::zero()
 }
 
-/// [`angle`]'s zero `dot`, the operand a select takes as `+0` before `atan2`, and half the pole (R-437).
+/// [`angle`]'s zero `dot`, the operand a select takes as `+0` before `atan2`, and half the pole.
 #[inline]
 pub fn dot_zero<R: LinkReal>(dot: R) -> bool {
     dot == R::zero()
@@ -193,10 +193,10 @@ pub fn cross_dot<R: LinkReal>(rho: [R; 2], lambda: [R; 2]) -> (R, R) {
     )
 }
 
-/// `rho_angle` of the configuration block's own `ρ̃` and `λ̃`, `Φ`'s vectors (R-628; dd_decoder §3.6): [`angle`] of
+/// `rho_angle` of the configuration block's own `ρ̃` and `λ̃`, `Φ`'s vectors (dd_decoder §3.6): [`angle`] of
 /// their cross and dot products. At the `α = 0` pole `Φ`'s `λ̃` is `±0`, so the pole's case gives 0 on every backend,
-/// where the positions' `λ` would be `C`'s rounding residue. No decode mirrors (the shape sphere's `C` does not take
-/// step 3, R-544; every other chart's configuration is canonical by construction), so no sign is turned.
+/// where the positions' `λ` would be `C`'s rounding residue. No decode mirrors (`C` has no mirror step, and every
+/// chart's configuration is canonical by construction), so no sign is turned.
 #[inline]
 pub fn config_angle<R: LinkReal>(config: &Config<R>) -> R {
     let (cross, dot) = cross_dot(config.rho_t, config.lambda_t);
@@ -261,7 +261,7 @@ pub fn describe<R: LinkReal + PayloadReal>(ic: &Ic<R>) -> ICDescriptorOf<R> {
 }
 
 /// The `ICDescriptor` of the decoded IC `ic` whose configuration block gave `config` (dd_decoder §3.6): every field
-/// from `ic`'s positions and momenta but `rho_angle`, which is [`config_angle`], `Φ`'s (R-628).
+/// from `ic`'s positions and momenta but `rho_angle`, which is [`config_angle`], `Φ`'s.
 #[inline]
 pub fn describe_decoded<R: LinkReal + PayloadReal>(
     ic: &Ic<R>,
