@@ -1,5 +1,5 @@
 //! `InvariantLE` and `InvariantLK`, the invariant-momentum charts `(L_z, E)` and `(L_z, K)` (chart_reference §2, §2.1,
-//! §5.1; REQ-CHART-017): they fix geometry and mass and spend both axes on conserved or constructed quantities, the
+//! §5.1): they fix geometry and mass and spend both axes on conserved or constructed quantities, the
 //! momenta built by the invariant-momentum construction ([`crate::decode::invariant`], chart_reference §2.2).
 //!
 //! **The frozen part** (the chart's parameters; [`Invariant`]): the configuration controls `(z_α, z_β)` and the mass
@@ -26,7 +26,7 @@
 //! `(s, t) ∈ [0,1]²`, the edges included, on a backend whose `sqrt` lies within four ulps of the exact root: proven
 //! and tested on the CPU at f32 and f64 (correctly rounded). WGSL's nominal `sqrt` bound (inherited from
 //! `1/inverseSqrt`) can exceed four ulps, so the GPU's edges are verified where its feasibility tags are compared
-//! with the CPU's, TASK-M2-24's cross-backend check, whose fuzz covers the edge columns `s ∈ {0, 1}`.
+//! with the CPU's, in the cross-backend check, whose fuzz covers the edge columns `s ∈ {0, 1}`.
 //!
 //! **`K* = K(t)` on both charts.** On `(L_z, K)` it is the coordinate itself (§2.1). On `(L_z, E)`, §2.2's
 //! `K* = E − U` with `E = U + K(t)` is `K(t)` in exact arithmetic, so the decode takes `K(t)` directly rather than
@@ -36,16 +36,16 @@
 //!
 //! **The decode** ([`decode()`]): the shared mass and configuration blocks, then the construction in place of the free
 //! momentum block ([`InvariantBlocks`]), then the shared derived invariants ([`crate::decode::decode_with`]). The
-//! construction runs under the seed in force, the expansion `w = r/√I` (R-934;
-//! [`crate::decode::invariant::construct_expansion`]); R-82's rule is a named option ([`decode_seeded`],
-//! [`InvariantBlocks::seeded`]), for which the configuration block hands the construction the `z_α` it decoded, so its
-//! seed is decided on the very control the configuration came from ([`crate::decode::invariant::construct`]). `Φ`'s [`ChartOut`] carries the frozen controls
-//! (the momentum controls 0, unread); the targets `(L_z, K*)` are [`Invariant::targets`]. Both charts override
-//! [`Chart::decode`] with it, the outcome dropped, so every entry runs the construction, never the free decode of `Φ`'s
-//! controls; the exact-sign arithmetic it needs ([`WarpReal`]) every payload float type has
-//! ([`crate::real::IeeeBits`]'s bound).
+//! construction runs under the seed in force, the expansion `w = r/√I`
+//! ([`crate::decode::invariant::construct_expansion`]); the legacy largest-norm rule is a named option
+//! ([`decode_seeded`], [`InvariantBlocks::seeded`]), for which the configuration block hands the construction the `z_α`
+//! it decoded, so its seed is decided on the very control the configuration came from
+//! ([`crate::decode::invariant::construct`]). `Φ`'s [`ChartOut`] carries the frozen controls (the momentum controls 0,
+//! unread); the targets `(L_z, K*)` are [`Invariant::targets`]. Both charts override [`Chart::decode`] with it, the
+//! outcome dropped, so every entry runs the construction, never the free decode of `Φ`'s controls; the exact-sign
+//! arithmetic it needs ([`WarpReal`]) every payload float type has ([`crate::real::IeeeBits`]'s bound).
 //!
-//! **`η_E` is forbidden** (chart_reference §0.6; R-25): energy is a coordinate here, or is fixed by the construction,
+//! **`η_E` is forbidden** (chart_reference §0.6): energy is a coordinate here, or is fixed by the construction,
 //! so both charts set `forbids_energy_normalisation`, and the validation pass refuses any view combining them with an
 //! `E*` (`engine::chart_validate`).
 //!
@@ -56,7 +56,7 @@
 //! `NO_QUALIFYING_SEED` are carried in [`Decoded::degenerate`] after the mass block's tag ([`Blocks::tag`],
 //! [`Outcome::tag`]), so the decode stage writes them as it writes `M01_TINY`.
 //!
-//! **Validation** (R-26; chart_reference §5.1): inside `[0,1]²` every point is `Valid` (layer 2 by the warp; layer 3,
+//! **Validation** (chart_reference §5.1): inside `[0,1]²` every point is `Valid` (layer 2 by the warp; layer 3,
 //! decode sanity, by the shared decoder's construction: positive masses, the CoM at the origin, `Σpᵢ = 0` by the
 //! construction's projection). Past it: a non-finite coordinate is rejected; `t < 0` (`K < 0`, `E < U`, and no real
 //! `t^γ_K` for a non-integer `γ_K`) is projected to `(clamp(s), 0)`, the parabola's apex, the rest start; `s ∉ [0, 1]`
@@ -66,7 +66,7 @@
 //!
 //! **The overflow edge.** In f64 the decode past `t > 1` is a system only while `K(t)` is at most half the greatest
 //! finite float: past it the construction's `2·I·K*` is not finite, `L_max` is stepped down to the greatest finite float,
-//! and the decode is [`Degenerate::InvariantInfeasible`] with every momentum 0, not a system (R-469 P1). At `K_max = 1`,
+//! and the decode is [`Degenerate::InvariantInfeasible`] with every momentum 0, not a system. At `K_max = 1`,
 //! `γ_K = 3/2` the last such `t` is `2.0065826040452472·10²⁰⁵`. `validate` does not decode, so it is `Valid` there too;
 //! the chart's [`Chart::phi_finite`] reads the decode instead, under [`Defaults`] at the default link parameters, and
 //! fails a point layer 2 accepts whose decode fails layer 3 (`decoded_sanity`: the masses positive, the configuration and momenta
@@ -147,7 +147,7 @@ fn lower<R: WarpReal>(k: R, l: R) -> R {
 
 /// `L_max = √(2·I·K)` at `I = 1`, held to `L_max² ≤ 2K` exactly where `sqrt` lies within four ulps of the exact root:
 /// the rounded root, stepped down while the exact test still finds it infeasible, four steps at most (the module's
-/// note: the CPU's is correctly rounded; a GPU's is checked by TASK-M2-24).
+/// note: the CPU's is correctly rounded; a GPU's is checked by the cross-backend check).
 #[inline]
 pub fn l_max<R: WarpReal>(k: R) -> R {
     let root = Float::sqrt(k + k);
@@ -184,7 +184,7 @@ pub struct Targets<R> {
 }
 
 /// §2.1's `K(t) = K_max·t^γ_K`, the warp's kinetic energy, which the Burrau `(ν, K)` chart's vertical axis takes too
-/// (chart_reference §4.5; R-113).
+/// (chart_reference §4.5).
 #[inline]
 pub fn kinetic<R: Float + Real>(k_max: R, gamma_k: R, t: R) -> R {
     k_max * Real::power(t, gamma_k)
@@ -240,8 +240,8 @@ impl<P: Copy> Invariant<P> {
         ]
     }
 
-    /// The frozen part with the control `k`, a configuration control or a mass logit, set to `value` (the slice, R-473
-    /// T6); `None` for a momentum control, which the axes write.
+    /// The frozen part with the control `k`, a configuration control or a mass logit, set to `value` (the slice);
+    /// `None` for a momentum control, which the axes write.
     pub fn sliced(&self, k: u32, value: P) -> Option<Self> {
         let mut inv = *self;
         match k {
@@ -457,9 +457,9 @@ impl<P: Copy> Chart for InvariantLK<P> {
 
 /// The invariant charts' decoder under the selection `S`: the shared mass and configuration blocks, the construction
 /// in place of the free momentum block, and the shared derived invariants. The construction runs under its seeding, the
-/// seed in force unless [`InvariantBlocks::seeded`] names R-82's legacy rule; the configuration block keeps the `z_α` it
-/// decoded, which the legacy rule reads. The mass block reads the tunable parameters `params`, the active `μ_max`
-/// (`crate::chart`'s note; R-481 G4).
+/// seed in force unless [`InvariantBlocks::seeded`] names the legacy largest-norm rule; the configuration block keeps
+/// the `z_α` it decoded, which the legacy rule reads. The mass block reads the tunable parameters `params`, the active
+/// `μ_max` (`crate::chart`'s note).
 pub struct InvariantBlocks<S, R> {
     /// The target `L_z`.
     lz: R,
@@ -499,7 +499,7 @@ impl<S, R: Float> InvariantBlocks<S, R> {
         }
     }
 
-    /// This decoder with the construction under `seeding`: [`Seeding::LargestNorm`] is R-82's named legacy option.
+    /// This decoder with the construction under `seeding`: [`Seeding::LargestNorm`] is the named legacy option.
     #[inline]
     pub fn seeded(self, seeding: Seeding) -> Self {
         InvariantBlocks { seeding, ..self }
@@ -538,9 +538,9 @@ impl<S: Selection, R: LinkReal + PayloadReal + ExactSign> Blocks<R> for Invarian
         config::decode::<S, R>(z_cfg, masses)
     }
 
-    /// The construction (chart_reference §2.2) under the decoder's seeding, R-82's legacy rule's seed decided on the
-    /// decoded `z_α`; the momentum controls are not read. [`Momentum::q`] holds the construction's Jacobi momenta
-    /// `(p_ρ, p_λ)`, not decoded controls.
+    /// The construction (chart_reference §2.2) under the decoder's seeding, the legacy largest-norm rule's seed decided
+    /// on the decoded `z_α`; the momentum controls are not read. [`Momentum::q`] holds the construction's Jacobi
+    /// momenta `(p_ρ, p_λ)`, not decoded controls.
     #[inline]
     fn momentum(&mut self, _z_mom: [R; 4], masses: &Masses<R>, config: &Config<R>) -> Momentum<R> {
         let c = construction::construct_with(
@@ -610,7 +610,7 @@ where
 }
 
 /// [`decode_controls()`] with the construction under `seeding`: [`Seeding::Expansion`] is the chart's own decode, the
-/// seed in force; [`Seeding::LargestNorm`] is R-82's named legacy option, its seam at `z_α = 0` declared (R-934).
+/// seed in force; [`Seeding::LargestNorm`] is the named legacy option, its seam at `z_α = 0` declared.
 #[inline]
 pub fn decode_seeded<S, R, C>(
     chart: &C,
@@ -631,7 +631,7 @@ where
     (decoded, blocks.outcome())
 }
 
-/// The invariant charts' hidden coordinates and tilt (R-473 J1): the configuration's two controls and the two mass
+/// The invariant charts' hidden coordinates and tilt: the configuration's two controls and the two mass
 /// logits, `{0, 1, 6, 7}`; the axes write the momentum block.
 macro_rules! tiltable {
     ($($chart:ident),*) => {$(

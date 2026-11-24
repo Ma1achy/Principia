@@ -1,31 +1,30 @@
-//! Physical-quantity axes: warped by default, linear as an option per axis, the warp evaluated per pixel (R-471 E1 to
-//! E3, H1 to H7; R-506 W1 to W5; R-508 V1 to V5; chart_reference §2.1; chart_decoder_contract § "The four axis kinds — a
-//! closed set", § "Past the unit square — each axis's extension type (R-407)").
+//! Physical-quantity axes: warped by default, linear as an option per axis, the warp evaluated per pixel
+//! (chart_reference §2.1; chart_decoder_contract § "The four axis kinds — a closed set", § "Past the unit square —
+//! each axis's extension type").
 //!
 //! **The quantities and their warps** ([`Quantity`], [`written`]). The energy-type axes of kind 3, `E`, `L_z`, `K` and
 //! `KE` (`K`'s quantity), take chart_reference §2.1's warp, each alone its own line of it: `K = K_max·t^γ_K`,
 //! `E = U + K_max·t^γ_K`, `L_z = (2s − 1)·L_max` with `L_max = √(2IK)` at the kinetic energy the axis reads. The virial
-//! ratio and the mass ratio take the warps §2.1 writes for them (REQ-CHART-070, R-72), built in `super::physical`. `PE`
+//! ratio and the mass ratio take the warps §2.1 writes for them, built in `super::physical`. `PE`
 //! has no warp: §2.1 writes that no chart offers it, so [`written`] refuses it, and the well-posedness validator with it
 //! (`engine::chart_authoring::validate`).
 //!
-//! **The mapping** ([`Mapping`]; R-471 E2, H4, H7). `Warped` is the default and every existing chart's map, bit for bit.
+//! **The mapping** ([`Mapping`]). `Warped` is the default and every existing chart's map, bit for bit.
 //! `Linear` maps the axis affinely onto the warp's range at the slice centre: `K ∈ [0, K_max]`, `E ∈ [U₀, U₀ + K_max]`,
 //! `L_z ∈ ±√(2·I₀·K_max)`, `U₀` and `I₀` the slice centre's (the canonical-frame decode's `I₀ = 1`). Its infeasible
 //! pixels are not a system, refused by `validate`, which the chart classification draws blank and never integrates.
 //! The mapping of each axis is a chart parameter, a sim key (`engine::contract::sim_config::Chart`).
 //!
-//! **Each axis's extension type** ([`extension`]; R-407, R-508, R-506 W4): a warped `t` axis (`K`, `KE`, `E`) is bounded
+//! **Each axis's extension type** ([`extension`]): a warped `t` axis (`K`, `KE`, `E`) is bounded
 //! below `t = 0` and continues, affine, past `t = 1`; the warp's `s` axis (`L_z`) is bounded on both sides; the virial
-//! ratio and the mass ratio, warped, are bounded on both sides; under the linear option every axis is affine, R-408's
-//! B1 axis.
+//! ratio and the mass ratio, warped, are bounded on both sides; under the linear option every axis is affine.
 //!
 //! **The invariant charts and the Burrau family's `K` axes under the linear option** ([`Mapped`]). The warped map is the
 //! chart's own: [`Mapped`] with every axis warped decodes, maps and validates as the chart it wraps, bit for bit. Under
 //! the linear option the targets `(L_z, K*)` come from [`Rule`] and the construction runs in [`RuleBlocks`], which reads
-//! the pixel's own potential `U` where the rule needs it (`E`'s linear map, `K* = E − U`, E3).
+//! the pixel's own potential `U` where the rule needs it (`E`'s linear map, `K* = E − U`).
 //!
-//! **Per pixel** (R-471 E3, H6; R-473 T5). Every target is formed from the pixel's own decoded masses and configuration,
+//! **Per pixel.** Every target is formed from the pixel's own decoded masses and configuration,
 //! after a tilt's hidden offsets: `I = 1` at every pixel (the canonical-frame decode), `K*` is `K(t)` itself on the warp
 //! and `U` is read where an axis needs it. Untilted, those are the slice centre's at every pixel.
 
@@ -47,7 +46,7 @@ use crate::decode::{self, descriptor, Blocks, Decoded, Degenerate, Ic, Latent};
 use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 
-/// How an axis maps `[0, 1]` onto its quantity (R-471 E1, E2; R-506): warped by default, linear as an option. A `u32`
+/// How an axis maps `[0, 1]` onto its quantity: warped by default, linear as an option. A `u32`
 /// discriminant, a type the kernel's SPIR-V has.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[repr(u32)]
@@ -61,7 +60,7 @@ pub enum Mapping {
 }
 
 /// A physical quantity an axis may show (chart_decoder_contract Part 3, kind 3's list; render_gui_spec §G7's physical
-/// quantities, R-506).
+/// quantities).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Quantity {
     /// The energy `E = K + U`.
@@ -105,12 +104,12 @@ impl Quantity {
 /// Why a physical-quantity axis is refused.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Refused {
-    /// chart_reference §2.1 writes no warp for the quantity: no chart offers it (REQ-CHART-070, R-72; R-471 H2).
+    /// chart_reference §2.1 writes no warp for the quantity: no chart offers it.
     NoWarpWritten(Quantity),
 }
 
 /// Whether chart_reference §2.1 writes a warp for `quantity`, so that a chart may offer an axis of it: every quantity
-/// but `PE`, which §2.1's paragraph says no chart offers (REQ-CHART-070).
+/// but `PE`, which §2.1's paragraph says no chart offers.
 #[inline]
 pub fn written(quantity: Quantity) -> Result<(), Refused> {
     match quantity {
@@ -119,7 +118,7 @@ pub fn written(quantity: Quantity) -> Result<(), Refused> {
     }
 }
 
-/// An axis's extension type past its edge (chart_decoder_contract Part 3, R-407's four).
+/// An axis's extension type past its edge (chart_decoder_contract Part 3's four).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExtensionType {
     /// The formula continues.
@@ -150,8 +149,8 @@ impl Sides {
 }
 
 /// The extension type of an axis of `quantity` under `mapping` (the module's note): a warped `K`, `KE` or `E` axis
-/// bounded below `t = 0` and affine past `t = 1` (R-508); a warped `L_z`, the warp's `s` axis, bounded on both sides; a
-/// warped virial or mass ratio bounded on both sides (R-506 W4); every linear axis affine (B1); `PE` refused.
+/// bounded below `t = 0` and affine past `t = 1`; a warped `L_z`, the warp's `s` axis, bounded on both sides; a
+/// warped virial or mass ratio bounded on both sides; every linear axis affine; `PE` refused.
 pub fn extension(quantity: Quantity, mapping: Mapping) -> Result<Sides, Refused> {
     written(quantity)?;
     Ok(sides(quantity, mapping))
@@ -170,7 +169,7 @@ pub(super) fn sides(quantity: Quantity, mapping: Mapping) -> Sides {
     }
 }
 
-/// How a pixel of a chart's window counts in R-408's area statistics, through its axes' types
+/// How a pixel of a chart's window counts in the area statistics, through its axes' types
 /// (chart_decoder_contract Part 3, "Area statistics past `[0,1]²`").
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Count {
@@ -187,8 +186,8 @@ pub enum Count {
 /// The count of the pixel at the chart point `at`, `[s, t]`, whose axes have the types `sides` and whose `validate`
 /// accepts it where `valid` (chart_decoder_contract Part 3's order): past a bounded side the domain's end; past a
 /// periodic or pole-crossing one not counted; an affine side's primary range is unbounded; then forbidden where not
-/// valid, else a system. So a linear axis's unreachable pixels are forbidden, in the count and the total (B1), and a
-/// warped axis's pixels past a bounded edge leave both (R-471 H3; R-506 W4).
+/// valid, else a system. So a linear axis's unreachable pixels are forbidden, in the count and the total, and a
+/// warped axis's pixels past a bounded edge leave both.
 pub fn count(sides: [Sides; 2], at: [f64; 2], valid: bool) -> Count {
     let side = |s: Sides, x: f64| {
         if x < 0.0 {
@@ -213,8 +212,8 @@ pub fn count(sides: [Sides; 2], at: [f64; 2], valid: bool) -> Count {
     }
 }
 
-/// Whether a pixel inside `[0,1]²` that is not a system logs R-467's decoder-bug warning on a chart whose
-/// physical-quantity axes have the mappings `mappings` (R-506 W1; R-471 H5): only where every one is warped, the chart
+/// Whether a pixel inside `[0,1]²` that is not a system logs the decoder-bug warning on a chart whose
+/// physical-quantity axes have the mappings `mappings`: only where every one is warped, the chart
 /// then valid there by construction; a linear axis's in-square failures are by design, and warn nothing.
 #[inline]
 pub fn decoder_bug_warning(mappings: &[Mapping]) -> bool {
@@ -271,7 +270,7 @@ impl<R: WarpReal> Rule<R> {
 
 /// The decoder of a [`Rule`]'s targets under the selection `S`: the shared mass and configuration blocks at the tunable
 /// parameters, the construction (chart_reference §2.2) at the targets the rule gives on the pixel's own potential,
-/// under the seed in force, the expansion `w = r/√I` (R-934), and the shared descriptor.
+/// under the seed in force, the expansion `w = r/√I`, and the shared descriptor.
 pub struct RuleBlocks<S, R> {
     rule: Rule<R>,
     outcome: Outcome,
