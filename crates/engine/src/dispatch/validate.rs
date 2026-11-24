@@ -1,21 +1,21 @@
 //! Dispatch's refusals (integrator_contract Part 5, "Exact step-index timing invariant"; dd_simstate_payload §2,
-//! `times`, and §8; R-86, R-502, R-610, R-668): what a [`SimUniforms`] must satisfy before anything is dispatched under
-//! it, each refusal a typed [`DispatchError`] with its reason. [`validate`] checks, in order:
+//! `times`, and §8): what a [`SimUniforms`] must satisfy before anything is dispatched under it, each refusal a typed
+//! [`DispatchError`] with its reason. [`validate`] checks, in order:
 //!
-//! - **The horizon's range**, `T_horizon ∈ [0.4, 200]` (R-610): `T` finite; at least one escape window, the carried
-//!   `escape_window` (0.4, provisional, R-29), since below it the escape arm cannot fire, the floor following the
+//! - **The horizon's range**, `T_horizon ∈ [0.4, 200]`: `T` finite; at least one escape window, the carried
+//!   `escape_window` (0.4, provisional), since below it the escape arm cannot fire, the floor following the
 //!   window's value; at most the cap, 200, until long horizons are measured for cost. Dispatch refuses a `T` outside
 //!   the range and never clamps it: a sim key is dispatched as given or not at all. A window that is not finite and
 //!   positive is refused first, since the floor is read from it.
 //! - **The horizon's steps**, `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`, evaluated in f64 ([`horizon_steps`]), with
 //!   `dt_macro` finite and positive: the exact u16 `t_end_step` and `t_dmin_step` hold every step index only then, and
-//!   there is no fallback format; a longer integration takes a coarser `dt_macro` or march epochs (R-86). `dt_macro`
+//!   there is no fallback format; a longer integration takes a coarser `dt_macro` or march epochs. `dt_macro`
 //!   must stay finite rounded to f32 as well, since [`Validated::wrapper_uniforms_f32`] hands that value to the
 //!   kernel, and its smallest substep, `dt_macro / N_max` at f32, must be a normal f32: infinity or 0 would make every
-//!   substep's `dt` not a time step, and a backend that flushes subnormal results (Metal; determinism note rule 6,
-//!   R-547; integrator contract Part 5, branch-cut crossing detection) reads a subnormal substep as 0 where the CPU
+//!   substep's `dt` not a time step, and a backend that flushes subnormal results (Metal; determinism note rule 6;
+//!   integrator contract Part 5, branch-cut crossing detection) reads a subnormal substep as 0 where the CPU
 //!   keeps it.
-//! - **The `N_sub` table** (R-502): the host generator's refusal of the carried `r_sub`, `gamma_sub` and `N_max`
+//! - **The `N_sub` table**: the host generator's refusal of the carried `r_sub`, `gamma_sub` and `N_max`
 //!   (`kernel::driver::nsub_table`), an `N_max` above the table's maximum length among them, is returned as it is;
 //!   and the carried table must be the generator's for them, bit for bit, never another config's.
 //! - **The joint bound** `horizon_steps × N_max ≤ 2³² − 1`, so the exact `total_substeps` u32 cannot overflow
@@ -27,20 +27,20 @@
 //!   (`kernel::detect::collision::CollisionRadius::from_r_coll`), finite: a `±∞` may be tested only on its bits
 //!   (gpu_determinism_note § "The discipline", rule 4), and a finite-math backend may not honour `d² < +∞`, so an
 //!   `r_coll` above about `1.8·10¹⁹` is refused, never clamped to `f32::MAX`: dispatch refuses a carried value rather
-//!   than alter it, as it does `T`, and as the `N_sub` table refuses an infinite threshold (R-502); `tau` finite and
+//!   than alter it, as it does `T`, and as the `N_sub` table refuses an infinite threshold; `tau` finite and
 //!   positive, since Part 7's escape test `|Δn̂| < tau` is strict and `|Δn̂|` is never below 0, so at `tau = 0` escape
 //!   never fires; `eps_E` and `eps_L` finite and positive, since each is only the floor under a relative drift's
 //!   denominator, `δE = ΔE / max(ε_E, |E₀|)` (dd_integrator §3.5), and with a floor not positive and `E₀ = 0`, on the
 //!   `E` axis of an `(L_z, E)` chart, the drift is `0/0`.
 //! - **The softening length**, `epsilon = 0`: no force law takes `epsilon`, and the corpus does not define softened
-//!   gravity (dd_generation_root §3.7, "Open"; RQ-627), so a run with any other `epsilon`, NaN and ±∞ included, would
+//!   gravity (dd_generation_root §3.7, "Open"), so a run with any other `epsilon`, NaN and ±∞ included, would
 //!   come back Newtonian under the `softened` tag. It is refused until the force law is built.
-//! - **The units**, `g = 1` and then `m_total = 1`: the kernel runs only at `G = 1` and `M = 1` (Part 5; R-668), so a
+//! - **The units**, `g = 1` and then `m_total = 1`: the kernel runs only at `G = 1` and `M = 1` (Part 5), so a
 //!   run with any other value, NaN and ±∞ included, would be a `G = 1`, `M = 1` run keyed under the value carried. A
 //!   source in another `G` or total mass is converted at the import boundary (`validation::import`), never carried
 //!   here.
 //! - **The sync quantum**, `delta_sync` the register's: the regularised occupants' grid is a constant of the build
-//!   (Part 2a; R-565), so a run carrying any other value, NaN and ±∞ included, would be marched on the build's grid
+//!   (Part 2a), so a run carrying any other value, NaN and ±∞ included, would be marched on the build's grid
 //!   and keyed under the value carried.
 //!
 //! A sim key that passes is a [`Validated`], the one way to the kernel's `WrapperUniforms`; [`dispatch`] launches only
@@ -68,14 +68,14 @@ pub enum DispatchError {
         /// The `T` carried.
         t_horizon: f64,
     },
-    /// `T_horizon` is below one escape window, where the escape arm cannot fire (R-610).
+    /// `T_horizon` is below one escape window, where the escape arm cannot fire.
     HorizonBelowWindow {
         /// The `T` carried.
         t_horizon: f64,
         /// The escape window, the floor.
         escape_window: f64,
     },
-    /// `T_horizon` is above the cap, 200 (R-610).
+    /// `T_horizon` is above the cap, 200.
     HorizonAboveCap {
         /// The `T` carried.
         t_horizon: f64,
@@ -86,7 +86,7 @@ pub enum DispatchError {
         /// The `dt_macro` carried.
         dt_macro: f64,
     },
-    /// `⌈T/dt_macro⌉` is above 65535, which the exact u16 step indices cannot hold (R-86).
+    /// `⌈T/dt_macro⌉` is above 65535, which the exact u16 step indices cannot hold.
     HorizonSteps {
         /// The `T` carried.
         t_horizon: f64,
@@ -95,7 +95,7 @@ pub enum DispatchError {
         /// `⌈T/dt_macro⌉` in f64.
         steps: f64,
     },
-    /// The host generator refused the substep law (R-502).
+    /// The host generator refused the substep law.
     Nsub(NsubTableError),
     /// `r_coll` is not finite or is negative: at NaN `d² < r_coll²` is never true, so collisions would be silently off.
     CollisionRadius {
@@ -128,22 +128,22 @@ pub enum DispatchError {
         /// The `eps_L` carried.
         eps_l: f64,
     },
-    /// `epsilon` is not 0: softened gravity is not built (RQ-627).
+    /// `epsilon` is not 0: softened gravity is not built.
     Softening {
         /// The `epsilon` carried.
         epsilon: f64,
     },
-    /// `g` is not 1: the kernel runs only at `G = 1` (R-668).
+    /// `g` is not 1: the kernel runs only at `G = 1`.
     GravitationalConstant {
         /// The `g` carried.
         g: f64,
     },
-    /// `m_total` is not 1: the kernel runs only at `M = 1` (R-668).
+    /// `m_total` is not 1: the kernel runs only at `M = 1`.
     TotalMass {
         /// The `m_total` carried.
         m_total: f64,
     },
-    /// `delta_sync` is not the register's: the sync grid is a constant of the build (R-565).
+    /// `delta_sync` is not the register's: the sync grid is a constant of the build.
     SyncQuantum {
         /// The `delta_sync` carried.
         delta_sync: f64,
@@ -332,7 +332,7 @@ pub fn check_total_substeps(horizon_steps: u32, n_max: u32) -> Result<(), Dispat
     Ok(())
 }
 
-/// The horizon's range (R-610): `t` finite, at least `escape_window`, at most the cap.
+/// The horizon's range: `t` finite, at least `escape_window`, at most the cap.
 fn check_horizon(t: f64, escape_window: f64) -> Result<(), DispatchError> {
     if !(escape_window.is_finite() && escape_window > 0.0) {
         return Err(DispatchError::EscapeWindow { escape_window });
