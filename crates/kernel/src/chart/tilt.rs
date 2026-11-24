@@ -1084,8 +1084,7 @@ where
     }
 }
 
-// ── The tilted shape sphere: one-to-one at every tilt
-// ─────────────────────────────────────────────────────────────────
+// ── The tilted shape sphere: one-to-one at every tilt ─────────────────────────────────────────────────────────────────
 
 impl<P: Copy + FloatConst> Tilted<ShapeSphere<P>, P>
 where

@@ -4,7 +4,7 @@
 //! `ν` axis's blocks (`super::burrau`): no Burrau-specific integrator or renderer.
 //!
 //! **The acute-angle axis** ([`nu_of`], [`theta_of`]; §4.5). `θ ∈ (0, π/4]` is horizontal,
-//! `θ(u) = θ_min + (θ_max − θ_min)·u`, its range the constants register's, and the system is
+//! `θ(u) = θ_min + (θ_max − θ_min)·u`, its range proposed in the constants register, and the system is
 //! the `ν` axis's embed at `ν(θ) = sec θ − tan θ`, evaluated as `cos θ/(1 + sin θ)`, the same function, which cancels
 //! nowhere on `(0, π/4]`. It inverts `θ(ν) = arctan((1 − ν²)/(2ν))` ([`super::burrau::acute_angle`]) there, onto
 //! `ν ∈ [√2 − 1, 1)`: the fold's end `θ = π/4` is the isosceles triangle, and the classical point `ν = 1/2` is
