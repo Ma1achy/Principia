@@ -22,7 +22,7 @@
 //! `‖P r‖² = gᵀ(JᵀJ)⁻¹g` falls, the measure first-order optimality is judged on, so it is reached to the gradient's own
 //! rounding; where neither lowers it, the solve has stalled. After a polishing step `μ` starts again from its floor, so the next step is a damped one, on the cost,
 //! wherever the cost can be resolved. The ceiling is also passed where no trial is finite (at the edge of the map's
-//! domain); a polish there descends `‖Jᵀr‖` alone and can stop at a stationary point that is not a minimiser, which
+//! domain); a polish there descends `‖P r‖` alone and can stop at a stationary point that is not a minimiser, which
 //! no test of this module rules out.
 //!
 //! **Convergence, per call** ([`Report`]): `Converged(OnImage)` where `‖r‖ ≤` the residual tolerance (the state is on

@@ -4258,7 +4258,7 @@ fn check_reproduces(at: [f64; 2], switches: engine::path::anchor::probe::Switche
 // which goes through there.
 #[cfg(feature = "controls")]
 #[test]
-#[ignore = "a few minutes: cargo test -p engine --features controls --test path_lock -- path_lock_slide_stall --exact --include-ignored --nocapture"]
+#[ignore = "about 30 seconds in release, much longer in debug: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_stall --exact --include-ignored --nocapture"]
 fn path_lock_slide_stall() {
     use engine::path::anchor::probe::Switches;
     let main = main_slide();
@@ -4647,7 +4647,7 @@ fn check_rehold_slide_stall(pins: &[[f64; 2]], logged: bool) {
 
 #[cfg(feature = "controls")]
 #[test]
-#[ignore = "a few minutes: cargo test -p engine --features controls --test path_lock -- path_lock_rehold_slide_stall --exact --include-ignored --nocapture"]
+#[ignore = "about 2 minutes in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_rehold_slide_stall --exact --include-ignored --nocapture"]
 fn path_lock_rehold_slide_stall() {
     check_rehold_slide_stall(&sweep_pins(SWEEP_SIDE), true);
 }
@@ -4708,7 +4708,7 @@ fn show_outcome(o: &Option<SlideOutcome>) -> String {
 
 #[cfg(feature = "controls")]
 #[test]
-#[ignore = "about 20 minutes: cargo test -p engine --features controls --test path_lock -- path_lock_slide_follows_sweep --exact --include-ignored --nocapture"]
+#[ignore = "about 4 minutes in release, hours in debug: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_follows_sweep --exact --include-ignored --nocapture"]
 fn path_lock_slide_follows_sweep() {
     check_slide_follows(&sweep_pins(SWEEP_SIDE));
 }
@@ -4718,7 +4718,7 @@ fn path_lock_slide_follows_sweep() {
 // a mirror tie (`path_lock_slide_first_choice`); the polish alone, the fix as it is, passes every criterion.
 #[cfg(feature = "controls")]
 #[test]
-#[ignore = "a few minutes in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_follows_sweep_three --exact --include-ignored --nocapture"]
+#[ignore = "a measurement that fails F4 by design (the three changes not taken), about 5 minutes in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_follows_sweep_three --exact --include-ignored --nocapture"]
 fn path_lock_slide_follows_sweep_three() {
     use engine::path::anchor::probe;
     probe::with(three_changes(), || {
@@ -5093,7 +5093,7 @@ const MARGIN_CASES: [([f64; 2], usize); 6] = [
 
 #[cfg(feature = "controls")]
 #[test]
-#[ignore = "about a minute: cargo test -p engine --features controls --test path_lock -- path_lock_slide_margins --exact --include-ignored --nocapture"]
+#[ignore = "under a second in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_margins --exact --include-ignored --nocapture"]
 fn path_lock_slide_margins() {
     measure_margins(&MARGIN_CASES, true);
 }
