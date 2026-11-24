@@ -1,10 +1,10 @@
-//! The acute-angle Burrau charts and the strips (chart_reference §4.5; REQ-CHART-024, REQ-CHART-027, REQ-CHART-025):
+//! The acute-angle Burrau charts and the strips (chart_reference §4.5):
 //! `Φ_θ,K` ([`BurrauThetaK`], which is the bifurcation strip `Φ_strip,K`), `Φ_θ,L_z` ([`BurrauThetaLz`]) and the δm
 //! strip `Φ_strip,δm` ([`BurrauThetaDeltaM`]). Each is an ordinary chart map into the shared decoder, through the
 //! `ν` axis's blocks (`super::burrau`): no Burrau-specific integrator or renderer.
 //!
 //! **The acute-angle axis** ([`nu_of`], [`theta_of`]; §4.5). `θ ∈ (0, π/4]` is horizontal,
-//! `θ(u) = θ_min + (θ_max − θ_min)·u`, its range REQ-CHART-045's (proposed in the constants register), and the system is
+//! `θ(u) = θ_min + (θ_max − θ_min)·u`, its range the constants register's, and the system is
 //! the `ν` axis's embed at `ν(θ) = sec θ − tan θ`, evaluated as `cos θ/(1 + sin θ)`, the same function, which cancels
 //! nowhere on `(0, π/4]`. It inverts `θ(ν) = arctan((1 − ν²)/(2ν))` ([`super::burrau::acute_angle`]) there, onto
 //! `ν ∈ [√2 − 1, 1)`: the fold's end `θ = π/4` is the isosceles triangle, and the classical point `ν = 1/2` is
@@ -12,14 +12,14 @@
 //! each chart covers each shape once: [`SystemImage::Bijective`], the quotient "shape only" ([`ChartLabel`]).
 //!
 //! **`Φ_θ,K`** ([`BurrauThetaK`]). `K(v) = K_max·v^γ_K`, the invariant warp's ([`super::invariant::kinetic`]; its
-//! `K_max` and `γ_K` REQ-CHART-044's, R-113), and the momenta §2.2's construction at `(L_z = 0, K(v))`, under the seed
-//! in force, the expansion `w = r/√I` (R-934), as on the `(ν, K)` chart. (R-82's legacy rule, a named option, would
-//! take `(0, λ)` everywhere here, `ν ≥ √2 − 1 > 1/3`; [`super::burrau::seed`].)
+//! `K_max` and `γ_K` the constants register's), and the momenta §2.2's construction at `(L_z = 0, K(v))`, under the
+//! seed in force, the expansion `w = r/√I`, as on the `(ν, K)` chart. (The legacy largest-norm rule, a named option,
+//! would take `(0, λ)` everywhere here, `ν ≥ √2 − 1 > 1/3`; [`super::burrau::seed`].)
 //!
 //! **`Φ_θ,L_z`** ([`BurrauThetaLz`]). `K` fixed and `L_z(v) = (2v − 1)·λ_L·L_max(K)`, `λ_L ∈ (0, 1]`, both
-//! REQ-CHART-046's: a band symmetric about 0 inside the feasible `|L_z| ≤ √(2IK)`, `I = 1`. `L_max` is the warp's
-//! ([`super::invariant::l_max`]), held to `L_max² ≤ 2K` exactly, and `|(2v − 1)·λ_L| ≤ 1` after rounding on `[0, 1]`,
-//! so `L_z² ≤ 2K` and the construction is feasible at every `(u, v) ∈ [0,1]²`, the edges included.
+//! the constants register's: a band symmetric about 0 inside the feasible `|L_z| ≤ √(2IK)`, `I = 1`. `L_max` is the
+//! warp's ([`super::invariant::l_max`]), held to `L_max² ≤ 2K` exactly, and `|(2v − 1)·λ_L| ≤ 1` after rounding on
+//! `[0, 1]`, so `L_z² ≤ 2K` and the construction is feasible at every `(u, v) ∈ [0,1]²`, the edges included.
 //!
 //! **The δm strip** ([`BurrauThetaDeltaM`], [`DeltaMBlocks`]). `m(u, v) = (1 − v)·m_Burrau(ν(θ(u))) + v·m_target`, the
 //! target by default equal masses ([`BurrauThetaDeltaM::equal_masses`]), the momenta zero. The triangle is the Burrau
@@ -33,9 +33,9 @@
 //! [`Chart::decode`] with its own, which its [`ChartDecode`] calls too; the δm strip overrides [`Chart::decode`] with
 //! [`decode_delta_m`]. All three are the Burrau family, whose masses vary per pixel, and declare
 //! [`Chart::requires_per_pixel_mass`] (inverse_encode_contract § "Chart-aware validation", the chart flags). Energy is the construction's on `Φ_θ,K` and `Φ_θ,L_z`, which forbid
-//! `η_E` (chart_reference §0.6; R-25); the δm strip is a rest start and allows it, as the Euclid plane does.
+//! `η_E` (chart_reference §0.6); the δm strip is a rest start and allows it, as the Euclid plane does.
 //!
-//! **Validation** (R-26; chart_reference §5.1). Layer 2: `θ ∈ (0, π/4]` ([`Constraint::BurrauTheta`]), whose failure is
+//! **Validation** (chart_reference §5.1). Layer 2: `θ ∈ (0, π/4]` ([`Constraint::BurrauTheta`]), whose failure is
 //! rejected: past `θ = 0` a mass is zero or negative, and past `π/4` the system is the other leg ordering, outside the
 //! fold, so neither clamping nor projecting keeps the IC the one intended. Then each chart's vertical constraint:
 //! `Φ_θ,K`'s `K ≥ 0`, `v < 0` projected to `v = 0`, the rest start ([`Constraint::KNonNegative`]); `Φ_θ,L_z`'s
@@ -45,8 +45,8 @@
 //! ([`Constraint::DecodedMassPositive`]; `θ` so small that `ν` rounds to 1 gives `a = 0`), then the positions and
 //! momenta finite, as on the `ν` axis's charts.
 //!
-//! **Past `[0,1]²`** each axis's extension type is chart_reference §5.4's (REQ-CHART-055): `θ` and `K` bounded, `L_z`
-//! and δm affine; the types are declared in code by TASK-M8-05 (REQ-CHART-054), not here.
+//! **Past `[0,1]²`** each axis's extension type is chart_reference §5.4's: `θ` and `K` bounded, `L_z`
+//! and δm affine; this module does not declare them in code.
 
 use spirv_std::num_traits::Float;
 
@@ -265,7 +265,7 @@ where
     }
 
     /// [`decode_theta_k`] at `(u, v)`, the construction's outcome dropped, as [`ChartDecode::decode_at`] decodes it: the
-    /// masses follow `ν(θ(u))` (REQ-DEC-006). `S` is not read, as there.
+    /// masses follow `ν(θ(u))`. `S` is not read, as there.
     #[inline]
     fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
@@ -284,7 +284,7 @@ where
 }
 
 /// `D ∘ Φ_θ,K` at `(u, v)`: the embed at `ν(θ(u))`, §2's construction at `L_z = 0`, `K* = K(v)`, under the seed in
-/// force (R-934); and the construction's outcome.
+/// force; and the construction's outcome.
 #[inline]
 pub fn decode_theta_k<R, P>(chart: &BurrauThetaK<P>, u: R, v: R) -> (Decoded<R>, Outcome)
 where
@@ -295,7 +295,7 @@ where
 }
 
 /// [`decode_theta_k`] with the construction at the held `L_z = lz` in place of 0, the chart's hidden coordinate, and
-/// `K* = k` in place of `K(v)`, the row its mode gives (R-633, R-708; `super::construction`).
+/// `K* = k` in place of `K(v)`, the row its mode gives (`super::construction`).
 #[inline]
 pub fn decode_theta_k_lz<R, P>(chart: &BurrauThetaK<P>, u: R, lz: R, k: R) -> (Decoded<R>, Outcome)
 where
@@ -368,7 +368,7 @@ impl<P: Copy> BurrauThetaLz<P> {
         self.lz_at(v, self.kinetic::<F>())
     }
 
-    /// `L_z(v)` on the band of `K = k`, the pixel's own under a warped tilt (R-708).
+    /// `L_z(v)` on the band of `K = k`, the pixel's own under a warped tilt.
     #[inline]
     pub fn lz_at<F: WarpReal + From<P>>(&self, v: F, k: F) -> F {
         (v + v - F::one()) * self.band(k)
@@ -492,7 +492,7 @@ where
     }
 
     /// [`decode_theta_lz`] at `(u, v)`, the construction's outcome dropped, as [`ChartDecode::decode_at`] decodes it: the
-    /// masses follow `ν(θ(u))` (REQ-DEC-006). `S` is not read, as there.
+    /// masses follow `ν(θ(u))`. `S` is not read, as there.
     #[inline]
     fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
@@ -525,8 +525,8 @@ where
     }
 }
 
-/// `D ∘ Φ_θ,L_z` at `(u, v)`: the embed at `ν(θ(u))`, §2's construction at `L_z(v)`, `K* = K`, under the seed in force
-/// (R-934); and the construction's outcome.
+/// `D ∘ Φ_θ,L_z` at `(u, v)`: the embed at `ν(θ(u))`, §2's construction at `L_z(v)`, `K* = K`, under the seed in force;
+/// and the construction's outcome.
 #[inline]
 pub fn decode_theta_lz<R, P>(chart: &BurrauThetaLz<P>, u: R, v: R) -> (Decoded<R>, Outcome)
 where
@@ -537,7 +537,7 @@ where
 }
 
 /// [`decode_theta_lz`] with the construction at `(L_z, K*) = (lz, k)`, the held `K` tilted and the band its mode gives
-/// (R-633, R-708; `super::construction`).
+/// (`super::construction`).
 #[inline]
 pub fn decode_theta_lz_at<R, P>(
     chart: &BurrauThetaLz<P>,
