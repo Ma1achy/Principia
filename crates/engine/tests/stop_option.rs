@@ -1,6 +1,7 @@
 //! The stop option (`SimUniforms::stop_on_escape`; `kernel::driver::cadence`'s note) on every march path that had
 //! marched live whatever the key said: the first slice (`engine::first_slice::march`, through its [`MarchKey`]), the
-//! time coordinate's per-sample stop (`kernel::driver::wrapper::integrate_detecting_to`), the FTLE entry
+//! time coordinate's per-sample stop (`kernel::driver::wrapper::integrate_detecting_to`) and its label
+//! (`engine::time_coordinate::stop_label`), the FTLE entry
 //! (`kernel::driver::benettin::integrate_ftle`) and the producer (`kernel::driver::producer::produce`).
 //!
 //! Every check starts from the sim key: `SimUniforms { stop_on_escape, .. }`, validated as dispatch validates it, and
@@ -16,6 +17,7 @@
 use engine::contract::sim_uniforms::{dt_macro_for, SimUniforms};
 use engine::dispatch::validate::validate;
 use engine::first_slice::{march, march_key, HeggieRk4, MarchKey};
+use engine::time_coordinate::{stop_label, StopLabel};
 use kernel::decode::Ic;
 use kernel::detect::escape_rule::DefaultRule;
 use kernel::driver::advance::Advance;
@@ -206,6 +208,78 @@ negative_control!(
     })
 );
 
+/// The time coordinate's label of a sample stopped at its stop index: the record, `k_stop`, the horizon and the stop
+/// option (`engine::time_coordinate::stop_label`'s arguments).
+type Labeller = fn(&SimStateBase, u32, u32, bool) -> StopLabel;
+
+/// The label `label_of` gives the fixture marched by the time coordinate's stop under KDK, from the sim key, in both
+/// modes, at two stop indices: the first label's own step, and midway from it to the horizon. Off, the escape label at
+/// `k_stop` is live, so the sample reached its time; on, the first label ended the march and stays, so the label is the
+/// payload's escape, at `k_stop` as before it.
+fn check_stop_label(label_of: Labeller) {
+    let ic = spreading(10.0);
+    let first = reference::<Kdk>(&ic, &key(true), true);
+    let label = tm_t_end_step(first.times);
+    let horizon = key(true).loop_values.horizon_steps;
+    for k_stop in [label, label + (horizon - label) / 2] {
+        for stop in [false, true] {
+            let k = key(stop);
+            let s = integrate_detecting_to::<Kdk, f32>(
+                &ic,
+                &k.loop_values,
+                k.radius,
+                k_stop,
+                k.stop_on_escape,
+            );
+            assert_eq!(
+                sd_state(s.packed_a),
+                STATE_ESCAPE,
+                "the fixture stopped at {k_stop} (stop option {stop}) is not labelled escape"
+            );
+            let want = if stop {
+                StopLabel::Payload(STATE_ESCAPE)
+            } else {
+                StopLabel::ReachedItsTime
+            };
+            let got = label_of(&s, k_stop, horizon, stop);
+            println!(
+                "the time coordinate's label at k_stop {k_stop} (first label {label}, horizon {horizon}), stop option \
+                 {stop}: escape at t_end_step {}, read {got:?}",
+                tm_t_end_step(s.times)
+            );
+            assert_eq!(
+                got,
+                want,
+                "stop option {stop}, k_stop {k_stop}: the escape at t_end_step {} reads {got:?}, not {want:?}",
+                tm_t_end_step(s.times)
+            );
+        }
+    }
+}
+
+#[test]
+fn stop_option_stop_label() {
+    check_stop_label(stop_label);
+}
+
+negative_control!(
+    stop_option_stop_label,
+    "main's label before the fix: only `running` at `k_stop` reached its time, whatever the stop option",
+    expected = "not ReachedItsTime",
+    check_stop_label(|s, k_stop, horizon, _| {
+        let state = sd_state(s.packed_a);
+        if state == kernel::payload::STATE_RUNNING
+            && k_stop < horizon
+            && tm_t_end_step(s.times) == k_stop
+            && !kernel::payload::bb_budget_exhausted(s.budget_bits)
+        {
+            StopLabel::ReachedItsTime
+        } else {
+            StopLabel::Payload(state)
+        }
+    })
+);
+
 // ── The FTLE entry and the producer ──────────────────────────────────────────────────────────────────────────────
 
 /// Benettin's values for the FTLE tier here: a renormalisation every macro-step, so `S` moves on every step the march
@@ -265,6 +339,46 @@ fn check_ftle(path: &str, ftle: FtleMarch) {
         s_sums[0]
     );
 }
+
+/// Criterion (written before the run): under the option, the FTLE-tier march `ftle`, named `path`, freezes `S` at the
+/// first label: its `S` is, bit for bit, the `S` of the live FTLE entry whose horizon is the label's `t_end_step` plus
+/// `offset` (every other loop value the key's), where the co-march ends on the same macro-step. The control's
+/// `offset` 1 runs the live reference one macro-step past the label, and its `S` must differ.
+fn check_frozen_s(path: &str, ftle: FtleMarch, offset: u32) {
+    let ic = spreading(10.0);
+    let k = key(true);
+    let stopped = ftle(&ic, &k, true);
+    let label = tm_t_end_step(stopped.times);
+    let mut to_label = key(false);
+    to_label.loop_values.horizon_steps = label + offset;
+    let live = ftle_entry(&ic, &to_label, false);
+    println!(
+        "{path}: S stopped at the label (t_end_step {label}) {:e}; live to {} macro-steps {:e} (t_end_step {})",
+        stopped.S,
+        label + offset,
+        live.S,
+        tm_t_end_step(live.times)
+    );
+    assert!(
+        stopped.S.to_bits() == live.S.to_bits(),
+        "{path}: S under the option ({:e}) is not the live run's to its label + {offset} ({:e})",
+        stopped.S,
+        live.S
+    );
+}
+
+#[test]
+fn stop_option_ftle_frozen_s() {
+    check_frozen_s("the FTLE entry", ftle_entry, 0);
+    check_frozen_s("the producer", producer, 0);
+}
+
+negative_control!(
+    stop_option_ftle_frozen_s,
+    "the live reference run one macro-step past the label",
+    expected = "is not the live run's to its label",
+    check_frozen_s("the FTLE entry", ftle_entry, 1)
+);
 
 /// The FTLE entry at the key.
 fn ftle_entry(ic: &Ic<f32>, k: &MarchKey, stop: bool) -> SimStateFTLE {

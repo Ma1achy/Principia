@@ -40,7 +40,7 @@ use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
 use kernel::generated::links::Defaults;
 use kernel::occupant::State;
-use kernel::regularisation::heggie::{HgParams, DEFAULT_TIME};
+use kernel::regularisation::heggie::{HgAdvanced, HgParams, DEFAULT_TIME};
 use kernel::regularisation::sync::{boundary_at_or_before, delta_sync};
 use render::colour::outcome::{shown, Shown, K, SWATCHES};
 
@@ -209,7 +209,32 @@ pub fn outcome_stopping(
     params: &HgParams<f32>,
     stop_on_escape: bool,
 ) -> Outcome {
-    record::sample(
+    marched(ic, degenerate, radius, k_target, params, stop_on_escape).outcome
+}
+
+/// One of the field's marches: its [`Outcome`], and where the march stood when it ended, `None` where the dispatch-time
+/// label settled the sample with no march.
+#[derive(Clone, Copy, Debug)]
+pub struct Marched {
+    /// The sample's outcome, [`outcome_stopping`]'s.
+    pub outcome: Outcome,
+    /// Heggie's march as it ended: the state at boundary `end.boundary` on a landing, or latched between boundaries
+    /// where a terminal, a non-finite step or the step budget ended it (`end.count.end`).
+    pub end: Option<HgAdvanced<f32>>,
+}
+
+/// The march [`outcome_stopping`] reads its outcome from, with where it ended: the one march the field and the
+/// trajectory interface's integrator (`crate::trajectory::Integrated`) share, so a row the interface reads is a state
+/// the field's own march stands on. It is [`record::sample`]'s march, without the word.
+pub fn marched(
+    ic: &Ic<f32>,
+    degenerate: Option<kernel::decode::degenerate::Degenerate>,
+    radius: CollisionRadius,
+    k_target: u32,
+    params: &HgParams<f32>,
+    stop_on_escape: bool,
+) -> Marched {
+    let s = record::sample(
         ic,
         degenerate,
         radius,
@@ -217,8 +242,11 @@ pub fn outcome_stopping(
         params,
         stop_on_escape,
         false,
-    )
-    .outcome
+    );
+    Marched {
+        outcome: s.outcome,
+        end: s.end,
+    }
 }
 
 /// `sim_failed`'s detail for a march that ended at `s` (payload §2): 0 for a NaN in the state, else 1 for a `±∞`,
