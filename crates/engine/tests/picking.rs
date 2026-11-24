@@ -1,13 +1,13 @@
-//! Pointer picking and the harness's quad frames (TASK-M1-07; principia_coordinate_conventions_note.md path 2;
-//! debug_tooling_plan §F's picking cross-check):
-//! - REQ-GUI-001, REQ-TOOL-027: a click at each known corner of the canvas, through the function the GUI will call,
+//! Pointer picking and the harness's quad frames (principia_coordinate_conventions_note.md path 2; debug_tooling_plan
+//! §F's picking cross-check):
+//! - a click at each known corner of the canvas, through the function the GUI will call,
 //!   reports that corner's UV (top-left → v ≈ 1, bottom-left → v ≈ 0), its quad and the screen's `ctx.chart.z`
 //!   (`picking_corners*`); a pick at each pixel's centre lands in the quad the raster draws there, and one off the
 //!   canvas is none, and a position on a quad boundary picks the quad above or right of it exactly (`picking_*`);
-//! - REQ-TOOL-019 (RQ-214): the synthetic harness's per-quad centre and half-width from its own grid, deep_zoom §1's
+//! - the synthetic harness's per-quad centre and half-width from its own grid, deep_zoom §1's
 //!   `c` and `h = 2^−(ℓ+1)`, and the f32 frames it uploads (`synthetic_quad_frame_*`).
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use engine::picking::{pick, Pick, Screen};
 use engine::synthetic::{QuadFrame, Synthetic};
@@ -275,7 +275,7 @@ negative_control!(
     })
 );
 
-// ── The harness's quad frames (REQ-TOOL-019, RQ-214) ────────────────────────────────────────────────────────────
+// ── The harness's quad frames ────────────────────────────────────────────────────────────────────────────────────────
 
 /// Quad `q` of `set` (grid columns `columns`, depth `depth`, origin `origin`) has `c = (origin + (i, j) + ½)·2^−ℓ` and
 /// `h = 2^−(ℓ+1)`, and the bytes it uploads hold each quad's `(c_u, c_v, h_u, h_v)` as f32, in quad order.

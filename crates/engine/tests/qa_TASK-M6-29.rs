@@ -1,19 +1,19 @@
-//! QA tests for TASK-M6-29 on the engine side, written from the contract, not from the implementation:
+//! QA tests for the stain graph on the engine side, written from the contract, not from the implementation:
 //!
 //! - gui_state_contract §2, "The stain graph": `RenderState`'s stain graph is §5's graph object, its nodes each
-//!   `{ id, kind, occupant, params }` and its wires each `{ from, to, port }`, `port` a u32 (R-329); "It serialises
+//!   `{ id, kind, occupant, params }` and its wires each `{ from, to, port }`, `port` a u32; "It serialises
 //!   with `RenderState` as `{ nodes, wires }`, in id order; the default is the backbone alone, the combiner wired to
-//!   `OUT`". "Its `SetField` path is `RenderField::StainGraph`, the whole graph in one edit, undoable (R-69)", "logged
+//!   `OUT`". "Its `SetField` path is `RenderField::StainGraph`, the whole graph in one edit, undoable", "logged
 //!   as \"SetField StainGraph [before] → [after]\", each graph as its nodes in id order, `id kind occupant` (a custom
 //!   occupant written `custom`) with its params, if any, as `{name=value, …}`, then its wires, each `from→to.port`".
 //!   "A node's place on the editor's canvas, the canvas's pan and zoom, and which nodes are selected are the editor's
 //!   own, not the graph's": the serialised graph carries none of them.
 //! - gui_state_contract §5: node ids, wires and per-node params are the stain's data, and they serialise with
 //!   `RenderState`.
-//! - REQ-GUI-166 (re-run): the one conformance suite has a case for the new path (R-390, "Contract fields"), and a
-//!   double that drops the stain graph's edits fails it, naming that case.
+//! - The one conformance suite has a case for the stain graph's path, and a double that drops the stain graph's edits
+//!   fails it, naming that case.
 //!
-//! Each check runs on the real engine's `StateStore`; its control (R-176) runs the same check on an input that differs
+//! Each check runs on the real engine's `StateStore`; its control runs the same check on an input that differs
 //! in the one respect the contract turns on.
 // The file name `qa_TASK-M6-29` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
@@ -48,7 +48,7 @@ fn sim() -> SimConfig {
             q2: ZERO,
         },
         slice: Slice {
-            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            // The slice frame, at its defaults: the normal and both targets z_q3.
             frame: engine::contract::sim_config::SliceFrame::along(
                 engine::contract::sim_config::Z_Q3,
             ),
@@ -199,7 +199,7 @@ fn qa_stain_graph_serialises_as_nodes_and_wires_in_id_order() {
     let text = serde_json::to_string(&render(g.clone())).unwrap();
     let back: RenderState = serde_json::from_str(&text).expect("RenderState reads back");
     assert_eq!(back.stain_graph, g, "the graph did not round-trip");
-    // R-329: the in-port's position is a u32 in the type itself.
+    // The in-port's position is a u32 in the type itself.
     let w: Wire = g.wires()[0];
     let _: u32 = w.port;
 }
@@ -370,7 +370,7 @@ impl EngineInterface for DropsGraph {
             self.0.set_field(e);
         }
     }
-    // The history key's methods (R-458 F1), forwarded as `set_field` is, so the suite's key cases run on the store.
+    // The history key's methods, forwarded as `set_field` is, so the suite's key cases run on the store.
     fn set_field_under(&mut self, e: SetField, key: HistoryKey) {
         if !matches!(e.edit, Edit::Render(RenderField::StainGraph(_))) {
             self.0.set_field_under(e, key);
@@ -433,7 +433,7 @@ negative_control!(
     check_custom_written(&format!("SetField StainGraph [5 brightness {FADE_WGSL}]"))
 );
 
-// --- REQ-GUI-166: the suite's case for the path ---------------------------------------------------------------------
+// --- The suite's case for the path -----------------------------------------------------------------------------------
 
 fn check_suite_catches<E: EngineInterface>(make: impl FnMut() -> E) {
     let err = match conformance::run(make) {

@@ -1,4 +1,4 @@
-//! The decode dispatch's host-side arithmetic (`engine::decode_dispatch`; TASK-M2-06), with no device:
+//! The decode dispatch's host-side arithmetic (`engine::decode_dispatch`), with no device:
 //! - `decode_dispatch_check_samples`: a dispatch covers `n` samples at 64 per workgroup within the device's workgroup
 //!   count and storage-binding size, each limit met exactly and refused one past it, and `n` within u32.
 //! - `decode_dispatch_uniform_words`: the uniform's words are the chart's six rows, in order, as f32 bits, then the

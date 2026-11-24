@@ -1,13 +1,13 @@
-//! QA's tests for TASK-M3-06: `dt_macro` at the f32 kernel, each with its negative control (R-176). The dispatch
+//! QA's tests for `dt_macro` at the f32 kernel, each with its negative control. The dispatch
 //! requires `dt_macro` finite and positive, and `wrapper_uniforms_f32` hands the kernel that value rounded once to
-//! f32: REQ-PAY-040's exact step indices and REQ-INT-081's `horizon_steps` mean nothing if the step the kernel takes
+//! f32: the payload's exact step indices and the integrator's `horizon_steps` mean nothing if the step the kernel takes
 //! is infinite or 0. So what dispatch accepts stays a time step after the rounding, wherever the rounding's edges
 //! fall. The large edge is not at `f32::MAX` itself: round-to-nearest carries values past it, to `f32::MAX + ½ulp` (a
 //! tie, going to infinity).
 //!
 //! The small edge is the substep's: the kernel steps by `dt_macro / N_sub`, smallest at `N_max`, and that value at f32
 //! must be a normal f32, since a backend that flushes subnormal results reads a subnormal substep as 0 where the CPU
-//! keeps it (the refusal stands by decision under R-369, recorded on the PR). So the floor moves with `N_max`:
+//! keeps it, so dispatch refuses one. So the floor moves with `N_max`:
 //! `2⁻¹²⁶ · N_max`, `2⁻¹²⁰` at the default 64.
 //!
 //! The horizon and window are chosen so the step count is 1 and neither is what refuses: the default ones for a

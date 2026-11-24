@@ -1,7 +1,6 @@
-//! Lookup (inverse_encode_contract Part 6, "Lookup" and § "Chart-aware validation"; R-13; TASK-M2-19): the exact and
-//! partial forms and the lock and slice they give (REQ-ENC-012), the three layers in order with each remedy and each
-//! failure (REQ-ENC-013), and coincident bodies, clamped and never rejected (REQ-ENC-019). Each test registers its
-//! negative control (R-176).
+//! Lookup (inverse_encode_contract Part 6, "Lookup" and § "Chart-aware validation"): the exact and partial forms and
+//! the lock and slice they give, the three layers in order with each remedy and each failure, and coincident bodies,
+//! clamped and never rejected. Each test registers its negative control.
 
 use engine::lookup::{
     after, changed, lookup, lookup_partial, moves, residuals, sanity, slice, Class, Classes, Exact,
@@ -23,7 +22,7 @@ use validation::roundtrip::{charts, phys};
 
 type Result = std::result::Result<Locked, Rejected>;
 
-/// The curve tolerance: REQ-ENC-026's proposed `k = 128` (`fixtures/gates/curve_projection/measurement.toml`) at f64.
+/// The curve tolerance: the proposed `k = 128` (`fixtures/gates/curve_projection/measurement.toml`) at f64.
 fn tol() -> Tolerances {
     Tolerances::register(128.0 * f64::EPSILON)
 }
@@ -72,7 +71,7 @@ fn generic() -> Ic<f64> {
     }
 }
 
-// ── REQ-ENC-012: the forms ─────────────────────────────────────────────────────────────────────────────────────────
+// ── The forms ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Checks the exact forms: `(2, 1)`, `(3, 4, 5)` and `(6, 8, 10)` lock the classical Burrau system at rest on the
 /// `(ν, K)` chart at `ν = ½`, `K = 0`; each entry's lock decodes to `C` of the entered state; a raw `z` is kept bit for
@@ -234,7 +233,7 @@ negative_control!(
 /// Checks a physical state: the lock is `E(x)`'s `z`, the same under a gauge and for the same system in another mass
 /// unit (`mᵢ·M`, `pᵢ·M^{3/2}`), with `λ`, `M` and the landing on the latent chart's plane where it holds `x`; a state
 /// below its `ρ` at `β ∈ (π, 2π)` and its mirror image above at `β ∈ (0, π)`, the signed encode (`C` has no mirror
-/// step, R-865).
+/// step).
 fn check_physical(masses: [f64; 3]) {
     let x = generic();
     let lock = exact(&latent_chart(), Exact::Physical(x)).expect("a physical state is refused");
@@ -609,11 +608,11 @@ negative_control!(
     })
 );
 
-// ── REQ-ENC-013: the ladder ────────────────────────────────────────────────────────────────────────────────────────
+// ── The ladder ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The canonical state at the latent controls `z_cfg`, equal masses, with Jacobi momenta `p_ρ`, `p_λ`: `p₂ = p_λ`,
 /// `p₁ = p_ρ − (m₁/M₀₁)p_λ`, `p₀ = −p₁ − p₂`. `z_cfg`'s `z_β` is written for `sigmoid_beta` and converted once to
-/// `periodic_beta`'s (R-898), so each state is the one it was.
+/// `periodic_beta`'s, so each state is the one `z_cfg` names under `sigmoid_beta`.
 fn jacobi_state(z_cfg: [f64; 2], p_rho: [f64; 2], p_lambda: [f64; 2]) -> Ic<f64> {
     let mut z = [0.0; 8];
     z[..2].copy_from_slice(&z_cfg);
@@ -1144,8 +1143,7 @@ negative_control!(
     check_changed(tol().zero_class)
 );
 
-/// [`q_case`]'s pulled state, `L_z = 0` up to rounding and `z_q1` past its clamp, turned by `angle`. *Was:* a collinear,
-/// equal-mass state moving along its line, whose `β` clamped at the line, which `periodic_beta` does not (R-898).
+/// [`q_case`]'s pulled state, `L_z = 0` up to rounding and `z_q1` past its clamp, turned by `angle`.
 fn zero_case(angle: f64) -> Ic<f64> {
     gauge(&d(q_case(true)), angle, [0.0, 0.0])
 }
@@ -1155,7 +1153,7 @@ fn orientations() -> impl Iterator<Item = f64> {
     (0..64).map(|k| std::f64::consts::TAU * f64::from(k) / 64.0)
 }
 
-/// Checks the zero class's gauge invariance (§ "The zero class in floating point", REQ-ENC-036): [`zero_case`] at each
+/// Checks the zero class's gauge invariance (§ "The zero class in floating point"): [`zero_case`] at each
 /// of 64 orientations gets one verdict at the zero-class band `band`, the contract's: its true `L_z` is class 0, and the
 /// clamp of `z_q1` moves it off 0, so each is rejected as a change of the sense of rotation.
 fn check_orientations(band: f64) {
@@ -1195,8 +1193,8 @@ negative_control!(
     check_orientations(0.0)
 );
 
-/// The rounding the zero-class band absorbs, in f64's ε relative to each scale (§ "The zero class in floating point",
-/// REQ-ENC-037): over `n` states decoded from latent `z` on `[−8, 8]⁸`, all but one in nine with one control set to
+/// The rounding the zero-class band absorbs, in f64's ε relative to each scale (§ "The zero class in floating point"):
+/// over `n` states decoded from latent `z` on `[−8, 8]⁸`, all but one in nine with one control set to
 /// ±20, past its clamp, each against a random gauge image of itself (offsets and boosts on `[−8, 8)²`, scales
 /// `2^±12`, either parity): `C`'s rounding of `L_z` and `E` (`C(g·x)` against `C(x)`, one canonical state, each at
 /// its own entry's extents), and, where both clamp the same controls, the rounding of the clamps' [`moves`] and of the
@@ -1227,7 +1225,7 @@ fn rounding(n: usize) -> Rounding {
             z[pick / 2] = if pick.is_multiple_of(2) { -20.0 } else { 20.0 };
         }
         let x = d(z);
-        // No mirror: `Π·x` is another system, its `L_z` negated (R-865).
+        // No mirror: `Π·x` is another system, its `L_z` negated.
         let gx = Gauge {
             mirror: false,
             ..Gauge::random(&mut rng, 8.0, 12.0)
@@ -1326,8 +1324,7 @@ negative_control!(
 );
 
 /// A collinear state moving along its line, the outer body's momentum `t` against the inner pair's ±1, turned by
-/// `angle` and moved: `L_z = 0` exactly, and `β` at the line, where `periodic_beta` has no clamp (R-898; under
-/// `sigmoid_beta` its clamp fired).
+/// `angle` and moved: `L_z = 0` exactly, and `β` at the line, where `periodic_beta` has no clamp.
 fn along(t: f64, angle: f64) -> Ic<f64> {
     let x = Ic {
         m: [1.0 / 3.0; 3],
@@ -1370,7 +1367,7 @@ fn q_case(pull: bool) -> [f64; 8] {
         let u = (q / 2.0 + 1.0) / 2.0;
         (u / (1.0 - u)).ln()
     };
-    // `z_β = 0`, `sigmoid_beta`'s 0 converted, `π/2 − π/2` under the offset link (R-898, R-1020).
+    // `z_β = 0`, `sigmoid_beta`'s 0 converted, `π/2 − π/2` under the offset link.
     let beta = kernel::decode::retired::convert::<kernel::generated::links::SigmoidBeta, f64>(0.0);
     if pull {
         [1.0, beta, 0.0, 40.0, logit(2.0 * ratio), 0.0, 0.0, 0.0]
@@ -1395,11 +1392,11 @@ fn q_just_past() -> [f64; 8] {
     [1.0, beta, 0.0, logit(q1), logit(q1 * ratio), 0.0, 0.0, 0.0]
 }
 
-/// The clamp-rule table (§ "The class a clamp moves", REQ-ENC-038): each state, its clamped controls and the class
+/// The clamp-rule table (§ "The class a clamp moves"): each state, its clamped controls and the class
 /// its clamp changes in exact arithmetic. The collinear states moving along their line clamp nothing: `β` at the line
-/// is 0 or `π`, inside `periodic_beta`'s circle, which has no clamp (R-898). *Was:* each clamped `β` (`0b10`), the class
-/// `Rotation` where `p_λ ≠ 0`. The last row's clamp moves `L_z` between the zero-class band and `2²⁴ε` of its scale
-/// ([`q_just_past`]), the move the `clamp_rule` control must not read as rounding.
+/// is 0 or `π`, inside `periodic_beta`'s circle, which has no clamp. The last row's clamp moves `L_z` between the
+/// zero-class band and `2²⁴ε` of its scale ([`q_just_past`]), the move the `clamp_rule` control must not read as
+/// rounding.
 fn table() -> Vec<(&'static str, Ic<f64>, u32, Option<Class>)> {
     let mut rows = Vec::new();
     for angle in [0.0, 0.3, 2.0] {
@@ -1629,13 +1626,12 @@ negative_control!(
     check_after(tol().zero_class)
 );
 
-// ── REQ-ENC-019: coincident bodies ─────────────────────────────────────────────────────────────────────────────────
+// ── Coincident bodies ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Entries whose controls clamp: latent `z` on `[−3, 3]⁸` with one control, or both mass controls, pushed to `±20`,
 /// each entered under a gauge element with an offset, a boost, a rotation and a scale. `z_β`, drawn for `sigmoid_beta`,
-/// is converted once to `periodic_beta`'s (R-898), so each entry is the state it was; the entries that pushed `z_β`,
-/// which has no clamp (R-898), are drawn and dropped, the others' draws unchanged. *Was:* `z_β` as drawn, and its
-/// push among the controls.
+/// is converted once to `periodic_beta`'s, so each entry is the state those draws name under `sigmoid_beta`; the
+/// entries that pushed `z_β`, which has no clamp, are drawn and dropped, the others' draws unchanged.
 fn clamped_entries(n: usize) -> Vec<Ic<f64>> {
     use kernel::decode::retired::convert;
     use kernel::generated::links::SigmoidBeta;
@@ -1709,7 +1705,7 @@ fn check_moves(sign: f64) {
             after.e
         );
     }
-    // Every control but `z_β`, which has no clamp (R-898). Was: all eight.
+    // Every control but `z_β`, which has no clamp.
     assert_eq!(
         seen & 0b1111_1111,
         0b1111_1101,
@@ -1729,11 +1725,11 @@ negative_control!(
     check_moves(-1.0)
 );
 
-/// The rounding bounds of the first 16 [`clamped_entries`] (of 18 drawn; `z_β`'s two dropped, R-898), each control
+/// The rounding bounds of the first 16 [`clamped_entries`] (of 18 drawn; `z_β`'s two dropped), each control
 /// but `z_β` clamped at either end and the masses together: `ΔL_z`'s, `ΔE`'s, `L_z`'s after and `E`'s after ([`Moves`]), and `L_z`'s and `E`'s on the canonical state
 /// ([`Classes::within`]), the contract's first-order bounds (§ "The zero class in floating point", § "The class a
-/// clamp moves") as computed when TASK-M2-19 set `zero_class`, pinned so that a change to a bound is a change to the
-/// band's calibration (REQ-ENC-037).
+/// clamp moves") as computed when `zero_class` was set, pinned so that a change to a bound is a change to the band's
+/// calibration.
 const BOUNDS: [[f64; 6]; 16] = [
     [
         45133.859988981676,
@@ -1946,7 +1942,7 @@ negative_control!(
 
 /// States with body 2 at the inner pair's centre of mass, `λ = 0`, so `α = 0` and `β` undefined, `α` clamping, and
 /// `L_z = 0` (`q₁ = 0`), with the verdict the interim pole rule gives each (§ "The class a clamp moves", "At the
-/// `α = 0` pole"; RQ-565): `p_λ ≠ 0` is rejected, `p_λ = 0` accepted.
+/// `α = 0` pole"): `p_λ ≠ 0` is rejected, `p_λ = 0` accepted.
 fn poles() -> [(&'static str, Ic<f64>, Option<Class>); 4] {
     let euler = |p: [[f64; 2]; 3]| Ic {
         m: [0.25, 0.25, 0.5],
@@ -2006,8 +2002,8 @@ fn check_poles(read: impl Fn(&Ic<f64>) -> Option<Class>) {
             .act(&x);
             let en = e(&g);
             assert_eq!(en.blocks.clamped & 1, 1, "{what}, image {k}: α clamps");
-            // On `λ̃_y = 0`, `β` exactly 0 or `π̂` by its selects, R-437's defined 0 at `λ̃ = 0` among them. Was: `β`'s
-            // clamp bit, set there under `sigmoid_beta`; `periodic_beta` has no clamp (R-898).
+            // On `λ̃_y = 0`, `β` exactly 0 or `π̂` by its selects, the defined 0 at `λ̃ = 0` among them;
+            // `periodic_beta` sets no clamp bit for `β` there.
             // `β` itself, not `z_β`, which is `β − π/2` under the offset link.
             let beta = en.blocks.beta;
             if beta == 0.0 || beta == std::f64::consts::PI {
@@ -2222,8 +2218,8 @@ fn coincident(group: &[usize], p: f64) -> Ic<f64> {
     gauge(&x, 1.1, [0.4, 2.0])
 }
 
-/// Checks R-13 as R-1019 reads it for the bodies `group` made to coincide: the coincident inner pair, `[0, 1]`, and all
-/// three, `[0, 1, 2]`: the lookup locks it, clamped, never refused, the inner pair's flag raised.
+/// Checks the bodies `group` made to coincide: the coincident inner pair, `[0, 1]`, and all three, `[0, 1, 2]`: the
+/// lookup locks it, clamped, never refused, the inner pair's flag raised.
 fn check_coincident(groups: &[&[usize]]) {
     for group in groups {
         for p in [0.0, 1.0, 3.0] {
@@ -2253,9 +2249,9 @@ negative_control!(
     check_coincident(&[&[0]])
 );
 
-/// Checks R-1019's coincident outer pair, bodies `(i, j)` with `j = 2`: a representable `t = 0` collision state, the
+/// Checks the coincident outer pair, bodies `(i, j)` with `j = 2`: a representable `t = 0` collision state, the
 /// lookup locks it unrefused and unclamped, no coincidence flag raised, and the locked state's pair within `r_coll`
-/// (10⁻³ by default; integrator_contract Part 7), fenced by the collision detector, not by a flag (REQ-ENC-019).
+/// (10⁻³ by default; integrator_contract Part 7), fenced by the collision detector, not by a flag.
 fn check_outer_coincident(pairs: &[(usize, usize)]) {
     for &(i, j) in pairs {
         for p in [0.0, 1.0, 3.0] {
@@ -2326,8 +2322,7 @@ negative_control!(
     check_within(0.1)
 );
 
-// ── latent_plane_lift (TASK-M2-57; dd_decoder § 3.2, "Stored reduced or unreduced"; physics review 5907871580 of PR
-// #533, P8) ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── latent_plane_lift (dd_decoder § 3.2, "Stored reduced or unreduced") ───────────────────────────────────────────
 
 /// The oblique latent plane `z₀ + u·q₁ + v·q₂`, `z₀ = 0`, `q₁ = 4e_β + 4e_q0`, `q₂ = e_q1`.
 fn oblique_beta_plane() -> Latent<f64> {
@@ -2341,7 +2336,7 @@ fn oblique_beta_plane() -> Latent<f64> {
     }
 }
 
-/// The bounds written before the test ran (R-649): `|u − 1| ≤ 10⁻¹⁰` and `|v| ≤ 10⁻¹⁰`, against `E∘D`'s recovery at
+/// The bounds written before the test ran: `|u − 1| ≤ 10⁻¹⁰` and `|v| ≤ 10⁻¹⁰`, against `E∘D`'s recovery at
 /// f64 of about `10⁻¹³` in the ball and the `q` link's `1/(σ(1 − σ)) ≈ 57` at `z_q0 = 4`.
 fn check_on_plane(u: f64, v: f64) {
     assert!(

@@ -1,21 +1,23 @@
-//! QA's tests for TASK-M7-11, written from the requirements it closes and their sources, not from the code:
+//! QA's tests for the render graph and the custom-stop ramp, written from the requirements and their sources, not from
+//! the code:
 //!
-//! - REQ-GUI-021 (render_gui_spec Part II §3, §3.1): each node kind's in-ports and out-port are §3.1's row, the
+//! - Node kinds (render_gui_spec Part II §3, §3.1): each node kind's in-ports and out-port are §3.1's row, the
 //!   ports directional and typed `field` / `vec3` / `f32`, a source's out-port subtype following its field.
-//! - REQ-GUI-022 (§4, §7, §15): `OUT` and the combiner are never added, deleted or duplicated; a graph with two of
+//! - Fixed singletons (§4, §7, §15): `OUT` and the combiner are never added, deleted or duplicated; a graph with two of
 //!   either, or none, is refused on reading too; after any edit sequence there is exactly one of each.
-//! - REQ-GUI-023 (§4, §15; a property): over random edit sequences the graph stays acyclic, each wire's out-port type is
-//!   its in-port's, every wire that would close a cycle is refused, and the free interior takes any number of nodes.
-//! - REQ-GUI-025 (§6): over every out-type × in-type pair a wire attaches only on equal types; a mismatch leaves the
+//! - Acyclic and typed (§4, §15; a property): over random edit sequences the graph stays acyclic, each wire's out-port
+//!   type is its in-port's, every wire that would close a cycle is refused, and the free interior takes any number of
+//!   nodes.
+//! - Matching types (§6): over every out-type × in-type pair a wire attaches only on equal types; a mismatch leaves the
 //!   graph as it was; a categorical field onto a colour node in gradient mode attaches.
-//! - REQ-GUI-026 (§6, §15): a second wire on an occupied in-port replaces the first; an out-port feeds five and more.
-//! - REQ-GUI-016 (gui_state_contract §5): node ids, wires and per-node params round-trip through `RenderState`;
+//! - Port arity (§6, §15): a second wire on an occupied in-port replaces the first; an out-port feeds five and more.
+//! - Round-trip (gui_state_contract §5): node ids, wires and per-node params round-trip through `RenderState`;
 //!   picking an occupant is one `SetField`, one undo entry.
-//! - REQ-COL-140 (colour_composition §9.4, "The custom-stop ramp"): the ramp's stops, positions, OKLab interpolation,
+//! - The ramp (colour_composition §9.4, "The custom-stop ramp"): the ramp's stops, positions, OKLab interpolation,
 //!   clamped or cyclic ends, hard edge and invalid `t`; it round-trips through `RenderState`.
 //!
-//! Each test has its negative control (R-176). The OKLab conversion here is transcribed from Ottosson (2020), "A
-//! perceptual color space for image processing", independently of the crate's (R-51).
+//! Each test has its negative control. The OKLab conversion here is transcribed from Ottosson (2020), "A perceptual
+//! color space for image processing", independently of the crate's.
 
 use engine::contract::interface::EngineInterface;
 use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState};
@@ -170,7 +172,7 @@ fn state(graph: StainGraph) -> RenderState {
     }
 }
 
-// ── REQ-GUI-021: node kinds and their ports ─────────────────────────────────────────────────────────────────────────
+// ── Node kinds and their ports ──────────────────────────────────────────────────────────────────────────────────────
 
 /// Node `id`'s ports as (in types, out types), each checked for its direction.
 fn row(g: &StainGraph, id: NodeId) -> (Vec<PortType>, Vec<PortType>) {
@@ -359,7 +361,7 @@ negative_control!(
     check_brightness_one(BRIGHT_K)
 );
 
-// ── REQ-GUI-022: fixed singletons ───────────────────────────────────────────────────────────────────────────────────
+// ── Fixed singletons ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Every add, delete and duplicate of the combiner and `OUT` is refused, leaving exactly one of each.
 fn check_singletons(g: &StainGraph) {
@@ -491,7 +493,7 @@ negative_control!(
     check_read_refused(backbone_json(), "is the plain backbone")
 );
 
-// ── REQ-GUI-023: acyclic, type-compatible, any number of free nodes (a property) ────────────────────────────────────
+// ── Acyclic, type-compatible, any number of free nodes (a property) ─────────────────────────────────────────────────
 
 /// One random editor action, by indices into the graph's nodes at the time.
 #[derive(Clone, Debug)]
@@ -809,7 +811,7 @@ negative_control!(
     }
 );
 
-// ── REQ-GUI-025: a wire attaches only on matching types ─────────────────────────────────────────────────────────────
+// ── A wire attaches only on matching types ──────────────────────────────────────────────────────────────────────────
 
 /// A graph with a representative of each out-type and in-type: (graph, outs by type, ins by type).
 #[allow(clippy::type_complexity)]
@@ -994,7 +996,7 @@ negative_control!(
     check_categorical_onto_gradient(&field_of(FieldSubtype::Scalar))
 );
 
-// ── REQ-GUI-026: in-port arity one, out-port unbounded ──────────────────────────────────────────────────────────────
+// ── In-port arity one, out-port unbounded ───────────────────────────────────────────────────────────────────────────
 
 /// The wires into `to`.`port`.
 fn into(g: &StainGraph, to: NodeId, port: u32) -> Vec<NodeId> {
@@ -1077,7 +1079,7 @@ negative_control!(
     assert_eq!(fan_out(4), 5, "an out-port does not hold five wires")
 );
 
-// ── REQ-GUI-016: RenderState round-trip; picking an occupant is one SetField ────────────────────────────────────────
+// ── RenderState round-trip; picking an occupant is one SetField ─────────────────────────────────────────────────────
 
 /// A wired graph with ids, wires, a param and a ramp.
 fn full() -> StainGraph {
@@ -1223,7 +1225,7 @@ negative_control!(
     }
 );
 
-// ── REQ-COL-140: the custom-stop ramp (colour_composition §9.4) ─────────────────────────────────────────────────────
+// ── The custom-stop ramp (colour_composition §9.4) ──────────────────────────────────────────────────────────────────
 
 /// Ottosson (2020): linear sRGB → OKLab.
 fn ottosson_forward([r, g, b]: [f64; 3]) -> [f64; 3] {
@@ -1652,7 +1654,7 @@ negative_control!(
     check_ramp_round_trip(true)
 );
 
-// ── REQ-COL-140: the cyclic wrap with its stops a hair from the ends ────────────────────────────────────────────────
+// ── The cyclic wrap with its stops a hair from the ends ─────────────────────────────────────────────────────────────
 
 /// One wrap case: (first, last, t, a, b, u).
 type WrapCase = (f64, f64, f64, [f64; 3], [f64; 3], f64);

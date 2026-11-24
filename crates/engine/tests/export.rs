@@ -1,7 +1,7 @@
-//! The host export decoder (render contract Part 5 (c); RQ-217; TASK-M1-08), generated from the layout table into
+//! The host export decoder (render contract Part 5 (c)), generated from the layout table into
 //! `engine::export`: a synthetic sample decodes to every ledger field, each through its accessor, the vectors
-//! flattened, the shadow from the stored struct and the descriptor's fields from the descriptor (REQ-GEN-010). Each
-//! test has a registered negative control (R-176).
+//! flattened, the shadow from the stored struct and the descriptor's fields from the descriptor. Each test has a
+//! registered negative control.
 
 use engine::export::{decode, Decoded};
 use kernel::payload::*;

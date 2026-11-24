@@ -1,7 +1,7 @@
-//! The stain graph is always renderable (TASK-M7-12; render_gui_spec Part II §13, "Always-renderable"; §7;
-//! REQ-RENDER-072; R-814, RQ-676 (b): the property runs here, in the crate that holds `StainGraph`):
+//! The stain graph is always renderable (render_gui_spec Part II §13, "Always-renderable"; §7; the property runs here,
+//! in the crate that holds `StainGraph`):
 //! - `stain_always_renderable_through_every_edit`, a property over random edit sequences (add, delete, duplicate,
-//!   wire, unwire, reorder, pick an occupant), `validation::prop::CASES` cases (REQ-VAL-151): after every edit,
+//!   wire, unwire, reorder, pick an occupant), `validation::prop::CASES` cases: after every edit,
 //!   accepted or refused, the graph lowers and assembles to a fragment, never the fallback and never an error, and
 //!   each sequence's last graph draws on the GPU (a fragment drawn once is not drawn again); and that graph's node
 //!   list, forced invalid (a second combiner, a second `OUT`, no `OUT`, `OUT` reading itself, or the combiner None),
@@ -16,7 +16,7 @@
 //!
 //! Dangling in-ports and None occupants render by identity (§13), so no edit sequence reaches the fallback: the
 //! forced-invalid lists are written straight to the assembler, past the graph's own checks, which refuse them.
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};

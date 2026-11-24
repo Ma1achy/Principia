@@ -1,5 +1,5 @@
-//! QA tests for TASK-M7-11's fix round: the custom-stop ramp's OKLab `a` and `b` bound (colour_composition §9.4,
-//! "Stops"; REQ-COL-140, R-72), from the section's text, not the implementation.
+//! QA tests for the custom-stop ramp's OKLab `a` and `b` bound (colour_composition §9.4, "Stops"), from the section's
+//! text, not the implementation.
 //!
 //! - `qa_ramp_ab_bound_on_reading`: the bound holds where a ramp is read from text too (`RenderState` serialises the
 //!   ramp; §9.4 "serialised with the node"): `a` or `b` past `[−1, 1]` is refused, at `±1` read.
@@ -10,7 +10,7 @@
 //!   inputs.
 //! - `qa_ramp_ab_bound_corners_within_figure`: the same figure at each of the bound's corners, with its control.
 //!
-//! The colours and `t` values are test inputs, not register constants (REQ-SYS-082).
+//! The colours and `t` values are test inputs, not register constants.
 
 use engine::contract::stain::ramp::{Ramp, Stop};
 use proptest::prelude::*;

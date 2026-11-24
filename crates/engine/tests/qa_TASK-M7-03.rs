@@ -1,7 +1,7 @@
-//! QA's tests for TASK-M7-03's REQ-COL-011 (colour_composition §1): a colour occupant is an expression tree whose
+//! QA's tests for the colour occupant's typing (colour_composition §1): a colour occupant is an expression tree whose
 //! every node outputs `vec3` or `f32`, and only the root is constrained by the slot's signature, `vec3` for `colour`
 //! and `f32` for `brightness`. Verify: a tree with an `f32` node feeding a `vec3` root type-checks; an `f32` root in
-//! the colour slot fails type-checking. Each test has its negative control (R-176).
+//! the colour slot fails type-checking. Each test has its negative control.
 
 use engine::contract::stain::occupant::{Expr, Primitive, Slot, Tree, ValueType};
 use render::codegen::{schema::MapParam, Arg, Call, Param};

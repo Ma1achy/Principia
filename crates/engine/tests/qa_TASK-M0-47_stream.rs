@@ -1,17 +1,16 @@
-//! QA tests for TASK-M0-47 (REQ-TOOL-147) on the engine's streaming writer, `engine::contract::profile::Stream`,
-//! written from the requirement's statement and verify detail, R-341, R-286, R-298 and telemetry §5 ("The file",
-//! "`prin profile` streams its trace"), not from the implementation:
+//! QA tests on the engine's streaming profile writer, `engine::contract::profile::Stream`, written from telemetry §5
+//! ("The file", "`prin profile` streams its trace"), not from the implementation:
 //!
-//! - over a writer that records its flushes and a clock the test drives, with R-341's policy (every 60 frames or 1 s,
-//!   whichever comes first): the header line is flushed when written; frame lines are flushed at the 60th frame since
-//!   the last flush, or once 1 s has passed since it, never later; each flush leaves whole lines; the summary line is
-//!   written last and flushed;
+//! - over a writer that records its flushes and a clock the test drives, with telemetry §5's policy (every 60 frames
+//!   or 1 s, whichever comes first): the header line is flushed when written; frame lines are flushed at the 60th
+//!   frame since the last flush, or once 1 s has passed since it, never later; each flush leaves whole lines; the
+//!   summary line is written last and flushed;
 //! - the stream refuses what `profile::write` refuses, with the same error, naming the same line ("An error names the
 //!   line, from 1"), and writes nothing of a refused header or frame;
 //! - a finished stream is the file `profile::write` writes for the same trace.
 //!
 //! The header and frame are hand-written from §5, key for key, so the writer is tested on input it did not produce.
-//! Each test has its negative control (R-176).
+//! Each test has its negative control.
 // The file name `qa_TASK-M0-47_stream` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -25,7 +24,7 @@ use engine::contract::profile::{
 };
 use serde_json::{json, Value};
 
-/// R-341's flush, from the ruling's text: every 60 frames or 1 s, whichever comes first.
+/// The flush policy, from telemetry §5's text: every 60 frames or 1 s, whichever comes first.
 const R341: Flush = Flush {
     frames: 60,
     interval: Duration::from_secs(1),
@@ -64,7 +63,7 @@ fn frame_value(index: u64, frame_ms: f64) -> Value {
     })
 }
 
-/// A no-GPU header line (§5, R-308), hand-filled.
+/// A no-GPU header line (§5), hand-filled.
 fn header_line() -> Value {
     json!({
         "schema": "principia-profile-v1",
@@ -156,7 +155,7 @@ fn by_count(n: usize) -> Vec<usize> {
 }
 
 /// The count rule at and around its edges, the clock held still: 0 frames (header and summary only), 1, 59, 60, 61,
-/// 119, 120, 121 and 300 (REQ-TOOL-147: "flushed at the 60th frame since the last flush").
+/// 119, 120, 121 and 300 ("flushed at the 60th frame since the last flush").
 fn check_count_rule(flush: Flush) {
     for n in [0usize, 1, 59, 60, 61, 119, 120, 121, 300] {
         let got = flushed_lines(flush, &vec![Duration::ZERO; n]);
@@ -184,7 +183,7 @@ validation::negative_control!(
 );
 
 /// The clock rule at its edge: 999 ms after the last flush is not yet 1 s, 1000 ms is ("once 1 s has passed"); the
-/// clock counts from the last flush, the header's or a count flush; a slow frame flushes alone (REQ-TOOL-147, R-341).
+/// clock counts from the last flush, the header's or a count flush; a slow frame flushes alone.
 fn check_clock_rule(flush: Flush) {
     let got = flushed_lines(flush, &[ms(999), ms(1000)]);
     assert_eq!(got, [1, 3, 4], "clock rule: 999/1000 ms flushed at {got:?}");

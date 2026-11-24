@@ -1,10 +1,10 @@
-//! The coordinate presets as stain graphs (TASK-M1-07; colour_composition §6; debug_tooling_plan §F): each lowers and
+//! The coordinate presets as stain graphs (colour_composition §6; debug_tooling_plan §F): each lowers and
 //! assembles, and drawn through the preset harness over the synthetic set it draws its coordinate as RG with B = 0:
 //! `uv_screen` the pixel's post-flip UV, `uv_quad` the sample's t, the coordinate view c + h·(2t − 1) and its δ mode
-//! (δ/h + 1)/2 (REQ-TOOL-019, REQ-TOOL-027, REQ-TOOL-153). The render crate's `coords` tests check the reconstruction,
+//! (δ/h + 1)/2. The render crate's `coords` tests check the reconstruction,
 //! the banding criterion and the export on these presets in full; these hold each preset to its picture.
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use engine::presets::{coordinate_view, uv_quad, uv_screen, CoordinateMode};
 use engine::stain::{GraphError, StainGraph};

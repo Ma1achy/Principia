@@ -1,4 +1,4 @@
-//! Locking does not move the view (TASK-M2-62; chart_decoder_contract Part 4, "Setting the lock" and "The lock's
+//! Locking does not move the view (chart_decoder_contract Part 4, "Setting the lock" and "The lock's
 //! construction, defined"): the lock pins the clicked pixel and edits the lock group alone; tilt and zoom turn about the
 //! pin; snap-back undoes the slice only; centre on pin brings the pin to the centre.
 //!

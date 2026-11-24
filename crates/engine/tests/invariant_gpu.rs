@@ -1,4 +1,4 @@
-//! The invariant-momentum construction's branches on the GPU, feasibility and seed (`kernel::decode::invariant`; TASK-M2-09): the
+//! The invariant-momentum construction's branches on the GPU, feasibility and seed (`kernel::decode::invariant`): the
 //! kernel's f32 build, `target/spirv/kernel.wgsl`, its entry points `decode_invariant_feasibility` and
 //! `decode_invariant_construct_defaults` dispatched natively, read back and checked against the same source on the CPU
 //! at f32 and at f64 and against an exact integer reference. CI runs this file in the `gpu-kernel` job (lavapipe) and on
@@ -7,14 +7,13 @@
 //!   inputs, and it is the exact one: triples on both sides of the boundary at every scale, subnormals included; sparse
 //!   triples whose difference lands in each limb column; those scaled by powers of two from `2⁻⁶³` to `2⁶⁰` and by
 //!   `1e-18` to `1e18`; and the tiny triples, where the limb products of operands not normalised to `[1, 2)` would be
-//!   subnormal, which a GPU that flushes subnormals drops (REQ-DEC-022; dd_decoder §5 test 12).
+//!   subnormal, which a GPU that flushes subnormals drops (dd_decoder §5 test 12).
 //! - `invariant_infeasible_construct`: the decoder's construction on the GPU, over decoded configurations and
 //!   `(L_z, K*)` pairs on both sides of `K* = L_z²/2`, the boundary itself included: tagged infeasible exactly where the
-//!   CPU at f32 and f64 tags it, which is exactly `K* < L_z²/2`; every momentum finite, none NaN, none dropped
-//!   (REQ-DEC-022).
-//! - `invariant_seed_parity`: the decoder's seed on the GPU is R-82's decided on `z_α`, CPU-f64's, at `z_α = 0` and
+//!   CPU at f32 and f64 tags it, which is exactly `K* < L_z²/2`; every momentum finite, none NaN, none dropped.
+//! - `invariant_seed_parity`: the decoder's seed on the GPU is the one decided on `z_α`, CPU-f64's, at `z_α = 0` and
 //!   either side of it to where `cos²α` and `sin²α` are equal to rounding, with unequal masses (PIT-9), and the momenta
-//!   agree to f32's rounding (REQ-DEC-021; dd_decoder §5 test 12).
+//!   agree to f32's rounding (dd_decoder §5 test 12).
 //!
 //! **Domain** (pitfalls §10): the construction alone, its inputs held fixed; no trajectory. **PIT-10:** the claim is for
 //! identical inputs; the GPU's continuous values (`a`, `w`, `p`) may differ from the CPU's in their last bits.
@@ -584,7 +583,7 @@ fn seed_samples() -> Vec<[f32; 6]> {
         .collect()
 }
 
-/// `out`, the GPU's words for `samples`: each seed is R-82's decided on `z_α`, `(ρ, 0)` (word 0) where `z_α ≤ 0` and
+/// `out`, the GPU's words for `samples`: each seed is the one decided on `z_α`, `(ρ, 0)` (word 0) where `z_α ≤ 0` and
 /// `(0, λ)` (word 1) elsewhere, CPU-f64's; and the momenta are CPU-f64's to f32's rounding, not a fork's O(1)
 /// (dd_decoder §5 test 12).
 fn check_seeds(samples: &[[f32; 6]], out: &[u32]) {

@@ -1,18 +1,19 @@
-//! QA tests for TASK-M1-14, engine side, written from the requirements it closes, not from the implementation:
+//! QA tests for the synthetic fixtures and stored-value purity, engine side, written from the requirements, not from
+//! the implementation:
 //!
-//! - REQ-TOOL-018 (debug tooling plan, "Principle", "Synthetic-first"): the named synthetic fixtures (a set `state`, a
-//!   known escaper, a ramp in `energy_drift`, a bitwise-adversarial descriptor, a forced-failure sample) hold what they
-//!   name, and the generated accessors return the stored values, checked against payload §2's bit layout decoded here
-//!   by hand (`qa_m1_14_accessors_*`, `qa_m1_14_fixture_*`).
-//! - REQ-PAY-024 with its verify conformed to R-271: no stored value of the synthetic and forced-failure samples is
-//!   NaN, and the only non-finite stored value is `d_min`'s unset f16 +inf, `0x7C00` in bits 16–31 of `packed_a`, held
-//!   only by a failed sample (`sim_failed` or `decode_failed`, payload §2) or one before its first step
-//!   (`t_end_step == 0`, payload §2 `times`: "initial: 0"). The scanner below is this file's own, written from payload
-//!   §1 and §2 and R-271; each misplacement (wrong half, wrong word, wrong sign, wrong sample, f32 +inf) is a control
-//!   (`qa_stored_values_no_nan_*`). The grep half of the verify: generated Rust and WGSL decide no validity by
-//!   `isnan` (`qa_m1_14_no_isnan_in_generated_validity_logic`).
+//! - The debug tooling plan ("Principle", "Synthetic-first"): the named synthetic fixtures (a set `state`, a known
+//!   escaper, a ramp in `energy_drift`, a bitwise-adversarial descriptor, a forced-failure sample) hold what they name,
+//!   and the generated accessors return the stored values, checked against payload §2's bit layout decoded here by hand
+//!   (`qa_m1_14_accessors_*`, `qa_m1_14_fixture_*`).
+//! - No stored NaN: no stored value of the synthetic and forced-failure samples is NaN, and the only non-finite stored
+//!   value is `d_min`'s unset f16 +inf, `0x7C00` in bits 16–31 of `packed_a`, held only by a failed sample
+//!   (`sim_failed` or `decode_failed`, payload §2) or one before its first step (`t_end_step == 0`, payload §2 `times`:
+//!   "initial: 0"). The scanner below is this file's own, written from payload §1 and §2; each misplacement (wrong
+//!   half, wrong word, wrong sign, wrong sample, f32 +inf) is a control (`qa_stored_values_no_nan_*`). The grep half of
+//!   the verify: generated Rust and WGSL decide no validity by `isnan`
+//!   (`qa_m1_14_no_isnan_in_generated_validity_logic`).
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use std::path::{Path, PathBuf};
 
@@ -40,7 +41,7 @@ const RUNNING: u32 = 3;
 const SIM_FAILED: u32 = 4;
 const DECODE_FAILED: u32 = 5;
 
-/// f16 +inf, `d_min`'s unset bits (R-271).
+/// f16 +inf, `d_min`'s unset bits.
 const F16_POS_INF: u16 = 0x7c00;
 
 /// A row of eight fresh samples, one quad each.
@@ -85,7 +86,7 @@ fn decoded(w: u32) -> (u32, u32, bool, u32, u32) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// REQ-TOOL-018: the accessors return the stored values.
+// The accessors return the stored values.
 
 /// Checks that each generated accessor of each named fixture's samples returns the field `layout` decodes from the
 /// stored words, and the f16 and u16 halves are payload §2's.
@@ -117,7 +118,7 @@ fn check_accessors(layout: fn(u32) -> (u32, u32, bool, u32, u32)) {
                 s.times >> 16,
                 "`{name}` {i}: t_dmin_step"
             );
-            // The drift halves are `log16` since R-632 (payload §2): the value its bits hold is the form's.
+            // The drift halves are `log16` (payload §2): the value its bits hold is the form's.
             for (got, h, what) in [
                 (pb_dE_max(s.packed_b), s.packed_b as u16, "dE_max"),
                 (pb_dLz_max(s.packed_b), (s.packed_b >> 16) as u16, "dLz_max"),
@@ -357,7 +358,7 @@ negative_control!(
 );
 
 /// Checks the forced-failure fixture: every sample is failed, both failed states occur, and each holds payload §1's
-/// failed-state values: `dE_max` and `dLz_max` 0.0, `d_min` the unset bits `0x7C00` (R-271).
+/// failed-state values: `dE_max` and `dLz_max` 0.0, `d_min` the unset bits `0x7C00`.
 fn check_forced_failure(set: &Synthetic) {
     let mut states = std::collections::BTreeSet::new();
     for i in 0..8 {
@@ -404,7 +405,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------------
-// REQ-PAY-024 (R-79, R-271): no stored NaN; the one non-finite value, and where it may sit.
+// No stored NaN; the one non-finite value, and where it may sit.
 
 /// The members of `SimStateFTLE` and `ICDescriptor` this scanner has a rule for, in the ledger's order. A new member
 /// makes `check_members` fail, so it cannot pass unscanned.
@@ -423,20 +424,20 @@ const SIMSTATE_MEMBERS: [&str; 25] = [
     "packed_b",
     "times",
     "total_substeps",
-    // the budget word and the regularised drift (payload §1; TASK-M3-41): u32s, no f32, so no float rule
+    // the budget word and the regularised drift (payload §1): u32s, no f32, so no float rule
     "budget_bits",
     "dE_reg",
     "closure_min",
     "closure_step",
     "_reserved",
-    // the collision floor's u32 record (payload §1; R-973; TASK-M3-71): no f32, so no float rule, and no f16
+    // the collision floor's u32 record (payload §1): no f32, so no float rule, and no f16
     "coll_floor_bits",
-    // the escape rule's lagged n̂ register (payload §1; TASK-M3-12): three f32s, under the float rule
+    // the escape rule's lagged n̂ register (payload §1): three f32s, under the float rule
     "_nhat_lag_0",
     "_nhat_lag_1",
     "_nhat_lag_2",
-    // the re-boot's exact d_min latch and its march bits (payload §1, "Payload purity"; TASK-M3-21): u32s, no f32, so
-    // no float rule
+    // the re-boot's exact d_min latch and its march bits (payload §1, "Payload purity"): u32s, no f32, so no
+    // float rule
     "_dmin_d2",
     "_march_bits",
 ];
@@ -498,9 +499,9 @@ fn simstate_floats(s: &SimStateFTLE) -> Vec<(String, f32)> {
     out
 }
 
-/// Checks REQ-PAY-024 on the first `n` samples of `set`:
-/// - every stored f32, of `SimStateFTLE` and `ICDescriptor`, is finite (no NaN, and no ±inf: R-271's one exception is
-///   an f16);
+/// Checks that no stored value is NaN, on the first `n` samples of `set`:
+/// - every stored f32, of `SimStateFTLE` and `ICDescriptor`, is finite (no NaN, and no ±inf: the one exception,
+///   `d_min`'s unset +inf, is an f16);
 /// - `packed_b`'s two `log16` halves, `dE_max` and `dLz_max`, read finite (every code does: [`check_every_drift_code`]);
 /// - `packed_a`'s bits 0–15 are the descriptor, whose reserved bits 10–15 are zero, so no f16 lands there;
 /// - `packed_a`'s bits 16–31, `d_min`, are never NaN or −inf, and are +inf only as exactly `0x7C00` on a `sim_failed` or
@@ -731,7 +732,7 @@ negative_control!(
 
 #[test]
 fn qa_stored_values_no_nan_unset_before_first_step() {
-    // A fresh row: every sample running, before its first step, `d_min` unset. R-271 allows it.
+    // A fresh row: every sample running, before its first step, `d_min` unset, which is allowed.
     let mut set = row();
     for i in 0..8 {
         assert_eq!(
@@ -757,7 +758,7 @@ negative_control!(
 
 #[test]
 fn qa_stored_values_no_nan_unset_on_failed_after_steps() {
-    // A sim_failed sample many steps in keeps d_min unset: allowed, it is failed (R-271).
+    // A sim_failed sample many steps in keeps d_min unset: allowed, it is failed.
     let mut set = filled("forced_failure");
     let s = *set.simstate(1);
     assert!(tm_t_end_step(s.times) > 0 && bits(s.packed_a, 0, 3) == SIM_FAILED);
@@ -812,7 +813,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------------
-// REQ-PAY-024's grep: no `isnan` in validity logic of the generated Rust and WGSL.
+// The grep: no `isnan` in validity logic of the generated Rust and WGSL.
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -846,7 +847,7 @@ fn generated_files() -> Vec<PathBuf> {
 }
 
 /// Checks `text`, the source `path`: WGSL holds no `isnan`/`isNan` at all; in Rust every `is_nan` sits in a function
-/// whose name begins `set_`, a write-side storage guard (R-79: refuse or replace a NaN before storing it), never in a
+/// whose name begins `set_`, a write-side storage guard (it refuses or replaces a NaN before storing it), never in a
 /// reader, a `has_*` const or a validity predicate.
 fn check_no_isnan(path: &str, text: &str) {
     let wgsl = path.ends_with(".wgsl");

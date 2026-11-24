@@ -1,5 +1,5 @@
 //! The payload's producer (`kernel::driver::producer`; dd_integrator §4, seam 5: "every field of the generation-root
-//! ledger written, per its metadata"; debug_tooling_plan §D, §E, §G; TASK-M3-22), on real CPU marches:
+//! ledger written, per its metadata"; debug_tooling_plan §D, §E, §G), on real CPU marches:
 //! - `producer_joins_the_tiers`: [`produce`] is the join of the paths that each wrote part of the payload: every field
 //!   but `last_symbol` is `integrate_ftle`'s, bit for bit, and `last_symbol` and the word are `integrate_word`'s; a
 //!   non-finite IC is `decode_failed`, its shadow the failed one and its word empty; beside an occupant that owns its
@@ -16,7 +16,7 @@
 //!   its sentinel (sentinel conventions honoured; dd seam 5's "sane"). The `ICDescriptor`'s fields are read from the
 //!   decoded survey only: the hand-built fixtures' `(m, r, p)` are no decoder's output, and their descriptors fall
 //!   outside the canonical gauge its ranges are stated in.
-//! - The scalar views' assertions (debug_tooling_plan §D; REQ-TOOL-036), on the produced payloads read through the
+//! - The scalar views' assertions (debug_tooling_plan §D), on the produced payloads read through the
 //!   generated read side: `scalar_view_t_end_step_latched` (the completed-step count, latched at termination);
 //!   `scalar_view_d_min_is_trajectory_minimum` (`d_min > 0`, the minimum over every state the march took);
 //!   `scalar_view_latches_bound_final_drift` (`dE_max ≥ |energy_drift|`, `dLz_max ≥ |Lz_drift|`);
@@ -24,10 +24,10 @@
 //!   `scalar_view_drift_fields_signed` (signed drift fields on diverging scales, both signs read).
 //!   `ftle ≈ 0` on the Kepler-embedded orbit and large on Burrau is `benettin.rs`'s `benettin_ftle`, read through the
 //!   same generated read side.
-//! - `e0_agreement` (debug_tooling_plan §G; REQ-VAL-117, REQ-VAL-027): `|E_0 − (K_0 + V_0)|` on the synthetic fixtures
+//! - `e0_agreement` (debug_tooling_plan §G): `|E_0 − (K_0 + V_0)|` on the synthetic fixtures
 //!   and a decoded survey, at f32 and f64, within a bound derived below; every non-finite `E_0`, `K_0` or `V_0`, tested
-//!   on its bits first, is excluded and counted (R-436); the `ICDescriptor` stores no `E₀`.
-//! - `shape_views_terminal_frozen` (debug_tooling_plan §E; REQ-TOOL-037): a sample that latched a terminal stores the
+//!   on its bits first, is excluded and counted; the `ICDescriptor` stores no `E₀`.
+//! - `shape_views_terminal_frozen` (debug_tooling_plan §E): a sample that latched a terminal stores the
 //!   same payload, every word, whatever horizon it is produced at, so the live shape and accumulator views over it are
 //!   frozen. The other two shape-view properties are measured elsewhere: `‖n‖ = 1` is a stateless function of the
 //!   stored positions, tested over random states by `shape_live.rs` and through the fragment by
@@ -1157,7 +1157,7 @@ negative_control!(
     }
 );
 
-// ── The scalar views (debug_tooling_plan §D; REQ-TOOL-036) ──────────────────────────────────────────────────────
+// ── The scalar views (debug_tooling_plan §D) ─────────────────────────────────────────────────────────────────────────
 
 /// The read-side `SimState` of a produced f32 sample, as the views read it.
 fn read(p: &Produced<f32>, key: &WrapperUniforms<f32>) -> SimState {
@@ -1600,7 +1600,7 @@ negative_control!(
     check_signed(true)
 );
 
-// ── The energy agreement (debug_tooling_plan §G; REQ-VAL-117, REQ-VAL-027) ──────────────────────────────────────
+// ── The energy agreement (debug_tooling_plan §G) ─────────────────────────────────────────────────────────────────────
 
 /// The survey's latent slice: `z = z₀ + u·q₁ + v·q₂` over a 24 × 24 grid of `(u, v)` in `[−1, 1]²`, `wrapper.rs`'s
 /// `Latent` chart's vectors.
@@ -1649,7 +1649,7 @@ where
 
 /// `|E_0 − (K_0 + V_0)| ≤ 24u(K_0 + |V_0|)` on every sample of the synthetic fixtures and the decoded survey at `R`,
 /// `u` the precision's unit roundoff, with every sample whose `E_0`, `K_0` or `V_0` is non-finite on its bits, and
-/// every `decode_failed` one, excluded and counted (R-436). Derivation: `E_0` is the monitor's `H` of the march's IC
+/// every `decode_failed` one, excluded and counted. Derivation: `E_0` is the monitor's `H` of the march's IC
 /// and `K_0 + V_0` the descriptor's, the same sum of the same three kinetic and three pair terms in `R`, each formed
 /// with at most about 11 roundings relative to `K + |V|` (each kinetic term 4, each pair term 6, the sums 5): their
 /// difference is at most twice that, 22u, taken as 24u. `kick` scales the IC's momenta for the stored `E_0` only (the
@@ -1706,7 +1706,7 @@ where
 
 #[test]
 fn e0_agreement() {
-    // REQ-VAL-027: no `E₀` in the `ICDescriptor`; `E_0` is `SimState`'s, the descriptor's energy derived at read.
+    // No `E₀` in the `ICDescriptor`; `E_0` is `SimState`'s, the descriptor's energy derived at read.
     for e in entries() {
         assert!(
             !(e.provenance == Provenance::Decode && e.name.eq_ignore_ascii_case("e_0")),
@@ -1727,7 +1727,7 @@ negative_control!(
     }
 );
 
-// ── The shape views (debug_tooling_plan §E; REQ-TOOL-037) ───────────────────────────────────────────────────────
+// ── The shape views (debug_tooling_plan §E) ──────────────────────────────────────────────────────────────────────────
 
 /// A sample that latched a terminal stores every word the same however far past it the horizon runs, so the live
 /// views over it are frozen: produced at its horizon `H`, at `H + 1` and at `2H`, at f32 and f64, under the stop option

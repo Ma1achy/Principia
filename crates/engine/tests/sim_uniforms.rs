@@ -1,22 +1,20 @@
 //! `SimUniforms` and dispatch's refusals (`engine::contract::sim_uniforms`, `engine::dispatch::validate`;
-//! integrator_contract Part 3, Part 5; dd_simstate_payload §2, `times`; dd_generation_root §3.7, "Open"; R-86, R-132,
-//! R-502, R-575, R-610, R-668; TASK-M3-06, TASK-M3-66):
+//! integrator_contract Part 3, Part 5; dd_simstate_payload §2, `times`; dd_generation_root §3.7, "Open"):
 //! - `sim_uniforms_defaults`: the default `SimUniforms` is Part 3's table, and `dt_macro = T/65535` above `T = 65.535`,
-//!   `10⁻³` at and below it (REQ-INT-026).
+//!   `10⁻³` at and below it.
 //! - `horizon_refusal`: a `(T, dt_macro)` giving 65536 macro-steps is refused at dispatch and launches nothing, 65535
 //!   is accepted; the other refusals' edges; the joint `total_substeps` bound; and a terminal sample's `t_end_step` is
-//!   the latched step count (REQ-PAY-037). A non-finite or negative `r_coll` or `r_close`, and a `tau`, `eps_E` or
-//!   `eps_L` not finite and positive (±0 included), each refused with its reason; `r_coll = 0` accepted (Part 7).
+//!   the latched step count. A non-finite or negative `r_coll` or `r_close`, and a `tau`, `eps_E` or `eps_L` not finite
+//!   and positive (±0 included), each refused with its reason; `r_coll = 0` accepted (Part 7).
 //! - `collision_softening_defaults`: `r_coll` nonzero and `epsilon` 0 by default, no co-moving field, and `epsilon > 0`
-//!   tagged in the provenance and on the sim key (REQ-SYS-018); dispatch refuses every `epsilon` other than 0 until
-//!   softened gravity is built (RQ-627).
+//!   tagged in the provenance and on the sim key; dispatch refuses every `epsilon` other than 0 until softened gravity
+//!   is built.
 //! - `sim_uniforms_nsub_table`: the table `SimUniforms` carries is the host generator's for a changed config, and
-//!   dispatch returns the generator's refusal at `N_max = L_max + 1` and launches nothing (REQ-INT-028, in part; R-502).
+//!   dispatch returns the generator's refusal at `N_max = L_max + 1` and launches nothing.
 //! - `horizon_default`: the default horizon, `T = 200`, and `T = 10`, 0.5 and 0.4 accepted; nothing in `[0.4, 200]`
-//!   refused, and a `T` below 0.4 refused with its reason (REQ-INT-081).
+//!   refused, and a `T` below 0.4 refused with its reason.
 //! - `units_refusal`: dispatch refuses `g` and `m_total` other than 1, each with its own refusal naming the field and
-//!   its value, launches nothing for either, and dispatches `g = m_total = 1`; the sim key still moves with each
-//!   (REQ-SYS-096).
+//!   its value, launches nothing for either, and dispatches `g = m_total = 1`; the sim key still moves with each.
 
 use std::cell::Cell;
 
@@ -57,7 +55,7 @@ fn bits(table: &NsubThresholds) -> Vec<u32> {
         .collect()
 }
 
-// ── sim_uniforms_defaults (REQ-INT-026) ──────────────────────────────────────────────────────────────────────────
+// ── sim_uniforms_defaults ────────────────────────────────────────────────────────────────────────────────────────
 
 /// `u` is Part 3's table: `T_horizon = 50`, `dt_macro = 10⁻³`, `N_max = 64`, `r_sub = 0.05`, `gamma_sub = 1.5`,
 /// `r_coll = 10⁻³`, `tau = 10⁻³`, the 0.4 escape window, the register's `Δ_sync = 1/8`, `r_close = 0.01`, `eps_E = eps_L = 10⁻⁶`, `G = M_total = 1`,
@@ -156,7 +154,7 @@ negative_control!(
     check_dt_macro(&|t: f64| (1e-3f64).max(t / 65535.0))
 );
 
-// ── horizon_refusal (REQ-PAY-037) ────────────────────────────────────────────────────────────────────────────────
+// ── horizon_refusal ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `check` refuses `(T, dt_macro) = (64, 2⁻¹⁰)`, exactly 65536 macro-steps, naming them, and accepts
 /// `(65535·2⁻¹⁰, 2⁻¹⁰)`, exactly 65535; `launch` is called only for the accepted one.
@@ -824,7 +822,7 @@ carried_edge!(
     expected = "eps_L -0.000001 is not refused as such"
 );
 
-// ── collision_softening_defaults (REQ-SYS-018) ───────────────────────────────────────────────────────────────────
+// ── collision_softening_defaults ─────────────────────────────────────────────────────────────────────────────────
 
 /// The default `u` has `r_coll` nonzero and `epsilon` 0, untagged; each field is one number, constant across the
 /// dispatch (fixed at `t = 0`), and there is none other, so no co-moving option; `epsilon > 0` is tagged `softened`
@@ -903,7 +901,7 @@ fn check_collision_softening(u: &SimUniforms) {
         assert_eq!(key.last(), Some(&1), "epsilon {eps}'s sim-key tag");
         assert_ne!(key, plain, "epsilon {eps} pools with the unsoftened run");
     }
-    // The table is derived, so it adds nothing to the sim key (R-502); every carried value does.
+    // The table is derived, so it adds nothing to the sim key; every carried value does.
     let other_table = SimUniforms {
         thresholds: pack(&[0; NSUB_TABLE_MAX]),
         ..*u
@@ -939,7 +937,7 @@ negative_control!(
 );
 
 /// `check` refuses every `epsilon` other than 0, positive, negative, NaN and ±∞, each as [`DispatchError::Softening`]
-/// with its reason: no force law takes `epsilon` (RQ-627), so a run with one would come back Newtonian under the
+/// with its reason: no force law takes `epsilon`, so a run with one would come back Newtonian under the
 /// `softened` tag. `epsilon = 0` is accepted.
 fn check_epsilon_refused(check: &Check) {
     let neg_least = -f64::from_bits(1);
@@ -1070,7 +1068,7 @@ negative_control!(
     check_every_value_keyed(&|u: &SimUniforms| u.t_horizon.to_bits().to_be_bytes().to_vec())
 );
 
-// ── units_refusal (REQ-SYS-096; R-668) ───────────────────────────────────────────────────────────────────────────
+// ── units_refusal ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Dispatch itself, holding that it launches once for an accepted sim key and never for a refused one.
 fn launched(u: &SimUniforms) -> Result<u32, DispatchError> {
@@ -1283,7 +1281,7 @@ negative_control!(
     check_every_value_keyed(&|u: &SimUniforms| SimUniforms { m_total: 1.0, ..*u }.sim_key_bytes())
 );
 
-// ── sim_uniforms_nsub_table (REQ-INT-028, in part; R-502) ────────────────────────────────────────────────────────
+// ── sim_uniforms_nsub_table ──────────────────────────────────────────────────────────────────────────────────────
 
 /// `u`'s table is the host generator's for its `r_sub`, `gamma_sub` and `N_max`, bit for bit.
 fn check_table_is_generators(u: &SimUniforms) {
@@ -1387,7 +1385,7 @@ negative_control!(
     })
 );
 
-// ── horizon_default (REQ-INT-081) ────────────────────────────────────────────────────────────────────────────────
+// ── horizon_default ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `check` accepts the default horizon, 50 at `10⁻³` (50000 steps), `T = 200` at `200/65535` (65535 steps), and
 /// `T = 10`, 0.5 and 0.4 at `10⁻³`.
@@ -1414,7 +1412,8 @@ fn check_horizon_lowered(check: &Check) {
 }
 
 /// `check` refuses no `T` in `[0.4, 200]` (a grid of 0.05, its ends and their neighbours inside, and both sides of
-/// 65.535), and refuses 0.39, 0, −1 and the f64 just below 0.4 with R-610's reason, and the f64 just above 200.
+/// 65.535), and refuses 0.39, 0, −1 and the f64 just below 0.4 with the floor's reason (below one closure window the
+/// escape arm cannot fire), and the f64 just above 200.
 fn check_horizon_floor(check: &Check) {
     let mut ts: Vec<f64> = (8..=4000).map(|k| f64::from(k) * 0.05).collect();
     ts.extend([

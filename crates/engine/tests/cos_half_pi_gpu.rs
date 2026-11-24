@@ -1,10 +1,10 @@
-//! Each backend's `cos` near `π/2` against f64, relative to its value (TASK-M4-38; REQ-RENDER-122).
+//! Each backend's `cos` near `π/2` against f64, relative to its value.
 //!
 //! WGSL bounds `sin` and `cos` only by an absolute error (2⁻¹¹ inside `[−π, π]`), but the decode's `‖ρ̃‖ = cos α`
 //! (`kernel::decode::config::hyperspherical`) needs a relative one where `α → π/2`: there `cos α` is small, and an
 //! error of a fixed size is a large share of it. The decode's f32 build lowers `Real::cosine` to WGSL's builtin `cos`
 //! (`crates/render/wgsl/decode.wgsl`, the committed translation), so this file dispatches that builtin alone, through
-//! the compute entry point at the default fast-math setting (off, R-297), on whatever adapter the harness opens
+//! the compute entry point at the default fast-math setting (off), on whatever adapter the harness opens
 //! (`PRIN_GPU_BACKEND`, or the platform's), and names the adapter in its output. No kernel build is needed.
 //!
 //! **The arguments.** Every f32 from `π/4` (rounded) up to the decode's largest `α`, the f32 image of `π/2` rounded
@@ -23,7 +23,7 @@
 //!
 //! **The output.** The worst relative error in each band of `cos x`, `[2⁻⁽ᵏ⁺¹⁾, 2⁻ᵏ)`, in f32 eps (`2⁻²³`), with its
 //! argument, printed before the assertion so a failure shows the distribution, not one number. The fast-math-on
-//! compile, an opt-in (R-297), is measured and printed too, not held to the bound.
+//! compile, an opt-in, is measured and printed too, not held to the bound.
 //!
 //! **The controls.** Two stand-in `cos`es, each well inside WGSL's absolute bound of 2⁻¹¹, must fail: the f64 value
 //! plus one f32 eps (`2⁻²³`, absolute), on the CPU; and `1 − 2 sin²(x/2)` on the GPU, whose absolute error of about

@@ -1,5 +1,5 @@
 //! The collision threshold dispatch hands the kernel (`engine::dispatch::validate::Validated::collision_radius`;
-//! integrator_contract Part 7; TASK-M3-09):
+//! integrator_contract Part 7):
 //! - `dispatch_collision_radius`: an accepted sim key's threshold is its own `r_coll`'s, `r_coll²` rounded once to f32,
 //!   at the default, at another value and at `r_coll = 0`, and a run under it collides where its IC starts inside
 //!   `r_coll`.

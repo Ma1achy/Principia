@@ -1,16 +1,17 @@
-//! QA's tests for TASK-M2-22, written from the requirements it closes and their sources, not from the implementation:
+//! QA's tests for slice, pan, zoom, tilt and the named directions, written from the contract, not from the
+//! implementation:
 //!
-//! - REQ-GUI-002 (chart_decoder_contract Part 4, "The operation table", "Slice"): a slice moves every pixel's IC by the
-//!   identical step, orthogonal to the plane; a pan's `Δz₀` lies in `span(q₁, q₂)` and keeps the plane; a zoom keeps
-//!   `z₀` and scales `q₁, q₂` by one common, log-stepped factor.
-//! - REQ-GUI-003 (Part 4, "Tilt", "Directions are axis kinds"): `q′(τ) = normalise(cos τ·q + sin τ·d)`; `τ = 0` leaves
+//! - Slice, pan and zoom (chart_decoder_contract Part 4, "The operation table", "Slice"): a slice moves every pixel's
+//!   IC by the identical step, orthogonal to the plane; a pan's `Δz₀` lies in `span(q₁, q₂)` and keeps the plane; a
+//!   zoom keeps `z₀` and scales `q₁, q₂` by one common, log-stepped factor.
+//! - Tilt (Part 4, "Tilt", "Directions are axis kinds"): `q′(τ) = normalise(cos τ·q + sin τ·d)`; `τ = 0` leaves
 //!   `q`; `τ = ±90°` gives `±d`; `±30°` differ; `τ` outside `[−90°, 90°]` is refused; the six directions orthogonal to
 //!   the plane complete it to ℝ⁸; a curve axis tilts its tangent at the centre.
-//! - REQ-CHART-009 / REQ-CHART-051 (Part 4, "Their latent vectors"): the three named directions as unit latent
+//! - The named directions (Part 4, "Their latent vectors"): the three named directions as unit latent
 //!   vectors in their blocks, evaluated at and recomputed with the centre; `d_E` is tangent to the `L_z` level set and
 //!   raises `E`, its physical momentum change parallel to `mᵢ(v − (L_z/I)·J r)ᵢ`; `d_m`'s step of `‖z_eq − z₀[6:8]‖`
 //!   reaches equal masses; the morph's target leaves the plane and its tilt keeps `z(½,½) = z₀`.
-//! - REQ-CHART-016 (chart_reference §1.1): an oblique slice records its orthonormal pair in the export; raw tilts
+//! - The oblique record (chart_reference §1.1): an oblique slice records its orthonormal pair in the export; raw tilts
 //!   replace rather than compose.
 //!
 //! Every IC is read through the kernel's latent chart `Φ`, every edit applied through the real state store.
@@ -108,7 +109,7 @@ fn sim(plane: Plane) -> SimConfig {
         },
         plane,
         slice: Slice {
-            // The slice frame (R-457 E3), at its defaults: the normal and both targets z_q3.
+            // The slice frame, at its defaults: the normal and both targets z_q3.
             frame: engine::contract::sim_config::SliceFrame::along(
                 engine::contract::sim_config::Z_Q3,
             ),
@@ -174,7 +175,7 @@ fn planes() -> Vec<Plane> {
         .collect()
 }
 
-// ---- REQ-GUI-002: slice, pan, zoom ----
+// ---- slice, pan, zoom ----
 
 /// Every pixel moved by one common step, orthogonal to `before`'s plane, and the basis is untouched.
 fn check_slice(before: &Plane, after: &Plane) {
@@ -355,7 +356,7 @@ negative_control!(
     }
 );
 
-// ---- REQ-GUI-003: tilt ----
+// ---- tilt ----
 
 /// The contract's formula, `normalise(cos τ·q + sin τ·d)`, computed here, for a unit `q`.
 fn formula(q: &Latent, tau_deg: f64, d: &Latent) -> Latent {
@@ -616,7 +617,7 @@ negative_control!(
     }
 );
 
-// ---- REQ-CHART-009 / REQ-CHART-051: the named directions ----
+// ---- the named directions ----
 
 /// Burrau masses `(5, 4, 3)/12` (chart_reference §4.2) as default mass controls.
 fn burrau_mass() -> [f64; 2] {
@@ -912,7 +913,7 @@ negative_control!(
     }
 );
 
-// ---- REQ-CHART-016: the oblique record and raw-tilt replacement ----
+// ---- the oblique record and raw-tilt replacement ----
 
 fn check_export(sim: &SimConfig, q1: &Latent, q2: &Latent) {
     let text = canonical::to_string(sim).expect("serialises");

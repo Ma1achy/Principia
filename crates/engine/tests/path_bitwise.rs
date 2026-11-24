@@ -1,4 +1,4 @@
-//! Today's operations through the chart-path object (TASK-M2-61), bit for bit against the baseline recorded from the
+//! Today's operations through the chart-path object, bit for bit against the baseline recorded from the
 //! code they replaced (`fixtures/chart_composition/digest.json`, written on this PR's baseline commits from `main`'s
 //! code, before the re-expression; `crates/engine/tests/path_support/mod.rs` says what a digest holds): every case of pan,
 //! zoom, slice, raw tilt (one vector and the pair, from an untilted and from a tilted plane), the oblique slice, the lock
@@ -9,8 +9,8 @@
 //!
 //! **The criterion**, written before the first run: every case's digest equals the stored one exactly, text for text,
 //! and every stored case is produced. One test per operation reads its own cases; `path_every_case` reads them all.
-//! `digest.json` is never written here: the code that wrote it is gone. Stage 2 (TASK-M2-62) changes the lock's own
-//! cases, locking no longer moving the view: they are re-recorded in `lock_stage2.json`, which overlays the baseline
+//! `digest.json` is never written here: the code that wrote it is gone. Stage 2 changes the lock's own cases,
+//! locking not moving the view: they are re-recorded in `lock_stage2.json`, which overlays the baseline
 //! (`PRINCIPIA_RECORD_LOCK_STAGE2=1`, by hand; the section "The lock's re-recorded cases" below says which and why), and with the
 //! centre-on-pin setting on every lock case is still its stage-1 digest.
 //!
@@ -791,7 +791,7 @@ fn object() -> BTreeMap<String, String> {
 /// The re-recorded cases' file, relative to the workspace root.
 const STAGE2: &str = "fixtures/chart_composition/lock_stage2.json";
 
-/// The cases R-866 changes, by prefix, and why. Every other case must stay bit for bit.
+/// The cases stage 2 changes, by prefix, and why. Every other case must stay bit for bit.
 const RERECORDED: [(&str, &str); 6] = [
     ("lock/set/", "the lock edits the lock group alone, not z₀"),
     ("lock/slider/", "the move starts from the unmoved z₀"),

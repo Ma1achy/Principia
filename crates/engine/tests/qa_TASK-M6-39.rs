@@ -1,16 +1,16 @@
-//! QA tests for TASK-M6-39 on the engine side, written from gui_state_contract §2 and R-458 F1, not from the
+//! QA tests for a drag's history entry on the engine side, written from gui_state_contract §2, not from the
 //! implementation:
 //!
-//! - gui_state_contract §2, "A drag coalesces into one history entry (R-96), its edits applied live (R-458)": a drag
+//! - gui_state_contract §2, "A drag coalesces into one history entry, its edits applied live": a drag
 //!   "sends its edit every frame the value changes, at most one per frame, each marked with the drag's key; the history
 //!   keeps one entry per key, its before the value at the drag's start and its after the last value sent, and the
 //!   console logs it once, when the drag ends. An edit with a new key, or none, closes the entry."
-//! - R-458 F1: "The console logs a drag once, at its end, as one \"SetField … before → after\" line, not a line per
-//!   frame"; R-101: playback's "no history" edits never enter the history.
-//! - REQ-GUI-166 (re-run): the one conformance suite holds the key's cases, so an engine that keeps no history keys (the
+//! - "The console logs a drag once, at its end, as one \"SetField … before → after\" line, not a line per frame";
+//!   playback's "no history" edits never enter the history.
+//! - The one conformance suite holds the key's cases, so an engine that keeps no history keys (the
 //!   interface's default, each keyed edit an entry of its own) fails it, naming those cases and no other.
 //!
-//! Each check runs on the real engine's `StateStore`; its control (R-176) runs the same check on a store that ignores
+//! Each check runs on the real engine's `StateStore`; its control runs the same check on a store that ignores
 //! the keys, or on the trace such a store would leave.
 // The file name `qa_TASK-M6-39` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
@@ -135,7 +135,7 @@ fn drag(engine: &mut dyn EngineInterface, key: HistoryKey) -> Drag {
         let s = engine.snapshot();
         let mut l = lines(&s);
         if k == 5 {
-            // The clock's advance during the drag: logged at once, marked, and out of the history (R-101).
+            // The clock's advance during the drag: logged at once, marked, and out of the history.
             engine.set_field(playhead(5.5, true));
             let s = engine.snapshot();
             l.extend(lines(&s));

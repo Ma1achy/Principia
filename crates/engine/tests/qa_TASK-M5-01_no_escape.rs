@@ -1,6 +1,6 @@
-//! QA tests for TASK-M5-01, R-418 on the engine side: the generated Rust `QuadReduction` accessors and sentinels of
-//! `escape_time_min` and `escape_time_max`. Written from R-418, REQ-REF-006 and dd_generation_root §3.7 ("No escape
-//! (R-418)", "Layout and §3.8 entries"), not from the implementation:
+//! QA tests for the quad reduction's "no escape" sentinels on the engine side: the generated Rust `QuadReduction`
+//! accessors and sentinels of `escape_time_min` and `escape_time_max`. Written from dd_generation_root §3.7 ("No
+//! escape", "Layout and §3.8 entries"), not from the implementation:
 //! - with no copy escaped, `escape_time_min` holds +∞ (binary16 `0x7c00`, bits 0–15 of `qr_w7`) and `escape_time_max`
 //!   −∞ (`0xfc00`, bits 16–31), each its reduction's identity, so the min and max reductions over a quad's escaped
 //!   copies need no branch: folding any set of recorded times from them gives the set's min and max;
@@ -8,7 +8,7 @@
 //! - an escape time past f16's range saturates to 65504, so no recorded time is either identity, and the generated
 //!   sentinel tests fire on the identities' bits only.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use engine::quad::*;
 use validation::negative_control;
@@ -50,7 +50,7 @@ fn reduce(min0: u16, max0: u16, times: &[u16]) -> u32 {
     u32::from(bits(hi)) << 16 | u32::from(bits(lo))
 }
 
-/// Every subset of [`ESCAPES`] (the empty one first) reduced from (`min0`, `max0`), checked against R-418.
+/// Every subset of [`ESCAPES`] (the empty one first) reduced from (`min0`, `max0`), checked against the rules above.
 fn check_no_escape(min0: u16, max0: u16) {
     for mask in 0u32..(1 << ESCAPES.len()) {
         let times: Vec<u16> = (0..ESCAPES.len())
@@ -95,7 +95,7 @@ fn check_no_escape(min0: u16, max0: u16) {
 
 #[test]
 fn qa_quad_reduction_no_escape_identities_rust() {
-    // The generated constants are R-418's bits and decode to +∞ and −∞.
+    // The generated constants are the identities' bits and decode to +∞ and −∞.
     assert_eq!(
         (
             QR_ESCAPE_TIME_MIN_SENTINEL_BITS,

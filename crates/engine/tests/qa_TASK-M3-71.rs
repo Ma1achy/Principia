@@ -1,5 +1,5 @@
-//! QA tests for TASK-M3-71, written from REQ-EVT-035's verify (and integrator contract Part 7, "The floor's record,
-//! defined"; dd_simstate_payload §2, `coll_floor_bits`, and §5; R-954, R-973), not from the implementation: runs
+//! QA tests for the collision floor's record, written from integrator contract Part 7 ("The floor's record, defined")
+//! and dd_simstate_payload §2, `coll_floor_bits`, and §5, not from the implementation: runs
 //! through dispatch's validation, the kernel's wrapper and the host export decoder.
 //! - The flag follows the pair's coordinates, not `r_coll` alone: the same `r_coll`, `1.5·2⁻²⁴`, between the f32
 //!   spacing at `[0.5, 1)` (`2⁻²⁴`) and at `[1, 2)` (`2⁻²³`), lies above the floor of a run whose closest pair sits
@@ -8,7 +8,7 @@
 //!   code (17 for `2⁻²⁴`, 18 for `2⁻²³`) in bits 0–7 of `coll_floor_bits`, its reserved bits zero.
 //! - A failed sample records no floor: the code 0, which reads no flag.
 //!
-//! Each test has its negative controls (R-176).
+//! Each test has its negative controls.
 
 use engine::contract::sim_uniforms::SimUniforms;
 use engine::dispatch::validate::validate;

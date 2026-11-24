@@ -1,4 +1,4 @@
-//! The evidence for the CPU worker pool's core reserve (`engine::pool`; TASK-M3-20), on the machine it runs on: the
+//! The evidence for the CPU worker pool's core reserve (`engine::pool`), on the machine it runs on: the
 //! CPU field of the app's start view, 48 × 48 samples to its horizon of 50, on pools of 1 to every available core,
 //! and, while each pool works, how late a 1 ms ticker wakes (a stand-in for the compositor and the UI thread, which
 //! need a core at a steady cadence). Reports the throughput, each added worker's marginal return, and the ticker's

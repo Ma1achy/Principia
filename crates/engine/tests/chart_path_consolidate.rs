@@ -1,4 +1,4 @@
-//! The chart path consolidated (TASK-M2-64): one leaf per operation, every navigation edit through the stop, the gui's
+//! The chart path consolidated: one leaf per operation, every navigation edit through the stop, the gui's
 //! routes onto the same leaves.
 //!
 //! **`path_merge_bitwise`.** The gui's own copies of pan (a drag), zoom (the wheel and + / −), the zoom row (`q·(σ′/σ)`,
@@ -14,14 +14,15 @@
 //!   `0·q` is `+0`, each to `+0`, a difference of 0 in value. Criterion: the components that change are exactly those
 //!   predicted, and each is a signed zero.
 //! - the tilt (Tilt's sliders, the arrows on `τ₁`, `τ₂`, `γ`, the compass's step and drag), the gui's `View::basis` on
-//!   std's `sin_cos`, is now R-474's Lean each axis through `kernel::chart::tilt::latent_basis`, the kernel's pinned
-//!   `sin` and `cos`. Each within 1 ulp of the value, at most 1, so `|Δq_i| ≤ 8ε·σ` per component (four products of
-//!   terms off by `ε` at most, and the rounding of two sums). Criterion: every component within `8ε·σ`.
+//!   std's `sin_cos`, is now the Lean each axis tilt (`Family::R474Tilt`) through `kernel::chart::tilt::latent_basis`,
+//!   the kernel's pinned `sin` and `cos`. Each within 1 ulp of the value, at most 1, so `|Δq_i| ≤ 8ε·σ` per component
+//!   (four products of terms off by `ε` at most, and the rounding of two sums). Criterion: every component within
+//!   `8ε·σ`.
 //! - the compass's slice is not converted: modelled here first as normal to the plane, the gui's own test on CI
 //!   measured its drawn normal 1.6·10⁻³ off the slice leaf's step on a tilted plane, which is not rounding; it stays
 //!   the compass's (`crates/gui/tests/chart_path_consolidate.rs`, `path_slice_not_merged`).
 //!
-//! Each changed case's view also decodes to the same system (`validation::roundtrip::phys`, REQ-ENC-024's `ε_phys`) at
+//! Each changed case's view also decodes to the same system (`validation::roundtrip::phys`, within `ε_phys`) at
 //! every pixel of a 3 × 3 probe whose decoded configuration is farther than `δ` from a binary collision, the skipped
 //! pixels counted and reported. (A first run read the zoom row's conversion on the sliders' rail alone, after a fuzzed
 //! zoom past the gui's span failed off it; the physics review measured a reachable off-rail pixel 1.424·10⁻¹⁴ from the
@@ -33,7 +34,7 @@
 //! **`path_pin_kept`.** Locked off the centre, a zoom and a tilt through their leaves keep the pinned pixel on its held
 //! point: bit for bit wherever `hold_plane` reports it held, and the leaf's view is its family constructor's, bit for bit.
 //!
-//! **`nav_stop_edit_path`** (REQ-CHART-168). On the linear `(L_z, E)` chart a pan past the feasible edge through the
+//! **`nav_stop_edit_path`**. On the linear `(L_z, E)` chart a pan past the feasible edge through the
 //! leaf: the edits recorded hold the window's centre the kernel's stop accepts, bit for bit, the stop naming layer 2
 //! and `LzEParabola`; a drag held past the edge sends nothing new, and one brought back inside sends its value.
 //!
@@ -409,10 +410,10 @@ fn collision_ratio(ic: &Ic<f64>) -> f64 {
     d(0, 1).min(d(0, 2)).min(d(1, 2)) / extent
 }
 
-/// The sliders' rail, `|zᵢ| ≤ 1` (R-920's span 2): a reported split of the physical arm, which asserts at every pixel.
+/// The sliders' rail, `|zᵢ| ≤ 1` (a span of 2): a reported split of the physical arm, which asserts at every pixel.
 const RAIL: f64 = 1.0;
 
-/// `ε_phys` (REQ-ENC-024) and the collision landmarks' `δ` (the module's note).
+/// `ε_phys` and the collision landmarks' `δ` (the module's note).
 fn eps_phys() -> f64 {
     ledger::constants::EPS_PHYS.number() * f64::EPSILON
 }
@@ -677,8 +678,8 @@ mod physical {
 
 // ── path_canonical_conversion_outcome ─────────────────────────────────────────────────────────────────────────────
 //
-// The outcome-class arm (TASK-M3-67), on integrated runs: every changed case of `path_canonical_conversion` (the one-axis
-// pans and the tilts), at every pixel of its 3 × 3 probe, the old view's decoded state against the new one's, each
+// The outcome-class arm, on integrated runs: every changed case of `path_canonical_conversion` (the one-axis pans and
+// the tilts), at every pixel of its 3 × 3 probe, the old view's decoded state against the new one's, each
 // decoded at f64, the state rounded once to f32, then marched by the default occupant, Heggie × RK4, to the default
 // horizon `T = 50` (`engine::trajectory::Integrated`), the dispatch-time label first. (Not the field's record bit for
 // bit: the field narrows the plane to f32 before it decodes; the march is the field's.) The class is the
@@ -1086,7 +1087,7 @@ mod after {
 
 // ── The families this task builds, against the direct calls ───────────────────────────────────────────────────────
 
-/// How the R-474 family's interior is checked: at the lerped angles, or the control's angles scaled from 0.
+/// How the `R474Tilt` family's interior is checked: at the lerped angles, or the control's angles scaled from 0.
 #[derive(Clone, Copy, PartialEq)]
 enum Interior {
     Lerped,
@@ -1094,9 +1095,9 @@ enum Interior {
     FromZero,
 }
 
-/// R-474's tilt of a latent view against `kernel::chart::tilt::latent_basis` called directly: `B` and the interior
-/// frames at `s = ¼, ½, ¾`, the angles lerped, under both maps, one target and two, `z₀` untouched. Criterion: bit for
-/// bit.
+/// The Lean each axis tilt (`Family::R474Tilt`) of a latent view against `kernel::chart::tilt::latent_basis` called
+/// directly: `B` and the interior frames at `s = ¼, ½, ¾`, the angles lerped, under both maps, one target and two, `z₀`
+/// untouched. Criterion: bit for bit.
 fn check_r474(interior: Interior) {
     use kernel::chart::tilt::{latent_basis, LatentFrame};
     let mut r = Mix(SEED ^ 4);

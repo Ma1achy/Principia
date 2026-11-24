@@ -1,20 +1,21 @@
-//! QA's tests for TASK-M1-06, written from the requirements and their sources, not from the implementation:
-//! - REQ-RENDER-004 (canonical spec §8): QUAD → N×N SAMPLES → one TILE per sample → PIXELS, no interpolation. Checked
-//!   on the rendered picture by geometry alone: every tile's pixel square is one stored value, every tile a different
-//!   sample, every pixel bit-equal to a value the CPU wrote (no blend), and the lanes' `sample_index` and `quad.index`
-//!   point at the sample and quad whose values the pixel shows.
-//! - REQ-COL-056 (colour_composition §3): `ctx.tile.uv` and `ctx.quad.uv` in [0, 1]², origin bottom-left, Y-up, and
-//!   `ctx.quad.uv = (vec2(i, j) + ctx.tile.uv) / N`; checked exactly on a dyadic grid.
-//! - REQ-RENDER-008 (render contract Part 1): `RenderContext {sample: SimState, ic: ICDescriptor, quad: RenderQuad, uv,
-//!   screen_uv, time}` read from naga's IR, and each member carrying the uploaded values to the fragment.
-//! - REQ-COL-003 (colour_composition §3): every lane and every field §3 names, with naga's types; every payload field
+//! QA's tests for the fragment's render context and its lanes, written from the requirements and their sources, not
+//! from the implementation:
+//! - One sample per tile (canonical spec §8): QUAD → N×N SAMPLES → one TILE per sample → PIXELS, no interpolation.
+//!   Checked on the rendered picture by geometry alone: every tile's pixel square is one stored value, every tile a
+//!   different sample, every pixel bit-equal to a value the CPU wrote (no blend), and the lanes' `sample_index` and
+//!   `quad.index` point at the sample and quad whose values the pixel shows.
+//! - The tile and quad uv (colour_composition §3): `ctx.tile.uv` and `ctx.quad.uv` in [0, 1]², origin bottom-left,
+//!   Y-up, and `ctx.quad.uv = (vec2(i, j) + ctx.tile.uv) / N`; checked exactly on a dyadic grid.
+//! - The render context (render contract Part 1): `RenderContext {sample: SimState, ic: ICDescriptor, quad: RenderQuad,
+//!   uv, screen_uv, time}` read from naga's IR, and each member carrying the uploaded values to the fragment.
+//! - The lanes (colour_composition §3): every lane and every field §3 names, with naga's types; every payload field
 //!   paired with a bool validity; the screen, chart, tile, quad and validity lanes carrying their sources' values.
-//! - REQ-TOOL-014 (debug tooling plan, "Synthetic-first"): a bitwise-adversarial descriptor and hand-chosen values,
+//! - Synthetic values (debug tooling plan, "Synthetic-first"): a bitwise-adversarial descriptor and hand-chosen values,
 //!   CPU-filled, asserted on both surfaces: the Rust accessor returns it and the shader renders it.
-//! - REQ-RENDER-007 (render contract Part 1): no compute pass and no writable buffer in the fragment modules, and no
+//! - No unpacked copy (render contract Part 1): no compute pass and no writable buffer in the fragment modules, and no
 //!   buffer of the unpacked logical struct.
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use std::collections::{HashMap, HashSet};
 
@@ -107,7 +108,7 @@ fn flipped(image: &Image) -> Image {
     }
 }
 
-// ── REQ-RENDER-004: one sample per tile, no interpolation ───────────────────────────────────────────────────────
+// ── One sample per tile, no interpolation ───────────────────────────────────────────────────────────────────────
 
 /// The grids the rasterisation is checked on: non-square quad counts, N from 1 to 3, E from 0 to 2, tiles of 1, 4
 /// and 5 px.
@@ -294,7 +295,7 @@ negative_control!(
     }
 );
 
-// ── REQ-COL-056 and the chart/quad lanes' geometry, exact on a dyadic grid ─────────────────────────────────────
+// ── The tile and quad uv and the chart/quad lanes' geometry, exact on a dyadic grid ─────────────────────────────
 
 /// Four by four quads of 2 × 2 tiles of 4 px: a 32 × 32 target, every coordinate below dyadic, so exact in f32.
 fn dyadic() -> Grid {
@@ -322,11 +323,11 @@ fn f(w: u32) -> f32 {
     f32::from_bits(w)
 }
 
-/// colour_composition §3 (R-72): `ctx.tile.uv` is the pixel centre's place in its tile, origin at the tile's
+/// colour_composition §3: `ctx.tile.uv` is the pixel centre's place in its tile, origin at the tile's
 /// bottom-left, `v` upward; `ctx.quad.uv = (vec2(i, j) + ctx.tile.uv) / N` for the tile in column `i`, row `j` of its
 /// quad counted from the quad's bottom-left; `RenderContext.uv` is the within-quad uv; on a flat grid tiling the
 /// slice, `ctx.chart.slice_uv` is the centre's place on the slice, Y-up; the quad's `tl` and `centre` are its top-left
-/// corner (largest `v`) and centre in slice coords, from its frame (§3, R-72: `centre` is deep_zoom §1's `c` and
+/// corner (largest `v`) and centre in slice coords, from its frame (§3: `centre` is deep_zoom §1's `c` and
 /// `half_width` its `h = 2^−(ℓ+1)`): the depth-ℓ cell `(i, j)` has `c = ((i, j) + ½)·2^−ℓ`, so `tl = c + (−h, +h) =
 /// (i, j + 1)·2^−ℓ`, and the harness's frame (`Synthetic::quad_frame`) is that cell's. All exact: every quantity is
 /// dyadic.
@@ -419,7 +420,7 @@ negative_control!(
     }
 );
 
-// ── REQ-RENDER-008 and REQ-COL-003: the declarations, read from naga's IR ───────────────────────────────────────
+// ── The render context and the lanes: the declarations, read from naga's IR ─────────────────────────────────────
 
 fn parse(wgsl: &str) -> naga::Module {
     naga::front::wgsl::parse_str(wgsl).unwrap_or_else(|e| panic!("{}", e.emit_to_string(wgsl)))
@@ -670,7 +671,7 @@ negative_control!(
     )
 );
 
-// ── REQ-RENDER-008, REQ-COL-003, REQ-TOOL-014: the values reach the fragment, both surfaces ────────────────────
+// ── The values reach the fragment, both surfaces ────────────────────────────────────────────────────────────────
 
 /// One grid for the value tests: four by two quads of 2 × 2 tiles of 2 px, one copy each: a 16 × 8 target, so the
 /// screen coordinates are dyadic and exact in f32.
@@ -1059,7 +1060,7 @@ negative_control!(
     }
 );
 
-// ── REQ-RENDER-007: accessors over the physical structs, never an unpacked copy ────────────────────────────────
+// ── Accessors over the physical structs, never an unpacked copy ─────────────────────────────────────────────────
 
 /// In `wgsl`, every entry point is a fragment entry: no compute pass.
 fn check_no_compute(wgsl: &str) {

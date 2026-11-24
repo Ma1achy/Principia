@@ -1,5 +1,5 @@
-//! The trajectory interface and its exact fixtures (chart_composition § 18.7; R-918, R-919 F18; REQ-CHART-173;
-//! TASK-M2-82), every test named `trajectory_interface_*`:
+//! The trajectory interface and its exact fixtures (chart_composition § 18.7), every test named
+//! `trajectory_interface_*`:
 //! - `_row_reads_provider_bitwise`: a row reads the provider's state, bit for bit, on the Lagrange circular member;
 //! - `_circular_rows_differ`: the circular member's rows read, every one within one period (`kΔ < 2π/ω`), differ
 //!   pairwise, so a check that tells boundaries apart can fire on them; on the figure-eight it could not;

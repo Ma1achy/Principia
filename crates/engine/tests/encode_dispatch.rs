@@ -1,4 +1,4 @@
-//! The encode dispatches' host-side check (`engine::decode_dispatch::check_output_words`; TASK-M2-15):
+//! The encode dispatches' host-side check (`engine::decode_dispatch::check_output_words`):
 //! - `encode_dispatch_check_words`: a dispatch covers `n` samples within the device's workgroup count and an output
 //!   buffer of `words` words a sample within the binding size, each limit met exactly and refused one past it, for the
 //!   encode's 12 words a sample and `β`'s one.

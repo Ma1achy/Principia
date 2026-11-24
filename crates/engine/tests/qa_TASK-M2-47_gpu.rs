@@ -1,25 +1,25 @@
-//! QA tests for TASK-M2-47 on the GPU, written from the requirements and R-547: step 0's skip, its coincidence select
+//! QA tests for `C`'s branches on the GPU, written from the specs: step 0's skip, its coincidence select
 //! and step 2's guard on CPU-f32 and GPU-f32, fed the same `Ic<f32>` (`C` has no mirror step, so no mirror branch).
 //! The CPU side's own checks are `kernel`'s `qa_TASK-M2-47`, whose constructions these states repeat.
-//! - REQ-DEC-002, REQ-ENC-006 (`canonicaliser_qa_m247_branches_agree`): `lookup_rescaled` (the skip) and
+//! - `canonicaliser_qa_m247_branches_agree`: `lookup_rescaled` (the skip) and
 //!   `lookup_clamped` (the guard and the coincidence) are the same on both, with no condition on any value
 //!   agreeing first (pitfalls §9), over: states whose `I_in` is exactly `1 ± τ_I`, inside it and just outside it; f32
 //!   states at coordinates near `1e-36` whose inner pair is a subnormal apart, and the same with the pair coincident;
 //!   three coincident bodies at the origin and off it; generic states scaled from `1e-37` to `1e37`; and canonical
 //!   decodes. Where CPU-f32 skips step 0, the GPU's `λ` is 1 by its bits.
-//! - REQ-ENC-006 (`canonicaliser_qa_m247_range`): on the GPU, the scaled states leave `C` with every output finite and
+//! - `canonicaliser_qa_m247_range`: on the GPU, the scaled states leave `C` with every output finite and
 //!   `I = 1` to rounding, and the coincident bodies with `p = 0`, `λ = 1` and `φ = +0`.
 //!
 //! The names carry `canonicaliser_` so CI's Metal and lavapipe steps select them. The binary reads
 //! `target/spirv/kernel.wgsl`, which `cargo xtask build-kernel` writes.
 //!
-//! **Tolerances** (applied per R-369: a test's bound). `I = 1` on the GPU: 16 f32 eps (WGSL's `sqrt` and division
+//! **Tolerances** (a test's bound). `I = 1` on the GPU: 16 f32 eps (WGSL's `sqrt` and division
 //! carry ulp bounds, not correct rounding).
 //!
 //! **Domain** (pitfalls §10): `C` alone on states held fixed; no trajectory. **PIT-10:** the claim is for identical
 //! inputs.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::path::Path;
 
@@ -95,7 +95,7 @@ fn below(mu: f64) -> Ic<f32> {
     })
 }
 
-/// The exact-`I` states at `1 ± τ_I`, inside and just outside, each with whether step 0 runs (R-547).
+/// The exact-`I` states at `1 ± τ_I`, inside and just outside, each with whether step 0 runs.
 fn edge_states() -> Vec<(Ic<f32>, bool)> {
     let tau = f64::from(f32::TAU_I);
     let e = f64::from(f32::EPSILON);
@@ -319,8 +319,8 @@ fn inertia(x: &Ic<f64>) -> f64 {
         .sum()
 }
 
-/// One GPU output against REQ-ENC-006: every output finite; the bodies apart, `I = 1` within 16 f32 eps; the bodies
-/// coincident, `p = 0`, `λ = 1`, `φ = +0`.
+/// One GPU output against the encode's range: every output finite; the bodies apart, `I = 1` within 16 f32 eps; the
+/// bodies coincident, `p = 0`, `λ = 1`, `φ = +0`.
 fn check_output(c: &Canonical<f32>, coincident: bool, at: &str) -> Result<f64, String> {
     let w = widen(&c.ic);
     let finite =
