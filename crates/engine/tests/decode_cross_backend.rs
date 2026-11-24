@@ -1,30 +1,30 @@
-//! Decoder test 12 across backends (dd_decoder §2, §5 test 12; parity_contract Tier N; R-34, R-84, R-85; TASK-M2-24):
-//! the decode stage's GPU-f32 instantiation, `target/spirv/kernel.wgsl` dispatched natively (`DecodeStage::run_with`),
-//! against the same source at f64 on the CPU (`decode_only_with`), over every compute variant the stage is built for,
-//! on identical inputs: the same f32 `(u, v)`, chart parameters and `E*`, the CPU's widened, never narrowed (PIT-10).
-//! CI runs this file in the `gpu-kernel` job (lavapipe) and on Metal (`gpu-metal`'s `decode_` filter).
+//! Decoder test 12 across backends (dd_decoder §2, §5 test 12; parity_contract Tier N): the decode stage's GPU-f32
+//! instantiation, `target/spirv/kernel.wgsl` dispatched natively (`DecodeStage::run_with`), against the same source at
+//! f64 on the CPU (`decode_only_with`), over every compute variant the stage is built for, on identical inputs: the
+//! same f32 `(u, v)`, chart parameters and `E*`, the CPU's widened, never narrowed (PIT-10). CI runs this file in the
+//! `gpu-kernel` job (lavapipe) and on Metal (`gpu-metal`'s `decode_` filter).
 //! - `decode_cross_backend_registry`: the charts this file decodes on the GPU are every chart of the registry
 //!   (`kernel::chart::REGISTRY`), through every decode entry point the kernel's WGSL holds.
-//! - `decode_cross_backend_continuous`: the 27 continuous values within REQ-DEC-043's factor (`decode-f32-eps`'s
-//!   threshold), `η_E` off and on, inside its domain; outside it (saturated `stick_breaking`, the invariant charts' edge
-//!   columns and the points past their square, the shape sphere's `n₀ = ±1` poles) measured and reported, as
-//!   REQ-DEC-043's proposal records (`validation::decode_f32_eps`).
+//! - `decode_cross_backend_continuous`: the 27 continuous values within the `decode-f32-eps` gate's factor (its
+//!   threshold), `η_E` off and on, inside its domain; outside it (saturated `stick_breaking`, the invariant charts'
+//!   edge columns and the points past their square, the shape sphere's `n₀ = ±1` poles) measured and reported, as the
+//!   gate's proposal records (`validation::decode_f32_eps`).
 //! - `decode_cross_backend_tags`: on each backend each tag is what dd_decoder §2's branch inputs, read from that
 //!   backend's own emitted values, call for; across backends the tags are bitwise equal wherever those inputs are, and
 //!   the construction's tag (`INVARIANT_INFEASIBLE`), decided on the shared `(u, v)` and parameters, everywhere, the
-//!   invariant charts' edge columns `s ∈ {0, 1}` included (the GPU's `sqrt` there, TASK-M2-12's note), and past the
-//!   square in `s`, where every pixel is `INVARIANT_INFEASIBLE`, on both backends.
+//!   invariant charts' edge columns `s ∈ {0, 1}` included (the GPU's `sqrt` there, `kernel::chart::invariant`'s note),
+//!   and past the square in `s`, where every pixel is `INVARIANT_INFEASIBLE`, on both backends.
 //! - `decode_cross_backend_energy`: `η_E` on, as a uniform: rest starts at `E* > V₀` (`ENERGY_UNSCALABLE`), targets
 //!   `E* < V₀` (`ENERGY_INFEASIBLE`) and `E* = V₀` (untouched, untagged), each on each backend, its tag dd_decoder
 //!   §3.7's from that backend's own `V₀`, `E*`, `s` and `r_min_pair_0`; a disagreement between backends only where those
 //!   differ (precision, as §3.1 reads `M₀₁`); and a chart that forbids `η_E` ignoring the target on the GPU as on the
 //!   CPU.
-//! - `decode_parity_m01_crossings`: test 12 at `M01_TINY`'s onset crossings (TASK-M2-02's 40 000 points, one
-//!   dispatch; TASK-M2-48, REQ-DEC-011, REQ-VAL-017): the GPU's tag is the CPU form's (R-547) on the GPU's own emitted
-//!   masses at every point, and the native f32 decode's wherever the two emitted the same masses bit for bit.
-//! - `decode_parity_superseded`: REQ-VAL-017's control on those inputs: the superseded `fma(m₁, 1, m₀)`, its `×1`
-//!   folded and its add contracted, as a backend may evaluate it, gives a different tag from the block's on the CPU at
-//!   f32 at some crossing; unfused, it is the one rounded sum and flips none (RQ-621).
+//! - `decode_parity_m01_crossings`: test 12 at `M01_TINY`'s onset crossings (40 000 points, one dispatch): the GPU's
+//!   tag is the CPU form's on the GPU's own emitted masses at every point, and the native f32 decode's wherever the two
+//!   emitted the same masses bit for bit.
+//! - `decode_parity_superseded`: test 12's control on those inputs: the superseded `fma(m₁, 1, m₀)`, its `×1` folded
+//!   and its add contracted, as a backend may evaluate it, gives a different tag from the block's on the CPU at f32 at
+//!   some crossing; unfused, it is the one rounded sum and flips none.
 //!
 //! The controls contaminate one branch input (PIT-9): the GPU's emitted `V₀` one float up, or its `M₀₁` read from a
 //! perturbed mass, so the bitwise comparison of a tag against its recomputation fails.
@@ -74,7 +74,7 @@ fn wgsl() -> String {
         .expect("target/spirv/kernel.wgsl: run `cargo xtask build-kernel` first")
 }
 
-/// REQ-DEC-043's factor, in f32 eps: `decode-f32-eps`'s threshold (`fixtures/gates/decode-f32-eps/gate.json`).
+/// The `decode-f32-eps` gate's factor, in f32 eps: its threshold (`fixtures/gates/decode-f32-eps/gate.json`).
 fn factor() -> f64 {
     validation::gate::config(&root(), "decode-f32-eps")
         .expect("decode-f32-eps's gate.json")
@@ -89,9 +89,9 @@ trait Q: LinkReal + PayloadReal + Into<f64> {}
 impl Q for f32 {}
 impl Q for f64 {}
 
-/// `M01_TINY` as the mass block forms it from the emitted masses, the CPU form at `R` (`kernel::decode::mass`; R-547):
+/// `M01_TINY` as the mass block forms it from the emitted masses, the CPU form at `R` (`kernel::decode::mass`):
 /// `ε_M01 > M₀₁`, `M₀₁` the one rounded sum `m₀ + m₁` in `Wide` arithmetic. Applied to a backend's own emitted masses,
-/// so a tag is compared on identical inputs (REQ-VAL-079; dd_decoder §3.1, "Its premise").
+/// so a tag is compared on identical inputs (dd_decoder §3.1, "Its premise").
 fn m01_tag<R: Q>(m: [R; 3]) -> Option<Degenerate> {
     from_masses(m).degenerate
 }
@@ -247,7 +247,7 @@ fn points(rng: &mut SplitMix, n: usize) -> Vec<[f32; 2]> {
     out
 }
 
-/// The defaults' latent batches: the golden IC, REQ-DEC-043's interior, and a rest start.
+/// The defaults' latent batches: the golden IC, the `decode-f32-eps` gate's fuzzed interior, and a rest start.
 fn latent_defaults() -> Vec<Batch<Latent<f32>>> {
     let mut b = validation::decode_f32_eps::golden();
     b.extend(interior(Fuzz {
@@ -912,41 +912,42 @@ negative_control!(
 
 // ── decode_cross_backend_continuous ─────────────────────────────────────────────────────────────────────────────
 
-/// The batch kind outside REQ-DEC-043's domain: `stick_breaking` at saturated controls, f32's own conditioning
-/// (`validation::decode_f32_eps`'s note: 2.53·10⁶ eps against f64, 16.5 against the native f32 decode).
+/// The batch kind outside the `decode-f32-eps` gate's domain: `stick_breaking` at saturated controls, f32's own
+/// conditioning (`validation::decode_f32_eps`'s note: 2.53·10⁶ eps against f64, 16.5 against the native f32 decode).
 const SATURATED: &str = "saturated";
 
-/// The invariant charts' edge columns, outside REQ-DEC-043's domain: there `K* − L_z²/2` is the rounding of the
-/// stepped-down `L_max` (TASK-M2-12), so the mixing amplitude `a = √(2(K* − L_z²/2))` is f32's or f64's own rounding,
+/// The invariant charts' edge columns, outside the `decode-f32-eps` gate's domain: there `K* − L_z²/2` is the rounding
+/// of the stepped-down `L_max`, so the mixing amplitude `a = √(2(K* − L_z²/2))` is f32's or f64's own rounding,
 /// `√eps`-sized and different at each precision, and the momenta differ by `a·w` (f32's conditioning, not the backend).
 const EDGES: &str = "edge columns";
 
-/// The invariant charts' points past the square in `s` ([`past`]), outside REQ-DEC-043's domain: every one is
-/// `INVARIANT_INFEASIBLE`, its momenta the rigid rotation, and its continuous values are measured and reported.
+/// The invariant charts' points past the square in `s` ([`past`]), outside the `decode-f32-eps` gate's domain: every
+/// one is `INVARIANT_INFEASIBLE`, its momenta the rigid rotation, and its continuous values are measured and reported.
 const PAST: &str = "past the square";
 
 /// The spherical map's points of `n₀ = ±1` in `[0,1]²`, the inverse's two poles (chart_reference §3.2). At `(½, ½)`,
-/// `θ = π` and `φ = π/2`, so `n₀ = −1` and `ρ̃ = √(I(1 + n₀)/2) = 0`: the binary collision `BC₀₁`, where `V₀ → −∞`
-/// (R-436). At `(0, ½)` and `(1, ½)`, `n₀ = +1` and `λ̃ = 0`, where `rho_angle` is R-437's defined `atan2` pole. Each
+/// `θ = π` and `φ = π/2`, so `n₀ = −1` and `ρ̃ = √(I(1 + n₀)/2) = 0`: the binary collision `BC₀₁`, where `V₀ → −∞`. At
+/// `(0, ½)` and `(1, ½)`, `n₀ = +1` and `λ̃ = 0`, where `rho_angle` is at its `atan2` pole, a defined value. Each
 /// precision reaches them only to its own rounding of `sin π` and `cos(π/2)`, so the vanishing vector is that rounding,
 /// f32's or f64's, and `1/ρ` or the angle of a rounding-sized `λ̃` amplifies it.
 const POLES: [[f32; 2]; 3] = [[0.5, 0.5], [0.0, 0.5], [1.0, 0.5]];
 
-/// The shape sphere at [`POLES`], outside REQ-DEC-043's domain: its continuous values are measured and reported.
+/// The shape sphere at [`POLES`], outside the `decode-f32-eps` gate's domain: its continuous values are measured and
+/// reported.
 const POLE: &str = "n₀ = ±1 poles";
 
-/// Whether `domain` lies outside REQ-DEC-043's: [`SATURATED`], [`EDGES`], [`PAST`] or [`POLE`].
+/// Whether `domain` lies outside the `decode-f32-eps` gate's domain: [`SATURATED`], [`EDGES`], [`PAST`] or [`POLE`].
 fn outside(domain: &str) -> bool {
     [SATURATED, EDGES, PAST, POLE]
         .iter()
         .any(|d| domain.contains(d))
 }
 
-/// Inside REQ-DEC-043's domain, every continuous value within its factor of the f64 decode. Outside it, the
-/// differences are measured and reported, against f64 and against the native f32 decode, not held to the factor: there
-/// a value's rounding at f32 is amplified, so a one-ulp difference in a backend's `sqrt` moves it by more than any
-/// fixed multiple of `eps` (REQ-DEC-043's note: "a factor for saturated controls … would be measured on its own
-/// domain").
+/// Inside the `decode-f32-eps` gate's domain, every continuous value within its factor of the f64 decode. Outside it,
+/// the differences are measured and reported, against f64 and against the native f32 decode, not held to the factor:
+/// there a value's rounding at f32 is amplified, so a one-ulp difference in a backend's `sqrt` moves it by more than
+/// any fixed multiple of `eps` (`validation::decode_f32_eps`'s note: "a factor for saturated controls … would be
+/// measured on its own domain").
 fn check_continuous(taint: Taint) {
     let r = run_all(taint, true);
     let f = factor();
@@ -1041,7 +1042,7 @@ negative_control!(
 
 // ── decode_parity: M₀₁ at the onset crossings ───────────────────────────────────────────────────────────────────
 
-/// The lines `z₁ ∈ [6.3, 20.3]` the onset crossings are bisected on (TASK-M2-02; `kernel`'s `decode_blocks`).
+/// The lines `z₁ ∈ [6.3, 20.3]` the onset crossings are bisected on (`kernel`'s `decode_blocks`).
 const LINES: u32 = 20_000;
 
 /// `stick_breaking`'s forward at f32 in the generated op order (`kernel::generated::links`), stopped before its last
@@ -1055,7 +1056,7 @@ fn stick_parts(z: [f32; 2]) -> (f32, f32, f32) {
     (sigmoid(-t0) + t4, sigmoid(t0) - t4, sigmoid(-t8) + t12)
 }
 
-/// `M01_TINY`'s onset crossings at f32 (TASK-M2-02): on each of [`LINES`] lines `z₁ ∈ [6.3, 20.3]`, `z₀ ∈ [0, 30]`
+/// `M01_TINY`'s onset crossings at f32: on each of [`LINES`] lines `z₁ ∈ [6.3, 20.3]`, `z₀ ∈ [0, 30]`
 /// bisected to the adjacent pair where the CPU's emitted masses' one rounded sum crosses `ε_M01`, where one rounding
 /// decides the tag. Both points of every pair.
 fn crossings() -> Vec<[f32; 2]> {
@@ -1135,11 +1136,11 @@ struct Crossings {
     clear: usize,
 }
 
-/// Decoder test 4's cross-backend half and test 12 at the onset crossings (REQ-DEC-011, REQ-VAL-017): the 40 000
+/// Decoder test 4's cross-backend half and test 12 at the onset crossings: the 40 000
 /// points of [`crossing_batch`] in one dispatch through `stick_breaking`'s latent entry point. At every point the GPU's
 /// tag is the CPU form's applied to the GPU's own emitted masses ([`m01_tag`], after `taint`): the two compared on
 /// identical inputs, so a one-ulp difference in the GPU's `tanh` or `exp` reads as precision, not as a fork
-/// (REQ-VAL-079; dd_decoder §3.1, "Its premise"). Where the GPU's masses are the native f32 decode's bit for bit, its
+/// (dd_decoder §3.1, "Its premise"). Where the GPU's masses are the native f32 decode's bit for bit, its
 /// tag is the native decode's. Both tags are reached.
 fn check_crossings(taint: fn(&mut DecodeOut<f32>)) -> Crossings {
     let h = GpuHarness::new().expect("a GPU device");
@@ -1227,17 +1228,16 @@ fn folded_fused(m0: f32, t7: f32, t13: f32) -> f32 {
 }
 
 /// The explicit `fma(m₁, 1, m₀)` as a backend that does not fuse it evaluates it, a rounded product and an add (CI's
-/// lavapipe, RQ-298): `round(round(m₁·1) + m₀)`, the one rounded sum, so it never flips the tag (RQ-621).
+/// lavapipe): `round(round(m₁·1) + m₀)`, the one rounded sum, so it never flips the tag.
 #[cfg(feature = "controls")]
 fn unfused(m0: f32, t7: f32, t13: f32) -> f32 {
     let m1 = t7 * t13;
     std::hint::black_box(m1 * 1.0) + m0
 }
 
-/// REQ-VAL-017's control on test 12's inputs: at the onset crossings ([`crossings`], the batch
-/// `decode_parity_m01_crossings` dispatches),
-/// the superseded form under `emulation`, evaluated on the CPU at f32, gives a different tag from the block's, the one
-/// rounded sum's, on at least one input. Returns how many.
+/// The control on test 12's inputs: at the onset crossings ([`crossings`], the batch `decode_parity_m01_crossings`
+/// dispatches), the superseded form under `emulation`, evaluated on the CPU at f32, gives a different tag from the
+/// block's, the one rounded sum's, on at least one input. Returns how many.
 fn check_superseded(emulation: Emulated) -> usize {
     let eps = mass::m01_epsilon::<f32>();
     let mut flips = 0;

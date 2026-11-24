@@ -7,7 +7,7 @@
 //! under it at f64 and f32 over fuzzed `z`. Every quantity asserted is computed here from the contract's own formulas
 //! (the masses carried to `M = 1` with the momenta by `M^{3/2}`, Burrau's sides, `ν = sec θ − tan θ`, `q = (p_ρ, p_λ)`,
 //! `L_z`, `E`, `‖Σmᵢrᵢ‖/R_x`). Each test registers its negative control. The mass unit (Part 6, "The physical form's
-//! masses", physics review 5630998530 of PR #284, P1) and layer 1's zero class (§ "The zero class in floating point",
+//! masses") and layer 1's zero class (§ "The zero class in floating point",
 //! and its band `k`) are tested at the end.
 
 use engine::lookup::{
@@ -1050,7 +1050,7 @@ negative_control!(
     check_decode_residuals(1e-6)
 );
 
-// ── Lookup: the mass unit (Part 6, "The physical form's masses"; physics review 5630998530 of PR #284, P1) ─────────
+// ── Lookup: the mass unit (Part 6, "The physical form's masses") ───────────────────────────────────────────────────
 
 /// `K/|U|` of `x` (`G = 1`), each from its own definition.
 fn virial(x: &Ic<f64>) -> f64 {
