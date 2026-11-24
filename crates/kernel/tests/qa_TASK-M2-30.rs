@@ -1,11 +1,11 @@
-//! QA tests for TASK-M2-30 on the kernel side (`kernel::generated::links`), written from REQ-GEN-034 and R-417, not
-//! from the implementation:
+//! QA tests for the generated links' closed codomains on the kernel side (`kernel::generated::links`), written from
+//! dd_decoder §3.2, §3.4 and dd_generation_root §3.9, not from the implementation:
 //! - the f32 images of π/2 and π the generated links use are `fl↓(π/2)` and `fl↓(π)`, the largest f32 not above
 //!   each, bits `0x3FC9_0FDA` and `0x4049_0FDA`; the f64 images are the nearest f64 values, which lie below;
 //! - every bounded link's output, at f32 and f64, saturated controls included, lies in the closed codomain at the
 //!   exact bounds (α ∈ [0, π/2], β ∈ [0, π], q ∈ [−q_max, q_max], q_max = 2), compared against π itself, not against
 //!   a float image of it;
-//! - each lower end is reached where the link's output underflows, and `q` reaches `±q_max` at saturation (R-417, "the
+//! - each lower end is reached where the link's output underflows, and `q` reaches `±q_max` at saturation ("the
 //!   range is closed").
 //!
 //! "Below π" is decided exactly: a float is `m·2⁻ˢ` with integer `m`, and π is bracketed by its first 30 decimals,
@@ -101,7 +101,7 @@ fn check_nearest(v: f64, k: u128, what: &str) {
 // ── The f32 images are fl↓ and the f64 images the nearest ───────────────────────────────────────────────────────
 
 /// The width of `sigmoid_alpha` and `sigmoid_beta` at a saturated control: `a + (b − a)·σ(x)` with `a = 0`
-/// (α_min = 0, REQ-DEC-009) and `σ = 1`, so the image of π/2 and of π the link carries at `R`.
+/// (α_min = 0) and `σ = 1`, so the image of π/2 and of π the link carries at `R`.
 fn images<R: kernel::generated::links::LinkReal>(big: R) -> (R, R) {
     (
         SigmoidAlpha::forward([big])[0],
@@ -163,7 +163,7 @@ negative_control!(
 
 // ── The closed range at the exact bounds ────────────────────────────────────────────────────────────────────────
 
-/// A bounded codomain, from the docs (dd_decoder §3.2, §3.4; REQ-DEC-009: α_min = 0, q_max = 2).
+/// A bounded codomain, from the docs (dd_decoder §3.2, §3.4: α_min = 0, q_max = 2).
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Range {
     /// `[0, π/k]`.
@@ -272,7 +272,7 @@ fn lit<R: LinkReal>(v: f64) -> R {
     <R as spirv_std::num_traits::NumCast>::from(v).expect("a float converts")
 }
 
-/// σ onto β with the round-to-nearest image of π, `fl(π)·σ(x)`, as the generator emitted before R-417.
+/// σ onto β with the round-to-nearest image of π, `fl(π)·σ(x)`, which overshoots π at f32: the broken variant.
 #[cfg(feature = "controls")]
 fn nearest_beta<R: LinkReal>(x: R) -> R {
     let one = R::one();
@@ -294,7 +294,7 @@ negative_control!(
 // ── The ends reached: the lower poles at underflow, q at ±q_max ─────────────────────────────────────────────────
 
 /// At f32 and f64, a control saturated downwards gives each lower end exactly (α = 0, β = 0, q = −q_max), and one
-/// saturated upwards gives q = +q_max exactly (R-417; dd_generation_root §3.9, "The closed range").
+/// saturated upwards gives q = +q_max exactly (dd_generation_root §3.9, "The closed range").
 fn check_ends(u: &Bounded) {
     let lo = match u.range {
         Range::Q => -2.0,

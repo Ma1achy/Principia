@@ -1,55 +1,54 @@
-//! QA tests for TASK-M3-14 (the Benettin FTLE shadow), written from the requirements, not from the implementation:
-//! REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038; dd_integrator §2, §3.4, §3.8, §5
-//! tests 10 and 11; payload §5, §8; R-253, R-254.
+//! QA tests for the Benettin FTLE shadow, written from the spec, not from the implementation: dd_integrator §2,
+//! §3.4, §3.8, §5 tests 10 and 11; payload §5, §8.
 //!
-//! - `qa_m314_sample_untouched` (REQ-INT-035): for every shadow configuration (‖δ₀‖ small, large; `n_renorm` 0, 1, the
+//! - `qa_m314_sample_untouched`: for every shadow configuration (‖δ₀‖ small, large; `n_renorm` 0, 1, the
 //!   proposal; both forms), the FTLE tier's sample is the base tier's, bit for bit: the shadow never reaches the
 //!   sample's state or its stored fields, and every sample carries a shadow of its own (`r_sh ≠ r`).
-//! - `qa_m314_pool_reads_sample` (REQ-INT-035, dd test 11): the colour/spread pool's member is the sample's own `(r, p)`,
+//! - `qa_m314_pool_reads_sample` (dd test 11): the colour/spread pool's member is the sample's own `(r, p)`,
 //!   whatever the shadow fields hold (NaN included), and the read side's `SimState` gives the same.
-//! - `qa_m314_shadow_own_com` (REQ-INT-039, §3.4): on unequal masses, where §3.8's offset puts the shadow's CoM off the
+//! - `qa_m314_shadow_own_com` (§3.4): on unequal masses, where §3.8's offset puts the shadow's CoM off the
 //!   origin by `‖δ₀‖·|Σmᵢuᵢ|/M`, the shadow's CoM is at rounding level after every macro-step: it is projected with its
 //!   own `R_com`, not the sample's (inheriting the sample's would keep the offset's CoM). Its cadence runs once per
 //!   substep the sample took, every macro-step.
-//! - `qa_m314_shadow_own_monitor` (REQ-INT-039): the shadow's monitor holds the shadow's own `E₀`, the energy of
+//! - `qa_m314_shadow_own_monitor`: the shadow's monitor holds the shadow's own `E₀`, the energy of
 //!   `x₀ + δ₀`, not the sample's.
-//! - `qa_m314_renormalise` (REQ-INT-043, §3.8): one renormalisation at a sample state `x`, of a shadow at `x'`, adds
+//! - `qa_m314_renormalise` (§3.8): one renormalisation at a sample state `x`, of a shadow at `x'`, adds
 //!   `ln(δ/δ₀)` to `S` and leaves the shadow at `x + δ₀·δ⃗/δ`, `δ⃗ = x' − x`, computed here in f64: in both forms after a
 //!   5000-step march with no renormalisation, and in the absolute form at a sample state moved off `x₀`.
-//! - `qa_m314_renorm_cadence` (REQ-INT-043): over a march, `S` changes exactly at the end of every `n_renorm`-th
+//! - `qa_m314_renorm_cadence`: over a march, `S` changes exactly at the end of every `n_renorm`-th
 //!   macro-step and nowhere else, the separation is reset to `δ₀` there, and the number of changes is
 //!   `step_count / n_renorm`.
-//! - `qa_m314_completed_renorms` (REQ-INT-043): `completed_renorms = step_count / n_renorm`, none at `n_renorm = 0`.
-//! - `qa_m314_ftle_read_known` (REQ-INT-043, R-253, R-254): on hand-filled samples the read is
+//! - `qa_m314_completed_renorms`: `completed_renorms = step_count / n_renorm`, none at `n_renorm = 0`.
+//! - `qa_m314_ftle_read_known`: on hand-filled samples the read is
 //!   `(S + ln(δ/δ₀))/(n·dt)`, and NaN with `step_count = 0`, with no completed renormalisation, at `n_renorm = 0` and on
 //!   a failed sample; the generated read side agrees at f32.
-//! - `qa_m314_not_biased_low` (REQ-INT-043, dd test 10): at a renormalisation boundary the finalised read equals plain
+//! - `qa_m314_not_biased_low` (dd test 10): at a renormalisation boundary the finalised read equals plain
 //!   `S/T` (the separation is `δ₀` there); one step before a boundary, the finalised read is closer to the boundary's
 //!   than plain `S/T` is (summed over several boundaries), so it does not under-read between boundaries.
-//! - `qa_m314_dd10_invariance` (REQ-INT-043, REQ-INT-076, dd test 10): at the proposed `(‖δ₀‖, n_renorm)`, halving
+//! - `qa_m314_dd10_invariance` (dd test 10): at the proposed `(‖δ₀‖, n_renorm)`, halving
 //!   `‖δ₀‖`, doubling `n_renorm` and both leave `λ_T`, read from the stored sample, within the proposed tolerance on the
 //!   Kepler-embedded orbit and Burrau, at f32 and f64.
-//! - `qa_m314_kepler_vs_burrau` (REQ-INT-043, dd test 10): `λ_T ≈ 0` on the Kepler-embedded orbit (it falls as `T`
+//! - `qa_m314_kepler_vs_burrau` (dd test 10): `λ_T ≈ 0` on the Kepler-embedded orbit (it falls as `T`
 //!   doubles, as `ln(ct)/t` does for a separation growing polynomially), and Burrau's `λ_T` is positive and above it.
-//! - `qa_m314_delta0_direction` (REQ-INT-077, §3.8): `x'₀ = x₀ + ‖δ₀‖·u` with `u = (+½,0 | −½,+½ | 0,−½)` on the
+//! - `qa_m314_delta0_direction` (§3.8): `x'₀ = x₀ + ‖δ₀‖·u` with `u = (+½,0 | −½,+½ | 0,−½)` on the
 //!   positions and no momentum, each component one rounding, bit for bit at f32 and f64 for any state and masses;
 //!   `‖u‖ = 1` and `Σu = 0`; the shadow a sample starts with is that offset.
-//! - `qa_m314_lagrange_exponent` (REQ-VAL-038's ground truth): the known exponent of Lagrange's equilateral orbit is the
+//! - `qa_m314_lagrange_exponent` (the validation's ground truth): the known exponent of Lagrange's equilateral orbit is the
 //!   largest real part of the roots of `s⁴ + s² + (27/4)β = 0` (Routh), computed here from the roots, and 0 in the
 //!   stable case `27β < 1`.
-//! - `qa_m314_forms_one_map` (REQ-VAL-038): the payload's form stays the absolute one (`integrate_ftle` is
-//!   `integrate_ftle_with::<Absolute>`, bit for bit, at f32) until REQ-PAY-085's criterion says otherwise; both forms'
+//! - `qa_m314_forms_one_map`: the payload's form stays the absolute one (`integrate_ftle` is
+//!   `integrate_ftle_with::<Absolute>`, bit for bit, at f32) until payload §8's criterion says otherwise; both forms'
 //!   start and reset are checked by `qa_m314_delta0_direction` and `qa_m314_renormalise`.
 //!
 //! **Tolerances.** Rounding bounds are `RND = 64` eps relative (as `qa_TASK-M2-13`), widened where a difference of two
 //! nearby states loses digits: a state component `x` carrying an offset of size `δ₀` keeps `δ₀`'s relative precision
-//! only to `ε·|x|/δ₀`. The dd test 10 tolerance is the REQ-INT-076 proposal's (`PROPOSED_TOLERANCE`, calibrated,
-//! pending the M3 gate), applied to its own measure of change.
+//! only to `ε·|x|/δ₀`. The dd test 10 tolerance is the proposed one (`PROPOSED_TOLERANCE`, calibrated,
+//! pending the gate), applied to its own measure of change.
 //!
 //! **Domain** (pitfalls §10): Yoshida-4, `r_coll = 0` (no terminal fires), the orbits `validation::measure::benettin`
 //! defines; each test bounds its march by the sim key's `horizon_steps`.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176, R-212).
+//! Each test has a registered negative control naming the panic it expects.
 
 use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
@@ -164,7 +163,7 @@ fn energy(m: &[f64; 3], r: &[[f64; 2]; 3], p: &[[f64; 2]; 3]) -> f64 {
 /// The unit direction of §3.8, over `(r, p)`.
 const U_R: [[f64; 2]; 3] = [[0.5, 0.0], [-0.5, 0.5], [0.0, -0.5]];
 
-// ── REQ-INT-035: the shadow never reaches the sample, the pool reads the sample ─────────────────────────────────
+// ── The shadow never reaches the sample, the pool reads the sample ──────────────────────────────────────────────
 
 /// The sample's stored fields as bits, the base tier's set.
 fn base_fields<R: P>(b: &SimStateBaseOf<R>) -> Vec<u64> {
@@ -338,7 +337,7 @@ negative_control!(
     check_pool(|s| (s.r_sh, s.p_sh))
 );
 
-// ── REQ-INT-039: the shadow's own projection and monitor ────────────────────────────────────────────────────────
+// ── The shadow's own projection and monitor ─────────────────────────────────────────────────────────────────────
 
 /// A recorder around a shadow: after each of the sample's macro-steps it lets the shadow march, then records the
 /// shadow's state through `view`, the sample's end state, the shadow's `S`, its separation, and the substeps its
@@ -543,7 +542,7 @@ negative_control!(
     })
 );
 
-// ── REQ-INT-043: renormalisation, cadence, the finalised read ───────────────────────────────────────────────────
+// ── Renormalisation, cadence, the finalised read ────────────────────────────────────────────────────────────────
 
 /// After one renormalisation at the sample's `x` of a shadow that stood at `pre` with sum `s_before`, `b` has
 /// `S = s_before + ln(‖δ⃗‖/δ₀)` and its shadow at `x + δ₀·δ⃗/‖δ⃗‖`, `δ⃗ = pre − x`, computed here in f64.
@@ -808,7 +807,7 @@ where
             "n = {n}: the read {got} is not (S + ln(δ/δ₀))/(n·dt) = {want}"
         );
     }
-    // Invalid: NaN, no sentinel (R-253, R-254).
+    // Invalid: NaN, no sentinel.
     let cases = [
         ("step_count = 0", hand::<R>(1.0, 0.0, 0, 0), k),
         (
@@ -929,7 +928,7 @@ negative_control!(
         / (f64::from(kernel::payload::tm_t_end_step(s.times)) * dt))
 );
 
-// ── dd test 10 at the proposal (REQ-INT-043, REQ-INT-076) ───────────────────────────────────────────────────────
+// ── dd test 10 at the proposal ──────────────────────────────────────────────────────────────────────────────────
 
 /// `λ_T` from the stored sample of `orbit`'s full-horizon run at `(δ₀, k)`.
 fn lambda_t<R: P>(orbit: &Orbit, t: f64, d0: f64, k: u32) -> f64
@@ -1035,7 +1034,7 @@ negative_control!(
     check_kepler_vs_burrau(&kepler_embedded(), &kepler_embedded())
 );
 
-// ── REQ-INT-077: δ₀'s direction ────────────────────────────────────────────────────────────────────────────────
+// ── δ₀'s direction ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A small deterministic generator of states (no external RNG).
 fn lcg(seed: &mut u64) -> f64 {
@@ -1137,7 +1136,7 @@ negative_control!(
     })
 );
 
-// ── REQ-VAL-038: the known exponent and the forms ───────────────────────────────────────────────────────────────
+// ── The known exponent and the forms ────────────────────────────────────────────────────────────────────────────
 
 /// The largest real part of the roots of `s⁴ + s² + c = 0`, `c = (27/4)β`, from the roots: `s² = (−1 ± √(1 − 4c))/2`,
 /// then `s = ±√(s²)`, by complex square roots.
@@ -1221,7 +1220,7 @@ type Payload = fn(&Ic<f32>, &WrapperUniforms<f32>, BenettinParams<f32>) -> SimSt
 /// The payload's form, by `payload`, is the absolute one, bit for bit (the forms' shared start is
 /// `qa_m314_delta0_direction`'s, their shared reset `qa_m314_renormalise`'s).
 fn check_forms(payload: Payload) {
-    // The payload stays in the absolute form until REQ-PAY-085's criterion is met (payload §8).
+    // The payload stays in the absolute form until payload §8's criterion is met.
     for orbit in [
         burrau(),
         lagrange("Lagrange, (0.5, 0.3, 0.2)", [0.5, 0.3, 0.2], 30.0),

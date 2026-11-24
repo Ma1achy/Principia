@@ -1,33 +1,32 @@
 //! Heggie (`kernel::regularisation::heggie`; integrator_contract Part 2b § "Heggie: the equations, the time
-//! transformations, the maps and the step control (transcribed)", § "The time-reversal maps (REQ-INT-095)", Part 1,
-//! Part 6; R-160, R-161, R-500, R-561), TASK-M3-77 (the system's own checks, needing no march, are TASK-M3-08's
-//! `heggie_system`):
+//! transformations, the maps and the step control (transcribed)", § "The time-reversal maps", Part 1, Part 6); the
+//! system's own checks, needing no march, are in `heggie_system`:
 //! - `heggie_pairs`: Heggie × every stepper under Eq. 20 and Eq. 22 marches a fixture state across a sync boundary as a
 //!   direct march, registered once at `t = 0`, its state finite and moved and its profile its form's; the default time
-//!   transformation is Eq. 22 (R-161). Controls: a stepper that takes no step does not land, and a default of Eq. 20.
+//!   transformation is Eq. 22. Controls: a stepper that takes no step does not land, and a default of Eq. 20.
 //! - `heggie_march_*`: the step control's checks. The march registered once, `h` held, landing on each boundary at
 //!   `k·Δ_sync` (control: a march re-registered at a boundary); the explicit
-//!   finiteness exit at entry and mid-interval, the state latched finite (control: the test removed); R-604's budget
+//!   finiteness exit at entry and mid-interval, the state latched finite (control: the test removed); the step budget
 //!   ending the march latched (control: a budget that does not bind); the floor signal on `dt/dτ < TINY` or `Rᵢ < TINY`
 //!   at its edges (control: the reference's `Rᵢ` arm alone); the entry-cap hit, the predictive limit and the clamp at
 //!   their edges; the explicit test on every component; the rate of `t` and `dt/dτ` bitwise one expression (control:
-//!   `R₀R₁R₂/S^{3/2}`, which differs in the last bit); R-604's budget helper at its edges.
-//! - `heggie_march_landing`: the landing with no tolerance (R-998 as R-1007 applies it; Part 2b, Heggie's step 8) on a
+//!   `R₀R₁R₂/S^{3/2}`, which differs in the last bit); the budget helper at its edges.
+//! - `heggie_march_landing`: the landing with no tolerance (Part 2b, Heggie's step 8) on a
 //!   scripted clock: the secant's stops, the bisection, the closing step, the overshoot's edge and `dt_max` (control:
 //!   the retakes off, a step past the boundary kept).
 //! - `heggie_landing_state`, `heggie_landing_reported`: Heggie × RK4 lands on each boundary with the state's own clock
 //!   the boundary's, bitwise, the time reported `k·Δ_sync` (controls: the clock-only landing, its state left overshot;
-//!   a stored state whose clock differs from the boundary it reports). The convergence order across η (R-1007) runs
-//!   under R-1021's criterion, written before it ran and approved by physics, on `T/8` sync intervals with the
+//!   a stored state whose clock differs from the boundary it reports). The convergence order across η runs
+//!   under the criterion below, written before it ran, on `T/8` sync intervals with the
 //!   predictive step limit set not to bind (`heggie_landing_order`; control: the clock-only landing under the same
 //!   interval and setting, which must still read as a landing defect).
 //! - `regularised_step_reversibility_logh`, `…_logh_complete`: the same test's logH arms, each time mode with its own
 //!   leapfrog and with RK4, through logH's map, with a flipped-flag and a left-out control of their own.
 //! - `regularised_step_reversibility`: dd_integrator §5's test 3 on Heggie × RK4 (Eq. 20 and Eq. 22) and Aarseth–Zare +
-//!   RK4, each through its time-reversal map, on its full state, at REQ-VAL-191's criterion inside its domain: each
+//!   RK4, each through its time-reversal map, on its full state, at the reversibility criterion inside its domain: each
 //!   residual and verdict printed, each verdict against the pair's profile; at the same `dt`, Cartesian RK4 and
-//!   REQ-VAL-032's asymmetric Yoshida-4 read not reversible. Controls: a profile with one flag flipped, and a
-//!   measurement set with one built occupant left out (REQ-VAL-190's Heggie and Aarseth–Zare arms; R-500).
+//!   an asymmetric Yoshida-4 (`w₁, w₁, w₀`) read not reversible. Controls: a profile with one flag flipped, and a
+//!   measurement set with one built occupant left out (its Heggie and Aarseth–Zare arms).
 
 use std::cell::RefCell;
 
@@ -60,9 +59,9 @@ fn v<R: AzReal>(x: f64) -> R {
     R::at_width(x as f32, x)
 }
 
-/// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8`, the reference's `TINY`, R-160's `f = 0.02`, a budget
-/// that does not bind, and the landing in force (Part 2b, Heggie's step 8: the clamp, the secant's 4 retakes and the
-/// bisection's 64 halvings), under `time`. Test inputs, not calibrations.
+/// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8`, the reference's `TINY`, the predictive limit's
+/// `f = 0.02`, a budget that does not bind, and the landing in force (Part 2b, Heggie's step 8: the clamp, the
+/// secant's 4 retakes and the bisection's 64 halvings), under `time`. Test inputs, not calibrations.
 fn params<R: AzReal>(time: HeggieTime) -> HgParams<R> {
     HgParams {
         eta: v(0.01),
@@ -199,7 +198,7 @@ fn check_pairs(runs: &[PairRun]) {
     }
 }
 
-/// Heggie's default time transformation is Eq. 22 at n = 3/2 (R-161).
+/// Heggie's default time transformation is Eq. 22 at n = 3/2.
 fn check_default(time: HeggieTime) {
     assert_eq!(
         time,
@@ -870,7 +869,7 @@ negative_control!(
     })
 );
 
-/// R-604's budget helper at its edges, `f` read as it: over only past `max(N_min, rate·t)`, at `N_min` and at
+/// The step budget's helper at its edges, `f` read as it: over only past `max(N_min, rate·t)`, at `N_min` and at
 /// `rate·t`, and a NaN allowance spent (Aarseth–Zare's `over_budget` calls it at its values).
 fn check_allowance(f: impl Fn(u32, f64, f64, u32) -> bool) {
     assert!(!f(100, 0.05, 1000.0, 100), "at N_min, not over");
@@ -985,10 +984,9 @@ negative_control!(
     })
 );
 
-// ── heggie_landing: the convergence order (R-1007) ───────────────────────────────────────────────────────────────
+// ── heggie_landing: the convergence order ───────────────────────────────────────────────────────────────────────
 
-/// The convergence ladder (R-1021, unchanged from the first criterion, approved by physics review 5902945413 of #530):
-/// the requirement's whole range [0.02, 0.001].
+/// The convergence ladder: the whole η range [0.02, 0.001].
 const LADDER: [f64; 10] = [
     0.02, 0.014, 0.01, 0.007, 0.005, 0.0035, 0.0025, 0.0017, 0.0012, 0.001,
 ];
@@ -996,18 +994,18 @@ const LADDER: [f64; 10] = [
 /// The reference run's `η`.
 const REFERENCE_ETA: f64 = 1e-4;
 
-/// The sync intervals over one period: 8 of `T/8` (R-1021, in place of the first criterion's 32 of `T/32`; for this
-/// check only, REQ-INT-049's closure gate stays on `T/32`).
+/// The sync intervals over one period: 8 of `T/8`, for this check only; the figure-eight closure gate stays on
+/// `T/32`.
 const INTERVALS: u32 = 8;
 
-/// The predictive step limit's `f`, set not to bind (R-1021, a stated measurement setting): at `f ≤ 0` the limit is
-/// `+∞` (Part 2b's step 6), in place of R-160's `f = 0.02`.
+/// The predictive step limit's `f`, set not to bind (a stated measurement setting): at `f ≤ 0` the limit is
+/// `+∞` (Part 2b's step 6), in place of the default `f = 0.02`.
 const PREDICTIVE_F: f64 = 0.0;
 
 /// RK4's order and the margin a pass lies within.
 const ORDER: (f64, f64) = (4.0, 0.5);
 
-/// The round-off floor and its fit (the first criterion's, kept by R-1021; R-1008's floor rule): `F = max(1e-12, |ref − ref(η = 1.25e-4)|)`, a rung fitted only
+/// The round-off floor and its fit: `F = max(1e-12, |ref − ref(η = 1.25e-4)|)`, a rung fitted only
 /// where its error exceeds `10·F`, at least 3 rungs, and an order below 3.0 a landing defect.
 fn criterion() -> FloorCriterion {
     FloorCriterion {
@@ -1114,7 +1112,7 @@ negative_control!(
 /// A precision test 3 runs at.
 trait P: AzReal + Into<f64> {
     const EPS: f64;
-    /// The domain's lower edge (REQ-VAL-191).
+    /// The domain's lower edge of the reversibility criterion.
     fn edge() -> f64;
 }
 
@@ -1279,7 +1277,7 @@ fn measure_heggie<R: P>(name: &'static str, time: HeggieTime) -> Measured {
     }
 }
 
-/// Aarseth–Zare's time-reversal map (Part 2b § "The time-reversal maps (REQ-INT-095)"): `(u, p, t) → (u, −p, −t)`.
+/// Aarseth–Zare's time-reversal map (Part 2b § "The time-reversal maps"): `(u, p, t) → (u, −p, −t)`.
 fn az_reversed<R: AzReal>(q: &AzQ<R>, p: &AzP<R>) -> (AzQ<R>, AzP<R>) {
     let neg = |x: [R; 2]| [-x[0], -x[1]];
     (
@@ -1501,7 +1499,7 @@ fn cartesian<R: P>(step: impl Fn(&State<R>, R, &Geom<R>) -> (State<R>, Geom<R>),
     rel(&flat(&neg(&b)), &flat(&s)) / R::EPS
 }
 
-/// REQ-VAL-032's asymmetric Yoshida-4: the KDK steps at `w₁, w₁, w₀`.
+/// An asymmetric Yoshida-4, the not-reversible control: the KDK steps at `w₁, w₁, w₀`.
 fn asymmetric<R: P>(s: &State<R>, dt: R, g: &Geom<R>) -> (State<R>, Geom<R>) {
     let (s, g) = Kdk::step(s, R::YOSHIDA4_W1 * dt, g);
     let (s, g) = Kdk::step(&s, R::YOSHIDA4_W1 * dt, &g);
@@ -1564,7 +1562,7 @@ negative_control!(
     }
 );
 
-/// Every built regularised occupant is in the measurement set, at each precision (REQ-VAL-190).
+/// Every built regularised occupant is in the measurement set, at each precision.
 #[test]
 fn regularised_step_reversibility_complete() {
     check_complete(&measure_all::<f64>(), &built());

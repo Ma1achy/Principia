@@ -1,7 +1,7 @@
-//! QA tests for TASK-M0-12 on the kernel side, from payload §2's `state` enum (0 escape · 1 bounded · 2 collision ·
-//! 3 running · 4 sim_failed · 5 decode_failed; codes 6–7 reserved, read as finished and untrusted) and §6's
+//! QA tests for the payload's `state` codes on the kernel side, from payload §2's `state` enum (0 escape · 1 bounded
+//! · 2 collision · 3 running · 4 sim_failed · 5 decode_failed; codes 6–7 reserved, read as finished and untrusted) and §6's
 //! predicates: the generated `STATE_*` constants hold §2's codes, and each predicate classifies every 3-bit code as
-//! §2 does. Each test has a registered negative control (R-176).
+//! §2 does. Each test has a registered negative control.
 
 use kernel::payload::*;
 use validation::negative_control;

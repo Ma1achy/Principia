@@ -1,8 +1,8 @@
 //! The regularisation axis, `none`, the pair table and the largest-step diagnostic (`kernel::regularisation`;
-//! integrator_contract Part 2b, Part 2a, Part 2c; R-19, R-561):
+//! integrator_contract Part 2b, Part 2a, Part 2c):
 //! - `regularisation_compose_selects`: every stepper × regularisation pair, under every time transformation, `none`
 //!   and the measured-bad pairs included, is selected as asked; `none` is among the kinds and the rows; its control is
-//!   a selection that blocks the measured-bad pairs (REQ-INT-017's arm here; R-561).
+//!   a selection that blocks the measured-bad pairs.
 //! - `regularisation_compose_warnings`: every cell of the shipped table is Part 2b's, transcribed here; a measured-bad
 //!   pair carries the contract's warning and every other pair none; its control is a measured-bad pair with no warning.
 //! - `regularisation_compose_note_4`: the table carries note 4's warning, and every cell an evidence line. Control: a
@@ -16,12 +16,12 @@
 //!   stepper.
 //! - `owns_time_mapping_composed`: over every stepper × regularisation pair, selected or composed as a type,
 //!   `owns_time_mapping == (regularisation != none)`, whatever the regularisation's own profile says, and the rest of
-//!   the composed profile is the pair's; its control reports the stepper's flag for a Heggie pair (REQ-INT-021). The
-//!   kinds not built yet are stood in for by stubs here; Aarseth–Zare's own arm is TASK-M3-68's.
+//!   the composed profile is the pair's; its control reports the stepper's flag for a Heggie pair. The
+//!   kinds not built yet are stood in for by stubs here; Aarseth–Zare's own arm is in `az.rs`.
 //! - `no_usable_step_sentinel`: a trajectory with no step, or with every step unusable, reports the explicit sentinel,
 //!   not `0.0`; a zero step reads apart from it; the `2.209e128` overflow is reported as itself at f64 and is skipped
 //!   and counted at f32, where it is `+∞`; the fold is reseeded from the first usable step; its control is the fold
-//!   from `0.0` (REQ-TOOL-039; pitfalls §9).
+//!   from `0.0` (pitfalls §9).
 //! - `dt_max_skipped_nan_is_counted`: a NaN among finite steps is skipped and counted, so the report reads apart from
 //!   the same steps without it, at f64 and f32; its control drops the NaN uncounted.
 //! - `dt_max_skipped_infinity_is_counted`: `+∞` and `−∞` among finite steps are skipped and counted, first, last or

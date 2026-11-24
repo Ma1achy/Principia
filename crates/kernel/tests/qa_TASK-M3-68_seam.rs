@@ -1,14 +1,14 @@
-//! QA tests for TASK-M3-68's seam end (PR #502, the `Reached` seam), written from integrator contract Part 2a
-//! § "The sync grid is a fixed quantum of physical time (R-565)", Part 2a § "What this preserves, and what it costs",
+//! QA tests for the seam end (the `Reached` seam), written from integrator contract Part 2a
+//! § "The sync grid is a fixed quantum of physical time", Part 2a § "What this preserves, and what it costs",
 //! payload §2 (`t_end_step`, `sim_failed` and its detail) and §4 (one Welford sample per completed macro-step), not
 //! from the implementation:
 //! - `qa_m368_seam_non_finite_latches`, `qa_m368_seam_exhausted_latches`: a terminal "still latches at the step it
-//!   fires on, and the copy's march ends there" (R-565's bullet). A scripted occupant, through the wrapper, ends its
-//!   march at its fourth call, after three completed calls whose steps were never `N_sub`: the run stops at once (no
+//!   fires on, and the copy's march ends there" (that section's bullet). A scripted occupant, through the wrapper,
+//!   ends its march at its fourth call, after three completed calls whose steps were never `N_sub`: the run stops at once (no
 //!   further call), `t_end_step = 3`, the Welford co-moments those of exactly the three completed states, the state
 //!   the one the occupant latched; non-finite is `sim_failed` with detail 2 (a finite state, payload §2), a spent
 //!   budget `running`.
-//! - `qa_m368_seam_failed_over_collision`: R-30, `sim_failed` first: a march that ends non-finite on the step a
+//! - `qa_m368_seam_failed_over_collision`: `sim_failed` takes precedence: a march that ends non-finite on the step a
 //!   collision fires stays `sim_failed` through the monitored write, `dmin_pair` its sentinel; the same step reported
 //!   short is labelled `collision`, so the fixture does fire one.
 //! - `qa_m368_sync_grid_routes`: "live march, catch-up and re-boot after eviction reach the same state at the same grid
@@ -20,7 +20,7 @@
 //!   bitwise the stepper's own run through the wrapper, at f32 and f64, under a cadence done at every substep of the
 //!   first three macro-steps and never, and through the monitored write with and without a collision radius.
 //!
-//! Each check takes the code under test as a function, so its negative control (R-176) runs the same check on a faulty
+//! Each check takes the code under test as a function, so its negative control runs the same check on a faulty
 //! one.
 
 use std::fmt::Debug;
@@ -130,9 +130,9 @@ impl<R> Cadence<R> for DoneAfter {
 }
 
 /// Aarseth–Zare test values (test inputs, not the calibrations): `η = 0.01`, `Δ_sync = 1/8` (exact in binary), the
-/// reference's `TINY` (R-953), R-160's `f = 0.02`, a budget that does not bind, the clamp and the landing's retakes on
-/// (the secant's 4, the bisection's 64, Part 2b). Changed by TASK-M3-76: the `|R₃|` floor is `TINY` (R-999), and the
-/// landing takes no tolerance (R-998); *was* `r3_floor` `0` / `1e-300` and `land_eps_rel` `1e-5` / `1e-14`.
+/// reference's `TINY`, which is also the `|R₃|` floor, the predictive limit's `f = 0.02`, a budget that does not
+/// bind, the clamp and the landing's retakes on (the secant's 4, the bisection's 64, Part 2b); the landing takes no
+/// tolerance.
 struct Grid;
 
 impl AzConfig for Grid {
@@ -443,7 +443,7 @@ fn detecting<A: Advance>(ic: &Ic<f64>) -> SimStateBaseOf<f64> {
     integrate_detecting::<A, f64>(ic, &key(1.0 / 16.0, 8), CollisionRadius::from_r_coll(0.05))
 }
 
-/// R-30, `sim_failed` first: the march ended non-finite on the step a collision fired stays `sim_failed`.
+/// `sim_failed` takes precedence: the march ended non-finite on the step a collision fired stays `sim_failed`.
 fn check_failed_over_collision(failing: Detecting) {
     let out = failing(&burrau());
     assert_eq!(
@@ -484,7 +484,7 @@ negative_control!(
     check_failed_over_collision(detecting::<Composed<Rk4, Script<3, SHORT, true>>>)
 );
 
-// ── R-565 through the wrapper ──────────────────────────────────────────────────────────────────────────────────
+// ── The fixed sync grid through the wrapper ──────────────────────────────────────────────────────────────────────
 
 /// The wrapper's run by an occupant under a quiet cadence.
 type GridRun<R> = fn(&Ic<R>, &WrapperUniforms<R>) -> SimStateBaseOf<R>;

@@ -1,11 +1,11 @@
-//! QA tests for TASK-M2-53, written from REQ-DEC-053 (the f32 exponential sinc reads no backend `sin` near 0, and at f64
-//! the line's bits do not move), REQ-DEC-054 (the cut and bound) and R-696, not from the implementation. The kernel
+//! QA tests for the exponential sinc, written from the spec (the f32 exponential sinc reads no backend `sin` near 0, at
+//! f64 the line's bits do not move, and the series has its cut and bound), not from the implementation. The kernel
 //! decode stage's half, the same failure run through the built kernel's WGSL with the backend's `sin` emulated as 0, is
 //! in `crates/validation/tests/qa_TASK-M2-25_gpu.rs` (`qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole`).
 //!
-//! - `qa_exponential_sinc_f64_is_the_old_line`: at f64 `exponential` and `ShapeSphere::point` are the line before R-696,
-//!   bit for bit, on fuzzed frames, at `r = 0`, with signed zeros, and at subnormal and large `r`. Control: the form with
-//!   no gate on the precision moves a bit.
+//! - `qa_exponential_sinc_f64_is_the_old_line`: at f64 `exponential` and `ShapeSphere::point` are the plain `sin r/r`
+//!   line, bit for bit, on fuzzed frames, at `r = 0`, with signed zeros, and at subnormal and large `r`. Control: the
+//!   form with no gate on the precision moves a bit.
 //! - `qa_exponential_sinc_f32_bound`: at f32, within `sinc_bound` of the f64 `sin r/r`, relative, on every f32 within
 //!   about 20% of the cut, on fuzzed `r` through `(0, 32)` from the subnormals up, and on the neighbours of π, 2π and
 //!   WGSL's bound, with the `r²` one ulp either side of `r·r`, since the map forms `r²` by another chain than `r`.
@@ -13,25 +13,26 @@
 //! - `qa_exponential_sinc_series_coefficients`: the coefficients are `−1/3!`, `1/5!`, `−1/7!`, each the nearest f32, and
 //!   the cut's square is exact at f32. Control: a coefficient one digit off.
 //! - `qa_exponential_sinc_reads_no_sin_below_the_cut`: below the cut no value of the backend's `sin`, NaN, an infinity or
-//!   a wrong number, reaches `k`, on `r` from RQ-687's radius through WGSL's `2⁻¹¹` to the last f32 below the cut.
-//!   Control: the line before R-696.
+//!   a wrong number, reaches `k`, on `r` from the measured radius through WGSL's `2⁻¹¹` to the last f32 below the cut.
+//!   Control: the plain `sin r/r` line.
 //! - `qa_exponential_sinc_on_a_conforming_backend`: with the worst `sin` WGSL's absolute `2⁻¹¹` allows, `k` is positive
-//!   and within `2⁻¹¹/c` of `sin r/r` at every `r` up to 3, so `k` is never the 0 of RQ-687's card. Control: a cut below
-//!   WGSL's bound.
+//!   and within `2⁻¹¹/c` of `sin r/r` at every `r` up to 3, so `k` is never the 0 measured on a backend.
+//!   Control: a cut below WGSL's bound.
 //! - `qa_exponential_sinc_f32_point`: at f32 `ShapeSphere::point` on the exponential map is `cos(r)·n₀ + k·d` with `k`
-//!   R-696's form, on `r` down to where `r²` underflows, and `n₀` exactly at `(½, ½)`. Control: the line before R-696.
+//!   the series-and-cut form, on `r` down to where `r²` underflows, and `n₀` exactly at `(½, ½)`. Control: the plain
+//!   `sin r/r` line.
 //!
-//! **Domain** (pitfalls §10): the sinc and the point it feeds, stateless, on the CPU; RQ-687's backend is emulated.
+//! **Domain** (pitfalls §10): the sinc and the point it feeds, stateless, on the CPU; the measured backend is emulated.
 
 use kernel::chart::shape_sphere::{exponential, sinc_f32, sinc_of};
 use kernel::chart::{ShapeMap, ShapeSphere};
 use kernel::generated::constants::{SINC_CUT2_F32, SINC_SERIES_F32};
 use validation::{negative_control, SINC_BOUND, SINC_CUT};
 
-/// WGSL's absolute bound on `sin`, `2⁻¹¹` (R-696's "near 0"; the register's `sinc_cut` note).
+/// WGSL's absolute bound on `sin`, `2⁻¹¹` (the spec's "near 0"; the register's `sinc_cut` note).
 const WGSL_SIN: f32 = 1.0 / 2048.0;
 
-/// RQ-687's radius, the failing pixel's.
+/// The measured radius, the failing pixel's, where a backend's `sin` read 0.
 const CARD_R: f32 = 1.00005e-7;
 
 /// A form of the f32 `sin r/r` from the backend's `sin r`: `(sin_r, r, r²)`.
@@ -65,13 +66,13 @@ impl Draws {
     }
 }
 
-/// `sin r/r` at f64, the requirement's reference.
+/// `sin r/r` at f64, the spec's reference.
 fn truth(r: f32) -> f64 {
     let r = f64::from(r);
     r.sin() / r
 }
 
-/// `1 − z/3! + z²/5! − z³/7!` at f32, written from R-696's form, with the literals of the factorials.
+/// `1 − z/3! + z²/5! − z³/7!` at f32, written from the spec's form, with the literals of the factorials.
 fn series(z: f32) -> f32 {
     let (c1, c2, c3) = (-1.0 / 6.0f32, 1.0 / 120.0f32, -1.0 / 5040.0f32);
     z.mul_add(z.mul_add(z.mul_add(c3, c2), c1), 1.0)
@@ -123,7 +124,7 @@ fn check_bound(form: Form) {
     }
 }
 
-/// R-696's series with its cut moved up to `r = 1`, past where four terms hold.
+/// The series with its cut moved up to `r = 1`, past where four terms hold.
 #[cfg(feature = "controls")]
 fn wide_cut(r: f32, z: f32) -> f32 {
     if z < 1.0 {
@@ -194,13 +195,13 @@ fn check_no_read(form: FromSin) {
     }
 }
 
-/// The line before R-696.
+/// The plain `sin r/r` line.
 #[cfg(feature = "controls")]
 fn old_line(sin_r: f32, r: f32, _z: f32) -> f32 {
     sin_r / r
 }
 
-/// R-696's form with its cut below WGSL's bound on `sin`.
+/// The series-and-cut form with its cut below WGSL's bound on `sin`.
 #[cfg(feature = "controls")]
 fn low_cut(sin_r: f32, r: f32, z: f32) -> f32 {
     if r < WGSL_SIN / 2.0 {
@@ -223,7 +224,7 @@ negative_control!(
 );
 
 /// `form` on the worst `sin` a conforming backend may return, `sin r − 2⁻¹¹` kept at 0 or above, is positive and within
-/// `2⁻¹¹/c` of `sin r/r`, on `r` from below RQ-687's radius to 3, short of π, where `sin r` itself reaches `2⁻¹¹`.
+/// `2⁻¹¹/c` of `sin r/r`, on `r` from below the measured radius to 3, short of π, where `sin r` itself reaches `2⁻¹¹`.
 fn check_conforming(form: FromSin) {
     let c = SINC_CUT.number();
     let allowance = f64::from(WGSL_SIN) / c;
@@ -263,18 +264,18 @@ negative_control!(
     check_conforming(low_cut)
 );
 
-/// The line before R-696 at f64, with `d` and `r` as it formed them, the sinc and all.
+/// The plain `sin r/r` line at f64, with `d` and `r` as it formed them, the sinc and all.
 fn line_f64(n0: [f64; 3], e1: [f64; 3], e2: [f64; 3], s: f64, u: f64, v: f64) -> [f64; 3] {
     let (a, b) = ((u + u - 1.0) * s, (v + v - 1.0) * s);
     let d = [0, 1, 2].map(|i| a * e1[i] + b * e2[i]);
     let r = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-    // the pinned libm's `cos` and `sin`, the f64 path's since R-991 (REQ-CHART-212)
+    // the pinned libm's `cos` and `sin`, the f64 path's
     let c = libm::cos(r);
     let k = if r == 0.0 { 1.0 } else { libm::sin(r) / r };
     [0, 1, 2].map(|i| c * n0[i] + k * d[i])
 }
 
-/// The same with R-696's series and cut in its `k` and no gate on the precision.
+/// The same with the series and cut in its `k` and no gate on the precision.
 #[cfg(feature = "controls")]
 fn ungated_f64(n0: [f64; 3], e1: [f64; 3], e2: [f64; 3], s: f64, u: f64, v: f64) -> [f64; 3] {
     let (a, b) = ((u + u - 1.0) * s, (v + v - 1.0) * s);
@@ -363,8 +364,8 @@ negative_control!(
     check_f64(ungated_f64)
 );
 
-/// R-696's `k`, written from the ruling: 1 at `r = 0`, the series below the cut on `z`, `r²` by its `fma` chain, and the
-/// backend's `sin r/r` from it up.
+/// The series-and-cut `k`, written from the spec: 1 at `r = 0`, the series below the cut on `z`, `r²` by its `fma`
+/// chain, and the backend's `sin r/r` from it up.
 fn form_k(r: f32, z: f32) -> f32 {
     if r == 0.0 {
         1.0

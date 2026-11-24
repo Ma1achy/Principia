@@ -1,15 +1,15 @@
-//! QA tests for TASK-M3-05, from the requirements and integrator_contract Part 1, dd_integrator §3.4, §3.5, §5, not from
-//! the implementation. Every energy and `L_z` here is written out in this file from dd §3.5's formula; the kernel's
-//! `physics::energy` is never the reference.
-//! - REQ-INT-010: a worked projection in exact dyadics, and `R_com`, `P_com` zero to rounding after every `STEP` of a
+//! QA tests for the CoM projection and the invariant monitor, from integrator_contract Part 1, dd_integrator §3.4,
+//! §3.5, §5, not from the implementation. Every energy and `L_z` here is written out in this file from dd §3.5's
+//! formula; the kernel's `physics::energy` is never the reference.
+//! - A worked projection in exact dyadics, and `R_com`, `P_com` zero to rounding after every `STEP` of a
 //!   whole run, each occupant at f32 and f64 (`qa_com_projection_*`).
-//! - REQ-INT-011: the projection changes `E` by exactly `−|P|²/2M` and `L_z` by exactly `−R × P`, the removed modes'
+//! - The projection changes `E` by exactly `−|P|²/2M` and `L_z` by exactly `−R × P`, the removed modes'
 //!   own terms, on states carrying a large drift, so nothing restores either (`qa_projection_restores_nothing`).
-//! - REQ-INT-012: `E₀`, `L_{z,0}` by hand before the loop; the accumulation is post-projection, at every substep,
+//! - `E₀`, `L_{z,0}` by hand before the loop; the accumulation is post-projection, at every substep,
 //!   signed final, unsigned max; the relative forms' floors (`qa_invariant_monitor_*`).
-//! - REQ-INT-040: the predicates' relative energy and absolute `L_z`, read from the latches alone, and the `symplectic`
-//!   flag carried (`qa_drift_suspect_read_time_*`); Euler lighting on bound states with momentum, the domain RQ-626
-//!   names (`qa_drift_suspect_euler_on_bound_states`).
+//! - The predicates' relative energy and absolute `L_z`, read from the latches alone, and the `symplectic`
+//!   flag carried (`qa_drift_suspect_read_time_*`); Euler lighting on bound states with momentum, the domain
+//!   "bound, interacting states" (`qa_drift_suspect_euler_on_bound_states`).
 //!
 //! **Domain** (pitfalls §10): `qa_com_projection_every_step` holds over the first steps of dd test 7's fixture; the
 //! rounding bounds are multiples of the unit roundoff at the state's own scale.
@@ -70,7 +70,7 @@ fn hand_lz(r: &V, p: &V) -> f64 {
     (0..3).map(|i| r[i][0] * p[i][1] - r[i][1] * p[i][0]).sum()
 }
 
-/// `(R_com, P_com)`, written out from the requirement's statement.
+/// `(R_com, P_com)`, written out from the spec's statement.
 fn hand_com(m: &[f64; 3], r: &V, p: &V) -> ([f64; 2], [f64; 2]) {
     let total: f64 = m.iter().sum();
     let mean = |k: usize| (0..3).map(|i| m[i] * r[i][k]).sum::<f64>() / total;
@@ -558,7 +558,7 @@ negative_control!(
     check_floors(|d, i, _| d / i.abs())
 );
 
-// ── The predicates (REQ-INT-040) ────────────────────────────────────────────────────────────────────────────────
+// ── The predicates ──────────────────────────────────────────────────────────────────────────────────────────────
 
 fn tau_e() -> f32 {
     SUSPECT_ENERGY_THRESHOLD
@@ -621,8 +621,8 @@ negative_control!(
     check_lz_absolute(|d| d > 8.0 * tau_l())
 );
 
-/// The read side's whole predicate, from the stored state: it reads `dE_reg_max` (the regularised drift's latch since
-/// R-605; `dE_max` before), `E_0`, `dLz_max`, not `r`, `p`, `Lz_0` or the Cartesian `dE_max`, so moving those moves
+/// The read side's whole predicate, from the stored state: it reads `dE_reg_max` (the regularised drift's latch),
+/// `E_0`, `dLz_max`, not `r`, `p`, `Lz_0` or the Cartesian `dE_max`, so moving those moves
 /// nothing; and the flag it carries is the one it is given, the occupant's.
 fn check_latches(read: fn(&SimState, f32, bool) -> DriftSuspect) {
     let t = tau_e();
@@ -703,7 +703,7 @@ fn read_state() -> kernel::payload::SimState {
     )
 }
 
-/// RQ-626's option (a) names "bound, interacting states". Draws from the latent cube near rest, keeping those with
+/// The domain is "bound, interacting states". Draws from the latent cube near rest, keeping those with
 /// `E₀ < 0` whose bodies are all still within `SEPARATION` of each other at the end of the run: Euler at f32 lights
 /// `SUSPECT_ENERGY` on each.
 fn check_lights_bound_states<A: Stepper>() {

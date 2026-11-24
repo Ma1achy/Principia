@@ -1,26 +1,27 @@
-//! QA tests for TASK-M2-28, written from the requirements it closes (R-544, R-503, R-554), not from the code.
+//! QA tests for the shape sphere's charts (spherical, exponential cap, Hammer display), written from chart_reference,
+//! not from the code.
 //!
-//! - REQ-CHART-002 (`qa_m228_spherical_whole_sphere`): the spherical map is the whole sphere, every pixel its own
-//!   system: on a grid over `[0,1]²` each pixel decodes to the system whose shape, read from the decoded positions by
-//!   R-14's map (written out here), is R-14's point `(sin φ cos θ, sin φ sin θ, cos φ)` with `θ = 2πs`,
+//! - `qa_m228_spherical_whole_sphere`: the spherical map is the whole sphere, every pixel its own system: on a grid
+//!   over `[0,1]²` each pixel decodes to the system whose shape, read from the decoded positions by the shape-sphere
+//!   map (written out here), is the spherical point `(sin φ cos θ, sin φ sin θ, cos φ)` with `θ = 2πs`,
 //!   `φ = π(1 − t)`, the lower pixels below the equator; mirror pixels `(θ, π − φ)` decode to two systems; no two
-//!   pixels share one; `system_image` is bijective. Control: R-141's fold, a lower pixel read as its mirror, puts two
-//!   pixels on one system, and fails.
-//! - REQ-CHART-075 (`qa_m228_exp_cap_bijective`): on caps in either hemisphere, touching the equator and straddling
+//!   pixels share one; `system_image` is bijective. Control: the mirror fold, a lower pixel read as its mirror, puts
+//!   two pixels on one system, and fails.
+//! - `qa_m228_exp_cap_bijective`: on caps in either hemisphere, touching the equator and straddling
 //!   it, about frames of every orientation and extents past `s√2 = π`, `system_image` is bijective, and the decoded
 //!   shape at every pixel short of `r = π` is the exponential map's point `cos r·n₀ + (sin r/r)·d` (written out here),
-//!   no two such pixels one system. Controls: R-503's per-pixel fold, and a fixed n = 2, each fail.
-//! - REQ-CHART-075 (`qa_m228_exp_count`): on random grids symmetric under `w → −w` (`n₀` on the equator at a random
+//!   no two such pixels one system. Controls: the per-pixel mirror fold, and a fixed n = 2, each fail.
+//! - `qa_m228_exp_count`: on random grids symmetric under `w → −w` (`n₀` on the equator at a random
 //!   longitude, `e₂ = ŵ`, odd `N`, every pixel centre more than `10⁻⁶` from `r = π`), the counted total is `N²` when
 //!   `s√2 < π`, and the number of pixels with `r ≤ π`, enumerated here from `(u, v)` alone, when
-//!   `s√2·(N − 1)/N > π`; on one-hemisphere caps, every pixel. Controls: R-503's fold (undercounts), a fixed n = 2,
-//!   and a count including the pixels past `r = π`, each fail.
-//! - REQ-CHART-078 (`qa_m228_antipode_once`): grids whose pixel centres land exactly on `r = π` (exactly representable
+//!   `s√2·(N − 1)/N > π`; on one-hemisphere caps, every pixel. Controls: the per-pixel mirror fold (undercounts), a
+//!   fixed n = 2, and a count including the pixels past `r = π`, each fail.
+//! - `qa_m228_antipode_once`: grids whose pixel centres land exactly on `r = π` (exactly representable
 //!   offsets `±½` at `s = 2π`), about a pole, the other pole and a point of the equator: those pixels decode to `−n₀`
 //!   to rounding, finite, and together count once, beside the pixels short of π counting one each and those past it
 //!   none (chart_reference §3.3, "Pixels on `r = π`"). Controls: each antipode pixel counted on its own (overcounts)
 //!   and the antipode read as the domain's end (undercounts), each fail.
-//! - REQ-RENDER-026, REQ-CHART-047 (`qa_m228_hammer_equal_area`): Hammer's equal-area projection, as chart_reference
+//! - `qa_m228_hammer_equal_area`: Hammer's equal-area projection, as chart_reference
 //!   §3.3 defines it: over a fine grid of display points, the share of the shown points whose chart point lies in a
 //!   polar cap of angle `α`, or a band about the equator, is the share of solid angle `(1 − cos α)/2`, both
 //!   hemispheres alike, and the shown region is the 2:1 ellipse, `π/4` of the square; the poles land at the top and
@@ -35,7 +36,7 @@ const PI: f64 = std::f64::consts::PI;
 
 // ── Independent formulas ─────────────────────────────────────────────────────────────────────────────────────────
 
-/// R-14's shape-sphere point of the configuration `r` with masses `m` (chart_reference §0.2, §3.1), written out from
+/// The shape-sphere point of the configuration `r` with masses `m` (chart_reference §0.2, §3.1), written out from
 /// the docs: `ρ = r₁ − r₀`, `λ = r₂ − r₀₁`, `ρ̃ = √(m₀m₁/M₀₁)·ρ`, `λ̃ = √(m₂M₀₁)·λ` (M = 1), `n = (‖ρ̃‖² − ‖λ̃‖²,
 /// 2ρ̃·λ̃, 2ρ̃∧λ̃)/I`.
 fn shape_of(r: [[f64; 2]; 3], m: [f64; 3]) -> [f64; 3] {
@@ -64,7 +65,7 @@ fn decoded_shape(chart: &ShapeSphere<f64>, u: f64, v: f64) -> [f64; 3] {
     shape_of(d.ic.r, d.ic.m)
 }
 
-/// R-14's spherical point at `(s, t)`.
+/// The spherical map's point at `(s, t)`: `(sin φ cos θ, sin φ sin θ, cos φ)`, `θ = 2πs`, `φ = π(1 − t)`.
 fn sphere_point(s: f64, t: f64) -> [f64; 3] {
     let (theta, phi) = (2.0 * PI * s, PI * (1.0 - t));
     [phi.sin() * theta.cos(), phi.sin() * theta.sin(), phi.cos()]
@@ -130,7 +131,7 @@ fn closest(points: &[[f64; 3]]) -> (f64, usize, usize) {
     best
 }
 
-// ── REQ-CHART-002: the whole sphere ──────────────────────────────────────────────────────────────────────────────
+// ── The whole sphere ─────────────────────────────────────────────────────────────────────────────────────────────
 
 const SPH: [u32; 2] = [24, 12];
 
@@ -222,7 +223,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-075: the exponential map's cap ─────────────────────────────────────────────────────────────────────
+// ── The exponential map's cap ────────────────────────────────────────────────────────────────────────────────────
 
 /// A unit vector, and an orthonormal frame `(n0, e1, e2)` about it turned by `turn`.
 fn frame(n0: [f64; 3], turn: f64) -> ([f64; 3], [f64; 3], [f64; 3]) {
@@ -371,7 +372,7 @@ mod fixed_n2 {
     );
 }
 
-// ── REQ-CHART-075: the count ─────────────────────────────────────────────────────────────────────────────────────
+// ── The count ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A counted total of `chart` over `nx` × `ny` pixel centres.
 type Total = fn(&ShapeSphere<f64>, u32, u32) -> u64;
@@ -455,7 +456,7 @@ fn qa_m228_exp_count() {
     check_count(|c, nx, ny| c.exp_counted_total(nx, ny));
 }
 
-/// R-503's withdrawn per-pixel fold: a `w < 0` pixel counts 0 when its mirror `w → −w` is in the cap.
+/// The withdrawn per-pixel mirror fold: a `w < 0` pixel counts 0 when its mirror `w → −w` is in the cap.
 #[cfg(feature = "controls")]
 fn folded_total(c: &ShapeSphere<f64>, nx: u32, ny: u32) -> u64 {
     let mut total = 0;
@@ -513,7 +514,7 @@ mod count_past {
     );
 }
 
-// ── REQ-CHART-078: the pixels on r = π ───────────────────────────────────────────────────────────────────────────
+// ── The pixels on r = π ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// Grids at `s = 2π` whose pixel centres along one axis are `±1/6`, `±1/2` and `±5/6` of the half-width, each exact,
 /// with the other axis at its centre line: the `±½` pixels lie exactly on `r = π`, the `±1/6` short of it, the `±5/6`
@@ -627,7 +628,7 @@ mod antipode_end {
     );
 }
 
-// ── REQ-RENDER-026, REQ-CHART-047: Hammer's equal-area projection ────────────────────────────────────────────────
+// ── Hammer's equal-area projection ───────────────────────────────────────────────────────────────────────────────
 
 /// The display grid's side: `2M` × `M` points over `[0,1]²`.
 const M: u32 = 1000;

@@ -1,8 +1,8 @@
-//! qa's tests for TASK-M2-49, written from REQ-TOOL-188: "While the pinned nightly carries rustc's MIR GVN miscompile
-//! (RQ-299), the native build must set `-Zmir-enable-passes=-GVN`, scoped to the host target [...]" (R-547); verify:
-//! "RQ-299's standalone reproducer, built with the workspace's host flags at opt-level 1, 2 and 3, prints 0.5;
-//! control: the reproducer built on the pin without the flag prints −0.5". The reproducer is RQ-299's, as transcribed
-//! into `plan/tasks/M2/TASK-M2-49.md` § "Notes", with the value returned rather than printed.
+//! Tests that the native build works around rustc's MIR GVN miscompile on the pinned nightly: while the pin carries
+//! it, the native build must set `-Zmir-enable-passes=-GVN`, scoped to the host target. The standalone reproducer,
+//! built with the workspace's host flags at opt-level 1, 2 and 3, prints 0.5; built on the pin without the flag it
+//! prints −0.5 (the control). The reproducer is the one transcribed into `plan/tasks/M2/TASK-M2-49.md` § "Notes",
+//! with the value returned rather than printed.
 //!
 //! - `qa_m249_repro_under_the_workspace_config`: the reproducer, a crate of its own written into the system's
 //!   temporary directory (outside the checkout, so cargo discovers no `.cargo/config.toml` of the repo's: CI's
@@ -15,11 +15,11 @@
 //!   left: the miscompile shows, so the config is what removes it.
 //! - `qa_m249_this_build_is_not_miscompiled`: the reproducer compiled into this very test binary returns 0.5. At the
 //!   dev profile that holds whatever the flags; at the release profile (`cargo test -p kernel --release`, CI's
-//!   `ci-release`, REQ-TOOL-189) it holds only because the workspace's build carries the flag, so the build the tests
+//!   `ci-release`) it holds only because the workspace's build carries the flag, so the build the tests
 //!   themselves run in is covered, not just a separate one. Its control feeds the same check the value the reproducer
 //!   gives when built at the release profile without the flag.
 //!
-//! Each test registers a negative control (R-176).
+//! Each test registers a negative control.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -28,7 +28,7 @@ use std::process::Command;
 use validation::negative_control;
 use validation::spawn::Spawn;
 
-/// RQ-299's reproducer, as a function: the value its `println!` printed, `s[1][0][1]`, which should be 0.5.
+/// The miscompile's reproducer, as a function: the value its `println!` printed, `s[1][0][1]`, which should be 0.5.
 fn repro() -> f32 {
     let plain: [[f32; 2]; 3] = [[-1.0, -0.5], [1.0, -0.5], [0.0, 0.5]];
     let flip = |mut x: [[f32; 2]; 3]| {
@@ -55,7 +55,7 @@ const REPRO_BUILD: &str = r#"fn main() {
 }
 "#;
 
-/// The reproducer's source as a program, verbatim from RQ-299 but for the printed text: the value alone.
+/// The reproducer's source as a program, verbatim from the reproducer but for the printed text: the value alone.
 const REPRO_MAIN: &str = r#"fn main() {
     let plain: [[f32; 2]; 3] = [[-1.0, -0.5], [1.0, -0.5], [0.0, 0.5]];
     let flip = |mut x: [[f32; 2]; 3]| { for v in x.iter_mut() { v[1] = -v[1]; } x };

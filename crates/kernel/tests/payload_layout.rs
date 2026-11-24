@@ -1,6 +1,6 @@
-//! The generated payload structs against dd_simstate_payload §1 (REQ-PAY-003, REQ-PAY-008, REQ-PAY-009, REQ-PAY-020):
+//! The generated payload structs against dd_simstate_payload §1:
 //! sizes, alignments and every field offset; the closure fields in both variants; `ICDescriptor`'s names. It prints
-//! the recomputed widths and payload §7's memory rows (R-40, R-59 D6).
+//! the recomputed widths and payload §7's memory rows.
 
 use std::mem::{align_of, offset_of, size_of};
 
@@ -8,8 +8,8 @@ use kernel::payload::{FreeGroupWord, ICDescriptor, SimStateBase, SimStateFTLE};
 use validation::negative_control;
 
 /// Payload §1's `SimStateFTLE` offsets; `SimStateBase` is the same less `r_sh` and `p_sh`, 48 B earlier from `S`.
-/// The last three are the escape rule's lagged n̂ register, three Reals where 4 B of padding stood (TASK-M3-12).
-/// `budget_bits` and `dE_reg` follow `total_substeps` (R-603, R-605; TASK-M3-41).
+/// The last three are the escape rule's lagged n̂ register, three Reals.
+/// `budget_bits` and `dE_reg` follow `total_substeps`.
 const FTLE: [(&str, usize); 23] = [
     ("r", 0),
     ("p", 24),
