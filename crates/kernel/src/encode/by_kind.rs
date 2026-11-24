@@ -36,7 +36,7 @@
 //! [`encode_into_within`] takes both from its caller, the lookup, and fixes neither, and with them kind 4's curve
 //! tolerance `tol`, which only a curve chart reads; [`encode_into`] is it at `tol = 0`, where a curve chart represents
 //! only a state its curve holds exactly, and rounding alone puts `d > 0` on the curve, so it places essentially no
-//! state: a caller on a curve chart calls [`encode_into_within`] with the calibrated curve-projection tolerance
+//! state: a caller on a curve chart calls [`encode_into_within`] with the proposed curve-projection tolerance
 //! (inverse_encode_contract Part 6, step 4). A coordinate that is not finite, or an axis that cannot place the state
 //! ([`Coord::Unplaced`]), lands it in latent `z` with no comparison. A curve chart's own report, `d`, `ν*` and the
 //! fold's flag, is [`ChartEncoded::curve`].
@@ -197,7 +197,7 @@ fn placed<R: LinkReal>(c: Coord<R>) -> Option<R> {
 
 /// [`encode_into_within`] at `tol = 0` (the module's note): a curve chart represents only a state on its curve exactly,
 /// and rounding alone puts `d > 0` on the curve, so there it places essentially no state. On a curve chart, call
-/// [`encode_into_within`] with the calibrated curve-projection tolerance (inverse_encode_contract Part 6, step 4).
+/// [`encode_into_within`] with the proposed curve-projection tolerance (inverse_encode_contract Part 6, step 4).
 #[inline]
 pub fn encode_into<S, R, C, N>(chart: &C, ic: &Ic<R>, norm: N, eps_phys: R) -> ChartEncoded<R>
 where

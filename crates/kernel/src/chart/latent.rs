@@ -20,8 +20,8 @@
 //! "Chart-aware validation", layer 2 lists none for it), and layer 1 is the encode path's, never a pixel's
 //! (chart_decoder_contract Part 3), so its layer-2 check accepts every `(u, v)`. Layer 3, decode sanity, holds
 //! by the shared decoder's construction (chart_reference §5.1): the masses are positive under every registered mass
-//! link (§0.1), the CoM is at the origin (§0.2) and `Σpᵢ = 0` (§0.3), the residuals rounding within layer 3's
-//! calibrated decode-sanity tolerance. So `validate` is `Valid` at every `(u, v)`. Both axes are affine past
+//! link (§0.1), the CoM is at the origin (§0.2) and `Σpᵢ = 0` (§0.3), the residuals rounding within the register's
+//! `decode_sanity` tolerance. So `validate` is `Valid` at every `(u, v)`. Both axes are affine past
 //! `[0,1]²` (chart_reference §5.4): the formula continues.
 
 use spirv_std::num_traits::Float;

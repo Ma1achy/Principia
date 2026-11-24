@@ -26,7 +26,8 @@
 //! `(s, t) ∈ [0,1]²`, the edges included, on a backend whose `sqrt` lies within four ulps of the exact root: proven
 //! and tested on the CPU at f32 and f64 (correctly rounded). WGSL's nominal `sqrt` bound (inherited from
 //! `1/inverseSqrt`) can exceed four ulps, so the GPU's edges are verified where its feasibility tags are compared
-//! with the CPU's, in the cross-backend check, whose fuzz covers the edge columns `s ∈ {0, 1}`.
+//! with the CPU's, in the cross-backend check (`decode_cross_backend`), whose fuzz covers the edge columns
+//! `s ∈ {0, 1}`.
 //!
 //! **`K* = K(t)` on both charts.** On `(L_z, K)` it is the coordinate itself (§2.1). On `(L_z, E)`, §2.2's
 //! `K* = E − U` with `E = U + K(t)` is `K(t)` in exact arithmetic, so the decode takes `K(t)` directly rather than
@@ -147,7 +148,7 @@ fn lower<R: WarpReal>(k: R, l: R) -> R {
 
 /// `L_max = √(2·I·K)` at `I = 1`, held to `L_max² ≤ 2K` exactly where `sqrt` lies within four ulps of the exact root:
 /// the rounded root, stepped down while the exact test still finds it infeasible, four steps at most (the module's
-/// note: the CPU's is correctly rounded; a GPU's is checked by the cross-backend check).
+/// note: the CPU's is correctly rounded; a GPU's by `decode_cross_backend`).
 #[inline]
 pub fn l_max<R: WarpReal>(k: R) -> R {
     let root = Float::sqrt(k + k);

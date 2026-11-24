@@ -17,7 +17,7 @@
 //!
 //! **`β`** ([`beta_at`], [`beta`]; dd_encode §3.1, §3.2). `C` has no mirror step, so `λ̃_y` keeps
 //! its sign and `β` is the signed angle of `λ̃` from `+x`, reduced to one period, `[0, 2π̂]`: a state above the `x`-axis
-//! reads `β ∈ (0, π)`, one below it `β ∈ (π, 2π]`, `π̂` being the registry's image of π (`descriptor::pi_image`) and
+//! reads `β ∈ (0, π)`, one below it `β ∈ (π, 2π]`, `π̂` being dd_decoder §3.2's image of π (`descriptor::pi_image`) and
 //! `τ̂ = 2π̂`, exact.
 //!
 //! **The case is not read off the floats.** A collinear state's rotated `λ̃_y` is a rounding residue whose sign turns

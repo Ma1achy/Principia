@@ -29,7 +29,7 @@
 //!
 //! **The landing on the curve** ([`project`], kind 4 (a) and (b)): on the curve where `ν(θ)` lies in the span and
 //! `d(ν(θ)) ≤ tol`, the argmin bypassed; else projected to `ν*` where `d(ν*) ≤ tol`; else latent `z`, `E(x)`'s, always
-//! available (Part 6 case 3). `d` is reported in every case. `tol` is the caller's, a calibrated tolerance,
+//! available (Part 6 case 3). `d` is reported in every case. `tol` is the caller's, a tolerance still to calibrate,
 //! proposed with its evidence in `fixtures/gates/curve_projection/`.
 //!
 //! **Past the span's edge, and the fold** (dd_encode §3.1, §3.4). The curve axis of every Burrau chart,
@@ -49,7 +49,7 @@
 //! against latent, as for every chart: `d` does not see the momentum. A chart landing needs both. The curve encode,
 //! `past_fold` among it, goes to the caller in `ChartEncoded::curve`; `by_kind::encode_into` is `tol = 0`, where
 //! rounding alone puts `d > 0` on the curve and a curve chart places essentially no state, so the lookup calls the
-//! `_within` forms at the calibrated curve-projection tolerance (inverse_encode_contract Part 6, step 4). The δm strip,
+//! `_within` forms at the proposed curve-projection tolerance (inverse_encode_contract Part 6, step 4). The δm strip,
 //! whose masses leave the curve's off its `v = 0` row, reads `θ` off the triangle alone; the projection does not apply
 //! there.
 //!
@@ -418,7 +418,7 @@ where
     f64: From<P>,
 {
     /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
-    /// uses [`ByKind::coords_within`] at the calibrated curve-projection tolerance (inverse_encode_contract Part 6,
+    /// uses [`ByKind::coords_within`] at the proposed curve-projection tolerance (inverse_encode_contract Part 6,
     /// step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
@@ -469,7 +469,7 @@ where
     f64: From<P>,
 {
     /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
-    /// uses [`ByKind::coords_within`] at the calibrated curve-projection tolerance (inverse_encode_contract Part 6,
+    /// uses [`ByKind::coords_within`] at the proposed curve-projection tolerance (inverse_encode_contract Part 6,
     /// step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
@@ -521,7 +521,7 @@ where
     f64: From<P>,
 {
     /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
-    /// uses [`ByKind::coords_within`] at the calibrated curve-projection tolerance (inverse_encode_contract Part 6,
+    /// uses [`ByKind::coords_within`] at the proposed curve-projection tolerance (inverse_encode_contract Part 6,
     /// step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
@@ -576,7 +576,7 @@ where
     f64: From<P>,
 {
     /// `tol = 0`: rounding alone puts `d > 0` on the curve, so this places essentially no state. A caller on this chart
-    /// uses [`ByKind::coords_within`] at the calibrated curve-projection tolerance (inverse_encode_contract Part 6,
+    /// uses [`ByKind::coords_within`] at the proposed curve-projection tolerance (inverse_encode_contract Part 6,
     /// step 4).
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where

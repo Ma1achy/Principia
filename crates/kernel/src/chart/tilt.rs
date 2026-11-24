@@ -32,13 +32,13 @@
 //! invariant chart's two configuration controls and two mass logits, a mixed chart's six frozen controls. Its `d` is
 //! added to that control, the link's pre-image, never to the physical value, so a mass tilt keeps every pixel's masses
 //! positive and summing to 1. The index is the chart's to read, so a chart whose hidden coordinate is a
-//! physical value (the construction charts, the shape sphere's `p_λ`) names it with an index of its own and adds `d` to
-//! that value in its own [`Tiltable::decode_shifted`]: the path is this one. A cell whose tilted physical value leaves
-//! no system is refused ([`Tiltable::refusal`]): the view's `validate` rejects it and its area weight is 0
-//! ([`Tilted::weight`]). A held energy clamped at its floor is a system, and flagged ([`Tilted::held_at_floor`]).
-//! What is said of a pixel's decode is said at that decode's precision: the flag at the decode's own, and a refusal at
-//! f64 and at the chart's own, [`Tilted::weight`] and [`Chart::validate_params`] reading both. Only [`Tilted::pixel`]'s
-//! count stays at f64: it counts the view's pixels, not a decode's output.
+//! physical value (the construction charts; the shape sphere's physical `p_λ`, once built) names it with an index of
+//! its own and adds `d` to that value in its own [`Tiltable::decode_shifted`]: the path is this one. A cell whose
+//! tilted physical value leaves no system is refused ([`Tiltable::refusal`]): the view's `validate` rejects it and its
+//! area weight is 0 ([`Tilted::weight`]). A held energy clamped at its floor is a system, and flagged
+//! ([`Tilted::held_at_floor`]). What is said of a pixel's decode is said at that decode's precision: the flag at the
+//! decode's own, and a refusal at f64 and at the chart's own, [`Tilted::weight`] and [`Chart::validate_params`] reading
+//! both. Only [`Tilted::pixel`]'s count stays at f64: it counts the view's pixels, not a decode's output.
 //! Slicing sets a hidden coordinate's value at the centre ([`Hidden::sliced`]); on these charts every value of a
 //! latent control is a system, so no slice reaches an edge.
 //!
