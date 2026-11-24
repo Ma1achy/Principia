@@ -1,4 +1,4 @@
-//! The engine-side Inspector (`engine::inspector`; TASK-M3-19): a clicked IC integrated through the shared kernel at
+//! The engine-side Inspector (`engine::inspector`): a clicked IC integrated through the shared kernel at
 //! f64 on the CPU, one `Inspector` type for the IC Inspector and the trajectory viewer, with the RK45 reference beside
 //! it.
 //!

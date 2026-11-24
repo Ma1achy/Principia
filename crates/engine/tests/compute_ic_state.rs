@@ -1,5 +1,5 @@
 //! The Precision ring's state-in entry, `computeICState(state, simKey)`, beside `computeIC`, and the frame the IC
-//! constructor integrates (TASK-M8-83; ic_save §3.4; parity_contract §1).
+//! constructor integrates (ic_save §3.4; parity_contract §1).
 //!
 //! Pass criteria, fixed before the first run:
 //! - **A picked IC**: `computeICState` on the state `computeIC` decodes (no `DEGENERATE` tag) gives a `SimState` equal

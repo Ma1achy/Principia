@@ -1,5 +1,5 @@
 //! The sync quantum on the engine's side (integrator_contract Part 2a § "The sync grid is a fixed quantum of physical
-//! time"; R-565):
+//! time"):
 //! - `sync_quantum_on_the_sim_key`: `SimUniforms` carries `Δ_sync`, the register's value, the one the kernel's marches
 //!   read; a key carrying another value has other sim-key bytes, so a change re-integrates, and dispatch refuses it,
 //!   since the kernel cannot march on another grid. Control: a sim key blind to `Δ_sync`.

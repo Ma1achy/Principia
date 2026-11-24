@@ -31,7 +31,7 @@ use saturated::saturated;
 
 const EPS: f64 = f32::EPSILON as f64;
 
-/// The GPU test's bound on `I − 1`, in f32 eps (`qa_TASK-M2-06_gpu`'s `INERTIA_EPS`, REQ-DEC-044's proposal).
+/// The GPU test's bound on `I − 1`, in f32 eps (`qa_TASK-M2-06_gpu`'s `INERTIA_EPS`).
 const INERTIA_EPS: f64 = 8.0;
 
 /// Sample 410: the defaults' first latent at `10³⁰` (82 samples per magnitude, the sixth magnitude), at the centre.
