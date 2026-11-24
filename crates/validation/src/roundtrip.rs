@@ -86,30 +86,11 @@ fn norm(v: [f64; 2]) -> f64 {
 
 /// `‖x′ − x‖_phys` (inverse-encode Part 4, REQ-ENC-029), `x` the reference state and `x′` the one measured against it,
 /// both on the canonical section: the largest of `|m′ᵢ − mᵢ|`, `‖r′ᵢ − rᵢ‖/R_x` and `‖p′ᵢ − pᵢ‖/P_x` over the three
-/// bodies, with `R_x = max(1, maxⱼ‖rⱼ‖)` and `P_x = max(1, maxⱼ‖pⱼ‖)` the reference's extent in each block. A NaN
-/// anywhere gives NaN, which no tolerance admits: a NaN in `x` or `x′` makes its difference NaN (`f64::max` drops it
-/// from the extent).
+/// bodies, with `R_x = max(1, maxⱼ‖rⱼ‖)` and `P_x = max(1, maxⱼ‖pⱼ‖)` the reference's extent in each block; NaN where
+/// either state has one. The engine's definition ([`engine::lookup::phys`]), so the engine's own decisions in the norm
+/// and every measurement here read one function.
 pub fn phys(x: &Ic<f64>, x_prime: &Ic<f64>) -> f64 {
-    let extent = |v: &[[f64; 2]; 3]| v.iter().map(|&w| norm(w)).fold(1.0f64, f64::max);
-    let (r_x, p_x) = (extent(&x.r), extent(&x.p));
-    let mut worst = 0.0f64;
-    let mut nan = false;
-    for i in 0..3 {
-        let d = [
-            (x_prime.m[i] - x.m[i]).abs(),
-            norm([x_prime.r[i][0] - x.r[i][0], x_prime.r[i][1] - x.r[i][1]]) / r_x,
-            norm([x_prime.p[i][0] - x.p[i][0], x_prime.p[i][1] - x.p[i][1]]) / p_x,
-        ];
-        for e in d {
-            nan |= e.is_nan();
-            worst = worst.max(e);
-        }
-    }
-    if nan {
-        f64::NAN
-    } else {
-        worst
-    }
+    engine::lookup::phys(x, x_prime)
 }
 
 /// `ε_phys` at the precision `R` (REQ-ENC-024; inverse-encode Part 4): the register's `eps_phys`, `k`, times `R`'s

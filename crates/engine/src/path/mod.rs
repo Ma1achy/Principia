@@ -1110,7 +1110,8 @@ impl Segment {
             ));
         }
         let a = anchor::record(&ea.b, leaves)?;
-        let (mut b, holds) = anchor::rehold(&a, &eb.b, leaves, blend.s())?;
+        // In the engine's `‖·‖_phys`, as each frame's own re-hold decides it (`Blend::end_b`).
+        let (mut b, holds) = anchor::rehold(&a, &eb.b, leaves, crate::lookup::phys, blend.s())?;
         // Where `B` can't hold `A`'s pinned state it carries no anchor: the frame slides, never claiming the words.
         if holds {
             b.anchor = a.anchor;

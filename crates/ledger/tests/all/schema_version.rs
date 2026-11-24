@@ -528,6 +528,8 @@ const PRESENTATION: [&str; 15] = [
 /// decides which value `θ̃` and `_reserved` take, not what their bits mean, and `n_norm_tol`, a test's tolerance; and
 /// the shape sphere's (TASK-M2-08), `shape_vec_js_tol` and `shape_roundtrip_bound`, a test's and a gate's tolerances;
 /// and the round trip's `eps_phys` (TASK-M2-16), the T2 tests' and the `encode-eps-phys` gate's tolerance; and
+/// the lock's `lock_tolerance` and its re-solve's `lock_solve_tolerance`, which decide whether a locked end holds, not
+/// what a stored bit means; and
 /// lookup's layer-3 `decode_sanity` and layer-1 `zero_class` (TASK-M2-19), validation tolerances on lookup and lock;
 /// and the literature import's `literature_import_tol` (TASK-M2-20), the `literature-import` gate's tolerance; and
 /// `step_reversal_tol`, `step_reversal_edge_f64`, `step_reversal_edge_f32` and `step_reversal_edge_max` (TASK-M3-02),
@@ -538,13 +540,14 @@ const PRESENTATION: [&str; 15] = [
 /// closure's departure threshold `delta_dep` (TASK-M3-11; REQ-VAL-055), which decides which value `closure_min`,
 /// `closure_step` and the departed bit take, not what their bits mean, as `r_pole` does for `θ̃`. None is among the
 /// entries §3.8 hashes ("The hash"), so none is hashed.
-const CALIBRATIONS: [&str; 18] = [
+const CALIBRATIONS: [&str; 19] = [
     "r_pole",
     "n_norm_tol",
     "shape_vec_js_tol",
     "shape_roundtrip_bound",
     "eps_phys",
     "lock_tolerance",
+    "lock_solve_tolerance",
     "decode_sanity",
     "zero_class",
     "literature_import_tol",

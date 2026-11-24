@@ -611,7 +611,11 @@ impl Blend {
             return Ok((self.b.clone(), self.lock.is_some_and(|l| l.hold)));
         }
         self.reheld
-            .get_or_init(|| anchor::rehold(&self.a, &self.b, leaves, self.s))
+            // The plan is unclear here (the hold is decided in "lookup's `‖·‖_phys`", which a caller passes; a frame's
+            // decode has no caller's norm in reach); chose the engine's own copy of that norm, `lookup::phys`, the
+            // function every caller passes, because a frame built by `Segment::frame` or replayed from its record
+            // must re-hold as the slice that made it did.
+            .get_or_init(|| anchor::rehold(&self.a, &self.b, leaves, crate::lookup::phys, self.s))
             .clone()
     }
 
