@@ -4007,3 +4007,51 @@ negative_control!(
         burrau_end_logged([0.0, 0.0], 64, false);
     }
 );
+
+// ── The follow at a slide's first frames: criteria, written before the fix ran ───────────────────────────────────────
+//
+// PR #72's C6: on mixed to Burrau, 132 of the 256 pins' slides stop at 64 frames, every one a failed follow (71 the
+// frame's direct solve `Stalled` at first-order optimality 1.4e-8 to 2.2e-7 against 1e-8, 61 `Ended` by the continuity
+// test or a probe), and the failing frame moves toward the start as frames are added; 124 are refused by the sweep (115
+// at the morph, 9 at the slice's re-hold, whose slide solve stalls the same way). `anchor::slide` reads any failed
+// follow as the path's end.
+//
+// **The diagnosis** (`path_lock_slide_stall`, a measurement): one variable changed at a time from main's solve, the
+// 132 pins at 64 frames, a per-pin table of each run (the stop's kind, frame, optimality, conditioning), each run's
+// prediction written here before it ran.
+//
+// - **D0, main.** Prediction: the 132 of PR #72's C6, the same kinds and frames.
+// - **D1, the residual's form.** The slide's frame state is `block_line(a, B_x, s)` and its target the anchor `a`, so
+//   the solver forms `r = (a + s(B_x − a)) − a`: an absolute rounding of `ε|a|` against a residual of size `s·|B_x − a|`,
+//   and central-difference slopes whose rounding is `ε|a|/h` against slopes of size `s·|∂B|`. Both relative errors grow
+//   as `1/s`, so the solve's noise floor in `‖P r‖/‖r‖` grows as the frame nears `s = 0`, the stall's signature. The
+//   variable: the residual formed as `block_line(a, B_x, s) − a` directly (`s(B_x − a)` on the linear blocks, the great
+//   circle's offset `(cos sθ − 1)a + sin sθ·ŵ` with `cos sθ − 1 = −2 sin²(sθ/2)` on `n̂`), target 0: the same function in
+//   exact arithmetic, with no cancellation. Prediction, if this is the cause: no `Stalled` follow is left, the `Ended`
+//   at the 2nd to 6th frame are gone, and the remaining stops (if any) sit at a fixed `s`; if not the cause, the count
+//   of stops within 10% of D0's.
+// - **D2, the damping's ceiling** (`1e12` to `1e16`, main's residual form). Prediction: the stops unchanged within 10%,
+//   because a stall here is the polish failing to lower `‖Jᵀr‖` (noise), not the damping running out.
+// - **D3, the seed** (each follow seeded by the restart rule's point at its frame, not the last frame's point; main's
+//   residual form). Prediction: the stalls unchanged within 10%: they are at the minimiser, seeded there or not.
+// - **Read, not varied:** the optimality measure is already relative (`‖P r‖/‖r‖`, a sine, the same whatever the scale
+//   of `r` or of either coordinate), so its scaling is not varied; `JᵀJ`'s conditioning at each stop is tabulated, to
+//   see whether a null direction (as `s → 0`) is present.
+//
+// **The fix's criteria** (on the cause D1–D3 find; the runs `path_lock_slide_follows_sweep` and the sweeps below):
+//
+// - **F1, no stall and no spurious continuity failure.** On mixed to Burrau at the sweep's 256 pins, at 64, 128 and 256
+//   frames, no slide stops on a direct solve's failure (`Stalled`, `IterationCap`, `IllConditioned`, `NonFinite`).
+// - **F2, every remaining stop a true end:** an `Ended` at 64, 128 and 256 frames alike whose `s` is within one frame of
+//   the coarsest count's (`|s_n − s_64| ≤ 1/64`), and not at the 2nd frame of any count (an end there moves with the
+//   frame count by construction, the old classifier's blind spot).
+// - **F3, a failed follow is not an end.** A direct solve's failure in a follow is its own outcome, `PathError::
+//   FollowFailed`, refused and named so, never `LockedEnd::Ended`.
+// - **F4, the slides that went through before go through the same way.** Every pin of mixed to the rest chart and to
+//   Burrau whose slide reached `s = 1` on main (`LockedEnd::Slides`) reaches it again with the same `not_nearest`, its
+//   track's every node within the continuity test's agreement (`10⁻⁶·h`) of main's.
+// - **F5, no hold lost:** #72's C2 (no hold pair refuses or slides, at 16 frames), C5 (the rest pair's refusals and
+//   per-pin readings as on main) and C7 (the re-solving pairs at 64 frames) rerun, as written there.
+// - **Reported:** how many of the 124 become pins the sweep reads through, true ends, or remaining failures; C1's floor
+//   rerun and the sizing rule's value and its margins. `LOCK_TOLERANCE` (64) and `lock_solve_tolerance` (32) are not
+//   changed here; proposed values go to the owner.
