@@ -94,7 +94,7 @@ fn sim(plane: Plane, window: Window, links: Links) -> SimConfig {
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 75.0 },
-        collision: Collision {},
+        collision: Collision::default(),
         quality: Quality {},
     }
 }

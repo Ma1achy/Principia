@@ -15,8 +15,9 @@
 //!   inside that window is the grid's luck, not the physics'.
 //! - `golden_anchors_burrau_integrator`: dd_integrator §5 test 12, the Burrau smoke test, on the anchor: marched by the
 //!   default occupant at `r_coll = 0` (the benchmark's pin) to 100 of Szebehely & Peters' time units, it ends in the
-//!   lightest body's escape, labelled between 50 and 100 of them (`validation::ground_truth::tiers::check_burrau_label`,
-//!   the criterion the ground-truth suite's Burrau case shares).
+//!   lightest body's escape, its first label (the stop option's label time) between 50 and 100 of them and its live
+//!   label at the horizon that same escape (`validation::ground_truth::tiers::check_burrau_live`, the criterion the
+//!   ground-truth suite's Burrau case shares).
 //!
 //! **Pass criteria, fixed before the first run.** Bitwise equality for the decodes and the encode. The homothetic
 //! bounds: the RK45 reference is within `1.3·10⁻¹⁴` of the closed form at `t = 1.25` (`rtol = 10⁻¹³`; `1.3·10⁻¹³` at
@@ -38,7 +39,7 @@ use kernel::generated::links::Defaults;
 use kernel::occupant::yoshida4::Yoshida4;
 use kernel::payload::{sd_detail, sd_state, tm_t_end_step};
 
-use validation::ground_truth::tiers::{check_burrau_label, Homothetic, BURRAU_HORIZON};
+use validation::ground_truth::tiers::{Homothetic, BURRAU_HORIZON};
 use validation::ground_truth::{
     burrau_time_scale, march_key, DefaultOccupant, MarchKey64, BENCHMARK_R_COLL,
 };
@@ -257,20 +258,32 @@ fn check_burrau<A: Advance>(occupant: &str) {
     let x = anchors()[1].decoded;
     let scale = burrau_time_scale();
     let key = march_key(BURRAU_HORIZON * scale, BENCHMARK_R_COLL).expect("the sim key validates");
-    let out = integrate_detecting::<A, f64>(&x, &key.loop_values, key.radius);
+    // The label's time is the stop option's first label; the label at the horizon is the live march's (the default).
+    let out = kernel::driver::wrapper::integrate_detecting_rule::<
+        A,
+        f64,
+        kernel::detect::escape_rule::DefaultRule<f64>,
+    >(&x, &key.loop_values, key.radius, true);
+    let live = integrate_detecting::<A, f64>(&x, &key.loop_values, key.radius);
     println!(
-        "burrau_345 under {occupant} at r_coll = {BENCHMARK_R_COLL}: state {}, detail {}, t_end {:.3} of S&P's units",
+        "burrau_345 under {occupant} at r_coll = {BENCHMARK_R_COLL}: first label state {}, detail {}, at {:.3} of S&P's \
+         units; live at the horizon: state {}, detail {}",
         sd_state(out.packed_a),
         sd_detail(out.packed_a),
-        f64::from(tm_t_end_step(out.times)) * key.loop_values.dt_macro / scale
+        f64::from(tm_t_end_step(out.times)) * key.loop_values.dt_macro / scale,
+        sd_state(live.packed_a),
+        sd_detail(live.packed_a)
     );
-    check_burrau_label(&out, key.loop_values.dt_macro, scale, x.m);
+    validation::ground_truth::tiers::check_burrau_live(
+        &out,
+        &live,
+        key.loop_values.dt_macro,
+        scale,
+        x.m,
+    );
 }
 
-// Ignored until the owner settles tau: at the provisional 1e-3 the label fires at 157.6 of S&P's units; at any tau from
-// 3e-3 to the measured false-positive edge 1.353e-2 it fires in [50, 100] (`cargo xtask gate tau-gap --propose`).
 #[test]
-#[ignore = "Burrau: under the default (closure) rule at tau = 1e-3 the escape label fires at t = 157.6, outside [50, 100]; neither the measured tau gap nor the escape-rules measurement (TASK-M3-34) settled a change, so the owner decides; plan/KNOWN.md"]
 fn golden_anchors_burrau_integrator() {
     check_burrau::<DefaultOccupant>("Heggie × RK4");
 }

@@ -1,0 +1,23 @@
+{
+  "centred": {
+    "lock/set/skew/1": "7adbe901cee3fd25"
+  },
+  "command": "PRINCIPIA_RECORD_ESCAPE_LIVE=1 cargo test -p engine --test path_bitwise path_live_images_only_where_an_image_is",
+  "images": {
+    "lock/set/skew/1": "1602c297cbe85279",
+    "pan/skew/2": "1444b9ee5910c544",
+    "presets/z_q0 × z_q1": "20923642089b8745",
+    "presets/z_q2 × z_q3": "7ad629925e9a8395",
+    "presets/z_q3 × z_μ1": "89c15e6f5e90a0b0",
+    "presets/z_α × z_β": "20d8b9ee6c57ade8",
+    "presets/z_α × z_μ1": "5ddf890fd64bc355",
+    "presets/z_μ1 × z_μ2": "30a13c0d62722eed",
+    "slice/axis/0/0": "7adbe901cee3fd25",
+    "slice/deep/0/0": "7adbe901cee3fd25",
+    "slice/skew/0/0": "18a620f8e14fda25",
+    "tilt/skew/1": "3d689a89cb2e4df5",
+    "tilt_pair/skew/1": "bc15d4bad31447c8",
+    "zoom/skew/2": "7adbe901cee3fd25"
+  },
+  "what": "The chart-path baseline's images re-recorded for escape-live-label: the escape label live by default and the default rule Fewbody change the 8 × 8 field at horizon 3 of these cases; every other word of every case is the baseline's."
+}

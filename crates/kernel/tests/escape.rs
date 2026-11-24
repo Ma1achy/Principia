@@ -48,9 +48,7 @@ use kernel::detect::escape::{
 use kernel::driver::advance::{Advance, Cadence};
 use kernel::driver::cadence::WrapperCadence;
 use kernel::driver::substep::NsubThresholds;
-use kernel::driver::wrapper::{
-    integrate_detecting, integrate_resumed_with, integrate_with, WrapperUniforms,
-};
+use kernel::driver::wrapper::{integrate_resumed_with, integrate_with, WrapperUniforms};
 use kernel::generated::nsub_thresholds::NSUB_TABLE_ROWS;
 use kernel::occupant::kdk::Kdk;
 use kernel::occupant::rk4::Rk4;
@@ -494,14 +492,26 @@ fn ic_of(s: &State<f64>) -> Ic<f64> {
 }
 
 /// The wrapper's run of the fixture `name` to its `t_end` by the default occupant, the macro-step the sync quantum,
-/// with the wrapper's own cadence at `r_coll = 0`.
+/// with the wrapper's own cadence at `r_coll = 0`, under the stop option: these fixtures state when the first label
+/// fires, which is where that option ends the march (the default label is live; `tests/escape_live.rs`).
 fn wrapped(name: &str) -> SimStateBaseOf<f64> {
     let text = fixture(name);
     let steps = boundaries(num(&text, "t_end"), DELTA_SYNC);
-    integrate_detecting::<Default10, f64>(
+    stopping::<Default10, f64>(
         &ic_of(&state_of(&text)),
         &key(DELTA_SYNC, steps, 1),
         CollisionRadius::none(),
+    )
+}
+
+/// The wrapper's march under the closure rule, these fixtures' detector, with the stop option on.
+fn stopping<A: kernel::driver::advance::Advance, R: kernel::driver::wrapper::WrapperReal>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    radius: CollisionRadius,
+) -> SimStateBaseOf<R> {
+    kernel::driver::wrapper::integrate_detecting_rule::<A, R, kernel::detect::escape_rule::Closure<R>>(
+        ic, uniforms, radius, true,
     )
 }
 
@@ -597,7 +607,7 @@ fn escape_detector_hyperbolic_ejection() {
         n_max: 1,
         thresholds: key(DELTA_SYNC, steps, 1).thresholds,
     };
-    let out32 = integrate_detecting::<Default10, f32>(&s32, &uniforms, CollisionRadius::none());
+    let out32 = stopping::<Default10, f32>(&s32, &uniforms, CollisionRadius::none());
     let t32 = f64::from(tm_t_end_step(out32.times)) * DELTA_SYNC;
     println!(
         "hyperbolic_ejection at f32: state {} detail {} at t_end = {t32}",
@@ -1380,7 +1390,7 @@ struct Event {
 /// The wrapper's own cadence, watched: every internal step and every sampling point recorded with the escape
 /// detector's lagged register after it. `refresh` is the control's: the register rewritten at every sampling point.
 struct Watching {
-    inner: WrapperCadence<f64>,
+    inner: WrapperCadence<f64, kernel::detect::escape_rule::Closure<f64>>,
     events: Vec<Event>,
     refresh: bool,
 }
@@ -1388,7 +1398,12 @@ struct Watching {
 impl Watching {
     fn new(s: &State<f64>, refresh: bool) -> Self {
         Watching {
-            inner: WrapperCadence::new(&s.m, &s.r, &s.p),
+            inner: WrapperCadence::<f64, kernel::detect::escape_rule::Closure<f64>>::with_rule(
+                &s.m,
+                &s.r,
+                &s.p,
+                CollisionRadius::none(),
+            ),
             events: Vec::new(),
             refresh,
         }
@@ -1506,7 +1521,7 @@ negative_control!(
 );
 
 /// A fresh wrapper cadence that drops the re-boot hook ([`Cadence::resume`]): the register is the shape at the re-boot.
-struct NoReload(WrapperCadence<f64>);
+struct NoReload(WrapperCadence<f64, kernel::detect::escape_rule::Closure<f64>>);
 
 impl Cadence<f64> for NoReload {
     fn after_step(&mut self, state: &mut State<f64>, geom: &mut Geom<f64>) {
@@ -1534,23 +1549,30 @@ impl Cadence<f64> for NoReload {
 /// with a fresh cadence, the register reloaded by the wrapper's re-boot hook or not (`reload`), run on past the mark at
 /// `t = 120.4`: it goes on as the uncut march, which has not fired there (its chord is 0.558/d, about `4·10⁻³`), to
 /// the same state and register. The caller does not reload the register: the wrapper hands the stored state to the
-/// cadence ([`Cadence::resume`]).
+/// cadence ([`Cadence::resume`]). Under the stop option, so a firing the re-boot's wrong window makes ends the march
+/// and shows; live, it would be re-read at the next mark.
 fn check_reboot(reload: bool) {
     let s = state("hyperbolic_ejection");
     let ic = ic_of(&s);
     let (dt, cut, end) = (0.05, 2407, 2420);
-    let uncut = integrate_detecting::<Kdk, f64>(&ic, &key(dt, end, 1), CollisionRadius::none());
+    let uncut = stopping::<Kdk, f64>(&ic, &key(dt, end, 1), CollisionRadius::none());
     assert_eq!(
         sd_state(uncut.packed_a),
         STATE_BOUNDED,
         "the uncut march has not fired by t = 121"
     );
-    let stored = integrate_detecting::<Kdk, f64>(&ic, &key(dt, cut, 1), CollisionRadius::none());
+    let stored = stopping::<Kdk, f64>(&ic, &key(dt, cut, 1), CollisionRadius::none());
     assert_eq!(tm_t_end_step(stored.times), cut);
     // The stored register is the mark's at `t = 120`, not the cut state's shape: the cut is mid-window.
     let held = [stored._nhat_lag_0, stored._nhat_lag_1, stored._nhat_lag_2];
     assert!(chord(held, shape(stored.r, s.m)) > 1e-4);
-    let fresh = WrapperCadence::new(&s.m, &stored.r, &stored.p);
+    let fresh = WrapperCadence::<f64, kernel::detect::escape_rule::Closure<f64>>::with_rule(
+        &s.m,
+        &stored.r,
+        &stored.p,
+        CollisionRadius::none(),
+    )
+    .stopping_on_escape(true);
     let out = if reload {
         let mut cadence = fresh;
         let out = integrate_resumed_with::<Kdk, f64, _>(

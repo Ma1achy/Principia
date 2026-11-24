@@ -85,6 +85,9 @@ pub struct SimUniforms {
     pub delta0: Option<f64>,
     /// The `N_sub` thresholds `THR[1] … THR[L_max]` for `r_sub` and `gamma_sub`, f32 bit patterns (R-502).
     pub thresholds: NsubThresholds,
+    /// `stop_on_escape`: whether the first escape label stops the march and stays (`kernel::driver::cadence`'s note).
+    /// Off by default: the escape label is live at the playhead.
+    pub stop_on_escape: bool,
 }
 
 impl Default for SimUniforms {
@@ -111,6 +114,7 @@ impl Default for SimUniforms {
             n_renorm: None,
             delta0: None,
             thresholds: pack(&DEFAULT_THRESHOLD_BITS),
+            stop_on_escape: false,
         }
     }
 }
@@ -216,8 +220,9 @@ impl SimUniforms {
 
     /// `SimUniforms`' contribution to the sim key's bytes: each field in declaration order, a float by its f64 bits
     /// and an integer as a u32, big-endian; an optional field as a presence byte, 0 or 1, then its value when present;
-    /// and last the softening tag, [`Softening`] as a byte. The threshold table is derived from `r_sub`, `gamma_sub`
-    /// and `N_max`, so it adds nothing (R-502). The sim key's full composition is REQ-SCHED-007's (M4).
+    /// then `stop_on_escape` as a byte, 0 or 1; and last the softening tag, [`Softening`] as a byte. The threshold
+    /// table is derived from `r_sub`, `gamma_sub` and `N_max`, so it adds nothing (R-502). The sim key's full
+    /// composition is REQ-SCHED-007's (M4).
     pub fn sim_key_bytes(&self) -> Vec<u8> {
         let mut out = Vec::new();
         for x in [self.t_horizon, self.dt_macro] {
@@ -255,6 +260,7 @@ impl SimUniforms {
             }
             None => out.push(u8::from(false)),
         }
+        out.push(u8::from(self.stop_on_escape));
         out.push(self.softening() as u8);
         out
     }

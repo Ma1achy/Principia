@@ -264,6 +264,11 @@ impl<R: WrapperReal, C: Cadence<R>> Cadence<R> for Recorder<'_, R, C> {
     }
 
     #[inline]
+    fn escape_final(&self) -> bool {
+        self.inner.escape_final()
+    }
+
+    #[inline]
     fn non_finite(&mut self, detail: u32) {
         self.reported.fire(0, detail);
         self.inner.non_finite(detail);

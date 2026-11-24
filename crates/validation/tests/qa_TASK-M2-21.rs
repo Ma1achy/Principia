@@ -340,7 +340,7 @@ fn view(links: Links) -> SimConfig {
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 100.0 },
-        collision: Collision {},
+        collision: Collision::default(),
         quality: Quality {},
     }
 }

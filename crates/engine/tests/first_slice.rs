@@ -1244,7 +1244,9 @@ fn spreading(speed: f32) -> Ic<f32> {
 
 /// The harness's march labels escape, so the arms can read an escape flip: three bodies spreading at speed 10 (each
 /// body's `E_rel = ½·100·(3/2)² − 1/1.5 > 0`, and the shape point fixed, the triangle growing self-similarly) end
-/// `escape` before `T = 4`, on the default occupant and on the stand-in.
+/// `escape`, on the default occupant and on the stand-in. The label is live (escape-live-label): the march goes on to
+/// `T = 4` and the label is the one at the horizon, so the stop-time half of this check, that it ended before the horizon,
+/// went with the stop option (`kernel::driver::cadence`'s note).
 fn check_escapes(speed: f32) {
     let u = uniforms(T).expect("T is a valid horizon");
     let ic = spreading(speed);
@@ -1253,7 +1255,7 @@ fn check_escapes(speed: f32) {
         ("KDK", outcome::<Kdk>(&ic, &u)),
     ] {
         assert!(
-            got.state == STATE_ESCAPE && got.t_end_step < u.loop_values.horizon_steps,
+            got.state == STATE_ESCAPE,
             "{name}: three spreading bodies did not end in escape before the horizon: state {} at t_end_step {}",
             got.state,
             got.t_end_step

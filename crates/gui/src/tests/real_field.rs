@@ -31,9 +31,8 @@ const ESCAPE: u32 = 0;
 const BOUNDED: u32 = 1;
 const COLLISION: u32 = 2;
 
-/// The fixed frame's histogram, `(state, detail, samples)`: 248 samples a triple ejection (`escape`, `detail` 3), 4
-/// an escape of one body (`detail` 1), 2 bounded at the horizon of 50 and 2 a collision of pair 1 (bodies 1 and 3), no
-/// failure of any kind.
+/// The fixed frame's histogram, `(state, detail, samples)`: 248 samples a triple ejection (`escape`, `detail` 3), 6
+/// bounded at the horizon of 50 and 2 a collision of pair 1 (bodies 1 and 3), no failure of any kind.
 ///
 /// The start chart, "z_α × z_β", runs along `z_β`, so under the periodic `β` link it is a redefined plane (the same
 /// axes and window number, the base point's `z_β` converted): its 16 × 16 samples sit at other `β` than before, 2.0 rad
@@ -41,12 +40,11 @@ const COLLISION: u32 = 2;
 /// redefined. The frame the old plane showed, 253 triple ejections and 3 collisions, is held in
 /// `crates/engine/tests/field.rs` (`the_start_view_before_the_periodic_link_ends_the_same`): each old sample,
 /// converted point by point, decodes bit for bit as before and ends the same, so no outcome moved.
-const STORED: &[(u32, u32, usize)] = &[
-    (ESCAPE, 1, 4),
-    (ESCAPE, 3, 248),
-    (BOUNDED, 0, 2),
-    (COLLISION, 1, 2),
-];
+///
+/// Restored under escape-live-label's default, the Fewbody rule with the label live: the 248 triple ejections and the
+/// two collisions are unchanged; the 4 single-body escapes (body 1) the closure rule labelled by `t = 50` are not yet
+/// labelled by Fewbody's tidal test there, and read `bounded` (6 in all).
+const STORED: &[(u32, u32, usize)] = &[(ESCAPE, 3, 248), (BOUNDED, 0, 6), (COLLISION, 1, 2)];
 
 /// Asserts that `field`'s histogram is the stored one.
 fn check_histogram(field: &Field) {

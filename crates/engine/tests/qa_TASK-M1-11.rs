@@ -303,7 +303,7 @@ fn config(v: KernelVariant) -> SimConfig {
         integrator: Integrator {},
         kernel_variant: v,
         horizon: Horizon { t: 0.0 },
-        collision: Collision {},
+        collision: Collision::default(),
         quality: Quality {},
     }
 }

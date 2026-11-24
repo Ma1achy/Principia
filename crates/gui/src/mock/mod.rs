@@ -407,7 +407,7 @@ pub fn state(t: f64) -> (SimConfig, RenderState) {
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
             horizon: Horizon { t: MOCK_T_MAX },
-            collision: Collision {},
+            collision: Collision::default(),
             quality: Quality {},
         },
         RenderState {

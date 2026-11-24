@@ -225,6 +225,11 @@ are set by calibration (R-71):
 3. **`deep interior`**, where the transient population actually lives. The config chart's base rates
    are too high to discriminate.
 
+*23 Nov 2026 (escape-live-label): the owner reversed the termination ruling. The escape label is now live by
+default: the selected rule re-reads its label at every window mark, the march goes on, and the label at the playhead
+is the last mark's, free to change; stopping at the first label, which then stays, is the option `stop_on_escape`, off
+by default. The validation harness's post-escape march stays as it was.*
+
 **Collision stays terminal regardless** — it is a **singularity**, not a heuristic. There is
 genuinely nothing to integrate past.
 

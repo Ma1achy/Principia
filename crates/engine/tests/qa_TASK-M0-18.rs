@@ -43,7 +43,7 @@ fn sim() -> SimConfig {
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: 0.0 },
-        collision: Collision {},
+        collision: Collision::default(),
         quality: Quality {},
     }
 }

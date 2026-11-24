@@ -37,7 +37,8 @@ use kernel::payload::{
 };
 use kernel::shape::shape;
 
-use engine::precision::{integrate_ic, MarchKey64, SimState64};
+use engine::precision::{integrate_ic_rule, MarchKey64, SimState64};
+use kernel::detect::escape_rule::Closure;
 
 /// The escape firing as the harness saw it: the sampling point the detector fired at and the state there.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -146,7 +147,7 @@ pub fn distances(m: &[f64; 3], r: &[[f64; 2]; 3]) -> [f64; 3] {
 
 /// The production cadence with escape no longer ending the run, and the harness's records (the module's note).
 pub struct Harness {
-    inner: WrapperCadence<f64>,
+    inner: WrapperCadence<f64, Closure<f64>>,
     /// Set at the firing, until the macro-step it fell in has returned ([`Returned`]).
     awaiting: Rc<Cell<bool>>,
     n_lag: [f64; 3],
@@ -157,10 +158,13 @@ pub struct Harness {
 }
 
 impl Harness {
-    /// The harness cadence of a run from `ic` under the collision threshold of `key`.
+    /// The harness cadence of a run from `ic` under the collision threshold of `key`. Its production cadence runs under
+    /// the stop option, so the first firing is the one it keeps and reports, as these checks measure it; the march
+    /// itself goes on past it ([`Cadence::done`] below).
     pub fn new(ic: &Ic<f64>, key: &MarchKey64) -> Self {
         Harness {
-            inner: WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, key.radius),
+            inner: WrapperCadence::<f64, Closure<f64>>::with_rule(&ic.m, &ic.r, &ic.p, key.radius)
+                .stopping_on_escape(true),
             awaiting: Rc::new(Cell::new(false)),
             n_lag: shape(ic.r, ic.m),
             firing: None,
@@ -394,11 +398,17 @@ pub fn harness<A: Advance>(
     parallel(n, one)
 }
 
-/// The production buffer of `ics` under `keys`: each marched by `A` through the Precision ring's `integrate_ic`, as a
-/// pixel is, on every available core.
+/// The production buffer of `ics` under `keys`: each marched by `A` through the Precision ring's `integrate_ic_rule`
+/// under the closure rule, the detector these checks measure (the default is Fewbody since escape-live-label), on every
+/// available core, under the stop option: these checks measure the first firing, where that
+/// option ends the march (`kernel::driver::cadence`'s note).
 pub fn production<A: Advance>(ics: &[Ic<f64>], keys: &[MarchKey64]) -> Vec<SimState64> {
     parallel(ics.len(), |i| {
-        Ok::<_, String>(integrate_ic::<A>(&ics[i], None, &keys[i]))
+        let key = MarchKey64 {
+            stop_on_escape: true,
+            ..keys[i]
+        };
+        Ok::<_, String>(integrate_ic_rule::<A, Closure<f64>>(&ics[i], None, &key))
     })
     .expect("integrate_ic cannot fail")
 }

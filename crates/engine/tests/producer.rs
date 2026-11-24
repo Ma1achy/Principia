@@ -1705,7 +1705,8 @@ negative_control!(
 // ── The shape views (debug_tooling_plan §E; REQ-TOOL-037) ───────────────────────────────────────────────────────
 
 /// A sample that latched a terminal stores every word the same however far past it the horizon runs, so the live
-/// views over it are frozen: the head-on collision and the three-way escape, produced at their horizon `H`, at
+/// views over it are frozen: the head-on collision (an escape is a terminal only under the stop option), produced at its
+/// horizon `H`, at
 /// `H + 1` and at `2H`, at f32 and f64. `names` picks the samples (the control picks one with no terminal).
 fn check_frozen(names: &[&str]) {
     for &name in names {
@@ -1740,7 +1741,10 @@ fn check_frozen(names: &[&str]) {
 
 #[test]
 fn shape_views_terminal_frozen() {
-    check_frozen(&["head-on", "expanding"]);
+    // The three-way escape is no longer a terminal here: the escape label is live by default (escape-live-label) and
+    // the producer marches under the default, so only the collision latches; the stop option's latch is
+    // `kernel/tests/terminal.rs`'s.
+    check_frozen(&["head-on"]);
 }
 
 negative_control!(

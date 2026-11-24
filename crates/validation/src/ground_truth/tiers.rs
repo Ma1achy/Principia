@@ -116,6 +116,25 @@ pub fn check_burrau_label(state: &SimStateBaseOf<f64>, dt_macro: f64, scale: f64
     );
 }
 
+/// The Burrau anchor's criterion with the label live by default (escape-live-label): `stopped`, the march under the
+/// stop option, meets [`check_burrau_label`] (its first label, the label's time, in the window, naming the lightest
+/// body), and `live`, the same march with the label live, ends at its horizon on that same escape. Panics naming what
+/// failed.
+pub fn check_burrau_live(
+    stopped: &SimStateBaseOf<f64>,
+    live: &SimStateBaseOf<f64>,
+    dt_macro: f64,
+    scale: f64,
+    m: [f64; 3],
+) {
+    check_burrau_label(stopped, dt_macro, scale, m);
+    assert_eq!(
+        (sd_state(live.packed_a), sd_detail(live.packed_a)),
+        (sd_state(stopped.packed_a), sd_detail(stopped.packed_a)),
+        "the Burrau live label at the horizon is not the first label's escape"
+    );
+}
+
 /// The index of the lightest body: Szebehely & Peters' escaper.
 pub fn lightest(m: [f64; 3]) -> usize {
     (0..3).fold(0, |k, i| if m[i] < m[k] { i } else { k })

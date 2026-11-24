@@ -273,7 +273,8 @@ fn march<A: Advance>(
         );
     }
     let mut recorder = Recorder {
-        inner: WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, key.radius),
+        inner: WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, key.radius)
+            .stopping_on_escape(key.stop_on_escape),
         times: vec![0.0],
         path: vec![state_of(ic)],
     };

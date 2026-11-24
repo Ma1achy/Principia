@@ -464,7 +464,11 @@ pub struct Horizon {
 }
 
 /// Collision radius `r_coll` (gui_state_contract §2).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+///
+/// The stop option (`stop_on_escape`, escape-live-label) is not here: the plan is unclear on its group; chose the sim
+/// key's `SimUniforms` (`crate::contract::sim_uniforms`) and the march keys, because `SimConfig` is written in full and
+/// refuses a record missing a field, so a field added here would refuse every stored record.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Collision {}
 

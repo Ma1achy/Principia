@@ -728,10 +728,10 @@ fn check(prefixes: &[&str], variant: Variant) {
             .collect()
     };
     let expected = pick(match variant {
-        Variant::Centred => stored(),
+        Variant::Centred => with_live_images(stored(), "centred"),
         #[cfg(feature = "controls")]
-        Variant::CentredSettingOff => stored(),
-        _ => expected(),
+        Variant::CentredSettingOff => with_live_images(stored(), "centred"),
+        _ => with_live_images(expected(), "images"),
     });
     assert!(
         !expected.is_empty(),
@@ -906,6 +906,142 @@ fn record_lock_stage2() {
     });
     std::fs::write(
         root().join(STAGE2),
+        serde_json::to_string_pretty(&text).expect("JSON") + "\n",
+    )
+    .expect("written");
+}
+
+// ── The images under the live escape label (escape-live-label) ─────────────────────────────────────────────────────
+//
+// The escape label became live by default and the default rule Fewbody, so the 8 × 8 field a latent case images at
+// horizon 3 changes where a sample's label at the horizon changes; nothing of the chart path does. Measured before the
+// overlay was written: with the old behaviour put back (the closure rule, the stop option on), every case is bit for bit
+// its stored digest; with the new default, 14 cases differ, each in its `img=` alone. Those images are re-recorded in
+// `escape_live.json`, which replaces the `img=` word of its cases and nothing else. **The criterion**, written before it
+// was recorded: the overlay names only cases that carry an image, each image differs from the one it replaces, and
+// every other word of every case is still bit for bit the baseline's (the tests above).
+
+/// The re-recorded images' file, relative to the workspace root.
+const LIVE_IMAGES: &str = "fixtures/chart_composition/escape_live.json";
+
+/// Set, `path_live_images_only_where_an_image_is` first re-records the images: `PRINCIPIA_RECORD_ESCAPE_LIVE=1 cargo test
+/// -p engine --test path_bitwise path_live_images_only_where_an_image_is`, by hand, when the field's physics is meant to
+/// change.
+const RECORD_LIVE: &str = "PRINCIPIA_RECORD_ESCAPE_LIVE";
+
+/// The re-recorded images of `set`, case name to its `img=` word's value: `images` against the baseline with the lock's
+/// stage-2 cases, `centred` against the stage-1 baseline the centre-on-pin lock is checked with.
+fn live_images_of(set: &str) -> BTreeMap<String, String> {
+    let text = std::fs::read_to_string(root().join(LIVE_IMAGES)).expect("the re-recorded images");
+    let value: serde_json::Value = serde_json::from_str(&text).expect("JSON");
+    serde_json::from_value(value[set].clone()).expect("the images")
+}
+
+/// The re-recorded images against the baseline with the lock's stage-2 cases.
+fn live_images() -> BTreeMap<String, String> {
+    live_images_of("images")
+}
+
+/// The `img=` word of `digest`, if it has one.
+fn img_of(digest: &str) -> Option<&str> {
+    digest.split(' ').find_map(|w| w.strip_prefix("img="))
+}
+
+/// `cases` with each re-recorded image of `set` in place of its `img=` word.
+fn with_live_images(cases: BTreeMap<String, String>, set: &str) -> BTreeMap<String, String> {
+    let images = live_images_of(set);
+    cases
+        .into_iter()
+        .map(|(name, digest)| match images.get(&name) {
+            Some(img) => {
+                let words: Vec<String> = digest
+                    .split(' ')
+                    .map(|w| {
+                        if w.starts_with("img=") {
+                            format!("img={img}")
+                        } else {
+                            w.to_owned()
+                        }
+                    })
+                    .collect();
+                (name, words.join(" "))
+            }
+            None => (name, digest),
+        })
+        .collect()
+}
+
+/// The re-recorded images `images` replace images of `base` only, each a changed one.
+fn check_live_images(images: BTreeMap<String, String>, base: BTreeMap<String, String>) {
+    let wrong: Vec<String> = images
+        .iter()
+        .filter(
+            |(name, img)| match base.get(*name).and_then(|d| img_of(d)) {
+                Some(old) => old == img.as_str(),
+                None => true,
+            },
+        )
+        .map(|(name, _)| name.clone())
+        .collect();
+    assert!(
+        wrong.is_empty(),
+        "re-recorded but not a case with an image, or unchanged: {wrong:?}"
+    );
+    assert!(!images.is_empty(), "no image re-recorded");
+}
+
+#[test]
+fn path_live_images_only_where_an_image_is() {
+    if std::env::var_os(RECORD_LIVE).is_some() {
+        record_live_images();
+    }
+    check_live_images(live_images(), expected());
+    check_live_images(live_images_of("centred"), stored());
+}
+
+/// The re-recorded images with a case that has no image among them.
+#[cfg(feature = "controls")]
+fn with_an_imageless_case() -> BTreeMap<String, String> {
+    let mut images = live_images();
+    images.insert("chart_switch/le".into(), "0000000000000000".into());
+    images
+}
+
+negative_control!(
+    path_live_images_only_where_an_image_is,
+    "a case with no image among the re-recorded ones",
+    expected = "re-recorded but not a case with an image",
+    check_live_images(with_an_imageless_case(), expected())
+);
+
+/// Writes the re-recorded images: every case whose `img=` the object now gives differently from the baseline's (see
+/// [`RECORD_LIVE`]).
+fn record_live_images() {
+    let changed = |base: BTreeMap<String, String>, now: BTreeMap<String, String>| {
+        now.into_iter()
+            .filter_map(|(name, digest)| {
+                let new = img_of(&digest)?.to_owned();
+                let old = base.get(&name).and_then(|d| img_of(d))?;
+                (old != new).then_some((name, new))
+            })
+            .collect::<BTreeMap<String, String>>()
+    };
+    let images = changed(expected(), record(Variant::Object));
+    let centred = changed(
+        stored(),
+        record(Variant::Centred)
+            .into_iter()
+            .filter(|(name, _)| name.starts_with("lock/"))
+            .collect(),
+    );
+    let text = serde_json::json!({
+        "what": "The chart-path baseline's images re-recorded for escape-live-label: the escape label live by default and the default rule Fewbody change the 8 × 8 field at horizon 3 of these cases; every other word of every case is the baseline's.",
+        "command": "PRINCIPIA_RECORD_ESCAPE_LIVE=1 cargo test -p engine --test path_bitwise path_live_images_only_where_an_image_is",
+        "images": images,
+        "centred": centred,
+    });
+    std::fs::write(
+        root().join(LIVE_IMAGES),
         serde_json::to_string_pretty(&text).expect("JSON") + "\n",
     )
     .expect("written");

@@ -95,7 +95,7 @@ pub fn sim(plane: Plane) -> SimConfig {
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
         horizon: Horizon { t: IMAGE_HORIZON },
-        collision: Collision {},
+        collision: Collision::default(),
         quality: Quality {},
     }
 }
