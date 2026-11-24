@@ -16,9 +16,10 @@
 //!   points: fresh 0xFFFF, entry writes the code of the last longitude outside, inside holds, exit adds
 //!   `wrap(exit − decode(code))` and writes 0xFFFF, exactly ±π adds +π, an IC inside adds nothing at its first exit;
 //!   "inside" decided from the current state alone, agreeing with `√(n_u² + n_v²) < r_pole` written here and invariant
-//!   under any power-of-two scale of the configuration (a branch input every backend must decide alike, so no
-//!   subnormal intermediate); and on a real march through the disc, outside always 0xFFFF and descriptor bits 10–14
-//!   `I_max`'s level, never decreasing, bit 15 the departed bit's (`qa_m311_theta_hold_*`).
+//!   under any power-of-two scale of the configuration (a branch input, so built only from operations every IEEE
+//!   backend rounds alike, with no subnormal intermediate); and on a real march through the disc, outside always
+//!   0xFFFF and descriptor bits 10–14 `I_max`'s level, never decreasing, bit 15 the departed bit's
+//!   (`qa_m311_theta_hold_*`).
 //! - The split: a march through the disc, and one from an IC inside it, at f32 and f64, as one call and as
 //!   k ∈ {2, 3, 7} resumed calls split on the entry step, strictly inside and on the exit step, each resume from the
 //!   stored `SimState` with `packed_a` put through the generated unpack and pack: `θ̃`'s bits, `_reserved` and the
@@ -1036,7 +1037,8 @@ type Disc<R> = fn([[R; 2]; 3], [R; 3], R) -> bool;
 /// The march's disc test at `R` against `√(n_u² + n_v²) < r_pole` written here, on near-pole configurations whose
 /// radius is at least 2% from `r_pole` (beyond `R`'s round-off of the radius); and invariant under every power-of-two
 /// scale `2^k`, `k` over `scales`, which commutes exactly with every operation unless an intermediate underflows or
-/// overflows (none may: a branch input must agree across backends). Returns the counts inside and outside.
+/// overflows, and on these scales none does (a branch input may have no subnormal
+/// intermediate). Returns the counts inside and outside.
 fn check_disc<R: Prec>(test: Disc<R>, scales: std::ops::RangeInclusive<i32>) -> (usize, usize) {
     let rp: R = r_pole();
     let rp64 = wide(rp);
@@ -1252,8 +1254,8 @@ fn check_march_holds<R: Prec>() {
         let states = path(&ic, PASS_DT, PASS_STEPS);
         let (entry, exit) = check_march_hold(&states, &ic);
         assert!(exit > entry + 2, "the passage is {entry} → {exit}");
-        // A branch input built alike on every backend: whether a state is inside agrees with the radius written here,
-        // away from the edge.
+        // The disc test is a branch input: whether a state is inside agrees with the radius written here, away from
+        // the edge.
         for (k, s) in states.iter().enumerate() {
             let r = s.r.map(|v| v.map(wide));
             let rad = pole_radius(r, MASSES);
