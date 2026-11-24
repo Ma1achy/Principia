@@ -320,7 +320,8 @@ negative_control!(
 // ── Detection only at the macro-step: the control the rotation exists for ────────────────────────────────────────────
 
 /// The detector fed only each macro-step's last state, read from the run's own substeps: the "once per macro-step"
-/// detection the contract forbids, with its letters through §1's literal reading into the word.
+/// detection the payload design forbids (dd_simstate_payload), with its letters through §1's literal reading into
+/// the word.
 #[cfg(feature = "controls")]
 fn per_macro_step(ic: &Ic<f64>, u: &WrapperUniforms<f64>, words: &mut [FreeGroupWord]) -> u32 {
     use kernel::word::{state_cuts, CrossingDetector, CrossingHook};

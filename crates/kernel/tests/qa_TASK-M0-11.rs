@@ -236,9 +236,9 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// Descriptor bits 10–14 hold the Chazy latch `I_max` and bit 15 the departed bit (`t_min`'s departure threshold on
-// the shape sphere), each a versioned assignment: no pack or setter of `packed_a` writes them but `I_max`'s and the
-// departed bit's own, over every in-range field value and a spread of d_min values.
+// Descriptor bits 10–14 hold the Chazy latch `I_max` and bit 15 the departed bit (latched once the shape's chord first
+// exceeds the register's `delta_dep`), each a versioned assignment: no pack or setter of `packed_a` writes them but
+// `I_max`'s and the departed bit's own, over every in-range field value and a spread of d_min values.
 
 /// `d_min` values across binary16's range and its edges: zero, the subnormal floor, normal values, the clamp, beyond
 /// it, and infinity. NaN and negative values, which the debug pack refuses, go through
