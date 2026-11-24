@@ -1,7 +1,7 @@
-//! The descriptor's `rho_angle` read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors (R-628; dd_decoder
+//! The descriptor's `rho_angle` read from the configuration block's own `(ρ̃, λ̃)`, `Φ`'s vectors (dd_decoder
 //! §3.6; `kernel::decode::descriptor::config_angle`), on the CPU at f32 and f64:
 //! - `rho_angle_latent_is_beta`: on the latent chart's decode, whose `ρ̃ = cos α·(1, 0)` and `λ̃ = sin α·(cos β, sin β)`
-//!   (dd_decoder §3.2), `rho_angle` is the configuration block's `β`, on the circle (R-898), within a few ε of it, over
+//!   (dd_decoder §3.2), `rho_angle` is the configuration block's `β`, on the circle, within a few ε of it, over
 //!   random `z`, and is `config_angle` of the decode's configuration bit for bit; `η_E` (`energy_norm::apply_shared`,
 //!   and `apply` through the free blocks) keeps it, bit for bit, since it moves only the momenta.
 //! - `rho_angle_shape_pole`: on the shape sphere's exponential map at `(½, ½)`, where the point is `n₀`, at the exact
@@ -9,8 +9,8 @@
 //!   near it, `n₀ = (+1, ε, 0)` and `(+1, 0, ε)` with `|ε|` from `10⁻¹²` to `10⁻⁴`, both signs, the f32 decode's
 //!   `rho_angle` is within `4ε₃₂` of `Φ`'s f64 angle (physics measured at most `1.6·10⁻⁷` rad).
 //!
-//! Control: `rho_angle` read from the f32 decode's re-centred positions (`descriptor::describe`, the form before
-//! R-628), held to `Φ`'s f64 angle by the same check, is far from it near the pole: `C`'s rounding residue in `λ`
+//! Control: `rho_angle` read from the f32 decode's re-centred positions (`descriptor::describe`, which reads
+//! positions, not `Φ`'s vectors), held to `Φ`'s f64 angle by the same check, is far from it near the pole: `C`'s rounding residue in `λ`
 //! swamps `λ̃` there.
 
 use kernel::chart::{Chart, ShapeMap, ShapeSphere};
@@ -81,7 +81,7 @@ fn check_latent<R: Width>(rewrite: fn(Decoded<R>) -> Decoded<R>) {
             "rho_angle is not the configuration's at {at}"
         );
         let (g, b): (f64, f64) = (got.into(), beta.into());
-        // `β = z_β` is periodic, anywhere on the line (R-898): the two compared on the circle.
+        // `β = z_β` is periodic, anywhere on the line: the two compared on the circle.
         let tau = std::f64::consts::TAU;
         let off = (g - b) - tau * ((g - b) / tau).round();
         assert!(
@@ -112,7 +112,7 @@ fn rho_angle_latent_is_beta() {
     check_latent::<f64>(|n| n);
 }
 
-/// `n` with its descriptor rewritten by `describe` from its positions, as `η_E` rewrote it before R-628.
+/// `n` with its descriptor rewritten by `describe` from its positions, not from `Φ`'s vectors.
 #[cfg(feature = "controls")]
 fn positional<R: Width>(n: Decoded<R>) -> Decoded<R> {
     Decoded {

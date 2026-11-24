@@ -1,6 +1,6 @@
-//! qa's tests for TASK-M2-37, fix round 6: a NaN mass on the mass-ratio chart, at the pixel and over every body pair
+//! qa's tests: a NaN mass on the mass-ratio chart, at the pixel and over every body pair
 //! (chart_reference §2.1: "every pixel's masses are positive and sum to 1"; "A pixel whose ratio is at or below 0, or
-//! is not realised, is not a system"; REQ-CHART-067, REQ-CHART-068). Written from that paragraph. A NaN compares false
+//! is not realised, is not a system"). Written from that paragraph. A NaN compares false
 //! with everything, so a test of "positive" or "within `ε_μ`" that drops it would pass one.
 //!
 //! - `qa_nan_mass_no_warped_chart`: a NaN in either mass control, or in both, offers no warped chart, under either link
