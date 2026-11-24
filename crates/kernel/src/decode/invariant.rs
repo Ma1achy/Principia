@@ -4,7 +4,7 @@
 //!
 //! ```text
 //! (i)   ω = L_z/I            vᵢ⁽ᴸ⁾ = ω·J rᵢ          K_min = L_z²/(2I)           J(x, y) = (−y, x)
-//! (ii)  the seed in force: the uniform expansion, vᵢ = rᵢ, so w = r/√I
+//! (ii)  the seed in force (R-934): the uniform expansion, vᵢ = rᵢ, so w = r/√I
 //!       w⁽¹⁾ᵢ = vᵢ − c/M, c = Σ mᵢvᵢ       w⁽²⁾ᵢ = w⁽¹⁾ᵢ − β_L·J rᵢ, β_L = L(w⁽¹⁾)/I, L(w) = Σ mᵢ(rᵢ × wᵢ)_z
 //!       wᵢ = w⁽²⁾ᵢ/‖w⁽²⁾‖_m;  ‖w⁽²⁾‖²_m = 0, which is I = 0 about the CoM, → DEGENERATE
 //! (iii) K* < K_min → infeasible;  else a = √(2(K* − K_min)),  vᵢ = vᵢ⁽ᴸ⁾ + a·wᵢ,  pᵢ = mᵢvᵢ

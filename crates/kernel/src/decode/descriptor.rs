@@ -9,7 +9,7 @@
 //! rho_mag        ‖ρ̃‖ = √μ_ρ·‖ρ‖,  ρ = r₁ − r₀,                       μ_ρ = m₀m₁/M₀₁
 //! lambda_mag     ‖λ̃‖ = √μ_λ·‖λ‖,  λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁,        μ_λ = m₂M₀₁
 //! rho_ratio      ‖ρ̃‖/‖λ̃‖
-//! rho_angle      atan2(ρ̃ × λ̃, ρ̃ · λ̃) of the configuration block's ρ̃, λ̃, radians on (−π, π]
+//! rho_angle      atan2(ρ̃ × λ̃, ρ̃ · λ̃) of the configuration block's ρ̃, λ̃ (R-628), radians on (−π, π]
 //! K_0            Σᵢ ‖pᵢ‖²/2mᵢ
 //! V_0            −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖                 (G = 1)
 //! virial_ratio   2K₀/|V₀|
