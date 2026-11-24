@@ -1,0 +1,6 @@
+{
+  "gate": "burrau-smoke",
+  "inputs": ["sp1.json", "control_yoshida4.json"],
+  "threshold": { "value": 100.0, "requirement": "REQ-VAL-132", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-132" }
+}

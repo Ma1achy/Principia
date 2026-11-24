@@ -107,6 +107,32 @@ pub struct Start {
     pub motion: Motion,
 }
 
+/// What a run does besides integrating its start (SP-2, TASK-M3-27): both default to nothing, and a run without them
+/// is [`run`]'s, step for step.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Extras {
+    /// A decimal offset added to one starting position at the rung's precision, so a published start such as
+    /// `x = 1.0000000001` enters exactly as its digits say rather than as the f64 nearest them.
+    pub nudge: Option<Nudge>,
+    /// An output time at which, once its state is recorded, every velocity is reversed, `vᵢ → −vᵢ`, at the rung's
+    /// precision. The march then runs on to the later output times: by time-reversal symmetry it retraces its path, so
+    /// at twice this time the exact flow is back at the start.
+    pub reverse_at: Option<f64>,
+}
+
+/// A decimal offset `numerator·10^−exponent` on body `body`'s coordinate `axis` (0 for `x`, 1 for `y`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Nudge {
+    /// The body.
+    pub body: usize,
+    /// The coordinate: 0 for `x`, 1 for `y`.
+    pub axis: usize,
+    /// The offset's numerator, signed.
+    pub numerator: i64,
+    /// The power of ten it is divided by.
+    pub exponent: u32,
+}
+
 /// Why a rung's run stopped short of its last output time.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Failure {
@@ -434,6 +460,56 @@ pub fn scaled(a: &[Big], b: &[Big], m: &[f64; 3], gm: f64) -> f64 {
         .fold(0.0f64, f64::max)
 }
 
+/// [`scaled`] on two phase-space points held in f64, `x₀ y₀ x₁ y₁ x₂ y₂` then the velocities: the largest, over the
+/// bodies, of `|Δrᵢ|/R` and `|Δvᵢ|/V`, the scales [`scales`] of `b`. For a state compared with a published one, whose
+/// digits past f64's are not the comparison's.
+pub fn scaled_f64(a: &[f64; 12], b: &[f64; 12], m: &[f64; 3], gm: f64) -> f64 {
+    let (size, speed) = scales(b, m, gm);
+    (0..3)
+        .map(|i| {
+            let dr = (a[2 * i] - b[2 * i]).hypot(a[2 * i + 1] - b[2 * i + 1]) / size;
+            let dv = (a[6 + 2 * i] - b[6 + 2 * i]).hypot(a[7 + 2 * i] - b[7 + 2 * i]) / speed;
+            dr.max(dv)
+        })
+        .fold(0.0f64, f64::max)
+}
+
+/// The [`scaled`] distance between two runs' states at output `k`, at full precision, the scales the second run's:
+/// [`disagreement`] at one output time. Infinite where either run has no output `k`.
+pub fn disagreement_at(coarse: &Run, fine: &Run, k: usize) -> f64 {
+    match (coarse.outputs.get(k), fine.outputs.get(k)) {
+        (Some(a), Some(b)) => scaled(&a.y, &b.y, &b.masses, fine.gm),
+        _ => f64::INFINITY,
+    }
+}
+
+/// The [`scaled`] distance of `run`'s state at output `k` from a published state given as decimal strings,
+/// `x₀ y₀ x₁ y₁ x₂ y₂` then the velocities, each read exactly and rounded to the run's precision, so the comparison
+/// resolves digits past f64's. The scales are the run's state's. `Err` names a string that is not a decimal number,
+/// or an output the run does not have.
+pub fn scaled_to_decimal(run: &Run, k: usize, b: &[&str; 12]) -> Result<f64, String> {
+    let o = run
+        .outputs
+        .get(k)
+        .ok_or_else(|| format!("the run has no output {k}"))?;
+    let bits = run.rung.bits;
+    let big: Vec<Big> = b
+        .iter()
+        .map(|s| {
+            s.trim()
+                .parse::<FBig<HalfEven, 10>>()
+                .map(|d| {
+                    d.with_base_and_precision::<2>(bits)
+                        .value()
+                        .with_precision(bits)
+                        .value()
+                })
+                .map_err(|e| format!("`{s}` is not a decimal number: {e:?}"))
+        })
+        .collect::<Result<_, _>>()?;
+    Ok(scaled(&big, &o.y, &o.masses, run.gm))
+}
+
 /// The disagreement between two runs of the same start and output times: the largest [`scaled`] distance between their
 /// states at any output time, the scales the second run's. Infinite where they reached different numbers of outputs.
 pub fn disagreement(coarse: &Run, fine: &Run) -> f64 {
@@ -477,6 +553,18 @@ impl Output {
 /// `start` integrated by one rung, landing on each of `times` (finite, positive, increasing), within `max_steps` step
 /// attempts.
 pub fn run(start: &Start, times: &[f64], rung: Rung, max_steps: u64) -> Result<Run, Failure> {
+    run_with(start, times, rung, max_steps, &Extras::default())
+}
+
+/// [`run`] with `extras`: a nudge on the start, a velocity reversal at an output time ([`Extras`]). A reversal time that
+/// is not one of `times` is refused.
+pub fn run_with(
+    start: &Start,
+    times: &[f64],
+    rung: Rung,
+    max_steps: u64,
+    extras: &Extras,
+) -> Result<Run, Failure> {
     let finite = start
         .m
         .iter()
@@ -487,7 +575,15 @@ pub fn run(start: &Start, times: &[f64], rung: Rung, max_steps: u64) -> Result<R
     let increasing = times.first().is_some_and(|&t| t > 0.0)
         && times.iter().all(|t| t.is_finite())
         && times.windows(2).all(|w| w[0] < w[1]);
-    if !finite || start.m.iter().any(|&m| m <= 0.0) || start.g <= 0.0 || !increasing {
+    let reverse_ok = extras.reverse_at.is_none_or(|t| times.contains(&t));
+    let nudge_ok = extras.nudge.is_none_or(|n| n.body < 3 && n.axis < 2);
+    if !finite
+        || start.m.iter().any(|&m| m <= 0.0)
+        || start.g <= 0.0
+        || !increasing
+        || !reverse_ok
+        || !nudge_ok
+    {
         return Err(Failure::Refused);
     }
     let bits = rung.bits;
@@ -509,6 +605,20 @@ pub fn run(start: &Start, times: &[f64], rung: Rung, max_steps: u64) -> Result<R
         y.push(ctx.big(start.r[i][0]));
         y.push(ctx.big(start.r[i][1]));
     }
+    if let Some(n) = extras.nudge {
+        let ten = ctx.int(10);
+        let mut scale = ctx.int(1);
+        for _ in 0..n.exponent {
+            scale = &scale * &ten;
+        }
+        let offset = ctx.int(n.numerator.unsigned_abs()) / scale;
+        let k = 2 * n.body + n.axis;
+        y[k] = if n.numerator < 0 {
+            &y[k] - &offset
+        } else {
+            &y[k] + &offset
+        };
+    }
     for i in 0..3 {
         for c in 0..2 {
             let w = ctx.big(start.w[i][c]);
@@ -520,7 +630,7 @@ pub fn run(start: &Start, times: &[f64], rung: Rung, max_steps: u64) -> Result<R
     }
     let gm = start.g * (start.m[0] + start.m[1] + start.m[2]);
     let e0 = ctx.energy(&y);
-    let l0 = ctx.lz(&y);
+    let mut l0 = ctx.lz(&y);
     let l_scale = {
         let s: f64 = (0..3)
             .map(|i| {
@@ -662,6 +772,14 @@ pub fn run(start: &Start, times: &[f64], rung: Rung, max_steps: u64) -> Result<R
             l_scale,
             start.m,
         ));
+        // The reversal: `vᵢ → −vᵢ` exactly (a sign at full precision), after the state is recorded. `L_z` changes sign
+        // with the velocities, so its reference does too; the energy is even in them and keeps its own.
+        if extras.reverse_at == Some(t_out) {
+            for v in &mut y[6..12] {
+                *v = -v.clone();
+            }
+            l0 = -l0;
+        }
     }
     Ok(Run {
         rung,
@@ -675,11 +793,21 @@ pub fn run(start: &Start, times: &[f64], rung: Rung, max_steps: u64) -> Result<R
 
 /// The ladder run on `start` to `times` (the module's note): the converged result, or why there is none.
 pub fn converge(start: &Start, times: &[f64], ladder: &Ladder) -> Result<Converged, NotConverged> {
+    converge_with(start, times, ladder, &Extras::default())
+}
+
+/// [`converge`], each rung run with `extras` ([`run_with`]).
+pub fn converge_with(
+    start: &Start,
+    times: &[f64],
+    ladder: &Ladder,
+    extras: &Extras,
+) -> Result<Converged, NotConverged> {
     let mut runs: Vec<Run> = Vec::new();
     let mut disagreement_seen: Vec<f64> = Vec::new();
     for j in 0..ladder.rungs {
         let rung = ladder.rung(j);
-        let this = match run(start, times, rung, ladder.max_steps) {
+        let this = match run_with(start, times, rung, ladder.max_steps, extras) {
             Ok(r) => r,
             Err(failure) => {
                 return Err(NotConverged::Failed {

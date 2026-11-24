@@ -27,9 +27,11 @@
 //! with no GPU ([`MeasurementGate`]). What it measures runs under its flags, which assert nothing.
 
 pub mod ablation;
+pub mod burrau;
 pub mod figure_eight;
 pub mod lagrange;
 pub mod order_scaling;
+pub mod replication;
 pub mod report;
 pub mod reregistration;
 pub mod symplectic;
@@ -119,6 +121,7 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &symplectic::SymplecticDriftGate,
     &crate::reference::brutus_gate::ReferenceConvergenceGate,
     &crate::reversibility::ReversibilityXiGate,
+    &burrau::BurrauSmokeGate,
 ];
 
 /// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.
@@ -571,9 +574,14 @@ fn read_input(path: &Path) -> Result<(serde_json::Value, Expected), String> {
     Ok((value, expected))
 }
 
-/// Runs the flags `args` of the gate `name` on the workspace at `root`: a measurement gate's, or a gate's own
-/// ([`Gate::flags`]).
+/// Runs the flags `args` of the gate `name` on the workspace at `root`: the replication scoring command's
+/// ([`replication::command`]), a measurement gate's, or a gate's own ([`Gate::flags`]).
 pub fn run_flags(root: &Path, name: &str, args: &[&str]) -> Result<(), String> {
+    if name == replication::NAME {
+        let text = replication::command(replication::TARGETS, root, &out_dir(root), args)?;
+        println!("{text}");
+        return Ok(());
+    }
     if let Some(g) = measurement(name) {
         return g.flags(root, args);
     }
@@ -643,6 +651,9 @@ fn run_measurement(root: &Path, g: &dyn MeasurementGate, out: &Path) -> Result<(
 /// Runs the gate `name` on each of its inputs under `root`, writing reports under `out`, and printing each outcome.
 /// Fails naming each input whose outcome is not its expected one.
 pub fn run(root: &Path, name: &str, out: &Path) -> Result<(), String> {
+    if name == replication::NAME {
+        return replication::command(replication::TARGETS, root, out, &[]).map(|_| ());
+    }
     if let Some(g) = measurement(name) {
         return run_measurement(root, g, out);
     }

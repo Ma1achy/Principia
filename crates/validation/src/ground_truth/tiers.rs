@@ -102,18 +102,33 @@ pub const BURRAU_WINDOW: [f64; 2] = [50.0, 100.0];
 /// [`BURRAU_WINDOW`]. `dt_macro` is the march's macro-step and `scale` the canonical time per unit of Szebehely &
 /// Peters' ([`super::burrau_time_scale`]). Panics naming what failed.
 pub fn check_burrau_label(state: &SimStateBaseOf<f64>, dt_macro: f64, scale: f64, m: [f64; 3]) {
+    if let Err(e) = burrau_label(state, dt_macro, scale, m) {
+        panic!("{e}");
+    }
+}
+
+/// [`check_burrau_label`]'s verdict: `Err` naming what failed.
+pub fn burrau_label(
+    state: &SimStateBaseOf<f64>,
+    dt_macro: f64,
+    scale: f64,
+    m: [f64; 3],
+) -> Result<(), String> {
     let (code, detail) = (sd_state(state.packed_a), sd_detail(state.packed_a));
     let t = f64::from(tm_t_end_step(state.times)) * dt_macro / scale;
     let lightest = lightest(m);
-    assert!(
-        code == STATE_ESCAPE && detail as usize == lightest,
-        "the Burrau march does not end in the lightest body's escape: state {code}, detail {detail}, at {t:.3} of \
-         S&P's units (the lightest is body {lightest})"
-    );
-    assert!(
-        (BURRAU_WINDOW[0]..=BURRAU_WINDOW[1]).contains(&t),
-        "the Burrau escape fires at {t:.3} of S&P's units, outside {BURRAU_WINDOW:?}"
-    );
+    if !(code == STATE_ESCAPE && detail as usize == lightest) {
+        return Err(format!(
+            "the Burrau march does not end in the lightest body's escape: state {code}, detail {detail}, at {t:.3} of \
+             S&P's units (the lightest is body {lightest})"
+        ));
+    }
+    if !(BURRAU_WINDOW[0]..=BURRAU_WINDOW[1]).contains(&t) {
+        return Err(format!(
+            "the Burrau escape fires at {t:.3} of S&P's units, outside {BURRAU_WINDOW:?}"
+        ));
+    }
+    Ok(())
 }
 
 /// The Burrau anchor's criterion with the label live by default (escape-live-label): `stopped`, the march under the
@@ -127,12 +142,30 @@ pub fn check_burrau_live(
     scale: f64,
     m: [f64; 3],
 ) {
-    check_burrau_label(stopped, dt_macro, scale, m);
-    assert_eq!(
+    if let Err(e) = burrau_live(stopped, live, dt_macro, scale, m) {
+        panic!("{e}");
+    }
+}
+
+/// [`check_burrau_live`]'s verdict: `Err` naming what failed.
+pub fn burrau_live(
+    stopped: &SimStateBaseOf<f64>,
+    live: &SimStateBaseOf<f64>,
+    dt_macro: f64,
+    scale: f64,
+    m: [f64; 3],
+) -> Result<(), String> {
+    burrau_label(stopped, dt_macro, scale, m)?;
+    let (a, b) = (
         (sd_state(live.packed_a), sd_detail(live.packed_a)),
         (sd_state(stopped.packed_a), sd_detail(stopped.packed_a)),
-        "the Burrau live label at the horizon is not the first label's escape"
     );
+    if a != b {
+        return Err(format!(
+            "the Burrau live label at the horizon is not the first label's escape: live {a:?}, first {b:?}"
+        ));
+    }
+    Ok(())
 }
 
 /// The index of the lightest body: Szebehely & Peters' escaper.
