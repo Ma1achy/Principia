@@ -69,8 +69,8 @@
 //! `sin(r)/r` from there up. The form has a cut because one with none would be the kernel's own `sin` at every `r`,
 //! which is not built. `cos(r)` stays the backend's. `r²` is the `‖d‖²` of `d`'s `fma` chain
 //! (`square`). That select chooses between two forms of one continuous value and writes no tag, so it need not agree
-//! across backends, and the rule for a branch input that must agree (gpu_determinism_note) does not bind it: the chain
-//! gives no such agreement.
+//! across backends, and the rule for a branch input that must agree (gpu_determinism_note rule 6) does not bind it: the
+//! chain gives no such agreement.
 //!
 //! **`p = −0`** (pitfalls §11). The point's `n₁ = sin φ·sin θ` is `−0` wherever one
 //! factor is a zero and the other negative: on the `L⁺` row (`t = 1`, `φ = +0`) for every `s ∈ (½, 1)`, where

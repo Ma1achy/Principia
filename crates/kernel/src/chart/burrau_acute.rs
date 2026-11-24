@@ -46,7 +46,8 @@
 //! momenta finite, as on the `ν` axis's charts.
 //!
 //! **Past `[0,1]²`** each axis's extension type is chart_reference §5.4's: `θ` and `K` bounded, `L_z`
-//! and δm affine; this module does not declare them in code.
+//! and δm affine; `Φ_θ,K`'s are declared in code by its `super::energy::Mapped` wrapper's
+//! `extension`, and this module declares none.
 
 use spirv_std::num_traits::Float;
 

@@ -81,8 +81,8 @@
 //! in force, the expansion `w = r/√I` ([`SeedRule::Expansion`], the decoder's `construct_expansion`), on every
 //! configuration, so an entered pair lands where the clicked pixel does. Where no seed qualifies, the fibre returns
 //! [`Lookup::Degenerate`], the construction's `Outcome::Degenerate`, the label the pixel path gives: under the expansion
-//! only at `I = 0`, which no configuration of the canonical-frame decode has. The older seed rule stays a named legacy
-//! option ([`SeedRule::Decoded`], decided on `z_α`; [`SeedRule::ByNorms`], the rule on the computed norms, the
+//! only at `I = 0`, which no configuration of the canonical-frame decode has. The largest-norm rule stays a named
+//! legacy option ([`SeedRule::Decoded`], decided on `z_α`; [`SeedRule::ByNorms`], the rule on the computed norms, the
 //! decoder's `construct_by_norms`, which can degenerate on a configuration from elsewhere).
 //!
 //! **The active values** (chart_reference §0.1; chart_decoder_contract § "Tunable parameters": the encode's clamps and
@@ -769,10 +769,11 @@ pub fn feasibility<R: WarpReal>(lz: R, k: R, low: Constraint, wide: Constraint) 
 pub enum SeedRule<R> {
     /// The seed in force, the pixel's: the expansion `w = r/√I` on any configuration, `DEGENERATE` only at `I = 0`.
     Expansion,
-    /// The legacy seed rule on a configuration of the canonical-frame decode: the seed decided on its control `z_α`.
+    /// The legacy largest-norm rule on a configuration of the canonical-frame decode: the seed decided on its control
+    /// `z_α`.
     Decoded { z_alpha: R },
-    /// The legacy seed rule on a configuration from elsewhere: the rule on the computed norms, `DEGENERATE` where none
-    /// qualifies.
+    /// The legacy largest-norm rule on a configuration from elsewhere: the rule on the computed norms, `DEGENERATE`
+    /// where none qualifies.
     ByNorms,
 }
 

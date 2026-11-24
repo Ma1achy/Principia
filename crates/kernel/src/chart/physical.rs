@@ -46,8 +46,9 @@
 //! coordinate is not one, nor is the physical axis's block (the momentum block for an energy axis, the mass block for
 //! the mass ratio). A tilt into a configuration control or a mass logit moves `U` and the masses across the window,
 //! and the decode reads them per pixel. The held `L_z` or `K`, the physical parameter of the construction that holds
-//! the momentum block, is a hidden coordinate too, meant to tilt and slice as on the construction charts (the held
-//! `L_z` by value, the held `K` on its warp line); that is not built, so this chart neither tilts nor slices it.
+//! the momentum block, is a hidden coordinate too (chart_reference §4.5, "Hidden coordinates under tilt and slice"),
+//! but its tilt and slice are not built and a lone virial axis's slider span is not defined, so this chart neither
+//! tilts nor slices it.
 
 use core::fmt;
 use core::marker::PhantomData;
