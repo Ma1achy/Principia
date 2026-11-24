@@ -1,17 +1,18 @@
-//! QA's tests for TASK-M3-01, written from the requirements it closes, not from the implementation:
-//! - REQ-INT-004 (R-265): the kernel's `Real` is implemented for f32 and f64 only, no double-double, and one generic
+//! QA's tests for the integrator's float types, force, pair map and shared pair geometry, written from their
+//! specification, not from the implementation:
+//! - The float types: the kernel's `Real` is implemented for f32 and f64 only, no double-double, and one generic
 //!   golden-IC check (the M2 decoder's `z = 0`, and a second, asymmetric decode) runs at each.
-//! - REQ-INT-036 (dd_integrator §3.1): `aᵢ = Σ_{j≠i} mⱼ(rⱼ − rᵢ)/‖rⱼ − rᵢ‖³`, `G = 1`, on a hand-computed 6-8-10
+//! - The force (dd_integrator §3.1): `aᵢ = Σ_{j≠i} mⱼ(rⱼ − rᵢ)/‖rⱼ − rᵢ‖³`, `G = 1`, on a hand-computed 6-8-10
 //!   right-triangle state (exact rationals), under every permutation of the bodies, and against a direct per-body sum
 //!   over fuzzed states; `Σ mᵢaᵢ = 0`.
-//! - R-22's pair map: pair `k` is the side opposite body `k`, pair 0 = (1, 2), pair 1 = (2, 0), pair 2 = (0, 1), so
+//! - The pair map: pair `k` is the side opposite body `k`, pair 0 = (1, 2), pair 1 = (2, 0), pair 2 = (0, 1), so
 //!   pair `k`'s distance is that of the two bodies other than `k`; `r_min` is the least of the three.
-//! - REQ-PERF-001 (integrator_contract Part 1, "COM projection and invariant monitoring"): `E`'s potential and `r_min`
-//!   read the force's pairwise distances. An instrumented `Real` counts square roots: building the geometry takes three,
-//!   and the force, `E` (kinetic and potential) and `r_min` read from it take none.
+//! - One distance computation (integrator_contract Part 1, "COM projection and invariant monitoring"): `E`'s potential
+//!   and `r_min` read the force's pairwise distances. An instrumented `Real` counts square roots: building the geometry
+//!   takes three, and the force, `E` (kinetic and potential) and `r_min` read from it take none.
 //! - E and `L_z` (integrator_contract Part 1's formulas, `G = 1`) on the same hand state and against direct sums.
 //!
-//! **Tolerance, derived not picked.** "Matches to f64 rounding" (REQ-INT-036's verify) is bounded by a first-order
+//! **Tolerance, derived not picked.** The force's "matches to f64 rounding" is bounded by a first-order
 //! rounding count of the force's own evaluation at unit roundoff `u = eps/2`: a separation (1 rounding), its `d²` (2,
 //! doubling the separation's), `‖·‖` (1, halving `d²`'s), `‖·‖³ = d²·‖·‖` (1), the quotient (1), the mass product (1)
 //! and the pair sum (1), at most `12u = 6 eps` relative to the sum of the magnitudes of the terms. [`BOUND_EPS`] = 6
@@ -111,7 +112,7 @@ fn reference_lz(r: V3, p: V3) -> (f64, f64) {
     (t.iter().sum(), s)
 }
 
-// ── REQ-INT-036: the hand-computed state ─────────────────────────────────────────────────────────────────────────
+// ── the force: the hand-computed state ───────────────────────────────────────────────────────────────────────────
 
 /// A 6-8-10 right triangle, the right angle at body 2, bodies in no symmetric arrangement, unequal masses.
 const HM: [f64; 3] = [2.0, 3.0, 7.0];
@@ -261,13 +262,13 @@ negative_control!(
     })
 );
 
-// ── R-22's pair map and r_min ────────────────────────────────────────────────────────────────────────────────────
+// ── the pair map and r_min ───────────────────────────────────────────────────────────────────────────────────────
 
-/// Pair `k`'s two bodies (R-22: the side opposite body `k`).
+/// Pair `k`'s two bodies: the side opposite body `k`.
 const R22: [(usize, usize); 3] = [(1, 2), (2, 0), (0, 1)];
 
-/// `g`'s pair `k` is the side opposite body `k` of the positions `r`: its separation is `±(rⱼ − rᵢ)` of R-22's bodies,
-/// its `d²`, `‖·‖` and `‖·‖³` theirs, and `r_min` the least distance of the three.
+/// `g`'s pair `k` is the side opposite body `k` of the positions `r`: its separation is `±(rⱼ − rᵢ)` of the map's
+/// bodies, its `d²`, `‖·‖` and `‖·‖³` theirs, and `r_min` the least distance of the three.
 fn check_r22(g: &PairGeom<f64>, r: V3, map: [(usize, usize); 3]) {
     for (k, (i, j)) in map.into_iter().enumerate() {
         let d = [r[j][0] - r[i][0], r[j][1] - r[i][1]];
@@ -315,7 +316,7 @@ negative_control!(
     check_r22(&PairGeom::new(&HR), HR, [(0, 1), (1, 2), (2, 0)])
 );
 
-/// The R-22 pair id of the closest pair is the body not in it.
+/// The pair map's id of the closest pair is the body not in it.
 fn check_closest_id(g: &PairGeom<f64>, outside: usize) {
     assert_eq!(
         g.closest(),
@@ -490,7 +491,7 @@ negative_control!(
     check_formulas(true)
 );
 
-// ── REQ-INT-004: f32 and f64 only, one golden-IC check at each ───────────────────────────────────────────────────
+// ── f32 and f64 only, one golden-IC check at each ────────────────────────────────────────────────────────────────
 
 /// One check, instantiated at each precision: the decode of `z` at `R`, run through the physics layer at `R`, against
 /// the f64 formulas on the same decoded state; at `z = 0` the decoded state is the golden IC, equal masses `1/3` at the
@@ -610,7 +611,7 @@ negative_control!(
     }
 );
 
-// ── REQ-PERF-001: one distance computation, read by the force, E and r_min ───────────────────────────────────────
+// ── one distance computation, read by the force, E and r_min ─────────────────────────────────────────────────────
 
 thread_local! {
     static ROOTS: Cell<usize> = const { Cell::new(0) };
@@ -757,7 +758,7 @@ negative_control!(
     }
 );
 
-// ── REQ-PERF-002: the crate the physics layer lives in is no_std ─────────────────────────────────────────────────
+// ── the crate the physics layer lives in is no_std ───────────────────────────────────────────────────────────────
 
 fn check_no_std(lib: &str) {
     assert!(

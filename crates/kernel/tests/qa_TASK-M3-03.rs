@@ -1,35 +1,36 @@
-//! QA's tests for TASK-M3-03, written from the requirements it closes, not from the implementation:
-//! - REQ-INT-091 (`qa_nsub_table_host_*`): each threshold the host generator emits, for every configuration of
+//! QA's tests for the substep table and the substep count, written from their specification, not from the
+//! implementation:
+//! - The host generator (`qa_nsub_table_host_*`): each threshold the host generator emits, for every configuration of
 //!   `fixtures/gates/nsub-table/tables.json` and for drawn sim keys, is the f32 nearest the exact
 //!   `(r_sub·n^{−1/γ_sub})²`, decided by an oracle of this file's own in exact rational arithmetic (no f64, no libm, no
 //!   Python): `γ_sub = a/b` in lowest terms, the exact threshold `x` is the positive root of `x^a = r_sub^{2a}/n^{2b}`, so
 //!   an f32 `t` is its correct rounding iff the `a`-th powers of the midpoints either side of `t` bracket that rational.
 //!   The fixture's own bits are checked against the same oracle, so the reference script is checked too. Where the
-//!   generator's f64 path may legitimately round to the other side (R-502; the requirement's listed exceptions), only
+//!   generator's f64 path may legitimately round to the other side (the specification's listed exceptions), only
 //!   an exact value within a few f64 ulps of an f32 rounding tie is admitted. `N_max = L_max + 1`, `N_max = 0` and
 //!   `u32::MAX` are refused with the typed error; `N_max = 1` and `N_max = L_max` are taken, and the table is the same
 //!   for every accepted `N_max` (never truncated).
-//! - REQ-INT-092 (`qa_nsub_default_table_bitwise`): at `r_sub = 0.05`, `γ_sub = 1.5`, `N_max = 64` the host generator
-//!   reproduces the checked-in build-time table bit for bit, and that table is the oracle's.
-//! - REQ-INT-028 (`qa_nsub_bucket_*`): `N_sub` equals the specification `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)`,
-//!   evaluated exactly (`⌈y⌉ > n` iff `(r_sub²/d²)^a > n^{2b}`), for every `d²` sampled at and straddling every edge
-//!   and drawn across the range, at the default sim key and at sim keys with `r_sub`, `γ_sub` and `N_max` each changed
-//!   (a non-power-of-two `N_max` among them); the only `d²` where it may differ are the edges themselves, an f32
-//!   threshold rounded below its exact edge, where the f32 rounding of `THR[n]` decides. The CPU-f64 and CPU-f32 legs
-//!   take the same `d²`, bit for bit, so the same `N_sub` (0 forks); domain: identical inputs per macro-step
+//! - The default table (`qa_nsub_default_table_bitwise`): at `r_sub = 0.05`, `γ_sub = 1.5`, `N_max = 64` the host
+//!   generator reproduces the checked-in build-time table bit for bit, and that table is the oracle's.
+//! - The substep count (`qa_nsub_bucket_*`): `N_sub` equals the specification
+//!   `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)`, evaluated exactly (`⌈y⌉ > n` iff `(r_sub²/d²)^a > n^{2b}`), for every `d²` sampled at and straddling
+//!   every edge and drawn across the range, at the default sim key and at sim keys with `r_sub`, `γ_sub` and `N_max`
+//!   each changed (a non-power-of-two `N_max` among them); the only `d²` where it may differ are the edges themselves,
+//!   an f32 threshold rounded below its exact edge, where the f32 rounding of `THR[n]` decides. The CPU-f64 and CPU-f32
+//!   legs take the same `d²`, bit for bit, so the same `N_sub` (0 forks); domain: identical inputs per macro-step
 //!   (pitfalls §10), not a trajectory. Control: the default table under a changed `r_sub` or `γ_sub` fails the
 //!   specification.
-//! - REQ-INT-028 at positions under the square's floor (`qa_nsub_bucket_floor_pairs_*`): the specification is on the
-//!   closest approach of the f32 positions, so a pair one of whose axis offsets the quantised `d²`'s floor sets to 0
-//!   (an axis square below `2⁻⁸⁰`; dd_integrator §3.3, R-547) still takes the specification's `N_sub`, judged in exact
+//! - The substep count at positions under the square's floor (`qa_nsub_bucket_floor_pairs_*`): the specification is on
+//!   the closest approach of the f32 positions, so a pair one of whose axis offsets the quantised `d²`'s floor sets to
+//!   0 (an axis square below `2⁻⁸⁰`; dd_integrator §3.3) still takes the specification's `N_sub`, judged in exact
 //!   arithmetic, at `2⁻¹⁹` either side of every deciding threshold of every sim key the generator accepts, across
-//!   `r_sub`, `γ_sub` down to 1/4 and `N_max` up to `L_max`. A sim key it refuses is refused with the typed error naming a
-//!   deciding threshold, never a truncated table (R-502). Control: a sim key's correctly rounded table whose deciding
+//!   `r_sub`, `γ_sub` down to 1/4 and `N_max` up to `L_max`. A sim key it refuses is refused with the typed error
+//!   naming a deciding threshold, never a truncated table. Control: a sim key's correctly rounded table whose deciding
 //!   thresholds fall far below the floor's reach fails the specification at such a pair.
-//! - REQ-INT-094 (`qa_nsub_table_max_bounds`): the refusal bound is the table's length, the table takes `4·L_max` bytes
-//!   in 16-byte rows, and `horizon_steps × N_max ≤ 2³² − 1` holds at `L_max`.
-//! - REQ-INT-027 (`qa_nsub_live_readout`), REQ-TOOL-033 (`qa_saturated_sticky`), REQ-TOOL-034
-//!   (`qa_total_substeps_proxy`).
+//! - The maximum length (`qa_nsub_table_max_bounds`): the refusal bound is the table's length, the table takes
+//!   `4·L_max` bytes in 16-byte rows, and `horizon_steps × N_max ≤ 2³² − 1` holds at `L_max`.
+//! - The live readout (`qa_nsub_live_readout`), the sticky saturated bit (`qa_saturated_sticky`), and
+//!   `total_substeps` with its log proxy (`qa_total_substeps_proxy`).
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -213,7 +214,7 @@ fn mid(x: u32, y: u32) -> BigRational {
     (exact32(f32::from_bits(x)) + exact32(f32::from_bits(y))) / int(2)
 }
 
-// ── REQ-INT-091: the host generator against the exact oracle and the fixture ───────────────────────────────────
+// ── the host generator against the exact oracle and the fixture ────────────────────────────────────────────────
 
 struct FixtureConfig {
     config: NsubConfig,
@@ -266,7 +267,7 @@ fn fixture() -> Vec<FixtureConfig> {
 /// The f64 ulps of the generator's admitted error band: an f64 evaluation of `(r_sub·n^{−1/γ})²` in four rounded
 /// steps errs by at most `ln n/γ + 3.5` f64 ulps (the rounded exponent amplified by `ln n/γ`, `pow`'s sub-ulp error, the
 /// product, the square, its rounding); at `n = L_max = 256` and the least `γ` drawn here, 0.5, that is 14.6, doubled
-/// and rounded up to 32. Only an entry this close to an f32 tie may round to the other side (R-502).
+/// and rounded up to 32. Only an entry this close to an f32 tie may round to the other side.
 const TIE_BAND_F64_ULPS: u32 = 32;
 
 /// `bits` (THR[1..=L]) are, entry for entry, the oracle's correctly rounded bits; an entry in `listed` may instead be
@@ -423,7 +424,7 @@ negative_control!(
     )
 );
 
-// ── REQ-INT-092: the default sim key reproduces the build-time table ────────────────────────────────────────────
+// ── the default sim key reproduces the build-time table ─────────────────────────────────────────────────────────
 
 fn check_default(build_time: &[u32; L]) {
     assert_eq!(
@@ -464,7 +465,7 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-028: the tree against the exact specification; the two legs ────────────────────────────────────────
+// ── the tree against the exact specification; the two legs ─────────────────────────────────────────────────────
 
 /// The sim keys: the default, and `r_sub`, `γ_sub` and `N_max` each changed (50 and 7 not powers of two), and all
 /// three changed.
@@ -673,11 +674,11 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-028: pairs under the square's floor ─────────────────────────────────────────────────────────────────
+// ── pairs under the square's floor ──────────────────────────────────────────────────────────────────────────────
 
 /// The relative band about an exact edge within which a pair's `N_sub` is not judged: twice the roundings a correct
 /// tree may carry against the exact comparison, `u = 2⁻²⁴` f32's unit roundoff: `THR[n]`'s rounding (`u`), the
-/// quantised `d²`'s (the subtractions from a body at the origin exact; each split-product square `3u`, R-547, and the
+/// quantised `d²`'s (the subtractions from a body at the origin exact; each split-product square `3u`, and the
 /// add `u`: `7u` at most), `8u` in all, doubled.
 const FLOOR_BAND: f64 = 1.0 / (1u64 << 20) as f64;
 
@@ -685,7 +686,7 @@ const FLOOR_BAND: f64 = 1.0 / (1u64 << 20) as f64;
 /// [`FLOOR_BAND`] of the exact edge, which is within `u` of the f32 threshold.
 const FLOOR_OFFSET: f64 = 1.0 / (1u64 << 19) as f64;
 
-/// Axis offsets whose square is below `2⁻⁸⁰`, which the quantised `d²` sets to 0 (dd_integrator §3.3, R-547): the f32
+/// Axis offsets whose square is below `2⁻⁸⁰`, which the quantised `d²` sets to 0 (dd_integrator §3.3): the f32
 /// just under `2⁻⁴⁰` and `2⁻⁴¹`.
 const FLOOR_DXS: [f32; 2] = [f32::from_bits(0x2B7F_FFFF), f32::from_bits(0x2B00_0000)];
 
@@ -826,7 +827,7 @@ negative_control!(
     }
 );
 
-// ── REQ-INT-094: the maximum length's bounds ────────────────────────────────────────────────────────────────────
+// ── the maximum length's bounds ─────────────────────────────────────────────────────────────────────────────────
 
 /// `horizon_steps` at most, from the integrator contract Part 5 (`t_end_step` an exact u16).
 const HORIZON_STEPS: u64 = 65_535;
@@ -878,7 +879,7 @@ negative_control!(
     check_bounds(65_538, 65_538 / 4 + 1, 4 * 65_538)
 );
 
-// ── REQ-INT-027: the live readout ───────────────────────────────────────────────────────────────────────────────
+// ── the live readout ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A walk of `d²` down through the table and back, away from the edges (geometric midpoints between thresholds).
 fn walk(bits: &[u32; L], n_max: u32) -> Vec<f32> {
@@ -932,7 +933,7 @@ negative_control!(
     check_readout(&NsubConfig::DEFAULT, |_, previous| previous)
 );
 
-// ── REQ-TOOL-033: the sticky saturated bit ──────────────────────────────────────────────────────────────────────
+// ── the sticky saturated bit ────────────────────────────────────────────────────────────────────────────────────
 
 /// The run over `d2s`: after each step, the flag as `flag` reads it, against whether `N_sub == N_max` has occurred,
 /// `N_sub` counted from the table; the descriptor's bit 5 carries it and keeps the other bits.
@@ -1018,7 +1019,7 @@ mod power_of_two_control {
     );
 }
 
-// ── REQ-TOOL-034: total_substeps and its log proxy ──────────────────────────────────────────────────────────────
+// ── total_substeps and its log proxy ────────────────────────────────────────────────────────────────────────────
 
 /// `⌊log₂ t⌋` by shifting, 0 for `t ≤ 1`.
 fn floor_log2(t: u32) -> u32 {

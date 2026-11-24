@@ -1,25 +1,24 @@
-//! qa's tests for TASK-M2-52, written from REQ-CHART-062's R-633 arms and REQ-CHART-065 (chart_reference §4.5,
-//! "Hidden coordinates under tilt and slice", and §2.2's construction) as R-708, R-709 and R-720 rule them, each with
-//! its negative control (R-176). `I = 1` throughout.
+//! qa's tests for the construction charts' hidden coordinates under tilt and slice (chart_reference §4.5, "Hidden
+//! coordinates under tilt and slice", and §2.2's construction), each with its negative control. `I = 1` throughout.
 //!
 //! - `qa_tilt_every_chart_hidden_set`: each of the six construction charts offers exactly §4.5's table's hidden
 //!   coordinates: the mass simplex `ν₀` and the four momentum controls, the Euclid plane and the δm strip the four
 //!   momentum controls, `(ν, K)` and `Φ_θ,K` the held `L_z`, `Φ_θ,L_z` the held `K`.
-//! - `qa_tilt_every_chart_held_lz`, warped, the default (R-708, R-720): `(ν, K)` and `Φ_θ,K` (`Φ_strip,K` the same map)
+//! - `qa_tilt_every_chart_held_lz`, warped, the default: `(ν, K)` and `Φ_θ,K` (`Φ_strip,K` the same map)
 //!   tilted 30° into the held `L_z`, about a centre at 0 and at each sign, at a slider span of 2 and of 40: over a 33 × 33
 //!   grid of the square's vertices, the bottom row `v = 0` among them, no cell is refused, and each is §2.2's construction
 //!   at `L_z = L_z₀ + d`, by value at both signs of `d`, and `K = L_z²/2 + K_max·b^γ_K`, the floor at the pixel's own `L_z`,
 //!   past `K_max` where the floor takes it there. At `L_z = 0` the held chart is the registered one, bit for bit.
-//! - `qa_tilt_every_chart_held_lz_linear`, linear (R-708, R-633's refusal): rows at the fixed `K(b) = K_max·b`, the held
+//! - `qa_tilt_every_chart_held_lz_linear`, linear: rows at the fixed `K(b) = K_max·b`, the held
 //!   `L_z + d` by value: where `K(b) ≥ L_z²/2` the momenta satisfy §2.2's three constraints, `Σp = 0`, `L_z(p)` and
 //!   `K(p)`, to machine precision, the cell valid and weighted as the tilt; where `K(b) < L_z²/2` the cell is refused:
 //!   `DEGENERATE(INVARIANT_INFEASIBLE)`, the view's check a rejection, area weight 0, and its momenta §2.2's `a = 0`
 //!   ones. Both kinds occur on the window.
 //! - `qa_tilt_every_chart_bottom_row`: `t = 0` at a held `L_z` whose `l²` rounds below the exact value is a system: the
-//!   floor's rounding is handled (R-708's "must not blank the bottom row").
+//!   floor's rounding is handled: the bottom row must never be blanked.
 //! - `qa_tilt_every_chart_held_k`, linear: `Φ_θ,L_z` tilted into the held `K`, bare and as `HeldK` in linear mode, the
 //!   refusal arm with `K* = K + d` and `L_z(b) = (2b − 1)·λ_L·√(2K)` at the centre's `K`.
-//! - `qa_tilt_every_chart_held_k_warped`, warped (R-708, R-709): the held `K` moved in its warp coordinate,
+//! - `qa_tilt_every_chart_held_k_warped`, warped: the held `K` moved in its warp coordinate,
 //!   `K = K_max·t^γ_K`, `t = t₀ + d`, the band at the pixel's own `K`: no cell refused; past `t = 0` the pixel is clamped
 //!   there, a real system at rest, flagged, not mirrored; the clamped-pixel share in the test output.
 //! - `qa_tilt_every_chart_nu0`: the mass simplex tilted into `ν₀`: each pixel's masses are §4.5's ternary map at
@@ -28,10 +27,10 @@
 //! - `qa_tilt_every_chart_rest_start`: each rest-start chart tilted into each momentum control: masses and positions
 //!   the untilted chart's at `(a, b)`, momenta `D_mom` of the control at `d` (the others 0) under the pixel's masses,
 //!   `Σp = 0`; every cell valid. The centre pixel of every arm is the untilted chart's, bitwise.
-//! - `qa_slice_every_chart_construction_edge`: REQ-CHART-060's stop. A physical slice past the construction's edge
-//!   (`ν₀ ∉ (0, 1)`, a held `K < 0`, and in linear mode a held `L_z` past `√(2K(v))`) leaves a centre that `validate`
-//!   refuses; one inside passes. In warped mode a held `L_z` has no such edge: the floor keeps it a system at any `L_z`
-//!   (R-720), and a held `K` stops at `K₀ = 0`.
+//! - `qa_slice_every_chart_construction_edge`: a slice stops where its centre fails `validate`. A physical slice past
+//!   the construction's edge (`ν₀ ∉ (0, 1)`, a held `K < 0`, and in linear mode a held `L_z` past `√(2K(v))`) leaves a
+//!   centre that `validate` refuses; one inside passes. In warped mode a held `L_z` has no such edge: the floor keeps
+//!   it a system at any `L_z`; a held `K` stops at `K₀ = 0`.
 //! - `qa_slice_every_chart_construction`: a slice of each hidden coordinate moves only that held value; the decode at
 //!   the centre follows (the sliced `L_z` by value at both signs, its row's `K` by the mode; `K(p) = K₀ + d`, its band
 //!   following, and the tilt's `t₀` recomputed from the new `K₀`; the triangle at the sliced `ν₀`; `D_mom` of the sliced
@@ -50,12 +49,13 @@
 //! - `qa_refusal_at_placed_domain_end`: each chart's domain ends through an f32 view, walked float by float: a pixel placed
 //!   outside at f32 is refused where the check at the f64 placement passes, and one inside at both stays a system. A
 //!   domain end's weight is `qa_weight_reads_refusals_only`'s.
-//! - `qa_view_check_reads_own_parameters`: REQ-DEC-048's active value on a view's check at the chart's own precision: at
-//!   `μ_max` 1, 1.7 and 8, at f64 and f32, on a linear energy axis, the view accepts a pixel exactly where the chart's
-//!   check passes and the decode at that `p`, at that precision, is a system; `p` changes the answer on each arm.
+//! - `qa_view_check_reads_own_parameters`: the active link parameters `p` on a view's check at the chart's own
+//!   precision: at `μ_max` 1, 1.7 and 8, at f64 and f32, on a linear energy axis, the view accepts a pixel exactly
+//!   where the chart's check passes and the decode at that `p`, at that precision, is a system; `p` changes the answer
+//!   on each arm.
 //! - `qa_construction_check_free_of_parameters`: the construction charts read no link for their systems, so on all of
 //!   them, at f64 and f32, tilted, the check at any `μ_max` and `q_max` is the check at the defaults.
-//! - `qa_weight_reads_refusals_only`: REQ-CHART-062's area weight 0 is the refusal's: on every chart, at f64 and f32, over
+//! - `qa_weight_reads_refusals_only`: the area weight 0 is the refusal's: on every chart, at f64 and f32, over
 //!   a window past the square, the weight is 0 exactly where the chart refuses at f64 or at its own precision, and there
 //!   the check rejects too; a rejection that is no refusal, a domain end or a linear energy axis' infeasible pixel, keeps
 //!   the tilt's. The weight takes no parameters.
@@ -259,7 +259,7 @@ negative_control!(
 
 // ── The held L_z and the held K ──────────────────────────────────────────────────────────────────────────────────────
 
-/// The square's 33 × 33 vertices, its edges included: the bottom row `v = 0` is itself a row (R-708).
+/// The square's 33 × 33 vertices, its edges included: the bottom row `v = 0` is itself a row, never blanked.
 fn vertices() -> Vec<[f64; 2]> {
     let at = |k: u32| f64::from(k) / 32.0;
     (0..33)
@@ -380,8 +380,8 @@ enum Warped {
     OneSign,
 }
 
-/// R-708 and R-720 on one chart, its `K` axis `K_max·b^γ_K` and its held `L_z` about `centre`, in the mode a new
-/// [`HeldLz`] takes: every vertex of the square a system, `L_z = L_z₀ + d`, `K = L_z²/2 + K_max·b^γ_K`.
+/// The warped held `L_z`, by value, on one chart, its `K` axis `K_max·b^γ_K` and its held `L_z` about `centre`, in the
+/// mode a new [`HeldLz`] takes: every vertex of the square a system, `L_z = L_z₀ + d`, `K = L_z²/2 + K_max·b^γ_K`.
 fn check_warped_lz<C: LzChart<Param = f64>>(
     name: &str,
     chart: C,
@@ -447,7 +447,7 @@ fn check_warped_lz<C: LzChart<Param = f64>>(
         d_signs.iter().all(|&c| c > 100) && lz_signs.iter().all(|&c| c > 20),
         "{name}: both signs: d {d_signs:?}, L_z {lz_signs:?}"
     );
-    // R-720's "a column above K_max at large tilt": the wide span reaches it on every arm.
+    // A column above K_max at large tilt is accepted: the wide span reaches it on every arm.
     assert!(span < 40.0 || above > 0, "{name}: no cell above K_max");
     assert_eq!(
         bits(&tv.decode::<Defaults, f64>(C[0], C[1])),
@@ -650,7 +650,7 @@ negative_control!(
 );
 
 /// The linear arm of the held `K`: the bare chart's tilt, and [`HeldK`]'s in linear mode, by value, blank where
-/// infeasible (R-708, R-709's "linear mode unchanged").
+/// infeasible; the warped mode's clamp at `t = 0` does not apply in linear mode.
 fn check_held_k(ctl: Ctl) {
     let span = 2.0;
     for centre_k in [0.5, 0.3] {
@@ -712,8 +712,9 @@ enum WarpedK {
     Mirror,
 }
 
-/// R-708 and R-709 on `Φ_θ,L_z`: every vertex a system at `K = K_max·t^γ_K`, `t = t₀ + d`, the band at it; a pixel past
-/// `t = 0` clamped there at rest and flagged. The clamped pixels and the pixels counted.
+/// The warped held `K` on `Φ_θ,L_z`, tilted in its warp coordinate: every vertex a system at `K = K_max·t^γ_K`,
+/// `t = t₀ + d`, the band at it; a pixel past `t = 0` clamped there at rest and flagged. The clamped pixels and the
+/// pixels counted.
 fn check_warped_k(
     [k0, k_max, gamma]: [f64; 3],
     arm: Arm,
@@ -816,7 +817,7 @@ fn qa_tilt_every_chart_held_k_warped() {
     let [high, low] = check_warped_k_all(WarpedK::AsRuled);
     assert_eq!(high.0, 0, "no pixel clamped at the high centre");
     assert!(low.0 > 100, "the clamp arises: {low:?}");
-    // R-709's report, past the harness's capture so that the test output shows it.
+    // The clamped-pixel share, written past the harness's capture so that the test output shows it.
     writeln!(
         std::io::stderr(),
         "R-709 clamped-pixel share (qa): high centre {}/{}; low centre {}/{} = {:.4}",
@@ -1015,7 +1016,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-065: slice ─────────────────────────────────────────────────────────────────────────────────────────────
+// ── slice ────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A control of [`check_slice`].
 #[derive(Clone, Copy, PartialEq)]
@@ -1031,8 +1032,8 @@ enum SliceCtl {
     StaleT0,
 }
 
-/// The held `L_z` slid by value, each sign, in each mode, the row's `K` the mode's (R-720: "the same rule governs slicing
-/// the held L_z as well as tilting it"): warped, past the untilted band as well; linear, inside it.
+/// The held `L_z` slid by value, each sign, in each mode, the row's `K` the mode's (the held `L_z` is sliced by the
+/// same rule it is tilted by): warped, past the untilted band as well; linear, inside it.
 fn slice_lz<C: LzChart<Param = f64> + PartialEq + std::fmt::Debug>(
     name: &str,
     chart: C,
@@ -1083,7 +1084,7 @@ fn slice_lz<C: LzChart<Param = f64> + PartialEq + std::fmt::Debug>(
     }
 }
 
-/// The held `K` slid by value on [`HeldK`], and the tilt's `t₀` recomputed from the new `K₀` (R-720's reading of R-633).
+/// The held `K` slid by value on [`HeldK`], and the tilt's `t₀` recomputed from the new `K₀`.
 fn slice_k(ctl: SliceCtl) {
     let c = theta_lz(0.5);
     let h = HeldK::new(c, 1.0, 1.5);
@@ -1207,15 +1208,15 @@ enum Edge {
     AsRuled,
     /// The centres past the edge expected to validate.
     PastAsValid,
-    /// The warped held `L_z` past the band expected refused, the reading R-720 replaces.
+    /// The warped held `L_z` past the band expected refused (wrong: warped, the floor keeps it a system).
     WarpedRefused,
 }
 
-/// REQ-CHART-065's "subject to REQ-CHART-060's stop": REQ-CHART-060 stops a slice where the centre, `Φ` at the slice
-/// centre's hidden coordinates, fails `validate`. So a physical slice past the construction's edge must leave a centre
-/// that fails it, and one inside must pass: `ν₀ ∉ (0, 1)`; a held `K < 0`, below every `L_z(v)²/2`, the stop at
-/// `K₀ = 0` in either mode; in linear mode a held `L_z` with `K(v) < L_z²/2`. In warped mode the held `L_z` has no edge:
-/// the floor keeps every pixel a system at any `L_z` (R-720).
+/// A slice of a hidden coordinate is subject to the slice's stop, which stops a slice where the centre, `Φ` at the
+/// slice centre's hidden coordinates, fails `validate`. So a physical slice past the construction's edge must leave a
+/// centre that fails it, and one inside must pass: `ν₀ ∉ (0, 1)`; a held `K < 0`, below every `L_z(v)²/2`, the stop at
+/// `K₀ = 0` in either mode; in linear mode a held `L_z` with `K(v) < L_z²/2`. In warped mode the held `L_z` has no
+/// edge: the floor keeps every pixel a system at any `L_z`.
 fn check_slice_edge(edge: Edge) {
     let ok = |r: ValidationResult| r == ValidationResult::Valid;
     let refused = |r: ValidationResult| matches!(r, ValidationResult::Reject { .. });
