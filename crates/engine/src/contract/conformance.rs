@@ -431,7 +431,8 @@ pub(crate) fn turned(f: SliceFrame, by: u32) -> SliceFrame {
 /// `after`'s, each in the frame's field order (normal, tilt_x, tilt_y), as integers among its other text.
 /// gui_state_contract §2 has each applied `SetField` logged "naming the field's path and its values before and after"
 /// and gives no format for a frame's values. The plan is unclear here; chose to find them as integers in the frame's
-/// field order, because a frame is three latent indices, so any wording that names them carries those integers.
+/// field order, because the frame's normal and targets are latent indices, so any wording that names them carries those
+/// integers.
 pub(crate) fn names_frames(message: &str, before: SliceFrame, after: SliceFrame) -> bool {
     let Some((_, rest)) = message.split_once("Slice.frame") else {
         return false;

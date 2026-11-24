@@ -240,7 +240,7 @@ validation::negative_control!(
 );
 
 /// Every value's text reads back to the same double: 20 000 finite bit patterns from a fixed generator. (−0.0 reads
-/// back as 0, as JCS writes it `0`, which the check accepts.)
+/// back as 0, as JCS writes it `0`; these 20 000 draws include no ±0.0.)
 fn check_read_back(format: impl Fn(f64) -> String) {
     let mut state: u64 = 0x9E37_79B9_7F4A_7C15;
     let mut checked = 0;

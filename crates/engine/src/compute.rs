@@ -1,6 +1,6 @@
 //! The compute-pipeline entry point: every compute pipeline is created here, through [`pipeline`], under an explicit
 //! fast-math setting ([`FastMath`], off by default). The harness's dispatches go through it, and the baked compute
-//! variants (chart × link × occupant), not yet built, must too. `cargo xtask lint compute-pipelines` fails on a
+//! variants (chart × link × occupant × FTLE), not yet built, must too. `cargo xtask lint compute-pipelines` fails on a
 //! compute pipeline created anywhere else, and on a passthrough module anywhere else.
 //!
 //! What each backend compiles (parity contract §4):

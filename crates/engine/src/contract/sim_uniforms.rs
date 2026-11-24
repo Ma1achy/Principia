@@ -222,7 +222,7 @@ impl SimUniforms {
     /// and an integer as a u32, big-endian; an optional field as a presence byte, 0 or 1, then its value when present;
     /// then `stop_on_escape` as a byte, 0 or 1; and last the softening tag, [`Softening`] as a byte. The threshold
     /// table is derived from `r_sub`, `gamma_sub` and `N_max`, so it adds nothing. The sim key's full composition is
-    /// defined by the caching contract (Part 2), not by this function.
+    /// defined by the caching contract (Parts 1 and 2), not by this function.
     pub fn sim_key_bytes(&self) -> Vec<u8> {
         let mut out = Vec::new();
         for x in [self.t_horizon, self.dt_macro] {
