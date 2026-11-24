@@ -2620,8 +2620,8 @@ negative_control!(
 
 // ── The six charts that hold a block by a construction ────────────────────────────────────────────────────────────────
 
-/// `ν₀`'s slider span. The plan is unclear here (it names the slider span as the unit but gives none for the physical
-/// hidden coordinates); chose a test's own, which the kernel takes as an input.
+/// `ν₀`'s slider span, a test's own: the kernel takes each target's span as an input (`span` in the tilt's params), so
+/// these tests pass their own; the shipped spans are chart_decoder_contract Part 4's ("The slider spans").
 const NU_SPAN: f64 = 0.4;
 /// The held `L_z`'s slider span, a test's own (as `NU_SPAN`).
 const LZ_SPAN: f64 = 2.0;
