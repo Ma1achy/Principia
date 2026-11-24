@@ -10,7 +10,7 @@
 //!
 //! - `qa_seed_offers_a_realised_range`: an asked range holding a realised interval at least 0.2 wide in `ln q` has a
 //!   chart. Control: a build that gives up on an unrealised centre. A narrower interval is not asserted: a chart over
-//!   it is of no use, and a chart may be refused (no chart offers an axis it cannot warp).
+//!   it is of no use, and a chart may be refused (no chart offers an axis whose warp is not written).
 //! - `qa_seed_range_is_the_realised_part`: a ratio of the asked range the oracle finds realised is inside the warped
 //!   chart's `[q₀, q₁]`, and `[q₀, q₁]` lies inside the asked range. Control: a range cut short.
 //! - `qa_seed_every_pixel`: each of 65 rows validates and decodes the three masses of `q(t)` at the held `m_c`, each to

@@ -6,11 +6,11 @@
 //!   edit; the tilted shape sphere bijective, each pixel counted once; the f32 instantiation. On the six that hold a
 //!   block by a construction (`tilt_every_chart_construction_*`): `d = 0` bitwise the untilted chart, `ν₀` moved
 //!   by `d` with the masses kept, a rest start's momenta `D_mom` of the control from 0, the held `L_z` or `K` §2.2's
-//!   construction at the tilted value under each of the energy axes' two modes: warped, the default, no cell refused,
-//!   the bottom row included, the held `L_z` by value at both signs of `d`, the held `K` in its warp coordinate and
-//!   clamped at `t = 0`; linear, rows at fixed values, the refused cells no system and weighted 0. The rank-losing
-//!   corner (Lean each axis, one target, `|τ₁| = |τ₂| = 90°`) `ray-degenerate` over the whole registry, unfolded,
-//!   weighted 0, its shares undefined.
+//!   construction at the tilted value under each of the construction's two mappings: warped, the default, no cell
+//!   refused, the bottom row included, the held `L_z` by value at both signs of `d`, the held `K` in its warp
+//!   coordinate and clamped at `t = 0`; linear, rows at fixed values, the refused cells no system and weighted 0. The
+//!   rank-losing corner (Lean each axis, one target, `|τ₁| = |τ₂| = 90°`) `ray-degenerate` over the whole registry,
+//!   unfolded, weighted 0, its shares undefined.
 //! - `tilt_mass_logits`: the shape sphere tilted into each mass logit keeps every mass positive,
 //!   the three summing to 1.
 //! - `tilt_units`: the tilted axis's direction in the chart's parameters is the same at every

@@ -902,8 +902,7 @@ fn gallery() -> Vec<Job> {
 }
 
 /// Every `Chart` implementation `kernel::chart` ships, by its `Chart::name`, and the body plane, a `Φ` outside the
-/// trait; a Chart-builder chart is not swept here (its in-square failure on a linear axis is not a system, not a
-/// fault).
+/// trait; a Chart-builder chart is not swept here.
 const SHIPPED: [&str; 12] = [
     "BodyPlane",
     "Latent",
