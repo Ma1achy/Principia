@@ -242,7 +242,7 @@ fn parity_tiers_index_is_parity_section_8() {
     check_index(&read("docs/contracts/principia_parity_contract.md"));
 }
 
-/// `contract`'s §8 integrator row reads as the task states it (TASK-M3-21's acceptance test).
+/// `contract`'s §8 integrator row reads as the task states it (the task's acceptance test).
 fn check_index(contract: &str) {
     let index = index(contract);
     let want: BTreeMap<String, String> = [
