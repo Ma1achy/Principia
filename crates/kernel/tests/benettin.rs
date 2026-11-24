@@ -245,7 +245,7 @@ where
     f64: AsR<R>,
 {
     let (ic, key) = setup::<R>(orbit, 5.0);
-    let s = integrate_ftle::<Yoshida4, R>(&ic, &key, CollisionRadius::none(), proposed());
+    let s = integrate_ftle::<Yoshida4, R>(&ic, &key, CollisionRadius::none(), proposed(), false);
     let b = integrate_detecting::<Yoshida4, R>(&ic, &key, CollisionRadius::none());
     assert_eq!(
         ftle_members(&s),
@@ -277,7 +277,7 @@ fn shadow_not_in_pool() {
     }
     // The read side's sample: its `(r, p)` is the pool's member, its shadow a separate field.
     let (ic, key) = setup::<f32>(&burrau(), 5.0);
-    let s = integrate_ftle::<Yoshida4, f32>(&ic, &key, CollisionRadius::none(), proposed());
+    let s = integrate_ftle::<Yoshida4, f32>(&ic, &key, CollisionRadius::none(), proposed(), false);
     let read = sim_state_from_ftle(&s, [0; 4], false, 0.0, false, ic.m, &ReadParams::default());
     assert_eq!((read.r, read.p), pool_member(&s));
     assert_eq!((read.r_sh, read.p_sh), (s.r_sh, s.p_sh));
@@ -309,8 +309,13 @@ fn check_write(write: Writer, failed: bool) {
         n_renorm: 1,
         ..proposed()
     };
-    let (_, shadow) =
-        integrate_ftle_with::<Yoshida4, f64, Absolute>(&ic, &key, CollisionRadius::none(), params);
+    let (_, shadow) = integrate_ftle_with::<Yoshida4, f64, Absolute>(
+        &ic,
+        &key,
+        CollisionRadius::none(),
+        params,
+        false,
+    );
     let k = |i: u8| f64::from(i) + 0.25;
     let out = SimStateBaseOf::<f64> {
         r: [[k(1), k(2)], [k(3), k(4)], [k(5), k(6)]],
@@ -663,6 +668,7 @@ where
         &key,
         CollisionRadius::none(),
         proposed(),
+        false,
     );
     let x = State {
         m: ic.m,
@@ -755,8 +761,13 @@ fn read_at(orbit: &Orbit, d0: f64, n_renorm: u32, t: f64, read: Read) -> f64 {
         delta_0: d0,
         n_renorm,
     };
-    let (out, shadow) =
-        integrate_ftle_with::<Yoshida4, f64, Absolute>(&ic, &key, CollisionRadius::none(), params);
+    let (out, shadow) = integrate_ftle_with::<Yoshida4, f64, Absolute>(
+        &ic,
+        &key,
+        CollisionRadius::none(),
+        params,
+        false,
+    );
     let x = State {
         m: ic.m,
         r: out.r,
@@ -848,7 +859,7 @@ fn benettin_ftle() {
             delta_0: PROPOSED_DELTA_0 as f32,
             n_renorm,
         };
-        let s = integrate_ftle::<Yoshida4, f32>(&ic, &key, CollisionRadius::none(), params);
+        let s = integrate_ftle::<Yoshida4, f32>(&ic, &key, CollisionRadius::none(), params, false);
         let mine = ftle_read(&s, &params, dt);
         let read = sim_state_from_ftle(
             &s,
@@ -1143,7 +1154,7 @@ fn kernel_run(
     radius: CollisionRadius,
     params: BenettinParams<f64>,
 ) -> (SimStateFTLEOf<f64>, Benettin<f64, Absolute>) {
-    integrate_ftle_with::<Yoshida4, f64, Absolute>(ic, key, radius, params)
+    integrate_ftle_with::<Yoshida4, f64, Absolute>(ic, key, radius, params, false)
 }
 
 /// The close pair's Benettin values for the R-972 tests: `‖δ₀‖ = 10⁻³`, which brings the shadow's pair about `‖δ₀‖`
@@ -1337,8 +1348,13 @@ fn shadow_failed_sum() {
         delta_0: 0.0f32,
         n_renorm: 10,
     };
-    let s =
-        integrate_ftle::<Yoshida4, f32>(&ic32, &key, CollisionRadius::from_squared(1e-4), params);
+    let s = integrate_ftle::<Yoshida4, f32>(
+        &ic32,
+        &key,
+        CollisionRadius::from_squared(1e-4),
+        params,
+        false,
+    );
     assert_eq!(
         s.S.to_bits(),
         S_FAILED_BITS,

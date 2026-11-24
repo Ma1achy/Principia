@@ -210,7 +210,7 @@ fn ftle_run<R: P, F: ShadowForm>(
 where
     f64: AsR<R>,
 {
-    integrate_ftle_with::<Yoshida4, R, F>(ic, k, CollisionRadius::none(), prm).0
+    integrate_ftle_with::<Yoshida4, R, F>(ic, k, CollisionRadius::none(), prm, false).0
 }
 
 /// The sample from the FTLE tier, `tier`, is the base tier's `base`, bit for bit, and carries a shadow of its own.
@@ -1243,7 +1243,9 @@ fn check_forms(payload: Payload) {
 
 #[test]
 fn qa_m314_forms_one_map() {
-    check_forms(|ic, k, prm| integrate_ftle::<Yoshida4, f32>(ic, k, CollisionRadius::none(), prm));
+    check_forms(|ic, k, prm| {
+        integrate_ftle::<Yoshida4, f32>(ic, k, CollisionRadius::none(), prm, false)
+    });
 }
 
 negative_control!(

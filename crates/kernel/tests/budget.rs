@@ -249,7 +249,8 @@ where
         delta_0: 1e-8.to_r(),
         n_renorm: 10,
     };
-    let ftle = integrate_ftle::<HgTight, R>(&burrau::<R>(), &key, CollisionRadius::none(), params);
+    let ftle =
+        integrate_ftle::<HgTight, R>(&burrau::<R>(), &key, CollisionRadius::none(), params, false);
     let budget_bits = keep(ftle.budget_bits);
     println!(
         "{name}: base budget_bits {:#010x} dE_reg {:#010x}; FTLE {budget_bits:#010x} {:#010x}",

@@ -354,6 +354,7 @@ type ProducerFn<R> = fn(&Fixture, &WrapperUniforms<R>) -> (SimStateFTLEOf<R>, [u
 fn produced_by<A: Advance, R: P>(
     f: &Fixture,
     key: &WrapperUniforms<R>,
+    stop_on_escape: bool,
 ) -> (SimStateFTLEOf<R>, [u32; 4])
 where
     f64: AsR<R>,
@@ -368,20 +369,33 @@ where
         benettin::<R>(),
         0,
         &mut words[..],
+        stop_on_escape,
     );
     (s, words[0].free_group_word)
 }
 
-/// The producer under the fixture's occupant.
+/// The producer under the fixture's occupant, the stop option off (the default).
 fn producer<R: P>(f: &Fixture, key: &WrapperUniforms<R>) -> (SimStateFTLEOf<R>, [u32; 4])
 where
     f64: AsR<R>,
 {
+    producer_stopping::<R>(f, key, false)
+}
+
+/// The producer under the fixture's occupant and the stop option `stop`.
+fn producer_stopping<R: P>(
+    f: &Fixture,
+    key: &WrapperUniforms<R>,
+    stop: bool,
+) -> (SimStateFTLEOf<R>, [u32; 4])
+where
+    f64: AsR<R>,
+{
     match f.occupant {
-        Occupant::Yoshida4 => produced_by::<Yoshida4, R>(f, key),
-        Occupant::Euler => produced_by::<Euler, R>(f, key),
-        Occupant::HeggieTight => produced_by::<Composed<Rk4, Heggie<Tight>>, R>(f, key),
-        Occupant::HeggieFloored => produced_by::<Composed<Rk4, Heggie<Floored>>, R>(f, key),
+        Occupant::Yoshida4 => produced_by::<Yoshida4, R>(f, key, stop),
+        Occupant::Euler => produced_by::<Euler, R>(f, key, stop),
+        Occupant::HeggieTight => produced_by::<Composed<Rk4, Heggie<Tight>>, R>(f, key, stop),
+        Occupant::HeggieFloored => produced_by::<Composed<Rk4, Heggie<Floored>>, R>(f, key, stop),
     }
 }
 
@@ -394,14 +408,24 @@ where
     let ic = at::<R>(&f.ic);
     let radius = CollisionRadius::from_r_coll(f.r_coll);
     let s = match f.occupant {
-        Occupant::Yoshida4 => integrate_ftle::<Yoshida4, R>(&ic, key, radius, benettin::<R>()),
-        Occupant::Euler => integrate_ftle::<Euler, R>(&ic, key, radius, benettin::<R>()),
-        Occupant::HeggieTight => {
-            integrate_ftle::<Composed<Rk4, Heggie<Tight>>, R>(&ic, key, radius, benettin::<R>())
+        Occupant::Yoshida4 => {
+            integrate_ftle::<Yoshida4, R>(&ic, key, radius, benettin::<R>(), false)
         }
-        Occupant::HeggieFloored => {
-            integrate_ftle::<Composed<Rk4, Heggie<Floored>>, R>(&ic, key, radius, benettin::<R>())
-        }
+        Occupant::Euler => integrate_ftle::<Euler, R>(&ic, key, radius, benettin::<R>(), false),
+        Occupant::HeggieTight => integrate_ftle::<Composed<Rk4, Heggie<Tight>>, R>(
+            &ic,
+            key,
+            radius,
+            benettin::<R>(),
+            false,
+        ),
+        Occupant::HeggieFloored => integrate_ftle::<Composed<Rk4, Heggie<Floored>>, R>(
+            &ic,
+            key,
+            radius,
+            benettin::<R>(),
+            false,
+        ),
     };
     (s, [0; 4])
 }
@@ -1618,6 +1642,7 @@ where
         benettin::<R>(),
         0,
         &mut words[..],
+        false,
     );
     (sd_state(s.packed_a), s.E_0)
 }
@@ -1705,10 +1730,11 @@ negative_control!(
 // ── The shape views (debug_tooling_plan §E; REQ-TOOL-037) ───────────────────────────────────────────────────────
 
 /// A sample that latched a terminal stores every word the same however far past it the horizon runs, so the live
-/// views over it are frozen: the head-on collision (an escape is a terminal only under the stop option), produced at its
-/// horizon `H`, at
-/// `H + 1` and at `2H`, at f32 and f64. `names` picks the samples (the control picks one with no terminal).
-fn check_frozen(names: &[&str]) {
+/// views over it are frozen: produced at its horizon `H`, at `H + 1` and at `2H`, at f32 and f64, under the stop option
+/// `stop`. A collision is a terminal in both modes; an escape only under the stop option (`kernel::driver::cadence`'s
+/// note), so the three-way escape ("expanding") is frozen with it on and marches on with it off. `names` picks the
+/// samples.
+fn check_frozen(names: &[&str], stop: bool) {
     for &name in names {
         let f = fixtures()
             .into_iter()
@@ -1716,40 +1742,52 @@ fn check_frozen(names: &[&str]) {
             .expect("a fixture");
         for steps in [1, 2] {
             let key = sim_key::<f32>(f.horizon);
-            let (s, w) = producer::<f32>(&f, &key);
+            let (s, w) = producer_stopping::<f32>(&f, &key, stop);
             let later = with_steps(&key, key.horizon_steps * steps + (2 - steps));
-            let (t, wt) = producer::<f32>(&f, &later);
+            let (t, wt) = producer_stopping::<f32>(&f, &later, stop);
             assert!(
                 words(&s, false) == words(&t, false) && w == wt,
-                "{name} at f32: not frozen: its payload at {} steps differs from {}",
+                "{name} at f32 (stop option {stop}): not frozen: its payload at {} steps differs from {}",
                 later.horizon_steps,
                 key.horizon_steps
             );
             let key = sim_key::<f64>(f.horizon);
-            let (s, w) = producer::<f64>(&f, &key);
-            let (t, wt) = producer::<f64>(&f, &with_steps(&key, later.horizon_steps));
+            let (s, w) = producer_stopping::<f64>(&f, &key, stop);
+            let (t, wt) =
+                producer_stopping::<f64>(&f, &with_steps(&key, later.horizon_steps), stop);
             assert!(
                 words(&s, false) == words(&t, false) && w == wt,
-                "{name} at f64: not frozen: its payload at {} steps differs from {}",
+                "{name} at f64 (stop option {stop}): not frozen: its payload at {} steps differs from {}",
                 later.horizon_steps,
                 key.horizon_steps
             );
         }
-        println!("{name}: frozen past its terminal at f32 and f64");
+        println!("{name}: frozen past its terminal at f32 and f64 (stop option {stop})");
     }
 }
 
 #[test]
 fn shape_views_terminal_frozen() {
-    // The three-way escape is no longer a terminal here: the escape label is live by default (escape-live-label) and
-    // the producer marches under the default, so only the collision latches; the stop option's latch is
-    // `kernel/tests/terminal.rs`'s.
-    check_frozen(&["head-on"]);
+    check_frozen(&["head-on"], false);
 }
 
 negative_control!(
     shape_views_terminal_frozen,
     "a sample with no terminal, which marches on past the horizon",
     expected = "not frozen",
-    check_frozen(&["figure-eight"])
+    check_frozen(&["figure-eight"], true)
+);
+
+/// Under the stop option the producer freezes an escape too: the head-on collision and the three-way escape.
+#[test]
+fn shape_views_terminal_frozen_stop_option() {
+    check_frozen(&["head-on", "expanding"], true);
+}
+
+negative_control!(
+    shape_views_terminal_frozen_stop_option,
+    "the three-way escape with the stop option off: the producer honours the option, so its label stays live and the \
+     march goes on past the horizon",
+    expected = "expanding at f32 (stop option false): not frozen",
+    check_frozen(&["expanding"], false)
 );
