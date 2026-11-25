@@ -28,6 +28,11 @@ PY = os.path.join(HERE, 'python')
 sys.path.insert(0, HERE)
 
 PARTS = ['sim', 'boards', 'web', 'stills', 'videos', 'social']
+OPTIONAL_PARTS = ['explore']      # slow, and not needed for the pictures: the placement searches, run for the record
+# The placement searches, in the order they were written; each runs in a fresh copy of the committed data.
+EXPLORE = [['clear.py'], ['clear2.py'], ['clear3.py'], ['hole.py'], ['hole2.py'], ['hole3.py'], ['hole4.py'], ['hole5.py'],
+           ['hole6.py'], ['hole7.py'], ['dragon.py'], ['dragon2.py'], ['dragon3.py'],
+           ['sorb.py', 'butterfly1'], ['sorb.py', 'butterfly2'], ['sorb.py', 'goggles'], ['sorb.py', 'dragonfly']]
 # The ten boards whose output is committed in code/boards (final.py also writes exploration boards).
 BOARDS = ['Dragonfly', 'DragonflyNight', 'Word3D', 'Word3DSub', 'WordFlat', 'WordFlatNight', 'WordFlatSub',
           'WordFlatSubNight', 'WordMixed', 'WordMixedSub']
@@ -46,6 +51,9 @@ VIDEOS = [('icon-light', 'icons/animated', 'principia-icon-light', 24, 12, 400, 
 WEBP_WIDTH, WEBP_LIMIT = 1200, 4_000_000
 # Page-colour variants of the subtitle title for GitHub's default dark and light pages: the glow and the
 # ink-style mixing are computed on that colour (the runtime's backdrop option), not on the paper colour.
+# The glow reaches the picture's own edge in some frames (up to 10 levels on dark), so the page-colour variants carry
+# a margin of the page colour: the outer border is then exactly that colour, and Lanczos (radius 4 px at 1200 px) cannot reach it.
+GITHUB_PAD = 12
 GITHUB = [('github-dark', 'title-2d-subtitle-dark', '#0d1117'), ('github-light', 'title-2d-subtitle-light', '#ffffff')]
 
 
@@ -184,7 +192,7 @@ def part_videos(out, only=None):
             continue
         frames = os.path.join(out, 'work', 'frames', f'title-2d-subtitle-{name}')
         log('frames', name)
-        render.frames(wd, v, 30, frames, backdrop=bd)
+        render.frames(wd, v, 30, frames, backdrop=bd, pad=GITHUB_PAD)
         stem = f'principia-title-2d-subtitle-{name}'
         q, size = encode.webp(frames, 30, 15, WEBP_WIDTH, os.path.join(out, 'titles', f'{stem}.webp'), limit=WEBP_LIMIT)
         record_webp(out, f'{stem}.webp', q, size)
@@ -197,6 +205,45 @@ def part_social(out):
     os.makedirs(dst, exist_ok=True)
     run([sys.executable, os.path.join(BRAND, 'social/make_social_preview.py'), '--web', web, '--out', dst,
          '--hero', os.path.join(REPO, 'docs/readme/hero.jpg')], BRAND)
+
+
+def part_explore(out, only=None, timeout=900):
+    """Runs each placement-search script in its own fresh copy of the committed data and records what happened:
+    whether it ran, how long it took, and which data files it wrote that differ from the committed ones."""
+    import filecmp, tempfile
+    res = {}
+    for cmd in EXPLORE:
+        name = ' '.join(cmd)
+        if only and not any(o in name for o in only):
+            continue
+        wd = os.path.join(out, 'work', 'explore', name.replace(' ', '_').replace('.py', ''))
+        if os.path.exists(wd):
+            shutil.rmtree(wd)                       # our own scratch folder, made by an earlier run of this part
+        shutil.copytree(PY, wd, ignore=shutil.ignore_patterns('__pycache__'))
+        os.makedirs(os.path.join(wd, 'p4'), exist_ok=True)
+        data_to_cwd(wd)
+        t0 = time.time()
+        try:
+            p = subprocess.run([sys.executable] + cmd, cwd=wd, capture_output=True, text=True, timeout=timeout)
+            status, tail = ('ran' if p.returncode == 0 else f'failed (exit {p.returncode})'), (p.stdout + p.stderr).strip().splitlines()[-6:]
+        except subprocess.TimeoutExpired as e:
+            status, tail = f'timed out after {timeout} s', []
+        wrote = {}
+        for f in sorted(os.listdir(wd)):
+            ref = os.path.join(PY, 'data', f)
+            cur = os.path.join(wd, f)
+            if f.endswith(('.json', '.npz')) and os.path.isfile(cur) and f in os.listdir(os.path.join(PY, 'data')) + [f]:
+                if os.path.exists(ref):
+                    if not filecmp.cmp(ref, cur, shallow=False):
+                        wrote[f] = 'differs from the committed file'
+                else:
+                    wrote[f] = 'new file (not committed)'
+        res[name] = {'status': status, 'seconds': round(time.time() - t0), 'changed_or_new': wrote, 'tail': tail}
+        log(name, res[name]['status'], res[name]['seconds'], 's', wrote)
+    p = os.path.join(out, 'explore.json')
+    old = json.load(open(p)) if os.path.exists(p) else {}
+    old.update(res)
+    json.dump(old, open(p, 'w'), indent=1)
 
 
 def build_info(out):
@@ -227,7 +274,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__)
     ap.add_argument('--out', default=os.path.join(os.getcwd(), 'brand-rebuild'), help='where everything is written (default ./brand-rebuild)')
-    ap.add_argument('--part', action='append', choices=PARTS, help='run only this part (repeatable); default: all')
+    ap.add_argument('--part', action='append', choices=PARTS + OPTIONAL_PARTS, help='run only this part (repeatable); default: all')
     ap.add_argument('--only', action='append', help='videos: only variants whose name contains this, e.g. icon-light')
     a = ap.parse_args()
     out = check_out(a.out)
@@ -236,8 +283,8 @@ def main():
     build_info(out)
     for p in (a.part or PARTS):
         log('== part', p)
-        if p == 'videos':
-            part_videos(out, a.only)
+        if p in ('videos', 'explore'):
+            globals()['part_' + p](out, a.only)
         else:
             globals()['part_' + p](out)
     log(f'done in {time.time() - t0:.0f} s; compare with: python3 {os.path.join(HERE, "compare.py")} {BRAND} {out}')

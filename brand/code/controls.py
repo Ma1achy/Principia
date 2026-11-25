@@ -112,20 +112,106 @@ def video_controls(ref, tmp, quick):
     # harmless: the WebM against the MP4 is not a control (different backgrounds)
 
 
+def png_frames(d, perturb=None, limit=None):
+    for k, n in enumerate(sorted(os.listdir(d))[:limit]):
+        a = np.asarray(Image.open(os.path.join(d, n)).convert('RGBA')).copy()
+        yield perturb(k, a) if perturb else a
+
+
+def webp_controls(ref, rebuild):
+    """WebP files have no committed counterpart: the transparent ones are judged against the committed WebM of
+    the same loop, the page-colour ones against the frames they were made from. Each wrong picture is fed in as
+    the reference side, which is the same comparison with the pictures the other way round."""
+    t = os.path.join(rebuild, 'titles')
+    wd, wl = (os.path.join(t, f'principia-title-2d-subtitle-{n}.webp') for n in ('dark', 'light'))
+    webm = lambda n: os.path.join(ref, f'titles/principia-title-2d-subtitle-{n}-transparent.webm')
+    record('right: transparent dark WebP against the committed dark WebM', True, C.compare_webp_to_frames(wd, C.decode(webm('dark')), 30))
+    record('wrong: dark WebP against the light WebM (wrong theme)', False, C.compare_webp_to_frames(wd, C.decode(webm('light')), 30))
+    frames = list(C.decode(webm('dark')))
+    def a_opaque(k, a): a = a.copy(); a[..., 3] = 255; return a
+    record('wrong: alpha dropped (reference forced opaque)', False, C.compare_webp_to_frames(wd, (a_opaque(0, f) for f in frames), 30))
+    shift = 8 * 2                                   # half a second at 15 fps is 7.5 frames; 8 frames = 16 source frames
+    record('wrong: loop shifted by half a second', False, C.compare_webp_to_frames(wd, iter(frames[shift:] + frames[:shift]), 30))
+    record('wrong: truncated (only the first 18 s)', False, C.compare_webp_to_frames(wd, iter(frames[:540]), 30))
+    swap = [f[..., [2, 1, 0, 3]] for f in frames[::30]]
+    sw = [frames[i] if i % 30 else swap[i // 30] for i in range(len(frames))]
+    record('wrong: red and blue swapped in every 30th frame', False, C.compare_webp_to_frames(wd, iter(sw), 30))
+    del frames
+    # page-colour variants: border and picture against their own rendered frames
+    for n, col in (('dark', (13, 17, 23)), ('light', (255, 255, 255))):
+        w = os.path.join(t, f'principia-title-2d-subtitle-github-{n}.webp')
+        fd = os.path.join(rebuild, 'work/frames', f'title-2d-subtitle-github-{n}')
+        if not (os.path.exists(w) and os.path.isdir(fd)):
+            continue
+        other = 'light' if n == 'dark' else 'dark'
+        ocol = (255, 255, 255) if n == 'dark' else (13, 17, 23)
+        fo = os.path.join(rebuild, 'work/frames', f'title-2d-subtitle-github-{other}')
+        record(f'right: github-{n} WebP, border and picture', True, C.compare_page_colour(w, png_frames(fd), 30, col))
+        record(f'wrong: github-{n} WebP judged as the {other} page colour', False, C.compare_page_colour(w, png_frames(fd), 30, ocol))
+        if os.path.isdir(fo):
+            record(f'wrong: github-{n} WebP against the {other} variant frames', False, C.compare_page_colour(w, png_frames(fo), 30, col))
+        # a frame whose background is 2 levels off (more than the 1 level a lossy file may be off): must fail the border test
+        def off(k, a, d=2):
+            if k == 300:
+                a = a.copy(); a[..., :3] = np.clip(a[..., :3].astype(int) + (d if n == 'dark' else -d), 0, 255).astype(np.uint8)
+            return a
+        record(f'wrong: one frame of github-{n} with its background 2 levels off', False,
+               C.compare_page_colour(w, png_frames(fd, off), 30, col))
+        # the border test itself, on the rendered frames: one level off passes (tolerance 1), two fails
+        wst, _ = C.border_check([off(300, next(png_frames(fd)), 1)], col, 1)
+        wst2, _ = C.border_check([off(300, next(png_frames(fd)), 2)], col, 1)
+        RESULTS.append((f'border test: background 1 level off reads {wst}, 2 levels off reads {wst2}', True, wst <= 1 < wst2 or wst2 > 1, '', ''))
+
+
+def patched_render_dir(rebuild, tmp, name, patch):
+    """A copy of the rebuild's render folder whose icon-light script has been changed by patch(text)."""
+    import render
+    src = os.path.join(rebuild, 'work', 'render')
+    dst = os.path.join(tmp, 'rd-' + name)
+    render.make_render_dir(dst, src)
+    p = os.path.join(dst, 'principia-icon-light.js')
+    t = open(p).read()
+    new = patch(t)
+    assert new != t, f'patch {name} changed nothing'
+    open(p, 'w').write(new)
+    return dst
+
+
+def swap_bodies(t):
+    """Magenta and cyan bodies exchange their colour ramps."""
+    import re
+    m = re.search(r'const RAMP = (\[\[.*?\]\]),', t)
+    ramp = eval(m.group(1))
+    ramp[0], ramp[2] = ramp[2], ramp[0]
+    return t.replace(m.group(1), str(ramp).replace("'", '"'))
+
+
+def nudge_point(t):
+    """One orbit point of the first body, the one nearest to t = 17 s into the loop, moved 0.15 (7 % of the
+    P's cap height) in x. The points are the adaptive samples in the board's AD list."""
+    import re
+    m = re.search(r'\{ t: \[([^\]]*)\], p: \[([^\]]*)\] \}', t)
+    ts = [float(x) for x in m.group(1).split(',')]
+    ps = [float(x) for x in m.group(2).split(',')]
+    i = min(range(len(ts)), key=lambda k: abs(ts[k] - 17 / 36))
+    ps[3 * i] += 0.15
+    return t.replace(m.group(2), ','.join(format(x, '.6g') for x in ps), 1)
+
+
 def render_controls(ref, rebuild, tmp):
     """Rendered wrong pictures: needs Chrome and the rebuild's work/render folder."""
     import render
+    light = os.path.join(ref, 'icons/source/principia-icon-2048-uncropped.png')
     wd = os.path.join(rebuild, 'work', 'render')
-    light = os.path.join(ref, 'icons/source/principia-icon-1024-transparent.png')
-    arms = [('bodies colours swapped (magenta <-> cyan)', dict(v='icon-light', swap='1')),
-            ('trails 1.6x heavier', dict(v='icon-light', weight='1.6')),
-            ('one orbit point moved', dict(v='icon-light', nudge='1')),
-            ('dark palette for the light file', dict(v='icon-dark')),
-            ('harmless: the same render again (Chrome is deterministic?)', dict(v='icon-light'))]
-    for name, q in arms:
-        out = f'{tmp}/{q["v"]}-{abs(hash(name)) % 10**6}.png'
-        render.still(wd, out, size=1024, t=17, **{k: v for k, v in q.items() if k != 'v'}, v=q['v'])
-        record(('' if name.startswith('harmless') else 'wrong: ') + name, name.startswith('harmless'), C.compare_still(light, out))
+    arms = [('harmless: the same render again (Chrome is deterministic here)', wd, 'icon-light', 1),
+            ('wrong: bodies colours swapped (magenta <-> cyan)', patched_render_dir(rebuild, tmp, 'swap', swap_bodies), 'icon-light', 1),
+            ('wrong: trails 1.6x heavier', wd, 'icon-light', 1.6),
+            ('wrong: one orbit point moved by 0.15', patched_render_dir(rebuild, tmp, 'nudge', nudge_point), 'icon-light', 1),
+            ('wrong: dark palette for the light file', wd, 'icon-dark', 1)]
+    for i, (name, d, v, w) in enumerate(arms):
+        out = f'{tmp}/ctl{i}.png'
+        render.stills(d, [(v, out, 2048, 17, w)])
+        record(name, name.startswith('harmless'), C.compare_still(light, out))
 
 
 def main():
@@ -138,6 +224,7 @@ def main():
     video_controls(a.reference, tmp, a.quick)
     if a.render:
         render_controls(a.reference, a.render, tmp)
+        webp_controls(a.reference, a.render)
     broken = 0
     print(f'{"control":<66} {"must":<7} {"got":<7} detail')
     for name, want, got, why, st in RESULTS:

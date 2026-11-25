@@ -18,10 +18,10 @@ def make_render_dir(wd, web_dir):
             shutil.copy(os.path.join(web_dir, f), wd)
 
 
-async def _open(p, wd, v, size, t, weight, vw, vh, backdrop=None):
+async def _open(p, wd, v, size, t, weight, vw, vh, backdrop=None, pad=0):
     b = await p.chromium.launch()
     pg = await b.new_page(viewport={'width': vw, 'height': vh})
-    q = f'v={v}&t={t}' + (f'&size={size}' if size else '') + (f'&weight={weight}' if weight else '') + (f'&backdrop=%23{backdrop.lstrip("#")}' if backdrop else '')
+    q = f'v={v}&t={t}' + (f'&size={size}' if size else '') + (f'&weight={weight}' if weight else '') + (f'&backdrop=%23{backdrop.lstrip("#")}' if backdrop else '') + (f'&pad={pad}' if pad else '')
     await pg.goto(f'file://{os.path.abspath(wd)}/r.html?{q}')
     await pg.wait_for_function("document.title==='ready'")
     await pg.wait_for_timeout(300)
@@ -46,13 +46,13 @@ def still(wd, out, v, size=1024, t=17, weight=1):
     stills(wd, [(v, out, size, t, weight)])
 
 
-async def _frames(wd, v, fps, outdir, loop=36.0, t0=6.0, only=None, backdrop=None):
+async def _frames(wd, v, fps, outdir, loop=36.0, t0=6.0, only=None, backdrop=None, pad=0):
     """Frame i is the mark at t0 + i/fps seconds: the loop starts 6 s in. only: a set of frame numbers."""
     os.makedirs(outdir, exist_ok=True)
     n = int(round(loop * fps))
     async with async_playwright() as p:
-        b, pg = await _open(p, wd, v, None, 0, None, 1600, 700, backdrop)
-        el = await pg.query_selector('#m')
+        b, pg = await _open(p, wd, v, None, 0, None, 1700, 800, backdrop, pad)
+        el = await pg.query_selector('#w' if pad else '#m')
         for i in range(n):
             if only is not None and i not in only:
                 continue
@@ -65,6 +65,7 @@ async def _frames(wd, v, fps, outdir, loop=36.0, t0=6.0, only=None, backdrop=Non
         await b.close()
 
 
-def frames(wd, v, fps, outdir, only=None, backdrop=None):
-    """backdrop: a colour drawn behind the mark, so glow and ink mixing are computed on it."""
-    asyncio.run(_frames(wd, v, fps, outdir, only=only, backdrop=backdrop))
+def frames(wd, v, fps, outdir, only=None, backdrop=None, pad=0):
+    """backdrop: a colour drawn behind the mark, so glow and ink mixing are computed on it.
+    pad: pixels of backdrop colour added around the mark (the glow is clipped at the mark's own edge)."""
+    asyncio.run(_frames(wd, v, fps, outdir, only=only, backdrop=backdrop, pad=pad))
