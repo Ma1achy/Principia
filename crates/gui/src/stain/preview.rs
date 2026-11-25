@@ -14,7 +14,7 @@ use eframe::egui_wgpu;
 use engine::contract::render_state::NodeKind;
 
 use super::{
-    canvas, choices, chosen, controls, description, edited, Out, Page, Scratch, CHOICE_IDS,
+    canvas, choices, chosen, controls, description, edited, yours, Out, Page, Scratch, CHOICE_IDS,
     EDIT_WGSL, REVERT,
 };
 use crate::keyboard::scopes::ScopeId;
@@ -104,6 +104,9 @@ fn inspector(
         let nodes = g.nodes().count();
         ui.label(RichText::new(format!("{nodes} nodes · {} wires", g.wires().len())).weak());
         ui.label(RichText::new("select one node to edit it").weak());
+        if let (true, Some(c)) = (s.canvas.selection.is_empty(), page.content) {
+            yours::panel(ui, &c.yours, &s.yours, keys, clicked);
+        }
         return;
     };
     let d = description(page.content, n);
@@ -118,6 +121,7 @@ fn inspector(
     ui.label(RichText::new(&d.maps).weak());
     ui.add_space(6.0);
     if let Some(c) = page.content {
+        yours::offer(ui, &c.yours, n.id, keys, clicked);
         let options = choices(n, c);
         if !options.is_empty() {
             ui.label(
@@ -130,7 +134,9 @@ fn inspector(
             );
             ui.horizontal_wrapped(|ui| {
                 for (choice, id) in options.into_iter().zip(CHOICE_IDS.iter()) {
-                    let button = ui.add(Button::selectable(chosen(n, choice, c), choice.name));
+                    let button = ui
+                        .add(Button::selectable(chosen(n, choice, c), choice.name))
+                        .on_hover_text(&choice.from);
                     if button.clicked() {
                         clicked.push(id);
                     }
@@ -182,10 +188,19 @@ fn inspector(
                 clicked.push(EDIT_WGSL);
             }
             keys.place(EDIT_WGSL, &edit);
+            let revert = page
+                .content
+                .is_some_and(|c| c.yours.held(n.id).is_some_and(|h| h.revert));
             let revert = ui
-                .add_enabled(false, Button::new("Revert"))
-                .on_disabled_hover_text("TASK-M7-24");
+                .add_enabled(revert, Button::new("Revert"))
+                .on_disabled_hover_text("this node's code is not an edit of one here");
+            if revert.clicked() {
+                clicked.push(REVERT);
+            }
             keys.place(REVERT, &revert);
         });
+        if let Some(c) = page.content {
+            yours::shader(ui, &c.yours, &mut s.yours, n.id, keys, clicked);
+        }
     }
 }

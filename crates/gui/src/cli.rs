@@ -3,12 +3,12 @@
 //! RQ-251): on the real engine by default, its field computed on the CPU before the window opens ([`real`]); on the
 //! mock with the `mock` feature ([`mock`]). `capture --screen <screen> --steps <steps> --out <dir>` is the headless
 //! capture mode the screenshot runner spawns, on either; the real side takes no steps yet, and shoots the capture's
-//! view (`crate::real::capture_view`), the origin slice of z_α × z_β, not the start state the window opens on. `--bench
-//! console-open-close` measures the console's frames on the mock (R-463 K4; `crate::bench`). The mock's commands read
-//! `PRIN_MOCK_INVALID`, the mock's invalid-pixel test hook's launch switch (R-467 D8), and refuse a malformed value,
-//! naming it. `PRIN_MEASURE=1` opens the mock's window with the v1 web skeleton's measurement panel beside the figure
-//! (TASK-M8-86, `crate::measure`), which reads the refresh rate of the monitor the window is on; its run's report is
-//! printed to stdout.
+//! view (`crate::real::capture_view`), the origin slice of z_α × z_β, not the start state the window opens on, and
+//! reads your shaders only from the folder `--shaders <dir>` names. `--bench console-open-close` measures the
+//! console's frames on the mock (`crate::bench`). The mock's commands read `PRIN_MOCK_INVALID`, the mock's
+//! invalid-pixel test hook's launch switch, and refuse a malformed value, naming it. `PRIN_MEASURE=1` opens the
+//! mock's window with the v1 web skeleton's measurement panel beside the figure (`crate::measure`), which reads the
+//! refresh rate of the monitor the window is on; its run's report is printed to stdout.
 
 /// Runs the command `args` names, the window through `eframe::run_native`: on the mock with the `mock` feature, on the
 /// real engine without it.
@@ -32,6 +32,7 @@ pub mod real {
     use crate::layout::LEAST_WINDOW;
     use crate::real::{capture_view, payload, start, RealCanvas, FIELD_SIZE};
     use crate::settings::Store;
+    use crate::shaders::Shaders;
     use crate::side::{EngineSide, RealSide};
 
     /// What the binary says of a command the real engine does not run.
@@ -56,7 +57,9 @@ pub mod real {
                     return Err("capture: the real engine takes no steps yet".to_owned());
                 }
                 let (side, canvas) = open_capture(&Cpu, FIELD_SIZE)?;
-                let shot = capture::shoot_real(side, canvas.as_ref(), &args.screen);
+                let shaders = args.shaders.as_deref().map(Shaders::at);
+                let shaders = shaders.unwrap_or_default();
+                let shot = capture::shoot_real(side, canvas.as_ref(), &args.screen, shaders);
                 capture::write(&shot, &args.out)
             }
             Some(other) => Err(unknown(other)),
@@ -119,11 +122,8 @@ pub mod real {
                     .as_ref()
                     .ok_or("eframe opened no wgpu renderer")?
                     .target_format;
-                Ok(Box::new(App::with_settings(
-                    side,
-                    format,
-                    Store::platform(),
-                )))
+                let app = App::with_settings(side, format, Store::platform());
+                Ok(Box::new(app.with_shaders(Shaders::platform())))
             }),
         )
         .map_err(|e| format!("gui: {e}"))
@@ -143,6 +143,7 @@ pub mod mock {
     use crate::measure;
     use crate::mock::{canvas::MockCanvas, MockEngine};
     use crate::settings::Store;
+    use crate::shaders::Shaders;
     use crate::side::{EngineSide, MockSide};
 
     /// The environment variable that turns the mock's invalid-pixel test hook on at launch (R-467 D8; REQ-GUI-226):
@@ -218,6 +219,9 @@ pub mod mock {
             None => window(runner),
             Some("capture") => {
                 let args = capture::Args::parse(&args[1..])?;
+                if args.shaders.is_some() {
+                    return Err("capture: the mock takes no --shaders".to_owned());
+                }
                 let canvas = canvas()?;
                 let (shot, compass) = capture::shoot_case(canvas, &args.screen, &args.steps);
                 capture::write(&shot, &args.out)?;
@@ -282,11 +286,8 @@ pub mod mock {
                     .as_ref()
                     .ok_or("eframe opened no wgpu renderer")?
                     .target_format;
-                Ok(Box::new(App::with_settings(
-                    side,
-                    format,
-                    Store::platform(),
-                )))
+                let app = App::with_settings(side, format, Store::platform());
+                Ok(Box::new(app.with_shaders(Shaders::platform())))
             }),
         )
         .map_err(|e| format!("gui: {e}"))

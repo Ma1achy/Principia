@@ -155,7 +155,8 @@ fn untilted(map: TiltMap) -> SimConfig {
 #[test]
 fn tilt_maps_zero_is_the_identity_and_a_single_tilt_is_the_same() {
     for gamma in [0.0, 30.0, -120.0] {
-        let (sg, cg) = f64::to_radians(gamma).sin_cos();
+        // The code's own sines: the platform's can differ from them in the last bit.
+        let (sg, cg) = engine::exact::sin_cos(f64::to_radians(gamma));
         let mut want1 = [0.0; 8];
         let mut want2 = [0.0; 8];
         (want1[Z_ALPHA], want1[Z_BETA]) = (cg, sg);

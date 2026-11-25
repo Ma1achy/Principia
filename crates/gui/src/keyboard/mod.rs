@@ -6,11 +6,11 @@
 //!
 //! The layer takes its keys from the raw input before egui sees them, so egui's own Tab and arrow focus never moves;
 //! it stands aside only while a text field holds the keyboard: one being typed in (interaction mode on a text scope,
-//! after Enter or a click on it, R-456) takes every key but Esc, Enter and Tab (R-409 G4, G5), and any other text
-//! entry the mouse focused (a value's typed entry, egui's) takes every key. A key's release goes to whoever saw its
-//! press. The menus are scopes too: the focus inside a menu opens it, and a menu the mouse opens takes the focus. In
-//! either mode the letter and Space shortcuts are egui's to read, Ctrl+Z is never the layer's, and `?` opens the
-//! shortcuts (R-409 F1, G1).
+//! after Enter or a click on it) takes every key but Esc, Enter and Tab, a field of lines every key but Esc, and any
+//! other text entry the mouse focused (a value's typed entry, egui's) every key. A key's release goes to whoever saw
+//! its press. The menus are scopes too: the focus inside a menu opens it, and a menu the mouse opens takes the focus.
+//! In either mode the letter and Space shortcuts are egui's to read, Ctrl+Z is never the layer's, and `?` opens the
+//! shortcuts.
 //!
 //! Keyboard navigation is on or off, apart from the focus (render_gui_spec §G3; R-460, R-464): the layer's own flag,
 //! never `ViewUI`'s. Any key press turns it on, and any pointer press, a click's or a drag's, turns it off; a scroll
@@ -194,6 +194,10 @@ impl Keyboard {
     /// overlay is open it takes every click: a press outside its frame closes it.
     pub fn take_keys(&mut self, ctx: &egui::Context, raw: &mut RawInput) {
         let typing = !self.shortcuts_open && self.typing.is_some();
+        let lines = self.typing.is_some_and(|id| {
+            let scope = self.explore.get(id).or_else(|| self.stain.get(id));
+            scope.is_some_and(|s| s.lines)
+        });
         let aside = !self.shortcuts_open && !typing && ctx.text_edit_focused();
         if !aside && !typing {
             // A widget egui focused would draw itself active: the focus is the layer's alone.
@@ -247,7 +251,11 @@ impl Keyboard {
                     let Some(command) = keymap::command(key, modifiers) else {
                         return true;
                     };
-                    if aside || (typing && !keymap::ends_typing(command)) {
+                    let ends = match lines {
+                        true => command == Command::Back,
+                        false => keymap::ends_typing(command),
+                    };
+                    if aside || (typing && !ends) {
                         return true;
                     }
                     if !layers {

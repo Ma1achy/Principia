@@ -374,15 +374,22 @@ pub fn shoot_case(
 /// The app on the real engine's `side`, its canvas `canvas`, rendered on `screen` (`02_stain` in Stain mode) after two
 /// frames with no input: the capture of the real app on the state `side` holds, the capture's view from the binary
 /// (`crate::cli::real::open_capture`). The real side takes no steps yet: its engine has no
-/// warning to raise and no plane edit applies to its field, which is computed once.
-pub fn shoot_real(side: crate::side::RealSide, canvas: &dyn Canvas, screen: &str) -> Shot {
-    let mut app = crate::app::App::new(side, FORMAT);
+/// warning to raise and no plane edit applies to its field, which is computed once. Your shaders are `shaders`, read by
+/// the time it is rendered.
+pub fn shoot_real(
+    side: crate::side::RealSide,
+    canvas: &dyn Canvas,
+    screen: &str,
+    shaders: crate::shaders::Shaders,
+) -> Shot {
+    let mut app = crate::app::App::new(side, FORMAT).with_shaders(shaders);
     if screen == "02_stain" {
         app.view.mode = engine::contract::view_ui::Mode::Stain;
     }
     let mut headless = Headless::new(SIZE, PIXELS_PER_POINT);
     for _ in 0..2 {
         let _ = headless.frame(&mut app, Vec::new());
+        app.shaders.wait();
     }
     render_frame_on(canvas, &mut app, &mut headless)
 }
@@ -556,7 +563,8 @@ pub fn write(shot: &Shot, out: &Path) -> Result<(), String> {
     fs::write(&path, text).map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
-/// The capture command's arguments, after `capture`: `--screen <screen> --steps <steps> --out <dir>`.
+/// The capture command's arguments, after `capture`: `--screen <screen> --steps <steps> --out <dir>`, and
+/// `--shaders <dir>`.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Args {
     /// The screen.
@@ -565,18 +573,21 @@ pub struct Args {
     pub steps: Vec<Step>,
     /// The output directory.
     pub out: std::path::PathBuf,
+    /// The folder of shaders the app reads, never the person's own unless named; none reads none.
+    pub shaders: Option<std::path::PathBuf>,
 }
 
 impl Args {
     /// Parses `args`; `--steps` may be empty or left out, and each flag is given once.
     pub fn parse(args: &[String]) -> Result<Self, String> {
-        let (mut screen, mut steps, mut out) = (None, None, None);
+        let (mut screen, mut steps, mut out, mut shaders) = (None, None, None, None);
         let mut it = args.iter();
         while let Some(flag) = it.next() {
             let slot = match flag.as_str() {
                 "--screen" => &mut screen,
                 "--steps" => &mut steps,
                 "--out" => &mut out,
+                "--shaders" => &mut shaders,
                 other => return Err(format!("capture: unknown argument `{other}`")),
             };
             let value = it
@@ -597,6 +608,7 @@ impl Args {
             screen,
             steps: Step::parse_list(steps.as_deref().unwrap_or(""))?,
             out: out.ok_or("capture: --out is required")?.into(),
+            shaders: shaders.map(Into::into),
         })
     }
 }

@@ -20,7 +20,7 @@ use eframe::egui::{
 use engine::contract::render_state::{NodeId, NodeKind, PortType, StainGraph};
 use engine::contract::stain::describe::{Description, Shown};
 
-use super::{controls, description, Content, View, NODE_IDS, VIEWS};
+use super::{controls, description, yours, Content, View, NODE_IDS, VIEWS};
 use crate::keyboard::scopes::ScopeId;
 use crate::windows::Keys;
 
@@ -474,6 +474,8 @@ pub struct Frame<'a> {
     pub view: &'a mut View,
     /// The canvas's state.
     pub canvas: &'a mut Canvas,
+    /// The code being typed.
+    pub yours: &'a mut yours::Scratch,
 }
 
 /// Draws the canvas in `rect`: its toggle, and the graph or the code its toggle shows. The controls clicked are pushed
@@ -494,6 +496,14 @@ pub fn show(
     match frame.view {
         View::Graph => graph(&mut own, rect, toggles, frame, keys),
         View::Pipeline | View::Node => {
+            let typed = yours::editable(frame.content, &frame.canvas.selection)
+                .filter(|_| *frame.view == View::Node);
+            if let Some(node) = typed {
+                let top = toggles.center().y - TOGGLE_H / 2.0;
+                let area = Rect::from_min_max(pos2(rect.min.x, top), rect.max);
+                yours::code(&mut own, area, node, frame.yours, keys, clicked);
+                return;
+            }
             let text = frame
                 .content
                 .map_or_else(String::new, |c| match frame.view {

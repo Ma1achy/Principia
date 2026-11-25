@@ -1,8 +1,8 @@
 //! The library drawer (render_gui_spec Part II §1; GUI_DESIGN_NOTES § "02 Stain"; 02_stain.png): collapsible, left;
 //! the catalogue's groups, each collapsible, its rows filtered by the filter, the stain loaded highlighted, and New,
-//! Rename, Import and Export. Its rows are the engine side's content; selecting one highlights it. Loading a whole
-//! graph from a row (§11) is the content's, where it has one for the row; the four buttons are drawn
-//! disabled, with nothing behind them yet.
+//! Rename, Import and Export; under the list, a line on your shaders' folder ([`yours`]). Its rows are the engine
+//! side's content; selecting one highlights it. Loading a whole graph from a row (§11) is the content's, where it has
+//! one for the row; the four buttons are drawn disabled, with nothing behind them yet.
 
 use std::collections::BTreeSet;
 
@@ -10,7 +10,8 @@ use eframe::egui::{
     self, pos2, vec2, Align, Button, Layout as EguiLayout, Rect, RichText, Ui, UiBuilder,
 };
 
-use super::{Content, BUTTONS, COLLAPSE, FILTER, GROUP_IDS, ROW_IDS};
+use super::yours;
+use super::{Content, Row, BUTTONS, COLLAPSE, FILTER, GROUP_IDS, ROW_IDS};
 use crate::keyboard::scopes::ScopeId;
 use crate::windows::Keys;
 
@@ -47,17 +48,14 @@ pub fn passes(row: &str, filter: &str) -> bool {
 /// The drawer's lines as they stand: each group with a row the filter passes, then, unless it is closed, those rows.
 pub fn visible(c: &Content, state: &State) -> Vec<Item> {
     let mut items = Vec::new();
-    let mut k = 0;
     for (g, group) in c.library.iter().enumerate().take(GROUP_IDS.len()) {
         let rows: Vec<Item> = group
             .rows
             .iter()
-            .enumerate()
-            .filter(|(_, row)| passes(row, &state.filter))
-            .map(|(i, row)| Item::Row(k + i, row))
+            .filter(|row| passes(row.name, &state.filter))
+            .map(|row| Item::Row(row.place, row.name))
             .filter(|item| matches!(item, Item::Row(k, _) if *k < ROW_IDS.len()))
             .collect();
-        k += group.rows.len();
         if rows.is_empty() {
             continue;
         }
@@ -71,7 +69,12 @@ pub fn visible(c: &Content, state: &State) -> Vec<Item> {
 
 /// Row `k` of the whole library.
 pub fn row(c: &Content, k: usize) -> Option<&'static str> {
-    c.library.iter().flat_map(|g| g.rows.iter().copied()).nth(k)
+    at(c, k).map(|row| row.name)
+}
+
+fn at(c: &Content, k: usize) -> Option<&Row> {
+    let mut rows = c.library.iter().flat_map(|g| &g.rows);
+    rows.find(|row| row.place == k)
 }
 
 /// The count beside the filter: the catalogue's modes, or, filtering, the rows that pass.
@@ -83,7 +86,7 @@ pub fn count(c: &Content, state: &State) -> u32 {
         .library
         .iter()
         .flat_map(|g| g.rows.iter())
-        .filter(|row| passes(row, &state.filter))
+        .filter(|row| passes(row.name, &state.filter))
         .count();
     u32::try_from(passing).unwrap_or(u32::MAX)
 }
@@ -125,6 +128,7 @@ pub fn show(
         return;
     }
     let (list, foot) = areas(rect);
+    let (list, line) = list.split_top_bottom_at_y(list.max.y - yours::SHELF_H);
     let mut panel = ui.new_child(UiBuilder::new().max_rect(list));
     panel.horizontal(|ui| {
         ui.label(RichText::new("Library").heading());
@@ -176,10 +180,14 @@ pub fn show(
                                 keys.place(GROUP_IDS[g], &heading);
                             }
                             Item::Row(k, name) => {
-                                let row = ui.add(Button::selectable(
-                                    loaded == Some(k),
-                                    format!("   {name}"),
-                                ));
+                                let row = ui
+                                    .add(Button::selectable(
+                                        loaded == Some(k),
+                                        format!("   {name}"),
+                                    ))
+                                    .on_hover_ui(|ui| {
+                                        ui.label(at(c, k).map_or("", |row| &row.from));
+                                    });
                                 if row.clicked() {
                                     clicked.push(ROW_IDS[k]);
                                 }
@@ -189,6 +197,8 @@ pub fn show(
                     }
                 });
             });
+        let mut strip = ui.new_child(UiBuilder::new().max_rect(line));
+        yours::line(&mut strip, &c.yours, keys, clicked);
     }
     let mut row = ui.new_child(
         UiBuilder::new()
