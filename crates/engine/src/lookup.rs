@@ -57,12 +57,19 @@ use kernel::burrau::{euclid, Triple};
 use kernel::chart::burrau::embed;
 use kernel::chart::invariant::WarpReal;
 use kernel::chart::mixed::{Coordinate, Quantity};
+use kernel::chart::LzHold;
 use kernel::chart::{
     BlockTouch, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Constraint, EuclidPlane,
     InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeSphere, ValidationResult,
 };
+use kernel::decode::descriptor::describe;
+use kernel::decode::energy_norm::Outcome;
+use kernel::decode::hold::{hold_ic, Targets};
 use kernel::decode::{self, config, mass, momentum, Ic};
-use kernel::encode::by_kind::{encode_into_within_params, invariants, ByKind, Landing};
+use kernel::encode::by_kind::{
+    encode_into_held_params, encode_into_within_params, invariants, ByKind, Landing,
+};
+use kernel::encode::held::{enter, Entry};
 use kernel::encode::{encode_at, SimplexClamp};
 use kernel::generated::links::{LinkParams, Selection};
 use ledger::constants::{DECODE_SANITY, EPS_PHYS, ZERO_CLASS};
@@ -220,6 +227,18 @@ pub struct Notices {
     pub past_fold: bool,
 }
 
+/// `lookup_held`, raised beside a lock by the held lookups: the entry was off its hold and the lock is its projection
+/// (Part 6, "Under a hold, at step 4"). It is not a field of [`Notices`], whose printed form is the baseline's. The value
+/// is how far the entered state was from each hold, `L_z(C(x)) − L*` and `E(C(x)) − E*`, 0 for a
+/// quantity not held.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HeldNotice {
+    /// `L_z(C(x)) − L*`.
+    pub lz_gap: f64,
+    /// `E(C(x)) − E*`.
+    pub e_gap: f64,
+}
+
 impl Notices {
     /// `lookup_clamped`: a control, the coincident pair or a chart coordinate moved.
     pub fn lookup_clamped(&self) -> bool {
@@ -252,6 +271,8 @@ pub enum Layer {
     Feasibility,
     /// Layer 3, decode sanity.
     Sanity,
+    /// Step 4's hold, before the ladder: the entry's tag test and the class rule on its projection.
+    Hold,
 }
 
 /// A constant of motion whose class a clamp changed (§ "A qualitatively different IC").
@@ -278,6 +299,11 @@ pub enum Failed {
     Clamp { controls: u32, class: Class },
     /// A chart constraint (layer 2) or a decode-sanity one (layer 3).
     Constraint(Constraint),
+    /// The hold tags the state, `outcome`: `no_state` is the first reason (no state on the hold at this configuration),
+    /// else the second (no direction for the hold to choose).
+    Held { outcome: Outcome, no_state: bool },
+    /// The projection onto the hold would change `class`: the class rule binds it as it binds a clamp.
+    HeldClass(Class),
 }
 
 /// A refused lookup.
@@ -359,19 +385,7 @@ impl Classes {
                 rescale * r * p + ext.r * p + r * ext.p
             })
             .sum();
-        let kinetic: f64 = (0..3)
-            .map(|i| {
-                let p = norm(x.p[i]);
-                (rescale * p * p / 2.0 + p * ext.p) / x.m[i]
-            })
-            .sum();
-        let potential: f64 = [(0, 1), (0, 2), (1, 2)]
-            .iter()
-            .map(|&(i, j)| {
-                let d = norm([x.r[i][0] - x.r[j][0], x.r[i][1] - x.r[j][1]]);
-                x.m[i] * x.m[j] / d * (rescale + 2.0 * ext.r / d)
-            })
-            .sum();
+        let (kinetic, potential) = energy_scales(x, ext);
         Classes {
             lz: inv.lz,
             lz_scale,
@@ -379,6 +393,27 @@ impl Classes {
             e_scale: kinetic + potential,
         }
     }
+}
+
+/// The rounding bounds of `K` and of `U` on `x`, in units of `ε_R` (the two terms of [`Classes::e_scale`]): `x` the
+/// canonical form of an entry of extents `ext`.
+fn energy_scales(x: &Ic<f64>, ext: &Extents) -> (f64, f64) {
+    let norm = |v: [f64; 2]| libm::hypot(v[0], v[1]);
+    let rescale = 1.0 + ext.r;
+    let kinetic: f64 = (0..3)
+        .map(|i| {
+            let p = norm(x.p[i]);
+            (rescale * p * p / 2.0 + p * ext.p) / x.m[i]
+        })
+        .sum();
+    let potential: f64 = [(0, 1), (0, 2), (1, 2)]
+        .iter()
+        .map(|&(i, j)| {
+            let d = norm([x.r[i][0] - x.r[j][0], x.r[i][1] - x.r[j][1]]);
+            x.m[i] * x.m[j] / d * (rescale + 2.0 * ext.r / d)
+        })
+        .sum();
+    (kinetic, potential)
 }
 
 /// The class of `x` at `scale`: `Equal` (class 0) where `|x| ≤ band·scale`, else `sign(x)`; `None` where `x` or
@@ -900,6 +935,26 @@ where
     f64: From<C::Param>,
     N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
 {
+    lookup_held_params::<S, C, N>(chart, entry, norm, tol, p, &Targets::OFF).map(|(l, _)| l)
+}
+
+/// [`lookup_params`] under the holds `t` (Part 6, "Under a hold, at step 4"): the same ladder, step 4 reading the held
+/// decode, and a state off the hold projected. With both holds off it is [`lookup_params`], bit for bit.
+pub fn lookup_held_params<S, C, N>(
+    chart: &C,
+    entry: &Exact,
+    norm: N,
+    tol: &Tolerances,
+    p: &LinkParams<f64>,
+    t: &Targets<f64>,
+) -> Result<(Locked, Option<HeldNotice>), Rejected>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    C: ByKind,
+    f64: From<C::Param>,
+    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+{
     let (x, raw, mass) = match *entry {
         Exact::Pythagorean { m, n } => match euclid(m, n) {
             Some(t) => (at_rest(t.burrau()), None, perimeter(&t)),
@@ -928,7 +983,7 @@ where
             (x, None, mass)
         }
     };
-    ladder::<S, C, N>(chart, &x, raw, mass, norm, tol, p)
+    ladder::<S, C, N>(chart, &x, raw, mass, norm, tol, p, t)
 }
 
 /// A partial entry on `chart` under `S` (the module's note): the blocks not given filled, Burrau's at `locked_nu` or
@@ -967,6 +1022,35 @@ where
     f64: From<C::Param>,
     N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
 {
+    lookup_partial_held_params::<S, C, N>(
+        chart,
+        partial,
+        locked_nu,
+        norm,
+        tol,
+        params,
+        &Targets::OFF,
+    )
+    .map(|(l, _)| l)
+}
+
+/// [`lookup_partial_params`] under the holds `t` ([`lookup_held_params`]).
+pub fn lookup_partial_held_params<S, C, N>(
+    chart: &C,
+    partial: &Partial,
+    locked_nu: Option<f64>,
+    norm: N,
+    tol: &Tolerances,
+    params: &LinkParams<f64>,
+    t: &Targets<f64>,
+) -> Result<(Locked, Option<HeldNotice>), Rejected>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    C: Fill,
+    f64: From<C::Param>,
+    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+{
     let nu = locked_nu.unwrap_or(0.5);
     if C::BURRAU && !(nu > 0.0 && nu < 1.0) {
         return Err(refuse(
@@ -996,13 +1080,150 @@ where
         momentum: partial.momenta.is_none(),
         mass: partial.masses.is_none(),
     };
-    let mut locked = ladder::<S, C, N>(chart, &x, None, total, norm, tol, params)?;
+    let (mut locked, held) = ladder::<S, C, N>(chart, &x, None, total, norm, tol, params, t)?;
     locked.slice = slice(locked.z, free);
-    Ok(locked)
+    Ok((locked, held))
+}
+
+/// `H`'s moves on `C(x)` and the values after them, each with its first-order rounding bound in units of `ε_R`
+/// (Part 6, "Under a hold, at step 4", item 3): `before` the classes of `canonical = C(x)` at the entry's extents, `t`
+/// the view's holds on a chart with the flags `forbids_energy_normalisation` and `lz_hold`. With `I = 1`:
+/// - hold `L_z` alone, `ΔL_z = L* − L₀` and `ΔE = (L* − L₀)(L* + L₀)/2`, a product, never a difference of two rounded
+///   energies; `L_z` after is `L*`;
+/// - hold `E` alone, `ΔE = E* − E` and `ΔL_z = (η_E − 1)·L₀`, `η_E = √((E* − U)/K₀)`, its bound from those of `U` and
+///   `K₀`; `E` after is `E*`;
+/// - both held, `ΔL_z = L* − L₀` and `ΔE = E* − E`, and both after values are the targets.
+///
+/// `L*` and `E*` are the view's exact values, so a value after that is a target has no rounding (bound 0). A
+/// quantity no hold moves has a move of exactly 0. Feed the result to [`after`] and [`changed`].
+pub fn held_moves(
+    before: &Classes,
+    canonical: &Ic<f64>,
+    ext: &Extents,
+    t: &Targets<f64>,
+    forbids_energy_normalisation: bool,
+    lz_hold: LzHold,
+) -> Moves {
+    let (l0, sl) = (before.lz, before.lz_scale);
+    let (e0, se) = (before.e, before.e_scale);
+    let mut m = Moves {
+        lz_after: l0,
+        lz_after_scale: sl,
+        e_after: e0,
+        e_after_scale: se,
+        ..Moves::default()
+    };
+    let lz = t.lz_star.filter(|_| lz_hold == LzHold::Free);
+    let e = t.e_star.filter(|_| !forbids_energy_normalisation);
+    if let Some(l) = lz {
+        let d = l - l0;
+        m.lz = d;
+        m.lz_scale = sl + d.abs();
+        m.lz_after = l;
+        m.lz_after_scale = 0.0;
+    }
+    match (lz, e) {
+        (Some(l), None) => {
+            let (d1, d2) = (l - l0, l + l0);
+            m.e = 0.5 * d1 * d2;
+            m.e_scale =
+                0.5 * (d1.abs() * (sl + d2.abs()) + d2.abs() * (sl + d1.abs()) + (d1 * d2).abs());
+            m.e_after = e0 + m.e;
+            m.e_after_scale = se + m.e_scale + m.e_after.abs();
+        }
+        (_, Some(target)) => {
+            m.e = target - e0;
+            m.e_scale = se + m.e.abs();
+            m.e_after = target;
+            m.e_after_scale = 0.0;
+            if lz.is_none() {
+                let d = describe(canonical);
+                let (sk, su) = energy_scales(canonical, ext);
+                let (gap, k0) = (target - d.V_0, d.K_0);
+                let q = gap / k0;
+                let eta = q.max(0.0).sqrt();
+                // `η`'s bound: the relative bounds of `E* − U` and `K₀`, the division's and the root's own roundings.
+                // Within rounding of the floor the root amplifies the gap's error to its square root, so the bound in units of ε carries 1/√ε.
+                let bound = if q > 0.0 {
+                    eta * (0.5 * ((su + gap.abs()) / gap.abs() + sk / k0 + 1.0) + 1.0)
+                } else {
+                    (su / (k0 * f64::EPSILON)).sqrt()
+                };
+                let step = (eta - 1.0).abs();
+                m.lz = (eta - 1.0) * l0;
+                m.lz_scale = step * sl + l0.abs() * (bound + step) + m.lz.abs();
+                m.lz_after = eta * l0;
+                m.lz_after_scale = eta * sl + l0.abs() * bound + m.lz_after.abs();
+            }
+        }
+        (None, None) => {}
+    }
+    m
+}
+
+/// Part 6, "Under a hold, at step 4", in its order, for the entered state `x` under the holds `t`: the tag test on
+/// `C(x)`, on or off the hold, the projection `y`, the class rule on `y`, the tag test on `y`. `Ok` is `y` where the
+/// state was off the hold, with `lookup_held`'s gaps, else `None`; steps 4 to 6 then run on `y` in `x`'s place. With both
+/// holds off, nothing is read or computed.
+pub fn step4<S, C, N>(
+    chart: &C,
+    x: &Ic<f64>,
+    norm: &N,
+    tol: &Tolerances,
+    p: &LinkParams<f64>,
+    t: &Targets<f64>,
+) -> Result<(Option<Ic<f64>>, Option<HeldNotice>), Rejected>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    C: ByKind,
+    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
+{
+    if t.is_off() {
+        return Ok((None, None));
+    }
+    let c = encode_at::<S, f64>(x, p);
+    let enter_at = |ic: &Ic<f64>| {
+        enter(
+            ic,
+            t,
+            chart.forbids_energy_normalisation(),
+            chart.lz_hold(),
+            norm,
+            tol.eps_phys,
+        )
+    };
+    match enter_at(&c.canonical.ic) {
+        Entry::Free | Entry::On => Ok((None, None)),
+        Entry::Tagged { outcome, no_state } => {
+            Err(refuse(Layer::Hold, Failed::Held { outcome, no_state }))
+        }
+        Entry::Projected { y, lz_gap, e_gap } => {
+            let ext = Extents::entered(x, c.report.lambda);
+            let before = Classes::within(&c.canonical.ic, &ext);
+            let moves = held_moves(
+                &before,
+                &c.canonical.ic,
+                &ext,
+                t,
+                chart.forbids_energy_normalisation(),
+                chart.lz_hold(),
+            );
+            let classes = after(&before, &moves, tol.zero_class);
+            if let Some(class) = changed(&before, &classes, tol.zero_class) {
+                return Err(refuse(Layer::Hold, Failed::HeldClass(class)));
+            }
+            if let Entry::Tagged { outcome, no_state } = enter_at(&y) {
+                return Err(refuse(Layer::Hold, Failed::Held { outcome, no_state }));
+            }
+            Ok((Some(y), Some(HeldNotice { lz_gap, e_gap })))
+        }
+    }
 }
 
 /// The ladder on the entered state `x` at the tunable parameters `p` (the module's note); `raw` the entered `z`, whose
 /// unclamped controls the lock keeps; `mass` the entry's `M`.
+#[allow(clippy::too_many_arguments)] // Reason: the entered state and every tolerance, one by one.
 fn ladder<S, C, N>(
     chart: &C,
     x: &Ic<f64>,
@@ -1011,7 +1232,8 @@ fn ladder<S, C, N>(
     norm: N,
     tol: &Tolerances,
     p: &LinkParams<f64>,
-) -> Result<Locked, Rejected>
+    t: &Targets<f64>,
+) -> Result<(Locked, Option<HeldNotice>), Rejected>
 where
     S: Selection,
     S::MassLink: SimplexClamp,
@@ -1019,8 +1241,21 @@ where
     f64: From<C::Param>,
     N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
 {
-    let ce =
-        encode_into_within_params::<S, f64, C, _>(chart, x, &norm, tol.eps_phys, tol.curve_tol, p);
+    let (entered, held) = step4::<S, C, _>(chart, x, &norm, tol, p, t)?;
+    let x = entered.as_ref().unwrap_or(x);
+    let held_decode = |u: f64, v: f64| {
+        let d = chart.decode_at_params::<S, f64>(u, v, p).ic;
+        if t.is_off() {
+            d
+        } else {
+            hold_ic(&d, t, chart.forbids_energy_normalisation(), chart.lz_hold()).0
+        }
+    };
+    let ce = if t.is_off() {
+        encode_into_within_params::<S, f64, C, _>(chart, x, &norm, tol.eps_phys, tol.curve_tol, p)
+    } else {
+        encode_into_held_params::<S, f64, C, _>(chart, x, &norm, tol.eps_phys, tol.curve_tol, p, t)
+    };
     let e = &ce.encoded;
     let mut moved = Moved {
         controls: e.report.clamped_controls,
@@ -1078,30 +1313,31 @@ where
         };
         if let Some((u, v)) = to {
             landing = Landing::Chart { u, v };
-            z = encode_at::<S, f64>(&chart.decode_at_params::<S, f64>(u, v, p).ic, p)
-                .z
-                .z;
+            z = encode_at::<S, f64>(&held_decode(u, v), p).z.z;
         }
     }
     // Layer 3: the lock decoded as a pixel decodes it.
     let decoded = match landing {
-        Landing::Chart { u, v } => chart.decode_at_params::<S, f64>(u, v, p).ic,
+        Landing::Chart { u, v } => held_decode(u, v),
         Landing::Latent => decode::decode_at::<S, f64>(&decode::Latent::new(z), p).ic,
     };
     if let Some(failed) = sanity(&decoded, tol.sanity) {
         return Err(refuse(Layer::Sanity, Failed::Constraint(failed)));
     }
-    Ok(Locked {
-        z,
-        landing,
-        slice: None,
-        notices: Notices {
-            moved,
-            projected,
-            clamped,
-            lambda: e.report.lambda,
-            mass,
-            past_fold: ce.curve.is_some_and(|c| c.closed.past_fold),
+    Ok((
+        Locked {
+            z,
+            landing,
+            slice: None,
+            notices: Notices {
+                moved,
+                projected,
+                clamped,
+                lambda: e.report.lambda,
+                mass,
+                past_fold: ce.curve.is_some_and(|c| c.closed.past_fold),
+            },
         },
-    })
+        held,
+    ))
 }

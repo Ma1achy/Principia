@@ -375,6 +375,10 @@ impl<C: RestChart<Param = P>, P: Copy> Chart for RestStart<C, P> {
         self.chart.forbids_energy_normalisation()
     }
 
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        self.chart.lz_hold()
+    }
+
     fn name(&self) -> &str {
         self.chart.name()
     }
@@ -732,6 +736,10 @@ where
         self.chart.forbids_energy_normalisation()
     }
 
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        self.chart.lz_hold()
+    }
+
     fn name(&self) -> &str {
         self.chart.name()
     }
@@ -978,6 +986,10 @@ where
 
     fn forbids_energy_normalisation(&self) -> bool {
         self.chart.forbids_energy_normalisation()
+    }
+
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        self.chart.lz_hold()
     }
 
     fn name(&self) -> &str {

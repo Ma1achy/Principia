@@ -106,8 +106,9 @@ use crate::chart::warp::AxisWarp;
 use crate::chart::{ChartDecode, Constraint, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere};
 use crate::decode::config::{self, Config};
 use crate::decode::descriptor::pi_image;
+use crate::decode::hold::{hold_ic, Targets};
 use crate::decode::invariant::{
-    construct, construct_by_norms, construct_expansion, infeasible, Outcome,
+    construct, construct_by_norms, construct_expansion, infeasible, ExactSign, Outcome,
 };
 use crate::decode::mass::{self, Masses};
 use crate::decode::{descriptor, Ic};
@@ -258,14 +259,68 @@ where
     C: ByKind,
     N: Fn(&Ic<R>, &Ic<R>) -> R,
 {
+    encode_into_with::<S, R, C, N, _>(chart, ic, norm, eps_phys, tol, p, |u, v| {
+        chart.decode_at_params::<S, R>(u, v, p).ic
+    })
+}
+
+/// [`encode_into_within_params`] under the holds `t` (Part 6, "Under a hold, at step 4"): the landing test compares
+/// `C(ic)` with the chart's held decode, `D` then the holds' step, so a state lands on the pixel that shows it. The
+/// entry's own projection onto the hold, and its outcomes, are [`crate::encode::held`]'s.
+#[inline]
+pub fn encode_into_held_params<S, R, C, N>(
+    chart: &C,
+    ic: &Ic<R>,
+    norm: N,
+    eps_phys: R,
+    tol: R,
+    p: &LinkParams<R>,
+    t: &Targets<R>,
+) -> ChartEncoded<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + PayloadReal + ExactSign + From<C::Param>,
+    C: ByKind,
+    N: Fn(&Ic<R>, &Ic<R>) -> R,
+{
+    encode_into_with::<S, R, C, N, _>(chart, ic, norm, eps_phys, tol, p, |u, v| {
+        let decoded = chart.decode_at_params::<S, R>(u, v, p);
+        hold_ic(
+            &decoded.ic,
+            t,
+            chart.forbids_energy_normalisation(),
+            chart.lz_hold(),
+        )
+        .0
+    })
+}
+
+/// Encode with the chart's decode at a point given by `decode`: the one source of [`encode_into_within_params`] and
+/// [`encode_into_held_params`], so a held encode is the unheld one with another decode, never a second route.
+#[inline]
+fn encode_into_with<S, R, C, N, D>(
+    chart: &C,
+    ic: &Ic<R>,
+    norm: N,
+    eps_phys: R,
+    tol: R,
+    p: &LinkParams<R>,
+    decode: D,
+) -> ChartEncoded<R>
+where
+    S: Selection,
+    S::MassLink: SimplexClamp,
+    R: LinkReal + PayloadReal + From<C::Param>,
+    C: ByKind,
+    N: Fn(&Ic<R>, &Ic<R>) -> R,
+    D: Fn(R, R) -> Ic<R>,
+{
     let encoded = encode_at::<S, R>(ic, p);
     let (coords, curve) = chart.coords_within::<S, R>(&encoded, tol);
     let (residual, landing) = match (placed(coords[0]), placed(coords[1])) {
         (Some(u), Some(v)) => {
-            let d = norm(
-                &encoded.canonical.ic,
-                &chart.decode_at_params::<S, R>(u, v, p).ic,
-            );
+            let d = norm(&encoded.canonical.ic, &decode(u, v));
             (
                 Some(d),
                 select(d <= eps_phys, Landing::Chart { u, v }, Landing::Latent),

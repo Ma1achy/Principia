@@ -206,6 +206,19 @@ pub enum ValidationResult {
     Reject { failed: Constraint },
 }
 
+/// How a chart stands to a held `L_z`.
+/// Its discriminant is a `u32`: the kernel's SPIR-V has no 8-bit integers (no `OpCapability Int8`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
+pub enum LzHold {
+    /// `L_z` is free: the hold's rotation applies after the decode.
+    Free,
+    /// `L_z` is an axis: any hold on it is refused, `Some(0)` included.
+    Axis,
+    /// The chart holds `L_z` by its construction: the rotation never runs after it, since it would move a `K` axis.
+    Construction,
+}
+
 /// A chart (chart_reference §5.1).
 pub trait Chart {
     /// The float type the chart's parameters are held at: f32 in the kernel, f64 on the CPU.
@@ -219,6 +232,16 @@ pub trait Chart {
     /// coordinate or is enforced by the momentum construction.
     fn forbids_energy_normalisation(&self) -> bool {
         false
+    }
+
+    /// How the chart stands to a held `L_z` ([`LzHold`]).
+    fn lz_hold(&self) -> LzHold {
+        LzHold::Free
+    }
+
+    /// Whether `L_z` is an axis of the chart, so that a hold on it is refused.
+    fn forbids_lz_hold(&self) -> bool {
+        self.lz_hold() == LzHold::Axis
     }
 
     /// The chart's name, written in every dump header ([`write_dump_header`]).

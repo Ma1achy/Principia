@@ -25,35 +25,51 @@ use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use kernel::chart::{Chart, ChartDecode, Latent, ValidationResult};
+use kernel::decode::hold::{self, Targets};
 use kernel::decode::{Decoded, Ic};
-use kernel::encode::by_kind::{encode_into_within, ChartEncoded};
+use kernel::encode::by_kind::{encode_into_held_params, encode_into_within, ChartEncoded};
 use kernel::encode::ingest::{ingest, Ingested};
 use kernel::encode::SimplexClamp;
-use kernel::generated::links::{Defaults, Selection};
+use kernel::generated::links::{Defaults, LinkParams, Selection};
 use ledger::constants::EPS_PHYS;
 
 use super::lowering::{resolve_spec, Lowering};
 use super::registry::{AxisSpec, ChartSpec, Primitive, Registry};
 use super::validate::{validate_spec, ValidatedSpec};
+use crate::chart_validate::{validate_holds, Refusal};
 use crate::contract::sim_config::LATENT_DIM;
 use crate::lock::FrozenControls;
 use crate::lookup::{
-    lookup, lookup_partial, phys, Exact, Fill, Locked, Partial, Rejected, Tolerances,
+    lookup_held_params, lookup_partial_held_params, phys, step4, Exact, Fill, HeldNotice, Locked,
+    Partial, Rejected, Tolerances,
 };
 
 /// A kernel chart, type-erased at f64 for the CPU's decode and inverses.
 trait Erased64 {
     fn name(&self) -> String;
     fn validate(&self, u: f64, v: f64) -> ValidationResult;
-    fn decode(&self, u: f64, v: f64) -> Decoded<f64>;
-    fn encode(&self, ic: &Ic<f64>, tol: &Tolerances) -> ChartEncoded<f64>;
-    fn lookup(&self, entry: &Exact, tol: &Tolerances) -> Result<Locked, Rejected>;
+    fn decode(&self, u: f64, v: f64, t: &Targets<f64>) -> Decoded<f64>;
+    fn encode(&self, ic: &Ic<f64>, tol: &Tolerances, t: &Targets<f64>) -> ChartEncoded<f64>;
+    fn lookup(
+        &self,
+        entry: &Exact,
+        tol: &Tolerances,
+        t: &Targets<f64>,
+    ) -> Result<(Locked, Option<HeldNotice>), Rejected>;
     fn partial(
         &self,
         partial: &Partial,
         locked_nu: Option<f64>,
         tol: &Tolerances,
-    ) -> Result<Locked, Rejected>;
+        t: &Targets<f64>,
+    ) -> Result<(Locked, Option<HeldNotice>), Rejected>;
+    fn view(&self, t: &Targets<f64>) -> Result<(), Refusal>;
+    fn enter(
+        &self,
+        ic: &Ic<f64>,
+        tol: &Tolerances,
+        t: &Targets<f64>,
+    ) -> Result<(Option<Ic<f64>>, Option<HeldNotice>), Rejected>;
 }
 
 impl<C: Fill> Erased64 for C
@@ -66,34 +82,92 @@ where
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         Chart::validate(self, u, v)
     }
-    fn decode(&self, u: f64, v: f64) -> Decoded<f64> {
-        self.decode_at::<Defaults, f64>(u, v)
+    fn decode(&self, u: f64, v: f64, t: &Targets<f64>) -> Decoded<f64> {
+        let d = self.decode_at::<Defaults, f64>(u, v);
+        if t.is_off() {
+            return d;
+        }
+        hold::apply_shared(
+            d,
+            t.e_star,
+            self.forbids_energy_normalisation(),
+            t.lz_star,
+            self.lz_hold(),
+        )
+        .0
     }
-    fn encode(&self, ic: &Ic<f64>, tol: &Tolerances) -> ChartEncoded<f64> {
+    fn encode(&self, ic: &Ic<f64>, tol: &Tolerances, t: &Targets<f64>) -> ChartEncoded<f64> {
         let eps = EPS_PHYS.number() * f64::EPSILON;
-        encode_into_within::<Defaults, f64, _, _>(self, ic, phys, eps, tol.curve_tol)
+        if t.is_off() {
+            return encode_into_within::<Defaults, f64, _, _>(self, ic, phys, eps, tol.curve_tol);
+        }
+        encode_into_held_params::<Defaults, f64, _, _>(
+            self,
+            ic,
+            phys,
+            eps,
+            tol.curve_tol,
+            &LinkParams::DEFAULT,
+            t,
+        )
     }
-    fn lookup(&self, entry: &Exact, tol: &Tolerances) -> Result<Locked, Rejected> {
-        lookup::<Defaults, C, _>(self, entry, phys, tol)
+    fn lookup(
+        &self,
+        entry: &Exact,
+        tol: &Tolerances,
+        t: &Targets<f64>,
+    ) -> Result<(Locked, Option<HeldNotice>), Rejected> {
+        lookup_held_params::<Defaults, C, _>(self, entry, phys, tol, &LinkParams::DEFAULT, t)
     }
     fn partial(
         &self,
         partial: &Partial,
         locked_nu: Option<f64>,
         tol: &Tolerances,
-    ) -> Result<Locked, Rejected> {
-        lookup_partial::<Defaults, C, _>(self, partial, locked_nu, phys, tol)
+        t: &Targets<f64>,
+    ) -> Result<(Locked, Option<HeldNotice>), Rejected> {
+        lookup_partial_held_params::<Defaults, C, _>(
+            self,
+            partial,
+            locked_nu,
+            phys,
+            tol,
+            &LinkParams::DEFAULT,
+            t,
+        )
+    }
+    fn view(&self, t: &Targets<f64>) -> Result<(), Refusal> {
+        validate_holds(self, t.e_star, t.lz_star)
+    }
+    fn enter(
+        &self,
+        ic: &Ic<f64>,
+        tol: &Tolerances,
+        t: &Targets<f64>,
+    ) -> Result<(Option<Ic<f64>>, Option<HeldNotice>), Rejected> {
+        step4::<Defaults, C, _>(self, ic, &phys, tol, &LinkParams::DEFAULT, t)
     }
 }
 
 /// A kernel chart held at f32, type-erased for the f32 decode.
 trait Erased32 {
-    fn decode(&self, u: f32, v: f32) -> Decoded<f32>;
+    fn decode(&self, u: f32, v: f32, t: &Targets<f32>) -> Decoded<f32>;
 }
 
 impl<C: ChartDecode<Param = f32>> Erased32 for C {
-    fn decode(&self, u: f32, v: f32) -> Decoded<f32> {
-        self.decode_at::<Defaults, f32>(u, v)
+    fn decode(&self, u: f32, v: f32, t: &Targets<f32>) -> Decoded<f32> {
+        let d = self.decode_at::<Defaults, f32>(u, v);
+        if t.is_off() {
+            return d;
+        }
+        hold::apply_shared(
+            d,
+            t.e_star,
+            self.forbids_energy_normalisation(),
+            t.lz_star,
+            self.lz_hold(),
+        )
+        .0
     }
 }
 
@@ -184,6 +258,8 @@ pub enum Unresolved {
     Cpu,
     /// The lowering names a chart the table does not hold.
     NoChart(&'static str),
+    /// The spec's holds are refused on the chart: it has `L_z` as an axis, or a target is not finite.
+    View(Refusal),
 }
 
 /// How many calls of each kind went through a composed chart.
@@ -216,6 +292,7 @@ pub struct Composed {
     lowering: Lowering,
     entry: Entry,
     routed: Routed,
+    holds: Targets<f64>,
 }
 
 impl Composed {
@@ -247,10 +324,17 @@ impl Composed {
                 .ok_or(Unresolved::NoChart(chart))?,
             Lowering::Cpu { .. } => return Err(Unresolved::Cpu),
         };
+        let c = &spec.spec().constraints;
+        let holds = Targets {
+            e_star: c.hold_e,
+            lz_star: c.hold_lz,
+        };
+        entry.f64.view(&holds).map_err(Unresolved::View)?;
         Ok(Composed {
             lowering,
             entry,
             routed: Routed::default(),
+            holds,
         })
     }
 
@@ -299,29 +383,50 @@ impl Composed {
         }
     }
 
-    /// `D ∘ Φ` at `(u, v)` at f64.
-    pub fn decode(&self, u: f64, v: f64) -> Decoded<f64> {
-        self.routed.decode.fetch_add(1, Ordering::Relaxed);
-        self.entry.f64.decode(u, v)
+    /// The holds the spec sets: `η_E`'s `E*` and hold `L_z`'s `L*`, each off at `None`.
+    pub fn holds(&self) -> &Targets<f64> {
+        &self.holds
     }
 
-    /// `D ∘ Φ` at `(u, v)` at f32, where the table held the chart at f32.
+    /// `D ∘ Φ` at `(u, v)` at f64, through the spec's holds where it sets any.
+    pub fn decode(&self, u: f64, v: f64) -> Decoded<f64> {
+        self.routed.decode.fetch_add(1, Ordering::Relaxed);
+        self.entry.f64.decode(u, v, &self.holds)
+    }
+
+    /// `D ∘ Φ` at `(u, v)` at f32, where the table held the chart at f32, through the spec's holds where it sets any.
     pub fn decode32(&self, u: f32, v: f32) -> Option<Decoded<f32>> {
         let chart = self.entry.f32.as_ref()?;
         self.routed.decode.fetch_add(1, Ordering::Relaxed);
-        Some(chart.decode(u, v))
+        let narrow = |x: f64| x as f32;
+        let t = Targets {
+            e_star: self.holds.e_star.map(narrow),
+            lz_star: self.holds.lz_star.map(narrow),
+        };
+        Some(chart.decode(u, v, &t))
     }
 
-    /// `ic` encoded into the chart at `tol`.
+    /// `ic` encoded into the chart at `tol`: under the spec's holds, the landing test reads the held decode (Part 6,
+    /// step 4). The entry's own projection is [`Composed::lookup`]'s and [`Composed::ingest_held`]'s.
     pub fn encode(&self, ic: &Ic<f64>, tol: &Tolerances) -> ChartEncoded<f64> {
         self.routed.encode.fetch_add(1, Ordering::Relaxed);
-        self.entry.f64.encode(ic, tol)
+        self.entry.f64.encode(ic, tol, &self.holds)
     }
 
-    /// An exact entry, looked up.
+    /// An exact entry, looked up, under the spec's holds where it sets any.
     pub fn lookup(&self, entry: &Exact, tol: &Tolerances) -> Result<Locked, Rejected> {
+        self.lookup_held(entry, tol).map(|(l, _)| l)
+    }
+
+    /// [`Composed::lookup`] with `lookup_held`: the gaps where the entry was off the spec's holds and the lock is its
+    /// projection, else `None`.
+    pub fn lookup_held(
+        &self,
+        entry: &Exact,
+        tol: &Tolerances,
+    ) -> Result<(Locked, Option<HeldNotice>), Rejected> {
         self.routed.lookup.fetch_add(1, Ordering::Relaxed);
-        self.entry.f64.lookup(entry, tol)
+        self.entry.f64.lookup(entry, tol, &self.holds)
     }
 
     /// A partial entry, looked up.
@@ -332,7 +437,10 @@ impl Composed {
         tol: &Tolerances,
     ) -> Result<Locked, Rejected> {
         self.routed.partial.fetch_add(1, Ordering::Relaxed);
-        self.entry.f64.partial(partial, locked_nu, tol)
+        self.entry
+            .f64
+            .partial(partial, locked_nu, tol, &self.holds)
+            .map(|(l, _)| l)
     }
 
     /// `ic` ingested: encode, the free decode of its `z`, the residual and `κ`. The ingest is the free latent encode,
@@ -344,5 +452,21 @@ impl Composed {
     {
         self.routed.ingest.fetch_add(1, Ordering::Relaxed);
         ingest::<S, f64, _>(ic, phys)
+    }
+
+    /// `ic` ingested under the spec's holds (Part 6, "Under a hold, at step 4"): the entry is projected onto the hold
+    /// where it is off it, the notice `lookup_held` naming the gaps, and the ingest runs on the projection; a tagged
+    /// entry is rejected. With no hold set it is [`Composed::ingest`], and the notice is `None`.
+    pub fn ingest_held<S>(
+        &self,
+        ic: &Ic<f64>,
+        tol: &Tolerances,
+    ) -> Result<(Ingested<f64>, Option<HeldNotice>), Rejected>
+    where
+        S: Selection,
+        S::MassLink: SimplexClamp,
+    {
+        let (projected, notice) = self.entry.f64.enter(ic, tol, &self.holds)?;
+        Ok((self.ingest::<S>(projected.as_ref().unwrap_or(ic)), notice))
     }
 }

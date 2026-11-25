@@ -38,6 +38,7 @@ pub mod config;
 pub mod degenerate;
 pub mod descriptor;
 pub mod energy_norm;
+pub mod hold;
 pub mod invariant;
 pub mod latent;
 pub mod mass;

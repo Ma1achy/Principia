@@ -31,6 +31,7 @@
 pub mod blocks;
 pub mod by_kind;
 pub mod curve;
+pub mod held;
 // The host's ingestion (`κ` via `+∞` and a swept Jacobi loop): not taken by the SPIR-V build.
 #[cfg(not(target_arch = "spirv"))]
 pub mod ingest;
