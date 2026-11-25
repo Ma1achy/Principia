@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>loading</title>
+<style>html,body{margin:0;background:transparent}#m{display:inline-block;line-height:0}</style></head>
+<body><div id="m"></div>
+<script>
+// Render page for headless Chrome. ?v=icon-light|icon-dark|title-2d-*  &t=seconds  &size=px  &weight=trail weight
+// Loads principia-<v>.js from this folder, mounts a still frame (transparent) and sets the title to "ready".
+// window.__seek(s) moves the same mount to another time, for rendering frames of the loop.
+const q = new URLSearchParams(location.search), v = q.get('v');
+const s = document.createElement('script');
+s.src = 'principia-' + v + '.js';
+s.onload = () => {
+  const props = { still: true, frame: +(q.get('t') ?? 0), transparent: true, backdrop: 'transparent' };
+  if (q.get('size')) props.size = +q.get('size');
+  if (q.get('weight')) props.weight = +q.get('weight');
+  window.__mark = PrincipiaMark[v].mount(document.getElementById('m'), props);
+  window.__seek = (t) => window.__mark.seek(t);
+  document.title = 'ready';
+};
+document.head.appendChild(s);
+</script></body></html>
