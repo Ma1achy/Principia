@@ -61,8 +61,10 @@ pub enum Mapping {
 }
 
 /// A physical quantity an axis may show (chart_decoder_contract Part 3, kind 3's list; render_gui_spec §G7's physical
-/// quantities, R-506).
+/// quantities). A `u32` discriminant, a type the kernel's SPIR-V has: the derived `PartialEq` compares it, and a
+/// decode entry compares quantities.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
 pub enum Quantity {
     /// The energy `E = K + U`.
     E,
@@ -234,14 +236,17 @@ fn select<T: Copy>(c: bool, t: T, f: T) -> T {
 // ── The targets rule and its blocks ──────────────────────────────────────────────────────────────────────────────────
 
 /// A pixel's targets for §2.2's construction, read against its own potential `U` (the module's note):
-/// `K* = k0 + weight·(u_ref − U)` where `weight ≠ 0`, else `k0` itself; `L_z = s2·L_max(K*)` on the warp's line
-/// (`lz_on_warp`), else the fixed `lz`.
+/// `K* = base + weight·(u_ref − U)` where `weight ≠ 0`, else `base` itself, `base = max(k0, bottom_weight·(u_ref − U))`
+/// where `bottom_weight ≠ 0`, else `k0`; `L_z = s2·L_max(K*)` on the warp's line (`lz_on_warp`), else the fixed `lz`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Rule<R> {
     /// `K*`'s part that reads no potential.
     pub k0: R,
     /// The potential's weight: 0 where `K*` reads none.
     pub weight: R,
+    /// The weight of the potential `k0` is raised to where it is below it: `Q₀/2` on a warped virial axis whose floor
+    /// sits under the rise only (`super::physical`'s note), 0 everywhere else.
+    pub bottom_weight: R,
     /// The reference potential: `U₀` for a linear `E`, 0 for the virial ratio.
     pub u_ref: R,
     /// `2s − 1`, the factor on `L_max(K*)` where `L_z` is on the warp's line.
@@ -256,8 +261,15 @@ impl<R: WarpReal> Rule<R> {
     /// `K*` at the pixel's potential `u_pot`.
     #[inline]
     pub fn k_star(&self, u_pot: R) -> R {
-        let read = self.k0 + self.weight * (self.u_ref - u_pot);
-        select(self.weight == R::zero(), self.k0, read)
+        let reach = self.u_ref - u_pot;
+        // Don't fold this into `max(k0, 0·reach)`: at `U = −∞` that is NaN, and `max` with a NaN differs by backend.
+        let base = select(
+            self.bottom_weight == R::zero(),
+            self.k0,
+            Float::max(self.k0, self.bottom_weight * reach),
+        );
+        let read = base + self.weight * reach;
+        select(self.weight == R::zero(), base, read)
     }
 
     /// `L_z` at `K* = k`: on the warp's line `(2s − 1)·L_max(K*)`, `L_max` of a negative `K*` taken at 0, where the
@@ -448,6 +460,7 @@ where
     Rule {
         k0: select(linear_t, k_max * t, invariant::kinetic(k_max, gamma, t)),
         weight: select(linear_t & energy, R::one(), R::zero()),
+        bottom_weight: R::zero(),
         u_ref,
         s2,
         lz: s2 * invariant::l_max(k_max),

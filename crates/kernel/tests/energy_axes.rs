@@ -192,6 +192,7 @@ fn lone_lz_line(k_line: f64) -> impl Fn(f64, f64) -> (ValidationResult, Option<D
         let rule = Rule {
             k0: k_max(),
             weight: 0.0,
+            bottom_weight: 0.0,
             u_ref: 0.0,
             s2: 0.0,
             lz: (v + v - 1.0) * invariant::l_max(k_line),
@@ -1277,6 +1278,7 @@ where
                 let rule = Rule {
                     k0: u0 + k,
                     weight: 1.0,
+                    bottom_weight: 0.0,
                     u_ref: 0.0,
                     s2: 0.0,
                     lz: (a + a - 1.0) * invariant::l_max(k),
@@ -1725,6 +1727,7 @@ fn check_virial(per_pixel: bool) {
             let rule = Rule {
                 k0: q * u0.abs() / 2.0,
                 weight: 0.0,
+                bottom_weight: 0.0,
                 u_ref: 0.0,
                 s2: 0.0,
                 lz: 0.0,
@@ -2225,6 +2228,7 @@ fn check_floor_saturates(held: fn(f64) -> f64) {
         let rule = Rule {
             k0: invariant::k_floor(l),
             weight: 0.0,
+            bottom_weight: 0.0,
             u_ref: 0.0,
             s2: 0.0,
             lz: l,

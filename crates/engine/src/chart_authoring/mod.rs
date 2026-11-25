@@ -14,6 +14,7 @@ pub mod descriptor;
 pub mod lowering;
 pub mod registry;
 pub mod validate;
+pub mod virial;
 
 pub use axis::{
     AxisDescriptor, AxisKind, Block, CurveMeta, CurvePoint, InvariantMeta, InvariantQuantity,

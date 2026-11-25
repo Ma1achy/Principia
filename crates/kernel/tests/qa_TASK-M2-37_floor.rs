@@ -12,8 +12,8 @@
 //!   linear chart fed that rounded value, which refuses them; the controls run the check on it.
 //! - `qa_energy_axes_warped_floor_rigid`: the bottom row is §2.2's rigid rotation, `a = 0`: the non-rigid part of the
 //!   kinetic energy is `K`'s tolerance. Control: the row `t = ½`, above the floor.
-//! - `qa_energy_axes_warped_floor_virial`: the pixel's own virial ratio is `Q(t) + L_z²/(I·|U|)` over asked ranges with
-//!   `Q_lo` below, at and above 0. Control: the ratio with no floor.
+//! - `qa_energy_axes_warped_floor_virial`: the pixel's own virial ratio is `max(Q₀, L_z²/(I·|U|)) + (Q_hi − Q₀)·t^γ_K`
+//!   over asked ranges with `Q_lo` below, at and above 0. Control: the ratio with no floor.
 //! - `qa_energy_axes_warped_floor_past_edges`: the top row exceeds `K_max`; past `t = 1` the additive line runs on,
 //!   affine, each pixel a counted system; below `t = 0` the axis is bounded, its clamp landing on the floor, a system.
 //!   Control: `K*` capped at the top row's.
@@ -438,8 +438,9 @@ negative_control!(
 // ── The virial axis ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Over asked ranges, every pixel of the warped virial axis at the held `L_z` validates and its own ratio `2K/|U|` is
-/// §2.1's `Q(t) + L_z²/(I·|U|)`, `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`, `Q₀ = max(Q_lo, 0)`; `floor` the term's weight, 1 and
-/// (the control) 0.
+/// §2.1's `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, `Q_min(U) = L_z²/(I·|U|)`, `Q₀ = max(Q_lo, 0)`: at `Q₀ = 0` the
+/// additive `Q(t) + Q_min(U)`, and with `Q₀ > 0` the floor under the rise only; `floor` the floor's weight, 1 and (the
+/// control) 0.
 fn check_virial(floor: f64) {
     let g = gamma_k();
     for asked in [[0.0, Q_MAX], [0.4, Q_MAX], [-0.5, Q_MAX]] {
@@ -459,8 +460,8 @@ fn check_virial(floor: f64) {
         for [u, t] in unit() {
             let d = chart.decode::<Defaults, f64>(u, t);
             let p = phys(&d);
-            let q = q0 + (asked[1] - q0) * t.powf(g);
-            let ratio = q + floor * HELD * HELD / (p.i * p.u.abs());
+            let rise = (asked[1] - q0) * t.powf(g);
+            let ratio = q0.max(floor * HELD * HELD / (p.i * p.u.abs())) + rise;
             let own = 2.0 * p.k / p.u.abs();
             assert!(
                 chart.validate(u, t) == ValidationResult::Valid

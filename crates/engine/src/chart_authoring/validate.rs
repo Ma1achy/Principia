@@ -349,6 +349,7 @@ fn quantity(q: InvariantQuantity) -> Quantity {
         InvariantQuantity::K => Quantity::K,
         InvariantQuantity::KE => Quantity::KE,
         InvariantQuantity::PE => Quantity::PE,
+        InvariantQuantity::Q => Quantity::VirialRatio,
     }
 }
 

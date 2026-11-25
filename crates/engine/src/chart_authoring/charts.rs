@@ -26,7 +26,7 @@ use kernel::burrau::System;
 use kernel::chart::burrau::embed;
 use kernel::chart::burrau_acute::nu_of;
 use kernel::chart::mixed::{Coordinate, Quantity};
-use kernel::chart::physical::{AxisE, AxisK, AxisKE, AxisLz, EnergyAxis};
+use kernel::chart::physical::{AxisE, AxisK, AxisKE, AxisLz, AxisVirial, EnergyAxis};
 use kernel::chart::{
     BlockTouch, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane,
     InvariantLE, InvariantLK, Latent, Mapped, MassSimplex, Mixed, MixedEnergy, MixedMassRatio,
@@ -468,8 +468,9 @@ where
     }
 }
 
-/// An energy-type axis of a mixed-axis chart (`kernel::chart::physical`): its kind-3 quantity, its name, and the
-/// invariant the chart holds beside it. The virial ratio is not kind 3 (R-471 H3) and has no descriptor here.
+/// A kind-3 axis of a mixed-axis chart (`kernel::chart::physical`): its quantity, its name, and the invariant the chart
+/// holds beside it. The virial ratio is kind 3 here and not in `kernel::chart::energy::Quantity::energy_type`, which
+/// says only how the axis extends past its edges.
 pub trait EnergyInvariant: EnergyAxis {
     /// The kind-3 quantity.
     const INVARIANT: InvariantQuantity;
@@ -501,6 +502,12 @@ impl EnergyInvariant for AxisLz {
     const INVARIANT: InvariantQuantity = InvariantQuantity::Lz;
     const NAME: &'static str = "L_z";
     const HELD: &'static str = "the chart's K";
+}
+
+impl EnergyInvariant for AxisVirial {
+    const INVARIANT: InvariantQuantity = InvariantQuantity::Q;
+    const NAME: &'static str = "Q";
+    const HELD: &'static str = "the chart's L_z";
 }
 
 impl<A: Quantity, V: EnergyInvariant, S, P> Authored for MixedEnergy<A, V, S, P>

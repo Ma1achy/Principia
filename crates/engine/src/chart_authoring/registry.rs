@@ -32,7 +32,7 @@ use kernel::shape::{shape_vec, weighted_jacobi};
 use kernel::stage::decode::{
     BurrauDefaults, BurrauThetaDeltaMDefaults, BurrauThetaKDefaults, BurrauThetaLzDefaults,
     DecodeVariant, EuclidPlaneDefaults, InvariantLEDefaults, InvariantLKDefaults,
-    MassSimplexDefaults, MixedMu1AlphaDefaults, ShapeSphereDefaults,
+    MassSimplexDefaults, MixedAlphaVirialDefaults, MixedMu1AlphaDefaults, ShapeSphereDefaults,
 };
 
 use super::axis::{AxisKind, Block};
@@ -1154,7 +1154,7 @@ impl ChartSpec {
 /// The registered pairs: today's charts, each a pair of rows closed together, by `kernel::chart::REGISTRY` name, and
 /// the compute entry the kernel bakes it as (`kernel::stage::decode`'s variant at the default links; § 7.1). The
 /// latent chart's pairs are uniform, not baked.
-pub static PAIRS: [(&str, &str, &str, &str); 10] = [
+pub static PAIRS: [(&str, &str, &str, &str); 11] = [
     ("θ", "φ", "ShapeSphere", ShapeSphereDefaults::ENTRY),
     ("ν", "K", "Burrau", BurrauDefaults::ENTRY),
     ("m", "ν", "EuclidPlane", EuclidPlaneDefaults::ENTRY),
@@ -1175,6 +1175,7 @@ pub static PAIRS: [(&str, &str, &str, &str); 10] = [
         MassSimplexDefaults::ENTRY,
     ),
     ("z_μ1", "α", "Mixed", MixedMu1AlphaDefaults::ENTRY),
+    ("α", "Q", "Mixed", MixedAlphaVirialDefaults::ENTRY),
 ];
 
 /// The registered pair `(h, v)`, in that order: its chart and entry.
