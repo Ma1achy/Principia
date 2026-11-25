@@ -32,7 +32,7 @@ use super::blend::{block_line, Blocks, Leaves, Pixel};
 use super::lock::hold_plane;
 use super::{hold_window, Map, PathError, Pin, PinPoint, View, ViewWindow};
 
-/// The lock's tolerance in `‖·‖_phys`: `lock_tolerance·ε_R` at f64 (REQ-CHART-158, a calibration).
+/// The lock's tolerance in `‖·‖_phys`: `lock_tolerance·ε_R` at f64, a calibration.
 pub const LOCK_TOLERANCE: f64 = ledger::constants::LOCK_TOLERANCE.number() * f64::EPSILON;
 
 /// The re-solve's own residual target, `‖r‖` in block coordinates: `lock_solve_tolerance·ε_R` at f64, below the lock's
