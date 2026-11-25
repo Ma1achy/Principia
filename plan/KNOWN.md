@@ -80,12 +80,6 @@ delete its line when it's done.
   wait on TASK-M2-68 and TASK-M2-83 (ignored placeholders in `path_lock.rs`, whose controls are bare panics because
   the controls lint needs one per test). The gui's chart switch under a lock still takes `Segment::chart_switch`'s
   labelled jump; `Segment::locked_switch` needs the chart's leaves in the gui adapter.
-- **The lock's tolerance sweep fails today** (`path_lock_tolerance_window`, ignored; PRs #69, #72), on its refusal arm
-  only, 124 of 256 pins on mixed to Burrau, all solves that fail to converge. At 115, `anchor::slide` reads a failed
-  follow as "ended" before `s = 0.4`; it is no end (`path_lock_burrau_ends`): the frame's direct solve stalls just short
-  of first-order optimality, or the continuity test fails, and the failing frame moves toward the 2nd as the frame count
-  grows (124 of the 132 ending pins at 256 frames). At 9, the slice mid-morph's re-hold refuses: its slide solve stalls
-  the same way.
 - **The GPU path does not read the stop option** (`SimUniforms::stop_on_escape`): neither the dispatch nor the WGSL
   kernel carries it, so the CPU and GPU fields agree today only because `SimConfig` cannot set it. The GPU path must
   read it before `SimConfig` can set it, or the two fields will disagree.

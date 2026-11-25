@@ -3387,13 +3387,11 @@ fn check_tolerance(
 
 // Pass: the criterion above, on the 16 × 16 grid, every pair. About 6 minutes in a debug build, so ignored in CI's
 // shards; run it with `CARGO_PROFILE_TEST_DEBUG=0 cargo test -p engine --test path_lock -- path_lock_tolerance_window
-// --exact --include-ignored --nocapture`. Its siblings below run in CI on the window's corners. It fails today on its
-// refusal arm only, at 124 of 256 pins on mixed to Burrau: at 115 the followed minimiser "ends" before the pause, every
-// one a failed follow (`anchor::slide` reads one as an end; C6, `path_lock_burrau_ends`), and at 9 the slice's re-hold
-// finds no slide minimiser (its solve stalls). Its tolerance arm passes since the re-hold decides in `‖·‖_phys` with its
-// own solver target: worst 34.244 ε, the sphere's re-held slice frames.
+// --exact --include-ignored --nocapture` (about 2 minutes with `--release`, the same bits). Its siblings below run in CI
+// on the window's corners. It passes since the solver's polish is judged on `‖P r‖` (PR #79): no refusal (main: 124 on
+// mixed to Burrau, failed follows), and the worst reading 34.244 ε, the sphere's re-held slice frames.
 #[test]
-#[ignore = "about 6 minutes, and fails today (mixed to Burrau's follow fails before the pause at 124 pins): cargo test -p engine --test path_lock -- path_lock_tolerance_window --exact --include-ignored --nocapture"]
+#[ignore = "about 6 minutes: cargo test -p engine --test path_lock -- path_lock_tolerance_window --exact --include-ignored --nocapture"]
 fn path_lock_tolerance_window() {
     check_tolerance_window(SWEEP_SIDE, &[0, 1, 2, 3, 4, 5], SWEEP_FRAMES, &|x| x);
 }
@@ -3401,7 +3399,8 @@ fn path_lock_tolerance_window() {
 negative_control!(
     path_lock_tolerance_window,
     "the drift read against another state: every stored state moved by 2⁻⁴⁰ in its first mass (on the window's \
-     corners; Burrau left out, whose followed minimiser ends before the pause there and is counted as a refusal first)",
+     corners; Burrau left out, as when its followed minimiser ended before the pause there and was counted as a refusal \
+     first)",
     expected = "past the lock's tolerance",
     check_tolerance_window(2, &[0, 1, 2, 3, 5], 4, &|mut x| {
         x.m[0] += 2f64.powi(-40);
@@ -3682,9 +3681,11 @@ fn burrau_end_logged(at: [f64; 2], frames: usize, logged: bool) -> Option<Burrau
     let a = try_locked_mixed(home(), (at[0], at[1])).ok()?;
     let b = kernel_view(&nu_k(), Window::SQUARE);
     let run = || Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, frames);
+    // Main's slide, so the control's pin ends as on main.
+    let main = main_slide();
     let (out, log) = match logged {
         true => probe::with(Switches::default(), run),
-        false => (run(), Vec::new()),
+        false => (probe::with(main, run).0, Vec::new()),
     };
     let (_, end) = out.ok()?;
     let LockedEnd::Ended { .. } = end else {
@@ -4001,9 +4002,1449 @@ negative_control!(
 
 negative_control!(
     path_lock_burrau_ends,
-    "the solves not logged: an end at (0, 0), whose followed minimiser ends at 64 frames, has no failed follow to read",
+    "the solves not logged: an end at (0, 0), whose followed minimiser ends at 64 frames under main's slide, has no \
+     failed follow to read",
     expected = "an ended slide's failed follow in the log",
     {
         burrau_end_logged([0.0, 0.0], 64, false);
     }
+);
+
+// ── The follow at a slide's first frames: criteria, written before the fix ran ───────────────────────────────────────
+//
+// PR #72's C6: on mixed to Burrau, 132 of the 256 pins' slides stop at 64 frames, every one a failed follow (71 the
+// frame's direct solve `Stalled` at first-order optimality 1.4e-8 to 2.2e-7 against 1e-8, 61 `Ended` by the continuity
+// test or a probe), and the failing frame moves toward the start as frames are added; 124 are refused by the sweep (115
+// at the morph, 9 at the slice's re-hold, whose slide solve stalls the same way). `anchor::slide` reads any failed
+// follow as the path's end.
+//
+// **The diagnosis** (`path_lock_slide_stall`, a measurement): one variable changed at a time from main's solve, the
+// 132 pins at 64 frames, a per-pin table of each run (the stop's kind, frame, optimality, conditioning), each run's
+// prediction written here before it ran.
+//
+// - **D0, main.** Prediction: the 132 of PR #72's C6, the same kinds and frames.
+// - **D1, the residual's form.** The slide's frame state is `block_line(a, B_x, s)` and its target the anchor `a`, so
+//   the solver forms `r = (a + s(B_x − a)) − a`: an absolute rounding of `ε|a|` against a residual of size `s·|B_x − a|`,
+//   and central-difference slopes whose rounding is `ε|a|/h` against slopes of size `s·|∂B|`. Both relative errors grow
+//   as `1/s`, so the solve's noise floor in `‖P r‖/‖r‖` grows as the frame nears `s = 0`, the stall's signature. The
+//   variable: the residual formed as `block_line(a, B_x, s) − a` directly (`s(B_x − a)` on the linear blocks, the great
+//   circle's offset `(cos sθ − 1)a + sin sθ·ŵ` with `cos sθ − 1 = −2 sin²(sθ/2)` on `n̂`), target 0: the same function in
+//   exact arithmetic, with no cancellation. Prediction, if this is the cause: no `Stalled` follow is left, the `Ended`
+//   at the 2nd to 6th frame are gone, and the remaining stops (if any) sit at a fixed `s`; if not the cause, the count
+//   of stops within 10% of D0's.
+// - **D2, the damping's ceiling** (`1e12` to `1e16`, main's residual form). Prediction: the stops unchanged within 10%,
+//   because a stall here is the polish failing to lower `‖Jᵀr‖` (noise), not the damping running out.
+// - **D3, the seed** (each follow seeded by the restart rule's point at its frame, not the last frame's point; main's
+//   residual form). Prediction: the stalls unchanged within 10%: they are at the minimiser, seeded there or not.
+// - **Read, not varied:** the optimality measure is already relative (`‖P r‖/‖r‖`, a sine, the same whatever the scale
+//   of `r` or of either coordinate), so its scaling is not varied; `JᵀJ`'s conditioning at each stop is tabulated, to
+//   see whether a null direction (as `s → 0`) is present.
+//
+// **D0–D3 read** (`path_lock_slide_stall`): D0 reproduces PR #72's C6 exactly (132 stops, 71 `Stalled`, 61 `Ended`, the
+// same frames). D1 misses its prediction as the whole cause (121 stops, 74 `Stalled`, 47 `Ended`), but its stops no
+// longer pile at the 2nd frame (9 there against 43) and its worst optimality falls from 2.22e-7 to 2.59e-8: the
+// cancellation is the part that moves the stop toward `s = 0`. D2 changes nothing (132, bit for bit the same table).
+// D3 has no stop, but it seeds each frame at the restart rule's own minimiser there, so the frame's direct solve does
+// not move and the continuity test passes on a zero step: it shows a minimiser exists at every frame, and bypasses the
+// test rather than passing it. Read, not varied: `JᵀJ`'s conditioning at the stops is 2.5e-7 to 1e-5, a near-null
+// direction, through which the slopes' error reaches the optimality measure amplified by about `1/√conditioning`
+// (`‖P r‖² = gᵀ(JᵀJ)⁻¹g`): central differences are good to about `ε^{2/3} ≈ 4e-11`, and `4e-11/√2.5e-7 ≈ 8e-8`, the
+// stalls' range. Two more runs, one variable each, predictions written before they ran:
+//
+// - **D4, the slopes** (a five-point central difference at its own step `ε^{1/5}·h`, good to about `ε^{4/5} ≈ 3e-13`,
+//   main's residual form). Prediction: the stops fall well below D0's, those left at the first frames (≤ 6), where
+//   main's cancelling form still costs `1/s`.
+//   *Changed before D4 ran in this test, after a scratch probe at three pins (reported in PR #79):* the step `ε^{1/5}·h`
+//   failed the rest chart's slide at (0, 0), which main takes through, and measuring the slopes at the stops showed why
+//   and what the stall's slope error is: the three-point difference at `ε^{1/3}·h` is off by `1.5e-7` (Burrau) and
+//   `4e-8` (rest) relative, falling 4× per halving of the step, so truncation, not the `ε^{2/3}` rounding assumed; the
+//   five-point difference at the same step `ε^{1/3}·h` agrees with itself to about `1e-11`, and a wider stencil meets
+//   the rest chart's curvature. D4 and D5 take the five-point difference at `ε^{1/3}·h`; the predictions stand.
+// - **D5, both** (D1's residual and D4's slopes). Prediction: no `Stalled`, and no `Ended` before the 7th frame; any
+//   stop left is at a fixed `s`, for F2 to judge.
+//
+// **Added before any fix run was read** (the first F-sweep run was stopped unread when the suite showed this): the
+// constructed ending (`path_lock_centre_slide_ends`), a true end at the edge of `B`'s states, arrives as the frame's
+// direct solve stalling (`Stalled` at `s = 51/64`), not as `Ended`. So a direct solve's failure is classified by
+// `anchor::leaves_states`: where the frame's Gauss–Newton step from the last frame's point leaves `B`'s states, the
+// minimiser has run into their edge, an end; any other direct failure is `FollowFailed`. (Two first forms, an end
+// wherever a bisection of the frame stepped toward the failure, with and without this test, were replaced before any
+// sweep ran: the first read main's spurious stall at (0, 0) as an end in `path_lock_failed_follow`, and at the
+// constructed edge no bisected half converges at all, so "stepped toward" picks the wrong one of the two.) F1 reads
+// "no slide stops on `FollowFailed`"; F2 is judged on every stop whatever its tag, and also asks that the brackets
+// `[k/n, (k+1)/n]` of the last good frame at 64, 128 and 256 share a point (an end drifting toward 0 by less than a
+// frame per count fails it).
+//
+// **The fix's criteria** (on the cause D1–D3 find; the runs `path_lock_slide_follows_sweep` and the sweeps below):
+//
+// - **F1, no stall and no spurious continuity failure.** On mixed to Burrau at the sweep's 256 pins, at 64, 128 and 256
+//   frames, no slide stops on a direct solve's failure (`Stalled`, `IterationCap`, `IllConditioned`, `NonFinite`).
+// - **F2, every remaining stop a true end:** an `Ended` at 64, 128 and 256 frames alike whose `s` is within one frame of
+//   the coarsest count's (`|s_n − s_64| ≤ 1/64`), and not at the 2nd frame of any count (an end there moves with the
+//   frame count by construction, the old classifier's blind spot).
+// - **F3, a failed follow is not an end.** A direct solve's failure in a follow is its own outcome, `PathError::
+//   FollowFailed`, refused and named so, never `LockedEnd::Ended`.
+// - **F4, the slides that went through before go through the same way.** Every pin of mixed to the rest chart and to
+//   Burrau whose slide reached `s = 1` on main (`LockedEnd::Slides`) reaches it again with the same `not_nearest`, its
+//   track's every node within the continuity test's agreement (`10⁻⁶·h`) of main's.
+// - **F5, no hold lost:** #72's C2 (no hold pair refuses or slides, at 16 frames), C5 (the rest pair's refusals and
+//   per-pin readings as on main) and C7 (the re-solving pairs at 64 frames) rerun, as written there.
+// - **Reported:** how many of the 124 become pins the sweep reads through, true ends, or remaining failures; C1's floor
+//   rerun and the sizing rule's value and its margins. `LOCK_TOLERANCE` (64) and `lock_solve_tolerance` (32) are not
+//   changed here; proposed values go to the owner.
+//
+// **Read** (PR #79 carries the output): the cause is the solver's polish, judged on `‖Jᵀr‖` while convergence reads
+// `‖P r‖` (M2; D6 no stop where D0 has 132). With it alone fixed, F1, F2 and F4 pass at 64, 128 and 256 frames (all 256
+// Burrau pins go through, no end, every node within `1.85·10⁻⁷·h` of main's), and F5: the whole sweep refuses nothing,
+// every other pair's row and per-pin map identical to main's. D1's and D4's changes are not the cause and are not taken
+// (with them, F4 fails at 29 mirror ties, `path_lock_slide_first_choice`).
+
+// ── path_lock_slide_stall: the diagnosis (D0–D3 above) ─────────────────────────────────────────────────────────────
+
+/// Where a slide on mixed to Burrau stops: the frame count, the stop's frame index `k` (`s = k/frames`), the failed
+/// solve's report, the residual's relative rounding there (`‖r_main − r‖/‖r‖`, main's cancelling form against the
+/// offset formed directly) and main's slopes' relative error there (its three-point difference against a five-point one
+/// of the offset formed directly), or `None` where the slide reaches `s = 1`.
+#[cfg(feature = "controls")]
+type SlideStop = Option<(usize, kernel::chart::lock_solve::Report<f64>, f64, f64)>;
+
+/// Mixed to Burrau's locked morph at `at` over `frames` frames under `switches`: where its slide stops (any solve in the
+/// slide that fails: the first frame's restart, a follow, or, read as main read it, a follow ending). `Err` where the
+/// lock itself refuses.
+#[cfg(feature = "controls")]
+fn slide_stop(
+    at: [f64; 2],
+    frames: usize,
+    switches: engine::path::anchor::probe::Switches,
+) -> Result<SlideStop, String> {
+    use engine::path::anchor::probe;
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let a = try_locked_mixed(home(), (at[0], at[1]))?;
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let (_, log) = probe::with(switches, || {
+        Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, frames)
+    });
+    let Some(failed) = log
+        .iter()
+        .find(|x| matches!(x.what, "slide first" | "follow") && !x.report.converged())
+    else {
+        return Ok(None);
+    };
+    let k = (failed.s * frames as f64).round() as usize;
+    // The residual at the stop, both ways: the frame's state less the anchor, and the offset formed directly.
+    let anchor = a.anchor.expect("a recorded anchor").blocks();
+    let placed = anchor::placed(&b, pin(&a), failed.report.x);
+    let own = Blocks::of(
+        &state(anchor::state_at(&placed, &burrau, pin(&a)).map_err(|e| format!("{e:?}"))?).ic,
+    );
+    let main: [f64; 9] = {
+        let line = engine::path::blend::block_line(&anchor, &own, failed.s)
+            .0
+            .vector();
+        let a = anchor.vector();
+        std::array::from_fn(|i| line[i] - a[i])
+    };
+    let offset = engine::path::blend::line_offset(&anchor, &own, failed.s);
+    let norm = |v: [f64; 9]| v.iter().map(|x| x * x).sum::<f64>().sqrt();
+    let rounding = norm(std::array::from_fn(|i| main[i] - offset[i])) / norm(offset);
+    // The slopes' error at the stop: main's three-point difference of main's residual against a five-point one of the
+    // offset formed directly at the same step, `ε^{1/3}·h` (which agrees with itself to about `1e-11` there), relative
+    // to the latter (`‖·‖` over both columns).
+    let value = |x: [f64; 2], cancelling: bool| -> Option<[f64; 9]> {
+        let v = anchor::placed(&b, pin(&a), x);
+        let own = Blocks::of(&decoded_ic(anchor::state_at(&v, &burrau, pin(&a)).ok()?)?);
+        Some(match cancelling {
+            true => {
+                let line = engine::path::blend::block_line(&anchor, &own, failed.s)
+                    .0
+                    .vector();
+                let a = anchor.vector();
+                std::array::from_fn(|i| line[i] - a[i])
+            }
+            false => engine::path::blend::line_offset(&anchor, &own, failed.s),
+        })
+    };
+    let half = b.sim.chart.window.half[0]
+        .abs()
+        .max(b.sim.chart.window.half[1].abs());
+    let x = failed.report.x;
+    let slopes = |cancelling: bool, k: &[(f64, f64)], h: f64| -> Option<[[f64; 9]; 2]> {
+        let mut out = [[0.0; 9]; 2];
+        for (axis, col) in out.iter_mut().enumerate() {
+            for &(at, w) in k {
+                let mut p = x;
+                p[axis] += at * h;
+                let v = value(p, cancelling)?;
+                for i in 0..9 {
+                    col[i] += w * v[i] / h;
+                }
+            }
+        }
+        Some(out)
+    };
+    let three = [(1.0, 0.5), (-1.0, -0.5)];
+    let five = [
+        (-2.0, 1.0 / 12.0),
+        (-1.0, -8.0 / 12.0),
+        (1.0, 8.0 / 12.0),
+        (2.0, -1.0 / 12.0),
+    ];
+    let slope_error = match (
+        slopes(true, &three, f64::EPSILON.cbrt() * half),
+        slopes(false, &five, f64::EPSILON.cbrt() * half),
+    ) {
+        (Some(j3), Some(j5)) => {
+            let n =
+                |j: &[[f64; 9]; 2]| (j[0].iter().chain(&j[1]).map(|x| x * x).sum::<f64>()).sqrt();
+            let d: [[f64; 9]; 2] =
+                std::array::from_fn(|c| std::array::from_fn(|i| j3[c][i] - j5[c][i]));
+            n(&d) / n(&j5)
+        }
+        _ => f64::NAN,
+    };
+    Ok(Some((k, failed.report, rounding, slope_error)))
+}
+
+/// A pixel's state, `None` on a blank one.
+#[cfg(feature = "controls")]
+fn decoded_ic(pixel: Pixel) -> Option<Ic<f64>> {
+    match pixel {
+        Pixel::State { decoded, .. } => Some(decoded.ic),
+        Pixel::Blank(_) => None,
+    }
+}
+
+/// Main's slide, emulated through the probe: its residual and slopes, a failed follow read as an end, and `recentre`'s
+/// hold on `placed_at`'s decode.
+#[cfg(feature = "controls")]
+fn main_slide() -> engine::path::anchor::probe::Switches {
+    engine::path::anchor::probe::Switches {
+        polish_unscaled: true,
+        failed_is_end: true,
+        placed_at_hold: true,
+        ..Default::default()
+    }
+}
+
+/// The diagnosis's premise: under `switches` the slide at `at` stops as PR #72 measured main's at (0, 0), its follow
+/// stalling at the 2nd of 64 frames.
+#[cfg(feature = "controls")]
+fn check_reproduces(at: [f64; 2], switches: engine::path::anchor::probe::Switches) {
+    let stop = slide_stop(at, 64, switches).expect("a lock");
+    assert!(
+        matches!(
+            stop,
+            Some((
+                2,
+                kernel::chart::lock_solve::Report {
+                    status: kernel::chart::lock_solve::Status::Failed(
+                        kernel::chart::lock_solve::Failure::Stalled
+                    ),
+                    ..
+                },
+                ..
+            ))
+        ),
+        "main's stall not reproduced at ({}, {}): {stop:?}",
+        at[0],
+        at[1]
+    );
+}
+
+// Its check, before the measurement: D0's switches reproduce PR #72's stall at (0, 0). Control: the slide as it is now,
+// which goes through there.
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "about 30 seconds in release, much longer in debug: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_stall --exact --include-ignored --nocapture"]
+fn path_lock_slide_stall() {
+    use engine::path::anchor::probe::Switches;
+    let main = main_slide();
+    check_reproduces([0.0, 0.0], main);
+    let runs: [(&str, Switches); 8] = [
+        ("D0 main", main),
+        (
+            "D1 the offset formed directly",
+            Switches {
+                offset: true,
+                ..main
+            },
+        ),
+        (
+            "D2 the damping's ceiling 1e16",
+            Switches {
+                ceiling: Some(1e16),
+                ..main
+            },
+        ),
+        (
+            "D3 each follow seeded by the restart rule at its frame",
+            Switches {
+                restart_seed: true,
+                ..main
+            },
+        ),
+        (
+            "D4 five-point slopes",
+            Switches {
+                five_point: true,
+                ..main
+            },
+        ),
+        (
+            "D5 the offset formed directly and five-point slopes",
+            Switches {
+                offset: true,
+                five_point: true,
+                ..main
+            },
+        ),
+        (
+            "D6 the polish judged on ‖P r‖ alone (the fix)",
+            Switches {
+                polish_unscaled: false,
+                ..main
+            },
+        ),
+        (
+            "D7 all three",
+            Switches {
+                offset: true,
+                five_point: true,
+                polish_unscaled: false,
+                ..main
+            },
+        ),
+    ];
+    let pins = sweep_pins(SWEEP_SIDE);
+    let mut table: Vec<([f64; 2], Vec<SlideStop>)> = Vec::new();
+    for at in &pins {
+        let row: Vec<SlideStop> = runs
+            .iter()
+            .map(|(_, sw)| slide_stop(*at, 64, *sw).unwrap_or(None))
+            .collect();
+        if row.iter().any(|x| x.is_some()) {
+            table.push((*at, row));
+        }
+    }
+    let cell = |x: &SlideStop| {
+        match x {
+        None => "reaches 1".to_string(),
+        Some((k, r, rounding, slope)) => format!(
+            "{:?} at k = {k}, opt {:.2e}, cond {:.2e}, it {}, r {:.2e}, rounding {:.1e}, slopes {:.1e} (/√cond {:.1e})",
+            r.status,
+            r.optimality,
+            r.conditioning,
+            r.iterations,
+            r.residual,
+            rounding,
+            slope,
+            slope / r.conditioning.sqrt()
+        ),
+    }
+    };
+    println!(
+        "| pin | {} |",
+        runs.iter().map(|r| r.0).collect::<Vec<_>>().join(" | ")
+    );
+    println!("|---|{}", "---|".repeat(runs.len()));
+    for (at, row) in &table {
+        println!(
+            "| ({:.4}, {:.4}) | {} |",
+            at[0],
+            at[1],
+            row.iter().map(cell).collect::<Vec<_>>().join(" | ")
+        );
+    }
+    for (i, (name, _)) in runs.iter().enumerate() {
+        let mut kinds: Vec<(String, usize)> = Vec::new();
+        let mut frames: Vec<(usize, usize)> = Vec::new();
+        let mut opt: Vec<f64> = Vec::new();
+        let mut rounding: Vec<f64> = Vec::new();
+        let mut cond: Vec<f64> = Vec::new();
+        for (_, row) in &table {
+            let Some((k, r, ro, _)) = &row[i] else {
+                continue;
+            };
+            let kind = format!("{:?}", r.status);
+            match kinds.iter_mut().find(|(v, _)| *v == kind) {
+                Some((_, n)) => *n += 1,
+                None => kinds.push((kind, 1)),
+            }
+            match frames.iter_mut().find(|(f, _)| f == k) {
+                Some((_, n)) => *n += 1,
+                None => frames.push((*k, 1)),
+            }
+            opt.push(r.optimality);
+            rounding.push(*ro);
+            cond.push(r.conditioning);
+        }
+        frames.sort();
+        let stops = opt.len();
+        println!(
+            "path_lock_slide_stall: {name}: {stops} stops; by kind {kinds:?}; by frame {frames:?}"
+        );
+        if stops > 0 {
+            println!(
+                "path_lock_slide_stall: {name}: optimality min {:.2e}, median {:.2e}, max {:.2e}; the residual's rounding min {:.1e}, median {:.1e}, max {:.1e}; conditioning min {:.2e}, median {:.2e}",
+                quantile(&mut opt, 0.0),
+                quantile(&mut opt, 0.5),
+                quantile(&mut opt, 1.0),
+                quantile(&mut rounding, 0.0),
+                quantile(&mut rounding, 0.5),
+                quantile(&mut rounding, 1.0),
+                quantile(&mut cond, 0.0),
+                quantile(&mut cond, 0.5),
+            );
+        }
+    }
+}
+
+// ── path_lock_solve_below_lock: the re-solve's target below the lock's tolerance ────────────────────────────────────
+//
+// `anchor::SOLVE_TOLERANCE < LOCK_TOLERANCE`, so a hold is never judged at the point its solve stopped (PR #72's
+// review). The engine also asserts it at compile time, through the same `anchor::solve_below_lock`. Pass: it holds of
+// the constants in force. Control: the target set to the lock's tolerance (main before PR #72) fails.
+
+fn check_solve_below_lock(solve: f64) {
+    assert!(
+        anchor::solve_below_lock(solve, LOCK_TOLERANCE),
+        "the re-solve's target {} ε is not below the lock's tolerance {} ε",
+        solve / f64::EPSILON,
+        LOCK_TOLERANCE / f64::EPSILON
+    );
+}
+
+#[test]
+fn path_lock_solve_below_lock() {
+    check_solve_below_lock(anchor::SOLVE_TOLERANCE);
+}
+
+negative_control!(
+    path_lock_solve_below_lock,
+    "the re-solve's target set to the lock's tolerance, as before PR #72",
+    expected = "is not below the lock's tolerance",
+    check_solve_below_lock(LOCK_TOLERANCE)
+);
+
+// ── path_lock_recentre_place: recentre judges the state its view shows ──────────────────────────────────────────────
+//
+// `anchor::recentre` decides a kernel map's hold on the state the view it returns shows at the pin (`place`'s window,
+// its own decode), as `rehold` does, not on the nearest-point solve's own decode through `placed_at`'s window, which
+// differs from it by up to 7.3 ε on the sphere (PR #72). Latent to the exponential sphere, at the first of the sweep's
+// pins (row by row from (0.8, 0.6)) where the two decodes differ in `‖·‖_phys` from the anchor: a norm that reads 0 at
+// exactly the shown state's distance and ∞ elsewhere, so only a hold judged on the shown state holds. Pass: the end
+// holds. Control: the hold judged on `placed_at`'s decode, main's, slides.
+
+/// The sphere pair's leaves: latent and the exponential shape sphere.
+type SphereLeaves = (
+    LatentLeaves<Defaults>,
+    ChartLeaves<kernel::chart::ShapeSphere<f64>, Defaults>,
+);
+
+/// The sphere pair at the first pin where `place`'s and `placed_at`'s decodes differ: the locked start, the end, the
+/// leaves and the shown state's distance from the anchor.
+fn recentre_case() -> (View, View, SphereLeaves, f64) {
+    let sphere_a = frame_plane(GATE_Z0, 0, 2, 0.5);
+    let mut pins = sweep_pins(SWEEP_SIDE);
+    pins.rotate_left(9 * SWEEP_SIDE + 12);
+    for at in pins {
+        let Ok(a) = try_locked_latent(&sphere_a, (at[0], at[1])) else {
+            continue;
+        };
+        let sphere = sphere_for(&engine::lock::point(&sphere_a, at[0], at[1]));
+        let leaves = (
+            LatentLeaves::<Defaults>::new(),
+            ChartLeaves::<_, Defaults>::new(sphere).expect("a chart"),
+        );
+        let b = kernel_view(&sphere, Window::SQUARE);
+        let anchor = a.anchor.expect("a recorded anchor");
+        let Ok(found) = anchor::nearest(&b, &leaves, at, &anchor) else {
+            continue;
+        };
+        let shown = View {
+            anchor: None,
+            ..anchor::place(&b, at, found.x)
+        };
+        let Ok(own) = leaves.decode(&shown, at) else {
+            continue;
+        };
+        let (d_shown, d_solver) = (phys(&anchor.ic(), &own.ic), phys(&anchor.ic(), &found.ic));
+        if d_shown != d_solver && d_shown <= LOCK_TOLERANCE {
+            println!(
+                "path_lock_recentre_place: at ({:.4}, {:.4}): the shown state {:.3} ε from the anchor, the solver's own decode {:.3} ε",
+                at[0],
+                at[1],
+                d_shown / f64::EPSILON,
+                d_solver / f64::EPSILON
+            );
+            return (a, b, leaves, d_shown);
+        }
+    }
+    panic!("no pin where the two decodes differ");
+}
+
+fn check_recentre_place() {
+    let (a, b, leaves, d_shown) = recentre_case();
+    let only_shown = |x: &Ic<f64>, y: &Ic<f64>| match phys(x, y) == d_shown {
+        true => 0.0,
+        false => f64::INFINITY,
+    };
+    let out = anchor::recentre(&a, &b, &leaves, only_shown, 4);
+    assert!(
+        matches!(out, Ok(anchor::Recentred::Holds(_))),
+        "recentre judged a state its view does not show: {:?}",
+        out.map(|r| matches!(r, anchor::Recentred::Holds(_)))
+    );
+}
+
+#[test]
+fn path_lock_recentre_place() {
+    check_recentre_place();
+}
+
+negative_control!(
+    path_lock_recentre_place,
+    "the hold judged on the nearest-point solve's own decode (placed_at's window), main's",
+    expected = "recentre judged a state its view does not show",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            placed_at_hold: true,
+            ..Switches::default()
+        };
+        probe::with(switches, check_recentre_place);
+    }
+);
+
+// ── path_lock_failed_follow: a failed follow is refused, not read as an end ─────────────────────────────────────────
+//
+// Criterion F3. `anchor::slide` reads a follow whose frame's own solve fails (`Stalled`, `IterationCap`,
+// `IllConditioned`, `NonFinite`) as the solver's failure, `PathError::FollowFailed`, never as the followed minimiser's
+// end (`LockedEnd::Ended`, the continuity test's). Mixed to Burrau at (0, 0), 64 frames, its slide solved as main solved
+// it (`main_slide`: its residual, its slopes and the polish's acceptance), under which its follow stalls at the 2nd frame
+// (PR #72's C6). Pass: the
+// locked morph is refused with `FollowFailed`. Control: a failed follow read as an end, main's, gives `Ended`.
+
+#[cfg(feature = "controls")]
+fn check_failed_follow(failed_is_end: bool) {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let a = try_locked_mixed(home(), (0.0, 0.0)).expect("a lock");
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let switches = Switches {
+        failed_is_end,
+        placed_at_hold: false,
+        ..main_slide()
+    };
+    let (out, _) = probe::with(switches, || {
+        Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, 64)
+    });
+    let out = out.map(|(_, end)| end);
+    println!("path_lock_failed_follow: {out:?}");
+    assert!(
+        !matches!(out, Ok(LockedEnd::Ended { .. })),
+        "a failed follow read as an end: {out:?}"
+    );
+    assert!(
+        matches!(out, Err(PathError::FollowFailed { .. })),
+        "the failed follow not refused as one: {out:?}"
+    );
+}
+
+#[cfg(feature = "controls")]
+#[test]
+fn path_lock_failed_follow() {
+    check_failed_follow(false);
+}
+
+negative_control!(
+    path_lock_failed_follow,
+    "a failed follow read as the followed minimiser's end, main's",
+    expected = "a failed follow read as an end",
+    check_failed_follow(true)
+);
+
+// ── path_lock_rehold_slide_stall: the slice refusals' measurement ───────────────────────────────────────────────────
+//
+// PR #72's 9 refusals at the slice mid-morph on mixed to Burrau, measured then in a scratch run, committed here: at each
+// of the sweep's 256 pins, the Burrau pair's gate path at 16 frames per segment, with the slide's residual formed as
+// main formed it (and a failed follow read as an end, as main read it) and as it is formed now. Per pin refused at the
+// slice: each `"rehold slide"` solve that failed, its `s`, status and optimality (main's run emulated through the probe,
+// `main_slide`: `recentre`'s old hold decode included). A measurement: it fails only if a
+// slice refusal has no failed re-hold slide solve in its log (the log would then not be the refusal's).
+
+/// The Burrau pair's gate path at `at` under `switches`: the slice's refusal, if any, and the re-hold slide solves that
+/// failed (`s`, status, optimality).
+#[cfg(feature = "controls")]
+#[allow(clippy::type_complexity)]
+fn rehold_slide_stalls(
+    at: [f64; 2],
+    switches: engine::path::anchor::probe::Switches,
+    logged: bool,
+) -> (
+    Option<String>,
+    Vec<(f64, kernel::chart::lock_solve::Status, f64)>,
+) {
+    use engine::path::anchor::probe;
+    let run = || tolerance_window(&[at], &[4], SWEEP_FRAMES, &|x| x).1;
+    let (refusals, log) = match logged {
+        true => probe::with(switches, run),
+        false => (probe::with(switches, run).0, Vec::new()),
+    };
+    let slice = refusals
+        .into_iter()
+        .find(|r| matches!(r.2, "the slice mid-morph" | "slice"))
+        .map(|r| r.3);
+    let failed = log
+        .iter()
+        .filter(|x| x.what == "rehold slide" && !x.report.converged())
+        .map(|x| (x.s, x.report.status, x.report.optimality))
+        .collect();
+    (slice, failed)
+}
+
+#[cfg(feature = "controls")]
+fn check_rehold_slide_stall(pins: &[[f64; 2]], logged: bool) {
+    use engine::path::anchor::probe::Switches;
+    let main = main_slide();
+    for (name, sw) in [
+        ("main's slide", main),
+        ("the slide as now", Switches::default()),
+    ] {
+        let mut refused = 0;
+        let mut opt: Vec<f64> = Vec::new();
+        for &at in pins {
+            let (slice, failed) = rehold_slide_stalls(at, sw, logged);
+            let Some(why) = slice else { continue };
+            refused += 1;
+            println!(
+                "path_lock_rehold_slide_stall: {name}: ({:.4}, {:.4}) refused at the slice ({why}); failed re-hold slide solves (s, status, optimality): {failed:?}",
+                at[0], at[1]
+            );
+            assert!(
+                !failed.is_empty(),
+                "a slice refusal with no failed re-hold slide solve in its log"
+            );
+            opt.extend(failed.iter().map(|f| f.2));
+        }
+        print!("path_lock_rehold_slide_stall: {name}: {refused} pins refused at the slice");
+        match opt.is_empty() {
+            true => println!(),
+            false => println!(
+                "; the failed solves' optimality min {:.2e}, max {:.2e} (the spec's 1e-8)",
+                quantile(&mut opt, 0.0),
+                quantile(&mut opt, 1.0)
+            ),
+        }
+    }
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "about 2 minutes in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_rehold_slide_stall --exact --include-ignored --nocapture"]
+fn path_lock_rehold_slide_stall() {
+    check_rehold_slide_stall(&sweep_pins(SWEEP_SIDE), true);
+}
+
+negative_control!(
+    path_lock_rehold_slide_stall,
+    "the solves not logged, at (7/15, 4/5), refused at the slice under main's slide: its refusal has no failed solve to \
+     read",
+    expected = "a slice refusal with no failed re-hold slide solve in its log",
+    check_rehold_slide_stall(&[grid_pin(7, 12)], false)
+);
+
+negative_control!(
+    path_lock_slide_stall,
+    "the slide as it is now in place of main's, at (0, 0), where it goes through",
+    expected = "main's stall not reproduced",
+    check_reproduces([0.0, 0.0], engine::path::anchor::probe::Switches::default())
+);
+
+// ── path_lock_slide_follows_sweep: criteria F1, F2 and F4 ────────────────────────────────────────────────────────────
+//
+// As written above, before the fix ran. At the sweep's 256 pins: mixed to Burrau re-centred at 64, 128 and 256 frames
+// (F1: no follow fails; F2: every stop an `Ended` at all three counts, its last frame's `s` within 1/64 of the 64-frame
+// count's and past the first frame at each), and mixed to the rest chart and to Burrau at 64 frames against main's
+// residual and main's reading of a failed follow (F4: every slide that reached `s = 1` on main reaches it again, with
+// the same `not_nearest` at `s = 1`, every node within `10⁻⁶·h` of main's). Prints the per-pin table and the tallies.
+
+/// A slide's outcome at one pin: its track (ended or through), or the refusal.
+#[cfg(feature = "controls")]
+type SlideOutcome = Result<anchor::Track, PathError>;
+
+/// Mixed locked at `at`, re-centred on `b` through `leaves` over `frames` frames: the slide's outcome (`None` where the
+/// lock refuses or `b` holds).
+#[cfg(feature = "controls")]
+fn slide_outcome<L: Leaves>(
+    at: [f64; 2],
+    b: &View,
+    leaves: &L,
+    frames: usize,
+) -> Option<SlideOutcome> {
+    let a = try_locked_mixed(home(), (at[0], at[1])).ok()?;
+    match anchor::recentre(&a, b, leaves, phys, frames) {
+        Ok(anchor::Recentred::Slides { track, .. }) => Some(Ok(track)),
+        Ok(anchor::Recentred::Holds(_)) => None,
+        Err(e) => Some(Err(e)),
+    }
+}
+
+#[cfg(feature = "controls")]
+fn show_outcome(o: &Option<SlideOutcome>) -> String {
+    match o {
+        None => "holds or no lock".into(),
+        Some(Ok(t)) if t.ended => format!("ends, last s = {:.6}", t.end()),
+        Some(Ok(t)) => format!("through, not nearest {}", t.not_nearest(1.0)),
+        Some(Err(e)) => format!("{e:?}"),
+    }
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "about 4 minutes in release, hours in debug: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_follows_sweep --exact --include-ignored --nocapture"]
+fn path_lock_slide_follows_sweep() {
+    check_slide_follows(&sweep_pins(SWEEP_SIDE));
+}
+
+// The same criteria with D7's three changes (the polish's, the offset formed directly and five-point slopes), the fix as
+// it stood when this sweep first ran: a measurement, reported, not a criterion of the fix. It fails F4 at 29 pins, each
+// a mirror tie (`path_lock_slide_first_choice`); the polish alone, the fix as it is, passes every criterion.
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "a measurement that fails F4 by design (the three changes not taken), about 5 minutes in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_follows_sweep_three --exact --include-ignored --nocapture"]
+fn path_lock_slide_follows_sweep_three() {
+    use engine::path::anchor::probe;
+    probe::with(three_changes(), || {
+        check_slide_follows(&sweep_pins(SWEEP_SIDE))
+    });
+}
+
+/// D7's three changes: the polish's (in force), the slide's residual formed directly and its slopes five-point.
+#[cfg(feature = "controls")]
+fn three_changes() -> engine::path::anchor::probe::Switches {
+    engine::path::anchor::probe::Switches {
+        offset: true,
+        five_point: true,
+        ..Default::default()
+    }
+}
+
+negative_control!(
+    path_lock_slide_follows_sweep_three,
+    "main's polish too, at (0, 0)",
+    expected = "F1: 1 pins' follows fail",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            failed_is_end: false,
+            ..main_slide()
+        };
+        probe::with(switches, || check_slide_follows(&[[0.0, 0.0]]));
+    }
+);
+
+negative_control!(
+    path_lock_slide_follows_sweep,
+    "the slide as main formed it (its residual and slopes; a failed follow refused as now), at (0, 0)",
+    expected = "F1: 1 pins' follows fail",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            failed_is_end: false,
+            ..main_slide()
+        };
+        probe::with(switches, || check_slide_follows(&[[0.0, 0.0]]));
+    }
+);
+
+/// F1, F2 and F4 at `pins`.
+#[cfg(feature = "controls")]
+fn check_slide_follows(pins: &[[f64; 2]]) {
+    use engine::path::anchor::probe;
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let rest = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(simplex()).expect("a chart"),
+    );
+    let b_burrau = kernel_view(&nu_k(), Window::SQUARE);
+    let b_rest = kernel_view(&simplex(), Window::SQUARE);
+    let h = b_burrau.sim.chart.window.half[0]
+        .abs()
+        .max(b_burrau.sim.chart.window.half[1].abs());
+    let h_rest = b_rest.sim.chart.window.half[0]
+        .abs()
+        .max(b_rest.sim.chart.window.half[1].abs());
+    let main = main_slide();
+    let mut f1: Vec<String> = Vec::new();
+    let mut f2: Vec<String> = Vec::new();
+    let mut f4: Vec<String> = Vec::new();
+    let (mut through, mut ends, mut failed) = (0, 0, 0);
+    let mut worst_node = 0.0f64;
+    println!(
+        "| pin | Burrau, main at 64 | at 64 | at 128 | at 256 | rest, main at 64 | rest at 64 |"
+    );
+    println!("|---|---|---|---|---|---|---|");
+    for &at in pins {
+        let (main_b, _) = probe::with(main, || slide_outcome(at, &b_burrau, &burrau, 64));
+        let (main_r, _) = probe::with(main, || slide_outcome(at, &b_rest, &rest, 64));
+        let now: Vec<Option<SlideOutcome>> = [64, 128, 256]
+            .iter()
+            .map(|&n| slide_outcome(at, &b_burrau, &burrau, n))
+            .collect();
+        let now_r = slide_outcome(at, &b_rest, &rest, 64);
+        println!(
+            "| ({:.4}, {:.4}) | {} | {} | {} | {} | {} | {} |",
+            at[0],
+            at[1],
+            show_outcome(&main_b),
+            show_outcome(&now[0]),
+            show_outcome(&now[1]),
+            show_outcome(&now[2]),
+            show_outcome(&main_r),
+            show_outcome(&now_r)
+        );
+        let pin_name = format!("({:.4}, {:.4})", at[0], at[1]);
+        // F1 and F2, Burrau at 64, 128 and 256.
+        if now.iter().any(|o| matches!(o, Some(Err(_)))) {
+            failed += 1;
+            f1.push(format!(
+                "{pin_name}: {:?}",
+                now.iter().map(show_outcome).collect::<Vec<_>>()
+            ));
+        } else if now.iter().any(|o| matches!(o, Some(Ok(t)) if t.ended)) {
+            ends += 1;
+            let s64 = match &now[0] {
+                Some(Ok(t)) if t.ended => Some(t.end()),
+                _ => None,
+            };
+            let true_end = s64.is_some_and(|s64| {
+                now.iter().zip([64.0, 128.0, 256.0]).all(|(o, n)| {
+                    matches!(o, Some(Ok(t)) if t.ended && (t.end() - s64).abs() <= 1.0 / 64.0 && t.end() > 1.0 / n)
+                })
+            });
+            // The brackets `[s_n, s_n + 1/n]` of the last good frame share a point.
+            let shared = now
+                .iter()
+                .zip([64.0, 128.0, 256.0])
+                .filter_map(|(o, n)| match o {
+                    Some(Ok(t)) => Some((t.end(), t.end() + 1.0 / n)),
+                    _ => None,
+                })
+                .fold((f64::NEG_INFINITY, f64::INFINITY), |(lo, hi), (a, b)| {
+                    (lo.max(a), hi.min(b))
+                });
+            let true_end = true_end && shared.0 <= shared.1;
+            if !true_end {
+                f2.push(format!(
+                    "{pin_name}: {:?}",
+                    now.iter().map(show_outcome).collect::<Vec<_>>()
+                ));
+            }
+        } else if now.iter().all(|o| matches!(o, Some(Ok(_)))) {
+            through += 1;
+        }
+        // F4: what went through on main goes through the same way.
+        for (name, before, after, hh) in [
+            ("Burrau", &main_b, &now[0], h),
+            ("rest", &main_r, &now_r, h_rest),
+        ] {
+            let Some(Ok(tb)) = before else { continue };
+            if tb.ended {
+                continue;
+            }
+            match after {
+                Some(Ok(ta))
+                    if !ta.ended
+                        && ta.not_nearest(1.0) == tb.not_nearest(1.0)
+                        && ta.nodes.len() == tb.nodes.len() =>
+                {
+                    let d = ta
+                        .nodes
+                        .iter()
+                        .zip(&tb.nodes)
+                        .map(|(x, y)| {
+                            ((x.x[0] - y.x[0]).powi(2) + (x.x[1] - y.x[1]).powi(2)).sqrt()
+                        })
+                        .fold(0.0f64, f64::max);
+                    worst_node = worst_node.max(d / hh);
+                    if d > 1e-6 * hh {
+                        f4.push(format!(
+                            "{name} {pin_name}: a node {:.3e}·h from main's",
+                            d / hh
+                        ));
+                    }
+                }
+                other => f4.push(format!(
+                    "{name} {pin_name}: through on main, now {}",
+                    show_outcome(other)
+                )),
+            }
+        }
+    }
+    println!("path_lock_slide_follows_sweep: Burrau: {through} pins through at all three counts, {ends} that end, {failed} with a failed follow");
+    println!(
+        "path_lock_slide_follows_sweep: F4: the largest node distance from main's {:.3e}·h",
+        worst_node
+    );
+    println!("path_lock_slide_follows_sweep: F1 failures: {}", f1.len());
+    for x in &f1 {
+        println!("  {x}");
+    }
+    println!("path_lock_slide_follows_sweep: F2 failures: {}", f2.len());
+    for x in &f2 {
+        println!("  {x}");
+    }
+    println!("path_lock_slide_follows_sweep: F4 failures: {}", f4.len());
+    for x in &f4 {
+        println!("  {x}");
+    }
+    assert!(f1.is_empty(), "F1: {} pins' follows fail", f1.len());
+    assert!(
+        f2.is_empty(),
+        "F2: {} stops that are not true ends",
+        f2.len()
+    );
+    assert!(
+        f4.is_empty(),
+        "F4: {} slides that went through before do not now",
+        f4.len()
+    );
+}
+
+// ── path_lock_line_offset: the slide's residual is the frame's offset ───────────────────────────────────────────────
+//
+// `blend::line_offset(a, b, s)` is `block_line(a, b, s) − a`, formed without the cancellation: the slide solves on it,
+// the frames show `block_line`. On each of the great circle's branches (general with `a·b ≥ 0` and `< 0`, `b = a`, the
+// antipodal tie and a near-tie inside `√ε`) at `s` from `10⁻³` to 0.9, with masses and momenta moved too. Pass: every
+// component within `16·ε·max(1, |a|, |b|)` of `block_line(a, b, s) − a`, whose own rounding is `ε·|a|`. Control: the
+// offset taken at `1 − s`.
+
+fn check_line_offset(offset: &dyn Fn(&Blocks, &Blocks, f64) -> [f64; 9]) {
+    let unit = |v: [f64; 3]| {
+        let n = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+        v.map(|x| x / n)
+    };
+    let a = Blocks {
+        mu: [0.3, -0.7],
+        n: unit([0.2, -0.5, 0.8]),
+        p_rho: [1.1, -0.4],
+        p_lambda: [-0.6, 0.9],
+    };
+    let tilt = |n: [f64; 3]| Blocks {
+        mu: [0.1, 0.4],
+        n,
+        p_rho: [-0.2, 0.5],
+        p_lambda: [0.7, 1.3],
+    };
+    let near_tie = unit([-a.n[0] + 1e-9, -a.n[1], -a.n[2]]);
+    let cases = [
+        ("general, a·b ≥ 0", tilt(unit([0.4, -0.1, 0.9]))),
+        ("general, a·b < 0", tilt(unit([-0.6, 0.7, -0.2]))),
+        ("b = a", tilt(a.n)),
+        ("the antipodal tie", tilt(a.n.map(|x| -x))),
+        ("a near-tie", tilt(near_tie)),
+    ];
+    for (name, b) in &cases {
+        for s in [1e-3, 1.0 / 64.0, 0.25, 0.5, 0.9] {
+            let line = engine::path::blend::block_line(&a, b, s).0.vector();
+            let av = a.vector();
+            let got = offset(&a, b, s);
+            let scale = av
+                .iter()
+                .chain(&b.vector())
+                .fold(1.0f64, |m, x| m.max(x.abs()));
+            for i in 0..9 {
+                let want = line[i] - av[i];
+                assert!(
+                    (got[i] - want).abs() <= 16.0 * f64::EPSILON * scale,
+                    "the slide's residual is not the frame's offset: {name}, s = {s}, component {i}: {} against {want}",
+                    got[i]
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn path_lock_line_offset() {
+    check_line_offset(&engine::path::blend::line_offset);
+}
+
+negative_control!(
+    path_lock_line_offset,
+    "the offset taken at 1 − s",
+    expected = "the slide's residual is not the frame's offset",
+    check_line_offset(&|a, b, s| engine::path::blend::line_offset(a, b, 1.0 - s))
+);
+
+// ── path_lock_slide_follows: the follow converges at a slide's first frames ─────────────────────────────────────────
+//
+// The fix's guard in CI (criteria F1 and F2, at two of the pins PR #72's C6 measured stalling at the 2nd frame: (0, 0)
+// and (1/15, 0)). Mixed to Burrau at 64 and 256 frames. Pass: no follow fails (`FollowFailed`), and where the slide ends
+// it ends at the same `s` within 1/64 at both counts, past the first frame. Control: the slide as main formed it (its
+// residual and its slopes), whose follow fails at the 2nd frame.
+
+fn check_slide_follows_at(pins: &[[f64; 2]]) {
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    for &at in pins {
+        let a = try_locked_mixed(home(), (at[0], at[1])).expect("a lock");
+        let ends: Vec<Option<f64>> = [64usize, 256]
+            .iter()
+            .map(|&n| {
+                let end = Segment::locked_blend(&a, &b, BlendPath::BlockLine, &burrau, phys, n)
+                    .map(|x| x.1);
+                println!(
+                    "path_lock_slide_follows: ({}, {}) at {n} frames: {end:?}",
+                    at[0], at[1]
+                );
+                match end {
+                    Ok(LockedEnd::Ended { s }) => {
+                        assert!(s > 1.0 / n as f64, "an end at the first frame: {s}");
+                        Some(s)
+                    }
+                    Ok(_) => None,
+                    Err(e) => panic!(
+                        "the follow failed at ({}, {}), {n} frames: {e:?}",
+                        at[0], at[1]
+                    ),
+                }
+            })
+            .collect();
+        if let [Some(s64), Some(s256)] = ends[..] {
+            assert!(
+                (s64 - s256).abs() <= 1.0 / 64.0,
+                "an end that moves with the frame count: {s64} at 64, {s256} at 256"
+            );
+        }
+        assert!(
+            ends[0].is_some() == ends[1].is_some(),
+            "an end at one frame count and not the other: {ends:?}"
+        );
+    }
+}
+
+#[test]
+fn path_lock_slide_follows() {
+    check_slide_follows_at(&[[0.0, 0.0], [1.0 / 15.0, 0.0]]);
+}
+
+negative_control!(
+    path_lock_slide_follows,
+    "the slide's residual and slopes as main formed them",
+    expected = "the follow failed",
+    {
+        use engine::path::anchor::probe::{self, Switches};
+        let switches = Switches {
+            failed_is_end: false,
+            ..main_slide()
+        };
+        probe::with(switches, || check_slide_follows_at(&[[0.0, 0.0]]));
+    }
+);
+
+// ── path_lock_slide_margins: the margins, measured where the follow still fails ─────────────────────────────────────
+//
+// D5's fix as first committed (the offset formed directly; five-point slopes at `ε^{1/3}·h`) still fails at the first
+// frames at 128 and 256 frames: the F-sweep's first nine rows were read before that run was stopped. At these Burrau
+// minimisers the window is `[0, 1]²` and the point sits at `u ≈ −0.03`, about 0.01 from `B`'s mass edge, where `μ₁` is
+// log-steep (`|∂B/∂u| ≈ 250`) and `B` barely moves along `v` (`|∂B/∂v| ≈ 0.09`): `JᵀJ`'s conditioning ≈ 1e-7. So the
+// margins are measured directly, not by counting stops, at six frames where the follow fails now (the frame's `s` and
+// the last converged point before it, under the current slide). Predictions, written before the run:
+//
+// - **M1, the optimality floor:** the frame's solve from the last point with tolerance 0 stops (its least optimality)
+//   within 3× of `1e-8` (3e-9 to 3e-8): the solve is precision-limited, not lost.
+// - **M2, the polish's acceptance:** `lock_solve::polish` accepts a step where `‖Jᵀr‖²` falls, while convergence is
+//   judged on the scale-invariant `‖P r‖² = gᵀ(JᵀJ)⁻¹g`; with columns 2000× apart, `‖Jᵀr‖²` is the steep column's and
+//   its rounding hides the weak one. With the polish accepting where `‖P r‖²` falls instead (one variable), if this is
+//   the cause the floor falls at least 10× at every point.
+// - **Then D6 and D7** (`path_lock_slide_stall`, one more variable each, predictions written after M1–M3 were read and
+//   before D6 and D7 ran): D6, the polish
+//   judged on `‖P r‖` alone (main's residual and slopes): if M2 holds, the `Stalled` stops fall well below D0's, the
+//   ones left at the first frames, where main's residual still cancels; D7, all three: no `Stalled`, and no `Ended`
+//   before the 7th frame.
+// - **M3, the scatter:** solves of the frame from seeds `10⁻⁶·h` apart (and from the restart rule's point) converge to
+//   points spread by more than the continuity test's floor, `10⁻⁷·h`, where the follow ended: the test reads scatter as
+//   travel.
+
+/// The six frames: pin, frame count.
+#[cfg(feature = "controls")]
+const MARGIN_CASES: [([f64; 2], usize); 6] = [
+    ([0.0, 0.0], 64),
+    ([0.0, 0.0], 256),
+    ([1.0 / 15.0, 0.0], 128),
+    ([2.0 / 15.0, 0.0], 64),
+    ([3.0 / 15.0, 0.0], 64),
+    ([6.0 / 15.0, 0.0], 64),
+];
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "under a second in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_margins --exact --include-ignored --nocapture"]
+fn path_lock_slide_margins() {
+    measure_margins(&MARGIN_CASES, true);
+}
+
+/// The margins at `cases`, the slide's solves logged where `logged` (the control's switch: with no log, there is no
+/// failed follow to measure at).
+#[cfg(feature = "controls")]
+fn measure_margins(cases: &[([f64; 2], usize)], logged: bool) {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let h = b.sim.chart.window.half[0]
+        .abs()
+        .max(b.sim.chart.window.half[1].abs());
+    let mut read = 0;
+    for &(at, frames) in cases {
+        let a = try_locked_mixed(home(), (at[0], at[1])).expect("a lock");
+        let anchor_ = a.anchor.expect("an anchor");
+        // Where D5's slide (the residual and slopes fixed, the polish as main's) failed, the frames M1–M3 were taken at.
+        let d5 = Switches {
+            offset: true,
+            five_point: true,
+            polish_unscaled: true,
+            ..Switches::default()
+        };
+        let (out, log) = probe::with(d5, || anchor::slide(&b, &burrau, pin(&a), &anchor_, frames));
+        let log = match logged {
+            true => log,
+            false => Vec::new(),
+        };
+        let Some(k) = log
+            .iter()
+            .position(|x| x.what == "follow" && !x.report.converged())
+        else {
+            println!(
+                "path_lock_slide_margins: ({:.4}, {:.4}) at {frames}: no failed follow ({:?})",
+                at[0],
+                at[1],
+                out.map(|t| t.ended)
+            );
+            continue;
+        };
+        let failed = log[k];
+        let prev = log[..k]
+            .iter()
+            .rev()
+            .find(|x| matches!(x.what, "follow" | "slide first") && x.report.converged())
+            .expect("a converged frame before it");
+        let (s, x) = (failed.s, prev.report.x);
+        let frame = |sw: Switches, seed: [f64; 2], at_s: f64| {
+            probe::with(sw, || {
+                anchor::slide_frame(&b, &burrau, pin(&a), &anchor_, at_s, seed)
+            })
+            .0
+        };
+        let floor = Switches {
+            target: Some(0.0),
+            optimality: Some(0.0),
+            offset: true,
+            five_point: true,
+            ..Switches::default()
+        };
+        let m1 = frame(
+            Switches {
+                polish_unscaled: true,
+                ..floor
+            },
+            x,
+            s,
+        );
+        let m2 = frame(floor, x, s);
+        let spread = |at_s: f64| {
+            let seeds = [
+                x,
+                [x[0] + 1e-6 * h, x[1]],
+                [x[0], x[1] + 1e-6 * h],
+                [x[0] - 1e-6 * h, x[1] - 1e-6 * h],
+            ];
+            let got: Vec<[f64; 2]> = seeds
+                .iter()
+                .map(|&seed| frame(d5, seed, at_s))
+                .filter(|r| r.converged())
+                .map(|r| r.x)
+                .collect();
+            let mut d = 0.0f64;
+            for p in &got {
+                for q in &got {
+                    d = d.max(((p[0] - q[0]).powi(2) + (p[1] - q[1]).powi(2)).sqrt());
+                }
+            }
+            (got.len(), d / h)
+        };
+        let (n_prev, d_prev) = spread(prev.s);
+        let (n_s, d_s) = spread(s);
+        println!(
+            "path_lock_slide_margins: ({:.4}, {:.4}) at {frames}, s = {s:.6} ({:?}, opt {:.2e}, cond {:.2e}): M1 floor {:.2e} ({:?}, it {}); M2 floor {:.2e} ({:?}, it {}); M3 spread/h at the last frame {d_prev:.2e} ({n_prev} of 4 converged), at s {d_s:.2e} ({n_s} of 4); the travel/h of the last frame {:.2e}; the continuity floor/h 1e-7",
+            at[0],
+            at[1],
+            failed.report.status,
+            failed.report.optimality,
+            failed.report.conditioning,
+            m1.optimality,
+            m1.status,
+            m1.iterations,
+            m2.optimality,
+            m2.status,
+            m2.iterations,
+            prev.report.travel / h,
+        );
+        read += 1;
+    }
+    assert!(
+        read > 0,
+        "no failed follow to measure at any of the six frames"
+    );
+}
+
+negative_control!(
+    path_lock_slide_margins,
+    "the slide's solves not logged, at (0, 0) at 64 frames, where its follow fails: nothing to measure",
+    expected = "no failed follow to measure",
+    measure_margins(&MARGIN_CASES[..1], false)
+);
+
+// ── path_lock_slide_first_choice: F4's 29 pins, read ────────────────────────────────────────────────────────────────
+//
+// F4 failed at 29 Burrau pins when the fix was D7's three changes (`path_lock_slide_follows_sweep_three`): each goes
+// through as on main, on a track about `2h` from main's. A measurement of why, written before it ran: at each, the
+// first frame's restart rule (`"slide first"`) under main's solve and under the three changes, its kept seed's index and
+// residual; and main's solve from the three changes' kept seed. If main's choice is a stall's artefact, the three
+// changes' kept point has the lower residual, and main's solve from that seed stalled short of converging there.
+//
+// Read: the prediction is refuted. At all 29 the two kept points are mirror images in `v`, `(u, −v)` and `(u, v)`, their
+// residuals equal to a few `10⁻¹⁵` (relative) and their states at the pin within `2.3·10⁻⁸` of each other in the
+// blocks; main's solve from the other seed converges there too (at 27; `IllConditioned` at 2). On Burrau the first
+// frame's minimiser comes as a mirror pair, and the restart rule's strict "least residual" picks between the two by
+// rounding, on main as under the three changes. The polish alone, the fix as it is, leaves every pick as main's (F4
+// passes). Its check, written after that run: at each of the 29 the two points show the same state (within `10⁻⁶` in
+// the blocks) and their residuals agree within `10⁻¹²` (relative). Control: main's first point set against the three
+// changes' at another frame (`s = 1/2`), a different state.
+
+/// At each of `pins`: main's first point against the three changes' at the frame `other` (the first, `1/64`, but for the
+/// control): the largest distance between their states in the blocks, and between their residuals (relative).
+#[cfg(feature = "controls")]
+fn first_choice(pins: &[[f64; 2]], other: f64) -> (f64, f64) {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let (mut far, mut unequal) = (0.0f64, 0.0f64);
+    for &at in pins {
+        let a = try_locked_mixed(home(), (at[0], at[1])).expect("a lock");
+        let anchor_ = a.anchor.expect("an anchor");
+        let frame = |sw: Switches, at_s: f64| {
+            let (_, log) = probe::with(sw, || anchor::slide(&b, &burrau, pin(&a), &anchor_, 64));
+            log.into_iter()
+                .find(|x| match at_s == 1.0 / 64.0 {
+                    true => x.what == "slide first",
+                    false => x.what == "follow" && x.s == at_s,
+                })
+                .expect("a frame")
+                .report
+        };
+        let (m, n) = (
+            frame(main_slide(), 1.0 / 64.0),
+            frame(three_changes(), other),
+        );
+        let index = |r: &kernel::chart::lock_solve::Report<f64>| match r.branch {
+            kernel::chart::lock_solve::Branch::Restart { index, .. } => index,
+            _ => u32::MAX,
+        };
+        let seed = match n.branch {
+            kernel::chart::lock_solve::Branch::Restart { seed, .. } => seed,
+            _ => n.x,
+        };
+        let (from_seed, _) = probe::with(main_slide(), || {
+            anchor::slide_frame(&b, &burrau, pin(&a), &anchor_, 1.0 / 64.0, seed)
+        });
+        let blocks_at = |x: [f64; 2]| {
+            let v = anchor::placed(&b, pin(&a), x);
+            Blocks::of(&state(anchor::state_at(&v, &burrau, pin(&a)).expect("a state")).ic).vector()
+        };
+        let (bm, bn) = (blocks_at(m.x), blocks_at(n.x));
+        let apart = (0..9).map(|i| (bm[i] - bn[i]).powi(2)).sum::<f64>().sqrt();
+        let rel = ((m.residual - n.residual) / m.residual).abs();
+        println!(
+            "path_lock_slide_first_choice: ({:.4}, {:.4}): main keeps seed {} at {:?}, r = {:.6e}; the three changes keep seed {} at {:?}, r = {:.6e}; main's solve from that seed {:?}; residuals {rel:.3e} apart (relative), states {apart:.3e} in the blocks",
+            at[0],
+            at[1],
+            index(&m),
+            m.x,
+            m.residual,
+            index(&n),
+            n.x,
+            n.residual,
+            from_seed.status,
+        );
+        far = far.max(apart);
+        unequal = unequal.max(rel);
+    }
+    println!(
+        "path_lock_slide_first_choice: at {} pins, the states at most {far:.3e} apart, the residuals {unequal:.3e}",
+        pins.len()
+    );
+    (far, unequal)
+}
+
+#[cfg(feature = "controls")]
+fn check_first_choice(pins: &[[f64; 2]], other: f64) {
+    let (far, unequal) = first_choice(pins, other);
+    assert!(
+        far <= 1e-6 && unequal <= 1e-12,
+        "main's first point and the three changes' are not one state: {far:.3e} apart, residuals {unequal:.3e}"
+    );
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "seconds in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_slide_first_choice --exact --include-ignored --nocapture"]
+fn path_lock_slide_first_choice() {
+    let pins: Vec<[f64; 2]> = [
+        (9, 0),
+        (14, 0),
+        (15, 0),
+        (14, 1),
+        (11, 2),
+        (14, 2),
+        (11, 3),
+        (11, 4),
+        (12, 4),
+        (14, 4),
+        (11, 5),
+        (12, 5),
+        (13, 5),
+        (12, 6),
+        (12, 7),
+        (13, 7),
+        (10, 8),
+        (11, 10),
+        (12, 10),
+        (11, 11),
+        (11, 12),
+        (12, 12),
+        (13, 12),
+        (10, 13),
+        (12, 13),
+        (10, 14),
+        (14, 14),
+        (10, 15),
+        (12, 15),
+    ]
+    .iter()
+    .map(|&(k, j)| grid_pin(k, j))
+    .collect();
+    check_first_choice(&pins, 1.0 / 64.0);
+}
+
+negative_control!(
+    path_lock_slide_first_choice,
+    "main's first point set against the three changes' at s = 1/2, a different state, at (0.6, 0)",
+    expected = "are not one state",
+    check_first_choice(&[grid_pin(9, 0)], 0.5)
+);
+
+// ── path_lock_edge_reading: a direct failure read as an end only at B's edge ────────────────────────────────────────
+//
+// `anchor::slide` reads a frame whose own solve fails as an end only where its Gauss–Newton step leaves `B`'s states
+// (`leaves_states`); the fix leaves no failed follow on Burrau to read, so the rule is checked on main's stalls: every
+// Burrau pin at 64, 128 and 256 frames under main's slide with failures read as now (`main_slide`, `failed_is_end`
+// off). Criterion, written before it ran: every pin whose first failed follow is a direct solve's failure (not the
+// continuity test's `Ended`) is refused with `FollowFailed`, and none of them returns a track that ends (Burrau's
+// minimisers sit about 0.01 from its mass edge, so a stalled step there could read as leaving `B`'s states). Control:
+// main's reading of every failed follow as an end.
+
+#[cfg(feature = "controls")]
+fn check_edge_reading(failed_is_end: bool, pins: &[[f64; 2]]) {
+    use engine::path::anchor::probe::{self, Switches};
+    let burrau = (
+        MixedLeaves,
+        ChartLeaves::<_, Defaults>::new(nu_k()).expect("a chart"),
+    );
+    let b = kernel_view(&nu_k(), Window::SQUARE);
+    let sw = Switches {
+        failed_is_end,
+        ..main_slide()
+    };
+    let (mut direct, mut refused, mut misread) = (0, 0, Vec::new());
+    for &at in pins {
+        let Ok(a) = try_locked_mixed(home(), (at[0], at[1])) else {
+            continue;
+        };
+        let anchor_ = a.anchor.expect("an anchor");
+        for n in [64usize, 128, 256] {
+            let (out, log) = probe::with(sw, || anchor::slide(&b, &burrau, pin(&a), &anchor_, n));
+            let Some(first) = log
+                .iter()
+                .find(|x| x.what == "follow" && !x.report.converged())
+            else {
+                continue;
+            };
+            if matches!(
+                first.report.status,
+                kernel::chart::lock_solve::Status::Failed(
+                    kernel::chart::lock_solve::Failure::Ended
+                )
+            ) {
+                continue;
+            }
+            direct += 1;
+            match out {
+                Err(PathError::FollowFailed { .. }) => refused += 1,
+                other => misread.push(format!(
+                    "({:.4}, {:.4}) at {n}: {:?} read as {:?}",
+                    at[0],
+                    at[1],
+                    first.report.status,
+                    other.map(|t| (t.ended, t.end()))
+                )),
+            }
+        }
+    }
+    println!(
+        "path_lock_edge_reading: {direct} slides whose first failed follow is a direct failure; {refused} refused as FollowFailed; {} read otherwise",
+        misread.len()
+    );
+    for m in &misread {
+        println!("  {m}");
+    }
+    assert!(direct > 0, "no direct failure to read");
+    assert!(
+        misread.is_empty(),
+        "a direct failure read as an end: {} of {direct}",
+        misread.len()
+    );
+}
+
+#[cfg(feature = "controls")]
+#[test]
+#[ignore = "about a minute in release: cargo test --release -p engine --features controls --test path_lock -- path_lock_edge_reading --exact --include-ignored --nocapture"]
+fn path_lock_edge_reading() {
+    check_edge_reading(false, &sweep_pins(SWEEP_SIDE));
+}
+
+negative_control!(
+    path_lock_edge_reading,
+    "every failed follow read as an end, main's reading, at (0, 0)",
+    expected = "a direct failure read as an end",
+    check_edge_reading(true, &[[0.0, 0.0]])
 );
