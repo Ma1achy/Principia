@@ -30,7 +30,9 @@ fn real_stain() -> (App<RealSide>, Headless) {
     on_stain(App::new(RealSide::new(sim, render), FORMAT))
 }
 
+/// The content, once the stain asked for is assembled.
 fn content(app: &mut App<RealSide>) -> Content {
+    app.side().wait_for_stain();
     app.side()
         .stain_content()
         .expect("the real side's stain content")
@@ -188,6 +190,7 @@ fn a_choice_is_one_undoable_set_field_that_reaches_the_code() {
     rejects("an edit that does not reach the code", || {
         check_content(Some(c0), &g1)
     });
+    let _ = h.frame(&mut app, Vec::new());
     assert_eq!(
         logged(&app, rows)
             .iter()
@@ -292,6 +295,7 @@ fn set(app: &mut App<RealSide>, h: &mut Headless, g: StainGraph) {
         no_history: false,
     });
     app.side().recompile();
+    app.side().wait_for_stain();
     for _ in 0..2 {
         let _ = h.frame(app, Vec::new());
     }

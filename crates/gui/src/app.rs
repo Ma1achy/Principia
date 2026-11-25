@@ -489,6 +489,10 @@ impl<S: EngineSide> App<S> {
         if std::mem::take(&mut self.reread) {
             self.read();
         }
+        // At the end, so a compile this frame began asks for the next.
+        if self.side.compiling() {
+            ctx.request_repaint();
+        }
     }
 
     /// The frame's work on the root `ui`, between the hold's start and end.

@@ -36,7 +36,7 @@ const PALETTE: NodeId = NodeId(3);
 const PX: usize = 3;
 
 /// `canvas`'s plain draw at [`PX`] pixels a sample of a `w × h` field: its RGBA rows, from the top.
-fn plain(canvas: &RealCanvas, [w, h]: [usize; 2]) -> Vec<u8> {
+pub(super) fn plain(canvas: &RealCanvas, [w, h]: [usize; 2]) -> Vec<u8> {
     let context = canvas.context();
     let (device, queue) = (&context.device, &context.queue);
     let (width, height) = ((w * PX) as u32, (h * PX) as u32);
@@ -105,7 +105,7 @@ fn plain(canvas: &RealCanvas, [w, h]: [usize; 2]) -> Vec<u8> {
 }
 
 /// `canvas`'s plain draw in the graph `g`, once it has compiled.
-fn plain_in(canvas: &RealCanvas, size: [usize; 2], g: StainGraph) -> Vec<u8> {
+pub(super) fn plain_in(canvas: &RealCanvas, size: [usize; 2], g: StainGraph) -> Vec<u8> {
     canvas.set_stain(g);
     let _ = plain(canvas, size);
     canvas.wait();
@@ -134,7 +134,7 @@ fn check_image(rgba: &[u8], field: &Field) {
 }
 
 /// A field of every `state` code with every `detail`, 8 × 4, no row like another, the last two codes reserved.
-fn every_class() -> Field {
+pub(super) fn every_class() -> Field {
     let outcomes = (0..32u32)
         .map(|i| Outcome {
             state: i % 8,
@@ -222,7 +222,7 @@ fn every_graph_the_library_loads_draws() {
 /// A backend of one 4 × 4 field, every class in it, that counts what it is asked for: its fields, and its records,
 /// which it has none of.
 #[derive(Default)]
-struct Counting(AtomicU64);
+pub(super) struct Counting(AtomicU64);
 
 impl FieldBackend for Counting {
     fn field(
@@ -253,7 +253,7 @@ impl FieldBackend for Counting {
 }
 
 /// The app on the real side over `backend`'s field, on the Stain page.
-fn app(backend: &Counting) -> (App<RealSide>, Headless, Arc<RealCanvas>) {
+pub(super) fn app(backend: &Counting) -> (App<RealSide>, Headless, Arc<RealCanvas>) {
     let (side, canvas) = open_capture(backend, [4, 4]).expect("the real side");
     let (app, h) = on_stain(App::new(side, FORMAT));
     (app, h, canvas)
@@ -337,7 +337,7 @@ fn an_edit_in_the_editor_recolours_the_preview_and_the_figure() {
     app.undo();
     assert_eq!(all(&mut app, &mut h), first, "the param's undo");
     assert_eq!(canvas.compiles(), compiled);
-    // An occupant, clicked in the inspector: one pipeline in each view.
+    // An occupant, clicked in the inspector: one pipeline, which draws both.
     app.view.mode = Mode::Stain;
     let _ = h.frame(&mut app, Vec::new());
     select(&mut app, &mut h, PALETTE);
@@ -351,11 +351,16 @@ fn an_edit_in_the_editor_recolours_the_preview_and_the_figure() {
     for (a, b) in first.iter().zip(&swapped) {
         check_recoloured(a, b, computed(), opened);
     }
-    assert_eq!(canvas.compiles(), compiled + 2);
-    // Its undo, whose pipelines are compiled already.
+    assert_eq!(canvas.compiles(), compiled + 1);
+    // Its undo, whose pipeline is compiled already.
     app.undo();
     assert_eq!(all(&mut app, &mut h), first, "the occupant's undo");
-    assert_eq!(canvas.compiles(), compiled + 2);
+    assert_eq!(canvas.compiles(), compiled + 1);
+    assert_eq!(
+        canvas.uploads(),
+        1,
+        "the figure's and the preview's records"
+    );
     assert_eq!(computed(), opened);
     // A field computed as the app computes one.
     let (sim, _) = capture_view();
@@ -411,7 +416,10 @@ fn a_broken_node_keeps_the_last_picture_and_is_named() {
     set(&mut app, "vec3<f32>(nothing)");
     let broken = picture(&mut app, &mut h, &canvas, Mode::Stain);
     assert!(broken == first, "the last picture is not kept");
-    let problems = |app: &mut App<RealSide>| app.side().stain_content().expect("content").problems;
+    let problems = |app: &mut App<RealSide>| {
+        app.side().wait_for_stain();
+        app.side().stain_content().expect("content").problems
+    };
     let named = |p: &[String]| {
         assert_eq!(p.len(), 1, "{p:?}");
         assert!(p[0].contains("key 3") && p[0].contains("nothing"), "{p:?}");
