@@ -1,5 +1,6 @@
-import re, json, os
-OUT='/home/claude/pack/principia-brand/code/web'
+# usage: build_runtime.py OUT_WEB_DIR   (reads p4/*.dc.html from the working folder)
+import re, json, os, sys
+OUT=sys.argv[1]
 os.makedirs(OUT,exist_ok=True)
 VARIANTS={'icon-light':'Dragonfly','icon-dark':'DragonflyNight','title-2d-light':'WordFlat','title-2d-dark':'WordFlatNight','title-2d-subtitle-light':'WordFlatSub','title-2d-subtitle-dark':'WordFlatSubNight'}
 RUNTIME=r'''
@@ -21,7 +22,7 @@ for name,board in VARIANTS.items():
     lib=f'''/* Principia mark: {name}. Self-contained: no dependencies.
    Usage: PrincipiaMark['{name}'].mount(element, {{ speed, glow, weight, size, still, frame, transparent, backdrop }})
           PrincipiaMark['{name}'].svgAt(t, props)  -> SVG string of the frame at time t (seconds)
-   Generated from the three-body simulations in ../python. */
+   Generated from the three-body simulations in ../python.  */
 (function () {{
 {RUNTIME}
   const TEMPLATE = {json.dumps(root+svg+'</div>')};
@@ -64,7 +65,7 @@ for name,board in VARIANTS.items():
 # animated favicon
 open(f'{OUT}/favicon-animated.js','w').write('''/* Animated Principia favicon (Chrome, Edge, Firefox; Safari keeps the static favicon).
    Include principia-icon-light.js and principia-icon-dark.js first, then this file.
-   It follows prefers-color-scheme, redraws the tab icon ~15 times a second, and pauses when the tab is hidden. */
+   It follows prefers-color-scheme, redraws the tab icon ~15 times a second, and pauses when the tab is hidden.  */
 (function () {
   const FPS = 15, PX = 64;
   const link = document.querySelector('link[rel~="icon"]') || Object.assign(document.head.appendChild(document.createElement('link')), { rel: 'icon' });
@@ -88,7 +89,6 @@ open(f'{OUT}/favicon-animated.js','w').write('''/* Animated Principia favicon (C
 open(f'{OUT}/favicon-demo.html','w').write('''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Principia</title>
 <link rel="icon" href="../../icons/web/favicon.ico" sizes="any">
-<link rel="icon" href="../../icons/web/favicon.svg" type="image/svg+xml">
 <script src="principia-icon-light.js"></script><script src="principia-icon-dark.js"></script>
 <script src="favicon-animated.js" defer></script>
 <style>body{font:16px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif;margin:48px;color:#1d1b19;background:#efe9dc}@media (prefers-color-scheme: dark){body{background:#0d0c0b;color:#efe9dc}}</style>

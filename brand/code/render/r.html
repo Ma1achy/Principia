@@ -13,6 +13,7 @@ s.onload = () => {
   const props = { still: true, frame: +(q.get('t') ?? 0), transparent: true, backdrop: 'transparent' };
   if (q.get('size')) props.size = +q.get('size');
   if (q.get('weight')) props.weight = +q.get('weight');
+  if (q.get('zoom')) props.zoom = +q.get('zoom');
   window.__mark = PrincipiaMark[v].mount(document.getElementById('m'), props);
   window.__seek = (t) => window.__mark.seek(t);
   document.title = 'ready';

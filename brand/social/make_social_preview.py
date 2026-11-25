@@ -24,7 +24,7 @@ VARIANTS = {
 }
 
 
-def page(variant, tint, frame):
+def page(variant, tint, frame, web=WEB):
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 html,body{{margin:0;width:{W}px;height:{H}px;overflow:hidden}}
 .bg{{position:absolute;inset:0;background:url({HERO.as_uri()}) center/cover}}
@@ -32,7 +32,7 @@ html,body{{margin:0;width:{W}px;height:{H}px;overflow:hidden}}
 #m{{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);line-height:0}}
 #m svg{{width:{TITLE_WIDTH}px;height:auto}}
 </style></head><body><div class="bg"></div><div class="tint"></div><div id="m"></div>
-<script src="{(WEB / f'principia-{variant}.js').as_uri()}"></script>
+<script src="{(web / f'principia-{variant}.js').as_uri()}"></script>
 <script>
   const el = document.getElementById('m');
   el.innerHTML = PrincipiaMark['{variant}'].svgAt({frame}, {{ transparent: true, backdrop: 'transparent' }});
@@ -42,20 +42,20 @@ html,body{{margin:0;width:{W}px;height:{H}px;overflow:hidden}}
 </script></body></html>'''
 
 
-async def main(frame, chrome):
-    OUT.mkdir(exist_ok=True)
+async def main(frame, chrome, out, web):
+    out.mkdir(parents=True, exist_ok=True)
     async with async_playwright() as p:
         browser = await p.chromium.launch(**({'executable_path': chrome} if chrome else {}))
         pg = await browser.new_page(viewport={'width': W, 'height': H})
         for name, (variant, tint) in VARIANTS.items():
-            html = HERE / f'_{name}.html'
-            html.write_text(page(variant, tint, frame))
+            html = out / f'_{name}.html'
+            html.write_text(page(variant, tint, frame, web))
             await pg.goto(html.as_uri())
             await pg.wait_for_function("document.title === 'ready'")
             await pg.wait_for_timeout(300)
-            png = OUT / f'social-preview-{name}.png'
+            png = out / f'social-preview-{name}.png'
             await pg.screenshot(path=str(png))
-            Image.open(png).convert('RGB').save(OUT / f'social-preview-{name}.jpg', quality=90, optimize=True)
+            Image.open(png).convert('RGB').save(out / f'social-preview-{name}.jpg', quality=90, optimize=True)
             html.unlink()
             print(png.name, 'and', png.with_suffix('.jpg').name)
         await browser.close()
@@ -65,5 +65,9 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--frame', type=float, default=14, help='moment of the 36 s loop to freeze, in seconds')
     ap.add_argument('--chrome', help='path to a Chrome binary, if not using Playwright\'s own')
+    ap.add_argument('--out', type=pathlib.Path, default=OUT, help='folder for the images')
+    ap.add_argument('--web', type=pathlib.Path, default=WEB, help='folder holding principia-title-2d-subtitle-*.js')
+    ap.add_argument('--hero', type=pathlib.Path, default=HERO, help='the banner picture')
     a = ap.parse_args()
-    asyncio.run(main(a.frame, a.chrome))
+    HERO = a.hero.resolve()
+    asyncio.run(main(a.frame, a.chrome, a.out.resolve(), a.web.resolve()))

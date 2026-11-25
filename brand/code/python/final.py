@@ -184,6 +184,7 @@ def freeorb(key, period, frac, P, r, src=None):
       return {{ trails: B.map((A, i) => {{ const pts = []; for (let j = k - TL; j <= k; j++) pts.push(at(A, j)); return {{ pts, i }}; }}), bodies: B.map((A, i) => ({{ p: at(A, k), i, r: {r} }})) }}; }};
 '''
 MF=json.load(open('moth_free.json'))
+# The plan is unclear here; moth_frame.json and frames.json are not committed, so the defaults below are used (they gave the committed boards).
 MFR=json.load(open('moth_frame.json')) if __import__('os').path.exists('moth_frame.json') else [172,320,306]
 E=d['eight'][:-1,0,:]
 _,_,th,x0,y0,S,yk=cl['eight']
@@ -245,7 +246,7 @@ def adaptorb(period, frac, r):
         pts.push(at(b, u)); return {{ pts, i: b }}; }}), bodies: [0, 1, 2].map(b => ({{ p: at(b, u), i: b, r: {r} }})) }};
     }};
 '''
-DFR=json.load(open('dragon_frame.json')) if __import__('os').path.exists('dragon_frame.json') else [172,320,320]
+DFR=json.load(open('dragon_frame.json'))   # required: a missing file must fail, not fall back to a different framing
 B['Dragonfly.dc.html']=board('Dragonfly','dfa',False,mspin,'solid',cp(False),adaptorb(36,0.2,0.085),tw=8,frame=tuple(DFR))
 B['DragonflyNight.dc.html']=board('Dragonfly at night','dfb',True,mspin,'solid',cp(True),adaptorb(36,0.2,0.085),tw=8,frame=tuple(DFR))
 for k,v in B.items(): open('p4/'+k,'w').write(v); print(k,len(v))

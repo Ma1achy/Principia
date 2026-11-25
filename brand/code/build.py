@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""Rebuilds the Principia brand pictures from the committed sources.
+
+    pip install -r brand/code/requirements.txt && python3 -m playwright install chromium
+    python3 brand/code/build.py --out /path/to/rebuild            # everything
+    python3 brand/code/build.py --out /path/to/rebuild --part stills
+
+Needs: Python 3.13, ffmpeg 6.1 with libx264 and libvpx (ffmpeg -version is recorded in build-info.json),
+and the Chromium that requirements.txt's playwright installs. It writes only inside --out and never
+deletes anything; it refuses an --out that is inside (or contains) the brand/ folder it reads.
+
+The parts run in this order, each reading what the earlier ones wrote into --out:
+  sim      the orbit integrals (sim.py, cat.py)               -> code/python/data/traj.npz, catalog.npz
+  boards   the ten design-canvas boards (final.py, wordmarks.py)  -> code/boards/
+  web      the self-contained scripts and demo pages          -> code/web/
+  stills   Chrome masters, then every icon pack               -> icons/ (except animated/)
+  videos   every frame of the 36 s loops, then MP4/WebM/GIF   -> icons/animated/, titles/
+  social   the social-preview images                          -> social/out/
+Frames of the videos are resumable: an interrupted run continues where it stopped.
+Compare the result with the committed folder:  python3 brand/code/compare.py brand <out>
+"""
+import argparse, json, os, platform, shutil, subprocess, sys, time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+BRAND = os.path.dirname(HERE)
+REPO = os.path.dirname(BRAND)
+PY = os.path.join(HERE, 'python')
+sys.path.insert(0, HERE)
+
+PARTS = ['sim', 'boards', 'web', 'stills', 'videos', 'social']
+# The ten boards whose output is committed in code/boards (final.py also writes exploration boards).
+BOARDS = ['Dragonfly', 'DragonflyNight', 'Word3D', 'Word3DSub', 'WordFlat', 'WordFlatNight', 'WordFlatSub',
+          'WordFlatSubNight', 'WordMixed', 'WordMixedSub']
+# The plan is unclear here; chose the 1024 px crop (x, y, size on the 2048 render) that reproduces the
+# committed 1024 stills to the pixel, because the code that made them was not kept.
+CROP = (80, 117, 1802, 1839)
+# (variant, folder, file stem, frames per second, GIF frames per second, GIF width, theme)
+VIDEOS = [('icon-light', 'icons/animated', 'principia-icon-light', 24, 12, 400, 'light'),
+          ('icon-dark', 'icons/animated', 'principia-icon-dark', 24, 12, 400, 'dark'),
+          ('title-2d-light', 'titles', 'principia-title-2d-light', 30, 15, 800, 'light'),
+          ('title-2d-dark', 'titles', 'principia-title-2d-dark', 30, 15, 800, 'dark'),
+          ('title-2d-subtitle-light', 'titles', 'principia-title-2d-subtitle-light', 30, 15, 800, 'light'),
+          ('title-2d-subtitle-dark', 'titles', 'principia-title-2d-subtitle-dark', 30, 15, 800, 'dark')]
+
+
+def log(*a):
+    print(time.strftime('%H:%M:%S'), *a, flush=True)
+
+
+def run(cmd, cwd, **kw):
+    log('$', ' '.join(cmd), f'(in {os.path.basename(cwd)})')
+    subprocess.run(cmd, cwd=cwd, check=True, **kw)
+
+
+def check_out(out):
+    out = os.path.realpath(out)
+    b = os.path.realpath(BRAND)
+    if out == b or out.startswith(b + os.sep) or b.startswith(out + os.sep):
+        sys.exit(f'refusing --out {out}: it overlaps the committed brand folder {b}')
+    return out
+
+
+def work_py(out):
+    """A private copy of code/python and its data/: the scripts read and write relative to it."""
+    wp = os.path.join(out, 'work', 'py')
+    if not os.path.isdir(wp):
+        shutil.copytree(PY, wp, ignore=shutil.ignore_patterns('__pycache__'))
+        os.makedirs(os.path.join(wp, 'p4'), exist_ok=True)
+    return wp
+
+
+def need(path, part):
+    if not os.path.exists(path):
+        sys.exit(f'{path} is missing: run --part {part} first')
+
+
+def part_sim(out):
+    wp = work_py(out)
+    run([sys.executable, 'sim.py'], wp)
+    run([sys.executable, 'cat.py'], wp)
+    # sim.py and cat.py write to the working folder; keep the results beside the committed data
+    for f in ('traj.npz', 'catalog.npz'):
+        os.makedirs(os.path.join(out, 'code/python/data'), exist_ok=True)
+        shutil.copy(os.path.join(wp, f), os.path.join(out, 'code/python/data', f))
+        shutil.copy(os.path.join(wp, f), os.path.join(wp, 'data', f))
+
+
+def data_to_cwd(wp):
+    """The scripts open data files from their working folder."""
+    d = os.path.join(wp, 'data')
+    for f in os.listdir(d):
+        shutil.copy(os.path.join(d, f), os.path.join(wp, f))
+
+
+def part_boards(out):
+    wp = work_py(out)
+    data_to_cwd(wp)
+    run([sys.executable, 'final.py'], wp, stdout=subprocess.DEVNULL)
+    run([sys.executable, 'wordmarks.py'], wp, stdout=subprocess.DEVNULL)
+    dst = os.path.join(out, 'code/boards')
+    os.makedirs(dst, exist_ok=True)
+    for b in BOARDS:
+        shutil.copy(os.path.join(wp, 'p4', b + '.dc.html'), dst)
+
+
+def part_web(out):
+    wp = work_py(out)
+    need(os.path.join(wp, 'p4', 'Dragonfly.dc.html'), 'boards')
+    web = os.path.join(out, 'code/web')
+    os.makedirs(web, exist_ok=True)
+    run([sys.executable, 'build_runtime.py', web], wp, stdout=subprocess.DEVNULL)
+
+
+def render_dir(out):
+    import render
+    web = os.path.join(out, 'code/web')
+    need(os.path.join(web, 'principia-icon-light.js'), 'web')
+    wd = os.path.join(out, 'work', 'render')
+    render.make_render_dir(wd, web)
+    return wd
+
+
+def part_stills(out):
+    import render
+    from PIL import Image
+    wd = render_dir(out)
+    masters = os.path.join(out, 'work', 'masters')
+    jobs = [(f'icon-{v}', f'{masters}/icon-{v}-{"small-" if w != 1 else ""}2048.png', 2048, 17, w)
+            for v in ('light', 'dark') for w in (1, 1.6)]
+    render.stills(wd, jobs)
+    for v in ('light', 'dark'):
+        big = Image.open(f'{masters}/icon-{v}-2048.png').convert('RGBA')
+        sm = Image.open(f'{masters}/icon-{v}-small-2048.png').convert('RGBA')
+        box = (CROP[0], CROP[1], CROP[2], CROP[3])
+        big.crop(box).resize((1024, 1024), Image.LANCZOS).save(f'{masters}/icon-{v}-1024.png')
+        sm.crop(box).resize((1024, 1024), Image.LANCZOS).save(f'{masters}/icon-{v}-small-1024.png')
+    run([sys.executable, os.path.join(PY, 'packs.py'), masters, os.path.join(out, 'icons')], PY)
+
+
+def png_size(path):
+    from PIL import Image
+    return Image.open(path).size
+
+
+def part_videos(out, only=None):
+    import render, encode
+    wd = render_dir(out)
+    for v, folder, stem, fps, gfps, gw, theme in VIDEOS:
+        if only and not any(o in v for o in only):
+            continue
+        frames = os.path.join(out, 'work', 'frames', v)
+        log('frames', v)
+        render.frames(wd, v, fps, frames)
+        n = int(round(36 * fps))
+        missing = [i for i in range(n) if not os.path.exists(f'{frames}/f{i:05d}.png')]
+        if missing:
+            sys.exit(f'{v}: {len(missing)} frames missing')
+        w, h = png_size(f'{frames}/f00000.png')
+        dst = os.path.join(out, folder)
+        os.makedirs(dst, exist_ok=True)
+        log('encode', v)
+        encode.mp4(frames, fps, w, h, theme, f'{dst}/{stem}.mp4')
+        encode.webm(frames, fps, f'{dst}/{stem}-transparent.webm')
+        encode.gif(frames, fps, w, h, theme, gfps, gw, f'{dst}/{stem}.gif')
+
+
+def part_social(out):
+    web = os.path.join(out, 'code/web')
+    need(os.path.join(web, 'principia-title-2d-subtitle-dark.js'), 'web')
+    dst = os.path.join(out, 'social/out')
+    os.makedirs(dst, exist_ok=True)
+    run([sys.executable, os.path.join(BRAND, 'social/make_social_preview.py'), '--web', web, '--out', dst,
+         '--hero', os.path.join(REPO, 'docs/readme/hero.jpg')], BRAND)
+
+
+def build_info(out):
+    def cmd(c):
+        try:
+            return subprocess.check_output(c, text=True, stderr=subprocess.STDOUT).splitlines()[0]
+        except Exception as e:
+            return f'unavailable: {e}'
+    info = {'python': platform.python_version(), 'platform': platform.platform(),
+            'ffmpeg': cmd(['ffmpeg', '-version']), 'git': cmd(['git', '-C', REPO, 'rev-parse', 'HEAD'])}
+    for p in ('numpy', 'scipy', 'matplotlib', 'svgpathtools', 'PIL', 'playwright'):
+        try:
+            m = __import__(p)
+            info[p] = getattr(m, '__version__', '?')
+        except Exception as e:
+            info[p] = f'missing: {e}'
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as pw:
+            b = pw.chromium.launch(); info['chromium'] = b.version; b.close()
+    except Exception as e:
+        info['chromium'] = f'unavailable: {e}'
+    json.dump(info, open(os.path.join(out, 'build-info.json'), 'w'), indent=1)
+    log('build-info.json', info)
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0], formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 epilog=__doc__)
+    ap.add_argument('--out', default=os.path.join(os.getcwd(), 'brand-rebuild'), help='where everything is written (default ./brand-rebuild)')
+    ap.add_argument('--part', action='append', choices=PARTS, help='run only this part (repeatable); default: all')
+    ap.add_argument('--only', action='append', help='videos: only variants whose name contains this, e.g. icon-light')
+    a = ap.parse_args()
+    out = check_out(a.out)
+    os.makedirs(out, exist_ok=True)
+    t0 = time.time()
+    build_info(out)
+    for p in (a.part or PARTS):
+        log('== part', p)
+        if p == 'videos':
+            part_videos(out, a.only)
+        else:
+            globals()['part_' + p](out)
+    log(f'done in {time.time() - t0:.0f} s; compare with: python3 {os.path.join(HERE, "compare.py")} {BRAND} {out}')
+
+
+if __name__ == '__main__':
+    main()

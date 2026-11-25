@@ -60,8 +60,8 @@ async def _frames(wd, v, fps, outdir, loop=36.0, t0=6.0, only=None):
             if os.path.exists(fn):          # resumable
                 continue
             await pg.evaluate(f'window.__seek({t0 + i / fps})')
-            await el.screenshot(path=fn + '.part', omit_background=True)
-            os.replace(fn + '.part', fn)
+            await el.screenshot(path=fn[:-4] + '.part.png', omit_background=True)
+            os.replace(fn[:-4] + '.part.png', fn)
         await b.close()
 
 

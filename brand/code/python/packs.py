@@ -1,7 +1,7 @@
-import os, json, shutil
+# usage: packs.py MASTERS_DIR ICONS_DIR   (writes only the files it makes; never deletes anything)
+import os, sys, json
 from PIL import Image
-M='/home/claude/pack/masters'; R='/home/claude/pack/principia-brand/icons'
-shutil.rmtree(R,ignore_errors=True)
+M,R=sys.argv[1],sys.argv[2]
 BG={'light':'#efe9dc','dark':'#0d0c0b'}
 src={v:Image.open(f'{M}/icon-{v}-1024.png').convert('RGBA') for v in ('light','dark')}
 small={v:Image.open(f'{M}/icon-{v}-small-1024.png').convert('RGBA') for v in ('light','dark')}
@@ -42,8 +42,10 @@ for v in ('light','dark'):
     for d,px in (('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)):
         made.append(save(at(v,px,opaque=True),f'{R}/android/res/mipmap-{d}{"-night" if v=="dark" else ""}/ic_launcher.png'))
         made.append(save(at(v,round(px*108/48),pad=0.34),f'{R}/android/res/mipmap-{d}{"-night" if v=="dark" else ""}/ic_launcher_foreground.png'))
-    # master
-    made.append(save(src[v],f'{R}/source/principia-icon{sfx}-1024.png'))
+    # masters
+    made.append(save(src[v],f'{R}/source/principia-icon{sfx}-1024-transparent.png'))
+    made.append(save(at(v,1024,opaque=True),f'{R}/source/principia-icon{sfx}-1024-on-background.png'))
+    made.append(save(Image.open(f'{M}/icon-{v}-2048.png'),f'{R}/source/principia-icon{sfx}-2048-uncropped.png'))
     made.append(save(small[v],f'{R}/source/principia-icon{sfx}-smallsizes-1024.png'))
 # iOS: light icon is opaque, dark-appearance icon is transparent (iOS 18+)
 made.append(save(at('light',1024,opaque=True),f'{R}/ios/AppIcon.appiconset/AppIcon-1024.png'))

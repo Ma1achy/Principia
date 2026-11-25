@@ -64,7 +64,7 @@ def wordboard(title,vid,spin,pitch,D,Hp,Hr,over,frame,W,Hh,perl=False,night=Fals
     page=page.replace('width: {{size}}px; height: {{size}}px;','width: %dpx; height: %dpx;' % (W,Hh)).replace('width="{{size}}" height="{{size}}"','width="%d" height="%d"' % (W,Hh))
     page=page.replace('"$preview":{"width":640,"height":640}','"$preview":{"width":%d,"height":%d}' % (W,Hh))
     return page
-WF=json.load(open('word_frames.json')) if __import__('os').path.exists('word_frames.json') else {}
+WF=json.load(open('word_frames.json'))   # required: a missing file must fail, not fall back to a different framing
 def fr(k,dflt): return tuple(WF.get(k,dflt))
 SPECS=[
  ('WordFlat',         'Principia, 2D',                'wa',  0.0,0.0,1e4,0.0,0.0,False,False,False,600),
