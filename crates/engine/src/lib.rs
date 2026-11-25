@@ -51,6 +51,7 @@ pub mod contract {
         pub mod assembled;
         pub mod describe;
         pub mod edit;
+        pub mod folder;
         pub mod graph;
         pub mod occupant;
         pub mod ports;

@@ -368,6 +368,17 @@ impl StainGraph {
     pub fn set_param(&mut self, id: NodeId, name: &str, value: Vec<f64>) -> Result<(), GraphError> {
         self.edit(|g| {
             let n = g.nodes.get_mut(&id).ok_or_else(|| no_node(id))?;
+            #[cfg(feature = "controls")]
+            if crate::contract::stain::folder::probe::lifted(
+                crate::contract::stain::folder::probe::Lift::SettingIntoSource,
+            ) {
+                if let Ok(Some(text)) =
+                    assemble::occupant_source(n.kind.into(), &(&n.occupant).into())
+                {
+                    let text = crate::contract::stain::folder::probe::written(&text, name, &value);
+                    n.occupant = Occupant::Custom(text);
+                }
+            }
             n.params.insert(name.to_owned(), value);
             Ok(())
         })
