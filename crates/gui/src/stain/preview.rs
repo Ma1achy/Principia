@@ -9,13 +9,16 @@
 
 use std::collections::BTreeSet;
 
-use eframe::egui::{self, pos2, vec2, Button, Rect, RichText, Ui, UiBuilder, Vec2};
+use eframe::egui::{
+    self, pos2, vec2, Align, Button, FontSelection, Rect, RichText, Ui, UiBuilder, Vec2,
+};
 use eframe::egui_wgpu;
 use engine::contract::render_state::NodeKind;
+use engine::contract::stain::describe::{Description, Standing};
 
 use super::{
-    canvas, choices, chosen, controls, description, edited, yours, Out, Page, Scratch, CHOICE_IDS,
-    EDIT_WGSL, REVERT,
+    canvas, choices, chosen, controls, description, standing, yours, Out, Page, Scratch,
+    CHOICE_IDS, EDIT_WGSL, REVERT,
 };
 use crate::keyboard::scopes::ScopeId;
 use crate::windows::Keys;
@@ -81,6 +84,33 @@ pub fn show(
         .id_salt("stain_inspector")
         .auto_shrink(false)
         .show(&mut panel, |ui| inspector(ui, page, s, keys, clicked, out));
+}
+
+/// Why none of `section`'s controls can matter now, in words, where it is the same for every one of them.
+fn section_words(section: &controls::Section, d: &Description, all: &[Standing]) -> Option<String> {
+    let mut each = section
+        .controls
+        .iter()
+        .map(|(k, _)| standing::words(&d.controls[*k], all));
+    let first = each.next()??;
+    each.all(|w| w.as_ref() == Some(&first)).then_some(first)
+}
+
+/// A section's heading: its title and, where its controls share them, the words of why none can matter.
+fn heading(ui: &mut Ui, title: &str, words: Option<&str>) -> egui::Response {
+    let mut job = egui::text::LayoutJob::default();
+    let style = ui.style().clone();
+    let (font, strong) = (FontSelection::Default, ui.visuals().strong_text_color());
+    RichText::new(title)
+        .color(strong)
+        .append_to(&mut job, &style, font.clone(), Align::Center);
+    if let Some(words) = words {
+        RichText::new(format!(" · {words}"))
+            .small()
+            .weak()
+            .append_to(&mut job, &style, font, Align::Center);
+    }
+    ui.add(Button::new(job).frame(false).wrap())
 }
 
 /// The inspector: the selected node's, or the graph's.
@@ -152,12 +182,14 @@ fn inspector(
         .filter(|(of, _)| *of == n.id)
         .map(|(_, scope)| *scope)
         .collect();
+    let standing = page.content.and_then(|c| c.standing.get(&n.id));
+    let standing: &[Standing] = standing.map_or(&[], |s| s);
     let mut edits = Vec::new();
     for section in controls::sections(&d) {
         let folded = s.folded.contains(&section.title);
         let arrow = if folded { "▸" } else { "▾" };
-        let text = RichText::new(format!("{arrow} {}", section.title)).strong();
-        let heading = ui.add(Button::new(text).frame(false));
+        let shared = section_words(&section, &d, standing);
+        let heading = heading(ui, &format!("{arrow} {}", section.title), shared.as_deref());
         if heading.clicked() {
             clicked.push(section.scope.id);
         }
@@ -169,6 +201,8 @@ fn inspector(
                 keys,
                 clicked,
                 edits: &mut edits,
+                standing,
+                shared: shared.is_some(),
             };
             for (k, part) in &section.controls {
                 controls::show(ui, &d.controls[*k], part, &mut draw);
@@ -177,8 +211,7 @@ fn inspector(
         ui.add_space(6.0);
     }
     for (uniform, value) in edits {
-        out.edits
-            .extend(edited(g, |g| g.set_param(n.id, &uniform, value)));
+        out.edits.extend(s.set_param(g, n.id, &uniform, value));
     }
     if n.kind != NodeKind::Out {
         ui.label(RichText::new("▾ Shader").strong());

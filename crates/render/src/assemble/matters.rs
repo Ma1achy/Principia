@@ -1391,8 +1391,10 @@ impl Shader {
             let held = self.declaration.described.controls.iter().any(|c| {
                 c.uniform == us[k].name && matches!(c.control, Control::Toggle | Control::Choice(_))
             });
-            let free = || self.reach(&self.held(value, Some(&us[k].name))).uniforms[k];
-            if now.uniforms[k] || (held && free()) {
+            let free = |value: &dyn Fn(&Uniform) -> Vec<f64>| {
+                held && self.reach(&self.held(value, Some(&us[k].name))).uniforms[k]
+            };
+            if now.uniforms[k] || free(value) {
                 out.push(Standing::Matters);
                 continue;
             }
@@ -1403,24 +1405,24 @@ impl Shader {
                     Control::Choice(names) => names.len(),
                     _ => continue,
                 };
-                let Some(held) = us.iter().find(|u| u.name == c.uniform) else {
+                let Some(set) = us.iter().find(|u| u.name == c.uniform) else {
                     continue;
                 };
                 for v in 0..values {
                     let v = v as f64;
-                    if value(held).first() == Some(&v) {
+                    if value(set).first() == Some(&v) {
                         continue;
                     }
-                    let tried = self.now(&|u: &Uniform| {
-                        if u.name == held.name {
+                    let tried = |u: &Uniform| {
+                        if u.name == set.name {
                             vec![v]
                         } else {
                             value(u)
                         }
-                    });
-                    if tried.uniforms[k] {
+                    };
+                    if self.now(&tried).uniforms[k] || free(&tried) {
                         needs = Some(Setting {
-                            uniform: held.name.clone(),
+                            uniform: set.name.clone(),
                             value: v,
                         });
                         break 'search;

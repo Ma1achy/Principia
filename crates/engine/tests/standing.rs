@@ -24,6 +24,19 @@ fn colour(ctx: Ctx) -> vec3<f32> {
 }
 "#;
 
+/// A toggle that hides a choice, which decides by a `select`.
+const HIDDEN: &str = r#"// @uniform gate: u32 = 0 [0, 1]
+// @control gate toggle "Gate"
+// @uniform mode: u32 = 0
+// @control mode choice("full", "half") "Mode"
+fn colour(ctx: Ctx) -> vec3<f32> {
+    if (uniforms.gate == 0u) {
+        return vec3<f32>(0.25);
+    }
+    return vec3<f32>(select(0.5, 1.0, uniforms.mode != 1u));
+}
+"#;
+
 fn at(mode: f64) -> Vec<Standing> {
     let params = BTreeMap::from([("mode".to_owned(), vec![mode])]);
     standing(NodeKind::Colour, &Occupant::Custom(CHOICE.into()), &params)
@@ -82,4 +95,37 @@ negative_control!(
     "the standing at mode 1 checked as mode 0's",
     expected = "is not dimmed with the setting",
     check(&at(1.0), "cool", 1.0, "cool")
+);
+
+/// Asserts that the choice hidden by the toggle at `gate` needs the toggle on, and that the toggle matters.
+fn check_hidden(gate: f64) {
+    let params = BTreeMap::from([("gate".to_owned(), vec![gate])]);
+    let got = standing(NodeKind::Colour, &Occupant::Custom(HIDDEN.into()), &params)
+        .unwrap_or_else(|e| panic!("{e}"));
+    let want = Matters::NotNow {
+        needs: Some(Needs {
+            uniform: "gate".into(),
+            label: "Gate".into(),
+            value: 1.0,
+            named: "on".into(),
+        }),
+    };
+    assert_eq!(got[0].matters, Matters::Now, "{got:?}");
+    assert_eq!(
+        got[1].matters, want,
+        "the choice does not need the toggle that shows it"
+    );
+}
+
+#[test]
+fn standing_names_the_toggle_that_shows_a_choice() {
+    // Pass criterion: with the gate off the choice is "not now" and needs the gate on, judged free as it is now.
+    check_hidden(0.0);
+}
+
+negative_control!(
+    standing_names_the_toggle_that_shows_a_choice,
+    "the gate already on",
+    expected = "does not need the toggle",
+    check_hidden(1.0)
 );

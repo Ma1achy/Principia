@@ -222,6 +222,7 @@ fn made(g: &StainGraph) -> Content {
         code: assembled(g),
         pipeline: pipeline(g),
         described,
+        standing: Default::default(),
         node_code: node_code(g),
         compiled: COMPILED.to_owned(),
         compiling: false,

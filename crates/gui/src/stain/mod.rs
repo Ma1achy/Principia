@@ -17,7 +17,7 @@
 //!
 //! Everything shown of a node is its description's (`engine::contract::stain::describe`), read from its source: its
 //! title, its glyph, its "maps … → …" line, its controls, and the library's rows and headings. Nothing here asks where a
-//! node's source comes from.
+//! node's source comes from. What the engine says cannot change the picture now is dimmed ([`standing`]).
 
 pub mod canvas;
 pub mod catalogue;
@@ -26,6 +26,7 @@ pub mod controls;
 pub mod library;
 pub mod preview;
 pub mod problems;
+pub mod standing;
 pub mod yours;
 
 use std::borrow::Cow;
@@ -37,7 +38,7 @@ use engine::contract::canvas::Canvas;
 use engine::contract::render_state::{Node, NodeId, NodeKind, StainGraph};
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::stain::assembled::node_source;
-use engine::contract::stain::describe::{describe_node, from_source, Description, Shown};
+use engine::contract::stain::describe::{describe_node, from_source, Description, Shown, Standing};
 
 use crate::keyboard::scopes::{Adjust, Scope, ScopeId, ScopeTree};
 use crate::layout::{Layout, ARTBOARD};
@@ -60,6 +61,8 @@ pub struct Content {
     pub pipeline: String,
     /// Each node's description.
     pub described: BTreeMap<NodeId, Description>,
+    /// What the engine says each node's controls can do now, of the nodes it has been asked of and has answered for.
+    pub standing: BTreeMap<NodeId, Arc<[Standing]>>,
     /// Each node's code (Node WGSL), its own source: never the compile cache's, which a label edit does not reach.
     pub node_code: BTreeMap<NodeId, String>,
     /// The compile status line.
@@ -278,6 +281,9 @@ pub struct Scratch {
     pub open: BTreeSet<(NodeId, ScopeId)>,
     /// Your shaders': the code being typed, the save being named and what came of the last ask.
     pub yours: yours::Scratch,
+    /// The uniforms no edit is taken of.
+    #[cfg(test)]
+    pub(crate) locked: BTreeSet<String>,
 }
 
 impl Default for Scratch {
@@ -291,6 +297,8 @@ impl Default for Scratch {
             folded: BTreeSet::new(),
             open: BTreeSet::new(),
             yours: yours::Scratch::default(),
+            #[cfg(test)]
+            locked: BTreeSet::new(),
         }
     }
 }
@@ -303,6 +311,21 @@ impl Scratch {
             (Some(id), None) => Some(*id),
             _ => None,
         }
+    }
+
+    /// The `SetField` by which node `node`'s `uniform` is `value`, as every control edits it.
+    fn set_param(
+        &self,
+        g: &StainGraph,
+        node: NodeId,
+        uniform: &str,
+        value: Vec<f64>,
+    ) -> Option<SetField> {
+        #[cfg(test)]
+        if self.locked.contains(uniform) {
+            return None;
+        }
+        edited(g, |g| g.set_param(node, uniform, value))
     }
 }
 
@@ -591,9 +614,10 @@ pub fn activate(
             }
         } else if let Some(part) = controls::find(&sections, id) {
             match &part.act {
-                controls::Act::Set(uniform, value) => out
-                    .edits
-                    .extend(edited(g, |g| g.set_param(node, uniform, value.clone()))),
+                controls::Act::Set(uniform, value) => {
+                    out.edits
+                        .extend(s.set_param(g, node, uniform, value.clone()))
+                }
                 controls::Act::Open => {
                     let key = (node, part.scope.id);
                     if !s.open.remove(&key) {
@@ -624,8 +648,7 @@ pub fn adjust(
         return;
     };
     let next = step.moved(adjust);
-    out.edits
-        .extend(edited(g, |g| g.set_param(node, &step.uniform, next)));
+    out.edits.extend(s.set_param(g, node, &step.uniform, next));
 }
 
 /// What the page draws from.
