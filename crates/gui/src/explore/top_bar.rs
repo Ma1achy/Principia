@@ -340,7 +340,7 @@ pub fn show(
         let status = bar_state
             .refused
             .map_or_else(|| status_line(snapshot), str::to_owned);
-        ui.label(RichText::new(status).monospace());
+        ui.add(egui::Label::new(RichText::new(status).monospace()).truncate());
         crate::explore::breadcrumb::show(ui, bar_state.breadcrumb, bar_state.keys);
     });
 }

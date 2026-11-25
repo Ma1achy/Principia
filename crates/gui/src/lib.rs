@@ -44,6 +44,7 @@ mod tests {
     mod conformance;
     mod console_open_close;
     mod degenerate_tilt_guards;
+    mod explore_shell;
     mod f3_fallback_mock;
     mod f3_fill_modes;
     mod f3_fills_window_mock;

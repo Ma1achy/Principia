@@ -43,15 +43,55 @@ pub fn text(tree: &ScopeTree, focus: &Focus) -> String {
     tree.labels(&focus.path).join(SEPARATOR)
 }
 
+/// What replaces the outer scopes a breadcrumb has no room for.
+pub const CUT: &str = "…";
+
+/// `text` as it fits `room`, its width given by `width`: whole, or with its outermost scopes replaced by [`CUT`], as
+/// few as need be, or the innermost scope, the focused one, alone, whatever its width.
+pub fn fitted(text: &str, room: f32, width: impl Fn(&str) -> f32) -> String {
+    let mut shown = text.to_owned();
+    let mut rest = text;
+    while width(&shown) > room {
+        let Some((_, inner)) = rest.split_once(SEPARATOR) else {
+            return rest.to_owned();
+        };
+        rest = inner;
+        shown = format!("{CUT}{SEPARATOR}{rest}");
+    }
+    shown
+}
+
 /// Draws the breadcrumb `text` in `mode`'s colour, in a right-to-left row, after the status line: so the glyph goes
-/// after the text.
+/// after the text. It stays in the row's room, the controls being at its left: what does not fit is cut ([`fitted`]),
+/// the whole in its tooltip and its accessible name.
 pub fn show(ui: &mut Ui, text: &str, mode: KeyMode) {
     if text.is_empty() {
         return;
     }
     let colour = breadcrumb_colour(ui.visuals(), mode);
     ui.add_space(12.0);
-    ui.label(RichText::new(text).monospace().color(colour));
+    let font = |style| egui::TextStyle::resolve(&style, ui.style());
+    let width = |text: &str, font| {
+        ui.painter()
+            .layout_no_wrap(text.to_owned(), font, colour)
+            .size()
+            .x
+    };
+    let glyph = width(GLYPH, font(egui::TextStyle::Body));
+    let room = (ui.available_width() - glyph - ui.spacing().item_spacing.x).max(0.0);
+    let mono = font(egui::TextStyle::Monospace);
+    let shown = fitted(text, room, |t| width(t, mono.clone()));
+    let label = RichText::new(&shown).monospace().color(colour);
+    let label = ui
+        .scope(|ui| {
+            ui.set_max_width(room);
+            ui.add(egui::Label::new(label).truncate())
+        })
+        .inner;
+    if shown != text {
+        label.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Label, true, text));
+        label.on_hover_text(text);
+    }
     ui.label(RichText::new(GLYPH).color(colour));
 }
 
