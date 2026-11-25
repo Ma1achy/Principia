@@ -23,13 +23,14 @@ Commands:
                                   baseline, and it never fails on the number
   build-kernel [--bless]          compile crates/kernel to SPIR-V with rust-gpu (target/spirv/kernel.spv) and
                                   translate it to WGSL with naga (target/spirv/kernel.wgsl, and the read-back's
-                                  entries apart in target/spirv/branch_read.wgsl); refuses when
+                                  entries apart in target/spirv/branch_read.wgsl, the parity
+                                  harness's in target/spirv/parity.wgsl); refuses when
                                   rust-gpu's backend needs another nightly than rust-toolchain.toml pins
                                   (canonical_spec §1 item 2); fails when a fragment snippet lifted from the
                                   translation (crates/render/wgsl/decode.wgsl, encode.wgsl,
                                   crates/ledger/wgsl/shape.wgsl) differs from the checked-in file; --bless writes
                                   them (R-116)
-  build-kernel --cache-dir <dir>  the same, but taking the three outputs from <dir>/<kernel source hash>/ when that
+  build-kernel --cache-dir <dir>  the same, but taking the four outputs from <dir>/<kernel source hash>/ when that
                                   entry is whole (the fragment snippets still checked against its SPIR-V), and
                                   storing them there after a build; plain build-kernel does the same with
                                   PRIN_KERNEL_CACHE=<dir> set, as CI sets it (TASK-M0-77)

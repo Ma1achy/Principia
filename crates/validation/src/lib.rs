@@ -27,6 +27,7 @@ pub mod gauge;
 pub mod golden_scene;
 pub mod gpu;
 pub mod ground_truth;
+pub mod harness;
 pub mod heggie;
 pub mod import;
 pub mod inspector;
@@ -50,6 +51,7 @@ pub mod spawn;
 pub mod stop_images;
 pub mod structural_scene;
 pub mod suspect;
+pub mod synth;
 
 /// The synthetic payload harness (TASK-M1-06), re-exported for the render crate's tests, which reach the engine only
 /// through this dev-dependency (systems_architecture §7.1).

@@ -229,9 +229,25 @@ impl GpuHarness {
         inputs: &[&[u32]],
         setting: FastMath,
     ) -> Prepared<'_> {
-        use wgpu::util::DeviceExt;
         let len = inputs.first().map_or(0, |i| i.len());
         assert!(len > 0, "run_wgsl needs a non-empty first input");
+        self.prepare_sized(module, entry, inputs, len, len as u32, setting)
+    }
+
+    /// [`prepare_with`](Self::prepare_with) for an entry whose output has a size and an invocation count of its own:
+    /// `out_words` words, zero at first, and `invocations` invocations (rounded up to whole workgroups). An input the
+    /// entry declares `var<uniform>` is bound as one.
+    pub fn prepare_sized(
+        &self,
+        module: &str,
+        entry: &str,
+        inputs: &[&[u32]],
+        out_words: usize,
+        invocations: u32,
+        setting: FastMath,
+    ) -> Prepared<'_> {
+        use wgpu::util::DeviceExt;
+        let len = out_words;
         let size = (len * 4) as u64;
         let shader = ComputeShader {
             label: entry,
@@ -250,7 +266,8 @@ impl GpuHarness {
             self.device.create_buffer_init(&desc)
         };
         let writable = wgpu::BufferUsages::STORAGE.union(wgpu::BufferUsages::COPY_DST);
-        let mut buffers: Vec<_> = inputs.iter().map(|i| storage(i, writable)).collect();
+        let readable = writable.union(wgpu::BufferUsages::UNIFORM);
+        let mut buffers: Vec<_> = inputs.iter().map(|i| storage(i, readable)).collect();
         buffers.push(storage(
             &vec![0; len],
             writable.union(wgpu::BufferUsages::COPY_SRC),
@@ -274,6 +291,7 @@ impl GpuHarness {
             output,
             readback,
             len,
+            invocations,
         }
     }
 }
@@ -292,6 +310,7 @@ pub struct Prepared<'h> {
     output: wgpu::Buffer,
     readback: wgpu::Buffer,
     len: usize,
+    invocations: u32,
 }
 
 impl Prepared<'_> {
@@ -321,7 +340,7 @@ impl Prepared<'_> {
         queue.write_buffer(&self.output, 0, &le_bytes(&vec![sentinel; self.len]));
     }
 
-    /// Dispatches once per word of the first input, copies the output back and returns it, waiting for the GPU.
+    /// Dispatches the invocations prepared, copies the output back and returns it, waiting for the GPU.
     pub fn run(&self) -> Vec<u32> {
         self.submit(true)
     }
@@ -340,7 +359,7 @@ impl Prepared<'_> {
         if dispatch {
             let mut pass = encoder.begin_compute_pass(&Default::default());
             self.kernel.set(&mut pass, &self.bindings);
-            pass.dispatch_workgroups((self.len as u32).div_ceil(WORKGROUP_SIZE), 1, 1);
+            pass.dispatch_workgroups(self.invocations.div_ceil(WORKGROUP_SIZE), 1, 1);
         }
         encoder.copy_buffer_to_buffer(&self.output, 0, &self.readback, 0, size);
         queue.submit([encoder.finish()]);

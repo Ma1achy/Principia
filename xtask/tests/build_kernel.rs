@@ -18,8 +18,8 @@ use validation::spawn::Spawn;
 use xtask::build_kernel::{
     backend_built, build_backend, check_channel, check_locked, check_source, ensure_backend,
     exact_requirement, locked_version, pinned_channel, prepare_backend, run, run_cached_with,
-    spirv_fingerprints, to_read_wgsl, to_wgsl, BACKEND_LOCK, BACKEND_TOML, BACKEND_VERSION,
-    READ_ENTRIES, READ_WGSL, SPV, TARGET, WGSL,
+    spirv_fingerprints, to_parity_wgsl, to_read_wgsl, to_wgsl, BACKEND_LOCK, BACKEND_TOML,
+    BACKEND_VERSION, PARITY_ENTRIES, PARITY_WGSL, READ_ENTRIES, READ_WGSL, SPV, TARGET, WGSL,
 };
 use xtask::fragment_wgsl::{DECODE_FILE, ENCODE_FILE, SHAPE_FILE};
 use xtask::kernel_cache::{self, FINGERPRINT, OUTPUTS};
@@ -366,6 +366,43 @@ negative_control!(
     {
         let spv = fs::read(root().join(SPV)).expect("target/spirv/kernel.spv");
         check_parted(&to_read_wgsl(&spv).unwrap(), &to_wgsl(&spv).unwrap())
+    }
+);
+
+/// The parity harness's entries, 7 of them, are in `parity` alone: the production module holds none.
+fn check_parity_parted(production: &str, parity: &str) {
+    let entry = format!("fn {PARITY_ENTRIES}");
+    assert_eq!(
+        production.matches(&entry).count(),
+        0,
+        "the production module holds a parity entry"
+    );
+    assert_eq!(parity.matches(&entry).count(), 7);
+    assert_eq!(
+        parity.matches("@compute").count(),
+        7,
+        "the parity module holds another entry"
+    );
+}
+
+#[test]
+fn build_kernel_parts_the_parity_entries_from_the_other_modules() {
+    let spv = fs::read(root().join(SPV))
+        .expect("target/spirv/kernel.spv: run `cargo xtask build-kernel` first");
+    let parity = to_parity_wgsl(&spv).unwrap();
+    check_parity_parted(&to_wgsl(&spv).unwrap(), &parity);
+    check_parity_parted(&to_read_wgsl(&spv).unwrap(), &parity);
+    let on_disk = fs::read_to_string(root().join(PARITY_WGSL)).expect("the parity module");
+    assert!(on_disk == parity, "{PARITY_WGSL} is not the translation");
+}
+
+negative_control!(
+    build_kernel_parts_the_parity_entries_from_the_other_modules,
+    "the two modules taken the wrong way round",
+    expected = "the production module holds a parity entry",
+    {
+        let spv = fs::read(root().join(SPV)).expect("target/spirv/kernel.spv");
+        check_parity_parted(&to_parity_wgsl(&spv).unwrap(), &to_wgsl(&spv).unwrap())
     }
 );
 

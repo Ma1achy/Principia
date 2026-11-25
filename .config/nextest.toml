@@ -200,6 +200,7 @@ default-filter = """
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=validation::agreement_preset_gpu)
         | binary_id(=validation::qa_TASK-M2-25_gpu)
+        | binary_id(=validation::parity_harness_gpu)
         | binary_id(=xtask::build_kernel)
         | binary_id(=xtask::qa_TASK-M0-14)
         | binary_id(=xtask::fragment_wgsl)
@@ -267,6 +268,7 @@ default-filter = """
     | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=validation::agreement_preset_gpu)
     | binary_id(=validation::qa_TASK-M2-25_gpu)
+    | binary_id(=validation::parity_harness_gpu)
     | binary_id(=xtask::build_kernel)
     | binary_id(=xtask::qa_TASK-M0-14)
     | binary_id(=xtask::fragment_wgsl)
@@ -292,6 +294,12 @@ success-output = "immediate"
 # R-369.
 [[profile.gpu-kernel.overrides]]
 filter = "binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu)"
+success-output = "immediate"
+
+# The parity harness's differences between the GPU, the CPU at f32 and the CPU at f64, which its tests print and never
+# assert on, shown on success so each backend's numbers stay in its log.
+[[profile.gpu-kernel.overrides]]
+filter = "binary_id(=validation::parity_harness_gpu)"
 success-output = "immediate"
 
 # The Windows runner's `win-vulkan` (`.github/workflows/win-gpu.yml`, TASK-M0-88). Twelve tests are reported there, not
@@ -373,6 +381,7 @@ default-filter = """
     | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=validation::agreement_preset_gpu)
     | binary_id(=validation::qa_TASK-M2-25_gpu)
+    | binary_id(=validation::parity_harness_gpu)
     | binary_id(=xtask::qa_TASK-M0-14)
     | binary_id(=xtask::fragment_wgsl)
     | binary_id(=engine::path_bitwise)
@@ -380,7 +389,7 @@ default-filter = """
 # Beyond gpu-kernel's list, `engine::path_bitwise`, no GPU test: the chart path's digests bit for bit against the
 # baseline recorded on Linux, so the same bits are checked on Windows too; the `ci` profile runs it on Linux.
 
-# The three measurements gpu-kernel shows on success, shown here too, so the card's numbers stay in its log.
+# The measurements gpu-kernel shows on success, shown here too, so the card's numbers stay in its log.
 [[profile.win-gpu-kernel.overrides]]
 filter = "binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_continuous)"
 success-output = "immediate"
@@ -395,6 +404,10 @@ success-output = "immediate"
 
 [[profile.win-gpu-kernel.overrides]]
 filter = "binary_id(=engine::cos_half_pi_gpu) & test(=gpu_cos_near_half_pi)"
+success-output = "immediate"
+
+[[profile.win-gpu-kernel.overrides]]
+filter = "binary_id(=validation::parity_harness_gpu)"
 success-output = "immediate"
 
 # The GPU smoke set (R-909, the owner's CI model, item 1: "lavapipe GPU smoke set; Metal smoke set on
@@ -418,7 +431,9 @@ success-output = "immediate"
 #   not run);
 # - the agreement preset's fragment decode against the kernel decode stage: `agreement_preset_twin` (6.6 s, Metal not
 #   run);
-# - decoder test 12 across backends at the M0/M1 crossings: `decode_parity_m01_crossings` (5.8 s, 4.5 s).
+# - decoder test 12 across backends at the M0/M1 crossings: `decode_parity_m01_crossings` (5.8 s, 4.5 s);
+# - the parity harness's entries, the three body pairs summed on the GPU: `three_pairs_hamiltonian` (lavapipe and Metal
+#   not timed).
 # About 126 s of test time on lavapipe, under a minute of the job's wall time on its four test threads. Beside them, the
 # kernel build's own checks, which read the kernel the job has just built and take under a second: xtask's
 # `build_kernel` tests but its two slow-tier ones, which `cargo xtask build-kernel` itself covers, `fragment_wgsl` and
@@ -443,6 +458,7 @@ default-filter = """
     | (binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu))
     | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_twin))
     | (binary_id(=engine::decode_cross_backend) & test(=decode_parity_m01_crossings))
+    | (binary_id(=validation::parity_harness_gpu) & test(=three_pairs_hamiltonian))
     | (binary_id(=xtask::build_kernel) & not test(=build_kernel_runs_in_ci) & not test(=build_kernel_listed_in_ci))
     | binary_id(=xtask::fragment_wgsl)
     | binary_id(=xtask::qa_TASK-M0-14)

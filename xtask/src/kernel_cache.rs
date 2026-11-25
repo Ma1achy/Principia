@@ -11,11 +11,11 @@
 //! [`INPUTS`] is everything the build reads: the kernel crate, its one path dependency (`ledger`, a build-dependency,
 //! with the files it includes), the workspace's manifest, lockfile, toolchain pin and cargo config, rust-gpu's backend
 //! lockfile, and the xtask code that builds and translates the kernel and hashes it. A file outside them can't change
-//! [`crate::build_kernel::SPV`], [`crate::build_kernel::WGSL`] or [`crate::build_kernel::READ_WGSL`]; the fragment
-//! snippets `build-kernel` checks are not outputs, and are checked against the cached SPIR-V on every hit
+//! [`crate::build_kernel::SPV`], [`crate::build_kernel::WGSL`], [`crate::build_kernel::READ_WGSL`] or
+//! [`crate::build_kernel::PARITY_WGSL`]; the fragment snippets `build-kernel` checks are not outputs, and are checked against the cached SPIR-V on every hit
 //! ([`crate::build_kernel::run_cached`]).
 //!
-//! An entry, `<cache>/<hash>/`, holds the three outputs and [`MARK`], which lists each with its SHA-256. It is written
+//! An entry, `<cache>/<hash>/`, holds the four outputs and [`MARK`], which lists each with its SHA-256. It is written
 //! whole under a temporary name, [`PARTIAL`], and renamed into place, so a build cancelled part-way leaves no entry that
 //! looks whole; an entry whose files don't match its mark is removed and rebuilt.
 //!
@@ -36,7 +36,7 @@ use std::time::SystemTime;
 
 use sha2::{Digest, Sha256};
 
-use crate::build_kernel::{READ_WGSL, SPV, WGSL};
+use crate::build_kernel::{PARITY_WGSL, READ_WGSL, SPV, WGSL};
 
 /// The hash's first line: a change to how it is computed changes every hash.
 pub const VERSION: &str = "principia kernel sources 1";
@@ -67,7 +67,7 @@ pub const MARK: &str = "complete";
 pub const PARTIAL: &str = ".partial-";
 
 /// The outputs an entry holds, as paths relative to the workspace's root.
-pub const OUTPUTS: [&str; 3] = [SPV, WGSL, READ_WGSL];
+pub const OUTPUTS: [&str; 4] = [SPV, WGSL, READ_WGSL, PARITY_WGSL];
 
 /// The folder of an entry that holds the kernel's SPIR-V build fingerprints, one `<folder>/`[`FINGERPRINT`] each.
 pub const FINGERPRINTS: &str = "fingerprints";
