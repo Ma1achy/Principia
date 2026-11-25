@@ -120,14 +120,15 @@ fn check_cancels(win_gpu: &str, runner_proof: &str) {
             let cancel = job["concurrency"]["cancel-in-progress"].as_bool();
             if name == "win-vulkan" {
                 seen_vulkan = true;
+                // The nightly's run is in a group of its own and cancels nothing; the rest share one and cancel.
                 assert_eq!(
                     job["concurrency"]["group"].as_str(),
-                    Some("win-vulkan"),
+                    Some("${{ github.event_name == 'schedule' && 'win-vulkan-nightly' || 'win-vulkan' }}"),
                     "qa: win-vulkan's concurrency group is not its own"
                 );
                 assert_eq!(
-                    cancel,
-                    Some(true),
+                    job["concurrency"]["cancel-in-progress"].as_str(),
+                    Some("${{ github.event_name != 'schedule' }}"),
                     "qa: win-vulkan does not cancel an older run in progress"
                 );
             } else {
@@ -154,8 +155,8 @@ negative_control!(
     check_cancels(
         &edited(
             &read(WIN_GPU),
-            "      group: win-vulkan\n      cancel-in-progress: true\n",
-            "      group: win-vulkan\n      cancel-in-progress: false\n"
+            "      cancel-in-progress: ${{ github.event_name != 'schedule' }}\n",
+            "      cancel-in-progress: false\n"
         ),
         &read(RUNNER_PROOF)
     )
