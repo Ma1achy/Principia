@@ -10,7 +10,8 @@ and the Chromium that requirements.txt's playwright installs. It writes only ins
 deletes anything; it refuses an --out that is inside (or contains) the brand/ folder it reads.
 
 The parts run in this order, each reading what the earlier ones wrote into --out:
-  sim      the orbit integrals (sim.py, cat.py)               -> code/python/data/traj.npz, catalog.npz
+  sim      the orbit integrals (sim.py, cat.py) and the Dragonfly path (dragon.py)
+                                                              -> code/python/data/traj.npz, catalog.npz, dragon_adapt.json
   boards   the ten design-canvas boards (final.py, wordmarks.py)  -> code/boards/
   web      the self-contained scripts and demo pages          -> code/web/
   stills   Chrome masters, then every icon pack               -> icons/ (except animated/)
@@ -92,8 +93,10 @@ def part_sim(out):
     wp = work_py(out)
     run([sys.executable, 'sim.py'], wp)
     run([sys.executable, 'cat.py'], wp)
-    # sim.py and cat.py write to the working folder; keep the results beside the committed data
-    for f in ('traj.npz', 'catalog.npz'):
+    data_to_cwd(wp)
+    run([sys.executable, 'dragon.py'], wp, stdout=subprocess.DEVNULL)      # dragon_P.json -> dragon_adapt.json
+    # these scripts write to the working folder; keep the results beside the committed data
+    for f in ('traj.npz', 'catalog.npz', 'dragon_adapt.json'):
         os.makedirs(os.path.join(out, 'code/python/data'), exist_ok=True)
         shutil.copy(os.path.join(wp, f), os.path.join(out, 'code/python/data', f))
         shutil.copy(os.path.join(wp, f), os.path.join(wp, 'data', f))

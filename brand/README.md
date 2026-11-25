@@ -79,14 +79,14 @@ python3 brand/code/compare.py brand /somewhere/else        # per-file verdict ag
 
 | part | scripts | makes |
 |---|---|---|
-| sim | `sim.py`, `cat.py` | `traj.npz`, `catalog.npz`: the orbits, DOP853 at 1e-13 |
+| sim | `sim.py`, `cat.py`, `dragon.py` | `traj.npz`, `catalog.npz` (the orbits, DOP853 at 1e-13) and `dragon_adapt.json` |
 | boards | `final.py`, `wordmarks.py` | the ten boards in `code/boards/` |
 | web | `build_runtime.py` | `code/web/` |
 | stills | `render.py`, `packs.py` | the four 2048 px Chrome masters, the 1024 px crops, every pack in `icons/` |
 | videos | `render.py`, `encode.py` | frames, MP4, WebM, GIF, WebP |
 | social | `social/make_social_preview.py` | `social/out/` |
 
-The inputs that are committed rather than rebuilt are in `code/python/data/`: the traced P and wordmark (`pgeo.json`, `word_loops.json`, `sub_loops.json`, traced by `trace_p.py` from `docs/readme/title-light.svg`, with the corner indices added by hand), the placement of each orbit (`clear.json`, `orb_*.json`, `dragon_P.json`, `dragon_frame.json`, `moth_free.json`) and the framing of the titles (`word_frames.json`). `dragon_adapt.json` is rebuilt from `dragon_P.json` by `dragon.py`.
+The inputs that are committed rather than rebuilt are in `code/python/data/`: the traced P and wordmark (`pgeo.json`, `word_loops.json`, `sub_loops.json`, traced by `trace_p.py` from `docs/readme/title-light.svg`, with the corner indices added by hand), the placement of each orbit (`clear.json`, `orb_*.json`, `dragon_P.json`, `dragon_frame.json`, `moth_free.json`; the search scripts that found them are exploration and some of their intermediate files were not kept) and the framing of the titles (`word_frames.json`). 
 
 Encoder settings (the originals were not kept; the MP4 header records libx264 crf 15 and ffmpeg 6.1):
 

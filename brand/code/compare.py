@@ -328,10 +328,20 @@ def compare_webp_files(ref, new):
     return _result(ok, ratio, why, st)
 
 
+def compare_npz(ref, new):
+    a, b = np.load(ref), np.load(new)
+    if sorted(a.files) != sorted(b.files):
+        return _result(False, 99.0, 'different orbit sets', {})
+    worst = max(float(np.abs(a[k] - b[k]).max()) if a[k].shape == b[k].shape else float('inf') for k in a.files)
+    return _result(worst <= NPZ_TOL, worst / NPZ_TOL, '' if worst <= NPZ_TOL else f'max difference {worst:.3g} > {NPZ_TOL}', {'maxdiff': worst})
+
+
 def compare_file(ref, new):
     ext = os.path.splitext(ref)[1].lower()
     if ext in ('.png', '.jpg', '.ico', '.icns'):
         return compare_still(ref, new)
+    if ext == '.npz':
+        return compare_npz(ref, new)
     if ext == '.webp':
         return compare_webp_files(ref, new)
     if ext in ('.mp4', '.webm', '.gif'):
@@ -341,6 +351,9 @@ def compare_file(ref, new):
 
 # ---- the folders --------------------------------------------------------------------------
 COMPARED = ('icons', 'titles', 'social/out', 'code/web', 'code/boards')
+# Rebuilt data: the orbit integrals (compared to NPZ_TOL) and the adaptive Dragonfly path (identical text).
+EXTRA_FILES = ('code/python/data/traj.npz', 'code/python/data/catalog.npz', 'code/python/data/dragon_adapt.json')
+NPZ_TOL = 1e-6      # the boards round positions to 3 or 4 decimals, so 1e-6 cannot change a picture
 
 
 def list_files(root):
@@ -350,6 +363,7 @@ def list_files(root):
         for dp, _, fns in os.walk(base):
             for fn in fns:
                 out.append(os.path.relpath(os.path.join(dp, fn), root))
+    out += [f for f in EXTRA_FILES if os.path.exists(os.path.join(root, f))]
     return sorted(out)
 
 
@@ -408,6 +422,8 @@ def fmt_stats(s):
         return ''
     if 'bytes' in s:
         return f"identical, {s['bytes']} bytes"
+    if 'maxdiff' in s:
+        return f"max coordinate difference {s['maxdiff']:.3g} (limit {NPZ_TOL:g})"
     if 'ref' in s:
         return ''
     parts = [f"mean {s['mean']:.2f}", f"p50 {s['p50']}", f"p99 {s['p99']}", f"p99.9 {s['p999']}", f"max {s['pmax']}",
