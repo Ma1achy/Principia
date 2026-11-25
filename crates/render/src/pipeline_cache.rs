@@ -179,6 +179,10 @@ pub fn bytes(words: &[u32]) -> Vec<u8> {
 fn align_size(ty: UniformType) -> (u64, u64) {
     match ty {
         UniformType::F32 | UniformType::I32 | UniformType::U32 => (4, 4),
+        UniformType::Image | UniformType::Field => (4, 4),
+        UniformType::Gradient(_) | UniformType::List { .. } | UniformType::Lut(_) => {
+            crate::assemble::params::align_size(ty)
+        }
         UniformType::Vec2 => (8, 8),
         UniformType::Vec3 => (16, 12),
         UniformType::Vec4 => (16, 16),
@@ -201,6 +205,9 @@ pub fn block_layout(uniforms: &[Uniform]) -> (Vec<u64>, u64) {
 
 /// `value`, a value of type `ty`, as the block stores it: each component a little-endian `f32`, `i32` or `u32`.
 pub fn encode(ty: UniformType, value: &[f64]) -> Vec<u8> {
+    if let Some(bytes) = crate::assemble::params::encode(ty, value) {
+        return bytes;
+    }
     value
         .iter()
         .flat_map(|&v| match ty {
@@ -429,10 +436,15 @@ fn buffer_entry(binding: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLay
 
 /// A block of `uniforms` holding each one's default, by [`block_layout`].
 fn defaults(uniforms: &[Uniform]) -> Vec<u8> {
+    pack(uniforms, &|u| u.default.clone())
+}
+
+/// A block of `uniforms` holding the value `value` gives each, by [`block_layout`]: the bytes the buffer holds.
+pub fn pack(uniforms: &[Uniform], value: &dyn Fn(&Uniform) -> Vec<f64>) -> Vec<u8> {
     let (offsets, size) = block_layout(uniforms);
     let mut contents = vec![0u8; size as usize];
     for (u, &at) in uniforms.iter().zip(&offsets) {
-        let v = encode(u.ty, &u.default);
+        let v = encode(u.ty, &value(u));
         contents[at as usize..at as usize + v.len()].copy_from_slice(&v);
     }
     contents

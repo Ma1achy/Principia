@@ -181,7 +181,14 @@ fn part(k: usize, c: &ControlView) -> Option<Part> {
             .collect::<Vec<_>>()
     };
     Some(match &c.control {
-        Control::Hidden => return None,
+        // The editors of version 2's types (a gradient with its own stops, a list, a lut, a field and an image) are
+        // not drawn yet: their value is more than a few numbers, and the editor for each is its own piece of work.
+        Control::Hidden
+        | Control::List
+        | Control::Curve
+        | Control::FieldPicker
+        | Control::ImagePicker => return None,
+        Control::Gradient(stops) if stops.is_empty() => return None,
         Control::Slider => value(StepKind::Bounded, By::Share),
         Control::LogSlider => value(StepKind::Bounded, By::Log),
         Control::Stepper => value(StepKind::Bounded, By::One),
@@ -387,7 +394,12 @@ impl Draw<'_, '_> {
 /// Draws control `c` as `part`.
 pub fn show(ui: &mut Ui, c: &ControlView, part: &Part, draw: &mut Draw<'_, '_>) {
     ui.push_id(part.scope.id, |ui| match &c.control {
-        Control::Hidden => {}
+        Control::Hidden
+        | Control::List
+        | Control::Curve
+        | Control::FieldPicker
+        | Control::ImagePicker => {}
+        Control::Gradient(stops) if stops.is_empty() => {}
         Control::Slider | Control::LogSlider => slider(ui, c, part, draw),
         Control::Stepper => stepper(ui, c, part, draw),
         Control::Toggle => {

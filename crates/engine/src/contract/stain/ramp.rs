@@ -120,6 +120,40 @@ impl Ramp {
         self.cyclic
     }
 
+    /// The ramp as the value of a `gradient<N>` parameter (`render::assemble::params`): OKLab, `[1, cyclic, (L, a, b,
+    /// position) per stop]`. Nothing is lost: [`Ramp::from_gradient`] gives the ramp back exactly.
+    pub fn to_gradient(&self) -> Vec<f64> {
+        let mut v = vec![1.0, if self.cyclic { 1.0 } else { 0.0 }];
+        for s in &self.stops {
+            v.extend([s.oklab[0], s.oklab[1], s.oklab[2], s.position]);
+        }
+        v
+    }
+
+    /// The ramp a `gradient` parameter's value `v` is, where it is in OKLab; refused in linear RGB, which is no ramp's.
+    pub fn from_gradient(v: &[f64]) -> Result<Ramp, RampError> {
+        let [space, cyclic, stops @ ..] = v else {
+            return Err(RampError(
+                "a gradient value is `[space, cyclic, stops…]`".into(),
+            ));
+        };
+        if *space != 1.0 || stops.len() % 4 != 0 {
+            return Err(RampError(
+                "a custom-stop ramp is an OKLab gradient of whole stops".into(),
+            ));
+        }
+        Ramp::new(
+            stops
+                .chunks_exact(4)
+                .map(|s| Stop {
+                    position: s[3],
+                    oklab: [s[0], s[1], s[2]],
+                })
+                .collect(),
+            *cyclic != 0.0,
+        )
+    }
+
     /// The ramp's OKLab colour at `t`, or `None` where `t` is not finite: a non-finite field takes the invalid-pixel
     /// treatment (colour_composition §1.2), not a colour of the ramp.
     pub fn oklab_at(&self, t: f64) -> Option<[f64; 3]> {

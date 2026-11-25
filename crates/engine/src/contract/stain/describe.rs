@@ -14,6 +14,7 @@ use std::collections::BTreeMap;
 
 use render::assemble::{self, Declaration, Kind};
 
+pub use render::assemble::declare::{Accepts, Format};
 pub use render::assemble::{Control, Glyph, UniformType};
 
 use crate::contract::stain::graph::{GraphError, Node, NodeKind, Occupant};
@@ -30,6 +31,20 @@ pub struct Description {
     pub maps: String,
     pub glyph: Shown,
     pub controls: Vec<ControlView>,
+    /// What each declared field input says about itself, in declaration order.
+    pub ports: Vec<PortView>,
+}
+
+/// A field input as the editor draws it: its label (its name where none is declared), the subtypes it accepts (none
+/// listed: any), whether it works unwired, its unit and its declared domain.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PortView {
+    pub input: String,
+    pub label: String,
+    pub accepts: Vec<Accepts>,
+    pub optional: bool,
+    pub unit: Option<String>,
+    pub domain: Option<(f64, f64)>,
 }
 
 /// The glyph, with what it draws.
@@ -69,6 +84,14 @@ pub struct ControlView {
     pub default: Vec<f64>,
     pub range: Option<(f64, f64)>,
     pub stops: Vec<Stop>,
+    /// The uniform of the high end of a pair this control is the low end of; the editor keeps the two ordered.
+    pub pair: Option<String>,
+    /// The part of the range the control spans; a value may be typed anywhere in the range.
+    pub soft: Option<(f64, f64)>,
+    pub unit: Option<String>,
+    pub format: Option<Format>,
+    /// The most items, entries or stops the type holds: a gradient's, a list's, a lut's length.
+    pub capacity: Option<usize>,
 }
 
 /// A gradient's stop after its first: its uniform, current value and default.
@@ -118,6 +141,7 @@ pub fn from_source(
             },
             glyph: shown(kind, None, &[]),
             controls: Vec::new(),
+            ports: Vec::new(),
         });
     };
     let declaration = Declaration::parse(text)?;
@@ -130,6 +154,21 @@ pub fn from_source(
         maps: maps(kind, d.maps.as_deref()),
         glyph: shown(kind, d.glyph.as_ref().map(|(g, _)| g), &controls),
         controls,
+        ports: declaration
+            .inputs
+            .iter()
+            .map(|i| {
+                let line = d.ports.iter().find(|p| p.input == i.name);
+                PortView {
+                    input: i.name.clone(),
+                    label: line.map_or_else(|| i.name.clone(), |p| p.label.clone()),
+                    accepts: line.map(|p| p.accepts.clone()).unwrap_or_default(),
+                    optional: line.is_some_and(|p| p.optional),
+                    unit: line.and_then(|p| p.unit.clone()),
+                    domain: i.domain,
+                }
+            })
+            .collect(),
     })
 }
 
@@ -183,10 +222,27 @@ fn shown(kind: NodeKind, declared: Option<&Glyph>, controls: &[ControlView]) -> 
             controls
                 .iter()
                 .find(|c| matches!(c.control, Control::Gradient(_)))
-                .map(|c| {
-                    std::iter::once(rgb(&c.value))
+                .map(|c| match c.ty {
+                    // A gradient of its own: its stops' colours, OKLab ones in linear RGB.
+                    UniformType::Gradient(_) => {
+                        let oklab = c.value.first() == Some(&1.0);
+                        c.value
+                            .get(2..)
+                            .unwrap_or_default()
+                            .chunks_exact(4)
+                            .map(|s| {
+                                let lab = [s[0], s[1], s[2]];
+                                if oklab {
+                                    render::colour::space::oklab_to_linear(lab)
+                                } else {
+                                    lab
+                                }
+                            })
+                            .collect()
+                    }
+                    _ => std::iter::once(rgb(&c.value))
                         .chain(c.stops.iter().map(|s| rgb(&s.value)))
-                        .collect()
+                        .collect(),
                 })
                 .unwrap_or_default(),
         ),
@@ -277,6 +333,17 @@ fn controls(declaration: &Declaration, params: &BTreeMap<String, Vec<f64>>) -> V
                 default: u.default.clone(),
                 range: u.range,
                 stops,
+                pair: line.and_then(|l| l.pair.clone()),
+                soft: line.and_then(|l| l.soft),
+                unit: line.and_then(|l| l.unit.clone()),
+                format: line.and_then(|l| l.format),
+                capacity: match u.ty {
+                    UniformType::Gradient(n) | UniformType::List { max: n, .. } => {
+                        Some(usize::from(n))
+                    }
+                    UniformType::Lut(n) => Some(usize::from(n)),
+                    _ => None,
+                },
             },
         ));
     }

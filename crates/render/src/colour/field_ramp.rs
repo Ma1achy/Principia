@@ -491,6 +491,25 @@ impl Ramp {
         }
     }
 
+    /// The ramp as a `gradient` parameter's value (`render::assemble::params`) in linear RGB, where it is one: `lerp` is
+    /// two stops at 0 and 1, `diverging` three, at 0, ½ and 1. A gradient reads these to the same bits as `ramp.wgsl`.
+    pub fn as_gradient(&self) -> Option<Vec<f64>> {
+        let stop = |c: Rgb, p: f64| [c[0], c[1], c[2], p];
+        let stops: Vec<[f64; 4]> = match *self {
+            Ramp::Lerp { c0, c1 } => vec![stop(c0, 0.0), stop(c1, 1.0)],
+            Ramp::Diverging { lo, mid, hi } => {
+                vec![stop(lo, 0.0), stop(mid, 0.5), stop(hi, 1.0)]
+            }
+            Ramp::Lut(_) | Ramp::Bands { .. } => return None,
+        };
+        Some(
+            [0.0, 0.0]
+                .into_iter()
+                .chain(stops.into_iter().flatten())
+                .collect(),
+        )
+    }
+
     /// The ramp at the WGSL `f32` expression `t`, its settings read from its uniforms ([`Ramp::uniforms`]).
     pub fn wgsl(&self, t: &str) -> String {
         match *self {

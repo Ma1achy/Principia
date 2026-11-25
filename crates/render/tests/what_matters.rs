@@ -197,6 +197,19 @@ fn colour(ctx: Ctx) -> vec3<f32> {
 }
 "#;
 
+/// A colour that reads one gradient, and holds a second, a list and a lut it never reads into its result.
+pub const GRADIENTS: &str = "// @version 2
+// @uniform gain: f32 = 0.5 [0, 1]
+// @uniform ramp: gradient<8> = oklab 0:(0.25, 0.0, 0.0) 1:(0.875, 0.0, 0.0)
+// @uniform spare: gradient<4> = linear 0:(0.0, 0.0, 0.0) 1:(1.0, 1.0, 1.0)
+// @uniform unused_list: list<vec3<f32>, 4> = [(1.0, 0.0, 0.0)]
+// @uniform unused_lut: lut<8> = [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 1.0]
+fn colour(ctx: Ctx) -> vec3<f32> {
+    let unused = gradient4_at(uniforms.spare, 0.5) + uniforms.unused_list.items[0u].xyz * 0.0;
+    return gradient8_at(uniforms.ramp, ctx.inputs[0].x) * uniforms.gain;
+}
+";
+
 fn live(kind: Kind, text: &str) -> Vec<bool> {
     matters::shader(kind, text)
         .unwrap_or_else(|e| panic!("{e}"))
@@ -743,6 +756,10 @@ fn fixture_rows() -> Vec<(String, Vec<Node>)> {
             "fixture choice".into(),
             showing(Kind::Colour, Occupant::Custom(CHOICE.into())),
         ),
+        (
+            "fixture gradients".into(),
+            showing(Kind::Colour, Occupant::Custom(GRADIENTS.into())),
+        ),
     ]
 }
 
@@ -845,9 +862,12 @@ fn check_row(
                             u.ty,
                             assemble::UniformType::I32 | assemble::UniformType::U32
                         );
-                        (0..u.ty.components() as u32)
-                            .map(|k| p.bits(k, float))
-                            .collect()
+                        // A gradient, list or lut has no components: poison each word of its struct.
+                        let words = match u.ty.components() {
+                            0 => render::assemble::params::align_size(u.ty).1 as u32 / 4,
+                            n => n as u32,
+                        };
+                        (0..words).map(|k| p.bits(k, float)).collect()
                     })
             };
             let got = draw(h, &kept, &source, scene, &bits);

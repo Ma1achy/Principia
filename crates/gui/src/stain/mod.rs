@@ -370,6 +370,7 @@ fn plain(kind: NodeKind) -> Description {
         maps: String::new(),
         glyph: Shown::None,
         controls: Vec::new(),
+        ports: Vec::new(),
     })
 }
 

@@ -217,17 +217,44 @@ struct NodeForm {
     params: BTreeMap<String, Vec<f64>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     ramp: Option<Ramp>,
+    /// Each `field` uniform's field by its name, never its place in the ledger's order, which a ledger change moves.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    fields: BTreeMap<String, String>,
+}
+
+/// The uniforms of node `n`'s code that are fields.
+fn field_uniforms(kind: NodeKind, occupant: &Occupant) -> Vec<String> {
+    assemble::declaration(kind.into(), &occupant.into())
+        .map(|d| {
+            d.uniforms
+                .into_iter()
+                .filter(|u| u.ty == assemble::UniformType::Field)
+                .map(|u| u.name)
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 impl Serialize for Node {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
         let occupant = write(self.kind, &self.occupant).map_err(S::Error::custom)?;
+        let mut params = self.params.clone();
+        let mut fields = self.lost_fields.clone();
+        if let Ok(names) = assemble::source_fields() {
+            for u in field_uniforms(self.kind, &self.occupant) {
+                let name = params
+                    .remove(&u)
+                    .and_then(|v| v.first().and_then(|&i| names.get(i as usize).cloned()));
+                fields.extend(name.map(|n| (u, n)));
+            }
+        }
         NodeForm {
             id: self.id,
             kind: self.kind,
             occupant,
-            params: self.params.clone(),
+            params,
             ramp: self.ramp.clone(),
+            fields,
         }
         .serialize(s)
     }
@@ -238,13 +265,49 @@ impl<'de> Deserialize<'de> for Node {
         let n = NodeForm::deserialize(d)?;
         let occupant = read(n.kind, n.occupant)
             .map_err(|e| D::Error::custom(format!("node {}: {e}", n.id.0)))?;
-        Ok(Node {
+        let mut node = Node {
             id: n.id,
             kind: n.kind,
             occupant,
             params: n.params,
             ramp: n.ramp,
-        })
+            lost_fields: BTreeMap::new(),
+        };
+        // A field is saved by name. One this build has no field of opens at its default, and says so.
+        // The plan is unclear here; chose to open the stain with the node noting the missing field, because a refusal
+        // would cost the whole stain for one source; a stain saved with the index form still reads as an index into
+        // this build's order, which no stain on main holds.
+        let names = assemble::source_fields().unwrap_or_default();
+        for (u, name) in n.fields {
+            match names.iter().position(|f| *f == name) {
+                Some(i) => {
+                    node.params.insert(u, vec![i as f64]);
+                }
+                None => {
+                    node.lost_fields.insert(u, name);
+                }
+            }
+        }
+        // A ramp saved beside the params of a node whose code now declares a gradient is that gradient's value.
+        if let Some(ramp) = node.ramp.take() {
+            let gradient = assemble::declaration(node.kind.into(), &(&node.occupant).into())
+                .ok()
+                .and_then(|d| {
+                    d.uniforms
+                        .into_iter()
+                        .find(|u| matches!(u.ty, assemble::UniformType::Gradient(_)))
+                });
+            // Only where the gradient can hold it: a ramp of more stops than it declares stays beside the params.
+            match gradient.filter(|u| u.admits(&ramp.to_gradient())) {
+                Some(u) => {
+                    node.params
+                        .entry(u.name)
+                        .or_insert_with(|| ramp.to_gradient());
+                }
+                None => node.ramp = Some(ramp),
+            }
+        }
+        Ok(node)
     }
 }
 

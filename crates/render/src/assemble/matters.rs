@@ -1193,6 +1193,9 @@ pub struct Shader {
     compiled: Arc<Compiled>,
     kind: Kind,
     declaration: Declaration,
+    /// Whether the text reads each declared uniform, by declaration order: a `field` is read as the field in the code, so
+    /// it has no member to follow, and a read of it is counted as reaching the result.
+    read: Vec<bool>,
 }
 
 /// A shader's module, kept under its kind and code.
@@ -1268,6 +1271,14 @@ impl Shader {
     }
 
     /// Each choice and toggle's value, as `value` gives it, but the uniform `free`'s, which is left free.
+    /// The member of the uniform block that declared uniform `k` is: a `field` has none, so those before it are not counted.
+    fn member(&self, k: usize) -> u32 {
+        self.declaration.uniforms[..k]
+            .iter()
+            .filter(|u| u.ty != UniformType::Field)
+            .count() as u32
+    }
+
     fn held(&self, value: &dyn Fn(&Uniform) -> Vec<f64>, free: Option<&str>) -> Held {
         let mut held = Held::new();
         let Some(g) = self.global() else { return held };
@@ -1287,7 +1298,7 @@ impl Shader {
             };
             let u = &self.declaration.uniforms[k];
             if let Some(l) = value(u).first().and_then(|&v| Lit::uniform(u.ty, v)) {
-                held.insert((g, k as u32), l);
+                held.insert((g, self.member(k)), l);
             }
         }
         held
@@ -1302,8 +1313,15 @@ impl Shader {
             held,
         );
         let block = proof.global("n0_uniforms");
-        let uniforms = (0..self.declaration.uniforms.len())
-            .map(|k| !block.part(k as u32).is_nothing())
+        let uniforms = self
+            .declaration
+            .uniforms
+            .iter()
+            .enumerate()
+            .map(|(k, u)| match u.ty {
+                UniformType::Field => self.read[k],
+                _ => !block.part(self.member(k)).is_nothing(),
+            })
             .collect();
         let ctx = Ctx::of(&self.compiled.module);
         let (values, context) = match self.kind {
@@ -1466,16 +1484,31 @@ pub fn shader(kind: Kind, text: &str) -> Result<Shader, AssembleError> {
             let fields: Vec<&str> = fields.iter().map(String::as_str).collect();
             let mut source = head(Tier::FULL, &fields)?;
             let mut extra = Vec::new();
-            if !declaration.uniforms.is_empty() {
+            // A `field` is read as the field it defaults to, as the assembler reads it.
+            let chosen: Vec<&Uniform> = declaration
+                .uniforms
+                .iter()
+                .filter(|u| u.ty == UniformType::Field)
+                .collect();
+            let code =
+                super::params::specialise(&code_text(text), &chosen, &|u| u.default[0] as usize)?;
+            let block: Vec<&Uniform> = declaration
+                .uniforms
+                .iter()
+                .filter(|u| u.ty != UniformType::Field)
+                .collect();
+            if !block.is_empty() {
+                let types: Vec<UniformType> = block.iter().map(|u| u.ty).collect();
+                source.push_str(&super::params::library(&types));
                 source.push_str("struct n0_Uniforms {\n");
-                for u in &declaration.uniforms {
+                for u in &block {
                     source.push_str(&format!("    {}: {},\n", u.name, u.ty.wgsl()));
                 }
                 source
                     .push_str("}\n@group(0) @binding(1) var<uniform> n0_uniforms: n0_Uniforms;\n");
                 extra.push("uniforms");
             }
-            source.push_str(&prefixed(&code_text(text), "n0_", kind, &extra)?);
+            source.push_str(&prefixed(&code, "n0_", kind, &extra)?);
             source.push_str("\nfn note_non_finite() {}\n");
             let (module, info) = compile(&source)?;
             let c = Arc::new(Compiled { module, info });
@@ -1487,10 +1520,16 @@ pub fn shader(kind: Kind, text: &str) -> Result<Shader, AssembleError> {
             c
         }
     };
+    let read = declaration
+        .uniforms
+        .iter()
+        .map(|u| super::params::reads(text, &u.name))
+        .collect();
     Ok(Shader {
         compiled,
         kind,
         declaration,
+        read,
     })
 }
 
@@ -1607,8 +1646,13 @@ pub(super) fn dropped(
         if !gone && without_uniforms(&text, &[], "").is_none() {
             continue;
         }
-        for (k, u) in uniforms.iter().enumerate() {
-            if gone || block.part(k as u32).is_nothing() {
+        // A `field` has no member in an assembled block: it is read as the field, in the code.
+        for (member, u) in uniforms
+            .iter()
+            .filter(|u| u.ty != UniformType::Field)
+            .enumerate()
+        {
+            if gone || block.part(member as u32).is_nothing() {
                 out.uniforms.push((i, u.clone()));
             }
         }
