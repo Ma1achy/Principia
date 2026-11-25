@@ -9,12 +9,17 @@
 //!
 //! `source` is the whole text the node runs, its declarations included; `hash` is its 64-bit FNV-1a, sixteen lowercase
 //! hex digits ([`hash`]), so a damaged text is refused, never drawn. `id` names where the code came from: a shipped
-//! source's registry id, [`FIELD_ID`]`<field>` for a field's generated source, `null` for a custom. `version` is the
-//! node's own version where its source declares one, else `null`. The identity is `"none"`.
+//! source's registry id, [`FIELD_ID`]`<field>` for a field's generated source, a shader of your folder's `@id`, `null`
+//! for a custom. `version` is the node's own version where its source declares one (`@node_version`), else `null`.
+//! `"edited": "<hash>"`, written only for code edited in this stain and saved to no file, is the [`hash`] of the text
+//! the edit was made from: such a node is never offered an update, only a revert, and its save over a file is refused
+//! where the file is no longer that text. The identity is `"none"`.
 //!
 //! **Reading** ([`read`]). The text is the node. Where it is, byte for byte, what its id names in this build, the node
 //! is that shipped source or field again; otherwise it stays the saved text ([`Occupant::Pinned`]), drawn as it was
 //! saved, and [`StainGraph::updates`] offers the newer file. Nothing updates on its own ([`StainGraph::update`]).
+//! Reading never needs your folder ([`folder`](super::folder)): a shader of yours opens as its saved text, and
+//! [`StainGraph::updates_in`] offers the folder's file where it differs.
 //!
 //! **The old forms**, which hold no source for a shipped node: `{"builtin": <name>}` (a shipped source by its name in its
 //! slot), `{"field": <field>}` and `{"custom": <text>}`. A `builtin` is read as the file its name gives in this build,
@@ -29,6 +34,7 @@ use serde::de::Error as _;
 use serde::ser::Error as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
+use crate::contract::stain::folder::Folder;
 use crate::contract::stain::graph::{GraphError, Node, NodeId, NodeKind, Occupant, StainGraph};
 use crate::contract::stain::ramp::Ramp;
 
@@ -37,16 +43,19 @@ use crate::contract::stain::ramp::Ramp;
 // directory beside `source/zero` and is the name the editor shows, `ctx.<field>`, and no shipped file can be named so.
 pub const FIELD_ID: &str = "source/ctx.";
 
-/// A node's code held by value with the id of the source it was saved from, because this build's file under that id
-/// differs from it (or this build has none).
+/// A node's code held by value with the id of the source it came from: a shader of your folder, a shipped source
+/// whose file in this build differs from it (or this build has none), or code edited in this stain ([`Pinned::edited`]).
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Pinned {
-    /// The id it was saved under: a registry id, or [`FIELD_ID`]`<field>`.
+    /// The id it was saved under: a registry id, [`FIELD_ID`]`<field>`, or a shader of yours' `@id`.
     pub id: String,
     /// The node's own version, where its source declared one.
     pub version: Option<String>,
     /// The text it runs.
     pub source: String,
+    /// Where the text is an edit made in this stain and saved to no file, the [`hash`] of the text it was made from:
+    /// offered a revert, never an update.
+    pub edited: Option<String>,
 }
 
 /// The new form's shader: what [`read`] takes and [`write`] gives.
@@ -57,6 +66,8 @@ pub struct Shader {
     pub version: Option<String>,
     pub hash: String,
     pub source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub edited: Option<String>,
 }
 
 /// An occupant as saved: the new form, `shader`, or one of the three old forms.
@@ -83,6 +94,19 @@ fn text(kind: NodeKind, occupant: &Occupant) -> Result<Option<String>, GraphErro
 /// The shipped occupant id `id` names in a node of `kind` in this build, with its text: a registry entry of the slot,
 /// as [`Occupant::Builtin`], or a field's generated source, as [`Occupant::Field`].
 pub fn current(kind: NodeKind, id: &str) -> Option<(Occupant, String)> {
+    current_in(kind, id, None)
+}
+
+/// [`current`], or where this build ships nothing under `id`, the shader of `folder` with that id, of `kind`'s slot,
+/// as [`Occupant::Pinned`] with the file's text. An id your folder gives twice, not yet chosen, names nothing.
+pub fn current_in(kind: NodeKind, id: &str, folder: Option<&Folder>) -> Option<(Occupant, String)> {
+    shipped(kind, id).or_else(|| {
+        let s = folder?.shader(id).ok()?;
+        (NodeKind::from(s.entry.slot) == kind).then(|| (s.occupant(), s.entry.source.clone()))
+    })
+}
+
+fn shipped(kind: NodeKind, id: &str) -> Option<(Occupant, String)> {
     if let Some(field) = id.strip_prefix(FIELD_ID) {
         let occupant = Occupant::Field(field.to_owned());
         let source = text(kind, &occupant).ok().flatten()?;
@@ -110,8 +134,7 @@ pub fn write(kind: NodeKind, occupant: &Occupant) -> Result<Form, GraphError> {
         Occupant::Builtin(name) => {
             let entry =
                 registry::named(Kind::from(kind), name).map_err(|e| GraphError(e.to_string()))?;
-            // The plan is unclear here; a shipped source's version is null until sources declare their own.
-            (Some(entry.id.clone()), None)
+            (Some(entry.id.clone()), node_version(&entry.source))
         }
         Occupant::Pinned(p) => (Some(p.id.clone()), p.version.clone()),
     };
@@ -121,6 +144,10 @@ pub fn write(kind: NodeKind, occupant: &Occupant) -> Result<Form, GraphError> {
         version,
         hash: hash(&source),
         source,
+        edited: match occupant {
+            Occupant::Pinned(p) => p.edited.clone(),
+            _ => None,
+        },
     }))
 }
 
@@ -150,6 +177,12 @@ pub fn read(kind: NodeKind, form: Form) -> Result<Occupant, GraphError> {
         )));
     }
     let Some(id) = s.id else {
+        if s.edited.is_some() {
+            return Err(GraphError(
+                "a saved node is marked edited but has no id: an edit is of a source with one"
+                    .into(),
+            ));
+        }
         if let Some(v) = s.version {
             return Err(GraphError(format!(
                 "a saved node has version `{v}` but no id: a version labels a source with an id"
@@ -157,12 +190,18 @@ pub fn read(kind: NodeKind, form: Form) -> Result<Occupant, GraphError> {
         }
         return Ok(Occupant::Custom(s.source));
     };
+    if probe::by_id() {
+        if let Some((occupant, _)) = current_in(kind, &id, probe::folder().as_ref()) {
+            return Ok(occupant);
+        }
+    }
     match current(kind, &id) {
-        Some((occupant, now)) if now == s.source || probe::by_id() => Ok(occupant),
+        Some((occupant, now)) if now == s.source && s.edited.is_none() => Ok(occupant),
         _ => Ok(Occupant::Pinned(Pinned {
             id,
             version: s.version,
             source: s.source,
+            edited: s.edited,
         })),
     }
 }
@@ -237,26 +276,52 @@ pub struct Updated {
     pub reset: Vec<String>,
 }
 
+/// The `@node_version` `source` declares, if it parses and declares one.
+pub(crate) fn node_version(source: &str) -> Option<String> {
+    assemble::Declaration::parse(source)
+        .ok()
+        .and_then(|d| d.described.node_version)
+}
+
 impl StainGraph {
     /// Each node saved by value whose id names a file in this build: the update it is offered, in node order.
-    // The plan is unclear here; chose to offer an update whenever the file differs, since no source declares a node
-    // version yet to say which is newer.
     pub fn updates(&self) -> Vec<Update> {
-        self.nodes().filter_map(|n| self.offer(n.id)).collect()
+        self.updates_in(None)
+    }
+
+    /// [`StainGraph::updates`], a shader of yours' file looked for in `folder` too.
+    // The plan is unclear here; chose to offer an update whenever the file differs, an older `@node_version` included,
+    // and to give both versions so the app can say which is newer, rather than withhold an offer by a version.
+    pub fn updates_in(&self, folder: Option<&Folder>) -> Vec<Update> {
+        self.nodes()
+            .filter_map(|n| self.offer_in(n.id, folder))
+            .collect()
     }
 
     /// The update node `node` is offered, if any ([`StainGraph::updates`]).
     pub fn offer(&self, node: NodeId) -> Option<Update> {
+        self.offer_in(node, None)
+    }
+
+    /// The update node `node` is offered, if any ([`StainGraph::updates_in`]): none where its text is the file's, or
+    /// it holds an edit ([`Pinned::edited`]).
+    pub fn offer_in(&self, node: NodeId, folder: Option<&Folder>) -> Option<Update> {
         let n = self.node(node)?;
         let Occupant::Pinned(p) = &n.occupant else {
             return None;
         };
-        let (occupant, source) = current(n.kind, &p.id)?;
+        if p.edited.is_some() {
+            return None;
+        }
+        let (occupant, source) = current_in(n.kind, &p.id, folder)?;
+        if source == p.source {
+            return None;
+        }
         Some(Update {
             node,
             id: p.id.clone(),
             saved_version: p.version.clone(),
-            version: None,
+            version: node_version(&source),
             code_changed: assemble::key_text(&p.source) != assemble::key_text(&source),
             saved: p.source.clone(),
             source,
@@ -270,12 +335,34 @@ impl StainGraph {
     // The plan is unclear here; chose to reset a param the new file no longer admits rather than clamp it, until
     // editing a declaration says how a value carries over.
     pub fn update(&mut self, node: NodeId) -> Result<Updated, GraphError> {
+        self.update_in(node, None)
+    }
+
+    /// [`StainGraph::update`] to the update [`StainGraph::offer_in`] gives.
+    pub fn update_in(
+        &mut self,
+        node: NodeId,
+        folder: Option<&Folder>,
+    ) -> Result<Updated, GraphError> {
         let offer = self
-            .offer(node)
+            .offer_in(node, folder)
             .ok_or_else(|| GraphError(format!("node {} is offered no update", node.0)))?;
-        let kind = self.node(node).map(|n| n.kind).expect("an offered node");
-        let d = assemble::declaration(kind.into(), &(&offer.occupant).into())?;
-        let params = &self.node(node).expect("an offered node").params;
+        self.replace(node, offer.occupant)
+    }
+
+    /// Node `node`'s occupant made `occupant`, its params kept where `occupant` declares and admits them, the others
+    /// reset and listed. One edit.
+    pub(crate) fn replace(
+        &mut self,
+        node: NodeId,
+        occupant: Occupant,
+    ) -> Result<Updated, GraphError> {
+        let kind = self
+            .node(node)
+            .map(|n| n.kind)
+            .ok_or_else(|| GraphError(format!("no node {}", node.0)))?;
+        let d = assemble::declaration(kind.into(), &(&occupant).into())?;
+        let params = &self.node(node).expect("checked above").params;
         let reset: Vec<String> = params
             .iter()
             .filter(|(name, v)| !d.uniforms.iter().any(|u| &u.name == *name && u.admits(v)))
@@ -285,7 +372,7 @@ impl StainGraph {
         for name in &reset {
             next.unset_param(node, name);
         }
-        next.set_occupant(node, offer.occupant)?;
+        next.set_occupant(node, occupant)?;
         *self = next;
         Ok(Updated { reset })
     }
@@ -297,9 +384,29 @@ pub mod probe {
     use std::cell::Cell;
 
     #[cfg(feature = "controls")]
+    use crate::contract::stain::folder::Folder;
+
+    #[cfg(feature = "controls")]
     thread_local! {
         static BY_ID: Cell<bool> = const { Cell::new(false) };
         static NO_HASH: Cell<bool> = const { Cell::new(false) };
+        static FOLDER: std::cell::RefCell<Option<Folder>> = const { std::cell::RefCell::new(None) };
+    }
+
+    /// `f` run with a saved node read as whatever its id names in this build or in `folder`, its saved text ignored.
+    #[cfg(feature = "controls")]
+    pub fn by_id_with_folder_in<T>(folder: &Folder, f: impl FnOnce() -> T) -> T {
+        let before = FOLDER.with(|l| l.replace(Some(folder.clone())));
+        let out = by_id_in(f);
+        FOLDER.with(|l| l.replace(before));
+        out
+    }
+
+    pub(super) fn folder() -> Option<crate::contract::stain::folder::Folder> {
+        #[cfg(feature = "controls")]
+        return FOLDER.with(|l| l.borrow().clone());
+        #[cfg(not(feature = "controls"))]
+        None
     }
 
     /// `f` run with a saved node read as whatever its id names in this build, its saved text ignored, as a reader that

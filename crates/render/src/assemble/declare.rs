@@ -27,6 +27,11 @@
 //!   radians), `gradient(<stop>, …)` (`vec3<f32>`: it and each named `vec3<f32>` uniform, in order, are one gradient's
 //!   stops, which take no control of their own), `fields` (a number per component) and `hidden` (not drawn: a value
 //!   the host writes). `order` sorts the controls for display only; the uniform block keeps declaration order.
+//! - `@id`, `@author`, `@licence`, `@node_version`: who the node is, for the shaders list and a saved stain's label,
+//!   never for the picture. `@id <id>` is one to eight segments of `a`–`z`, `0`–`9`, `_` and `-`, joined by `/`, at
+//!   most [`ID_MAX`] bytes, no segment a Windows device name (`con`, `nul`, `com1`, …): never a path, so it cannot
+//!   climb out of a folder (`..`), name a root, a drive or a device, or differ from another only in case. `@author` and `@licence` are texts as `@name` is. `@node_version` is the node's own
+//!   version, one to four whole numbers joined by `.` (`2`, `1.4.0`), compared part by part ([`node_version_order`]).
 //! - `@version <n>`: the grammar the source is written for, from 1; absent, it is 1. A build reads every version up to
 //!   its own, [`VERSION`], and refuses a later one at its line, naming it, so a later grammar is recognised by its
 //!   `@version` line and never misread. A later version may add words and controls; a word keeps its meaning.
@@ -48,9 +53,22 @@ use crate::lex::{is_line_break, is_space, tokens, Tok};
 pub const VERSION: u32 = 1;
 
 /// The declaration words this module reads; `uniform` and `input` are the assembler's.
-pub const WORDS: [&str; 7] = [
-    "version", "name", "group", "about", "maps", "glyph", "control",
+pub const WORDS: [&str; 11] = [
+    "version",
+    "name",
+    "group",
+    "about",
+    "maps",
+    "glyph",
+    "control",
+    "id",
+    "author",
+    "licence",
+    "node_version",
 ];
+
+/// The longest `@id`, in bytes.
+pub const ID_MAX: usize = 128;
 
 /// The state glyph a node draws under its title.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -146,6 +164,10 @@ pub struct Described {
     /// The glyph and its line.
     pub glyph: Option<(Glyph, usize)>,
     pub controls: Vec<ControlLine>,
+    pub id: Option<String>,
+    pub author: Option<String>,
+    pub licence: Option<String>,
+    pub node_version: Option<String>,
 }
 
 /// A refusal's kind, each a check a test's control can lift ([`probe`]).
@@ -243,15 +265,32 @@ pub(super) fn read(
             }
             out.version = Some(v);
         }
-        "name" | "group" | "about" | "maps" => {
+        "name" | "group" | "about" | "maps" | "author" | "licence" => {
             let slot = match word {
                 "name" => &mut out.name,
                 "group" => &mut out.group,
                 "about" => &mut out.about,
+                "author" => &mut out.author,
+                "licence" => &mut out.licence,
                 _ => &mut out.maps,
             };
             twice(slot.is_some())?;
             *slot = Some(text(rest)?);
+        }
+        "id" => {
+            twice(out.id.is_some())?;
+            out.id = Some(node_id(rest.trim()).map_err(|why| Refusal(Check::Malformed, why))?);
+        }
+        "node_version" => {
+            twice(out.node_version.is_some())?;
+            let v = rest.trim();
+            if node_version_parts(v).is_none() {
+                return refuse(
+                    Check::Malformed,
+                    "a node version is one to four whole numbers joined by `.`",
+                );
+            }
+            out.node_version = Some(v.to_owned());
         }
         "glyph" => {
             twice(out.glyph.is_some())?;
@@ -260,6 +299,59 @@ pub(super) fn read(
         _ => out.controls.push(control(rest, line)?),
     }
     Ok(())
+}
+
+/// `id` where it is a node id (`@id`), else why not.
+pub fn node_id(id: &str) -> Result<String, String> {
+    let segment = |s: &str| {
+        !s.is_empty()
+            && s.bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_' || b == b'-')
+    };
+    let parts: Vec<&str> = id.split('/').collect();
+    if id.len() > ID_MAX || parts.len() > 8 || !parts.iter().all(|s| segment(s)) {
+        return Err(format!(
+            "an id is one to eight segments of `a`-`z`, `0`-`9`, `_` and `-`, joined by `/`, at most {ID_MAX} bytes"
+        ));
+    }
+    // An id becomes a file's name, and Windows opens a device for these names whatever follows them.
+    let device = |s: &str| {
+        matches!(s, "con" | "prn" | "aux" | "nul")
+            || (s.len() == 4
+                && (s.starts_with("com") || s.starts_with("lpt"))
+                && matches!(s.as_bytes()[3], b'1'..=b'9'))
+    };
+    if let Some(d) = parts.iter().find(|s| device(s)) {
+        return Err(format!(
+            "`{d}` names a device on Windows, so no segment of an id is it"
+        ));
+    }
+    Ok(id.to_owned())
+}
+
+/// A node version's parts, where `v` is one (`@node_version`).
+fn node_version_parts(v: &str) -> Option<Vec<u32>> {
+    let parts: Option<Vec<u32>> = v
+        .split('.')
+        .map(|p| {
+            (!p.is_empty() && p.len() <= 9 && p.bytes().all(|b| b.is_ascii_digit()))
+                .then(|| p.parse().ok())
+                .flatten()
+        })
+        .collect();
+    parts.filter(|p| (1..=4).contains(&p.len()))
+}
+
+/// How node version `a` compares with `b`, part by part, a missing part 0 (`1.2` is `1.2.0`); `None` where either is
+/// not one.
+pub fn node_version_order(a: &str, b: &str) -> Option<std::cmp::Ordering> {
+    let (a, b) = (node_version_parts(a)?, node_version_parts(b)?);
+    let at = |p: &[u32], k: usize| p.get(k).copied().unwrap_or(0);
+    Some(
+        (0..4)
+            .map(|k| at(&a, k).cmp(&at(&b, k)))
+            .fold(std::cmp::Ordering::Equal, std::cmp::Ordering::then),
+    )
 }
 
 /// A free text: the line's rest, trimmed, not empty, with no `"` or control character.
