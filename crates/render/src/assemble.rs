@@ -588,14 +588,19 @@ fn field_type(field: &str) -> Result<&'static str, AssembleError> {
 /// input; a colour declares one to [`MAX_INPUTS`], a brightness one, and a post up to [`MAX_INPUTS`] (a colour or a
 /// brightness that declares none has one, `field`, its domain inherited); an occupant the slot does not take is refused.
 pub fn declaration(kind: Kind, occupant: &Occupant) -> Result<Declaration, AssembleError> {
-    let Some(source) = occupant_source(kind, occupant)? else {
+    declaration_of(kind, occupant_source(kind, occupant)?.as_deref())
+}
+
+/// [`declaration`] of a node of `kind` whose occupant's text is `source`, `None` for the identity.
+fn declaration_of(kind: Kind, source: Option<&str>) -> Result<Declaration, AssembleError> {
+    let Some(source) = source else {
         let mut d = Declaration::default();
         if matches!(kind, Kind::Colour | Kind::Brightness) {
             d.inputs.push(default_input());
         }
         return Ok(d);
     };
-    let mut d = Declaration::parse(&source)?;
+    let mut d = Declaration::parse(source)?;
     if matches!(kind, Kind::Colour | Kind::Brightness) && d.inputs.is_empty() {
         d.inputs.push(default_input());
     }
@@ -679,6 +684,8 @@ pub struct Node {
 pub struct Stain {
     nodes: Vec<Node>,
     declarations: Vec<Declaration>,
+    /// Each node's occupant's text, read once at construction: what is declared, keyed and assembled is one text.
+    texts: Vec<Option<String>>,
 }
 
 impl Stain {
@@ -688,8 +695,10 @@ impl Stain {
     /// more than [`MAX_POSTS`] posts in the live chain.
     pub fn new(nodes: Vec<Node>) -> Result<Stain, AssembleError> {
         let mut declarations = Vec::new();
+        let mut texts = Vec::new();
         for (i, n) in nodes.iter().enumerate() {
-            let d = declaration(n.kind, &n.occupant)?;
+            let text = occupant_source(n.kind, &n.occupant)?;
+            let d = declaration_of(n.kind, text.as_deref())?;
             let ports = in_ports(n.kind, &d);
             if ports.len() != n.inputs.len() {
                 return Err(AssembleError::Wire(format!(
@@ -709,6 +718,7 @@ impl Stain {
                 check_wire(nodes[j].kind, n.kind, port)?;
             }
             declarations.push(d);
+            texts.push(text);
         }
         for kind in [Kind::Combiner, Kind::Out] {
             let count = nodes.iter().filter(|n| n.kind == kind).count();
@@ -722,6 +732,7 @@ impl Stain {
         let stain = Stain {
             nodes,
             declarations,
+            texts,
         };
         let posts = stain.chain().len();
         if posts > MAX_POSTS {
@@ -740,6 +751,11 @@ impl Stain {
     /// The declarations of node `i`'s occupant.
     pub fn declaration(&self, i: usize) -> &Declaration {
         &self.declarations[i]
+    }
+
+    /// Node `i`'s occupant's WGSL as written, `None` for the identity: the code its key hashes and it assembles.
+    pub fn text(&self, i: usize) -> Option<&str> {
+        self.texts[i].as_deref()
     }
 
     fn position(&self, kind: Kind) -> usize {
@@ -849,11 +865,13 @@ impl Stain {
             .iter()
             .map(|&i| self.declarations[i].clone())
             .collect();
+        let texts = order.iter().map(|&i| self.texts[i].clone()).collect();
         Canonical {
             order,
             stain: Stain {
                 nodes,
                 declarations,
+                texts,
             },
         }
     }
@@ -878,9 +896,14 @@ impl Canonical {
     }
 
     /// The form's text (lowering contract Part 5): `{"nodes":[…]}`, each node `{"inputs":[…],"kind":…,"occupant":…}`,
-    /// its occupant `null`, `{"field":…}`, `{"builtin":…}` or `{"custom":…}`, a custom's text as [`key_text`] gives it,
-    /// its descriptive lines removed, in JCS (RFC 8785: keys sorted, no white
-    /// space, strings escaped as ECMAScript's `JSON.stringify` escapes them). The fragment key's input.
+    /// its occupant `null` for the identity, else `{"code":…}`, the code it runs as [`key_text`] gives it, its
+    /// descriptive lines removed, in JCS (RFC 8785: keys sorted, no white space, strings escaped as ECMAScript's
+    /// `JSON.stringify` escapes them). The fragment key's input.
+    ///
+    /// Who wrote the code is not in it: a shipped source, the same text pasted as a custom and a field's generated
+    /// source are keyed alike, so one code compiles once.
+    // Don't put a shipped source's id or a field's name in it: the same code would compile twice, and a shipped file
+    // that changed under its id would keep its old key.
     pub fn text(&self) -> String {
         let mut out = String::from("{\"nodes\":[");
         for (k, n) in self.stain.nodes.iter().enumerate() {
@@ -902,20 +925,21 @@ impl Canonical {
             out.push_str("],\"kind\":");
             json_string(n.kind.name(), &mut out);
             out.push_str(",\"occupant\":");
-            let (key, value) = match &n.occupant {
-                Occupant::None => {
-                    out.push_str("null}");
-                    continue;
-                }
-                Occupant::Field(f) => ("field", f),
-                Occupant::BuiltIn(id) => ("builtin", id),
-                Occupant::Custom(text) => ("custom", text),
+            let Some(code) = self.stain.text(k) else {
+                out.push_str("null}");
+                continue;
             };
             out.push('{');
-            json_string(key, &mut out);
+            #[cfg(feature = "controls")]
+            if let (true, Occupant::BuiltIn(id)) = (probe::id_in_key(), &n.occupant) {
+                json_string("builtin", &mut out);
+                out.push(':');
+                json_string(id, &mut out);
+                out.push(',');
+            }
+            json_string("code", &mut out);
             out.push(':');
-            // A custom's descriptive lines are not code: a label edit keeps the key, so it recompiles nothing.
-            json_string(&key_text(value), &mut out);
+            json_string(&key_text(code), &mut out);
             out.push_str("}}");
         }
         out.push_str("]}");
@@ -1217,11 +1241,11 @@ fn source(
     let mut uniforms = Vec::new();
     for &i in &live {
         let n = &stain.nodes[i];
-        let text = occupant_source(n.kind, &n.occupant)?.unwrap_or_default();
+        let text = stain.text(i).unwrap_or_default();
         let text = if written {
-            std::borrow::Cow::Borrowed(text.as_str())
+            std::borrow::Cow::Borrowed(text)
         } else {
-            code_text(&text)
+            code_text(text)
         };
         let schema = &stain.declarations[i].uniforms;
         let mut extra = Vec::new();
@@ -1741,3 +1765,25 @@ impl fmt::Display for AssembleError {
 }
 
 impl std::error::Error for AssembleError {}
+
+/// A test's control's reach into the key, on this thread only.
+#[cfg(feature = "controls")]
+pub mod probe {
+    use std::cell::Cell;
+
+    thread_local! {
+        static ID_IN_KEY: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// `f` run with a shipped source's name written into the fragment key beside its code, as a key by id would.
+    pub fn id_in_key_in<T>(f: impl FnOnce() -> T) -> T {
+        let before = ID_IN_KEY.with(|l| l.replace(true));
+        let out = f();
+        ID_IN_KEY.with(|l| l.set(before));
+        out
+    }
+
+    pub(super) fn id_in_key() -> bool {
+        ID_IN_KEY.with(Cell::get)
+    }
+}

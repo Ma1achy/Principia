@@ -126,6 +126,7 @@ fn occupant_name(o: &Occupant) -> &str {
         Occupant::Field(f) => f,
         Occupant::Builtin(id) => id,
         Occupant::Custom(_) => "custom",
+        Occupant::Pinned(p) => &p.id,
     }
 }
 

@@ -33,7 +33,7 @@ fn check_shipped_only(rows: &[(Entry, StainGraph)]) {
                         )
                     });
                 }
-                Occupant::Custom(_) => {
+                Occupant::Custom(_) | Occupant::Pinned(_) => {
                     panic!(
                         "{}: node {} holds pasted text, not a shipped source",
                         e.id, n.id.0

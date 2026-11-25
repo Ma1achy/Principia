@@ -1710,9 +1710,19 @@ fn check_text(g: &[Node], want: &str) {
     );
 }
 
+/// The code `occupant` runs in a node of `kind`, as the key writes it: descriptive lines removed, a JSON string.
+fn code_json(kind: Kind, occupant: &Occupant) -> String {
+    let text = render::assemble::occupant_source(kind, occupant)
+        .unwrap_or_else(|e| panic!("{e}"))
+        .expect("an occupant with code");
+    serde_json::to_string(&render::assemble::key_text(&text)).unwrap_or_else(|e| panic!("{e}"))
+}
+
 fn defined_text() -> String {
+    let field = code_json(Kind::Source, &Occupant::Field("d_min".into()));
+    let combiner = code_json(Kind::Combiner, &Occupant::BuiltIn("pass_through".into()));
     format!(
-        r#"{{"nodes":[{{"inputs":[],"kind":"source","occupant":{{"field":"d_min"}}}},{{"inputs":[0],"kind":"colour","occupant":{{"custom":"{SHOW_INPUT}"}}}},{{"inputs":[1,null],"kind":"combiner","occupant":{{"builtin":"pass_through"}}}},{{"inputs":[2],"kind":"out","occupant":null}}]}}"#
+        r#"{{"nodes":[{{"inputs":[],"kind":"source","occupant":{{"code":{field}}}}},{{"inputs":[0],"kind":"colour","occupant":{{"code":"{SHOW_INPUT}"}}}},{{"inputs":[1,null],"kind":"combiner","occupant":{{"code":{combiner}}}}},{{"inputs":[2],"kind":"out","occupant":null}}]}}"#
     )
 }
 
@@ -1732,7 +1742,7 @@ fn canonical_hash_the_text_is_the_defined_form() {
     let c = stain(&g).canonical();
     assert!(
         c.text().ends_with(
-            r#"{"inputs":[2,0],"kind":"post","occupant":{"custom":"// @input mask\nfn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb; } // \"\\\t\u0001"}},{"inputs":[3],"kind":"out","occupant":null}]}"#
+            r#"{"inputs":[2,0],"kind":"post","occupant":{"code":"// @input mask\nfn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb; } // \"\\\t\u0001"}},{"inputs":[3],"kind":"out","occupant":null}]}"#
         ),
         "{}",
         c.text()

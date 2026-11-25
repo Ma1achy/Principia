@@ -81,13 +81,28 @@ const RENDER_TEXT: &str = "{\"debug_view\":false,\"hover\":{\"at\":null},\
 \"stain_graph\":{\"nodes\":[{\"id\":0,\"kind\":\"combiner\",\"occupant\":{\"builtin\":\"pass_through\"},\"params\":{}},\
 {\"id\":1,\"kind\":\"out\",\"occupant\":\"none\",\"params\":{}}],\"wires\":[{\"from\":0,\"port\":0,\"to\":1}]}}";
 
+/// [`RENDER_TEXT`] with the backbone's combiner as it is saved, by value: the shipped pass-through's id, hash and
+/// source, `version` null, keys in byte order.
+fn render_text_saved() -> String {
+    let e = render::registry::named(render::assemble::Kind::Combiner, "pass_through")
+        .expect("the pass-through combiner");
+    let saved = format!(
+        r#"{{"shader":{{"hash":"{}","id":"{}","source":{},"version":null}}}}"#,
+        engine::contract::stain::saved::hash(&e.source),
+        e.id,
+        serde_json::to_string(&e.source).expect("a string")
+    );
+    RENDER_TEXT.replace(r#"{"builtin":"pass_through"}"#, &saved)
+}
+
 fn check_skeleton(sim_text: &str, render_text: &str) {
     assert_eq!(
         sim_text, SIM_TEXT,
         "SimConfig's canonical text is not its groups in byte order"
     );
     assert_eq!(
-        render_text, RENDER_TEXT,
+        render_text,
+        render_text_saved(),
         "RenderState's canonical text is not its groups in byte order"
     );
 }
@@ -128,7 +143,7 @@ validation::negative_control!(
         "{\"chart\":{\"window\":{\"centre\":[0.5,0.5],\"half\":[0.5,0.5]},\"mapping\":[\"warped\",\"warped\"]},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{\"frame\":{\"normal\":5,\"tilt_x\":5,\"tilt_y\":5,\"tilt_map\":\"sheet\",\"tau1\":0,\"tau2\":0}},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\"links\":{\"alpha\":{\"id\":\"sigmoid_alpha\",\"params\":{}},\"beta\":{\"id\":\"periodic_beta\",\"params\":{}},\"mass\":{\"id\":\"softmax_tanh\",\"params\":{\"mu_max\":5}},\"momenta\":{\"id\":\"sigmoid_q\",\"params\":{\"q_max\":2}}},\"integrator\":{},\
 \"kernel_variant\":\"physics\",\"horizon\":{\"t\":0},\"collision\":{},\"quality\":{}}",
-        RENDER_TEXT
+        &render_text_saved()
     )
 );
 
