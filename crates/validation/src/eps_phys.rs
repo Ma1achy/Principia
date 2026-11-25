@@ -42,7 +42,8 @@ use crate::gate::{Gate, GateConfig};
 use crate::gauge::uniform;
 use crate::oklab::quantile;
 use crate::roundtrip::{
-    margins, registry, trip_against, widen, Against, DecodeAt, Precision, Registered, Sides, Trip,
+    composed, margins, registry, trip_against, widen, Against, DecodeAt, Precision, Registered,
+    Sides, Trip,
 };
 use ledger::constants::EPS_PHYS;
 
@@ -193,10 +194,11 @@ pub fn fuzz_row<R: Precision>(input: &Input) -> Row {
     row("latent z (8-D)", input.encode, Against::Decoded, xs)
 }
 
-/// Every row: each registered chart at f64 and f32, in the registry's order, then the 8-D interior.
+/// Every row: each registered chart at f64 and f32, in the registry's order, then each composed chart, then the 8-D
+/// interior.
 pub fn rows(input: &Input) -> Vec<Row> {
     let mut out = Vec::new();
-    for chart in registry() {
+    for chart in registry().into_iter().chain(composed()) {
         out.push(chart_row::<f64>(chart.as_ref(), input));
         out.push(chart_row::<f32>(chart.as_ref(), input));
     }

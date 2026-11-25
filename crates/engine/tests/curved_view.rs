@@ -40,6 +40,7 @@
 //! - `curved_tilt_frames`: the curved tilt family's interior frames, its record round trip, and a non-finite angle
 //!   refused (its criterion beside it).
 
+mod path_shim;
 mod path_support;
 
 use engine::contract::sim_config::Window;
@@ -48,8 +49,7 @@ use kernel::chart::construction::{HELD_K, HELD_LZ, NU0};
 use kernel::chart::saved::{ParentParams, SaveParent, Saved};
 use kernel::chart::tilt::{Placement, Shift, TiltMap, TiltSpec, Tiltable};
 use kernel::chart::{
-    Burrau, BurrauThetaLz, Chart as _, ChartDecode, HeldLz, InvariantLE, MassSimplex, RestStart,
-    ShapeSphere,
+    Burrau, BurrauThetaLz, Chart as _, ChartDecode, HeldLz, MassSimplex, RestStart, ShapeSphere,
 };
 use kernel::decode::{Decoded, Ic};
 use kernel::generated::links::{Defaults, LinkParams};
@@ -367,14 +367,8 @@ fn check_pivot(record: Record) {
     let a = free(&chart, window([0.45, 0.55], 0.25));
     let a = tilt(&a, &chart, sheet(25.0, 0.0, MASS));
     let a = Segment::zoom(&a, 0.5).expect("a zoom").b().clone();
-    let (seg, found) = Segment::lock_on_chart::<Defaults, InvariantLE<f64>, _>(
-        &a,
-        &chart,
-        (0.5, 0.5),
-        validation::roundtrip::phys,
-        &tol,
-    )
-    .expect("a lock at the centre");
+    let (seg, found) = Segment::lock_on_chart(&a, &path_shim::lockable(&chart), (0.5, 0.5), &tol)
+        .expect("a lock at the centre");
     let mut view = seg.b().clone();
     let pivot = view.pivot.expect("a pivot record");
     let state = chart

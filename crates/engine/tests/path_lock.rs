@@ -189,7 +189,7 @@ fn locked_mixed(window: Window, (s, t): (f64, f64)) -> View {
     let view = mixed_view(window);
     let tol = Tolerances::register(128.0 * f64::EPSILON);
     let (seg, _) =
-        Segment::lock_on_chart::<Defaults, _, _>(&view, &mixed(FROZEN), (s, t), phys, &tol)
+        Segment::lock_on_chart(&view, &path_shim::lockable(&mixed(FROZEN)), (s, t), &tol)
             .expect("a lock on the mixed chart");
     anchor::record(seg.b(), &leaves()).expect("a recorded anchor")
 }
@@ -280,11 +280,10 @@ fn hold_pairs() -> Vec<Pair> {
         sim.chart.window = Window::SQUARE;
         let view = View::kernel(&invariant_lk(), sim).expect("a registry chart");
         let tol = Tolerances::register(128.0 * f64::EPSILON);
-        let (seg, _) = Segment::lock_on_chart::<Defaults, _, _>(
+        let (seg, _) = Segment::lock_on_chart(
             &view,
-            &invariant_lk(),
+            &path_shim::lockable(&invariant_lk()),
             (0.4, 0.55),
-            phys,
             &tol,
         )
         .expect("a lock on the (L_z, K) chart");
@@ -1796,7 +1795,7 @@ fn pivoted_lock() -> View {
     let v = tilted_mixed(home(), 20.0);
     let tol = Tolerances::register(128.0 * f64::EPSILON);
     let (seg, _) =
-        Segment::lock_on_chart::<Defaults, _, _>(&v, &mixed(FROZEN), (0.5, 0.5), phys, &tol)
+        Segment::lock_on_chart(&v, &path_shim::lockable(&mixed(FROZEN)), (0.5, 0.5), &tol)
             .expect("a lock");
     let locked = anchor::record(seg.b(), &switch_leaves()).expect("recorded");
     assert!(
@@ -2275,7 +2274,7 @@ fn sweep(against: &dyn Fn(&Anchor) -> Ic<f64>) -> (Vec<f64>, Vec<f64>) {
     for &(s, t) in &grid {
         // (1) The (L_z, K) chart to latent; a pin whose lock is refused (not a system there) is counted.
         let locked =
-            Segment::lock_on_chart::<Defaults, _, _>(&lk, &invariant_lk(), (s, t), phys, &tol);
+            Segment::lock_on_chart(&lk, &path_shim::lockable(&invariant_lk()), (s, t), &tol);
         if locked.is_err() {
             skipped.push((s, t));
         }
@@ -3031,7 +3030,7 @@ fn try_locked_mixed(window: Window, (s, t): (f64, f64)) -> Result<View, String> 
     let view = mixed_view(window);
     let tol = Tolerances::register(128.0 * f64::EPSILON);
     let (seg, _) =
-        Segment::lock_on_chart::<Defaults, _, _>(&view, &mixed(FROZEN), (s, t), phys, &tol)
+        Segment::lock_on_chart(&view, &path_shim::lockable(&mixed(FROZEN)), (s, t), &tol)
             .map_err(|e| format!("{e:?}"))?;
     anchor::record(seg.b(), &leaves()).map_err(|e| format!("{e:?}"))
 }
@@ -3226,7 +3225,7 @@ fn tolerance_window(
                         };
                         sweep_case(&c, &rest_leaves(), at, frames, against)
                     }),
-                _ => Segment::lock_on_chart::<Defaults, _, _>(&lk, &invariant_lk(), st, phys, &tol)
+                _ => Segment::lock_on_chart(&lk, &path_shim::lockable(&invariant_lk()), st, &tol)
                     .map_err(|e| ("the lock", format!("{e:?}")))
                     .and_then(|(seg, _)| {
                         anchor::record(seg.b(), &leaves())

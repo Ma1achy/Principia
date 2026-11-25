@@ -49,7 +49,7 @@ use kernel::chart::invariant::Invariant;
 use kernel::chart::InvariantLK;
 use kernel::decode::{decode_at, Ic, Latent as KernelLatent};
 use kernel::generated::links::{
-    Defaults, LinkParams, PeriodicBeta, Select, SoftsignAlpha, StickBreaking, TanhQ,
+    LinkParams, PeriodicBeta, Select, SoftsignAlpha, StickBreaking, TanhQ,
 };
 use ledger::links::{self as registry};
 use path_shim::set_on_chart;
@@ -57,7 +57,6 @@ use proptest::prelude::*;
 use serde_json::Value;
 use validation::negative_control;
 use validation::prop::run;
-use validation::roundtrip::phys;
 
 // ---- shared ----
 
@@ -807,8 +806,7 @@ fn check_lock_undo(send: Send) {
     start.links = Links::defaults();
     start.chart.window = window;
     let mut st = store(start.clone());
-    let first =
-        set_on_chart::<Defaults, _, _>(&lk(), &window, 0.7, 0.35, phys, &tol()).expect("a lock");
+    let first = set_on_chart(&lk(), &window, 0.7, 0.35, &tol()).expect("a lock");
     assert!(
         first
             .edits
@@ -829,8 +827,7 @@ fn check_lock_undo(send: Send) {
         "the lock is not one history entry"
     );
     // A second lock, re-centred again, under a fresh key: a second entry.
-    let second = set_on_chart::<Defaults, _, _>(&lk(), &first.window, 0.25, 0.6, phys, &tol())
-        .expect("a lock");
+    let second = set_on_chart(&lk(), &first.window, 0.25, 0.6, &tol()).expect("a lock");
     send(&mut st, second.edits.to_vec(), 8);
     assert_eq!(
         st.snapshot().history.undo_depth,

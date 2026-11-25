@@ -554,6 +554,11 @@ pub mod charts {
         Mixed::new(of(base()), of([0.1, 1.4]), of([-1.0, 1.0]))
     }
 
+    /// The registered pair `(z_μ1, α)`'s chart.
+    pub fn mixed_mu1_alpha<P: Precision>() -> Mixed<ZMu1, Alpha, P> {
+        Mixed::new(of(base()), of([-1.0, 1.0]), of([0.25, 1.3]))
+    }
+
     /// A mixed chart of two latent coordinates, `z_μ1` and `z_q2`.
     pub fn mixed_latent<P: Precision>() -> Mixed<ZMu1, ZQ2, P> {
         Mixed::new(of(base()), of([-1.0, 1.0]), of([-1.0, 1.0]))
@@ -645,4 +650,95 @@ pub fn registry() -> Vec<Box<dyn Registered>> {
         .into_iter()
         .map(|k| chart(k).unwrap_or_else(|| panic!("the registry lists {k} and holds none")))
         .collect()
+}
+
+/// A composed chart (`engine::chart_authoring::composed`) as the gate reads a chart: decoded through the lowering of its
+/// registered pair, at both precisions.
+struct ComposedEntry {
+    key: &'static str,
+    name: &'static str,
+    composed: engine::chart_authoring::composed::Composed,
+}
+
+impl Registered for ComposedEntry {
+    fn key(&self) -> &'static str {
+        self.key
+    }
+
+    fn type_name(&self) -> &'static str {
+        self.name
+    }
+
+    fn decode64(&self, u: f64, v: f64) -> Decoded<f64> {
+        self.composed.decode(u, v)
+    }
+
+    fn decode32(&self, u: f32, v: f32) -> Decoded<f32> {
+        self.composed
+            .decode32(u, v)
+            .expect("the composed chart holds its f32 form")
+    }
+}
+
+/// Every chart of `kernel::chart::REGISTRY`, composed from its registered pair (`engine::chart_authoring::registry`)
+/// and decoded through `resolve`'s lowering, at the representatives [`charts`] holds. The gate's interior set takes these
+/// beside [`registry`]'s.
+pub fn composed() -> Vec<Box<dyn Registered>> {
+    use engine::chart_authoring::composed::{Charts, Composed};
+    use engine::chart_authoring::registry::{AxisSpec, ChartSpec, Primitive, Registry, PAIRS};
+    use engine::chart_authoring::validate::validate_spec;
+    use engine::lookup::Fill;
+    use kernel::chart::ChartDecode;
+
+    fn spec(name: &str) -> ChartSpec {
+        if name == "Latent" {
+            let l = charts::latent::<f64>();
+            let dir = |q| AxisSpec::of(Primitive::Direction(q));
+            return ChartSpec::new(dir(l.q1), dir(l.q2), l.z0);
+        }
+        let (h, v, _, _) = PAIRS
+            .iter()
+            .find(|p| p.2 == name)
+            .unwrap_or_else(|| panic!("{name}: no registered pair"));
+        ChartSpec::new(AxisSpec::pick(h), AxisSpec::pick(v), [0.0; 8])
+    }
+    fn entry<A, B>(key: &'static str, name: &'static str, a: A, b: B) -> Box<dyn Registered>
+    where
+        A: Fill + 'static,
+        f64: From<A::Param>,
+        B: ChartDecode<Param = f32> + 'static,
+    {
+        let valid = validate_spec(&Registry::standard(), &spec(name))
+            .unwrap_or_else(|e| panic!("{name}'s pair is refused: {e:?}"));
+        let table = Charts::new().with(name, a).with_f32(name, b);
+        let composed = Composed::new(&valid, table)
+            .unwrap_or_else(|e| panic!("{name}'s pair does not compose: {e:?}"));
+        Box::new(ComposedEntry {
+            key,
+            name,
+            composed,
+        })
+    }
+    macro_rules! at {
+        ($key:literal, $name:literal, $ctor:ident) => {
+            entry($key, $name, charts::$ctor::<f64>(), charts::$ctor::<f32>())
+        };
+    }
+    vec![
+        at!("composed latent", "Latent", latent),
+        at!("composed shape_sphere", "ShapeSphere", shape_sphere),
+        at!("composed burrau", "Burrau", burrau),
+        at!("composed euclid_plane", "EuclidPlane", euclid_plane),
+        at!("composed burrau_theta_k", "BurrauThetaK", burrau_theta_k),
+        at!("composed burrau_theta_lz", "BurrauThetaLz", burrau_theta_lz),
+        at!(
+            "composed burrau_theta_delta_m",
+            "BurrauThetaDeltaM",
+            burrau_theta_delta_m
+        ),
+        at!("composed invariant_le", "InvariantLE", invariant_le),
+        at!("composed invariant_lk", "InvariantLK", invariant_lk),
+        at!("composed mass_simplex", "MassSimplex", mass_simplex),
+        at!("composed mixed", "Mixed", mixed_mu1_alpha),
+    ]
 }

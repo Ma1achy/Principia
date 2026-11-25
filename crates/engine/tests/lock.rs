@@ -301,11 +301,11 @@ fn check_chart_lock<C>(
     centred: fn(&Window, &Window) -> Window,
     edits: fn(&ChartLock) -> Vec<SetField>,
 ) where
-    C: kernel::encode::by_kind::ByKind<Param = f64> + FrozenControls + Rebuild,
+    C: engine::lookup::Fill<Param = f64> + FrozenControls + Rebuild + Clone + 'static,
 {
     let [u, v] = window.at(s, t);
     let clicked = chart.decode_at::<Defaults, f64>(u, v).ic;
-    let lock = set_on_chart::<Defaults, C, _>(chart, window, s, t, phys, &tol()).expect("a lock");
+    let lock = set_on_chart(chart, window, s, t, &tol()).expect("a lock");
     let mut before = sim(oblique_plane());
     before.chart.window = *window;
     let mut st = store(before);
@@ -446,10 +446,9 @@ fn lock_set_refuses_a_point_that_is_not_a_system() {
         centre: [u, 0.5],
         half: [0.5, 0.5],
     };
-    let edge = set_on_chart::<Defaults, _, _>(&chart, &at(1.0), 0.5, 0.5, phys, &tol());
+    let edge = set_on_chart(&chart, &at(1.0), 0.5, 0.5, &tol());
     assert!(edge.is_ok(), "the parabola's edge is refused: {edge:?}");
-    let past =
-        set_on_chart::<Defaults, _, _>(&chart, &at(1.0f64.next_up()), 0.5, 0.5, phys, &tol());
+    let past = set_on_chart(&chart, &at(1.0f64.next_up()), 0.5, 0.5, &tol());
     assert!(
         matches!(
             past,
@@ -461,7 +460,7 @@ fn lock_set_refuses_a_point_that_is_not_a_system() {
         "a point past the parabola is locked: {past:?}"
     );
     assert_eq!(
-        set_on_chart::<Defaults, _, _>(&chart, &SQUARE, f64::NAN, 0.5, phys, &tol()),
+        set_on_chart(&chart, &SQUARE, f64::NAN, 0.5, &tol()),
         Err(LockError::NonFinite)
     );
     let wide = Window {
@@ -469,7 +468,7 @@ fn lock_set_refuses_a_point_that_is_not_a_system() {
         half: [f64::MAX, 0.5],
     };
     assert_eq!(
-        set_on_chart::<Defaults, _, _>(&chart, &wide, 1.0, 0.5, phys, &tol()),
+        set_on_chart(&chart, &wide, 1.0, 0.5, &tol()),
         Err(LockError::NonFinite),
         "a chart point past f64's range is not locked"
     );
@@ -479,7 +478,7 @@ fn lock_set_refuses_a_point_that_is_not_a_system() {
     };
     assert!(
         matches!(
-            set_on_chart::<Defaults, _, _>(&mixed(), &SQUARE, 0.3, 0.8, phys, &strict),
+            set_on_chart(&mixed(), &SQUARE, 0.3, 0.8, &strict),
             Err(LockError::Refused(_))
         ),
         "a state the ladder refuses is locked"
@@ -495,7 +494,7 @@ negative_control!(
             centre: [1.0, 0.5],
             half: [0.5, 0.5],
         };
-        let r = set_on_chart::<Defaults, _, _>(&invariant_le(), &at, 0.5, 0.5, phys, &tol());
+        let r = set_on_chart(&invariant_le(), &at, 0.5, 0.5, &tol());
         assert!(r.is_err(), "the edge is refused");
     }
 );
@@ -789,8 +788,7 @@ fn lock_setfields() {
         unlock(&locked).expect("locked"),
     ];
     check_setfields(&more);
-    let chart =
-        set_on_chart::<Defaults, _, _>(&mixed(), &SQUARE, 0.4, 0.3, phys, &tol()).expect("a lock");
+    let chart = set_on_chart(&mixed(), &SQUARE, 0.4, 0.3, &tol()).expect("a lock");
     check_setfields(&chart.edits);
     let nearest = Nearest {
         lz: 0.0,
@@ -1641,8 +1639,7 @@ fn check_window_undo(send: Send) {
     let mut free = sim(oblique_plane());
     free.chart.window = window;
     let mut st = store(free.clone());
-    let lock =
-        set_on_chart::<Defaults, _, _>(&mixed(), &window, 0.3, 0.8, phys, &tol()).expect("a lock");
+    let lock = set_on_chart(&mixed(), &window, 0.3, 0.8, &tol()).expect("a lock");
     assert_ne!(lock.window, window, "the lock did not move the window");
     send(&mut st, lock.edits.clone());
     let locked = now(&mut st);

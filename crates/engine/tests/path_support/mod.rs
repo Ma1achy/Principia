@@ -14,6 +14,9 @@
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use engine::chart_authoring::composed::{Charts, Composed};
+use engine::chart_authoring::registry::{AxisSpec, ChartSpec, Primitive, Registry, PAIRS};
+use engine::chart_authoring::validate::validate_spec;
 use engine::contract::canonical;
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{
@@ -421,4 +424,194 @@ pub fn presets() -> Vec<(String, Plane)> {
             )
         })
         .collect()
+}
+
+// ── The charts of the composition's baseline ───────────────────────────────────────────────────────────────────────
+
+/// What visits each kernel chart the composition covers, with the window its baseline digest is read through.
+pub trait Visit {
+    /// One chart `name` of `kernel::chart::REGISTRY`, built as its stored baseline built it.
+    fn chart<C>(&mut self, name: &'static str, chart: C, window: Window)
+    where
+        C: engine::lookup::Fill + 'static,
+        f64: From<C::Param>;
+}
+
+/// The window the chart switch shows `chart` in, from the latent view at the origin.
+fn switched<C: kernel::chart::Chart>(chart: &C) -> Window {
+    let zero = || Plane {
+        z0: [0.0; 8],
+        q1: [0.0; 8],
+        q2: [0.0; 8],
+    };
+    let from = engine::path::View::latent(sim(zero()));
+    let to = engine::path::View::kernel(chart, sim(zero())).expect("a view");
+    engine::path::Segment::chart_switch(&from, to)
+        .b()
+        .sim
+        .chart
+        .window
+}
+
+/// Every chart of `kernel::chart::REGISTRY` the composition covers, each once: the latent chart (an oblique plane
+/// through every block) and each registered pair's chart, `Mixed` as its `(z_μ1, α)` pair.
+pub fn each_chart(v: &mut impl Visit) {
+    use validation::roundtrip::charts;
+    let sq = Window::SQUARE;
+    v.chart("Latent", charts::latent::<f64>(), sq);
+    let s = sphere();
+    let w = switched(&s);
+    v.chart("ShapeSphere", s, w);
+    v.chart("Burrau", charts::burrau::<f64>(), sq);
+    v.chart("EuclidPlane", charts::euclid_plane::<f64>(), sq);
+    v.chart("BurrauThetaK", charts::burrau_theta_k::<f64>(), sq);
+    v.chart("BurrauThetaLz", charts::burrau_theta_lz::<f64>(), sq);
+    v.chart(
+        "BurrauThetaDeltaM",
+        charts::burrau_theta_delta_m::<f64>(),
+        sq,
+    );
+    let le = invariant_le();
+    let w = switched(&le);
+    v.chart("InvariantLE", le, w);
+    v.chart("InvariantLK", invariant_lk(), sq);
+    v.chart("MassSimplex", charts::mass_simplex::<f64>(), sq);
+    let m = mixed();
+    let w = switched(&m);
+    v.chart("Mixed", m, w);
+}
+
+// ── The inverses' words ────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The entries every chart is looked up with besides its own decoded states.
+pub fn entries() -> Vec<engine::lookup::Exact> {
+    use engine::lookup::Exact;
+    vec![
+        Exact::Pythagorean { m: 2, n: 1 },
+        Exact::Triple([3, 4, 5]),
+        Exact::Raw([0.3, -0.2, 0.1, 0.4, -0.3, 0.2, 0.15, -0.25]),
+    ]
+}
+
+/// The partial entries.
+pub fn partials() -> Vec<engine::lookup::Partial> {
+    use engine::lookup::Partial;
+    vec![
+        Partial {
+            masses: Some([0.5, 0.3, 0.2]),
+            ..Partial::default()
+        },
+        Partial {
+            positions: Some([[0.0, 0.0], [1.0, 0.0], [0.4, 0.8]]),
+            ..Partial::default()
+        },
+        Partial {
+            momenta: Some([[0.1, 0.0], [-0.05, 0.05], [-0.05, -0.05]]),
+            ..Partial::default()
+        },
+    ]
+}
+
+/// What a chart does, however it is reached: the operations whose words `inverses.json` holds.
+pub trait Ops {
+    fn decode(&self, u: f64, v: f64) -> Ic<f64>;
+    fn encode(&self, ic: &Ic<f64>) -> kernel::encode::by_kind::ChartEncoded<f64>;
+    fn lookup(
+        &self,
+        e: &engine::lookup::Exact,
+    ) -> Result<engine::lookup::Locked, engine::lookup::Rejected>;
+    fn partial(
+        &self,
+        p: &engine::lookup::Partial,
+    ) -> Result<engine::lookup::Locked, engine::lookup::Rejected>;
+    fn ingest(&self, ic: &Ic<f64>) -> kernel::encode::ingest::Ingested<f64>;
+}
+
+/// FNV-1a 64 of the text of `parts`, as a word.
+fn word(parts: &[String]) -> String {
+    format!("{:016x}", fnv(parts.join("\n").as_bytes()))
+}
+
+/// The states a chart is probed with: its decoded states at the probe, each also with a momentum moved.
+pub fn states(ops: &dyn Ops, window: &Window) -> Vec<Ic<f64>> {
+    let mut out = Vec::new();
+    for t in PROBE {
+        for s in PROBE {
+            let [u, v] = window.at(s, t);
+            let ic = ops.decode(u, v);
+            let mut moved = ic;
+            moved.p[1][1] += 0.07;
+            out.push(ic);
+            out.push(moved);
+        }
+    }
+    out
+}
+
+/// `name`'s four words by `ops`, `flip` applied to each decoded state first.
+pub fn inverse_words(
+    name: &str,
+    ops: &dyn Ops,
+    window: &Window,
+    flip: fn(&mut Ic<f64>),
+    out: &mut BTreeMap<String, String>,
+) {
+    let mut states = states(ops, window);
+    states.iter_mut().for_each(flip);
+    let text = |x: &dyn std::fmt::Debug| format!("{x:?}");
+    let encode: Vec<String> = states.iter().map(|ic| text(&ops.encode(ic))).collect();
+    let exact: Vec<String> = states
+        .iter()
+        .map(|ic| engine::lookup::Exact::Physical(*ic))
+        .chain(entries())
+        .map(|e| text(&ops.lookup(&e)))
+        .collect();
+    let partial: Vec<String> = partials().iter().map(|p| text(&ops.partial(p))).collect();
+    let ingested: Vec<String> = states.iter().map(|ic| text(&ops.ingest(ic))).collect();
+    for (what, parts) in [
+        ("encode", encode),
+        ("lookup", exact),
+        ("partial", partial),
+        ("ingest", ingested),
+    ] {
+        out.insert(format!("{name}/{what}"), word(&parts));
+    }
+}
+
+// ── Composed charts ────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The spec of a chart: the registered pair of `name`, or for the latent chart its plane's directions.
+pub fn spec_of(name: &str) -> ChartSpec {
+    if name == "Latent" {
+        let l = validation::roundtrip::charts::latent::<f64>();
+        let dir = |q| AxisSpec::of(Primitive::Direction(q));
+        return ChartSpec::new(dir(l.q1), dir(l.q2), l.z0);
+    }
+    let (h, v, _, _) = PAIRS
+        .iter()
+        .find(|p| p.2 == name)
+        .unwrap_or_else(|| panic!("{name}: no registered pair"));
+    ChartSpec::new(AxisSpec::pick(h), AxisSpec::pick(v), [0.0; 8])
+}
+
+/// The composed chart of `name` over `chart`.
+pub fn compose<C>(name: &'static str, chart: C) -> Composed
+where
+    C: engine::lookup::Fill + 'static,
+    f64: From<C::Param>,
+{
+    let v = validate_spec(&Registry::standard(), &spec_of(name)).expect("the pair validates");
+    Composed::new(&v, Charts::new().with(name, chart)).expect("the pair composes")
+}
+
+/// The decode word of `decode` at the probe through `window`, in the digest's form.
+pub fn decode_word(decode: impl Fn(f64, f64) -> Ic<f64>, window: &Window) -> String {
+    let mut bytes = Vec::new();
+    for t in PROBE {
+        for s in PROBE {
+            let [u, v] = window.at(s, t);
+            ic_words(&decode(u, v), &mut bytes);
+        }
+    }
+    format!("ic={:016x}", fnv(&bytes))
 }

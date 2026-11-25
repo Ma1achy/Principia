@@ -22,15 +22,13 @@
 use kernel::chart::tilt::{Placement, Shift, Tilt, TiltSpec};
 use kernel::chart::{Float, ValidationResult};
 use kernel::decode::Ic;
-use kernel::encode::by_kind::ByKind;
-use kernel::encode::SimplexClamp;
-use kernel::generated::links::Selection;
 
 use super::family::edit;
+use crate::chart_authoring::composed::{Composed, Hidden};
 use crate::contract::set_field::{SetField, SimField};
 use crate::contract::sim_config::{Latent, Lock, Plane, SimConfig, Window, LATENT_DIM};
-use crate::lock::{finite, point, FrozenControls, LockError, Nearest};
-use crate::lookup::{self, Exact, Notices, Tolerances};
+use crate::lock::{finite, point, LockError, Nearest};
+use crate::lookup::{Exact, Notices, Tolerances};
 
 /// The lock group's edit: the flag and the anchor `z_locked`.
 fn lock_group(z_locked: Latent) -> SetField {
@@ -68,21 +66,14 @@ pub struct ChartLock {
 /// `z_locked` the controls the chart's axes set, every other control the chart's frozen one, bit for bit. The edit is the
 /// lock group's alone: the window is not re-centred, so the pinned pixel is the clicked pixel of the same chart through
 /// the same window, and decodes the clicked state bit for bit.
-pub(crate) fn set_on_chart<S, C, N>(
-    chart: &C,
+pub(crate) fn set_on_chart(
+    chart: &Composed,
+    hidden: &Hidden,
     window: &Window,
     s: f64,
     t: f64,
-    norm: N,
     tol: &Tolerances,
-) -> Result<(SetField, ChartLock), LockError>
-where
-    S: Selection,
-    S::MassLink: SimplexClamp,
-    C: ByKind + FrozenControls,
-    f64: From<C::Param>,
-    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
-{
+) -> Result<(SetField, ChartLock), LockError> {
     finite(&[s, t])?;
     let [u, v] = window.at(s, t);
     finite(&[u, v])?;
@@ -90,13 +81,13 @@ where
         ValidationResult::Valid => {}
         refused => return Err(LockError::NotASystem(refused)),
     }
-    let ic = chart.decode_at::<S, f64>(u, v).ic;
-    let locked = lookup::lookup::<S, C, N>(chart, &Exact::Physical(ic), norm, tol)
+    let ic = chart.decode(u, v).ic;
+    let locked = chart
+        .lookup(&Exact::Physical(ic), tol)
         .map_err(LockError::Refused)?;
-    let (frozen, set) = (chart.frozen(), chart.set_by_axes());
-    let z_locked: Latent = std::array::from_fn(|k| match set[k] {
+    let z_locked: Latent = std::array::from_fn(|k| match hidden.set_by_axes[k] {
         true => locked.z[k],
-        false => frozen[k],
+        false => hidden.frozen[k],
     });
     Ok((
         lock_group(z_locked),

@@ -22,14 +22,14 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+use engine::chart_authoring::composed::Composed;
 use kernel::decode::Ic;
-use kernel::encode::ingest::{ingest, Ingested};
+use kernel::encode::ingest::Ingested;
 use kernel::generated::links::Defaults;
 use ledger::constants::LITERATURE_IMPORT_TOL;
 
 use crate::gate::report::{GateReport, RegionCount, Regions, Verdict};
 use crate::gate::{Gate, GateConfig};
-use crate::roundtrip::phys;
 
 /// The gate's name, its directory under `fixtures/gates/`.
 pub const NAME: &str = "literature-import";
@@ -187,7 +187,7 @@ impl Imported {
 /// Imports `s`: its unit state, ingested under the defaults links with Part 4's norm, and multiplied back.
 pub fn import(s: &Start) -> Result<Imported, String> {
     let ic = unit_state(s)?;
-    let ingested = ingest::<Defaults, f64, _>(&ic, phys);
+    let ingested = Composed::free().ingest::<Defaults>(&ic);
     let rescale = Rescale {
         mass: s.m[0] + s.m[1] + s.m[2],
         g: s.g,

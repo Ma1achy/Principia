@@ -38,12 +38,10 @@ use engine::path::{Constructor, Pin, Segment, View};
 use kernel::chart::tilt::{Tilt, TiltMap, TiltSpec, Tiltable, Tilted};
 use kernel::chart::ChartDecode;
 use kernel::decode::Ic;
-use kernel::encode::by_kind::ByKind;
 use kernel::generated::links::Defaults;
 use path_shim::sim_of;
 use path_support::*;
 use validation::negative_control;
-use validation::roundtrip::phys;
 
 /// What runs the lock and the tilt: the object, or a control's stand-in.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -97,16 +95,15 @@ fn lock(a: &View, (s, t): (f64, f64), variant: Variant) -> View {
 /// The lock of the kernel view `a` on `chart` at `(s, t)`, by the variant, and the clicked state.
 fn chart_lock<C>(a: &View, chart: &C, at: (f64, f64), variant: Variant) -> (View, Ic<f64>)
 where
-    C: ByKind + engine::lock::FrozenControls,
+    C: engine::lookup::Fill + engine::lock::FrozenControls + Clone + 'static,
     f64: From<C::Param>,
 {
     let tol = Tolerances::register(128.0 * f64::EPSILON);
+    let composed = path_shim::lockable(chart);
     let (seg, found) = match variant {
         #[cfg(feature = "controls")]
-        Variant::Recentres => {
-            Segment::lock_on_chart_centred::<Defaults, C, _>(a, chart, at, phys, &tol)
-        }
-        _ => Segment::lock_on_chart::<Defaults, C, _>(a, chart, at, phys, &tol),
+        Variant::Recentres => Segment::lock_on_chart_centred(a, &composed, at, &tol),
+        _ => Segment::lock_on_chart(a, &composed, at, &tol),
     }
     .expect("a lock");
     (seg.b().clone(), found.ic)
@@ -378,7 +375,12 @@ const SPAN: [f64; 2] = [2.0, 2.0];
 /// clicked state under each.
 fn check_chart<C>(name: &str, chart: &C, [x, y]: [u32; 2], variant: Variant)
 where
-    C: ByKind + engine::lock::FrozenControls + ChartDecode + Tiltable<Param = f64> + Copy,
+    C: engine::lookup::Fill
+        + engine::lock::FrozenControls
+        + ChartDecode
+        + Tiltable<Param = f64>
+        + Copy
+        + 'static,
     f64: From<<C as kernel::chart::Chart>::Param>,
 {
     for at in CHART_PINS {

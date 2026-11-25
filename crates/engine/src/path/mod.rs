@@ -37,9 +37,6 @@ use kernel::chart::saved::{Composed, ParentParams, SaveParent, Saved};
 use kernel::chart::tilt::{latent_basis, LatentFrame, Placement, Tiltable, Tilted};
 use kernel::chart::{Latent as LatentChart, REGISTRY};
 use kernel::decode::Ic;
-use kernel::encode::by_kind::ByKind;
-use kernel::encode::SimplexClamp;
-use kernel::generated::links::Selection;
 use serde::{Deserialize, Serialize};
 
 pub use curved::{held_k, CurvedTilt, Pivot, SliderSpan, LATENT_SPAN, NU0_SPAN};
@@ -50,9 +47,10 @@ pub use record::{Align, FrameRecord, Version};
 pub use stop::{Gate, Numbers};
 pub use timing::{Easing, MonotoneTable, Timing};
 
+use crate::chart_authoring::composed::Composed as ComposedChart;
 use crate::contract::set_field::{Edit, SetField, SimField};
 use crate::contract::sim_config::{Latent, Plane, SimConfig, Window};
-use crate::lock::{point, FrozenControls, LockError, Nearest};
+use crate::lock::{point, LockError, Nearest};
 use crate::lookup::Tolerances;
 use crate::nav::{BasisVector, NavError};
 
@@ -116,9 +114,14 @@ pub struct KernelMap {
 impl KernelMap {
     /// The kernel map of `chart`; [`PathError::WrongMap`] for a chart the registry does not name.
     pub fn of<C: kernel::chart::Chart>(chart: &C) -> Result<Self, PathError> {
+        Self::named(chart.name())
+    }
+
+    /// The kernel map named `name`; [`PathError::WrongMap`] for a name the registry does not hold.
+    pub fn named(name: &str) -> Result<Self, PathError> {
         REGISTRY
             .iter()
-            .position(|name| *name == chart.name())
+            .position(|n| *n == name)
             .map(|i| KernelMap { registry: i as u32 })
             .ok_or(PathError::WrongMap)
     }
@@ -1308,13 +1311,11 @@ impl Segment {
     /// Centre on pin on the nonlinear `chart`: the window's centre moved to the pin's chart point, and `z₀` the
     /// centre's controls, `z_locked`'s where the chart's axes set them, the chart's frozen ones elsewhere; the pin is then
     /// the centre. A cut labelled `CentreOnPin`.
-    pub fn centre_on_pin_chart<C>(a: &View, chart: &C) -> Result<Self, PathError>
-    where
-        C: kernel::chart::Chart + FrozenControls,
-    {
-        if a.map != Map::Kernel(KernelMap::of(chart)?) {
+    pub fn centre_on_pin_chart(a: &View, chart: &ComposedChart) -> Result<Self, PathError> {
+        if a.map != Map::Kernel(KernelMap::named(&chart.name())?) {
             return Err(PathError::WrongMap);
         }
+        let hidden = chart.hidden().ok_or(PathError::WrongMap)?;
         let pin = a.pin.ok_or(LockError::NotLocked)?;
         let held = match pin {
             Pin::At {
@@ -1327,7 +1328,7 @@ impl Segment {
                 .window
                 .at(other.address()[0], other.address()[1]),
         };
-        let edits = lock::centre_on_pin_chart(&a.sim, chart.frozen(), chart.set_by_axes(), held);
+        let edits = lock::centre_on_pin_chart(&a.sim, hidden.frozen, hidden.set_by_axes, held);
         let seg = Self::of(a, cut(CutLabel::CentreOnPin), Vec::from(edits));
         Ok(seg.pinned(Some(Pin::Centre)))
     }
@@ -1337,26 +1338,18 @@ impl Segment {
     /// so the pinned pixel decodes the clicked state bit for bit. A cut labelled `Lock`, and what the lock found. On a
     /// tilted curved view the lock is placed at the centre only, where the tilt is anchor-preserving, and the view gains
     /// R-899's pivot record there ([`Pivot`]); off the centre it is the untilt's (R-899 (a1)), not built.
-    pub fn lock_on_chart<S, C, N>(
+    pub fn lock_on_chart(
         a: &View,
-        chart: &C,
+        chart: &ComposedChart,
         (s, t): (f64, f64),
-        norm: N,
         tol: &Tolerances,
-    ) -> Result<(Self, ChartLock), PathError>
-    where
-        S: Selection,
-        S::MassLink: SimplexClamp,
-        C: ByKind + FrozenControls,
-        f64: From<C::Param>,
-        N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
-    {
-        if a.map != Map::Kernel(KernelMap::of(chart)?) {
+    ) -> Result<(Self, ChartLock), PathError> {
+        if a.map != Map::Kernel(KernelMap::named(&chart.name())?) {
             return Err(PathError::WrongMap);
         }
+        let hidden = chart.hidden().ok_or(PathError::WrongMap)?;
         let pivot = pivot_at(a, (s, t))?;
-        let (e, found) =
-            lock::set_on_chart::<S, C, N>(chart, &a.sim.chart.window, s, t, norm, tol)?;
+        let (e, found) = lock::set_on_chart(chart, hidden, &a.sim.chart.window, s, t, tol)?;
         let mut seg = Self::of(a, cut(CutLabel::Lock), vec![e]).pinned(Some(Pin::at(a, s, t)));
         seg.b.pivot = pivot;
         Ok((seg, found))
@@ -1364,21 +1357,13 @@ impl Segment {
 
     /// The lock on the nonlinear `chart` with the centre-on-pin setting on: the lock and centre on pin in one command,
     /// `z₀`, the lock group and the window, the pin at the centre. A cut labelled `LockRecentre`.
-    pub fn lock_on_chart_centred<S, C, N>(
+    pub fn lock_on_chart_centred(
         a: &View,
-        chart: &C,
+        chart: &ComposedChart,
         at: (f64, f64),
-        norm: N,
         tol: &Tolerances,
-    ) -> Result<(Self, ChartLock), PathError>
-    where
-        S: Selection,
-        S::MassLink: SimplexClamp,
-        C: ByKind + FrozenControls,
-        f64: From<C::Param>,
-        N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
-    {
-        let (locked, found) = Self::lock_on_chart::<S, C, N>(a, chart, at, norm, tol)?;
+    ) -> Result<(Self, ChartLock), PathError> {
+        let (locked, found) = Self::lock_on_chart(a, chart, at, tol)?;
         let centred = Self::centre_on_pin_chart(locked.b(), chart)?;
         let seg = Self::joined(a, &[locked, centred], CutLabel::LockRecentre);
         Ok((seg, found))
