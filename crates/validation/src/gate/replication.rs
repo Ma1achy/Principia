@@ -8,8 +8,8 @@
 //! `--propose` prints the target's calibration proposal and `--render` writes its figure beside the paper's, each the
 //! target's own; a target without one refuses the flag.
 //!
-//! No target is registered yet ([`TARGETS`]): the first are M9's. Burrau's anchors are not targets here: they are
-//! internal and blocking, under `cargo xtask gate burrau-smoke` (`super::burrau`).
+//! The registered targets are [`TARGETS`]. Burrau's anchors are not targets here: they are internal and blocking,
+//! under `cargo xtask gate burrau-smoke` (`super::burrau`).
 
 use std::path::{Path, PathBuf};
 
@@ -68,8 +68,8 @@ pub trait Target: Sync {
     }
 }
 
-/// The registered targets. None yet: M9's targets register here.
-pub const TARGETS: &[&dyn Target] = &[];
+/// The registered targets.
+pub const TARGETS: &[&dyn Target] = &[&super::butterfly_periods::BG4];
 
 /// The command's name, as `cargo xtask gate` takes it.
 pub const NAME: &str = "replication";
