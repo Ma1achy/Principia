@@ -481,13 +481,14 @@ fn check_cache_hit(second: &[Node]) {
     let k1 = PipelineKey::new(&stain(&first), Tier::FULL);
     let k2 = PipelineKey::new(&stain(second), Tier::FULL);
     assert_eq!(k1.fragment, stain(&first).canonical().fragment_key());
+    // Before the request: the compile runs on a worker, which a control's thread-local probe does not reach.
+    assert_eq!(k2, k1, "the same stain built two ways gives two keys");
     assert_eq!((k1.has_ftle, k1.has_word), (true, true));
     assert_eq!(k1.tier(), Tier::FULL);
     assert_eq!(r.request(&first), Requested::Queued);
     assert_eq!(r.rl.cache().compiles(), 1);
     let compiled = Arc::clone(r.rl.cache().current().expect("compiled"));
     assert_eq!(compiled.key(), k1);
-    assert_eq!(k2, k1, "the same stain built two ways gives two keys");
     let got =
         r.rl.cache()
             .request(&stain(second), &keys(second), Tier::FULL)
