@@ -11,7 +11,9 @@
 //! - `L_z` ([`AxisLz`]): `L_z = (2t − 1)·L_max`, `L_max = √(2·I·K)` at the chart's held `K`, `I = 1`.
 //! - The virial ratio ([`AxisVirial`]; chart_reference §2.1's paragraph) over the asked range `[Q_lo, Q_hi]`
 //!   ([`MixedEnergy::virial`]; [`MixedEnergy::new`]'s is `[0, Q_max]`): `Q = Q₀ + (Q_hi − Q₀)·t^γ_K`,
-//!   `Q₀ = max(Q_lo, 0)`, `K* = L_z²/2I + Q·|U|/2` on the pixel's own `U`, at the held `L_z`.
+//!   `Q₀ = max(Q_lo, 0)`, `K* = L_z²/2I + Q·|U|/2` on the pixel's own `U`, at the held `L_z`. With `Q₀ > 0` at a held
+//!   `L_z ≠ 0` the floor sits under the rise only: `K* = max(Q₀·|U|/2, L_z²/2I) + (Q_hi − Q₀)·t^γ_K·|U|/2`, so the
+//!   bottom row is the asked `Q₀` on a column where it is feasible and the floor on one where it is not.
 //!
 //! Every pixel of `[0,1]²` is feasible on a warped `t` axis at every held `L_z` (the owner's ruling of 4 Nov 2026 on
 //! RQ-683; chart_reference §2.1): the floor `L_z²/2I` ([`invariant::k_floor`], 0 at the held `L_z = 0`, `Φ_θ,K`'s) sits
@@ -127,6 +129,7 @@ fn kinetic_rule<R: WarpReal>(k: R, held_lz: R) -> Rule<R> {
     Rule {
         k0: k,
         weight: R::zero(),
+        bottom_weight: R::zero(),
         u_ref: R::zero(),
         s2: R::zero(),
         lz: held_lz,
@@ -191,6 +194,7 @@ impl EnergyAxis for AxisLz {
         Rule {
             k0: held,
             weight: R::zero(),
+            bottom_weight: R::zero(),
             u_ref: R::zero(),
             s2: x,
             lz: R::zero(),
@@ -373,8 +377,21 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: WarpReal> MixedEnergy<A, Q, 
         let held = w(self.held);
         let rule = Q::rule(self.scale(v), held, linear, u_ref);
         let floored = !linear & (Q::QUANTITY != Quantity::Lz);
+        let floor = invariant::k_floor(held);
+        // The floor under the rise only: `K* = max(Q₀·|U|/2, floor) + (Q_hi − Q₀)·t^γ_K·|U|/2`, built in `K`, never as
+        // the ratio times `|U|/2`, whose `L_z²/(I·|U|)·|U|/2` isn't `L_z²/2I` in floating point. Taken only at `Q₀ > 0`
+        // and a floor: the additive form at `Q₀ = 0` and the plain `Q(t)·|U|/2` at a held `L_z = 0` stay bit for bit.
+        let q0 = Float::max(w(self.bottom), R::zero());
+        let two = R::one() + R::one();
+        let under = floored
+            & (Q::QUANTITY == Quantity::VirialRatio)
+            & (q0 > R::zero())
+            & (floor > R::zero());
+        let rise = invariant::kinetic(w(self.top) - q0, w(self.gamma_k), v) / two;
         let rule = Rule {
-            k0: select(floored, invariant::k_floor(held) + rule.k0, rule.k0),
+            k0: select(floored, floor + rule.k0, rule.k0),
+            weight: select(under, rise, rule.weight),
+            bottom_weight: select(under, q0 / two, R::zero()),
             ..rule
         };
         decode_rule::<S, R>(rule, &Latent::new(z), p)

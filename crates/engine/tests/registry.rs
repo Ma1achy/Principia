@@ -628,10 +628,31 @@ negative_control!(
 
 // ── pairs_match_descriptors ──────────────────────────────────────────────────────────────────────────────────────
 
-/// The axis kinds today's chart `name` declares (`Authored::descriptor`), horizontal then vertical.
-fn declared_kinds(name: &str) -> [Option<engine::chart_authoring::AxisKind>; 2] {
+/// The virial pair `(α, Q)` at a held `L_z ≠ 0`, over an asked range with a bottom above 0.
+fn virial_pair() -> kernel::chart::physical::MixedEnergy<
+    kernel::chart::mixed::Alpha,
+    kernel::chart::physical::AxisVirial,
+    Defaults,
+    f64,
+> {
+    kernel::chart::physical::MixedEnergy::virial(
+        [0.4, -0.3, 0.2, -0.1, 0.3, 0.15, 0.0, -0.4],
+        [0.25, 1.3],
+        [0.5, 2.0],
+        2.0,
+        0.2,
+        kernel::chart::energy::Mapping::Warped,
+    )
+    .expect("an offered range")
+}
+
+/// The axis kinds the chart `name` baked as `entry` declares (`Authored::descriptor`), horizontal then vertical: two
+/// entries share the name `Mixed`.
+fn declared_kinds(name: &str, entry: &str) -> [Option<engine::chart_authoring::AxisKind>; 2] {
     use engine::chart_authoring::Authored;
+    use kernel::stage::decode::{DecodeVariant, MixedAlphaVirialDefaults};
     let d = match name {
+        "Mixed" if entry == MixedAlphaVirialDefaults::ENTRY => virial_pair().descriptor(),
         "ShapeSphere" => sphere().descriptor(),
         "Burrau" => charts::burrau::<f64>().descriptor(),
         "EuclidPlane" => charts::euclid_plane::<f64>().descriptor(),
@@ -651,8 +672,8 @@ fn check_pairs(pairs: &[(&str, &str, &str, &str)]) {
     // Each registered pair's rows are of the kinds its chart's own descriptor declares, an annotation axis (no kind)
     // matching a row of any kind, since it writes nothing.
     let registry = Registry::standard();
-    for (h, v, chart, _) in pairs {
-        let declared = declared_kinds(chart);
+    for (h, v, chart, entry) in pairs {
+        let declared = declared_kinds(chart, entry);
         for (row, kind) in [h, v].into_iter().zip(declared) {
             let row_kind = registry.row(row).expect("the row").kind;
             assert!(

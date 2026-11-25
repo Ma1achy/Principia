@@ -36,8 +36,10 @@ use std::path::{Path, PathBuf};
 
 use engine::contract::fast_math::FastMath;
 use engine::decode_dispatch::{decode_only_with, DecodeStage, DESCRIBE_ENTRY};
+use kernel::chart::energy::Mapping;
 use kernel::chart::invariant::{Invariant, InvariantChart};
 use kernel::chart::mixed::{Alpha, ZMu1};
+use kernel::chart::physical::{AxisVirial, MixedEnergy};
 use kernel::chart::{
     Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, EuclidPlane, InvariantLE,
     InvariantLK, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere, REGISTRY,
@@ -53,7 +55,7 @@ use kernel::stage::decode::{
     BurrauDefaults, BurrauThetaDeltaMDefaults, BurrauThetaKDefaults, BurrauThetaLzDefaults,
     DecodeMode, DecodeOut, DecodeVariant, EuclidPlaneDefaults, InvariantLEDefaults,
     InvariantLKDefaults, LatentDefaults, LatentStickBreaking, MassSimplexDefaults,
-    MixedMu1AlphaDefaults, ShapeSphereDefaults, UniformChart,
+    MixedAlphaVirialDefaults, MixedMu1AlphaDefaults, ShapeSphereDefaults, UniformChart,
 };
 use validation::decode_f32_eps::{
     error, interior, physics_key, values, Fuzz, SplitMix, QUANTITIES,
@@ -139,6 +141,7 @@ impl Case for Latent<f32> {
 impl Case for MassSimplex<f32> {}
 impl Case for EuclidPlane<f32> {}
 impl Case for Mixed<ZMu1, Alpha, f32> {}
+impl Case for MixedEnergy<Alpha, AxisVirial, kernel::generated::links::Defaults, f32> {}
 impl Case for BurrauThetaDeltaM<f32> {}
 impl Case for ShapeSphere<f32> {}
 
@@ -399,6 +402,24 @@ fn mixed(rng: &mut SplitMix) -> Mixed<ZMu1, Alpha, f32> {
         [-2.0, 2.0],
         [0.1, 1.4],
     )
+}
+
+/// A warped virial pair `(α, Q)` over `asked` at the held `held`, its other controls drawn: every pixel a system, the
+/// floor under the rise only where `Q₀ > 0` and `held ≠ 0`.
+fn virial(
+    rng: &mut SplitMix,
+    asked: [f32; 2],
+    held: f32,
+) -> MixedEnergy<Alpha, AxisVirial, kernel::generated::links::Defaults, f32> {
+    MixedEnergy::virial(
+        core::array::from_fn(|_| rng.uniform(-2.0, 2.0)),
+        [0.1, 1.4],
+        asked,
+        2.0,
+        held,
+        Mapping::Warped,
+    )
+    .expect("an offered range")
 }
 
 // ── The runner ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -801,6 +822,16 @@ fn run_all(taint: Taint, energy: bool) -> Report {
         .map(|_| (mixed(&mut rng), points(&mut rng, 64)))
         .collect();
     run::<MixedMu1AlphaDefaults>(&h, &wgsl, &mut r, ("fuzz", &mx), t, false);
+    let vr: Vec<_> = [
+        ([1.0, 2.5], 0.2),
+        ([1.0, 2.5], -0.05),
+        ([0.0, 2.0], 0.15),
+        ([0.4, 2.0], 0.0),
+    ]
+    .into_iter()
+    .map(|(asked, held)| (virial(&mut rng, asked, held), points(&mut rng, 64)))
+    .collect();
+    run::<MixedAlphaVirialDefaults>(&h, &wgsl, &mut r, ("fuzz", &vr), t, false);
     run::<BurrauThetaKDefaults>(
         &h,
         &wgsl,

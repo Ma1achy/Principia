@@ -7,6 +7,7 @@
 //! [`DecodeVariant`], whose compute entry point is a concrete `#[spirv(compute)]` wrapper ([`latent_defaults`],
 //! [`latent_stick_breaking`], [`invariant_le_defaults`], [`invariant_lk_defaults`], and the charts whose masses vary per
 //! pixel, [`mass_simplex_defaults`], [`burrau_defaults`], [`euclid_plane_defaults`] and [`mixed_mu1_alpha_defaults`],
+//! the virial pair, [`mixed_alpha_virial_defaults`],
 //! the acute Burrau strips, [`burrau_theta_k_defaults`], [`burrau_theta_lz_defaults`] and
 //! [`burrau_theta_delta_m_defaults`], and the shape sphere, [`shape_sphere_defaults`]) calling [`entry`]. Nothing at run
 //! time names a chart, a chart id or an axis kind: adding a chart is a `Φ` ([`crate::chart`]), its decode
@@ -46,8 +47,10 @@ use core::mem::offset_of;
 use spirv_std::glam::{UVec3, UVec4, Vec4};
 use spirv_std::spirv;
 
+use crate::chart::energy::Mapping;
 use crate::chart::invariant::{Invariant, WarpReal};
 use crate::chart::mixed::{Alpha, ZMu1};
+use crate::chart::physical::{AxisVirial, MixedEnergy};
 use crate::chart::{
     Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode, EuclidPlane,
     InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere,
@@ -314,6 +317,47 @@ impl UniformChart for Mixed<ZMu1, Alpha, f32> {
     }
 }
 
+/// The virial pair `(α, Q)`'s uniform: rows 0–1 the frozen controls, row 2 `(α_lo, α_hi, Q_hi, Q_lo)`, row 3
+/// `(γ_K, held L_z, mapping, 0)`, the mapping's word 0 warped and any other linear, rows 4–5 zero.
+impl UniformChart for MixedEnergy<Alpha, AxisVirial, Defaults, f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        let mapping = if r[3].z == 0.0 {
+            Mapping::Warped
+        } else {
+            Mapping::Linear
+        };
+        let mut c = MixedEnergy::new(
+            eight(r[0], r[1]),
+            [r[2].x, r[2].y],
+            r[2].z,
+            r[3].x,
+            r[3].y,
+            mapping,
+        );
+        c.bottom = r[2].w;
+        c
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        let [a, b] = rows(&self.frozen);
+        let zero = Vec4::ZERO;
+        let mapping = match self.mapping {
+            Mapping::Warped => 0.0,
+            Mapping::Linear => 1.0,
+        };
+        [
+            a,
+            b,
+            Vec4::new(self.a_range[0], self.a_range[1], self.top, self.bottom),
+            Vec4::new(self.gamma_k, self.held, mapping, 0.0),
+            zero,
+            zero,
+        ]
+    }
+}
+
 /// A row of the acute Burrau strips' uniforms: `(θ_min, θ_max, a, b)`, the rest zero.
 #[inline]
 fn strip_rows(theta: [f32; 2], a: f32, b: f32) -> [Vec4; 6] {
@@ -515,6 +559,15 @@ impl DecodeVariant for MixedMu1AlphaDefaults {
     type Chart = Mixed<ZMu1, Alpha, f32>;
     type Links = Defaults;
     const ENTRY: &'static str = "stage_decode_mixed_mu1_alpha_defaults";
+}
+
+/// The virial pair `(α, Q)`, a derived configuration axis and the virial ratio, under the default links.
+pub struct MixedAlphaVirialDefaults;
+
+impl DecodeVariant for MixedAlphaVirialDefaults {
+    type Chart = MixedEnergy<Alpha, AxisVirial, Defaults, f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_mixed_alpha_virial_defaults";
 }
 
 /// The `(θ, K)` strip under the default links, which it does not read.
@@ -890,6 +943,20 @@ pub fn mixed_mu1_alpha_defaults(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
 ) {
     entry::<MixedMu1AlphaDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`MixedAlphaVirialDefaults`], as [`latent_defaults`] is for the latent
+/// chart.
+#[spirv(compute(threads(64)))]
+pub fn mixed_alpha_virial_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<MixedAlphaVirialDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
 }
 
 /// The decode stage's compute entry point for [`BurrauThetaKDefaults`], as [`latent_defaults`] is for the latent chart.

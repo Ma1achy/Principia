@@ -143,7 +143,8 @@ pub enum AxisKind {
     RawLatent,
     /// Kind 2: a scalar inside one block, inverted into it; the block's leftover DOF take a residual convention.
     DerivedInBlock,
-    /// Kind 3: `E`, `L_z`, `K`, `KE` or `PE`, solved into a downstream sector, the upstream sectors read as fixed.
+    /// Kind 3: `E`, `L_z`, `K`, `KE`, `PE` or the virial ratio `Q`, solved into a downstream sector, the upstream sectors
+    /// read as fixed.
     CrossBlockInvariant,
     /// Kind 4: one scalar slaving several blocks through a fixed nonlinear embed.
     CoupledCurve,
@@ -162,12 +163,14 @@ pub enum InvariantQuantity {
     KE,
     /// The potential energy `PE`.
     PE,
+    /// The virial ratio `Q = 2K/|U|`, solved into the momenta, reading the configuration and the masses.
+    Q,
 }
 
 impl InvariantQuantity {
     /// Whether the quantity is a constant of motion (Part 5, `conserved_along_flow`): `E` and `L_z` are; `K` is
     /// invariant-constructed but not conserved, a trace oscillating as `KE ↔ PE` exchange, and `KE` and `PE` are that
-    /// exchange's two sides.
+    /// exchange's two sides, and `Q = 2K/|U|` moves with both.
     pub fn conserved_along_flow(self) -> bool {
         matches!(self, InvariantQuantity::E | InvariantQuantity::Lz)
     }
