@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Principia · title-2d-subtitle-dark</title>
+<style>html,body{margin:0;height:100%;background:#0d0c0b}body{display:grid;place-items:center}#m{line-height:0}</style></head>
+<body><div id="m"></div>
+<script src="principia-title-2d-subtitle-dark.js"></script>
+<script>
+  // ?t=12 shows a still frame at 12 s; otherwise it animates
+  const q = new URLSearchParams(location.search), t = q.get('t');
+  const props = t !== null ? { still: true, frame: +t } : {};
+  if (q.get('transparent') === '0') props.transparent = false;
+  if (q.get('size')) props.size = +q.get('size');
+  if (q.get('weight')) props.weight = +q.get('weight');
+  window.__mark = PrincipiaMark['title-2d-subtitle-dark'].mount(document.getElementById('m'), props);
+  window.__seek = (s) => window.__mark.seek(s);
+</script></body></html>
