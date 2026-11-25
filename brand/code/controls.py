@@ -40,9 +40,14 @@ def still_controls(ref, tmp):
     noisy[..., :3] += rng.integers(-3, 4, noisy[..., :3].shape).astype(np.int16)
     save_png(np.clip(noisy, 0, 255).astype(np.uint8), f'{tmp}/noise.png')
     record('harmless: colour noise of +-3 levels', True, C.compare_still(light, f'{tmp}/noise.png'))
-    rt = Image.open(light).convert('RGBA').resize((512, 512), Image.LANCZOS).resize((1024, 1024), Image.LANCZOS)
-    rt.save(f'{tmp}/roundtrip.png')
-    record('harmless: Lanczos 1024 -> 512 -> 1024 (softer edges)', True, C.compare_still(light, f'{tmp}/roundtrip.png'))
+    # harmless: another resampling kernel for the 2048 -> 1024 step (a different Pillow or resampler)
+    big2048 = Image.open(os.path.join(src, 'principia-icon-2048-uncropped.png')).convert('RGBA').crop((80, 117, 1802, 1839))
+    for nm, k in (('bicubic', Image.BICUBIC), ('box', Image.BOX)):
+        big2048.resize((1024, 1024), k).save(f'{tmp}/{nm}.png')
+        record(f'harmless: 2048 -> 1024 resampled with {nm} instead of Lanczos', True, C.compare_still(light, f'{tmp}/{nm}.png'))
+    # wrong: blurred, by going down to half size and back up
+    Image.open(light).convert('RGBA').resize((512, 512), Image.LANCZOS).resize((1024, 1024), Image.LANCZOS).save(f'{tmp}/roundtrip.png')
+    record('wrong: blurred (Lanczos 1024 -> 512 -> 1024)', False, C.compare_still(light, f'{tmp}/roundtrip.png'))
     # wrong: dark palette for the light file
     record('wrong: dark picture for the light file', False, C.compare_still(light, dark))
     # wrong: trails 1.6 times as heavy (the committed small-sizes cut is exactly that)
@@ -150,17 +155,20 @@ def webp_controls(ref, rebuild):
         record(f'wrong: github-{n} WebP judged as the {other} page colour', False, C.compare_page_colour(w, png_frames(fd), 30, ocol))
         if os.path.isdir(fo):
             record(f'wrong: github-{n} WebP against the {other} variant frames', False, C.compare_page_colour(w, png_frames(fo), 30, col))
-        # a frame whose background is 2 levels off (more than the 1 level a lossy file may be off): must fail the border test
-        def off(k, a, d=2):
-            if k == 300:
-                a = a.copy(); a[..., :3] = np.clip(a[..., :3].astype(int) + (d if n == 'dark' else -d), 0, 255).astype(np.uint8)
-            return a
+        # a frame whose background is 2 levels off (more than the 1 level a lossy file may be off), on the WebP side
+        def off_webp(d):
+            for k, f in enumerate(C.webp_frames(w)):
+                if k == 150:
+                    f = f.copy(); f[..., :3] = np.clip(f[..., :3].astype(int) + (d if n == 'dark' else -d), 0, 255).astype(np.uint8)
+                yield f
         record(f'wrong: one frame of github-{n} with its background 2 levels off', False,
-               C.compare_page_colour(w, png_frames(fd, off), 30, col))
-        # the border test itself, on the rendered frames: one level off passes (tolerance 1), two fails
-        wst, _ = C.border_check([off(300, next(png_frames(fd)), 1)], col, 1)
-        wst2, _ = C.border_check([off(300, next(png_frames(fd)), 2)], col, 1)
-        RESULTS.append((f'border test: background 1 level off reads {wst}, 2 levels off reads {wst2}', True, wst <= 1 < wst2 or wst2 > 1, '', ''))
+               C.compare_page_colour(w, png_frames(fd), 30, col, border_frames=off_webp(2)))
+        # the border test itself, on a rendered frame: 1 level off reads 1 (allowed), 2 levels off reads 2 (not)
+        f0 = next(png_frames(fd))
+        sh = lambda d: np.clip(f0.astype(int) + np.array([d if n == 'dark' else -d] * 3 + [0]), 0, 255).astype(np.uint8)
+        wst, _ = C.border_check([sh(1)], col, 1)
+        wst2, _ = C.border_check([sh(2)], col, 1)
+        RESULTS.append((f'border test on github-{n}: background 1 level off reads {wst}, 2 levels off reads {wst2}', True, wst == 1 and wst2 == 2, '', ''))
 
 
 def patched_render_dir(rebuild, tmp, name, patch):

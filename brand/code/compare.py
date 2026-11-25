@@ -281,12 +281,12 @@ def border_check(frames, colour, tol):
     return worst, where
 
 
-def compare_page_colour(webp_path, ref_frames, ref_fps, colour, tol=None):
+def compare_page_colour(webp_path, ref_frames, ref_fps, colour, tol=None, border_frames=None):
     """A page-colour variant: opaque, every border pixel of every frame equal to colour within tol, and the
     picture itself within the webp criterion of the rendered frames."""
     tol = BORDER_TOL['webp'] if tol is None else tol
     r = compare_webp_to_frames(webp_path, ref_frames, ref_fps, want_alpha=False)
-    worst, where = border_check(webp_frames(webp_path), colour, tol)
+    worst, where = border_check(border_frames if border_frames is not None else webp_frames(webp_path), colour, tol)
     r['stats']['border'] = worst
     if worst > tol:
         r['ok'] = False
@@ -313,10 +313,27 @@ def compare_bytes(ref, new):
     return {'ok': False, 'ratio': 99.0, 'why': f"bytes differ (sizes {len(a)} vs {len(b)}, first at {first})", 'stats': {}}
 
 
+def compare_webp_files(ref, new):
+    """Committed WebP against rebuilt WebP: same container facts, then the decoded frames under the webp criterion."""
+    if open(ref, 'rb').read() == open(new, 'rb').read():
+        return {'ok': True, 'ratio': 0.0, 'why': '', 'stats': {'bytes': os.path.getsize(ref)}}
+    a, b = webp_info(ref), webp_info(new)
+    keys = ('w', 'h', 'frames', 'duration_ms', 'loop', 'alpha_flag')
+    bad = [f'{k} {a[k]} vs {b[k]}' for k in keys if a[k] != b[k]]
+    if bad:
+        return _result(False, 99.0, 'format differs: ' + '; '.join(bad), {})
+    fr = [frame_diff(x, y) for x, y in zip(webp_frames(ref), webp_frames(new))]
+    st = aggregate(fr)
+    ok, ratio, why = judge('webp', st)
+    return _result(ok, ratio, why, st)
+
+
 def compare_file(ref, new):
     ext = os.path.splitext(ref)[1].lower()
     if ext in ('.png', '.jpg', '.ico', '.icns'):
         return compare_still(ref, new)
+    if ext == '.webp':
+        return compare_webp_files(ref, new)
     if ext in ('.mp4', '.webm', '.gif'):
         return compare_video(ref, new)
     return compare_bytes(ref, new)
@@ -357,6 +374,35 @@ def compare_trees(ref_root, new_root, only=None, log=print):
     return rows, extra
 
 
+def derived_checks(ref_root, new_root, log=print):
+    """The WebP files judged by what they are made from. Transparent ones: against the committed WebM of the
+    same loop, alpha included. Page-colour ones: opaque, border equal to the page colour in every frame, and,
+    when the rebuild's frames are there, the picture against them."""
+    rows = []
+    t = os.path.join(new_root, 'titles')
+    for n in ('dark', 'light'):
+        w = os.path.join(t, f'principia-title-2d-subtitle-{n}.webp')
+        webm = os.path.join(ref_root, f'titles/principia-title-2d-subtitle-{n}-transparent.webm')
+        if os.path.exists(w) and os.path.exists(webm):
+            r = compare_webp_to_frames(w, decode(webm), probe(webm)['fps'])
+            r['file'] = f'titles/principia-title-2d-subtitle-{n}.webp against the committed transparent WebM'
+            rows.append(r); log(('  ok   ' if r['ok'] else '  FAIL ') + r['file'])
+    for n, col in (('dark', (13, 17, 23)), ('light', (255, 255, 255))):
+        w = os.path.join(t, f'principia-title-2d-subtitle-github-{n}.webp')
+        if not os.path.exists(w):
+            continue
+        fd = os.path.join(new_root, 'work', 'frames', f'title-2d-subtitle-github-{n}')
+        if os.path.isdir(fd):
+            frames = (np.asarray(Image.open(os.path.join(fd, f)).convert('RGBA')) for f in sorted(os.listdir(fd)))
+            r = compare_page_colour(w, frames, 30, col)
+        else:
+            worst, where = border_check(webp_frames(w), col, BORDER_TOL['webp'])
+            r = _result(worst <= BORDER_TOL['webp'], worst / max(BORDER_TOL['webp'], 1), '' if worst <= BORDER_TOL['webp'] else f'border off by {worst}', {'border': worst})
+        r['file'] = f'titles/principia-title-2d-subtitle-github-{n}.webp, page colour #{"%02x%02x%02x" % col}'
+        rows.append(r); log(('  ok   ' if r['ok'] else '  FAIL ') + r['file'])
+    return rows
+
+
 def fmt_stats(s):
     if not s:
         return ''
@@ -392,7 +438,11 @@ def main(argv=None):
     ap.add_argument('--only'); ap.add_argument('--md'); ap.add_argument('--json')
     a = ap.parse_args(argv)
     rows, extra = compare_trees(a.reference, a.rebuilt, a.only)
+    drows = derived_checks(a.reference, a.rebuilt) if not a.only else []
     md = markdown(rows, extra)
+    if drows:
+        md += '\n\nWebP files against what they are made from:\n\n' + markdown(sorted(drows, key=lambda r: -r['ratio']), [])
+    rows = rows + drows
     print(md)
     if a.md:
         open(a.md, 'w').write(md + '\n')
