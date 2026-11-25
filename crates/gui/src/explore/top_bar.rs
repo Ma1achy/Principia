@@ -9,7 +9,7 @@
 //! dimmed while Home has nothing to do (R-466 K8, K11), a separator, F3 hide and, after
 //! it the row F3 fills by: Extend / Fit, two radio options, `ViewUI`'s and so never an edit (R-468 E4), then Debug view,
 //! a check entry: one undoable `SetField` on `RenderState`'s `debug_view` per toggle, as an Overlays ▾ toggle is
-//! (R-467 D5, R-69). The row is a scope of the menu, Enter going into its options, ← → moving between them and Enter on
+//! (R-467 D5, R-69), then Save view as chart, as the Chart section's button. The row is a scope of the menu, Enter going into its options, ← → moving between them and Enter on
 //! one choosing it.
 
 use eframe::egui::containers::menu::MenuButton;
@@ -60,6 +60,11 @@ pub const FILL_EXTEND: (ScopeId, &str) = ("view_f3_fill_extend", "Extend");
 pub const FILL_FIT: (ScopeId, &str) = ("view_f3_fill_fit", "Fit");
 /// View's check entry that switches the figure to the debug view (R-467 D5), after the row.
 pub const DEBUG_VIEW: (ScopeId, &str) = ("view_debug", "Debug view");
+/// View's entry that saves the view as a chart (render_gui_spec §G2), after Debug view.
+pub const SAVE_VIEW: (ScopeId, &str) = (
+    "view_save_chart",
+    crate::explore::manifold_view::saved::SAVE_TEXT,
+);
 /// View's entry that returns every splitter to 01_main.png's layout, after F3 hide (R-462 J3; §G2's View menu).
 pub const RESET_LAYOUT: (ScopeId, &str) = ("view_reset_layout", "reset layout");
 /// Help's entry that opens the `?` shortcuts (RQ-250).
@@ -95,6 +100,7 @@ pub fn register(tree: &mut ScopeTree) {
         tree.register(Some(FILL_ROW.0), Scope::control(option.0, option.1));
     }
     tree.register(Some("view"), Scope::control(DEBUG_VIEW.0, DEBUG_VIEW.1));
+    tree.register(Some("view"), Scope::control(SAVE_VIEW.0, SAVE_VIEW.1));
     tree.register(Some("view"), Scope::control(RESET_LAYOUT.0, RESET_LAYOUT.1));
     for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
         tree.register(Some("windows"), Scope::control(id, name));
@@ -115,6 +121,7 @@ pub fn activate(id: &str, actions: &mut Actions) {
         id if id == FILL_EXTEND.0 => actions.f3_fill = Some(F3Fill::Extend),
         id if id == FILL_FIT.0 => actions.f3_fill = Some(F3Fill::Fit),
         id if id == DEBUG_VIEW.0 => actions.debug_view = true,
+        id if id == SAVE_VIEW.0 => actions.save_view = true,
         id if id == RESET_LAYOUT.0 => actions.reset_layout = true,
         id if id == KEYS.0 => actions.shortcuts = true,
         _ => {}
@@ -190,6 +197,8 @@ pub struct TopBar<'a> {
     pub f3_fill: F3Fill,
     /// Why View › Home is dimmed, while it is (R-466 K3, K11).
     pub home_dimmed: Option<&'static str>,
+    /// Why the last gesture was refused, which the status line then says alone.
+    pub refused: Option<&'static str>,
 }
 
 /// Draws the top bar in `rect`, recording what its controls ask for in `actions` and where they are in `keyboard`.
@@ -260,6 +269,12 @@ pub fn show(
             actions.debug_view = true;
         }
         keyboard.place_widget(DEBUG_VIEW.0, &debug);
+        let save = ui.button(SAVE_VIEW.1);
+        if save.clicked() {
+            actions.save_view = true;
+            ui.close();
+        }
+        keyboard.place_widget(SAVE_VIEW.0, &save);
         let reset = ui.button(RESET_LAYOUT.1);
         if reset.clicked() {
             actions.reset_layout = true;
@@ -322,7 +337,10 @@ pub fn show(
         keyboard.place_widget(id, &response);
     }
     bar.with_layout(EguiLayout::right_to_left(Align::Center), |ui| {
-        ui.label(RichText::new(status_line(snapshot)).monospace());
+        let status = bar_state
+            .refused
+            .map_or_else(|| status_line(snapshot), str::to_owned);
+        ui.label(RichText::new(status).monospace());
         crate::explore::breadcrumb::show(ui, bar_state.breadcrumb, bar_state.keys);
     });
 }

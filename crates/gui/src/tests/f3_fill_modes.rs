@@ -188,6 +188,7 @@ fn f3_fill_modes_row_is_in_the_view_menu_and_marked() {
             HIDE.0,
             FILL_ROW.0,
             DEBUG_VIEW.0,
+            top_bar::SAVE_VIEW.0,
             top_bar::RESET_LAYOUT.0
         ]
     );

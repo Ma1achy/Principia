@@ -25,6 +25,7 @@ pub mod depth;
 pub mod lock;
 pub mod navigate;
 pub mod reset;
+pub mod saved;
 pub mod tilt;
 
 use eframe::egui::{
@@ -263,6 +264,7 @@ pub fn join(tree: &mut ScopeTree) {
         }
     }
     tree.register(Some(CHART), Scope::control(BUILDER, "Chart builder…"));
+    tree.register(Some(CHART), Scope::control(saved::SAVE, saved::SAVE_TEXT));
     tree.register(Some(NAVIGATE), Scope::value(CENTRE_U, "centre u", Pan));
     tree.register(Some(NAVIGATE), Scope::value(CENTRE_V, "centre v", Pan));
     tree.register(Some(NAVIGATE), Scope::value(ZOOM, "zoom", ZoomLog2));
@@ -916,19 +918,34 @@ impl View {
 
     /// The zoom as its row reads it: `log₂(σ_h / σ)`, 0 at the preset's window (R-466, REQ-GUI-224).
     pub fn zoom_row(&self) -> f64 {
-        self.window().log2() + self.zoom()
+        self.zoom_row_of(self.window())
+    }
+
+    /// [`View::zoom_row`] read against the window `window`: a saved chart's.
+    pub fn zoom_row_of(&self, window: f64) -> f64 {
+        window.log2() + self.zoom()
     }
 
     /// [`ZOOM_RANGE`] as the zoom row reads it. A preset's choice keeps `σ` (§G2), so the row moves with the window; the
     /// span moves too, or the slider would pin its handle at an end for a `σ` inside `ZOOM_RANGE` and reach one past it.
     pub fn zoom_row_range(&self) -> std::ops::RangeInclusive<f64> {
-        let window = self.window().log2();
+        self.zoom_row_range_of(self.window())
+    }
+
+    /// [`View::zoom_row_range`] read against the window `window`.
+    pub fn zoom_row_range_of(&self, window: f64) -> std::ops::RangeInclusive<f64> {
+        let window = window.log2();
         ZOOM_RANGE.0 + window..=ZOOM_RANGE.1 + window
     }
 
     /// This view at the zoom row's reading `row`.
     pub fn with_zoom_row(self, row: f64) -> Self {
-        self.with_zoom(row - self.window().log2())
+        self.with_zoom_row_of(row, self.window())
+    }
+
+    /// [`View::with_zoom_row`] read against the window `window`.
+    pub fn with_zoom_row_of(self, row: f64, window: f64) -> Self {
+        self.with_zoom(row - window.log2())
     }
 
     /// This view at zoom `zoom`.
@@ -1263,6 +1280,8 @@ pub struct Scratch {
     /// The centre-on-pin setting, **Centre on pin when locking** (render_gui_spec §G4): a preference, off by default,
     /// kept with the GUI's settings, never undoable.
     pub centre_on_pin: engine::path::leaf::CentreOnPin,
+    /// The saved charts and which is active (render_gui_spec §G2, Save view as chart).
+    pub charts: saved::Charts,
     /// The pin the last lock's leaf returned, with the plane and lock it made ([`dispatch::Pinned`]).
     pub pinned: Option<dispatch::Pinned>,
 }
@@ -1313,6 +1332,8 @@ pub struct Out {
     /// The resets' commands, also turned about the pin, each sent under a fresh key of its own: one history entry,
     /// whatever else the pointer holds (R-466 K10).
     pub fresh: Vec<Vec<SetField>>,
+    /// The change of the active chart asked for: sent after the frame's edits.
+    pub chart: Option<saved::Switch>,
     /// The windows to open.
     pub windows: Vec<Window>,
     /// The console's lines for the physical steers refused (R-550).
@@ -1485,7 +1506,8 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
         return;
     }
     if let Some(section) = reset::Section::of(id) {
-        out.fresh.push(reset::command(sim, section));
+        out.fresh
+            .push(reset::command(scratch.charts.at(sim), section));
         return;
     }
     let view = View::read(sim);
@@ -1493,6 +1515,9 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
         if let Some(to) = entries.iter().position(|e| *e == id) {
             // A target dropdown is Tilt's: picking from it switches the compass to Tilt (R-458 F4).
             scratch.compass.mode = Touch::Tilt;
+            if scratch.charts.refuse(sim) {
+                return;
+            }
             if let Some(edit) = target_edit(&view, which, to) {
                 out.edit(edit, Some(Touch::Tilt), scratch);
             }
@@ -1501,6 +1526,9 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
     }
     match id {
         TILT_MAP_SHEET | TILT_MAP_LEAN => {
+            if scratch.charts.refuse(sim) {
+                return;
+            }
             let map = if id == TILT_MAP_SHEET {
                 TiltMap::Sheet
             } else {
@@ -1510,10 +1538,10 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
                 out.edit(edit, Some(Touch::Tilt), scratch);
             }
         }
-        PRESET => {
-            let next = view.preset.map_or(0, |p| (p + 1) % PRESETS.len());
-            out.edit(chart::preset_edit(sim, view, next), None, scratch);
-        }
+        PRESET => chart::pick_next(sim, scratch, out),
+        saved::SAVE => out.chart = Some(saved::Switch::Save),
+        saved::RENAME => chart::begin_rename(sim, scratch),
+        saved::DELETE => chart::delete_active(sim, scratch, out),
         UNLOCK => lock::unlock(&sim.lock, out),
         CENTRE_ON_PIN => lock::centre_on_pin(sim, scratch, out),
         CENTRE_ON_PIN_SETTING => lock::toggle_setting(scratch, out),
@@ -1577,6 +1605,9 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
         ),
         ZOOM => out.edit(navigate::zoom_by(plane, octaves), None, scratch),
         TAU1 | TAU2 | GAMMA => {
+            if scratch.charts.refuse(sim) {
+                return;
+            }
             let mut to = tilt::Angles::read(sim);
             to.turn(id, degrees, view.map);
             let edit = dispatch::one(plane, Class::Tilt { from: view, to });
@@ -1683,16 +1714,16 @@ pub fn header_with_reset(
             .max_rect(line)
             .layout(EguiLayout::right_to_left(Align::Center)),
     );
-    let sim = &panel.snapshot.sim;
+    let at = panel.scratch.charts.at(&panel.snapshot.sim);
     let button = right
         .add_enabled(
-            reset::enabled(sim, section),
+            reset::enabled(at, section),
             Button::new(reset::RESET).small(),
         )
         .on_hover_text(section.tooltip())
-        .on_disabled_hover_text(reset::dimmed_because(sim));
+        .on_disabled_hover_text(reset::section_dimmed_because(at, section));
     if button.clicked() {
-        panel.out.fresh.push(reset::command(sim, section));
+        panel.out.fresh.push(reset::command(at, section));
     }
     panel.place(section.scope(), &button, clip);
     let left = Rect::from_min_max(line.min, pos2(button.rect.min.x, line.max.y));

@@ -15,7 +15,8 @@ wgpu = { version = "30", default-features = false, features = ["std", "parking_l
 pollster = "1"
 # The capture mode writes its PNG and its names file (R-274; RQ-253), as xtask's runner reads them.
 png = "0.18"
-serde_json = "1"
+# `float_roundtrip`: the settings read a saved chart's vectors back bit for bit.
+serde_json = { version = "1", features = ["float_roundtrip"] }
 
 [dev-dependencies]
 # wgpu 30's naga, to read the noise's IR in `lattice_source_is_integer` (REQ-GUI-412).
