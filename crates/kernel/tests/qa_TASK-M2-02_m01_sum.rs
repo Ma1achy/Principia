@@ -1,5 +1,5 @@
-//! QA tests for TASK-M2-02: the M01_TINY branch input is the one rounded sum `m₀ + m₁` (dd_decoder §3.1 "The branch
-//! input"; REQ-DEC-011; R-34), bit for bit, at f64 and f32, whatever form the block computes it in.
+//! QA tests: the M01_TINY branch input is the one rounded sum `m₀ + m₁` (dd_decoder §3.1 "The branch
+//! input"), bit for bit, at f64 and f32, whatever form the block computes it in.
 //!
 //! §3.1 fixes `M₀₁` as "the one rounded sum of the emitted masses `m₀ + m₁`", compared strictly against `ε_M01`. The
 //! oracle is independent of the block: at f64 the IEEE add `m₀ + m₁` (Rust never contracts it); at f32 the exact
@@ -7,7 +7,7 @@
 //! more than `2·24 + 2` bits, so the double rounding is innocuous (Figueroa, "When is double rounding innocuous?",
 //! 1995). The inputs are chosen where a different form differs by one rounding: `m₁` below half an ulp of `m₀`,
 //! round-half-even ties, subnormals, `ε` and its neighbours, simplex points set directly, and `stick_breaking`'s
-//! bisected onset crossings, where one rounding decides the tag. Each control (R-176) swaps in a form one rounding
+//! bisected onset crossings, where one rounding decides the tag. Each control swaps in a form one rounding
 //! away and must fail.
 
 use kernel::decode::degenerate::Degenerate;

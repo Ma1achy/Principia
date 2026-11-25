@@ -1,6 +1,6 @@
-//! qa's tests for TASK-M2-36, written from the three requirements it closes, each with its negative control (R-176):
+//! qa's tests for the tilt's mass logits, units and extension, three properties, each with its negative control:
 //!
-//! - `qa_tilt_mass_logits` (REQ-CHART-063; R-473 T3, J8; R-477 C7): "on the shape-sphere chart tilted into each mass
+//! - `qa_tilt_mass_logits`: "on the shape-sphere chart tilted into each mass
 //!   logit at τ ∈ {15°, 45°, 89°, 135°}, over a 65 × 65 grid every pixel has m₁, m₂, m₃ > 0 and m₁ + m₂ + m₃ = 1 to
 //!   4 ulp; control: the same tilt added to the physical mass m₁ yields a pixel with a non-positive mass or a sum ≠ 1".
 //!   Run on both shape maps, as `τ₁` alone, as `τ₂` alone and with both angles set under each tilt map, at the
@@ -8,7 +8,7 @@
 //!   simplex, each single-angle pixel's masses are the mass link's at the logits with `d` added, where `d` is
 //!   `span · sin τ · (offset from the centre)` (chart_decoder_contract § "Tilt (basis edit)": `d` added to the hidden
 //!   coordinate at the slice centre, a mass in its logit); a second control adds `d` to the other logit.
-//! - `qa_tilt_units` (REQ-CHART-064; R-507 U1, U2): on the shape sphere tilted 30° into a momentum control, the tilted
+//! - `qa_tilt_units`: on the shape sphere tilted 30° into a momentum control, the tilted
 //!   axis's direction in the chart's parameters (`d` per unit of `a`) is bit-identical at the window's edge at zoom 1
 //!   and at zoom 4, it is `span · tan τ`, and the decode at those pixels is the chart's own at `a = c + cos τ · ũ` with
 //!   the control moved by `span · sin τ · ũ` (`ũ` in units of the axis's full range at zoom 1, the chart's `[0, 1]`);
@@ -16,7 +16,7 @@
 //!   chart the tilted basis is the basis edit `σ(cos τ e_a + sin τ e_X)` bitwise, one target or two. Controls: a scale
 //!   in window half-widths changes with zoom; a latent tilt scaled by the slider span differs from the basis edit; a
 //!   tilt one hair from zero is not bitwise the chart's (the untilted check can fail).
-//! - `qa_tilted_extension` (REQ-CHART-066; R-472 X3, X3a; R-508 V2; chart_reference §5.4's table): the spherical shape
+//! - `qa_tilted_extension` (chart_reference §5.4's table): the spherical shape
 //!   sphere tilted 30° into a momentum control, a pixel past the square decodes as the chart at the tilted `(a, b)`,
 //!   bitwise, and that point is the pole-crossing (φ) and periodic (θ) image inside the square; both invariant charts
 //!   tilted into a mass logit are not a system past `s`'s edges or below `t = 0` and are the continuing side's system
@@ -110,7 +110,7 @@ fn rodrigues(t1: f64, t2: f64) -> [[f64; 3]; 2] {
     [rot([1.0, 0.0, 0.0]), rot([0.0, 1.0, 0.0])]
 }
 
-// ── REQ-CHART-063: a mass is tilted in its logit ──────────────────────────────────────────────────────────────────────
+// ── The mass tilted in its logit ──────────────────────────────────────────────────────────────────────────────────────
 
 /// `d`'s closed form, one angle set: `sin τ` and the offset `(ũ, ṽ)` from the centre give `d / span`.
 type ClosedD = fn(f64, f64, f64) -> f64;
@@ -195,7 +195,7 @@ mod other_logit {
     );
 }
 
-// ── REQ-CHART-064: units that do not depend on zoom (R-507) ───────────────────────────────────────────────────────────
+// ── Units that do not depend on zoom ──────────────────────────────────────────────────────────────────────────────────
 
 const SPAN: f64 = 2.0;
 
@@ -371,7 +371,7 @@ mod hair {
     );
 }
 
-// ── REQ-CHART-066: the extension acts on the tilted (a, b) ────────────────────────────────────────────────────────────
+// ── The extension acts on the tilted (a, b) ───────────────────────────────────────────────────────────────────────────
 
 /// chart_reference §5.4's spherical row: θ (horizontal) periodic, φ (vertical) pole-crossing with θ shifted by half
 /// its period. The image inside the square of the chart point `(a, b)`.

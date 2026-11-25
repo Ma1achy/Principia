@@ -1,21 +1,21 @@
 //! The `ICDescriptor` the decode stage writes (`kernel::decode::descriptor`; dd_decoder §3.6; dd_generation_root §3.6),
-//! at the f64 and the f32 instantiation natively (R-265):
+//! at the f64 and the f32 instantiation natively:
 //! - `ic_descriptor_golden`: at the golden IC (`z = 0`) each field against its hand-computed value, the exact value
-//!   rounded to the precision (`fixtures/golden_ic/z0.json`; R-421): `K_0` and `virial_ratio`, 0 at rest, bit-exact;
-//!   the others within REQ-PAY-095's proposed ulps (REQ-PAY-034).
+//!   rounded to the precision (`fixtures/golden_ic/z0.json`): `K_0` and `virial_ratio`, 0 at rest, bit-exact;
+//!   the others within the proposed ulps (below).
 //! - `ic_descriptor_names`: the generated struct's fields are dd_generation_root §3.6's twelve, in order, with no `E₀`;
-//!   the derived `E₀` is `K_0 + V_0` (REQ-PAY-034, R-86).
+//!   the derived `E₀` is `K_0 + V_0`.
 //! - `ic_descriptor_definitions`: on fuzzed `z`, every field is dd_decoder §3.6's formula of the decoded `(m, r, p)`,
 //!   evaluated again here in f64, in the canonical frame and rotated out of it; and in the canonical frame
-//!   `rho_mag = cos α`, `lambda_mag = sin α` and `rho_angle = β`, the two angles compared on the circle (REQ-PAY-088).
+//!   `rho_mag = cos α`, `lambda_mag = sin α` and `rho_angle = β`, the two angles compared on the circle.
 //! - `ic_descriptor_rho_angle_axis`: `rho_angle` on the axis `ρ × λ = 0` and next to it, at f64 and f32: `π̂` when
 //!   antiparallel, whatever the sign of a zero `ρ × λ`; 0 when parallel and at the pole; `atan2`'s value taken down to
-//!   `π̂`, or read as `π̂` at or below `−π̂`, elsewhere (dd_decoder §3.6; REQ-PAY-088).
-//! - `ic_descriptor_floors`: REQ-TOOL-163's evidence on decoded values, `rho_ratio` and `r_min_pair_0` against their
-//!   log floors (R-419), and where they place the decoded values on the log view's ramp.
+//!   `π̂`, or read as `π̂` at or below `−π̂`, elsewhere (dd_decoder §3.6).
+//! - `ic_descriptor_floors`: the floors' evidence on decoded values, `rho_ratio` and `r_min_pair_0` against their
+//!   log floors, and where they place the decoded values on the log view's ramp.
 //!
-//! **REQ-PAY-095's proposal** (R-71, R-421; unconfirmed until the M2 gate). At the golden IC the fields 0 at rest are
-//! `K_0` and `virial_ratio` (R-421), compared bit-exact; none of the six fields REQ-PAY-088 defines is 0 there. Each
+//! **The proposed tolerances** (unconfirmed until the M2 gate). At the golden IC the fields 0 at rest are
+//! `K_0` and `virial_ratio`, compared bit-exact; none of the six fields dd_decoder §3.6 defines is 0 there. Each
 //! other field is within 4 ulps of its exact value rounded to the precision, at f64 and at f32
 //! (`decode_support::DESCRIPTOR_ULPS`). The measured distance, in ulps, the decode at `z = 0` being deterministic:
 //!
@@ -46,7 +46,7 @@ use validation::negative_control;
 /// A decode entry at `R`, behind a function pointer, so a control runs the same check on a broken one.
 type Run<R> = fn(&kernel::decode::Latent<R>) -> Decoded<R>;
 
-// ── ic_descriptor_golden (REQ-PAY-034, REQ-PAY-095) ─────────────────────────────────────────────────────────────
+// ── ic_descriptor_golden ────────────────────────────────────────────────────────────────────────────────────────
 
 /// Checks each descriptor field of `run`'s golden IC against the fixture, and the derived `E₀`.
 fn check_golden<R: P>(run: Run<R>, worst: &Worst) {
@@ -114,9 +114,9 @@ mod zero_at_rest {
     );
 }
 
-// ── ic_descriptor_names (REQ-PAY-034) ───────────────────────────────────────────────────────────────────────────
+// ── ic_descriptor_names ─────────────────────────────────────────────────────────────────────────────────────────
 
-/// dd_generation_root §3.6's fields, in order (R-22, R-62).
+/// dd_generation_root §3.6's fields, in order.
 const FIELDS: [&str; 12] = [
     "m0",
     "m1",
@@ -217,12 +217,12 @@ negative_control!(
     )
 );
 
-// ── ic_descriptor_definitions (REQ-PAY-088) ─────────────────────────────────────────────────────────────────────
+// ── ic_descriptor_definitions ───────────────────────────────────────────────────────────────────────────────────
 
-/// The definitions' tolerance, in `eps` of each field's scale (below): REQ-DEC-044's neighbour, the formula's few
-/// roundings at `R` against the same formula in f64 on the same `(m, r, p)`. Over 200 runs at the seeds 1 … 200 the
-/// worst was 2.3 `eps` for a field, the rotated IC included, and 5.2 for the canonical frame's
-/// `rho_mag² + lambda_mag² = 1`, at f32.
+/// The definitions' tolerance, in `eps` of each field's scale (below), a per-precision tolerance like dd_decoder
+/// tests 1 and 6's: the formula's few roundings at `R` against the same formula in f64 on the same `(m, r, p)`. Over
+/// 200 runs at the seeds 1 … 200 the worst was 2.3 `eps` for a field, the rotated IC included, and 5.2 for the
+/// canonical frame's `rho_mag² + lambda_mag² = 1`, at f32.
 const DEFINITION_EPS: f64 = 16.0;
 
 /// A descriptor computed at `R`, behind a function pointer, so a control runs the same check on a broken one.
@@ -431,7 +431,7 @@ negative_control!(
     check_definitions_both(reversed_angle::<f64>, reversed_angle::<f32>)
 );
 
-// ── ic_descriptor_rho_angle_axis (REQ-PAY-088) ─────────────────────────────────────────────────────────────────
+// ── ic_descriptor_rho_angle_axis ───────────────────────────────────────────────────────────────────────────────
 
 /// `rho_angle` from `ρ × λ` and `ρ · λ`, behind a function pointer, so a control runs the same check on a broken one.
 type Angle<R> = fn(R, R) -> R;
@@ -508,11 +508,11 @@ negative_control!(
     check_axis_both(bare_atan2::<f64>, bare_atan2::<f32>)
 );
 
-// ── ic_descriptor_floors (REQ-TOOL-163) ─────────────────────────────────────────────────────────────────────────
+// ── ic_descriptor_floors ────────────────────────────────────────────────────────────────────────────────────────
 
 /// The register's provisional floors (`crates/ledger/src/constants.rs`, `LOG_FLOOR_RHO_RATIO` and
-/// `LOG_FLOOR_R_MIN_PAIR_0`; R-419), which kernel's tests cannot read from the ledger (kernel → ledger is a
-/// build-dependency only, R-185): `rho_ratio`'s 2⁻²³, `r_min_pair_0`'s 2⁻¹⁴.
+/// `LOG_FLOOR_R_MIN_PAIR_0`), which kernel's tests cannot read from the ledger (kernel → ledger is a
+/// build-dependency only): `rho_ratio`'s 2⁻²³, `r_min_pair_0`'s 2⁻¹⁴.
 const RHO_RATIO_FLOOR: f64 = 1.0 / 8_388_608.0;
 const R_MIN_FLOOR: f64 = 1.0 / 16_384.0;
 
@@ -620,7 +620,7 @@ fn spreads<R: P>(run: Run<R>) -> [(&'static str, Spread, Spread); 2] {
 /// emitted bodies coincide (the collision pole, dd_decoder §3.6); and reports both fields over the hypercube and the
 /// whole domain, with where their values land on the log view's ramp ([`raw`]). "None below the floor" bounds the
 /// floor from above only: a floor far below the population passes it too, and squeezes the population into a sliver
-/// of the ramp, which the report's 8-bit levels show for the human to weigh at the M2 gate (R-419).
+/// of the ramp, which the report's 8-bit levels show for the human to weigh at the M2 gate.
 fn check_floors<R: P>(links: &str, run: Run<R>, floors: [f64; 2]) {
     for ((what, hyper, domain), floor) in spreads(run).into_iter().zip(floors) {
         eprintln!(
@@ -642,7 +642,7 @@ fn check_floors<R: P>(links: &str, run: Run<R>, floors: [f64; 2]) {
         );
     }
     // At f32, `rho_ratio` below its floor is the decode's last grid step alone: `α` saturated at the f32 image of π/2
-    // (R-417), where `cot α ≈ 7.5e-8`; the step before it, `cot α ≈ 1.9e-7`, is above the floor.
+    // (rounded toward zero), where `cot α ≈ 7.5e-8`; the step before it, `cot α ≈ 1.9e-7`, is above the floor.
     if R::NAME == "f32" {
         over(any_z(), |z| {
             let d = run(&latent::<R>(z));

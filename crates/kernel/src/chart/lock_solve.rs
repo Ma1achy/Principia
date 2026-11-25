@@ -1,11 +1,11 @@
-//! The lock's solver core (design `principia_chart_composition.md` § 17.8 and § 10.6; TASK-M2-94): a least-squares
-//! solve over a map, "which chart point's state is nearest this one", the one solve the lock's re-solve (TASK-M2-65)
-//! and placement's nearest-point route (TASK-M2-99) both call.
+//! The lock's solver core (design `principia_chart_composition.md` § 17.8 and § 10.6): a least-squares
+//! solve over a map, "which chart point's state is nearest this one", the one solve the lock's re-solve calls and
+//! placement's nearest-point route is to call.
 //!
 //! **The problem.** A map `F : ℝ² → ℝᴺ` (a chart's forward code, or a frame of a family of them, a morph), a target
 //! `y ∈ ℝᴺ` and a diagonal weight `w`: find a local minimiser of `½‖r(x)‖²`, `rᵢ(x) = wᵢ(Fᵢ(x) − yᵢ)`. The map gives
 //! its value and its slopes ([`Map`]); the solver never differentiates. The weight is the caller's, because the metric
-//! "nearest" is measured in is placement's definition to write (§ 10.6, owed by TASK-M2-99).
+//! "nearest" is measured in is placement's definition to write (§ 10.6).
 //!
 //! **The step** ([`solve`]): damped Newton (Levenberg) on the 2×2 system `(H + μI)δ = −Jᵀr`, solved in closed form.
 //! `H = JᵀJ + S`, where `S`, the residual's own curvature `Σ rᵢ∇²Fᵢ`, is estimated by a secant update from the steps
@@ -71,7 +71,7 @@
 //! that reaches to within about `2^−depth` of a frame of the fold: at depth 32, the frame that crosses it.
 //!
 //! The plan is unclear here; chose this nested test as the definition of "the followed minimiser ends" because the
-//! definition the lock's paths are to read (TASK-M2-65's, under physics review) is not written yet, and this one is
+//! definition the lock's paths are to read is not written yet, and this one is
 //! G8's own criterion (the step falls as the frame step halves) applied inside one frame, descending until the step
 //! either shrinks or is seen not to: an ending is a step that does not shrink, a jump, whatever the frame's size. Steps
 //! are measured in chart coordinates, the solve's own unknowns. A chain through an interval's midpoint that ends

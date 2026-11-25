@@ -1,12 +1,12 @@
 //! The regularisation axis: the second occupant slot, independent of the stepper (integrator_contract Part 2b, Part
-//! 2a; R-19, R-561).
+//! 2a).
 //!
 //! **Two slots.** The stepper ([`crate::occupant`]) and the regularisation are chosen separately, and the bound
 //! occupant is their composition, [`Composed<S, G>`], which implements the occupant seam [`Advance`]. The slot has Part
 //! 2b's four kinds ([`Kind`]): `none`, Aarseth–Zare, Heggie and logH. Like the steppers, a regularisation is a Rust type
 //! implementing [`Regularisation`], bound at build time.
 //!
-//! **`owns_time_mapping` is the composed occupant's** (Part 2a; R-19): [`Composed::profile`] reports it as
+//! **`owns_time_mapping` is the composed occupant's** (Part 2a): [`Composed::profile`] reports it as
 //! [`Kind::owns_time_mapping`], true whenever the regularisation is not `none`, whatever the regularisation's own
 //! profile says.
 //!
@@ -19,12 +19,12 @@
 //! **logH** ([`logh`]) has its two time modes, its own state, its steps, its direct march, registered once at
 //! `t = 0`, and its seam `ADVANCE` ([`logh::LogH`]), which carries `B`, `W` and its clock as Heggie's carries `(Q, P, h)`.
 //!
-//! [`heggie_joint`] is the FTLE shadow's joint step on Heggie × RK4, the default occupant (R-974, R-560; TASK-M3-74).
+//! [`heggie_joint`] is the FTLE shadow's joint step on Heggie × RK4, the default occupant.
 //!
-//! [`budget`] is the regularised integration floor: R-604's step budget as a rate, the sticky exhaustion flag and the
-//! two counted signals in `budget_bits` (R-603).
+//! [`budget`] is the regularised integration floor: the step budget as a rate, the sticky exhaustion flag and the
+//! two counted signals in `budget_bits`.
 //!
-//! [`sync`] is the regularised occupants' sync grid, the fixed quantum `Δ_sync` every march lands on (Part 2a; R-565).
+//! [`sync`] is the regularised occupants' sync grid, the fixed quantum `Δ_sync` every march lands on (Part 2a).
 //!
 //! [`pairs`] is Part 2b's pair table and the selection of a pair; [`dt_max`] is the per-trajectory largest-step
 //! diagnostic with its "no usable step" sentinel (Part 2c).
@@ -62,7 +62,7 @@ impl Kind {
     pub const ALL: [Kind; 4] = [Kind::None, Kind::AarsethZare, Kind::Heggie, Kind::LogH];
 
     /// Whether an occupant composed with this regularisation owns its time mapping: whenever it is not `none` (Part
-    /// 2a; R-19).
+    /// 2a).
     #[inline]
     pub const fn owns_time_mapping(self) -> bool {
         !matches!(self, Kind::None)
@@ -91,7 +91,7 @@ pub trait Regularisation {
     /// The pair's `ADVANCE` with how the call ended ([`Advance::advance_reaching`]). This default is the kind's rule. An
     /// occupant that owns its time mapping reached its target unless the cadence's `done` stopped it: its march stops
     /// only on the sync grid, at the latest boundary at or before `t_target` (Part 2a § "The sync grid is a fixed
-    /// quantum of physical time (R-565)"), and the steps it took there are its own, not the wrapper's `N_sub` (Part 2a,
+    /// quantum of physical time"), and the steps it took there are its own, not the wrapper's `N_sub` (Part 2a,
     /// Cost 2). `none` keeps the stepper's rule ([`Reached::by_count`]). **This default suits only a march that cannot
     /// fail**: it never reports [`Reached::NonFinite`] or [`Reached::Exhausted`], so a regularisation whose march can
     /// end non-finite or on its step budget reports it in its own, as [`az::AarsethZare`], [`heggie::Heggie`] and
@@ -166,7 +166,7 @@ pub struct Composed<S, G>(PhantomData<(S, G)>);
 
 impl<S: Stepper, G: Regularisation> Composed<S, G> {
     /// The composed occupant's profile: the pair's ([`Regularisation::profile`]), with `owns_time_mapping` true
-    /// whenever the regularisation is not `none` (Part 2a; R-19).
+    /// whenever the regularisation is not `none` (Part 2a).
     #[inline]
     pub fn profile() -> CapabilityProfile {
         CapabilityProfile {

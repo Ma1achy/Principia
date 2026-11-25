@@ -1,10 +1,9 @@
-//! QA tests for TASK-M0-11's total table functions, written from REQ-PAY-016's statement and verify detail, payload §3
-//! ("The table functions are total") and the rulings R-321 (symbol inputs `debug_assert!`-ed < 4, then masked `& 3`;
-//! `continuation_index` returns 3 only in its four inverse cells, R-307) and R-324 (the digit `debug_assert!`-ed < 3,
-//! then clamped `min(d, 2)`), not from the implementation. The tables below are transcribed from payload §3's frozen
-//! arrays. The release half runs under `cargo test --release`; the debug half under `cargo test`. Each check takes its
-//! functions as arguments, so each negative control (R-176) substitutes a function that breaks one rule, and goes red
-//! in either build.
+//! QA tests for the payload's total table functions, written from payload §3 ("The table functions are total"), not
+//! from the implementation: symbol inputs are `debug_assert!`-ed < 4, then masked `& 3`; `continuation_index` returns 3
+//! only in its four inverse cells; the digit is `debug_assert!`-ed < 3, then clamped `min(d, 2)`. The tables below are
+//! transcribed from payload §3's frozen arrays. The release half runs under `cargo test --release`; the debug half under
+//! `cargo test`. Each check takes its functions as arguments, so each negative control substitutes a function that
+//! breaks one rule, and goes red in either build.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
@@ -15,7 +14,7 @@ use validation::negative_control;
 const INV: [u32; 4] = [1, 0, 3, 2];
 /// Payload §3: `cont_symbol[digit][prev]`; each row an involution, so `predecessor_symbol[e] == cont_symbol[e]`.
 const CONT: [[u32; 4]; 3] = [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2, 1, 0]];
-/// Payload §3 (R-307): `continuation_index[prev][next]`, 3 in the four cells where `next = inverse(prev)`.
+/// Payload §3: `continuation_index[prev][next]`, 3 in the four cells where `next = inverse(prev)`.
 const CI: [[u32; 4]; 4] = [[0, 3, 1, 2], [3, 0, 2, 1], [1, 2, 0, 3], [2, 1, 3, 0]];
 
 /// The four table functions, so a control can substitute one.
@@ -60,7 +59,7 @@ fn digits() -> Vec<u32> {
     v
 }
 
-/// The release-build reading (R-321, R-324): every function reads its table at each symbol `& 3` and each digit
+/// The release-build reading: every function reads its table at each symbol `& 3` and each digit
 /// `min(d, 2)`, over in-range and out-of-range inputs alike, so no out-of-range value exists; `continuation_index`
 /// returns 3 exactly in its inverse cells.
 fn check_release(f: Fns) {
@@ -105,7 +104,7 @@ fn panics(call: impl FnOnce() -> u32) -> bool {
     catch_unwind(AssertUnwindSafe(call)).is_err()
 }
 
-/// The debug-build reading (R-321, R-324): every in-range call returns the frozen cell without panicking; a symbol
+/// The debug-build reading: every in-range call returns the frozen cell without panicking; a symbol
 /// input ≥ 4, or a digit ≥ 3, fails a `debug_assert!`. The boundaries 3/4 and 2/3 are both probed.
 fn check_debug(f: Fns) {
     let syms_out = [4, 5, 6, 7, 8, 255, 1 << 31, u32::MAX];
@@ -197,8 +196,8 @@ fn qa_continuation_table_out_of_range_debug_asserts() {
     check_debug(GEN);
 }
 
-/// The rulings' release reading, written from payload §3 and R-321/R-324 without assertions: the base the release
-/// controls break one function of, so each control fails in either build.
+/// The release reading, written from payload §3 without assertions: the base the release controls break one function
+/// of, so each control fails in either build.
 #[cfg(feature = "controls")]
 const RELEASE_REF: Fns = Fns {
     inverse: |s| INV[(s & 3) as usize],
@@ -207,7 +206,7 @@ const RELEASE_REF: Fns = Fns {
     continuation_index: |p, s| CI[(p & 3) as usize][(s & 3) as usize],
 };
 
-/// The rulings' debug reading with `assert!`, which holds in either build: the base the debug controls break one
+/// The debug reading with `assert!`, which holds in either build: the base the debug controls break one
 /// function of.
 #[cfg(feature = "controls")]
 const DEBUG_REF: Fns = Fns {
@@ -229,7 +228,7 @@ const DEBUG_REF: Fns = Fns {
     },
 };
 
-/// R-319's vetoed release reading: 3 for an out-of-range symbol, replaced by `& 3` (R-321).
+/// A wrong release reading: 3 for an out-of-range symbol, where the table functions mask it `& 3`.
 #[cfg(feature = "controls")]
 fn ci_returns_3_out_of_range(p: u32, s: u32) -> u32 {
     if p < 4 && s < 4 {

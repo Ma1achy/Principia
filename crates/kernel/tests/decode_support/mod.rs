@@ -1,5 +1,5 @@
 //! What `decode_join.rs` and `ic_descriptor.rs` share: the two precisions, the selections, the fuzzed domain, the
-//! golden IC's fixture (`fixtures/golden_ic/z0.json`) and REQ-PAY-095's proposed tolerances.
+//! golden IC's fixture (`fixtures/golden_ic/z0.json`) and the descriptor's proposed tolerances.
 
 #![allow(dead_code)] // Each test file uses part of the module.
 
@@ -104,15 +104,16 @@ pub fn latent<R: P>(z: [f64; 8]) -> Latent<R> {
     Latent::new(at::<R, 8>(z))
 }
 
-/// The golden IC's `z` at `R`: `z = 0`, its `z_β` converted from `sigmoid_beta`, the link it was written under (R-898),
-/// `z_β′ = σ-link(0) − π/2 = π̂/2 − π̂/2 = 0` exactly under the offset link (R-1020), so `fixtures/golden_ic/z0.json`
-/// stands bit for bit. *Was (the identity link, 14 Nov 2026):* "`z_β = π̂·σ(0) = π̂/2`".
+/// The golden IC's `z` at `R`: `z = 0`, its `z_β` converted from `sigmoid_beta`, the link it was written under,
+/// `z_β′ = σ-link(0) − π/2 = π̂/2 − π̂/2 = 0` exactly under the offset link, so `fixtures/golden_ic/z0.json` stands bit
+/// for bit.
 pub fn golden_z<R: P>() -> Latent<R> {
     latent::<R>([0.0; 8])
 }
 
-/// The offset link's constant at `R`, `c = π̂/2` (dd_decoder § 3.2, "The offset in floating point"; R-1020): half of
-/// R-417's image of π, exact, `fl↓(π/2)` at f32 (bits `0x3FC9_0FDA`), the nearest at f64.
+/// The offset link's constant at `R`, `c = π̂/2` (dd_decoder § 3.2, "The offset in floating point"): half of
+/// the generated image of π (rounded toward zero at f32), exact, `fl↓(π/2)` at f32 (bits `0x3FC9_0FDA`), the nearest
+/// at f64.
 pub fn offset<R: P>() -> R {
     R::LIT_7 / (R::one() + R::one())
 }
@@ -147,7 +148,7 @@ pub fn selections<R: P>() -> [(&'static str, Entry<R>); 4] {
 // ── The domain ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A control drawn from the centre, the transition into saturation, deep saturation, or anywhere up to 10³⁸ in
-/// magnitude: every finite `z` is accepted (R-407), and the widest draws stay finite at f32.
+/// magnitude: every finite `z` is accepted, and the widest draws stay finite at f32.
 pub fn control() -> impl Strategy<Value = f64> {
     prop_oneof![
         -2.0f64..=2.0,
@@ -277,7 +278,7 @@ pub fn field<R: PayloadReal>(d: &ICDescriptorOf<R>, field: &str) -> R {
     }
 }
 
-/// REQ-PAY-095's proposal (R-71, R-421): each golden descriptor field that is not 0 at rest is within this many ulps of
+/// The descriptor's proposed tolerances: each golden descriptor field that is not 0 at rest is within this many ulps of
 /// its exact value rounded to the precision, the same count at f64 and at f32; the fields 0 at rest, `K_0` and
 /// `virial_ratio`, take none and are compared bit-exact. The measured distances, the evidence, are in
 /// `ic_descriptor.rs`'s header. Unconfirmed until the M2 gate.
@@ -294,7 +295,7 @@ pub const DESCRIPTOR_ULPS: [(&str, u64); 10] = [
     ("r_min_pair_0", 4),
 ];
 
-/// The descriptor's fields that are 0 at the golden IC because it is at rest (R-421), compared bit-exact.
+/// The descriptor's fields that are 0 at the golden IC because it is at rest, compared bit-exact.
 pub const ZERO_AT_REST: [&str; 2] = ["K_0", "virial_ratio"];
 
 /// A field's proposed tolerance in ulps, or `None` for a field 0 at rest.
@@ -309,7 +310,7 @@ pub fn descriptor_ulps(field: &str) -> Option<u64> {
     Some(*n)
 }
 
-/// A descriptor field against the fixture: bit-exact if 0 at rest, else within its REQ-PAY-095 ulps.
+/// A descriptor field against the fixture: bit-exact if 0 at rest, else within its proposed ulps.
 pub fn check_field<R: P>(field: &str, got: R, want: R, worst: &Worst) {
     match descriptor_ulps(field) {
         None => assert_eq!(

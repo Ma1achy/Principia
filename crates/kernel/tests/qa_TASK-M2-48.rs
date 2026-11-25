@@ -1,23 +1,23 @@
-//! QA tests for TASK-M2-48, written from the requirements, not from the implementation: `M₀₁` in R-547's form.
+//! QA tests, written from the spec, not from the implementation: `M₀₁` is the one rounded sum `m₀ + m₁`.
 //!
-//! - REQ-DEC-011 (dd_decoder §3.1 "The branch input, rewritten"): the mass block emits `DEGENERATE(M01_TINY)` iff
+//! - dd_decoder §3.1 "The branch input, rewritten": the mass block emits `DEGENERATE(M01_TINY)` iff
 //!   `M₀₁ < ε`, strict, `M₀₁` the one rounded sum of the emitted masses. Checked against an oracle independent of the
 //!   block (at f64 the IEEE add, which Rust never contracts; at f32 the f64 sum of the two f32 masses rounded once to
 //!   f32, innocuous double rounding since 53 ≥ 2·24 + 2): at `ε` itself and its neighbours, at sums whose exact value
 //!   lies on one side of `ε` and whose rounding lands on the other, at ties, and over exponent gaps well past the
 //!   form's cap of 60 (`qa_m48_strict_eps`, `qa_m48_sum_gaps`).
-//! - REQ-DEC-011's control and REQ-VAL-017's (RQ-621, option (a)): at TASK-M2-02's onset crossings, 20 000 lines
+//! - The decoder's and the CPU/GPU parity check's control: at `stick_breaking`'s onset crossings, 20 000 lines
 //!   `z₁ ∈ [6.3, 20.3]`, bisected here on the oracle's tag, at f32 and f64, the block's `M₀₁` and tag are the
 //!   oracle's at every point, while the superseded `fma(m₁, 1, m₀)` with its `×1` folded and its add contracted,
 //!   `fma(t₇, t₁₃, m₀)` fused, gives a different tag at one point at least (`qa_m48_crossings_fused_flips`).
-//! - REQ-DEC-011 "flushing or not": a flushing backend emits a subnormal mass as 0; the block's tag on the flushed
+//! - Flushing or not (dd_decoder §3.1): a flushing backend emits a subnormal mass as 0; the block's tag on the flushed
 //!   masses is its tag on the kept ones, at f32 and f64 (`qa_m48_flush_keeps_tag`).
 //!
-//! **Domain** (pitfalls §10): the mass block alone on the CPU, its inputs held fixed; no trajectory. The GPU half of
-//! REQ-DEC-011 and REQ-VAL-017 is `engine`'s `decode_parity_m01_crossings`, which compares the GPU's tag with this
+//! **Domain** (pitfalls §10): the mass block alone on the CPU, its inputs held fixed; no trajectory. The GPU half is
+//! `engine`'s `decode_parity_m01_crossings`, which compares the GPU's tag with this
 //! block's form on the GPU's own emitted masses; these tests pin that form to the independent oracle.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use kernel::decode::degenerate::Degenerate;
 use kernel::decode::mass::{self, Masses};
@@ -131,7 +131,7 @@ fn check_point<R: Fp>(form: Form<R>, m0: R, m1: R) -> Result<(), String> {
 
 // ── Strict `< ε`, on the rounded sum ────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-011's tag at `ε` and around it, each pair in both orders: the rounded sum exactly `ε` (by several splits),
+/// The `M01_TINY` tag at `ε` and around it, each pair in both orders: the rounded sum exactly `ε` (by several splits),
 /// one float below and above, an exact sum below `ε` that rounds up to it, one above that rounds down to it, and ties.
 /// Both tags are reached, and `M₀₁ = ε` is untagged by name.
 fn check_strict<R: Fp>(form: Form<R>) {
@@ -207,7 +207,7 @@ negative_control!(
 
 // ── The sum over exponent gaps past the cap ─────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-011's `M₀₁` over masses on very different scales, the smaller `2^0` to `2^−160` below the larger (past the
+/// `M₀₁` over masses on very different scales, the smaller `2^0` to `2^−160` below the larger (past the
 /// form's alignment cap of 60, and into the subnormals at f32), and the larger from `ε`'s binade to 1: bit for bit the
 /// oracle's, and the tag its.
 fn check_gaps<R: Fp>(form: Form<R>) {
@@ -258,7 +258,7 @@ negative_control!(
 
 // ── The onset crossings: the folded-and-fused control flips, the block does not ─────────────────────────────────
 
-/// TASK-M2-02's lines.
+/// The number of onset-crossing lines `z₁ ∈ [6.3, 20.3]`.
 const LINES: u32 = 20_000;
 
 /// `stick_breaking`'s forward, from `kernel::generated::links`' op order, up to its last multiply: `(m₀, t₇, t₁₃)`,
@@ -377,7 +377,7 @@ negative_control!(
 
 // ── Flushing or not ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-011's "flushing or not": a flushing backend emits each subnormal mass as 0. On masses mixing zero,
+/// Flushing or not (dd_decoder §3.1): a flushing backend emits each subnormal mass as 0. On masses mixing zero,
 /// subnormal and normal values, at and around `ε`, `form`'s tag on the flushed masses is its tag on the kept ones, and
 /// on the kept ones it is the oracle's.
 fn check_flush<R: Fp>(form: Form<R>) {

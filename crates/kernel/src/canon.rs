@@ -1,27 +1,26 @@
 //! Canonicalisation `C`, the one seam to `(m, r, p)` (core_design §5; canonical_spec §3; dd_encode §3.2; inverse-encode
 //! contract Parts 1, 2 and 6; dd_decoder §3.3, §3.5; chart_reference §0.4, §0.5): the quotient of a physical state onto
 //! the decode's canonical section, CoM at the origin, total momentum zero, `ρ̃` on `+x` and `I = 1`, `λ̃` in either
-//! half-plane, one source for the f32 kernel and the f64 CPU path (R-265). Decode and encode both run it (seam 8).
+//! half-plane, one source for the f32 kernel and the f64 CPU path. Decode and encode both run it (seam 8).
 //!
-//! **The order is normative** (R-23; [`canonicalise`]): every step acts on the full state, every `rᵢ` and every `pᵢ`.
+//! **The order is normative** ([`canonicalise`]): every step acts on the full state, every `rᵢ` and every `pᵢ`.
 //! ```text
 //! 1a COM     r ← r − R_com                         R_com = Σ mᵢrᵢ  (M = 1)
 //! 0  SCALE   I_in = Σ mᵢ‖rᵢ‖² in the CoM frame;  r ← r/√I_in,  p ← I_in^{1/4}·p;  λ = I_in^{−1/2} recorded;
-//!            lookup_rescaled exactly when step 0 ran (R-547):
+//!            lookup_rescaled exactly when step 0 ran:
 //!            |I_in − 1| ≤ τ_I → skipped (λ = 1, r and p unchanged);  else in two steps, by a power of two, then by
 //!            the remainder;  the bodies coincident (I_in = 0) → divisor 1, λ = 1, p = 0
 //! 1b BOOST   p ← p − mᵢ·P_tot                      P_tot = Σ pᵢ    (M = 1)
-//! 2  ROTATE  φ = atan2(ρ_y, ρ_x), ρ = r₁ − r₀;  R(−φ) on every rᵢ and pᵢ;  ρ = 0 → lookup_clamped (R-13), φ = +0
+//! 2  ROTATE  φ = atan2(ρ_y, ρ_x), ρ = r₁ − r₀;  R(−φ) on every rᵢ and pᵢ;  ρ = 0 → lookup_clamped, φ = +0
 //!            R(−φ)'s cos φ and sin φ formed as ρ/‖ρ‖, the same in exact arithmetic (rotation)
 //! ```
 //! CoM subtraction precedes the `I` computation because `I` is CoM-frame-defined.
 //!
-//! **No mirror step** (R-865, R-898; TASK-M2-57; dd_encode §3.2, dd_decoder §3.3). `C` has four steps, and `λ̃_y` keeps
+//! **No mirror step** (dd_encode §3.2, dd_decoder §3.3). `C` has four steps, and `λ̃_y` keeps
 //! its sign: a state below the `x`-axis stays there, and the encode reads its `β` in `(π, 2π)` (latent `β` is a periodic
 //! angle over the full circle). Which side that is, the encode does not read off the rotated floats: `C` decides it on
 //! its input and records it ([`Canonical::signs`]; "The signs of `λ̃`" below), and moves no coordinate for it. Every caller, the shape sphere chart's decode among them, runs the one [`canonicalise`],
-//! so there is one path with no special case. *Was:* a step 3, `MIRROR iff λ̃_y < −δ_λ: y → −y on every rᵢ and pᵢ;
-//! lookup_mirrored; |λ̃_y| ≤ δ_λ → no mirror (R-82)`, and a second entry without it for the shape sphere (R-544).
+//! so there is one path with no special case.
 //! [`reflect`] is the mirror itself, `Π`, the `y → −y` of every `rᵢ` and every `pᵢ`, which the encode is now
 //! equivariant under (T1, inverse-encode contract Part 1).
 //!
@@ -30,13 +29,13 @@
 //! Part 4, "The mass columns"), which differentiate these formulas off the simplex, `M` still taken as 1.
 //!
 //! **The notices.** [`Canonical`] carries `λ` and `lookup_rescaled` (step 0 ran) and `lookup_clamped`, each raised iff
-//! its operation did (seam 8; REQ-ENC-014). [`Canonical::signs`] is no notice: nothing was discarded.
+//! its operation did (seam 8). [`Canonical::signs`] is no notice: nothing was discarded.
 //!
-//! **Step 0** ([`scale_step`]; R-547, closing RQ-295 and RQ-296; dd_encode §3.2; inverse-encode contract Parts 2
-//! and 6). Three cases, chosen by selects on its branch inputs (below), every one computed:
-//! - **Skipped** where `|I_in − 1| ≤ τ_I`, `τ_I` the register's `tau_i` eps of the precision ([`IeeeBits::TAU_I`];
-//!   REQ-ENC-035): `λ = 1`, `r` and `p` leave the step bit for bit as they entered it, and `lookup_rescaled` is not
-//!   raised. A canonical input, at `I = 1` only to rounding, raises no notice.
+//! **Step 0** ([`scale_step`]; dd_encode §3.2; inverse-encode contract Parts 2 and 6).
+//! Three cases, chosen by selects on its branch inputs (below), every one computed:
+//! - **Skipped** where `|I_in − 1| ≤ τ_I`, `τ_I` the register's `tau_i` eps of the precision ([`IeeeBits::TAU_I`]):
+//!   `λ = 1`, `r` and `p` leave the step bit for bit as they entered it, and `lookup_rescaled` is not raised.
+//!   A canonical input, at `I = 1` only to rounding, raises no notice.
 //! - **Run** elsewhere, the bodies apart, in two steps: `I_in = s·2^{4q}` with `q` an integer and `s` in `[1, 16)`
 //!   (`I_in`'s mantissa times `2^b`, `b` the low two bits of its exponent), so `√I_in = √s·2^{2q}` and
 //!   `I_in^{1/4} = √√s·2^q`: first by the power of two, `r·2^{−2q}` and `p·2^q`, exact (an integer added to an
@@ -45,27 +44,27 @@
 //!   below), so it neither underflows nor overflows for any finite state with the bodies apart, and the state leaves
 //!   step 0 at `I = 1` to rounding. `lookup_rescaled` is raised.
 //! - **The bodies coincident**, `r₀ = r₁ = r₂`: divisor 1, `λ = 1`, `p = 0`, `r` the CoM frame's, no
-//!   `lookup_rescaled`; `ρ = 0` raises `lookup_clamped` (R-13) and `φ = +0` (R-437). With positive masses `I_in = 0`
+//!   `lookup_rescaled`; `ρ = 0` raises `lookup_clamped` and `φ = +0`. With positive masses `I_in = 0`
 //!   happens there only. The select is on the coincidence itself, not on `I_in = 0`: `R_com` of three equal positions
-//!   off the origin is rounded, so their CoM frame can be an ulp from 0 and `I_in` an ulp's square, not 0, and the
-//!   case R-547 names is the coincidence (decided per R-369).
+//!   off the origin is rounded, so their CoM frame can be an ulp from 0 and `I_in` an ulp's square, not 0. The plan is
+//!   unclear here (it names the case `I_in = 0`); chose the coincidence because that `I_in` need not round to 0.
 //!
 //! The recorded `I_in` ([`Canonical::i_in`]) is the input's, converted to the float: where it is past the float's
 //! range, at f32 coordinates above about `1e19` or below about `4e-23` (f64 above about `1e154`, below about
 //! `1e-162`), it reads `+∞` or a subnormal or 0, a record only; nothing in `C` reads it. `λ` is past the float's range
 //! only where `I_in^{−1/2}` itself is, the bodies within about `1e-38` of each other at f32.
 //!
-//! **`φ` at the pole** (R-437; dd_decoder §3.2, §3.3; [`rotation_angle`]): at `ρ = 0`, `φ` is 0 for every sign of the
+//! **`φ` at the pole** (dd_decoder §3.2, §3.3; [`rotation_angle`]): at `ρ = 0`, `φ` is 0 for every sign of the
 //! zeros, a select on `ρ_x = 0` and `ρ_y = 0`, never `atan2(0, 0)`, which GLSL.std.450 leaves undefined; `R(−φ)` is then
 //! the identity on CPU-f64 and GPU-f32 alike. Only the exact `ρ = 0` reaches `lookup_clamped` here; a near-zero `ρ` is
-//! the validation ladder's (TASK-M2-15).
+//! the validation ladder's.
 //!
-//! **The branch inputs** (R-547, correcting R-34 and the determinism note's rules 2 and 6; R-84). Five branches must
+//! **The branch inputs** (gpu_determinism_note § "The discipline", rules 2 and 6). Five branches must
 //! agree across backends: step 0's skip, its coincidence select, step 2's guard `ρ = 0`, where `ρ_x` or `ρ_y` is
 //! 0 in step 2's turn and angle, and the signs of `λ̃_x` and `λ̃_y` that choose the encode's case of `β`
 //! (dd_encode §3.2, "The signed encode of `β`"). Each is built only from operations every IEEE backend rounds
 //! alike, with no intermediate that can be subnormal. `√`, `/` and `atan2` carry ulp bounds in WGSL, not correct
-//! rounding; `fma` is not fused on every backend (CI's lavapipe evaluates it as a rounded product and an add, RQ-298),
+//! rounding; `fma` is not fused on every backend (CI's lavapipe evaluates it as a rounded product and an add),
 //! nor is `a·b + c` left uncontracted on every one; and a backend that flushes subnormal results (Metal) rounds a
 //! subnormal intermediate differently from one that keeps it (the CPU), fused or not. So none of them is built from
 //! those. Every quantity a branch reads is carried as a `Wide`, a mantissa in `[1, 2)` and an integer exponent, its
@@ -88,8 +87,8 @@
 //!
 //! So no float a branch input rounds is subnormal or overflows, for any state whose coordinates are 0 or normal, its
 //! pair differences, CoM and `I_in` whatever their size: one input takes one branch on every IEEE backend that keeps
-//! its additions and multiplications correctly rounded and unreassociated (fast-math off, R-84), whether it fuses,
-//! contracts or flushes subnormals. Each branch input, in exact arithmetic R-23's step:
+//! its additions and multiplications correctly rounded and unreassociated (fast-math off), whether it fuses,
+//! contracts or flushes subnormals. Each branch input, in exact arithmetic the normative order's step:
 //! - **The CoM and `I_in`** (`wide_com`, `wide_inertia`). `R_com = (m₀x₀ + m₁x₁) + m₂x₂` per axis, each product a `Wide`
 //!   product and each sum a `Wide` sum; the CoM frame `xᵢ − R_com`, a `Wide` difference; `I_in = (m₀‖c₀‖² + m₁‖c₁‖²) +
 //!   m₂‖c₂‖²`, `‖c‖² = c_x² + c_y²`, the same. [`centre_of_mass`] and [`inertia`] are these, converted to the float.
@@ -116,8 +115,8 @@
 //!   collinear only to its coordinates' rounding gets a cross product of either sign, the same one everywhere, and
 //!   a state whose `Wide` terms are exact gets its exact sign and its exact zero. `C` moves no coordinate for it (no
 //!   mirror): only `crate::encode::blocks::beta_at`'s selects read it, and they give `atan2` operands of the decided
-//!   signs. *Was (to TASK-M2-57's physics review):* the encode's `β` compared the rotated float `λ̃_x`, `λ̃_y`
-//!   ([`lambda_t_axis`]: an `fma`, a division and a `√`) with 0.
+//!   signs. Don't compare the rotated floats `λ̃_x`, `λ̃_y` ([`lambda_t_axis`]: an `fma`, a division and a `√`)
+//!   with 0 for `β`: their signs at a collinear state can differ between backends.
 //!
 //! The cross-backend claim is for identical inputs only (PIT-10). A state with a subnormal coordinate is itself read
 //! differently by a flushing GPU, before `C` runs; on a backend that keeps subnormals, the CPU's, such a coordinate is
@@ -149,9 +148,9 @@ pub struct Canonical<R> {
     /// `λ̃_y = √μ_λ·λ_y` after the rotation ([`lambda_t_y`]): recorded, not branched on. Its sign is a backend's own
     /// rounding at a collinear state; the half the encode reads is [`Canonical::signs`].
     pub lambda_t_y: R,
-    /// `lookup_rescaled`: step 0 ran, `|I_in − 1| > τ_I` with the bodies apart (R-547).
+    /// `lookup_rescaled`: step 0 ran, `|I_in − 1| > τ_I` with the bodies apart.
     pub rescaled: bool,
-    /// `lookup_clamped`: `ρ = 0` exactly at step 2 (R-13), read before step 0's division.
+    /// `lookup_clamped`: `ρ = 0` exactly at step 2, read before step 0's division.
     pub clamped: bool,
     /// The signs of the rotated `λ̃_x` and `λ̃_y`, decided on the input ([`signs_of`]; the module's note): the case the
     /// encode's `β` takes. The state is not moved for it.
@@ -207,7 +206,7 @@ pub struct Wide<R> {
 }
 
 impl Wide<f32> {
-    /// The mantissa's bits and the exponent, as words: both, since a `Wide`'s value is the pair (R-690).
+    /// The mantissa's bits and the exponent, as words: both, since a `Wide`'s value is the pair.
     #[inline]
     pub fn words(self) -> [u32; 2] {
         [self.m.to_bits(), self.e as u32]
@@ -332,8 +331,8 @@ pub(crate) fn to_float<R: LinkReal + IeeeBits>(a: Wide<R>) -> R {
 }
 
 /// `a` as a float where its exponent is in `R`'s normal range, where [`ldexp`] is exact, and 0 below it: decided on the
-/// exponent, before anything rounds, so no subnormal is formed for a branch to read on any backend (R-547;
-/// gpu_determinism_note § "The discipline", rule 6). A `Wide` just below the range whose float would round up to the
+/// exponent, before anything rounds, so no subnormal is formed for a branch to read on any backend
+/// (gpu_determinism_note § "The discipline", rule 6). A `Wide` just below the range whose float would round up to the
 /// least normal reads 0 like the rest; a backend's flushing or keeping never reaches it.
 #[inline]
 pub(crate) fn to_normal_float<R: LinkReal + IeeeBits>(a: Wide<R>) -> R {
@@ -525,7 +524,7 @@ pub fn scale_step<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Scaled<R> {
     scale_wide(mass, x, ic.p, coincident)
 }
 
-/// Both components 0: `ρ = 0`, step 2's guard (`lookup_clamped`, R-13), true for `+0` and `−0` alike.
+/// Both components 0: `ρ = 0`, step 2's guard (`lookup_clamped`), true for `+0` and `−0` alike.
 #[inline]
 pub fn is_pole<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> bool {
     is_zero(v[0]) & is_zero(v[1])
@@ -575,7 +574,7 @@ fn turn_of<R: LinkReal>(v: [R; 2], pole: bool) -> (R, R) {
     )
 }
 
-/// Step 2's angle `φ = atan2(ρ_y, ρ_x)`, and 0 at `ρ = 0` for every sign of the zeros, selected (R-437). `ρ` is taken
+/// Step 2's angle `φ = atan2(ρ_y, ρ_x)`, and 0 at `ρ = 0` for every sign of the zeros, selected. `ρ` is taken
 /// into the `Wide` form and scaled as `C` scales it (the module's note), so the zero tests read exact zeros; `atan2` is
 /// unchanged by the positive factor. A zero `ρ_x` is taken as `+0` before `atan2`, by a select on it against 0: Metal's
 /// `atan2` at its default math mode gives `atan2(ρ_y, −0)` the opposite sign of `π/2` to IEEE's (pitfalls §11). Where
@@ -587,7 +586,7 @@ pub fn rotation_angle<R: LinkReal + IeeeBits>(rho: [R; 2]) -> R {
 }
 
 /// Step 2's turn `(c, s) = (cos φ, sin φ)` for `φ` = [`rotation_angle`]`(ρ)`, formed as `ρ̂ = ρ/‖ρ‖`, not through `φ`;
-/// at `ρ = 0`, `(1, 0)`, so `R(−φ)` is the identity there (R-437). In exact arithmetic `ρ̂` is `(cos φ, sin φ)`. In
+/// at `ρ = 0`, `(1, 0)`, so `R(−φ)` is the identity there. In exact arithmetic `ρ̂` is `(cos φ, sin φ)`. In
 /// rounded arithmetic `sin` and `cos` of a rounded `atan2` turn `ρ` off `+x` by their error in `φ`, which WGSL bounds
 /// only loosely (`atan2` to 4096 ulp, `sin` and `cos` to an absolute `2⁻¹¹`) and `R(−φ)` multiplies by each `‖rᵢ‖`; a
 /// light body is far out at `I = 1` (`‖r₁‖ ≈ 27` at `m₁ ≈ 1.2·10⁻³`), and through the sines CI's lavapipe put that
@@ -776,9 +775,9 @@ pub fn reflect<R: LinkReal>(ic: &Ic<R>, flip: bool) -> Ic<R> {
     }
 }
 
-/// `C`: `ic` onto the canonical section, in R-23's order (the module's note): 1a, 0, 1b and 2, so the state is at its
-/// CoM, at rest, at `I = 1` with `ρ̃` on `+x`, and `λ̃_y` keeps its sign; the signs of `λ̃` are decided on `ic` and
-/// recorded, the state not moved for them. `ic.m` is positive with `Σmᵢ = 1`.
+/// `C`: `ic` onto the canonical section, in the normative order (the module's note): 1a, 0, 1b and 2, so the state is
+/// at its CoM, at rest, at `I = 1` with `ρ̃` on `+x`, and `λ̃_y` keeps its sign; the signs of `λ̃` are decided on `ic`
+/// and recorded, the state not moved for them. `ic.m` is positive with `Σmᵢ = 1`.
 #[inline]
 pub fn canonicalise<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
     let m = ic.m;

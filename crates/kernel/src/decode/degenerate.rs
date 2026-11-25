@@ -1,14 +1,14 @@
 //! The `DEGENERATE(reason)` label (dd_decoder §2, "From totality"; chart_reference §0.7): a decode-time terminal label
 //! with a narrow, enumerated cause set. An invalid decode is tagged, never dropped, and every pixel carries a label.
 //!
-//! **The closed set** (dd_decoder §2, "The `DEGENERATE` cause set"; R-72, REQ-DEC-038): five reasons, each raised by one
+//! **The closed set** (dd_decoder §2, "The `DEGENERATE` cause set"): five reasons, each raised by one
 //! block, each recorded in payload §2's `sample_descriptor` as `state = decode_failed` with the `detail` code
 //! [`Degenerate::detail`] gives:
 //!
 //! | reason | raised by | `detail` |
 //! |---|---|---|
 //! | `M01_TINY` | the mass block, `M₀₁ < ε_M01` (dd_decoder §3.1) | 2, invalid mass construction |
-//! | `NO_QUALIFYING_SEED` | the invariant construction, no seed with `‖w⁽²⁾‖²_m > ε_w` (§3.4, R-82) | 1, degenerate configuration |
+//! | `NO_QUALIFYING_SEED` | the invariant construction, no seed with `‖w⁽²⁾‖²_m > ε_w` (§3.4) | 1, degenerate configuration |
 //! | `INVARIANT_INFEASIBLE` | the invariant construction, `K* < L_z²/(2I)`, or no finite `2K*` (chart_reference §2.2, §4.5) | 3, other |
 //! | `ENERGY_INFEASIBLE` | `η_E`, `E* < U` (§3.7) | 3, other |
 //! | `ENERGY_UNSCALABLE` | `η_E`, the rest start at `E* > U` or the collision pole (§3.7) | 3, other |
@@ -29,20 +29,20 @@ pub use crate::payload::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Degenerate {
-    /// `M01_TINY`: the inner pair's mass `M₀₁ = m₀ + m₁` is below the mass block's ε (dd_decoder §3.1;
-    /// REQ-DEC-011), [`crate::decode::mass::from_masses`].
+    /// `M01_TINY`: the inner pair's mass `M₀₁ = m₀ + m₁` is below the mass block's ε (dd_decoder §3.1),
+    /// [`crate::decode::mass::from_masses`].
     M01Tiny,
-    /// `ENERGY_INFEASIBLE`: under an energy target, `E* < U`, so `η_E` is not real (dd_decoder §3.7; REQ-DEC-041),
+    /// `ENERGY_INFEASIBLE`: under an energy target, `E* < U`, so `η_E` is not real (dd_decoder §3.7),
     /// [`crate::decode::energy_norm`].
     EnergyInfeasible,
     /// `ENERGY_UNSCALABLE`: under an energy target, no finite `η_E` exists: the rest start `K₀ = 0` at `E* > U`, or the
-    /// collision pole `U = −∞` (dd_decoder §3.7; REQ-DEC-041), [`crate::decode::energy_norm`].
+    /// collision pole `U = −∞` (dd_decoder §3.7), [`crate::decode::energy_norm`].
     EnergyUnscalable,
     /// `INVARIANT_INFEASIBLE`: on a chart built by the invariant-momentum construction, `K* < L_z²/(2I)`, so no momentum
-    /// realises the targets (chart_reference §2.2; REQ-DEC-040), [`crate::decode::invariant::Outcome::Infeasible`].
+    /// realises the targets (chart_reference §2.2), [`crate::decode::invariant::Outcome::Infeasible`].
     InvariantInfeasible,
     /// `NO_QUALIFYING_SEED`: the construction's targets are feasible but no seed has `‖w⁽²⁾‖²_m > ε_w` (dd_decoder
-    /// §3.4; R-82), [`crate::decode::invariant::Outcome::Degenerate`].
+    /// §3.4), [`crate::decode::invariant::Outcome::Degenerate`].
     NoQualifyingSeed,
 }
 

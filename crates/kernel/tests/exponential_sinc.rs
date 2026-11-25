@@ -1,13 +1,13 @@
-//! The shape sphere's exponential sinc, `kernel::Real::sinc` (R-696, RQ-687's option (b); REQ-DEC-053, REQ-DEC-054): at
+//! The shape sphere's exponential sinc, `kernel::Real::sinc`: at
 //! f32 it never reads the backend's `sin` near 0, and at f64 its bits do not move.
-//! - `exponential_sinc_f64_is_sin_over_r`: at f64 it is `sin(r)/r`, the pinned libm's `sin` (R-991), bit for bit, on fuzzed `r`; an ungated form moves a
-//!   bit, its control.
+//! - `exponential_sinc_f64_is_sin_over_r`: at f64 it is `sin(r)/r`, the pinned libm's `sin`, bit for bit, on fuzzed
+//!   `r`; an ungated form moves a bit, its control.
 //! - `exponential_sinc_f64_map_bits`: `exponential` at f64 is the line's old form, bit for bit, on fuzzed frames and at
 //!   `r = 0`.
 //! - `exponential_sinc_f32_within_the_bound`: at f32, on the CPU, within `sinc_bound` of the f64 value on fuzzed `r` and
 //!   across the cut, printing the worst on each side. `exponential_sinc_f32_exhaustive`, ignored, does so on every f32
-//!   below 4 (applied per R-369: too slow for CI; `cargo test --release -p kernel --test exponential_sinc -- --ignored`).
-//! - `exponential_sinc_backend_sin_of_zero`: with the backend's `sin` emulated as 0 near 0, RQ-687's measured case, the
+//!   below 4 (too slow for CI; `cargo test --release -p kernel --test exponential_sinc -- --ignored`).
+//! - `exponential_sinc_backend_sin_of_zero`: with the backend's `sin` emulated as 0 near 0, the measured case, the
 //!   old form gives `k = 0` and the new one its value.
 //! - `exponential_sinc_cut_boundary`: the cut itself takes `sin(r)/r`, the next `r²` below it the series, `r² = 0` gives
 //!   1 exactly, and the generated cut is the register's squared.
@@ -28,7 +28,7 @@ const FRAME: [[f64; 3]; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
 /// `2⁻¹¹`, the absolute bound WGSL puts on `sin`: a conforming backend may return 0 up to here.
 const BACKEND_BOUND: f32 = 1.0 / 2048.0;
 
-/// RQ-687's radius: the failing test's pixel, where the card's `sin(1.00005e-7)` is read to have returned 0.
+/// The measured radius: the failing test's pixel, where the backend's `sin(1.00005e-7)` is read to have returned 0.
 const MEASURED_R: f32 = 1.00005e-7;
 
 /// A small seeded generator: the draws repeat from run to run.
@@ -197,7 +197,7 @@ fn check_f64(form: fn(f64, f64) -> f64) {
     }
 }
 
-/// The series and cut with no gate on the precision, at f64: what R-696's gate keeps out.
+/// The series and cut with no gate on the precision, at f64: what the gate on the precision keeps out.
 #[cfg(feature = "controls")]
 fn ungated(r: f64, square: f64) -> f64 {
     if square < f64::from(SINC_CUT2_F32) {
@@ -233,8 +233,8 @@ fn frame(a: f64, b: f64, c: f64) -> [[f64; 3]; 3] {
     FRAME.map(turn)
 }
 
-/// `exponential`'s line at f64 before R-696, its offset and radius as the map forms them, its `sin` and `cos` the pinned
-/// libm's (R-991).
+/// `exponential`'s plain line at f64 (`sin r/r`, no series), its offset and radius as the map forms them, its `sin`
+/// and `cos` the pinned libm's.
 fn old_map(n0: [f64; 3], e1: [f64; 3], e2: [f64; 3], s: f64, u: f64, v: f64) -> [f64; 3] {
     let (a, b) = ((u + u - 1.0) * s, (v + v - 1.0) * s);
     let d = [0, 1, 2].map(|i| a * e1[i] + b * e2[i]);
@@ -289,7 +289,7 @@ negative_control!(
     })
 );
 
-/// The backend `sin` of RQ-687's measured case: 0 up to the absolute bound, where a conforming `sin` may be.
+/// The backend `sin` of the measured case: 0 up to the absolute bound, where a conforming `sin` may be.
 fn flat_sin(r: f32) -> f32 {
     if r <= BACKEND_BOUND {
         0.0
@@ -298,7 +298,7 @@ fn flat_sin(r: f32) -> f32 {
     }
 }
 
-/// The line before R-696, on the emulated `sin`.
+/// The plain line, `sin r/r` with no series, on the emulated `sin`.
 fn old_form(sin_r: f32, r: f32, _square: f32) -> f32 {
     if r == 0.0 {
         1.0
@@ -307,7 +307,7 @@ fn old_form(sin_r: f32, r: f32, _square: f32) -> f32 {
     }
 }
 
-/// `form` on the emulated `sin` is `sin r/r` near 0, within the bound, at RQ-687's radius and through to the bound.
+/// `form` on the emulated `sin` is `sin r/r` near 0, within the bound, at the measured radius and through to the bound.
 fn check_flat_sin(form: fn(f32, f32, f32) -> f32) {
     let eps = f64::from(f32::EPSILON);
     let mut draws = Draws(0x8BB8_4B93_962E_ACC9);

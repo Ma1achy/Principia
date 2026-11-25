@@ -1,9 +1,8 @@
-//! qa's tests for TASK-M2-37: the sign of the mass ratio (chart_reference §2.1, "A pixel whose ratio is at or below 0,
-//! or is not realised, is not a system"; `MixedMassRatio::realised`, "`q` positive and finite"; REQ-CHART-068,
-//! REQ-CHART-070). Written from those statements. A relative miss divides by the mass, so at a mass below 0 it comes out
-//! negative and "within `ε_μ`" holds of anything: the round trip alone cannot refuse such a ratio when the link returns
-//! the other masses in tolerance, which it can just below `q = 0`.
-//!
+//! qa's tests of the sign of the mass ratio (chart_reference §2.1, "A pixel whose ratio is at or below 0, or is not
+//! realised, is not a system"; `MixedMassRatio::realised`, "`q` positive and finite"). Written from those statements. A
+//! relative miss divides by the mass, so at a mass below 0 it comes out negative and "within `ε_μ`" holds of anything:
+//! the round trip alone cannot refuse such a ratio when the link returns the other masses in tolerance, which it can
+//! just below `q = 0`.
 //! - `qa_ratio_not_positive_or_not_finite_is_not_realised`: under either link, for every ordered pair, across held
 //!   masses and `μ_max` over its registered range, no ratio at or below 0 and none infinite or NaN is realised.
 //!   Control: the bare round trip, each mass within `ε_μ` of the relative miss, which takes such a ratio.

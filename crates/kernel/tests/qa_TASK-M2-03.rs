@@ -1,40 +1,38 @@
-//! QA tests for TASK-M2-03 (the free momentum block, the ordered decode entry and the `ICDescriptor`), written from
-//! the requirements and dd_decoder §3.2, §3.4, §3.6 and §5, chart_reference §0.3 and R-28, R-417, R-421, not from the
-//! implementation. Each check runs at the f64 and the f32 instantiation (R-265), behind function pointers or a
-//! `Blocks` implementation, so each negative control (R-176) runs the same check on a deliberately broken decode.
+//! QA tests for the free momentum block, the ordered decode entry and the `ICDescriptor`, written from
+//! dd_decoder §3.2, §3.4, §3.6 and §5 and chart_reference §0.3, not from the
+//! implementation. Each check runs at the f64 and the f32 instantiation, behind function pointers or a
+//! `Blocks` implementation, so each negative control runs the same check on a deliberately broken decode.
 //!
-//! - REQ-DEC-001, REQ-DEC-004: the entry calls mass → config → momentum → invariants, once each, each block handed its
+//! - The entry calls mass → config → momentum → invariants, once each, each block handed its
 //!   own `z` slice and the outputs of the blocks before it, and the invariants the joined `(m, r, p)`.
-//! - REQ-DEC-003: a `z` with one block non-zero moves only that block's physical outputs (config α, β; momentum
+//! - A `z` with one block non-zero moves only that block's physical outputs (config α, β; momentum
 //!   `p_ρ`, `p_λ`; mass `m`).
-//! - REQ-DEC-026: perturbing one block's controls leaves the other blocks' intermediates bit-identical (fuzzed).
-//! - REQ-DEC-019, REQ-DEC-030, REQ-DEC-045: `qₖ = q_max(2σ(z) − 1)` with `q_max = 2` (R-10), `p_ρ = (q₀, q₁)`,
-//!   `p_λ = (q₂, q₃)`, the Jacobi-to-particle map with no unweighting; `Σpᵢ = 0` within REQ-DEC-045's proposal; the
+//! - Perturbing one block's controls leaves the other blocks' intermediates bit-identical (fuzzed).
+//! - `qₖ = q_max(2σ(z) − 1)` with `q_max = 2`, `p_ρ = (q₀, q₁)`,
+//!   `p_λ = (q₂, q₃)`, the Jacobi-to-particle map with no unweighting; `Σpᵢ = 0` within its tolerance (below); the
 //!   kinetic energy of the particles equals the Jacobi form `‖p_ρ‖²/2μ_ρ + ‖p_λ‖²/2μ_λ`, which holds only for the
 //!   conjugate map and so catches the factor swap `Σpᵢ = 0` cannot (PIT-9: swapping both factors keeps `Σpᵢ = 0`);
-//!   `z_q = 0` gives rest; `|qₖ| ≤ q_max`, reached at saturation (R-417).
-//! - REQ-DEC-027: decoder test 3 over fuzzed `z` with saturation: α compared in f64 at the exact `π/2`, its lower pole
-//!   reached at underflow, `|qₖ| = q_max` at saturation, masses in the open simplex. `β` is a periodic angle with no
-//!   range to respect: `β = z_β + π̂/2` bit for bit at every finite `z_β`, far out as near, with nothing saturating;
+//!   `z_q = 0` gives rest; `|qₖ| ≤ q_max`, reached at saturation.
+//! - Decoder test 3 (dd_decoder §5) over fuzzed `z` with saturation: α compared in f64 at the exact `π/2`, its lower
+//!   pole reached at underflow, `|qₖ| = q_max` at saturation, masses in the open simplex. `β` is a periodic angle with
+//!   no range to respect: `β = z_β + π̂/2` bit for bit at every finite `z_β`, far out as near, with nothing saturating;
 //!   between the two collinear landmarks, `|z_β| ≤ π̂/2`, it lies in `[0, π]`, compared in f64 at the exact `π`, the
-//!   upper landmark the image of `π` rounded toward zero. (Before the periodic link this read "β in `[0, π]` at every
-//!   `z`, `β = 0` reached at underflow"; that was the squashing link's saturation.)
-//! - REQ-VAL-018, REQ-PAY-034: the golden IC at f64 and f32 against values written here from their closed forms
-//!   (exact decimals, each rounded once to the precision, R-421), `K_0` and `virial_ratio` bit-exact, the others within
-//!   REQ-PAY-095's proposal; `E₀ = K_0 + V_0`; the struct's members, with no `E₀`; and `fixtures/golden_ic/z0.json`
-//!   cross-checked against the same closed forms.
-//! - REQ-VAL-020: `z = 0` is equilateral; `z_β = −π̂/2` gives `β = 0` exactly and a collinear IC; from `z_β = 0` up to
+//!   upper landmark the image of `π` rounded toward zero.
+//! - The golden IC at f64 and f32 against values written here from their closed forms
+//!   (exact decimals, each rounded once to the precision), `K_0` and `virial_ratio` bit-exact, the others within
+//!   the golden IC's tolerance (below); `E₀ = K_0 + V_0`; the struct's members, with no `E₀`; and
+//!   `fixtures/golden_ic/z0.json` cross-checked against the same closed forms.
+//! - `z = 0` is equilateral; `z_β = −π̂/2` gives `β = 0` exactly and a collinear IC; from `z_β = 0` up to
 //!   `z_β = π̂/2`, `β` rises to the image of `π` from below, monotone, never past it, the IC as collinear as `β` says.
 //!   Both collinear landmarks are interior points of the periodic `β`, reached exactly, with no underflow and no edge.
-//!   (Before the periodic link they were the limits `z_β → ∓∞` of the squashing link.)
-//! - REQ-PAY-088: the six defined fields on ICs out of the canonical frame (rotated, mirrored, unequal masses) against
+//! - The six defined fields on ICs out of the canonical frame (rotated, mirrored, unequal masses) against
 //!   dd_decoder §3.6's formulas evaluated here in f64; their stated ranges, `rho_angle ∈ (−π, π]` included on the
 //!   collinear antiparallel IC; on canonical decodes `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β`, the two
 //!   angles compared on the circle (`β` runs over the whole line, `rho_angle` over `(−π, π]`).
 //!
-//! **Tolerances.** REQ-PAY-095 (calibrated; the PR's proposal, pending the M2 gate): 4 ulps from the exact value
-//! rounded to the precision. REQ-DEC-045 (calibrated; the PR's proposal, pending the M2 gate): `|Σpᵢ|` per component
-//! within `4·eps·Σ‖pᵢ‖`. REQ-DEC-044 (TASK-M2-02's proposal): `I − 1` within 8 eps. The checks of a formula against
+//! **Tolerances.** The golden IC's fields (calibrated; proposed, pending the M2 gate): 4 ulps from the exact value
+//! rounded to the precision. `Σpᵢ` (calibrated; proposed, pending the M2 gate): `|Σpᵢ|` per component
+//! within `4·eps·Σ‖pᵢ‖`. The unit scale (proposed): `I − 1` within 8 eps. The checks of a formula against
 //! an f64 evaluation have no calibration requirement: each bound is the round-off of the operations the formula names,
 //! derived beside its constant.
 
@@ -132,15 +130,15 @@ fn at<R: Fp, const N: usize>(z: [f64; N]) -> [R; N] {
 
 // ── Constants from the corpus ───────────────────────────────────────────────────────────────────────────────────
 
-/// `q_max = 2` (R-10).
+/// `q_max = 2`.
 const Q_MAX: f64 = 2.0;
-/// `μ_max = 5` (R-10).
+/// `μ_max = 5`.
 const MU_MAX: f64 = 5.0;
-/// REQ-PAY-095's proposal: 4 ulps.
+/// The golden IC's tolerance: 4 ulps.
 const TOL_ULPS: i128 = 4;
-/// REQ-DEC-045's proposal: `|Σpᵢ|` within `4·eps·Σ‖pᵢ‖`.
+/// The momentum sum's tolerance: `|Σpᵢ|` within `4·eps·Σ‖pᵢ‖`.
 const TOL_SUM_P: f64 = 4.0;
-/// REQ-DEC-044's proposal: `I − 1` within 8 eps.
+/// The unit scale's tolerance: `I − 1` within 8 eps.
 const TOL_I: f64 = 8.0;
 
 /// Exact decimals of the golden IC's closed forms, to 50 digits.
@@ -152,7 +150,7 @@ const NEG_SQRT3_OVER_9: &str = "-0.192450089729875254836382926833985818549200583
 const HALF_PI: &str = "1.5707963267948966192313216916397514420985846996876";
 const PI: &str = "3.1415926535897932384626433832795028841971693993751";
 
-/// The largest `R` not above the exact `s` (R-417: the images of `π/2` and `π` are rounded toward zero).
+/// The largest `R` not above the exact `s` (the images of `π/2` and `π` are rounded toward zero).
 fn toward_zero<R: Fp>(s: &str) -> R {
     let n = R::parse(s);
     // The f64 nearest of π and π/2 lie below them (dd_decoder §3.2), and an f32 rounding error is far above the f64
@@ -202,7 +200,7 @@ fn latent_unequal(max: f64) -> BoxedStrategy<[f64; 8]> {
         .boxed()
 }
 
-// ── REQ-DEC-001, REQ-DEC-004: the call order and what each block reads ──────────────────────────────────────────
+// ── The call order and what each block reads ────────────────────────────────────────────────────────────────────
 
 /// One recorded block call: its name, the `z` slice it was handed, and the bits of the earlier outputs it read.
 #[derive(Clone, Debug, PartialEq)]
@@ -393,7 +391,7 @@ mod call_order_slice {
     );
 }
 
-// ── REQ-DEC-003: one block at a time ────────────────────────────────────────────────────────────────────────────
+// ── One block at a time ─────────────────────────────────────────────────────────────────────────────────────────
 
 type Decode<R> = fn(&Latent<R>) -> Decoded<R>;
 
@@ -459,7 +457,7 @@ negative_control!(
     check_one_block::<f64>(swapped_layout::<f64>)
 );
 
-// ── REQ-DEC-026: blocks couple only through the join ────────────────────────────────────────────────────────────
+// ── Blocks couple only through the join ─────────────────────────────────────────────────────────────────────────
 
 /// Each block's intermediates: mass `(m, M₀₁, tag)`, config `(α, β, ρ̃, λ̃)`, momentum `(q, p_ρ, p_λ)`.
 fn intermediates<R: Fp>(d: &Decoded<R>) -> [Vec<u64>; 3] {
@@ -552,7 +550,7 @@ negative_control!(
     )
 );
 
-// ── REQ-DEC-019, REQ-DEC-030, REQ-DEC-045: the momentum block ───────────────────────────────────────────────────
+// ── The momentum block ──────────────────────────────────────────────────────────────────────────────────────────
 
 type MomBlock<R> = fn([R; 4], &Masses<R>) -> Momentum<R>;
 
@@ -605,7 +603,7 @@ fn jacobi_scale<R: Fp>(out: &Momentum<R>) -> f64 {
     out.q.iter().map(|x| x.f().abs()).sum()
 }
 
-/// The map `p₀ = −p_ρ − (m₀/M₀₁)p_λ`, `p₁ = p_ρ − (m₁/M₀₁)p_λ`, `p₂ = p_λ`, from the block's `q`, unweighted (R-28).
+/// The map `p₀ = −p_ρ − (m₀/M₀₁)p_λ`, `p₁ = p_ρ − (m₁/M₀₁)p_λ`, `p₂ = p_λ`, from the block's `q`, unweighted.
 fn check_map<R: Fp>(out: &Momentum<R>, masses: &Masses<R>) {
     let q = out.q.map(Fp::f);
     let [m0, m1, m2] = masses.m.map(Fp::f);
@@ -634,7 +632,7 @@ fn check_map<R: Fp>(out: &Momentum<R>, masses: &Masses<R>) {
     }
 }
 
-/// `Σpᵢ = 0` within REQ-DEC-045's proposal.
+/// `Σpᵢ = 0` within the momentum sum's tolerance.
 fn check_sum_p<R: Fp>(out: &Momentum<R>, masses: &Masses<R>) {
     let p = out.p.map(|v| v.map(Fp::f));
     let scale: f64 = p.iter().map(|v| v[0].hypot(v[1])).sum();
@@ -689,7 +687,7 @@ fn check_rest<R: Fp>(mom: MomBlock<R>, masses: &Masses<R>) {
     );
 }
 
-/// `|qₖ| = q_max` at saturation (R-417), with sign.
+/// `|qₖ| = q_max` at saturation, with sign.
 fn check_saturation<R: Fp>(mom: MomBlock<R>, masses: &Masses<R>) {
     for z in [1e3, 1e30, R::MAX] {
         let out = mom(at::<R, 4>([z, -z, z, -z]), masses);
@@ -782,7 +780,7 @@ fn one_sided<R: Fp>(z: [R; 4], m: &Masses<R>) -> Momentum<R> {
     out
 }
 
-/// R-28's forbidden step: `p_ρ` and `p_λ` unweighted by `√μ_ρ`, `√μ_λ` before the map.
+/// The forbidden step: `p_ρ` and `p_λ` unweighted by `√μ_ρ`, `√μ_λ` before the map.
 #[cfg(feature = "controls")]
 fn unweighted<R: Fp>(z: [R; 4], m: &Masses<R>) -> Momentum<R> {
     let mut out = momentum::decode::<Defaults, R>(z, m);
@@ -838,7 +836,7 @@ mod momentum_unweighted {
     );
 }
 
-// ── REQ-DEC-027: ranges ─────────────────────────────────────────────────────────────────────────────────────────
+// ── Ranges ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
 fn check_ranges<R: Fp>(d: &Decoded<R>, z: &[f64; 8]) {
     let (a, b) = (d.config.alpha.f(), d.config.beta.f());
@@ -984,7 +982,7 @@ mod ranges_squashed_beta {
     );
 }
 
-// ── REQ-VAL-018, REQ-PAY-034: the golden IC ─────────────────────────────────────────────────────────────────────
+// ── The golden IC ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The descriptor's members by name (the ledger's, dd_generation_root §3.6), with the exact value at the golden IC
 /// as a decimal, and whether it is 0 at rest.
@@ -1065,7 +1063,7 @@ fn check_golden<R: Fp>(d: &Decoded<R>) {
             R::NAME
         );
     }
-    // σ(0) = ½ exactly, so α and β are the halves of the images of π/2 and π (R-417).
+    // σ(0) = ½ exactly, so α and β are the halves of the images of π/2 and π.
     let half = R::of(0.5);
     assert_eq!(
         (d.config.alpha.bits(), d.config.beta.bits()),
@@ -1099,7 +1097,7 @@ fn check_golden<R: Fp>(d: &Decoded<R>) {
     check_descriptor(&d.descriptor);
 }
 
-/// Every pair distance within REQ-PAY-095's `r_min_pair_0` tolerance of √3: the Lagrange equilateral triangle.
+/// Every pair distance within the golden IC's `r_min_pair_0` tolerance of √3: the Lagrange equilateral triangle.
 fn check_equilateral<R: Fp>(ic: &Ic<R>) {
     let r = ic.r.map(|v| v.map(Fp::f));
     let sqrt3 = R::parse(SQRT3);
@@ -1249,7 +1247,7 @@ negative_control!(
     }
 );
 
-// ── REQ-VAL-020: the Lagrange and Euler landmarks ───────────────────────────────────────────────────────────────
+// ── The Lagrange and Euler landmarks ────────────────────────────────────────────────────────────────────────────
 
 /// `|ρ × λ|/(‖ρ‖‖λ‖)` from the positions, in f64: 0 on a collinear IC.
 fn sine<R: Fp>(ic: &Ic<R>) -> f64 {
@@ -1358,7 +1356,7 @@ negative_control!(
     check_landmarks::<f64>(past_pi::<f64>)
 );
 
-// ── REQ-PAY-088: the six definitions on ICs out of the canonical frame ──────────────────────────────────────────
+// ── The six definitions on ICs out of the canonical frame ───────────────────────────────────────────────────────
 
 /// dd_decoder §3.6's six fields, evaluated in f64 from `(m, r)`.
 fn reference(m: [f64; 3], r: [[f64; 2]; 3]) -> [f64; 6] {
@@ -1613,7 +1611,7 @@ negative_control!(
 fn check_canonical<R: Fp>(d: &Decoded<R>) {
     let (a, b) = (d.config.alpha.f(), d.config.beta.f());
     let [_, rm, lm, _, ang, _] = six(&d.descriptor);
-    // Each field is ≤ 8 roundings from the emitted positions, which carry REQ-DEC-044's 8 eps of the unit scale.
+    // Each field is ≤ 8 roundings from the emitted positions, which carry the unit scale's 8 eps.
     let tol = 32.0 * R::EPS;
     assert!(
         (rm - a.cos()).abs() <= tol,

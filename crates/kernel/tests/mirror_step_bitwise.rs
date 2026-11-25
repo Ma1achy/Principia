@@ -1,4 +1,4 @@
-//! The owner's bitwise check on the kernel's side of TASK-M2-57's baseline: every chart preset and saved chart whose
+//! The owner's bitwise check on the kernel's side of the mirror-step baseline: every chart preset and saved chart whose
 //! recorded states all have `β ∈ [0, π]` must reproduce unchanged through the decoder without its mirror step, bit
 //! for bit, in its IC words and its sim key. The goldens' half, with their image hashes, is
 //! `crates/validation/tests/mirror_step_baseline.rs` (`mirror_step_bitwise_goldens`).

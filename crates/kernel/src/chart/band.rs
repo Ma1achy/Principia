@@ -1,8 +1,8 @@
-//! The f32 band (chart_reference § 2.1, "The f32 band at the floor"; R-876, REQ-CHART-169's CPU arm): where an f32
+//! The f32 band (chart_reference § 2.1, "The f32 band at the floor"): where an f32
 //! chart refuses a pixel because f32 rounding, not the chart, decides, the refusal is labelled as rounding, never drawn
 //! as the chart's edge, and no pixel that is not a system is accepted.
 //!
-//! **The quantity and the width (a definition, R-72; under physics review).** The band is measured in the pixel's own
+//! **The quantity and the width (a definition).** The band is measured in the pixel's own
 //! coordinates `(u, v)` at the chart's precision, the row coordinate `t = v` among them, and it is one float wide: an
 //! f32 refusal at `(u, v)` is a rounding refusal iff
 //! 1. the chart as authored at f64, whose narrowing to f32 the f32 chart is, accepts the same pixel (its f32
@@ -14,17 +14,17 @@
 //! The width is one float **as measured on these charts** (below), not derived for every chart: a check set by a
 //! parameter narrowed to f32, or an operand whose map from `(u, v)` is flat (a power warp near `t = 0`), can put a
 //! rounding refusal many floats of `u` or `v` from f32-accepted ground, where it would read [`Band::Unexplained`], a
-//! false alarm, never a wrong picture. The GPU's edge walk (TASK-M4-06) repeats the measurement.
+//! false alarm, never a wrong picture.
 //! A refusal the f64 twin shares is the chart's edge ([`Band::Edge`]); one the f64 twin does not share and with no
-//! f32-accepted pixel one float away is no rounding effect ([`Band::Unexplained`]), R-506's decoder-bug warning.
+//! f32-accepted pixel one float away is no rounding effect ([`Band::Unexplained`]), a sign of a decoder bug, not of rounding.
 //!
-//! **Measured (TASK-M2-66, `f32_band_label`):** on `HeldLz` over the `(ν, K)` and `(θ, K)` charts and on `HeldK`,
-//! warped and linear, at held values over every magnitude, 2,121,000 pixels: no rounding refusal at the warp's floor,
-//! which `invariant::k_floor` keeps feasible at the chart's own precision. The 24,134 rounding refusals are all on the
-//! acute charts' `θ` axis at `u = 1`, where `θ_max = π/4` narrowed to f32 lies above `π/4`; against the f32 chart's own
-//! parameters widened there are none, so the per-pixel arithmetic never decides alone.
+//! On `HeldLz` over the `(ν, K)` and `(θ, K)` charts and on `HeldK`, `tests/f32_band_label.rs` finds no rounding
+//! refusal at the warp's floor, which `invariant::k_floor` keeps feasible at the chart's own precision. The rounding
+//! refusals it does find are all on the acute charts' `θ` axis at `u = 1`, where `θ_max = π/4` narrowed to f32 lies
+//! above `π/4`; against the f32 chart's own parameters widened there are none, so the per-pixel arithmetic never
+//! decides alone.
 //!
-//! CPU-side, off the SPIR-V build: the GPU's edge walk is TASK-M4-06's.
+//! CPU-side, off the SPIR-V build.
 
 use super::{Chart, Constraint, ValidationResult};
 

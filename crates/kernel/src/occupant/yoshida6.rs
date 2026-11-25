@@ -2,7 +2,7 @@
 //! steps with drift sequence `d = [w₃, w₂, w₁, w₀, w₁, w₂, w₃]` and kick sequence `cᵢ = (d_{i−1} + dᵢ)/2`, `d₀ = d₈ = 0`
 //! ([`super::kdk::sequence7`]).
 //!
-//! **The coefficients** (R-57, R-501). *Citation:* Yoshida, H. (1990), "Construction of higher order symplectic
+//! **The coefficients.** *Citation:* Yoshida, H. (1990), "Construction of higher order symplectic
 //! integrators", *Phys. Lett. A* 150, 262–268, Table 1, solution A (`w₁`, `w₂`, `w₃`; `w₀` from the consistency
 //! condition). The shipped digits are dd_integrator §3.2's:
 //!
@@ -16,8 +16,8 @@
 //! `w₁`, `w₂` and `w₃` are the constants register's `yoshida6_w1` to `yoshida6_w3`; `w₀` and the kicks are derived from
 //! them in f64 and generated into [`StepperCoefficients`](super::StepperCoefficients) (`YOSHIDA6_*`), which this block
 //! reads. The transcription is checked by the convergence-order test and the order-condition check (dd_integrator §5,
-//! test 1a; REQ-INT-090), as R-501 puts them in place of a copy of the paper. The negative weight is `w₁` (R-57); the
-//! composition is symmetric, so it is step-reversible despite it (R-500).
+//! test 1a), in place of a copy of the paper. The negative weight is `w₁`; the composition is symmetric, so it is
+//! step-reversible despite it.
 
 use super::kdk::{joint_sequence7, sequence7};
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};

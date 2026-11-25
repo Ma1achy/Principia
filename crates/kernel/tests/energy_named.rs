@@ -1,12 +1,12 @@
 //! The two energies under a regularised occupant, and the drift latches' `log16` form (integrator_contract Part 1,
-//! "Under a regularised occupant, two energies, named"; R-566, R-605, R-632; payload §1, §2, §5):
-//! - `energy_named_*` (REQ-VAL-195): under Heggie × RK4 the stored `dE_reg` is the occupant's own regularised drift, as
+//! "Under a regularised occupant, two energies, named"; payload §1, §2, §5):
+//! - `energy_named_*`: under Heggie × RK4 the stored `dE_reg` is the occupant's own regularised drift, as
 //!   it reported it, and the suspect predicate reads it, never the Cartesian `dE_max`, which differs from it after a
 //!   close passage; with regularisation off (RK4 alone) the two energies are one and `dE_reg` holds the Cartesian drift.
-//! - `dE_reg_encoding_*` (REQ-PAY-111): on dd_integrator §5's tests 2 and 7 (REQ-INT-106's fixtures) a round-off
+//! - `dE_reg_encoding_*`: on dd_integrator §5's tests 2 and 7 a round-off
 //!   regularised drift at f64 reads back non-zero and within the form's stated resolution, a relative 2⁻⁹; final and
 //!   max read back ordered, and distinct where they differ by more than the resolution.
-//! - `packed_b_encoding_*` (REQ-PAY-112): `dE_max` and `dLz_max` pack through `dE_reg`'s form, a drift at the form's
+//! - `packed_b_encoding_*`: `dE_max` and `dLz_max` pack through `dE_reg`'s form, a drift at the form's
 //!   floor `2⁻⁹⁶` reads back non-zero within its resolution, a failed state reads 0.0, and the march's branch reads the
 //!   live f32 latch, never the unpacked one.
 //!
@@ -128,7 +128,7 @@ fn stored_as(x: f64) -> f32 {
     log16_to_f32(f32_to_log16(x as f32))
 }
 
-// ── energy_named (REQ-VAL-195) ─────────────────────────────────────────────────────────────────────────────────
+// ── energy_named ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Asserts, of Heggie × RK4 at f64 on test 7's close encounters (run with the drift reports passed on or not, as
 /// `forward`): `dE_reg`'s halves are the regularised drift the occupant reported, final and max, bitwise as stored;
@@ -225,7 +225,7 @@ negative_control!(
     check_one_energy::<f64>(|_, _| 0)
 );
 
-// ── dE_reg_encoding (REQ-PAY-111) ──────────────────────────────────────────────────────────────────────────────
+// ── dE_reg_encoding ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// An encoding of the two halves under test: `(final, max)` in, the two decoded values out.
 type Halves = fn(f64, f64) -> (f64, f64);
@@ -309,7 +309,7 @@ mod collapse {
     );
 }
 
-// ── packed_b_encoding (REQ-PAY-112) ────────────────────────────────────────────────────────────────────────────
+// ── packed_b_encoding ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// A `packed_b` packer under test.
 type PackB = fn(f32, f32) -> u32;
@@ -399,7 +399,7 @@ fn widths<R: PayloadReal>(s: &SimStateBaseOf<R>) -> (u32, u32) {
     (s.dE_reg, s.budget_bits)
 }
 
-// ── The energy-drift readout's "stopped at event" (REQ-TOOL-219, the data and the string) ──────────────────────────
+// ── The energy-drift readout's "stopped at event" (the data and the string) ────────────────────────────────────────
 
 /// Asserts `readout` says "stopped at event" of an escape and a collision and nothing of a bounded, running or failed
 /// run, and that the diagnostics' filter keeps the Cartesian drift of exactly the runs that did not stop at an event and

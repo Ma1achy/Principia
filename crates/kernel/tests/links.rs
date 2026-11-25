@@ -1,12 +1,12 @@
-//! The generated link functions (`kernel::generated::links`; dd_generation_root §3.9, §5 test 8; REQ-CHART-034) and
-//! chart constants (`kernel::generated::constants`; REQ-DEC-009):
+//! The generated link functions (`kernel::generated::links`; dd_generation_root §3.9, §5 test 8) and chart
+//! constants (`kernel::generated::constants`):
 //! - `link_properties_cover_every_entry`: the links under test here are every generated entry.
 //! - `link_properties_a_constraint`: §5 test 8 (a), fuzzed at f32 and f64 across the domain, saturation included:
 //!   simplex outputs positive and summing to 1, interval outputs in range, half-line outputs positive.
 //! - `link_properties_b_round_trip`: (b), `f(f⁻¹(f(x)))` against `f(x)` in physical units, within the ε clamp's
 //!   tolerance (inverse_encode Part 4), at f32 and f64.
 //! - `link_properties_c_log_det`: (c), the analytic log-det against the numeric Jacobian's log volume factor, `log |J|`
-//!   or, for the 3×2 simplex Jacobian, `log √det(JᵀJ)` (R-368), at f64.
+//!   or, for the 3×2 simplex Jacobian, `log √det(JᵀJ)`, at f64.
 //! - `link_properties_d_c1`: (d), the central-difference derivative continuous along a fine grid through saturation.
 //! - `link_properties_log_det_finite`: every log-det finite at f32 and f64 for every finite control up to 10³⁰, far
 //!   past where `exp` and `cosh` overflow, and the two precisions agreeing to f32 round-off (walls W7, W9).
@@ -14,14 +14,14 @@
 //!   `|x| ≤ MAX/2`, and for two at `|z₁| = |z₂| = MAX/4` and at `(MAX/2, 0)` in either order; one float past,
 //!   where the computed `2|x|` or `2|z₁| + 2|z₂|` overflows, −∞ for an entry with a `log sech²` term (within half an
 //!   ulp of where its true value passes `−MAX`), and finite up to `MAX` for the others.
-//! - `link_selection_defaults_resolve_by_name`: the baked defaults are the named entries (REQ-GEN-013).
-//! - `chart_constants_values`: the generated constants equal REQ-DEC-009's values at f32 and f64.
+//! - `link_selection_defaults_resolve_by_name`: the baked defaults are the named entries.
+//! - `chart_constants_values`: the generated constants equal their specified values at f32 and f64.
 //! - `chart_constants_source_scan`: no float literal of a chart constant's value in `crates/kernel/src/{decode,encode}`,
 //!   in either module form (`decode.rs` or `decode/`).
 //!
 //! Each property is a check over a link behind function pointers, so its control runs the same check on a link broken
-//! for it. The step and tolerances of (c) and (d) are REQ-GEN-025's calibration: the values here are the proposal,
-//! with the measured discrepancy per link as evidence, unconfirmed until the M2 gate (R-71).
+//! for it. The step and tolerances of (c) and (d) are a calibration: the values here are the proposal, with the
+//! measured discrepancy per link as evidence, unconfirmed until the M2 gate.
 
 use std::path::Path;
 
@@ -184,8 +184,9 @@ fn over_domain(u: &Under, check: impl Fn(&Under, &[f64], f64)) {
 
 /// `y` satisfies `u`'s constraint at a float of machine epsilon `eps`: simplex outputs finite, positive and summing to
 /// 1 within the sum's round-off, `4·eps`; interval outputs finite and in the closed `[u.lo, u.hi]`, compared at the
-/// exact bounds in f64, not their rounded images, at f32 as at f64 (R-417; §5 test 8 (a)), which a saturated control
-/// may reach but never pass; half-line outputs finite and positive; real-line outputs finite.
+/// exact bounds in f64, not their rounded images, at f32 as at f64 (the f32 bounds round toward zero, dd_decoder
+/// §3.2; §5 test 8 (a)), which a saturated control may reach but never pass; half-line outputs finite and positive;
+/// real-line outputs finite.
 fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64) {
     let at = |what: &str| {
         format!(
@@ -283,7 +284,7 @@ negative_control!(
 );
 
 /// `sigmoid_alpha` with the round-to-nearest f32 image of π/2, `num(FRAC_PI_2)·σ(x)`: at f32 `num` rounds π/2 to the
-/// nearest, `0x3FC9_0FDB`, above π/2, which a saturated control reaches (R-417).
+/// nearest, `0x3FC9_0FDB`, above π/2, which a saturated control reaches (the generated image rounds toward zero).
 #[cfg(feature = "controls")]
 struct NearestPi;
 
@@ -476,7 +477,7 @@ negative_control!(
 
 // ── (c) The log-det against a numeric Jacobian ──────────────────────────────────────────────────────────────────
 
-/// REQ-GEN-025's proposed (c) (R-71, unconfirmed until the M2 gate): the central-difference step, the control range
+/// The proposed (c) (unconfirmed until the M2 gate): the central-difference step, the control range
 /// the comparison spans, and the tolerance on `|analytic − numeric|` of the log volume factor, beside the numeric
 /// Jacobian's own round-off ([`c_allowance`]).
 ///
@@ -515,7 +516,7 @@ fn jacobian(u: &Under, x: &[f64]) -> Vec<(Vec<f64>, f64)> {
 }
 
 /// The log of the volume factor of the Jacobian whose columns are `cols`: `log |J|` for one column of one row, and
-/// `log √det(JᵀJ)` otherwise (R-368).
+/// `log √det(JᵀJ)` otherwise.
 fn log_volume(cols: &[(Vec<f64>, f64)]) -> f64 {
     let dot = |a: &[f64], b: &[f64]| a.iter().zip(b).map(|(p, q)| p * q).sum::<f64>();
     match cols {
@@ -609,7 +610,7 @@ impl Link<1, 1> for NoWidth {
     }
 }
 
-/// The simplex link whose log-det is `log |det|` of its first two rows, without the area element's `√3` (R-368).
+/// The simplex link whose log-det is `log |det|` of its first two rows, without the area element's `√3`.
 #[cfg(feature = "controls")]
 struct NoAreaElement;
 
@@ -933,7 +934,7 @@ mod half_max_finite_control {
 
 // ── (d) C¹ ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// REQ-GEN-025's proposed (d) (R-71, unconfirmed until the M2 gate): the central-difference step, the grid's spacing
+/// The proposed (d) (unconfirmed until the M2 gate): the central-difference step, the grid's spacing
 /// and range, and the tolerance `τ` on the change of the derivative between neighbouring grid points, relative to
 /// its size: `|D(x + δ) − D(x)| ≤ τ·max(|D(x)|, |D(x + δ)|)`, beside each difference's own round-off,
 /// `16·eps·max(|f|, scale)/h`, as in (c).
@@ -1056,7 +1057,7 @@ negative_control!(
     check_d(&under::<1, 1, HardSigmoid>())
 );
 
-// ── The evidence for REQ-GEN-025 ────────────────────────────────────────────────────────────────────────────────
+// ── The evidence for the (c) and (d) calibration ────────────────────────────────────────────────────────────────
 
 /// The largest (c) gap and (d) share of each of `links`, printed for the calibration's evidence (run with
 /// `--nocapture`), each within its proposed tolerance.
@@ -1129,7 +1130,7 @@ negative_control!(
 // ── Selection ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `ids` are dd_decoder §3's defaults, in `Selection`'s order: mass = softmax ∘ `μ_max·tanh`, `α` = sigmoid, `β` =
-/// `periodic_beta` (R-919 Q1 (c); *was:* "config = sigmoid"), free momentum = sigmoid.
+/// `periodic_beta` (not `sigmoid_beta`), free momentum = sigmoid.
 fn check_defaults(ids: [&str; 7]) {
     assert_eq!(
         ids,
@@ -1162,9 +1163,9 @@ negative_control!(
 
 // ── The chart constants ─────────────────────────────────────────────────────────────────────────────────────────
 
-/// `got`, the chart constants in `ChartConstants`' order at some float, read as f64, are REQ-DEC-009's values at
+/// `got`, the chart constants in `ChartConstants`' order at some float, read as f64, are their specified values at
 /// that float: `μ_max = 5`, `q_max = 2`, `α_min = 0`, `ε_μ = ε_z = ε_q = 10⁻⁶`, `δ_λ = 10⁻¹²`, `ε_w = 10⁻¹⁰` and
-/// `ε_M01 = 10⁻⁵` (REQ-DEC-039's provisional proposal), each rounded once to the float by `round`.
+/// `ε_M01 = 10⁻⁵` (provisional), each rounded once to the float by `round`.
 fn check_chart_constants(got: [f64; 9], round: fn(f64) -> f64) {
     let want = [5.0, 2.0, 0.0, 1e-6, 1e-6, 1e-6, 1e-12, 1e-10, 1e-5].map(round);
     assert_eq!(got, want, "the chart constants are not REQ-DEC-009's");
@@ -1271,8 +1272,7 @@ fn float_literals(source: &str) -> Vec<(usize, String)> {
 /// The chart constants' values.
 const CHART_VALUES: [f64; 9] = [5.0, 2.0, 0.0, 1e-6, 1e-6, 1e-6, 1e-12, 1e-10, 1e-5];
 
-/// No float literal in `files` (path and source) equals a chart constant's value: the formulae name the constants
-/// (REQ-DEC-009).
+/// No float literal in `files` (path and source) equals a chart constant's value: the formulae name the constants.
 fn check_no_constant_literals(files: &[(String, String)]) {
     for (path, source) in files {
         for (line, token) in float_literals(source) {

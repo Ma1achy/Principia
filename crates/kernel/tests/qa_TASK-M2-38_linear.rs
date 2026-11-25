@@ -1,12 +1,13 @@
-//! QA's tests for TASK-M2-38's stop on the invariant charts under R-471's linear option, written from REQ-CHART-060
+//! QA's tests for the navigation stop on the invariant charts under the linear option, written from the stop's rule
 //! ("accept a pan … or chart-parameter edit only if the chart's centre … still passes validate's layers 2 and 3, a
-//! centre whose Φ fails counting as failing") and R-471 ("a linear mapping is an option per axis, its infeasible
-//! pixels 'not a system' and the navigation stop keeping the centre feasible"), not from the implementation.
+//! centre whose Φ fails counting as failing") and the linear option's ("a linear mapping is an option per axis, its
+//! infeasible pixels 'not a system' and the navigation stop keeping the centre feasible"), not from the
+//! implementation.
 //!
 //! The oracle is the decode at the accepted centre, never the chart's own report: what the stop accepts must decode to
 //! a three-body system, every mass positive and finite, every position and momentum finite, and no `DEGENERATE`
 //! reason, and must validate. Probes, on `Mapped` `(L_z, E)` and `(L_z, K)` with every per-axis mix that has a linear
-//! axis (R-471: the option is per axis): far pans in seeded directions at magnitudes up to `f64::MAX`, straight up,
+//! axis (the option is per axis): far pans in seeded directions at magnitudes up to `f64::MAX`, straight up,
 //! down and sideways, and `K_max` / `γ_K` edits toward huge, zero and negative targets.
 //!
 //! The arm binds: some target is not a system and the stop is shown to hold short of it. Control: the stop disabled
@@ -229,7 +230,7 @@ fn check(disabled: bool) {
     let le = run("(L_z, E)", InvariantLE, 0x0038_1E00, disabled);
     let lk = run("(L_z, K)", InvariantLK, 0x0038_1C00, disabled);
     for (name, (bad, held)) in [("(L_z, E)", le), ("(L_z, K)", lk)] {
-        // R-471: under the linear option a far pan reaches infeasible or overflowing centres.
+        // Under the linear option a far pan reaches infeasible or overflowing centres.
         assert!(
             bad > 0,
             "{name}: no target is not a system: the probe never reached the edge"

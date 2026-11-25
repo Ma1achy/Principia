@@ -1,9 +1,9 @@
-//! QA's tests for TASK-M3-77 (REQ-INT-123): Heggie's step control and landing built to integrator_contract Part 2b
+//! QA's tests for Heggie's step control and landing built to integrator_contract Part 2b
 //! § "Heggie: the equations, the time transformations, the maps and the step control (transcribed)", steps 1 to 10,
-//! with the landing under R-998's rule as R-1007 applies it (no tolerance, the state landing with the clock), R-604's
-//! step budget, and Part 6's floor signal and entry-cap hits (R-160, R-561, R-565, R-604, R-998, R-1007, R-1013).
+//! with the landing exact (no tolerance, the state landing with the clock), the step budget, and Part 6's floor signal
+//! and entry-cap hits.
 //!
-//! Written from the requirement and the contract, not from the implementation. Every anchor is computed here:
+//! Written from the contract, not from the implementation. Every anchor is computed here:
 //! - `qa_m377_landing`: Heggie × RK4 under Eq. 20 and Eq. 22, at f64 and f32, from a fixture triple of its own, lands
 //!   on each boundary 1 to 8: the stored state's own clock is `Δ_sync` bitwise, the stored Cartesian state is that
 //!   regularised state's image, the time reported `k·Δ_sync` bitwise, and no state the march keeps (every one its
@@ -24,15 +24,15 @@
 //!   `dt/dτ < TINY` and on `Rᵢ < TINY` each alone, strict. Control: the clamp read with the unfloored `dt/dτ`.
 //! - `qa_m377_signals_counted`: in a march, the floor signals and entry-cap hits counted equal those tallied here from
 //!   each step's pre-floor `dt/dτ`, `S` and least `Rᵢ`, both nonzero. Control: the cap hit tallied with `≥`.
-//! - `qa_m377_budget`: R-604's helper, over when the running total exceeds `max(N_min, rate·t)`, at its edges at f64
-//!   and f32; the march ends `Exhausted`, latched, with no step after, and its allowance reads the time since `t = 0`,
-//!   not the interval clock. Control: a helper over at equality.
+//! - `qa_m377_budget`: the budget's helper, over when the running total exceeds `max(N_min, rate·t)`, at its edges at
+//!   f64 and f32; the march ends `Exhausted`, latched, with no step after, and its allowance reads the time since
+//!   `t = 0`, not the interval clock. Control: a helper over at equality.
 //! - `qa_m377_non_finite`: a state with two bodies coincident ends the march at entry (`dt/dτ = 0`), and a NaN in a
 //!   regularised position, momentum or the clock mid-interval ends it `NonFinite`, latched at the last finite state.
 //!   Control: a finiteness test that reads positions and momenta but not the clock.
 //!
-//! The values marked "test value" are fixtures, not calibrations (REQ-INT-080, REQ-INT-103, REQ-INT-105, REQ-INT-108
-//! are the calibrations). The identities are checked bitwise where the contract says bitwise, else at `ROUND`.
+//! The values marked "test value" are fixtures, not calibrations. The identities are checked bitwise where the contract
+//! says bitwise, else at `ROUND`.
 
 use std::cell::Cell;
 
@@ -91,7 +91,7 @@ fn fixture32() -> State<f32> {
 }
 
 /// The occupant's landing in force (the clamp, the secant's 4 retakes, the bisection's 64 halvings; Part 2b step 8),
-/// R-160's `f = 0.02`, and test values for `η`, `Δ_sync`, `TINY` and a budget that does not bind.
+/// the predictive limit's `f = 0.02`, and test values for `η`, `Δ_sync`, `TINY` and a budget that does not bind.
 fn params64(time: HeggieTime) -> HgParams<f64> {
     HgParams {
         eta: 0.02,

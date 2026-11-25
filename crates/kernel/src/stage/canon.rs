@@ -1,6 +1,6 @@
 //! Canonicalisation `C` as a compute entry point (`crate::canon`): the kernel's f32 build of the one source, so that a
-//! test reads the GPU's `C`, its branch decisions included, on given states (dd_decoder §5 tests 5 and 12; REQ-DEC-017,
-//! REQ-ENC-015, REQ-ENC-016). Invocation `i` reads sample `i`'s `(m, r, p)` in the decode stage's word layout
+//! test reads the GPU's `C`, its branch decisions included, on given states (dd_decoder §5 tests 5 and 12).
+//! Invocation `i` reads sample `i`'s `(m, r, p)` in the decode stage's word layout
 //! ([`read_ic`]) and writes its [`Canonical`] as [`canon_words`] words ([`write_canonical`]).
 
 use spirv_std::glam::UVec3;
@@ -16,8 +16,8 @@ pub fn canon_words() -> usize {
     ic_words() + 5
 }
 
-/// The notices word: bit 0 `lookup_clamped`, bit 2 `lookup_rescaled`; bit 1, `lookup_mirrored` until `C`'s mirror
-/// step was removed (R-865, TASK-M2-57), is never set, so the other bits keep their places. Bits 4 to 7 are no notice:
+/// The notices word: bit 0 `lookup_clamped`, bit 2 `lookup_rescaled`; bit 1, the retired `lookup_mirrored`
+/// (`C` has no mirror step), is never set, so the other bits keep their places. Bits 4 to 7 are no notice:
 /// they carry the decided signs of `λ̃` ([`Canonical::signs`], `LambdaSigns::word`), so a test reads the GPU's case of
 /// `β` beside the CPU's.
 #[inline]

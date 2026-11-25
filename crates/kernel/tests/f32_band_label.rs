@@ -1,5 +1,5 @@
-//! The f32 band's label on the CPU (chart_reference § 2.1, "The f32 band at the floor"; R-876; REQ-CHART-169;
-//! `kernel::chart::band`): an edge walk over the f32 charts R-708 covers, `HeldLz` on the `(ν, K)` and `(θ, K)` charts
+//! The f32 band's label on the CPU (chart_reference § 2.1, "The f32 band at the floor";
+//! `kernel::chart::band`): an edge walk over the f32 charts, `HeldLz` on the `(ν, K)` and `(θ, K)` charts
 //! and `HeldK` on `(θ, L_z)`, warped and linear, each against its f64 twin.
 //!
 //! **The twin.** A pixel is checked against the chart as authored at f64, whose narrowing to f32 the f32 chart is:
@@ -11,7 +11,7 @@
 //! with the floats next to its ends; `v` the floor row `0`, the first 32 f32 floats above it, the floats next to `1`,
 //! and a 65-point grid.
 //!
-//! **The criterion**, written before the first run:
+//! **The criterion**:
 //! 1. every pixel the f32 chart refuses and its f64 twin accepts is labelled rounding, none unexplained, and its f64
 //!    decode is a system (the twin's `validate` passes);
 //! 2. no f32-accepted pixel fails its f64 check;

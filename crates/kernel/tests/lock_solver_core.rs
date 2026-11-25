@@ -1,17 +1,17 @@
-//! The lock's solver core (TASK-M2-94; design `principia_chart_composition.md` § 17.8 and § 10.6): a least-squares solve
+//! The lock's solver core (design `principia_chart_composition.md` § 17.8 and § 10.6): a least-squares solve
 //! over a map with a recorded branch rule, convergence reported per call, failures tagged, and the measurement along a
 //! 64-frame morph.
 //!
-//! The plan is unclear here; chose to run these as `cargo test -p kernel lock_solver_core` because the task file names
-//! `-p engine` but the solver is a pure kernel function (the brief: kernel only), and the engine's lock is TASK-M2-62's.
+//! The plan is unclear here; chose to run these as `cargo test -p kernel lock_solver_core` because the solver is a pure
+//! kernel function, so its tests need no engine.
 //!
-//! The plan is unclear here; chose two test-side morphs because the blend chart (TASK-M2-90) is not built: (1) a
+//! The plan is unclear here; chose two test-side morphs because the blend chart is not built: (1) a
 //! constructed one, `F_s(u, v) = (u − t(s), v, u² − 1)`, whose target `0` has two local minimisers, one in each well,
 //! the nearer changing side at `t = 0` (a cut locus) and the left one ending at the fold `t = 2/(3√6)`; and (2) a state
 //! blend of two latent charts' decoded states, `(1 − s)·D(Φ_A) + s·D(Φ_B)` over the fifteen `(m, r, p)` words, the
 //! anchor `D(Φ_A(0.37, 0.61))`, so the anchor leaves the image as `s` grows. The solver is the same whatever the map.
-//! Morph (2) has no exact slopes yet (TASK-M2-88's): its slopes are central differences, the stand-in, and its weight
-//! is 1 per word (the metric is TASK-M2-99's to define).
+//! Morph (2) has no exact slopes yet: its slopes are central differences, the stand-in, and its weight
+//! is 1 per word (the metric is placement's to define).
 //!
 //! - `lock_solver_core_solves`: on the image the solve converges `OnImage` at the point; off it, `Stationary` at the
 //!   foot, its residual the distance; f64 and f32. Control: the slopes' sign flipped (a wrong Jacobian).

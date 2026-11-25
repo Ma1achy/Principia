@@ -1,16 +1,16 @@
-//! The kernel's one debug mode, colour_composition Appendix A's bring-up mode (R-75): instead of physics, the kernel
+//! The kernel's one debug mode, colour_composition Appendix A's bring-up mode: instead of physics, the kernel
 //! writes a known pattern, a function of the sample's index alone, into the existing `SimState` slots (no new buffer),
 //! for when payload writes are too broken for the fragment presets to run. It is a baked variant, selected by its type
-//! and pre-built (lowering Part 3, "Compute side"), never a dispatch-flag bit (R-41): nothing here reads a flags word.
-//! It is on the sim key (colour_composition §0; RQ-221), which the engine carries.
+//! and pre-built (lowering Part 3, "Compute side"), never a dispatch-flag bit: nothing here reads a flags word.
+//! It is on the sim key (colour_composition §0), which the engine carries.
 //!
-//! **The pattern** (colour_composition Appendix A, REQ-TOOL-123), for the sample at buffer index `i`, `j = i mod 2¹⁶`:
+//! **The pattern** (colour_composition Appendix A), for the sample at buffer index `i`, `j = i mod 2¹⁶`:
 //! - each real slot of `SimStateFTLE`, numbered `k` in the ledger's member order — `r` 0–5 (`r[b][c]` is `2b + c`), `p`
 //!   6–11, `r_sh` 12–17, `p_sh` 18–23, `S` 24, `theta` 25, `mean_y` 26, `C_ty` 27, `E_0` 28, `Lz_0` 29, `closure_min`
 //!   30 — holds `32·i + k`, an integer exact in f32 for `i < 2¹⁹`, so the f32 and the f64 instantiations write the same
 //!   values;
 //! - `packed_a`, through the generated setters: `state = i mod 6`, `detail = ⌊i/2⌋ mod 4`, `saturated = ⌊i/8⌋ mod 2 =
-//!   1`, `dmin_pair = ⌊i/16⌋ mod 4`, `last_symbol = ⌊i/64⌋ mod 4`, `d_min` unset (R-271), the reserved bits 10–15 zero;
+//!   1`, `dmin_pair = ⌊i/16⌋ mod 4`, `last_symbol = ⌊i/64⌋ mod 4`, `d_min` unset, the reserved bits 10–15 zero;
 //! - `packed_b = 0`: `dE_max` and `dLz_max` both +0;
 //! - `times = pack_times(j, 65535 − j)`; `total_substeps = i`; `closure_step = j`, `_reserved = 0`.
 //!
@@ -29,7 +29,7 @@ use crate::payload::{
 };
 
 /// A baked kernel variant, selected by its type (lowering Part 3, "Compute side"): each is its own pre-built kernel,
-/// never a branch on a dispatch-flag bit (R-41).
+/// never a branch on a dispatch-flag bit.
 pub trait Variant {
     /// The variant's name, as the sim key carries it.
     const NAME: &'static str;
@@ -37,7 +37,7 @@ pub trait Variant {
     const DEBUG: bool;
 }
 
-/// colour_composition Appendix A's bring-up mode, the kernel's one debug mode (R-75).
+/// colour_composition Appendix A's bring-up mode, the kernel's one debug mode.
 #[derive(Clone, Copy, Debug)]
 pub struct BringUp;
 
@@ -47,7 +47,7 @@ impl Variant for BringUp {
 }
 
 /// The kernel's baked variants, as `(name, debug)`. The physics kernel is not built yet (M1), so the bring-up mode is
-/// the only one; UV, DECODE and ROUNDTRIP are fragment presets, never kernel variants (R-75).
+/// the only one; UV, DECODE and ROUNDTRIP are fragment presets, never kernel variants.
 pub const VARIANTS: &[(&str, bool)] = &[(BringUp::NAME, BringUp::DEBUG)];
 
 /// A `Real` the pattern is written at: the payload's, with the exact conversion of a pattern integer.
@@ -71,7 +71,7 @@ impl PatternReal for f64 {
 }
 
 /// The samples the pattern covers: below `2¹⁹`, every real slot's value is exact in f32. Interface data of the bring-up
-/// pattern, fixed by f32's 24-bit significand (`32·2¹⁹ = 2²⁴`); not a register constant (REQ-SYS-082).
+/// pattern, fixed by f32's 24-bit significand (`32·2¹⁹ = 2²⁴`); not a register constant.
 #[inline]
 pub fn max_samples() -> u32 {
     1 << 19
@@ -95,7 +95,7 @@ pub fn packed_a(i: u32) -> u32 {
 }
 
 /// Sample `i`'s `packed_b`: `dE_max` and `dLz_max` both +0, the bring-up pattern's value, interface data; not a
-/// register constant (REQ-SYS-082).
+/// register constant.
 #[inline]
 pub fn packed_b(_i: u32) -> u32 {
     0
@@ -209,11 +209,11 @@ pub fn write_words(i: u32, out: &mut [u32]) {
         real_slot(i, 30),
     );
     out[at(offset_of!(SimStateFTLE, closure_step))] = closure_step(i);
-    // The collision floor's record, code 0, "not recorded" (Appendix A; payload §2; R-973), and the escape rule's
+    // The collision floor's record, code 0, "not recorded" (Appendix A; payload §2), and the escape rule's
     // lagged shape register, zero, march state the pattern does not march (payload §1): written, as every member
     // is, so a reused buffer keeps no stale word.
     out[at(offset_of!(SimStateFTLE, coll_floor_bits))] = 0;
-    // The budget word and the regularised drift (payload §1, §2; R-603, R-605): zero, no budget spent and no drift,
+    // The budget word and the regularised drift (payload §1, §2): zero, no budget spent and no drift,
     // as the pattern marches nothing.
     out[at(offset_of!(SimStateFTLE, budget_bits))] = 0;
     out[at(offset_of!(SimStateFTLE, dE_reg))] = 0;

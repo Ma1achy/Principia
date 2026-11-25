@@ -1,17 +1,17 @@
 //! The kernel's physics layer (`kernel::physics`; dd_integrator §3.1; integrator_contract Part 1, Part 2c):
 //! - `real_instantiations_*`: the kernel is instantiated at f32 and f64, as the ledger's precision rows say, and no
-//!   double-double instantiation exists (R-265); the same golden-IC force and energy check runs at each, the M2
+//!   double-double instantiation exists; the same golden-IC force and energy check runs at each, the M2
 //!   decoder's `z = 0` decode (`fixtures/golden_ic/z0.json`: the equilateral triangle of side √3, at rest) run through
-//!   [`PairGeom`], [`force`] and [`energy`]; and `fma` is fused and `square_root` the root at each (REQ-INT-004).
+//!   [`PairGeom`], [`force`] and [`energy`]; and `fma` is fused and `square_root` the root at each.
 //! - `force_known_state*`: the force on a hand-computed three-body state, a triangle of sides 20, 15, 25 with masses 3, 4, 5,
-//!   matches to f64 rounding, and `Σ mᵢaᵢ = 0` (REQ-INT-036); so do the energy and `L_z` of the same state with
+//!   matches to f64 rounding, and `Σ mᵢaᵢ = 0`; so do the energy and `L_z` of the same state with
 //!   momenta.
 //! - `pair_geometry_shared*`: an instrumented `Real`, which counts square roots, shows one pairwise-distance computation
-//!   per force evaluation, and the potential and `r_min` reading the same `PairGeom` and forming none (REQ-PERF-001);
-//!   the geometry's values by hand, indexed by R-22 pair id (pair `k` opposite body `k`); `closest`'s least `d²`, ties
-//!   going to the lowest pair id; `d²` built as `fma(dy, dy, dx·dx)` (R-34).
+//!   per force evaluation, and the potential and `r_min` reading the same `PairGeom` and forming none;
+//!   the geometry's values by hand, indexed by pair id (pair `k` opposite body `k`); `closest`'s least `d²`, ties
+//!   going to the lowest pair id; `d²` built as `fma(dy, dy, dx·dx)`.
 //!
-//! **Tolerances** (applied per R-369: test tolerances): a value is compared relative to its scale, in units of the
+//! **Tolerances** (test tolerances): a value is compared relative to its scale, in units of the
 //! precision's `eps`. [`KNOWN_EPS`] = 2 for the hand-computed state at f64, whose inputs are all exact, so the error is
 //! the evaluation's own few roundings (measured: the force and `Σmᵢaᵢ` 0.40 `eps` at worst, the energy terms 0.78).
 //! [`GOLDEN_EPS`] = 4 for the golden IC is empirical, not derived. The decoder's own bound would not give it: positions
@@ -49,7 +49,7 @@ fn err_eps(got: f64, want: f64, scale: f64, eps: f64) -> f64 {
     (got - want).abs() / scale / eps
 }
 
-// ── real_instantiations (REQ-INT-004, R-265) ─────────────────────────────────────────────────────────────────────
+// ── real_instantiations ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// The precision rows the ledger instantiates are exactly `names`, and the double-double row is a stub only.
 fn check_rows(names: &[&str]) {
@@ -249,7 +249,7 @@ negative_control!(
     check_square_root::<f64>(|x| x / 2.0)
 );
 
-// ── force_known_state (REQ-INT-036) ──────────────────────────────────────────────────────────────────────────────
+// ── force_known_state ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Masses 3, 4, 5 at `(2, 3)`, `(14, 19)` and `(26, 10)`: the separations of bodies 0 and 1, 1 and 2, 2 and 0 are
 /// `(12, 16)`, `(12, −9)` and `(−24, −7)`, of lengths 20, 15 and 25, so each cube is exact; no coordinate, separation component or mass is 0, ±1 or 2, so that no
@@ -370,7 +370,7 @@ negative_control!(
     }
 );
 
-// ── pair_geometry_shared (REQ-PERF-001) ──────────────────────────────────────────────────────────────────────────
+// ── pair_geometry_shared ─────────────────────────────────────────────────────────────────────────────────────────
 
 thread_local! {
     /// The square roots taken on this thread by [`Counted`].
@@ -489,7 +489,7 @@ negative_control!(
     }))
 );
 
-/// The known state's geometry, by hand, by R-22 pair id (pair 0 = bodies 1 and 2, pair 1 = 2 and 0, pair 2 = 0 and 1):
+/// The known state's geometry, by hand, by pair id (pair 0 = bodies 1 and 2, pair 1 = 2 and 0, pair 2 = 0 and 1):
 /// separations `r₂ − r₁ = (12, −9)`, `r₀ − r₂ = (−24, −7)`, `r₁ − r₀ = (12, 16)`; `d²` 225, 625, 400; distances 15, 25,
 /// 20; cubes 3375, 15625, 8000; the closest pair 0, `r_min = 15`.
 fn check_geometry(g: &PairGeom<f64>) {
@@ -523,7 +523,7 @@ negative_control!(
 /// `y·y + x·x` 1.9945402333912905.
 const UNFUSED_XY: [f64; 2] = [1.0413266654746878, 0.9540330230986024];
 
-/// `d2` is `fma(y, y, x·x)` for the separation `(x, y)`, which differs from the unfused `y·y + x·x` (R-34).
+/// `d2` is `fma(y, y, x·x)` for the separation `(x, y)`, which differs from the unfused `y·y + x·x`.
 fn check_fused(d2: f64, [x, y]: [f64; 2]) {
     let fused = y.mul_add(y, x * x);
     assert_ne!(
@@ -564,7 +564,7 @@ fn check_closest(layouts: &[([[f64; 2]; 3], usize)]) {
     }
 }
 
-/// Each pair the least alone, and each tie, the `d²` of pairs 0, 1, 2 (R-22) given: pair 2 (25, 16, 9), pair 0
+/// Each pair the least alone, and each tie, the `d²` of pairs 0, 1, 2 given: pair 2 (25, 16, 9), pair 0
 /// (9, 25, 16), pair 1 (34, 9, 25); ties of pairs 0 and 2 (1, 4, 1), 1 and 2 (2, 1, 1), 0 and 1 (2, 2, 4), and all
 /// three (the bodies coincident).
 const LAYOUTS: [([[f64; 2]; 3], usize); 7] = [

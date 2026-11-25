@@ -1,5 +1,6 @@
 //! The Chazy classifier's fixtures (chazy drill-down §12.1, transcribed from prin-rs PR #32's `tests/chazy.rs`; §12.2
-//! items 10 and 11; R-595's arm), each with its control arm, on CPU-f64 (`kernel::chazy`; REQ-PAY-099).
+//! items 10 and 11; an `E < 0` state past the dispersal step's geometric tests), each with its control arm, on CPU-f64
+//! (`kernel::chazy`).
 //!
 //! Each state is `validation::chazy`'s, equal masses in the centre-of-mass frame, classified with `R_0 = 1`, a fresh
 //! latch (`I_max = I`) and the defaults, unless the test says otherwise.
@@ -47,11 +48,11 @@ fn defaults() -> ChazyCfg<f64> {
 /// The ways a control breaks the rule, one switch each.
 #[derive(Clone, Copy, Debug, Default)]
 struct Switches {
-    /// H, HP, P and the two-stage H without R-548's `E ≥ 0` guard (prin-rs's `classify`).
+    /// H, HP, P and the two-stage H without the dispersal step's `E ≥ 0` guard (prin-rs's `classify`).
     no_e_guard: bool,
-    /// Excursion inside step 2 before B-stable (prin-rs's order, RQ-324's other option).
+    /// Excursion inside step 2 before B-stable (prin-rs's order, not the kernel's).
     excursion_first: bool,
-    /// An `E < 0` state that passed step 1's geometric tests skips step 2 (R-595's other reading).
+    /// An `E < 0` state that passed step 1's geometric tests skips step 2, where the kernel's rule goes on to step 2.
     skip_hierarchy_when_guarded: bool,
     /// A pair's binding tested against the band, not the sign (§3.4 reverted).
     pair_band: bool,
@@ -496,7 +497,7 @@ negative_control!(
     }))
 );
 
-// ── §12.2 items 10 and 11, and R-595's arm ──────────────────────────────────────────────────────────────────────
+// ── §12.2 items 10 and 11, and an `E < 0` state past dispersal ───────────────────────────────────────────────────
 
 /// §12.2 item 10's radial velocity: §12.1's hierarchy with body 2 receding at 0.1, still bound to the pair
 /// (`K_out/U_out = 0.55`) and Mardling–Aarseth stable.
@@ -589,7 +590,7 @@ negative_control!(
     }))
 );
 
-/// R-595's outer `K/U`: hyperbolic, and small enough that `E < 0`.
+/// The outer `K/U` of `validation::chazy::r595`'s state: hyperbolic, and small enough that `E < 0`.
 const R595_Q_OUT: f64 = 1.06;
 
 fn r595_arm(c: Classifier) {
@@ -751,7 +752,7 @@ negative_control!(
     }
 );
 
-/// REQ-PAY-099: every output is one of the ten labels, each code `0..10` once, and the read side's code is the label's.
+/// Every output is one of the ten labels, each code `0..10` once, and the read side's code is the label's.
 /// A read side's `chazy_class`: masses, positions, momenta, `E_0`, `R_0` and the stored level in, a code out.
 type ReadClass = fn([f64; 3], [[f64; 2]; 3], [[f64; 2]; 3], f64, f64, u32) -> u32;
 
@@ -790,7 +791,7 @@ fn check_ten_labels(read: ReadClass) {
     assert_eq!(committed, ["H", "HP", "P", "HE", "PE", "B-stable"]);
 }
 
-/// The one rule at f32 (R-265): the fixtures' labels at f32 are their f64 labels. A label within ulps of a sign
+/// The one rule at f32: the fixtures' labels at f32 are their f64 labels. A label within ulps of a sign
 /// change may differ between widths (§8); none of these states is near one.
 #[test]
 fn chazy_fixtures_f32_instantiates_the_one_rule() {

@@ -1,5 +1,5 @@
 //! The closure registers and their departure gate (payload §1 and § "Why closure is here, at this width,
-//! unconditionally"; dd_generation_root §3.4; dd_validation_orbits §6; R-37, R-545): two registers and one bit, no
+//! unconditionally"; dd_generation_root §3.4; dd_validation_orbits §6): two registers and one bit, no
 //! array and no history.
 //!
 //! **What they hold.** `closure_min` is the running minimum of the shape-sphere chord `|n̂(t) − n̂(0)|`, the IC's shape
@@ -11,9 +11,9 @@
 //! bit, and a chord that recurs to that last bit can move the step or not; a resumed march compares against the same
 //! stored bits, so the split and the uninterrupted march agree.
 //!
-//! **The departure gate (R-37).** The chord is trivially 0 at `t = 0`, so the minimum starts only once the shape has
+//! **The departure gate.** The chord is trivially 0 at `t = 0`, so the minimum starts only once the shape has
 //! departed: once the chord has first exceeded `δ_dep`, the register's `delta_dep`, a chord on the unit sphere, so a
-//! pure number and the rule gauge-covariant. Departure is a latched fact, `sample_descriptor` bit 15 (R-545), sticky:
+//! pure number and the rule gauge-covariant. Departure is a latched fact, `sample_descriptor` bit 15, sticky:
 //! set at the first sample whose chord exceeds `δ_dep`, never cleared. That sample is the first the minimum takes,
 //! unconditionally; the samples before it are ignored, however close to `n̂(0)` they come. Both tests are on the
 //! squared chord, `d² > δ_dep²` and `d² < closure_min²`, so no `√` decides either; the stored minimum is `√(d²)`. A
@@ -21,16 +21,15 @@
 //! moves the minimum.
 //!
 //! **Before departure** the registers hold the minimum of an empty set: `closure_min` `+∞` and `closure_step` 0, the
-//! departed bit clear. The corpus gives no stored value for a sample that has not departed; RQ-835 is decided so, its
-//! option (a) (17 Nov 2026, `plan/DECISIONS-LOG.md`), as `d_min`'s unset value is `+∞` (R-271), and a reader tells the
-//! case by the departed bit. The march never forms or compares against that `+∞` (gpu_determinism_note § "The
-//! discipline", rule 4): before departure the in-march minimum is a finite placeholder, never read, the minimum is
-//! decided by the departed flag until the first departed sample takes it, and the stored `+∞` is formed from its bits
-//! where the sample has not departed, when it is stored (`IeeeBits::or_pos_inf`, as `driver::latch` forms `d_min`'s).
-//! A resumed march reloads that stored `+∞` with the departed bit clear, and so never reads it either.
+//! departed bit clear, as `d_min`'s unset value is `+∞`, and a reader tells the case by the departed bit. The march
+//! never forms or compares against that `+∞` (gpu_determinism_note § "The discipline", rule 4): before departure the
+//! in-march minimum is a finite placeholder, never read, the minimum is decided by the departed flag until the first
+//! departed sample takes it, and the stored `+∞` is formed from its bits where the sample has not departed, when it is
+//! stored (`IeeeBits::or_pos_inf`, as `driver::latch` forms `d_min`'s). A resumed march reloads that stored `+∞` with
+//! the departed bit clear, and so never reads it either.
 //!
 //! **Parity tier.** The departed bit and `closure_step` follow from the float chord, so they are Tier N/S with
-//! `closure_min`, not Tier B (parity contract § "Tier B"; 17 Nov 2026, `plan/DECISIONS-LOG.md`).
+//! `closure_min`, not Tier B (parity contract § "Tier B").
 
 use super::welford::chord2;
 use crate::real::IeeeBits;
@@ -46,7 +45,7 @@ pub struct Closure<R> {
     pub min: R,
     /// `closure_step`: the completed-step count at which [`Closure::min`] was taken; 0 before departure.
     pub step: u32,
-    /// The departed bit (R-37, R-545): whether the chord has exceeded `δ_dep`.
+    /// The departed bit: whether the chord has exceeded `δ_dep`.
     pub departed: bool,
 }
 

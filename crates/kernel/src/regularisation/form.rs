@@ -1,6 +1,6 @@
 //! Each stepper's exact form on a regularised (non-separable) system (integrator_contract Part 2b § "Every stepper ×
-//! regularisation pair runs; the pairs measured not to work carry a warning (R-561)", "Every pair is defined exactly,
-//! so its results reproduce"; R-561).
+//! regularisation pair runs; the pairs measured not to work carry a warning", "Every pair is defined exactly,
+//! so its results reproduce").
 //!
 //! Aarseth–Zare's `Γ` (and Heggie's `Γ*`) couples position and momentum, so a stepper is applied to the regularised
 //! equations of motion `(u̇, ṫ) = ∂Γ/∂p`, `ṗ = −∂Γ/∂u` in fictitious time `τ`, at the step `h` the step control gives.
@@ -16,7 +16,7 @@
 //!
 //! **The pair's profile** ([`Form::pair_profile`]) is the pair's, not the stepper's row (Part 2b: "The explicit
 //! composition is not symplectic on a non-separable Hamiltonian"): `symplectic` false for every pair, and
-//! `step_reversible` false, dd test 3's measurement being the regularised occupants' (R-500) and none recorded for these
+//! `step_reversible` false, dd test 3's measurement being the regularised occupants' and none recorded for these
 //! pairs; `run_reversible` false. RK4's row is the table's (integrator_contract Part 2a § "The table gains two rows":
 //! order 4, 4 evaluations). The orders of the others are their forms' on a non-separable system: Euler's 1; KDK's 1,
 //! since its drift reads `u̇` at the old `u` and so misses the `½h²·(∂u̇/∂u)·u̇` term of the exact flow, which a
@@ -197,12 +197,12 @@ fn rk4_stages<R: StepReal, F: Flow<R>>(
     }
 }
 
-/// RK4's joint step on a regularised flow (R-974; dd_integrator §3.8, "Heggie × RK4's joint step"): the sample
+/// RK4's joint step on a regularised flow (dd_integrator §3.8, "Heggie × RK4's joint step"): the sample
 /// `(q, p)` one step `h` on `flow`, [`Form::step`]'s under [`Form::Rk4`] bit for bit (the same `rk4_stages`), and
 /// the displacement `(dq, dp)` through the same stages and the same tableau, each stage's rate replaced by the
 /// difference `G(yᵢ + δyᵢ) − kᵢ`: `G` the rates of `shadow`, the flow the shadow follows, at the stage's state plus
-/// the stage's displacement, each sum formed plainly at the working precision (R-974's (a1), the form TASK-M3-72's
-/// measurement chose), less the sample's own stage rate `kᵢ`. Returns the sample's state, then the displacement's.
+/// the stage's displacement, each sum formed plainly at the working precision ((a1), the form the measurement of
+/// the two chose), less the sample's own stage rate `kᵢ`. Returns the sample's state, then the displacement's.
 #[inline]
 pub fn rk4_joint<R: StepReal, F: Flow<R>>(
     flow: &F,

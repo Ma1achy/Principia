@@ -1,4 +1,4 @@
-//! QA tests for TASK-M2-93's fix round, written from REQ-DEC-021 (statement and verify detail) and the source it cites,
+//! QA tests for the invariant construction at zero moment of inertia, written from the source,
 //! `principia_dd_decoder.md` § 2 ("`NO_QUALIFYING_SEED` … only where its `‖w⁽²⁾‖²_m` is 0, which is `I = 0` about the
 //! CoM, a finite 0 there") and § 3.4 ("`‖w⁽²⁾‖²_m = 0`, which is `I = 0` about the CoM only → DEGENERATE"), not from
 //! the implementation.
@@ -16,7 +16,7 @@
 //!
 //! **Domain** (pitfalls §10): the stateless construction, its inputs held fixed; no trajectory.
 //!
-//! The control (R-176): §3.4's formula taken literally, `w = r/√I` with `I = Σ mᵢ‖rᵢ‖²` unguarded, which is 0/0 at
+//! The control: §3.4's formula taken literally, `w = r/√I` with `I = Σ mᵢ‖rᵢ‖²` unguarded, which is 0/0 at
 //! `I = 0`; its norm and direction are NaN, so the check must fail.
 
 use kernel::decode::config::{self, Config};

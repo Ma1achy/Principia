@@ -1,28 +1,28 @@
-//! QA tests for TASK-M2-13, written from the requirements (REQ-CHART-026, REQ-CHART-008, REQ-DEC-006; chart_reference
-//! §1.3, §4.4, §4.5; chart_decoder_contract § "The four axis kinds"; inverse_encode_contract § "Chart-aware validation";
-//! lowering Part 3 "Mass source"; R-22), not from the implementation. Each decode check runs at the f64 and the f32
-//! instantiation of the one source, natively (R-265).
-//! - `qa_m213_ternary_masses` (REQ-CHART-026): over a 65 × 65 lattice of `[0,1]²` (edges and corners included) and a
+//! QA tests for the ternary plot, the mixed `(α, p_ρ)` chart and the per-pixel mass flags, written from the
+//! requirements (chart_reference §1.3, §4.4, §4.5; chart_decoder_contract § "The four axis kinds";
+//! inverse_encode_contract § "Chart-aware validation"; lowering Part 3 "Mass source"), not from the implementation.
+//! Each decode check runs at the f64 and the f32 instantiation of the one source, natively.
+//! - `qa_m213_ternary_masses`: over a 65 × 65 lattice of `[0,1]²` (edges and corners included) and a
 //!   low-discrepancy interior set, every pixel's decoded masses are `≥ ε_m` and sum to 1, and they are §4.5's formula
 //!   evaluated here: `x = u`, `y = (1 − u)v`, `(m₀, m₁, m₂) = (1 − x − y, x, y)`, `m ← (1 − 3ε_m)m + ε_m`; the default
 //!   `ε_m` is `10⁻⁴`.
-//! - `qa_m213_ternary_geometry` (REQ-CHART-026): the geometry is fixed at `ν₀`: at every pixel the decoded triangle has
+//! - `qa_m213_ternary_geometry`: the geometry is fixed at `ν₀`: at every pixel the decoded triangle has
 //!   its right angle at body 0 and sides opposite bodies 0, 1, 2 in the ratio `c : b : a` of `ν₀`'s Burrau triangle
-//!   (`a = 1 − ν₀²`, `b = 2ν₀`, `c = 1 + ν₀²`; R-22: mass `i` is the side opposite body `i`); every momentum is zero.
-//! - `qa_m213_ternary_marker` (REQ-CHART-026): the Burrau marker lies in `[0,1]²` and the decode there gives the Burrau
+//!   (`a = 1 − ν₀²`, `b = 2ν₀`, `c = 1 + ν₀²`; mass `i` is the side opposite body `i`); every momentum is zero.
+//! - `qa_m213_ternary_marker`: the Burrau marker lies in `[0,1]²` and the decode there gives the Burrau
 //!   masses `(c, b, a)/(a + b + c)` (at `ν₀ = 1/2`, `(5, 4, 3)/12`).
 //! - `qa_m213_ternary_validate` (inverse_encode_contract layer 2, "Mass simplex"): every point of `[0,1]²` is valid;
 //!   any point whose raw masses leave the simplex (some `mᵢ < 0`) is not; `ν₀ ∉ (0, 1)` is refused; a clamp lands on a
 //!   valid point.
-//! - `qa_m213_mixed_alpha_prho` (REQ-CHART-008): the `(α, p_ρ)` chart decodes through the shared decoder: its decode
+//! - `qa_m213_mixed_alpha_prho`: the `(α, p_ρ)` chart decodes through the shared decoder: its decode
 //!   is bit-identical to `kernel::decode::decode` on `z(u, v)`, the frozen controls with `z_α` and `z_q0` set through
 //!   the selection's own link inverses at `α(u) = lo + (hi − lo)u`, `p_ρ(v)` likewise; the decoded `α` and `p_ρ,x` are
 //!   the axes' values to within one pixel's step of the axis.
-//! - `qa_m213_mixed_feasibility` (REQ-CHART-008, inverse_encode layer 2 "Mixed-axis charts inherit both axes'
+//! - `qa_m213_mixed_feasibility` (inverse_encode layer 2 "Mixed-axis charts inherit both axes'
 //!   constraints"): on a lattice reaching past both axes' domains (`α ∈ [0, π/2]`, `p ∈ [−q_max, q_max]`), validate is
 //!   `Valid` exactly where both axes are inside their domains; outside, a clamp moves exactly the failing axes and lands
 //!   on a valid point; an axis that is a latent coordinate adds no constraint.
-//! - `qa_m213_per_pixel_mass_flags` (REQ-DEC-006): the ternary plot, the `(ν, K)` chart, the Euclid plane and mixed
+//! - `qa_m213_per_pixel_mass_flags`: the ternary plot, the `(ν, K)` chart, the Euclid plane and mixed
 //!   charts with a mass axis declare `requires_per_pixel_mass`; each chart that declares it *false* has bit-identical
 //!   masses at every pixel, so a uniform mass describes it; each mass-varying chart's masses do vary, from its decode.
 //!
@@ -30,10 +30,10 @@
 //! 64` eps absolute (relative for ratios), a rounding bound, as `qa_TASK-M2-10` states it. The axis round trip is held to
 //! the pixel step, the axis's own resolution, with no constant. `ε_m` is the register's `mass_simplex_eps_m`.
 //!
-//! **Domain** (pitfalls §10): the stateless decode, its inputs held fixed; no trajectory. The GPU half of REQ-DEC-006
-//! is the implementer's `engine/tests/per_pixel_mass_gpu.rs`.
+//! **Domain** (pitfalls §10): the stateless decode, its inputs held fixed; no trajectory. The GPU half of the per-pixel
+//! mass check is the implementer's `engine/tests/per_pixel_mass_gpu.rs`.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176, R-212).
+//! Each test has a registered negative control naming the panic it expects.
 
 use std::fmt::Debug;
 
@@ -141,7 +141,7 @@ where
     Chart::decode::<Defaults, R>(chart, R::of(u), R::of(v))
 }
 
-// ── REQ-CHART-026: the masses ──────────────────────────────────────────────────────────────────────────────────────
+// ── The ternary plot: the masses ───────────────────────────────────────────────────────────────────────────────────
 
 /// Every pixel's masses are `≥ want_floor`, sum to 1 and are the formula's at `formula_eps`.
 fn check_masses<R: Q>(chart_eps: f64, want_floor: f64, formula_eps: f64)
@@ -207,7 +207,7 @@ negative_control!(
     check_masses::<f64>(eps_m(), 0.0, 3.0 * eps_m())
 );
 
-// ── REQ-CHART-026: the geometry, fixed at ν₀, at rest ───────────────────────────────────────────────────────────────
+// ── The ternary plot: the geometry, fixed at ν₀, at rest ────────────────────────────────────────────────────────────
 
 fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
     ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt()
@@ -269,7 +269,7 @@ negative_control!(
     check_geometry::<f64>(0.5, 1.0 / 3.0)
 );
 
-// ── REQ-CHART-026: the Burrau marker ───────────────────────────────────────────────────────────────────────────────
+// ── The ternary plot: the Burrau marker ────────────────────────────────────────────────────────────────────────────
 
 /// The marker of the chart at `nu0` lies in `[0,1]²`, and the decode there gives the Burrau masses at `want_nu`.
 fn check_marker<R: Q>(nu0: f64, want_nu: f64)
@@ -300,7 +300,8 @@ where
 
 #[test]
 fn qa_m213_ternary_marker() {
-    // ν₀ = 1/2: the (3, 4, 5) triangle, masses (5, 4, 3)/12 (R-22, body 0 at the right angle).
+    // ν₀ = 1/2: the (3, 4, 5) triangle, masses (5, 4, 3)/12 (mass i the side opposite body i, body 0 at the right
+    // angle).
     let (a, b, c) = sides(0.5);
     assert_eq!(
         [c / (a + b + c), b / (a + b + c), a / (a + b + c)],
@@ -388,7 +389,7 @@ negative_control!(
     check_ternary_validate(eps_m(), |_, _| true)
 );
 
-// ── REQ-CHART-008: the (α, p_ρ) chart ──────────────────────────────────────────────────────────────────────────────
+// ── Mixed axes: the (α, p_ρ) chart ─────────────────────────────────────────────────────────────────────────────────
 
 type AlphaPRho<R> = Mixed<Alpha, PRhoX, R>;
 
@@ -475,7 +476,7 @@ negative_control!(
     check_alpha_prho::<f64>(1)
 );
 
-// ── REQ-CHART-008: feasibility, the conjunction ────────────────────────────────────────────────────────────────────
+// ── Mixed axes: feasibility, the conjunction ───────────────────────────────────────────────────────────────────────
 
 fn alpha_ok(x: f64) -> bool {
     (0.0..=core::f64::consts::FRAC_PI_2).contains(&x)
@@ -578,7 +579,7 @@ negative_control!(
     check_conjunction(|h, _| h)
 );
 
-// ── REQ-DEC-006: every chart declares requires_per_pixel_mass ─────────────────────────────────────────────────────
+// ── Every chart declares requires_per_pixel_mass ──────────────────────────────────────────────────────────────────
 
 /// The distinct mass triples `decode` gives at a 9 × 9 lattice of `[0,1]²`.
 fn mass_set(decode: &dyn Fn(f64, f64) -> Decoded<f64>) -> usize {

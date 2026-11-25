@@ -3,26 +3,26 @@
 //! signed distances directly, with no segment gate (both open), so the sort is exercised on cuts with distinct
 //! distances. The cuts of symbolic_dynamics_contract §1, which share one distance and choose by segment gate, are
 //! checked from positions by `crossing_segment_gate`, `crossing_state_cuts` and `crossing_published_words`.
-//! - REQ-INT-031: a double crossing in one substep orders by `τ`; equal `τ` uses the cut ID; an endpoint exactly on the
+//! - A double crossing in one substep orders by `τ`; equal `τ` uses the cut ID; an endpoint exactly on the
 //!   cut follows the half-open rule (`crossing_order`).
-//! - REQ-INT-046: a cross-and-recross inside one macro-step yields both crossings, and the word they leave
+//! - A cross-and-recross inside one macro-step yields both crossings, and the word they leave
 //!   (`crossing_every_substep`).
-//! - REQ-INT-047: a segment crossing both cuts near their shared endpoint appends in `τ` order, distances below f32's
+//! - A segment crossing both cuts near their shared endpoint appends in `τ` order, distances below f32's
 //!   product range included; the product comparison against the exact one (`crossing_tau_sort`).
-//! - REQ-INT-048: endpoints exactly on a cut, `−0` and subnormals among them, give no duplicate or missed crossing
-//!   (`crossing_half_open`). The GPU arm is REQ-VAL-072's at M4 (R-150).
+//! - Endpoints exactly on a cut, `−0` and subnormals among them, give no duplicate or missed crossing
+//!   (`crossing_half_open`), on the CPU; the GPU arm is not tested here.
 //! - The segment gate (integrator contract Part 5): read at the substep's non-negative endpoint, exclusive gates
 //!   crossing one cut at most (`crossing_segment_gate`).
 //! - §1's cuts from positions: `d`'s sign against the shape sphere's `n_w`, the classifier against the exact longest
 //!   side, and loops about each collision point reading `A`, `b` and Appendix B's `aB` (`crossing_state_cuts`).
-//! - REQ-PAY-070's cross-check: ten orbits of the PRL's Table I read their published words up to R-630 item 5's
-//!   symmetries, from `fixtures/crossings/prl_orbits.json` (`crossing_published_words`). REQ-VAL-043 is TASK-M3-30's.
+//! - The published words' cross-check: ten orbits of the PRL's Table I read their published words up to the
+//!   symmetries [`symmetry`] allows, from `fixtures/crossings/prl_orbits.json` (`crossing_published_words`).
 //! - §1's body map: of the six labellings of those orbits, only ours and its outer swap read the published words
 //!   (`crossing_body_relabelling`).
 //! - A march that starts on the cut, or a rounding from it, each way (`crossing_start_on_cut`), and what a coarse
 //!   substep reads wrongly (`crossing_substep_limits`), from `fixtures/crossings/position_marches.json` (integrator
 //!   contract Part 5).
-//! - No subnormal `d` feeds the side (R-547): a distance below the normal range reads zero though its float would
+//! - No subnormal `d` feeds the side: a distance below the normal range reads zero though its float would
 //!   round up to the least normal (`crossing_no_subnormal_distance`).
 //!
 //! Each check takes the detector as a function, so its control runs the same check on a faulty one.
@@ -173,7 +173,7 @@ fn check_cases<T: Fixture>(detect: Detect<T>, cases: &[Case]) {
     }
 }
 
-// ── crossing_order (REQ-INT-031) ─────────────────────────────────────────────────────────────────────────────────────
+// ── crossing_order ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 fn check_order(d32: Detect<f32>, d64: Detect<f64>) {
     let mut cases = fixture("double crossing in one substep");
@@ -202,7 +202,7 @@ negative_control!(
     check_order(by_cut_id::<f32>, by_cut_id::<f64>)
 );
 
-// ── crossing_every_substep (REQ-INT-046) ─────────────────────────────────────────────────────────────────────────────
+// ── crossing_every_substep ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// A march: its crossings, in order, from the cuts' distances at its accepted endpoints. The detector at every
 /// accepted substep, or a control's faulty one.
@@ -295,7 +295,7 @@ negative_control!(
     check_every_substep(per_macro_step)
 );
 
-// ── crossing_tau_sort (REQ-INT-047) ──────────────────────────────────────────────────────────────────────────────────
+// ── crossing_tau_sort ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The exact order of `|x₁|·|y₁|` and `|x₂|·|y₂|`, f32 operands, each product exact in f64 (48 significant bits).
 fn exact_order(x1: f32, y1: f32, x2: f32, y2: f32) -> std::cmp::Ordering {
@@ -455,7 +455,7 @@ negative_control!(
     check_tau_sort(plain_products::<f32>, plain_products::<f64>)
 );
 
-// ── crossing_half_open (REQ-INT-048) ─────────────────────────────────────────────────────────────────────────────────
+// ── crossing_half_open ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A side change of `a` alone over each substep of `ds`, as the detector counts it.
 fn a_stream<T: IeeeBits>(detect: Detect<T>, ds: &[T]) -> Vec<Vec<u32>> {
@@ -817,7 +817,7 @@ negative_control!(
     check_state_cuts::<f64>(flipped::<f64>)
 );
 
-// ── crossing_published_words (REQ-PAY-070's cross-check) ─────────────────────────────────────────────────────────────
+// ── crossing_published_words ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// A word of letters `a`, `A`, `b`, `B` as symbol codes.
 fn codes(word: &str) -> Vec<u32> {
@@ -841,8 +841,9 @@ fn cyclic(w: &[u32]) -> Vec<u32> {
     out
 }
 
-/// R-630 item 5's comparison of `got` against `published`, both cyclically reduced: the first of conjugacy, the
-/// inverse, the `(a, b) ↔ (A, B)` exchange and both that makes `got` a cyclic rotation of `published`.
+/// The comparison of `got` against `published` up to the published words' symmetries, both cyclically reduced: the
+/// first of conjugacy, the inverse, the `(a, b) ↔ (A, B)` exchange and both that makes `got` a cyclic rotation of
+/// `published`.
 fn symmetry(got: &[u32], published: &[u32]) -> Option<&'static str> {
     let rotation = |w: &[u32]| {
         w.len() == published.len()
@@ -938,8 +939,8 @@ negative_control!(
 
 // ── crossing_body_relabelling (symbolic_dynamics_contract §1, the body map) ──────────────────────────────────────────
 
-/// How many of the fixture's orbits, read with their bodies permuted by `perm`, are the published word up to R-630
-/// item 5's symmetries.
+/// How many of the fixture's orbits, read with their bodies permuted by `perm`, are the published word up to
+/// [`symmetry`]'s symmetries.
 fn orbits_matching(cuts: Cuts<f64>, perm: [usize; 3]) -> usize {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -1093,7 +1094,7 @@ negative_control!(
     check_position_marches::<f64>(flipped::<f64>, "limit")
 );
 
-// ── crossing_no_subnormal_distance (R-547; gpu_determinism_note, rule 6) ─────────────────────────────────────────────
+// ── crossing_no_subnormal_distance (gpu_determinism_note, rule 6) ────────────────────────────────────────────────────
 
 /// A distance from positions: [`signed_distance`], or a control's faulty one.
 type Distance<T> = fn(&[[T; 2]; 3]) -> T;

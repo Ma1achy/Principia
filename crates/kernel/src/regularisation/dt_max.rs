@@ -1,10 +1,10 @@
 //! `dt_max`, the largest physical step a trajectory's occupant took, and its "no usable step" sentinel
 //! (integrator_contract Part 2c § "Rules the new kernel must hold by construction", rule 4 and its `dt_max` definition;
-//! Part 2b, the Aarseth–Zare step control's step 8; pitfalls §9; REQ-TOOL-039).
+//! Part 2b, the Aarseth–Zare step control's step 8; pitfalls §9).
 //!
 //! An occupant diagnostic, outside the payload: the occupant that forms the physical steps feeds [`DtMax::observe`] one
 //! step at a time, and whoever runs it reads [`DtMax::report`]. A step is usable when it is finite; a NaN or `±∞` is
-//! skipped, decided on its bits before any comparison ([`IeeeBits::non_finite_bits`]; R-114, R-538;
+//! skipped, decided on its bits before any comparison ([`IeeeBits::non_finite_bits`];
 //! gpu_determinism_note § "The discipline", rule 4), and every finite step, zero, negative or the overflow `2.209e128`
 //! at f64, is reported as it stands. A skipped step is not reported as `dt_max`: it is counted, and the count is
 //! reported beside the largest usable step, so it is never invisible. The fold is reseeded from the first usable step
@@ -76,7 +76,7 @@ impl<R: IeeeBits> DtMax<R> {
     #[inline]
     pub fn skipping(self, more: u32) -> Self {
         // The saturation is written out, not as `self.skipped.saturating_add(more)`: rust-gpu 0.10.0-alpha.1, the
-        // backend the kernel builds with (R-169), leaves the `saturating_add` intrinsic unimplemented, a zombie that
+        // backend the kernel builds with, leaves the `saturating_add` intrinsic unimplemented, a zombie that
         // fails the SPIR-V build where it is reached (its `builder/intrinsics.rs`), as `driver/advance.rs` records
         // for `saturating_sub`.
         let skipped = if more > u32::MAX - self.skipped {

@@ -1,11 +1,10 @@
 //! The pair table of integrator_contract Part 2b § "Every stepper × regularisation pair runs; the pairs measured not to
-//! work carry a warning (R-561)": one cell per stepper × regularisation × time transformation, each measured good,
+//! work carry a warning": one cell per stepper × regularisation × time transformation, each measured good,
 //! measured bad or not measured, a measured-bad cell carrying its warning.
 //!
-//! **No pair is forbidden** (R-561). [`Pair::select`] takes any stepper with any regularisation and returns the pair;
+//! **No pair is forbidden**. [`Pair::select`] takes any stepper with any regularisation and returns the pair;
 //! it has no failing case, and a measured-bad pair is selected like any other, with its warning to show. A pair's
-//! status is its cell's for the time transformation in force ([`Choice`]), never looked up by the pair alone
-//! (REQ-INT-017).
+//! status is its cell's for the time transformation in force ([`Choice`]), never looked up by the pair alone.
 //!
 //! [`PairTable::part_2b`] is the contract's table as measured: every regularised cell measured good or measured bad by
 //! the contract's criterion (`cargo xtask gate pair-table` takes the measurement and fails when this table or the
@@ -18,7 +17,7 @@ use super::{Composed, Kind};
 use crate::occupant::rk4::Rk4;
 use crate::occupant::{DebugOccupant, Occupant, Selection};
 
-/// Heggie's time transformations (Part 2b; R-161).
+/// Heggie's time transformations (Part 2b).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HeggieTime {
     /// Eq. 20, `dτ = dt/(R₁R₂R₃)`.
@@ -27,7 +26,7 @@ pub enum HeggieTime {
     Eq22,
 }
 
-/// logH's time modes (Part 2b; R-162).
+/// logH's time modes (Part 2b).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LogHMode {
     /// The logH mode.
@@ -106,7 +105,7 @@ const fn column(stepper: Selection) -> usize {
     }
 }
 
-/// A cell's status (R-561).
+/// A cell's status.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Status {
     /// Not measured.
@@ -314,7 +313,7 @@ impl Pair {
     );
 
     /// Selects `stepper` with `regularisation`. Every pair is selectable, `none` and the measured-bad pairs included:
-    /// there is no refusal (R-561).
+    /// there is no refusal.
     #[inline]
     pub const fn select(stepper: Selection, regularisation: Choice) -> Self {
         Pair {
@@ -335,7 +334,7 @@ impl Pair {
         self.status(table).warning()
     }
 
-    /// Whether the composed occupant owns its time mapping: whenever the regularisation is not `none` (Part 2a; R-19).
+    /// Whether the composed occupant owns its time mapping: whenever the regularisation is not `none` (Part 2a).
     #[inline]
     pub const fn owns_time_mapping(self) -> bool {
         self.regularisation.kind().owns_time_mapping()

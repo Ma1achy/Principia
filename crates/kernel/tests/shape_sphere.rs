@@ -1,50 +1,48 @@
-//! The shape-sphere chart and the shape map's landmarks (`kernel::chart::shape_sphere`, `kernel::shape`; TASK-M2-08).
+//! The shape-sphere chart and the shape map's landmarks (`kernel::chart::shape_sphere`, `kernel::shape`).
 //! - `shape_vec_poles`: `L⁺` (bodies 0 → 1 → 2 anticlockwise, equilateral) is `w = +1`, `L⁻` is `w = −1`, and the
 //!   collision of bodies 0 and 1 is exactly `(−1, 0, 0)`, under several masses, turned and scaled, at f64 and f32,
-//!   through `shape` and `shape_vec` (REQ-CHART-018).
+//!   through `shape` and `shape_vec`.
 //! - `shape_vec_inspector`: `n` against the IC Inspector's on `fixtures/ic_inspector/shape_vec.json`'s random ICs,
-//!   within `shape_vec_js_tol` (REQ-CHART-018, REQ-CHART-049), printing the measured worst.
+//!   within `shape_vec_js_tol`, printing the measured worst.
 //! - `shape_sphere_chart_map_spherical`: `(s, 1)` is `L⁺` exactly, `(s, 0)` is `L⁻`, and the polar angle runs over the
-//!   whole `[0, π]`, `π·(1 − t)`, with the azimuth `2π·s`, at f64 and f32 (REQ-CHART-019).
+//!   whole `[0, π]`, `π·(1 − t)`, with the azimuth `2π·s`, at f64 and f32.
 //! - `shape_sphere_chart_map_exponential`: the exponential map at `d = 0` is `n₀` exactly, its points are unit, and
-//!   each lies at the geodesic distance `r = ‖d‖` from `n₀` (REQ-CHART-019).
-//! - `shape_sphere_inverse_poles`: at `n₀ = ±1` with `±0` in `n₁` and `n₂`, `β` is R-437's `+0` and `ψ = φ_f`; an `n`
-//!   off the sphere by a rounding forms no root of a negative (REQ-CHART-020).
-//! - `shape_sphere_roundtrip`: `Φ` alone (R-178), `shape(Φ(u, v)) = n(u, v)` within `shape_roundtrip_bound` on both
-//!   hemispheres, the gate's measure in miniature (REQ-CHART-020, REQ-CHART-053).
+//!   each lies at the geodesic distance `r = ‖d‖` from `n₀`.
+//! - `shape_sphere_inverse_poles`: at `n₀ = ±1` with `±0` in `n₁` and `n₂`, `β` is `+0` and `ψ = φ_f`; an `n`
+//!   off the sphere by a rounding forms no root of a negative.
+//! - `shape_sphere_roundtrip`: `Φ` alone, `shape(Φ(u, v)) = n(u, v)` within `shape_roundtrip_bound` on both
+//!   hemispheres, the gate's measure in miniature.
 //! - `shape_sphere_roundtrip_near_poles`: the same within polar radii `10⁻²` to `10⁻¹⁵` of `n₀ = ±1`, where `n₀` rounds
-//!   to `±1` and the smaller of `a` and `b` must come from `n₁² + n₂²` (REQ-CHART-020).
-//! - `shape_sphere_canonical_form`: `Φ` then `C`, which has no mirror step (R-865), keeps every point's signed shape, a
-//!   lower-hemisphere point below the equator, with the held masses and momenta, and never mirrors (R-544, R-178;
-//!   REQ-CHART-020, REQ-CHART-048).
+//!   to `±1` and the smaller of `a` and `b` must come from `n₁² + n₂²`.
+//! - `shape_sphere_canonical_form`: `Φ` then `C`, which has no mirror step, keeps every point's signed shape, a
+//!   lower-hemisphere point below the equator, with the held masses and momenta, and never mirrors.
 //! - `shape_sphere_shared_decoder`: the chart's decode is the shared blocks, the configuration [`place`]'s, `C` with its
-//!   step 3 not taken after, and its `validate` is `Valid` everywhere (REQ-CHART-015's shape, R-544).
-//! - `shape_sphere_decode_canonical`: the decode's `ic` is `C(Φ)` (C has no mirror step, R-865), on `I = 1`, and its
-//!   descriptor that state's, at `I ≠ 1` and on both hemispheres (dd_decoder §2, §3.6; REQ-CHART-015, R-544).
+//!   step 3 not taken after, and its `validate` is `Valid` everywhere.
+//! - `shape_sphere_decode_canonical`: the decode's `ic` is `C(Φ)` (C has no mirror step), on `I = 1`, and its
+//!   descriptor that state's, at `I ≠ 1` and on both hemispheres (dd_decoder §2, §3.6).
 //! - `shape_sphere_energy_norm`: `η_E`'s entry, `energy_norm::decode_chart`, decodes the shape sphere through its own
-//!   decode, the configuration `place`'s at `n(u, v)`, with and without a target `E*` (REQ-CHART-015).
+//!   decode, the configuration `place`'s at `n(u, v)`, with and without a target `E*`.
 //! - `shape_landmarks`: `BC₀₁ = (−1, 0, 0)`, `L⁺ = (0, 0, 1)`, every collision at `w = 0`, equal masses 120° apart, and
-//!   the collisions against the inspector's (REQ-CHART-036).
+//!   the collisions against the inspector's.
 //! - `shape_landmarks_mass_weighted`: dd_integrator test 9, `BC₀₁ = (−1, 0, 0)` for any masses, `L⁺ = (0, 0, 1)`,
 //!   every collision at `w = 0`, equal masses at 180°, 60°, 300°, and each collision the `n` of any configuration with
-//!   that pair together (REQ-INT-003).
+//!   that pair together.
 //! - `shape_dot_on_collision_landmark`: bodies `i` and `j` brought together put the dot on the landmark opposite `k`,
-//!   and keep it off the other two (REQ-VAL-023).
+//!   and keep it off the other two.
 //! - `shape_sphere_mirror_runs`: the run from `Π·x` is the run from `x` mirrored, bitwise, at every state the march
 //!   left, under KDK, RK4 and Heggie × RK4 at f64 and f32, released from rest and with a held momentum of zero
 //!   `y`-components: the fates and `t_end_step` equal, `L_z` and the frame's winding negated; "does not apply" with a
-//!   held `p_λ,y ≠ 0` (chart_reference §3.3; TASK-M3-38).
+//!   held `p_λ,y ≠ 0` (chart_reference §3.3).
 //! - `shape_sphere_mirror_runs_pairs`: the pixel pairs `(θ, φ)`, `(θ, π − φ)` on two named fixtures shown non-chaotic
 //!   by a separation bound: fates equal, `L_z` and the winding opposite.
 //! - `frame_winding`, `frame_winding_runs`: the frame's winding on its definition's cases (a rigid rotation, the
 //!   negative `x`-axis, the `±π` tie, `ρ` on the axis and through zero) and on real runs, negated under `Π`.
 //!
-//! **Tolerances.** The inspector's and the round trip's are the register's (R-427). The others are multiples of the
-//! precision's epsilon, set from the worst case each test measures, with headroom (applied per R-369: a test decision,
-//! as `canon.rs`'s). `shape_landmarks_mass_weighted`'s is `8ε·κ`, scaled by `shape`'s condition number `κ` at each
-//! draw: a collision configuration is an ill-conditioned input, `|ρ|` small against the positions, and the error is
-//! `shape`'s rounding on it, not the landmark's; the worst error over 600,000 draws is `3.8 ε·κ` (physics review
-//! 5897335433; applied per R-369: a test decision).
+//! **Tolerances.** The inspector's and the round trip's are the register's. The others are multiples of the
+//! precision's epsilon, set from the worst case each test measures, with headroom (this test's choice, as
+//! `canon.rs`'s). `shape_landmarks_mass_weighted`'s is `8ε·κ` (this test's choice), scaled by `shape`'s condition
+//! number `κ` at each draw: a collision configuration is an ill-conditioned input, `|ρ|` small against the positions,
+//! and the error is `shape`'s rounding on it, not the landmark's; the worst error over 600,000 draws is `3.8 ε·κ`.
 
 use std::path::Path;
 
@@ -85,10 +83,10 @@ use validation::{negative_control, prop, SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL
 const PI: f64 = std::f64::consts::PI;
 const EPS: f64 = f64::EPSILON;
 
-/// `shape_vec_js_tol` (REQ-CHART-049), provisional until M2.
+/// `shape_vec_js_tol`, provisional until M2.
 const JS_TOL: f64 = SHAPE_VEC_JS_TOL.number();
 
-/// `shape_roundtrip_bound` (REQ-CHART-053, R-181), provisional until M2.
+/// `shape_roundtrip_bound`, provisional until M2.
 const ROUNDTRIP: f64 = SHAPE_ROUNDTRIP_BOUND.number();
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -153,7 +151,7 @@ fn via_jacobi(r: [[f64; 2]; 3], m: [f64; 3]) -> [f64; 3] {
 
 /// `w` of the unit equilateral triangle, anticlockwise, under masses `m` (`Σmᵢ = 1`), in closed form from the pair
 /// distances: `I = Σ_{i<j} mᵢmⱼ rᵢⱼ² = m₀m₁ + m₀m₂ + m₁m₂` and `ρ̃ ∧ λ̃ = √(m₀m₁m₂)·2·Area`, `2·Area = √3/2`, so
-/// `w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`: 1 at equal masses, below 1 otherwise (RQ-355).
+/// `w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`: 1 at equal masses, below 1 otherwise.
 fn lagrange_w(m: [f64; 3]) -> f64 {
     (3.0 * m[0] * m[1] * m[2]).sqrt() / (m[0] * m[1] + m[0] * m[2] + m[1] * m[2])
 }
@@ -538,7 +536,7 @@ negative_control!(
     }
 );
 
-// ── The inverse at its poles (R-437) ───────────────────────────────────────────────────────────────────────────────
+// ── The inverse at its poles ───────────────────────────────────────────────────────────────────────────────────────
 
 type Inverse64 = fn([f64; 3], f64, f64) -> Inverse<f64>;
 
@@ -760,7 +758,7 @@ fn relative(a: [[f64; 2]; 3], b: [[f64; 2]; 3]) -> f64 {
         / scale
 }
 
-/// `Φ` alone at `(s, t)`, without `C` (R-178): `D_mass`, [`place`] and [`held_momentum`] joined.
+/// `Φ` alone at `(s, t)`, without `C`: `D_mass`, [`place`] and [`held_momentum`] joined.
 fn phi(chart: &ShapeSphere<f64>, s: f64, t: f64) -> Ic<f64> {
     let m = mass::decode::<Defaults, f64>(chart.z_mass);
     let c = place(chart.point(s, t), chart.inertia, chart.phase, &m);
@@ -774,7 +772,7 @@ fn phi(chart: &ShapeSphere<f64>, s: f64, t: f64) -> Ic<f64> {
 
 type Phi64 = fn(&ShapeSphere<f64>, f64, f64) -> Ic<f64>;
 
-/// `C(Φ(chart, s, t))` (C has no mirror step, R-865), `Φ` given by `phi`: its shape is `n(s, t)` with its sign on both
+/// `C(Φ(chart, s, t))` (C has no mirror step), `Φ` given by `phi`: its shape is `n(s, t)` with its sign on both
 /// hemispheres, a lower-hemisphere point at `n₂ < 0`, within `tol`; its masses are `m_fixed` exactly and its momenta
 /// `p_fixed` within `tol` relative; nothing is mirrored. Returns the worst.
 fn check_form(phi: Phi64, tol: f64) -> f64 {
@@ -842,8 +840,9 @@ negative_control!(
 
 /// `decode` on random spherical and exponential charts, under both link sets: its masses are `D_mass`'s on `z₀`'s
 /// mass block, its configuration [`place`]'s at the chart's point, its momenta [`held_momentum`]'s, its `ic` `C` of
-/// their join (C has no mirror step, R-865) (R-544) and its descriptor that `ic`'s, `Σpᵢ = 0` and the CoM at the origin within `16ε`; `map`'s controls are the held blocks; `validate` is `Valid`
-/// inside and past `[0,1]²`; the name is `ShapeSphere`.
+/// their join (C has no mirror step) and its descriptor that `ic`'s, `Σpᵢ = 0` and the CoM at the origin within
+/// `16ε`; `map`'s controls are the held blocks; `validate` is `Valid` inside and past `[0,1]²`; the name is
+/// `ShapeSphere`.
 fn check_shared(decode: Decode64) {
     let mut rng = SplitMix::new(9);
     for k in 0..256 {
@@ -965,8 +964,8 @@ fn random_chart(rng: &mut SplitMix, exponential: bool) -> ShapeSphere<f64> {
 }
 
 /// `decode` on random charts of both maps, `I` in `[¼, 4]`, both hemispheres drawn: its `ic` is `C(Φ)` (no mirror step,
-/// R-865; R-544's signed sphere), at `I = 1` within `64ε`, and its descriptor is that state's, with `rho_mag` and `lambda_mag` in
-/// `[0, 1]`.
+/// on the signed sphere), at `I = 1` within `64ε`, and its descriptor is that state's, with `rho_mag` and
+/// `lambda_mag` in `[0, 1]`.
 fn check_canonical(decode: Decode64) {
     let mut rng = SplitMix::new(0x0206);
     let (mut lower, mut scaled) = (0, 0);
@@ -1094,7 +1093,7 @@ negative_control!(
     }
 );
 
-// ── The signed decode (R-544; REQ-CHART-081) ──────────────────────────────────────────────────────────────────────
+// ── The signed decode ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A decode of the chart at `(u, v)` to the state that crosses to the integrator: the chart's own, or a control's.
 type DecodeIc = fn(&ShapeSphere<f64>, f64, f64) -> Ic<f64>;
@@ -1135,8 +1134,8 @@ fn signed_pixel(rng: &mut SplitMix, k: usize) -> (f64, f64) {
 }
 
 /// `decode` over random masses, held momenta, `I` and `φ_f`, at pixels of both hemispheres, the poles and the equator
-/// included (R-544; REQ-CHART-081): its shape is `n(θ, φ)` with its sign, within `shape_roundtrip_bound`; it is
-/// canonical in its CoM, scale, boost and rotation, `C`, which has no mirror step (R-865), leaving it unchanged within
+/// included: its shape is `n(θ, φ)` with its sign, within `shape_roundtrip_bound`; it is
+/// canonical in its CoM, scale, boost and rotation, `C`, which has no mirror step, leaving it unchanged within
 /// [`SIGNED_TOL`] and `I = 1`; and its held Jacobi momenta are `p_fixed` at `(θ, φ)` and at `(θ, π − φ)`, within
 /// [`SIGNED_TOL`] relative. Returns the worst shape distance.
 fn check_signed_decode(decode: DecodeIc) -> f64 {
@@ -1203,8 +1202,8 @@ negative_control!(
     }
 );
 
-/// `Φ` with `p_fixed` mirrored below the equator, R-141's held momentum, its `y`-controls negated where `n₂ < 0`, then
-/// `C` (C has no mirror step, R-865): a control's decode.
+/// `Φ` with `p_fixed` mirrored below the equator, the retired 2-to-1 gauge's held momentum, its `y`-controls negated
+/// where `n₂ < 0`, then `C` (C has no mirror step): a control's decode.
 #[cfg(feature = "controls")]
 fn mirrored_hold(chart: &ShapeSphere<f64>, u: f64, v: f64) -> Ic<f64> {
     let below = chart.point(u, v)[2] < 0.0;
@@ -1240,7 +1239,7 @@ mod signed_decode_skipping_c {
     );
 }
 
-// ── The mirror test (R-544 item 5; REQ-CHART-082) ─────────────────────────────────────────────────────────────────
+// ── The mirror test ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Which case the mirror test is in: the coordinates the chart holds fixed are all their own mirror images, or not.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1252,7 +1251,7 @@ enum MirrorCase {
     DoesNotApply,
 }
 
-/// The case `chart` is in, from what it holds fixed (R-544 item 5): its masses are mirror-invariant, so the held
+/// The case `chart` is in, from what it holds fixed: its masses are mirror-invariant, so the held
 /// Jacobi momenta decide, mirror-equivariant exactly where `p_ρ,y = p_λ,y = 0`.
 fn classify(chart: &ShapeSphere<f64>) -> MirrorCase {
     let m = mass::decode::<Defaults, f64>(chart.z_mass);
@@ -1285,10 +1284,10 @@ const GRID: u32 = 41;
 /// The state comparison's distance from each binary-collision landmark, chordal on the sphere. Near a landmark `λ̃`'s
 /// direction is conditioned as `ulp/‖ρ̃‖` (chart_reference §3.2), so a rounding-level difference in `n̂` turns the state
 /// by up to about `2·ulp/δ` (the 2 near `BC₀₁`; physics review 5640193616 of PR #288); at `δ = 1/16` that is
-/// `32 ulp ≤ ε_phys = 64 ulp` (REQ-ENC-024), the reason for `δ`.
+/// `32 ulp ≤ ε_phys = 64 ulp`, the reason for `δ`.
 const DELTA: f64 = 1.0 / 16.0;
 
-/// The mirror test on `chart` (R-544 item 5; REQ-CHART-082), its decode `decode` and its `Π` `pi`, the state comparison
+/// The mirror test on `chart`, its decode `decode` and its `Π` `pi`, the state comparison
 /// kept `delta` from each landmark: it classifies the chart's held coordinates and says which case it is in. On every
 /// decoded state of the grid `Π·x` has every `rᵢ` and `pᵢ` reflected through the `x`-axis, bit for bit, its `L_z`
 /// `−L_z(x)` and its `shape` `x`'s with `w` negated, bitwise where nonzero and by value at zero: a property of `Π` alone,
@@ -1598,10 +1597,10 @@ fn condition(r: [[f64; 2]; 3], m: [f64; 3], k: usize) -> f64 {
     1.0 + (big / rho) * ((m[0] + m[1]) / m[k])
 }
 
-/// dd_integrator test 9 and R-50: the landmarks of [`check_landmarks`], equal masses at azimuths 180°, 60° and 300°
-/// for `BC₀₁`, `BC₁₂` and `BC₂₀` within `1e-12°`; and under every mass set each collision is the `n` of random
-/// configurations with that pair together, turned, scaled and moved: `BC₀₁` exactly, the others within `8ε·κ`
-/// ([`condition`]); mass-weighted, so unequal masses move them.
+/// dd_integrator test 9, mass-weighted landmarks: the landmarks of [`check_landmarks`], equal masses at azimuths
+/// 180°, 60° and 300° for `BC₀₁`, `BC₁₂` and `BC₂₀` within `1e-12°`; and under every mass set each collision is
+/// the `n` of random configurations with that pair together, turned, scaled and moved: `BC₀₁` exactly, the others
+/// within `8ε·κ` ([`condition`]); mass-weighted, so unequal masses move them.
 fn check_mass_weighted(of: LandmarksFn) {
     check_landmarks(of);
     let l = of([1.0 / 3.0; 3]);
@@ -1779,7 +1778,7 @@ negative_control!(
     }
 );
 
-// ── The mirror test's runs and the frame's winding (TASK-M3-38) ────────────────────────────────────────────────────
+// ── The mirror test's runs and the frame's winding ─────────────────────────────────────────────────────────────────
 
 /// A precision the runs are made at, f64 the CPU's and f32 the GPU's, each widened exactly to f64 for the checks.
 trait Prec: WrapperReal + LinkReal + Real + Into<f64> + std::fmt::Debug {
@@ -2423,8 +2422,8 @@ fn kernel_pi<R: Prec>(x: &Ic<R>) -> Ic<R> {
     canon::reflect(x, true)
 }
 
-/// `Π`, then `C` with R-141's gauge left in, the retired mirror step: `Π·x` folded back onto `λ̃_y ≥ 0`, which is `x`'s
-/// side for an upper-hemisphere `x` (a control's `Π`).
+/// `Π`, then `C` with the retired 2-to-1 gauge left in, the retired mirror step: `Π·x` folded back onto `λ̃_y ≥ 0`,
+/// which is `x`'s side for an upper-hemisphere `x` (a control's `Π`).
 #[cfg(feature = "controls")]
 fn gauged_pi(x: &Ic<f64>) -> Ic<f64> {
     let c = canonicalise(&canon::reflect(x, true));

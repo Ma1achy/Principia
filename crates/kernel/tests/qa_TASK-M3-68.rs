@@ -1,42 +1,41 @@
-//! QA tests for TASK-M3-68, the Aarseth–Zare occupant, written from the requirements and integrator contract Part 2b
+//! QA tests for the Aarseth–Zare occupant, written from integrator contract Part 2b
 //! § "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)",
 //! not from the implementation. Every expected value comes from a model written here from the contract's text:
-//! - REQ-INT-044 (`qa_m368_lc_inverse_any_orientation`, `qa_m368_unstable_form_loses`): the conditioned inverse's
+//! - `qa_m368_lc_inverse_any_orientation`, `qa_m368_unstable_form_loses`: the conditioned inverse's
 //!   round trip `R → u → L(u)u` within a few unit round-offs at every orientation, at f32 and f64, `u₀ ≥ 0`; and the
 //!   unstable form at 179.9° within a decade of the reference's own table (`2.2e-2` at f32, `4.0e-12` at f64).
 //! - Part 2b's reference-body rule (`qa_m368_reference_body`): the body not in the longest of `(0,1), (0,2), (1,2)`,
-//!   the first maximum winning a tie, on integer triangles whose distances tie exactly (R-953).
+//!   the first maximum winning a tie, on integer triangles whose distances tie exactly.
 //! - Part 2b's registration (`qa_m368_registration`): the pairs `(a,b)`, `(a,c)` with `b < c`, the mass factors, `E`
 //!   the Cartesian energy, `Γ = A·B·(H − E) = 0` on the registered state, and the return to the centre-of-mass state.
 //! - Part 2b's equations of motion (`qa_m368_equations_of_motion`): the rates against central differences of `Γ` as
 //!   the contract writes it, and `dt/dτ = A·B`.
-//! - REQ-INT-049 and Part 2b steps 2–4 (`qa_m368_step_control`): the entry size, the least usable constraint, the
-//!   predictive limit on the relative **momenta** `P = K·V` (R-953), the entry-cap hit, the floor signal, and the
+//! - Part 2b steps 2–4 (`qa_m368_step_control`): the entry size, the least usable constraint, the predictive limit
+//!   on the relative **momenta** `P = K·V`, not the velocities, the entry-cap hit, the floor signal, and the
 //!   landing clamp `dτ_eff = min(dτ, max(dt_left − t_s, 0)/(A·B))`.
-//! - REQ-INT-105's finiteness arm (`qa_m368_doubly_degenerate`): an f32 state with both `A` and `B` below `TINY` at
+//! - The finiteness arm (`qa_m368_doubly_degenerate`): an f32 state with both `A` and `B` below `TINY` at
 //!   entry (subnormal separations) ends at the explicit finiteness test, its state finite; degenerate only
 //!   mid-interval, its step is finite, a counted cap hit.
-//! - REQ-INT-054 (`qa_m368_tau_schedule_bound`): over fuzzed ICs, the steps actually taken (counted by a stepper
-//!   wrapper written here, not by the occupant's own counter) are at every boundary `t_k` at most
-//!   `max(N_min, rate·t_k)`; a spent copy is never stepped again; the budget can fire.
-//! - R-565 (`qa_m368_boundary_by_products`, `qa_m368_advance_lands_on_the_grid`): the boundary at or before `t` by the
-//!   products `k·Δ_sync`; `ADVANCE` ends at exactly `k·Δ_sync`, and to a target between boundaries at the one before it.
-//! - REQ-INT-024 (`qa_m368_slot_profile`): AZ + RK4's profile is Part 2a's row (order 4, 4 evaluations, not
+//! - The step budget on a fixed τ-schedule (`qa_m368_tau_schedule_bound`): over fuzzed ICs, the steps actually taken
+//!   (counted by a stepper wrapper written here, not by the occupant's own counter) are at every boundary `t_k` at most
+//!   `max(N_min, rate·t_k)`, a cumulative budget read at each boundary with no cap per interval; a spent copy is never
+//!   stepped again; the budget can fire.
+//! - The sync grid (`qa_m368_boundary_by_products`, `qa_m368_advance_lands_on_the_grid`): the boundary at or before `t`
+//!   by the products `k·Δ_sync`; `ADVANCE` ends at exactly `k·Δ_sync`, and to a target between boundaries at the one
+//!   before it.
+//! - The slot's profile (`qa_m368_slot_profile`): AZ + RK4's profile is Part 2a's row (order 4, 4 evaluations, not
 //!   symplectic, not step- or run-reversible, owns its time mapping), and the slot accepts a stepper type that is not a
 //!   Cartesian `Stepper` (the Mikkola–Tanikawa leapfrog's place), with its own row.
 //!
-//! - Added in fix round 2 (PR #502): Part 2b's landing with the clamp off (`qa_m368_clamp_off_reads_no_tolerance`):
-//!   the run without the landing fix lands only at `dt_left` (physics review 5873527379, point 2): every kept clock
-//!   before the landing is short of `dt_left` and the landing's is at or past it, the time read the boundary. Changed
-//!   by TASK-M3-76 (R-998: no landing tolerance exists to vary): *was* "the reference driver's `land_tol` being 0 there,
-//!   so the landing tolerance is not read and two tolerances give the same bits"; and
+//! - Part 2b's landing with the clamp off (`qa_m368_clamp_off_reads_no_tolerance`): the run without the landing fix
+//!   lands only at `dt_left`: every kept clock before the landing is short of `dt_left` and the landing's is at or past
+//!   it, the time read the boundary; the landing takes no tolerance, so there is none to vary; and
 //!   `Count::whole` (`qa_m368_whole_is_clamped`), which forms the boundary index, against a model written from
 //!   gpu_determinism_note § "The discipline", rule 3: clamped into range in the float type before the cast, so a NaN
 //!   and a negative give `0`, a value at or above `2³²` gives `u32::MAX`, and one in range its truncation, swept over
 //!   f32 bit patterns and fuzzed f64s.
 //!
-//! Each check takes the code under test as a function, so its negative control (R-176) runs the same check on a faulty
-//! one.
+//! Each check takes the code under test as a function, so its negative control runs the same check on a faulty one.
 
 use std::cell::Cell;
 
@@ -68,9 +67,9 @@ impl<R> Cadence<R> for Quiet {
 }
 
 /// Step-control values for these tests at f64 (test inputs, not the calibrations): `η`, `Δ_sync = 1/8`, the
-/// reference's `TINY` (`1e-300`, R-953), R-160's `f = 0.02`, a budget that does not bind, and the landing's retakes
-/// (the secant's 4, the bisection's 64, Part 2b). The `|R₃|` floor is `TINY` (R-999) and the landing takes no tolerance
-/// (R-998). *Was:* "the `|R₃|` floor `1e-300`, a landing tolerance `1e-14`".
+/// reference's `TINY` (`1e-300`), the predictive limit's `f = 0.02`, a budget that does not bind, and the landing's
+/// retakes (the secant's 4, the bisection's 64, Part 2b). The `|R₃|` floor is `TINY` and the landing takes no
+/// tolerance.
 fn params64(eta: f64) -> AzParams<f64> {
     AzParams {
         eta,
@@ -159,7 +158,7 @@ fn momenta(s: &State<f64>, a: u32) -> (V2, V2) {
 }
 
 #[cfg(feature = "controls")]
-/// The relative velocities `V₁ = v_b − v_a`, `V₂ = v_c − v_a`: what R-953 says the limit does **not** read.
+/// The relative velocities `V₁ = v_b − v_a`, `V₂ = v_c − v_a`: what the predictive limit does **not** read.
 fn velocities(s: &State<f64>, a: u32) -> (V2, V2) {
     let (b, c) = others(a);
     let a = a as usize;
@@ -189,10 +188,10 @@ fn trip<R: AzReal + Into<f64>>(
     ((bx - x).hypot(by - y) / x.hypot(y), u[0].into())
 }
 
-/// REQ-INT-044: the conditioned inverse at every orientation (0° to 360° in 0.1° steps, and 179.9°, 179.99°, 180°)
-/// and over scales `2^-30 .. 2^30`: relative round-trip error at most 4 unit round-offs everywhere, at most 2 at 179.9°
-/// (the requirement's "≈ 5.96e-8 at f32, ≈ 1e-16 at f64"), and `u₀ ≥ 0` (Part 2b, the sign choice). The bounds were
-/// fixed before the first run.
+/// The conditioned inverse at every orientation (0° to 360° in 0.1° steps, and 179.9°, 179.99°, 180°) and over scales
+/// `2^-30 .. 2^30`: relative round-trip error at most 4 unit round-offs everywhere, at most 2 at 179.9°
+/// (dd_predictability_horizon §7.3's "≈ 5.96e-8 at f32, ≈ 1e-16 at f64"), and `u₀ ≥ 0` (Part 2b, the sign choice). The
+/// bounds were fixed before the first run.
 fn check_any_orientation(i32_: fn([f32; 2], f32) -> [f32; 2], i64_: fn([f64; 2], f64) -> [f64; 2]) {
     let u32_ = f64::from(f32::EPSILON) / 2.0;
     let u64_ = f64::EPSILON / 2.0;
@@ -233,8 +232,9 @@ negative_control!(
 
 // ── qa_m368_unstable_form_loses ──────────────────────────────────────────────────────────────────────────────────
 
-/// REQ-INT-044's verify: the unstable form at 179.9° loses as the reference's table has it, `2.2e-2` at f32 and
-/// `4.0e-12` at f64 (R-927); read as "within a decade", fixed before the first run. The measurement can fire.
+/// The unstable form at 179.9° loses as the reference's table has it, `2.2e-2` at f32 and `4.0e-12` at f64
+/// (`tb_lc.py`'s figures for 179.9°, not its `3.5e-9` for 179.99°); read as "within a decade", fixed before the first
+/// run. The measurement can fire.
 fn check_unstable_loses(i32_: fn([f32; 2], f32) -> [f32; 2], i64_: fn([f64; 2], f64) -> [f64; 2]) {
     let (e32, _) = trip::<f32>(i32_, 179.9, 1.0, 1e-37);
     let (e64, _) = trip::<f64>(i64_, 179.9, 1.0, 1e-300);
@@ -524,11 +524,11 @@ negative_control!(
 
 // ── qa_m368_step_control ─────────────────────────────────────────────────────────────────────────────────────────
 
-/// The relative vectors' limit Part 2b step 4 reads, from the Cartesian state: `(P₁, P₂)` (R-953), or, for the
+/// The relative vectors' limit Part 2b step 4 reads, from the Cartesian state: the momenta `(P₁, P₂)`, or, for the
 /// control, the velocities.
 type Limit = fn(&State<f64>, u32) -> (V2, V2);
 
-/// REQ-INT-049 and Part 2b steps 2–4, from the formulas, on a registered state at unequal masses.
+/// Part 2b steps 2–4, from the formulas, on a registered state at unequal masses.
 fn check_step_control(limit: Limit) {
     let s = generic();
     let (sys, q, p) = register(&s, 1e-300);
@@ -588,7 +588,7 @@ fn check_step_control(limit: Limit) {
         "the floored product is not max(A, TINY)·max(B, TINY)"
     );
 
-    // REQ-INT-049: dτ_eff = min(dτ, max(dt_left − t_s, 0)/(A·B)).
+    // The landing clamp: dτ_eff = min(dτ, max(dt_left − t_s, 0)/(A·B)).
     for t_s in [dt - 1e-6, dt - 1e-9, 0.5 * dt] {
         let qt = AzQ { t: t_s, ..q };
         let sz = step_size(&sys, &qt, &p, entry, &off);
@@ -665,7 +665,7 @@ fn degenerate32() -> State<f32> {
     }
 }
 
-/// REQ-INT-105's finiteness arm: the march ends at the explicit test, no non-finite state carried past it.
+/// The finiteness arm: the march ends at the explicit test, no non-finite state carried past it.
 fn check_degenerate<X: Watch<f32>>(mut watch: X) {
     let s = degenerate32();
     let (_, q, _) = register(&s, 1e-37);
@@ -797,7 +797,7 @@ fn budget() -> AzParams<f64> {
     p
 }
 
-/// REQ-INT-054 on one IC: returns whether the budget fired, and the most steps taken in one interval.
+/// The step budget on one IC: returns whether the budget fired, and the most steps taken in one interval.
 fn schedule(s: &State<f64>, step: Interval) -> Result<(bool, u64), TestCaseError> {
     let pr = budget();
     TAKEN.with(|c| c.set(0));
@@ -899,7 +899,7 @@ negative_control!(
 
 // ── qa_m368_boundary_by_products ─────────────────────────────────────────────────────────────────────────────────
 
-/// R-565: the latest boundary `k` at or before `t`, by the products the grid's times are: `k·Δ ≤ t < (k + 1)·Δ`, at
+/// The latest boundary `k` at or before `t`, by the products the grid's times are: `k·Δ ≤ t < (k + 1)·Δ`, at
 /// `t` on, just below and just above a boundary's product, at f64 and f32 (`k < 2²⁰`).
 fn check_products(b64: fn(f64, f64) -> u32, b32: fn(f32, f32) -> u32) {
     let s = (1u32..1 << 20, 1e-3f64..2.0, 0u8..3);
@@ -972,7 +972,7 @@ impl AzConfig for Cfg {
 /// `ADVANCE` to a physical target from `t = 0`.
 type Reach = fn(&State<f64>, f64) -> AzAdvanced<f64>;
 
-/// R-565: `ADVANCE` to a boundary ends at exactly its time; to a target between boundaries, at the boundary before it,
+/// `ADVANCE` to a boundary ends at exactly its time; to a target between boundaries, at the boundary before it,
 /// the same state bit for bit.
 fn check_grid(reach: Reach) {
     let s = generic();
@@ -1027,7 +1027,7 @@ negative_control!(
 // ── qa_m368_slot_profile ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// A stepper type that is not a Cartesian `Stepper`, filling the slot as the Mikkola–Tanikawa leapfrog would, with
-/// Part 2a's row for the pair; its step is a placeholder (the leapfrog's equations are not in the corpus, R-162).
+/// Part 2a's row for the pair; its step is a placeholder (the leapfrog's equations are not in the corpus).
 struct MtSlot;
 
 impl AzStepper for MtSlot {
@@ -1051,7 +1051,7 @@ impl AzStepper for MtSlot {
     }
 }
 
-/// REQ-INT-024: AZ + RK4 is Part 2a's row: order 4, 4 evaluations, not symplectic, not step- or run-reversible, owning
+/// AZ + RK4 is Part 2a's row: order 4, 4 evaluations, not symplectic, not step- or run-reversible, owning
 /// its time mapping.
 fn check_profile(p: CapabilityProfile) {
     let row = CapabilityProfile {
@@ -1124,10 +1124,9 @@ fn one_interval(clamp: bool) -> (AzAdvanced<f64>, Vec<f64>) {
     (out, clocks.0)
 }
 
-/// Part 2b's run without the landing fix lands only at `dt_left`, with no tolerance (R-998): every clock the march kept
+/// Part 2b's run without the landing fix lands only at `dt_left`, with no tolerance: every clock the march kept
 /// before its last is short of `dt_left = 1/8`, its last is at or past it, and the march ends on the boundary at
-/// exactly `Δ_sync`. *Was (TASK-M3-68):* a landing tolerance of `1e-14` and one of `0.3` give the same march, bit for
-/// bit; R-998 removed the tolerance, so there is none to vary.
+/// exactly `Δ_sync`.
 fn check_clamp_off(run: Landing) {
     let (out, clocks) = run(false);
     assert_eq!(

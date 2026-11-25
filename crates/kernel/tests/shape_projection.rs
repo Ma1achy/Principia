@@ -1,14 +1,13 @@
 //! The shape sphere's projection, a display remap of the spherical map's render (`kernel::chart::shape_sphere`;
-//! chart_reference §3.3, "Projection" and "The equal-area projection is Hammer's"; TASK-M2-28).
-//! - `shape_projection_default`: equirectangular by default, its display point the chart point both ways
-//!   (REQ-RENDER-026).
+//! chart_reference §3.3, "Projection" and "The equal-area projection is Hammer's").
+//! - `shape_projection_default`: equirectangular by default, its display point the chart point both ways.
 //! - `shape_projection_hammer_landmarks`: Hammer's centre is `θ = π` on the equator, its top and bottom the poles
-//!   `L⁺` and `L⁻`, its ends `θ = 0` and `2π`; the ellipse's edge `q = 1` is shown, past it nothing (REQ-CHART-047).
+//!   `L⁺` and `L⁻`, its ends `θ = 0` and `2π`; the ellipse's edge `q = 1` is shown, past it nothing.
 //! - `shape_projection_hammer_round_trip`: the inverse and the forward map undo each other, to `10⁻¹²`, over the
-//!   chart and over the ellipse (REQ-CHART-047).
+//!   chart and over the ellipse.
 //! - `shape_projection_hammer_equal_area`: the display's area element covers the solid angle `16 dx dy` everywhere
 //!   inside the ellipse, by finite differences of the shape-sphere point it shows, to `10⁻⁵`, where the
-//!   equirectangular's varies with `sin φ` (REQ-RENDER-026, REQ-CHART-047).
+//!   equirectangular's varies with `sin φ`.
 
 use kernel::chart::shape_sphere::{hammer_forward, hammer_inverse, spherical, Projection};
 use validation::negative_control;

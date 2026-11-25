@@ -1,25 +1,25 @@
-//! QA tests for TASK-M2-24, written from the requirements, not from the implementation:
-//! - REQ-DEC-038 / REQ-DEC-008 (dd_decoder §2, "The `DEGENERATE` cause set"; payload §2, "`detail` failure enum"): the
+//! QA tests for the decode's failure tags, written from the spec, not from the implementation:
+//! - The cause set (dd_decoder §2, "The `DEGENERATE` cause set"; payload §2, "`detail` failure enum"): the
 //!   closed set is exactly the five reasons dd_decoder §2 names, each recorded as `decode_failed` (state 5) with the
 //!   table's detail code, none writing 0 (the non-finite output); each tag word the stage writes round-trips and every
 //!   other word is refused (`qa_m224_cause_set_is_the_tables`).
-//! - REQ-DEC-008 (chart_reference §0.7, "No pixel is ever rejected"): on every chart of the registry, fuzzed `(u, v)` on
-//!   `[0,1]²`, at f32 and f64, `η_E` off and toward real targets (`Some(0)` among them, R-25): every pixel's decode is
-//!   kept, its `(m, r, p)` finite and its descriptor free of NaN; a tagged pixel's label is `decode_failed` with its
-//!   reason's code, and the `η_E` tags fire exactly where dd_decoder §3.7's ordered cases call for them, read from the
-//!   decode with `η_E` off (`qa_m224_every_pixel_labelled`).
-//! - REQ-DEC-025 (dd_decoder §5 test 1, "every decode"; chart_reference §5.2): `Σmᵢ = 1`, CoM `= 0`, `Σpᵢ = 0` and
+//! - Every pixel labelled (chart_reference §0.7, "No pixel is ever rejected"): on every chart of the registry, fuzzed
+//!   `(u, v)` on `[0,1]²`, at f32 and f64, `η_E` off and toward real targets (`Some(0)` among them): every pixel's
+//!   decode is kept, its `(m, r, p)` finite and its descriptor free of NaN; a tagged pixel's label is `decode_failed`
+//!   with its reason's code, and the `η_E` tags fire exactly where dd_decoder §3.7's ordered cases call for them, read
+//!   from the decode with `η_E` off (`qa_m224_every_pixel_labelled`).
+//! - The identities (dd_decoder §5 test 1, "every decode"; chart_reference §5.2): `Σmᵢ = 1`, CoM `= 0`, `Σpᵢ = 0` and
 //!   `I = 1` on every chart, at both precisions, including the decodes `η_E` rescales, whose momenta are not the
-//!   momentum block's (`qa_m224_identities_every_decode`). Tolerances: REQ-DEC-044's and REQ-DEC-045's proposals,
+//!   momentum block's (`qa_m224_identities_every_decode`). Tolerances: the proposed ones,
 //!   as `kernel/tests/decode_blocks.rs` and `decode_join.rs` state them (4 eps for `Σm`, CoM and `Σp`; 8 eps for `I`).
-//! - dd_decoder §3.7, "It must be disabled" on the invariant-momentum charts, and R-25 (`None` is off, `Some(0)` a real
-//!   target): the decode stage, `sample_with`, leaves a forbidding chart's decode untouched, bit for bit, under every
-//!   `Some(E*)`, and the energy uniform row carries `Some(0)` as on and `None` as off
+//! - dd_decoder §3.7, "It must be disabled" on the invariant-momentum charts, and the switch's rule (`None` is off,
+//!   `Some(0)` a real target): the decode stage, `sample_with`, leaves a forbidding chart's decode untouched, bit for
+//!   bit, under every `Some(E*)`, and the energy uniform row carries `Some(0)` as on and `None` as off
 //!   (`qa_m224_eta_switch`).
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::collections::BTreeSet;
 
@@ -62,7 +62,7 @@ impl Rng {
     }
 }
 
-// ── REQ-DEC-038: the table ──────────────────────────────────────────────────────────────────────────────────────
+// ── The cause set: the table ────────────────────────────────────────────────────────────────────────────────────
 
 /// payload §2's `state` for a decode failure.
 const DECODE_FAILED: u32 = 5;
@@ -257,7 +257,7 @@ fn points(rng: &mut Rng, n: usize) -> Vec<[f32; 2]> {
     out
 }
 
-/// The energy targets: off, a real zero (R-25), bound, deeply bound, unbound.
+/// The energy targets: off, a real zero, bound, deeply bound, unbound.
 const TARGETS: [Option<f32>; 5] = [None, Some(0.0), Some(-0.5), Some(-30.0), Some(2.0)];
 
 fn dec<C: Chart<Param = f32>, R: P>(c: &C, uv: [f32; 2], e: Option<f32>) -> Decoded<R> {
@@ -271,7 +271,7 @@ fn dec<C: Chart<Param = f32>, R: P>(c: &C, uv: [f32; 2], e: Option<f32>) -> Deco
     .0
 }
 
-// ── REQ-DEC-008: every pixel labelled ───────────────────────────────────────────────────────────────────────────
+// ── Every pixel labelled ────────────────────────────────────────────────────────────────────────────────────────
 
 struct Labelled {
     names: BTreeSet<String>,
@@ -401,9 +401,9 @@ negative_control!(
     check_labelled(true)
 );
 
-// ── REQ-DEC-025: the identities on every decode ─────────────────────────────────────────────────────────────────
+// ── The identities on every decode ──────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-044's (Σm, CoM, I) and REQ-DEC-045's (Σp) proposals, in eps.
+/// The proposed tolerances for Σm, CoM, I and Σp, in eps.
 const TOL: [f64; 4] = [4.0, 4.0, 4.0, 8.0];
 const NAMES: [&str; 4] = ["Σm − 1", "CoM", "Σp", "I − 1"];
 
@@ -503,7 +503,7 @@ negative_control!(
     check_identities(true)
 );
 
-// ── dd_decoder §3.7 / R-25: the switch in the stage ─────────────────────────────────────────────────────────────
+// ── dd_decoder §3.7: the switch in the stage ────────────────────────────────────────────────────────────────────
 
 /// `chart`, through the decode stage's source at f32 and f64, under each `Some(E*)`, decodes bit for bit as with `η_E`
 /// off.
@@ -539,7 +539,7 @@ where
 }
 
 fn check_switch(latent_too: bool) {
-    // The energy row: None off, Some(E*) on with E*'s bits, Some(0) on (R-25), -0 kept as given.
+    // The energy row: None off, Some(E*) on with E*'s bits, Some(0) on (a real target), -0 kept as given.
     assert_eq!(target(energy(None)), None, "None is not off");
     for e in [0.0f32, -0.0, -0.5, 2.0, f32::MIN_POSITIVE] {
         assert_eq!(

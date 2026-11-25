@@ -1,25 +1,25 @@
-//! QA tests for TASK-M2-09, written from the requirements (chart_reference §2.1, §2.2, §5.2; dd_decoder §3.4, §5 tests
-//! 8 and 12; R-82; payload §2), not from the implementation. Every check runs at the f64 and the f32 instantiation of
-//! the one source, natively (R-265).
-//! - REQ-DEC-020 (`qa_m209_targets_*`): over random `(u, v)` through §2.1's warp, and over a grid of `(L_z, K*)` at
+//! QA tests for the invariant-momentum construction, written from the spec (chart_reference §2.1, §2.2, §5.2;
+//! dd_decoder §3.4, §5 tests 8 and 12; payload §2), not from the implementation. Every check runs at the f64 and the
+//! f32 instantiation of the one source, natively.
+//! - The targets (`qa_m209_targets_*`): over random `(u, v)` through §2.1's warp, and over a grid of `(L_z, K*)` at
 //!   fixed decoded configurations with unequal masses, `K* → K_min` included: `Σpᵢ = 0`, `L_z(p) = L_z` and
 //!   `K(p) = K*`. The residuals are formed in double-double from the construction's own output, so they measure the
-//!   construction, not the check; the tolerances are REQ-DEC-046's proposal (below). `qa_m209_follows_section_2_2`
+//!   construction, not the check; the tolerances are the proposed ones (below). `qa_m209_follows_section_2_2`
 //!   compares the momenta with an independent f64 transcription of §2.2 that recomputes `M` and `I`: the three
 //!   invariants alone hold for any unit direction free of drift and spin, so they cannot see which seed was taken or
 //!   whether its direction is §2.2's; this test carries the direction, and its control is a transcription taking the
 //!   smallest qualifying seed. (A crossed `m₀ ↔ m₁` in the seed map's `ρ̇` coefficients is invisible after the CoM
 //!   projection, which restores `v₁ − v₀ = ρ̇` either way, so it is not a control here.)
-//! - REQ-DEC-021 (`qa_m209_seed_*`): the seed rule on given norms, and through the construction on decoded and
+//! - The seed rule (`qa_m209_seed_*`): the seed rule on given norms, and through the construction on decoded and
 //!   hand-built configurations: the largest norm wins, not the first; an exact tie keeps the earlier seed; `ρ = 0`
 //!   selects a fallback, not `DEGENERATE`; `DEGENERATE` only where no norm exceeds `ε_w`, `ε_w` itself not qualifying.
-//! - REQ-DEC-022, REQ-DEC-040 (`qa_m209_infeasible_*`): `K* < L_z²/(2I)` decided exactly, against references that are
+//! - The infeasible pixel (`qa_m209_infeasible_*`): `K* < L_z²/(2I)` decided exactly, against references that are
 //!   exact by construction (an f32 triple's products are exact in f64; an f64 square is split error-free by `fma`), at
 //!   both precisions for identical inputs, which is the CPU half of dd_decoder test 12's branch identity; a pixel on
 //!   the infeasible side is `Infeasible`, labelled `decode_failed` (payload §2's state 5) with detail 3, its momenta
 //!   finite and the rigid rotation, and it takes precedence over `DEGENERATE`.
 //!
-//! **Tolerances** (REQ-DEC-046, proposed per R-71 by TASK-M2-09 and pending the human at the M2 gate; not picked here):
+//! **Tolerances** (proposed, not yet settled; not picked here):
 //! `|Σpᵢ| ≤ 4·eps·Σ|pᵢ|`, `|L_z(p) − L_z| ≤ 4·eps·(|L_z| + √(2K*))`, `|K(p) − K*| ≤ 8·eps·K*`, `eps` the
 //! instantiation's machine epsilon. `qa_m209_follows_section_2_2` holds `‖p − p_§2.2‖` to the `L_z` tolerance's scale,
 //! the momenta's own size, `4·eps·(|L_z| + √(2K*))` per component (the same proposal).
@@ -27,7 +27,7 @@
 //! **Domain** (pitfalls §10): the stateless construction, inputs held fixed; no trajectory. The GPU half of the branch
 //! identity is `engine`'s `invariant_gpu`, which runs only in the `gpu-kernel` profile's filter.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176, R-212).
+//! Each test has a registered negative control naming the panic it expects.
 
 use std::fmt::Debug;
 
@@ -97,7 +97,7 @@ impl Q for f32 {
     }
 }
 
-/// REQ-DEC-046's proposed tolerances, in units of `eps` times the quantity's scale (the module's note).
+/// The proposed tolerances, in units of `eps` times the quantity's scale (the module's note).
 const TOL_P: f64 = 4.0;
 const TOL_L: f64 = 4.0;
 const TOL_K: f64 = 8.0;
@@ -178,7 +178,7 @@ fn residuals<R: Q>(m: [R; 3], r: [[R; 2]; 3], p: [[R; 2]; 3], lz: R, k: R) -> (f
     (rp, rl, rk)
 }
 
-/// REQ-DEC-020's check on one construction: `Σp = 0`, `L_z(p) = L_z`, `K(p) = K*`, to REQ-DEC-046's proposal.
+/// The targets' check on one construction: `Σp = 0`, `L_z(p) = L_z`, `K(p) = K*`, to the proposed tolerances.
 fn check_targets<R: Q>(
     masses: &Masses<R>,
     cfg: &Config<R>,
@@ -331,7 +331,7 @@ fn f32_triples(n: usize) -> Vec<[f32; 3]> {
     out
 }
 
-// ── REQ-DEC-020: the targets ────────────────────────────────────────────────────────────────────────────────────
+// ── The targets ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// One property case at `R`: latent `z`, warp inputs `(u, v, K_max, γ)`. Infeasible pairs (the warp's rounding at
 /// `u ∈ {0, 1}`) must be exactly the reference's, and then tagged; every other pair meets its targets.
@@ -366,7 +366,7 @@ fn targets_strategy() -> impl Strategy<Value = ([f64; 4], f64, f64, f64, f64)> {
         .prop_map(|(z, u, v, lk, g)| (z, u, v, 10f64.powf(lk), g))
 }
 
-/// REQ-DEC-020 over random `(u, v)` (property test, `prop::CASES` cases, fixed printed seed).
+/// The targets over random `(u, v)` (property test, `prop::CASES` cases, fixed printed seed).
 #[test]
 fn qa_m209_targets_property() {
     prop::run(&targets_strategy(), |(z, u, v, k_max, g)| {
@@ -439,7 +439,7 @@ fn grid_at<R: Q>(z: [f64; 4]) -> usize {
     n
 }
 
-/// REQ-DEC-020 on a grid of feasible `(L_z, K*)`, near `K* → K_min` included, at fixed configurations.
+/// The targets on a grid of feasible `(L_z, K*)`, near `K* → K_min` included, at fixed configurations.
 #[test]
 fn qa_m209_targets_grid() {
     let mut n = 0;
@@ -463,7 +463,7 @@ negative_control!(
     }
 );
 
-// ── REQ-DEC-020: §2.2 exactly ──────────────────────────────────────────────────────────────────────────────────
+// ── §2.2 exactly ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Seed velocities by §2.2's map.
 fn seed_velocities(m: [f64; 3], rho_dot: [f64; 2], lam_dot: [f64; 2]) -> [[f64; 2]; 3] {
@@ -576,7 +576,7 @@ fn check_section_2_2(z: [f64; 4], lz: f64, k: f64, smallest: bool) -> bool {
     true
 }
 
-/// REQ-DEC-020: the construction is §2.2's, seed map, projection, normalisation and mixing included.
+/// The construction is §2.2's, seed map, projection, normalisation and mixing included.
 #[test]
 fn qa_m209_follows_section_2_2() {
     let mut g = SplitMix::new(20922);
@@ -604,11 +604,12 @@ negative_control!(
     }
 );
 
-// ── REQ-DEC-021: the seed rule ─────────────────────────────────────────────────────────────────────────────────
+// ── The seed rule ──────────────────────────────────────────────────────────────────────────────────────────────
 
 const SEEDS: [Seed; 4] = [Seed::Rho, Seed::Lambda, Seed::JRho, Seed::JLambda];
 
-/// The seed rule at `R` on given norms against the rule as R-82 states it.
+/// The seed rule at `R` on given norms against the rule as stated: among the norms above `ε_w`, the largest; an
+/// exact tie keeps the earlier seed.
 fn check_choose<R: Q>(norms: [f64; 4], want: Option<Seed>) {
     let n = [
         R::of(norms[0]),
@@ -624,7 +625,7 @@ fn check_choose<R: Q>(norms: [f64; 4], want: Option<Seed>) {
     );
 }
 
-/// REQ-DEC-021: several qualify, the largest wins, wherever it sits; not the first.
+/// Several qualify, the largest wins, wherever it sits; not the first.
 #[test]
 fn qa_m209_seed_largest() {
     let cases: [([f64; 4], Seed); 6] = [
@@ -651,8 +652,8 @@ fn qa_m209_seed_largest() {
         };
         let mut sorted = norms;
         sorted.sort_by(|a, b| b.total_cmp(a));
-        // Away from a near tie the largest is §2.2's argmax; at the exact tie (`z_α = 0`, α = π/4) R-82 keeps the
-        // earlier seed, (ρ, 0).
+        // Away from a near tie the largest is §2.2's argmax; at the exact tie (`z_α = 0`, α = π/4) the rule keeps
+        // the earlier seed, (ρ, 0).
         let want = if z[2] == 0.0 {
             Some(0)
         } else if sorted[0] - sorted[1] > 64.0 * f64::EPSILON * sorted[0] {
@@ -694,7 +695,7 @@ negative_control!(
     check_choose::<f64>([0.3, 0.9, 0.5, 0.1], Some(Seed::Rho))
 );
 
-/// REQ-DEC-021: an exact tie keeps the earlier seed, at every pair of positions.
+/// An exact tie keeps the earlier seed, at every pair of positions.
 #[test]
 fn qa_m209_seed_tie() {
     for a in 0..4 {
@@ -764,7 +765,7 @@ fn check_fallback<R: Q>(masses: &Masses<R>, cfg: &Config<R>) {
     }
 }
 
-/// REQ-DEC-021 / §5.2: forcing the primary seed to degenerate (`ρ = 0`) selects a fallback, not `DEGENERATE`.
+/// §5.2: forcing the primary seed to degenerate (`ρ = 0`) selects a fallback, not `DEGENERATE`.
 #[test]
 fn qa_m209_seed_fallback() {
     for z in [[0.0, 0.0], [1.3, -0.7], [-2.0, 1.5]] {
@@ -806,7 +807,7 @@ fn check_degenerate_rule<R: Q>(eps_w: R) {
     }
 }
 
-/// REQ-DEC-021: `DEGENERATE` fires only where no seed has `‖w⁽²⁾‖²_m > ε_w`; through the construction, only on a
+/// `DEGENERATE` fires only where no seed has `‖w⁽²⁾‖²_m > ε_w`; through the construction, only on a
 /// configuration whose every seed vanishes (all bodies at the CoM), never on a decoded configuration.
 #[test]
 fn qa_m209_seed_degenerate() {
@@ -882,7 +883,7 @@ fn check_seed_same(z32: [f64; 4], z64: [f64; 4]) {
     );
 }
 
-/// REQ-DEC-021 with dd_decoder §5 test 12 (branch tags bit-identical across backends) and R-82's tie rule: the seed is
+/// dd_decoder §5 test 12 (branch tags bit-identical across backends) and the seed rule's tie: the seed is
 /// a branch decision, so identical latents take one seed at f32 and at f64; at `z_α = 0`, `α = π/4` under the
 /// default α-link (chart_reference §0.2), the first two seeds' norms `cos²α` and `sin²α` tie exactly, and the rule
 /// takes `(ρ, 0)` at both precisions.
@@ -950,9 +951,9 @@ negative_control!(
     check_seed_same([0.3, -0.2, -1.5, 0.7], [0.3, -0.2, 1.5, 0.7])
 );
 
-// ── REQ-DEC-022, REQ-DEC-040: the infeasible pixel ─────────────────────────────────────────────────────────────
+// ── The infeasible pixel ───────────────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-022: `K* < L_z²/(2I)` exactly, f32 and f64 taking one branch for identical inputs (dd_decoder test 12, CPU).
+/// `K* < L_z²/(2I)` exactly, f32 and f64 taking one branch for identical inputs (dd_decoder test 12, CPU).
 #[test]
 fn qa_m209_infeasible_branch_exact() {
     let triples = f32_triples(200_000);
@@ -1037,7 +1038,7 @@ fn check_tag<R: Q>(masses: &Masses<R>, cfg: &Config<R>, za: R, lz: R, k: R) {
     }
 }
 
-/// REQ-DEC-022, REQ-DEC-040: a pixel with `K* < K_min` is `Infeasible` exactly there, labelled `decode_failed` (5)
+/// A pixel with `K* < K_min` is `Infeasible` exactly there, labelled `decode_failed` (5)
 /// with detail 3, never NaN, its momenta finite; `K* = K_min` is feasible with `a = 0`; f32 and f64 agree on the tag.
 #[test]
 fn qa_m209_infeasible_tagged() {

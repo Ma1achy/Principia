@@ -1,24 +1,24 @@
 //! The collision detector and the `dmin_pair` latch (integrator_contract Part 7; dd_integrator §3.6; payload §2).
 //!
-//! **One computation per step, three consumers** (REQ-EVT-004). After every `STEP`, on the projected state, the
+//! **One computation per step, three consumers**. After every `STEP`, on the projected state, the
 //! [`Detector`] forms the three pairs' squared separations once ([`Separations::of`]), in the substep law's
 //! position-quantised form (`crate::driver::substep`: each position cast to f32, one subtraction per axis, each square
-//! by `square`, one addition; R-547). The collision test reads them, the `dmin_pair` latch reads their least, and the
+//! by `square`, one addition). The collision test reads them, the `dmin_pair` latch reads their least, and the
 //! next macro-step's `N_sub` bucket reads that same least through the cadence (`Cadence::bucket_d2`), so no second
 //! `d²` of the state is formed. `d_min` is the latch's `√`, packed by the latch writer
 //! (`crate::driver::latch::Latches`).
 //!
 //! **Count before classifying** (Part 7, pending change 7, landed): each pair `k` is tested `d²ₖ < r_coll²`, strictly,
 //! against the sim key's threshold ([`CollisionRadius`]). Exactly one pair below it is `collision` with `detail` that
-//! pair's R-22 id, pair `k` the side opposite body `k`; two or more is `collision` with `detail = 3`, a triple
+//! pair's id, pair `k` the side opposite body `k`; two or more is `collision` with `detail = 3`, a triple
 //! collision, terminal and non-continuable. Testing "any pair below" first would steal a genuine triple into the binary
 //! arm. The comparison is on `d²`, so no `sqrt` reaches the branch (dd_integrator §3.3's comparison-only rule).
 //!
 //! **The threshold** ([`CollisionRadius::from_r_coll`]). `r_coll` is a length on the sim key, the same value on every
 //! pipeline (Part 7). The host squares it in f64 and rounds the square once to f32, as the substep law's thresholds are
-//! formed (R-502), so every backend compares the same `d²` with the same bits. For `r_coll > 0` a square below f32's
+//! formed, so every backend compares the same `d²` with the same bits. For `r_coll > 0` a square below f32's
 //! least normal value, subnormal or rounded to 0, is raised to that least normal, `2⁻¹²⁶`, never written as a
-//! subnormal a backend may flush (gpu_determinism_note rule 6, R-547) nor as 0, which would turn a positive `r_coll`
+//! subnormal a backend may flush (gpu_determinism_note rule 6) nor as 0, which would turn a positive `r_coll`
 //! into `r_coll = 0`. The quantised `d²` is 0 or at least `2⁻⁸⁰` (`square`'s floor), so against `2⁻¹²⁶` exactly
 //! `d² = 0` fires, the decision `d² < r_coll²` makes for every such `r_coll` on every `d²` the detector can meet: bodies
 //! whose f32 positions coincide collide under any positive `r_coll`, at `t = 0` too (Part 5, "t=0 terminals are real
@@ -26,20 +26,20 @@
 //! threshold is never `+∞` (rule 4). `r_coll = 0` is Part 7's "refuse to regularise": its threshold is 0, and no pair is
 //! below it ([`CollisionRadius::none`]).
 //!
-//! **The latch** ([`DminLatch`]; payload §2, REQ-PAY-047): the least quantised `d²` the run has met, the IC's
-//! included, since `d_min = min_t |separation|` runs over the trajectory from `t = 0`, and the R-22 id of the pair that
+//! **The latch** ([`DminLatch`]; payload §2): the least quantised `d²` the run has met, the IC's
+//! included, since `d_min = min_t |separation|` runs over the trajectory from `t = 0`, and the id of the pair that
 //! met it, the lowest id of a tie. A later state replaces it only when strictly closer, so the first state to reach
 //! the minimum keeps it. It is seeded from the IC's separations, never from an infinity (Part 2c rule 4), and it is a
 //! latched fact, never derived from the word (symbolic-dynamics contract, "What is already settled"). The payload
 //! holds `dmin_pair`'s sentinel, 3, until the latch is written into it ([`Detector::label`]).
 //!
-//! **The floor's record** (Part 7, "The floor's record, defined"; R-954, R-973; REQ-EVT-035). The test resolves a
+//! **The floor's record** (Part 7, "The floor's record, defined"). The test resolves a
 //! separation only to the f32 spacing at the pair's coordinates, so the detector records, per sample, the largest
 //! floor over every pair near firing at every state it tests and over the `d_min` state. A pair's floor at a state is
 //! [`floor_codes`]'s code, `c + 41` for the floor `2^c`, `c = clamp(e − 23, −40, 104)`, `e` the largest exponent field
 //! of the pair's four f32-cast coordinates. A pair is near firing ([`near_firing`]) where the test fires on it or where
 //! `d² < t·t`, `t = r ⊕ floor` with `r` the threshold's root ([`CollisionRadius::root`]): `d_quant < r_coll + floor`
-//! in squared form, no `sqrt` in the branch, every input normal (R-547). [`Detector::floor_code`] is the code the
+//! in squared form, no `sqrt` in the branch, every input normal. [`Detector::floor_code`] is the code the
 //! payload's `coll_floor` stores, the larger of the near-firing maximum and the code of the pair and state the latch
 //! holds.
 
@@ -72,7 +72,7 @@ pub fn floor_of_code(code: u32) -> f32 {
     f32::pow2(code as i32 - FLOOR_CODE_BIAS)
 }
 
-/// Each R-22 pair's floor code at the positions `r` (the module's note): each position cast to f32 as the test's `d²`
+/// Each pair's floor code at the positions `r` (the module's note): each position cast to f32 as the test's `d²`
 /// casts it, the largest exponent field of the pair's four coordinates, read from the bits, through
 /// [`floor_code_of_exponent`]. Pair `k` is the side opposite body `k`.
 #[inline]
@@ -105,7 +105,7 @@ pub fn near_firing(d2: f32, code: u32, radius: &CollisionRadius) -> bool {
     d2 < radius.squared() || t.exponent() >= 64 || d2 < t.product(t)
 }
 
-/// The three pairs' position-quantised squared separations, by R-22 pair id: `d2[k]` is pair `k`'s, the side opposite
+/// The three pairs' position-quantised squared separations, by pair id: `d2[k]` is pair `k`'s, the side opposite
 /// body `k`, `(1, 2), (2, 0), (0, 1)`. Formed once per state ([`Separations::of`]) and read by every consumer.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Separations {
@@ -215,7 +215,7 @@ impl CollisionRadius {
 pub struct Verdict {
     /// Whether at least one pair is inside `r_coll`.
     pub fired: bool,
-    /// The pair's R-22 id where exactly one pair is inside, 3 (triple collision) where two or more are; where not
+    /// The pair's id where exactly one pair is inside, 3 (triple collision) where two or more are; where not
     /// fired, 2, which nothing reads.
     pub detail: u32,
 }
@@ -243,7 +243,7 @@ pub fn classify(s: &Separations, radius: &CollisionRadius) -> Verdict {
     }
 }
 
-/// The `dmin_pair` latch (the module's note): the least quantised `d²` met so far and its pair's R-22 id.
+/// The `dmin_pair` latch (the module's note): the least quantised `d²` met so far and its pair's id.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DminLatch {
     d2: f32,
@@ -283,7 +283,7 @@ impl DminLatch {
         self.d2
     }
 
-    /// The R-22 id of the pair that met it: `dmin_pair`.
+    /// The id of the pair that met it: `dmin_pair`.
     #[inline]
     pub fn pair(&self) -> u32 {
         self.pair
@@ -319,7 +319,7 @@ fn near_max(near: u32, s: &Separations, codes: &[u32; 3], radius: &CollisionRadi
     raise(out, s.d2[2], codes[2])
 }
 
-/// The floor code of the pair `pair` (an R-22 id, 0–2) of `codes`, by constant indices (gpu_determinism_note rule 5).
+/// The floor code of the pair `pair` (a pair id, 0–2) of `codes`, by constant indices (gpu_determinism_note rule 5).
 #[inline]
 fn code_of(codes: &[u32; 3], pair: u32) -> u32 {
     if pair == DETAIL_COLLISION_PAIR_0 {

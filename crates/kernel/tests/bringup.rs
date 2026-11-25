@@ -1,7 +1,7 @@
-//! The kernel's debug variants (`kernel::bringup`; REQ-TOOL-013; R-41, R-75): exactly one, colour_composition Appendix
+//! The kernel's debug variants (`kernel::bringup`): exactly one, colour_composition Appendix
 //! A's bring-up mode, a baked variant selected by its type, reading no flag bit, whose output decodes through the
-//! normal unpack path to Appendix A's pattern (REQ-TOOL-123). Bits 6–7's reservation is checked on `QuadRequest.flags`
-//! by `quad_request_flags` (REQ-PAY-064, TASK-M5-04), where the flags word exists (RQ-220).
+//! normal unpack path to Appendix A's pattern. Bits 6–7's reservation is checked on `QuadRequest.flags`
+//! by `quad_request_flags`, where the flags word exists.
 //! - `debug_variants_are_the_bring_up_mode_alone`: the kernel's variants hold one debug mode, the bring-up mode, and
 //!   no fragment preset (UV, DECODE, ROUNDTRIP).
 //! - `debug_variants_bring_up_decodes_through_the_unpack`: the native writer at f32 and at f64, each a function of
@@ -22,7 +22,7 @@ use validation::bringup::{check, check_f64};
 use validation::negative_control;
 use validation::synthetic::simstate_from_words;
 
-/// The fragment presets, which are never kernel variants (R-75).
+/// The fragment presets, which are never kernel variants.
 const PRESETS: [&str; 3] = ["uv", "decode", "roundtrip"];
 
 /// `variants` holds exactly one debug variant, the bring-up mode, and no fragment preset.
@@ -70,7 +70,7 @@ mod preset_control {
     );
 }
 
-/// The native writer at f32: a function of the sample index alone, so no flags word reaches it (R-41). The type is a
+/// The native writer at f32: a function of the sample index alone, so no flags word reaches it. The type is a
 /// compile check: a writer taking a flag would not coerce to it.
 const WRITER_F32: fn(u32) -> SimStateFTLE = pattern::<f32>;
 

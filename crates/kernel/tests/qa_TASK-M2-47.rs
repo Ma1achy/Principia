@@ -1,4 +1,4 @@
-//! QA tests for TASK-M2-47, written from the requirements and R-547, not from the implementation: `C`'s step 0
+//! QA tests, written from the spec, not from the implementation: `C`'s step 0
 //! (`kernel::canon::canonicalise`, `kernel::canon::scale_step`) and its notices (`kernel::encode::encode`), at f64 and
 //! f32 on the CPU. The GPU-f32 side is `engine`'s `qa_TASK-M2-47_gpu`.
 //!
@@ -9,31 +9,30 @@
 //!   `1 + τ_I + 2ε`; and masses `((1−μ)/2, (1−μ)/2, μ)` with `r₀ = (1, 0)`, `r₁ = (−1, 0)`, `r₂ = 0`, so
 //!   `I_in = 1 − μ` exactly, reaching `1 − τ_I` and `1 − τ_I − ε/2`.
 //! - **Scaled states.** A generic state `x` and `s·x` (`r ← s·r`, `p ← p/√s`, `s` a power of ten, not of two), whose
-//!   canonical form is `C(x)`'s (the scale gauge's orbit, R-547's RQ-360: T1 holds for scalings everywhere).
+//!   canonical form is `C(x)`'s (the scale gauge's orbit: T1 holds for scalings everywhere).
 //! - **Exact differences.** f32 inputs whose pair differences are subnormal, against their differences taken in f64,
 //!   where they are exact and normal.
 //!
 //! The tests:
-//! - REQ-ENC-006, REQ-ENC-014, REQ-ENC-035 (`qa_m247_skip_on_canonical_decodes`): canonical-frame decodes of fuzzed `z`
+//! - `qa_m247_skip_on_canonical_decodes`: canonical-frame decodes of fuzzed `z`
 //!   leave step 0 skipped: `λ = 1` exactly, step 0's `r` and `p` bit for bit as they entered it, no `lookup_rescaled`,
 //!   and encode raises no notice at all; the measured `|I_in − 1|` is printed against `τ_I`.
-//! - REQ-ENC-006, REQ-ENC-014 (`qa_m247_tau_edge`): on the exact-`I` states, step 0 is skipped at `|I_in − 1| = τ_I`
+//! - `qa_m247_tau_edge`: on the exact-`I` states, step 0 is skipped at `|I_in − 1| = τ_I`
 //!   exactly, on either side of 1, and inside it; it runs, raising `lookup_rescaled` with `λ = I_in^{−1/2}`, at
 //!   `1 + τ_I + 2ε` and `1 − τ_I − ε/2`, the state leaving `C` at `I = 1`; encode's `lookup_rescaled` agrees.
-//! - REQ-ENC-006 (`qa_m247_range`): states with the bodies apart at scales from below to above `I_in`'s float range
+//! - `qa_m247_range`: states with the bodies apart at scales from below to above `I_in`'s float range
 //!   (f64 `1e-300` to `1e300`; f32 `1e-37` to `1e37`) leave `C` at `I = 1` to rounding, every output finite,
 //!   `lookup_rescaled` and no `lookup_clamped`, `λ = 1/(s√I₀)`, and the same canonical state as the unscaled input,
 //!   with `E_canon = √I_in·E_in` and `L_z,canon = L_z,in/I_in^{1/4}`.
-//! - REQ-ENC-006, REQ-ENC-014 (`qa_m247_coincident`): three coincident bodies, at the origin and off it, small and far,
+//! - `qa_m247_coincident`: three coincident bodies, at the origin and off it, small and far,
 //!   with nonzero momenta: divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0` by its bits, no `lookup_rescaled`,
 //!   every output finite (no `1/0` formed); encode reports the coincident pair and no rescale.
-//! - REQ-DEC-002 (`qa_m247_subnormal_differences`): f32 states at coordinates near `1e-36` whose inner pair is a
+//! - `qa_m247_subnormal_differences`: f32 states at coordinates near `1e-36` whose inner pair is a
 //!   subnormal apart: `ρ ≠ 0`, so no `lookup_clamped`; `φ` the exact difference's angle; the half `C` leaves the
-//!   state in, `λ̃_y`'s sign, the exact difference's, `C` taking no mirror (TASK-M2-57; *was:* "the mirror the exact
-//!   difference's decision"); every output finite at `I = 1`.
+//!   state in, `λ̃_y`'s sign, the exact difference's, `C` taking no mirror; every output finite at `I = 1`.
 //!
-//! **Tolerances** (applied per R-369: a test's bound, not a constant of the system). `τ_I` is the register's, read as
-//! `IeeeBits::TAU_I` (REQ-ENC-035, provisional until M2). `I = 1` after step 0: 8 eps (each `rᵢ/√I_in` rounded by a
+//! **Tolerances** (a test's bound, not a constant of the system). `τ_I` is the register's, read as
+//! `IeeeBits::TAU_I` (provisional until M2). `I = 1` after step 0: 8 eps (each `rᵢ/√I_in` rounded by a
 //! few half-ulps, `I` of degree 2 in them). `λ`: 4 eps. The scaled state against the unscaled one: 32 eps on the state
 //! (measured up to 8), whose input roundings differ by an ulp per coordinate, through the rotation's conditioning on
 //! these states; 16 eps on `E` and `L_z` (measured up to 3.5). `φ`
@@ -41,7 +40,7 @@
 //!
 //! **Domain** (pitfalls §10): `C` alone on states held fixed; no trajectory.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use kernel::canon::{canonicalise, scale_step, Canonical, Scaled};
 use kernel::decode::{decode, Ic, Latent};
@@ -145,7 +144,7 @@ fn check_finite<R: P>(c: &Canonical<R>, at: &str) {
     );
 }
 
-// ── qa_m247_skip_on_canonical_decodes (REQ-ENC-006, REQ-ENC-014, REQ-ENC-035) ───────────────────────────────────
+// ── qa_m247_skip_on_canonical_decodes ───────────────────────────────────────────────────────────────────────────
 
 /// Step 0 skipped on `x`: `λ = 1` exactly, no `lookup_rescaled`, and step 0's `r` and `p` bit for bit its inputs
 /// (the CoM-frame positions and the momenta as given).
@@ -254,7 +253,7 @@ negative_control!(
     }
 );
 
-// ── qa_m247_tau_edge (REQ-ENC-006, REQ-ENC-014) ─────────────────────────────────────────────────────────────────
+// ── qa_m247_tau_edge ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `log₂ v` for `v` a power of two.
 fn log2_exact(v: f64) -> i32 {
@@ -306,7 +305,7 @@ fn below<R: P>(mu: f64) -> Ic<R> {
     n
 }
 
-/// The edge states, each with its exact `I_in` and whether step 0 runs (R-547: skipped iff `|I_in − 1| ≤ τ_I`).
+/// The edge states, each with its exact `I_in` and whether step 0 runs (skipped iff `|I_in − 1| ≤ τ_I`).
 fn edge_states<R: P>() -> Vec<(&'static str, Ic<R>, f64, bool)> {
     let tau: f64 = R::TAU_I.into();
     let e = eps::<R>();
@@ -425,7 +424,7 @@ mod edge_below {
     );
 }
 
-// ── qa_m247_range (REQ-ENC-006) ─────────────────────────────────────────────────────────────────────────────────
+// ── qa_m247_range ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A generic state, masses each ≥ 0.2 before normalising, the bodies at least 0.3 apart, off the origin, moving.
 fn generic(rng: &mut SplitMix) -> Ic<f64> {
@@ -518,9 +517,9 @@ fn check_scaled<R: P>(x: &Ic<f64>, s: f64, c: &Canonical<R>, at: &str) -> [f64; 
     // E_canon = √I_in·E_in and L_z,canon = L_z,in/I_in^{1/4}: with I_in = s²I₀, E_in = E₀/s, L_z,in = L₀/√s.
     // In the input's rest frame (CoM at the origin, `Σp = 0`), where steps 1a and 1b leave `E` and `L_z` alone.
     let x0 = rest(&widen(&narrow::<R>(x)));
-    // `L_z` keeps its sign on either half: `C` takes no mirror, so nothing reverses it (was: "a mirrored output has its
-    // `L_z` reversed"). The half itself is the input's: `λ̃_y`'s sign is that of `ρ × (r₂ − r₀)`, which [`generic`]
-    // keeps past 0.05 in magnitude, at every scale.
+    // `L_z` keeps its sign on either half: `C` takes no mirror, so nothing reverses it. The half itself is the
+    // input's: `λ̃_y`'s sign is that of `ρ × (r₂ − r₀)`, which [`generic`] keeps past 0.05 in magnitude, at every
+    // scale.
     let cross = (x.r[1][0] - x.r[0][0]) * (x.r[2][1] - x.r[0][1])
         - (x.r[1][1] - x.r[0][1]) * (x.r[2][0] - x.r[0][0]);
     let lty: f64 = c.lambda_t_y.into();
@@ -541,8 +540,8 @@ fn check_scaled<R: P>(x: &Ic<f64>, s: f64, c: &Canonical<R>, at: &str) -> [f64; 
     [i_err.max(lam_err), state, e_err.max(l_err)]
 }
 
-/// Scales per precision, past `I_in`'s float range at either end (R-547's underflow and overflow states; REQ-ENC-006's
-/// verify: f64 below about `1e-162` and above about `1e154`, f32 below about `4e-23` and above about `1e19`).
+/// Scales per precision, past `I_in`'s float range at either end (the underflow and overflow states: f64 below about
+/// `1e-162` and above about `1e154`, f32 below about `4e-23` and above about `1e19`).
 const SCALES_F64: [f64; 7] = [1e-300, 1e-200, 1e-170, 1e-3, 1e160, 1e200, 1e300];
 const SCALES_F32: [f64; 7] = [1e-37, 1e-30, 1e-25, 3e-23, 3e19, 1e30, 1e37];
 
@@ -619,7 +618,7 @@ mod range_overflow {
     );
 }
 
-// ── qa_m247_coincident (REQ-ENC-006, REQ-ENC-014) ───────────────────────────────────────────────────────────────
+// ── qa_m247_coincident ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// Three coincident bodies at `q`, with nonzero momenta summing to 0.
 fn coincident<R: P>(q: [f64; 2]) -> Ic<R> {
@@ -698,7 +697,7 @@ negative_control!(
     }
 );
 
-// ── qa_m247_subnormal_differences (REQ-DEC-002) ─────────────────────────────────────────────────────────────────
+// ── qa_m247_subnormal_differences ───────────────────────────────────────────────────────────────────────────────
 
 /// f32 states at coordinates near `1e-36`, the inner pair `1..=7` ulps apart on each axis (a subnormal difference:
 /// an f32 ulp there is `2^−143`), the third body about `1e-36` off, in any direction; momenta order 1.
@@ -732,7 +731,7 @@ fn subnormal_states(n: usize, seed: u64) -> Vec<Ic<f32>> {
 
 /// `(ρ, λ̃_y)` of `x` from its pair differences taken in f64, where an f32 difference is exact and normal: `ρ = r₁ − r₀`,
 /// and `λ̃_y = √(m₂M₀₁)·(ρ̂ × Λ)/(M₀₁√I)`, `Λ = m₀(r₂ − r₀) + m₁(r₂ − r₁)`, `I = Σ_{i<j}mᵢmⱼ‖rⱼ − rᵢ‖²` (`Σm`
-/// normalised), the canonical frame's `λ̃_y` (dd_decoder §3.2, R-82), `ρ̂ = (1, 0)` at `ρ = 0`.
+/// normalised), the canonical frame's `λ̃_y` (dd_decoder §3.2), `ρ̂ = (1, 0)` at `ρ = 0`.
 fn exact_branch_inputs(x: &Ic<f32>) -> ([f64; 2], f64) {
     let w = widen(x);
     let t: f64 = w.m.iter().sum();
@@ -755,8 +754,7 @@ fn exact_branch_inputs(x: &Ic<f32>) -> ([f64; 2], f64) {
 
 /// `C` on `x` against its exact branch inputs `(ρ, λ̃_y)`: `lookup_clamped` iff `ρ = 0`; `φ` within 4 eps of
 /// `atan2(ρ_y, ρ_x)`; the half kept, `C`'s recorded `λ̃_y` negative iff the exact `λ̃_y` is (only where `λ̃_y` is
-/// clear of 0 by `10⁻³·δ_λ`; *was:* "the mirror iff `λ̃_y < −δ_λ` (only where `λ̃_y` is clear of `−δ_λ` by `10⁻³`)");
-/// every output finite at `I = 1`. The worst `φ` error, in f32 eps.
+/// clear of 0 by `10⁻³·δ_λ`); every output finite at `I = 1`. The worst `φ` error, in f32 eps.
 fn check_exact_branches(c: &Canonical<f32>, exact: ([f64; 2], f64), at: &str) -> f64 {
     let (rho, lty) = exact;
     let pole = rho[0] == 0.0 && rho[1] == 0.0;

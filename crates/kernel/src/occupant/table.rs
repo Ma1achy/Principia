@@ -1,5 +1,5 @@
 //! The occupant table of integrator_contract Part 2 and Part 2a ("The table gains two rows"): each occupant's profile
-//! and default binding, and the tier defaults (REQ-INT-014, REQ-INT-015).
+//! and default binding, and the tier defaults.
 //!
 //! | Occupant | Order | Force evals | Symplectic | Step-reversible | Run-reversible | Owns time mapping | Default |
 //! |---|---|---|---|---|---|---|---|
@@ -12,12 +12,12 @@
 //! | Aarseth–Zare + time-transformed leapfrog | 2 | 1 | ✓ | ✓ (measured) | ✗ | ✓ | allowed future occupant |
 //!
 //! The five steppers are built here, and each row reads its occupant's own [`Stepper::profile`]. Aarseth–Zare + RK4 is
-//! a regularised composition TASK-M3-68 builds (Part 2b); its row is the table's profile until then, and a
-//! regularised occupant's `step_reversible` is the one dd_integrator §5 test 3 measures (R-500). Aarseth–Zare +
-//! time-transformed leapfrog is an allowed future occupant, not a v1 requirement, and is not built (R-162, R-168).
+//! a regularised composition, built on the regularisation axis (Part 2b); its row is the table's profile, and a
+//! regularised occupant's `step_reversible` is the one dd_integrator §5 test 3 measures. Aarseth–Zare +
+//! time-transformed leapfrog is an allowed future occupant, not a v1 requirement, and is not built.
 //!
 //! Euler is in no tier's default and in no production list: [`default_occupant`] returns an [`Occupant`], which has
-//! no Euler, and Euler's row is bound [`Binding::DebugOnly`] (REQ-INT-015).
+//! no Euler, and Euler's row is bound [`Binding::DebugOnly`].
 
 use super::euler::Euler;
 use super::kdk::Kdk;
@@ -60,7 +60,7 @@ pub enum Binding {
     DebugOnly,
     /// Close-encounter regimes, a validation-grade stepper (Aarseth–Zare + RK4).
     CloseEncounter,
-    /// An allowed future occupant, not a v1 requirement (R-168).
+    /// An allowed future occupant, not a v1 requirement.
     AllowedFuture,
 }
 
@@ -69,9 +69,9 @@ pub enum Binding {
 pub enum Built {
     /// A stepper built here, as its selection.
     Stepper(Selection),
-    /// A regularised composition, built on the regularisation axis (Part 2b; TASK-M3-68).
+    /// A regularised composition, built on the regularisation axis (Part 2b).
     Regularised,
-    /// Not built (R-162, R-168).
+    /// Not built.
     NotBuilt,
 }
 
@@ -88,8 +88,7 @@ pub struct Row {
     pub built: Built,
 }
 
-/// The table, Part 2's five rows then Part 2a's two: interface data, the contract's table, not register constants
-/// (REQ-SYS-082).
+/// The table, Part 2's five rows then Part 2a's two: interface data, the contract's table, not register constants.
 pub fn table() -> [Row; 7] {
     [
         Row {

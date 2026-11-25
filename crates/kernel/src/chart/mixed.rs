@@ -1,5 +1,5 @@
-//! `Mixed<H, V>`, the mixed-axis charts (chart_reference §1.3; chart_decoder_contract § "The four axis kinds";
-//! REQ-CHART-008): the two axes need not come from the same block, and any pair of quantities can be the horizontal and
+//! `Mixed<H, V>`, the mixed-axis charts (chart_reference §1.3; chart_decoder_contract § "The four axis kinds"):
+//! the two axes need not come from the same block, and any pair of quantities can be the horizontal and
 //! vertical axes, the other six frozen at stated values.
 //!
 //! **Each axis states what it maps and its warp** ([`Quantity`]). An axis is a latent coordinate `z_k`, kind 1
@@ -29,8 +29,8 @@
 //!
 //! **Feasibility is inherited** (inverse_encode_contract § "Chart-aware validation", layer 2: "Mixed-axis charts inherit
 //! both axes' constraints"). Each axis has its own check, and the chart's is their conjunction: a latent coordinate
-//! takes any finite `z`, which the decoder accepts (R-407), and a derived quantity must lie in its domain, its link's
-//! codomain, closed (`α ∈ [0, π/2]`, `β ∈ [0, π]`, each momentum component in `[−q_max, q_max]`;
+//! takes any finite `z`, which the decoder accepts, and a derived quantity must lie in its domain, its link's
+//! codomain, closed (`α ∈ [0, π/2]`, `β ∈ [0, 2π̂]`, one period, each momentum component in `[−q_max, q_max]`;
 //! [`Constraint::AxisDomain`]). A value past its domain is clamped onto it, the coordinate snapped to where the axis
 //! meets the edge, as layer 1 clamps an input past the decoder's range (`lookup_clamped`), and `moved` says which axes
 //! moved; a non-finite coordinate, or an axis whose range has no width to clamp along, is rejected. Layer 3 holds by the
@@ -38,7 +38,7 @@
 //! saturated inverse at its domain's edge, which the link maps back onto the edge.
 //!
 //! **The active values** (chart_reference §0.1, "every chart reads the active value"; chart_decoder_contract § "Three
-//! hard requirements on any registered link", "Tunable parameters"; R-481 G4; REQ-DEC-048). A momentum axis's domain
+//! hard requirements on any registered link", "Tunable parameters"). A momentum axis's domain
 //! is `[−q_max, q_max]` at the active `q_max` ([`Quantity::domain_at`], the codomain's [`Ends::ends_at`]), its control
 //! the link's inverse at it ([`Quantity::control_at`]), and the decode reads the active `μ_max` and `q_max`
 //! ([`Chart::decode_params`], [`Chart::validate_params`]); so an axis labelled `x` decodes to `x` at every value of a
@@ -619,7 +619,7 @@ impl<H: Quantity, V: Quantity, P: Copy> Hidden for Mixed<H, V, P>
 where
     f64: From<P>,
 {
-    /// The six controls the axes leave frozen (R-473 J1, "the controls its axes leave frozen").
+    /// The six controls the axes leave frozen.
     fn hidden(&self, k: u32) -> bool {
         k < 8 && k != H::COORDINATE as u32 && k != V::COORDINATE as u32
     }

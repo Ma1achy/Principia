@@ -1,6 +1,6 @@
 //! Explicit Euler (dd_integrator §3.2): the debug occupant, order 1, 1 force evaluation, not symplectic; it drifts
 //! secularly on purpose, so that "energy-drift view + Euler" tests that the diagnostic plumbing works (integrator_contract
-//! Part 2). Reachable only from a debug selection ([`super::Selection::Debug`]; REQ-INT-015).
+//! Part 2). Reachable only from a debug selection ([`super::Selection::Debug`]).
 //!
 //! ```text
 //! r' = r + dt·v ;   v' = v + dt·a(r)
@@ -8,7 +8,7 @@
 //!
 //! on the momenta, `v = p/m`: both updates read the state at the start of the step.
 //!
-//! **The joint step** (R-974; [`Stepper::joint_step`]): the displacement takes the same update, linear in it, the
+//! **The joint step** ([`Stepper::joint_step`]): the displacement takes the same update, linear in it, the
 //! force replaced by the force difference at the step's start, `δr' = δr + dt·δp/m`, `δp' = δp + dt·m·Δa(r, δr)`.
 
 use super::kdk::{drift, kick};

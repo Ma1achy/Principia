@@ -5,7 +5,7 @@
 //! - `chazy_fold_final_*`, `chazy_fold_status_*`: the fold tables, exhaustive over the label enum (a label added breaks
 //!   the build: [`chazy_fold_final_is_exhaustive`] compiles the folds' source against an eleventh label), and
 //!   collision-terminated samples (pair, triple, `t = 0`) to collision.
-//! - `chazy_structure_*`, `chazy_q_*`: the rows on §12.1's fixtures and on each precedence case §5.5 now defines, and
+//! - `chazy_structure_*`, `chazy_q_*`: the rows on §12.1's fixtures and on each precedence case §5.5 defines, and
 //!   each row's `q` against its hand-computed `K/U`.
 //! - `chazy_escaper_*`, `chazy_qk_*`: §5.6's per-body fields, against values computed here from
 //!   `validation::chazy::State`'s own two-body energies, never the kernel's `out_kup` or `most_separated`.

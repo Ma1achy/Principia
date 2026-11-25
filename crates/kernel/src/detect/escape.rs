@@ -50,7 +50,7 @@
 //! through, `|Δv|⁴·d² > 4·(M_pair + m_b)²` for `E_rel > 0` (Part 4), both sides being positive. The quantities under
 //! them still hold divisions (the shape point's by `I`, a velocity's by its mass), and a chord that small can square to
 //! a subnormal, which changes no decision against `tau²` but is not the written form rule 6 asks for. The plan is
-//! unclear here (Part 4 gives the forms to a later task, TASK-M4-29, which depends on this one); chose these because
+//! unclear here (Part 4 leaves the forms to later work); chose these because
 //! they are the forms Part 4 already writes, and kept each decision in its own function for that task to replace. A
 //! value that is not finite fires nothing: the chord is tested on its bits, and a NaN energy fails its comparison.
 //!
@@ -75,7 +75,7 @@ use crate::Real;
 /// The provisional settling threshold `tau`, `10⁻³`, a chord on the unit shape sphere, so a pure number: the
 /// register's `tau`, which is prin-rs's `CLOSURE_TAU` (`src/outcome.rs:263` at `8600d45`), inside the recorded gap
 /// between escapers and bound trajectories, `7.04·10⁻⁵ … 2.70·10⁻²`. Provisional until the gap is re-measured with
-/// this `E_rel` and the confirmed value replaces it (REQ-EVT-025; TASK-M3-34).
+/// this `E_rel` and the confirmed value replaces it.
 pub const TAU_PROVISIONAL: f64 = TAU;
 
 /// The float type the detector runs at: the shape map's, with a sampling index converted and compared ([`Count`]), a

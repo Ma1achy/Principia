@@ -322,13 +322,13 @@ fn failed_words<R: PayloadReal>(
 ) -> SimStateBaseOf<R> {
     let labelled = Label { state, detail }.write(s.packed_a);
     SimStateBaseOf {
-        // `I_max`'s level 0, the fresh latch's (chazy drill-down §6; R-545): a failed sample has no motion to classify.
+        // `I_max`'s level 0, the fresh latch's (chazy drill-down §6): a failed sample has no motion to classify.
         packed_a: set_I_max(
             set_dmin_pair(set_d_min_unset(labelled), SD_DMIN_PAIR_SENTINEL),
             0,
         ),
         packed_b: pack_packed_b(0.0, 0.0),
-        // The regularised drift's halves, 0.0 as `packed_b`'s (payload §2; R-605, TASK-M3-41).
+        // The regularised drift's halves, 0.0 as `packed_b`'s (payload §2).
         dE_reg: pack_dE_reg(0.0, 0.0),
         times: set_t_dmin_step(s.times, 0),
         coll_floor_bits: set_coll_floor(s.coll_floor_bits, 0),
@@ -386,8 +386,8 @@ pub fn decode_failed<R: WrapperReal>(detail: u32) -> SimStateBaseOf<R> {
 }
 
 /// The FTLE tier's stored sample of the failed sample `s` ([`sim_failed`] or [`decode_failed`]): every field of `s`,
-/// and the failed shadow, `r_sh`, `p_sh` the sample's own `r`, `p` and `S` the failed mark, the values R-972 gives a
-/// shadow whose sum went non-finite.
+/// and the failed shadow, `r_sh`, `p_sh` the sample's own `r`, `p` and `S` the failed mark, the values a shadow
+/// whose sum went non-finite takes.
 #[inline]
 pub fn failed_shadow<R: WrapperReal>(s: SimStateBaseOf<R>) -> SimStateFTLEOf<R> {
     super::benettin::ftle_of(s, s.r, s.p, s_failed::<R>())

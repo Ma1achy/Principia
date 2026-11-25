@@ -1,37 +1,36 @@
-//! QA tests for TASK-M2-11, written from the requirements (REQ-CHART-024, REQ-CHART-027, REQ-CHART-025, REQ-CHART-046's
-//! feasibility, REQ-CHART-055's reasoning; chart_reference §4.2, §4.3, §4.5, §5.4; chart_decoder_contract Part 5; R-27,
-//! R-104, R-157, R-407), not from the implementation. Every decode check runs at f64 and f32 natively (R-265).
-//! - `qa_m211_theta_nu` (REQ-CHART-024): `ν(θ)` is `sec θ − tan θ` (computed here directly, not as `cos/(1 + sin)`),
+//! QA tests for the Burrau acute-angle charts, written from the spec (chart_reference §4.2, §4.3, §4.5, §5.4;
+//! chart_decoder_contract Part 5), not from the implementation. Every decode check runs at f64 and f32 natively.
+//! - `qa_m211_theta_nu`: `ν(θ)` is `sec θ − tan θ` (computed here directly, not as `cos/(1 + sin)`),
 //!   inverts `θ(ν) = arctan((1 − ν²)/(2ν))` on `(0, π/4]`, maps the fold onto `[√2 − 1, 1)`, and the triangle with
 //!   §4.3's sides `(1 − ν², 2ν, 1 + ν²)` has acute angle `θ`.
-//! - `qa_m211_theta_k` (REQ-CHART-024): `Φ_θ,K`'s decoded IC, read *geometrically*: right angle at body 0, the acute
+//! - `qa_m211_theta_k`: `Φ_θ,K`'s decoded IC, read *geometrically*: right angle at body 0, the acute
 //!   angle at body 2 equal to `θ(u) = θ_min + (θ_max − θ_min)u`, each mass the side opposite its body over the
 //!   perimeter (§4.2), CoM at the origin, `I = 1` (§0.5), `Σp = 0`, `L_z(p) = 0`, `K(p) = K_max·v^γ_K`.
-//! - `qa_m211_theta_lz` (REQ-CHART-024, REQ-CHART-046): `Φ_θ,L_z` at the register's proposed defaults: the same
+//! - `qa_m211_theta_lz`: `Φ_θ,L_z` at the register's proposed defaults: the same
 //!   geometry, `K(p) = K` at every `v`, `L_z(p) = (2v − 1)·λ_L·√(2IK)`, `|L_z| ≤ √(2IK)` with `I` measured on the
 //!   decode, and `validate` `Valid` on the whole grid, the edges of `[0,1]²` included.
-//! - `qa_m211_delta_m` (REQ-CHART-027): the `v = 0` row's masses are the Burrau masses (computed here from the sides),
+//! - `qa_m211_delta_m`: the `v = 0` row's masses are the Burrau masses (computed here from the sides),
 //!   the `v = 1` row's `m_target` (default equal masses, and a non-default target), the blend linear between, `Σm = 1`,
 //!   every momentum 0, and the triangle the Burrau one (right angle at 0, angle `θ(u)` at 2) with the CoM of the
 //!   *blended* masses at the origin.
 //! - `qa_m211_flags`: `Φ_θ,K` and `Φ_θ,L_z` forbid energy normalisation, the δm strip (a rest start) allows it (§0.6,
 //!   §4.5).
-//! - `qa_m211_quotients` (REQ-CHART-025): a brute-force multiplicity count (does some shape appear twice in the chart's
+//! - `qa_m211_quotients`: a brute-force multiplicity count (does some shape appear twice in the chart's
 //!   `ν` range, through the leg swap `ν ↦ (1 − ν)/(1 + ν)`, checked to swap the legs?) decides `DoubleCover` against
 //!   bijective, on the Euclid plane's defaults, on several `(ν, K)` ranges and on the acute-angle charts; the values
 //!   differ, each label shows its value and quotient ("shape × labelling" / "shape only", §4.5), and the shape-fraction
 //!   guard refuses the full-range chart and admits the folded ones.
-//! - `qa_m211_past_the_square` (REQ-CHART-055's reasoning, §5.4): `θ` past `0` gives `ν > 1`, a negative mass, and is
+//! - `qa_m211_past_the_square` (§5.4): `θ` past `0` gives `ν > 1`, a negative mass, and is
 //!   refused; `θ` past `π/4` (the other leg ordering) is refused; δm past `v = 1` keeps `Σm = 1` and is valid until a
 //!   mass reaches 0, then refused; `L_z` past its edge at `λ_L < 1` stays feasible, at `λ_L = 1` it is not `Valid`.
 //!
-//! **Tolerances.** The construction's `Σp`, `L_z` and `K` residuals are REQ-DEC-046's proposed per-precision
+//! **Tolerances.** The construction's `Σp`, `L_z` and `K` residuals are the decoder's proposed per-precision
 //! tolerances (as `invariant_construction.rs` states them: 4, 4 and 8 eps). The geometric bounds are rounding bounds of
 //! a few operations on quantities of magnitude ≤ 1 (positions with `I = 1`, masses, angles ≤ π/2): [`RND`] = 64 eps
 //! absolute. `ν(θ)`'s are 16 eps, a handful of operations with no cancellation on `(0, π/4]` (`sec θ ≤ √2`).
 //!
 //! **Domain** (pitfalls §10): the stateless decode, inputs held fixed; no trajectory. Each test has a registered
-//! negative control naming the panic it expects (R-176, R-212).
+//! negative control naming the panic it expects.
 
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
 use std::fmt::Debug;
@@ -52,11 +51,11 @@ use validation::{
 
 /// Geometric rounding bound, eps, absolute (the module's note).
 const RND: f64 = 64.0;
-/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|` (REQ-DEC-046, proposed).
+/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|` (proposed).
 const TOL_P: f64 = 4.0;
-/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))` (REQ-DEC-046, proposed).
+/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))` (proposed).
 const TOL_L: f64 = 4.0;
-/// `|K(p) − K*|` in units of `eps·K*` (REQ-DEC-046, proposed).
+/// `|K(p) − K*|` in units of `eps·K*` (proposed).
 const TOL_K: f64 = 8.0;
 
 /// The coordinates every check visits, edges included.
@@ -199,7 +198,7 @@ fn theta_lin<R: Q>(range: [R; 2], u: f64) -> f64 {
     lo + (hi - lo) * u
 }
 
-// ── qa_m211_theta_nu (REQ-CHART-024) ─────────────────────────────────────────────────────────────────────────────
+// ── qa_m211_theta_nu ─────────────────────────────────────────────────────────────────────────────────────────────
 
 type Fun = fn(f64) -> f64;
 
@@ -278,7 +277,7 @@ negative_control!(
     check_theta_nu(|t| 1.0 / t.cos() + t.tan(), theta_of::<f64>)
 );
 
-// ── qa_m211_theta_k (REQ-CHART-024) ──────────────────────────────────────────────────────────────────────────────
+// ── qa_m211_theta_k ──────────────────────────────────────────────────────────────────────────────────────────────
 
 fn theta_k<R: Q>() -> BurrauThetaK<R> {
     BurrauThetaK {
@@ -376,7 +375,7 @@ negative_control!(
     }
 );
 
-// ── qa_m211_theta_lz (REQ-CHART-024, REQ-CHART-046) ──────────────────────────────────────────────────────────────
+// ── qa_m211_theta_lz ─────────────────────────────────────────────────────────────────────────────────────────────
 
 fn theta_lz<R: Q>() -> BurrauThetaLz<R> {
     BurrauThetaLz {
@@ -432,7 +431,7 @@ fn qa_m211_theta_lz() {
         BURRAU_THETA_LZ_K.number(),
         BURRAU_THETA_LZ_FRACTION.number(),
     );
-    // REQ-CHART-046's proposal is inside the feasible band: K > 0, λ_L ∈ (0, 1].
+    // The register's proposed defaults are inside the feasible band: K > 0, λ_L ∈ (0, 1].
     assert!(k > 0.0 && f > 0.0 && f <= 1.0, "K = {k}, λ_L = {f}");
     check_theta_lz(&c64, c64.theta_range, k, f);
     check_theta_lz(&c32, c32.theta_range, k, f);
@@ -461,7 +460,7 @@ negative_control!(
     }
 );
 
-// ── qa_m211_delta_m (REQ-CHART-027) ──────────────────────────────────────────────────────────────────────────────
+// ── qa_m211_delta_m ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The δm strip's rows: `(1 − v)·m_Burrau + v·target`, at rest, on the Burrau triangle (the module's note).
 fn check_delta_m<R: Q>(chart: &BurrauThetaDeltaM<R>, target: [f64; 3])
@@ -565,7 +564,7 @@ negative_control!(
     check_flags([true, true, true])
 );
 
-// ── qa_m211_quotients (REQ-CHART-025) ────────────────────────────────────────────────────────────────────────────
+// ── qa_m211_quotients ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The leg swap `ν ↦ (1 − ν)/(1 + ν)`.
 fn swap(nu: f64) -> f64 {
@@ -694,7 +693,7 @@ negative_control!(
     check_quotients(SystemImage::Bijective, "x", folded())
 );
 
-// ── qa_m211_past_the_square (REQ-CHART-055's reasoning, §5.4) ────────────────────────────────────────────────────
+// ── qa_m211_past_the_square (§5.4) ───────────────────────────────────────────────────────────────────────────────
 
 fn rejected(r: ValidationResult) -> Option<Constraint> {
     match r {

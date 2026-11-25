@@ -1,4 +1,4 @@
-//! The occupant seam, `ADVANCE(state, t_now, t_target, params) → state'` (integrator_contract Part 1, Part 2a; R-19;
+//! The occupant seam, `ADVANCE(state, t_now, t_target, params) → state'` (integrator_contract Part 1, Part 2a;
 //! systems_architecture §5, seam 4).
 //!
 //! **The wrapper owns the target; the occupant owns how it gets there** (Part 2a). The wrapper calls [`Advance::advance`]
@@ -9,9 +9,9 @@
 //! **Times are the macro-step grid's** (Part 5; dd_integrator §3.3): `t_now` and `t_target` are integer indices on it,
 //! physical time `index · dt_macro`, so no float time is formed, accumulated or compared on the path.
 //!
-//! **The cadence is passed in, not run after** (Part 2a, Cost 1; R-19). Projection, invariant accumulation and terminal
+//! **The cadence is passed in, not run after** (Part 2a, Cost 1). Projection, invariant accumulation and terminal
 //! detection run inside the occupant's march, after every internal step, through [`Cadence::after_step`]; an occupant
-//! that skips the call skips them, which the callback's count against the steps taken catches (REQ-INT-009). The march
+//! that skips the call skips them, which the callback's count against the steps taken catches. The march
 //! ends early only on the cadence's `done` flag ([`Cadence::done`]), read in the loop condition: no `break` (Part 1;
 //! gpu_determinism_note § "The discipline", rule 5).
 //!
@@ -21,19 +21,19 @@
 //! `dt`, and `G`, which is 1 in the force (Part 3, Part 5); no chart reaches it (seam 3). The regularised occupants,
 //! which own their time mapping, implement `ADVANCE` themselves, as [`crate::regularisation::Composed`].
 //!
-//! **The joint march** (R-974; [`Advance::advance_joint`]): the FTLE shadow's displacement form marches `(x, δ⃗)`
+//! **The joint march** ([`Advance::advance_joint`]): the FTLE shadow's displacement form marches `(x, δ⃗)`
 //! together through the occupant's joint step ([`Stepper::joint_step`]), `x` bit-identical to the occupant's own
 //! `ADVANCE` and `δ⃗` through the same stages, with a [`JointCadence`] after each internal step. A stepper's is the
 //! blanket impl's; an occupant that owns its time mapping has none until its own is built: marching a
 //! displacement-form shadow beside it fails to build. Heggie × RK4's joint step is
-//! [`crate::regularisation::heggie_joint`] (TASK-M3-74); its joint march, which rides Heggie's seam `ADVANCE`
+//! [`crate::regularisation::heggie_joint`]; its joint march, which rides Heggie's seam `ADVANCE`
 //! ([`crate::regularisation::heggie::Heggie`]), is not yet built.
 //!
 //! **The carried state** ([`Advance::advance_carrying`]; Part 2a): the wrapper's call passes the trajectory's carried
 //! buffer ([`Carried`]) in and out beside `(m, r, p)`, so an occupant that registers once marches on from its own
 //! state at every call. A stepper carries nothing.
 //!
-//! **Determinism** (REQ-INT-007, REQ-INT-023): the number and size of the steps are a function of the integer span, the
+//! **Determinism**: the number and size of the steps are a function of the integer span, the
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.
 
 use super::carried::Carried;
@@ -134,14 +134,14 @@ pub trait AdvanceReal: StepReal + Count + IeeeBits + Width {}
 
 impl<R: StepReal + Count + IeeeBits + Width> AdvanceReal for R {}
 
-/// The per-substep cadence the wrapper passes into the occupant (integrator_contract Part 2a, Cost 1; R-19): the work
+/// The per-substep cadence the wrapper passes into the occupant (integrator_contract Part 2a, Cost 1): the work
 /// that runs after every internal step, and the `done` flag that ends the march.
 pub trait Cadence<R> {
     /// Runs after each internal step, on the state the step left and the force evaluation at its positions, either of
     /// which it may replace (the projection does).
     fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>);
 
-    /// Whether the run is done: a terminal has fired, so no further step is taken (Part 1, R-103).
+    /// Whether the run is done: a terminal has fired, so no further step is taken (Part 1).
     fn done(&self) -> bool;
 
     /// A sampling point of the occupant's grid, `index` on a grid of `quantum`, physical time `index · quantum`, at the
@@ -153,7 +153,7 @@ pub trait Cadence<R> {
     #[inline]
     fn sample(&mut self, _state: &State<R>, _index: u32, _quantum: R) {}
 
-    /// A regularised step's two counted, non-terminal signals (integrator_contract Part 6; R-563, R-603), reported
+    /// A regularised step's two counted, non-terminal signals (integrator_contract Part 6), reported
     /// by the march once per step it sizes, before the step: `floored`, the separation floor (`TINY`) bound one of
     /// its separations, and `cap_hit`, its per-step size asked for more than the interval's entry size. A stepper
     /// reports none. The wrapper's cadence counts them into `budget_bits` (payload §2; [`crate::regularisation::budget`]);
@@ -162,7 +162,7 @@ pub trait Cadence<R> {
     fn signals(&mut self, _floored: bool, _cap_hit: bool) {}
 
     /// The regularised energy's drift after a kept step of a regularised march (integrator_contract Part 1, "The
-    /// regularised energies, defined"; R-566, R-605): the occupant's regularised energy of its own state against its
+    /// regularised energies, defined"): the occupant's regularised energy of its own state against its
     /// own reference (Heggie's `h`, Aarseth–Zare's first registration's `E`, logH's `E₀ = −B`), at the working
     /// precision, reported before the step's [`Cadence::after_step`]. A stepper reports none: with regularisation off
     /// the two energies are one. The wrapper's cadence latches it into `dE_reg` (payload §1); a cadence that keeps
@@ -173,7 +173,7 @@ pub trait Cadence<R> {
     /// The position-quantised `d²` of the closest pair at the positions `r`, the state the cadence last saw (its run's
     /// IC, or the state its last [`Cadence::after_step`] left), which the wrapper's `N_sub` bucket reads
     /// (dd_integrator §3.3). A cadence that formed it there returns its own, so the step's one computation serves the
-    /// bucket too (integrator_contract Part 7; REQ-EVT-004); one that did not forms it from `r`
+    /// bucket too (integrator_contract Part 7); one that did not forms it from `r`
     /// ([`d2_quantised`]).
     #[inline]
     fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32
@@ -239,7 +239,7 @@ pub trait Cadence<R> {
     }
 }
 
-/// The per-substep cadence of a joint march (R-974; [`Advance::advance_joint`]): the work that runs after every internal
+/// The per-substep cadence of a joint march ([`Advance::advance_joint`]): the work that runs after every internal
 /// joint step on the sample's state `x`, its force evaluation and the displacement, and the `done` flag that ends the
 /// march.
 pub trait JointCadence<R> {
@@ -262,7 +262,7 @@ pub struct AdvanceParams<R> {
 }
 
 /// The occupant's answer: the state it reached, the force evaluation at its positions, and the internal steps it took,
-/// which the wrapper cannot verify and so takes as reported (Part 2a, Cost 2; REQ-INT-022).
+/// which the wrapper cannot verify and so takes as reported (Part 2a, Cost 2).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Advanced<R> {
     /// The state at `t_target`, or where the cadence's `done` stopped the march.
@@ -273,7 +273,7 @@ pub struct Advanced<R> {
     pub substeps: u32,
 }
 
-/// The occupant seam (integrator_contract Part 2a; R-19).
+/// The occupant seam (integrator_contract Part 2a).
 pub trait Advance {
     /// Advances `state`, whose force evaluation is `geom`, from the macro-step grid's `t_now` to its `t_target`, calling
     /// `cadence` after every internal step and stopping early once it is done.
@@ -322,7 +322,7 @@ pub trait Advance {
         Self::advance_reaching(state, geom, t_now, t_target, params, cadence)
     }
 
-    /// The joint march of the FTLE shadow's displacement form (R-974; the module's note): `state`, whose force
+    /// The joint march of the FTLE shadow's displacement form (the module's note): `state`, whose force
     /// evaluation is `geom`, and the displacement `delta` advanced together from `t_now` to `t_target` with the
     /// force difference `D`, `cadence` after every internal joint step, stopping early once it is done; the sample's
     /// part is [`Advance::advance`]'s, bit for bit, under the same per-step work. Returns the sample's answer and the
@@ -362,7 +362,7 @@ pub trait Advance {
 
 /// How an `ADVANCE` call ended (integrator_contract Part 2a, Part 7): at its target; short of it, the run able to go
 /// on; or with the copy's march ended, which latches at the step it fired on and is never run on (Part 2a § "The sync
-/// grid is a fixed quantum of physical time (R-565)": "a terminal event (a collision, a non-finite state, the step
+/// grid is a fixed quantum of physical time": "a terminal event (a collision, a non-finite state, the step
 /// budget run out, Part 6 and Part 7) still latches at the step it fires on").
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Reached {
@@ -374,8 +374,8 @@ pub enum Reached {
     Short,
     /// The occupant's state was not finite: the run is `sim_failed` (payload §2), its state the last finite one.
     NonFinite,
-    /// The step budget ran out (R-604): the copy stops, undetermined, its `state` as it stood (Part 7; R-603, whose
-    /// sticky `budget_exhausted` flag is TASK-M3-41's).
+    /// The step budget ran out: the copy stops, undetermined, its `state` as it stood (Part 7), and the wrapper
+    /// sets the sticky `budget_exhausted` flag.
     Exhausted,
 }
 
@@ -411,7 +411,7 @@ impl<S: Stepper> Advance for S {
         cadence: &mut C,
     ) -> Advanced<R> {
         // The guard is written out, not as `t_target.saturating_sub(t_now)` as the lint suggests: rust-gpu
-        // 0.10.0-alpha.1, the backend the kernel builds with (R-169), leaves the `saturating_sub` intrinsic
+        // 0.10.0-alpha.1, the backend the kernel builds with, leaves the `saturating_sub` intrinsic
         // unimplemented, a zombie that fails the SPIR-V build where it is reached (its `builder/intrinsics.rs`).
         #[allow(clippy::implicit_saturating_sub)]
         let span = if t_target > t_now {
@@ -451,7 +451,7 @@ impl<S: Stepper> Advance for S {
         params: &AdvanceParams<R>,
         cadence: &mut C,
     ) -> (Advanced<R>, State<R>) {
-        // Written out, as in `advance`, for rust-gpu (R-169).
+        // Written out, as in `advance`, for rust-gpu.
         #[allow(clippy::implicit_saturating_sub)]
         let span = if t_target > t_now {
             t_target - t_now

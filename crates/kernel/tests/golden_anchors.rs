@@ -1,4 +1,4 @@
-//! The integrator suite's golden anchors (dd_integrator §5, "Golden anchors"; TASK-M3-24): `z = 0`, and the Burrau IC
+//! The integrator suite's golden anchors (dd_integrator §5, "Golden anchors"): `z = 0`, and the Burrau IC
 //! encoded from the (3, 4, 5) construction, each held in `fixtures/anchors/anchors.json` as its `z` and its f64 decode,
 //! bit for bit.
 //!

@@ -1,13 +1,13 @@
-//! Mixed-axis charts with a physical-quantity axis (chart_reference §1.3, §2.1; R-471 E1 to E3, H1; R-506 W2, W3;
-//! REQ-CHART-067, REQ-CHART-070): one axis any latent coordinate or derived quantity of a block the physical axis does
+//! Mixed-axis charts with a physical-quantity axis (chart_reference §1.3, §2.1): one
+//! axis any latent coordinate or derived quantity of a block the physical axis does
 //! not write ([`super::mixed::Quantity`], horizontal), the other a physical quantity (vertical), the rest of `z₀`
 //! frozen. Each is a mixed-axis chart, named `Mixed` as [`super::Mixed`] is.
 //!
-//! **An energy-type axis alone** ([`MixedEnergy`]; R-471 H1). The axis takes its own line of chart_reference §2.1's
-//! warp and solves into the momentum block by §2.2's construction, under the seed in force (R-934), the masses and
+//! **An energy-type axis alone** ([`MixedEnergy`]). The axis takes its own line of chart_reference §2.1's
+//! warp and solves into the momentum block by §2.2's construction, under the seed in force, the masses and
 //! configuration read as fixed (kind 3: the other axis sits upstream, in the mass or configuration block):
 //! - `K` and `KE` ([`AxisK`], [`AxisKE`]): `K* = L_z²/2I + K_max·t^γ_K`, at the chart's held `L_z`.
-//! - `E` ([`AxisE`]): `E = U + K*`, that `K*`, `U` the pixel's own potential (E3).
+//! - `E` ([`AxisE`]): `E = U + K*`, that `K*`, `U` the pixel's own potential.
 //! - `L_z` ([`AxisLz`]): `L_z = (2t − 1)·L_max`, `L_max = √(2·I·K)` at the chart's held `K`, `I = 1`.
 //! - The virial ratio ([`AxisVirial`]; chart_reference §2.1's paragraph) over the asked range `[Q_lo, Q_hi]`
 //!   ([`MixedEnergy::virial`]; [`MixedEnergy::new`]'s is `[0, Q_max]`): `Q = Q₀ + (Q_hi − Q₀)·t^γ_K`,
@@ -15,8 +15,8 @@
 //!   `L_z ≠ 0` the floor sits under the rise only: `K* = max(Q₀·|U|/2, L_z²/2I) + (Q_hi − Q₀)·t^γ_K·|U|/2`, so the
 //!   bottom row is the asked `Q₀` on a column where it is feasible and the floor on one where it is not.
 //!
-//! Every pixel of `[0,1]²` is feasible on a warped `t` axis at every held `L_z` (the owner's ruling of 4 Nov 2026 on
-//! RQ-683; chart_reference §2.1): the floor `L_z²/2I` ([`invariant::k_floor`], 0 at the held `L_z = 0`, `Φ_θ,K`'s) sits
+//! Every pixel of `[0,1]²` is feasible on a warped `t` axis at every held `L_z`
+//! (chart_reference §2.1): the floor `L_z²/2I` ([`invariant::k_floor`], 0 at the held `L_z = 0`, `Φ_θ,K`'s) sits
 //! under the line, so `K*` is at or above it, the bottom row `t = 0` exactly on it. `I = 1` on every pixel, so the floor
 //! does not vary across the window. A held `L_z` whose `L_z²` has no finite float at the chart's own precision has no
 //! floor, §2.1's one exception: `validate` refuses it there as the decode at that precision labels it. An `L_z` axis is
@@ -26,12 +26,12 @@
 //! pixels with `K* < L_z²/2I` (or, virial, `Q < 0`) not a system, and `L_z`'s line is already linear at its held `K`
 //! and `I = I₀ = 1`, so its two mappings decode alike and differ only in their extension types.
 //!
-//! **A mass-ratio axis** ([`MixedMassRatio`]; R-506 W3; chart_reference §2.1's paragraph). The ratio `q = m_b/m_a` of
+//! **A mass-ratio axis** ([`MixedMassRatio`]; chart_reference §2.1's paragraph). The ratio `q = m_b/m_a` of
 //! two bodies, the third body's mass `m_c` held at its slice-centre value: `m_a = (1 − m_c)/(1 + q)`, `m_b = q·m_a`.
 //! The axis moves the active mass link's inputs, `z_mass = L⁻¹(m)`, and the decode reads the masses through the link,
 //! `L(z_mass)`, so every pixel's masses are positive and sum to 1. Warped, `q(t) = q₀·(q₁/q₀)^t` over `[q₀, q₁]`, the
 //! part of the asked range the link realises at `m_c`, as held and as narrowed to `f32`, at its active parameters
-//! ([`MixedMassRatio::new`], to the search's margin `ε_μ/2`, RQ-707); linear,
+//! ([`MixedMassRatio::new`], to the search's margin `ε_μ/2`); linear,
 //! `q(t) = q_lo + (q_hi − q_lo)·t` over the asked range, a pixel whose ratio the link does not realise, or at or below
 //! 0, not a system. A ratio is realised where the link's inverse followed by its forward returns its masses
 //! `(m_a, m_b, m_c)`, `m_c` at its held value, to within `ε_μ`, relative: the inverse saturates past what the link
@@ -39,17 +39,18 @@
 //! (chart_decoder_contract § "Three hard requirements on any registered link", item 2; inverse_encode_contract Part 3),
 //! reused here as the round trip's tolerance, not a new constant.
 //!
-//! **Validation** (R-26). The other axis's own check (`super::mixed`'s), then the physical axis's: past a bounded side
+//! **Validation**. The other axis's own check (`super::mixed`'s), then the physical axis's: past a bounded side
 //! the point is clamped to the edge; then, on the decode under the chart's selection, the construction's exact test
 //! (`K* < L_z²/2I` refused) or the ratio's realisation. `validate` takes no selection, so each chart carries its own,
 //! `S`, the active links, which its decode reads too (`super::energy::Mapped`'s note).
 //!
-//! **Tilt** (R-473 J1). The hidden coordinates are the frozen controls the axes do not write: the other axis's
+//! **Tilt**. The hidden coordinates are the frozen controls the axes do not write: the other axis's
 //! coordinate is not one, nor is the physical axis's block (the momentum block for an energy axis, the mass block for
 //! the mass ratio). A tilt into a configuration control or a mass logit moves `U` and the masses across the window,
-//! and the decode reads them per pixel (E3). The held `L_z` or `K` is a hidden coordinate too under R-633, the physical
-//! parameter of the construction that holds the momentum block. No task builds its tilt or its slice, and this chart
-//! does neither: whether and how it tilts and slices is RQ-701's.
+//! and the decode reads them per pixel. The held `L_z` or `K`, the physical parameter of the construction that holds
+//! the momentum block, is a hidden coordinate too, but its tilt and slice are not built and a mixed chart's held `L_z`
+//! or `K` has no slider span defined (chart_reference §4.5, the slider spans), so this chart neither tilts nor slices
+//! it.
 
 use core::fmt;
 use core::marker::PhantomData;
@@ -300,8 +301,8 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection, P: Float> MixedEnergy<A, Q, S, 
 }
 
 impl<A: Coordinate, S: Selection, P: Float> MixedEnergy<A, AxisVirial, S, P> {
-    /// The virial-ratio chart over the asked range `asked = [Q_lo, Q_hi]`, a Chart-builder axis's own range (R-471 H4;
-    /// chart_reference §2.1's paragraph): warped over its feasible part `[max(Q_lo, 0), Q_hi]`, linear over `asked`.
+    /// The virial-ratio chart over the asked range `asked = [Q_lo, Q_hi]`, a Chart-builder axis's own range
+    /// (chart_reference §2.1's paragraph): warped over its feasible part `[max(Q_lo, 0), Q_hi]`, linear over `asked`.
     /// `None` where `asked` is not an increasing finite range or, warped, its feasible part is empty or one point
     /// (`Q_hi ≤ 0`).
     #[inline]
@@ -563,7 +564,7 @@ where
     f64: From<P>,
 {
     /// The frozen controls neither axis writes: not `A`'s coordinate, nor the momentum block. The held value is not an
-    /// index here: whether and how it tilts and slices is RQ-701's (the module's note).
+    /// index here: this chart neither tilts nor slices it (the module's note).
     fn hidden(&self, k: u32) -> bool {
         k < 8 && k != A::COORDINATE as u32 && !momentum_index(k)
     }
@@ -593,7 +594,7 @@ where
             .0
     }
 
-    /// The check on `z₀` shifted: the pixel's own `U`, `I` and masses (E3).
+    /// The check on `z₀` shifted: the pixel's own `U`, `I` and masses.
     fn validate_shifted(
         &self,
         a: f64,
@@ -662,7 +663,7 @@ impl<A: Coordinate, S, P: fmt::Debug> fmt::Debug for MixedMassRatio<A, S, P> {
 
 /// A saved chart's parent ([`ParentParams`]), `Mixed`'s second form: the axes' codes ([`axis_code`],
 /// [`quantity_code`]), then `frozen`, `a_range`, `top`, `bottom`, `γ_K`, `held`, the mapping. The link selection `S`
-/// is not written: a saved chart carries no links (R-478).
+/// is not written: a saved chart carries no links.
 impl<A: Coordinate, Q: EnergyAxis, S: Selection> ParentParams for MixedEnergy<A, Q, S, f64> {
     const FORM: Form = Form::Second;
     fn write(&self, w: &mut Writer<'_>) {
@@ -692,7 +693,7 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection> ParentParams for MixedEnergy<A,
 
 /// A saved chart's parent ([`ParentParams`]), `Mixed`'s third form: the axis's code ([`axis_code`]), then `frozen`,
 /// `a_range`, `ratio`, `bodies` (each a body, below 3), `held`, the mapping. The link selection `S` is not written: a
-/// saved chart carries no links (R-478).
+/// saved chart carries no links.
 impl<A: Coordinate, S: Selection> ParentParams for MixedMassRatio<A, S, f64> {
     const FORM: Form = Form::Third;
     fn write(&self, w: &mut Writer<'_>) {
@@ -819,7 +820,7 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// value, found outward from the slice centre's own ratio, or, where the link does not realise that, a saturated
     /// centre, from `seed`. `None` where the bodies are not two distinct bodies, `asked` is not an increasing finite
     /// range, or, warped, a mass at `z₀` is NaN or no ratio of `asked` lies within `ε_μ/2` at both, the search's margin
-    /// (`edge`, RQ-707), which can refuse an ask realised at full `ε_μ`; above `μ_max` about 29.3 `seed` can too.
+    /// (`edge`), which can refuse an ask realised at full `ε_μ`; above `μ_max` about 29.3 `seed` can too.
     pub fn new(
         frozen: [f64; 8],
         a_range: [f64; 2],

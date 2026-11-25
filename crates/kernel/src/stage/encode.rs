@@ -1,12 +1,12 @@
 //! Encode `E` as compute entry points (`crate::encode`): the kernel's f32 build of the one source, so that a test reads
-//! the GPU's encode, its selects and notices included, on given states (REQ-ENC-007, REQ-DEC-014; R-116, R-437, R-438).
+//! the GPU's encode, its selects and notices included, on given states.
 //! - [`encode()`]: invocation `i` reads sample `i`'s `(m, r, p)` in the decode stage's word layout ([`read_ic`]) and writes
 //!   its encode under the default links, [`encode_words`] words ([`write_encoded`]).
 //! - [`beta()`]: invocation `i` reads the pair `λ̃ = (λ̃_x, λ̃_y)` at words `2i`, `2i + 1` and writes `β` at word `i`, so
 //!   a test gives `β`'s selects their operands' exact bits, `±0` included: `blocks::beta`, the selects at the operands'
 //!   own signs. The whole encode takes its case from `C`'s decision instead (`blocks::beta_at`).
 //! - [`arctangent()`]: invocation `i` reads the pair `(y, x)` at words `2i`, `2i + 1` and writes the kernel's own f32
-//!   `atan2(y, x)` (`crate::arctan`; RQ-628) at word `i`, so a test reads it as the backend compiles it.
+//!   `atan2(y, x)` (`crate::arctan`) at word `i`, so a test reads it as the backend compiles it.
 
 use spirv_std::glam::UVec3;
 use spirv_std::spirv;
@@ -22,8 +22,8 @@ pub fn encode_words() -> usize {
     12
 }
 
-/// The notices word: bit 0 the coincident inner pair (R-13), bit 2 `lookup_rescaled`, bits 8 to 15 the clamped
-/// controls `z[0]` to `z[7]`; bit 1, `lookup_mirrored` until `C`'s mirror step was removed (R-865, TASK-M2-57), is never
+/// The notices word: bit 0 the coincident inner pair, bit 2 `lookup_rescaled`, bits 8 to 15 the clamped
+/// controls `z[0]` to `z[7]`; bit 1, the retired `lookup_mirrored` (`C` has no mirror step), is never
 /// set, so the other bits keep their places.
 #[inline]
 pub fn notices(r: &Report<f32>) -> u32 {
@@ -139,7 +139,7 @@ pub fn beta(
     }
 }
 
-/// The kernel's own f32 `atan2` on given operands (`crate::arctan`; RQ-628): invocation `i` reads `(y, x)` at words
+/// The kernel's own f32 `atan2` on given operands (`crate::arctan`): invocation `i` reads `(y, x)` at words
 /// `2i`, `2i + 1` of `yx` and writes `atan2_f32(y, x)` at word `i` of `out`; an invocation past the last pair writes
 /// nothing.
 #[spirv(compute(threads(64)))]

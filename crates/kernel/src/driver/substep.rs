@@ -1,4 +1,4 @@
-//! Substep control (dd_integrator §3.3; integrator_contract Part 3, Part 4; R-502): which `N_sub` a macro-step takes,
+//! Substep control (dd_integrator §3.3; integrator_contract Part 3, Part 4): which `N_sub` a macro-step takes,
 //! and the record of it the payload keeps.
 //!
 //! **The law.** `N_sub` specifies as `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)` and is computed, never by a runtime
@@ -18,19 +18,19 @@
 //! **The one float the branch reads** ([`d2_quantised`]). The positions are cast to f32 first, so the f64 and the f32
 //! kernels decide on the same input; each separation is one subtraction; each square is [`square`], `IeeeBits::product`'s
 //! split form, so a backend that fuses or contracts rounds it alike, with a floor below which a square is 0, so that no
-//! partial product is subnormal (R-547; gpu_determinism_note rules 2 and 6); the two squares are added once, and the
-//! least of the three pairs' sums is taken by comparison. The proof of this form on every backend, Metal and lavapipe
-//! with their flushing and fusing, is REQ-INT-066's (TASK-M4-03, which writes and proves the form `d²` keeps); here it
-//! is the CPU's, at f64 and at f32. *Was* (the task's earlier deliverable): "lone-sub, lone-mul, explicit
-//! `fma(dy, dy, dx*dx)`", the form R-547 retired.
+//! partial product is subnormal (gpu_determinism_note rules 2 and 6); the two squares are added once, and the
+//! least of the three pairs' sums is taken by comparison. This form is not proved here on every backend, Metal and
+//! lavapipe with their flushing and fusing; here it is checked on the CPU, at f64 and at f32. Don't write the sum of
+//! squares as an explicit `fma(dy, dy, dx*dx)` to force one rounding: not every backend fuses an explicit `fma`
+//! (lavapipe does not), and its partial products can be subnormal.
 //!
 //! **The record** ([`SubstepState`]). Per macro-step the live `N_sub` (render Part 5's animated effort view), the exact
 //! u32 `total_substeps = Σ N_sub` and the sticky `saturated`, set when `N_sub == N_max` occurs and never cleared
-//! (payload §2, descriptor bit 5; R-86). With `N_max ≤ L_max` and `horizon_steps ≤ 65535`, `Σ N_sub ≤ 65535·L_max`
-//! fits a u32 (REQ-INT-094).
+//! (payload §2, descriptor bit 5). With `N_max ≤ L_max` and `horizon_steps ≤ 65535`, `Σ N_sub ≤ 65535·L_max`
+//! fits a u32.
 //!
 //! **Domain** (pitfalls §10): each decision is identical given its macro-step's inputs, the quantised positions and
-//! the sim key (R-84); along a chaotic trajectory the inputs differ by precision, and so may the decisions.
+//! the sim key; along a chaotic trajectory the inputs differ by precision, and so may the decisions.
 
 use spirv_std::glam::UVec4;
 
@@ -40,10 +40,10 @@ use crate::payload::set_saturated;
 use crate::real::IeeeBits;
 use crate::Real;
 
-/// The sim key's `N_sub` thresholds as `SimUniforms` holds them (R-502): `THR[1] … THR[L_max]`, f32 bit patterns,
+/// The sim key's `N_sub` thresholds as `SimUniforms` holds them: `THR[1] … THR[L_max]`, f32 bit patterns,
 /// four to a 16-byte row, `THR[n]` at row `(n − 1)/4`, lane `(n − 1) mod 4` (`x`, `y`, `z`, `w`), so a uniform array's
 /// 16-byte stride takes them with no padding. The host generator fills it (`super::nsub_table::thresholds`); dispatch
-/// binds it (TASK-M3-06).
+/// binds it.
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(C)]
 pub struct NsubThresholds {
@@ -61,7 +61,7 @@ impl NsubThresholds {
 }
 
 /// `N_sub` for the macro-step whose `d²` is `d2`: `min(bucket(d2), n_max)` (dd_integrator §3.3). `n_max` is the sim
-/// key's, at least 1 and at most `L_max`, which the host generator holds to (REQ-INT-091).
+/// key's, at least 1 and at most `L_max`, which the host generator holds to.
 #[inline]
 pub fn n_sub(d2: f32, table: &NsubThresholds, n_max: u32) -> u32 {
     table.bucket(d2).min(n_max)
@@ -112,7 +112,7 @@ fn pair_d2(a: [f32; 2], b: [f32; 2]) -> f32 {
     square(b[0] - a[0]) + square(b[1] - a[1])
 }
 
-/// The position-quantised `d²` of each R-22 pair of the positions `r` (pair `k` the side opposite body `k`): each
+/// The position-quantised `d²` of each pair of the positions `r` (pair `k` the side opposite body `k`): each
 /// position cast to f32 ([`Quantise`]), then each pair's by `pair_d2`. The collision detector reads all three
 /// ([`crate::detect::collision::Separations`]); the bucket reads their least ([`d2_quantised`]).
 #[inline]
@@ -163,7 +163,7 @@ impl SubstepState {
         n
     }
 
-    /// The descriptor word `packed_a` with `saturated`, bit 5, set from this record (payload §2; R-86), every other
+    /// The descriptor word `packed_a` with `saturated`, bit 5, set from this record (payload §2), every other
     /// bit kept.
     #[inline]
     pub fn packed_a(&self, packed_a: u32) -> u32 {
