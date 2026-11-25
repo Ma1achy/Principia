@@ -20,6 +20,7 @@ icons/
   animated/  the icon as a 36-second loop, light and dark: MP4, WebM (transparent) and GIF
 titles/      the animated 2D wordmark, with and without "Planar Three-Body Problem",
              light and dark: MP4 on a background, WebM with a transparent background, and GIF
+social/      the 1280 x 640 social-preview image (dark and light) and the script that renders it
 code/
   web/       self-contained JavaScript for each variant, demo pages, and the animated favicon
   python/    the simulations, the clearance searches and the generators that built everything
