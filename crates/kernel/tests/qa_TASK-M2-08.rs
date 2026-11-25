@@ -1,4 +1,4 @@
-//! QA tests for TASK-M2-08, written from the requirements and their sources, not from the implementation: the shape
+//! QA tests written from the requirements and their sources, not from the implementation: the shape
 //! map `n` (`kernel::shape::shape`, `shape_vec`), the shape-sphere chart's maps and closed-form inverse
 //! (`kernel::chart::shape_sphere`) and the landmarks (`kernel::shape::landmarks`).
 //!
@@ -7,52 +7,53 @@
 //! (`ρ ∧ λ` is twice the signed area of the triangle `r₀ r₁ r₂`); closed forms of the mass-weighted collision points
 //! (a collinear configuration with the pair together, [`analytic_bc`]); §0.2's position reconstruction written here
 //! ([`reconstruct`]); and the IC Inspector's own numbers in `fixtures/ic_inspector/shape_vec.json`.
-//! - REQ-CHART-018 (`shape_vec_qa_l_plus_bc01`, `shape_vec_qa_reference`, `shape_vec_qa_inspector`): `L⁺` (bodies
+//! - The forward map (`shape_vec_qa_l_plus_bc01`, `shape_vec_qa_reference`, `shape_vec_qa_inspector`): `L⁺` (bodies
 //!   0 → 1 → 2 anticlockwise, equilateral, equal masses) is `w = +1` and `L⁻` is `w = −1` under any rotation, translation
 //!   and scale; the collision of bodies 0 and 1 is `(−1, 0, 0)` at any masses; `n` agrees with the statement's map on
 //!   random ICs and with the IC Inspector's JS on the fixture's random ICs.
-//! - REQ-CHART-019 (`shape_sphere_chart_map_qa_spherical`, `shape_sphere_chart_map_qa_exponential`): `(s, 1)` is `L⁺`,
+//! - The chart maps (`shape_sphere_chart_map_qa_spherical`, `shape_sphere_chart_map_qa_exponential`): `(s, 1)` is `L⁺`,
 //!   `(s, 0)` is `L⁻`, the polar angle is `π(1 − t)` over the whole `[0, π]` (no cap excised next to either pole) and the
 //!   azimuth `2πs`; the exponential map at `d = 0` is `n₀` exactly and lies at geodesic distance `‖d‖` along `d`.
-//! - REQ-CHART-020, REQ-CHART-053 (`shape_sphere_roundtrip_qa_chart`, `shape_sphere_roundtrip_qa_closed_form`,
-//!   `shape_sphere_roundtrip_qa_poles`): `Φ` alone (R-178), `shape(Φ(u, v)) = n(u, v)` within `shape_roundtrip_bound` on
+//! - The inverse and the round trip (`shape_sphere_roundtrip_qa_chart`, `shape_sphere_roundtrip_qa_closed_form`,
+//!   `shape_sphere_roundtrip_qa_poles`): `Φ` alone, `shape(Φ(u, v)) = n(u, v)` within `shape_roundtrip_bound` on
 //!   both hemispheres through the chart's own decode; the inverse is §3.2's closed form, `‖ρ̃‖² = I(1 + n₀)/2`,
 //!   `‖λ̃‖² = I(1 − n₀)/2`, `ρ̃` at `φ_f`, `λ̃` at `φ_f + atan2(q, p)`; at `n₀ = ±1` with `±0` in `n₁`, `n₂` the `atan2` term
-//!   is `+0` and `ψ = φ_f` (R-437). The gate's fixture holds the register's bound (`shape_sphere_roundtrip_qa_gate_json`).
+//!   is `+0` and `ψ = φ_f`. The gate's fixture holds the register's bound (`shape_sphere_roundtrip_qa_gate_json`).
 //!   `Φ` is the decode's blocks (its `masses`, `config` and `momentum`), not its `ic`, which is `C`'s (below).
-//! - REQ-CHART-020 (`shape_sphere_canonical_fold_qa`): `C(Φ(s, t))` is at its own signed point `(θ, φ)` on both
+//! - `Φ` then `C` (`shape_sphere_canonical_fold_qa`): `C(Φ(s, t))` is at its own signed point `(θ, φ)` on both
 //!   hemispheres, a lower-hemisphere point keeping `n₂ < 0`: `C` has no mirror step, so nothing is folded onto the upper
 //!   hemisphere; and at the default gauge (`I = 1`, `φ_f = 0`) `Φ` is on `C`'s section on either hemisphere, so `C`
 //!   leaves it. (While `C` mirrored, this test asserted the fold, `(θ, π − φ)` below the equator; its name is kept.)
-//! - dd_decoder §2, §3.3, §3.5, §3.6; REQ-CHART-020, R-544 (`shape_sphere_decode_canonical_qa`,
+//! - dd_decoder §2, §3.3, §3.5, §3.6 (`shape_sphere_decode_canonical_qa`,
 //!   `shape_sphere_energy_norm_qa`): the decode's `ic` is canonical, `G = M = I = 1`, at any chart `I` and on both
 //!   hemispheres, nothing mirrored (`C` has no mirror step): the CoM at rest at the origin, `I = 1`, `ρ` on
 //!   `+x`, `λ̃_y` keeping `n₂`'s sign, the masses `m_fixed`, the shape the signed `n(u, v)`, the energy `√I·E(Φ)` and
 //!   `|L_z|` `I^{−1/4}·|L_z(Φ)|` (§3.5's similarity), the descriptor read from it; `η_E`'s entry decodes the chart's
 //!   signed shape, with no target as the chart's own decode, with `E*` at the same positions and energy `E*`.
-//! - REQ-CHART-036, REQ-INT-003 (`shape_landmarks_qa_equal_masses`, `shape_landmarks_mass_weighted_qa`,
+//! - The landmarks (`shape_landmarks_qa_equal_masses`, `shape_landmarks_mass_weighted_qa`,
 //!   `shape_landmarks_qa_inspector`): equal masses, `BC₀₁ = (−1, 0, 0)` at 180°, `BC₁₂` at 60°, `BC₂₀` at 300°, 120°
 //!   apart, `L± = (0, 0, ±1)`; random masses, `BC₀₁ = (−1, 0, 0)`, every collision on `w = 0` at its mass-weighted
 //!   point; the collisions against the inspector's `collisionPhi`.
-//! - REQ-VAL-023 (`shape_dot_on_collision_landmark_qa`): property, mass ratios up to `e⁸`, bodies `i` and `j` brought
-//!   together along a straight path: the dot's distance to the landmark opposite `k` falls with the separation, by
-//!   decades to coincidence, and its distance to the two other landmarks stays above half their separation.
-//! - REQ-CHART-049 (`shape_vec_qa_fixture_provenance`): the fixture names the `.nvmrc` Node version and the inspector as
-//!   its source (R-169, R-184).
+//! - The dot on a collision (`shape_dot_on_collision_landmark_qa`): property, mass ratios up to `e⁸`, bodies `i` and
+//!   `j` brought together along a straight path: the dot's distance to the landmark opposite `k` falls with the
+//!   separation, by decades to coincidence, and its distance to the two other landmarks stays above half their
+//!   separation.
+//! - Provenance (`shape_vec_qa_fixture_provenance`): the fixture names the `.nvmrc` Node version and the inspector as
+//!   its source.
 //!
-//! **Not asserted** (held open): `L±` off the poles at unequal masses (RQ-355); only `L⁺`'s orientation, `w > 0`, is
-//! asserted there.
+//! **Not asserted**: where `L±` sit at unequal masses (chart_reference: `w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`,
+//! the poles only at equal masses); only `L⁺`'s orientation, `w > 0`, is asserted there.
 //!
 //! **Tolerances.** The agreement of `n` computed by two routes (the inspector's, the closed-form collision points', the
-//! statement's reference) is the register's `shape_vec_js_tol` (REQ-CHART-049); the round trip and the fold, which
-//! recover a point of the sphere from `Φ`'s configuration, are within the register's `shape_roundtrip_bound`
-//! (REQ-CHART-053, R-181). The chart map's own identities are a multiple of ε from the handful of rounded operations on
-//! their path (applied per R-369, a test decision). Exact values (`(−1, 0, 0)` at `ρ̃ = 0`, `n₀` at `d = 0`, `+0` at the
-//! poles) are asserted exactly.
+//! statement's reference) is the register's `shape_vec_js_tol`; the round trip and the fold, which
+//! recover a point of the sphere from `Φ`'s configuration, are within the register's `shape_roundtrip_bound`.
+//! The chart map's own identities are a multiple of ε from the handful of rounded operations on their path (this test's
+//! choice of multiple). Exact values (`(−1, 0, 0)` at `ρ̃ = 0`, `n₀` at `d = 0`,
+//! `+0` at the poles) are asserted exactly.
 //!
 //! **Domain** (pitfalls §10): the map, the chart and `C` on states held fixed; no trajectory.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::path::Path;
 
@@ -72,10 +73,10 @@ use validation::{negative_control, prop, SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL
 const PI: f64 = std::f64::consts::PI;
 const EPS: f64 = f64::EPSILON;
 
-/// `shape_vec_js_tol` (REQ-CHART-049), provisional until M2: the agreement of `n` by two routes.
+/// `shape_vec_js_tol`, provisional until M2: the agreement of `n` by two routes.
 const TWO_ROUTES: f64 = SHAPE_VEC_JS_TOL.number();
 
-/// `shape_roundtrip_bound` (REQ-CHART-053, R-181), provisional until M2.
+/// `shape_roundtrip_bound`, provisional until M2.
 const ROUNDTRIP: f64 = SHAPE_ROUNDTRIP_BOUND.number();
 
 /// The chart map's identities: a sine, a cosine and a product or two, each within an ulp, `π` at most in the angle.
@@ -107,7 +108,7 @@ fn masses(rng: &mut SplitMix, spread: f64) -> [f64; 3] {
 
 /// chart_reference §3.1 from the text, on §0.2's mass-weighted Jacobi vectors at any total mass `M`:
 /// `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁/M`, `ρ = r₁ − r₀`, `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`; `a = ‖ρ̃‖²`, `b = ‖λ̃‖²`,
-/// `p = ρ̃·λ̃`, `q = ρ̃ₓλ̃_y − ρ̃_yλ̃ₓ` (standard cross, R-14), `n = ((a − b)/I, 2p/I, 2q/I)`.
+/// `p = ρ̃·λ̃`, `q = ρ̃ₓλ̃_y − ρ̃_yλ̃ₓ` (standard cross), `n = ((a − b)/I, 2p/I, 2q/I)`.
 fn reference_n(r: Pos, m: [f64; 3]) -> [f64; 3] {
     let total = m[0] + m[1] + m[2];
     let m01 = m[0] + m[1];
@@ -208,7 +209,7 @@ fn azimuth_deg(n: [f64; 3]) -> f64 {
     n[1].atan2(n[0]).to_degrees().rem_euclid(360.0)
 }
 
-// ── REQ-CHART-018: the forward map ──────────────────────────────────────────────────────────────────────────────────
+// ── The forward map ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Under the map `n_of` at equal masses: `L⁺` (anticlockwise) is `(0, 0, +1)`, `L⁻` `(0, 0, −1)`, under random
 /// rotations, translations and scales; `w` has the sign of the signed area at any masses; the collision of 0 and 1 is
@@ -326,7 +327,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-018, REQ-CHART-036, REQ-CHART-049: the IC Inspector's numbers ─────────────────────────────────────────
+// ── The IC Inspector's numbers ──────────────────────────────────────────────────────────────────────────────────────
 
 fn bits(v: &serde_json::Value) -> f64 {
     let s = v.as_str().expect("a hex string");
@@ -391,7 +392,7 @@ negative_control!(
     }
 );
 
-/// The fixture is the inspector's, run under the `.nvmrc` Node version (R-169, R-184), with the seed recorded.
+/// The fixture is the inspector's, run under the `.nvmrc` Node version, with the seed recorded.
 fn check_provenance(nvmrc: &str) {
     let f = fixture();
     assert_eq!(
@@ -432,7 +433,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-019: the chart maps ───────────────────────────────────────────────────────────────────────────────────
+// ── The chart maps ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 type SphericalFn = fn(f64, f64) -> [f64; 3];
 
@@ -651,7 +652,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-020, REQ-CHART-053: the closed-form inverse and the round trip ─────────────────────────────────────────
+// ── The closed-form inverse and the round trip ───────────────────────────────────────────────────────────────────────
 
 /// A random spherical or exponential chart with random held blocks and gauge.
 fn random_chart(rng: &mut SplitMix, spherical_map: bool) -> ShapeSphere<f64> {
@@ -676,7 +677,7 @@ fn random_chart(rng: &mut SplitMix, spherical_map: bool) -> ShapeSphere<f64> {
 
 type DecodeFn = fn(&ShapeSphere<f64>, f64, f64) -> ([f64; 3], Pos);
 
-/// `Φ` alone (R-178) through `decode`: `shape(r, m)` of the decoded configuration is the chart's `n(u, v)` within
+/// `Φ` alone through `decode`: `shape(r, m)` of the decoded configuration is the chart's `n(u, v)` within
 /// `shape_roundtrip_bound`, on random charts of both maps, both hemispheres drawn. Returns the worst.
 fn check_chart_roundtrip(decode: DecodeFn) -> f64 {
     let mut rng = SplitMix::new(0x2020);
@@ -706,13 +707,13 @@ fn check_chart_roundtrip(decode: DecodeFn) -> f64 {
     worst
 }
 
-/// `Φ` alone through the chart's decode: its blocks' masses and configuration, before `C` (R-178).
+/// `Φ` alone through the chart's decode: its blocks' masses and configuration, before `C`.
 fn chart_decode(chart: &ShapeSphere<f64>, u: f64, v: f64) -> ([f64; 3], Pos) {
     let d = chart.decode::<Defaults, f64>(u, v);
     (d.masses.m, d.config.r)
 }
 
-/// `Φ`'s state through the chart's decode: its blocks joined, before `C` (R-178).
+/// `Φ`'s state through the chart's decode: its blocks joined, before `C`.
 fn chart_phi(chart: &ShapeSphere<f64>, u: f64, v: f64) -> Ic<f64> {
     let d = chart.decode::<Defaults, f64>(u, v);
     Ic {
@@ -848,7 +849,7 @@ mod closed_form_sign {
     );
 }
 
-/// At the eight poles `(±1, ±0, ±0)` (R-437): `atan2(q, p)`'s term, the inverse's `β`, is `+0` by its bits, so
+/// At the eight poles `(±1, ±0, ±0)`: `atan2(q, p)`'s term, the inverse's `β`, is `+0` by its bits, so
 /// `ψ = φ_f`: at `n₀ = −1` (`a = 0`) `λ̃ = √I·(cos φ_f, sin φ_f)` and `ρ̃ = 0`; at `n₀ = 1` (`b = 0`) `λ̃ = 0`; and the
 /// chart's decode there is finite and recovers the pole.
 fn check_poles(beta_of: fn([f64; 3], f64, f64) -> f64) {
@@ -917,7 +918,7 @@ fn shape_sphere_roundtrip_qa_poles() {
                 dist(shape(r, m), pole) <= ROUNDTRIP,
                 "Φ({s}, {t}) is not at {pole:?}"
             );
-            // The decode keeps the signed shape (R-544): its canonical ic is at the pole it decodes, L⁻ at t = 0.
+            // The decode keeps the signed shape: its canonical ic is at the pole it decodes, L⁻ at t = 0.
             let d = chart.decode::<Defaults, f64>(s, t);
             assert!(
                 d.ic.r.iter().flatten().all(|x| x.is_finite())
@@ -938,8 +939,8 @@ negative_control!(
     }
 );
 
-/// The gate's fixture judges against the register's bound, provisional, citing REQ-CHART-053 and R-181; its inputs are
-/// the round trip, expected to pass, and the negative-cross control, expected to fail.
+/// The gate's fixture judges against the register's bound, marked provisional and citing the requirement it comes
+/// from; its inputs are the round trip, expected to pass, and the negative-cross control, expected to fail.
 fn check_gate_json(gate: &serde_json::Value, bound: f64) {
     let t = &gate["threshold"];
     assert_eq!(
@@ -1006,7 +1007,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-020: Φ then C ────────────────────────────────────────────────────────────────────────────────────────
+// ── Φ then C ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
 type CanonFn = fn(&Ic<f64>) -> Ic<f64>;
 
@@ -1095,11 +1096,13 @@ mod fold_moves_section {
 // ── dd_decoder §2, §3.5: the decode hands the integrator C(Φ), nothing mirrored, canonical ─────────────────────────
 
 /// The canonical section's identities (`I = 1`, the CoM, `ρ_y`, `Σp`) and §3.5's scalings of `E` and `L_z`: `C`'s
-/// rotation and scale, a few roundings each, against the state's own size (applied per R-369, a test decision).
+/// rotation and scale, a few roundings each, against the state's own size (dd_decoder §5
+/// test 1 asks for a precision-appropriate tolerance; this test chose it).
 const CANON_TOL: f64 = 64.0 * EPS;
 
 /// `|n₂|` above which `λ̃_y`'s sign is asserted to be `n₂`'s: with `ρ` on `+x`, `n₂ = 2ρ̃ₓλ̃_y` at `I = 1` (§3.1), so the
-/// two share a sign; at `n₂` within a few roundings of 0 the sign is the rounding's (applied per R-369, a test decision).
+/// two share a sign; at `n₂` within a few roundings of 0 the sign is the rounding's (this test's
+/// choice).
 const SIGN_FLOOR: f64 = CANON_TOL;
 
 /// `(com, I, E, L_z, size, L_z's scale)` of a state: the mass-weighted moment of inertia about the CoM, §3.6's
@@ -1279,7 +1282,7 @@ mod decode_mirrored {
 type DecodeChartFn = fn(&ShapeSphere<f64>, f64, f64, Option<f64>) -> (Decoded<f64>, Outcome);
 
 /// `η_E`'s entry on the shape sphere (dd_decoder §3.7): with no target (`None`, "Off") the decode is the chart's own,
-/// its shape the signed `n(u, v)` (R-544); with `E* = V₀ + ½` (feasible, `K₀ > 0`) the positions are the same, the outcome
+/// its shape the signed `n(u, v)`; with `E* = V₀ + ½` (feasible, `K₀ > 0`) the positions are the same, the outcome
 /// `Scaled`, the energy of the result `E*` within `CANON_TOL` relative, and the descriptor's `K₀ + V₀` too.
 fn check_energy_norm(decode: DecodeChartFn) {
     let mut rng = SplitMix::new(0x0237);
@@ -1337,7 +1340,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-036, REQ-INT-003: the landmarks ───────────────────────────────────────────────────────────────────────
+// ── The landmarks ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 type LandmarksFn = fn([f64; 3]) -> Landmarks<f64>;
 
@@ -1345,7 +1348,7 @@ type LandmarksFn = fn([f64; 3]) -> Landmarks<f64>;
 /// conditioning at 120° (`1/sin 120° < 2`) and the dot product's two roundings.
 const DEG_TOL: f64 = 4.0 * TWO_ROUTES * 180.0 / PI;
 
-/// Equal masses (dd_integrator test 9, R-14): `BC₀₁ = (−1, 0, 0)` exactly, at 180°; `BC₁₂` at 60°, `(½, √3/2, 0)`;
+/// Equal masses (dd_integrator test 9): `BC₀₁ = (−1, 0, 0)` exactly, at 180°; `BC₁₂` at 60°, `(½, √3/2, 0)`;
 /// `BC₂₀` at 300°, `(½, −√3/2, 0)`; the three 120° apart on `w = 0`; `L± = (0, 0, ±1)`.
 fn check_equal(of: LandmarksFn) {
     let l = of([1.0 / 3.0; 3]);
@@ -1409,7 +1412,8 @@ negative_control!(
 );
 
 /// Random masses, ratios up to `e⁸`: `BC₀₁ = (−1, 0, 0)` exactly; every collision on `w = 0`, unit, at the
-/// mass-weighted point [`analytic_bc`]; and `L⁺`'s `w > 0` (its orientation, RQ-355 aside).
+/// mass-weighted point [`analytic_bc`]; and `L⁺`'s `w > 0` (its orientation only; its
+/// `w` at unequal masses is not asserted).
 fn check_mass_weighted(of: LandmarksFn) -> f64 {
     let mut rng = SplitMix::new(0x2050);
     let mut worst: f64 = 0.0;
@@ -1509,7 +1513,7 @@ negative_control!(
     }
 );
 
-// ── REQ-VAL-023: the dot on a collision ─────────────────────────────────────────────────────────────────────────────
+// ── The dot on a collision ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// Bodies `i` and `j` brought together along `r_j(ε) = r_i + ε(r_j − r_i)`: the dot's distance to the landmark of the
 /// side opposite `k` (the third body) falls strictly as `ε` goes `10⁻³ → 10⁻⁵ → 10⁻⁷`, and two more decades at

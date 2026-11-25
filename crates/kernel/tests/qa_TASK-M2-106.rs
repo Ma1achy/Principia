@@ -1,4 +1,4 @@
-//! QA tests for TASK-M2-106, written from REQ-CHART-212 and R-991, not from the implementation: every f64
+//! QA tests for the CPU chart evaluator's libm pin, written from the spec, not from the implementation: every f64
 //! transcendental the CPU chart evaluator reaches goes through the pinned pure-software libm (0.2.16,
 //! `force-soft-floats`), `sqrt` excepted, so a record is the same on every machine. The implementer's tests check `Real`'s
 //! methods against libm (`real_pinned_bits`) and the source for stray calls (`transcendental_pin`); these check the
@@ -14,7 +14,7 @@
 //!     `log_det`, `ln(π/2 − 2α_min) − softplus(−z) − softplus(z)`, `softplus(x) = max(x, 0) + ln_1p(e^(−|x|))` (`ln`,
 //!     `ln_1p`, `exp`).
 //!
-//!   Control: the same expectations with libm's `sin` moved one ulp up, R-991's own control on the measurement, are
+//!   Control: the same expectations with libm's `sin` moved one ulp up, the libm-pin measurement's own control, are
 //!   not met: the comparison sees one ulp of one function.
 //! - `qa_m2106_inputs_tell_std_from_the_pin` (macOS, the measurement's reference machine): on the same inputs, each
 //!   call site's expectation formed through the platform's library (`f64`'s inherent methods, the path before the pin)
@@ -203,7 +203,7 @@ fn qa_m2106_call_sites_take_the_pin() {
     check_pinned(PINNED);
 }
 
-/// libm's `sin` one ulp up, R-991's control on the measurement.
+/// libm's `sin` one ulp up, the libm-pin measurement's own control.
 #[cfg(feature = "controls")]
 fn sin_up(x: f64) -> f64 {
     f64::from_bits(libm::sin(x).to_bits() + 1)

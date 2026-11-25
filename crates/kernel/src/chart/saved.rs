@@ -1,74 +1,76 @@
-//! Saved charts (R-475 S1 to S3, L4 to L6; R-513 Q1 to Q3; R-473 J9; chart_reference §1.1, "Twelve is the full count;
+//! Saved charts (chart_reference §1.1, "Twelve is the full count;
 //! Save view as chart commits"): "Save view as chart" commits the current view as a chart of its own, which can be
 //! tilted and sliced like any other, so tilts compose.
 //!
 //! **A latent view** ([`Saved::Oblique`]) is saved as the oblique chart `(z₀, q₁, q₂)`, the stored vectors exactly as
 //! the view held them, never re-orthonormalised (under Lean each axis the pair may be skewed, and is kept so), its axes
-//! affine: reopened, it is the [`Latent`] chart on those vectors, so it decodes the saved view bit for bit (S3, L6).
+//! affine: reopened, it is the [`Latent`] chart on those vectors, so it decodes the saved view bit for bit.
 //!
-//! **A curved view** ([`Saved::Curved`], [`Curved`]) is saved as its parent chart, its id and params (R-475 L5,
-//! REQ-CHART-073): its registry id, and the chart value by value, the hidden coordinates' values at the slice centre
+//! **A curved view** ([`Saved::Curved`], [`Curved`]) is saved as its parent chart, its id and params: its
+//! registry id, and the chart value by value, the hidden coordinates' values at the slice centre
 //! among its params ([`ParentParams`]), so the definition alone decodes the view ([`Curved::open`]) and a parent with
 //! other params is refused ([`Curved::reopen`]); its centre `s` in the parent's own parameters and its tilt, the
 //! stored angles, targets and map with the targets' slider spans; `R` is recomputed from them ([`TiltSpec::columns`],
-//! [`TiltSpec::inputs`]; R-474 R3). Its own parameters are the saved
-//! view's window offsets from `s`, so a new tilt `R′` acts on them first and the saved `R` after ([`Composed`]; L5,
-//! R-513):
+//! [`TiltSpec::inputs`]). Its own parameters are the saved
+//! view's window offsets from `s`, so a new tilt `R′` acts on them first and the saved `R` after ([`Composed`]):
 //! - `(u′, v′, e′) = R′·(ũ, ṽ, 0)`, `(ũ, ṽ)` the pixel's offset from the view's centre `c`, which is also the new
-//!   tilt's pivot (R-473 J7), and `e′` the new offsets;
+//!   tilt's pivot, and `e′` the new offsets;
 //! - `(Δa, Δb, d̃) = R·(u′ + c − s, v′, w)` (`v′` likewise offset), `w` the new offset on a saved target, entering
-//!   `R` at that target's input (Q1), so into the saved target the rotations compose, `R·R′·(u, v, 0)` (option (b)),
+//!   `R` at that target's input, so into the saved target the rotations compose, `R·R′·(u, v, 0)`,
 //!   the offsets never added;
 //! - `(a, b) = s + (Δa, Δb)` through the parent's map exactly; `d̃` scaled by the saved target's slider span and added
 //!   to it; a new offset on any other target scaled by its own span and added to that target, which is the block
-//!   composition `(R ⊕ 1)·(1 ⊕ R′)` in `(a, b, d_saved, d_new)` (REQ-CHART-073).
+//!   composition `(R ⊕ 1)·(1 ⊕ R′)` in `(a, b, d_saved, d_new)`.
 //!
-//! Both rotations act in R-507 U1's scaled coordinates (Q2): the parent's parameters in units of their full range at
+//! Both rotations act in the tilt's scaled coordinates: the parent's parameters in units of their full range at
 //! zoom 1, as on any tilted chart, and each hidden offset in units of its target's slider span, the saved target's
 //! own in `R`'s input, so `R·R′` composes in one scaled space and nothing reads the zoom.
 //!
-//! **Reopened untilted, bitwise** (S3, Q3, R-473 J6). At `τ′ = 0` the new tilt takes no path and the saved chart is
+//! **Reopened untilted, bitwise.** At `τ′ = 0` the new tilt takes no path and the saved chart is
 //! [`Tilted`] on the parent under the saved tilt, the arithmetic of the view it was saved from; with the saved tilt
 //! itself zero, the parent's own.
 //!
-//! **A saved Lean each axis view with one target and both angles set** (R-895, ruling RQ-746 (a); REQ-CHART-149): its
+//! **A saved Lean each axis view with one target and both angles set**: its
 //! columns `û₁`, `û₂` are skewed, no rotation's, and a new offset on its target enters `R`'s third input `t̂`, the
-//! saved plane's unit normal `û₁ × û₂` normalised, its sign toward `+e_X` ([`TiltSpec::inputs`]): R-513's `R·R′`
-//! literally, `R = [û₁ û₂ t̂]`, the composition no rotation, as the saved map is none. So the saved target is offered there too (R-513 Q3).
+//! saved plane's unit normal `û₁ × û₂` normalised, its sign toward `+e_X` ([`TiltSpec::inputs`]): `R·R′`
+//! literally, `R = [û₁ û₂ t̂]`, the composition no rotation, as the saved map is none. So the saved target is offered
+//! there too.
 //!
 //! **What is refused** (`None` from [`Composed::new`]): a new tilt into the target of a saved Lean each axis view at
-//! RQ-471's corner, `|τ₁| = |τ₂| = 90°` with one target, which has no frame (R-554's `ray-degenerate`; R-895); and a
-//! composition whose offsets land on more than two hidden coordinates, which one [`Shift`] cannot carry
-//! (REQ-CHART-148, built by TASK-M2-55). Saving a saved chart again, the chain `R·R′·R″`, and the composed chart's
-//! area weight and the shape sphere's repeat counting are TASK-M2-55's too (REQ-CHART-148); meanwhile
+//! the rank-losing corner, `|τ₁| = |τ₂| = 90°` with one target, which has no frame (`ray-degenerate`); and a
+//! composition whose offsets land on more than two hidden coordinates, which one [`Shift`] cannot carry.
+//! Saving a saved chart again, the chain `R·R′·R″`, and the composed chart's area weight and the shape sphere's repeat
+//! counting are not built yet; meanwhile
 //! [`Saved::curved`] refuses a saved or tilted chart as a parent by type ([`SaveParent`]), never saving it without its
 //! tilt.
 //!
 //! **The serialisation** ([`Saved::to_words`], [`Saved::from_words`]): the definition as [`WORDS`] doubles, by value,
-//! so it reads back bit for bit (R-483 H3); a saved chart carries no links (R-478). The words: the kind (2 oblique,
+//! so it reads back bit for bit; a saved chart carries no links. The words: the kind (2 oblique,
 //! 3 curved), then `z₀`, `q₁`, `q₂` for an oblique chart, the rest `+0`; or, for a curved one, the parent's registry
 //! index, `s`, `τ₁`, `τ₂`, the map (0 Tip as sheet, 1 Lean each axis), `X`, `Y` and the two spans, then the parent's
 //! [`PARAMS`] words ([`ParentParams`]): its form, which of its registry entry's charts it is, then its params, the
 //! rest `+0`. A word list that is not one of these, or holds a non-finite value, reads as `None`; params that are not
-//! the named parent's are refused on reopening. The layout is the kernel's own (applied per R-369); the export format
-//! is REQ-TOOL-065's and REQ-SYS-011's. *Was (TASK-M2-57):* "the kind (0 oblique, 1 curved)".
+//! the named parent's are refused on reopening. The plan is unclear on this layout; chose the kernel's own, because
+//! chart_reference §1.1 and the export format name what a saved chart carries, not how its words are laid out.
 //!
-//! **The version, and an old file converted on load** (R-898, R-919 Q3 (a); REQ-DEC-055; TASK-M2-57). Kinds 0 and 1
+//! **The version, and an old file converted on load.** Kinds 0 and 1
 //! are the same layouts written before latent `β` became periodic, their `z_β` made under a retired `β` link
 //! (`crate::decode::retired`); [`Saved::from_words`] refuses them, and [`Saved::load`] reads them, converting each
-//! stored `z_β` once, `z_β′ = L(z_β) − π/2` (R-1020), from the link the file pins (R-516), else from `sigmoid_beta`, the default it
+//! stored `z_β` once, `z_β′ = L(z_β) − π/2`, from the link the file pins, else from `sigmoid_beta`, the default it
 //! was made under, the assumption reported for the notice on load ([`Loaded::assumed`]). The converted definition
 //! writes the current kinds. The stored `z_β` words: an oblique chart's `z₀[1]`, and a curved chart's frozen `z_β`
 //! where its parent holds one, the invariant charts' `z_cfg[1]` and the mixed charts' `frozen[1]` ([`beta_word`]); no
 //! other parent stores a latent `z_β`. A definition whose plane runs along `z_β`, which the retired link made curved
-//! in the periodic coordinate, is refused rather than approximated by a plane (applied per R-369): an oblique chart
+//! in the periodic coordinate, is refused rather than approximated by a plane: an oblique chart
 //! with `q₁[1]` or `q₂[1]` nonzero, a mixed chart with a raw `z_β` axis, a curved chart tilted into `z_β`.
+//! A plane's components along `z_β` are directions, which the link cannot convert: such a plane is redefined in the
+//! new coordinates, not converted (dd_decoder §3.2, "How a stored value converts").
 //!
 //! **The parent's params** ([`ParentParams`]): each value field in declaration order, an enum as its index in
 //! declaration order ([`Mapping`], [`ShapeMap`]), a body or other index as itself; each type-level parameter as a
 //! code, ahead of the fields: a mixed axis's [`axis_code`] (its [`mixed::Coordinate`] and whether it is derived), an
 //! energy axis's [`Quantity`] index; a wrapped chart's params where the wrapper's field is. The link selection a chart
-//! is built for is never written: a saved chart carries no links (R-478); the links are `SimConfig`'s own group.
+//! is built for is never written: a saved chart carries no links; the links are `SimConfig`'s own group.
 
 use spirv_std::num_traits::Float;
 
@@ -108,13 +110,13 @@ const _: () = assert!(OBLIQUE_WORDS <= WORDS);
 #[derive(Clone, Copy)]
 #[repr(u32)]
 enum Kind {
-    /// An oblique chart written before TASK-M2-57, its `z_β` under a retired link.
+    /// An oblique chart written before latent `β` became periodic, its `z_β` under a retired link.
     // Built only by `Saved::load`, which is off the SPIR-V build; the variant stays there so the kinds keep their words
-    // (an index in declaration order), so the SPIR-V build's dead-code lint is allowed on it (R-197).
+    // (an index in declaration order), so the SPIR-V build's dead-code lint is allowed on it.
     #[cfg_attr(target_arch = "spirv", allow(dead_code))]
     RetiredOblique,
-    /// A curved chart written before TASK-M2-57, its `z_β` under a retired link.
-    // As `RetiredOblique` (R-197).
+    /// A curved chart written before latent `β` became periodic, its `z_β` under a retired link.
+    // As `RetiredOblique`.
     #[cfg_attr(target_arch = "spirv", allow(dead_code))]
     RetiredCurved,
     /// An oblique chart.
@@ -148,7 +150,7 @@ pub enum Form {
     Third,
 }
 
-/// A saved curved view: its parent, slice centre and tilt (R-475 S2, L5).
+/// A saved curved view: its parent, slice centre and tilt.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Curved {
     /// The parent chart's index in [`REGISTRY`].
@@ -157,7 +159,7 @@ pub struct Curved {
     pub centre: [f64; 2],
     /// The saved tilt: the stored angles, the map and the targets.
     pub tilt: TiltSpec,
-    /// The targets' slider spans (R-507 U1).
+    /// The targets' slider spans.
     pub span: [f64; 2],
     /// The parent chart by value ([`ParentParams`]): its form, then its params, the rest `+0`.
     pub params: [f64; PARAMS],
@@ -251,7 +253,7 @@ impl Reader<'_> {
     }
 }
 
-/// A saved curved chart's parent, by value (R-475 L5; R-483 H3; the module's note): its params as words, in the
+/// A saved curved chart's parent, by value (the module's note): its params as words, in the
 /// layout the module's note gives, and back. Every [`SaveParent`] has it, and each chart a parent wraps.
 pub trait ParentParams: Sized {
     /// Which of its registry entry's charts the parent is: the charts that share a name ([`Chart::name`]) have
@@ -371,7 +373,7 @@ macro_rules! invariant_params {
 invariant_params!(InvariantLE, InvariantLK);
 
 /// The chart's, then each axis's mapping. The second form: the mapped chart shares its chart's name. The link
-/// selection `S` is not written: a saved chart carries no links (R-478).
+/// selection `S` is not written: a saved chart carries no links.
 impl<C: ParentParams, S> ParentParams for Mapped<C, S> {
     const FORM: Form = Form::Second;
     fn write(&self, w: &mut Writer<'_>) {
@@ -522,14 +524,14 @@ impl<C: ParentParams> ParentParams for RestStart<C, f64> {
 /// A chart [`Saved::curved`] takes as a parent: a bare chart, every [`Tiltable`] one and the latent chart (which it
 /// refuses, a latent view saving as an oblique chart). A tilted chart, a reopened saved one included, is not one: it
 /// names its parent ([`Chart::name`]), so saving it as a parent would drop its tilt, the saved `R` with it. Saving a
-/// saved chart again, the chain `R·R′·R″`, is TASK-M2-55's (R-475 S1, REQ-CHART-148).
+/// saved chart again, the chain `R·R′·R″`, is not built yet.
 pub trait SaveParent: Chart {}
 
 impl<C: Tiltable> SaveParent for C {}
 
 impl<P: Copy> SaveParent for Latent<P> {}
 
-/// A saved chart's definition (R-475 S2).
+/// A saved chart's definition.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Saved {
     /// A latent view, as the oblique chart `(z₀, q₁, q₂)`, the stored vectors exactly.
@@ -667,8 +669,8 @@ impl Saved {
 #[cfg(not(target_arch = "spirv"))]
 impl Saved {
     /// A saved file's words read (the module's note): a definition of the current kinds as it is; one written before
-    /// TASK-M2-57, kinds 0 and 1, converted from the retired `β` link `pinned`, the link the file pins (R-516), else
-    /// from [`ASSUMED`], `sigmoid_beta`, the assumption reported ([`Loaded::assumed`]). `None` where `words` is no
+    /// latent `β` became periodic, kinds 0 and 1, converted from the retired `β` link `pinned`, the link the file pins,
+    /// else from [`ASSUMED`], `sigmoid_beta`, the assumption reported ([`Loaded::assumed`]). `None` where `words` is no
     /// definition of either version, or an old one whose plane runs along `z_β` ([`Saved::converted`]).
     pub fn load(words: &[f64; WORDS], pinned: Option<RetiredLink>) -> Option<Loaded> {
         if let Some(saved) = Saved::from_words(words) {
@@ -686,8 +688,8 @@ impl Saved {
     }
 
     /// The definition with each stored `z_β`, made under the retired link `link`, converted to the periodic `β`
-    /// (`z_β′ = link(z_β) − π/2`, at f64; R-1020), everything else as it is; `None` where its plane runs along `z_β` (the module's
-    /// note).
+    /// (`z_β′ = link(z_β) − π/2`, at f64), everything else as it is; `None` where its plane runs along `z_β` (the
+    /// module's note).
     pub fn converted(&self, link: RetiredLink) -> Option<Self> {
         match *self {
             Saved::Oblique(mut chart) => {
@@ -714,7 +716,7 @@ pub struct Loaded {
     /// The definition, of the current kinds.
     pub saved: Saved,
     /// The retired `β` link an old file that pins none was converted from, for the notice on load naming the
-    /// assumption (R-919 Q3 (a)); `None` where the file is of the current kinds or pins its link.
+    /// assumption; `None` where the file is of the current kinds or pins its link.
     pub assumed: Option<RetiredLink>,
 }
 
@@ -847,8 +849,7 @@ pub struct Composed<P> {
 impl Composed<f64> {
     /// The saved tilt `saved` about `saved_centre`, spans `saved_span`, composed after the new tilt `new` about the view's
     /// centre `centre`, spans `span`. `None` where a new offset enters a saved target whose `R` has no input there, at
-    /// RQ-471's corner ([`TiltSpec::inputs`]; R-895), or where the offsets land on more than two hidden coordinates
-    /// (TASK-M2-55).
+    /// the rank-losing corner ([`TiltSpec::inputs`]), or where the offsets land on more than two hidden coordinates.
     pub fn new(
         saved: &TiltSpec,
         saved_centre: [f64; 2],
@@ -910,8 +911,7 @@ impl Composed<f64> {
 }
 
 impl<P: Float> Composed<P> {
-    /// The same composition with its params at the float `Q`, each rounded, as the kernel's uniform holds them (R-473
-    /// J5).
+    /// The same composition with its params at the float `Q`, each rounded, as the kernel's uniform holds them.
     pub fn at_precision<Q: Float>(&self) -> Composed<Q> {
         Composed {
             saved: tilt_at(&self.saved),

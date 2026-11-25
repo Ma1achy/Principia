@@ -1,26 +1,26 @@
-//! QA tests for TASK-M3-07, the regularisation axis, `none`, the pair table and the `dt_max` diagnostic, written from
+//! QA tests for the regularisation axis, `none`, the pair table and the `dt_max` diagnostic, written from
 //! the requirements and the contract text (integrator_contract Part 2a, Part 2b § "Every stepper × regularisation pair
 //! runs; …", Part 2b's step 8, Part 2c rule 4 and its `dt_max` definition), not from the implementation:
-//! - REQ-TOOL-039, REQ-TOOL-125 (`qa_m307_dt_max_edges`, `qa_m307_dt_max_property_f64`, `qa_m307_dt_max_property_f32`):
+//! - `qa_m307_dt_max_edges`, `qa_m307_dt_max_property_f64`, `qa_m307_dt_max_property_f32`:
 //!   the diagnostic against a model written here from Part 2c's definition: a step is usable when its exponent field
 //!   is not all ones, decided on its bits; every usable step is reported as it stands (zero, negative, subnormal, the
 //!   largest finite); the first usable step seeds the fold and a later one replaces it only where it compares greater;
 //!   the non-usable steps are counted; no usable step is the explicit sentinel. Over hand-picked edges and over
 //!   arbitrary bit patterns (NaN payloads of both signs, `±∞`, subnormals, signed zeros) at f64 and f32.
-//! - REQ-TOOL-039 (`qa_m307_no_usable_step_reads_apart_from_zero`): "no usable step" reads apart from a step of zero,
+//! - `qa_m307_no_usable_step_reads_apart_from_zero`: "no usable step" reads apart from a step of zero,
 //!   `+0.0` or `−0.0`, with or without skipped steps beside it (pitfalls §9).
-//! - REQ-TOOL-039 (`qa_m307_overflow_2_209e128`): the `2.209e128` overflow is reported as itself at f64, wherever it
+//! - `qa_m307_overflow_2_209e128`: the `2.209e128` overflow is reported as itself at f64, wherever it
 //!   falls in the march, and at f32, where it is `+∞`, skipped and counted.
-//! - REQ-INT-017's arm here (`qa_m307_pair_table_part_2b`, `qa_m307_cell_follows_time_transformation`): every pair is
+//! - The pair table (`qa_m307_pair_table_part_2b`, `qa_m307_cell_follows_time_transformation`): every pair is
 //!   selectable; the shipped table is Part 2b's, transcribed here, the measured-bad cells with note 2's warning and the
 //!   others none; on a synthetic table whose Heggie Eq. 20 and Eq. 22 cells differ for one pair (and logH's two modes),
 //!   the warning follows the time transformation in force.
-//! - REQ-INT-021 (`qa_m307_owns_time_mapping`): over every pair, and over the composed types, `owns_time_mapping ==
+//! - `qa_m307_owns_time_mapping`: over every pair, and over the composed types, `owns_time_mapping ==
 //!   (regularisation != none)`.
 //! - `none` (`qa_m307_none_is_the_stepper`): a stepper under `none` is the stepper's own `ADVANCE`, bit for bit, with a
 //!   cadence that stops the march early and over an empty span, at f64 and f32.
 //!
-//! Each check takes the code under test as a function, so its negative control (R-176) runs the same check on a faulty
+//! Each check takes the code under test as a function, so its negative control runs the same check on a faulty
 //! one.
 
 use kernel::driver::advance::{Advance, AdvanceParams, AdvanceReal, Advanced, Cadence};
@@ -425,7 +425,7 @@ negative_control!(
     check_property32(negative_nan_uncounted)
 );
 
-// ── REQ-TOOL-039: no usable step reads apart from a step of zero ───────────────────────────────────────────────────
+// ── No usable step reads apart from a step of zero ─────────────────────────────────────────────────────────────────
 
 const APART: &str = "no usable step must read apart from a step of zero";
 
@@ -470,7 +470,7 @@ negative_control!(
     check_apart(seeded_at_zero)
 );
 
-// ── REQ-TOOL-039: the 2.209e128 overflow is reported ───────────────────────────────────────────────────────────────
+// ── The 2.209e128 overflow is reported ─────────────────────────────────────────────────────────────────────────────
 
 const OVER: &str = "the 2.209e128 overflow must be reported";
 
@@ -533,7 +533,7 @@ negative_control!(
     check_overflow(drops_huge, kernel32)
 );
 
-// ── REQ-INT-017's arm: the pair table ──────────────────────────────────────────────────────────────────────────────
+// ── The pair table ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 const EULER: Selection = Selection::Debug(DebugOccupant::Euler);
 const KDK: Selection = Selection::Production(Occupant::Kdk);
@@ -713,7 +713,7 @@ negative_control!(
     check_follows(by_pair_alone)
 );
 
-// ── REQ-INT-021: owns_time_mapping ─────────────────────────────────────────────────────────────────────────────────
+// ── owns_time_mapping ──────────────────────────────────────────────────────────────────────────────────────────────
 
 const OWNS: &str = "owns_time_mapping must be (regularisation != none)";
 

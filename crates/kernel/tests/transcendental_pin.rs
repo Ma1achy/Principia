@@ -1,8 +1,8 @@
-//! The pin's enforcement (R-991, REQ-CHART-212): every f64 transcendental the CPU chart evaluator reaches goes through
+//! The pin's enforcement: every f64 transcendental the CPU chart evaluator reaches goes through
 //! the pinned libm, by [`kernel::Real`]'s methods, so no `Float::` or inherent transcendental may stand in the
 //! evaluator's source outside `src/real.rs`'s `Real` items (the trait and its two impls), `sqrt` excepted (IEEE 754
 //! rounds it correctly on every platform). A source scan in the `discipline_lint` style, not a clippy
-//! `disallowed-methods` entry, which would be lint configuration (R-197).
+//! `disallowed-methods` entry, which would be a change to the workspace's lint configuration.
 //!
 //! - `transcendental_pin`: the evaluator's source holds no stray transcendental; its control plants a `Float::sin`.
 //! - `platform_maths`: the production crates (engine, render, gui, prin, ledger) and the kernel's integrator layers
@@ -14,8 +14,8 @@
 //!   `Real` methods, a longer name, a field); its control is a scan that reads comments as code.
 //!
 //! **The evaluator's source** is `crates/kernel/src`, every file, but for the integrator's layers, which the chart
-//! evaluator does not reach (R-926: the CPU evaluates charts, the integrator only integrates records): `driver/`,
-//! `occupant/`, `physics/`, `regularisation/`, `detect/` and `payload/` (applied per R-369: the scan's scope). A file
+//! evaluator does not reach (the CPU evaluates charts, the integrator only integrates records): `driver/`,
+//! `occupant/`, `physics/`, `regularisation/`, `detect/` and `payload/`. A file
 //! added anywhere else is scanned. With it, the CPU evaluator's entry, `crates/engine/src/decode_dispatch.rs`
 //! (`decode_only_with`), labelled `engine/decode_dispatch.rs`; the rest of the engine calls the evaluator and is not
 //! reached by it.

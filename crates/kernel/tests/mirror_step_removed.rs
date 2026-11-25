@@ -1,8 +1,8 @@
-//! The decoder's mirror step removed, latent `β` over the full circle (R-865, R-898, R-1020; REQ-DEC-055; dd_decoder
-//! §3.2 and §3.3, dd_encode §3.2), under the offset link `β = z_β + π/2`:
+//! The decoder's mirror step removed, latent `β` over the full circle (dd_decoder §3.2 and §3.3,
+//! dd_encode §3.2), under the offset link `β = z_β + π/2`:
 //! - `mirror_step_removed_lower_half`: a lower-half state, `β ∈ (π, 2π)`, moved by a random gauge without the mirror,
-//!   encodes to `β ∈ (π, 2π)`, `z_β ∈ (π/2, 3π/2)`, and decodes back to itself within REQ-ENC-024's `ε_phys` in `‖·‖_phys`, `L_z`'s sign
-//!   kept, not to its mirror image. Control: the mirror step left in fails.
+//!   encodes to `β ∈ (π, 2π)`, `z_β ∈ (π/2, 3π/2)`, and decodes back to itself within the round trip's `ε_phys` in
+//!   `‖·‖_phys`, `L_z`'s sign kept, not to its mirror image. Control: the mirror step left in fails.
 //! - `mirror_step_removed_syzygy_trace`: a latent-chart trace through a syzygy at `β = 0` (`z_β = −π/2`) and at
 //!   `β = π` (`z_β = π/2`), the samples'
 //!   encoded `z_β` each placed on the lift nearest the previous sample's (`kernel::encode::by_kind::nearest_lift`), the
@@ -24,7 +24,7 @@ use validation::roundtrip::{eps_phys, phys};
 
 const PI: f64 = std::f64::consts::PI;
 
-/// The offset link's `π/2` at f64 (R-1020).
+/// The offset link's `π/2` at f64.
 const C: f64 = std::f64::consts::FRAC_PI_2;
 
 /// An encode under test, from a state to its `z`: the kernel's, or a control's.
@@ -194,7 +194,7 @@ negative_control!(
     }
 );
 
-/// The encode's representative (inverse_encode_contract Part 1's T2; dd_decoder § 3.2; R-1020): over states on the
+/// The encode's representative (inverse_encode_contract Part 1's T2; dd_decoder § 3.2): over states on the
 /// whole circle, each in a random gauge without the mirror, and the two half-axes and the pole, `enc`'s `z_β` lies in
 /// `[−c, 3c]`, `c = π̂/2`, the offset link's inverse of the signed `β ∈ [0, 2π̂]`; the `+x` half-axis and the pole give
 /// `−c`, the `−x` half-axis `c`, exactly. Returns the extremes met.

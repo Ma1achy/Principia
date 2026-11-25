@@ -1,5 +1,5 @@
 //! The FTLE shadow's joint step on the default occupant, Heggie × RK4 (`kernel::regularisation::heggie_joint`;
-//! R-974, R-560; dd_integrator §3.8, "Heggie × RK4's joint step and its displacement"; REQ-VAL-355), TASK-M3-74:
+//! dd_integrator §3.8, "Heggie × RK4's joint step and its displacement"):
 //! - `displacement_shadow_same_time`: on a joint-step run, at every renormalisation the shadow's elapsed physical time
 //!   equals the sample's, bit for bit, at f32 and f64, on three orbits, the clocks having moved apart between;
 //!   control: a renormalisation that rescales without resynchronising, the shadow advanced by the sample's `Δτ` alone.
@@ -18,7 +18,7 @@
 //! - `displacement_shadow_rescale`: the rescaled displacement's `‖J·δy‖` is `δ₀`, its `δt` scaled, its `δh` the rescaled
 //!   shadow's energy offset; control: `δh` kept from before the rescale.
 //!
-//! Each test has a registered negative control naming the panic it expects (R-176).
+//! Each test has a registered negative control naming the panic it expects.
 
 use kernel::driver::benettin::offset;
 use kernel::occupant::State;
@@ -89,7 +89,7 @@ fn tiny<R: P>() -> R {
     R::of(1e-30)
 }
 
-/// `s` registered under Heggie's default time transformation (Eq. 22, R-161).
+/// `s` registered under Heggie's default time transformation (Eq. 22).
 fn registered<R: P>(s: &State<f64>) -> HgRegistered<R> {
     register(&cast::<R>(s), tiny(), DEFAULT_TIME)
 }

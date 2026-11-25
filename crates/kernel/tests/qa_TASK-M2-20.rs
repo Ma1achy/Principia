@@ -1,4 +1,4 @@
-//! QA tests for TASK-M2-20 (REQ-ENC-025, REQ-VAL-014), written from inverse-encode contract Part 4, "The conditioning
+//! QA tests for the encode's conditioning number, written from inverse-encode contract Part 4, "The conditioning
 //! number `κ`", not from `kernel::encode::ingest`'s code.
 //!
 //! - **The section identity.** On the section `E ∘ D` is the identity, so `J_E(D(z))·J_D(z) = I` (Part 4, "The
@@ -10,7 +10,7 @@
 //! - **The lower bound.** Hence `κ(D(z)) ≥ 1/σ_min(W·J_D(z))`: checked on interior states of the section, the
 //!   canonical representatives of the Lagrange, Burrau and light starts and on hand-picked `z`.
 //!
-//! **Tolerances** (applied per R-369, the test's decisions): both Jacobians are Part 4's central differences at
+//! **Tolerances** (the test's own): both Jacobians are Part 4's central differences at
 //! `hₖ = ε^{1/3}·max(1, |·ₖ|)`, whose truncation and rounding errors are each `O(ε^{2/3})` relative to the entries
 //! they difference. The checks allow `ε^{1/3}` (≈ 6·10⁻⁶), the step itself, relative to the two factors' norms: the
 //! identity's worst entry was measured at 10⁻¹¹ to 6·10⁻¹⁰ of that product at the interior points and 7·10⁻⁸ at the

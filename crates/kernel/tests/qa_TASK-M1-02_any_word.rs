@@ -1,9 +1,9 @@
-//! QA tests for TASK-M1-02, second round: the decode and `fgw_symbol` on any `[u32; 4]`, every `length_raw` 0…127,
+//! QA tests: the decode and `fgw_symbol` on any `[u32; 4]`, every `length_raw` 0…127,
 //! each held to an independent reference written from payload §3 alone (dd_simstate_payload), not to each other.
 //!
 //! Payload §3's Horner recurrence `W₁ = d₀, W_{k+1} = 3·W_k + e_k` makes a word of length `L` the integer
 //! `W = d₀·3^{L−1} + Σ e_k·3^{L−1−k}`: digit `e_k` is `⌊W / 3^{L−1−k}⌋ mod 3`, and `d₀` is `⌊W / 3^{L−1}⌋`, a symbol code
-//! masked to 2 bits as R-321 masks every symbol input. The reference reads them that way in a u128 (`W` < 2¹²¹), and
+//! masked to 2 bits as every symbol input is masked. The reference reads them that way in a u128 (`W` < 2¹²¹), and
 //! replays the digits through payload §3's frozen `cont_symbol[e][prev]` table. The retained prefix is `length_raw`,
 //! 127 clamped to 76 (payload §3, §6).
 //!
@@ -12,7 +12,7 @@
 //!
 //! In both, `fgw_decode` yields exactly the retained prefix's length, then `None`, and equals the reference symbol by
 //! symbol; `fgw_symbol(w, k)` equals it at every `k` and is `FGW_NO_SYMBOL` at and past the length. Each check takes
-//! the decode and the symbol accessor as function pointers; its negative control (R-176) runs it on a variant with one
+//! the decode and the symbol accessor as function pointers; its negative control runs it on a variant with one
 //! fault.
 
 #[cfg(feature = "controls")]
@@ -188,7 +188,7 @@ fn word_any_qa_every_length() {
     check_every_length(decode, fgw_symbol);
 }
 
-/// `fgw_symbol` reading `d₀` without its 2-bit mask, `W`'s top digits beyond it leaking in: R-321's mask dropped.
+/// `fgw_symbol` reading `d₀` without its 2-bit mask, `W`'s top digits beyond it leaking in: the mask dropped.
 #[cfg(feature = "controls")]
 fn symbol_unmasked(w: [u32; 4], k: u32) -> u32 {
     let s = fgw_symbol(w, k);

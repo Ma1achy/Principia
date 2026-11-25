@@ -1,4 +1,4 @@
-//! The escape rule, selectable as the integrators are (TASK-M3-34): a type the wrapper's cadence is generic over
+//! The escape rule, selectable as the integrators are: a type the wrapper's cadence is generic over
 //! (`crate::driver::cadence::WrapperCadence<R, E>`), so a march names its rule as it names its occupant, and a build
 //! compiles only the rules it instantiates. The default is [`DefaultRule`], [`Fewbody`].
 //!

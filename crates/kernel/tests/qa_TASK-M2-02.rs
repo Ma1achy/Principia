@@ -1,41 +1,40 @@
-//! QA tests for TASK-M2-02 (`kernel::decode`: the latent type, `D_mass`, `D_cfg`), written from the requirements and
-//! dd_decoder §3.1, §3.2 and §5, not from the implementation. Each check runs at the f64 and the f32 instantiation
-//! natively (R-265), behind function pointers, so each negative control (R-176) runs the same check on a deliberately
-//! broken block.
+//! QA tests for `kernel::decode`'s latent type, `D_mass` and `D_cfg`, written from dd_decoder §3.1, §3.2 and §5, not
+//! from the implementation. Each check runs at the f64 and the f32 instantiation natively, behind function pointers,
+//! so each negative control runs the same check on a deliberately broken block.
 //!
-//! - REQ-SYS-010: the latent type is exactly 8 controls, `z[0:2]` config, `z[2:6]` momentum, `z[6:8]` mass; the
+//! - The latent type is exactly 8 controls, `z[0:2]` config, `z[2:6]` momentum, `z[6:8]` mass; the
 //!   config block's output does not depend on the masses' controls (dd_decoder §5 test 2) and is in the canonical
 //!   frame, `ρ̃` exactly on `+x`.
-//! - REQ-DEC-010: the masses are `softmax(0, μ₁, μ₂)`, `μₖ = μ_max·tanh(z_μk)`, `μ_max = 5` (R-10), evaluated here in
+//! - The masses are `softmax(0, μ₁, μ₂)`, `μₖ = μ_max·tanh(z_μk)`, `μ_max = 5`, evaluated here in
 //!   f64 from the formula; `z_μ = 0` gives `(⅓, ⅓, ⅓)`; the Burrau masses 3, 4, 5 (and a second, unsymmetric
 //!   triple) give `(c, b, a)/(a+b+c)`; `Σmᵢ = 1`.
-//! - REQ-DEC-011 (with REQ-DEC-039's ε): the tag is `M01_TINY` exactly when `m₀ + m₁ < ε`, strict, over fuzzed
+//! - The tag is `M01_TINY` exactly when `m₀ + m₁ < ε`, strict, over fuzzed
 //!   `z_μ` with saturation, over simplex points set directly (the ternary plot, the δm strip), and at `ε` and its
 //!   neighbours; tagged outputs keep the link's masses, finite, and their configuration decodes finite with `I = 1`;
 //!   `stick_breaking`'s `m₂ → 1` corner reaches the tag from finite `z`; `softmax_tanh` stays above its `M₀₁` floor.
-//!   ε is the chart constant `ε_M01` read from dd_decoder §3.1's text (REQ-DEC-039's proposal, REQ-DEC-009), never
+//!   ε is the chart constant `ε_M01` read from dd_decoder §3.1's text, never
 //!   from the block: the block's `m01_epsilon` must equal it, and every tag is checked against it. The corner's
 //!   pile-up `ε_μ − ε_μ²/4` (dd_generation_root §3.9) sits at least tenfold below ε and outside the f32 rounding band
 //!   (§3.1, "a tenfold margin at either precision"); on the diagonal the onset of the tag, at f64 and at f32, is where
 //!   §3.9's `stick_breaking` formula, evaluated here in f64, crosses ε, within that precision's rounding band
 //!   ([`K_SB`]); and over `z_μ ∈ [3, 20]²` the f64 and f32 blocks give the same tag wherever the formula's `M₀₁` lies
 //!   outside the f32 band.
-//! - REQ-DEC-012: `α = (π/2)σ(z_α)`, `β = z_β + π/2` (the periodic link, an angle over the full circle; *was:*
-//!   "`β = πσ(z_β)`", the retired link's), `ρ̃ = cos α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)` against the formula in
+//! - `α = (π/2)σ(z_α)`, `β = z_β + π/2` (the periodic link, an angle over the full circle, not the
+//!   retired link's `β = πσ(z_β)`), `ρ̃ = cos α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)` against the formula in
 //!   f64; `z = 0` gives `α = π/4`, `β = π/2`, `‖ρ̃‖ = ‖λ̃‖`; `‖ρ̃‖² + ‖λ̃‖² = 1`; `α`'s range, `β` finite.
-//! - REQ-DEC-013: `r₁ − r₀ = ρ`, `r₂ − r₀₁ = λ`, CoM `= 0`, `I = 1`, and decoder test 6 (from the emitted `(m, rᵢ)`
+//! - Reconstruction: `r₁ − r₀ = ρ`, `r₂ − r₀₁ = λ`, CoM `= 0`, `I = 1`, and decoder test 6 (from the emitted `(m, rᵢ)`
 //!   alone, §3.2's definitions give back `α`, `β` and `R̃ = 1`), over link-produced and directly set masses.
-//! - REQ-DEC-015: decoder test 9, over a fine `z_α` sweep at several mass points, skewed and tagged ones included.
-//! - REQ-INT-002: `G = 1`, `M = 1`, `I = 1`.
+//! - The `α` orientation: decoder test 9, over a fine `z_α` sweep at several mass points, skewed and tagged ones
+//!   included.
+//! - Units: `G = 1`, `M = 1`, `I = 1`.
 //!
-//! **Tolerances.** Test 1's `Σmᵢ`, CoM and `I` and test 6's are REQ-DEC-044 (calibrated; the PR's proposal, pending
-//! the M2 gate): `Σmᵢ − 1` within 4 eps, the CoM within 4 eps of `Σmᵢ‖rᵢ‖`, `I − 1` within 8 eps, and test 6's
+//! **Tolerances.** Test 1's `Σmᵢ`, CoM and `I` and test 6's are calibrated (proposed values, pending the M2
+//! gate): `Σmᵢ − 1` within 4 eps, the CoM within 4 eps of `Σmᵢ‖rᵢ‖`, `I − 1` within 8 eps, and test 6's
 //! `|R̃ − 1|`, `|Δα|`, `sin α·|Δβ|` and `|ρ̃_y|` within 8 eps, `eps` the precision's machine epsilon. The checks of
 //! the formulae against an f64 evaluation have no calibration requirement: their bounds are the round-off of the
 //! operations the formula names, each derived beside its constant, never fitted. The f32 behaviour at a saturated
-//! `α` or `β` is ruled by R-417 (dd_decoder §3.2): the f32 images of `π/2` and `π` are generated rounded toward
-//! zero, so the range is closed at the exact bounds. That exact-bound check lands with the rounded-down constants
-//! (TASK-M2-30, and TASK-M2-03's `decode_ranges`), not here, since this task does not depend on TASK-M2-30; the
+//! `α` or `β` follows dd_decoder §3.2: the f32 images of `π/2` and `π` are generated rounded toward zero, so the
+//! range is closed at the exact bounds. That exact-bound check is in `decode_ranges` (decode_join.rs), not here; the
 //! ranges here are asserted closed against the precision's own `π/2` and `π` on the whole domain, which holds under
 //! either constant, and open only on the interior.
 
@@ -102,7 +101,7 @@ impl Fp for f32 {
     }
 }
 
-// ── REQ-DEC-044's proposed tolerances, in eps ───────────────────────────────────────────────────────────────────
+// ── The proposed tolerances, in eps ─────────────────────────────────────────────────────────────────────────────
 
 /// Test 1, `Σmᵢ = 1`.
 const TOL_SUM: f64 = 4.0;
@@ -113,7 +112,7 @@ const TOL_I: f64 = 8.0;
 /// Test 6, the reconstruction inverse.
 const TOL_INV: f64 = 8.0;
 
-/// `μ_max`, R-10.
+/// `μ_max`.
 const MU_MAX: f64 = 5.0;
 
 // ── The blocks under test ───────────────────────────────────────────────────────────────────────────────────────
@@ -152,7 +151,7 @@ fn stick<R: Fp>() -> Blocks<R> {
     blocks::<Stick, R>("stick_breaking")
 }
 
-// ── The domain: any finite z (R-407) ────────────────────────────────────────────────────────────────────────────
+// ── The domain: any finite z ────────────────────────────────────────────────────────────────────────────────────
 
 /// One control at precision `R`: the centre, the transition, saturation, and log-uniform magnitudes up to the
 /// precision's largest finite value. Drawn as `R`, so the f64 reference sees exactly the control the block saw.
@@ -228,7 +227,7 @@ fn fixed_pairs<R: Fp>() -> Vec<[f64; 2]> {
         .collect()
 }
 
-// ── REQ-SYS-010: the latent type ────────────────────────────────────────────────────────────────────────────────
+// ── The latent type ─────────────────────────────────────────────────────────────────────────────────────────────
 
 type Acc<const N: usize> = fn(&Latent<f64>) -> [f64; N];
 
@@ -346,7 +345,7 @@ negative_control!(
     })
 );
 
-// ── REQ-DEC-010: the mass block ─────────────────────────────────────────────────────────────────────────────────
+// ── The mass block ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `softmax(0, μ₁, μ₂)`, `μₖ = μ_max·tanh(zₖ)`, in f64.
 fn masses_ref(z: [f64; 2]) -> [f64; 3] {
@@ -400,7 +399,7 @@ fn qa_mass_formula() {
     check_mass_all(defaults::<f32>());
 }
 
-/// The IC Inspector's uncorrected `μ_max = 4` (R-10).
+/// The IC Inspector's uncorrected `μ_max = 4`.
 #[cfg(feature = "controls")]
 struct MuMaxFour;
 
@@ -496,12 +495,12 @@ negative_control!(
     })
 );
 
-// ── REQ-DEC-011: M01_TINY ───────────────────────────────────────────────────────────────────────────────────────
+// ── M01_TINY ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// `ε_μ`, REQ-DEC-009.
+/// `ε_μ`.
 const EPS_MU: f64 = 1e-6;
 
-/// The `ε_M01` dd_decoder §3.1 states (REQ-DEC-039's proposal, provisional until the M2 gate): the number after
+/// The `ε_M01` dd_decoder §3.1 states (provisional until the M2 gate): the number after
 /// "`ε_M01 = 10" in §3.1's text, its exponent in superscript digits.
 fn doc_eps_m01() -> f64 {
     static EPS: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
@@ -546,7 +545,7 @@ fn eps_m01<R: Fp>() -> R {
     R::of(doc_eps_m01())
 }
 
-/// The block's threshold is §3.1's `ε_M01` at both precisions (REQ-DEC-039, REQ-DEC-009), not `ε_μ`.
+/// The block's threshold is §3.1's `ε_M01` at both precisions, not `ε_μ`.
 fn check_eps(doc: f64) {
     assert!(
         mass::m01_epsilon::<f64>() == doc && mass::m01_epsilon::<f32>() == doc as f32,
@@ -761,7 +760,7 @@ negative_control!(
     check_reach(defaults::<f64>(), defaults::<f64>())
 );
 
-// ── REQ-DEC-039: ε_M01's margin, the onset, the two precisions ──────────────────────────────────────────────────
+// ── ε_M01's margin, the onset, the two precisions ───────────────────────────────────────────────────────────────
 
 /// `stick_breaking`'s `M₀₁ = m₀ + m₁ = (1 − s) + s(1 − u)` from dd_generation_root §3.9's formula, in f64, with
 /// `1 − s` and `1 − u` in §3.9's stable forms `σ(−2z) + ½ε_μ·tanh z`: no cancellation, so its relative error is a
@@ -942,7 +941,7 @@ negative_control!(
     check_precisions(sb_tag::<f64>, sb_tag_eps_mu)
 );
 
-// ── REQ-DEC-012: the configuration block ────────────────────────────────────────────────────────────────────────
+// ── The configuration block ─────────────────────────────────────────────────────────────────────────────────────
 
 fn sigma(x: f64) -> f64 {
     1.0 / (1.0 + (-x).exp())
@@ -1101,7 +1100,7 @@ negative_control!(
     >("narrow_beta"))
 );
 
-// ── REQ-DEC-013: reconstruction ─────────────────────────────────────────────────────────────────────────────────
+// ── Reconstruction ──────────────────────────────────────────────────────────────────────────────────────────────
 
 fn norm(v: [f64; 2]) -> f64 {
     v[0].hypot(v[1])
@@ -1260,7 +1259,7 @@ negative_control!(
     })
 );
 
-// ── REQ-DEC-015: the α orientation ──────────────────────────────────────────────────────────────────────────────
+// ── The α orientation ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// Decoder test 9: over a `z_α` sweep (α from near 0 to near π/2, within the range where the precision still
 /// resolves a step in `cos α` and `sin α`), `‖r₁ − r₀‖` falls and `‖λ‖` rises strictly, so the largest separation and
@@ -1366,7 +1365,7 @@ negative_control!(
     })
 );
 
-// ── REQ-INT-002: units ──────────────────────────────────────────────────────────────────────────────────────────
+// ── Units ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
 fn check_units(g: f64, m: f64, i: f64) {
     assert!(

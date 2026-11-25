@@ -1,6 +1,6 @@
-//! QA (TASK-M4-27; REQ-VAL-347): the `INVARIANT_INFEASIBLE` read-back's sign flags, packed into one word (`flat` 1,
+//! QA: the `INVARIANT_INFEASIBLE` read-back's sign flags, packed into one word (`flat` 1,
 //! `negative` 2, `moving` 4, `branch_read`'s `FeasibilityBits`), keep each flag in its own bit. The comparison reads a
-//! branch's input bits word for word across backends (REQ-VAL-347; pitfalls §9: no check whose output set excludes the
+//! branch's input bits word for word across backends (pitfalls §9: no check whose output set excludes the
 //! fork it guards), so two flag triples that pack to the same word would hide a fork in the flags. At the canonical
 //! `I = 1`: `flat` is `K* = ±0`, `negative` is `K*`'s sign bit, `moving` is `L_z ≠ 0` (`decode/invariant.rs`,
 //! `Feasibility`). The eight triples are reached at `K* ∈ {1, −1, +0, −0}`, `L_z ∈ {0, 1}`; each word is a literal, and

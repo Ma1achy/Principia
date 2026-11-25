@@ -1,20 +1,20 @@
 //! The shape sphere's `system_image` and label, and the exponential map's cap and count
-//! (`kernel::chart::shape_sphere`; chart_reference §3.3; R-503, R-544; TASK-M2-28).
+//! (`kernel::chart::shape_sphere`; chart_reference §3.3).
 //! - `exp_map_system_image_one_hemisphere`: caps inside `w ≥ 0`, inside `w ≤ 0`, and touching the equator from one
-//!   side, from above and from below, report bijective, every pixel of the cap counted once (REQ-CHART-075).
+//!   side, from above and from below, report bijective, every pixel of the cap counted once.
 //! - `exp_map_system_image_straddling`: a straddling cap on a grid symmetric under `w → −w` (`n₀` on the equator,
 //!   `e₂ = ŵ`, odd `N`, `s√2 < π`) reports bijective; every pixel of both halves is its own system, each `w < 0` pixel
 //!   and its mirror `(i, N − 1 − j)` two, the middle row's computed `w` ±0.0 and each of its pixels counted once, and
-//!   the counted total is `N²` (REQ-CHART-075).
+//!   the counted total is `N²`.
 //! - `exp_map_system_image_domain_end`: on the same grid with `s√2·(N − 1)/N > π`, every pixel centre more than `10⁻⁶`
 //!   from `r = π`, the total is the number of pixels with `r ≤ π`, enumerated from `r` alone, and each pixel past
-//!   `r = π` is the domain's end (REQ-CHART-075).
+//!   `r = π` is the domain's end.
 //! - `exp_map_system_image_antipode`: pixels exactly on `r = π` are one system, `−n₀`, and count once together, about
-//!   a centre in either hemisphere or on the equator (REQ-CHART-078).
+//!   a centre in either hemisphere or on the equator.
 //! - `shape_sphere_label`: the label of either map names no hemisphere and flags no redundancy: the whole sphere, or
-//!   the cap, bijective (REQ-CHART-002).
+//!   the cap, bijective.
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use kernel::chart::shape_sphere::{pixel_centre, PixelCount, ShapeMap, ShapeSphere};
 use kernel::chart::SystemImage;
@@ -57,7 +57,7 @@ fn polar_cap(sign: f64, scale: f64) -> ShapeSphere<f64> {
     exp_chart([0.0, 0.0, sign], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], scale)
 }
 
-/// The symmetric grid's chart (R-503, review rounds 1 and 2): `n₀ = x̂` on the equator, `e₁ = ŷ`, `e₂ = ŵ`, so the
+/// The symmetric grid's chart: `n₀ = x̂` on the equator, `e₁ = ŷ`, `e₂ = ŵ`, so the
 /// mirror `w → −w` is `(u, v) ↔ (u, 1 − v)`.
 fn symmetric(scale: f64) -> ShapeSphere<f64> {
     exp_chart([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0], scale)
@@ -279,7 +279,7 @@ negative_control!(
     }
 );
 
-// ── r = π (REQ-CHART-078) ──────────────────────────────────────────────────────────────────────────────────────────
+// ── r = π ──────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A 3 × 2 grid at `s = 2π` about `n₀` with `e₂ = ŷ` and `e₁` the third direction: the middle column's two pixel
 /// centres, `(2u − 1) = 0` and `(2v − 1) = ∓½`, so `d = ∓π·ŷ`, lie exactly on `r = π`, the side columns past it.
@@ -344,7 +344,7 @@ negative_control!(
     }
 );
 
-// ── The label (REQ-CHART-002) ──────────────────────────────────────────────────────────────────────────────────────
+// ── The label ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The label `label` gives each chart: the spherical map's whole sphere, and the exponential map's cap, whether in one
 /// hemisphere, straddling, or reaching `r = π`, each bijective, naming no hemisphere and flagging no redundancy.

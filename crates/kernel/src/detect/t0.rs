@@ -1,5 +1,5 @@
 //! The dispatch-time detector pass (integrator_contract Part 5, "t=0 terminals are real outcomes"; payload §2; dd_
-//! generation_root §3.1; chart_reference §0.7; R-60, R-13): at dispatch, before the first step, the terminal detectors
+//! generation_root §3.1; chart_reference §0.7): at dispatch, before the first step, the terminal detectors
 //! run on the decoded IC, and [`t0`] gives the label the sample starts with.
 //!
 //! **A pure function** of the decode's output, its `(m, r, p)` and its `DEGENERATE` tag, and the sim key's threshold:
@@ -15,8 +15,8 @@
 //! 2. **A valid IC already inside `r_coll` is a real outcome**, `collision` with `t_end_step = 0` and `detail` its pair
 //!    or 3 (chart_reference §0.7's `COLLISION_T0(pair)` with `t_event = 0`), by the same test, on the same quantised
 //!    separations, as every step's ([`crate::detect::collision::classify`]). A looked-up IC takes this path like any
-//!    pixel: lookup does not reject bodies within `r_coll` (R-13).
-//! 3. **There is no t = 0 escape** (R-60): the escape rule needs a window of history (R-29), so an IC that is already
+//!    pixel: lookup does not reject bodies within `r_coll`.
+//! 3. **There is no t = 0 escape**: the escape rule needs a window of history, so an IC that is already
 //!    escaping is `running`, and is classified when its window completes.
 
 use crate::decode::{Degenerate, Ic};

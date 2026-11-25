@@ -1,7 +1,7 @@
-//! QA tests for TASK-M0-09, written from REQ-PAY-003, REQ-PAY-008, REQ-PAY-009 and REQ-PAY-020 against their sources
-//! (dd_simstate_payload §0, §1, §7; dd_generation_root §3.3a, §3.6; render contract Part 1; R-22, R-62, R-86), not
-//! from the implementation. Offsets are computed from payload §1's own group widths; the corpus's quoted widths are
-//! read from the docs. Each test has a registered negative control (R-176).
+//! QA tests for the payload layout (`SimStateBase`, `SimStateFTLE`, the free-group word, `ICDescriptor`), written from
+//! dd_simstate_payload §0, §1, §7, dd_generation_root §3.3a, §3.6 and render contract Part 1, not from the
+//! implementation. Offsets are computed from payload §1's own group widths; the corpus's quoted widths are read from
+//! the docs. Each test has a registered negative control.
 
 use std::any::type_name_of_val as ty;
 use std::mem::{align_of, offset_of, size_of};
@@ -10,11 +10,10 @@ use kernel::payload::{FreeGroupWord, ICDescriptor, SimStateBase, SimStateFTLE};
 use validation::negative_control;
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-008: every offset, from payload §1's field widths (phase 48 B, shadow 48 B, accumulators 16 B, drift refs
-// 8 B, packed words 12 B, total_substeps 4 B, the budget word and the regularised drift 8 B: R-603, R-605,
-// TASK-M3-41, closure 8 B, the collision floor's record 4 B: R-973, TASK-M3-71, and
-// the escape rule's lagged n̂ register 12 B, three Reals in place of the record's 4 B of padding: TASK-M3-12), and the
-// type of each field.
+// Every offset, from payload §1's field widths (phase 48 B, shadow 48 B, accumulators 16 B, drift refs 8 B, packed
+// words 12 B, total_substeps 4 B, the budget word and the regularised drift 8 B, closure 8 B, the collision floor's
+// record 4 B, the escape rule's lagged n̂ register 12 B, three Reals in place of the record's 4 B of padding, and the
+// re-boot's two registers 8 B), and the type of each field.
 
 /// `(name, width in bytes, Rust type)` of payload §1, in order; the shadow rows only when `ftle`.
 fn section_1(ftle: bool) -> Vec<(&'static str, usize, &'static str)> {
@@ -40,12 +39,12 @@ fn section_1(ftle: bool) -> Vec<(&'static str, usize, &'static str)> {
         ("closure_min", 4, "f32"),
         ("closure_step", 2, "u16"),
         ("_reserved", 2, "u16"),
-        // the collision floor's record (payload §1, R-973; TASK-M3-71), then the lagged n̂ register (TASK-M3-12)
+        // the collision floor's record (payload §1), then the escape rule's lagged n̂ register
         ("coll_floor_bits", 4, "u32"),
         ("_nhat_lag_0", 4, "f32"),
         ("_nhat_lag_1", 4, "f32"),
         ("_nhat_lag_2", 4, "f32"),
-        // the re-boot's two registers (payload §1, "Payload purity"; TASK-M3-21)
+        // the re-boot's two registers (payload §1, "Payload purity")
         ("_dmin_d2", 4, "u32"),
         ("_march_bits", 4, "u32"),
     ]);
@@ -185,10 +184,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-003, REQ-PAY-008: size_of/align_of are 168/8 and 120/8, with the budget word and the regularised drift
-// (R-603, R-605; TASK-M3-41; 160/8 and 112/8 before them), with the escape rule's lagged n̂
-// register (three Reals in place of 4 B of padding, TASK-M3-12; 152/8 and 104/8 before it, with the collision floor's
-// 8 B, R-973, TASK-M3-71; 144/8 and 96/8 before that), and equal the widths the corpus quotes.
+// size_of/align_of are 176/8 (`SimStateFTLE`) and 128/8 (`SimStateBase`), and equal the widths the corpus quotes.
 
 /// The first number of bytes after `marker` in `text`.
 fn quoted_after(text: &str, marker: &str) -> usize {
@@ -273,7 +269,7 @@ negative_control!(
 // ---------------------------------------------------------------------------------------------------------------
 // §3.3a: the word buffer's element is one vec4<u32>, 16 B; §3.6: ICDescriptor is 12 f32 in order plus 16 B padding.
 
-/// §3.6's order (R-22, R-62).
+/// §3.6's order.
 const IC: [&str; 12] = [
     "m0",
     "m1",

@@ -1,4 +1,4 @@
-//! Energy normalisation `η_E` (dd_decoder §3.7; chart_reference §0.6; REQ-DEC-024, REQ-DEC-041): the optional
+//! Energy normalisation `η_E` (dd_decoder §3.7; chart_reference §0.6): the optional
 //! post-momentum rescale that sets the decoded energy to a target `E*`,
 //!
 //! ```text
@@ -7,10 +7,10 @@
 //!
 //! with `U = V₀` and `K₀` the decoded IC's (§3.6).
 //!
-//! **The off switch** (R-25): the target is an `Option`. `None` is off, and the momenta are untouched, bit for bit.
+//! **The off switch**: the target is an `Option`. `None` is off, and the momenta are untouched, bit for bit.
 //! `Some(0)` is a real target, the energy set to zero, never "off". On a chart whose `forbids_energy_normalisation` is
 //! set, the invariant-momentum charts, the rescale is never applied: chart-aware validation refuses such a view with
-//! any `Some(E*)` before anything decodes (R-124; inverse_encode_contract's flag table), so the decoder reads the
+//! any `Some(E*)` before anything decodes (inverse_encode_contract's flag table), so the decoder reads the
 //! target there as `None`. [`decode_chart`] reads the flag from the chart itself ([`Chart::forbids_energy_normalisation`]).
 //!
 //! **The outcomes** (dd_decoder §3.7, in its order; [`Outcome`]): the collision pole `U = −∞`, where a pair separation
@@ -24,7 +24,7 @@
 //! one component of `p̂` is ±1 and every `mᵢ ≤ 1`. So `η_E` is finite wherever the rest start is excluded, even where
 //! `(E* − U)/K₀` overflows or `K₀` rounds to 0 with a non-zero momentum.
 //!
-//! **The branch inputs** (dd_decoder §2's comparison-only rule; R-436): `E* < V₀`, `E* = V₀`, `s = 0` and
+//! **The branch inputs** (dd_decoder §2's comparison-only rule): `E* < V₀`, `E* = V₀`, `s = 0` and
 //! `r_min_pair_0 = 0`, comparisons of emitted values with no arithmetic at the decision. `V₀` and `r_min_pair_0` are
 //! the descriptor's, so the tag reads the values the descriptor stores. The collision pole is tested on the
 //! separation, and `V₀` is replaced by 0 there before any arithmetic or comparison reads it, so nothing here computes
@@ -138,7 +138,7 @@ pub fn normalise<R: LinkReal>(ic: &Ic<R>, v0: R, r_min: R, e_star: R) -> Normali
 
 /// `η_E` on a decode, under the target `e_star` and the chart's `forbids_energy_normalisation`: the IC's momenta
 /// rescaled where [`Outcome::Scaled`], the descriptor rewritten from the result through `blocks`, its `rho_angle` the
-/// decode's configuration block's ([`config_angle`], R-628; `η_E` moves only the momenta), and the outcome's tag added
+/// decode's configuration block's ([`config_angle`]; `η_E` moves only the momenta), and the outcome's tag added
 /// where the decode has none. The decode's `momentum` stays the momentum block's output, before `η_E`.
 #[inline]
 pub fn apply<R: LinkReal + PayloadReal, B: Blocks<R>>(
@@ -164,7 +164,7 @@ pub fn apply<R: LinkReal + PayloadReal, B: Blocks<R>>(
 /// target, and the switch, a uniform's (`None`, or a chart that forbids it), selects between the rescaled momenta and
 /// the decoded ones, so the kernel's SPIR-V carries no decode as a value across a branch. With the switch off the
 /// momenta are the decode's, and the descriptor `describe_decoded` rewrites from them and the decode's configuration
-/// block is the decode's, bit for bit, as every decode writes its descriptor so (R-628).
+/// block is the decode's, bit for bit, as every decode writes its descriptor so.
 #[inline]
 pub fn apply_shared<R: LinkReal + PayloadReal>(
     decoded: Decoded<R>,
@@ -246,7 +246,7 @@ pub fn decode<S: Selection, R: LinkReal + PayloadReal>(
     decode_with(&mut Free::<S>::new(), z, e_star, false)
 }
 
-/// [`decode`] at the tunable parameters `p`: the free decode at the active `μ_max` and `q_max` ([`FreeAt`]; R-481 G4).
+/// [`decode`] at the tunable parameters `p`: the free decode at the active `μ_max` and `q_max` ([`FreeAt`]).
 #[inline]
 pub fn decode_at<S: Selection, R: LinkReal + PayloadReal>(
     z: &Latent<R>,

@@ -1,42 +1,40 @@
 //! The chart system, the Question rung (systems_architecture §0; chart_decoder_contract Part 3; chart_reference §5.1):
 //! a chart is a map `Φ : [0,1]² → Y` into a chart space, followed by the shared decoder `D` and canonicaliser `C`.
-//! Every chart feeds the same `D ∘ C`, so adding a chart means adding a `Φ` and nothing else (REQ-CHART-003,
-//! REQ-CHART-015): no chart module holds a mass, configuration or momentum decode formula, an integrator or a
-//! renderer. [`decode()`] is `D ∘ Φ` through the shared [`mod@crate::decode`], whose output is the canonical `(m, r, p)`
+//! Every chart feeds the same `D ∘ C`, so adding a chart means adding a `Φ` and nothing else: no chart module holds a
+//! mass, configuration or momentum decode formula, an integrator or a renderer. [`decode()`] is `D ∘ Φ` through the shared [`mod@crate::decode`], whose output is the canonical `(m, r, p)`
 //! for a chart that hands the decoder latent controls; a chart that sets the configuration explicitly ([`ShapeSphere`])
 //! runs the same blocks through [`Chart::decode`], then `C`, so its output is canonical too. Every `D ∘ Φ` entry, this
 //! one and `energy_norm::decode_chart`, goes through [`Chart::decode`].
 //!
-//! **The trait** ([`Chart`]; R-26, R-118): `map`, `Φ`, generic over the float type, so the one source is monomorphised
-//! as the f32 kernel and the f64 CPU reference; `forbids_energy_normalisation` (R-25); `name`, which every dump header
+//! **The trait** ([`Chart`]): `map`, `Φ`, generic over the float type, so the one source is monomorphised
+//! as the f32 kernel and the f64 CPU reference; `forbids_energy_normalisation`; `name`, which every dump header
 //! carries ([`write_dump_header`]); and `validate(u, v) -> ValidationResult`, a CPU-side f64 check
-//! (inverse_encode_contract § "Chart-aware validation"), whose variants chart_reference §5.1 defines (R-72,
-//! REQ-CHART-043).
+//! (inverse_encode_contract § "Chart-aware validation"), whose variants chart_reference §5.1 defines.
 //!
-//! **The charts, in chart_reference §5.1's order** (REQ-CHART-029): [`Latent`] (`latent`), then [`ShapeSphere`]
+//! **The charts, in chart_reference §5.1's order**: [`Latent`] (`latent`), then [`ShapeSphere`]
 //! (`shape_sphere`), [`Burrau`] and the [`EuclidPlane`] (`burrau`) with the acute-angle charts [`BurrauThetaK`],
 //! [`BurrauThetaLz`] and [`BurrauThetaDeltaM`] (`burrau_acute`), [`InvariantLE`] / [`InvariantLK`] (`invariant`) and
 //! [`MassSimplex`] (`mass_simplex`), each a `Φ` beside it; and the mixed-axis charts, [`Mixed`] (`mixed`), whose two
 //! axes are any two quantities, the other six frozen, with [`MixedEnergy`] and [`MixedMassRatio`] (`physical`), whose
 //! vertical axis is a physical quantity.
 //!
-//! **Physical-quantity axes** ([`mod@energy`]; R-471, R-506, R-508): warped by default, as every chart above maps them,
+//! **Physical-quantity axes** ([`mod@energy`]): warped by default, as every chart above maps them,
 //! a linear mapping an option per axis ([`Mapping`], [`Mapped`]), the warp evaluated per pixel; `PE`, which chart_reference
 //! §2.1 gives no warp, refused ([`energy::written`]).
 //!
-//! **Tilt and slice** ([`mod@tilt`]; R-473, R-474, R-507): the rotation `R(τ₁, τ₂)` from the stored angles and the map,
+//! **Tilt and slice** ([`mod@tilt`]): the rotation `R(τ₁, τ₂)` from the stored angles and the map,
 //! the latent chart's basis edit, and [`Tilted`], a curved chart under its tilt, on every chart: the charts that hold
 //! their blocks by latent controls, and those that hold one by a physical construction, whose hidden coordinates are
-//! its physical parameters ([`mod@construction`]; R-633).
+//! its physical parameters ([`mod@construction`]).
 //!
-//! **Navigation stops at the edge** (`nav`; R-469 P2): one generic stop over this trait and `validate`, keeping the
+//! **Navigation stops at the edge** (`nav`): one generic stop over this trait and `validate`, keeping the
 //! view's centre valid under every navigation edit, which no chart writes for itself. CPU-side, off the SPIR-V build.
 //!
-//! **Saved charts** ([`mod@saved`]; R-475, R-513): a latent view saved as the oblique chart `(z₀, q₁, q₂)`, reopened as
+//! **Saved charts** ([`mod@saved`]): a latent view saved as the oblique chart `(z₀, q₁, q₂)`, reopened as
 //! [`Latent`] on the stored vectors; a curved one as its parent, slice centre and tilt, reopened as [`Tilted`] on the
 //! parent under the saved tilt composed after a new one ([`Composed`]), so tilts compose.
 //!
-//! **Masses come from the decode** (lowering Part 3, "Mass source"; REQ-DEC-006): every chart's masses are its own
+//! **Masses come from the decode** (lowering Part 3, "Mass source"): every chart's masses are its own
 //! decode's, per pixel, and each declares [`Chart::requires_per_pixel_mass`], CPU-side metadata saying whether a
 //! uniform mass, `SimUniforms.m[3]`, describes its pixels for CPU consumers. The kernel reads no such uniform.
 //!
@@ -46,9 +44,9 @@
 //! only, and a 2D density claim across the annotation axis is refused.
 //!
 //! **`system_image` and the shape-fraction guard** ([`SystemImage`], [`ChartLabel`], [`admit_shape_fraction`];
-//! chart_decoder_contract Part 5; chart_reference §4.5; R-27, R-104, R-157): a chart's descriptor of how its pixels
+//! chart_decoder_contract Part 5; chart_reference §4.5): a chart's descriptor of how its pixels
 //! fold onto distinct systems, one of the contract's four values, shown in the chart's label with the quotient it
-//! covers. A shape fraction is refused on a `DoubleCover` chart, which counts each shape twice (R-27), and on a
+//! covers. A shape fraction is refused on a `DoubleCover` chart, which counts each shape twice, and on a
 //! ray-degenerate one, whose areas are not system fractions. The Burrau charts carry it (`burrau`, `burrau_acute`).
 //!
 //! **Each chart's decode** ([`ChartDecode`]): `D ∘ Φ` through the shared blocks. A chart whose `Φ` hands `D` only `z`
@@ -62,9 +60,9 @@
 //! own step, never `map`'s.
 //!
 //! **The tunable link parameters** (chart_reference §0.1: `μ_max` and `q_max` are the defaults of tunable link
-//! parameters "and every chart reads the active value"; R-481 G4; REQ-DEC-048): [`Chart::decode_params`],
+//! parameters "and every chart reads the active value"): [`Chart::decode_params`],
 //! [`Chart::validate_params`] and [`ChartDecode::decode_at_params`] take the active values, an argument, never a
-//! compiled variant (R-481 G7); the forms without them are these at `LinkParams::DEFAULT`, bitwise. A chart whose
+//! compiled variant; the forms without them are these at `LinkParams::DEFAULT`, bitwise. A chart whose
 //! decode reads a tunable parameter (the latent, shape-sphere, invariant and mixed charts, through the mass and
 //! momentum links) overrides them; one that reads none (the Burrau family and the ternary mass plot, which set their
 //! masses and momenta directly) keeps the defaults, which ignore the parameters, as a [`crate::generated::links::Link`]
@@ -95,8 +93,8 @@ pub mod warp;
 
 use core::fmt;
 
-/// The float trait [`Chart::map`] is generic over (R-118), re-exported so that a chart written outside the kernel, a
-/// test's among them, names the same trait (TASK-M2-32).
+/// The float trait [`Chart::map`] is generic over, re-exported so that a chart written outside the kernel, a
+/// test's among them, names the same trait.
 pub use spirv_std::num_traits::Float;
 
 pub use body_plane::BodyPlane;
@@ -119,9 +117,9 @@ use crate::payload::PayloadReal;
 use spirv_std::num_traits::FloatConst;
 
 /// The chart registry: every chart of this crate, by its [`Chart::name`], in chart_reference §5.1's order (the module's
-/// note), so that a test iterating every chart reads the set from one place (TASK-M2-24's `decode_totality`). The
+/// note), so that a test iterating every chart reads the set from one place (`decode_totality`). The
 /// mixed-axis charts with a physical-quantity axis ([`MixedEnergy`], [`MixedMassRatio`]) are `Mixed`, by their name,
-/// and an energy chart under a mapping ([`Mapped`]) is its own chart's. A saved chart ([`Saved`]; R-475) is a chart
+/// and an energy chart under a mapping ([`Mapped`]) is its own chart's. A saved chart ([`Saved`]) is a chart
 /// of the registry too, not a name of its own: an oblique chart is `Latent`, and a curved one its parent's, under its
 /// saved and new tilts.
 ///
@@ -151,7 +149,7 @@ pub struct ChartOut<F> {
 
 /// The constraint a [`ValidationResult`] names as failed (chart_reference §5.1; inverse_encode_contract § "Chart-aware
 /// validation", layers 2 and 3, in that order). Layer 1, the hypercube bounds, is the encode path's on lookup and lock,
-/// never `validate`'s (chart_decoder_contract Part 3, R-407).
+/// never `validate`'s (chart_decoder_contract Part 3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Constraint {
     /// Layer 2, `(L_z, E)`: inside the parabola `|L_z| ≤ √(2I(E − U))`.
@@ -185,7 +183,7 @@ pub enum Constraint {
     MomentumZero,
 }
 
-/// What [`Chart::validate`] returns for a chart point `(u, v)` (chart_reference §5.1; R-26). On a failure the chart
+/// What [`Chart::validate`] returns for a chart point `(u, v)` (chart_reference §5.1). On a failure the chart
 /// gives the first preferred remedy that keeps the IC the one intended: project, then clamp, then reject
 /// (inverse_encode_contract § "Chart-aware validation", "On failure").
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -208,16 +206,16 @@ pub enum ValidationResult {
     Reject { failed: Constraint },
 }
 
-/// A chart (chart_reference §5.1; R-26, R-118).
+/// A chart (chart_reference §5.1).
 pub trait Chart {
     /// The float type the chart's parameters are held at: f32 in the kernel, f64 on the CPU.
     type Param: Copy;
 
-    /// `Φ : [0,1]² → chart space`, generic over the float type (R-118): instantiated at f32 by the kernel and at f64 on
+    /// `Φ : [0,1]² → chart space`, generic over the float type: instantiated at f32 by the kernel and at f64 on
     /// the CPU, from this one source.
     fn map<F: Float + From<Self::Param>>(&self, u: F, v: F) -> ChartOut<F>;
 
-    /// Whether the chart forbids energy normalisation (chart_reference §0.6; R-25): `true` where energy is a chart
+    /// Whether the chart forbids energy normalisation (chart_reference §0.6): `true` where energy is a chart
     /// coordinate or is enforced by the momentum construction.
     fn forbids_energy_normalisation(&self) -> bool {
         false
@@ -228,7 +226,7 @@ pub trait Chart {
 
     /// Whether the chart's masses vary per pixel, so that a uniform mass (`SimUniforms.m[3]`) does not describe its
     /// pixels and the integrator must not read one (inverse_encode_contract § "Chart-aware validation", the chart
-    /// flags; REQ-DEC-006): true for the ternary mass plot, the Burrau family and a mixed-axis chart with a mass axis.
+    /// flags): true for the ternary mass plot, the Burrau family and a mixed-axis chart with a mass axis.
     /// CPU-side metadata only (lowering Part 3): the masses always come from the chart's own decode. Every chart in this
     /// crate declares it; the default, `true`, trusts no uniform mass.
     fn requires_per_pixel_mass(&self) -> bool {
@@ -236,7 +234,7 @@ pub trait Chart {
     }
 
     /// Whether `Φ` at `(u, v)` is finite, a CPU-side f64 check: the navigation stop's (`nav`), a centre whose `Φ` is
-    /// not finite failing (R-469 A1). By default `map`'s output; a chart that builds a block outside `map` and whose
+    /// not finite failing. By default `map`'s output; a chart that builds a block outside `map` and whose
     /// `validate` does not decode overrides it to check that block too: the shape sphere's explicit configuration and
     /// momenta ([`ShapeSphere`]), the invariant charts' construction, read through layer 3 on the f64 decode
     /// ([`InvariantLE`], `crate::chart::nav`'s note).
@@ -247,7 +245,7 @@ pub trait Chart {
         self.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite())
     }
 
-    /// The chart's domain function (R-26), a CPU-side f64 check: inverse_encode_contract § "Chart-aware validation"'s
+    /// The chart's domain function, a CPU-side f64 check: inverse_encode_contract § "Chart-aware validation"'s
     /// layers 2 and 3 at `(u, v)`, at the default parameters.
     fn validate(&self, u: f64, v: f64) -> ValidationResult;
 
@@ -285,7 +283,7 @@ pub trait Chart {
 }
 
 /// `D ∘ Φ` at `(u, v)` under the link selection `S`: the chart's output through the shared decoder, which no chart
-/// re-implements (REQ-CHART-015).
+/// re-implements.
 #[inline]
 pub fn decode<S, R, C>(chart: &C, u: R, v: R) -> Decoded<R>
 where
@@ -296,7 +294,7 @@ where
     chart.decode::<S, R>(u, v)
 }
 
-/// A chart's decode, `D ∘ Φ` at `(u, v)` under the link selection `S`, through the shared blocks (REQ-CHART-015): the
+/// A chart's decode, `D ∘ Φ` at `(u, v)` under the link selection `S`, through the shared blocks: the
 /// decode stage's ([`crate::stage::decode::sample`]).
 pub trait ChartDecode: Chart {
     /// The chart's decode at `(u, v)`.
@@ -491,7 +489,7 @@ pub enum StatisticRefused {
     DensityAcrossAnnotation,
     /// A per-value statistic along an annotation axis: every value of it is the same family.
     AlongAnnotation,
-    /// A shape fraction on a `DoubleCover` chart, which covers each shape twice, as two labelled systems (R-27).
+    /// A shape fraction on a `DoubleCover` chart, which covers each shape twice, as two labelled systems.
     ShapeFractionOnDoubleCover,
     /// A shape fraction on a ray-degenerate chart, whose areas are not system fractions (chart_decoder_contract Part 5).
     ShapeFractionOnRayDegenerate,
@@ -506,7 +504,7 @@ fn meta(axes: [AxisMeta; 2], axis: Axis) -> AxisMeta {
     }
 }
 
-/// The statistics guard (chart_decoder_contract Part 5; REQ-CHART-013): on a chart with an annotation axis, only
+/// The statistics guard (chart_decoder_contract Part 5): on a chart with an annotation axis, only
 /// per-value statistics along a swept axis are admitted; a 2D density, and a per-value statistic along the annotation
 /// axis, are refused. A chart with no annotation axis admits both.
 pub fn admit_statistic(axes: [AxisMeta; 2], statistic: Statistic) -> Result<(), StatisticRefused> {
@@ -538,16 +536,16 @@ pub fn family_label(axes: [AxisMeta; 2]) -> &'static str {
 }
 
 /// How a chart's address map folds onto distinct systems: the `system_image` descriptor (chart_decoder_contract Part 5,
-/// its four values; R-104, R-157, R-544).
+/// its four values).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SystemImage {
     /// Every pixel is a distinct system.
     Bijective,
     /// A fixed finite number `n` of pixels share each system. Not the shape sphere's spherical map, which is the whole
-    /// sphere, each pixel its own system (R-544).
+    /// sphere, each pixel its own system.
     NToOne(u32),
     /// Each shape is covered twice, as two labelled systems: the full-range Burrau chart, where the leg swap relabels
-    /// the bodies (R-27, R-104, R-157).
+    /// the bodies.
     DoubleCover,
     /// Whole lines of pixels map to the same system.
     RayDegenerate,
@@ -564,7 +562,7 @@ impl fmt::Display for SystemImage {
     }
 }
 
-/// A chart's label (chart_reference §4.5, R-27: "label each chart with the quotient it covers"): its name, its
+/// A chart's label (chart_reference §4.5: "label each chart with the quotient it covers"): its name, its
 /// [`SystemImage`] and, in words, the quotient that value covers. It displays as `<name> · system_image <value> ·
 /// <quotient>`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -587,7 +585,7 @@ impl fmt::Display for ChartLabel<'_> {
     }
 }
 
-/// The shape-fraction guard (chart_reference §4.5; R-27; chart_decoder_contract Part 5): a fraction of shapes taken
+/// The shape-fraction guard (chart_reference §4.5; chart_decoder_contract Part 5): a fraction of shapes taken
 /// over a chart's pixels is refused on a [`SystemImage::DoubleCover`] chart, which counts each shape twice, and on a
 /// [`SystemImage::RayDegenerate`] one, whose areas are not system fractions; a bijective or n-to-1 chart admits it.
 pub fn admit_shape_fraction(image: SystemImage) -> Result<(), StatisticRefused> {

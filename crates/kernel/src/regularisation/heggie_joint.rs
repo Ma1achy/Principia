@@ -1,5 +1,5 @@
-//! The FTLE shadow's joint step on the default occupant, Heggie × RK4 (R-974, RQ-793 (a); R-560; dd_integrator §3.8,
-//! "Heggie × RK4's joint step and its displacement", TASK-M3-74's definition, R-72; REQ-VAL-355).
+//! The FTLE shadow's joint step on the default occupant, Heggie × RK4 (dd_integrator §3.8, "Heggie × RK4's joint step
+//! and its displacement").
 //!
 //! **The displacement** ([`HgDisplacement`]) is carried in Heggie's own variables, `δy = (δQ, δP, δt)`, with `δh`, the
 //! shadow's frozen energy less the sample's: the shadow is `y + δy` marched under `Γ*` at the energy `h + δh`, as
@@ -7,7 +7,7 @@
 //!
 //! - [`start`]: the registration's tangent at the sample's registered state, applied to §3.8's Cartesian offset.
 //! - [`joint_step`]: the sample one RK4 step on, the step's bit for bit, and `δy` through the same stages
-//!   ([`super::form::rk4_joint`]), each stage's rate difference formed plainly (R-974's (a1)).
+//!   ([`super::form::rk4_joint`]), each stage's rate difference formed plainly (`physics::difference`'s (a1)).
 //! - [`cartesian`]: `δx = J·δy`, `J` the Jacobian of the return to the Cartesian state at the sample's state, the
 //!   displacement the estimator reads.
 //! - [`resynchronise`]: `δy ← δy − F(y)·δt/g(y)`, then `δt ← 0`, so the shadow's clock is the sample's.

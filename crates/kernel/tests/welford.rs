@@ -1,18 +1,18 @@
-//! The Welford streaming diffusion (`kernel::driver::welford`; dd_simstate_payload §4; dd_integrator §3.5; R-17,
-//! R-245), and the wrapper's use of it (`kernel::driver::wrapper`):
-//! - REQ-INT-041 (`welford_slope_*`): the streaming slope, the f32 co-moments `mean_y` and `C_ty` read through the
+//! The Welford streaming diffusion (`kernel::driver::welford`; dd_simstate_payload §4; dd_integrator §3.5), and the
+//! wrapper's use of it (`kernel::driver::wrapper`):
+//! - `welford_slope_*`: the streaming slope, the f32 co-moments `mean_y` and `C_ty` read through the
 //!   ledger's `diffusion_slope`, equals the least-squares slope of `y` on `t` for random series within an f32
 //!   tolerance, and the f64 stream equals it to round-off; `n = 0` and `n = 1` read NaN and are invalid, `n = 2` the
 //!   first valid fit; the update reads no shared mutable state, so samples updated interleaved, in any order, are bit
 //!   for bit the samples updated alone; and the wrapper streams payload §4's `y`, its `mean_y` and slope those of the
 //!   least-squares fit of `y` over the completed macro-steps, a macro-step cut short by `done` taking no sample.
-//! - REQ-PAY-054 (`time_moments_closed_form_*`): `C_tt(n) = h²·n(n² − 1)/12` equals the brute-force `Σ(tᵢ − mean_t)²`,
+//! - `time_moments_closed_form_*`: `C_tt(n) = h²·n(n² − 1)/12` equals the brute-force `Σ(tᵢ − mean_t)²`,
 //!   and `mean_t = (n + 1)·h/2` the brute-force mean, for `n = 0 … 1000`; `δ_t = 0.5·n·h` is `t_n − mean_t(n − 1)`; and
 //!   the kernel's f32 `C_tt` is the read side's to the bit for every u16 `n`.
-//! - REQ-PAY-073 (`welford_y_*`): `y` is the squared shape-sphere chord to the IC's shape: 0 at the IC, 4 at the
+//! - `welford_y_*`: `y` is the squared shape-sphere chord to the IC's shape: 0 at the IC, 4 at the
 //!   antipode, in `[0, 4]`, and the function of `(r, m)` through `kernel::shape::shape`.
 //!
-//! Each test registers its negative control (R-176).
+//! Each test registers its negative control.
 
 use kernel::decode::Ic;
 use kernel::driver::advance::Cadence;
@@ -31,7 +31,7 @@ use proptest::prelude::*;
 use spirv_std::glam::UVec4;
 use validation::{negative_control, prop};
 
-/// The canonical quiet NaN an invalid fit reads (R-245; lowering Part 3a).
+/// The canonical quiet NaN an invalid fit reads (lowering Part 3a).
 const QNAN: u32 = 0x7fc0_0000;
 
 /// The f32 `x` at `R`, exactly.
@@ -51,7 +51,7 @@ fn stream(seed: u64) -> impl FnMut() -> f64 {
     }
 }
 
-// ── REQ-INT-041: the streaming slope ────────────────────────────────────────────────────────────────────────────────
+// ── The streaming slope ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// One series: the step `h` and the samples `y₁ … y_n` at `tᵢ = i·h`, each in `[0, 4]`, the range of payload §4's `y`.
 #[derive(Clone, Debug)]
@@ -233,7 +233,7 @@ negative_control!(
 
 /// Checks that `samples` series updated interleaved, round-robin in the order `order` gives, are bit for bit the
 /// series each streamed alone: the update reads and writes nothing but its own sample's co-moments and `(y, n, h)`,
-/// and the time moments are functions of `(n, h)` only, so no state is shared between samples (REQ-INT-041).
+/// and the time moments are functions of `(n, h)` only, so no state is shared between samples.
 fn check_no_shared_state(series: &[Series], order: &[usize], update: Update<f32>) {
     let alone: Vec<Welford<f32>> = series.iter().map(|s| streamed(s, update)).collect();
     let mut live = vec![Welford::default(); series.len()];
@@ -449,7 +449,7 @@ negative_control!(
     check_cut_short(false)
 );
 
-// ── REQ-PAY-054: the time moments in closed form ────────────────────────────────────────────────────────────────────
+// ── The time moments in closed form ─────────────────────────────────────────────────────────────────────────────────
 
 /// Checks the closed forms against brute force over `tᵢ = i·h`, `i = 1 … n`, for `n = 0 … 1000`: `c_tt` is
 /// `Σ(tᵢ − mean)²` within `10⁻¹²` relative (0 for `n < 2`), `mean_t` the mean for `n ≥ 1`, and `delta_t(n)` is
@@ -524,7 +524,7 @@ negative_control!(
     })
 );
 
-// ── REQ-PAY-073: y ──────────────────────────────────────────────────────────────────────────────────────────────────
+// ── y ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A `y`: payload §4's ([`welford::y`]) or a control's faulty one, of the positions, the masses and the IC's shape.
 type YFn = fn([[f64; 2]; 3], [f64; 3], [f64; 3]) -> f64;

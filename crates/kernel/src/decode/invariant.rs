@@ -1,16 +1,16 @@
-//! The invariant-momentum construction (chart_reference §2.2; dd_decoder §3.4; REQ-DEC-020, REQ-DEC-021, REQ-DEC-022):
+//! The invariant-momentum construction (chart_reference §2.2; dd_decoder §3.4):
 //! the momentum stage of the `(L_z, E)` and `(L_z, K)` charts, which build `pᵢ` from the decoded masses and
-//! configuration and the pixel's targets `L_z` and `K*`, one source for the f32 kernel and the f64 CPU path (R-265).
+//! configuration and the pixel's targets `L_z` and `K*`, one source for the f32 kernel and the f64 CPU path.
 //!
 //! ```text
 //! (i)   ω = L_z/I            vᵢ⁽ᴸ⁾ = ω·J rᵢ          K_min = L_z²/(2I)           J(x, y) = (−y, x)
-//! (ii)  the seed in force (R-934): the uniform expansion, vᵢ = rᵢ, so w = r/√I
+//! (ii)  the seed in force: the uniform expansion, vᵢ = rᵢ, so w = r/√I
 //!       w⁽¹⁾ᵢ = vᵢ − c/M, c = Σ mᵢvᵢ       w⁽²⁾ᵢ = w⁽¹⁾ᵢ − β_L·J rᵢ, β_L = L(w⁽¹⁾)/I, L(w) = Σ mᵢ(rᵢ × wᵢ)_z
 //!       wᵢ = w⁽²⁾ᵢ/‖w⁽²⁾‖_m;  ‖w⁽²⁾‖²_m = 0, which is I = 0 about the CoM, → DEGENERATE
 //! (iii) K* < K_min → infeasible;  else a = √(2(K* − K_min)),  vᵢ = vᵢ⁽ᴸ⁾ + a·wᵢ,  pᵢ = mᵢvᵢ
 //! ```
 //!
-//! **The seed in force** ([`construct_expansion`], [`expansion`]; R-934, chart_reference §2.2, dd_decoder §3.4): the
+//! **The seed in force** ([`construct_expansion`], [`expansion`]; chart_reference §2.2, dd_decoder §3.4): the
 //! uniform expansion `vᵢ = rᵢ`. The configuration's CoM is at the origin, so its drift is 0, and `rᵢ × rᵢ = 0`, so it
 //! carries no `L_z`: the projections of (ii) leave it, to rounding, and `w = r/√I`, `‖w‖²_m = I/I = 1`. It is one seed
 //! with no choice, so the construction has no seed branch, no seam where a choice flips, and `NO_QUALIFYING_SEED` is
@@ -25,12 +25,12 @@
 //! `L(w⁽¹⁾)` is 0 too. Every pixel's state is then
 //! `vᵢ = (ω·J + a/√I)·rᵢ`, a rotation and a uniform dilation of the configuration: a homographic start.
 //!
-//! **R-82's rule, the named legacy option** ([`construct`], [`construct_seeded`], [`construct_by_norms`], [`choose`];
-//! R-934): the seeds `(ρ̇, λ̇) = (ρ, 0), (0, λ), (Jρ, 0), (0, Jλ)`, in that order, as particle velocities
+//! **The largest-norm rule, the named legacy option** ([`construct`], [`construct_seeded`], [`construct_by_norms`],
+//! [`choose`]): the seeds `(ρ̇, λ̇) = (ρ, 0), (0, λ), (Jρ, 0), (0, Jλ)`, in that order, as particle velocities
 //! `v₀ = −(m₂/M)λ̇ − (m₁/M₀₁)ρ̇`, `v₁ = −(m₂/M)λ̇ + (m₀/M₀₁)ρ̇`, `v₂ = (M₀₁/M)λ̇`, each projected as in (ii); among those
 //! with `‖w⁽²⁾‖²_m > ε_w` the largest, ties by seed order; none → `DEGENERATE`. Its seam is declared: where its choice
 //! of seed flips (`z_α = 0` on a decoded configuration, `ν = 1/3` on Burrau's) the two seeds are orthogonal, and the
-//! decoded velocity jumps by `‖Δv‖_m = √2·a = 2√(K* − K_min)`, an artefact of the rule, not physics (R-934). The notes
+//! decoded velocity jumps by `‖Δv‖_m = √2·a = 2√(K* − K_min)`, an artefact of the rule, not physics. The notes
 //! below on the rule describe this option.
 //!
 //! **`I` and `M`** (dd_decoder §3.4, "with `I = 1` at the canonical scale"; [`crate::decode::units`]): the
@@ -39,13 +39,13 @@
 //! configuration's own `I` is 1 to rounding, so `L_z(p)` and `K(p)` meet their targets to rounding, and the feasibility
 //! branch reads only the pixel's own `(L_z, K*)`.
 //!
-//! **The legacy seed rule** (R-82): among the seeds with `‖w⁽²⁾‖²_m > ε_w` (the chart constant `eps_w`,
+//! **The legacy seed rule**: among the seeds with `‖w⁽²⁾‖²_m > ε_w` (the chart constant `eps_w`,
 //! [`crate::generated::constants`]) the largest, ties by seed order; none → `DEGENERATE`. [`choose`] is the rule on given
 //! norms, compared squared, the order of the norms: a seed is taken over the one held only if its norm is strictly
 //! larger, so an exact tie keeps the earlier seed.
 //!
 //! **The legacy rule on a decoded configuration is decided on `z_α`** ([`decoded_seed`], [`construct`]; dd_decoder §2,
-//! "branch decisions … bit-identical across backends", §5 test 12; R-34, R-84). The canonical-frame decode
+//! "branch decisions … bit-identical across backends", §5 test 12). The canonical-frame decode
 //! (chart_reference §0.2) has `ρ̃ = cos α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)`, `I = M = 1`. The Jacobi velocities
 //! `(ρ̇, λ̇)` carry no CoM drift and `‖v‖²_m = μ_ρ‖ρ̇‖² + μ_λ‖λ̇‖²`, `L(v) = μ_ρ ρ×ρ̇ + μ_λ λ×λ̇`, so in exact arithmetic
 //! the four norms are
@@ -68,7 +68,7 @@
 //! are orthogonal, so the momenta would differ at O(1). [`construct_by_norms`], the rule on computed norms, serves a configuration not from the canonical decode, and its
 //! choice near a tie is not claimed branch-identical.
 //!
-//! **The infeasible pixel** (chart_reference §2.2, R-72; REQ-DEC-040): `K* < K_min` is
+//! **The infeasible pixel** (chart_reference §2.2): `K* < K_min` is
 //! `DEGENERATE(INVARIANT_INFEASIBLE)`, recorded as `decode_failed`, detail 3 (other) ([`infeasible_label`]); an earlier
 //! block's tag (the mass block's `M01_TINY`) is kept over it, and it takes precedence over the seed rule's
 //! `DEGENERATE(NO_QUALIFYING_SEED)`. Both are members of [`crate::decode::degenerate::Degenerate`]'s closed set
@@ -76,7 +76,7 @@
 //! never dropped, and its momenta are finite: `a` is selected as 0, so `pᵢ = mᵢvᵢ⁽ᴸ⁾`, the rigid rotation. A
 //! `DEGENERATE` pixel likewise keeps `w = 0`, selected, so nothing divides by its zero norm.
 //!
-//! **The feasibility branch** ([`infeasible`]; R-34, R-84; gpu_determinism_note rules 1, 2 and 6). `K* < L_z²/(2I)` is
+//! **The feasibility branch** ([`infeasible`]; gpu_determinism_note rules 1, 2 and 6). `K* < L_z²/(2I)` is
 //! decided as `2·I·K* < L_z²` in exact arithmetic, so it is the inequality itself, with no rounding at the decision, and
 //! one input takes one branch at f32 and at f64 and on every IEEE backend, fused or not:
 //! - **The operands' binades** ([`ExactSign::binade`]): each of `I`, `K*` and `L_z` is read from its bits as a sign, a
@@ -97,9 +97,9 @@
 //!   sum to less than half of it, so no later rounding can change the sign.
 //!
 //! Every product is exact and every other operation a lone addition or subtraction, an integer operation on bits, a
-//! select or a comparison: no `fma` (lavapipe does not fuse an explicit one, RQ-298), no `√`, no division. A backend
+//! select or a comparison: no `fma` (lavapipe does not fuse an explicit one), no `√`, no division. A backend
 //! that contracts or fuses any `a·b + c` here rounds the same exact product. The claim holds on every backend that
-//! keeps its additions and multiplications correctly rounded and unreassociated (fast-math off, R-84), for identical
+//! keeps its additions and multiplications correctly rounded and unreassociated (fast-math off), for identical
 //! finite inputs (PIT-10); non-finite inputs are not this test's.
 //!
 //! **A `K*` with no finite `2K*`.** The construction takes `a = √(2K*)`, so a `K*` whose double has no finite float at
@@ -319,7 +319,7 @@ pub fn construction_short<R: ExactSign>(f: &Feasibility<R>, e: i32) -> bool {
 }
 
 /// The label of an infeasible pixel, `DEGENERATE(INVARIANT_INFEASIBLE)`, as `(state, detail)` of payload §2's
-/// `sample_descriptor`: `decode_failed` (5), detail 3 (other) (chart_reference §2.2; REQ-DEC-040).
+/// `sample_descriptor`: `decode_failed` (5), detail 3 (other) (chart_reference §2.2).
 #[inline]
 pub fn infeasible_label() -> (u32, u32) {
     Degenerate::InvariantInfeasible.label()
@@ -331,8 +331,8 @@ pub fn j<R: LinkReal>(v: [R; 2]) -> [R; 2] {
     [-v[1], v[0]]
 }
 
-/// The seeds: R-82's four, in their order, the legacy rule's tie-break order (chart_reference §2.2), and the
-/// expansion, the seed in force (R-934).
+/// The seeds: the legacy rule's four, in its tie-break order (chart_reference §2.2), and the expansion, the seed in
+/// force.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Seed {
@@ -344,19 +344,19 @@ pub enum Seed {
     JRho,
     /// `(0, Jλ)`.
     JLambda,
-    /// The uniform expansion `vᵢ = rᵢ`, `w = r/√I`: the seed in force (R-934).
+    /// The uniform expansion `vᵢ = rᵢ`, `w = r/√I`: the seed in force.
     Expansion,
 }
 
-/// Which seed rule the construction runs under (R-934): the seed in force, or R-82's rule, kept as a named option with
-/// its seam declared (the module's note).
+/// Which seed rule the construction runs under: the seed in force, or the largest-norm rule, kept as a named option
+/// with its seam declared (the module's note).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 #[repr(u32)]
 pub enum Seeding {
     /// The expansion `w = r/√I` on every pixel ([`construct_expansion`]): the seed in force.
     #[default]
     Expansion,
-    /// R-82's largest-norm rule, the named legacy option: on a decoded configuration decided on `z_α` ([`construct`]).
+    /// The largest-norm rule, the named legacy option: on a decoded configuration decided on `z_α` ([`construct`]).
     LargestNorm,
 }
 
@@ -371,7 +371,7 @@ pub enum Outcome {
     Infeasible,
     /// Feasible, but no seed qualified: `DEGENERATE`, momenta the rigid rotation. Under the expansion only at `I = 0`
     /// about the CoM;
-    /// under R-82's legacy rule where no seed has `‖w⁽²⁾‖²_m > ε_w`.
+    /// under the legacy largest-norm rule where no seed has `‖w⁽²⁾‖²_m > ε_w`.
     Degenerate,
 }
 
@@ -397,7 +397,7 @@ pub struct Construction<R> {
     pub w: [[R; 2]; 3],
     /// The mixing amplitude `a`; 0 where infeasible or `DEGENERATE`.
     pub a: R,
-    /// Under R-82's legacy rule, each of its seeds' `‖w⁽²⁾‖²_m`, in seed order; under the expansion, its own
+    /// Under the legacy largest-norm rule, each of its seeds' `‖w⁽²⁾‖²_m`, in seed order; under the expansion, its own
     /// `‖w⁽²⁾‖²_m` at the scaled positions ([`expansion`]) first, finite, exactly 0 where `I` about the CoM is 0, the
     /// other three 0.
     pub norms: [R; 4],
@@ -478,7 +478,7 @@ fn consider<R: LinkReal>(state: (Seed, R, bool), seed: Seed, n: R, eps: R) -> (S
     )
 }
 
-/// The seed rule (R-82) on the seeds' `‖w⁽²⁾‖²_m`, in seed order: among those above `ε_w`, the largest; an exact tie
+/// The legacy seed rule on the seeds' `‖w⁽²⁾‖²_m`, in seed order: among those above `ε_w`, the largest; an exact tie
 /// keeps the earlier; `None` where none is above `ε_w`.
 #[inline]
 pub fn choose<R: LinkReal>(norms: [R; 4]) -> Option<Seed> {
@@ -490,10 +490,10 @@ pub fn choose<R: LinkReal>(norms: [R; 4]) -> Option<Seed> {
     select(found, Some(best), None)
 }
 
-/// The seed R-82's rule takes on a configuration of the canonical-frame decode, from its configuration control `z_α`:
-/// `(ρ, 0)` where `z_α ≤ 0`, else `(0, λ)` (the module's note). `z_α ≤ 0` is read on its bits, the sign bit set or every
-/// other bit clear, as the feasibility test reads its signs: a GPU that flushes a subnormal `z_α` to 0 in its float
-/// comparisons reads the same input.
+/// The seed the largest-norm rule takes on a configuration of the canonical-frame decode, from its configuration
+/// control `z_α`: `(ρ, 0)` where `z_α ≤ 0`, else `(0, λ)` (the module's note). `z_α ≤ 0` is read on its bits, the sign
+/// bit set or every other bit clear, as the feasibility test reads its signs: a GPU that flushes a subnormal `z_α` to 0
+/// in its float comparisons reads the same input.
 #[inline]
 pub fn decoded_seed<R: ExactSign>(z_alpha: R) -> Seed {
     let (negative, zero) = alpha_sign(z_alpha);
@@ -513,7 +513,7 @@ pub fn seed_of_sign(negative: bool, zero: bool) -> Seed {
     select(negative | zero, Seed::Rho, Seed::Lambda)
 }
 
-/// R-82's seeds' `w⁽²⁾`, in seed order, and their `‖w⁽²⁾‖²_m`.
+/// The legacy rule's seeds' `w⁽²⁾`, in seed order, and their `‖w⁽²⁾‖²_m`.
 #[inline]
 fn seeds<R: LinkReal>(masses: &Masses<R>, config: &Config<R>) -> ([[[R; 2]; 3]; 4], [R; 4]) {
     let (m, r) = (masses.m, config.r);
@@ -651,8 +651,8 @@ fn finish<R: ExactSign>(
     }
 }
 
-/// The construction under R-82's legacy rule with its seed `seed` taken (`None`: none qualified) from its seeds'
-/// fields and norms ([`seeds`]).
+/// The construction under the legacy largest-norm rule with its seed `seed` taken (`None`: none qualified) from its
+/// seeds' fields and norms ([`seeds`]).
 #[inline]
 fn legacy<R: ExactSign>(
     masses: &Masses<R>,
@@ -672,7 +672,7 @@ fn legacy<R: ExactSign>(
     finish(masses, config, taken, norms, seed, lz, k_star)
 }
 
-/// The invariant-momentum construction (chart_reference §2.2) under the seed in force (R-934): the momenta realising
+/// The invariant-momentum construction (chart_reference §2.2) under the seed in force: the momenta realising
 /// `L_z = lz` and `K = k_star` with the expansion seed `w = r/√I` ([`expansion`]), on every configuration, one seed
 /// with no choice, so no seed branch and no seam (the module's note); `DEGENERATE` only where `I = 0`.
 #[inline]
@@ -698,7 +698,7 @@ pub fn construct_expansion<R: ExactSign>(
 
 /// The invariant-momentum construction (chart_reference §2.2) on a configuration of the canonical-frame decode from
 /// the configuration control `z_alpha`, under `seeding`: the seed in force, [`construct_expansion`], which does not
-/// read `z_alpha`, or R-82's legacy rule, [`construct`].
+/// read `z_alpha`, or the legacy largest-norm rule, [`construct`].
 #[inline]
 pub fn construct_with<R: ExactSign>(
     masses: &Masses<R>,
@@ -714,10 +714,10 @@ pub fn construct_with<R: ExactSign>(
     }
 }
 
-/// The invariant-momentum construction (chart_reference §2.2) under R-82's rule, the named legacy option (R-934), on a
-/// configuration of the canonical-frame decode from the configuration control `z_alpha`: the momenta realising
-/// `L_z = lz` and `K = k_star`, the seed decided on `z_α` ([`decoded_seed`]), so one input takes one seed on every
-/// backend (the module's note), with the seam at `z_α = 0` the rule declares.
+/// The invariant-momentum construction (chart_reference §2.2) under the largest-norm rule, the named legacy option, on
+/// a configuration of the canonical-frame decode from the configuration control `z_alpha`: the momenta realising `L_z =
+/// lz` and `K = k_star`, the seed decided on `z_α` ([`decoded_seed`]), so one input takes one seed on every backend
+/// (the module's note), with the seam at `z_α = 0` the rule declares.
 #[inline]
 pub fn construct<R: ExactSign>(
     masses: &Masses<R>,
@@ -730,7 +730,7 @@ pub fn construct<R: ExactSign>(
 }
 
 /// The invariant-momentum construction (chart_reference §2.2) with the seed `seed` given: [`Seed::Expansion`], the
-/// seed in force ([`construct_expansion`]), or one of R-82's, the legacy rule's choice decided by the chart on an input
+/// seed in force ([`construct_expansion`]), or one of the legacy rule's, its choice decided by the chart on an input
 /// of its own so that one input takes one seed on every backend, as [`construct`] decides it on `z_α` (the module's
 /// note); the Burrau charts decide it on `ν` (`crate::chart::burrau::seed`).
 #[inline]
@@ -754,9 +754,9 @@ pub fn construct_seeded<R: ExactSign>(
     }
 }
 
-/// The invariant-momentum construction (chart_reference §2.2) under R-82's legacy rule on a configuration not from the
-/// canonical-frame decode: the rule ([`choose`]) on the computed norms, `DEGENERATE` where none qualifies. Its choice
-/// near a tie is not claimed branch-identical (the module's note).
+/// The invariant-momentum construction (chart_reference §2.2) under the legacy largest-norm rule on a configuration not
+/// from the canonical-frame decode: the rule ([`choose`]) on the computed norms, `DEGENERATE` where none qualifies. Its
+/// choice near a tie is not claimed branch-identical (the module's note).
 #[inline]
 pub fn construct_by_norms<R: ExactSign>(
     masses: &Masses<R>,
@@ -779,7 +779,7 @@ pub fn outcome_word(outcome: Outcome) -> u32 {
     }
 }
 
-/// The word of a seed: R-82's seeds' index in their order, 4 for none, 5 for the expansion.
+/// The word of a seed: the legacy rule's seeds' index in their order, 4 for none, 5 for the expansion.
 #[inline]
 pub fn seed_word(seed: Option<Seed>) -> u32 {
     match seed {
@@ -829,11 +829,11 @@ pub fn construct_out_words() -> usize {
     8
 }
 
-/// The construction under R-82's legacy rule at f32 under the default links, so a test reads the GPU's branches of the
-/// named option (the seed in force has no seed branch; the decode stage's entries run it): invocation `n` reads sample
-/// `n`'s [`construct_in_words`] words of `input` (f32 bits), decodes the masses and configuration from them, constructs
-/// ([`construct`], its seed decided on `z_α`), and writes [`construct_out_words`] words at sample `n` of
-/// `output`; an invocation past the last sample writes nothing.
+/// The construction under the legacy largest-norm rule at f32 under the default links, so a test reads the GPU's
+/// branches of the named option (the seed in force has no seed branch; the decode stage's entries run it): invocation
+/// `n` reads sample `n`'s [`construct_in_words`] words of `input` (f32 bits), decodes the masses and configuration from
+/// them, constructs ([`construct`], its seed decided on `z_α`), and writes [`construct_out_words`] words at sample `n`
+/// of `output`; an invocation past the last sample writes nothing.
 #[spirv(compute(threads(64)))]
 pub fn construct_defaults(
     #[spirv(global_invocation_id)] id: UVec3,

@@ -1,6 +1,5 @@
-//! The kernel's own `atan2` (`kernel::arctan`; RQ-628, decided by the orchestrator per R-369, option (a)), on the CPU,
-//! against its bound: no worse than libm's `atan2f`, the arithmetic `ε_phys` was calibrated on (`validation::arctan`'s
-//! sweeps and measures).
+//! The kernel's own `atan2` (`kernel::arctan`), on the CPU, against its bound: no worse than libm's `atan2f`, the
+//! arithmetic `ε_phys` was calibrated on (`validation::arctan`'s sweeps and measures).
 //! - `arctan_f64_is_libm`: the f64 path is libm's `atan2`, bit for bit, on the plane sweep widened and on f64 draws.
 //! - `arctan_special_values`: on every pair of signed zeros, subnormals, normals, the largest finite values, infinities
 //!   and NaN, the f32 result is the f32 nearest f64 `atan2`, bit for bit, signed zeros and `±π` included, and NaN for
@@ -13,15 +12,15 @@
 //! - `arctan_entry_point`: the compute entry point `kernel::stage::encode::arctangent`, run natively, writes each pair's
 //!   `atan2_f32` at its word and nothing for an invocation past the last pair.
 //! - `arctan_reduced_exhaustive`, `arctan_plane_dense`, `arctan_round_trip_exhaustive`, ignored: the same checks on every
-//!   f32 `t ∈ [0, 1]`, on 2²⁸ plane pairs and on every f32 `α ∈ [0, π/2]`, minutes in a release build (applied per R-369:
-//!   too slow for CI; run with `cargo test --release -p kernel --test arctan -- --ignored`).
+//!   f32 `t ∈ [0, 1]`, on 2²⁸ plane pairs and on every f32 `α ∈ [0, π/2]`, minutes in a release build (too slow for
+//!   CI; run with `cargo test --release -p kernel --test arctan -- --ignored`).
 //!
-//! **libm** (applied per R-369, a test decision): on macOS the platform's f32 `atan2`, `sin` and `cos`, Apple's libm,
-//! on which `ε_phys` was calibrated; elsewhere the pinned pure-software libm's (`libm`, at the version `Cargo.lock`
-//! holds), so a CI image's libm cannot move the bound.
+//! **libm**: on macOS the platform's f32 `atan2`, `sin` and `cos`, Apple's libm, on which `ε_phys` was calibrated;
+//! elsewhere the pinned pure-software libm's (`libm`, at the version `Cargo.lock` holds), so a CI image's libm cannot
+//! move the bound.
 //!
-//! Each sweep prints Mesa's lowering of `atan2` for lavapipe, [`mesa_like`] (RQ-628), beside the two, and each control
-//! runs a check on it, which the bound must refuse.
+//! Each sweep prints Mesa's lowering of `atan2` for lavapipe, [`mesa_like`], beside the two, and each control runs a
+//! check on it, which the bound must refuse.
 
 use std::ops::Range;
 use std::thread;
@@ -65,7 +64,7 @@ mod libm32 {
 type Atan2 = fn(f32, f32) -> f32;
 
 /// Mesa's lowering of `atan2` (`nir_atan2`, `nir_atan`), which lavapipe runs: `t = min/max` of the magnitudes, an odd
-/// degree-11 polynomial in `t`, `π/2 −` it where `|y| > |x|`, `π −` that where `x < 0`, and `y`'s sign (RQ-628).
+/// degree-11 polynomial in `t`, `π/2 −` it where `|y| > |x|`, `π −` that where `x < 0`, and `y`'s sign.
 fn mesa_like(y: f32, x: f32) -> f32 {
     let (ay, ax) = (y.abs(), x.abs());
     let t = ay.min(ax) / ay.max(ax);

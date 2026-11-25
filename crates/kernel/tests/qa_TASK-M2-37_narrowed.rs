@@ -1,8 +1,7 @@
-//! qa's tests for TASK-M2-37, fix round 7: the warped mass ratio's chart narrowed to `f32`, pixel by pixel, and the two
-//! searches `new` runs brought to their ends (chart_reference §2.1: "every pixel of `[0,1]²` is feasible"; "A chart
-//! decoded at `f32` holds `m_c` narrowed to `f32` [...] so the range is the part realised at `m_c` both as held and as
-//! narrowed"; REQ-CHART-067, REQ-CHART-070). Written from that paragraph, not from the search; each test has its negative
-//! control (R-176).
+//! qa's tests for the warped mass ratio's chart narrowed to `f32`, pixel by pixel, and the two searches `new` runs
+//! brought to their ends (chart_reference §2.1: "every pixel of `[0,1]²` is feasible"; "A chart decoded at `f32` holds
+//! `m_c` narrowed to `f32` [...] so the range is the part realised at `m_c` both as held and as narrowed"). Written from
+//! that paragraph, not from the search; each test has its negative control.
 //!
 //! - `qa_narrowed_held_near_one`: the slice `softmax_tanh`, `μ_max = 10`, mass controls `(0, 3)`, bodies `(0, 1)`, asked
 //!   `[0.5, 2]`, where the held mass rounds to `0.99990463` and the two small masses move by `2.8e-4`, relative: every
@@ -28,7 +27,7 @@
 //! **Values.** `ε_μ` is the register's link clamp (§2.1), the sum held to it as `qa_TASK-M2-37_any_ask.rs` holds it;
 //! `DECODE_TOL` is parity_contract §4's relative IC/decode figure, for an `f32` decode against the `f64` formula;
 //! `ε_μ/4` is this file's line for "the narrowing bites"; the watchdog's 120 s is far past any build here, a fraction of
-//! a second. `μ_max` stays inside REQ-GEN-038's range, capped at 10 (R-597). Every slice, ask and row is test data.
+//! a second. `μ_max` stays inside its allowed range, capped at 10. Every slice, ask and row is test data.
 
 use std::panic::resume_unwind;
 #[cfg(feature = "controls")]
@@ -304,7 +303,7 @@ fn family<S: Selection>(how: Range, target: Target, p: &LinkParams<f64>) -> (u32
     (charts, bites)
 }
 
-/// `μ_max` over REQ-GEN-038's range, with two values `f32` rounds by nearly half a spacing, up and down, which the `f32`
+/// `μ_max` over its allowed range, with two values `f32` rounds by nearly half a spacing, up and down, which the `f32`
 /// decode reads narrowed.
 fn mu_maxes() -> Vec<f64> {
     let range = tunables()

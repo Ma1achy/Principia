@@ -1,10 +1,10 @@
-//! The descriptor's pole values, selected, never divided (R-436; dd_decoder §3.6, "Each producer selects its pole
+//! The descriptor's pole values, selected, never divided (dd_decoder §3.6, "Each producer selects its pole
 //! value"; `kernel::decode::descriptor`, `kernel::real::IeeeBits`), natively at f32 and f64:
 //! - `ieee_bits`: `or_pos_inf` and `or_neg_inf` give `±∞`'s integer pattern where their condition holds and `self`'s
 //!   bits, unchanged, where it doesn't; `non_finite_bits` is true exactly on an exponent field of all ones.
 //! - `descriptor_poles`: on `(m, r, p)` built at each pole, `rho_ratio` stores `+∞`'s bits where `‖λ̃‖ = 0`, `V_0`
 //!   `−∞`'s wherever a pair separation is 0, and `virial_ratio` 0 there; one step off each pole the quotient is stored,
-//!   finite (REQ-TOOL-030).
+//!   finite.
 
 use kernel::decode::descriptor::{describe, potential, ratio, virial};
 use kernel::decode::Ic;

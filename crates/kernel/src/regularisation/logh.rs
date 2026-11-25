@@ -721,7 +721,7 @@ pub struct LhCount<R> {
     pub closings: u32,
     /// The most halvings one landing took.
     pub most_bisections: u32,
-    /// The most steps taken in one interval, for the record.
+    /// The most steps taken in one interval, for the record only: the budget is cumulative, with no cap per interval.
     pub largest_interval: u32,
     /// The largest physical step.
     pub dt_max: DtMax<R>,
@@ -1057,7 +1057,7 @@ fn interval<S: LhStepper, R: AzReal, C: Cadence<R>, X: LhWatch<R>>(
             // `done` is read before the landing: a terminal that fires on the landing step ends the march there, its
             // state latched; the landing itself still counts ([`Interval::landed`]).
             // A terminal is read before the budget: one found on a step the budget allowed is the copy's outcome, and a
-            // copy never stores a terminal beside `budget_exhausted` (payload §2; R-603).
+            // copy never stores a terminal beside `budget_exhausted` (payload §2).
             if cadence.done() {
                 count.end = End::Done;
                 go = false;

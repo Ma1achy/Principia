@@ -2,25 +2,25 @@
 //! dd_generation_root §3.5): after each completed macro-step the wrapper derives the shape point `n = (u, v, w)/I` from
 //! the current positions and masses alone, never the momenta ([`shape`]; payload §5's `shape(r, masses)`), and stores
 //! nothing of it: no checkpoint array, no history. From it the readout advances two things the payload carries:
-//! - **`θ̃`**, the unwrapped phase, with R-389's pole hold kept in `SimState` alone (R-397): the frozen reference in
+//! - **`θ̃`**, the unwrapped phase, with its pole hold kept in `SimState` alone: the frozen reference in
 //!   `_reserved` as a u16 code ([`encode`], [`decode`]), `theta_ref_none` (0xFFFF) for "no reference";
-//! - **the closure registers** `closure_min` and `closure_step` with the departed bit ([`super::closure`]; R-37).
+//! - **the closure registers** `closure_min` and `closure_step` with the departed bit ([`super::closure`]).
 //!
-//! **The hold in `SimState` (R-397; payload §2, `_reserved`).** A fresh sample's `_reserved` is 0xFFFF, wherever its IC
+//! **The hold in `SimState` (payload §2, `_reserved`).** A fresh sample's `_reserved` is 0xFFFF, wherever its IC
 //! lies. Each macro-step, with "inside" decided on the state before it and the state after it by the march's disc test
-//! ([`crate::shape::config_in_disc`]; R-547), never stored:
+//! ([`crate::shape::config_in_disc`]), never stored:
 //! - outside → outside: `θ̃` adds `wrap(longitude(n) − longitude(n_prev))`, unquantised; `_reserved` stays 0xFFFF;
 //! - outside → inside (entry): `_reserved` takes the code of `n_prev`'s longitude, the last one outside; `θ̃` holds;
 //! - inside → inside: both hold;
 //! - inside → outside (exit): with a code, `θ̃` adds `wrap(longitude(n) − decode(code))`, exactly ±π adding +π; with
-//!   0xFFFF (R-392's IC that starts inside), nothing; `_reserved` becomes 0xFFFF.
+//!   0xFFFF (an IC that starts inside), nothing; `_reserved` becomes 0xFFFF.
 //!
 //! The reference is quantised when it is stored, and every exit differences against the decoded code, so `θ̃` and
 //! `_reserved` are bit-identical however the march is split into dispatches: a resumed march reloads `θ̃`, `_reserved`
 //! and the closure registers from the stored `SimState` ([`Readout::resume`]) and recomputes the previous point and its
 //! side of the disc from the stored positions, the same function of the same bits as the uninterrupted march's.
 //!
-//! **The code** (payload §2; R-397). Encode, of a longitude `λ ∈ [−π, π]`: `λ' = λ`, or `λ + 2π` where `λ < 0`;
+//! **The code** (payload §2). Encode, of a longitude `λ ∈ [−π, π]`: `λ' = λ`, or `λ + 2π` where `λ < 0`;
 //! `c = ⌊λ'·N/(2π) + ½⌋`, `N` the register's `theta_ref_steps` (65535), and `c = N` becomes 0, so the encode never
 //! yields the sentinel. Decode: `c·2π/N`, less `2π` where it exceeds `π`, so it lies in `(−π, π)`. `encode(decode(c)) =
 //! c` for every code. The decoded reference is within `π/N + 4·ulp_Real(2π)` of the longitude encoded. `N/(2π)` and
@@ -49,16 +49,16 @@ pub trait ReadoutReal: PayloadReal + LinkReal + IeeeBits + FloatConst + Count + 
 
 impl<R: PayloadReal + LinkReal + IeeeBits + FloatConst + Count + Width> ReadoutReal for R {}
 
-/// `_reserved`'s "no reference" sentinel, the register's `theta_ref_none` (0xFFFF; R-397).
+/// `_reserved`'s "no reference" sentinel, the register's `theta_ref_none` (0xFFFF).
 pub const NO_REFERENCE: u32 = THETA_REF_NONE;
 
-/// `r_pole`, the register's, at the width `R` (R-389, R-433).
+/// `r_pole`, the register's, at the width `R`.
 #[inline]
 pub fn r_pole<R: Width>() -> R {
     R::at_width(R_POLE as f32, R_POLE)
 }
 
-/// `δ_dep`, the register's, at the width `R` (R-37; REQ-VAL-055).
+/// `δ_dep`, the register's, at the width `R`.
 #[inline]
 pub fn delta_dep<R: Width>() -> R {
     R::at_width(DELTA_DEP as f32, DELTA_DEP)
@@ -99,7 +99,8 @@ pub fn decode<R: Real + Float + FloatConst + Count>(c: u32) -> R {
 
 /// One macro-step of `θ̃` with its reference in `_reserved` (the module's note): `theta` and the stored `code` before
 /// the step, `n_prev` and `n` the shape points before and after it, `prev_inside` and `inside` their sides of the disc.
-/// Returns `θ̃` and the code after it. The step itself is R-389's ([`theta_step_held`]), its reference the decoded code.
+/// Returns `θ̃` and the code after it. The step itself is the pole hold's ([`theta_step_held`]), its reference the
+/// decoded code.
 #[inline]
 pub fn theta_hold<R: Real + Float + FloatConst + Count>(
     theta: R,
@@ -130,7 +131,7 @@ pub fn theta_hold<R: Real + Float + FloatConst + Count>(
 /// shape `n̂(0)`, which the closure is measured from.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Readout<R> {
-    /// `θ̃`, the net turning since the IC (R-389).
+    /// `θ̃`, the net turning since the IC.
     pub theta: R,
     /// `_reserved`: the code of the frozen reference, or [`NO_REFERENCE`].
     pub code: u32,
@@ -146,7 +147,7 @@ pub struct Readout<R> {
 
 impl<R: ReadoutReal> Readout<R> {
     /// A fresh sample's readout at its IC's positions `r_0` with masses `m`: `θ̃ = 0`, `_reserved` 0xFFFF, wherever the
-    /// IC lies (R-389, R-392, R-397), and the closure not departed ([`Closure::fresh`]).
+    /// IC lies, and the closure not departed ([`Closure::fresh`]).
     #[inline]
     pub fn fresh(r_0: [[R; 2]; 3], m: [R; 3]) -> Self {
         Self::resume(
@@ -160,7 +161,7 @@ impl<R: ReadoutReal> Readout<R> {
     }
 
     /// The readout resumed at the positions `r` with masses `m`, the IC's shape `n_0`, and `θ̃`, the code and the
-    /// closure as stored: the previous point and whether it is inside are recomputed from `r` (R-397).
+    /// closure as stored: the previous point and whether it is inside are recomputed from `r`.
     #[inline]
     pub fn resume(
         n_0: [R; 3],

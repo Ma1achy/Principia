@@ -1,35 +1,36 @@
 //! The live shape readout in the march (`kernel::driver::shape`, `kernel::driver::closure`, the wrapper's
-//! `integrate` and `integrate_resumed_with`; dd_integrator §3.7; payload §1, §2; R-37, R-389, R-392, R-397, R-545):
-//! - `theta_ref_code` (REQ-INT-087): every code round-trips, `encode(decode(c)) = c`, and decodes into `(−π, π)`; the
+//! `integrate` and `integrate_resumed_with`; dd_integrator §3.7; payload §1, §2):
+//! - `theta_ref_code`: every code round-trips, `encode(decode(c)) = c`, and decodes into `(−π, π)`; the
 //!   encode's error on the circle is at most `π/65535 + 4·ulp_Real(2π)` on a million random longitudes and on the edge
 //!   cases (±π, ±0, the cut, the rounding edges), with the encode written in either order; it never yields 0xFFFF.
-//! - `theta_hold_state` (REQ-INT-088): through the march, on a real pole passage and from an IC inside the disc: a fresh
+//! - `theta_hold_state`: through the march, on a real pole passage and from an IC inside the disc: a fresh
 //!   sample's `_reserved` is 0xFFFF; it is 0xFFFF outside the disc after every step; entry writes the code of the last
 //!   longitude outside; inside, `θ̃` and the code hold; exit adds `wrap(exit − decode(code))` and writes 0xFFFF; an IC
 //!   inside adds nothing at its first exit; ±π adds +π; the inside test is recomputed from the stored state on resume;
 //!   descriptor bits 10–14 stay zero and bit 15 is the departed bit, the latched departure, whatever the hold does.
-//! - `theta_hold_disc_test` (R-547): the march's disc test on `Wide`s agrees with the float form away from the edge,
+//! - `theta_hold_disc_test`: the march's disc test on `Wide`s agrees with the float form away from the edge,
 //!   is invariant under power-of-two scales far past f32's normal range, where the float form's intermediates are
 //!   subnormal or zero, and under the mirror.
-//! - `theta_resume_split` (REQ-INT-089): one call against `k ∈ {2, 3, 7}` resumed calls, at f32 and f64, split on a
+//! - `theta_resume_split`: one call against `k ∈ {2, 3, 7}` resumed calls, at f32 and f64, split on a
 //!   pole passage's entry step, inside it and on its exit step, and inside the disc for an IC that starts there: `θ̃`,
 //!   `_reserved`, the closure registers and the state are bit-identical; the resume's step bounds, from the start and
 //!   part-way in; the stored `saturated` bit kept through a resume.
 //! - `march_loop_bound`: the march's loop stops at its end with a cadence that is never done, fresh and resumed, under a
 //!   cadence that panics at the first macro-step past it, so a broken loop condition fails at once.
-//! - `closure_registers` (REQ-PAY-043): after every horizon of a figure-eight run, `closure_min` is the offline minimum
+//! - `closure_registers`: after every horizon of a figure-eight run, `closure_min` is the offline minimum
 //!   of the chord `|n̂(t) − n̂(0)|` over the steps from departure on and `closure_step` its first argmin.
-//! - `closure_departure` (REQ-PAY-056): the figure-eight's `closure_min` is near 0 at `closure_step` near its shape
+//! - `closure_departure`: the figure-eight's `closure_min` is near 0 at `closure_step` near its shape
 //!   period over `dt_macro`; a closure before departure is ignored, however near; the departure test's edges; an equal
 //!   chord after departure does not move the step.
 //! - `closure_non_finite_chord`: a non-finite chord is no sample, before departure (the registers stay unset, the stored
 //!   minimum `+∞`) and after it (the minimum and its step kept).
-//! - `theta_unwrap_real_orbit` (REQ-INT-082, R-580): on a circulating figure-eight with a rotation added, `θ̃` has no
+//! - `theta_unwrap_real_orbit`: on a circulating figure-eight with a rotation added, `θ̃` has no
 //!   2π jumps, `orbit_count` matches a hand count, `retrograde` the hand-counted direction along the equator, and the
 //!   mirror's run (`y → −y` on every position and momentum) has `θ̃` and `retrograde` bitwise identical and `L_z`
-//!   bitwise opposite at every step; with R-433's near-pole arc report.
+//!   bitwise opposite at every step; with the near-pole arc report (the
+//!   step chords and least polar radius near the pole, against `r_pole`).
 //!
-//! Each test registers its negative control (R-176). Each check takes what it tests as an argument, so its control
+//! Each test registers its negative control. Each check takes what it tests as an argument, so its control
 //! runs the same check on a faulty one. `r_pole` and `δ_dep` are the register's, read through the kernel's generated
 //! constants (`r_pole`, `delta_dep`), never literals here. The figure-eight's period is `ledger::fixtures`'.
 
@@ -112,7 +113,7 @@ fn ulp_tau<R: Prec>() -> f64 {
     4.0 * eps
 }
 
-/// R-397's bound on the encode's error: `π/65535 + 4·ulp_R(2π)`.
+/// The bound on the pole-reference code's encode error: `π/65535 + 4·ulp_R(2π)`.
 fn code_bound<R: Prec>() -> f64 {
     PI / 65535.0 + 4.0 * ulp_tau::<R>()
 }
@@ -128,7 +129,8 @@ fn circle(a: f64, b: f64) -> f64 {
 /// An encode under test: the kernel's, or a control's.
 type Encode<R> = fn(R) -> u32;
 
-/// The kernel's encode with its multiply in the other order, `(λ'·N)/(2π)`: R-397's bound holds whatever the order.
+/// The kernel's encode with its multiply in the other order, `(λ'·N)/(2π)`: the code's bound holds whatever
+/// the order.
 fn encode_reordered<R: Prec>(lon: R) -> u32 {
     let tau = R::PI() + R::PI();
     let shifted = if lon < R::zero() { lon + tau } else { lon };
@@ -191,9 +193,9 @@ fn next_down<R: Prec>(x: R) -> R {
     -next_up(-x)
 }
 
-/// Checks R-397's code at `R` through `enc`, against the kernel's decode: the encode's error on the circle is within
-/// [`code_bound`] on [`longitudes`] and is never the sentinel; then every code round-trips and decodes into `(−π, π)`.
-/// Returns the worst error.
+/// Checks the pole-reference code (`_reserved`'s u16, 0xFFFF for none) at `R` through `enc`, against the kernel's
+/// decode: the encode's error on the circle is within [`code_bound`] on [`longitudes`] and is never the sentinel; then
+/// every code round-trips and decodes into `(−π, π)`. Returns the worst error.
 fn check_code<R: Prec>(enc: Encode<R>) -> f64 {
     let bound = code_bound::<R>();
     let mut worst = 0.0f64;
@@ -372,9 +374,11 @@ fn field(w: u32, lo: u32, width: u32) -> u32 {
     (w >> lo) & ((1 << width) - 1)
 }
 
-/// Checks R-389, R-392 and R-397's hold on the march's `series` of masses `m`, step by step from the stored values
-/// alone (`label` names the fixture), and that the hold leaves the descriptor's bits 10–14 zero and bit 15 the latched
-/// departure. Returns how many steps were entries, holds inside, exits with a code and exits with none.
+/// Checks `θ̃`'s pole hold (frozen reference below `r_pole`, the wrapped exit-minus-entry added on exit, nothing added
+/// at the first exit of an IC that starts inside, the reference stored as its code) on the march's `series` of masses
+/// `m`, step by step from the stored values alone (`label` names the fixture), and that the hold leaves the
+/// descriptor's bits 10–14 zero and bit 15 the latched departure. Returns how many steps were entries, holds inside,
+/// exits with a code and exits with none.
 fn check_hold<R: Prec>(series: &[Stored<R>], m: [R; 3], label: &str) -> [usize; 4] {
     let n: Vec<[R; 3]> = series.iter().map(|s| shape(s.r, m)).collect();
     let ins: Vec<bool> = series
@@ -1277,7 +1281,7 @@ negative_control!(
 /// orbit stays bound and circulating over two periods (0.05 breaks it up within half a period, measured).
 const OMEGA: f64 = 0.02;
 
-/// The fixture's `|L_z|` exceeds this, so "`L_z` opposite" is not vacuous (R-580's fix round).
+/// The fixture's `|L_z|` exceeds this, so "`L_z` opposite" is not vacuous.
 const LZ_BOUND: f64 = 0.01;
 
 /// The real orbit's horizon, in periods: the shape curve turns twice a period, so `orbit_count` reaches 2.
@@ -1450,8 +1454,8 @@ fn check_orbit<R: Prec>(
     (count, signed)
 }
 
-/// The arcs R-433 asks for: the largest step's chord on the sphere among the steps within `3·r_pole` of the pole, and
-/// the least polar radius reached; `None` for the arc where no step comes that near.
+/// The near-pole arcs reported against `r_pole`: the largest step's chord on the sphere among the steps within
+/// `3·r_pole` of the pole, and the least polar radius reached; `None` for the arc where no step comes that near.
 fn near_pole_arcs<R: Prec>(path: &[[R; 3]]) -> (Option<f64>, f64) {
     let pole: f64 = r_pole::<f64>();
     let mut worst: Option<f64> = None;
@@ -1510,8 +1514,8 @@ fn theta_unwrap_real_orbit() {
     );
 }
 
-/// `θ̃` re-stepped over a run's shape points, each point transformed by `f` first: the R-389 step on other
-/// coordinates.
+/// `θ̃` re-stepped over a run's shape points, each point transformed by `f` first: the pole-hold step on
+/// other coordinates.
 #[cfg(feature = "controls")]
 fn restepped(run: &[Sample<f64>], f: fn([f64; 3]) -> [f64; 3]) -> Vec<Sample<f64>> {
     let pole = r_pole::<f64>();

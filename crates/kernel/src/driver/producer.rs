@@ -156,13 +156,13 @@ pub const WRITERS: &[Writer] = &[
     // The monitored and detected fields, written after the march from the cadence it ran with.
     w("E_0", "driver/wrapper.rs", "written"),
     w("Lz_0", "driver/wrapper.rs", "written"),
-    // `saturated` is the substep law's `N_max` bit, OR-ed here with the regularised march's counted signals (R-603):
+    // `saturated` is the substep law's `N_max` bit, OR-ed here with the regularised march's counted signals:
     // this is the write the stored bit ends with.
     w("saturated", "driver/wrapper.rs", "written"),
     w("dmin_pair", "driver/wrapper.rs", "written"),
     w("t_dmin_step", "driver/wrapper.rs", "written"),
     w("coll_floor", "driver/wrapper.rs", "written"),
-    // The Chazy latch's stored level (chazy drill-down §6; R-545; TASK-M7-35).
+    // The Chazy latch's stored level (chazy drill-down §6).
     w("I_max", "driver/wrapper.rs", "written"),
     w("state", "detect/label.rs", "write"),
     w("detail", "detect/label.rs", "write"),
@@ -182,7 +182,7 @@ pub const WRITERS: &[Writer] = &[
     w("p_sh", "driver/benettin.rs", "write"),
     w("S", "driver/benettin.rs", "write"),
     // The decode's `ICDescriptor` (dd_decoder §3.6): every field from the decoded `(m, r, p)`, `rho_angle` from the
-    // configuration block's `Φ` (R-628), which replaces the one `fields` was handed.
+    // configuration block's `Φ`, which replaces the one `fields` was handed.
     w("m0", "decode/descriptor.rs", "fields"),
     w("m1", "decode/descriptor.rs", "fields"),
     w("m2", "decode/descriptor.rs", "fields"),

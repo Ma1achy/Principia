@@ -1,32 +1,30 @@
 //! Aarseth–Zare (`kernel::regularisation::az`; integrator_contract Part 2b § "Aarseth–Zare: the equations, the
-//! reference body, the Levi-Civita inverse and the step control (transcribed)", Part 2a, Part 6; R-927, R-953):
+//! reference body, the Levi-Civita inverse and the step control (transcribed)", Part 2a, Part 6):
 //! - `az_doubly_degenerate_is_finite`: an f32 state degenerate at the interval's entry, `A` and `B` both below `TINY`
 //!   so that `TINY·TINY` underflows and the entry size is infinite, ends its march at the explicit finiteness test,
 //!   its state latched finite; the same state degenerate only mid-interval takes a finite step, a counted cap hit, and
-//!   does not reach the test; its control removes the test, and the march carries a non-finite state on (REQ-INT-105's
-//!   finiteness arm; R-953).
+//!   does not reach the test; its control removes the test, and the march carries a non-finite state on.
 //! - `regularisation_compose_az_runs`: every stepper × Aarseth–Zare pair is selected, runs through the seam (the state
 //!   moves and stays finite, the cadence follows each kept step) and carries the Part 2b table's warning where the
-//!   table marks it measured bad and none otherwise; its control is an Aarseth–Zare that takes no step (REQ-INT-017's
-//!   arm; R-561).
+//!   table marks it measured bad and none otherwise; its control is an Aarseth–Zare that takes no step.
 //! - `regularisation_compose_az_profile`: the AZ + RK4 profile is not symplectic, step- or run-reversible, owns its
 //!   time mapping, order 4 with 4 evaluations (Part 2a's table); every pair's profile is non-symplectic; and the slot
-//!   takes a Mikkola–Tanikawa leapfrog type, whose row is symplectic (REQ-INT-024); its control is the stepper's own
-//!   row reported for the pair.
+//!   takes a Mikkola–Tanikawa leapfrog type, whose row is symplectic; its control is the stepper's own row reported for
+//!   the pair.
 //! - `owns_time_mapping_composed_az`: under Aarseth–Zare `ADVANCE` to a sync boundary ends at exactly its time, and to a
 //!   target between boundaries at the boundary before it, in physical time and through the seam's macro-step grid,
-//!   bitwise the same state (R-565; REQ-INT-021's arm); its control lands on the off-grid target.
+//!   bitwise the same state; its control lands on the off-grid target.
 //! - `tau_schedule_bound`: over fuzzed ICs, at every sync boundary `t_k` a copy's running total of steps is at most
 //!   `max(N_min, step_budget_rate·t_k)`, and a copy that would exceed it has ended undetermined and is never run on;
 //!   no cap per interval is asserted, and the largest count in one interval is printed for the record; its control
-//!   resets the counter at each boundary (REQ-INT-054; R-604, R-953).
+//!   resets the counter at each boundary.
 //! - `az_reference_body_tie_break`, `az_lc_inverse_branches`, `az_round_trip`, `az_energy_held`: the reference-body
 //!   rule with its tie-break, the conditioned inverse's branches, registration and return, and the interval's energy;
 //!   their controls a last-maximum tie-break, the unstable inverse, a quarter-turned `u₁` and a flow whose energy is
 //!   not the state's.
 //! - `az_landing_secant`: on a scripted clock, the landing's secant and bisection landing the clock on the boundary
 //!   exactly, a retake that leaves the clock where it was, the budget's physical time, a copy spent as it lands, and
-//!   the overshoot's edge, no kept clock past the boundary; its control turns the retakes off (R-998).
+//!   the overshoot's edge, no kept clock past the boundary; its control turns the retakes off.
 //! - `az_boundary_corrected`, `az_seam_index`: the boundary's corrections of the quotient both ways and before `0`,
 //!   and the seam's `ADVANCE` from a later macro index; their controls the uncorrected quotient and a seam from 0.
 //! - `az_form_orders`: each stepper's form at its own order on the harmonic oscillator (KDK second order there, being
@@ -37,17 +35,16 @@
 //!   (gpu_determinism_note § "The discipline", rule 3): a NaN on its bits to `0`, a negative to `0`, at or above `2³²`
 //!   to `u32::MAX`; their controls a NaN sent to the top, a negative by its magnitude, and a clamp with no select.
 //! - `az_landing_no_tolerance`: no landing tolerance, with the clamp on or off: a clock short of the boundary never
-//!   lands, one past it is never kept; its control keeps a step past the boundary (R-998).
+//!   lands, one past it is never kept; its control keeps a step past the boundary.
 //! - `az_landing_state_with_clock`: under RK4, an interval whose clamped step overshoots stores the state whose own
-//!   clock is the boundary, bitwise, its time the boundary's; its control is the clock-only correction (R-998;
-//!   REQ-INT-119).
+//!   clock is the boundary, bitwise, its time the boundary's; its control is the clock-only correction.
 //! - `az_r3_floor_tiny`: the equations of motion read `|R₃|` floored at `TINY`, `1e-37` at f32 and `1e-300` at f64; its
-//!   control a floor of 0 at f32 (R-999; REQ-INT-120).
+//!   control a floor of 0 at f32.
 //! - `az_seam_non_finite_fails`, `az_seam_completes`, `az_seam_exhausted_stops`, `az_seam_done_short`: through the
-//!   wrapper (`integrate_with`), the seam's end (Part 2a, Cost 2; § "The sync grid is a fixed quantum of physical time
-//!   (R-565)"): a march ended non-finite fails the run, `sim_failed` at the macro-step it ended in; every macro-step
-//!   that reached its boundary is completed, `t_end_step` and the Welford samples counting it; a spent budget stops
-//!   the copy, `running` as it stood; a march stopped on `done` is not completed. Their controls drop the end (the
+//!   wrapper (`integrate_with`), the seam's end (Part 2a, Cost 2; § "The sync grid is a fixed quantum of physical
+//!   time"): a march ended non-finite fails the run, `sim_failed` at the macro-step it ended in; every macro-step that
+//!   reached its boundary is completed, `t_end_step` and the Welford samples counting it; a spent budget stops the
+//!   copy, `running` as it stood; a march stopped on `done` is not completed. Their controls drop the end (the
 //!   stepper's rule) or count a short call completed.
 //! - `az_done_on_landing`: a seam call spanning several sync boundaries with a terminal on a landing step ends there,
 //!   latched; its control leaves the terminal's `done` unread.
@@ -116,8 +113,8 @@ fn v<R: AzReal>(x: f64) -> R {
 }
 
 /// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8` (exact in binary), the reference's `TINY` (`1e-37` at
-/// f32, `1e-300` at f64, R-953), which also floors `|R₃|` (R-999), R-160's `f = 0.02`, a budget that does not bind, the
-/// clamp on, the secant's 4 retakes and the bisection's 64 halvings (Part 2b, step 6; R-998). Test inputs, not the
+/// f32, `1e-300` at f64), which also floors `|R₃|`, the predictive limit's `f = 0.02`, a budget that does not bind,
+/// the clamp on, the secant's 4 retakes and the bisection's 64 halvings (Part 2b, step 6). Test inputs, not the
 /// calibrations.
 fn params<R: AzReal>() -> AzParams<R> {
     AzParams {
@@ -438,11 +435,11 @@ negative_control!(
 // ── The profile and the stepper slot ───────────────────────────────────────────────────────────────────────────
 
 /// A stand-in for a time-transformed leapfrog in Mikkola–Tanikawa form, a type of the Aarseth–Zare stepper slot. Its
-/// equations are not in the corpus (R-162); the stand-in steps with RK4's form, and advertises the table's row.
+/// equations are not in the corpus; the stand-in steps with RK4's form, and advertises the table's row.
 struct MikkolaTanikawaStandIn;
 
 impl AzStepper for MikkolaTanikawaStandIn {
-    /// Part 2a's row for Aarseth–Zare with a time-transformed leapfrog (R-162, R-168, R-500): order 2, one
+    /// Part 2a's row for Aarseth–Zare with a time-transformed leapfrog: order 2, one
     /// evaluation, symplectic, step-reversible, not run-reversible, owning its time mapping.
     fn pair_profile() -> CapabilityProfile {
         CapabilityProfile {
@@ -1777,7 +1774,7 @@ fn script(clock: Clock, k: u32, params: AzParams<f64>) -> (AzAdvanced<f64>, Vec<
     (out, watch.t)
 }
 
-/// The landing and what the interval counts around it (Part 2b, steps 5 to 7; R-604, R-998), `Δ_sync = 1/8`:
+/// The landing and what the interval counts around it (Part 2b, steps 5 to 7), `Δ_sync = 1/8`:
 /// - a clock twice as fast: the clamped step reaches `2Δ`, past, and the retakes land the clock on `Δ` exactly, the
 ///   march then at boundary 1;
 /// - a clock that jumps `Δ/2` each step: the secant's 3 retakes end at `31Δ/30` by hand, still past, and the bisection
@@ -1969,7 +1966,7 @@ negative_control!(
     check_not_finite_clock(f64::MIN)
 );
 
-/// No landing tolerance (R-998): a clock that stops `Δ·5e-15` short of the boundary never lands, with the clamp on or
+/// No landing tolerance: a clock that stops `Δ·5e-15` short of the boundary never lands, with the clamp on or
 /// off, the copy stepping on until its budget (3 steps) is spent; a clock that reaches the boundary exactly lands
 /// either way; and a clock that every step and retake puts past the boundary is never kept: the copy is spent at
 /// `t = 0`, unlanded. `run` is the scripted march under test.
@@ -2020,7 +2017,7 @@ negative_control!(
     })
 );
 
-/// The state lands on the boundary with the clock (R-998; REQ-INT-119), under RK4 on Burrau's state at f64: at
+/// The state lands on the boundary with the clock, under RK4 on Burrau's state at f64: at
 /// `η = 10` with the predictive limit off each interval is one clamped step, whose first-order prediction of the
 /// landing overshoots the boundary (asserted, on the first of the sync quanta tried that does). The march's stored
 /// state is the image of the regularised state whose own clock is the boundary, bitwise, and its time reads the
@@ -2117,7 +2114,7 @@ negative_control!(
 
 // ── The floor on |R₃| ──────────────────────────────────────────────────────────────────────────────────────────
 
-/// The equations of motion read `|R₃|` floored at `TINY` at each working precision (R-999; REQ-INT-120): with
+/// The equations of motion read `|R₃|` floored at `TINY` at each working precision: with
 /// `u₂ = u₁`, so that `|R₃| = 0`, the term reads `TINY`, `1e-37` at f32 (not 0) and `1e-300` at f64; above the floor
 /// it reads `|R₂ − R₁|` itself. `tiny32` is the f32 floor registered.
 fn check_r3_floor(tiny32: f32) {
@@ -2505,7 +2502,7 @@ type AzRk4 = Composed<Rk4, Az>;
 /// `bounded`: latched at the macro-step it ended in, which is not completed (`t_end_step = 1`), its state the march's
 /// latched finite one, its detail 2 (a non-finite derived quantity on a finite state, payload §2), and, through
 /// [`integrate`]'s monitored fields, `dmin_pair` its sentinel (Part 2a § "The sync grid is a fixed quantum of physical
-/// time (R-565)": "a terminal event … still latches at the step it fires on").
+/// time": "a terminal event … still latches at the step it fires on").
 fn check_non_finite_fails(
     run: WrapperRun<f32, Counting>,
     monitored: fn(&Ic<f32>) -> SimStateBaseOf<f32>,
@@ -2600,7 +2597,7 @@ fn replay() -> (State<f64>, u32, Welford<f64>) {
 
 /// Burrau's state through the wrapper at `dt_macro = 1/16` (`Δ_sync = 1/8`), eight macro-steps (`t = 1/2`, four
 /// boundaries), `N_sub = 4`, which Aarseth–Zare's step count never is: every macro-step reaches its boundary at or
-/// before its target (R-565) and is completed, whatever the steps it took (Part 2a, Cost 2), so the run is `bounded`
+/// before its target and is completed, whatever the steps it took (Part 2a, Cost 2), so the run is `bounded`
 /// with `t_end_step = 8` and eight Welford samples, each on the state the seam returned (payload §2, §4), bitwise the
 /// replay's.
 fn check_completes(run: WrapperRun<f64, Counting>) {
@@ -2672,11 +2669,11 @@ type SpentRk4 = Composed<Rk4, AarsethZare<Spent>>;
 
 /// The budget here is `N_min = 4` at rate 0, so the second macro-step's march spends it whatever the time. The running
 /// step total is carried across seam calls in the trajectory's buffer (`tests/sync_quantum.rs`,
-/// `sync_quantum_bitwise_budget`); the budget as a rate and its flag are TASK-M3-41's.
+/// `sync_quantum_bitwise_budget`); the budget as a rate and its exhaustion flag are tested in `tests/budget.rs`.
 ///
 /// Burrau's state through the wrapper as in [`check_completes`] on a budget of 4 steps: the first macro-step takes no
-/// step and is completed, the second's march spends its budget, and the copy is never run on (R-604): the run stops
-/// there, `running` as it stood (Part 7; R-603's flag being TASK-M3-41's), at `t_end_step = 1`, with the state and
+/// step and is completed, the second's march spends its budget, and the copy is never run on: the run stops there,
+/// `running` as it stood (Part 7; the exhaustion flag is `tests/budget.rs`'s), at `t_end_step = 1`, with the state and
 /// steps of that one march.
 fn check_exhausted_stops(run: WrapperRun<f64, Counting>) {
     let out = run(
@@ -2899,8 +2896,8 @@ impl<R> Cadence<R> for Unread {
 /// One seam call spanning four sync boundaries (`dt_macro = 1/2`, `Δ_sync = 1/8`) with a terminal that fires on the
 /// first interval's landing step (the cadence done from the call that follows that step): the march ends there, its
 /// state the landing's, latched, never marched on into the next interval, and the call is short of its target (Part
-/// 2a § "The sync grid is a fixed quantum of physical time (R-565)": "a terminal event … still latches at the step it
-/// fires on"; code review 5880407311 of PR #502, F2). `cadence(n)` is the cadence done from its `n`-th call.
+/// 2a § "The sync grid is a fixed quantum of physical time": "a terminal event … still latches at the step it fires
+/// on"). `cadence(n)` is the cadence done from its `n`-th call.
 fn check_done_on_landing<C: Cadence<f64>>(cadence: fn(u32) -> C) {
     let s = burrau::<f64>();
     let first = march::<Rk4, f64, Counting, ExplicitTest>(

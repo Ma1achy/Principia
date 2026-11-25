@@ -1,4 +1,4 @@
-//! The fragment entry points on the host (`kernel::stage::fragment`; TASK-M2-25, R-116): each writes, at the generated
+//! The fragment entry points on the host (`kernel::stage::fragment`): each writes, at the generated
 //! layout's offsets, exactly what the source it wraps computes, bit for bit, so the translation the fragment snippets
 //! are lifted from moves the right values to the right words. The snippets' own agreement on the GPU is render's
 //! `decode_preset` and validation's `agreement_preset_gpu`.
@@ -10,7 +10,7 @@
 //!   values against `descriptor::describe`, `encode::encode` with `stage::encode::notices` and `C`'s canonical state,
 //!   and `shape::shape`.
 //!   Controls: a word read one place off is found in each.
-//! - `fragment_entries_free_decode_writes_its_source` (TASK-M2-26): `decode_free` on latent `z`, the origin, an interior
+//! - `fragment_entries_free_decode_writes_its_source`: `decode_free` on latent `z`, the origin, an interior
 //!   point and points past every control's saturation, against `decode::decode` at f32 under the default links: the
 //!   `(m, r, p)` and the tag word. Control: a `z` read one place off is found.
 
@@ -162,7 +162,7 @@ negative_control!(
 );
 
 /// A state of fifteen distinct values, the `k`-th of a few; the fifth has its inner pair coincident, so the encode's
-/// notices word sets bit 0 (R-13). Other states may set other bits, such as bit 2, `lookup_rescaled` (R-547).
+/// notices word sets bit 0. Other states may set other bits, such as bit 2, `lookup_rescaled`.
 fn state(k: usize) -> Ic<f32> {
     let s = 1.0 + 0.1 * k as f32;
     if k == 4 {

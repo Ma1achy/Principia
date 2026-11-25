@@ -1,18 +1,19 @@
-//! QA's tests for TASK-M3-10, written from the requirements it closes (payload §1, "Why closure is here, at this
-//! width, unconditionally"; payload §2, "Drift latches are ABSOLUTE maxima"; R-271):
-//! - `qa_layout_read_with_unpack2x16float` (REQ-PAY-041): `d_min` is the high half of `packed_a`, read with WGSL's
-//!   `unpack2x16float`, `dE_max` the low and `dLz_max` the high half of `packed_b`, `log16` since R-632, the
+//! QA's tests for the closure and drift latches, written from payload §1, "Why closure is here, at this width,
+//! unconditionally", and payload §2, "Drift latches are ABSOLUTE maxima":
+//! - `qa_layout_read_with_unpack2x16float`: `d_min` is the high half of `packed_a`, read with WGSL's
+//!   `unpack2x16float`, `dE_max` the low and `dLz_max` the high half of `packed_b`, both in the `log16` form, the
 //!   descriptor's low 16 bits kept.
-//! - `qa_clamp_fuzz_any_bits` (REQ-PAY-045): over every f32 bit pattern (NaN payloads, ±∞, ±10⁶, subnormals), a valid
-//!   state's halves are finite, clamped to 65504, the drift maxima never negative and `d_min` never 0.0 (R-271); a failed
-//!   state's halves are exactly `0x0000` in both drifts and `0x7C00` in `d_min`, tested by the bits.
-//! - `qa_failed_run_packs_failed_state_values` (REQ-PAY-041, REQ-PAY-045): a march that fails at f32 (momenta whose
+//! - `qa_clamp_fuzz_any_bits`: over every f32 bit pattern (NaN payloads, ±∞, ±10⁶, subnormals), a valid state's
+//!   halves are finite, `d_min` clamped to 65504 and the drifts saturating at `log16`'s greatest code, the drift maxima
+//!   never negative and `d_min` never 0.0; a failed state's halves are exactly `0x0000` in both drifts and `0x7C00` in
+//!   `d_min`, tested by the bits.
+//! - `qa_failed_run_packs_failed_state_values`: a march that fails at f32 (momenta whose
 //!   squares overflow) stores `sim_failed` with `0x7C00` in `d_min` and 0.0 in both drift halves, though its detector
 //!   latched a finite separation.
-//! - `qa_reload_persist_is_exact` (REQ-PAY-044): every word a valid sample can persist, reloaded at a resume and
+//! - `qa_reload_persist_is_exact`: every word a valid sample can persist, reloaded at a resume and
 //!   persisted again with nothing new observed, is the same word, exhaustively over the f16 halves: one requantisation
 //!   per persist boundary, none added by the resume.
-//! - `qa_latches_monotone_across_persists` (REQ-PAY-044, REQ-PAY-050): over random measurements and persist cuts, the
+//! - `qa_latches_monotone_across_persists`: over random measurements and persist cuts, the
 //!   live f32 latches never move the wrong way after any observation, each bounds the observation just made, the
 //!   persisted halves never move the wrong way from one persist boundary to the next, and the last persist is the f16 of
 //!   the offline least separation and greatest drift magnitudes.
@@ -74,12 +75,11 @@ fn observed(ds: &[f32], drifts: &[(f32, f32)]) -> Latches {
     l
 }
 
-// ── qa_layout_read_with_unpack2x16float (REQ-PAY-041) ────────────────────────────────────────────────────────────
+// ── qa_layout_read_with_unpack2x16float ──────────────────────────────────────────────────────────────────────────
 
 /// Asserts the bit layout `pack` writes: `d_min = 0.5` (`0x3800`) in `packed_a`'s high half, read back by
 /// `unpack2x16float`; `dE_max = |−0.25|` (`log16` `0x5E01`) in `packed_b`'s low half and `dLz_max = 3` (`0x6181`) in
-/// its high half, in the `log16` form since R-632 (binary16 `0x3400` and `0x4200` before), read back by their
-/// accessors; the descriptor kept.
+/// its high half, in the `log16` form, read back by their accessors; the descriptor kept.
 fn check_layout(pack: Persist) {
     let l = observed(&[2.0, 0.5, 1.0], &[(-0.25, 1.0), (0.125, -3.0)]);
     let a0 = descriptor(STATE_BOUNDED);
@@ -112,7 +112,7 @@ negative_control!(
     })
 );
 
-// ── qa_clamp_fuzz_any_bits (REQ-PAY-045) ─────────────────────────────────────────────────────────────────────────
+// ── qa_clamp_fuzz_any_bits ───────────────────────────────────────────────────────────────────────────────────────
 
 /// Asserts the clamp and failed-state rule of `pack` on the latches of the observations `obs` (`(d, ΔE, ΔL_z)`) in
 /// `state`.
@@ -165,7 +165,7 @@ fn check_clamp(pack: Persist, state: u32, obs: &[(f32, f32, f32)]) -> Result<(),
         pa_d_min(a)
     );
     // A column with a NaN in it is a march that marks itself `sim_failed` (payload §1), outside this check's domain.
-    // The drift halves are `log16` (R-632), which saturates at its greatest code, `LOG16_CODE_MAX`, never past it: a
+    // The drift halves are `log16`, which saturates at its greatest code, `LOG16_CODE_MAX`, never past it: a
     // drift of `±∞` is stored as that code.
     let inf = |x: f32| x.is_infinite();
     let max_de = obs.iter().any(|o| inf(o.1)) && !obs.iter().any(|o| o.1.is_nan());
@@ -219,7 +219,7 @@ negative_control!(
     })
 );
 
-// ── qa_failed_run_packs_failed_state_values (REQ-PAY-041, REQ-PAY-045) ────────────────────────────────────────────
+// ── qa_failed_run_packs_failed_state_values ──────────────────────────────────────────────────────────────────────
 
 /// A march whose energy is non-finite at f32: momenta whose squares overflow, so the monitor marks it `sim_failed`.
 fn overflowing() -> Fixture {
@@ -280,7 +280,7 @@ negative_control!(
     }
 );
 
-// ── qa_reload_persist_is_exact (REQ-PAY-044) ─────────────────────────────────────────────────────────────────────
+// ── qa_reload_persist_is_exact ───────────────────────────────────────────────────────────────────────────────────
 
 /// Asserts that `resume` then [`persist`] gives back every persisted word of a valid sample: each `d_min` half from the
 /// least subnormal to 65504 and the unset `0x7C00`, and each drift half from 0.0 to 65504, in both halves.
@@ -326,7 +326,7 @@ negative_control!(
     })
 );
 
-// ── qa_latches_monotone_across_persists (REQ-PAY-044, REQ-PAY-050) ───────────────────────────────────────────────
+// ── qa_latches_monotone_across_persists ──────────────────────────────────────────────────────────────────────────
 
 /// The f16 bits a valid sample stores for a `d_min` of `d`: clamped to 65504, below the least subnormal floored to it.
 fn d_min_bits(d: f32) -> u32 {
@@ -337,8 +337,7 @@ fn d_min_bits(d: f32) -> u32 {
     }
 }
 
-/// The bits a valid sample stores for a drift maximum `x >= 0`: its `log16` code (R-632; binary16 clamped to 65504
-/// before).
+/// The bits a valid sample stores for a drift maximum `x >= 0`: its `log16` code.
 fn drift_bits(x: f32) -> u32 {
     u32::from(f32_to_log16(x))
 }

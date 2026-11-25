@@ -170,8 +170,7 @@ const CASTS: &[(&str, &str, &str, Cast)] = &[
         "code as i32",
         Cast::Int,
     ),
-    // The Chazy test's escaper, a body index (`usize`), to the detail's u32 (both casts): TASK-M3-34's file, held once
-    // it merges.
+    // The Chazy test's escaper, a body index (`usize`), to the detail's u32 (both casts).
     (
         "detect/escape_rule.rs",
         "chazy_test",

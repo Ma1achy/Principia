@@ -49,7 +49,7 @@ pub struct FgwAppended {
 /// - otherwise the push: `W = 3·W + continuation_index(prev, s)`, `prev = s`.
 ///
 /// `packed_a`'s `last_symbol` is set to `prev` wherever `prev` changes (the push and the pop), and nowhere else
-/// (payload §3). `s` is a symbol code, 0…3: `debug_assert!`ed, then masked `& 3`, as the table functions are (R-321).
+/// (payload §3). `s` is a symbol code, 0…3: `debug_assert!`ed, then masked `& 3`, as the table functions are.
 #[inline]
 pub fn fgw_append(word: [u32; 4], prev: u32, packed_a: u32, s: u32) -> FgwAppended {
     debug_assert!(s < 4, "s is not a symbol code (R-321)");

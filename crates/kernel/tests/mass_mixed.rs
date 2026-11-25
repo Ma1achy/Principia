@@ -1,18 +1,17 @@
 //! The ternary mass plot and the mixed-axis charts (`kernel::chart::mass_simplex`, `kernel::chart::mixed`;
 //! chart_reference §1.3, §4.4, §4.5; inverse_encode_contract § "Chart-aware validation"), each check at the f64 and the
-//! f32 instantiation natively where it decodes (R-118, R-265):
+//! f32 instantiation natively where it decodes:
 //! - `ternary_mass_*`: every pixel's masses are `≥ ε_m` and sum to 1; the masses are the shear's, buffered; the
 //!   geometry is the Burrau triangle at `ν₀` under every pixel's masses, at rest; the Burrau marker lands at the Burrau
-//!   masses; validation is the buffered simplex, decided exactly at the edge (REQ-CHART-026).
+//!   masses; validation is the buffered simplex, decided exactly at the edge.
 //! - `mixed_axis_*`: the `(α, p_ρ)` chart decodes through the shared decoder, its axes the decoder's own `α` and `p_ρ`,
-//!   the other six frozen; a latent axis places `z` directly; feasibility is the conjunction of both axes' checks
-//!   (REQ-CHART-008).
+//!   the other six frozen; a latent axis places `z` directly; feasibility is the conjunction of both axes' checks.
 //! - `per_pixel_mass_stage_*`: each chart whose masses vary per pixel has a decode-stage entry point, whose native call
 //!   is the chart's own decode, and a uniform that round-trips its parameters.
 //! - `per_pixel_mass_declared_*`: every chart declares `requires_per_pixel_mass`, true exactly for the ternary plot, the
-//!   Burrau family, a mixed chart with a mass axis and the latent chart, whose type cannot say (REQ-DEC-006).
+//!   Burrau family, a mixed chart with a mass axis and the latent chart, whose type cannot say.
 //! - `per_pixel_mass_trait_decode_*`: on each chart that declares it and whose masses its type decides, the trait's
-//!   `Chart::decode` is the decode stage's `ChartDecode::decode_at`, and its masses vary per pixel (REQ-DEC-006); on the
+//!   `Chart::decode` is the decode stage's `ChartDecode::decode_at`, and its masses vary per pixel; on the
 //!   invariant charts, which declare no per-pixel mass, the trait decode is `decode_at` too.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
@@ -84,7 +83,7 @@ fn grid() -> Vec<(f64, f64)> {
 /// The shapes `ν₀` checked: the classical `1/2`, its leg swap `1/3`, and three others.
 const NUS: [f64; 5] = [0.5, 1.0 / 3.0, 0.2, 0.7, 0.9];
 
-// ── ternary_mass (REQ-CHART-026) ────────────────────────────────────────────────────────────────────────────────
+// ── ternary_mass ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The buffered masses at `(u, v)` under `ε`, behind a function pointer so a control runs the check on a broken map.
 type MassFn<R> = fn(R, R, R) -> [R; 3];
@@ -418,7 +417,7 @@ negative_control!(
     })
 );
 
-// ── mixed_axis (REQ-CHART-008) ──────────────────────────────────────────────────────────────────────────────────
+// ── mixed_axis ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The `(α, p_ρ)` chart.
 type AlphaPRho<R> = Mixed<Alpha, PRhoX, R>;
@@ -796,7 +795,7 @@ fn mixed_axis_latent_axes() {
         <Alpha as Quantity>::DOMAIN,
         [0.0, core::f64::consts::FRAC_PI_2]
     );
-    // `β`'s domain is the circle's one period (R-898).
+    // `β`'s domain is the circle's one period.
     assert_eq!(<Beta as Quantity>::DOMAIN, [0.0, core::f64::consts::TAU]);
     for d in [
         <PRhoX as Quantity>::DOMAIN,
@@ -900,7 +899,7 @@ negative_control!(
     })
 );
 
-// ── per_pixel_mass_declared (REQ-DEC-006) ───────────────────────────────────────────────────────────────────────
+// ── per_pixel_mass_declared ─────────────────────────────────────────────────────────────────────────────────────
 
 /// A chart that declares nothing beyond the trait's required items.
 struct Undeclared;
@@ -1090,7 +1089,7 @@ negative_control!(
     )
 );
 
-// ── per_pixel_mass_trait_decode (REQ-DEC-006) ───────────────────────────────────────────────────────────────────
+// ── per_pixel_mass_trait_decode ─────────────────────────────────────────────────────────────────────────────────
 
 /// A chart's decode under the default links, behind a function pointer so a control runs the check on a broken one.
 type TraitDecodeFn<C, R> = fn(&C, R, R) -> Decoded<R>;

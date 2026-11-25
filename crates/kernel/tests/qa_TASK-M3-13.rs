@@ -1,26 +1,26 @@
-//! QA's tests for TASK-M3-13, written from the requirements and their sources (dd_simstate_payload §4; dd_integrator
-//! §3.5, §3.7; R-17, R-72, R-245), not from the implementation:
-//! - REQ-INT-041 (`qa_m3_13_welford_slope_*`): the f32 streaming co-moments, read through the read side's
+//! QA's tests for the diffusion sentinel's streaming slope and the shape distance `y`, written from the requirements
+//! and their sources (dd_simstate_payload §4; dd_integrator §3.5, §3.7), not from the implementation:
+//! - The streaming slope (`qa_m3_13_welford_slope_*`): the f32 streaming co-moments, read through the read side's
 //!   `diffusion_slope`, give the least-squares slope of `y` on `t` within an f32 tolerance that is a first-order
 //!   running round-off bound on the update's own operations (Higham, *Accuracy and Stability of Numerical Algorithms*,
-//!   §3.3), never a number picked; `n = 0` and `n = 1` read the canonical NaN (R-245), whatever `C_ty` holds; samples
-//!   streamed concurrently on threads in lockstep, as one dispatch's invocations are, are bit for bit the samples
-//!   streamed alone, so no shared mutable state enters the update.
-//! - REQ-PAY-054 (`qa_m3_13_time_moments_*`): `C_tt(n) = h²·n(n²−1)/12` and `mean_t = (n+1)h/2` are exactly the
+//!   §3.3), never a number picked; `n = 0` and `n = 1` read the canonical NaN (an invalid fit reads NaN, no sentinel
+//!   value), whatever `C_ty` holds; samples streamed concurrently on threads in lockstep, as one dispatch's invocations
+//!   are, are bit for bit the samples streamed alone, so no shared mutable state enters the update.
+//! - The time moments (`qa_m3_13_time_moments_*`): `C_tt(n) = h²·n(n²−1)/12` and `mean_t = (n+1)h/2` are exactly the
 //!   brute-force `Σ(tᵢ − mean_t)²` and mean over `tᵢ = i·h` for `n = 0 … 1000` at dyadic `h`, where both are exact in
 //!   f64; at f32 within the closed form's five roundings; `δ_t = 0.5·n·h` is `t_n − mean_t(n − 1)`.
-//! - REQ-PAY-073 (`qa_m3_13_y_*`): payload §4's `y = ‖n̂(r, m) − n̂₀‖²` at the shape sphere's landmarks, which
+//! - The shape distance (`qa_m3_13_y_*`): payload §4's `y = ‖n̂(r, m) − n̂₀‖²` at the shape sphere's landmarks, which
 //!   dd_integrator §3.7 places independently of the code: `L⁺ = (0, 0, 1)` for the anticlockwise equilateral triangle at
 //!   equal masses, `L⁻` its mirror, `b̂₀₁ = (−1, 0, 0)` for bodies 0 and 1 coincident at any masses, and every collinear
 //!   configuration on the equator `w = 0` at any masses; `y` is invariant under rotation, scale and translation (a
 //!   shape quantity), and in `[0, 4]`.
-//! - REQ-PAY-098, kernel side (`qa_m3_13_wrapper_mean_y_in_declared_range`): the wrapper's `mean_y` over real
+//! - The declared range, kernel side (`qa_m3_13_wrapper_mean_y_in_declared_range`): the wrapper's `mean_y` over real
 //!   integrations lies in the declared `[0, 4]`, and the read side's slope of the same run is valid and finite.
 //!
 //! **Domain** (pitfalls §10): the update and the time moments are stateless functions of their arguments; the wrapper
 //! test runs real trajectories, which is the regime the range claim is about.
 //!
-//! Each test has its negative control (R-176).
+//! Each test has its negative control.
 
 use std::sync::Barrier;
 
@@ -34,7 +34,7 @@ use kernel::payload::{diffusion_slope, diffusion_slope_valid, tm_t_end_step};
 use spirv_std::glam::UVec4;
 use validation::negative_control;
 
-/// The canonical quiet NaN (R-245; lowering Part 3a).
+/// The canonical quiet NaN (lowering Part 3a).
 const QNAN: u32 = 0x7fc0_0000;
 
 /// f32's unit roundoff, `2⁻²⁴`.
@@ -52,7 +52,7 @@ fn rng(seed: u64) -> impl FnMut() -> f64 {
     }
 }
 
-// ── REQ-INT-041: the streaming slope ────────────────────────────────────────────────────────────────────────────────
+// ── The streaming slope ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A series: the macro-step `h` and the samples `y₁ … y_n` at `tᵢ = i·h`, each in `[0, 4]` (payload §4's range of `y`).
 struct Series {
@@ -273,7 +273,7 @@ negative_control!(
     check_lockstep(shared_count)
 );
 
-// ── REQ-PAY-054: the time moments in closed form ────────────────────────────────────────────────────────────────────
+// ── The time moments in closed form ─────────────────────────────────────────────────────────────────────────────────
 
 /// Checks, for `n = 0 … 1000` and the dyadic `h = 1, 1/4, 1/128`, where every term and sum below is exact in f64,
 /// that `c_tt(n, h)` is exactly the brute-force `Σ(tᵢ − mean)²`, `mean_t(n, h)` exactly the mean (for `n ≥ 1`), and
@@ -323,7 +323,7 @@ negative_control!(
     check_closed_form(|n, h| h * h * f64::from(n) * (f64::from(n).powi(2) + 1.0) / 12.0)
 );
 
-// ── REQ-PAY-073: y at the shape sphere's landmarks ─────────────────────────────────────────────────────────────────
+// ── y at the shape sphere's landmarks ──────────────────────────────────────────────────────────────────────────────
 
 type YFn = fn([[f64; 2]; 3], [f64; 3], [f64; 3]) -> f64;
 
@@ -418,7 +418,7 @@ negative_control!(
     check_landmarks(|r, m, n0| welford::y::<f64>(r, m, n0).sqrt())
 );
 
-// ── REQ-PAY-098, kernel side: the wrapper's mean_y lies in the declared [0, 4] ──────────────────────────────────────
+// ── Kernel side: the wrapper's mean_y lies in the declared [0, 4] ───────────────────────────────────────────────────
 
 /// A sim key with `N_sub = 1` throughout, `dt_macro` and `horizon_steps` as given.
 fn key(dt: f32, horizon: u32) -> WrapperUniforms<f32> {

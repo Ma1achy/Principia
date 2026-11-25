@@ -1,7 +1,7 @@
-//! The conversion of a stored `z_β` to the periodic `β` (R-898, R-919 Q3 (a); REQ-DEC-055; dd_decoder §3.2, "How a
-//! stored value converts"; `kernel::decode::retired`, `kernel::chart::saved`):
+//! The conversion of a stored `z_β` to the periodic `β` (dd_decoder §3.2, "How a stored value converts";
+//! `kernel::decode::retired`, `kernel::chart::saved`):
 //! - `latent_conversion_same_system`: for each retired link `L`, every converted `z`, `z_β′ = L(z_β) − π/2`, decodes under
-//!   the periodic link to the same system as its old `z` decoded through `L`, within REQ-ENC-024's `ε_phys` on the
+//!   the periodic link to the same system as its old `z` decoded through `L`, within the round trip's `ε_phys` on the
 //!   decoded state in `‖·‖_phys`, at f64 and f32, over `z_β` across the link's range, the saturated ends included.
 //!   Control: a value converted by the wrong link fails.
 //! - `latent_conversion_saved_file`: a saved file of the old version, kinds 0 and 1, is converted on load

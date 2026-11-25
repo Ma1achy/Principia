@@ -1,18 +1,18 @@
-//! The gui's chart presets through TASK-M2-57's conversion (REQ-DEC-055; R-865, R-898, R-919): the decode half of
+//! The gui's chart presets through the periodic link's conversion: the decode half of
 //! `cargo test -p gui mirror_step_presets`. The gui's presets are the gui's (`gui::explore::manifold_view`'s `PRESETS`
 //! and `PRESET_HOMES`), and the gui may not depend on the kernel (systems_architecture §7.1; `cargo xtask deps`), so
 //! the conversion test runs here on the gui's baseline, `fixtures/mirror_step_baseline/gui.json`, and the converted
 //! planes it checks are written to `fixtures/mirror_step_baseline/gui_converted.json`, which the gui's test holds its
-//! presets to, bit for bit (applied per R-369: the test's wiring).
+//! presets to, bit for bit.
 //!
 //! - `mirror_step_presets_write_gui_converted` (ignored): writes `gui_converted.json` from `gui.json`: each preset's
 //!   plane with its base point's `z_β` converted from `sigmoid_beta`, the link the baseline was made under
-//!   (`RetiredLink::Sigmoid`, R-898), its directions as they were; and whether its plane runs along `z_β`.
-//! - `mirror_step_presets_gui_converted` (R-898, R-919; REQ-DEC-055): `gui_converted.json` is that conversion of
+//!   (`RetiredLink::Sigmoid`), its directions as they were; and whether its plane runs along `z_β`.
+//! - `mirror_step_presets_gui_converted`: `gui_converted.json` is that conversion of
 //!   `gui.json`, bit for bit; each preset whose plane does not run along `z_β`, its converted plane decoded at every
-//!   recorded pixel under the periodic link, is within REQ-ENC-024's `ε_phys` of the baseline's state in `‖·‖_phys`,
+//!   recorded pixel under the periodic link, is within the round trip's `ε_phys` of the baseline's state in `‖·‖_phys`,
 //!   the count bit for bit printed; each whose plane runs along `z_β` is [`REDEFINED`], an affine plane in the new
-//!   coordinates, exempt from the conversion test (R-919 Q2 (b)), its `β` coverage old and new printed. Control: the
+//!   coordinates, exempt from the conversion test, its `β` coverage old and new printed. Control: the
 //!   planes converted from `tanh_beta` fail.
 
 use std::path::{Path, PathBuf};
@@ -25,7 +25,7 @@ use serde_json::{json, Value};
 use validation::negative_control;
 use validation::roundtrip::{eps_phys, phys};
 
-/// The presets whose plane runs along `z_β`, each redefined, with why (R-919 Q2 (b)).
+/// The presets whose plane runs along `z_β`, each redefined, with why.
 const REDEFINED: [(&str, &str); 1] = [(
     "z_α × z_β",
     "its plane runs along z_β: under the periodic link a flat plane in the old z_β is curved, so it is redefined as \

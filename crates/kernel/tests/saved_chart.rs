@@ -1,23 +1,23 @@
-//! Saved charts in the kernel (`kernel::chart::saved`; R-475 S2, S3, L4 to L6; R-513 Q1 to Q3; chart_reference §1.1,
+//! Saved charts in the kernel (`kernel::chart::saved`; chart_reference §1.1,
 //! "Twelve is the full count; Save view as chart commits"):
-//! - `saved_chart_*` (REQ-CHART-073, C8): a latent view at `τ = (30°, 20°)` saved as the oblique chart, its stored
+//! - `saved_chart_*`: a latent view at `τ = (30°, 20°)` saved as the oblique chart, its stored
 //!   pair kept, and a shape-sphere view tilted 25° into a momentum control saved, each reopened at zero tilt bitwise
 //!   at every pixel of a 33 × 33 grid, through the serialisation; a further tilt into a second momentum control is the
 //!   block composition `(R ⊕ 1)·(1 ⊕ R′)`; every route of a new tilt's offsets, a panned view included, is `R·R′`
 //!   with the saved targets fed to `R`'s inputs; the words read back bit for bit; the refusals; the f32 instantiation.
-//! - `saved_chart_parent_*` (REQ-CHART-073; R-475 L5, R-483 H3): the parent is saved by value, its params in the
+//! - `saved_chart_parent_*`: the parent is saved by value, its params in the
 //!   words: two shape spheres differing only in `z_mass` save to different words, each reproducing its own view and
 //!   never the other's; every admitted parent type reads back from its words, each param its own word; charts one
 //!   name covers save to different words.
-//! - `saved_chart_same_target` (REQ-CHART-077, R-513): a new tilt into the saved target composes the rotations,
+//! - `saved_chart_same_target`: a new tilt into the saved target composes the rotations,
 //!   `R·R′·(u, v, 0)`, at zoom 1 and zoom 4 alike; into a second control the block form; at `τ′ = 0` the saved view.
-//! - `saved_chart_skewed` (REQ-CHART-149, R-895): into the target of a saved Lean each axis view with one target and
-//!   both angles set, `R·R′` with `R = [û₁ û₂ t̂]`, `t̂` the saved plane's unit normal toward `+e_X`: R-895's pixel
-//!   at option (a)'s values (control: option (b)'s), every pixel to one ulp (control: `t̂`'s opposite sign); none at
-//!   RQ-471's corner.
+//! - `saved_chart_skewed`: into the target of a saved Lean each axis view with one target and both angles set,
+//!   `R·R′` with `R = [û₁ û₂ t̂]`, `t̂` the saved plane's unit normal toward `+e_X`: the reference pixel at option
+//!   (a)'s values, the composition (control: option (b)'s, the frame action), every pixel to one ulp (control: `t̂`'s
+//!   opposite sign); none at the rank-losing corner.
 //!
 //! "To 1 ulp" here: each placed value differs from the reference by at most one ulp of the terms that form it,
-//! `ε·Σ|terms|`, a criterion fixed before the run (R-649). Each test registers its negative control (R-176).
+//! `ε·Σ|terms|`, a criterion fixed before the run. Each test registers its negative control.
 
 use kernel::chart::burrau::{Burrau, EuclidPlane};
 use kernel::chart::burrau_acute::{BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz};
@@ -140,9 +140,9 @@ fn givens(m: &mut M, i: usize, j: usize, deg: f64) {
     m[j][j] = c;
 }
 
-/// A stored tilt's rotation on `(a, b, h₀ … h₇)`, written out from its closed forms (R-474 K1, J4): two targets, each
+/// A stored tilt's rotation on `(a, b, h₀ … h₇)`, written out from its closed forms: two targets, each
 /// axis turned toward its own; Tip as sheet with both angles set, Rodrigues' 3 × 3 rotation about
-/// `k = (τ₂ e_a − τ₁ e_b)/m`; Lean each axis with one target and both angles set, `[û₁ û₂ t̂]` (R-895), no rotation;
+/// `k = (τ₂ e_a − τ₁ e_b)/m`; Lean each axis with one target and both angles set, `[û₁ û₂ t̂]`, no rotation;
 /// a single angle, its axis's turn.
 fn rotation(t: &TiltSpec) -> M {
     tilt_matrix(t, 1.0)
@@ -292,7 +292,7 @@ fn within(got: &Placed, want: &Placed, tol: &Placed) -> bool {
 enum Got {
     /// The saved chart's own placement.
     Kernel,
-    /// RQ-403's option (a): the saved `R` on `(u′, v′, 0)`, and the new offset added to the saved one, `d + d′`.
+    /// The control's: the saved `R` on `(u′, v′, 0)`, and the new offset added to the saved one, `d + d′`.
     Added,
 }
 
@@ -479,7 +479,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-073: into a second control, the block form (R ⊕ 1)·(1 ⊕ R′) ───────────────────────────────────────────
+// ── Into a second control, the block form (R ⊕ 1)·(1 ⊕ R′) ──────────────────────────────────────────────────────────
 
 /// The new tilt `τ′ = (20°, 0)` into the second momentum control: it turns `a` as the saved tilt does, so the two
 /// orders differ (a turn of `b` into it would commute with `R`, the planes `(a, X)` and `(b, Y′)` disjoint).
@@ -536,7 +536,7 @@ negative_control!(
     }
 );
 
-// ── Every route of a new tilt's offsets (R-513 Q1) ──────────────────────────────────────────────────────────────────
+// ── Every route of a new tilt's offsets ─────────────────────────────────────────────────────────────────────────────
 
 /// Saved and new tilts over every route: one saved target or two, Tip as sheet with both angles set, a new tilt into
 /// the saved target, into the saved second target, into another, and with two targets one of them saved (either one),
@@ -607,17 +607,17 @@ negative_control!(
     }
 );
 
-// ── The spans each offset is scaled by (R-513 Q2) ───────────────────────────────────────────────────────────────────
+// ── The spans each offset is scaled by ──────────────────────────────────────────────────────────────────────────────
 
 /// The saved tilt's slider spans, unequal, and the new tilt's, unequal and unlike them.
 const SAVED_SPAN: [f64; 2] = [1.5, 2.5];
 const NEW_SPAN: [f64; 2] = [0.7, 3.0];
 
-/// With unequal spans, each offset is scaled by the span R-513 Q2 names for it, at every pixel of the window about the
+/// With unequal spans, each offset is scaled by the span named for it, at every pixel of the window about the
 /// view's centre and a panned one, to one ulp: an offset out of `R` on a saved target by that target's saved span,
-/// whatever span the new tilt names for it, and a new offset on another target by the new tilt's span for it (code
-/// review 5816802860 of PR #447, C3); a control no tilt names, span 0, never moves. Each route's spans are written out
-/// per control. `swap` builds the chart with the saved and new spans exchanged (the control).
+/// whatever span the new tilt names for it, and a new offset on another target by the new tilt's span for it; a
+/// control no tilt names, span 0, never moves. Each route's spans are written out per control. `swap` builds the chart
+/// with the saved and new spans exchanged (the control).
 fn check_spans(swap: bool) {
     let (built_saved, built_new) = if swap {
         (NEW_SPAN, SAVED_SPAN)
@@ -690,7 +690,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-077: into the saved target, the rotations compose (R-513) ─────────────────────────────────────────────
+// ── Into the saved target, the rotations compose ────────────────────────────────────────────────────────────────────
 
 /// The new tilt `τ′ = (0, 20°)` into the saved target: non-parallel to the saved `τ = (25°, 0)`, so the two orders
 /// differ.
@@ -698,7 +698,7 @@ fn same() -> TiltSpec {
     spec(0.0, 20.0, TiltMap::Sheet, X, X)
 }
 
-/// R-513 at zoom 1 and zoom 4: into the saved target `R·R′·(u, v, 0)` to one ulp at every pixel of a 33 × 33 grid, the
+/// At zoom 1 and zoom 4: into the saved target `R·R′·(u, v, 0)` to one ulp at every pixel of a 33 × 33 grid, the
 /// decode the sphere's there with `d` on the saved control; into a second control the block form; at `τ′ = 0` the
 /// saved view, bitwise. `got` forms the placement (the control's: the offsets added).
 fn check_same_target(got: Got) {
@@ -763,27 +763,27 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-149: a saved Lean each axis view, one target and both angles set (R-895, ruling RQ-746 (a)) ───────────
+// ── A saved Lean each axis view, one target and both angles set ─────────────────────────────────────────────────────
 
-/// R-895's saved view: Lean each axis at `τ = (30°, 40°)` into the momentum control `X`.
+/// The saved view: Lean each axis at `τ = (30°, 40°)` into the momentum control `X`.
 fn skewed_spec() -> TiltSpec {
     spec(30.0, 40.0, TiltMap::Lean, X, X)
 }
 
-/// R-895's new tilt: `τ′ = (20°, 0)` into the saved target.
+/// The new tilt: `τ′ = (20°, 0)` into the saved target.
 fn skewed_new() -> TiltSpec {
     spec(20.0, 0.0, TiltMap::Sheet, X, X)
 }
 
-/// `(Δa, Δb, d_X)` at R-895's pixel, `(u, v) = (0.3, 0.7)` from the centre, in scaled units: option (a)'s, to the four
-/// decimals the ruling gives.
+/// `(Δa, Δb, d_X)` at the reference pixel, `(u, v) = (0.3, 0.7)` from the centre, in scaled units: option (a)'s, the
+/// composition `R·R′`, to four decimals.
 const OPTION_A: [f64; 3] = [0.2026, 0.4759, 0.6628];
 
-/// R-895 (REQ-CHART-149): R-895's pixel placed at `at_pixel` to its four decimals, the saved target offered; over a
+/// The reference pixel placed at `at_pixel` to its four decimals, the saved target offered; over a
 /// 33 × 33 grid at zoom 1 and 4, about the saved centre and a panned one, `R·R′` with `R = [û₁ û₂ t̂]` to one ulp, the
 /// decode the sphere's there, at the edge of Lean's range (`τ₁ = 90°`, `t̂` the cross product's own sign) and with the
-/// saved target as a new second target; `t̂` the plane's unit normal; at RQ-471's corner no composition; at `τ′ = 0`
-/// the saved view, bitwise. `sign` multiplies the reference's `t̂` (the opposite sign is a control's).
+/// saved target as a new second target; `t̂` the plane's unit normal; at the rank-losing corner no composition; at
+/// `τ′ = 0` the saved view, bitwise. `sign` multiplies the reference's `t̂` (the opposite sign is a control's).
 fn check_skewed(at_pixel: [f64; 3], sign: f64) {
     let view = reopened(&skewed_spec(), &skewed_new(), CENTRE);
     let ([a, b], shift) = view.tilt().place(CENTRE[0] + 0.3, CENTRE[1] + 0.7);
@@ -855,7 +855,7 @@ negative_control!(
     "option (b)'s values, R-514's frame action, are not R-895's composition at its pixel, so it must fail",
     expected = "the skewed composition at R-895's pixel",
     {
-        // Option (b)'s, R-514's frame action, at R-895's pixel.
+        // Option (b)'s, the frame action, at the reference pixel.
         const OPTION_B: [f64; 3] = [0.1598, 0.4307, 0.7099];
         check_skewed(OPTION_B, 1.0);
     }
@@ -876,9 +876,9 @@ mod skewed_sign {
 // ── R's inputs: its third column ────────────────────────────────────────────────────────────────────────────────────
 
 /// Every stored tilt gives `R·e_X` (and with two targets `R·e_Y`) as the reference's column, to one ulp: a rotation's,
-/// or under Lean each axis with one target and both angles set the saved plane's unit normal toward `+e_X` (R-895),
+/// or under Lean each axis with one target and both angles set the saved plane's unit normal toward `+e_X`,
 /// at the edge of Lean's range and past it too; a single angle under either map its closed form, bit for bit; at
-/// RQ-471's corner none. `flip` negates the input, a reflection's (the control).
+/// the rank-losing corner none. `flip` negates the input, a reflection's (the control).
 fn check_inputs(flip: f64) {
     let rotations = [
         spec(0.0, 0.0, TiltMap::Sheet, 4, 4),
@@ -1118,7 +1118,7 @@ macro_rules! meets {
 
 /// `Saved::curved` takes a bare chart as a parent, the shape sphere and the latent chart (which it refuses at run
 /// time), and refuses by type a reopened saved chart and a tilted view, which name their parent, so saving them would
-/// drop the saved `R` (code review 5816802860 of PR #447, C2), and what is no chart. `bound_chart` reads the bound as
+/// drop the saved `R`, and what is no chart. `bound_chart` reads the bound as
 /// `Chart`, which every chart meets (the control: the bound before the fix).
 fn check_parents(bound_chart: bool) {
     let taken = |(save_parent, chart): (bool, bool)| if bound_chart { chart } else { save_parent };
@@ -1166,10 +1166,10 @@ negative_control!(
 
 // ── Refusals ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// Reopenings that must be refused: a new tilt into the target of a saved Lean view with one target at RQ-471's corner
-/// (R-895), a composition onto three hidden coordinates, a parent other than the saved one, a target that is not
-/// hidden; and those that must not, a new tilt into the target of a saved Lean view with both angles set among them
-/// (R-895). `admitted` is checked as refused (the control).
+/// Reopenings that must be refused: a new tilt into the target of a saved Lean view with one target at the rank-losing
+/// corner, a composition onto three hidden coordinates, a parent other than the saved one, a target that is not
+/// hidden; and those that must not, a new tilt into the target of a saved Lean view with both angles set among them.
+/// `admitted` is checked as refused (the control).
 fn check_refused(admitted: bool) {
     let lean = spec(30.0, 40.0, TiltMap::Lean, 4, 4);
     let curved = |t: TiltSpec| match Saved::curved(&sphere(), t, CENTRE, SPAN) {
@@ -1270,7 +1270,7 @@ negative_control!(
 // ── Entries: the mass flag, and the f32 instantiation ───────────────────────────────────────────────────────────────
 
 /// The saved chart's entries: per-pixel masses only where a tilt moves a mass logit, the name the parent's; and at f32
-/// (R-118, J5), its params rounded, each placed value within four f32 ulps of the f64 placement `against`'s (the
+/// its params rounded, each placed value within four f32 ulps of the f64 placement `against`'s (the
 /// control's another composition), and a system decoded there.
 fn check_entries(against: TiltSpec) {
     let view = reopened(&saved_spec(), &second(), CENTRE);
@@ -1342,7 +1342,7 @@ negative_control!(
     }
 );
 
-// ── The parent by value (R-475 L5, R-483 H3; physics review 5816908974 of PR #447, P1) ───────────────────────────────
+// ── The parent by value ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The first word of a curved chart's parent: its form, then its params.
 const HEAD: usize = WORDS - PARAMS;

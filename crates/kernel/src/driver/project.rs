@@ -1,5 +1,5 @@
 //! The COM projection after every `STEP` (integrator_contract Part 1, "COM projection and invariant monitoring";
-//! dd_integrator §3.4; REQ-INT-010, REQ-INT-011, REQ-INT-030): the wrapper's housekeeping that keeps floating-point
+//! dd_integrator §3.4): the wrapper's housekeeping that keeps floating-point
 //! drift from putting the centre of mass's translation and the bulk momentum back, so that f32's dynamic range is
 //! spent on the internal motion.
 //!
@@ -14,19 +14,19 @@
 //! ([`ComProjection::project_velocities`]). No occupant built so far evolves velocities: every stepper marches the
 //! momenta (integrator_contract Part 2), so the wrapper's cadence calls [`ComProjection::project`].
 //!
-//! **CoM and linear momentum only** (REQ-INT-011). The projection is linear and removes the two modes the exact
+//! **CoM and linear momentum only**. The projection is linear and removes the two modes the exact
 //! translation symmetry generates; it never projects, rescales or otherwise restores the energy or `L_z`, which the
 //! monitor ([`super::monitor`]) only reads. Subtracting a spurious bulk momentum does change the evaluated energy by
 //! the bulk kinetic term it removes; that change stays visible in the post-projection monitoring (payload §1,
 //! "Coordinate pipeline").
 //!
-//! **One written operation order, on the parity surface** (Part 5; REQ-INT-030). The projection is part of the
+//! **One written operation order, on the parity surface** (Part 5). The projection is part of the
 //! deterministic step, on CPU-f64, CPU-f32 and the GPU alike, in CoM-frame particle coordinates: no Jacobi vector is
 //! formed here, nor anywhere in the step (the chart's Jacobi coordinates become particles once, at decode). Each
-//! component is formed in this order, with every product that meets an addition written as an explicit `fma`, so a
-//! backend that contracts a multiply and an add and one that does not round the same (gpu_determinism_note
-//! § "The discipline", rules 2 and 6; whether every backend fuses an explicit `fma` is RQ-298's question, under its
-//! "applied meanwhile"):
+//! component is formed in this order, with every product that meets an addition written as an explicit `fma`, so no
+//! compiler is left to choose whether to contract it. A backend that fuses an explicit `fma` rounds it once; one that
+//! does not (CI's lavapipe) rounds the product, then the add (gpu_determinism_note § "The discipline", rule 6), so the
+//! projection's words agree across backends to rounding, not bit for bit, like every continuous word:
 //!
 //! ```text
 //! S      = fma(m₂, x₂, fma(m₁, x₁, m₀·x₀))       the mass-weighted sum, body 0 first
@@ -40,7 +40,7 @@
 //!
 //! **What it costs.** About twenty operations for the projection itself. A projection moves the positions, so the
 //! wrapper's cadence then re-forms the force evaluation at the projected positions, which the next step reads and the
-//! monitor's energy reuses (`super::cadence`; the physics note on TASK-M3-04): the state the next step starts from is
+//! monitor's energy reuses (`super::cadence`): the state the next step starts from is
 //! then a function of the projected `(r, p)` alone.
 
 use crate::Real;

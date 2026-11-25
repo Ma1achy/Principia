@@ -1,5 +1,5 @@
-//! The invariant charts `(L_z, E)` and `(L_z, K)` (`kernel::chart::invariant`; chart_reference §2, §2.1, §5.1, §5.2;
-//! REQ-CHART-017), each check at the f64 and the f32 instantiation natively (R-118, R-265):
+//! The invariant charts `(L_z, E)` and `(L_z, K)` (`kernel::chart::invariant`; chart_reference §2, §2.1, §5.1, §5.2),
+//! each check at the f64 and the f32 instantiation natively:
 //! - `invariant_warp_feasible`: no `(u, v)` in `[0,1]²` gives `K* < K_min` under the warp, on both charts: the warp's
 //!   targets pass the construction's exact test and the chart's decode is `Feasible`, over random `(u, v)`, warp
 //!   parameters and frozen configurations, and over every edge `s ∈ {0, 1}` on a fine grid of `t`, where a rounded
@@ -7,16 +7,16 @@
 //! - `invariant_warp_formula`: `K(t) = K_max·t^γ_K`, `L_max(t)` the largest float with `L_max² ≤ 2K` within the steps
 //!   it takes from the rounded root, `L_z(s, t) = (2s − 1)·L_max(t)`; `E(t) = U + K(t)` on `(L_z, E)`.
 //! - `invariant_chart_decode_targets`: the chart's decode is the shared decoder with the construction on the decoded
-//!   masses and configuration, under the seed in force, the expansion `w = r/√I` (R-934), bit for bit, and its
+//!   masses and configuration, under the seed in force, the expansion `w = r/√I`, bit for bit, and its
 //!   descriptor the decoded IC's; it meets
-//!   `Σpᵢ = 0`, `L_z(p) = L_z` and `K(p) = K*` within REQ-DEC-046's proposed tolerances over random `(u, v)`, near
+//!   `Σpᵢ = 0`, `L_z(p) = L_z` and `K(p) = K*` within the proposed tolerances below over random `(u, v)`, near
 //!   `K* → K_min` included; the two charts decode alike (chart_reference §5.2).
 //! - `invariant_chart_validate`: `Valid` on `[0,1]²` and above it; `t < 0` and `s ∉ [0, 1]` projected onto the
-//!   feasible region, naming each chart's constraint; a non-finite coordinate rejected (R-26; chart_reference §5.1).
+//!   feasible region, naming each chart's constraint; a non-finite coordinate rejected (chart_reference §5.1).
 //! - `invariant_chart_forbids_energy_normalisation`: both charts set the flag and carry their names into the dump
 //!   header (chart_reference §0.6, §5.1).
 //! - `invariant_chart_stage`: the uniform round-trips the chart; the decode stage's compute entry points for both
-//!   charts, called natively, write each sample's decode, the chart's own, and nothing past the last (REQ-CHART-001).
+//!   charts, called natively, write each sample's decode, the chart's own, and nothing past the last.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 
@@ -40,11 +40,11 @@ use spirv_std::glam::UVec3;
 use validation::decode_f32_eps::SplitMix;
 use validation::{negative_control, prop, GAMMA_K, K_MAX};
 
-/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|`, at most (REQ-DEC-046, proposed; `invariant_construction.rs`).
+/// `|Σpᵢ|` in units of `eps·Σ|pᵢ|`, at most (proposed; as `invariant_construction.rs`'s).
 const TOL_P: f64 = 4.0;
-/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (REQ-DEC-046, proposed).
+/// `|L_z(p) − L_z|` in units of `eps·(|L_z| + √(2K*))`, at most (proposed).
 const TOL_L: f64 = 4.0;
-/// `|K(p) − K*|` in units of `eps·K*`, at most (REQ-DEC-046, proposed).
+/// `|K(p) − K*|` in units of `eps·K*`, at most (proposed).
 const TOL_K: f64 = 8.0;
 
 /// A precision under test.
@@ -89,7 +89,7 @@ fn inv<R: Q>(z: [f64; 4], k_max: f64, gamma_k: f64) -> Invariant<R> {
     }
 }
 
-/// The register's warp defaults (REQ-CHART-044, proposed).
+/// The register's proposed warp defaults.
 fn defaults() -> (f64, f64) {
     (K_MAX.number(), GAMMA_K.number())
 }
@@ -97,7 +97,7 @@ fn defaults() -> (f64, f64) {
 /// A warp under check: `(K_max, γ_K, s, t)` to the targets.
 type Warp<R> = fn(R, R, R, R) -> Targets<R>;
 
-// ── invariant_warp_feasible (REQ-CHART-017) ──────────────────────────────────────────────────────────────────────
+// ── invariant_warp_feasible ──────────────────────────────────────────────────────────────────────────────────────
 
 /// At `(s, t)` under `(K_max, γ_K)`: the targets `warp` gives pass the exact test `2·I·K* ≥ L_z²`, and both charts'
 /// decodes at the frozen `z` are `Feasible` (the charts decode through the kernel's own warp).
@@ -205,7 +205,7 @@ negative_control!(
     check_feasible::<f32>(rounded_root::<f32>)
 );
 
-// ── invariant_warp_formula (REQ-CHART-017) ───────────────────────────────────────────────────────────────────────
+// ── invariant_warp_formula ───────────────────────────────────────────────────────────────────────────────────────
 
 /// `warp` at `R` is §2.1's: `K = K_max·t^γ_K` as written; `L_max` within four floats below the rounded root, with
 /// `L_max² ≤ 2K` exactly and the next float up past it unless it is the rounded root itself; `L_z = (2s − 1)·L_max`;
@@ -309,7 +309,7 @@ fn residuals<R: Q>(d: &Decoded<R>, lz: R, k: R) -> [f64; 3] {
 }
 
 /// The decode at `(u, v)` of the `(L_z, E)` chart at frozen `z`: the shared blocks and the construction under the seed
-/// in force (R-934), bit for bit; `(L_z, K)` the same; and the targets met within the tolerances.
+/// in force (the expansion `w = r/√I`), bit for bit; `(L_z, K)` the same; and the targets met within the tolerances.
 fn check_decode_point<R: Q>(decode: ChartDecodeFn<R>, z: [f64; 4], u: R, v: R, worst: &Worst) {
     let (k0, g0) = defaults();
     let c = inv::<R>(z, k0, g0);
@@ -402,7 +402,7 @@ fn invariant_chart_decode_targets() {
     worst.print("invariant_chart_decode_targets");
 }
 
-/// A decode whose construction runs under R-82's legacy rule, decided on `z_α`: not the seed in force.
+/// A decode whose construction runs under the legacy largest-norm seed rule, decided on `z_α`: not the seed in force.
 #[cfg(feature = "controls")]
 fn legacy_seed<R: Q>(c: &InvariantLE<R>, u: R, v: R) -> (Decoded<R>, Outcome) {
     let (mut d, outcome) = kernel_decode(c, u, v);
@@ -418,7 +418,7 @@ negative_control!(
     check_decode::<f64>(legacy_seed::<f64>, &Worst::default())
 );
 
-// ── invariant_chart_validate (R-26) ──────────────────────────────────────────────────────────────────────────────
+// ── invariant_chart_validate ─────────────────────────────────────────────────────────────────────────────────────
 
 /// A chart's `validate` under check.
 type Validate = fn(&dyn Fn(f64, f64) -> ValidationResult, f64, f64) -> ValidationResult;
@@ -583,7 +583,7 @@ negative_control!(
     }
 );
 
-// ── invariant_chart_stage (REQ-CHART-001) ────────────────────────────────────────────────────────────────────────
+// ── invariant_chart_stage ────────────────────────────────────────────────────────────────────────────────────────
 
 /// A decode stage compute entry point, called natively.
 type Entry = fn(UVec3, &DecodeUniforms, &[f32], &mut [u32], &mut [u32], &mut [u32]);

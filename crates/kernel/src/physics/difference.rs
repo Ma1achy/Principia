@@ -1,9 +1,9 @@
-//! The force difference of the FTLE shadow's joint step (R-974, RQ-793 (a); dd_integrator §3.8; integrator_contract
-//! Part 2): the change in the three bodies' accelerations when their positions `r` move by a displacement `δr`,
+//! The force difference of the FTLE shadow's joint step (dd_integrator §3.8; integrator_contract Part 2): the change
+//! in the three bodies' accelerations when their positions `r` move by a displacement `δr`,
 //! `a(r + δr) − a(r)`, formed from the pair separations, never from an absolute `r + δr`.
 //!
-//! Pair `k` (R-22: `(i, j) = (1, 2), (2, 0), (0, 1)`) has the separation `dₖ = rⱼ − rᵢ` of the sample's
-//! [`PairGeom`] and the separation's displacement `eₖ = δrⱼ − δrᵢ`, and contributes the change of its term
+//! Pair `k` (`(i, j) = (1, 2), (2, 0), (0, 1)`, the side opposite body `k`) has the separation `dₖ = rⱼ − rᵢ` of the
+//! sample's [`PairGeom`] and the separation's displacement `eₖ = δrⱼ − δrᵢ`, and contributes the change of its term
 //! `u(d) = d/‖d‖³` ([`super::force`]),
 //!
 //! ```text
@@ -11,7 +11,7 @@
 //! ```
 //!
 //! which [`super::force::combine`] turns into the accelerations' change, the force being linear in the terms.
-//! [`ForceDifference`] has two forms, R-974's sub-choice, which a measurement chooses (TASK-M3-72's criterion):
+//! [`ForceDifference`] has two forms, between which a measurement chooses:
 //!
 //! - **(a1) [`Plain`]**: `d + e` formed at the working precision, its `u` formed as the force forms it, less `u(d)`.
 //!   Where `‖e‖ ≪ ‖d‖`, `d + e` is rounded to `ε·‖d‖`, so the difference keeps about `ε·‖d‖/‖e‖` relative.
@@ -35,7 +35,7 @@
 //!   overflows to +inf above `‖d‖ ≈ 2.9e5`, while the numerator stays finite, so `c` comes out as zero (±0, its
 //!   sign that of `−q`) and (a2) returns `e/n'³` alone: finite and wrong, the missing `d·c` being of the same order,
 //!   with no NaN or inf to flag it. (a1) reaches as far as the force itself. (a2) is the measured alternative, not the
-//!   chosen form (TASK-M3-72's result: `Displacement` names (a1)); only that measurement and the tests form it.
+//!   chosen form (the measurement's result: `Displacement` names (a1)); only that measurement and the tests form it.
 //!
 //! No branch, no loop, no runtime index (integrator_contract Part 2c): each pair is written out.
 
@@ -43,7 +43,7 @@ use super::force::combine;
 use super::PairGeom;
 use crate::Real;
 
-/// How the joint step forms the force difference (R-974's (a1) or (a2)).
+/// How the joint step forms the force difference ((a1) or (a2)).
 pub trait ForceDifference {
     /// The change of pair `k`'s term, `u(d + e) − u(d)`, for its separation `d` (with `‖d‖²`, `‖d‖` and `‖d‖³` as the
     /// sample's [`PairGeom`] formed them) and the separation's displacement `e`.

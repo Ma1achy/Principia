@@ -1,6 +1,6 @@
 //! The shared decoder `D`, the Matter rung (dd_decoder §1, §3): `z → mass × config × momentum → (m, r, p)`, one
-//! source for the f32 kernel and the f64 CPU path (R-265), generic over the kernel's `Real` and over the link
-//! [`Selection`], so each selection is a monomorphised variant (REQ-GEN-013; lowering Part 2).
+//! source for the f32 kernel and the f64 CPU path, generic over the kernel's `Real` and over the link
+//! [`Selection`], so each selection is a monomorphised variant (lowering Part 2).
 //!
 //! The blocks, in the decode order mass → config → momentum → derived invariants (chart_decoder_contract Part 2):
 //! - [`latent`]: the 8-component control vector and its fixed block layout.
@@ -8,29 +8,29 @@
 //! - [`config`]: `D_cfg`, the canonical-frame hyperspherical decode, unweighted and reconstructed.
 //! - [`momentum`]: `D_mom`, the free Jacobi momenta and the Jacobi-to-particle map.
 //! - [`descriptor`]: the derived invariants, the `ICDescriptor` filled from the decoded `(m, r, p)`, its `rho_angle` from
-//!   the configuration block's `(ρ̃, λ̃)` (R-628).
+//!   the configuration block's `(ρ̃, λ̃)`.
 //! - [`invariant`]: the invariant-momentum construction of the `(L_z, E)` and `(L_z, K)` charts, its seed rule and
 //!   its exact feasibility branch.
 //! - [`energy_norm`]: the optional `η_E` rescale toward a target energy, between the momentum block and the derived
-//!   invariants, behind an explicit `Option` (R-25).
+//!   invariants, behind an explicit `Option`.
 //! - [`degenerate`]: the `DEGENERATE` reason type.
 //! - [`retired`]: the retired `β` links, kept as conversion sources only, the conversion into the periodic `β` and the
-//!   decode of a record made under one (R-919, R-921).
+//!   decode of a record made under one.
 //! - [`units`]: the dimensionless system `G = M = I = 1`.
 //!
-//! **The ordered entry** ([`decode`], through [`decode_with`]; REQ-DEC-001, REQ-DEC-004): `D = D_mass × D_cfg × D_mom`
+//! **The ordered entry** ([`decode`], through [`decode_with`]): `D = D_mass × D_cfg × D_mom`
 //! over the blocks `z[6:8]`, `z[0:2]` and `z[2:6]`, evaluated mass → config → momentum → derived invariants, each
 //! block reading its own `z` slice and the blocks before it, never a later one ([`Blocks`]' signatures). The free
 //! momentum block reads no configuration; the configuration is passed to it so that an invariant-momentum block
 //! (dd_decoder §3.4) reads the already-decoded masses and configuration through the same entry. The derived
-//! invariants read the joined `(m, r, p)`, and `rho_angle` the configuration block's own `(ρ̃, λ̃)` (R-628;
-//! [`descriptor::config_angle`]). The output is the canonical `(m, r, p)` ([`Ic`], seam 3), the block
+//! invariants read the joined `(m, r, p)`, and `rho_angle` the configuration block's own `(ρ̃, λ̃)`
+//! ([`descriptor::config_angle`]). The output is the canonical `(m, r, p)` ([`Ic`], seam 3), the block
 //! outputs, the descriptor and the `DEGENERATE` tag: a tagged decode is kept, never dropped. The tag is the mass
 //! block's, else the momentum stage's ([`Blocks::tag`]): an earlier block's tag is kept (dd_decoder §3.7).
 //!
-//! **No guard** (REQ-DEC-028; validation ground-truth note, "Degenerate configs"): the decoder accepts any finite `z`
-//! (R-407), and nothing in it clamps, lands on or excludes an endpoint. In exact arithmetic degenerate configurations
-//! are approached as limits; in floating point the range is closed (R-417, dd_decoder §3.2), the lower poles reached
+//! **No guard** (validation ground-truth note, "Degenerate configs"): the decoder accepts any finite `z`,
+//! and nothing in it clamps, lands on or excludes an endpoint. In exact arithmetic degenerate configurations
+//! are approached as limits; in floating point the range is closed (dd_decoder §3.2), the lower poles reached
 //! only by the links' own rounding where their output underflows. The only tag is the narrow, enumerated
 //! `DEGENERATE` cause ([`degenerate`]'s closed set).
 
@@ -57,7 +57,7 @@ use mass::Masses;
 use momentum::Momentum;
 
 /// The canonical `(m, r, p)`, the decoder's output and the integrator's one input type (dd_decoder §2; seam 3): CoM at
-/// the origin, `ρ̃` on `+x`, `λ̃` in either half-plane (latent `β` over the full circle, R-865), `G = M = I = 1`.
+/// the origin, `ρ̃` on `+x`, `λ̃` in either half-plane (latent `β` over the full circle), `G = M = I = 1`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Ic<R> {
     /// The masses `m₀, m₁, m₂`, `Σmᵢ = 1`.
@@ -78,7 +78,7 @@ pub trait Blocks<R: PayloadReal> {
     /// `D_mom`, from `z[2:6]`, the masses and the configuration.
     fn momentum(&mut self, z_mom: [R; 4], masses: &Masses<R>, config: &Config<R>) -> Momentum<R>;
     /// The derived invariants, the `ICDescriptor`, from the joined `(m, r, p)`; [`decode_with`] then takes its
-    /// `rho_angle` from the configuration block's own `(ρ̃, λ̃)` ([`descriptor::config_angle`], R-628).
+    /// `rho_angle` from the configuration block's own `(ρ̃, λ̃)` ([`descriptor::config_angle`]).
     fn invariants(&mut self, ic: &Ic<R>) -> ICDescriptorOf<R>;
     /// The `DEGENERATE` reason the momentum stage raised, read once it has run: none for the free momentum block; the
     /// invariant-momentum construction's `INVARIANT_INFEASIBLE` or `NO_QUALIFYING_SEED` ([`invariant::Outcome::tag`]).
@@ -89,7 +89,7 @@ pub trait Blocks<R: PayloadReal> {
 }
 
 /// The free-momentum decoder under the selection `S`: the blocks of [`mass`], [`config`] and [`momentum`], and
-/// [`descriptor::describe`], its `rho_angle` then the configuration block's ([`decode_with`], R-628).
+/// [`descriptor::describe`], its `rho_angle` then the configuration block's ([`decode_with`]).
 pub struct Free<S>(PhantomData<S>);
 
 impl<S> Free<S> {
@@ -129,8 +129,8 @@ impl<S: Selection, R: LinkReal + PayloadReal> Blocks<R> for Free<S> {
     }
 }
 
-/// The free-momentum decoder under the selection `S` at the tunable parameters `params` (R-481 A2, G4;
-/// REQ-DEC-048): [`Free`]'s blocks, the mass and momentum links reading the active `μ_max` and `q_max`.
+/// The free-momentum decoder under the selection `S` at the tunable parameters `params`: [`Free`]'s blocks, the mass
+/// and momentum links reading the active `μ_max` and `q_max`.
 pub struct FreeAt<S, R> {
     /// The active values.
     pub params: LinkParams<R>,

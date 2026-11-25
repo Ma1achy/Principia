@@ -1,5 +1,6 @@
-//! `tanh_sat`, the bound dd_generation_root §3.9's `tanh` operator clamps its argument to (an R-72 definition;
-//! REQ-DEC-047's proposal, 20, provisional until the M2 gate), on the CPU at f32 and f64:
+//! `tanh_sat`, the bound dd_generation_root §3.9's `tanh` operator clamps its argument to (the register's
+//! `tanh_sat`, dd_generation_root's constants table: the proposed 20, provisional until the M2 gate), on the CPU at
+//! f32 and f64:
 //! - `tanh_sat_keeps_every_bit`: `tanh` is exactly ±1 at `±tanh_sat` and at every argument past it, at both widths, so
 //!   clamping the argument changes no CPU value; and each link whose control enters only through `tanh` (`tanh_alpha`,
 //!   `tanh_beta`, `softmax_tanh`) gives, past the bound, the bits it gives at the bound, a NaN control giving NaN.
@@ -10,7 +11,7 @@
 //!   over an f64 sweep from 10⁻³⁰⁰ to `MAX`: the host's `tanh`, the pinned libm's, stays in `[−1, 1]`, so the select
 //!   never acts there.
 //! - `tanh_sat_below_metal`: the bound lies below 43.671875, from which Metal's GPU `tanh` was measured to fail (0, then
-//!   NaN; TASK-M2-06's probe), so the GPU never evaluates `tanh` where it fails.
+//!   NaN, by a probe on the GPU), so the GPU never evaluates `tanh` where it fails.
 //!
 //! The decode stage on the GPU at saturated controls is `engine`'s `decode_stage_identities`.
 

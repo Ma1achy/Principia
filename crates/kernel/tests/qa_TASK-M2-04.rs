@@ -1,18 +1,17 @@
-//! QA tests for TASK-M2-04 (energy normalisation `η_E` with an explicit off switch), written from REQ-DEC-024,
-//! REQ-DEC-041, dd_decoder §3.7, chart_reference §0.6 and R-25, R-124, not from the implementation. Each check runs at
-//! the f64 and the f32 instantiation (R-265), behind a function pointer, so each negative control (R-176) runs the same
-//! check on a deliberately broken `η_E`.
+//! QA tests for energy normalisation `η_E` with an explicit off switch, written from dd_decoder §3.7 and
+//! chart_reference §0.6, not from the implementation. Each check runs at the f64 and the f32 instantiation, behind a
+//! function pointer, so each negative control runs the same check on a deliberately broken `η_E`.
 //!
-//! - REQ-DEC-024, "with E* set, decoded energy equals E*": over fuzzed `z` with moving bodies and targets
+//! - "With E* set, decoded energy equals E*": over fuzzed `z` with moving bodies and targets
 //!   `E* ∈ [U, U + 4|U|]`, and every `E* ≥ 0`, the rescaled IC's energy, evaluated here in f64 from its `(m, r, p)`,
 //!   and the descriptor's `K_0 + V_0` both equal `E*`; the momenta are one common factor `η_E ≥ 0` times the decoded
 //!   ones (`pᵢ ← η_E·pᵢ`), with `η_E = √((E* − U)/K₀)`; masses and positions untouched; the descriptor describes the
-//!   rescaled IC, its `rho_angle` the decode's (R-628: read from the configuration block, which `η_E` does not move).
-//! - REQ-DEC-024, "with the option None, momenta are untouched": `None` gives the plain decode bit for bit; a chart
+//!   rescaled IC, its `rho_angle` the decode's (read from the configuration block, which `η_E` does not move).
+//! - "With the option None, momenta are untouched": `None` gives the plain decode bit for bit; a chart
 //!   whose `forbids_energy_normalisation` is set gives the same under any `Some(E*)` (chart_reference §0.6).
-//! - REQ-DEC-024, "E* = 0 is a real target, not off": `Some(0)` sets the energy to 0; `Some(−0.0)` is the same target
+//! - "E* = 0 is a real target, not off": `Some(0)` sets the energy to 0; `Some(−0.0)` is the same target
 //!   (`−0 = 0`), never off; at the rest start both are `E* > U`, tagged, not off.
-//! - REQ-DEC-041 / §3.7's outcomes, at their boundaries: `E* = U` exactly with moving bodies scales to rest, untagged;
+//! - §3.7's outcomes, at their boundaries: `E* = U` exactly with moving bodies scales to rest, untagged;
 //!   one ulp below is `ENERGY_INFEASIBLE` with the momenta untouched; one ulp above scales, untagged. At the rest start
 //!   (every `pᵢ = 0`) `E* = U` is untouched and untagged, one ulp above is `ENERGY_UNSCALABLE`, one ulp below
 //!   `ENERGY_INFEASIBLE`.
@@ -22,10 +21,10 @@
 //!   untouched, nothing NaN, ahead of `E* < U` and of the rest start.
 //! - §3.7, "a decode the mass block has already tagged keeps that tag".
 //!
-//! **Fuzzing**: `validation::prop::run`, `prop::CASES` cases (REQ-VAL-151), `z` over `[−4, 4]⁸`.
+//! **Fuzzing**: `validation::prop::run`, `prop::CASES` cases, `z` over `[−4, 4]⁸`.
 //!
 //! **Tolerances** (no calibration requirement covers `η_E`; each bound is the round-off of the operations §3.7's
-//! formula names, counted here, as in the TASK-M2-03 qa tests). The rescaled component `η_E·pᵢ` carries, relative to
+//! formula names, counted here, as in `qa_TASK-M2-03.rs`). The rescaled component `η_E·pᵢ` carries, relative to
 //! itself: `E* − U` (½ eps), the kinetic sum `K₀` (squares, sum, division, sum over bodies: 3 eps), `(E* − U)/K₀`
 //! (½ eps), the `sqrt` (halving the 4 eps before it, plus ½), the product (½), and a normalising division if one is
 //! used (½): at most 3.5 eps. The kinetic energy squares it, 7 eps of `K`, and `K + U` adds ½ eps of the sum. The f64
@@ -184,7 +183,7 @@ fn at_rest<R: Fp>(p: &[[R; 2]; 3]) -> bool {
 
 /// Asserts the rescaled IC `after` of the decode `before` reaches `e`: energy within [`ENERGY_ULPS`] from the IC and
 /// from the descriptor, the momenta `η·pᵢ` along the decoded ones, masses and positions untouched, the descriptor that
-/// of the rescaled IC, its `rho_angle` the decode's (R-628: read from the configuration block's own `(ρ̃, λ̃)`, which
+/// of the rescaled IC, its `rho_angle` the decode's (read from the configuration block's own `(ρ̃, λ̃)`, which
 /// `η_E` does not move).
 fn assert_reaches<R: Fp>(decode: &Decoded<R>, after: &Decoded<R>, e: R, ctx: &str) {
     let before = &decode.ic;
@@ -212,7 +211,7 @@ fn assert_reaches<R: Fp>(decode: &Decoded<R>, after: &Decoded<R>, e: R, ctx: &st
         after.descriptor.K_0.f() + after.descriptor.V_0.f(),
         e
     );
-    // R-628: every field but rho_angle is read from the rescaled (m, r, p); rho_angle is read from the configuration
+    // Every field but rho_angle is read from the rescaled (m, r, p); rho_angle is read from the configuration
     // block, which η_E does not move, so it is the decode's, bit for bit (dd_decoder §3.6).
     assert_eq!(
         fingerprint(&Decoded {
@@ -256,7 +255,7 @@ fn zs() -> impl Strategy<Value = [f64; 8]> {
     prop::array::uniform8(-4.0f64..=4.0)
 }
 
-// ── REQ-DEC-024: with E* set, the decoded energy equals E* ──────────────────────────────────────────────────────
+// ── With E* set, the decoded energy equals E* ───────────────────────────────────────────────────────────────────
 
 fn check_target<R: Fp>(apply: Apply<R>, z: [f64; 8], t: f64) {
     let before = plain::<R>(moving(z));
@@ -311,7 +310,7 @@ negative_control!(
     }
 );
 
-// ── REQ-DEC-024: None is off, and a forbidding chart is off ─────────────────────────────────────────────────────
+// ── None is off, and a forbidding chart is off ──────────────────────────────────────────────────────────────────
 
 fn check_off<R: Fp>(apply: Apply<R>, z: [f64; 8]) {
     for z in [z, rest(z)] {
@@ -491,7 +490,7 @@ negative_control!(
     }
 );
 
-// ── REQ-DEC-024: E* = 0 is a real target; −0.0 is the same target ───────────────────────────────────────────────
+// ── E* = 0 is a real target; −0.0 is the same target ────────────────────────────────────────────────────────────
 
 fn check_zero<R: Fp>(apply: Apply<R>, z: [f64; 8]) {
     let before = plain::<R>(moving(z));
@@ -542,7 +541,7 @@ fn qa_energy_normalisation_zero_target() {
     check_zeros::<f32>(real_apply::<f32>);
 }
 
-/// Reads a zero target, of either sign, as off: the `E* = 0` sentinel R-25 forbids.
+/// Reads a zero target, of either sign, as off: the `E* = 0` sentinel the spec forbids (zero is a real target).
 #[cfg(feature = "controls")]
 fn zero_as_off<R: Fp>(d: Decoded<R>, e: Option<R>, forbids: bool) -> (Decoded<R>, Outcome) {
     real_apply(d, e.filter(|e| e.f() != 0.0), forbids)
@@ -587,7 +586,7 @@ mod zero_target_negative_zero {
     );
 }
 
-// ── REQ-DEC-041 / §3.7: the feasibility boundary E* = U and the rest start ───────────────────────────────────────
+// ── §3.7: the feasibility boundary E* = U and the rest start ─────────────────────────────────────────────────────
 
 fn check_boundary<R: Fp>(apply: Apply<R>, z: [f64; 8]) {
     // Moving bodies.

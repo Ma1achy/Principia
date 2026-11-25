@@ -1,7 +1,7 @@
-//! qa's tests for TASK-M2-37, fix round 2: a mass ratio is realised only with the third body's mass at its held value
-//! (REQ-CHART-070; chart_reference §2.1: "A ratio is realised when the link's inverse followed by its forward returns
+//! QA tests for realised mass ratios: a mass ratio is realised only with the third body's mass at its held value
+//! (chart_reference §2.1: "A ratio is realised when the link's inverse followed by its forward returns
 //! its masses `(m_a, m_b, m_c)`, `m_c` at its held value, each to within `ε_μ`, relative"). Written from that
-//! paragraph, not from the implementation; each test has its negative control (R-176).
+//! paragraph, not from the implementation; each test has its negative control.
 //!
 //! The slices are a grid of mass controls `{−3, −1, 0, 1, 3}²` beside a fixed `z_β` slice, every ordered body pair,
 //! under `softmax_tanh` at both ends of `μ_max`'s allowed range (`validation::tunables`) and at its default, and under

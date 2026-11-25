@@ -1,5 +1,5 @@
-//! QA tests for TASK-M1-02, the word buffer's append, decode and Rust word accessors, written from the requirements
-//! and payload §3, §5, §6 (dd_simstate_payload), not from the implementation. Every expectation comes from a reference
+//! QA tests for the word buffer's append, decode and Rust word accessors, written from payload §3, §5, §6
+//! (dd_simstate_payload), not from the implementation. Every expectation comes from a reference
 //! model written here from the corpus alone:
 //! - the frozen table transcribed from payload §3 (`inverse = [1,0,3,2]`, `cont_symbol[e][prev]`), symbol codes
 //!   `a = 0, A = 1, b = 2, B = 3`;
@@ -7,25 +7,22 @@
 //!   `.w` bit map says (low 96 bits in x, y, z; the next 25 in `.w[0:24]`; length in `.w[25:31]`);
 //! - payload §3's append (empty, pop, cap, push, and ignore once truncated) over a symbol vector.
 //!
-//! - REQ-PAY-023 (`word_roundtrip_qa_*`): random reduced words of 0…76 symbols pack bit-for-bit as the Horner reference
+//! - `word_roundtrip_qa_*`: random reduced words of 0…76 symbols pack bit-for-bit as the Horner reference
 //!   and decode back; 76 symbols need all 121 bits and 77 cannot fit; truncation is the sentinel 127 alone (no other
 //!   length and no payload bit reads as truncated); the cap, not `W`'s size, truncates; the retained prefix clamps
 //!   127 → 76.
-//! - REQ-PAY-029 (`word_decode_reduced_qa_*`): `decode(append(s))` is the free reduction of `s` for random streams of
+//! - `word_decode_reduced_qa_*`: `decode(append(s))` is the free reduction of `s` for random streams of
 //!   up to 76 symbols, cancellation-heavy; the `last_symbol` cache in `packed_a` follows `prev` and leaves every other
 //!   bit alone.
-//! - REQ-PAY-028 (`truncated_word_validity_qa_*`): a truncated word reads `fgw_reduced_length_valid` false,
+//! - `truncated_word_validity_qa_*`: a truncated word reads `fgw_reduced_length_valid` false,
 //!   `sd_last_symbol_valid` false, retained prefix 76, and no length accessor but the raw one returns 127; the
 //!   checked-in fixture `fixtures/words/truncated.txt` is recomputed from its stream by the reference.
-//! - REQ-PAY-033 (`word_accessor_names_qa_*`): the Rust accessors at lengths 0, 1, 76 and 127, and the reduced
+//! - `word_accessor_names_qa_*`: the Rust accessors at lengths 0, 1, 76 and 127, and the reduced
 //!   crossing count equals `fgw_reduced_length` when valid.
-//! - REQ-PAY-025 (`word_buffer_split_qa_*`): the stored Rust word element is exactly 16 B; the stored `SimState`
-//!   variants are 168 / 120 B, aligned to 8, not 16 (payload §0; 160 / 112 B before the budget word and the
-//!   regularised drift, TASK-M3-41; 152 / 104 B before the escape rule's lagged n̂
-//!   register, three Reals in place of 4 B of padding, TASK-M3-12; 144 / 96 B before the collision floor's record,
-//!   R-973, TASK-M3-71).
+//! - `word_buffer_split_qa_*`: the stored Rust word element is exactly 16 B; the stored `SimState`
+//!   variants are 176 / 128 B, aligned to 8, not 16 (payload §0).
 //!
-//! Each check takes the implementation under test as function pointers; its negative control (R-176) runs the same
+//! Each check takes the implementation under test as function pointers; its negative control runs the same
 //! check on a variant with one fault.
 
 use kernel::payload::*;
@@ -203,7 +200,7 @@ fn stream(max: usize) -> impl Strategy<Value = Vec<u32>> {
     })
 }
 
-// ── REQ-PAY-023 ───────────────────────────────────────────────────────────────────────────────────────────────────
+// ── The round trip ────────────────────────────────────────────────────────────────────────────────────────────────
 
 fn check_roundtrip(
     append: Append,
@@ -441,7 +438,7 @@ negative_control!(
     check_cap(append_cap_first)
 );
 
-// ── REQ-PAY-029 ───────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Decode is the free reduction ──────────────────────────────────────────────────────────────────────────────────
 
 fn check_decode_reduced(
     append: Append,
@@ -543,7 +540,7 @@ negative_control!(
     )
 );
 
-// ── REQ-PAY-028 ───────────────────────────────────────────────────────────────────────────────────────────────────
+// ── A truncated word ──────────────────────────────────────────────────────────────────────────────────────────────
 
 fn check_truncated(last_valid: fn(u32) -> bool, w: [u32; 4]) {
     assert!(fgw_truncated(w), "the word is not truncated");
@@ -634,7 +631,7 @@ fn fixture_text() -> String {
 }
 
 /// The fixture recomputed by the reference: its stream truncates, its word is the reference's word, its prefix the
-/// reference's retained symbols; the read accessors hold REQ-PAY-028 on it.
+/// reference's retained symbols; the read accessors read it as truncated.
 fn check_fixture(text: &str) {
     let (stream, word, prefix) = fixture(text);
     let (kept, truncated) = ref_append(&stream);
@@ -664,7 +661,7 @@ negative_control!(
     check_fixture(&fixture_text().replace("word = 0xf9839ad5", "word = 0xf9839ad4"))
 );
 
-// ── REQ-PAY-033 (Rust target) ─────────────────────────────────────────────────────────────────────────────────────
+// ── The accessors (Rust target) ───────────────────────────────────────────────────────────────────────────────────
 
 /// The accessors on words of length 0, 1, 76 and 127, against payload §6's definitions; and on random appended words
 /// the reduced crossing count (the reference reduction's length) equals `fgw_reduced_length` when valid.
@@ -714,7 +711,7 @@ negative_control!(
     check_lengths(fgw_length_raw)
 );
 
-// ── REQ-PAY-025 (Rust target) ─────────────────────────────────────────────────────────────────────────────────────
+// ── The buffer split (Rust target) ────────────────────────────────────────────────────────────────────────────────
 
 fn check_split(word: (usize, usize), ftle: (usize, usize), base: (usize, usize)) {
     assert_eq!(

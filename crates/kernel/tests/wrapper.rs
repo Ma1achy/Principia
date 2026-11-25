@@ -1,32 +1,31 @@
 //! The wrapper, the `ADVANCE` seam and the per-substep callback (`kernel::driver::{wrapper, advance, cadence}`;
-//! integrator_contract Part 1, Part 2a, Part 3, Part 5; dd_integrator §4, seams 3 and 4; R-19), over every occupant
+//! integrator_contract Part 1, Part 2a, Part 3, Part 5; dd_integrator §4, seams 3 and 4), over every occupant
 //! (Euler, KDK, Yoshida-4, Yoshida-6, RK4) at f64 and f32, on ICs decoded from fuzzed latent controls:
-//! - `same_spec_twice`: the same IC and sim key integrated twice give bit-identical `SimState`s (REQ-INT-007).
+//! - `same_spec_twice`: the same IC and sim key integrated twice give bit-identical `SimState`s.
 //! - `seam4_occupant_swap`: the wrapper's trace, each `ADVANCE` call's `(t_now, t_target, N_sub, d²)`, the substeps
 //!   reported and the cadence's calls, is the same function of the state for every occupant: each `N_sub` is the law's
 //!   on the quantised `d²` of the state the call starts from, the times step 0, 1, … on the integer grid, and where the
 //!   table forces `N_sub` the whole trace is identical across occupants, a `done` stop included, while their states
-//!   differ (REQ-INT-008).
+//!   differ.
 //! - `cadence_callback_count`: the callback's calls equal the `STEP` calls an occupant made, the run stopped by `done`
-//!   or not (REQ-INT-009).
+//!   or not.
 //! - `advance_equals_nsub_steps`: `ADVANCE(t, t + 1)` at `N_sub` is `N_sub` `STEP` calls at `dt_macro / N_sub`, bit for
-//!   bit, `t_target = t + 2` is twice that, and a target not after `t` takes no step (REQ-INT-020).
+//!   bit, `t_target = t + 2` is twice that, and a target not after `t` takes no step.
 //! - `total_substeps_honest`: the `total_substeps` the run reports is the callback's calls, and differs from `Σ N_sub`
-//!   where `done` stopped a macro-step part-way (REQ-INT-022).
+//!   where `done` stopped a macro-step part-way.
 //! - `seam3_every_chart`: a sample of every chart of the registry, decoded at fuzzed `(u, v)`, integrates through the
-//!   one wrapper to the same bits as its `(m, r, p)` copied out of the decode as bare numbers; the run is labelled
-//!   (REQ-INT-025).
+//!   one wrapper to the same bits as its `(m, r, p)` copied out of the decode as bare numbers; the run is labelled.
 //! - `advance_seam_r19`: for every stepper with regularisation `none`, `owns_time_mapping` is false and the callback is
-//!   called once per substep (REQ-INT-053's stepper arm).
+//!   called once per substep.
 //! - `wrapper_horizon_counter`: the loop runs `horizon_steps` macro-steps, writes `bounded` and `t_end_step` at the
 //!   horizon, `running` when `done` stopped it, and `saturated` where `N_sub` reached `N_max`.
 //!
 //! - `wrapper_cadence_hooks`: the wrapper's own cadence counts one call per substep, is never done while detection finds
-//!   nothing, and its hooks project the state (TASK-M3-05), so its march differs from an empty cadence's.
+//!   nothing, and its hooks project the state, so its march differs from an empty cadence's.
 //!
 //! **Domain** (pitfalls §10): the wrapper's loop at `r_coll = 0`, where its collision detector never fires
-//! (`collision.rs` has the detector), over short horizons; what it shows is the loop's and the seam's, not a trajectory's physics. The projection and the monitor the
-//! cadence runs (TASK-M3-05) are `monitor.rs`'s.
+//! (`collision.rs` has the detector), over short horizons; what it shows is the loop's and the seam's, not a
+//! trajectory's physics. The projection and the monitor the cadence runs are `monitor.rs`'s.
 
 use std::any::Any;
 use std::cell::{Cell, RefCell};
@@ -442,7 +441,7 @@ impl<R, C: Cadence<R>> Cadence<R> for Doubled<'_, C> {
     }
 }
 
-// ── same_spec_twice (REQ-INT-007) ────────────────────────────────────────────────────────────────────────────────
+// ── same_spec_twice ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `render`, run twice, gives the same bits.
 fn check_twice<R: P>(label: &str, mut render: impl FnMut() -> SimStateBaseOf<R>) {
@@ -484,7 +483,7 @@ negative_control!(
     }
 );
 
-// ── seam4_occupant_swap (REQ-INT-008) ────────────────────────────────────────────────────────────────────────────
+// ── seam4_occupant_swap ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// One occupant's run in the swap: its name, the wrapper's trace, the callback's calls and the final state's bits.
 struct Run {
@@ -641,7 +640,7 @@ negative_control!(
     }
 );
 
-// ── cadence_callback_count (REQ-INT-009) ─────────────────────────────────────────────────────────────────────────
+// ── cadence_callback_count ───────────────────────────────────────────────────────────────────────────────────────
 
 fn check_calls(name: &str, calls: u32, steps: u32) {
     assert_eq!(
@@ -692,7 +691,7 @@ negative_control!(
     )
 );
 
-// ── advance_equals_nsub_steps (REQ-INT-020) ──────────────────────────────────────────────────────────────────────
+// ── advance_equals_nsub_steps ────────────────────────────────────────────────────────────────────────────────────
 
 /// `n` `STEP` calls of `S` at `dt` from `(s, g)`.
 fn steps<S: Stepper, R: P>(s: &State<R>, g: &Geom<R>, dt: R, n: u32) -> (State<R>, Geom<R>) {
@@ -791,7 +790,7 @@ negative_control!(
     }
 );
 
-// ── total_substeps_honest (REQ-INT-022) ──────────────────────────────────────────────────────────────────────────
+// ── total_substeps_honest ────────────────────────────────────────────────────────────────────────────────────────
 
 fn check_reported(name: &str, reported: u32, calls: u32) {
     assert_eq!(
@@ -876,7 +875,7 @@ negative_control!(
     check_mid_macro::<Liar<Kdk>>("Liar")
 );
 
-// ── seam3_every_chart (REQ-INT-025) ──────────────────────────────────────────────────────────────────────────────
+// ── seam3_every_chart ────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A check run on a chart.
 trait Visit {
@@ -1057,7 +1056,7 @@ negative_control!(
     seam3_with::<Kdk, f64>([0.4, 0.6], chart_aware)
 );
 
-// ── advance_seam_r19 (REQ-INT-053, the stepper arm) ──────────────────────────────────────────────────────────────
+// ── advance_seam_r19 ─────────────────────────────────────────────────────────────────────────────────────────────
 
 /// For a stepper with regularisation `none`, `owns_time_mapping` is false; one `ADVANCE` at `N_sub = n` calls the
 /// cadence `n` times, once after each of its `n` substeps.

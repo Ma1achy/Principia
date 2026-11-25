@@ -1,7 +1,7 @@
-//! QA's tests for TASK-M2-39, written from REQ-CHART-076 (R-512 F1, R-508 V2 and V5, R-472 X3a) and the chart decoder
-//! contract § "Tilt (basis edit)", not from the implementation.
+//! QA's tests for Tip as sheet past the chart's square, written from the chart decoder contract § "Tilt (basis edit)",
+//! not from the implementation.
 //!
-//! REQ-CHART-076: under Tip as sheet with one target and both angles set, a window pixel whose own chart parameters
+//! The property: under Tip as sheet with one target and both angles set, a window pixel whose own chart parameters
 //! `(a, b)` leave the chart's square is past the chart's edge: its axes' types act on `(a, b)` as past the window, so past
 //! a bounded edge (a warped `L_z`'s `s` on either side, the warp's `t < 0`) it is not a system and draws blank, and past
 //! the energy warp's continuing `t > 1` side it is that side's system.
@@ -9,16 +9,16 @@
 //! What these tests add to the implementer's `tip_sheet_in_window`:
 //! - **The rotation from the contract.** Each pixel's `(a, b, d)` is computed here from the contract's words, Rodrigues'
 //!   turn of `span(e_a, e_b)` by `m = √(τ₁² + τ₂²)` about `k = (τ₂ e_a − τ₁ e_b)/m` in `(e_a, e_b, e_X)`, `d` in units of
-//!   the target's slider span (R-507), and each pixel is classified by that `(a, b)`, not by the view's own placement.
+//!   the target's slider span, and each pixel is classified by that `(a, b)`, not by the view's own placement.
 //! - **"As past the window", pixel by pixel.** A tilted pixel is a system exactly when the untilted chart, sliced to the
 //!   pixel's own hidden value (the slice centre plus its `d`), is one at `(a, b)`; where it is, it decodes bit-identically
 //!   to that sliced chart at `(a, b)`, and where `d` moved a mass the decode is not the unsliced chart's.
-//! - **Every Tip-as-sheet tilt, not only the two the verify names.** A sweep of both-angles-set tilts over each angle's
+//! - **Every Tip-as-sheet tilt, not only the two named ones.** A sweep of both-angles-set tilts over each angle's
 //!   range `[−180°, 180°]` (the contract's range under Tip as sheet), past the 180° total-tip wrap included, into a
-//!   configuration target and a mass target, on both invariant energy charts, `(L_z, K)` and `(L_z, E)` (R-508 V1), each
+//!   configuration target and a mass target, on both invariant energy charts, `(L_z, K)` and `(L_z, E)`, each
 //!   as itself and as its warped `Mapped` form.
 //!
-//! Negative controls (R-176), each must fail: the rotation turned the wrong way, at the named tilts and over the sweep;
+//! Negative controls, each must fail: the rotation turned the wrong way, at the named tilts and over the sweep;
 //! the classification read at the window point, the types acting before the tilt; the reference decode not sliced to the
 //! pixel's hidden value; and a draw that blanks the continuing `t > 1` side.
 
@@ -33,9 +33,9 @@ use kernel::generated::links::Defaults;
 use validation::chart_class::forbidden;
 use validation::{negative_control, GAMMA_K, K_MAX};
 
-/// A latent slider's span (R-920: rail `[−1, 1]`), the unit of a latent target's offset `d` (R-507).
+/// A latent slider's span (rail `[−1, 1]`), the unit of a latent target's offset `d`.
 const SPAN: f64 = 2.0;
-/// The tilts REQ-CHART-076's verify names, `(τ₁, τ₂)` in degrees.
+/// The two named tilts, `(τ₁, τ₂)` in degrees.
 const NAMED: [[f64; 2]; 2] = [[30.0, 12.4], [-45.0, 77.9]];
 /// Each angle of the sweep, in degrees, both signs, over Tip as sheet's range `[−180°, 180°]`; the pairs with total tip
 /// past 180° exercise the contract's wrap.
@@ -64,7 +64,7 @@ enum Fault {
     BlankTop,
 }
 
-/// The frozen controls and the warp's parameters, REQ-CHART-044's placeholders (R-71).
+/// The frozen controls, and the warp's parameters at their proposed defaults.
 fn invariant() -> Invariant<f64> {
     Invariant {
         z_cfg: [0.15, -0.25],
@@ -79,7 +79,7 @@ fn bits(d: &Decoded<f64>) -> String {
     format!("{d:?}")
 }
 
-/// The contract's Tip as sheet (chart_decoder_contract § "Tilt (basis edit)", R-474): the window offset `(du, dv, 0)`
+/// The contract's Tip as sheet (chart_decoder_contract § "Tilt (basis edit)"): the window offset `(du, dv, 0)`
 /// turned by `m = √(τ₁² + τ₂²)` degrees about the in-plane unit axis `k = (τ₂, −τ₁, 0)/m`, by Rodrigues' formula
 /// `v cos m + (k × v) sin m + k (k·v)(1 − cos m)`, giving `(Δa, Δb, d/span)`. A wrap of the total tip by 360° is the same
 /// rotation, so none is applied here.
@@ -131,8 +131,8 @@ struct Tally {
     moved: u32,
 }
 
-/// R-512 F1 on `chart` under Tip as sheet into `target` at each of `taus`, over an `n × n` grid of the window at zoom 1
-/// about the centre `(½, ½)`, with `fault` injected.
+/// The property (the module's note) on `chart` under Tip as sheet into `target` at each of `taus`, over an `n × n`
+/// grid of the window at zoom 1 about the centre `(½, ½)`, with `fault` injected.
 fn check<C>(chart: C, target: u32, taus: &[[f64; 2]], n: u32, fault: Fault, tally: &mut Tally)
 where
     C: Tiltable<Param = f64> + Copy,
@@ -281,7 +281,8 @@ fn qa_tip_sheet_named_tilts() {
     run(&NAMED, 65, Fault::None);
 }
 
-/// Every both-angles-set pair of [`ANGLES`] over a 17 × 17 grid: R-512 F1 holds for Tip as sheet, not only at two tilts.
+/// Every both-angles-set pair of [`ANGLES`] over a 17 × 17 grid: the property holds for Tip as sheet, not only at two
+/// tilts.
 #[test]
 fn qa_tip_sheet_every_tilt() {
     run(&sweep(), 17, Fault::None);

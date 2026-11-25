@@ -5,7 +5,7 @@
 //! L_z = Σᵢ (xᵢ p_{y,i} − yᵢ p_{x,i})
 //! ```
 //!
-//! The potential term reads the force evaluation's [`PairGeom`], so it forms no distance of its own (REQ-PERF-001).
+//! The potential term reads the force evaluation's [`PairGeom`], so it forms no distance of its own.
 //! Each sum is written out over its three terms, so no fold is seeded.
 
 use super::PairGeom;
@@ -20,7 +20,7 @@ pub fn kinetic<R: Real>(m: &[R; 3], p: &[[R; 2]; 3]) -> R {
 }
 
 /// The potential energy `−Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` of masses `m`, from the pairwise geometry `g`: pair `k`'s term is
-/// the product of the masses of the two bodies other than `k` (R-22).
+/// the product of the masses of the two bodies other than `k`.
 #[inline]
 pub fn potential<R: Real>(m: &[R; 3], g: &PairGeom<R>) -> R {
     let norm = g.norm();

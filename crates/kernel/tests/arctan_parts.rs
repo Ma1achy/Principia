@@ -1,4 +1,4 @@
-//! The parts of the kernel's own `atan2` (`kernel::arctan`; RQ-628, decided by the orchestrator per R-369, option (a)),
+//! The parts of the kernel's own `atan2` (`kernel::arctan`),
 //! each against a reference in native integer or f64 arithmetic, on edge values and on draws from every magnitude.
 //! The sweeps (`tests/arctan.rs`) hold the whole function to its bound; these hold each part to its own contract, so
 //! that an error too small or too rare for a sweep's sample still fails.

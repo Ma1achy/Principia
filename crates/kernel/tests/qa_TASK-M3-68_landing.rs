@@ -1,15 +1,15 @@
-//! QA tests for TASK-M3-68's terminal on a landing step (PR #502), written from integrator contract Part 2a § "The sync
-//! grid is a fixed quantum of physical time (R-565)": "a terminal event … still latches at the step it fires on, and
+//! QA tests for the Aarseth–Zare occupant's terminal on a landing step, written from integrator contract Part 2a § "The
+//! sync grid is a fixed quantum of physical time": "a terminal event … still latches at the step it fires on, and
 //! the copy's march ends there", not from the implementation:
-//! - `qa_m368_done_on_each_landing`: Aarseth–Zare + RK4 marched over four sync boundaries, with a terminal that fires on
-//!   the landing step of the first, second and third interval in turn, at f32 and f64. The march ends at that step: its
-//!   state is bitwise the landing state of the same march run to that boundary with no terminal, its accepted steps are
-//!   that march's, its time is that boundary's (exactly, R-998; *was* "within the landing tolerance"), the end is `Done`, and the march never
-//!   registered past the landing (re-registrations equal to the boundaries landed on, so no registration of the next
-//!   interval was made).
+//! - `qa_m368_done_on_each_landing`: Aarseth–Zare + RK4 marched over four sync boundaries, with a terminal that fires
+//!   on the landing step of the first, second and third interval in turn, at f32 and f64. The march ends at that step:
+//!   its state is bitwise the landing state of the same march run to that boundary with no terminal, its accepted steps
+//!   are that march's, its time is that boundary's exactly (the landing takes no tolerance), the end is `Done`, and the
+//!   march never registered past the landing (re-registrations equal to the boundaries landed on, so no registration of
+//!   the next interval was made).
 //!
-//! The negative control (R-176) runs the same check with a terminal whose `done` is first seen one read late, the
-//! landing step's own read missed: the march then registers the next interval before it stops, and the check fails.
+//! The negative control runs the same check with a terminal whose `done` is first seen one read late, the landing
+//! step's own read missed: the march then registers the next interval before it stops, and the check fails.
 
 #[cfg(feature = "controls")]
 use std::cell::Cell;
@@ -39,8 +39,7 @@ impl P for f64 {
 
 /// Step control values for the test: `η = 0.01`, `Δ_sync = 1/8` (exact in binary), `TINY` `1e-37` / `1e-300`,
 /// `f = 0.02`, a budget no march here comes near, the landing clamp and retakes on (the secant's 4, the bisection's 64,
-/// Part 2b). Changed by TASK-M3-76: the `|R₃|` floor is `TINY` (R-999) and the landing takes no tolerance (R-998);
-/// *was* `r3_floor` `0` / `1e-300` and the landing tolerance `1e-5` / `1e-14`.
+/// Part 2b). The `|R₃|` floor is `TINY` and the landing takes no tolerance.
 fn params<R: AzReal>() -> AzParams<R> {
     AzParams {
         eta: R::at_width(0.01, 0.01),
@@ -178,8 +177,7 @@ fn check_each_landing<R: P, C: Cadence<R>>(terminal: Terminal<C>) {
         );
         let t: f64 = out.t.into();
         let at = f64::from(j) * delta;
-        // R-998: no landing tolerance; the time is the boundary's exactly (`j·Δ_sync`, exact for `Δ_sync = 1/8`).
-        // *Was:* `|t − j·Δ| ≤ 2·Δ·LAND_EPS_REL`.
+        // No landing tolerance: the time is the boundary's exactly (`j·Δ_sync`, exact for `Δ_sync = 1/8`).
         assert_eq!(
             t, at,
             "the latched time {t} is boundary {j}'s, {at}, exactly"

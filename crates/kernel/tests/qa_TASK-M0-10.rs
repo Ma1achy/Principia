@@ -1,20 +1,18 @@
-//! QA tests for TASK-M0-10, written from REQ-PAY-004, REQ-PAY-012, REQ-PAY-014, REQ-PAY-015, REQ-PAY-018,
-//! REQ-GEN-005 and REQ-PAY-092 against their sources (dd_simstate_payload §1, §2, §6; dd_generation_root §3.1, §5;
-//! pitfalls §9; R-22, R-86, R-271), not from the implementation. Every bit position, bit pattern and tolerance below
-//! is payload §2's table, IEEE 754 binary16, or the requirement's own figure. Each test has a registered negative
-//! control (R-176).
+//! QA tests for the payload's packing and accessors, written from their sources (dd_simstate_payload §1, §2, §6;
+//! dd_generation_root §3.1, §5; pitfalls §9), not from the implementation. Every bit position, bit pattern and
+//! tolerance below is payload §2's table, IEEE 754 binary16, or the figure its section states. Each test has a
+//! registered negative control.
 //!
-//! R-294 moved the `d_min` counters to the frame: `set_d_min` and `pack_packed_a` take the caller's `DminCounters`.
+//! The `d_min` counters live in the frame: `set_d_min` and `pack_packed_a` take the caller's `DminCounters`.
 //! Every value this file packs is valid, so none counts; each pack here goes through [`pa`] or [`sdm`], which pass a
-//! fresh frame pair and assert that it reads back `(0, 0)`, so no assertion below changed. The counting itself is
-//! `qa_TASK-M0-10_r288.rs`'s.
+//! fresh frame pair and assert that it reads back `(0, 0)`. The counting itself is `qa_TASK-M0-10_r288.rs`'s.
 
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::*;
 use validation::negative_control;
 
-/// `pack_packed_a` over a fresh frame pair (R-294), which a valid `d_min` must leave at `(0, 0)` (R-288), `I_max`'s
-/// level 0 and its departed bit clear (bits 10–15, R-545; [`check_reserved_zero`] sets each too).
+/// `pack_packed_a` over a fresh frame pair, which a valid `d_min` must leave at `(0, 0)`, `I_max`'s
+/// level 0 and its departed bit clear (bits 10–15; [`check_reserved_zero`] sets each too).
 fn pa(
     state: u32,
     detail: u32,
@@ -43,7 +41,7 @@ fn pa(
     w
 }
 
-/// `set_d_min` over a fresh frame pair (R-294), which a valid `d_min` must leave at `(0, 0)` (R-288).
+/// `set_d_min` over a fresh frame pair, which a valid `d_min` must leave at `(0, 0)`.
 fn sdm(w: u32, v: f32) -> u32 {
     let frame = DminCounters::new();
     let out = set_d_min(w, v, &frame);
@@ -55,7 +53,7 @@ fn sdm(w: u32, v: f32) -> u32 {
     out
 }
 
-/// `PackedA::pack` over a fresh frame pair (R-294).
+/// `PackedA::pack` over a fresh frame pair.
 fn pk(e: &PackedA) -> u32 {
     let frame = DminCounters::new();
     let w = e.pack(&frame);
@@ -97,7 +95,7 @@ fn set(field: &str, w: u32, v: u32) -> u32 {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-004: the `sd_*` accessors extract exactly payload §2's bits; all 1024 values of bits 0–9 round-trip; bits
+// The `sd_*` accessors extract exactly payload §2's bits; all 1024 values of bits 0–9 round-trip; bits
 // 10–15 decode as zero.
 
 /// With one bit set at a time over the whole word, each accessor in `table` sees it exactly when it is in its range.
@@ -198,7 +196,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-012: known values give payload §2's raw words, and the accessors return them.
+// Known values give payload §2's raw words, and the accessors return them.
 
 /// `(case, got, want)` rows.
 fn check_rows(rows: &[(&str, u32, u32)]) {
@@ -209,7 +207,7 @@ fn check_rows(rows: &[(&str, u32, u32)]) {
 
 /// Raw words for known values. `packed_a` = d_min(1.0 → 0x3c00) << 16 | last_symbol 3 << 8 | dmin_pair 0 << 6 |
 /// saturated << 5 | detail 1 << 3 | state 2 = 0x3c00_032a. `packed_b` = dLz_max(2.0 → 0x6101) << 16 | dE_max(0.5 →
-/// 0x5F01), the `log16` form's codes since R-632 (0x4000 and 0x3800 in binary16 before; payload §2). `times` = t_dmin_step << 16 | t_end_step.
+/// 0x5F01), the `log16` form's codes (payload §2). `times` = t_dmin_step << 16 | t_end_step.
 fn known_rows() -> Vec<(&'static str, u32, u32)> {
     vec![
         ("packed_a", pa(2, 1, true, 0, 3, 1.0), 0x3c00_032a),
@@ -219,7 +217,7 @@ fn known_rows() -> Vec<(&'static str, u32, u32)> {
         ("times max dmin", pack_times(0, 0xffff), 0xffff_0000),
         (
             "set_dE_max keeps high",
-            // 1.0 in the `log16` form (R-632): f32 bits `0x3F80_0000 >> 15 = 0x7F00`, less `0x1F00`, plus 1.
+            // 1.0 in the `log16` form: f32 bits `0x3F80_0000 >> 15 = 0x7F00`, less `0x1F00`, plus 1.
             set_dE_max(0xabcd_0000, 1.0),
             0xabcd_6001,
         ),
@@ -239,8 +237,8 @@ fn known_rows() -> Vec<(&'static str, u32, u32)> {
             set_t_dmin_step(0x0000_1234, 7),
             0x0007_1234,
         ),
-        // Payload §2: the `log16` form (R-632) holds 1e9 as itself to 2⁻⁹ (code 0x7DDE, its sign in bit 15) and
-        // saturates `+∞` at its greatest code, 0x7FFF; binary16 clamped all three to ±65504 before.
+        // Payload §2: the `log16` form holds 1e9 as itself to 2⁻⁹ (code 0x7DDE, its sign in bit 15) and
+        // saturates `+∞` at its greatest code, 0x7FFF.
         ("dE_max clamp", set_dE_max(0, 1.0e9), 0x0000_7dde),
         ("dE_max clamp -", set_dE_max(0, -1.0e9), 0x0000_fdde),
         (
@@ -297,7 +295,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-014: codes 0–7 decode; 6 and 7 are finished and untrusted.
+// Codes 0–7 decode; 6 and 7 are finished and untrusted.
 
 /// Each code 0–7, with every bit above the state set, decodes to itself, and the predicates follow payload §2/§6:
 /// resolved 0–2, running 3, untrusted 4–7, finished all but 3; exactly one of resolved/running/untrusted.
@@ -336,8 +334,8 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-015: with every other field at its maximum, `I_max`'s bits 10–14 are its level's alone and bit 15 the
-// departed bit's: no field spills into either. Both are fields since R-545 (10–14 the Chazy latch `I_max`, 15 R-37's
+// With every other field at its maximum, `I_max`'s bits 10–14 are its level's alone and bit 15 the
+// departed bit's: no field spills into either. Both are fields (10–14 the Chazy latch `I_max`, 15 the
 // departed bit), so the reserved list is empty.
 
 /// Every combination of each field at 0 or its maximum, with the largest `d_min`s, leaves bits 10–14 zero through
@@ -416,7 +414,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-018: roundtrip_ctl fails on a flip of any bit, including those an unpack masks off (pitfalls §9).
+// roundtrip_ctl fails on a flip of any bit, including those an unpack masks off (pitfalls §9).
 
 type Ctl = fn(&PackedA, u32) -> bool;
 
@@ -543,7 +541,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-GEN-005: f16 pairs round-trip through the pack2x16float / unpack2x16float equivalents within f16 epsilon over
+// f16 pairs round-trip through the pack2x16float / unpack2x16float equivalents within f16 epsilon over
 // finite values in ±65504.
 
 /// f16 epsilon, 2⁻¹⁰, at `x`: one f16 ULP for a normal (2⁻¹⁰·2^⌊log₂|x|⌋), the subnormal step 2⁻²⁴ below 2⁻¹⁴.
@@ -664,14 +662,14 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-092: d_min's unset value is f16 +inf (0x7c00); a valid value below 2⁻²⁴ stores 0x0001; no valid input
-// stores 0x0000; the unset test reads bits; the packer writes both patterns itself (R-271).
+// d_min's unset value is f16 +inf (0x7c00); a valid value below 2⁻²⁴ stores 0x0001; no valid input
+// stores 0x0000; the unset test reads bits; the packer writes both patterns itself.
 
 type SetDMin = fn(u32, f32) -> u32;
 
-/// Three named cases store 0x7c00 with the descriptor half untouched (R-271):
+/// Three named cases store 0x7c00 with the descriptor half untouched:
 /// - a failed sample (states 4, 5), written unset by bits with `set_d_min_unset`;
-/// - an unstepped sample (state 3, before its first step), written unset by bits with `set_d_min_unset`. R-271's
+/// - an unstepped sample (state 3, before its first step), written unset by bits with `set_d_min_unset`. The unset
 ///   +inf is a stored value written by its bits, not a fold seed (integrator contract § "Rules the new kernel must
 ///   hold by construction", rule 4; PIT-9), so no latch value is modelled here;
 /// - an f32 +inf given to the packer `set` (a plain `f32::INFINITY` input). Through the clamping conversion payload
@@ -835,8 +833,8 @@ negative_control!(
     check_unset_bits(|w| pa_d_min(w).is_infinite())
 );
 
-/// The unset `d_min` (f16 +inf, 0x7c00, stored by bits under R-271) reads back as f32 +inf, and −inf and NaN halves read back as
-/// themselves: `unpack2x16float` converts every binary16 pattern exactly.
+/// The unset `d_min` (f16 +inf, 0x7c00, stored by its bits) reads back as f32 +inf, and −inf and NaN halves read
+/// back as themselves: `unpack2x16float` converts every binary16 pattern exactly.
 fn check_non_finite_unpack(unpack: fn(u32) -> [f32; 2]) {
     assert_eq!(
         unpack(PA_D_MIN_UNSET << 16)[1],

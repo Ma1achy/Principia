@@ -1,6 +1,6 @@
 //! Heggie's regularised system (`kernel::regularisation::heggie`; integrator_contract Part 2b § "Heggie: the equations,
-//! the time transformations, the maps and the step control (transcribed)", § "The time-reversal maps (REQ-INT-095)",
-//! Part 1; R-160, R-161, R-566), TASK-M3-08, and the energies Aarseth–Zare's march reports:
+//! the time transformations, the maps and the step control (transcribed)", § "The time-reversal maps",
+//! Part 1), and the energies Aarseth–Zare's march reports:
 //! - `heggie_system_round_trip`: Cartesian → regularised → Cartesian at unequal masses, the registered `h` and the
 //!   regularised energy against the Cartesian energy, and Eq. 7's relative velocities against the image's; control: a
 //!   quarter-turned `Q₀`.
@@ -11,10 +11,10 @@
 //! - `heggie_system_dt_dtau`, `heggie_system_floors`: `dt/dτ` under each time transformation and the floors at `TINY`
 //!   of `S`, `|qᵢ|` and `Rᵢ`; controls: Eq. 20's `dt/dτ` read for Eq. 22's, and an unfloored `Rᵢ`.
 //! - `heggie_system_reversed`, `heggie_system_flow`, `heggie_system_default`: the time-reversal map an involution
-//!   negating `P` and `t`, the flow's sums, and the default time transformation Eq. 22 (R-161); controls: a map keeping
+//!   negating `P` and `t`, the flow's sums, and the default time transformation Eq. 22; controls: a map keeping
 //!   `t`, a sum dropping the clock, and a default of Eq. 20.
 //! - `az_energy_reported`: Aarseth–Zare's march reports the `E` of its first registration and the regularised energy
-//!   where it ended (R-566); control: the last registration's `E` read for the first's.
+//!   where it ended; control: the last registration's `E` read for the first's.
 
 use kernel::driver::advance::Cadence;
 use kernel::occupant::rk4::Rk4;
@@ -465,7 +465,7 @@ negative_control!(
     })
 );
 
-/// Heggie's default time transformation is Eq. 22 at n = 3/2 (R-161).
+/// Heggie's default time transformation is Eq. 22 at n = 3/2.
 fn check_default(time: HeggieTime) {
     assert_eq!(
         time,
@@ -498,7 +498,7 @@ impl<R> Cadence<R> for Quiet {
     }
 }
 
-/// Test values for Aarseth–Zare's step control at f64 (the reference's `TINY`, R-953; the landing bisection's 64 halvings,
+/// Test values for Aarseth–Zare's step control at f64 (the reference's `TINY`; the landing bisection's 64 halvings,
 /// Part 2b, step 6), a budget that does not bind.
 fn az_params() -> AzParams<f64> {
     AzParams {

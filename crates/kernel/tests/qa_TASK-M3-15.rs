@@ -1,4 +1,4 @@
-//! QA tests for TASK-M3-15, the word buffer's binding, the append through the crossing hook, and the length cap,
+//! QA tests for the word buffer's binding, the append through the crossing hook, and the length cap,
 //! written from the requirements and dd_simstate_payload §0, §2, §3, §6, not from the implementation. Every
 //! expectation comes from a model written here from payload §3 alone:
 //! - the frozen table (`inverse = [1,0,3,2]`, `cont_symbol[e][prev]`), symbol codes `a = 0, A = 1, b = 2, B = 3`;
@@ -8,23 +8,23 @@
 //!   step), laid out by payload §3's `.w` bit map: low 96 bits in x, y, z, the next 25 in `.w[0:24]`, length in
 //!   `.w[25:31]`.
 //!
-//! - REQ-PAY-036 / REQ-PAY-038 (`qa_m315_binding_*`): the word buffer is a binding of its own (its own binding slot,
-//!   16 B entries, SimState 120 / 168 B with no word member; 112 / 160 B before the budget word and the regularised drift (TASK-M3-41); 104 / 152 B before the escape rule's lagged n̂ register, 96 / 144 B before the collision floor's record, R-973); a crossing of sample `i` touches only index `i`; a substep
-//!   with no crossing touches the buffer not at all.
-//! - REQ-PAY-042 (`qa_m315_write_count_*`): over lockstep marches of several samples, word-buffer writes == crossings
+//! - `qa_m315_binding_*`: the word buffer is a binding of its own (its own binding slot, 16 B entries, SimState
+//!   128 / 176 B with no word member); a crossing of sample `i` touches only index `i`; a substep with no crossing
+//!   touches the buffer not at all.
+//! - `qa_m315_write_count_*`: over lockstep marches of several samples, word-buffer writes == crossings
 //!   on every substep, and no read on a substep with no crossing.
-//! - REQ-PAY-048 (`qa_m315_last_symbol_*`): after every crossing, with 1 ≤ length ≤ 76, `last_symbol` (packed_a bits
+//! - `qa_m315_last_symbol_*`: after every crossing, with 1 ≤ length ≤ 76, `last_symbol` (packed_a bits
 //!   8–9) is the word's final symbol; bits 0–7 and 10–31 never change; after truncation packed_a is frozen.
-//! - REQ-PAY-052 (`qa_m315_packing_*`): random reduced words of 1…76 symbols pack as the closed form, within 121 bits,
+//! - `qa_m315_packing_*`: random reduced words of 1…76 symbols pack as the closed form, within 121 bits,
 //!   the length field their length; the largest 76-symbol word needs bit 120; `fgw_mul3_add` is `3v + e`.
-//! - REQ-PAY-053 (`qa_m315_vs_reference_*`): random streams (cancellation-heavy, at-the-cap wobbles, small-W 77-symbol
-//!   words) agree with the model after every symbol; the PR's `validation::reference::free_group` agrees with the model.
-//! - REQ-TOOL-035 (`qa_m315_truncation_*`): a 77th non-cancelling symbol reads 127 for small W (W = 0 included); a
+//! - `qa_m315_vs_reference_*`: random streams (cancellation-heavy, at-the-cap wobbles, small-W 77-symbol words) agree
+//!   with the model after every symbol; `validation::reference::free_group` agrees with the model.
+//! - `qa_m315_truncation_*`: a 77th non-cancelling symbol reads 127 for small W (W = 0 included); a
 //!   cancelling one at 76 pops; pops from 76 to 0 decrement the length by one; truncated words ignore every later
 //!   crossing; a 75-symbol word of large W is not truncated by its 76th.
 //!
 //! Every word access goes through a logging buffer whose log is capped, so a mutant that loops panics fast. Each check
-//! takes the code under test as a function pointer; its negative control (R-176) runs the same check with one fault.
+//! takes the code under test as a function pointer; its negative control runs the same check with one fault.
 
 use std::cell::RefCell;
 use std::mem::{align_of, size_of};
@@ -269,7 +269,7 @@ fn march() -> impl Strategy<Value = Vec<Vec<Vec<u32>>>> {
     proptest::collection::vec(proptest::collection::vec(substep, 0..120), 1..=5)
 }
 
-// ── REQ-PAY-036 / REQ-PAY-038 / REQ-PAY-042: the binding, its index, the write count ──────────────────────────────
+// ── The binding, its index, the write count ──────────────────────────────────────────────────────────────────────
 
 /// Runs a lockstep march: for each substep index, each sample in turn. On every substep: writes == crossings; no access
 /// at all with no crossing; reads ≤ crossings; every access at the sample's own index; and every word in the buffer is
@@ -434,7 +434,8 @@ negative_control!(
 );
 
 /// The binding's layout: the word buffer has a slot of its own, apart from SimState's; its entry is one 16 B
-/// `vec4<u32>`; SimState is 128 / 176 B at align 8 (with the collision floor's record, R-973, the lagged n̂ register and the re-boot's two u32s), so it holds no 16-aligned word member (payload §0).
+/// `vec4<u32>`; SimState is 128 / 176 B at align 8 (with the collision floor's record, the lagged n̂ register and the
+/// re-boot's two u32s), so it holds no 16-aligned word member (payload §0).
 fn check_layout(word_slot: (u32, u32), state_slot: (u32, u32), sizes: [(usize, usize); 3]) {
     assert_ne!(
         word_slot, state_slot,
@@ -485,7 +486,7 @@ negative_control!(
     )
 );
 
-// ── REQ-PAY-048: last_symbol mirrors prev ─────────────────────────────────────────────────────────────────────────
+// ── last_symbol mirrors prev ─────────────────────────────────────────────────────────────────────────────────────
 
 /// Streams through the hook one crossing at a time from `pa0`. After every crossing: with 1 ≤ length ≤ 76,
 /// `last_symbol` is the model's final symbol; bits other than 8–9 are `pa0`'s; once truncated, packed_a is unchanged.
@@ -572,7 +573,7 @@ negative_control!(
     check_mirror(cross_clearing_bit_10, &[0], u32::MAX).unwrap()
 );
 
-// ── REQ-PAY-052: the Horner packing in 121 bits ───────────────────────────────────────────────────────────────────
+// ── The Horner packing in 121 bits ───────────────────────────────────────────────────────────────────────────────
 
 /// Pushes the reduced `word` through the hook and checks the stored word bit for bit against the closed form, W within
 /// 121 bits, the length field `word.len()`.
@@ -690,7 +691,7 @@ negative_control!(
     check_mul3(mul3_no_top_carry, (1u128 << 126) - 1, 2).unwrap()
 );
 
-// ── REQ-PAY-053: against the reference reducer ────────────────────────────────────────────────────────────────────
+// ── Against the reference reducer ────────────────────────────────────────────────────────────────────────────────
 
 /// Streams through the hook; after every symbol, the stored word is the model's, bit for bit.
 fn check_vs_model(cross: Cross, stream: &[u32]) -> Result<(), TestCaseError> {
@@ -821,7 +822,7 @@ negative_control!(
     check_pr_reference(pr_reduce_never_truncated, &[0; 77]).unwrap()
 );
 
-// ── REQ-TOOL-035: the truncation sentinel ─────────────────────────────────────────────────────────────────────────
+// ── The truncation sentinel ──────────────────────────────────────────────────────────────────────────────────────
 
 /// Unit checks of the length cap through the hook:
 /// - `a`×76 (W = 0) and `a`×75 `b` (W = 1) plus each non-cancelling 77th symbol: length 127, `fgw_truncated`,

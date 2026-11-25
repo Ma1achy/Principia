@@ -422,8 +422,8 @@ negative_control!(
 type SpentRk4 = DefaultOccupant<Spent>;
 
 /// Burrau's state through the wrapper at `dt_macro = 1/16`, eight macro-steps, on a budget of 4 steps: the first
-/// macro-step takes no step and is completed, the second's march spends its budget, and the copy is never run on
-/// (R-604): the run stops there, `running` as it stood, at `t_end_step = 1`, with the state and steps of the direct
+/// macro-step takes no step and is completed, the second's march spends its budget, and the copy is never run on:
+/// the run stops there, `running` as it stood, at `t_end_step = 1`, with the state and steps of the direct
 /// march on that budget.
 fn check_exhausted_stops<A: Advance, R: P>() {
     let s = burrau::<R>();

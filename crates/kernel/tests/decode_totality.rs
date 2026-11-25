@@ -1,19 +1,19 @@
 //! Decode totality and the identities on every chart (dd_decoder §2 "From totality", §5 tests 1 and 4; chart_reference
-//! §0.7, §5.2; TASK-M2-24), over the chart registry (`kernel::chart::REGISTRY`), at f32 and f64:
+//! §0.7, §5.2), over the chart registry (`kernel::chart::REGISTRY`), at f32 and f64:
 //! - `degenerate_totality_closed_set`: `DEGENERATE`'s cause set is closed, five reasons, each with dd_decoder §2's
-//!   `decode_failed` detail code, none of them 0 (REQ-DEC-008, REQ-DEC-038).
+//!   `decode_failed` detail code, none of them 0.
 //! - `degenerate_totality_registry`: the charts this file visits are the registry's, and every `Chart` impl in
-//!   `kernel/src/chart` is visited, the physical-quantity mixed-axis charts under the registry's `Mixed` (REQ-DEC-008).
+//!   `kernel/src/chart` is visited, the physical-quantity mixed-axis charts under the registry's `Mixed`.
 //! - `degenerate_totality_every_chart`: fuzzed `(u, v)` on every chart, `η_E` off and on where the chart allows it, past
 //!   `[0,1]²` where the chart's own `validate` takes the point: every pixel carries a label, the reason its emitted
 //!   values call for (`M01_TINY` from the masses, the construction's from its targets, `η_E`'s from `V₀`, `E*`, `s` and
-//!   `r_min_pair_0`) or none, its `(m, r, p)` finite and its descriptor never NaN (REQ-DEC-008).
+//!   `r_min_pair_0`) or none, its `(m, r, p)` finite and its descriptor never NaN.
 //! - `degenerate_totality_reasons_reached`: each reason a chart can raise is raised, on the decode it names, and the
-//!   one no chart raises, `NO_QUALIFYING_SEED`, by the construction's rule on computed norms (REQ-DEC-008).
+//!   one no chart raises, `NO_QUALIFYING_SEED`, by the construction's rule on computed norms.
 //! - `degenerate_totality_stage_entry`: the decode stage's body, natively at f32, writes a tag word every sample, for
-//!   every compute variant, under `η_E` off and on (REQ-DEC-008).
+//!   every compute variant, under `η_E` off and on.
 //! - `decode_identities_every_chart`: test 1 on every chart over random `(u, v)` and the edges: `Σmᵢ = 1`, CoM `= 0`,
-//!   `Σpᵢ = 0` and `I = 1`, each within REQ-DEC-044's and REQ-DEC-045's proposals at each precision (REQ-DEC-025).
+//!   `Σpᵢ = 0` and `I = 1`, each within the proposed tolerances below at each precision.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 
@@ -365,7 +365,7 @@ fn every_chart(v: &mut impl Visit) {
     mapped(v, &mut rng);
 }
 
-/// The energy charts under a linear mapping (`kernel::chart::energy::Mapped`; TASK-M2-37), each its own chart's name.
+/// The energy charts under a linear mapping (`kernel::chart::energy::Mapped`), each its own chart's name.
 fn mapped(v: &mut impl Visit, rng: &mut SplitMix) {
     v.chart(
         &Mapped::<_, Defaults>::new(
@@ -394,7 +394,7 @@ fn mapped(v: &mut impl Visit, rng: &mut SplitMix) {
     );
 }
 
-/// The mixed-axis charts with a physical-quantity axis (`kernel::chart::physical`; TASK-M2-37), registered as `Mixed`:
+/// The mixed-axis charts with a physical-quantity axis (`kernel::chart::physical`), registered as `Mixed`:
 /// each energy-type axis and the virial ratio warped, `K` linear, and the mass ratio warped and linear.
 fn physical(v: &mut impl Visit, rng: &mut SplitMix) {
     let (k_max, gamma_k) = (K_MAX.number() as f32, GAMMA_K.number() as f32);
@@ -685,8 +685,8 @@ fn energy_tag<R: Q>(v0: R, r_min: R, s: R, e_star: R) -> Option<Degenerate> {
     }
 }
 
-/// The decode's `(m, r, p)` is finite and its descriptor never NaN, `±∞` only at R-436's poles (`rho_ratio`'s `+∞`,
-/// `V_0`'s `−∞`).
+/// The decode's `(m, r, p)` is finite and its descriptor never NaN, `±∞` only at the descriptor's poles
+/// (`rho_ratio`'s `+∞`, `V_0`'s `−∞`).
 fn check_finite<R: Q>(d: &Decoded<R>, at: &str) {
     let ic = &d.ic;
     assert!(
@@ -1039,8 +1039,8 @@ negative_control!(
 
 // ── decode_identities_every_chart ───────────────────────────────────────────────────────────────────────────────
 
-/// REQ-DEC-044's and REQ-DEC-045's proposals for test 1 (`kernel/tests/decode_blocks.rs`, `decode_join.rs`), in the
-/// precision's eps: `Σmᵢ − 1`; the CoM relative to `Σmᵢ‖rᵢ‖`; `Σpᵢ` relative to `Σ‖pᵢ‖`; `I − 1`.
+/// The proposed tolerances for test 1 (`kernel/tests/decode_blocks.rs`, `decode_join.rs`), in the precision's eps:
+/// `Σmᵢ − 1`; the CoM relative to `Σmᵢ‖rᵢ‖`; `Σpᵢ` relative to `Σ‖pᵢ‖`; `I − 1`.
 const SUM_EPS: f64 = 4.0;
 const COM_EPS: f64 = 4.0;
 const SUM_P_EPS: f64 = 4.0;

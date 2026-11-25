@@ -1,9 +1,9 @@
 //! The collision test's floor and its record (`kernel::detect::collision`; integrator contract Part 7, "The floor's
-//! record, defined"; dd_simstate_payload §2, `coll_floor_bits`; R-954, R-973; REQ-EVT-035):
+//! record, defined"; dd_simstate_payload §2, `coll_floor_bits`):
 //! - `collision_floor_code`: a pair's floor code is `clamp(e − 23, −40, 104) + 41`, at each end of the clamp and on
 //!   both sides of it, and the code's floor is `2^(code − 41)`.
-//! - `collision_floor_pairs`: each R-22 pair's code reads the largest exponent field of its own four coordinates, cast
-//!   to f32 first, a negative or a `y` coordinate included.
+//! - `collision_floor_pairs`: each pair's code (a pair named by its opposite body) reads the largest exponent field
+//!   of its own four coordinates, cast to f32 first, a negative or a `y` coordinate included.
 //! - `collision_floor_near`: near firing is strict at `d² = t·t`, holds where the test fires whatever `t`, and holds
 //!   without the product from `t ≥ 2⁶⁴`, not at `t` just below it.
 //! - `collision_floor_record`: the record is the larger of the near-firing maximum and the `d_min` state's code; a

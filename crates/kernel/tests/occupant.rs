@@ -3,36 +3,36 @@
 //! - `occupant_profiles_*`: each built occupant's advertised profile, both reversibility flags included, and its
 //!   default tier binding equal the Part 2 / Part 2a tables, transcribed here; its force evaluations per `STEP`,
 //!   counted, are its profile's; Euler is in the debug selection only; Aarseth–Zare + time-transformed leapfrog is an
-//!   allowed future occupant, not built (REQ-INT-013, REQ-INT-014, REQ-INT-015; R-162, R-168, R-500).
-//! - `capability_profile_readers`: the readings downstream features take from the profile (Part 2; REQ-INT-078).
+//!   allowed future occupant, not built.
+//! - `capability_profile_readers`: the readings downstream features take from the profile (Part 2).
 //! - `occupant_update_rules`: one `STEP` of each occupant equals dd_integrator §3.2's update rule, written here
-//!   independently in its printed velocity form, Yoshida's as three or seven unfused KDK steps (REQ-INT-037).
+//!   independently in its printed velocity form, Yoshida's as three or seven unfused KDK steps.
 //! - `occupant_coefficients_*`: the shipped constants equal dd_integrator §3.2 to all printed digits, each printed value
-//!   parsing to the shipped f64; Yoshida-4's `w₀` is bitwise `1 − 2w₁` and `w₀ + 2w₁` is exactly 1 in f64 (R-515);
-//!   Yoshida-6's `w₀ = 1 − 2(w₁ + w₂ + w₃)`; the kick sequences are `(d_{i−1} + dᵢ)/2`; the f32 constants are the f64
-//!   ones rounded once (REQ-INT-037).
+//!   parsing to the shipped f64; Yoshida-4's `w₀` is bitwise `1 − 2w₁` and `w₀ + 2w₁` is exactly 1 in f64 (`w₁`
+//!   printed correctly rounded to f64, `w₀` computed from it); Yoshida-6's `w₀ = 1 − 2(w₁ + w₂ + w₃)`; the kick
+//!   sequences are `(d_{i−1} + dᵢ)/2`; the f32 constants are the f64 ones rounded once.
 //! - `yoshida6_published*`: the Yoshida-6 constants equal dd §3.2's printed digits, their block carrying the citation
 //!   (Yoshida 1990, Table 1, solution A), the Yoshida-4 block carrying its own (the fourth-order closed form), and
-//!   REQ-INT-090's checks pass on them (REQ-INT-056; R-501).
+//!   the convergence-order and order-condition checks pass on them.
 //! - `yoshida_convergence_order_*`: on the Kepler-embedded fixture the fitted order of the maximum relative energy error
 //!   over one orbit rounds to 4 (Yoshida-4) and 6 (Yoshida-6); each free coefficient with its 4th significant digit
-//!   changed fits lower; the ladder, the fit and the detection floor are printed (REQ-INT-090; dd §5 test 1a).
+//!   changed fits lower; the ladder, the fit and the detection floor are printed (dd §5 test 1a).
 //! - `yoshida_order_conditions_*`: the order conditions, evaluated exactly in rational arithmetic on the shipped f64
 //!   constants, are within 3·10⁻¹⁵ (Yoshida-4) and 5·10⁻¹⁴ (Yoshida-6); each coefficient moved one unit of its 15th
-//!   (Yoshida-4) or 13th (Yoshida-6) significant digit, each way, exceeds the bound (REQ-INT-090).
+//!   (Yoshida-4) or 13th (Yoshida-6) significant digit, each way, exceeds the bound.
 //! - `step_reversibility`: dd test 3, `STEP(dt)`, negate `p`, `STEP(dt)`, negate `p`, returns the state within the
-//!   rounding-level criterion `step_reversal_tol` (REQ-VAL-191, proposed) for KDK, Yoshida-4 and Yoshida-6 at f64 and
+//!   rounding-level criterion `step_reversal_tol` (proposed) for KDK, Yoshida-4 and Yoshida-6 at f64 and
 //!   f32, on every fixture of test 3 (with Burrau's start and three approaching pairs), at every dt of the ladder in
 //!   the criterion's domain and at its edges, `dt/τ` from `step_reversal_edge_f64` or `step_reversal_edge_f32` up to
 //!   `step_reversal_edge_max`, `τ` the step's shortest two-body time over its force evaluations, with no projection or
 //!   substepping; it prints the evidence, those residuals beside Euler's, the cells outside the domain labelled; its
-//!   control is Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)` (REQ-VAL-032, REQ-VAL-191).
+//!   control is Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`.
 //! - `step_reversibility_upper_edge`: the same across the whole domain at 16 points per decade; its control reads `τ`
-//!   from the start's positions alone, which Burrau's and the approaches' steps outrun (REQ-VAL-191).
+//!   from the start's positions alone, which Burrau's and the approaches' steps outrun.
 //! - `step_reversibility_domain`: dd test 3's named controls, RK4 and the asymmetric Yoshida-4, read above the
 //!   criterion on every fixture at each edge, at every dt of the ladder in the domain and across it at 16 points per
 //!   decade, at f64 and f32, so the domain is one where test 3 can fail; its control is the f32 edge taken down to
-//!   `dt/τ = 0.2`, where RK4 reads below the criterion (REQ-VAL-191).
+//!   `dt/τ = 0.2`, where RK4 reads below the criterion.
 //!
 //! parity-tier: N (one-step)
 
@@ -212,13 +212,13 @@ fn y6_drift() -> [f64; 7] {
     [w3, w2, w1, w0, w1, w2, w3]
 }
 
-/// Yoshida-4 with its stages made asymmetric, `(w₁, w₁, w₀)` (REQ-VAL-032's control).
+/// Yoshida-4 with its stages made asymmetric, `(w₁, w₁, w₀)`, dd test 3's named control.
 fn y4_asymmetric<R: P>(s: &State<R>, dt: R, g: &Geom<R>) -> (State<R>, Geom<R>) {
     let (w1, w0) = (f64::YOSHIDA4_W1, f64::YOSHIDA4_W0);
     composition(&[w1, w1, w0], s, dt, g)
 }
 
-// ── occupant_profiles (REQ-INT-013, REQ-INT-014, REQ-INT-015; R-162, R-168, R-500) ─────────────────────────────
+// ── occupant_profiles ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// A row as the contract prints it: name, order, force evaluations, symplectic, step-reversible, run-reversible, owns
 /// time mapping, default binding.
@@ -347,8 +347,8 @@ negative_control!(
     }
 );
 
-/// Checks that no row of `table` is run-reversible: the one run-reversible occupant is logH's TTL time mode (R-162,
-/// R-500), which is not in Part 2's or Part 2a's table.
+/// Checks that no row of `table` is run-reversible: the one run-reversible occupant is logH's TTL time mode, which is
+/// not in Part 2's or Part 2a's table.
 fn check_run_reversible(table: &[Row]) {
     for row in table {
         assert!(
@@ -515,7 +515,7 @@ negative_control!(
 );
 
 /// Checks that Aarseth–Zare + time-transformed leapfrog is an allowed future occupant and not built, and that no
-/// built stepper owns its time mapping (R-162, R-168).
+/// built stepper owns its time mapping.
 fn check_future(table: &[Row]) {
     let row = table
         .iter()
@@ -685,7 +685,7 @@ negative_control!(
     })
 );
 
-// ── capability_profile_readers (REQ-INT-013, REQ-INT-078) ───────────────────────────────────────────────────────
+// ── capability_profile_readers ──────────────────────────────────────────────────────────────────────────────────
 
 /// The readings Part 2 defines, per profile checked: energy drift reads the dynamics (`symplectic`), the
 /// reversibility diagnostic qualifies (`step_reversible`), the reversibility test binds it (`run_reversible`), the
@@ -713,7 +713,7 @@ const READINGS: [Reading; 8] = [
     ("a run-reversible profile", true, true, true, false, 2, 1),
 ];
 
-/// A run-reversible profile, as logH's TTL time mode's is (R-162, R-500), which no row of Part 2's or Part 2a's
+/// A run-reversible profile, as logH's TTL time mode's is, which no row of Part 2's or Part 2a's
 /// table is: its other fields are illustrative, the reversibility test's reading is what it checks.
 const RUN_REVERSIBLE: CapabilityProfile = CapabilityProfile {
     order: 2,
@@ -791,7 +791,7 @@ negative_control!(
     }
 );
 
-// ── occupant_update_rules (REQ-INT-037) ─────────────────────────────────────────────────────────────────────────
+// ── occupant_update_rules ───────────────────────────────────────────────────────────────────────────────────────
 
 /// The velocities `p/m` of `s`.
 fn velocities(s: &State<f64>) -> [[f64; 2]; 3] {
@@ -880,7 +880,7 @@ fn rk4_rule(s: &State<f64>, dt: f64) -> State<f64> {
 
 /// The bound on one step's difference from its rule, relative to the state, in units of the f64 epsilon: the two
 /// differ by rounding alone (the kernel's momentum form, fused kicks and shared pair geometry against the rule's
-/// velocity form). Applied per R-369 (a test tolerance); measured worst printed.
+/// velocity form). A test tolerance; the measured worst is printed.
 const RULE_EPS: f64 = 64.0;
 
 /// Checks one `STEP` of `step` against `rule` on each fixture at each dt of the reversibility ladder.
@@ -919,7 +919,7 @@ negative_control!(
     })
 );
 
-// ── occupant_coefficients (REQ-INT-037; R-515) ──────────────────────────────────────────────────────────────────
+// ── occupant_coefficients ───────────────────────────────────────────────────────────────────────────────────────
 
 /// dd §3.2's printed Yoshida-4 digits.
 const Y4_PRINTED: [&str; 2] = ["1.3512071919596575", "-1.702414383919315"];
@@ -932,7 +932,7 @@ const Y6_PRINTED: [&str; 4] = [
     "1.31518632068391",
 ];
 
-/// Checks Yoshida-4's weights `w₁`, `w₀`: `w₀ + 2w₁` is exactly 1 in f64 and `w₀` is bitwise `1 − 2w₁` (R-515).
+/// Checks Yoshida-4's weights `w₁`, `w₀`: `w₀ + 2w₁` is exactly 1 in f64 and `w₀` is bitwise `1 − 2w₁`.
 fn check_y4_identity(w1: f64, w0: f64) {
     let sum = w0 + 2.0 * w1;
     assert!(sum == 1.0, "w₀ + 2w₁ is {sum:?}, not exactly 1.0 in f64");
@@ -1129,7 +1129,7 @@ negative_control!(
     }
 );
 
-// ── yoshida6_published (REQ-INT-056; R-57, R-501) ───────────────────────────────────────────────────────────────
+// ── yoshida6_published ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// The Yoshida-6 block.
 const Y6_SOURCE: &str = include_str!("../src/occupant/yoshida6.rs");
@@ -1137,7 +1137,7 @@ const Y6_SOURCE: &str = include_str!("../src/occupant/yoshida6.rs");
 /// The Yoshida-4 block.
 const Y4_SOURCE: &str = include_str!("../src/occupant/yoshida4.rs");
 
-/// The citation every Yoshida block carries (R-501).
+/// The citation every Yoshida block carries.
 const CITATION: [&str; 3] = [
     "Yoshida, H. (1990)",
     "\"Construction of higher order symplectic\n//! integrators\"",
@@ -1198,7 +1198,7 @@ negative_control!(
     )
 );
 
-// ── yoshida_convergence_order (REQ-INT-090; dd §5 test 1a) ──────────────────────────────────────────────────────
+// ── yoshida_convergence_order (dd §5 test 1a) ───────────────────────────────────────────────────────────────────
 
 /// The Kepler-embedded fixture (dd §5 test 1): bodies 0 and 1 of masses `(1 − ε)/2` on an orbit of semi-major axis 1
 /// and eccentricity 1/2, starting at apocentre about their centre of mass; body 2 of mass `ε = 10⁻⁹` at rest at
@@ -1233,8 +1233,8 @@ fn max_energy_error(d: &[f64], n: usize) -> f64 {
     worst
 }
 
-/// The dt ladders, in steps per orbit (applied per R-369, R-501: this task's, named in its PR). Each doubles the
-/// steps; the finest keeps the error above f64 rounding (about 10⁻¹¹ for Yoshida-4 and 10⁻¹² for Yoshida-6).
+/// The dt ladders, in steps per orbit. The plan is unclear here (it names no ladder); chose these because each doubles
+/// the steps and the finest keeps the error above f64 rounding (about 10⁻¹¹ for Yoshida-4 and 10⁻¹² for Yoshida-6).
 const Y4_LADDER: [usize; 4] = [1000, 2000, 4000, 8000];
 const Y6_LADDER: [usize; 4] = [150, 300, 600, 1200];
 
@@ -1406,7 +1406,7 @@ y6_order_test!(yoshida_convergence_order_yoshida6_w1, 0, "w₁");
 y6_order_test!(yoshida_convergence_order_yoshida6_w2, 1, "w₂");
 y6_order_test!(yoshida_convergence_order_yoshida6_w3, 2, "w₃");
 
-// ── yoshida_order_conditions (REQ-INT-090; dd §5 test 1a) ───────────────────────────────────────────────────────
+// ── yoshida_order_conditions (dd §5 test 1a) ────────────────────────────────────────────────────────────────────
 
 /// An exact rational.
 type Q = BigRational;
@@ -1668,14 +1668,14 @@ condition_test!(
     "exceeds 5e-14"
 );
 
-// ── step_reversibility (REQ-VAL-032, REQ-VAL-191; dd §5 test 3) ─────────────────────────────────────────────────
+// ── step_reversibility (dd §5 test 3) ───────────────────────────────────────────────────────────────────────────
 
-/// The dt ladder (applied per R-369: this task's, named in its PR): `10⁻¹` and `10⁻²` above the default macro-step,
-/// `dt_macro = 10⁻³` (dd_integrator §2, R-132), and `10⁻³/64`, the smallest substep at the default `dt_macro` and
-/// `N_max = 64`.
+/// The dt ladder. The plan is unclear here (it names no ladder); chose `10⁻¹` and `10⁻²` above the default
+/// macro-step, `dt_macro = 10⁻³` (dd_integrator §2), and `10⁻³/64`, the smallest substep at the default `dt_macro` and
+/// `N_max = 64`, because they reach two decades above the default macro-step and down to its smallest substep.
 const DT_LADDER: [f64; 4] = [1e-1, 1e-2, 1e-3, 1e-3 / 64.0];
 
-/// The criterion, `step_reversal_tol` (REQ-VAL-191, provisional until M3), in units of the precision's epsilon.
+/// The criterion, `step_reversal_tol` (provisional), in units of the precision's epsilon.
 const TOL: f64 = STEP_REVERSAL_TOL.number();
 
 /// A fixture's dynamical time `τ`, the shortest two-body time `√(r³ / (G(mᵢ + mⱼ)))` over its pairs, `G = 1`: 1.09
@@ -1693,7 +1693,7 @@ fn dynamical_time<R: P>(s: &State<R>) -> f64 {
 }
 
 /// The domain's lower edge at `R`, the smallest `dt/τ` at which test 3 discriminates, as `step_reversal_tol`'s proposal
-/// states it (REQ-VAL-191): the register's `step_reversal_edge_f64` (10⁻²) and `step_reversal_edge_f32` (0.4). At the
+/// states it: the register's `step_reversal_edge_f64` (10⁻²) and `step_reversal_edge_f32` (0.4). At the
 /// edge itself and above it, dd's named controls, RK4 and the asymmetric Yoshida-4, read above the criterion
 /// (`step_reversibility_domain`). Below it a control's time-asymmetry, relative `O((dt/τ)⁴)` for the asymmetric
 /// Yoshida-4 and `O((dt/τ)⁶)` for RK4 (even order: the `h⁵` terms of `Φ_h` and `Φ_{−h}` cancel in `Φ_{−h}∘Φ_h`), falls
@@ -1746,7 +1746,7 @@ fn reversal_fixtures<R: P>() -> [(&'static str, State<R>); 6] {
     ]
 }
 
-/// The step's shortest two-body time `τ` at `dt`, the criterion's `τ` (REQ-VAL-191): the least `√(r³ / (G m_pair))`,
+/// The step's shortest two-body time `τ` at `dt`, the criterion's `τ`: the least `√(r³ / (G m_pair))`,
 /// `G = 1`, `m_pair` the pair's two masses, over the three pairs at every position at which test 3's two steps
 /// evaluate the force, `STEP(dt)` from `s` and `STEP(dt)` from its momentum-negated result, the start's included. The
 /// positions are those of the f64 step, read from the square roots [`Counted`] records.
@@ -1902,7 +1902,7 @@ fn step_reversibility() {
     check_reversible("KDK", (kdk, kdk, kdk));
     check_reversible("Yoshida-4", (y4, y4, y4));
     check_reversible("Yoshida-6", (y6, y6, y6));
-    // Euler, not step-reversible, printed as evidence for REQ-VAL-191; dd's named controls are checked by
+    // Euler, not step-reversible, printed as evidence for the criterion; dd's named controls are checked by
     // `step_reversibility_domain`.
     reversals::<f64>("Euler", euler, euler, domain::<f64>(), false);
     reversals::<f32>("Euler", euler, euler, domain::<f32>(), false);

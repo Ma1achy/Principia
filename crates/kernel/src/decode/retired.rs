@@ -1,23 +1,23 @@
-//! The retired `β` links and the conversion into the periodic `β` (R-898, R-919 Q1 (c) and Q3 (a), R-921; REQ-DEC-055,
-//! REQ-DEC-056; dd_decoder §3.2).
+//! The retired `β` links and the conversion into the periodic `β` (dd_decoder §3.2).
 //!
 //! Latent `β` is a periodic angle with one link, `periodic_beta`, the offset onto the angle: `β = z_β + π/2`
-//! (R-1020), read modulo `2π` by the decode's `cos β` and `sin β`. The three bounded links a `z_β` was stored under
-//! before TASK-M2-57, `sigmoid_beta`, `tanh_beta` and `softsign_beta`, onto `β ∈ [0, π]`, are no block's link: their
+//! read modulo `2π` by the decode's `cos β` and `sin β`. The three bounded links under which older records stored
+//! `z_β` (`sigmoid_beta`, `tanh_beta` and `softsign_beta`, onto `β ∈ [0, π]`) are no block's link: their
 //! codomain, `RetiredBeta`, is no slot's, so no [`Selection`](crate::generated::links::Selection) names one. Their
 //! forward maps stay, as conversion sources only:
 //! - **Conversion** ([`convert`], [`converted`]): a stored `z_β` made under the retired link `L` becomes the periodic
-//!   link's inverse of the `β` it decoded to, `z_β′ = L(z_β) − π/2` (R-1020; dd_decoder § 3.2, "How a stored value
+//!   link's inverse of the `β` it decoded to, `z_β′ = L(z_β) − π/2` (dd_decoder § 3.2, "How a stored value
 //!   converts"), one period, so stored reduced and unreduced alike: the old golden, `z_β = 0` under `sigmoid_beta`,
 //!   converts to 0. The subtraction rounds once and the decode adds `π/2` back, so a converted value need not decode
-//!   bit for bit to the old state, at f64 or at f32; R-898's conversion test, within REQ-ENC-024's `ε_phys`, binds.
-//! - **Recreation** ([`decode_retired`]; R-921): a record made under `L` decodes through `L` itself, bitwise, at the
+//!   bit for bit to the old state, at f64 or at f32; it is held to the old system within `ε_phys`
+//!   (`tests/latent_conversion.rs`).
+//! - **Recreation** ([`decode_retired`]): a record made under `L` decodes through `L` itself, bitwise, at the
 //!   decode's own precision: `L`'s forward of `z_β` at `R` is the angle `β`, which [`Retired`]'s configuration block
 //!   takes as it is, in place of the periodic link's; every other block is the selection's. Nothing is converted on
 //!   recreation.
 //!
-//! [`RetiredLink`] names the three at run time, for a reader that learns the link from a file (R-516); [`ASSUMED`] is
-//! the link an unpinned old saved chart is read under, with a notice (R-919 Q3 (a)).
+//! [`RetiredLink`] names the three at run time, for a reader that learns the link from a file; [`ASSUMED`] is
+//! the link an unpinned old saved chart is read under, with a notice.
 
 use core::marker::PhantomData;
 
@@ -32,7 +32,7 @@ use crate::payload::ICDescriptorOf;
 use crate::payload::PayloadReal;
 
 /// `z_β` made under the retired link `L`, converted to the periodic link's control at `R`: the periodic link's inverse
-/// of `L`'s forward, `L(z_β) − π/2` (R-1020).
+/// of `L`'s forward, `L(z_β) − π/2`.
 #[inline]
 pub fn convert<L: Link<1, 1, Codomain = RetiredBeta>, R: LinkReal>(z_beta: R) -> R {
     let [beta] = L::forward([z_beta]);
@@ -58,8 +58,8 @@ pub fn converted<L: Link<1, 1, Codomain = RetiredBeta>, R: LinkReal>(z: &Latent<
     out
 }
 
-/// The free-momentum decoder under the selection `S` with `β` through the retired link `L` (R-921): [`Free`]'s blocks,
-/// the configuration block's `β` `L`'s forward of `z_β`, taken as the angle, the decode before TASK-M2-57 under `L`.
+/// The free-momentum decoder under the selection `S` with `β` through the retired link `L`: [`Free`]'s blocks,
+/// the configuration block's `β` `L`'s forward of `z_β`, taken as the angle: the decode an old record was made with.
 pub struct Retired<S, L>(Free<S>, PhantomData<L>);
 
 impl<S, L> Retired<S, L> {
@@ -106,9 +106,9 @@ where
     }
 }
 
-/// The decode under the selection `S` of `z` made under the retired `β` link `L` (R-921): [`Retired`]'s, `L`'s forward
-/// of `z_β` at the decode's precision taken as `β`, then the one decode's other steps: the decode under `L` before
-/// TASK-M2-57, bit for bit at f64 and at f32.
+/// The decode under the selection `S` of `z` made under the retired `β` link `L`: [`Retired`]'s, `L`'s forward
+/// of `z_β` at the decode's precision taken as `β`, then the one decode's other steps: the decode an old record was
+/// made with under `L`, bit for bit at f64 and at f32.
 #[inline]
 pub fn decode_retired<S, L, R>(z: &Latent<R>) -> Decoded<R>
 where
@@ -123,7 +123,7 @@ where
 #[cfg(not(target_arch = "spirv"))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RetiredLink {
-    /// `sigmoid_beta`, the default `β` link before TASK-M2-57.
+    /// `sigmoid_beta`, the old default `β` link.
     Sigmoid,
     /// `tanh_beta`.
     Tanh,
@@ -131,7 +131,7 @@ pub enum RetiredLink {
     Softsign,
 }
 
-/// The link an old saved chart that pins none was made under, the default (R-919 Q3 (a)): its conversion is
+/// The link an old saved chart that pins none was made under, the old default: its conversion is
 /// reported, naming it, for the notice on load.
 #[cfg(not(target_arch = "spirv"))]
 pub const ASSUMED: RetiredLink = RetiredLink::Sigmoid;

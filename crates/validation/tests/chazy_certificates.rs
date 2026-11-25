@@ -9,7 +9,7 @@
 //! start is shifted to its centre-of-mass frame.
 //!
 //! **The march** is the default occupant as the field backend runs it (Heggie × RK4, [`DefaultOccupant`]) at f64, under
-//! the sim key's march values at the horizon and the default `r_coll = 10⁻³`, with a cadence that keeps the stored
+//! the sim key's march values at the horizon and [`R_COLL`], the benchmark's pin `r_coll = 0`, with a cadence that keeps the stored
 //! state and the latch's stored level at each playhead's macro-step ([`Watching`]). Each kept state is read as the read
 //! side reads it ([`kernel::chazy::chazy_class`]: `E_0`, `R_0` from the start, the stored `I_max` level). A sample that
 //! collided or failed before a playhead has no motion to classify there; they are counted and reported.

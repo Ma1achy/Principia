@@ -1,7 +1,7 @@
-//! The read-back (`kernel::stage::branch_read`; TASK-M4-27; REQ-VAL-347): each word of a sample sits in its slot, as the
+//! The read-back (`kernel::stage::branch_read`): each word of a sample sits in its slot, as the
 //! kernel's own branch functions give it, canon's and the decode's alike, the outcome what `canonicalise` and the decode
 //! give; each chart reads what its decode reads; the entries write sample `i` and nothing past the last; and the branch
-//! functions at the boundary of each comparison. Each test registers the control that must make it fail (R-176).
+//! functions at the boundary of each comparison. Each test registers the control that must make it fail.
 
 use kernel::canon::{
     axis_zero, canonicalise, com_frame, is_pole, pair_differences, scaled_rho, signs_input,

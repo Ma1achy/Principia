@@ -1,23 +1,24 @@
-//! QA tests for TASK-M2-06, written from the requirements, not from the implementation: the CPU side of the shared
-//! source, at f32 and f64 (R-118, R-265). The GPU side is `engine`'s `qa_TASK-M2-06_gpu`.
-//! - REQ-TOOL-030 / R-436 (dd_decoder §3.6, "Each producer selects its pole value"): at the poles the stored values are
+//! QA tests for the decode's shared pieces (the descriptor's poles, the decode-mode bit, the uniform, the `DEGENERATE`
+//! tag word, `tanh_sat`), written from the requirements, not from the implementation: the CPU side of the shared
+//! source, at f32 and f64. The GPU side is `engine`'s `qa_TASK-M2-06_gpu`.
+//! - The poles (dd_decoder §3.6, "Each producer selects its pole value"): at the poles the stored values are
 //!   the IEEE patterns `+∞` (`rho_ratio` where `‖λ̃‖ = 0`), `−∞` (`V_0` wherever any pair separation is 0) and `+0`
 //!   (`virial_ratio` where `V_0` is non-finite), compared on their bits, never by arithmetic on `∞`; one step off each
 //!   pole the value is the plain quotient (`qa_m206_pole_*`). The select's own primitive gives exactly the pattern on
 //!   one side and `self`'s bits, a NaN's payload included, on the other; the bit test is an exponent of all ones
 //!   (`qa_m206_ieee_bits_*`).
-//! - REQ-DEC-007 (scheduler_contract Part 5, `QuadRequest.flags` bit 0): `DECODE_MODE` is bit 0 of the flags word and
-//!   nothing else in the word changes it (`qa_m206_decode_mode_bit0`); the chart's parameters, `z₀`, `q₁`, `q₂`, are
-//!   carried by the uniform, every one of the 24 recoverable from it (`qa_m206_uniform_round_trip`).
+//! - The decode mode (scheduler_contract Part 5, `QuadRequest.flags` bit 0): `DECODE_MODE` is bit 0 of the flags word
+//!   and nothing else in the word changes it (`qa_m206_decode_mode_bit0`); the chart's parameters, `z₀`, `q₁`, `q₂`,
+//!   are carried by the uniform, every one of the 24 recoverable from it (`qa_m206_uniform_round_trip`).
 //! - The `DEGENERATE` readback tag: every reason, and none, round-trips through its tag word; the words are distinct and
 //!   no other word decodes (`qa_m206_tag_round_trip`).
-//! - REQ-DEC-047 (dd_generation_root §3.9's `tanh` operator; the requirement's verify detail): `tanh_sat` lies at or
+//! - `tanh_sat` (dd_generation_root §3.9's `tanh` operator; the requirement's verify detail): `tanh_sat` lies at or
 //!   above the first argument where `tanh` rounds to ±1, found here by search at each width, and below 43.671875, from
 //!   which Metal's GPU `tanh` was measured to fail, 0 and then NaN (`qa_m206_tanh_sat_window`).
 //!
 //! **Domain** (pitfalls §10): the decode's stateless pieces, inputs fixed; no trajectory.
 //!
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use kernel::chart::Latent;
 use kernel::decode::descriptor::{describe, potential, ratio, virial};
@@ -147,7 +148,7 @@ negative_control!(
     )
 );
 
-// ── The poles (R-436), both sides of each select, both widths ────────────────────────────────────────────────
+// ── The poles, both sides of each select, both widths ────────────────────────────────────────────────────────
 
 /// Equal masses at the given positions, with momenta summing to 0.
 fn ic<R: From<f32> + Copy>(r: [[f32; 2]; 3]) -> Ic<R> {
@@ -403,8 +404,8 @@ negative_control!(
 
 /// Every reason the type holds, and none.
 ///
-/// TASK-M2-24 closed the set (dd_decoder §2, "The `DEGENERATE` cause set"): `INVARIANT_INFEASIBLE` and
-/// `NO_QUALIFYING_SEED` joined it, so they write tag words too.
+/// The set is closed (dd_decoder §2, "The `DEGENERATE` cause set") and includes `INVARIANT_INFEASIBLE` and
+/// `NO_QUALIFYING_SEED`, so they write tag words too.
 const REASONS: [Option<Degenerate>; 6] = [
     None,
     Some(Degenerate::M01Tiny),
@@ -459,7 +460,7 @@ negative_control!(
     })
 );
 
-// ── tanh_sat's window (REQ-DEC-047) ──────────────────────────────────────────────────────────────────────────
+// ── tanh_sat's window ────────────────────────────────────────────────────────────────────────────────────────
 
 /// The least f32 `x > 1` with `tanh(x) = 1` exactly, by bisection on the bit pattern (tanh is monotone).
 fn saturates32() -> f32 {
@@ -475,7 +476,7 @@ fn saturates32() -> f32 {
     f32::from_bits(hi)
 }
 
-/// The least f64 `x > 1` with `tanh(x) = 1` exactly, `tanh` the CPU's own at f64, the pinned libm's (R-991).
+/// The least f64 `x > 1` with `tanh(x) = 1` exactly, `tanh` the CPU's own at f64, the pinned pure-software libm's.
 fn saturates64() -> f64 {
     let (mut lo, mut hi) = (1.0f64.to_bits(), 100.0f64.to_bits());
     while hi - lo > 1 {
@@ -491,7 +492,7 @@ fn saturates64() -> f64 {
 
 /// `t` is at or above where `tanh` rounds to ±1 at both widths (and `tanh` is ±1 at `±t`, so the clamp changes no
 /// CPU value), and below 43.671875, the first argument where Metal's GPU `tanh` was measured to fail, 0 and then NaN
-/// (REQ-DEC-047's verify detail). Both widths' `tanh_sat` are the same number.
+/// (the requirement's verify detail). Both widths' `tanh_sat` are the same number.
 fn check_window(t32: f32, t64: f64) {
     let (s32, s64) = (saturates32(), saturates64());
     println!("tanh rounds to 1 from {s32} at f32 and {s64} at f64; tanh_sat = {t64}");

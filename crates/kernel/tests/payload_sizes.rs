@@ -1,9 +1,9 @@
-//! REQ-PAY-001's size facts on the generated payload: `ICDescriptor` is 64 B with its padding a declared member and no
-//! stored E₀, and descriptor bits 10–14 hold only `I_max`'s level, bit 15 being R-37's departed bit (R-545) (dd_generation_root §3.1,
-//! §3.6; R-86). With them, the word buffer's
+//! The payload's size facts on the generated payload: `ICDescriptor` is 64 B with its padding a declared member and
+//! no stored E₀, and descriptor bits 10–14 hold only `I_max`'s level, bit 15 being the `departed` bit
+//! (dd_generation_root §3.1, §3.6; payload §2). With them, the word buffer's
 //! `fgw_*` accessors (payload §3's `.w` bit map) and payload §3's frozen continuation table as emitted to Rust,
-//! `continuation_index` with 3 in its four `next = inverse(prev)` cells (R-307), and total: an input out of range fails
-//! a `debug_assert!` in a debug build and reads the masked (`& 3`, R-321) or clamped (`min(d, 2)`, R-324) cell in a
+//! `continuation_index` with 3 in its four `next = inverse(prev)` cells, and total: an input out of range fails
+//! a `debug_assert!` in a debug build and reads the masked (`& 3`) or clamped (`min(d, 2)`) cell in a
 //! release build.
 
 use std::mem::{offset_of, size_of, size_of_val};
@@ -18,7 +18,7 @@ use kernel::payload::{
 use validation::negative_control;
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-001: ICDescriptor, 64 B, the padding declared, no stored E₀ (generation-root §3.6, R-86).
+// ICDescriptor, 64 B, the padding declared, no stored E₀ (generation-root §3.6).
 
 /// The field names of a derived `Debug` rendering, `Name { a: …, b: … }`: each identifier followed by `:`.
 fn field_names(debug: &str) -> Vec<String> {
@@ -74,8 +74,8 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-001: descriptor bits 10–14 hold only the Chazy latch `I_max`'s level and bit 15 the departed bit (R-545), each
-// a field; `packed_a` has no reserved span left (generation-root §3.1, R-86).
+// Descriptor bits 10–14 hold only the Chazy latch `I_max`'s level and bit 15 the departed bit, each a field;
+// `packed_a` has no reserved span left (generation-root §3.1).
 
 /// `packed_a` with every field at its widest, `I_max`'s level `i_max`, as the generated packer writes it.
 fn packed_a_full(i_max: u32) -> u32 {
@@ -178,7 +178,7 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// Payload §3's frozen continuation table, as emitted to Rust; the WGSL half is TASK-M0-13's.
+// Payload §3's frozen continuation table, as emitted to Rust; the WGSL half is `qa_TASK-M0-13.rs`'s.
 
 /// Payload §3's arrays, as written there.
 const INVERSE_3: [u32; 4] = [1, 0, 3, 2];
@@ -250,9 +250,9 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// The table functions are total (R-321, R-324): a symbol input ≥ 4 fails its `debug_assert!` in a debug build and
+// The table functions are total: a symbol input ≥ 4 fails its `debug_assert!` in a debug build and
 // reads the cell at `input & 3` in a release build; a digit ≥ 3 fails its `debug_assert!` and reads the digit-2 cell.
-// `continuation_index` returns 3 only in its four inverse cells (R-307).
+// `continuation_index` returns 3 only in its four inverse cells.
 
 /// The four table functions, so a control can substitute one.
 struct Tables {

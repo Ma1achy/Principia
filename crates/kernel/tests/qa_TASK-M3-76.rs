@@ -1,27 +1,27 @@
-//! QA tests for TASK-M3-76, written from REQ-INT-119 and REQ-INT-120 and their sources (R-998, R-999, R-998's dated
-//! line, and integrator contract Part 2b § "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse
+//! QA tests, written from the landing and `|R₃|`-floor requirements and their sources (the landing rule's words, and
+//! integrator contract Part 2b § "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse
 //! and the step control (transcribed)"), not from the implementation:
 //!
-//! - REQ-INT-119 (`qa_az_landing_state_with_clock_fuzzed`): over fuzzed three-body states, three step factors and
+//! - The landing (`qa_az_landing_state_with_clock_fuzzed`): over fuzzed three-body states, three step factors and
 //!   three sync quanta, at f32 and f64, Aarseth–Zare + RK4 marched over three sync intervals lands on every boundary
 //!   with "the state landing on the boundary together with the clock": in every interval the last kept regularised
 //!   state's own clock is `Δ_sync`, bitwise, and no kept state's clock is past it (the clock "never set to the boundary
-//!   while the stored state's own clock differs from it", R-998's dated line, with no tolerance in which a clock short
-//!   of or past `Δ_sync` could land); the march's time is `k·Δ_sync` exactly; and its Cartesian state is, bit for bit,
-//!   the image of that last kept state under the last interval's registration. A stepper spy counts the steps that
-//!   ended the clock past the boundary, so the fixtures are shown to exercise the landing (an overshooting step), at
-//!   each precision.
-//! - REQ-INT-119 (`qa_az_landing_state_with_clock_truth`): ground truth from outside the occupant, a Cartesian RK4
+//!   while the stored state's own clock differs from it", the landing rule's words, with no tolerance in which a clock
+//!   short of or past `Δ_sync` could land); the march's time is `k·Δ_sync` exactly; and its Cartesian state is, bit for
+//!   bit, the image of that last kept state under the last interval's registration. A stepper spy counts the steps
+//!   that ended the clock past the boundary, so the fixtures are shown to exercise the landing (an overshooting step),
+//!   at each precision.
+//! - The landing (`qa_az_landing_state_with_clock_truth`): ground truth from outside the occupant, a Cartesian RK4
 //!   integration of the same three bodies in physical time at a step 1/20000 of the sync quantum: after four landed
 //!   intervals the occupant's state is nearer the truth than the clock-only landing's (the clamp kept, no retakes, the
-//!   clock set to the boundary over the overshot state, what R-998 forbids), whose run is shown to keep a clock past
-//!   the boundary.
-//! - REQ-INT-120 (`qa_az_r3_floor_tiny`): the equations of motion's `|R₃|` reads `max(|R₃|, TINY)`, `TINY` the working
-//!   precision's (`1e-37` at f32, `1e-300` at f64, the reference's values, R-953): on states built with `|R₃|` exactly
-//!   `0` and with `0 < |R₃| < TINY` it reads `TINY`; above `TINY` it reads `|R₂ − R₁|` from a Levi-Civita map written
-//!   here.
+//!   clock set to the boundary over the overshot state, what the landing rule forbids), whose run is shown to keep a
+//!   clock past the boundary.
+//! - The `|R₃|` floor (`qa_az_r3_floor_tiny`): the equations of motion's `|R₃|` reads `max(|R₃|, TINY)`, `TINY` the
+//!   working precision's (`1e-37` at f32, `1e-300` at f64, the reference's values): on states built with `|R₃|`
+//!   exactly `0` and with `0 < |R₃| < TINY` it reads `TINY`; above `TINY` it reads `|R₂ − R₁|` from a Levi-Civita map
+//!   written here.
 //!
-//! Negative controls (R-176): the clock-only landing (the secant's and the bisection's caps both 0, the contract's
+//! Negative controls: the clock-only landing (the secant's and the bisection's caps both 0, the contract's
 //! measurement setting) fails the fuzzed check and the truth check; a floor of 0 at f32 fails the floor check on the
 //! state with `|R₃|` below `TINY`.
 
@@ -54,8 +54,8 @@ impl P for f64 {
 }
 
 /// Test step-control values (inputs, not the calibrations): `η` and `Δ_sync` as given, the reference's `TINY`
-/// (`1e-37` / `1e-300`, R-953), R-160's `f = 0.02`, a budget that a stalled landing would spend, the clamp on and the
-/// landing's two integer caps as Part 2b writes them (the secant's 4, the bisection's 64).
+/// (`1e-37` / `1e-300`), the predictive step limit's `f = 0.02`, a budget that a stalled landing would spend, the
+/// clamp on and the landing's two integer caps as Part 2b writes them (the secant's 4, the bisection's 64).
 fn params<R: P>(eta: f64, delta: f64) -> AzParams<R> {
     AzParams {
         eta: R::of(eta),
@@ -74,7 +74,8 @@ fn params<R: P>(eta: f64, delta: f64) -> AzParams<R> {
 fn retakes_on<R>(_p: &mut AzParams<R>) {}
 
 /// The clock-only landing: the clamp kept, the secant's and the bisection's caps both 0, so a step past the boundary
-/// is kept and the clock set to the boundary alone (the contract's measurement setting; what R-998 forbids).
+/// is kept and the clock set to the boundary alone (the contract's measurement setting; what the landing rule
+/// forbids).
 #[cfg(feature = "controls")]
 fn clock_only<R>(p: &mut AzParams<R>) {
     p.secant_tries = 0;
@@ -217,8 +218,8 @@ fn spied<R: P>(s: &State<R>, k: u32, prm: &AzParams<R>) -> (AzAdvanced<R>, Recor
 /// The boundaries each fuzzed march lands on.
 const K: u32 = 3;
 
-/// REQ-INT-119 over the fuzzed states at `R`, with `landing` setting the landing's retakes: see the module's note.
-/// Returns the steps that ended the clock past a boundary.
+/// The landing check over the fuzzed states at `R`, with `landing` setting the landing's retakes: see the module's
+/// note. Returns the steps that ended the clock past a boundary.
 fn check_fuzzed<R: P>(landing: fn(&mut AzParams<R>)) -> u32 {
     let mut past = 0;
     for (i, s64) in fuzzed(16).iter().enumerate() {
@@ -444,9 +445,9 @@ fn system<R: P>(tiny: R) -> (AzSystem<R>, AzQ<R>) {
     (sys, q)
 }
 
-/// REQ-INT-120 at `R`, the system registered with `tiny` and the precision's `TINY` being `want`: `|R₃| = 0` and
-/// `|R₃| = x²` (with `u₁ = (x, 0)`, `u₂ = 0`, `x² < TINY`) read `want`; the registered state's `|R₃|`, above `TINY`,
-/// reads `|L(u₂)u₂ − L(u₁)u₁|`.
+/// The `|R₃|` floor check at `R`, the system registered with `tiny` and the precision's `TINY` being `want`: `|R₃| = 0`
+/// and `|R₃| = x²` (with `u₁ = (x, 0)`, `u₂ = 0`, `x² < TINY`) read `want`; the registered state's `|R₃|`, above
+/// `TINY`, reads `|L(u₂)u₂ − L(u₁)u₁|`.
 fn check_floor<R: P>(tiny: R, want: f64, x: f64) {
     let (sys, q) = system::<R>(tiny);
     let what = core::any::type_name::<R>();

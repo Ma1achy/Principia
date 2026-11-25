@@ -1,6 +1,5 @@
 //! The Benettin FTLE shadow (dd_integrator §2, §3.4, §3.8; integrator_contract Part 3, Part 5; payload §5): the FTLE
-//! tier's co-computation, riding the forward pass beside the sample's own march (REQ-INT-035, REQ-INT-039,
-//! REQ-INT-043).
+//! tier's co-computation, riding the forward pass beside the sample's own march.
 //!
 //! **One shadow per sample** (§3.8, verbatim from stability-metrics.md):
 //!
@@ -12,25 +11,24 @@
 //!
 //! `x` is the sample's phase-space state, the twelve components `(r, p)`, and `δ` the Euclidean norm over them, the
 //! read side's `benettin_delta` ([`delta`]). The offset `δ₀` is `‖δ₀‖` times §3.8's fixed direction
-//! ([`offset`]; REQ-INT-077): in the positions alone, its components `±½` and 0, so it is exact at either
-//! precision and the same on every backend. `‖δ₀‖` and `n_renorm` are REQ-INT-076's calibration ([`BenettinParams`]);
+//! ([`offset`]): in the positions alone, its components `±½` and 0, so it is exact at either
+//! precision and the same on every backend. `‖δ₀‖` and `n_renorm` are the calibration ([`BenettinParams`]);
 //! the sim key carries them.
 //!
-//! **Its own trajectory, its own projection** (§3.4; REQ-INT-039). The shadow is marched by the bound occupant through
+//! **Its own trajectory, its own projection** (§3.4). The shadow is marched by the bound occupant through
 //! its own [`WrapperCadence`]: its own COM projection, its `M` cached from its own masses, its own monitor and its own
 //! detector, every `STEP`, so its CoM drift under its own roundoff is removed by its own `R_com`, never by the
 //! sample's. It is marched after each of the sample's macro-steps ([`super::wrapper::CoMarch`]), from the same grid
 //! time to the same grid time, with the sample's `N_sub`, and it takes no more substeps than the sample took: a
 //! macro-step the sample's `done` cut short stops the shadow at the same substep, so `δ` is always read between two
 //! states at one time. Taking the sample's `N_sub` makes the two the same discrete map, whose separation the exponent
-//! is of. The shadow's detectors only watch (R-972; the owner's words of 12 Nov 2026 on
-//! RQ-791: "The shadow's collision check only watches and the shadow carries on through"): what would be the shadow's
+//! is of. The shadow's detectors only watch: what would be the shadow's
 //! terminal neither stops the shadow nor touches the sample, whose own detectors and outcome are its own. A shadow that
 //! marches through a close approach can blow up; that is the next note's.
 //!
-//! **A non-finite sum** (R-972, option (a) of RQ-791: "if its sum goes non-finite, (a)"). Once the shadow's finalised
+//! **A non-finite sum.** Once the shadow's finalised
 //! sum `S + ln(δ/δ₀)` is non-finite, the FTLE is invalid from then on: a non-finite value stays non-finite under the
-//! sums and the march, so the mark is derived at write, with no latch. Storage never holds NaN (R-79), so the sample's
+//! sums and the march, so the mark is derived at write, with no latch. Storage never holds NaN, so the sample's
 //! `S` then stores [`s_failed`], `R`'s largest finite value (`f32::MAX`, the generated read side's `S_FAILED_BITS`; at
 //! f64, `f64::MAX`), and `r_sh`, `p_sh` the sample's own `r`, `p`: failed-state values, every other field the
 //! sample's. A real `S` never reaches it: each renormalisation adds `ln(δ/δ₀)`, and for a finite, nonzero f32 `δ`
@@ -39,31 +37,30 @@
 //! most 65535 macro-steps (`t_end_step` is a u16, payload §2), so `|S| ≤ 65535 · 103 ≈ 6.8e6`, 31 orders below
 //! `f32::MAX`. At f64 the same count gives `|S| ≤ 65535 · 760 ≈ 5.0e7` (`ln(f64::MAX) ≈ 709.8`, the smallest
 //! subnormal's log `≈ −744.4`), far below `f64::MAX`. Payload §6's `ftle_valid` gains the
-//! clause `S ≠ S_FAILED` (compared by its bits), so `ftle` reads NaN (R-254) and every aggregate drops the sample
-//! (R-255); payload §5's `S` is the stored sum or the mark. *Applied per R-369 (the smallest mark that changes no
-//! other field: no new field and no new bit, the descriptor's 16 bits being assigned, R-545); physics checks it.*
+//! clause `S ≠ S_FAILED` (compared by its bits), so `ftle` reads NaN and every aggregate drops the sample;
+//! payload §5's `S` is the stored sum or the mark. The mark is the smallest that changes no other field: no new field
+//! and no new bit, the descriptor's 16 bits being assigned.
 //!
 //! **Renormalisation** at the end of every `n_renorm`-th completed macro-step, counted by an integer counter, so the
 //! decision is a comparison of integers (integrator_contract Part 4): `completed_renorms = step_count / n_renorm`, as
 //! the read side derives it. `n_renorm = 0` never renormalises, and the read side reads no completed renorm.
 //!
-//! **Two forms of the held shadow** (payload §8; REQ-VAL-038; R-974). [`Absolute`] holds `x'` and marches it by the
+//! **Two forms of the held shadow** (payload §8). [`Absolute`] holds `x'` and marches it by the
 //! occupant's own `ADVANCE`: the payload's form, `r_sh`, `p_sh`. [`Displacement`] holds `δ⃗ = x' − x` and marches it
 //! with the sample by the occupant's joint step ([`Advance::advance_joint`]; dd_integrator §3.8): the sample's
 //! macro-step is replayed from its start with `δ⃗` beside it, its `x` bit-identical to the sample's, and `δ⃗` advanced
-//! through the same stages, each force difference formed from the stage's pair separations by `D`, R-974's (a1)
-//! [`Plain`] or (a2) [`CancellationFree`] ([`crate::physics::difference`]); `Displacement` alone names the one TASK-M3-72's
-//! measurement chose. Where the shadow needs absolute positions it reads `x + δ⃗` (§3.8): its projection is its own,
+//! through the same stages, each force difference formed from the stage's pair separations by `D`, (a1)
+//! [`Plain`] or (a2) [`CancellationFree`] ([`crate::physics::difference`]); `Displacement` alone, which defaults to `Plain`, is the
+//! form outside the measurement. Where the shadow needs absolute positions it reads `x + δ⃗` (§3.8): its projection is its own,
 //! the sample's replayed on `x` and the same linear map on `δ⃗` (so `x + δ⃗` is projected by its own `R_com` and
 //! `P_com`), and its monitor and detector watch `x + δ⃗`, formed at the working precision after the projections. The
-//! payload stores the absolute form; the switch waits for REQ-PAY-085's criterion (TASK-M4-13), and a displacement
-//! shadow written to the payload stores `x + δ⃗`.
+//! payload stores the absolute form, and a displacement shadow written to the payload stores `x + δ⃗`.
 //!
 //! **Finalised at read** ([`ftle`], [`ftle_read`]): the partial interval since the last renormalisation is folded in
 //! before dividing by the full elapsed `step_count · dt_macro`, never plain `S / t` (payload §5); the read is NaN
-//! whenever `ftle_valid` is false (R-253, R-254).
+//! whenever `ftle_valid` is false.
 //!
-//! **Never a sample** (§2; REQ-INT-035): the shadow is held here, apart from the sample's `SimState`, and written only
+//! **Never a sample** (§2): the shadow is held here, apart from the sample's `SimState`, and written only
 //! into `r_sh`, `p_sh` and `S`; the state a sample gives the colour/spread pool is its own `(r, p)` ([`pool_member`]).
 
 use core::marker::PhantomData;
@@ -81,7 +78,7 @@ pub use crate::physics::difference::{CancellationFree, ForceDifference, Plain};
 use crate::real::Real;
 
 /// The sim key's Benettin values (integrator_contract Part 3): `‖δ₀‖` and the renormalisation interval in macro-steps,
-/// REQ-INT-076's calibration.
+/// the calibration.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BenettinParams<R> {
     /// `‖δ₀‖`, the separation the shadow starts at and is reset to.
@@ -132,9 +129,9 @@ impl ShadowForm for Absolute {
     }
 }
 
-/// The displacement form (R-974): `δ⃗ = x' − x`, marched with the sample by the occupant's joint step, its force
-/// difference formed by `D`, R-974's (a1) [`Plain`] or (a2) [`CancellationFree`]. `Displacement` alone is the form
-/// TASK-M3-72's pre-registered measurement chose.
+/// The displacement form: `δ⃗ = x' − x`, marched with the sample by the occupant's joint step, its force
+/// difference formed by `D`, (a1) [`Plain`] or (a2) [`CancellationFree`]. `Displacement` alone, which defaults to `Plain`, is the
+/// form outside the measurement.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Displacement<D = Plain>(PhantomData<D>);
 
@@ -221,7 +218,7 @@ fn scaled_plus<R: AdvanceReal>(k: R, d: &State<R>, x: &State<R>) -> State<R> {
     }
 }
 
-/// The shadow's initial state `x₀ + ‖δ₀‖·u` (dd_integrator §3.8; REQ-INT-077): `u`, the direction of `δ₀`, is
+/// The shadow's initial state `x₀ + ‖δ₀‖·u` (dd_integrator §3.8): `u`, the direction of `δ₀`, is
 /// `δr₀ = (+½, 0)`, `δr₁ = (−½, +½)`, `δr₂ = (0, −½)` and no momentum, a unit vector over the twelve components; the
 /// momenta are `x₀`'s and each position component `r + ‖δ₀‖·uₖ`, one rounded multiply-add each.
 #[inline]
@@ -275,16 +272,16 @@ pub fn ftle<R: WrapperReal>(s_sum: R, delta: R, delta_0: R, n: u32, dt_macro: R)
 /// count and the read's.
 pub use crate::payload::completed_renorms;
 
-/// `S`'s failed-state value, the mark of a shadow whose finalised sum went non-finite (R-972; the module's note):
-/// `R`'s largest finite value, `f32::MAX` (the generated read side's `S_FAILED_BITS`) or `f64::MAX`. Never NaN (R-79),
+/// `S`'s failed-state value, the mark of a shadow whose finalised sum went non-finite (the module's note):
+/// `R`'s largest finite value, `f32::MAX` (the generated read side's `S_FAILED_BITS`) or `f64::MAX`. Never NaN,
 /// and never a real `S`, whose magnitude is bounded far below it.
 #[inline]
 pub fn s_failed<R: WrapperReal>() -> R {
     R::max_value()
 }
 
-/// Whether a stored `S` is the mark [`s_failed`]: the shadow's sum went non-finite, so the FTLE is invalid (R-972;
-/// payload §6's `ftle_valid`, its clause `S ≠ S_FAILED`).
+/// Whether a stored `S` is the mark [`s_failed`]: the shadow's sum went non-finite, so the FTLE is invalid
+/// (payload §6's `ftle_valid`, its clause `S ≠ S_FAILED`).
 #[inline]
 pub fn sum_failed<R: WrapperReal>(s_sum: R) -> bool {
     s_sum == s_failed::<R>()
@@ -292,7 +289,7 @@ pub fn sum_failed<R: WrapperReal>(s_sum: R) -> bool {
 
 /// The FTLE read from a stored sample `s` (payload §5): [`ftle`] from `S` and the stored shadow's `δ`, at `step_count
 /// = t_end_step`; NaN whenever `ftle_valid` is false: a failed sample, `step_count = 0`, no completed
-/// renormalisation (R-253, R-254), or a shadow whose sum went non-finite, `S` the mark [`s_failed`] (R-972).
+/// renormalisation, or a shadow whose sum went non-finite, `S` the mark [`s_failed`].
 #[inline]
 pub fn ftle_read<R: WrapperReal>(
     s: &SimStateFTLEOf<R>,
@@ -300,7 +297,7 @@ pub fn ftle_read<R: WrapperReal>(
     dt_macro: R,
 ) -> R {
     let n = tm_t_end_step(s.times);
-    // `step_count ≥ 1` (R-253) is implied: a completed renormalisation needs `n ≥ n_renorm ≥ 1`.
+    // `step_count ≥ 1` is implied: a completed renormalisation needs `n ≥ n_renorm ≥ 1`.
     let valid =
         !sd_is_failed(s.packed_a) && completed_renorms(n, params.n_renorm) > 0 && !sum_failed(s.S);
     if valid {
@@ -311,7 +308,7 @@ pub fn ftle_read<R: WrapperReal>(
     }
 }
 
-/// The state a sample gives the colour/spread pool (dd_integrator §2, §3.8; REQ-INT-035): its own `(r, p)`. The
+/// The state a sample gives the colour/spread pool (dd_integrator §2, §3.8): its own `(r, p)`. The
 /// shadow's `r_sh`, `p_sh` are never read: a renormalised endpoint is an algorithmic artefact, not a trajectory.
 #[inline]
 pub fn pool_member<R: PayloadReal>(s: &SimStateFTLEOf<R>) -> ([[R; 2]; 3], [[R; 2]; 3]) {
@@ -319,7 +316,7 @@ pub fn pool_member<R: PayloadReal>(s: &SimStateFTLEOf<R>) -> ([[R; 2]; 3], [[R; 
 }
 
 /// The shadow's cadence for one macro-step: its own [`WrapperCadence`], done once it has taken `left` more substeps,
-/// the sample's count. Its detectors only watch (R-972): what would be the shadow's terminal never ends its march. The
+/// the sample's count. Its detectors only watch: what would be the shadow's terminal never ends its march. The
 /// shadow's `N_sub` is the sample's, so no bucket is read from it.
 struct Limited<'a, C> {
     inner: &'a mut C,
@@ -349,10 +346,10 @@ impl<R: WrapperReal, C: Cadence<R>> Cadence<R> for Limited<'_, C> {
     }
 }
 
-/// The displacement form's joint cadence for one macro-step (R-974; the module's note): after each joint step, the
+/// The displacement form's joint cadence for one macro-step (the module's note): after each joint step, the
 /// sample's projection replayed on `x` (the shadow's projection's `M` and weights are the sample's, the masses being
 /// one), the same linear projection on `δ⃗`, so that `x + δ⃗` is projected by its own `R_com` and `P_com`; then the
-/// shadow's monitor and detector watch `x + δ⃗` ([`WrapperCadence::watch`]), which only watch (R-972). Done once it has
+/// shadow's monitor and detector watch `x + δ⃗` ([`WrapperCadence::watch`]), which only watch. Done once it has
 /// taken `left` more steps, the sample's count.
 struct JointLimited<'a, R> {
     cadence: &'a mut WrapperCadence<R>,
@@ -495,7 +492,7 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
     }
 
     /// Whether the sum finalised beside the sample's `x`, `S + ln(δ/δ₀)`, is finite: false once the shadow's sum has
-    /// gone non-finite, and from then on (R-972; the module's note). Tested term by term: the sum of two finite terms
+    /// gone non-finite, and from then on (the module's note). Tested term by term: the sum of two finite terms
     /// is finite, `|S|` being bounded far below overflow (the module's note), and a non-finite term makes it
     /// non-finite. Each term is tested on its bits ([`crate::real::IeeeBits::non_finite_bits`]), never by `is_finite`, which lowers
     /// to a comparison with an infinite literal (gpu_determinism_note § "The discipline", rule 4).
@@ -507,7 +504,7 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
 
     /// The FTLE tier's `SimState`: the sample's `out`, every field kept, with the shadow's absolute state in `r_sh`,
     /// `p_sh` and `S`; or, once the shadow's finalised sum is non-finite, the failed-state values: `S` the mark
-    /// [`s_failed`] and `r_sh`, `p_sh` the sample's own `r`, `p`, never NaN (R-79, R-972). A failed sample
+    /// [`s_failed`] and `r_sh`, `p_sh` the sample's own `r`, `p`, never NaN. A failed sample
     /// (`sim_failed`) stores the failed shadow whatever the shadow's sum ([`super::failure::failed_shadow`]; payload §1).
     #[inline]
     pub fn write(&self, out: SimStateBaseOf<R>) -> SimStateFTLEOf<R> {

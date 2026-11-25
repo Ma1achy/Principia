@@ -1,19 +1,19 @@
 //! The word buffer's binding, append and length cap (`kernel::word`), against the reference free-group reducer
 //! (`validation::reference::free_group`), which shares no code with the kernel (dd_simstate_payload §0, §2, §3, §6;
 //! dd_generation_root §3.3, §3.3a).
-//! - REQ-PAY-036: the word buffer is a binding of its own, at the sample's own index; a substep with no crossing
+//! - The word buffer is a binding of its own, at the sample's own index; a substep with no crossing
 //!   touches it not at all (`word_buffer_binding`).
-//! - REQ-PAY-042: over a march's substeps, the word buffer's writes equal the crossings, and the per-step path reads
+//! - Over a march's substeps, the word buffer's writes equal the crossings, and the per-step path reads
 //!   no word outside a crossing: on a synthetic stream (`word_write_count`), on the kept states of the PRL's real
-//!   trajectories through TASK-M3-16's detector (`word_write_count_real_trajectories`), and on a run of the wrapper
+//!   trajectories through the crossing detector (`word_write_count_real_trajectories`), and on a run of the wrapper
 //!   itself from those orbits' initial conditions, the detector wired in (`word_write_count_on_the_march`).
-//! - REQ-PAY-048: `last_symbol` is the final symbol of the decoded word whenever 1 ≤ length ≤ 76, and every set keeps
+//! - `last_symbol` is the final symbol of the decoded word whenever 1 ≤ length ≤ 76, and every set keeps
 //!   `packed_a`'s other bits (`last_symbol_mirror`, `last_symbol_mirror_set_keeps_other_bits`).
-//! - REQ-PAY-052: the packing is payload §3's closed form, fitting 121 bits, with `length` in `.w` bits 25–31
+//! - The packing is payload §3's closed form, fitting 121 bits, with `length` in `.w` bits 25–31
 //!   (`word_horner_packing`).
-//! - REQ-PAY-053: the append agrees with the reference reducer on random streams, 77-symbol words with a small `W`
+//! - The append agrees with the reference reducer on random streams, 77-symbol words with a small `W`
 //!   among them (`word_vs_reference_reducer`).
-//! - REQ-TOOL-035: a 77th symbol truncates the word to length 127, at a small `W` too; a pop decrements the length
+//! - A 77th symbol truncates the word to length 127, at a small `W` too; a pop decrements the length
 //!   (`word_truncation_sentinel`).
 //!
 //! Each check takes the append, the hook, the substep or the setter as a function, so its control runs the same check
@@ -214,7 +214,7 @@ fn all_a(n: usize) -> Vec<u32> {
     vec![0; n]
 }
 
-// ── word_buffer_binding (REQ-PAY-036) ────────────────────────────────────────────────────────────────────────────────
+// ── word_buffer_binding ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `packed_a` of sample `j` in [`check_binding`]'s buffers, distinct per sample, `last_symbol` bits clear.
 fn packed_a_of(j: usize) -> u32 {
@@ -291,8 +291,8 @@ fn binding_cases() -> impl Strategy<Value = Vec<(usize, usize, Vec<u32>)>> {
 
 #[test]
 fn word_buffer_binding() {
-    // A binding of its own: the word buffer's binding is not the SimState buffer's, in the same group (R-343), and its
-    // element is the 16 B word, not a SimState member.
+    // A binding of its own: the word buffer's binding is not the SimState buffer's, in the same group (group 1:
+    // SimState at binding 0, the word buffer at binding 1), and its element is the 16 B word, not a SimState member.
     assert_eq!(WORD_GROUP, SIMSTATE_GROUP, "the word buffer's group");
     assert_ne!(
         WORD_BINDING, SIMSTATE_BINDING,
@@ -339,7 +339,7 @@ negative_control!(
     check_binding(cross_next_index, &[(4, 1, vec![2, 0])])
 );
 
-// ── word_write_count (REQ-PAY-042) ───────────────────────────────────────────────────────────────────────────────────
+// ── word_write_count ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `crossings` (at most [`MAX_CROSSINGS_PER_SUBSTEP`]) as one substep's [`SubstepCrossings`].
 fn substep(crossings: &[u32]) -> SubstepCrossings {
@@ -446,7 +446,7 @@ negative_control!(
     check_write_count(substep_reading, &[(0, vec![vec![], vec![1]])])
 );
 
-// ── word_write_count on real trajectories (REQ-PAY-042; TASK-M3-15's note) ───────────────────────────────────────────
+// ── word_write_count on real trajectories ────────────────────────────────────────────────────────────────────────────
 
 /// `fixtures/crossings/prl_orbits.json`'s ten orbits.
 fn prl_orbits() -> Vec<serde_json::Value> {
@@ -612,7 +612,8 @@ fn period_uniforms(t: f64) -> WrapperUniforms<f64> {
 
 /// Each orbit, marched by the wrapper for one period: the cadence runs at every accepted substep, the word-buffer
 /// writes equal the crossings a replay over those same substeps counts, and are not none; the word and `last_symbol`
-/// hold them. What reads the published class from this march is REQ-VAL-043's (TASK-M3-30).
+/// hold them. Reading the published class from this march is checked against the literature's classes by the
+/// validation's word-calculus gate (`validation/tests/word_calculus.rs`).
 fn check_on_the_march(march: WordMarch) {
     for orbit in prl_orbits() {
         let name = orbit["name"].as_str().expect("name");
@@ -759,7 +760,7 @@ negative_control!(
     check_write_count(substep_first_only, &[(3, vec![vec![2, 0]])])
 );
 
-// ── last_symbol_mirror (REQ-PAY-048) ─────────────────────────────────────────────────────────────────────────────────
+// ── last_symbol_mirror ───────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Each `(packed_a, stream)`: after each crossing of `stream` appended from the empty word with `packed_a`, where
 /// 1 ≤ length ≤ 76, `last_symbol` is the final symbol of `decode(W)`; at every length, `packed_a`'s other bits are its
@@ -877,7 +878,7 @@ negative_control!(
     check_set(set_clearing_bit_10, &[(u32::MAX, 1)])
 );
 
-// ── word_horner_packing (REQ-PAY-052) ────────────────────────────────────────────────────────────────────────────────
+// ── word_horner_packing ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `W` as the word's 121 payload bits hold it: `x`, `y`, `z`, then `.w` bits 0–24.
 fn payload_bits(w: [u32; 4]) -> u128 {
@@ -962,7 +963,7 @@ negative_control!(
     check_packing(append_dropping_d0, &[vec![3, 3, 1]])
 );
 
-// ── word_vs_reference_reducer (REQ-PAY-053) ──────────────────────────────────────────────────────────────────────────
+// ── word_vs_reference_reducer ────────────────────────────────────────────────────────────────────────────────────────
 
 /// Each stream of `streams`, appended from empty: after every symbol, the word is the reference reducer's packing of
 /// the stream so far, and `prev` its last symbol (none for the empty word, the 76th once truncated).
@@ -1027,7 +1028,7 @@ negative_control!(
     check_vs_reference(append_overflow_cap, &[all_a(77)])
 );
 
-// ── word_truncation_sentinel (REQ-TOOL-035) ──────────────────────────────────────────────────────────────────────────
+// ── word_truncation_sentinel ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// Each `(symbols, e, later)`, `symbols` a 76-symbol freely-reduced word: appended from empty it reads length 76; a
 /// pop there reads 75, as each pop on down to the empty word decrements the length; a 77th symbol continuing it by

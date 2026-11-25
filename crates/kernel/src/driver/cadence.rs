@@ -1,10 +1,10 @@
-//! The wrapper's per-substep cadence (integrator_contract Part 1, "Cadence (pinned)"; Part 2a, Cost 1; R-19): what runs
+//! The wrapper's per-substep cadence (integrator_contract Part 1, "Cadence (pinned)"; Part 2a, Cost 1): what runs
 //! after every internal step, inside the occupant's march, as the callback [`WrapperCadence`] the wrapper passes in.
 //!
 //! **In order, after each `STEP`** (Part 1's loop): the failure path's read of the state the step left
 //! ([`super::failure::Detector`]), the COM projection ([`WrapperCadence::project`], with the force evaluation re-formed
 //! at the projected positions), the failure path's read of the projected state, the invariant accumulation on it
-//! ([`WrapperCadence::monitor`]; TASK-M3-05) and the failure path's read of its energy and `L_z`, and terminal
+//! ([`WrapperCadence::monitor`]) and the failure path's read of its energy and `L_z`, and terminal
 //! detection, which sets the `done` flag on collision ([`Detector`]) and never breaks. A failure sets `done` too: the
 //! march ends on its first non-finite step (`super::failure`). **At each sampling point** of the occupant's grid ([`Cadence::sample`]: a completed
 //! macro-step, or a sync boundary under an occupant that owns its time mapping) the escape rule runs
@@ -54,17 +54,17 @@
 //! (`_march_bits`); and the budget word's counts. A stored state the wrapper's write never wrote (its lagged register
 //! zero) reloads nothing but the counts.
 //!
-//! **One `d²` per step** (Part 7; REQ-EVT-004): the detector forms the projected state's pair separations once, and
+//! **One `d²` per step** (Part 7): the detector forms the projected state's pair separations once, and
 //! the collision test, the `dmin_pair` latch and the next macro-step's bucket ([`Cadence::bucket_d2`]) all read them.
 //!
-//! **Instrumented** (REQ-INT-009, REQ-INT-022): the cadence counts its own invocations
+//! **Instrumented**: the cadence counts its own invocations
 //! ([`WrapperCadence::invocations`]), so a test compares them with the internal steps an occupant took and with the
 //! `total_substeps` it reported.
 //!
 //! **The word** (integrator_contract Part 5, branch-cut crossing detection; payload §3): [`WordCadence`] adds crossing
 //! detection to any cadence, after that cadence's own work on the same accepted substep, for a run with a word buffer
-//! bound ([`super::wrapper::integrate_word`]). The word buffer stays out of a run without one (REQ-PERF-008's symbolic
-//! features off, TASK-M4-05), which is why it is a wrapper around the cadence and not a hook in it.
+//! bound ([`super::wrapper::integrate_word`]). The word buffer stays out of a run without one (the symbolic
+//! features off), which is why it is a wrapper around the cadence and not a hook in it.
 
 use super::advance::Cadence;
 use super::failure;
@@ -123,9 +123,9 @@ pub struct WrapperCadence<R, E = crate::detect::escape_rule::DefaultRule<R>> {
     dmin_pending: bool,
     /// Whether the wrapper handed a finished stored sample back ([`Cadence::latched`]): the write leaves it.
     handed_back: bool,
-    /// The regularised march's two counted signals (R-603), reloaded from a re-booted march's `budget_bits`.
+    /// The regularised march's two counted signals, reloaded from a re-booted march's `budget_bits`.
     signals: Signals,
-    /// The regularised energy's drift latches (R-605).
+    /// The regularised energy's drift latches.
     regularised: RegularisedDrift<R>,
     /// The Chazy latch `I_max`, the greatest moment of inertia met, `I_0` at the IC (chazy drill-down §6).
     i_max: ImaxLatch<R>,
@@ -259,19 +259,19 @@ impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
         self.dmin_step
     }
 
-    /// The regularised march's two counted signals so far (R-603).
+    /// The regularised march's two counted signals so far.
     #[inline]
     pub fn signal_counts(&self) -> Signals {
         self.signals
     }
 
-    /// The regularised energy's drift latches so far (R-605).
+    /// The regularised energy's drift latches so far.
     #[inline]
     pub fn regularised(&self) -> &RegularisedDrift<R> {
         &self.regularised
     }
 
-    /// The Chazy latch `I_max` so far (chazy drill-down §6; REQ-PAY-105): raised at every internal step, never by a
+    /// The Chazy latch `I_max` so far (chazy drill-down §6): raised at every internal step, never by a
     /// shadow's, which has its own cadence (`super::benettin`).
     #[inline]
     pub fn i_max(&self) -> &ImaxLatch<R> {
@@ -374,7 +374,7 @@ impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
     }
 
     /// The COM projection after a `STEP` (integrator_contract Part 1, "COM projection and invariant monitoring"):
-    /// `state`'s positions and momenta projected with the cached `M`, never its energy or `L_z` (REQ-INT-011), and
+    /// `state`'s positions and momenta projected with the cached `M`, never its energy or `L_z`, and
     /// `geom` re-formed at the projected positions, the force evaluation the next step reads and the monitor's
     /// energy reuses.
     #[inline]
@@ -397,7 +397,7 @@ impl<R: WrapperReal, E: EscapeRule<R>> WrapperCadence<R, E> {
     /// The cadence's work after a `STEP` past the projection, on a state already projected: the call counted, the
     /// invariant accumulation ([`WrapperCadence::monitor`]) and terminal detection, which sets `done` on a collision.
     /// [`Cadence::after_step`] is the projection then this; the FTLE shadow's displacement form projects its own
-    /// state and calls this on it (R-974; `super::benettin`).
+    /// state and calls this on it (`super::benettin`).
     #[inline]
     pub fn watch(&mut self, state: &State<R>, geom: &Geom<R>) {
         self.invocations += 1;
@@ -521,9 +521,9 @@ impl<R: WrapperReal, E: EscapeRule<R>> Cadence<R> for WrapperCadence<R, E> {
             self.reload(stored);
         }
         // The budget word's counts go on from the stored ones, so a march split at any persist boundary stores the
-        // uncut march's word (R-603; `crate::regularisation::budget`).
+        // uncut march's word (`crate::regularisation::budget`).
         self.signals = Signals::reload(stored.budget_bits);
-        // The Chazy latch goes on from the stored level, its floor (chazy drill-down §6; REQ-PAY-105).
+        // The Chazy latch goes on from the stored level, its floor (chazy drill-down §6).
         self.i_max.reload(sd_I_max(stored.packed_a));
     }
 

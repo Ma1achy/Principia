@@ -1,8 +1,8 @@
-//! QA tests for TASK-M0-11 on the kernel side, written from REQ-PAY-001 (dd_generation_root §3.6, payload §2's
-//! descriptor table, R-86), payload §3's `.w` bit map and frozen continuation table (dd_simstate_payload §3,
-//! dd_generation_root §3.3, R-307), not from the implementation. Every name, bit position and table value below is
+//! QA tests on the kernel side, written from the descriptor's layout (dd_generation_root §3.6, payload §2's
+//! descriptor table), payload §3's `.w` bit map and frozen continuation table (dd_simstate_payload §3,
+//! dd_generation_root §3.3), not from the implementation. Every name, bit position and table value below is
 //! transcribed from those sections; the word-buffer round trip follows payload §3's append and decode pseudocode.
-//! Each test has a registered negative control (R-176).
+//! Each test has a registered negative control.
 
 use std::mem::{offset_of, size_of};
 
@@ -10,9 +10,8 @@ use kernel::payload::*;
 use validation::negative_control;
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-001: ICDescriptor is 64 B, its twelve §3.6 f32 fields then 16 B of declared padding, and E₀ is not stored.
-// R-313 amends §3.6: the fields follow `Real`, `_pad` is 16 B at every width, and the declared `_tail` follows it,
-// empty at each row; at f32 the struct has fourteen members and is 64 B.
+// ICDescriptor: §3.6's twelve fields, which follow `Real`, then `_pad`, 16 B of declared padding at every width, and
+// the declared `_tail`, empty at each row; E₀ is not stored. At f32 the struct has fourteen members and is 64 B.
 
 /// Generation-root §3.6's twelve fields, in its order.
 const IC_FIELDS: [&str; 12] = [
@@ -46,7 +45,7 @@ fn stores_energy(name: &str) -> bool {
 }
 
 /// The struct's members are §3.6's twelve fields in order, then exactly two more, `_pad` and `_tail`, the declared
-/// padding, neither an energy (R-86, R-313); each field is a 4-byte f32 at `4·i`; `_pad` fills bytes 48..64; `_tail`
+/// padding, neither an energy; each field is a 4-byte f32 at `4·i`; `_pad` fills bytes 48..64; `_tail`
 /// is empty at f32, at byte 64; and the struct is 64 B.
 fn check_icdescriptor(
     members: &[String],
@@ -237,13 +236,12 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
-// REQ-PAY-001: descriptor bits 10–14 were reserved, "decode as zero, never opportunistically reused" (payload §2), until
-// R-545 spent them on the Chazy latch `I_max` and bit 15 on R-37's departed bit, each a versioned assignment: no pack
-// or setter of `packed_a` writes them but `I_max`'s and the departed bit's own, over every in-range field value and a
-// spread of d_min values.
+// Descriptor bits 10–14 hold the Chazy latch `I_max` and bit 15 the departed bit (latched once the shape's chord first
+// exceeds the register's `delta_dep`), each a versioned assignment: no pack or setter of `packed_a` writes them but
+// `I_max`'s and the departed bit's own, over every in-range field value and a spread of d_min values.
 
 /// `d_min` values across binary16's range and its edges: zero, the subnormal floor, normal values, the clamp, beyond
-/// it, and infinity. NaN and negative values, which the debug pack refuses (R-79, R-281), go through
+/// it, and infinity. NaN and negative values, which the debug pack refuses, go through
 /// `set_d_min_release` only.
 const D_MINS: [f32; 9] = [
     0.0,
@@ -318,7 +316,7 @@ fn packed_a_words() -> Vec<(u32, u32, bool)> {
     out
 }
 
-/// Bits 10–14 hold exactly the requested `I_max` level and bit 15 exactly the requested departed value (R-545):
+/// Bits 10–14 hold exactly the requested `I_max` level and bit 15 exactly the requested departed value:
 /// `(w >> 10) & 0x3f` is `level | departed << 5`, so no other field spills into either.
 fn check_reserved_zero(words: &[(u32, u32, bool)]) {
     for &(w, level, departed) in words {
@@ -517,7 +515,7 @@ const GENERATED: Tables = Tables {
 };
 
 /// Every cell of the four tables equals payload §3's letter table, with `continuation_index` its inversion and 3 in
-/// the four `next = inverse(prev)` cells (R-307); and the arrays equal the functions.
+/// the four `next = inverse(prev)` cells; and the arrays equal the functions.
 fn check_against_letter_table(t: Tables, arrays: Arrays) {
     for (prev, digits, excluded) in LETTER_TABLE {
         let p = code(prev);
@@ -598,9 +596,9 @@ negative_control!(
     )
 );
 
-/// REQ-PAY-016's properties, from the statement: each digit's map is a permutation that never gives `inverse(prev)`,
-/// the three digits cover the three legal continuations, each map is an involution so `predecessor_symbol ==
-/// cont_symbol`, and `inverse` is itself an involution with no fixed point.
+/// The continuation table's properties, from the statement: each digit's map is a permutation that never gives
+/// `inverse(prev)`, the three digits cover the three legal continuations, each map is an involution so
+/// `predecessor_symbol == cont_symbol`, and `inverse` is itself an involution with no fixed point.
 fn check_properties(t: Tables) {
     for s in 0..4u32 {
         assert_ne!((t.inverse)(s), s, "inverse({s}) is not {s}");

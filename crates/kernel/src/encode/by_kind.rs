@@ -1,5 +1,5 @@
-//! Encode into the active chart, by axis kind (inverse_encode_contract Parts 5 and 6; dd_encode §3.1, §3.2 steps 4–6;
-//! REQ-ENC-008, REQ-ENC-009, REQ-ENC-010, REQ-CHART-005): `E(x)` ([`super::encode`]) puts `x` on the canonical section
+//! Encode into the active chart, by axis kind (inverse_encode_contract Parts 5 and 6; dd_encode §3.1, §3.2 steps 4–6):
+//! `E(x)` ([`super::encode`]) puts `x` on the canonical section
 //! and gives its latent `z`, always available. [`encode_into`] then reads the active chart's point `c(x)` off `C(x)`,
 //! axis by axis, and lands on the chart where the chart represents `x`, otherwise in latent `z`.
 //!
@@ -23,52 +23,55 @@
 //!   for it.
 //! - **Kind 4, coupled curve** (`super::curve`): the Burrau charts' impls are there, beside the closed form, the
 //!   off-curve projection and the fold. The curve axis's coordinate is kind 4's landing at the curve tolerance `tol`
-//!   ([`ByKind::coords_within`]; REQ-ENC-026): the closed form's on the curve, `ν*`'s within `tol`, and none beyond
+//!   ([`ByKind::coords_within`]): the closed form's on the curve, `ν*`'s within `tol`, and none beyond
 //!   it; the chart's other axis is read by its own kind.
 //!
 //! **Lowered, never interpreted** (chart_decoder_contract design axiom 4; lowering Part 2): the kind is each chart
 //! type's impl, monomorphised, as the decode is; the kernel holds no runtime axis-kind value. The authoring layer's
 //! `AxisKind` (`engine::chart_authoring`) describes the same axes, CPU-side.
 //!
-//! **Where possible** (inverse_encode_contract Part 6, step 4's definition, R-72): `x` lands on the chart iff
+//! **Where possible** (inverse_encode_contract Part 6, step 4's definition): `x` lands on the chart iff
 //! `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`, `D(Φ(c(x)))` the chart's decode at `c(x)`
-//! ([`crate::chart::ChartDecode::decode_at`]), both states canonical: Part 4's norm (REQ-ENC-029) and tolerance
-//! (REQ-ENC-024). [`encode_into_within`] takes both from its caller, the lookup, and fixes neither, and with them kind
-//! 4's curve tolerance `tol` (REQ-ENC-026), which only a curve chart reads; [`encode_into`] is it at `tol = 0`, where a
-//! curve chart represents only a state its curve holds exactly, and rounding alone puts `d > 0` on the curve, so it
-//! places essentially no state: a caller on a curve chart calls [`encode_into_within`] with REQ-ENC-026's tolerance
-//! (inverse_encode_contract Part 6, step 4). A coordinate that is not finite, or an axis that
-//! cannot place the state ([`Coord::Unplaced`]), lands it in latent `z` with no comparison. A curve chart's own report,
-//! `d`, `ν*` and the fold's flag, is [`ChartEncoded::curve`].
+//! ([`crate::chart::ChartDecode::decode_at`]), both states canonical: Part 4's norm and tolerance.
+//! [`encode_into_within`] takes both from its caller, the lookup, and fixes neither, and with them kind 4's curve
+//! tolerance `tol`, which only a curve chart reads; [`encode_into`] is it at `tol = 0`, where a curve chart represents
+//! only a state its curve holds exactly, and rounding alone puts `d > 0` on the curve, so it places essentially no
+//! state: a caller on a curve chart calls [`encode_into_within`] with the proposed curve-projection tolerance
+//! (inverse_encode_contract Part 6, step 4). A coordinate that is not finite, or an axis that cannot place the state
+//! ([`Coord::Unplaced`]), lands it in latent `z` with no comparison. A curve chart's own report, `d`, `ν*` and the
+//! fold's flag, is [`ChartEncoded::curve`].
 //!
-//! **The shape sphere's section** (R-544, R-865; inverse_encode_contract Parts 5 and 6, "On the shape sphere chart";
-//! REQ-ENC-034). `C` has no mirror step (TASK-M2-57), so every chart, the shape sphere included, reads its point and
+//! **The shape sphere's section** (inverse_encode_contract Parts 5 and 6, "On the shape sphere chart"). `C` has no
+//! mirror step, so every chart, the shape sphere included, reads its point and
 //! its comparison off the one section, `C(x)`, whose states keep their signed shape. So `x` and `Π·x` land at `(θ, φ)`
 //! and `(θ, π − φ)`, and a lower-hemisphere `x` whose masses and body-frame momenta are the slice's lands on the chart
-//! and decodes back to itself. *Was:* "The shape sphere chart decodes with `C`'s step 3 not taken
-//! (`crate::canon::canonicalise_signed`) … its point and its comparison are read off that section, not `C(x)`'s: `C(x)`
-//! with step 3's mirror undone on the full state … where `lookup_mirrored` is set (`ByKind::section`)"
+//! and decodes back to itself.
 //!
-//! **The branch inputs** (R-34; gpu_determinism_note, "The discipline", rules 1, 2, 4 and 6). The kernel builds this
+//! **The branch inputs** (gpu_determinism_note, "The discipline", rules 1, 2, 4 and 6). The kernel builds this
 //! module to f32 SPIR-V, so every float that decides a branch or a select is built in a fixed form, every sum of
-//! products an explicit `fma`, and no `±∞` or NaN literal is written. Each divisor a select guards is itself selected
-//! as 1 there, so no `x/0` is formed (R-436's producer rule):
+//! products an explicit `fma`, and no `±∞` or NaN literal is written. An explicit `fma` stops one compiler contracting
+//! where another does not, but it does not make a branch input agree across backends (rule 6: lavapipe rounds the
+//! product, then the add, and Metal flushes subnormals), so the `fma`-built inputs, among them the Gram determinant and
+//! `‖n⊥‖²` below and `plane_lift`'s `n·n` and `uv`, can fork between backends near their thresholds; rule 6's form is
+//! `IeeeBits::product`'s, as `super::curve` builds its distances. Each divisor a select guards is itself selected as 1
+//! there, so no `x/0` is formed:
 //! - **The landing**, in [`encode_into`]: the caller's norm against the caller's `ε_phys`, `d ≤ ε_phys`, so a NaN `d`
 //!   lands in latent `z`; `placed`'s finiteness test on each coordinate.
 //! - **`plane`'s Gram determinant**, in [`plane`]: `det = g₁₁g₂₂ − g₁₂²` against 0, in Kahan's form, `w = g₁₂·g₁₂`,
-//!   `det = fma(g₁₁, g₂₂, −w) + fma(−g₁₂, g₁₂, w)`, which is exactly 0 wherever the rounded Gram entries satisfy
-//!   `g₁₁g₂₂ = g₁₂²`; each `g` and the right-hand side is `dot`, a chain of explicit `fma`s from the lone first product.
+//!   `det = fma(g₁₁, g₂₂, −w) + fma(−g₁₂, g₁₂, w)`, which, on a backend that fuses the `fma`, is exactly 0 wherever
+//!   the rounded Gram entries satisfy `g₁₁g₂₂ = g₁₂²`; each `g` and the right-hand side is `dot`, a chain of explicit
+//!   `fma`s from the lone first product.
 //! - **The ternary plot's edge `u = 1`**, in [`MassSimplex`]'s impl: `v`'s divisor `k − (m₁ − ε_m)` against 0, lone
 //!   subtractions, no division.
 //! - **The pole and `θ`'s sign**, in [`spherical_inverse`]: `n₀`, `n₁` against 0, `θ`'s sign decided on `n₁`, never on
-//!   `atan2`'s output; the pole's `θ` is selected as 0, as `crate::canon`'s rotation angle selects `φ` (R-437).
+//!   `atan2`'s output; the pole's `θ` is selected as 0, as `crate::canon`'s rotation angle selects `φ`.
 //! - **The centre**, in [`exponential_inverse`]: `‖n⊥‖²`, a chain of explicit `fma`s, against 0, not its `sqrt`.
 //! - **The warp at rest**, in [`warp_inverse`]: `K` against 0, where `L_max(K) = 0`, not `L_max` itself.
 //! - **Feasibility**, in [`feasibility`]: the finiteness of the entries; the construction's own exact test
 //!   (`crate::decode::invariant::infeasible`); `K*` against 0, and `L_z` against 0, for the constraint named and the
 //!   class kept.
 //!
-//! **Feasibility first** ([`feasibility`]; Part 5 kind 3, Part 6 "Chart-aware validation"; REQ-ENC-010, REQ-ENC-030).
+//! **Feasibility first** ([`feasibility`]; Part 5 kind 3, Part 6 "Chart-aware validation").
 //! An entered pair is tested before the construction, by the construction's own exact test `2·I·K* < L_z²`
 //! (`crate::decode::invariant::infeasible`, `I = 1`). An infeasible pair is projected by the contract's metric: `K*`
 //! (so `E`) held and `L_z` moved onto the parabola on its own side, `L_z ← sign(L_z)·L_max(K*)`, `L_max` the chart's own
@@ -79,16 +82,16 @@
 //! ([`InvariantAxis`]), as its `validate` names it. Layer 1, the hypercube, is the momentum links' clamp
 //! (`lookup_clamped`, [`Lookup::Encoded`]'s `clamped`).
 //!
-//! **The seed and DEGENERATE** (Part 5 kind 3; R-934, R-82). The fibre's construction takes the pixel's seed: the seed
+//! **The seed and DEGENERATE** (Part 5 kind 3). The fibre's construction takes the pixel's seed: the seed
 //! in force, the expansion `w = r/√I` ([`SeedRule::Expansion`], the decoder's `construct_expansion`), on every
 //! configuration, so an entered pair lands where the clicked pixel does. Where no seed qualifies, the fibre returns
 //! [`Lookup::Degenerate`], the construction's `Outcome::Degenerate`, the label the pixel path gives: under the expansion
-//! only at `I = 0`, which no configuration of the canonical-frame decode has. R-82's rule stays a named legacy option
-//! ([`SeedRule::Decoded`], decided on `z_α`; [`SeedRule::ByNorms`], the rule on the computed norms, the decoder's
-//! `construct_by_norms`, which can degenerate on a configuration from elsewhere).
+//! only at `I = 0`, which no configuration of the canonical-frame decode has. The largest-norm rule stays a named
+//! legacy option ([`SeedRule::Decoded`], decided on `z_α`; [`SeedRule::ByNorms`], the rule on the computed norms, the
+//! decoder's `construct_by_norms`, which can degenerate on a configuration from elsewhere).
 //!
 //! **The active values** (chart_reference §0.1; chart_decoder_contract § "Tunable parameters": the encode's clamps and
-//! its layer-1 range check read the active value; R-481 G4; REQ-DEC-048). Every path here has a form at the tunable
+//! its layer-1 range check read the active value). Every path here has a form at the tunable
 //! parameters `p` ([`encode_into_within_params`], [`Residual::controls_at`], [`fibre_at_params`], [`fibre_params`]):
 //! `E(x)`, the chart's decode, the mass link's inverse and the momentum clamps, so layer 1's `lookup_clamped` bits, all
 //! at the active `μ_max` and `q_max`. The forms without them are these at `LinkParams::DEFAULT`.
@@ -154,7 +157,7 @@ pub trait ByKind: ChartDecode {
         S: Selection,
         R: LinkReal + PayloadReal + From<Self::Param>;
 
-    /// The chart coordinates at kind 4's curve tolerance `tol` (Part 5 kind 4; REQ-ENC-026), and a curve chart's curve
+    /// The chart coordinates at kind 4's curve tolerance `tol` (Part 5 kind 4), and a curve chart's curve
     /// encode (`super::curve`). A chart with no curve axis ignores `tol`: its [`ByKind::coords`], and no curve encode.
     #[inline]
     fn coords_within<S, R>(
@@ -182,7 +185,7 @@ pub struct ChartEncoded<R> {
     /// The chart point, or latent `z`.
     pub landing: Landing<R>,
     /// A curve chart's curve encode at the caller's `tol`: the closed form, its `past_fold` flag among it, `d`, `ν*`
-    /// where the projection ran, and the landing on the curve (`super::curve`; REQ-ENC-022, REQ-ENC-026). `None` on
+    /// where the projection ran, and the landing on the curve (`super::curve`). `None` on
     /// every other chart.
     pub curve: Option<CurveEncoded<R>>,
 }
@@ -200,7 +203,7 @@ fn placed<R: LinkReal>(c: Coord<R>) -> Option<R> {
 
 /// [`encode_into_within`] at `tol = 0` (the module's note): a curve chart represents only a state on its curve exactly,
 /// and rounding alone puts `d > 0` on the curve, so there it places essentially no state. On a curve chart, call
-/// [`encode_into_within`] with REQ-ENC-026's tolerance (inverse_encode_contract Part 6, step 4).
+/// [`encode_into_within`] with the proposed curve-projection tolerance (inverse_encode_contract Part 6, step 4).
 #[inline]
 pub fn encode_into<S, R, C, N>(chart: &C, ic: &Ic<R>, norm: N, eps_phys: R) -> ChartEncoded<R>
 where
@@ -216,9 +219,8 @@ where
 /// Encode `ic` into `chart` under the selection `S` (the module's note): `E(ic)`, the chart point by kind at the curve
 /// tolerance `tol`, and the chart as the landing where `norm(C(ic), D(Φ(c(ic))))`, its decode there measured from
 /// `C(ic)` on every chart, is at most `eps_phys`, else
-/// latent `z`. `norm` is inverse_encode_contract Part 4's `‖·‖_phys` (REQ-ENC-029) and `eps_phys` its `ε_phys`
-/// (REQ-ENC-024), both the caller's (Part 6, step 4's "where possible"), and `tol` Part 5 kind 4's (REQ-ENC-026), the
-/// caller's too.
+/// latent `z`. `norm` is inverse_encode_contract Part 4's `‖·‖_phys` and `eps_phys` its `ε_phys`,
+/// both the caller's (Part 6, step 4's "where possible"), and `tol` Part 5 kind 4's, the caller's too.
 #[inline]
 pub fn encode_into_within<S, R, C, N>(
     chart: &C,
@@ -330,7 +332,7 @@ pub fn plane<R: LinkReal>(d: &[R; 8], q1: &[R; 8], q2: &[R; 8]) -> Option<(R, R)
 }
 
 /// `z_β` on the lift nearest `reference` (dd_decoder §3.2, "A syzygy crossing on a latent chart" and "Stored reduced
-/// or unreduced, and where a wrap enters"; R-898): `z_β + 2π̂k`, `k` the integer with `|z_β + 2π̂k − reference| ≤ π̂`,
+/// or unreduced, and where a wrap enters"): `z_β + 2π̂k`, `k` the integer with `|z_β + 2π̂k − reference| ≤ π̂`,
 /// a tie to the smaller `k`, so `k = ⌈(reference − z_β)/2π̂ − ½⌉`: an encoded `z_β` placed on a trace, about the
 /// previous sample. A latent chart's point takes its lift by [`plane_lift`] instead.
 #[inline]
@@ -359,7 +361,7 @@ fn lifted<R: LinkReal>(d: &[R; 8], k: R) -> [R; 8] {
 }
 
 /// The `k` of the lift `E(x) + 2πk·e_β` a latent plane `z₀ + u·q₁ + v·q₂` takes (dd_decoder § 3.2, "Stored reduced or
-/// unreduced, and where a wrap enters"; R-898): the `k` whose offset `d(k) = E(x) + 2πk·e_β − z₀` has the least plane
+/// unreduced, and where a wrap enters"): the `k` whose offset `d(k) = E(x) + 2πk·e_β − z₀` has the least plane
 /// residual, `d(k)`'s residual after its least-squares fit by `u·q₁ + v·q₂`; a tie to the `k` whose `(u, v)` is
 /// nearest the centre, `(0, 0)`, then to the smaller `k`. `d` is `d(0)`.
 ///
@@ -396,9 +398,8 @@ pub fn plane_lift<R: LinkReal>(d: &[R; 8], q1: &[R; 8], q2: &[R; 8]) -> Option<R
 }
 
 /// The latent chart: both axes kind 1, `(u, v) = ((a + 1)/2, (b + 1)/2)` from `z − z₀ = a·q₁ + b·q₂`, `z_β` on the
-/// lift [`plane_lift`] takes, the least plane residual (dd_decoder § 3.2, "Stored reduced or unreduced"; R-898).
-/// *Was:* "`z_β` on the lift nearest `z₀[1]` ([`nearest_lift`])", which put a state with an exact point on an oblique
-/// plane off it (the physics reviewer's ruling on Codex thread 4573289690 of PR #533).
+/// lift [`plane_lift`] takes, the least plane residual (dd_decoder § 3.2, "Stored reduced or unreduced").
+/// Not the lift nearest `z₀[1]` ([`nearest_lift`]): on an oblique plane that puts a state with an exact point off it.
 impl<P: Copy> ByKind for Latent<P> {
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
     where
@@ -573,8 +574,8 @@ fn dot3<R: LinkReal>(a: [R; 3], b: [R; 3]) -> R {
 
 /// The spherical map inverted at the unit point `n`, `pi` the float type's π: `θ = atan2(n₁, n₀)` taken into
 /// `[0, 2π)`, `φ = atan2(√(n₀² + n₁²), n₂)`, `(s, t) = (θ/2π, 1 − φ/π)` (chart_reference §3.3). At the poles, `n₀ = n₁
-/// = 0`, `θ` is 0, selected, never `atan2(0, 0)` (R-437). `θ` is taken into `[0, 2π)` on `n₁`'s sign, a `−0` as `+0`,
-/// so the select reads no transcendental (the module's list). `atan2` is [`crate::arctan`]'s (RQ-628).
+/// = 0`, `θ` is 0, selected, never `atan2(0, 0)`. `θ` is taken into `[0, 2π)` on `n₁`'s sign, a `−0` as `+0`,
+/// so the select reads no transcendental (the module's list). `atan2` is [`crate::arctan`]'s.
 #[inline]
 pub fn spherical_inverse<R: LinkReal>(n: [R; 3], pi: R) -> (R, R) {
     let zero = R::zero();
@@ -590,8 +591,7 @@ pub fn spherical_inverse<R: LinkReal>(n: [R; 3], pi: R) -> (R, R) {
 /// The exponential map inverted at the unit point `n` about the frame `(n0, e1, e2)` with extent `scale`: the log map,
 /// `r = atan2(‖n⊥‖, n·n₀)`, `n⊥ = n − (n·n₀)·n₀`, `d = (r/‖n⊥‖)·n⊥`, then `u = (d·e₁/s + 1)/2`, `v = (d·e₂/s + 1)/2`
 /// (chart_reference §3.3). At `n⊥ = 0`, `d = 0`, selected: `n₀` itself, and at the antipode, which the map reaches only
-/// past its extent, the centre too, which [`encode_into`]'s comparison then refuses. `atan2` is [`crate::arctan`]'s
-/// (RQ-628).
+/// past its extent, the centre too, which [`encode_into`]'s comparison then refuses. `atan2` is [`crate::arctan`]'s.
 #[inline]
 pub fn exponential_inverse<R: LinkReal>(
     n: [R; 3],
@@ -617,8 +617,8 @@ pub fn exponential_inverse<R: LinkReal>(
 }
 
 /// The shape sphere: both axes kind 2 in the configuration block, together pinning its two DOF, so no residual. The
-/// point is the state's signed `n̂` (R-544; REQ-ENC-034): `n = shape_vec(ρ̃, λ̃)` of `C(x)`, which keeps `λ̃_y`'s sign
-/// (no mirror step, R-865), so a lower-hemisphere state is placed below the equator, through the chart map's inverse.
+/// point is the state's signed `n̂`: `n = shape_vec(ρ̃, λ̃)` of `C(x)`, which keeps `λ̃_y`'s sign
+/// (no mirror step), so a lower-hemisphere state is placed below the equator, through the chart map's inverse.
 /// The held masses and momenta are [`encode_into`]'s comparison, against `C(x)`.
 impl<P: Copy + FloatConst> ByKind for ShapeSphere<P> {
     fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
@@ -774,15 +774,16 @@ pub fn feasibility<R: WarpReal>(lz: R, k: R, low: Constraint, wide: Constraint) 
     }
 }
 
-/// How the fibre's construction takes its seed (R-934, R-82; `crate::decode::invariant`'s note).
+/// How the fibre's construction takes its seed (`crate::decode::invariant`'s note).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SeedRule<R> {
     /// The seed in force, the pixel's: the expansion `w = r/√I` on any configuration, `DEGENERATE` only at `I = 0`.
     Expansion,
-    /// R-82's legacy rule on a configuration of the canonical-frame decode: the seed decided on its control `z_α`.
+    /// The legacy largest-norm rule on a configuration of the canonical-frame decode: the seed decided on its control
+    /// `z_α`.
     Decoded { z_alpha: R },
-    /// R-82's legacy rule on a configuration from elsewhere: the rule on the computed norms, `DEGENERATE` where none
-    /// qualifies.
+    /// The legacy largest-norm rule on a configuration from elsewhere: the rule on the computed norms, `DEGENERATE`
+    /// where none qualifies.
     ByNorms,
 }
 
@@ -802,7 +803,7 @@ pub enum Lookup<R> {
         /// `lookup_clamped`'s bits: bit `k` set iff `z[k]`'s momentum link clamped (`k = 2 … 5`).
         clamped: u32,
     },
-    /// No seed qualifies: the pixel path's `DEGENERATE` (under the expansion only at `I = 0`; R-934, R-82).
+    /// No seed qualifies: the pixel path's `DEGENERATE` (under the expansion only at `I = 0`).
     Degenerate,
     /// Refused, naming the failed constraint.
     Rejected { failed: Constraint },

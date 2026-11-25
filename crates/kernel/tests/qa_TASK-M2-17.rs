@@ -1,21 +1,20 @@
-//! QA tests for TASK-M2-17, written from the requirements, not the implementation:
-//! - REQ-ENC-008: a state round-trips through each axis kind (kind 1 on an oblique latent plane, kind 2 on a mixed
+//! QA tests for encode through the axis kinds, written from the requirements, not the implementation:
+//! - Round trip: a state round-trips through each axis kind (kind 1 on an oblique latent plane, kind 2 on a mixed
 //!   chart, kind 3 on both invariant charts, its coordinates checked against `L_z`, `K` computed here from first
 //!   principles), under gauges without the mirror; a state off the chart lands in latent `z`, `E(x)`'s own.
-//! - REQ-ENC-009: entering the `(L_z, E)` computed here from a clicked pixel's state gives the pixel's `z`, and the same
+//! - Re-entry: entering the `(L_z, E)` computed here from a clicked pixel's state gives the pixel's `z`, and the same
 //!   state in physical units.
-//! - REQ-ENC-010 / REQ-ENC-030: the feasibility test, fuzzed over the plane of `(L_z, K*)` with its edges and non-finite
+//! - Feasibility: the feasibility test, fuzzed over the plane of `(L_z, K*)` with its edges and non-finite
 //!   entries: a feasible pair is taken as is, an infeasible one never silently, never NaN; a projection lands on the
 //!   parabola at the same energy and on `L_z`'s side, and a class change is rejected (the contract's § "Chart-aware
 //!   validation"); the fibre lookup on a real chart decodes to the entered energy; a no-seed configuration is the pixel
 //!   path's `DEGENERATE`.
-//! - REQ-CHART-005: `m₀ = 0.4` under hold-`m₁:m₂` and hold-`m₁ = m₂`: the masses each convention states, two `z`, and
+//! - Masses: `m₀ = 0.4` under hold-`m₁:m₂` and hold-`m₁ = m₂`: the masses each convention states, two `z`, and
 //!   each `z` decodes back to its own convention's masses only; encode of that state gives the convention's controls.
 //!
-//! Tolerances (applied per R-369, a test decision): "to precision" (REQ-ENC-009) is read as a small multiple of f64
-//! eps of the quantity's scale; the landing tolerance is a physical-units norm (inverse_encode_contract Part 4) at
-//! `1e-9`, `ε_phys` being uncalibrated (REQ-ENC-024), far above an on-chart residual and below an off-chart one (both
-//! printed).
+//! Tolerances (a test decision): "to precision" (re-entry) is read as a small multiple of f64 eps of the quantity's
+//! scale; the landing tolerance is a physical-units norm (inverse_encode_contract Part 4) at `1e-9`, `ε_phys` being
+//! uncalibrated, far above an on-chart residual and below an off-chart one (both printed).
 //!
 //! Domain: encode alone, on states held fixed (pitfalls §10).
 
@@ -121,7 +120,7 @@ fn round_trip<C: ByKind<Param = f64>>(from: &C, into: &C, seed: u64, name: &str)
     eprintln!("qa {name}: worst on-chart residual {worst:e}");
 }
 
-// ── REQ-ENC-008 ────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Round trip through each axis kind ──────────────────────────────────────────────────────────────────────────────
 
 fn oblique() -> Latent<f64> {
     Latent {
@@ -265,7 +264,7 @@ negative_control!(
     }
 );
 
-// ── REQ-ENC-009 ────────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Re-entry of a clicked pixel's (L_z, E) ─────────────────────────────────────────────────────────────────────────
 
 /// Entering the pixel's `(L_z, E)` (computed here) gives the clicked pixel's `z` and state, to precision.
 fn check_reuse(shift: f64) {
@@ -312,7 +311,7 @@ negative_control!(
     check_reuse(1e-6)
 );
 
-// ── REQ-ENC-010, REQ-ENC-030 ───────────────────────────────────────────────────────────────────────────────────────
+// ── Feasibility and projection ─────────────────────────────────────────────────────────────────────────────────────
 
 /// `x = m·2^e`, `m` a non-negative integer below `2^53`.
 fn split(x: f64) -> (u128, i32) {
@@ -654,7 +653,7 @@ negative_control!(
     }
 );
 
-// ── REQ-CHART-005 ──────────────────────────────────────────────────────────────────────────────────────────────────
+// ── Mass conventions ───────────────────────────────────────────────────────────────────────────────────────────────
 
 fn close(a: [f64; 3], b: [f64; 3]) -> bool {
     (0..3).all(|i| (a[i] - b[i]).abs() < 1e-12)

@@ -1,27 +1,27 @@
 //! The fixed shared wrapper, `integrate(ic, uniforms) → SimState` (integrator_contract Part 1; systems_architecture §2,
 //! the Physics rung, and § "The pixel's life"): it owns the loop, the horizon, the adaptive substepping and the
-//! per-substep cadence, and calls the bound occupant through its one seam, `ADVANCE` ([`super::advance`]; R-19).
+//! per-substep cadence, and calls the bound occupant through its one seam, `ADVANCE` ([`super::advance`]).
 //!
 //! **The loop's shape** (Part 1; gpu_determinism_note § "The discipline", rule 5). Two `while` loops, the macro-steps'
 //! here and the substeps' in the occupant's `ADVANCE`, each with the `done` flag in its condition, the only exit
 //! besides its count; no `break`, no `for`, and both bounded, the outer by `horizon_steps`, the inner by `N_sub`
 //! (Part 2c rule 3).
 //!
-//! **The horizon is an integer counter** (dd_integrator §3.3; Part 5; REQ-INT-038): the loop's macro-step counter, compared
+//! **The horizon is an integer counter** (dd_integrator §3.3; Part 5): the loop's macro-step counter, compared
 //! with the sim key's `horizon_steps = ⌈T/dt_macro⌉`, which the host computes and dispatch holds to at most 65535
 //! (Part 5). No float time is accumulated: `ADVANCE`'s times are the macro-step grid's indices.
 //!
 //! **Per macro-step** the wrapper chooses `N_sub` from the position-quantised `d²` of the state it starts from
 //! ([`SubstepState::macro_step`]; dd_integrator §3.3), which the cadence gives it ([`Cadence::bucket_d2`]): the wrapper's
-//! own forms it once per step, for the collision test and `dmin_pair` too (integrator_contract Part 7; REQ-EVT-004).
+//! own forms it once per step, for the collision test and `dmin_pair` too (integrator_contract Part 7).
 //! It then calls `ADVANCE` from `macro` to `macro + 1` with it and the cadence. The occupant reports the internal steps
 //! it took, and `total_substeps` is their sum (Part 2a, Cost 2): the wrapper cannot verify it, so it is asserted by test
-//! against the cadence's calls (REQ-INT-022).
+//! against the cadence's calls.
 //!
-//! **One input type, no other** (seam 3; REQ-DEC-005, REQ-INT-025; scheduler_contract Part 1): the entry point takes the
+//! **One input type, no other** (seam 3; scheduler_contract Part 1): the entry point takes the
 //! decoded `(m, r, p)` and the sim key's uniforms, nothing else, so no chart, neighbour or parent state reaches the
-//! march, and every sample integrates from its own decoded state (REQ-SCHED-003). The occupant is a type parameter, a
-//! baked variant (Part 3), so the wrapper's code holds no branch on which occupant is bound (seam 4; REQ-INT-008).
+//! march, and every sample integrates from its own decoded state. The occupant is a type parameter, a
+//! baked variant (Part 3), so the wrapper's code holds no branch on which occupant is bound (seam 4).
 //!
 //! **What it writes** of the `SimState`: the state `(r, p)` where the march stopped; `total_substeps`; `saturated`
 //! (descriptor bit 5); `state`, `bounded` where the loop ran to the horizon (Part 7: reaching `T` without a terminal is
@@ -29,13 +29,13 @@
 //! replace, every label through one precedence and one write ([`crate::detect::label`]); and `t_end_step`, the completed macro-steps (Part 5, "Exact step-index timing invariant"; payload §2): a
 //! macro-step counts once the occupant reports its target reached ([`Advance::advance_reaching`]), a stepper once its
 //! `N_sub` substeps were all taken and an occupant that owns its time mapping once its march stopped on the sync grid
-//! at or before the target (Part 2a, Cost 2; R-565), so one that `done` cut short does not, while the loop's counter
+//! at or before the target (Part 2a, Cost 2), so one that `done` cut short does not, while the loop's counter
 //! `macro`, which still advances past it, bounds the loop only. **A march that ended** ([`Reached::ended`]) is never
 //! run on: the loop stops at the macro-step it ended in, which is not completed, its state the one the occupant
-//! latched (Part 2a § "The sync grid is a fixed quantum of physical time (R-565)": "a terminal event … still latches
+//! latched (Part 2a § "The sync grid is a fixed quantum of physical time": "a terminal event … still latches
 //! at the step it fires on"). A spent budget leaves `state` `running`, as it stood, and sets the sticky
 //! `budget_exhausted` bit of `budget_bits`, which also holds the two counted signals, `saturated` set when either fired
-//! (Part 7; R-603; `crate::regularisation::budget`). A terminal found on the step the budget ran out is the outcome:
+//! (Part 7; `crate::regularisation::budget`). A terminal found on the step the budget ran out is the outcome:
 //! the march reads `done` before its budget, so the copy is labelled and the bit is never set beside a terminal.
 //!
 //! **A march that fails** ([`super::failure`]) ends on its first non-finite step: the cadence's per-step detection, or
@@ -47,12 +47,12 @@
 //! [`integrate`] writes the monitored fields from
 //! its cadence's monitor ([`monitored`]; Part 1, "COM projection and invariant monitoring"): `E_0` and `Lz_0`, stored
 //! before the loop, and `packed_b`'s `dE_max` and `dLz_max`, the maxima latched at `Real` during the march and packed
-//! once, here, in the `log16` form (R-632) (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
+//! once, here, in the `log16` form (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
 //! side derives them from the final state (payload §5). [`monitored`] also writes the detector's: `dmin_pair`, the
 //! latched pair (payload §2), `d_min`, the `√` of its latched least `d²`, a collision's `state` and `detail` over
 //! `running`, and `coll_floor`, the collision test's floor over its near-firing states and the `d_min` state (Part 7,
-//! R-954, R-973; [`crate::detect`]). The three latches are packed through [`super::latch::Latches`], which clamps
-//! them and writes the failed-state values (payload §1; R-271). `integrate_with` writes `dmin_pair`'s sentinel, 3, and
+//! [`crate::detect`]). The three latches are packed through [`super::latch::Latches`], which clamps
+//! them and writes the failed-state values (payload §1). `integrate_with` writes `dmin_pair`'s sentinel, 3, and
 //! `d_min` unset, so a run whose cadence latches nothing keeps them, and carries `t_dmin_step` from where it started;
 //! [`monitored`] writes the cadence's `t_dmin_step`, the macro-step index of the latched least `d²`
 //! ([`WrapperCadence::dmin_step`]), which the wrapper's clock stamps ([`Cadence::clock`]). [`monitored`] writes the
@@ -78,14 +78,14 @@
 //!
 //! **The shape readout** (dd_integrator §3.7; Part 1's `expose_state_readout`; [`super::shape`]): after each completed
 //! macro-step, on the same state, the wrapper derives the shape point from the positions and masses and advances `θ̃`
-//! with its pole hold in `_reserved` (R-389, R-392, R-397) and the closure registers with the departed bit (R-37,
-//! R-545), and writes them into the `SimState`. As the Welford sample, a macro-step that `done` cut short takes none, so
-//! `θ̃` and the closure are those of the last completed macro-step and `closure_step` never exceeds `t_end_step`.
+//! with its pole hold in `_reserved` and the closure registers with the departed bit, and writes them into the
+//! `SimState`. As the Welford sample, a macro-step that `done` cut short takes none, so `θ̃` and the closure are those
+//! of the last completed macro-step and `closure_step` never exceeds `t_end_step`.
 //!
 //! **A resumed march** ([`integrate_resumed_with`]): from a stored `SimState` of the same `ic`, at its `t_end_step`, the
 //! wrapper reloads the state `(r, p)`, `total_substeps`, the sticky `saturated` bit, the Welford co-moments and the
 //! readout ([`super::shape::Readout::load`]), and marches on; a march split into any number of resumed calls writes
-//! these fields bit-identically to one call (R-397's "however the march is split into dispatches"). The cadence is the
+//! these fields bit-identically to one call, however the march is split into dispatches. The cadence is the
 //! caller's; the wrapper hands it the stored state before the first step ([`Cadence::resume`]), and the wrapper's own
 //! reloads everything else it keeps across macro-steps from it: the escape register, the monitor, the collision
 //! detector with its exact `d_min` latch and floor codes, the `t_dmin_step` stamp and the regularised drift
@@ -129,22 +129,22 @@ use crate::word::WordBuffer;
 
 /// The float type the wrapper runs at: an occupant's ([`AdvanceReal`]), a payload's ([`PayloadReal`]), quantised for
 /// the substep law's `d²` ([`Quantise`]), with the shape map's `Float` functions for the Welford `y`
-/// ([`welford::y`]), and the shape readout's ([`ReadoutReal`]): f32 and f64 (R-265).
+/// ([`welford::y`]), and the shape readout's ([`ReadoutReal`]): f32 and f64.
 pub trait WrapperReal: AdvanceReal + PayloadReal + Quantise + Float + ReadoutReal {}
 
 impl<R: AdvanceReal + PayloadReal + Quantise + Float + ReadoutReal> WrapperReal for R {}
 
 /// The sim-key values the wrapper's loop reads (integrator_contract Part 3, "Wrapper config — the loop"), constant
-/// across a dispatch; `SimUniforms` carries them (TASK-M3-06 lays it out and binds it).
+/// across a dispatch; `SimUniforms` carries them.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WrapperUniforms<R> {
-    /// The macro-step, `max(1e-3, T/65535)` (Part 3; R-132), as the host computed it.
+    /// The macro-step, `max(1e-3, T/65535)` (Part 3), as the host computed it.
     pub dt_macro: R,
     /// `horizon_steps = ⌈T/dt_macro⌉`, as the host computed it, at most 65535 (Part 5).
     pub horizon_steps: u32,
-    /// The substep cap `N_max`, at least 1 and at most the table's maximum length (Part 3; R-502).
+    /// The substep cap `N_max`, at least 1 and at most the table's maximum length (Part 3).
     pub n_max: u32,
-    /// The sim key's `N_sub` thresholds (dd_integrator §3.3; R-502).
+    /// The sim key's `N_sub` thresholds (dd_integrator §3.3).
     pub thresholds: NsubThresholds,
 }
 
@@ -222,13 +222,13 @@ pub fn integrate_detecting_to<A: Advance, R: WrapperReal>(
 
 /// `out` with the monitored fields of the run `cadence` followed (Part 1, "COM projection and invariant monitoring";
 /// payload §1, §2): `E_0` and `Lz_0` as stored before the loop, and `packed_b` holding `dE_max = max|ΔE|` and
-/// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed in the `log16` form (R-632); `dE_reg`, the regularised drift's
-/// final value and maximum as the occupant reported them, or the Cartesian ones where it reported none (R-605); and
-/// `budget_bits`' two counts, `saturated` set when either fired (R-603); and its
+/// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed in the `log16` form; `dE_reg`, the regularised drift's
+/// final value and maximum as the occupant reported them, or the Cartesian ones where it reported none; and
+/// `budget_bits`' two counts, `saturated` set when either fired; and its
 /// detector's fields (Part 7; [`crate::detect::collision::Detector::label`]): `dmin_pair` the latched pair, `d_min` the
-/// `√` of the latched least `d²`, the IC's included, so a start already collided stores its least separation (R-933),
+/// `√` of the latched least `d²`, the IC's included, so a start already collided stores its least separation,
 /// and where a collision fired, `state` `collision` and its `detail`; and `coll_floor`, the floor's record
-/// ([`crate::detect::collision::Detector::floor_code`]; Part 7, R-973). The latches are packed by
+/// ([`crate::detect::collision::Detector::floor_code`]; Part 7). The latches are packed by
 /// [`Latches::persist`] (payload §1's semantics (a)). Rounding the `Real` maxima to f32 at write-out gives what an f32
 /// latch of the f32-rounded drifts would hold, since rounding is monotone.
 ///
@@ -236,7 +236,7 @@ pub fn integrate_detecting_to<A: Advance, R: WrapperReal>(
 /// or a regularised march's step-7 exit it was told of; [`super::failure`]), `state` `sim_failed` with that cause, over
 /// a collision too (`sim_failed` first); where it recorded none and `out` is already `sim_failed`, `out`'s cause. Either
 /// way the one writer, [`super::failure::sim_failed`], writes every field's failed-state value (payload §1): the
-/// latches 0.0 in both drift halves and `d_min` unset (R-271), `dmin_pair` 3, `coll_floor` 0, `t_dmin_step` 0, and no
+/// latches 0.0 in both drift halves and `d_min` unset, `dmin_pair` 3, `coll_floor` 0, `t_dmin_step` 0, and no
 /// f32 field holds the non-finite value that failed it, `E_0` and `Lz_0` included. The label is [`precedence`]'s, of
 /// the failure, the cadence's terminals with their step ordinals and the horizon.
 ///
@@ -246,7 +246,7 @@ pub fn integrate_detecting_to<A: Advance, R: WrapperReal>(
 ///
 /// The `d_min` counters [`Latches::persist`] counts into are a pair of this write's own: the latch admits no NaN `d²`
 /// and the detector's quantised `d²` is never negative (`crate::driver::substep::square`), so `√` gives neither a NaN
-/// nor a negative value and neither counter can count here (R-288).
+/// nor a negative value and neither counter can count here.
 #[inline]
 pub fn monitored<R: WrapperReal, E: EscapeRule<R>>(
     out: SimStateBaseOf<R>,
@@ -282,7 +282,7 @@ fn written<R: WrapperReal, E: EscapeRule<R>>(
         horizon: sd_state(out.packed_a) == STATE_BOUNDED,
         ..cadence.events()
     };
-    // R-603: `saturated` is set when either of the regularised march's counted signals fired.
+    // `saturated` is set when either of the regularised march's counted signals fired.
     let signals = cadence.signal_counts();
     let described = set_saturated(out.packed_a, sd_saturated(out.packed_a) || signals.fired());
     let labelled = precedence(&events).write(set_dmin_pair(described, detector.latch().pair()));
@@ -290,10 +290,10 @@ fn written<R: WrapperReal, E: EscapeRule<R>>(
     latches.separation_squared(detector.latch().d2());
     latches.drift(m.de_max().quantise(), m.dlz_max().quantise());
     let (packed_a, packed_b) = latches.persist(labelled, &DminCounters::new());
-    // The Chazy latch's stored level (chazy drill-down §6; R-545): the greater of a resumed march's stored level and its
+    // The Chazy latch's stored level (chazy drill-down §6): the greater of a resumed march's stored level and its
     // own maximum's, so a split march stores the uncut one's. A failed run's is replaced below (`failure::sim_failed`).
     let packed_a = set_I_max(packed_a, cadence.i_max().code());
-    // R-605: the regularised drift, or the Cartesian where no regularised one was reported (regularisation off, the two
+    // The regularised drift, or the Cartesian where no regularised one was reported (regularisation off, the two
     // energies one). A failed run's is replaced by the failed-state value below (`failure::sim_failed`).
     let reg = cadence.regularised();
     let (last, max) = if reg.seen() {
@@ -402,7 +402,7 @@ pub trait CoMarch<R: AdvanceReal> {
     /// reached, `params` its `dt_macro` and `N_sub`, and `taken` the substeps it took, `N_sub` unless its `done` cut
     /// the macro-step short. `A` is the bound occupant. For a stepper `taken == N_sub` is exactly the macro-step
     /// completed ([`Reached::by_count`], what the wrapper counts); under an occupant that owns its time mapping the
-    /// shadow's joint step is [`crate::regularisation::heggie_joint`]'s (R-974; Heggie × RK4), its joint march not yet
+    /// shadow's joint step is [`crate::regularisation::heggie_joint`]'s (Heggie × RK4), its joint march not yet
     /// built, and no caller marches a shadow beside one.
     fn after_macro<A: Advance>(
         &mut self,
@@ -518,7 +518,7 @@ fn resume_march<A: Advance, R: WrapperReal, C: Cadence<R>>(
         },
         readout: Readout::load(stored, shape(ic.r, ic.m), ic.m),
     };
-    // The guard is written out, not as `saturating_sub`, for rust-gpu (R-169), as `Advance::advance`'s is.
+    // The guard is written out, not as `saturating_sub`, for rust-gpu, as `Advance::advance`'s is.
     #[allow(clippy::implicit_saturating_sub)]
     let left = if uniforms.horizon_steps > completed {
         uniforms.horizon_steps - completed
@@ -669,7 +669,7 @@ fn march<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
         packed_a,
         times: pack_times(completed, start.t_dmin_step),
         total_substeps,
-        // R-603: a spent budget is the sticky flag, `state` left `running` (`crate::regularisation::budget`).
+        // A spent budget is the sticky flag, `state` left `running` (`crate::regularisation::budget`).
         budget_bits: latch_exhausted(0, last == Reached::Exhausted),
         ..SimStateBaseOf::default()
     });

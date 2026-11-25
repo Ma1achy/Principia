@@ -1,10 +1,11 @@
-//! QA's tests for TASK-M2-38's slice of a held coordinate, written from REQ-CHART-060 ("accept a pan, slice, … edit
-//! only if the chart's centre … still passes validate's layers 2 and 3, a centre whose Φ fails counting as failing; …
-//! a lock on a pixel that is not a system must be refused, the centre unchanged"), not from the implementation.
+//! QA's tests for the slice of a held coordinate, written from the chart navigation's requirement ("accept a pan,
+//! slice, … edit only if the chart's centre … still passes validate's layers 2 and 3, a centre whose Φ fails counting
+//! as failing; … a lock on a pixel that is not a system must be refused, the centre unchanged"), not from the
+//! implementation.
 //!
 //! The oracle is the decode at the accepted centre, never the chart's own report: what the stop accepts must decode to
 //! a three-body system, every mass positive and finite, every position and momentum finite, and no `DEGENERATE`
-//! reason (R-469). Each held coordinate whose value at the slice centre the chart states (the rest starts' four
+//! reason. Each held coordinate whose value at the slice centre the chart states (the rest starts' four
 //! momentum controls on the mass simplex, the Euclid plane and the δm strip, bare and under a tilt; the shape sphere's
 //! momentum controls and mass logits; the held `L_z` of `(ν, K)` and `Φ_θ,K`; the held `K` of `Φ_θ,L_z`, each warped
 //! and linear) is sliced from that value toward NaN, ±∞, ±`f64::MAX` and ordinary values, and locked on each.

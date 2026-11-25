@@ -165,7 +165,7 @@ fn half_plants() -> Vec<(String, SimStateBase)> {
     )]
 }
 
-/// The drift latches' `log16` halves (payload §2; R-632, R-605) hold no NaN at all: every one of the 2¹⁶ codes reads
+/// The drift latches' `log16` halves (payload §2) hold no NaN at all: every one of the 2¹⁶ codes reads
 /// back as a number, so there is nothing for the scanner to plant there.
 fn check_log16_has_no_nan() {
     for h in 0..=u16::MAX {
@@ -195,7 +195,7 @@ fn check_scanner(plants: Vec<(String, SimStateBase)>, nan: bool) {
 #[test]
 fn no_nan_in_storage_scanner_sees_every_float() {
     // 6 + 6 phase-state components (three 2-vectors each), 10 scalars, 5 16-bit halves (`d_min`, `packed_b`'s two and
-    // `dE_reg`'s two, TASK-M3-41); the FTLE tier adds the shadow's 12.
+    // `dE_reg`'s two); the FTLE tier adds the shadow's 12.
     assert_eq!(
         count(&SimStateBase::default()),
         27,
@@ -1054,7 +1054,7 @@ negative_control!(
 /// The diffusion slope `slope` reads of real samples with `n` = 0, 1 and 2.
 fn check_diffusion(slope: fn(f32, u32, f32) -> f32) {
     // The plan is unclear here: the task asks a sample with n < 2 to read diffusion −1.0, while payload §4 and the
-    // generated read side read NaN there (R-245: no −1 marker); chose the read side's NaN, because the read side is
+    // generated read side read NaN there (no −1 marker); chose the read side's NaN, because the read side is
     // generated from the ledger and the code is the source of truth. Storage holds the co-moments, finite, never NaN.
     let h = key(1).dt_macro;
     for steps in [0u32, 1] {

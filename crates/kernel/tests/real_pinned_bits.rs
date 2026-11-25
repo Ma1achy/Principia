@@ -1,8 +1,8 @@
-//! `Real`'s transcendentals at each precision (R-991, REQ-CHART-212):
+//! `Real`'s transcendentals at each precision:
 //! - `real_pinned_bits`: at f64 each method gives the pinned libm's result, bit for bit, and the bits recorded here
 //!   from libm 0.2.16 on the Mac, on fixed inputs, so that on every machine the f64 path is the pinned library and
 //!   the pinned library gives the Mac's bits, but for a NaN, compared as NaN: libm forms an out-of-domain NaN by a
-//!   hardware `0/0`, so its sign and payload are the target's (records never hold one, R-79); `sine_cosine` is `(sine, cosine)` and `sinc` `sine(r)/r`. Every
+//!   hardware `0/0`, so its sign and payload are the target's (records never hold one); `sine_cosine` is `(sine, cosine)` and `sinc` `sine(r)/r`. Every
 //!   function's inputs hold at least one where the Mac's platform library and libm differ (marked in the table, found
 //!   by a sweep of 10⁶ inputs per function), and `sine`'s four: at `0xc021cb0947a686b4` and `0xbfe2b074a5ac7510` libm's
 //!   `sin` is correctly rounded and the Mac's is not, at `0xc023fa30a11813de` and `0xc0155b4e049f4aee` the Mac's is and

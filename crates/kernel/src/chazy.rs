@@ -1,31 +1,30 @@
-//! Chazy's final-motion classifier (chazy drill-down §3; R-442): at every playhead, a label for what kind of final
+//! Chazy's final-motion classifier (chazy drill-down §3): at every playhead, a label for what kind of final
 //! motion the three bodies are in, as far as can be told at `t`, from the live state, the masses, `E_0`, the initial
 //! hyperradius `R_0 = √(I_0/M)` and one running latch, `I_max`, the greatest moment of inertia met so far (§6). It
 //! reads nothing after the playhead (the live-playhead test, §3.1), writes nothing to the payload and changes no event
 //! class: the label is derived at read (§5.1; payload §5), through the read side's `chazy_class`.
 //!
-//! **Transcribed, not re-derived.** Every definition and the rule's order are the drill-down's transcription of prin-rs
-//! PR #32 (`src/chazy.rs::classify`, `pair_kup`, `out_kup`, `kepler`, `ma_stable`), with R-548's three changes and
-//! R-595's reading of them: transient before B-stable, B-stable requiring `E < 0` (step 4); B-stable before excursion
-//! inside the hierarchy step (step 2); H, HP, P and the two-stage H only at `E ≥ 0` (steps 1 and 2), an `E < 0` state
-//! that passes the dispersal step's geometric tests going on to the hierarchy step, where it may read HE, PE, B-stable
-//! or excursion.
+//! **Transcribed, not re-derived.** Every definition and the rule's order are the drill-down's transcription of prin-rs's
+//! classifier (`src/chazy.rs::classify`, `pair_kup`, `out_kup`, `kepler`, `ma_stable`), with these changes: transient
+//! before B-stable, B-stable requiring `E < 0` (step 4); B-stable before excursion inside the hierarchy step (step 2);
+//! H, HP, P and the two-stage H only at `E ≥ 0` (steps 1 and 2), an `E < 0` state that passes the dispersal step's
+//! geometric tests going on to the hierarchy step, where it may read HE, PE, B-stable or excursion.
 //!
 //! **The two physics choices** (§3.4): a pair's binding is a sign, `K < U`, never the band, so an eccentric binary at
 //! pericentre (`K/U = (1 + e)/2`) is still bound; and parabolic is a band, `|K/U − 1| ≤ ε`, scored with its hyperbolic
 //! neighbour ([`Motion::coarse`]).
 //!
-//! **Softening.** §3.1 softens both two-body potentials at `ε_soft ≠ 0` (R-792). The kernel's force carries no
+//! **Softening.** §3.1 softens both two-body potentials at `ε_soft ≠ 0`. The kernel's force carries no
 //! softening, so `U = m_i m_j / d` here, the drill-down's `ε_soft = 0` case.
 //!
-//! **One rule at every width.** Generic over the kernel's `Real` with `Float`'s functions (R-265), so the CPU at f64 and
+//! **One rule at every width.** Generic over the kernel's `Real` with `Float`'s functions, so the CPU at f64 and
 //! the GPU at f32 instantiate the one rule; the parameters are the constants register's, read at the classifier's width
 //! ([`Width`]). The labels may differ between widths within ulps of a sign change: a label on a real trajectory,
-//! reported, not asserted (§8; R-548).
+//! reported, not asserted (§8).
 //!
-//! **The latch's storage** ([`i_max_code`], [`i_max_decode`]; R-545): `I_max` is stored in the descriptor's bits 10–14
-//! as its level in half-octaves above `I_0`, 32 levels to `2¹⁶`. The plan is unclear here: the ruling gives "log,
-//! half-octave, 32 levels to 2¹⁶" without saying what the levels count from. Chose `I_max / I_0`, because `I_max ≥ I_0`
+//! **The latch's storage** ([`i_max_code`], [`i_max_decode`]): `I_max` is stored in the descriptor's bits 10–14
+//! as its level in half-octaves above `I_0`, 32 levels to `2¹⁶`. The plan is unclear here; chose to count the levels
+//! from `I_max / I_0` ("log, half-octave, 32 levels to 2¹⁶" does not say what they count from), because `I_max ≥ I_0`
 //! by construction (the latch starts at `I_0`), so level 0 is the fresh latch and decodes to `I_0` exactly, and the
 //! read side recovers `I_0 = M·R_0²` from the inputs the classifier already reads, with no new stored field.
 
@@ -478,7 +477,7 @@ fn settled<R: ChazyReal>(ph: &Playhead<R>, cfg: &ChazyCfg<R>, prev: &Previous<R>
     prev.held && d[0] * d[0] + d[1] * d[1] + d[2] * d[2] < cfg.tau * cfg.tau
 }
 
-/// The label at a playhead (§3.2, the rule in order, as R-548 and R-595 rule it). `prev` is the settling gate's
+/// The label at a playhead (§3.2, the rule in order). `prev` is the settling gate's
 /// previous snapshot, read only with settling on.
 ///
 /// 1. **Dispersal.** If `E ≥ 0`, every pair is farther than `h_far · R_0` and the shape has settled (under the tidal
@@ -486,7 +485,7 @@ fn settled<R: ChazyReal>(ph: &Playhead<R>, cfg: &ChazyCfg<R>, prev: &Previous<R>
 ///    two are, P when all three are.
 /// 2. **Hierarchy.** For the body `b` most separated from its pair, the pair's binding is a sign (`K < U`, else its
 ///    band); the gate is `ρ_b > h_far` and settled (under the tidal gate, both replaced by the tidal ratio below `δ`:
-///    settling is the hierarchy gate's alone, as prin-rs PR #32's `classify` has it). Where it passes and `b` recedes:
+///    settling is the hierarchy gate's alone, as prin-rs's `classify` has it). Where it passes and `b` recedes:
 ///    a bound pair reads HE, PE, or (outer bound) B-stable where step 4's test holds and excursion where not; an
 ///    unbound pair with `b` not bound reads H, the two-stage break-up, at `E ≥ 0`. Otherwise go on.
 /// 3. **Transient**, at `E > 0`.
@@ -498,7 +497,7 @@ pub fn classify<R: ChazyReal>(ph: &Playhead<R>, cfg: &ChazyCfg<R>, prev: &Previo
     let zero = R::default();
     let settled = settled(ph, cfg, prev);
 
-    // 1. Dispersal, at E ≥ 0 only (R-548): all three separating needs non-negative energy.
+    // 1. Dispersal, at E ≥ 0 only: all three separating needs non-negative energy.
     let pairs = [pair_kup(ph, 0, 1), pair_kup(ph, 0, 2), pair_kup(ph, 1, 2)];
     let far_limit = cfg.h_far * ph.r_0;
     let far = match cfg.gate {
@@ -541,7 +540,7 @@ pub fn classify<R: ChazyReal>(ph: &Playhead<R>, cfg: &ChazyCfg<R>, prev: &Previo
         Gate::Hierarchy => hierarchy_ratio(ph, b) > cfg.h_far && settled,
         Gate::Tidal => tidal_ratio(ph, i, j, b) < cfg.delta,
     };
-    // Step 4's test, read in step 2 too: B-stable before excursion (R-548).
+    // Step 4's test, read in step 2 too: B-stable before excursion.
     let stable = ph.e < zero
         && cfg.mardling_aarseth
         && pair_sign == -1
@@ -577,7 +576,7 @@ pub fn classify<R: ChazyReal>(ph: &Playhead<R>, cfg: &ChazyCfg<R>, prev: &Previo
     Motion::BSoFar
 }
 
-/// `I_max`'s stored level (R-545; REQ-PAY-106): the number of whole half-octaves `I_max` lies above `I_0`, the `c` with
+/// `I_max`'s stored level: the number of whole half-octaves `I_max` lies above `I_0`, the `c` with
 /// `2^(c/2) ≤ I_max / I_0 < 2^((c+1)/2)`, saturating at 31 (`2^15.5` and up, 32 levels to `2¹⁶`), 0 at or below `I_0`.
 /// Decided on `(I_max / I_0)²` against the exact powers of two `2^c`, so no logarithm, `√2` or non-finite constant is
 /// read; a NaN ratio reads 0. Monotone in `I_max`, so a latch's level is the greatest of its segments' levels.
@@ -586,7 +585,7 @@ pub fn i_max_code<R: ChazyReal>(i_max: R, i_0: R) -> u32 {
     let ratio = i_max / i_0;
     let square = ratio * ratio;
     let two = R::one() + R::one();
-    // The field's five bits hold levels 0–31 (R-545).
+    // The field's five bits hold levels 0–31.
     let mut code = 0;
     let mut edge = two;
     while code < 31 && square >= edge {
@@ -596,7 +595,7 @@ pub fn i_max_code<R: ChazyReal>(i_max: R, i_0: R) -> u32 {
     code
 }
 
-/// The stored level `code`'s value (R-545): the level's lower edge, `I_0 · 2^(code/2)`, so level 0 is `I_0` exactly
+/// The stored level `code`'s value: the level's lower edge, `I_0 · 2^(code/2)`, so level 0 is `I_0` exactly
 /// and a decoded latch is never above the latch it was stored from: OS-candidate, `I_max / I > os_ratio`, can then only
 /// fire less often than on the unquantised latch, never where it would not.
 #[inline]
@@ -611,7 +610,7 @@ pub fn i_max_decode<R: ChazyReal>(code: u32, i_0: R) -> R {
     i_0 * scale.square_root()
 }
 
-/// The running maximum of `I` (§6; REQ-PAY-105): forward-only, starting at `I_0`, raised at every step by the step's
+/// The running maximum of `I` (§6): forward-only, starting at `I_0`, raised at every step by the step's
 /// `I`, a NaN `I` never latched. A resumed march takes up the stored level as a floor ([`ImaxLatch::reload`]) and the
 /// stored level is the greater of the floor and its own maximum's level: the level is monotone, so a march split at any
 /// persist boundary stores the uncut march's level.

@@ -1,27 +1,29 @@
-//! QA tests for TASK-M3-09, written from the requirements and their sources, not from the implementation
-//! (integrator_contract Part 5, Part 7; dd_integrator §3.6; payload §2; chart_reference §0.7; R-13, R-22, R-60):
+//! QA tests for the collision and t = 0 terminals, written from the spec, not from the implementation
+//! (integrator_contract Part 5, Part 7; dd_integrator §3.6; payload §2; chart_reference §0.7). Pair `k` is the side
+//! opposite body `k`; there is no escape outcome at t = 0; lookup has no coincident-bodies rejection.
 //!
-//! - REQ-EVT-002 (`qa_t0_inside_r_coll`, `qa_t0_no_escape`, `qa_t0_decode_failed_decoder_only`): the t = 0 pass, a pure
-//!   function of the decoded IC and the sim key's `r_coll`. An IC inside `r_coll` is `collision` with its pair at
-//!   `t_end_step = 0`, at both precisions, and the march takes no step; an IC that is already escaping by R-29's own
-//!   `E_rel` is never `escape` at t = 0 (R-60); `decode_failed` is the decoder's failure only: every one of the fifteen
-//!   values non-finite (NaN, `+∞`, `−∞`) is `decode_failed` 0, each `DEGENERATE` reason is the code payload §2 maps it
-//!   to, and a valid IC inside `r_coll` is never folded into `decode_failed`.
-//! - REQ-EVT-003 (`qa_collision_count_before_classify`, `qa_collision_two_pairs_one_step`,
+//! - The t = 0 pass (`qa_t0_inside_r_coll`, `qa_t0_no_escape`, `qa_t0_decode_failed_decoder_only`): a pure function of
+//!   the decoded IC and the sim key's `r_coll`. An IC inside `r_coll` is `collision` with its pair at `t_end_step = 0`,
+//!   at both precisions, and the march takes no step; an IC that is already escaping by the escape criterion's own
+//!   `E_rel` is never `escape` at t = 0; `decode_failed` is the decoder's failure only: every one of the fifteen values
+//!   non-finite (NaN, `+∞`, `−∞`) is `decode_failed` 0, each `DEGENERATE` reason is the code payload §2 maps it to, and
+//!   a valid IC inside `r_coll` is never folded into `decode_failed`.
+//! - Counting before classifying (`qa_collision_count_before_classify`, `qa_collision_two_pairs_one_step`,
 //!   `qa_collision_head_on_march`): the classification over all eight subsets of pairs inside `r_coll²` (none, one,
 //!   two, three), the strict `<` at `d² = r_coll²` exactly, two pairs inside on one observed step is `detail = 3` and
-//!   stays, and dd test 6, a head-on pair marched into collision for each of the three pairs, labelled with the R-22 id
+//!   stays, and dd test 6, a head-on pair marched into collision for each of the three pairs, labelled with its pair id
 //!   (the side opposite the third body), and integrated through at `r_coll = 0`.
-//! - REQ-EVT-004 (`qa_collision_shared_d2`): the `d²` the bucket reads after a step is the closest pair's quantised
+//! - The shared `d²` (`qa_collision_shared_d2`): the `d²` the bucket reads after a step is the closest pair's quantised
 //!   `d²` of the state the detector observed, by an independent f32 formation here.
-//! - REQ-EVT-009 (`qa_collision_t0_lookup_each_pair`): for each pair, a decoded IC with only that pair inside `r_coll`
-//!   is `COLLISION_T0` with the opposite-side id and `t_event = 0`; the same IC entered via lookup is not rejected and
-//!   has the same label.
-//! - REQ-PAY-047 (`qa_dmin_pair_latch`, `qa_dmin_pair_initial`): over a fly-by whose closest pair at the IC, at the
-//!   encounter and at the end are three different pairs, `dmin_pair` is the encounter's; a run whose cadence latches
-//!   nothing keeps the initial value 3.
+//! - `COLLISION_T0` through decode and lookup (`qa_collision_t0_lookup_each_pair`): for each pair, a decoded IC with
+//!   only that pair inside `r_coll` is `COLLISION_T0` with the opposite-side id and `t_event = 0`; the same IC entered
+//!   via lookup is not rejected and has the same label.
+//! - The `dmin_pair` latch (`qa_dmin_pair_latch`, `qa_dmin_pair_initial`): over a fly-by whose closest pair at the IC,
+//!   at the encounter and at the end are three different pairs, `dmin_pair` is the encounter's; a run whose cadence
+//!   latches nothing keeps the initial value 3.
 //!
-//! REQ-ENC-033 is in `crates/engine/tests/qa_TASK-M3-09.rs`, through dispatch's own validated sim key.
+//! A looked-up IC with bodies within `r_coll` reaching dispatch as `collision` is tested in
+//! `crates/engine/tests/qa_TASK-M3-09.rs`, through dispatch's own validated sim key.
 //!
 //! **Thresholds.** None is picked here: `r_coll` is the sim key's (the default `10⁻³`, integrator_contract Part 3's table;
 //! `0.5` only where its square must be exact in f32); every fixture places its pairs a factor of two or more from it.
@@ -56,7 +58,7 @@ const R_COLL: f64 = 1e-3;
 /// The type of a t = 0 pass.
 type Label = fn(&Ic<f64>, Option<Degenerate>, &CollisionRadius) -> T0;
 
-/// The bodies of pair `k`, transcribed from R-22: pair 0 = (1, 2), pair 1 = (2, 0), pair 2 = (0, 1).
+/// The bodies of pair `k`, the side opposite body `k`: pair 0 = (1, 2), pair 1 = (2, 0), pair 2 = (0, 1).
 fn bodies(k: usize) -> (usize, usize) {
     match k {
         0 => (1, 2),
@@ -65,7 +67,7 @@ fn bodies(k: usize) -> (usize, usize) {
     }
 }
 
-/// The f64 distance of each pair `k` of `r`, by R-22's map.
+/// The f64 distance of each pair `k` of `r`, by [`bodies`]' map.
 fn dist(r: &[[f64; 2]; 3]) -> [f64; 3] {
     let d = |k: usize| {
         let (a, b) = bodies(k);
@@ -108,9 +110,9 @@ fn to_f32(x: &Ic<f64>) -> Ic<f32> {
     }
 }
 
-// ── REQ-EVT-002: the t = 0 pass ─────────────────────────────────────────────────────────────────────────────────
+// ── The t = 0 pass ──────────────────────────────────────────────────────────────────────────────────────────────
 
-/// For each pair, an IC with only that pair `4·10⁻⁴` apart: the pass `label` gives `collision` with that pair's R-22 id,
+/// For each pair, an IC with only that pair `4·10⁻⁴` apart: the pass `label` gives `collision` with that pair's id,
 /// terminal, and the same at f32; the march from it takes no step and stores `collision`, that pair, `t_end_step = 0`,
 /// the IC unmoved.
 fn check_inside(label: Label) {
@@ -156,7 +158,7 @@ fn qa_t0_inside_r_coll() {
 }
 
 /// A t = 0 pass naming a pair by the lower of its two bodies, `(1, 2)` → 1, `(2, 0)` → 0, `(0, 1)` → 0, not by the
-/// opposite body (R-22's map reversed).
+/// opposite body (the pair-id map reversed).
 #[cfg(feature = "controls")]
 fn lower_body_pass(x: &Ic<f64>, tag: Option<Degenerate>, radius: &CollisionRadius) -> T0 {
     let got = t0(x, tag, radius);
@@ -177,8 +179,8 @@ negative_control!(
     check_inside(lower_body_pass)
 );
 
-/// R-29's relative two-body energy of body `b` about the other two's centre of mass, with the total mass:
-/// `E_rel = ½|Δv|² − (M_pair + m_b)/d`, `G = 1`.
+/// The escape criterion's relative two-body energy of body `b` about the other two's centre of mass, with the total
+/// mass: `E_rel = ½|Δv|² − (M_pair + m_b)/d`, `G = 1`.
 fn e_rel(x: &Ic<f64>, b: usize) -> f64 {
     let (i, j) = match b {
         0 => (1, 2),
@@ -210,7 +212,7 @@ fn escaping() -> Ic<f64> {
 }
 
 /// The already-escaping IC (its `E_rel(2) > 0`, the outward radial velocity positive): `label` gives `running`, not
-/// `escape` (R-60), nor any other terminal.
+/// `escape` (there is no escape outcome at t = 0), nor any other terminal.
 fn check_no_escape(label: Label) {
     let x = escaping();
     assert!(e_rel(&x, 2) > 0.0, "fixture: body 2 is not unbound");
@@ -232,7 +234,7 @@ fn qa_t0_no_escape() {
     check_no_escape(t0);
 }
 
-/// A t = 0 pass that classifies escape by `E_rel > 0` alone at the IC, which R-60 forbids.
+/// A t = 0 pass that classifies escape by `E_rel > 0` alone at the IC, which the spec forbids (no t = 0 escape).
 #[cfg(feature = "controls")]
 fn eager_escape_pass(x: &Ic<f64>, tag: Option<Degenerate>, radius: &CollisionRadius) -> T0 {
     let got = t0(x, tag, radius);
@@ -346,7 +348,7 @@ negative_control!(
     check_decode_failed(unchecked_pass)
 );
 
-// ── REQ-EVT-003: count before classifying ────────────────────────────────────────────────────────────────────────
+// ── Count before classifying ─────────────────────────────────────────────────────────────────────────────────────
 
 /// Over every subset of the three pairs inside `r_coll²` (each `d²` a quarter of it inside, four times it outside):
 /// none is not fired; exactly one is `collision` with that pair; two or three is `detail = 3`, never a binary label. At
@@ -502,7 +504,7 @@ fn head_on(k: usize) -> Ic<f64> {
     Ic { m: [M; 3], r, p }
 }
 
-/// For each pair, the head-on march under `radius` (horizon `t = 2`): `collision` with the pair's R-22 id, after at
+/// For each pair, the head-on march under `radius` (horizon `t = 2`): `collision` with the pair's id, after at
 /// least one step and before the horizon; and at `r_coll = 0` ("refuse to regularise") the same march is not a
 /// collision.
 fn check_head_on(radius: CollisionRadius) {
@@ -541,7 +543,7 @@ negative_control!(
     check_head_on(CollisionRadius::none())
 );
 
-// ── REQ-EVT-004: the shared d² ───────────────────────────────────────────────────────────────────────────────────
+// ── The shared d² ────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The closest pair's quantised `d²`, formed here: each position cast to f32, one subtraction and one square per axis,
 /// one addition, the least of the three.
@@ -630,7 +632,7 @@ negative_control!(
     check_shared(|_, r| qa_d2(r))
 );
 
-// ── REQ-EVT-009: COLLISION_T0 through decode and lookup ──────────────────────────────────────────────────────────
+// ── COLLISION_T0 through decode and lookup ───────────────────────────────────────────────────────────────────────
 
 /// A state with pair `k`'s bodies `0.004` apart (a little under `0.006` at `I = 1`), the third body far.
 fn close_state(k: usize) -> Ic<f64> {
@@ -648,7 +650,7 @@ fn close_state(k: usize) -> Ic<f64> {
 }
 
 /// For each pair: the IC decoded from the state's `z`, under `r_coll = 0.01`, has that pair alone inside (by the f64
-/// distances here); the pass gives `COLLISION_T0` with the pair's R-22 id and the run stores it at `t_event = 0`; the
+/// distances here); the pass gives `COLLISION_T0` with the pair's id and the run stores it at `t_event = 0`; the
 /// same IC entered via lookup is not rejected (`lookup_clamped` false) and gets the same label.
 fn check_lookup(label: Label) {
     let r_coll = 0.01;
@@ -703,7 +705,7 @@ negative_control!(
     check_lookup(lower_body_pass)
 );
 
-// ── REQ-PAY-047: the dmin_pair latch ─────────────────────────────────────────────────────────────────────────────
+// ── The dmin_pair latch ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// A fly-by: body 2 starts `0.2` from body 1 (pair 0 closest), runs past body 0 about `0.1` off (pair 1 at the
 /// encounter), and leaves; at the end bodies 0 and 1, `1` apart, are the closest (pair 2). Total momentum zero.
@@ -715,7 +717,7 @@ fn fly_by() -> Ic<f64> {
     }
 }
 
-/// The R-22 id of the closest pair of `r` by f64 distance.
+/// The id of the closest pair of `r` by f64 distance.
 fn closest(r: &[[f64; 2]; 3]) -> usize {
     let d = dist(r);
     (0..3).fold(0, |k, j| if d[j] < d[k] { j } else { k })
@@ -815,12 +817,12 @@ negative_control!(
     }
 );
 
-// ── REQ-EVT-002 / REQ-EVT-003 at the slider's small end (integrator_contract Part 7, "→0, all valid") ──────────────
+// ── The t = 0 pass and the count at the slider's small end (integrator_contract Part 7, "→0, all valid") ───────────
 
 /// For each pair and each tiny positive `r_coll` (its square subnormal in f32, or below f32's range), an IC with only
 /// that pair `r_coll / 4` apart, about `x = 0` and about `x = 0.5`, is within `r_coll`, so the t = 0 pass under the
 /// threshold `radius` gives `collision` with that pair, at both precisions, and the march takes no step: Part 7 calls
-/// every `r_coll > 0` valid, and an IC within it is `collision` at `t_end_step = 0` (REQ-EVT-002).
+/// every `r_coll > 0` valid, and an IC within it is `collision` at `t_end_step = 0`.
 fn check_tiny(radius: fn(f64) -> CollisionRadius) {
     for r_coll in [1e-20, 2f64.powi(-64), 1e-30, 1e-100] {
         let threshold = radius(r_coll);
@@ -878,8 +880,8 @@ negative_control!(
 );
 
 /// At a large `r_coll` whose square is finite in f32 (Part 7's "regularise aggressively" end), every pair of an
-/// ordinary IC is inside, so the t = 0 pass is `collision` with `detail = 3`, at both precisions (REQ-EVT-002,
-/// REQ-EVT-003); the threshold is finite.
+/// ordinary IC is inside, so the t = 0 pass is `collision` with `detail = 3`, at both precisions; the
+/// threshold is finite.
 fn check_huge(radius: fn(f64) -> CollisionRadius) {
     for r_coll in [10.0, 1e10, 1e18, 1.8e19] {
         let threshold = radius(r_coll);

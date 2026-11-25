@@ -1,45 +1,44 @@
 //! Heggie's global regularisation, the regularisation occupant of integrator_contract Part 2b § "Heggie: the equations,
 //! the time transformations, the maps and the step control (transcribed)" (D. C. Heggie, Celest. Mech. 10 (1974)
-//! 217–241; R-160, R-161). Planar, `G = 1`.
+//! 217–241). Planar, `G = 1`.
 //!
 //! **Three relative vectors, no reference body, registered once.** `qᵢ = rⱼ − rₖ`, `(j, k)` the cyclic successors of
 //! `i`, each Levi-Civita regularised (`Qᵢ`, the conditioned inverse of [`super::az::lc_inverse`]) with its momentum
 //! `Pᵢ = 2L(Qᵢ)ᵀpᵢ` ([`register`]); the state `(Q₀, P₀, Q₁, P₁, Q₂, P₂, t)` is marched in fictitious time `τ` under
 //! `Γ*` with the energy `h` frozen at registration ([`HgSystem`], its [`Flow`]), and its Cartesian image is
-//! [`HgSystem::image`]. [`march`] registers once, at `t = 0`, and carries the state across every boundary of R-565's
-//! grid, never re-registering (TASK-M3-77). **Through the occupant seam** ([`Heggie`], its [`Regularisation`] impl)
+//! [`HgSystem::image`]. [`march`] registers once, at `t = 0`, and carries the state across every boundary of the
+//! sync grid, never re-registering. **Through the occupant seam** ([`Heggie`], its [`Regularisation`] impl)
 //! the march is the same one, cut into `ADVANCE` calls: the regularised state, `h`, the interval clock and the running
 //! step total cross from call to call in the trajectory's carried buffer ([`Carried`]; [`carried_state`]), so a call
 //! registers only where the buffer holds no registration, at `t = 0` in a run from its IC, and marches on from the
 //! state the last call left ([`march_on`]). A registration at a later boundary is a re-registration and is counted.
 //!
-//! **The time transformations** ([`HeggieTime`]; R-161): Eq. 20, `dτ = dt/(R₀R₁R₂)`, and Eq. 22 at n = 3/2, the
+//! **The time transformations** ([`HeggieTime`]): Eq. 20, `dτ = dt/(R₀R₁R₂)`, and Eq. 22 at n = 3/2, the
 //! default ([`DEFAULT_TIME`]), `dτ = S^{3/2}/(R₀R₁R₂) dt`, whose momentum rates gain `3Γ*Qᵢ/S`, `S` floored at `TINY`.
 //!
 //! **The step control** ([`march`]), Part 2b's: the interval `dt_left = Δ_sync` with the interval clock reset at its
 //! start; an entry `dt/dτ` that is not positive or not finite ends the march not finite; each step's size
 //! `min(η·dt_left/d, dτ_entry)`, `d` the floored `dt/dτ`, cut by the predictive limit `f·d_min/(v_max·dt/dτ)` on the
 //! relative velocities of Heggie's Eq. 7, then by the landing clamp; one step of the stepper; the landing; the explicit
-//! finiteness exit and R-604's budget ([`super::az::over_allowance`]). The floor signal (`dt/dτ < TINY`, `S < TINY`
+//! finiteness exit and the step budget ([`super::az::over_allowance`]). The floor signal (`dt/dτ < TINY`, `S < TINY`
 //! under Eq. 22, or any `Rᵢ < TINY`) and the entry-cap hit (`η·dt_left/d > dτ_entry`) are counted, non-terminal
-//! signals (Part 6, R-563). Each step's physical increment is fed to `dt_max` ([`super::dt_max`]).
+//! signals (Part 6). Each step's physical increment is fed to `dt_max` ([`super::dt_max`]).
 //!
-//! **The landing** (Part 2b, Heggie's step 8; R-998's rule as R-1007 applies it): no landing tolerance. A step that
+//! **The landing** (Part 2b, Heggie's step 8): no landing tolerance. A step that
 //! ends the clock past the boundary is retaken from its saved state, by a secant (at most `secant_tries` retakes) and
 //! then a bisection (at most `bisect_tries` halvings), each retake a counted step, so that the step kept ends the clock
 //! on the boundary or short of it, never past; one kept short is closed by the march's next clamped step. The interval
 //! lands when a kept step ends the clock at or past the boundary, so the stored state's own clock is the boundary's.
 //!
-//! **The regularised energy** ([`HgSystem::energy`]; integrator_contract Part 1, R-566, REQ-INT-104): Heggie's Eq. 6
+//! **The regularised energy** ([`HgSystem::energy`]; integrator_contract Part 1): Heggie's Eq. 6
 //! on the relative positions and momenta the regularised state gives, read from `(Q, P)`, never through the Cartesian
-//! return. **The time-reversal map** ([`reversed`]; Part 2b, REQ-INT-095): `(Q, P, t) → (Q, −P, −t)`, `h` held.
+//! return. **The time-reversal map** ([`reversed`]; Part 2b): `(Q, P, t) → (Q, −P, −t)`, `h` held.
 //!
 //! **The stepper slot under Heggie** is [`HgStepper`]: every stepper fills it through its form on the regularised
-//! system ([`super::form`]), the pair's profile its form's (Part 2b, R-561).
+//! system ([`super::form`]), the pair's profile its form's (Part 2b).
 //!
 //! No precision-dependent constant is in a branch here (Part 2c rule 1): `TINY` is the one excepted floor, and the
-//! landing's only other constants are its two integer caps. The step control's values are calibrations (R-71:
-//! REQ-INT-080, REQ-INT-105, REQ-INT-108, REQ-INT-103), read from [`HgParams`], never from a literal here.
+//! landing's only other constants are its two integer caps. The step control's values are calibrations, read from [`HgParams`], never from a literal here.
 
 use super::az::{
     add, dot, finite, floored, lc, lc_inverse, least, lmul, ltmul, norm, over_allowance, scale,
@@ -58,7 +57,7 @@ use crate::driver::carried::Carried;
 use crate::driver::failure;
 use crate::occupant::{CapabilityProfile, Geom, State, Stepper};
 
-/// Heggie's default time transformation: Eq. 22 at n = 3/2 (R-161).
+/// Heggie's default time transformation: Eq. 22 at n = 3/2.
 pub const DEFAULT_TIME: HeggieTime = HeggieTime::Eq22;
 
 /// The regularised positions and the interval clock: `(Q₀, Q₁, Q₂, t)`.
@@ -416,7 +415,7 @@ impl<R: AzReal> HgSystem<R> {
         )
     }
 
-    /// The regularised energy of `(q, p)` (integrator_contract Part 1, R-566; REQ-INT-104): Eq. 6 on [`HgSystem::phys`],
+    /// The regularised energy of `(q, p)` (integrator_contract Part 1): Eq. 6 on [`HgSystem::phys`],
     /// read from the regularised coordinates and momenta (`system.rs:188-192`).
     #[inline]
     pub fn energy(&self, q: &HgQ<R>, p: &HgP<R>) -> R {
@@ -559,7 +558,7 @@ pub fn register<R: AzReal>(s: &State<R>, tiny: R, time: HeggieTime) -> HgRegiste
     }
 }
 
-/// The time-reversal map (Part 2b § "The time-reversal maps (REQ-INT-095)"): `(Q, P, t) → (Q, −P, −t)`, an involution.
+/// The time-reversal map (Part 2b § "The time-reversal maps"): `(Q, P, t) → (Q, −P, −t)`, an involution.
 #[inline]
 pub fn reversed<R: AzReal>(q: &HgQ<R>, p: &HgP<R>) -> (HgQ<R>, HgP<R>) {
     let neg = |v: V<R>| scale(-R::one(), v);
@@ -644,7 +643,7 @@ impl<R: AzReal> Flow<R> for HgSystem<R> {
 // ── The stepper slot ───────────────────────────────────────────────────────────────────────────────────────────
 
 /// The stepper slot under Heggie: a step `h` in fictitious time on the regularised system, and the pair's profile.
-/// Every [`Stepper`] fills it through its form ([`super::form::Form`]; Part 2b, R-561).
+/// Every [`Stepper`] fills it through its form ([`super::form::Form`]; Part 2b).
 pub trait HgStepper {
     /// The profile of the pair this stepper forms with Heggie.
     fn pair_profile() -> CapabilityProfile;
@@ -686,17 +685,17 @@ pub fn profile<S: HgStepper>() -> CapabilityProfile {
 /// The values Heggie's step control reads (integrator_contract Part 2b, Part 3), each supplied by the caller.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct HgParams<R> {
-    /// The step factor `η` (REQ-INT-080, a calibration).
+    /// The step factor `η` (a calibration).
     pub eta: R,
-    /// The sync quantum `Δ_sync`, the interval `dt_left` (R-565; REQ-INT-080, a calibration).
+    /// The sync quantum `Δ_sync`, the interval `dt_left` (a calibration).
     pub delta_sync: R,
-    /// The floor `TINY` (Part 3, Part 6; REQ-INT-105, a calibration).
+    /// The floor `TINY` (Part 3, Part 6; a calibration).
     pub tiny: R,
-    /// The predictive limit's `f` (R-160: 0.02); the limit is off where it is not positive.
+    /// The predictive limit's `f` (callers use 0.02); the limit is off where it is not positive.
     pub predictive_f: R,
-    /// The step budget's rate, steps per unit physical time per copy (R-564; REQ-INT-103, a calibration).
+    /// The step budget's rate, steps per unit physical time per copy (a calibration).
     pub step_budget_rate: R,
-    /// The step budget's floor `N_min` (R-604; REQ-INT-108, a calibration).
+    /// The step budget's floor `N_min` (a calibration).
     pub n_min: u32,
     /// Whether the landing clamp is on (Part 2b, Heggie's step 5; the default). Off it sizes no step to the boundary,
     /// but does not turn the landing off: a step that ends the clock past the boundary still takes the retakes (only
@@ -706,17 +705,17 @@ pub struct HgParams<R> {
     pub secant_tries: u32,
     /// The landing bisection's most halvings (Part 2b, Heggie's step 8: 64). With this `0`, whatever `secant_tries` is,
     /// a step past the boundary is kept (the secant's last retake, where it takes any), the boundary's time set over a
-    /// state whose own clock is past it: a setting only for measuring what R-998 forbids (the clock-only control),
-    /// never the occupant's.
+    /// state whose own clock is past it: a setting only for measuring the clock-only landing (the control), which the
+    /// landing's rule forbids, never the occupant's.
     pub bisect_tries: u32,
-    /// The time transformation ([`DEFAULT_TIME`], R-161).
+    /// The time transformation ([`DEFAULT_TIME`]).
     pub time: HeggieTime,
 }
 
 /// One trajectory's counts across its march.
 #[derive(Clone, Copy, Debug)]
 pub struct HgCount<R> {
-    /// The running total of steps since `t = 0`, every stepper call and landing retake counted (R-604's).
+    /// The running total of steps since `t = 0`, every stepper call and landing retake counted, the step budget's count.
     pub steps: u32,
     /// The steps the cadence followed: those the march kept.
     pub accepted: u32,
@@ -731,7 +730,7 @@ pub struct HgCount<R> {
     /// The steps that carried the interval clock past `2·dt_left` with the clamp on.
     pub overshoots: u32,
     /// The intervals whose landing kept a step short of the boundary, so that the march closed them with a further
-    /// clamped step (Part 2b, Heggie's step 8; R-998).
+    /// clamped step (Part 2b, Heggie's step 8).
     pub closings: u32,
     /// The most halvings one landing took (Part 2b, Heggie's step 8).
     pub most_bisections: u32,
@@ -794,7 +793,7 @@ pub struct HgAdvanced<R> {
 }
 
 impl<R: AzReal> HgAdvanced<R> {
-    /// The regularised energy where the march ended (integrator_contract Part 1, R-566).
+    /// The regularised energy where the march ended (integrator_contract Part 1).
     #[inline]
     pub fn regularised(&self) -> R {
         self.system.energy(&self.q, &self.p)
@@ -913,7 +912,7 @@ pub fn step_size_in<R: AzReal>(
     }
 }
 
-/// One landing's retakes (Part 2b, Heggie's step 8; R-998, R-1007), from the saved state `(q, p)` whose step `h` gave
+/// One landing's retakes (Part 2b, Heggie's step 8), from the saved state `(q, p)` whose step `h` gave
 /// `(q1, p1)` past the boundary `dt_left`: the secant on `t(h)`, at most `secant_tries` retakes, stopping where a retake
 /// ends the clock on the boundary, its increment is not finite or not positive, or the tries are spent; then, where the
 /// last retake is still past, its clock finite, a bisection on `h` between `0` (the saved state) and that retake's
@@ -1020,7 +1019,7 @@ fn state_bits<R: AzReal>(q: &HgQ<R>, p: &HgP<R>) -> (bool, bool) {
 }
 /// Marches one sync interval from `(q, p)`, its clock at `0`, at boundary `k` (Part 2b, Heggie's steps 2 to 9), the
 /// cadence after every kept step on its Cartesian image, the counts in `count`. The interval lands when a kept step
-/// ends the clock at or past the boundary, with no tolerance (R-998, R-1007); with the landing's retakes on, a kept step
+/// ends the clock at or past the boundary, with no tolerance; with the landing's retakes on, a kept step
 /// never ends past it, so the state's own clock is the boundary's.
 #[inline]
 fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
@@ -1038,8 +1037,7 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
     if !(finite(entry_rate) && entry_rate > R::default()) {
         count.non_finite_entries += 1;
         count.end = End::NonFinite;
-        // A non-finite entry size is a non-finite step size: 2, whatever the registered state (the contract's dated
-        // line of 13 Nov 2026 names "an entry size that is not finite").
+        // A non-finite entry size is a non-finite step size: 2, whatever the registered state.
         cadence.non_finite(failure::DETAIL_DERIVED);
         return Interval {
             q,
@@ -1076,10 +1074,10 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
             kept_p = p;
             landed = q.t >= dt_left;
             // `done` is read before the landing: a terminal that fires on the landing step ends the march there, its
-            // state latched (Part 2a § "The sync grid is a fixed quantum of physical time (R-565)"); the landing itself
+            // state latched (Part 2a § "The sync grid is a fixed quantum of physical time"); the landing itself
             // still counts ([`Interval::landed`]).
             // A terminal is read before the budget: one found on a step the budget allowed is the copy's outcome, and a
-            // copy never stores a terminal beside `budget_exhausted` (payload §2; R-603).
+            // copy never stores a terminal beside `budget_exhausted` (payload §2).
             if cadence.done() {
                 count.end = End::Done;
                 go = false;
@@ -1093,7 +1091,7 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
             count.end = End::NonFinite;
             go = false;
             // The cause by what failed: the step size that produced the rejected state, else that state itself
-            // (payload §2; the contract's dated line of 13 Nov 2026).
+            // (payload §2).
             let (_, nan) = state_bits(&q, &p);
             cadence.non_finite(failure::regularised(size_finite, nan));
         }
@@ -1158,7 +1156,7 @@ pub struct HgStanding<R> {
     pub count: HgCount<R>,
 }
 
-/// Heggie's march over the sync grid (R-565), registered once (Part 2b, step 1): the Cartesian `state` at `t = 0`,
+/// Heggie's march over the sync grid, registered once (Part 2b, step 1): the Cartesian `state` at `t = 0`,
 /// in the centre-of-mass frame, registered under `params.time` and marched to boundary `k_target` with the stepper `S`
 /// and the watch `watch`, each boundary a sampling cadence that does not touch the regularised state or `h`. On a
 /// landing the time is the boundary's, `k·Δ_sync`, exactly.
@@ -1271,7 +1269,7 @@ pub fn carry<R: AzReal>(carried: &mut Carried<R>, q: &HgQ<R>, p: &HgP<R>, h: R, 
     carried.registered = 1;
 }
 
-/// Heggie's seam `ADVANCE` (Part 2a; R-565): `t_now` and `t_target` on the macro-step grid, physical time
+/// Heggie's seam `ADVANCE` (Part 2a): `t_now` and `t_target` on the macro-step grid, physical time
 /// `index·dt_macro`, mapped to the sync grid, the latest boundary at or before each ([`boundary_of_step`]).
 ///
 /// Where `carried` holds no registration, `state` is registered into it; that is the march's one registration when it
@@ -1284,7 +1282,7 @@ pub fn carry<R: AzReal>(carried: &mut Carried<R>, q: &HgQ<R>, p: &HgP<R>, h: R, 
 /// so that a re-boot reproduces the live march); chose to carry it and to leave the march as it is, because a call ends
 /// on a sync boundary, where the clock is `Δ_sync` exactly, and the next interval restarts it at 0, so no interval
 /// reads the clock it is handed and making one read it would change the direct march. The running step total is
-/// carried for the same equality: the budget reads the total since `t = 0` (R-604), so a call that started its own
+/// carried for the same equality: the budget reads the total since `t = 0`, so a call that started its own
 /// would run on where the direct march has spent its budget.
 ///
 /// **Only a call that ended on a boundary can be marched on.** A march that ended between boundaries (not finite, its

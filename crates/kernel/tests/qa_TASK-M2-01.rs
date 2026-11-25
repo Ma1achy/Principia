@@ -1,27 +1,27 @@
-//! QA tests for TASK-M2-01 on the kernel side (`kernel::generated::links`, `kernel::generated::constants`), written from
+//! QA tests on the kernel side (`kernel::generated::links`, `kernel::generated::constants`), written from
 //! the requirements, not from the implementation:
-//! - REQ-CHART-034 (dd_generation_root §5 test 8; chart_decoder_contract § "Three hard requirements on any registered
-//!   link"; R-368): per link, (a) constraint preservation for all inputs including saturation, (b) the inverse
+//! - The link requirements (dd_generation_root §5 test 8; chart_decoder_contract § "Three hard requirements on any
+//!   registered link"): per link, (a) constraint preservation for all inputs including saturation, (b) the inverse
 //!   round trip within the ε clamp's tolerance in physical units, (c) the analytic log-det against an independent
 //!   Jacobian, the log of the volume factor (`log |f'|`, or `log √det(JᵀJ)` for the 3×2 simplex Jacobian), and
 //!   (d) C¹.
 //! - Each generated link's forward is the formula §3.9 and dd_decoder §3 give for it, evaluated here from the docs.
-//! - REQ-GEN-013 / REQ-GEN-015: the baked defaults are mass = softmax ∘ μ_max·tanh, α = sigmoid, β = the periodic
+//! - Selection: the baked defaults are mass = softmax ∘ μ_max·tanh, α = sigmoid, β = the periodic
 //!   link (`β = z_β + π/2`, an angle over the full circle; *was:* "config = sigmoid"), free momentum = sigmoid, and
 //!   the selection is a type, so another selection is another variant. The three bounded `β` links are retired:
 //!   still links, held to (a) to (d) here as conversion sources, onto `retired_beta`, which no selection can name.
-//! - REQ-DEC-009: the generated chart constants are μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶,
+//! - The chart constants: the generated chart constants are μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶,
 //!   δ_λ = 10⁻¹², ε_w = 10⁻¹⁰ at f32 and f64, and no decode/encode source, nor the generated link bodies, writes one
 //!   as a literal.
 //!
 //! The Jacobian of (c) and the derivative of (d) are computed by forward-mode automatic differentiation: the
 //! generated links are generic over `LinkReal`, so they are instantiated here at a dual number, which carries the
 //! exact derivative of the generated forward alongside its value. That Jacobian is the "numeric Jacobian" of test
-//! 8 (c) without a finite-difference step. Its tolerance is REQ-GEN-025's (the proposed value, pending the M2 gate).
+//! 8 (c) without a finite-difference step. Its tolerance is `C_TOL` (the proposed value, pending the M2 gate).
 //! (d) is a convergence test, not a tolerance: a jump in `f'` at a point leaves `|f'(x+h) − f'(x−h)|` unchanged as
 //! `h` shrinks tenfold, a C¹ link shrinks it tenfold, and the check requires it to at least halve.
 //!
-//! Every check runs over a link behind function pointers, so each negative control (R-176) runs the same check on a
+//! Every check runs over a link behind function pointers, so each negative control runs the same check on a
 //! deliberately broken link.
 
 use std::cmp::Ordering;
@@ -43,7 +43,7 @@ use proptest::prelude::*;
 use spirv_std::num_traits::{Float, Num, One, ToPrimitive, Zero};
 use validation::{negative_control, prop};
 
-// ── The chart constants, from the requirement (REQ-DEC-009) ─────────────────────────────────────────────────────
+// ── The chart constants, from the requirement ───────────────────────────────────────────────────────────────────
 
 const MU_MAX: f64 = 5.0;
 const Q_MAX: f64 = 2.0;
@@ -509,7 +509,7 @@ fn softmax_tanh_doc(z: &[f64]) -> Vec<f64> {
     vec![1.0 / t, e1 / t, e2 / t]
 }
 
-/// Stick-breaking (§3.9's R-72 definition): s, u = ½(1 + (1 − ε_μ) tanh zₖ), m = (1 − s, s(1 − u), su).
+/// Stick-breaking (§3.9's definition): s, u = ½(1 + (1 − ε_μ) tanh zₖ), m = (1 − s, s(1 − u), su).
 fn stick_doc(z: &[f64]) -> Vec<f64> {
     let s = 0.5 * (1.0 + (1.0 - EPS) * z[0].tanh());
     let u = 0.5 * (1.0 + (1.0 - EPS) * z[1].tanh());
@@ -543,10 +543,10 @@ fn reach_softsign() -> f64 {
 /// value lies in it, to within the normal range's ends.
 const REACH_LINE: f64 = 700.0;
 
-/// The docs' fifteen entries: §3.9's six rows, registered once per block codomain, the two R-72 definitions, and the
-/// periodic `β` link. The three bounded `β` rows map onto `retired_beta` (*was:* "beta"): conversion sources, onto
-/// the interval they always had. `periodic_beta` maps onto `beta`, a periodic angle with no bound, so its kind here is
-/// the line's: every finite control gives a finite angle, with no clamp.
+/// The docs' fifteen entries: §3.9's six rows, registered once per block codomain, the two mass-link definitions
+/// (softmax_tanh and stick-breaking), and the periodic `β` link. The three bounded `β` rows map onto `retired_beta`:
+/// conversion sources, onto the interval they always had. `periodic_beta` maps onto `beta`, a periodic angle with no
+/// bound, so its kind here is the line's: every finite control gives a finite angle, with no clamp.
 fn specs() -> Vec<Spec> {
     let alpha = Kind::Interval(ALPHA_MIN, HALF_PI - ALPHA_MIN);
     let beta = Kind::Interval(0.0, PI);
@@ -896,7 +896,7 @@ negative_control!(
 /// `y = f(x)` satisfies `u`'s constraint at a float of epsilon `eps` and largest finite value `max`: on the simplex,
 /// finite, strictly positive, summing to 1 within the sum's round-off (each of three quotients within 3 ulps, and
 /// two additions: 16 ulps); on an interval, within the closed bounds at their exact values, at f32 as at f64, not
-/// their f32-rounded images (R-417: the f32 images of π/2 and π are rounded toward zero, so a saturated control may
+/// their f32-rounded images (the f32 images of π/2 and π are generated rounded toward zero, so a saturated control may
 /// reach a bound but never pass it); on the half-line, finite and not negative; on the line, finite.
 fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64) {
     let s = spec(u.name);
@@ -1003,7 +1003,8 @@ negative_control!(
 );
 
 /// σ onto α with the round-to-nearest f32 image of π/2 as its width, `fl(π/2)·σ(x)`: `fl(π/2)` (bits `0x3FC9_0FDB`)
-/// lies above π/2, so a saturated f32 control passes the exact bound (R-417).
+/// lies above π/2, so a saturated f32 control passes the exact bound, which the generated round-toward-zero image
+/// never does.
 #[cfg(feature = "controls")]
 struct NearestHalfPiAlpha;
 
@@ -1254,12 +1255,12 @@ negative_control!(
 
 // ── (c) The analytic log-det against the Jacobian ───────────────────────────────────────────────────────────────
 
-/// REQ-GEN-025: the tolerance of test 8 (c), the proposed value, unconfirmed until the M2 gate (R-71). The Jacobian
+/// The tolerance of test 8 (c), the proposed value, unconfirmed until the M2 gate. The Jacobian
 /// here is exact to round-off, so the discrepancy measured against it is the log-det's own.
 const C_TOL: f64 = 1e-5;
 
 /// The log of the forward's volume factor at `x`, from the dual Jacobian: `log |f'|` for one control, and for the
-/// simplex's 3×2 `J`, `log √det(JᵀJ)`, the area element, which is `log ‖J₁ × J₂‖` (R-368).
+/// simplex's 3×2 `J`, `log √det(JᵀJ)`, the area element, which is `log ‖J₁ × J₂‖`.
 fn log_volume(u: &Under, x: &[f64]) -> f64 {
     let seeded: Vec<D> = x
         .iter()
@@ -1339,7 +1340,8 @@ fn qa_link_properties_c_log_det() {
     }
 }
 
-/// softmax_tanh with `log det(JᵀJ)` for its log-det: the volume factor's square, which R-368 rules out.
+/// softmax_tanh with `log det(JᵀJ)` for its log-det: the volume factor's square, where the log-det must
+/// be the log of the volume factor itself, `log √det(JᵀJ)`.
 #[cfg(feature = "controls")]
 struct NoRootSimplex;
 
@@ -1401,7 +1403,7 @@ fn stick_half(z: f64) -> (f64, f64) {
 /// before the exact value does: σ's `log((b − a)·σ(x)·σ(−x))`, tanh's `log(c·sech² x)`, softsign's
 /// `log(2c) − 2 log(2 + |x|)`, softplus's `log σ(x)`, exp's `x`, identity's 0, softmax_tanh's
 /// `½ log 3 + Σᵢ log mᵢ + 2 log μ_max + log sech² z₁ + log sech² z₂` and stick-breaking's
-/// `log(√3/4·(1 − ε_μ)²·s·sech² z₁·sech² z₂)` (R-368).
+/// `log(√3/4·(1 − ε_μ)²·s·sech² z₁·sech² z₂)`: each the log of the volume factor.
 fn log_det_doc(name: &str, x: &[f64]) -> f64 {
     let s = spec(name);
     let width = match s.kind {
@@ -1626,7 +1628,7 @@ negative_control!(
     check_d(&one::<KinkedBeta>())
 );
 
-// ── Selection (REQ-GEN-013, REQ-GEN-015) ────────────────────────────────────────────────────────────────────────
+// ── Selection ───────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// A selection's link ids are dd_decoder §3's defaults: mass = softmax ∘ μ_max·tanh, α = sigmoid, β = the periodic
 /// link (*was:* "config = sigmoid"), free momentum = sigmoid.
@@ -1711,9 +1713,9 @@ negative_control!(
     )
 );
 
-// ── The chart constants (REQ-DEC-009) ───────────────────────────────────────────────────────────────────────────
+// ── The chart constants ─────────────────────────────────────────────────────────────────────────────────────────
 
-/// The generated constants, in the order μ_max, q_max, α_min, ε_μ, ε_z, ε_q, δ_λ, ε_w, against REQ-DEC-009's.
+/// The generated constants, in the order μ_max, q_max, α_min, ε_μ, ε_z, ε_q, δ_λ, ε_w, against the requirement's.
 fn check_constants(got: [f64; 8], at: fn(f64) -> f64) {
     let want = [MU_MAX, Q_MAX, ALPHA_MIN, EPS, EPS, EPS, DELTA_LAMBDA, EPS_W];
     for (g, w) in got.iter().zip(want) {

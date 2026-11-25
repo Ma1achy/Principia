@@ -1,12 +1,11 @@
-//! Navigation stops at the edge (R-469 P2, A1 to A3; REQ-CHART-060) and never leaves the manifold under fuzzed edits
-//! (R-477 C6; REQ-CHART-061): [`kernel::chart::nav::nav_stop`], the one generic stop over the `Chart` trait and
-//! `validate`, on the gallery's charts.
+//! Navigation stops at the edge and never leaves the manifold under fuzzed edits: [`kernel::chart::nav::nav_stop`],
+//! the one generic stop over the `Chart` trait and `validate`, on the gallery's charts.
 //!
-//! **`nav_stop_at_edge_*`** (REQ-CHART-060): a pan on the invariant `(L_z, E)` chart under the linear option, from a
+//! **`nav_stop_at_edge_*`**: a pan on the invariant `(L_z, E)` chart under the linear option, from a
 //! feasible centre toward `|L_z| > √(2I(E − U))`, stops at a centre that validates while the next f64 along the path
 //! fails, the report naming layer 2 and the constraint; the mass simplex's centre moved toward a zero mass, and its one
-//! physical slice, `ν₀`, toward a zero side, stop with every mass `> 0`; a held `K` sliced below 0 stops at `K₀ ≥ 0`
-//! (R-720's reading); a tilt and a zoom with no centre edit pass unchanged; a lock on a forbidden pixel is refused; a
+//! physical slice, `ν₀`, toward a zero side, stop with every mass `> 0`; a held `K` sliced below 0 stops at `K₀ ≥ 0`;
+//! a tilt and a zoom with no centre edit pass unchanged; a lock on a forbidden pixel is refused; a
 //! parameter edit whose boundary lies at `λ ≈ 10⁻⁶` stops at adjacent f64s within 62 steps; on the latent chart nothing
 //! stops; a pan on the shape sphere's exponential map far enough that its point `n` overflows stops on `Φ`, the
 //! decoded configuration finite at the stop and not past it, and one large but short of the overflow is taken whole;
@@ -22,18 +21,19 @@
 //! chart's `map` alone, a wrapper that drops the wrapped chart's `Φ` check, and a rest start whose `Φ` check is the
 //! wrapped chart's alone, and a path that forms the difference of its ends first.
 //!
-//! **`nav_fuzz_never_leaves*`** (REQ-CHART-061): on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
+//! **`nav_fuzz_never_leaves*`**: on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
 //! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts and
-//! `Φ_θ,L_z` (its `L_z` an energy-type axis, R-471 H1; its held `K`, R-708), warped, every pixel of a 65 × 65 grid over
+//! `Φ_θ,L_z` (its `L_z` an energy-type axis; its held `K`), warped, every pixel of a 65 × 65 grid over
 //! `[0,1]²` whose own `(a, b)` lie in the square validates at every tilt reached, under every tilt configuration, and
-//! each run validates at least one such pixel past its start (R-512: E3 and C6 read over the chart's square; R-708's
-//! "every pixel" likewise). Where the view's centre lies in the square, every grid pixel's `(a, b)` does too under Lean
-//! each axis, with two targets or with one angle set, each angle within ±90° (R-471 H9, R-512 F2), and that is
-//! asserted; a centre outside the square, which the stop admits where it is a system (a held `K₀ = 0`, R-720, R-709),
-//! takes the pixels between it and the window out of the square, past the edge, and C6 does not read them (R-512).
-//! Past 90°, Tip as sheet's range, a turned window's pixel can leave the square, and the in-square arm holds. Under the
-//! linear option infeasible pixels appear and each is classified not a system. Controls: the stop disabled, H9's claim
-//! asserted without the centre in the square, and the linear arm run warped or read as a system.
+//! each run validates at least one such pixel past its start (the every-pixel claim is read over the chart's square).
+//! Where the view's centre lies in the square, every grid pixel's `(a, b)` does too under Lean
+//! each axis, with two targets or with one angle set, each angle within ±90°, and that is
+//! asserted; a centre outside the square, which the stop admits where it is a system (a held `K₀ = 0`),
+//! takes the pixels between it and the window out of the square, past the edge, and the every-pixel claim does not
+//! read them. Past 90°, Tip as sheet's range, a turned window's pixel can leave the square, and the in-square arm
+//! holds. Under the linear option infeasible pixels appear and each is classified not a system. Controls: the stop
+//! disabled, the in-square claim asserted without the centre in the square, and the linear arm run warped or read as
+//! a system.
 //!
 //! The draws are SplitMix64 from fixed seeds, each printed. `I = 1` throughout (the canonical-frame decode).
 
@@ -68,9 +68,9 @@ use validation::{
 const P: LinkParams<f64> = LinkParams::DEFAULT;
 /// A view's centre off `(½, ½)`.
 const C: [f64; 2] = [0.37, 0.61];
-/// The targets' slider spans: the Slice centre slider's range, `[−1, 1]` (R-507 U1).
+/// The targets' slider spans: the Slice centre slider's range, `[−1, 1]`.
 const SPAN: [f64; 2] = [2.0, 2.0];
-/// R-469 A3's bound on the bisection: the f64s of `[0, 1]` number fewer than 2⁶². They number `0x3FF0…0 + 1`, just
+/// The bound on the bisection's steps: the f64s of `[0, 1]` number fewer than 2⁶². They number `0x3FF0…0 + 1`, just
 /// under 2⁶², so halving their bit patterns' interval to adjacent ends takes 61 or 62 steps, by where the edge lies.
 const MAX_STEPS: u32 = 62;
 
@@ -98,7 +98,7 @@ fn verdict<C: Chart<Param = f64>>(view: Option<View<C>>) -> Option<Check> {
     }
 }
 
-/// REQ-CHART-060's stop of a path from `from` to `to`, checked against the chart alone: the value is on the path at
+/// The stop of a path from `from` to `to`, checked against the chart alone: the value is on the path at
 /// its `λ`; its centre validates; where it stopped, the next f64 above `λ` fails with the check reported, after 61 or
 /// 62 steps; where it did not, the value is the one asked for.
 fn check_stop<V, C>(what: &str, from: V, to: V, view: impl Fn(V) -> Option<View<C>>, stop: &Stop<V>)
@@ -187,7 +187,7 @@ fn invariant() -> Invariant<f64> {
 type LeMapped = Mapped<InvariantLE<f64>, Defaults>;
 type LkMapped = Mapped<InvariantLK<f64>, Defaults>;
 
-/// `(L_z, E)` under the linear option on both axes (R-471 E2, H4).
+/// `(L_z, E)` under the linear option on both axes.
 fn le_linear() -> LeMapped {
     Mapped::new(InvariantLE(invariant()), [Mapping::Linear; 2])
 }
@@ -220,7 +220,7 @@ fn at<C>(chart: C, c: [f64; 2]) -> Option<View<C>> {
     Some(View { chart, centre: c })
 }
 
-// ── REQ-CHART-060: the linear option's pan ───────────────────────────────────────────────────────────────────────
+// ── The stop: the linear option's pan ────────────────────────────────────────────────────────────────────────────
 
 /// The linear `(L_z, E)` chart's parabola at the row `t = ½`: `L_z = (2s − 1)·√(2·K_max)` against
 /// `L_max = √(2·K_max·t)`, so the edge is `s = ½ + ½·√t`.
@@ -297,7 +297,7 @@ mod short {
     );
 }
 
-// ── REQ-CHART-060: the mass simplex and the held K ───────────────────────────────────────────────────────────────
+// ── The stop: the mass simplex and the held K ────────────────────────────────────────────────────────────────────
 
 /// The decoded masses at a view's centre.
 fn masses<C: Chart<Param = f64>>(view: &View<C>) -> [f64; 3] {
@@ -314,7 +314,7 @@ fn keep<V>(stop: Stop<V>, to: V, kept: bool) -> Stop<V> {
     }
 }
 
-/// The mass simplex (R-633: its hidden coordinates `ν₀` and the momentum controls): its centre moved toward each zero
+/// The mass simplex (its hidden coordinates are `ν₀` and the momentum controls): its centre moved toward each zero
 /// mass, and `ν₀` sliced toward each zero side, `ν₀ ∉ (0, 1)`. Each stops with every decoded mass `> 0`, the report
 /// layer 2's. `kept` keeps the requested values (the control).
 fn check_simplex(kept: bool) {
@@ -363,7 +363,7 @@ negative_control!(
 );
 
 /// The held `K` of `Φ_θ,L_z` sliced toward `K < 0`, bare and held in either mode: the stop holds the centre at
-/// `K₀ ≥ 0` (R-720, applied per R-369: "REQ-CHART-060's stop holds the centre at `K₀ ≥ 0`"). `kept` keeps the requested
+/// `K₀ ≥ 0`. `kept` keeps the requested
 /// value (the control).
 fn check_held_k(kept: bool) {
     let bare = theta_lz();
@@ -408,7 +408,7 @@ negative_control!(
     check_held_k(true)
 );
 
-// ── REQ-CHART-060: tilt and zoom, the lock ────────────────────────────────────────────────────────────────────────
+// ── The stop: tilt and zoom, the lock ─────────────────────────────────────────────────────────────────────────────
 
 fn spec(tau1: f64, tau2: f64, map: TiltMap, x: u32, y: u32) -> TiltSpec {
     TiltSpec {
@@ -551,10 +551,11 @@ negative_control!(
     check_lock(true)
 );
 
-// ── REQ-CHART-060: a boundary at λ ≈ 10⁻⁶ ──────────────────────────────────────────────────────────────────────────
+// ── The stop: a boundary at λ ≈ 10⁻⁶ ───────────────────────────────────────────────────────────────────────────────
 
 /// A parameter edit, the mass simplex's `ν₀` from `10⁻⁶` to `10⁻⁶ − 1`, whose boundary `ν₀ = 0` lies at `λ ≈ 10⁻⁶`:
-/// it stops at adjacent f64s within 62 steps (R-469 A3 as corrected: halving `λ` itself never gets within 64 there).
+/// it stops at adjacent f64s within 62 steps (the bisection halves the bit patterns' interval: halving `λ` itself
+/// never gets within 64 steps there).
 /// `short` takes the stop one bisection step short (the control).
 fn check_tiny(short: bool) {
     let (from, to) = (1e-6, 1e-6 - 1.0);
@@ -589,9 +590,9 @@ negative_control!(
     check_tiny(true)
 );
 
-// ── REQ-CHART-060: the latent chart, and Φ ─────────────────────────────────────────────────────────────────────────
+// ── The stop: the latent chart, and Φ ──────────────────────────────────────────────────────────────────────────────
 
-/// On the latent chart (the decoder accepts any `z`; R-570) nothing stops: pans and slices of `z₀` to `|z| = 10⁴` and a
+/// On the latent chart (the decoder accepts any `z`) nothing stops: pans and slices of `z₀` to `|z| = 10⁴` and a
 /// lock far out are taken whole. `simplex` runs the same pans on the mass simplex, which stops (the control). And a
 /// centre whose `Φ` fails stops: a pan toward a non-finite `z₀`, and a view that cannot be built past a value.
 fn check_latent(on_simplex: bool) {
@@ -669,7 +670,7 @@ negative_control!(
     check_latent(true)
 );
 
-// ── REQ-CHART-060: one rule, and the report's layers ──────────────────────────────────────────────────────────────
+// ── The stop: one rule, and the report's layers ───────────────────────────────────────────────────────────────────
 
 /// A chart's own remedy in place of the generic stop, registered for one chart by name: `validate`'s projection or
 /// clamp of the requested centre, which a chart writing its own rule would take.
@@ -755,7 +756,7 @@ negative_control!(
     check_one_rule(&["MassSimplex"])
 );
 
-// ── REQ-CHART-060: Φ built outside `map` ──────────────────────────────────────────────────────────────────────────
+// ── The stop: Φ built outside `map` ───────────────────────────────────────────────────────────────────────────────
 
 /// The shape sphere with its centre check reading `map` alone, the held blocks, which carry no `(u, v)`: the stop
 /// without the chart's own `Chart::phi_finite` (the control).
@@ -830,7 +831,7 @@ fn check_overflow_pan<C: Chart<Param = f64>>(
     );
 }
 
-/// REQ-CHART-060's `Φ` at the centre on the exponential shape sphere at `π/4`, bare, and under a tilt off and on, its
+/// The `Φ` check at the centre on the exponential shape sphere at `π/4`, bare, and under a tilt off and on, its
 /// centre the view's; `map_only` checks the centre by `map` alone (the control).
 fn check_shape_overflow(map_only: bool) {
     let chart = shape(ShapeMap::Exponential, std::f64::consts::FRAC_PI_4);
@@ -961,7 +962,7 @@ fn check_inertia_edit<C: Chart<Param = f64>>(
     finite
 }
 
-/// REQ-CHART-060's `Φ` at the centre under a chart-parameter edit: the shape sphere's inertia edited from 1 to `10³⁰⁸`,
+/// The `Φ` check at the centre under a chart-parameter edit: the shape sphere's inertia edited from 1 to `10³⁰⁸`,
 /// which overflows `inverse`'s `inertia·(1 + |n₀|)` where `|n₀|` is near 1, to −1, which has no `√a`, and to 0, where the
 /// momenta's `I^{−1/4}` is infinite, on the spherical map at three centres and the exponential at `(½, ½)`, and to
 /// `10²⁰⁰`, finite, taken whole. `point_only` checks the centre by `map` and the point alone (the control).
@@ -1029,7 +1030,7 @@ impl Field for Naive {
     }
 }
 
-/// REQ-CHART-060's last valid value along a path whose finite ends lie more than `f64::MAX` apart: the shape sphere's
+/// The stop's last valid value along a path whose finite ends lie more than `f64::MAX` apart: the shape sphere's
 /// inertia edited from `10³⁰⁷`, a system, to `−f64::MAX`. Every inertia between `10³⁰⁷` and 0 is on the path and half
 /// of `10³⁰⁷` is a system, so the stop moves, to the last positive inertia that builds finite, the next f64 of `λ`
 /// failing `Φ`. And the path itself: its ends bitwise at `λ = 0` and 1, its midpoint finite, a path whose difference
@@ -1234,7 +1235,7 @@ fn check_invariant_pan<C: Chart<Param = f64>>(
     assert_eq!(stop.stopped, None, "{name}: the pan to v = 1e200 stops");
 }
 
-/// REQ-CHART-060's `Φ` at the centre on the invariant charts past the overflow edge: `(L_z, E)`, `(L_z, K)` and the
+/// The `Φ` check at the centre on the invariant charts past the overflow edge: `(L_z, E)`, `(L_z, K)` and the
 /// warped `Mapped` `(L_z, E)`, bare and under a tilt off; `frozen_only` checks `(L_z, E)`'s centre by `map` alone (the
 /// control).
 fn check_invariant_overflow(frozen_only: bool) {
@@ -1339,7 +1340,7 @@ fn check_linear_overflow_pan<C: Chart<Param = f64>>(
     );
 }
 
-/// REQ-CHART-060's `Φ` at the centre on the mapped invariant charts under the linear option past the overflow edge:
+/// The `Φ` check at the centre on the mapped invariant charts under the linear option past the overflow edge:
 /// `(L_z, E)` and `(L_z, K)` linear on both axes, and `(L_z, E)` warped in `L_z`, linear in `E`; `map_only` checks
 /// each centre by `map` alone (the control).
 fn check_linear_overflow(map_only: bool) {
@@ -1372,7 +1373,7 @@ negative_control!(
     check_linear_overflow(true)
 );
 
-// ── REQ-CHART-060: a wrapped chart's own `Φ` check ───────────────────────────────────────────────────────────────
+// ── The stop: a wrapped chart's own `Φ` check ────────────────────────────────────────────────────────────────────
 
 /// Where [`Gate`]'s `Φ` check fails: past `u = 0.4`.
 const GATE: f64 = 0.4;
@@ -1493,7 +1494,7 @@ fn check_wrapped_pan<W: Chart<Param = f64> + Copy>(name: &str, wrapper: W, drop:
     );
 }
 
-/// REQ-CHART-060's `Φ` at the centre through the wrapping charts: `RestStart` over a gated mass simplex and `HeldLz`,
+/// The `Φ` check at the centre through the wrapping charts: `RestStart` over a gated mass simplex and `HeldLz`,
 /// warped and linear, over a gated `(ν, K)` chart, each forwarding the chart's own `Chart::phi_finite`. `drop` reads
 /// it through a wrapper that does not (the control).
 fn check_wrapped_phi(drop: bool) {
@@ -1519,7 +1520,7 @@ negative_control!(
     check_wrapped_phi(true)
 );
 
-// ── REQ-CHART-060: a rest start's held momentum controls ─────────────────────────────────────────────────────────
+// ── The stop: a rest start's held momentum controls ──────────────────────────────────────────────────────────────
 
 /// A rest start whose `Φ` check is the wrapped chart's alone, its held momentum controls unread (the control).
 /// Everything else is the rest start's.
@@ -1617,7 +1618,7 @@ fn check_held_controls_on<C: RestChart<Param = f64>>(
     }
 }
 
-/// REQ-CHART-060's `Φ` at the centre on the rest starts' own hidden coordinates (R-469 A1; R-633): the mass simplex,
+/// The `Φ` check at the centre on the rest starts' own hidden coordinates: the mass simplex,
 /// the Euclid plane and the δm strip, each momentum control ([`check_held_controls_on`]). `unheld` reads the centre
 /// by the wrapped chart's `Φ` check alone (the control).
 fn check_held_controls(unheld: bool) {
@@ -1686,7 +1687,7 @@ negative_control!(
     check_layers(true)
 );
 
-// ── REQ-CHART-061: the fuzz ───────────────────────────────────────────────────────────────────────────────────────
+// ── The fuzz ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The seeded draws: SplitMix64 from a fixed seed, uniform on `[−1, 1]`.
 struct Draw(u64);
@@ -1709,9 +1710,9 @@ impl Draw {
 
 /// The fuzz's seed.
 const SEED: u64 = 0x5EED_0C06;
-/// The edits per gallery chart: R-477 C6's "≥ 1000".
+/// The edits per gallery chart: at least 1000.
 const EDITS: u32 = 1000;
-/// The grid side of C6's every-pixel arm: 65 × 65 over `[0,1]²`, `i/64` for `i ∈ 0..=64`.
+/// The grid side of the every-pixel arm: 65 × 65 over `[0,1]²`, `i/64` for `i ∈ 0..=64`.
 const GRID: u32 = 64;
 
 /// A navigation edit's kind.
@@ -1738,18 +1739,18 @@ const KINDS: [Kind; 10] = [
     Kind::Lock,
 ];
 
-/// What C6's grid checks at each tilt reached.
+/// What the every-pixel grid checks at each tilt reached.
 #[derive(Clone, Copy, PartialEq)]
 enum Grid {
     None,
-    /// Every pixel whose own `(a, b)` lie in the square validates, at every tilt and under every configuration (R-512:
-    /// C6's every-pixel arm is over the chart's square). Under Lean, two targets or one angle, each angle within ±90°,
+    /// Every pixel whose own `(a, b)` lie in the square validates, at every tilt and under every configuration (the
+    /// every-pixel arm is over the chart's square). Under Lean, two targets or one angle, each angle within ±90°,
     /// `(a, b)` lie between the pixel and the centre, so with the centre in the square every pixel's `(a, b)` lie in it
-    /// too (R-471 H9, R-512 F2), and that is asserted. With the centre outside the square (the stop admits one where it
+    /// too, and that is asserted. With the centre outside the square (the stop admits one where it
     /// is a system, as at a held `K₀ = 0`) those pixels can leave the square, past the edge, where § 5.4's affine
     /// continuation is not a system; they are not checked. Past 90° (Tip as sheet's range) a single turn, or each of
     /// two, takes the window over, and a pixel can leave the square even with the centre in it. `centred` false drops
-    /// the centre from H9's premise (a control).
+    /// the centre-in-the-square premise (a control).
     Warped {
         centred: bool,
     },
@@ -1930,8 +1931,8 @@ fn unit(x: f64) -> bool {
     (0.0..=1.0).contains(&x)
 }
 
-/// C6's grid at the current view: the warped arm's in-square pixels, and H9's every pixel in the square where its
-/// premise holds; or the linear arm's infeasible ones.
+/// The every-pixel grid at the current view: the warped arm's in-square pixels, and every pixel in the square where
+/// the centre-in-the-square premise holds; or the linear arm's infeasible ones.
 fn check_grid<C: Nav>(state: &Curved<C>, grid: Grid, t: &mut Tally, at_edit: u32) {
     let view = state.view().expect("the view").chart;
     let s = state.spec;
@@ -1986,7 +1987,7 @@ fn check_grid<C: Nav>(state: &Curved<C>, grid: Grid, t: &mut Tally, at_edit: u32
 }
 
 /// A seeded fuzz of `edits` navigation edits on a curved chart under the tilt `config`, each through the stop (or, with
-/// `off`, taken as asked): after each, the view's centre validates; after each tilt, C6's grid is checked.
+/// `off`, taken as asked): after each, the view's centre validates; after each tilt, the every-pixel grid is checked.
 fn fuzz_curved<C: Nav>(
     chart: C,
     config: (TiltMap, u32, u32),
@@ -2113,7 +2114,7 @@ fn fuzz_curved<C: Nav>(
 }
 
 /// A seeded fuzz on a latent frame (`Latent` with `(q₁, q₂)` from the frame and the tilt): pan and lock move `z₀` in
-/// the plane, a slice moves one hidden component, a zoom the frame's scale, a tilt the basis. Nothing stops (R-570),
+/// the plane, a slice moves one hidden component, a zoom the frame's scale, a tilt the basis. Nothing stops,
 /// and the centre validates after each edit.
 fn fuzz_latent(frame: LatentFrame, z0: [f64; 8], seed: u64, edits: u32) -> Tally {
     let hidden: Vec<u32> = (0..8).filter(|&k| frame.hidden(k)).collect();
@@ -2310,11 +2311,10 @@ macro_rules! mixed_pairs {
 /// The edits per mixed-axis pair, each pair a chart of its own.
 const MIXED_EDITS: u32 = EDITS;
 
-/// Every gallery chart (gallery_sweep's list, R-467 D11), warped, at f64: the latent chart and its flat slices, the
+/// Every gallery chart (gallery_sweep's list), warped, at f64: the latent chart and its flat slices, the
 /// shape sphere's three maps, the invariant charts, the Euclid plane, `(ν, K)`, `Φ_θ,K` (and `Φ_strip,K`, the same map),
-/// `Φ_θ,L_z`, `Φ_θ,δm` (and `Φ_strip,δm`), the mass simplex, and the mixed-axis pairs. C6's warped grid runs on the
-/// invariant charts, `(ν, K)`, `Φ_θ,K` and `Φ_θ,L_z`, the charts with an energy-type axis or a held `K` (R-471 H1,
-/// R-708).
+/// `Φ_θ,L_z`, `Φ_θ,δm` (and `Φ_strip,δm`), the mass simplex, and the mixed-axis pairs. The warped every-pixel grid
+/// runs on the invariant charts, `(ν, K)`, `Φ_θ,K` and `Φ_θ,L_z`, the charts with an energy-type axis or a held `K`.
 fn gallery(off: bool, centred: bool) -> Vec<Job> {
     let mut jobs: Vec<Job> = Vec::new();
     if !off {
@@ -2430,7 +2430,7 @@ fn gallery(off: bool, centred: bool) -> Vec<Job> {
     jobs
 }
 
-/// The linear option's run (R-471 E2): the invariant and Burrau `K` charts, and `Φ_θ,L_z`, the same edits.
+/// The linear option's run: the invariant and Burrau `K` charts, and `Φ_θ,L_z`, the same edits.
 fn linear_gallery(mapping: Mapping, grid: Grid) -> Vec<Job> {
     let mut jobs: Vec<Job> = Vec::new();
     let le = Mapped::<_, Defaults>::new(InvariantLE(register_invariant()), [mapping; 2]);
@@ -2455,7 +2455,7 @@ fn linear_gallery(mapping: Mapping, grid: Grid) -> Vec<Job> {
     jobs
 }
 
-/// The worker threads, at most (R-228's four).
+/// The worker threads, at most four.
 const WORKERS: usize = 4;
 
 /// Runs the jobs on up to [`WORKERS`] threads, the tallies in the jobs' order.
@@ -2505,8 +2505,9 @@ fn report(runs: &[(String, Tally)]) {
     );
 }
 
-/// The warped fuzz over every gallery chart; `off` disables the stop, and `centred` false drops the centre from H9's
-/// premise (the controls). Each run with the warped grid validates an in-square pixel past its start.
+/// The warped fuzz over every gallery chart; `off` disables the stop, and `centred` false drops the
+/// centre-in-the-square premise (the controls). Each run with the warped grid validates an in-square pixel past its
+/// start.
 fn check_fuzz(off: bool, centred: bool) {
     let runs = run(gallery(off, centred));
     report(&runs);
@@ -2542,7 +2543,7 @@ mod uncentred {
     );
 }
 
-/// The linear option's arm (R-471 E2, A7): the same run, the stop keeping the centre feasible, finds infeasible pixels
+/// The linear option's arm: the same run, the stop keeping the centre feasible, finds infeasible pixels
 /// inside `[0,1]²`, each classified not a system. `mapping` warped finds none (a control); `grid` read as a system
 /// misclassifies them (a control).
 fn check_linear(mapping: Mapping, grid: Grid) {
