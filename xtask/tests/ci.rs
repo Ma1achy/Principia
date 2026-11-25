@@ -286,29 +286,34 @@ validation::negative_control!(
     check_processes_are_the_registry(&PROCESSES[..PROCESSES.len() - 1])
 );
 
-/// Each step of bare `xtask ci`, by its runner's name, and how its call to cargo ends.
-const STEPS: [(&str, &str); 9] = [
-    ("build-kernel", "-p xtask -- build-kernel"),
-    ("controls", "negative_control"),
-    ("lint constants", "-p xtask -- lint constants"),
-    ("lint vocab", "-p xtask -- lint vocab"),
-    ("lint wgsl", "-p xtask -- lint wgsl"),
+/// Each step of bare `xtask ci`, by its runner's name: words its one call to cargo holds, and words it ends with.
+const STEPS: [(&str, &str, &str); 9] = [
+    ("build-kernel", "-p xtask --", "-- build-kernel"),
+    ("controls", "--features controls", "negative_control"),
+    ("lint constants", "-p xtask --", "lint constants"),
+    ("lint vocab", "-p xtask --", "lint vocab"),
+    ("lint wgsl", "-p xtask --", "lint wgsl"),
     (
         "lint compute-pipelines",
-        "-p xtask -- lint compute-pipelines",
+        "-p xtask --",
+        "lint compute-pipelines",
     ),
-    ("lint no-alloc", "-p xtask -- lint no-alloc"),
-    ("gate", "--all"),
-    ("golden", "-p xtask -- golden --all"),
+    ("lint no-alloc", "-p xtask --", "lint no-alloc"),
+    ("gate", "-p validation --bin gate --", "--all"),
+    ("golden", "-p xtask --", "golden --all"),
 ];
 
 /// `run`, from [`run_with_stand_in_cargo`], passed, and every step reached the stand-in cargo, so none did its work in
 /// xtask's own process: no golden harness was built, as a golden run in that process builds it.
 fn check_every_step_through_cargo((passed, calls): (bool, Vec<String>)) {
-    for (name, call) in STEPS {
+    for (name, holds, ends) in STEPS {
         assert!(
-            calls.iter().any(|c| c.ends_with(call)),
-            "xtask ci did not run {name} through its cargo: {calls:?}"
+            calls
+                .iter()
+                .filter(|c| c.contains(holds) && c.ends_with(ends))
+                .count()
+                == 1,
+            "xtask ci did not run {name} through its cargo once: {calls:?}"
         );
     }
     assert!(
@@ -326,6 +331,6 @@ fn ci_runs_every_step_through_its_cargo() {
 validation::negative_control!(
     ci_runs_every_step_through_its_cargo,
     "bare `xtask controls`, which runs one step of ci's, given to the check",
-    expected = "xtask ci did not run build-kernel through its cargo",
+    expected = "xtask ci did not run build-kernel through its cargo once",
     check_every_step_through_cargo(run_with_stand_in_cargo("ctl_steps", &["controls"]))
 );
