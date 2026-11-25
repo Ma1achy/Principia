@@ -82,7 +82,8 @@ pub fn header(what: &str) -> String {
 }
 
 /// `entry`'s body lifted out of `module` as WGSL under `prefix` (the module's note): `<prefix>_body(words_in)`, its words
-/// the struct `<prefix>_words` (array member `w`), its uniform, if any, `<prefix>_uniforms` at [`DECODE_UNIFORMS`].
+/// the struct `<prefix>_words` (array member `w`), its uniform, if any, `<prefix>_uniforms` at [`DECODE_UNIFORMS`], each
+/// function it calls `<prefix>_f<k>`.
 pub fn lift(module: &Module, entry: &str, prefix: &str) -> Result<String, String> {
     let mut m = module.clone();
     let at = m
@@ -141,6 +142,17 @@ pub fn lift(module: &Module, entry: &str, prefix: &str) -> Result<String, String
     }
     let (words, words_ty) =
         words.ok_or_else(|| format!("`{entry}` has no storage array, its words"))?;
+    // Every other function the body calls is named under the prefix too: ROUNDTRIP places two sections in one module,
+    // and naga's default names (`function_`, …) would collide there.
+    let helpers: Vec<_> = m
+        .functions
+        .iter()
+        .map(|(h, _)| h)
+        .filter(|&h| h != body)
+        .collect();
+    for (k, h) in helpers.into_iter().enumerate() {
+        m.functions.get_mut(h).name = Some(format!("{prefix}_f{k}"));
+    }
     let f = m.functions.get_mut(body);
     f.name = Some(format!("{prefix}_body"));
     localise(f, words, words_ty, &moved);

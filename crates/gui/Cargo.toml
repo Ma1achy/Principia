@@ -17,6 +17,9 @@ pollster = "1"
 png = "0.18"
 # `float_roundtrip`: the settings read a saved chart's vectors back bit for bit.
 serde_json = { version = "1", features = ["float_roundtrip"] }
+# The pinned pure-software libm the engine uses, for the steer's rotations and the stain canvas's zoom, so their bits
+# are the same on every platform; the view edits take the engine's correctly rounded `engine::exact`.
+libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
 
 [dev-dependencies]
 # wgpu 30's naga, to read the noise's IR in `lattice_source_is_integer` (REQ-GUI-412).

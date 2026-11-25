@@ -7,7 +7,8 @@
 //!   the first check's.)
 //! - `tanh_sat_operator_is_tanh`: the operator itself, the clamp and then the select to ±1 where `|tanh| > 1`, is `tanh`
 //!   bit for bit at every f32 (strided over the bit patterns, the signs, zeros, subnormals, `±∞` and NaN included) and
-//!   over an f64 sweep from 10⁻³⁰⁰ to `MAX`: the CPU's `tanh` stays in `[−1, 1]`, so the select never acts there.
+//!   over an f64 sweep from 10⁻³⁰⁰ to `MAX`: the host's `tanh`, the pinned libm's, stays in `[−1, 1]`, so the select
+//!   never acts there.
 //! - `tanh_sat_below_metal`: the bound lies below 43.671875, from which Metal's GPU `tanh` was measured to fail (0, then
 //!   NaN; TASK-M2-06's probe), so the GPU never evaluates `tanh` where it fails.
 //!
@@ -94,13 +95,13 @@ fn check_bound<R: Width>(t: R) {
     let one = R::one();
     for x in R::past(t) {
         assert_eq!(
-            x.tanh().bits(),
+            kernel::Real::hyperbolic_tangent(x).bits(),
             one.bits(),
             "tanh({:e}) is not 1 at {at}",
             x.wide()
         );
         assert_eq!(
-            (-x).tanh().bits(),
+            kernel::Real::hyperbolic_tangent(-x).bits(),
             (-one).bits(),
             "tanh({:e}) is not −1 at {at}",
             -x.wide()
@@ -183,7 +184,7 @@ fn check_operator(op32: fn(f32) -> f32, op64: fn(f64) -> f64) {
         f32::NAN,
     ]);
     for x in xs32 {
-        let (got, want) = (op32(x), x.tanh());
+        let (got, want) = (op32(x), libm::tanhf(x));
         assert!(
             got.to_bits() == want.to_bits() || (got.is_nan() && want.is_nan()),
             "the operator at {x:e} is {got:e}, not tanh's {want:e}, at f32"

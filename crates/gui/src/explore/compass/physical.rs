@@ -175,7 +175,7 @@ pub fn central_column(
     z: &Latent,
     k: usize,
 ) -> [f64; LATENT_DIM] {
-    let h = f64::EPSILON.cbrt() * z[k].abs().max(1.0);
+    let h = engine::exact::cbrt(f64::EPSILON) * z[k].abs().max(1.0);
     let (mut up, mut down) = (*z, *z);
     up[k] = z[k] + h;
     down[k] = z[k] - h;
@@ -242,7 +242,7 @@ pub fn svd(j: &Matrix) -> Svd {
             }
             rotated = true;
             let zeta = (b - a) / (2.0 * g);
-            let t = zeta.signum() / (zeta.abs() + zeta.hypot(1.0));
+            let t = zeta.signum() / (zeta.abs() + libm::hypot(zeta, 1.0));
             let cs = 1.0 / (1.0 + t * t).sqrt();
             let sn = cs * t;
             for m in [&mut c, &mut v] {

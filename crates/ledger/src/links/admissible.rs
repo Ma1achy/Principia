@@ -109,6 +109,7 @@ impl Fl for f64 {
     }
 }
 
+/// At f32 each transcendental is the pinned libm's too, as the kernel's f32 host path is (`kernel::real`).
 impl Fl for f32 {
     const NAME: &'static str = "f32";
     const EPS: f64 = f32::EPSILON as f64;
@@ -122,25 +123,25 @@ impl Fl for f32 {
         f64::from(self)
     }
     fn exp(self) -> Self {
-        f32::exp(self)
+        libm::expf(self)
     }
     fn ln(self) -> Self {
-        f32::ln(self)
+        libm::logf(self)
     }
     fn ln_1p(self) -> Self {
-        f32::ln_1p(self)
+        libm::log1pf(self)
     }
     fn exp_m1(self) -> Self {
-        f32::exp_m1(self)
+        libm::expm1f(self)
     }
     fn tanh(self) -> Self {
-        f32::tanh(self)
+        libm::tanhf(self)
     }
     fn atanh(self) -> Self {
-        f32::atanh(self)
+        libm::atanhf(self)
     }
     fn cosh(self) -> Self {
-        f32::cosh(self)
+        libm::coshf(self)
     }
     fn abs(self) -> Self {
         f32::abs(self)
@@ -404,7 +405,7 @@ fn column<F: Fl>(
     values: &Values,
 ) -> (Vec<f64>, f64, f64) {
     let z = x[k].f64();
-    let h = F::of(k_h * F::EPS.cbrt() * z.abs().max(1.0));
+    let h = F::of(k_h * libm::cbrt(F::EPS) * z.abs().max(1.0));
     let (mut up, mut down) = (x.to_vec(), x.to_vec());
     up[k] = x[k] + h;
     down[k] = x[k] - h;
@@ -450,7 +451,7 @@ pub fn volume<F: Fl>(link: &Link, x: &[F], k_h: f64, values: &Values) -> (f64, f
 /// volume factor (the module's note).
 pub fn c1<F: Fl>(link: &Link, x: &[F], values: &Values) -> Result<(), String> {
     let ld = eval(&link.log_det, x, values).f64();
-    let from_ld = ld.exp();
+    let from_ld = libm::exp(ld);
     if ld.is_nan() || !from_ld.is_finite() {
         return Err(format!(
             "its log-det at z = {:?} is {ld}, not a finite derivative",

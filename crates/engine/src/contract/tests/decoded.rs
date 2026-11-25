@@ -112,8 +112,8 @@ fn decoded_sphere_is_shape_vecs_with_its_rates() {
     let sphere = Sphere::of(&s);
     let n = kernel::shape::shape_vec(s.rho_t, s.lambda_t);
     assert_eq!(sphere.sin_phi, (n[0] * n[0] + n[1] * n[1]).sqrt());
-    assert_eq!(sphere.theta, n[1].atan2(n[0]));
-    assert_eq!(sphere.phi, sphere.sin_phi.atan2(n[2]), "φ from +w");
+    assert_eq!(sphere.theta, libm::atan2(n[1], n[0]));
+    assert_eq!(sphere.phi, libm::atan2(sphere.sin_phi, n[2]), "φ from +w");
     check_rates(&s, &sphere);
     // At the exact pole the azimuth and the angles' rates are defined as 0, never NaN; Ṙ is still the state's.
     let at = State {

@@ -480,7 +480,7 @@ pub fn benettin_delta(
 #[inline]
 pub fn ftle(s_sum: f32, delta: f32, delta_0: f32, n: u32, dt_macro: f32, valid: bool) -> f32 {
     if valid {
-        (s_sum + Float::ln(delta / delta_0)) / (n as f32 * dt_macro)
+        (s_sum + crate::real::Real::logarithm(delta / delta_0)) / (n as f32 * dt_macro)
     } else {
         canonical_nan()
     }

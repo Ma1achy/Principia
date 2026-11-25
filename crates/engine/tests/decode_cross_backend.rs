@@ -57,6 +57,7 @@ use kernel::stage::decode::{
     InvariantLKDefaults, LatentDefaults, LatentStickBreaking, MassSimplexDefaults,
     MixedAlphaVirialDefaults, MixedMu1AlphaDefaults, ShapeSphereDefaults, UniformChart,
 };
+use kernel::Real;
 use validation::decode_f32_eps::{
     error, interior, physics_key, values, Fuzz, SplitMix, QUANTITIES,
 };
@@ -903,8 +904,13 @@ fn entries(wgsl: &str) -> BTreeSet<String> {
         .filter(|w| w[0].trim().starts_with("@compute"))
         .filter_map(|w| w[1].trim().strip_prefix("fn "))
         .map(|l| l.split('(').next().unwrap_or("").to_owned())
+        // `stage_decode_sine_cosine` writes the kernel's own sine and cosine of given arguments
+        // (`cos_half_pi_gpu.rs`), not a chart's decode.
         .filter(|n| {
-            n.starts_with("stage_decode_") && n != DESCRIBE_ENTRY && n != "stage_decode_link_tanh"
+            n.starts_with("stage_decode_")
+                && n != DESCRIBE_ENTRY
+                && n != "stage_decode_link_tanh"
+                && n != "stage_decode_sine_cosine"
         })
         .collect()
 }
@@ -1078,11 +1084,11 @@ const LINES: u32 = 20_000;
 /// `stick_breaking`'s forward at f32 in the generated op order (`kernel::generated::links`), stopped before its last
 /// multiply: `(m₀, t₇, t₁₃)`, with `m₁ = t₇·t₁₃`. Checked against the generated forward bit for bit where it is used.
 fn stick_parts(z: [f32; 2]) -> (f32, f32, f32) {
-    let sigmoid = |x: f32| 1.0 / (1.0 + (-x).exp());
+    let sigmoid = |x: f32| 1.0 / (1.0 + Real::exponential(-x));
     let t0 = f32::LIT_3 * z[0];
-    let t4 = f32::LIT_1 * f32::EPS_MU * z[0].tanh();
+    let t4 = f32::LIT_1 * f32::EPS_MU * Real::hyperbolic_tangent(z[0]);
     let t8 = f32::LIT_3 * z[1];
-    let t12 = f32::LIT_1 * f32::EPS_MU * z[1].tanh();
+    let t12 = f32::LIT_1 * f32::EPS_MU * Real::hyperbolic_tangent(z[1]);
     (sigmoid(-t0) + t4, sigmoid(t0) - t4, sigmoid(-t8) + t12)
 }
 

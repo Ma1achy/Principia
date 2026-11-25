@@ -64,3 +64,8 @@ test = false
 [[bin]]
 name = "golden_bodyplane"
 test = false
+
+# A GPU test (`tests/qa_TASK-M2-25_gpu.rs`) finds the kernel's own sine in its WGSL by parsing it: naga, at render's
+# version, already in the build.
+[dev-dependencies]
+naga = { version = "30", features = ["wgsl-in"] }

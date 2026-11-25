@@ -202,7 +202,7 @@ impl Synthetic {
     /// `(i, j)`, `q = j · columns + i`, place it at the cell `origin + (i, j)`, so `c = (origin + (i, j) + ½) · 2^−ℓ`.
     pub fn quad_frame(&self, q: u32) -> QuadFrame {
         let (depth, cell) = self.places[q as usize];
-        let h = (-f64::from(depth) - 1.0).exp2();
+        let h = crate::exact::exp2(-f64::from(depth) - 1.0);
         let c = cell.map(|x| (x as f64 * 2.0 + 1.0) * h);
         QuadFrame { c, h: [h, h] }
     }

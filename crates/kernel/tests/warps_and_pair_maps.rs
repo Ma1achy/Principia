@@ -206,8 +206,8 @@ fn linear_digests(kind: WarpKind) -> [u64; 4] {
 /// Recorded before the warp word existed (the module's note).
 const LINEAR_DIGESTS: [u64; 4] = [
     0x1d72_88c9_9ed1_0651,
-    0x3c0b_c2bc_32a8_85e8,
-    0xf9b0_0eef_b9c8_abde,
+    0x240b_28cf_50ab_9a39,
+    0x1a65_ca64_53a3_9334,
     0xd7d7_0628_8ed6_31e2,
 ];
 

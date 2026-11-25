@@ -17,8 +17,8 @@
 //!
 //! - REQ-DEC-053, R-696 (`qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole`, added by TASK-M2-53's QA, here because
 //!   this file is in the `gpu-kernel` run and its fixture is RQ-687's): the same pole and points, on the built kernel's
-//!   WGSL with the backend's `sin` emulated as 0 up to WGSL's absolute `2⁻¹¹`, RQ-687's measured case, on whichever
-//!   backend runs the test. Control: the WGSL with the f32 sinc put back to the line before R-696 moves `rho_angle`.
+//!   WGSL with its sine (the kernel's own, out of line) emulated as 0 up to WGSL's absolute `2⁻¹¹`, RQ-687's measured
+//!   case, on whichever backend runs the test. Control: the WGSL with the f32 sinc put back to the line before R-696 moves `rho_angle`.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; each chart at the harness's fixed parameters
 //! (`validation::decode_preset::uniforms`), inside its square.
@@ -294,45 +294,134 @@ negative_control!(
 
 // ── REQ-DEC-053, R-696: the same fixture with the backend's `sin` emulated as 0 near 0 ───────────────────────────────
 
-/// The kernel's WGSL with every `sin` emulated as RQ-687's card read: 0 up to WGSL's absolute `2⁻¹¹`.
+/// The kernel's WGSL with its sine emulated as RQ-687's card read: 0 up to WGSL's absolute `2⁻¹¹`. The kernel's f32
+/// sine is its own (`kernel::trig::sin_cos_f32`), one out-of-line function the `stage_decode_sine_cosine` entry calls;
+/// it is renamed, and a function of its name returns its result with the sine flattened. Any builtin `sin` left is
+/// flattened too.
 fn flat_sin(wgsl: &str) -> String {
-    let mut out = String::with_capacity(wgsl.len());
-    let mut rest = wgsl;
-    let mut count = 0;
+    let (name, ty, sine) = sine_cosine_helper(wgsl);
+    let def = format!("fn {name}(");
+    assert_eq!(
+        wgsl.matches(&def).count(),
+        1,
+        "the kernel's sine `{name}` is not defined once"
+    );
+    let mut out = wgsl.replacen(&def, &format!("fn qa_exact_{name}("), 1);
+    let mut builtin = String::with_capacity(out.len());
+    let mut rest = out.as_str();
     while let Some(at) = rest.find("sin(") {
         let (before, after) = rest.split_at(at);
-        out.push_str(before);
+        builtin.push_str(before);
         let named = before
             .chars()
             .next_back()
             .is_some_and(|c| c.is_alphanumeric() || c == '_');
         if !named {
-            out.push_str("qa_flat_");
-            count += 1;
+            builtin.push_str("qa_flat_");
         }
-        out.push_str("sin(");
+        builtin.push_str("sin(");
         rest = &after[4..];
     }
-    out.push_str(rest);
-    assert!(count > 0, "the kernel's WGSL calls no sin");
-    out.push_str("\nfn qa_flat_sin(x: f32) -> f32 { return select(sin(x), 0f, abs(x) <= 0.00048828125f); }\n");
+    builtin.push_str(rest);
+    out = builtin;
+    out.push_str(&format!(
+        "\nfn qa_flat_sin(x: f32) -> f32 {{ return select(sin(x), 0f, abs(x) <= 0.00048828125f); }}\n\
+         fn {name}(x: f32) -> {ty} {{\n    var r = qa_exact_{name}(x);\n    \
+         if (abs(x) <= 0.00048828125f) {{ r.{sine} = 0f; }}\n    return r;\n}}\n"
+    ));
     out
 }
 
-/// `wgsl` with each f32 sinc back to the line before R-696: R-696's inner select, on the series, dropped for `sin(r)/r`.
+/// The kernel's sine in `wgsl`: the function of one f32 that `stage_decode_sine_cosine` calls, through its body, with
+/// its result struct's name and the member that holds the sine (the first).
+fn sine_cosine_helper(wgsl: &str) -> (String, String, String) {
+    let m = naga::front::wgsl::parse_str(wgsl).unwrap_or_else(|e| panic!("the kernel's WGSL: {e}"));
+    let entry = m
+        .entry_points
+        .iter()
+        .find(|e| e.name.replace("::", "_") == "stage_decode_sine_cosine")
+        .expect("the kernel's WGSL has the stage_decode_sine_cosine entry");
+    let mut todo: Vec<&naga::Function> = vec![&entry.function];
+    let mut seen = std::collections::HashSet::new();
+    while let Some(f) = todo.pop() {
+        let mut calls = Vec::new();
+        visit(&f.body, &mut calls);
+        for h in calls {
+            if !seen.insert(h) {
+                continue;
+            }
+            let g = &m.functions[h];
+            let f32_ty = |t: naga::Handle<naga::Type>| {
+                matches!(
+                    m.types[t].inner,
+                    naga::TypeInner::Scalar(naga::Scalar {
+                        kind: naga::ScalarKind::Float,
+                        width: 4
+                    })
+                )
+            };
+            if let ([arg], Some(result)) = (g.arguments.as_slice(), g.result.as_ref()) {
+                if let naga::TypeInner::Struct { members, .. } = &m.types[result.ty].inner {
+                    if f32_ty(arg.ty) && members.len() == 2 && members.iter().all(|x| f32_ty(x.ty))
+                    {
+                        let name = g.name.clone().expect("the sine's name");
+                        let ty = m.types[result.ty]
+                            .name
+                            .clone()
+                            .expect("the sine's result type's name");
+                        let sine = members[0].name.clone().expect("the sine's member name");
+                        return (name, ty, sine);
+                    }
+                }
+            }
+            todo.push(g);
+        }
+    }
+    panic!("the kernel's WGSL calls no out-of-line sine and cosine from stage_decode_sine_cosine");
+}
+
+/// The functions `block` calls, nested blocks included.
+fn visit(block: &naga::Block, out: &mut Vec<naga::Handle<naga::Function>>) {
+    for s in block.iter() {
+        match s {
+            naga::Statement::Call { function, .. } => out.push(*function),
+            naga::Statement::Block(b) => visit(b, out),
+            naga::Statement::If { accept, reject, .. } => {
+                visit(accept, out);
+                visit(reject, out);
+            }
+            naga::Statement::Loop {
+                body, continuing, ..
+            } => {
+                visit(body, out);
+                visit(continuing, out);
+            }
+            naga::Statement::Switch { cases, .. } => {
+                for c in cases {
+                    visit(&c.body, out);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// `wgsl` with each f32 sinc back to the line before R-696: R-696's inner select, on the series, dropped for its
+/// quotient `sin(r)/r`. The sinc is the select whose condition is the cut, `… < 0.0625f`, and whose accepted value is
+/// the series' `fma`: its first operand, the quotient, is kept.
 #[cfg(feature = "controls")]
 fn old_sinc(wgsl: &str) -> String {
-    const OPEN: &str = "select((sin(";
+    const CUT: &str = "< 0.0625f))";
     let mut out = String::with_capacity(wgsl.len());
     let mut rest = wgsl;
     let mut count = 0;
-    while let Some(at) = rest.find(OPEN) {
-        let (before, form) = rest.split_at(at);
-        let quotient = form.find(", fma(").expect("the sinc's select");
-        let shut = form.find("< 0.0625f))").expect("the sinc's cut") + "< 0.0625f))".len();
-        out.push_str(before);
+    while let Some(shut) = rest.find(CUT) {
+        let open = rest[..shut].rfind("select((").expect("the sinc's select");
+        let form = &rest[open..shut];
+        let quotient = form.find(", fma(").expect("the sinc's series");
+        out.push_str(&rest[..open]);
         out.push_str(&form["select(".len()..quotient]);
-        rest = &form[shut..];
+        rest = &rest[shut + CUT.len()..];
         count += 1;
     }
     out.push_str(rest);

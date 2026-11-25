@@ -46,7 +46,7 @@ pub fn wheel_octaves(events: &[egui::Event]) -> f64 {
 
 /// The magnification `2^zoom`, as the zoom row reads it, `zoom` its reading ([`View::zoom_row`]), so `σ_h / σ`: "× 1.00".
 pub fn magnification(zoom: f64) -> String {
-    format!("× {:.2}", zoom.exp2())
+    format!("× {:.2}", engine::exact::exp2(zoom))
 }
 
 /// Draws Navigate's own rows in `section`, then the depth readout and the lock under them.

@@ -4,6 +4,8 @@
 //! - `INV_TWO_PI`: eight words, the bits of `1/2π` from weight `2³¹` down, word 0 zero (`1/2π < 1`) and words 1 to 7
 //!   `⌊2²²⁴/2π⌋`'s, most significant first.
 //! - `PI_HAT_BITS`: the bits of `π̂`, the f32 nearest `π`: `π·2²²` rounded to nearest, at the exponent of `[2, 4)`.
+//! - `SIN_SERIES` and `COS_SERIES`: `1/n!` in Q0.64, rounded to nearest, for odd `n` from 3 to 13 and even `n` from 2 to
+//!   14, the Taylor coefficients of the kernel's own f32 sine and cosine (`kernel::trig`), as two words each.
 //!
 //! **Exact, and the same on every host.** `π` is summed here in integer arithmetic, never read from a float: Machin's
 //! `π = 16·atan(1/5) − 4·atan(1/239)`, each `atan(1/x) = Σₙ (−1)ⁿ/((2n+1)·x^(2n+1))` summed in units of
@@ -208,6 +210,20 @@ pub fn pi_hat_bits() -> u32 {
     (128 << 23) | (mantissa & 0x007F_FFFF)
 }
 
+/// Interface data, not a register constant: the factorials the sine's and cosine's series read, `n` in `3, 5, …, 13` and
+/// `2, 4, …, 14`, so the first dropped term is below `2⁻⁴⁰` of the result on `[0, π/4]`.
+pub fn series_orders() -> ([u32; 6], [u32; 7]) {
+    ([3, 5, 7, 9, 11, 13], [2, 4, 6, 8, 10, 12, 14])
+}
+
+/// `1/n!` in Q0.64, rounded to nearest, as `[hi, lo]`: `⌊(2⁶⁵/n! + 1)/2⌋`, in integer arithmetic.
+pub fn inverse_factorial(n: u32) -> [u32; 2] {
+    let f: u128 = (1..=u128::from(n)).product();
+    let q = ((1u128 << 65) / f).div_ceil(2);
+    assert!(q < 1 << 64, "1/{n}! does not fit Q0.64");
+    [(q >> 32) as u32, q as u32]
+}
+
 /// `w` as a hex literal in groups of four digits.
 fn hex(w: u32) -> String {
     format!("0x{:04X}_{:04X}", w >> 16, w & 0xFFFF)
@@ -229,5 +245,22 @@ pub fn circle_file() -> String {
     }
     s.push_str("];\n\n/// The bits of `π̂`, the f32 nearest `π`.\n");
     let _ = writeln!(s, "pub const PI_HAT_BITS: u32 = {};", hex(pi_hat_bits()));
+    let (sines, cosines) = series_orders();
+    for (name, orders, what) in [
+        ("SIN_SERIES", &sines[..], "odd `n` from 3 to 13"),
+        ("COS_SERIES", &cosines[..], "even `n` from 2 to 14"),
+    ] {
+        let _ = write!(
+            s,
+            "\n/// `1/n!` in Q0.64, rounded to nearest, `[hi, lo]`, for {what}: the kernel's own f32 sine's and cosine's\n\
+             /// series (`crate::trig`).\npub const {name}: [[u32; 2]; {}] = [\n",
+            orders.len()
+        );
+        for &n in orders {
+            let [hi, lo] = inverse_factorial(n);
+            let _ = writeln!(s, "    [{}, {}],", hex(hi), hex(lo));
+        }
+        s.push_str("];\n");
+    }
     s
 }

@@ -8,9 +8,12 @@
 //!   `sin` is correctly rounded and the Mac's is not, at `0xc023fa30a11813de` and `0xc0155b4e049f4aee` the Mac's is and
 //!   libm's is not (checked at 200 bits with mpmath), so a correctly rounded platform `sin`, as glibc's, differs too.
 //!   So a method left on std fails here. Its control is that method, `sine` on `f64::sin`.
-//! - `real_pinned_bits_f32`: at f32, the GPU's precision, each method is `num_traits::Float`'s, unchanged (R-991
-//!   pins the f64 path alone); `arctan2` and `sinc` are the kernel's own, held by their own tests. Its control,
-//!   `exp_minus_one` as `exp(x) − 1`, loses `x` near 0.
+//! - `real_pinned_bits_f32`: at f32 on the host each method is the pinned libm's f32 function (`sinf`'s and `cosf`'s
+//!   places taken by the kernel's own `kernel::trig::sin_cos_f32`, which runs on the GPU too), bit for bit, on the f64
+//!   table's inputs narrowed and, per function, one input where Linux's platform library and libm differ (`cbrtf`
+//!   has none). `arctan2` and `sinc` are the kernel's own, held
+//!   by their own tests. Its controls: `exp_minus_one` as `exp(x) − 1`, which loses `x` near 0, and, on Linux,
+//!   `hyperbolic_tangent` left on std.
 
 use kernel::chart::Float;
 use kernel::Real;
@@ -93,26 +96,45 @@ fn libm_binary(name: &str) -> Binary<f64> {
     }
 }
 
-/// `num_traits::Float`'s function at f32 for each of [`Methods`]'s, by name.
-fn float_unary(name: &str) -> Unary<f32> {
+/// The pinned f32 function for each of [`Methods`]'s, by name: libm's, or the kernel's own sine and cosine.
+fn pinned_unary(name: &str) -> Unary<f32> {
     match name {
-        "sine" => Float::sin,
-        "cosine" => Float::cos,
-        "tangent" => Float::tan,
-        "arcsine" => Float::asin,
-        "arccosine" => Float::acos,
-        "exponential" => Float::exp,
-        "exp_minus_one" => Float::exp_m1,
-        "logarithm" => Float::ln,
-        "ln_one_plus" => Float::ln_1p,
-        "cube_root" => Float::cbrt,
-        "hyperbolic_sine" => Float::sinh,
-        "hyperbolic_cosine" => Float::cosh,
-        "hyperbolic_tangent" => Float::tanh,
-        "arctanh" => Float::atanh,
-        other => panic!("no Float function for {other}"),
+        "sine" => |x| kernel::trig::sin_cos_f32(x).0,
+        "cosine" => |x| kernel::trig::sin_cos_f32(x).1,
+        "tangent" => libm::tanf,
+        "arcsine" => libm::asinf,
+        "arccosine" => libm::acosf,
+        "exponential" => libm::expf,
+        "exp_minus_one" => libm::expm1f,
+        "logarithm" => libm::logf,
+        "ln_one_plus" => libm::log1pf,
+        "cube_root" => libm::cbrtf,
+        "hyperbolic_sine" => libm::sinhf,
+        "hyperbolic_cosine" => libm::coshf,
+        "hyperbolic_tangent" => libm::tanhf,
+        "arctanh" => libm::atanhf,
+        other => panic!("no pinned function for {other}"),
     }
 }
+
+/// Per unary method, in [`Methods`]'s order, an input where Linux's platform `f32` function and the pinned one differ
+/// (none for `cube_root`); the binary methods' are in [`check_f32`].
+const LINUX_DIFFERS: [u32; 14] = [
+    0xc03f_fd4c,
+    0xc016_cb4b,
+    0xbfbf_ffa8,
+    0xbf7f_fe19,
+    0xbf80_0000,
+    0xc19f_ffeb,
+    0xbf01_e5a0,
+    0x3c32_9589,
+    0xbf64_4112,
+    0x3f80_0000,
+    0xc10e_b112,
+    0xc11f_ffb7,
+    0xbf7f_ffa8,
+    0xbf7d_70a4,
+];
 
 /// libm 0.2.16's results on the Mac, `(input, result)` bits, per unary method in [`Methods`]'s order (generated once
 /// from `libm::<function>`; the inputs marked are where the Mac's platform library differs).
@@ -567,47 +589,54 @@ negative_control!(
     }
 );
 
-/// Checks `m`, the f32 methods, against `num_traits::Float`'s on the f64 table's inputs, narrowed. Every input goes
-/// through `black_box`, so both sides call the run-time function: in release LLVM folds a platform call on constants
-/// at compile time, from the host's f64 function rounded to f32, not the platform's f32 one (`Float::atan2(3, −4)`
-/// folded to `0x401fe0bb` while Linux's `atan2f` gives `0x401fe0bc`), so a folded oracle is not `Float`'s.
+/// Checks `m`, the f32 methods, against the pinned f32 functions on the f64 table's inputs, narrowed, and
+/// [`LINUX_DIFFERS`]. Every input goes through `black_box`, so a platform call is the run-time function: in release LLVM
+/// folds a platform call on constants at compile time.
 fn check_f32(m: &Methods<f32>) {
-    for ((name, method), (_, rows)) in m.unary.iter().zip(UNARY) {
-        for x in rows
-            .iter()
-            .map(|&(x, _)| f64::from_bits(x) as f32)
-            .chain([1e-10, -3e-8])
-        {
+    for (((name, method), (_, rows)), differs) in m.unary.iter().zip(UNARY).zip(LINUX_DIFFERS) {
+        for x in rows.iter().map(|&(x, _)| f64::from_bits(x) as f32).chain([
+            1e-10,
+            -3e-8,
+            f32::from_bits(differs),
+        ]) {
             let x = black_box(x);
-            let (got, want) = (method(x), float_unary(name)(x));
+            let (got, want) = (method(x), pinned_unary(name)(x));
             assert!(
                 got.to_bits() == want.to_bits() || (got.is_nan() && want.is_nan()),
                 "{name}({x:e}) at f32"
             );
         }
     }
-    let pairs = [(0.5f32, 2.0f32), (3.0, -4.0), (10.0, 3.0)];
+    let pairs = [
+        (0.5f32, 2.0f32),
+        (3.0, -4.0),
+        (10.0, 3.0),
+        (f32::from_bits(1_041_289_320), f32::from_bits(1_080_820_023)),
+        (f32::from_bits(1_036_831_949), f32::from_bits(1_080_872_141)),
+        (f32::from_bits(1_036_835_976), f32::from_bits(1_080_872_103)),
+    ];
     for (a, b) in pairs {
         let (a, b) = (black_box(a), black_box(b));
         assert_eq!(
             m.binary[1].1(a, b).to_bits(),
-            Float::atan2(a, b).to_bits(),
+            libm::atan2f(a, b).to_bits(),
             "arctangent2({a}, {b}) at f32"
         );
         assert_eq!(
             m.binary[2].1(a, b).to_bits(),
-            Float::powf(a, b).to_bits(),
+            libm::powf(a, b).to_bits(),
             "power({a}, {b}) at f32"
         );
         assert_eq!(
             m.binary[3].1(a, b).to_bits(),
-            Float::hypot(a, b).to_bits(),
+            libm::hypotf(a, b).to_bits(),
             "hypotenuse({a}, {b}) at f32"
         );
         let (s, c) = (m.sine_cosine)(a);
+        let (ws, wc) = kernel::trig::sin_cos_f32(a);
         assert_eq!(
             (s.to_bits(), c.to_bits()),
-            (Float::sin(a).to_bits(), Float::cos(a).to_bits()),
+            (ws.to_bits(), wc.to_bits()),
             "sine_cosine"
         );
     }
@@ -628,3 +657,19 @@ negative_control!(
         check_f32(&m)
     }
 );
+
+#[cfg(target_os = "linux")]
+mod on_std {
+    use super::*;
+
+    negative_control!(
+        real_pinned_bits_f32,
+        "`hyperbolic_tangent` left on std, Linux's `tanhf`",
+        expected = "hyperbolic_tangent(",
+        {
+            let mut m = real::<f32>();
+            m.unary[12].1 = f32::tanh;
+            check_f32(&m)
+        }
+    );
+}

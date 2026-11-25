@@ -16,10 +16,10 @@
 //! `crates/validation/tests/qa_TASK-M2-25_gpu.rs`: this file's own copy of those builders, since a binary can't call a
 //! test file and those files stay as they are, the qa file above all (R-290). They are written once by `--write-inputs`,
 //! no GPU, under `fixtures/gates/cross-backend-branches/inputs/`, committed, and every backend's `--record` reads them
-//! from there, since the builders call the platform's `sin_cos` and `powf`, whose bits need not match on Windows. A
-//! sweep built on a GPU's own decodes (`canonicaliser_noop_gpu`), or on a backend's own `V₀`, takes CPU f32's here, for
-//! the same reason. The states are binary, the f32 words as they are: as text they would be some 30 MB (applied per
-//! R-369).
+//! from there. The builders reach no platform maths call (`kernel::Real`'s methods are the pinned library's or the
+//! kernel's own), so every platform builds the same bits, which `cross_backend_read_back_fixture_is_the_builders` holds.
+//! A sweep built on a GPU's own decodes (`canonicaliser_noop_gpu`), or on a backend's own `V₀`, takes CPU f32's here.
+//! The states are binary, the f32 words as they are: as text they would be some 30 MB.
 //!
 //! **A record** ([`Record`]) is one file per backend, keyed by the commit, the adapter line, the driver version, the
 //! compute fast-math setting, the hardware label if any and the inputs' hash ([`Inputs::hash`]). It holds one row per
@@ -79,6 +79,7 @@ use kernel::stage::decode::{
     InvariantLEDefaults, InvariantLKDefaults, LatentDefaults, LatentStickBreaking,
     MassSimplexDefaults, MixedMu1AlphaDefaults, ShapeSphereDefaults, UniformChart,
 };
+use kernel::Real;
 use serde::{Deserialize, Serialize};
 
 use crate::decode_f32_eps::{golden, interior, kernel_wgsl, Fuzz, SplitMix};
@@ -883,7 +884,7 @@ fn tie_values<R: LinkReal>(up: fn(R) -> R, down: fn(R) -> R) -> Vec<R> {
 }
 
 fn turned(x: &Ic<f64>, theta: f64) -> Ic<f64> {
-    let (s, c) = theta.sin_cos();
+    let (s, c) = theta.sine_cosine();
     let rot = |v: [f64; 2]| [c * v[0] - s * v[1], s * v[0] + c * v[1]];
     Ic {
         m: x.m,
@@ -928,7 +929,7 @@ fn seam_states() -> Vec<Ic<f32>> {
             let w = [0; 3].map(|_| f64::from(rng.uniform(0.2, 1.2)));
             let total: f64 = w.iter().sum();
             let theta = f64::from(rng.uniform(0.0, 1.0)) * std::f64::consts::TAU;
-            let (sn, cs) = theta.sin_cos();
+            let (sn, cs) = theta.sine_cosine();
             let origin = [0; 2].map(|_| f64::from(rng.uniform(-0.5, 0.5)));
             let mut t = [0; 3].map(|_| f64::from(rng.uniform(-1.0, 1.0)));
             if n % 8 == 0 {
@@ -1091,7 +1092,8 @@ const RATIOS: [f64; 6] = [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8];
 /// The unit vector at angle `theta` and the one a quarter turn anticlockwise from it: the inner pair's line and the
 /// direction across it.
 fn frame(theta: f64) -> ([f64; 2], [f64; 2]) {
-    ([theta.cos(), theta.sin()], [-theta.sin(), theta.cos()])
+    let (s, c) = theta.sine_cosine();
+    ([c, s], [-s, c])
 }
 
 fn hierarchy(ratio: f64, axis: bool, edge: bool, seed: u64) -> Vec<Ic<f32>> {
@@ -1168,7 +1170,7 @@ fn bisect(side: impl Fn(f64) -> f64, mut lo: f64, mut hi: f64) -> (f64, f64) {
 fn hierarchy_edge(j: i32, theta: f64, seed: u64) -> Vec<Ic<f32>> {
     let mut rng = SplitMix::new(seed);
     let mut u = |lo: f32, hi: f32| f64::from(rng.uniform(lo, hi));
-    let (cs, sn) = (theta.cos(), theta.sin());
+    let (sn, cs) = theta.sine_cosine();
     let turn = |v: [f64; 2]| [v[0] * cs - v[1] * sn, v[0] * sn + v[1] * cs];
     let mut out = Vec::new();
     for _ in 0..40 {
@@ -1218,7 +1220,7 @@ struct Gauge {
 }
 
 fn apply(g: &Gauge, x: &Ic<f64>) -> Ic<f64> {
-    let (sn, cs) = g.theta.sin_cos();
+    let (sn, cs) = g.theta.sine_cosine();
     let map = |v: [f64; 2], k: f64| {
         let y = if g.mirror { -v[1] } else { v[1] };
         [k * (cs * v[0] - sn * y), k * (sn * v[0] + cs * y)]
@@ -1230,7 +1232,7 @@ fn apply(g: &Gauge, x: &Ic<f64>) -> Ic<f64> {
             [w[0] + g.a[0], w[1] + g.a[1]]
         }),
         p: [0, 1, 2].map(|i| {
-            let w = map(x.p[i], g.s.powf(-0.5));
+            let w = map(x.p[i], g.s.power(-0.5));
             [w[0] + x.m[i] * g.u[0], w[1] + x.m[i] * g.u[1]]
         }),
     }

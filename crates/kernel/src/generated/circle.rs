@@ -18,3 +18,26 @@ pub const INV_TWO_PI: [u32; 8] = [
 
 /// The bits of `π̂`, the f32 nearest `π`.
 pub const PI_HAT_BITS: u32 = 0x4049_0FDB;
+
+/// `1/n!` in Q0.64, rounded to nearest, `[hi, lo]`, for odd `n` from 3 to 13: the kernel's own f32 sine's and cosine's
+/// series (`crate::trig`).
+pub const SIN_SERIES: [[u32; 2]; 6] = [
+    [0x2AAA_AAAA, 0xAAAA_AAAB],
+    [0x0222_2222, 0x2222_2222],
+    [0x000D_00D0, 0x0D00_D00D],
+    [0x0000_2E3B, 0xC74A_AD8E],
+    [0x0000_006B, 0x9915_9FD5],
+    [0x0000_0000, 0xB092_309D],
+];
+
+/// `1/n!` in Q0.64, rounded to nearest, `[hi, lo]`, for even `n` from 2 to 14: the kernel's own f32 sine's and cosine's
+/// series (`crate::trig`).
+pub const COS_SERIES: [[u32; 2]; 7] = [
+    [0x8000_0000, 0x0000_0000],
+    [0x0AAA_AAAA, 0xAAAA_AAAB],
+    [0x005B_05B0, 0x5B05_B05B],
+    [0x0001_A01A, 0x01A0_1A02],
+    [0x0000_049F, 0x93ED_DE28],
+    [0x0000_0008, 0xF76C_77FC],
+    [0x0000_0000, 0x0C9C_BA54],
+];

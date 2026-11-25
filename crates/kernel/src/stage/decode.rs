@@ -850,6 +850,23 @@ pub fn entry<V: DecodeVariant>(
     }
 }
 
+/// The kernel's own f32 sine and cosine on given arguments ([`crate::trig::sin_cos_f32`], which the decode's `cos α`
+/// and every other f32 `sin` and `cos` call): invocation `i` reads `x` at word `i` of `x` and writes `sin x`, `cos x` at
+/// words `2i`, `2i + 1` of `out`; an invocation past the last argument writes nothing.
+#[spirv(compute(threads(64)))]
+pub fn sine_cosine(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] x: &[u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] out: &mut [u32],
+) {
+    let i = id.x as usize;
+    if i < x.len() {
+        let (s, c) = crate::trig::sin_cos_f32(f32::from_bits(x[i]));
+        out[2 * i] = s.to_bits();
+        out[2 * i + 1] = c.to_bits();
+    }
+}
+
 /// The decode stage's compute entry point for [`LatentDefaults`], one invocation per sample, at the workgroup size of the
 /// GPU harness (64).
 #[spirv(compute(threads(64)))]

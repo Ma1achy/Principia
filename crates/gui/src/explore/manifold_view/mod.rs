@@ -38,6 +38,7 @@ use engine::contract::sim_config::{
 };
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::Window;
+use engine::exact;
 
 use crate::dispatch::{self, Class};
 use crate::explore::compass::{self, Compass};
@@ -521,12 +522,12 @@ pub fn degrees(radians: f64) -> f64 {
 /// The rotation `γ` of `q1`, `q2` as the axes `(a, b)` read it, and the two turned back by it: `(γ, σ u₁, σ u₂)` for a
 /// basis [`View::basis`] gives, whose `σ u₁` is on `e_a` and `e_X` alone and `σ u₂` on `e_b` and `e_Y` alone.
 fn turned_back(a: usize, b: usize, q1: &Latent, q2: &Latent) -> (f64, Latent, Latent) {
-    let gamma = if q1[a].hypot(q2[a]) >= q1[b].hypot(q2[b]) {
-        (-q2[a]).atan2(q1[a])
+    let gamma = if exact::hypot(q1[a], q2[a]) >= exact::hypot(q1[b], q2[b]) {
+        exact::atan2(-q2[a], q1[a])
     } else {
-        q1[b].atan2(q2[b])
+        exact::atan2(q1[b], q2[b])
     };
-    let (sin_g, cos_g) = gamma.sin_cos();
+    let (sin_g, cos_g) = exact::sin_cos(gamma);
     let u1 = add(&q1.map(|v| v * cos_g), -sin_g, q2);
     let u2 = add(&q2.map(|v| v * cos_g), sin_g, q1);
     (gamma, u1, u2)
@@ -690,8 +691,8 @@ impl View {
         q1: &Latent,
         q2: &Latent,
     ) -> Self {
-        let cos1 = q1[a].hypot(q2[a]);
-        let cos2 = q1[b].hypot(q2[b]);
+        let cos1 = exact::hypot(q1[a], q2[a]);
+        let cos2 = exact::hypot(q1[b], q2[b]);
         let (gamma, u1, u2) = turned_back(a, b, q1, q2);
         let (sin1, sin2) = (u1[x], u2[y]);
         let stray = (0..LATENT_DIM)
@@ -707,9 +708,9 @@ impl View {
             d,
             x,
             y,
-            scale: cos1.hypot(sin1).hypot(stray),
-            tau1: sin1.atan2(cos1) + 0.0,
-            tau2: sin2.atan2(cos2) + 0.0,
+            scale: exact::hypot(exact::hypot(cos1, sin1), stray),
+            tau1: exact::atan2(sin1, cos1) + 0.0,
+            tau2: exact::atan2(sin2, cos2) + 0.0,
             gamma: gamma + 0.0,
             map: TiltMap::Lean,
         }
@@ -731,9 +732,9 @@ impl View {
                 return basis;
             }
         }
-        let (s1, c1) = self.tau1.sin_cos();
-        let (s2, c2) = self.tau2.sin_cos();
-        let (sg, cg) = self.gamma.sin_cos();
+        let (s1, c1) = exact::sin_cos(self.tau1);
+        let (s2, c2) = exact::sin_cos(self.tau2);
+        let (sg, cg) = exact::sin_cos(self.gamma);
         let u1 = add(&axis(self.a, c1), s1, &axis(self.x, 1.0));
         let u2 = add(&axis(self.b, c2), s2, &axis(self.y, 1.0));
         let q1 = add(&u1.map(|x| x * cg * self.scale), sg * self.scale, &u2);
@@ -857,8 +858,8 @@ impl View {
                 let c = (dot(q1, &u1) + dot(q2, &u2)) / norms;
                 let s = (dot(q1, &u2) - dot(q2, &u1)) / norms;
                 let view = Self {
-                    scale: c.hypot(s),
-                    gamma: s.atan2(c) + 0.0,
+                    scale: exact::hypot(c, s),
+                    gamma: exact::atan2(s, c) + 0.0,
                     ..unit
                 };
                 view.gives(plane).then_some(view)
@@ -891,11 +892,11 @@ impl View {
                     q1[x] * q2[a] - q1[a] * q2[x],
                     q1[a] * q2[b] - q1[b] * q2[a],
                 ];
-                let side = n[0].hypot(n[1]);
+                let side = exact::hypot(n[0], n[1]);
                 if side == 0.0 {
                     return None;
                 }
-                let m = side.atan2(n[2]).to_degrees();
+                let m = exact::atan2(side, n[2]).to_degrees();
                 let angles = (-m * n[0] / side, -m * n[1] / side);
                 let only = Self { a, b, ..*read };
                 Self::at_angles(plane, frame, &only, angles).filter(|v| (v.a, v.b) == (a, b))
@@ -908,7 +909,7 @@ impl View {
 
     /// The zoom, in log₂: `−log₂ σ`. Absolute, as the depth readout counts it; the zoom row reads [`View::zoom_row`].
     pub fn zoom(&self) -> f64 {
-        -self.scale.log2()
+        -exact::log2(self.scale)
     }
 
     /// The window `σ_h` the zoom row reads against: the active preset's, or 1 with none (§G2, REQ-GUI-224).
@@ -923,7 +924,7 @@ impl View {
 
     /// [`View::zoom_row`] read against the window `window`: a saved chart's.
     pub fn zoom_row_of(&self, window: f64) -> f64 {
-        window.log2() + self.zoom()
+        exact::log2(window) + self.zoom()
     }
 
     /// [`ZOOM_RANGE`] as the zoom row reads it. A preset's choice keeps `σ` (§G2), so the row moves with the window; the
@@ -934,7 +935,7 @@ impl View {
 
     /// [`View::zoom_row_range`] read against the window `window`.
     pub fn zoom_row_range_of(&self, window: f64) -> std::ops::RangeInclusive<f64> {
-        let window = window.log2();
+        let window = exact::log2(window);
         ZOOM_RANGE.0 + window..=ZOOM_RANGE.1 + window
     }
 
@@ -945,13 +946,13 @@ impl View {
 
     /// [`View::with_zoom_row`] read against the window `window`.
     pub fn with_zoom_row_of(self, row: f64, window: f64) -> Self {
-        self.with_zoom(row - window.log2())
+        self.with_zoom(row - exact::log2(window))
     }
 
     /// This view at zoom `zoom`.
     pub fn with_zoom(self, zoom: f64) -> Self {
         Self {
-            scale: (-zoom).exp2(),
+            scale: exact::exp2(-zoom),
             ..self
         }
     }

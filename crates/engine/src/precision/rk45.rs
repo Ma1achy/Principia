@@ -313,7 +313,9 @@ pub fn integrate_with_rule(
             } else if err == 0.0 {
                 5.0
             } else {
-                (0.9 * err.powf(-0.2)).clamp(0.2, 5.0)
+                // Correctly rounded, so every platform takes the same steps. Don't use a pow that isn't: Burrau's RK45
+                // ejection reading moves on the factor's last bit.
+                (0.9 * crate::exact::pow(err, -0.2)).clamp(0.2, 5.0)
             };
             if err <= 1.0 {
                 t = if landing { target } else { t + h_try };

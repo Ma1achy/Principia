@@ -157,7 +157,11 @@ impl<'a> Active<'a> {
                     .all(|(angle, home)| at(angle, home))
             }
             Section::Navigate => {
-                still(along) && at(self.home.window.log2() + self.view.zoom(), 0.0)
+                still(along)
+                    && at(
+                        engine::exact::log2(self.home.window) + self.view.zoom(),
+                        0.0,
+                    )
             }
         }
     }

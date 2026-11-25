@@ -22,6 +22,9 @@ pollster = "1"
 # The image export writes the headless readback as a PNG (TASK-M1-07, REQ-SYS-080), with the png crate xtask already
 # builds with.
 png = "0.18"
+# The pinned pure-software libm the engine and ledger use, so an embed's rotated canvas has the same size and bits on
+# every platform.
+libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
 # The Print graph (TASK-M7-54) is data: its graphs, presets and registry entries are JSON, read with serde_json
 # (`float_roundtrip`, so a number read back is the number written and the canonical serialisation round-trips bitwise),
 # and written in JCS, its numbers in ECMAScript's form from ryu's shortest digits, as engine's canonical writer's are.

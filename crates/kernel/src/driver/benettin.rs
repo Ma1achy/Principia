@@ -78,6 +78,7 @@ use crate::detect::collision::CollisionRadius;
 use crate::occupant::{Geom, State};
 use crate::payload::{sd_is_failed, tm_t_end_step, PayloadReal, SimStateBaseOf, SimStateFTLEOf};
 pub use crate::physics::difference::{CancellationFree, ForceDifference, Plain};
+use crate::real::Real;
 
 /// The sim key's Benettin values (integrator_contract Part 3): `‖δ₀‖` and the renormalisation interval in macro-steps,
 /// REQ-INT-076's calibration.
@@ -267,7 +268,7 @@ pub fn delta<R: WrapperReal>(
 /// divided by the full elapsed time (payload §5; integrator_contract Part 5), never plain `S / t`.
 #[inline]
 pub fn ftle<R: WrapperReal>(s_sum: R, delta: R, delta_0: R, n: u32, dt_macro: R) -> R {
-    (s_sum + Float::ln(delta / delta_0)) / (R::count(n) * dt_macro)
+    (s_sum + Real::logarithm(delta / delta_0)) / (R::count(n) * dt_macro)
 }
 
 /// The renormalisations completed by step `n` (payload §5): the generated read side's, one source for the kernel's
@@ -471,7 +472,7 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
         let d = self.offset_from(x);
         let zero = [[R::default(); 2]; 3];
         let dist = delta(&zero, &zero, &d.r, &d.p);
-        self.s_sum = self.s_sum + Float::ln(dist / self.params.delta_0);
+        self.s_sum = self.s_sum + Real::logarithm(dist / self.params.delta_0);
         let k = self.params.delta_0 / dist;
         if F::DISPLACEMENT {
             self.held = scaled_plus(k, &d, &zero_state(&x.m));
@@ -500,7 +501,7 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
     /// to a comparison with an infinite literal (gpu_determinism_note § "The discipline", rule 4).
     #[inline]
     pub fn sum_finite(&self, x: &State<R>) -> bool {
-        let partial = Float::ln(self.separation(x) / self.params.delta_0);
+        let partial = Real::logarithm(self.separation(x) / self.params.delta_0);
         !(self.s_sum.non_finite_bits() || partial.non_finite_bits())
     }
 

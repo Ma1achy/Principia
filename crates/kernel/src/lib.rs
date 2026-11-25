@@ -22,6 +22,7 @@ pub mod regularisation;
 pub mod shape;
 pub mod stage;
 pub mod toolchain;
+pub mod trig;
 pub mod winding;
 pub mod word;
 

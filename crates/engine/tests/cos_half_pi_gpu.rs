@@ -1,11 +1,13 @@
-//! Each backend's `cos` near `π/2` against f64, relative to its value (TASK-M4-38; REQ-RENDER-122).
+//! The decode's `cos` near `π/2` on each backend, against f64, relative to its value.
 //!
 //! WGSL bounds `sin` and `cos` only by an absolute error (2⁻¹¹ inside `[−π, π]`), but the decode's `‖ρ̃‖ = cos α`
 //! (`kernel::decode::config::hyperspherical`) needs a relative one where `α → π/2`: there `cos α` is small, and an
-//! error of a fixed size is a large share of it. The decode's f32 build lowers `Real::cosine` to WGSL's builtin `cos`
-//! (`crates/render/wgsl/decode.wgsl`, the committed translation), so this file dispatches that builtin alone, through
-//! the compute entry point at the default fast-math setting (off, R-297), on whatever adapter the harness opens
-//! (`PRIN_GPU_BACKEND`, or the platform's), and names the adapter in its output. No kernel build is needed.
+//! error of a fixed size is a large share of it. So the decode calls the kernel's own `cos`, `kernel::trig::sin_cos_f32`,
+//! integer arithmetic alone, never the backend's builtin. This file dispatches that function from the kernel's f32
+//! build, `target/spirv/kernel.wgsl` (`cargo xtask build-kernel` writes it; the `gpu-kernel` profile), through
+//! `kernel::stage::decode::sine_cosine`, under each fast-math setting, on whatever adapter the harness opens
+//! (`PRIN_GPU_BACKEND`, or the platform's), and names the adapter in its output. The builtin's own numbers are
+//! measured, not held, in `builtin_trig_gpu.rs`.
 //!
 //! **The arguments.** Every f32 from `π/4` (rounded) up to the decode's largest `α`, the f32 image of `π/2` rounded
 //! toward zero (the generated `LIT_6`, `0x3FC90FDA`), about 8.4·10⁶ of them: the half of `α`'s range where
@@ -13,7 +15,10 @@
 //!
 //! **The criterion,** written before the first run. For each argument `x`,
 //! `|cos_gpu(x) − cos(x as f64)| ≤ δ_max·|cos(x as f64)|`, with `δ_max = ε_phys / 4`, `ε_phys = EPS_PHYS·2⁻²³` the
-//! round trip's f32 tolerance: `δ_max = 16·2⁻²³ ≈ 1.91·10⁻⁶`. A NaN fails.
+//! round trip's f32 tolerance: `δ_max = 16·2⁻²³ ≈ 1.91·10⁻⁶`. A NaN fails. And the GPU's `sin` and `cos` are the CPU's
+//! `kernel::trig::sin_cos_f32`, bit for bit, under both fast-math settings: the function is integer arithmetic, which no
+//! backend may round or reassociate, so the CPU's exhaustive sweep (`crates/kernel/tests/trig.rs`) holds for the GPU.
+//! The identity is also held on every 997th f32 of `[−2π, 2π]`, the decode's other arguments.
 //! Why a quarter: a relative error `δ` in `cos α` moves `ρ̃`, so `ρ = ρ̃/√μ_ρ`, by `δ‖ρ‖`, and the positions
 //! `r₀ = r₀₁ − w₀ρ` and `r₁ = r₀₁ + w₁ρ` by at most `δ‖ρ‖` (`w₀, w₁ ≤ 1`); since `ρ = r₁ − r₀`, `‖ρ‖ ≤ 2R_x`, so the
 //! residual `‖Δrᵢ‖/R_x` (`validation::roundtrip`) is at most `2δ`. The plan is unclear here (it says only "the bound
@@ -22,18 +27,23 @@
 //! half covers. The momenta's share is not counted here.
 //!
 //! **The output.** The worst relative error in each band of `cos x`, `[2⁻⁽ᵏ⁺¹⁾, 2⁻ᵏ)`, in f32 eps (`2⁻²³`), with its
-//! argument, printed before the assertion so a failure shows the distribution, not one number. The fast-math-on
-//! compile, an opt-in (R-297), is measured and printed too, not held to the bound.
+//! argument, printed before the assertion so a failure shows the distribution, not one number.
 //!
 //! **The controls.** Two stand-in `cos`es, each well inside WGSL's absolute bound of 2⁻¹¹, must fail: the f64 value
 //! plus one f32 eps (`2⁻²³`, absolute), on the CPU; and `1 − 2 sin²(x/2)` on the GPU, whose absolute error of about
 //! f32's eps near `cos x = 0` is a relative error that grows as `cos x` shrinks (on Metal, an M3 Pro, 55% of `cos x` at
-//! `x = LIT_6`). Each control first asserts its stand-in is inside the 2⁻¹¹ absolute bound.
+//! `x = LIT_6`). Each control first asserts its stand-in is inside the 2⁻¹¹ absolute bound. A third, the kernel's
+//! entry read with its `cos` word one ulp up, must fail the bitwise identity.
+
+use std::path::Path;
 
 use engine::contract::fast_math::FastMath;
+use engine::decode_dispatch::sine_cosine_gpu;
 use kernel::generated::links::Literals;
+use kernel::trig::sin_cos_f32;
 use ledger::constants::EPS_PHYS;
 use validation::gpu::GpuHarness;
+use validation::negative_control;
 
 /// The decode's largest `α`: the f32 image of `π/2`, rounded toward zero.
 const TOP: f32 = <f32 as Literals>::LIT_6;
@@ -50,14 +60,13 @@ const BATCH: usize = 1 << 20;
 /// The bands of `cos x` the report reads: `[2⁻⁽ᵏ⁺¹⁾, 2⁻ᵏ)` for `k` below this.
 const BANDS: usize = 26;
 
-const COS_WGSL: &str = r"
-@group(0) @binding(0) var<storage, read> x: array<u32>;
-@group(0) @binding(1) var<storage, read_write> output: array<u32>;
-@compute @workgroup_size(64)
-fn cosine(@builtin(global_invocation_id) id: vec3<u32>) {
-    if (id.x < arrayLength(&x)) { output[id.x] = bitcast<u32>(cos(bitcast<f32>(x[id.x]))); }
+/// The WGSL `cargo xtask build-kernel` wrote.
+fn wgsl() -> String {
+    std::fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/spirv/kernel.wgsl"),
+    )
+    .expect("target/spirv/kernel.wgsl: run `cargo xtask build-kernel` first")
 }
-";
 
 /// The control's stand-in: `cos x = 1 − 2 sin²(x/2)`, accurate only absolutely.
 #[cfg(feature = "controls")]
@@ -85,7 +94,20 @@ fn arguments() -> Vec<f32> {
         .collect()
 }
 
+/// `(sin, cos)` of each argument by the kernel's entry, under `setting`, in batches of [`BATCH`].
+fn kernel_gpu(h: &GpuHarness, wgsl: &str, xs: &[f32], setting: FastMath) -> Vec<(f32, f32)> {
+    let mut out = Vec::with_capacity(xs.len());
+    for chunk in xs.chunks(BATCH) {
+        let got = sine_cosine_gpu(h.device(), h.queue(), wgsl, chunk, setting)
+            .expect("the sine_cosine dispatch");
+        assert_eq!(got.len(), chunk.len(), "one result per argument");
+        out.extend(got);
+    }
+    out
+}
+
 /// `cos` of each argument by the WGSL `module`'s `entry`, under `setting`, in batches of [`BATCH`].
+#[cfg(feature = "controls")]
 fn gpu(h: &GpuHarness, module: &str, entry: &str, xs: &[f32], setting: FastMath) -> Vec<f32> {
     let mut out = Vec::with_capacity(xs.len());
     for chunk in xs.chunks(BATCH) {
@@ -95,6 +117,25 @@ fn gpu(h: &GpuHarness, module: &str, entry: &str, xs: &[f32], setting: FastMath)
         out.extend(got.into_iter().map(f32::from_bits));
     }
     out
+}
+
+/// Panics at the first argument whose GPU `(sin, cos)` is not the CPU's `sin_cos_f32`, bit for bit; returns the count.
+fn check_identity(label: &str, xs: &[f32], got: &[(f32, f32)]) -> usize {
+    assert_eq!(got.len(), xs.len(), "{label}: one result per argument");
+    for (&x, &(s, c)) in xs.iter().zip(got) {
+        let (ws, wc) = sin_cos_f32(x);
+        assert!(
+            (s.to_bits(), c.to_bits()) == (ws.to_bits(), wc.to_bits()),
+            "{label}: the GPU's sin and cos are not the CPU's at {x:e} ({:#010x}): ({:#010x}, {:#010x}) against \
+             ({:#010x}, {:#010x})",
+            x.to_bits(),
+            s.to_bits(),
+            c.to_bits(),
+            ws.to_bits(),
+            wc.to_bits()
+        );
+    }
+    xs.len()
 }
 
 /// `|got − cos x| / |cos x|`, `cos x` at f64; NaN where `got` is.
@@ -162,21 +203,59 @@ fn check(label: &str, xs: &[f32], got: &[f32]) {
 fn gpu_cos_near_half_pi() {
     let h = GpuHarness::new().expect("a GPU device");
     eprintln!("{}", h.adapter_info());
+    let wgsl = wgsl();
     let xs = arguments();
     assert!(
         f64::from(TOP) < std::f64::consts::FRAC_PI_2 && f64::from(TOP).cos() < 1e-7,
         "the sweep's top {TOP:e} is not the f32 just below π/2"
     );
     assert_eq!(xs.len(), (TOP.to_bits() - BOTTOM.to_bits() + 1) as usize);
-    let on = gpu(&h, COS_WGSL, "cosine", &xs, FastMath::On);
-    report("cos, fast-math on (measured, not held)", &xs, &on);
-    let off = gpu(&h, COS_WGSL, "cosine", &xs, FastMath::default());
-    let absolute = absolute_worst(&xs, &off);
-    eprintln!(
-        "cos, fast-math off: worst absolute error {absolute:e} (WGSL's bound {WGSL_ABSOLUTE:e})"
-    );
-    check("cos, fast-math off (the default)", &xs, &off);
+    for setting in [FastMath::default(), FastMath::On] {
+        let got = kernel_gpu(&h, &wgsl, &xs, setting);
+        let n = check_identity(&format!("the kernel's sin_cos, {setting:?}"), &xs, &got);
+        eprintln!("the kernel's sin_cos, {setting:?}: {n} arguments, the CPU's bits");
+        let cos: Vec<f32> = got.iter().map(|g| g.1).collect();
+        let absolute = absolute_worst(&xs, &cos);
+        eprintln!("the kernel's cos, {setting:?}: worst absolute error {absolute:e} (WGSL's bound {WGSL_ABSOLUTE:e})");
+        check(&format!("the kernel's cos, {setting:?}"), &xs, &cos);
+        let wide = circle_arguments();
+        let got = kernel_gpu(&h, &wgsl, &wide, setting);
+        let n = check_identity(
+            &format!("the kernel's sin_cos on [−2π, 2π], {setting:?}"),
+            &wide,
+            &got,
+        );
+        eprintln!("the kernel's sin_cos on [−2π, 2π], {setting:?}: {n} arguments, the CPU's bits");
+    }
 }
+
+/// Every 997th f32 in `[0, 2π̂]` and its negative, with `±0`: the decode's `β` after `on_circle`, both signs, each octant
+/// and its swap past `π/2`, the tiny path below `2⁻¹²` and the reduction's `r = 0` window, so the bit identity the CPU's
+/// exhaustive sweep rests on is a test here, not an argument.
+fn circle_arguments() -> Vec<f32> {
+    let top = (2.0 * std::f32::consts::PI).to_bits();
+    (0..=top)
+        .step_by(997)
+        .chain([top])
+        .map(f32::from_bits)
+        .flat_map(|x| [x, -x])
+        .collect()
+}
+
+negative_control!(
+    gpu_cos_near_half_pi,
+    "the kernel's entry with its cos word one ulp up is not the CPU's",
+    expected = "are not the CPU's",
+    {
+        let h = GpuHarness::new().expect("a GPU device");
+        let xs: Vec<f32> = arguments().into_iter().step_by(4099).collect();
+        let got: Vec<(f32, f32)> = kernel_gpu(&h, &wgsl(), &xs, FastMath::default())
+            .into_iter()
+            .map(|(s, c)| (s, f32::from_bits(c.to_bits() + 1)))
+            .collect();
+        check_identity("one ulp up", &xs, &got);
+    }
+);
 
 #[cfg(feature = "controls")]
 mod absolute_eps {

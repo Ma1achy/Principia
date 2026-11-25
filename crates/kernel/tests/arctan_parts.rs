@@ -2,7 +2,8 @@
 //! each against a reference in native integer or f64 arithmetic, on edge values and on draws from every magnitude.
 //! The sweeps (`tests/arctan.rs`) hold the whole function to its bound; these hold each part to its own contract, so
 //! that an error too small or too rare for a sweep's sample still fails.
-//! - `arctan_mul`: `mul` and `mul_hi` are the 64-bit product and its high word.
+//! - `arctan_mul`: `mul` and `mul_hi` are the 64-bit product and its high word, and so is `mul_halves`, the GPU's `mul`
+//!   from 16-bit halves (the host's is one u64 product).
 //! - `arctan_add_sub`: `add` and `sub` are 64-bit sums and differences modulo 2⁶⁴, the carry and the borrow at their
 //!   edges.
 //! - `arctan_shifts`: `shr` and `shl` are 64-bit shifts for every `s` to 80, 0 from 64 on.
@@ -21,7 +22,8 @@
 //!   with `|r|` up to `1/8`.
 
 use kernel::arctan::{
-    add, atan2_f32, atan_reduced, divide, mul, mul_hi, round, shl, shr, sub, unpack, zeros, Words,
+    add, atan2_f32, atan_reduced, divide, mul, mul_halves, mul_hi, round, shl, shr, sub, unpack,
+    zeros, Words,
 };
 use validation::arctan::ulps;
 use validation::decode_f32_eps::SplitMix;
@@ -100,6 +102,30 @@ fn check_mul(full: fn(u32, u32) -> Words, high: fn(u32, u32) -> u32) {
 #[test]
 fn arctan_mul() {
     check_mul(mul, mul_hi);
+    check_mul(mul_halves, |a, b| mul_halves(a, b).hi);
+}
+
+mod halves {
+    use super::*;
+
+    negative_control!(
+        arctan_mul,
+        "the halves' product with the middle sum's carry into the high word dropped",
+        expected = "mul(",
+        check_mul(
+            |a, b| {
+                let (a1, a0) = (a >> 16, a & 0xFFFF);
+                let (b1, b0) = (b >> 16, b & 0xFFFF);
+                let (p00, p01, p10, p11) = (a0 * b0, a0 * b1, a1 * b0, a1 * b1);
+                let mid = (p00 >> 16) + (p01 & 0xFFFF) + (p10 & 0xFFFF);
+                Words {
+                    hi: p11 + (p01 >> 16) + (p10 >> 16),
+                    lo: (p00 & 0xFFFF) | (mid << 16),
+                }
+            },
+            mul_hi
+        )
+    );
 }
 
 negative_control!(

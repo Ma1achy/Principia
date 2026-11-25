@@ -1344,10 +1344,8 @@ negative_control!(
     )
 );
 
-/// The fixture is what the builders give, bit for bit, on the platform that wrote it alone: the builders call the
-/// platform's `sin_cos` and `powf`, which is why the fixture exists at all (the module's note). CI's Linux gives other
-/// bits, run 42288064592.
-#[cfg(target_os = "macos")]
+/// The fixture is what the builders give, bit for bit, on every platform: the builders and the decodes they call reach
+/// no platform maths call (`kernel::Real`'s f64 and f32 methods are the pinned library's or the kernel's own).
 fn check_fixture(inputs: &Inputs) {
     let held = Inputs::load(root()).expect("the fixture");
     assert_eq!(
@@ -1357,13 +1355,11 @@ fn check_fixture(inputs: &Inputs) {
     );
 }
 
-#[cfg(target_os = "macos")]
 #[test]
 fn cross_backend_read_back_fixture_is_the_builders() {
     check_fixture(&build_inputs());
 }
 
-#[cfg(target_os = "macos")]
 negative_control!(
     cross_backend_read_back_fixture_is_the_builders,
     "one state of the builders' moved",
@@ -1386,8 +1382,7 @@ fn batch_shape(b: &Batch) -> (String, String, usize, bool, usize) {
     )
 }
 
-/// The fixture has the builders' shape, on any platform: the same runs of states and the same batches, whatever the
-/// platform's `sin_cos` and `powf` make of their bits.
+/// The fixture has the builders' shape: the same runs of states and the same batches.
 fn check_fixture_shape(inputs: &Inputs) {
     let held = Inputs::load(root()).expect("the fixture");
     let shape = |i: &Inputs| i.batches.iter().map(batch_shape).collect::<Vec<_>>();

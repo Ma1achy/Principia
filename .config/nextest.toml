@@ -193,6 +193,7 @@ default-filter = """
         | binary_id(=engine::qa_TASK-M2-24_gpu)
         | binary_id(=engine::lock_gpu)
         | binary_id(=engine::arctan_gpu)
+        | binary_id(=engine::cos_half_pi_gpu)
         | binary_id(=engine::branch_read_gpu)
         | binary_id(=engine::first_slice_gpu)
         | binary_id(=validation::cross_backend_gpu)
@@ -213,12 +214,12 @@ default-filter = """
 """
 fail-fast = false
 
-# Each backend's `cos` near `π/2` against f64, relative to its value (TASK-M4-38): `engine`'s `cos_half_pi_gpu` needs no
-# kernel build, so it runs here, on every pull request's lavapipe, and `gpu_cos_near_half_pi` prints the worst relative
-# error per band of `cos x` on success, so the backend's numbers stay in the log. The Windows card runs it under
-# `win-gpu-kernel` below.
+# The backend's builtin `cos` near `π/2` and `sin` near 0, measured, never held: `engine`'s `builtin_trig_gpu` needs no
+# kernel build, so it runs here, on every pull request's lavapipe, and prints the worst relative error per band on
+# success, so the backend's numbers stay in the log. The Windows card runs it under `win-gpu-kernel` below. The decode's
+# own `cos`, `cos_half_pi_gpu`, needs the kernel build and runs under `gpu-kernel`.
 [[profile.ci.overrides]]
-filter = "binary_id(=engine::cos_half_pi_gpu) & test(=gpu_cos_near_half_pi)"
+filter = "binary_id(=engine::builtin_trig_gpu)"
 success-output = "immediate"
 
 # The tests that run cargo on the workspace's own target directory from xtask (the override above), among them the
@@ -261,6 +262,7 @@ default-filter = """
     | binary_id(=engine::qa_TASK-M2-24_gpu)
     | binary_id(=engine::lock_gpu)
     | binary_id(=engine::arctan_gpu)
+    | binary_id(=engine::cos_half_pi_gpu)
     | binary_id(=engine::branch_read_gpu)
     | binary_id(=engine::first_slice_gpu)
     | binary_id(=validation::cross_backend_gpu)
@@ -294,6 +296,12 @@ success-output = "immediate"
 # R-369.
 [[profile.gpu-kernel.overrides]]
 filter = "binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu)"
+success-output = "immediate"
+
+# The decode's own `cos` near `π/2` on the job's backend: `gpu_cos_near_half_pi` prints the worst relative error per
+# band, shown on success.
+[[profile.gpu-kernel.overrides]]
+filter = "binary_id(=engine::cos_half_pi_gpu) & test(=gpu_cos_near_half_pi)"
 success-output = "immediate"
 
 # The parity harness's differences between the GPU, the CPU at f32 and the CPU at f64, which its tests print and never
@@ -351,8 +359,8 @@ default-filter = """
 
 # `win-vulkan`'s gpu-kernel step: the `gpu-kernel` profile's list less `xtask::build_kernel`, whose one reported test
 # (above) can't be left out of a list of whole binaries; the job runs that binary's other tests in a step of their own,
-# under `win-asserted`. TASK-M0-88. One binary is added: `engine::cos_half_pi_gpu` needs no kernel build, so `ci` runs
-# it on lavapipe, and the card's Vulkan reaches it only here (TASK-M4-38).
+# under `win-asserted`. One binary is added: `engine::builtin_trig_gpu` needs no kernel build, so `ci` runs it on
+# lavapipe, and the card's Vulkan reaches it only here.
 [profile.win-gpu-kernel]
 fail-fast = false
 default-filter = """
@@ -374,6 +382,7 @@ default-filter = """
     | binary_id(=engine::lock_gpu)
     | binary_id(=engine::arctan_gpu)
     | binary_id(=engine::cos_half_pi_gpu)
+    | binary_id(=engine::builtin_trig_gpu)
     | binary_id(=engine::branch_read_gpu)
     | binary_id(=engine::first_slice_gpu)
     | binary_id(=validation::cross_backend_gpu)
@@ -404,6 +413,10 @@ success-output = "immediate"
 
 [[profile.win-gpu-kernel.overrides]]
 filter = "binary_id(=engine::cos_half_pi_gpu) & test(=gpu_cos_near_half_pi)"
+success-output = "immediate"
+
+[[profile.win-gpu-kernel.overrides]]
+filter = "binary_id(=engine::builtin_trig_gpu)"
 success-output = "immediate"
 
 [[profile.win-gpu-kernel.overrides]]

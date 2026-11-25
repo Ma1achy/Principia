@@ -270,7 +270,7 @@ impl Step {
                 v + step.signum() * step.abs().round().max(1.0)
             }
             (By::Share, Some((lo, hi))) => v + share * (hi - lo),
-            (By::Log, Some((lo, hi))) => v * (hi / lo).powf(share),
+            (By::Log, Some((lo, hi))) => v * engine::exact::pow(hi / lo, share),
             (By::Share | By::Log, None) => v + share,
             (By::One, _) => v + one,
             (By::Degree, _) => match adjust.delta() {
@@ -310,7 +310,7 @@ pub fn code(v: f64) -> f64 {
     let s = if v <= 0.003_130_8 {
         12.92 * v
     } else {
-        1.055 * v.powf(1.0 / 2.4) - 0.055
+        1.055 * engine::exact::pow(v, 1.0 / 2.4) - 0.055
     };
     (255.0 * s).round()
 }
@@ -321,7 +321,7 @@ pub fn linear(c: f64) -> f64 {
     if s <= 0.040_45 {
         s / 12.92
     } else {
-        ((s + 0.055) / 1.055).powf(2.4)
+        engine::exact::pow((s + 0.055) / 1.055, 2.4)
     }
 }
 

@@ -221,7 +221,8 @@ impl Canvas {
     /// `(u, v)` takes the image's pixel under its centre, `(u + ½, v + ½)` rotated counter-clockwise by θ about the two
     /// centres, rounded down to the pixel it falls in.
     fn rotated_back(lows: &[u8], width: u32, height: u32, degrees: u32) -> Self {
-        let (sin, cos) = f64::from(degrees).to_radians().sin_cos();
+        let angle = f64::from(degrees).to_radians();
+        let (sin, cos) = (libm::sin(angle), libm::cos(angle));
         let (w, h) = (f64::from(width), f64::from(height));
         // At 0° the sides are the image's exactly; at every other whole degree they are not whole numbers.
         let (cw, ch) = (

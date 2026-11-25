@@ -61,6 +61,9 @@ pub const BETA_ENTRY: &str = "stage_encode_beta";
 /// The WGSL entry point naga names for `kernel::stage::encode::arctangent`.
 pub const ARCTANGENT_ENTRY: &str = "stage_encode_arctangent";
 
+/// The WGSL entry point naga names for `kernel::stage::decode::sine_cosine`.
+pub const SINE_COSINE_ENTRY: &str = "stage_decode_sine_cosine";
+
 /// The decode-only readback of one dispatch, as words: the integrator's input buffer, the tags and the descriptors.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Words {
@@ -750,6 +753,34 @@ pub fn arctan2_gpu(
         setting,
     )?;
     Ok(read.into_iter().map(f32::from_bits).collect())
+}
+
+/// The kernel's own f32 sine and cosine (`kernel::trig`), `kernel::stage::decode::sine_cosine`, dispatched on `device`
+/// over the arguments `xs`, each passed by its bits, under the fast-math `setting`: each one's `(sin x, cos x)` as the
+/// GPU computes them. Its pipeline is made per call: a test's.
+pub fn sine_cosine_gpu(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    wgsl: &str,
+    xs: &[f32],
+    setting: FastMath,
+) -> Result<Vec<(f32, f32)>, ComputeError> {
+    if xs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let words: Vec<u32> = xs.iter().map(|x| x.to_bits()).collect();
+    let read = run_entry(
+        device,
+        queue,
+        (wgsl, SINE_COSINE_ENTRY),
+        &words,
+        (xs.len(), 2),
+        setting,
+    )?;
+    Ok(read
+        .chunks_exact(2)
+        .map(|w| (f32::from_bits(w[0]), f32::from_bits(w[1])))
+        .collect())
 }
 
 /// [`decode_only_with`] with `η_E` off.

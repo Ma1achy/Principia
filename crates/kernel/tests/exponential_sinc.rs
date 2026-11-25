@@ -404,7 +404,7 @@ fn check_map_f32(k_of: fn(r: f32, d: [f32; 3]) -> f32) {
         let (a, b) = ((u + u - 1.0) * s, (v + v - 1.0) * s);
         let d = [0, 1, 2].map(|i| a * e1[i] + b * e2[i]);
         let r = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-        let (c, k) = (r.cos(), k_of(r, d));
+        let (c, k) = (Real::cosine(r), k_of(r, d));
         let want = [0, 1, 2].map(|i| c * n0[i] + k * d[i]);
         let got = exponential(n0, e1, e2, s, u, v);
         assert_eq!(
@@ -429,7 +429,7 @@ negative_control!(
     exponential_sinc_f32_map_reads_the_form,
     "the f32 map compared with the line before R-696 must differ in a bit",
     expected = "with the form's k",
-    check_map_f32(|r, _| r.sin() / r)
+    check_map_f32(|r, _| Real::sine(r) / r)
 );
 
 /// The fragment's WGSL holds the form: the cut and each coefficient, written as naga writes an f32.

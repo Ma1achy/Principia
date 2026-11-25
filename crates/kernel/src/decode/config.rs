@@ -62,6 +62,10 @@ pub fn angles<S: Selection, R: LinkReal>(z_cfg: [R; 2]) -> (R, R) {
 /// ([`Real::on_circle`]) before `cos` and `sin` see it: the periodic `β` is any real number (dd_decoder §3.2), and a
 /// GPU's `cos` and `sin` are bounded only inside `[−π, π]` (`crate::circle`'s note). `α ∈ [0, π/2]` needs no reduction.
 ///
+/// `‖ρ̃‖ = cos α` must stay accurate relative to itself as `α → π/2`, a tight inner pair. At f32 [`Real::cosine`] is the
+/// kernel's own (`crate::trig`), on the GPU too: don't take the backend's builtin `cos` here, whose bound is absolute, so
+/// near `π/2` it can be off by many times `cos α` itself.
+///
 /// The plan is unclear here; chose to reduce at f32 only and leave f64 on the pinned libm because f64 runs only on the
 /// host, whose libm already reduces exactly, so f64's records keep their bits, and at f32 the reduction is exact too.
 #[inline]
