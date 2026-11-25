@@ -2765,16 +2765,16 @@ negative_control!(
 //
 // - **C1, the solver target from its floor.** With the residual target at 0, the residual each hold solve stops at (the
 //   re-hold's and the nearest point's, on the hold pairs at the sweep's pins) is its floor. The target is the smallest
-//   power of two in `ε` at or above twice the worst floor. Pass: it is below `LOCK_TOLERANCE` (64 ε); if not, the target
+//   power of two in `ε` at or above twice the worst floor. Pass: it is below `LOCK_TOLERANCE`; if not, the target
 //   goes to the owner, not into the code.
 // - **C2, no hold lost.** At that target, no hold pair (affine, nonlinear, the sphere, `(L_z, K)` to latent) refuses or
 //   has a frame that slides: a hold decided in `‖·‖_phys` must not turn a frame main held into a slide, since a sliding
 //   frame reads 0 here and would hide it.
 // - **C3, the worst and its distribution**, reported per pair, the target's own pin included. Every holding frame is now
 //   within `LOCK_TOLERANCE` in `‖·‖_phys` by construction; the number that matters is how far under.
-// - **C4, a fixed point.** `T` = the rule's output at 64. Rerun with `LOCK_TOLERANCE` set to `T` (a local edit of the
-//   ledger, reverted, as PR #69 did). Pass: the rule gives `T` again there, and nothing the sweep holds at 64 refuses
-//   or slides at `T`.
+// - **C4, a fixed point.** `T` = the rule's output at the tolerance in force. Rerun with `LOCK_TOLERANCE` set to `T` (a local edit of the
+//   ledger, reverted). Pass: the rule gives `T` again there, and nothing the sweep holds at the tolerance in force
+//   refuses or slides at `T`.
 // - **C5, the slides unchanged.** The rest and Burrau pairs' refusal count and per-pin readings as on main, the
 //   shared solver settings notwithstanding; any change is listed.
 // - **C6, the Burrau refusals' cause.** Each ended slide's failure kind (the follow's continuity test or a probe,
@@ -3800,8 +3800,9 @@ fn path_lock_burrau_ends() {
 // so a frame it holds is not held at the tolerance it is judged by. At the pin where main read its worst, latent to the
 // exponential sphere at (0.8, 0.6) (65.825 ε, the slice's first step), the gate path at 16 frames per segment. Pass: no
 // frame of the hold pair slides or is refused, and every reading is within `LOCK_TOLERANCE` in `‖·‖_phys`. Control:
-// the solver's target set back to `LOCK_TOLERANCE` (main's), under which that pin's re-held frames stop short of the
-// pinned state and, decided in `‖·‖_phys`, slide.
+// the solver's target set to four times `LOCK_TOLERANCE`, under which that pin's re-held frames stop short of the pinned
+// state and, decided in `‖·‖_phys`, slide. Don't use 1× or 2× `LOCK_TOLERANCE` as the target: the pin's reading is
+// inside the tolerance, so the control would not fail.
 
 /// The sweep's pin `(k/15, j/15)`.
 fn grid_pin(k: usize, j: usize) -> [f64; 2] {
@@ -3815,12 +3816,12 @@ fn path_lock_rehold_target() {
 
 negative_control!(
     path_lock_rehold_target,
-    "the solver's residual target set back to the lock's tolerance, main's",
+    "the solver's residual target set to four times the lock's tolerance",
     expected = "a correct lock should hold",
     {
         use engine::path::anchor::probe::{self, Switches};
         let switches = Switches {
-            target: Some(LOCK_TOLERANCE),
+            target: Some(4.0 * LOCK_TOLERANCE),
             ..Switches::default()
         };
         probe::with(switches, || {
@@ -4089,7 +4090,7 @@ negative_control!(
 // - **F5, no hold lost:** #72's C2 (no hold pair refuses or slides, at 16 frames), C5 (the rest pair's refusals and
 //   per-pin readings as on main) and C7 (the re-solving pairs at 64 frames) rerun, as written there.
 // - **Reported:** how many of the 124 become pins the sweep reads through, true ends, or remaining failures; C1's floor
-//   rerun and the sizing rule's value and its margins. `LOCK_TOLERANCE` (64) and `lock_solve_tolerance` (32) are not
+//   rerun and the sizing rule's value and its margins. `LOCK_TOLERANCE` and `lock_solve_tolerance` (32) are not
 //   changed here; proposed values go to the owner.
 //
 // **Read** (PR #79 carries the output): the cause is the solver's polish, judged on `‖Jᵀr‖` while convergence reads

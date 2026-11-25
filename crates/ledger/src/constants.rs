@@ -1101,15 +1101,12 @@ pub const EPS_PHYS: ConstantBuilder = proposed(
     "M2",
 );
 
-/// The lock's tolerance (TASK-M2-65; composition § 17.8; REQ-CHART-158), as `k` in `k·ε_R`, in `‖·‖_phys` (the norm
-/// `ε_phys` is stated in, inverse-encode Part 4): how far the state a locked view shows at its pin may drift from the
-/// pinned state along a locked path where the target holds it, and how close a chart's nearest point to the anchor must
-/// come for the chart to hold it. A calibration: proposed from the pinned state's drift along the gate test's path, on
-/// affine and nonlinear charts, confirmed by the owner at the M2 gate. It reads `ε_phys`'s 64, the lookup's own landing
-/// tolerance in the same norm, until the owner confirms TASK-M2-65's proposal or another value.
+/// The lock's tolerance, as `k` in `k·ε_R`, in `‖·‖_phys` (the norm `ε_phys` is stated in, inverse-encode Part 4): how
+/// far the state a locked view shows at its pin may drift from the pinned state along a locked path where the target
+/// holds it, and how close a chart's nearest point to the anchor must come for the chart to hold it.
 pub const LOCK_TOLERANCE: ConstantBuilder = proposed(
     "lock_tolerance",
-    64.0,
+    128.0,
     Admissibility::CanonicalUnits,
     "REQ-CHART-158",
     "M2",
