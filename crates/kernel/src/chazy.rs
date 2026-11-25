@@ -688,7 +688,351 @@ pub fn chazy_class<R: ChazyReal>(
     r_0: R,
     i_max_code: u32,
 ) -> u32 {
+    label_of(m, r, p, e_0, r_0, i_max_code).code()
+}
+
+// ── The read-side fields (§5.2–§5.6) ──────────────────────────────────────────────────────────────────
+//
+// `chazy_final`, `chazy_status`, `chazy_structure` and `chazy_q` are folds of the label at the playhead; `chazy_escaper`
+// and `chazy_qk` read the live state and the masses alone. Every one is derived at read, nothing stored (§5.1).
+
+/// `chazy_final`'s eight values (§5.2, §5.3): Chazy's seven classes and collision, with the codes the read side gives.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Final {
+    /// Bounded, or nobody has left yet at the playhead (B-stable, B-so-far, excursion and transient).
+    B = 0,
+    H = 1,
+    Hp = 2,
+    P = 3,
+    He = 4,
+    Pe = 5,
+    /// Oscillatory: the OS-candidate label.
+    Os = 6,
+    /// A collision-terminated sample: a pair, a triple or a collision at `t = 0` (§7).
+    Collision = 7,
+}
+
+impl Final {
+    /// The eight values in code order.
+    pub const ALL: [Final; 8] = [
+        Final::B,
+        Final::H,
+        Final::Hp,
+        Final::P,
+        Final::He,
+        Final::Pe,
+        Final::Os,
+        Final::Collision,
+    ];
+
+    /// The value's code, `0..8`.
+    #[inline]
+    pub fn code(self) -> u32 {
+        self as u32
+    }
+}
+
+/// `chazy_status`'s seven values (§5.2, §5.4), with the codes the read side gives.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Status {
+    /// H, HP, P, HE or PE.
+    Committed = 0,
+    /// Committed, but shown in its own colour: the one bound label that is a prediction.
+    BStable = 1,
+    BSoFar = 2,
+    Excursion = 3,
+    Transient = 4,
+    OsCandidate = 5,
+    /// A collision-terminated sample (§7).
+    Collision = 6,
+}
+
+impl Status {
+    /// The seven values in code order.
+    pub const ALL: [Status; 7] = [
+        Status::Committed,
+        Status::BStable,
+        Status::BSoFar,
+        Status::Excursion,
+        Status::Transient,
+        Status::OsCandidate,
+        Status::Collision,
+    ];
+
+    /// The value's code, `0..7`.
+    #[inline]
+    pub fn code(self) -> u32 {
+        self as u32
+    }
+}
+
+/// `chazy_structure`'s four values (§5.2, §5.5): which bodies are separating from which.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Structure {
+    Dispersal = 0,
+    Hierarchy = 1,
+    Interacting = 2,
+    Oscillatory = 3,
+}
+
+impl Structure {
+    /// The four values in code order.
+    pub const ALL: [Structure; 4] = [
+        Structure::Dispersal,
+        Structure::Hierarchy,
+        Structure::Interacting,
+        Structure::Oscillatory,
+    ];
+
+    /// The value's code, `0..4`.
+    #[inline]
+    pub fn code(self) -> u32 {
+        self as u32
+    }
+}
+
+// The folds: begin. Each is a match over every label with no wildcard arm, so a label added to `Motion` fails to build
+// until each fold maps it (§12.2 item 3); `kernel/tests/chazy_fields.rs` compiles this region against an eleventh label
+// to hold that. Nothing between the markers reads anything but `Motion`, `Final`, `Status` and `Structure`.
+
+/// The label folded onto Chazy's seven (§5.3): H, HP, P, HE and PE themselves; B-stable, B-so-far, excursion (bound to
+/// its pair) and transient (nobody has left yet: a display choice, not a physics claim) to B; OS-candidate to OS.
+#[inline]
+pub fn fold_final(label: Motion) -> Final {
+    match label {
+        Motion::H => Final::H,
+        Motion::Hp => Final::Hp,
+        Motion::P => Final::P,
+        Motion::He => Final::He,
+        Motion::Pe => Final::Pe,
+        Motion::BStable => Final::B,
+        Motion::BSoFar => Final::B,
+        Motion::Excursion => Final::B,
+        Motion::Transient => Final::B,
+        Motion::OsCandidate => Final::Os,
+    }
+}
+
+/// The label's status (§5.4): committed for H, HP, P, HE and PE; B-stable in its own value; the four working states
+/// themselves.
+#[inline]
+pub fn fold_status(label: Motion) -> Status {
+    match label {
+        Motion::H => Status::Committed,
+        Motion::Hp => Status::Committed,
+        Motion::P => Status::Committed,
+        Motion::He => Status::Committed,
+        Motion::Pe => Status::Committed,
+        Motion::BStable => Status::BStable,
+        Motion::BSoFar => Status::BSoFar,
+        Motion::Excursion => Status::Excursion,
+        Motion::Transient => Status::Transient,
+        Motion::OsCandidate => Status::OsCandidate,
+    }
+}
+
+/// The label's structure row (§5.5, the precedence written there): the row is the label's, never the hierarchy ratio's
+/// alone. Dispersal for H, HP and P, the two-stage H included; hierarchy for the hierarchy step's own labels, HE, PE
+/// and excursion, and for B-stable, which Mardling–Aarseth certifies a bound hierarchy (§10.5.2's "bound hierarchy");
+/// oscillatory for OS-candidate; interacting for transient and B-so-far, whatever their most separated body's ratio.
+///
+/// The plan is unclear here: §5.5 suggests the hierarchy row for HE, PE and excursion alone and interacting for "the
+/// rest". Chose B-stable in the hierarchy row because §10.5.2 draws a bound hierarchy dark in the hierarchy hue and a
+/// B-stable state is one by its own test; its `q` is then the outer `K/U`, below 1 by that test (`K_out < U_out`), so
+/// the review's property (a bound label below the parabolic mid-point) holds on either row.
+#[inline]
+pub fn fold_structure(label: Motion) -> Structure {
+    match label {
+        Motion::H => Structure::Dispersal,
+        Motion::Hp => Structure::Dispersal,
+        Motion::P => Structure::Dispersal,
+        Motion::He => Structure::Hierarchy,
+        Motion::Pe => Structure::Hierarchy,
+        Motion::Excursion => Structure::Hierarchy,
+        Motion::BStable => Structure::Hierarchy,
+        Motion::Transient => Structure::Interacting,
+        Motion::BSoFar => Structure::Interacting,
+        Motion::OsCandidate => Structure::Oscillatory,
+    }
+}
+
+// The folds: end.
+
+/// The label of a stored sample at the playhead ([`chazy_class`]'s): masses `m`, live positions `r` and momenta `p`,
+/// `E_0`, `R_0` and the stored level of `I_max`, under the defaults with no previous snapshot.
+#[inline]
+pub fn label_of<R: ChazyReal>(
+    m: [R; 3],
+    r: [[R; 2]; 3],
+    p: [[R; 2]; 3],
+    e_0: R,
+    r_0: R,
+    i_max_code: u32,
+) -> Motion {
     let i_0 = (m[0] + m[1] + m[2]) * r_0 * r_0;
     let ph = Playhead::from_momenta(m, r, p, e_0, r_0, i_max_decode(i_max_code, i_0));
-    classify(&ph, &ChazyCfg::defaults(), &Previous::none()).code()
+    classify(&ph, &ChazyCfg::defaults(), &Previous::none())
+}
+
+/// The read side's `chazy_final` (§5.3): a collision-terminated sample (`state` is `collision`: a pair, a triple or a
+/// collision at `t = 0` alike, §7) reads collision, every other sample its label folded ([`fold_final`]). An
+/// escape-terminated sample's stored state is its fire-time state, so it reads the class there (§7).
+#[inline]
+pub fn chazy_final<R: ChazyReal>(
+    state: u32,
+    m: [R; 3],
+    r: [[R; 2]; 3],
+    p: [[R; 2]; 3],
+    e_0: R,
+    r_0: R,
+    i_max_code: u32,
+) -> u32 {
+    if state == crate::payload::STATE_COLLISION {
+        Final::Collision.code()
+    } else {
+        fold_final(label_of(m, r, p, e_0, r_0, i_max_code)).code()
+    }
+}
+
+/// The read side's `chazy_status` (§5.4): collision for a collision-terminated sample, as [`chazy_final`]; otherwise
+/// the label's status ([`fold_status`]).
+#[inline]
+pub fn chazy_status<R: ChazyReal>(
+    state: u32,
+    m: [R; 3],
+    r: [[R; 2]; 3],
+    p: [[R; 2]; 3],
+    e_0: R,
+    r_0: R,
+    i_max_code: u32,
+) -> u32 {
+    if state == crate::payload::STATE_COLLISION {
+        Status::Collision.code()
+    } else {
+        fold_status(label_of(m, r, p, e_0, r_0, i_max_code)).code()
+    }
+}
+
+/// The read side's `chazy_structure` (§5.5): the label's row ([`fold_structure`]). A collision-terminated sample has
+/// no structure to read; its row is its stored state's, which the stains do not draw (they draw `chazy_final`'s
+/// collision, §7).
+#[inline]
+pub fn chazy_structure<R: ChazyReal>(
+    m: [R; 3],
+    r: [[R; 2]; 3],
+    p: [[R; 2]; 3],
+    e_0: R,
+    r_0: R,
+    i_max_code: u32,
+) -> u32 {
+    fold_structure(label_of(m, r, p, e_0, r_0, i_max_code)).code()
+}
+
+/// The smaller of `a` and `b`, `b` where they compare false.
+#[inline]
+fn least<R: ChazyReal>(a: R, b: R) -> R {
+    if a < b {
+        a
+    } else {
+        b
+    }
+}
+
+/// `q` of the label's row at the playhead `ph` (§5.5; [`chazy_q`]).
+///
+/// - **Dispersal**: the smallest pair `K/U`, where no pair is bound by its band (step 1's H, HP and P, and a two-stage H
+///   with every pair unbound); otherwise, a two-stage H with a bound pair `(b, i)` or `(b, j)`, the smaller of the inner
+///   pair's `K/U` and the outer body's, the two ratios the rule banded to commit it. Either way `q ≥ 1 − ε`.
+/// - **Hierarchy**: the most separated body's outer `K/U` against its pair.
+/// - **Interacting** and **oscillatory**: the total `K/|U|` with `K = E_0 + |U|`, `q = 1 + E_0/|U|`, held at 0 from below.
+///
+/// The plan is unclear here on two points. "The smallest pair `K/U` (the least unbound pair)" presumes every pair
+/// unbound, which a two-stage H need not have (a body co-moving with the escaper reads `K/U` near 0); chose the two
+/// ratios the rule committed on, so an H, HP or P sample never draws below the parabolic mid-point (§10.5.2: dispersal
+/// dark "not reachable"). And "total `K/|U|` (> 1 exactly when E > 0)" holds for the live energy only up to the march's
+/// drift; chose `K = E_0 + |U|`, the energy the label reads, so `q ≥ 1` exactly when `E_0 ≥ 0` and `q ≤ 1` exactly
+/// when `E_0 ≤ 0` (rounding is monotone and 1 is exact), and a transient sample is never drawn below a bound one by a
+/// drift. Strictly above 1 wherever `E_0/|U|` is above half an ulp of 1.
+#[inline]
+pub fn q_of<R: ChazyReal>(ph: &Playhead<R>, row: Structure, eps: R) -> R {
+    let zero = R::default();
+    let ratio = |x: Kup<R>| x.k / x.u;
+    let pairs = [pair_kup(ph, 0, 1), pair_kup(ph, 0, 2), pair_kup(ph, 1, 2)];
+    let b = most_separated(ph);
+    let (i, j) = others(b);
+    match row {
+        Structure::Dispersal => {
+            let three = least(least(ratio(pairs[0]), ratio(pairs[1])), ratio(pairs[2]));
+            if three >= R::one() - eps {
+                three
+            } else {
+                least(ratio(pair_kup(ph, i, j)), ratio(out_kup(ph, b, i, j)))
+            }
+        }
+        Structure::Hierarchy => ratio(out_kup(ph, b, i, j)),
+        Structure::Interacting | Structure::Oscillatory => {
+            let u = pairs[0].u + pairs[1].u + pairs[2].u;
+            let q = R::one() + ph.e / u;
+            if q < zero {
+                zero
+            } else {
+                q
+            }
+        }
+    }
+}
+
+/// The read side's `chazy_q` (§5.5): the label's row's `K/|U|` ([`q_of`]), ≥ 0, 1 parabolic; for display
+/// `b = q / (1 + q)`.
+#[inline]
+pub fn chazy_q<R: ChazyReal>(
+    m: [R; 3],
+    r: [[R; 2]; 3],
+    p: [[R; 2]; 3],
+    e_0: R,
+    r_0: R,
+    i_max_code: u32,
+) -> R {
+    let i_0 = (m[0] + m[1] + m[2]) * r_0 * r_0;
+    let ph = Playhead::from_momenta(m, r, p, e_0, r_0, i_max_decode(i_max_code, i_0));
+    let cfg = ChazyCfg::defaults();
+    let row = fold_structure(classify(&ph, &cfg, &Previous::none()));
+    q_of(&ph, row, cfg.eps)
+}
+
+/// The read side's `chazy_escaper` (§5.6): the body most separated from its pair, the largest hierarchy ratio
+/// `ρ_b`, the lowest index on a tie ([`most_separated`], `classify`'s own choice). A body index, 0-based. From
+/// the live positions and the masses alone.
+#[inline]
+pub fn chazy_escaper<R: ChazyReal>(m: [R; 3], r: [[R; 2]; 3]) -> u32 {
+    let ph = Playhead {
+        m,
+        r,
+        v: [[R::default(); 2]; 3],
+        e: R::default(),
+        r_0: R::one(),
+        i_max: R::default(),
+    };
+    match most_separated(&ph) {
+        0 => 0,
+        1 => 1,
+        _ => 2,
+    }
+}
+
+/// The read side's `chazy_qk` (§5.6): body `k`'s `K/|U|` against the centre of mass of the other two
+/// (`out_kup(k)`), `k = 0, 1, 2`, each ≥ 0, 1 parabolic. From the live positions and momenta and the masses alone; on a
+/// HE or PE sample `chazy_qk[chazy_escaper]` is `chazy_q`.
+#[inline]
+pub fn chazy_qk<R: ChazyReal>(m: [R; 3], r: [[R; 2]; 3], p: [[R; 2]; 3]) -> [R; 3] {
+    let ph = Playhead::from_momenta(m, r, p, R::default(), R::one(), R::default());
+    let q = |b: usize| {
+        let (i, j) = others(b);
+        let x = out_kup(&ph, b, i, j);
+        x.k / x.u
+    };
+    [q(0), q(1), q(2)]
 }

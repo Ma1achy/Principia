@@ -1,0 +1,4 @@
+{
+  "description": "The Burrau rest start through Path A, Heggie × RK4 at f64 with the stop option off, at the benchmark's pinned r_coll = 0, classified by the Chazy rule after every step to 100 of S&P's units, past its escape: the last label HE, its escaper the lightest body, no step H, HP or P. The threshold, 0, is the number of steps reading H, HP or P a pass allows.",
+  "expected": "pass"
+}

@@ -450,6 +450,24 @@ hierarchy row only for the hierarchy step's own labels (HE, PE, excursion), and 
 for H, HP and P, oscillatory for OS-candidate, interacting for the rest); the task chooses and writes it (applied per
 R-369: the definition can satisfy both §5.5 and ruling 5, so this is not an RQ).
 
+**The precedence, as built** (`kernel::chazy::fold_structure`, `q_of`): the row is the label's, never the hierarchy
+ratio's alone.
+
+| label | row | `q` |
+|---|---|---|
+| H, HP, P (the two-stage H included) | dispersal | the smallest pair `K/U` where no pair is bound by its band; otherwise (a two-stage H with a bound pair `(b, i)` or `(b, j)`) the smaller of the inner pair's `K/U` and the outer body's, the two ratios the rule banded. Either way `q ≥ 1 − ε` |
+| HE, PE, excursion, B-stable | hierarchy | the most separated body's outer `K/U` |
+| transient, B-so-far | interacting | `1 + E_0/\|U\|`, the total `K/\|U\|` with `K = E_0 + \|U\|`, held at 0 from below |
+| OS-candidate | oscillatory | as interacting |
+
+So every overlap above resolves by label: an OS-candidate or a two-stage H past `h_far` reads oscillatory or
+dispersal; the review's transient state reads interacting with `q = 1 + E_0/|U| > 1`; a B-so-far whose outer body
+approaches with outer `K/U = 2` reads interacting with `q < 1`. B-stable takes the hierarchy row (§10.5.2's dark
+"bound hierarchy"): its `q` is the outer `K/U`, below 1 by its own test (`K_out < U_out`). The interacting `q` reads
+`E_0`, the energy the label reads, not the live kinetic energy, so `q ≥ 1` exactly when `E_0 ≥ 0` and a march's drift
+never draws a transient sample below a bound one. The dispersal row's exception keeps §10.5.2's "dark: not reachable"
+true: a two-stage H whose escaper co-moves with one body of the unbound pair has that pair's `K/U` near 0.
+
 ### 5.6 `chazy_escaper` and `chazy_qk` (R-443)
 
 The spec's 02 addition (the human's follow-up of 16 October 2026), transcribed:

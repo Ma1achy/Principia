@@ -1,0 +1,5 @@
+{
+  "description": "The control: the same march at r_coll = 0.05, where the Burrau march ends in collision before its escape. A run ending in collision has no final motion and must fail.",
+  "r_coll": 0.05,
+  "expected": "fail"
+}

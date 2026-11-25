@@ -44,7 +44,11 @@
 //! reads it); chose the Rust function alone because `R_0` is not in the read side's inputs (no stored field holds
 //! `I_0`, and the masses come from the `ICDescriptor`, which holds no `I_0` either), and the WGSL twin must be the
 //! kernel source's translation through `cargo xtask build-kernel` (as `shape`'s is, R-116), never a second rule written
-//! here; the Chazy stains' task adds the member and its WGSL with the fragment input that carries `R_0`.
+//! here; the Chazy stains' task adds the member and its WGSL with the fragment input that carries `R_0`. The Chazy
+//! fields beside it (chazy drill-down §5.2–§5.6), `chazy_final`, `chazy_status`, `chazy_structure`, `chazy_q`,
+//! `chazy_escaper` and `chazy_qk`, are Rust functions on the same terms and for the same reason, each calling its one
+//! source in `kernel::chazy`; their `from` is their arguments: the live state, the `ICDescriptor`'s `m0 m1 m2`, and for
+//! the label's folds `E_0`, `R_0` and the stored `I_max` level, and `state` for the two that read collision.
 //!
 //! The current drifts (payload §5; dd_generation_root §3.8, R-246) are `energy_drift = H(r, p) − E_0` and
 //! `Lz_drift = L_z(r, p) − Lz_0`, with integrator dd §3.5's forms in CoM-frame particle coordinates and `G = 1`:
@@ -571,6 +575,89 @@ pub fn chazy_class(
     i_max: u32,
 ) -> u32 {
     crate::chazy::chazy_class(m, r, p, e_0, r_0, i_max)
+}
+
+// The Chazy fields (chazy drill-down §5.2–§5.6), beside `chazy_class` and from the same inputs. Each reads
+// the stored state, the f32 image of the march: under Heggie that image can lose a tight pair's separation (the
+// closure gap PR #76 measured), which moves every field that reads a pair's `K/U` or `ρ`; the f32 fields are measured
+// against f64 in `validation/tests/chazy_fields_f32.rs`, reported, not asserted (§8).
+
+/// `chazy_final` (chazy drill-down §5.3): the label folded onto Chazy's seven and collision, its code `0..8`
+/// (`crate::chazy::Final`: B, H, HP, P, HE, PE, OS, collision). From `state` (a collision-terminated sample, pair, triple
+/// or `t = 0`, reads collision), the live state `r`, `p`, the `ICDescriptor`'s masses `m0 m1 m2`, `E_0`, `R_0` and the
+/// stored `I_max` level, as `chazy_class`; in live f32.
+#[inline]
+pub fn chazy_final(
+    state: u32,
+    r: [[f32; 2]; 3],
+    p: [[f32; 2]; 3],
+    m: [f32; 3],
+    e_0: f32,
+    r_0: f32,
+    i_max: u32,
+) -> u32 {
+    crate::chazy::chazy_final(state, m, r, p, e_0, r_0, i_max)
+}
+
+/// `chazy_status` (chazy drill-down §5.4): its code `0..7` (`crate::chazy::Status`: committed, B-stable, B-so-far,
+/// excursion, transient, OS-candidate, collision), from the inputs `chazy_final` reads; in live f32.
+#[inline]
+pub fn chazy_status(
+    state: u32,
+    r: [[f32; 2]; 3],
+    p: [[f32; 2]; 3],
+    m: [f32; 3],
+    e_0: f32,
+    r_0: f32,
+    i_max: u32,
+) -> u32 {
+    crate::chazy::chazy_status(state, m, r, p, e_0, r_0, i_max)
+}
+
+/// `chazy_structure` (chazy drill-down §5.5): the label's row, its code `0..4` (`crate::chazy::Structure`: dispersal,
+/// hierarchy, interacting, oscillatory), the row by label as §5.5 writes the precedence; from the inputs `chazy_class`
+/// reads, in live f32.
+#[inline]
+pub fn chazy_structure(
+    r: [[f32; 2]; 3],
+    p: [[f32; 2]; 3],
+    m: [f32; 3],
+    e_0: f32,
+    r_0: f32,
+    i_max: u32,
+) -> u32 {
+    crate::chazy::chazy_structure(m, r, p, e_0, r_0, i_max)
+}
+
+/// `chazy_q` (chazy drill-down §5.5): the row's `K/|U|`, ≥ 0, 1 parabolic (`crate::chazy::q_of`); from the inputs
+/// `chazy_class` reads, in live f32.
+#[inline]
+pub fn chazy_q(
+    r: [[f32; 2]; 3],
+    p: [[f32; 2]; 3],
+    m: [f32; 3],
+    e_0: f32,
+    r_0: f32,
+    i_max: u32,
+) -> f32 {
+    crate::chazy::chazy_q(m, r, p, e_0, r_0, i_max)
+}
+
+/// `chazy_escaper` (chazy drill-down §5.6): the body most separated from its pair, the lowest index on a tie. A
+/// body index, **0-based**: a machine-readable export keeps it so and says so; what a person reads is body
+/// 1, 2, 3 through the one display conversion. From the live positions `r` and the `ICDescriptor`'s masses `m0 m1 m2`,
+/// nothing stored; in live f32.
+#[inline]
+pub fn chazy_escaper(r: [[f32; 2]; 3], m: [f32; 3]) -> u32 {
+    crate::chazy::chazy_escaper(m, r)
+}
+
+/// `chazy_qk` (chazy drill-down §5.6): `[q_0, q_1, q_2]`, body k's `K/|U|` against the centre of mass of the
+/// other two, each ≥ 0, 1 parabolic; `k` a body index, **0-based**. From the live state `r`, `p` and the
+/// `ICDescriptor`'s masses `m0 m1 m2`, nothing stored; in live f32.
+#[inline]
+pub fn chazy_qk(r: [[f32; 2]; 3], p: [[f32; 2]; 3], m: [f32; 3]) -> [f32; 3] {
+    crate::chazy::chazy_qk(m, r, p)
 }
 "#;
 
