@@ -53,13 +53,59 @@ It redraws the tab icon about 15 times a second, follows `prefers-color-scheme`,
 
 Options are `size`, `speed`, `glow` (orb size), `weight` (trail thickness), `still` and `frame` (seconds) for a fixed frame, `transparent`, and `backdrop` (a colour shown behind the mark that isn't part of it). `PrincipiaMark[name].svgAt(t, options)` returns the SVG for time `t` as a string. The variants are `icon-light`, `icon-dark`, `title-2d-light`, `title-2d-dark`, `title-2d-subtitle-light` and `title-2d-subtitle-dark`. Open the matching `.html` file to see each one.
 
-## Videos and GIFs
+## Videos, GIFs and WebP
 
-Every animation is one seamless 36-second loop, rendered frame by frame in Chrome: 30 fps for the titles, 24 fps for the icons.
+Every animation is one seamless 36-second loop, rendered frame by frame in Chrome: 30 fps for the titles, 24 fps for the icons. Frame `i` shows the mark at `6 + i/fps` seconds.
 
 - **WebM:** has a real transparent background, so the glow fades into whatever is behind it. Use this on the web: `<video autoplay loop muted playsinline>`.
 - **MP4:** sits on paper (light versions) or near-black (dark versions), for anywhere that can't play WebM.
-- **GIF:** also on its background, because GIF transparency is all-or-nothing and can't carry a soft glow. To keep files manageable, they're smaller and slower: titles are 800 px wide at 15 fps, and icons are 400 px at 12 fps.
+- **GIF:** also on its background, because GIF transparency is all-or-nothing and can't carry a soft glow. They are smaller and slower: titles are 800 px wide at 15 fps, and icons are 400 px at 12 fps (every second frame).
+- **WebP (subtitle title only):** `principia-title-2d-subtitle-{dark,light}.webp` keep the transparent background (alpha); `principia-title-2d-subtitle-github-{dark,light}.webp` are drawn on GitHub's own page colours, `#0d1117` and `#ffffff`, so the glow and the ink-style mixing are computed on that colour and no box shows. They are 1200 px wide at 15 fps, lossy, with the quality set to the highest that keeps each file under 4 MB (`webp-settings.json` in a rebuild records it). The page-colour ones carry a 12 px margin of the page colour so that the outer border is exactly that colour.
+
+The repository README shows the page-colour WebPs under `prefers-color-scheme`, and the title SVGs under `prefers-reduced-motion`.
+
+## Rebuilding
+
+Everything in `icons/`, `titles/`, `social/out/`, `code/web/` and `code/boards/` can be rebuilt from a clean checkout:
+
+```
+pip install -r brand/code/requirements.txt
+python3 -m playwright install chromium          # the pinned Chromium: 158.0.8127.36
+python3 brand/code/build.py --out /somewhere/else          # about 30 minutes, 6 GB of frames
+python3 brand/code/compare.py brand /somewhere/else        # per-file verdict against the committed files
+```
+
+`--out` is required to be outside `brand/`; the build writes only there and deletes nothing. Run one part with `--part sim|boards|web|stills|videos|social` (`--only icon-light` narrows `videos`). It needs ffmpeg 6.1 with libx264 and libvpx; `build-info.json` in the output records every version used.
+
+| part | scripts | makes |
+|---|---|---|
+| sim | `sim.py`, `cat.py` | `traj.npz`, `catalog.npz`: the orbits, DOP853 at 1e-13 |
+| boards | `final.py`, `wordmarks.py` | the ten boards in `code/boards/` |
+| web | `build_runtime.py` | `code/web/` |
+| stills | `render.py`, `packs.py` | the four 2048 px Chrome masters, the 1024 px crops, every pack in `icons/` |
+| videos | `render.py`, `encode.py` | frames, MP4, WebM, GIF, WebP |
+| social | `social/make_social_preview.py` | `social/out/` |
+
+The inputs that are committed rather than rebuilt are in `code/python/data/`: the traced P and wordmark (`pgeo.json`, `word_loops.json`, `sub_loops.json`, traced by `trace_p.py` from `docs/readme/title-light.svg`, with the corner indices added by hand), the placement of each orbit (`clear.json`, `orb_*.json`, `dragon_P.json`, `dragon_frame.json`, `moth_free.json`) and the framing of the titles (`word_frames.json`). `dragon_adapt.json` is rebuilt from `dragon_P.json` by `dragon.py`.
+
+Encoder settings (the originals were not kept; the MP4 header records libx264 crf 15 and ffmpeg 6.1):
+
+- MP4: libx264, preset veryfast, crf 15, yuv420p, frames composited on the page colour.
+- WebM: libvpx-vp9, alpha plane (yuva420p), constant quality `-crf 28 -b:v 0`.
+- GIF: ffmpeg `fps`, Lanczos scale, `palettegen stats_mode=single` and `paletteuse new=1` (a palette per frame).
+- WebP: Pillow, lossy, method 4, colour and alpha quality equal and chosen per file.
+
+## How the pictures are made (`code/python/`)
+
+The scripts read and write relative to their working folder; `build.py` runs them in a copy of `code/python/` inside `--out`, so none of them touches the committed files.
+
+1. `trace_p.py`: traces the P, the full wordmark and the subtitle from `docs/readme/title-light.svg` into polygons (96 points per curve for the P). Its output is committed in `data/`.
+2. `sim.py` and `cat.py`: integrate the periodic orbits (figure-eight, Butterfly I to III, Moth I to III, Goggles, Dragonfly, Yin-yang, Bumblebee) and Burrau's 3-4-5 problem. The initial conditions are the published ones: Table I of Šuvakov and Dmitrašinović, PRL 110, 114301 (2013), and the Chenciner-Montgomery figure-eight; `verify_paths.py` checks every literal against the copies in this repository.
+3. `dragon.py` places the Dragonfly orbit using `dragon_P.json` and resamples the paths adaptively (a new point whenever the path turns 2.5°), so the trails stay smooth through close encounters. The searches that found the placements (`sorb.py`, `hole*.py`, `clear*.py`, `dragon2.py`, `dragon3.py`) are exploration, not part of the build; their results are the committed data files. `verify_clearance.py` and `js/verify.js` confirm the result: no point of any trail or body is ever inside the solid P, and the orbit passes through the hole 9 times per loop.
+4. `final.py` and `wordmarks.py`: build the renderers. The P is extruded and shaded by a key light plus the coloured light of each body, and drawn back to front with the bodies passing behind and in front. Trails are tapered neon ribbons, split exactly where they cross the P's plane. Bloom and halation come from one stacked-blur filter, and glow from behind the P is masked by the letter's silhouette.
+5. `build_runtime.py`: turns the boards into the standalone JavaScript in `code/web/`.
+6. `render.py`, `packs.py` and `encode.py`: render stills and title frames in headless Chrome, then build the platform packs and videos. The 1024 px masters are a fixed crop of the 2048 px render, resampled with Lanczos.
+7. `compare.py`: the rebuild is judged file by file (identical bytes for text; decoded pixels with the criteria written at the top of the file for pictures and videos). `controls.py` feeds it wrong pictures that it must reject. `checks.py` is the quick version that needs only `python3`.
 
 ## Platform notes
 
@@ -67,16 +113,3 @@ Every animation is one seamless 36-second loop, rendered frame by frame in Chrom
 - **iOS:** the light icon is opaque, as Apple requires. The dark-appearance icon is transparent, so iOS draws its own dark background behind it.
 - **Android:** the adaptive foreground keeps the mark inside the central 66 % safe zone. Backgrounds are `#EFE9DC`, and `#0D0C0B` at night.
 - **Small sizes:** at 64 px and below, the packs use the `smallsizes` cut, with heavier trails so the orbits survive. At 16 px the mark is the P with three coloured lights; at 32 px the hole and the orbits read.
-
-## How it was made (`code/python/`)
-
-The paths in these scripts point at the working folders I used, so adjust them before re-running.
-
-1. `trace_p.py`: traces the P, the full wordmark and the subtitle from `docs/readme/title-light.svg` into polygons (96 points per curve for the P).
-2. `sim.py` and `cat.py`: integrate the periodic orbits (figure-eight, Butterfly I to III, Moth I to III, Goggles, Dragonfly, Yin-yang, Bumblebee) and Burrau's 3-4-5 problem.
-3. `sorb.py`, `hole*.py` and `dragon*.py`: search each orbit's placement in 3D, so that it threads the hole in the P and never touches the solid letter, allowing margin for body size and line width. Dragonfly is checked at 120,000 time steps per period, with zero contact and 9 passes through the hole per loop. `dragon.py` then resamples the paths adaptively (a new point whenever the path turns 2.5°), so the trails stay smooth through close encounters.
-4. `final.py` and `wordmarks.py`: build the renderers. The P is extruded and shaded by a key light plus the coloured light of each body, and drawn back to front with the bodies passing behind and in front. Trails are tapered neon ribbons, split exactly where they cross the P's plane. Bloom and halation come from one stacked-blur filter, and glow from behind the P is masked by the letter's silhouette.
-5. `build_runtime.py`: turns the boards into the standalone JavaScript in `code/web/`.
-6. `render_masters.py`, `packs.py` and `frames.py`: render stills and title frames in headless Chrome, then build the platform packs and videos.
-7. `js/verify.js`: confirms that no point of any trail or body is ever inside the solid P.
-
