@@ -1852,7 +1852,13 @@ fn mock_keyboard_manifold_view_scopes() {
     let mut h = headless();
     let _ = h.frame(&mut app, Vec::new());
     let tree = app.keyboard.tree(Mode::Explore);
-    let chart = [mv::PRESET, mv::Q1_EDIT, mv::Q2_EDIT, mv::BUILDER];
+    let chart = [
+        mv::PRESET,
+        mv::Q1_EDIT,
+        mv::Q2_EDIT,
+        mv::BUILDER,
+        mv::saved::SAVE,
+    ];
     let navigate = [
         mv::CENTRE_U,
         mv::CENTRE_V,

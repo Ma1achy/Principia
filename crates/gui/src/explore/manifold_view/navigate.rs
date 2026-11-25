@@ -87,13 +87,19 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     }
     let mut zoom_row = row_ui(ui, row(section, h, 2));
     zoom_row.add_sized([label_w, h], egui::Label::new("zoom (log₂)"));
-    let mut zoom = view.zoom_row();
+    let window = panel
+        .scratch
+        .charts
+        .active(&panel.snapshot.sim)
+        .map_or_else(|| view.window(), |(_, chart)| chart.home().window);
+    let mut zoom = view.zoom_row_of(window);
     zoom_row.spacing_mut().slider_width = (zoom_row.available_width() - 70.0).max(40.0);
-    let slider = zoom_row.add(Slider::new(&mut zoom, view.zoom_row_range()).show_value(false));
+    let slider =
+        zoom_row.add(Slider::new(&mut zoom, view.zoom_row_range_of(window)).show_value(false));
     panel.place(ZOOM, &slider, clip);
-    zoom_row.label(RichText::new(magnification(view.zoom_row())).monospace());
+    zoom_row.label(RichText::new(magnification(view.zoom_row_of(window))).monospace());
     if slider.changed() {
-        let edit = zoom_to(&plane, view, view.with_zoom_row(zoom));
+        let edit = zoom_to(&plane, view, view.with_zoom_row_of(zoom, window));
         panel.out.edit(edit, None, panel.scratch);
     }
     super::depth::show(ui, row(section, h, 3), row(section, h, 4), panel);

@@ -9,7 +9,8 @@
 //! `{"windows": {"<name>": {"x": …, "y": …, "w": …, "h": …}, …}, "layout": {"<splitter>": …, …, "console_top": …}}`,
 //! each place in points, each splitter a fraction of the window's width, or height (`crate::layout::Splits`), and
 //! `console_top` the console's top edge, a fraction of the window's height; `"lock": {"centre_on_pin": true}` with the
-//! preference on, written only then; one the file does not name is at its default, as `console_top` is never written until the edge is dragged. It is written each time a window's move or resize ends, a splitter's drag ends, a
+//! preference on, written only then; `"saved_charts": [{…}, …]` with any (`SavedChart::to_json`), written as a save,
+//! a rename and a delete; one the file does not name is at its default, as `console_top` is never written until the edge is dragged. It is written each time a window's move or resize ends, a splitter's drag ends, a
 //! splitter is reset and the layout is reset, and as the console's height is dragged or reset, through a file beside it renamed over it, so a write cut short leaves
 //! the last one.
 //!
@@ -22,6 +23,7 @@ use eframe::egui::{pos2, vec2, Rect};
 use engine::path::leaf::CentreOnPin;
 use serde_json::{json, Map, Value};
 
+use crate::explore::manifold_view::saved::{self, SavedChart};
 use crate::layout::{Splits, Splitter};
 use crate::windows::{self, place::Places};
 
@@ -37,6 +39,9 @@ pub const LOCK: &str = "lock";
 /// Centre on pin when locking's name in the file's lock object.
 pub const CENTRE_ON_PIN: &str = "centre_on_pin";
 
+/// The saved charts' name in the file.
+pub const SAVED_CHARTS: &str = "saved_charts";
+
 /// The directory under the platform's config directory that holds it.
 pub const DIR: &str = "principia";
 
@@ -49,6 +54,8 @@ pub struct Settings {
     pub layout: Splits,
     /// Centre on pin when locking (render_gui_spec §G4), off by default.
     pub centre_on_pin: CentreOnPin,
+    /// The saved charts (render_gui_spec §G2, Save view as chart), in order.
+    pub saved_charts: Vec<SavedChart>,
 }
 
 impl Settings {
@@ -71,6 +78,9 @@ impl Settings {
         let mut root = json!({ "windows": windows, "layout": layout });
         if self.centre_on_pin == CentreOnPin::On {
             root[LOCK] = json!({ CENTRE_ON_PIN: true });
+        }
+        if !self.saved_charts.is_empty() {
+            root[SAVED_CHARTS] = self.saved_charts.iter().map(SavedChart::to_json).collect();
         }
         let mut text =
             serde_json::to_string_pretty(&root).expect("a JSON value of finite numbers serialises");
@@ -128,10 +138,14 @@ impl Settings {
                 centre_on_pin = CentreOnPin::On;
             }
         }
+        let saved_charts = root
+            .get(SAVED_CHARTS)
+            .map_or_else(|| Ok(Vec::new()), saved::read_list)?;
         Ok(Self {
             places: Places::remembered(rects),
             layout,
             centre_on_pin,
+            saved_charts,
         })
     }
 }

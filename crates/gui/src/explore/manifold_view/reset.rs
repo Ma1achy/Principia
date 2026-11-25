@@ -12,13 +12,17 @@
 //! rule for its kind ([`about_the_pin`]; K5). Navigate moves `z₀` before it scales, so its zoom turns about the pin as
 //! every zoom does; Home moves `z₀` last, so it lands on the home view exactly, locked or not. A reset that is dimmed
 //! sends nothing, and none switches the compass's mode (K12): the compass reads the new state in the next frame.
+//!
+//! On an active saved chart ([`Charted`]) the values are the saved view's: Slice centre's `z₀` off the saved plane,
+//! Navigate's `z₀` in it and the scale, Tilt's the saved pair, so Home returns to the saved view bit for bit.
 
 use eframe::egui::{self, pos2, vec2, Area, Button, Color32, Id, Order, Rect, Shape, Stroke, Ui};
 use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{SimConfig, LATENT_DIM};
 
+use super::saved::{SavedChart, NOT_BUILT};
 use super::{
-    about_the_pin, basis_edit, z0_edit, PresetHome, View, PRESET_HOMES, RESET_NAVIGATE,
+    about_the_pin, add, basis_edit, z0_edit, PresetHome, View, PRESET_HOMES, RESET_NAVIGATE,
     RESET_SLICE_CENTRE, RESET_TILT, SECTION_TITLES,
 };
 use crate::keyboard::scopes::ScopeId;
@@ -93,18 +97,93 @@ pub fn at(value: f64, home: f64) -> bool {
     (value - home).abs() <= HOME_TOLERANCE
 }
 
-/// The chart read in its active preset's coordinates.
-struct Active {
-    view: View,
-    home: PresetHome,
+/// A chart with the home values its resets read: an active saved chart's, or, with none, the preset's that holds it.
+#[derive(Clone, Copy, Debug)]
+pub struct Charted<'a> {
+    /// The state.
+    pub sim: &'a SimConfig,
+    /// The active saved chart.
+    pub saved: Option<&'a SavedChart>,
 }
 
-impl Active {
-    /// `sim`'s chart, if a preset holds it (K3).
-    fn of(sim: &SimConfig) -> Option<Self> {
-        let view = View::read(sim);
-        let home = PRESET_HOMES[view.preset?];
-        Some(Self { view, home })
+impl<'a> From<&'a SimConfig> for Charted<'a> {
+    fn from(sim: &'a SimConfig) -> Self {
+        Self { sim, saved: None }
+    }
+}
+
+/// The chart read in its active preset's coordinates, or a saved chart's.
+struct Active<'a> {
+    view: View,
+    home: PresetHome,
+    saved: Option<&'a SavedChart>,
+}
+
+impl<'a> Active<'a> {
+    /// The chart, if a preset holds it (K3) or it is a saved one.
+    fn of(at: Charted<'a>) -> Option<Self> {
+        let view = View::read(at.sim);
+        let home = match at.saved {
+            Some(chart) => chart.home(),
+            None => PRESET_HOMES[view.preset?],
+        };
+        Some(Self {
+            view,
+            home,
+            saved: at.saved,
+        })
+    }
+
+    /// `z₀` less the saved chart's, in its plane and off it.
+    fn moved(&self, chart: &SavedChart, sim: &SimConfig) -> (super::Latent, super::Latent) {
+        chart.split(&add(&sim.plane.z0, -1.0, &chart.plane.z0))
+    }
+
+    /// Whether `section`'s values are at `chart`'s.
+    fn at_saved(&self, chart: &SavedChart, sim: &SimConfig, section: Section) -> bool {
+        let still = |d: super::Latent| d.into_iter().all(|v| at(v, 0.0));
+        let (along, off) = self.moved(chart, sim);
+        match section {
+            Section::SliceCentre => still(off),
+            Section::Tilt => {
+                let home = chart.view();
+                chart.tilted()
+                    || [
+                        (self.view.tau1, home.tau1),
+                        (self.view.tau2, home.tau2),
+                        (self.view.gamma, home.gamma),
+                    ]
+                    .into_iter()
+                    .all(|(angle, home)| at(angle, home))
+            }
+            Section::Navigate => {
+                still(along) && at(self.home.window.log2() + self.view.zoom(), 0.0)
+            }
+        }
+    }
+
+    /// The edits of `section`'s reset to `chart`'s values, before the lock's rule.
+    fn saved_edits(&self, chart: &SavedChart, sim: &SimConfig, section: Section) -> Vec<SetField> {
+        let (along, off) = self.moved(chart, sim);
+        let pair = (chart.plane.q1, chart.plane.q2);
+        match section {
+            Section::SliceCentre => vec![z0_edit(add(&chart.plane.z0, 1.0, &along))],
+            Section::Tilt => {
+                let k = self.view.scale / self.home.window;
+                vec![basis_edit((pair.0.map(|v| v * k), pair.1.map(|v| v * k)))]
+            }
+            Section::Navigate => {
+                let basis = if self.at_saved(chart, sim, Section::Tilt) {
+                    pair
+                } else {
+                    let View {
+                        tau1, tau2, gamma, ..
+                    } = self.view;
+                    self.basis(self.home.window, (tau1, tau2, gamma))
+                };
+                vec![z0_edit(add(&chart.plane.z0, 1.0, &off)), basis_edit(basis)]
+            }
+        }
     }
 
     /// `view` with its angles and scale replaced: the basis of a reset.
@@ -122,6 +201,9 @@ impl Active {
 
     /// Whether `section`'s values are at their home values.
     fn at_home(&self, sim: &SimConfig, section: Section) -> bool {
+        if let Some(chart) = self.saved {
+            return self.at_saved(chart, sim, section);
+        }
         let View { a, b, .. } = self.view;
         let z0 = &sim.plane.z0;
         match section {
@@ -140,6 +222,9 @@ impl Active {
 
     /// The edits of `section`'s reset, before the lock's rule.
     fn edits(&self, sim: &SimConfig, section: Section) -> Vec<SetField> {
+        if let Some(chart) = self.saved {
+            return self.saved_edits(chart, sim, section);
+        }
         let View { a, b, .. } = self.view;
         let mut z0 = sim.plane.z0;
         match section {
@@ -162,28 +247,40 @@ impl Active {
     }
 }
 
-/// Whether `section`'s reset is live: a preset is active and the section is off its home values.
-pub fn enabled(sim: &SimConfig, section: Section) -> bool {
-    Active::of(sim).is_some_and(|active| !active.at_home(sim, section))
+/// Whether `section`'s reset is live: a preset or a saved chart is active and the section is off its home values.
+pub fn enabled<'a>(at: impl Into<Charted<'a>>, section: Section) -> bool {
+    let at = at.into();
+    Active::of(at).is_some_and(|active| !active.at_home(at.sim, section))
 }
 
 /// Whether Home is live: any section's reset is.
-pub fn home_enabled(sim: &SimConfig) -> bool {
-    SECTIONS.into_iter().any(|section| enabled(sim, section))
+pub fn home_enabled<'a>(at: impl Into<Charted<'a>>) -> bool {
+    let at = at.into();
+    SECTIONS.into_iter().any(|section| enabled(at, section))
 }
 
-/// Why a reset or Home on `sim` is dimmed, for its tooltip.
-pub fn dimmed_because(sim: &SimConfig) -> &'static str {
-    if View::read(sim).preset.is_some() {
+/// Why a reset or Home is dimmed, for its tooltip.
+pub fn dimmed_because<'a>(at: impl Into<Charted<'a>>) -> &'static str {
+    if Active::of(at.into()).is_some() {
         ALREADY_HOME
     } else {
         NO_PRESET
     }
 }
 
-/// `section`'s reset on `sim`, through the lock's rule: nothing while it is dimmed.
-pub fn command(sim: &SimConfig, section: Section) -> Vec<SetField> {
-    match Active::of(sim) {
+/// Why `section`'s reset is dimmed, for its tooltip: Tilt's, on a chart saved at a tilt, that its tilt is not built.
+pub fn section_dimmed_because(at: Charted<'_>, section: Section) -> &'static str {
+    match at.saved {
+        Some(chart) if section == Section::Tilt && chart.tilted() => NOT_BUILT,
+        _ => dimmed_because(at),
+    }
+}
+
+/// `section`'s reset, through the lock's rule: nothing while it is dimmed.
+pub fn command<'a>(at: impl Into<Charted<'a>>, section: Section) -> Vec<SetField> {
+    let at = at.into();
+    let sim = at.sim;
+    match Active::of(at) {
         Some(active) if !active.at_home(sim, section) => {
             super::agreeing(about_the_pin(active.edits(sim, section), sim), sim)
         }
@@ -191,12 +288,17 @@ pub fn command(sim: &SimConfig, section: Section) -> Vec<SetField> {
     }
 }
 
-/// Home on `sim`, through the lock's rule, its edit of `z₀` last, so it lands on the home view exactly (K5): nothing
-/// while it is dimmed.
-pub fn home(sim: &SimConfig) -> Vec<SetField> {
-    match Active::of(sim).filter(|_| home_enabled(sim)) {
+/// Home, through the lock's rule, its edit of `z₀` last, so it lands on the home view exactly (K5): nothing while it is
+/// dimmed.
+pub fn home<'a>(at: impl Into<Charted<'a>>) -> Vec<SetField> {
+    let at = at.into();
+    let sim = at.sim;
+    match Active::of(at).filter(|_| home_enabled(at)) {
         Some(active) => {
-            let basis = active.basis(active.home.window, (0.0, 0.0, 0.0));
+            let basis = match active.saved {
+                Some(chart) => (chart.plane.q1, chart.plane.q2),
+                None => active.basis(active.home.window, (0.0, 0.0, 0.0)),
+            };
             let edits = about_the_pin(vec![basis_edit(basis), z0_edit(active.home.base)], sim);
             super::agreeing(edits, sim)
         }
@@ -233,12 +335,13 @@ pub fn house(rect: Rect, colour: Color32) -> [Shape; 2] {
 /// takes the pointer, so a click on it, dimmed or not, is none on the figure (K7). That layer is above the windows' and
 /// the console's too, so the app draws it only where none reaches it (R-463 K2, R-461; applied per R-369). Returns
 /// whether it was clicked.
-pub fn home_button(ctx: &egui::Context, shown: Rect, sim: &SimConfig) -> bool {
+pub fn home_button<'a>(ctx: &egui::Context, shown: Rect, at: impl Into<Charted<'a>>) -> bool {
+    let at = at.into();
     let rect = home_rect(shown);
     if !shown.contains_rect(rect) {
         return false;
     }
-    let live = home_enabled(sim);
+    let live = home_enabled(at);
     Area::new(Id::new("home button"))
         .order(Order::Foreground)
         .fixed_pos(rect.min)
@@ -252,7 +355,7 @@ pub fn home_button(ctx: &egui::Context, shown: Rect, sim: &SimConfig) -> bool {
                 let button = ui
                     .add(Button::new("").min_size(rect.size()))
                     .on_hover_text(HOME_TOOLTIP)
-                    .on_disabled_hover_text(dimmed_because(sim));
+                    .on_disabled_hover_text(dimmed_because(at));
                 button.widget_info(|| {
                     egui::WidgetInfo::labeled(egui::WidgetType::Button, live, HOME_NAME)
                 });

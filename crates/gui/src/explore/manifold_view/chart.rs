@@ -5,16 +5,22 @@
 //! plane by the slice-axis rule in the same edit, a target following ([`super::plane_edit`]; R-459 G4). The shape
 //! sphere's projection selector and hemisphere toggle are REQ-GUI-161's, TASK-M8-06's: the mock's charts are all
 //! affine.
+//!
+//! After Chart builder…, Save view as chart ([`super::saved`]): the preset selector's Saved group lists the saved charts
+//! under the presets, each with its provenance; while one is active the header shows its provenance, and the selector's
+//! row renames and deletes it.
 
 use eframe::egui::{
-    self, Area, Button, ComboBox, DragValue, Frame, Grid, Id, Order, Rect, RichText, Ui,
+    self, Area, Button, ComboBox, DragValue, Frame, Grid, Id, Label, Order, Rect, RichText,
+    TextEdit, Ui,
 };
 use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{Latent, SimConfig};
 
+use super::saved::{self, Switch};
 use super::{
-    axis, close_under_console, header, plane_edit, row, row_ui, Panel, View, AXES, BUILDER, PRESET,
-    PRESETS, Q1_COMPONENTS, Q1_EDIT, Q2_COMPONENTS, Q2_EDIT,
+    about_the_pin, agreeing, axis, close_under_console, plane_edit, row, row_ui, Out, Panel,
+    Scratch, View, AXES, BUILDER, PRESET, PRESETS, Q1_COMPONENTS, Q1_EDIT, Q2_COMPONENTS, Q2_EDIT,
 };
 
 /// The chart's kind: every chart the mock serves is the affine slice (chart_decoder_contract Part 3).
@@ -23,6 +29,8 @@ pub const KIND: &str = "affine chart";
 pub const LABEL_W: f32 = 92.0;
 /// The width of a basis editor's field, in points (a look choice, R-390): four to a row fit the panel.
 pub const EDITOR_FIELD_W: f32 = 44.0;
+/// The width of the selector's rename and delete buttons, in points (a look choice).
+pub const BUTTONS_W: f32 = 96.0;
 /// The height of a component's field in the basis editor, in points (a look choice, R-390).
 pub const EDITOR_FIELD_H: f32 = 18.0;
 
@@ -37,6 +45,54 @@ pub fn preset_basis(view: View, preset: usize) -> (Latent, Latent) {
 /// a target ([`plane_edit`]; R-459 G4).
 pub fn preset_edit(sim: &SimConfig, view: View, preset: usize) -> SetField {
     plane_edit(sim, preset_basis(view, preset))
+}
+
+/// The pick of preset `preset`: its edit, or, off a saved chart, the change of the active chart.
+pub fn pick_preset(sim: &SimConfig, preset: usize, scratch: &mut Scratch, out: &mut Out) {
+    let edit = preset_edit(sim, View::read(sim), preset);
+    if scratch.charts.is_marked() {
+        out.chart = Some(Switch::Leave(agreeing(about_the_pin(vec![edit], sim), sim)));
+    } else {
+        out.edit(edit, None, scratch);
+    }
+}
+
+/// Enter on the preset selector: the chart after the active one, the presets then the saved charts.
+// The plan is unclear here: how the keyboard picks a saved chart; chose the selector's own Enter, on past the presets,
+// because the picker's entries are no scopes.
+pub fn pick_next(sim: &SimConfig, scratch: &mut Scratch, out: &mut Out) {
+    let saved: Vec<u64> = scratch.charts.entries().iter().map(|(id, _)| *id).collect();
+    let active = scratch.charts.active(sim).map(|(id, _)| id);
+    let now = match active {
+        Some(id) => saved
+            .iter()
+            .position(|s| *s == id)
+            .map(|i| PRESETS.len() + i),
+        None => View::read(sim).preset,
+    };
+    let next = now.map_or(0, |i| (i + 1) % (PRESETS.len() + saved.len()));
+    match next.checked_sub(PRESETS.len()) {
+        Some(i) => out.chart = Some(Switch::Open(saved[i])),
+        None => pick_preset(sim, next, scratch, out),
+    }
+}
+
+/// Starts the rename of the active saved chart.
+pub fn begin_rename(sim: &SimConfig, scratch: &mut Scratch) {
+    let name = scratch
+        .charts
+        .active(sim)
+        .and_then(|(id, _)| scratch.charts.get(id))
+        .map(|c| c.name.clone());
+    scratch.charts.naming = name;
+}
+
+/// Deletes the active saved chart from the list, the view left as it is.
+pub fn delete_active(sim: &SimConfig, scratch: &mut Scratch, out: &mut Out) {
+    if let Some((id, _)) = scratch.charts.active(sim) {
+        scratch.charts.delete(id);
+        out.save_settings = true;
+    }
 }
 
 /// `q` as the Chart rows read it: its non-zero components, each with its axis, "1.00·z_α".
@@ -60,29 +116,11 @@ pub fn basis_text(q: &Latent) -> String {
 
 /// Draws Chart in `section`, rows `h` tall.
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
-    header(ui, section, h, super::SECTION_TITLES[0], "");
+    title(ui, section, h, panel);
     let plane = panel.snapshot.sim.plane.clone();
-    let view = View::read(&panel.snapshot.sim);
     let mut row1 = row_ui(ui, row(section, h, 1));
     row1.add_sized([LABEL_W, h], egui::Label::new("preset"));
-    let mut chosen = view.preset;
-    let combo = ComboBox::from_id_salt("chart preset")
-        .selected_text(view.name())
-        .width(row1.available_width() - 4.0)
-        .show_ui(&mut row1, |ui| {
-            for (i, &(a, b)) in PRESETS.iter().enumerate() {
-                ui.selectable_value(&mut chosen, Some(i), format!("{} × {}", AXES[a], AXES[b]));
-            }
-        });
-    close_under_console(&combo.response, panel.scratch.console_top);
-    panel.place(PRESET, &combo.response, clip);
-    if let Some(preset) = chosen.filter(|p| Some(*p) != view.preset) {
-        panel.out.edit(
-            preset_edit(&panel.snapshot.sim, view, preset),
-            None,
-            panel.scratch,
-        );
-    }
+    selector(&mut row1, clip, panel);
     for (i, (label, q, edit, components)) in [
         ("horizontal q₁", plane.q1, Q1_EDIT, Q1_COMPONENTS),
         ("vertical q₂", plane.q2, Q2_EDIT, Q2_COMPONENTS),
@@ -122,8 +160,141 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
             .push(engine::contract::view_ui::Window::ChartBuilder);
     }
     panel.place(BUILDER, &builder, clip);
-    last.add_space(8.0);
-    last.label(RichText::new(KIND).monospace().weak());
+    let save = last.add(Button::new(saved::SAVE_TEXT));
+    if save.clicked() {
+        panel.out.chart = Some(Switch::Save);
+    }
+    panel.place(saved::SAVE, &save, clip);
+}
+
+/// The header: the title, the kind and, on a saved chart, its provenance, whole in the tooltip.
+fn title(ui: &mut Ui, section: Rect, h: f32, panel: &Panel<'_>) {
+    let mut line = row_ui(ui, row(section, h, 0));
+    line.label(RichText::new(super::SECTION_TITLES[0]).strong());
+    line.add_space(8.0);
+    line.label(RichText::new(KIND).weak().small());
+    if let Some((_, chart)) = panel.scratch.charts.active(&panel.snapshot.sim) {
+        let lines = chart.provenance();
+        line.add(Label::new(RichText::new(lines.join(" · ")).weak().small()).truncate())
+            .on_hover_text(lines.join("\n"));
+    }
+}
+
+/// The preset selector in `row`, its Saved group under the presets; on a saved chart its rename and delete beside it, or
+/// the name field in its place while it is renamed.
+fn selector(row: &mut Ui, clip: Rect, panel: &mut Panel<'_>) {
+    let sim = &panel.snapshot.sim;
+    let view = View::read(sim);
+    let charts = &mut panel.scratch.charts;
+    let active = charts.active(sim).map(|(id, _)| id);
+    let listed = active.filter(|id| charts.get(*id).is_some());
+    let naming = listed.filter(|_| charts.naming.is_some());
+    let gap = row.spacing().item_spacing.x;
+    let buttons = listed.map_or(0.0, |_| BUTTONS_W + 2.0 * gap);
+    let width = row.available_width() - 4.0 - buttons;
+    match naming {
+        Some(id) => name_field(row, width, id, clip, panel),
+        None => picker(row, width, view, active, clip, panel),
+    }
+    let Some(id) = listed else { return };
+    for (scope, text) in [
+        (saved::RENAME, saved::RENAME_TEXT),
+        (saved::DELETE, saved::DELETE_TEXT),
+    ] {
+        let button = row.add_enabled(naming.is_none(), Button::new(text).small());
+        panel.place(scope, &button, clip);
+        if !button.clicked() {
+            continue;
+        }
+        if scope == saved::RENAME {
+            begin_rename(&panel.snapshot.sim, panel.scratch);
+        } else {
+            panel.scratch.charts.delete(id);
+            panel.out.save_settings = true;
+        }
+    }
+}
+
+/// The picker: the presets, then the saved charts, each with its provenance and its delete.
+fn picker(
+    row: &mut Ui,
+    width: f32,
+    view: View,
+    active: Option<u64>,
+    clip: Rect,
+    panel: &mut Panel<'_>,
+) {
+    let sim = &panel.snapshot.sim;
+    let charts = &panel.scratch.charts;
+    let preset = view.preset.filter(|_| active.is_none());
+    let mut chosen = preset;
+    let mut opened = None;
+    let mut deleted = None;
+    let name = charts.label(sim).map_or_else(|| view.name(), str::to_owned);
+    let combo = ComboBox::from_id_salt("chart preset")
+        .selected_text(name)
+        .width(width)
+        .show_ui(row, |ui| {
+            for (i, &(a, b)) in PRESETS.iter().enumerate() {
+                ui.selectable_value(&mut chosen, Some(i), format!("{} × {}", AXES[a], AXES[b]));
+            }
+            if charts.entries().is_empty() {
+                return;
+            }
+            ui.separator();
+            ui.label(RichText::new(saved::GROUP).weak());
+            for (id, chart) in charts.entries() {
+                let lines = chart.provenance();
+                ui.horizontal(|ui| {
+                    let entry = ui
+                        .selectable_label(active == Some(*id), &chart.name)
+                        .on_hover_text(lines.join("\n"));
+                    if entry.clicked() {
+                        opened = Some(*id);
+                    }
+                    ui.label(RichText::new(lines[..2].join(" · ")).weak().small());
+                    if ui.add(Button::new(saved::DELETE_TEXT).small()).clicked() {
+                        deleted = Some(*id);
+                    }
+                });
+            }
+        });
+    close_under_console(&combo.response, panel.scratch.console_top);
+    panel.place(PRESET, &combo.response, clip);
+    if let Some(preset) = chosen.filter(|p| Some(*p) != preset) {
+        pick_preset(&panel.snapshot.sim, preset, panel.scratch, panel.out);
+    }
+    if let Some(id) = opened {
+        panel.out.chart = Some(Switch::Open(id));
+    }
+    if let Some(id) = deleted {
+        panel.scratch.charts.delete(id);
+        panel.out.save_settings = true;
+    }
+}
+
+/// The active saved chart's name, typed: kept as it is typed, a blank one not, until the field loses the keyboard.
+fn name_field(row: &mut Ui, width: f32, id: u64, clip: Rect, panel: &mut Panel<'_>) {
+    let Some(mut name) = panel.scratch.charts.naming.take() else {
+        return;
+    };
+    let field = row.add(TextEdit::singleline(&mut name).desired_width(width - 8.0));
+    panel.place(saved::NAME, &field, clip);
+    if field.changed() {
+        panel.scratch.charts.rename(id, &name);
+    }
+    if field.lost_focus() {
+        panel.out.save_settings = true;
+        if panel.focus_in(saved::NAME) {
+            panel.out.focus = Some(saved::RENAME);
+        }
+        return;
+    }
+    if !field.has_focus() {
+        // The keyboard layer follows egui's focus into a text scope and starts typing in it.
+        field.request_focus();
+    }
+    panel.scratch.charts.naming = Some(name);
 }
 
 /// The id of the area of basis vector `which`'s editor.

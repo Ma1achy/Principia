@@ -31,6 +31,7 @@ use engine::contract::canvas::Canvas;
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity, Source};
 use engine::contract::set_field::{Edit, HistoryKey, RenderField, SetField};
+use engine::contract::sim_config::SimConfig;
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{
     Backdrop, DebugCategories, Focus, Inspector, KeptOrbits, KeyMode, LinkedViews, Mode, Selection,
@@ -192,6 +193,8 @@ pub struct Actions {
     pub save_overlays: bool,
     /// Toggle the debug view, one `SetField` (View › Debug view, R-467 D5).
     pub debug_view: bool,
+    /// Save view as chart (View's entry).
+    pub save_view: bool,
     /// Return every splitter to its default (View › reset layout, R-462 J3).
     pub reset_layout: bool,
     /// Home: the Home button, the Home key or View › Home (R-466).
@@ -251,6 +254,7 @@ impl<S: EngineSide> App<S> {
         app.places = loaded.settings.places;
         app.splits = loaded.settings.layout;
         app.manifold.centre_on_pin = loaded.settings.centre_on_pin;
+        app.manifold.charts.set_list(loaded.settings.saved_charts);
         app.store = store;
         if let Some(line) = loaded.ignored {
             app.log_warning(line);
@@ -264,6 +268,7 @@ impl<S: EngineSide> App<S> {
             places: self.places.clone(),
             layout: self.splits,
             centre_on_pin: self.manifold.centre_on_pin,
+            saved_charts: self.manifold.charts.list().cloned().collect(),
         }
     }
 
@@ -316,6 +321,7 @@ impl<S: EngineSide> App<S> {
             self.clock.resync();
             self.reread = true;
         }
+        self.manifold.charts.edited(edit.no_history, None);
         self.side.engine().set_field(edit);
     }
 
@@ -343,7 +349,17 @@ impl<S: EngineSide> App<S> {
         }
         let key = self.fresh_key();
         self.send_under(command, key);
+        self.manifold.charts.ended(key);
         self.side.engine().end_key(key);
+    }
+
+    /// Sends a change of the active chart as one entry, marks it active and saves the settings.
+    fn switch_chart(&mut self, switch: explore::manifold_view::saved::Switch, sim: &SimConfig) {
+        if let Some((command, chart)) = self.manifold.charts.switch(switch, sim) {
+            self.send_fresh(command);
+            self.manifold.charts.mark(chart);
+            self.save_settings();
+        }
     }
 
     /// Sends `command`'s edits under `key`.
@@ -353,6 +369,7 @@ impl<S: EngineSide> App<S> {
                 self.clock.resync();
                 self.reread = true;
             }
+            self.manifold.charts.edited(edit.no_history, Some(key));
             self.side.engine().set_field_under(edit, key);
         }
     }
@@ -360,6 +377,7 @@ impl<S: EngineSide> App<S> {
     /// Requests undo, rereading the snapshot next frame.
     pub fn undo(&mut self) {
         self.side.engine().undo();
+        self.manifold.charts.undone();
         self.clock.resync();
         self.reread = true;
         self.stepped = true;
@@ -368,6 +386,7 @@ impl<S: EngineSide> App<S> {
     /// Requests redo, rereading the snapshot next frame.
     pub fn redo(&mut self) {
         self.side.engine().redo();
+        self.manifold.charts.redone();
         self.clock.resync();
         self.reread = true;
         self.stepped = true;
@@ -378,6 +397,7 @@ impl<S: EngineSide> App<S> {
     /// edit of it does.
     fn read(&mut self) {
         let before = std::mem::replace(&mut self.snapshot, self.side.engine().snapshot());
+        self.manifold.charts.follow(&self.snapshot);
         if std::mem::take(&mut self.stepped)
             && self.stain.auto_recompile
             && before.render.stain_graph != self.snapshot.render.stain_graph
@@ -479,6 +499,7 @@ impl<S: EngineSide> App<S> {
         self.frame(ui);
         if !down {
             if let Some(key) = self.hold.take() {
+                self.manifold.charts.ended(key);
                 self.side.engine().end_key(key);
                 self.reread = true;
             }
@@ -594,6 +615,11 @@ impl<S: EngineSide> App<S> {
             self.keyboard.tree_mut(Mode::Explore),
             &explore::manifold_view::View::read(&self.snapshot.sim),
         );
+        explore::manifold_view::saved::join(
+            self.keyboard.tree_mut(Mode::Explore),
+            &self.manifold.charts,
+            &self.snapshot.sim,
+        );
         explore::trajectory::join_kept(
             self.keyboard.tree_mut(Mode::Explore),
             self.view.kept_orbits.orbits.len(),
@@ -689,6 +715,7 @@ impl<S: EngineSide> App<S> {
         } else {
             String::new()
         };
+        let at = self.manifold.charts.at(&self.snapshot.sim);
         explore::top_bar::show(
             ui,
             layout.top_bar,
@@ -698,8 +725,9 @@ impl<S: EngineSide> App<S> {
                 breadcrumb: &breadcrumb,
                 keys: self.view.focus.mode,
                 f3_fill: self.view.f3_fill,
-                home_dimmed: (!explore::manifold_view::reset::home_enabled(&self.snapshot.sim))
-                    .then(|| explore::manifold_view::reset::dimmed_because(&self.snapshot.sim)),
+                home_dimmed: (!explore::manifold_view::reset::home_enabled(at))
+                    .then(|| explore::manifold_view::reset::dimmed_because(at)),
+                refused: self.manifold.charts.status(&self.snapshot.sim),
             },
             &mut self.keyboard,
             &mut actions,
@@ -764,8 +792,8 @@ impl<S: EngineSide> App<S> {
             let shown = self.uncovered(layout.figure, &layout);
             let home = explore::manifold_view::reset::home_rect(shown);
             if !self.window_over(home, &layout) {
-                actions.home |=
-                    explore::manifold_view::reset::home_button(&ctx, shown, &self.snapshot.sim);
+                let at = self.manifold.charts.at(&self.snapshot.sim);
+                actions.home |= explore::manifold_view::reset::home_button(&ctx, shown, at);
             }
         }
         // A click on a text field starts typing in it, on every page and in every window (R-456).
@@ -788,8 +816,12 @@ impl<S: EngineSide> App<S> {
             self.overlay_default = self.snapshot.render.overlays.clone();
         }
         if std::mem::take(&mut actions.home) {
-            out.fresh
-                .push(explore::manifold_view::reset::home(&self.snapshot.sim));
+            out.fresh.push(explore::manifold_view::reset::home(
+                self.manifold.charts.at(&self.snapshot.sim),
+            ));
+        }
+        if std::mem::take(&mut actions.save_view) {
+            out.chart = Some(explore::manifold_view::saved::Switch::Save);
         }
         let asked = std::mem::take(&mut actions.open);
         self.apply(&ctx, actions);
@@ -811,6 +843,10 @@ impl<S: EngineSide> App<S> {
         }
         for command in std::mem::take(&mut out.fresh) {
             self.send_fresh(command);
+        }
+        if let Some(switch) = out.chart.take() {
+            let now = out.now(&self.snapshot.sim);
+            self.switch_chart(switch, &now);
         }
         for line in std::mem::take(&mut out.refusals) {
             self.log_warning(line);

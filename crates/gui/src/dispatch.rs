@@ -35,7 +35,7 @@ use engine::contract::sim_config::{
 };
 use engine::path::leaf::Leaf;
 use engine::path::leaf::{self, Affine, CentreOnPin, OnLatent, Scale};
-use engine::path::{stop, LatentTilt, Pin, TiltSpec, View as PathView};
+use engine::path::{stop, LatentTilt, Map, Pin, Segment, TiltSpec, View as PathView};
 
 use crate::explore::manifold_view::tilt::Angles;
 use crate::explore::manifold_view::{chart_coords, View};
@@ -144,6 +144,22 @@ fn affine(plane: &Plane) -> PathView {
         horizon: Horizon { t: 1.0 },
         collision: Collision::default(),
         quality: Quality {},
+    })
+}
+
+/// The chart `(z₀, q₁, q₂)` the view of `plane` saves as, read from the engine's Save view as chart: the oblique chart's
+/// words, after its kind's. `None` where the engine refuses it.
+pub fn save_view(plane: &Plane) -> Option<Plane> {
+    let saved = Segment::save_view(&affine(plane)).ok()?;
+    let Map::Saved(chart) = &saved.b().map else {
+        return None;
+    };
+    let words = chart.to_words();
+    let vector = |i: usize| -> Option<Latent> { words.get(1 + 8 * i..9 + 8 * i)?.try_into().ok() };
+    Some(Plane {
+        z0: vector(0)?,
+        q1: vector(1)?,
+        q2: vector(2)?,
     })
 }
 

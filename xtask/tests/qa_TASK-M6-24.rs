@@ -151,6 +151,7 @@ fn check_01_main(cases: &[Case]) {
             "mock_manifold_view",
             "mock_overlays_menu",
             "mock_present",
+            "mock_saved_chart",
             "mock_shell",
             "mock_tile_bounds",
             "mock_time",

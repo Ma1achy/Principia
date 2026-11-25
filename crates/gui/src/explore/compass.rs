@@ -793,10 +793,27 @@ pub fn pick(id: &str, sim: &SimConfig, scratch: &mut Scratch, out: &mut Out) -> 
         scratch.compass.mode,
         scratch.compass.active(),
     );
-    if let Some(edit) = pick_edit(sim, edge, to, shows) {
-        out.edit(edit, None, scratch);
-    }
+    send_pick(pick_edit(sim, edge, to, shows), edge, sim, scratch, out);
     true
+}
+
+/// Sends the pick `edit` on `edge`, but for a third axis's that tilts, on a chart saved at a tilt: refused.
+fn send_pick(
+    edit: Option<SetField>,
+    edge: Edge,
+    sim: &SimConfig,
+    scratch: &mut Scratch,
+    out: &mut Out,
+) {
+    let Some(edit) = edit else { return };
+    let tilts = matches!(
+        edit.edit,
+        Edit::Sim(SimField::SliceFrame { basis: Some(_), .. })
+    );
+    if edge == Edge::D && tilts && scratch.charts.refuse(sim) {
+        return;
+    }
+    out.edit(edit, None, scratch);
 }
 
 /// An axis name on the edge `edge`, centred on it and pushed [`LABEL_OUT`] outward from the cube's centre.
@@ -1649,6 +1666,7 @@ pub fn adjust(adjust: &Adjust, sim: &SimConfig, scratch: &mut Scratch, out: &mut
         }
     }
     match scratch.compass.mode {
+        Touch::Tilt if scratch.charts.refuse(sim) => {}
         Touch::Tilt => {
             let Base::Degrees(degrees) = StepKind::Tilt.base().times(adjust.times) else {
                 unreachable!("the compass's tilt step is in degrees")
@@ -1876,7 +1894,10 @@ pub fn take(ui: &Ui, rect: Rect, sim: &SimConfig, scratch: &mut Scratch, out: &m
         // on its press state, because the figure's drag already pans by each frame's travel on the snapshot.
         if let Some(mut drag) = scratch.compass.drag {
             let was = drag;
-            drag.moved(response.drag_delta(), square);
+            let moves = response.drag_delta() != Vec2::ZERO;
+            if !(drag.mode == Touch::Tilt && moves && scratch.charts.refuse(&out.now(sim))) {
+                drag.moved(response.drag_delta(), square);
+            }
             scratch.compass.drag = Some(drag);
             if drag != was {
                 let now = out.now(sim);
@@ -2179,9 +2200,8 @@ fn axis_buttons(
         });
         close_under_console(&button, scratch.console_top);
         if picked != shown {
-            if let Some(edit) = pick_edit(sim, edge, picked, drawing.third) {
-                out.edit(edit, None, scratch);
-            }
+            let edit = pick_edit(sim, edge, picked, drawing.third);
+            send_pick(edit, edge, sim, scratch, out);
         }
     }
 }

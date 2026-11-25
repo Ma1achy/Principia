@@ -24,6 +24,7 @@ use crate::explore::compass::Gesture;
 
 use crate::dispatch::{self, Class};
 
+use super::saved::{own_angles, NOT_BUILT};
 use super::{
     close_under_console, frame_edit, reset::Section, row, row_ui, target_choices, target_edit,
     Panel, Target, Touch, View, ANGLE_READS_BACK, AXES, GAMMA, TAU1, TAU2, TILT_MAP_LEAN,
@@ -131,7 +132,16 @@ pub const TARGET_W: f32 = 64.0;
 pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
     let view = View::read(&panel.snapshot.sim);
     super::header_with_reset(ui, section, h, clip, "", Section::Tilt, panel);
-    let angles = Angles::read(&panel.snapshot.sim);
+    let angles = own_angles(&panel.scratch.charts, &panel.snapshot.sim);
+    // Dimmed, inert, on a chart saved at a tilt.
+    let guarded = panel.scratch.charts.guarded(&panel.snapshot.sim);
+    let line_in = |ui: &mut Ui, rect: Rect| {
+        let mut line = row_ui(ui, rect);
+        if guarded {
+            line.disable();
+        }
+        line
+    };
     let range = tilt_range(view.map);
     panel.scratch.compass.slider = None;
     for (i, (id, label, value, (lo, hi))) in [
@@ -143,7 +153,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     .enumerate()
     {
         let rect = row(section, h, 1 + 2 * i);
-        let mut line = row_ui(ui, rect);
+        let mut line = line_in(ui, rect);
         line.add_sized([40.0, rect.height()], egui::Label::new(label));
         let gap = line.spacing().item_spacing.x;
         line.spacing_mut().slider_width =
@@ -158,18 +168,19 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
                 .suffix("°")
                 .max_decimals(1),
         );
-        let changed = slider.changed() || field.changed();
-        if super::centre::touched(&slider, &field) {
+        let changed = !guarded && (slider.changed() || field.changed());
+        if !guarded && super::centre::touched(&slider, &field) {
             panel.scratch.compass.mode = Touch::Tilt;
         }
-        if slider.is_pointer_button_down_on() || field.is_pointer_button_down_on() {
+        if !guarded && (slider.is_pointer_button_down_on() || field.is_pointer_button_down_on()) {
             panel.scratch.compass.slider = match id {
                 TAU1 => Some(Gesture::Tau1),
                 TAU2 => Some(Gesture::Tau2),
                 _ => None,
             };
         }
-        panel.place(id, &slider.union(field), clip);
+        let row = slider.union(field).on_disabled_hover_text(NOT_BUILT);
+        panel.place(id, &row, clip);
         if changed {
             let mut to = angles;
             to.turn(id, moved - value, view.map);
@@ -186,7 +197,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     .enumerate()
     {
         let rect = row(section, h, 2 + 2 * i);
-        let mut line = row_ui(ui, rect);
+        let mut line = line_in(ui, rect);
         line.add_space(40.0 + line.spacing().item_spacing.x);
         line.label(label);
         let mut picked = now;
@@ -200,8 +211,12 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
                 }
             });
         close_under_console(&combo.response, panel.scratch.console_top);
-        panel.place(id, &combo.response, clip);
-        if combo.response.is_pointer_button_down_on() || combo.response.clicked() {
+        let response = combo.response.on_disabled_hover_text(NOT_BUILT);
+        panel.place(id, &response, clip);
+        if guarded {
+            continue;
+        }
+        if response.is_pointer_button_down_on() || response.clicked() {
             panel.scratch.compass.mode = Touch::Tilt;
         }
         if let Some(edit) = target_edit(&view, which, picked) {
@@ -209,7 +224,7 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         }
     }
     let rect = row(section, h, 6);
-    let mut line = row_ui(ui, rect);
+    let mut line = line_in(ui, rect);
     line.add_sized([40.0, rect.height()], egui::Label::new(MAP_LABEL));
     let mut picked = view.map;
     for (id, map) in [
@@ -218,8 +233,12 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
     ] {
         let radio = line
             .radio_value(&mut picked, map, map.name())
-            .on_hover_text(map_tooltip(map));
+            .on_hover_text(map_tooltip(map))
+            .on_disabled_hover_text(NOT_BUILT);
         panel.place(id, &radio, clip);
+    }
+    if guarded {
+        return;
     }
     if let Some(edit) = map_edit(&panel.snapshot.sim, picked) {
         panel.out.edit(edit, Some(Touch::Tilt), panel.scratch);

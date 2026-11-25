@@ -92,6 +92,7 @@ mod tests {
     mod mock_manifold_sections;
     mod mock_manifold_view;
     mod mock_reachability;
+    mod mock_saved_chart;
     mod mock_stain_drawn;
     mod mock_stain_preview;
     mod mock_status_line;
@@ -110,6 +111,8 @@ mod tests {
     mod real_field;
     mod real_stain;
     mod real_stain_drawn;
+    mod save_view_as_chart;
+    mod saved_latent_chart;
     mod scope_tab_order_mock;
     mod stain_off_thread;
     mod support;
