@@ -67,6 +67,77 @@ pub const RUNNERS: &[Runner] = &[
     },
 ];
 
+/// [`RUNNERS`] as bare `cargo xtask ci` and `--partition` run them: each runner that does its work in this process (the
+/// lints and golden) runs instead as its own `cargo run -p xtask -- <command>`, as build-kernel already does, so every
+/// step goes through the cargo that runs xtask. The tests' stand-in cargo then answers each step, and a test of which
+/// steps `ci` runs, and with what status, runs no real lint or render.
+/// Don't put these spawns in [`RUNNERS`]: tests call its runners in their own process, where a `cargo run -p xtask`
+/// would rebuild `target/debug/xtask` under the other tests that spawn it.
+pub const PROCESSES: &[Runner] = &[
+    Runner {
+        name: "build-kernel",
+        run: build_kernel,
+        list: build_kernel_list,
+    },
+    Runner {
+        name: "controls",
+        run: controls,
+        list: controls_list,
+    },
+    Runner {
+        name: "lint constants",
+        run: || xtask(&["lint", "constants"]),
+        list: lint_constants,
+    },
+    Runner {
+        name: "lint vocab",
+        run: || xtask(&["lint", "vocab"]),
+        list: lint_vocab,
+    },
+    Runner {
+        name: "lint wgsl",
+        run: || xtask(&["lint", "wgsl"]),
+        list: lint_wgsl,
+    },
+    Runner {
+        name: "lint compute-pipelines",
+        run: || xtask(&["lint", "compute-pipelines"]),
+        list: lint_compute,
+    },
+    Runner {
+        name: "lint no-alloc",
+        run: || xtask(&["lint", "no-alloc"]),
+        list: lint_no_alloc,
+    },
+    Runner {
+        name: "gate",
+        run: gate,
+        list: gate_list,
+    },
+    Runner {
+        name: "golden",
+        run: || xtask(&["golden", "--all"]),
+        list: golden_list,
+    },
+];
+
+/// `cargo run -p xtask -- <words>` on this workspace, through the cargo that runs xtask; `Err` when it fails.
+fn xtask(words: &[&str]) -> Result<(), String> {
+    let what = words.join(" ");
+    let status = std::process::Command::new(crate::deps::cargo())
+        .args(["run", "--quiet", "--manifest-path"])
+        .arg(crate::workspace_manifest())
+        .args(["-p", "xtask", "--"])
+        .args(words)
+        .status()
+        .map_err(|e| format!("cannot run cargo run -p xtask -- {what}: {e}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("{what} failed ({status})"))
+    }
+}
+
 /// `cargo xtask gate --all` on this workspace: every registered numerical gate (TASK-M0-05).
 fn gate() -> Result<(), String> {
     crate::gate::run(&crate::workspace_manifest(), crate::gate::Which::All)

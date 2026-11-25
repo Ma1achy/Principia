@@ -167,10 +167,10 @@ fn main() -> ExitCode {
             xtask::kernel_cache::source_hash(&workspace_root()).map(|hash| println!("{hash}"))
         }
         ["ci-cache-trim", rest @ ..] => xtask::kernel_cache::trim_cli(rest),
-        ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
+        ["ci"] => xtask::ci::run(xtask::ci::PROCESSES),
         ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),
         ["ci", "--partition", slice] => Partition::parse(slice)
-            .and_then(|slice| xtask::ci::run_partition(xtask::ci::RUNNERS, slice)),
+            .and_then(|slice| xtask::ci::run_partition(xtask::ci::PROCESSES, slice)),
         ["codegen"] => xtask::codegen::run(&workspace_manifest()),
         ["controls"] => xtask::controls::run(&workspace_manifest(), Mode::Run),
         ["controls", "--list"] => xtask::controls::run(&workspace_manifest(), Mode::List),
