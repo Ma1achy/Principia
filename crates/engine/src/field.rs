@@ -45,7 +45,7 @@ use kernel::generated::links::Defaults;
 use kernel::occupant::State;
 use kernel::regularisation::heggie::{HgAdvanced, HgParams, DEFAULT_TIME};
 use kernel::regularisation::sync::{boundary_at_or_before, delta_sync};
-use render::colour::outcome::{shown, Shown, K, SWATCHES};
+use render::colour::outcome::{shown, Shown, Swatch, K, SWATCHES};
 
 use crate::compute::ComputeError;
 use crate::contract::sim_config::{SimConfig, Window};
@@ -104,10 +104,16 @@ impl Field {
         counts
     }
 
-    /// The field as an image, 8-bit sRGB RGBA, rows from the top (as a texture is laid out): each sample its outcome
-    /// palette swatch (`render::colour::outcome`'s default set) at alpha 255; a sample the palette draws as the canvas
-    /// background (a decode failure) transparent, `[0, 0, 0, 0]`, for the canvas to draw its background there.
+    /// The field as an image, 8-bit sRGB RGBA, rows from the top (as a texture is laid out): [`Field::rgba8_with`] the
+    /// shipped outcome palette's default set.
     pub fn rgba8(&self) -> Vec<u8> {
+        self.rgba8_with(&SWATCHES)
+    }
+
+    /// The field as an image in `swatches`, a set of an outcome palette (`render::colour::outcome::Palette`): each
+    /// sample its class's swatch at alpha 255; a sample the palette draws as the canvas background (a decode failure)
+    /// transparent, `[0, 0, 0, 0]`, for the canvas to draw its background there.
+    pub fn rgba8_with(&self, swatches: &[Swatch; K]) -> Vec<u8> {
         let [w, h] = self.size;
         let mut out = Vec::with_capacity(w * h * 4);
         for row in (0..h).rev() {
@@ -115,7 +121,7 @@ impl Field {
                 let o = self.at(x, row);
                 out.extend_from_slice(&match shown(o.state, o.detail, false) {
                     Shown::Swatch(k) => {
-                        let [r, g, b] = SWATCHES[k].srgb8;
+                        let [r, g, b] = swatches[k].srgb8;
                         [r, g, b, 255]
                     }
                     Shown::Forbidden | Shown::DecodeFailed => [0; 4],

@@ -318,8 +318,11 @@ fn outcome_mode(mode: Look3, colour: Option<String>) -> Mode {
 /// The outcome occupant's WGSL with `from` replaced by `to`: a control's altered occupant.
 #[cfg(feature = "controls")]
 fn altered(from: &str, to: &str) -> String {
-    assert!(outcome::WGSL.contains(from), "the occupant has no `{from}`");
-    outcome::WGSL.replace(from, to)
+    assert!(
+        outcome::source().contains(from),
+        "the occupant has no `{from}`"
+    );
+    outcome::source().replace(from, to)
 }
 
 /// The outcome occupant drawing the forbidden lane as `colour`, a `decode_failed` sample still the background.
@@ -681,7 +684,7 @@ fn test_stain(edit: Option<(&str, &str)>) -> (FieldRamp, Mode) {
     let post = ramp_mode(&d_min, edit).post;
     let mode = Mode {
         name: "test stain",
-        colour: Occupant::BuiltIn(outcome::ID.to_owned()),
+        colour: Occupant::BuiltIn(outcome::name().to_owned()),
         brightness: Occupant::Custom(d_min.wgsl()),
         combiner: "replace_l",
         post,

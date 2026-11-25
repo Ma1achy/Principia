@@ -88,7 +88,7 @@ pub fn library() -> Result<Vec<Entry>, String> {
             let name = e.name().to_owned();
             let debug = e.category == Category::Debug;
             let graph = match e.slot {
-                Kind::Colour if name == render::colour::outcome::ID => Some(presets::outcome()),
+                Kind::Colour if name == render::colour::outcome::name() => Some(presets::outcome()),
                 Kind::Colour if debug => Some(presets::named_view(&name)),
                 _ => None,
             }

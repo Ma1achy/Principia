@@ -84,7 +84,7 @@ fn outcome_graph() -> (StainGraph, NodeId) {
         .add(NodeKind::Source, Occupant::Field("ftle".into()))
         .unwrap_or_else(|e| panic!("{e}"));
     let colour = g
-        .add(NodeKind::Colour, Occupant::Builtin(outcome::ID.into()))
+        .add(NodeKind::Colour, Occupant::Builtin(outcome::name().into()))
         .unwrap_or_else(|e| panic!("{e}"));
     g.connect(source, colour, 0)
         .unwrap_or_else(|e| panic!("{e}"));
@@ -580,8 +580,9 @@ fn check_param_edit(via_graph: bool) {
     let linear = present::srgb8(EDIT.1).to_vec();
     if via_graph {
         let mut nodes = stain.nodes().to_vec();
-        nodes[k].occupant =
-            assemble::Occupant::Custom(outcome::WGSL.replace("escape_body_1", "escape_body_1_x"));
+        nodes[k].occupant = assemble::Occupant::Custom(
+            outcome::source().replace("escape_body_1", "escape_body_1_x"),
+        );
         let edited = Stain::new(nodes).unwrap_or_else(|e| panic!("{e}"));
         v.set_stain(&edited, &keys(&stain))
             .unwrap_or_else(|e| panic!("{e}"));
@@ -659,7 +660,7 @@ fn check_graph_back(trailing: bool) {
     let back = if trailing {
         with(assemble::Occupant::Custom(format!(
             "{}\n// back\n",
-            outcome::WGSL
+            outcome::source()
         )))
     } else {
         stain.clone()

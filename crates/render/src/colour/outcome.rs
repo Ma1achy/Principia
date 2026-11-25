@@ -1,7 +1,6 @@
-//! The outcome state's canonical default palette (colour_composition §1.4; R-77, R-444 to R-447; TASK-M1-10,
-//! TASK-M2-32), the CPU twin of the built-in colour occupant `outcome_state`
-//! (`shaders/wgsl/frag/colour/outcome_state.wgsl`), and the twin of the debug catalogue's `detail` view, keyed by
-//! `state` (`ledger::gen::catalogue::detail_segments`).
+//! The outcome palette read from its source, the CPU twin of the shipped colour source that declares it maps the
+//! outcome class ([`MAPS`]), and the twin of the debug catalogue's `detail` view, keyed by `state`
+//! (`ledger::gen::catalogue::detail_segments`).
 //!
 //! **The outcome view shows physical outcomes only, in nine classes (R-444).** A sample's class is read from `state`
 //! and the `detail` union alone (payload §2): a collision takes its pair's class and an escape its body's (0-based
@@ -17,45 +16,46 @@
 //! test. A `decode_failed` sample of every `detail` and tag draws the background too, as a pixel that is not a system
 //! (R-511), with no class: it is in no legend key or share.
 //!
-//! **The swatches** are the occupant's node params, so editing one changes only its class (REQ-COL-002): linear RGB,
-//! the colour slot's space, as a field ramp's `INVALID_COLOUR` is, each default the f32 nearest the sRGB decode of its
-//! 8-bit code. The fragment returns a swatch unchanged, with no arithmetic, so it renders the same bits on every
-//! backend, however near a rounding tie its 8-bit level falls (applied per R-369: `#30C8DC`'s blue, 220, decodes to
-//! 182.5018 of 255, 0.0018 of a step from a tie). **Two named sets** ([`SETS`]): the sRGB palette of R-444 and R-445,
-//! the default ([`SWATCHES`]), and R-447's OKLab-uniform variant ([`OKLAB_UNIFORM`]), each chromatic class at its own
-//! OKLab hue at L = 0.72 and C = 0.123, bounded staying `#141418` (REQ-COL-103). Each set's swatches are params of
-//! their own, so editing one set leaves the other unchanged, and the param [`SET_PARAM`] selects the set shown, beside
-//! the swatches where they are edited (applied per R-369).
+//! **The swatches** are the source's own: the colour controls of each set it declares, read from its `@uniform`
+//! defaults ([`Palette::read`]), linear RGB, each shown as the 8-bit sRGB code nearest its f32's encode. No code holds
+//! a colour or names the source: the shipped palette is the one colour source in the registry that declares it maps
+//! the outcome class ([`shipped`]), and [`SWATCHES`] and the sets are read from it once, when first asked.
 //!
-//! **The labels** are R-449's display names, 1-based: the bodies 1, 2, 3 and a pair by its two bodies, never by its
-//! pair id, each the class name of the one conversion module, `ledger::display::class_name` (REQ-GUI-188), of the
-//! swatch's `state` and `detail`: the black class "bounded / nothing yet", every other its `(state, detail)` name. The
-//! params stay the machine-readable 0-based ids (`escape_body_0`, `collision_pair_2`).
+//! **The sets.** The `@glyph swatches "<set>"` line names the set shown by default; the `choice` control whose names
+//! include it selects the set ([`Palette::set_param`]), its names the sets in order, each set the colour controls `in`
+//! that group, in `order`, one per class.
 //!
-//! **The order** of the swatches is colour_composition §1.4's table, bounded / nothing yet first, and it is the rank
-//! greyscale and hue mode give the outcome class (R-448; §4.1): [`class`] is that rank, `K = 9` ([`K`]).
+//! **The labels** are the ledger's class names (`ledger::display::class_name`) of each class's `state` and `detail`,
+//! 1-based as a person reads them; the params stay the source's machine-readable names (`escape_body_0`).
 //!
-//! **The categorical filter** (REQ-COL-019; TASK-M7-08): the occupant's last param, `class_mask`
-//! ([`super::palette::MASK_PARAM`]), shows class [`class`] where its bit is set and draws every other class's swatch
-//! through [`super::palette::filter`]'s mute; a sample with no class, [`Shown::Forbidden`] or [`Shown::DecodeFailed`],
-//! keeps the canvas background whatever the mask.
+//! **The order** of the classes, bounded / nothing yet first, is the rank greyscale and hue mode give the outcome
+//! class: [`class`] is that rank, `K = 9` ([`K`]).
 //!
-//! **The legends.** Each is keyed by `state` (dd_colouring §3.7; render_gui_spec G6): [`segment`] gives the outcome
-//! palette's classes a state's samples may take, and [`detail_view`] the `detail` view's colour, from the ledger's
-//! segments, the data the view is generated from.
+//! **The categorical filter**: the source's `flags` control, `class_mask` ([`super::palette::MASK_PARAM`]), shows
+//! class [`class`] where its bit is set and draws every other class's swatch through [`super::palette::filter`]'s
+//! mute; a sample with no class, [`Shown::Forbidden`] or [`Shown::DecodeFailed`], keeps the canvas background whatever
+//! the mask.
+//!
+//! **The legends.** Each is keyed by `state`: [`segment`] gives the outcome palette's classes a state's samples may
+//! take, and [`detail_view`] the `detail` view's colour, from the ledger's segments, the data the view is generated
+//! from.
+
+use std::collections::BTreeSet;
+use std::sync::{LazyLock, Mutex, OnceLock, PoisonError};
 
 use ledger::display;
 use ledger::display::Detail::{self, D0, D1, D2, D3};
 use ledger::display::State::{self, Bounded, Collision, Escape};
 use ledger::gen::catalogue;
 
+use crate::assemble::{Control, Declaration, Glyph, Kind, UniformType};
 use crate::present::{self, Rgb};
+use crate::registry::{self, Entry};
 
-/// One swatch of the outcome palette: the occupant's param; its class's legend label, R-449's display name from
-/// `ledger::display::class_name`; the `state` and `detail` codes of a sample of its class (colour_composition §1.4's
-/// payload column; `bounded`'s for the black class, which `running`, `sim_failed` and the reserved codes share); its 8-bit sRGB colour;
-/// and whether the value is still a proposal awaiting the human's confirmation (R-71). None is: the colours are the
-/// human's (R-444, R-445, R-447).
+/// One swatch of the outcome palette: its uniform in the source; its class's legend label, the ledger's class name;
+/// the `state` and `detail` codes of a sample of its class (`bounded`'s for the black class, which `running`,
+/// `sim_failed` and the reserved codes share); its 8-bit sRGB colour, the source's default encoded; and whether the
+/// value is still a proposal (none is).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Swatch {
     pub param: &'static str,
@@ -66,64 +66,207 @@ pub struct Swatch {
     pub proposed: bool,
 }
 
-/// The swatch `param` of the class of samples with `state` and `detail`, labelled by the class's display name.
-const fn swatch(param: &'static str, state: State, detail: Detail, hex: u32) -> Swatch {
-    Swatch {
-        param,
-        label: display::class_name(state, detail),
-        state: state.code(),
-        detail: detail.code(),
-        srgb8: [(hex >> 16) as u8, (hex >> 8) as u8, hex as u8],
-        proposed: false,
+/// The outcome class count, `K = 9`.
+pub const K: usize = 9;
+
+/// The `state` and `detail` of a sample of each class, in class order ([`class`]).
+const CLASSES: [(State, Detail); K] = [
+    (Bounded, D0),
+    (Collision, D2),
+    (Collision, D1),
+    (Collision, D0),
+    (Collision, D3),
+    (Escape, D0),
+    (Escape, D1),
+    (Escape, D2),
+    (Escape, D3),
+];
+
+/// What the palette's source declares it maps, the start of its `@maps` line: the outcome class.
+// The plan is unclear here (how to find the source without its id); chose its `@maps` line, the meaning it declares.
+pub const MAPS: &str = "outcome class";
+
+/// The outcome palette as a source declares it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Palette {
+    /// The name a node of the colour slot calls the source by, as the registry names it.
+    pub name: &'static str,
+    /// The source's WGSL.
+    pub source: String,
+    /// The `u32` uniform whose value selects the set shown.
+    pub set_param: &'static str,
+    /// The sets, by the selector's value: each its name and a swatch per class. The first is the default.
+    pub sets: Vec<(&'static str, [Swatch; K])>,
+}
+
+impl Palette {
+    /// The palette the colour source `source`, named `name`, declares; why not, where it declares none.
+    pub fn read(name: &str, source: &str) -> Result<Palette, String> {
+        let d = Declaration::parse(source).map_err(|e| format!("{name}: {e}"))?;
+        let shown = match &d.described.glyph {
+            Some((Glyph::Swatches(Some(set)), _)) => set.as_str(),
+            _ => {
+                return Err(format!(
+                    "{name}: no `@glyph swatches \"<set>\"` names the set shown"
+                ))
+            }
+        };
+        let (set_param, names) = d
+            .described
+            .controls
+            .iter()
+            .find_map(|c| match &c.control {
+                Control::Choice(names) if names.iter().any(|n| n == shown) => {
+                    Some((c.uniform.as_str(), names))
+                }
+                _ => None,
+            })
+            .ok_or_else(|| format!("{name}: no `choice` control selects the set `{shown}`"))?;
+        if names.first().map(String::as_str) != Some(shown) {
+            return Err(format!(
+                "{name}: the set shown, `{shown}`, is not the selector's first, its default"
+            ));
+        }
+        let mut sets = Vec::with_capacity(names.len());
+        for set in names {
+            let mut controls: Vec<_> = d
+                .described
+                .controls
+                .iter()
+                .filter(|c| c.control == Control::Colour && c.group.as_deref() == Some(set))
+                .collect();
+            // The plan is unclear here; chose class k as the set's k-th colour control by `order`, the editor's order.
+            controls.sort_by_key(|c| c.order.unwrap_or(i64::MAX));
+            if controls.len() != K {
+                return Err(format!(
+                    "{name}: the set `{set}` has {} colour controls, not one per class, {K}",
+                    controls.len()
+                ));
+            }
+            let mut swatches = Vec::with_capacity(K);
+            for (c, &(state, detail)) in controls.iter().zip(&CLASSES) {
+                let u = d
+                    .uniforms
+                    .iter()
+                    .find(|u| u.name == c.uniform && u.ty == UniformType::Vec3)
+                    .ok_or_else(|| format!("{name}: `{}` is no `vec3<f32>`", c.uniform))?;
+                swatches.push(Swatch {
+                    param: intern(&u.name),
+                    // The plan is unclear here; chose the ledger's class names over the controls' labels.
+                    label: display::class_name(state, detail),
+                    state: state.code(),
+                    detail: detail.code(),
+                    srgb8: [0, 1, 2].map(|i| encode8(u.default[i])),
+                    proposed: false,
+                });
+            }
+            let swatches: [Swatch; K] = swatches.try_into().expect("K swatches");
+            // The plan is unclear here; chose the source's set names ("sRGB palette"), the ones the editor shows.
+            sets.push((intern(set), swatches));
+        }
+        Ok(Palette {
+            name: intern(name),
+            source: source.to_owned(),
+            set_param: intern(set_param),
+            sets,
+        })
+    }
+
+    /// The palette the registry entry `entry` declares.
+    pub fn of(entry: &Entry) -> Result<Palette, String> {
+        Palette::read(entry.name(), &entry.source)
+    }
+
+    /// The default set's swatches.
+    pub fn swatches(&self) -> &[Swatch; K] {
+        &self.sets[0].1
     }
 }
 
-/// The outcome class count, `K = 9` (R-444, R-448).
-pub const K: usize = 9;
+/// The 8-bit sRGB code of the linear channel `c` as the shader holds it, an `f32`: its sRGB encode, rounded.
+pub fn encode8(c: f64) -> u8 {
+    let c = f64::from(c as f32).clamp(0.0, 1.0);
+    (255.0 * present::linear_to_srgb(c)).round() as u8
+}
 
-/// The sRGB palette, the default set (R-444, R-445; colour_composition §1.4's table, in its order): bounded / nothing
-/// yet `#141418`; collision 1–2, 1–3 and 2–3 (pairs 2, 1 and 0) `#DE2D2D`, `#2EBC4E`, `#3462E0`; triple collision
-/// `#F29620`; escape body 1, 2 and 3 (`detail` 0, 1 and 2) `#F0DE32`, `#E034C6`, `#30C8DC`; triple ejection `#611597`.
-pub const SWATCHES: [Swatch; K] = [
-    swatch("bounded", Bounded, D0, 0x141418),
-    swatch("collision_pair_2", Collision, D2, 0xDE2D2D),
-    swatch("collision_pair_1", Collision, D1, 0x2EBC4E),
-    swatch("collision_pair_0", Collision, D0, 0x3462E0),
-    swatch("triple_collision", Collision, D3, 0xF29620),
-    swatch("escape_body_0", Escape, D0, 0xF0DE32),
-    swatch("escape_body_1", Escape, D1, 0xE034C6),
-    swatch("escape_body_2", Escape, D2, 0x30C8DC),
-    swatch("triple_ejection", Escape, D3, 0x611597),
-];
+/// `s` kept for the life of the program, once however often it is read, so a swatch stays `Copy`.
+fn intern(s: &str) -> &'static str {
+    static NAMES: Mutex<BTreeSet<&'static str>> = Mutex::new(BTreeSet::new());
+    let mut names = NAMES.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(&n) = names.get(s) {
+        return n;
+    }
+    let n: &'static str = Box::leak(s.to_owned().into_boxed_str());
+    names.insert(n);
+    n
+}
 
-/// R-447's OKLab-uniform variant, the second set, in [`SWATCHES`]' order (colour_composition §1.4's second table):
-/// bounded `#141418`; collision 1–2 `#E7857A` (27°), 1–3 `#6EB976` (147°), 2–3 `#7FA2F2` (265°); triple collision
-/// `#D99349` (65°); escape body 1 `#B3A841` (103°), 2 `#D486C3` (335°), 3 `#09B9CD` (208°); triple ejection `#B790E2`
-/// (305°). Its params are the default set's, prefixed `oklab_`.
-pub const OKLAB_UNIFORM: [Swatch; K] = [
-    swatch("oklab_bounded", Bounded, D0, 0x141418),
-    swatch("oklab_collision_pair_2", Collision, D2, 0xE7857A),
-    swatch("oklab_collision_pair_1", Collision, D1, 0x6EB976),
-    swatch("oklab_collision_pair_0", Collision, D0, 0x7FA2F2),
-    swatch("oklab_triple_collision", Collision, D3, 0xD99349),
-    swatch("oklab_escape_body_0", Escape, D0, 0xB3A841),
-    swatch("oklab_escape_body_1", Escape, D1, 0xD486C3),
-    swatch("oklab_escape_body_2", Escape, D2, 0x09B9CD),
-    swatch("oklab_triple_ejection", Escape, D3, 0xB790E2),
-];
+/// The palettes the colour sources of `entries` declare: each source whose `@maps` line starts [`MAPS`].
+pub fn declared(entries: &[Entry]) -> Result<Vec<Palette>, String> {
+    let mut out = Vec::new();
+    for e in entries.iter().filter(|e| e.slot == Kind::Colour) {
+        let d = Declaration::parse(&e.source).map_err(|why| format!("{}: {why}", e.id))?;
+        if d.described
+            .maps
+            .as_deref()
+            .is_some_and(|m| m.starts_with(MAPS))
+        {
+            out.push(Palette::of(e)?);
+        }
+    }
+    Ok(out)
+}
 
-/// The named swatch sets, by the value of [`SET_PARAM`]: 0 the sRGB palette, the default; 1 the OKLab-uniform variant
-/// (R-447; REQ-COL-103).
-pub const SETS: [(&str, [Swatch; K]); 2] = [("sRGB", SWATCHES), ("OKLab-uniform", OKLAB_UNIFORM)];
+/// The one palette among `entries`' colour sources ([`declared`]); refused where there is none or more than one,
+/// naming them.
+pub fn find(entries: &[Entry]) -> Result<Palette, String> {
+    let mut found = declared(entries)?;
+    match found.len() {
+        1 => Ok(found.remove(0)),
+        0 => Err(format!("no colour source declares `@maps {MAPS}`")),
+        _ => Err(format!(
+            "more than one colour source declares `@maps {MAPS}`: {}",
+            found.iter().map(|p| p.name).collect::<Vec<_>>().join(", ")
+        )),
+    }
+}
 
-/// The occupant's param that selects the set shown, a `u32` index into [`SETS`], 0 by default.
-pub const SET_PARAM: &str = "swatch_set";
+/// The shipped outcome palette, read from the registry once. The registry is built into the crate, so a registry
+/// without exactly one is a defect of the build, which the crate's tests catch.
+pub fn shipped() -> &'static Palette {
+    static SHIPPED: OnceLock<Palette> = OnceLock::new();
+    SHIPPED.get_or_init(|| {
+        registry::registry()
+            .map_err(|e| e.to_string())
+            .and_then(|entries| find(&entries))
+            .unwrap_or_else(|why| panic!("the shipped outcome palette: {why}"))
+    })
+}
 
-/// The occupant's WGSL, as the registry scans it and the assembler's built-in `outcome_state` holds it.
-pub const WGSL: &str = include_str!("../../shaders/wgsl/frag/colour/outcome_state.wgsl");
+/// The name a node of the colour slot calls the shipped palette by.
+pub fn name() -> &'static str {
+    shipped().name
+}
 
-/// The built-in occupant's id in the `colour` slot.
-pub const ID: &str = "outcome_state";
+/// The shipped palette's WGSL.
+pub fn source() -> &'static str {
+    &shipped().source
+}
+
+/// The `u32` uniform that selects the set shown, the shipped palette's.
+pub fn set_param() -> &'static str {
+    shipped().set_param
+}
+
+/// The shipped palette's default set.
+pub static SWATCHES: LazyLock<[Swatch; K]> = LazyLock::new(|| *shipped().swatches());
+
+/// The shipped palette's second set, its OKLab-uniform variant.
+pub static OKLAB_UNIFORM: LazyLock<[Swatch; K]> = LazyLock::new(|| shipped().sets[1].1);
+
+/// The shipped palette's sets, by the selector's value.
+pub static SETS: LazyLock<Vec<(&'static str, [Swatch; K])>> =
+    LazyLock::new(|| shipped().sets.clone());
 
 /// What the outcome palette shows for one sample.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

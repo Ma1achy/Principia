@@ -59,7 +59,7 @@ fn graph(source: String, colour: String) -> Result<StainGraph, GraphError> {
 pub fn outcome() -> Result<StainGraph, GraphError> {
     chain(
         Occupant::Field("state".to_owned()),
-        Occupant::Builtin(render::colour::outcome::ID.to_owned()),
+        Occupant::Builtin(render::colour::outcome::name().to_owned()),
     )
 }
 

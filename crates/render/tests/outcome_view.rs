@@ -317,8 +317,11 @@ fn event_with(colour: String) -> Mode {
 /// The outcome occupant's WGSL with `from` replaced by `to`: a control's altered occupant.
 #[cfg(feature = "controls")]
 fn altered(from: &str, to: &str) -> String {
-    assert!(outcome::WGSL.contains(from), "the occupant has no `{from}`");
-    outcome::WGSL.replace(from, to)
+    assert!(
+        outcome::source().contains(from),
+        "the occupant has no `{from}`"
+    );
+    outcome::source().replace(from, to)
 }
 
 /// Column `x`'s pixels in an image of `n` tiles, with their positions.
@@ -859,7 +862,7 @@ fn check_swatches(what: &str, image: &[[f32; 4]], wants: &[Option<[u8; 3]>]) {
 /// The variant's params: `swatch_set` at `set`, and the param `edit`, if any, at `#FFFFFF`.
 fn variant_params(set: u32, edit: Option<&'static str>) -> impl Fn(&str) -> Option<Vec<f64>> {
     move |name| {
-        if name == outcome::SET_PARAM {
+        if name == outcome::set_param() {
             Some(vec![f64::from(set)])
         } else if Some(name) == edit {
             Some(present::srgb8([0xFF; 3]).to_vec())
@@ -902,14 +905,14 @@ fn check_variant(mode: &Mode) {
     check_swatches(
         "the default",
         &v.at(mode, &defaults),
-        &variant_wants(&SWATCHES),
+        &variant_wants(&*SWATCHES),
     );
     check_swatches(
         "the variant",
         &v.at(mode, &variant_params(1, None)),
-        &variant_wants(&OKLAB_UNIFORM),
+        &variant_wants(&*OKLAB_UNIFORM),
     );
-    let mut edited = OKLAB_UNIFORM;
+    let mut edited = *OKLAB_UNIFORM;
     edited[6].srgb8 = [0xFF; 3];
     check_swatches(
         "the variant, edited",
@@ -935,14 +938,14 @@ fn check_edits_apart(mode: &Mode) {
 
 #[test]
 fn outcome_oklab_variant_measures_r_447() {
-    check_measured(&OKLAB_UNIFORM);
+    check_measured(&*OKLAB_UNIFORM);
 }
 
 negative_control!(
     outcome_oklab_variant_measures_r_447,
     "the sRGB palette measures neither L 0.72 nor C 0.123",
     expected = "not L 0.72, C 0.123",
-    check_measured(&SWATCHES)
+    check_measured(&*SWATCHES)
 );
 
 #[test]
@@ -1102,7 +1105,7 @@ fn check_srgb(set: &[outcome::Swatch]) {
 
 #[test]
 fn outcome_palette_separation_srgb() {
-    check_srgb(&SWATCHES);
+    check_srgb(&*SWATCHES);
 }
 
 negative_control!(
@@ -1110,7 +1113,7 @@ negative_control!(
     "the palette with triple ejection back in R-433's navy #000097 measures another nearest to it",
     expected = "purple's nearest",
     {
-        let mut old = SWATCHES;
+        let mut old = *SWATCHES;
         old[8].srgb8 = [0x00, 0x00, 0x97];
         check_srgb(&old)
     }
@@ -1211,7 +1214,7 @@ fn check_variant_evidence(set: &[outcome::Swatch]) {
 
 #[test]
 fn outcome_palette_separation_variant() {
-    check_variant_evidence(&OKLAB_UNIFORM);
+    check_variant_evidence(&*OKLAB_UNIFORM);
 }
 
 negative_control!(
@@ -1219,7 +1222,7 @@ negative_control!(
     "a variant with escape body 2 moved onto triple ejection's hue measures another closest pair",
     expected = "the closest pair",
     {
-        let mut moved = OKLAB_UNIFORM;
+        let mut moved = *OKLAB_UNIFORM;
         moved[6].srgb8 = OKLAB_UNIFORM[8].srgb8;
         check_variant_evidence(&moved)
     }

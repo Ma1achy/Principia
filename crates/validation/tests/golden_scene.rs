@@ -803,23 +803,23 @@ fn check_occupant(want: &render::assemble::Occupant) {
 fn golden_scene_outcome_is_the_built_in() {
     use render::assemble::Occupant;
     use render::colour::outcome;
-    check_occupant(&Occupant::BuiltIn(outcome::ID.to_owned()));
+    check_occupant(&Occupant::BuiltIn(outcome::name().to_owned()));
     let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
     let s = named("outcome");
     let built_in = s
         .render(h.device(), h.queue())
         .unwrap_or_else(|e| panic!("{e}"));
     let custom = s
-        .render_colour(h.device(), h.queue(), outcome::WGSL)
+        .render_colour(h.device(), h.queue(), outcome::source())
         .unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(built_in, custom, "the outcome text rendered as custom WGSL");
     let from = "select(uniforms.escape_body_1, uniforms.oklab_escape_body_1, v)";
-    assert!(outcome::WGSL.contains(from));
+    assert!(outcome::source().contains(from));
     let swapped = s
         .render_colour(
             h.device(),
             h.queue(),
-            &outcome::WGSL.replace(
+            &outcome::source().replace(
                 from,
                 "select(uniforms.escape_body_2, uniforms.oklab_escape_body_2, v)",
             ),
@@ -833,7 +833,7 @@ negative_control!(
     "the outcome scene's occupant taken for custom text",
     expected = "the outcome scene's occupant",
     check_occupant(&render::assemble::Occupant::Custom(
-        render::colour::outcome::WGSL.to_owned()
+        render::colour::outcome::source().to_owned()
     ))
 );
 
