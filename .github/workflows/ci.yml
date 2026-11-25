@@ -92,7 +92,9 @@ jobs:
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          shared-key: test
+          # rust-cache's key does not see `--config`: change it when the dependencies' opt-level below changes, or main
+          # keeps restoring, and never replaces, dependencies built at the old level.
+          shared-key: test-deps-opt2
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - uses: ./.github/actions/cargo-ci-config
       - name: Restore the Mesa packages
@@ -115,7 +117,9 @@ jobs:
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
-      - run: cargo nextest run --workspace --locked --partition hash:${{ matrix.shard }}/3
+      # Dependencies optimised (the shader and GUI libraries are much of the time); our own crates stay unoptimised, the
+      # code these tests are for.
+      - run: cargo nextest run --workspace --locked --partition hash:${{ matrix.shard }}/3 --config 'profile.test.package."*".opt-level=2'
 
   test-workspace:
     # The tests that run cargo on the workspace itself: slow by nature, so after the merge, not on the PR.
