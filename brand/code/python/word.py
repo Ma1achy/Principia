@@ -1,7 +1,8 @@
 import numpy as np, json, re
 from svgpathtools import parse_path, Line
 from matplotlib.path import Path
-s=open('/home/claude/ma1achy/principia/docs/readme/title-light.svg').read()
+import sys
+s=open(sys.argv[1]).read()   # the README title SVG, e.g. docs/readme/title-light.svg
 d=re.search(r'<path fill="#1d1b19" d="([^"]+)"',s).group(1)
 path=parse_path(d)
 loops=[]

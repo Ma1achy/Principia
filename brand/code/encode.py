@@ -4,8 +4,11 @@ The committed MP4s record libx264 crf 15 (x264 core 164, veryfast-class options)
 the other settings were not recorded, so these are chosen (see README-build.md):
   MP4   frames composited on the page colour, libx264 -preset veryfast -crf 15, yuv420p
   WebM  libvpx-vp9 with an alpha plane (yuva420p), constant quality: -crf 28 -b:v 0
-  GIF   composited on the page colour, scaled with Lanczos, one 256-colour palette for the whole
-        loop (palettegen), Bayer dithering, looping forever
+  GIF   composited on the page colour, scaled with Lanczos, a 256-colour palette per frame
+        (palettegen stats_mode=single, paletteuse new=1; of the settings tried it came closest to the
+        committed GIFs), looping forever
+  WebP  animated, lossy, with an alpha plane, scaled with Lanczos, looping forever; quality is set per file
+        by webp() to the highest that fits the size limit
 """
 import subprocess
 
@@ -32,5 +35,39 @@ def webm(frames, fps, out):
 
 def gif(frames, fps, w, h, theme, gif_fps, gif_w, out):
     flt = (f'[1][0]overlay=shortest=1,fps={gif_fps},scale={gif_w}:-1:flags=lanczos,split[a][b];'
-           f'[a]palettegen=max_colors=256[p];[b][p]paletteuse=dither=bayer:bayer_scale=5')
+           f'[a]palettegen=stats_mode=single[p];[b][p]paletteuse=new=1')
     _run(_inputs(frames, fps, w, h, BG[theme]) + ['-filter_complex', flt, '-loop', '0', out])
+
+
+def webp(frames, fps, out_fps, width, out, limit=None, quality=None):
+    """Animated lossy WebP written with Pillow (ffmpeg's libwebp_anim cannot lower the alpha quality, and
+    losslessly kept alpha alone is more than 4 MB). Colour and alpha share one quality number. With limit
+    (bytes) the highest quality (1 to 100) whose file fits is used; the result is (quality, bytes).
+    Frame durations are 67, 67, 66 ms so that 15 fps comes to exactly 36 s over 540 frames."""
+    import os
+    from PIL import Image
+    step = int(round(fps / out_fps))
+    names = sorted(os.listdir(frames))[::step]
+    ims = []
+    for n in names:
+        im = Image.open(f'{frames}/{n}').convert('RGBa')           # premultiplied: no dark fringes when scaled
+        h = round(im.height * width / im.width)
+        ims.append(im.resize((width, h), Image.LANCZOS).convert('RGBA'))
+    dur = [67, 67, 66] * (len(ims) // 3 + 1)
+    def write(q):
+        ims[0].save(out, save_all=True, append_images=ims[1:], duration=dur[:len(ims)], loop=0, lossless=False,
+                    quality=q, alpha_quality=q, method=4)
+        return os.path.getsize(out)
+    if quality is not None:
+        return quality, write(quality)
+    lo, hi, best = 1, 100, None                         # file size grows with quality: bisect for the highest that fits
+    while lo <= hi:
+        q = (lo + hi) // 2
+        size = write(q)
+        if limit is None or size <= limit:
+            best, lo = (q, size), q + 1
+        else:
+            hi = q - 1
+    if best is None:
+        return 1, write(1)
+    return best[0], write(best[0])

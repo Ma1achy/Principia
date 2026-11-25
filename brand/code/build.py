@@ -43,6 +43,12 @@ VIDEOS = [('icon-light', 'icons/animated', 'principia-icon-light', 24, 12, 400, 
           ('title-2d-subtitle-dark', 'titles', 'principia-title-2d-subtitle-dark', 30, 15, 800, 'dark')]
 
 
+WEBP_WIDTH, WEBP_LIMIT = 1200, 4_000_000
+# Page-colour variants of the subtitle title for GitHub's default dark and light pages: the glow and the
+# ink-style mixing are computed on that colour (the runtime's backdrop option), not on the paper colour.
+GITHUB = [('github-dark', 'title-2d-subtitle-dark', '#0d1117'), ('github-light', 'title-2d-subtitle-light', '#ffffff')]
+
+
 def log(*a):
     print(time.strftime('%H:%M:%S'), *a, flush=True)
 
@@ -142,6 +148,14 @@ def png_size(path):
     return Image.open(path).size
 
 
+def record_webp(out, name, q, size):
+    p = os.path.join(out, 'webp-settings.json')
+    d = json.load(open(p)) if os.path.exists(p) else {}
+    d[name] = {'quality': q, 'alpha_quality': q, 'method': 4, 'width': WEBP_WIDTH, 'fps': 15, 'bytes': size}
+    json.dump(d, open(p, 'w'), indent=1)
+    log(name, d[name])
+
+
 def part_videos(out, only=None):
     import render, encode
     wd = render_dir(out)
@@ -162,6 +176,18 @@ def part_videos(out, only=None):
         encode.mp4(frames, fps, w, h, theme, f'{dst}/{stem}.mp4')
         encode.webm(frames, fps, f'{dst}/{stem}-transparent.webm')
         encode.gif(frames, fps, w, h, theme, gfps, gw, f'{dst}/{stem}.gif')
+        if 'subtitle' in v:
+            q, size = encode.webp(frames, fps, 15, WEBP_WIDTH, f'{dst}/{stem}.webp', limit=WEBP_LIMIT)
+            record_webp(out, f'{stem}.webp', q, size)
+    for name, v, bd in GITHUB:
+        if only and not any(o in name for o in only):
+            continue
+        frames = os.path.join(out, 'work', 'frames', f'title-2d-subtitle-{name}')
+        log('frames', name)
+        render.frames(wd, v, 30, frames, backdrop=bd)
+        stem = f'principia-title-2d-subtitle-{name}'
+        q, size = encode.webp(frames, 30, 15, WEBP_WIDTH, os.path.join(out, 'titles', f'{stem}.webp'), limit=WEBP_LIMIT)
+        record_webp(out, f'{stem}.webp', q, size)
 
 
 def part_social(out):

@@ -203,6 +203,98 @@ def compare_video(ref, new, kind=None, ref_frames=None, new_frames=None):
     return {'ok': ok, 'ratio': ratio, 'why': why, 'stats': st}
 
 
+# ---- animated WebP (no committed counterpart: judged against the WebM of the same loop, or the rendered frames)
+def webp_info(path):
+    """Read from the RIFF chunks: Pillow does not report per-frame durations of animated WebP."""
+    d = open(path, 'rb').read()
+    if d[:4] != b'RIFF' or d[8:12] != b'WEBP':
+        raise ValueError(f'{path} is not a WebP')
+    i, n, dur, loop, w, h, alpha = 12, 0, 0, None, 0, 0, False
+    while i + 8 <= len(d):
+        t, ln = d[i:i + 4], struct.unpack('<I', d[i + 4:i + 8])[0]
+        body = d[i + 8:i + 8 + ln]
+        if t == b'VP8X':
+            alpha = bool(body[0] & 0x10)
+            w, h = int.from_bytes(body[4:7], 'little') + 1, int.from_bytes(body[7:10], 'little') + 1
+        elif t == b'ANIM':
+            loop = struct.unpack('<H', body[4:6])[0]
+        elif t == b'ANMF':
+            n += 1
+            dur += int.from_bytes(body[12:15], 'little')
+        i += 8 + ln + (ln & 1)
+    return {'w': w, 'h': h, 'frames': n, 'duration_ms': dur, 'loop': loop, 'alpha_flag': alpha,
+            'fps': n / (dur / 1000.0) if dur else 0}
+
+
+def webp_frames(path):
+    im = Image.open(path)
+    for i in range(im.n_frames):
+        im.seek(i)
+        yield np.asarray(im.convert('RGBA')).copy()
+
+
+def scale_rgba(a, w, h):
+    """Lanczos on premultiplied colour, as the encoder scales."""
+    return np.asarray(Image.fromarray(a).convert('RGBa').resize((w, h), Image.LANCZOS).convert('RGBA'))
+
+
+def _result(ok, ratio, why, stats):
+    return {'ok': ok, 'ratio': ratio, 'why': why, 'stats': stats}
+
+
+def compare_webp_to_frames(webp_path, ref_frames, ref_fps, ref_duration_ms=36000, want_alpha=True, kind='webp'):
+    """ref_frames: iterable of full-size RGBA frames at ref_fps (every frame of the loop)."""
+    wi = webp_info(webp_path)
+    step = int(round(ref_fps / wi['fps']))
+    problems = []
+    if wi['loop'] != 0:
+        problems.append(f"loop {wi['loop']} (want 0 = forever)")
+    if abs(wi['duration_ms'] - ref_duration_ms) > 2:
+        problems.append(f"duration {wi['duration_ms']} ms vs {ref_duration_ms}")
+    fr, i = [], 0
+    for k, (x, y) in enumerate(zip((f for j, f in enumerate(ref_frames) if j % step == 0), webp_frames(webp_path))):
+        fr.append(frame_diff(scale_rgba(x, wi['w'], wi['h']), y))
+        i = k + 1
+    if i != wi['frames']:
+        problems.append(f"compared {i} frames of {wi['frames']}")
+    if problems:
+        return _result(False, 99.0, 'format differs: ' + '; '.join(problems), {})
+    st = aggregate(fr)
+    st['size'] = f"{wi['w']}x{wi['h']}"
+    ok, ratio, why = judge(kind, st)
+    return _result(ok, ratio, why, st)
+
+
+def border_check(frames, colour, tol):
+    """Worst deviation of the BORDER_PX-wide outer border of every frame from colour (levels)."""
+    c = np.array(colour, dtype=np.int16)
+    worst, where = 0, None
+    for k, f in enumerate(frames):
+        a = f[..., :3].astype(np.int16)
+        e = BORDER_PX
+        edge = np.concatenate([a[:e].reshape(-1, 3), a[-e:].reshape(-1, 3), a[e:-e, :e].reshape(-1, 3), a[e:-e, -e:].reshape(-1, 3)])
+        d = int(np.abs(edge - c).max())
+        if d > worst:
+            worst, where = d, k
+        if f[..., 3].min() != 255:
+            worst, where = max(worst, 255), k           # a page-colour variant must be opaque
+    return worst, where
+
+
+def compare_page_colour(webp_path, ref_frames, ref_fps, colour, tol=None):
+    """A page-colour variant: opaque, every border pixel of every frame equal to colour within tol, and the
+    picture itself within the webp criterion of the rendered frames."""
+    tol = BORDER_TOL['webp'] if tol is None else tol
+    r = compare_webp_to_frames(webp_path, ref_frames, ref_fps, want_alpha=False)
+    worst, where = border_check(webp_frames(webp_path), colour, tol)
+    r['stats']['border'] = worst
+    if worst > tol:
+        r['ok'] = False
+        r['ratio'] = max(r['ratio'], 1 + worst / max(tol, 1))
+        r['why'] = (r['why'] + '; ' if r['why'] else '') + f'border off by {worst} > {tol} (frame {where})'
+    return r
+
+
 def compare_bytes(ref, new):
     a, b = open(ref, 'rb').read(), open(new, 'rb').read()
     if a == b:
@@ -266,6 +358,10 @@ def fmt_stats(s):
              f"block {s['block']:.1f}", f"alpha {s['alpha_mean']:.2f}"]
     if s.get('frames', 1) > 1 and 'entries' not in s:
         parts.append(f"worst frame {s['worst_frame']}/{s['frames']}, mean over frames {s['mean_avg']:.2f}")
+    if 'border' in s:
+        parts.append(f"border off by {s['border']}")
+    if 'size' in s:
+        parts.append(f"{s['size']}")
     if 'worst_entry' in s:
         parts.append(f"worst size {s['worst_entry']}")
     return ', '.join(parts)
