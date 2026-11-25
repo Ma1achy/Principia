@@ -406,10 +406,9 @@ negative_control!(
     }
 );
 
-/// `xtask <args>` against a stand-in `cargo` (`CARGO`) that lists one test with its control, answers any run as that
-/// control tripping, answers `run … -- build-kernel` with exit status `build`, and hands a run of the golden harness's
-/// binary to the real cargo, since the golden step renders its harness cases through it (RQ-229; TASK-M1-09): whether
-/// xtask passed, its output, and each argument list the stand-in was called with.
+/// `xtask <args>` against a stand-in `cargo` (`CARGO`) that lists one test with its control, answers `run … --
+/// build-kernel` with exit status `build`, and answers any other run, each of bare `ci`'s other steps among them, as that
+/// control tripping: whether xtask passed, its output, and each argument list the stand-in was called with.
 fn with_stand_in(case: &str, args: &[&str], build: u8) -> (bool, String, Vec<String>) {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("build_kernel_{case}"));
     let _ = fs::remove_dir_all(&dir);
@@ -419,7 +418,6 @@ fn with_stand_in(case: &str, args: &[&str], build: u8) -> (bool, String, Vec<Str
         json!({
             "log": dir.join("calls.log"),
             "metadata": stand_in::metadata("build_kernel_fake"),
-            "real": std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned()),
             "listed": "build_kernel_t::t: test\nbuild_kernel_t::t::negative_control: test\n",
             "build": build,
             "output": "test build_kernel_t::t::negative_control - should panic ... ok\n",
