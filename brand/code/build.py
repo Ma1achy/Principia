@@ -295,10 +295,10 @@ def build_info(out):
             return f'unavailable: {e}'
     info = {'python': platform.python_version(), 'platform': platform.platform(),
             'ffmpeg': cmd(['ffmpeg', '-version']), 'git': cmd(['git', '-C', REPO, 'rev-parse', 'HEAD'])}
-    for p in ('numpy', 'scipy', 'matplotlib', 'svgpathtools', 'PIL', 'playwright'):
+    from importlib import metadata
+    for p in ('numpy', 'scipy', 'matplotlib', 'svgpathtools', 'pillow', 'playwright'):
         try:
-            m = __import__(p)
-            info[p] = getattr(m, '__version__', '?')
+            info[p] = metadata.version(p)
         except Exception as e:
             info[p] = f'missing: {e}'
     try:

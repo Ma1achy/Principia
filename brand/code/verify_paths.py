@@ -16,6 +16,8 @@ Pass criterion, written before the rebuilt files were compared:
   5. the 36 s loop closes: the three body positions the drawing uses (in the P's units, cap height 2) at t and
      at t + 36 s differ by less than 1e-3, and a step across the seam (42 s - 1e-4 s to 42 s) moves a body no
      more than twice the largest step of the same size elsewhere in the loop, so the path has no jump.
+  5b. the closing segment of the drawn Dragonfly path (last sample back to the first) is no longer than the
+     median segment, so the seam is not a visible jump even though the orbit closes only to 1.8e-3.
 Burrau's problem is not periodic: its closure is not a property, and its energy drift (close encounters)
 is reported but not held to criterion 2.
 """
@@ -133,6 +135,15 @@ console.log(JSON.stringify(out));"""
         good = d['seam'] is not None and d['seam'] <= 2 * d['generic'] and d['wrap'] < TOL_LOOP and d['wrap2'] < TOL_LOOP
         ok &= good
         print(f'   {v:<24} jump across the seam {d["seam"]:.3g} (largest elsewhere {d["generic"]:.3g}); body positions at t and t+36 differ by {d["wrap"]:.3g}  {"ok" if good else "FAIL"}')
+    # the drawn path's own closing segment: from the last adaptive sample back to the first
+    ad = json.load(open(os.path.join(PYDIR, 'data', 'dragon_adapt.json')))
+    print('\n5b. closing segment of the drawn Dragonfly path (dragon_adapt.json), against its median segment')
+    for i, b in enumerate(ad):
+        pts = np.array(b['p']).reshape(-1, 3)
+        close, med = float(np.linalg.norm(pts[-1] - pts[0])), float(np.median(np.linalg.norm(np.diff(pts, axis=0), axis=1)))
+        good = close <= med
+        ok &= good
+        print(f'   body {i}: last sample to first {close:.4f}, median segment {med:.4f}  {"ok" if good else "FAIL"}')
     print('\n' + ('all criteria met' if ok else 'SOME CRITERIA NOT MET'))
     return 0 if ok else 1
 
