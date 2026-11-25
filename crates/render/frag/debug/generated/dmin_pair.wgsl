@@ -5,6 +5,11 @@
 // `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust twins. The colouring is a placeholder
 // (`ledger::gen::catalogue`). Its legend names each pair id by the pair's two bodies, 1-based, smaller first, never by
 // the id (R-449; `ledger::display`): 0 = 2–3, 1 = 1–3, 2 = 1–2.
+// @name dmin_pair
+// @group Debug · payload fields
+// @about The debug view of the payload field dmin_pair: `packed_a` bits 6–7, u-bits.
+// @maps dmin_pair [categorical(3), [0, 2]]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     return select(dbg_cat(ctx.sample.dmin_pair, 3u), dbg_sentinel(f32(ctx.sample.dmin_pair), ctx.frag_xy), ctx.sample.dmin_pair == 3u);
 }

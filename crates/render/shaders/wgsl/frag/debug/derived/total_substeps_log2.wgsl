@@ -3,6 +3,11 @@
 // computed in the fragment from the exact stored u32 `total_substeps` by the read side's own `total_substeps_log2`
 // (render contract Part 5), never a descriptor field, on the viridis ramp over [0, 31], the u32's whole octave range,
 // as the word view draws its reduced length over [0, 76].
+// @name total_substeps_log2
+// @group Debug · derived
+// @about The total substeps taken, as ⌊log₂⌋.
+// @maps total_substeps_log2 [lin, 0 to 31]
+// @glyph name
 
 // The value the view shows: the floor of the total's base-2 logarithm.
 fn value(ctx: Ctx) -> f32 {

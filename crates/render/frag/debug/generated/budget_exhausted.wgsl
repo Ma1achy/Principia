@@ -4,6 +4,11 @@
 // field through `SimState.budget_exhausted`; its test, `catalogue_view_budget_exhausted` in
 // `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust twins. The colouring is a placeholder
 // (`ledger::gen::catalogue`).
+// @name budget_exhausted
+// @group Debug · payload fields
+// @about The debug view of the payload field budget_exhausted: `budget_bits` bits 0–0, u-bits.
+// @maps budget_exhausted [flag, [0, 1]]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_flag(ctx.sample.budget_exhausted);
 }

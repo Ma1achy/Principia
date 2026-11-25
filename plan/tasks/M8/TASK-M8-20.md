@@ -8,6 +8,8 @@
 - **Pitfalls:** none
 - **Size:** ~500 lines
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gaps 6 and 18: a node's accepted subtypes, and the palette listing ours and yours.
+
 ## Goal
 The canvas supports §7's gestures: click-select opening the inspector, click-empty deselect, marquee multi-select, node drag with wires following and multi-selected nodes moving together, space- / middle-drag pan and scroll zoom. While a wire is dragged, compatible in-ports highlight and incompatible ones dim; release on empty canvas opens a node-create menu filtered to what accepts the dragged type. A wire is removed by dragging it off near its head or selecting it and pressing Delete. Right-click opens the categorised node palette (sources by ctx group; colour / brightness / post), whose contents are defined in §7; the library is not a source of single nodes. Field subtype never gates a wire: a categorical field dropped on a gradient colour node is accepted and the inspector morphs to the palette editor, flagging unmappable params. Each node box carries §8's title bar, state glyph, typed colour-coded ports, the { } badge and the selection outline.
 

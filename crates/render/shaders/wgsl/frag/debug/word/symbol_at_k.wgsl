@@ -3,7 +3,13 @@
 // (`dbg_cat(s, 4)`, `a = 0, A = 1, b = 2, B = 3`). The slot slider is `u_k`. Word-derived quantities are invalid once
 // the word is truncated (payload §3), and a slot past the word's length holds no symbol (`FGW_NO_SYMBOL`): either way
 // the view draws the hatch (applied per R-369, as REQ-TOOL-156 styles the reduced length).
+// @name symbol_at_k
+// @group Debug · word
+// @about The word's symbol at slot k, a = 0, A = 1, b = 2, B = 3.
+// @maps symbol at slot k [categorical]
+// @glyph name
 // @uniform u_k: u32 = 0 [0, 75]
+// @control u_k stepper "Slot k"
 
 // The value the view shows: the symbol's code, NaN where there is none or the word is truncated.
 fn value(ctx: Ctx) -> f32 {

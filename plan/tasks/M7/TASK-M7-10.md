@@ -8,6 +8,8 @@
 - **Pitfalls:** none
 - **Size:** ~350 lines
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gaps 1 and 2: the node generates a source with declarations, on TASK-M7-78's types.
+
 ## Goal
 The combinators mix_const, mix_field, bandmask and site_overlay as `vec3(+ctx) → vec3` operations, and the physics overlay as exactly `site_overlay(base, SiteBlend{physics(m), vmf(κ), per-site colours}, s)`, blending sequentially over the sites in order (BC, then Euler, then Lagrange), c ← mix(c, c_j, min(1, w_j)), with w_j = s·4·max(0, exp(κ_j(n̂·p̂_j − 1)) + 0.005), κ = 11 for BC and 9 for Euler/Lagrange — the colour explorer's blob weight and sequential clamped mix (R-122). The overlay is a per-fragment occupant, never baked (R-121).
 

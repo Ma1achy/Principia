@@ -5,8 +5,15 @@
 // `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust twins. Its colouring is the numeric
 // template (`ledger::gen::numeric`; render_gui_spec §10.1, RQ-231): the stored sentinel's or unset value's line where
 // the field has one, the non-finite guard (R-436), and the ramp, with `RANGE_AUTO` and `u_range` its uniforms.
+// @name coll_floor
+// @group Debug · payload fields
+// @about The debug view of the payload field coll_floor: `coll_floor_bits` bits 0–7, u-bits.
+// @maps coll_floor [lin, [0, 145]]
+// @glyph name
 // @uniform RANGE_AUTO: u32 = 0 [0, 1]
 // @uniform u_range: vec2<f32> = (0.0, 145.0)
+// @control RANGE_AUTO toggle "Auto range"
+// @control u_range hidden "Measured range"
 fn colour(ctx: Ctx) -> vec3<f32> {
     let raw = f32(ctx.sample.coll_floor);
     if (raw == 0.0) { return dbg_sentinel(raw, ctx.frag_xy); }

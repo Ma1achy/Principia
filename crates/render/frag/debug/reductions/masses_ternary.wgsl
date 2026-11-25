@@ -4,6 +4,11 @@
 // (REQ-TOOL-154); its legend reads red body 1, green body 2, blue body 3 (R-449). A colour occupant, it reads the
 // masses through `ICDescriptor.m0`, `ICDescriptor.m1` and `ICDescriptor.m2`; it certifies the decoder, independent of
 // any integration.
+// @name masses_ternary
+// @group Debug · vector reductions
+// @about The masses m0, m1 and m2 as one ternary colour; equal masses draw white.
+// @maps m0, m1, m2 [ternary]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_ternary(vec3<f32>(ctx.ic.m0, ctx.ic.m1, ctx.ic.m2), ctx.frag_xy);
 }

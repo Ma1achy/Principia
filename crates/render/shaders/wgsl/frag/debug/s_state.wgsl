@@ -4,6 +4,11 @@
 // Okabe–Ito palette in its order. A code beyond the enum shows its literal place in the cycle, not the hatch (R-79,
 // R-136). It reads quad metadata, not payload. A lane the raster did not place (`shade_sample`) holds the absence NaN's
 // bits and draws `debug_invalid`'s hatch.
+// @name s_state
+// @group Debug · structure
+// @about The quad's state: loaded, pending, refinable, terminal or stale.
+// @maps ctx.quad.state [categorical]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     if ctx.quad.state == CTX_ABSENT_BITS {
         return debug_invalid(ctx.frag_xy);

@@ -54,7 +54,7 @@ use std::fmt::{self, Write as _};
 use std::sync::{Mutex, OnceLock, PoisonError};
 
 use crate::codegen;
-use crate::lex::{is_space, lines, tokens, Tok};
+use crate::lex::{lines, tokens, Tok};
 use ledger::gen::{self as generate, prelude, read};
 use ledger::schema::{Entry, Scale, Word};
 use naga::valid::{Capabilities, FunctionInfo, ModuleInfo, ValidationFlags, Validator};
@@ -273,6 +273,10 @@ pub enum Occupant {
 
 // ── The declaration format (gui_state_contract §3; REQ-GEN-027) ──────────────────────────────────────────────────
 
+pub mod declare;
+
+pub use declare::{code_text, key_text, Check, Control, ControlLine, Described, Glyph};
+
 /// A uniform's type.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum UniformType {
@@ -362,22 +366,48 @@ pub struct Input {
     pub domain: Option<(f64, f64)>,
 }
 
-/// An occupant's declarations: its `uniformSchema` and its field inputs with their `inputDomains` (R-53).
+/// An occupant's declarations: its `uniformSchema`, its field inputs with their `inputDomains`, and what it says about
+/// itself for the editor ([`declare`]).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Declaration {
     pub uniforms: Vec<Uniform>,
     pub inputs: Vec<Input>,
+    pub described: Described,
 }
 
 impl Declaration {
     /// The declarations in `source`: each line whose text, leading WGSL white space (`is_space`) removed, starts
-    /// `// @`, its lines split at WGSL's line breaks (`lines`), where naga ends the declaration's comment. The text
-    /// before `//` is WGSL source, so its white space is WGSL's, not Unicode's. Any word after `@` but `uniform` and
-    /// `input` is refused, as is a malformed line or a name declared twice.
+    /// `// @` as a real line comment, not inside a block comment, its lines split at WGSL's line breaks (`lines`), where
+    /// naga ends the declaration's comment. The text
+    /// before `//` is WGSL source, so its white space is WGSL's, not Unicode's. Any word after `@` but `uniform`,
+    /// `input` and [`declare::WORDS`] is refused, as is a malformed line, a name declared twice, or a control or glyph
+    /// [`declare`] refuses.
     pub fn parse(source: &str) -> Result<Declaration, AssembleError> {
         let mut out = Declaration::default();
-        for (k, line) in lines(source).into_iter().enumerate() {
-            let Some(rest) = line.trim_start_matches(is_space).strip_prefix("// @") else {
+        let all = lines(source);
+        let comments = declare::line_comments(source);
+        // The version first, so a later grammar is refused as one whatever word comes before its `@version` line.
+        for (k, line) in all.iter().enumerate() {
+            let Some(rest) = declare::declaration_rest(source, line, &comments) else {
+                continue;
+            };
+            let (word, v) = rest.split_once(char::is_whitespace).unwrap_or((rest, ""));
+            if word == "version" {
+                match declare::read("version", v, k + 1, &mut Described::default()) {
+                    Err(declare::Refusal(check, why))
+                        if check == Check::Version && declare::on(check) =>
+                    {
+                        return Err(AssembleError::Declaration {
+                            line: k + 1,
+                            why: format!("`{}`: {why}", line.trim()),
+                        })
+                    }
+                    _ => {}
+                }
+            }
+        }
+        for (k, line) in all.iter().enumerate() {
+            let Some(rest) = declare::declaration_rest(source, line, &comments) else {
                 continue;
             };
             let bad = |why: &str| AssembleError::Declaration {
@@ -388,7 +418,21 @@ impl Declaration {
             match word {
                 "uniform" => out.uniforms.push(uniform(rest).map_err(|w| bad(&w))?),
                 "input" => out.inputs.push(input(rest).map_err(|w| bad(&w))?),
-                _ => return Err(bad("a declaration is `@uniform` or `@input`")),
+                w if declare::WORDS.contains(&w) => {
+                    match declare::read(w, rest, k + 1, &mut out.described) {
+                        Err(declare::Refusal(check, why)) if declare::on(check) => {
+                            return Err(bad(&why))
+                        }
+                        _ => continue,
+                    }
+                }
+                _ if !declare::on(Check::Word) => continue,
+                _ => {
+                    return Err(bad(&format!(
+                        "a declaration is `@uniform`, `@input` or `@{}`",
+                        declare::WORDS.join("`, `@")
+                    )))
+                }
             }
             let names: Vec<&str> = match word {
                 "uniform" => out.uniforms.iter().map(|u| u.name.as_str()).collect(),
@@ -398,6 +442,12 @@ impl Declaration {
                 return Err(bad("the name is declared twice"));
             }
         }
+        declare::check(&out.described, &out.uniforms).map_err(
+            |(line, declare::Refusal(_, why))| AssembleError::Declaration {
+                line,
+                why: format!("`{}`: {why}", all[line - 1].trim()),
+            },
+        )?;
         Ok(out)
     }
 }
@@ -550,10 +600,16 @@ pub fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>
         (_, Occupant::None) => Ok(None),
         (Kind::Source, Occupant::Field(f)) => {
             let ty = field_type(f)?;
+            let declared = |about: &str| {
+                format!(
+                    "// @name ctx.{f}\n// @group Source\n// @about {about}\n// @maps ctx.{f}\n// @glyph dropdown\n"
+                )
+            };
             if ty == "vec3<f32>" {
                 return Ok(Some(format!(
                     "// The built-in source of `{f}`: the vector field in `.xyz` (render_gui_spec Part II §3.1, §5).\n\
-                     fn source(ctx: Ctx) -> Field {{ return Field(ctx.sample.{f}, 0.0); }}\n"
+                     {}fn source(ctx: Ctx) -> Field {{ return Field(ctx.sample.{f}, 0.0); }}\n",
+                    declared(&format!("The read-side vector field {f}, in the field's xyz."))
                 )));
             }
             let value = match ty {
@@ -562,7 +618,8 @@ pub fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>
             };
             Ok(Some(format!(
                 "// The built-in source of `{f}`: the field in `.x` (render_gui_spec Part II §3.1).\n\
-                 fn source(ctx: Ctx) -> Field {{ return Field({value}, 0.0, 0.0, 0.0); }}\n"
+                 {}fn source(ctx: Ctx) -> Field {{ return Field({value}, 0.0, 0.0, 0.0); }}\n",
+                declared(&format!("The read-side field {f}, in the field's x."))
             )))
         }
         (_, Occupant::Field(_)) => refuse("a field: only a source does"),
@@ -877,7 +934,8 @@ impl Canonical {
     }
 
     /// The form's text (lowering contract Part 5): `{"nodes":[…]}`, each node `{"inputs":[…],"kind":…,"occupant":…}`,
-    /// its occupant `null`, `{"field":…}`, `{"builtin":…}` or `{"custom":…}`, in JCS (RFC 8785: keys sorted, no white
+    /// its occupant `null`, `{"field":…}`, `{"builtin":…}` or `{"custom":…}`, a custom's text as [`key_text`] gives it,
+    /// its descriptive lines removed, in JCS (RFC 8785: keys sorted, no white
     /// space, strings escaped as ECMAScript's `JSON.stringify` escapes them). The fragment key's input.
     pub fn text(&self) -> String {
         let mut out = String::from("{\"nodes\":[");
@@ -912,7 +970,8 @@ impl Canonical {
             out.push('{');
             json_string(key, &mut out);
             out.push(':');
-            json_string(value, &mut out);
+            // A custom's descriptive lines are not code: a label edit keeps the key, so it recompiles nothing.
+            json_string(&key_text(value), &mut out);
             out.push_str("}}");
         }
         out.push_str("]}");
@@ -1060,16 +1119,32 @@ pub fn assemble_arm(
     tier: Tier,
     arm: Option<&str>,
 ) -> Result<Fragment, AssembleError> {
-    let fields = field_set_arm(stain, tier, arm)?;
+    assemble_placed(stain, tier, arm, false)
+}
+
+/// [`assemble`] with each occupant placed as written, its descriptive lines kept rather than blanked ([`code_text`]):
+/// the check that those lines are not code, since naga must make one module of the two.
+pub fn assemble_written(stain: &Stain, tier: Tier) -> Result<Fragment, AssembleError> {
+    assemble_placed(stain, tier, None, true)
+}
+
+/// [`assemble_arm`], each occupant placed as written where `written`, else with its descriptive lines blanked.
+fn assemble_placed(
+    stain: &Stain,
+    tier: Tier,
+    arm: Option<&str>,
+    written: bool,
+) -> Result<Fragment, AssembleError> {
+    let fields = field_set_arm(stain, tier, arm, written)?;
     let fields: Vec<&str> = fields.iter().map(String::as_str).collect();
-    assemble_reading_arm(stain, tier, &fields, arm)
+    assemble_reading_arm(stain, tier, &fields, arm, written)
 }
 
 /// The stain's field set (R-378): every member of the read-side `SimState` its live nodes read, by naga's IR of the
 /// stain assembled with every field filled, the word as `word` or as only the components it reads, and each member of
 /// `ctx.ic` it reads as `ic.<member>` ([`fields_read`]).
 pub fn field_set(stain: &Stain, tier: Tier) -> Result<Vec<String>, AssembleError> {
-    field_set_arm(stain, tier, None)
+    field_set_arm(stain, tier, None, false)
 }
 
 /// [`field_set`] with the debug arm `arm`, whose reads join the stain's.
@@ -1077,6 +1152,7 @@ fn field_set_arm(
     stain: &Stain,
     tier: Tier,
     arm: Option<&str>,
+    written: bool,
 ) -> Result<Vec<String>, AssembleError> {
     let (words, entries) = ledger()?;
     let mut every: Vec<String> = read::members(words, entries)
@@ -1085,7 +1161,7 @@ fn field_set_arm(
         .collect();
     every.extend(read::ic_fields());
     let every: Vec<&str> = every.iter().map(String::as_str).collect();
-    let (source, _) = source(stain, tier, &every, arm)?;
+    let (source, _) = source(stain, tier, &every, arm, written)?;
     let (module, info) = compile(&source)?;
     Ok(fields_read(&module, &info).into_iter().collect())
 }
@@ -1098,7 +1174,7 @@ pub fn assemble_reading(
     tier: Tier,
     fields: &[&str],
 ) -> Result<Fragment, AssembleError> {
-    assemble_reading_arm(stain, tier, fields, None)
+    assemble_reading_arm(stain, tier, fields, None, false)
 }
 
 /// [`assemble_reading`] with the debug arm `arm`.
@@ -1107,8 +1183,9 @@ fn assemble_reading_arm(
     tier: Tier,
     fields: &[&str],
     arm: Option<&str>,
+    written: bool,
 ) -> Result<Fragment, AssembleError> {
-    let (source, uniforms) = source(stain, tier, fields, arm)?;
+    let (source, uniforms) = source(stain, tier, fields, arm, written)?;
     let (module, info) = compile(&source)?;
     let filled = |f: &str| {
         fields.contains(&f)
@@ -1167,12 +1244,13 @@ fn head(tier: Tier, fields: &[&str]) -> Result<String, AssembleError> {
 }
 
 /// `stain`'s WGSL at `tier`, its read side filling `fields`, with the debug arm `arm` or the presentation variant's
-/// hook, and its uniform blocks.
+/// hook, and its uniform blocks; each occupant as written where `written`, else its descriptive lines blanked.
 fn source(
     stain: &Stain,
     tier: Tier,
     fields: &[&str],
     arm: Option<&str>,
+    written: bool,
 ) -> Result<(String, Vec<UniformBlock>), AssembleError> {
     let mut out = head(tier, fields)?;
     // The canonical form's stain: its live nodes only, numbered in canonical order, so two wirings of one graph
@@ -1196,6 +1274,11 @@ fn source(
     for &i in &live {
         let n = &stain.nodes[i];
         let text = occupant_source(n.kind, &n.occupant)?.unwrap_or_default();
+        let text = if written {
+            std::borrow::Cow::Borrowed(text.as_str())
+        } else {
+            code_text(&text)
+        };
         let schema = &stain.declarations[i].uniforms;
         let mut extra = Vec::new();
         if !schema.is_empty() {

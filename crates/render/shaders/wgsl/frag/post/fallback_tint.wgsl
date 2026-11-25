@@ -4,6 +4,11 @@
 // sRGB, a colour that collides with no palette entry and is neither of `debug_invalid`'s (REQ-TOOL-124; proposed,
 // R-71). A flat tint, no pattern, so the data beneath still reads. A quad drawn from its own payload, and a lane the
 // raster did not place, pass unchanged.
+// @name Fallback tint
+// @group Post
+// @about Tints pink a quad drawn from an ancestor's payload.
+// @maps the quad's ancestor gap
+// @glyph name
 
 // #FF69FF, 8-bit sRGB, decoded to linear, and the tint's opacity.
 const FALLBACK_TINT_SRGB8: vec3<f32> = vec3<f32>(255.0, 105.0, 255.0);

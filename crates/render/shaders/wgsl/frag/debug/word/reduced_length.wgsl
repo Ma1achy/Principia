@@ -4,6 +4,11 @@
 // failed validity predicate as R-245 reads one, the view draws `debug_invalid(frag_xy)`, the hatch, never 127; the raw
 // `length` view still shows 127 as its literal value (R-136). The predicate is the validity lane's for the word
 // (`render::bind::validity_over`).
+// @name reduced_length
+// @group Debug · word
+// @about The net reduced branch-cut crossings.
+// @maps fgw_reduced_length [lin, 0 to 76]
+// @glyph name
 
 // The value the view shows: the reduced length, NaN where it is invalid.
 fn value(ctx: Ctx) -> f32 {

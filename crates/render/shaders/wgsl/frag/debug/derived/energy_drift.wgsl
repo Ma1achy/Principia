@@ -11,10 +11,19 @@
 // (`dbg_drift_shown`, R-652, R-928). Over it the suspect styling of the drift suspect predicates read from the stored
 // latches: rows for `SUSPECT_ENERGY`, columns for `SUSPECT_LZ`. `LIN_R`'s and `EPS_E`'s defaults are the constants
 // register's `drift_lin_r_E` (REQ-TOOL-150) and `eps_e`, as the generated `energy_drift` view's are.
+// @name energy_drift
+// @group Debug · derived
+// @about The current energy drift H(r, p) − E_0, with the suspect styling.
+// @maps energy drift [diverging]
+// @glyph name
 // @uniform COMPACTION: u32 = 0 [0, 2]
+// @control COMPACTION choice("symlog", "lin", "log") "Compaction"
 // @uniform PALETTE: u32 = 0 [0, 1]
+// @control PALETTE choice("diverging", "viridis") "Palette"
 // @uniform LIN_R: f32 = 0.0625
+// @control LIN_R fields "lin range"
 // @uniform EPS_E: f32 = 1e-6
+// @control EPS_E fields "ε_E"
 
 // The value the view shows: the current energy drift.
 fn value(ctx: Ctx) -> f32 {

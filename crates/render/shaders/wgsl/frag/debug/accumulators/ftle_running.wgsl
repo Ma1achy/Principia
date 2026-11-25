@@ -2,6 +2,11 @@
 // the Benettin sum over the elapsed time, `S/t` with `t = step_count · dt_macro`, a live approximation; the finalised
 // read, `S_final/(step_count · dt)`, is the derived `ftle` view's (payload §5). Undefined before the first step, where
 // it reads the canonical quiet NaN and draws the hatch; otherwise its literal place on the viridis ramp (R-136).
+// @name ftle_running
+// @group Debug · accumulators
+// @about The running FTLE, the Benettin sum over the elapsed time.
+// @maps running FTLE [lin]
+// @glyph name
 
 // The value the view shows: `S/(step_count · dt_macro)`, NaN at `step_count = 0`.
 fn value(ctx: Ctx) -> f32 {

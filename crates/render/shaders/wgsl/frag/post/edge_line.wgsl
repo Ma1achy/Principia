@@ -7,12 +7,23 @@
 // (linear RGB) both; `level` picks what is drawn: 0 the quad boundaries, 1 the tile boundaries, 2 both, composited by
 // the larger coverage, so an edge both cells share is drawn once. A width is the line's full width across the edge, in
 // pixels, at half coverage. The leaf outlines are the quad boundaries of the quads drawn (debug_tooling_plan §F).
+// @name Boundary lines
+// @group Post
+// @about Lines along the quad and tile boundaries, the same width in pixels at any zoom.
+// @maps the quad and tile boundaries
+// @glyph name
 // @uniform width: f32 = 2.0 [0.25, 16.0]
+// @control width slider "Width" in "Quad lines" order 1
 // @uniform opacity: f32 = 1.0 [0.0, 1.0]
+// @control opacity slider "Opacity" in "Quad lines" order 2
 // @uniform tile_width: f32 = 1.0 [0.25, 16.0]
+// @control tile_width slider "Width" in "Tile lines" order 3
 // @uniform tile_opacity: f32 = 0.5 [0.0, 1.0]
+// @control tile_opacity slider "Opacity" in "Tile lines" order 4
 // @uniform colour: vec3<f32> = (1.0, 1.0, 1.0)
+// @control colour colour "Line colour" order 5
 // @uniform level: u32 = 0 [0, 2]
+// @control level choice("quads", "tiles", "both") "Draw" order 0
 
 // One pixel's size in the cell coordinate `uv`, per axis: `fwidth(uv)`, each derivative taken modulo the cell, so that
 // a 2 × 2 pixel block straddling a cell edge, where `uv` jumps from near 1 to near 0, still reads the step within a

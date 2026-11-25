@@ -366,8 +366,14 @@ pub fn reductions(words: &[Word], entries: &[Entry]) -> Vec<Reduction> {
             Some(Reduction {
                 path: PathBuf::from(format!("{REDUCTIONS_DIR}/{name}.wgsl")),
                 wgsl: format!(
-                    "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    return {helper}({}, ctx.frag_xy);\n}}\n",
+                    "{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    return {helper}({}, ctx.frag_xy);\n}}\n",
                     generated_comment(&text),
+                    declared(
+                        &name,
+                        "Debug · vector reductions",
+                        &format!("The direction cosines of the vector field {}.", e.name),
+                        &format!("{} [direction cosines]", e.name)
+                    ),
                     r.wgsl(e.name)
                 ),
                 name,
@@ -396,8 +402,14 @@ pub fn reductions(words: &[Word], entries: &[Entry]) -> Vec<Reduction> {
             fields: MASSES.to_vec(),
             path: PathBuf::from(format!("{REDUCTIONS_DIR}/{MASSES_TERNARY}.wgsl")),
             wgsl: format!(
-                "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    return dbg_ternary(vec3<f32>({}), ctx.frag_xy);\n}}\n",
+                "{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    return dbg_ternary(vec3<f32>({}), ctx.frag_xy);\n}}\n",
                 generated_comment(&text),
+                declared(
+                    MASSES_TERNARY,
+                    "Debug · vector reductions",
+                    "The masses m0, m1 and m2 as one ternary colour; equal masses draw white.",
+                    "m0, m1, m2 [ternary]"
+                ),
                 masses.join(", ")
             ),
         });
@@ -609,6 +621,19 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
             _ => EPS_E_DEFAULT.number(),
         };
         let _ = writeln!(uniforms, "// @uniform {eps}: f32 = {}", float(default));
+    }
+    let _ = write!(
+        uniforms,
+        "// @control COMPACTION choice(\"symlog\", \"lin\", \"log\") \"Compaction\"\n\
+         // @control PALETTE choice(\"diverging\", \"viridis\") \"Palette\"\n\
+         // @control LIN_R fields \"lin range\"\n// @control EPS_E fields \"ε_E\"\n"
+    );
+    if eps != "EPS_E" {
+        let _ = writeln!(
+            uniforms,
+            "// @control {eps} fields \"{}\"",
+            floor.replacen("eps_", "ε_", 1)
+        );
     }
     let reference = drift_reference(e.name);
     // A drift view is only ever of a drift field, which has its band.
@@ -926,6 +951,23 @@ fn header(e: &Entry, r: &Read, colouring: &str) -> String {
         test = test_name(e.name),
     );
     generated_comment(&text)
+        + &declared(
+            e.name,
+            "Debug · payload fields",
+            &format!(
+                "The debug view of the payload field {}: {location}, {ty}.",
+                e.name
+            ),
+            &format!("{} [{scale}, {}]", e.name, e.range),
+        )
+}
+
+/// A view's descriptive declarations (`render::assemble::declare`): its name, its group, a line about it and what it
+/// maps, drawn by its name.
+fn declared(name: &str, group: &str, about: &str, maps: &str) -> String {
+    format!(
+        "// @name {name}\n// @group {group}\n// @about {about}\n// @maps {maps}\n// @glyph name\n"
+    )
 }
 
 /// The generated-file line, then `text` as line comments.

@@ -8,8 +8,10 @@
 - **Pitfalls:** none
 - **Size:** ~350 lines
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gaps 11 to 14: controls stay live after an edit, values follow a changed declaration, last valid description, new from template and duplicate to custom. It replaces the greying-out of controls below.
+
 ## Goal
-A node's occupant can become `custom`: a WGSL source for that node, with schema-driven uniforms, asynchronous compilation, fallback to the last valid pipeline on error with per-node failure isolation, and a compile-status indicator and error surface (the Problems model the stain editor shows). Per-node eject turns a generated node function into editable text among generated peers (stable function boundaries, dependency tracking), its parameter widgets greying out, with revert-to-generated as the way back; whole-slot eject is the same mechanism for a whole occupant.
+A node's occupant can become `custom`: a WGSL source for that node, with schema-driven uniforms, asynchronous compilation, fallback to the last valid pipeline on error with per-node failure isolation, and a compile-status indicator and error surface (the Problems model the stain editor shows). Per-node eject turns a generated node function into editable text among generated peers (stable function boundaries, dependency tracking), its controls staying live, with revert-to-generated as the way back; whole-slot eject is the same mechanism for a whole occupant.
 
 ## References
 - `docs/contracts/principia_gui_state_contract.md` § "5. The stain editor — a free, typed node graph (R-64)"
@@ -26,5 +28,5 @@ A node's occupant can become `custom`: a WGSL source for that node, with schema-
 - `cargo test -p render custom_node_fallback` — invalid WGSL in one node: the previous pipeline keeps rendering, the error appears in Problems against that node, other nodes are unaffected; eject then revert restores the generated function byte-identically (REQ-RENDER-057).
 
 ## Notes
-- The GUI side of Problems and the `{ }` badge are drawn in TASK-M7-22 and -24.
+- The GUI side of Problems is drawn in TASK-M7-22 and -24. There is no badge.
 - *19 Nov 2026 (R-1034, applied by TASK-M0-76; logged in `plan/DECISIONS-LOG.md`):* qa's independent tests are asked only of physics-critical tasks, those naming physics among their reviewers, and this task's list names no physics, so qa no longer reviews it. *Was (Reviewers):* "code, qa".

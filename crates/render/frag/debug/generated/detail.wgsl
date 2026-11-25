@@ -12,6 +12,11 @@
 // = decode_failed: degenerate configuration, 2 = decode_failed: invalid mass construction, 3 = decode_failed:
 // other/reserved). Every other state, bounded, running and the reserved codes, has no `detail` and draws blank, black,
 // class 0 (payload §2).
+// @name detail
+// @group Debug · payload fields
+// @about The debug view of the payload field detail: `packed_a` bits 3–4, u-bits.
+// @maps detail [categorical(4), [0, 3]]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     let s = ctx.sample.state;
     let d = ctx.sample.detail;

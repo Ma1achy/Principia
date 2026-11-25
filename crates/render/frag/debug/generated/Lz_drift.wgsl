@@ -13,11 +13,21 @@
 // (`dbg_drift_shown`, R-652, R-928). Over it the suspect styling of the drift suspect predicates read from the stored
 // latches, the energy's from the regularised drift's `dE_reg_max` (R-605): rows for `SUSPECT_ENERGY`, columns for
 // `SUSPECT_LZ`. `LIN_R`'s default is the constants register's (REQ-TOOL-150).
+// @name Lz_drift
+// @group Debug · payload fields
+// @about The debug view of the payload field Lz_drift: derived from `r`, `p`, `Lz_0`, f32.
+// @maps Lz_drift [diverging, (−∞, ∞)]
+// @glyph name
 // @uniform COMPACTION: u32 = 0 [0, 2]
 // @uniform PALETTE: u32 = 0 [0, 1]
 // @uniform LIN_R: f32 = 0.0009765625
 // @uniform EPS_E: f32 = 1e-6
 // @uniform EPS_L: f32 = 1e-6
+// @control COMPACTION choice("symlog", "lin", "log") "Compaction"
+// @control PALETTE choice("diverging", "viridis") "Palette"
+// @control LIN_R fields "lin range"
+// @control EPS_E fields "ε_E"
+// @control EPS_L fields "ε_L"
 fn colour(ctx: Ctx) -> vec3<f32> {
     if (sd_is_failed(ctx.sample.state)) { return debug_invalid(ctx.frag_xy); }
     if (dbg_drift_non_finite(ctx.sample.Lz_0)) { return debug_invalid(ctx.frag_xy); }

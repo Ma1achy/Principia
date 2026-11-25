@@ -5,8 +5,15 @@
 // through their Rust twins. Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec §10.1,
 // RQ-231): the stored sentinel's or unset value's line where the field has one, the non-finite guard (R-436), and the
 // ramp, with `RANGE_AUTO` and `u_range` its uniforms.
+// @name I_max
+// @group Debug · payload fields
+// @about The debug view of the payload field I_max: `packed_a` bits 10–14, u-bits.
+// @maps I_max [lin, [0, 31]]
+// @glyph name
 // @uniform RANGE_AUTO: u32 = 0 [0, 1]
 // @uniform u_range: vec2<f32> = (0.0, 31.0)
+// @control RANGE_AUTO toggle "Auto range"
+// @control u_range hidden "Measured range"
 fn colour(ctx: Ctx) -> vec3<f32> {
     let raw = f32(ctx.sample.I_max);
     if ((bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u) { return debug_invalid(ctx.frag_xy); }

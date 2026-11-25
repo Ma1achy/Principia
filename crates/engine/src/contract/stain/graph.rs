@@ -702,7 +702,8 @@ impl Canonical {
                     Occupant::None => Value::Null,
                     Occupant::Field(f) => json!({ "field": f }),
                     Occupant::Builtin(id) => json!({ "builtin": id }),
-                    Occupant::Custom(text) => json!({ "custom": text }),
+                    // Its descriptive lines removed, as the fragment key's: a label edit re-renders nothing.
+                    Occupant::Custom(text) => json!({ "custom": assemble::key_text(text) }),
                 };
                 let mut node = json!({
                     "kind": Kind::from(n.kind).name(),

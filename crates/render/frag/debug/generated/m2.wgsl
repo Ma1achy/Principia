@@ -5,8 +5,15 @@
 // twins. Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec §10.1, RQ-231): the stored
 // sentinel's or unset value's line where the field has one, the non-finite guard (R-436), and the ramp, with
 // `RANGE_AUTO` and `u_range` its uniforms.
+// @name m2
+// @group Debug · payload fields
+// @about The debug view of the payload field m2: scalar index 2, f32.
+// @maps m2 [lin, [0, 1]]
+// @glyph name
 // @uniform RANGE_AUTO: u32 = 0 [0, 1]
 // @uniform u_range: vec2<f32> = (0.0, 1.0)
+// @control RANGE_AUTO toggle "Auto range"
+// @control u_range hidden "Measured range"
 fn colour(ctx: Ctx) -> vec3<f32> {
     let raw = ctx.ic.m2;
     if ((bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u) { return debug_invalid(ctx.frag_xy); }

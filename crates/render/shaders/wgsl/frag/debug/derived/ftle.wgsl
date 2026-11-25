@@ -2,6 +2,11 @@
 // dt)` with the partial renormalisation interval closed, `S_final = S + ln(δ/δ₀)`, computed in the fragment by the read
 // side (`ctx.sample.ftle`), never plain `S/t`. It reads NaN whenever `ftle_valid` is false (R-253, R-254) and draws
 // the hatch; a valid value its literal place on the viridis ramp, which needs no range (R-136).
+// @name ftle
+// @group Debug · derived
+// @about The finalised finite-time Lyapunov exponent.
+// @maps ftle [lin]
+// @glyph name
 
 // The value the view shows: the finalised FTLE.
 fn value(ctx: Ctx) -> f32 {

@@ -49,6 +49,7 @@ pub mod contract {
     /// the library.
     pub mod stain {
         pub mod assembled;
+        pub mod describe;
         pub mod edit;
         pub mod graph;
         pub mod occupant;

@@ -18,6 +18,11 @@
 // is not finite or a difference that is not (two finite inputs may overflow), each by its bits: the inputs are
 // tested themselves because a backend's fast-math may fold `x − x` to 0 where one source feeds both ports, and ∞ − ∞
 // must not draw the map's zero on one backend and #141418 on another.
+// @name Margin
+// @group Colour
+// @about The margin top1 − top2 on the grey ramp, white where top1 is far above top2.
+// @maps top1 − top2 [lin, 0 to 1]
+// @glyph name
 // @input top1
 // @input top2
 // Whether `x` is ±∞ or a NaN, by its bits: every exponent bit set.

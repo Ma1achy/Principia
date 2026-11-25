@@ -8,6 +8,8 @@
 - **Pitfalls:** none
 - **Size:** ~500 lines
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gaps 1 and 2: the node generates a source with declarations, on TASK-M7-78's types.
+
 ## Goal
 FieldRamp's ScalarField sources, each returning (value, valid) through `ctx`: payload fields (through the generated accessors), geometry-of-n̂ fields (n_z, ‖n̂‖, azimuth/polar in R-14's names, stability, real spherical harmonics ℓ ≤ 3, the Turing wave-triple, 4-octave 3-D value noise), ctx lanes, the lattice classifiers `bands` uses (checker, latitude/longitude stripes, Truchet on (θ, φ)), and the derived operators gradient_magnitude (three evaluations at ±ε) and topk_margin = d_1 − d_2. Alongside, the physics site generators BC(m), Euler(m), Lagrange(m): computed from the decoded IC masses per pixel on the mass-weighted shape sphere (R-14, R-50), with the Euler landmarks the Euler central configurations — the collinear relative equilibria, roots of Euler's quintic in the mass ratios — mapped through the shape map (R-126), hoisted to uniforms only when no basis axis or active tilt touches a mass dimension (an allowed optimisation, not a bake tier, R-121).
 

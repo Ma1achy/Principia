@@ -3,6 +3,11 @@
 // closed-form `C_tt(n) = h²·n(n²−1)/12`, computed in the fragment by the read side's own `diffusion_slope` (payload §4,
 // §5), `n` the sample's own `t_end_step`. An invalid fit, `n < 2`, reads NaN (R-245) and draws the hatch; a valid one
 // its literal place on the viridis ramp (R-136).
+// @name diffusion_slope
+// @group Debug · accumulators
+// @about The diffusion slope C_ty / C_tt(n) from the Welford co-moment.
+// @maps diffusion slope [lin]
+// @glyph name
 
 // The value the view shows: the slope, NaN for `n < 2`.
 fn value(ctx: Ctx) -> f32 {

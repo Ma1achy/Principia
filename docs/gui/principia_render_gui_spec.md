@@ -2202,7 +2202,6 @@ Each node box carries:
 - a **state glyph** — a gradient chip / mini shape-sphere / palette dots / op icon — so the graph is
   readable at a glance without opening inspectors,
 - **typed ports** on left (in) and right (out), **colour-coded by type** (`field` / `vec3` / `f32`),
-- a small **`{ }` badge** when the node's code has been hand-edited (§10),
 - an **accent outline** when selected.
 
 ---
@@ -2236,8 +2235,9 @@ so switching back restores it exactly (state map SM15).
 
 **Advanced ▸ edit shader** sits at the bottom of every node's inspector: reveals the generated WGSL
 **for that node**, editable in place (per-node eject, `principia_colour_composition.md` §5). Editing
-respects the node's function boundary; the node then shows the `{ }` badge and its graphical controls
-grey out; **revert-to-generated** restores them.
+respects the node's function boundary; its controls stay live, drawn from the
+declarations its edited source still carries (`principia_node_sdk.md` gap 11); **revert-to-generated** restores
+the generated source.
 
 ---
 
@@ -2253,7 +2253,7 @@ The pipeline is the source of truth; both are renderings of it. **Graph view is 
 pipeline still has graph structure:**
 
 - No hand edits, or only per-node code edits that **preserve node function boundaries** → the toggle
-  is lossless (flip freely; the edited node shows a `{ }` glyph in graph view).
+  is lossless (flip freely).
 - A **whole-pipeline code edit** that dissolves node boundaries into a form with no graph
   decomposition → **only code view can be rendered faithfully**, so the toggle stops offering graph
   view and stays on code.

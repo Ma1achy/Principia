@@ -3,6 +3,11 @@
 // flag, range [0, 1]. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field through
 // `SimState.departed`; its test, `catalogue_view_departed` in `crates/kernel/tests/catalogue_views/generated.rs`, reads
 // it through their Rust twins. The colouring is a placeholder (`ledger::gen::catalogue`).
+// @name departed
+// @group Debug · payload fields
+// @about The debug view of the payload field departed: `packed_a` bits 15–15, u-bits.
+// @maps departed [flag, [0, 1]]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_flag(ctx.sample.departed);
 }

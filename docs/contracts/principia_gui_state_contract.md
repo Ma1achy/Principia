@@ -272,8 +272,8 @@ field (RQ-786). The generated legend samples each node over these domains (rende
 **The declaration format (R-72; REQ-GEN-027; TASK-M1-04).** An occupant's `.wgsl` file declares its `uniformSchema`
 and `inputDomains` in line comments, so the file stays plain WGSL; the scanner and the assembler read the same lines.
 A declaration is a line whose text, leading white space removed, starts `// @`, one to a line, anywhere in the file.
-The word after `@` is `uniform` or `input`; any other is refused, so a misspelt declaration is an error, never a
-silent default.
+The word after `@` is `uniform`, `input` or one of the descriptive words below; any other is refused, so a misspelt
+declaration is an error, never a silent default.
 - `// @uniform <name>: <type> = <default>`, optionally followed by `[<lo>, <hi>]`: one `uniformSchema` entry. `<type>`
   is `f32`, `i32`, `u32`, `vec2<f32>`, `vec3<f32>` or `vec4<f32>`. `<default>`, the value a new node starts with, is a
   number for a scalar and `(<x>, <y>, …)` for a vector, one number per component. `[<lo>, <hi>]`, `lo < hi`, is the
@@ -297,6 +297,19 @@ silent default.
 - Names are ASCII WGSL identifiers, each declared once among a file's uniforms and once among its inputs: an ASCII
   letter or `_`, then ASCII letters, digits or `_`, and neither `_` alone nor beginning `__`, which WGSL does not take
   as identifiers. WGSL's non-ASCII identifiers are not names here.
+- The descriptive words say what the editor shows, the same for a built-in's file and a custom's text
+  (`render::assemble::declare`, whose module documentation is the full grammar; `docs/design/principia_node_sdk.md`):
+  `// @name <text>`, `// @group <text>` (the library heading), `// @about <text>` (one line), `// @maps <text>` (what
+  the input means and its scale), `// @glyph <glyph>` (`name`, `dropdown`, `swatches ["<control group>"]`, `ramp`,
+  `gradient` or `none`), `// @control <uniform> <control> "<label>" [in "<group>"] [order <n>]` (`slider`,
+  `log_slider`, `stepper`, `toggle`, `choice("a", …)`, `flags("a", …)`, `colour`, `angle`, `gradient(<stop>, …)`,
+  `fields` or `hidden`, each fitting its uniform's type) and `// @version <n>` (absent, 1; an older version is read, a
+  later one refused with its number). Each is given once, `@control` once per uniform; a malformed line, an unknown
+  control or glyph, or a control that does not fit is refused with its line. A declaration of either kind is a real line
+  comment: a `// @` line inside a `/* … */` is that comment's text and declares nothing. They are not code: the
+  assembler places them blanked and the fragment key hashes a custom's text without them, so editing one changes no picture and
+  compiles nothing. A source that declares none still works: the editor's defaults come from its kind (a custom's
+  name from its first function, or "Custom").
 
 **Worked example of the declaration format.** A colour occupant, `frag/colour/banded.wgsl`:
 

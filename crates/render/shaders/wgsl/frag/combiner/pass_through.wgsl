@@ -3,4 +3,9 @@
 // the colour maths (colour_composition §4.1). It reaches the assembler as a user's custom text would, through the one
 // entry point (render contract Part 2). Under it a brightness-only stain renders flat white: the colour None gives the
 // combiner white (colour_composition §4.1), and the brightness is not read.
+// @name Pass-through
+// @group Combiner
+// @about The colour unchanged; the brightness is not read.
+// @maps colour · brightness
+// @glyph dropdown
 fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb; }

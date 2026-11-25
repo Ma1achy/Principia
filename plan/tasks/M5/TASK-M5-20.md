@@ -8,6 +8,13 @@
 - **Pitfalls:** none
 - **Size:** ~380 lines
 
+> **The space the colours are averaged in is a setting of the stain**, on `OUT`: linear RGB (the default), OKLab or
+> sRGB (the owner, 24 Nov 2026: average in the colour space chosen). It is one setting per stain, because nodes may each
+> blend in a space of their own. On the GPU the resolve is written into the stain's own fragment shader, a loop over the
+> copies around `shade()`, so it averages at full precision before any rounding to 8 bits, and one generated shader is
+> the whole picture. It is not a node: a node sees one sample, and nothing may read the average as data. The CPU
+> resolve (`crates/render/src/resolve.rs`) takes the same setting.
+
 ## Goal
 Each sample is coloured independently through the full stain pipeline and a render-side resolve pass averages
 a footprint's E+1 sample colours into the pixel colour; no data value is averaged before colouring and no category is

@@ -5,6 +5,11 @@
 // reads it through their Rust twins. The colouring is a placeholder (`ledger::gen::catalogue`). For a vector field it
 // is the '‖·‖ as scalar' reduction; its 'as direction-cosines' view is `<field>_dircos.wgsl` in
 // `crates/render/frag/debug/reductions/` (gui_state_contract §4).
+// @name n
+// @group Debug · payload fields
+// @about The debug view of the payload field n: derived from `r`, `m0`, `m1`, `m2`, vector(·, 3).
+// @maps n [lin, [-1, 1]]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_sentinel(length(ctx.sample.n), ctx.frag_xy);
 }

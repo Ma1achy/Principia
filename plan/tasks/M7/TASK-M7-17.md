@@ -8,6 +8,8 @@
 - **Pitfalls:** none
 - **Size:** ~450 lines
 
+> **The node SDK** (`docs/design/principia_node_sdk.md` section 4) changes this task: a preset is a saved stain file, read as a user's is, and its inline shaders become shipped sources.
+
 ## Goal
 A preset is an entire serialised graph that replaces the current graph wholesale on selection, and the catalogue's default composition is that preset payload — one data source, not two. Debug presets load locked (the first edit forks a custom copy), production presets load editable, and preset → graph is one-way. Bivariate presets load with both combiner inputs occupied. The debug views are presets over the one colouring system — field views as FieldRamp presets, structural views as ctx.quad presets, quad boundary lines as a post-chain bandmask on distance-to-quad-edge — forming a section of the library. Uncertainty marking is an optional fuzziness post node reading the exposed spread (the entropy-desaturation rule is not implemented); map gradient magnitude is a post node (screen-space finite difference over the colour buffer), distinct from the sphere FieldRamp gradient. Quantitative presets document their measure; the combiner gives L to a bound brightness.
 

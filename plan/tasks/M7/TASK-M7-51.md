@@ -8,6 +8,8 @@
 - **Pitfalls:** none
 - **Size:** ~800 lines, the tests included
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gap 24: the base and layers are a list control.
+
 ## Goal
 Chart position in the stain editor, as SM15 and the art boards place it: one source node beside the unchanged Shape n̂, the `point⟨q⟩` subtype, the base-and-layers inspector, switching the source or chart and back restoring every setting, the Problems warnings and counts, the seven presets, and every saved stain rendering as before.
 
