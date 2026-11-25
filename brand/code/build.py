@@ -30,10 +30,11 @@ sys.path.insert(0, HERE)
 
 PARTS = ['sim', 'boards', 'web', 'stills', 'videos', 'social']
 OPTIONAL_PARTS = ['explore']      # slow, and not needed for the pictures: the placement searches, run for the record
-# The placement searches, the Dragonfly ones first; each runs in a fresh copy of the committed data.
-EXPLORE = [['dragon.py'], ['dragon2.py'], ['dragon3.py'], ['sorb.py', 'dragonfly'], ['sorb.py', 'butterfly1'],
-           ['sorb.py', 'butterfly2'], ['sorb.py', 'goggles'], ['hole.py'], ['hole2.py'], ['hole3.py'], ['hole4.py'],
-           ['hole5.py'], ['hole6.py'], ['hole7.py'], ['clear.py'], ['clear2.py'], ['clear3.py']]
+# The placement searches. Each chain runs in its own fresh copy of the committed data, its scripts one after another
+# (hole4 to hole7 read what hole3 writes, clear2 and clear3 refine clear.json); chains run side by side.
+EXPLORE = [['dragon.py'], ['dragon2.py'], ['dragon3.py'], ['sorb.py dragonfly'], ['sorb.py butterfly1'], ['sorb.py butterfly2'],
+           ['sorb.py goggles'], ['hole.py'], ['hole2.py'], ['hole3.py', 'hole4.py', 'hole5.py', 'hole6.py', 'hole7.py'],
+           ['clear.py', 'clear2.py', 'clear3.py']]
 # The ten boards whose output is committed in code/boards (final.py also writes exploration boards).
 BOARDS = ['Dragonfly', 'DragonflyNight', 'Word3D', 'Word3DSub', 'WordFlat', 'WordFlatNight', 'WordFlatSub',
           'WordFlatSubNight', 'WordMixed', 'WordMixedSub']
@@ -237,43 +238,53 @@ def part_social(out):
          '--hero', os.path.join(REPO, 'docs/readme/hero.jpg')], BRAND)
 
 
-def part_explore(out, only=None, timeout=300):
-    """Runs each placement-search script in its own fresh copy of the committed data and records what happened:
-    whether it ran, how long it took, and which data files it wrote that differ from the committed ones."""
-    import filecmp, tempfile
-    res = {}
-    for cmd in EXPLORE:
-        name = ' '.join(cmd)
-        if only and not any(o in name for o in only):
-            continue
-        wd = os.path.join(out, 'work', 'explore', name.replace(' ', '_').replace('.py', ''))
-        if os.path.exists(wd):
-            shutil.rmtree(wd)                       # our own scratch folder, made by an earlier run of this part
-        shutil.copytree(PY, wd, ignore=shutil.ignore_patterns('__pycache__'))
-        os.makedirs(os.path.join(wd, 'p4'), exist_ok=True)
-        data_to_cwd(wd)
+def _explore_chain(args):
+    out, chain, timeout = args
+    import filecmp
+    name = ' + '.join(chain)
+    wd = os.path.join(out, 'work', 'explore', chain[0].replace(' ', '_').replace('.py', ''))
+    if os.path.exists(wd):
+        shutil.rmtree(wd)                       # our own scratch folder, made by an earlier run of this part
+    shutil.copytree(PY, wd, ignore=shutil.ignore_patterns('__pycache__'))
+    os.makedirs(os.path.join(wd, 'p4'), exist_ok=True)
+    data_to_cwd(wd)
+    steps = []
+    for cmd in chain:
         t0 = time.time()
         try:
-            p = subprocess.run([sys.executable] + cmd, cwd=wd, capture_output=True, text=True, timeout=timeout)
-            status, tail = ('ran' if p.returncode == 0 else f'failed (exit {p.returncode})'), (p.stdout + p.stderr).strip().splitlines()[-6:]
-        except subprocess.TimeoutExpired as e:
+            p = subprocess.run([sys.executable] + cmd.split(), cwd=wd, capture_output=True, text=True, timeout=timeout)
+            status = 'ran' if p.returncode == 0 else f'failed (exit {p.returncode})'
+            tail = (p.stdout + p.stderr).strip().splitlines()[-6:]
+        except subprocess.TimeoutExpired:
             status, tail = f'timed out after {timeout} s', []
-        wrote = {}
-        for f in sorted(os.listdir(wd)):
-            ref = os.path.join(PY, 'data', f)
-            cur = os.path.join(wd, f)
-            if f.endswith(('.json', '.npz')) and os.path.isfile(cur):
-                if os.path.exists(ref):
-                    if not filecmp.cmp(ref, cur, shallow=False):
-                        wrote[f] = 'differs from the committed file'
-                else:
-                    wrote[f] = 'new file (not committed)'
-        res[name] = {'status': status, 'seconds': round(time.time() - t0), 'changed_or_new': wrote, 'tail': tail}
-        log(name, res[name]['status'], res[name]['seconds'], 's', wrote)
-        p = os.path.join(out, 'explore.json')       # written after every script: a long run can be read as it goes
-        old = json.load(open(p)) if os.path.exists(p) else {}
-        old.update(res)
-        json.dump(old, open(p, 'w'), indent=1)
+        steps.append({'script': cmd, 'status': status, 'seconds': round(time.time() - t0), 'tail': tail})
+        if status != 'ran':
+            break
+    wrote = {}
+    for f in sorted(os.listdir(wd)):
+        ref, cur = os.path.join(PY, 'data', f), os.path.join(wd, f)
+        if f.endswith(('.json', '.npz')) and os.path.isfile(cur):
+            if not os.path.exists(ref):
+                wrote[f] = 'new file (not committed)'
+            elif not filecmp.cmp(ref, cur, shallow=False):
+                wrote[f] = 'differs from the committed file'
+    return name, {'steps': steps, 'changed_or_new': wrote}
+
+
+def part_explore(out, only=None, timeout=1800):
+    """Runs each placement-search chain in its own fresh copy of the committed data and records what happened: whether
+    each script ran, how long it took, and which data files the chain wrote that differ from the committed ones."""
+    from concurrent.futures import ThreadPoolExecutor
+    jobs = [(out, c, timeout) for c in EXPLORE if not only or any(o in ' '.join(c) for o in only)]
+    res = {}
+    with ThreadPoolExecutor(min(4, os.cpu_count() or 1)) as ex:
+        for name, r in ex.map(_explore_chain, jobs):
+            res[name] = r
+            log(name, [(s['script'], s['status'], s['seconds']) for s in r['steps']], r['changed_or_new'])
+    p = os.path.join(out, 'explore.json')
+    old = json.load(open(p)) if os.path.exists(p) else {}
+    old.update(res)
+    json.dump(old, open(p, 'w'), indent=1)
 
 
 def build_info(out):
