@@ -542,7 +542,7 @@ fn check_no_shader_made(before: &StainGraph, after: &StainGraph) {
 /// A shipped shader's settings leave it shipped, and its code as it was.
 #[test]
 fn a_setting_on_a_shipped_shader_makes_no_shader() {
-    let palette = Occupant::Builtin(engine::contract::legend::OUTCOME_OCCUPANT.to_owned());
+    let palette = Occupant::Builtin(engine::contract::legend::outcome_palette().to_owned());
     let (g, id) = holding(NodeKind::Colour, palette);
     let mut app = mock_app();
     app.set_field(SetField {
@@ -650,7 +650,7 @@ fn chips(d: &Drawing, n: usize) -> Vec<Vec<egui::Color32>> {
 
 #[test]
 fn the_swatches_are_the_nodes_own_and_of_the_set_it_shows() {
-    let palette = Occupant::Builtin(engine::contract::legend::OUTCOME_OCCUPANT.to_owned());
+    let palette = Occupant::Builtin(engine::contract::legend::outcome_palette().to_owned());
     let (g, id) = holding(NodeKind::Colour, palette);
     let mut bench = Bench::new();
     let mut drawn = |g: &StainGraph| {

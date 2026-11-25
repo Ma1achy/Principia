@@ -3,14 +3,14 @@
 //! per dimension, in the order received. The real engine's evaluation is TASK-M8-22's (REQ-GUI-105, REQ-GUI-106);
 //! until then its snapshot carries no key.
 //!
-//! The "not yet" style, the hatch, the NaN / Inf style and the outcome palette, with its built-in colour occupant's id,
-//! are re-exported here, so the GUI draws a "not yet" key as the style (R-399) and the debug view's "Debug" key's
+//! The "not yet" style, the hatch, the NaN / Inf style and the outcome palette, with the name of the source it is read
+//! from, are re-exported here, so the GUI draws a "not yet" key as the style (R-399) and the debug view's "Debug" key's
 //! entries as the hatch and the NaN / Inf style (R-136, R-467 D5, D6; render_gui_spec §G6), from the one source of
 //! their calibrations (REQ-COL-053, REQ-COL-055, REQ-COL-064, REQ-COL-110 as proposed; colour_composition §1.4),
 //! through the contract it is allowed to reach. `linear_to_srgb` is the sRGB
 //! transfer (dd_colouring §3.1) the GUI encodes the hatch's linear colour with.
 
-pub use render::colour::outcome::{Swatch, ID as OUTCOME_OCCUPANT, SWATCHES};
+pub use render::colour::outcome::{name as outcome_palette, Palette, Swatch, K, SWATCHES};
 pub use render::present::{
     debug_invalid, debug_nan_inf, debug_not_yet, hatch_stripe, linear_to_srgb, nan_inf_square,
     not_yet_dot_at, NAN_INF_SRGB8, NOT_YET_CELL, NOT_YET_DOT, NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
@@ -81,4 +81,13 @@ pub enum SwatchStyle {
     /// The NaN / Inf style: [`debug_nan_inf`], a checkerboard from the pixel position, the debug view's "NaN / Inf"
     /// entry (R-467 D5, D6; REQ-COL-110 as proposed, a placeholder until it is confirmed), compared as the style.
     NanInf,
+}
+
+/// The outcome key's label and swatch of the class whose param is `param` in `swatches`, a set of an outcome palette:
+/// its class name and its colour, flat; `None` where no swatch has that param.
+pub fn outcome_entry(swatches: &[Swatch; K], param: &str) -> Option<(String, SwatchStyle)> {
+    swatches
+        .iter()
+        .find(|s| s.param == param)
+        .map(|s| (s.label.to_owned(), SwatchStyle::Flat(s.srgb8)))
 }

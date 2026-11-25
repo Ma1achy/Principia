@@ -347,14 +347,14 @@ fn check_declared(srgb: &[outcome::Swatch], variant: &[outcome::Swatch]) {
 
 #[test]
 fn qa_m2_32_outcome_view_declared_sets() {
-    check_declared(&outcome::SWATCHES, &outcome::OKLAB_UNIFORM);
+    check_declared(&*outcome::SWATCHES, &*outcome::OKLAB_UNIFORM);
 }
 
 negative_control!(
     qa_m2_32_outcome_view_declared_sets,
     "the sets swapped are not R-444's and R-447's",
     expected = "the sRGB set's class 0",
-    check_declared(&outcome::OKLAB_UNIFORM, &outcome::SWATCHES)
+    check_declared(&*outcome::OKLAB_UNIFORM, &*outcome::SWATCHES)
 );
 
 // ── REQ-COL-101 / REQ-COL-103: the GPU scene ────────────────────────────────────────────────────────────────────
@@ -525,7 +525,7 @@ fn render(
 }
 
 fn built_in() -> Occupant {
-    Occupant::BuiltIn(outcome::ID.to_owned())
+    Occupant::BuiltIn(outcome::name().to_owned())
 }
 
 fn no_params(_: &str) -> Option<Vec<f64>> {
@@ -571,11 +571,11 @@ fn inserted(to: &str) -> Occupant {
 #[cfg(feature = "controls")]
 fn replaced(from: &str, to: &str) -> Occupant {
     assert_eq!(
-        outcome::WGSL.matches(from).count(),
+        outcome::source().matches(from).count(),
         1,
         "`{from}` in the occupant"
     );
-    Occupant::Custom(outcome::WGSL.replace(from, to))
+    Occupant::Custom(outcome::source().replace(from, to))
 }
 
 /// Row `x`'s pixels and their positions.
@@ -802,7 +802,7 @@ fn variant_params(
             return Some(linear(0x80FF10).to_vec());
         }
         match set {
-            Some(s) if name == outcome::SET_PARAM => Some(vec![f64::from(s)]),
+            Some(s) if name == outcome::set_param() => Some(vec![f64::from(s)]),
             _ => None,
         }
     }
@@ -1725,7 +1725,7 @@ fn check_forbidden_lane(lanes: &[render::bind::Lane], occupant: &str) {
 #[test]
 fn qa_m2_32_forbidden_is_a_validity_predicate() {
     let lanes = render::bind::lanes().unwrap_or_else(|e| panic!("{e}"));
-    check_forbidden_lane(&lanes, outcome::WGSL);
+    check_forbidden_lane(&lanes, outcome::source());
 }
 
 #[cfg(feature = "controls")]
@@ -1746,7 +1746,7 @@ mod qa_m2_32_forbidden_in_chart_lane {
                 .unwrap();
             let m = lanes[v].members.remove(k);
             lanes[c].members.push(m);
-            check_forbidden_lane(&lanes, outcome::WGSL)
+            check_forbidden_lane(&lanes, outcome::source())
         }
     );
 }
@@ -1761,14 +1761,14 @@ mod qa_m2_32_forbidden_read_from_chart {
         {
             let lanes = render::bind::lanes().unwrap_or_else(|e| panic!("{e}"));
             // Amended by qa for TASK-M2-34: the occupant's first test now holds `decode_failed` beside the lane (R-511).
-            let src = outcome::WGSL.replacen(
+            let src = outcome::source().replacen(
                 "ctx.validity.forbidden",
                 "ctx.validity.forbidden || ctx.chart.chart_id == 7u",
                 1,
             );
             assert_ne!(
                 src,
-                outcome::WGSL,
+                outcome::source(),
                 "the occupant reads no ctx.validity.forbidden"
             );
             check_forbidden_lane(&lanes, &src)
@@ -1791,7 +1791,7 @@ mod qa_m2_32_forbidden_from_payload {
                     m.fill = "s.state == STATE_DECODE_FAILED && s.detail == 1u".to_owned();
                 }
             }
-            check_forbidden_lane(&lanes, outcome::WGSL)
+            check_forbidden_lane(&lanes, outcome::source())
         }
     );
 }

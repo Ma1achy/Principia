@@ -98,7 +98,7 @@ fn view(h: &GpuHarness, size: [u32; 2], first: &RecordBytes, read: ReadParams) -
         .add(NodeKind::Source, Occupant::Field("ftle".into()))
         .unwrap_or_else(|e| panic!("{e}"));
     let colour = g
-        .add(NodeKind::Colour, Occupant::Builtin(outcome::ID.into()))
+        .add(NodeKind::Colour, Occupant::Builtin(outcome::name().into()))
         .unwrap_or_else(|e| panic!("{e}"));
     g.connect(source, colour, 0)
         .unwrap_or_else(|e| panic!("{e}"));

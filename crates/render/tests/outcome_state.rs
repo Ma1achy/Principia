@@ -197,7 +197,7 @@ negative_control!(
         let image = render_altered(
             &h,
             &s,
-            outcome::WGSL,
+            outcome::source(),
             "select(uniforms.escape_body_1, uniforms.oklab_escape_body_1, v)",
             "select(uniforms.escape_body_2, uniforms.oklab_escape_body_2, v)",
         );
@@ -262,7 +262,7 @@ negative_control!(
 /// TASK-M7-08); that `swatches` are §1.4's table and `variant` its OKLab-uniform table, labels as shown (R-449), none still a
 /// proposal; and that `outcome::SETS` holds them in that order.
 fn check_declared(swatches: &[outcome::Swatch], variant: &[outcome::Swatch]) {
-    let d = Declaration::parse(outcome::WGSL).unwrap_or_else(|e| panic!("{e:?}"));
+    let d = Declaration::parse(outcome::source()).unwrap_or_else(|e| panic!("{e:?}"));
     let (set, rest) = d
         .uniforms
         .split_first()
@@ -270,7 +270,7 @@ fn check_declared(swatches: &[outcome::Swatch], variant: &[outcome::Swatch]) {
     assert_eq!(
         (set.name.as_str(), set.ty, set.default.as_slice(), set.range),
         (
-            outcome::SET_PARAM,
+            outcome::set_param(),
             render::assemble::UniformType::U32,
             &[0.0][..],
             Some((0.0, 1.0))
@@ -306,9 +306,12 @@ fn check_declared(swatches: &[outcome::Swatch], variant: &[outcome::Swatch]) {
         assert_eq!(got, want, "a set is not §1.4's table");
     }
     assert_eq!(
-        outcome::SETS.map(|(name, set)| (name, set.to_vec())),
+        outcome::SETS
+            .iter()
+            .map(|(name, set)| (*name, set.to_vec()))
+            .collect::<Vec<_>>(),
         [
-            ("sRGB", swatches.to_vec()),
+            ("sRGB palette", swatches.to_vec()),
             ("OKLab-uniform", variant.to_vec())
         ],
         "the named sets, the sRGB palette first, the default"
@@ -317,14 +320,14 @@ fn check_declared(swatches: &[outcome::Swatch], variant: &[outcome::Swatch]) {
 
 #[test]
 fn outcome_palette_swatches_are_the_occupants_params() {
-    check_declared(&SWATCHES, &outcome::OKLAB_UNIFORM);
+    check_declared(&*SWATCHES, &*outcome::OKLAB_UNIFORM);
     assert_eq!(
-        render::registry::named(render::assemble::Kind::Colour, outcome::ID)
+        render::registry::named(render::assemble::Kind::Colour, outcome::name())
             .ok()
             .map(|e| e.source.as_str()),
-        Some(outcome::WGSL),
+        Some(outcome::source()),
         "the occupant is the built-in colour `{}`",
-        outcome::ID
+        outcome::name()
     );
 }
 
@@ -333,9 +336,9 @@ negative_control!(
     "a swatch one 8-bit step off its declared default must fail",
     expected = "`escape_body_2`'s default is not",
     {
-        let mut swatches = SWATCHES;
+        let mut swatches = *SWATCHES;
         swatches[7].srgb8[2] += 1;
-        check_declared(&swatches, &outcome::OKLAB_UNIFORM);
+        check_declared(&swatches, &*outcome::OKLAB_UNIFORM);
     }
 );
 
@@ -383,7 +386,7 @@ negative_control!(
         let image = render_altered(
             &gpu(),
             &s,
-            outcome::WGSL,
+            outcome::source(),
             "    return select(uniforms.bounded, uniforms.oklab_bounded, v);",
             "    return vec3<f32>(0.0, 0.0, 0.0);",
         );
@@ -672,7 +675,7 @@ fn check_swatch_labels(sets: &[&[outcome::Swatch]]) {
 
 #[test]
 fn display_names_swatch_labels_are_the_modules() {
-    check_swatch_labels(&[&SWATCHES, &outcome::OKLAB_UNIFORM]);
+    check_swatch_labels(&[&*SWATCHES, &*outcome::OKLAB_UNIFORM]);
     assert_eq!(SWATCHES[0].label, "bounded / nothing yet");
     assert_eq!(SWATCHES[5].label, "escape body 1");
 }
@@ -682,7 +685,7 @@ negative_control!(
     "a swatch labelled 0-based fails",
     expected = "`escape_body_0`'s label",
     {
-        let mut set = SWATCHES;
+        let mut set = *SWATCHES;
         set[5].label = "escape body 0";
         check_swatch_labels(&[&set]);
     }

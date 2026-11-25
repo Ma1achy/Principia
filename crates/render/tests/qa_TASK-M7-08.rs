@@ -573,7 +573,7 @@ fn render(h: &GpuHarness, colour: &Occupant, mask: u32, set: u32) -> Vec<Rgb> {
         &context(),
         &|_, name| match name {
             n if n == palette::MASK_PARAM => Some(vec![f64::from(mask)]),
-            n if n == outcome::SET_PARAM => Some(vec![f64::from(set)]),
+            n if n == outcome::set_param() => Some(vec![f64::from(set)]),
             _ => None,
         },
         Inputs {
@@ -671,13 +671,16 @@ fn check_filter(colour: Occupant) {
 
 #[test]
 fn categorical_filter_qa_state_map_filters() {
-    check_filter(Occupant::BuiltIn(outcome::ID.to_owned()));
+    check_filter(Occupant::BuiltIn(outcome::name().to_owned()));
 }
 
 #[cfg(feature = "controls")]
 fn altered(from: &str, to: &str) -> Occupant {
-    assert!(outcome::WGSL.contains(from), "the occupant has no `{from}`");
-    Occupant::Custom(outcome::WGSL.replace(from, to))
+    assert!(
+        outcome::source().contains(from),
+        "the occupant has no `{from}`"
+    );
+    Occupant::Custom(outcome::source().replace(from, to))
 }
 
 negative_control!(

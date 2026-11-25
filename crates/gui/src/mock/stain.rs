@@ -16,8 +16,6 @@ use crate::stain::{described, node_code, Content};
 pub const OUTCOME_FIELD: &str = "state";
 /// The source of the time of fate: the payload's `t_end_step` (02_stain.png's "Time of fate", `ctx.t_end`).
 pub const FATE_FIELD: &str = "t_end_step";
-/// The outcome palette, the built-in colour occupant (colour_composition §1.4; 02_stain.png's "Event palette").
-pub const PALETTE: &str = engine::contract::legend::OUTCOME_OCCUPANT;
 /// The late fade's param: how dark the latest fates go, as a fraction of full.
 pub const FADE: &str = "fade";
 /// The late fade: full brightness for an early fate, fading to `fade` at the horizon.
@@ -55,7 +53,10 @@ pub fn default_graph() -> StainGraph {
         .add(NodeKind::Source, Occupant::Field(FATE_FIELD.into()))
         .expect(checked);
     let palette = g
-        .add(NodeKind::Colour, Occupant::Builtin(PALETTE.into()))
+        .add(
+            NodeKind::Colour,
+            Occupant::Builtin(engine::contract::legend::outcome_palette().into()),
+        )
         .expect(checked);
     let fade = g
         .add(NodeKind::Brightness, Occupant::Custom(LATE_FADE.into()))

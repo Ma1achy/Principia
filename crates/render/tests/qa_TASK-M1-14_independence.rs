@@ -258,7 +258,7 @@ struct Mode {
 fn event() -> Mode {
     Mode {
         name: "event",
-        colour: Occupant::BuiltIn(render::colour::outcome::ID.to_owned()),
+        colour: Occupant::BuiltIn(render::colour::outcome::name().to_owned()),
         brightness: Occupant::None,
         post: None,
     }

@@ -186,7 +186,7 @@ enum Over {
 /// The stain `over`: the zero source into its colour, the brightness None, Replace L and `OUT`.
 fn stain(over: Over) -> Stain {
     let colour = match over {
-        Over::Outcome => Occupant::BuiltIn(outcome::ID.to_owned()),
+        Over::Outcome => Occupant::BuiltIn(outcome::name().to_owned()),
         Over::DMin => Occupant::Custom(FieldRamp::d_min().unwrap_or_else(|e| panic!("{e}")).wgsl()),
     };
     let node = |kind, occupant, inputs: Vec<Option<usize>>| Node {

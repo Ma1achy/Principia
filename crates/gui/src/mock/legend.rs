@@ -13,7 +13,9 @@
 //! running class's the display name of `running`.
 
 use engine::contract::display;
-use engine::contract::legend::{Legend, LegendEntry, LegendKey, SwatchStyle, SWATCHES};
+use engine::contract::legend::{
+    outcome_entry, Legend, LegendEntry, LegendKey, SwatchStyle, SWATCHES,
+};
 
 /// The class a categorical dimension shows: one of the outcome palette's swatches, by its param, or the running
 /// samples' "not yet" style of a field that holds no value for them (R-399).
@@ -118,13 +120,8 @@ pub fn evaluate(stain: &FakeStain) -> Legend {
                     .iter()
                     .map(|(class, w)| {
                         let (label, swatch) = match class {
-                            Class::Swatch(param) => {
-                                let s = SWATCHES
-                                    .iter()
-                                    .find(|s| s.param == *param)
-                                    .unwrap_or_else(|| panic!("no swatch `{param}`"));
-                                (s.label.to_owned(), SwatchStyle::Flat(s.srgb8))
-                            }
+                            Class::Swatch(param) => outcome_entry(&SWATCHES, param)
+                                .unwrap_or_else(|| panic!("no swatch `{param}`")),
                             Class::Running => (
                                 display::name(display::State::Running, display::Detail::D0)
                                     .to_owned(),

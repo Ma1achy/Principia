@@ -253,7 +253,7 @@ fn render(h: &GpuHarness, s: &Scene) -> Vec<[f32; 4]> {
 
 #[cfg(feature = "controls")]
 fn render_altered(h: &GpuHarness, s: &Scene, from: &str, to: &str) -> Vec<[f32; 4]> {
-    let src = render::colour::outcome::WGSL;
+    let src = render::colour::outcome::source();
     assert!(src.contains(from), "the occupant has no `{from}`");
     s.render_colour(h.device(), h.queue(), &src.replace(from, to))
         .unwrap_or_else(|e| panic!("{e}"))
@@ -903,7 +903,7 @@ fn check_figures(collision: u32, ejection: u32) {
 fn qa_col062_proposed_swatches_match_section_1_4s_figures() {
     check_figures(M1_TRIPLE_COLLISION, M1_TRIPLE_EJECTION);
     // The occupant declares R-445's values, which supersede the proposal, as its defaults.
-    let wgsl = render::colour::outcome::WGSL;
+    let wgsl = render::colour::outcome::source();
     for (param, h) in [
         ("triple_collision", TRIPLE_COLLISION),
         ("triple_ejection", TRIPLE_EJECTION),

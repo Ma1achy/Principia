@@ -82,7 +82,7 @@ fn check_swatches(sets: &[(&str, [Swatch; 9])]) {
 
 #[test]
 fn qa_m2_33_swatch_labels_are_the_shown_names() {
-    check_swatches(&[("sRGB", SWATCHES), ("OKLab-uniform", OKLAB_UNIFORM)]);
+    check_swatches(&[("sRGB", *SWATCHES), ("OKLab-uniform", *OKLAB_UNIFORM)]);
 }
 
 negative_control!(
@@ -90,12 +90,12 @@ negative_control!(
     "a variant set whose collision swatches are labelled by pair id fails",
     expected = "OKLab-uniform: the swatch `oklab_collision_pair_2`'s label",
     {
-        let mut oklab = OKLAB_UNIFORM;
+        let mut oklab = *OKLAB_UNIFORM;
         for s in oklab.iter_mut() {
             if s.param == "oklab_collision_pair_2" {
                 s.label = "collision pair 2";
             }
         }
-        check_swatches(&[("sRGB", SWATCHES), ("OKLab-uniform", oklab)]);
+        check_swatches(&[("sRGB", *SWATCHES), ("OKLab-uniform", oklab)]);
     }
 );

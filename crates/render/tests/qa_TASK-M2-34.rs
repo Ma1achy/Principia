@@ -460,11 +460,11 @@ fn check(what: &str, image: &[[f32; 4]], bg: [f32; 3], want: &dyn Fn(&Row) -> Wa
 #[cfg(feature = "controls")]
 fn altered_outcome(from: &str, to: &str) -> Occupant {
     assert_eq!(
-        outcome::WGSL.matches(from).count(),
+        outcome::source().matches(from).count(),
         1,
         "the outcome occupant has no single `{from}`"
     );
-    Occupant::Custom(outcome::WGSL.replace(from, to))
+    Occupant::Custom(outcome::source().replace(from, to))
 }
 
 /// The outcome view, its occupant `colour`, rendered with each background and checked; every pixel but the
@@ -496,7 +496,7 @@ fn check_outcome(colour: Occupant) {
 
 #[test]
 fn qa_m2_34_presentation_outcome_view() {
-    check_outcome(Occupant::BuiltIn(outcome::ID.to_owned()));
+    check_outcome(Occupant::BuiltIn(outcome::name().to_owned()));
 }
 
 /// The outcome occupant's first test, the lane and `decode_failed` beside it, as REQ-COL-108 and R-511 put it.
@@ -922,7 +922,7 @@ fn debug_stains() -> Vec<(&'static str, Stain, Option<Field>)> {
         (
             "the outcome view",
             stain(
-                Occupant::BuiltIn(outcome::ID.to_owned()),
+                Occupant::BuiltIn(outcome::name().to_owned()),
                 Occupant::None,
                 None,
             ),

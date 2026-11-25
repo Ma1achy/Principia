@@ -1046,15 +1046,15 @@ impl Scene {
                 .map(|e| e.source)
                 .ok_or_else(|| format!("no registry entry `{}`", case.id)),
             Colouring::Probe(wgsl, _) => Ok(wgsl.clone()),
-            Colouring::Outcome { .. } => Ok(outcome::WGSL.to_owned()),
+            Colouring::Outcome { .. } => Ok(outcome::source().to_owned()),
         }
     }
 
-    /// The colour node's occupant: the built-in `outcome_state` for the outcome palette, else the colour's WGSL
+    /// The colour node's occupant: the shipped outcome palette by its name, else the colour's WGSL
     /// ([`Scene::colour`]) as custom text.
     pub fn occupant(&self) -> Result<Occupant, String> {
         Ok(match self.colouring {
-            Colouring::Outcome { .. } => Occupant::BuiltIn(outcome::ID.to_owned()),
+            Colouring::Outcome { .. } => Occupant::BuiltIn(outcome::name().to_owned()),
             _ => Occupant::Custom(self.colour()?),
         })
     }

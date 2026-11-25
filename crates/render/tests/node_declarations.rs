@@ -464,7 +464,7 @@ fn check_swatches(text: &str) {
 
 #[test]
 fn declarations_outcome_swatches_are_its_colour_controls() {
-    check_swatches(outcome::WGSL);
+    check_swatches(outcome::source());
 }
 
 negative_control!(
@@ -472,7 +472,7 @@ negative_control!(
     "two swatches' labels swapped",
     expected = "controls are not the twin's swatches",
     check_swatches(
-        &outcome::WGSL
+        &outcome::source()
             .replace("\"collision 1–2\" in \"sRGB", "\"SWAP\" in \"sRGB")
             .replace("\"collision 1–3\" in \"sRGB", "\"collision 1–2\" in \"sRGB")
     )

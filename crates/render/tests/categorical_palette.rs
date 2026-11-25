@@ -126,12 +126,12 @@ fn check_resolution(resolve: fn(&str) -> Result<Palette, String>) {
         assert!(resolve(field).is_err(), "`{field}` resolves to a palette");
     }
     assert_eq!(
-        render::registry::named(render::assemble::Kind::Colour, outcome::ID)
+        render::registry::named(render::assemble::Kind::Colour, outcome::name())
             .ok()
             .map(|e| e.source.as_str()),
-        Some(outcome::WGSL),
+        Some(outcome::source()),
         "the outcome palette is not the built-in colour `{}`",
-        outcome::ID
+        outcome::name()
     );
 }
 
@@ -654,13 +654,16 @@ fn check_filter(colour: Occupant) {
 
 #[test]
 fn categorical_filter_state_map_to_the_escape_classes() {
-    check_filter(Occupant::BuiltIn(outcome::ID.to_owned()));
+    check_filter(Occupant::BuiltIn(outcome::name().to_owned()));
 }
 
 #[cfg(feature = "controls")]
 fn altered_outcome(from: &str, to: &str) -> Occupant {
-    assert!(outcome::WGSL.contains(from), "the occupant has no `{from}`");
-    Occupant::Custom(outcome::WGSL.replace(from, to))
+    assert!(
+        outcome::source().contains(from),
+        "the occupant has no `{from}`"
+    );
+    Occupant::Custom(outcome::source().replace(from, to))
 }
 
 negative_control!(
