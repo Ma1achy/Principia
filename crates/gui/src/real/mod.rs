@@ -174,7 +174,7 @@ impl View {
         if self.graph.as_ref() == Some(g) {
             return Ok(());
         }
-        self.key = stain::key(g);
+        self.key = crate::stain::catalogue::key(g);
         let lowered = g.keyed().map_err(|e| e.to_string())?;
         if self.asked.as_ref() != Some(&lowered) {
             let keys: Vec<view::NodeKey> = lowered.0.iter().map(|id| u64::from(id.0)).collect();

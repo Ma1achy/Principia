@@ -16,8 +16,8 @@ use crate::headless::Headless;
 use crate::layout::Layout;
 use crate::side::MockSide;
 use crate::stain::canvas::{
-    default_position, grid_dots, outcome_palette, size, type_colour, type_name, wire, wire_width,
-    Drawn, Zoom, GLYPH_H, HINT, NODE_W, OUT_W, PORT_R, RAMP_DARKEST, ROW_H, SELECTED_W, TITLE_H,
+    default_position, grid_dots, size, type_colour, type_name, wire, wire_width, Drawn, Zoom,
+    GLYPH_H, HINT, NODE_W, OUT_W, PORT_R, RAMP_DARKEST, ROW_H, SELECTED_W, TITLE_H,
 };
 use crate::stain::Regions;
 
@@ -265,7 +265,7 @@ fn mock_stain_drawn_the_palette_swatches() {
     }
     let title = texts(&all)
         .into_iter()
-        .find(|t| t.text == "colour · outcome_state")
+        .find(|t| t.text == "colour · Outcome palette")
         .expect("the title");
     assert!(!title.elided);
     // Selected: the accent outline.
@@ -278,7 +278,7 @@ fn mock_stain_drawn_the_palette_swatches() {
 }
 
 #[test]
-fn mock_stain_drawn_the_brightness_ramp_and_badge() {
+fn mock_stain_drawn_the_brightness_ramp() {
     let (mut app, mut h) = stain_app();
     let (all, d) = at_zoom(&mut app, &mut h, NodeId(5));
     let visuals = visuals(&h);
@@ -303,15 +303,10 @@ fn mock_stain_drawn_the_brightness_ramp_and_badge() {
             "ramp step {i} at {chip:?}"
         );
     }
-    let title_rect = Rect::from_min_size(d.rect.min, vec2(d.rect.width(), TITLE_H * Z));
-    let ts = texts(&all);
-    let badge = text_in(&ts, "{ }", title_rect);
-    assert!(
-        close(badge.rect.max.x, title_rect.max.x - 8.0 * Z),
-        "{badge:?}"
-    );
-    assert!(close(badge.rect.center().y, title_rect.center().y));
-    assert_eq!(badge.size, 11.0 * Z);
+    assert!(texts(&all)
+        .iter()
+        .any(|t| t.text == "brightness · Late fade"));
+    assert!(!texts(&all).iter().any(|t| t.text == "{ }"), "a badge");
     rejects("a ramp to black", || assert_eq!(grey(steps - 1), 0));
 }
 
@@ -321,7 +316,7 @@ fn mock_stain_drawn_the_combiner_and_out() {
     let visuals = visuals(&h);
     let (all, d) = at_zoom(&mut app, &mut h, NodeId(0));
     check_box(&all, &d, &visuals, false);
-    check_face(&all, &d, "multiply", &visuals);
+    check_face(&all, &d, "Multiply", &visuals);
     let ts = texts(&all);
     for (i, label) in ["colour", "brightness"].into_iter().enumerate() {
         let p = d.in_port(i, Z);
@@ -339,7 +334,7 @@ fn mock_stain_drawn_the_combiner_and_out() {
         .iter()
         .any(|r| r.fill == visuals.widgets.inactive.bg_fill && d.rect.contains_rect(r.rect)));
     rejects("a face on OUT", || {
-        check_face(&all, &d, "multiply", &visuals)
+        check_face(&all, &d, "Multiply", &visuals)
     });
 }
 
@@ -503,7 +498,7 @@ fn mock_stain_drawn_the_toggle() {
     let all = nodes(&mut h, &mut app);
     let button = |label: &str| {
         all.iter()
-            .find(|n| n.text == label)
+            .find(|n| n.text == label && super::reachability::is_control(n.role))
             .unwrap_or_else(|| panic!("{label}"))
             .rect
     };
@@ -574,28 +569,6 @@ fn mock_stain_drawn_node_geometry() {
     );
     rejects("the ports under the title, past the glyph", || {
         assert_eq!(o.in_port(0, Z), c.in_port(0, Z))
-    });
-}
-
-/// Only the outcome palette's colour draws swatches.
-#[test]
-fn mock_stain_drawn_outcome_palette() {
-    let palette = Occupant::Builtin("outcome_state".into());
-    assert!(outcome_palette(NodeKind::Colour, &palette));
-    assert!(!outcome_palette(
-        NodeKind::Colour,
-        &Occupant::Builtin("other".into())
-    ));
-    assert!(!outcome_palette(
-        NodeKind::Colour,
-        &Occupant::Custom(String::new())
-    ));
-    assert!(!outcome_palette(NodeKind::Post, &palette));
-    rejects("another built-in read as the palette", || {
-        assert!(outcome_palette(
-            NodeKind::Colour,
-            &Occupant::Builtin("other".into())
-        ))
     });
 }
 
@@ -676,32 +649,33 @@ fn mock_stain_drawn_capture_screens() {
     });
 }
 
-/// A node's title: its kind and its occupant; `OUT`'s none is "to the style", any other none "None".
+/// A node's title: its kind and its description's name.
 #[test]
 fn mock_stain_drawn_titles() {
     use crate::stain::canvas::title;
+    use engine::contract::stain::describe::describe;
+    let of = |kind, occupant: Occupant| {
+        title(
+            kind,
+            &describe(kind, &occupant, &Default::default()).expect("a description"),
+        )
+    };
+    assert_eq!(of(NodeKind::Out, Occupant::None), "OUT · to the style");
+    assert_eq!(of(NodeKind::Source, Occupant::None), "source · None");
+    assert_eq!(of(NodeKind::Post, Occupant::None), "post · None");
     assert_eq!(
-        title(NodeKind::Out, &Occupant::None),
-        ("OUT", "to the style".to_owned())
+        of(NodeKind::Source, Occupant::Field("ftle".into())),
+        "source · ctx.ftle"
     );
-    assert_eq!(
-        title(NodeKind::Source, &Occupant::None),
-        ("source", "None".to_owned())
+    let custom = Occupant::Custom(
+        "// @name Dimmer\nfn brightness(ctx: Ctx) -> f32 { return 1.0; }\n".into(),
     );
-    assert_eq!(
-        title(NodeKind::Post, &Occupant::None),
-        ("post", "None".to_owned())
-    );
-    assert_eq!(
-        title(NodeKind::Source, &Occupant::Field("ftle".into())),
-        ("source", "ctx.ftle".to_owned())
-    );
-    assert_eq!(
-        title(NodeKind::Brightness, &Occupant::Custom("x".into())),
-        ("brightness", "custom".to_owned())
-    );
+    assert_eq!(of(NodeKind::Brightness, custom), "brightness · Dimmer");
     rejects("a source's none read as OUT's", || {
-        assert_eq!(title(NodeKind::Source, &Occupant::None).1, "to the style")
+        assert_eq!(
+            of(NodeKind::Source, Occupant::None),
+            "source · to the style"
+        )
     });
 }
 
@@ -783,10 +757,11 @@ fn mock_stain_drawn_library_areas() {
     rejects("a foot below the drawer", || assert_eq!(foot.max.y, 660.0));
 }
 
-/// The drawer as drawn: its count, its rows with the loaded one highlighted, its filter's width, its buttons in the
+/// The drawer as drawn: its count, its rows with the loaded one highlighted (the second `ftle`, not its namesake), its filter's width, its buttons in the
 /// foot; filtering narrows the rows and the count; collapsed, only its strip.
 #[test]
 fn mock_stain_drawn_the_library() {
+    use crate::side::EngineSide;
     let (mut app, mut h) = stain_app();
     let ppp = h.pixels_per_point();
     let drawer = Regions::new(&Layout::new(h.screen(), ppp), ppp, false).library;
@@ -794,10 +769,15 @@ fn mock_stain_drawn_the_library() {
     let all = nodes(&mut h, &mut app);
     let find =
         |all: &[super::support::Node], t: &str| all.iter().find(|n| n.text == t).map(|n| n.rect);
-    assert!(find(&all, "135").is_some(), "the catalogue's count");
-    let loaded = find(&all, "   Outcome class").expect("the loaded row");
-    let other = find(&all, "   Total energy E₀").expect("a row");
-    assert!(list.contains_rect(other));
+    let count = app
+        .side()
+        .stain_content()
+        .expect("content")
+        .modes
+        .to_string();
+    assert!(find(&all, &count).is_some(), "the catalogue's count");
+    let margin = find(&all, "   Margin").expect("a row");
+    assert!(list.contains_rect(margin));
     let new = find(&all, "New").expect("New");
     assert!(foot.expand(0.5).contains_rect(new), "{new:?} in {foot:?}");
     let filter = all
@@ -809,6 +789,27 @@ fn mock_stain_drawn_the_library() {
         (filter.width() - (list.width() - 40.0)).abs() <= 1.0,
         "{filter:?} in {list:?}"
     );
+    // Filtered: the rows that hold "ftle", and the count says how many; the two of one name are told apart.
+    app.stain.library.filter = "ftle".into();
+    let filtered = nodes(&mut h, &mut app);
+    let named: Vec<Rect> = filtered
+        .iter()
+        .filter(|n| n.text == "   ftle")
+        .map(|n| n.rect)
+        .collect();
+    assert_eq!(named.len(), 2, "two rows are named ftle");
+    let passing = filtered
+        .iter()
+        .filter(|n| n.text.starts_with("   ") && n.text.contains("ftle"))
+        .count();
+    assert!(find(&filtered, &passing.to_string()).is_some());
+    assert!(find(&filtered, "   Margin").is_none());
+    for events in crate::capture::click(named[1].center()) {
+        let _ = h.frame(&mut app, events);
+    }
+    for _ in 0..2 {
+        let _ = h.frame(&mut app, Vec::new());
+    }
     let fill = visuals(&h).selection.bg_fill;
     let drawn = rects(&shapes(&mut h, &mut app));
     let lit = |r: Rect| {
@@ -816,19 +817,13 @@ fn mock_stain_drawn_the_library() {
             .iter()
             .any(|s| s.fill == fill && r.contains(s.rect.center()))
     };
-    assert!(lit(loaded) && !lit(other));
-    // Filtered: two rows hold "ftle", and the count says so.
-    app.stain.library.filter = "ftle".into();
-    let filtered = nodes(&mut h, &mut app);
-    assert!(find(&filtered, "2").is_some());
-    assert!(find(&filtered, "   FTLE (Lyapunov)").is_some());
-    assert!(find(&filtered, "   Total energy E₀").is_none());
+    assert!(lit(named[1]) && !lit(named[0]));
     // Collapsed: no rows.
     app.stain.library.collapsed = true;
     let collapsed = nodes(&mut h, &mut app);
-    assert!(find(&collapsed, "   FTLE (Lyapunov)").is_none());
+    assert!(find(&collapsed, "   ftle").is_none());
     assert!(find(&collapsed, "▸").is_some());
-    rejects("an unloaded row highlighted", || assert!(lit(other)));
+    rejects("its namesake highlighted", || assert!(lit(named[0])));
 }
 
 /// Whether every glyph `galley` places is a mark the eye reads: none is a combining mark (U+0300 to U+036F), which egui
@@ -842,8 +837,7 @@ fn readable(galley: &egui::Galley) -> bool {
         .all(|g| !('\u{300}'..='\u{36f}').contains(&g.chr))
 }
 
-/// The drawer's rows as drawn keep every mark: the unit shape vector is drawn "n (unit)", never a bare `n` whose hat
-/// egui drops; no row drawn in the list carries a combining mark.
+/// The drawer's rows as drawn keep every mark: none carries a combining mark, which egui drops.
 #[test]
 fn mock_stain_drawn_library_rows_keep_their_marks() {
     let (mut app, mut h) = stain_app();
@@ -858,11 +852,6 @@ fn mock_stain_drawn_library_rows_keep_their_marks() {
             _ => None,
         })
         .collect();
-    let drawn = |text: &str| rows.iter().find(|g| g.text() == text);
-    for text in ["   Shape n (unit)", "   n (unit) × FTLE"] {
-        let galley = drawn(text).unwrap_or_else(|| panic!("no row {text:?}"));
-        assert!(readable(galley), "{text:?}");
-    }
     assert!(rows.len() > 10, "{} rows", rows.len());
     assert!(rows.iter().all(|g| readable(g)));
     // The control: the hat as a combining mark, laid out as the row would be, fails the check.

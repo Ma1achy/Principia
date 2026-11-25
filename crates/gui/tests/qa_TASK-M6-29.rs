@@ -35,6 +35,7 @@ use eframe::egui::{
     Shape, TouchPhase, Vec2,
 };
 use engine::contract::render_state::{NodeId, NodeKind, Occupant, StainGraph};
+use engine::contract::stain::describe::describe_node;
 use engine::contract::view_ui::{KeyMode, Mode};
 use gui::app::App;
 use gui::capture::{render_frame, Shot, PIXELS_PER_POINT, SIZE};
@@ -389,9 +390,15 @@ fn check_layout(s: &Surfaces, names: &[Name]) {
     let xs: Vec<f32> = TOGGLE
         .iter()
         .map(|t| {
-            let at = centre_of(names, t).unwrap_or_else(|| panic!("no `{t}` drawn"));
+            // The inspector's heading with no node selected reads `Graph` too.
+            let at = names
+                .iter()
+                .filter(|n| n.name == *t)
+                .filter_map(|n| n.rect.map(|r| rect_px(r).center()))
+                .find(|at| s.canvas.contains(*at))
+                .unwrap_or_else(|| panic!("no `{t}` drawn on the canvas"));
             assert!(
-                s.canvas.contains(at) && at.y < s.canvas.min.y + s.canvas.height() * 0.25,
+                at.y < s.canvas.min.y + s.canvas.height() * 0.25,
                 "`{t}` at {at:?} is not on the canvas's top {:?}",
                 s.canvas
             );
@@ -548,10 +555,9 @@ fn qa_canvas_gestures_mock_click_selects_opening_the_inspector_and_empty_click_d
     let g = rig.graph();
     let rects = node_rects(&mut rig);
     let colour = find(&g, NodeKind::Colour)[0];
-    let occupant = match &g.node(colour).unwrap().occupant {
-        Occupant::Builtin(id) => id.clone(),
-        o => panic!("the mock's colour node holds {o:?}"),
-    };
+    let occupant = describe_node(g.node(colour).unwrap())
+        .expect("a description")
+        .name;
     let graph_view = inspector_names(&mut rig, right);
     assert!(
         !graph_view.iter().any(|n| n.contains(&occupant)),
@@ -1270,10 +1276,9 @@ fn qa_mock_keyboard_stain_enter_on_a_node_selects_it_in_navigation_mode() {
     let mut rig = Rig::stain(None);
     let g = rig.graph();
     let colour = find(&g, NodeKind::Colour)[0];
-    let occupant = match &g.node(colour).unwrap().occupant {
-        Occupant::Builtin(id) => id.clone(),
-        o => panic!("{o:?}"),
-    };
+    let occupant = describe_node(g.node(colour).unwrap())
+        .expect("a description")
+        .name;
     rig.focus_element("Graph canvas", |l| l.contains(&occupant));
     assert_eq!(
         rig.app.view.focus.mode, NAV,
@@ -1464,10 +1469,9 @@ fn qa_mock_keyboard_stain_one_ring_orange_navigating_blue_interacting() {
     // On a node, selected by Enter: one ring, orange; the selection's outline is not a second ring.
     let g = rig.graph();
     let colour = find(&g, NodeKind::Colour)[0];
-    let occupant = match &g.node(colour).unwrap().occupant {
-        Occupant::Builtin(id) => id.clone(),
-        o => panic!("{o:?}"),
-    };
+    let occupant = describe_node(g.node(colour).unwrap())
+        .expect("a description")
+        .name;
     rig.focus_element("Graph canvas", |l| l.contains(&occupant));
     rig.key(Key::Enter, NONE);
     assert!(selection(&rig).contains(&colour));

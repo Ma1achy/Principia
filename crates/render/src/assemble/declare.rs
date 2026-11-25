@@ -17,8 +17,8 @@
 //! - `@name`, `@group`, `@about`, `@maps`: the rest of the line, trimmed, not empty, no `"`. `@maps` is what the
 //!   node's input means and its scale; the editor writes it into its "maps … → …" line.
 //! - `@glyph <glyph>`, one of [`Glyph`]'s words: `name`, `dropdown`, `swatches` (optionally `"<control group>"`,
-//!   the colour controls of that group as chips, else every colour control), `ramp`, `gradient` (the first gradient
-//!   control) and `none`.
+//!   the colour controls of that group as chips, or of the group a choice naming it has chosen, else every colour
+//!   control), `ramp`, `gradient` (the first gradient control) and `none`.
 //! - `@control <uniform> <control> "<label>" [in "<group>"] [order <integer>]`, one per uniform at most, the uniform
 //!   declared anywhere in the source by `@uniform`. The controls are [`Control`]'s: `slider` (a scalar with a range),
 //!   `log_slider` (an `f32` whose range is above 0), `stepper` (`i32` or `u32`), `toggle` (`i32` or `u32`, range

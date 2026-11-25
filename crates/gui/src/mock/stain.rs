@@ -1,16 +1,16 @@
 //! The mock's stain (R-390, ORDER item 6): the graph it starts with, the look its preview is drawn in, and the Stain
-//! editor's content it serves: the library's rows, the assembled code, the per-node code and the Problems pane's lines.
+//! editor's content it serves. The library, the choices, each node's description and its code are the registry's; the
+//! assembled code and the Problems pane's lines are placeholders, the mock assembling nothing.
 //! The graph is a real stain graph, checked as every edit of it is (gui_state_contract §5; `engine::stain`), made of
 //! 02_stain.png's nodes: the outcome state and `t_end` as sources, the outcome palette as colour, a late fade as
-//! brightness (a custom occupant), multiplied at the combiner into `OUT`. Its code, its library and its Problems are
-//! placeholder content, not the registry's, the assembler's or the compiler's: the real ones are TASK-M7-24's and
-//! TASK-M8-19's.
+//! brightness, multiplied at the combiner into `OUT`.
 
-use std::collections::BTreeMap;
+use std::sync::Mutex;
 
 use engine::contract::render_state::{NodeId, NodeKind, Occupant, StainGraph};
 
-use crate::stain::{Content, Group, COMBINERS};
+use crate::stain::catalogue::catalogue;
+use crate::stain::{described, node_code, Content};
 
 /// The source of the outcome class: the payload's `state` (02_stain.png's "Outcome state").
 pub const OUTCOME_FIELD: &str = "state";
@@ -20,18 +20,21 @@ pub const FATE_FIELD: &str = "t_end_step";
 pub const PALETTE: &str = engine::contract::legend::OUTCOME_OCCUPANT;
 /// The late fade's param: how dark the latest fates go, as a fraction of full.
 pub const FADE: &str = "fade";
-/// The late fade, a custom brightness occupant (placeholder content): full brightness for an early fate, fading to
-/// `fade` at the horizon.
-pub const LATE_FADE: &str =
-    "// Late fade (mock): full brightness for an early fate, fading to `fade` at the horizon.
+/// The late fade: full brightness for an early fate, fading to `fade` at the horizon.
+pub const LATE_FADE: &str = "// @name Late fade
+// @group Brightness
+// @about Full brightness for an early fate, fading towards the horizon.
+// @maps t_end [lin, 0 to 50]
+// @glyph ramp
 // @input t_end [0, 50]
 // @uniform fade: f32 = 0.12 [0, 1]
+// @control fade slider \"Fade\"
 fn brightness(ctx: Ctx) -> f32 {
     return mix(1.0, fade, clamp(ctx.inputs[0].x / 50.0, 0.0, 1.0));
 }
 ";
 
-/// The fields the mock offers a source (placeholder content: a few of the payload's read-side fields).
+/// The fields the mock's picture tells apart ([`look`]).
 pub const SOURCE_FIELDS: [&str; 5] = ["state", "t_end_step", "ftle", "d_min", "energy_drift"];
 
 /// The combiner and `OUT`: the backbone's ids.
@@ -116,7 +119,7 @@ pub fn look(g: &StainGraph) -> Look {
     ]
 }
 
-/// The occupant's name as the code reads it: a field, a built-in's id, `custom` or `none`.
+/// The occupant as the placeholder code reads it.
 fn occupant_name(o: &Occupant) -> &str {
     match o {
         Occupant::None => "none",
@@ -183,65 +186,6 @@ pub fn pipeline(g: &StainGraph) -> String {
     text
 }
 
-/// Node `n`'s own code, the Node WGSL view: a custom occupant's text, or the mock's line for a built-in or a field.
-pub fn node_code(occupant: &Occupant) -> String {
-    match occupant {
-        Occupant::Custom(text) => text.clone(),
-        Occupant::None => "// None: the identity (render_gui_spec Part II §13)\n".to_owned(),
-        Occupant::Field(f) => {
-            format!("// the built-in source of `{f}` (mock)\nfn source(ctx: Ctx) -> Field {{ return Field(f32(ctx.sample.{f}), 0.0, 0.0, 0.0); }}\n")
-        }
-        Occupant::Builtin(id) => {
-            format!("// the built-in occupant `{id}` (mock: its WGSL is the registry's)\n")
-        }
-    }
-}
-
-/// The library's groups (placeholder content in 02_stain.png's rows). The unit shape vector `n̂` is spelled "n (unit)":
-/// egui doesn't place combining marks, so the hat (U+0302) would draw as a bare `n` (decided per R-369).
-pub const LIBRARY: [Group; 6] = [
-    Group {
-        title: "Scalar · energy & dynamics",
-        rows: &[
-            "Total energy E₀",
-            "Angular momentum L_z",
-            "Kinetic energy K₀",
-            "FTLE (Lyapunov)",
-            "Time to event t_end",
-        ],
-    },
-    Group {
-        title: "Directional / vector",
-        rows: &["Shape n (unit)", "Escape direction"],
-    },
-    Group {
-        title: "Categorical",
-        rows: &[
-            "Outcome class",
-            "Encounter word / basin",
-            "F₂ conjugacy class",
-        ],
-    },
-    Group {
-        title: "Bivariate",
-        rows: &["n (unit) × FTLE", "Outcome class × time to event"],
-    },
-    Group {
-        title: "Debug · 109 modes",
-        rows: &["Quad depth", "Pixel UV", "SimState (stored) …"],
-    },
-    Group {
-        title: "Your stains",
-        rows: &["my outcome class", "my time to event"],
-    },
-];
-
-/// How many modes the catalogue holds, the library's count (placeholder content, 02_stain.png's "135").
-pub const MODES: u32 = 135;
-
-/// The stain the library shows loaded.
-pub const LOADED: &str = "Outcome class";
-
 /// The compile status line (placeholder content, 02_stain.png's).
 pub const COMPILED: &str = "✔ compiled · 3.1 ms · pipeline cached";
 
@@ -251,25 +195,36 @@ pub const NOTE: &str = "note: brightness range fixed [0, 50]";
 /// What the mock logs when asked to recompile.
 pub const RECOMPILED: &str = "stain recompiled · 3.1 ms (mock)";
 
-/// The editor's content for `g`.
+/// The editor's content for `g`, made once a graph.
 pub fn content(g: &StainGraph) -> Content {
+    static LAST: Mutex<Option<(StainGraph, Content)>> = Mutex::new(None);
+    let mut last = LAST.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some((_, content)) = last.as_ref().filter(|(of, _)| of == g) {
+        return content.clone();
+    }
+    let content = made(g);
+    *last = Some((g.clone(), content.clone()));
+    content
+}
+
+fn made(g: &StainGraph) -> Content {
+    let tables = catalogue();
+    let (described, undescribed) = described(g);
+    let mut problems = tables.problems.clone();
+    problems.extend(undescribed);
     Content {
-        library: &LIBRARY,
-        modes: MODES,
-        loaded: Some(LOADED),
+        library: &tables.groups,
+        modes: tables.modes,
+        loaded: tables.loaded(g),
         code: assembled(g),
         pipeline: pipeline(g),
-        node_code: g
-            .nodes()
-            .map(|n| (n.id, node_code(&n.occupant)))
-            .collect::<BTreeMap<_, _>>(),
+        described,
+        node_code: node_code(g),
         compiled: COMPILED.to_owned(),
         compiling: false,
-        problems: Vec::new(),
+        problems,
         notes: vec![NOTE.to_owned()],
-        fields: &SOURCE_FIELDS,
-        combiners: &COMBINERS,
-        colours: &[],
-        graphs: &[],
+        choices: &tables.choices,
+        graphs: &tables.graphs,
     }
 }

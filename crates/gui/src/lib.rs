@@ -106,6 +106,7 @@ mod tests {
     mod mock_windows_move_resize;
     mod mock_windows_open;
     mod mock_windows_remembered;
+    mod node_editor;
     mod present_fills_window_mock;
     mod reachability;
     mod real_field;

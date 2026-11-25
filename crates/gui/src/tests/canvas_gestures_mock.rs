@@ -493,7 +493,7 @@ fn canvas_gestures_mock_through_the_app() {
     check_selected(&app.stain.canvas, &[PALETTE]);
     let texts = frame_texts(&mut h, &mut app);
     assert!(
-        texts.iter().any(|t| t == "Colour · outcome_state"),
+        texts.iter().any(|t| t == "Colour · Outcome palette"),
         "{texts:?}"
     );
     // Drag it: it moves.
@@ -567,11 +567,11 @@ fn canvas_gestures_mock_through_the_app() {
 #[test]
 fn canvas_gestures_mock_the_toggle_takes_its_press() {
     let (mut app, mut h) = stain_app();
-    super::support::click(&mut h, &mut app, "Pipeline WGSL");
+    super::support::click_scope(&mut h, &mut app, "stain_view_pipeline");
     assert_eq!(app.stain.view, crate::stain::View::Pipeline);
     assert!(!app.stain.canvas.busy());
     check_selected(&app.stain.canvas, &[]);
-    super::support::click(&mut h, &mut app, "Graph");
+    super::support::click_scope(&mut h, &mut app, "stain_view_graph");
     assert_eq!(app.stain.view, crate::stain::View::Graph);
     rejects("the toggle unmoved", || {
         assert_eq!(app.stain.view, crate::stain::View::Pipeline)
@@ -622,8 +622,8 @@ fn canvas_gestures_mock_only_its_presses() {
     let (mut app, mut h) = stain_app();
     app.stain.canvas.selection = [PALETTE].into();
     let rect = canvas_rect(&h);
-    // On the drawer, below its rows.
-    let drawer = pos2(rect.min.x - 30.0, rect.max.y - 20.0);
+    // On the drawer, right of its heading.
+    let drawer = pos2(rect.min.x - 100.0, rect.min.y + 14.0);
     for events in crate::capture::click(drawer) {
         let _ = h.frame(&mut app, events);
     }

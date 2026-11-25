@@ -129,7 +129,7 @@ fn mock_stain_preview_a_source_field_shifts_the_look() {
     let (mut app, mut h) = on_stain(mock_app());
     select(&mut app, &mut h, OUTCOME);
     let (g0, d0, rows) = (graph(&app).clone(), depth(&app), app.console().len());
-    click(&mut h, &mut app, "ftle");
+    click(&mut h, &mut app, "ctx.ftle");
     let _ = h.frame(&mut app, Vec::new());
     check_one_edit((&g0, d0, rows), &app, |g| {
         g.node(OUTCOME).map(|n| &n.occupant) == Some(&Occupant::Field("ftle".into()))

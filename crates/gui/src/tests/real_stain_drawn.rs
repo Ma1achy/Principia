@@ -341,7 +341,7 @@ fn an_edit_in_the_editor_recolours_the_preview_and_the_figure() {
     app.view.mode = Mode::Stain;
     let _ = h.frame(&mut app, Vec::new());
     select(&mut app, &mut h, PALETTE);
-    click(&mut h, &mut app, "margin");
+    click(&mut h, &mut app, "Margin");
     let _ = h.frame(&mut app, Vec::new());
     assert_eq!(
         graph(&app).node(PALETTE).map(|n| &n.occupant),
@@ -378,7 +378,7 @@ fn with_auto_recompile_off_the_picture_waits_for_recompile() {
     let first = picture(&mut app, &mut h, &canvas, Mode::Stain);
     click(&mut h, &mut app, "auto-recompile");
     select(&mut app, &mut h, PALETTE);
-    click(&mut h, &mut app, "margin");
+    click(&mut h, &mut app, "Margin");
     let _ = h.frame(&mut app, Vec::new());
     let waiting = picture(&mut app, &mut h, &canvas, Mode::Stain);
     assert!(waiting == first, "drawn before its recompile");

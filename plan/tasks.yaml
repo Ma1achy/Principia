@@ -1376,6 +1376,7 @@
 - id: TASK-M7-77
   milestone: C7
   title: 'The stain editor draws every node from its description: titles, glyphs, controls and choices, no special cases'
+  status: done
   depends_on:
   - TASK-M7-83
 - id: TASK-M7-84

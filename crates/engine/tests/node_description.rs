@@ -21,7 +21,7 @@ fn builtins() -> Vec<(NodeKind, Occupant)> {
     let mut out: Vec<(NodeKind, Occupant)> = library()
         .unwrap_or_else(|e| panic!("{e}"))
         .into_iter()
-        .filter_map(|e| Some((e.slot, Occupant::Builtin(e.builtin?))))
+        .map(|e| (e.slot, Occupant::Builtin(e.name)))
         .collect();
     for f in assemble::source_fields().unwrap_or_else(|e| panic!("{e}")) {
         out.push((NodeKind::Source, Occupant::Field(f)));
@@ -275,6 +275,55 @@ negative_control!(
     "the example's order lines dropped",
     expected = "the controls are not the example's",
     check_example(&EXAMPLE.replace(" order 0", ""))
+);
+
+/// A swatches glyph whose group a choice names draws the colours of the group the choice has chosen, their current
+/// values; a choice of no colours leaves it the glyph's own.
+fn check_chosen_swatches(describer: &Describer) {
+    let text = "// @glyph swatches \"A\"\n\
+                // @uniform set: u32 = 0 [0, 2]\n// @control set choice(\"A\", \"B\", \"none\") \"Set\"\n\
+                // @uniform a: vec3<f32> = (1.0, 0.0, 0.0)\n// @control a colour \"a\" in \"A\"\n\
+                // @uniform b: vec3<f32> = (0.0, 1.0, 0.0)\n// @control b colour \"b\" in \"B\"\n\
+                fn colour(ctx: Ctx) -> vec3<f32> { return select(uniforms.a, uniforms.b, uniforms.set == 1u); }\n";
+    for (set, uniform, rgb) in [
+        (0.0, "a", [1.0, 0.0, 0.0]),
+        (1.0, "b", [0.0, 0.0, 1.0]),
+        (2.0, "a", [1.0, 0.0, 0.0]),
+    ] {
+        let params: Params = [
+            ("set".to_owned(), vec![set]),
+            ("b".to_owned(), vec![0.0, 0.0, 1.0]),
+        ]
+        .into();
+        let d = describer(NodeKind::Colour, &Occupant::Custom(text.into()), &params);
+        let Shown::Swatches(chips) = d.glyph else {
+            panic!("the glyph is {:?}", d.glyph);
+        };
+        assert_eq!(
+            chips
+                .iter()
+                .map(|c| (c.uniform.as_str(), c.rgb))
+                .collect::<Vec<_>>(),
+            [(uniform, rgb)],
+            "the chips are not the chosen set's"
+        );
+    }
+}
+
+#[test]
+fn description_swatches_follow_the_set_chosen() {
+    check_chosen_swatches(&plain);
+}
+
+negative_control!(
+    description_swatches_follow_the_set_chosen,
+    "a describer blind to the set chosen",
+    expected = "the chips are not the chosen set's",
+    check_chosen_swatches(&|kind, occupant, params| {
+        let mut params = params.clone();
+        params.remove("set");
+        plain(kind, occupant, &params)
+    })
 );
 
 /// A source with nothing declared takes its kind's defaults: its first function's name, "Custom", its kind's glyph and

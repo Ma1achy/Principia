@@ -58,12 +58,9 @@ negative_control!(
     {
         let mut rows = loading(library().expect("the library"));
         let (e, g) = rows.iter_mut().find(|(e, _)| e.debug).expect("a debug row");
-        let source = node_source(
-            e.slot,
-            &Occupant::Builtin(e.builtin.clone().expect("a name")),
-        )
-        .expect("its source")
-        .expect("not the identity");
+        let source = node_source(e.slot, &Occupant::Builtin(e.name.clone()))
+            .expect("its source")
+            .expect("not the identity");
         *g = presets::view(&source).expect("the row as text");
         check_shipped_only(&rows);
     }
@@ -90,12 +87,9 @@ fn check_same_code(rows: &[(Entry, StainGraph)], as_text: &dyn Fn(&str) -> Strin
         if !e.debug {
             continue;
         }
-        let source = node_source(
-            e.slot,
-            &Occupant::Builtin(e.builtin.clone().expect("a name")),
-        )
-        .expect("its source")
-        .expect("not the identity");
+        let source = node_source(e.slot, &Occupant::Builtin(e.name.clone()))
+            .expect("its source")
+            .expect("not the identity");
         let text = presets::view(&as_text(&source)).expect("the row as text");
         let named = assemble(g, Tier::FULL).unwrap_or_else(|why| panic!("{}: {why}", e.id));
         let placed = assemble(&text, Tier::FULL).unwrap_or_else(|why| panic!("{}: {why}", e.id));

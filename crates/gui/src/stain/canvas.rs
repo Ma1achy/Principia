@@ -17,10 +17,10 @@ use eframe::egui::{
     self, pos2, vec2, Align, Color32, Event, FontId, Key, Layout as EguiLayout, MouseWheelUnit,
     PointerButton, Pos2, Rect, Shape, Stroke, StrokeKind, Ui, UiBuilder, Vec2,
 };
-use engine::contract::legend::{OUTCOME_OCCUPANT, SWATCHES};
-use engine::contract::render_state::{NodeId, NodeKind, Occupant, PortType, StainGraph};
+use engine::contract::render_state::{NodeId, NodeKind, PortType, StainGraph};
+use engine::contract::stain::describe::{Description, Shown};
 
-use super::{Content, View, NODE_IDS, VIEWS};
+use super::{controls, description, Content, View, NODE_IDS, VIEWS};
 use crate::keyboard::scopes::ScopeId;
 use crate::windows::Keys;
 
@@ -389,24 +389,21 @@ impl Canvas {
     }
 }
 
-/// A node's title: its kind and its occupant, as the breadcrumb and the inspector read it.
-pub fn title(kind: NodeKind, occupant: &Occupant) -> (&'static str, String) {
-    let kind = match kind {
+/// A kind as a node's title reads it.
+fn kind_name(kind: NodeKind) -> &'static str {
+    match kind {
         NodeKind::Source => "source",
         NodeKind::Colour => "colour",
         NodeKind::Brightness => "brightness",
         NodeKind::Combiner => "combiner",
         NodeKind::Post => "post",
         NodeKind::Out => "OUT",
-    };
-    let name = match occupant {
-        Occupant::None if kind == "OUT" => "to the style".to_owned(),
-        Occupant::None => "None".to_owned(),
-        Occupant::Field(f) => format!("ctx.{f}"),
-        Occupant::Builtin(id) => id.clone(),
-        Occupant::Custom(_) => "custom".to_owned(),
-    };
-    (kind, name)
+    }
+}
+
+/// A node's title: its kind and its description's name, as the breadcrumb and the inspector read it.
+pub fn title(kind: NodeKind, d: &Description) -> String {
+    format!("{} · {}", kind_name(kind), d.name)
 }
 
 /// Feeds the frame's pointer events on `rect` to `canvas`: presses inside it, off `toggles` and on its own layer;
@@ -595,8 +592,8 @@ fn graph(ui: &mut Ui, rect: Rect, toggles: Rect, frame: &mut Frame<'_>, keys: &m
         node(
             ui,
             &painter,
-            &visuals,
             g,
+            frame.content,
             d,
             zoom,
             canvas.selection.contains(&d.id),
@@ -691,8 +688,8 @@ fn hint(painter: &egui::Painter, visuals: &egui::Visuals, rect: Rect) {
 fn node(
     ui: &mut Ui,
     painter: &egui::Painter,
-    visuals: &egui::Visuals,
     g: &StainGraph,
+    content: Option<&Content>,
     d: &Drawn,
     zoom: f32,
     selected: bool,
@@ -700,6 +697,8 @@ fn node(
     let Some(n) = g.node(d.id) else {
         return;
     };
+    let shown = description(content, n);
+    let visuals = &ui.visuals().clone();
     let r = d.rect;
     painter.rect_filled(r, 3.0 * zoom, visuals.window_fill);
     let stroke = if selected {
@@ -713,37 +712,26 @@ fn node(
         [title_rect.left_bottom(), title_rect.right_bottom()],
         visuals.widgets.noninteractive.bg_stroke,
     );
-    let (kind, name) = title(n.kind, &n.occupant);
     let size = 13.0 * zoom;
     let mut job = egui::text::LayoutJob::default();
     job.append(
-        &format!("{kind} · "),
+        &format!("{} · ", kind_name(n.kind)),
         0.0,
         egui::TextFormat::simple(FontId::proportional(size), visuals.weak_text_color()),
     );
     job.append(
-        &name,
+        &shown.name,
         0.0,
         egui::TextFormat::simple(FontId::proportional(size), visuals.strong_text_color()),
     );
     let label = title_rect.shrink2(vec2(10.0 * zoom, 0.0));
     ui.put(label, egui::Label::new(job).selectable(false).truncate());
-    // A custom occupant's code is hand-written: the `{ }` badge (§8).
-    if matches!(n.occupant, Occupant::Custom(_)) {
-        painter.text(
-            pos2(title_rect.max.x - 8.0 * zoom, title_rect.center().y),
-            egui::Align2::RIGHT_CENTER,
-            "{ }",
-            FontId::monospace(11.0 * zoom),
-            visuals.warn_fg_color,
-        );
-    }
     if has_glyph(n.kind) {
         let glyph = Rect::from_min_size(
             pos2(r.min.x + 12.0 * zoom, title_rect.max.y + 5.0 * zoom),
             vec2(r.width() - 24.0 * zoom, GLYPH_H * zoom - 10.0 * zoom),
         );
-        state_glyph(painter, visuals, n, glyph, zoom);
+        state_glyph(painter, visuals, &shown, glyph, zoom);
     }
     let font = FontId::proportional(12.0 * zoom);
     for (i, label) in port_labels(n.kind, &d.ins).into_iter().enumerate() {
@@ -770,53 +758,47 @@ fn node(
     }
 }
 
-/// Whether a node of `kind` with `occupant` is the outcome palette, drawn as its swatches.
-pub fn outcome_palette(kind: NodeKind, occupant: &Occupant) -> bool {
-    kind == NodeKind::Colour && *occupant == Occupant::Builtin(OUTCOME_OCCUPANT.to_owned())
-}
-
-/// The state glyph (§8): a source's field and a combiner's occupant as a dropdown's face, the outcome palette's
-/// swatches as chips, a brightness as its ramp from full to its darkest, anything else as its occupant's name.
+/// The state glyph (§8), the description's: its name on a dropdown's face, its colour chips, a ramp from full to its
+/// darkest, its gradient, its name, or nothing.
 fn state_glyph(
     painter: &egui::Painter,
     visuals: &egui::Visuals,
-    n: &engine::contract::render_state::Node,
+    d: &Description,
     rect: Rect,
     zoom: f32,
 ) {
     let font = FontId::proportional(12.0 * zoom);
-    let face = |text: &str| {
-        painter.rect_filled(rect, 2.0, visuals.widgets.inactive.bg_fill);
-        painter.text(
-            rect.left_center() + vec2(8.0 * zoom, 0.0),
-            egui::Align2::LEFT_CENTER,
-            text,
-            font.clone(),
-            visuals.text_color(),
-        );
-        painter.text(
-            rect.right_center() - vec2(8.0 * zoom, 0.0),
-            egui::Align2::RIGHT_CENTER,
-            "▾",
-            font.clone(),
-            visuals.text_color(),
-        );
-    };
-    match (&n.kind, &n.occupant) {
-        (NodeKind::Source, _) | (NodeKind::Combiner, _) => face(&title(n.kind, &n.occupant).1),
-        (kind, occupant) if outcome_palette(*kind, occupant) => {
-            let w = rect.width() / SWATCHES.len() as f32;
-            for (i, s) in SWATCHES.iter().enumerate() {
-                let [r, gr, b] = s.srgb8;
+    match &d.glyph {
+        Shown::None => {}
+        Shown::Dropdown => {
+            painter.rect_filled(rect, 2.0, visuals.widgets.inactive.bg_fill);
+            painter.text(
+                rect.left_center() + vec2(8.0 * zoom, 0.0),
+                egui::Align2::LEFT_CENTER,
+                &d.name,
+                font.clone(),
+                visuals.text_color(),
+            );
+            painter.text(
+                rect.right_center() - vec2(8.0 * zoom, 0.0),
+                egui::Align2::RIGHT_CENTER,
+                "▾",
+                font,
+                visuals.text_color(),
+            );
+        }
+        Shown::Swatches(chips) => {
+            let w = rect.width() / chips.len() as f32;
+            for (i, s) in chips.iter().enumerate() {
                 let chip = Rect::from_min_size(
                     pos2(rect.min.x + i as f32 * w, rect.min.y),
                     vec2(w - 1.0, rect.height()),
                 );
-                painter.rect_filled(chip, 0.0, Color32::from_rgb(r, gr, b));
+                painter.rect_filled(chip, 0.0, controls::colour(s.rgb));
             }
         }
-        (NodeKind::Brightness, _) => {
-            // A ramp, full to dark: what a brightness does, whatever its occupant.
+        Shown::Gradient(stops) => controls::gradient(painter, rect, stops),
+        Shown::Ramp => {
             let steps = 24;
             let w = rect.width() / steps as f32;
             for i in 0..steps {
@@ -829,11 +811,11 @@ fn state_glyph(
                 painter.rect_filled(chip, 0.0, Color32::from_gray(v));
             }
         }
-        _ => {
+        Shown::Name => {
             painter.text(
                 rect.left_center(),
                 egui::Align2::LEFT_CENTER,
-                title(n.kind, &n.occupant).1,
+                &d.name,
                 font,
                 visuals.weak_text_color(),
             );

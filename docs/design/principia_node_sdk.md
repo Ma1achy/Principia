@@ -35,8 +35,9 @@ its picture come out the same. Its control arm is a branch on the id.
   a label edit changes no picture and compiles nothing. `engine::contract::stain::describe::describe` gives the editor
   one description, and each library entry carries its own. The occupant algebra's expression trees
   (`render::codegen`) do not declare yet: they come with gap 2.
-- **Not shared: the editor.** `crates/gui/src/stain` still takes titles, the palette's swatches, the "maps" line and
-  the choices from its own tables, draws a control only for a scalar with a range, and draws at most eight of them.
+- **The editor, shared (TASK-M7-77).** `crates/gui/src/stain` takes titles, glyphs, groups, the "maps" line, the
+  choices and every control from the description (`stain::controls` draws them, `stain::catalogue` is the library), on
+  the mock and the real side alike. The special editors of gap 3 are not controls yet.
 - **Not shared: the colour algebra.** Site-blend, field-ramp and the combinators are to be Rust operations
   (`Primitive`) that generate WGSL, with inspectors written by hand. As planned they are exactly the private door rule
   4 forbids (gap 1).
@@ -51,9 +52,9 @@ Each row: what is missing, and what to do. The task that takes it is in brackets
 |---|---|---|
 | 1 | Parameters are numbers and short vectors only. A gradient with any number of stops, a list of sites with colours, a swatch set, a lookup table and a named field cannot be declared. The custom-stop ramp is a special field on colour nodes, outside the schema. | Add parameter types: `gradient`, `list<…>` with a declared maximum, `lut`, `field`, `image`. The ramp becomes the first gradient. (M7-78) |
 | 2 | The algebra's nodes would have their own inspectors. | Each generates a source with declarations, so its inspector is drawn from them like any other. Structure (which kernel, how many sites) is a `choice` or a list; changing it may recompile, but the node is still the same shader. (M7-06, -07, -09, -10, built on M7-78) |
-| 3 | The sphere editor, gradient bar and palette grid are special editors, so far reachable only by node kind and wired subtype (render_gui_spec Part II §9). | They become controls in the fixed set: any node with a direction list may ask for the sphere, any with a gradient for the bar. (M7-77, M7-23) |
+| 3 | The sphere editor, gradient bar and palette grid are special editors, so far reachable only by node kind and wired subtype (render_gui_spec Part II §9). | They become controls in the fixed set: any node with a direction list may ask for the sphere, any with a gradient for the bar. The bar is one (`gradient`) and the palette is its colours; the sphere is left. (M7-23) |
 | 4 | Relations between controls: shown only when another is on, linked lo/hi pairs, a soft range inside the hard one, reset to default, units and number format. | Add `pair`, `soft [lo, hi]`, `unit`, `format` to `@control`. When a control matters is not declared: it is proved (gap 26). Reset and copy/paste of values come with every control, for free. (M7-78) |
-| 5 | The editor draws the first eight parameters and drops the rest silently. | Controls scroll and fold by `group`; no cap. A test with 40 parameters. (M7-77) |
+| 5 | The editor draws the first eight parameters and drops the rest silently. | Done: controls scroll and fold by `group`; no cap. (M7-77) |
 
 ### What a node reads
 
@@ -172,7 +173,7 @@ and what moves it.
 | Generated debug views | Generated from the field ledger, which is right: one source of truth. They carry declarations, and the library names them by id. | Done. | M7-76, M7-83 |
 | Site-blend, gradients, combinators, overlays | Planned as Rust operations with their own inspectors. Not built. | Shipped sources on M7-78's parameters. Where a shader must be generated (a chosen kernel, a list's length), the generator takes a declared source and is open to a custom too. | M7-06, -07, -09, -10 |
 | Presets | Graphs built in Rust (`presets.rs`, `structural.rs`), with small shaders as strings inside. | Saved stains as files, read as a user's are. Their inline shaders become shipped sources. | M7-17 |
-| The mock engine's stain | Its own palette, names and shader text. | The shipped registry. | M7-77 |
+| The mock engine's stain | The shipped registry's names, descriptions and source text. Its assembled code and compile times are still invented: the mock assembles nothing. | Done. | M7-77 |
 | Print graph nodes | Declared as data already, in JSON, in a format of their own. | The same words and controls, so one inspector draws both. | M8-69 |
 | Legend line for FTLE | A special case on one field. | A declared note on the input. | M7-79, M8-22 |
 

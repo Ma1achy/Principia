@@ -171,9 +171,7 @@ fn shown(kind: NodeKind, declared: Option<&Glyph>, controls: &[ControlView]) -> 
         Glyph::Ramp => Shown::Ramp,
         Glyph::None => Shown::None,
         Glyph::Swatches(group) => Shown::Swatches(
-            controls
-                .iter()
-                .filter(|c| c.control == Control::Colour && (group.is_none() || &c.group == group))
+            chips(group.as_deref(), controls)
                 .map(|c| Swatch {
                     uniform: c.uniform.clone(),
                     label: c.label.clone(),
@@ -193,6 +191,42 @@ fn shown(kind: NodeKind, declared: Option<&Glyph>, controls: &[ControlView]) -> 
                 .unwrap_or_default(),
         ),
     }
+}
+
+/// The colour controls a swatches glyph of `group` draws: every one without a group; with one, that group's, or, where a
+/// choice names `group` among its values, the colours of the group its current value names.
+// The plan is unclear here; chose to follow a choice that names the group, because the grammar has no word for which of
+// two swatch sets is shown.
+fn chips<'a>(
+    group: Option<&str>,
+    controls: &'a [ControlView],
+) -> impl Iterator<Item = &'a ControlView> {
+    let chosen = |g: &str| {
+        controls.iter().find_map(|c| match &c.control {
+            Control::Choice(names) if names.iter().any(|n| n == g) => {
+                let at = c.value.first().copied().unwrap_or(0.0) as usize;
+                names.get(at).cloned()
+            }
+            _ => None,
+        })
+    };
+    let of = |g: &str| -> Vec<&'a ControlView> {
+        controls
+            .iter()
+            .filter(|c| c.control == Control::Colour && c.group.as_deref() == Some(g))
+            .collect()
+    };
+    let shown = match group {
+        None => controls
+            .iter()
+            .filter(|c| c.control == Control::Colour)
+            .collect(),
+        Some(g) => chosen(g)
+            .map(|c| of(&c))
+            .filter(|shown| !shown.is_empty())
+            .unwrap_or_else(|| of(g)),
+    };
+    shown.into_iter()
 }
 
 /// The controls of `declaration`'s uniforms with `params`, in display order.

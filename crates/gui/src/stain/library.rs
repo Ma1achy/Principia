@@ -26,8 +26,8 @@ pub struct State {
     pub filter: String,
     /// The groups closed, by their place.
     pub closed: BTreeSet<usize>,
-    /// The row selected; the stain loaded until one is.
-    pub selected: Option<&'static str>,
+    /// The row selected, by its place in the whole library; the stain loaded until one is.
+    pub selected: Option<usize>,
 }
 
 /// One line of the drawer's list: a group's heading, by its place, or a row, by its place in the whole library.
@@ -177,7 +177,7 @@ pub fn show(
                             }
                             Item::Row(k, name) => {
                                 let row = ui.add(Button::selectable(
-                                    loaded == Some(name),
+                                    loaded == Some(k),
                                     format!("   {name}"),
                                 ));
                                 if row.clicked() {

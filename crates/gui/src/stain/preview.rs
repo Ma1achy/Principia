@@ -2,22 +2,20 @@
 //! everywhere", § "02 Stain"; 02_stain.png), right. The preview is the engine side's, drawn through the canvas as the
 //! figure is, live: it is redrawn from the graph as it stands, so an edit shows at once. It keeps the viewport's aspect
 //! (§G1: "Every preview of the slice keeps the viewport's aspect ratio — square for the slice"), the Explore figure's
-//! rect, fitted into its area, never stretched or cropped. Under it the inspector shows the selected node: its title
-//! and what it maps, its choices (a source's field, the combiner's occupant) and its scalar params, each edit one
-//! `SetField` of the graph (a slider's drag applied every frame its value changes, one history entry, R-96, R-458 F2),
-//! the outcome palette's swatches, and its shader's actions; with no node selected, the graph's. The full morphing
-//! inspector is TASK-M7-23's and TASK-M8-21's.
+//! rect, fitted into its area, never stretched or cropped. Under it the inspector shows the selected node from its
+//! description: its title, what it is and maps, the shaders of its kind, its controls ([`controls`]) and its shader's
+//! actions, each edit one `SetField` of the graph (a slider's drag applied every frame its value changes, one history
+//! entry); with no node selected, the graph's.
 
-use eframe::egui::{
-    self, pos2, vec2, Button, Color32, Rect, RichText, Slider, Ui, UiBuilder, Vec2,
-};
+use std::collections::BTreeSet;
+
+use eframe::egui::{self, pos2, vec2, Button, Rect, RichText, Ui, UiBuilder, Vec2};
 use eframe::egui_wgpu;
-use engine::contract::legend::SWATCHES;
-use engine::contract::render_state::{NodeKind, Occupant};
+use engine::contract::render_state::NodeKind;
 
 use super::{
-    canvas, choices, edited, params, whole, Out, Page, Scratch, CHOICE_IDS, EDIT_WGSL, PARAM_IDS,
-    REVERT,
+    canvas, choices, chosen, controls, description, edited, Out, Page, Scratch, CHOICE_IDS,
+    EDIT_WGSL, REVERT,
 };
 use crate::keyboard::scopes::ScopeId;
 use crate::windows::Keys;
@@ -36,22 +34,6 @@ pub fn fit(area: Rect, viewport: Vec2) -> Rect {
     // The largest scale at which both sides fit.
     let size = v * (area.width() / v.x).min(area.height() / v.y);
     Rect::from_min_size(pos2(area.center().x - size.x / 2.0, area.min.y), size)
-}
-
-/// What node `kind` with `occupant` maps, as the inspector's second line reads.
-pub fn maps(kind: NodeKind, occupant: &Occupant) -> String {
-    if canvas::outcome_palette(kind, occupant) {
-        return "maps outcome class [categorical] → vec3".to_owned();
-    }
-    match (kind, occupant) {
-        (NodeKind::Source, Occupant::Field(f)) => format!("reads ctx.{f} → field"),
-        (NodeKind::Colour, _) => "maps its field → vec3".to_owned(),
-        (NodeKind::Brightness, _) => "maps its field → f32".to_owned(),
-        (NodeKind::Combiner, _) => "colour · brightness → vec3".to_owned(),
-        (NodeKind::Post, _) => "vec3 → vec3".to_owned(),
-        (NodeKind::Out, _) => "the stain's output, to the style (Display)".to_owned(),
-        (NodeKind::Source, _) => "None: no field".to_owned(),
-    }
 }
 
 /// Draws the preview and the inspector in `rect`.
@@ -124,13 +106,16 @@ fn inspector(
         ui.label(RichText::new("select one node to edit it").weak());
         return;
     };
-    let (kind, name) = canvas::title(n.kind, &n.occupant);
-    let mut kind_title = kind.to_owned();
-    if let Some(first) = kind_title.get_mut(0..1) {
+    let d = description(page.content, n);
+    let mut title = canvas::title(n.kind, &d);
+    if let Some(first) = title.get_mut(0..1) {
         first.make_ascii_uppercase();
     }
-    ui.label(RichText::new(format!("{kind_title} · {name}")).heading());
-    ui.label(RichText::new(maps(n.kind, &n.occupant)).weak());
+    ui.label(RichText::new(title).heading());
+    if !d.about.is_empty() {
+        ui.label(&d.about);
+    }
+    ui.label(RichText::new(&d.maps).weak());
     ui.add_space(6.0);
     if let Some(c) = page.content {
         let options = choices(n, c);
@@ -144,59 +129,50 @@ fn inspector(
                 .strong(),
             );
             ui.horizontal_wrapped(|ui| {
-                for (i, (occupant, label)) in options.into_iter().enumerate().take(CHOICE_IDS.len())
-                {
-                    let button = ui.add(Button::selectable(n.occupant == occupant, label));
+                for (choice, id) in options.into_iter().zip(CHOICE_IDS.iter()) {
+                    let button = ui.add(Button::selectable(chosen(n, choice, c), choice.name));
                     if button.clicked() {
-                        clicked.push(CHOICE_IDS[i]);
+                        clicked.push(id);
                     }
-                    keys.place(CHOICE_IDS[i], &button);
+                    keys.place(id, &button);
                 }
             });
             ui.add_space(6.0);
         }
     }
-    let id = n.id;
-    let ps = params(g, id);
-    if !ps.is_empty() {
-        ui.label(RichText::new("▾ Params").strong());
-        for (i, (name, value, lo, hi)) in ps.into_iter().enumerate().take(PARAM_IDS.len()) {
-            let mut v = value;
-            let slider = Slider::new(&mut v, lo..=hi).text(name.as_str());
-            let slider = ui.add(if whole(g, id, &name) {
-                slider.integer()
-            } else {
-                slider
-            });
-            keys.place(PARAM_IDS[i], &slider);
-            // Live: each frame the value changes, one `SetField` of the graph, the drag's frames one history entry
-            // under the pointer's hold's key (R-458 F2).
-            if slider.changed() {
-                out.edits
-                    .extend(edited(g, |g| g.set_param(id, &name, vec![v])));
+    let open: BTreeSet<ScopeId> = s
+        .open
+        .iter()
+        .filter(|(of, _)| *of == n.id)
+        .map(|(_, scope)| *scope)
+        .collect();
+    let mut edits = Vec::new();
+    for section in controls::sections(&d) {
+        let folded = s.folded.contains(&section.title);
+        let arrow = if folded { "▸" } else { "▾" };
+        let text = RichText::new(format!("{arrow} {}", section.title)).strong();
+        let heading = ui.add(Button::new(text).frame(false));
+        if heading.clicked() {
+            clicked.push(section.scope.id);
+        }
+        keys.place(section.scope.id, &heading);
+        if !folded {
+            let mut draw = controls::Draw {
+                focus: page.focus,
+                open: &open,
+                keys,
+                clicked,
+                edits: &mut edits,
+            };
+            for (k, part) in &section.controls {
+                controls::show(ui, &d.controls[*k], part, &mut draw);
             }
         }
         ui.add_space(6.0);
     }
-    if canvas::outcome_palette(n.kind, &n.occupant) {
-        ui.label(RichText::new("▾ Palette").strong());
-        for swatch in SWATCHES {
-            let [r, gr, b] = swatch.srgb8;
-            ui.horizontal(|ui| {
-                let (chip, _) = ui.allocate_exact_size(vec2(18.0, 14.0), egui::Sense::hover());
-                ui.painter()
-                    .rect_filled(chip, 1.0, Color32::from_rgb(r, gr, b));
-                ui.label(swatch.label);
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(
-                        RichText::new(format!("#{r:02x}{gr:02x}{b:02x}"))
-                            .monospace()
-                            .weak(),
-                    );
-                });
-            });
-        }
-        ui.add_space(6.0);
+    for (uniform, value) in edits {
+        out.edits
+            .extend(edited(g, |g| g.set_param(n.id, &uniform, value)));
     }
     if n.kind != NodeKind::Out {
         ui.label(RichText::new("▾ Shader").strong());
