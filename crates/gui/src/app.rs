@@ -159,6 +159,8 @@ pub struct App<S: EngineSide> {
     scrolled_to: (Vec<String>, u8),
     snapshot: Snapshot,
     console: Vec<LogEntry>,
+    /// The footer's latest message, kept apart from the console's rows, which the hover's edits push out.
+    latest: Option<LogEntry>,
     counts: Counts,
     last_read: Option<f64>,
     reread: bool,
@@ -210,6 +212,7 @@ impl<S: EngineSide> App<S> {
         let mut counts = Counts::default();
         let snapshot = side.engine().snapshot();
         let errored = absorb(&snapshot, &mut console, &mut counts);
+        let latest = explore::footer::latest(&snapshot.log).cloned();
         Self {
             side,
             view: initial_view(),
@@ -234,6 +237,7 @@ impl<S: EngineSide> App<S> {
             hover_sent: None,
             snapshot,
             console,
+            latest,
             counts,
             last_read: None,
             reread: false,
@@ -286,12 +290,14 @@ impl<S: EngineSide> App<S> {
         let at = crate::clock::time::SystemTime::now()
             .duration_since(crate::clock::time::UNIX_EPOCH)
             .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
-        self.console.push(LogEntry {
+        let entry = LogEntry {
             severity: Severity::Warn,
             at,
             source: Source::App,
             message,
-        });
+        };
+        self.console.push(entry.clone());
+        self.latest = Some(entry);
         self.counts.warnings = self.counts.warnings.saturating_add(1);
     }
 
@@ -403,6 +409,9 @@ impl<S: EngineSide> App<S> {
             && before.render.stain_graph != self.snapshot.render.stain_graph
         {
             self.side.recompile();
+        }
+        if let Some(latest) = explore::footer::latest(&self.snapshot.log) {
+            self.latest = Some(latest.clone());
         }
         if absorb(&self.snapshot, &mut self.console, &mut self.counts) {
             self.console_auto_opened |= !self.console_open;
@@ -764,7 +773,7 @@ impl<S: EngineSide> App<S> {
             layout.footer,
             &explore::footer::Footer {
                 counts: self.counts,
-                latest: self.console.last(),
+                latest: self.latest.as_ref(),
                 memory: self.snapshot.frame.live_memory,
                 is_mock: self.side.is_mock(),
                 console_open: self.console_open,
@@ -1510,6 +1519,7 @@ impl<S: EngineSide> App<S> {
                 windows::console::Act::Copy(text) => ctx.copy_text(text),
                 windows::console::Act::Clear => {
                     self.console.clear();
+                    self.latest = None;
                     self.counts = Counts::default();
                 }
                 windows::console::Act::Close => {

@@ -7,7 +7,7 @@
 use eframe::egui::{
     self, Align, Button, Color32, Layout as EguiLayout, Rect, RichText, Sense, Ui, UiBuilder,
 };
-use engine::contract::log::{LogEntry, Severity};
+use engine::contract::log::{LogEntry, Severity, Source};
 use engine::contract::snapshot::LiveMemory;
 
 use crate::app::{Actions, Counts};
@@ -33,7 +33,7 @@ pub const KEYS_HINT: &str = "? keys";
 pub struct Footer<'a> {
     /// The counts since the session began.
     pub counts: Counts,
-    /// The latest entry, if any.
+    /// The latest message, if any ([`latest`]).
     pub latest: Option<&'a LogEntry>,
     /// The snapshot's memory, if any.
     pub memory: Option<LiveMemory>,
@@ -74,6 +74,30 @@ pub fn severity_colour(visuals: &egui::Visuals, severity: Severity) -> Color32 {
     }
 }
 
+/// The colour of the counts: the worst severity counted's, the button's own (`None`) while there is nothing to see.
+pub fn counts_colour(visuals: &egui::Visuals, counts: Counts) -> Option<Color32> {
+    let worst = if counts.errors > 0 {
+        Severity::Error
+    } else if counts.warnings > 0 {
+        Severity::Warn
+    } else {
+        return None;
+    };
+    Some(severity_colour(visuals, worst))
+}
+
+/// What ends the log line of an edit marked "no history" (`engine::contract::store::set_field_message`).
+pub const NO_HISTORY: &str = " (no history)";
+
+/// The newest of `log`'s entries the footer shows as the latest message.
+// The plan is unclear here: whether a logged edit marked "no history" is a message; chose not, because the pointer over
+// the figure and playback send one a frame, and a warning would be gone before it was read. The console lists them.
+pub fn latest(log: &[LogEntry]) -> Option<&LogEntry> {
+    log.iter()
+        .rev()
+        .find(|e| !(e.source == Source::Contract && e.message.ends_with(NO_HISTORY)))
+}
+
 /// Draws the footer in `rect`; a click on it opens the console.
 pub fn show(
     ui: &mut Ui,
@@ -105,8 +129,11 @@ pub fn show(
             .max_rect(inner)
             .layout(EguiLayout::left_to_right(Align::Center)),
     );
-    let label = RichText::new(counts_label(footer.counts, footer.console_open)).monospace();
-    let toggle = row.add(Button::new(label).frame(false)).clicked();
+    let mut label = RichText::new(counts_label(footer.counts, footer.console_open)).monospace();
+    if let Some(colour) = counts_colour(row.visuals(), footer.counts) {
+        label = label.color(colour);
+    }
+    let toggle = row.add(Button::new(label)).clicked();
     if let Some(entry) = footer.latest {
         let colour = severity_colour(row.visuals(), entry.severity);
         let room = (right_edge - row.cursor().min.x - 16.0).max(0.0);
