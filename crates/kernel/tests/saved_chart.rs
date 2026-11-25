@@ -33,6 +33,7 @@ use kernel::chart::saved::{
 };
 use kernel::chart::shape_sphere::pixel_centre;
 use kernel::chart::tilt::{latent_basis, Hidden, LatentFrame, Placement, Shift};
+use kernel::chart::warp::AxisWarp;
 use kernel::chart::{
     Chart, ChartDecode, Float, InvariantLE, Latent, ShapeMap, ShapeSphere, Tilt, TiltMap, TiltSpec,
     Tilted, ValidationResult,
@@ -1611,10 +1612,19 @@ fn check_every_parent(alter: fn(&mut [f64; WORDS])) {
         "Φ_θ,Δm at rest",
         alter,
     );
+    // A mixed chart's codes: its two axes', then each axis's warp kind.
     check_parent(
         Mixed::<Alpha, ZQ1, f64>::new(FROZEN, [0.1, 1.2], [-0.7, 0.9]),
-        2,
+        4,
         "a mixed chart",
+        alter,
+    );
+    check_parent(
+        Mixed::<Alpha, ZQ1, f64>::new(FROZEN, [0.1, 1.2], [-0.7, 0.9])
+            .with_warps(AxisWarp::log(), AxisWarp::power(2.5).expect("γ > 0"))
+            .expect("log on a positive range"),
+        4,
+        "a warped mixed chart",
         alter,
     );
     check_parent(

@@ -18,7 +18,7 @@
 
 use std::fmt;
 
-use super::registry::{pair, Class, Constraints, Exactness, Inverse, Scale, Warp};
+use super::registry::{pair, Class, Constraints, Exactness, Inverse, PairMap, Scale, Warp};
 use super::validate::{AxisInverse, GeneralSolve, ValidatedSpec};
 use crate::contract::sim_config::Latent;
 
@@ -145,6 +145,7 @@ fn plain(chart: &ValidatedSpec) -> bool {
         q.iter().filter(|&&x| x == 1.0).count() == 1 && q.iter().all(|&x| x == 0.0 || x == 1.0)
     };
     spec.constraints == Constraints::default()
+        && spec.pair_map == PairMap::Independent
         && spec
             .axes
             .iter()
@@ -166,8 +167,15 @@ pub fn resolve_spec(chart: &ValidatedSpec) -> Resolution {
 pub fn resolve_spec_with(chart: &ValidatedSpec, guard: bool) -> Resolution {
     let [h, v] = chart.axes();
     let mut labels = Vec::new();
+    // The latent chart's uniforms carry no warp and no pair map: a chart with either goes to the CPU.
+    let affine = chart.spec().pair_map == PairMap::Independent
+        && chart
+            .spec()
+            .axes
+            .iter()
+            .all(|a| matches!(a.warp, Warp::Feasibility | Warp::Linear));
     let lowering = match (h, v) {
-        (AxisInverse::Latent(q1), AxisInverse::Latent(q2)) => Lowering::Uniform {
+        (AxisInverse::Latent(q1), AxisInverse::Latent(q2)) if affine => Lowering::Uniform {
             z0: chart.spec().slice,
             q1: *q1,
             q2: *q2,

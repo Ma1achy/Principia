@@ -8,8 +8,9 @@
 //! [`PLambdaX`], [`PLambdaY`]), each in its own block, set by the link's inverse, so kind 2 with no residual: the block's
 //! other control is frozen. The mass block's one link maps two controls onto three masses, so a single mass has no
 //! inverse of its own; a mass axis is a latent mass control, `z_μ₁` or `z_μ₂`. The warp is affine from `[0,1]` onto the
-//! axis's range, `x(t) = lo + (hi − lo)·t`, in `z` for a latent coordinate and in the quantity for a derived one (R-408's
-//! "a physical-quantity axis mapped linearly onto its range"). Which quantity each axis is, is the chart's type, baked
+//! axis's range, `x(t) = lo + (hi − lo)·t`, in `z` for a latent coordinate and in the quantity for a derived one, a
+//! physical-quantity axis mapped linearly onto its range; power or log is an option per axis ([`Mixed::with_warps`],
+//! `super::warp`), its word beside the ranges. Which quantity each axis is, is the chart's type, baked
 //! (lowering Part 3: chart type and axis kinds are monomorphised, never interpreted); the ranges and the frozen values
 //! are its parameters, uniforms.
 //!
@@ -54,6 +55,7 @@ use spirv_std::num_traits::Float;
 use super::invariant::WarpReal;
 use super::saved::{axis_code, ParentParams, Reader, Writer};
 use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
+use super::warp::{AxisWarp, WarpKind};
 use super::{AxisMeta, BlockTouch, Chart, ChartDecode, ChartOut, Constraint, ValidationResult};
 use crate::decode::{self, Decoded, Latent};
 use crate::encode::blocks::Ends;
@@ -62,6 +64,7 @@ use crate::generated::links::{
     Momentum as MomentumRange, Selection,
 };
 use crate::payload::PayloadReal;
+use crate::real::Real;
 
 /// One of the eight latent coordinates, in the decoder's block layout (`crate::decode::latent`). Its discriminant is a
 /// `u32`, a type the kernel's SPIR-V has without the `Int8` capability.
@@ -224,6 +227,8 @@ pub struct Mixed<H, V, P> {
     pub h_range: [P; 2],
     /// `[lo, hi]`, the vertical axis's value at `v = 0` and `v = 1`.
     pub v_range: [P; 2],
+    /// Each axis's warp onto its range, `[horizontal, vertical]`: linear unless [`Mixed::with_warps`] sets another.
+    pub warps: [AxisWarp<P>; 2],
     /// The axes, the chart's type.
     axes: PhantomData<(H, V)>,
 }
@@ -241,6 +246,7 @@ impl<H, V, P: PartialEq> PartialEq for Mixed<H, V, P> {
         self.frozen == other.frozen
             && self.h_range == other.h_range
             && self.v_range == other.v_range
+            && self.warps == other.warps
     }
 }
 
@@ -252,6 +258,7 @@ impl<H: Quantity, V: Quantity, P: fmt::Debug> fmt::Debug for Mixed<H, V, P> {
             .field("frozen", &self.frozen)
             .field("h_range", &self.h_range)
             .field("v_range", &self.v_range)
+            .field("warps", &self.warps)
             .finish()
     }
 }
@@ -264,11 +271,26 @@ impl<H: Quantity, V: Quantity> ParentParams for Mixed<H, V, f64> {
         w.all(&self.frozen);
         w.all(&self.h_range);
         w.all(&self.v_range);
+        // Linear must write `0, 0`: a saved chart's unused words are `+0`, so words with no warp in them read as linear.
+        for warp in self.warps {
+            w.code(warp.kind as u32);
+            w.put(warp.gamma);
+        }
     }
     fn read(r: &mut Reader<'_>) -> Option<Self> {
         r.expect(axis_code::<H>())?;
         r.expect(axis_code::<V>())?;
-        Some(Mixed::new(r.array()?, r.array()?, r.array()?))
+        let chart = Mixed::new(r.array()?, r.array()?, r.array()?);
+        let mut warp = || -> Option<AxisWarp<f64>> {
+            let kind = WarpKind::from_word(r.code(3)?);
+            let gamma = r.take()?;
+            match kind {
+                WarpKind::Power => AxisWarp::power(gamma),
+                _ => Some(AxisWarp { kind, gamma }),
+            }
+        };
+        let (h, v) = (warp()?, warp()?);
+        chart.with_warps(h, v)
     }
 }
 
@@ -304,14 +326,14 @@ pub(super) fn lerp<F: Float>(range: [F; 2], t: F) -> F {
     range[0] + (range[1] - range[0]) * t
 }
 
-impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
+impl<H: Quantity, V: Quantity, P: Copy + Default> Mixed<H, V, P> {
     /// The two axes set different coordinates, checked where the chart is built for its axes.
     const DISTINCT: () = assert!(
         H::COORDINATE as u32 != V::COORDINATE as u32,
         "a mixed chart's two axes set one coordinate"
     );
 
-    /// The chart with the frozen controls `frozen` and the axes' ranges.
+    /// The chart with the frozen controls `frozen` and the axes' ranges, each axis linear.
     #[inline]
     pub fn new(frozen: [P; 8], h_range: [P; 2], v_range: [P; 2]) -> Self {
         let () = Self::DISTINCT;
@@ -319,22 +341,45 @@ impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
             frozen,
             h_range,
             v_range,
+            warps: [AxisWarp::linear(), AxisWarp::linear()],
             axes: PhantomData,
         }
     }
+}
 
-    /// The horizontal axis's value at `u`.
+impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P>
+where
+    f64: From<P>,
+{
+    /// The chart with the horizontal axis warped by `h` and the vertical by `v`; `None` where a warp is not defined
+    /// on its axis's range ([`AxisWarp::fits`]).
+    pub fn with_warps(self, h: AxisWarp<P>, v: AxisWarp<P>) -> Option<Self> {
+        (h.fits(self.h_range) && v.fits(self.v_range)).then_some(Mixed {
+            warps: [h, v],
+            ..self
+        })
+    }
+}
+
+impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
+    /// The horizontal axis's value at `u`, through its warp.
     #[inline]
-    pub fn h<F: Float + From<P>>(&self, u: F) -> F {
+    pub fn h<F: Real + Float + From<P>>(&self, u: F) -> F {
         let w = <F as From<P>>::from;
-        lerp([w(self.h_range[0]), w(self.h_range[1])], u)
+        self.warps[0].value([w(self.h_range[0]), w(self.h_range[1])], u)
     }
 
-    /// The vertical axis's value at `v`.
+    /// The vertical axis's value at `v`, through its warp.
     #[inline]
-    pub fn v<F: Float + From<P>>(&self, v: F) -> F {
+    pub fn v<F: Real + Float + From<P>>(&self, v: F) -> F {
         let w = <F as From<P>>::from;
-        lerp([w(self.v_range[0]), w(self.v_range[1])], v)
+        self.warps[1].value([w(self.v_range[0]), w(self.v_range[1])], v)
+    }
+
+    /// Whether the axis `k` (0 horizontal, 1 vertical) takes the linear warp, the one [`Chart::map`] places.
+    #[inline]
+    fn linear(&self, k: usize) -> bool {
+        self.warps[k].kind == WarpKind::Linear
     }
 
     /// The frozen controls at `F`.
@@ -405,8 +450,21 @@ impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
 /// One axis's check at `t` on `range` against the domain `[lo, hi]` (the module's note): `Ok(t)` inside the domain,
 /// `Ok(t′)` with `t′ ≠ t` where the axis meets the domain's edge, `Err(())` where nothing can be clamped: a value that
 /// is not finite, a range of no width or of a width past f64's range, or an edge four inward steps of `t` do not reach.
-pub(super) fn axis_check([lo, hi]: [f64; 2], range: [f64; 2], t: f64) -> Result<f64, ()> {
-    let x = lerp(range, t);
+pub(super) fn axis_check(domain: [f64; 2], range: [f64; 2], t: f64) -> Result<f64, ()> {
+    warped_check(AxisWarp::<f64>::linear(), domain, range, t)
+}
+
+/// [`axis_check`] through the warp `warp`: `t` first brought into the warp's own bounds ([`AxisWarp::bound`]), the
+/// edge's `t` its inverse. Each warp is monotone, increasing in `t` where `hi > lo`, so the inward step's direction is
+/// linear's.
+pub(super) fn warped_check(
+    warp: AxisWarp<f64>,
+    [lo, hi]: [f64; 2],
+    range: [f64; 2],
+    t: f64,
+) -> Result<f64, ()> {
+    let t = warp.bound(t);
+    let x = warp.value(range, t);
     if !x.is_finite() {
         return Err(());
     }
@@ -420,9 +478,9 @@ pub(super) fn axis_check([lo, hi]: [f64; 2], range: [f64; 2], t: f64) -> Result<
     // and smaller from above, until it lands in the domain, at most four steps, and refuse past them. A range of no
     // width or of a width past f64's range gives a `t` whose `x` is NaN or infinite, and is refused so.
     let up = below == width.is_sign_positive();
-    let mut t = (edge - range[0]) / width;
+    let mut t = warp.bound(warp.position(range, edge));
     for _ in 0..4 {
-        if in_domain(lerp(range, t), lo, hi) {
+        if in_domain(warp.value(range, t), lo, hi) {
             return Ok(t);
         }
         t = if up { t.next_up() } else { t.next_down() };
@@ -447,15 +505,26 @@ where
     #[inline]
     fn map<F: Float + From<P>>(&self, u: F, v: F) -> ChartOut<F> {
         let z = self.frozen_at();
-        let z = if H::DERIVED {
+        // A warped latent axis is placed by `decode`, as a derived one is: its `pow` and `ln` are `Real`'s, the pinned
+        // libm's at f64, which `map`'s `Float` bound does not reach.
+        let w = <F as From<P>>::from;
+        let z = if H::DERIVED || !self.linear(0) {
             z
         } else {
-            place(z, H::COORDINATE, self.h(u))
+            place(
+                z,
+                H::COORDINATE,
+                lerp([w(self.h_range[0]), w(self.h_range[1])], u),
+            )
         };
-        let z = if V::DERIVED {
+        let z = if V::DERIVED || !self.linear(1) {
             z
         } else {
-            place(z, V::COORDINATE, self.v(v))
+            place(
+                z,
+                V::COORDINATE,
+                lerp([w(self.v_range[0]), w(self.v_range[1])], v),
+            )
         };
         ChartOut { z: Latent::new(z) }
     }
@@ -499,9 +568,13 @@ where
     /// note).
     fn validate_params(&self, u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult {
         let wide = |r: [P; 2]| [f64::from(r[0]), f64::from(r[1])];
+        let widen = |a: AxisWarp<P>| AxisWarp {
+            kind: a.kind,
+            gamma: f64::from(a.gamma),
+        };
         let checked = (
-            axis_check(H::domain_at(p), wide(self.h_range), u),
-            axis_check(V::domain_at(p), wide(self.v_range), v),
+            warped_check(widen(self.warps[0]), H::domain_at(p), wide(self.h_range), u),
+            warped_check(widen(self.warps[1]), V::domain_at(p), wide(self.v_range), v),
         );
         let failed = Constraint::AxisDomain;
         match checked {

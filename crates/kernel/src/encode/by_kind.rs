@@ -99,6 +99,7 @@ use super::curve::CurveEncoded;
 use super::{encode_at, Encoded, SimplexClamp};
 use crate::chart::invariant::{l_max, InvariantChart, InvariantLE, InvariantLK, WarpReal};
 use crate::chart::mixed::{Coordinate, Quantity};
+use crate::chart::warp::AxisWarp;
 use crate::chart::{ChartDecode, Constraint, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere};
 use crate::decode::config::{self, Config};
 use crate::decode::descriptor::pi_image;
@@ -441,16 +442,20 @@ pub fn derived<R: Copy>(e: &Encoded<R>, k: Coordinate) -> Option<R> {
 }
 
 /// A mixed chart's axis `Q` on `range` (`[lo, hi]` at `t = 0, 1`): kind 1 reads `z`'s component, kind 2 the block
-/// inverse's value, and `t = (x − lo)/(hi − lo)` inverts the axis's affine warp.
+/// inverse's value, and the warp's inverse gives `t`, at the linear warp `t = (x − lo)/(hi − lo)`.
 #[inline]
-fn mixed_axis<Q: Quantity, R: LinkReal>(e: &Encoded<R>, range: [R; 2]) -> Coord<R> {
+fn mixed_axis<Q: Quantity, R: LinkReal + From<P>, P: Copy>(
+    e: &Encoded<R>,
+    range: [R; 2],
+    warp: AxisWarp<P>,
+) -> Coord<R> {
     let x = select(
         Q::DERIVED,
         derived(e, Q::COORDINATE),
         Some(component(&e.z.z, Q::COORDINATE)),
     );
     match x {
-        Some(x) => Coord::At((x - range[0]) / (range[1] - range[0])),
+        Some(x) => Coord::At(warp.position(range, x)),
         None => Coord::Unplaced,
     }
 }
@@ -467,8 +472,8 @@ where
     {
         let wide = |r: [P; 2]| r.map(<R as From<P>>::from);
         [
-            mixed_axis::<H, R>(e, wide(self.h_range)),
-            mixed_axis::<V, R>(e, wide(self.v_range)),
+            mixed_axis::<H, R, P>(e, wide(self.h_range), self.warps[0]),
+            mixed_axis::<V, R, P>(e, wide(self.v_range), self.warps[1]),
         ]
     }
 }

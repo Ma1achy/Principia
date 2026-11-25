@@ -207,6 +207,10 @@ pub mod precision;
 // Precision ring with its RK45 reference beside it (TASK-M3-19): documented in the module itself.
 pub mod inspector;
 
+// A statistic's measure over a flat grid: weighted into a named measure, or labelled per pixel of the chart: documented
+// in the module itself.
+pub mod statistic;
+
 // The CPU worker pool: rayon, sized from the available cores less a reserve, overridable, changing no result bit
 // (dd_telemetry_and_tiers §6; TASK-M3-20): documented in the module itself.
 pub mod pool;

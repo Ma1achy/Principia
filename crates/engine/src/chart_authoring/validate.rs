@@ -29,6 +29,7 @@
 use std::fmt;
 
 use kernel::chart::energy::{self, Quantity};
+use kernel::chart::warp::WarpKind;
 use kernel::chart::{family_label, swept, Axis, BlockTouch};
 use kernel::decode::Decoded;
 use kernel::generated::links::{LinkParams, Selection};
@@ -41,7 +42,7 @@ use super::descriptor::{Authored, ChartDescriptor, ChartKind, Coupling, Frozen};
 use super::registry::pair;
 use super::registry::{
     AxisSpec, ChartSpec, Class, Constraints, Expr, Hold, Inverse, Primitive, Registry, Row, Scale,
-    LATENT_ROWS,
+    Warp, LATENT_ROWS,
 };
 use crate::chart_validate::{self, validate_view};
 use crate::contract::sim_config::{Latent, LATENT_DIM};
@@ -106,6 +107,9 @@ pub enum Refusal {
     /// The typed combination `axis` reads the row `part`, which has no forward of its own to evaluate, so no solve
     /// has a residual: a row closed only on its chart's pair is that chart's encode, never a part of an expression.
     NoForward { axis: String, part: &'static str },
+    /// The axis `axis` is warped `warp`, which it does not offer: power or log on an energy-type quantity, whose own
+    /// warp is the feasibility warp (§ 4), or power at an exponent that is not finite and positive.
+    WarpNotOffered { axis: String, warp: &'static str },
     /// The axis `axis` is closed only on its chart's pair, `chart`, and is used off it; its forward is that chart's
     /// encode, so it has none of its own for a solve to read.
     PairOnly {
@@ -119,6 +123,9 @@ impl fmt::Display for Refusal {
         match self {
             Refusal::View(r) => write!(f, "{r}"),
             Refusal::NoSweptAxis => f.write_str("refused: neither axis is swept"),
+            Refusal::WarpNotOffered { axis, warp } => {
+                write!(f, "refused: the axis {axis} does not offer the {warp} warp")
+            }
             Refusal::NoWarpWritten { axis } => write!(
                 f,
                 "refused: the axis {axis} is of a quantity chart_reference §2.1 writes no warp for"
@@ -930,6 +937,41 @@ fn classify(
     }
 }
 
+/// Whether the axis named `name`, on `row`, offers `warp` (§ 4): the kernel's rule for an energy-type row
+/// (`kernel::chart::energy::offered`), and power's exponent finite and positive.
+// The plan is unclear here; chose to refuse only registered energy rows, not a typed combination of them, because § 4
+// names energy-type axes and a combination has no written feasibility warp to stand on.
+fn warp_offered(warp: &Warp, row: Option<Row>, name: &str) -> Result<(), Refusal> {
+    let (kind, label) = match warp {
+        Warp::Feasibility | Warp::Linear => return Ok(()),
+        Warp::Power(g) => {
+            if !(g.is_finite() && *g > 0.0) {
+                return Err(Refusal::WarpNotOffered {
+                    axis: name.to_owned(),
+                    warp: "power",
+                });
+            }
+            (WarpKind::Power, "power")
+        }
+        Warp::Log => (WarpKind::Log, "log"),
+    };
+    let quantity = match row.map(|r| r.name) {
+        Some("E") => Quantity::E,
+        Some("K") => Quantity::K,
+        Some("KE") => Quantity::KE,
+        Some("L_z") => Quantity::Lz,
+        Some("PE") => Quantity::PE,
+        _ => return Ok(()),
+    };
+    match energy::offered(quantity, kind) {
+        Ok(()) => Ok(()),
+        Err(_) => Err(Refusal::WarpNotOffered {
+            axis: name.to_owned(),
+            warp: label,
+        }),
+    }
+}
+
 /// R-849's general solve of `e`, whose parts are `parts`: it solves into the most downstream block they write.
 fn general(e: &Expr, parts: &[Row]) -> GeneralSolve {
     let sector = Block::ORDER
@@ -968,6 +1010,8 @@ pub struct Rules {
     pub forward_check: bool,
     /// Whether a row closed only on its chart's pair is refused `NoJointInverse` off it (the control's old rule).
     pub pair_only_refused: bool,
+    /// Whether a warp an axis does not offer is refused (its control turns it off).
+    pub warp_check: bool,
 }
 
 impl Rules {
@@ -976,6 +1020,7 @@ impl Rules {
         table: same_quantity,
         forward_check: true,
         pair_only_refused: false,
+        warp_check: true,
     };
 }
 
@@ -1005,6 +1050,11 @@ pub fn validate_spec_under(
     let names = spec.axes.clone().map(|a| axis_name(&a));
     let (h, hr) = classify(registry, &spec.constraints, &spec.axes[0], &names[1], rules)?;
     let (v, vr) = classify(registry, &spec.constraints, &spec.axes[1], &names[0], rules)?;
+    for (i, row) in [hr, vr].into_iter().enumerate() {
+        if rules.warp_check {
+            warp_offered(&spec.axes[i].warp, row, &names[i])?;
+        }
+    }
     if let (AxisInverse::Latent(x), AxisInverse::Latent(y)) = (&h, &v) {
         let parallel = (0..LATENT_DIM)
             .all(|i| (0..LATENT_DIM).all(|j| products_equal(x[i], y[j], x[j], y[i])));

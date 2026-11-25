@@ -85,10 +85,13 @@ pub mod mass_simplex;
 pub mod mixed;
 #[cfg(not(target_arch = "spirv"))]
 pub mod nav;
+#[cfg(not(target_arch = "spirv"))]
+pub mod paired;
 pub mod physical;
 pub mod saved;
 pub mod shape_sphere;
 pub mod tilt;
+pub mod warp;
 
 use core::fmt;
 
