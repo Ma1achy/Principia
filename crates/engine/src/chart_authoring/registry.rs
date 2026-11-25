@@ -1099,12 +1099,16 @@ impl AxisSpec {
     }
 }
 
-/// A chart-level pair map (§ 5.1). Only the independent pair is authored here; the pair maps are TASK-M2-71's.
+/// A chart-level pair map (§ 5.1), before the axes: the kernel's `chart::paired`, its centre and ranges the view's.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum PairMap {
     /// Each axis written alone.
     #[default]
     Independent,
+    /// Polar about a centre, the radius pole-crossing or bounded at the pole.
+    Polar { pole_crossing: bool },
+    /// Log-polar about a centre, no pole in view.
+    LogPolar,
 }
 
 /// The chart's constraints (§ 5.3): hold `E`, hold `L_z`, each off by default.

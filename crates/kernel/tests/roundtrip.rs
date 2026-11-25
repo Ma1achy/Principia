@@ -218,9 +218,9 @@ fn declared(src: &str, trait_: &str) -> Vec<String> {
 }
 
 /// Every chart type: `Authored` in `engine::chart_authoring::charts`, the registered charts' descriptors, and `Chart`
-/// in `kernel::chart`'s sources, but `Tilted`, a registered chart under its tilt params (R-473 J5;
-/// `kernel::chart::tilt`), and `RestStart`, `HeldLz` and `HeldK`, a registered chart with its held hidden coordinates
-/// (R-633; `kernel::chart::construction`), none a chart of its own.
+/// in `kernel::chart`'s sources, but the wrappers, none a chart of its own: `Tilted`, a registered chart under its tilt
+/// params (`kernel::chart::tilt`); `RestStart`, `HeldLz` and `HeldK`, a registered chart with its held hidden
+/// coordinates (`kernel::chart::construction`); and `Paired`, a chart seen through a pair map (`kernel::chart::paired`).
 fn chart_types() -> Vec<String> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let read = |p: &Path| {
@@ -238,11 +238,9 @@ fn chart_types() -> Vec<String> {
         .collect();
     files.sort();
     for f in files {
-        types.extend(
-            declared(&read(&f), "Chart")
-                .into_iter()
-                .filter(|t| !["Tilted", "RestStart", "HeldLz", "HeldK"].contains(&t.as_str())),
-        );
+        types.extend(declared(&read(&f), "Chart").into_iter().filter(|t| {
+            !["Tilted", "RestStart", "HeldLz", "HeldK", "Paired"].contains(&t.as_str())
+        }));
     }
     types.sort();
     types.dedup();

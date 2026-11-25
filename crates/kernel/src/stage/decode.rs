@@ -51,6 +51,7 @@ use crate::chart::energy::Mapping;
 use crate::chart::invariant::{Invariant, WarpReal};
 use crate::chart::mixed::{Alpha, ZMu1};
 use crate::chart::physical::{AxisVirial, MixedEnergy};
+use crate::chart::warp::{AxisWarp, WarpKind};
 use crate::chart::{
     Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartDecode, EuclidPlane,
     InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere,
@@ -295,12 +296,19 @@ impl UniformChart for EuclidPlane<f32> {
     }
 }
 
-/// The mixed chart `(z_μ1, α)`'s uniform: rows 0–1 the frozen controls, row 2 `(h_lo, h_hi, v_lo, v_hi)`, rows 3–5
-/// zero.
+/// The mixed chart `(z_μ1, α)`'s uniform: rows 0–1 the frozen controls, row 2 `(h_lo, h_hi, v_lo, v_hi)`, row 3 the
+/// warps `(h_word, h_γ, v_word, v_γ)`, each word [`WarpKind`]'s index, 0 linear, so a zeroed row is today's chart; rows
+/// 4–5 zero.
 impl UniformChart for Mixed<ZMu1, Alpha, f32> {
     #[inline]
     fn from_uniform(r: &[Vec4; 6]) -> Self {
-        Mixed::new(eight(r[0], r[1]), [r[2].x, r[2].y], [r[2].z, r[2].w])
+        let warp = |word: f32, gamma: f32| AxisWarp {
+            kind: WarpKind::from_word(word as u32),
+            gamma,
+        };
+        let mut chart = Mixed::new(eight(r[0], r[1]), [r[2].x, r[2].y], [r[2].z, r[2].w]);
+        chart.warps = [warp(r[3].x, r[3].y), warp(r[3].z, r[3].w)];
+        chart
     }
 
     #[inline]
@@ -313,7 +321,9 @@ impl UniformChart for Mixed<ZMu1, Alpha, f32> {
             self.v_range[0],
             self.v_range[1],
         );
-        [a, b, ranges, zero, zero, zero]
+        let [h, v] = self.warps;
+        let warps = Vec4::new(h.kind as u32 as f32, h.gamma, v.kind as u32 as f32, v.gamma);
+        [a, b, ranges, warps, zero, zero]
     }
 }
 

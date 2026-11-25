@@ -30,6 +30,8 @@
 //! and `U` is read where an axis needs it. Untilted, those are the slice centre's at every pixel.
 
 use core::fmt;
+
+use super::warp::WarpKind;
 use core::marker::PhantomData;
 
 use spirv_std::num_traits::Float;
@@ -109,6 +111,9 @@ impl Quantity {
 pub enum Refused {
     /// chart_reference §2.1 writes no warp for the quantity: no chart offers it (REQ-CHART-070, R-72; R-471 H2).
     NoWarpWritten(Quantity),
+    /// Power or log asked of an energy-type quantity: its own warp is the feasibility warp, linear an option, and no
+    /// other is written for it (design `principia_chart_composition.md` § 4).
+    WarpNotOffered(Quantity, WarpKind),
 }
 
 /// Whether chart_reference §2.1 writes a warp for `quantity`, so that a chart may offer an axis of it: every quantity
@@ -117,6 +122,19 @@ pub enum Refused {
 pub fn written(quantity: Quantity) -> Result<(), Refused> {
     match quantity {
         Quantity::PE => Err(Refused::NoWarpWritten(quantity)),
+        _ => Ok(()),
+    }
+}
+
+/// Whether an axis of `quantity` may take the warp `warp` on top of its own: [`written`] first, then power and log
+/// refused on an energy-type quantity ([`Quantity::energy_type`]), linear offered on every quantity written.
+#[inline]
+pub fn offered(quantity: Quantity, warp: WarpKind) -> Result<(), Refused> {
+    written(quantity)?;
+    match warp {
+        WarpKind::Power | WarpKind::Log if quantity.energy_type() => {
+            Err(Refused::WarpNotOffered(quantity, warp))
+        }
         _ => Ok(()),
     }
 }
