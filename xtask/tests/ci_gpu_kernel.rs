@@ -1,23 +1,30 @@
-//! `ci.yml`'s gpu-kernel shards and what decides whether a run needs them (`.github/scripts/gpu_touch.sh`): a change to
-//! any file the kernel's build reads runs them, they together run every suite slice, every package's controls and the
-//! golden renders once, and `gpu-kernel` passes only when all of them did. And `cargo xtask controls --package`, which
-//! the control shards call: it runs the packages it names, and refuses a name it can't run.
+//! `ci.yml`'s gpu-kernel shards and what decides which of them a run needs (`.github/scripts/gpu_touch.sh`): a change to
+//! any file the kernel's build reads runs all of them, another change to crates/render the render controls' alone, they
+//! together run every suite slice, every package's controls and the golden renders once, and `gpu-kernel` passes only
+//! when all those asked for did. And `cargo xtask controls --package`, which the control shards call: it runs the
+//! packages it names, and refuses a name it can't run.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use serde_json::json;
+#[cfg(unix)]
+use serde_json::Value;
 use validation::negative_control;
 use validation::spawn::Spawn;
+#[cfg(unix)]
 use xtask::kernel_cache::INPUTS;
+#[cfg(unix)]
 use yaml_rust2::{Yaml, YamlLoader};
 
 #[allow(dead_code)] // its one-package `metadata`
 #[path = "support/stand_in.rs"]
 mod stand_in;
 
+#[cfg(unix)]
 const CI: &str = include_str!("../../.github/workflows/ci.yml");
+#[cfg(unix)]
 const TOUCH: &str = include_str!("../../.github/scripts/gpu_touch.sh");
 
 /// An empty directory of this test's own.
@@ -29,7 +36,7 @@ fn scratch(name: &str) -> PathBuf {
 }
 
 /// `text` with `from` replaced by `to`; the edit must apply.
-#[cfg(feature = "controls")]
+#[cfg(all(unix, feature = "controls"))]
 fn edited(text: &str, from: &str, to: &str) -> String {
     assert!(text.contains(from), "the control's edit doesn't apply");
     text.replacen(from, to, 1)
@@ -37,7 +44,54 @@ fn edited(text: &str, from: &str, to: &str) -> String {
 
 // ---- What runs the shards -----------------------------------------------------------------------------------------
 
-/// What `script` prints in a repository whose HEAD changes `path` alone against `base`.
+/// What `gpu_touch.sh` prints.
+#[cfg(unix)]
+#[derive(Debug, PartialEq)]
+struct Answer {
+    run: bool,
+    kernel: bool,
+    shards: Vec<Value>,
+}
+
+#[cfg(unix)]
+impl Answer {
+    fn parse(out: &str) -> Answer {
+        let lines: Vec<&str> = out.lines().collect();
+        let [run, kernel, shards] = lines[..] else {
+            panic!("not three lines: {out}");
+        };
+        let value = |line: &str, key: &str| -> Value {
+            let text = line
+                .strip_prefix(key)
+                .and_then(|rest| rest.strip_prefix('='))
+                .unwrap_or_else(|| panic!("no `{key}` in `{line}`"));
+            serde_json::from_str(text).unwrap_or_else(|e| panic!("{line}: {e}"))
+        };
+        Answer {
+            run: value(run, "run").as_bool().expect("run"),
+            kernel: value(kernel, "kernel").as_bool().expect("kernel"),
+            shards: value(shards, "shards").as_array().expect("shards").clone(),
+        }
+    }
+
+    fn none() -> Answer {
+        Answer {
+            run: false,
+            kernel: false,
+            shards: Vec::new(),
+        }
+    }
+
+    fn render_alone() -> Answer {
+        Answer {
+            run: true,
+            kernel: false,
+            shards: vec![json!({"name": "controls render", "controls": "render"})],
+        }
+    }
+}
+
+/// A repository whose HEAD is compared with `origin/main`, or `origin/other`, the same commit.
 #[cfg(unix)]
 struct Repo {
     dir: PathBuf,
@@ -56,7 +110,9 @@ impl Repo {
         fs::create_dir_all(&repo.dir).expect("the repository's directory");
         repo.git(&["init", "-q"]);
         repo.commit(&["README.md"]);
-        repo.git(&["update-ref", "refs/remotes/origin/main", "HEAD"]);
+        for base in ["main", "other"] {
+            repo.git(&["update-ref", &format!("refs/remotes/origin/{base}"), "HEAD"]);
+        }
         repo
     }
 
@@ -86,7 +142,7 @@ impl Repo {
     }
 
     /// The script's output, with `base` as the pull request's base (none on a push).
-    fn touch(&self, base: Option<&str>) -> Result<String, String> {
+    fn touch(&self, base: Option<&str>) -> Result<Answer, String> {
         let mut command = Command::new("bash");
         command
             .arg(&self.script)
@@ -99,21 +155,33 @@ impl Repo {
         if !output.status.success() {
             return Err(String::from_utf8_lossy(&output.stderr).into_owned());
         }
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
+        Ok(Answer::parse(&String::from_utf8_lossy(&output.stdout)))
     }
 
-    /// The script's output on a pull request that changes `path` alone.
-    fn touched(&self, path: &str) -> String {
+    /// The script's output on a run with no pull request.
+    fn push(&self) -> Answer {
+        self.touch(None).expect("the script passes")
+    }
+
+    /// The script's output on a pull request into `base` that changes `paths` alone.
+    fn touched_into(&self, base: &str, paths: &[&str]) -> Answer {
         self.git(&["checkout", "-q", "--detach", "refs/remotes/origin/main"]);
-        self.commit(&[path]);
-        self.touch(Some("main")).expect("the script passes")
+        self.commit(paths);
+        self.touch(Some(base)).expect("the script passes")
+    }
+
+    /// The script's output on a pull request into main that changes `paths` alone.
+    fn touched(&self, paths: &[&str]) -> Answer {
+        self.touched_into("main", paths)
     }
 }
 
-/// A pull request changing a file of any entry of [`INPUTS`], any kernel file, or the checked-in WGSL runs the shards.
+/// A pull request changing a file of any entry of [`INPUTS`], any kernel file, or the checked-in WGSL runs every shard
+/// a push does, alone or with a change to the rest of crates/render.
 #[cfg(unix)]
 fn check_touch_covers(name: &str, script: &str) {
     let repo = Repo::new(name, script);
+    let every = repo.push();
     let inputs = INPUTS.map(|input| {
         if input.contains('.') {
             input.to_owned()
@@ -130,9 +198,14 @@ fn check_touch_covers(name: &str, script: &str) {
     ];
     for path in inputs.iter().map(String::as_str).chain(others) {
         assert_eq!(
-            repo.touched(path),
-            "run=true",
+            repo.touched(&[path]),
+            every,
             "a change to {path} doesn't run the GPU suites"
+        );
+        assert_eq!(
+            repo.touched(&[path, "crates/render/src/lib.rs"]),
+            every,
+            "a change to {path} and crates/render doesn't run the GPU suites"
         );
     }
 }
@@ -151,7 +224,138 @@ negative_control!(
     check_touch_covers("ctl_covers", &edited(TOUCH, "  crates/ledger/data\n", ""))
 );
 
-/// A pull request that changes nothing the kernel's build reads doesn't run the shards.
+#[cfg(all(unix, feature = "controls"))]
+mod covers_render_only {
+    use super::*;
+    negative_control!(
+        gpu_touch_covers_every_kernel_input,
+        "a kernel change that runs the render shard alone",
+        expected = "a change to .cargo/config.toml doesn't run the GPU suites",
+        check_touch_covers(
+            "ctl_covers_render_only",
+            &edited(
+                TOUCH,
+                "if [ -n \"$kernel_changed\" ]; then\n  answer true \"${shards[@]}\"",
+                "if [ -n \"$kernel_changed\" ]; then\n  answer true \"$render\""
+            )
+        )
+    );
+}
+
+#[cfg(all(unix, feature = "controls"))]
+mod covers_render_first {
+    use super::*;
+    negative_control!(
+        gpu_touch_covers_every_kernel_input,
+        "a change to the kernel and to crates/render taken as one to crates/render",
+        expected = "a change to .cargo/config.toml and crates/render doesn't run the GPU suites",
+        check_touch_covers(
+            "ctl_covers_render_first",
+            &edited(
+                TOUCH,
+                "if [ -n \"$kernel_changed\" ]; then",
+                "if [ -n \"$kernel_changed\" ] && [ -z \"$render_changed\" ]; then"
+            )
+        )
+    );
+}
+
+/// A pull request into main that changes crates/render, and nothing the kernel's build reads, runs the render controls'
+/// shard alone.
+#[cfg(unix)]
+fn check_touch_render(name: &str, script: &str) {
+    let repo = Repo::new(name, script);
+    for path in [
+        "crates/render/src/assemble/declare.rs",
+        "crates/render/tests/t.rs",
+        "crates/render/Cargo.toml",
+    ] {
+        assert_eq!(
+            repo.touched(&[path, "docs/a.md"]),
+            Answer::render_alone(),
+            "a change to {path} doesn't run the render controls alone"
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn gpu_touch_runs_the_render_controls_alone_on_a_render_change() {
+    check_touch_render("render", TOUCH);
+}
+
+#[cfg(all(unix, feature = "controls"))]
+mod render_dropped {
+    use super::*;
+    negative_control!(
+        gpu_touch_runs_the_render_controls_alone_on_a_render_change,
+        "crates/render dropped, its WGSL aside",
+        expected = "declare.rs doesn't run the render controls alone",
+        check_touch_render(
+            "ctl_render",
+            &edited(
+                TOUCH,
+                "changed crates/render)",
+                "changed crates/render/wgsl)"
+            )
+        )
+    );
+}
+
+#[cfg(all(unix, feature = "controls"))]
+mod render_runs_all {
+    use super::*;
+    negative_control!(
+        gpu_touch_runs_the_render_controls_alone_on_a_render_change,
+        "a render change that runs every shard",
+        expected = "declare.rs doesn't run the render controls alone",
+        check_touch_render(
+            "ctl_render_all",
+            &edited(
+                TOUCH,
+                "answer false \"$render\"",
+                "answer false \"${shards[@]}\""
+            )
+        )
+    );
+}
+
+/// Into another branch the diff leaves out that branch's own kernel changes, and changing the base to main starts no new
+/// run, so a render change there runs every shard: a passing gpu-kernel it carries to main means all of them.
+#[cfg(unix)]
+fn check_touch_other_base(name: &str, script: &str) {
+    let repo = Repo::new(name, script);
+    let other = |path: &str| repo.touched_into("other", &[path]);
+    assert_eq!(
+        other("crates/render/src/lib.rs").shards,
+        repo.push().shards,
+        "a render change into another branch doesn't run every shard"
+    );
+    assert_eq!(other("docs/a.md"), Answer::none());
+}
+
+#[cfg(unix)]
+#[test]
+fn gpu_touch_runs_every_shard_on_a_render_change_into_another_branch() {
+    check_touch_other_base("other", TOUCH);
+}
+
+#[cfg(unix)]
+negative_control!(
+    gpu_touch_runs_every_shard_on_a_render_change_into_another_branch,
+    "any base taken as main",
+    expected = "a render change into another branch doesn't run every shard",
+    check_touch_other_base(
+        "ctl_other",
+        &edited(
+            TOUCH,
+            "elif [ \"$BASE_REF\" = main ]; then",
+            "elif true; then"
+        )
+    )
+);
+
+/// A pull request that changes neither crates/render nor anything the kernel's build reads runs no shard.
 #[cfg(unix)]
 fn check_touch_skips(name: &str, script: &str) {
     let repo = Repo::new(name, script);
@@ -159,10 +363,11 @@ fn check_touch_skips(name: &str, script: &str) {
         "docs/a.md",
         "crates/gui/src/lib.rs",
         "crates/kernelled/a.rs",
+        "crates/renderer/a.rs",
     ] {
         assert_eq!(
-            repo.touched(path),
-            "run=false",
+            repo.touched(&[path]),
+            Answer::none(),
             "a change to {path} runs the GPU suites"
         );
     }
@@ -185,14 +390,28 @@ negative_control!(
     )
 );
 
+#[cfg(all(unix, feature = "controls"))]
+mod render_always {
+    use super::*;
+    negative_control!(
+        gpu_touch_skips_other_changes,
+        "the render shard always on",
+        expected = "a change to docs/a.md runs the GPU suites",
+        check_touch_skips(
+            "ctl_render_always",
+            &edited(TOUCH, "  answer false\n", "  answer false \"$render\"\n")
+        )
+    );
+}
+
 /// A run with no base (push, schedule, dispatch) runs the shards, and a diff that can't be taken fails, saying neither.
 #[cfg(unix)]
 fn check_touch_without_a_diff(name: &str, script: &str) {
     let repo = Repo::new(name, script);
-    assert_eq!(
-        repo.touch(None).as_deref(),
-        Ok("run=true"),
-        "a push doesn't run the GPU suites"
+    let push = repo.push();
+    assert!(
+        push.run && push.kernel,
+        "a push doesn't run the GPU suites: {push:?}"
     );
     let missing = repo.touch(Some("missing"));
     assert!(
@@ -212,28 +431,128 @@ negative_control!(
     gpu_touch_runs_without_a_base_and_fails_without_a_diff,
     "the diff taken in a pipe's condition, whose failure reads as no change",
     expected = "a base that isn't there passed",
-    check_touch_without_a_diff(
-        "ctl_base",
-        &edited(TOUCH, "-- \"${paths[@]}\")", "|| true)")
-    )
+    check_touch_without_a_diff("ctl_base", &edited(TOUCH, "-- \"$@\"", "-- \"$@\" || true"))
 );
 
 // ---- The shards ---------------------------------------------------------------------------------------------------
 
+#[cfg(unix)]
 fn parse(text: &str) -> Yaml {
     YamlLoader::load_from_str(text)
         .expect("ci.yml parses")
         .remove(0)
 }
 
-/// The shards: gpu-shard's matrix entries.
-fn shards(ci: &Yaml) -> &[Yaml] {
-    ci["jobs"]["gpu-shard"]["strategy"]["matrix"]["include"]
-        .as_vec()
-        .expect("gpu-shard's matrix")
+/// Every shard: the matrix entries `script` prints on a push.
+#[cfg(unix)]
+fn shards(name: &str, script: &str) -> Vec<Value> {
+    Repo::new(name, script).push().shards
+}
+
+/// gpu-shard's matrix is what gpu-touch printed and nothing more, and kernel-wgsl's steps run on `kernel`, which a render
+/// change doesn't set.
+#[cfg(unix)]
+fn check_wiring(ci: &str) {
+    let ci = parse(ci);
+    let jobs = &ci["jobs"];
+    let matrix = jobs["gpu-shard"]["strategy"]["matrix"]
+        .as_hash()
+        .expect("gpu-shard's matrix");
+    assert_eq!(matrix.len(), 1, "gpu-shard's matrix: {matrix:?}");
+    assert_eq!(
+        matrix[&Yaml::String("include".into())].as_str(),
+        Some("${{ fromJSON(needs.gpu-touch.outputs.shards) }}"),
+        "gpu-shard's matrix"
+    );
+    let outputs = jobs["gpu-touch"]["outputs"]
+        .as_hash()
+        .expect("gpu-touch's outputs");
+    for key in ["run", "shards"] {
+        assert_eq!(
+            outputs
+                .get(&Yaml::String(key.into()))
+                .and_then(Yaml::as_str),
+            Some(format!("${{{{ steps.touch.outputs.{key} }}}}").as_str()),
+            "gpu-touch's output {key}"
+        );
+    }
+    for job in ["gpu-touch", "kernel-wgsl"] {
+        let steps = jobs[job]["steps"].as_vec().expect("the job's steps");
+        let at = steps
+            .iter()
+            .position(|step| step["id"].as_str() == Some("touch"))
+            .expect("the touch step");
+        assert_eq!(
+            steps[at]["run"].as_str(),
+            Some("bash .github/scripts/gpu_touch.sh >> \"$GITHUB_OUTPUT\"")
+        );
+        assert_eq!(
+            steps[at]["env"]["BASE_REF"].as_str(),
+            Some("${{ github.base_ref }}")
+        );
+        for step in &steps[at + 1..] {
+            assert_eq!(
+                step["if"].as_str(),
+                Some("steps.touch.outputs.kernel == 'true'"),
+                "when a step of {job} runs"
+            );
+        }
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn gpu_shards_are_the_ones_gpu_touch_asks_for() {
+    check_wiring(CI);
+}
+
+#[cfg(all(unix, feature = "controls"))]
+mod wiring_static {
+    use super::*;
+    negative_control!(
+        gpu_shards_are_the_ones_gpu_touch_asks_for,
+        "a matrix that isn't gpu-touch's",
+        expected = "gpu-shard's matrix",
+        check_wiring(&edited(
+            CI,
+            "include: ${{ fromJSON(needs.gpu-touch.outputs.shards) }}",
+            "include: [{name: controls render, controls: render}]"
+        ))
+    );
+}
+
+#[cfg(all(unix, feature = "controls"))]
+mod wiring_output {
+    use super::*;
+    negative_control!(
+        gpu_shards_are_the_ones_gpu_touch_asks_for,
+        "a gpu-touch that doesn't output the shards",
+        expected = "gpu-touch's output shards",
+        check_wiring(&edited(
+            CI,
+            "      shards: ${{ steps.touch.outputs.shards }}\n",
+            ""
+        ))
+    );
+}
+
+#[cfg(all(unix, feature = "controls"))]
+mod wiring_kernel {
+    use super::*;
+    negative_control!(
+        gpu_shards_are_the_ones_gpu_touch_asks_for,
+        "a kernel build on a render change",
+        expected = "when a step of kernel-wgsl runs",
+        check_wiring(&edited(
+            CI,
+            "if: steps.touch.outputs.kernel == 'true'",
+            "if: steps.touch.outputs.run == 'true'"
+        ))
+    );
 }
 
 /// gpu-shard's step whose command starts with `command`.
+#[cfg(unix)]
 fn step<'a>(ci: &'a Yaml, command: &str) -> &'a Yaml {
     let found: Vec<&Yaml> = ci["jobs"]["gpu-shard"]["steps"]
         .as_vec()
@@ -247,7 +566,8 @@ fn step<'a>(ci: &'a Yaml, command: &str) -> &'a Yaml {
 
 /// The control shards together name every package of the workspace that declares `controls`, once, and run what they
 /// name.
-fn check_controls_matrix(ci: &str) {
+#[cfg(unix)]
+fn check_controls_matrix(name: &str, ci: &str, touch: &str) {
     let ci = parse(ci);
     let run = step(&ci, "cargo xtask controls");
     assert_eq!(
@@ -258,7 +578,8 @@ fn check_controls_matrix(ci: &str) {
         run["if"].as_str(),
         Some("${{ !cancelled() && matrix.controls }}")
     );
-    let mut named: Vec<&str> = shards(&ci)
+    let shards = shards(name, touch);
+    let mut named: Vec<&str> = shards
         .iter()
         .filter_map(|shard| shard["controls"].as_str())
         .flat_map(|names| names.split(','))
@@ -269,36 +590,54 @@ fn check_controls_matrix(ci: &str) {
     assert_eq!(named, want, "the control shards' packages");
 }
 
+#[cfg(unix)]
 #[test]
 fn gpu_shards_cover_every_controls_package_once() {
-    check_controls_matrix(CI);
+    check_controls_matrix("controls", CI, TOUCH);
 }
 
-#[cfg(feature = "controls")]
+#[cfg(all(unix, feature = "controls"))]
 mod controls_dropped {
     use super::*;
     negative_control!(
         gpu_shards_cover_every_controls_package_once,
         "a shard that drops a package",
         expected = "the control shards' packages",
-        check_controls_matrix(&edited(CI, "controls: ledger,prin\n", "controls: ledger\n"))
+        check_controls_matrix(
+            "ctl_controls_dropped",
+            CI,
+            &edited(
+                TOUCH,
+                "\"controls\": \"ledger,prin\"",
+                "\"controls\": \"ledger\""
+            )
+        )
     );
 }
 
-#[cfg(feature = "controls")]
+#[cfg(all(unix, feature = "controls"))]
 mod controls_twice {
     use super::*;
     negative_control!(
         gpu_shards_cover_every_controls_package_once,
         "a package in two shards",
         expected = "the control shards' packages",
-        check_controls_matrix(&edited(CI, "controls: engine\n", "controls: engine,prin\n"))
+        check_controls_matrix(
+            "ctl_controls_twice",
+            CI,
+            &edited(
+                TOUCH,
+                "\"controls\": \"engine\"",
+                "\"controls\": \"engine,prin\""
+            )
+        )
     );
 }
 
 /// The suite shards are every slice 1 to n of the n the step splits into, once each, and one shard runs the golden
 /// renders.
-fn check_suites_matrix(ci: &str) {
+#[cfg(unix)]
+fn check_suites_matrix(name: &str, ci: &str, touch: &str) {
     let ci = parse(ci);
     let suites = step(&ci, "cargo nextest run");
     let n: i64 = suites["run"]
@@ -315,7 +654,8 @@ fn check_suites_matrix(ci: &str) {
         suites["env"]["NEXTEST_PROFILE"].as_str(),
         Some("gpu-kernel")
     );
-    let mut slices: Vec<i64> = shards(&ci)
+    let shards = shards(name, touch);
+    let mut slices: Vec<i64> = shards
         .iter()
         .filter_map(|shard| shard["slice"].as_i64())
         .collect();
@@ -329,47 +669,58 @@ fn check_suites_matrix(ci: &str) {
     assert!(golden["if"]
         .as_str()
         .is_some_and(|when| when.contains("matrix.golden == true")));
-    let goldens = shards(&ci)
+    let goldens = shards
         .iter()
         .filter(|shard| shard["golden"].as_bool() == Some(true));
     assert_eq!(goldens.count(), 1, "the shards that run the golden renders");
 }
 
+#[cfg(unix)]
 #[test]
 fn gpu_shards_cover_every_suite_slice_and_the_golden_renders() {
-    check_suites_matrix(CI);
+    check_suites_matrix("suites", CI, TOUCH);
 }
 
-#[cfg(feature = "controls")]
+#[cfg(all(unix, feature = "controls"))]
 mod slice_dropped {
     use super::*;
     negative_control!(
         gpu_shards_cover_every_suite_slice_and_the_golden_renders,
         "a split into three, with two shards",
         expected = "the suite shards' slices",
-        check_suites_matrix(&edited(
-            CI,
-            "hash:${{ matrix.slice }}/2",
-            "hash:${{ matrix.slice }}/3"
-        ))
+        check_suites_matrix(
+            "ctl_slice_dropped",
+            &edited(
+                CI,
+                "hash:${{ matrix.slice }}/2",
+                "hash:${{ matrix.slice }}/3"
+            ),
+            TOUCH
+        )
     );
 }
 
-#[cfg(feature = "controls")]
+#[cfg(all(unix, feature = "controls"))]
 mod golden_dropped {
     use super::*;
     negative_control!(
         gpu_shards_cover_every_suite_slice_and_the_golden_renders,
         "no shard runs the golden renders",
         expected = "the shards that run the golden renders",
-        check_suites_matrix(&edited(CI, "            golden: true\n", ""))
+        check_suites_matrix(
+            "ctl_golden_dropped",
+            CI,
+            &edited(TOUCH, ", \"golden\": true", "")
+        )
     );
 }
 
 /// One shard saves the caches, on main alone.
-fn check_one_shard_saves(ci: &str) {
+#[cfg(unix)]
+fn check_one_shard_saves(name: &str, ci: &str, touch: &str) {
     let ci = parse(ci);
-    let savers = shards(&ci)
+    let shards = shards(name, touch);
+    let savers = shards
         .iter()
         .filter(|shard| shard["save"].as_bool() == Some(true));
     assert_eq!(savers.count(), 1, "the shards that save the caches");
@@ -398,20 +749,26 @@ fn check_one_shard_saves(ci: &str) {
     }
 }
 
+#[cfg(unix)]
 #[test]
 fn gpu_shards_save_each_cache_once_on_main() {
-    check_one_shard_saves(CI);
+    check_one_shard_saves("saves", CI, TOUCH);
 }
 
+#[cfg(unix)]
 negative_control!(
     gpu_shards_save_each_cache_once_on_main,
     "every shard saves the compiled kernel",
     expected = "a cache is saved by",
-    check_one_shard_saves(&edited(
-        CI,
-        "        if: github.ref == 'refs/heads/main' && matrix.save == true\n",
-        "        if: github.ref == 'refs/heads/main'\n"
-    ))
+    check_one_shard_saves(
+        "ctl_saves",
+        &edited(
+            CI,
+            "        if: github.ref == 'refs/heads/main' && matrix.save == true\n",
+            "        if: github.ref == 'refs/heads/main'\n"
+        ),
+        TOUCH
+    )
 );
 
 /// `gpu-kernel` needs the touch job and the shards, runs unless the touch job said no, and its step passes only when
