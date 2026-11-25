@@ -39,15 +39,18 @@ pub struct Found {
     pub path: PathBuf,
 }
 
-/// A directory the scan could not read, and why.
+/// A directory the scan could not read, or a file whose id another file has, and why.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ScanError {
     pub path: PathBuf,
     pub why: String,
+    /// Where two files share an id: the id and the other file.
+    pub twice: Option<(String, PathBuf)>,
 }
 
 /// Every `.wgsl` file under the [`ROOTS`] of the render crate at `render`, sorted by id. A missing directory holds
-/// no file.
+/// no file. Two files with one id are refused, naming both: `frag/debug/generated/x.wgsl` and
+/// `shaders/wgsl/frag/debug/generated/x.wgsl` are both `debug/generated/x`.
 pub fn occupant_files(render: &Path) -> Result<Vec<Found>, ScanError> {
     let mut out = Vec::new();
     for (root, prefix) in ROOTS {
@@ -72,8 +75,51 @@ pub fn occupant_files(render: &Path) -> Result<Vec<Found>, ScanError> {
             });
         }
     }
-    out.sort_by(|a, b| a.id.cmp(&b.id));
+    out.sort_by(|a, b| a.id.cmp(&b.id).then_with(|| a.rel.cmp(&b.rel)));
+    if let Some(w) = out.windows(2).find(|w| w[0].id == w[1].id && !lifted()) {
+        return Err(ScanError {
+            path: w[1].path.clone(),
+            why: format!(
+                "`{}` is the id of two files, {} and {}",
+                w[0].id, w[0].rel, w[1].rel
+            ),
+            twice: Some((w[0].id.clone(), w[0].path.clone())),
+        });
+    }
     Ok(out)
+}
+
+/// Whether a test's control has lifted the refusal of an id given twice ([`probe`]); never outside the `controls`
+/// feature.
+pub(crate) fn lifted() -> bool {
+    #[cfg(feature = "controls")]
+    {
+        probe::LIFTED.with(std::cell::Cell::get)
+    }
+    #[cfg(not(feature = "controls"))]
+    {
+        false
+    }
+}
+
+/// A test's control's reach into the scan, on this thread only: the refusal of an id given twice lifted.
+#[cfg(feature = "controls")]
+pub mod probe {
+    use std::cell::Cell;
+
+    thread_local! {
+        pub(super) static LIFTED: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// `f` run with two files of one id let through.
+    // The build script compiles this file too, and never calls it.
+    #[allow(dead_code)]
+    pub fn twice_allowed<T>(f: impl FnOnce() -> T) -> T {
+        let before = LIFTED.with(|l| l.replace(true));
+        let out = f();
+        LIFTED.with(|l| l.set(before));
+        out
+    }
 }
 
 /// Each `.wgsl` file under `dir`, recursively; none if `dir` does not exist.
@@ -84,6 +130,7 @@ fn wgsl_files(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), ScanError> {
     let io = |e: std::io::Error| ScanError {
         path: dir.to_owned(),
         why: e.to_string(),
+        twice: None,
     };
     for item in std::fs::read_dir(dir).map_err(io)? {
         let path = item.map_err(io)?.path();

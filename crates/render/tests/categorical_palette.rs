@@ -126,7 +126,9 @@ fn check_resolution(resolve: fn(&str) -> Result<Palette, String>) {
         assert!(resolve(field).is_err(), "`{field}` resolves to a palette");
     }
     assert_eq!(
-        render::assemble::builtin(render::assemble::Kind::Colour, outcome::ID),
+        render::registry::named(render::assemble::Kind::Colour, outcome::ID)
+            .ok()
+            .map(|e| e.source.as_str()),
         Some(outcome::WGSL),
         "the outcome palette is not the built-in colour `{}`",
         outcome::ID

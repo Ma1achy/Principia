@@ -38,8 +38,8 @@ pub fn assemble(g: &StainGraph, tier: Tier) -> Result<Assembled, GraphError> {
     })
 }
 
-/// The WGSL `occupant` gives a node of `kind`, as written: a built-in's file, a custom's text, a field's generated
-/// source; `None` for the identity.
+/// The WGSL `occupant` gives a node of `kind`, as written: a shipped source's file, a custom's text, a field's
+/// generated source; `None` for the identity.
 pub fn node_source(kind: NodeKind, occupant: &Occupant) -> Result<Option<String>, GraphError> {
     Ok(assemble::occupant_source(kind.into(), &occupant.into())?)
 }
@@ -58,7 +58,9 @@ pub struct Entry {
     pub debug: bool,
     /// The slot it is valid in.
     pub slot: NodeKind,
-    /// Its built-in id in its slot, where it has one.
+    /// The name a node of its slot names it by (`render::registry::Entry::name`): `outcome_state`,
+    /// `debug/generated/state`. Every entry has one.
+    // The plan is unclear here; kept `builtin: Option` so the editor needs no change until it reads the description.
     pub builtin: Option<String>,
     /// The whole graph that shows it, where it is a view by itself: what selecting it loads (§11).
     pub graph: Option<StainGraph>,
@@ -81,39 +83,31 @@ impl Entry {
 /// The library: the registry's entries, the slots' before the debug ones, each directory's together, in id order.
 ///
 /// An entry's graph is the outcome stain for the outcome palette and, for a debug colour view, the catalogue's own
-/// wiring of it (`render::registry::view_nodes`); a colour whose fields no entry names (`margin`), a combiner and a post
-/// are no view by themselves.
+/// wiring of it (`render::registry::named_view_nodes`); a colour whose fields no entry names (`margin`), a source, a
+/// combiner and a post are no view by themselves. Every node of every graph names a shipped source by id, or a field.
 // The plan is unclear here (§11 has debug presets load locked); chose editable because no graph holds a lock.
 pub fn library() -> Result<Vec<Entry>, String> {
     let mut out = registry::registry()
         .map_err(|e| e.to_string())?
         .into_iter()
         .map(|e| {
-            let name = e.id.rsplit('/').next().unwrap_or(&e.id);
+            let name = e.name().to_owned();
             let debug = e.category == Category::Debug;
-            let builtin = assemble::builtin(e.slot, name)
-                .filter(|_| !debug)
-                .map(|_| name.to_owned());
-            let graph = match (e.slot, &builtin) {
-                (Kind::Colour, Some(id)) if id == render::colour::outcome::ID => {
-                    Some(presets::outcome())
-                }
-                (Kind::Colour, None) if debug => Some(presets::view(&e.source)),
+            let graph = match e.slot {
+                Kind::Colour if name == render::colour::outcome::ID => Some(presets::outcome()),
+                Kind::Colour if debug => Some(presets::named_view(&name)),
                 _ => None,
             }
             .transpose()
             .map_err(|why| format!("{}: {why}", e.id))?;
-            let occupant = match &builtin {
-                Some(id) => Occupant::Builtin(id.clone()),
-                None => Occupant::Custom(e.source.clone()),
-            };
+            let occupant = Occupant::Builtin(name.clone());
             let description = describe(e.slot.into(), &occupant, &Default::default())
                 .map_err(|why| format!("{}: {why}", e.id))?;
             Ok(Entry {
                 slot: e.slot.into(),
                 id: e.id,
                 debug,
-                builtin,
+                builtin: Some(name),
                 graph,
                 description,
             })

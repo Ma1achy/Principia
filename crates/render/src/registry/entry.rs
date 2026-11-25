@@ -2,7 +2,8 @@
 //! uniformSchema, inputDomains}`, keyed by directory; the slot it is valid in ([`Entry::occupant`]); and its
 //! `inputDomains` (R-53; REQ-GEN-019).
 //!
-//! **Slot.** A file under a slot directory is that slot's occupant: `colour/`, `brightness/`, `combiner/` or `post/`.
+//! **Slot.** A file under a slot directory is that slot's occupant: `source/`, `colour/`, `brightness/`, `combiner/` or
+//! `post/`.
 //! A file under a `debug/` directory is tagged [`Category::Debug`] (a filter tag, not a different mechanism), and its
 //! slot is the slot function it defines, exactly one of `colour`, `brightness`, `combine` and `post` (RQ-219); a
 //! generated field view defines `colour`. An occupant is valid only in its slot.
@@ -27,7 +28,8 @@ use ledger::schema::Range;
 use crate::assemble::{self, Input, Kind, Occupant, Uniform};
 
 /// The slot directories and the slot each holds (gui_state_contract §3).
-const SLOTS: [(&str, Kind); 4] = [
+const SLOTS: [(&str, Kind); 5] = [
+    ("source", Kind::Source),
     ("colour", Kind::Colour),
     ("brightness", Kind::Brightness),
     ("combiner", Kind::Combiner),
@@ -76,6 +78,10 @@ pub enum RegistryError {
     Occupant(PathBuf, assemble::AssembleError),
     /// An occupant asked for in a slot that is not its own: its id, its slot, and the slot asked.
     WrongSlot(String, Kind, Kind),
+    /// A node named a source no file gives its slot: the slot and the name.
+    Unknown(Kind, String),
+    /// Two files give one name: the name, and both files.
+    Twice(String, PathBuf, PathBuf),
 }
 
 impl fmt::Display for RegistryError {
@@ -84,7 +90,7 @@ impl fmt::Display for RegistryError {
             RegistryError::Io(path, why) => write!(f, "{}: {why}", path.display()),
             RegistryError::NoSlot(path) => write!(
                 f,
-                "{}: not under a slot directory (colour/, brightness/, combiner/, post/) or debug/",
+                "{}: not under a slot directory (source/, colour/, brightness/, combiner/, post/) or debug/",
                 path.display()
             ),
             RegistryError::DebugSlot(path, kinds) => write!(
@@ -100,6 +106,15 @@ impl fmt::Display for RegistryError {
                 "`{id}` is a {} occupant, valid only in its slot: the {} slot does not take it",
                 slot.name(),
                 asked.name()
+            ),
+            RegistryError::Unknown(slot, name) => {
+                write!(f, "no {} source is named `{name}`", slot.name())
+            }
+            RegistryError::Twice(name, first, second) => write!(
+                f,
+                "`{name}` names two files, {} and {}: a name is one source",
+                first.display(),
+                second.display()
             ),
         }
     }
@@ -139,6 +154,17 @@ impl Entry {
             uniform_schema: declaration.uniforms,
             input_domains: declaration.inputs,
         })
+    }
+
+    /// The name a node of its slot calls it by: its id less its slot's directory where it is under one,
+    /// `outcome_state` for `colour/outcome_state`, else its whole id, `debug/generated/state`.
+    // The plan is unclear here; chose in-slot names for files under a slot's directory because saved stains and their
+    // keys already name the combiners, the outcome palette, margin and the overlays so.
+    pub fn name(&self) -> &str {
+        match self.category {
+            Category::Slot => self.id.split_once('/').map_or(&self.id, |(_, rest)| rest),
+            Category::Debug => &self.id,
+        }
     }
 
     /// The occupant this entry gives a node of the `slot` slot: its WGSL, in its own slot only. Any other slot refuses

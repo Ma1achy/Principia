@@ -15,7 +15,7 @@
 //!   `(x + 1)/2`, `u`'s in R and `v`'s in G, B = 0 (REQ-TOOL-153; debug_tooling_plan §F).
 //!
 //! And the stain the real app opens on, the outcome palette's ([`outcome`](crate::presets::outcome)), and a debug view's
-//! own graph ([`view`](crate::presets::view)).
+//! own graph, named by id ([`named_view`](crate::presets::named_view)) or as text ([`view`](crate::presets::view)).
 //!
 //! [`uv_screen`]: crate::presets::uv_screen
 //! [`uv_quad`]: crate::presets::uv_quad
@@ -67,6 +67,16 @@ pub fn outcome() -> Result<StainGraph, GraphError> {
 /// the zero source into the colour, passed through.
 pub fn view(colour: &str) -> Result<StainGraph, GraphError> {
     graph(render::registry::ZERO_SOURCE.to_owned(), colour.to_owned())
+}
+
+/// The shipped debug view `name` (`render::registry::Entry::name`), wired as the catalogue wires it
+/// (`render::registry::named_view_nodes`): the zero source into the view, both named by id, passed through. The same
+/// code as [`view`] of the view's file.
+pub fn named_view(name: &str) -> Result<StainGraph, GraphError> {
+    chain(
+        Occupant::Builtin(render::registry::ZERO.to_owned()),
+        Occupant::Builtin(name.to_owned()),
+    )
 }
 
 /// The graph of a source `source` into a colour `colour`, that into the pass-through combiner's colour port.

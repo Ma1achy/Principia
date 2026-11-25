@@ -239,7 +239,7 @@ fn registry_scan_refuses_a_file_under_no_slot() {
         "not under a slot directory",
     );
     check_refused(
-        ("shaders/wgsl/frag/source/s.wgsl", COLOUR),
+        ("shaders/wgsl/frag/field/s.wgsl", COLOUR),
         "not under a slot directory",
     );
     // Named for a slot, but under no slot directory: a file's own name is not a directory.

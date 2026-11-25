@@ -83,55 +83,6 @@ pub const DRIFT: &str = include_str!("../shaders/wgsl/lib/drift.wgsl");
 /// (TASK-M7-08).
 const PALETTE: &str = crate::colour::palette::WGSL;
 
-/// The built-in occupants, each its slot, id and WGSL file (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): the
-/// combiners pass-through (M1's), Replace-L and Multiply (dd_colouring §3.5); the colour `outcome_state`, the
-/// outcome palette of colour_composition §1.4 (TASK-M1-10); the colour `margin`, a multi-source occupant with two
-/// field inputs (render_gui_spec Part II §5; R-813; TASK-M7-12); and the structural overlays, post occupants
-/// (TASK-M1-13): the Tier-1 boundary overlay `edge_line` (render_gui_spec §12.1), the fallback ancestor tint and the
-/// pending hatch (debug_tooling_plan §F; RQ-239), so a graph names them by id.
-const BUILTINS: [(Kind, &str, &str); 8] = [
-    (
-        Kind::Combiner,
-        "pass_through",
-        include_str!("../shaders/wgsl/frag/combiner/pass_through.wgsl"),
-    ),
-    (
-        Kind::Combiner,
-        "replace_l",
-        include_str!("../shaders/wgsl/frag/combiner/replace_l.wgsl"),
-    ),
-    (
-        Kind::Combiner,
-        "multiply",
-        include_str!("../shaders/wgsl/frag/combiner/multiply.wgsl"),
-    ),
-    (
-        Kind::Colour,
-        crate::colour::outcome::ID,
-        crate::colour::outcome::WGSL,
-    ),
-    (
-        Kind::Colour,
-        "margin",
-        include_str!("../shaders/wgsl/frag/colour/margin.wgsl"),
-    ),
-    (
-        Kind::Post,
-        "edge_line",
-        include_str!("../shaders/wgsl/frag/post/edge_line.wgsl"),
-    ),
-    (
-        Kind::Post,
-        "fallback_tint",
-        include_str!("../shaders/wgsl/frag/post/fallback_tint.wgsl"),
-    ),
-    (
-        Kind::Post,
-        "pending_hatch",
-        include_str!("../shaders/wgsl/frag/post/pending_hatch.wgsl"),
-    ),
-];
-
 /// The post chain's bound (colour_composition §4.2: "Bounded at ≤ 8").
 pub const MAX_POSTS: usize = 8;
 
@@ -265,7 +216,7 @@ pub enum Occupant {
     None,
     /// The built-in source of a read-side field, by its member name (render_gui_spec Part II §3.1: "which ctx field").
     Field(String),
-    /// A built-in occupant, by its id in its slot.
+    /// A shipped source, by its name in its slot (`registry::Entry::name`): `pass_through`, `debug/generated/state`.
     BuiltIn(String),
     /// A custom occupant's WGSL, as written.
     Custom(String),
@@ -546,14 +497,6 @@ fn identifier(s: &str) -> Result<String, String> {
 
 // ── Occupants and wires ───────────────────────────────────────────────────────────────────────────────────────────
 
-/// The built-in occupant `id` of `kind`'s slot, as its WGSL file.
-pub fn builtin(kind: Kind, id: &str) -> Option<&'static str> {
-    BUILTINS
-        .iter()
-        .find(|(k, i, _)| *k == kind && *i == id)
-        .map(|(.., source)| *source)
-}
-
 /// The WGSL types of the read-side members a built-in source may read (lowering Part 3a): the scalars, `f32`, `u32`
 /// and `bool`, and the vector `vec3<f32>`, which a `Field` carries in `.xyz` (render_gui_spec Part II §3, §5: the
 /// shape n̂ source).
@@ -584,8 +527,9 @@ pub fn field_subtype(field: &str) -> Result<Subtype, AssembleError> {
     })
 }
 
-/// The WGSL `occupant` gives a node of `kind`, or `None` for the identity: a built-in's file and a custom's text alike,
-/// the built-in source generated from its field. An occupant the slot does not take is refused.
+/// The WGSL `occupant` gives a node of `kind`, or `None` for the identity: a shipped source's file, named by id from
+/// the registry (`registry::named`), and a custom's text alike, a field's source generated from its field. An
+/// occupant the slot does not take, or a name no file gives the slot, is refused.
 pub fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>, AssembleError> {
     let refuse = |what: &str| {
         Err(AssembleError::Occupant(format!(
@@ -623,9 +567,9 @@ pub fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>
             )))
         }
         (_, Occupant::Field(_)) => refuse("a field: only a source does"),
-        (_, Occupant::BuiltIn(id)) => builtin(kind, id)
-            .map(|s| Some(s.to_owned()))
-            .ok_or_else(|| AssembleError::Occupant(format!("no built-in {} `{id}`", kind.name()))),
+        (_, Occupant::BuiltIn(id)) => crate::registry::named(kind, id)
+            .map(|e| Some(e.source.clone()))
+            .map_err(|e| AssembleError::Occupant(e.to_string())),
         (_, Occupant::Custom(text)) => Ok(Some(text.clone())),
     }
 }

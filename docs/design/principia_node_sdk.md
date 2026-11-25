@@ -163,13 +163,13 @@ and what moves it.
 
 | Built-in | Its path today | Moves to | Task |
 |---|---|---|---|
-| The registry's 86 sources | Scanned from folders, as designed. But a graph can name only eight of them by id, through a second, hand-kept table (`assemble::BUILTINS`). The other 78 enter a graph as pasted custom text, so a shipped debug view is titled "custom" and marked hand-written. | One registry. The table goes; a graph names any shipped source by its id. | M7-83 |
+| The registry's 87 sources | Scanned from folders, and the only table: a graph names any of them by its id (`registry::named`), a file under a slot's directory by its name there (`pass_through`), any other by its whole id (`debug/generated/state`). The zero source the debug views read is a shipped file, `source/zero`. | Done. | M7-83 |
 | Keys and saved stains | A built-in is keyed and saved by its id, a custom by its text. So a shipped source can change under a saved stain, and the same code compiles twice under two keys. | Keyed by code, whoever wrote it. Saved as id, version and hash, plus the text. | M7-84 |
 | Source nodes (`ctx.<field>`) | WGSL written inside the assembler, one per field. | One shipped source, `field`, with a `field` parameter. | M7-85 |
 | Field ramps | Built by Rust (`colour/field_ramp.rs`), one shader per field, 42 of them, each handling its own invalid pixels, with a CPU mirror the goldens check. Placed in graphs as custom text, and not in the app's library at all. | One shipped source, `field_ramp`, with input, gradient, curve, polarity and range as parameters, so the ramps appear in the app. The generator goes; the CPU mirror stays as the check. | M7-86 |
 | The outcome palette | The shader, a CPU twin, a swatch table, the legend, the field's own image and the editor, each with the colours or the id written in. | The colours are the source's declared defaults. The legend, the CPU image and the editor read them there. | M7-87 |
-| Combiners, margin, boundary lines, fallback tint, pending hatch | Plain source files, in the second table. | Nothing but M7-83. | M7-83 |
-| Generated debug views | Generated from the field ledger, which is right: one source of truth. | Stay generated. They carry declarations and are named by id. | M7-76, M7-83 |
+| Combiners, margin, boundary lines, fallback tint, pending hatch | Plain source files, named by id from the registry. | Done. | M7-83 |
+| Generated debug views | Generated from the field ledger, which is right: one source of truth. They carry declarations, and the library names them by id. | Done. | M7-76, M7-83 |
 | Site-blend, gradients, combinators, overlays | Planned as Rust operations with their own inspectors. Not built. | Shipped sources on M7-78's parameters. Where a shader must be generated (a chosen kernel, a list's length), the generator takes a declared source and is open to a custom too. | M7-06, -07, -09, -10 |
 | Presets | Graphs built in Rust (`presets.rs`, `structural.rs`), with small shaders as strings inside. | Saved stains as files, read as a user's are. Their inline shaders become shipped sources. | M7-17 |
 | The mock engine's stain | Its own palette, names and shader text. | The shipped registry. | M7-77 |
