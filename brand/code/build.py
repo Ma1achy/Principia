@@ -259,7 +259,7 @@ def part_explore(out, only=None, timeout=300):
         for f in sorted(os.listdir(wd)):
             ref = os.path.join(PY, 'data', f)
             cur = os.path.join(wd, f)
-            if f.endswith(('.json', '.npz')) and os.path.isfile(cur) and f in os.listdir(os.path.join(PY, 'data')) + [f]:
+            if f.endswith(('.json', '.npz')) and os.path.isfile(cur):
                 if os.path.exists(ref):
                     if not filecmp.cmp(ref, cur, shallow=False):
                         wrote[f] = 'differs from the committed file'
@@ -267,10 +267,10 @@ def part_explore(out, only=None, timeout=300):
                     wrote[f] = 'new file (not committed)'
         res[name] = {'status': status, 'seconds': round(time.time() - t0), 'changed_or_new': wrote, 'tail': tail}
         log(name, res[name]['status'], res[name]['seconds'], 's', wrote)
-    p = os.path.join(out, 'explore.json')
-    old = json.load(open(p)) if os.path.exists(p) else {}
-    old.update(res)
-    json.dump(old, open(p, 'w'), indent=1)
+        p = os.path.join(out, 'explore.json')       # written after every script: a long run can be read as it goes
+        old = json.load(open(p)) if os.path.exists(p) else {}
+        old.update(res)
+        json.dump(old, open(p, 'w'), indent=1)
 
 
 def build_info(out):
