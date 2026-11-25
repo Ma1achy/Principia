@@ -1,0 +1,13 @@
+{
+  "charts": {
+    "Burrau": "ic=cc9a5bc881ae9458",
+    "BurrauThetaDeltaM": "ic=44b85c7c9f7aa816",
+    "BurrauThetaK": "ic=6c6d1fda33926489",
+    "BurrauThetaLz": "ic=88d515073ba366d1",
+    "EuclidPlane": "ic=2b0d90da2041d504",
+    "InvariantLK": "ic=00dfaf51a92e24f7",
+    "MassSimplex": "ic=8837ff219b1d340f"
+  },
+  "command": "PRINCIPIA_BLESS_REGISTRY_BASELINE=1 cargo test -p engine --test registry_baseline",
+  "what": "The kernel charts digest.json holds no case of, recorded from today's code before the primitive registry (TASK-M2-66): each chart's decoded states at path_support's 3 x 3 probe of the unit square, FNV-1a 64 (crates/engine/tests/registry_baseline.rs)."
+}

@@ -11,6 +11,8 @@
 pub mod axis;
 pub mod charts;
 pub mod descriptor;
+pub mod lowering;
+pub mod registry;
 pub mod validate;
 
 pub use axis::{

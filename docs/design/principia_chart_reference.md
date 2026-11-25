@@ -1135,9 +1135,19 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   `HeldK` and the Burrau charts R-708 covers) to refuse a pixel inside the band one float wide at the warp's floor, where
   f32 rounding, not the chart, decides: such a refusal is labelled as rounding, never drawn as the chart's edge, and no
   pixel that isn't a system is ever accepted. The edge walk is repeated on the GPU when the shader decodes these charts
-  (TASK-M4-06). What "one float wide" is measured in, and the band's width in it, is a definition TASK-M4-06 writes
-  here under physics review (R-72); a width that is a number rather than a derivation is a calibration (R-71)
-  (REQ-CHART-152).
+  (TASK-M4-06). *The band, defined (TASK-M2-66, under physics review, R-72; `kernel::chart::band`):* it is measured in
+  the pixel's own coordinates `(u, v)` at the chart's precision, the row coordinate `t = v` among them, and it is one
+  float wide. An f32 refusal at `(u, v)` is a rounding refusal iff the chart as authored at f64, whose narrowing the f32
+  chart is, accepts the same pixel (its f32 coordinates widened exactly; a parameter's rounding is f32 rounding too) and a pixel one f32 float away, `(u ± 1 ulp, v)` or `(u, v ± 1 ulp)`, is accepted at
+  f32. The width is one float as measured on the charts below, not derived for every chart: a check set by a parameter
+  narrowed to f32, or an operand whose map from `(u, v)` is flat (a power warp near `t = 0`), can put a rounding refusal
+  many floats from f32-accepted ground, where it would read as unexplained, a false alarm and never a wrong picture;
+  the GPU's edge walk (TASK-M4-06) repeats the measurement. A refusal its f64 twin shares is the chart's edge; one its twin does not share, with no f32-accepted
+  pixel one float away, is no rounding effect and takes R-506's decoder-bug warning. Measured on the CPU edge walk
+  (`f32_band_label`, 2,121,000 pixels of `HeldLz` on `(ν, K)` and `(θ, K)` and of `HeldK`, warped and linear): no
+  rounding refusal at the warp's floor, which `k_floor` keeps feasible at the chart's own precision; the 24,134 rounding
+  refusals are all on the acute charts' `θ` axis at `u = 1`, where `θ_max = π/4` rounded to f32 lies above `π/4`;
+  against the f32 chart's own parameters widened there are none, so the per-pixel arithmetic never decides alone.
 - **The slider spans of the held coordinates (R-920, ruling RQ-679; a definition, R-72, REQ-CHART-188).** R-507 U1
   divides a hidden offset by the coordinate's slider span. A span is the full range at zoom 1 of the screen axis that
   carries the same coordinate on the registry's own charts, read at that chart's home window, the preset's: a length,
