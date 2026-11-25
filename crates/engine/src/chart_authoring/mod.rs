@@ -10,6 +10,7 @@
 
 pub mod axis;
 pub mod charts;
+pub mod composed;
 pub mod descriptor;
 pub mod lowering;
 pub mod registry;

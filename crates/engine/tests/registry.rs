@@ -57,7 +57,7 @@ use engine::chart_authoring::validate::{
 #[cfg(feature = "controls")]
 use engine::chart_authoring::{registry::ROWS, validate::validate_spec_with};
 use engine::contract::sim_config::{Plane, Window};
-use kernel::chart::{Chart, ChartDecode, REGISTRY};
+use kernel::chart::{Chart, REGISTRY};
 use kernel::decode::{decode, Ic, Latent as Controls};
 use kernel::driver::nsub_table::{thresholds, NsubConfig};
 use kernel::driver::wrapper::{integrate, WrapperUniforms};
@@ -851,77 +851,44 @@ fn key_of(sim: &engine::contract::sim_config::SimConfig, d: Digest) -> u64 {
     }
 }
 
-/// The word of the chart `name` of `kernel::chart::REGISTRY`, decoded through its registered pair's lowering: the
-/// chart the lowering names, built as the stored baseline built it, at the stored baseline's window.
+/// The word of the chart `name` of `kernel::chart::REGISTRY`, decoded through the composition: its registered pair's
+/// lowering, the chart built as the stored baseline built it, at the stored baseline's window.
 fn chart_word(name: &str, flip: bool) -> String {
-    let registry = Registry::standard();
-    let (h, v, _, _) = PAIRS
-        .iter()
-        .find(|p| p.2 == name)
-        .unwrap_or_else(|| panic!("{name}: no registered pair"));
-    let s = spec(AxisSpec::pick(h), AxisSpec::pick(v));
-    let resolved = resolve_spec(&validate_spec(&registry, &s).expect("the pair validates"));
-    let Lowering::Baked { chart, .. } = resolved.lowering else {
-        panic!("{name} lowers to {:?}", resolved.lowering)
-    };
-    fn ic_of<C: ChartDecode>(c: &C, w: &Window, flip: bool) -> String
-    where
-        f64: From<C::Param>,
-    {
-        let mut bytes = Vec::new();
-        for t in PROBE {
-            for s in PROBE {
-                let [u, v] = w.at(s, t);
-                let mut ic = c.decode_at::<Defaults, f64>(u, v).ic;
-                if flip {
-                    ic.p[0][0] = f64::from_bits(ic.p[0][0].to_bits() ^ 1);
-                }
-                ic_words(&ic, &mut bytes);
+    struct One<'a> {
+        name: &'a str,
+        flip: bool,
+        word: Option<String>,
+    }
+    impl Visit for One<'_> {
+        fn chart<C>(&mut self, name: &'static str, chart: C, window: Window)
+        where
+            C: engine::lookup::Fill + 'static,
+            f64: From<C::Param>,
+        {
+            if name == self.name {
+                let c = compose(name, chart);
+                let flip = self.flip;
+                self.word = Some(decode_word(
+                    |u, v| {
+                        let mut ic = c.decode(u, v).ic;
+                        if flip {
+                            ic.p[0][0] = f64::from_bits(ic.p[0][0].to_bits() ^ 1);
+                        }
+                        ic
+                    },
+                    &window,
+                ));
             }
         }
-        format!("ic={:016x}", fnv(&bytes))
     }
-    let switched = |w: engine::path::View| {
-        let from = engine::path::View::latent(sim(Plane {
-            z0: [0.0; 8],
-            q1: [0.0; 8],
-            q2: [0.0; 8],
-        }));
-        engine::path::Segment::chart_switch(&from, w)
-            .b()
-            .sim
-            .chart
-            .window
+    let mut one = One {
+        name,
+        flip,
+        word: None,
     };
-    let zero = Plane {
-        z0: [0.0; 8],
-        q1: [0.0; 8],
-        q2: [0.0; 8],
-    };
-    let sq = Window::SQUARE;
-    match chart {
-        "ShapeSphere" => {
-            let w = switched(engine::path::View::kernel(&sphere(), sim(zero)).expect("a view"));
-            ic_of(&sphere(), &w, flip)
-        }
-        "InvariantLE" => {
-            let w =
-                switched(engine::path::View::kernel(&invariant_le(), sim(zero)).expect("a view"));
-            ic_of(&invariant_le(), &w, flip)
-        }
-        "Mixed" => {
-            let w = switched(engine::path::View::kernel(&mixed(), sim(zero)).expect("a view"));
-            ic_of(&mixed(), &w, flip)
-        }
-        "Burrau" => ic_of(&charts::burrau::<f64>(), &sq, flip),
-        "EuclidPlane" => ic_of(&charts::euclid_plane::<f64>(), &sq, flip),
-        "BurrauThetaK" => ic_of(&charts::burrau_theta_k::<f64>(), &sq, flip),
-        "BurrauThetaLz" => ic_of(&charts::burrau_theta_lz::<f64>(), &sq, flip),
-        "BurrauThetaDeltaM" => ic_of(&charts::burrau_theta_delta_m::<f64>(), &sq, flip),
-        "InvariantLK" => ic_of(&invariant_lk(), &sq, flip),
-        "MassSimplex" => ic_of(&charts::mass_simplex::<f64>(), &sq, flip),
-        other => panic!("{other}: no baseline construction"),
-    }
+    each_chart(&mut one);
+    one.word
+        .unwrap_or_else(|| panic!("{name}: no baseline construction"))
 }
 
 /// The registry baseline recorded before the registry (`registry_baseline.rs`).

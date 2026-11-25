@@ -35,7 +35,6 @@ use kernel::decode::{Decoded, Degenerate, Ic};
 use kernel::generated::links::Defaults;
 use path_shim::sim_of;
 use validation::negative_control;
-use validation::roundtrip::phys;
 
 // ── The fixtures, as `path_lock.rs` builds them ────────────────────────────────────────────────────────────────────
 
@@ -125,7 +124,7 @@ fn locked_mixed(window: Window, (s, t): (f64, f64)) -> View {
     let view = mixed_view(window);
     let tol = Tolerances::register(128.0 * f64::EPSILON);
     let (seg, _) =
-        Segment::lock_on_chart::<Defaults, _, _>(&view, &mixed(FROZEN), (s, t), phys, &tol)
+        Segment::lock_on_chart(&view, &path_shim::lockable(&mixed(FROZEN)), (s, t), &tol)
             .expect("a lock on the mixed chart");
     anchor::record(seg.b(), &leaves()).expect("a recorded anchor")
 }

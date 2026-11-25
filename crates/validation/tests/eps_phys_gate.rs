@@ -12,7 +12,7 @@ use validation::eps_phys::{
 };
 use validation::gate::{self, GateConfig, RegionCount, Verdict};
 use validation::negative_control;
-use validation::roundtrip::{keys, margins, Registered, Sides, INSIDE, PAST};
+use validation::roundtrip::{composed, keys, margins, Registered, Sides, INSIDE, PAST};
 
 /// This workspace's root.
 fn root() -> PathBuf {
@@ -277,7 +277,9 @@ negative_control!(
 fn check_rows(i: &Input, got: &[Row]) {
     let mut want: Vec<(String, u32)> = keys()
         .into_iter()
-        .flat_map(|k| [(k.to_owned(), 64), (k.to_owned(), 32)])
+        .map(str::to_owned)
+        .chain(composed().iter().map(|c| c.key().to_owned()))
+        .flat_map(|k| [(k.clone(), 64), (k, 32)])
         .collect();
     if i.fuzz > 0 {
         want.extend([
@@ -544,17 +546,17 @@ fn check_judge(judge: Judge) {
         "the pass gives no margin {margin}: {:?}",
         pass.scatter
     );
-    // 17 registered charts at f64 and f32, 256 points each, and the latent fuzz's 1024 at each.
+    // 17 registered charts and 11 composed ones at f64 and f32, 256 points each, and the latent fuzz's 1024 at each.
     assert_eq!(
         pass.regions.as_ref().map(|r| r.count.clone()),
-        Some(RegionCount::Recorded(34 * 256 + 2 * 1024)),
+        Some(RegionCount::Recorded(56 * 256 + 2 * 1024)),
         "the pass's sample count"
     );
     assert_eq!(
         pass.negative_results,
         [format!(
             "0 of {} samples beyond ε_phys or against their clamp flags",
-            34 * 256 + 2 * 1024
+            56 * 256 + 2 * 1024
         )],
         "the pass's negative results"
     );
@@ -575,7 +577,7 @@ fn check_judge(judge: Judge) {
     );
     assert_eq!(
         fail.negative_results[0].matches(" interior, ").count(),
-        36,
+        58,
         "the fail names every row: {:?}",
         fail.negative_results
     );

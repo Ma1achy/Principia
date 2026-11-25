@@ -24,20 +24,15 @@
 //! A drag sends one leaf per frame, each from the view where it began; [`Emitted`] keeps the last view it sent, so a
 //! drag held past the stop sends nothing new and one brought back inside sends the value.
 
-use std::marker::PhantomData;
-
 use kernel::chart::nav::{Check, Edit};
 use kernel::chart::tilt::TiltSpec;
-use kernel::decode::Ic;
-use kernel::encode::by_kind::ByKind;
-use kernel::encode::SimplexClamp;
-use kernel::generated::links::Selection;
 
 use super::stop::{Gate, Numbers};
 use super::{ChartLock, CutLabel, LatentTilt, PathError, Segment, SliderSpan, View};
+use crate::chart_authoring::composed::Composed;
 use crate::contract::set_field::SetField;
 use crate::contract::sim_config::Latent;
-use crate::lock::{FrozenControls, Nearest};
+use crate::lock::Nearest;
 use crate::lookup::Tolerances;
 
 /// What a leaf did: its segment, the check the stop named where it stopped, and what a lock on a nonlinear chart found.
@@ -232,25 +227,14 @@ impl Locate for Affine {
 }
 
 /// A nonlinear chart's lock: the chart, lookup's norm and tolerances, under the link selection `S`.
-pub struct OnChart<'c, S, C, N> {
+pub struct OnChart<'c> {
     /// The chart.
-    pub chart: &'c C,
-    /// Lookup's norm.
-    pub norm: N,
+    pub chart: &'c Composed,
     /// Lookup's tolerances.
     pub tol: &'c Tolerances,
-    /// The link selection.
-    pub selection: PhantomData<S>,
 }
 
-impl<S, C, N> Locate for OnChart<'_, S, C, N>
-where
-    S: Selection,
-    S::MassLink: SimplexClamp,
-    C: ByKind + FrozenControls,
-    f64: From<C::Param>,
-    N: Fn(&Ic<f64>, &Ic<f64>) -> f64 + Copy,
-{
+impl Locate for OnChart<'_> {
     fn lock(
         &self,
         a: &View,
@@ -258,12 +242,8 @@ where
         setting: CentreOnPin,
     ) -> Result<(Segment, Option<ChartLock>), PathError> {
         let (seg, found) = match setting {
-            CentreOnPin::Off => {
-                Segment::lock_on_chart::<S, C, N>(a, self.chart, at, self.norm, self.tol)?
-            }
-            CentreOnPin::On => {
-                Segment::lock_on_chart_centred::<S, C, N>(a, self.chart, at, self.norm, self.tol)?
-            }
+            CentreOnPin::Off => Segment::lock_on_chart(a, self.chart, at, self.tol)?,
+            CentreOnPin::On => Segment::lock_on_chart_centred(a, self.chart, at, self.tol)?,
         };
         Ok((seg, Some(found)))
     }

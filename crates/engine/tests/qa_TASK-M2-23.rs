@@ -38,7 +38,6 @@ use kernel::chart::{
 use kernel::decode::descriptor::potential;
 use kernel::decode::{decode, Ic};
 use kernel::encode::blocks::clamps;
-use kernel::encode::by_kind::ByKind;
 use kernel::encode::SimplexClamp;
 use kernel::generated::links::{
     Defaults, Link, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ, StickBreaking,
@@ -282,13 +281,13 @@ fn check_chart<C>(
     read_at: fn(f64, f64) -> (f64, f64),
     rebuild: fn(&C, &Latent) -> C,
 ) where
-    C: ByKind<Param = f64> + ChartDecode + FrozenControls,
+    C: engine::lookup::Fill<Param = f64> + ChartDecode + FrozenControls + Clone + 'static,
 {
     let (ps, pt) = read_at(s, t);
     let u = window.centre[0] + (2.0 * ps - 1.0) * window.half[0];
     let v = window.centre[1] + (2.0 * pt - 1.0) * window.half[1];
     let clicked = chart.decode_at::<Defaults, f64>(u, v).ic;
-    let lock = set_on_chart::<Defaults, C, _>(chart, window, s, t, phys, &tol()).expect("a lock");
+    let lock = set_on_chart(chart, window, s, t, &tol()).expect("a lock");
     assert_eq!(lock.window.half, window.half, "the lock changed the zoom");
     let c = lock.window.at(0.5, 0.5);
     assert!(
@@ -479,7 +478,7 @@ fn check_refusals(verdict: fn(f64, f64) -> ValidationResult) {
         for i in 0..=20 {
             let (s, t) = (i as f64 / 20.0, j as f64 / 20.0);
             let [u, v] = square.at(s, t);
-            let got = set_on_chart::<Defaults, _, _>(&chart, &square, s, t, phys, &tol());
+            let got = set_on_chart(&chart, &square, s, t, &tol());
             match verdict(u, v) {
                 ValidationResult::Valid => {
                     assert!(
@@ -836,7 +835,7 @@ fn qa_lock_setfields_sim_only() {
     check_sim_only(&gestures);
     apply(&mut st, gestures);
     check_sim_only(
-        &set_on_chart::<Defaults, _, _>(
+        &set_on_chart(
             &lk(),
             &Window {
                 centre: [0.5, 0.5],
@@ -844,7 +843,6 @@ fn qa_lock_setfields_sim_only() {
             },
             0.5,
             0.9,
-            phys,
             &tol(),
         )
         .expect("a lock")

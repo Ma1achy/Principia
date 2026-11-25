@@ -5,19 +5,19 @@
 
 #![allow(dead_code)]
 
+use engine::chart_authoring::composed::{Charts, Composed};
+use engine::chart_authoring::registry::{AxisSpec, ChartSpec, Registry, PAIRS};
+use engine::chart_authoring::validate::validate_spec;
 use engine::contract::set_field::SetField;
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
     SimConfig, Slice, SliceFrame, Window, Z_Q3,
 };
 use engine::lock::{FrozenControls, LockError, Nearest};
-use engine::lookup::{Notices, Tolerances};
+use engine::lookup::{Fill, Notices, Tolerances};
 use engine::nav::{BasisVector, NavError};
 use engine::path::{Constructor, PathError, Segment, View};
 use kernel::decode::Ic;
-use kernel::encode::by_kind::ByKind;
-use kernel::encode::SimplexClamp;
-use kernel::generated::links::Selection;
 
 #[allow(unused_imports)]
 pub use engine::path::{oblique, tilt_tangent, tilt_vector};
@@ -163,20 +163,16 @@ pub struct ChartLock {
 
 /// The lock on the nonlinear `chart` through `window` with the centre-on-pin setting on, today's lock before the pin,
 /// through `Segment::lock_on_chart_centred`: the earlier tests' lock.
-pub fn set_on_chart<S, C, N>(
+pub fn set_on_chart<C>(
     chart: &C,
     window: &Window,
     s: f64,
     t: f64,
-    norm: N,
     tol: &Tolerances,
 ) -> Result<ChartLock, LockError>
 where
-    S: Selection,
-    S::MassLink: SimplexClamp,
-    C: ByKind + FrozenControls,
+    C: Fill + FrozenControls + Clone + 'static,
     f64: From<C::Param>,
-    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
 {
     let mut sim = sim_of(&Plane {
         z0: [0.0; 8],
@@ -185,7 +181,7 @@ where
     });
     sim.chart.window = *window;
     let view = View::kernel(chart, sim).expect("a registry chart");
-    Segment::lock_on_chart_centred::<S, C, N>(&view, chart, (s, t), norm, tol)
+    Segment::lock_on_chart_centred(&view, &lockable(chart), (s, t), tol)
         .map(|(seg, found)| ChartLock {
             edits: <[SetField; 3]>::try_from(seg.edits().to_vec()).expect("three edits"),
             window: seg.b().sim.chart.window,
@@ -206,20 +202,16 @@ pub struct PinnedLock {
 }
 
 /// The lock on the nonlinear `chart` through `window`, the setting off, through `Segment::lock_on_chart`.
-pub fn set_on_chart_pinned<S, C, N>(
+pub fn set_on_chart_pinned<C>(
     chart: &C,
     window: &Window,
     s: f64,
     t: f64,
-    norm: N,
     tol: &Tolerances,
 ) -> Result<PinnedLock, LockError>
 where
-    S: Selection,
-    S::MassLink: SimplexClamp,
-    C: ByKind + FrozenControls,
+    C: Fill + FrozenControls + Clone + 'static,
     f64: From<C::Param>,
-    N: Fn(&Ic<f64>, &Ic<f64>) -> f64,
 {
     let mut sim = sim_of(&Plane {
         z0: [0.0; 8],
@@ -228,7 +220,7 @@ where
     });
     sim.chart.window = *window;
     let view = View::kernel(chart, sim).expect("a registry chart");
-    Segment::lock_on_chart::<S, C, N>(&view, chart, (s, t), norm, tol)
+    Segment::lock_on_chart(&view, &lockable(chart), (s, t), tol)
         .map(|(seg, found)| PinnedLock {
             edits: <[SetField; 1]>::try_from(seg.edits().to_vec()).expect("one edit"),
             window: found.window,
@@ -269,4 +261,20 @@ pub fn recentre(nearest: &Nearest) -> [SetField; 2] {
     };
     let seg = Segment::recentre(&view_of(&plane), nearest);
     <[SetField; 2]>::try_from(seg.edits().to_vec()).expect("two edits")
+}
+
+/// The composed chart of `chart`: its registered pair's lowering, the chart and its hidden coordinates held in the table.
+pub fn lockable<C>(chart: &C) -> Composed
+where
+    C: Fill + FrozenControls + Clone + 'static,
+    f64: From<C::Param>,
+{
+    let (h, v, name, _) = PAIRS
+        .iter()
+        .find(|p| p.2 == chart.name())
+        .expect("a registered pair");
+    let spec = ChartSpec::new(AxisSpec::pick(h), AxisSpec::pick(v), [0.0; 8]);
+    let valid = validate_spec(&Registry::standard(), &spec).expect("the pair validates");
+    Composed::new(&valid, Charts::new().with_hidden(name, chart.clone()))
+        .expect("the pair composes")
 }

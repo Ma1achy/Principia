@@ -38,14 +38,12 @@ use kernel::chart::saved::Saved;
 use kernel::chart::tilt::{TiltMap, TiltSpec};
 use kernel::chart::{ChartDecode, ShapeSphere};
 use kernel::decode::Ic;
-use kernel::encode::by_kind::ByKind;
 use kernel::generated::links::Defaults;
 use path_shim::{
     oblique, pan, recentre, set_on_chart, set_on_chart_pinned, slice, zoom, ChartConstructor,
 };
 use path_support::*;
 use validation::negative_control;
-use validation::roundtrip::phys;
 
 /// What runs each family: the object, or a control's stand-in.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -128,7 +126,7 @@ fn zoomed(plane: &Plane, octaves: f64) -> Plane {
 /// through the re-centred window.
 fn chart_lock<C>(chart: &C, at: (f64, f64, f64), centred: bool) -> String
 where
-    C: ByKind + engine::lock::FrozenControls + ChartDecode,
+    C: engine::lookup::Fill + engine::lock::FrozenControls + ChartDecode + Clone + 'static,
     f64: From<C::Param>,
     f64: From<<C as kernel::chart::Chart>::Param>,
 {
@@ -152,7 +150,7 @@ fn chart_lock_in<C>(
     centred: bool,
 ) -> String
 where
-    C: ByKind + engine::lock::FrozenControls + ChartDecode,
+    C: engine::lookup::Fill + engine::lock::FrozenControls + ChartDecode + Clone + 'static,
     f64: From<C::Param>,
     f64: From<<C as kernel::chart::Chart>::Param>,
 {
@@ -169,11 +167,11 @@ where
             )
         };
     match centred {
-        true => match set_on_chart::<Defaults, C, _>(chart, win, s, t, phys, tol) {
+        true => match set_on_chart(chart, win, s, t, tol) {
             Ok(lock) => digest(&lock.edits, &lock.ic, lock.notices, &lock.window),
             Err(e) => err_digest(&e),
         },
-        false => match set_on_chart_pinned::<Defaults, C, _>(chart, win, s, t, phys, tol) {
+        false => match set_on_chart_pinned(chart, win, s, t, tol) {
             Ok(lock) => digest(&lock.edits, &lock.ic, lock.notices, &lock.window),
             Err(e) => err_digest(&e),
         },

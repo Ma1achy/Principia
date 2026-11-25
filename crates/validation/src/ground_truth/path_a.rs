@@ -20,9 +20,9 @@
 //! residual is a bug signal, never a statement that the start is out of reach. A start the encode can only clamp
 //! (`lookup_clamped`, an `α`-pole) is Path B's, not Path A's: [`PathA::clamped`] reports it.
 
+use engine::chart_authoring::composed::Composed;
 use kernel::decode::{Degenerate, Ic};
 use kernel::driver::advance::Advance;
-use kernel::encode::ingest::ingest;
 use kernel::encode::SimplexClamp;
 use kernel::generated::links::Selection;
 
@@ -30,7 +30,6 @@ use engine::compute::ComputeError;
 use engine::precision::{decode_only, integrate_ic, MarchKey64, SimState64};
 
 use super::{latent_sim_key, Provenance};
-use crate::roundtrip::phys;
 
 /// CHECK 1: what the front end made of the start.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -57,7 +56,7 @@ where
     S: Selection,
     S::MassLink: SimplexClamp,
 {
-    let g = ingest::<S, f64, _>(x, phys);
+    let g = Composed::free().ingest::<S>(x);
     Check1 {
         canonical: g.encoded.canonical.ic,
         lambda: g.encoded.canonical.lambda,

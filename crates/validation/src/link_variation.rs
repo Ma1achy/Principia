@@ -24,16 +24,14 @@
 //! **What it does not do.** It classifies nothing: the note's "clean" and "bad" would need a threshold on `κ` that the
 //! corpus does not give; the rows report `residual_L` and `κ_L` and the reader judges.
 
+use engine::chart_authoring::composed::Composed;
 use engine::contract::sim_config::Links;
 use kernel::decode::Ic;
-use kernel::encode::ingest::ingest;
 use kernel::encode::SimplexClamp;
 use kernel::generated::links::{
     Alpha, Beta, Link, Mass, PeriodicBeta, Select, Selection, SigmoidAlpha, SigmoidQ, SoftmaxTanh,
     SoftsignAlpha, SoftsignQ, StickBreaking, TanhAlpha, TanhQ,
 };
-
-use crate::roundtrip::phys;
 
 /// One selection's row: the IC inverted under it.
 #[derive(Clone, Debug, PartialEq)]
@@ -57,7 +55,7 @@ where
     S: Selection,
     S::MassLink: SimplexClamp,
 {
-    let got = ingest::<S, f64, _>(ic, phys);
+    let got = Composed::free().ingest::<S>(ic);
     Row {
         links: Links::of::<S>().expect("each row's momentum controls share one link"),
         z: got.encoded.z.z,
