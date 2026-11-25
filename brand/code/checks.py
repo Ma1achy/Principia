@@ -27,14 +27,16 @@ def png_size(path):
 
 
 def ico_sizes(path):
-    d = open(path, 'rb').read()
+    with open(path, 'rb') as f:
+        d = f.read()
     n = struct.unpack('<H', d[4:6])[0]
     return sorted((d[6 + 16 * i] or 256) for i in range(n))
 
 
 def icns_sizes(path):
     """Embedded images as (type, pixels): the type names the size and scale."""
-    d = open(path, 'rb').read()
+    with open(path, 'rb') as f:
+        d = f.read()
     out, i = [], 8
     while i < len(d):
         t, ln = d[i:i + 4].decode('latin1'), struct.unpack('>I', d[i + 4:i + 8])[0]
@@ -44,7 +46,8 @@ def icns_sizes(path):
 
 
 def webp_canvas(path):
-    d = open(path, 'rb').read(40)
+    with open(path, 'rb') as f:
+        d = f.read(40)
     if d[:4] != b'RIFF' or d[8:12] != b'WEBP' or d[12:16] != b'VP8X':
         raise ValueError(f'{path} is not an extended (animated) WebP')
     return int.from_bytes(d[24:27], 'little') + 1, int.from_bytes(d[27:30], 'little') + 1
@@ -65,8 +68,12 @@ def web_matches_generator(brand, boards_dir=None):
         bad = []
         for f in sorted(os.listdir(out)):
             a, b = os.path.join(out, f), os.path.join(brand, 'code/web', f)
-            if not os.path.exists(b) or open(a, 'rb').read() != open(b, 'rb').read():
+            if not os.path.exists(b):
                 bad.append(f)
+                continue
+            with open(a, 'rb') as fa, open(b, 'rb') as fb:
+                if fa.read() != fb.read():
+                    bad.append(f)
         return bad
 
 
