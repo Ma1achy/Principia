@@ -3,8 +3,15 @@
 // w_f·P_f` (debug_tooling_plan §F), on Viridis over the measured range: neither end is bounded. It reads quad metadata,
 // not payload. A lane the raster did not place (`shade_sample`) holds the absence NaN, or its bits in a u32 member, and
 // draws `debug_invalid`'s hatch (R-136).
+// @name s_priority
+// @group Debug · structure
+// @about The scheduler's priority for the quad.
+// @maps ctx.quad.priority [lin, measured range]
+// @glyph name
 // @uniform RANGE_AUTO: u32 = 1 [0, 1]
+// @control RANGE_AUTO toggle "Auto range"
 // @uniform u_range: vec2<f32> = (0.0, 1.0)
+// @control u_range hidden "Measured range"
 fn colour(ctx: Ctx) -> vec3<f32> {
     if is_absent_nan(ctx.quad.priority) {
         return debug_invalid(ctx.frag_xy);

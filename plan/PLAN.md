@@ -328,12 +328,32 @@ Refinement where the picture needs it, and zoom past the f32 floor through the o
 ## C7 — Colour
 
 The stain graph, colour composition, legends, traces and contours on the real field, and the print stage.
+Built-in and custom stain nodes are made and shown one way: `docs/design/principia_node_sdk.md` gives the order, and
+where it differs from an older task below, it stands.
 
 - Site-blend: kernels, blend space, swatches, static site sets and the vMF engine (TASK-M7-06)
 - The seamless LUT sphere and analytic Cubehelix (TASK-M7-07)
 - ScalarField sources, derived operators and the physics site generators (TASK-M7-09)
 - Combinators and the physics overlay (blob blend) (TASK-M7-10)
+- A node's own source describes it: name, group, glyph and controls, the same for built-in and custom (TASK-M7-76)
+- One registry of stain nodes: every shipped source named by its id, the second table gone (TASK-M7-83)
+- The stain editor draws every node from its description: titles, glyphs, controls and choices, no special cases
+  (TASK-M7-77)
+- Stain keys and saved stains by code: a shipped source cannot change under a saved stain (TASK-M7-84)
+- Your shaders: a folder the app reads, their ids and versions, and update (TASK-M7-80)
 - Custom per-node WGSL: async compile, last-valid fallback, the Problems surface and eject (TASK-M7-14)
+- What can change the picture, proved from the shader: dead controls, inputs, fields and nodes dropped (TASK-M7-89)
+- Richer node parameters: gradients, lists, lookup tables, field inputs and how controls relate (TASK-M7-78)
+- What a node needs, read from its source, and the standard treatment of invalid pixels (TASK-M7-79)
+- Field sources as one shipped node with a field parameter (TASK-M7-85)
+- Field ramps as one shipped node: field, gradient, curve, polarity and range as parameters (TASK-M7-86)
+- The outcome palette read from its own source by the legend, the CPU image and the editor (TASK-M7-87)
+- Other people's shaders: import, allowed before they run, loops bounded, a lost GPU recovered (TASK-M7-81)
+- The node author's guide, generated from the grammar, and `prin node check` (TASK-M7-82)
+- A shader opens as a graph: code edits inside a node come back as that node (TASK-M7-90)
+- Shaders that are not nodes: one box, run through an adapter, the instrument's guarantees kept (TASK-M7-91)
+- The built-ins prove the path: the app run with its shipped nodes as a user's folder, and the lint that keeps it so
+  (TASK-M7-88)
 - The render key and render freedom (TASK-M7-15)
 - The bake tier: the equirect texture for pure-f(n̂) occupants, and the sphere widget (TASK-M7-16)
 - The preset library: presets as whole graphs, debug views as locked presets (TASK-M7-17)

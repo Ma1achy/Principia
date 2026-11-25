@@ -2,6 +2,11 @@
 // The 'as direction-cosines' view of the vector field `n` (gui_state_contract §4; dd_generation_root §3.8), beside its
 // '‖·‖ as scalar' view, `crates/render/frag/debug/generated/n.wgsl`. A colour occupant, it reads the field through
 // `SimState.n` and draws `dbg_dircos3`, render contract Part 5's rendering of its direction cosines (REQ-TOOL-157).
+// @name n_dircos
+// @group Debug · vector reductions
+// @about The direction cosines of the vector field n.
+// @maps n [direction cosines]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_dircos3(ctx.sample.n, ctx.frag_xy);
 }

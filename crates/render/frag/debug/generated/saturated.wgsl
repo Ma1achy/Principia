@@ -3,6 +3,11 @@
 // flag, range [0, 1]. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field through
 // `SimState.saturated`; its test, `catalogue_view_saturated` in `crates/kernel/tests/catalogue_views/generated.rs`,
 // reads it through their Rust twins. The colouring is a placeholder (`ledger::gen::catalogue`).
+// @name saturated
+// @group Debug · payload fields
+// @about The debug view of the payload field saturated: `packed_a` bits 5–5, u-bits.
+// @maps saturated [flag, [0, 1]]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_flag(ctx.sample.saturated);
 }

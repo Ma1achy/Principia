@@ -114,6 +114,8 @@ pub fn register(
 /// The source of the zero field: the input the catalogue's views take and do not read.
 pub const ZERO_SOURCE: &str =
     "// The zero field, wired to a debug view's input, which it does not read.\n\
+     // @name Zero field\n// @group Source\n// @about The zero field, wired to a debug view's input, which it does not read.\n\
+     // @maps nothing\n// @glyph name\n\
      fn source(ctx: Ctx) -> Field { return Field(0.0, 0.0, 0.0, 0.0); }\n";
 
 /// The debug catalogue's generated views, by field: the registry's entries under [`GENERATED_DIR`].

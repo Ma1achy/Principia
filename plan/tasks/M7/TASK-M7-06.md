@@ -8,6 +8,8 @@
 - **Pitfalls:** none
 - **Size:** ~450 lines
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gaps 1 and 2: the node generates a source with declarations, on TASK-M7-78's types.
+
 ## Goal
 Family A: `SiteBlend{sites, kernel, colours, space}`. Kernels vmf(κ) with w_i = exp(κ(d_i − d_max)), topk(k, ks) as a softmax over the k largest d_i, and nearest as a discrete argmax code path (never the κ → ∞ limit of exp); BlendSpace an explicit oklab | rgb parameter; a site's colour always a swatch, with the Full-OKLab and Okabe–Ito tables as preset swatch-sets and colours from generators (golden-angle, OI-cycle, gradient A → B) or a LUT sampled at i/N; the static generators axes6, corner8, ico12, fib(N), ring(N, tilt, rot) computed once and bound as uniform arrays; and the vMF engine of dd_colouring §3.2 (C·(cos θ_i, sin θ_i) weighted by exp(κ n̂·p̂_i), no atan2 in the blend).
 

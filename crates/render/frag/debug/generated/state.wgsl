@@ -4,6 +4,11 @@
 // through `SimState.state`; its test, `catalogue_view_state` in `crates/kernel/tests/catalogue_views/generated.rs`,
 // reads it through their Rust twins. Its colouring is the six-colour `dbg_cat` palette, one colour per state, not the
 // outcome palette (R-115; debug_tooling_plan §B).
+// @name state
+// @group Debug · payload fields
+// @about The debug view of the payload field state: `packed_a` bits 0–2, u-bits.
+// @maps state [categorical(6), [0, 5]]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_cat(ctx.sample.state, 6u);
 }

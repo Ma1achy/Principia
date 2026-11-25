@@ -308,7 +308,8 @@ impl Compaction {
     pub fn uniforms(&self) -> String {
         match *self {
             Compaction::LinRead { lo, hi, .. } if lo == End::Measured || hi == End::Measured => {
-                "// @uniform u_range: vec2<f32> = (0.0, 1.0)\n".to_owned()
+                "// @uniform u_range: vec2<f32> = (0.0, 1.0)\n// @control u_range hidden \"Measured range\"\n"
+                    .to_owned()
             }
             _ => String::new(),
         }
@@ -460,11 +461,16 @@ impl Ramp {
     pub fn uniforms(&self) -> String {
         match *self {
             Ramp::Lut(_) => String::new(),
-            Ramp::Lerp { c0, c1 } => vec3_uniform("RAMP_C0", c0) + &vec3_uniform("RAMP_C1", c1),
+            Ramp::Lerp { c0, c1 } => {
+                vec3_uniform("RAMP_C0", c0)
+                    + &vec3_uniform("RAMP_C1", c1)
+                    + "// @control RAMP_C0 gradient(RAMP_C1) \"Ramp\"\n"
+            }
             Ramp::Diverging { lo, mid, hi } => {
                 vec3_uniform("RAMP_LO", lo)
                     + &vec3_uniform("RAMP_MID", mid)
                     + &vec3_uniform("RAMP_HI", hi)
+                    + "// @control RAMP_LO gradient(RAMP_MID, RAMP_HI) \"Ramp\"\n"
             }
             Ramp::Bands {
                 n,
@@ -472,7 +478,11 @@ impl Ramp {
                 line,
                 base,
             } => format!(
-                "// @uniform RAMP_N: f32 = {}\n// @uniform RAMP_WIDTH: f32 = {} [0, 1]\n{}{}",
+                "// @uniform RAMP_N: f32 = {}\n// @uniform RAMP_WIDTH: f32 = {} [0, 1]\n{}{}\
+                 // @control RAMP_N fields \"Bands\" in \"Ramp\"\n\
+                 // @control RAMP_WIDTH slider \"Band width\" in \"Ramp\"\n\
+                 // @control RAMP_LINE colour \"Line colour\" in \"Ramp\"\n\
+                 // @control RAMP_BASE colour \"Base colour\" in \"Ramp\"\n",
                 float(n),
                 float(width),
                 vec3_uniform("RAMP_LINE", line),
@@ -690,10 +700,31 @@ impl FieldRamp {
     fn invalid_uniforms() -> String {
         let [r, g, b] = override_default();
         format!(
-            "// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]\n// @uniform INVALID_COLOUR: vec3<f32> = ({}, {}, {})\n",
+            "// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]\n// @uniform INVALID_COLOUR: vec3<f32> = ({}, {}, {})\n\
+             // @control INVALID_OVERRIDE toggle \"Override the invalid colour\" in \"Invalid\"\n\
+             // @control INVALID_COLOUR colour \"Invalid colour\" in \"Invalid\"\n",
             float(r),
             float(g),
             float(b)
+        )
+    }
+
+    /// The polarity's name.
+    fn polarity_name(&self) -> &'static str {
+        match self.polarity {
+            Polarity::High => "high",
+            Polarity::Low => "low",
+        }
+    }
+
+    /// The ramp's descriptive declarations ([`crate::assemble::declare`]): `name`, `group`, `about` and `glyph`, and
+    /// what it maps, its field with its compaction and polarity.
+    fn declared(&self, name: &str, group: &str, about: &str, glyph: &str) -> String {
+        format!(
+            "// @name {name}\n// @group {group}\n// @about {about}\n// @maps {} [{}, polarity {}]\n// @glyph {glyph}\n",
+            self.field.field,
+            self.compaction.name(),
+            self.polarity_name()
         )
     }
 
@@ -744,19 +775,25 @@ impl FieldRamp {
         let b = self
             .polarity
             .wgsl(&self.compaction.wgsl(&self.banded_wgsl()));
-        let polarity = match self.polarity {
-            Polarity::High => "high",
-            Polarity::Low => "low",
-        };
+        let polarity = self.polarity_name();
         match &self.map {
             Map::Ramp(ramp) => format!(
                 "// A field ramp of `{}` (colour_composition §1.2; render::colour::field_ramp): the `{}` compaction, \
                  polarity {polarity},\n// then `{}`, with the invalid lane, #141418 unless INVALID_OVERRIDE is 1, and \
                  the canvas background\n// for a pixel that is not a system (REQ-COL-001, REQ-COL-108; R-467, R-511).\n\
-                 {}{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{}    return {};\n}}\n",
+                 {}{}{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{}    return {};\n}}\n",
                 self.field.field,
                 self.compaction.name(),
                 ramp.name(),
+                self.declared(
+                    &format!("{} ramp", self.field.field),
+                    "Field ramp",
+                    &format!("{} on the {} ramp.", self.field.field, ramp.name()),
+                    match **ramp {
+                        Ramp::Lerp { .. } | Ramp::Diverging { .. } => "gradient",
+                        Ramp::Lut(_) | Ramp::Bands { .. } => "name",
+                    }
+                ),
                 Self::invalid_uniforms(),
                 self.compaction.uniforms(),
                 ramp.uniforms(),
@@ -770,9 +807,15 @@ impl FieldRamp {
             Map::Lightness => format!(
                 "// A field ramp of `{}` as a lightness (colour_composition §1.2, §4.1; render::colour::field_ramp): the \
                  `{}`\n// compaction, polarity {polarity}. A blank, unset or invalid sample returns 0: its style is \
-                 drawn by the ramp's post.\n{}fn brightness(ctx: Ctx) -> f32 {{\n{}    return {b};\n}}\n",
+                 drawn by the ramp's post.\n{}{}fn brightness(ctx: Ctx) -> f32 {{\n{}    return {b};\n}}\n",
                 self.field.field,
                 self.compaction.name(),
+                self.declared(
+                    &format!("{} lightness", self.field.field),
+                    "Brightness",
+                    &format!("{} as a lightness; its post draws its styles.", self.field.field),
+                    "ramp"
+                ),
                 self.compaction.uniforms(),
                 self.guards("return 0.0;", "return 0.0;", "return 0.0;"),
             ),
@@ -788,9 +831,18 @@ impl FieldRamp {
         format!(
             "// The styles of the field ramp of `{}` (colour_composition §4.1; render::colour::field_ramp): the \
              background, \"not yet\"\n// and the invalid lane over the combiner's output, #141418 unless \
-             INVALID_OVERRIDE is 1; every other colour as it is.\n{}fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> \
+             INVALID_OVERRIDE is 1; every other colour as it is.\n{}{}fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> \
              {{\n{}    return rgb;\n}}\n",
             self.field.field,
+            self.declared(
+                &format!("{} styles", self.field.field),
+                "Post",
+                &format!(
+                    "The background, not-yet and invalid styles of the {} lightness, over the combiner's colour.",
+                    self.field.field
+                ),
+                "name"
+            ),
             Self::invalid_uniforms(),
             self.guards(
                 Self::BLANK_RETURN,

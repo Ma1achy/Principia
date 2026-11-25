@@ -4,8 +4,15 @@
 // fixes its low end at 0, its high end still the measured. It reads quad metadata, not payload. A lane the raster did
 // not place (`shade_sample`) holds the absence NaN, or its bits in a u32 member, and draws `debug_invalid`'s hatch
 // (R-136).
+// @name s_cache_age
+// @group Debug · structure
+// @about The quad's cache age in frames.
+// @maps ctx.quad.cache_age [lin, measured range]
+// @glyph name
 // @uniform RANGE_AUTO: u32 = 1 [0, 1]
+// @control RANGE_AUTO toggle "Auto range"
 // @uniform u_range: vec2<f32> = (0.0, 1.0)
+// @control u_range hidden "Measured range"
 fn colour(ctx: Ctx) -> vec3<f32> {
     if ctx.quad.cache_age == CTX_ABSENT_BITS {
         return debug_invalid(ctx.frag_xy);

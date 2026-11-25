@@ -5,8 +5,15 @@
 // reads it through their Rust twins. Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec
 // §10.1, RQ-231): the stored sentinel's or unset value's line where the field has one, the non-finite guard (R-436),
 // and the ramp, with `RANGE_AUTO` and `u_range` its uniforms.
+// @name t_dmin_step
+// @group Debug · payload fields
+// @about The debug view of the payload field t_dmin_step: `times` bits 16–31, u-bits.
+// @maps t_dmin_step [lin, [0, 65535]]
+// @glyph name
 // @uniform RANGE_AUTO: u32 = 0 [0, 1]
 // @uniform u_range: vec2<f32> = (0.0, 1.0)
+// @control RANGE_AUTO toggle "Auto range"
+// @control u_range hidden "Measured range"
 fn colour(ctx: Ctx) -> vec3<f32> {
     let raw = f32(ctx.sample.t_dmin_step);
     if ((bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u) { return debug_invalid(ctx.frag_xy); }

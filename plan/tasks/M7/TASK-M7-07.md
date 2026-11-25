@@ -8,6 +8,8 @@
 - **Pitfalls:** PIT-3
 - **Size:** ~350 lines
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gaps 1 and 2: the node generates a source with declarations, on TASK-M7-78's types.
+
 ## Goal
 The seamless LUT sphere: N_e = 16 LUT samples placed as equatorial poles (cos 2πi/N_e, sin 2πi/N_e, 0), the LUT endpoints at the north and south poles, blended with the vMF law in RGB — for Viridis, Cividis, Plasma, Magma, Inferno, Twilight (cyclic, closing exactly at the wrap), Cool-warm, Principia and Cubehelix. Cubehelix is generated analytically (φ = 2π(s/3 − λt), a = h·t(1−t)/2, s = 0.5, λ = 1.5, h = 1, dd_colouring §3.8's R, G, B forms). LUT data comes from the published matplotlib tables (viridis, cividis, plasma, magma, inferno, twilight; Cubehelix is analytic, its matplotlib function a cross-check only, R-151) and Moreland's table for Cool-warm; the Principia palette's stops come from `docs/gui/reference/principia_colour_explorer.html` (R-122). The blend tolerance of dd_colouring unit test 4 is proposed with its evidence (R-71).
 

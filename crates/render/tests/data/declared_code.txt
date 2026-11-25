@@ -1,0 +1,408 @@
+Presentation registry colour/margin: e794ac2029cb4a77
+Debug registry colour/margin: 4969099a5353606a
+Presentation registry colour/outcome_state: 63803fbebb054934
+Debug registry colour/outcome_state: 8beade6ed23caa92
+Presentation registry combiner/multiply: 5750247b7318986c
+Debug registry combiner/multiply: ae0c47bf6d8bba1f
+Presentation registry combiner/pass_through: 95fd21aa1494bbf4
+Debug registry combiner/pass_through: 0636242ee8958ac7
+Presentation registry combiner/replace_l: 4d9e524d88c131cc
+Debug registry combiner/replace_l: e8c269f8bfe85b85
+Presentation registry debug/accumulators/diffusion_slope: cec32911c8f83dda
+Debug registry debug/accumulators/diffusion_slope: 690c661f78cce831
+Presentation registry debug/accumulators/drift_max_vs_final: c2ad039c6ea01a88
+Debug registry debug/accumulators/drift_max_vs_final: 319b5873d30b6a73
+Presentation registry debug/accumulators/ftle_running: 4a56dea6ccd06c38
+Debug registry debug/accumulators/ftle_running: 00adc6d1cf54a459
+Presentation registry debug/derived/energy_drift: a7e74bb26da2000b
+Debug registry debug/derived/energy_drift: a693c2a90e70888a
+Presentation registry debug/derived/ftle: ab5f870248a46d77
+Debug registry debug/derived/ftle: 66780d54f3152555
+Presentation registry debug/derived/orbit_count: b2eb556c07d2bf60
+Debug registry debug/derived/orbit_count: 5ed96a9982389da1
+Presentation registry debug/derived/retrograde: 78e7c189db837fd6
+Debug registry debug/derived/retrograde: 2a4bf61c69a5352f
+Presentation registry debug/derived/total_substeps_log2: 47694b5f8211bb11
+Debug registry debug/derived/total_substeps_log2: adc47da6ac8881d0
+Presentation registry debug/generated/C_ty: 00d6f6029b79c5fb
+Debug registry debug/generated/C_ty: 0d3ae3798da00d80
+Presentation registry debug/generated/E_0: f2a183a2b37b4f7c
+Debug registry debug/generated/E_0: 21ae10438e687151
+Presentation registry debug/generated/I_max: 0eb59329024f8fe5
+Debug registry debug/generated/I_max: c8957cc3a3ef0bef
+Presentation registry debug/generated/K_0: 51a7352a8c39c3ec
+Debug registry debug/generated/K_0: b932223ba02da6e3
+Presentation registry debug/generated/Lz_0: 706b78d5329f99af
+Debug registry debug/generated/Lz_0: 5a3dbf0b90fc9564
+Presentation registry debug/generated/Lz_drift: cbe25485bf9e3ded
+Debug registry debug/generated/Lz_drift: 93f7f8443b2c9f54
+Presentation registry debug/generated/S: 72399d8f9fe556fb
+Debug registry debug/generated/S: 7495f06f3d8329e6
+Presentation registry debug/generated/V_0: 7825b8b3ceae22ce
+Debug registry debug/generated/V_0: be3765bf4df5b561
+Presentation registry debug/generated/budget_exhausted: a89d0dd9899189db
+Debug registry debug/generated/budget_exhausted: 75cb7052bb9937fc
+Presentation registry debug/generated/cap_hits: 2cbfde67eef818d2
+Debug registry debug/generated/cap_hits: de77da59970798f3
+Presentation registry debug/generated/closure_min: 5c18e808b75f0c4f
+Debug registry debug/generated/closure_min: cfbd321f09c170fe
+Presentation registry debug/generated/closure_step: 41d77521813fd9d8
+Debug registry debug/generated/closure_step: 956e4767d56d8f37
+Presentation registry debug/generated/coll_floor: 13549288b4387c71
+Debug registry debug/generated/coll_floor: 23cf0dd3d8299756
+Presentation registry debug/generated/dE_max: d70e5cba8b9f24f0
+Debug registry debug/generated/dE_max: 115d93fd2f838245
+Presentation registry debug/generated/dE_reg_final: 6680a2faf99b17fb
+Debug registry debug/generated/dE_reg_final: 481be7caf5a571b6
+Presentation registry debug/generated/dE_reg_max: 979cc6c4e34be066
+Debug registry debug/generated/dE_reg_max: e347cbbf91ff4137
+Presentation registry debug/generated/dLz_max: 8b63dfcef63eae11
+Debug registry debug/generated/dLz_max: a8c49312d7053226
+Presentation registry debug/generated/d_min: 4041703bcf7a7e07
+Debug registry debug/generated/d_min: 596b4d2db04afa51
+Presentation registry debug/generated/departed: 9e88f07934862b28
+Debug registry debug/generated/departed: 1023817bf093739a
+Presentation registry debug/generated/detail: 2c653fa814074b35
+Debug registry debug/generated/detail: dc4a8b275948291b
+Presentation registry debug/generated/diffusion: 821ce9c1e55e608a
+Debug registry debug/generated/diffusion: 0974d09dd68cdd8f
+Presentation registry debug/generated/dmin_pair: aae7166f77cb2c31
+Debug registry debug/generated/dmin_pair: 39911585a91db59b
+Presentation registry debug/generated/energy_drift: b1befcc8b711b29b
+Debug registry debug/generated/energy_drift: 8d2e9958211ae980
+Presentation registry debug/generated/floor_hits: dc17b74f58c7d3ec
+Debug registry debug/generated/floor_hits: e8d26a8c60a53cc9
+Presentation registry debug/generated/ftle: 1a79ab1edbb64150
+Debug registry debug/generated/ftle: 3d0e73e32fda00f6
+Presentation registry debug/generated/lambda_mag: f969be0613cf49eb
+Debug registry debug/generated/lambda_mag: 504c16b0e63ba96e
+Presentation registry debug/generated/last_symbol: 70cc6fdbaec6035a
+Debug registry debug/generated/last_symbol: dc478bbdc5094828
+Presentation registry debug/generated/length: 802bd93d77baebf3
+Debug registry debug/generated/length: 58eaa8ee327ca3c0
+Presentation registry debug/generated/m0: a65e52d8abca83fd
+Debug registry debug/generated/m0: a0ace6198620dbc0
+Presentation registry debug/generated/m1: 76d4ac057c6e46c4
+Debug registry debug/generated/m1: e6c0625f1bca1b09
+Presentation registry debug/generated/m2: 7df7dd3f2f7cba53
+Debug registry debug/generated/m2: 9e238177462d890a
+Presentation registry debug/generated/mean_y: 0f66a87366ed8a29
+Debug registry debug/generated/mean_y: 48595573658b2492
+Presentation registry debug/generated/n: 66e5a7af03a2d89e
+Debug registry debug/generated/n: 418e00de6b1259ef
+Presentation registry debug/generated/p: bc8c649d6f2e269f
+Debug registry debug/generated/p: bac11539617b78a6
+Presentation registry debug/generated/p_sh: 20664ffa6abc6309
+Debug registry debug/generated/p_sh: d573db41449cc8ca
+Presentation registry debug/generated/payload: a4ad3f44b9d52903
+Debug registry debug/generated/payload: cae8cf6985ac1dbc
+Presentation registry debug/generated/q_mass: 951d6d3e4480a04a
+Debug registry debug/generated/q_mass: 6e6b8731874f42ff
+Presentation registry debug/generated/r: 535ccc346955d225
+Debug registry debug/generated/r: 9e3efdc572639508
+Presentation registry debug/generated/r_min_pair_0: d4361f96a2f7e6fd
+Debug registry debug/generated/r_min_pair_0: 8611630562f5bf56
+Presentation registry debug/generated/r_sh: 77755d2871fe3c83
+Debug registry debug/generated/r_sh: 1c81563061dbac74
+Presentation registry debug/generated/rho_angle: 5dbfff91f88c4ffd
+Debug registry debug/generated/rho_angle: cd6bdd1f325251b6
+Presentation registry debug/generated/rho_mag: 77432d64baade005
+Debug registry debug/generated/rho_mag: 5a54824d98960ada
+Presentation registry debug/generated/rho_ratio: 274e7791c0eb808b
+Debug registry debug/generated/rho_ratio: 65f4fd93c6cec35a
+Presentation registry debug/generated/saturated: 6a850a8831680466
+Debug registry debug/generated/saturated: 600df72eb7fe6e58
+Presentation registry debug/generated/state: 1061c90b076e0fed
+Debug registry debug/generated/state: cd96c5acd0670bf4
+Presentation registry debug/generated/t_dmin_step: ad38a4aaaf4ab9b5
+Debug registry debug/generated/t_dmin_step: 4d1eae8683a0541e
+Presentation registry debug/generated/t_end_step: 9d8c451bec08aba8
+Debug registry debug/generated/t_end_step: 506d8fd887a8e7d5
+Presentation registry debug/generated/theta: fa7123a9911ddd27
+Debug registry debug/generated/theta: 9d024ea726d49126
+Presentation registry debug/generated/total_substeps: 885c24eaa0cac1ec
+Debug registry debug/generated/total_substeps: 4d2b9ef4fe5e64b7
+Presentation registry debug/generated/virial_ratio: 67122ed8a2e440a5
+Debug registry debug/generated/virial_ratio: e6a792ed1a2e1f24
+Presentation registry debug/live_shape: c5f2e45e8b8f7dce
+Debug registry debug/live_shape: acde078f6456e469
+Presentation registry debug/reductions/masses_ternary: 15d4d1f5c22e234e
+Debug registry debug/reductions/masses_ternary: 8859637b3c3319c1
+Presentation registry debug/reductions/n_dircos: c2a561458efa8090
+Debug registry debug/reductions/n_dircos: da6f7c26b619ddcf
+Presentation registry debug/reductions/p_dircos: a7e60c1e4d717353
+Debug registry debug/reductions/p_dircos: da430b9c6042b34a
+Presentation registry debug/reductions/p_sh_dircos: cd2f3210433d5431
+Debug registry debug/reductions/p_sh_dircos: 6e98fe21df66f9f2
+Presentation registry debug/reductions/r_dircos: 05dfd0d088dfce25
+Debug registry debug/reductions/r_dircos: 436331a8ab8eb0e4
+Presentation registry debug/reductions/r_sh_dircos: 71d3d9f4983867ff
+Debug registry debug/reductions/r_sh_dircos: 40d50592a99f6cec
+Presentation registry debug/s_ancestor_gap: 142232e0dd9b6013
+Debug registry debug/s_ancestor_gap: 466e18ea648508ba
+Presentation registry debug/s_cache_age: 53c82a3cda279ec3
+Debug registry debug/s_cache_age: 1a4e8953a7441c52
+Presentation registry debug/s_coherence: b30507e808ef2360
+Debug registry debug/s_coherence: a969e8a0da2eb553
+Presentation registry debug/s_depth: a8e3fa31c2a1fa99
+Debug registry debug/s_depth: fea78cc3001bd864
+Presentation registry debug/s_impurity: 021edcb8c512cf5f
+Debug registry debug/s_impurity: 8adcc76ce4f6840c
+Presentation registry debug/s_priority: bae4fbd271e9f63c
+Debug registry debug/s_priority: 64734018c87af46f
+Presentation registry debug/s_spread: 98d69fde0d844dac
+Debug registry debug/s_spread: ab3e0b68c1c8f0d1
+Presentation registry debug/s_state: b743d171c20f8ebf
+Debug registry debug/s_state: e662d570d2f9b93e
+Presentation registry debug/s_suspect: 0ef4e06790ef4194
+Debug registry debug/s_suspect: edcd6312549aedb7
+Presentation registry debug/word/hash: f133773eb72268f4
+Debug registry debug/word/hash: 06e5cdaf0f5e8f83
+Presentation registry debug/word/reduced_length: ba6e05ae17dc9f27
+Debug registry debug/word/reduced_length: 773d4f79f362c31c
+Presentation registry debug/word/symbol_at_k: 36c78da714240f5c
+Debug registry debug/word/symbol_at_k: f1df3f1dc3568fe5
+Presentation registry debug/word/truncated: 40816853ee8d2662
+Debug registry debug/word/truncated: a245e7ba7af2dee1
+Presentation registry post/edge_line: df25c2f13fdb10f1
+Debug registry post/edge_line: 96c6efb13923cc68
+Presentation registry post/fallback_tint: 75a96dd647c97bfc
+Debug registry post/fallback_tint: 4b3a2d964637bea7
+Presentation registry post/pending_hatch: a005fa0c62b2d33f
+Debug registry post/pending_hatch: edac251f0010214e
+Presentation field S: 772ed68a3d44abb3
+Debug field S: ff040bc4c7ad8552
+Presentation field theta: 13e4c07e48421908
+Debug field theta: 79feefb209165431
+Presentation field mean_y: bdcaa6673c64ae4d
+Debug field mean_y: 304341191ec0765a
+Presentation field C_ty: 2e13186ca28928b5
+Debug field C_ty: e01a10c603a6ec92
+Presentation field E_0: d964190d2c5d700c
+Debug field E_0: 4175a3a4e1aea3dd
+Presentation field Lz_0: e803e73fff576cc9
+Debug field Lz_0: 114997b519aa8ce6
+Presentation field state: 35319506cf0c673a
+Debug field state: f371197b293684f1
+Presentation field detail: 02fa06584f284802
+Debug field detail: 22e97b4f869114d3
+Presentation field saturated: f2de675ddb552cd2
+Debug field saturated: 3090c076cb3b5a6c
+Presentation field dmin_pair: 19046531ea4a12de
+Debug field dmin_pair: 6e27eacd2b020238
+Presentation field last_symbol: 2db8307830922f96
+Debug field last_symbol: 0bf0ef7144d3d410
+Presentation field I_max: 4a2101e7a10d8737
+Debug field I_max: c59d11f103837741
+Presentation field departed: 6aa5c2c847b8aec2
+Debug field departed: f0845af6f963b224
+Presentation field d_min: 70a3bdaee25ba11c
+Debug field d_min: 3d80a99920cafa7e
+Presentation field dE_max: ef672db0a95612d1
+Debug field dE_max: 0f95e9fd5331c6fc
+Presentation field dLz_max: 3b502c94ca2258fa
+Debug field dLz_max: cdd494144eeda009
+Presentation field t_end_step: 8ec2d18ee034cbd2
+Debug field t_end_step: 0cd46ec3636c8735
+Presentation field t_dmin_step: 6670bab55e174855
+Debug field t_dmin_step: 89d5ada0cf9c629c
+Presentation field total_substeps: 1ea2f265f513f0b8
+Debug field total_substeps: 8be7c4ecc9c5978b
+Presentation field budget_exhausted: 7df9823f1898040b
+Debug field budget_exhausted: 4edbd99bf281da1e
+Presentation field floor_hits: d188037df8bc08df
+Debug field floor_hits: 4a355afd7c17f8dc
+Presentation field cap_hits: 70f5ef70589a3155
+Debug field cap_hits: 53a25fe056c29a86
+Presentation field dE_reg_final: b53dac81657938d9
+Debug field dE_reg_final: 215c87a5c50517e4
+Presentation field dE_reg_max: 4913cef49b82a11b
+Debug field dE_reg_max: 6f51d82e068fa9d2
+Presentation field closure_min: fa48178a5b374f4a
+Debug field closure_min: 59ce5715f5e50b2f
+Presentation field closure_step: 63f22c286773eb9e
+Debug field closure_step: daf2302917460bc3
+Presentation field coll_floor: 71d4445764401c04
+Debug field coll_floor: 8987572981e67697
+Presentation field ftle: f157be910b550fd2
+Debug field ftle: a5633183828845e8
+Presentation field ftle_valid: c4d4ed629952f2bb
+Debug field ftle_valid: 141916e6b4ad9fc1
+Presentation field diffusion: 34974f31f36b6ace
+Debug field diffusion: 8448fb3ac1e9780f
+Presentation field diffusion_slope_valid: db8d3fd40c42f086
+Debug field diffusion_slope_valid: d9704d174e7dab3b
+Presentation field total_substeps_log2: 40e4adeaa2dfd808
+Debug field total_substeps_log2: 34d7c37fc8070015
+Presentation field t_end_fraction: a701757d666da009
+Debug field t_end_fraction: a661c39b66b65516
+Presentation field t_dmin_fraction: 69846cd364e5fcb0
+Debug field t_dmin_fraction: 59037c52f16f1a39
+Presentation field orbit_count: 78323405d19daf9b
+Debug field orbit_count: ac73559cc1404e40
+Presentation field retrograde: 15feb5faa3c48b8e
+Debug field retrograde: 2fc3352bb1967659
+Presentation field is_resolved_outcome: 5821411b4e128fd5
+Debug field is_resolved_outcome: 943e11cadec94467
+Presentation field is_running: 3cc728400bf29bd9
+Debug field is_running: 93e4256adbca12ab
+Presentation field is_failed: b673650b39285b4b
+Debug field is_failed: 15d19557a5527fe5
+Presentation field is_finished: b0710ac711316532
+Debug field is_finished: 823460c247ea833c
+Presentation field ensemble_spread: 5ff91606eea54da8
+Debug field ensemble_spread: 6026088a4b0b8403
+Presentation field energy_drift: 3733be75e2a972ef
+Debug field energy_drift: 31fd03bcc1e8e06a
+Presentation field Lz_drift: 703be8ecd2f5c822
+Debug field Lz_drift: 5fd4b1c0418501dd
+Presentation field n: 347d48e6fd49f6ee
+Debug field n: db3d5d198149a6bb
+Presentation ramp S colour: d998bc3b12b7d0a9
+Debug ramp S colour: 7397b74431ce233e
+Presentation ramp S brightness: d9a7f306c278e698
+Debug ramp S brightness: eaca72195ceb67b7
+Presentation ramp theta colour: 7d6232c6d216d409
+Debug ramp theta colour: fe27eb3b9842774a
+Presentation ramp theta brightness: 26634669885c5755
+Debug ramp theta brightness: 17d1f5f2ef43c7f6
+Presentation ramp mean_y colour: 509774e72b974e00
+Debug ramp mean_y colour: 378c7337489b6825
+Presentation ramp mean_y brightness: 026706555e54f6fb
+Debug ramp mean_y brightness: e79e5bc3e730277a
+Presentation ramp C_ty colour: 35b950fca02f41b3
+Debug ramp C_ty colour: d36fdef495991e4e
+Presentation ramp C_ty brightness: 62eb197bc81cfad8
+Debug ramp C_ty brightness: 8a08568c1bcd5ec7
+Presentation ramp E_0 colour: 1d56c021e1fcd810
+Debug ramp E_0 colour: 4490af1dcec048cb
+Presentation ramp E_0 brightness: c0963ea4ae922048
+Debug ramp E_0 brightness: abf3c2aaae88dc97
+Presentation ramp Lz_0 colour: f150218d77e37a2f
+Debug ramp Lz_0 colour: 84fbec3b403eb9ba
+Presentation ramp Lz_0 brightness: 14d10b8575fd0d7e
+Debug ramp Lz_0 brightness: 1f5a8f37472b37bd
+Presentation ramp total_substeps colour: c353c303b8e5286d
+Debug ramp total_substeps colour: 858eaa2c1c832dcc
+Presentation ramp total_substeps brightness: 360b748419c3b3e7
+Debug ramp total_substeps brightness: 2fd1dc21afb7683e
+Presentation ramp closure_min colour: 1c8991bb1347953d
+Debug ramp closure_min colour: ec1299f6ff87c146
+Presentation ramp closure_min brightness: b52c4f22a316e96e
+Debug ramp closure_min brightness: fce71af0baf50659
+Presentation ramp closure_step colour: dbe50e393377e033
+Debug ramp closure_step colour: 9885f7c2aa0ac6e2
+Presentation ramp closure_step brightness: 6e989767a5481c8f
+Debug ramp closure_step brightness: bf37567514889e8e
+Presentation ramp I_max colour: 15fdb40d519b016b
+Debug ramp I_max colour: e9b9878950c5ccfe
+Presentation ramp I_max brightness: 861decaa7495a483
+Debug ramp I_max brightness: 49c05045b5a09f6c
+Presentation ramp d_min colour: 81128cb0d05fa17c
+Debug ramp d_min colour: d4ac0051ee5b9171
+Presentation ramp d_min brightness: eae7ccc7ecc3af06
+Debug ramp d_min brightness: 9a273b123f029913
+Presentation ramp dE_max colour: 693a960984292749
+Debug ramp dE_max colour: 38e0be4e8f9b4236
+Presentation ramp dE_max brightness: db594b054a57d8a9
+Debug ramp dE_max brightness: 564ff1617752e028
+Presentation ramp dLz_max colour: a73f407265c18ca6
+Debug ramp dLz_max colour: 31bc22de0ced3263
+Presentation ramp dLz_max brightness: de36f9299d5bda45
+Debug ramp dLz_max brightness: 7a58f74c02eef11c
+Presentation ramp floor_hits colour: fec647342d45334d
+Debug ramp floor_hits colour: d8e76ed13a0d793a
+Presentation ramp floor_hits brightness: c6127cdc3ca4ce7e
+Debug ramp floor_hits brightness: 4219e600f6bee539
+Presentation ramp cap_hits colour: ddcf47da59d0db03
+Debug ramp cap_hits colour: 747b5e2f165559e0
+Presentation ramp cap_hits brightness: c4d0e2180c1e92ce
+Debug ramp cap_hits brightness: fe2687ead1a7746d
+Presentation ramp dE_reg_max colour: 728de13a62e0faf9
+Debug ramp dE_reg_max colour: 40a05d98177dc142
+Presentation ramp dE_reg_max brightness: eea2c70192779e02
+Debug ramp dE_reg_max brightness: 70cad79023b067ef
+Presentation ramp t_end_step colour: 99a89935273ac320
+Debug ramp t_end_step colour: df67816c9031e149
+Presentation ramp t_end_step brightness: f6b6cd54c285c0ea
+Debug ramp t_end_step brightness: 8ff65a69534649d9
+Presentation ramp t_dmin_step colour: 07002f73e8b18876
+Debug ramp t_dmin_step colour: 0e6bfd58d1138a03
+Presentation ramp t_dmin_step brightness: cd67a00d78dd20d2
+Debug ramp t_dmin_step brightness: 8af9de6c67a56a71
+Presentation ramp coll_floor colour: 6a6ce7eba4dd9d9c
+Debug ramp coll_floor colour: e51e4589df21e3f1
+Presentation ramp coll_floor brightness: 3ea24f888e5e7d2e
+Debug ramp coll_floor brightness: 292b895a3aa67d95
+Presentation ramp ftle colour: 239a4a455fd74d55
+Debug ramp ftle colour: 9ae97056920ced32
+Presentation ramp ftle brightness: ee78f0bde1179e4a
+Debug ramp ftle brightness: c9e4ffcd9d3c28ab
+Presentation ramp energy_drift colour: 6bc6dd5e7a9df3ae
+Debug ramp energy_drift colour: 83db28422af1a8ed
+Presentation ramp energy_drift brightness: 446c8b7b6b6a80a4
+Debug ramp energy_drift brightness: db11053f80dd5721
+Presentation ramp Lz_drift colour: e48e1126fbef9f95
+Debug ramp Lz_drift colour: 4f1d585d76daff94
+Presentation ramp Lz_drift brightness: bc16accdd8d3b94b
+Debug ramp Lz_drift brightness: 0693b5c779e4756c
+Presentation ramp diffusion colour: 4539d24aa06ddec3
+Debug ramp diffusion colour: cd9a909baa5af624
+Presentation ramp diffusion brightness: b56cfa17f05bfb4c
+Debug ramp diffusion brightness: e1511ab9b994de3b
+Presentation ramp m0 colour: dfe1912956e99800
+Debug ramp m0 colour: b2cb0e9b48ea3b49
+Presentation ramp m0 brightness: c13f3bcd81b33d7f
+Debug ramp m0 brightness: 6e363be417485d0a
+Presentation ramp m1 colour: 32c99d81b141c73b
+Debug ramp m1 colour: ae0cf9ab0230feae
+Presentation ramp m1 brightness: 3edd01af8cb8dd73
+Debug ramp m1 brightness: 209ac60027dc052e
+Presentation ramp m2 colour: 596a9e5ab88ff03e
+Debug ramp m2 colour: 03df3288f47cae6f
+Presentation ramp m2 brightness: c9424c5750d844f3
+Debug ramp m2 brightness: 812bff35db692f3e
+Presentation ramp q_mass colour: c9a3a87f1630519d
+Debug ramp q_mass colour: 0664bf780c367e3c
+Presentation ramp q_mass brightness: bf2b23728904cbb3
+Debug ramp q_mass brightness: befc0fb742d4267e
+Presentation ramp rho_mag colour: dc71b85102b39892
+Debug ramp rho_mag colour: e679c2b7c1393549
+Presentation ramp rho_mag brightness: 2addd93e36a8bc3d
+Debug ramp rho_mag brightness: ae7d633d56c84464
+Presentation ramp lambda_mag colour: f5ae1bbfb679678a
+Debug ramp lambda_mag colour: 6d22effc53d06517
+Presentation ramp lambda_mag brightness: 8d84c6aacfc08be7
+Debug ramp lambda_mag brightness: ea4b7a56ac8a6ba2
+Presentation ramp rho_ratio colour: 8aced9d881a2cdbe
+Debug ramp rho_ratio colour: dc30de5c7c3fca85
+Presentation ramp rho_ratio brightness: 77397b308c979f5f
+Debug ramp rho_ratio brightness: 7e0b71afe9d98abc
+Presentation ramp rho_angle colour: 4f124ebc85380fdf
+Debug ramp rho_angle colour: fa5c5c42a439c340
+Presentation ramp rho_angle brightness: ea4683219ccd9672
+Debug ramp rho_angle brightness: b11bfa60abe698e1
+Presentation ramp K_0 colour: 6c5e731880f00e61
+Debug ramp K_0 colour: ce2211e016eab496
+Presentation ramp K_0 brightness: da8ffd64938b53fb
+Debug ramp K_0 brightness: 82a0debf8c91f60e
+Presentation ramp V_0 colour: a80a0fefa1d8b34b
+Debug ramp V_0 colour: ae8c8a2d07299d1c
+Presentation ramp V_0 brightness: eaaf2a1c1bf01070
+Debug ramp V_0 brightness: 485335d45cb59961
+Presentation ramp virial_ratio colour: 6b08e82515c2a230
+Debug ramp virial_ratio colour: ad4e54eaaaf0918d
+Presentation ramp virial_ratio brightness: e77a1d4e5f3140fb
+Debug ramp virial_ratio brightness: 82afda6b0fe24efa
+Presentation ramp r_min_pair_0 colour: 4379c014ca39f3d2
+Debug ramp r_min_pair_0 colour: 5c926cd9ebc7d32f
+Presentation ramp r_min_pair_0 brightness: 567fa0130d92fd7f
+Debug ramp r_min_pair_0 brightness: f75fb437e3d62f34
+Presentation ramp payload colour: 0fc605a82894ea1d
+Debug ramp payload colour: 67ba004d79079556
+Presentation ramp payload brightness: 817467ad41fc3842
+Debug ramp payload brightness: 5fb2016cb03dd9e5
+Presentation ramp length colour: 0d5ccb08bdfe4d96
+Debug ramp length colour: 3ad6651776a5bdf7
+Presentation ramp length brightness: 513b079ec56f3f32
+Debug ramp length brightness: 252a1771de91d041

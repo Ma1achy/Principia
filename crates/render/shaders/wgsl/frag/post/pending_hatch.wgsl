@@ -4,6 +4,11 @@
 // (REQ-TOOL-124; proposed, R-71). It is not `debug_invalid`'s hatch: those stripes run across `x + y`, 4 px each, and
 // alternate violet and cyan over the whole pixel, so a pending quad never reads as NaN (PIT-8, R-136). Every other
 // state, and a lane the raster did not place, pass unchanged.
+// @name Pending hatch
+// @group Post
+// @about Hatches a pending quad in blue, the colour beneath showing through.
+// @maps the quad's state
+// @glyph name
 
 // #0000FF, 8-bit sRGB, decoded to linear; the period and the line width, in pixels, across x − y.
 const PENDING_SRGB8: vec3<f32> = vec3<f32>(0.0, 0.0, 255.0);

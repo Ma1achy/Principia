@@ -71,6 +71,7 @@ and **`Policy::Tolerance`**.
 
 - `docs/design/principia_colour_composition.md` — the colour algebra; §1.4 the outcome palette
 - `docs/design/principia_dd_colouring.md`
+- `docs/design/principia_node_sdk.md` — stain nodes: built-in and custom made and shown one way
 - `docs/design/principia_dd_chazy_final_motion.md` — Chazy's final-motion classes as a live, per-playhead field, its derived fields and its stains; a separate system from the event classes (R-442). Transcribed from the Chazy stain spec; evidence prin-rs PR #32
 - `docs/design/principia_state_map.md` — the state map: each sample coloured by where its system is now on a chart, the Chart position node, its base and layers (a separate node from Shape n̂), its four projection results and its stain-editor GUI; transcribed from the prototype `docs/gui/reference/state_map/state_flow.html` (R-542)
 

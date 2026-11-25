@@ -4,6 +4,11 @@
 // finer than outcome boundaries (the Burrau topological-boundary diagnostic). Word-derived quantities are invalid
 // once the word is truncated (payload §3): the retained prefix is not the reduced word, so a truncated word draws the
 // hatch, not a basin's colour (applied per R-369, as the reduced-length and symbol-at-k views do).
+// @name hash
+// @group Debug · word
+// @about The whole word's hash: distinct words take distinct colours.
+// @maps word hash [categorical]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     let w = ctx.sample.word;
     if (!fgw_reduced_length_valid(w)) {

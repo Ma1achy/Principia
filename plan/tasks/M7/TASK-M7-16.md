@@ -8,6 +8,8 @@
 - **Pitfalls:** none
 - **Size:** ~480 lines
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gap 8: purity in n̂ is derived from the source.
+
 ## Goal
 Colour occupants that are pure f(n̂) bake into an equirect texture keyed by the colour-node source and its uniforms, rebaked debounced (~120 ms) and never synchronously inside the frame callback; the GUI preview canvas is the uploaded texture itself. The bake cache is keyed only on colour occupant + params, stays outside the quad cache and its eviction, and is chart- and IC-independent. Occupants reading dynamical fields skip the bake and evaluate per fragment; the physics overlay is one of them — a per-fragment occupant, never baked (R-121). Baked and directly-evaluated colour agree within texture quantisation. Render config never touches sim buffers. The sphere widget projects with s_x = (p_x−c_x)/R, s_y = −(p_y−c_y)/R, s_z = √max(0, 1−s_x²−s_y²), R = W/2 − 4.
 

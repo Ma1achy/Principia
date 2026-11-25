@@ -6,6 +6,11 @@
 // (`ledger::gen::catalogue`), gated on the word: the field has no in-band "none" code and is meaningful where
 // `sd_last_symbol_valid(fgw_length_raw(word))` holds, so the empty word and a truncated word draw the hatch (payload
 // §2, §6; applied per R-369).
+// @name last_symbol
+// @group Debug · payload fields
+// @about The debug view of the payload field last_symbol: `packed_a` bits 8–9, u-bits.
+// @maps last_symbol [categorical(4), [0, 3]]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     if (!sd_last_symbol_valid(fgw_length_raw(ctx.sample.word))) {
         return debug_invalid(ctx.frag_xy);

@@ -4,8 +4,15 @@
 // the view contains an ensemble, read as the prelude's `has_ensemble()` (R-145; RQ-239): with no ensemble (E = 0) the
 // view draws the absence NaN's hatch, `debug_invalid` (R-136), whatever the quad holds. A lane the raster did not place
 // (`shade_sample`) holds the absence NaN and draws the hatch too.
+// @name s_spread
+// @group Debug · structure
+// @about The quad's ensemble spread, present when the view holds an ensemble.
+// @maps ctx.quad.spread [lin, 0 to 1]
+// @glyph name
 // @uniform RANGE_AUTO: u32 = 0 [0, 1]
+// @control RANGE_AUTO toggle "Auto range"
 // @uniform u_range: vec2<f32> = (0.0, 1.0)
+// @control u_range hidden "Measured range"
 fn colour(ctx: Ctx) -> vec3<f32> {
     if !has_ensemble() || is_absent_nan(ctx.quad.spread) {
         return debug_invalid(ctx.frag_xy);

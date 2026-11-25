@@ -8,6 +8,8 @@
 - **Pitfalls:** none
 - **Size:** ~600 lines, the tests included
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gap 23: the Print graph's nodes use the same declarations.
+
 ## Goal
 Edit graph… opens the Stain's node editor component on the Print graph: the same wiring, typed ports, undo and keyboard scopes, on the same graph the slots show; a mismatched wire refused with its reason; node positions, pan, zoom and selection in `ViewUI`, so a move is no undo entry; nodes that are not `temporally_stable` marked; custom nodes (user WGSL) through the Stain's occupant mechanism, tier 3.
 

@@ -3,6 +3,11 @@
 // its '‖·‖ as scalar' view, `crates/render/frag/debug/generated/p_sh.wgsl`. A colour occupant, it reads the field
 // through `SimState.p_sh` and draws `dbg_dircos6`, render contract Part 5's rendering of its direction cosines
 // (REQ-TOOL-157). Channel `j` is body `j`'s share; its legend reads red body 1, green body 2, blue body 3 (R-449).
+// @name p_sh_dircos
+// @group Debug · vector reductions
+// @about The direction cosines of the vector field p_sh.
+// @maps p_sh [direction cosines]
+// @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_dircos6(ctx.sample.p_sh, ctx.frag_xy);
 }

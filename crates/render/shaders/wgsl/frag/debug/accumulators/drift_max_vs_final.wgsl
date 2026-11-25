@@ -3,7 +3,13 @@
 // `|L_z(r, p) − Lz_0| / dLz_max` (1), on the viridis ramp over [0, 1]. Near 1 the drift is secular, still at its
 // maximum; near 0 it was a transient spike that recovered: the reason both are kept (payload §5; R-246). Before any
 // drift is latched, a maximum of 0, the ratio is undefined and the hatch is drawn.
+// @name drift_max_vs_final
+// @group Debug · accumulators
+// @about The current drift over its running maximum: near 1 secular, near 0 a recovered spike.
+// @maps current drift / maximum drift [lin, 0 to 1]
+// @glyph name
 // @uniform u_quantity: u32 = 0 [0, 1]
+// @control u_quantity choice("energy", "L_z") "Quantity"
 
 // The value the view shows: the ratio, NaN where the maximum is not positive.
 fn value(ctx: Ctx) -> f32 {

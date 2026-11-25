@@ -787,9 +787,9 @@ generated code into the existing **custom-WGSL occupant**:
   edit does not silently orphan a downstream node's inputs.
 - **whole-slot** — eject the entire occupant function as one blob (the simpler mechanism; identical
   to today's custom-WGSL occupant).
-- Eject is **one-way** (no decompilation). An ejected node/slot flags itself custom; its parameter
-  widgets **grey out** (the code no longer derives from them); **live-compile with last-valid
-  fallback** applies (already specified in `dd_colouring`); **"revert to generated"** is the way
+- Eject is **one-way** (no decompilation). An ejected node/slot is a custom shader; its controls **stay
+  live**, drawn from the declarations its source still carries (`principia_node_sdk.md` gap 11); **live-compile with
+  last-valid fallback** applies (already specified in `dd_colouring`); **"revert to generated"** is the way
   back. Same peek-vs-commit discipline as chart tilt vs promotion.
 
 This is precisely the Unreal material-graph → HLSL relationship.

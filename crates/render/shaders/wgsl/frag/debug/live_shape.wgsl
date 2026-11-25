@@ -8,7 +8,13 @@
 //   reach it: it stays on viridis (applied per R-369; R-416 accepts the scope).
 // Every colouring maps NaN or a sentinel to its invalid colour (payload §1; render contract Part 4): where `n` is
 // undefined (a coincident configuration, `I = 0`, gives `0/0`) or `θ̃` is not finite, each mode draws the hatch.
+// @name live_shape
+// @group Debug · structure
+// @about The current shape n and its running phase, by mode.
+// @maps the current shape n and phase θ̃
+// @glyph name
 // @uniform u_mode: u32 = 0 [0, 2]
+// @control u_mode choice("direction cosines", "phase θ̃", "‖n‖ − 1") "Mode"
 
 // Whether `x` is not finite, NaN or ±inf, by its exponent bits (lowering Part 3a; R-351: no `isnan`).
 fn live_shape_nonfinite(x: f32) -> bool {

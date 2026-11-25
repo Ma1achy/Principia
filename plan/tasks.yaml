@@ -1343,26 +1343,121 @@
   milestone: C7
   title: 'Site-blend: kernels, blend space, swatches, static site sets and the vMF engine'
   depends_on:
+  - TASK-M7-78
   - TASK-M5-23
 - id: TASK-M7-07
   milestone: C7
   title: The seamless LUT sphere and analytic Cubehelix
   depends_on:
+  - TASK-M7-78
   - TASK-M7-06
 - id: TASK-M7-09
   milestone: C7
   title: ScalarField sources, derived operators and the physics site generators
   depends_on:
+  - TASK-M7-78
   - TASK-M7-06
 - id: TASK-M7-10
   milestone: C7
   title: Combinators and the physics overlay (blob blend)
   depends_on:
+  - TASK-M7-78
   - TASK-M7-09
+- id: TASK-M7-76
+  milestone: C7
+  title: 'A node''s own source describes it: name, group, glyph and controls, the same for built-in and custom'
+  status: done
+  depends_on: []
+- id: TASK-M7-83
+  milestone: C7
+  title: 'One registry of stain nodes: every shipped source named by its id, the second table gone'
+  depends_on:
+  - TASK-M7-76
+- id: TASK-M7-77
+  milestone: C7
+  title: 'The stain editor draws every node from its description: titles, glyphs, controls and choices, no special cases'
+  depends_on:
+  - TASK-M7-83
+- id: TASK-M7-84
+  milestone: C7
+  title: 'Stain keys and saved stains by code: a shipped source cannot change under a saved stain'
+  depends_on:
+  - TASK-M7-83
+- id: TASK-M7-80
+  milestone: C7
+  title: 'Your shaders: a folder the app reads, their ids and versions, and update'
+  depends_on:
+  - TASK-M7-83
+  - TASK-M7-84
 - id: TASK-M7-14
   milestone: C7
   title: 'Custom per-node WGSL: async compile, last-valid fallback, the Problems surface and eject'
-  depends_on: []
+  depends_on:
+  - TASK-M7-77
+  - TASK-M7-84
+  - TASK-M7-80
+- id: TASK-M7-89
+  milestone: C7
+  title: 'What can change the picture, proved from the shader: dead controls, inputs, fields and nodes dropped'
+  depends_on:
+  - TASK-M7-77
+- id: TASK-M7-78
+  milestone: C7
+  title: 'Richer node parameters: gradients, lists, lookup tables, field inputs and how controls relate'
+  depends_on:
+  - TASK-M7-77
+- id: TASK-M7-79
+  milestone: C7
+  title: 'What a node needs, read from its source, and the standard treatment of invalid pixels'
+  depends_on:
+  - TASK-M7-89
+- id: TASK-M7-85
+  milestone: C7
+  title: 'Field sources as one shipped node with a field parameter'
+  depends_on:
+  - TASK-M7-78
+  - TASK-M7-84
+- id: TASK-M7-86
+  milestone: C7
+  title: 'Field ramps as one shipped node: field, gradient, curve, polarity and range as parameters'
+  depends_on:
+  - TASK-M7-79
+  - TASK-M7-85
+- id: TASK-M7-87
+  milestone: C7
+  title: 'The outcome palette read from its own source by the legend, the CPU image and the editor'
+  depends_on:
+  - TASK-M7-77
+- id: TASK-M7-81
+  milestone: C7
+  title: 'Other people''s shaders: import, allowed before they run, loops bounded, a lost GPU recovered'
+  depends_on:
+  - TASK-M7-14
+- id: TASK-M7-82
+  milestone: C7
+  title: 'The node author''s guide, generated from the grammar, and `prin node check`'
+  depends_on:
+  - TASK-M7-78
+  - TASK-M7-79
+- id: TASK-M7-90
+  milestone: C7
+  title: 'A shader opens as a graph: code edits inside a node come back as that node'
+  depends_on:
+  - TASK-M7-14
+  - TASK-M7-89
+- id: TASK-M7-91
+  milestone: C7
+  title: 'Shaders that are not nodes: one box, run through an adapter, the instrument''s guarantees kept'
+  depends_on:
+  - TASK-M7-81
+  - TASK-M7-90
+- id: TASK-M7-88
+  milestone: C7
+  title: 'The built-ins prove the path: the app run with its shipped nodes as a user''s folder, and the lint that keeps it so'
+  depends_on:
+  - TASK-M7-80
+  - TASK-M7-86
+  - TASK-M7-87
 - id: TASK-M7-15
   milestone: C7
   title: The render key and render freedom
@@ -1382,6 +1477,7 @@
   milestone: C7
   title: 'The preset library: presets as whole graphs, debug views as locked presets'
   depends_on:
+  - TASK-M7-84
   - TASK-M7-10
   - TASK-M5-18
 - id: TASK-M7-18
@@ -1819,6 +1915,7 @@
   milestone: C7
   title: 'The Print graph editor: the Stain''s node editor reused on the slots'' graph, typed wire refusal, positions in `ViewUI`, unstable nodes marked, and custom WGSL nodes'
   depends_on:
+  - TASK-M7-78
   - TASK-M8-68
   - TASK-M8-93
   - TASK-M8-21

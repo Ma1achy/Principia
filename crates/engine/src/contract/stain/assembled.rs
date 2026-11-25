@@ -7,6 +7,7 @@ use render::registry::{self, Category};
 
 pub use render::assemble::Tier;
 
+use crate::contract::stain::describe::{describe, Description};
 use crate::contract::stain::graph::{GraphError, NodeKind, Occupant, StainGraph};
 use crate::presets;
 
@@ -61,6 +62,8 @@ pub struct Entry {
     pub builtin: Option<String>,
     /// The whole graph that shows it, where it is a view by itself: what selecting it loads (§11).
     pub graph: Option<StainGraph>,
+    /// Its description, from its source: its name and group are the row's and its heading's.
+    pub description: Description,
 }
 
 impl Entry {
@@ -100,12 +103,19 @@ pub fn library() -> Result<Vec<Entry>, String> {
             }
             .transpose()
             .map_err(|why| format!("{}: {why}", e.id))?;
+            let occupant = match &builtin {
+                Some(id) => Occupant::Builtin(id.clone()),
+                None => Occupant::Custom(e.source.clone()),
+            };
+            let description = describe(e.slot.into(), &occupant, &Default::default())
+                .map_err(|why| format!("{}: {why}", e.id))?;
             Ok(Entry {
                 slot: e.slot.into(),
                 id: e.id,
                 debug,
                 builtin,
                 graph,
+                description,
             })
         })
         .collect::<Result<Vec<Entry>, String>>()?;

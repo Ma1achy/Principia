@@ -8,6 +8,8 @@
 - **Pitfalls:** PIT-8
 - **Size:** ~450 lines
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gaps 2, 3 and 5: the sphere, gradient and palette editors are controls any node may ask for, drawn by TASK-M7-77, not chosen by kind.
+
 ## Goal
 The node inspector of render_gui_spec §9, morphing by node kind and wired source subtype (SiteBlend editor for vector, gradient editor for scalar, palette-swatch editor for categorical, gradient/compaction editor for brightness, combiner choice, post-op controls, source field dropdown). Sources the current quality tier does not populate are greyed out; binding one anyway triggers no recompute, reads NaN at unpack and shows the invalid colour, and the only path to recompute is an explicit tier change (R-79). Pairing a monotone-L LUT with Replace-L raises a conflict flag. Every Artefact-1 map offers the global Invert (v ↦ 255 − v), Blend (linear mix of any two modes) and Auto-rotate controls.
 

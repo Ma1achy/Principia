@@ -8,6 +8,8 @@
 - **Pitfalls:** none
 - **Size:** ~480 lines (~450 before R-297)
 
+> **The node SDK** (`docs/design/principia_node_sdk.md`) changes this task: gap 21: the record keeps a custom's id, name and values when its source is dropped.
+
 ## Goal
 The embedded payload carries the build hash, the slice (chart id + params, z₀ over the 8-D latent, q₁ and q₂ with zoom as their common scale, slice values, lock flag, z_locked, δ), the sim settings (T_horizon, dt_macro, N_max, r_sub, gamma_sub, r_coll, r_close, eps_E, eps_L, tau, the escape window, the integrator occupant as stepper × regularisation, and the compute shaders' fast-math setting, R-297), the ensemble (E, N, no jitter field), the full colour spec including brightness field, polarity and ramp window, and the tier settings used — every field named as the contracts name it (R-81). Recreating across a decoder change is refused, the detecting build-hash component defined in dd_image_embedding §6 (R-72). Colour modes travel as enum IDs plus parameters, WGSL source only for genuinely ejected nodes, and any recreate fallback to a different colouring is visible.
 

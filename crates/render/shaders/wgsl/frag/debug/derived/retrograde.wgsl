@@ -1,6 +1,11 @@
 // The derived winding-sense view (debug_tooling_plan §B, "DERIVED views"; render contract Part 6, "Winding
 // consistency"): `retrograde = θ̃ < 0`, computed in the fragment from the stored running phase `theta` by the read
 // side's own `retrograde` (payload §5), as a flag (`dbg_flag`: true green, false red).
+// @name retrograde
+// @group Debug · derived
+// @about Whether the running phase winds backwards.
+// @maps retrograde [flag]
+// @glyph name
 
 // The value the view shows: 1 for retrograde, 0 otherwise.
 fn value(ctx: Ctx) -> f32 {

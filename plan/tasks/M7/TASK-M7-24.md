@@ -9,7 +9,7 @@
 - **Size:** ~300 lines
 
 ## Goal
-Every pipeline stage exposes its generated WGSL for reading: the canvas's `Graph | Code` toggle shows the assembled fragment WGSL (prelude, node functions, `shade()`), the node inspector's Advanced section shows the selected node's function, per-node edits show the `{ }` badge, graph view is offered iff the pipeline still has graph structure, and the Problems pane shows compile status and errors from TASK-M7-14.
+Every pipeline stage exposes its generated WGSL for reading: the canvas's `Graph | Code` toggle shows the assembled fragment WGSL (prelude, node functions, `shade()`), the node inspector's Advanced section shows the selected node's function, graph view is offered iff the pipeline still has graph structure, and the Problems pane shows compile status and errors from TASK-M7-14.
 
 ## References
 - `docs/design/principia_colour_composition.md` § "5. Codegen & eject"

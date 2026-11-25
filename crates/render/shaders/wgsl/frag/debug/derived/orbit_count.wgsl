@@ -1,6 +1,11 @@
 // The derived winding-count view (debug_tooling_plan §B, "DERIVED views"; render contract Part 6, "Winding
 // consistency"): `orbit_count = ⌊|θ̃|/2π⌋`, computed in the fragment from the stored running phase `theta` by the read
 // side's own `orbit_count` (payload §5), at its literal place on the viridis ramp (R-136).
+// @name orbit_count
+// @group Debug · derived
+// @about The completed revolutions of the running phase.
+// @maps orbit_count [lin]
+// @glyph name
 
 // The value the view shows: the completed revolutions.
 fn value(ctx: Ctx) -> f32 {

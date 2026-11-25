@@ -3,8 +3,15 @@
 // brightness owns L and the colour contributes hue and chroma only (render contract Part 4, L-ownership). The defaults
 // L_min = 0, L_max = 1 make it L = b (R-77). The result is not clamped: the gamut clamp is the display stage's.
 // The CPU mirror is `crates/render/src/colour/combine.rs`.
+// @name Replace-L
+// @group Combiner
+// @about The brightness sets OKLab L from L min to L max; the colour keeps its hue and chroma.
+// @maps colour · brightness
+// @glyph dropdown
 // @uniform l_min: f32 = 0.0
+// @control l_min fields "L min" order 0
 // @uniform l_max: f32 = 1.0
+// @control l_max fields "L max" order 1
 
 // The step in OKLab: L replaced, (a, b_ab) returned as given. L_min + (L_max − L_min)·b is evaluated as
 // L_min·(1 − b) + L_max·b, the same value, exact at each end: b = 0 gives L_min, b = 1 gives L_max, and at the

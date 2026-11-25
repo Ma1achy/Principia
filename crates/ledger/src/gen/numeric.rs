@@ -328,7 +328,8 @@ impl NumericView {
     pub fn header(&self) -> String {
         let [lo, hi] = self.u_range_default();
         format!(
-            "// @uniform RANGE_AUTO: u32 = {} [0, 1]\n// @uniform u_range: vec2<f32> = ({}, {})\n",
+            "// @uniform RANGE_AUTO: u32 = {} [0, 1]\n// @uniform u_range: vec2<f32> = ({}, {})\n\
+             // @control RANGE_AUTO toggle \"Auto range\"\n// @control u_range hidden \"Measured range\"\n",
             u32::from(self.range_auto),
             float(lo),
             float(hi)

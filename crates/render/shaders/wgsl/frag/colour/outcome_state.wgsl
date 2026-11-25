@@ -28,47 +28,72 @@
 // whatever the mask.
 //
 // The set shown: 0 the sRGB palette (the default), 1 the OKLab-uniform variant.
+// @name Outcome palette
+// @group Colour
+// @about One colour per outcome class, from the sample's state and detail.
+// @maps outcome class [categorical]
+// @glyph swatches "sRGB palette"
 // @uniform swatch_set: u32 = 0 [0, 1]
+// @control swatch_set choice("sRGB palette", "OKLab-uniform") "Swatch set" order 0
 // The sRGB palette (R-444, R-445).
 // bounded / nothing yet, black: #141418.
 // @uniform bounded: vec3<f32> = (0.00699541, 0.00699541, 0.009134059)
+// @control bounded colour "bounded / nothing yet" in "sRGB palette" order 2
 // collision 1–2 (pair 2), red: #DE2D2D.
 // @uniform collision_pair_2: vec3<f32> = (0.73046076, 0.026241222, 0.026241222)
+// @control collision_pair_2 colour "collision 1–2" in "sRGB palette" order 3
 // collision 1–3 (pair 1), green: #2EBC4E.
 // @uniform collision_pair_1: vec3<f32> = (0.027320892, 0.5028865, 0.07618538)
+// @control collision_pair_1 colour "collision 1–3" in "sRGB palette" order 4
 // collision 2–3 (pair 0), blue: #3462E0.
 // @uniform collision_pair_0: vec3<f32> = (0.034339808, 0.122138776, 0.7454042)
+// @control collision_pair_0 colour "collision 2–3" in "sRGB palette" order 5
 // triple collision (a collision, detail = 3), orange: #F29620.
 // @uniform triple_collision: vec3<f32> = (0.8879231, 0.3049873, 0.014443844)
+// @control triple_collision colour "triple collision" in "sRGB palette" order 6
 // escape body 1 (detail 0), yellow: #F0DE32.
 // @uniform escape_body_0: vec3<f32> = (0.8713671, 0.73046076, 0.031896032)
+// @control escape_body_0 colour "escape body 1" in "sRGB palette" order 7
 // escape body 2 (detail 1), magenta: #E034C6.
 // @uniform escape_body_1: vec3<f32> = (0.7454042, 0.034339808, 0.5647115)
+// @control escape_body_1 colour "escape body 2" in "sRGB palette" order 8
 // escape body 3 (detail 2), cyan: #30C8DC.
 // @uniform escape_body_2: vec3<f32> = (0.029556835, 0.57758045, 0.7156935)
+// @control escape_body_2 colour "escape body 3" in "sRGB palette" order 9
 // triple ejection (an escape, detail = 3), purple: #611597.
 // @uniform triple_ejection: vec3<f32> = (0.11953843, 0.007499032, 0.30946892)
+// @control triple_ejection colour "triple ejection" in "sRGB palette" order 10
 // The OKLab-uniform variant (R-447), each chromatic class at OKLab L = 0.72, C = 0.123 and its hue.
 // bounded / nothing yet: #141418.
 // @uniform oklab_bounded: vec3<f32> = (0.00699541, 0.00699541, 0.009134059)
+// @control oklab_bounded colour "bounded / nothing yet" in "OKLab-uniform" order 11
 // collision 1–2, 27°: #E7857A.
 // @uniform oklab_collision_pair_2: vec3<f32> = (0.7991027, 0.23455058, 0.19461784)
+// @control oklab_collision_pair_2 colour "collision 1–2" in "OKLab-uniform" order 12
 // collision 1–3, 147°: #6EB976.
 // @uniform oklab_collision_pair_1: vec3<f32> = (0.15592647, 0.48514995, 0.18116425)
+// @control oklab_collision_pair_1 colour "collision 1–3" in "OKLab-uniform" order 13
 // collision 2–3, 265°: #7FA2F2.
 // @uniform oklab_collision_pair_0: vec3<f32> = (0.21223076, 0.3613068, 0.8879231)
+// @control oklab_collision_pair_0 colour "collision 2–3" in "OKLab-uniform" order 14
 // triple collision, 65°: #D99349.
 // @uniform oklab_triple_collision: vec3<f32> = (0.69387174, 0.29177064, 0.06662594)
+// @control oklab_triple_collision colour "triple collision" in "OKLab-uniform" order 15
 // escape body 1, 103°: #B3A841.
 // @uniform oklab_escape_body_0: vec3<f32> = (0.4507858, 0.39157248, 0.052860647)
+// @control oklab_escape_body_0 colour "escape body 1" in "OKLab-uniform" order 16
 // escape body 2, 335°: #D486C3.
 // @uniform oklab_escape_body_1: vec3<f32> = (0.65837485, 0.23839757, 0.54572445)
+// @control oklab_escape_body_1 colour "escape body 2" in "OKLab-uniform" order 17
 // escape body 3, 208°: #09B9CD.
 // @uniform oklab_escape_body_2: vec3<f32> = (0.0027317428, 0.48514995, 0.61049557)
+// @control oklab_escape_body_2 colour "escape body 3" in "OKLab-uniform" order 18
 // triple ejection, 305°: #B790E2.
 // @uniform oklab_triple_ejection: vec3<f32> = (0.47353148, 0.27889428, 0.7605245)
+// @control oklab_triple_ejection colour "triple ejection" in "OKLab-uniform" order 19
 // The categorical filter's class mask: bit k shows class k; every bit set shows every class.
 // @uniform class_mask: u32 = 4294967295 [0, 4294967295]
+// @control class_mask flags("bounded / nothing yet", "collision 1–2", "collision 1–3", "collision 2–3", "triple collision", "escape body 1", "escape body 2", "escape body 3", "triple ejection") "Classes shown" order 1
 
 // The swatch of the sample's class in the set shown, or the canvas background for a sample with no class.
 fn outcome_swatch(ctx: Ctx) -> vec3<f32> {
