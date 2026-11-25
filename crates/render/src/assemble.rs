@@ -225,6 +225,7 @@ pub enum Occupant {
 // ── The declaration format (gui_state_contract §3; REQ-GEN-027) ──────────────────────────────────────────────────
 
 pub mod declare;
+pub mod matters;
 
 pub use declare::{code_text, key_text, Check, Control, ControlLine, Described, Glyph};
 
@@ -986,14 +987,37 @@ pub struct UniformBlock {
     pub uniforms: Vec<Uniform>,
 }
 
-/// An assembled stain: its WGSL, the read-side fields its `sample_read` fills, its nodes' uniform blocks, and whether
-/// it carries a debug arm, which binds the counts at [`DEBUG_COUNTS_GROUP`].
+/// An assembled stain: its WGSL, the read-side fields its `sample_read` fills, its nodes' uniform blocks, whether
+/// it carries a debug arm, which binds the counts at [`DEBUG_COUNTS_GROUP`], and what the proof left out of it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Fragment {
     pub source: String,
     pub fields: Vec<String>,
     pub uniforms: Vec<UniformBlock>,
     pub debug_arm: bool,
+    pub dropped: Dropped,
+}
+
+/// What provably cannot change a stain's picture, and so is left out of its assembly ([`matters`]): nodes whose result
+/// nothing reads, never emitted; field inputs the node never reads, never wired; uniforms the node never reads, out of
+/// its block, a read of one in dead code given its type's zero. Each by its node's canonical position.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Dropped {
+    pub nodes: Vec<usize>,
+    /// (node, field input).
+    pub inputs: Vec<(usize, usize)>,
+    pub uniforms: Vec<(usize, Uniform)>,
+}
+
+impl Dropped {
+    /// Node `i`'s uniforms left out.
+    pub fn uniforms_of(&self, i: usize) -> Vec<&Uniform> {
+        self.uniforms
+            .iter()
+            .filter(|(n, _)| *n == i)
+            .map(|(_, u)| u)
+            .collect()
+    }
 }
 
 /// The one assembler entry point (render contract Part 2): `stain` at `tier`, a presentation view, its read side
@@ -1072,6 +1096,7 @@ pub fn fallback(tier: Tier) -> Result<Fragment, AssembleError> {
         fields: Vec::new(),
         uniforms: Vec::new(),
         debug_arm: false,
+        dropped: Dropped::default(),
     };
     kept.lock()
         .unwrap_or_else(PoisonError::into_inner)
@@ -1090,6 +1115,22 @@ pub fn assemble_arm(
     assemble_placed(stain, tier, arm, false)
 }
 
+/// [`assemble_view`] with nothing the proof finds dead left out: every node, wire and uniform, and every field its IR
+/// names. The picture is the same bit for bit; a test sets what [`Fragment::dropped`] names here to anything at all.
+pub fn assemble_kept(stain: &Stain, tier: Tier, view: View) -> Result<Fragment, AssembleError> {
+    let arm = match view {
+        View::Presentation => None,
+        View::Debug => Some(DEBUG_ARM),
+    };
+    let every = every_field()?;
+    let every: Vec<&str> = every.iter().map(String::as_str).collect();
+    let (source, _) = source(stain, tier, &every, arm, false, &Dropped::default())?;
+    let (module, info) = compile(&source)?;
+    let fields: Vec<String> = fields_read(&module, &info).into_iter().collect();
+    let fields: Vec<&str> = fields.iter().map(String::as_str).collect();
+    assemble_reading_arm(stain, tier, &fields, arm, false, &Dropped::default())
+}
+
 /// [`assemble`] with each occupant placed as written, its descriptive lines kept rather than blanked ([`code_text`]):
 /// the check that those lines are not code, since naga must make one module of the two.
 pub fn assemble_written(stain: &Stain, tier: Tier) -> Result<Fragment, AssembleError> {
@@ -1103,14 +1144,15 @@ fn assemble_placed(
     arm: Option<&str>,
     written: bool,
 ) -> Result<Fragment, AssembleError> {
-    let fields = field_set_arm(stain, tier, arm, written)?;
+    let (fields, dropped) = plan(stain, tier, arm, written)?;
     let fields: Vec<&str> = fields.iter().map(String::as_str).collect();
-    assemble_reading_arm(stain, tier, &fields, arm, written)
+    assemble_reading_arm(stain, tier, &fields, arm, written, &dropped)
 }
 
-/// The stain's field set (R-378): every member of the read-side `SimState` its live nodes read, by naga's IR of the
-/// stain assembled with every field filled, the word as `word` or as only the components it reads, and each member of
-/// `ctx.ic` it reads as `ic.<member>` ([`fields_read`]).
+/// The stain's field set: every member of the read-side `SimState` its live nodes read into its picture, by
+/// naga's IR of the stain assembled with every field filled, the word as `word` or as only the components it reads,
+/// and each member of `ctx.ic` it reads as `ic.<member>` ([`fields_read`], less what the proof finds cannot reach the
+/// picture, [`matters::live_fields`]).
 pub fn field_set(stain: &Stain, tier: Tier) -> Result<Vec<String>, AssembleError> {
     field_set_arm(stain, tier, None, false)
 }
@@ -1122,16 +1164,39 @@ fn field_set_arm(
     arm: Option<&str>,
     written: bool,
 ) -> Result<Vec<String>, AssembleError> {
+    plan(stain, tier, arm, written).map(|(fields, _)| fields)
+}
+
+/// Every field the read side can fill: each read-side member and each `ic.<member>`.
+fn every_field() -> Result<Vec<String>, AssembleError> {
     let (words, entries) = ledger()?;
     let mut every: Vec<String> = read::members(words, entries)
         .into_iter()
         .map(|m| m.name)
         .collect();
     every.extend(read::ic_fields());
+    Ok(every)
+}
+
+/// The stain's field set and what its assembly may leave out, from the proof over its IR assembled with every field
+/// filled and nothing dropped.
+// Don't drop on a node's present settings (question 2): a pipeline is shared by every stain of its key, and settings are
+// not in the key.
+fn plan(
+    stain: &Stain,
+    tier: Tier,
+    arm: Option<&str>,
+    written: bool,
+) -> Result<(Vec<String>, Dropped), AssembleError> {
+    let every = every_field()?;
     let every: Vec<&str> = every.iter().map(String::as_str).collect();
-    let (source, _) = source(stain, tier, &every, arm, written)?;
+    let (source, _) = source(stain, tier, &every, arm, written, &Dropped::default())?;
     let (module, info) = compile(&source)?;
-    Ok(fields_read(&module, &info).into_iter().collect())
+    let held = matters::Held::new();
+    let proof = matters::Proof::new(&module, &info, &matters::STAIN_ROOTS, &held);
+    let fields = matters::live_fields(&module, &proof, fields_read(&module, &info));
+    let dropped = matters::dropped(stain, &proof, written)?;
+    Ok((fields.into_iter().collect(), dropped))
 }
 
 /// [`assemble`]'s second step: `stain` at `tier` with a read side whose `sample_read` fills `fields`, compiled;
@@ -1142,7 +1207,7 @@ pub fn assemble_reading(
     tier: Tier,
     fields: &[&str],
 ) -> Result<Fragment, AssembleError> {
-    assemble_reading_arm(stain, tier, fields, None, false)
+    assemble_reading_arm(stain, tier, fields, None, false, &Dropped::default())
 }
 
 /// [`assemble_reading`] with the debug arm `arm`.
@@ -1152,8 +1217,9 @@ fn assemble_reading_arm(
     fields: &[&str],
     arm: Option<&str>,
     written: bool,
+    dropped: &Dropped,
 ) -> Result<Fragment, AssembleError> {
-    let (source, uniforms) = source(stain, tier, fields, arm, written)?;
+    let (source, uniforms) = source(stain, tier, fields, arm, written, dropped)?;
     let (module, info) = compile(&source)?;
     let filled = |f: &str| {
         fields.contains(&f)
@@ -1163,7 +1229,11 @@ fn assemble_reading_arm(
                     .iter()
                     .all(|c| fields.contains(&&*format!("word.{c}")))
     };
-    if let Some(missing) = fields_read(&module, &info).into_iter().find(|f| !filled(f)) {
+    // A read the proof finds cannot reach the picture may read 0: only the reads that can must be filled.
+    let held = matters::Held::new();
+    let proof = matters::Proof::new(&module, &info, &matters::STAIN_ROOTS, &held);
+    let reads = matters::live_fields(&module, &proof, fields_read(&module, &info));
+    if let Some(missing) = reads.into_iter().find(|f| !filled(f)) {
         return Err(AssembleError::UnfilledField(missing));
     }
     let mut fields: Vec<String> = fields.iter().map(|&f| f.to_owned()).collect();
@@ -1174,6 +1244,7 @@ fn assemble_reading_arm(
         fields,
         uniforms,
         debug_arm: arm.is_some(),
+        dropped: dropped.clone(),
     })
 }
 
@@ -1212,13 +1283,15 @@ fn head(tier: Tier, fields: &[&str]) -> Result<String, AssembleError> {
 }
 
 /// `stain`'s WGSL at `tier`, its read side filling `fields`, with the debug arm `arm` or the presentation variant's
-/// hook, and its uniform blocks; each occupant as written where `written`, else its descriptive lines blanked.
+/// hook, and its uniform blocks; each occupant as written where `written`, else its descriptive lines blanked; what
+/// `dropped` names left out.
 fn source(
     stain: &Stain,
     tier: Tier,
     fields: &[&str],
     arm: Option<&str>,
     written: bool,
+    dropped: &Dropped,
 ) -> Result<(String, Vec<UniformBlock>), AssembleError> {
     let mut out = head(tier, fields)?;
     // The canonical form's stain: its live nodes only, numbered in canonical order, so two wirings of one graph
@@ -1240,6 +1313,9 @@ fn source(
     let first = prelude::uniforms_binding();
     let mut uniforms = Vec::new();
     for &i in &live {
+        if dropped.nodes.contains(&i) {
+            continue;
+        }
         let n = &stain.nodes[i];
         let text = stain.text(i).unwrap_or_default();
         let text = if written {
@@ -1247,7 +1323,38 @@ fn source(
         } else {
             code_text(text)
         };
-        let schema = &stain.declarations[i].uniforms;
+        let gone = dropped.uniforms_of(i);
+        let text = match gone.is_empty() {
+            true => text,
+            false => {
+                // Don't give a dropped uniform a constant: naga folds constant expressions, and `1.0 / f32()` is
+                // refused. A zero private struct reads zero at run time.
+                let _ = writeln!(
+                    out,
+                    "\n// Node {i}'s uniforms that cannot change the picture: never bound, each read zero."
+                );
+                let _ = writeln!(out, "struct n{i}_Dropped {{");
+                for u in &gone {
+                    let _ = writeln!(out, "    {}: {},", u.name, u.ty.wgsl());
+                }
+                let _ = writeln!(out, "}}\nvar<private> n{i}_dropped: n{i}_Dropped;");
+                let to = format!("n{i}_dropped");
+                std::borrow::Cow::Owned(matters::without_uniforms(&text, &gone, &to).ok_or_else(
+                    || {
+                        AssembleError::Occupant(
+                            "a dropped uniform is read other than as `uniforms.<name>`".into(),
+                        )
+                    },
+                )?)
+            }
+        };
+        let schema: Vec<Uniform> = stain.declarations[i]
+            .uniforms
+            .iter()
+            .filter(|u| !gone.contains(u))
+            .cloned()
+            .collect();
+        let schema = &schema;
         let mut extra = Vec::new();
         if !schema.is_empty() {
             let binding = first.binding + 1 + uniforms.len() as u32;
@@ -1288,6 +1395,7 @@ fn source(
         combiner,
         &chain,
         arm.is_some(),
+        dropped,
     ));
     out.push_str(arm.unwrap_or(PRESENTATION_HOOK));
     Ok((out, uniforms))
@@ -1305,6 +1413,7 @@ fn label(occupant: &Occupant) -> String {
 /// `shade(ctx)`, which walks the graph in backbone order: the sources, the colour and the brightness, the combiner, the
 /// post chain in declaration order (colour_composition §4.2), `OUT`; with `shade_at` and `shade_sample`
 /// ([`shade_functions`]).
+#[allow(clippy::too_many_arguments)] // the walk's parts, as `source` has them; a struct would only rename them
 fn shade(
     stain: &Stain,
     sources: &[usize],
@@ -1313,24 +1422,38 @@ fn shade(
     combiner: usize,
     chain: &[usize],
     debug: bool,
+    dropped: &Dropped,
 ) -> String {
     let mut out = String::new();
-    for &s in sources {
+    let gone = |i: usize| dropped.nodes.contains(&i);
+    for &s in sources.iter().filter(|&&s| !gone(s)) {
         let _ = writeln!(out, "    let f{s} = n{s}_source(ctx);");
     }
     let context = |i: usize, out: &mut String| {
         let _ = writeln!(out, "    var c{i} = ctx;");
         for (k, j) in stain.field_inputs(i).into_iter().enumerate() {
-            let _ = writeln!(out, "    c{i}.inputs[{k}] = f{};", j.unwrap_or_default());
+            if !dropped.inputs.contains(&(i, k)) {
+                let _ = writeln!(out, "    c{i}.inputs[{k}] = f{};", j.unwrap_or_default());
+            }
         }
     };
-    if let Some(c) = colour {
-        context(c, &mut out);
-        let _ = writeln!(out, "    let rgb = n{c}_colour(c{c});");
+    // A dropped colour or brightness is still named: the combiner's statement reads it, and provably not into the
+    // picture, so its type's zero stands in.
+    match colour {
+        Some(c) if gone(c) => out.push_str("    let rgb = vec3<f32>();\n"),
+        Some(c) => {
+            context(c, &mut out);
+            let _ = writeln!(out, "    let rgb = n{c}_colour(c{c});");
+        }
+        None => {}
     }
-    if let Some(b) = brightness {
-        context(b, &mut out);
-        let _ = writeln!(out, "    let b = n{b}_brightness(c{b});");
+    match brightness {
+        Some(b) if gone(b) => out.push_str("    let b = 0.0;\n"),
+        Some(b) => {
+            context(b, &mut out);
+            let _ = writeln!(out, "    let b = n{b}_brightness(c{b});");
+        }
+        None => {}
     }
     let combine = codegen::combine::statement(
         &format!("n{combiner}_combine"),
@@ -1338,7 +1461,7 @@ fn shade(
         brightness.is_some(),
     );
     let _ = writeln!(out, "    {combine}");
-    for &p in chain {
+    for &p in chain.iter().filter(|&&p| !gone(p)) {
         context(p, &mut out);
         let _ = writeln!(out, "    out = n{p}_post(c{p}, out);");
     }

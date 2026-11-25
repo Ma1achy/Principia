@@ -242,6 +242,8 @@ pub struct CompiledStain {
     pipeline: wgpu::RenderPipeline,
     layouts: [wgpu::BindGroupLayout; 3],
     blocks: Vec<NodeBlock>,
+    /// The uniforms the proof left out of the blocks, by canonical position: a write to one changes nothing.
+    dropped: Vec<(usize, Uniform)>,
 }
 
 impl CompiledStain {
@@ -272,7 +274,8 @@ impl CompiledStain {
 
     /// Writes `value` to the uniform `name` of the node at canonical position `position`: a param edit, a buffer write
     /// that never recompiles (lowering Part 5). Refused when the node there declares no `name`, or `value` is not a
-    /// value of it ([`Uniform::admits`]).
+    /// value of it ([`Uniform::admits`]). A uniform the proof left out of the block takes the write and changes
+    /// nothing, since it cannot change the picture.
     pub fn write_param(
         &self,
         queue: &wgpu::Queue,
@@ -280,6 +283,16 @@ impl CompiledStain {
         name: &str,
         value: &[f64],
     ) -> Result<(), String> {
+        if let Some((_, u)) = self
+            .dropped
+            .iter()
+            .find(|(p, u)| *p == position && u.name == name)
+        {
+            return match u.admits(value) {
+                true => Ok(()),
+                false => Err(format!("{value:?} is not a value of `{name}`: {u:?}")),
+            };
+        }
         let (block, k) = self
             .blocks
             .iter()
@@ -434,6 +447,7 @@ fn create(
 ) -> Result<CompiledStain, String> {
     let source = format!("{}{STAIN_ENTRY}", fragment.source);
     let reads_ic = fragment.fields.iter().any(|f| f.starts_with("ic."));
+    let dropped = fragment.dropped.uniforms.clone();
     checked(device, "the stain's pipeline", || {
         objects(device, key, reads_ic, &source, &fragment.uniforms)
     })
@@ -444,6 +458,7 @@ fn create(
         pipeline,
         layouts,
         blocks,
+        dropped,
     })
 }
 
@@ -1241,5 +1256,47 @@ mod tests {
         "with each request waited for before the next, none is superseded and all compile",
         expected = "the superseded requests compiled",
         check_superseded(false)
+    );
+
+    /// A colour that never reads its `unused`, so the proof leaves it out of the block.
+    const UNUSED: &str =
+        "// @uniform gain: f32 = 0.5 [0, 1]\n// @uniform unused: f32 = 0.5 [0, 1]\n\
+                          fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(uniforms.gain); }";
+
+    /// The stain holding [`UNUSED`] compiled, and `name` written at its colour's position: the write must succeed,
+    /// whether the uniform is in the block or was left out of it.
+    fn check_dropped_write(name: &str) {
+        let h = GpuHarness::new().expect("a GPU device");
+        let mut cache = PipelineCache::new(h.device());
+        let mut stain = grey(0).nodes().to_vec();
+        stain[1].occupant = Occupant::Custom(UNUSED.into());
+        let stain = Stain::new(stain).unwrap_or_else(|e| panic!("{e}"));
+        cache
+            .request(&stain, &[0, 1, 2, 3], Tier::FULL)
+            .unwrap_or_else(|e| panic!("{e}"));
+        cache.wait();
+        let c = cache.current().expect("the stain compiled");
+        let block: Vec<&str> = c
+            .blocks()
+            .iter()
+            .flat_map(|b| b.uniforms.iter().map(|u| u.name.as_str()))
+            .collect();
+        assert_eq!(block, ["gain"], "the block holds what can matter");
+        if let Err(e) = c.write_param(h.queue(), 1, name, &[0.25]) {
+            panic!("the write of `{name}` was refused: {e}");
+        }
+    }
+
+    #[test]
+    fn pipeline_runtime_a_dropped_uniform_takes_its_write() {
+        check_dropped_write("gain");
+        check_dropped_write("unused");
+    }
+
+    negative_control!(
+        pipeline_runtime_a_dropped_uniform_takes_its_write,
+        "a uniform the node does not declare",
+        expected = "was refused",
+        check_dropped_write("undeclared")
     );
 }

@@ -22,10 +22,15 @@ pub struct Assembled {
     pub key: u64,
 }
 
-/// `g` assembled at `tier`, a presentation view, or why not, as the assembler says.
+/// `g` assembled at `tier`, a presentation view, or why not, as the assembler says: every live node's code, with
+/// nothing the proof finds cannot change the picture left out (`render::assemble::assemble_kept`). The pipeline that
+/// draws leaves that out, and draws the same bits.
+// The plan is unclear here; chose to show the code with nothing dropped, because the code view maps its text back to
+// the nodes, and a node or wire the proof drops would vanish from it while still on the canvas.
 pub fn assemble(g: &StainGraph, tier: Tier) -> Result<Assembled, GraphError> {
     let canonical = g.canonical()?;
-    let pipeline = assemble::assemble(canonical.stain(), tier)?.source;
+    let pipeline =
+        assemble::assemble_kept(canonical.stain(), tier, assemble::View::Presentation)?.source;
     // The nodes follow the context, the last thing before them.
     let code = match pipeline.split_once(assemble::CONTEXT) {
         Some((_, nodes)) => nodes.trim_start().to_owned(),
