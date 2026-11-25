@@ -495,6 +495,46 @@ pub fn run(manifest: &Path, mode: Mode) -> Result<(), String> {
 /// the listing shows (a test with no control, a shared name, a doctest) by shard 1, which also runs `cargo xtask ci`'s
 /// other runners.
 pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Result<(), String> {
+    run_packages(manifest, mode, partition, None)
+}
+
+/// The names of the packages of the workspace of `manifest` that declare [`FEATURE`], in cargo's order.
+pub fn packages(manifest: &Path) -> Result<Vec<String>, String> {
+    let packages = metadata(manifest)?.packages;
+    Ok(packages
+        .into_iter()
+        .filter(|package| package.features.contains_key(FEATURE))
+        .map(|package| package.name)
+        .collect())
+}
+
+/// The packages of `--package`'s argument, names separated by commas: `Err`, before anything is built, for a name
+/// given twice, or that no package declaring [`FEATURE`] has (an empty one among them).
+fn select<'a>(packages: &[Package], only: &'a str) -> Result<Vec<&'a str>, String> {
+    let mut names: Vec<&str> = Vec::new();
+    for name in only.split(',') {
+        if names.contains(&name) {
+            return Err(format!("controls: --package names `{name}` twice"));
+        }
+        match packages.iter().find(|package| package.name == name) {
+            None => {
+                return Err(format!(
+                    "controls: --package: no package `{name}` in the workspace"
+                ))
+            }
+            Some(package) if !package.features.contains_key(FEATURE) => {
+                return Err(format!(
+                    "controls: --package: `{name}` declares no `{FEATURE}` feature"
+                ))
+            }
+            Some(_) => names.push(name),
+        }
+    }
+    Ok(names)
+}
+
+/// The workspace of `manifest`, as `cargo metadata` gives it.
+fn metadata(manifest: &Path) -> Result<Metadata, String> {
     let output = Command::new(cargo())
         .args([
             "metadata",
@@ -507,12 +547,30 @@ pub fn run_partition(manifest: &Path, mode: Mode, partition: Partition) -> Resul
         .output()
         .map_err(|e| format!("cannot run cargo metadata: {e}"))?;
     let stdout = succeeded("cargo metadata", output)?;
-    let metadata: Metadata =
-        serde_json::from_str(&stdout).map_err(|e| format!("cannot parse cargo metadata: {e}"))?;
+    serde_json::from_str(&stdout).map_err(|e| format!("cannot parse cargo metadata: {e}"))
+}
+
+/// [`run_partition`] on the packages `only` names, separated by commas, or on every one (`--package`).
+pub fn run_packages(
+    manifest: &Path,
+    mode: Mode,
+    partition: Partition,
+    only: Option<&str>,
+) -> Result<(), String> {
+    let metadata = metadata(manifest)?;
+    let only = only
+        .map(|only| select(&metadata.packages, only))
+        .transpose()?;
     let resolution = Resolution::of(mode, std::env::var_os(IN_RUN).is_some());
     let mut failed = 0;
     for package in &metadata.packages {
         let name = &package.name;
+        if only
+            .as_ref()
+            .is_some_and(|only| !only.contains(&name.as_str()))
+        {
+            continue;
+        }
         if !package.features.contains_key(FEATURE) {
             println!("xtask controls: {name}: skipped: it declares no `{FEATURE}` feature (R-176)");
             continue;

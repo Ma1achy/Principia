@@ -1,6 +1,7 @@
 # CI. Required on every PR: fmt, clippy, checks, test (3 shards). Aim: under 10 minutes.
-# After a merge to main, and nightly: test-workspace (the tests that run cargo on the workspace), the GPU-kernel
-# suites, every negative control and the golden renders. Caches are saved from main only; PR runs restore them.
+# After a merge to main, and nightly: test-workspace (the tests that run cargo on the workspace) and gpu-kernel (the
+# GPU-kernel suites, every negative control and the golden renders, in shards). gpu-kernel also runs, not required, on a
+# PR that touches the kernel (gpu_touch.sh). Caches are saved from main only; PR runs restore them.
 name: ci
 
 on:
@@ -149,8 +150,7 @@ jobs:
 
   kernel-wgsl:
     # On a PR that touches the kernel or the checked-in WGSL: the rust-gpu kernel build alone, which fails when
-    # crates/render/wgsl no longer matches the kernel's translation. gpu-kernel below runs it only after merge, so a
-    # stale translation used to reach main unseen (main's gpu-kernel was red for eight hours on 20-21 Nov).
+    # crates/render/wgsl no longer matches the kernel's translation, in a few minutes, ahead of gpu-kernel's shards.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -160,12 +160,9 @@ jobs:
           fetch-depth: 0
       - name: Does this PR touch the kernel or the WGSL?
         id: touch
-        run: |
-          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -qE '^(crates/kernel/|crates/render/wgsl/|xtask/src/build_kernel|rust-toolchain\.toml)'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"; echo "No kernel or WGSL change: nothing to check."
-          fi
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/gpu_touch.sh >> "$GITHUB_OUTPUT"
       - name: Free runner disk
         if: steps.touch.outputs.run == 'true'
         run: |
@@ -196,11 +193,49 @@ jobs:
         if: steps.touch.outputs.run == 'true'
         run: cargo xtask build-kernel
 
-  gpu-kernel:
-    # The rust-gpu kernel build, its suites on lavapipe, every negative control and the golden renders.
-    if: github.event_name != 'pull_request'
+  gpu-touch:
     runs-on: ubuntu-24.04
-    timeout-minutes: 120
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.touch.outputs.run }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Does this run need the GPU suites?
+        id: touch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/gpu_touch.sh >> "$GITHUB_OUTPUT"
+
+  gpu-shard:
+    # The rust-gpu kernel build and, shard by shard, its suites on lavapipe, every negative control and the golden
+    # renders. The controls are split by package, not by hash, so each package's tests are built once.
+    needs: gpu-touch
+    if: needs.gpu-touch.outputs.run == 'true'
+    name: gpu-shard (${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: suites 1/2, controls kernel
+            slice: 1
+            controls: kernel
+            save: true
+          - name: suites 2/2, golden, controls ledger, prin
+            slice: 2
+            controls: ledger,prin
+            golden: true
+          - name: controls xtask
+            controls: xtask
+          - name: controls validation
+            controls: validation
+          - name: controls engine
+            controls: engine
+          - name: controls render
+            controls: render
     env:
       PRIN_GPU_BACKEND: vulkan
     steps:
@@ -221,7 +256,7 @@ jobs:
         with:
           shared-key: gpu-kernel
           cache-targets: "false"
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: ${{ github.ref == 'refs/heads/main' && matrix.save == true }}
       - uses: ./.github/actions/cargo-ci-config
       - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
@@ -252,22 +287,38 @@ jobs:
           key: spirv-${{ runner.os }}-${{ steps.kernel-src.outputs.hash }}
       - run: cargo xtask build-kernel
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && matrix.save == true
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && matrix.save == true
         with:
           path: ~/.cache/principia-spirv
           key: spirv-${{ runner.os }}-${{ steps.kernel-src.outputs.hash }}
       - name: GPU-kernel suites
+        if: matrix.slice
         env:
           NEXTEST_PROFILE: gpu-kernel
-        run: cargo nextest run -p validation -p xtask -p engine
+        run: cargo nextest run -p validation -p xtask -p engine --partition hash:${{ matrix.slice }}/2
       - name: Every negative control fires
-        if: ${{ !cancelled() }}
-        run: cargo xtask controls
+        if: ${{ !cancelled() && matrix.controls }}
+        run: cargo xtask controls --package ${{ matrix.controls }}
       - name: Golden renders
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && matrix.golden == true }}
         run: cargo xtask golden --all
+
+  gpu-kernel:
+    # Passes only when every shard did. Skipped only when gpu-touch said no: a gpu-touch that failed says neither, and
+    # fails this job. `always()`, as without it a failed or cancelled shard would skip this job.
+    needs: [gpu-touch, gpu-shard]
+    if: always() && needs.gpu-touch.outputs.run != 'false'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every shard passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for result in ${RESULTS:-none}; do [ "$result" = success ] || exit 1; done

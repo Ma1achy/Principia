@@ -46,11 +46,13 @@ Commands:
                                   shard 1 only (R-360)
   codegen                         regenerate the checked-in generated files from the layout table; refuses when
                                   an entry lacks a §3.8 key, naming the field and the key (dd_generation_root §3.8)
-  controls [--list] [--partition <k>/<n>] [--manifest-path <Cargo.toml>]
+  controls [--list] [--package <name>,...] [--partition <k>/<n>] [--manifest-path <Cargo.toml>]
                                   check that every test of each crate declaring the `controls` feature has a
                                   negative control that makes it fail (REQ-VAL-147, R-199, R-201); on this
                                   workspace or on <Cargo.toml>'s; a crate without the feature is skipped (R-176);
                                   --list lists each test's controls and checks the listing, running none (R-226);
+                                  --package checks only the packages named, and refuses a name that isn't one
+                                  declaring the feature;
                                   --partition runs, or lists, only the k-th of n slices of the controls, by a
                                   stable hash of the control name (R-360)
   deps [--metadata <file> | --manifest-path <Cargo.toml>]
@@ -176,7 +178,9 @@ fn main() -> ExitCode {
         ["controls", "--list", "--manifest-path", path] => {
             xtask::controls::run(Path::new(path), Mode::List)
         }
-        ["controls", rest @ ..] if rest.contains(&"--partition") => controls_partition(rest),
+        ["controls", rest @ ..] if rest.contains(&"--partition") || rest.contains(&"--package") => {
+            controls_part(rest)
+        }
         ["gate", "--all"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::All),
         ["gate", "--list"] => xtask::gate::run(&workspace_manifest(), xtask::gate::Which::List),
         ["gate", name, flags @ ..] if !name.starts_with('-') => {
@@ -228,17 +232,24 @@ fn main() -> ExitCode {
     }
 }
 
-/// `cargo xtask controls` with `--partition <k>/<n>` among `args`, and optionally `--list` and `--manifest-path
-/// <Cargo.toml>`, in any order (R-360).
-fn controls_partition(args: &[&str]) -> Result<(), String> {
-    let (mut mode, mut partition, mut manifest) = (Mode::Run, None, workspace_manifest());
+/// `cargo xtask controls` with `--partition <k>/<n>` or `--package <name>,...` among `args`, and optionally `--list` and
+/// `--manifest-path <Cargo.toml>`, in any order (R-360).
+fn controls_part(args: &[&str]) -> Result<(), String> {
+    let (mut mode, mut partition, mut only, mut manifest) =
+        (Mode::Run, Partition::ALL, None, workspace_manifest());
     let mut args = args.iter();
     while let Some(arg) = args.next() {
         match *arg {
             "--list" => mode = Mode::List,
             "--partition" => {
                 let slice = args.next().ok_or("controls: --partition takes k/n")?;
-                partition = Some(Partition::parse(slice)?);
+                partition = Partition::parse(slice)?;
+            }
+            "--package" => {
+                let names = args.next().ok_or("controls: --package takes names")?;
+                if only.replace(*names).is_some() {
+                    return Err("controls: --package is given twice".to_owned());
+                }
             }
             "--manifest-path" => {
                 let path = args
@@ -249,8 +260,7 @@ fn controls_partition(args: &[&str]) -> Result<(), String> {
             other => return Err(format!("controls: unrecognised argument `{other}`")),
         }
     }
-    let partition = partition.ok_or("controls: --partition takes k/n")?;
-    xtask::controls::run_partition(&manifest, mode, partition)
+    xtask::controls::run_packages(&manifest, mode, partition, only)
 }
 
 /// The libm-pin harness's arms on this machine: each one's name, which names its run's file and its own target directory,
