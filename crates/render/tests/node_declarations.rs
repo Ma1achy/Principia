@@ -197,10 +197,10 @@ negative_control!(
 
 fn version_cases() -> Vec<(&'static str, usize)> {
     vec![
-        ("// @name N\n// @version 2\n", 2),
+        ("// @name N\n// @version 3\n", 2),
         ("// @version 7\n", 1),
         // A later grammar's new word above its version line is refused as a later grammar.
-        ("// @name N\n// @sparkle on\n// @version 2\n", 3),
+        ("// @name N\n// @sparkle on\n// @version 3\n", 3),
     ]
 }
 

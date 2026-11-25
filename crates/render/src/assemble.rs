@@ -226,6 +226,7 @@ pub enum Occupant {
 
 pub mod declare;
 pub mod matters;
+pub mod params;
 
 pub use declare::{code_text, key_text, Check, Control, ControlLine, Described, Glyph};
 
@@ -238,6 +239,19 @@ pub enum UniformType {
     Vec2,
     Vec3,
     Vec4,
+    /// `gradient<N>`: two to `N` stops, positions and colours ([`params`]).
+    Gradient(u8),
+    /// `list<T, N>`: up to `N` items of `width` numbers each.
+    List {
+        width: u8,
+        max: u8,
+    },
+    /// `lut<N>`: `N` numbers sampled over `[0, 1]`.
+    Lut(u16),
+    /// `field`: a read-side field the node's code reads, chosen by the stain.
+    Field,
+    /// `image`: an image's handle.
+    Image,
 }
 
 impl UniformType {
@@ -254,7 +268,14 @@ impl UniformType {
     }
 
     /// The type as WGSL writes it.
-    pub const fn wgsl(self) -> &'static str {
+    pub fn wgsl(self) -> String {
+        if let Some(name) = params::struct_name(self) {
+            return name;
+        }
+        self.scalar_wgsl().to_owned()
+    }
+
+    const fn scalar_wgsl(self) -> &'static str {
         match self {
             UniformType::F32 => "f32",
             UniformType::I32 => "i32",
@@ -262,12 +283,19 @@ impl UniformType {
             UniformType::Vec2 => "vec2<f32>",
             UniformType::Vec3 => "vec3<f32>",
             UniformType::Vec4 => "vec4<f32>",
+            UniformType::Image | UniformType::Field => "u32",
+            UniformType::Gradient(_) | UniformType::List { .. } | UniformType::Lut(_) => "",
         }
     }
 
-    /// Its number of components.
+    /// Its number of components; a new type's value has no fixed number, so 0.
     pub const fn components(self) -> usize {
         match self {
+            UniformType::Gradient(_)
+            | UniformType::List { .. }
+            | UniformType::Lut(_)
+            | UniformType::Field
+            | UniformType::Image => 0,
             UniformType::F32 | UniformType::I32 | UniformType::U32 => 1,
             UniformType::Vec2 => 2,
             UniformType::Vec3 => 3,
@@ -304,6 +332,16 @@ pub struct Uniform {
 impl Uniform {
     /// Whether `value` is a value of this uniform: one number per component, each of the type, within the range.
     pub fn admits(&self, value: &[f64]) -> bool {
+        if let Some(ok) = params::admits(self.ty, value) {
+            // A field is swapped for one of its default's kind, a vector for a vector and a scalar for a scalar: the
+            // code that reads it does not change with it.
+            return ok
+                && (self.ty != UniformType::Field
+                    || self
+                        .default
+                        .first()
+                        .is_some_and(|&d| params::same_field_kind(d, value[0])));
+        }
         value.len() == self.ty.components()
             && value.iter().all(|&v| {
                 self.ty.holds(v) && self.range.is_none_or(|(lo, hi)| (lo..=hi).contains(&v))
@@ -339,13 +377,15 @@ impl Declaration {
         let all = lines(source);
         let comments = declare::line_comments(source);
         // The version first, so a later grammar is refused as one whatever word comes before its `@version` line.
+        let mut grammar = 1;
         for (k, line) in all.iter().enumerate() {
             let Some(rest) = declare::declaration_rest(source, line, &comments) else {
                 continue;
             };
             let (word, v) = rest.split_once(char::is_whitespace).unwrap_or((rest, ""));
             if word == "version" {
-                match declare::read("version", v, k + 1, &mut Described::default()) {
+                let mut read = Described::default();
+                match declare::read("version", v, k + 1, &mut read, 1) {
                     Err(declare::Refusal(check, why))
                         if check == Check::Version && declare::on(check) =>
                     {
@@ -354,7 +394,7 @@ impl Declaration {
                             why: format!("`{}`: {why}", line.trim()),
                         })
                     }
-                    _ => {}
+                    _ => grammar = read.version.unwrap_or(1),
                 }
             }
         }
@@ -368,10 +408,18 @@ impl Declaration {
             };
             let (word, rest) = rest.split_once(char::is_whitespace).unwrap_or((rest, ""));
             match word {
-                "uniform" => out.uniforms.push(uniform(rest).map_err(|w| bad(&w))?),
+                "uniform" => match uniform(rest, grammar) {
+                    Ok(u) => out.uniforms.push(u),
+                    // A uniform of a new type refused for its own sake is a check a test's control can lift.
+                    Err(why) if is_param(rest) && !declare::on(Check::Param) => {
+                        let _ = why;
+                        continue;
+                    }
+                    Err(why) => return Err(bad(&why)),
+                },
                 "input" => out.inputs.push(input(rest).map_err(|w| bad(&w))?),
                 w if declare::WORDS.contains(&w) => {
-                    match declare::read(w, rest, k + 1, &mut out.described) {
+                    match declare::read(w, rest, k + 1, &mut out.described, grammar) {
                         Err(declare::Refusal(check, why)) if declare::on(check) => {
                             return Err(bad(&why))
                         }
@@ -393,8 +441,21 @@ impl Declaration {
             if names[..names.len() - 1].contains(names.last().unwrap_or(&"")) {
                 return Err(bad("the name is declared twice"));
             }
+            let block: Vec<Uniform> = out
+                .uniforms
+                .iter()
+                .filter(|u| u.ty != UniformType::Field)
+                .cloned()
+                .collect();
+            let size = crate::pipeline_cache::block_layout(&block).1;
+            if word == "uniform" && size > params::BLOCK_MAX && declare::on(Check::Param) {
+                return Err(bad(&format!(
+                    "the uniforms take {size} bytes; a node's block is at most {}",
+                    params::BLOCK_MAX
+                )));
+            }
         }
-        declare::check(&out.described, &out.uniforms).map_err(
+        declare::check(&out.described, &out.uniforms, &out.inputs).map_err(
             |(line, declare::Refusal(_, why))| AssembleError::Declaration {
                 line,
                 why: format!("`{}`: {why}", all[line - 1].trim()),
@@ -404,11 +465,42 @@ impl Declaration {
     }
 }
 
-/// `<name>: <type> = <default>` then an optional `[<lo>, <hi>]`.
-fn uniform(rest: &str) -> Result<Uniform, String> {
+/// Whether the `@uniform` line `rest` names a type of grammar version 2.
+fn is_param(rest: &str) -> bool {
+    let ty = rest
+        .split_once(':')
+        .map_or("", |(_, t)| t.split_once('=').map_or(t, |(t, _)| t));
+    !matches!(params::parse_type(ty), Ok(None))
+}
+
+/// `<name>: <type> = <default>` then an optional `[<lo>, <hi>]`; the new types of grammar version 2 ([`params`]) read
+/// their default as their own text, and take no range.
+fn uniform(rest: &str, version: u32) -> Result<Uniform, String> {
     let (name, rest) = rest.split_once(':').ok_or("no `:` after the name")?;
-    let (ty, rest) = rest.split_once('=').ok_or("no `=` before the default")?;
     let name = identifier(name)?;
+    if let Some(ty) = params::parse_type(rest.split_once('=').map_or(rest, |(t, _)| t))? {
+        if version < 2 {
+            return Err(format!(
+                "`{}` is a grammar version 2 type: the source declares `// @version 2` first",
+                rest.split_once('=').map_or(rest, |(t, _)| t).trim()
+            ));
+        }
+        let (_, default) = rest.split_once('=').ok_or("no `=` before the default")?;
+        let u = Uniform {
+            name,
+            ty,
+            default: params::parse_default(ty, default)?,
+            range: None,
+        };
+        if !u.admits(&u.default) {
+            return Err(format!(
+                "the default is not a value of the type: {}",
+                params::why_not(ty, &u.default)
+            ));
+        }
+        return Ok(u);
+    }
+    let (ty, rest) = rest.split_once('=').ok_or("no `=` before the default")?;
     let ty =
         UniformType::parse(ty.trim()).ok_or("the type is not f32, i32, u32 or vec2/3/4<f32>")?;
     let rest = rest.trim();
@@ -594,6 +686,16 @@ pub fn declaration(kind: Kind, occupant: &Occupant) -> Result<Declaration, Assem
 
 /// [`declaration`] of a node of `kind` whose occupant's text is `source`, `None` for the identity.
 fn declaration_of(kind: Kind, source: Option<&str>) -> Result<Declaration, AssembleError> {
+    let declared = declaration_of_text(kind, source)?;
+    if kind == Kind::Combiner && declared.uniforms.iter().any(|u| u.ty == UniformType::Field) {
+        return Err(AssembleError::Occupant(
+            "a combiner has no context to read a field from: it declares no `field` uniform".into(),
+        ));
+    }
+    Ok(declared)
+}
+
+fn declaration_of_text(kind: Kind, source: Option<&str>) -> Result<Declaration, AssembleError> {
     let Some(source) = source else {
         let mut d = Declaration::default();
         if matches!(kind, Kind::Colour | Kind::Brightness) {
@@ -602,6 +704,15 @@ fn declaration_of(kind: Kind, source: Option<&str>) -> Result<Declaration, Assem
         return Ok(d);
     };
     let mut d = Declaration::parse(source)?;
+    // A field is written into each `uniforms.<name>` read, so a node that reads its uniforms any other way (whole, or
+    // through a pointer) cannot hold one.
+    if d.uniforms.iter().any(|u| u.ty == UniformType::Field)
+        && matters::without_uniforms(source, &[], "").is_none()
+    {
+        return Err(AssembleError::Occupant(
+            "a node with a `field` uniform reads its uniforms only as `uniforms.<name>`".into(),
+        ));
+    }
     if matches!(kind, Kind::Colour | Kind::Brightness) && d.inputs.is_empty() {
         d.inputs.push(default_input());
     }
@@ -1312,6 +1423,9 @@ fn source(
         .collect();
     let first = prelude::uniforms_binding();
     let mut uniforms = Vec::new();
+    // The structs of the new parameter types, once each, before the first node that holds one: a dropped uniform's
+    // struct too, since the dropped block names it.
+    let mut library: Vec<UniformType> = Vec::new();
     for &i in &live {
         if dropped.nodes.contains(&i) {
             continue;
@@ -1324,6 +1438,22 @@ fn source(
             code_text(text)
         };
         let gone = dropped.uniforms_of(i);
+        let new: Vec<UniformType> = stain.declarations[i]
+            .uniforms
+            .iter()
+            .map(|u| u.ty)
+            .filter(|t| params::struct_name(*t).is_some() && !library.contains(t))
+            .collect();
+        out.push_str(&params::library(&new));
+        library.extend(new);
+        let defaults: Vec<&Uniform> = stain.declarations[i]
+            .uniforms
+            .iter()
+            .filter(|u| u.ty == UniformType::Field)
+            .collect();
+        let text = std::borrow::Cow::Owned(params::specialise(&text, &defaults, &|u| {
+            u.default[0] as usize
+        })?);
         let text = match gone.is_empty() {
             true => text,
             false => {
@@ -1348,10 +1478,11 @@ fn source(
                 )?)
             }
         };
+        // A `field` is read as the field in the node's code, so it has no member.
         let schema: Vec<Uniform> = stain.declarations[i]
             .uniforms
             .iter()
-            .filter(|u| !gone.contains(u))
+            .filter(|u| !gone.contains(u) && u.ty != UniformType::Field)
             .cloned()
             .collect();
         let schema = &schema;

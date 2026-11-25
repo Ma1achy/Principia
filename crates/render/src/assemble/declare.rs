@@ -27,6 +27,13 @@
 //!   radians), `gradient(<stop>, …)` (`vec3<f32>`: it and each named `vec3<f32>` uniform, in order, are one gradient's
 //!   stops, which take no control of their own), `fields` (a number per component) and `hidden` (not drawn: a value
 //!   the host writes). `order` sorts the controls for display only; the uniform block keeps declaration order.
+//! - Grammar version 2 (`// @version 2` first) adds to a `@control`, after its label, any of `in`, `order`, and
+//!   `pair <uniform>` (this control is the low end of a pair whose high end is `<uniform>`'s control; the two stay
+//!   ordered), `soft [<lo>, <hi>]` (the part of the uniform's range the control spans), `unit "<text>"` and
+//!   `format fixed(<0-9>) | percent | scientific | whole`; the controls `list`, `lut`, `field` and `image`, and
+//!   `gradient` with no stops, for a uniform of the types in [`super::params`]; and `@port <input> "<label>"
+//!   [accepts <subtype> | …] [required | optional] [unit "<text>"]`, what an `@input` says about itself. The `@port`
+//!   line is not code, as no declaration here is, so a label or a subtype edit changes no key.
 //! - `@id`, `@author`, `@licence`, `@node_version`: who the node is, for the shaders list and a saved stain's label,
 //!   never for the picture. `@id <id>` is one to eight segments of `a`–`z`, `0`–`9`, `_` and `-`, joined by `/`, at
 //!   most [`ID_MAX`] bytes, no segment a Windows device name (`con`, `nul`, `com1`, …): never a path, so it cannot
@@ -50,10 +57,10 @@ use super::{Uniform, UniformType};
 use crate::lex::{is_line_break, is_space, tokens, Tok};
 
 /// The grammar version this build reads.
-pub const VERSION: u32 = 1;
+pub const VERSION: u32 = 2;
 
 /// The declaration words this module reads; `uniform` and `input` are the assembler's.
-pub const WORDS: [&str; 11] = [
+pub const WORDS: [&str; 12] = [
     "version",
     "name",
     "group",
@@ -65,6 +72,7 @@ pub const WORDS: [&str; 11] = [
     "author",
     "licence",
     "node_version",
+    "port",
 ];
 
 /// The longest `@id`, in bytes.
@@ -105,9 +113,62 @@ pub enum Control {
     /// The other stops after this uniform, by uniform name.
     // The plan is unclear here; chose a gradient of `vec3` uniform stops, because that is what `ramp_lerp` and
     // `ramp_diverging` take; a node's custom-stop ramp is no uniform yet.
+    // A gradient with no stop list is the control of a `gradient<N>` uniform, which holds its own stops.
     Gradient(Vec<String>),
     Fields,
     Hidden,
+    /// A `list<T, N>` uniform: add, remove and edit items (grammar version 2).
+    List,
+    /// A `lut<N>` uniform: a curve drawn over `[0, 1]`.
+    Curve,
+    /// A `field` uniform: a pick from the fields a source reads.
+    FieldPicker,
+    /// An `image` uniform: a pick of an image.
+    ImagePicker,
+}
+
+/// How a number control writes its value, a fixed set a source chooses from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Format {
+    /// `n` decimals, 0 to 9.
+    Fixed(u8),
+    /// The value times 100 and a `%`.
+    Percent,
+    /// `1.5e-3`.
+    Scientific,
+    /// No decimals, rounded.
+    Whole,
+}
+
+impl Format {
+    fn parse(c: &mut Cursor) -> Result<Format, Refusal> {
+        let word = c
+            .word()
+            .map_or_else(|| refuse(Check::Malformed, "expected a format"), Ok)?;
+        Ok(match word {
+            "percent" => Format::Percent,
+            "scientific" => Format::Scientific,
+            "whole" => Format::Whole,
+            "fixed" => {
+                let n = c.list(|c| {
+                    c.word()
+                        .and_then(|w| w.parse::<u8>().ok())
+                        .filter(|n| *n <= 9)
+                        .map_or_else(|| refuse(Check::Malformed, "decimals are 0 to 9"), Ok)
+                })?;
+                match n[..] {
+                    [n] => Format::Fixed(n),
+                    _ => return refuse(Check::Malformed, "`fixed` takes one number of decimals"),
+                }
+            }
+            other => {
+                return refuse(
+                    Check::Control,
+                    format!("`{other}` is no format: fixed(n), percent, scientific or whole"),
+                )
+            }
+        })
+    }
 }
 
 impl Control {
@@ -125,12 +186,24 @@ impl Control {
             Control::Gradient(_) => "gradient",
             Control::Fields => "fields",
             Control::Hidden => "hidden",
+            Control::List => "list",
+            Control::Curve => "lut",
+            Control::FieldPicker => "field",
+            Control::ImagePicker => "image",
         }
     }
 
     /// The control a uniform takes when its source declares none: a slider for a scalar with a range, number fields
     /// otherwise.
     pub fn default_for(u: &Uniform) -> Control {
+        match u.ty {
+            UniformType::Gradient(_) => return Control::Gradient(Vec::new()),
+            UniformType::List { .. } => return Control::List,
+            UniformType::Lut(_) => return Control::Curve,
+            UniformType::Field => return Control::FieldPicker,
+            UniformType::Image => return Control::ImagePicker,
+            _ => {}
+        }
         if u.ty.components() == 1 && u.range.is_some() {
             Control::Slider
         } else {
@@ -149,8 +222,52 @@ pub struct ControlLine {
     // The plan is unclear here; chose display order only, a control without one at its uniform's place, because the
     // uniform block's layout must not move with a label.
     pub order: Option<i64>,
+    /// The uniform this control's value may not exceed: the two are one low and high pair, and the editor keeps them
+    /// ordered (grammar version 2).
+    pub pair: Option<String>,
+    /// The part of the uniform's range the control spans; a value may still be typed anywhere in the range.
+    pub soft: Option<(f64, f64)>,
+    /// The unit written after the value.
+    pub unit: Option<String>,
+    pub format: Option<Format>,
     /// Its line in the source, 1-based.
     pub line: usize,
+}
+
+/// One `@port` line: what an `@input` says about itself, kept off the `@input` line so that editing it changes no code
+/// key (grammar version 2).
+// The plan is unclear here; chose a line of its own, `@port`, for the label, subtypes, optionality and unit the brief
+// puts on `@input`, because `@input` lines are hashed into the code key and a label edit must compile nothing.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PortLine {
+    pub input: String,
+    pub label: String,
+    /// The subtypes it takes; empty for any.
+    pub accepts: Vec<Accepts>,
+    /// Whether the node works with nothing wired.
+    pub optional: bool,
+    pub unit: Option<String>,
+    pub line: usize,
+}
+
+/// A field subtype a port takes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Accepts {
+    Scalar,
+    Vector,
+    Categorical,
+    Position,
+}
+
+impl Accepts {
+    pub fn word(self) -> &'static str {
+        match self {
+            Accepts::Scalar => "scalar",
+            Accepts::Vector => "vector",
+            Accepts::Categorical => "categorical",
+            Accepts::Position => "position",
+        }
+    }
 }
 
 /// What a source declares about itself; each part `None` where it declares nothing.
@@ -164,6 +281,7 @@ pub struct Described {
     /// The glyph and its line.
     pub glyph: Option<(Glyph, usize)>,
     pub controls: Vec<ControlLine>,
+    pub ports: Vec<PortLine>,
     pub id: Option<String>,
     pub author: Option<String>,
     pub licence: Option<String>,
@@ -185,6 +303,9 @@ pub enum Check {
     Fit,
     /// A grammar version this build does not read.
     Version,
+    /// A `@uniform` of one of version 2's types (`gradient`, `list`, `lut`, `field`, `image`) with a bad size, default
+    /// or place.
+    Param,
     /// A `// @` line inside a block comment, which is comment text, not a declaration. Lifted, every line reads by its
     /// own text alone, as the controls' arm of the block-comment test.
     Comment,
@@ -240,6 +361,7 @@ pub(super) fn read(
     rest: &str,
     line: usize,
     out: &mut Described,
+    grammar: u32,
 ) -> Result<(), Refusal> {
     let twice = |set: bool| {
         if set {
@@ -296,7 +418,11 @@ pub(super) fn read(
             twice(out.glyph.is_some())?;
             out.glyph = Some((glyph(rest)?, line));
         }
-        _ => out.controls.push(control(rest, line)?),
+        "port" => {
+            needs(grammar, "`@port`")?;
+            out.ports.push(port(rest, line)?);
+        }
+        _ => out.controls.push(control(rest, line, grammar)?),
     }
     Ok(())
 }
@@ -438,6 +564,85 @@ impl<'a> Cursor<'a> {
     }
 }
 
+/// Refuses `what` where the source is written for grammar version 1: version 2's words say so first.
+fn needs(grammar: u32, what: &str) -> Result<(), Refusal> {
+    if grammar < 2 && on(Check::Version) {
+        return refuse(
+            Check::Version,
+            format!("{what} is grammar version 2: the source declares `// @version 2` first"),
+        );
+    }
+    Ok(())
+}
+
+/// `<input> "<label>" [accepts <subtype> | …] [required | optional] [unit "<text>"]`.
+fn port(rest: &str, line: usize) -> Result<PortLine, Refusal> {
+    let mut c = Cursor(rest);
+    let input = c
+        .word()
+        .and_then(|w| super::identifier(w).ok())
+        .map_or_else(|| refuse(Check::Malformed, "expected the input's name"), Ok)?;
+    let label = c.quoted()?;
+    let (mut accepts, mut optional, mut unit) = (Vec::new(), None, None);
+    while let Some(clause) = c.clone_word().map(str::to_owned) {
+        c.word();
+        match clause.as_str() {
+            "accepts" => {
+                if !accepts.is_empty() {
+                    return refuse(Check::Malformed, "`accepts` is given twice");
+                }
+                loop {
+                    let a = match c.word() {
+                        Some("scalar") => Accepts::Scalar,
+                        Some("vector") => Accepts::Vector,
+                        Some("categorical") => Accepts::Categorical,
+                        Some("position") => Accepts::Position,
+                        _ => {
+                            return refuse(
+                                Check::Malformed,
+                                "a subtype is scalar, vector, categorical or position",
+                            )
+                        }
+                    };
+                    if accepts.contains(&a) {
+                        return refuse(Check::Malformed, "a subtype is named twice");
+                    }
+                    accepts.push(a);
+                    if !c.eat('|') {
+                        break;
+                    }
+                }
+            }
+            "required" | "optional" => {
+                if optional.is_some() {
+                    return refuse(Check::Malformed, "`required` or `optional`, once");
+                }
+                optional = Some(clause == "optional");
+            }
+            "unit" => {
+                if unit.is_some() {
+                    return refuse(Check::Malformed, "`unit` is given twice");
+                }
+                unit = Some(c.quoted()?);
+            }
+            _ => {
+                return refuse(
+                    Check::Malformed,
+                    "expected `[accepts <subtype> | …] [required | optional] [unit \"<text>\"]` and nothing after",
+                )
+            }
+        }
+    }
+    Ok(PortLine {
+        input,
+        label,
+        accepts,
+        optional: optional.unwrap_or(false),
+        unit,
+        line,
+    })
+}
+
 fn glyph(rest: &str) -> Result<Glyph, Refusal> {
     let mut c = Cursor(rest);
     let word = c
@@ -464,7 +669,7 @@ fn glyph(rest: &str) -> Result<Glyph, Refusal> {
     Ok(g)
 }
 
-fn control(rest: &str, line: usize) -> Result<ControlLine, Refusal> {
+fn control(rest: &str, line: usize, grammar: u32) -> Result<ControlLine, Refusal> {
     let mut c = Cursor(rest);
     let uniform = c
         .word()
@@ -486,6 +691,10 @@ fn control(rest: &str, line: usize) -> Result<ControlLine, Refusal> {
         "flags" => Control::Flags(names(&mut c)?),
         "colour" => Control::Colour,
         "angle" => Control::Angle,
+        "gradient" if c.clone_char() != Some('(') => {
+            needs(grammar, "a `gradient` control with no stops")?;
+            Control::Gradient(Vec::new())
+        }
         "gradient" => Control::Gradient(c.list(|c| {
             c.word()
                 .and_then(|w| super::identifier(w).ok())
@@ -493,39 +702,90 @@ fn control(rest: &str, line: usize) -> Result<ControlLine, Refusal> {
         })?),
         "fields" => Control::Fields,
         "hidden" => Control::Hidden,
+        "list" | "lut" | "field" | "image" => {
+            needs(grammar, &format!("the `{word}` control"))?;
+            match word {
+                "list" => Control::List,
+                "lut" => Control::Curve,
+                "field" => Control::FieldPicker,
+                _ => Control::ImagePicker,
+            }
+        }
         other => {
             return refuse(
                 Check::Control,
                 format!(
                     "`{other}` is no control: slider, log_slider, stepper, toggle, choice, flags, colour, angle, \
-                     gradient, fields or hidden"
+                     gradient, fields, hidden, list, lut, field or image"
                 ),
             )
         }
     };
     let label = c.quoted()?;
-    let mut group = None;
-    let mut order = None;
-    if c.clone_word() == Some("in") {
+    let (mut group, mut order, mut pair, mut soft, mut unit, mut format) =
+        (None, None, None, None, None, None);
+    // The tail's clauses, each at most once, in any order.
+    while let Some(clause) = c.clone_word().map(str::to_owned) {
+        let twice = |set: bool| {
+            if set {
+                refuse(Check::Malformed, format!("`{clause}` is given twice"))
+            } else {
+                Ok(())
+            }
+        };
         c.word();
-        group = Some(c.quoted()?);
-    }
-    if c.clone_word() == Some("order") {
-        c.word();
-        c.skip();
-        let end = c.0.find(|ch: char| is_space(ch)).unwrap_or(c.0.len());
-        order = Some(
-            c.0[..end]
-                .parse::<i64>()
-                .or_else(|_| refuse(Check::Malformed, "an order is a whole number"))?,
-        );
-        c.0 = &c.0[end..];
-    }
-    if !c.done() {
-        return refuse(
-            Check::Malformed,
-            "expected `[in \"<group>\"] [order <n>]` and nothing after",
-        );
+        match clause.as_str() {
+            "in" => {
+                twice(group.is_some())?;
+                group = Some(c.quoted()?);
+            }
+            "order" => {
+                twice(order.is_some())?;
+                c.skip();
+                let end = c.0.find(|ch: char| is_space(ch)).unwrap_or(c.0.len());
+                order = Some(
+                    c.0[..end]
+                        .parse::<i64>()
+                        .or_else(|_| refuse(Check::Malformed, "an order is a whole number"))?,
+                );
+                c.0 = &c.0[end..];
+            }
+            "pair" | "soft" | "unit" | "format" => {
+                needs(grammar, &format!("`{clause}`"))?;
+                match clause.as_str() {
+                    "pair" => {
+                        twice(pair.is_some())?;
+                        pair = Some(
+                            c.word()
+                                .and_then(|w| super::identifier(w).ok())
+                                .map_or_else(
+                                    || refuse(Check::Malformed, "`pair` names the uniform of the high end"),
+                                    Ok,
+                                )?,
+                        );
+                    }
+                    "soft" => {
+                        twice(soft.is_some())?;
+                        soft = Some(c.range()?);
+                    }
+                    "unit" => {
+                        twice(unit.is_some())?;
+                        unit = Some(c.quoted()?);
+                    }
+                    _ => {
+                        twice(format.is_some())?;
+                        format = Some(Format::parse(&mut c)?);
+                    }
+                }
+            }
+            _ => {
+                return refuse(
+                    Check::Malformed,
+                    "expected `[in \"<group>\"] [order <n>] [pair <u>] [soft [<lo>, <hi>]] [unit \"<u>\"] \
+                     [format <f>]` and nothing after",
+                )
+            }
+        }
     }
     if let Control::Choice(n) | Control::Flags(n) = &control {
         if (1..n.len()).any(|k| n[..k].contains(&n[k])) {
@@ -538,11 +798,34 @@ fn control(rest: &str, line: usize) -> Result<ControlLine, Refusal> {
         label,
         group,
         order,
+        pair,
+        soft,
+        unit,
+        format,
         line,
     })
 }
 
 impl Cursor<'_> {
+    /// The next character, not taken.
+    fn clone_char(&self) -> Option<char> {
+        self.0.trim_start().chars().next()
+    }
+
+    /// `[<lo>, <hi>]`, `lo < hi`.
+    fn range(&mut self) -> Result<(f64, f64), Refusal> {
+        self.skip();
+        let bad = || refuse(Check::Malformed, "a range is `[<lo>, <hi>]`, `lo < hi`");
+        let Some(inner) = self.0.strip_prefix('[').and_then(|r| r.split_once(']')) else {
+            return bad();
+        };
+        self.0 = inner.1;
+        match super::numbers(inner.0).map_err(|_| ()).ok().as_deref() {
+            Some(&[lo, hi]) if lo < hi => Ok((lo, hi)),
+            _ => bad(),
+        }
+    }
+
     /// The next word, not taken.
     fn clone_word(&self) -> Option<&str> {
         Cursor(self.0).word()
@@ -551,7 +834,11 @@ impl Cursor<'_> {
 
 /// Checks `d`'s controls and glyph against the source's `uniforms`: each control names a declared uniform once and
 /// fits it, a gradient's stops are its own, and the glyph has something to draw. A refusal carries its line.
-pub(super) fn check(d: &Described, uniforms: &[Uniform]) -> Result<(), (usize, Refusal)> {
+pub(super) fn check(
+    d: &Described,
+    uniforms: &[Uniform],
+    inputs: &[super::Input],
+) -> Result<(), (usize, Refusal)> {
     let find = |name: &str| uniforms.iter().find(|u| u.name == name);
     for (k, c) in d.controls.iter().enumerate() {
         let at = |r: Refusal| (c.line, r);
@@ -572,6 +859,7 @@ pub(super) fn check(d: &Described, uniforms: &[Uniform]) -> Result<(), (usize, R
         }
         if on(Check::Fit) {
             fits(c, u, &find).map_err(|why| at(Refusal(Check::Fit, why)))?;
+            relates(c, u, &d.controls, &find).map_err(|why| at(Refusal(Check::Fit, why)))?;
         }
         if let Control::Gradient(stops) = &c.control {
             for s in stops.iter().filter(|s| **s != c.uniform) {
@@ -591,6 +879,15 @@ pub(super) fn check(d: &Described, uniforms: &[Uniform]) -> Result<(), (usize, R
                     )));
                 }
             }
+        }
+    }
+    for (k, p) in d.ports.iter().enumerate() {
+        let at = |why: String| (p.line, Refusal(Check::Malformed, why));
+        if on(Check::Malformed) && !inputs.iter().any(|i| i.name == p.input) {
+            return Err(at(format!("no `@input {}` is declared", p.input)));
+        }
+        if on(Check::Malformed) && d.ports[..k].iter().any(|o| o.input == p.input) {
+            return Err(at(format!("`{}` has a `@port` already", p.input)));
         }
     }
     if let Some((g, line)) = &d.glyph {
@@ -639,13 +936,23 @@ fn fits<'u>(
         Control::Flags(n) => u.ty == U32 && n.len() <= 32,
         Control::Colour => u.ty == Vec3,
         Control::Angle => u.ty == F32,
+        Control::Gradient(stops) if stops.is_empty() => matches!(u.ty, UniformType::Gradient(_)),
+        Control::List => matches!(u.ty, UniformType::List { .. }),
+        Control::Curve => matches!(u.ty, UniformType::Lut(_)),
+        Control::FieldPicker => u.ty == UniformType::Field,
+        Control::ImagePicker => u.ty == UniformType::Image,
         Control::Gradient(stops) => {
             u.ty == Vec3
                 && stops.iter().enumerate().all(|(k, s)| {
                     s != &u.name && !stops[..k].contains(s) && find(s).is_some_and(|v| v.ty == Vec3)
                 })
         }
-        Control::Fields | Control::Hidden => true,
+        Control::Fields | Control::Hidden => {
+            !matches!(
+                u.ty,
+                UniformType::Field | UniformType::Image | UniformType::Gradient(_)
+            ) || c.control == Control::Hidden
+        }
     };
     if ok {
         Ok(())
@@ -659,6 +966,73 @@ fn fits<'u>(
                 .map_or(String::new(), |(lo, hi)| format!(" in [{lo}, {hi}]"))
         ))
     }
+}
+
+/// Whether control `c`'s `pair`, `soft`, `unit` and `format` fit its uniform `u`: each is for a control of one number;
+/// a pair is two of one type, the second with no pair of its own, its default in order; a soft range lies inside the
+/// uniform's own.
+fn relates<'u>(
+    c: &ControlLine,
+    u: &Uniform,
+    all: &[ControlLine],
+    find: &dyn Fn(&str) -> Option<&'u Uniform>,
+) -> Result<(), String> {
+    let number = matches!(
+        c.control,
+        Control::Slider | Control::LogSlider | Control::Stepper | Control::Angle | Control::Fields
+    ) && u.ty.components() == 1;
+    for (word, set) in [
+        ("pair", c.pair.is_some()),
+        ("soft", c.soft.is_some()),
+        ("unit", c.unit.is_some()),
+        ("format", c.format.is_some()),
+    ] {
+        if set && !number {
+            return Err(format!(
+                "`{word}` is for a control of one number; `{}` is a {} control of a {}",
+                u.name,
+                c.control.word(),
+                u.ty.wgsl()
+            ));
+        }
+    }
+    if let Some((lo, hi)) = c.soft {
+        let Some((rlo, rhi)) = u.range else {
+            return Err(format!("`soft` needs a range on `{}`", u.name));
+        };
+        if lo < rlo || hi > rhi {
+            return Err(format!(
+                "the soft range [{lo}, {hi}] is not inside [{rlo}, {rhi}]"
+            ));
+        }
+    }
+    if let Some(other) = &c.pair {
+        let Some(o) = find(other).filter(|o| o.name != u.name) else {
+            return Err(format!("`pair {other}` is no other declared uniform"));
+        };
+        let theirs = all.iter().find(|l| &l.uniform == other);
+        if o.ty != u.ty || o.ty.components() != 1 {
+            return Err(format!("`{other}` is not a number of `{}`'s type", u.name));
+        }
+        if theirs.is_none_or(|t| t.pair.is_some()) {
+            return Err(format!(
+                "`{other}` needs a control of its own, and no `pair` of its own: the pair is the low end naming the high"
+            ));
+        }
+        if all
+            .iter()
+            .any(|l| l.pair.as_deref() == Some(other) && l.uniform != u.name)
+        {
+            return Err(format!("`{other}` is the high end of another pair"));
+        }
+        if u.default[0] > o.default[0] {
+            return Err(format!(
+                "the default of `{}` is above `{other}`'s: a pair's low end is not above its high end",
+                u.name
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// The byte offsets in `source` where a real line comment starts, a `//` that WGSL reads as one: never one inside a

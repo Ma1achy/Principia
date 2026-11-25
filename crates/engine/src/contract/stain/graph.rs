@@ -113,6 +113,9 @@ pub struct Node {
     pub occupant: Occupant,
     pub params: BTreeMap<String, Vec<f64>>,
     pub ramp: Option<Ramp>,
+    /// A `field` uniform's saved field that no field of this build is, by uniform: the stain opened with the uniform at
+    /// its default, and the editor says which field is gone. Saved again as it was.
+    pub lost_fields: BTreeMap<String, String>,
 }
 
 /// One wire: from a node's out-port into another's in-port, by its position: a u32, as the graph serialises with
@@ -210,6 +213,7 @@ impl StainGraph {
             occupant,
             params: BTreeMap::new(),
             ramp: None,
+            lost_fields: BTreeMap::new(),
         };
         let (combiner, out) = (NodeId(0), NodeId(1));
         StainGraph {
@@ -283,6 +287,7 @@ impl StainGraph {
                     occupant,
                     params: BTreeMap::new(),
                     ramp: None,
+                    lost_fields: BTreeMap::new(),
                 },
             );
             Ok(())
@@ -392,11 +397,78 @@ impl StainGraph {
     }
 
     /// Sets node `id`'s custom-stop ramp, or removes it with `None`; a ramp on any node but a `colour` is refused.
+    ///
+    /// A node whose code declares a `gradient` parameter holds its ramp as that parameter's value, so it is edited,
+    /// reset, saved and read by the shader as any parameter is; a node that declares none keeps it beside its params.
+    // The plan is unclear here; chose to keep a ramp beside the params on a node whose code declares no gradient,
+    // because nothing in it can read one, and a ramp set there before this must open as it was saved.
     pub fn set_ramp(&mut self, id: NodeId, ramp: Option<Ramp>) -> Result<(), GraphError> {
         self.edit(|g| {
-            g.nodes.get_mut(&id).ok_or_else(|| no_node(id))?.ramp = ramp;
+            let n = g.nodes.get_mut(&id).ok_or_else(|| no_node(id))?;
+            match gradient_uniform(n)? {
+                Some(u) => {
+                    n.ramp = None;
+                    match ramp {
+                        Some(r) => {
+                            n.params.insert(u.name, r.to_gradient());
+                        }
+                        None => {
+                            n.params.remove(&u.name);
+                        }
+                    }
+                }
+                None => n.ramp = ramp,
+            }
             Ok(())
         })
+    }
+
+    /// Node `id`'s custom-stop ramp, where it has one: its `gradient` parameter's value where that is an OKLab ramp,
+    /// else the one set beside its params.
+    pub fn ramp_of(&self, id: NodeId) -> Result<Option<Ramp>, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        let Some(u) = gradient_uniform(n)? else {
+            return Ok(n.ramp.clone());
+        };
+        let v = n.params.get(&u.name).unwrap_or(&u.default);
+        Ok(Ramp::from_gradient(v).ok())
+    }
+
+    /// The wires a node's declared inputs do not take: each into an input whose `@port` names the subtypes it accepts
+    /// where the subtype arriving is another. A wire is never refused for it (the editor's rule); these are the
+    /// Problems notes, with, for each, the library nodes that do accept it left to the caller.
+    pub fn wire_notes(&self) -> Result<Vec<WireNote>, GraphError> {
+        let mut out = Vec::new();
+        for &(to, port) in self.wires.keys() {
+            let n = &self.nodes[&to];
+            let d = assemble::declaration(n.kind.into(), &(&n.occupant).into())?;
+            let skip = usize::from(n.kind == NodeKind::Post);
+            let Some(input) = port.checked_sub(skip).and_then(|k| d.inputs.get(k)) else {
+                continue;
+            };
+            let Some(line) = d.described.ports.iter().find(|p| p.input == input.name) else {
+                continue;
+            };
+            let Some(got) = self.ports_of(to)?.inputs.get(port).and_then(|p| p.subtype) else {
+                continue;
+            };
+            let word = match got {
+                Subtype::Scalar => assemble::declare::Accepts::Scalar,
+                Subtype::Vector => assemble::declare::Accepts::Vector,
+                Subtype::Categorical => assemble::declare::Accepts::Categorical,
+                Subtype::Point(_) => assemble::declare::Accepts::Position,
+            };
+            if !line.accepts.is_empty() && !line.accepts.contains(&word) {
+                out.push(WireNote {
+                    node: to,
+                    port,
+                    label: line.label.clone(),
+                    got: word,
+                    accepts: line.accepts.clone(),
+                });
+            }
+        }
+        Ok(out)
     }
 
     /// The live post chain (render_gui_spec Part II §4, `… → combiner → (post)* → OUT`): the posts `OUT` reads
@@ -541,6 +613,30 @@ impl StainGraph {
                 )));
             }
             let d = assemble::declaration(n.kind.into(), &(&n.occupant).into())?;
+            // A pair's low end is never above its high end.
+            for c in &d.described.controls {
+                let Some(hi) = &c.pair else { continue };
+                let at = |name: &str| {
+                    n.params
+                        .get(name)
+                        .cloned()
+                        .or_else(|| {
+                            d.uniforms
+                                .iter()
+                                .find(|u| u.name == name)
+                                .map(|u| u.default.clone())
+                        })
+                        .and_then(|v| v.first().copied())
+                };
+                if let (Some(a), Some(b)) = (at(&c.uniform), at(hi)) {
+                    if a > b {
+                        return Err(GraphError(format!(
+                            "node {}'s `{}` = {a} is above its pair `{hi}` = {b}",
+                            n.id.0, c.uniform
+                        )));
+                    }
+                }
+            }
             for (name, value) in &n.params {
                 let ok = d
                     .uniforms
@@ -615,6 +711,35 @@ impl StainGraph {
         Ok(order)
     }
 
+    /// Node `n`'s occupant as the assembler takes it: a node with a `field` parameter has the field it holds written
+    /// into its code (`render::assemble::params::specialise`), so the field it reads is what the proof, the field set
+    /// and the code key see; a node with none is its occupant as it is.
+    fn read_fields(&self, n: &Node) -> Result<assemble::Occupant, GraphError> {
+        let occupant: assemble::Occupant = (&n.occupant).into();
+        let d = assemble::declaration(n.kind.into(), &occupant)?;
+        let fields: Vec<&Uniform> = d
+            .uniforms
+            .iter()
+            .filter(|u| u.ty == assemble::UniformType::Field)
+            .collect();
+        let Some(text) = assemble::occupant_source(n.kind.into(), &occupant)? else {
+            return Ok(occupant);
+        };
+        if fields.is_empty() {
+            return Ok(occupant);
+        }
+        let at = |u: &Uniform| {
+            n.params
+                .get(&u.name)
+                .and_then(|v| v.first())
+                .copied()
+                .unwrap_or(u.default[0]) as usize
+        };
+        Ok(assemble::Occupant::Custom(assemble::params::specialise(
+            &text, &fields, &at,
+        )?))
+    }
+
     /// The graph as the assembler takes it, every node in [`StainGraph::order`], each in-port its feeder's position,
     /// with that order.
     fn lowered(&self) -> Result<(Vec<NodeId>, Stain), GraphError> {
@@ -628,7 +753,7 @@ impl StainGraph {
                 .collect();
             nodes.push(assemble::Node {
                 kind: n.kind.into(),
-                occupant: (&n.occupant).into(),
+                occupant: self.read_fields(n)?,
                 inputs,
             });
         }
@@ -678,6 +803,25 @@ impl StainGraph {
             .collect();
         Ok(Canonical { nodes, form })
     }
+}
+
+/// A wire into an input that does not take what arrives on it ([`StainGraph::wire_notes`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct WireNote {
+    pub node: NodeId,
+    pub port: usize,
+    /// The input's label.
+    pub label: String,
+    pub got: assemble::declare::Accepts,
+    pub accepts: Vec<assemble::declare::Accepts>,
+}
+
+/// The first `gradient` uniform node `n`'s code declares: where its custom-stop ramp lives.
+fn gradient_uniform(n: &Node) -> Result<Option<Uniform>, GraphError> {
+    Ok(assemble::declaration(n.kind.into(), &(&n.occupant).into())?
+        .uniforms
+        .into_iter()
+        .find(|u| matches!(u.ty, assemble::UniformType::Gradient(_))))
 }
 
 fn no_node(id: NodeId) -> GraphError {
