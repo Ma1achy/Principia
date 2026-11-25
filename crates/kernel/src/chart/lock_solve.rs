@@ -18,11 +18,11 @@
 //! iteration are bounded whatever an accepted step's `decrease` has done to `μ`; settings that could not terminate
 //! (`initial ≤ 0`, `increase ≤ 1`, `decrease ≤ 0`, `ceiling ≤ initial`) are refused, tagged, before anything is
 //! evaluated. Where `μ` passes its ceiling the cost is, near a minimiser, flat to its rounding (within `√ε` of it in
-//! `x`), and the solve polishes ([`polish`]): the undamped step with `H`, else with `JᵀJ`, accepted only where `‖Jᵀr‖`
-//! falls, so first-order optimality is reached to the gradient's own rounding; where neither lowers it, the solve has
-//! stalled. After a polishing step `μ` starts again from its floor, so the next step is a damped one, on the cost,
+//! `x`), and the solve polishes ([`polish`]): the undamped step with `H`, else with `JᵀJ`, accepted only where
+//! `‖P r‖² = gᵀ(JᵀJ)⁻¹g` falls, the measure first-order optimality is judged on, so it is reached to the gradient's own
+//! rounding; where neither lowers it, the solve has stalled. After a polishing step `μ` starts again from its floor, so the next step is a damped one, on the cost,
 //! wherever the cost can be resolved. The ceiling is also passed where no trial is finite (at the edge of the map's
-//! domain); a polish there descends `‖Jᵀr‖` alone and can stop at a stationary point that is not a minimiser, which
+//! domain); a polish there descends `‖P r‖` alone and can stop at a stationary point that is not a minimiser, which
 //! no test of this module rules out.
 //!
 //! **Convergence, per call** ([`Report`]): `Converged(OnImage)` where `‖r‖ ≤` the residual tolerance (the state is on
@@ -33,7 +33,7 @@
 //! evaluations, residual, optimality, conditioning and travel.
 //!
 //! **Failures, tagged, never dropped** ([`Failure`]): settings that cannot terminate; the map not finite at the seed; the iteration cap; a stall (no
-//! damping up to the ceiling lowers the cost and no polishing step lowers `‖Jᵀr‖`, short of convergence); a converged
+//! damping up to the ceiling lowers the cost and no polishing step lowers `‖P r‖`, short of convergence); a converged
 //! point whose `JᵀJ` is ill-conditioned, its smallest eigenvalue over its largest below the caller's floor, so the
 //! minimiser is not isolated; and, for a continued solve, the followed minimiser ending.
 //!
@@ -165,6 +165,10 @@ pub struct Spec<R> {
     /// termination test catches that hang. Per call, so tests running beside it are untouched.
     #[cfg(feature = "controls")]
     pub unguarded: bool,
+    /// Under the `controls` feature only, and set only by a control or a measurement: `true` accepts a polishing step
+    /// where `‖Jᵀr‖²` falls, as the solve did before, in place of `‖P r‖²`. Per call.
+    #[cfg(feature = "controls")]
+    pub polish_unscaled: bool,
 }
 
 impl<R> Spec<R> {
@@ -186,6 +190,8 @@ impl<R> Spec<R> {
             damping,
             #[cfg(feature = "controls")]
             unguarded: false,
+            #[cfg(feature = "controls")]
+            polish_unscaled: false,
         }
     }
 }
@@ -225,7 +231,7 @@ pub enum Failure {
     NonFinite,
     /// The iteration cap reached short of convergence.
     IterationCap,
-    /// No damping up to the ceiling lowers the cost, nor the polishing step `‖Jᵀr‖`, short of convergence.
+    /// No damping up to the ceiling lowers the cost, nor the polishing step `‖P r‖`, short of convergence.
     Stalled,
     /// Converged, but `JᵀJ` is below the conditioning floor: the minimiser is not isolated.
     IllConditioned,
@@ -439,11 +445,15 @@ fn gradient_squared<R: Real>(p: &Point<R>) -> R {
 }
 
 /// The polishing step, where no damping lowers the cost: the undamped step `Hδ = −Jᵀr`, `H` the curvature in use
-/// ([`curvature`]), accepted where the map is finite and `‖Jᵀr‖` falls; where `H` is not `JᵀJ` and its step does not
-/// lower `‖Jᵀr‖`, Gauss–Newton's, `JᵀJδ = −Jᵀr`, on the same test (the secant `S` is built from gradients, and where
-/// those are noisy, slopes by differences, it can be off by their noise). Near a minimiser the cost is flat to its
-/// rounding, `ε‖r‖²`, a distance of order `√ε` in `x`, so a rule on the cost alone stalls there; the gradient is
-/// resolved to `ε`, and the step goes on to its zero.
+/// ([`curvature`]), accepted where the map is finite and `‖P r‖² = gᵀ(JᵀJ)⁻¹g` ([`projected`]) falls; where `H` is not
+/// `JᵀJ` and its step does not lower it, Gauss–Newton's, `JᵀJδ = −Jᵀr`, on the same test (the secant `S` is built from
+/// gradients, and where those are noisy, slopes by differences, it can be off by their noise). Near a minimiser the
+/// cost is flat to its rounding, `ε‖r‖²`, a distance of order `√ε` in `x`, so a rule on the cost alone stalls there;
+/// the gradient is resolved to `ε`, and the step goes on to its zero. The step is judged on `‖P r‖`, the measure
+/// [`converged`] reads, not on `‖Jᵀr‖`: the two differ by the columns' scale, and where they are far apart (the lock's
+/// slide on Burrau, `JᵀJ`'s conditioning about `10⁻⁷`) `‖Jᵀr‖` is the steep column's alone, whose rounding hid the weak
+/// column's progress, and the solve stalled at `‖P r‖/‖r‖ ≈ 10⁻⁸` where steps judged on `‖P r‖` reach `10⁻¹²`
+/// (measured, the engine's `path_lock_slide_margins`, M2).
 #[inline]
 fn polish<R: Real + Float, const N: usize, M: Map<R, N>>(
     map: &M,
@@ -452,12 +462,19 @@ fn polish<R: Real + Float, const N: usize, M: Map<R, N>>(
     p: &Point<R>,
     h: [R; 3],
     evaluations: &mut u32,
+    #[cfg(feature = "controls")] unscaled: bool,
 ) -> Option<Point<R>> {
+    #[cfg(feature = "controls")]
+    let falls = |q: &Point<R>| match unscaled {
+        true => gradient_squared(q) < gradient_squared(p),
+        false => projected(q) < projected(p),
+    };
+    #[cfg(not(feature = "controls"))]
+    let falls = |q: &Point<R>| projected(q) < projected(p);
     let mut attempt = |m: [R; 3]| {
         let delta = step(m, R::default(), p.g)?;
         *evaluations += 1;
-        evaluate(map, y, w, [p.x[0] + delta[0], p.x[1] + delta[1]])
-            .filter(|q| gradient_squared(q) < gradient_squared(p))
+        evaluate(map, y, w, [p.x[0] + delta[0], p.x[1] + delta[1]]).filter(|q| falls(q))
     };
     attempt(h).or_else(|| if h == p.a { None } else { attempt(p.a) })
 }
@@ -609,7 +626,16 @@ where
             if mu > ceiling || (guarded && !finite(mu)) {
                 // After a polishing step μ starts again from its floor, so where the cost can be resolved again
                 // the next step is a damped one, accepted on the cost.
-                let polished = polish(map, y, w, &p, h, &mut evaluations);
+                let polished = polish(
+                    map,
+                    y,
+                    w,
+                    &p,
+                    h,
+                    &mut evaluations,
+                    #[cfg(feature = "controls")]
+                    spec.polish_unscaled,
+                );
                 if polished.is_some() {
                     mu = floor;
                 }

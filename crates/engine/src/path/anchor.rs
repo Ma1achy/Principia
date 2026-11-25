@@ -24,7 +24,7 @@
 //! - **The select**: under a lock whose ends both hold the anchor, the pin's pixel takes the stored words by a
 //!   comparison of the address, so it is the anchor bit for bit on every frame (§ 17.8: offset alone is not bitwise).
 
-use kernel::chart::lock_solve::{self, Continuity, Damping, Report, Spec, Status, Target};
+use kernel::chart::lock_solve::{self, Continuity, Damping, Failure, Report, Spec, Status, Target};
 use kernel::decode::descriptor;
 use kernel::decode::{Decoded, Ic};
 
@@ -37,8 +37,21 @@ pub const LOCK_TOLERANCE: f64 = ledger::constants::LOCK_TOLERANCE.number() * f64
 
 /// The re-solve's own residual target, `‖r‖` in block coordinates: `lock_solve_tolerance·ε_R` at f64, below the lock's
 /// tolerance, so a solve stopping at its target is not already at the tolerance its hold is judged by (from the solves'
-/// measured floor: the sweep's criterion C1, `path_lock.rs`).
+/// measured floor: the sweep's criterion C1, `path_lock.rs`, on its two re-solving hold pairs only).
 pub const SOLVE_TOLERANCE: f64 = ledger::constants::LOCK_SOLVE_TOLERANCE.number() * f64::EPSILON;
+
+// The re-solve's target is below the lock's tolerance, at compile time; `path_lock_solve_below_lock` checks the same
+// with [`solve_below_lock`] and its control.
+const _: () = assert!(
+    solve_below_lock(SOLVE_TOLERANCE, LOCK_TOLERANCE),
+    "the re-solve's target must be below the lock's tolerance"
+);
+
+/// Whether a re-solve's residual target `solve` is below the lock's tolerance `lock`, so a hold is never judged at the
+/// point its solve stopped: [`SOLVE_TOLERANCE`] and [`LOCK_TOLERANCE`] are checked against it at compile time.
+pub const fn solve_below_lock(solve: f64, lock: f64) -> bool {
+    solve < lock
+}
 
 /// A control's and a measurement's reach into the re-solve, on this thread only: the solver's residual target replaced,
 /// the re-hold's hold decided by the block residual as it was before it was decided in `‖·‖_phys`, and each solve the
@@ -75,6 +88,28 @@ pub mod probe {
         /// report logged as `"nearest floor"` or `"rehold floor"`: where the solve stops when nothing stops it early,
         /// its floor. The path itself goes on with the solve at its own target.
         pub floor: bool,
+        /// The slide's residual formed directly, [`crate::path::blend::line_offset`] (target 0), in place of the frame's
+        /// state less the anchor (`block_line(a, B_x, s)` against the target `a`): a diagnostic's one variable changed
+        /// (`path_lock_slide_stall`'s D1; not the stall's cause, so not taken).
+        pub offset: bool,
+        /// The damping's ceiling in place of [`super::spec`]'s `10¹²`: a diagnostic's one variable changed.
+        pub ceiling: Option<f64>,
+        /// Each follow's direct solve seeded at the restart rule's point at its own frame, not at the last frame's
+        /// point: a diagnostic's one variable changed.
+        pub restart_seed: bool,
+        /// A follow whose direct solve fails read as the followed minimiser's end, as main read it, in place of
+        /// [`crate::path::PathError::FollowFailed`].
+        pub failed_is_end: bool,
+        /// The slide's slopes by a five-point central difference, in place of the three-point one, both at `ε^{1/3}` of
+        /// the window's half-width: a diagnostic's one variable changed (`path_lock_slide_stall`'s D4; not the stall's
+        /// cause, so not taken).
+        pub five_point: bool,
+        /// The solver's polishing step accepted where `‖Jᵀr‖²` falls, as main's did, in place of `‖P r‖²`
+        /// (`lock_solve::Spec::polish_unscaled`).
+        pub polish_unscaled: bool,
+        /// `recentre`'s hold decided on the nearest point's own decode (`placed_at`'s window), as main decided it, in
+        /// place of the decode of the view it returns (`place`'s).
+        pub placed_at_hold: bool,
     }
 
     thread_local! {
@@ -82,13 +117,23 @@ pub mod probe {
         static LOG: RefCell<Option<Vec<Solve>>> = const { RefCell::new(None) };
     }
 
-    /// `f` run with `switches` set and every solve logged; the switches cleared after.
+    /// `f` run with `switches` set and every solve logged; the switches and log in force before restored after, `f`
+    /// panicking or not, so a call nests inside another.
     pub fn with<T>(switches: Switches, f: impl FnOnce() -> T) -> (T, Vec<Solve>) {
-        SWITCHES.with(|c| c.set(switches));
-        LOG.with(|l| *l.borrow_mut() = Some(Vec::new()));
+        struct Restore(Switches, Option<Vec<Solve>>);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                SWITCHES.with(|c| c.set(self.0));
+                LOG.with(|l| *l.borrow_mut() = self.1.take());
+            }
+        }
+        let restore = Restore(
+            SWITCHES.with(|c| c.replace(switches)),
+            LOG.with(|l| l.borrow_mut().replace(Vec::new())),
+        );
         let out = f();
-        SWITCHES.with(|c| c.set(Switches::default()));
         let log = LOG.with(|l| l.borrow_mut().take()).unwrap_or_default();
+        drop(restore);
         (out, log)
     }
 
@@ -340,24 +385,75 @@ struct Slide<'a, L> {
     anchor: Blocks,
 }
 
+impl<L> Slide<'_, L> {
+    /// The target the family's value is solved toward: the anchor (0 under the probe's `offset`, its value then the
+    /// frame's offset from the anchor).
+    fn target(&self) -> Target<f64, 9> {
+        #[cfg(feature = "controls")]
+        if probe::switches().offset {
+            return Target {
+                value: [0.0; 9],
+                weight: [1.0; 9],
+            };
+        }
+        Target {
+            value: self.anchor.vector(),
+            weight: [1.0; 9],
+        }
+    }
+}
+
 impl<L: Leaves> lock_solve::Family<f64, 9> for Slide<'_, L> {
     fn value(&self, s: f64, x: [f64; 2]) -> Option<[f64; 9]> {
         let b = self.placed.blocks(x)?;
+        #[cfg(feature = "controls")]
+        if probe::switches().offset {
+            return Some(super::blend::line_offset(&self.anchor, &b, s));
+        }
         Some(block_line(&self.anchor, &b, s).0.vector())
     }
 
     fn jacobian(&self, s: f64, x: [f64; 2]) -> Option<[[f64; 9]; 2]> {
+        #[cfg(feature = "controls")]
+        if probe::switches().five_point {
+            return five_point(|p| self.value(s, p), x, self.placed.step);
+        }
         lock_solve::central_difference(|p| self.value(s, p), x, self.placed.step)
     }
+}
+
+/// The five-point central difference of `value` at `x`, step `h` per coordinate: `(f(x−2h) − 8f(x−h) + 8f(x+h) −
+/// f(x+2h))/12h`, its truncation `O(h⁴)` against the three-point difference's `O(h²)`, its rounding `O(ε/h)` as theirs:
+/// the probe's `five_point`.
+#[cfg(feature = "controls")]
+fn five_point(
+    value: impl Fn([f64; 2]) -> Option<[f64; 9]>,
+    x: [f64; 2],
+    h: f64,
+) -> Option<[[f64; 9]; 2]> {
+    let mut out = [[0.0; 9]; 2];
+    for (axis, column) in out.iter_mut().enumerate() {
+        let at = |k: f64| {
+            let mut p = x;
+            p[axis] = x[axis] + k * h;
+            value(p)
+        };
+        let (m2, m1, p1, p2) = (at(-2.0)?, at(-1.0)?, at(1.0)?, at(2.0)?);
+        for i in 0..9 {
+            column[i] = ((m2[i] - p2[i]) + 8.0 * (p1[i] - m1[i])) / (12.0 * h);
+        }
+    }
+    Some(out)
 }
 
 /// The solver core's settings for the lock's re-solve. The plan is unclear here; chose the solver core's own test
 /// settings (`lock_solver_core`), because the re-solve is that solve on the blocks, its residual target
 /// [`SOLVE_TOLERANCE`], below the lock's tolerance so a hold is never judged at the point the solve stopped, and
-/// first-order optimality to `10⁻⁸`, not `10⁻¹⁰`, because the slopes here are central differences,
-/// good to about `ε^{2/3} ≈ 4·10⁻¹¹`, and near the start of a slide the residual is small (it grows as `s`), so
-/// `10⁻¹⁰` of it was below the slopes' own error: measured on the Burrau chart, the follow then failed to converge at
-/// its second frame and the slide was tagged ended there.
+/// first-order optimality to `10⁻⁸`, not `10⁻¹⁰`, because the slopes here are central differences: measured on the
+/// Burrau chart, at `10⁻¹⁰` the follow failed to converge at its second frame and the slide was tagged ended there. (The
+/// three-point difference was taken then to be good to `ε^{2/3}`; measured near the slide's minimisers on Burrau its
+/// truncation is about `1.5·10⁻⁷` of the slopes. What stalled the follow at `10⁻⁸` was not that but the solver's polish
+/// judging its steps on `‖Jᵀr‖`, now on `‖P r‖`: `lock_solve::polish`, and `path_lock_slide_stall`'s D6.)
 fn spec() -> Spec<f64> {
     #[cfg(feature = "controls")]
     let target = probe::switches().target.unwrap_or(SOLVE_TOLERANCE);
@@ -372,7 +468,12 @@ fn spec_at(target: f64) -> Spec<f64> {
     let optimality = probe::switches().optimality.unwrap_or(1e-8);
     #[cfg(not(feature = "controls"))]
     let optimality = 1e-8;
-    Spec::new(
+    #[cfg(feature = "controls")]
+    let ceiling = probe::switches().ceiling.unwrap_or(1e12);
+    #[cfg(not(feature = "controls"))]
+    let ceiling = 1e12;
+    #[allow(unused_mut)]
+    let mut spec = Spec::new(
         200,
         target,
         optimality,
@@ -381,8 +482,41 @@ fn spec_at(target: f64) -> Spec<f64> {
             initial: 1e-3,
             increase: 10.0,
             decrease: 0.1,
-            ceiling: 1e12,
+            ceiling,
         },
+    );
+    #[cfg(feature = "controls")]
+    {
+        spec.polish_unscaled = probe::switches().polish_unscaled;
+    }
+    spec
+}
+
+/// One frame of the slide on `b` toward `anchor` at `s`, solved directly from `seed` with the re-solve's settings (and
+/// the probe's switches): a measurement's reach into the follow's own solve.
+#[cfg(feature = "controls")]
+pub fn slide_frame<L: Leaves>(
+    b: &View,
+    leaves: &L,
+    pin: [f64; 2],
+    anchor: &Anchor,
+    s: f64,
+    seed: [f64; 2],
+) -> Report<f64> {
+    let family = Slide {
+        placed: Placed {
+            view: b,
+            leaves,
+            pin,
+            step: step(b),
+        },
+        anchor: anchor.blocks(),
+    };
+    lock_solve::solve(
+        &lock_solve::Frame { family: &family, s },
+        &family.target(),
+        seed,
+        &spec(),
     )
 }
 
@@ -651,8 +785,27 @@ where
         (_, ViewWindow::Chart(_)) => {
             // No converged nearest point (one on the edge of `B`'s states, say) holds nothing: the anchor slides.
             if let Ok(found) = nearest(b, leaves, pin, &anchor) {
-                if norm(&anchor.ic(), &found.ic) <= LOCK_TOLERANCE {
-                    return Ok(Recentred::Holds(held(place(b, pin, found.x))));
+                // The hold is judged on the state the returned view shows at the pin (`place`'s window, its anchor
+                // dropped so the select can't show the stored words), as `rehold` judges it, not on the solver's own
+                // decode through `placed_at`'s window, which can differ from it by a few ε.
+                let at = place(b, pin, found.x);
+                let own = leaves
+                    .decode(
+                        &View {
+                            anchor: None,
+                            ..at.clone()
+                        },
+                        pin,
+                    )
+                    .map(|d| d.ic);
+                #[cfg(feature = "controls")]
+                let own = match probe::switches().placed_at_hold {
+                    true => Ok(found.ic),
+                    false => own,
+                };
+                // A decode that fails at the nearest point holds nothing there: the anchor slides.
+                if own.is_ok_and(|ic| norm(&anchor.ic(), &ic) <= LOCK_TOLERANCE) {
+                    return Ok(Recentred::Holds(held(at)));
                 }
             }
             let track = slide(b, leaves, pin, &anchor, frames)?;
@@ -667,7 +820,9 @@ where
 /// The slide's track over `frames` frames (`s = k/frames`): the minimiser of the frame's pin state's block distance to
 /// the anchor, at the first frame by the restart rule, then followed frame to frame (`lock_solve::follow`), each frame
 /// labelled "not nearest" where the restart rule finds a point whose residual is below the followed one's by more than
-/// the lock's tolerance; it ends at the last frame before the followed minimiser ends (`Failure::Ended`).
+/// the lock's tolerance; it ends at the last frame before the followed minimiser ends (`Failure::Ended`, or a frame
+/// whose direct solve fails with its step leaving `B`'s states, [`leaves_states`]). [`PathError::FollowFailed`] where a
+/// frame's solve fails anywhere else: the solver's failure, never read as an end.
 pub fn slide<L: Leaves>(
     b: &View,
     leaves: &L,
@@ -690,10 +845,7 @@ pub fn slide<L: Leaves>(
         },
         anchor: anchor.blocks(),
     };
-    let target = Target {
-        value: anchor.blocks().vector(),
-        weight: [1.0; 9],
-    };
+    let target = family.target();
     let (spec, cont) = (spec(), continuity(h));
     let seeds = seeds(b, pin);
     let restart = |s: f64| {
@@ -723,21 +875,78 @@ pub fn slide<L: Leaves>(
     for k in 2..=frames {
         let s = k as f64 / frames as f64;
         let last = nodes[nodes.len() - 1];
+        #[cfg(feature = "controls")]
+        let last = match probe::switches().restart_seed {
+            true => Node {
+                x: restart(s).x,
+                ..last
+            },
+            false => last,
+        };
         let report = lock_solve::follow(&family, &target, last.s, last.x, s, &spec, &cont);
         logged("follow", s, &report);
+        #[cfg(feature = "controls")]
+        let report = match (probe::switches().failed_is_end, report.status) {
+            (true, Status::Failed(_)) => Report {
+                status: Status::Failed(Failure::Ended),
+                ..report
+            },
+            _ => report,
+        };
         match report.status {
             Status::Converged(_) => nodes.push(Node {
                 s,
                 x: report.x,
                 not_nearest: nearer(&report, s),
             }),
-            Status::Failed(_) => {
+            // The continuity test, or a probe inside the frame, finds no one minimiser joining the frame's ends: the
+            // followed system ends here.
+            Status::Failed(Failure::Ended) => {
                 ended = true;
                 break;
             }
+            // The frame's own solve failed. Where its step from the last frame's point leaves `B`'s states, the
+            // minimiser has run into their edge, an end the direct solve meets as a stall; anywhere else the follow
+            // failed, which says nothing of where the minimiser ends.
+            // The plan is unclear here (it defines an ending by the continuity test, and a direct solve's failure not at
+            // all); chose this, because the constructed ending's minimiser runs into the edge of `B`'s states and its
+            // direct solve stalls there, its step leaving them, while the slide's stalls at its first frames (PR #72's
+            // C6) were short steps inside them.
+            Status::Failed(failure) => match leaves_states(&family, &target, s, last.x) {
+                true => {
+                    ended = true;
+                    break;
+                }
+                false => return Err(PathError::FollowFailed { s, failure }),
+            },
         }
     }
     Ok(Track { pin, nodes, ended })
+}
+
+/// Whether the Gauss–Newton step at the frame `s` from `x` (the point the follow converged at, the frame before) leaves
+/// the family's states: its value, or its slopes, not finite at `x` or at `x + δ`, `JᵀJδ = −Jᵀr`. Where the followed
+/// minimiser runs into the edge of `B`'s states the step toward it does; where a solve stalls on its own precision the
+/// step is a short one inside them.
+fn leaves_states<F: lock_solve::Family<f64, 9>>(
+    family: &F,
+    target: &Target<f64, 9>,
+    s: f64,
+    x: [f64; 2],
+) -> bool {
+    let (Some(v), Some(j)) = (family.value(s, x), family.jacobian(s, x)) else {
+        return true;
+    };
+    let r: [f64; 9] = core::array::from_fn(|i| target.weight[i] * (v[i] - target.value[i]));
+    let dot = |p: &[f64; 9], q: &[f64; 9]| (0..9).map(|i| p[i] * q[i]).sum::<f64>();
+    let (a11, a12, a22) = (dot(&j[0], &j[0]), dot(&j[0], &j[1]), dot(&j[1], &j[1]));
+    let (g1, g2) = (dot(&j[0], &r), dot(&j[1], &r));
+    let det = a11 * a22 - a12 * a12;
+    let d = [(a12 * g2 - a22 * g1) / det, (a12 * g1 - a11 * g2) / det];
+    if !(det > 0.0 && d.iter().all(|x| x.is_finite())) {
+        return false;
+    }
+    family.value(s, [x[0] + d[0], x[1] + d[1]]).is_none()
 }
 
 // ── A mid-morph slice: `B` re-held ─────────────────────────────────────────────────────────────────────────────────
@@ -755,7 +964,8 @@ pub fn slide<L: Leaves>(
 /// state"); chose to slice each end in its own hidden coordinates and then re-solve `b`'s placement this way, because
 /// the lock is the path's: both ends show one pinned state where `b` can, and the slide where it can't.
 /// [`PathError::NotBuilt`] for a latent `b` with a nonlinear `a`, whose pinned state has no latent point here;
-/// [`PathError::Refused`] where neither solve converges.
+/// [`PathError::Refused`] where the nearest-point solve does not converge, [`PathError::FollowFailed`] where the slide's
+/// own does not.
 pub fn rehold<L, N>(
     a: &View,
     b: &View,
@@ -856,10 +1066,11 @@ where
                     anchor: target_blocks,
                 };
                 let frame = lock_solve::Frame { family: &family, s };
-                let slid = lock_solve::solve(&frame, &target, seed, &spec());
+                let slid = lock_solve::solve(&frame, &family.target(), seed, &spec());
                 logged("rehold slide", s, &slid);
-                if !slid.converged() {
-                    return Err(PathError::Refused("the re-solve found no minimiser"));
+                match slid.status {
+                    Status::Converged(_) => {}
+                    Status::Failed(failure) => return Err(PathError::FollowFailed { s, failure }),
                 }
                 (place(b, pin, slid.x), false)
             }
