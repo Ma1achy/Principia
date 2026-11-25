@@ -264,6 +264,7 @@ pub fn content(g: &StainGraph) -> Content {
             .map(|n| (n.id, node_code(&n.occupant)))
             .collect::<BTreeMap<_, _>>(),
         compiled: COMPILED.to_owned(),
+        compiling: false,
         problems: Vec::new(),
         notes: vec![NOTE.to_owned()],
         fields: &SOURCE_FIELDS,

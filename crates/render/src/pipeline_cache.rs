@@ -36,6 +36,7 @@
 //! compositor's full-target triangle ([`full_target_vertex`]).
 
 use std::collections::HashMap;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -671,6 +672,9 @@ struct Shared {
     /// Held by a test while it queues requests: the worker waits on it after taking a job.
     #[cfg(test)]
     hold: Mutex<()>,
+    /// Set by a test: the worker's next job panics.
+    #[cfg(test)]
+    panics: std::sync::atomic::AtomicBool,
 }
 
 /// The lock's value, a panic in another holder notwithstanding: the maps hold no invariant a panic could break midway.
@@ -712,6 +716,8 @@ impl PipelineCache {
             superseded_below: AtomicU64::new(0),
             #[cfg(test)]
             hold: Mutex::new(()),
+            #[cfg(test)]
+            panics: Default::default(),
         });
         let (jobs, rx) = mpsc::channel::<Job>();
         let (tx, outcomes) = mpsc::channel::<Outcome>();
@@ -728,7 +734,12 @@ impl PipelineCache {
                     let (rendered, errors) = if superseded {
                         (None, Vec::new())
                     } else {
-                        resolve(&worker_shared, &job)
+                        // Caught, so the job is answered: an unanswered one is in flight for ever.
+                        catch_unwind(AssertUnwindSafe(|| resolve(&worker_shared, &job)))
+                            .unwrap_or_else(|_| {
+                                let why = "the compile panicked".to_owned();
+                                (None, vec![CompileError::Stain(why)])
+                            })
                     };
                     let outcome = Outcome {
                         ticket: job.ticket,
@@ -982,6 +993,8 @@ fn check_keys(stain: &Stain, keys: &[NodeKey]) -> Result<(), RequestError> {
 /// The worker's work on `job`: the stain as it can render, each failing node at its last valid occupant (the module
 /// docs), compiled or taken from the cache; and the errors to surface.
 fn resolve(shared: &Shared, job: &Job) -> (Option<Rendered>, Vec<CompileError>) {
+    #[cfg(test)]
+    assert!(!shared.panics.swap(false, Ordering::SeqCst), "a panic");
     let last_valid = lock(&shared.last_valid).clone();
     let nodes = job.stain.nodes();
     let (stain, fragment, failed) = match assemble(&job.stain, job.tier) {
@@ -1169,6 +1182,42 @@ mod tests {
             "the worker still holds the shared state after the cache's drop"
         );
     }
+
+    /// A stain whose compile panics keeps the last valid pipeline, is an error, is no longer in flight, and the next
+    /// compiles; with no panic, the control, it is no error.
+    fn check_panic(panics: bool) {
+        let h = GpuHarness::new().expect("a GPU device");
+        let mut cache = PipelineCache::new(h.device());
+        let keys = [0, 1, 2, 3];
+        let ask = |cache: &mut PipelineCache, v: usize| {
+            cache
+                .request(&grey(v), &keys, Tier::FULL)
+                .unwrap_or_else(|e| panic!("{e}"));
+            cache.wait();
+            cache.current().expect("a pipeline").key()
+        };
+        let key = |v: usize| PipelineKey::new(&grey(v), Tier::FULL);
+        assert_eq!(ask(&mut cache, 1), key(1));
+        cache.shared.panics.store(panics, Ordering::SeqCst);
+        let after = ask(&mut cache, 2);
+        assert_eq!(cache.in_flight(), 0, "the panicked compile is in flight");
+        assert_eq!(cache.errors().len(), 1, "the panicked compile is no error");
+        assert_eq!(after, key(1));
+        assert_eq!(ask(&mut cache, 3), key(3));
+        assert_eq!(cache.errors(), []);
+    }
+
+    #[test]
+    fn fragment_cache_a_panicked_compile_is_an_error() {
+        check_panic(true);
+    }
+
+    negative_control!(
+        fragment_cache_a_panicked_compile_is_an_error,
+        "a compile that does not panic",
+        expected = "the panicked compile is no error",
+        check_panic(false)
+    );
 
     #[test]
     fn pipeline_teardown_drop_waits_for_the_worker() {

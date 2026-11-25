@@ -111,6 +111,7 @@ mod tests {
     mod real_stain;
     mod real_stain_drawn;
     mod scope_tab_order_mock;
+    mod stain_off_thread;
     mod support;
     mod theme;
     mod tilt_targets;

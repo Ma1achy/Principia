@@ -37,11 +37,14 @@ pub fn show(
     pane.add_space(6.0);
     if let Some(c) = content {
         // Green while it compiled; a status that names a failure reads as one.
-        let status = if c.problems.is_empty() {
+        let status = if c.compiling {
+            visuals.weak_text_color()
+        } else if c.problems.is_empty() {
             COMPILED
         } else {
             visuals.warn_fg_color
         };
+        // Text, not egui's spinner, which asks for a frame at once for as long as it shows: the app asks for those.
         pane.label(RichText::new(&c.compiled).monospace().color(status));
         for problem in &c.problems {
             pane.label(

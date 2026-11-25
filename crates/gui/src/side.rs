@@ -72,6 +72,11 @@ pub trait EngineSide {
     /// Asks the engine side to recompile the stain (the Problems pane's Recompile).
     fn recompile(&mut self);
 
+    /// Whether the stain is compiling in the background, so the app draws on until it is done though no input comes.
+    fn compiling(&self) -> bool {
+        false
+    }
+
     /// `computeIC` (trajectory_viewing §1, §6): the sample of the IC `ic`, given at the figure point `at`, integrated
     /// under the sim key as it stands and read at the playhead, as the hover's sample is: what the Trajectory panel's
     /// pin re-integrates (R-453 D1, D5). `None` when the engine side has none.
@@ -178,12 +183,50 @@ impl RealSide {
     fn compiler(&self) -> MutexGuard<'_, crate::real::stain::Compiler> {
         self.stain.lock().expect("the stain's lock")
     }
+
+    /// Waits until the stain asked for is assembled: the tests'. A frame never waits.
+    pub fn wait_for_stain(&self) {
+        self.compiler().wait();
+    }
+
+    /// A side whose stain is compiled by `compiler`: the tests', whose assemblers are slow or held.
+    #[cfg(test)]
+    pub(crate) fn set_compiler(&mut self, compiler: crate::real::stain::Compiler) {
+        self.stain = Mutex::new(compiler);
+    }
+
+    /// Logs what came of compiling the stain; nothing while it compiles, as its outcome is logged then.
+    fn log_compiled(&mut self, outcome: crate::real::stain::Outcome) {
+        use crate::real::stain::Outcome;
+        let (severity, line) = match outcome {
+            Outcome::Compiling => return,
+            Outcome::Assembled(ms) => (Severity::Info, format!("stain recompiled · {ms:.1} ms")),
+            Outcome::Cached => (
+                Severity::Info,
+                "stain recompiled · cached, its code unchanged".to_owned(),
+            ),
+            // A warning, not an error: an error opens the console over the editor, whose Problems pane has it already.
+            Outcome::Failed(why) => (
+                Severity::Warn,
+                format!(
+                    "stain does not compile: {}",
+                    why.lines().next().unwrap_or_default()
+                ),
+            ),
+        };
+        self.store.log(severity, Source::Stain, line);
+    }
 }
 
 impl EngineSide for RealSide {
     type Engine = StateStore;
 
+    /// The store, what the stain's compiles have come to since logged first, so the next snapshot read has it.
     fn engine(&mut self) -> &mut StateStore {
+        let finished = self.compiler().finished();
+        for outcome in finished {
+            self.log_compiled(outcome);
+        }
         &mut self.store
     }
 
@@ -238,26 +281,15 @@ impl EngineSide for RealSide {
         self.canvas()
     }
 
-    /// Compiles the store's graph, logging what came of it from the stain.
+    /// Compiles the store's graph, off this thread; what comes of it is logged from the stain, now or when it is done.
     fn recompile(&mut self) {
-        use crate::real::stain::Outcome;
         let outcome = self.compiler().compile(&self.store.render().stain_graph);
-        let (severity, line) = match outcome {
-            Outcome::Assembled(ms) => (Severity::Info, format!("stain recompiled · {ms:.1} ms")),
-            Outcome::Cached => (
-                Severity::Info,
-                "stain recompiled · cached, its code unchanged".to_owned(),
-            ),
-            // A warning, not an error: an error opens the console over the editor, whose Problems pane has it already.
-            Outcome::Failed(why) => (
-                Severity::Warn,
-                format!(
-                    "stain does not compile: {}",
-                    why.lines().next().unwrap_or_default()
-                ),
-            ),
-        };
-        self.store.log(severity, Source::Stain, line);
+        self.log_compiled(outcome);
+    }
+
+    fn compiling(&self) -> bool {
+        let drawn = self.canvas.as_ref().is_some_and(|c| c.drew_compiling());
+        self.compiler().compiling() || drawn
     }
 
     /// None: the real engine's `computeIC` and its Trajectory panel are TASK-M8-10's and TASK-M8-11's.

@@ -50,6 +50,8 @@ pub struct Content {
     pub node_code: BTreeMap<NodeId, String>,
     /// The compile status line.
     pub compiled: String,
+    /// Whether the graph is still compiling: the code, and the picture drawn, are the last valid ones.
+    pub compiling: bool,
     /// The problems, one line each.
     pub problems: Vec<String>,
     /// The notes, one line each.

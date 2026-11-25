@@ -14,6 +14,9 @@
 //!   and compiles nothing (`stain_view_graph_edit_back_compiles_nothing`).
 //! - A broken node leaves the last picture, byte for byte, and the error names the node, by its position and key
 //!   (`stain_view_broken_node_keeps_last_picture`).
+//! - Two paints of one view in one pass, each at its own placement, equal two views' paints of the same field at those
+//!   placements, byte for byte (`stain_view_paints_two_placements_as_two_views_do`), and the one view uploaded the
+//!   records once (`stain_view_paints_two_placements_from_one_upload`).
 //!
 //! Each test registers its negative control (R-176), which breaks its property and shows the check fails.
 
@@ -394,8 +397,9 @@ fn check_gui(shift: bool) {
     if shift {
         placement.centre[0] += 2.0 / TW as f32;
     }
-    v.set_placement(placement);
-    let ours = v.render(TW, TH).unwrap_or_else(|e| panic!("{e}"));
+    let ours = v
+        .render_at(TW, TH, placement)
+        .unwrap_or_else(|e| panic!("{e}"));
     let gui = gui_render(&h, PLACED, TW, TH);
     let bad = differing(&ours, |x, y| {
         let t = gui.texel(x, y);
@@ -430,6 +434,131 @@ negative_control!(
     "the view's placement moved one target pixel across",
     expected = "the view differs from the GUI's field",
     check_gui(true)
+);
+
+// ── Two placements in one frame ───────────────────────────────────────────────────────────────────────────────────
+
+/// Both `placements` painted in one pass over one target, in its left and right halves, before its one submit, as the
+/// app's frame paints the figure and the preview: the first by the first of `views`, the second by the last.
+fn pair(h: &GpuHarness, views: &mut [StainView], placements: [Placement; 2]) -> Image {
+    const SIDE: u32 = 41;
+    let target = Target {
+        width: 2 * SIDE,
+        height: SIDE,
+        format: wgpu::TextureFormat::Rgba8Unorm,
+    };
+    let texture = h.device().create_texture(&wgpu::TextureDescriptor {
+        label: Some("two placements"),
+        size: wgpu::Extent3d {
+            width: target.width,
+            height: target.height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: target.format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    });
+    let onto = texture.create_view(&Default::default());
+    let mut encoder = h.device().create_command_encoder(&Default::default());
+    {
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("two placements"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &onto,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+        let last = views.len() - 1;
+        for (k, placement) in placements.into_iter().enumerate() {
+            let v = &mut views[k.min(last)];
+            v.prepare().unwrap_or_else(|e| panic!("{e}"));
+            let x = k as f32 * SIDE as f32;
+            pass.set_viewport(x, 0.0, SIDE as f32, SIDE as f32, 0.0, 1.0);
+            v.paint(&mut pass, placement);
+        }
+    }
+    h.queue().submit([encoder.finish()]);
+    read_back(h.device(), h.queue(), &texture, target).unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// `n` views of the field on the GUI's target format.
+fn gui_views(h: &GpuHarness, n: usize) -> Vec<StainView> {
+    let bytes = records(false);
+    (0..n)
+        .map(|_| view(h, wgpu::TextureFormat::Rgba8Unorm, &bytes).0)
+        .collect()
+}
+
+/// The figure's placement and the preview's.
+const BOTH: [Placement; 2] = [PLACED, Placement::IDENTITY];
+
+/// One view's paints at [`BOTH`] against two views'. `shared`, the control, paints both at the second's placement, what
+/// one placement a frame draws.
+fn check_two_placements(shared: bool) {
+    let h = gpu();
+    let ours = if shared { [BOTH[1]; 2] } else { BOTH };
+    let one = pair(&h, &mut gui_views(&h, 1), ours);
+    let two = pair(&h, &mut gui_views(&h, 2), BOTH);
+    let bad = one
+        .bytes
+        .chunks(4)
+        .zip(two.bytes.chunks(4))
+        .filter(|(a, b)| a != b)
+        .count();
+    println!("{bad} of {} pixels differ", one.width * one.height);
+    let side = two.width / 2;
+    let told_apart = (0..two.height)
+        .flat_map(|y| (0..side).map(move |x| (x, y)))
+        .any(|(x, y)| two.texel(x, y) != two.texel(x + side, y));
+    assert!(told_apart, "the two placements draw one picture");
+    assert_eq!(bad, 0, "one view's two paints are not two views'");
+}
+
+#[test]
+fn stain_view_paints_two_placements_as_two_views_do() {
+    check_two_placements(false);
+}
+
+negative_control!(
+    stain_view_paints_two_placements_as_two_views_do,
+    "both paints at the second's placement, as a placement set on the view for the frame draws them",
+    expected = "one view's two paints are not two views'",
+    check_two_placements(true)
+);
+
+/// How often `n` views upload the records to paint at [`BOTH`].
+fn check_one_upload(n: usize) {
+    let h = gpu();
+    let mut views = gui_views(&h, n);
+    for _ in 0..3 {
+        let _ = pair(&h, &mut views, BOTH);
+    }
+    let uploads: u64 = views.iter().map(StainView::uploads).sum();
+    assert_eq!(uploads, 1, "the records were uploaded more than once");
+}
+
+#[test]
+fn stain_view_paints_two_placements_from_one_upload() {
+    check_one_upload(1);
+}
+
+negative_control!(
+    stain_view_paints_two_placements_from_one_upload,
+    "two views, one a placement",
+    expected = "the records were uploaded more than once",
+    check_one_upload(2)
 );
 
 // ── A param edit compiles nothing ─────────────────────────────────────────────────────────────────────────────────

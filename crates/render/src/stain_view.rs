@@ -15,8 +15,9 @@
 //! at the ledger's offsets, one of each per sample, row by row from the bottom left, sample `(x, y)` at `y · w + x`
 //! (`engine::field::Field`'s order). The engine's synthetic payload harness writes them (`engine::synthetic::Bytes`).
 //!
-//! **The placement** ([`Placement`]) is the GUI's (`gui::layout::Placement`): the field's `[0, 1]²` as a rect in the
-//! viewport's normalized device coordinates, Y-up. The placement pass is the GUI's real field's (`gui/src/real/field.wgsl`)
+//! **The placement** ([`Placement`]) is the paint call's, so one view draws the field at several in one frame from the
+//! records uploaded once. It is the GUI's (`gui::layout::Placement`): the field's `[0, 1]²` as a rect in the viewport's
+//! normalized device coordinates, Y-up. The placement pass is the GUI's real field's (`gui/src/real/field.wgsl`)
 //! arithmetic, line for line, so a sample lands on the same pixels as the GUI's outcome image of the same field.
 //!
 //! **No sample is forbidden.** The colour pass shades through `shade_sample`, whose validity lane is unclassified
@@ -43,9 +44,6 @@ pub use crate::assemble::Stain;
 
 /// The placement pass's WGSL.
 pub const PLACE_WGSL: &str = include_str!("../shaders/wgsl/compositor/place.wgsl");
-
-/// The placement uniform's size in bytes: two `vec4<f32>`.
-const PLACE_BYTES: u64 = 32;
 
 /// Where the field is drawn in a viewport: the shown figure's rect, the field's `[0, 1]²`, as its centre and half-size
 /// in the viewport's normalized device coordinates, Y-up (the GUI's `gui::layout::Placement`, field for field). A
@@ -114,12 +112,15 @@ impl Records<'_> {
     }
 }
 
-/// The placement pass: its pipeline, built for one target format, its uniform and its bind group.
+/// The placement pass: its pipeline, built for one target format, and the bind groups of the uniforms last painted.
 struct Place {
     pipeline: wgpu::RenderPipeline,
-    uniform: wgpu::Buffer,
-    group: wgpu::BindGroup,
+    layout: wgpu::BindGroupLayout,
+    groups: Vec<([u32; 8], wgpu::BindGroup)>,
 }
+
+/// How many placements' bind groups are kept: the figure's, the preview's and two more, so a still frame makes none.
+const KEPT_PLACEMENTS: usize = 4;
 
 /// A view that draws a stain over a `w × h` field's records ([the module](self)).
 pub struct StainView {
@@ -131,17 +132,16 @@ pub struct StainView {
     render: RenderLoop,
     inputs: FrameInputs,
     place: Place,
-    placement: Placement,
+    uploads: u64,
     /// The canvas background, 8-bit sRGB.
     background: [u8; 3],
 }
 
 impl StainView {
     /// A view on `device` drawing a `size = [w, h]` field's `records` at `tier` into `format` targets, with the read
-    /// side's uniforms `inputs`, the field over the whole viewport ([`Placement::IDENTITY`]), the canvas background
-    /// `crate::present::CANVAS_BACKGROUND_SRGB8`. No stain is drawn until one is set ([`StainView::set_stain`]) and has
-    /// compiled; until then the field is the background. Refused for an empty field, records of another length, or a
-    /// format the placement pass cannot draw into.
+    /// side's uniforms `inputs`, the canvas background `crate::present::CANVAS_BACKGROUND_SRGB8`. No stain is drawn
+    /// until one is set ([`StainView::set_stain`]) and has compiled; until then the field is the background. Refused for
+    /// an empty field, records of another length, or a format the placement pass cannot draw into.
     pub fn new(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -156,7 +156,7 @@ impl StainView {
             return Err(format!("a {w} × {h} field has no sample"));
         }
         let render = RenderLoop::new(device, queue, LAYER_FORMAT, w, h)?;
-        let place = place(device, format, &render)?;
+        let place = place(device, format)?;
         let mut view = StainView {
             device: device.clone(),
             queue: queue.clone(),
@@ -166,11 +166,10 @@ impl StainView {
             render,
             inputs,
             place,
-            placement: Placement::IDENTITY,
+            uploads: 0,
             background: crate::present::CANVAS_BACKGROUND_SRGB8,
         };
         view.set_records(records)?;
-        view.write_place();
         Ok(view)
     }
 
@@ -205,7 +204,13 @@ impl StainView {
         self.render
             .set_sim(buffer("stain view simstate", records.simstate), word);
         self.render.set_ic(buffer("stain view ic", records.ic));
+        self.uploads += 1;
         Ok(())
+    }
+
+    /// How many times records have been uploaded: once at [`StainView::new`] and once per [`StainView::set_records`].
+    pub fn uploads(&self) -> u64 {
+        self.uploads
     }
 
     /// Sets the read side's uniforms (the masses, the ensemble and the read params), written with the next draw: a
@@ -273,30 +278,18 @@ impl StainView {
     /// where the stain draws the background (a `decode_failed` sample). A uniform: it compiles nothing.
     pub fn set_background(&mut self, background: [u8; 3]) {
         self.background = background;
-        self.write_place();
     }
 
-    /// Sets where the next draws put the field in the viewport: a uniform.
-    pub fn set_placement(&mut self, placement: Placement) {
-        self.placement = placement;
-        self.write_place();
-    }
-
-    /// The placement the next draws use.
-    pub fn placement(&self) -> Placement {
-        self.placement
-    }
-
-    /// The placement uniform: the placement, and the background in the space the target is written in, linear for an
-    /// sRGB-typed target, encoded for any other.
-    fn write_place(&self) {
-        let Placement { centre, half } = self.placement;
+    /// The placement uniform's words: the placement, and the background in the space the target is written in, linear
+    /// for an sRGB-typed target, encoded for any other.
+    fn place_words(&self, placement: Placement) -> [u32; 8] {
+        let Placement { centre, half } = placement;
         let background = if self.format.is_srgb() {
             crate::present::srgb8(self.background).map(|c| c as f32)
         } else {
             self.background.map(|c| f32::from(c) / 255.0)
         };
-        let words = [
+        [
             centre[0],
             centre[1],
             half[0],
@@ -306,9 +299,47 @@ impl StainView {
             background[2],
             1.0,
         ]
-        .map(f32::to_bits);
-        self.queue
-            .write_buffer(&self.place.uniform, 0, &bytes(&words));
+        .map(f32::to_bits)
+    }
+
+    /// The bind group of the placement uniform `words`, kept from an earlier paint or made. Each uniform is a buffer of
+    /// its own, never written again: a queue write lands before every pass of the next submit, so one buffer rewritten
+    /// between two paints of a frame would draw both at the second's placement.
+    fn place_group(&mut self, words: [u32; 8]) -> &wgpu::BindGroup {
+        use wgpu::util::DeviceExt;
+        let kept = self.place.groups.iter().position(|(w, _)| *w == words);
+        let k = kept.unwrap_or_else(|| {
+            let uniform = self
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("stain view placement"),
+                    contents: &bytes(&words),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                });
+            let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("stain view placement"),
+                layout: &self.place.layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: uniform.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(layer(
+                            self.format,
+                            &self.render,
+                        )),
+                    },
+                ],
+            });
+            if self.place.groups.len() == KEPT_PLACEMENTS {
+                self.place.groups.remove(0);
+            }
+            self.place.groups.push((words, group));
+            self.place.groups.len() - 1
+        });
+        &self.place.groups[k].1
     }
 
     /// Draws the stain into the view's layer, a sample a texel, taking a finished compile first: call it once a frame,
@@ -320,18 +351,30 @@ impl StainView {
         self.render.draw_stain(&self.inputs)
     }
 
-    /// Records the placement pass into `pass`, a pass over a target of the view's format: the layer at the placement,
-    /// over the pass's viewport, the background past it. It draws what the last [`StainView::prepare`] drew.
-    pub fn paint(&self, pass: &mut wgpu::RenderPass<'_>) {
+    /// Records the placement pass into `pass`, a pass over a target of the view's format: the layer at `placement` in
+    /// the pass's viewport, the background past it. Painted as often as it is called, each at its own placement, it
+    /// draws what the last [`StainView::prepare`] before the submit drew.
+    pub fn paint(&mut self, pass: &mut wgpu::RenderPass<'_>, placement: Placement) {
+        let words = self.place_words(placement);
         pass.set_pipeline(&self.place.pipeline);
-        pass.set_bind_group(0, &self.place.group, &[]);
+        pass.set_bind_group(0, self.place_group(words), &[]);
         pass.draw(0..3, 0..1);
     }
 
-    /// Prepares and draws the view into a new `width × height` texture of its format, at its placement, and reads it
+    /// [`StainView::render_at`], the field over the whole viewport.
+    pub fn render(&mut self, width: u32, height: u32) -> Result<Image, String> {
+        self.render_at(width, height, Placement::IDENTITY)
+    }
+
+    /// Prepares and draws the view into a new `width × height` texture of its format, at `placement`, and reads it
     /// back: the offscreen render. The format must allow `COPY_SRC`. A wgpu error is returned; a draw with no stain
     /// compiled is the background, as [`StainView::prepare`] says.
-    pub fn render(&mut self, width: u32, height: u32) -> Result<Image, String> {
+    pub fn render_at(
+        &mut self,
+        width: u32,
+        height: u32,
+        placement: Placement,
+    ) -> Result<Image, String> {
         // A draw with nothing compiled is drawn anyway: the background, as the GUI would show it.
         let _ = self.prepare();
         let target = Target {
@@ -354,7 +397,8 @@ impl StainView {
             view_formats: &[],
         });
         let view = texture.create_view(&Default::default());
-        checked(&self.device, "the stain view's placement", || {
+        let device = self.device.clone();
+        checked(&device, "the stain view's placement", || {
             let mut encoder = self.device.create_command_encoder(&Default::default());
             {
                 let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -373,7 +417,7 @@ impl StainView {
                     occlusion_query_set: None,
                     multiview_mask: None,
                 });
-                self.paint(&mut pass);
+                self.paint(&mut pass, placement);
             }
             self.queue.submit([encoder.finish()]);
         })?;
@@ -381,17 +425,17 @@ impl StainView {
     }
 }
 
-/// The placement pass for `format` targets, reading `render`'s fresh layer through the view the format needs.
-fn place(
-    device: &wgpu::Device,
-    format: wgpu::TextureFormat,
-    render: &RenderLoop,
-) -> Result<Place, String> {
-    let layer = if format.is_srgb() {
+/// `render`'s fresh layer through the view a `format` target needs.
+fn layer(format: wgpu::TextureFormat, render: &RenderLoop) -> &wgpu::TextureView {
+    if format.is_srgb() {
         render.layers().fresh()
     } else {
         render.layers().fresh_encoded()
-    };
+    }
+}
+
+/// The placement pass for `format` targets.
+fn place(device: &wgpu::Device, format: wgpu::TextureFormat) -> Result<Place, String> {
     checked(device, "the stain view's placement pass", || {
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("stain view placement"),
@@ -448,30 +492,10 @@ fn place(
             multiview_mask: None,
             cache: None,
         });
-        let uniform = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("stain view placement"),
-            size: PLACE_BYTES,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("stain view placement"),
-            layout: &layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: uniform.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::TextureView(layer),
-                },
-            ],
-        });
         Place {
             pipeline,
-            uniform,
-            group,
+            layout,
+            groups: Vec::new(),
         }
     })
 }

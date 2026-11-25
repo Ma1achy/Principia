@@ -8,12 +8,13 @@
 pub mod stain;
 
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use engine::contract::canvas::{Canvas, CanvasContext};
 use engine::contract::render_state::{NodeId, StainGraph};
 use engine::contract::sim_config::SimConfig;
-use engine::contract::stain::view::{self, FrameInputs, Records, Stain, StainView};
+use engine::contract::stain::view::{self, CompileError, FrameInputs, Records, Stain, StainView};
 use engine::field::{Field, FieldBackend, RecordBytes, Stored};
 
 use crate::layout::Placement;
@@ -151,7 +152,7 @@ pub fn payload(
     }
 }
 
-/// One stain view and what it was last told.
+/// The stain view, which every draw of a frame is painted by, and what it was last told.
 struct View {
     view: StainView,
     /// The graph last shown.
@@ -160,8 +161,10 @@ struct View {
     asked: Option<(Vec<NodeId>, Stain)>,
     /// The params it holds, by node and name.
     params: BTreeMap<(NodeId, String), Vec<f64>>,
-    /// The params it refused, to ask again: a node whose new occupant is still compiling declares none of its params.
+    /// The params not yet the drawn picture's, to ask again.
     waiting: BTreeMap<(NodeId, String), Vec<f64>>,
+    /// The fragment key of the graph last shown.
+    key: Option<u64>,
 }
 
 impl View {
@@ -171,6 +174,7 @@ impl View {
         if self.graph.as_ref() == Some(g) {
             return Ok(());
         }
+        self.key = stain::key(g);
         let lowered = g.keyed().map_err(|e| e.to_string())?;
         if self.asked.as_ref() != Some(&lowered) {
             let keys: Vec<view::NodeKey> = lowered.0.iter().map(|id| u64::from(id.0)).collect();
@@ -191,11 +195,37 @@ impl View {
         Ok(())
     }
 
-    /// Sets each param waiting that differs from the one held; one refused waits on.
+    /// Whether the stain last asked for is still compiling.
+    fn compiling(&mut self) -> bool {
+        let Some((_, asked)) = &self.asked else {
+            return false;
+        };
+        // A superseded compile may still be with the worker after the stain asked for was found compiled.
+        let cache = self.view.cache();
+        cache.in_flight() > 0 && cache.rendered() != Some(asked)
+    }
+
+    /// Sets each param waiting that differs from the one held; one refused waits on. While the stain compiles all wait,
+    /// and after it failed the failing nodes': the picture still drawn is the last valid one's, whose nodes may declare
+    /// params of the same names.
     fn settle(&mut self) {
+        if self.compiling() {
+            return;
+        }
+        let errors = self.view.errors();
+        let failed = |id: NodeId| {
+            errors.iter().any(|e| match e {
+                CompileError::Node { key, .. } => *key == u64::from(id.0),
+                CompileError::Stain(_) => true,
+            })
+        };
         for ((id, name), value) in std::mem::take(&mut self.waiting) {
             let held = self.params.get(&(id, name.clone()));
             if held == Some(&value) {
+                continue;
+            }
+            if failed(id) {
+                self.waiting.insert((id, name), value);
                 continue;
             }
             match self.view.set_param(u64::from(id.0), &name, &value) {
@@ -210,27 +240,26 @@ impl View {
     }
 }
 
-/// The views of one target format: the placed figure's and the plain draws', apart, as each has one placement and the
-/// two may be drawn in one frame (the figure, and the Chart builder's quick render).
-struct Views {
-    format: wgpu::TextureFormat,
-    views: [Option<View>; 2],
-}
-
 /// The real engine's canvas: its device, and the field's records drawn on it through the stain.
 pub struct RealCanvas {
     context: CanvasContext,
     payload: Payload,
-    /// The views, built on first use for the first target format they are drawn on.
-    views: Mutex<Option<Views>>,
+    /// The view, built on first use for the first target format it is drawn on, with that format.
+    view: Mutex<Option<(wgpu::TextureFormat, View)>>,
     /// The graph the next draws show.
     stain: Mutex<StainGraph>,
     /// The placement of the placed figure's next draw.
     placement: Mutex<Placement>,
     /// The canvas background, 8-bit sRGB: the colour the window is cleared to.
     background: Mutex<[u8; 3]>,
-    /// The last draw's errors.
-    problems: Mutex<Vec<String>>,
+    /// What the last draw reported.
+    drawn: Mutex<stain::Drawn>,
+    /// Whether, since [`RealCanvas::drew_compiling`] was last asked, a draw kept the last valid picture for a compile or
+    /// another graph was set.
+    drew_compiling: AtomicBool,
+    /// The control's: every compile waited for and drawn, whatever was asked since.
+    #[cfg(test)]
+    pub(crate) completion_order: AtomicBool,
 }
 
 impl RealCanvas {
@@ -252,17 +281,25 @@ impl RealCanvas {
         Self {
             context,
             payload,
-            views: Mutex::new(None),
+            view: Mutex::new(None),
             stain: Mutex::new(start().1.stain_graph),
             placement: Mutex::new(Placement::IDENTITY),
             background: Mutex::new(crate::mock::canvas::default_background()),
-            problems: Mutex::new(Vec::new()),
+            drawn: Mutex::default(),
+            drew_compiling: AtomicBool::new(false),
+            #[cfg(test)]
+            completion_order: Default::default(),
         }
     }
 
-    /// The next draws show the graph `g`: the same records, drawn another way.
+    /// The next draws show the graph `g`: the same records, drawn another way. A new one counts as drawn compiling
+    /// ([`RealCanvas::drew_compiling`]), since the draw that finds it so comes after the frame that sets it.
     pub fn set_stain(&self, g: StainGraph) {
-        *self.stain.lock().expect("the stain lock") = g;
+        let mut stain = self.stain.lock().expect("the stain lock");
+        if *stain != g {
+            self.drew_compiling.store(true, Ordering::SeqCst);
+            *stain = g;
+        }
     }
 
     /// The placed figure's next draw puts the field at `placement` in its viewport.
@@ -280,27 +317,39 @@ impl RealCanvas {
         *self.background.lock().expect("the background lock") = background;
     }
 
-    /// What drawing the stain reported: the last draw's errors, and the note on the records.
+    /// What drawing the stain reported: the last draw's report, and the note on the records.
     pub fn reported(&self) -> stain::Drawn {
         stain::Drawn {
-            problems: self.problems.lock().expect("the problems lock").clone(),
             notes: self.payload.note.iter().cloned().collect(),
+            ..self.drawn.lock().expect("the drawn lock").clone()
         }
     }
 
-    /// How many pipelines the views have compiled or tried to.
+    /// Whether a draw since this was last asked was of a stain still compiling, or another stain was set. A report no draw renews does not count:
+    /// the compile's end shows in a draw only, so with none a frame asked for it would be asked for for ever.
+    pub fn drew_compiling(&self) -> bool {
+        self.drew_compiling.swap(false, Ordering::SeqCst)
+    }
+
+    /// `f` of the view, once there is one.
+    fn viewed<T>(&self, f: impl FnOnce(&mut StainView) -> T) -> Option<T> {
+        let mut view = self.view.lock().expect("the view lock");
+        view.as_mut().map(|(_, v)| f(&mut v.view))
+    }
+
+    /// How many pipelines have been compiled or tried to.
     pub fn compiles(&self) -> u64 {
-        let mut views = self.views.lock().expect("the views lock");
-        let built = views.iter_mut().flat_map(|v| v.views.iter_mut().flatten());
-        built.map(|v| v.view.compiles()).sum()
+        self.viewed(|v| v.compiles()).unwrap_or(0)
+    }
+
+    /// How many times the records have been uploaded.
+    pub fn uploads(&self) -> u64 {
+        self.viewed(|v| v.uploads()).unwrap_or(0)
     }
 
     /// Waits until every stain asked for has compiled: the tests'. A frame never waits for an edit's compile.
     pub fn wait(&self) {
-        let mut views = self.views.lock().expect("the views lock");
-        for v in views.iter_mut().flat_map(|v| v.views.iter_mut().flatten()) {
-            v.view.wait();
-        }
+        self.viewed(|v| v.wait());
     }
 
     /// A view on a target of `format`.
@@ -321,67 +370,79 @@ impl RealCanvas {
             asked: None,
             params: BTreeMap::new(),
             waiting: BTreeMap::new(),
+            key: None,
         })
     }
 
-    /// Draws the field into `pass` on a target of `format`: placed, at [`RealCanvas::set_placement`]'s placement;
-    /// plain, over the whole viewport.
-    fn draw(&self, pass: &mut wgpu::RenderPass<'_>, format: wgpu::TextureFormat, placed: bool) {
-        let mut problems = Vec::new();
-        if let Err(why) = self.try_draw(pass, format, placed, &mut problems) {
-            problems.push(why);
+    /// Draws the field into `pass` on a target of `format`, at `placement` in its viewport.
+    fn draw(
+        &self,
+        pass: &mut wgpu::RenderPass<'_>,
+        format: wgpu::TextureFormat,
+        placement: Placement,
+    ) {
+        let mut drawn = stain::Drawn::default();
+        if let Err(why) = self.try_draw(pass, format, placement, &mut drawn) {
+            drawn.problems.push(why);
         }
-        *self.problems.lock().expect("the problems lock") = problems;
+        self.drew_compiling
+            .fetch_or(drawn.compiling, Ordering::SeqCst);
+        *self.drawn.lock().expect("the drawn lock") = drawn;
     }
 
-    /// [`RealCanvas::draw`], the pipelines' errors to `problems`, or why it draws nothing.
+    /// [`RealCanvas::draw`], what the pipelines report to `report`, or why it draws nothing.
     fn try_draw(
         &self,
         pass: &mut wgpu::RenderPass<'_>,
         format: wgpu::TextureFormat,
-        placed: bool,
-        problems: &mut Vec<String>,
+        placement: Placement,
+        report: &mut stain::Drawn,
     ) -> Result<(), String> {
-        let mut views = self.views.lock().expect("the views lock");
-        let views = match views.take() {
-            Some(v) if v.format == format => views.insert(v),
-            _ => views.insert(Views {
-                format,
-                views: [None, None],
-            }),
-        };
+        let mut slot = self.view.lock().expect("the view lock");
         let graph = self.stain.lock().expect("the stain lock").clone();
-        let slot = &mut views.views[usize::from(placed)];
-        let v = match slot {
-            Some(v) => v,
-            None => {
+        let (_, v) = match slot.take() {
+            Some(kept) if kept.0 == format => slot.insert(kept),
+            _ => {
                 let mut v = self.build(format)?;
-                // A view's first draw has no last picture to keep, so it waits for its first compile.
+                // The first draw has no last picture to keep, so it waits for its first compile.
                 v.show(&graph)?;
                 v.view.wait();
-                slot.insert(v)
+                slot.insert((format, v))
             }
         };
-        v.show(&graph)?;
+        #[cfg(test)]
+        if self.completion_order.load(Ordering::SeqCst) {
+            v.view.wait();
+        }
+        // Asked for before a finished compile is taken, so one this graph supersedes is never drawn. A graph that cannot
+        // be asked for leaves the last picture.
+        if let Err(why) = v.show(&graph) {
+            report.problems.push(why);
+        }
         v.view.cache().poll();
         v.settle();
-        let placement = if placed {
-            self.placement()
-        } else {
-            Placement::IDENTITY
-        };
-        v.view.set_placement(view::Placement {
-            centre: placement.centre,
-            half: placement.half,
-        });
         v.view
             .set_background(*self.background.lock().expect("the background lock"));
         // The layer is drawn in a submit of its own, before the pass this is recorded into is submitted.
-        let drawn = v.view.prepare();
-        v.view.paint(pass);
+        let generation = v.view.cache().generation();
+        let mut drawn = v.view.prepare();
+        if v.view.cache().generation() != generation {
+            // A compile finished between the poll and the draw, whose params are still to be set.
+            v.settle();
+            drawn = v.view.prepare();
+        }
+        let placement = view::Placement {
+            centre: placement.centre,
+            half: placement.half,
+        };
+        v.view.paint(pass, placement);
+        report.key = v.key;
+        report.compiling = v.compiling();
         let errors = v.view.errors();
-        problems.extend(errors.iter().map(ToString::to_string));
-        if problems.is_empty() {
+        report
+            .problems
+            .extend(errors.iter().map(ToString::to_string));
+        if report.problems.is_empty() {
             drawn?;
         }
         Ok(())
@@ -396,7 +457,7 @@ impl Canvas for RealCanvas {
     /// The plain draw: the field over the whole viewport, as the Chart builder's quick render and the Stain editor's
     /// preview draw it.
     fn draw_figure(&self, pass: &mut wgpu::RenderPass<'_>, format: wgpu::TextureFormat) {
-        self.draw(pass, format, false);
+        self.draw(pass, format, Placement::IDENTITY);
     }
 }
 
@@ -409,6 +470,6 @@ impl Canvas for FigureCanvas {
     }
 
     fn draw_figure(&self, pass: &mut wgpu::RenderPass<'_>, format: wgpu::TextureFormat) {
-        self.0.draw(pass, format, true);
+        self.0.draw(pass, format, self.0.placement());
     }
 }

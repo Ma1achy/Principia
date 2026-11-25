@@ -60,9 +60,9 @@ pub fn resolve_srgb8(copies: &[&[u8]]) -> Result<Vec<u8>, String> {
         .collect())
 }
 
-/// Draws each copy's records (`copies[k]`, copy `k`'s whole field) through `view`'s stain, a pixel per sample at the
-/// view's placement, and resolves them ([`resolve_srgb8`]): the supersampled picture, `w × h`, in the view's format,
-/// rows from the top.
+/// Draws each copy's records (`copies[k]`, copy `k`'s whole field) through `view`'s stain, a pixel per sample, the field
+/// over the whole picture, and resolves them ([`resolve_srgb8`]): the supersampled picture, `w × h`, in the view's
+/// format, rows from the top.
 /// The view is left holding copy 0's records. Refused for no copy or records the view refuses.
 pub fn draw(view: &mut StainView, copies: &[Records<'_>]) -> Result<Image, String> {
     let [w, h] = view.size();
