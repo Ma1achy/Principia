@@ -137,7 +137,11 @@ fn the_content_is_the_assemblers_and_the_registrys() {
 /// group, no name twice in a group; and every row, group and choice has a scope, so none is dropped.
 fn check_library(c: &Content) {
     let entries = library().expect("the library");
-    let rows: Vec<&str> = c.library.iter().flat_map(|g| g.rows).copied().collect();
+    let rows: Vec<&str> = c
+        .library
+        .iter()
+        .flat_map(|g| g.rows.iter().map(|row| row.name))
+        .collect();
     assert_eq!(rows.len(), entries.len());
     assert_eq!(c.modes as usize, entries.len());
     assert_eq!(c.graphs.len(), entries.len());
@@ -147,7 +151,7 @@ fn check_library(c: &Content) {
     for (group, (title, entries)) in c.library.iter().zip(&groups) {
         assert_eq!(group.title, title);
         assert_eq!(group.rows.len(), entries.len());
-        let mut unique = group.rows.to_vec();
+        let mut unique: Vec<&str> = group.rows.iter().map(|row| row.name).collect();
         unique.sort_unstable();
         unique.dedup();
         assert_eq!(
@@ -156,7 +160,7 @@ fn check_library(c: &Content) {
             "two rows of {title} share a name"
         );
         for (row, e) in group.rows.iter().zip(entries) {
-            assert_eq!(*row, e.description.name, "{}", e.id);
+            assert_eq!((row.name, row.place), (e.description.name.as_str(), k));
             assert_eq!(*title, e.description.group, "{}", e.id);
             assert_eq!(c.graphs[k], e.graph);
             k += 1;
@@ -178,12 +182,12 @@ fn the_library_is_the_registry_and_none_of_it_is_dropped() {
     let c = content(&mut app);
     check_library(&c);
     let mut short = c.clone();
-    short.library = &c.library[1..];
+    short.library = c.library[1..].into();
     rejects("a library short of a group", || check_library(&short));
     let mut renamed = c.clone();
     let mut groups = c.library.to_vec();
     groups[0].title = "colour";
-    renamed.library = Vec::leak(groups);
+    renamed.library = groups.into();
     rejects("a heading taken from the directory", || {
         check_library(&renamed)
     });

@@ -76,6 +76,8 @@ pub struct Scope {
     /// Whether it is a text field: Enter on it starts typing, interaction mode, in which every key but Esc, Enter and
     /// Tab goes to the field (R-409 G4, G5).
     pub text: bool,
+    /// For a text field, whether it holds lines: Enter and Tab are then its own too, and only Esc ends the typing.
+    pub lines: bool,
     /// Whether it is a window (render_gui_spec §G3, §G5; R-405): registered at the top level but outside the big
     /// scopes' Tab order, reached only by opening it. With the focus inside it, Tab and Shift+Tab move between its
     /// sections and stay in it, and Esc in navigation mode on a section leaves it ([`Outcome::Leave`]).
@@ -98,6 +100,7 @@ impl Scope {
             ring: Ring::Inside,
             menu: false,
             text: false,
+            lines: false,
             window: false,
             scopes: false,
             axis: Axis::Both,
@@ -163,6 +166,14 @@ impl Scope {
         Self {
             text: true,
             ..Self::group(id, label)
+        }
+    }
+
+    /// A text field of lines: Enter on it starts typing, and only Esc ends it.
+    pub const fn lines(id: ScopeId, label: &'static str) -> Self {
+        Self {
+            lines: true,
+            ..Self::text(id, label)
         }
     }
 

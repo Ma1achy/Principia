@@ -44,6 +44,7 @@ use crate::keyboard::scopes::ScopeId;
 use crate::keyboard::Keyboard;
 use crate::layout::{Layout, Splits};
 use crate::settings::{Settings, Store};
+use crate::shaders::Shaders;
 use crate::side::EngineSide;
 use crate::stain;
 use crate::windows;
@@ -149,6 +150,10 @@ pub struct App<S: EngineSide> {
     pub trajectory: explore::trajectory::Scratch,
     /// The Stain editor's own state.
     pub stain: stain::Scratch,
+    /// Your shaders' folder; none unless given ([`App::with_shaders`]).
+    pub shaders: Shaders,
+    /// Whether the Stain page was shown last frame.
+    on_stain: bool,
     /// The overlay set Overlays ▾'s save as default kept, for the session (applied per R-369: it is not among the GUI's
     /// settings, which keep the windows' places, R-461; every launch starts with every overlay off).
     pub overlay_default: engine::contract::render_state::Overlays,
@@ -233,6 +238,8 @@ impl<S: EngineSide> App<S> {
             manifold: Default::default(),
             trajectory: Default::default(),
             stain: Default::default(),
+            shaders: Shaders::default(),
+            on_stain: false,
             overlay_default: Default::default(),
             hover_sent: None,
             snapshot,
@@ -264,6 +271,12 @@ impl<S: EngineSide> App<S> {
             app.log_warning(line);
         }
         app
+    }
+
+    /// The app with your shaders in `shaders`.
+    pub fn with_shaders(mut self, shaders: Shaders) -> Self {
+        self.shaders = shaders;
+        self
     }
 
     /// The GUI's settings as they stand: what is saved.
@@ -404,11 +417,22 @@ impl<S: EngineSide> App<S> {
     fn read(&mut self) {
         let before = std::mem::replace(&mut self.snapshot, self.side.engine().snapshot());
         self.manifold.charts.follow(&self.snapshot);
-        if std::mem::take(&mut self.stepped)
-            && self.stain.auto_recompile
-            && before.render.stain_graph != self.snapshot.render.stain_graph
-        {
-            self.side.recompile();
+        let (was, is) = (
+            &before.render.stain_graph,
+            &self.snapshot.render.stain_graph,
+        );
+        if std::mem::take(&mut self.stepped) && was != is {
+            // A step that changes any node's shader may be a load's, and an offer shown again costs less than one hidden.
+            let held = |g: &engine::contract::render_state::StainGraph| {
+                let nodes = g.nodes().map(|n| (n.id, n.kind, n.occupant.clone()));
+                nodes.collect::<Vec<_>>()
+            };
+            if held(was) != held(is) {
+                self.shaders.loaded();
+            }
+            if self.stain.auto_recompile {
+                self.side.recompile();
+            }
         }
         if let Some(latest) = explore::footer::latest(&self.snapshot.log) {
             self.latest = Some(latest.clone());
@@ -644,7 +668,8 @@ impl<S: EngineSide> App<S> {
             self.keyboard.tree_mut(self.view.mode),
             self.windows.chart.presets.len(),
         );
-        let content = self.side.stain_content();
+        let mut content = self.side.stain_content();
+        self.follow_shaders(&ctx, content.as_mut());
         let mut stain_out = stain::Out::default();
         stain::join(
             self.keyboard.tree_mut(Mode::Stain),
@@ -757,6 +782,10 @@ impl<S: EngineSide> App<S> {
                 );
                 self.send_hover(None);
             }
+        }
+        self.shader_asks(&mut stain_out);
+        if stain_out.loads {
+            self.shaders.loaded();
         }
         let stain_edited = !stain_out.edits.is_empty();
         edits.append(&mut stain_out.edits);
@@ -1206,6 +1235,80 @@ impl<S: EngineSide> App<S> {
         for _ in 0..presses {
             let console = &mut self.windows.console;
             console.maximised = !console.maximised;
+        }
+    }
+
+    /// Follows your shaders' folder: read as the Stain page opens and as the window gets the focus back on it, and what
+    /// it holds put in `content`.
+    // The plan is unclear here; chose these moments, and the panel's Read again, rather than watching the folder, because
+    // a file is edited in another window, and nothing is read while nothing can have changed it.
+    fn follow_shaders(&mut self, ctx: &egui::Context, content: Option<&mut stain::Content>) {
+        let here = self.view.mode == Mode::Stain;
+        let back = ctx.input(|i| i.events.contains(&egui::Event::WindowFocused(true)));
+        if here && (back || !self.on_stain) {
+            self.shaders.read();
+        }
+        self.on_stain = here;
+        self.shaders.poll();
+        if let Some(content) = content.filter(|_| here) {
+            self.shaders
+                .list(content, &self.snapshot.render.stain_graph);
+        }
+    }
+
+    /// Does what your shaders' controls asked this frame, and takes one save that came back.
+    fn shader_asks(&mut self, out: &mut stain::Out) {
+        use stain::yours::Ask;
+        for ask in std::mem::take(&mut out.asks) {
+            let graph = &self.snapshot.render.stain_graph;
+            match ask {
+                Ask::Read => self.shaders.read(),
+                Ask::Choose { id, file } => self.shaders.choose(id, file),
+                Ask::Keep(node) => self.shaders.keep(graph, node),
+                Ask::Update(node) | Ask::Revert(node) => {
+                    let edit = match ask {
+                        Ask::Update(_) => self.shaders.update(graph, node),
+                        _ => self.shaders.revert(graph, node),
+                    };
+                    match edit {
+                        Ok((edit, reset)) => {
+                            out.edits.push(edit);
+                            if !reset.is_empty() {
+                                let reset = reset.join(", ");
+                                let line = format!("back to the file's own values: {reset}");
+                                self.stain.yours.say(Some(node), line, false);
+                            }
+                        }
+                        Err(why) => self.stain.yours.say(Some(node), why, true),
+                    }
+                }
+                Ask::SaveAs {
+                    node,
+                    id,
+                    name,
+                    author,
+                } => self.shaders.save_as(graph, node, id, name, author),
+                Ask::SaveFile(node) => self.shaders.save_file(graph, node),
+            }
+        }
+        // An edit writes the whole graph, so a save's waits for a frame with no other, and outside a drag's one entry.
+        if !out.edits.is_empty() || self.hold.is_some() {
+            return;
+        }
+        let Some(saved) = self.shaders.finished() else {
+            return;
+        };
+        out.edits
+            .extend(saved.taken(&self.snapshot.render.stain_graph));
+        let node = Some(saved.node);
+        match saved.result {
+            Ok(made) => {
+                let form = &mut self.stain.yours.form;
+                form.take_if(|f| f.node == saved.node);
+                let line = format!("saved as {} in {}", made.id, made.file);
+                self.stain.yours.say(node, line, false);
+            }
+            Err(why) => self.stain.yours.say(node, why, true),
         }
     }
 

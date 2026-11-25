@@ -312,10 +312,11 @@ impl Compiler {
 
     /// [`Compiler::content`], made.
     fn made(&self, g: &StainGraph, drawn: &Drawn) -> Content {
-        let tables = catalogue();
+        let held = catalogue();
+        let tables = &held.tables;
         let wanted = key(g);
         let stale = self.asked.as_ref().is_some_and(|a| a.key != wanted);
-        let mut problems = tables.problems.clone();
+        let mut problems = held.problems.clone();
         let (described, undescribed) = described(g);
         problems.extend(undescribed);
         let mut notes = drawn.notes.clone();
@@ -360,9 +361,9 @@ impl Compiler {
             .map(|(a, _)| (a.code.clone(), a.pipeline.clone()))
             .unwrap_or_default();
         Content {
-            library: &tables.groups,
+            library: tables.groups.clone(),
             modes: tables.modes,
-            loaded: tables.loaded(g),
+            loaded: held.loaded(g),
             code,
             pipeline,
             described,
@@ -371,8 +372,9 @@ impl Compiler {
             compiling,
             problems,
             notes,
-            choices: &tables.choices,
-            graphs: &tables.graphs,
+            choices: tables.choices.clone(),
+            graphs: tables.graphs.clone(),
+            yours: Default::default(),
         }
     }
 }

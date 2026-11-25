@@ -1,6 +1,6 @@
 //! The assembled code under the canvas (render_gui_spec Part II §1, §10; 02_stain.png), and the code the canvas's
 //! Pipeline WGSL and Node WGSL views show: the engine side's text, in egui's monospace, comments, keywords and types
-//! in their colours. Read-only here: editing a node's code is TASK-M7-24's.
+//! in their colours. Read-only here: a node's own code is typed in [`super::yours`].
 
 use eframe::egui::text::LayoutJob;
 use eframe::egui::{self, vec2, Color32, FontId, Rect, TextFormat, Ui, UiBuilder};
@@ -88,12 +88,25 @@ pub fn colour(class: Class, visuals: &egui::Visuals) -> Color32 {
     }
 }
 
-/// Draws `text` as code: monospace, coloured by [`classify`].
+/// Draws `text` as code ([`job`]).
 pub fn code(ui: &mut Ui, text: &str) {
+    let mut job = job(ui, text);
+    if !text.ends_with('\n') {
+        job.append("\n", 0.0, TextFormat::default());
+    }
+    ui.add(egui::Label::new(job).selectable(false).extend());
+}
+
+/// `text` as code: monospace, coloured by [`classify`], its characters as they are.
+pub fn job(ui: &Ui, text: &str) -> LayoutJob {
     let visuals = ui.visuals().clone();
     let font = FontId::monospace(13.0);
     let mut job = LayoutJob::default();
-    for line in text.lines() {
+    for (i, line) in text.split('\n').enumerate() {
+        if i > 0 {
+            let plain = TextFormat::simple(font.clone(), visuals.text_color());
+            job.append("\n", 0.0, plain);
+        }
         for (run, class) in classify(line) {
             job.append(
                 &run,
@@ -101,13 +114,8 @@ pub fn code(ui: &mut Ui, text: &str) {
                 TextFormat::simple(font.clone(), colour(class, &visuals)),
             );
         }
-        job.append(
-            "\n",
-            0.0,
-            TextFormat::simple(font.clone(), visuals.text_color()),
-        );
     }
-    ui.add(egui::Label::new(job).selectable(false).extend());
+    job
 }
 
 /// Draws the assembled code in `rect`; with no content, an empty pane.

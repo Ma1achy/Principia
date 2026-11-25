@@ -19,6 +19,7 @@ pub mod layout;
 pub mod measure;
 pub mod real;
 pub mod settings;
+pub mod shaders;
 pub mod side;
 pub mod stain;
 pub mod theme;
@@ -121,4 +122,5 @@ mod tests {
     mod theme;
     mod tilt_targets;
     mod two_tilt_maps;
+    mod your_shaders;
 }

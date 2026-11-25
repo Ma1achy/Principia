@@ -210,14 +210,15 @@ pub fn content(g: &StainGraph) -> Content {
 }
 
 fn made(g: &StainGraph) -> Content {
-    let tables = catalogue();
+    let held = catalogue();
+    let tables = &held.tables;
     let (described, undescribed) = described(g);
-    let mut problems = tables.problems.clone();
+    let mut problems = held.problems.clone();
     problems.extend(undescribed);
     Content {
-        library: &tables.groups,
+        library: tables.groups.clone(),
         modes: tables.modes,
-        loaded: tables.loaded(g),
+        loaded: held.loaded(g),
         code: assembled(g),
         pipeline: pipeline(g),
         described,
@@ -226,7 +227,8 @@ fn made(g: &StainGraph) -> Content {
         compiling: false,
         problems,
         notes: vec![NOTE.to_owned()],
-        choices: &tables.choices,
-        graphs: &tables.graphs,
+        choices: tables.choices.clone(),
+        graphs: tables.graphs.clone(),
+        yours: Default::default(),
     }
 }

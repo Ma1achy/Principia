@@ -1,14 +1,17 @@
 //! The editor's tables that no graph changes, built once from the registry (`engine::contract::stain::assembled`): the
 //! library's groups and rows, the graph each row loads, and the shaders a node can be given. Every name and group is
-//! its source's own, from its description.
+//! its source's own, from its description. A folder's shaders join them ([`Catalogue::with`]), each row after ours.
 
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use engine::contract::render_state::{NodeKind, Occupant, StainGraph};
 use engine::contract::stain::assembled::{library, node_source, source_fields, Entry};
-use engine::contract::stain::describe::describe;
+use engine::contract::stain::describe::{describe, from_source};
+use engine::contract::stain::folder::Folder;
+use engine::contract::stain::saved::FIELD_ID;
 
-use super::{intern, Group};
+use super::yours::origin;
+use super::{intern, Group, Row};
 
 /// A shader the inspector offers a node.
 #[derive(Clone, Debug, PartialEq)]
@@ -21,20 +24,33 @@ pub struct Choice {
     pub name: &'static str,
     /// Its source: a node is this choice when its own source is this text.
     pub source: String,
+    /// Where it comes from, as its tooltip says.
+    pub from: String,
 }
 
-/// The tables.
-pub struct Catalogue {
+/// What the library and the inspector list.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Tables {
     /// The library's groups, in the order their first rows have in it.
-    pub groups: Vec<Group>,
+    pub groups: Arc<[Group]>,
     /// How many entries it holds.
     pub modes: u32,
     /// Each row's graph, by its place in the library.
-    pub graphs: Vec<Option<StainGraph>>,
+    pub graphs: Arc<[Option<StainGraph>]>,
+    /// The shaders a node can be given, each kind's in the library's order, a source's fields first.
+    pub choices: Arc<[Choice]>,
+}
+
+/// The shaders of a folder the tables list, the rest counted.
+// A bound on the rows drawn each frame: the rest stay usable by the stains that hold them, and the panel says how many.
+pub const LISTED: usize = 256;
+
+/// The tables.
+pub struct Catalogue {
+    /// What the registry lists.
+    pub tables: Tables,
     /// The [`Sources`] of each row's graph.
     sources: Vec<Option<Sources>>,
-    /// The shaders a node can be given, each kind's in the library's order, a source's fields first.
-    pub choices: Vec<Choice>,
     /// Why a table could not be built, for the Problems pane.
     pub problems: Vec<String>,
 }
@@ -44,6 +60,50 @@ impl Catalogue {
     pub fn loaded(&self, g: &StainGraph) -> Option<usize> {
         let g = sources(g)?;
         self.sources.iter().position(|of| of.as_ref() == Some(&g))
+    }
+
+    /// The tables with `folder`'s shaders in them, each in its own group beside ours and among its kind's choices, the
+    /// first [`LISTED`] by id.
+    // The plan is unclear here; a shader of yours under `debug/` is offered to a node, though ours are not, because it
+    // has no whole stain to load and could not be used otherwise.
+    pub fn with(&self, folder: &Folder) -> Tables {
+        let mut groups = self.tables.groups.to_vec();
+        let mut graphs = self.tables.graphs.to_vec();
+        let mut choices = self.tables.choices.to_vec();
+        for shader in folder.shaders().take(LISTED) {
+            let source = &shader.entry.source;
+            let Ok(described) = from_source(shader.kind(), Some(source), &Default::default())
+            else {
+                continue;
+            };
+            let (name, from) = (intern(&described.name), origin(shader));
+            let row = Row {
+                place: graphs.len(),
+                name,
+                from: from.clone(),
+            };
+            match groups.iter_mut().find(|g| g.title == described.group) {
+                Some(group) => group.rows.push(row),
+                None => groups.push(Group {
+                    title: intern(&described.group),
+                    rows: vec![row],
+                }),
+            }
+            graphs.push(None);
+            choices.push(Choice {
+                slot: shader.kind(),
+                occupant: shader.occupant(),
+                name,
+                source: source.clone(),
+                from,
+            });
+        }
+        Tables {
+            modes: u32::try_from(graphs.len()).unwrap_or(u32::MAX),
+            groups: groups.into(),
+            graphs: graphs.into(),
+            choices: choices.into(),
+        }
     }
 }
 
@@ -92,48 +152,60 @@ fn build() -> Catalogue {
         Vec::new()
     });
     let mut choices = Vec::new();
-    let mut offer =
-        |slot: NodeKind, occupant: Occupant, name: &str| match node_source(slot, &occupant) {
-            Ok(source) => choices.push(Choice {
-                slot,
-                occupant,
-                name: intern(name),
-                source: source.unwrap_or_default(),
-            }),
-            Err(why) => problems.push(format!("{name}: {why}")),
-        };
+    let mut offer = |slot: NodeKind, occupant: Occupant, name: &str, id: &str| match node_source(
+        slot, &occupant,
+    ) {
+        Ok(source) => choices.push(Choice {
+            slot,
+            occupant,
+            name: intern(name),
+            source: source.unwrap_or_default(),
+            from: ours(id),
+        }),
+        Err(why) => problems.push(format!("{name}: {why}")),
+    };
     for f in fields {
+        let id = format!("{FIELD_ID}{f}");
         let occupant = Occupant::Field(f.clone());
         let name = describe(NodeKind::Source, &occupant, &Default::default())
             .map_or(f, |described| described.name);
-        offer(NodeKind::Source, occupant, &name);
+        offer(NodeKind::Source, occupant, &name, &id);
     }
     // The plan is unclear here; chose to offer a node every shader of its kind but the debug views, because those are
     // whole stains the library loads.
     for e in entries.iter().filter(|e| !e.debug) {
         let occupant = Occupant::Builtin(e.name.clone());
-        offer(e.slot, occupant, &e.description.name);
+        offer(e.slot, occupant, &e.description.name, &e.id);
     }
-    let modes = u32::try_from(entries.len()).unwrap_or(u32::MAX);
     let (mut groups, mut graphs) = (Vec::new(), Vec::new());
     for (title, entries) in grouped(entries) {
-        let rows: Vec<&'static str> = entries
-            .iter()
-            .map(|e| intern(&e.description.name))
-            .collect();
+        let mut rows = Vec::new();
+        for e in entries {
+            rows.push(Row {
+                place: graphs.len(),
+                name: intern(&e.description.name),
+                from: ours(&e.id),
+            });
+            graphs.push(e.graph);
+        }
         groups.push(Group {
             title: intern(&title),
-            // Kept for the session, as the interned names are: the tables are built once.
-            rows: Vec::leak(rows),
+            rows,
         });
-        graphs.extend(entries.into_iter().map(|e| e.graph));
     }
     Catalogue {
-        groups,
-        modes,
         sources: graphs.iter().map(|g| sources(g.as_ref()?)).collect(),
-        graphs,
-        choices,
+        tables: Tables {
+            modes: u32::try_from(graphs.len()).unwrap_or(u32::MAX),
+            groups: groups.into(),
+            graphs: graphs.into(),
+            choices: choices.into(),
+        },
         problems,
     }
+}
+
+/// Where the shipped source `id` comes from.
+pub fn ours(id: &str) -> String {
+    format!("ours · {id}")
 }

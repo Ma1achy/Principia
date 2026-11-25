@@ -3,8 +3,9 @@
 //! with its `Graph · Pipeline WGSL · Node WGSL` toggle (`canvas`); the preview and the node inspector right
 //! (`preview`); and the assembled code (`code_view`) and the Problems pane (`problems`) under the canvas. The graph is
 //! the snapshot's stain graph (gui_state_contract §2, §5), and every edit of it is one `SetField` of the whole graph,
-//! undoable (R-69): the inspector's. The canvas's places, view and selection, the drawer's state and the toggle are
-//! the editor's own.
+//! undoable: the inspector's. The canvas's places, view and selection, the drawer's state, the toggle and the code
+//! being typed are the editor's own. Your shaders' folder is the app's (`crate::shaders`); what is shown of it is in
+//! [`yours`].
 //!
 //! **Keys** (render_gui_spec §G3; R-409; applied per R-369, review 5434766412 on PR #157): in Stain mode the big scopes
 //! in Tab order are the top bar, the library drawer, the graph canvas, the preview and node inspector, the code and
@@ -25,6 +26,7 @@ pub mod controls;
 pub mod library;
 pub mod preview;
 pub mod problems;
+pub mod yours;
 
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
@@ -47,7 +49,7 @@ pub use catalogue::Choice;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Content {
     /// The library's groups, in order.
-    pub library: &'static [Group],
+    pub library: Arc<[Group]>,
     /// How many modes the catalogue holds.
     pub modes: u32,
     /// The library row of the stain loaded, by its place in the library.
@@ -69,18 +71,31 @@ pub struct Content {
     /// The notes, one line each.
     pub notes: Vec<String>,
     /// The shaders the inspector offers, every kind's.
-    pub choices: &'static [Choice],
+    pub choices: Arc<[Choice]>,
     /// The whole graph each library row loads (§11), by its place in the library; none for a row only selected.
-    pub graphs: &'static [Option<StainGraph>],
+    pub graphs: Arc<[Option<StainGraph>]>,
+    /// Your shaders' folder and what the nodes hold of it.
+    pub yours: yours::Shelf,
 }
 
 /// One group of the library.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Group {
     /// Its heading.
     pub title: &'static str,
     /// Its rows.
-    pub rows: &'static [&'static str],
+    pub rows: Vec<Row>,
+}
+
+/// One row of the library.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Row {
+    /// Its place in the whole library, which a shader joining the library does not move.
+    pub place: usize,
+    /// Its name.
+    pub name: &'static str,
+    /// Where it comes from, as its tooltip says.
+    pub from: String,
 }
 
 /// What the canvas shows: the toggle's three views.
@@ -124,7 +139,7 @@ pub const BUTTONS: [(ScopeId, &str); 4] = [
 ];
 /// The inspector's "Edit this node's WGSL": the Node WGSL view.
 pub const EDIT_WGSL: ScopeId = "stain_insp_edit_wgsl";
-/// The inspector's Revert, drawn disabled: a hand edit's revert is TASK-M7-24's.
+/// The inspector's Revert: an edit's, back to the source it was made from.
 pub const REVERT: ScopeId = "stain_insp_revert";
 /// The Problems pane's auto-recompile.
 pub const AUTO_RECOMPILE: ScopeId = "stain_auto_recompile";
@@ -174,9 +189,9 @@ fn ids(stem: &str, count: usize) -> Vec<ScopeId> {
 /// The library's rows' scopes, by their place in the library: more than the registry holds, so every row is reached.
 pub static ROW_IDS: LazyLock<Vec<ScopeId>> = LazyLock::new(|| ids("stain_lib_row_", 512));
 /// The library's groups' headings' scopes.
-pub static GROUP_IDS: LazyLock<Vec<ScopeId>> = LazyLock::new(|| ids("stain_lib_group_", 32));
+pub static GROUP_IDS: LazyLock<Vec<ScopeId>> = LazyLock::new(|| ids("stain_lib_group_", 320));
 /// The inspector's choices' scopes: the shaders a node can be given.
-pub static CHOICE_IDS: LazyLock<Vec<ScopeId>> = LazyLock::new(|| ids("stain_insp_choice_", 256));
+pub static CHOICE_IDS: LazyLock<Vec<ScopeId>> = LazyLock::new(|| ids("stain_insp_choice_", 512));
 /// `s` as a `'static` label: a scope's label is `'static`, and the labels the graph gives (a node's title, a param's
 /// name) are few, each kept once for the session.
 pub fn intern(s: &str) -> &'static str {
@@ -261,6 +276,8 @@ pub struct Scratch {
     pub folded: BTreeSet<String>,
     /// The colours of the inspector the mouse opened, each its node and its scope.
     pub open: BTreeSet<(NodeId, ScopeId)>,
+    /// Your shaders': the code being typed, the save being named and what came of the last ask.
+    pub yours: yours::Scratch,
 }
 
 impl Default for Scratch {
@@ -273,6 +290,7 @@ impl Default for Scratch {
             preview: None,
             folded: BTreeSet::new(),
             open: BTreeSet::new(),
+            yours: yours::Scratch::default(),
         }
     }
 }
@@ -364,7 +382,7 @@ pub fn description<'a>(content: Option<&'a Content>, n: &Node) -> Cow<'a, Descri
 }
 
 /// The inspector's choices for node `n`: the shaders of its kind.
-pub fn choices(n: &Node, content: &Content) -> Vec<&'static Choice> {
+pub fn choices<'a>(n: &Node, content: &'a Content) -> Vec<&'a Choice> {
     content
         .choices
         .iter()
@@ -409,6 +427,7 @@ fn wanted(g: &StainGraph, s: &Scratch, content: Option<&Content>) -> Vec<(ScopeI
                 };
                 out.push((LIBRARY, scope));
             }
+            out.push((LIBRARY, Scope::control(yours::SHELF, "Your shaders")));
         }
         out.extend(BUTTONS.map(|(id, label)| (LIBRARY, Scope::disabled(id, label))));
     }
@@ -422,7 +441,16 @@ fn wanted(g: &StainGraph, s: &Scratch, content: Option<&Content>) -> Vec<(ScopeI
             out.push((CANVAS, Scope::control(scope, intern(&title))));
         }
     }
+    if let (View::Node, Some(c)) = (s.view, content) {
+        out.extend(yours::code_scopes(c, s).map(|scope| (CANVAS, scope)));
+    }
+    if let (true, Some(c)) = (s.canvas.selection.is_empty(), content) {
+        let scopes = yours::panel_scopes(&c.yours);
+        out.extend(scopes.into_iter().map(|scope| (INSPECTOR, scope)));
+    }
     if let (Some(n), Some(c)) = (s.selected().and_then(|id| g.node(id)), content) {
+        let offered = yours::offer_scopes(&c.yours, n.id);
+        out.extend(offered.into_iter().map(|scope| (INSPECTOR, scope)));
         for (choice, id) in choices(n, c).into_iter().zip(CHOICE_IDS.iter()) {
             out.push((INSPECTOR, Scope::control(id, choice.name)));
         }
@@ -439,7 +467,8 @@ fn wanted(g: &StainGraph, s: &Scratch, content: Option<&Content>) -> Vec<(ScopeI
                 INSPECTOR,
                 Scope::control(EDIT_WGSL, "Edit this node's WGSL"),
             ));
-            out.push((INSPECTOR, Scope::disabled(REVERT, "Revert")));
+            let shader = yours::shader_scopes(&c.yours, &s.yours, n.id);
+            out.extend(shader.into_iter().map(|scope| (INSPECTOR, scope)));
         }
     }
     out
@@ -486,6 +515,10 @@ pub struct Out {
     pub edits: Vec<SetField>,
     /// Recompile.
     pub recompile: bool,
+    /// What your shaders' controls ask, which needs the folder.
+    pub asks: Vec<yours::Ask>,
+    /// Whether an edit replaces the graph by another stain.
+    pub loads: bool,
 }
 
 /// The `SetField` of the graph `g` after `edit`, or nothing when the graph refuses it.
@@ -509,7 +542,8 @@ pub fn activate(
     content: Option<&Content>,
     out: &mut Out,
 ) {
-    if let Some((_, view, _)) = VIEWS.iter().find(|(v, ..)| *v == id) {
+    if yours::activate(id, s, g, content, out) {
+    } else if let Some((_, view, _)) = VIEWS.iter().find(|(v, ..)| *v == id) {
         s.view = *view;
     } else if let Some(node) = NODE_IDS.iter().position(|n| *n == id) {
         s.canvas.selection = BTreeSet::from([NodeId(node as u32)]);
@@ -525,10 +559,12 @@ pub fn activate(
         match content.and_then(|c| c.graphs.get(k)?.as_ref()) {
             Some(load) => {
                 s.library.selected = None;
-                out.edits.extend(edited(g, |g| {
+                let edit = edited(g, |g| {
                     *g = load.clone();
                     Ok(())
-                }));
+                });
+                out.loads |= edit.is_some();
+                out.edits.extend(edit);
             }
             None => s.library.selected = content.and_then(|c| library::row(c, k)).map(|_| k),
         }
@@ -635,6 +671,7 @@ pub fn show(
         content: page.content,
         view: &mut s.view,
         canvas: &mut s.canvas,
+        yours: &mut s.yours,
     };
     canvas::show(
         &mut own("stain_canvas"),
