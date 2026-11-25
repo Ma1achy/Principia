@@ -1,0 +1,6 @@
+{
+  "gate": "chazy-burrau",
+  "inputs": ["burrau.json", "control_collision.json"],
+  "threshold": { "value": 0, "requirement": "REQ-VAL-186", "status": "confirmed" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-132" }
+}

@@ -28,6 +28,7 @@
 
 pub mod ablation;
 pub mod burrau;
+pub mod chazy_burrau;
 pub mod figure_eight;
 pub mod lagrange;
 pub mod order_scaling;
@@ -122,6 +123,7 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &crate::reference::brutus_gate::ReferenceConvergenceGate,
     &crate::reversibility::ReversibilityXiGate,
     &burrau::BurrauSmokeGate,
+    &chazy_burrau::ChazyBurrauGate,
 ];
 
 /// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.
