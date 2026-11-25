@@ -543,9 +543,23 @@ fn cases() -> Vec<(String, &'static str)> {
     ]
 }
 
+/// `text` with the backbone's combiner written as it is saved, by value: the shipped pass-through's id, hash and
+/// source, `version` null, its keys in byte order.
+pub(super) fn saved_backbone(text: &str) -> String {
+    let e = render::registry::named(render::assemble::Kind::Combiner, "pass_through")
+        .expect("the pass-through combiner");
+    let saved = format!(
+        r#"{{"shader":{{"hash":"{}","id":"{}","source":{},"version":null}}}}"#,
+        crate::contract::stain::saved::hash(&e.source),
+        e.id,
+        serde_json::to_string(&e.source).expect("a string")
+    );
+    text.replace(r#"{"builtin":"pass_through"}"#, &saved)
+}
+
 fn check_texts(cases: &[(String, &str)]) {
     for (got, want) in cases {
-        assert_eq!(got, want, "not the canonical text");
+        assert_eq!(*got, saved_backbone(want), "not the canonical text");
     }
 }
 

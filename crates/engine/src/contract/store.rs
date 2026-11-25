@@ -184,6 +184,7 @@ pub fn stain_graph(g: &StainGraph) -> String {
                 Occupant::Field(f) => f.as_str(),
                 Occupant::Builtin(id) => id.as_str(),
                 Occupant::Custom(_) => "custom",
+                Occupant::Pinned(p) => p.id.as_str(),
             };
             let mut text = format!("{} {kind} {occupant}", n.id.0);
             if !n.params.is_empty() {

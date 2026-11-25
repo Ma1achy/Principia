@@ -48,7 +48,7 @@ fn check_roundtrip(g: &StainGraph, saved: &str) {
 fn boundary_overlay_roundtrip() {
     let (g, p) = overlay_graph();
     let saved = serde_json::to_string(&g).unwrap_or_else(|e| panic!("{e}"));
-    assert!(saved.contains(r#""builtin":"edge_line""#), "{saved}");
+    assert!(saved.contains(r#""id":"post/edge_line""#), "{saved}");
     for param in [
         r#""width":[3.5]"#,
         r#""opacity":[0.75]"#,

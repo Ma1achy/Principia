@@ -262,8 +262,8 @@ not in it, so two constructions of one graph have one form.
   brightness, then each post in chain order; then the colour, the brightness, the combiner, the posts from the
   combiner to `OUT`, and `OUT`. Every wire runs forward in this order.
 - **Each node** is `{"kind", "occupant", "inputs"}`. `kind` is `source`, `colour`, `brightness`, `combiner`, `post` or
-  `out`. `occupant` is `{"field": <member>}` for the built-in source of a read-side field, `{"builtin": <id>}`,
-  `{"custom": <text>}` with the custom WGSL exactly as written, or `null` for `OUT`. `inputs` has one entry per in-port
+  `out`. `occupant` is `{"code": <text>}`, the WGSL the node runs with its declaration lines removed, whoever wrote
+  it (a shipped source, a custom, a field's generated source), or `null` for the identity and `OUT`. `inputs` has one entry per in-port
   in port order (a post's colour first, then its field inputs; the combiner's colour, then its brightness): the
   feeding node's position in the order, or `null` where the input is absent.
 - **The post chain** is encoded by the posts' positions, in chain order, each post's first input the position of the

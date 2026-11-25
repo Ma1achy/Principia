@@ -305,6 +305,25 @@ fn check_provenance(header_line: &str, frames: u32, commit: &str) {
     );
 }
 
+/// `text` with the backbone's combiner as a stain saves it, by value: the shipped pass-through's id, hash and source,
+/// `version` null, its keys sorted (JCS).
+fn saved_backbone(text: &str) -> String {
+    use engine::contract::stain::assembled::node_source;
+    use engine::contract::stain::graph::{NodeKind, Occupant};
+    let source = node_source(
+        NodeKind::Combiner,
+        &Occupant::Builtin("pass_through".into()),
+    )
+    .expect("the pass-through combiner")
+    .expect("its source");
+    let saved = format!(
+        r#"{{"shader":{{"hash":"{}","id":"combiner/pass_through","source":{},"version":null}}}}"#,
+        engine::contract::stain::saved::hash(&source),
+        serde_json::to_string(&source).expect("a string")
+    );
+    text.replace(r#"{"builtin":"pass_through"}"#, &saved)
+}
+
 #[test]
 fn profile_file_header_holds_build_hash_and_config() {
     let (_file, text) = synthetic(4);
@@ -317,8 +336,8 @@ validation::negative_control!(
     expected = "the config is not the canonical text",
     check_provenance(
         &lines_of(&synthetic(4).1)[0].replace(
-            r#""config":{"frames":4,"render":{"debug_view":false,"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}},"scenario":"synthetic_frames","#,
-            r#""config":{"scenario":"synthetic_frames","frames":4,"render":{"debug_view":false,"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}},"#
+            &saved_backbone(r#""config":{"frames":4,"render":{"debug_view":false,"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}},"scenario":"synthetic_frames","#),
+            &saved_backbone(r#""config":{"scenario":"synthetic_frames","frames":4,"render":{"debug_view":false,"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}},"#)
         ),
         4,
         &expected_commit()
@@ -415,7 +434,9 @@ fn profile_file_canonical_same_bytes_twice() {
     check_same_text(
         &canonical::to_string(&render).unwrap(),
         &canonical::to_string(&render2).unwrap(),
-        r#"{"debug_view":false,"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}}"#,
+        &saved_backbone(
+            r#"{"debug_view":false,"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}}"#,
+        ),
     );
     // Keys sort by their UTF-16 code units at every depth, whatever order the struct declares or the map iterates.
     check_same_text(

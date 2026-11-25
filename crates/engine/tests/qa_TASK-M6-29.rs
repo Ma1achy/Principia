@@ -271,6 +271,7 @@ fn logged(g: &StainGraph) -> String {
                 Occupant::Field(f) => f.clone(),
                 Occupant::Builtin(b) => b.clone(),
                 Occupant::Custom(_) => "custom".to_owned(),
+                Occupant::Pinned(p) => p.id.clone(),
             };
             let mut s = format!("{} {} {occupant}", n.id.0, kind.as_str().unwrap());
             if !n.params.is_empty() {

@@ -3,6 +3,7 @@
 //! render contract Part 3; REQ-RENDER-075). The assembler's own tests (`crates/render/tests/assemble.rs`) cover the
 //! lowering; these cover the graph type the engine defines. Each test registers its negative control (R-176).
 
+use engine::contract::stain::assembled::node_source;
 use engine::stain::{
     Canonical, GraphError, NodeId, NodeKind, Occupant, PortType, StainGraph, UniformType, Wire,
 };
@@ -62,6 +63,7 @@ fn summary(c: &Canonical) -> Vec<String> {
                 Occupant::Field(f) => format!("field {f}"),
                 Occupant::Builtin(id) => format!("builtin {id}"),
                 Occupant::Custom(t) => format!("custom {}", t.len()),
+                Occupant::Pinned(p) => format!("pinned {}", p.id),
             };
             format!("{:?} {occupant} {:?}", n.kind, n.inputs)
         })
@@ -541,7 +543,7 @@ fn check_keys(g: &StainGraph) {
     let c = g.canonical().expect("a canonical form");
     let text = c.text();
     assert!(
-        text.starts_with(r#"{"nodes":[{"inputs":[],"kind":"source","occupant":{"field":"ftle"}}"#),
+        text.starts_with(r#"{"nodes":[{"inputs":[],"kind":"source","occupant":{"code":"// The built-in source of `ftle`"#),
         "{text}"
     );
     for kind in ["colour", "brightness", "combiner", "post", "out"] {
@@ -550,7 +552,7 @@ fn check_keys(g: &StainGraph) {
             "no {kind} in {text}"
         );
     }
-    assert!(text.contains(r#""occupant":{"custom":"fn colour"#));
+    assert!(text.contains(r#""occupant":{"code":"fn colour"#));
     assert!(text.contains(r#""occupant":null"#));
     assert_eq!(
         c.fragment_key(),
@@ -582,9 +584,16 @@ fn check_keys(g: &StainGraph) {
         .set_occupant(COMBINER, Occupant::Builtin("pass_through".into()))
         .expect("built-in");
     let builtin = builtin.canonical().expect("a canonical form");
+    let pass_through = node_source(
+        NodeKind::Combiner,
+        &Occupant::Builtin("pass_through".into()),
+    )
+    .expect("the pass-through")
+    .expect("its text");
+    let code = serde_json::to_string(&render::assemble::key_text(&pass_through)).expect("JSON");
     assert!(builtin
         .text()
-        .contains(r#""occupant":{"builtin":"pass_through"}"#));
+        .contains(&format!(r#""occupant":{{"code":{code}}}"#)));
     assert_eq!(
         builtin.stain().nodes()[3].occupant,
         render::assemble::Occupant::BuiltIn("pass_through".into())
@@ -666,10 +675,14 @@ fn check_jcs(colour: &str, written: &str) {
     let c = g.add(NodeKind::Colour, custom(colour)).expect("a colour");
     g.connect(s, c, 0).expect("source → colour");
     g.connect(c, COMBINER, 0).expect("colour → combiner");
+    let code = |kind, o: Occupant| {
+        let text = node_source(kind, &o).expect("a source").expect("its text");
+        render::assemble::key_text(&text).into_owned()
+    };
     let want = engine::contract::canonical::json_to_string(&serde_json::json!({ "nodes": [
-        { "inputs": [], "kind": "source", "occupant": { "field": "d_min" } },
-        { "inputs": [0], "kind": "colour", "occupant": { "custom": written } },
-        { "inputs": [1, null], "kind": "combiner", "occupant": { "builtin": "pass_through" } },
+        { "inputs": [], "kind": "source", "occupant": { "code": code(NodeKind::Source, Occupant::Field("d_min".into())) } },
+        { "inputs": [0], "kind": "colour", "occupant": { "code": written } },
+        { "inputs": [1, null], "kind": "combiner", "occupant": { "code": code(NodeKind::Combiner, Occupant::Builtin("pass_through".into())) } },
         { "inputs": [2], "kind": "out", "occupant": null },
     ] }))
     .expect("JCS");

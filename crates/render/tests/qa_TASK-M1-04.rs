@@ -965,25 +965,39 @@ fn check_text(want: &str) {
     assert_eq!(k, fnv1a64(want.as_bytes()));
 }
 
-const SMALLEST_TEXT: &str = concat!(
-    r#"{"nodes":["#,
-    r#"{"inputs":[],"kind":"source","occupant":{"field":"ftle"}},"#,
-    r#"{"inputs":[0],"kind":"colour","occupant":{"custom":"fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }"}},"#,
-    r#"{"inputs":[1,null],"kind":"combiner","occupant":{"builtin":"pass_through"}},"#,
-    r#"{"inputs":[2],"kind":"out","occupant":null}"#,
-    r#"]}"#
-);
+/// A shipped source's or a field's code as the key writes it: its text, descriptive lines removed, as a JSON string.
+fn code_json(kind: Kind, occupant: &Occupant) -> String {
+    let text = assemble::occupant_source(kind, occupant)
+        .unwrap()
+        .expect("an occupant with code");
+    serde_json::to_string(&assemble::key_text(&text)).unwrap()
+}
+
+fn smallest_text() -> String {
+    format!(
+        concat!(
+            r#"{{"nodes":["#,
+            r#"{{"inputs":[],"kind":"source","occupant":{{"code":{}}}}},"#,
+            r#"{{"inputs":[0],"kind":"colour","occupant":{{"code":"fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>(ctx.inputs[0].x); }}"}}}},"#,
+            r#"{{"inputs":[1,null],"kind":"combiner","occupant":{{"code":{}}}}},"#,
+            r#"{{"inputs":[2],"kind":"out","occupant":null}}"#,
+            r#"]}}"#
+        ),
+        code_json(Kind::Source, &Occupant::Field("ftle".into())),
+        code_json(Kind::Combiner, &pass_through()),
+    )
+}
 
 #[test]
 fn qa_canonical_hash_the_text_is_the_defined_form() {
-    check_text(SMALLEST_TEXT);
+    check_text(&smallest_text());
 }
 
 negative_control!(
     qa_canonical_hash_the_text_is_the_defined_form,
     "the brightness input written as absent-omitted",
     expected = "the canonical text is not lowering Part 5's",
-    check_text(&SMALLEST_TEXT.replace("[1,null]", "[1]"))
+    check_text(&smallest_text().replace("[1,null]", "[1]"))
 );
 
 // ── REQ-GEN-027: the declaration format ────────────────────────────────────────────────────────────────────────────

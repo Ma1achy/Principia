@@ -538,6 +538,33 @@ negative_control!(
     check_cache_hit(&reordered(&flat([0.5, 0.25, 0.25])))
 );
 
+/// [`reordered`] with the shipped pass-through combiner's file pasted in as a custom: the same code, so the same key,
+/// and the request is a hit on the pipeline the shipped one compiled.
+fn pasted_pass_through(colour: &str) -> Vec<Node> {
+    let mut g = reordered(colour);
+    let text = render::registry::named(Kind::Combiner, "pass_through")
+        .unwrap_or_else(|e| panic!("{e}"))
+        .source
+        .clone();
+    assert_eq!(g[3].kind, Kind::Combiner);
+    g[3].occupant = Occupant::Custom(text);
+    g
+}
+
+#[test]
+fn fragment_cache_shipped_and_pasted_compile_once() {
+    check_cache_hit(&pasted_pass_through(&flat([0.5, 0.25, 0.125])));
+}
+
+negative_control!(
+    fragment_cache_shipped_and_pasted_compile_once,
+    "the shipped source's id written into the key",
+    expected = "gives two keys",
+    render::assemble::probe::id_in_key_in(|| check_cache_hit(&pasted_pass_through(&flat([
+        0.5, 0.25, 0.125
+    ]))))
+);
+
 /// A failed compile keeps the previous pipeline: a stain whose new node fails with no last valid source surfaces a
 /// stain error and changes nothing; one whose changed node fails falls back to that node's last valid occupant, here
 /// the whole previous stain, compiled once.

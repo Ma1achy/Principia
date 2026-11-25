@@ -156,8 +156,27 @@ fn raw_member<'a>(object_text: &'a str, key: &str) -> &'a str {
 /// `sim`, as telemetry §5 lists them), no whitespace, the frame count a number. The groups are gui_state_contract
 /// §2's as a scenario leaves them: the plane all zero, the lock unlocked, the horizon and the playhead at 0, the stain
 /// graph the backbone alone, the debug view off, and the slice frame's tilt map Tip as sheet, its two angles 0.
+/// `text` with the backbone's combiner as a stain saves it, by value: the shipped pass-through's id, hash and source,
+/// `version` null, its keys sorted (JCS).
+fn saved_backbone(text: &str) -> String {
+    use engine::contract::stain::assembled::node_source;
+    use engine::contract::stain::graph::{NodeKind, Occupant};
+    let source = node_source(
+        NodeKind::Combiner,
+        &Occupant::Builtin("pass_through".into()),
+    )
+    .expect("the pass-through combiner")
+    .expect("its source");
+    let saved = format!(
+        r#"{{"shader":{{"hash":"{}","id":"combiner/pass_through","source":{},"version":null}}}}"#,
+        engine::contract::stain::saved::hash(&source),
+        serde_json::to_string(&source).expect("a string")
+    );
+    text.replace(r#"{"builtin":"pass_through"}"#, &saved)
+}
+
 fn expected_config_text(frames: u64) -> String {
-    format!(
+    saved_backbone(&format!(
         concat!(
             "{{\"frames\":{},",
             "\"render\":{{\"debug_view\":false,\"hover\":{{\"at\":null}},",
@@ -181,7 +200,7 @@ fn expected_config_text(frames: u64) -> String {
             "\"quality\":{{}},\"slice\":{{\"frame\":{{\"normal\":5,\"tau1\":0,\"tau2\":0,\"tilt_map\":\"sheet\",\"tilt_x\":5,\"tilt_y\":5}}}}}}}}"
         ),
         frames
-    )
+    ))
 }
 
 /// `text` is JSON Lines with `frames` frame lines: every line newline-ended, compact, an object validating against

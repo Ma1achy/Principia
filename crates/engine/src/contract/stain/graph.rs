@@ -27,6 +27,7 @@ use serde_json::{json, Value};
 use crate::contract::canonical;
 use crate::contract::stain::ports::{Direction, Port, Ports, Subtype};
 pub use crate::contract::stain::ramp::Ramp;
+pub use crate::contract::stain::saved::Pinned;
 
 /// A node's id: stable across edits, and not part of the canonical form.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -77,15 +78,16 @@ impl From<Kind> for NodeKind {
     }
 }
 
-/// What occupies a node (render contract Part 2; gui_state_contract §5): None, a built-in source's field, a built-in
-/// occupant's id, or a custom occupant's WGSL.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+/// What occupies a node (render contract Part 2; gui_state_contract §5): None, a built-in source's field, a shipped
+/// source by its name in its slot, a custom occupant's WGSL, or code saved from a shipped source that this build's file
+/// no longer matches, held by value ([`Pinned`]). It is saved by value whatever it is ([`saved`](super::saved)).
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Occupant {
     None,
     Field(String),
     Builtin(String),
     Custom(String),
+    Pinned(Pinned),
 }
 
 impl From<&Occupant> for assemble::Occupant {
@@ -95,22 +97,21 @@ impl From<&Occupant> for assemble::Occupant {
             Occupant::Field(f) => assemble::Occupant::Field(f.clone()),
             Occupant::Builtin(id) => assemble::Occupant::BuiltIn(id.clone()),
             Occupant::Custom(text) => assemble::Occupant::Custom(text.clone()),
+            // Its own text, never the file its id names now: what was saved is what is drawn.
+            Occupant::Pinned(p) => assemble::Occupant::Custom(p.source.clone()),
         }
     }
 }
 
 /// One node: its id, kind, occupant and params, each a uniform's value by the uniform's name, one number per
 /// component, and, on a `colour` node, its custom-stop ramp where it has one (colour_composition §9.4), serialised as
-/// `ramp` and left out where it has none.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+/// `ramp` and left out where it has none. Saved with its occupant's code by value ([`saved`](super::saved)).
+#[derive(Clone, Debug, PartialEq)]
 pub struct Node {
     pub id: NodeId,
     pub kind: NodeKind,
     pub occupant: Occupant,
-    #[serde(default)]
     pub params: BTreeMap<String, Vec<f64>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ramp: Option<Ramp>,
 }
 
@@ -370,6 +371,13 @@ impl StainGraph {
             n.params.insert(name.to_owned(), value);
             Ok(())
         })
+    }
+
+    /// Removes node `id`'s value for uniform `name`, unchecked: the caller's next edit checks the graph.
+    pub(crate) fn unset_param(&mut self, id: NodeId, name: &str) {
+        if let Some(n) = self.nodes.get_mut(&id) {
+            n.params.remove(name);
+        }
     }
 
     /// Sets node `id`'s custom-stop ramp, or removes it with `None`; a ramp on any node but a `colour` is refused.
@@ -691,19 +699,19 @@ impl Canonical {
         self.form.text()
     }
 
-    /// The form's text with each node's `params`, its uniforms' values, and a `colour` node's `ramp` where it has one
+    /// The form's text, each occupant its code as there, with each node's `params`, its uniforms' values, and a `colour` node's `ramp` where it has one
     /// (colour_composition §9.4), in JCS (gui_state_contract §2, R-318): the render key's graph part.
     pub fn render_text(&self) -> String {
         let nodes: Vec<Value> = self
             .nodes
             .iter()
-            .map(|n| {
-                let occupant = match &n.occupant {
-                    Occupant::None => Value::Null,
-                    Occupant::Field(f) => json!({ "field": f }),
-                    Occupant::Builtin(id) => json!({ "builtin": id }),
-                    // Its descriptive lines removed, as the fragment key's: a label edit re-renders nothing.
-                    Occupant::Custom(text) => json!({ "custom": assemble::key_text(text) }),
+            .enumerate()
+            .map(|(j, n)| {
+                // The code, as the fragment key's: whoever wrote it, and its descriptive lines removed, so a label
+                // edit re-renders nothing.
+                let occupant = match self.form.stain().text(j) {
+                    None => Value::Null,
+                    Some(code) => json!({ "code": assemble::key_text(code) }),
                 };
                 let mut node = json!({
                     "kind": Kind::from(n.kind).name(),

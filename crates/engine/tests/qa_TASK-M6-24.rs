@@ -521,6 +521,7 @@ fn graph_text(g: &StainGraph) -> String {
                 Occupant::Field(f) => f.clone(),
                 Occupant::Builtin(id) => id.clone(),
                 Occupant::Custom(_) => "custom".to_owned(),
+                Occupant::Pinned(p) => p.id.clone(),
             };
             let mut text = format!("{} {kind} {occupant}", n.id.0);
             if !n.params.is_empty() {
