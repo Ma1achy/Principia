@@ -33,7 +33,15 @@ CRITERIA = {
     'video': {'mean': 1.5, 'p99': 24.0, 'block': 10.0, 'alpha_mean': 1.5},
     # GIF: 256-colour dither adds per-pixel noise that a block average removes.
     'gif': {'mean': 2.0, 'p99': 40.0, 'block': 10.0, 'alpha_mean': 2.0},
+    # Animated WebP (lossy, sized to fit a size limit) against the transparent WebM of the same loop, or
+    # against the rendered frames: scaled down by Lanczos on premultiplied colour, then VP8 quantisation.
+    'webp': {'mean': 2.0, 'p99': 32.0, 'block': 12.0, 'alpha_mean': 2.0},
 }
+# A page-colour variant has no committed counterpart. Its background is the page colour, so its outer
+# border (4 px, every frame) must equal that colour: within 1 level for lossy WebP (VP8 rounds colour),
+# exactly for GIF. One level off in a single border pixel of a single frame fails.
+BORDER_PX = 4
+BORDER_TOL = {'webp': 1, 'gif': 0}
 VIDEO_DURATION_TOL = 0.0001      # seconds: frame count and fps are equal, so duration is
 BYTE_EXACT = ('.json', '.html', '.js', '.xml', '.webmanifest', '.py')
 BLOCK_PX = 16                    # block edge at 1024 px; scaled with image size, never below 4
