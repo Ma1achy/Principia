@@ -32,6 +32,9 @@ libm = { version = "=0.2.16", default-features = false, features = ["force-soft-
 # The profiler tests validate written traces against the checked-in JSON Schema (TASK-M0-17); no remote references,
 # so no HTTP resolver. Controls reach engine's tests through a dev-dependency on validation (R-176).
 [dev-dependencies]
+# hold_class: exact rational arithmetic for the moves' bounds, already in the build under kernel's tests.
+num-bigint = "0.4"
+num-rational = "0.4"
 jsonschema = { version = "0.58", default-features = false }
 validation = { path = "../validation" }
 # The shared proptest configuration's runner (validation::prop), for the lock's anchor-invariance property

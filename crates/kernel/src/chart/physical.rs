@@ -495,6 +495,15 @@ where
         true
     }
 
+    /// `L_z` is the vertical axis, or the construction holds it.
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        if Q::QUANTITY == Quantity::Lz {
+            crate::chart::LzHold::Axis
+        } else {
+            crate::chart::LzHold::Construction
+        }
+    }
+
     fn name(&self) -> &str {
         "Mixed"
     }

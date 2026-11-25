@@ -661,6 +661,10 @@ macro_rules! mapped_invariant {
                 self.chart.forbids_energy_normalisation()
             }
 
+            fn lz_hold(&self) -> crate::chart::LzHold {
+                self.chart.lz_hold()
+            }
+
             fn name(&self) -> &str {
                 self.chart.name()
             }
@@ -852,6 +856,10 @@ macro_rules! mapped_k {
 
             fn forbids_energy_normalisation(&self) -> bool {
                 self.chart.forbids_energy_normalisation()
+            }
+
+            fn lz_hold(&self) -> crate::chart::LzHold {
+                self.chart.lz_hold()
             }
 
             fn name(&self) -> &str {

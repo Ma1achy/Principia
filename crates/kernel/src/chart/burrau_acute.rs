@@ -251,6 +251,11 @@ where
         unread()
     }
 
+    /// The construction holds `L_z`.
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        crate::chart::LzHold::Construction
+    }
+
     /// `true`: the construction fixes the energy (chart_reference §0.6).
     fn forbids_energy_normalisation(&self) -> bool {
         true
@@ -476,6 +481,11 @@ where
     #[inline]
     fn map<F: Float + From<P>>(&self, _u: F, _v: F) -> ChartOut<F> {
         unread()
+    }
+
+    /// `L_z` is the vertical axis.
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        crate::chart::LzHold::Axis
     }
 
     /// `true`: the construction fixes the energy (chart_reference §0.6).

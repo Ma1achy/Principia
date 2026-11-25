@@ -347,6 +347,11 @@ impl<P: Copy> Chart for InvariantLE<P> {
         ChartOut { z: self.0.frozen() }
     }
 
+    /// `L_z` is the horizontal axis.
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        crate::chart::LzHold::Axis
+    }
+
     /// `true`: energy is the vertical coordinate (chart_reference §0.6).
     fn forbids_energy_normalisation(&self) -> bool {
         true
@@ -404,6 +409,11 @@ impl<P: Copy> Chart for InvariantLK<P> {
     #[inline]
     fn map<F: Float + From<P>>(&self, _u: F, _v: F) -> ChartOut<F> {
         ChartOut { z: self.0.frozen() }
+    }
+
+    /// `L_z` is the horizontal axis.
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        crate::chart::LzHold::Axis
     }
 
     /// `true`: the construction fixes the energy (chart_reference §0.6).

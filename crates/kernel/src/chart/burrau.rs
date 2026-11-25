@@ -482,6 +482,11 @@ where
         unread()
     }
 
+    /// The construction holds `L_z`.
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        crate::chart::LzHold::Construction
+    }
+
     /// `true`: the construction fixes the energy (chart_reference §0.6).
     fn forbids_energy_normalisation(&self) -> bool {
         true

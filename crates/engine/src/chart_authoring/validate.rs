@@ -44,7 +44,7 @@ use super::registry::{
     AxisSpec, ChartSpec, Class, Constraints, Expr, Hold, Inverse, Primitive, Registry, Row, Scale,
     Warp, LATENT_ROWS,
 };
-use crate::chart_validate::{self, validate_view};
+use crate::chart_validate::{self, validate_holds};
 use crate::contract::sim_config::{Latent, LATENT_DIM};
 
 /// Why the validator refuses a chart.
@@ -317,7 +317,17 @@ pub fn resolve<C: Authored>(chart: &ValidatedChart<C>) -> Resolved<'_, C> {
 /// The validation pass on `chart` under the view's energy target `e_star` (the module's note): the [`ValidatedChart`]
 /// where it passes, else the first [`Refusal`].
 pub fn validate<C: Authored>(chart: C, e_star: Option<f64>) -> Result<ValidatedChart<C>, Refusal> {
-    validate_view(&chart, e_star).map_err(Refusal::View)?;
+    validate_held(chart, e_star, None)
+}
+
+/// [`validate`] under the view's `L_z` target `lz_star` too: a chart with `L_z` as an axis refuses every `Some(L*)`
+/// ([`chart_validate::validate_holds`]).
+pub fn validate_held<C: Authored>(
+    chart: C,
+    e_star: Option<f64>,
+    lz_star: Option<f64>,
+) -> Result<ValidatedChart<C>, Refusal> {
+    validate_holds(&chart, e_star, lz_star).map_err(Refusal::View)?;
     let descriptor = chart.descriptor();
     if swept(descriptor.axes.map(|a| a.meta())) == 0 {
         return Err(Refusal::NoSweptAxis);

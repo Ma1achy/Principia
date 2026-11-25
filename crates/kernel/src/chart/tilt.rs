@@ -945,6 +945,10 @@ where
         self.chart.forbids_energy_normalisation()
     }
 
+    fn lz_hold(&self) -> crate::chart::LzHold {
+        self.chart.lz_hold()
+    }
+
     fn name(&self) -> &str {
         self.chart.name()
     }

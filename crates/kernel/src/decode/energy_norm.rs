@@ -54,6 +54,12 @@ pub enum Outcome {
     Infeasible,
     /// The collision pole, or the rest start at `E* > U`: `DEGENERATE(ENERGY_UNSCALABLE)`, the momenta untouched.
     Unscalable,
+    /// The hold on `L_z` (alone or with `E`) applied: the momenta are on the held set ([`crate::decode::hold`]).
+    Held,
+    /// Both held, `2K* < L*²`: `DEGENERATE(ENERGY_INFEASIBLE)`, the momenta untouched.
+    BelowFloor,
+    /// Both held, a rigid or rest start on the floor `2K* = L*²`: no tag, and the rotation applied.
+    OnFloor,
 }
 
 impl Outcome {
@@ -61,8 +67,12 @@ impl Outcome {
     #[inline]
     pub fn tag(self) -> Option<Degenerate> {
         match self {
-            Outcome::Off | Outcome::Scaled | Outcome::AtTarget => None,
-            Outcome::Infeasible => Some(Degenerate::EnergyInfeasible),
+            Outcome::Off
+            | Outcome::Scaled
+            | Outcome::AtTarget
+            | Outcome::Held
+            | Outcome::OnFloor => None,
+            Outcome::Infeasible | Outcome::BelowFloor => Some(Degenerate::EnergyInfeasible),
             Outcome::Unscalable => Some(Degenerate::EnergyUnscalable),
         }
     }

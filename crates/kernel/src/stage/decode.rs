@@ -71,8 +71,9 @@ pub struct DecodeUniforms {
     pub chart: [Vec4; 6],
     /// `x`: the quad's flags word, bit 0 `DECODE_MODE` ([`decode_mode`]); `y`, `z`, `w`: zero, padding to 16 bytes.
     pub flags: UVec4,
-    /// `η_E`'s target ([`energy`], [`target`]): `x` bit 0 the switch, 1 on and 0 off; `y` the bits of the f32
-    /// `E*`, read only where the switch is on; `z`, `w`: zero, padding to 16 bytes.
+    /// The holds' targets ([`energy`], [`target`], [`hold`], [`lz_target`]): `x` bit 0 the `E` switch and bit 1 the `L_z`
+    /// switch, 1 on and 0 off; `y` the bits of the f32 `E*`, read only where bit 0 is on; `z` the bits of `L*`,
+    /// read only where bit 1 is on; `w`: zero, padding to 16 bytes. With `L_z` off the row is `η_E`'s, byte for byte.
     pub energy: UVec4,
 }
 
@@ -82,6 +83,27 @@ pub fn energy(e_star: Option<f32>) -> UVec4 {
     match e_star {
         Some(e) => UVec4::new(1, e.to_bits(), 0, 0),
         None => UVec4::ZERO,
+    }
+}
+
+/// The holds' row for the targets `e_star` and `lz_star`: [`energy`]'s, with bit 1 of `x` and `z` set from `lz_star`
+/// where it is `Some`. Both `None` is the zero row.
+#[inline]
+pub fn hold(e_star: Option<f32>, lz_star: Option<f32>) -> UVec4 {
+    let row = energy(e_star);
+    match lz_star {
+        Some(l) => UVec4::new(row.x | 2, row.y, l.to_bits(), 0),
+        None => row,
+    }
+}
+
+/// The `L_z` target the energy row `row` holds: `Some(L*)` where bit 1 of `x` is on, `None` where it is off.
+#[inline]
+pub fn lz_target(row: UVec4) -> Option<f32> {
+    if row.x & 2 == 2 {
+        Some(f32::from_bits(row.z))
+    } else {
+        None
     }
 }
 
@@ -662,6 +684,36 @@ where
     }
 }
 
+/// [`sample_with`] with `L_z` held at `lz_star` too, where the chart leaves it free ([`Chart::lz_hold`]): the step is
+/// [`hold::apply_shared`](crate::decode::hold::apply_shared), which is `η_E`'s result bit for bit wherever `lz_star` is
+/// `None`.
+#[inline]
+pub fn sample_held<C, S, R>(
+    chart: &C,
+    u: R,
+    v: R,
+    e_star: Option<R>,
+    lz_star: Option<R>,
+) -> DecodeOut<R>
+where
+    C: ChartDecode,
+    S: Selection,
+    R: LinkReal + PayloadReal + WarpReal + From<C::Param>,
+{
+    let (d, _) = crate::decode::hold::apply_shared(
+        chart.decode_at::<S, R>(u, v),
+        e_star,
+        chart.forbids_energy_normalisation(),
+        lz_star,
+        chart.lz_hold(),
+    );
+    DecodeOut {
+        ic: d.ic,
+        descriptor: d.descriptor,
+        degenerate: d.degenerate,
+    }
+}
+
 /// The words of one sample's `(m, r, p)` in the integrator's input buffer: `m₀ m₁ m₂`, then `r₀ r₁ r₂` and `p₀ p₁ p₂`,
 /// each `x` then `y`.
 #[inline]
@@ -843,7 +895,14 @@ pub fn entry<V: DecodeVariant>(
     if i < uv.len() / 2 && decode_mode(uniforms.flags.x) == DecodeMode::Full {
         let chart = V::Chart::from_uniform(&uniforms.chart);
         let e_star = target(uniforms.energy);
-        let out = sample_with::<V::Chart, V::Links, f32>(&chart, uv[2 * i], uv[2 * i + 1], e_star);
+        let lz_star = lz_target(uniforms.energy);
+        let out = sample_held::<V::Chart, V::Links, f32>(
+            &chart,
+            uv[2 * i],
+            uv[2 * i + 1],
+            e_star,
+            lz_star,
+        );
         write_ic(ic, i, &out.ic);
         tags[i] = tag(out.degenerate);
         write_descriptor(descriptors, i, &out.descriptor);
