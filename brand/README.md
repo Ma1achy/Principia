@@ -71,7 +71,7 @@ Everything in `icons/`, `titles/`, `social/out/`, `code/web/` and `code/boards/`
 ```
 pip install -r brand/code/requirements.txt
 python3 -m playwright install chromium          # the pinned Chromium: 158.0.8127.36
-python3 brand/code/build.py --out /somewhere/else          # about 30 minutes, 6 GB of frames
+python3 brand/code/build.py --out /somewhere/else          # about 30 minutes and 2 GB of frames
 python3 brand/code/compare.py brand /somewhere/else        # per-file verdict against the committed files
 ```
 

@@ -164,15 +164,43 @@ def record_webp(out, name, q, size):
     log(name, d[name])
 
 
-def part_videos(out, only=None):
-    import render, encode
+def _render_job(args):
+    wd, v, fps, frames, backdrop, pad = args
+    import render
+    render.frames(wd, v, fps, frames, backdrop=backdrop, pad=pad)
+    return frames
+
+
+def _encode_job(args):
+    import encode
+    kind, a = args
+    if kind == 'webp':
+        frames, fps, dst = a
+        return dst, encode.webp(frames, fps, 15, WEBP_WIDTH, dst, limit=WEBP_LIMIT)
+    getattr(encode, kind)(*a)
+    return None, None
+
+
+def part_videos(out, only=None, workers=None):
+    """Frames first (one Chrome per variant, run side by side), then the encoders (also side by side)."""
+    from concurrent.futures import ProcessPoolExecutor
     wd = render_dir(out)
+    workers = workers or min(4, os.cpu_count() or 1)
+    sel = lambda name: not only or any(o in name for o in only)
+    render_jobs, encode_jobs, webps = [], [], []
     for v, folder, stem, fps, gfps, gw, theme in VIDEOS:
-        if only and not any(o in v for o in only):
+        if sel(v):
+            render_jobs.append((wd, v, fps, os.path.join(out, 'work', 'frames', v), None, 0))
+    for name, v, bd in GITHUB:
+        if sel(name):
+            render_jobs.append((wd, v, 30, os.path.join(out, 'work', 'frames', f'title-2d-subtitle-{name}'), bd, GITHUB_PAD))
+    log('rendering frames:', [os.path.basename(j[3]) for j in render_jobs])
+    with ProcessPoolExecutor(workers) as ex:
+        list(ex.map(_render_job, render_jobs))
+    for v, folder, stem, fps, gfps, gw, theme in VIDEOS:
+        if not sel(v):
             continue
         frames = os.path.join(out, 'work', 'frames', v)
-        log('frames', v)
-        render.frames(wd, v, fps, frames)
         n = int(round(36 * fps))
         missing = [i for i in range(n) if not os.path.exists(f'{frames}/f{i:05d}.png')]
         if missing:
@@ -180,22 +208,21 @@ def part_videos(out, only=None):
         w, h = png_size(f'{frames}/f00000.png')
         dst = os.path.join(out, folder)
         os.makedirs(dst, exist_ok=True)
-        log('encode', v)
-        encode.mp4(frames, fps, w, h, theme, f'{dst}/{stem}.mp4')
-        encode.webm(frames, fps, f'{dst}/{stem}-transparent.webm')
-        encode.gif(frames, fps, w, h, theme, gfps, gw, f'{dst}/{stem}.gif')
+        encode_jobs += [('mp4', (frames, fps, w, h, theme, f'{dst}/{stem}.mp4')),
+                        ('webm', (frames, fps, f'{dst}/{stem}-transparent.webm')),
+                        ('gif', (frames, fps, w, h, theme, gfps, gw, f'{dst}/{stem}.gif'))]
         if 'subtitle' in v:
-            q, size = encode.webp(frames, fps, 15, WEBP_WIDTH, f'{dst}/{stem}.webp', limit=WEBP_LIMIT)
-            record_webp(out, f'{stem}.webp', q, size)
+            encode_jobs.append(('webp', (frames, fps, f'{dst}/{stem}.webp')))
     for name, v, bd in GITHUB:
-        if only and not any(o in name for o in only):
-            continue
-        frames = os.path.join(out, 'work', 'frames', f'title-2d-subtitle-{name}')
-        log('frames', name)
-        render.frames(wd, v, 30, frames, backdrop=bd, pad=GITHUB_PAD)
-        stem = f'principia-title-2d-subtitle-{name}'
-        q, size = encode.webp(frames, 30, 15, WEBP_WIDTH, os.path.join(out, 'titles', f'{stem}.webp'), limit=WEBP_LIMIT)
-        record_webp(out, f'{stem}.webp', q, size)
+        if sel(name):
+            frames = os.path.join(out, 'work', 'frames', f'title-2d-subtitle-{name}')
+            os.makedirs(os.path.join(out, 'titles'), exist_ok=True)
+            encode_jobs.append(('webp', (frames, 30, os.path.join(out, 'titles', f'principia-title-2d-subtitle-{name}.webp'))))
+    log('encoding', len(encode_jobs), 'files')
+    with ProcessPoolExecutor(workers) as ex:
+        for dst, res in ex.map(_encode_job, encode_jobs):
+            if dst:
+                record_webp(out, os.path.basename(dst), *res)
 
 
 def part_social(out):
