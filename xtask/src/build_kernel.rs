@@ -3,10 +3,10 @@
 //! [`WGSL`], which `validation`'s `toolchain_trivial_kernel` dispatches through the harness. The native build is
 //! ordinary `rustc`.
 //!
-//! One rust-gpu build gives two WGSL files, parted through naga as `crate::fragment_wgsl` lifts its entries: [`WGSL`] is
-//! the production module, and [`READ_WGSL`] holds the `stage_branch_read_*` entries alone, which no runtime path runs. A
-//! pipeline's cost follows its module's size, so they stay out of what a shipped build loads (TASK-M4-27, applied per
-//! R-369).
+//! One rust-gpu build gives three WGSL files, parted through naga as `crate::fragment_wgsl` lifts its entries: [`WGSL`]
+//! is the production module, [`READ_WGSL`] holds the `stage_branch_read_*` entries alone, and [`PARITY_WGSL`] the parity
+//! harness's `stage_parity_*` entries alone, neither of which any runtime path runs. A pipeline's cost follows its
+//! module's size, so they stay out of what a shipped build loads.
 //!
 //! In `cargo xtask ci` it runs as a process of its own, through the cargo that runs xtask ([`run_in_ci`]), as the gate
 //! runner does.
@@ -47,6 +47,12 @@ pub const READ_WGSL: &str = "target/spirv/branch_read.wgsl";
 
 /// The entries [`READ_WGSL`] holds and [`WGSL`] doesn't: `kernel::stage::branch_read`'s, as naga names them.
 pub const READ_ENTRIES: &str = "stage_branch_read_";
+
+/// The WGSL of the parity harness's entries, relative to the workspace root.
+pub const PARITY_WGSL: &str = "target/spirv/parity.wgsl";
+
+/// The entries [`PARITY_WGSL`] holds and [`WGSL`] doesn't: `kernel::stage::parity`'s, as naga names them.
+pub const PARITY_ENTRIES: &str = "stage_parity_";
 
 /// rust-gpu's target: Vulkan 1.1 SPIR-V, the version naga's SPIR-V front end reads.
 pub const TARGET: &str = "spirv-unknown-vulkan1.1";
@@ -234,26 +240,32 @@ pub fn check_channel(pinned: &str, backend: &str) -> Result<(), String> {
     }
 }
 
-/// The production module of `spv`, a SPIR-V module: every entry but the read-back's, translated to WGSL by naga and
-/// validated on the way.
+/// The production module of `spv`, a SPIR-V module: every entry but the read-back's and the parity harness's,
+/// translated to WGSL by naga and validated on the way.
 pub fn to_wgsl(spv: &[u8]) -> Result<String, String> {
-    part(spv, false)
+    part(spv, |e| {
+        !e.starts_with(READ_ENTRIES) && !e.starts_with(PARITY_ENTRIES)
+    })
 }
 
 /// The read-back's module of `spv`: its [`READ_ENTRIES`] alone, translated as [`to_wgsl`] translates the rest.
 pub fn to_read_wgsl(spv: &[u8]) -> Result<String, String> {
-    part(spv, true)
+    part(spv, |e| e.starts_with(READ_ENTRIES))
 }
 
-/// The WGSL of `spv`'s entries that are the read-back's, or of those that aren't, with what those entries don't reach
-/// compacted away.
-fn part(spv: &[u8], read: bool) -> Result<String, String> {
+/// The parity harness's module of `spv`: its [`PARITY_ENTRIES`] alone, translated as [`to_wgsl`] translates the rest.
+pub fn to_parity_wgsl(spv: &[u8]) -> Result<String, String> {
+    part(spv, |e| e.starts_with(PARITY_ENTRIES))
+}
+
+/// The WGSL of `spv`'s entries whose naga name `keep` takes, with what those entries don't reach compacted away.
+fn part(spv: &[u8], keep: impl Fn(&str) -> bool) -> Result<String, String> {
     let options = naga::front::spv::Options::default();
     let mut module = naga::front::spv::parse_u8_slice(spv, &options)
         .map_err(|e| format!("naga could not read the SPIR-V: {e}"))?;
     module
         .entry_points
-        .retain(|e| e.name.replace("::", "_").starts_with(READ_ENTRIES) == read);
+        .retain(|e| keep(&e.name.replace("::", "_")));
     naga::compact::compact(&mut module, naga::compact::KeepUnused::No);
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
@@ -265,8 +277,8 @@ fn part(spv: &[u8], read: bool) -> Result<String, String> {
         .map_err(|e| format!("naga could not write WGSL: {e}"))
 }
 
-/// Builds `crates/kernel` of the workspace whose `Cargo.toml` is `manifest` to [`SPV`], [`WGSL`] and [`READ_WGSL`] under its root, and
-/// checks the fragment snippets against their translation ([`run_with`] without `bless`).
+/// Builds `crates/kernel` of the workspace whose `Cargo.toml` is `manifest` to [`SPV`], [`WGSL`], [`READ_WGSL`] and
+/// [`PARITY_WGSL`] under its root, and checks the fragment snippets against their translation ([`run_with`] without `bless`).
 pub fn run(manifest: &Path) -> Result<(), String> {
     run_with(manifest, false)
 }
@@ -316,10 +328,12 @@ pub fn run_with(manifest: &Path, bless: bool) -> Result<(), String> {
     let spv = std::fs::read(&module).map_err(|e| format!("{}: {e}", module.display()))?;
     let wgsl = to_wgsl(&spv)?;
     let read = to_read_wgsl(&spv)?;
+    let parity = to_parity_wgsl(&spv)?;
     for (path, bytes) in [
         (SPV, spv.as_slice()),
         (WGSL, wgsl.as_bytes()),
         (READ_WGSL, read.as_bytes()),
+        (PARITY_WGSL, parity.as_bytes()),
     ] {
         let out = root.join(path);
         if let Some(dir) = out.parent() {

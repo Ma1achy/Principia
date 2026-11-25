@@ -62,7 +62,10 @@ pub trait Flow<R> {
 /// stepper type names its own as the associated constant [`crate::occupant::Stepper::FORM`], so the form a march takes
 /// is fixed when the march is compiled for that stepper, never read from a profile at run time; a stepper that names
 /// none fails to build under a regularisation.
+///
+/// `repr(u32)`: rustc's default tag here is a `u8`, which the SPIR-V build has no capability for.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u32)]
 pub enum Form {
     /// Explicit Euler on the whole state.
     Euler,
