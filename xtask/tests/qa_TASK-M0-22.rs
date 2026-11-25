@@ -42,9 +42,7 @@ struct Outcome {
 }
 
 /// Runs `xtask <args>` with `CARGO` set to a stand-in that prints `listed` for `--list` and `run` for any other
-/// `cargo test`, in a directory of its own named `case`. A run of the golden harness's binary goes to the real cargo:
-/// the golden step renders its harness cases through it (RQ-229; TASK-M1-09), and the stand-in's canned text is no
-/// image.
+/// cargo call, each of bare `ci`'s other steps among them, in a directory of its own named `case`.
 fn run_with_fake_cargo(case: &str, args: &[&str], listed: &str, run: &str) -> Outcome {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("qa_m022_{case}"));
     let _ = fs::remove_dir_all(&dir);
@@ -54,9 +52,8 @@ fn run_with_fake_cargo(case: &str, args: &[&str], listed: &str, run: &str) -> Ou
     fs::write(dir.join("run.txt"), run).unwrap();
     let log = dir.join("calls.log");
     let script = format!(
-        "#!/bin/sh\nD='{d}'\necho \"$*\" >> \"$D/calls.log\"\ncase \"$1\" in\n  metadata) cat \"$D/metadata.json\"; exit 0;;\nesac\ncase \"$*\" in *golden_harness*) exec '{real}' \"$@\";; esac\nfor a in \"$@\"; do\n  if [ \"$a\" = \"--list\" ]; then cat \"$D/listed.txt\"; exit 0; fi\ndone\ncat \"$D/run.txt\"\nif grep -q FAILED \"$D/run.txt\"; then exit 101; fi\nexit 0\n",
-        d = dir.display(),
-        real = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
+        "#!/bin/sh\nD='{d}'\necho \"$*\" >> \"$D/calls.log\"\ncase \"$1\" in\n  metadata) cat \"$D/metadata.json\"; exit 0;;\nesac\nfor a in \"$@\"; do\n  if [ \"$a\" = \"--list\" ]; then cat \"$D/listed.txt\"; exit 0; fi\ndone\ncat \"$D/run.txt\"\nif grep -q FAILED \"$D/run.txt\"; then exit 101; fi\nexit 0\n",
+        d = dir.display()
     );
     let cargo = dir.join("cargo");
     validation::spawn::write_executable(&cargo, script).unwrap();
