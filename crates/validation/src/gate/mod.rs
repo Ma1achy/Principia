@@ -28,6 +28,7 @@
 
 pub mod ablation;
 pub mod burrau;
+pub mod butterfly_periods;
 pub mod chazy_burrau;
 pub mod figure_eight;
 pub mod lagrange;
