@@ -29,10 +29,10 @@ sys.path.insert(0, HERE)
 
 PARTS = ['sim', 'boards', 'web', 'stills', 'videos', 'social']
 OPTIONAL_PARTS = ['explore']      # slow, and not needed for the pictures: the placement searches, run for the record
-# The placement searches, in the order they were written; each runs in a fresh copy of the committed data.
-EXPLORE = [['clear.py'], ['clear2.py'], ['clear3.py'], ['hole.py'], ['hole2.py'], ['hole3.py'], ['hole4.py'], ['hole5.py'],
-           ['hole6.py'], ['hole7.py'], ['dragon.py'], ['dragon2.py'], ['dragon3.py'],
-           ['sorb.py', 'butterfly1'], ['sorb.py', 'butterfly2'], ['sorb.py', 'goggles'], ['sorb.py', 'dragonfly']]
+# The placement searches, the Dragonfly ones first; each runs in a fresh copy of the committed data.
+EXPLORE = [['dragon.py'], ['dragon2.py'], ['dragon3.py'], ['sorb.py', 'dragonfly'], ['sorb.py', 'butterfly1'],
+           ['sorb.py', 'butterfly2'], ['sorb.py', 'goggles'], ['hole.py'], ['hole2.py'], ['hole3.py'], ['hole4.py'],
+           ['hole5.py'], ['hole6.py'], ['hole7.py'], ['clear.py'], ['clear2.py'], ['clear3.py']]
 # The ten boards whose output is committed in code/boards (final.py also writes exploration boards).
 BOARDS = ['Dragonfly', 'DragonflyNight', 'Word3D', 'Word3DSub', 'WordFlat', 'WordFlatNight', 'WordFlatSub',
           'WordFlatSubNight', 'WordMixed', 'WordMixedSub']
@@ -234,7 +234,7 @@ def part_social(out):
          '--hero', os.path.join(REPO, 'docs/readme/hero.jpg')], BRAND)
 
 
-def part_explore(out, only=None, timeout=900):
+def part_explore(out, only=None, timeout=300):
     """Runs each placement-search script in its own fresh copy of the committed data and records what happened:
     whether it ran, how long it took, and which data files it wrote that differ from the committed ones."""
     import filecmp, tempfile

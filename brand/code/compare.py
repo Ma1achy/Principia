@@ -295,6 +295,16 @@ def compare_page_colour(webp_path, ref_frames, ref_fps, colour, tol=None):
     return r
 
 
+def gif_vs_own_mp4(gif, mp4):
+    """Not a criterion: how far a GIF is from the MP4 of the same loop, which is what quantising to a 256-colour
+    dither costs. Measured for the committed GIFs it shows what the 'gif' criterion can ask of any GIF."""
+    ig = probe(gif)
+    step = int(round(probe(mp4)['fps'] / ig['fps']))
+    fr = [frame_diff(scale_rgba(b, ig['w'], ig['h']), a)
+          for a, b in zip(decode(gif, ig), (f for i, f in enumerate(decode(mp4)) if i % step == 0))]
+    return aggregate(fr)
+
+
 def compare_bytes(ref, new):
     a, b = open(ref, 'rb').read(), open(new, 'rb').read()
     if a == b:
