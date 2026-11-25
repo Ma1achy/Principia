@@ -170,6 +170,8 @@ Presentation registry post/fallback_tint: 75a96dd647c97bfc
 Debug registry post/fallback_tint: 4b3a2d964637bea7
 Presentation registry post/pending_hatch: a005fa0c62b2d33f
 Debug registry post/pending_hatch: edac251f0010214e
+Presentation registry source/zero: 95fd21aa1494bbf4
+Debug registry source/zero: 0636242ee8958ac7
 Presentation field S: 772ed68a3d44abb3
 Debug field S: ff040bc4c7ad8552
 Presentation field theta: 13e4c07e48421908

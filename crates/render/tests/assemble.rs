@@ -474,7 +474,9 @@ fn check_same_source(a: &[Node], b: &[Node]) {
 fn one_path_a_builtin_is_assembled_as_a_custom_of_its_text() {
     let built_in = graph(Occupant::Field("d_min".into()), SHOW_INPUT);
     let mut as_custom = built_in.clone();
-    let text = assemble::builtin(Kind::Combiner, "pass_through").expect("the built-in");
+    let text = render::registry::named(Kind::Combiner, "pass_through")
+        .map(|e| e.source.as_str())
+        .expect("the built-in");
     as_custom[2].occupant = custom(text);
     check_same_source(&built_in, &as_custom);
     let source = assembled(&built_in, Tier::FULL);

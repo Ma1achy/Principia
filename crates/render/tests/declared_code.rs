@@ -1,6 +1,6 @@
 //! Declarations do not change pictures: the code every library row assembles to, its comments and blank lines
 //! dropped, is the code `tests/data/declared_code.txt` holds, one FNV-1a digest per row and view. The rows are every
-//! registry entry in its slot, every built-in source's field and every field's default ramp in either slot with the
+//! registry entry in its slot, named by id, every built-in source's field and every field's default ramp in either slot with the
 //! brightness ramp's style post. Run with `PRINCIPIA_BLESS=1` to rewrite the file after a change that is meant to
 //! change code.
 
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use render::assemble::{self, Kind, Node, Occupant, Stain, Tier, View};
 use render::codegen::Slot;
 use render::colour::defaults::{self, Resolve};
-use render::registry::{self, ZERO_SOURCE};
+use render::registry::{self, ZERO};
 use validation::negative_control;
 
 const FIXTURE: &str = "tests/data/declared_code.txt";
@@ -36,7 +36,7 @@ fn fed(kind: Kind, occupant: Occupant, colour: Option<usize>) -> Node {
 const SHOW: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }";
 
 fn zero() -> Node {
-    node(Kind::Source, Occupant::Custom(ZERO_SOURCE.to_owned()), &[])
+    node(Kind::Source, Occupant::BuiltIn(ZERO.to_owned()), &[])
 }
 
 fn pass_through() -> Occupant {
@@ -88,11 +88,7 @@ fn sim_key(name: &str) -> Option<f64> {
 fn rows() -> Vec<(String, Vec<Node>)> {
     let mut out = Vec::new();
     for e in registry::registry().unwrap_or_else(|e| panic!("{e}")) {
-        let name = e.id.rsplit('/').next().unwrap_or(&e.id).to_owned();
-        let occupant = match assemble::builtin(e.slot, &name) {
-            Some(_) if !e.id.starts_with("debug/") => Occupant::BuiltIn(name),
-            _ => Occupant::Custom(e.source.clone()),
-        };
+        let occupant = Occupant::BuiltIn(e.name().to_owned());
         out.push((format!("registry {}", e.id), showing(e.slot, occupant)));
     }
     for f in assemble::source_fields().unwrap_or_else(|e| panic!("{e}")) {

@@ -319,7 +319,9 @@ fn check_declared(swatches: &[outcome::Swatch], variant: &[outcome::Swatch]) {
 fn outcome_palette_swatches_are_the_occupants_params() {
     check_declared(&SWATCHES, &outcome::OKLAB_UNIFORM);
     assert_eq!(
-        render::assemble::builtin(render::assemble::Kind::Colour, outcome::ID),
+        render::registry::named(render::assemble::Kind::Colour, outcome::ID)
+            .ok()
+            .map(|e| e.source.as_str()),
         Some(outcome::WGSL),
         "the occupant is the built-in colour `{}`",
         outcome::ID

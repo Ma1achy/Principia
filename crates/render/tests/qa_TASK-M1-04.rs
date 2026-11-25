@@ -455,8 +455,9 @@ fn check_one_path(text: &str) {
 
 #[test]
 fn qa_one_path_a_builtin_is_a_custom_of_its_text() {
-    let text =
-        assemble::builtin(Kind::Combiner, "pass_through").expect("the built-in pass-through");
+    let text = render::registry::named(Kind::Combiner, "pass_through")
+        .map(|e| e.source.as_str())
+        .expect("the built-in pass-through");
     check_one_path(text);
     // A built-in id that is no file is refused, never silently substituted.
     let g = vec![

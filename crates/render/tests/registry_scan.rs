@@ -477,6 +477,7 @@ fn check_six_fields(entries: &[Entry]) {
             e.id
         );
         let by_directory = match dirs.split('/').next() {
+            Some("source") => Some(Kind::Source),
             Some("colour") => Some(Kind::Colour),
             Some("brightness") => Some(Kind::Brightness),
             Some("combiner") => Some(Kind::Combiner),
@@ -491,7 +492,7 @@ fn check_six_fields(entries: &[Entry]) {
         assert!(
             matches!(
                 e.slot,
-                Kind::Colour | Kind::Brightness | Kind::Combiner | Kind::Post
+                Kind::Source | Kind::Colour | Kind::Brightness | Kind::Combiner | Kind::Post
             ),
             "`{}`'s slot is no slot",
             e.id
@@ -548,8 +549,8 @@ negative_control!(
 
 // ── REQ-GEN-019: inputDomains ────────────────────────────────────────────────────────────────────────────────────
 
-/// Every one of `entries` has its `inputDomains`: a colour one to [`MAX_INPUTS`] inputs, a brightness one, a combiner
-/// none and a post up to [`MAX_INPUTS`]; each input named, its domain the bracket its `// @input` line declares and,
+/// Every one of `entries` has its `inputDomains`: a source none, a colour one to [`MAX_INPUTS`] inputs, a brightness
+/// one, a combiner none and a post up to [`MAX_INPUTS`]; each input named, its domain the bracket its `// @input` line declares and,
 /// with no bracket, "inherits".
 fn check_input_domains(entries: &[Entry]) {
     for e in entries {
@@ -557,9 +558,9 @@ fn check_input_domains(entries: &[Entry]) {
         let counted = match e.slot {
             Kind::Colour => (1..=MAX_INPUTS).contains(&n),
             Kind::Brightness => n == 1,
-            Kind::Combiner => n == 0,
+            Kind::Source | Kind::Combiner => n == 0,
             Kind::Post => n <= MAX_INPUTS,
-            Kind::Source | Kind::Out => false,
+            Kind::Out => false,
         };
         assert!(counted, "`{}`, a {}, has {n} inputs", e.id, e.slot.name());
         let lines: Vec<&str> = e
