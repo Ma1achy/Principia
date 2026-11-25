@@ -235,3 +235,79 @@ negative_control!(
         "actions/checkout@v4"
     ))
 );
+
+/// The group and `cancel-in-progress` of `win-vulkan`'s `concurrency` for a run started by `event`.
+fn win_vulkan_concurrency(all: &[(String, String)], event: &str) -> (String, bool) {
+    let (_, text) = all.iter().find(|(n, _)| n == "win-gpu.yml").unwrap();
+    let c = &parse(text)["jobs"]["win-vulkan"]["concurrency"];
+    let group = c["group"].as_str().expect("win-vulkan's group");
+    let cancel = &c["cancel-in-progress"];
+    let is = |then: &str, or: &str| {
+        if event == "schedule" {
+            then.to_owned()
+        } else {
+            or.to_owned()
+        }
+    };
+    let group = match group
+        .strip_prefix("${{ github.event_name == 'schedule' && '")
+        .and_then(|g| g.strip_suffix("' }}"))
+        .and_then(|g| g.split_once("' || '"))
+    {
+        Some((then, or)) => is(then, or),
+        None => group.to_owned(),
+    };
+    let cancel = match cancel {
+        Yaml::Boolean(b) => *b,
+        Yaml::String(s) if s == "${{ github.event_name != 'schedule' }}" => event != "schedule",
+        other => panic!("win-vulkan's cancel-in-progress is {other:?}"),
+    };
+    (group, cancel)
+}
+
+/// Criterion: a nightly's `win-vulkan` shares no group with a merge's or a dispatch's and cancels nothing, and the
+/// others share one group whose newer run cancels the older.
+fn check_nightly_kept(all: &[(String, String)]) {
+    let (nightly, nightly_cancels) = win_vulkan_concurrency(all, "schedule");
+    for event in ["push", "workflow_dispatch"] {
+        let (group, cancels) = win_vulkan_concurrency(all, event);
+        assert_ne!(group, nightly, "a {event} run can cancel the nightly");
+        assert!(cancels, "a newer {event} run doesn't cancel the older");
+    }
+    assert_eq!(
+        win_vulkan_concurrency(all, "push").0,
+        win_vulkan_concurrency(all, "workflow_dispatch").0,
+        "a push run and a dispatch share no group"
+    );
+    assert!(!nightly_cancels, "the nightly cancels a running one");
+}
+
+#[test]
+fn a_merge_never_cancels_the_nightly() {
+    check_nightly_kept(&workflows());
+}
+
+negative_control!(
+    a_merge_never_cancels_the_nightly,
+    "the nightly put in the merges' group",
+    expected = "can cancel the nightly",
+    check_nightly_kept(&edited(
+        "win-gpu.yml",
+        "'win-vulkan-nightly'",
+        "'win-vulkan'"
+    ))
+);
+
+mod cancels {
+    use super::*;
+    negative_control!(
+        a_merge_never_cancels_the_nightly,
+        "a nightly that cancels a running nightly",
+        expected = "the nightly cancels a running one",
+        check_nightly_kept(&edited(
+            "win-gpu.yml",
+            "cancel-in-progress: ${{ github.event_name != 'schedule' }}",
+            "cancel-in-progress: true"
+        ))
+    );
+}

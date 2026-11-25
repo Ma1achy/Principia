@@ -59,9 +59,9 @@
 # Concurrency: a group per job, each holding only that job's runs. The runner is one machine and takes one job at a time,
 # so the GPU is never shared whatever the groups; they bound the queue, and being per job, a push can't displace a
 # nightly's `win-self-check`, which pushes never run. `win-vulkan`, the 85-minute run, cancels in
-# progress (R-986, the owner's ruling of 12 Nov 2026: "merges to main, nightly and dispatch only, with a newer run
-# cancelling an older one; never branch pushes"): a newer run of it, from a merge, the schedule or a dispatch, cancels an
-# older one still running, on `main` too, so the PC always works on the newest commit. Every other job keeps
+# progress for merges and dispatches: a newer one cancels an older one still running, so the PC works on the newest
+# commit. The nightly's `win-vulkan` is in a group of its own and is never cancelled by them: it is the Windows check, and
+# merges come often enough to cancel it every day. Every other job keeps
 # `cancel-in-progress: false`: a running measurement finishes. GitHub keeps at most one run waiting in a group and
 # cancels the older waiting one, so with the PC off at most two of each job wait, the holder and the newest, and no queue
 # can pile up; a job a runner hasn't taken after 24 to 48 hours is cancelled by GitHub. A cancelled run is no failure,
@@ -290,8 +290,8 @@ jobs:
     runs-on: [self-hosted, windows, nvidia]
     timeout-minutes: 156
     concurrency:
-      group: win-vulkan
-      cancel-in-progress: true
+      group: ${{ github.event_name == 'schedule' && 'win-vulkan-nightly' || 'win-vulkan' }}
+      cancel-in-progress: ${{ github.event_name != 'schedule' }}
     env:
       RUSTC_WRAPPER: sccache
       SCCACHE_DIR: E:\ci-cache\sccache

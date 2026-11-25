@@ -78,7 +78,8 @@ jobs:
   test:
     name: test (${{ matrix.shard }}/3)
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # Hosted machines differ twofold in speed: the same shard takes 23 to 60 minutes.
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
