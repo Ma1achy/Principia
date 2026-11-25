@@ -9,15 +9,14 @@ use engine::contract::stain::assembled::{assemble, library, node_source, source_
 use engine::presets;
 
 use super::mock_stain_preview::{check_one_edit, depth, graph, logged, on_stain, select};
-use super::support::{click, click_scope, frame_texts, keys_on, nodes, press, rejects, FORMAT};
+use super::support::{click, click_scope, frame_texts, rejects, FORMAT};
 use crate::app::App;
 use crate::headless::Headless;
-use crate::real::stain::{heading, TIER};
+use crate::real::stain::TIER;
 use crate::real::start;
 use crate::side::{EngineSide, RealSide};
-use crate::stain::{
-    library as drawer, whole, Content, CHOICE_IDS, COMBINERS, GROUP_IDS, PARAM_IDS, ROW_IDS,
-};
+use crate::stain::catalogue::grouped;
+use crate::stain::{library as drawer, Content, CHOICE_IDS, GROUP_IDS, ROW_IDS};
 
 /// The start graph's nodes: the combiner, the source of `state` and the outcome palette.
 const COMBINER: NodeId = NodeId(0);
@@ -76,7 +75,7 @@ fn the_content_is_the_assemblers_and_the_registrys() {
     assert_eq!(g, presets::outcome().expect("the outcome stain"));
     check_content(app.side().stain_content(), &g);
     rejects("a side with no content", || check_content(None, &g));
-    rejects("the mock's placeholder content", || {
+    rejects("the mock's placeholder code", || {
         check_content(Some(crate::mock::stain::content(&g)), &g)
     });
     let other = presets::view("fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.5); }\n")
@@ -85,47 +84,80 @@ fn the_content_is_the_assemblers_and_the_registrys() {
     rejects("the code of another graph", || {
         check_content(frozen, &other)
     });
-    // The fields and the occupants offered are the real ones.
+    // The shaders offered are the registry's, each kind's, the fields before them, by their descriptions' names.
     let c = content(&mut app);
-    assert_eq!(c.fields, source_fields().expect("the fields"));
-    let entries = library().expect("the library");
-    let of = |dir: &str| -> Vec<String> {
-        let mut ids: Vec<String> = entries
+    let offered = |kind: NodeKind| -> Vec<(Occupant, &str)> {
+        c.choices
             .iter()
-            .filter(|e| e.dir() == dir)
-            .map(|e| e.builtin.clone().expect("a built-in"))
-            .collect();
-        ids.sort();
-        ids
+            .filter(|choice| choice.slot == kind)
+            .map(|choice| (choice.occupant.clone(), choice.name))
+            .collect()
     };
-    let mut offered: Vec<&str> = COMBINERS.iter().map(|(id, _)| *id).collect();
-    offered.sort_unstable();
-    assert_eq!(offered, of("combiner"));
+    let fields = source_fields().expect("the fields");
+    let entries = library().expect("the library");
+    for kind in [
+        NodeKind::Source,
+        NodeKind::Colour,
+        NodeKind::Combiner,
+        NodeKind::Post,
+    ] {
+        let mut want: Vec<(Occupant, String)> = Vec::new();
+        if kind == NodeKind::Source {
+            want.extend(
+                fields
+                    .iter()
+                    .map(|f| (Occupant::Field(f.clone()), format!("ctx.{f}"))),
+            );
+        }
+        want.extend(
+            entries
+                .iter()
+                .filter(|e| e.slot == kind && !e.debug)
+                .map(|e| {
+                    (
+                        Occupant::Builtin(e.name.clone()),
+                        e.description.name.clone(),
+                    )
+                }),
+        );
+        assert!(!want.is_empty());
+        let got = offered(kind);
+        assert_eq!(got.len(), want.len());
+        for (g, w) in got.iter().zip(&want) {
+            assert_eq!((&g.0, g.1), (&w.0, w.1.as_str()));
+        }
+    }
     assert_eq!(
-        c.colours.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
-        of("colour")
+        c.loaded.and_then(|k| drawer::row(&c, k)),
+        Some("Outcome palette")
     );
-    assert_eq!(c.loaded, Some("outcome_state"));
 }
 
-/// Asserts that the library in `c` is the registry: each entry one row, its name no other's, in its directory's group;
-/// and every row, group and choice has a scope, so none is dropped.
+/// Asserts that the library in `c` is the registry: each entry one row, by its description's name in its description's
+/// group, no name twice in a group; and every row, group and choice has a scope, so none is dropped.
 fn check_library(c: &Content) {
     let entries = library().expect("the library");
     let rows: Vec<&str> = c.library.iter().flat_map(|g| g.rows).copied().collect();
     assert_eq!(rows.len(), entries.len());
     assert_eq!(c.modes as usize, entries.len());
     assert_eq!(c.graphs.len(), entries.len());
-    let mut unique = rows.clone();
-    unique.sort_unstable();
-    unique.dedup();
-    assert_eq!(unique.len(), rows.len(), "two rows share a name");
+    let groups = grouped(entries);
+    assert_eq!(c.library.len(), groups.len());
     let mut k = 0;
-    for group in c.library {
-        for row in group.rows {
-            let e = &entries[k];
-            assert!(row.starts_with(e.name()), "{row} is not {}", e.id);
-            assert_eq!(group.title, heading(e.dir()), "{}", e.id);
+    for (group, (title, entries)) in c.library.iter().zip(&groups) {
+        assert_eq!(group.title, title);
+        assert_eq!(group.rows.len(), entries.len());
+        let mut unique = group.rows.to_vec();
+        unique.sort_unstable();
+        unique.dedup();
+        assert_eq!(
+            unique.len(),
+            group.rows.len(),
+            "two rows of {title} share a name"
+        );
+        for (row, e) in group.rows.iter().zip(entries) {
+            assert_eq!(*row, e.description.name, "{}", e.id);
+            assert_eq!(*title, e.description.group, "{}", e.id);
             assert_eq!(c.graphs[k], e.graph);
             k += 1;
         }
@@ -137,7 +169,7 @@ fn check_library(c: &Content) {
         "a row or a group with no scope"
     );
     assert!(c.library.len() <= GROUP_IDS.len());
-    assert!(c.fields.len() <= CHOICE_IDS.len());
+    assert!(c.choices.len() <= CHOICE_IDS.len());
 }
 
 #[test]
@@ -148,9 +180,15 @@ fn the_library_is_the_registry_and_none_of_it_is_dropped() {
     let mut short = c.clone();
     short.library = &c.library[1..];
     rejects("a library short of a group", || check_library(&short));
-    rejects("the mock's library", || {
-        check_library(&crate::mock::stain::content(graph(&app)))
+    let mut renamed = c.clone();
+    let mut groups = c.library.to_vec();
+    groups[0].title = "colour";
+    renamed.library = Vec::leak(groups);
+    rejects("a heading taken from the directory", || {
+        check_library(&renamed)
     });
+    // The mock's library is the registry too.
+    check_library(&crate::mock::stain::content(graph(&app)));
 }
 
 /// The outcome palette and every debug colour view load a graph, and no other row does; each assembles at the real
@@ -231,19 +269,21 @@ fn a_library_row_loads_its_whole_graph_and_a_source_takes_a_field() {
     let c = content(&mut app);
     check_content(Some(c.clone()), &loaded);
     assert!(c.code.contains("ctx.sample.d_min"), "{}", c.code);
-    assert_eq!(c.loaded, Some("d_min"));
+    let loaded = |c: &Content| c.loaded.and_then(|k| drawer::row(c, k));
+    assert_eq!(loaded(&c), Some("d_min"));
     rejects("the outcome stain left in place", || {
         check_one_edit((&g0, d0, rows), &app, |g| *g == g0)
     });
     app.undo();
     let _ = h.frame(&mut app, Vec::new());
     assert_eq!(graph(&app), &g0);
-    assert_eq!(content(&mut app).loaded, Some("outcome_state"));
+    assert_eq!(loaded(&content(&mut app)), Some("Outcome palette"));
     // A row with no graph is only selected.
     let d = depth(&app);
-    load(&mut app, &mut h, "multiply");
+    load(&mut app, &mut h, "Multiply");
     assert_eq!((graph(&app), depth(&app)), (&g0, d));
-    assert_eq!(app.stain.library.selected, Some("multiply"));
+    let selected = app.stain.library.selected.expect("a row selected");
+    assert_eq!(drawer::row(&c, selected), Some("Multiply"));
     // A source's field, past the eight choices the mock has.
     select(&mut app, &mut h, SOURCE);
     let k = source_fields()
@@ -356,22 +396,8 @@ fn a_param_edit_assembles_nothing_and_an_occupant_swap_does() {
     let (g0, d0, rows) = (graph(&app).clone(), depth(&app), app.console().len());
     let n0 = app.side().assemblies();
     assert_eq!(n0, 1, "the start graph, once, however many frames drew it");
-    // The palette's swatch set, a whole-number param: a click on its slider's right end sets 1.
-    let slider = app
-        .keyboard
-        .place_of(PARAM_IDS[0])
-        .expect("the swatch set's slider")
-        .rect;
-    let track = nodes(&mut h, &mut app)
-        .into_iter()
-        .find(|n| n.role == eframe::egui::accesskit::Role::Slider)
-        .expect("a slider")
-        .rect;
-    assert!(slider.intersects(track));
-    let at = eframe::egui::pos2(track.min.x + 0.8 * track.width(), track.center().y);
-    for events in crate::capture::click(at) {
-        let _ = h.frame(&mut app, events);
-    }
+    // The palette's swatch set: its second value's button sets 1.
+    click_scope(&mut h, &mut app, "stain_insp_param_0_1");
     let _ = h.frame(&mut app, Vec::new());
     let set = |g: &StainGraph| {
         g.node(PALETTE).and_then(|n| n.params.get("swatch_set")) == Some(&vec![1.0])
@@ -388,7 +414,7 @@ fn a_param_edit_assembles_nothing_and_an_occupant_swap_does() {
         "{:?}",
         logged(&app, rows)
     );
-    click(&mut h, &mut app, "margin");
+    click(&mut h, &mut app, "Margin");
     let _ = h.frame(&mut app, Vec::new());
     assert_eq!(
         graph(&app).node(PALETTE).map(|n| &n.occupant),
@@ -399,29 +425,6 @@ fn a_param_edit_assembles_nothing_and_an_occupant_swap_does() {
     rejects("an occupant swap counted as a param edit", || {
         check_assembled(n1, n2, 0)
     });
-}
-
-/// An arrow on a whole-number param steps it by one: a hundredth of its range is no value of it.
-#[test]
-fn an_arrow_steps_a_whole_number_param() {
-    use eframe::egui::{Key, Modifiers};
-    let (mut app, mut h) = real_stain();
-    select(&mut app, &mut h, PALETTE);
-    let g = graph(&app).clone();
-    assert!(whole(&g, PALETTE, "swatch_set"));
-    assert!(!whole(&g, PALETTE, "bounded"), "a vec3 is not whole");
-    app.view.focus.path = vec!["stain_inspector".into(), PARAM_IDS[0].into()];
-    app.view.focus.mode = engine::contract::view_ui::KeyMode::Interaction;
-    keys_on(&mut h, &mut app);
-    press(&mut h, &mut app, Key::ArrowRight, Modifiers::NONE);
-    let _ = h.frame(&mut app, Vec::new());
-    let value = |app: &App<RealSide>| {
-        graph(app)
-            .node(PALETTE)
-            .and_then(|n| n.params.get("swatch_set").cloned())
-    };
-    assert_eq!(value(&app), Some(vec![1.0]));
-    rejects("a refused step", || assert_eq!(value(&app), None));
 }
 
 /// The start state's stain is the outcome stain, its one colour the outcome palette.

@@ -695,6 +695,7 @@ impl<S: EngineSide> App<S> {
                 &adjust,
                 &self.stain,
                 &self.snapshot.render.stain_graph,
+                content.as_ref(),
                 &mut stain_out,
             );
         }
@@ -1213,6 +1214,7 @@ impl<S: EngineSide> App<S> {
             content,
             preview: self.side.preview().map(|c| (c, self.format)),
             viewport: layout.figure,
+            focus: &self.view.focus.path,
         };
         let mut keys = windows::Keys {
             keyboard: &mut self.keyboard,

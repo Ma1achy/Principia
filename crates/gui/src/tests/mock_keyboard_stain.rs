@@ -147,7 +147,7 @@ fn mock_keyboard_stain_library_rows_and_groups() {
     walk(&mut h, &mut app, 2, 3);
     assert_eq!(focus(&app), ["stain_library", "stain_lib_row_0"]);
     press(&mut h, &mut app, Key::Enter, NONE);
-    assert_eq!(app.stain.library.selected, Some("Total energy E₀"));
+    assert_eq!(app.stain.library.selected, Some(0));
     assert_eq!(app.view.focus.mode, KeyMode::Navigation);
     // Back to the heading: Enter closes the group, its rows leave the walk.
     press(&mut h, &mut app, Key::ArrowLeft, NONE);
@@ -159,7 +159,7 @@ fn mock_keyboard_stain_library_rows_and_groups() {
     // The drawer's disabled buttons are walked but do nothing.
     let rows = app.console().len();
     press(&mut h, &mut app, Key::ArrowDown, NONE);
-    for _ in 0..40 {
+    for _ in 0..140 {
         press(&mut h, &mut app, Key::ArrowRight, NONE);
     }
     assert_eq!(focus(&app), ["stain_library", "stain_lib_export"]);
@@ -174,7 +174,7 @@ fn mock_keyboard_stain_library_rows_and_groups() {
     press(&mut h, &mut app, Key::ArrowRight, NONE);
     assert_eq!(focus(&app), ["stain_library", "stain_lib_collapse"]);
     rejects("a row selected by the heading", || {
-        assert_eq!(app.stain.library.selected, Some("Shape n (unit)"))
+        assert_eq!(app.stain.library.selected, Some(1))
     });
 }
 
@@ -219,7 +219,7 @@ fn mock_keyboard_stain_enter_on_a_node_selects_it() {
     assert!(
         texts
             .iter()
-            .any(|t| t == "Graph canvas › colour · outcome_state"),
+            .any(|t| t == "Graph canvas › colour · Outcome palette"),
         "{texts:?}"
     );
     // The ring is drawn once on the node, its selection outline apart from it.
@@ -285,7 +285,9 @@ fn on_the_fade() -> (App<MockSide>, Headless) {
     walk(&mut h, &mut app, 3, 6);
     press(&mut h, &mut app, Key::Enter, NONE);
     assert_eq!(app.stain.selected(), Some(LATE_FADE));
-    keys(&mut h, &mut app, &[(Key::Tab, NONE), (Key::Enter, NONE)]);
+    // Past its section's heading.
+    let into = [Key::Tab, Key::Enter, Key::ArrowRight].map(|k| (k, NONE));
+    keys(&mut h, &mut app, &into);
     assert_eq!(
         at(&app),
         (
@@ -372,8 +374,8 @@ fn mock_keyboard_stain_choice_and_edit_wgsl() {
     walk(&mut h, &mut app, 3, 7);
     press(&mut h, &mut app, Key::Enter, NONE);
     assert_eq!(app.stain.selected(), Some(COMBINER));
-    walk(&mut h, &mut app, 1, 1);
-    assert_eq!(focus(&app), ["stain_inspector", "stain_insp_choice_1"]);
+    walk(&mut h, &mut app, 1, 2);
+    assert_eq!(focus(&app), ["stain_inspector", "stain_insp_choice_2"]);
     let d = depth(&app);
     press(&mut h, &mut app, Key::Enter, NONE);
     let _ = h.frame(&mut app, Vec::new());
@@ -382,12 +384,10 @@ fn mock_keyboard_stain_choice_and_edit_wgsl() {
         graph(&app).node(COMBINER).unwrap().occupant,
         Occupant::Builtin("replace_l".into())
     );
-    // Past the choices: Edit this node's WGSL, then Revert, disabled.
-    keys(
-        &mut h,
-        &mut app,
-        &[(Key::ArrowRight, NONE), (Key::ArrowRight, NONE)],
-    );
+    // Past the choices and Replace-L's controls: Edit this node's WGSL, then Revert, disabled.
+    for _ in 0..4 {
+        press(&mut h, &mut app, Key::ArrowRight, NONE);
+    }
     assert_eq!(focus(&app), ["stain_inspector", "stain_insp_edit_wgsl"]);
     press(&mut h, &mut app, Key::Enter, NONE);
     assert_eq!(app.stain.view, View::Node);
@@ -455,15 +455,16 @@ fn mock_keyboard_stain_param_step_is_a_share_of_its_range() {
     .expect("a brightness with a gain");
     let mut s = crate::stain::Scratch::default();
     s.canvas.selection = [LATE_FADE].into();
+    let content = crate::mock::stain::content(&g);
     let step = |times: f64| {
         let mut out = crate::stain::Out::default();
         let a = Adjust {
-            scope: crate::stain::PARAM_IDS[0],
+            scope: crate::stain::controls::scope(0),
             kind: StepKind::Bounded,
             times,
             direction: Direction::Right,
         };
-        crate::stain::adjust(&a, &s, &g, &mut out);
+        crate::stain::adjust(&a, &s, &g, Some(&content), &mut out);
         assert_eq!(out.edits.len(), 1, "one SetField");
         match &out.edits[0].edit {
             Edit::Render(RenderField::StainGraph(next)) => {

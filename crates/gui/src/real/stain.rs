@@ -2,126 +2,19 @@
 //! the registry. [`Compiler`] holds the stain as last compiled; a graph that differs from it only in params is the same
 //! code, so it is never assembled again, and one that does not compile leaves the last that did in place.
 
-use std::collections::BTreeMap;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use engine::contract::render_state::StainGraph;
-use engine::contract::stain::assembled::{
-    assemble, library, node_source, source_fields, Assembled, Entry, Tier,
-};
+use engine::contract::stain::assembled::{assemble, Assembled, Tier};
 
 use crate::clock::time::Instant;
-use crate::stain::{intern, Content, Group, COMBINERS};
+use crate::stain::catalogue::{catalogue, key};
+use crate::stain::{described, node_code, Content};
 
 /// The tier the real engine's records are stored at.
 pub const TIER: Tier = engine::field::record::TIER;
-
-/// The stain's tables that no graph changes, built once.
-pub struct Tables {
-    /// The library's groups, the registry's directories.
-    pub groups: Vec<Group>,
-    /// How many entries it holds.
-    pub modes: u32,
-    /// Each row's graph, by its place in the library.
-    pub graphs: Vec<Option<StainGraph>>,
-    /// Each row's name and, where it loads a graph, that graph's fragment key.
-    rows: Vec<(&'static str, Option<u64>)>,
-    /// The fields a source may read.
-    pub fields: Vec<&'static str>,
-    /// A colour node's built-in occupants, each its id and name.
-    pub colours: Vec<(&'static str, &'static str)>,
-    /// Why a table could not be built, for the Problems pane.
-    pub problems: Vec<String>,
-}
-
-/// The heading of the library's directory `dir`.
-pub fn heading(dir: &str) -> String {
-    match dir {
-        "colour" => "Colour".to_owned(),
-        "combiner" => "Combiner".to_owned(),
-        "post" => "Post".to_owned(),
-        "debug" => "Debug · structure".to_owned(),
-        "debug/accumulators" => "Debug · accumulators".to_owned(),
-        "debug/derived" => "Debug · derived".to_owned(),
-        "debug/generated" => "Debug · payload fields".to_owned(),
-        "debug/reductions" => "Debug · vector reductions".to_owned(),
-        "debug/word" => "Debug · word".to_owned(),
-        // A directory joins by being there, as a file does (gui_state_contract §3).
-        other => other.to_owned(),
-    }
-}
-
-/// The library's rows' names, in order: each entry's own, with its directory's last part where two share it.
-fn names(entries: &[Entry]) -> Vec<&'static str> {
-    entries
-        .iter()
-        .map(|e| {
-            let twins = entries.iter().filter(|o| o.name() == e.name()).count();
-            let dir = e.dir().rsplit('/').next().unwrap_or_default();
-            if twins > 1 && dir != "generated" {
-                intern(&format!("{} ({dir})", e.name()))
-            } else {
-                intern(e.name())
-            }
-        })
-        .collect()
-}
-
-/// The [`Tables`], built on first use and kept.
-pub fn tables() -> &'static Tables {
-    static TABLES: OnceLock<Tables> = OnceLock::new();
-    TABLES.get_or_init(|| {
-        let mut problems = Vec::new();
-        let entries = library().unwrap_or_else(|why| {
-            problems.push(format!("the library: {why}"));
-            Vec::new()
-        });
-        let fields = source_fields().unwrap_or_else(|why| {
-            problems.push(format!("the source fields: {why}"));
-            Vec::new()
-        });
-        let names = names(&entries);
-        let mut groups: Vec<(&str, Vec<&'static str>)> = Vec::new();
-        for (e, name) in entries.iter().zip(&names) {
-            match groups.last_mut() {
-                Some((dir, rows)) if *dir == e.dir() => rows.push(name),
-                _ => groups.push((e.dir(), vec![name])),
-            }
-        }
-        Tables {
-            groups: groups
-                .into_iter()
-                .map(|(dir, rows)| Group {
-                    title: intern(&heading(dir)),
-                    // Kept for the session, as the interned names are: the tables are built once.
-                    rows: Vec::leak(rows),
-                })
-                .collect(),
-            modes: u32::try_from(entries.len()).unwrap_or(u32::MAX),
-            rows: entries
-                .iter()
-                .zip(&names)
-                .map(|(e, name)| (*name, e.graph.as_ref().and_then(key)))
-                .collect(),
-            colours: entries
-                .iter()
-                .filter(|e| e.dir() == "colour")
-                .filter_map(|e| e.builtin.as_deref())
-                .map(|id| (intern(id), intern(id)))
-                .collect(),
-            graphs: entries.into_iter().map(|e| e.graph).collect(),
-            fields: fields.iter().map(|f| intern(f)).collect(),
-            problems,
-        }
-    })
-}
-
-/// The fragment key of `g`: what its code is compiled under, its params not in it.
-pub fn key(g: &StainGraph) -> Option<u64> {
-    Some(g.canonical().ok()?.fragment_key())
-}
 
 /// What a compile did.
 #[derive(Clone, Debug, PartialEq)]
@@ -419,10 +312,12 @@ impl Compiler {
 
     /// [`Compiler::content`], made.
     fn made(&self, g: &StainGraph, drawn: &Drawn) -> Content {
-        let tables = tables();
+        let tables = catalogue();
         let wanted = key(g);
         let stale = self.asked.as_ref().is_some_and(|a| a.key != wanted);
         let mut problems = tables.problems.clone();
+        let (described, undescribed) = described(g);
+        problems.extend(undescribed);
         let mut notes = drawn.notes.clone();
         // An error is its graph's own: while one compiles, the last one's are not shown as its.
         let asked = self.asked.as_ref().map(|a| a.key);
@@ -467,31 +362,16 @@ impl Compiler {
         Content {
             library: &tables.groups,
             modes: tables.modes,
-            loaded: wanted
-                .and_then(|k| tables.rows.iter().find(|(_, of)| *of == Some(k)))
-                .map(|(name, _)| *name),
+            loaded: tables.loaded(g),
             code,
             pipeline,
-            node_code: g
-                .nodes()
-                .map(|n| {
-                    let text = match node_source(n.kind, &n.occupant) {
-                        Ok(Some(text)) => text,
-                        Ok(None) => {
-                            "// None: the identity (render_gui_spec Part II §13)\n".to_owned()
-                        }
-                        Err(why) => format!("// {why}\n"),
-                    };
-                    (n.id, text)
-                })
-                .collect::<BTreeMap<_, _>>(),
+            described,
+            node_code: node_code(g),
             compiled,
             compiling,
             problems,
             notes,
-            fields: &tables.fields,
-            combiners: &COMBINERS,
-            colours: &tables.colours,
+            choices: &tables.choices,
             graphs: &tables.graphs,
         }
     }

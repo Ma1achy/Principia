@@ -59,9 +59,8 @@ pub struct Entry {
     /// The slot it is valid in.
     pub slot: NodeKind,
     /// The name a node of its slot names it by (`render::registry::Entry::name`): `outcome_state`,
-    /// `debug/generated/state`. Every entry has one.
-    // The plan is unclear here; kept `builtin: Option` so the editor needs no change until it reads the description.
-    pub builtin: Option<String>,
+    /// `debug/generated/state`.
+    pub name: String,
     /// The whole graph that shows it, where it is a view by itself: what selecting it loads (§11).
     pub graph: Option<StainGraph>,
     /// Its description, from its source: its name and group are the row's and its heading's.
@@ -72,11 +71,6 @@ impl Entry {
     /// Its directory, `debug/generated`.
     pub fn dir(&self) -> &str {
         self.id.rsplit_once('/').map_or("", |(dir, _)| dir)
-    }
-
-    /// Its name in its directory.
-    pub fn name(&self) -> &str {
-        self.id.rsplit_once('/').map_or(&self.id, |(_, name)| name)
     }
 }
 
@@ -107,7 +101,7 @@ pub fn library() -> Result<Vec<Entry>, String> {
                 slot: e.slot.into(),
                 id: e.id,
                 debug,
-                builtin: Some(name),
+                name,
                 graph,
                 description,
             })

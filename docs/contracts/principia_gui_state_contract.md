@@ -301,7 +301,7 @@ declaration is an error, never a silent default.
   (`render::assemble::declare`, whose module documentation is the full grammar; `docs/design/principia_node_sdk.md`):
   `// @name <text>`, `// @group <text>` (the library heading), `// @about <text>` (one line), `// @maps <text>` (what
   the input means and its scale), `// @glyph <glyph>` (`name`, `dropdown`, `swatches ["<control group>"]`, `ramp`,
-  `gradient` or `none`), `// @control <uniform> <control> "<label>" [in "<group>"] [order <n>]` (`slider`,
+  `gradient` or `none`; a swatches glyph whose group a choice names among its values draws the group chosen), `// @control <uniform> <control> "<label>" [in "<group>"] [order <n>]` (`slider`,
   `log_slider`, `stepper`, `toggle`, `choice("a", …)`, `flags("a", …)`, `colour`, `angle`, `gradient(<stop>, …)`,
   `fields` or `hidden`, each fitting its uniform's type) and `// @version <n>` (absent, 1; an older version is read, a
   later one refused with its number). Each is given once, `@control` once per uniform; a malformed line, an unknown
