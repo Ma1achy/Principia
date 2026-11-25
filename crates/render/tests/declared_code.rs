@@ -3,6 +3,10 @@
 //! registry entry in its slot, named by id, every built-in source's field and every field's default ramp in either slot with the
 //! brightness ramp's style post. Run with `PRINCIPIA_BLESS=1` to rewrite the file after a change that is meant to
 //! change code.
+//!
+//! The digests are of each row assembled with nothing dropped (`assemble::assemble_kept`), so the file pins the code
+//! itself; `tests/data/dropped_code.txt` pins, for each row the proof drops something from, the code it assembles to
+//! and what was dropped (`assemble::matters`). A row it drops nothing from assembles to its kept code exactly.
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -14,6 +18,7 @@ use render::registry::{self, ZERO};
 use validation::negative_control;
 
 const FIXTURE: &str = "tests/data/declared_code.txt";
+const DROPPED: &str = "tests/data/dropped_code.txt";
 
 fn node(kind: Kind, occupant: Occupant, inputs: &[Option<usize>]) -> Node {
     Node {
@@ -139,9 +144,15 @@ fn code(source: &str) -> String {
     out
 }
 
-/// Row `name`'s digest lines, `<view> <row>: <digest>`, with `edit` applied to every custom occupant's text.
-fn digest(name: &str, mut g: Vec<Node>, edit: &(dyn Fn(&str) -> String + Sync)) -> String {
+/// Row `name`'s digest lines, `<view> <row>: <digest>`, with `edit` applied to every custom occupant's text: the kept
+/// code's, and, where the proof drops something, the dropped code's with what was dropped.
+fn digest(
+    name: &str,
+    mut g: Vec<Node>,
+    edit: &(dyn Fn(&str) -> String + Sync),
+) -> (String, String) {
     let mut out = String::new();
+    let mut dropped = String::new();
     for n in &mut g {
         if let Occupant::Custom(text) = &n.occupant {
             n.occupant = Occupant::Custom(edit(text));
@@ -149,19 +160,38 @@ fn digest(name: &str, mut g: Vec<Node>, edit: &(dyn Fn(&str) -> String + Sync)) 
     }
     let stain = Stain::new(g).unwrap_or_else(|e| panic!("{name}: {e}"));
     for view in [View::Presentation, View::Debug] {
+        let kept = assemble::assemble_kept(&stain, Tier::FULL, view)
+            .unwrap_or_else(|e| panic!("{name}: {e}"));
         let f = assemble::assemble_view(&stain, Tier::FULL, view)
             .unwrap_or_else(|e| panic!("{name}: {e}"));
-        let _ = writeln!(
-            out,
-            "{view:?} {name}: {:016x}",
-            ledger::version::fnv1a64(code(&f.source).as_bytes())
-        );
+        let hash = |f: &assemble::Fragment| ledger::version::fnv1a64(code(&f.source).as_bytes());
+        let _ = writeln!(out, "{view:?} {name}: {:016x}", hash(&kept));
+        if f.source != kept.source {
+            let d = &f.dropped;
+            let uniforms: Vec<String> = d
+                .uniforms
+                .iter()
+                .map(|(n, u)| format!("{n}.{}", u.name))
+                .collect();
+            let fields: Vec<&String> = kept
+                .fields
+                .iter()
+                .filter(|x| !f.fields.contains(x))
+                .collect();
+            let _ = writeln!(
+                dropped,
+                "{view:?} {name}: {:016x} nodes {:?} inputs {:?} uniforms {uniforms:?} fields {fields:?}",
+                hash(&f),
+                d.nodes,
+                d.inputs
+            );
+        }
     }
-    out
+    (out, dropped)
 }
 
-/// Every row's digest lines, in the rows' order, the rows assembled on every core.
-fn digests(edit: &(dyn Fn(&str) -> String + Sync)) -> String {
+/// Every row's digest lines, in the rows' order, the rows assembled on every core: the kept code's, and the dropped.
+fn digests(edit: &(dyn Fn(&str) -> String + Sync)) -> (String, String) {
     let rows = rows();
     let threads = std::thread::available_parallelism().map_or(1, usize::from);
     let chunk = rows.len().div_ceil(threads).max(1);
@@ -172,26 +202,34 @@ fn digests(edit: &(dyn Fn(&str) -> String + Sync)) -> String {
                 s.spawn(move || {
                     part.iter()
                         .map(|(name, g)| digest(name, g.clone(), edit))
-                        .collect::<String>()
+                        .fold((String::new(), String::new()), |(a, b), (c, d)| {
+                            (a + &c, b + &d)
+                        })
                 })
             })
             .collect();
         handles
             .into_iter()
             .map(|h| h.join().unwrap_or_else(|e| std::panic::resume_unwind(e)))
-            .collect()
+            .fold((String::new(), String::new()), |(a, b), (c, d)| {
+                (a + &c, b + &d)
+            })
     })
 }
 
-fn fixture() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(FIXTURE)
+fn fixture(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(name)
 }
 
 fn check_code(got: &str) {
+    check_file(FIXTURE, got);
+}
+
+fn check_file(file: &str, got: &str) {
     if std::env::var_os("PRINCIPIA_BLESS").is_some() {
-        std::fs::write(fixture(), got).unwrap_or_else(|e| panic!("{e}"));
+        std::fs::write(fixture(file), got).unwrap_or_else(|e| panic!("{e}"));
     }
-    let want = std::fs::read_to_string(fixture()).unwrap_or_else(|e| panic!("{e}"));
+    let want = std::fs::read_to_string(fixture(file)).unwrap_or_else(|e| panic!("{e}"));
     let differ: Vec<&str> = got
         .lines()
         .filter(|l| !want.lines().any(|w| w == *l))
@@ -208,16 +246,16 @@ fn check_code(got: &str) {
 
 #[test]
 fn declared_code_is_unchanged() {
-    check_code(&digests(&|t| t.to_owned()));
+    let (kept, dropped) = digests(&|t| t.to_owned());
+    check_code(&kept);
+    check_file(DROPPED, &dropped);
 }
 
 negative_control!(
     declared_code_is_unchanged,
     "one statement more in every custom occupant changes the code",
     expected = "the assembled code changed",
-    check_code(&digests(&|t| format!(
-        "{t}\nconst DECLARED_CONTROL: f32 = 1.0;\n"
-    )))
+    check_code(&digests(&|t| format!("{t}\nconst DECLARED_CONTROL: f32 = 1.0;\n")).0)
 );
 
 // ── The blanked text is the text as written ───────────────────────────────────────────────────────────────────────

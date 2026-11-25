@@ -2020,7 +2020,12 @@ fn check_uniforms(value: Vec<f64>) {
         wired(Kind::Source, Occupant::Field("d_min".into()), &[]),
         wired(Kind::Brightness, custom(lift), &[Some(0)]),
         wired(Kind::Colour, custom(GAIN_TINT), &[Some(0)]),
-        node(Kind::Combiner, pass_through(), &[Some(2), Some(1)]),
+        // Not the pass-through: it ignores the brightness, so that node and its block would be dropped.
+        node(
+            Kind::Combiner,
+            Occupant::BuiltIn("multiply".into()),
+            &[Some(2), Some(1)],
+        ),
         node(Kind::Out, Occupant::None, &[Some(3)]),
     ];
     let f = assemble::assemble(&stain(&g), Tier::FULL).unwrap_or_else(|e| panic!("{e}"));

@@ -283,3 +283,91 @@ fn controls(declaration: &Declaration, params: &BTreeMap<String, Vec<f64>>) -> V
     out.sort_by_key(|(order, _)| *order);
     out.into_iter().map(|(_, c)| c).collect()
 }
+
+// ── What can matter ───────────────────────────────────────────────────────────────────────────────────────────────
+
+/// Whether a node's control can change its result (`render::assemble::matters`, proved from the node's shader): the
+/// editor dims one that cannot now, and says which setting would let it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Standing {
+    /// The uniform the control edits.
+    pub uniform: String,
+    pub matters: Matters,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Matters {
+    /// It can change the result with the settings as they are.
+    Now,
+    /// It cannot, whatever the settings: the shader never reads it into its result.
+    Never,
+    /// It cannot with the settings as they are; `needs` is a change of one choice or toggle that would let it, where
+    /// there is one.
+    NotNow { needs: Option<Needs> },
+}
+
+/// A choice or toggle set to a value: the control's uniform and label, the value, and its name, the choice's name for
+/// it or "on" / "off".
+#[derive(Clone, Debug, PartialEq)]
+pub struct Needs {
+    pub uniform: String,
+    pub label: String,
+    pub value: f64,
+    pub named: String,
+}
+
+/// Each declared uniform's [`Standing`] in a node of `kind` holding `occupant` with `params`, in declaration order,
+/// for the editor to dim the controls that cannot matter now. The identity has none.
+pub fn standing(
+    kind: NodeKind,
+    occupant: &Occupant,
+    params: &BTreeMap<String, Vec<f64>>,
+) -> Result<Vec<Standing>, GraphError> {
+    let Some(text) = assemble::occupant_source(kind.into(), &occupant.into())? else {
+        return Ok(Vec::new());
+    };
+    let shader = render::assemble::matters::shader(kind.into(), &text)?;
+    let declaration = shader.declaration();
+    let value = |u: &render::assemble::Uniform| {
+        params
+            .get(&u.name)
+            .cloned()
+            .unwrap_or_else(|| u.default.clone())
+    };
+    let needs = |s: render::assemble::matters::Setting| {
+        let line = declaration
+            .described
+            .controls
+            .iter()
+            .find(|l| l.uniform == s.uniform);
+        let named = match line.map(|l| &l.control) {
+            Some(Control::Choice(names)) => {
+                names.get(s.value as usize).cloned().unwrap_or_default()
+            }
+            _ if s.value == 0.0 => "off".to_owned(),
+            _ => "on".to_owned(),
+        };
+        Needs {
+            label: line.map_or_else(|| s.uniform.clone(), |l| l.label.clone()),
+            uniform: s.uniform,
+            value: s.value,
+            named,
+        }
+    };
+    use render::assemble::matters::Standing as S;
+    Ok(declaration
+        .uniforms
+        .iter()
+        .zip(shader.standing(&value))
+        .map(|(u, s)| Standing {
+            uniform: u.name.clone(),
+            matters: match s {
+                S::Matters => Matters::Now,
+                S::Never => Matters::Never,
+                S::NotNow { needs: n } => Matters::NotNow {
+                    needs: n.map(needs),
+                },
+            },
+        })
+        .collect())
+}
