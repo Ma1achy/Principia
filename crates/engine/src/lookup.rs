@@ -130,7 +130,7 @@ where
 /// from the extent). The engine's own copy of the norm, so a decision the engine makes in it (a re-held end's hold,
 /// `path::anchor::rehold`) needs no caller to pass it; `validation::roundtrip::phys` is this function.
 pub fn phys(x: &Ic<f64>, x_prime: &Ic<f64>) -> f64 {
-    let norm = |v: [f64; 2]| v[0].hypot(v[1]);
+    let norm = |v: [f64; 2]| libm::hypot(v[0], v[1]);
     let extent = |v: &[[f64; 2]; 3]| v.iter().map(|&w| norm(w)).fold(1.0f64, f64::max);
     let (r_x, p_x) = (extent(&x.r), extent(&x.p));
     let mut worst = 0.0f64;

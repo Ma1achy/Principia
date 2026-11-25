@@ -5,6 +5,10 @@
 //! `disallowed-methods` entry, which would be lint configuration (R-197).
 //!
 //! - `transcendental_pin`: the evaluator's source holds no stray transcendental; its control plants a `Float::sin`.
+//! - `platform_maths`: the production crates (engine, render, gui, prin, ledger) and the kernel's integrator layers
+//!   hold no platform maths call (`f64::sin`, `x.exp2()`, `Float::ln`) outside `KEPT`, each kept one with why: the rest
+//!   take the pinned libm, `engine::exact` or `kernel::Real`'s. Its control plants an `exp2` in the manifold view;
+//!   `platform_maths_scan` holds the scan's cases.
 //! - `transcendental_pin_scan`: the scan's own cases: what it flags (a `Float::`, `f64::`, `R::` or `libm::` path, a
 //!   method call, a function named as a value) and what it passes (comments, strings, char literals, `sqrt`, the
 //!   `Real` methods, a longer name, a field); its control is a scan that reads comments as code.
@@ -358,4 +362,498 @@ negative_control!(
     "a scan that reads comments as code",
     expected = "scan of",
     check_scan(false)
+);
+
+// ── The production crates ────────────────────────────────────────────────────────────────────────────────────────
+
+/// The production crates outside the kernel, scanned by [`platform_maths`]: their `src`, test code left out; with them
+/// the kernel's integrator layers ([`OUTSIDE`]).
+const PRODUCTION: [&str; 5] = ["engine", "render", "gui", "prin", "ledger"];
+
+/// Each platform maths call the production crates may keep, by file and token, how many, and why: each feeds no decoded
+/// state, no edit and no stored record, or is not maths. Every other call is the pinned libm's (`libm::`), the
+/// engine's correctly rounded `engine::exact`, or `kernel::Real`'s.
+const KEPT: &[(&str, &str, usize, &str)] = &[
+    (
+        "engine/src/contract/store.rs",
+        "log",
+        1,
+        "the store's logging method, not maths",
+    ),
+    (
+        "gui/src/side.rs",
+        "log",
+        1,
+        "the store's logging method, not maths",
+    ),
+    (
+        "gui/src/stain/controls.rs",
+        "cos",
+        1,
+        "draws the angle control's dial hand",
+    ),
+    (
+        "gui/src/stain/controls.rs",
+        "sin",
+        1,
+        "draws the angle control's dial hand",
+    ),
+    (
+        "gui/src/explore/compass.rs",
+        "atan2",
+        1,
+        "orders the slice polygon's corners for drawing",
+    ),
+    (
+        "gui/src/explore/compass.rs",
+        "hypot",
+        2,
+        "places an axis label on screen",
+    ),
+    (
+        "gui/src/explore/compass.rs",
+        "sin",
+        2,
+        "the axes' angle in the dead-zone readout text",
+    ),
+    (
+        "gui/src/explore/compass.rs",
+        "acos",
+        1,
+        "the axes' angle in the dead-zone readout text",
+    ),
+    (
+        "gui/src/explore/compass.rs",
+        "powf",
+        1,
+        "the compass drawing's easing per frame",
+    ),
+    (
+        "gui/src/explore/trajectory.rs",
+        "exp2",
+        6,
+        "the trajectory plot's on-screen zoom",
+    ),
+    (
+        "gui/src/explore/trajectory.rs",
+        "sin",
+        3,
+        "the trajectory plot's 3-D projection, drawn",
+    ),
+    (
+        "gui/src/explore/trajectory.rs",
+        "cos",
+        2,
+        "the trajectory plot's 3-D projection, drawn",
+    ),
+    (
+        "gui/src/explore/trajectory.rs",
+        "sin_cos",
+        2,
+        "the trajectory plot's camera, drawn",
+    ),
+    (
+        "gui/src/explore/axis_labels.rs",
+        "log10",
+        1,
+        "an axis label's decimals",
+    ),
+    (
+        "gui/src/windows/profiler.rs",
+        "sin",
+        1,
+        "the profiler's pie, drawn",
+    ),
+    (
+        "gui/src/windows/profiler.rs",
+        "cos",
+        1,
+        "the profiler's pie, drawn",
+    ),
+    (
+        "gui/src/windows/profiler.rs",
+        "ln_1p",
+        2,
+        "the profiler's histogram bars, drawn",
+    ),
+    (
+        "gui/src/windows/inspector.rs",
+        "sin_cos",
+        1,
+        "the inspector's gauge-turned display",
+    ),
+    (
+        "gui/src/windows/inspector.rs",
+        "exp",
+        2,
+        "the inspector's mass readout",
+    ),
+    (
+        "gui/src/windows/chart_builder.rs",
+        "sin",
+        2,
+        "the chart builder's drawn shape and its hit test",
+    ),
+    ("gui/src/bench.rs", "ln", 1, "the benchmark's statistics"),
+    ("gui/src/bench.rs", "exp", 1, "the benchmark's statistics"),
+    (
+        "render/src/presets/roundtrip.rs",
+        "hypot",
+        1,
+        "a preset's pixel colour",
+    ),
+    (
+        "render/src/presets/roundtrip.rs",
+        "log2",
+        1,
+        "a preset's pixel colour",
+    ),
+    (
+        "render/src/presets/agreement.rs",
+        "log2",
+        1,
+        "a preset's pixel colour",
+    ),
+    (
+        "render/src/colour/field_ramp.rs",
+        "ln",
+        2,
+        "a pixel colour's compaction, the GPU ramp's CPU twin",
+    ),
+    (
+        "render/src/colour/space.rs",
+        "powf",
+        3,
+        "sRGB's transfer curve, a pixel colour",
+    ),
+    (
+        "render/src/colour/space.rs",
+        "cbrt",
+        1,
+        "OKLab's cube root, a pixel colour",
+    ),
+    (
+        "render/src/colour/space.rs",
+        "atan2",
+        2,
+        "OKLCh's hue, a pixel colour",
+    ),
+    (
+        "render/src/colour/space.rs",
+        "cos",
+        2,
+        "OKLCh's hue, a pixel colour",
+    ),
+    (
+        "render/src/colour/space.rs",
+        "sin",
+        2,
+        "OKLCh's hue, a pixel colour",
+    ),
+    (
+        "render/src/present.rs",
+        "ln",
+        2,
+        "a pixel colour's compaction",
+    ),
+    (
+        "ledger/src/gen/numeric.rs",
+        "ln",
+        1,
+        "the colour compaction's CPU twin, a pixel colour",
+    ),
+    (
+        "ledger/src/links/admissible.rs",
+        "exp",
+        3,
+        "`Fl`'s methods, the pinned libm's at each width",
+    ),
+    (
+        "ledger/src/links/admissible.rs",
+        "ln",
+        3,
+        "`Fl`'s methods, the pinned libm's at each width",
+    ),
+    (
+        "ledger/src/links/admissible.rs",
+        "ln_1p",
+        1,
+        "`Fl`'s methods, the pinned libm's at each width",
+    ),
+    (
+        "ledger/src/links/admissible.rs",
+        "exp_m1",
+        1,
+        "`Fl`'s methods, the pinned libm's at each width",
+    ),
+    (
+        "ledger/src/links/admissible.rs",
+        "tanh",
+        1,
+        "`Fl`'s methods, the pinned libm's at each width",
+    ),
+    (
+        "ledger/src/links/admissible.rs",
+        "atanh",
+        1,
+        "`Fl`'s methods, the pinned libm's at each width",
+    ),
+    (
+        "ledger/src/links/admissible.rs",
+        "cosh",
+        1,
+        "`Fl`'s methods, the pinned libm's at each width",
+    ),
+];
+
+/// `code`, `src` blanked, with each item under `#[cfg(test)]` or `#[cfg(feature = "controls")]` blanked too: from the attribute
+/// to the item's closing brace, or its `;` where that comes first.
+fn without_tests(src: &str, code: &mut [u8]) {
+    for attr in ["#[cfg(test)]", "#[cfg(feature = \"controls\")]"] {
+        let mut from = 0;
+        while let Some(n) = src[from..].find(attr) {
+            let start = from + n;
+            // A match inside a comment or a string is blanked in `code`: not an attribute.
+            if code[start] != b'#' {
+                from = start + attr.len();
+                continue;
+            }
+            let rest = &code[start + attr.len()..];
+            let brace = rest.iter().position(|&c| c == b'{');
+            let semi = rest.iter().position(|&c| c == b';');
+            let end = match (brace, semi) {
+                (Some(b), Some(s)) if s < b => start + attr.len() + s,
+                (Some(b), _) => {
+                    let open = start + attr.len() + b;
+                    let mut depth = 0;
+                    let mut end = open;
+                    for (k, &c) in code[open..].iter().enumerate() {
+                        depth += i32::from(c == b'{') - i32::from(c == b'}');
+                        if depth == 0 {
+                            end = open + k;
+                            break;
+                        }
+                    }
+                    end
+                }
+                (None, Some(s)) => start + attr.len() + s,
+                (None, None) => code.len() - 1,
+            };
+            for c in &mut code[start..=end] {
+                if *c != b'\n' {
+                    *c = b' ';
+                }
+            }
+            from = end + 1;
+        }
+    }
+}
+
+/// Each platform maths call in `src`, a production file, as `(line, token)`: a transcendental's name as a method call or
+/// on a float's path (`f64::sin`, `Float::ln`, `<f32>::cos`); a `libm::` or `engine::exact::` path is pinned, and a
+/// module's path (`crate::log`) is not a call.
+fn platform_calls(src: &str) -> Vec<(usize, String)> {
+    let mut code = blank(src, true);
+    without_tests(src, &mut code);
+    let line = |at: usize| 1 + code[..at].iter().filter(|&&c| c == b'\n').count();
+    let mut found = Vec::new();
+    let mut i = 0;
+    while i < code.len() {
+        let start = i;
+        if !(code[i].is_ascii_alphabetic() || code[i] == b'_') || ident(&code, i) {
+            i += 1;
+            continue;
+        }
+        while i < code.len() && (code[i].is_ascii_alphanumeric() || code[i] == b'_') {
+            i += 1;
+        }
+        let word = std::str::from_utf8(&code[start..i]).expect("an ASCII identifier");
+        let float_path = [b"f32::".as_slice(), b"f64::", b"Float::", b">::"]
+            .iter()
+            .any(|p| start >= p.len() && &code[start - p.len()..start] == *p);
+        let after_dot =
+            start >= 1 && code[start - 1] == b'.' && !(start >= 2 && code[start - 2] == b'.');
+        let called = code[i..].iter().find(|c| !c.is_ascii_whitespace()) == Some(&b'(');
+        // `pow` is no float method (f64's are `powf` and `powi`): `.pow(` is an integer's, exact.
+        let method = after_dot && called && word != "pow";
+        if NAMES.contains(&word) && (float_path || method) {
+            found.push((line(start), word.to_owned()));
+        }
+    }
+    found
+}
+
+/// The production crates' source files, test files left out (a `tests` directory or a `tests.rs`), each labelled
+/// `<crate>/src/<path>`.
+fn production_sources() -> Vec<(String, String)> {
+    let crates = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+    let mut files = Vec::new();
+    for name in PRODUCTION {
+        let root = crates.join(name).join("src");
+        let mut stack = vec![root.clone()];
+        while let Some(dir) = stack.pop() {
+            for entry in fs::read_dir(&dir).expect("a source directory") {
+                let path = entry.expect("a directory entry").path();
+                let rel = path
+                    .strip_prefix(&root)
+                    .expect("below src")
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                let test_file = rel.split('/').any(|s| s == "tests" || s == "tests.rs");
+                // The mock side's placeholder content, behind `--features mock`'s start, decodes no real state.
+                let test_file = test_file || (name == "gui" && rel.starts_with("mock"));
+                if path.is_dir() && !test_file {
+                    stack.push(path);
+                } else if rel.ends_with(".rs") && !test_file {
+                    let text = fs::read_to_string(&path).expect("a source file");
+                    files.push((format!("{name}/src/{rel}"), text));
+                }
+            }
+        }
+    }
+    // The kernel's integrator layers, which `transcendental_pin` leaves out: they write the stored records.
+    let kernel = crates.join("kernel").join("src");
+    for layer in OUTSIDE {
+        let mut stack = vec![kernel.join(layer)];
+        while let Some(dir) = stack.pop() {
+            for entry in fs::read_dir(&dir).expect("a source directory") {
+                let path = entry.expect("a directory entry").path();
+                let rel = path
+                    .strip_prefix(&kernel)
+                    .expect("below src")
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                if path.is_dir() {
+                    stack.push(path);
+                } else if rel.ends_with(".rs") {
+                    files.push((
+                        format!("kernel/src/{rel}"),
+                        fs::read_to_string(&path).expect("a source file"),
+                    ));
+                }
+            }
+        }
+    }
+    files.sort();
+    files
+}
+
+/// Panics naming every platform maths call in `files` past [`KEPT`]'s count for its file and token, and every kept
+/// entry no longer there in full.
+fn check_production(files: &[(String, String)]) {
+    use std::collections::BTreeMap;
+    assert!(
+        files
+            .iter()
+            .any(|(l, _)| l == "gui/src/explore/manifold_view/mod.rs"),
+        "the scan reads the GUI's manifold view"
+    );
+    assert!(
+        files
+            .iter()
+            .any(|(l, _)| l == "kernel/src/driver/benettin.rs"),
+        "the scan reads the kernel's integrator layers"
+    );
+    let mut counts: BTreeMap<(String, String), Vec<usize>> = BTreeMap::new();
+    for (label, src) in files {
+        for (line, token) in platform_calls(src) {
+            counts.entry((label.clone(), token)).or_default().push(line);
+        }
+    }
+    let mut new = Vec::new();
+    for ((label, token), lines) in &counts {
+        let kept = KEPT
+            .iter()
+            .find(|k| k.0 == label && k.1 == token)
+            .map_or(0, |k| k.2);
+        if lines.len() > kept {
+            new.push(format!("{label}:{lines:?}: {token} ({} kept)", kept));
+        }
+    }
+    assert!(
+        new.is_empty(),
+        "a platform maths call in production code: {}; take `libm::`, `engine::exact` or `kernel::Real`'s, or keep it \
+         in KEPT with why",
+        new.join(", ")
+    );
+    let gone: Vec<String> = KEPT
+        .iter()
+        .filter(|k| {
+            counts
+                .get(&(k.0.to_owned(), k.1.to_owned()))
+                .map_or(0, Vec::len)
+                < k.2
+        })
+        .map(|k| format!("{} {}", k.0, k.1))
+        .collect();
+    assert!(
+        gone.is_empty(),
+        "KEPT lists calls no longer there: {}",
+        gone.join(", ")
+    );
+}
+
+#[test]
+fn platform_maths() {
+    check_production(&production_sources());
+}
+
+negative_control!(
+    platform_maths,
+    "a planted `f64::exp2` in the manifold view",
+    expected = "a platform maths call in production code",
+    {
+        let mut files = production_sources();
+        let view = files
+            .iter_mut()
+            .find(|(l, _)| l == "gui/src/explore/manifold_view/mod.rs")
+            .expect("the manifold view");
+        view.1
+            .push_str("\nfn planted(z: f64) -> f64 {\n    z.exp2()\n}\n");
+        check_production(&files)
+    }
+);
+
+/// The production scan's own cases: what it flags and what it passes, by `scan`.
+fn check_production_scan(scan: fn(&str) -> Vec<(usize, String)>) {
+    let cases: &[(&str, &[&str])] = &[
+        ("let y = x.exp2();", &["exp2"]),
+        ("let y = f64::hypot(a, b);", &["hypot"]),
+        (
+            "let y = libm::hypot(a, b) + engine::exact::atan2(a, b);",
+            &[],
+        ),
+        ("let (s, c) = exact::sin_cos(t);", &[]),
+        (
+            "#[cfg(test)]\nmod tests {\n    fn f(x: f64) -> f64 { x.sin() }\n}\nlet y = x.cos();",
+            &["cos"],
+        ),
+        (
+            "#[cfg(feature = \"controls\")]\nfn f(x: f64) -> f64 { x.sin() }",
+            &[],
+        ),
+        ("#[cfg(test)]\nmod tests;\nlet y = x.tanh();", &["tanh"]),
+    ];
+    for &(src, want) in cases {
+        let got: Vec<String> = scan(src).into_iter().map(|(_, t)| t).collect();
+        assert_eq!(got, want, "production scan of `{src}`");
+    }
+}
+
+#[test]
+fn platform_maths_scan() {
+    check_production_scan(platform_calls);
+}
+
+negative_control!(
+    platform_maths_scan,
+    "a scan that reads test code as production code",
+    expected = "production scan of",
+    check_production_scan(|src| {
+        let mut out = platform_calls(src);
+        if src.contains("#[cfg(") {
+            out.insert(0, (1, "sin".to_owned()));
+        }
+        out
+    })
 );

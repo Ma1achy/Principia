@@ -8,6 +8,8 @@
 //!   under the generated header, each chart's section, the descriptor's and the free decode's present in
 //!   `decode.wgsl`. Control: a snippet one byte off is
 //!   found. It reads `target/spirv/kernel.spv`, so `cargo xtask build-kernel` runs first, as CI runs it.
+//! - `fragment_wgsl_lift_sections_share_no_function`: two sections lifted from a body that calls a helper, under two
+//!   prefixes, name no function alike, so one module holds both, as ROUNDTRIP's does. Control: helpers left unnamed.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -165,4 +167,48 @@ negative_control!(
         "struct W { w: array<u32, 2> }\n@group(0) @binding(0) var<storage, read_write> a: W;",
         "a.w[0] = a.w[1];",
     )
+);
+
+/// The functions `wgsl` defines, by name.
+fn functions(wgsl: &str) -> Vec<String> {
+    naga::front::wgsl::parse_str(wgsl)
+        .unwrap_or_else(|e| panic!("a lifted section does not parse: {e}\n{wgsl}"))
+        .functions
+        .iter()
+        .filter_map(|(_, f)| f.name.clone())
+        .collect()
+}
+
+/// Two sections, `a` and `b`, lifted from a body that calls a helper, `rename` their output, and are placed in one
+/// module: no function name is in both, and the module parses.
+fn check_sections(rename: impl Fn(String) -> String) {
+    let m = naga::front::wgsl::parse_str(
+        "struct W { w: array<u32, 2> }\n@group(0) @binding(0) var<storage, read_write> words: W;\n\
+         fn helper(x: u32) -> u32 { return x + 1u; }\n\
+         fn body() { words.w[1] = helper(words.w[0]); }\n\
+         @compute @workgroup_size(1) fn e() { body(); }\n",
+    )
+    .unwrap();
+    let a = rename(xtask::fragment_wgsl::lift(&m, "e", "a").expect("section a lifts"));
+    let b = rename(xtask::fragment_wgsl::lift(&m, "e", "b").expect("section b lifts"));
+    let (fa, fb) = (functions(&a), functions(&b));
+    assert!(fa.len() >= 2, "section a lost its helper: {fa:?}");
+    let shared: Vec<_> = fa.iter().filter(|n| fb.contains(n)).collect();
+    assert!(
+        shared.is_empty(),
+        "two sections share a function name: {shared:?}"
+    );
+    naga::front::wgsl::parse_str(&format!("{a}\n{b}")).expect("two sections in one module");
+}
+
+#[test]
+fn fragment_wgsl_lift_sections_share_no_function() {
+    check_sections(|s| s);
+}
+
+negative_control!(
+    fragment_wgsl_lift_sections_share_no_function,
+    "each section's helper given one shared name",
+    expected = "two sections share a function name",
+    check_sections(|s| s.replace("a_f0", "function_").replace("b_f0", "function_"))
 );

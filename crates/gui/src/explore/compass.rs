@@ -1025,11 +1025,11 @@ pub fn components(q1: &Latent, q2: &Latent) -> [String; 2] {
 /// The total tip `m = √(τ₁² + τ₂²)` of `(τ₁, τ₂)` in degrees and the angles the rotation is made with, wrapped in total
 /// tip past 180°, `τ·(m − 360)/m`: `(m, τ₁, τ₂)` of the wrapped angles.
 pub fn wrapped(tau1: f64, tau2: f64) -> (f64, f64, f64) {
-    let m = tau1.hypot(tau2);
+    let m = engine::exact::hypot(tau1, tau2);
     if m > 180.0 {
         let k = (m - 360.0) / m;
         let (t1, t2) = (tau1 * k, tau2 * k);
-        (t1.hypot(t2), t1, t2)
+        (engine::exact::hypot(t1, t2), t1, t2)
     } else {
         (m, tau1, tau2)
     }
@@ -1332,7 +1332,7 @@ pub fn reading(view: &View) -> Reading {
 /// at least [`MIN_NORMAL_ON_SCREEN`]`·S` long, else vertically, `+1` where `n·(1, 1, 1) > 0`, else `−1`.
 pub fn reading_of(n: P3) -> Reading {
     let [x, y] = normal_on_screen(n);
-    let len = x.hypot(y);
+    let len = engine::exact::hypot(x, y);
     if len < MIN_NORMAL_ON_SCREEN {
         let facing = dot3(n, VIEW_DIR) > 0.0;
         Reading::Vertical(if facing { 1.0 } else { -1.0 })

@@ -252,7 +252,7 @@ impl Expr {
             Expr::Mul(a, b) => a.eval(registry, ic)? * b.eval(registry, ic)?,
             Expr::Div(a, b) => a.eval(registry, ic)? / b.eval(registry, ic)?,
             Expr::Neg(a) => -a.eval(registry, ic)?,
-            Expr::Exp(a) => a.eval(registry, ic)?.exp(),
+            Expr::Exp(a) => libm::exp(a.eval(registry, ic)?),
         })
     }
 }
@@ -341,7 +341,7 @@ fn beta(ic: &Ic<f64>) -> f64 {
 
 /// `‖v‖`.
 fn norm(v: [f64; 2]) -> f64 {
-    v[0].hypot(v[1])
+    libm::hypot(v[0], v[1])
 }
 
 /// The unweighted Jacobi vectors `ρ = r₁ − r₀`, `λ = r₂ − r₀₁`.
@@ -373,12 +373,12 @@ fn shape(ic: &Ic<f64>) -> [f64; 3] {
 /// The shape sphere's azimuth `θ` in the home frame (the module's note).
 fn shape_theta(ic: &Ic<f64>) -> f64 {
     let n = shape(ic);
-    n[2].atan2(n[1]).rem_euclid(TAU)
+    libm::atan2(n[2], n[1]).rem_euclid(TAU)
 }
 
 /// The shape sphere's polar angle `φ` in the home frame.
 fn shape_phi(ic: &Ic<f64>) -> f64 {
-    shape(ic)[0].clamp(-1.0, 1.0).acos()
+    libm::acos(shape(ic)[0].clamp(-1.0, 1.0))
 }
 
 /// `m₁/m₀`.
@@ -595,7 +595,7 @@ fn set_jacobi_ratio(ic: &Ic<f64>, x: f64) -> Option<Ic<f64>> {
     let mu_rho = m0 * m1 / (m0 + m1);
     let mu_lambda = m2 * (m0 + m1);
     (x > 0.0).then_some(())?;
-    set_alpha(ic, (x * (mu_lambda / mu_rho).sqrt()).atan())
+    set_alpha(ic, libm::atan(x * (mu_lambda / mu_rho).sqrt()))
 }
 
 /// `ic` at the masses `m`, the configuration and momentum controls held; `None` where the mass link does not reach

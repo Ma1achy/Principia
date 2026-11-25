@@ -95,6 +95,10 @@ pub use ledger::constants::{
     STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_EDGE_MAX, STEP_REVERSAL_TOL,
 };
 
+/// `ε_phys`, the round trip's tolerance, whose quarter bounds the kernel's f32 `cos` near `π/2` relative to its value,
+/// for the kernel crate's tests, as `r_pole` is.
+pub use ledger::constants::EPS_PHYS;
+
 /// The Burrau `ν = 1/2` tolerance (REQ-VAL-118, proposed) and the Euclid plane's defaults (chart_reference §4.5;
 /// TASK-M2-10), for the kernel crate's tests, as `r_pole` is.
 pub use ledger::constants::{

@@ -105,8 +105,12 @@ impl Sphere {
         let sin_phi = sq.sqrt();
         let at_pole = sq == 0.0;
         Self {
-            theta: if at_pole { 0.0 } else { n[1].atan2(n[0]) },
-            phi: sin_phi.atan2(n[2]),
+            theta: if at_pole {
+                0.0
+            } else {
+                libm::atan2(n[1], n[0])
+            },
+            phi: libm::atan2(sin_phi, n[2]),
             theta_dot: if at_pole {
                 0.0
             } else {

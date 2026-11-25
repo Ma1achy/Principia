@@ -26,6 +26,7 @@
 use kernel::chart::shape_sphere::{exponential, sinc_f32, sinc_of};
 use kernel::chart::{ShapeMap, ShapeSphere};
 use kernel::generated::constants::{SINC_CUT2_F32, SINC_SERIES_F32};
+use kernel::Real;
 use validation::{negative_control, SINC_BOUND, SINC_CUT};
 
 /// WGSL's absolute bound on `sin`, `2⁻¹¹` (R-696's "near 0"; the register's `sinc_cut` note).
@@ -129,7 +130,7 @@ fn wide_cut(r: f32, z: f32) -> f32 {
     if z < 1.0 {
         series(z)
     } else {
-        r.sin() / r
+        Real::sine(r) / r
     }
 }
 
@@ -364,14 +365,14 @@ negative_control!(
 );
 
 /// R-696's `k`, written from the ruling: 1 at `r = 0`, the series below the cut on `z`, `r²` by its `fma` chain, and the
-/// backend's `sin r/r` from it up.
+/// kernel's `sin r/r` from it up.
 fn form_k(r: f32, z: f32) -> f32 {
     if r == 0.0 {
         1.0
     } else if z < SINC_CUT2_F32 {
         series(z)
     } else {
-        r.sin() / r
+        Real::sine(r) / r
     }
 }
 
@@ -388,7 +389,7 @@ fn check_point(k_of: Form) {
         let d = [0, 1, 2].map(|i| a * e1[i] + b * e2[i]);
         let r = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
         let z = d[2].mul_add(d[2], d[1].mul_add(d[1], d[0] * d[0]));
-        let (c, k) = (r.cos(), k_of(r, z));
+        let (c, k) = (Real::cosine(r), k_of(r, z));
         let want = [0, 1, 2].map(|i| c * n0[i] + k * d[i]);
         let got = sphere(n0, e1, e2, s).point(u, v);
         assert_eq!(
@@ -411,5 +412,5 @@ negative_control!(
     qa_exponential_sinc_f32_point,
     "the line before R-696 must differ from the f32 point in a bit",
     expected = "is not cos(r)·n₀ + k·d",
-    check_point(|r, _| if r == 0.0 { 1.0 } else { r.sin() / r })
+    check_point(|r, _| if r == 0.0 { 1.0 } else { Real::sine(r) / r })
 );

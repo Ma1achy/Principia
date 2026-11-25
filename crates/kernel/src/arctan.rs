@@ -86,9 +86,29 @@ impl Words {
     }
 }
 
-/// `a·b`, all 64 bits, from the four products of the operands' 16-bit halves, each exact in a word.
+/// `a·b`, all 64 bits: on the GPU from the four products of the operands' 16-bit halves, each exact in a word (WGSL has
+/// no u64); on the host one u64 product, the same bits, faster.
+#[cfg(not(target_arch = "spirv"))]
 #[inline]
 pub fn mul(a: u32, b: u32) -> Words {
+    let p = u64::from(a) * u64::from(b);
+    Words {
+        hi: (p >> 32) as u32,
+        lo: p as u32,
+    }
+}
+
+/// `a·b`, all 64 bits, on the GPU: [`mul_halves`].
+#[cfg(target_arch = "spirv")]
+#[inline]
+pub fn mul(a: u32, b: u32) -> Words {
+    mul_halves(a, b)
+}
+
+/// `a·b`, all 64 bits, from the four products of the operands' 16-bit halves, each exact in a word (WGSL has no u64): the
+/// GPU's [`mul`], built on the host too so `crates/kernel/tests/arctan_parts.rs` holds it to the u64 product.
+#[inline]
+pub fn mul_halves(a: u32, b: u32) -> Words {
     let (a1, a0) = (a >> 16, a & 0xFFFF);
     let (b1, b0) = (b >> 16, b & 0xFFFF);
     let (p00, p01, p10, p11) = (a0 * b0, a0 * b1, a1 * b0, a1 * b1);

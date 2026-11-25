@@ -368,7 +368,7 @@ impl Canvas {
     /// [`ZOOM_MIN`, `ZOOM_MAX`].
     pub fn scroll(&mut self, origin: Pos2, at: Pos2, dy: f32) {
         let old = self.view.zoom;
-        let new = (old * (dy * ZOOM_PER_POINT).exp()).clamp(ZOOM_MIN, ZOOM_MAX);
+        let new = (old * libm::expf(dy * ZOOM_PER_POINT)).clamp(ZOOM_MIN, ZOOM_MAX);
         let from = at - origin;
         self.view.pan = from - (from - self.view.pan) * (new / old);
         self.view.zoom = new;

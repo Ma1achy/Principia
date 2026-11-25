@@ -32,13 +32,17 @@
 //! `sin` and `cos`. No platform maths library, compiler intrinsic or architecture-specific instruction computes them,
 //! so the f64 evaluation, and every record narrowed from it, has the same bits on every machine (the Mac, Linux,
 //! Windows and the wasm build). `sqrt` is not among them: IEEE 754 requires it correctly rounded, so every platform gives
-//! the same bits ([`RealOps::square_root`]). At f32, the GPU's precision, each is `num_traits::Float`'s, unchanged, but
-//! for [`Real::arctan2`] and [`Real::sinc`], the kernel's own. `crates/kernel/tests/transcendental_pin.rs` fails on a
-//! `Float::` or inherent transcendental anywhere in the evaluator's source outside this file's `Real` items.
+//! the same bits ([`RealOps::square_root`]). At f32, [`Real::sine`], [`Real::cosine`] and [`Real::sine_cosine`] are the
+//! kernel's own on every target, host and GPU ([`crate::trig`]), as [`Real::arctan2`] and [`Real::sinc`] are; on the
+//! host every other f32 transcendental is the pinned libm's f32 function (`expf`, `tanhf`, `logf`, …), and on the GPU
+//! the backend's builtin, unchanged. `crates/kernel/tests/transcendental_pin.rs` fails on a `Float::` or inherent
+//! transcendental anywhere in the evaluator's source outside this file's `Real` items, and on a platform maths call in
+//! the production crates.
 //!
-//! Two features, off in every build but the measurement's (`cargo xtask measure libm-pin`, R-991), change the f64 path:
-//! `measure-std-maths` puts it back on `num_traits::Float`, the platform's library, the path before the pin, and
-//! `measure-perturb-sin` moves [`Real::sine`]'s result one ulp up, the measurement's control.
+//! Two features, off in every build but the measurement's (`cargo xtask measure libm-pin`), change the host
+//! path: `measure-std-maths` puts it back on `num_traits::Float`, the platform's library (the
+//! f32 sine and cosine stay the kernel's own), and `measure-perturb-sin` moves [`Real::sine`]'s f64 result one ulp up,
+//! the measurement's control.
 
 use core::fmt::Debug;
 use core::ops::{Add, Div, Mul, Neg, Sub};
@@ -124,7 +128,8 @@ pub trait Real:
         (self.sine(), self.cosine())
     }
 
-    /// `sin(self)`. `Float::sin` by default; at f64 on the host libm's `sin`, pinned (the module's note).
+    /// `sin(self)`. `Float::sin` by default; at f64 on the host libm's `sin`, pinned; at f32 the kernel's own (the
+    /// module's note).
     #[inline]
     fn sine(self) -> Self
     where
@@ -133,7 +138,8 @@ pub trait Real:
         Float::sin(self)
     }
 
-    /// `cos(self)`. `Float::cos` by default; at f64 on the host libm's `cos`, pinned (the module's note).
+    /// `cos(self)`. `Float::cos` by default; at f64 on the host libm's `cos`, pinned; at f32 the kernel's own (the
+    /// module's note).
     #[inline]
     fn cosine(self) -> Self
     where
@@ -276,6 +282,9 @@ pub trait Real:
     }
 }
 
+/// The f32 path: the kernel's own `atan2`, `sinc`, reduction, sine and cosine on every target; on the host each other
+/// transcendental the pinned libm's f32 function, gated off the SPIR-V target, where the backend's builtin stays, and
+/// off under `measure-std-maths` (the module's note).
 impl Real for f32 {
     const NAME: &'static str = "f32";
 
@@ -292,6 +301,111 @@ impl Real for f32 {
     #[inline]
     fn on_circle(self) -> f32 {
         crate::circle::on_circle_f32(self)
+    }
+
+    #[inline]
+    fn sine(self) -> f32 {
+        crate::trig::sin_cos_f32(self).0
+    }
+
+    #[inline]
+    fn cosine(self) -> f32 {
+        crate::trig::sin_cos_f32(self).1
+    }
+
+    #[inline]
+    fn sine_cosine(self) -> (f32, f32) {
+        crate::trig::sin_cos_f32(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn arctangent2(self, x: f32) -> f32 {
+        libm::atan2f(self, x)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn tangent(self) -> f32 {
+        libm::tanf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn arcsine(self) -> f32 {
+        libm::asinf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn arccosine(self) -> f32 {
+        libm::acosf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn exponential(self) -> f32 {
+        libm::expf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn exp_minus_one(self) -> f32 {
+        libm::expm1f(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn logarithm(self) -> f32 {
+        libm::logf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn ln_one_plus(self) -> f32 {
+        libm::log1pf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn cube_root(self) -> f32 {
+        libm::cbrtf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn hyperbolic_sine(self) -> f32 {
+        libm::sinhf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn hyperbolic_cosine(self) -> f32 {
+        libm::coshf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn hyperbolic_tangent(self) -> f32 {
+        libm::tanhf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn arctanh(self) -> f32 {
+        libm::atanhf(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn power(self, x: f32) -> f32 {
+        libm::powf(self, x)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn hypotenuse(self, x: f32) -> f32 {
+        libm::hypotf(self, x)
     }
 }
 

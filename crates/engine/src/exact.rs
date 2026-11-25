@@ -321,8 +321,49 @@ fn atan_fix(t: &Fix) -> Fix {
     }
 }
 
-/// `eˣ`, correctly rounded for `|x| ≤ 708`.
-pub fn exp(x: f64) -> f64 {
+/// A per-thread direct-mapped memo of one function's results, keyed by its arguments' bits. The functions here cost
+/// microseconds a call, more in a debug build, and the GUI's view searches call them on the same few arguments millions
+/// of times; a pure function's memo returns the same bits. Don't drop it: the view tests run fifty times longer.
+struct Memo<K, V> {
+    slots: Vec<Option<(K, V)>>,
+}
+
+/// The memo's slots, `2^memo_bits()`: a table's size, not a number of the physics, so it is not a register constant.
+fn memo_bits() -> u32 {
+    12
+}
+
+impl<K: Copy + PartialEq, V: Copy> Memo<K, V> {
+    fn new() -> Self {
+        Self {
+            slots: vec![None; 1 << memo_bits()],
+        }
+    }
+
+    fn get_or(&mut self, key: K, hash: u64, f: impl FnOnce() -> V) -> V {
+        let i = (hash.wrapping_mul(0x9E37_79B9_7F4A_7C15) >> (64 - memo_bits())) as usize;
+        match self.slots[i] {
+            Some((k, v)) if k == key => v,
+            _ => {
+                let v = f();
+                self.slots[i] = Some((key, v));
+                v
+            }
+        }
+    }
+}
+
+/// `f`'s result at `key`, through the memo `memo` (a thread-local).
+fn memoised<K: Copy + PartialEq + 'static, V: Copy + 'static>(
+    memo: &'static std::thread::LocalKey<std::cell::RefCell<Memo<K, V>>>,
+    key: K,
+    hash: u64,
+    f: impl FnOnce() -> V,
+) -> V {
+    memo.with(|m| m.borrow_mut().get_or(key, hash, f))
+}
+
+fn exp_uncached(x: f64) -> f64 {
     if x.abs() < TINY {
         return 1.0;
     }
@@ -333,8 +374,16 @@ pub fn exp(x: f64) -> f64 {
     round(false, &v, k).unwrap_or_else(|| libm::exp(x))
 }
 
-/// `2ˣ`, correctly rounded for `|x| ≤ 1021`.
-pub fn exp2(x: f64) -> f64 {
+/// `eˣ`, correctly rounded for `|x| ≤ 708`.
+pub fn exp(x: f64) -> f64 {
+    thread_local! {
+        static MEMO: std::cell::RefCell<Memo<u64, f64>> = std::cell::RefCell::new(Memo::new());
+    }
+    let key = x.to_bits();
+    memoised(&MEMO, key, key, || exp_uncached(x))
+}
+
+fn exp2_uncached(x: f64) -> f64 {
     if x.abs() < TINY {
         return 1.0;
     }
@@ -353,8 +402,16 @@ pub fn exp2(x: f64) -> f64 {
     round(false, &exp_series(&mul(&part, &constants().ln2)), k).unwrap_or_else(|| libm::exp2(x))
 }
 
-/// `ln x`, correctly rounded for a normal `x > 0`.
-pub fn ln(x: f64) -> f64 {
+/// `2ˣ`, correctly rounded for `|x| ≤ 1021`.
+pub fn exp2(x: f64) -> f64 {
+    thread_local! {
+        static MEMO: std::cell::RefCell<Memo<u64, f64>> = std::cell::RefCell::new(Memo::new());
+    }
+    let key = x.to_bits();
+    memoised(&MEMO, key, key, || exp2_uncached(x))
+}
+
+fn ln_uncached(x: f64) -> f64 {
     if !(x.is_normal() && x > 0.0) || x == 1.0 {
         return libm::log(x);
     }
@@ -362,8 +419,40 @@ pub fn ln(x: f64) -> f64 {
     round(negative, &v, 0).unwrap_or_else(|| libm::log(x))
 }
 
-/// `xʸ`, correctly rounded for a normal `x > 0`, `ε² < |y| < 2²⁰` and a result within `e^±708`.
-pub fn pow(x: f64, y: f64) -> f64 {
+/// `ln x`, correctly rounded for a normal `x > 0`.
+pub fn ln(x: f64) -> f64 {
+    thread_local! {
+        static MEMO: std::cell::RefCell<Memo<u64, f64>> = std::cell::RefCell::new(Memo::new());
+    }
+    let key = x.to_bits();
+    memoised(&MEMO, key, key, || ln_uncached(x))
+}
+
+fn log2_uncached(x: f64) -> f64 {
+    if !(x.is_normal() && x > 0.0) || x == 1.0 {
+        return libm::log2(x);
+    }
+    let k = ((x.to_bits() >> 52) & 0x7ff) as i64 - 1023;
+    let m = f64::from_bits((x.to_bits() & ((1 << 52) - 1)) | 0x3ff0_0000_0000_0000);
+    let fraction = if m == 1.0 {
+        [0; 6]
+    } else {
+        div(&ln_fix(m).1, &constants().ln2)
+    };
+    let (negative, v) = plus((k < 0, fix(k.unsigned_abs(), 0)), (false, fraction));
+    round(negative, &v, 0).unwrap_or_else(|| libm::log2(x))
+}
+/// `log₂ x`, correctly rounded for a normal `x > 0`: `x = m·2ᵏ`, `m ∈ [1, 2)`, and `k + ln m / ln 2` in fixed point,
+/// rounded once (the quotient below 1, as [`div`] needs).
+pub fn log2(x: f64) -> f64 {
+    thread_local! {
+        static MEMO: std::cell::RefCell<Memo<u64, f64>> = std::cell::RefCell::new(Memo::new());
+    }
+    let key = x.to_bits();
+    memoised(&MEMO, key, key, || log2_uncached(x))
+}
+
+fn pow_uncached(x: f64, y: f64) -> f64 {
     let y_held = y.abs() > TINY && y.abs() < 1_048_576.0;
     if !(x.is_normal() && x > 0.0) || x == 1.0 || !y_held {
         return libm::pow(x, y);
@@ -377,8 +466,18 @@ pub fn pow(x: f64, y: f64) -> f64 {
     round(false, &v, k).unwrap_or_else(|| libm::pow(x, y))
 }
 
-/// `√(x² + y²)`, correctly rounded for a normal result and normal or zero `x` and `y`.
-pub fn hypot(x: f64, y: f64) -> f64 {
+/// `xʸ`, correctly rounded for a normal `x > 0`, `ε² < |y| < 2²⁰` and a result within `e^±708`.
+pub fn pow(x: f64, y: f64) -> f64 {
+    thread_local! {
+        static MEMO: std::cell::RefCell<Memo<(u64, u64), f64>> = std::cell::RefCell::new(Memo::new());
+    }
+    let key = (x.to_bits(), y.to_bits());
+    memoised(&MEMO, key, key.0 ^ key.1.rotate_left(29), || {
+        pow_uncached(x, y)
+    })
+}
+
+fn hypot_uncached(x: f64, y: f64) -> f64 {
     let held = |v: f64| v.is_normal() || v == 0.0;
     if !held(x) || !held(y) {
         return libm::hypot(x, y);
@@ -424,8 +523,18 @@ pub fn hypot(x: f64, y: f64) -> f64 {
     f64::from_bits(((e + 1023) as u64) << 52 | (m & ((1 << 52) - 1)))
 }
 
-/// `atan2(y, x)`, correctly rounded for normal `x` and `y` within a factor `2⁶⁰` of each other.
-pub fn atan2(y: f64, x: f64) -> f64 {
+/// `√(x² + y²)`, correctly rounded for a normal result and normal or zero `x` and `y`.
+pub fn hypot(x: f64, y: f64) -> f64 {
+    thread_local! {
+        static MEMO: std::cell::RefCell<Memo<(u64, u64), f64>> = std::cell::RefCell::new(Memo::new());
+    }
+    let key = (x.to_bits(), y.to_bits());
+    memoised(&MEMO, key, key.0 ^ key.1.rotate_left(29), || {
+        hypot_uncached(x, y)
+    })
+}
+
+fn atan2_uncached(y: f64, x: f64) -> f64 {
     if !x.is_normal() || !y.is_normal() {
         return libm::atan2(y, x);
     }
@@ -446,8 +555,18 @@ pub fn atan2(y: f64, x: f64) -> f64 {
     round(y < 0.0, &v, 0).unwrap_or_else(|| libm::atan2(y, x))
 }
 
-/// `(sin x, cos x)`, each correctly rounded for `|x| < 2²⁰`.
-pub fn sin_cos(x: f64) -> (f64, f64) {
+/// `atan2(y, x)`, correctly rounded for normal `x` and `y` within a factor `2⁶⁰` of each other.
+pub fn atan2(y: f64, x: f64) -> f64 {
+    thread_local! {
+        static MEMO: std::cell::RefCell<Memo<(u64, u64), f64>> = std::cell::RefCell::new(Memo::new());
+    }
+    let key = (y.to_bits(), x.to_bits());
+    memoised(&MEMO, key, key.0 ^ key.1.rotate_left(29), || {
+        atan2_uncached(y, x)
+    })
+}
+
+fn sin_cos_uncached(x: f64) -> (f64, f64) {
     if x.abs() < 1.0 / 134_217_728.0 {
         return (x, 1.0);
     }
@@ -460,6 +579,15 @@ pub fn sin_cos(x: f64) -> (f64, f64) {
     let sin = round((x < 0.0) != (q >= 2), &s, 0).unwrap_or_else(|| libm::sin(x));
     let cos = round(q == 1 || q == 2, &c, 0).unwrap_or_else(|| libm::cos(x));
     (sin, cos)
+}
+
+/// `(sin x, cos x)`, each correctly rounded for `|x| < 2²⁰`.
+pub fn sin_cos(x: f64) -> (f64, f64) {
+    thread_local! {
+        static MEMO: std::cell::RefCell<Memo<u64, (f64, f64)>> = std::cell::RefCell::new(Memo::new());
+    }
+    let key = x.to_bits();
+    memoised(&MEMO, key, key, || sin_cos_uncached(x))
 }
 
 /// `sin x`, as [`sin_cos`]'s.
@@ -481,8 +609,9 @@ pub fn cbrt(x: f64) -> f64 {
 mod tests {
     use super::*;
 
-    /// `function x y exact`, as bits: mpmath at 600 bits rounded to the nearest f64, for 400 seeded draws a function,
-    /// every call the curve tilt makes at the `ν` curve's centre, exact results, ties and reduction points.
+    /// `function x y exact`, as bits: mpmath at 600 bits rounded to the nearest f64 (`log2`'s: Python's `decimal` at 120
+    /// digits), for 400 seeded draws a function, every call the curve tilt makes at the `ν` curve's centre, exact results,
+    /// ties and reduction points.
     const CASES: &str = include_str!("exact_cases.txt");
 
     /// The functions, so a control can put another in a slot.
@@ -506,6 +635,7 @@ mod tests {
                 "exp" => (m.exp)(x),
                 "exp2" => exp2(x),
                 "ln" => ln(x),
+                "log2" => log2(x),
                 "pow" => pow(x, y),
                 "hypot" => (m.hypot)(x, y),
                 "atan2" => atan2(x, y),
@@ -543,6 +673,54 @@ mod tests {
             exp: libm::exp,
             ..EXACT
         })
+    );
+
+    /// Panics unless `get`, a memo's lookup, gives `exp2`'s own bits at every key: 20 000 keys sharing the 4096 slots,
+    /// each read twice.
+    fn check_memo(mut get: impl FnMut(f64) -> f64) {
+        let mut s = 0x2545_F491_4F6C_DD1Du64;
+        let keys: Vec<f64> = (0..20_000)
+            .map(|_| {
+                s ^= s << 13;
+                s ^= s >> 7;
+                s ^= s << 17;
+                (s >> 11) as f64 / (1u64 << 53) as f64 * 6.0 - 3.0
+            })
+            .collect();
+        for &x in keys.iter().chain(&keys) {
+            assert!(
+                get(x).to_bits() == exp2_uncached(x).to_bits(),
+                "the memo's value is not the function's at {x}"
+            );
+        }
+    }
+
+    /// **The criterion**: the memo gives the function's own bits. The control's memo reads a slot whatever key it holds.
+    #[test]
+    fn exact_memo_is_the_function() {
+        let mut m = Memo::new();
+        check_memo(|x| m.get_or(x.to_bits(), x.to_bits(), || exp2_uncached(x)));
+    }
+
+    validation::negative_control!(
+        exact_memo_is_the_function,
+        "a memo that reads a slot whatever key it holds",
+        expected = "the memo's value is not the function's",
+        {
+            let mut m: Memo<u64, f64> = Memo::new();
+            check_memo(|x| {
+                let i = (x.to_bits().wrapping_mul(0x9E37_79B9_7F4A_7C15) >> (64 - memo_bits()))
+                    as usize;
+                match m.slots[i] {
+                    Some((_, v)) => v,
+                    None => {
+                        let v = exp2_uncached(x);
+                        m.slots[i] = Some((x.to_bits(), v));
+                        v
+                    }
+                }
+            })
+        }
     );
 
     /// Panics unless the edges are as the module's note says.

@@ -2,17 +2,15 @@
 
 **Domain.** Decode's and canon's branch outcomes on fixed inputs, read per backend, on tier (a), the GPU explorer: a measurement (R-649), blocking nothing, no tolerance or threshold in it. **It does not answer the trajectory question:** these are fixed inputs through two stages and the GPU runs no march yet, so a clean table says nothing about collision or escape decisions along a trajectory, or about whether the missing `NoContraction` matters for the real kernel (TASK-M4-28 does that). The claim is for identical inputs only (PIT-10).
 
-Inputs: 236346, hash `455b67f16ebf9adb`.
-
-*14 Nov 2026 (TASK-M2-57; R-865, R-898):* this comparison is over the inputs as they stood before TASK-M2-57, hash `455b67f16ebf9adb`. Its `mirror` rows measure `C`'s mirror step, which TASK-M2-57 removes: the branch and its slot are gone from the kernel, and the inputs, written again by `--write-inputs` (236346, hash `a3df41959cf8e53d`), no longer hold them; the representatives' `z_β` now reads through `periodic_beta`. The rows are kept as the record of what was measured. A comparison over the new inputs needs each backend's own run on its hardware (Metal, lavapipe, NVIDIA), so it is not rewritten here.
+Inputs: 236346, hash `f6074cbdd8265014`.
 
 ## Records
 
 | backend | commit | adapter | driver | fast math | hardware label |
 |---|---|---|---|---|---|
-| Metal | 4c32b1b4a19291d5e7cf3982d31934d32a054ca2 | adapter: Apple M3 Pro \| backend: Metal \| driver: macOS 27.0.1 (26A434): the adapter reports no driver, so its OS build stands in | macOS 27.0.1 (26A434): the adapter reports no driver, so its OS build stands in | setting off; compute compiled off | none |
-| lavapipe | 4c32b1b4a19291d5e7cf3982d31934d32a054ca2 | adapter: llvmpipe (LLVM 20.1.2, 256 bits) \| backend: Vulkan \| driver: llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2) | llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2) | setting off; compute compiled off | none |
-| CPU f32 | 4c32b1b4a19291d5e7cf3982d31934d32a054ca2 | CPU f32: the kernel source, native (rustc), on x86_64-linux | not a driver | setting off; no shader | none |
+| Metal | 96c1487405cf0e2dc5900491ef7681beb109d33a | adapter: Apple M3 Pro \| backend: Metal \| driver: macOS 27.0.1 (26A434): the adapter reports no driver, so its OS build stands in | macOS 27.0.1 (26A434): the adapter reports no driver, so its OS build stands in | setting off; compute compiled off | none |
+| lavapipe | 96c1487405cf0e2dc5900491ef7681beb109d33a | adapter: llvmpipe (LLVM 20.1.2, 256 bits) \| backend: Vulkan \| driver: llvmpipe Mesa 25.2.8-0ubuntu0.24.04.5 (LLVM 20.1.2) | llvmpipe Mesa 25.2.8-0ubuntu0.24.04.5 (LLVM 20.1.2) | setting off; compute compiled off | none |
+| CPU f32 | 96c1487405cf0e2dc5900491ef7681beb109d33a | CPU f32: the kernel source, native (rustc), on x86_64-linux | not a driver | setting off; no shader | none |
 
 ## Disagreement rate, per backend pair
 
@@ -23,31 +21,35 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 | NVIDIA Vulkan / Metal | not run | not run | | | | | | | not run |
 | NVIDIA Vulkan / lavapipe | not run | not run | | | | | | | not run |
 | NVIDIA Vulkan / CPU f32 | not run | not run | | | | | | | not run |
-| Metal / lavapipe | 609 of 236346 | 2.577e-3 | 214288 | 975 | 0 | 0 | 91 | 0 | UNEXPLAINED |
-| Metal / CPU f32 | 5034 of 236346 | 2.130e-2 | 243292 | 17 | 0 | 0 | 111 | 0 | UNEXPLAINED |
-| lavapipe / CPU f32 | 5032 of 236346 | 2.129e-2 | 106638 | 1355 | 0 | 0 | 42 | 0 | UNEXPLAINED |
+| Metal / lavapipe | 602 of 236346 | 2.547e-3 | 67308 | 67 | 0 | 0 | 90 | 0 | UNEXPLAINED |
+| Metal / CPU f32 | 5006 of 236346 | 2.118e-2 | 100882 | 67 | 0 | 0 | 105 | 0 | UNEXPLAINED |
+| lavapipe / CPU f32 | 5049 of 236346 | 2.136e-2 | 80377 | 0 | 0 | 0 | 67 | 0 | UNEXPLAINED |
 
 ## The inputs that disagreed
 
-### Metal / lavapipe: 609 of 236346
+### Metal / lavapipe: 602 of 236346
 
 - stage_decode_latent_defaults defaults batch 5 point 0
+- stage_decode_latent_defaults defaults batch 16 point 0
+- stage_decode_latent_defaults defaults batch 17 point 0
 - stage_decode_latent_defaults defaults batch 30 point 0
-- stage_decode_latent_defaults defaults batch 40 point 0
-- stage_decode_latent_defaults defaults batch 41 point 0
-- stage_decode_latent_defaults defaults batch 53 point 0
-- stage_decode_latent_defaults defaults batch 54 point 0
+- stage_decode_latent_defaults defaults batch 37 point 0
+- stage_decode_latent_defaults defaults batch 44 point 0
+- stage_decode_latent_defaults defaults batch 52 point 0
+- stage_decode_latent_defaults defaults batch 55 point 0
+- stage_decode_latent_defaults defaults batch 57 point 0
 - stage_decode_latent_defaults defaults batch 65 point 0
 - stage_decode_latent_defaults defaults batch 67 point 0
-- stage_decode_latent_defaults defaults batch 68 point 0
 - stage_decode_latent_defaults defaults batch 69 point 0
+- stage_decode_latent_defaults defaults batch 77 point 0
 - stage_decode_latent_defaults defaults batch 78 point 0
 - stage_decode_latent_defaults defaults batch 82 point 0
+- stage_decode_latent_defaults defaults batch 89 point 0
+- stage_decode_latent_defaults defaults batch 90 point 0
 - stage_decode_latent_defaults defaults batch 93 point 0
+- stage_decode_latent_defaults defaults batch 94 point 0
 - stage_decode_latent_defaults defaults batch 102 point 0
-- stage_decode_latent_defaults defaults batch 104 point 0
-- stage_decode_latent_defaults defaults batch 106 point 0
-- stage_decode_latent_defaults defaults batch 109 point 0
+- stage_decode_latent_defaults defaults batch 116 point 0
 - stage_decode_latent_defaults defaults batch 118 point 0
 - stage_decode_latent_defaults defaults batch 122 point 0
 - stage_decode_mass_simplex_defaults fuzz batch 260 point 0
@@ -72,20 +74,21 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_euclid_plane_defaults fuzz batch 301 point 0
 - stage_decode_euclid_plane_defaults fuzz batch 302 point 0
 - stage_decode_euclid_plane_defaults fuzz batch 304 point 0
+- stage_decode_burrau_theta_delta_m_defaults fuzz batch 336 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 337 point 0
-- stage_decode_burrau_theta_delta_m_defaults fuzz batch 338 point 0
+- stage_decode_burrau_theta_delta_m_defaults fuzz batch 340 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 341 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 342 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 343 point 0
+- stage_decode_burrau_theta_delta_m_defaults fuzz batch 344 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 345 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 346 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 347 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 348 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 349 point 0
-- stage_decode_burrau_theta_delta_m_defaults fuzz batch 350 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 351 point 0
-- stage_decode_burrau_theta_delta_m_defaults fuzz batch 352 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 353 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 360 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 361 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 362 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 363 point 0
@@ -93,21 +96,14 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_shape_sphere_defaults fuzz batch 365 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 366 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 367 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 374 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 380 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 387 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 388 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 378 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 389 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 390 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 391 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 392 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 393 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 394 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 395 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 401 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 403 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 404 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 406 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 408 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 409 point 0
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 5
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 29
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 42
@@ -121,7 +117,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 334
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 335
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 349
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 355
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 354
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 409
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 483
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 498
@@ -253,7 +249,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4362
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4363
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4364
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4370
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4371
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4436
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4513
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4655
@@ -288,7 +284,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 5973
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6036
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6037
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6098
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6099
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6170
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6171
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6193
@@ -335,7 +331,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7899
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7934
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7935
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8066
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8067
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8076
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8077
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8168
@@ -628,52 +624,44 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_shape_sphere_defaults #393 batch 420 point 0
 - stage_decode_shape_sphere_defaults #393 batch 420 point 33
 - stage_decode_shape_sphere_defaults #393 batch 420 point 34
-- stage_decode_shape_sphere_defaults #393 batch 421 point 4
 - stage_decode_shape_sphere_defaults #393 batch 421 point 9
-- stage_decode_shape_sphere_defaults #393 batch 421 point 12
 - stage_decode_shape_sphere_defaults #393 batch 421 point 13
-- stage_decode_shape_sphere_defaults #393 batch 421 point 16
 - stage_decode_shape_sphere_defaults #393 batch 421 point 17
-- stage_decode_shape_sphere_defaults #393 batch 421 point 20
-- stage_decode_shape_sphere_defaults #393 batch 421 point 32
-- stage_decode_shape_sphere_defaults #393 batch 421 point 36
 - stage_decode_shape_sphere_defaults #393 batch 422 point 1
+- stage_decode_shape_sphere_defaults #393 batch 422 point 5
 - stage_decode_shape_sphere_defaults #393 batch 422 point 25
 - stage_decode_shape_sphere_defaults #393 batch 422 point 29
 
-### Metal / CPU f32: 5034 of 236346
+### Metal / CPU f32: 5006 of 236346
 
 - stage_decode_latent_defaults defaults batch 5 point 0
 - stage_decode_latent_defaults defaults batch 11 point 0
-- stage_decode_latent_defaults defaults batch 14 point 0
-- stage_decode_latent_defaults defaults batch 24 point 0
+- stage_decode_latent_defaults defaults batch 15 point 0
+- stage_decode_latent_defaults defaults batch 16 point 0
 - stage_decode_latent_defaults defaults batch 26 point 0
 - stage_decode_latent_defaults defaults batch 28 point 0
 - stage_decode_latent_defaults defaults batch 30 point 0
-- stage_decode_latent_defaults defaults batch 37 point 0
-- stage_decode_latent_defaults defaults batch 40 point 0
 - stage_decode_latent_defaults defaults batch 41 point 0
 - stage_decode_latent_defaults defaults batch 43 point 0
+- stage_decode_latent_defaults defaults batch 44 point 0
 - stage_decode_latent_defaults defaults batch 50 point 0
 - stage_decode_latent_defaults defaults batch 52 point 0
 - stage_decode_latent_defaults defaults batch 53 point 0
 - stage_decode_latent_defaults defaults batch 56 point 0
-- stage_decode_latent_defaults defaults batch 57 point 0
 - stage_decode_latent_defaults defaults batch 64 point 0
 - stage_decode_latent_defaults defaults batch 65 point 0
 - stage_decode_latent_defaults defaults batch 66 point 0
-- stage_decode_latent_defaults defaults batch 68 point 0
 - stage_decode_latent_defaults defaults batch 70 point 0
+- stage_decode_latent_defaults defaults batch 77 point 0
 - stage_decode_latent_defaults defaults batch 78 point 0
-- stage_decode_latent_defaults defaults batch 81 point 0
+- stage_decode_latent_defaults defaults batch 83 point 0
 - stage_decode_latent_defaults defaults batch 89 point 0
 - stage_decode_latent_defaults defaults batch 90 point 0
-- stage_decode_latent_defaults defaults batch 91 point 0
-- stage_decode_latent_defaults defaults batch 105 point 0
-- stage_decode_latent_defaults defaults batch 107 point 0
-- stage_decode_latent_defaults defaults batch 109 point 0
+- stage_decode_latent_defaults defaults batch 93 point 0
 - stage_decode_latent_defaults defaults batch 115 point 0
+- stage_decode_latent_defaults defaults batch 116 point 0
 - stage_decode_latent_defaults defaults batch 117 point 0
+- stage_decode_latent_defaults defaults batch 118 point 0
 - stage_decode_latent_defaults defaults batch 119 point 0
 - stage_decode_latent_defaults defaults batch 120 point 0
 - stage_decode_latent_defaults defaults batch 121 point 0
@@ -702,20 +690,19 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_euclid_plane_defaults fuzz batch 301 point 0
 - stage_decode_euclid_plane_defaults fuzz batch 302 point 0
 - stage_decode_euclid_plane_defaults fuzz batch 304 point 0
+- stage_decode_burrau_theta_delta_m_defaults fuzz batch 336 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 337 point 0
-- stage_decode_burrau_theta_delta_m_defaults fuzz batch 338 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 340 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 341 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 342 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 343 point 0
+- stage_decode_burrau_theta_delta_m_defaults fuzz batch 344 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 345 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 346 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 347 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 348 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 349 point 0
-- stage_decode_burrau_theta_delta_m_defaults fuzz batch 350 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 351 point 0
-- stage_decode_burrau_theta_delta_m_defaults fuzz batch 352 point 0
 - stage_decode_burrau_theta_delta_m_defaults fuzz batch 353 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 359 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 360 point 0
@@ -726,8 +713,14 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_shape_sphere_defaults fuzz batch 365 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 366 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 367 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 373 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 374 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 375 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 376 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 377 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 379 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 380 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 381 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 387 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 388 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 389 point 0
@@ -737,10 +730,15 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_shape_sphere_defaults fuzz batch 393 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 394 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 395 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 402 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 403 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 404 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 405 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 406 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 407 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 408 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 409 point 0
+- stage_decode_shape_sphere_defaults n₀ = ±1 poles batch 415 point 0
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 1
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 5
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 18
@@ -750,13 +748,14 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 38
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 41
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 43
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 45
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 52
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 59
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 68
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 70
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 82
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 84
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 93
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 103
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 107
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 108
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 125
@@ -812,12 +811,11 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 345
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 351
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 353
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 355
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 359
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 360
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 363
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 373
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 376
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 378
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 386
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 389
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 395
@@ -837,6 +835,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 460
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 469
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 471
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 488
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 498
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 503
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 505
@@ -1130,7 +1129,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2135
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2141
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2147
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2148
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2162
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2168
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2171
@@ -1169,7 +1167,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2345
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2355
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2362
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2365
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2367
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2369
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2377
@@ -1236,7 +1233,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2680
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2683
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2685
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2690
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2695
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2697
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2703
@@ -1353,7 +1349,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3355
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3356
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3369
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3371
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3387
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3391
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3393
@@ -1364,7 +1359,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3432
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3447
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3449
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3455
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3459
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3463
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3465
@@ -1382,7 +1376,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3506
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3513
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3517
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3521
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3530
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3537
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3542
@@ -1429,6 +1422,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3805
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3819
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3820
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3826
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3829
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3831
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3833
@@ -1459,7 +1453,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3967
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3975
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3977
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3978
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3980
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3986
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3993
@@ -1475,7 +1468,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4027
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4028
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4048
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4053
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4058
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4061
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4077
@@ -1533,11 +1525,11 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4362
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4364
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4368
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4370
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4373
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4375
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4382
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4387
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4389
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4390
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4399
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4400
@@ -1551,6 +1543,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4450
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4453
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4455
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4463
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4468
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4471
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4478
@@ -1834,7 +1827,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6082
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6089
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6095
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6098
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6105
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6106
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6109
@@ -1842,18 +1834,15 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6121
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6125
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6133
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6137
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6138
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6141
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6143
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6153
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6163
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6164
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6169
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6170
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6232
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6234
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6244
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6247
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6270
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6272
@@ -1882,7 +1871,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6406
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6409
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6414
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6419
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6422
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6428
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6431
@@ -1891,6 +1879,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6448
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6454
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6457
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6463
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6466
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6472
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6478
@@ -1910,14 +1899,12 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6546
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6550
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6554
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6565
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6590
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6594
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6598
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6601
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6603
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6607
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6614
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6618
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6621
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6623
@@ -1926,6 +1913,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6639
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6642
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6647
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6652
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6655
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6660
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6663
@@ -1937,6 +1925,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6696
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6702
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6711
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6712
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6715
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6717
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6721
@@ -1961,6 +1950,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6834
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6839
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6840
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6879
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6893
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6896
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6903
@@ -1983,6 +1973,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6990
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7003
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7005
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7011
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7013
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7015
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7017
@@ -2047,6 +2038,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7372
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7377
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7379
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7388
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7393
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7395
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7404
@@ -2090,7 +2082,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7585
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7587
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7593
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7594
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7595
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7608
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7617
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7619
@@ -2171,7 +2163,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8057
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8061
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8065
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8066
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8072
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8076
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8081
@@ -2230,7 +2221,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8381
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8385
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8386
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8399
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8401
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8404
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8415
@@ -2249,6 +2239,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8478
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8482
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8486
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8497
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8507
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8517
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8521
@@ -2271,7 +2262,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8579
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8583
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8585
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8589
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8595
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8616
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8622
@@ -2307,6 +2297,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8783
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8795
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8809
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8814
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8819
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8821
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8826
@@ -2319,6 +2310,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8863
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8865
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8870
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8877
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8883
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8885
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8890
@@ -2380,7 +2372,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9211
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9214
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9223
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9227
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9230
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9239
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9246
@@ -2418,7 +2409,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9408
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9415
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9419
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9423
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9426
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9437
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9445
@@ -2433,11 +2423,14 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9491
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9494
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9503
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9505
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9506
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9517
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9525
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9526
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9537
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9538
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9545
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9546
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9557
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9558
@@ -2462,6 +2455,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9680
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9689
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9690
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9701
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9703
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9711
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9712
@@ -2682,7 +2676,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10923
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10924
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10926
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10945
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10953
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10955
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10957
@@ -2757,7 +2750,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11337
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11338
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11340
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11353
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11365
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11375
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11377
@@ -2772,7 +2764,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11412
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11414
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11439
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11449
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11451
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11453
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11455
@@ -2804,7 +2795,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11583
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11584
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11599
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11611
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11613
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11615
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11617
@@ -2829,6 +2819,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11710
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11712
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11724
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11726
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11741
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11753
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11755
@@ -2864,6 +2855,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11921
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11922
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11924
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11926
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11943
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11957
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11959
@@ -2971,6 +2963,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12522
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12524
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12526
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12528
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12577
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12579
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12581
@@ -3090,8 +3083,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13161
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13162
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13164
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13203
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13205
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13207
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13209
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13243
@@ -3170,6 +3161,9 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13580
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13582
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13584
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13586
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13588
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13590
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13634
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13636
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13638
@@ -3566,19 +3560,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15600
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15602
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15604
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15813
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15815
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15817
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15819
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15821
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15823
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15825
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15827
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15829
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15831
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15833
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15835
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15837
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 16085
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 16087
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 16089
@@ -5652,44 +5633,27 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 21846
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 21848
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 21850
-- stage_decode_shape_sphere_defaults #393 batch 417 point 0
-- stage_decode_shape_sphere_defaults #393 batch 417 point 33
-- stage_decode_shape_sphere_defaults #393 batch 417 point 34
-- stage_decode_shape_sphere_defaults #393 batch 418 point 0
-- stage_decode_shape_sphere_defaults #393 batch 418 point 33
-- stage_decode_shape_sphere_defaults #393 batch 418 point 34
-- stage_decode_shape_sphere_defaults #393 batch 419 point 0
-- stage_decode_shape_sphere_defaults #393 batch 419 point 33
-- stage_decode_shape_sphere_defaults #393 batch 419 point 34
-- stage_decode_shape_sphere_defaults #393 batch 420 point 0
-- stage_decode_shape_sphere_defaults #393 batch 420 point 33
-- stage_decode_shape_sphere_defaults #393 batch 420 point 34
-- stage_decode_shape_sphere_defaults #393 batch 421 point 4
 - stage_decode_shape_sphere_defaults #393 batch 421 point 9
-- stage_decode_shape_sphere_defaults #393 batch 421 point 12
 - stage_decode_shape_sphere_defaults #393 batch 421 point 13
-- stage_decode_shape_sphere_defaults #393 batch 421 point 16
 - stage_decode_shape_sphere_defaults #393 batch 421 point 17
-- stage_decode_shape_sphere_defaults #393 batch 421 point 20
-- stage_decode_shape_sphere_defaults #393 batch 421 point 32
-- stage_decode_shape_sphere_defaults #393 batch 421 point 36
 - stage_decode_shape_sphere_defaults #393 batch 422 point 1
 - stage_decode_shape_sphere_defaults #393 batch 422 point 5
 - stage_decode_shape_sphere_defaults #393 batch 422 point 25
 - stage_decode_shape_sphere_defaults #393 batch 422 point 29
 
-### lavapipe / CPU f32: 5032 of 236346
+### lavapipe / CPU f32: 5049 of 236346
 
 - stage_decode_latent_defaults defaults batch 11 point 0
-- stage_decode_latent_defaults defaults batch 14 point 0
-- stage_decode_latent_defaults defaults batch 24 point 0
+- stage_decode_latent_defaults defaults batch 15 point 0
+- stage_decode_latent_defaults defaults batch 17 point 0
 - stage_decode_latent_defaults defaults batch 26 point 0
 - stage_decode_latent_defaults defaults batch 28 point 0
 - stage_decode_latent_defaults defaults batch 37 point 0
+- stage_decode_latent_defaults defaults batch 41 point 0
 - stage_decode_latent_defaults defaults batch 43 point 0
 - stage_decode_latent_defaults defaults batch 50 point 0
-- stage_decode_latent_defaults defaults batch 52 point 0
-- stage_decode_latent_defaults defaults batch 54 point 0
+- stage_decode_latent_defaults defaults batch 53 point 0
+- stage_decode_latent_defaults defaults batch 55 point 0
 - stage_decode_latent_defaults defaults batch 56 point 0
 - stage_decode_latent_defaults defaults batch 57 point 0
 - stage_decode_latent_defaults defaults batch 64 point 0
@@ -5697,18 +5661,12 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_defaults defaults batch 67 point 0
 - stage_decode_latent_defaults defaults batch 69 point 0
 - stage_decode_latent_defaults defaults batch 70 point 0
-- stage_decode_latent_defaults defaults batch 81 point 0
 - stage_decode_latent_defaults defaults batch 82 point 0
-- stage_decode_latent_defaults defaults batch 89 point 0
-- stage_decode_latent_defaults defaults batch 90 point 0
-- stage_decode_latent_defaults defaults batch 91 point 0
-- stage_decode_latent_defaults defaults batch 93 point 0
+- stage_decode_latent_defaults defaults batch 83 point 0
+- stage_decode_latent_defaults defaults batch 94 point 0
 - stage_decode_latent_defaults defaults batch 102 point 0
-- stage_decode_latent_defaults defaults batch 104 point 0
-- stage_decode_latent_defaults defaults batch 105 point 0
-- stage_decode_latent_defaults defaults batch 106 point 0
-- stage_decode_latent_defaults defaults batch 107 point 0
 - stage_decode_latent_defaults defaults batch 115 point 0
+- stage_decode_latent_defaults defaults batch 116 point 0
 - stage_decode_latent_defaults defaults batch 117 point 0
 - stage_decode_latent_defaults defaults batch 118 point 0
 - stage_decode_latent_defaults defaults batch 119 point 0
@@ -5717,9 +5675,29 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_defaults defaults batch 122 point 0
 - stage_decode_latent_defaults defaults batch 123 point 0
 - stage_decode_latent_defaults defaults batch 124 point 0
-- stage_decode_burrau_theta_delta_m_defaults fuzz batch 340 point 0
 - stage_decode_shape_sphere_defaults fuzz batch 359 point 0
-- stage_decode_shape_sphere_defaults fuzz batch 360 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 373 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 374 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 375 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 376 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 377 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 378 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 379 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 380 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 381 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 387 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 388 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 390 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 391 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 393 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 395 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 401 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 402 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 405 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 407 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 408 point 0
+- stage_decode_shape_sphere_defaults fuzz batch 409 point 0
+- stage_decode_shape_sphere_defaults n₀ = ±1 poles batch 415 point 0
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 1
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 18
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 23
@@ -5727,13 +5705,14 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 38
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 41
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 42
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 45
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 52
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 59
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 68
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 70
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 82
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 84
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 93
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 103
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 107
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 108
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 125
@@ -5786,11 +5765,12 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 349
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 351
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 353
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 354
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 359
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 360
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 363
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 373
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 376
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 378
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 386
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 389
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 395
@@ -5812,6 +5792,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 469
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 471
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 483
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 488
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 499
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 503
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 505
@@ -6110,7 +6091,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2136
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2140
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2147
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2148
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2162
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2168
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2171
@@ -6147,7 +6127,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2345
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2355
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2362
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2365
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2367
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2377
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2387
@@ -6213,7 +6192,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2681
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2683
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2685
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2690
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2697
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2703
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 2713
@@ -6329,7 +6307,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3355
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3356
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3369
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3371
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3387
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3391
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3393
@@ -6340,7 +6317,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3432
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3447
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3449
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3455
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3459
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3463
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3465
@@ -6358,7 +6334,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3506
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3513
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3517
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3521
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3530
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3537
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3542
@@ -6407,6 +6382,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3805
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3819
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3820
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3826
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3829
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3831
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3833
@@ -6437,7 +6413,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3967
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3975
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3977
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3978
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3980
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3986
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 3989
@@ -6454,7 +6429,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4027
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4028
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4048
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4053
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4058
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4061
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4077
@@ -6513,10 +6487,12 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4361
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4363
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4368
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4371
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4373
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4375
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4382
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4387
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4389
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4390
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4399
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4400
@@ -6529,6 +6505,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4450
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4453
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4455
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4463
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4468
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4471
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 4478
@@ -6811,6 +6788,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6082
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6089
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6095
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6099
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6105
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6106
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6109
@@ -6818,11 +6796,9 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6121
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6125
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6133
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6137
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6138
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6141
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6143
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6153
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6163
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6164
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6169
@@ -6831,7 +6807,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6215
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6232
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6234
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6244
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6247
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6270
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6272
@@ -6862,7 +6837,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6406
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6409
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6414
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6419
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6423
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6428
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6431
@@ -6871,6 +6845,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6448
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6454
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6457
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6463
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6466
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6472
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6479
@@ -6890,14 +6865,12 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6547
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6550
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6554
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6565
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6590
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6594
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6598
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6601
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6603
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6607
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6614
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6619
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6621
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6623
@@ -6906,6 +6879,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6639
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6642
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6647
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6652
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6655
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6660
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6663
@@ -6919,6 +6893,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6702
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6709
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6711
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6712
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6715
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6717
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6721
@@ -6943,6 +6918,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6834
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6839
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6840
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6879
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6893
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6896
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6903
@@ -6966,6 +6942,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 6990
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7003
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7005
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7011
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7013
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7015
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7017
@@ -7031,6 +7008,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7372
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7377
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7379
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7388
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7393
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7395
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7404
@@ -7075,7 +7053,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7585
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7587
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7593
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7594
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7595
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7608
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7617
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 7619
@@ -7157,6 +7135,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8057
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8061
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8065
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8067
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8072
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8077
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8081
@@ -7216,7 +7195,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8381
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8385
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8386
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8399
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8401
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8403
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8404
@@ -7237,6 +7215,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8477
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8482
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8486
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8497
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8507
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8517
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8521
@@ -7259,7 +7238,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8579
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8583
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8585
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8589
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8595
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8616
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8621
@@ -7296,6 +7274,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8783
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8795
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8809
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8814
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8819
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8821
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8826
@@ -7308,6 +7287,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8863
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8865
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8870
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8877
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8883
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8885
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 8890
@@ -7373,7 +7353,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9211
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9214
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9223
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9227
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9230
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9239
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9246
@@ -7413,7 +7392,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9408
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9415
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9419
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9423
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9426
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9437
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9445
@@ -7429,11 +7407,14 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9491
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9495
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9503
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9505
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9506
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9517
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9525
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9526
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9537
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9538
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9545
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9546
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9557
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9558
@@ -7457,6 +7438,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9677
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9689
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9690
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9701
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9703
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9711
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 9712
@@ -7678,7 +7660,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10923
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10925
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10926
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10945
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10953
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10955
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 10957
@@ -7756,7 +7737,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11337
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11338
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11340
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11353
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11365
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11367
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11375
@@ -7772,7 +7752,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11412
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11414
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11439
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11449
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11451
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11453
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11455
@@ -7806,7 +7785,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11584
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11599
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11601
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11611
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11613
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11615
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11617
@@ -7830,6 +7808,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11708
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11710
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11712
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11726
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11741
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11743
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11753
@@ -7866,6 +7845,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11921
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11923
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11924
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11926
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11943
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11945
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 11957
@@ -7977,6 +7957,7 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12522
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12524
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12526
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12528
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12577
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12579
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 12581
@@ -8099,8 +8080,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13161
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13162
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13164
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13203
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13205
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13207
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13209
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13211
@@ -8183,6 +8162,9 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13580
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13582
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13584
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13586
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13588
+- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13590
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13634
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13636
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 13638
@@ -8595,19 +8577,6 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15600
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15602
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15604
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15813
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15815
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15817
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15819
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15821
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15823
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15825
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15827
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15829
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15831
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15833
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15835
-- stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15837
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15839
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15841
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 15843
@@ -10711,7 +10680,18 @@ The rate counts inputs: an input disagrees if any of its rows' outcomes does.
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 21846
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 21848
 - stage_decode_latent_stick_breaking M₀₁ onset crossings batch 416 point 21850
-- stage_decode_shape_sphere_defaults #393 batch 422 point 5
+- stage_decode_shape_sphere_defaults #393 batch 417 point 0
+- stage_decode_shape_sphere_defaults #393 batch 417 point 33
+- stage_decode_shape_sphere_defaults #393 batch 417 point 34
+- stage_decode_shape_sphere_defaults #393 batch 418 point 0
+- stage_decode_shape_sphere_defaults #393 batch 418 point 33
+- stage_decode_shape_sphere_defaults #393 batch 418 point 34
+- stage_decode_shape_sphere_defaults #393 batch 419 point 0
+- stage_decode_shape_sphere_defaults #393 batch 419 point 33
+- stage_decode_shape_sphere_defaults #393 batch 419 point 34
+- stage_decode_shape_sphere_defaults #393 batch 420 point 0
+- stage_decode_shape_sphere_defaults #393 batch 420 point 33
+- stage_decode_shape_sphere_defaults #393 batch 420 point 34
 
 ## Each driver's standing under R-690's condition
 
@@ -10745,55 +10725,55 @@ Domain: the compute stage, setting off; compute compiled off, adapter: Apple M3 
 | INVARIANT_INFEASIBLE | stage_branch_read_invariant_le_defaults | + and × | 1570 | 1900 | 0 | 460 | 0 |
 | INVARIANT_INFEASIBLE | stage_branch_read_invariant_lk_defaults | + and × | 1600 | 1875 | 0 | 455 | 0 |
 | M01_TINY | stage_branch_read_burrau_defaults | + and × | 580 | 105 | 0 | 0 | 0 |
-| M01_TINY | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 331 | 362 | 0 | 10 | 0 |
-| M01_TINY | stage_branch_read_burrau_theta_k_defaults | + and × | 390 | 265 | 0 | 30 | 0 |
-| M01_TINY | stage_branch_read_burrau_theta_lz_defaults | + and × | 400 | 255 | 0 | 30 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 454 | 249 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_k_defaults | + and × | 600 | 85 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_lz_defaults | + and × | 615 | 70 | 0 | 0 | 0 |
 | M01_TINY | stage_branch_read_euclid_plane_defaults | + and × | 698 | 5 | 0 | 0 | 0 |
 | M01_TINY | stage_branch_read_invariant_le_defaults | + and × | 0 | 2620 | 0 | 1310 | 0 |
 | M01_TINY | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| M01_TINY | stage_branch_read_latent_defaults | + and × | 431 | 2247 | 0 | 327 | 0 |
-| M01_TINY | stage_branch_read_latent_stick_breaking | + and × | 2438 | 13088 | 0 | 28674 | 0 |
+| M01_TINY | stage_branch_read_latent_defaults | + and × | 500 | 2215 | 0 | 290 | 0 |
+| M01_TINY | stage_branch_read_latent_stick_breaking | + and × | 2650 | 12888 | 0 | 28662 | 0 |
 | M01_TINY | stage_branch_read_mass_simplex_defaults | + and × | 384 | 319 | 0 | 0 | 0 |
-| M01_TINY | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 195 | 850 | 0 | 50 | 0 |
+| M01_TINY | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 190 | 855 | 0 | 50 | 0 |
 | M01_TINY | stage_branch_read_shape_sphere_defaults | + and × | 0 | 1452 | 0 | 222 | 0 |
 | angle_cross_zero | stage_branch_read_burrau_defaults | + and × | 245 | 440 | 0 | 0 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 60 | 627 | 0 | 16 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 140 | 520 | 0 | 25 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 130 | 540 | 0 | 15 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 148 | 555 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 255 | 430 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 215 | 470 | 0 | 0 | 0 |
 | angle_cross_zero | stage_branch_read_euclid_plane_defaults | + and × | 240 | 463 | 0 | 0 | 0 |
-| angle_cross_zero | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_invariant_le_defaults | + and × | 2620 | 0 | 0 | 1310 | 0 |
 | angle_cross_zero | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| angle_cross_zero | stage_branch_read_latent_defaults | + and × | 279 | 2548 | 0 | 178 | 0 |
-| angle_cross_zero | stage_branch_read_latent_stick_breaking | + and × | 250 | 43745 | 0 | 205 | 0 |
+| angle_cross_zero | stage_branch_read_latent_defaults | + and × | 1717 | 661 | 0 | 627 | 0 |
+| angle_cross_zero | stage_branch_read_latent_stick_breaking | + and × | 41830 | 1585 | 0 | 785 | 0 |
 | angle_cross_zero | stage_branch_read_mass_simplex_defaults | + and × | 90 | 613 | 0 | 0 | 0 |
-| angle_cross_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 0 | 1090 | 0 | 5 | 0 |
-| angle_cross_zero | stage_branch_read_shape_sphere_defaults | + and × | 327 | 1280 | 0 | 67 | 0 |
+| angle_cross_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 575 | 315 | 0 | 205 | 0 |
+| angle_cross_zero | stage_branch_read_shape_sphere_defaults | + and × | 753 | 921 | 0 | 0 | 0 |
 | angle_dot_negative | stage_branch_read_burrau_defaults | + and × | 245 | 440 | 0 | 0 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 60 | 627 | 0 | 16 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_k_defaults | + and × | 140 | 520 | 0 | 25 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_lz_defaults | + and × | 130 | 540 | 0 | 15 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 148 | 555 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_k_defaults | + and × | 255 | 430 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_lz_defaults | + and × | 215 | 470 | 0 | 0 | 0 |
 | angle_dot_negative | stage_branch_read_euclid_plane_defaults | + and × | 240 | 463 | 0 | 0 | 0 |
-| angle_dot_negative | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_invariant_le_defaults | + and × | 2620 | 0 | 0 | 1310 | 0 |
 | angle_dot_negative | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| angle_dot_negative | stage_branch_read_latent_defaults | + and × | 279 | 2548 | 0 | 178 | 0 |
-| angle_dot_negative | stage_branch_read_latent_stick_breaking | + and × | 250 | 43745 | 0 | 205 | 0 |
+| angle_dot_negative | stage_branch_read_latent_defaults | + and × | 1717 | 661 | 0 | 627 | 0 |
+| angle_dot_negative | stage_branch_read_latent_stick_breaking | + and × | 41830 | 1585 | 0 | 785 | 0 |
 | angle_dot_negative | stage_branch_read_mass_simplex_defaults | + and × | 90 | 613 | 0 | 0 | 0 |
-| angle_dot_negative | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 0 | 1090 | 0 | 5 | 0 |
-| angle_dot_negative | stage_branch_read_shape_sphere_defaults | + and × | 327 | 1280 | 0 | 67 | 0 |
+| angle_dot_negative | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 575 | 315 | 0 | 205 | 0 |
+| angle_dot_negative | stage_branch_read_shape_sphere_defaults | + and × | 753 | 921 | 0 | 0 | 0 |
 | angle_dot_zero | stage_branch_read_burrau_defaults | + and × | 245 | 440 | 0 | 0 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 60 | 627 | 0 | 16 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 140 | 520 | 0 | 25 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 130 | 540 | 0 | 15 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 148 | 555 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 255 | 430 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 215 | 470 | 0 | 0 | 0 |
 | angle_dot_zero | stage_branch_read_euclid_plane_defaults | + and × | 240 | 463 | 0 | 0 | 0 |
-| angle_dot_zero | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_invariant_le_defaults | + and × | 2620 | 0 | 0 | 1310 | 0 |
 | angle_dot_zero | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| angle_dot_zero | stage_branch_read_latent_defaults | + and × | 279 | 2548 | 0 | 178 | 0 |
-| angle_dot_zero | stage_branch_read_latent_stick_breaking | + and × | 250 | 43745 | 0 | 205 | 0 |
+| angle_dot_zero | stage_branch_read_latent_defaults | + and × | 1717 | 661 | 0 | 627 | 0 |
+| angle_dot_zero | stage_branch_read_latent_stick_breaking | + and × | 41830 | 1585 | 0 | 785 | 0 |
 | angle_dot_zero | stage_branch_read_mass_simplex_defaults | + and × | 90 | 613 | 0 | 0 | 0 |
-| angle_dot_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 0 | 1090 | 0 | 5 | 0 |
-| angle_dot_zero | stage_branch_read_shape_sphere_defaults | + and × | 327 | 1280 | 0 | 67 | 0 |
+| angle_dot_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 575 | 315 | 0 | 205 | 0 |
+| angle_dot_zero | stage_branch_read_shape_sphere_defaults | + and × | 753 | 921 | 0 | 0 | 0 |
 | coincidence | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
-| mirror | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| lambda_signs | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
 | pole_rho_ratio | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
 | pole_rho_ratio | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
 | pole_rho_ratio | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
@@ -10833,23 +10813,18 @@ Domain: the compute stage, setting off; compute compiled off, adapter: Apple M3 
 | rho_x_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
 | rho_y_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
 | rho_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
-| seed_nu | stage_branch_read_burrau_defaults | + and × | 550 | 135 | 0 | 0 | 0 |
-| seed_nu | stage_branch_read_burrau_theta_k_defaults | + and × | 350 | 305 | 0 | 30 | 0 |
-| seed_nu | stage_branch_read_burrau_theta_lz_defaults | + and × | 350 | 305 | 0 | 30 | 0 |
-| seed_z_alpha | stage_branch_read_invariant_le_defaults | + and × | 3930 | 0 | 0 | 0 | 0 |
-| seed_z_alpha | stage_branch_read_invariant_lk_defaults | + and × | 3930 | 0 | 0 | 0 | 0 |
 | skip | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
 | sphere_inverse_pole | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
 
-Failure: level 2, angle_cross_zero through stage_branch_read_shape_sphere_defaults: 9 rows, the first stage_decode_shape_sphere_defaults #393 batch 422 point 5.
+Failure: level 2, angle_cross_zero through stage_branch_read_shape_sphere_defaults: 23 rows, the first stage_decode_shape_sphere_defaults #393 batch 421 point 5.
 
-Failure: level 2, angle_dot_negative through stage_branch_read_shape_sphere_defaults: 4 rows, the first stage_decode_shape_sphere_defaults #393 batch 422 point 6.
+Failure: level 2, angle_dot_negative through stage_branch_read_shape_sphere_defaults: 22 rows, the first stage_decode_shape_sphere_defaults #393 batch 421 point 6.
 
-Failure: level 2, angle_dot_zero through stage_branch_read_shape_sphere_defaults: 4 rows, the first stage_decode_shape_sphere_defaults #393 batch 422 point 6.
+Failure: level 2, angle_dot_zero through stage_branch_read_shape_sphere_defaults: 22 rows, the first stage_decode_shape_sphere_defaults #393 batch 421 point 6.
 
-### lavapipe: unverified, not supported
+### lavapipe: no failure in 1223618
 
-Domain: the compute stage, setting off; compute compiled off, adapter: llvmpipe (LLVM 20.1.2, 256 bits) | backend: Vulkan | driver: llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2), driver llvmpipe Mesa 25.2.8-0ubuntu0.24.04.4 (LLVM 20.1.2), read through stage_branch_read_burrau_defaults, stage_branch_read_burrau_theta_delta_m_defaults, stage_branch_read_burrau_theta_k_defaults, stage_branch_read_burrau_theta_lz_defaults, stage_branch_read_canon, stage_branch_read_euclid_plane_defaults, stage_branch_read_invariant_le_defaults, stage_branch_read_invariant_lk_defaults, stage_branch_read_latent_defaults, stage_branch_read_latent_stick_breaking, stage_branch_read_mass_simplex_defaults, stage_branch_read_mixed_mu1_alpha_defaults, stage_branch_read_shape_sphere_defaults.
+Domain: the compute stage, setting off; compute compiled off, adapter: llvmpipe (LLVM 20.1.2, 256 bits) | backend: Vulkan | driver: llvmpipe Mesa 25.2.8-0ubuntu0.24.04.5 (LLVM 20.1.2), driver llvmpipe Mesa 25.2.8-0ubuntu0.24.04.5 (LLVM 20.1.2), read through stage_branch_read_burrau_defaults, stage_branch_read_burrau_theta_delta_m_defaults, stage_branch_read_burrau_theta_k_defaults, stage_branch_read_burrau_theta_lz_defaults, stage_branch_read_canon, stage_branch_read_euclid_plane_defaults, stage_branch_read_invariant_le_defaults, stage_branch_read_invariant_lk_defaults, stage_branch_read_latent_defaults, stage_branch_read_latent_stick_breaking, stage_branch_read_mass_simplex_defaults, stage_branch_read_mixed_mu1_alpha_defaults, stage_branch_read_shape_sphere_defaults.
 
 | branch input | entry | kind | N | level 1 | other operation | shared operands, host agrees | shared operands, host differs |
 |---|---|---|---|---|---|---|---|
@@ -10870,58 +10845,58 @@ Domain: the compute stage, setting off; compute compiled off, adapter: llvmpipe 
 | INVARIANT_INFEASIBLE | stage_branch_read_burrau_defaults | + and × | 260 | 320 | 0 | 105 | 0 |
 | INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_k_defaults | + and × | 235 | 320 | 0 | 130 | 0 |
 | INVARIANT_INFEASIBLE | stage_branch_read_burrau_theta_lz_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
-| INVARIANT_INFEASIBLE | stage_branch_read_invariant_le_defaults | + and × | 1870 | 1600 | 0 | 460 | 0 |
+| INVARIANT_INFEASIBLE | stage_branch_read_invariant_le_defaults | + and × | 1875 | 1595 | 0 | 460 | 0 |
 | INVARIANT_INFEASIBLE | stage_branch_read_invariant_lk_defaults | + and × | 1815 | 1660 | 0 | 455 | 0 |
 | M01_TINY | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
-| M01_TINY | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 678 | 15 | 0 | 10 | 0 |
-| M01_TINY | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 15 | 0 | 30 | 0 |
-| M01_TINY | stage_branch_read_burrau_theta_lz_defaults | + and × | 630 | 25 | 0 | 30 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_k_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| M01_TINY | stage_branch_read_burrau_theta_lz_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
 | M01_TINY | stage_branch_read_euclid_plane_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
 | M01_TINY | stage_branch_read_invariant_le_defaults | + and × | 0 | 2620 | 0 | 1310 | 0 |
 | M01_TINY | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| M01_TINY | stage_branch_read_latent_defaults | + and × | 348 | 2330 | 0 | 327 | 0 |
-| M01_TINY | stage_branch_read_latent_stick_breaking | + and × | 2599 | 12927 | 0 | 28674 | 0 |
+| M01_TINY | stage_branch_read_latent_defaults | + and × | 411 | 2304 | 0 | 290 | 0 |
+| M01_TINY | stage_branch_read_latent_stick_breaking | + and × | 2606 | 12932 | 0 | 28662 | 0 |
 | M01_TINY | stage_branch_read_mass_simplex_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
-| M01_TINY | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 60 | 985 | 0 | 50 | 0 |
+| M01_TINY | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 65 | 980 | 0 | 50 | 0 |
 | M01_TINY | stage_branch_read_shape_sphere_defaults | + and × | 0 | 1452 | 0 | 222 | 0 |
 | angle_cross_zero | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 647 | 40 | 0 | 16 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 20 | 0 | 25 | 0 |
-| angle_cross_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 615 | 55 | 0 | 15 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
 | angle_cross_zero | stage_branch_read_euclid_plane_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
-| angle_cross_zero | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| angle_cross_zero | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| angle_cross_zero | stage_branch_read_latent_defaults | + and × | 417 | 2410 | 0 | 178 | 0 |
-| angle_cross_zero | stage_branch_read_latent_stick_breaking | + and × | 40830 | 3165 | 0 | 205 | 0 |
+| angle_cross_zero | stage_branch_read_invariant_le_defaults | + and × | 2620 | 0 | 0 | 1310 | 0 |
+| angle_cross_zero | stage_branch_read_invariant_lk_defaults | + and × | 2620 | 1310 | 0 | 0 | 0 |
+| angle_cross_zero | stage_branch_read_latent_defaults | + and × | 1480 | 898 | 0 | 627 | 0 |
+| angle_cross_zero | stage_branch_read_latent_stick_breaking | + and × | 42115 | 1300 | 0 | 785 | 0 |
 | angle_cross_zero | stage_branch_read_mass_simplex_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
-| angle_cross_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 130 | 960 | 0 | 5 | 0 |
-| angle_cross_zero | stage_branch_read_shape_sphere_defaults | + and × | 1121 | 486 | 0 | 67 | 0 |
+| angle_cross_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 465 | 425 | 0 | 205 | 0 |
+| angle_cross_zero | stage_branch_read_shape_sphere_defaults | + and × | 1674 | 0 | 0 | 0 | 0 |
 | angle_dot_negative | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 647 | 40 | 0 | 16 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 20 | 0 | 25 | 0 |
-| angle_dot_negative | stage_branch_read_burrau_theta_lz_defaults | + and × | 615 | 55 | 0 | 15 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_k_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_burrau_theta_lz_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
 | angle_dot_negative | stage_branch_read_euclid_plane_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
-| angle_dot_negative | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| angle_dot_negative | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| angle_dot_negative | stage_branch_read_latent_defaults | + and × | 417 | 2410 | 0 | 178 | 0 |
-| angle_dot_negative | stage_branch_read_latent_stick_breaking | + and × | 40830 | 3165 | 0 | 205 | 0 |
+| angle_dot_negative | stage_branch_read_invariant_le_defaults | + and × | 2620 | 0 | 0 | 1310 | 0 |
+| angle_dot_negative | stage_branch_read_invariant_lk_defaults | + and × | 2620 | 1310 | 0 | 0 | 0 |
+| angle_dot_negative | stage_branch_read_latent_defaults | + and × | 1480 | 898 | 0 | 627 | 0 |
+| angle_dot_negative | stage_branch_read_latent_stick_breaking | + and × | 42115 | 1300 | 0 | 785 | 0 |
 | angle_dot_negative | stage_branch_read_mass_simplex_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
-| angle_dot_negative | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 130 | 960 | 0 | 5 | 0 |
-| angle_dot_negative | stage_branch_read_shape_sphere_defaults | + and × | 1121 | 486 | 0 | 67 | 0 |
+| angle_dot_negative | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 465 | 425 | 0 | 205 | 0 |
+| angle_dot_negative | stage_branch_read_shape_sphere_defaults | + and × | 1674 | 0 | 0 | 0 | 0 |
 | angle_dot_zero | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 647 | 40 | 0 | 16 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 20 | 0 | 25 | 0 |
-| angle_dot_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 615 | 55 | 0 | 15 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_delta_m_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_k_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_burrau_theta_lz_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
 | angle_dot_zero | stage_branch_read_euclid_plane_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
-| angle_dot_zero | stage_branch_read_invariant_le_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| angle_dot_zero | stage_branch_read_invariant_lk_defaults | + and × | 0 | 3930 | 0 | 0 | 0 |
-| angle_dot_zero | stage_branch_read_latent_defaults | + and × | 417 | 2410 | 0 | 178 | 0 |
-| angle_dot_zero | stage_branch_read_latent_stick_breaking | + and × | 40830 | 3165 | 0 | 205 | 0 |
+| angle_dot_zero | stage_branch_read_invariant_le_defaults | + and × | 2620 | 0 | 0 | 1310 | 0 |
+| angle_dot_zero | stage_branch_read_invariant_lk_defaults | + and × | 2620 | 1310 | 0 | 0 | 0 |
+| angle_dot_zero | stage_branch_read_latent_defaults | + and × | 1480 | 898 | 0 | 627 | 0 |
+| angle_dot_zero | stage_branch_read_latent_stick_breaking | + and × | 42115 | 1300 | 0 | 785 | 0 |
 | angle_dot_zero | stage_branch_read_mass_simplex_defaults | + and × | 703 | 0 | 0 | 0 | 0 |
-| angle_dot_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 130 | 960 | 0 | 5 | 0 |
-| angle_dot_zero | stage_branch_read_shape_sphere_defaults | + and × | 1121 | 486 | 0 | 67 | 0 |
+| angle_dot_zero | stage_branch_read_mixed_mu1_alpha_defaults | + and × | 465 | 425 | 0 | 205 | 0 |
+| angle_dot_zero | stage_branch_read_shape_sphere_defaults | + and × | 1674 | 0 | 0 | 0 | 0 |
 | coincidence | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
-| mirror | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
+| lambda_signs | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
 | pole_rho_ratio | stage_branch_read_burrau_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
 | pole_rho_ratio | stage_branch_read_burrau_theta_delta_m_defaults | other operation | 0 | 0 | 703 | 0 | 0 |
 | pole_rho_ratio | stage_branch_read_burrau_theta_k_defaults | other operation | 0 | 0 | 685 | 0 | 0 |
@@ -10961,18 +10936,7 @@ Domain: the compute stage, setting off; compute compiled off, adapter: llvmpipe 
 | rho_x_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
 | rho_y_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
 | rho_zero | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
-| seed_nu | stage_branch_read_burrau_defaults | + and × | 685 | 0 | 0 | 0 | 0 |
-| seed_nu | stage_branch_read_burrau_theta_k_defaults | + and × | 640 | 15 | 0 | 0 | 30 |
-| seed_nu | stage_branch_read_burrau_theta_lz_defaults | + and × | 615 | 40 | 0 | 5 | 25 |
-| seed_z_alpha | stage_branch_read_invariant_le_defaults | + and × | 3930 | 0 | 0 | 0 | 0 |
-| seed_z_alpha | stage_branch_read_invariant_lk_defaults | + and × | 3930 | 0 | 0 | 0 | 0 |
 | skip | stage_branch_read_canon | + and × | 174348 | 0 | 0 | 0 | 0 |
 | sphere_inverse_pole | stage_branch_read_shape_sphere_defaults | other operation | 0 | 0 | 1674 | 0 | 0 |
-
-Failure: level 2, seed_nu through stage_branch_read_burrau_defaults: 510 rows, the first stage_decode_burrau_defaults fuzz batch 278 point 0.
-
-Failure: level 2, seed_nu through stage_branch_read_burrau_theta_k_defaults: 460 rows, the first stage_decode_burrau_theta_k_defaults fuzz batch 321 point 0.
-
-Failure: level 2, seed_nu through stage_branch_read_burrau_theta_lz_defaults: 440 rows, the first stage_decode_burrau_theta_lz_defaults fuzz batch 326 point 0.
 
 ### CPU f32: the arbiter

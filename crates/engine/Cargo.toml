@@ -24,9 +24,9 @@ pollster = "1"
 # The CPU worker pool (`pool`, TASK-M3-20): a rayon pool of its own, sized from the cores less a reserve
 # (dd_telemetry_and_tiers §6, "CPU").
 rayon = "1"
-# The trajectory fixtures' closed forms (TASK-M2-82) evaluate sin and cos through the pinned pure-software libm the
-# ledger already uses, documented below one ulp, so their rounding bounds are derived and their bits the same on every
-# platform.
+# The pinned pure-software libm the ledger already uses, so the engine's maths outside the kernel (the trajectory
+# fixtures' closed forms, whose rounding bounds are derived from its documented sub-ulp accuracy; norms; the decoded
+# sphere's angles) has the same bits on every platform.
 libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
 
 # The profiler tests validate written traces against the checked-in JSON Schema (TASK-M0-17); no remote references,

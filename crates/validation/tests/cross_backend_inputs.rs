@@ -1,19 +1,16 @@
 //! What the kernel cross-backend check's inputs are (TASK-M4-27; REQ-VAL-347): each builder of
 //! `validation::cross_backend`, through what `build_inputs` gives, on every platform.
 //!
-//! The comparison runs every backend on whatever states it is given, so a builder that drifts still agrees with itself,
-//! and the one test that held them bit for bit runs on macOS alone: the builders call the platform's `sin_cos` and `powf`
-//! (`cross_backend_read_back_fixture_is_the_builders`). So nothing else on CI told a state from any other. These tests
-//! say what the states are:
+//! The comparison runs every backend on whatever states it is given, so a builder that drifts still agrees with itself.
+//! These tests say what the states are:
 //! - first the property each state is built to have, as the file it is copied from states it
 //!   (`crates/engine/tests/canon_gpu.rs`, `crates/engine/tests/decode_cross_backend.rs`,
 //!   `crates/validation/tests/qa_TASK-M2-25_gpu.rs`). A mirror tie's `λ̃_y` is `−a` exactly; a `τ_I` state's `I_in` is its
 //!   target exactly; the hierarchy's `λ̃_y` is `−k·δ_λ`; a crossing's two points are adjacent floats either side of
-//!   `M01_TINY`. Where the file defines a state by a formula on the platform's own `sin_cos`, the test evaluates that
-//!   formula on the same platform, so it holds bit for bit there too.
-//! - then the fixture itself, which the Deliverables make the builders' output, written once. What no platform call
-//!   reaches is held bit for bit on every platform ([`check_fixture_exact`]). What one reaches is held to [`NEAR`]
-//!   ([`check_fixture_near`]), which is a test's reach, not a measurement's: no rate reads it (R-649).
+//!   `M01_TINY`. Where the file defines a state by a formula on `sin_cos`, the test evaluates that formula on the pinned
+//!   one the builders call (`kernel::Real`'s), so it holds bit for bit.
+//! - then the fixture itself, the builders' output, written by `--write-inputs`: every word, bit for bit, on every
+//!   platform ([`check_fixture_exact`]). The builders and the decodes they call reach no platform maths call.
 //!
 //! No test here needs a GPU. Each registers the control that must make it fail (R-176).
 
@@ -27,15 +24,11 @@ use kernel::decode::{decode, Ic};
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{Defaults, Link, StickBreaking};
 use kernel::real::IeeeBits;
+use kernel::Real;
 use validation::cross_backend::{build_inputs, chart_of, with_points, Inputs};
 use validation::negative_control;
 
 const EPS32: f64 = f32::EPSILON as f64;
-
-/// A word of what a platform's `sin_cos`, `powf` or `exp` reaches, against the fixture's: the fraction of its scale it
-/// may move. The platforms round those calls apart by an ulp or so, which a saturated decode or a `θ = 0.7` edge
-/// bisection amplifies; every builder's change moves a word by a percent or more.
-const NEAR: f64 = 1e-3;
 
 const TIE: &str = "canonicaliser_mirror_tie";
 const TURNED: &str = "canonicaliser_mirror_tie turned";
@@ -222,9 +215,9 @@ negative_control!(
 );
 
 /// `x` rotated by `θ`, translated by `(0.75, −1.25)` and boosted by `(0.3, −0.2)`, as `turned` in `canon_gpu.rs` has it,
-/// on this platform's `sin_cos`.
+/// on the pinned `sin_cos`.
 fn turned(x: &Ic<f64>, theta: f64) -> Ic<f32> {
-    let (s, c) = theta.sin_cos();
+    let (s, c) = theta.sine_cosine();
     let rot = |v: [f64; 2]| [c * v[0] - s * v[1], s * v[0] + c * v[1]];
     narrow(&Ic {
         m: x.m,
@@ -635,7 +628,7 @@ fn check_edge_sweep(run: &[Ic<f32>], j: i32) {
 /// turn's bisection finds again to within its own rounding.
 fn check_edge(inputs: &Inputs) {
     let states = part(inputs, EDGE);
-    let (cs, sn) = (0.7f64.cos(), 0.7f64.sin());
+    let (sn, cs) = 0.7f64.sine_cosine();
     let turn = |v: [f64; 2]| [v[0] * cs - v[1] * sn, v[0] * sn + v[1] * cs];
     for (k, block) in states.chunks(2 * 40 * SWEEP).enumerate() {
         let (flat, turned) = block.split_at(40 * SWEEP);
@@ -686,10 +679,10 @@ fn representatives() -> [Ic<f64>; 3] {
     .map(|z| decode::<Defaults, f64>(&kernel::decode::Latent::new(z)).ic)
 }
 
-/// dd_encode §3.3's gauge at the test's values: `rᵢ' = s·R(θ)·Π·rᵢ + a`, `pᵢ' = s^{−1/2}·R(θ)·Π·pᵢ + mᵢu`, on this
-/// platform's `sin_cos` and `powf`.
+/// dd_encode §3.3's gauge at the test's values: `rᵢ' = s·R(θ)·Π·rᵢ + a`, `pᵢ' = s^{−1/2}·R(θ)·Π·pᵢ + mᵢu`, on the
+/// pinned `sin_cos` and `pow`.
 fn gauged(x: &Ic<f64>, a: [f64; 2], theta: f64, s: f64, mirror: bool) -> Ic<f32> {
-    let (sn, cs) = theta.sin_cos();
+    let (sn, cs) = theta.sine_cosine();
     let map = |v: [f64; 2], k: f64| {
         let y = if mirror { -v[1] } else { v[1] };
         [k * (cs * v[0] - sn * y), k * (sn * v[0] + cs * y)]
@@ -702,7 +695,7 @@ fn gauged(x: &Ic<f64>, a: [f64; 2], theta: f64, s: f64, mirror: bool) -> Ic<f32>
             [w[0] + a[0], w[1] + a[1]]
         }),
         p: [0, 1, 2].map(|i| {
-            let w = map(x.p[i], s.powf(-0.5));
+            let w = map(x.p[i], s.power(-0.5));
             [w[0] + x.m[i] * u[0], w[1] + x.m[i] * u[1]]
         }),
     })
@@ -1164,50 +1157,27 @@ negative_control!(
 
 // ── The fixture ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// Which words of a state of `part`, `n`-th, no platform call reaches: all of them, or the masses and momenta alone.
-fn exact_words(name: &str, n: usize) -> usize {
-    const ALL: usize = 15;
-    const MASSES_AND_MOMENTA: usize = 3;
-    match name {
-        TIE | TAU | SUBNORMAL | RANGE | SCALE | COINCIDENT | SIGNED_ZERO => ALL,
-        // `+x`'s blocks take `θ = 0`, whose sine and cosine every platform gives alike.
-        HIERARCHY if (n / 2000) % 3 != 1 => ALL,
-        EDGE if (n / (40 * SWEEP)).is_multiple_of(2) => ALL,
-        TURNED | SEAM | HIERARCHY | EDGE => MASSES_AND_MOMENTA,
-        _ => 0,
-    }
-}
-
-/// The fixture is what the builders give, bit for bit, in every word no platform call reaches, on every platform:
-/// `+`, `−`, `×`, `/`, `√`, `powi`, `fma` and conversions round alike everywhere, so any difference is a builder's. The
-/// decode's charts and points are drawn from the seeds alone, but for the crossings, which bisect on the platform's
-/// `exp`, and each own `E*`, a decode's `V₀`.
+/// The fixture is what the builders give, bit for bit, in every word of every state, chart, `E*` and point, on every
+/// platform: the builders reach no platform maths call, so any difference is a builder's.
 fn check_fixture_exact(inputs: &Inputs, held: &Inputs) {
     let mut at = 0;
     for p in &held.parts {
         for n in 0..p.count {
-            let (a, b) = (bits(&inputs.canon[at + n]), bits(&held.canon[at + n]));
-            let k = exact_words(&p.name, n);
-            let momenta = if k == 3 { 9..15 } else { 15..15 };
             assert!(
-                a[..k] == b[..k] && a[momenta.clone()] == b[momenta],
-                "a word no platform call reaches is not the fixture's: {} {n}",
+                bits(&inputs.canon[at + n]) == bits(&held.canon[at + n]),
+                "a state is not the fixture's: {} {n}",
                 p.name
             );
         }
         at += p.count;
     }
-    let targets = TARGETS.map(f32::to_bits);
     let pairs = with_points(inputs).into_iter().zip(with_points(held));
     for ((_, a, ua), (_, b, ub)) in pairs {
-        let own = |e: Option<u32>| e.filter(|e| !targets.contains(e)).map(|_| 0);
-        let e_star = |e: Option<u32>| own(e).or(e);
-        let same = (&a.entry, &a.label, &a.uniform, a.points, e_star(a.e_star))
-            == (&b.entry, &b.label, &b.uniform, b.points, e_star(b.e_star));
-        let free = b.label != CROSSINGS;
+        let same = (&a.entry, &a.label, &a.uniform, a.points, a.e_star)
+            == (&b.entry, &b.label, &b.uniform, b.points, b.e_star);
         assert!(
-            same && (!free || ua == ub),
-            "a batch's charts or points are not the fixture's: {} {}",
+            same && ua == ub,
+            "a batch's charts, E* or points are not the fixture's: {} {}",
             b.entry,
             b.label
         );
@@ -1215,15 +1185,15 @@ fn check_fixture_exact(inputs: &Inputs, held: &Inputs) {
 }
 
 #[test]
-fn cross_backend_inputs_fixture_holds_every_word_no_platform_call_reaches() {
+fn cross_backend_inputs_fixture_holds_every_word() {
     let held = Inputs::load(root()).expect("the fixture");
     check_fixture_exact(built(), &held);
 }
 
 negative_control!(
-    cross_backend_inputs_fixture_holds_every_word_no_platform_call_reaches,
+    cross_backend_inputs_fixture_holds_every_word,
     "a builder's chart moved by one bit",
-    expected = "a batch's charts or points are not the fixture's",
+    expected = "a batch's charts, E* or points are not the fixture's",
     {
         let held = Inputs::load(root()).expect("the fixture");
         let mut inputs = build_inputs();
@@ -1232,66 +1202,19 @@ negative_control!(
     }
 );
 
-fn is_near(a: f32, b: f32, scale: f64) -> bool {
-    (f64::from(a) - f64::from(b)).abs() <= NEAR * scale
-}
+mod masses {
+    use super::*;
 
-/// The fixture is what the builders give, to [`NEAR`], in the words a platform call reaches: the turned seam and
-/// hierarchy positions, on their own scale, and a decode's masses, which its links alone give. A decode's positions and
-/// momenta are not held: saturated, they are f32's conditioning, 10⁶ eps and more.
-fn check_fixture_near(inputs: &Inputs, held: &Inputs) {
-    let positions = |x: &Ic<f32>, y: &Ic<f32>, name: &str, scale: [f64; 3]| {
-        for ((p, q), s) in x.r.iter().zip(&y.r).zip(scale) {
-            for j in 0..2 {
-                assert!(
-                    is_near(p[j], q[j], s),
-                    "a position a platform call reaches is off the fixture's: {name}"
-                );
-            }
+    negative_control!(
+        cross_backend_inputs_fixture_holds_every_word,
+        "a decode's masses swapped",
+        expected = "a state is not the fixture's",
+        {
+            let held = Inputs::load(root()).expect("the fixture");
+            let mut inputs = build_inputs();
+            let at = inputs.canon.len() - 1;
+            inputs.canon[at].m.swap(0, 2);
+            check_fixture_exact(&inputs, &held);
         }
-    };
-    for (x, y) in part(inputs, SEAM).iter().zip(part(held, SEAM)) {
-        positions(x, y, SEAM, [1.0; 3]);
-    }
-    let pairs = part(inputs, HIERARCHY).iter().zip(part(held, HIERARCHY));
-    for (n, (x, y)) in pairs.enumerate() {
-        positions(x, y, HIERARCHY, [1.0, RATIOS[n / 6000], 1.0]);
-    }
-    for name in [NOOP, NOOP_WIDE] {
-        for (x, y) in part(inputs, name).iter().zip(part(held, name)) {
-            assert!(
-                (0..3).all(|i| is_near(x.m[i], y.m[i], 1.0)),
-                "a decode's masses are off the fixture's: {name}"
-            );
-        }
-    }
-    let pairs = with_points(inputs).into_iter().zip(with_points(held));
-    for ((_, a, ua), (_, _, ub)) in pairs {
-        if a.label == CROSSINGS {
-            let close = |(p, q): (&[f32; 2], &[f32; 2])| (0..2).all(|j| is_near(p[j], q[j], 1.0));
-            assert!(
-                ua.iter().zip(&ub).all(close),
-                "a crossing is off the fixture's"
-            );
-        }
-    }
+    );
 }
-
-#[test]
-fn cross_backend_inputs_fixture_holds_what_a_platform_call_reaches_to_near() {
-    let held = Inputs::load(root()).expect("the fixture");
-    check_fixture_near(built(), &held);
-}
-
-negative_control!(
-    cross_backend_inputs_fixture_holds_what_a_platform_call_reaches_to_near,
-    "a decode's masses swapped",
-    expected = "a decode's masses are off the fixture's",
-    {
-        let held = Inputs::load(root()).expect("the fixture");
-        let mut inputs = build_inputs();
-        let at = inputs.canon.len() - 1;
-        inputs.canon[at].m.swap(0, 2);
-        check_fixture_near(&inputs, &held);
-    }
-);
