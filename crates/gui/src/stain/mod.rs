@@ -38,6 +38,7 @@ use engine::contract::canvas::Canvas;
 use engine::contract::render_state::{Node, NodeId, NodeKind, StainGraph};
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::stain::assembled::node_source;
+use engine::contract::stain::custom::Status;
 use engine::contract::stain::describe::{describe_node, from_source, Description, Shown, Standing};
 
 use crate::keyboard::scopes::{Adjust, Scope, ScopeId, ScopeTree};
@@ -65,6 +66,8 @@ pub struct Content {
     pub standing: BTreeMap<NodeId, Arc<[Standing]>>,
     /// Each node's code (Node WGSL), its own source: never the compile cache's, which a label edit does not reach.
     pub node_code: BTreeMap<NodeId, String>,
+    /// The status beside each node whose code did not compile: it is drawn at its last valid code.
+    pub status: BTreeMap<NodeId, Status>,
     /// The compile status line.
     pub compiled: String,
     /// Whether the graph is still compiling: the code, and the picture drawn, are the last valid ones.
@@ -142,6 +145,8 @@ pub const BUTTONS: [(ScopeId, &str); 4] = [
 ];
 /// The inspector's "Edit this node's WGSL": the Node WGSL view.
 pub const EDIT_WGSL: ScopeId = "stain_insp_edit_wgsl";
+/// The inspector's Duplicate: a copy of the node whose code is its own source, written out, to edit.
+pub const DUPLICATE: ScopeId = "stain_insp_duplicate";
 /// The inspector's Revert: an edit's, back to the source it was made from.
 pub const REVERT: ScopeId = "stain_insp_revert";
 /// The Problems pane's auto-recompile.
@@ -419,6 +424,12 @@ pub fn chosen(n: &Node, choice: &Choice, content: &Content) -> bool {
     content.node_code.get(&n.id) == Some(&choice.source)
 }
 
+/// Whether node `n` can be duplicated: it holds code, and is not one of the graph's fixed singletons.
+pub fn duplicable(n: &Node, content: &Content) -> bool {
+    let code = content.yours.held(n.id).is_some_and(|h| h.code.is_some());
+    code && !matches!(n.kind, NodeKind::Combiner | NodeKind::Out)
+}
+
 /// The sections of the selected node's controls.
 fn selected_sections(s: &Scratch, content: Option<&Content>) -> Vec<controls::Section> {
     s.selected()
@@ -491,6 +502,11 @@ fn wanted(g: &StainGraph, s: &Scratch, content: Option<&Content>) -> Vec<(ScopeI
                 INSPECTOR,
                 Scope::control(EDIT_WGSL, "Edit this node's WGSL"),
             ));
+            let duplicate = match duplicable(n, c) {
+                true => Scope::control(DUPLICATE, "Duplicate"),
+                false => Scope::disabled(DUPLICATE, "Duplicate"),
+            };
+            out.push((INSPECTOR, duplicate));
             let shader = yours::shader_scopes(&c.yours, &s.yours, n.id);
             out.extend(shader.into_iter().map(|scope| (INSPECTOR, scope)));
         }
@@ -583,6 +599,7 @@ pub fn activate(
         match content.and_then(|c| c.graphs.get(k)?.as_ref()) {
             Some(load) => {
                 s.library.selected = None;
+                s.yours.remembered.clear();
                 let edit = edited(g, |g| {
                     *g = load.clone();
                     Ok(())
@@ -594,6 +611,19 @@ pub fn activate(
         }
     } else if id == EDIT_WGSL {
         s.view = View::Node;
+    } else if id == DUPLICATE {
+        let Some(node) = s.selected() else {
+            return;
+        };
+        let mut copy = None;
+        let edit = edited(g, |g| {
+            copy = Some(g.duplicate_as_custom(node)?);
+            Ok(())
+        });
+        if let (Some(edit), Some(copy)) = (edit, copy) {
+            out.edits.push(edit);
+            s.canvas.selection = BTreeSet::from([copy]);
+        }
     } else if id == AUTO_RECOMPILE {
         s.auto_recompile = !s.auto_recompile;
     } else if id == RECOMPILE {
@@ -676,6 +706,7 @@ pub fn show(
     out: &mut Out,
 ) {
     let regions = Regions::new(layout, ui.ctx().pixels_per_point(), s.library.collapsed);
+    s.yours.forget_gone(page.graph);
     keys.keyboard.place(LIBRARY, regions.library);
     keys.keyboard.place(CANVAS, regions.canvas);
     keys.keyboard.place(INSPECTOR, regions.right);

@@ -15,9 +15,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use eframe::egui::{
     self, pos2, vec2, Align, Color32, Event, FontId, Key, Layout as EguiLayout, MouseWheelUnit,
-    PointerButton, Pos2, Rect, Shape, Stroke, StrokeKind, Ui, UiBuilder, Vec2,
+    PointerButton, Pos2, Rect, RichText, Shape, Stroke, StrokeKind, Ui, UiBuilder, Vec2,
 };
 use engine::contract::render_state::{NodeId, NodeKind, PortType, StainGraph};
+use engine::contract::stain::custom::Status;
 use engine::contract::stain::describe::{Description, Shown};
 
 use super::{controls, description, yours, Content, View, NODE_IDS, VIEWS};
@@ -734,7 +735,15 @@ fn node(
         0.0,
         egui::TextFormat::simple(FontId::proportional(size), visuals.strong_text_color()),
     );
-    let label = title_rect.shrink2(vec2(10.0 * zoom, 0.0));
+    let mut label = title_rect.shrink2(vec2(10.0 * zoom, 0.0));
+    if let Some(status) = content.and_then(|c| c.status.get(&n.id)) {
+        let (mark, colour, why) = status_mark(*status, visuals);
+        let at = Rect::from_min_max(pos2(label.max.x - 16.0 * zoom, label.min.y), label.max);
+        label.max.x = at.min.x;
+        let text = RichText::new(mark).size(size).color(colour);
+        ui.put(at, egui::Label::new(text).selectable(false))
+            .on_hover_text(why);
+    }
     ui.put(label, egui::Label::new(job).selectable(false).truncate());
     if has_glyph(n.kind) {
         let glyph = Rect::from_min_size(
@@ -765,6 +774,22 @@ fn node(
             font,
             visuals.weak_text_color(),
         );
+    }
+}
+
+/// The mark beside a node's title for its compile status, its colour, and what it means.
+pub fn status_mark(
+    status: Status,
+    visuals: &egui::Visuals,
+) -> (&'static str, Color32, &'static str) {
+    match status {
+        Status::Failed => (
+            "✘",
+            visuals.error_fg_color,
+            "its code does not compile: it is drawn at its last valid code, and Problems says why",
+        ),
+        Status::Compiling => ("…", visuals.weak_text_color(), "its code is compiling"),
+        Status::Valid => ("✔", visuals.weak_text_color(), "its code compiled"),
     }
 }
 

@@ -8,9 +8,12 @@ use std::sync::Arc;
 
 use engine::contract::render_state::StainGraph;
 use engine::contract::stain::assembled::{assemble, Assembled, Tier};
+use engine::contract::stain::custom::Status;
+use engine::contract::stain::view::CompileError;
 
 use crate::clock::time::Instant;
 use crate::stain::catalogue::{catalogue, key};
+use crate::stain::problems::located;
 use crate::stain::{described, node_code, Content};
 
 /// The tier the real engine's records are stored at.
@@ -49,6 +52,10 @@ pub struct Drawn {
     pub compiling: bool,
     /// The errors.
     pub problems: Vec<String>,
+    /// The pipelines' errors among them, as the cache gives them: each node's says which node and why.
+    pub errors: Vec<CompileError>,
+    /// The WGSL of the pipeline drawn, exactly as it was compiled; none before one has.
+    pub source: Option<Arc<str>>,
     /// The notes.
     pub notes: Vec<String>,
 }
@@ -335,8 +342,28 @@ impl Compiler {
         } else if drawn.problems.is_empty() {
             failed
         } else {
-            drawn.problems.clone()
+            let said = |p: &String| drawn.errors.iter().any(|e| e.to_string() == *p);
+            let mut out: Vec<String> = drawn
+                .problems
+                .iter()
+                .filter(|p| !said(p))
+                .cloned()
+                .collect();
+            out.extend(drawn.errors.iter().map(|e| located(g, e)));
+            out
         };
+        let status = drawn
+            .errors
+            .iter()
+            .filter(|_| !compiling)
+            .filter_map(|e| match e {
+                CompileError::Node { key, .. } => Some((
+                    engine::contract::render_state::NodeId(*key as u32),
+                    Status::Failed,
+                )),
+                CompileError::Stain(_) => None,
+            })
+            .collect();
         let compiled = match self.asked.as_ref().map(|a| &a.outcome) {
             _ if compiling => "compiling · the last that did stays".to_owned(),
             Some(Outcome::Assembled(ms)) if failed.is_empty() => {
@@ -355,11 +382,18 @@ impl Compiler {
                 g.nodes().count()
             ));
         }
-        let (code, pipeline) = self
+        let (code, mut pipeline) = self
             .valid
             .as_ref()
             .map(|(a, _)| (a.code.clone(), a.pipeline.clone()))
             .unwrap_or_default();
+        // The text the picture's pipeline was compiled from, not the assembler's again: that one keeps what the proof
+        // drops and the declarations the pipeline blanks, and misses a sound edit beside a node that fell back.
+        // The plan is unclear here; chose to leave the code under the canvas the assembler's, every node kept, because
+        // it maps its text back to the nodes on the canvas, which a dropped node would vanish from.
+        if let Some(source) = &drawn.source {
+            pipeline = source.to_string();
+        }
         Content {
             library: tables.groups.clone(),
             modes: tables.modes,
@@ -369,6 +403,7 @@ impl Compiler {
             described,
             standing: Default::default(),
             node_code: node_code(g),
+            status,
             compiled,
             compiling,
             problems,
