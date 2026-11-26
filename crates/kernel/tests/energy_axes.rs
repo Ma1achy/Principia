@@ -1521,6 +1521,7 @@ fn check_shifted(want: &[([Mapping; 2], [f64; 2], Option<Constraint>)]) {
         y: 0,
         dy: 0.0,
         two: false,
+        ..Shift::none()
     };
     for &(mapping, [a, b], failed) in want {
         let got = lk(mapping).validate_shifted(a, b, &shift, &LinkParams::DEFAULT);
@@ -2196,6 +2197,7 @@ fn check_held_tilted(mapping: Mapping) {
         y: 1,
         dy: 0.3,
         two: true,
+        ..Shift::none()
     };
     for [u, t] in grid(0.0, 1.0) {
         let valid = chart.validate_shifted(u, t, &shift, &LinkParams::DEFAULT);

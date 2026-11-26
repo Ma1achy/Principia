@@ -1771,6 +1771,7 @@ fn check_target_refused(inverted: bool) {
         y: HELD_LZ,
         dy: 0.0f32,
         two: false,
+        ..Shift::none()
     };
     let wide = |dx: f64| kernel::chart::tilt::Shift {
         x: HELD_LZ,
@@ -1778,6 +1779,7 @@ fn check_target_refused(inverted: bool) {
         y: HELD_LZ,
         dy: 0.0f64,
         two: false,
+        ..Shift::none()
     };
     let (mut labelled, mut systems) = (0, 0);
     for i in 1..200 {
@@ -2329,6 +2331,7 @@ where
                 y: placed.y,
                 dy: f64::from(placed.dy),
                 two: placed.two,
+                ..Shift::none()
             };
             let passes = chart.validate_shifted(a, b, &shift.expect("tilted"), p)
                 == ValidationResult::Valid

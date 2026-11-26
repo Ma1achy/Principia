@@ -318,11 +318,16 @@ impl Placement<f64> for Pivoted {
                 y: self.tilt.y,
                 dy: dy + w(self.d0[1]),
                 two: self.tilt.two,
+                ..Shift::none()
             },
         )
     }
 
     fn targets(&self) -> ([u32; 2], bool) {
         ([self.tilt.x, self.tilt.y], self.tilt.two)
+    }
+
+    fn area_weight(&self) -> f64 {
+        self.tilt.weight
     }
 }

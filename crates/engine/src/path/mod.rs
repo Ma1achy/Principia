@@ -362,7 +362,7 @@ impl View {
             Map::Kernel(_) => ViewWindow::Chart(&self.sim.chart.window),
             Map::Saved(saved) => match **saved {
                 Saved::Oblique(_) => ViewWindow::Plane(&self.sim.plane),
-                Saved::Curved(_) => ViewWindow::Chart(&self.sim.chart.window),
+                Saved::Curved(_) | Saved::Chained(_) => ViewWindow::Chart(&self.sim.chart.window),
             },
             Map::Blend(blend) => blend.a.window(),
         }

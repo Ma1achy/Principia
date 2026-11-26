@@ -248,6 +248,7 @@ fn view(saved: &Saved, u: f64, v: f64) -> Decoded<f64> {
                 .expect("a shape sphere or (L_z, E) parent")
                 .decode::<Defaults, f64>(u, v),
         },
+        Saved::Chained(_) => panic!("a chain is no view of the baseline"),
     }
 }
 
