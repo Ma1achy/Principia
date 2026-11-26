@@ -50,6 +50,10 @@ pub const CASES: &[Case] = &[
         check: horizon_edit_shows_and_undoes,
     },
     Case {
+        name: "links_edit_shows_and_undoes",
+        check: links_edit_shows_and_undoes,
+    },
+    Case {
         name: "stain_graph_edit_shows_and_undoes",
         check: stain_graph_edit_shows_and_undoes,
     },
@@ -361,6 +365,58 @@ fn horizon_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(),
         "the horizon after undo",
         engine.snapshot().sim.horizon,
         sim.horizon,
+    )
+}
+
+/// The links' path (gui_state_contract §2): the whole `Links` in one edit shows in the next snapshot, touches nothing
+/// else of the `SimConfig`, enters the history once, logs a "SetField Links" line naming the new masses' link (the
+/// contract gives no wording), and undo restores it.
+fn links_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(), String> {
+    let first = engine.snapshot();
+    let (sim, h0) = (first.sim.clone(), first.history);
+    let mut links = sim.links.clone();
+    // From any links, the masses' link is switched to the other simplex link, so the edit always moves them.
+    let other = if links.mass.id == "stick_breaking" {
+        "softmax_tanh"
+    } else {
+        "stick_breaking"
+    };
+    links.mass = crate::contract::links::at_defaults(other);
+    engine.set_field(SetField {
+        edit: Edit::Sim(SimField::Links(links.clone())),
+        no_history: false,
+    });
+    let after = engine.snapshot();
+    expect(
+        "the links after their SetField",
+        after.sim.links.clone(),
+        links.clone(),
+    )?;
+    let mut rest = after.sim.clone();
+    rest.links = sim.links.clone();
+    expect(
+        "the rest of SimConfig after a links SetField",
+        rest,
+        sim.clone(),
+    )?;
+    expect(
+        "the undo depth after a links SetField",
+        after.history.undo_depth,
+        h0.undo_depth + 1,
+    )?;
+    expect(
+        "the links SetField's log line",
+        after
+            .log
+            .iter()
+            .any(|e| e.message.starts_with("SetField Links") && e.message.contains(other)),
+        true,
+    )?;
+    engine.undo();
+    expect(
+        "the links after undo",
+        engine.snapshot().sim.links,
+        sim.links,
     )
 }
 

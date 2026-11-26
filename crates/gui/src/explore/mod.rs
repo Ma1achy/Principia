@@ -8,6 +8,7 @@
 //! and Time's elements are reached with Enter, and the Legend is read-only.
 
 pub mod axis_labels;
+pub mod badge;
 pub mod breadcrumb;
 pub mod compass;
 pub mod footer;

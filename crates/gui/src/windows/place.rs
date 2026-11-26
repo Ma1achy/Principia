@@ -44,6 +44,7 @@ pub fn min_size(window: Window) -> Vec2 {
     match window {
         Window::Run => vec2(300.0, 200.0),
         Window::ChartBuilder => vec2(240.0, 240.0),
+        Window::Decoder => vec2(300.0, 240.0),
         Window::Export => vec2(280.0, 200.0),
         Window::Display => vec2(260.0, 200.0),
         Window::Profiler => vec2(280.0, 240.0),

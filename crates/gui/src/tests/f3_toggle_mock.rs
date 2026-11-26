@@ -47,8 +47,9 @@ fn f3_toggle_mock_figure_identical_underneath() {
     let rect = figure_px();
     assert_eq!(
         rect,
-        [564, 43, 1596, 996],
-        "the figure's rect is 01_main.png's figure box, less its axis strips (16 points each, at 1.5 pixels a point)"
+        [564, 73, 1596, 996],
+        "the figure's rect is 01_main.png's figure box, less its axis strips (16 points each) and its header strip (20 \
+         points), at 1.5 pixels a point"
     );
     check_same_figure(&on, &off, rect);
     let clear = clear_colour(&egui::Visuals::dark()).to_array();
@@ -187,6 +188,7 @@ fn f3_toggle_mock_layout_tiles_the_window() {
         let parts = [
             l.top_bar,
             l.manifold_view,
+            l.header,
             l.figure,
             l.axis_x,
             l.axis_y,

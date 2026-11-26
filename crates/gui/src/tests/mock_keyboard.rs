@@ -1624,7 +1624,8 @@ fn mock_keyboard_capture_steps() {
             "compass_case_tilt_rect",
             "compass_case_tilt_hex",
             "compass_case_third_axis",
-            "compass_case_badge"
+            "compass_case_badge",
+            "decoder"
         ]
     );
     let err = Step::parse("zoom").expect_err("an unknown step");
@@ -1718,10 +1719,10 @@ fn mock_keyboard_manifold_sections() {
     let panel = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(360.0, 1000.0));
     let got = crate::explore::manifold_sections(panel);
     let want = [
-        (52.0, 110.0),
-        (168.0, 154.0),
-        (328.0, 198.0),
-        (532.0, 154.0),
+        (52.0, 132.0),
+        (190.0, 154.0),
+        (350.0, 198.0),
+        (554.0, 154.0),
     ]
     .map(|(y, h)| egui::Rect::from_min_size(egui::pos2(12.0, y), egui::vec2(336.0, h)));
     assert_eq!(got, want);
@@ -1730,10 +1731,10 @@ fn mock_keyboard_manifold_sections() {
         crate::explore::manifold_sections(moved),
         want.map(|r| r.translate(egui::vec2(100.0, 50.0)))
     );
-    // Short of room, the rows share what is left: 616 points, less the title and the gaps, over 28 rows.
+    // Short of room, the rows share what is left: 616 points, less the title and the gaps, over 29 rows.
     let short = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(360.0, 640.0));
     let h = crate::explore::manifold_view::row_height(short);
-    assert_eq!(h, (616.0 - 40.0 - 18.0) / 28.0);
+    assert_eq!(h, (616.0 - 40.0 - 18.0) / 29.0);
     let bottom = crate::explore::manifold_sections(short)[3].max.y;
     assert!(
         (bottom - (12.0 + 616.0)).abs() < 1e-3,
@@ -1858,6 +1859,7 @@ fn mock_keyboard_manifold_view_scopes() {
         mv::Q2_EDIT,
         mv::BUILDER,
         mv::saved::SAVE,
+        mv::DECODER,
     ];
     let navigate = [
         mv::CENTRE_U,

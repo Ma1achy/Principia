@@ -77,6 +77,7 @@ fn one_setfield_moving(out: &Out, plane: &Plane, what: &str) {
         }
         SimField::Lock(_)
         | SimField::Horizon(_)
+        | SimField::Links(_)
         | SimField::Window(_)
         | SimField::SliceFrame { .. } => {
             unreachable!("sim_field passes z₀ and the basis only")
@@ -1325,7 +1326,7 @@ fn mock_manifold_view_every_control_in_its_row_inside_the_body() {
     // Chart: the preset across row 1, the basis rows' edit buttons at the right, the builder in row 4.
     let preset = all
         .iter()
-        .find(|n| n.text == "z_α × z_β")
+        .find(|n| n.text == "z_α × z_β" && n.rect.min.x < body.max.x)
         .expect("the preset");
     assert!(
         preset.rect.width() > 150.0 && preset.rect.max.x <= body.max.x + 0.5,

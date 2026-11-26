@@ -188,6 +188,7 @@ struct Broken {
     overlays: Overlays,
     hover: Hover,
     horizon: Horizon,
+    links: Links,
     stain_graph: StainGraph,
     debug_view: bool,
     window: engine::contract::sim_config::Window,
@@ -211,6 +212,7 @@ impl Broken {
             overlays: Overlays::default(),
             hover: Hover::default(),
             horizon: sim().horizon,
+            links: sim().links,
             stain_graph: StainGraph::new(),
             debug_view: false,
             window: sim().chart.window,
@@ -254,6 +256,10 @@ impl Broken {
                 &mut self.horizon,
                 h.clone(),
             ))),
+            Edit::Sim(SimField::Links(l)) => Edit::Sim(SimField::Links(std::mem::replace(
+                &mut self.links,
+                l.clone(),
+            ))),
             Edit::Render(RenderField::StainGraph(g)) => Edit::Render(RenderField::StainGraph(
                 std::mem::replace(&mut self.stain_graph, g.clone()),
             )),
@@ -296,6 +302,12 @@ impl Broken {
                 (Edit::Sim(SimField::Horizon(b)), Edit::Sim(SimField::Horizon(a))) => {
                     format!("SetField Horizon.t {} → {}{marker}", b.t, a.t)
                 }
+                // gui_state_contract §2 gives the links' line its path and each block's id and values, not a wording;
+                // the double words it unlike the store.
+                (Edit::Sim(SimField::Links(b)), Edit::Sim(SimField::Links(a))) => format!(
+                    "SetField Links: was {} {}, now {} {}{marker}",
+                    b.mass.id, b.momenta.id, a.mass.id, a.momenta.id
+                ),
                 // gui_state_contract §2: "logged as \"SetField StainGraph [before] → [after]\"".
                 (
                     Edit::Render(RenderField::StainGraph(b)),
@@ -438,6 +450,7 @@ impl EngineInterface for Broken {
                 plane: self.plane.clone(),
                 lock: self.lock.clone(),
                 horizon: self.horizon.clone(),
+                links: self.links.clone(),
                 chart: Chart {
                     window: self.window,
                     mapping: Default::default(),

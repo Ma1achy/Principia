@@ -74,9 +74,9 @@ fn check_conforms<E: EngineInterface>(make: impl FnMut() -> E) {
 fn conformance_real_engine_passes_every_case() {
     assert_eq!(
         CASES.len(),
-        11,
+        12,
         "the suite's four state-semantics cases (RQ-254), the navigation paths', the overlay set's and hover's, the \
-         horizon's, the stain graph's (R-390), the slice frame's (R-457) and the history key's two (R-458)"
+         horizon's, the links', the stain graph's (R-390), the slice frame's (R-457) and the history key's two (R-458)"
     );
     check_conforms(|| store(0.0));
     // The cases read the state they start from, so they hold from any playhead.

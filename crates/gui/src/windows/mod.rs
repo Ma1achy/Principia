@@ -1,6 +1,6 @@
 //! The dev GUI's windows (render_gui_spec §G5, §G7, §G8, §G12; GUI_DESIGN_NOTES § "03 Chart builder", § "04 Windows",
 //! § "05 Inspector", § "12 Console"; R-390, ORDER item 5): Run, Chart builder, Export & share, Display, Profiler,
-//! Console and the Inspector's frame, one registry of seven that the Windows menu lists and every opener reads.
+//! Console, the Decoder and the Inspector's frame, one registry of eight that the Windows menu lists and every opener reads.
 //!
 //! **The window rule** (render_gui_spec §G3; R-405, R-409): an open window is a scope outside the big scopes' Tab
 //! order that takes the focus when it opens, on its first section's first element, in navigation mode; Tab and
@@ -24,6 +24,7 @@
 
 pub mod chart_builder;
 pub mod console;
+pub mod decoder;
 pub mod display;
 pub mod export;
 pub mod inspector;
@@ -56,9 +57,9 @@ pub struct Entry {
     pub close: ScopeId,
 }
 
-/// The seven windows, in the Windows menu's order (applied per R-369: the first five as TASK-M6-24 listed them, then
-/// the Chart builder and the Inspector).
-pub const REGISTRY: [Entry; 7] = [
+/// The eight windows, in the Windows menu's order: Run, Profiler, Export & share, Display and Console, then the Chart
+/// builder, the Decoder and the Inspector.
+pub const REGISTRY: [Entry; 8] = [
     Entry {
         window: Window::Run,
         scope: run::WINDOW,
@@ -106,6 +107,14 @@ pub const REGISTRY: [Entry; 7] = [
         title: chart_builder::TITLE,
         menu_entry: "windows_chart_builder",
         close: "chart_builder_close",
+    },
+    Entry {
+        window: Window::Decoder,
+        scope: decoder::WINDOW,
+        name: "Decoder",
+        title: decoder::TITLE,
+        menu_entry: "windows_decoder",
+        close: "decoder_close",
     },
     Entry {
         window: Window::Inspector,
@@ -159,6 +168,7 @@ pub fn register(tree: &mut ScopeTree) {
     display::register(tree);
     console::register(tree);
     chart_builder::register(tree);
+    decoder::register(tree);
     inspector::register(tree);
     for e in REGISTRY.iter().filter(|e| e.window != Window::Console) {
         tree.register(Some(e.scope), Scope::control(e.close, CLOSE_LABEL));
@@ -179,7 +189,10 @@ pub fn closed_by(id: &str) -> Option<Window> {
 pub fn rect(window: Window, layout: &Layout) -> Rect {
     match window {
         Window::Profiler | Window::ChartBuilder => layout.manifold_view,
-        Window::Run | Window::Export | Window::Display | Window::Inspector => layout.trajectory,
+        // Over the Trajectory panel, so the Chart section's Links row and the figure's badge stay in view.
+        Window::Run | Window::Export | Window::Display | Window::Inspector | Window::Decoder => {
+            layout.trajectory
+        }
         Window::Console => layout.console,
     }
 }
@@ -191,6 +204,8 @@ pub struct State {
     pub run: run::Draft,
     /// The Chart builder's draft.
     pub chart: chart_builder::Draft,
+    /// The Decoder's staged links.
+    pub decoder: decoder::Draft,
     /// Export & share's choices.
     pub export: export::State,
     /// Display's choices.

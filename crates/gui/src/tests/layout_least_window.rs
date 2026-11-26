@@ -43,7 +43,7 @@ fn default_at([w, h]: [u32; 2], scale: f32) -> Layout {
 
 #[test]
 fn layout_least_window_the_default_splits_meet_every_minimum() {
-    assert_eq!(LEAST_WINDOW, [1412.0, 817.0]);
+    assert_eq!(LEAST_WINDOW, [1412.0, 842.0]);
     for scale in SCALES {
         // The window's size is a whole number of pixels, the nearest to the least in points.
         let least = LEAST_WINDOW.map(|points| (points * scale).round() as u32);
@@ -76,15 +76,52 @@ fn layout_least_window_the_default_splits_meet_every_minimum() {
     });
     // The panels that bind: a point short of each one's own least, the rounding apart, is under its minimum. The compass
     // two points short: a point short, at 1407, its edge rounds up to 346 at 3 pixels per point.
-    let (wide, high) = (
-        (MIN_COMPASS_W * 2160.0 / 531.0).ceil(),
-        (MIN_TOP_H * 1350.0 / 977.0).ceil(),
-    );
+    let wide = (MIN_COMPASS_W * 2160.0 / 531.0).ceil();
     rejects("a window two points too narrow for the compass", || {
         check_minimums(&Layout::new(window([wide - 2.0, LEAST_WINDOW[1]]), 3.0))
     });
+    let low = too_low_for_the_top_row(MIN_TOP_H, 3.0);
     rejects("a window a point too low for the top row", || {
-        check_minimums(&Layout::new(window([LEAST_WINDOW[0], high - 1.0]), 3.0))
+        check_minimums(&Layout::new(window([LEAST_WINDOW[0], low]), 3.0))
+    });
+}
+
+/// The top row's height, snapped, in a window `h` points high at `scale`.
+fn top_row(h: f32, scale: f32) -> f32 {
+    let l = Layout::new(window([LEAST_WINDOW[0], h]), scale);
+    l.bottom_row.min.y - l.top_bar.max.y
+}
+
+/// The tallest window, in whole pixels at `scale`, whose snapped top row is under `min`, found by stepping down a pixel
+/// at a time from the unsnapped least: so the control is under the minimum by the layout's own snapping, whatever the
+/// value, and within a point and a pixel of the least.
+fn too_low_for_the_top_row(min: f32, scale: f32) -> f32 {
+    let mut h = (min * 1350.0 / 977.0 * scale).ceil() / scale;
+    while top_row(h, scale) >= min {
+        h -= 1.0 / scale;
+    }
+    assert!(top_row(h, scale) < min);
+    // The bottom row's edge snaps to a whole pixel, so the first window under is up to a pixel past a point short.
+    assert!(
+        (min * 1350.0 / 977.0) - h <= 1.0 + 1.0 / scale + 1e-3,
+        "{h} is more than a point and a pixel under the least"
+    );
+    h
+}
+
+/// The control's window is under the minimum at the derived floor, at the value before this slack was settled and at
+/// the value kept, at every scale: it does not depend on where a rounding lands.
+#[test]
+fn layout_least_window_the_too_low_window_is_under_at_any_minimum() {
+    for min in [604.0, 606.0, 608.0] {
+        for scale in SCALES {
+            let h = too_low_for_the_top_row(min, scale);
+            assert!(top_row(h, scale) < min, "{min} at {scale}: {h}");
+        }
+    }
+    rejects("a window a pixel taller than the one found", || {
+        let h = too_low_for_the_top_row(608.0, 3.0) + 1.0 / 3.0;
+        assert!(top_row(h, 3.0) < 608.0, "not under");
     });
 }
 

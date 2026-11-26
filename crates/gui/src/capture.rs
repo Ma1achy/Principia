@@ -71,6 +71,9 @@ pub enum Step {
     ClickNode,
     /// Set the plane to R-451 B8's case [`CompassCase`] through the contract, and the compass's mode to the case's.
     Compass(CompassCase),
+    /// Apply links off the default through the contract (the masses on stick-breaking, the momenta's `q_max` at 3),
+    /// stage the α row on tanh, and open the Decoder window.
+    Decoder,
 }
 
 /// R-451 B8's golden cases of the compass's cube: the plane the case sets, in the mock preset's frame `(e_a, e_b, e_d)`,
@@ -164,7 +167,7 @@ pub const LOCK_AT: (f32, f32) = (0.35, 0.6);
 
 /// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25), the Manifold view's
 /// (TASK-M6-26), the hover, Alt+1 and Space (TASK-M6-27), and R-451 B8's compass cases (TASK-M6-33).
-pub const STEPS: [(&str, Step); 26] = [
+pub const STEPS: [(&str, Step); 27] = [
     ("f3", Step::F3),
     ("raise_warning", Step::RaiseWarning),
     ("raise_error", Step::RaiseError),
@@ -197,6 +200,7 @@ pub const STEPS: [(&str, Step); 26] = [
         Step::Compass(CompassCase::ThirdAxis),
     ),
     ("compass_case_badge", Step::Compass(CompassCase::Badge)),
+    ("decoder", Step::Decoder),
 ];
 
 impl Step {
@@ -347,6 +351,23 @@ pub fn shoot_case(
                     app.set_field(edit);
                 }
                 app.manifold.compass.mode = case.parameters().2;
+            }
+            Step::Decoder => {
+                use engine::contract::links;
+                use engine::contract::set_field::{Edit, SetField, SimField};
+                let mut l = app.snapshot().sim.links.clone();
+                l.mass = links::at_defaults("stick_breaking");
+                l.momenta = links::with_param(&l.momenta, "q_max", 3.0);
+                app.set_field(SetField {
+                    edit: Edit::Sim(SimField::Links(l.clone())),
+                    no_history: false,
+                });
+                l.alpha = links::at_defaults("tanh_alpha");
+                app.windows.decoder.staged = Some(l);
+                app.view
+                    .windows
+                    .open
+                    .push(engine::contract::view_ui::Window::Decoder);
             }
         }
         frames.extend([Vec::new(), Vec::new()]);
