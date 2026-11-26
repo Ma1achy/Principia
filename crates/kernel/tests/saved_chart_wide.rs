@@ -16,7 +16,7 @@
 //! "To 1 ulp" here: each placed value differs from the reference by at most `ε·Σ|terms|` of the terms that form it, a
 //! criterion fixed before the run. Each test registers its negative control.
 
-use kernel::chart::saved::{Chain, Composed, Level, Saved};
+use kernel::chart::saved::{Chain, Composed, Level, Saved, WORDS};
 use kernel::chart::shape_sphere::PixelCount;
 use kernel::chart::tilt::{Folds, Hidden, Placement, Shift, Tilt};
 use kernel::chart::{
@@ -351,6 +351,11 @@ enum Got {
 /// `want` hidden coordinates, and decodes at `(a, b)` with each offset on its control.
 fn check_chain(levels: &[Level], want: usize, got: Got) {
     let composed = Composed::of(levels).expect("a composition");
+    check_composed(composed, levels, want, got);
+}
+
+/// [`check_chain`] on the composition `composed`, built however the caller built it from `levels`.
+fn check_composed(composed: Composed<f64>, levels: &[Level], want: usize, got: Got) {
     assert_eq!(named(&composed), want, "the coordinates named");
     let spec: Vec<_> = levels.iter().map(|l| (l.tilt, l.centre)).collect();
     let view = Tilted::placed(sphere(), composed).expect("every target a hidden control");
@@ -468,5 +473,276 @@ negative_control!(
         for (levels, want) in wide_cases() {
             check_chain(&levels, want, Got::Dropped);
         }
+    }
+);
+
+// ── Refusals ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// Compositions the kernel refuses (`admitted` false) and ones it takes, `admitted` true being the control's inversion.
+fn check_refused(admitted: bool) {
+    let at = CENTRE;
+    let corner = spec(-90.0, 90.0, TiltMap::Lean, 4, 4);
+    let of = |tilts: &[TiltSpec]| {
+        let levels: Vec<Level> = tilts.iter().map(|t| level(*t, at)).collect();
+        Composed::of(&levels).is_some()
+    };
+    let two = |x, y| spec(10.0, 5.0, TiltMap::Lean, x, y);
+    let refused = [
+        (of(&[two(2, 3), two(4, 5), two(6, 7)]), "onto six controls"),
+        (of(&[two(2, 3), two(4, 5), two(2, 6)]), "onto five controls"),
+        (
+            of(&[corner, spec(10.0, 0.0, TiltMap::Sheet, 4, 4)]),
+            "into the target at the rank-losing corner",
+        ),
+        (
+            of(&[two(2, 3), corner, spec(10.0, 0.0, TiltMap::Sheet, 4, 4)]),
+            "into the corner's target through a chain",
+        ),
+        (
+            of(&[two(2, 3), two(4, 5), two(6, 7), two(2, 3)]),
+            "past three tilts",
+        ),
+    ];
+    let admits = [
+        (of(&[two(2, 3), two(4, 5)]), "onto four controls"),
+        (of(&[two(2, 3), two(4, 5), two(2, 4)]), "a chain onto four controls"),
+        (
+            of(&[corner, spec(10.0, 0.0, TiltMap::Sheet, 5, 5)]),
+            "the corner, tilted into another target",
+        ),
+        (of(&[two(2, 3), two(2, 3), two(2, 3)]), "three tilts on two controls"),
+    ];
+    for (taken, what) in refused {
+        assert!(taken == admitted, "a composition {what} was not refused");
+    }
+    for (taken, what) in admits {
+        assert!(taken != admitted, "a composition {what} was refused");
+    }
+}
+
+#[test]
+fn saved_chart_wide_refused() {
+    check_refused(false);
+}
+
+negative_control!(
+    saved_chart_wide_refused,
+    "an admitted composition checked as refused must fail",
+    expected = "was not refused",
+    {
+        check_refused(true);
+    }
+);
+
+// ── A saved chart saved again ────────────────────────────────────────────────────────────────────────────────────────
+
+/// The saved tilt, the view's tilt it is saved again with, and the new one, over three centres.
+struct Tilts {
+    saved: TiltSpec,
+    link: TiltSpec,
+    new: TiltSpec,
+}
+
+const LINK_CENTRE: [f64; 2] = [0.45, 0.52];
+const NEW_CENTRE: [f64; 2] = [0.4, 0.58];
+
+fn chain_cases() -> Vec<(Tilts, usize)> {
+    vec![
+        // All three into the same target: the rotations compose.
+        (
+            Tilts {
+                saved: spec(25.0, 0.0, TiltMap::Sheet, 2, 2),
+                link: spec(10.0, 14.0, TiltMap::Sheet, 2, 2),
+                new: spec(-7.0, 12.0, TiltMap::Sheet, 2, 2),
+            },
+            1,
+        ),
+        // Three different targets: the block form, each offset on its own.
+        (
+            Tilts {
+                saved: spec(25.0, 0.0, TiltMap::Sheet, 2, 2),
+                link: spec(10.0, 14.0, TiltMap::Sheet, 3, 3),
+                new: spec(-7.0, 12.0, TiltMap::Sheet, 4, 4),
+            },
+            3,
+        ),
+        // Two targets each, one shared down the chain: four coordinates.
+        (
+            Tilts {
+                saved: spec(12.0, 9.0, TiltMap::Lean, 2, 3),
+                link: spec(10.0, 14.0, TiltMap::Lean, 3, 4),
+                new: spec(-7.0, 12.0, TiltMap::Lean, 4, 5),
+            },
+            4,
+        ),
+        // A skewed saved tilt, the next into its target.
+        (
+            Tilts {
+                saved: spec(30.0, 40.0, TiltMap::Lean, 4, 4),
+                link: spec(10.0, 0.0, TiltMap::Sheet, 4, 4),
+                new: spec(8.0, 6.0, TiltMap::Lean, 4, 5),
+            },
+            2,
+        ),
+    ]
+}
+
+fn saved_chain(t: &Tilts) -> Chain {
+    let saved = Saved::curved(&sphere(), t.saved, CENTRE, SPAN).expect("a curved parent");
+    match saved.again(&t.link, LINK_CENTRE, SPAN) {
+        Some(Saved::Chained(chain)) => chain,
+        _ => panic!("a saved curved chart saves again"),
+    }
+}
+
+/// A chain through its two records, read back and reopened under the new tilt.
+fn reopened_chain(t: &Tilts, new: &TiltSpec) -> Tilted<ShapeSphere<f64>, f64, Composed<f64>> {
+    let def = Saved::Chained(saved_chain(t));
+    let link = def.link_words().expect("a link record");
+    let Some(Saved::Chained(chain)) = Saved::from_chain_words(&def.to_words(), &link) else {
+        panic!("the records do not read back as a chain");
+    };
+    chain.open(new, NEW_CENTRE, SPAN).expect("a composition")
+}
+
+/// The chain `R·R′·R″`, through its words, places every pixel as the matrices do, and names the coordinates it should.
+fn check_chained(got: Got) {
+    for (t, want) in chain_cases() {
+        let levels = [
+            level(t.saved, CENTRE),
+            level(t.link, LINK_CENTRE),
+            level(t.new, NEW_CENTRE),
+        ];
+        let view = reopened_chain(&t, &t.new);
+        check_composed(*view.tilt(), &levels, want, got);
+    }
+}
+
+#[test]
+fn saved_chart_wide_chain() {
+    check_chained(Got::Kernel);
+}
+
+negative_control!(
+    saved_chart_wide_chain,
+    "the chain's tilts in the opposite order must not be R·R′·R″",
+    expected = "is not R·R′",
+    {
+        check_chained(Got::Reversed);
+    }
+);
+
+/// A chain reopened at `τ″ = 0` is the view it was saved from, bit for bit: the base chart reopened under the link's
+/// tilt, at every pixel, placed at f64 and f32 and decoded. With `new` another tilt (the control) it is another view.
+fn check_reopens(new: TiltSpec) {
+    for (t, _) in chain_cases() {
+        let from = chain_view(&t);
+        let again = reopened_chain(&t, &new);
+        let (a, b) = (from.tilt().at_precision::<f32>(), again.tilt().at_precision::<f32>());
+        for [u, v] in window() {
+            let (x, y) = (from.tilt().place::<f64>(u, v), again.tilt().place::<f64>(u, v));
+            assert_eq!(
+                (x.0.map(f64::to_bits), shift_bits(&x.1)),
+                (y.0.map(f64::to_bits), shift_bits(&y.1)),
+                "the reopened view is not the one saved at ({u}, {v})"
+            );
+            let (x, y) = (a.place::<f32>(u as f32, v as f32), b.place::<f32>(u as f32, v as f32));
+            assert_eq!(
+                (x.0.map(f32::to_bits), x.1.dx.to_bits()),
+                (y.0.map(f32::to_bits), y.1.dx.to_bits()),
+                "the reopened view is not the one saved at ({u}, {v}), at f32"
+            );
+            assert_eq!(
+                format!("{:?}", from.decode::<Defaults, f64>(u, v)),
+                format!("{:?}", again.decode::<Defaults, f64>(u, v)),
+                "the reopened view is not the one saved at ({u}, {v})"
+            );
+        }
+    }
+}
+
+/// The view the chain was saved from: its base reopened under the link's tilt about the link's centre.
+fn chain_view(t: &Tilts) -> Tilted<ShapeSphere<f64>, f64, Composed<f64>> {
+    let Saved::Curved(base) = Saved::curved(&sphere(), t.saved, CENTRE, SPAN).expect("a parent") else {
+        panic!("a curved parent");
+    };
+    base.open(&t.link, LINK_CENTRE, SPAN).expect("a composition")
+}
+
+fn shift_bits(s: &Shift<f64>) -> [u64; 9] {
+    [
+        u64::from(s.x),
+        s.dx.to_bits(),
+        u64::from(s.y),
+        s.dy.to_bits() & u64::from(s.two).wrapping_neg(),
+        u64::from(s.two),
+        u64::from(s.z),
+        s.dz.to_bits(),
+        u64::from(s.w),
+        u64::from(s.more),
+    ]
+}
+
+#[test]
+fn saved_chart_wide_chain_reopens() {
+    check_reopens(spec(0.0, 0.0, TiltMap::Sheet, 2, 2));
+}
+
+negative_control!(
+    saved_chart_wide_chain_reopens,
+    "a chain reopened under a tilt is not the view it was saved from",
+    expected = "is not the one saved",
+    {
+        check_reopens(spec(3.0, 0.0, TiltMap::Sheet, 2, 2));
+    }
+);
+
+/// The chain's two records read back bit for bit; every word of either that is changed reads as another chain or none;
+/// a lone head, a lone link, the records swapped and a head of kind 3 are no chain; nothing else saves again.
+fn check_chain_words(alter: bool) {
+    for (t, _) in chain_cases() {
+        let def = Saved::Chained(saved_chain(&t));
+        let (head, link) = (def.to_words(), def.link_words().expect("a link"));
+        assert_eq!(Saved::from_chain_words(&head, &link), Some(def), "the records read back");
+        assert_eq!(Saved::from_words(&head), None, "a lone head read as a chart");
+        assert_eq!(Saved::from_words(&link), None, "a lone link read as a chart");
+        assert_eq!(Saved::from_chain_words(&link, &head), None, "swapped records read");
+        let plain = Saved::curved(&sphere(), t.saved, CENTRE, SPAN).expect("a parent");
+        assert_eq!(Saved::from_chain_words(&plain.to_words(), &link), None, "a curved head read as a chain's");
+        for k in 0..WORDS {
+            let mut other = link;
+            if alter {
+                other[k] = f64::from_bits(other[k].to_bits() ^ 1);
+            }
+            let _ = k;
+            let read = Saved::from_chain_words(&head, &other);
+            assert!(
+                read != Some(def),
+                "the link record with word {k} changed read as the saved chain"
+            );
+        }
+    }
+    let plain = Saved::curved(&sphere(), chain_cases()[0].0.saved, CENTRE, SPAN).expect("a parent");
+    let chained = plain.again(&chain_cases()[0].0.link, LINK_CENTRE, SPAN).expect("saves again");
+    assert!(chained.again(&chain_cases()[0].0.new, NEW_CENTRE, SPAN).is_none(), "a chain saved again");
+    let oblique = Saved::latent(&kernel::chart::Latent {
+        z0: [0.0; 8],
+        q1: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        q2: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    });
+    assert!(oblique.again(&chain_cases()[0].0.link, LINK_CENTRE, SPAN).is_none(), "an oblique chart saved again");
+}
+
+#[test]
+fn saved_chart_wide_chain_words() {
+    check_chain_words(true);
+}
+
+negative_control!(
+    saved_chart_wide_chain_words,
+    "a link record left unchanged must read as the saved chain",
+    expected = "read as the saved chain",
+    {
+        check_chain_words(false);
     }
 );
