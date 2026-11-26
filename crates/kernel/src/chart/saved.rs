@@ -38,7 +38,7 @@
 //!
 //! **What is refused** (`None` from [`Composed::of`]): a new tilt into the target of a saved Lean each axis view at
 //! the rank-losing corner, `|τ₁| = |τ₂| = 90°` with one target, which has no frame (`ray-degenerate`); offsets that
-//! land on more than four hidden coordinates, which a [`Shift`] carries; and more than [`MAX_LEVELS`] tilts.
+//! land on more than four hidden coordinates, which a [`Shift`] carries; and more than three tilts.
 //! [`Saved::curved`] refuses a saved or tilted chart as a parent by type ([`SaveParent`]), never saving it without its
 //! tilt.
 //!
@@ -986,11 +986,11 @@ impl Chain {
     }
 }
 
-/// The most tilts a composition holds: two saved ([`Chain`]) and the new one.
-pub const MAX_LEVELS: usize = 3;
+/// One value per tilt of a composition, at most three: two saved ([`Chain`]) and the new one.
+type ByLevel<T> = [T; 3];
 
-/// The most hidden coordinates one composition's offsets name: the four a [`Shift`] carries.
-const MAX_TARGETS: usize = 4;
+/// One value per hidden coordinate a composition's offsets name, at most the four a [`Shift`] carries.
+type ByTarget<T> = [T; 4];
 
 /// One tilt of a composition: its stored tilt about its centre, the targets' slider spans.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -1009,18 +1009,18 @@ pub struct Level {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Composed<P> {
     /// The tilts, outermost (the saved `R`) first; the ones past `count` are off.
-    levels: [Tilt<P>; MAX_LEVELS],
+    levels: ByLevel<Tilt<P>>,
     /// How many tilts the composition was built from.
     count: usize,
     /// `R·e_X` and `R·e_Y` of each tilt ([`TiltSpec::inputs`]), set where an inner tilt feeds it.
-    inputs: [[[P; 4]; 2]; MAX_LEVELS],
+    inputs: ByLevel<[[P; 4]; 2]>,
     /// Whether an inner tilt's offset on a tilt's target `X` or `Y` enters its `R` at that target's input.
-    fed: [[bool; 2]; MAX_LEVELS],
+    fed: ByLevel<[bool; 2]>,
     /// The slot of the shift each tilt's targets write.
-    slot: [[usize; 2]; MAX_LEVELS],
+    slot: ByLevel<[usize; 2]>,
     /// The hidden coordinates the shift names, by slot; a slot never filled holds the outermost tilt's `Y` (the second)
     /// or none.
-    targets: [u32; MAX_TARGETS],
+    targets: ByTarget<u32>,
     /// How many of `targets` are filled.
     filled: usize,
     /// Each pixel's area weight ([`Composed::weight`]).
@@ -1059,20 +1059,20 @@ impl Composed<f64> {
         ])
     }
 
-    /// The composition of `levels`, outermost (the saved `R`) first, at most [`MAX_LEVELS`]; `None` past them, where an
+    /// The composition of `levels`, outermost (the saved `R`) first, at most three; `None` past them, where an
     /// offset enters a tilt whose `R` has no input at its target, or where the offsets land on more than four hidden
     /// coordinates. A tilt that is off takes no arithmetic; with one tilt on, the composition is that tilt's.
     pub fn of(levels: &[Level]) -> Option<Self> {
-        if levels.is_empty() || levels.len() > MAX_LEVELS {
+        if levels.is_empty() || levels.len() > 3 {
             return None;
         }
         let off = Tilt::new(&levels[0].tilt, levels[0].centre, levels[0].span);
         let mut composed = Composed {
-            levels: [off; MAX_LEVELS],
+            levels: [off; 3],
             count: levels.len(),
-            inputs: [[[0.0; 4]; 2]; MAX_LEVELS],
-            fed: [[false; 2]; MAX_LEVELS],
-            slot: [[0; 2]; MAX_LEVELS],
+            inputs: [[[0.0; 4]; 2]; 3],
+            fed: [[false, false], [false, false], [false, false]],
+            slot: [[0; 2]; 3],
             targets: [levels[0].tilt.x, levels[0].tilt.y, u32::MAX, u32::MAX],
             filled: 0,
             weight: 1.0,
@@ -1115,7 +1115,7 @@ impl Composed<f64> {
                 composed.slot[k][j] = match at {
                     Some(s) => s,
                     None => {
-                        if composed.filled == MAX_TARGETS {
+                        if composed.filled == 4 {
                             return None;
                         }
                         composed.targets[composed.filled] = target;
