@@ -165,6 +165,8 @@ struct View {
     waiting: BTreeMap<(NodeId, String), Vec<f64>>,
     /// The fragment key of the graph last shown.
     key: Option<u64>,
+    /// The current pipeline's WGSL, with the cache's generation it was taken at.
+    source: Option<(u64, Arc<str>)>,
 }
 
 impl View {
@@ -197,6 +199,17 @@ impl View {
         self.graph = Some(g.clone());
         self.settle();
         Ok(())
+    }
+
+    /// The WGSL the current pipeline was compiled from, the very text: taken again only when the pipeline changes.
+    fn source(&mut self) -> Option<Arc<str>> {
+        let cache = self.view.cache();
+        let generation = cache.generation();
+        if self.source.as_ref().map(|(g, _)| *g) != Some(generation) {
+            let text = cache.current().map(|c| Arc::<str>::from(c.source()));
+            self.source = text.map(|t| (generation, t));
+        }
+        self.source.as_ref().map(|(_, t)| Arc::clone(t))
     }
 
     /// Whether the stain last asked for is still compiling.
@@ -375,6 +388,7 @@ impl RealCanvas {
             params: BTreeMap::new(),
             waiting: BTreeMap::new(),
             key: None,
+            source: None,
         })
     }
 
@@ -446,6 +460,8 @@ impl RealCanvas {
         report
             .problems
             .extend(errors.iter().map(ToString::to_string));
+        report.errors = errors;
+        report.source = v.source();
         if report.problems.is_empty() {
             drawn?;
         }

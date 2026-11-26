@@ -83,6 +83,8 @@ delete its line when it's done.
 - **The GPU path does not read the stop option** (`SimUniforms::stop_on_escape`): neither the dispatch nor the WGSL
   kernel carries it, so the CPU and GPU fields agree today only because `SimConfig` cannot set it. The GPU path must
   read it before `SimConfig` can set it, or the two fields will disagree.
+- **`CustomNodes::answered` (render::custom) only matches fully custom nodes**: an edited built-in is never answered, so
+  the window calls `problem_of` directly for it.
 - **The preset library is partly built** (TASK-M7-17). Built: the preset files (`render/presets/`), the loader, locked
   debug presets that fork on the first edit (`engine::contract::stain::preset`), the catalogue's outcome entry reading
   its file, the addressing presets and two bivariate presets. Not built: the tile-index and sample-index grey presets

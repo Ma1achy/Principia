@@ -386,6 +386,34 @@ impl StainGraph {
         })
     }
 
+    /// [`StainGraph::set_occupant`], its declared uniforms then holding `values` alone, the rest at their defaults: one
+    /// checked edit, for a code edit whose values follow its declaration (`custom::reconcile`).
+    pub fn set_occupant_with(
+        &mut self,
+        id: NodeId,
+        occupant: Occupant,
+        values: &BTreeMap<String, Vec<f64>>,
+    ) -> Result<(), GraphError> {
+        // One edit, not set_occupant then the values: a value the new declaration no longer admits fails its check.
+        self.edit(|g| {
+            let n = g.nodes.get_mut(&id).ok_or_else(|| no_node(id))?;
+            let d = assemble::declaration(n.kind.into(), &(&occupant).into())?;
+            let ports = assemble::in_ports(n.kind.into(), &d).len();
+            n.occupant = occupant;
+            #[cfg(feature = "controls")]
+            let keep = crate::contract::stain::folder::probe::lifted(
+                crate::contract::stain::folder::probe::Lift::ValuesIgnored,
+            );
+            #[cfg(not(feature = "controls"))]
+            let keep = false;
+            if !keep {
+                n.params = values.clone();
+            }
+            g.wires.retain(|&(to, port), _| to != id || port < ports);
+            Ok(())
+        })
+    }
+
     /// Sets node `id`'s uniform `name` to `value`.
     pub fn set_param(&mut self, id: NodeId, name: &str, value: Vec<f64>) -> Result<(), GraphError> {
         self.edit(|g| {

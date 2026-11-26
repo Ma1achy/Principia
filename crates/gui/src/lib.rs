@@ -36,6 +36,7 @@ pub mod web;
 mod tests {
     mod canvas_gestures_mock;
     mod cli;
+    mod code_views;
     mod compass_cross_section;
     mod compass_latent_jacobian;
     mod compass_physical_views;

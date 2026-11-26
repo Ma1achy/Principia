@@ -177,6 +177,10 @@ pub enum GuiStep {
     CompassCaseBadge,
     /// Apply links off the default, stage one more edit, and open the Decoder window.
     Decoder,
+    /// Show the Stain canvas's Pipeline WGSL view.
+    PipelineWgsl,
+    /// Show the Stain canvas's Node WGSL view.
+    NodeWgsl,
 }
 
 impl GuiStep {
@@ -210,6 +214,8 @@ impl GuiStep {
             GuiStep::CompassCaseThirdAxis => "compass_case_third_axis",
             GuiStep::CompassCaseBadge => "compass_case_badge",
             GuiStep::Decoder => "decoder",
+            GuiStep::PipelineWgsl => "pipeline_wgsl",
+            GuiStep::NodeWgsl => "node_wgsl",
         }
     }
 }

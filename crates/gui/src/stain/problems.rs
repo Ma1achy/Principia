@@ -3,6 +3,10 @@
 //! status, the problems and the notes are the engine side's; Recompile asks it to recompile.
 
 use eframe::egui::{self, vec2, Color32, Rect, RichText, Ui, UiBuilder};
+use engine::contract::render_state::{NodeId, StainGraph};
+use engine::contract::stain::assembled::node_source;
+use engine::contract::stain::custom::problem_of;
+use engine::contract::stain::view::CompileError;
 
 use super::{Content, AUTO_RECOMPILE, RECOMPILE};
 use crate::keyboard::scopes::ScopeId;
@@ -11,6 +15,24 @@ use crate::windows::Keys;
 /// The pane's heading: "Problems · n".
 pub fn heading(content: Option<&Content>) -> String {
     format!("Problems · {}", content.map_or(0, |c| c.problems.len()))
+}
+
+/// The pipeline's error `e` of the graph `g`, one line: a node's names the node and, where the error says where, the
+/// line of the node's own code it is at, never the assembled text's, which the author never sees whole.
+pub fn located(g: &StainGraph, e: &CompileError) -> String {
+    let CompileError::Node { key, error, .. } = e else {
+        return e.to_string();
+    };
+    let id = NodeId(*key as u32);
+    let text = g
+        .node(id)
+        .and_then(|n| node_source(n.kind, &n.occupant).ok().flatten())
+        .unwrap_or_default();
+    let found = problem_of(Some(*key), &text, error);
+    match found.line {
+        Some(line) => format!("node {}, line {line} · {}", id.0, found.message),
+        None => format!("node {} · {}", id.0, found.message),
+    }
 }
 
 /// The compile status's colour: green, as 02_stain.png's (a look choice, R-390).
