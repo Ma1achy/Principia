@@ -222,9 +222,22 @@ def render_controls(ref, rebuild, tmp):
         record(name, name.startswith('harmless'), C.compare_still(light, out))
 
 
+def align_controls(root, tmp):
+    """The README's title and banner: the real layout must be within a pixel, the old full-width banner must not."""
+    import readme_align
+    for label, hero, want in (('the README as it is', None, 0), ('banner at the old full width (100%)', '100%', 1),
+                              ('banner 2 % too narrow (88.7%)', '88.7%', 1), ('banner 2 % too wide (92.7%)', '92.7%', 1)):
+        argv = [os.path.join(tmp, 'align-' + str(abs(hash(label)) % 10**5)), '--root', root, '--times', '1', '--widths', '1012']
+        if hero:
+            argv += ['--hero-width', hero]
+        rc = readme_align.main(argv)
+        RESULTS.append((f'alignment: {label}', want == 0, rc == 0, 'within 1 px' if rc == 0 else 'outside 1 px', ''))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('reference'); ap.add_argument('--scratch'); ap.add_argument('--render'); ap.add_argument('--quick', action='store_true')
+    ap.add_argument('--align-root', help='a folder shaped like the repository (README.md, docs/readme, brand/titles) built from a rebuild')
     a = ap.parse_args()
     tmp = a.scratch or tempfile.mkdtemp(prefix='brand-controls-')
     os.makedirs(tmp, exist_ok=True)
@@ -233,6 +246,8 @@ def main():
     if a.render:
         render_controls(a.reference, a.render, tmp)
         webp_controls(a.reference, a.render)
+    if a.align_root:
+        align_controls(a.align_root, tmp)
     broken = 0
     print(f'{"control":<66} {"must":<7} {"got":<7} detail')
     for name, want, got, why, st in RESULTS:

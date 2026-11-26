@@ -13,6 +13,7 @@ import os, re, shutil, struct, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 BRAND = os.path.dirname(HERE)
 REPO = os.path.dirname(BRAND)
+sys.path.insert(0, HERE)
 BOARDS = ['Dragonfly', 'DragonflyNight', 'Word3D', 'Word3DSub', 'WordFlat', 'WordFlatNight', 'WordFlatSub',
           'WordFlatSubNight', 'WordMixed', 'WordMixedSub']
 
@@ -176,6 +177,11 @@ def tree_names(readme):
     return sorted(n for n in names if not os.path.exists(os.path.join(BRAND, n.rstrip('/'))))
 
 
+def banner_percent(readme_text):
+    """The width, in percent, the README gives the banner (hero.jpg)."""
+    return float(re.search(r'hero\.jpg"[^>]*width="([\d.]+)%"', readme_text).group(1))
+
+
 def size_problems(brand):
     bad = []
     so = os.path.join(brand, 'social/out')
@@ -244,6 +250,15 @@ class Checks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             open(os.path.join(tmp, 'R.md'), 'w').write('<img src="nope.png"> <source srcset="docs/a.svg">')
             self.assertEqual(readme_paths(os.path.join(tmp, 'R.md'), tmp), ['docs/a.svg', 'nope.png'])
+
+    def test_banner_width_matches_the_title_layout(self):
+        import titlelayout
+        self.assertEqual(banner_percent(open(os.path.join(REPO, 'README.md')).read()), titlelayout.layout()['hero_percent'])
+
+    def test_control_banner_check_sees_a_wrong_width(self):
+        import titlelayout
+        old = '<img src="docs/readme/hero.jpg" alt="x" width="100%">'
+        self.assertNotEqual(banner_percent(old), titlelayout.layout()['hero_percent'])
 
     def test_social_jpgs_and_webps_are_within_their_limits(self):
         self.assertEqual(size_problems(BRAND), [])
