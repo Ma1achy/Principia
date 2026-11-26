@@ -183,8 +183,8 @@ def _encode_job(args):
     import encode
     kind, a = args
     if kind == 'webp':
-        frames, fps, dst = a
-        return dst, encode.webp(frames, fps, 15, WEBP_WIDTH, dst, limit=WEBP_LIMIT)
+        frames, fps, dst, border = a
+        return dst, encode.webp(frames, fps, 15, WEBP_WIDTH, dst, limit=WEBP_LIMIT, border=border)
     getattr(encode, kind)(*a)
     return None, None
 
@@ -223,12 +223,12 @@ def part_videos(out, only=None, workers=None):
                         ('webm', (frames, fps, f'{dst}/{stem}-transparent.webm')),
                         ('gif', (frames, fps, w, h, theme, gfps, gw, f'{dst}/{stem}.gif'))]
         if 'subtitle' in v:
-            encode_jobs.append(('webp', (frames + '-padded', fps, f'{dst}/{stem}.webp')))
+            encode_jobs.append(('webp', (frames + '-padded', fps, f'{dst}/{stem}.webp', None)))
     for name, v, bd in GITHUB:
         if sel(name):
             frames = os.path.join(out, 'work', 'frames', f'title-2d-subtitle-{name}')
             os.makedirs(os.path.join(out, 'titles'), exist_ok=True)
-            encode_jobs.append(('webp', (frames, 30, os.path.join(out, 'titles', f'principia-title-2d-subtitle-{name}.webp'))))
+            encode_jobs.append(('webp', (frames, 30, os.path.join(out, 'titles', f'principia-title-2d-subtitle-{name}.webp'), (tuple(int(bd.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4)), 1))))
     log('encoding', len(encode_jobs), 'files')
     with ProcessPoolExecutor(workers) as ex:
         for dst, res in ex.map(_encode_job, encode_jobs):

@@ -39,7 +39,7 @@ def gif(frames, fps, w, h, theme, gif_fps, gif_w, out):
     _run(_inputs(frames, fps, w, h, BG[theme]) + ['-filter_complex', flt, '-loop', '0', out])
 
 
-def webp(frames, fps, out_fps, width, out, limit=None, quality=None):
+def webp(frames, fps, out_fps, width, out, limit=None, quality=None, border=None):
     """Animated lossy WebP written with Pillow (ffmpeg's libwebp_anim cannot lower the alpha quality, and
     losslessly kept alpha alone is more than 4 MB). Colour and alpha share one quality number. With limit
     (bytes) the highest quality (1 to 100) whose file fits is used; the result is (quality, bytes).
@@ -70,4 +70,14 @@ def webp(frames, fps, out_fps, width, out, limit=None, quality=None):
             hi = q - 1
     if best is None:
         return 1, write(1)
-    return best[0], write(best[0])
+    q = best[0]
+    if border:                       # lossy colour can drift by a level or two: go down until the border is within tolerance
+        import compare
+        colour, tol = border
+        while q > 1:
+            size = write(q)
+            worst, _ = compare.border_check(compare.webp_frames(out), colour, tol)
+            if worst <= tol:
+                return q, size
+            q -= 1
+    return q, write(q)

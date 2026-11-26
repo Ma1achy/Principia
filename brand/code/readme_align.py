@@ -120,6 +120,9 @@ async def run(out, root, widths, times, hero_width):
                     dl = tb['x'] + xp * sx - hb['x']
                     dr = (hb['x'] + hb['width']) - (tb['x'] + xs * sx)
                     rows.append((width, name, k, dl, dr, ''))
+                blk = os.path.join(out, f'block-{width}-{name}.png')          # the whole picture block: title above, banner below
+                hb2 = await hero.bounding_box()
+                await pg.screenshot(path=blk, clip={'x': 0, 'y': 0, 'width': width, 'height': hb2['y'] + hb2['height'] + 8})
                 await ctx.close()
         await b.close()
     return rows
