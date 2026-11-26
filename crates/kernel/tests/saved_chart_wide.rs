@@ -705,7 +705,7 @@ fn saved_chain(t: &Tilts) -> Chain {
 /// A chain through its two records, read back and reopened under the new tilt.
 fn reopened_chain(t: &Tilts, new: &TiltSpec) -> Tilted<ShapeSphere<f64>, f64, Composed<f64>> {
     let def = Saved::Chained(saved_chain(t));
-    let link = def.link_words().expect("a link record");
+    let link = def.step_words().expect("a link record");
     let Some(Saved::Chained(chain)) = Saved::from_chain_words(&def.to_words(), &link) else {
         panic!("the records do not read back as a chain");
     };
@@ -820,7 +820,7 @@ negative_control!(
 fn check_chain_words(alter: bool) {
     for (t, _) in chain_cases() {
         let def = Saved::Chained(saved_chain(&t));
-        let (head, link) = (def.to_words(), def.link_words().expect("a link"));
+        let (head, link) = (def.to_words(), def.step_words().expect("a link"));
         assert_eq!(
             Saved::from_chain_words(&head, &link),
             Some(def),

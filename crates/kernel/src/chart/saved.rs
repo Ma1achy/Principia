@@ -47,7 +47,7 @@
 //! acting on the one inside it, and at `τ″ = 0` the view it was saved from, bit for bit, the tilt that is off taking no
 //! arithmetic. An inner tilt's offset on a target an outer tilt also names enters that tilt's `R` at the target's
 //! input and is replaced by its output; on any other target it passes on, scaled by its own span. A chain is two
-//! records ([`Saved::to_words`], [`Saved::link_words`], [`Saved::from_chain_words`]); a chain is not saved again.
+//! records ([`Saved::to_words`], [`Saved::step_words`], [`Saved::from_chain_words`]); a chain is not saved again.
 //!
 //! **The composed chart's weight and folds** ([`Composed::weight`], [`Composed::rank_loss`],
 //! [`Composed::normal_zero`]): with one tilt on, that tilt's, bit for bit. With several, the weight is 1 where every
@@ -141,7 +141,7 @@ enum Kind {
     /// A curved chart saved again: the head record of a chain, laid out as a curved chart's.
     Chained,
     /// The tilt a chain's second record holds.
-    Link,
+    Step,
 }
 
 impl Kind {
@@ -606,7 +606,7 @@ impl Saved {
         };
         Some(Saved::Chained(Chain {
             base: *base,
-            link: Link {
+            step: Step {
                 tilt: *new,
                 centre,
                 span,
@@ -631,15 +631,15 @@ impl Saved {
         words
     }
 
-    /// A chain's second record: the tilt it adds ([`Link`]); `None` for a definition that is not a chain.
-    pub fn link_words(&self) -> Option<[f64; WORDS]> {
+    /// A chain's second record: the tilt it adds ([`Step`]); `None` for a definition that is not a chain.
+    pub fn step_words(&self) -> Option<[f64; WORDS]> {
         let Saved::Chained(chain) = self else {
             return None;
         };
-        let l = &chain.link;
+        let l = &chain.step;
         let mut words = [0.0; WORDS];
         let fields = [
-            Kind::Link.word(),
+            Kind::Step.word(),
             l.centre[0],
             l.centre[1],
             l.tilt.tau1,
@@ -654,13 +654,13 @@ impl Saved {
         Some(words)
     }
 
-    /// The chain `head` and `link` write ([`Saved::to_words`], [`Saved::link_words`]), bit for bit; `None` where either
+    /// The chain `head` and `link` write ([`Saved::to_words`], [`Saved::step_words`]), bit for bit; `None` where either
     /// is no such record, the head is not a chain's, or a padding word is not `+0`.
     pub fn from_chain_words(head: &[f64; WORDS], link: &[f64; WORDS]) -> Option<Saved> {
         let Saved::Curved(base) = Saved::parse(head, Kind::Oblique, Kind::Chained)? else {
             return None;
         };
-        if !link.iter().all(|w| w.is_finite()) || link[0].to_bits() != Kind::Link.word().to_bits() {
+        if !link.iter().all(|w| w.is_finite()) || link[0].to_bits() != Kind::Step.word().to_bits() {
             return None;
         }
         let any = u64::from(u32::MAX) + 1;
@@ -676,7 +676,7 @@ impl Saved {
             .all(|w| w.to_bits() == 0)
             .then_some(Saved::Chained(Chain {
                 base,
-                link: Link {
+                step: Step {
                     tilt,
                     centre: [link[1], link[2]],
                     span: [link[8], link[9]],
@@ -925,7 +925,7 @@ impl Curved {
 
 /// The tilt a saved-again chart adds to its base: the view's tilt `R′` about its centre.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Link {
+pub struct Step {
     /// The stored tilt.
     pub tilt: TiltSpec,
     /// The view's centre, in the parent's own parameters.
@@ -941,7 +941,7 @@ pub struct Chain {
     /// The saved curved chart: its parent, slice centre and `R`.
     pub base: Curved,
     /// The tilt the view added to it.
-    pub link: Link,
+    pub step: Step,
 }
 
 impl Chain {
@@ -960,11 +960,11 @@ impl Chain {
         span: [f64; 2],
     ) -> Option<Tilted<C, f64, Composed<f64>>> {
         let parent = self.parent::<C>()?;
-        let Link {
+        let Step {
             tilt,
             centre: link_centre,
             span: link_span,
-        } = self.link;
+        } = self.step;
         let composed = Composed::of(&[
             Level {
                 tilt: self.base.tilt,
