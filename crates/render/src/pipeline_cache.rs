@@ -46,10 +46,10 @@ use ledger::gen::prelude;
 use wgpu::util::DeviceExt;
 
 use crate::assemble::{
-    assemble, AssembleError, Fragment, Node, Occupant, Stain, Tier, Uniform, UniformBlock,
-    UniformType,
+    AssembleError, Fragment, Occupant, Stain, Tier, Uniform, UniformBlock, UniformType,
 };
 use crate::compositor::{checked, full_target_vertex, LAYER_FORMAT};
+use crate::custom::{settle, Settled};
 
 /// A node's identity across edits, the caller's (the engine's stable node id): what the per-node last-valid state is
 /// kept by. It is not in the canonical form or the key.
@@ -1017,48 +1017,19 @@ fn check_keys(stain: &Stain, keys: &[NodeKey]) -> Result<(), RequestError> {
     Ok(())
 }
 
-/// The worker's work on `job`: the stain as it can render, each failing node at its last valid occupant (the module
-/// docs), compiled or taken from the cache; and the errors to surface.
+/// The worker's work on `job`: the stain as it can render, each failing node at its last valid occupant
+/// ([`settle`]), compiled or taken from the cache; and the errors to surface.
 fn resolve(shared: &Shared, job: &Job) -> (Option<Rendered>, Vec<CompileError>) {
     #[cfg(test)]
     assert!(!shared.panics.swap(false, Ordering::SeqCst), "a panic");
     let last_valid = lock(&shared.last_valid).clone();
-    let nodes = job.stain.nodes();
-    let (stain, fragment, failed) = match assemble(&job.stain, job.tier) {
-        Ok(fragment) => (job.stain.clone(), fragment, Vec::new()),
-        Err(whole) => {
-            // The nodes that can fall back: changed, with a last valid occupant. A node with none stays as it is in
-            // every trial, and a failure only it explains is the stain's.
-            let revertible: Vec<usize> = (0..nodes.len())
-                .filter(|&i| {
-                    last_valid
-                        .get(&job.keys[i])
-                        .is_some_and(|o| *o != nodes[i].occupant)
-                })
-                .collect();
-            let failed: Vec<(usize, AssembleError)> = revertible
-                .iter()
-                .filter_map(|&i| {
-                    let trial = with_last_valid(nodes, &job.keys, &last_valid, |j| {
-                        j != i && revertible.contains(&j)
-                    });
-                    Stain::new(trial)
-                        .and_then(|s| assemble(&s, job.tier))
-                        .err()
-                        .map(|e| (i, e))
-                })
-                .collect();
-            if failed.is_empty() {
-                return (None, vec![CompileError::Stain(whole.to_string())]);
-            }
-            let fallback = with_last_valid(nodes, &job.keys, &last_valid, |j| {
-                failed.iter().any(|(i, _)| *i == j)
-            });
-            match Stain::new(fallback).and_then(|s| assemble(&s, job.tier).map(|f| (s, f))) {
-                Ok((s, f)) => (s, f, failed),
-                Err(e) => return (None, vec![CompileError::Stain(e.to_string())]),
-            }
-        }
+    let Settled {
+        stain,
+        fragment,
+        failed,
+    } = match settle(&job.stain, &job.keys, job.tier, &last_valid) {
+        Ok(s) => s,
+        Err(e) => return (None, vec![e]),
     };
     let errors: Vec<CompileError> = failed
         .iter()
@@ -1087,31 +1058,10 @@ fn resolve(shared: &Shared, job: &Job) -> (Option<Rendered>, Vec<CompileError>) 
     (Some(Rendered::new(compiled, stain, &job.keys)), errors)
 }
 
-/// `nodes` with each node `j` for which `swap(j)` holds at its key's last valid occupant; `swap` holds only for nodes
-/// that have one.
-fn with_last_valid(
-    nodes: &[Node],
-    keys: &[NodeKey],
-    last_valid: &HashMap<NodeKey, Occupant>,
-    swap: impl Fn(usize) -> bool,
-) -> Vec<Node> {
-    nodes
-        .iter()
-        .enumerate()
-        .map(|(j, n)| {
-            let mut n = n.clone();
-            if let Some(o) = last_valid.get(&keys[j]).filter(|_| swap(j)) {
-                n.occupant = o.clone();
-            }
-            n
-        })
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::assemble::Kind;
+    use crate::assemble::{Kind, Node};
     use validation::gpu::GpuHarness;
     use validation::negative_control;
 

@@ -24,6 +24,7 @@
 //! tint (render_gui_spec §13; REQ-RENDER-072, REQ-RENDER-081).
 
 pub mod combine;
+pub mod eject;
 pub mod fallback;
 pub mod schema;
 
