@@ -1,0 +1,20 @@
+{
+  "id": "debug/word/hash",
+  "name": "hash",
+  "group": "diagnostic",
+  "locked": true,
+  "about": "The whole word's hash: distinct words take distinct colours.",
+  "graph": {
+    "nodes": [
+      { "id": 0, "kind": "combiner", "occupant": { "builtin": "pass_through" } },
+      { "id": 1, "kind": "out", "occupant": "none" },
+      { "id": 2, "kind": "source", "occupant": { "builtin": "zero" } },
+      { "id": 3, "kind": "colour", "occupant": { "builtin": "debug/word/hash" } }
+    ],
+    "wires": [
+      { "from": 0, "to": 1, "port": 0 },
+      { "from": 2, "to": 3, "port": 0 },
+      { "from": 3, "to": 0, "port": 0 }
+    ]
+  }
+}

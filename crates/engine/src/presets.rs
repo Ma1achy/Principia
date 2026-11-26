@@ -54,13 +54,14 @@ fn graph(source: String, colour: String) -> Result<StainGraph, GraphError> {
     chain(Occupant::Custom(source), Occupant::Custom(colour))
 }
 
-/// The outcome stain, the one the real app opens on: the sample's `state` into the outcome palette's colour
-/// (colour_composition §1.4), passed through.
+/// The outcome stain, the one the real app opens on: the library's outcome-palette preset.
 pub fn outcome() -> Result<StainGraph, GraphError> {
-    chain(
-        Occupant::Field("state".to_owned()),
-        Occupant::Builtin(render::colour::outcome::name().to_owned()),
-    )
+    library_graph(&format!("colour/{}", render::colour::outcome::name()))
+}
+
+/// The graph of the library preset `id`.
+fn library_graph(id: &str) -> Result<StainGraph, GraphError> {
+    Ok(crate::contract::stain::preset::preset(id)?.graph().clone())
 }
 
 /// The debug view whose colour is the WGSL `colour`, wired as the catalogue wires it (`render::registry::view_nodes`):
@@ -69,14 +70,10 @@ pub fn view(colour: &str) -> Result<StainGraph, GraphError> {
     graph(render::registry::ZERO_SOURCE.to_owned(), colour.to_owned())
 }
 
-/// The shipped debug view `name` (`render::registry::Entry::name`), wired as the catalogue wires it
-/// (`render::registry::named_view_nodes`): the zero source into the view, both named by id, passed through. The same
-/// code as [`view`] of the view's file.
+/// The shipped debug view `name` (`render::registry::Entry::name`): the library's preset of it, the zero source into the
+/// view, both named by id, passed through. The same code as [`view`] of the view's file.
 pub fn named_view(name: &str) -> Result<StainGraph, GraphError> {
-    chain(
-        Occupant::Builtin(render::registry::ZERO.to_owned()),
-        Occupant::Builtin(name.to_owned()),
-    )
+    library_graph(name)
 }
 
 /// The graph of a source `source` into a colour `colour`, that into the pass-through combiner's colour port.

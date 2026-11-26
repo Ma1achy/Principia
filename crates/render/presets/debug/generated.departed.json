@@ -1,0 +1,20 @@
+{
+  "id": "debug/generated/departed",
+  "name": "departed",
+  "group": "diagnostic",
+  "locked": true,
+  "about": "The debug view of the payload field departed: `packed_a` bits 15–15, u-bits.",
+  "graph": {
+    "nodes": [
+      { "id": 0, "kind": "combiner", "occupant": { "builtin": "pass_through" } },
+      { "id": 1, "kind": "out", "occupant": "none" },
+      { "id": 2, "kind": "source", "occupant": { "builtin": "zero" } },
+      { "id": 3, "kind": "colour", "occupant": { "builtin": "debug/generated/departed" } }
+    ],
+    "wires": [
+      { "from": 0, "to": 1, "port": 0 },
+      { "from": 2, "to": 3, "port": 0 },
+      { "from": 3, "to": 0, "port": 0 }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "debug/reductions/n_dircos",
+  "name": "n_dircos",
+  "group": "diagnostic",
+  "locked": true,
+  "about": "The direction cosines of the vector field n.",
+  "graph": {
+    "nodes": [
+      { "id": 0, "kind": "combiner", "occupant": { "builtin": "pass_through" } },
+      { "id": 1, "kind": "out", "occupant": "none" },
+      { "id": 2, "kind": "source", "occupant": { "builtin": "zero" } },
+      { "id": 3, "kind": "colour", "occupant": { "builtin": "debug/reductions/n_dircos" } }
+    ],
+    "wires": [
+      { "from": 0, "to": 1, "port": 0 },
+      { "from": 2, "to": 3, "port": 0 },
+      { "from": 3, "to": 0, "port": 0 }
+    ]
+  }
+}

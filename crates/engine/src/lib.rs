@@ -55,6 +55,7 @@ pub mod contract {
         pub mod graph;
         pub mod occupant;
         pub mod ports;
+        pub mod preset;
         pub mod ramp;
         pub mod saved;
         pub mod view;

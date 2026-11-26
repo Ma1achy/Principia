@@ -9,7 +9,7 @@ pub use render::assemble::Tier;
 
 use crate::contract::stain::describe::{describe, Description};
 use crate::contract::stain::graph::{GraphError, NodeKind, Occupant, StainGraph};
-use crate::presets;
+use crate::contract::stain::preset;
 
 /// A graph assembled.
 #[derive(Clone, Debug, PartialEq)]
@@ -68,6 +68,11 @@ pub struct Entry {
     pub name: String,
     /// The whole graph that shows it, where it is a view by itself: what selecting it loads (§11).
     pub graph: Option<StainGraph>,
+    /// Whether selecting it loads the graph read-only: a debug preset's does, and the first edit forks a custom copy
+    /// (`preset::Loaded`).
+    pub locked: bool,
+    /// Its preset's group: the debug section's (`addressing`, `quad-structure`, ...), or the production section's.
+    pub group: Option<String>,
     /// Its description, from its source: its name and group are the row's and its heading's.
     pub description: Description,
 }
@@ -81,10 +86,9 @@ impl Entry {
 
 /// The library: the registry's entries, the slots' before the debug ones, each directory's together, in id order.
 ///
-/// An entry's graph is the outcome stain for the outcome palette and, for a debug colour view, the catalogue's own
-/// wiring of it (`render::registry::named_view_nodes`); a colour whose fields no entry names (`margin`), a source, a
-/// combiner and a post are no view by themselves. Every node of every graph names a shipped source by id, or a field.
-// The plan is unclear here (§11 has debug presets load locked); chose editable because no graph holds a lock.
+/// An entry's graph is its preset file's (`preset`): the outcome stain for the outcome palette and, for a debug colour
+/// view, the catalogue's own wiring of it; a colour whose fields no entry names (`margin`), a source, a combiner and a
+/// post are no view by themselves. Every node of every graph names a shipped source by id, or a field.
 pub fn library() -> Result<Vec<Entry>, String> {
     let mut out = registry::registry()
         .map_err(|e| e.to_string())?
@@ -92,13 +96,14 @@ pub fn library() -> Result<Vec<Entry>, String> {
         .map(|e| {
             let name = e.name().to_owned();
             let debug = e.category == Category::Debug;
-            let graph = match e.slot {
-                Kind::Colour if name == render::colour::outcome::name() => Some(presets::outcome()),
-                Kind::Colour if debug => Some(presets::named_view(&name)),
+            // The row and its graph come from one preset file.
+            let preset = match e.slot {
+                Kind::Colour if name == render::colour::outcome::name() || debug => {
+                    Some(preset::preset(&e.id).map_err(|why| format!("{}: {why}", e.id))?)
+                }
                 _ => None,
-            }
-            .transpose()
-            .map_err(|why| format!("{}: {why}", e.id))?;
+            };
+            let graph = preset.as_ref().map(|p| p.graph().clone());
             let occupant = Occupant::Builtin(name.clone());
             let description = describe(e.slot.into(), &occupant, &Default::default())
                 .map_err(|why| format!("{}: {why}", e.id))?;
@@ -108,6 +113,8 @@ pub fn library() -> Result<Vec<Entry>, String> {
                 debug,
                 name,
                 graph,
+                locked: preset.as_ref().is_some_and(|p| p.locked),
+                group: preset.map(|p| p.group),
                 description,
             })
         })

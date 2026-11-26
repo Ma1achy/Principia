@@ -22,6 +22,7 @@
 
 pub mod agreement;
 pub mod decode;
+pub mod library;
 pub mod roundtrip;
 
 use crate::bind::{self, ViewOutput};

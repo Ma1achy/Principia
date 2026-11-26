@@ -1,0 +1,20 @@
+{
+  "id": "colour/outcome_state",
+  "name": "Outcome palette",
+  "group": "outcome",
+  "locked": false,
+  "about": "One colour per outcome class, from the sample's state and detail.",
+  "graph": {
+    "nodes": [
+      { "id": 0, "kind": "combiner", "occupant": { "builtin": "pass_through" } },
+      { "id": 1, "kind": "out", "occupant": "none" },
+      { "id": 2, "kind": "source", "occupant": { "field": "state" } },
+      { "id": 3, "kind": "colour", "occupant": { "builtin": "outcome_state" } }
+    ],
+    "wires": [
+      { "from": 0, "to": 1, "port": 0 },
+      { "from": 2, "to": 3, "port": 0 },
+      { "from": 3, "to": 0, "port": 0 }
+    ]
+  }
+}
