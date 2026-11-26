@@ -55,7 +55,10 @@ WEBP_WIDTH, WEBP_LIMIT = 1200, 4_000_000
 # ink-style mixing are computed on that colour (the runtime's backdrop option), not on the paper colour.
 # The glow reaches the picture's own edge in some frames (up to 10 levels on dark), so the page-colour variants carry
 # a margin of the page colour: the outer border is then exactly that colour, and Lanczos (radius 4 px at 1200 px) cannot reach it.
-GITHUB_PAD = 12
+# The right margin is wider so that the P's stem and the subtitle's right edge sit equally far from the frame edges
+# (titlelayout.py); every title WebP, transparent or not, has this canvas.
+import titlelayout
+GITHUB_PAD = titlelayout.layout()['pad']
 GITHUB = [('github-dark', 'title-2d-subtitle-dark', '#0d1117'), ('github-light', 'title-2d-subtitle-light', '#ffffff')]
 
 
@@ -153,6 +156,7 @@ def part_stills(out):
         big.crop(box).resize((1024, 1024), Image.LANCZOS).save(f'{masters}/icon-{v}-1024.png')
         sm.crop(box).resize((1024, 1024), Image.LANCZOS).save(f'{masters}/icon-{v}-small-1024.png')
     run([sys.executable, os.path.join(PY, 'packs.py'), masters, os.path.join(out, 'icons')], PY)
+    titlelayout.still_svgs(os.path.join(out, 'titles'))
 
 
 def png_size(path):
@@ -198,6 +202,9 @@ def part_videos(out, only=None, workers=None):
     for name, v, bd in GITHUB:
         if sel(name):
             render_jobs.append((wd, v, 30, os.path.join(out, 'work', 'frames', f'title-2d-subtitle-{name}'), bd, GITHUB_PAD))
+    for v in ('title-2d-subtitle-dark', 'title-2d-subtitle-light'):
+        if sel(v + '-padded') or sel(v):
+            render_jobs.append((wd, v, 30, os.path.join(out, 'work', 'frames', v + '-padded'), None, GITHUB_PAD))
     log('rendering frames:', [os.path.basename(j[3]) for j in render_jobs])
     with ProcessPoolExecutor(workers) as ex:
         list(ex.map(_render_job, render_jobs))
@@ -216,7 +223,7 @@ def part_videos(out, only=None, workers=None):
                         ('webm', (frames, fps, f'{dst}/{stem}-transparent.webm')),
                         ('gif', (frames, fps, w, h, theme, gfps, gw, f'{dst}/{stem}.gif'))]
         if 'subtitle' in v:
-            encode_jobs.append(('webp', (frames, fps, f'{dst}/{stem}.webp')))
+            encode_jobs.append(('webp', (frames + '-padded', fps, f'{dst}/{stem}.webp')))
     for name, v, bd in GITHUB:
         if sel(name):
             frames = os.path.join(out, 'work', 'frames', f'title-2d-subtitle-{name}')

@@ -21,7 +21,7 @@ def make_render_dir(wd, web_dir):
 async def _open(p, wd, v, size, t, weight, vw, vh, backdrop=None, pad=0):
     b = await p.chromium.launch()
     pg = await b.new_page(viewport={'width': vw, 'height': vh})
-    q = f'v={v}&t={t}' + (f'&size={size}' if size else '') + (f'&weight={weight}' if weight else '') + (f'&backdrop=%23{backdrop.lstrip("#")}' if backdrop else '') + (f'&pad={pad}' if pad else '')
+    q = f'v={v}&t={t}' + (f'&size={size}' if size else '') + (f'&weight={weight}' if weight else '') + (f'&backdrop=%23{backdrop.lstrip("#")}' if backdrop else '') + (f'&pad={",".join(str(p) for p in pad) if isinstance(pad, (tuple, list)) else pad}' if pad else '')
     await pg.goto(f'file://{os.path.abspath(wd)}/r.html?{q}')
     await pg.wait_for_function("document.title==='ready'")
     await pg.wait_for_timeout(300)

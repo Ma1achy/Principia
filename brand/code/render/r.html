@@ -3,7 +3,7 @@
 <style>html,body{margin:0;background:transparent}#m{display:inline-block;line-height:0}</style></head>
 <body><div id="m"></div>
 <script>
-// Render page for headless Chrome. ?v=icon-light|icon-dark|title-2d-*  &t=seconds  &size=px  &weight=trail weight  &backdrop=#rrggbb  &pad=px of backdrop colour around the mark
+// Render page for headless Chrome. ?v=icon-light|icon-dark|title-2d-*  &t=seconds  &size=px  &weight=trail weight  &backdrop=#rrggbb  &pad=px of backdrop colour around the mark (one number, or left,top,right,bottom)
 // Loads principia-<v>.js from this folder, mounts a still frame (transparent) and sets the title to "ready".
 // window.__seek(s) moves the same mount to another time, for rendering frames of the loop.
 const q = new URLSearchParams(location.search), v = q.get('v');
@@ -17,10 +17,11 @@ s.onload = () => {
   if (q.get('backdrop')) props.backdrop = q.get('backdrop');
   window.__mark = PrincipiaMark[v].mount(document.getElementById('m'), props);
   window.__seek = (t) => window.__mark.seek(t);
-  const pad = +(q.get('pad') || 0);
-  if (pad) {      // a margin of the backdrop colour around the mark, so the outer border is exactly that colour
+  const pad = (q.get('pad') || '').split(',').map(Number).filter(n => !isNaN(n));   // px: all sides, or left,top,right,bottom
+  if (pad.length) {      // a margin of the backdrop colour around the mark, so the outer border is exactly that colour
     const m = document.getElementById('m'), w = document.createElement('div');
-    w.id = 'w'; w.style.cssText = 'display:inline-block;line-height:0;padding:' + pad + 'px;background:' + (q.get('backdrop') || 'transparent');
+    w.id = 'w'; const px = pad.length === 4 ? pad[1] + 'px ' + pad[2] + 'px ' + pad[3] + 'px ' + pad[0] + 'px' : pad[0] + 'px';     // top right bottom left
+    w.style.cssText = 'display:inline-block;line-height:0;padding:' + px + ';background:' + (q.get('backdrop') || 'transparent');
     m.parentNode.insertBefore(w, m); w.appendChild(m);
   }
   document.title = 'ready';

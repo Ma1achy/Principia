@@ -398,8 +398,11 @@ def derived_checks(ref_root, new_root, log=print):
         w = os.path.join(t, f'principia-title-2d-subtitle-{n}.webp')
         webm = os.path.join(ref_root, f'titles/principia-title-2d-subtitle-{n}-transparent.webm')
         if os.path.exists(w) and os.path.exists(webm):
-            r = compare_webp_to_frames(w, decode(webm), probe(webm)['fps'])
-            r['file'] = f'titles/principia-title-2d-subtitle-{n}.webp against the committed transparent WebM'
+            import titlelayout
+            l, t_, r_, b_ = titlelayout.layout()['pad']       # the WebP's canvas is the WebM's frame plus transparent margins
+            padded = (np.pad(f, ((t_, b_), (l, r_), (0, 0))) for f in decode(webm))
+            r = compare_webp_to_frames(w, padded, probe(webm)['fps'])
+            r['file'] = f'titles/principia-title-2d-subtitle-{n}.webp against the committed transparent WebM, padded'
             rows.append(r); log(('  ok   ' if r['ok'] else '  FAIL ') + r['file'])
     for n, col in (('dark', (13, 17, 23)), ('light', (255, 255, 255))):
         w = os.path.join(t, f'principia-title-2d-subtitle-github-{n}.webp')
@@ -415,6 +418,23 @@ def derived_checks(ref_root, new_root, log=print):
         r['file'] = f'titles/principia-title-2d-subtitle-github-{n}.webp, page colour #{"%02x%02x%02x" % col}'
         rows.append(r); log(('  ok   ' if r['ok'] else '  FAIL ') + r['file'])
     return rows
+
+
+def compare_to_old_crop(new_webp, old_webp, old_canvas=(1624, 384), new_canvas=None):
+    """A re-laid-out title WebP against the earlier one: the earlier canvas is the new canvas minus the extra right
+    margin, so the new frames are scaled back to source pixels and cropped to the earlier canvas, the earlier ones
+    scaled to source pixels too, and the two compared under the webp criterion."""
+    import titlelayout
+    nw = titlelayout.layout()['frame_w'] if new_canvas is None else new_canvas[0]
+    ow, oh = old_canvas
+    fr = []
+    for a, b in zip(webp_frames(old_webp), webp_frames(new_webp)):
+        a_src = scale_rgba(a, ow, oh)
+        b_src = scale_rgba(b, nw, round(b.shape[0] * nw / b.shape[1]))[:oh, :ow]
+        fr.append(frame_diff(a_src, b_src))
+    st = aggregate(fr)
+    ok, ratio, why = judge('webp', st)
+    return _result(ok, ratio, why, st)
 
 
 def fmt_stats(s):
