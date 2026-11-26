@@ -19,8 +19,14 @@ PAD_LEFT = 12                        # margin of the page colour round the page-
 PAD_TB = 12
 
 
+# Where the P's stem and the end of the subtitle look to sit in the 1600 px frame, read from a rendered frame with
+# readme_align.measure (the same reading the alignment check uses). The polygon extents, from geometry(), are 64.93 and
+# 1557.95: anti-aliasing makes the visible edges a fraction of a pixel inside them.
+OPTICAL = (64.63, 1557.76)
+
+
 def geometry():
-    """x of the P's stem and of the subtitle's right edge in the animated title's 1600 px frame."""
+    """The polygon extents (x of the P's stem, x of the subtitle's right edge) in the 1600 px frame, for reference."""
     k, cx, cy = json.load(open(os.path.join(DATA, 'word_frames.json')))['WordFlatSub']
     p = min(x for x, y in json.load(open(os.path.join(DATA, 'pgeo.json')))['out'])
     s = max(x for q in json.load(open(os.path.join(DATA, 'sub_loops.json'))) for x, y in q['pts'])
@@ -29,7 +35,7 @@ def geometry():
 
 def layout():
     """The pads (left, top, right, bottom) in frame pixels, the inset, the canvas width and the banner width."""
-    xp, xs = geometry()
+    xp, xs = OPTICAL
     a = PAD_LEFT + xp                                       # inset on the left
     pad_r = round(a - (FRAME_W - xs))                       # the right pad that makes the right inset equal
     b = pad_r + (FRAME_W - xs)
@@ -67,7 +73,7 @@ def still_svgs(out_dir):
 
 if __name__ == '__main__':
     xp, xs = geometry()
-    print(f'P stem at {xp:.2f}, subtitle ends at {xs:.2f} of {FRAME_W}')
+    print(f'polygon extents: P stem at {xp:.2f}, subtitle ends at {xs:.2f}; as seen: {OPTICAL} of {FRAME_W}')
     print(json.dumps(layout(), indent=1))
     if len(sys.argv) > 1:
         print(still_svgs(sys.argv[1]))

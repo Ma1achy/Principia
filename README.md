@@ -1,11 +1,13 @@
 <p>
 <picture>
-  <source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="docs/readme/title-dark.svg">
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/readme/title-light.svg">
+  <source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="brand/titles/principia-title-still-dark.svg">
+  <source media="(prefers-reduced-motion: reduce)" srcset="brand/titles/principia-title-still-light.svg">
   <source media="(prefers-color-scheme: dark)" srcset="brand/titles/principia-title-2d-subtitle-github-dark.webp">
   <img src="brand/titles/principia-title-2d-subtitle-github-light.webp" alt="Principia. Planar Three-Body Problem." width="100%">
 </picture>
-<img src="docs/readme/hero.jpg" alt="A slice of the planar three-body problem, drawn in pencil: dark rippled bands on the left break into pale curling filaments that sweep across the page." width="100%">
+</p>
+<p align="center">
+<img src="docs/readme/hero.jpg" alt="A slice of the planar three-body problem, drawn in pencil: dark rippled bands on the left break into pale curling filaments that sweep across the page." width="90.7%">
 </p>
 
 ---
