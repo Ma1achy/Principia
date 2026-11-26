@@ -106,7 +106,7 @@ fn next(entry: &Entry) -> &'static Entry {
 
 #[test]
 fn mock_windows_open_each_from_its_windows_menu_entry() {
-    assert_eq!(REGISTRY.len(), 7, "one registry of seven");
+    assert_eq!(REGISTRY.len(), 8, "one registry of eight");
     for entry in &REGISTRY {
         let (mut app, mut h) = fresh();
         click(&mut h, &mut app, "Windows");

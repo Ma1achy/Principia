@@ -29,10 +29,11 @@ fn strip_names(h: &mut Headless, app: &mut App<MockSide>) -> Vec<Name> {
             })
         })
         .collect();
+    // By centre: the name's rect spans the strip, justified, so its left edge ties with the low end's.
     inside.sort_by(|a, b| {
         a.rect
-            .map(|r| r[0])
-            .partial_cmp(&b.rect.map(|r| r[0]))
+            .map(|r| r[0] + r[2])
+            .partial_cmp(&b.rect.map(|r| r[0] + r[2]))
             .unwrap()
     });
     inside

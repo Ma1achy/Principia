@@ -86,6 +86,9 @@ pub fn write(sim: &mut SimConfig, render: &mut RenderState, edit: Edit) -> Edit 
         Edit::Sim(SimField::Horizon(horizon)) => {
             Edit::Sim(SimField::Horizon(replace(&mut sim.horizon, horizon)))
         }
+        Edit::Sim(SimField::Links(links)) => {
+            Edit::Sim(SimField::Links(replace(&mut sim.links, links)))
+        }
         Edit::Sim(SimField::SliceFrame { frame, basis }) => Edit::Sim(SimField::SliceFrame {
             frame: replace(&mut sim.slice.frame, frame),
             basis: basis.map(|(q1, q2)| {
@@ -224,6 +227,19 @@ fn now_ms() -> u64 {
         .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
 }
 
+/// The links as the log writes them: each block's id and parameter values, "(mass softmax_tanh {mu_max: 5}, …)".
+fn links_text(links: &crate::contract::sim_config::Links) -> String {
+    let parts: Vec<String> = links
+        .blocks()
+        .iter()
+        .map(|(block, c)| {
+            let params: Vec<String> = c.params.iter().map(|(k, v)| format!("{k}: {v}")).collect();
+            format!("{block} {} {{{}}}", c.id, params.join(", "))
+        })
+        .collect();
+    format!("({})", parts.join(", "))
+}
+
 /// An edit's value as the log writes it (render_gui_spec §G12): a latent vector as `(z_α, …, z_μ2)`, the lock as "locked
 /// at …" or "unlocked", the hover at four decimals, the overlay set and the stain graph as `overlays` and
 /// [`stain_graph`] write them.
@@ -240,6 +256,7 @@ pub fn edit_value(edit: &Edit) -> String {
             w.centre[0], w.centre[1], w.half[0], w.half[1]
         ),
         Edit::Sim(SimField::Horizon(h)) => h.t.to_string(),
+        Edit::Sim(SimField::Links(links)) => links_text(links),
         Edit::Sim(SimField::SliceFrame { frame, basis }) => {
             let mut text = slice_frame(frame);
             if let Some((q1, q2)) = basis {
@@ -267,6 +284,7 @@ pub fn edit_path(edit: &Edit) -> &'static str {
         Edit::Sim(SimField::Lock(_)) => "Lock",
         Edit::Sim(SimField::Window(_)) => "Chart.window",
         Edit::Sim(SimField::Horizon(_)) => "Horizon.t",
+        Edit::Sim(SimField::Links(_)) => "Links",
         Edit::Sim(SimField::SliceFrame { basis: None, .. }) => "Slice.frame",
         Edit::Sim(SimField::SliceFrame { basis: Some(_), .. }) => "Slice.frame Plane.q1 Plane.q2",
         Edit::Render(RenderField::Playhead(_)) => "Playhead.t",

@@ -11,8 +11,9 @@
 //! ([`Charts::mark`]), the save's entry an edit writing the slice frame and the basis as they are, because the view is
 //! unchanged and the field belongs to the engine's contract with the curved saved charts.
 
+use engine::contract::set_field::{Edit, SimField};
 use engine::contract::set_field::{HistoryKey, SetField};
-use engine::contract::sim_config::{Latent, Plane, SimConfig, SliceFrame, LATENT_DIM};
+use engine::contract::sim_config::{Latent, Links, Plane, SimConfig, SliceFrame, LATENT_DIM};
 use engine::contract::snapshot::Snapshot;
 use serde_json::{json, Value};
 
@@ -63,6 +64,8 @@ pub struct SavedChart {
     pub parent: String,
     /// The view's angles on its parent, in degrees.
     pub angles: Angles,
+    /// The links it was designed under, while **Pin the active links** is on: applied with it on load.
+    pub pin: Option<Links>,
 }
 
 /// The dimensions `q₁` or `q₂` has anything on.
@@ -169,19 +172,24 @@ impl SavedChart {
         ]
     }
 
-    /// It as the settings file holds it.
+    /// It as the settings file holds it, its pin only while pinned.
     pub fn to_json(&self) -> Value {
         let Angles { tau1, tau2, gamma } = self.angles;
-        json!({
+        let mut value = json!({
             "name": self.name,
             "plane": { "z0": self.plane.z0, "q1": self.plane.q1, "q2": self.plane.q2 },
             "frame": serde_json::to_value(self.frame).expect("a frame of finite numbers serialises"),
             "parent": self.parent,
             "angles": [tau1, tau2, gamma],
-        })
+        });
+        if let Some(pin) = &self.pin {
+            value["pin"] = pin_json(pin);
+        }
+        value
     }
 
-    /// The chart `value` holds; `None` for anything else, or a target that is no latent dimension.
+    /// The chart `value` holds; `None` for anything else, a target that is no latent dimension, or a pin that is no
+    /// whole `Links` (never read under a default).
     pub fn from_json(value: &Value) -> Option<Self> {
         let text = |k: &str| value.get(k)?.as_str().map(str::to_owned);
         let plane: Plane = serde_json::from_value(value.get("plane")?.clone()).ok()?;
@@ -196,8 +204,31 @@ impl SavedChart {
             frame,
             parent: text("parent")?,
             angles: Angles { tau1, tau2, gamma },
+            pin: match value.get("pin") {
+                None => None,
+                Some(pin) => Some(serde_json::from_value(pin.clone()).ok()?),
+            },
         })
     }
+}
+
+/// A pin as the settings file holds it: the whole `Links`, as the contract serialises it.
+pub fn pin_json(pin: &Links) -> Value {
+    serde_json::to_value(pin).expect("links of finite numbers serialise")
+}
+
+/// Loading a chart named `what` whose pin is `pin`, from `active`: the `SetField` that applies the pin and the notice
+/// naming each block it changes; `None` unpinned, or pinned to the active links.
+pub fn pinned(pin: Option<&Links>, active: &Links, what: &str) -> Option<(SetField, String)> {
+    let pin = pin.filter(|p| *p != active)?;
+    let changes = engine::contract::links::changes(active, pin);
+    Some((
+        SetField {
+            edit: Edit::Sim(SimField::Links(pin.clone())),
+            no_history: false,
+        },
+        format!("{what} pinned its links: {}", changes.join(", ")),
+    ))
 }
 
 /// A saved chart with its id.
@@ -239,6 +270,10 @@ pub struct Charts {
     /// The name being typed, while the active chart is renamed.
     pub naming: Option<String>,
     refused: bool,
+    /// Each preset's pin, by the preset's name: the GUI's own settings, beside the presets.
+    pub preset_pins: std::collections::BTreeMap<String, Links>,
+    /// The notice of the last load that applied a pin, for the app to post.
+    pub notice: Option<String>,
 }
 
 impl Charts {
@@ -347,6 +382,7 @@ impl Charts {
             frame: sim.slice.frame,
             parent: parent.unwrap_or_else(|| View::read(sim).name()),
             angles: own_angles(self, sim),
+            pin: None,
         })
     }
 
@@ -367,7 +403,13 @@ impl Charts {
             }
             Switch::Open(id) => {
                 let chart = self.get(id)?.clone();
-                Some((chart.edits(), Some((id, chart))))
+                let mut command = chart.edits();
+                let what = format!("Saved chart '{}'", chart.name);
+                if let Some((edit, notice)) = pinned(chart.pin.as_ref(), &sim.links, &what) {
+                    command.push(edit);
+                    self.notice = Some(notice);
+                }
+                Some((command, Some((id, chart))))
             }
             Switch::Leave(command) => Some((command, None)),
         }
@@ -397,6 +439,23 @@ impl Charts {
         }
         if let Some((_, c)) = self.list.iter_mut().find(|(i, _)| *i == id) {
             c.name = name.to_owned();
+        }
+    }
+
+    /// Turns **Pin the active links** on the saved chart of id `id`: on, it stores `active`; off, it clears the pin.
+    pub fn toggle_pin(&mut self, id: u64, active: &Links) {
+        if let Some((_, c)) = self.list.iter_mut().find(|(i, _)| *i == id) {
+            c.pin = match c.pin {
+                Some(_) => None,
+                None => Some(active.clone()),
+            };
+        }
+    }
+
+    /// Turns **Pin the active links** on preset `name`.
+    pub fn toggle_preset_pin(&mut self, name: &str, active: &Links) {
+        if self.preset_pins.remove(name).is_none() {
+            self.preset_pins.insert(name.to_owned(), active.clone());
         }
     }
 

@@ -318,7 +318,8 @@ fn save_view_as_chart_by_the_keyboard() {
         assert_eq!(depth(app), 1);
     };
     use Key::{ArrowDown as Down, ArrowRight as Right, Enter, Tab};
-    let button = [Tab, Tab, Enter, Enter, Down, Down, Down, Down, Enter];
+    // Down from the buttons' row reaches the Links row's Decoder…, so the button is Right of Chart builder….
+    let button = [Tab, Tab, Enter, Enter, Down, Down, Down, Right, Enter];
     check(&play(&button));
     rejects("the keys one short of the button", || {
         check(&play(&[Tab, Tab, Enter, Enter, Down, Down, Down, Enter]))
@@ -337,7 +338,8 @@ fn save_view_as_chart_by_the_keyboard() {
     assert_eq!(at(bar::SAVE_VIEW.0), at(bar::DEBUG_VIEW.0) + 1);
     assert_eq!(at(bar::RESET_LAYOUT.0), at(bar::SAVE_VIEW.0) + 1);
     let chart = tree.children(Some(crate::explore::manifold_view::CHART));
-    assert_eq!(chart[chart.len() - 2..], [BUILDER, saved::SAVE]);
+    let decoder = crate::explore::manifold_view::DECODER;
+    assert_eq!(chart[chart.len() - 3..], [BUILDER, saved::SAVE, decoder]);
 }
 
 #[test]
@@ -468,6 +470,7 @@ fn chart_of(plane: Plane) -> SavedChart {
             tau2: -0.0,
             gamma: 1.0 / 3.0,
         },
+        pin: None,
     }
 }
 

@@ -8,7 +8,7 @@
 //! (R-467 D5).
 
 use crate::contract::render_state::{Hover, Overlays, Playhead, StainGraph};
-use crate::contract::sim_config::{Horizon, Latent, Lock, SliceFrame, Window};
+use crate::contract::sim_config::{Horizon, Latent, Links, Lock, SliceFrame, Window};
 
 /// One typed edit: a field path with its value (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq)]
@@ -67,6 +67,9 @@ pub enum SimField {
         /// The new `(q₁, q₂)`, where the pick also changes the basis; `None` where it edits the slice frame alone.
         basis: Option<(Latent, Latent)>,
     },
+    /// The links, the whole `Links` in one edit (gui_state_contract §2): the Decoder window's Apply, or a pinned chart's
+    /// load; a sim key that re-integrates, undoable.
+    Links(Links),
 }
 
 /// A `RenderState` field with its value (gui_state_contract §2; R-133).

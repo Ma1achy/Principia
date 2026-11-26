@@ -1,6 +1,6 @@
 //! The top bar (render_gui_spec §G2; 01_main.png; RQ-249, RQ-255): the "principia · dev" wordmark; the menus File,
 //! View, Windows and Help; Overlays ▾ with its count; Run…, Profiler… and Export…, each opening its window (§G5); the
-//! View menu's Home (R-466), F3 hide and reset layout (R-462); the Windows menu listing the registry's seven windows (`crate::windows`);
+//! View menu's Home (R-466), F3 hide and reset layout (R-462); the Windows menu listing the registry's windows (`crate::windows`);
 //! the mode switch Explore / Stain; the keyboard breadcrumb (§G3); and the status line, in the artboard's format and
 //! order, filled from the snapshot, in egui's `Monospace` (Ubuntu Mono, RQ-251). The top bar is the keyboard's big
 //! scope 1, its controls the sub-scopes Enter reaches, in the order they are drawn; Enter on one acts as its click.
@@ -70,10 +70,10 @@ pub const RESET_LAYOUT: (ScopeId, &str) = ("view_reset_layout", "reset layout");
 /// Help's entry that opens the `?` shortcuts (RQ-250).
 pub const KEYS: (ScopeId, &str) = ("help_keys", KEYS_ENTRY);
 /// The Windows menu's entries' scopes, one per [`WINDOWS`] name: the registry's, in its order.
-pub const WINDOW_ENTRIES: [ScopeId; 7] = {
-    let mut ids = [""; 7];
+pub const WINDOW_ENTRIES: [ScopeId; crate::windows::REGISTRY.len()] = {
+    let mut ids = [""; crate::windows::REGISTRY.len()];
     let mut i = 0;
-    while i < 7 {
+    while i < ids.len() {
         ids[i] = crate::windows::REGISTRY[i].menu_entry;
         i += 1;
     }
@@ -128,11 +128,11 @@ pub fn activate(id: &str, actions: &mut Actions) {
     }
 }
 
-/// The Windows menu: the registry's seven windows by their spec names (§G5, §G7, §G8, §G12), each opening its window.
-pub const WINDOWS: [&str; 7] = {
-    let mut names = [""; 7];
+/// The Windows menu: the registry's windows by their spec names (§G5, §G7, §G7a, §G8, §G12), each opening its window.
+pub const WINDOWS: [&str; crate::windows::REGISTRY.len()] = {
+    let mut names = [""; crate::windows::REGISTRY.len()];
     let mut i = 0;
-    while i < 7 {
+    while i < names.len() {
         names[i] = crate::windows::REGISTRY[i].name;
         i += 1;
     }

@@ -685,8 +685,9 @@ fn mock_layout_splitters_reset_holds_the_default_to_the_range() {
             );
         }
     }
-    // The top row's bottom, held by the top row's minimum: a window 812 points high, where the default leaves the top row under it.
-    let short = Rect::from_min_size(pos2(0.0, 0.0), vec2(screen.width(), 812.0));
+    // The top row's bottom, held by the top row's minimum: a window 837 points high, five under the least, where the
+    // default leaves the top row under it.
+    let short = Rect::from_min_size(pos2(0.0, 0.0), vec2(screen.width(), 837.0));
     let l = Layout::new(short, ppp);
     let mut splits = Splits::default();
     splits.set(Splitter::TopBottom, 0.6);

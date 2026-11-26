@@ -252,6 +252,7 @@ fn entry_points() -> Vec<EntryPoint> {
         ("Profiler…", "profiler", Window::Profiler),
         ("Export…", "export", Window::Export),
         ("Chart builder…", mv::BUILDER, Window::ChartBuilder),
+        ("Decoder…", mv::DECODER, Window::Decoder),
         ("open in Inspector", mv::OPEN_INSPECTOR, Window::Inspector),
         ("IC Inspector…", trajectory::INSPECTOR, Window::Inspector),
         ("Open full viewer…", trajectory::VIEWER, Window::Inspector),
@@ -323,7 +324,7 @@ fn mock_keyboard_nav_state_the_gui_starts_with_it_off() {
 #[test]
 fn mock_keyboard_nav_state_each_entry_point_opened_by_a_click_shows_no_ring() {
     let all = entry_points();
-    assert_eq!(all.len(), 15, "fifteen entry points");
+    assert_eq!(all.len(), 17, "seventeen entry points");
     for entry in &all {
         // Opened by a click with no key pressed: the focus on the landing, keyboard navigation off.
         let (mut app, mut h) = fresh_for(entry);

@@ -72,6 +72,7 @@ mod tests {
     mod mock_cube_axis_buttons;
     mod mock_cube_third_axis;
     mod mock_debug_view;
+    mod mock_decoder;
     mod mock_drawn;
     mod mock_engine;
     mod mock_figure_navigation;

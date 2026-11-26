@@ -26,6 +26,7 @@ pub mod contract {
     pub mod history;
     pub mod interface;
     pub mod legend;
+    pub mod links;
     pub mod log;
     pub mod profile;
     pub mod render_state;
@@ -66,6 +67,7 @@ pub mod contract {
         mod conformance;
         mod decoded;
         mod latent;
+        mod links;
         mod occupant;
         mod profile_v1;
         mod stain;

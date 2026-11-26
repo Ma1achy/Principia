@@ -33,6 +33,9 @@ const LEGEND_LEFT: f32 = 1463.0;
 pub const AXIS_X_H: f32 = 16.0;
 /// The width of the vertical axis labels' strip left of the figure, in points (a look choice, R-390).
 pub const AXIS_Y_W: f32 = 16.0;
+/// The height of the figure's header strip, the chrome above the plot that holds its badges, in points: one line of
+/// the body font with its padding (a look choice).
+pub const HEADER_H: f32 = 20.0;
 
 /// The Manifold view's least width, in points: its widest row, Centre z₀'s slider and number box, whole (R-462 J2;
 /// measured at the capture's size: the number box passes the panel's edge below 340).
@@ -40,9 +43,9 @@ pub const MIN_MANIFOLD_W: f32 = 340.0;
 /// The Trajectory panel's least width, in points: its views' buttons and checkboxes whole (J2; measured: "follow
 /// cursor" passes the edge below 246).
 pub const MIN_TRAJECTORY_W: f32 = 250.0;
-/// The top row's least height, in points: the Manifold view's 28 rows each at least egui's interact height, 18 points,
-/// below its title and margins, `28 × 18 + 40 + 3 × 6 + 2 × 12 = 586` (J2).
-pub const MIN_TOP_H: f32 = 590.0;
+/// The top row's least height, in points: the Manifold view's 29 rows at egui's interact height, 18 points, under its
+/// title, gaps and margins, `29 × 18 + 40 + 3 × 6 + 2 × 12 = 604`, plus the 4 points of slack this value has always kept.
+pub const MIN_TOP_H: f32 = 608.0;
 /// The figure's canvas's least width, in points, its axis strip apart: so no splitter can close it (J2; a look choice,
 /// R-390). Its height is held by [`MIN_TOP_H`].
 pub const MIN_CANVAS_W: f32 = 240.0;
@@ -283,6 +286,8 @@ pub struct Layout {
     pub top_bar: Rect,
     /// The left panel, "Manifold view".
     pub manifold_view: Rect,
+    /// The figure's header strip: the top of the figure region, above the plot and outside it, holding the badges.
+    pub header: Rect,
     /// The figure's rect: its canvas, where it is drawn with the layer shown and its gestures land.
     pub figure: Rect,
     /// Where the field's `[0, 1]²` is: the default layout's figure rect (R-406; R-462 J4). The figure's points, its
@@ -330,13 +335,16 @@ impl Layout {
         let rect = |a: f32, b: f32, c: f32, d: f32| Rect::from_min_max(pos2(a, b), pos2(c, d));
         let (axis_w, axis_h) = (snap(AXIS_Y_W), snap(AXIS_X_H));
         let (inner_left, inner_bottom) = (e.left + axis_w, e.bottom - axis_h);
+        let header_h = snap(HEADER_H);
+        let (plot_top, field_top) = (e.top + header_h, d.top + header_h);
         Self {
             top_bar: rect(x0, y0, x1, e.top),
             manifold_view: rect(x0, e.top, e.left, e.bottom),
-            figure: rect(inner_left, e.top, e.right, inner_bottom),
-            field: rect(d.left + axis_w, d.top, d.right, d.bottom - axis_h),
+            header: rect(e.left, e.top, e.right, plot_top),
+            figure: rect(inner_left, plot_top, e.right, inner_bottom),
+            field: rect(d.left + axis_w, field_top, d.right, d.bottom - axis_h),
             axis_x: rect(e.left, inner_bottom, e.right, e.bottom),
-            axis_y: rect(e.left, e.top, inner_left, inner_bottom),
+            axis_y: rect(e.left, plot_top, inner_left, inner_bottom),
             trajectory: rect(e.right, e.top, x1, e.bottom),
             compass: rect(x0, e.bottom, e.compass, e.footer),
             time: rect(e.compass, e.bottom, e.legend, e.footer),

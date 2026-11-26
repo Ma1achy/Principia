@@ -133,6 +133,8 @@ pub const Q1_EDIT: ScopeId = "chart_q1";
 pub const Q2_EDIT: ScopeId = "chart_q2";
 /// Chart builder…, which opens its window (render_gui_spec §G7).
 pub const BUILDER: ScopeId = "chart_builder";
+/// The Links row's Decoder…, which opens the Decoder window (render_gui_spec §G7a).
+pub const DECODER: ScopeId = "chart_decoder";
 /// `q₁`'s eight components, under its edit button.
 pub const Q1_COMPONENTS: [ScopeId; LATENT_DIM] = [
     "q1_0", "q1_1", "q1_2", "q1_3", "q1_4", "q1_5", "q1_6", "q1_7",
@@ -195,9 +197,9 @@ pub const TILT_Y_ENTRIES: [ScopeId; LATENT_DIM] = [
     "tilt_y_0", "tilt_y_1", "tilt_y_2", "tilt_y_3", "tilt_y_4", "tilt_y_5", "tilt_y_6", "tilt_y_7",
 ];
 
-/// The rows each section takes, header included: Chart 5; Navigate 7 (centre, zoom, depth, precision, the lock badge
+/// The rows each section takes, header included: Chart 6 (with the Links row); Navigate 7 (centre, zoom, depth, precision, the lock badge
 /// and its anchor); Slice centre 9; Tilt 7 (`τ₁` and its target, `τ₂` and its target, `γ`, the tilt map).
-pub const SECTION_ROWS: [usize; 4] = [5, 7, 9, 7];
+pub const SECTION_ROWS: [usize; 4] = [6, 7, 9, 7];
 /// The height the Manifold view's title and subtitle take above its sections, in points.
 pub const TITLE_H: f32 = 40.0;
 /// The gap between the sections, in points.
@@ -266,6 +268,7 @@ pub fn join(tree: &mut ScopeTree) {
     }
     tree.register(Some(CHART), Scope::control(BUILDER, "Chart builder…"));
     tree.register(Some(CHART), Scope::control(saved::SAVE, saved::SAVE_TEXT));
+    tree.register(Some(CHART), Scope::control(DECODER, chart::DECODER_TEXT));
     tree.register(Some(NAVIGATE), Scope::value(CENTRE_U, "centre u", Pan));
     tree.register(Some(NAVIGATE), Scope::value(CENTRE_V, "centre v", Pan));
     tree.register(Some(NAVIGATE), Scope::value(ZOOM, "zoom", ZoomLog2));
@@ -1339,6 +1342,8 @@ pub struct Out {
     pub windows: Vec<Window>,
     /// The console's lines for the physical steers refused (R-550).
     pub refusals: Vec<String>,
+    /// The notices the app posts to the console as info: a pinned chart's load.
+    pub notices: Vec<String>,
     /// The scope the focus goes back to, off a basis editor the console has hidden.
     pub focus: Option<ScopeId>,
     /// Whether a preference changed, so the GUI's settings are saved.
@@ -1488,6 +1493,7 @@ fn written(sim: &mut SimConfig, edit: &SetField) {
         Edit::Sim(SimField::Lock(lock)) => sim.lock = lock.clone(),
         Edit::Sim(SimField::Window(window)) => sim.chart.window = *window,
         Edit::Sim(SimField::Horizon(horizon)) => sim.horizon = horizon.clone(),
+        Edit::Sim(SimField::Links(links)) => sim.links = links.clone(),
         Edit::Sim(SimField::SliceFrame { frame, basis }) => {
             sim.slice.frame = *frame;
             if let Some((q1, q2)) = basis {
@@ -1548,6 +1554,7 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
         CENTRE_ON_PIN_SETTING => lock::toggle_setting(scratch, out),
         OPEN_INSPECTOR => lock::open_inspector(&sim.lock, out),
         BUILDER => out.windows.push(Window::ChartBuilder),
+        DECODER => out.windows.push(Window::Decoder),
         _ => compass::activate(id, scratch),
     }
 }

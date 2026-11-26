@@ -175,6 +175,8 @@ pub enum GuiStep {
     CompassCaseThirdAxis,
     /// Set the plane to R-459's `mock_compass_cube_badge` case, the compass in Tilt.
     CompassCaseBadge,
+    /// Apply links off the default, stage one more edit, and open the Decoder window.
+    Decoder,
 }
 
 impl GuiStep {
@@ -207,6 +209,7 @@ impl GuiStep {
             GuiStep::CompassCaseTiltHex => "compass_case_tilt_hex",
             GuiStep::CompassCaseThirdAxis => "compass_case_third_axis",
             GuiStep::CompassCaseBadge => "compass_case_badge",
+            GuiStep::Decoder => "decoder",
         }
     }
 }

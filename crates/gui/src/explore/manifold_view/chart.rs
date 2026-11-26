@@ -20,8 +20,28 @@ use engine::contract::sim_config::{Latent, SimConfig};
 use super::saved::{self, Switch};
 use super::{
     about_the_pin, agreeing, axis, close_under_console, plane_edit, row, row_ui, Out, Panel,
-    Scratch, View, AXES, BUILDER, PRESET, PRESETS, Q1_COMPONENTS, Q1_EDIT, Q2_COMPONENTS, Q2_EDIT,
+    Scratch, View, AXES, BUILDER, DECODER, PRESET, PRESETS, Q1_COMPONENTS, Q1_EDIT, Q2_COMPONENTS,
+    Q2_EDIT,
 };
+
+/// The Links row's button.
+pub const DECODER_TEXT: &str = "Decoder…";
+/// The Links row's label.
+pub const LINKS_LABEL: &str = "Links";
+
+/// The Links row's tooltip: the blocks off their default, or that none is.
+pub fn links_tooltip(links: &engine::contract::sim_config::Links) -> String {
+    let off = engine::contract::links::off_default(links);
+    if off.is_empty() {
+        return "every block at its default link".to_owned();
+    }
+    let named: Vec<&str> = off.iter().map(|b| b.title()).collect();
+    format!(
+        "off the default: {}\n{}",
+        named.join(", "),
+        crate::windows::decoder::NOT_DECODED
+    )
+}
 
 /// The chart's kind: every chart the mock serves is the affine slice (chart_decoder_contract Part 3).
 pub const KIND: &str = "affine chart";
@@ -47,15 +67,49 @@ pub fn preset_edit(sim: &SimConfig, view: View, preset: usize) -> SetField {
     plane_edit(sim, preset_basis(view, preset))
 }
 
-/// The pick of preset `preset`: its edit, or, off a saved chart, the change of the active chart.
+/// Preset `preset`'s name, as the picker lists it and its pin is kept by.
+pub fn preset_name(preset: usize) -> String {
+    let (a, b) = PRESETS[preset];
+    format!("{} × {}", AXES[a], AXES[b])
+}
+
+/// The pick of preset `preset`: its edit, or, off a saved chart, the change of the active chart. A preset whose pin
+/// differs from the active links sends the pin with it, one command, one history entry, and posts a notice.
 pub fn pick_preset(sim: &SimConfig, preset: usize, scratch: &mut Scratch, out: &mut Out) {
     let edit = preset_edit(sim, View::read(sim), preset);
+    let name = preset_name(preset);
+    let pin = saved::pinned(
+        scratch.charts.preset_pins.get(&name),
+        &sim.links,
+        &format!("Preset '{name}'"),
+    );
     if scratch.charts.is_marked() {
-        out.chart = Some(Switch::Leave(agreeing(about_the_pin(vec![edit], sim), sim)));
+        let mut command = agreeing(about_the_pin(vec![edit], sim), sim);
+        if let Some((links, notice)) = pin {
+            command.push(links);
+            out.notices.push(notice);
+        }
+        out.chart = Some(Switch::Leave(command));
+    } else if let Some((links, notice)) = pin {
+        let mut command = agreeing(about_the_pin(vec![edit], sim), sim);
+        command.push(links);
+        out.send_command(command);
+        out.notices.push(notice);
     } else {
         out.edit(edit, None, scratch);
     }
 }
+
+/// The tooltip of a pin toggle: the pinned links, or what turning it on does.
+fn pin_tooltip(pin: Option<&engine::contract::sim_config::Links>) -> String {
+    match pin {
+        Some(p) => format!("pinned links: {}", engine::contract::links::row_text(p)),
+        None => "Pin the active links".to_owned(),
+    }
+}
+
+/// The pin toggle's text: the pin icon.
+pub const PIN_TEXT: &str = "pin";
 
 /// Enter on the preset selector: the chart after the active one, the presets then the saved charts.
 // The plan is unclear here: how the keyboard picks a saved chart; chose the selector's own Enter, on past the presets,
@@ -165,6 +219,37 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         panel.out.chart = Some(Switch::Save);
     }
     panel.place(saved::SAVE, &save, clip);
+    links_row(ui, row(section, h, 5), h, clip, panel);
+}
+
+/// The Links row: the active links, tinted amber while any block is off its default, its tooltip naming them, and
+/// Decoder…. The links are the decoder's: no chart edit here changes them.
+fn links_row(ui: &mut Ui, rect: Rect, h: f32, clip: Rect, panel: &mut Panel<'_>) {
+    let links = &panel.snapshot.sim.links;
+    let off = !engine::contract::links::off_default(links).is_empty();
+    let mut line = row_ui(ui, rect);
+    line.add_sized([LABEL_W, h], egui::Label::new(LINKS_LABEL));
+    let mut text = RichText::new(engine::contract::links::row_text(links)).small();
+    if off {
+        text = text.color(line.visuals().warn_fg_color);
+    }
+    let tooltip = links_tooltip(links);
+    // The button first, at the right, so the text takes what is left and is elided to fit.
+    let right = egui::Layout::right_to_left(egui::Align::Center);
+    let button = line
+        .with_layout(right, |ui| {
+            let button = ui.add(Button::new(DECODER_TEXT).small());
+            ui.add(Label::new(text).truncate()).on_hover_text(tooltip);
+            button
+        })
+        .inner;
+    if button.clicked() {
+        panel
+            .out
+            .windows
+            .push(engine::contract::view_ui::Window::Decoder);
+    }
+    panel.place(DECODER, &button, clip);
 }
 
 /// The header: the title, the kind and, on a saved chart, its provenance, whole in the tooltip.
@@ -230,13 +315,25 @@ fn picker(
     let mut chosen = preset;
     let mut opened = None;
     let mut deleted = None;
+    let mut pin_preset = None;
+    let mut pin_saved = None;
     let name = charts.label(sim).map_or_else(|| view.name(), str::to_owned);
     let combo = ComboBox::from_id_salt("chart preset")
         .selected_text(name)
         .width(width)
         .show_ui(row, |ui| {
-            for (i, &(a, b)) in PRESETS.iter().enumerate() {
-                ui.selectable_value(&mut chosen, Some(i), format!("{} × {}", AXES[a], AXES[b]));
+            for i in 0..PRESETS.len() {
+                let name = preset_name(i);
+                ui.horizontal(|ui| {
+                    ui.selectable_value(&mut chosen, Some(i), &name);
+                    let pin = charts.preset_pins.get(&name);
+                    let toggle = ui
+                        .add(Button::selectable(pin.is_some(), PIN_TEXT).small())
+                        .on_hover_text(pin_tooltip(pin));
+                    if toggle.clicked() {
+                        pin_preset = Some(name.clone());
+                    }
+                });
             }
             if charts.entries().is_empty() {
                 return;
@@ -256,6 +353,12 @@ fn picker(
                     if ui.add(Button::new(saved::DELETE_TEXT).small()).clicked() {
                         deleted = Some(*id);
                     }
+                    let toggle = ui
+                        .add(Button::selectable(chart.pin.is_some(), PIN_TEXT).small())
+                        .on_hover_text(pin_tooltip(chart.pin.as_ref()));
+                    if toggle.clicked() {
+                        pin_saved = Some(*id);
+                    }
                 });
             }
         });
@@ -269,6 +372,17 @@ fn picker(
     }
     if let Some(id) = deleted {
         panel.scratch.charts.delete(id);
+        panel.out.save_settings = true;
+    }
+    // The plan is unclear here: the pin toggle as each entry's last keyboard control; chose the mouse only, because the
+    // picker's entries are no scopes.
+    let active_links = panel.snapshot.sim.links.clone();
+    if let Some(name) = pin_preset {
+        panel.scratch.charts.toggle_preset_pin(&name, &active_links);
+        panel.out.save_settings = true;
+    }
+    if let Some(id) = pin_saved {
+        panel.scratch.charts.toggle_pin(id, &active_links);
         panel.out.save_settings = true;
     }
 }

@@ -168,6 +168,8 @@ pub struct App<S: EngineSide> {
     console: Vec<LogEntry>,
     /// The footer's latest message, kept apart from the console's rows, which the hover's edits push out.
     latest: Option<LogEntry>,
+    /// The notices to post once the edits they report are read back: a pinned chart's load.
+    notices: Vec<String>,
     counts: Counts,
     last_read: Option<f64>,
     reread: bool,
@@ -248,6 +250,7 @@ impl<S: EngineSide> App<S> {
             snapshot,
             console,
             latest,
+            notices: Vec::new(),
             counts,
             last_read: None,
             reread: false,
@@ -269,6 +272,7 @@ impl<S: EngineSide> App<S> {
         app.splits = loaded.settings.layout;
         app.manifold.centre_on_pin = loaded.settings.centre_on_pin;
         app.manifold.charts.set_list(loaded.settings.saved_charts);
+        app.manifold.charts.preset_pins = loaded.settings.preset_pins;
         app.store = store;
         if let Some(line) = loaded.ignored {
             app.log_warning(line);
@@ -289,6 +293,7 @@ impl<S: EngineSide> App<S> {
             layout: self.splits,
             centre_on_pin: self.manifold.centre_on_pin,
             saved_charts: self.manifold.charts.list().cloned().collect(),
+            preset_pins: self.manifold.charts.preset_pins.clone(),
         }
     }
 
@@ -299,6 +304,21 @@ impl<S: EngineSide> App<S> {
                 self.log_warning(why);
             }
         }
+    }
+
+    /// Logs `message` to the console as the app's notice, shown as the footer's latest message.
+    pub(crate) fn log_info(&mut self, message: String) {
+        let at = crate::clock::time::SystemTime::now()
+            .duration_since(crate::clock::time::UNIX_EPOCH)
+            .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX));
+        let entry = LogEntry {
+            severity: Severity::Info,
+            at,
+            source: Source::App,
+            message,
+        };
+        self.console.push(entry.clone());
+        self.latest = Some(entry);
     }
 
     /// Logs `message` to the console as the app's warning, counted in the footer.
@@ -325,6 +345,11 @@ impl<S: EngineSide> App<S> {
     /// The latest snapshot the app read.
     pub fn snapshot(&self) -> &Snapshot {
         &self.snapshot
+    }
+
+    /// The footer's latest message.
+    pub fn latest(&self) -> Option<&LogEntry> {
+        self.latest.as_ref()
     }
 
     /// The console's rows, oldest first.
@@ -381,6 +406,9 @@ impl<S: EngineSide> App<S> {
             self.send_fresh(command);
             self.manifold.charts.mark(chart);
             self.save_settings();
+        }
+        if let Some(notice) = self.manifold.charts.notice.take() {
+            self.notices.push(notice);
         }
     }
 
@@ -439,6 +467,10 @@ impl<S: EngineSide> App<S> {
         }
         if let Some(latest) = explore::footer::latest(&self.snapshot.log) {
             self.latest = Some(latest.clone());
+        }
+        // After the snapshot's lines, so a notice is the footer's latest, past the edit it reports.
+        for notice in std::mem::take(&mut self.notices) {
+            self.log_info(notice);
         }
         if absorb(&self.snapshot, &mut self.console, &mut self.counts) {
             self.console_auto_opened |= !self.console_open;
@@ -737,6 +769,7 @@ impl<S: EngineSide> App<S> {
             explore::trajectory::adjust(&adjust, span, &mut self.trajectory);
             windows::run::adjust(&adjust, &mut self.windows.run);
             windows::chart_builder::adjust(&adjust, &mut self.windows.chart);
+            windows::decoder::adjust(&adjust, &mut self.windows.decoder, &self.snapshot.sim.links);
             windows::inspector::adjust(&adjust, &mut self.windows.inspector);
             stain::adjust(
                 &adjust,
@@ -903,6 +936,7 @@ impl<S: EngineSide> App<S> {
         for line in std::mem::take(&mut out.refusals) {
             self.log_warning(line);
         }
+        self.notices.append(&mut out.notices);
         if std::mem::take(&mut out.save_settings) {
             self.save_settings();
         }
@@ -917,6 +951,7 @@ impl<S: EngineSide> App<S> {
         for window in std::mem::take(&mut out.windows) {
             let opener = match window {
                 Window::ChartBuilder => explore::manifold_view::BUILDER,
+                Window::Decoder => explore::manifold_view::DECODER,
                 _ => explore::manifold_view::OPEN_INSPECTOR,
             };
             opens.push((window, Some(opener)));
@@ -1044,6 +1079,11 @@ impl<S: EngineSide> App<S> {
         let span = layout.span(true);
         let sim = &self.snapshot.sim;
         explore::axis_labels::show(ui, layout.axis_x, layout.axis_y, canvas, &sim.plane, span);
+        let chart = explore::manifold_view::View::read(sim).name();
+        let off = !engine::contract::links::off_default(&sim.links).is_empty();
+        let text = explore::badge::text(&chart, &sim.links);
+        let tooltip = explore::badge::tooltip(&sim.links);
+        explore::badge::show(ui, layout.header, &text, off, tooltip);
         // The splitters' handles, after the panels, so they take the pointer at the boundaries; a double-click resets
         // one, and the layout is saved (R-462 J3, J5).
         let resets = crate::layout::splitters(ui, layout);
@@ -1500,6 +1540,7 @@ impl<S: EngineSide> App<S> {
         windows::display::activate(id, &mut w.display, &self.snapshot.render.overlays, edits);
         let plane = &self.snapshot.sim.plane;
         windows::chart_builder::activate(id, &mut w.chart, plane, edits);
+        windows::decoder::activate(id, &mut w.decoder, &self.snapshot.sim.links, edits);
         windows::inspector::activate(id, &mut w.inspector, &mut self.view.kept_orbits, edits);
         let (sim, render) = (&self.snapshot.sim, &self.snapshot.render);
         if let Some(act) = windows::export::activate(id, &mut w.export, sim, render) {
@@ -1594,6 +1635,13 @@ impl<S: EngineSide> App<S> {
                         };
                         windows::chart_builder::show(ui, keys, &mut w.chart, &view, edits)
                     }
+                    Window::Decoder => windows::decoder::show(
+                        ui,
+                        keys,
+                        &mut w.decoder,
+                        (&snapshot.sim.links, &snapshot.sim.plane),
+                        edits,
+                    ),
                     Window::Inspector => windows::inspector::show(
                         ui,
                         keys,

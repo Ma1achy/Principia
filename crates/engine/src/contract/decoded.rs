@@ -33,8 +33,8 @@ pub struct State {
 }
 
 /// The decoded state at `z` under `links`' tunable parameters with the energy target `e_star` (`None` is off, R-25).
-/// The link ids are the defaults': a selection is a compile-time type (`kernel::generated::links::Selection`), and no
-/// surface of the dev GUI chooses another yet.
+/// The link ids are the defaults': a selection is a compile-time type (`kernel::generated::links::Selection`), so an id
+/// the Decoder window applies off its default does not reach this decode yet; the parameters do.
 pub fn state(z: &Latent, links: &Links, e_star: Option<f64>) -> State {
     let params = links.link_params();
     let (decoded, _) =

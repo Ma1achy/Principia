@@ -96,6 +96,8 @@ pub enum Window {
     Run,
     /// The Chart builder, from the Manifold view's Chart (§G7).
     ChartBuilder,
+    /// The Decoder: the link functions, chosen and tuned (§G7a).
+    Decoder,
     /// Export & share (§G5).
     Export,
     /// Display, the last stages (§G5).

@@ -125,7 +125,7 @@ fn steps(c: &Case) -> Vec<GuiStep> {
 /// TASK-M6-36, `mock_trajectory_views` (REQ-GUI-202, R-453); and, since TASK-M6-34, `mock_compass_views` and
 /// `mock_compass_plucker` (REQ-GUI-194, REQ-GUI-195, R-452); and, since TASK-M6-46, `mock_debug_view` (REQ-GUI-225,
 /// R-467); and, since TASK-M6-47, `mock_f3_fit` (REQ-GUI-229, R-468 E9); and, since TASK-M6-35, `mock_compass_jacobi` and
-/// `mock_compass_shape` (REQ-GUI-199, R-452); and no other.
+/// `mock_compass_shape`, the compass's physical views; and, with the Decoder window, `mock_decoder`; and no other.
 fn check_01_main(cases: &[Case]) {
     let mut names: Vec<&str> = cases.iter().map(|c| c.name.as_str()).collect();
     names.sort_unstable();
@@ -144,6 +144,7 @@ fn check_01_main(cases: &[Case]) {
             "mock_compass_tilt",
             "mock_compass_views",
             "mock_debug_view",
+            "mock_decoder",
             "mock_f3_fit",
             "mock_f3_off",
             "mock_footer",
