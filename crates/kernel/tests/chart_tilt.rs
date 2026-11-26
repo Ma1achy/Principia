@@ -2577,6 +2577,7 @@ fn check_shift(second: bool) {
         y: 5,
         dy: 1.0,
         two: second,
+        ..Shift::none()
     };
     assert_eq!(shift_controls(z, &one)[5], 0.5, "one target's y moved");
     let one = Shift { two: false, ..one };
@@ -2776,6 +2777,7 @@ where
         y: x,
         dy: 0.0,
         two: false,
+        ..Shift::none()
     };
     let centre = own.decode::<Defaults, f64>(CENTRE[0], CENTRE[1]);
     for map in [TiltMap::Sheet, TiltMap::Lean] {
@@ -3409,6 +3411,7 @@ fn held_k_shift(dx: f64) -> Shift<f64> {
         y: HELD_K,
         dy: 0.0,
         two: false,
+        ..Shift::none()
     }
 }
 
@@ -3531,6 +3534,7 @@ where
         y: HELD_K,
         dy: <R as From<f32>>::from(0.0),
         two: false,
+        ..Shift::none()
     };
     let d = c.decode_shifted::<Defaults, R>(a, b, &own, &LinkParams::DEFAULT);
     assert_eq!(
@@ -3633,6 +3637,7 @@ macro_rules! no_finite_2k {
                 y: HELD_K,
                 dy: 0.0,
                 two: false,
+                ..Shift::none()
             };
             assert_eq!(warped.refusal_own(0.5, 0.5, &own), bound);
             let plain = Shift::<$p>::none();
@@ -3804,6 +3809,7 @@ fn check_simplex_own_precision(wide: bool) {
         y: NU0,
         dy: 0.0,
         two: false,
+        ..Shift::none()
     };
     for (dx, end) in [(0.4999999701976776, 1.0), (-0.4999999999, 0.0)] {
         assert!(dx + 0.5 > 0.0 && dx + 0.5 < 1.0, "inside at f64");
@@ -4528,6 +4534,7 @@ fn tilt_every_chart_construction_validate() {
         y: NU0,
         dy: 0.0,
         two: false,
+        ..Shift::none()
     };
     let p = LinkParams::DEFAULT;
     assert!(matches!(
@@ -4575,6 +4582,7 @@ fn tilt_every_chart_construction_validate() {
         y: HELD_K,
         dy: 0.0,
         two: false,
+        ..Shift::none()
     };
     assert_eq!(
         c.refusal(0.5, 1.0, &k_shift(-0.1)),
@@ -4619,6 +4627,7 @@ fn tilt_every_chart_construction_validate() {
         y: HELD_LZ,
         dy: 0.0,
         two: false,
+        ..Shift::none()
     };
     assert_eq!(
         z.refusal(0.5, 0.01, &lz_shift(0.3)),

@@ -1188,17 +1188,6 @@ fn check_refused(admitted: bool) {
             "into the target at RQ-471's corner as a second one",
         ),
         (
-            reopen(&curved(saved_spec()), spec(10.0, 5.0, TiltMap::Lean, 5, 6)),
-            "onto three controls",
-        ),
-        (
-            reopen(
-                &curved(spec(10.0, 5.0, TiltMap::Lean, 2, 3)),
-                spec(10.0, 0.0, TiltMap::Sheet, 4, 4),
-            ),
-            "onto three controls",
-        ),
-        (
             reopen(&curved(saved_spec()), spec(10.0, 0.0, TiltMap::Sheet, 0, 0)),
             "into a control the axes write",
         ),
@@ -1215,6 +1204,17 @@ fn check_refused(admitted: bool) {
         ),
     ];
     let admits = [
+        (
+            reopen(&curved(saved_spec()), spec(10.0, 5.0, TiltMap::Lean, 5, 6)),
+            "onto three controls (saved_chart_wide)",
+        ),
+        (
+            reopen(
+                &curved(spec(10.0, 5.0, TiltMap::Lean, 2, 3)),
+                spec(10.0, 0.0, TiltMap::Sheet, 4, 4),
+            ),
+            "onto three controls (saved_chart_wide)",
+        ),
         (
             reopen(&curved(lean), spec(10.0, 0.0, TiltMap::Sheet, 5, 5)),
             "a skewed R tilted into another target",

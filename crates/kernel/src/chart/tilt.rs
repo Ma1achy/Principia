@@ -268,7 +268,7 @@ impl TiltSpec {
 
 /// `ray-degenerate` where the view loses rank, else `untilted`.
 #[inline]
-fn image(rank_loss: bool, untilted: SystemImage) -> SystemImage {
+pub(super) fn image(rank_loss: bool, untilted: SystemImage) -> SystemImage {
     if rank_loss {
         SystemImage::RayDegenerate
     } else {
@@ -616,6 +616,17 @@ pub struct Shift<R> {
     pub dy: R,
     /// Whether `y` is a second target.
     pub two: bool,
+    /// A third hidden coordinate, which only a composition of saved tilts reaches ([`super::saved::Composed`]).
+    pub z: u32,
+    /// Its offset, added only where `more` is at least 1.
+    pub dz: R,
+    /// A fourth hidden coordinate.
+    pub w: u32,
+    /// Its offset, added only where `more` is 2.
+    pub dw: R,
+    /// How many of `z` and `w` are targets, in order: 0, 1 or 2, and only past two targets. A slot past it is never
+    /// read: its offset is not added as a zero, which would turn a `−0` into `+0`.
+    pub more: u32,
 }
 
 /// The link parameters at the float `F`, each rounded as [`narrow`] does; a field added to the registry fails the build
@@ -644,6 +655,11 @@ impl<R: Float> Shift<R> {
             y: self.y,
             dy: narrow(self.dy),
             two: self.two,
+            z: self.z,
+            dz: narrow(self.dz),
+            w: self.w,
+            dw: narrow(self.dw),
+            more: self.more,
         }
     }
 
@@ -657,6 +673,11 @@ impl<R: Float> Shift<R> {
             y: u32::MAX,
             dy: R::zero(),
             two: false,
+            z: u32::MAX,
+            dz: R::zero(),
+            w: u32::MAX,
+            dw: R::zero(),
+            more: 0,
         }
     }
 }
@@ -690,6 +711,7 @@ impl<P: Copy> Tilt<P> {
                 y: self.y,
                 dy,
                 two: self.two,
+                ..Shift::none()
             },
         )
     }
@@ -705,8 +727,18 @@ impl<P: Copy> Tilt<P> {
 #[inline]
 pub(super) fn shifted<R: Float>(z: R, k: u32, shift: &Shift<R>) -> R {
     let z = if shift.x == k { z + shift.dx } else { z };
-    if shift.two && shift.y == k {
+    let z = if shift.two && shift.y == k {
         z + shift.dy
+    } else {
+        z
+    };
+    let z = if shift.more >= 1 && shift.z == k {
+        z + shift.dz
+    } else {
+        z
+    };
+    if shift.more >= 2 && shift.w == k {
+        z + shift.dw
     } else {
         z
     }
@@ -804,6 +836,15 @@ pub trait Placement<P> {
 
     /// The hidden coordinates the offsets name, `[x, y]`, and whether `y` is a second one.
     fn targets(&self) -> ([u32; 2], bool);
+
+    /// Each pixel's area weight, before a refusal ([`Tilted::weight`]).
+    fn area_weight(&self) -> P;
+
+    /// The third and fourth hidden coordinates the offsets name, and how many of the two there are, 0 to 2.
+    #[inline]
+    fn more_targets(&self) -> ([u32; 2], u32) {
+        ([u32::MAX; 2], 0)
+    }
 }
 
 impl<P: Copy> Placement<P> for Tilt<P> {
@@ -820,6 +861,11 @@ impl<P: Copy> Placement<P> for Tilt<P> {
     #[inline]
     fn targets(&self) -> ([u32; 2], bool) {
         ([self.x, self.y], self.two)
+    }
+
+    #[inline]
+    fn area_weight(&self) -> P {
+        self.weight
     }
 }
 
@@ -850,7 +896,11 @@ impl<C: Tiltable<Param = P>, P: Copy, T: Placement<P>> Tilted<C, P, T> {
     /// coordinates.
     pub fn placed(chart: C, tilt: T) -> Option<Self> {
         let ([x, y], _) = tilt.targets();
-        let targets = chart.hidden(x) && chart.hidden(y);
+        let ([z, w], more) = tilt.more_targets();
+        let targets = chart.hidden(x)
+            && chart.hidden(y)
+            && (more < 1 || chart.hidden(z))
+            && (more < 2 || chart.hidden(w));
         (!tilt.on() || targets).then_some(Tilted {
             chart,
             tilt,
@@ -964,7 +1014,9 @@ where
     /// The chart's, or true where a tilt moves a mass control, so the masses vary per pixel.
     fn requires_per_pixel_mass(&self) -> bool {
         let ([x, y], two) = self.tilt.targets();
-        let tilted = mass(x) || (two && mass(y));
+        let ([z, w], more) = self.tilt.more_targets();
+        let tilted =
+            mass(x) || (two && mass(y)) || (more >= 1 && mass(z)) || (more >= 2 && mass(w));
         self.chart.requires_per_pixel_mass() || (self.tilt.on() && tilted)
     }
 
@@ -1022,7 +1074,7 @@ where
     }
 }
 
-impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal, T: Placement<P>> Tilted<C, P, T>
 where
     f64: From<P>,
 {
@@ -1034,11 +1086,12 @@ where
     /// reject a pixel whose weight stays the tilt's, where the end is only the chart's check's, as at `Φ_θ,K`'s `θ` past the
     /// fold at f64; a shape [`Tiltable::refusal_own`] reads is 0 in both.
     pub fn weight(&self, u: f64, v: f64) -> f64 {
+        let weight = f64::from(self.tilt.area_weight());
         let ([a, b], shift) = self.at(u, v);
         let wide = self.chart.refusal(a, b, &shift.unwrap_or(Shift::none()));
         match wide.or(self.refused_own(u, v)) {
             Some(_) => 0.0,
-            None => f64::from(self.tilt.weight),
+            None => weight,
         }
     }
 }
@@ -1090,6 +1143,15 @@ where
 
 // ── The tilted shape sphere: one-to-one at every tilt ─────────────────────────────────────────────────────────────────
 
+/// What a placement's view says of the system pixels it counts: its fold's inputs, whatever placement holds them.
+#[derive(Clone, Copy)]
+pub struct Folds {
+    /// `[N_a = 0, N_b = 0]` ([`TiltSpec::normal_zero`]).
+    pub normal_zero: [bool; 2],
+    /// The lattice of repeats ([`TiltSpec::strip`]).
+    pub strip: Option<Strip>,
+}
+
 impl<P: Copy + FloatConst> Tilted<ShapeSphere<P>, P>
 where
     f64: From<P>,
@@ -1113,19 +1175,7 @@ where
     ///   Elsewhere the view is affine along that axis, its primary range unbounded, and the pixel is a system of its
     ///   own, counted.
     pub fn pixel(&self, u: f64, v: f64) -> Option<PixelCount> {
-        let ([a, b], _) = self.at(u, v);
-        let a_in = (0.0..=1.0).contains(&a);
-        let b_in = (0.0..=1.0).contains(&b);
-        let [na, nb] = self.tilt.normal_zero;
-        match self.chart.map {
-            ShapeMap::Spherical => {
-                let lattice = self.tilt.strip.is_some_and(|s| !s.canonical(a, b));
-                let repeat = (!a_in && na) || (!b_in && na && nb) || lattice;
-                (!repeat).then_some(PixelCount::System)
-            }
-            ShapeMap::Exponential if a_in && b_in => Some(self.chart.exp_pixel(a, b)),
-            ShapeMap::Exponential => Some(PixelCount::DomainEnd),
-        }
+        self.pixel_by(self.folds(), u, v)
     }
 
     /// The counted total over the pixels at `points`: each system pixel once, no pixel folded onto another, a repeat
@@ -1137,15 +1187,53 @@ where
         I: IntoIterator<Item = [f64; 2]>,
         I::IntoIter: Clone,
     {
+        self.counted_by(self.folds(), points)
+    }
+
+    fn folds(&self) -> Folds {
+        Folds {
+            normal_zero: self.tilt.normal_zero,
+            strip: self.tilt.strip,
+        }
+    }
+}
+
+impl<P: Copy + FloatConst, T: Placement<P>> Tilted<ShapeSphere<P>, P, T>
+where
+    f64: From<P>,
+{
+    /// [`Tilted::pixel`] under the folds `folds` of the placement.
+    pub fn pixel_by(&self, folds: Folds, u: f64, v: f64) -> Option<PixelCount> {
+        let ([a, b], _) = self.at(u, v);
+        let a_in = (0.0..=1.0).contains(&a);
+        let b_in = (0.0..=1.0).contains(&b);
+        let [na, nb] = folds.normal_zero;
+        match self.chart.map {
+            ShapeMap::Spherical => {
+                let lattice = folds.strip.is_some_and(|s| !s.canonical(a, b));
+                let repeat = (!a_in && na) || (!b_in && na && nb) || lattice;
+                (!repeat).then_some(PixelCount::System)
+            }
+            ShapeMap::Exponential if a_in && b_in => Some(self.chart.exp_pixel(a, b)),
+            ShapeMap::Exponential => Some(PixelCount::DomainEnd),
+        }
+    }
+
+    /// [`Tilted::counted_total`] under the folds `folds` of the placement.
+    pub fn counted_by<I>(&self, folds: Folds, points: I) -> u64
+    where
+        I: IntoIterator<Item = [f64; 2]>,
+        I::IntoIter: Clone,
+    {
         let points = points.into_iter();
         let mut total = 0u64;
         for (seen, [u, v]) in points.clone().enumerate() {
-            match self.pixel(u, v) {
+            match self.pixel_by(folds, u, v) {
                 Some(PixelCount::System) => total += 1,
                 Some(PixelCount::Antipode) => {
                     let counted = points.clone().take(seen).any(|[p, q]| {
-                        self.pixel(p, q) == Some(PixelCount::Antipode)
-                            && self.same_offsets([u, v], [p, q])
+                        self.pixel_by(folds, p, q) == Some(PixelCount::Antipode)
+                            && self.same_offsets(folds, [u, v], [p, q])
                     });
                     total += u64::from(!counted);
                 }
@@ -1158,11 +1246,12 @@ where
     /// Whether two pixels have the same hidden offsets: always where `N_a = N_b = 0`, decided exactly on the stored
     /// angles, the view adding no `d` that varies, whatever rounding leaves in the computed offsets; elsewhere the
     /// offsets as computed, compared exactly (chart_reference §3.3).
-    fn same_offsets(&self, [u, v]: [f64; 2], [p, q]: [f64; 2]) -> bool {
-        if self.tilt.normal_zero == [true, true] {
+    fn same_offsets(&self, folds: Folds, [u, v]: [f64; 2], [p, q]: [f64; 2]) -> bool {
+        // Not `== [true, true]`: array equality is a `raw_eq` intrinsic the SPIR-V backend lacks.
+        if folds.normal_zero[0] && folds.normal_zero[1] {
             return true;
         }
         let (one, other) = (self.tilt.place(u, v).1, self.tilt.place(p, q).1);
-        one.dx == other.dx && one.dy == other.dy
+        one.dx == other.dx && one.dy == other.dy && one.dz == other.dz && one.dw == other.dw
     }
 }

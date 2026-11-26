@@ -910,7 +910,7 @@ fn check_warped_chart(linear_encode: bool) {
     let reread = Saved::from_words(&words).expect("the words read back");
     let parent = match reread {
         Saved::Curved(c) => c.parent::<Mixed<ZQ1, Beta, f64>>(),
-        Saved::Oblique(_) => None,
+        Saved::Oblique(_) | Saved::Chained(_) => None,
     };
     assert!(
         parent == Some(chart),

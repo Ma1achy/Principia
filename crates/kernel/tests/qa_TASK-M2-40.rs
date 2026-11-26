@@ -272,6 +272,7 @@ fn reopen(
             .reopen(parent, new, S, [SPAN, SPAN])
             .expect("the new tilt's targets are hidden coordinates"),
         Saved::Oblique(_) => panic!("a curved view saved as an oblique chart"),
+        Saved::Chained(_) => panic!("a curved view saved as a chain"),
     }
 }
 
