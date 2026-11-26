@@ -1153,10 +1153,10 @@ impl Composed<f64> {
         } else {
             let inner = active.clone().next_back().unwrap_or(first);
             composed.rank_loss = composed.levels[inner].rank_loss;
-            composed.normal_zero = if active
-                .clone()
-                .all(|k| composed.levels[k].normal_zero == [true, true])
-            {
+            composed.normal_zero = if active.clone().all(|k| {
+                let [a, b] = composed.levels[k].normal_zero;
+                a && b
+            }) {
                 [true, true]
             } else {
                 [false, false]

@@ -1247,7 +1247,8 @@ where
     /// angles, the view adding no `d` that varies, whatever rounding leaves in the computed offsets; elsewhere the
     /// offsets as computed, compared exactly (chart_reference §3.3).
     fn same_offsets(&self, folds: Folds, [u, v]: [f64; 2], [p, q]: [f64; 2]) -> bool {
-        if folds.normal_zero == [true, true] {
+        // Not `== [true, true]`: array equality is a `raw_eq` intrinsic the SPIR-V backend lacks.
+        if folds.normal_zero[0] && folds.normal_zero[1] {
             return true;
         }
         let (one, other) = (self.tilt.place(u, v).1, self.tilt.place(p, q).1);
