@@ -881,7 +881,8 @@ fn code_the_engine_refuses_changes_nothing_and_is_kept() {
     hold(&mut app, &mut h, &g, PALETTE);
     type_code(&mut app, &mut h, "// @uniform nonsense\n");
     click_on(&mut app, &mut h, yours::APPLY);
-    let why = yours::applied(&g, PALETTE, "// @uniform nonsense\n").expect_err("refused");
+    let why = yours::applied(&g, PALETTE, "// @uniform nonsense\n", &Default::default())
+        .expect_err("refused");
     let check = |app: &mut Mock, h: &mut Headless| {
         assert_eq!(graph(app), &g);
         assert_eq!(app.stain.yours.drafts.len(), 1, "what was typed");
@@ -1559,4 +1560,212 @@ fn check_frame(app: &mut Mock) -> Headless {
         let _ = h.frame(app, Vec::new());
     }
     h
+}
+
+/// The late fade's code with its `fade` declared as `decl`, and read by the code where `reads`.
+fn fade_code(decl: Option<&str>, reads: bool) -> String {
+    let mut out = String::from(
+        "// @name Late fade\n// @group Brightness\n// @about Fades late fates.\n// @maps t_end [lin, 0 to 50]\n\
+         // @glyph name\n// @input t_end [0, 50]\n",
+    );
+    if let Some(d) = decl {
+        out.push_str(&format!("// @uniform fade: {d}\n"));
+        if d.starts_with("f32") {
+            out.push_str("// @control fade slider \"Fade\"\n");
+        }
+    }
+    let body = if reads {
+        "mix(1.0, uniforms.fade, clamp(ctx.inputs[0].x / 50.0, 0.0, 1.0))"
+    } else {
+        "1.0"
+    };
+    out.push_str(&format!(
+        "fn brightness(ctx: Ctx) -> f32 {{\n    return {body};\n}}\n"
+    ));
+    out
+}
+
+/// The fade's value in `app`'s graph, none when it is at its default.
+fn fade_value(app: &Mock) -> Option<Vec<f64>> {
+    graph(app)
+        .node(FADE)
+        .and_then(|n| n.params.get("fade").cloned())
+}
+
+/// Types `text` as the fade's code and applies it.
+fn apply_fade(app: &mut Mock, h: &mut Headless, text: &str) {
+    type_code(app, h, text);
+    click_on(app, h, yours::APPLY);
+}
+
+/// The code applied without its values following it: the edit `set_occupant` alone makes.
+fn unfollowed(g: &StainGraph, text: &str) -> Result<SetField, String> {
+    use engine::contract::stain::edit::{apply, StainEdit};
+    let occupant =
+        engine::contract::stain::folder::edited(g, FADE, text).map_err(|e| e.to_string())?;
+    apply(
+        g,
+        &StainEdit::Occupant {
+            node: FADE,
+            occupant,
+        },
+    )
+    .map_err(|e| e.to_string())
+}
+
+// Criteria, fixed before the first run: a code edit whose declaration narrows a value's range clamps the value into it,
+// one undoable edit, and says so; one that drops a uniform drops its value and keeps it, said so; one that declares it
+// again brings that value back, said so; one that changes its type puts it at its default, said so. Saving the node
+// forgets what was kept. Each against the edit `set_occupant` alone makes, which refuses or loses the value.
+#[test]
+fn values_follow_a_changed_declaration_by_name() {
+    let memory = Memory::default();
+    let (mut app, mut h) = app_on(&memory);
+    let mut g = default_graph();
+    g.set_param(FADE, "fade", vec![0.9]).expect("a value");
+    hold(&mut app, &mut h, &g, FADE);
+    let said = |app: &Mock| {
+        app.stain
+            .yours
+            .said
+            .clone()
+            .map(|s| s.text)
+            .unwrap_or_default()
+    };
+
+    // Narrowed: clamped into the new range.
+    let narrowed = fade_code(Some("f32 = 0.12 [0, 0.5]"), true);
+    let depth0 = depth(&app);
+    apply_fade(&mut app, &mut h, &narrowed);
+    assert_eq!(fade_value(&app), Some(vec![0.5]), "{}", said(&app));
+    assert_eq!(depth(&app), depth0 + 1, "one undoable edit");
+    assert!(
+        said(&app).contains("outside its new range"),
+        "{}",
+        said(&app)
+    );
+    assert!(drawn(&mut app, &mut h, "outside its new range"));
+    let refused = unfollowed(&g, &narrowed);
+    assert!(
+        refused.is_err(),
+        "set_occupant alone took a value outside the range"
+    );
+
+    // Dropped: the value goes with its uniform, and is kept.
+    let after_narrow = graph(&app).clone();
+    let dropped = fade_code(None, false);
+    apply_fade(&mut app, &mut h, &dropped);
+    assert_eq!(fade_value(&app), None);
+    assert!(said(&app).contains("no longer declared"), "{}", said(&app));
+    let kept = app
+        .stain
+        .yours
+        .remembered
+        .get(&FADE)
+        .cloned()
+        .unwrap_or_default();
+    assert_eq!(kept.get("fade").map(|(_, v)| v.clone()), Some(vec![0.5]));
+
+    // Declared again: the kept value comes back, not the default.
+    let again = fade_code(Some("f32 = 0.12 [0, 1]"), true);
+    apply_fade(&mut app, &mut h, &again);
+    assert_eq!(fade_value(&app), Some(vec![0.5]), "{}", said(&app));
+    assert!(said(&app).contains("has its value back"), "{}", said(&app));
+    let forgot = |g: &StainGraph| {
+        let (edit, _) = yours::applied(g, FADE, &again, &Default::default()).expect("applied");
+        written(Some(edit), g)
+            .node(FADE)
+            .and_then(|n| n.params.get("fade").cloned())
+    };
+    let without = graph(&app).clone();
+    let mut bare = without.clone();
+    bare.set_occupant(FADE, Occupant::Custom(dropped.clone()))
+        .expect("the code");
+    assert_eq!(
+        forgot(&bare),
+        None,
+        "with nothing kept the value is the default"
+    );
+
+    // Its type changed: the default, said so.
+    let mut typed = after_narrow.clone();
+    typed.set_param(FADE, "fade", vec![0.5]).expect("a value");
+    hold(&mut app, &mut h, &typed, FADE);
+    let vector = fade_code(Some("vec3<f32> = (1.0, 1.0, 1.0)"), false);
+    apply_fade(&mut app, &mut h, &vector);
+    assert_eq!(fade_value(&app), None, "{}", said(&app));
+    assert!(
+        said(&app).contains("does not fit its new type"),
+        "{}",
+        said(&app)
+    );
+    let unfit = unfollowed(&typed, &vector);
+    assert!(
+        unfit.is_err(),
+        "set_occupant alone kept a value of another type"
+    );
+
+    // Saved: what was kept is forgotten.
+    app.stain.yours.remembered.insert(FADE, kept.clone());
+    save_as(&mut app, &mut h, "Fade", "me/fade");
+    assert!(!app.stain.yours.remembered.contains_key(&FADE));
+
+    let check_clamped = |v: Option<Vec<f64>>| assert_eq!(v, Some(vec![0.5]));
+    rejects("the value left outside its range", || {
+        check_clamped(Some(vec![0.9]))
+    });
+}
+
+// Criteria, fixed before the first run: Duplicate, on any node with code, is one undoable edit adding a node whose code
+// is the original's own source, text to edit, with its params, drawn as the original is, and selected. Against the
+// plain duplicate, whose code is not text of its own.
+#[test]
+fn duplicate_copies_the_nodes_own_source_as_code_to_edit() {
+    let memory = Memory::default();
+    let (mut app, mut h) = app_on(&memory);
+    let mut g = default_graph();
+    g.set_param(FADE, "fade", vec![0.3]).expect("a value");
+    let check = |g: &StainGraph, after: &StainGraph, from: NodeId, copy: NodeId| {
+        let (a, b) = (
+            g.node(from).expect("the node"),
+            after.node(copy).expect("the copy"),
+        );
+        assert_eq!(
+            b.occupant,
+            Occupant::Custom(source(g, from)),
+            "its code is the source, written out"
+        );
+        assert_eq!(b.params, a.params);
+        assert_eq!(b.kind, a.kind);
+        assert_eq!(after.nodes().count(), g.nodes().count() + 1);
+    };
+    for from in [PALETTE, FADE] {
+        hold(&mut app, &mut h, &g, from);
+        let depth0 = depth(&app);
+        click_on(&mut app, &mut h, crate::stain::DUPLICATE);
+        let after = graph(&app).clone();
+        let copy = app.stain.selected().expect("the copy selected");
+        assert_ne!(copy, from);
+        check(&g, &after, from, copy);
+        assert_eq!(depth(&app), depth0 + 1, "one undoable edit");
+        let c = content(&mut app);
+        assert_eq!(
+            c.described[&copy], c.described[&from],
+            "drawn as the original"
+        );
+        assert_eq!(c.node_code[&copy], c.node_code[&from]);
+        let mut plain = g.clone();
+        let other = plain.duplicate(from).expect("a copy");
+        if from == PALETTE {
+            rejects("a copy whose code is not its own text", || {
+                check(&g, &plain, from, other)
+            });
+        }
+    }
+    hold(&mut app, &mut h, &g, COMBINER);
+    let tree = app.keyboard.tree(Mode::Stain);
+    let scope = tree
+        .get(crate::stain::DUPLICATE)
+        .expect("drawn on the combiner");
+    assert!(!scope.activates, "the combiner is never duplicated");
 }

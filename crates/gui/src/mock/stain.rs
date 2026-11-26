@@ -1,6 +1,6 @@
 //! The mock's stain (R-390, ORDER item 6): the graph it starts with, the look its preview is drawn in, and the Stain
-//! editor's content it serves. The library, the choices, each node's description and its code are the registry's; the
-//! assembled code and the Problems pane's lines are placeholders, the mock assembling nothing.
+//! editor's content it serves. The library, the choices, each node's description and its code are the registry's, and
+//! the Pipeline WGSL view's the assembler's; the code under the canvas and the Problems pane's lines are placeholders.
 //! The graph is a real stain graph, checked as every edit of it is (gui_state_contract §5; `engine::stain`), made of
 //! 02_stain.png's nodes: the outcome state and `t_end` as sources, the outcome palette as colour, a late fade as
 //! brightness, multiplied at the combiner into `OUT`.
@@ -28,7 +28,7 @@ pub const LATE_FADE: &str = "// @name Late fade
 // @uniform fade: f32 = 0.12 [0, 1]
 // @control fade slider \"Fade\"
 fn brightness(ctx: Ctx) -> f32 {
-    return mix(1.0, fade, clamp(ctx.inputs[0].x / 50.0, 0.0, 1.0));
+    return mix(1.0, uniforms.fade, clamp(ctx.inputs[0].x / 50.0, 0.0, 1.0));
 }
 ";
 
@@ -169,9 +169,12 @@ pub fn assembled(g: &StainGraph) -> String {
     )
 }
 
-/// The whole pipeline's code, the Pipeline WGSL view (placeholder content): the assembled code after the prelude's
-/// line and each node's function, by id.
+/// The whole pipeline's code, the Pipeline WGSL view: the assembler's text for `g`, so a capture shows real code; a
+/// placeholder of each node, by id, where it does not assemble.
 pub fn pipeline(g: &StainGraph) -> String {
+    if let Ok(a) = engine::contract::stain::assembled::assemble(g, crate::real::stain::TIER) {
+        return a.pipeline;
+    }
     let mut text =
         String::from("// pipeline WGSL (mock): the prelude, each node's function, then shade()\n");
     text.push_str("#import prelude::{Ctx, SampleCtx, PAL, curve, range_norm, with_l}\n\n");
@@ -224,6 +227,7 @@ fn made(g: &StainGraph) -> Content {
         described,
         standing: Default::default(),
         node_code: node_code(g),
+        status: Default::default(),
         compiled: COMPILED.to_owned(),
         compiling: false,
         problems,

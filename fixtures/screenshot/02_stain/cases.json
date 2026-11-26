@@ -9,6 +9,16 @@
       "name": "mock_stain_selected",
       "surface": { "kind": "gui", "screen": "02_stain", "steps": ["click_node"] },
       "artboard": "docs/gui/design/02_stain.png"
+    },
+    {
+      "name": "pipeline-wgsl",
+      "surface": { "kind": "gui", "screen": "02_stain", "steps": ["pipeline_wgsl"] },
+      "artboard": "docs/gui/design/02_stain.png"
+    },
+    {
+      "name": "node-wgsl",
+      "surface": { "kind": "gui", "screen": "02_stain", "steps": ["click_node", "node_wgsl"] },
+      "artboard": "docs/gui/design/02_stain.png"
     }
   ]
 }

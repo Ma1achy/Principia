@@ -74,6 +74,8 @@ pub enum Step {
     /// Apply links off the default through the contract (the masses on stick-breaking, the momenta's `q_max` at 3),
     /// stage the α row on tanh, and open the Decoder window.
     Decoder,
+    /// Show this view on the Stain canvas, as its toggle's button does.
+    View(crate::stain::View),
 }
 
 /// R-451 B8's golden cases of the compass's cube: the plane the case sets, in the mock preset's frame `(e_a, e_b, e_d)`,
@@ -167,7 +169,7 @@ pub const LOCK_AT: (f32, f32) = (0.35, 0.6);
 
 /// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25), the Manifold view's
 /// (TASK-M6-26), the hover, Alt+1 and Space (TASK-M6-27), and R-451 B8's compass cases (TASK-M6-33).
-pub const STEPS: [(&str, Step); 27] = [
+pub const STEPS: [(&str, Step); 29] = [
     ("f3", Step::F3),
     ("raise_warning", Step::RaiseWarning),
     ("raise_error", Step::RaiseError),
@@ -201,6 +203,8 @@ pub const STEPS: [(&str, Step); 27] = [
     ),
     ("compass_case_badge", Step::Compass(CompassCase::Badge)),
     ("decoder", Step::Decoder),
+    ("pipeline_wgsl", Step::View(crate::stain::View::Pipeline)),
+    ("node_wgsl", Step::View(crate::stain::View::Node)),
 ];
 
 impl Step {
@@ -352,6 +356,7 @@ pub fn shoot_case(
                 }
                 app.manifold.compass.mode = case.parameters().2;
             }
+            Step::View(view) => app.stain.view = *view,
             Step::Decoder => {
                 use engine::contract::links;
                 use engine::contract::set_field::{Edit, SetField, SimField};

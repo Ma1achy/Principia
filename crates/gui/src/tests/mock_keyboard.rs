@@ -1625,7 +1625,9 @@ fn mock_keyboard_capture_steps() {
             "compass_case_tilt_hex",
             "compass_case_third_axis",
             "compass_case_badge",
-            "decoder"
+            "decoder",
+            "pipeline_wgsl",
+            "node_wgsl"
         ]
     );
     let err = Step::parse("zoom").expect_err("an unknown step");

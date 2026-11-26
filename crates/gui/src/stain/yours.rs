@@ -11,9 +11,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use eframe::egui::{self, pos2, vec2, Align, Button, Rect, RichText, TextEdit, Ui, UiBuilder};
 use engine::contract::render_state::{Node, NodeId, Occupant, StainGraph};
-use engine::contract::set_field::SetField;
+use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::stain::assembled::node_source;
-use engine::contract::stain::edit::{apply, StainEdit};
+use engine::contract::stain::custom::{self, reconcile, Note, Reconciled, Remembered};
+use engine::contract::stain::edit::Refusal;
 use engine::contract::stain::folder::{self, Duplicate, Folder, Problem, Shader};
 use engine::contract::stain::saved::{self, Update, FIELD_ID};
 
@@ -336,6 +337,10 @@ pub struct Scratch {
     pub author: String,
     /// What came of the last ask.
     pub said: Option<Said>,
+    /// The values each node's code edits took out with their uniforms, to come back if the uniforms do.
+    // The plan is unclear here; chose to keep them in the editor until the node is saved, not in the stain, because an
+    // undo already brings the graph's own values back, and a stain saved with them would hold values nothing declares.
+    pub remembered: BTreeMap<NodeId, Remembered>,
 }
 
 impl Scratch {
@@ -384,12 +389,64 @@ fn id_of(name: &str) -> String {
     format!("me/{}", if slug.is_empty() { "shader" } else { slug })
 }
 
-/// Node `node`'s edit to `text`: the one `SetField` holding it in the stain, or why not.
+/// Node `node`'s edit to `text`: the one `SetField` holding it in the stain, its values following the declaration by
+/// name ([`reconcile`]), those an earlier edit took out back where it declares them again; and what became of the
+/// values. Or why not.
 // The plan is unclear here; chose an Apply, one undoable edit, because compiling as it is typed, with the last valid
 // code kept, is the in-app code editor's own task.
-pub fn applied(g: &StainGraph, node: NodeId, text: &str) -> Result<SetField, String> {
-    let occupant = folder::edited(g, node, text).map_err(|e| e.to_string())?;
-    apply(g, &StainEdit::Occupant { node, occupant }).map_err(|e| e.to_string())
+pub fn applied(
+    g: &StainGraph,
+    node: NodeId,
+    text: &str,
+    remembered: &Remembered,
+) -> Result<(SetField, Reconciled), String> {
+    let why = |e: engine::contract::render_state::GraphError| e.to_string();
+    let n = g.node(node).ok_or_else(|| format!("no node {}", node.0))?;
+    let occupant = folder::edited(g, node, text).map_err(why)?;
+    let old = g.uniforms(node).map_err(why)?;
+    let new = custom::uniforms(n.kind, &occupant).map_err(why)?;
+    let carried = reconcile(&old, &n.params, remembered, &new);
+    let mut next = g.clone();
+    next.set_occupant_with(node, occupant, &carried.values)
+        .map_err(why)?;
+    if next == *g {
+        return Err(Refusal::NoChange.to_string());
+    }
+    let edit = SetField {
+        edit: Edit::Render(RenderField::StainGraph(next)),
+        no_history: false,
+    };
+    Ok((edit, carried))
+}
+
+/// What became of the values `before` held, in words: one line, empty when nothing did.
+pub fn carried_line(r: &Reconciled, before: &Remembered) -> String {
+    let mut out: Vec<String> = r
+        .notes
+        .iter()
+        .map(|note| match note {
+            Note::Clamped { name, was, now } => {
+                format!("`{name}` {was:?} is outside its new range, so it is {now:?}")
+            }
+            Note::Reset { name, was } => {
+                format!("`{name}` {was:?} does not fit its new type, so it is at its default")
+            }
+            Note::Restored { name } => format!("`{name}` has its value back"),
+        })
+        .collect();
+    for name in r.remembered.keys().filter(|k| !before.contains_key(*k)) {
+        if !r.values.contains_key(name)
+            && !r
+                .notes
+                .iter()
+                .any(|n| matches!(n, Note::Reset { name: m, .. } if m == name))
+        {
+            out.push(format!(
+                "`{name}` is no longer declared; its value is kept until the node is saved"
+            ));
+        }
+    }
+    out.join(" · ")
 }
 
 /// Control `id`, clicked or Enter on it; whether it is one of your shaders'.
@@ -452,15 +509,21 @@ pub fn activate(
                 s.yours.said = None;
                 return true;
             }
-            match applied(g, node, &text) {
-                Ok(edit) => {
+            let before = s.yours.remembered.get(&node).cloned().unwrap_or_default();
+            match applied(g, node, &text, &before) {
+                Ok((edit, carried)) => {
                     s.yours.drop_draft(node, &base);
                     if let Some(form) = s.yours.form.as_mut().filter(|f| f.node == node) {
                         if form.base.as_ref() == Some(&base) {
                             form.base = Some(text);
                         }
                     }
+                    let line = carried_line(&carried, &before);
                     s.yours.said = None;
+                    if !line.is_empty() {
+                        s.yours.say(Some(node), line, false);
+                    }
+                    s.yours.remembered.insert(node, carried.remembered);
                     out.edits.push(edit);
                 }
                 Err(why) => s.yours.say(Some(node), why, true),
@@ -487,6 +550,9 @@ pub fn activate(
     };
     if asked.is_some() {
         s.yours.said = None;
+    }
+    if let Some(Ask::SaveAs { node, .. } | Ask::SaveFile(node)) = &asked {
+        s.yours.remembered.remove(node);
     }
     out.asks.extend(asked);
     true

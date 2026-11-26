@@ -17,8 +17,8 @@ use engine::contract::render_state::NodeKind;
 use engine::contract::stain::describe::{Description, Standing};
 
 use super::{
-    canvas, choices, chosen, controls, description, standing, yours, Out, Page, Scratch,
-    CHOICE_IDS, EDIT_WGSL, REVERT,
+    canvas, choices, chosen, controls, description, duplicable, standing, yours, Out, Page,
+    Scratch, CHOICE_IDS, DUPLICATE, EDIT_WGSL, REVERT,
 };
 use crate::keyboard::scopes::ScopeId;
 use crate::windows::Keys;
@@ -221,6 +221,17 @@ fn inspector(
                 clicked.push(EDIT_WGSL);
             }
             keys.place(EDIT_WGSL, &edit);
+            let can = page.content.is_some_and(|c| duplicable(n, c));
+            let duplicate = ui
+                .add_enabled(can, Button::new("Duplicate"))
+                .on_hover_text("a copy whose code is this node's own, to edit")
+                .on_disabled_hover_text(
+                    "this node holds no code, or is the graph's only one of its kind",
+                );
+            if duplicate.clicked() {
+                clicked.push(DUPLICATE);
+            }
+            keys.place(DUPLICATE, &duplicate);
             let revert = page
                 .content
                 .is_some_and(|c| c.yours.held(n.id).is_some_and(|h| h.revert));

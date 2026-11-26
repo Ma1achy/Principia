@@ -422,7 +422,10 @@ fn a_broken_node_keeps_the_last_picture_and_is_named() {
     };
     let named = |p: &[String]| {
         assert_eq!(p.len(), 1, "{p:?}");
-        assert!(p[0].contains("key 3") && p[0].contains("nothing"), "{p:?}");
+        assert!(
+            p[0].starts_with("node 3") && p[0].contains("nothing"),
+            "{p:?}"
+        );
     };
     let p = problems(&mut app);
     named(&p);
@@ -438,4 +441,109 @@ fn a_broken_node_keeps_the_last_picture_and_is_named() {
     rejects("the last picture kept past a sound edit", || {
         assert!(sound == first)
     });
+}
+
+/// The combiner passing its colour through, written out: a node of the graph's whose code can be edited.
+const THROUGH: &str = "fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> {\n    return rgb;\n}\n";
+/// The combiner broken on line 3 of its own code.
+const BROKEN: &str =
+    "// a combiner that does not compile\nfn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> {\n    return rgb * undeclared_m24;\n}\n";
+/// The palette's sound edit, its mark a number no prelude holds.
+const MARKED: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.3755); }\n";
+
+/// `g` with the combiner's code `combiner` and the palette's `palette`.
+fn coded(g: &StainGraph, combiner: &str, palette: &str) -> SetField {
+    let mut g = g.clone();
+    g.set_occupant(NodeId(0), Occupant::Custom(combiner.into()))
+        .expect("the graph takes the combiner");
+    g.set_occupant(PALETTE, Occupant::Custom(palette.into()))
+        .expect("the graph takes the palette");
+    SetField {
+        edit: Edit::Render(RenderField::StainGraph(g)),
+        no_history: false,
+    }
+}
+
+/// Asserts that `shown`, Pipeline WGSL's text, is `compiled`, the drawn pipeline's, byte for byte, and holds the sound
+/// edit and not the broken one.
+fn check_pipeline(shown: &str, compiled: &str) {
+    assert_eq!(shown, compiled, "Pipeline WGSL is not the text compiled");
+    assert!(
+        shown.contains("0.3755"),
+        "the sound edit drawn is not shown"
+    );
+    assert!(
+        !shown.contains("undeclared_m24"),
+        "the broken code is not drawn"
+    );
+}
+
+/// Asserts that `problems` is one line, the combiner's, at `line` of its own code.
+fn check_located(problems: &[String], line: usize) {
+    assert_eq!(problems.len(), 1, "{problems:?}");
+    let want = format!("node 0, line {line} ·");
+    assert!(problems[0].starts_with(&want), "{problems:?}");
+    assert!(problems[0].contains("undeclared_m24"), "{problems:?}");
+}
+
+/// The line the error report gives in the assembled module, which the author never sees.
+fn assembled_line(problem: &str) -> Option<usize> {
+    let at = problem.find("wgsl:")? + 5;
+    problem[at..]
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .collect::<String>()
+        .parse()
+        .ok()
+}
+
+// Criteria, fixed before the first run: with two nodes edited at once, one sound and one broken, Pipeline WGSL is the
+// text of the pipeline drawn, byte for byte: it holds the sound edit, drawn beside the broken node's last valid code,
+// and not the broken code. The Problems pane names the broken node at line 3 of its own code, and the node alone is
+// marked beside its title; a fix takes the mark and the problem away. Each against the text, the line or the mark the
+// property rules out: the assembler's last valid code, the assembled module's line, the fixed graph's frame.
+#[test]
+fn code_views_show_the_text_compiled_and_problems_the_authors_line() {
+    let backend = Counting::default();
+    let (mut app, mut h, canvas) = app(&backend);
+    let start = graph(&app).clone();
+    app.set_field(coded(
+        &start,
+        THROUGH,
+        "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.5); }\n",
+    ));
+    app.side().recompile();
+    let _ = picture(&mut app, &mut h, &canvas, Mode::Stain);
+    let sound = graph(&app).clone();
+    app.set_field(coded(&sound, BROKEN, MARKED));
+    app.side().recompile();
+    let _ = picture(&mut app, &mut h, &canvas, Mode::Stain);
+    app.side().wait_for_stain();
+    let c = app.side().stain_content().expect("content");
+    let compiled = canvas.reported().source.expect("a pipeline drawn");
+    check_pipeline(&c.pipeline, &compiled);
+    rejects("the assembler's last valid code", || {
+        check_pipeline(&c.code, &compiled)
+    });
+    check_located(&c.problems, 3);
+    let assembled = assembled_line(&c.problems[0]).expect("the report's own line");
+    assert_ne!(assembled, 3, "the assembled module's line is no control");
+    rejects("the assembled module's line", || {
+        check_located(&c.problems, assembled)
+    });
+    assert_eq!(
+        c.status,
+        [(NodeId(0), engine::contract::stain::custom::Status::Failed)].into(),
+    );
+    let marked = |texts: &[String]| assert!(texts.iter().any(|t| t == "✘"), "{texts:?}");
+    marked(&frame_texts(&mut h, &mut app));
+    app.set_field(coded(&sound, THROUGH, MARKED));
+    app.side().recompile();
+    let _ = picture(&mut app, &mut h, &canvas, Mode::Stain);
+    app.side().wait_for_stain();
+    let fixed = app.side().stain_content().expect("content");
+    assert!(fixed.problems.is_empty(), "{:?}", fixed.problems);
+    assert!(fixed.status.is_empty());
+    let texts = frame_texts(&mut h, &mut app);
+    rejects("the fixed graph's frame", || marked(&texts));
 }

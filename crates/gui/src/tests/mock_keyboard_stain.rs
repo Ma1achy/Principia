@@ -384,13 +384,18 @@ fn mock_keyboard_stain_choice_and_edit_wgsl() {
         graph(&app).node(COMBINER).unwrap().occupant,
         Occupant::Builtin("replace_l".into())
     );
-    // Past the choices and Replace-L's controls: Edit this node's WGSL, then Revert, disabled.
+    // Past the choices and Replace-L's controls: Edit this node's WGSL, then Duplicate and Revert, both disabled.
     for _ in 0..4 {
         press(&mut h, &mut app, Key::ArrowRight, NONE);
     }
     assert_eq!(focus(&app), ["stain_inspector", "stain_insp_edit_wgsl"]);
     press(&mut h, &mut app, Key::Enter, NONE);
     assert_eq!(app.stain.view, View::Node);
+    press(&mut h, &mut app, Key::ArrowRight, NONE);
+    assert_eq!(focus(&app), ["stain_inspector", "stain_insp_duplicate"]);
+    let d = depth(&app);
+    press(&mut h, &mut app, Key::Enter, NONE);
+    assert_eq!(depth(&app), d, "the combiner is never duplicated");
     press(&mut h, &mut app, Key::ArrowRight, NONE);
     assert_eq!(focus(&app), ["stain_inspector", "stain_insp_revert"]);
     let d = depth(&app);
