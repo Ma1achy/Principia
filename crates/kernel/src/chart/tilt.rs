@@ -837,6 +837,9 @@ pub trait Placement<P> {
     /// The hidden coordinates the offsets name, `[x, y]`, and whether `y` is a second one.
     fn targets(&self) -> ([u32; 2], bool);
 
+    /// Each pixel's area weight, before a refusal ([`Tilted::weight`]).
+    fn area_weight(&self) -> P;
+
     /// The third and fourth hidden coordinates the offsets name, and how many of the two there are, 0 to 2.
     #[inline]
     fn more_targets(&self) -> ([u32; 2], u32) {
@@ -858,6 +861,11 @@ impl<P: Copy> Placement<P> for Tilt<P> {
     #[inline]
     fn targets(&self) -> ([u32; 2], bool) {
         ([self.x, self.y], self.two)
+    }
+
+    #[inline]
+    fn area_weight(&self) -> P {
+        self.weight
     }
 }
 
@@ -1068,7 +1076,7 @@ where
     }
 }
 
-impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal, T: Placement<P>> Tilted<C, P, T>
 where
     f64: From<P>,
 {
@@ -1080,16 +1088,7 @@ where
     /// reject a pixel whose weight stays the tilt's, where the end is only the chart's check's, as at `Φ_θ,K`'s `θ` past the
     /// fold at f64; a shape [`Tiltable::refusal_own`] reads is 0 in both.
     pub fn weight(&self, u: f64, v: f64) -> f64 {
-        self.weighed(u, v, f64::from(self.tilt.weight))
-    }
-}
-
-impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal, T: Placement<P>> Tilted<C, P, T>
-where
-    f64: From<P>,
-{
-    /// [`Tilted::weight`] where the placement's own area weight is `weight`.
-    pub(super) fn weighed(&self, u: f64, v: f64, weight: f64) -> f64 {
+        let weight = f64::from(self.tilt.area_weight());
         let ([a, b], shift) = self.at(u, v);
         let wide = self.chart.refusal(a, b, &shift.unwrap_or(Shift::none()));
         match wide.or(self.refused_own(u, v)) {
@@ -1148,7 +1147,7 @@ where
 
 /// What a placement's view says of the system pixels it counts: its fold's inputs, whatever placement holds them.
 #[derive(Clone, Copy)]
-pub(super) struct Folds {
+pub struct Folds {
     /// `[N_a = 0, N_b = 0]` ([`TiltSpec::normal_zero`]).
     pub normal_zero: [bool; 2],
     /// The lattice of repeats ([`TiltSpec::strip`]).
@@ -1206,7 +1205,7 @@ where
     f64: From<P>,
 {
     /// [`Tilted::pixel`] under the folds `folds` of the placement.
-    pub(super) fn pixel_by(&self, folds: Folds, u: f64, v: f64) -> Option<PixelCount> {
+    pub fn pixel_by(&self, folds: Folds, u: f64, v: f64) -> Option<PixelCount> {
         let ([a, b], _) = self.at(u, v);
         let a_in = (0.0..=1.0).contains(&a);
         let b_in = (0.0..=1.0).contains(&b);
@@ -1223,7 +1222,7 @@ where
     }
 
     /// [`Tilted::counted_total`] under the folds `folds` of the placement.
-    pub(super) fn counted_by<I>(&self, folds: Folds, points: I) -> u64
+    pub fn counted_by<I>(&self, folds: Folds, points: I) -> u64
     where
         I: IntoIterator<Item = [f64; 2]>,
         I::IntoIter: Clone,

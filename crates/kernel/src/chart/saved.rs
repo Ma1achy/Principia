@@ -88,8 +88,6 @@ use super::tilt::{
     image, narrow, Folds, Placement, Shift, Strip, Tilt, TiltMap, TiltSpec, Tiltable, Tilted,
 };
 use super::{Chart, SystemImage, REGISTRY};
-use crate::generated::links::LinkReal;
-use crate::payload::PayloadReal;
 use spirv_std::num_traits::FloatConst;
 #[cfg(not(target_arch = "spirv"))]
 use crate::decode::retired::{RetiredLink, ASSUMED};
@@ -129,6 +127,10 @@ enum Kind {
     Oblique,
     /// A curved chart.
     Curved,
+    /// A curved chart saved again: the head record of a chain, laid out as a curved chart's.
+    Chained,
+    /// The tilt a chain's second record holds.
+    Link,
 }
 
 impl Kind {
@@ -544,6 +546,8 @@ pub enum Saved {
     Oblique(Latent<f64>),
     /// A curved view.
     Curved(Curved),
+    /// A saved curved chart saved again.
+    Chained(Chain),
 }
 
 impl Saved {
@@ -576,8 +580,27 @@ impl Saved {
     pub fn oblique(&self) -> Option<Latent<f64>> {
         match self {
             Saved::Oblique(chart) => Some(*chart),
-            Saved::Curved(_) => None,
+            Saved::Curved(_) | Saved::Chained(_) => None,
         }
+    }
+
+    /// A saved curved chart `self` under the new tilt `new` about the view's centre `centre`, spans `span`, saved again:
+    /// the chain `R·R′`, `R′` the new tilt. `None` for an oblique chart, which a latent view tilts as it is, and for a
+    /// chart that is already a chain, whose reopening under one more tilt is the deepest composition. The plan is
+    /// unclear on how deep saving goes; chose two saved tilts, because the kernel has no allocator and the chain is a
+    /// `Copy` value of fixed size.
+    pub fn again(&self, new: &TiltSpec, centre: [f64; 2], span: [f64; 2]) -> Option<Saved> {
+        let Saved::Curved(base) = self else {
+            return None;
+        };
+        Some(Saved::Chained(Chain {
+            base: *base,
+            link: Link {
+                tilt: *new,
+                centre,
+                span,
+            },
+        }))
     }
 
     /// The definition as [`WORDS`] doubles (the module's note).
@@ -591,29 +614,63 @@ impl Saved {
                     *word = *value;
                 }
             }
-            Saved::Curved(c) => {
-                let map = match c.tilt.map {
-                    TiltMap::Sheet => 0.0,
-                    TiltMap::Lean => 1.0,
-                };
-                let fields = [
-                    Kind::Curved.word(),
-                    f64::from(c.parent),
-                    c.centre[0],
-                    c.centre[1],
-                    c.tilt.tau1,
-                    c.tilt.tau2,
-                    map,
-                    f64::from(c.tilt.x),
-                    f64::from(c.tilt.y),
-                    c.span[0],
-                    c.span[1],
-                ];
-                words[..HEADER].copy_from_slice(&fields);
-                words[HEADER..].copy_from_slice(&c.params);
-            }
+            Saved::Curved(c) => words = c.words(Kind::Curved),
+            Saved::Chained(chain) => words = chain.base.words(Kind::Chained),
         }
         words
+    }
+
+    /// A chain's second record: the tilt it adds ([`Link`]); `None` for a definition that is not a chain.
+    pub fn link_words(&self) -> Option<[f64; WORDS]> {
+        let Saved::Chained(chain) = self else {
+            return None;
+        };
+        let l = &chain.link;
+        let mut words = [0.0; WORDS];
+        let fields = [
+            Kind::Link.word(),
+            l.centre[0],
+            l.centre[1],
+            l.tilt.tau1,
+            l.tilt.tau2,
+            map_word(l.tilt.map),
+            f64::from(l.tilt.x),
+            f64::from(l.tilt.y),
+            l.span[0],
+            l.span[1],
+        ];
+        words[..fields.len()].copy_from_slice(&fields);
+        Some(words)
+    }
+
+    /// The chain `head` and `link` write ([`Saved::to_words`], [`Saved::link_words`]), bit for bit; `None` where either
+    /// is no such record, the head is not a chain's, or a padding word is not `+0`.
+    pub fn from_chain_words(head: &[f64; WORDS], link: &[f64; WORDS]) -> Option<Saved> {
+        let Saved::Curved(base) = Saved::parse(head, Kind::Oblique, Kind::Chained)? else {
+            return None;
+        };
+        if !link.iter().all(|w| w.is_finite()) || link[0].to_bits() != Kind::Link.word().to_bits() {
+            return None;
+        }
+        let any = u64::from(u32::MAX) + 1;
+        let tilt = TiltSpec {
+            tau1: link[3],
+            tau2: link[4],
+            map: map_of(link[5])?,
+            x: index(link[6], any)?,
+            y: index(link[7], any)?,
+        };
+        link[10..]
+            .iter()
+            .all(|w| w.to_bits() == 0)
+            .then_some(Saved::Chained(Chain {
+                base,
+                link: Link {
+                    tilt,
+                    centre: [link[1], link[2]],
+                    span: [link[8], link[9]],
+                },
+            }))
     }
 
     /// The definition [`Saved::to_words`] wrote, bit for bit; `None` where `words` is no definition: an unknown kind,
@@ -649,10 +706,7 @@ impl Saved {
             let mut params = [0.0; PARAMS];
             params.copy_from_slice(&words[HEADER..]);
             let parent = index(words[1], REGISTRY.len() as u64).filter(|&p| p != 0)?;
-            let map = match index(words[6], 2)? {
-                0 => TiltMap::Sheet,
-                _ => TiltMap::Lean,
-            };
+            let map = map_of(words[6])?;
             Some(Saved::Curved(Curved {
                 parent,
                 centre: [words[2], words[3]],
@@ -711,6 +765,7 @@ impl Saved {
                 }
                 Some(Saved::Curved(c))
             }
+            Saved::Chained(chain) => Some(Saved::Chained(chain)),
         }
     }
 }
@@ -772,6 +827,22 @@ fn beta_word(c: &Curved) -> Option<Option<usize>> {
     Some(Some(at))
 }
 
+/// A tilt map's word: 0 Tip as sheet, 1 Lean each axis.
+fn map_word(map: TiltMap) -> f64 {
+    match map {
+        TiltMap::Sheet => 0.0,
+        TiltMap::Lean => 1.0,
+    }
+}
+
+/// The tilt map `x` writes; `None` where it is neither word.
+fn map_of(x: f64) -> Option<TiltMap> {
+    Some(match index(x, 2)? {
+        0 => TiltMap::Sheet,
+        _ => TiltMap::Lean,
+    })
+}
+
 /// The index `x` writes, below `below`: `None` unless `x` is exactly the double of a `u32` below it.
 fn index(x: f64, below: u64) -> Option<u32> {
     let k = x as u32;
@@ -779,6 +850,28 @@ fn index(x: f64, below: u64) -> Option<u32> {
 }
 
 impl Curved {
+    /// The head record of a curved chart of kind `kind`.
+    fn words(&self, kind: Kind) -> [f64; WORDS] {
+        let c = self;
+        let mut words = [0.0; WORDS];
+        let fields = [
+            kind.word(),
+            f64::from(c.parent),
+            c.centre[0],
+            c.centre[1],
+            c.tilt.tau1,
+            c.tilt.tau2,
+            map_word(c.tilt.map),
+            f64::from(c.tilt.x),
+            f64::from(c.tilt.y),
+            c.span[0],
+            c.span[1],
+        ];
+        words[..HEADER].copy_from_slice(&fields);
+        words[HEADER..].copy_from_slice(&c.params);
+        words
+    }
+
     /// The parent, from the definition alone ([`Curved::params`]); `None` where `C` is not the saved parent: another
     /// registry entry or another of its charts, or words that are not `C`'s params.
     pub fn parent<C: Chart + ParentParams>(&self) -> Option<C> {
@@ -816,6 +909,69 @@ impl Curved {
     ) -> Option<Tilted<C, f64, Composed<f64>>> {
         let same = params_of(&parent).map(f64::to_bits) == self.params.map(f64::to_bits);
         same.then(|| self.open(new, centre, span)).flatten()
+    }
+}
+
+/// The tilt a saved-again chart adds to its base: the view's tilt `R′` about its centre.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Link {
+    /// The stored tilt.
+    pub tilt: TiltSpec,
+    /// The view's centre, in the parent's own parameters.
+    pub centre: [f64; 2],
+    /// The targets' slider spans.
+    pub span: [f64; 2],
+}
+
+/// A saved curved chart saved again (the module's note): its definition the chain of saved tilts, `R` of the base about
+/// its slice centre and `R′` of the link about the view's centre.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Chain {
+    /// The saved curved chart: its parent, slice centre and `R`.
+    pub base: Curved,
+    /// The tilt the view added to it.
+    pub link: Link,
+}
+
+impl Chain {
+    /// The parent ([`Curved::parent`]).
+    pub fn parent<C: Chart + ParentParams>(&self) -> Option<C> {
+        self.base.parent::<C>()
+    }
+
+    /// The chain reopened from its definition alone on its parent, under a new tilt `new` about the view's centre
+    /// `centre`, its targets' spans `span`: `R·R′·R″`, each tilt acting on the one inside it ([`Composed`]); `None`
+    /// where `C` is not the parent, a target is not hidden, or [`Composed::of`] refuses the composition.
+    pub fn open<C: Tiltable<Param = f64> + ParentParams>(
+        &self,
+        new: &TiltSpec,
+        centre: [f64; 2],
+        span: [f64; 2],
+    ) -> Option<Tilted<C, f64, Composed<f64>>> {
+        let parent = self.parent::<C>()?;
+        let Link {
+            tilt,
+            centre: link_centre,
+            span: link_span,
+        } = self.link;
+        let composed = Composed::of(&[
+            Level {
+                tilt: self.base.tilt,
+                centre: self.base.centre,
+                span: self.base.span,
+            },
+            Level {
+                tilt,
+                centre: link_centre,
+                span: link_span,
+            },
+            Level {
+                tilt: *new,
+                centre,
+                span,
+            },
+        ])?;
+        Tilted::placed(parent, composed)
     }
 }
 
@@ -1215,20 +1371,14 @@ impl<P: Copy> Placement<P> for Composed<P> {
     }
 
     #[inline]
+    fn area_weight(&self) -> P {
+        self.weight
+    }
+
+    #[inline]
     fn more_targets(&self) -> ([u32; 2], u32) {
         let more = if self.filled >= 2 { self.filled - 2 } else { 0 };
         ([self.targets[2], self.targets[3]], more as u32)
-    }
-}
-
-impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Tilted<C, P, Composed<P>>
-where
-    f64: From<P>,
-{
-    /// The area weight of the pixel at `(u, v)`: the composition's ([`Composed::weight`]), or 0 where a refusal leaves
-    /// the cell no system ([`Tilted::weight`]).
-    pub fn weight(&self, u: f64, v: f64) -> f64 {
-        self.weighed(u, v, f64::from(self.tilt().weight))
     }
 }
 

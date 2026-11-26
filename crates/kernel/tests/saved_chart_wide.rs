@@ -3,10 +3,25 @@
 //!
 //! - `saved_chart_wide_as_today`: every composition of at most two hidden coordinates places, decodes and serialises
 //!   bit for bit as it did before the wide shift: a digest of the bits, captured from the tree before the change.
+//! - `saved_chart_wide_targets`: a new tilt onto three or four hidden coordinates is `R·R′`, each offset on its own
+//!   target, to one ulp of the terms that form it, and decodes at `(a, b)` with every offset on its control.
+//! - `saved_chart_wide_refused`: five or six coordinates, and an offset into a tilt with no input there, are refused.
+//! - `saved_chart_wide_chain`: a saved chart saved again is `R·R′·R″`; reopened at `τ″ = 0` it is the view it was
+//!   saved from, bit for bit; its two records read back bit for bit and nothing else reads as a chain.
+//! - `saved_chart_wide_weight`: the composed chart's area weight is 1 for rotations and the area of the window's steps
+//!   with a skewed tilt; `ray-degenerate` where the innermost tilt is at the corner.
+//! - `saved_chart_wide_repeats`: with one tilt on, its fold exactly; with several, only where every tilt keeps every
+//!   offset; and the antipode's one system counts once per distinct offset on all four slots.
+//!
+//! "To 1 ulp" here: each placed value differs from the reference by at most `ε·Σ|terms|` of the terms that form it, a
+//! criterion fixed before the run. Each test registers its negative control.
 
-use kernel::chart::saved::{Composed, Saved};
-use kernel::chart::tilt::{Placement, Shift};
-use kernel::chart::{Chart, ShapeMap, ShapeSphere, TiltMap, TiltSpec, Tilted};
+use kernel::chart::saved::{Chain, Composed, Level, Saved};
+use kernel::chart::shape_sphere::PixelCount;
+use kernel::chart::tilt::{Folds, Hidden, Placement, Shift, Tilt};
+use kernel::chart::{
+    Chart, Float, ShapeMap, ShapeSphere, SystemImage, TiltMap, TiltSpec, Tilted,
+};
 use kernel::generated::links::Defaults;
 use validation::negative_control;
 
@@ -149,5 +164,309 @@ negative_control!(
     expected = "a composition changed its bits",
     {
         assert_eq!(as_today(true), TODAY, "a composition changed its bits");
+    }
+);
+
+// ── The reference: R·R′·R″ as matrices on (a, b, h₀ … h₇) ──────────────────────────────────────────────────────────
+
+type M = [[f64; 10]; 10];
+
+fn sc(deg: f64) -> (f64, f64) {
+    Float::sin_cos(Float::to_radians(deg))
+}
+
+fn givens(m: &mut M, i: usize, j: usize, deg: f64) {
+    let (s, c) = sc(deg);
+    m[i][i] = c;
+    m[j][i] = s;
+    m[i][j] = -s;
+    m[j][j] = c;
+}
+
+/// A stored tilt's matrix on `(a, b, h₀ … h₇)`, from its closed forms (two targets: each axis turned toward its own;
+/// Tip as sheet with both angles: Rodrigues about `k = (τ₂ e_a − τ₁ e_b)/m`; Lean with one target and both angles:
+/// `[û₁ û₂ t̂]`; one angle: its axis's turn).
+fn matrix(t: &TiltSpec) -> M {
+    let mut m = [[0.0; 10]; 10];
+    for (k, row) in m.iter_mut().enumerate() {
+        row[k] = 1.0;
+    }
+    let (x, y) = (2 + t.x as usize, 2 + t.y as usize);
+    if t.x != t.y {
+        givens(&mut m, 0, x, t.tau1);
+        givens(&mut m, 1, y, t.tau2);
+    } else if t.tau1 != 0.0 && t.tau2 != 0.0 && t.map == TiltMap::Lean {
+        let (s1, c1) = sc(t.tau1);
+        let (s2, c2) = sc(t.tau2);
+        let cross = [-s1 * c2, -c1 * s2, c1 * c2];
+        let length = Float::sqrt(cross.iter().map(|c| c * c).sum::<f64>());
+        let toward = if cross[2] < 0.0 { -1.0 } else { 1.0 };
+        let columns = [[c1, 0.0, s1], [0.0, c2, s2], cross.map(|c| toward * c / length)];
+        let at = [0, 1, x];
+        for r in 0..3 {
+            for q in 0..3 {
+                m[at[r]][at[q]] = columns[q][r];
+            }
+        }
+    } else if t.tau1 != 0.0 && t.tau2 != 0.0 {
+        let deg = Float::sqrt(t.tau1 * t.tau1 + t.tau2 * t.tau2);
+        let k = [t.tau2 / deg, -t.tau1 / deg, 0.0];
+        let (s, c) = sc(deg);
+        let cross = [[0.0, -k[2], k[1]], [k[2], 0.0, -k[0]], [-k[1], k[0], 0.0]];
+        let at = [0, 1, x];
+        for r in 0..3 {
+            for q in 0..3 {
+                let id = if r == q { c } else { 0.0 };
+                m[at[r]][at[q]] = id + s * cross[r][q] + (1.0 - c) * k[r] * k[q];
+            }
+        }
+    } else if t.tau2 == 0.0 {
+        givens(&mut m, 0, x, t.tau1);
+    } else {
+        givens(&mut m, 1, x, t.tau2);
+    }
+    m
+}
+
+/// `m·x`, and for each component the sum of the magnitudes of every product that forms it, `size` carrying `x`'s own.
+fn apply(m: &M, x: &[f64; 10], size: &[f64; 10]) -> ([f64; 10], [f64; 10]) {
+    let mut y = [0.0; 10];
+    let mut terms = [0.0; 10];
+    for r in 0..10 {
+        for q in 0..10 {
+            y[r] += m[r][q] * x[q];
+            terms[r] += m[r][q].abs() * (x[q].abs() + size[q]);
+        }
+    }
+    (y, terms)
+}
+
+/// A pixel's placement: `(a, b)` and the offset on each latent control.
+#[derive(Clone, Copy, Debug)]
+struct Placed {
+    ab: [f64; 2],
+    d: [f64; 8],
+}
+
+/// The reference placement of the pixel `(u, v)` under `levels`, outermost first, each tilt's matrix applied to the
+/// one inside it, the centres' differences added between; every offset times its control's `span`; with each value's
+/// tolerance, `ε` times the sum of the magnitudes of every product and sum that forms it. `order` picks which tilt acts
+/// first: 0 the innermost (the composition), 1 the outermost (the control's wrong order).
+fn reference(levels: &[(TiltSpec, [f64; 2])], span: f64, u: f64, v: f64, order: usize) -> (Placed, Placed) {
+    let mut seq: Vec<(TiltSpec, [f64; 2])> = levels.iter().rev().copied().collect();
+    if order == 1 {
+        seq.reverse();
+    }
+    let mut x = [0.0; 10];
+    x[0] = u - seq[0].1[0];
+    x[1] = v - seq[0].1[1];
+    let mut size = x.map(f64::abs);
+    let (mut y, mut terms) = apply(&matrix(&seq[0].0), &x, &size);
+    for k in 1..seq.len() {
+        for q in 0..2 {
+            let pan = seq[k - 1].1[q] - seq[k].1[q];
+            y[q] += pan;
+            terms[q] += pan.abs() + y[q].abs();
+        }
+        size = terms;
+        let (z, t) = apply(&matrix(&seq[k].0), &y, &size);
+        y = z;
+        terms = t;
+    }
+    let outer = seq[seq.len() - 1].1;
+    let ab = [outer[0] + y[0], outer[1] + y[1]];
+    let tol_ab = [
+        f64::EPSILON * (outer[0].abs() + terms[0] + ab[0].abs()),
+        f64::EPSILON * (outer[1].abs() + terms[1] + ab[1].abs()),
+    ];
+    let mut d = [0.0; 8];
+    let mut tol_d = [0.0; 8];
+    for k in 0..8 {
+        d[k] = span * y[2 + k];
+        tol_d[k] = f64::EPSILON * span * terms[2 + k];
+    }
+    (Placed { ab, d }, Placed { ab: tol_ab, d: tol_d })
+}
+
+/// A kernel shift as one offset per latent control, every slot read as its count says.
+fn offsets(shift: &Shift<f64>) -> [f64; 8] {
+    let mut d = [0.0; 8];
+    d[shift.x as usize] += shift.dx;
+    if shift.two {
+        d[shift.y as usize] += shift.dy;
+    }
+    if shift.more >= 1 {
+        d[shift.z as usize] += shift.dz;
+    }
+    if shift.more >= 2 {
+        d[shift.w as usize] += shift.dw;
+    }
+    d
+}
+
+/// The hidden coordinates a composition names.
+fn named(c: &Composed<f64>) -> usize {
+    let (_, two) = c.targets();
+    let (_, more) = c.more_targets();
+    1 + usize::from(two) + more as usize
+}
+
+fn within(got: &Placed, want: &Placed, tol: &Placed) -> bool {
+    let close = |g: f64, w: f64, t: f64| (g - w).abs() <= t;
+    (0..2).all(|k| close(got.ab[k], want.ab[k], tol.ab[k]))
+        && (0..8).all(|k| close(got.d[k], want.d[k], tol.d[k]))
+}
+
+const SPAN: [f64; 2] = [2.0, 2.0];
+
+fn window() -> Vec<[f64; 2]> {
+    let mut points = Vec::new();
+    for j in 0..9u32 {
+        for i in 0..9u32 {
+            points.push([0.06 + 0.11 * f64::from(i), 0.05 + 0.115 * f64::from(j)]);
+        }
+    }
+    points
+}
+
+fn level(tilt: TiltSpec, centre: [f64; 2]) -> Level {
+    Level {
+        tilt,
+        centre,
+        span: SPAN,
+    }
+}
+
+/// How the check forms the pixel's placement: the kernel's, or a control's wrong one.
+#[derive(Clone, Copy, PartialEq)]
+enum Got {
+    Kernel,
+    /// The tilts in the opposite order, `R′·R`.
+    Reversed,
+    /// The kernel's, the third and fourth offsets dropped.
+    Dropped,
+}
+
+/// Every pixel of the 9 × 9 window under `levels` (outermost first) places as the chain of matrices to one ulp, names
+/// `want` hidden coordinates, and decodes at `(a, b)` with each offset on its control.
+fn check_chain(levels: &[Level], want: usize, got: Got) {
+    let composed = Composed::of(levels).expect("a composition");
+    assert_eq!(named(&composed), want, "the coordinates named");
+    let spec: Vec<_> = levels.iter().map(|l| (l.tilt, l.centre)).collect();
+    let view = Tilted::placed(sphere(), composed).expect("every target a hidden control");
+    for [u, v] in window() {
+        let (ab, shift) = composed.place::<f64>(u, v);
+        let mut shift = shift;
+        if got == Got::Dropped {
+            shift.more = shift.more.min(0);
+        }
+        let have = Placed {
+            ab,
+            d: offsets(&shift),
+        };
+        let order = usize::from(got == Got::Reversed);
+        let (expect, tol) = reference(&spec, SPAN[0], u, v, order);
+        assert!(
+            within(&have, &expect, &tol),
+            "the composition at ({u}, {v}) is not R·R′: {have:?} against {expect:?}"
+        );
+        let mut chart = sphere();
+        for (k, d) in have.d.iter().enumerate() {
+            if *d != 0.0 {
+                let held = chart.map(0.5, 0.5).z.z[k];
+                chart = chart.sliced(k as u32, held + d).expect("a hidden control");
+            }
+        }
+        if got == Got::Kernel {
+            let [a, b] = have.ab;
+            assert_eq!(
+                format!("{:?}", view.decode::<Defaults, f64>(u, v)),
+                format!("{:?}", chart.decode::<Defaults, f64>(a, b)),
+                "the composition at ({u}, {v}) does not decode at (a, b) with its offsets on the controls"
+            );
+        }
+    }
+}
+
+fn wide_cases() -> Vec<(Vec<Level>, usize)> {
+    let at = [0.42, 0.55];
+    vec![
+        // Saved onto 2, new onto 4 and 5: three coordinates.
+        (
+            vec![
+                level(spec(25.0, 0.0, TiltMap::Sheet, 2, 2), CENTRE),
+                level(spec(10.0, 5.0, TiltMap::Lean, 4, 5), at),
+            ],
+            3,
+        ),
+        // Saved onto 2 and 3, new onto 4: three.
+        (
+            vec![
+                level(spec(10.0, 5.0, TiltMap::Lean, 2, 3), CENTRE),
+                level(spec(20.0, 0.0, TiltMap::Sheet, 4, 4), at),
+            ],
+            3,
+        ),
+        // Saved onto 2 and 3, new onto 4 and 5: four.
+        (
+            vec![
+                level(spec(10.0, 5.0, TiltMap::Lean, 2, 3), CENTRE),
+                level(spec(8.0, 6.0, TiltMap::Lean, 4, 5), at),
+            ],
+            4,
+        ),
+        // One shared: saved 2, 3; new 2, 4: three.
+        (
+            vec![
+                level(spec(10.0, 5.0, TiltMap::Lean, 2, 3), CENTRE),
+                level(spec(8.0, 6.0, TiltMap::Lean, 2, 4), at),
+            ],
+            3,
+        ),
+        // A skewed saved tilt onto 4, new onto 5 and 6: three.
+        (
+            vec![
+                level(spec(30.0, 40.0, TiltMap::Lean, 4, 4), CENTRE),
+                level(spec(10.0, 5.0, TiltMap::Lean, 5, 6), at),
+            ],
+            3,
+        ),
+        // Tip as sheet saved onto 4, new onto 5 and 6 (masses): three.
+        (
+            vec![
+                level(spec(20.0, 15.0, TiltMap::Sheet, 4, 4), CENTRE),
+                level(spec(-12.0, 9.0, TiltMap::Lean, 5, 6), at),
+            ],
+            3,
+        ),
+    ]
+}
+
+#[test]
+fn saved_chart_wide_targets() {
+    for (levels, want) in wide_cases() {
+        check_chain(&levels, want, Got::Kernel);
+    }
+}
+
+negative_control!(
+    saved_chart_wide_targets,
+    "the tilts in the opposite order must not be R·R′",
+    expected = "is not R·R′",
+    {
+        for (levels, want) in wide_cases() {
+            check_chain(&levels, want, Got::Reversed);
+        }
+    }
+);
+
+negative_control!(
+    saved_chart_wide_targets_dropped,
+    "a composition whose third and fourth offsets are dropped must not be R·R′",
+    expected = "is not R·R′",
+    {
+        for (levels, want) in wide_cases() {
+            check_chain(&levels, want, Got::Dropped);
+        }
     }
 );

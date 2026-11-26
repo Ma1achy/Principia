@@ -1770,15 +1770,13 @@ fn check_target_refused(inverted: bool) {
         dx,
         y: HELD_LZ,
         dy: 0.0f32,
-        two: false,
-    };
+        two: false, ..Shift::none() };
     let wide = |dx: f64| kernel::chart::tilt::Shift {
         x: HELD_LZ,
         dx,
         y: HELD_LZ,
         dy: 0.0f64,
-        two: false,
-    };
+        two: false, ..Shift::none() };
     let (mut labelled, mut systems) = (0, 0);
     for i in 1..200 {
         let dx = i as f32 * 0.00613;
@@ -2328,8 +2326,7 @@ where
                 dx: f64::from(placed.dx),
                 y: placed.y,
                 dy: f64::from(placed.dy),
-                two: placed.two,
-            };
+                two: placed.two, ..Shift::none() };
             let passes = chart.validate_shifted(a, b, &shift.expect("tilted"), p)
                 == ValidationResult::Valid
                 && chart.validate_shifted(f64::from(wa), f64::from(wb), &wide, p)
