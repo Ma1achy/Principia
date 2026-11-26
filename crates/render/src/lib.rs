@@ -63,6 +63,7 @@ pub mod codegen;
 pub mod colour;
 pub mod compositor;
 pub mod coords;
+pub mod custom;
 pub mod debug_bake;
 pub mod debug_view;
 pub mod display;
