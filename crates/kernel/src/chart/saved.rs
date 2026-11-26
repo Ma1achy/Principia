@@ -83,8 +83,14 @@ use super::latent::Latent;
 use super::mass_simplex::MassSimplex;
 use super::mixed;
 use super::shape_sphere::{ShapeMap, ShapeSphere};
-use super::tilt::{narrow, Placement, Shift, Tilt, TiltMap, TiltSpec, Tiltable, Tilted};
-use super::{Chart, REGISTRY};
+use super::shape_sphere::PixelCount;
+use super::tilt::{
+    image, narrow, Folds, Placement, Shift, Strip, Tilt, TiltMap, TiltSpec, Tiltable, Tilted,
+};
+use super::{Chart, SystemImage, REGISTRY};
+use crate::generated::links::LinkReal;
+use crate::payload::PayloadReal;
+use spirv_std::num_traits::FloatConst;
 #[cfg(not(target_arch = "spirv"))]
 use crate::decode::retired::{RetiredLink, ASSUMED};
 use crate::generated::constants::{SAVED_HEADER_WORDS, SAVED_OBLIQUE_WORDS, SAVED_PARENT_WORDS};
@@ -813,43 +819,57 @@ impl Curved {
     }
 }
 
-/// Where one of a composition's hidden offsets comes from.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Source {
-    /// The saved target `X`'s, out of `R`.
-    SavedX,
-    /// The saved second target `Y`'s, out of `R`.
-    SavedY,
-    /// The new tilt's `X′`, on a target of its own.
-    NewX,
-    /// The new tilt's second target `Y′`, on a target of its own.
-    NewY,
+/// The most tilts a composition holds: two saved ([`Chain`]) and the new one.
+pub const MAX_LEVELS: usize = 3;
+
+/// The most hidden coordinates one composition's offsets name: the four a [`Shift`] carries.
+const MAX_TARGETS: usize = 4;
+
+/// One tilt of a composition: its stored tilt about its centre, the targets' slider spans.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Level {
+    /// The stored tilt.
+    pub tilt: TiltSpec,
+    /// The tilt's centre, in the parent's own parameters.
+    pub centre: [f64; 2],
+    /// The targets' slider spans.
+    pub span: [f64; 2],
 }
 
-/// A saved curved chart's placement (the module's note): the new tilt `R′` about the view's centre, then the saved `R`
-/// about the saved centre, each new offset on a saved target entering `R` at that target's input.
+/// A saved curved chart's placement (the module's note): the tilts of a composition, each acting on the one inside it,
+/// the new tilt `R′` about the view's centre first and the saved `R` last, each offset a tilt takes on a target an inner
+/// tilt also offsets entering that tilt's input at the target.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Composed<P> {
-    /// The saved tilt `R`, about the saved centre `s`.
-    saved: Tilt<P>,
-    /// The new tilt `R′`, about the view's centre `c`.
-    new: Tilt<P>,
-    /// `R·e_X` and `R·e_Y` ([`TiltSpec::inputs`]).
-    inputs: [[P; 4]; 2],
-    /// `into[i][j]`: the new offset `i` (`X′`, `Y′`) enters `R` at the saved target `j`'s input (`X`, `Y`).
-    into: [[bool; 2]; 2],
-    /// Each offset of the shift, by source.
-    sources: [Source; 2],
-    /// The hidden coordinates the shift names.
-    targets: [u32; 2],
-    /// Whether the shift has a second target.
-    two: bool,
+    /// The tilts, outermost (the saved `R`) first; the ones past `count` are off.
+    levels: [Tilt<P>; MAX_LEVELS],
+    /// How many tilts the composition was built from.
+    count: usize,
+    /// `R·e_X` and `R·e_Y` of each tilt ([`TiltSpec::inputs`]), set where an inner tilt feeds it.
+    inputs: [[[P; 4]; 2]; MAX_LEVELS],
+    /// Whether an inner tilt's offset on a tilt's target `X` or `Y` enters its `R` at that target's input.
+    fed: [[bool; 2]; MAX_LEVELS],
+    /// The slot of the shift each tilt's targets write.
+    slot: [[usize; 2]; MAX_LEVELS],
+    /// The hidden coordinates the shift names, by slot; a slot never filled holds the outermost tilt's `Y` (the second)
+    /// or none.
+    targets: [u32; MAX_TARGETS],
+    /// How many of `targets` are filled.
+    filled: usize,
+    /// Each pixel's area weight ([`Composed::weight`]).
+    weight: P,
+    /// Whether the view loses rank ([`Composed::rank_loss`]).
+    rank_loss: bool,
+    /// `[N_a = 0, N_b = 0]` ([`Composed::normal_zero`]).
+    normal_zero: [bool; 2],
+    /// The lattice of repeats ([`Composed::strip`]).
+    strip: Option<Strip>,
 }
 
 impl Composed<f64> {
     /// The saved tilt `saved` about `saved_centre`, spans `saved_span`, composed after the new tilt `new` about the view's
     /// centre `centre`, spans `span`. `None` where a new offset enters a saved target whose `R` has no input there, at
-    /// the rank-losing corner ([`TiltSpec::inputs`]), or where the offsets land on more than two hidden coordinates.
+    /// the rank-losing corner ([`TiltSpec::inputs`]), or where the offsets land on more than four hidden coordinates.
     pub fn new(
         saved: &TiltSpec,
         saved_centre: [f64; 2],
@@ -858,55 +878,142 @@ impl Composed<f64> {
         centre: [f64; 2],
         span: [f64; 2],
     ) -> Option<Self> {
-        let r = Tilt::new(saved, saved_centre, saved_span);
-        let r_new = Tilt::new(new, centre, span);
-        let mut composed = Composed {
-            saved: r,
-            new: r_new,
-            inputs: [[0.0; 4]; 2],
-            into: [[false, false], [false, false]],
-            sources: [Source::SavedX, Source::SavedY],
-            targets: [saved.x, saved.y],
-            two: r.two,
-        };
-        if !r_new.on {
-            return Some(composed);
-        }
-        if !r.on {
-            composed.sources = [Source::NewX, Source::NewY];
-            composed.targets = [new.x, new.y];
-            composed.two = r_new.two;
-            return Some(composed);
-        }
-        let saved_targets = [Some(saved.x), r.two.then_some(saved.y)];
-        let mut sources = [
-            (Source::SavedX, saved.x),
-            (Source::SavedY, saved.y),
-            (Source::NewX, 0),
-            (Source::NewY, 0),
-        ];
-        let mut count = if r.two { 2 } else { 1 };
-        let new_targets = [Some(new.x), r_new.two.then_some(new.y)];
-        for (i, target) in new_targets.into_iter().enumerate() {
-            let Some(t) = target else { continue };
-            match saved_targets.iter().position(|&s| s == Some(t)) {
-                Some(j) => composed.into[i][j] = true,
-                None => {
-                    sources[count] = ([Source::NewX, Source::NewY][i], t);
-                    count += 1;
-                }
-            }
-        }
-        if count > 2 {
+        Composed::of(&[
+            Level {
+                tilt: *saved,
+                centre: saved_centre,
+                span: saved_span,
+            },
+            Level {
+                tilt: *new,
+                centre,
+                span,
+            },
+        ])
+    }
+
+    /// The composition of `levels`, outermost (the saved `R`) first, at most [`MAX_LEVELS`]; `None` past them, where an
+    /// offset enters a tilt whose `R` has no input at its target, or where the offsets land on more than four hidden
+    /// coordinates. A tilt that is off takes no arithmetic; with one tilt on, the composition is that tilt's.
+    pub fn of(levels: &[Level]) -> Option<Self> {
+        if levels.is_empty() || levels.len() > MAX_LEVELS {
             return None;
         }
-        if composed.into.iter().flatten().any(|&fed| fed) {
-            composed.inputs = saved.inputs()?;
+        let off = Tilt::new(&levels[0].tilt, levels[0].centre, levels[0].span);
+        let mut composed = Composed {
+            levels: [off; MAX_LEVELS],
+            count: levels.len(),
+            inputs: [[[0.0; 4]; 2]; MAX_LEVELS],
+            fed: [[false; 2]; MAX_LEVELS],
+            slot: [[0; 2]; MAX_LEVELS],
+            targets: [levels[0].tilt.x, levels[0].tilt.y, u32::MAX, u32::MAX],
+            filled: 0,
+            weight: 1.0,
+            rank_loss: false,
+            normal_zero: [true, true],
+            strip: None,
+        };
+        let mut skewed = false;
+        for (k, level) in levels.iter().enumerate() {
+            composed.levels[k] = Tilt::new(&level.tilt, level.centre, level.span);
+            let t = &composed.levels[k];
+            skewed |= t.on && level.tilt.map == TiltMap::Lean && !t.two && !level.tilt.untilted()
+                && level.tilt.tau1 != 0.0 && level.tilt.tau2 != 0.0;
         }
-        composed.sources = [sources[0].0, sources[1].0];
-        composed.targets = [sources[0].1, sources[1].1];
-        composed.two = count == 2;
+        let on = |k: usize| composed.levels[k].on;
+        let first = (0..levels.len()).find(|&k| on(k));
+        let Some(first) = first else {
+            composed.filled = if composed.levels[0].two { 2 } else { 1 };
+            composed.slot[0] = [0, 1];
+            return Some(composed);
+        };
+        // The slots, outermost tilt first: a target an outer tilt already names keeps its slot.
+        for k in first..levels.len() {
+            if !on(k) {
+                continue;
+            }
+            let t = &composed.levels[k];
+            let named = [(t.x, true), (t.y, t.two)];
+            for (j, (target, active)) in named.into_iter().enumerate() {
+                if !active {
+                    continue;
+                }
+                let at = composed.targets[..composed.filled]
+                    .iter()
+                    .position(|&n| n == target);
+                composed.slot[k][j] = match at {
+                    Some(s) => s,
+                    None => {
+                        if composed.filled == MAX_TARGETS {
+                            return None;
+                        }
+                        composed.targets[composed.filled] = target;
+                        composed.filled += 1;
+                        composed.filled - 1
+                    }
+                };
+            }
+        }
+        // An inner tilt's offset on a target feeds the outer tilts that name it.
+        for k in first..levels.len() {
+            if !on(k) {
+                continue;
+            }
+            let t = &composed.levels[k];
+            for (j, (target, active)) in [(t.x, true), (t.y, t.two)].into_iter().enumerate() {
+                let inner = (k + 1..levels.len()).any(|m| {
+                    let n = &composed.levels[m];
+                    n.on && (n.x == target || (n.two && n.y == target))
+                });
+                composed.fed[k][j] = active && inner;
+            }
+            if composed.fed[k].iter().any(|&f| f) {
+                composed.inputs[k] = levels[k].tilt.inputs()?;
+            }
+        }
+        let active = (first..levels.len()).filter(|&k| on(k));
+        let single = active.clone().count() == 1;
+        if single {
+            let t = &composed.levels[first];
+            composed.weight = t.weight;
+            composed.rank_loss = t.rank_loss;
+            composed.normal_zero = t.normal_zero;
+            composed.strip = t.strip;
+        } else {
+            let inner = active.clone().last().unwrap_or(first);
+            composed.rank_loss = composed.levels[inner].rank_loss;
+            composed.normal_zero = if active.clone().all(|k| composed.levels[k].normal_zero == [true, true]) {
+                [true, true]
+            } else {
+                [false, false]
+            };
+            composed.weight = if composed.rank_loss {
+                0.0
+            } else if skewed {
+                composed.gram()
+            } else {
+                1.0
+            };
+        }
         Some(composed)
+    }
+
+    /// The area of the parallelogram the window's two unit steps map to in `(Δa, Δb, d̃…)`, the offsets in their scaled
+    /// units, as the root of the sum of its squared 2 × 2 minors, which no rounding makes negative.
+    fn gram(&self) -> f64 {
+        let (cu, cv) = (self.run(1.0, 0.0, false), self.run(0.0, 1.0, false));
+        let col = |r: &([f64; 2], [f64; 4], [f64; 4])| {
+            [r.0[0], r.0[1], r.1[0], r.1[1], r.1[2], r.1[3]]
+        };
+        let (a, b) = (col(&cu), col(&cv));
+        let mut sum = 0.0;
+        for i in 0..6 {
+            for j in i + 1..6 {
+                let minor = a[i] * b[j] - a[j] * b[i];
+                sum += minor * minor;
+            }
+        }
+        Float::sqrt(sum)
     }
 }
 
@@ -914,13 +1021,17 @@ impl<P: Float> Composed<P> {
     /// The same composition with its params at the float `Q`, each rounded, as the kernel's uniform holds them.
     pub fn at_precision<Q: Float>(&self) -> Composed<Q> {
         Composed {
-            saved: tilt_at(&self.saved),
-            new: tilt_at(&self.new),
-            inputs: self.inputs.map(|c| c.map(narrow)),
-            into: self.into,
-            sources: self.sources,
+            levels: self.levels.map(|t| tilt_at(&t)),
+            count: self.count,
+            inputs: self.inputs.map(|i| i.map(|c| c.map(narrow))),
+            fed: self.fed,
+            slot: self.slot,
             targets: self.targets,
-            two: self.two,
+            filled: self.filled,
+            weight: narrow(self.weight),
+            rank_loss: self.rank_loss,
+            normal_zero: self.normal_zero,
+            strip: self.strip,
         }
     }
 }
@@ -957,82 +1068,199 @@ fn turned<R: Float>(ra: R, rb: R, u: R, v: R, fx: Option<(R, R)>, fy: Option<(R,
 }
 
 impl<P: Copy> Composed<P> {
-    /// The saved tilt `R`.
+    /// The saved tilt `R`, the outermost.
     #[inline]
     pub fn saved(&self) -> &Tilt<P> {
-        &self.saved
+        &self.levels[0]
     }
 
-    /// The new tilt `R′`.
+    /// The new tilt `R′`, the innermost.
     #[inline]
     pub fn new_tilt(&self) -> &Tilt<P> {
-        &self.new
+        &self.levels[self.count - 1]
+    }
+
+    /// Each pixel's area weight: the one tilt's where one is on; with several, the area of the parallelogram the
+    /// window's unit steps map to in `(Δa, Δb, d̃…)`, exactly 1 where every tilt is a rotation, which it is but for
+    /// Lean each axis with one target and both angles set, whose columns are skewed ([`TiltSpec::area_weight`]); 0 at
+    /// the rank-losing corner.
+    #[inline]
+    pub fn weight(&self) -> P {
+        self.weight
+    }
+
+    /// Whether the view loses rank, `ray-degenerate`: decided on the stored angles, the innermost tilt that is on at its
+    /// rank-losing corner ([`TiltSpec::rank_loss`]). The plan is unclear on a composition whose outer tilt is at the
+    /// corner and an inner one offsets another target; chose to keep its rank, since the inner offsets still span the
+    /// plane, and to weigh it by the area it has.
+    #[inline]
+    pub fn rank_loss(&self) -> bool {
+        self.rank_loss
+    }
+
+    /// `[N_a = 0, N_b = 0]`: the one tilt's where one is on; with several `[true, true]` where every tilt's is, its
+    /// hidden offsets all nominally zero, and `[false, false]` elsewhere. The plan is unclear on the repeats of a
+    /// composition of tilts that move the offsets; chose to fold none, counting each such pixel as a system of its
+    /// own, because only the closed forms of one tilt's angles decide a fold exactly, and an over-count is the safer
+    /// error.
+    #[inline]
+    pub fn normal_zero(&self) -> [bool; 2] {
+        self.normal_zero
+    }
+
+    /// The lattice of repeats of the one tilt that is on; none with several.
+    #[inline]
+    pub fn strip(&self) -> Option<Strip> {
+        self.strip
+    }
+}
+
+impl<P: Copy> Composed<P> {
+    /// The pixel at `(u, v)` through the tilts, innermost first: `(Δa, Δb)` from the outermost centre, each target's
+    /// offset before its span, and each slot's span. With `pan` off the centres are taken as one point, which the area
+    /// of the window's steps does not read.
+    fn run<R: Float + From<P>>(&self, u: R, v: R, pan: bool) -> ([R; 2], [R; 4], [R; 4]) {
+        let w = <R as From<P>>::from;
+        let zero = R::zero();
+        let (mut cur, mut span) = ([zero; 4], [zero; 4]);
+        let mut prev: Option<(usize, [R; 2])> = None;
+        let mut out = [zero; 2];
+        for k in (0..self.count).rev() {
+            let t = &self.levels[k];
+            if !t.on {
+                continue;
+            }
+            let (pa, pb) = match prev {
+                None if pan => (u - w(t.centre[0]), v - w(t.centre[1])),
+                None => (u, v),
+                Some((m, [da, db])) if pan => {
+                    let c = (self.levels[m].centre, t.centre);
+                    ((w(c.0[0]) - w(c.1[0])) + da, (w(c.0[1]) - w(c.1[1])) + db)
+                }
+                Some((_, [da, db])) => (da, db),
+            };
+            let [r1, r2] = t.columns;
+            let [ix, iy] = self.inputs[k];
+            let fed = |j: usize, slot: usize| {
+                if self.fed[k][j] {
+                    Some(cur[slot])
+                } else {
+                    None
+                }
+            };
+            let (wx, wy) = (fed(0, self.slot[k][0]), fed(1, self.slot[k][1]));
+            let at = |kx: P, ky: P| (wx.map(|f| (w(kx), f)), wy.map(|f| (w(ky), f)));
+            let (fx, fy) = at(ix[0], iy[0]);
+            let da = turned(w(r1[0]), w(r2[0]), pa, pb, fx, fy);
+            let (fx, fy) = at(ix[1], iy[1]);
+            let db = turned(w(r1[1]), w(r2[1]), pa, pb, fx, fy);
+            let (fx, fy) = at(ix[2], iy[2]);
+            let dx = turned(w(r1[2]), w(r2[2]), pa, pb, fx, fy);
+            let (fx, fy) = at(ix[3], iy[3]);
+            let dy = turned(w(r1[3]), w(r2[3]), pa, pb, fx, fy);
+            cur[self.slot[k][0]] = dx;
+            span[self.slot[k][0]] = w(t.span[0]);
+            if t.two {
+                cur[self.slot[k][1]] = dy;
+                span[self.slot[k][1]] = w(t.span[1]);
+            }
+            prev = Some((k, [da, db]));
+            out = [da, db];
+        }
+        (out, cur, span)
     }
 }
 
 impl<P: Copy> Placement<P> for Composed<P> {
     #[inline]
     fn on(&self) -> bool {
-        self.saved.on || self.new.on
+        self.levels.iter().any(|t| t.on)
     }
 
-    /// The module's note: `R′` first, then `R`; with either off, the other alone, with no arithmetic of the one off.
+    /// The module's note: the innermost tilt first, the saved `R` last; a tilt that is off takes no arithmetic, and
+    /// with one on, its own placement.
     fn place<R: Float + From<P>>(&self, u: R, v: R) -> ([R; 2], Shift<R>) {
-        if !self.new.on {
-            return self.saved.place(u, v);
+        let mut on = (0..self.count).filter(|&k| self.levels[k].on);
+        match (on.next(), on.next()) {
+            (None, _) => return self.levels[0].place(u, v),
+            (Some(k), None) => return self.levels[k].place(u, v),
+            _ => {}
         }
-        if !self.saved.on {
-            return self.new.place(u, v);
-        }
+        let ([da, db], cur, span) = self.run(u, v, true);
         let w = <R as From<P>>::from;
-        let ([cu, cv], [su, sv]) = (self.new.centre, self.saved.centre);
-        let [n1, n2] = self.new.columns;
-        let (du, dv) = (u - w(cu), v - w(cv));
-        let pa = (w(cu) - w(su)) + (w(n1[0]) * du + w(n2[0]) * dv);
-        let pb = (w(cv) - w(sv)) + (w(n1[1]) * du + w(n2[1]) * dv);
-        let e0 = w(n1[2]) * du + w(n2[2]) * dv;
-        let e1 = w(n1[3]) * du + w(n2[3]) * dv;
-        let [[x0, y0], [x1, y1]] = self.into;
-        let fed = |by_first: bool, by_second: bool| {
-            if by_first {
-                Some(e0)
-            } else if by_second {
-                Some(e1)
-            } else {
-                None
-            }
-        };
-        let (wx, wy) = (fed(x0, x1), fed(y0, y1));
-        let [r1, r2] = self.saved.columns;
-        let [ix, iy] = self.inputs;
-        let at = |kx: P, ky: P| (wx.map(|f| (w(kx), f)), wy.map(|f| (w(ky), f)));
-        let (fx, fy) = at(ix[0], iy[0]);
-        let da = turned(w(r1[0]), w(r2[0]), pa, pb, fx, fy);
-        let (fx, fy) = at(ix[1], iy[1]);
-        let db = turned(w(r1[1]), w(r2[1]), pa, pb, fx, fy);
-        let (fx, fy) = at(ix[2], iy[2]);
-        let dx = turned(w(r1[2]), w(r2[2]), pa, pb, fx, fy);
-        let (fx, fy) = at(ix[3], iy[3]);
-        let dy = turned(w(r1[3]), w(r2[3]), pa, pb, fx, fy);
-        let value = |source: Source| match source {
-            Source::SavedX => w(self.saved.span[0]) * dx,
-            Source::SavedY => w(self.saved.span[1]) * dy,
-            Source::NewX => w(self.new.span[0]) * e0,
-            Source::NewY => w(self.new.span[1]) * e1,
-        };
-        let [first, second] = self.sources;
+        let outer = self
+            .levels
+            .iter()
+            .position(|t| t.on)
+            .map_or(self.levels[0].centre, |k| self.levels[k].centre);
+        let value = |s: usize| span[s] * cur[s];
         let shift = Shift {
             x: self.targets[0],
-            dx: value(first),
+            dx: value(0),
             y: self.targets[1],
-            dy: value(second),
-            two: self.two,
+            dy: if self.filled >= 2 { value(1) } else { R::zero() },
+            two: self.filled >= 2,
+            z: self.targets[2],
+            dz: if self.filled >= 3 { value(2) } else { R::zero() },
+            w: self.targets[3],
+            dw: if self.filled >= 4 { value(3) } else { R::zero() },
+            more: if self.filled >= 2 { (self.filled - 2) as u32 } else { 0 },
         };
-        ([w(su) + da, w(sv) + db], shift)
+        ([w(outer[0]) + da, w(outer[1]) + db], shift)
     }
 
     #[inline]
     fn targets(&self) -> ([u32; 2], bool) {
-        (self.targets, self.two)
+        ([self.targets[0], self.targets[1]], self.filled >= 2)
+    }
+
+    #[inline]
+    fn more_targets(&self) -> ([u32; 2], u32) {
+        let more = if self.filled >= 2 { self.filled - 2 } else { 0 };
+        ([self.targets[2], self.targets[3]], more as u32)
+    }
+}
+
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Tilted<C, P, Composed<P>>
+where
+    f64: From<P>,
+{
+    /// The area weight of the pixel at `(u, v)`: the composition's ([`Composed::weight`]), or 0 where a refusal leaves
+    /// the cell no system ([`Tilted::weight`]).
+    pub fn weight(&self, u: f64, v: f64) -> f64 {
+        self.weighed(u, v, f64::from(self.tilt().weight))
+    }
+}
+
+impl<P: Copy + FloatConst> Tilted<ShapeSphere<P>, P, Composed<P>>
+where
+    f64: From<P>,
+{
+    fn folds(&self) -> Folds {
+        let c = self.tilt();
+        Folds {
+            normal_zero: c.normal_zero,
+            strip: c.strip,
+        }
+    }
+
+    /// The composed view's `system_image`: `ray-degenerate` where it loses rank ([`Composed::rank_loss`]), else the
+    /// chart's own.
+    pub fn system_image(&self) -> SystemImage {
+        image(self.tilt().rank_loss, self.chart().system_image())
+    }
+
+    /// How the composed view's pixel at `(u, v)` counts ([`Tilted::pixel`]), under the composition's folds.
+    pub fn pixel(&self, u: f64, v: f64) -> Option<PixelCount> {
+        self.pixel_by(self.folds(), u, v)
+    }
+
+    /// The counted total over the pixels at `points` ([`Tilted::counted_total`]), under the composition's folds.
+    pub fn counted_total<I>(&self, points: I) -> u64
+    where
+        I: IntoIterator<Item = [f64; 2]>,
+        I::IntoIter: Clone,
+    {
+        self.counted_by(self.folds(), points)
     }
 }

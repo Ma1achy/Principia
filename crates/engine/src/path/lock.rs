@@ -318,6 +318,7 @@ impl Placement<f64> for Pivoted {
                 y: self.tilt.y,
                 dy: dy + w(self.d0[1]),
                 two: self.tilt.two,
+                ..Shift::none()
             },
         )
     }
