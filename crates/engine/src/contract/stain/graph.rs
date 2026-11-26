@@ -315,6 +315,23 @@ impl StainGraph {
         Ok(copy)
     }
 
+    /// Adds a copy of node `id` whose occupant is its real source, written out as a custom: the same code, so the same
+    /// fragment key and the same picture, now text to edit. Its kind, params and ramp are copied, its wires are not.
+    pub fn duplicate_as_custom(&mut self, id: NodeId) -> Result<NodeId, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        let text = assemble::occupant_source(n.kind.into(), &(&n.occupant).into())?
+            .ok_or_else(|| GraphError(format!("node {} holds no code to copy", id.0)))?;
+        let mut next = self.clone();
+        let copy = next.duplicate(id)?;
+        next.nodes
+            .get_mut(&copy)
+            .expect("the copy was just added")
+            .occupant = Occupant::Custom(text);
+        next.check()?;
+        *self = next;
+        Ok(copy)
+    }
+
     /// The id one past the largest in the graph.
     fn next_id(&self) -> NodeId {
         NodeId(self.nodes.keys().last().map_or(0, |n| n.0 + 1))
