@@ -2,7 +2,7 @@
 //! saved again, and the composed chart's area weight and repeat counting.
 //!
 //! - `saved_chart_wide_as_today`: every composition of at most two hidden coordinates places, decodes and serialises
-//!   bit for bit as it did before the wide shift: a digest of the bits, captured from the tree before the change.
+//!   to a fixed digest of its bits.
 //! - `saved_chart_wide_targets`: a new tilt onto three or four hidden coordinates is `R·R′`, each offset on its own
 //!   target, to one ulp of the terms that form it, and decodes at `(a, b)` with every offset on its control.
 //! - `saved_chart_wide_refused`: five or six coordinates, and an offset into a tilt with no input there, are refused.
@@ -235,7 +235,8 @@ fn as_today(flip: bool) -> u64 {
     d.0
 }
 
-/// Captured from the tree before the wide shift existed.
+/// Digest of the placement bits, decode and words of the twelve two-coordinate compositions in `cases()`. Don't
+/// re-capture it to make a failure pass.
 const TODAY: u64 = 11_074_953_001_277_844_569;
 
 #[test]
