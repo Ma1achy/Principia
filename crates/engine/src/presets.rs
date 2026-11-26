@@ -1,8 +1,8 @@
-//! The coordinate presets (colour_composition §6, "Debug views as presets"; debug_tooling_plan §A's UV preset and §F's
-//! UV passthrough; TASK-M1-07): in-code stain graphs, not editable and with no file format (RQ-215; the serialised
-//! format and locked loading are TASK-M7-17's, REQ-GUI-028 and REQ-GUI-029).
+//! The named presets as stain graphs, read from the library's files (`render/presets/`, [`preset`]): the coordinate
+//! presets (colour_composition §6, "Debug views as presets"; debug_tooling_plan §A's UV preset and §F's UV passthrough)
+//! and the outcome stain. The graph of a debug view named by id is the catalogue's one wiring rule ([`named_view`]).
 //!
-//! Each is a stain graph on the fixed backbone: a source holding a coordinate as a vector field, a colour drawing it
+//! Each coordinate preset is a stain graph on the fixed backbone: a source holding a coordinate as a vector field, a colour drawing it
 //! as RG with B = 0, the built-in pass-through combiner, and `OUT`. Every coordinate is the post-flip one, Y-up, read
 //! from `ctx` (`render::coords`; the raster fills the lanes):
 //! - [`uv_screen`]: `ctx.screen.uv → RG`, the pixel's UV in the view (fragment addressing);
@@ -23,6 +23,9 @@
 //! [`CoordinateMode::Uv`]: crate::presets::CoordinateMode::Uv
 //! [`CoordinateMode::Delta`]: crate::presets::CoordinateMode::Delta
 
+use render::presets::file::Section;
+
+use crate::contract::stain::preset;
 use crate::stain::{GraphError, NodeId, NodeKind, Occupant, StainGraph};
 
 /// The coordinate view's two modes (debug_tooling_plan §F's UV passthrough).
@@ -34,39 +37,24 @@ pub enum CoordinateMode {
     Delta,
 }
 
-/// The colour that draws its field input's first two components as R and G, with B = 0.
-fn rg() -> String {
-    "// The field's first two components as R and G, B = 0 (TASK-M1-07's coordinate presets).\n\
-     fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].xy, 0.0); }\n"
-        .to_owned()
-}
-
-/// A source holding `value`, a `vec2<f32>` expression over `ctx`, in the field's `.xy`.
-fn source(what: &str, value: &str) -> String {
-    format!(
-        "// {what}, a vector field in `.xy` (TASK-M1-07's coordinate presets).\n\
-         fn source(ctx: Ctx) -> Field {{ return Field({value}, 0.0, 0.0); }}\n"
-    )
-}
-
-/// The graph: `source` into `colour`, `colour` into the pass-through combiner's colour port.
-fn graph(source: String, colour: String) -> Result<StainGraph, GraphError> {
-    chain(Occupant::Custom(source), Occupant::Custom(colour))
-}
-
 /// The outcome stain, the one the real app opens on: the sample's `state` into the outcome palette's colour
 /// (colour_composition §1.4), passed through.
 pub fn outcome() -> Result<StainGraph, GraphError> {
-    chain(
-        Occupant::Field("state".to_owned()),
-        Occupant::Builtin(render::colour::outcome::name().to_owned()),
-    )
+    library_graph(Section::Production, "outcome")
+}
+
+/// The graph of the library preset `id` of `section`, from its file.
+fn library_graph(section: Section, id: &str) -> Result<StainGraph, GraphError> {
+    preset::graph(section, id)
 }
 
 /// The debug view whose colour is the WGSL `colour`, wired as the catalogue wires it (`render::registry::view_nodes`):
 /// the zero source into the colour, passed through.
 pub fn view(colour: &str) -> Result<StainGraph, GraphError> {
-    graph(render::registry::ZERO_SOURCE.to_owned(), colour.to_owned())
+    chain(
+        Occupant::Custom(render::registry::ZERO_SOURCE.to_owned()),
+        Occupant::Custom(colour.to_owned()),
+    )
 }
 
 /// The shipped debug view `name` (`render::registry::Entry::name`), wired as the catalogue wires it
@@ -91,44 +79,26 @@ fn chain(source: Occupant, colour: Occupant) -> Result<StainGraph, GraphError> {
 }
 
 /// `uv_screen`: the pixel's post-flip UV in the view, `ctx.screen.uv → RG` (colour_composition §6, fragment
-/// addressing).
+/// addressing). Its file is `presets/debug/uv_screen.json`.
 pub fn uv_screen() -> Result<StainGraph, GraphError> {
-    graph(
-        source("The pixel's post-flip UV in the view", "ctx.screen.uv"),
-        rg(),
-    )
+    library_graph(Section::Debug, "uv_screen")
 }
 
 /// `uv_quad`: the sample's quad-local coordinate `t`, `ctx.quad.uv → RG` (colour_composition §6, structural
 /// addressing).
 pub fn uv_quad() -> Result<StainGraph, GraphError> {
-    graph(
-        source("The sample's quad-local coordinate t", "ctx.quad.uv"),
-        rg(),
-    )
+    library_graph(Section::Debug, "uv_quad")
 }
 
 /// The coordinate view, the UV passthrough (debug_tooling_plan §F), in `mode`: the sample's UV coordinate
-/// reconstructed fragment-side, `c + h·(2t − 1)` (deep_zoom §1; REQ-TOOL-019), as RG; or its δ mode, δ = `h·(2t − 1)`
-/// normalised by `h` and mapped to `(δ/h + 1)/2` (REQ-TOOL-153).
+/// reconstructed fragment-side, `c + h·(2t − 1)` (deep_zoom §1), as RG; or its δ mode, δ = `h·(2t − 1)` normalised by
+/// `h` and mapped to `(δ/h + 1)/2`.
 pub fn coordinate_view(mode: CoordinateMode) -> Result<StainGraph, GraphError> {
-    match mode {
-        CoordinateMode::Uv => graph(
-            source(
-                "The sample's UV coordinate, c + h·(2t − 1) (deep_zoom §1)",
-                "ctx.quad.centre + ctx.quad.half_width * (2.0 * ctx.quad.uv - 1.0)",
-            ),
-            rg(),
-        ),
-        CoordinateMode::Delta => graph(
-            source(
-                "The quad-local offset δ = h·(2t − 1) (deep_zoom §2)",
-                "ctx.quad.half_width * (2.0 * ctx.quad.uv - 1.0)",
-            ),
-            "// δ normalised by its bound h = 2^−(ℓ+1) to [−1, 1] and mapped to (x + 1)/2: u's in R, v's in G, B = 0\n\
-             // (REQ-TOOL-153).\n\
-             fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>((ctx.inputs[0].xy / ctx.quad.half_width + 1.0) * 0.5, 0.0); }\n"
-                .to_owned(),
-        ),
-    }
+    library_graph(
+        Section::Debug,
+        match mode {
+            CoordinateMode::Uv => "coordinate_uv",
+            CoordinateMode::Delta => "coordinate_delta",
+        },
+    )
 }

@@ -68,6 +68,9 @@ pub struct Entry {
     pub name: String,
     /// The whole graph that shows it, where it is a view by itself: what selecting it loads (§11).
     pub graph: Option<StainGraph>,
+    /// Whether selecting it loads the graph locked: a debug view, whose first edit forks a custom copy
+    /// ([`super::preset::Loaded`]).
+    pub locked: bool,
     /// Its description, from its source: its name and group are the row's and its heading's.
     pub description: Description,
 }
@@ -84,7 +87,6 @@ impl Entry {
 /// An entry's graph is the outcome stain for the outcome palette and, for a debug colour view, the catalogue's own
 /// wiring of it (`render::registry::named_view_nodes`); a colour whose fields no entry names (`margin`), a source, a
 /// combiner and a post are no view by themselves. Every node of every graph names a shipped source by id, or a field.
-// The plan is unclear here (§11 has debug presets load locked); chose editable because no graph holds a lock.
 pub fn library() -> Result<Vec<Entry>, String> {
     let mut out = registry::registry()
         .map_err(|e| e.to_string())?
@@ -108,6 +110,7 @@ pub fn library() -> Result<Vec<Entry>, String> {
                 debug,
                 name,
                 graph,
+                locked: debug,
                 description,
             })
         })

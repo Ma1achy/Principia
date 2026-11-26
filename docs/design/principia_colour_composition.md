@@ -1142,6 +1142,9 @@ spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v`
 - **index = grey**: an index written as one value on all three channels, one grey preset per index: `ctx.quad.index`,
   `ctx.tile.tile_index` and `ctx.tile.sample_index` (R-546, RQ-280). Each maps its index to grey in [0, 1] by a
   stated rule, written here by TASK-M7-17 (R-72, REQ-COL-139).
+  The rule is `grey = (index mod 256) / 255`, the index's low byte: exact in f32, in [0, 1], and neighbouring indices
+  differ in grey (a ramp over the count would put hundreds of quads within one 8-bit step). The built preset is
+  `ctx.quad.index`'s; the tile and sample greys wait for `ctx.tile` to carry those two indices, which it does not yet.
 
 *Was:* "The channel TL = RB and centre = BG leave unnamed (G and R), which index "index" is (`ctx.quad.index`,
 `ctx.tile.tile_index` or `ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280."

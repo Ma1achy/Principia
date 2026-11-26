@@ -1,0 +1,94 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": 0,
+        "kind": "combiner",
+        "occupant": {
+          "builtin": "replace_l"
+        },
+        "params": {}
+      },
+      {
+        "id": 1,
+        "kind": "out",
+        "occupant": "none",
+        "params": {}
+      },
+      {
+        "id": 2,
+        "kind": "source",
+        "occupant": {
+          "field": "state"
+        },
+        "params": {}
+      },
+      {
+        "id": 3,
+        "kind": "colour",
+        "occupant": {
+          "builtin": "outcome_state"
+        },
+        "params": {}
+      },
+      {
+        "id": 4,
+        "kind": "source",
+        "occupant": {
+          "builtin": "zero"
+        },
+        "params": {}
+      },
+      {
+        "id": 5,
+        "kind": "brightness",
+        "occupant": {
+          "custom": "// A field ramp of `t_end_step` as a lightness (colour_composition §1.2, §4.1; render::colour::field_ramp): the `lin`\n// compaction, polarity low. A blank, unset or invalid sample returns 0: its style is drawn by the ramp's post.\n// @name t_end_step lightness\n// @group Brightness\n// @about t_end_step as a lightness; its post draws its styles.\n// @maps t_end_step [lin, polarity low]\n// @glyph ramp\nfn brightness(ctx: Ctx) -> f32 {\n    let v = f32(ctx.sample.t_end_step);\n    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return 0.0; }\n    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) { return 0.0; }\n    if (!(true)) {\n        return 0.0;\n    }\n    return 1.0 - range_norm(v, 0.0, f32(ctx.params.horizon_steps), false, vec2<f32>(0.0, 0.0));\n}\n"
+        },
+        "params": {}
+      },
+      {
+        "id": 6,
+        "kind": "post",
+        "occupant": {
+          "custom": "// The styles of the field ramp of `t_end_step` (colour_composition §4.1; render::colour::field_ramp): the background, \"not yet\"\n// and the invalid lane over the combiner's output, #141418 unless INVALID_OVERRIDE is 1; every other colour as it is.\n// @name t_end_step styles\n// @group Post\n// @about The background, not-yet and invalid styles of the t_end_step lightness, over the combiner's colour.\n// @maps t_end_step [lin, polarity low]\n// @glyph name\n// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]\n// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)\n// @control INVALID_OVERRIDE toggle \"Override the invalid colour\" in \"Invalid\"\n// @control INVALID_COLOUR colour \"Invalid colour\" in \"Invalid\"\nfn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {\n    let v = f32(ctx.sample.t_end_step);\n    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return canvas_background(); }\n    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) { return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u); }\n    if (!(true)) {\n        return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);\n    }\n    return rgb;\n}\n"
+        },
+        "params": {}
+      }
+    ],
+    "wires": [
+      {
+        "from": 3,
+        "port": 0,
+        "to": 0
+      },
+      {
+        "from": 5,
+        "port": 1,
+        "to": 0
+      },
+      {
+        "from": 6,
+        "port": 0,
+        "to": 1
+      },
+      {
+        "from": 2,
+        "port": 0,
+        "to": 3
+      },
+      {
+        "from": 4,
+        "port": 0,
+        "to": 5
+      },
+      {
+        "from": 0,
+        "port": 0,
+        "to": 6
+      }
+    ]
+  },
+  "measure": "The outcome class sets the hue and chroma; the terminal step t_end_step, compacted to [0, 1] with white = early, sets the OKLab lightness L.",
+  "name": "n̂ × t_end"
+}
