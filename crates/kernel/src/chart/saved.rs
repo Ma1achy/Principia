@@ -36,13 +36,24 @@
 //! literally, `R = [û₁ û₂ t̂]`, the composition no rotation, as the saved map is none. So the saved target is offered
 //! there too.
 //!
-//! **What is refused** (`None` from [`Composed::new`]): a new tilt into the target of a saved Lean each axis view at
-//! the rank-losing corner, `|τ₁| = |τ₂| = 90°` with one target, which has no frame (`ray-degenerate`); and a
-//! composition whose offsets land on more than two hidden coordinates, which one [`Shift`] cannot carry.
-//! Saving a saved chart again, the chain `R·R′·R″`, and the composed chart's area weight and the shape sphere's repeat
-//! counting are not built yet; meanwhile
+//! **What is refused** (`None` from [`Composed::of`]): a new tilt into the target of a saved Lean each axis view at
+//! the rank-losing corner, `|τ₁| = |τ₂| = 90°` with one target, which has no frame (`ray-degenerate`); offsets that
+//! land on more than four hidden coordinates, which a [`Shift`] carries; and more than [`MAX_LEVELS`] tilts.
 //! [`Saved::curved`] refuses a saved or tilted chart as a parent by type ([`SaveParent`]), never saving it without its
 //! tilt.
+//!
+//! **A saved chart saved again** ([`Saved::again`], [`Chain`]): the saved chart under the view's tilt `R′` about its
+//! centre, saved, its definition the chain of saved tilts; reopened under a new tilt `R″` it is `R·R′·R″`, each tilt
+//! acting on the one inside it, and at `τ″ = 0` the view it was saved from, bit for bit, the tilt that is off taking no
+//! arithmetic. An inner tilt's offset on a target an outer tilt also names enters that tilt's `R` at the target's
+//! input and is replaced by its output; on any other target it passes on, scaled by its own span. A chain is two
+//! records ([`Saved::to_words`], [`Saved::link_words`], [`Saved::from_chain_words`]); a chain is not saved again.
+//!
+//! **The composed chart's weight and folds** ([`Composed::weight`], [`Composed::rank_loss`],
+//! [`Composed::normal_zero`]): with one tilt on, that tilt's, bit for bit. With several, the weight is 1 where every
+//! tilt is a rotation, and else the area of the window's steps in the scaled coordinates, the innermost tilt at the
+//! corner `ray-degenerate`; the lattice of repeats is folded only where every tilt keeps every hidden offset, since
+//! only one tilt's angles decide a fold exactly.
 //!
 //! **The serialisation** ([`Saved::to_words`], [`Saved::from_words`]): the definition as [`WORDS`] doubles, by value,
 //! so it reads back bit for bit; a saved chart carries no links. The words: the kind (2 oblique,
@@ -82,16 +93,16 @@ use super::invariant::{Invariant, InvariantLE, InvariantLK};
 use super::latent::Latent;
 use super::mass_simplex::MassSimplex;
 use super::mixed;
-use super::shape_sphere::{ShapeMap, ShapeSphere};
 use super::shape_sphere::PixelCount;
+use super::shape_sphere::{ShapeMap, ShapeSphere};
 use super::tilt::{
     image, narrow, Folds, Placement, Shift, Strip, Tilt, TiltMap, TiltSpec, Tiltable, Tilted,
 };
 use super::{Chart, SystemImage, REGISTRY};
-use spirv_std::num_traits::FloatConst;
 #[cfg(not(target_arch = "spirv"))]
 use crate::decode::retired::{RetiredLink, ASSUMED};
 use crate::generated::constants::{SAVED_HEADER_WORDS, SAVED_OBLIQUE_WORDS, SAVED_PARENT_WORDS};
+use spirv_std::num_traits::FloatConst;
 
 /// The words of a curved chart's header: the kind, the parent's index, `s`, `τ₁`, `τ₂`, the map, `X`, `Y`, the spans
 /// (the register's `saved_header_words`).
@@ -531,8 +542,8 @@ impl<C: ParentParams> ParentParams for RestStart<C, f64> {
 
 /// A chart [`Saved::curved`] takes as a parent: a bare chart, every [`Tiltable`] one and the latent chart (which it
 /// refuses, a latent view saving as an oblique chart). A tilted chart, a reopened saved one included, is not one: it
-/// names its parent ([`Chart::name`]), so saving it as a parent would drop its tilt, the saved `R` with it. Saving a
-/// saved chart again, the chain `R·R′·R″`, is not built yet.
+/// names its parent ([`Chart::name`]), so saving it as a parent would drop its tilt, the saved `R` with it; a saved chart
+/// saved again goes through [`Saved::again`].
 pub trait SaveParent: Chart {}
 
 impl<C: Tiltable> SaveParent for C {}
@@ -1073,8 +1084,12 @@ impl Composed<f64> {
         for (k, level) in levels.iter().enumerate() {
             composed.levels[k] = Tilt::new(&level.tilt, level.centre, level.span);
             let t = &composed.levels[k];
-            skewed |= t.on && level.tilt.map == TiltMap::Lean && !t.two && !level.tilt.untilted()
-                && level.tilt.tau1 != 0.0 && level.tilt.tau2 != 0.0;
+            skewed |= t.on
+                && level.tilt.map == TiltMap::Lean
+                && !t.two
+                && !level.tilt.untilted()
+                && level.tilt.tau1 != 0.0
+                && level.tilt.tau2 != 0.0;
         }
         let on = |k: usize| composed.levels[k].on;
         let first = (0..levels.len()).find(|&k| on(k));
@@ -1136,9 +1151,12 @@ impl Composed<f64> {
             composed.normal_zero = t.normal_zero;
             composed.strip = t.strip;
         } else {
-            let inner = active.clone().last().unwrap_or(first);
+            let inner = active.clone().next_back().unwrap_or(first);
             composed.rank_loss = composed.levels[inner].rank_loss;
-            composed.normal_zero = if active.clone().all(|k| composed.levels[k].normal_zero == [true, true]) {
+            composed.normal_zero = if active
+                .clone()
+                .all(|k| composed.levels[k].normal_zero == [true, true])
+            {
                 [true, true]
             } else {
                 [false, false]
@@ -1158,9 +1176,8 @@ impl Composed<f64> {
     /// units, as the root of the sum of its squared 2 × 2 minors, which no rounding makes negative.
     fn gram(&self) -> f64 {
         let (cu, cv) = (self.run(1.0, 0.0, false), self.run(0.0, 1.0, false));
-        let col = |r: &([f64; 2], [f64; 4], [f64; 4])| {
-            [r.0[0], r.0[1], r.1[0], r.1[1], r.1[2], r.1[3]]
-        };
+        let col =
+            |r: &([f64; 2], [f64; 4], [f64; 4])| [r.0[0], r.0[1], r.1[0], r.1[1], r.1[2], r.1[3]];
         let (a, b) = (col(&cu), col(&cv));
         let mut sum = 0.0;
         for i in 0..6 {
@@ -1354,13 +1371,29 @@ impl<P: Copy> Placement<P> for Composed<P> {
             x: self.targets[0],
             dx: value(0),
             y: self.targets[1],
-            dy: if self.filled >= 2 { value(1) } else { R::zero() },
+            dy: if self.filled >= 2 {
+                value(1)
+            } else {
+                R::zero()
+            },
             two: self.filled >= 2,
             z: self.targets[2],
-            dz: if self.filled >= 3 { value(2) } else { R::zero() },
+            dz: if self.filled >= 3 {
+                value(2)
+            } else {
+                R::zero()
+            },
             w: self.targets[3],
-            dw: if self.filled >= 4 { value(3) } else { R::zero() },
-            more: if self.filled >= 2 { (self.filled - 2) as u32 } else { 0 },
+            dw: if self.filled >= 4 {
+                value(3)
+            } else {
+                R::zero()
+            },
+            more: if self.filled >= 2 {
+                (self.filled - 2) as u32
+            } else {
+                0
+            },
         };
         ([w(outer[0]) + da, w(outer[1]) + db], shift)
     }
@@ -1377,7 +1410,7 @@ impl<P: Copy> Placement<P> for Composed<P> {
 
     #[inline]
     fn more_targets(&self) -> ([u32; 2], u32) {
-        let more = if self.filled >= 2 { self.filled - 2 } else { 0 };
+        let more = self.filled.saturating_sub(2);
         ([self.targets[2], self.targets[3]], more as u32)
     }
 }

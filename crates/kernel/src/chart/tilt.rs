@@ -1015,10 +1015,8 @@ where
     fn requires_per_pixel_mass(&self) -> bool {
         let ([x, y], two) = self.tilt.targets();
         let ([z, w], more) = self.tilt.more_targets();
-        let tilted = mass(x)
-            || (two && mass(y))
-            || (more >= 1 && mass(z))
-            || (more >= 2 && mass(w));
+        let tilted =
+            mass(x) || (two && mass(y)) || (more >= 1 && mass(z)) || (more >= 2 && mass(w));
         self.chart.requires_per_pixel_mass() || (self.tilt.on() && tilted)
     }
 

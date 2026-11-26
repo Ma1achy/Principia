@@ -2576,7 +2576,9 @@ fn check_shift(second: bool) {
         dx: 0.25,
         y: 5,
         dy: 1.0,
-        two: second, ..Shift::none() };
+        two: second,
+        ..Shift::none()
+    };
     assert_eq!(shift_controls(z, &one)[5], 0.5, "one target's y moved");
     let one = Shift { two: false, ..one };
     let two = Shift { two: true, ..one };
@@ -2774,7 +2776,9 @@ where
         dx: 0.0,
         y: x,
         dy: 0.0,
-        two: false, ..Shift::none() };
+        two: false,
+        ..Shift::none()
+    };
     let centre = own.decode::<Defaults, f64>(CENTRE[0], CENTRE[1]);
     for map in [TiltMap::Sheet, TiltMap::Lean] {
         let view = held_view(chart, &spec(0.0, 0.0, map, x, x), span);
@@ -3406,7 +3410,9 @@ fn held_k_shift(dx: f64) -> Shift<f64> {
         dx,
         y: HELD_K,
         dy: 0.0,
-        two: false, ..Shift::none() }
+        two: false,
+        ..Shift::none()
+    }
 }
 
 /// Linear `Φ_θ,L_z` past the centre's band (`b = 1.3`, `L_z = 1.6`, `L_z²/2 = 1.28`, `K₀ = 0.5`): the `L_z` axis is affine
@@ -3527,7 +3533,9 @@ where
         dx,
         y: HELD_K,
         dy: <R as From<f32>>::from(0.0),
-        two: false, ..Shift::none() };
+        two: false,
+        ..Shift::none()
+    };
     let d = c.decode_shifted::<Defaults, R>(a, b, &own, &LinkParams::DEFAULT);
     assert_eq!(
         d.degenerate,
@@ -3628,7 +3636,9 @@ macro_rules! no_finite_2k {
                 dx: 1.0,
                 y: HELD_K,
                 dy: 0.0,
-                two: false, ..Shift::none() };
+                two: false,
+                ..Shift::none()
+            };
             assert_eq!(warped.refusal_own(0.5, 0.5, &own), bound);
             let plain = Shift::<$p>::none();
             assert_eq!(warped.refusal_own(0.5, 0.5, &plain), None);
@@ -3798,7 +3808,9 @@ fn check_simplex_own_precision(wide: bool) {
         dx,
         y: NU0,
         dy: 0.0,
-        two: false, ..Shift::none() };
+        two: false,
+        ..Shift::none()
+    };
     for (dx, end) in [(0.4999999701976776, 1.0), (-0.4999999999, 0.0)] {
         assert!(dx + 0.5 > 0.0 && dx + 0.5 < 1.0, "inside at f64");
         assert_eq!(0.5 + dx as f32, end, "the f32 sum");
@@ -4521,7 +4533,9 @@ fn tilt_every_chart_construction_validate() {
         dx,
         y: NU0,
         dy: 0.0,
-        two: false, ..Shift::none() };
+        two: false,
+        ..Shift::none()
+    };
     let p = LinkParams::DEFAULT;
     assert!(matches!(
         s.validate_shifted(1.4, 0.5, &shift(0.1), &p),
@@ -4567,7 +4581,9 @@ fn tilt_every_chart_construction_validate() {
         dx,
         y: HELD_K,
         dy: 0.0,
-        two: false, ..Shift::none() };
+        two: false,
+        ..Shift::none()
+    };
     assert_eq!(
         c.refusal(0.5, 1.0, &k_shift(-0.1)),
         Some(Constraint::KAboveLzBound)
@@ -4610,7 +4626,9 @@ fn tilt_every_chart_construction_validate() {
         dx,
         y: HELD_LZ,
         dy: 0.0,
-        two: false, ..Shift::none() };
+        two: false,
+        ..Shift::none()
+    };
     assert_eq!(
         z.refusal(0.5, 0.01, &lz_shift(0.3)),
         Some(Constraint::KAboveLzBound)

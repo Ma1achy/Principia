@@ -380,7 +380,9 @@ fn check_pivot(record: Record) {
                 dx: pivot.d0[0],
                 y: MASS,
                 dy: pivot.d0[1],
-                two: false, ..Shift::none() },
+                two: false,
+                ..Shift::none()
+            },
             &LinkParams::DEFAULT,
         )
         .ic;

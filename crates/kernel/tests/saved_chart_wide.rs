@@ -19,9 +19,7 @@
 use kernel::chart::saved::{Chain, Composed, Level, Saved, WORDS};
 use kernel::chart::shape_sphere::PixelCount;
 use kernel::chart::tilt::{Folds, Hidden, Placement, Shift, Tilt};
-use kernel::chart::{
-    Chart, Float, ShapeMap, ShapeSphere, SystemImage, TiltMap, TiltSpec, Tilted,
-};
+use kernel::chart::{Chart, Float, ShapeMap, ShapeSphere, SystemImage, TiltMap, TiltSpec, Tilted};
 use kernel::generated::links::Defaults;
 use validation::negative_control;
 
@@ -75,23 +73,110 @@ impl Digest {
 }
 
 /// The compositions of at most two hidden coordinates: (saved, saved centre, saved span, new, centre, span).
-fn cases() -> Vec<(TiltSpec, [f64; 2], [f64; 2], TiltSpec, [f64; 2], [f64; 2])> {
+/// A saved tilt with its centre and spans, then a new one.
+type Pair = (TiltSpec, [f64; 2], [f64; 2], TiltSpec, [f64; 2], [f64; 2]);
+
+fn cases() -> Vec<Pair> {
     let span = [2.0, 2.0];
     let odd = [1.5, 2.5];
     let skewed = spec(30.0, 40.0, TiltMap::Lean, 4, 4);
     vec![
-        (spec(25.0, 0.0, TiltMap::Sheet, X, X), CENTRE, span, spec(10.0, 0.0, TiltMap::Sheet, X, X), CENTRE, span),
-        (spec(25.0, 0.0, TiltMap::Sheet, X, X), CENTRE, span, spec(10.0, 5.0, TiltMap::Lean, 3, 3), [0.42, 0.55], span),
-        (spec(25.0, 0.0, TiltMap::Sheet, X, X), CENTRE, span, spec(10.0, 5.0, TiltMap::Lean, X, 3), [0.42, 0.55], odd),
-        (spec(10.0, 5.0, TiltMap::Lean, 2, 3), CENTRE, odd, spec(10.0, 0.0, TiltMap::Sheet, 3, 3), CENTRE, span),
-        (spec(10.0, 5.0, TiltMap::Lean, 2, 3), CENTRE, odd, spec(-12.0, 7.0, TiltMap::Lean, 3, 2), [0.5, 0.5], odd),
-        (skewed, CENTRE, span, spec(10.0, 0.0, TiltMap::Sheet, 4, 4), [0.4, 0.6], span),
-        (skewed, CENTRE, span, spec(10.0, 0.0, TiltMap::Sheet, 5, 5), CENTRE, odd),
-        (skewed, CENTRE, span, spec(10.0, 5.0, TiltMap::Lean, 5, 4), CENTRE, span),
-        (spec(20.0, 15.0, TiltMap::Sheet, 2, 2), CENTRE, span, spec(-12.0, 18.0, TiltMap::Sheet, 2, 2), [0.3, 0.7], span),
-        (spec(-90.0, 90.0, TiltMap::Lean, 4, 4), CENTRE, span, spec(10.0, 0.0, TiltMap::Sheet, 5, 5), CENTRE, span),
-        (spec(25.0, 0.0, TiltMap::Sheet, X, X), CENTRE, span, spec(0.0, 0.0, TiltMap::Sheet, X, X), CENTRE, span),
-        (spec(0.0, 0.0, TiltMap::Sheet, X, X), CENTRE, span, spec(10.0, 5.0, TiltMap::Lean, 2, 3), [0.45, 0.5], odd),
+        (
+            spec(25.0, 0.0, TiltMap::Sheet, X, X),
+            CENTRE,
+            span,
+            spec(10.0, 0.0, TiltMap::Sheet, X, X),
+            CENTRE,
+            span,
+        ),
+        (
+            spec(25.0, 0.0, TiltMap::Sheet, X, X),
+            CENTRE,
+            span,
+            spec(10.0, 5.0, TiltMap::Lean, 3, 3),
+            [0.42, 0.55],
+            span,
+        ),
+        (
+            spec(25.0, 0.0, TiltMap::Sheet, X, X),
+            CENTRE,
+            span,
+            spec(10.0, 5.0, TiltMap::Lean, X, 3),
+            [0.42, 0.55],
+            odd,
+        ),
+        (
+            spec(10.0, 5.0, TiltMap::Lean, 2, 3),
+            CENTRE,
+            odd,
+            spec(10.0, 0.0, TiltMap::Sheet, 3, 3),
+            CENTRE,
+            span,
+        ),
+        (
+            spec(10.0, 5.0, TiltMap::Lean, 2, 3),
+            CENTRE,
+            odd,
+            spec(-12.0, 7.0, TiltMap::Lean, 3, 2),
+            [0.5, 0.5],
+            odd,
+        ),
+        (
+            skewed,
+            CENTRE,
+            span,
+            spec(10.0, 0.0, TiltMap::Sheet, 4, 4),
+            [0.4, 0.6],
+            span,
+        ),
+        (
+            skewed,
+            CENTRE,
+            span,
+            spec(10.0, 0.0, TiltMap::Sheet, 5, 5),
+            CENTRE,
+            odd,
+        ),
+        (
+            skewed,
+            CENTRE,
+            span,
+            spec(10.0, 5.0, TiltMap::Lean, 5, 4),
+            CENTRE,
+            span,
+        ),
+        (
+            spec(20.0, 15.0, TiltMap::Sheet, 2, 2),
+            CENTRE,
+            span,
+            spec(-12.0, 18.0, TiltMap::Sheet, 2, 2),
+            [0.3, 0.7],
+            span,
+        ),
+        (
+            spec(-90.0, 90.0, TiltMap::Lean, 4, 4),
+            CENTRE,
+            span,
+            spec(10.0, 0.0, TiltMap::Sheet, 5, 5),
+            CENTRE,
+            span,
+        ),
+        (
+            spec(25.0, 0.0, TiltMap::Sheet, X, X),
+            CENTRE,
+            span,
+            spec(0.0, 0.0, TiltMap::Sheet, X, X),
+            CENTRE,
+            span,
+        ),
+        (
+            spec(0.0, 0.0, TiltMap::Sheet, X, X),
+            CENTRE,
+            span,
+            spec(10.0, 5.0, TiltMap::Lean, 2, 3),
+            [0.45, 0.5],
+            odd,
+        ),
     ]
 }
 
@@ -201,7 +286,11 @@ fn matrix(t: &TiltSpec) -> M {
         let cross = [-s1 * c2, -c1 * s2, c1 * c2];
         let length = Float::sqrt(cross.iter().map(|c| c * c).sum::<f64>());
         let toward = if cross[2] < 0.0 { -1.0 } else { 1.0 };
-        let columns = [[c1, 0.0, s1], [0.0, c2, s2], cross.map(|c| toward * c / length)];
+        let columns = [
+            [c1, 0.0, s1],
+            [0.0, c2, s2],
+            cross.map(|c| toward * c / length),
+        ];
         let at = [0, 1, x];
         for r in 0..3 {
             for q in 0..3 {
@@ -252,7 +341,13 @@ struct Placed {
 /// one inside it, the centres' differences added between; every offset times its control's `span`; with each value's
 /// tolerance, `ε` times the sum of the magnitudes of every product and sum that forms it. `order` picks which tilt acts
 /// first: 0 the innermost (the composition), 1 the outermost (the control's wrong order).
-fn reference(levels: &[(TiltSpec, [f64; 2])], span: f64, u: f64, v: f64, order: usize) -> (Placed, Placed) {
+fn reference(
+    levels: &[(TiltSpec, [f64; 2])],
+    span: f64,
+    u: f64,
+    v: f64,
+    order: usize,
+) -> (Placed, Placed) {
     let mut seq: Vec<(TiltSpec, [f64; 2])> = levels.iter().rev().copied().collect();
     if order == 1 {
         seq.reverse();
@@ -285,7 +380,13 @@ fn reference(levels: &[(TiltSpec, [f64; 2])], span: f64, u: f64, v: f64, order: 
         d[k] = span * y[2 + k];
         tol_d[k] = f64::EPSILON * span * terms[2 + k];
     }
-    (Placed { ab, d }, Placed { ab: tol_ab, d: tol_d })
+    (
+        Placed { ab, d },
+        Placed {
+            ab: tol_ab,
+            d: tol_d,
+        },
+    )
 }
 
 /// A kernel shift as one offset per latent control, every slot read as its count says.
@@ -363,7 +464,7 @@ fn check_composed(composed: Composed<f64>, levels: &[Level], want: usize, got: G
         let (ab, shift) = composed.place::<f64>(u, v);
         let mut shift = shift;
         if got == Got::Dropped {
-            shift.more = shift.more.min(0);
+            shift.more = 0;
         }
         let have = Placed {
             ab,
@@ -505,12 +606,18 @@ fn check_refused(admitted: bool) {
     ];
     let admits = [
         (of(&[two(2, 3), two(4, 5)]), "onto four controls"),
-        (of(&[two(2, 3), two(4, 5), two(2, 4)]), "a chain onto four controls"),
+        (
+            of(&[two(2, 3), two(4, 5), two(2, 4)]),
+            "a chain onto four controls",
+        ),
         (
             of(&[corner, spec(10.0, 0.0, TiltMap::Sheet, 5, 5)]),
             "the corner, tilted into another target",
         ),
-        (of(&[two(2, 3), two(2, 3), two(2, 3)]), "three tilts on two controls"),
+        (
+            of(&[two(2, 3), two(2, 3), two(2, 3)]),
+            "three tilts on two controls",
+        ),
     ];
     for (taken, what) in refused {
         assert!(taken == admitted, "a composition {what} was not refused");
@@ -638,15 +745,24 @@ fn check_reopens(new: TiltSpec) {
     for (t, _) in chain_cases() {
         let from = chain_view(&t);
         let again = reopened_chain(&t, &new);
-        let (a, b) = (from.tilt().at_precision::<f32>(), again.tilt().at_precision::<f32>());
+        let (a, b) = (
+            from.tilt().at_precision::<f32>(),
+            again.tilt().at_precision::<f32>(),
+        );
         for [u, v] in window() {
-            let (x, y) = (from.tilt().place::<f64>(u, v), again.tilt().place::<f64>(u, v));
+            let (x, y) = (
+                from.tilt().place::<f64>(u, v),
+                again.tilt().place::<f64>(u, v),
+            );
             assert_eq!(
                 (x.0.map(f64::to_bits), shift_bits(&x.1)),
                 (y.0.map(f64::to_bits), shift_bits(&y.1)),
                 "the reopened view is not the one saved at ({u}, {v})"
             );
-            let (x, y) = (a.place::<f32>(u as f32, v as f32), b.place::<f32>(u as f32, v as f32));
+            let (x, y) = (
+                a.place::<f32>(u as f32, v as f32),
+                b.place::<f32>(u as f32, v as f32),
+            );
             assert_eq!(
                 (x.0.map(f32::to_bits), x.1.dx.to_bits()),
                 (y.0.map(f32::to_bits), y.1.dx.to_bits()),
@@ -663,10 +779,12 @@ fn check_reopens(new: TiltSpec) {
 
 /// The view the chain was saved from: its base reopened under the link's tilt about the link's centre.
 fn chain_view(t: &Tilts) -> Tilted<ShapeSphere<f64>, f64, Composed<f64>> {
-    let Saved::Curved(base) = Saved::curved(&sphere(), t.saved, CENTRE, SPAN).expect("a parent") else {
+    let Saved::Curved(base) = Saved::curved(&sphere(), t.saved, CENTRE, SPAN).expect("a parent")
+    else {
         panic!("a curved parent");
     };
-    base.open(&t.link, LINK_CENTRE, SPAN).expect("a composition")
+    base.open(&t.link, LINK_CENTRE, SPAN)
+        .expect("a composition")
 }
 
 fn shift_bits(s: &Shift<f64>) -> [u64; 9] {
@@ -703,12 +821,32 @@ fn check_chain_words(alter: bool) {
     for (t, _) in chain_cases() {
         let def = Saved::Chained(saved_chain(&t));
         let (head, link) = (def.to_words(), def.link_words().expect("a link"));
-        assert_eq!(Saved::from_chain_words(&head, &link), Some(def), "the records read back");
-        assert_eq!(Saved::from_words(&head), None, "a lone head read as a chart");
-        assert_eq!(Saved::from_words(&link), None, "a lone link read as a chart");
-        assert_eq!(Saved::from_chain_words(&link, &head), None, "swapped records read");
+        assert_eq!(
+            Saved::from_chain_words(&head, &link),
+            Some(def),
+            "the records read back"
+        );
+        assert_eq!(
+            Saved::from_words(&head),
+            None,
+            "a lone head read as a chart"
+        );
+        assert_eq!(
+            Saved::from_words(&link),
+            None,
+            "a lone link read as a chart"
+        );
+        assert_eq!(
+            Saved::from_chain_words(&link, &head),
+            None,
+            "swapped records read"
+        );
         let plain = Saved::curved(&sphere(), t.saved, CENTRE, SPAN).expect("a parent");
-        assert_eq!(Saved::from_chain_words(&plain.to_words(), &link), None, "a curved head read as a chain's");
+        assert_eq!(
+            Saved::from_chain_words(&plain.to_words(), &link),
+            None,
+            "a curved head read as a chain's"
+        );
         for k in 0..WORDS {
             let mut other = link;
             if alter {
@@ -723,14 +861,26 @@ fn check_chain_words(alter: bool) {
         }
     }
     let plain = Saved::curved(&sphere(), chain_cases()[0].0.saved, CENTRE, SPAN).expect("a parent");
-    let chained = plain.again(&chain_cases()[0].0.link, LINK_CENTRE, SPAN).expect("saves again");
-    assert!(chained.again(&chain_cases()[0].0.new, NEW_CENTRE, SPAN).is_none(), "a chain saved again");
+    let chained = plain
+        .again(&chain_cases()[0].0.link, LINK_CENTRE, SPAN)
+        .expect("saves again");
+    assert!(
+        chained
+            .again(&chain_cases()[0].0.new, NEW_CENTRE, SPAN)
+            .is_none(),
+        "a chain saved again"
+    );
     let oblique = Saved::latent(&kernel::chart::Latent {
         z0: [0.0; 8],
         q1: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         q2: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
     });
-    assert!(oblique.again(&chain_cases()[0].0.link, LINK_CENTRE, SPAN).is_none(), "an oblique chart saved again");
+    assert!(
+        oblique
+            .again(&chain_cases()[0].0.link, LINK_CENTRE, SPAN)
+            .is_none(),
+        "an oblique chart saved again"
+    );
 }
 
 #[test]
@@ -744,5 +894,458 @@ negative_control!(
     expected = "read as the saved chain",
     {
         check_chain_words(false);
+    }
+);
+
+// ── The composed chart's area weight and ray-degenerate flag ─────────────────────────────────────────────────────────
+
+fn composed_view(levels: &[Level]) -> Tilted<ShapeSphere<f64>, f64, Composed<f64>> {
+    Tilted::placed(sphere(), Composed::of(levels).expect("a composition")).expect("hidden targets")
+}
+
+/// The area of the parallelogram the window's unit steps map to in `(a, b, h₀ … h₇)` under `levels` (outermost first),
+/// the centres not read: the root of the sum of the squared 2 × 2 minors of the two columns, from the matrices.
+fn reference_gram(levels: &[Level]) -> f64 {
+    let mut columns = [[0.0; 10]; 2];
+    for (q, column) in columns.iter_mut().enumerate() {
+        column[q] = 1.0;
+        for l in levels.iter().rev() {
+            let m = matrix(&l.tilt);
+            let x = *column;
+            for r in 0..10 {
+                column[r] = (0..10).map(|k| m[r][k] * x[k]).sum();
+            }
+        }
+    }
+    let mut sum = 0.0;
+    for i in 0..10 {
+        for j in i + 1..10 {
+            let minor = columns[0][i] * columns[1][j] - columns[0][j] * columns[1][i];
+            sum += minor * minor;
+        }
+    }
+    Float::sqrt(sum)
+}
+
+fn skewed() -> TiltSpec {
+    spec(30.0, 40.0, TiltMap::Lean, 4, 4)
+}
+
+fn corner() -> TiltSpec {
+    spec(-90.0, 90.0, TiltMap::Lean, 4, 4)
+}
+
+/// Over the window: with rotations only, the weight is exactly 1; with a skewed tilt it is the reference's area to
+/// `64 ε` of itself (a criterion fixed before the run), inside any composition and whichever tilt is skewed.
+fn check_weights(product: bool) {
+    let rotations = [
+        vec![
+            level(spec(25.0, 15.0, TiltMap::Sheet, 2, 2), CENTRE),
+            level(spec(-12.0, 18.0, TiltMap::Sheet, 2, 2), NEW_CENTRE),
+        ],
+        vec![
+            level(spec(10.0, 5.0, TiltMap::Lean, 2, 3), CENTRE),
+            level(spec(8.0, 6.0, TiltMap::Lean, 4, 5), NEW_CENTRE),
+        ],
+        vec![
+            level(spec(25.0, 0.0, TiltMap::Sheet, 2, 2), CENTRE),
+            level(spec(10.0, 14.0, TiltMap::Sheet, 3, 3), LINK_CENTRE),
+            level(spec(-7.0, 12.0, TiltMap::Sheet, 2, 2), NEW_CENTRE),
+        ],
+    ];
+    for levels in rotations {
+        let view = composed_view(&levels);
+        for [u, v] in window() {
+            let weight = view.weight(u, v);
+            assert!(
+                weight == 1.0,
+                "the weight of rotations at ({u}, {v}) is {weight}, not 1"
+            );
+        }
+    }
+    let bent = [
+        vec![
+            level(skewed(), CENTRE),
+            level(spec(10.0, 0.0, TiltMap::Sheet, 4, 4), NEW_CENTRE),
+        ],
+        vec![
+            level(skewed(), CENTRE),
+            level(spec(10.0, 0.0, TiltMap::Sheet, 5, 5), NEW_CENTRE),
+        ],
+        vec![
+            level(skewed(), CENTRE),
+            level(spec(10.0, 7.0, TiltMap::Lean, 4, 5), NEW_CENTRE),
+        ],
+        vec![
+            level(spec(20.0, 15.0, TiltMap::Sheet, 4, 4), CENTRE),
+            level(skewed(), NEW_CENTRE),
+        ],
+        vec![
+            level(skewed(), CENTRE),
+            level(spec(10.0, 14.0, TiltMap::Sheet, 5, 5), LINK_CENTRE),
+            level(spec(-7.0, 12.0, TiltMap::Sheet, 4, 4), NEW_CENTRE),
+        ],
+    ];
+    for levels in bent {
+        let want = reference_gram(&levels);
+        let view = composed_view(&levels);
+        let weight = if product {
+            levels
+                .iter()
+                .map(|l| Tilt::new(&l.tilt, l.centre, l.span).weight)
+                .product()
+        } else {
+            view.weight(0.5, 0.5)
+        };
+        eprintln!("skewed composition: weight {weight:.17} against area {want:.17}");
+        assert!(
+            (weight - want).abs() <= 64.0 * f64::EPSILON * want,
+            "the weight with a skewed tilt is {weight}, not the area {want}"
+        );
+    }
+}
+
+#[test]
+fn saved_chart_wide_weight() {
+    check_weights(false);
+}
+
+negative_control!(
+    saved_chart_wide_weight,
+    "the product of each tilt's weight is not the composition's area",
+    expected = "not the area",
+    {
+        check_weights(true);
+    }
+);
+
+/// The flag and the weight at the rank-losing corner: the innermost tilt there, or the one tilt on there, is
+/// `ray-degenerate` with every weight 0; an outer tilt there under an inner one on another target keeps its rank. With
+/// `swap` the control reads the other tilt as the one at the corner.
+fn check_corner(swap: bool) {
+    let sheet = |x| spec(10.0, 0.0, TiltMap::Sheet, x, x);
+    let cases = [
+        (
+            vec![level(corner(), CENTRE), level(sheet(4), NEW_CENTRE)],
+            false,
+            "the new tilt into the corner's target",
+        ),
+        (
+            vec![level(corner(), CENTRE), level(sheet(5), NEW_CENTRE)],
+            false,
+            "the outer tilt at the corner",
+        ),
+        (
+            vec![
+                level(corner(), CENTRE),
+                level(spec(0.0, 0.0, TiltMap::Sheet, 4, 4), NEW_CENTRE),
+            ],
+            true,
+            "one tilt, at the corner",
+        ),
+        (
+            vec![level(sheet(5), CENTRE), level(corner(), NEW_CENTRE)],
+            true,
+            "the innermost tilt at the corner",
+        ),
+        (
+            vec![
+                level(sheet(2), CENTRE),
+                level(sheet(3), LINK_CENTRE),
+                level(corner(), NEW_CENTRE),
+            ],
+            true,
+            "the innermost of three at the corner",
+        ),
+    ];
+    for (levels, degenerate, what) in cases {
+        let Some(composed) = Composed::of(&levels) else {
+            assert!(!degenerate, "{what}: no composition");
+            continue;
+        };
+        let view = Tilted::placed(sphere(), composed).expect("hidden targets");
+        let image = view.system_image();
+        let flag = composed.rank_loss() != swap;
+        assert_eq!(flag, degenerate, "{what}: the flag");
+        if degenerate != swap {
+            assert_eq!(image, SystemImage::RayDegenerate, "{what}: the image");
+            assert!(
+                window().iter().all(|&[u, v]| view.weight(u, v) == 0.0),
+                "{what}: a weight"
+            );
+        } else {
+            assert_eq!(image, SystemImage::Bijective, "{what}: the image");
+            assert!(
+                window().iter().all(|&[u, v]| view.weight(u, v) > 0.0),
+                "{what}: a weight"
+            );
+        }
+    }
+    let kept = [level(corner(), CENTRE), level(sheet(5), NEW_CENTRE)];
+    let want = reference_gram(&kept);
+    let weight = composed_view(&kept).weight(0.5, 0.5);
+    assert!(
+        want > 0.0 && (weight - want).abs() <= 64.0 * f64::EPSILON * want,
+        "the corner's area {weight} is not {want}"
+    );
+}
+
+#[test]
+fn saved_chart_wide_corner() {
+    check_corner(false);
+}
+
+negative_control!(
+    saved_chart_wide_corner,
+    "the other tilt read as the one at the corner must fail",
+    expected = ": the flag",
+    {
+        check_corner(true);
+    }
+);
+
+// ── Repeat counting ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The points of an `n` × `n` grid over `[lo, hi]²`, the square `[0, 1]²` and its surroundings.
+fn grid(n: u32, lo: f64, hi: f64) -> Vec<[f64; 2]> {
+    let at = |i: u32| lo + (hi - lo) * (f64::from(i) + 0.37) / f64::from(n);
+    (0..n)
+        .flat_map(|j| (0..n).map(move |i| [at(i), at(j)]))
+        .collect()
+}
+
+/// How many of `points` the composition places inside the chart's square `[0, 1]²`.
+fn inside(c: &Composed<f64>, points: &[[f64; 2]]) -> u64 {
+    points
+        .iter()
+        .filter(|&&[u, v]| {
+            let ([a, b], _) = c.place::<f64>(u, v);
+            (0.0..=1.0).contains(&a) && (0.0..=1.0).contains(&b)
+        })
+        .count() as u64
+}
+
+/// With one tilt on, the composition counts, flags and weighs as that tilt alone on the chart, at every pixel of a grid
+/// that runs past the square, whichever of the two places it holds; `other` is the tilt the control compares with.
+fn check_one_on(other: bool) {
+    let tilts = [
+        spec(180.0, 0.0, TiltMap::Sheet, 2, 2),
+        spec(20.0, 10.0, TiltMap::Sheet, 2, 2),
+        spec(30.0, 45.0, TiltMap::Lean, 2, 2),
+        spec(60.0, 60.0, TiltMap::Lean, 2, 3),
+        corner(),
+    ];
+    let points = grid(25, -1.5, 2.5);
+    for (k, t) in tilts.iter().enumerate() {
+        let off = spec(0.0, 0.0, TiltMap::Sheet, 2, 2);
+        let against = if other {
+            tilts[(k + 1) % tilts.len()]
+        } else {
+            *t
+        };
+        let single =
+            Tilted::new(sphere(), Tilt::new(&against, CENTRE, SPAN)).expect("a hidden target");
+        for levels in [
+            [level(*t, CENTRE), level(off, CENTRE)],
+            [level(off, CENTRE), level(*t, CENTRE)],
+        ] {
+            let view = composed_view(&levels);
+            assert_eq!(
+                view.system_image(),
+                single.system_image(),
+                "the image of {t:?}"
+            );
+            assert_eq!(
+                view.counted_total(points.iter().copied()),
+                single.counted_total(points.iter().copied()),
+                "the count of {t:?} alone is not the single tilt's"
+            );
+            for &[u, v] in &points {
+                assert_eq!(view.pixel(u, v), single.pixel(u, v), "the pixel of {t:?}");
+                assert_eq!(
+                    view.weight(u, v).to_bits(),
+                    single.weight(u, v).to_bits(),
+                    "the weight of {t:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn saved_chart_wide_one_tilt_on() {
+    check_one_on(false);
+}
+
+negative_control!(
+    saved_chart_wide_one_tilt_on,
+    "another tilt's count is not the composition's",
+    expected = "is not the single tilt's",
+    {
+        check_one_on(true);
+    }
+);
+
+/// With several tilts on: where every tilt keeps every hidden offset (`N = 0` on each), a pixel past the square is a
+/// repeat, so the count is the pixels placed inside it; where one does not, nothing is folded and every pixel counts.
+/// `wrong` swaps the two expectations (the control's).
+fn check_several(wrong: bool) {
+    let flip = spec(180.0, 0.0, TiltMap::Sheet, 2, 2);
+    let points = grid(25, -1.5, 2.5);
+    let all = points.len() as u64;
+    let keeps =
+        Composed::of(&[level(flip, CENTRE), level(flip, NEW_CENTRE)]).expect("a composition");
+    let moves = Composed::of(&[
+        level(flip, CENTRE),
+        level(spec(30.0, 0.0, TiltMap::Sheet, 2, 2), NEW_CENTRE),
+    ])
+    .expect("a composition");
+    assert_eq!(
+        keeps.normal_zero(),
+        [true, true],
+        "every tilt keeps every offset"
+    );
+    assert_eq!(
+        moves.normal_zero(),
+        [false, false],
+        "one tilt moves an offset"
+    );
+    for (c, folded) in [(keeps, true), (moves, false)] {
+        let view = Tilted::placed(sphere(), c).expect("a hidden target");
+        let want = if folded != wrong {
+            inside(&c, &points)
+        } else {
+            all
+        };
+        assert_eq!(
+            view.counted_total(points.iter().copied()),
+            want,
+            "the count of a composition that {} its offsets",
+            if folded { "keeps" } else { "moves" }
+        );
+        let outside = points.iter().find(|&&[u, v]| {
+            let ([a, b], _) = c.place::<f64>(u, v);
+            !(0.0..=1.0).contains(&a) || !(0.0..=1.0).contains(&b)
+        });
+        let &[u, v] = outside.expect("a pixel past the square");
+        assert_eq!(
+            view.pixel(u, v) == Some(PixelCount::System),
+            folded == wrong,
+            "a pixel past the square of a composition that {} its offsets",
+            if folded { "keeps" } else { "moves" }
+        );
+    }
+}
+
+#[test]
+fn saved_chart_wide_several_on() {
+    check_several(false);
+}
+
+negative_control!(
+    saved_chart_wide_several_on,
+    "a fold where the offsets move, and none where they are kept, must fail",
+    expected = "the count of a composition",
+    {
+        check_several(true);
+    }
+);
+
+/// A placement of the identity on `(a, b)` with the hidden offsets `d`, the third and fourth read from the pixel: it
+/// places exactly, which a tilt's sines and cosines do not, so a pixel lands on `r = π` of the exponential map.
+/// The offsets on the four targets 2, 3, 4, 5 of the pixel `(u, v)`.
+type Offsets = fn(f64, f64) -> [f64; 4];
+
+struct Exact {
+    d: Offsets,
+}
+
+impl Placement<f64> for Exact {
+    fn on(&self) -> bool {
+        true
+    }
+    fn place<R: Float + From<f64>>(&self, u: R, v: R) -> ([R; 2], Shift<R>) {
+        let widen = <R as From<f64>>::from;
+        let at = (self.d)(u.to_f64().unwrap_or(0.0), v.to_f64().unwrap_or(0.0));
+        let [d2, d3, d4, d5] = at.map(widen);
+        (
+            [u, v],
+            Shift {
+                x: 2,
+                dx: d2,
+                y: 3,
+                dy: d3,
+                two: true,
+                z: 4,
+                dz: d4,
+                w: 5,
+                dw: d5,
+                more: 2,
+            },
+        )
+    }
+    fn targets(&self) -> ([u32; 2], bool) {
+        ([2, 3], true)
+    }
+    fn more_targets(&self) -> ([u32; 2], u32) {
+        ([4, 5], 2)
+    }
+    fn area_weight(&self) -> f64 {
+        1.0
+    }
+}
+
+/// The two pixels on `r = π` of the exponential map, `(1, ½)` and `(0, ½)`, which are the one system `−n₀` where their
+/// offsets agree on all four targets and two where any differs, the third and the fourth included. `ignore` expects
+/// the wrong answer for a difference on the third or fourth alone (the control's: those slots unread).
+fn check_antipodes(ignore: bool) {
+    let mut chart = sphere();
+    chart.map = ShapeMap::Exponential;
+    chart.scale = core::f64::consts::PI;
+    let points = [[1.0, 0.5], [0.0, 0.5]];
+    let cases: [(Offsets, u64, &str); 5] = [
+        (|_, _| [0.1, 0.2, 0.3, 0.4], 1, "the same offsets"),
+        (|u, _| [0.1 * u, 0.2, 0.3, 0.4], 2, "the first differing"),
+        (|u, _| [0.1, 0.2 * u, 0.3, 0.4], 2, "the second differing"),
+        (|u, _| [0.1, 0.2, 0.3 * u, 0.4], 2, "the third differing"),
+        (|u, _| [0.1, 0.2, 0.3, 0.4 * u], 2, "the fourth differing"),
+    ];
+    for (d, expected, what) in cases {
+        let view = Tilted::placed(chart, Exact { d }).expect("hidden targets");
+        let folds = Folds {
+            normal_zero: [false, false],
+            strip: None,
+        };
+        for &[u, v] in &points {
+            assert_eq!(
+                view.pixel_by(folds, u, v),
+                Some(PixelCount::Antipode),
+                "a pixel on r = π"
+            );
+        }
+        let want = if ignore && (what.contains("third") || what.contains("fourth")) {
+            1
+        } else {
+            expected
+        };
+        assert_eq!(
+            view.counted_by(folds, points.iter().copied()),
+            want,
+            "the antipode's count with {what}"
+        );
+    }
+}
+
+#[test]
+fn saved_chart_wide_antipodes() {
+    check_antipodes(false);
+}
+
+negative_control!(
+    saved_chart_wide_antipodes,
+    "a count that reads only the first two offsets must fail",
+    expected = "the antipode's count",
+    {
+        check_antipodes(true);
     }
 );

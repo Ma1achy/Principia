@@ -166,6 +166,7 @@ fn old_words(def: &Saved) -> [f64; WORDS] {
     w[0] = match def {
         Saved::Oblique(_) => 0.0,
         Saved::Curved(_) => 1.0,
+        Saved::Chained(_) => panic!("a chain has no old version"),
     };
     w
 }
