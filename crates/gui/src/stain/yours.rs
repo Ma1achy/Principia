@@ -353,6 +353,11 @@ impl Scratch {
         });
     }
 
+    /// Forgets the values kept for nodes no longer in `g`: a node of another stain may come to have the same id.
+    pub fn forget_gone(&mut self, g: &StainGraph) {
+        self.remembered.retain(|id, _| g.node(*id).is_some());
+    }
+
     /// The draft of node `node` begun from `base`.
     fn draft(&self, node: NodeId, base: &str) -> Option<&Draft> {
         self.drafts

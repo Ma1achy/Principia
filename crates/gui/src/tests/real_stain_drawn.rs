@@ -522,8 +522,11 @@ fn code_views_show_the_text_compiled_and_problems_the_authors_line() {
     let c = app.side().stain_content().expect("content");
     let compiled = canvas.reported().source.expect("a pipeline drawn");
     check_pipeline(&c.pipeline, &compiled);
+    let last_valid = engine::contract::stain::assembled::assemble(&sound, crate::real::stain::TIER)
+        .expect("the sound graph assembles")
+        .pipeline;
     rejects("the assembler's last valid code", || {
-        check_pipeline(&c.code, &compiled)
+        check_pipeline(&last_valid, &compiled)
     });
     check_located(&c.problems, 3);
     let assembled = assembled_line(&c.problems[0]).expect("the report's own line");

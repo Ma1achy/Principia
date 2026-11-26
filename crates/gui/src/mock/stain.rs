@@ -5,6 +5,7 @@
 //! 02_stain.png's nodes: the outcome state and `t_end` as sources, the outcome palette as colour, a late fade as
 //! brightness, multiplied at the combiner into `OUT`.
 
+use std::collections::BTreeMap;
 use std::sync::Mutex;
 
 use engine::contract::render_state::{NodeId, NodeKind, Occupant, StainGraph};
@@ -172,7 +173,20 @@ pub fn assembled(g: &StainGraph) -> String {
 /// The whole pipeline's code, the Pipeline WGSL view: the assembler's text for `g`, so a capture shows real code; a
 /// placeholder of each node, by id, where it does not assemble.
 pub fn pipeline(g: &StainGraph) -> String {
+    // Assembling takes far longer than a frame, and a param edit changes no code: kept by the code's key, not the graph.
+    static KEPT: Mutex<BTreeMap<u64, String>> = Mutex::new(BTreeMap::new());
+    let key = crate::stain::catalogue::key(g);
+    let mut kept = KEPT.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(text) = key.and_then(|k| kept.get(&k)) {
+        return text.clone();
+    }
     if let Ok(a) = engine::contract::stain::assembled::assemble(g, crate::real::stain::TIER) {
+        if let Some(k) = key {
+            if kept.len() >= 64 {
+                kept.clear();
+            }
+            kept.insert(k, a.pipeline.clone());
+        }
         return a.pipeline;
     }
     let mut text =

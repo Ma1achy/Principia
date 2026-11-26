@@ -389,6 +389,8 @@ impl Compiler {
             .unwrap_or_default();
         // The text the picture's pipeline was compiled from, not the assembler's again: that one keeps what the proof
         // drops and the declarations the pipeline blanks, and misses a sound edit beside a node that fell back.
+        // The plan is unclear here; chose to leave the code under the canvas the assembler's, every node kept, because
+        // it maps its text back to the nodes on the canvas, which a dropped node would vanish from.
         if let Some(source) = &drawn.source {
             pipeline = source.to_string();
         }

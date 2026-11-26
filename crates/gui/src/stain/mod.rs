@@ -599,6 +599,7 @@ pub fn activate(
         match content.and_then(|c| c.graphs.get(k)?.as_ref()) {
             Some(load) => {
                 s.library.selected = None;
+                s.yours.remembered.clear();
                 let edit = edited(g, |g| {
                     *g = load.clone();
                     Ok(())
@@ -705,6 +706,7 @@ pub fn show(
     out: &mut Out,
 ) {
     let regions = Regions::new(layout, ui.ctx().pixels_per_point(), s.library.collapsed);
+    s.yours.forget_gone(page.graph);
     keys.keyboard.place(LIBRARY, regions.library);
     keys.keyboard.place(CANVAS, regions.canvas);
     keys.keyboard.place(INSPECTOR, regions.right);

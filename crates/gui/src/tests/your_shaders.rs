@@ -1710,6 +1710,18 @@ fn values_follow_a_changed_declaration_by_name() {
     save_as(&mut app, &mut h, "Fade", "me/fade");
     assert!(!app.stain.yours.remembered.contains_key(&FADE));
 
+    // Its node gone: what was kept is forgotten, so another stain's node of that id never takes it.
+    app.stain.yours.remembered.insert(FADE, kept.clone());
+    let gone = |app: &Mock| assert!(!app.stain.yours.remembered.contains_key(&FADE));
+    let mut without_fade = default_graph();
+    without_fade.remove(FADE).expect("the fade removed");
+    hold(&mut app, &mut h, &without_fade, PALETTE);
+    gone(&app);
+    hold(&mut app, &mut h, &g, FADE);
+    app.stain.yours.remembered.insert(FADE, kept.clone());
+    let _ = h.frame(&mut app, Vec::new());
+    rejects("the node still there", || gone(&app));
+
     let check_clamped = |v: Option<Vec<f64>>| assert_eq!(v, Some(vec![0.5]));
     rejects("the value left outside its range", || {
         check_clamped(Some(vec![0.9]))
