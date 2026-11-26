@@ -150,6 +150,8 @@ pub struct App<S: EngineSide> {
     pub trajectory: explore::trajectory::Scratch,
     /// The Stain editor's own state.
     pub stain: stain::Scratch,
+    /// What the engine says of the selected node's controls.
+    pub standings: stain::standing::Standings,
     /// Your shaders' folder; none unless given ([`App::with_shaders`]).
     pub shaders: Shaders,
     /// Whether the Stain page was shown last frame.
@@ -238,6 +240,7 @@ impl<S: EngineSide> App<S> {
             manifold: Default::default(),
             trajectory: Default::default(),
             stain: Default::default(),
+            standings: Default::default(),
             shaders: Shaders::default(),
             on_stain: false,
             overlay_default: Default::default(),
@@ -547,6 +550,11 @@ impl<S: EngineSide> App<S> {
         if self.side.compiling() {
             ctx.request_repaint();
         }
+        // The frame after an answer too, which draws it.
+        if self.standings.pending() {
+            self.standings.poll();
+            ctx.request_repaint();
+        }
     }
 
     /// The frame's work on the root `ui`, between the hold's start and end.
@@ -670,6 +678,11 @@ impl<S: EngineSide> App<S> {
         );
         let mut content = self.side.stain_content();
         self.follow_shaders(&ctx, content.as_mut());
+        if let Some(content) = content.as_mut().filter(|_| self.view.mode == Mode::Stain) {
+            let graph = &self.snapshot.render.stain_graph;
+            let selected = self.stain.selected().and_then(|id| graph.node(id));
+            self.standings.list(content, selected);
+        }
         let mut stain_out = stain::Out::default();
         stain::join(
             self.keyboard.tree_mut(Mode::Stain),

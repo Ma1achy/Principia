@@ -29,6 +29,9 @@ pub struct Headless {
     pixels_per_point: f32,
     time: f64,
     step: f64,
+    /// Whether a frame leaves the thread that judges the controls ([`crate::stain::standing`]) to its own pace, as a
+    /// window's does: otherwise each frame waits for it, so the next draws the same whatever its pace.
+    pub at_its_pace: bool,
     /// The texture changes of every frame so far, for a renderer that starts after them.
     pub textures: TexturesDelta,
 }
@@ -52,6 +55,7 @@ impl Headless {
             pixels_per_point,
             time: 0.0,
             step: FRAME_S,
+            at_its_pace: false,
             textures: TexturesDelta::default(),
         }
     }
@@ -99,6 +103,9 @@ impl Headless {
         let mut output = self.ctx.run_ui(input, |ui| app.ui(ui));
         self.textures
             .append(std::mem::take(&mut output.textures_delta));
+        if !self.at_its_pace {
+            app.standings.wait();
+        }
         output
     }
 

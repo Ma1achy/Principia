@@ -367,6 +367,7 @@ impl Compiler {
             code,
             pipeline,
             described,
+            standing: Default::default(),
             node_code: node_code(g),
             compiled,
             compiling,

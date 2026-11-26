@@ -44,6 +44,7 @@ mod tests {
     mod compass_support;
     mod conformance;
     mod console_open_close;
+    mod control_standing;
     mod degenerate_tilt_guards;
     mod explore_shell;
     mod f3_fallback_mock;

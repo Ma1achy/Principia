@@ -40,13 +40,13 @@ use crate::stain::{
 use crate::windows::Keys;
 
 /// A node using every control (`crates/render/tests/node_declarations.rs` holds it to that).
-const EXAMPLE: &str = include_str!("../../../render/tests/data/every_control.wgsl");
+pub(super) const EXAMPLE: &str = include_str!("../../../render/tests/data/every_control.wgsl");
 
 /// The node the tests look at, in a graph [`holding`] one.
 const COMBINER: NodeId = NodeId(0);
 
 /// A graph of the backbone and one node of `kind` with `occupant`, and that node.
-fn holding(kind: NodeKind, occupant: Occupant) -> (StainGraph, NodeId) {
+pub(super) fn holding(kind: NodeKind, occupant: Occupant) -> (StainGraph, NodeId) {
     let mut g = StainGraph::new();
     let id = match kind {
         NodeKind::Combiner => {
@@ -59,22 +59,22 @@ fn holding(kind: NodeKind, occupant: Occupant) -> (StainGraph, NodeId) {
 }
 
 /// The Stain page, drawn by itself on a context kept between drawings.
-struct Bench {
-    h: Headless,
+pub(super) struct Bench {
+    pub(super) h: Headless,
     time: f64,
 }
 
 /// What [`Bench::draw`] drew of a node: the canvas's and the inspector's shapes, the inspector's scopes, and where
 /// each scope was drawn.
-struct Drawing {
-    shapes: Vec<Shape>,
+pub(super) struct Drawing {
+    pub(super) shapes: Vec<Shape>,
     scopes: Vec<Scope>,
-    keyboard: Keyboard,
-    inspector: Rect,
+    pub(super) keyboard: Keyboard,
+    pub(super) inspector: Rect,
 }
 
 impl Bench {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             h: headless(),
             time: 0.0,
@@ -83,7 +83,13 @@ impl Bench {
 
     /// Draws `g` with `content`, node `id` selected and the focus on `at`, three frames, the last kept: egui's layout
     /// and its animations have settled by then.
-    fn draw(&mut self, g: &StainGraph, content: &Content, id: NodeId, at: &[String]) -> Drawing {
+    pub(super) fn draw(
+        &mut self,
+        g: &StainGraph,
+        content: &Content,
+        id: NodeId,
+        at: &[String],
+    ) -> Drawing {
         let ppp = self.h.pixels_per_point();
         let layout = Layout::new(self.h.screen(), ppp);
         let regions = Regions::new(&layout, ppp, false);
@@ -184,7 +190,7 @@ fn texts(shapes: &[Shape]) -> Vec<String> {
 // ── A built-in and its source pasted ───────────────────────────────────────────────────────────────────────────────
 
 /// Every shipped source and every field, each its kind and its occupant.
-fn shipped() -> Vec<(NodeKind, Occupant)> {
+pub(super) fn shipped() -> Vec<(NodeKind, Occupant)> {
     let fields = source_fields().expect("the fields").into_iter();
     library()
         .expect("the library")
@@ -356,7 +362,12 @@ fn a_node_of_forty_parameters_shows_all_forty() {
 
 /// The mock app on the Stain page with the example's node selected.
 fn on_example() -> (App<MockSide>, Headless, NodeId) {
-    let (g, id) = holding(NodeKind::Colour, Occupant::Custom(EXAMPLE.to_owned()));
+    on_colour(EXAMPLE)
+}
+
+/// The mock app on the Stain page with a colour of `text` selected.
+pub(super) fn on_colour(text: &str) -> (App<MockSide>, Headless, NodeId) {
+    let (g, id) = holding(NodeKind::Colour, Occupant::Custom(text.to_owned()));
     let mut app = mock_app();
     app.set_field(SetField {
         edit: Edit::Render(RenderField::StainGraph(g)),
@@ -371,7 +382,7 @@ fn on_example() -> (App<MockSide>, Headless, NodeId) {
 }
 
 /// Moves the focus to scope `at` and settles.
-fn go(app: &mut App<MockSide>, h: &mut Headless, at: &str) {
+pub(super) fn go(app: &mut App<MockSide>, h: &mut Headless, at: &str) {
     app.view.focus.path = app.keyboard.tree(Mode::Stain).path_to(at);
     app.view.focus.mode = KeyMode::Navigation;
     for _ in 0..4 {
@@ -446,7 +457,7 @@ fn node(app: &App<MockSide>, id: NodeId) -> Node {
 }
 
 /// Uniform `name`'s value in node `id`.
-fn value(app: &App<MockSide>, id: NodeId, name: &str) -> Vec<f64> {
+pub(super) fn value(app: &App<MockSide>, id: NodeId, name: &str) -> Vec<f64> {
     let declared = graph(app).uniforms(id).expect("the uniforms");
     let default = declared.into_iter().find(|u| u.name == name);
     node(app, id)
@@ -457,7 +468,7 @@ fn value(app: &App<MockSide>, id: NodeId, name: &str) -> Vec<f64> {
 }
 
 /// Asserts each uniform's value in `got` is `want`'s.
-fn check_values(got: &[(&str, Vec<f64>)], want: &[(&str, Vec<f64>)]) {
+pub(super) fn check_values(got: &[(&str, Vec<f64>)], want: &[(&str, Vec<f64>)]) {
     for ((name, a), (_, b)) in got.iter().zip(want) {
         let close = a.len() == b.len() && a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-9);
         assert!(close, "{name} is {a:?}, not {b:?}");
@@ -468,7 +479,7 @@ fn check_values(got: &[(&str, Vec<f64>)], want: &[(&str, Vec<f64>)]) {
 /// Each control's step, or press, by the keyboard: its scope, the uniform and its value after one Enter and, for a
 /// number, one →. The scopes are by the display order: mode, bands, scale, strength, invert, mask, warm, cool, hue,
 /// the ramp, offset.
-fn steps() -> Vec<(&'static str, &'static str, Vec<f64>)> {
+pub(super) fn steps() -> Vec<(&'static str, &'static str, Vec<f64>)> {
     let up = |v: f64| controls::linear(controls::code(v) + 1.0);
     vec![
         ("stain_insp_param_0_2", "mode", vec![2.0]),

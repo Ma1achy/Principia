@@ -8,6 +8,9 @@
 //! its channels, stops or components; and on a number it starts interaction, in which the arrows step it, ×10 with
 //! Shift and ×0.1 with Alt. A step is a hundredth of a slider's range (of its logarithm's, a log slider's; one at
 //! least, of whole numbers), one of a stepper or of an 8-bit channel, and a degree of an angle.
+//!
+//! A control that cannot change the picture now is dimmed, with why in words under it, or on its section's heading where
+//! every control there shares them ([`standing`]), and acts as it always does.
 
 use std::collections::BTreeSet;
 
@@ -15,9 +18,9 @@ use eframe::egui::{
     self, vec2, Button, Color32, DragValue, Rect, RichText, Sense, Slider, Stroke, Ui, WidgetInfo,
     WidgetType,
 };
-use engine::contract::stain::describe::{Control, ControlView, Description, UniformType};
+use engine::contract::stain::describe::{Control, ControlView, Description, Standing, UniformType};
 
-use super::intern;
+use super::{intern, standing};
 use crate::keyboard::scopes::{Adjust, Base, Scope, ScopeId, StepKind};
 use crate::windows::Keys;
 
@@ -373,6 +376,10 @@ pub struct Draw<'a, 'k> {
     pub clicked: &'a mut Vec<ScopeId>,
     /// The uniforms edited, each with its value.
     pub edits: &'a mut Vec<(String, Vec<f64>)>,
+    /// What the engine says of the node's uniforms.
+    pub standing: &'a [Standing],
+    /// Whether the section's heading says why none of its controls can matter, so they do not.
+    pub shared: bool,
 }
 
 impl Draw<'_, '_> {
@@ -391,9 +398,40 @@ impl Draw<'_, '_> {
     }
 }
 
+/// How far in the words under a dimmed control start, in points.
+const WORDS_INDENT: i8 = 10;
+
+/// Draws `control`, dimmed where there are words of `why`, over them unless they are `shared`.
+fn dimmed(ui: &mut Ui, why: Option<String>, shared: bool, control: impl FnOnce(&mut Ui)) {
+    let full = ui.opacity();
+    if why.is_some() {
+        ui.multiply_opacity(standing::DIMMED);
+    }
+    control(ui);
+    ui.set_opacity(full);
+    if let Some(why) = why.filter(|_| !shared) {
+        // Under its control, nearer it than the next.
+        ui.add_space(-0.5 * ui.spacing().item_spacing.y);
+        egui::Frame::NONE
+            .inner_margin(egui::Margin {
+                left: WORDS_INDENT,
+                bottom: 2,
+                ..Default::default()
+            })
+            .show(ui, |ui| ui.label(RichText::new(why).small().weak()));
+    }
+}
+
 /// Draws control `c` as `part`.
 pub fn show(ui: &mut Ui, c: &ControlView, part: &Part, draw: &mut Draw<'_, '_>) {
-    ui.push_id(part.scope.id, |ui| match &c.control {
+    let why = standing::words(c, draw.standing);
+    ui.push_id(part.scope.id, |ui| {
+        dimmed(ui, why, draw.shared, |ui| control(ui, c, part, draw));
+    });
+}
+
+fn control(ui: &mut Ui, c: &ControlView, part: &Part, draw: &mut Draw<'_, '_>) {
+    match &c.control {
         Control::Hidden
         | Control::List
         | Control::Curve
@@ -421,7 +459,7 @@ pub fn show(ui: &mut Ui, c: &ControlView, part: &Part, draw: &mut Draw<'_, '_>) 
         Control::Gradient(_) => stops(ui, c, part, draw),
         Control::Angle => angle(ui, c, part, draw),
         Control::Fields => fields(ui, c, part, draw),
-    });
+    }
 }
 
 fn slider(ui: &mut Ui, c: &ControlView, part: &Part, draw: &mut Draw<'_, '_>) {
@@ -554,10 +592,18 @@ fn stops(ui: &mut Ui, c: &ControlView, part: &Part, draw: &mut Draw<'_, '_>) {
             .collect::<Vec<_>>();
         let (bar, _) = ui.allocate_exact_size(vec2(ui.available_width(), 14.0), Sense::hover());
         let shades: Vec<[f64; 3]> = values.iter().map(|(_, v)| rgb(v)).collect();
-        gradient(ui.painter(), bar, &shades);
+        // Its chips overlap, so it is drawn whole and then covered: a see-through one would show its seams.
+        let mut whole = ui.painter().clone();
+        whole.set_opacity(1.0);
+        gradient(&whole, bar, &shades);
+        let cover = ui.visuals().panel_fill.gamma_multiply(1.0 - ui.opacity());
+        whole.rect_filled(bar, 0.0, cover);
         for (j, ((uniform, value), p)) in values.into_iter().zip(&part.parts).enumerate() {
             ui.push_id(j, |ui| {
-                swatch(ui, &stop_label(j), uniform, value, c.range, p, draw);
+                let why = standing::stop_words(c, uniform, draw.standing);
+                dimmed(ui, why, false, |ui| {
+                    swatch(ui, &stop_label(j), uniform, value, c.range, p, draw);
+                });
             });
         }
     });
