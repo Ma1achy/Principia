@@ -23,6 +23,8 @@ use render::codegen::{generate, Arg, Call, Node as Tree, Param, Slot, ValueType}
 use render::custom::{
     line_in, reconcile, settle, template, CustomNodes, Note, Origin, Remembered, Status,
 };
+#[cfg(feature = "controls")]
+use render::custom::{probe, Fault as CustomFault};
 use render::pipeline_cache::{CompileError, NodeKey};
 use render::registry::ZERO;
 use validation::negative_control;
@@ -70,10 +72,6 @@ fn stain(g: Vec<Node>) -> Stain {
 enum Fault {
     /// No last valid occupant is kept.
     NoLastValid,
-    /// The fallback reverts every changed node, the valid edit too.
-    RevertsEverything,
-    /// The line is the assembled module's own.
-    AssembledLine,
 }
 
 fn check_fallback(fault: Option<Fault>) {
@@ -90,10 +88,7 @@ fn check_fallback(fault: Option<Fault>) {
     };
     let blamed: Vec<usize> = settled.failed.iter().map(|(i, _)| *i).collect();
     assert_eq!(blamed, vec![1], "exactly the colour node failed");
-    let mut want = graph(A_V1, B_V2);
-    if fault == Some(Fault::RevertsEverything) {
-        want = graph(A_V1, B_V1);
-    }
+    let want = graph(A_V1, B_V2);
     let rendering = settled.stain.nodes();
     let got: Vec<&Occupant> = rendering.iter().map(|n| &n.occupant).collect();
     let want_occupants: Vec<&Occupant> = want.iter().map(|n| &n.occupant).collect();
@@ -126,15 +121,8 @@ fn check_fallback(fault: Option<Fault>) {
     let p = &problems.0[0];
     assert_eq!(p.node, Some(A_KEY), "against the node that failed");
     assert_eq!(p.origin, Origin::Code);
-    let line = match fault {
-        Some(Fault::AssembledLine) => match &errors[0] {
-            CompileError::Node { error, .. } => assembled_line(&error.to_string()),
-            CompileError::Stain(_) => None,
-        },
-        _ => p.line,
-    };
     assert_eq!(
-        line,
+        p.line,
         Some(3),
         "at the author's own line of `A`'s source: {}",
         p.message
@@ -143,7 +131,8 @@ fn check_fallback(fault: Option<Fault>) {
     assert_eq!(custom.status(B_KEY), Some(Status::Valid));
 }
 
-/// The `wgsl:<line>` of a naga report: the assembled module's line.
+/// The `wgsl:<line>` of a naga report: the assembled module's line, as a finder that takes it for the author's.
+#[cfg(feature = "controls")]
 fn assembled_line(report: &str) -> Option<usize> {
     let at = report.find("wgsl:")? + 5;
     report[at..]
@@ -173,9 +162,9 @@ fn custom_node_fallback_reverts_only_the_failing_node() {
 
 negative_control!(
     custom_node_fallback_reverts_only_the_failing_node,
-    "the fallback reverts the valid edit too",
+    "settle reverts the valid edit too",
     expected = "`A` at its last valid source, `B` at its new one",
-    check_fallback(Some(Fault::RevertsEverything)),
+    probe::with(CustomFault::RevertsEverything, || check_fallback(None)),
 );
 
 #[test]
@@ -186,9 +175,9 @@ fn custom_node_fallback_names_the_authors_line() {
 
 negative_control!(
     custom_node_fallback_names_the_authors_line,
-    "the line is the assembled module's",
+    "problem_of reports the assembled module's line",
     expected = "at the author's own line",
-    check_fallback(Some(Fault::AssembledLine)),
+    probe::with(CustomFault::AssembledLine, || check_fallback(None)),
 );
 
 /// A quoted line the node's text does not have (it is the prelude's) gives no line, not a wrong one; one it has, its own.
@@ -328,8 +317,9 @@ fn check_eject(break_it: bool) {
     assert_eq!(e.source(), g.source);
 
     assert_eq!(e.dependencies(2), Ok(vec![1]), "node 2 calls node 1");
+    assert!(!e.is_ejected(1));
     assert!(
-        e.edit(1, "fn other() {}").is_err() || !e.is_ejected(1),
+        e.edit(1, &g.functions[0].text).is_err(),
         "an edit of a node that is not ejected is refused"
     );
     e.eject(1).unwrap_or_else(|e| panic!("{e}"));
@@ -355,6 +345,109 @@ negative_control!(
     "a revert that leaves the ejected text behind",
     expected = "byte for byte",
     check_eject(true),
+);
+
+/// Edit of a node that is not ejected is refused; the control ejects it first, so the edit is taken.
+fn check_edit_refused(eject_first: bool) {
+    let g = generated();
+    let mut e = Ejected::new(g.clone());
+    if eject_first {
+        e.eject(1).unwrap_or_else(|e| panic!("{e}"));
+    }
+    assert!(
+        e.edit(1, &g.functions[0].text).is_err(),
+        "an edit of a node that is not ejected is refused"
+    );
+}
+
+#[test]
+fn custom_node_fallback_edit_needs_an_ejected_node() {
+    check_edit_refused(false);
+}
+
+negative_control!(
+    custom_node_fallback_edit_needs_an_ejected_node,
+    "the node is ejected, so its edit is taken",
+    expected = "is refused",
+    check_edit_refused(true),
+);
+
+/// Drift. Pass criteria, written before the run: node 2's function (it calls `node_1`) is ejected and edited, then
+/// the tree is regenerated unchanged. Editing its call to `node_9` reports exactly `Missing { id: 2, callee: 9 }`
+/// beside the `Rewired` that the lost call to node 1 is; dropping the call to `node_1` for a constant reports
+/// exactly `Rewired { id: 2, ejected: [], generated: [1] }`; an edit that keeps the calls reports nothing. The
+/// controls make the edit that keeps the calls, so the drift asserted is not there.
+fn drifted(edit: fn(&str) -> String) -> Vec<Drift> {
+    let g = generated();
+    let mut e = Ejected::new(g.clone());
+    let text = e.eject(2).unwrap_or_else(|e| panic!("{e}")).to_owned();
+    assert!(text.contains("node_1("), "node 2 calls node 1: {text}");
+    let edited = edit(&text);
+    e.edit(2, &edited).unwrap_or_else(|e| panic!("{e}"));
+    e.regenerate(g)
+}
+
+fn calls_node_9(text: &str) -> String {
+    text.replace("node_1(", "node_9(")
+}
+
+fn drops_the_call(text: &str) -> String {
+    let at = text.find("node_1(").expect("a call");
+    let close = at + text[at..].find(')').expect("its end") + 1;
+    format!("{}vec3<f32>(0.5){}", &text[..at], &text[close..])
+}
+
+fn keeps_the_calls(text: &str) -> String {
+    format!("{text}\n")
+}
+
+fn check_missing(edit: fn(&str) -> String) {
+    let drift = drifted(edit);
+    assert!(
+        drift.contains(&Drift::Missing { id: 2, callee: 9 }),
+        "a call to a function no node has is reported: {drift:?}"
+    );
+}
+
+fn check_rewired(edit: fn(&str) -> String) {
+    let drift = drifted(edit);
+    assert_eq!(
+        drift,
+        vec![Drift::Rewired {
+            id: 2,
+            ejected: vec![],
+            generated: vec![1]
+        }],
+        "an ejected function whose calls differ from the tree's is reported as rewired"
+    );
+}
+
+#[test]
+fn custom_node_fallback_drift_reports_a_missing_callee() {
+    check_missing(calls_node_9);
+    assert!(
+        drifted(keeps_the_calls).is_empty(),
+        "no edit of the calls, no drift"
+    );
+}
+
+negative_control!(
+    custom_node_fallback_drift_reports_a_missing_callee,
+    "the edit keeps its calls",
+    expected = "no node has is reported",
+    check_missing(keeps_the_calls),
+);
+
+#[test]
+fn custom_node_fallback_drift_reports_rewiring() {
+    check_rewired(drops_the_call);
+}
+
+negative_control!(
+    custom_node_fallback_drift_reports_rewiring,
+    "the edit keeps its calls",
+    expected = "reported as rewired",
+    check_rewired(keeps_the_calls),
 );
 
 // ── Values follow a declaration ───────────────────────────────────────────────────────────────────────────────────
@@ -460,6 +553,32 @@ negative_control!(
 
 // ── New from template ─────────────────────────────────────────────────────────────────────────────────────────────
 
+const FIELD: &str = "fn source(ctx: Ctx) -> Field { return Field(1.0, 0.0, 0.0, 0.0); }";
+const SHOW: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.5); }";
+const BRIGHT: &str = "fn brightness(ctx: Ctx) -> f32 { return 0.5; }";
+const COMBINE: &str = "fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * b; }";
+const POST: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb; }";
+
+/// Every kind of node wired into one stain, `kind`'s occupant being `text`.
+fn stain_with(kind: Kind, text: &str) -> Stain {
+    let mine = |k: Kind, fallback: &str| {
+        Occupant::Custom(if k == kind { text } else { fallback }.to_owned())
+    };
+    Stain::new(vec![
+        node(Kind::Source, mine(Kind::Source, FIELD), &[]),
+        node(Kind::Colour, mine(Kind::Colour, SHOW), &[Some(0)]),
+        node(Kind::Brightness, mine(Kind::Brightness, BRIGHT), &[Some(0)]),
+        node(
+            Kind::Combiner,
+            mine(Kind::Combiner, COMBINE),
+            &[Some(1), Some(2)],
+        ),
+        node(Kind::Post, mine(Kind::Post, POST), &[Some(3)]),
+        node(Kind::Out, Occupant::None, &[Some(4)]),
+    ])
+    .unwrap_or_else(|e| panic!("{kind:?}: {e}"))
+}
+
 fn check_templates(make: fn(Kind, &str, &str) -> Option<String>) {
     for kind in [
         Kind::Source,
@@ -479,6 +598,10 @@ fn check_templates(make: fn(Kind, &str, &str) -> Option<String>) {
             defined.iter().any(|f| Some(f.as_str()) == kind.slot()),
             "{kind:?}: a template defines its slot's function"
         );
+        // And the body compiles: the stain holding it assembles.
+        if let Err(e) = assemble::assemble(&stain_with(kind, &text), Tier::FULL) {
+            panic!("{kind:?}: a template assembles into a stain: {e}");
+        }
     }
     assert!(make(Kind::Out, "mine/new", "New").is_none());
 }
@@ -493,4 +616,17 @@ negative_control!(
     "a template that is the colour slot's for every kind",
     expected = "defines its slot's function",
     check_templates(|kind, id, name| template(Kind::Colour, id, name).filter(|_| kind != Kind::Out)),
+);
+
+#[test]
+fn custom_node_fallback_every_template_compiles() {
+    check_templates(template);
+}
+
+negative_control!(
+    custom_node_fallback_every_template_compiles,
+    "a template whose body reads a uniform it does not declare",
+    expected = "a template assembles into a stain",
+    check_templates(|kind, id, name| template(kind, id, name)
+        .map(|t| t.replace("uniforms.scale", "uniforms.missing"))),
 );

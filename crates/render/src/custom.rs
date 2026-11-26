@@ -79,6 +79,7 @@ pub fn settle(
     }
     let fallback = with_last_valid(nodes, keys, last_valid, |j| {
         failed.iter().any(|(i, _)| *i == j)
+            || injected(Fault::RevertsEverything) && revertible.contains(&j)
     });
     match Stain::new(fallback).and_then(|s| assemble(&s, tier).map(|f| (s, f))) {
         Ok((stain, fragment)) => Ok(Settled {
@@ -154,7 +155,14 @@ impl Problems {
 pub fn problem_of(key: Option<NodeKey>, text: &str, error: &AssembleError) -> Problem {
     let (origin, line) = match error {
         AssembleError::Declaration { line, .. } => (Origin::Declaration, Some(*line)),
-        AssembleError::Compile(report) => (Origin::Code, line_in(text, report)),
+        AssembleError::Compile(report) => (
+            Origin::Code,
+            if injected(Fault::AssembledLine) {
+                assembled_line(report)
+            } else {
+                line_in(text, report)
+            },
+        ),
         AssembleError::Slot(_) | AssembleError::Occupant(_) if key.is_some() => {
             (Origin::Code, None)
         }
@@ -165,6 +173,70 @@ pub fn problem_of(key: Option<NodeKey>, text: &str, error: &AssembleError) -> Pr
         origin,
         line,
         message: error.to_string(),
+    }
+}
+
+/// The `wgsl:<line>` of a naga report: the assembled module's line, which is no line of the author's text.
+#[cfg(feature = "controls")]
+fn assembled_line(report: &str) -> Option<usize> {
+    let at = report.find("wgsl:")? + 5;
+    report[at..]
+        .chars()
+        .take_while(char::is_ascii_digit)
+        .collect::<String>()
+        .parse()
+        .ok()
+}
+
+#[cfg(not(feature = "controls"))]
+fn assembled_line(_: &str) -> Option<usize> {
+    None
+}
+
+/// A fault a test's control injects into [`settle`] or [`problem_of`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(not(feature = "controls"), allow(dead_code))]
+pub enum Fault {
+    /// The fallback reverts every changed node, the valid edit too.
+    RevertsEverything,
+    /// A problem's line is the assembled module's, not the author's.
+    AssembledLine,
+}
+
+/// A test's control's reach into [`settle`] and [`problem_of`], on this thread only.
+#[cfg(feature = "controls")]
+pub mod probe {
+    use std::cell::Cell;
+
+    use super::Fault;
+
+    thread_local! {
+        static FAULT: Cell<Option<Fault>> = const { Cell::new(None) };
+    }
+
+    /// `f` run with `fault` injected.
+    pub fn with<T>(fault: Fault, f: impl FnOnce() -> T) -> T {
+        let before = FAULT.with(|l| l.replace(Some(fault)));
+        let out = f();
+        FAULT.with(|l| l.set(before));
+        out
+    }
+
+    pub(super) fn is(fault: Fault) -> bool {
+        FAULT.with(|l| l.get() == Some(fault))
+    }
+}
+
+/// Whether a control has injected `fault`; never outside the `controls` feature.
+fn injected(fault: Fault) -> bool {
+    #[cfg(feature = "controls")]
+    {
+        probe::is(fault)
+    }
+    #[cfg(not(feature = "controls"))]
+    {
+        let _ = fault;
+        false
     }
 }
 
