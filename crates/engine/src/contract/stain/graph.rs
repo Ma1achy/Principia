@@ -400,7 +400,15 @@ impl StainGraph {
             let d = assemble::declaration(n.kind.into(), &(&occupant).into())?;
             let ports = assemble::in_ports(n.kind.into(), &d).len();
             n.occupant = occupant;
-            n.params = values.clone();
+            #[cfg(feature = "controls")]
+            let keep = crate::contract::stain::folder::probe::lifted(
+                crate::contract::stain::folder::probe::Lift::ValuesIgnored,
+            );
+            #[cfg(not(feature = "controls"))]
+            let keep = false;
+            if !keep {
+                n.params = values.clone();
+            }
             g.wires.retain(|&(to, port), _| to != id || port < ports);
             Ok(())
         })

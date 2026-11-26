@@ -83,3 +83,5 @@ delete its line when it's done.
 - **The GPU path does not read the stop option** (`SimUniforms::stop_on_escape`): neither the dispatch nor the WGSL
   kernel carries it, so the CPU and GPU fields agree today only because `SimConfig` cannot set it. The GPU path must
   read it before `SimConfig` can set it, or the two fields will disagree.
+- **`CustomNodes::answered` (render::custom) only matches fully custom nodes**: an edited built-in is never answered, so
+  the window calls `problem_of` directly for it.

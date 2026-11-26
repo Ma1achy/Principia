@@ -1021,6 +1021,8 @@ pub mod probe {
         /// A setting is written into the node's source as its default, as an editor that made a shader of a
         /// setting would.
         SettingIntoSource,
+        /// A code edit keeps the node's old values and drops the ones it was given.
+        ValuesIgnored,
     }
 
     #[cfg(feature = "controls")]
