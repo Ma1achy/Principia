@@ -1,0 +1,9 @@
+# Pinned for the brand rebuild (python3 brand/code/build.py). Versions of the machine that ran
+# the verification are in brand/code/README-build.md.
+numpy==2.5.3
+scipy==1.18.1
+matplotlib==3.11.2
+svgpathtools==1.8.0
+pillow==13.0.0.post1
+# playwright 1.63.0 drives Chromium 158.0.8127.36 (install it with: python3 -m playwright install chromium)
+playwright==1.63.0
