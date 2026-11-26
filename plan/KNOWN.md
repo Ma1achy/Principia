@@ -83,3 +83,12 @@ delete its line when it's done.
 - **The GPU path does not read the stop option** (`SimUniforms::stop_on_escape`): neither the dispatch nor the WGSL
   kernel carries it, so the CPU and GPU fields agree today only because `SimConfig` cannot set it. The GPU path must
   read it before `SimConfig` can set it, or the two fields will disagree.
+- **The preset library is partly built** (TASK-M7-17). Built: the preset files (`render/presets/`), the loader, locked
+  debug presets that fork on the first edit (`engine::contract::stain::preset`), the catalogue's outcome entry reading
+  its file, the addressing presets and two bivariate presets. Not built: the tile-index and sample-index grey presets
+  (`ctx.tile` carries no index; adding one moves every assembled text); the debug views generated from the ledger, which
+  keep the catalogue's one wiring rule (`presets::named_view`) rather than one file each, and which §9.6's six groups
+  file all as diagnostic; the other bivariate presets (n̂ × diffusion, n̂ × ensemble spread, outcome × FTLE apart from
+  n̂'s); the `fuzziness` and `map_gradient` post nodes (a post sees one fragment, so the map gradient needs a pass over
+  the colour buffer); the OKLab-uniform swatch set listing. The window needs: a preset list by group with a lock badge,
+  `Loaded::apply` for every stain edit (so the first edit on a locked preset forks), and the preset's `measure` text.

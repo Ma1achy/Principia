@@ -1,0 +1,55 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": 0,
+        "kind": "combiner",
+        "occupant": {
+          "builtin": "pass_through"
+        },
+        "params": {}
+      },
+      {
+        "id": 1,
+        "kind": "out",
+        "occupant": "none",
+        "params": {}
+      },
+      {
+        "id": 2,
+        "kind": "source",
+        "occupant": {
+          "custom": "// The quad's centre in slice coordinates, a vector field in `.xy`.\nfn source(ctx: Ctx) -> Field { return Field(ctx.quad.centre, 0.0, 0.0); }\n"
+        },
+        "params": {}
+      },
+      {
+        "id": 3,
+        "kind": "colour",
+        "occupant": {
+          "custom": "// x → B, y → G, R = 0.\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.0, ctx.inputs[0].y, ctx.inputs[0].x); }\n"
+        },
+        "params": {}
+      }
+    ],
+    "wires": [
+      {
+        "from": 3,
+        "port": 0,
+        "to": 0
+      },
+      {
+        "from": 0,
+        "port": 0,
+        "to": 1
+      },
+      {
+        "from": 2,
+        "port": 0,
+        "to": 3
+      }
+    ]
+  },
+  "group": "addressing",
+  "name": "Quad centre (BG)"
+}

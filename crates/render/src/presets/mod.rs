@@ -22,6 +22,7 @@
 
 pub mod agreement;
 pub mod decode;
+pub mod file;
 pub mod roundtrip;
 
 use crate::bind::{self, ViewOutput};
@@ -132,6 +133,12 @@ impl Preset {
     /// What it writes.
     pub fn output(&self) -> ViewOutput {
         self.output
+    }
+
+    /// The debug group it files under: the fragment-side recompute presets certify the decoder (colour_composition
+    /// §9.6).
+    pub fn group(&self) -> file::DebugGroup {
+        file::DebugGroup::DecodedIc
     }
 
     /// Every library preset is locked (colour_composition §6, Discipline 1).

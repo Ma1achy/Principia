@@ -1,0 +1,55 @@
+{
+  "graph": {
+    "nodes": [
+      {
+        "id": 0,
+        "kind": "combiner",
+        "occupant": {
+          "builtin": "pass_through"
+        },
+        "params": {}
+      },
+      {
+        "id": 1,
+        "kind": "out",
+        "occupant": "none",
+        "params": {}
+      },
+      {
+        "id": 2,
+        "kind": "source",
+        "occupant": {
+          "custom": "// The sample's UV coordinate, c + h·(2t − 1) (deep_zoom §1), a vector field in `.xy`.\nfn source(ctx: Ctx) -> Field { return Field(ctx.quad.centre + ctx.quad.half_width * (2.0 * ctx.quad.uv - 1.0), 0.0, 0.0); }\n"
+        },
+        "params": {}
+      },
+      {
+        "id": 3,
+        "kind": "colour",
+        "occupant": {
+          "custom": "// The field's first two components as R and G, B = 0.\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].xy, 0.0); }\n"
+        },
+        "params": {}
+      }
+    ],
+    "wires": [
+      {
+        "from": 3,
+        "port": 0,
+        "to": 0
+      },
+      {
+        "from": 0,
+        "port": 0,
+        "to": 1
+      },
+      {
+        "from": 2,
+        "port": 0,
+        "to": 3
+      }
+    ]
+  },
+  "group": "addressing",
+  "name": "UV passthrough"
+}
