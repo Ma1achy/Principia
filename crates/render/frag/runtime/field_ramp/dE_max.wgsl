@@ -1,11 +1,33 @@
-// A field ramp of `dE_max` (colour_composition §1.2; render::colour::field_ramp): the `lin` compaction, polarity high,
-// then `lut(viridis)`, with the invalid lane, #141418 unless INVALID_OVERRIDE is 1, and the canvas background
-// for a pixel that is not a system (REQ-COL-001, REQ-COL-108; R-467, R-511).
-// @name dE_max ramp
+// @version 2
+// A scalar field of the read side drawn as a colour. The field's value is compacted to [0, 1] by the curve over the
+// range, the polarity says which end is bright, and the ramp turns it into a colour. Every parameter but the colours
+// is written into the code where the node is made, so a ramp is the code the field, the curve and the ramp choose and
+// the picture is the one a hand-written ramp of them would draw. Not a system, a failed decode, a failed run, a
+// reserved state and every value the field has none draw as the standard treatment says; a value the field leaves
+// unset draws the "not yet" style.
+// @name {field} ramp
 // @group Field ramp
-// @about dE_max on the lut(viridis) ramp.
-// @maps dE_max [lin, polarity high]
+// @about A read-side field on a ramp: its curve, range, polarity and colours are the node's settings.
+// @maps {field}
 // @glyph name
+// @uniform field: field = ftle scalar
+// @control field field "Field" in "Field"
+// @uniform curve: u32 = 0 [0, 4] baked
+// @control curve choice("lin", "log", "cyclic", "diverging", "flag") "Curve" in "Field"
+// @uniform scale: f32 = 1.0 baked
+// @control scale fields "Scale (ε, period or x₀)" in "Range"
+// @uniform range: vec2<f32> = (0.0, 1.0) baked
+// @control range fields "Range" in "Range"
+// @uniform low_end: u32 = 1 [0, 2] baked
+// @control low_end choice("value", "measured", "horizon") "Low end" in "Range"
+// @uniform high_end: u32 = 1 [0, 2] baked
+// @control high_end choice("value", "measured", "horizon") "High end" in "Range"
+// @uniform symmetric: u32 = 0 [0, 1] baked
+// @control symmetric toggle "Symmetric about zero" in "Range"
+// @uniform polarity: u32 = 0 [0, 1] baked
+// @control polarity choice("high is bright", "low is bright") "Polarity" in "Field"
+// @uniform ramp: u32 = 4 [0, 5] baked
+// @control ramp choice("viridis", "magma", "twilight", "coolwarm", "grey", "gradient") "Ramp" in "Ramp"
 // @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
 // @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 // @control INVALID_OVERRIDE toggle "Override the invalid colour" in "Invalid"

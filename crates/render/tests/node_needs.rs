@@ -128,6 +128,11 @@ fn hand_list() -> BTreeMap<&'static str, &'static [&'static str]> {
     for id in ["edge_line", "fallback_tint", "pending_hatch"] {
         m.insert(leak(format!("post/{id}")), &["quad"]);
     }
+    // A field ramp as the shipped file holds it, on the field it defaults to, the FTLE with its measured range; each
+    // field's own ramp needs what that field is.
+    m.insert("colour/field_ramp", &["ftle", "range"]);
+    m.insert("brightness/field_ramp", &["ftle", "range"]);
+    m.insert("post/field_ramp", &["ftle"]);
     m
 }
 

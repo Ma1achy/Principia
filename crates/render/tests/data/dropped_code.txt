@@ -1,3 +1,7 @@
+Presentation registry brightness/field_ramp: a043808001529f7a nodes [0] inputs [(1, 0)] uniforms ["1.u_range"] fields []
+Debug registry brightness/field_ramp: 7946178e3434065f nodes [0] inputs [(1, 0)] uniforms ["1.u_range"] fields []
+Presentation registry colour/field_ramp: 780343ff98b7acd6 nodes [0] inputs [(1, 0)] uniforms [] fields []
+Debug registry colour/field_ramp: 385900495bdf6e6b nodes [0] inputs [(1, 0)] uniforms [] fields []
 Presentation registry colour/outcome_state: 9ae15ba6565a6a5b nodes [0] inputs [(1, 0)] uniforms [] fields []
 Debug registry colour/outcome_state: 658206add8fc6281 nodes [0] inputs [(1, 0)] uniforms [] fields []
 Presentation registry combiner/replace_l: 893f320ac82d0e2f nodes [] inputs [] uniforms ["2.l_min", "2.l_max"] fields []

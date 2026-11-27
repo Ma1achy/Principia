@@ -659,7 +659,12 @@ pub fn specialise(
                 .trim()
                 .strip_prefix("uniforms.")
                 .and_then(|c| c.split_once('.'))
-                .ok_or_else(|| say(format!("`//? when {}` is `uniforms.<name>.<word>`", cond.trim())))?;
+                .ok_or_else(|| {
+                    say(format!(
+                        "`//? when {}` is `uniforms.<name>.<word>`",
+                        cond.trim()
+                    ))
+                })?;
             hide = crate::colour::field_ramp::word(&value, word.0, word.1)
                 .map_err(&say)?
                 .is_none();
@@ -687,12 +692,17 @@ pub fn specialise(
         if at(k + 1) != "." {
             continue;
         }
-        let is_word = at(k + 3) == "."
-            && crate::colour::field_ramp::knows(&u.name, at(k + 4));
+        let is_word = at(k + 3) == "." && crate::colour::field_ramp::knows(&u.name, at(k + 4));
         if is_word {
             let written = crate::colour::field_ramp::word(&value, &u.name, at(k + 4))
                 .map_err(&say)?
-                .ok_or_else(|| say(format!("`uniforms.{}.{}` has no value here", u.name, at(k + 4))))?;
+                .ok_or_else(|| {
+                    say(format!(
+                        "`uniforms.{}.{}` has no value here",
+                        u.name,
+                        at(k + 4)
+                    ))
+                })?;
             out.push_str(&text[from..toks[sig[k]].1]);
             out.push_str(&written);
             from = toks[sig[k + 4]].2;

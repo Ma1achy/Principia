@@ -99,7 +99,8 @@ fn shipped(f: &str) -> Occupant {
         .iter()
         .position(|n| n == f)
         .expect("a field");
-    let text = params::specialise(&e.source, &[u], &|_| vec![at as f64]).unwrap_or_else(|e| panic!("{e}"));
+    let text =
+        params::specialise(&e.source, &[u], &|_| vec![at as f64]).unwrap_or_else(|e| panic!("{e}"));
     Occupant::Custom(text)
 }
 

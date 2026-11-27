@@ -869,7 +869,8 @@ negative_control!(
 
 fn check_no_new_words(extra: Option<&str>) {
     // Pass criterion: no shipped source declares a version 2 type or a `@port`, so the pinned code is untouched; but
-    // `source/field`, whose one uniform is a `field`.
+    // `source/field`, whose one uniform is a `field`, and the three field ramps, whose uniforms are a `field`, a
+    // gradient and plain numbers.
     let mut sources: Vec<(String, String)> = render::registry::registry()
         .unwrap_or_else(|e| panic!("{e}"))
         .into_iter()
@@ -886,6 +887,17 @@ fn check_no_new_words(extra: Option<&str>) {
                         [UniformType::Field]
                     ),
                 "{id} uses a version 2 word other than its one field"
+            );
+            continue;
+        }
+        if id.ends_with("/field_ramp") {
+            assert!(
+                d.described.ports.is_empty()
+                    && d.uniforms.iter().all(|u| !matches!(
+                        u.ty,
+                        UniformType::List { .. } | UniformType::Lut(_) | UniformType::Image
+                    )),
+                "{id} uses a version 2 word other than a field and a gradient"
             );
             continue;
         }

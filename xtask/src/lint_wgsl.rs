@@ -533,6 +533,10 @@ fn lint_lib(root: &Path, accessors: &BTreeSet<String>) -> Result<Vec<FileReport>
         let occupancy = occupancy(&rel);
         let findings = if rel == PRELUDE {
             check_fragment(&source)
+        } else if is_template(&source) {
+            // A node written through words (`uniforms.<parameter>.<word>`) is no WGSL until it is made: the code it
+            // makes is checked in under `RUNTIME_DIR` and linted there.
+            Ok(Vec::new())
         } else if rel.starts_with(&format!("{STAIN_DIR}/")) {
             read_side_context(root).and_then(|context| check_fragment_after(&context, &source))
         } else if let Some(occupancy) = occupancy.filter(|_| {
@@ -623,8 +627,10 @@ pub fn uniform_block(source: &str) -> Result<String, String> {
                 line.trim()
             ));
         };
-        // A `field` uniform has no place in the block: the assembler writes the chosen field into the code instead.
-        if ty != "field" {
+        // A `field` uniform and a `baked` one have no place in the block: the assembler writes the chosen field and the
+        // baked value into the code instead.
+        let baked = rest.trim_end().ends_with(" baked");
+        if ty != "field" && !baked {
             members.push(format!("    {name}: {ty},\n"));
         }
     }
@@ -674,6 +680,13 @@ fn lint_frag(root: &Path, accessors: &BTreeSet<String>) -> Result<Vec<FileReport
         });
     }
     Ok(reports)
+}
+
+/// Whether `source` is written through the words of a baked parameter, a `//? when` line, so it is no WGSL as written.
+fn is_template(source: &str) -> bool {
+    source
+        .lines()
+        .any(|l| l.trim_start().starts_with("//? when "))
 }
 
 /// `source` with each `field` uniform read as the field it defaults to, as the assembler writes it into the code:

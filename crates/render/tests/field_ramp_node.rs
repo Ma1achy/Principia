@@ -114,7 +114,9 @@ fn check(how: &dyn Fn(&FieldRamp) -> FieldRamp) {
             }
             for (slot_name, kind) in made {
                 let row = format!("{field} {slot_name}");
-                let text = ramp.node_text(kind).unwrap_or_else(|e| panic!("{row}: {e}"));
+                let text = ramp
+                    .node_text(kind)
+                    .unwrap_or_else(|e| panic!("{row}: {e}"));
                 assert_eq!(
                     code(&text),
                     code_before[&row],
@@ -141,10 +143,14 @@ fn every_default_ramp_is_the_node_as_it_was() {
 /// `ramp` with its field read as the next scalar field.
 fn next_field(ramp: &FieldRamp) -> FieldRamp {
     let fields: Vec<String> = ramps(Slot::Colour).into_iter().map(|(f, _)| f).collect();
-    let at = fields.iter().position(|f| f == ramp.field.field).unwrap_or(0);
+    let at = fields
+        .iter()
+        .position(|f| f == ramp.field.field)
+        .unwrap_or(0);
     let next = &fields[(at + 1) % fields.len()];
     let mut out = ramp.clone();
-    out.field = render::colour::field_ramp::ScalarField::payload(next).unwrap_or_else(|e| panic!("{e}"));
+    out.field =
+        render::colour::field_ramp::ScalarField::payload(next).unwrap_or_else(|e| panic!("{e}"));
     out
 }
 
@@ -258,12 +264,17 @@ fn the_ramp_is_in_the_code() {
     let mut checked = 0;
     for (field, ramp) in ramps(Slot::Colour) {
         let (was, now) = (
-            ramp.node_text(Kind::Colour).unwrap_or_else(|e| panic!("{e}")),
+            ramp.node_text(Kind::Colour)
+                .unwrap_or_else(|e| panic!("{e}")),
             other_ramp(&ramp)
                 .node_text(Kind::Colour)
                 .unwrap_or_else(|e| panic!("{e}")),
         );
-        assert_ne!(code(&was), code(&now), "{field}: the ramp did not change the code");
+        assert_ne!(
+            code(&was),
+            code(&now),
+            "{field}: the ramp did not change the code"
+        );
         checked += 1;
     }
     println!("colour ramps checked: {checked}");
@@ -275,7 +286,13 @@ negative_control!(
     expected = "did not change the code",
     {
         let (field, ramp) = ramps(Slot::Colour).remove(0);
-        let text = ramp.node_text(Kind::Colour).unwrap_or_else(|e| panic!("{e}"));
-        assert_ne!(code(&text), code(&text), "{field}: the ramp did not change the code");
+        let text = ramp
+            .node_text(Kind::Colour)
+            .unwrap_or_else(|e| panic!("{e}"));
+        assert_ne!(
+            code(&text),
+            code(&text),
+            "{field}: the ramp did not change the code"
+        );
     }
 );

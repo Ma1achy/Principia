@@ -1627,8 +1627,7 @@ pub fn shader(kind: Kind, text: &str) -> Result<Shader, AssembleError> {
             let mut source = head(Tier::FULL, &fields)?;
             let mut extra = Vec::new();
             // A baked uniform is read as it defaults, as the assembler reads it.
-            let code =
-                super::params::specialise(&code_text(text), &baked, &|u| u.default.clone())?;
+            let code = super::params::specialise(&code_text(text), &baked, &|u| u.default.clone())?;
             let block: Vec<&Uniform> = declaration
                 .uniforms
                 .iter()
@@ -1657,10 +1656,13 @@ pub fn shader(kind: Kind, text: &str) -> Result<Shader, AssembleError> {
             c
         }
     };
+    // A baked uniform of a text already made has been read where it was written into the code, and nothing of it is
+    // left to read: only a template's can be a parameter nothing reads.
+    let template = baked.iter().any(|u| super::params::reads(text, &u.name));
     let read = declaration
         .uniforms
         .iter()
-        .map(|u| super::params::reads(text, &u.name))
+        .map(|u| (u.is_baked() && !template) || super::params::reads(text, &u.name))
         .collect();
     Ok(Shader {
         compiled,
@@ -1784,11 +1786,7 @@ pub(super) fn dropped(
             continue;
         }
         // A baked uniform has no member in an assembled block: it is written into the code.
-        for (member, u) in uniforms
-            .iter()
-            .filter(|u| !u.is_baked())
-            .enumerate()
-        {
+        for (member, u) in uniforms.iter().filter(|u| !u.is_baked()).enumerate() {
             if gone || block.part(member as u32).is_nothing() {
                 out.uniforms.push((i, u.clone()));
             }
