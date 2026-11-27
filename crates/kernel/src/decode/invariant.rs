@@ -610,8 +610,7 @@ fn finish<R: ExactSign>(
     (w, n2): ([[R; 2]; 3], R),
     norms: [R; 4],
     seed: Option<Seed>,
-    lz: R,
-    k_star: R,
+    (lz, k_star): (R, R),
     sheet: Sheet,
 ) -> Construction<R> {
     let m = masses.m;
@@ -682,7 +681,7 @@ fn legacy<R: ExactSign>(
         Some(Seed::JLambda) => (fields[3], norms[3]),
         _ => (fields[0], norms[0]),
     };
-    finish(masses, config, taken, norms, seed, lz, k_star, Sheet::One)
+    finish(masses, config, taken, norms, seed, (lz, k_star), Sheet::One)
 }
 
 /// The invariant-momentum construction (chart_reference §2.2) under the seed in force: the momenta realising
@@ -717,8 +716,7 @@ pub fn construct_expansion_on<R: ExactSign>(
         (w, n2),
         [n2, zero, zero, zero],
         seed,
-        lz,
-        k_star,
+        (lz, k_star),
         sheet,
     )
 }

@@ -202,10 +202,9 @@ validation::negative_control!(
     "E' read without the rotation's kinetic energy",
     expected = "energy: E' above the floor",
     check_energy(
-        |i, k, l, u| below_floor(i, k, l, u).map(|f| engine::edge::clamp::Floor {
+        |i, k, l, u| below_floor(i, k, l, u).map(|_| engine::edge::clamp::Floor {
             e_prime: u,
             unbound: u >= 0.0,
-            ..f
         })
     )
 );
