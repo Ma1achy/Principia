@@ -6,7 +6,8 @@
 //! the check of an exact or implicit slope, never its source.
 //!
 //! A kink site is where the decode changes branch and the slope jumps or is undefined: the feasibility boundary, `k = 0`,
-//! `warped_k` at `d = 0`, `normalise`'s edges, the exponential map's `r = 0`, the poles, the seed switches. A tier-1 or
+//! `warped_k` at `d = 0`, `normalise`'s edges, the exponential map's `r = 0`, the poles, the seed switches, and the
+//! ties and clamps of the registry rows' forwards. A tier-1 or
 //! tier-2 chart lists its sites in [`Declaration::kinks`], and [`flag`] reads a footprint: it returns the site the
 //! footprint meets, so a consumer need not ask whether a point lies exactly on one.
 //!
@@ -51,6 +52,13 @@ pub enum Kink {
     Pole,
     /// A switch between two seeds of a construction.
     SeedSwitch,
+    /// A branch of the encode's canonicalisation: the scale step skipped within `τ_I` of `I = 1`, `ρ_y` or the centre
+    /// of mass an exact zero, or a term truncated below `2⁻⁶⁰` of the sum it joins. A decoded state sits on every one.
+    CanonBranch,
+    /// A `min` or `max` of two values, where they tie.
+    OrderSwitch,
+    /// A clamp's edge.
+    ClampEdge,
 }
 
 /// What a chart declares: its tier and the kink sites it flags. `tier` is `None` until a chart declares one.
