@@ -221,7 +221,7 @@ def part_videos(out, only=None, workers=None):
         os.makedirs(dst, exist_ok=True)
         encode_jobs += [('mp4', (frames, fps, w, h, theme, f'{dst}/{stem}.mp4')),
                         ('webm', (frames, fps, f'{dst}/{stem}-transparent.webm')),
-                        ('gif', (frames, fps, w, h, theme, gfps, gw, f'{dst}/{stem}.gif'))]
+                        ('gif', (frames, fps, w, h, theme, gfps, gw, f'{dst}/{stem}.gif', 192 if folder.startswith('icons') else 256))]
         if 'subtitle' in v:
             encode_jobs.append(('webp', (frames + '-padded', fps, f'{dst}/{stem}.webp', None)))
     for name, v, bd in GITHUB:
