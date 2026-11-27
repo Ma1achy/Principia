@@ -15,9 +15,12 @@
 //! `p₀`), the masses taken as `p₀`'s value plus `δ` times the derivative, and the saturate arm swapped for blank.
 
 use engine::edge::saturate::{
-    affine_band, affine_masses, nu_masses, resolve, theta_masses, Band, Squash, EPS_M, EPS_M01,
+    affine_band, affine_masses, nu_masses, resolve, theta_masses, Band, Squash, EPS_M01,
 };
 use engine::edge::{Count, Kind};
+
+/// The register's `mass_simplex_eps_m`.
+const EPS_M: f64 = 1e-4;
 
 fn sizes(max: f64) -> Vec<f64> {
     (0..400)
@@ -74,7 +77,7 @@ fn strips() -> Vec<Strip> {
 
 fn check_strip(band: Band, from_rounded: bool, widths: f64, sigma: f64) {
     for s in strips() {
-        let Some((p_s, p0)) = affine_band(s.m, s.b, band) else {
+        let Some((p_s, p0)) = affine_band(s.m, s.b, EPS_M, band) else {
             panic!("saturate: {} has no squash", s.name);
         };
         let sq = Squash { sigma, p_s, p0 };

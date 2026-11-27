@@ -10,10 +10,8 @@
 
 use super::{Count, Kind, Resolved, Sheet};
 
-/// The mass block's `ε_M01` fence.
-pub const EPS_M01: f64 = 1e-5;
-/// The ternary plot's interior buffer `ε_m`: where the squash starts.
-pub const EPS_M: f64 = 1e-4;
+/// The mass block's `ε_M01` fence, from the register.
+pub const EPS_M01: f64 = <f64 as kernel::generated::constants::ChartConstants>::EPS_M01;
 
 /// One edge's squash, in outward coordinates.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -101,8 +99,9 @@ pub enum Band {
 
 /// The squash of masses affine in the outward distance `x` from the edge, `mᵢ(x) = mᵢ + bᵢ·x`, with `M₀₁ = m₀ + m₁`:
 /// `p_s` where the smallest decreasing mass reaches `ε_m` (the edge itself if one is already below), `p₀` the first
-/// floor crossed past it ([`Band`]). `None` where no mass decreases.
-pub fn affine_band(m: [f64; 3], b: [f64; 3], band: Band) -> Option<(f64, f64)> {
+/// floor crossed past it ([`Band`]), `eps_m` the ternary plot's interior buffer `ε_m` (the register's
+/// `mass_simplex_eps_m`). `None` where no mass decreases.
+pub fn affine_band(m: [f64; 3], b: [f64; 3], eps_m: f64, band: Band) -> Option<(f64, f64)> {
     let at = |i: usize, x: f64| m[i] + b[i] * x;
     let m01 = |x: f64| at(0, x) + at(1, x);
     let hits =
@@ -110,10 +109,10 @@ pub fn affine_band(m: [f64; 3], b: [f64; 3], band: Band) -> Option<(f64, f64)> {
     let mut p_s = f64::INFINITY;
     for i in 0..3 {
         if b[i] < 0.0 {
-            let x = if m[i] <= EPS_M {
+            let x = if m[i] <= eps_m {
                 0.0
             } else {
-                (EPS_M - m[i]) / b[i]
+                (eps_m - m[i]) / b[i]
             };
             p_s = p_s.min(x);
         }
