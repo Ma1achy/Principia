@@ -7,8 +7,11 @@
 //! | `gradient<N>` | `[space, cyclic, (x, y, z, position) × count]`, `2 ≤ count ≤ N`; `space` 0 is linear RGB, 1 OKLab | `GradientN` |
 //! | `list<T, N>` (`T` is `f32` or `vec2/3/4<f32>`) | `count × width` numbers, `count ≤ N` | `ListWxN` |
 //! | `lut<N>` | `N` numbers, sampled over `[0, 1]` | `LutN` |
-//! | `field` | the index of a read-side field in [`super::source_fields`] | nothing: read as the field, in the code |
+//! | `field` | the index of a read-side field in [`super::source_fields`], or with `scalar`, in [`super::ramp_fields`] | nothing: read as the field, in the code |
 //! | `image` | an image's handle, a whole number | a `u32` |
+//!
+//! A uniform of any type may end its default with `baked`: it has no member either, and the code reads it only through
+//! the words of [`specialise`] (`uniforms.<name>.<word>`).
 //!
 //! A gradient, list and lut are WGSL structs the assembler declares once per type, with the function that reads one
 //! (`gradientN_at`, `lutN_at`). Their elements are `vec4<f32>`, 16 bytes, because a uniform array's stride is 16: a

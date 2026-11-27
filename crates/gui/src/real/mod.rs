@@ -238,18 +238,17 @@ impl View {
         }
         self.waiting.clear();
         for n in g.nodes() {
-            for u in g.uniforms(n.id).map_err(|e| e.to_string())? {
-                // A baked uniform is part of the code, so the key says it, and there is no buffer to write.
-                if u.is_baked() {
-                    continue;
-                }
+            // The block as the node is made: a baked uniform is part of the code, so the key says it, and a measured
+            // range its curve does not read has no member to write.
+            for u in g.block(n.id).map_err(|e| e.to_string())? {
                 let value = n.params.get(&u.name).unwrap_or(&u.default).clone();
                 self.waiting.insert((n.id, u.name), value);
             }
         }
         self.ranges.clear();
         for n in g.nodes() {
-            let Some(Some(read)) = reads.get(&(n.kind, n.occupant.clone())) else {
+            let made = g.made(n.id).map_err(|e| e.to_string())?;
+            let Some(Some(read)) = reads.get(&(n.kind, made)) else {
                 continue;
             };
             let Some(target) = &read.range else { continue };

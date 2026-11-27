@@ -1656,13 +1656,15 @@ pub fn shader(kind: Kind, text: &str) -> Result<Shader, AssembleError> {
             c
         }
     };
-    // A baked uniform of a text already made has been read where it was written into the code, and nothing of it is
-    // left to read: only a template's can be a parameter nothing reads.
-    let template = baked.iter().any(|u| super::params::reads(text, &u.name));
+    // A text already made, a ramp whose curve and field the stain chose, still declares the baked uniforms it was
+    // made from and reads none of them: they were read where they were written into the code. Only a template's can
+    // be a parameter nothing reads.
+    let made = baked.iter().any(|u| u.ty != UniformType::Field)
+        && !baked.iter().any(|u| super::params::reads(text, &u.name));
     let read = declaration
         .uniforms
         .iter()
-        .map(|u| (u.is_baked() && !template) || super::params::reads(text, &u.name))
+        .map(|u| (u.is_baked() && made) || super::params::reads(text, &u.name))
         .collect();
     Ok(Shader {
         compiled,

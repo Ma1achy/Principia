@@ -102,8 +102,9 @@ impl Job {
             .graph
             .nodes()
             .map(|n| {
-                let read = catch_unwind(AssertUnwindSafe(|| reads(n.kind, &n.occupant)));
-                ((n.kind, n.occupant.clone()), read.ok().flatten())
+                let made = self.graph.made(n.id).unwrap_or_else(|_| n.occupant.clone());
+                let read = catch_unwind(AssertUnwindSafe(|| reads(n.kind, &made)));
+                ((n.kind, made), read.ok().flatten())
             })
             .collect();
         Done {
@@ -456,7 +457,8 @@ impl Compiler {
             reads: g
                 .nodes()
                 .filter_map(|n| {
-                    let read = self.reads.get(&(n.kind, n.occupant.clone()))?;
+                    let made = g.made(n.id).unwrap_or_else(|_| n.occupant.clone());
+                    let read = self.reads.get(&(n.kind, made))?;
                     Some((n.id, read.clone()?))
                 })
                 .collect(),

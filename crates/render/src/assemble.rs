@@ -332,6 +332,9 @@ pub struct Uniform {
     pub any_kind: bool,
     /// A `field` chosen among every scalar field a ramp reads ([`ramp_fields`]), with its validity, not among the fields
     /// a source reads. Written `= <field> scalar`.
+    // The plan is unclear here; chose the trailing words `scalar` and `baked`, as `any` is, with no version bump,
+    // because a source that never writes them reads as before, and a version would refuse the shipped files on an
+    // older build for a change they do not need.
     pub scalars: bool,
     /// Written into the code where the node is made, never bound: a `field` always is, and any other uniform written
     /// `= <default> baked`. Its value reaches the code only through the words of [`params::specialise`], so choosing

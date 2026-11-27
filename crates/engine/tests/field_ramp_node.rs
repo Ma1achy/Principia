@@ -352,3 +352,93 @@ negative_control!(
     expected = "the library has no",
     check_library(Some("colour/field_ramp"))
 );
+
+// ── What a ramp needs follows its field ───────────────────────────────────────────────────────────────────────
+
+/// The ramp node of `field`, alone in a graph, and the occupant its needs are read from: its made text, or, as a
+/// control, the shipped file it is made from.
+fn needs_of(
+    field: &str,
+    made: bool,
+) -> (
+    render::assemble::matters::Needs,
+    Option<describe::MeasuredRange>,
+) {
+    let mut g = StainGraph::new();
+    let id = node(&mut g, NodeKind::Colour, &ramp_of(field));
+    let occupant = if made {
+        g.made(id).unwrap_or_else(|e| panic!("{e}"))
+    } else {
+        Occupant::Builtin("field_ramp".into())
+    };
+    (
+        describe::needs(NodeKind::Colour, &occupant).unwrap_or_else(|e| panic!("{e}")),
+        describe::measured_range(NodeKind::Colour, &occupant).unwrap_or_else(|e| panic!("{e}")),
+    )
+}
+
+fn check_needs(made: bool) {
+    // The FTLE's ramp needs the FTLE and its measured range; `d_min`'s, on `log`, needs neither; the signed `S` on a
+    // symmetric measured range reads its own.
+    let (ftle, range) = needs_of("ftle", made);
+    assert!(ftle.ftle, "the FTLE's ramp does not need the FTLE");
+    assert_eq!(range.and_then(|r| r.field).as_deref(), Some("ftle"));
+    let (d_min, range) = needs_of("d_min", made);
+    assert!(!d_min.ftle, "a d_min ramp is told it needs the FTLE");
+    assert_eq!(
+        range, None,
+        "a d_min ramp is told it takes a measured range"
+    );
+    let (_, range) = needs_of("S", made);
+    assert_eq!(range.and_then(|r| r.field).as_deref(), Some("S"));
+}
+
+#[test]
+fn a_ramps_needs_follow_its_field() {
+    check_needs(true);
+}
+
+negative_control!(
+    a_ramps_needs_follow_its_field,
+    "the needs read from the shipped file, not the node as it is made",
+    expected = "a d_min ramp is told",
+    check_needs(false)
+);
+
+/// The block of a ramp node holds the measured range only where its curve reads one.
+fn check_block(made: bool) {
+    for (field, range) in [("ftle", true), ("d_min", false)] {
+        let mut g = StainGraph::new();
+        let id = node(&mut g, NodeKind::Colour, &ramp_of(field));
+        let names: Vec<String> = if made {
+            g.block(id)
+                .unwrap_or_else(|e| panic!("{e}"))
+                .into_iter()
+                .map(|u| u.name)
+                .collect()
+        } else {
+            g.uniforms(id)
+                .unwrap_or_else(|e| panic!("{e}"))
+                .into_iter()
+                .map(|u| u.name)
+                .collect()
+        };
+        assert_eq!(
+            names.iter().any(|n| n == "u_range"),
+            range,
+            "{field}: the block's members are {names:?}, a range only where the curve reads one"
+        );
+    }
+}
+
+#[test]
+fn a_ramps_block_holds_what_its_curve_reads() {
+    check_block(true);
+}
+
+negative_control!(
+    a_ramps_block_holds_what_its_curve_reads,
+    "the shipped file's uniforms, not the made block's",
+    expected = "a range only where the curve reads one",
+    check_block(false)
+);

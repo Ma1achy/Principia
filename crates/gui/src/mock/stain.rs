@@ -270,7 +270,10 @@ fn made(g: &StainGraph) -> Content {
         // The mock assembles on the frame already; its run holds no records, so nothing is said missing.
         reads: g
             .nodes()
-            .filter_map(|n| Some((n.id, kept_reads(n.kind, &n.occupant)?)))
+            .filter_map(|n| {
+                let made = g.made(n.id).unwrap_or_else(|_| n.occupant.clone());
+                Some((n.id, kept_reads(n.kind, &made)?))
+            })
             .collect(),
         run: None,
         ranges: Default::default(),

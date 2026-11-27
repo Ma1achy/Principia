@@ -34,6 +34,10 @@
 //!   `gradient` with no stops, for a uniform of the types in [`super::params`]; and `@port <input> "<label>"
 //!   [accepts <subtype> | …] [required | optional] [unit "<text>"]`, what an `@input` says about itself. The `@port`
 //!   line is not code, as no declaration here is, so a label or a subtype edit changes no key.
+//! - Grammar version 2 also lets a `@uniform` default end in a word: `any` (a `field` that may be swapped for one of
+//!   the other kind), `scalar` (a `field` chosen among every scalar field a ramp reads) and `baked` (a value written
+//!   into the code, no member of the block, read only as `uniforms.<name>.<word>`); and a line `//? when
+//!   uniforms.<name>.<word>`, which is a plain comment to WGSL, keeps the line after it only where the word has a value.
 //! - `@id`, `@author`, `@licence`, `@node_version`: who the node is, for the shaders list and a saved stain's label,
 //!   never for the picture. `@id <id>` is one to eight segments of `a`–`z`, `0`–`9`, `_` and `-`, joined by `/`, at
 //!   most [`ID_MAX`] bytes, no segment a Windows device name (`con`, `nul`, `com1`, …): never a path, so it cannot

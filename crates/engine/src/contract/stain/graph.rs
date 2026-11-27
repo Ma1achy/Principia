@@ -788,6 +788,32 @@ impl StainGraph {
         )?))
     }
 
+    /// The occupant node `id` is assembled as: a shipped source with parameters baked into its code (a field ramp)
+    /// is its made text, what its needs and its measured range are read from, since they follow the parameters; any
+    /// other node's occupant as it is.
+    pub fn made(&self, id: NodeId) -> Result<Occupant, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        if !matches!(n.occupant, Occupant::Builtin(_)) {
+            return Ok(n.occupant.clone());
+        }
+        match self.read_fields(n)? {
+            assemble::Occupant::Custom(text) => Ok(Occupant::Custom(text)),
+            _ => Ok(n.occupant.clone()),
+        }
+    }
+
+    /// The uniforms node `id`'s block holds as the node is made: [`StainGraph::uniforms`] less the baked ones and the
+    /// ones a setting of the node leaves out (a measured range its curve does not read).
+    pub fn block(&self, id: NodeId) -> Result<Vec<Uniform>, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        let made = self.read_fields(n)?;
+        Ok(assemble::declaration(n.kind.into(), &made)?
+            .uniforms
+            .into_iter()
+            .filter(|u| !u.is_baked())
+            .collect())
+    }
+
     /// The graph as the assembler takes it, every node in [`StainGraph::order`], each in-port its feeder's position,
     /// with that order.
     fn lowered(&self) -> Result<(Vec<NodeId>, Stain), GraphError> {

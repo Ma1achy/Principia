@@ -45,6 +45,16 @@ fn written() -> BTreeMap<String, String> {
         if ScalarField::payload(e.name).is_ok() {
             let ramp = ramp(e.name).unwrap_or_else(|why| panic!("{why}"));
             out.insert(format!("field_ramp/{}.wgsl", e.name), ramp.wgsl());
+            // The same ramp as a lightness, and the post that draws its styles: the node's other two slots.
+            let lightness = FieldRamp::new(ramp.field.clone(), ramp.compaction, Map::Lightness);
+            out.insert(
+                format!("field_ramp_brightness/{}.wgsl", e.name),
+                lightness.wgsl(),
+            );
+            out.insert(
+                format!("field_ramp_post/{}.wgsl", e.name),
+                lightness.style_post(),
+            );
         }
     }
     let graphs = [

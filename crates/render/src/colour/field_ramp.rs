@@ -787,6 +787,10 @@ pub const PARAMS: [&str; 9] = [
 ];
 
 impl Compaction {
+    // The plan is unclear here; chose a range as `range` (a pair of values), `low_end` and `high_end` (each a value, the
+    // measured range or the horizon), `symmetric` and `scale` (the `ε`, period or `x₀` of the other curves), because a
+    // fixed, a measured and a horizon end, a symmetric range and a curve's one constant are the forms the ledger's
+    // fields take, and each is a setting of its own that a stain can keep and an editor can show.
     /// The compaction the parameters `curve`, `low_end`, `high_end`, `symmetric`, `range` and `scale` name: the `lin`
     /// curve over `range`, an end that is not a `value` read at run time; `scale` the `ε`, period or `x₀` of the others.
     pub fn from_values(
@@ -1002,6 +1006,9 @@ pub fn word(
 }
 
 impl FieldRamp {
+    // The plan is unclear here; chose to leave `bands`, and `lerp` and `diverging` drawn from uniforms of their
+    // colours, out of the node, because a gradient parameter holds the last two to the same bits and a band mask is no
+    // ramp a field's role chooses; the CPU mirror keeps all three, as a library check of the ramp functions.
     /// The parameters of the shipped field ramp node that make it this ramp, by name: its field, curve and range, its
     /// polarity and its ramp, a lookup table by its place in [`RAMPS`] or, for a `lerp` or a `diverging` ramp, the
     /// gradient of its stops with the `colours` it is drawn from. A `bands` ramp is no setting of the node: it is none
@@ -1080,4 +1087,9 @@ impl FieldRamp {
 }
 
 /// The name of the shipped field ramp, in each of the colour, brightness and post slots.
+// The plan is unclear here; chose the FTLE, on the grey ramp over its measured range, for what a new ramp node holds
+// until a field is chosen, because it is the field colour_composition §1.2 names a ramp for first.
+// The plan is unclear here; chose one file in each of the three slots for the one node, because a node's slot is its
+// function's signature and the brightness ramp's styles are drawn by a post, so three signatures are three files, each
+// declaring only the parameters its code reads.
 pub const NODE: &str = "field_ramp";
