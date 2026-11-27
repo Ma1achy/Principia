@@ -27,7 +27,7 @@
         "id": 3,
         "kind": "colour",
         "occupant": {
-          "custom": "// x → B, y → G, R = 0.\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.0, ctx.inputs[0].y, ctx.inputs[0].x); }\n"
+          "custom": "// x → B, y → G, R = 0.\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(0.0, ctx.inputs[0].y, ctx.inputs[0].x); }\n"
         },
         "params": {}
       }

@@ -14,6 +14,7 @@
 // @uniform u_range: vec2<f32> = (0.0, 1.0)
 // @control RANGE_AUTO toggle "Auto range"
 // @control u_range hidden "Measured range"
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     let raw = ctx.sample.ftle;
     if ((bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u) { return debug_invalid(ctx.frag_xy); }

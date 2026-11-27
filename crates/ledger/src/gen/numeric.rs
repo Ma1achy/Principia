@@ -415,7 +415,7 @@ impl NumericView {
     /// The view's `colour()`, `value` the field's value as a WGSL `f32` expression over `ctx`.
     pub fn colour(&self, value: &str) -> String {
         format!(
-            "fn colour(ctx: Ctx) -> vec3<f32> {{\n    let raw = {value};\n{}}}\n",
+            "const HANDLES_VALIDITY: bool = true;\nfn colour(ctx: Ctx) -> vec3<f32> {{\n    let raw = {value};\n{}}}\n",
             self.body()
         )
     }

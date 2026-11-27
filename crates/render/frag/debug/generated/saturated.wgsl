@@ -8,6 +8,7 @@
 // @about The debug view of the payload field saturated: `packed_a` bits 5–5, u-bits.
 // @maps saturated [flag, [0, 1]]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_flag(ctx.sample.saturated);
 }

@@ -13,6 +13,7 @@
 // @uniform u_range: vec2<f32> = (0.0, 1.0)
 // @control u_range hidden "Measured range"
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     if is_absent_nan(ctx.quad.suspect_frac) {
         return debug_invalid(ctx.frag_xy);
     }

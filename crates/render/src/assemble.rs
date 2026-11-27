@@ -1235,7 +1235,7 @@ pub fn assemble_kept(stain: &Stain, tier: Tier, view: View) -> Result<Fragment, 
     };
     let every = every_field()?;
     let every: Vec<&str> = every.iter().map(String::as_str).collect();
-    let (source, _) = source(stain, tier, &every, arm, false, &Dropped::default())?;
+    let (source, _) = source(stain, tier, &every, arm, false, &Dropped::default(), true)?;
     let (module, info) = compile(&source)?;
     let fields: Vec<String> = fields_read(&module, &info).into_iter().collect();
     let fields: Vec<&str> = fields.iter().map(String::as_str).collect();
@@ -1301,7 +1301,7 @@ fn plan(
 ) -> Result<(Vec<String>, Dropped), AssembleError> {
     let every = every_field()?;
     let every: Vec<&str> = every.iter().map(String::as_str).collect();
-    let (source, _) = source(stain, tier, &every, arm, written, &Dropped::default())?;
+    let (source, _) = source(stain, tier, &every, arm, written, &Dropped::default(), true)?;
     let (module, info) = compile(&source)?;
     let held = matters::Held::new();
     let proof = matters::Proof::new(&module, &info, &matters::STAIN_ROOTS, &held);
@@ -1330,7 +1330,7 @@ fn assemble_reading_arm(
     written: bool,
     dropped: &Dropped,
 ) -> Result<Fragment, AssembleError> {
-    let (source, uniforms) = source(stain, tier, fields, arm, written, dropped)?;
+    let (source, uniforms) = source(stain, tier, fields, arm, written, dropped, true)?;
     let (module, info) = compile(&source)?;
     let filled = |f: &str| {
         fields.contains(&f)
@@ -1403,6 +1403,7 @@ fn source(
     arm: Option<&str>,
     written: bool,
     dropped: &Dropped,
+    standard: bool,
 ) -> Result<(String, Vec<UniformBlock>), AssembleError> {
     let mut out = head(tier, fields)?;
     // The canonical form's stain: its live nodes only, numbered in canonical order, so two wirings of one graph
@@ -1423,6 +1424,7 @@ fn source(
         .collect();
     let first = prelude::uniforms_binding();
     let mut uniforms = Vec::new();
+    let mut standard_nodes: Vec<usize> = Vec::new();
     // The structs of the new parameter types, once each, before the first node that holds one: a dropped uniform's
     // struct too, since the dropped block names it.
     let mut library: Vec<UniformType> = Vec::new();
@@ -1517,6 +1519,11 @@ fn source(
             label(&n.occupant)
         );
         out.push_str(&prefixed(&text, &format!("n{i}_"), n.kind, &extra)?);
+        // The debug variant draws no standard treatment: its arm is the instrument's own check of every pixel.
+        if standard && arm.is_none() && wrapped(n.kind, stain.text(i).unwrap_or_default()) {
+            out.push_str(&standard_treatment(i, n.kind));
+            standard_nodes.push(i);
+        }
     }
     out.push_str(&shade(
         stain,
@@ -1527,6 +1534,7 @@ fn source(
         &chain,
         arm.is_some(),
         dropped,
+        &standard_nodes,
     ));
     out.push_str(arm.unwrap_or(PRESENTATION_HOOK));
     Ok((out, uniforms))
@@ -1554,9 +1562,17 @@ fn shade(
     chain: &[usize],
     debug: bool,
     dropped: &Dropped,
+    standard: &[usize],
 ) -> String {
     let mut out = String::new();
     let gone = |i: usize| dropped.nodes.contains(&i);
+    let slot_fn = |i: usize, slot: &str| {
+        if standard.contains(&i) {
+            format!("n{i}_standard")
+        } else {
+            format!("n{i}_{slot}")
+        }
+    };
     for &s in sources.iter().filter(|&&s| !gone(s)) {
         let _ = writeln!(out, "    let f{s} = n{s}_source(ctx);");
     }
@@ -1574,7 +1590,7 @@ fn shade(
         Some(c) if gone(c) => out.push_str("    let rgb = vec3<f32>();\n"),
         Some(c) => {
             context(c, &mut out);
-            let _ = writeln!(out, "    let rgb = n{c}_colour(c{c});");
+            let _ = writeln!(out, "    let rgb = {}(c{c});", slot_fn(c, "colour"));
         }
         None => {}
     }
@@ -1582,7 +1598,7 @@ fn shade(
         Some(b) if gone(b) => out.push_str("    let b = 0.0;\n"),
         Some(b) => {
             context(b, &mut out);
-            let _ = writeln!(out, "    let b = n{b}_brightness(c{b});");
+            let _ = writeln!(out, "    let b = {}(c{b});", slot_fn(b, "brightness"));
         }
         None => {}
     }
@@ -1646,6 +1662,65 @@ fn shade_functions(walk: &str, debug: bool) -> String {
 }
 
 // ── Node functions: one per node, its names prefixed ──────────────────────────────────────────────────────────────
+
+/// The name a source uses to say it draws not-a-system, invalid and not-yet-run pixels itself: it calls
+/// `handles_validity();`, or declares `const HANDLES_VALIDITY: bool = true;` where a call has no place. The assembler
+/// wraps every other colour and brightness node in the standard treatment ([`standard_treatment`]).
+pub const HANDLES_VALIDITY: &str = "handles_validity";
+
+/// The constant form of the marker, for a source where a call has no place; a different name, so a source that is linted
+/// beside the context's own `handles_validity` does not redefine it.
+pub const HANDLES_VALIDITY_CONST: &str = "HANDLES_VALIDITY";
+
+/// Whether `text` says it handles validity itself: it names [`HANDLES_VALIDITY`] outside a comment.
+pub fn handles_validity(text: &str) -> bool {
+    #[cfg(feature = "controls")]
+    if probe::marker_ignored() {
+        return false;
+    }
+    tokens(text).0.iter().any(|(t, a, b)| {
+        *t == Tok::Ident
+            && matches!(
+                text.get(*a..*b),
+                Some(HANDLES_VALIDITY | HANDLES_VALIDITY_CONST)
+            )
+    })
+}
+
+/// Whether a node of `kind` with source `text` is wrapped in the standard treatment: a colour or a brightness that
+/// does not handle validity itself. A source, a combiner and a post take a colour or a field already treated.
+pub fn wrapped(kind: Kind, text: &str) -> bool {
+    #[cfg(feature = "controls")]
+    if probe::standard_off() {
+        return false;
+    }
+    matches!(kind, Kind::Colour | Kind::Brightness) && !handles_validity(text)
+}
+
+/// Node `i`'s standard treatment, `n<i>_standard`, which `shade()` calls in place of its slot function: a sample the
+/// chart classifies as not a system, or a `decode_failed` one, is the canvas background; a `sim_failed` sample or a
+/// reserved state is the presentation views' invalid colour, or a brightness's zero; any other sample is the node's.
+// Don't compute the node first and select: a node that divides or loops on a failed sample's garbage would still run.
+// The plan is unclear here; chose to leave a `running` sample to the node, because the outcome palette and the field
+// ramps draw it by their own map, so the standard treatment would have to be opted out of by every shipped colour.
+fn standard_treatment(i: usize, kind: Kind) -> String {
+    let (ty, blank, invalid, slot) = match kind {
+        Kind::Brightness => ("f32", "0.0", "0.0", "brightness"),
+        _ => (
+            "vec3<f32>",
+            "canvas_background()",
+            "PRESENT_INVALID",
+            "colour",
+        ),
+    };
+    format!(
+        "\n// Node {i}'s standard treatment of samples that are not a system or failed.\n\
+         fn n{i}_standard(ctx: Ctx) -> {ty} {{\n    \
+         if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {{ return {blank}; }}\n    \
+         if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) {{ return {invalid}; }}\n    \
+         return n{i}_{slot}(ctx);\n}}\n"
+    )
+}
 
 /// `s` as [`tokens`]: refused where a block comment is never closed.
 fn lex(s: &str) -> Result<Vec<(Tok, usize, usize)>, AssembleError> {
@@ -2039,5 +2114,37 @@ pub mod probe {
 
     pub(super) fn id_in_key() -> bool {
         ID_IN_KEY.with(Cell::get)
+    }
+
+    thread_local! {
+        static STANDARD_OFF: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// `f` run with no node wrapped in the standard treatment.
+    pub fn without_standard_treatment<T>(f: impl FnOnce() -> T) -> T {
+        let before = STANDARD_OFF.with(|l| l.replace(true));
+        let out = f();
+        STANDARD_OFF.with(|l| l.set(before));
+        out
+    }
+
+    pub(super) fn standard_off() -> bool {
+        STANDARD_OFF.with(Cell::get)
+    }
+
+    thread_local! {
+        static MARKER_IGNORED: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// `f` run with no source's `handles_validity();` read, so every colour and brightness is wrapped.
+    pub fn ignoring_the_marker<T>(f: impl FnOnce() -> T) -> T {
+        let before = MARKER_IGNORED.with(|l| l.replace(true));
+        let out = f();
+        MARKER_IGNORED.with(|l| l.set(before));
+        out
+    }
+
+    pub(super) fn marker_ignored() -> bool {
+        MARKER_IGNORED.with(Cell::get)
     }
 }

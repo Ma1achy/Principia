@@ -148,6 +148,7 @@ fn outcome_class(ctx: Ctx) -> i32 {
 }
 
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     let rgb = outcome_swatch(ctx);
     let k = outcome_class(ctx);
     if (k < 0) {

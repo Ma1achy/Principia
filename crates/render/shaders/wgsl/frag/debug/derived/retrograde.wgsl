@@ -13,5 +13,6 @@ fn value(ctx: Ctx) -> f32 {
 }
 
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     return dbg_flag(retrograde(ctx.sample.theta));
 }

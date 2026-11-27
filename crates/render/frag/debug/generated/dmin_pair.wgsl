@@ -10,6 +10,7 @@
 // @about The debug view of the payload field dmin_pair: `packed_a` bits 6–7, u-bits.
 // @maps dmin_pair [categorical(3), [0, 2]]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     return select(dbg_cat(ctx.sample.dmin_pair, 3u), dbg_sentinel(f32(ctx.sample.dmin_pair), ctx.frag_xy), ctx.sample.dmin_pair == 3u);
 }

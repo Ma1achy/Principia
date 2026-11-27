@@ -10,6 +10,7 @@
 // @about The debug view of the payload field n: derived from `r`, `m0`, `m1`, `m2`, vector(·, 3).
 // @maps n [lin, [-1, 1]]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_sentinel(length(ctx.sample.n), ctx.frag_xy);
 }

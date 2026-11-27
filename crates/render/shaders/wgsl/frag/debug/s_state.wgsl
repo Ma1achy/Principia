@@ -10,6 +10,7 @@
 // @maps ctx.quad.state [categorical]
 // @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     if ctx.quad.state == CTX_ABSENT_BITS {
         return debug_invalid(ctx.frag_xy);
     }

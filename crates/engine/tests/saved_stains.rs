@@ -26,9 +26,9 @@ const FIXTURES: [&str; 3] = ["outcome", "debug_view", "mixed"];
 
 /// The FNV-1a digest of the code each old fixture assembled to when it was saved, before the saved form changed.
 const DREW: [(&str, &str); 3] = [
-    ("outcome", "605fb40797da7873"),
-    ("debug_view", "6c46d7a218439d84"),
-    ("mixed", "f20a871f30e68fdd"),
+    ("outcome", "5609c03c0747c713"),
+    ("debug_view", "475809b73bd20d8b"),
+    ("mixed", "28265f1f88e85ece"),
 ];
 
 fn dir() -> PathBuf {

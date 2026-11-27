@@ -1140,7 +1140,15 @@ pub fn followed(
     let arm = (view == super::View::Debug).then_some(super::DEBUG_ARM);
     let every = super::every_field()?;
     let every: Vec<&str> = every.iter().map(String::as_str).collect();
-    let (source, _) = super::source(stain, tier, &every, arm, false, &super::Dropped::default())?;
+    let (source, _) = super::source(
+        stain,
+        tier,
+        &every,
+        arm,
+        false,
+        &super::Dropped::default(),
+        true,
+    )?;
     let (module, info) = compile(&source)?;
     let held = Held::new();
     Ok(Proof::new(&module, &info, &STAIN_ROOTS, &held).sure())
@@ -1150,7 +1158,15 @@ pub fn followed(
 pub fn stain_changes(stain: &super::Stain, tier: Tier) -> Result<Changes, AssembleError> {
     let every = super::every_field()?;
     let every: Vec<&str> = every.iter().map(String::as_str).collect();
-    let (source, _) = super::source(stain, tier, &every, None, false, &super::Dropped::default())?;
+    let (source, _) = super::source(
+        stain,
+        tier,
+        &every,
+        None,
+        false,
+        &super::Dropped::default(),
+        false,
+    )?;
     let (module, info) = compile(&source)?;
     let syntactic = super::fields_read(&module, &info);
     Ok(changes(&module, &info, syntactic))
@@ -1218,6 +1234,118 @@ pub struct Reach {
     pub fields: BTreeSet<String>,
     /// Whether the proof followed everything; where not, everything is live.
     pub sure: bool,
+}
+
+/// What a node needs the frame to provide, read from its source: each is true only where the proof finds that the
+/// node reads it into its result. Where the proof could not follow the code, everything it may read is needed.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Needs {
+    /// The Benettin FTLE (`ftle`, `ftle_valid`), which only a tier with the shadow stores.
+    pub ftle: bool,
+    /// The ensemble's spread (`ensemble_spread`), which only a run with an ensemble has.
+    pub spread: bool,
+    /// The symbolic word (`word`), which only a tier with the word buffer stores.
+    pub word: bool,
+    /// A range the host measures over the picture and writes into a `hidden` control's uniform.
+    pub measured_range: bool,
+    /// The sample's step times (`t_end_step`, `t_dmin_step` and their fractions): the picture follows the playhead.
+    pub time: bool,
+    /// The previous frame's class, a lane the context does not have yet.
+    pub previous_class: bool,
+    /// The sample's quad or tile (`ctx.quad`, `ctx.tile`).
+    pub quad: bool,
+    /// Whether the picture is a function of the sample alone, the same wherever it is drawn: what a bake to a texture
+    /// of n̂ needs. It reads no screen place, quad, tile or chart classification.
+    pub pure_in_n: bool,
+}
+
+impl Needs {
+    fn of(reach: &Reach, declaration: &Declaration) -> Needs {
+        if !reach.sure {
+            return Needs {
+                ftle: true,
+                spread: true,
+                word: true,
+                measured_range: true,
+                time: true,
+                previous_class: true,
+                quad: true,
+                pure_in_n: false,
+            };
+        }
+        let field = |names: &[&str]| names.iter().any(|n| reach.fields.contains(*n));
+        let lane = |names: &[&str]| names.iter().any(|n| reach.lanes.contains(*n));
+        // The plan is unclear here; chose a `hidden` control on a live `vec2<f32>` uniform as the mark of a measured
+        // range, because the host writes a hidden control and the shipped views' `u_range` is the only one there is.
+        let measured_range = declaration
+            .described
+            .controls
+            .iter()
+            .filter(|c| c.control == Control::Hidden)
+            .any(|c| {
+                declaration
+                    .uniforms
+                    .iter()
+                    .zip(&reach.uniforms)
+                    .any(|(u, &live)| live && u.name == c.uniform && u.ty == UniformType::Vec2)
+            });
+        Needs {
+            ftle: field(&["ftle", "ftle_valid"]),
+            spread: field(&["ensemble_spread"]),
+            word: field(&["word"]),
+            measured_range,
+            time: field(&[
+                "t_end_step",
+                "t_dmin_step",
+                "t_end_fraction",
+                "t_dmin_fraction",
+            ]),
+            previous_class: lane(&["previous"]),
+            quad: lane(&["quad", "tile"]),
+            pure_in_n: !lane(&["frag_xy", "screen", "quad", "tile", "validity"]),
+        }
+    }
+}
+
+/// Something a node needs that the run does not provide, for the editor to say.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Lack {
+    /// The FTLE, on a tier without the Benettin shadow.
+    Ftle,
+    /// The symbolic word, on a tier without the word buffer.
+    Word,
+    /// The ensemble's spread, in a run with no ensemble.
+    Spread,
+}
+
+impl Lack {
+    /// What the editor says about it, in plain words.
+    pub fn says(self) -> &'static str {
+        match self {
+            Lack::Ftle => "needs the FTLE, which this run does not compute",
+            Lack::Word => "needs the symbolic word, which this run does not store",
+            Lack::Spread => {
+                "needs the ensemble's spread, which a run with no ensemble does not have"
+            }
+        }
+    }
+}
+
+impl Needs {
+    /// What the node needs that a run at `tier`, with an ensemble where `ensemble`, does not provide.
+    pub fn lacks(&self, tier: Tier, ensemble: bool) -> Vec<Lack> {
+        let mut out = Vec::new();
+        if self.ftle && !tier.has_ftle {
+            out.push(Lack::Ftle);
+        }
+        if self.word && !tier.has_word {
+            out.push(Lack::Word);
+        }
+        if self.spread && !ensemble {
+            out.push(Lack::Spread);
+        }
+        out
+    }
 }
 
 /// Whether a control can matter now.
@@ -1370,6 +1498,12 @@ impl Shader {
             fields,
             sure: proof.sure(),
         }
+    }
+
+    /// What the node needs from the frame, derived from what its source reads into its result (question 1): never
+    /// declared by its author.
+    pub fn needs(&self) -> Needs {
+        Needs::of(&self.never(), &self.declaration)
     }
 
     /// Each declared uniform's standing with the uniforms at `value(uniform)` (question 2, with question 1 for

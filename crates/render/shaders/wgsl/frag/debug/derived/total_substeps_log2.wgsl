@@ -15,5 +15,6 @@ fn value(ctx: Ctx) -> f32 {
 }
 
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     return dbg_lin(value(ctx), 0.0, 31.0);
 }

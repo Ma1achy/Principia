@@ -91,3 +91,8 @@ struct Ctx {
     inputs: array<Field, 4>,
     params: ReadParams,
 }
+
+// A source's way of saying it draws not-a-system, invalid and not-yet-run pixels itself: `handles_validity();` in the
+// function, or `const HANDLES_VALIDITY: bool = true;` beside it. It does nothing; the assembler reads the name and
+// leaves that node out of the standard treatment.
+fn handles_validity() {}

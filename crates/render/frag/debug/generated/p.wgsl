@@ -10,6 +10,7 @@
 // @about The debug view of the payload field p: scalar index 6, vector(·, 6).
 // @maps p [lin, (−∞, ∞)]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     let v = ctx.sample.p;
     return dbg_sentinel(sqrt(dot(v[0], v[0]) + dot(v[1], v[1]) + dot(v[2], v[2])), ctx.frag_xy);

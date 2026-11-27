@@ -26,6 +26,7 @@
 // @control PALETTE choice("diverging", "viridis") "Palette"
 // @control LIN_R fields "lin range"
 // @control EPS_E fields "ε_E"
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     if (sd_is_failed(ctx.sample.state)) { return debug_invalid(ctx.frag_xy); }
     if (dbg_drift_non_finite(ctx.sample.E_0)) { return debug_invalid(ctx.frag_xy); }

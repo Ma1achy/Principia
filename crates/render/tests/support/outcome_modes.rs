@@ -38,7 +38,7 @@ pub const RANK: &str = "fn outcome_rank(ctx: Ctx) -> i32 {
 /// Greyscale mode's brightness: `B = (r + ½)/K`.
 pub fn grey_brightness() -> String {
     format!(
-        "{RANK}fn brightness(ctx: Ctx) -> f32 {{ return (f32(max(outcome_rank(ctx), 0)) + 0.5) / {K}.0; }}\n"
+        "{RANK}fn brightness(ctx: Ctx) -> f32 {{ handles_validity(); return (f32(max(outcome_rank(ctx), 0)) + 0.5) / {K}.0; }}\n"
     )
 }
 
@@ -58,6 +58,7 @@ pub fn grey_post() -> String {
 pub fn hue_colour(turns: u32) -> String {
     format!(
         "{RANK}fn colour(ctx: Ctx) -> vec3<f32> {{
+    handles_validity();
     let r = outcome_rank(ctx);
     if (r == -1) {{ return canvas_background(); }}
     return hue_wheel(f32(r) / {turns}.0);

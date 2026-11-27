@@ -50,7 +50,7 @@ const INPUTS: FrameInputs = FrameInputs {
 /// A colour occupant drawing the linear colour `rgb`.
 fn flat(rgb: [f32; 3]) -> String {
     format!(
-        "fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>({:?}, {:?}, {:?}); }}",
+        "fn colour(ctx: Ctx) -> vec3<f32> {{ handles_validity(); return vec3<f32>({:?}, {:?}, {:?}); }}",
         rgb[0], rgb[1], rgb[2]
     )
 }
@@ -61,7 +61,8 @@ fn scale(k: f32) -> String {
 }
 
 /// A colour occupant with a syntax error in its body.
-const BROKEN_COLOUR: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.5 0.5, 0.5); }";
+const BROKEN_COLOUR: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(0.5 0.5, 0.5); }";
 
 /// A post occupant with a syntax error in its body.
 const BROKEN_POST: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb * ; }";
@@ -836,7 +837,9 @@ negative_control!(
 /// compile. With `set` off, the background is left at the default.
 fn check_background(set: bool) {
     let mut r = rig();
-    let g = graph("fn colour(ctx: Ctx) -> vec3<f32> { return canvas_background(); }");
+    let g = graph(
+        "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return canvas_background(); }",
+    );
     r.request(&g);
     let default = render::present::canvas_background().map(f64::from);
     assert_all(&r.frame(), default, "the default background");
@@ -869,7 +872,7 @@ fn check_params(edit: bool) {
     let mut r = rig();
     let colour = "// @uniform gain: f32 = 0.5 [0, 1]\n\
                   // @uniform tint: vec3<f32> = (1, 0.5, 0.25)\n\
-                  fn colour(ctx: Ctx) -> vec3<f32> { return uniforms.tint * uniforms.gain; }";
+                  fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return uniforms.tint * uniforms.gain; }";
     let g = graph(colour);
     r.request(&g);
     assert_all(&r.frame(), [0.5, 0.25, 0.125], "the defaults");
@@ -943,7 +946,7 @@ negative_control!(
 /// A colour with the uniforms `gain` (default 0.5) and `tint` (default (1, 0.5, 0.25)), drawing `tint · gain`.
 const GAIN_COLOUR: &str = "// @uniform gain: f32 = 0.5 [0, 1]\n\
                            // @uniform tint: vec3<f32> = (1, 0.5, 0.25)\n\
-                           fn colour(ctx: Ctx) -> vec3<f32> { return uniforms.tint * uniforms.gain; }";
+                           fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return uniforms.tint * uniforms.gain; }";
 
 /// A cache hit for the same stain built another way, its nodes under other keys (a node deleted and added again, the
 /// graph built in another order): the hit draws its own nodes' params, the defaults, and a param edit on it reaches
@@ -1259,7 +1262,7 @@ fn check_unexplained(post_new: &str) {
     let colour = |ty: &str, one: &str| {
         format!(
             "fn helper() -> {ty} {{ return {one}; }}\n\
-             fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>(0.5, 0.25, 0.125) * helper(); }}"
+             fn colour(ctx: Ctx) -> vec3<f32> {{ handles_validity(); return vec3<f32>(0.5, 0.25, 0.125) * helper(); }}"
         )
     };
     let post_old = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb * n1_helper(); }";
@@ -1427,7 +1430,7 @@ negative_control!(
 
 /// A view of `field`: its built-in source into a colour showing the field on the grey ramp.
 fn view_of(field: &str) -> Option<Vec<Node>> {
-    let mut g = graph("fn colour(ctx: Ctx) -> vec3<f32> { return ramp_grey(ctx.inputs[0].x); }");
+    let mut g = graph("fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return ramp_grey(ctx.inputs[0].x); }");
     g[0].occupant = Occupant::Field(field.to_owned());
     Some(g)
 }
@@ -1967,7 +1970,7 @@ negative_control!(
 
 /// A stain whose colour is its sample's `ICDescriptor.rho_ratio`, in red.
 const IC_COLOUR: &str =
-    "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.ic.rho_ratio, 0.0, 0.0); }";
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.ic.rho_ratio, 0.0, 0.0); }";
 
 /// An `ICDescriptor` buffer of `W` × `H` descriptors, each with `rho_ratio` and every other member 1.
 fn ic_buffer(h: &GpuHarness, rho_ratio: f32) -> wgpu::Buffer {

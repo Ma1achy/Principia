@@ -272,7 +272,7 @@ fn greyscale_with(leak: f32) -> Mode {
         name: "greyscale",
         colour: Occupant::None,
         brightness: Occupant::Custom(format!(
-            "{RANK}fn brightness(ctx: Ctx) -> f32 {{
+            "{RANK}fn brightness(ctx: Ctx) -> f32 {{ handles_validity();
     return (f32(qa_rank(ctx)) + 0.5) / {K}.0 + {leak:?} * f32(ctx.sample.t_end_step % 2u);
 }}
 "
@@ -291,7 +291,7 @@ fn hue_with(turns: u32) -> Mode {
     Mode {
         name: "hue",
         colour: Occupant::Custom(format!(
-            "{RANK}fn colour(ctx: Ctx) -> vec3<f32> {{
+            "{RANK}fn colour(ctx: Ctx) -> vec3<f32> {{ handles_validity();
     return hue_wheel(f32(qa_rank(ctx)) / {turns}.0);
 }}
 "

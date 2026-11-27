@@ -14,6 +14,7 @@
 // @uniform u_range: vec2<f32> = (0.0, 1.0)
 // @control u_range hidden "Measured range"
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     if ctx.quad.ancestor_gap == CTX_ABSENT_BITS {
         return debug_invalid(ctx.frag_xy);
     }

@@ -11,6 +11,7 @@
 // @control INVALID_OVERRIDE toggle "Override the invalid colour" in "Invalid"
 // @control INVALID_COLOUR colour "Invalid colour" in "Invalid"
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     let v = ctx.sample.dE_max;
     if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return canvas_background(); }
     if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) { return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u); }

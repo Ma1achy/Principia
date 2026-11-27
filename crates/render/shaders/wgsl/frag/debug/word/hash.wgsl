@@ -10,6 +10,7 @@
 // @maps word hash [categorical]
 // @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     let w = ctx.sample.word;
     if (!fgw_reduced_length_valid(w)) {
         return debug_invalid(ctx.frag_xy);

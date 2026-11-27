@@ -7,5 +7,6 @@
 // @maps word truncated [flag]
 // @glyph name
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     return dbg_flag(fgw_truncated(ctx.sample.word));
 }
