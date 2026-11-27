@@ -453,6 +453,7 @@ impl<S: EngineSide> App<S> {
             &self.snapshot.render.stain_graph,
         );
         if std::mem::take(&mut self.stepped) && was != is {
+            stain::stepped(&mut self.stain, is);
             // A step that changes any node's shader may be a load's, and an offer shown again costs less than one hidden.
             let held = |g: &engine::contract::render_state::StainGraph| {
                 let nodes = g.nodes().map(|n| (n.id, n.kind, n.occupant.clone()));
@@ -830,6 +831,11 @@ impl<S: EngineSide> App<S> {
             }
         }
         self.shader_asks(&mut stain_out);
+        stain::settle(
+            &mut self.stain,
+            &self.snapshot.render.stain_graph,
+            &mut stain_out,
+        );
         if stain_out.loads {
             self.shaders.loaded();
         }

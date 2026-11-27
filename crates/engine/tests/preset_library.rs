@@ -8,6 +8,9 @@
 //! - `preset_locked_fork`: an accepted edit to a loaded debug preset gives `Applied::Forked`, an unlocked, renamed copy
 //!   that differs from the preset, and the library's preset is unchanged; a production preset gives `InPlace`; a refused
 //!   edit forks nothing;
+//! - `preset_locked_fork_whole_graph`: a whole-graph edit (`StainEdit::Graph`, what the window sends) to a loaded debug
+//!   preset forks as a typed one does, the copy holding exactly that graph and the preset unchanged; the same graph
+//!   again is refused and forks nothing;
 //! - `preset_bivariate`: n̂ × FTLE and n̂ × t_end have a wire into the combiner's colour port and into its brightness
 //!   port, the combiner is `replace_l`, and the same graph with the brightness unwired assembles to other code.
 
@@ -197,6 +200,49 @@ negative_control!(
             "a locked preset was edited in place"
         );
     }
+);
+
+/// A whole-graph edit of `id` of `section`, its combiner swapped, gives `Forked`: the copy holds that graph, unlocked and
+/// renamed, the library's preset as it was; the unchanged graph is refused, forking nothing.
+fn check_whole_graph_forks(section: Section, id: &str) {
+    let pristine = preset::preset(section, id).expect("the preset");
+    let mut loaded = preset::select(&pristine);
+    let same = StainEdit::Graph(pristine.graph.clone());
+    assert_eq!(loaded.apply(&same), Err(Refusal::NoChange));
+    assert_eq!(
+        loaded.locked,
+        pristine.locked(),
+        "a refused whole-graph edit forked"
+    );
+    let mut next = pristine.graph.clone();
+    next.set_occupant(COMBINER, Occupant::Builtin("multiply".into()))
+        .expect("occupant");
+    assert_eq!(
+        loaded.apply(&StainEdit::Graph(next.clone())),
+        Ok(Applied::Forked),
+        "a whole-graph edit did not fork the locked preset"
+    );
+    assert!(!loaded.locked && loaded.name != pristine.name);
+    assert_eq!(loaded.graph, next, "the copy does not hold the edit");
+    assert_eq!(
+        preset::graph(section, id).expect("again"),
+        pristine.graph,
+        "the library's preset moved"
+    );
+}
+
+#[test]
+fn preset_locked_fork_whole_graph() {
+    for id in ["uv_quad", "tl_rb"] {
+        check_whole_graph_forks(Section::Debug, id);
+    }
+}
+
+negative_control!(
+    preset_locked_fork_whole_graph,
+    "a production preset, which loads editable, does not fork on a whole-graph edit",
+    expected = "a whole-graph edit did not fork the locked preset",
+    check_whole_graph_forks(Section::Production, "outcome_ftle")
 );
 
 fn both_combiner_inputs(g: &StainGraph) -> bool {

@@ -90,5 +90,5 @@
     ]
   },
   "measure": "The outcome class sets the hue and chroma; the terminal step t_end_step, compacted to [0, 1] with white = early, sets the OKLab lightness L.",
-  "name": "n̂ × t_end"
+  "name": "Outcome × t_end"
 }

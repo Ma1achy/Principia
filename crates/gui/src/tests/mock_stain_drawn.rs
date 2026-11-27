@@ -789,18 +789,18 @@ fn mock_stain_drawn_the_library() {
         (filter.width() - (list.width() - 40.0)).abs() <= 1.0,
         "{filter:?} in {list:?}"
     );
-    // Filtered: the rows that hold "ftle", and the count says how many; the two of one name are told apart.
+    // Filtered: the rows that hold "ftle", case aside, and the count says how many; the two of one name are told apart.
     app.stain.library.filter = "ftle".into();
     let filtered = nodes(&mut h, &mut app);
     let named: Vec<Rect> = filtered
         .iter()
-        .filter(|n| n.text == "   ftle")
+        .filter(|n| n.text.starts_with("   ftle ("))
         .map(|n| n.rect)
         .collect();
     assert_eq!(named.len(), 2, "two rows are named ftle");
     let passing = filtered
         .iter()
-        .filter(|n| n.text.starts_with("   ") && n.text.contains("ftle"))
+        .filter(|n| n.text.starts_with("   ") && n.text.to_lowercase().contains("ftle"))
         .count();
     assert!(find(&filtered, &passing.to_string()).is_some());
     assert!(find(&filtered, "   Margin").is_none());
@@ -821,7 +821,7 @@ fn mock_stain_drawn_the_library() {
     // Collapsed: no rows.
     app.stain.library.collapsed = true;
     let collapsed = nodes(&mut h, &mut app);
-    assert!(find(&collapsed, "   ftle").is_none());
+    assert!(!collapsed.iter().any(|n| n.text.starts_with("   ftle")));
     assert!(find(&collapsed, "▸").is_some());
     rejects("its namesake highlighted", || assert!(lit(named[0])));
 }

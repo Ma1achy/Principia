@@ -2434,7 +2434,7 @@ confirmed at the M1 gate, R-433 and R-434: the grey `#4E4E4E`, 2 × 2 px dots of
   preset is only where it started. (Saving a graph back as a new named preset is a later question;
   "duplicate to custom" suffices for the dev GUI.) **Settled by the notes:** the library has a **Your stains** group,
   with New, Rename, Import and Export (§G14 item 11).
-- **Bivariate presets** (`n̂ × FTLE`, `Outcome-class × diffusion`, …) load a graph with **both**
+- **Bivariate presets** (`Outcome × FTLE`, `Outcome-class × diffusion`, …) load a graph with **both**
   combiner inputs occupied — one `source→colour`, one `source→brightness` — i.e. the second slot
   filled. There is no special bivariate UI; the family is just *the brightness slot occupied*.
 - **State map presets (R-542; state map SM15, board 5).** Classic shape colour (Shape n̂ → Site blend, as today), and

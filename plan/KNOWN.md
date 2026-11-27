@@ -87,10 +87,10 @@ delete its line when it's done.
   the window calls `problem_of` directly for it.
 - **The preset library is partly built** (TASK-M7-17). Built: the preset files (`render/presets/`), the loader, locked
   debug presets that fork on the first edit (`engine::contract::stain::preset`), the catalogue's outcome entry reading
-  its file, the addressing presets and two bivariate presets. Not built: the tile-index and sample-index grey presets
-  (`ctx.tile` carries no index; adding one moves every assembled text); the debug views generated from the ledger, which
-  keep the catalogue's one wiring rule (`presets::named_view`) rather than one file each, and which §9.6's six groups
-  file all as diagnostic; the other bivariate presets (n̂ × diffusion, n̂ × ensemble spread, outcome × FTLE apart from
-  n̂'s); the `fuzziness` and `map_gradient` post nodes (a post sees one fragment, so the map gradient needs a pass over
-  the colour buffer); the OKLab-uniform swatch set listing. The window needs: a preset list by group with a lock badge,
-  `Loaded::apply` for every stain edit (so the first edit on a locked preset forks), and the preset's `measure` text.
+  its file, the addressing presets, two bivariate presets (Outcome × FTLE, Outcome × t_end), and the window's side: the
+  library by group with a lock badge, every stain edit through `Loaded::apply`, the measure shown. Not built: the
+  tile-index and sample-index grey presets (`ctx.tile` carries no index; adding one moves every assembled text); the
+  debug views generated from the ledger, which keep the catalogue's one wiring rule (`presets::named_view`) rather than
+  one file each, and which §9.6's six groups file all as diagnostic; the other bivariate presets (the shape-sphere n̂ ×
+  FTLE, × diffusion, × ensemble spread and × t_end); the `fuzziness` and `map_gradient` post nodes (a post sees one
+  fragment, so the map gradient needs a pass over the colour buffer); the OKLab-uniform swatch set listing.

@@ -1,11 +1,12 @@
-//! The Stain editor on the real engine: its content is the store's own graph through the real assembler and registry,
-//! an edit made with the editor's controls is one undoable `SetField` that reaches the assembled code, a param edit
-//! assembles nothing, and a graph that does not compile is a problem that leaves the last code in place. Each check also
-//! runs on an input it must reject (through `rejects`).
+//! The Stain editor on the real engine: its content is the store's own graph through the real assembler, registry and
+//! presets, an edit made with the editor's controls is one undoable `SetField` that reaches the assembled code, a param
+//! edit assembles nothing, and a graph that does not compile is a problem that leaves the last code in place. Each check
+//! also runs on an input it must reject (through `rejects`).
 
 use engine::contract::render_state::{NodeId, NodeKind, Occupant, StainGraph};
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::stain::assembled::{assemble, library, node_source, source_fields};
+use engine::contract::stain::preset::{self, group_of, DebugGroup, Section};
 use engine::presets;
 
 use super::mock_stain_preview::{check_one_edit, depth, graph, logged, on_stain, select};
@@ -15,7 +16,7 @@ use crate::headless::Headless;
 use crate::real::stain::TIER;
 use crate::real::start;
 use crate::side::{EngineSide, RealSide};
-use crate::stain::catalogue::grouped;
+use crate::stain::catalogue::{grouped, told_apart, PRESETS};
 use crate::stain::{library as drawer, Content, CHOICE_IDS, GROUP_IDS, ROW_IDS};
 
 /// The start graph's nodes: the combiner, the source of `state` and the outcome palette.
@@ -133,19 +134,83 @@ fn the_content_is_the_assemblers_and_the_registrys() {
     );
 }
 
-/// Asserts that the library in `c` is the registry: each entry one row, by its description's name in its description's
-/// group, no name twice in a group; and every row, group and choice has a scope, so none is dropped.
-fn check_library(c: &Content) {
+/// A heading and its rows' names and graphs.
+type Listed = (String, Vec<(String, Option<StainGraph>)>);
+
+/// The library as it is listed: each heading with its rows' names and graphs. The registry's slots' entries by their
+/// descriptions' groups; then the production presets no registry row loads, under one heading; then the debug section,
+/// each group's preset files and then the registry's debug views `group_of` files there, two of one name told apart.
+fn listing() -> Vec<Listed> {
     let entries = library().expect("the library");
+    let (ours, debug): (Vec<_>, Vec<_>) = entries.into_iter().partition(|e| !e.debug);
+    let mut out: Vec<Listed> = grouped(ours)
+        .into_iter()
+        .map(|(t, es)| {
+            (
+                t,
+                es.into_iter()
+                    .map(|e| (e.description.name, e.graph))
+                    .collect(),
+            )
+        })
+        .collect();
+    let loads: Vec<StainGraph> = out
+        .iter()
+        .flat_map(|(_, r)| r.iter().filter_map(|r| r.1.clone()))
+        .collect();
+    let presets: Vec<_> = preset::library()
+        .expect("the presets")
+        .into_iter()
+        .filter(|p| !loads.contains(&p.graph))
+        .collect();
+    let mut push = |title: &str, name: String, g: Option<StainGraph>| match out
+        .iter_mut()
+        .find(|(t, _)| t == title)
+    {
+        Some((_, rows)) => rows.push((name, g)),
+        None => out.push((title.to_owned(), vec![(name, g)])),
+    };
+    for p in presets.iter().filter(|p| p.section == Section::Production) {
+        push(PRESETS, p.name.clone(), Some(p.graph.clone()));
+    }
+    for group in DebugGroup::ALL {
+        for p in presets.iter().filter(|p| p.group == Some(group)) {
+            push(group.name(), p.name.clone(), Some(p.graph.clone()));
+        }
+        let views: Vec<_> = debug
+            .iter()
+            .filter(|e| group_of(&e.id) == Some(group))
+            .collect();
+        for e in &views {
+            let shared = views
+                .iter()
+                .filter(|v| v.description.name == e.description.name)
+                .count()
+                > 1;
+            let name = if shared {
+                told_apart(e)
+            } else {
+                e.description.name.clone()
+            };
+            push(group.name(), name, e.graph.clone());
+        }
+    }
+    out
+}
+
+/// Asserts that the library in `c` is the registry and the presets as [`listing`] lists them: each one row, no name
+/// twice in a group; and every row, group and choice has a scope, so none is dropped.
+fn check_library(c: &Content) {
+    let groups = listing();
+    let count: usize = groups.iter().map(|(_, rows)| rows.len()).sum();
     let rows: Vec<&str> = c
         .library
         .iter()
         .flat_map(|g| g.rows.iter().map(|row| row.name))
         .collect();
-    assert_eq!(rows.len(), entries.len());
-    assert_eq!(c.modes as usize, entries.len());
-    assert_eq!(c.graphs.len(), entries.len());
-    let groups = grouped(entries);
+    assert_eq!(rows.len(), count);
+    assert_eq!(c.modes as usize, count);
+    assert_eq!(c.graphs.len(), count);
     assert_eq!(c.library.len(), groups.len());
     let mut k = 0;
     for (group, (title, entries)) in c.library.iter().zip(&groups) {
@@ -159,10 +224,9 @@ fn check_library(c: &Content) {
             group.rows.len(),
             "two rows of {title} share a name"
         );
-        for (row, e) in group.rows.iter().zip(entries) {
-            assert_eq!((row.name, row.place), (e.description.name.as_str(), k));
-            assert_eq!(*title, e.description.group, "{}", e.id);
-            assert_eq!(c.graphs[k], e.graph);
+        for (row, (name, g)) in group.rows.iter().zip(entries) {
+            assert_eq!((row.name, row.place), (name.as_str(), k));
+            assert_eq!(&c.graphs[k], g);
             k += 1;
         }
     }
@@ -195,8 +259,8 @@ fn the_library_is_the_registry_and_none_of_it_is_dropped() {
     check_library(&crate::mock::stain::content(graph(&app)));
 }
 
-/// The outcome palette and every debug colour view load a graph, and no other row does; each assembles at the real
-/// tier, so no row draws a problem.
+/// The outcome palette and every debug colour view load a graph, and no other registry row does; each, and every
+/// preset's, assembles at the real tier, so no row draws a problem.
 #[test]
 fn every_graph_the_library_loads_assembles() {
     for e in library().expect("the library") {
@@ -204,6 +268,11 @@ fn every_graph_the_library_loads_assembles() {
         assert_eq!(e.graph.is_some(), view, "{}", e.id);
         if let Some(Err(why)) = e.graph.as_ref().map(|g| assemble(g, TIER)) {
             panic!("{}: {why}", e.id);
+        }
+    }
+    for p in preset::library().expect("the presets") {
+        if let Err(why) = assemble(&p.graph, TIER) {
+            panic!("preset {}: {why}", p.id);
         }
     }
     rejects("a colour that reads no field there is", || {
