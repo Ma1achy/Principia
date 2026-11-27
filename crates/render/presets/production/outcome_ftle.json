@@ -90,5 +90,5 @@
     ]
   },
   "measure": "The outcome class sets the hue and chroma; the FTLE, compacted to [0, 1], sets the OKLab lightness L.",
-  "name": "n̂ × FTLE"
+  "name": "Outcome × FTLE"
 }

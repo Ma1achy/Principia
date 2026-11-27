@@ -273,7 +273,9 @@ fn check_lit(lit: &dyn Fn(&StainGraph) -> Option<usize>) -> usize {
             let got = lit(g);
             assert!(got.is_some(), "{}: no row lit", entry.id);
             assert_eq!(got, lit(graph), "{}: pasted lights another", entry.id);
-            assert_eq!(title(got), Some(entry.description.name.as_str()), "{row}");
+            let names = [entry.description.name.clone(), catalogue::told_apart(entry)];
+            let named = title(got).is_some_and(|t| names.iter().any(|n| n == t));
+            assert!(named, "{row}: {:?}", title(got));
         }
         rows += 1;
     }

@@ -7,7 +7,8 @@
 //! [`load`]). A production preset loads editable and the edit is made in place. The fork is one way: a graph never
 //! becomes a preset again.
 
-use render::presets::file::{self, DebugGroup, Section};
+use render::presets::file;
+pub use render::presets::file::{group_of, DebugGroup, Section};
 
 use crate::contract::set_field::{Edit, RenderField};
 use crate::contract::stain::edit::{self, Refusal, StainEdit};

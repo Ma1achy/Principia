@@ -46,6 +46,9 @@ pub enum StainEdit {
     },
     /// Set a `colour` node's custom-stop ramp, or remove it with `None` (colour_composition §9.4).
     Ramp { node: NodeId, ramp: Option<Ramp> },
+    /// Replace the graph by this one, an edit made on the whole graph: a node's code updated, reverted or written out
+    /// as a copy, or an occupant taken with the values carried over. Accepted where it is a graph.
+    Graph(StainGraph),
 }
 
 /// What a refused add, delete or duplicate asked of a fixed singleton.
@@ -201,6 +204,10 @@ pub fn apply(graph: &StainGraph, edit: &StainEdit) -> Result<SetField, Refusal> 
         StainEdit::Ramp { node, ramp } => {
             kind_of(graph, *node)?;
             next.set_ramp(*node, ramp.clone())?;
+        }
+        StainEdit::Graph(g) => {
+            g.check()?;
+            next = g.clone();
         }
     }
     if next == *graph {

@@ -113,6 +113,7 @@ mod tests {
     mod mock_windows_remembered;
     mod node_editor;
     mod present_fills_window_mock;
+    mod preset_window;
     mod reachability;
     mod real_field;
     mod real_stain;

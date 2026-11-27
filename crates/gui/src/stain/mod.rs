@@ -3,7 +3,8 @@
 //! with its `Graph · Pipeline WGSL · Node WGSL` toggle (`canvas`); the preview and the node inspector right
 //! (`preview`); and the assembled code (`code_view`) and the Problems pane (`problems`) under the canvas. The graph is
 //! the snapshot's stain graph (gui_state_contract §2, §5), and every edit of it is one `SetField` of the whole graph,
-//! undoable: the inspector's. The canvas's places, view and selection, the drawer's state, the toggle and the code
+//! undoable: the inspector's. Every edit goes through the preset loaded ([`settle`]): a locked one forks on its first
+//! (render_gui_spec §11). The canvas's places, view and selection, the drawer's state, the toggle and the code
 //! being typed are the editor's own. Your shaders' folder is the app's (`crate::shaders`); what is shown of it is in
 //! [`yours`].
 //!
@@ -40,6 +41,8 @@ use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::stain::assembled::node_source;
 use engine::contract::stain::custom::Status;
 use engine::contract::stain::describe::{describe_node, from_source, Description, Shown, Standing};
+use engine::contract::stain::edit::StainEdit;
+use engine::contract::stain::preset::Loaded;
 
 use crate::keyboard::scopes::{Adjust, Scope, ScopeId, ScopeTree};
 use crate::layout::{Layout, ARTBOARD};
@@ -102,6 +105,10 @@ pub struct Row {
     pub name: &'static str,
     /// Where it comes from, as its tooltip says.
     pub from: String,
+    /// Whether its graph loads locked: the first edit forks a custom copy.
+    pub locked: bool,
+    /// What it measures, in words, where it is a quantitative preset.
+    pub measure: Option<String>,
 }
 
 /// What the canvas shows: the toggle's three views.
@@ -286,6 +293,11 @@ pub struct Scratch {
     pub open: BTreeSet<(NodeId, ScopeId)>,
     /// Your shaders': the code being typed, the save being named and what came of the last ask.
     pub yours: yours::Scratch,
+    /// The preset the graph is, as last loaded or edited; `None` until the first edit or undo asks.
+    pub preset: Option<Loaded>,
+    /// Edits sent as they are, past the preset: the fault the preset tests must catch.
+    #[cfg(test)]
+    pub(crate) unguarded: bool,
     /// The uniforms no edit is taken of.
     #[cfg(test)]
     pub(crate) locked: BTreeSet<String>,
@@ -302,6 +314,9 @@ impl Default for Scratch {
             folded: BTreeSet::new(),
             open: BTreeSet::new(),
             yours: yours::Scratch::default(),
+            preset: None,
+            #[cfg(test)]
+            unguarded: false,
             #[cfg(test)]
             locked: BTreeSet::new(),
         }
@@ -559,6 +574,8 @@ pub struct Out {
     pub asks: Vec<yours::Ask>,
     /// Whether an edit replaces the graph by another stain.
     pub loads: bool,
+    /// The library row selected to replace the graph: a load, not an edit, so it never forks ([`settle`]).
+    pub select: Option<Loaded>,
 }
 
 /// The `SetField` of the graph `g` after `edit`, or nothing when the graph refuses it.
@@ -596,16 +613,13 @@ pub fn activate(
     } else if let Some(k) = ROW_IDS.iter().position(|r| *r == id) {
         // A row with a graph loads it, replacing the graph wholesale (§11), and its highlight is then the loaded
         // stain's; any other row is only selected.
-        match content.and_then(|c| c.graphs.get(k)?.as_ref()) {
+        let loaded = content.and_then(|c| preset_at(&c.library, &c.graphs, k));
+        match loaded {
             Some(load) => {
                 s.library.selected = None;
                 s.yours.remembered.clear();
-                let edit = edited(g, |g| {
-                    *g = load.clone();
-                    Ok(())
-                });
-                out.loads |= edit.is_some();
-                out.edits.extend(edit);
+                out.loads |= load.graph != *g;
+                out.select = Some(load);
             }
             None => s.library.selected = content.and_then(|c| library::row(c, k)).map(|_| k),
         }
@@ -657,6 +671,97 @@ pub fn activate(
                 controls::Act::Step(_) => {}
             }
         }
+    }
+}
+
+/// Row `k` of `library` as a loaded preset, where it has a graph in `graphs`.
+pub fn preset_at(library: &[Group], graphs: &[Option<StainGraph>], k: usize) -> Option<Loaded> {
+    let graph = graphs.get(k)?.clone()?;
+    let row = library
+        .iter()
+        .flat_map(|g| &g.rows)
+        .find(|r| r.place == k)?;
+    Some(Loaded {
+        from: row.name,
+        name: row.name.to_owned(),
+        locked: row.locked,
+        graph,
+    })
+}
+
+/// The preset `g` is: the library row whose graph is exactly `g`, else none of them, editable, named as `was` if that
+/// was editable too (a step back within a custom copy keeps its name).
+pub fn preset_of(
+    g: &StainGraph,
+    library: &[Group],
+    graphs: &[Option<StainGraph>],
+    was: Option<&Loaded>,
+) -> Loaded {
+    let k = graphs.iter().position(|x| x.as_ref() == Some(g));
+    if let Some(p) = k.and_then(|k| preset_at(library, graphs, k)) {
+        return p;
+    }
+    let (from, name) = match was.filter(|p| !p.locked) {
+        Some(p) => (p.from, p.name.clone()),
+        None => ("", String::new()),
+    };
+    Loaded {
+        from,
+        name,
+        locked: false,
+        graph: g.clone(),
+    }
+}
+
+/// The graph is now `g` by an undo or a redo: the preset is the one `g` is, a locked preset's graph locked again.
+pub fn stepped(s: &mut Scratch, g: &StainGraph) {
+    #[cfg(test)]
+    if s.unguarded {
+        return;
+    }
+    if s.preset.as_ref().is_some_and(|p| p.graph == *g) {
+        return;
+    }
+    let t = &catalogue::catalogue().tables;
+    s.preset = Some(preset_of(g, &t.groups, &t.graphs, s.preset.as_ref()));
+}
+
+/// Puts every stain edit of `out` through the preset loaded, as [`Loaded::apply`] takes it: on a locked preset the first
+/// forks a renamed copy, which the edit lands on and which is then the preset loaded; the library's preset is never
+/// touched. Then a row selected replaces the graph, and is the preset loaded.
+// Don't fork in the app's send: an undo or a load must be able to tell a preset's graph from its fork's, so the window
+// keeps the preset with the graph it sent.
+pub fn settle(s: &mut Scratch, g: &StainGraph, out: &mut Out) {
+    for e in std::mem::take(&mut out.edits) {
+        let Edit::Render(RenderField::StainGraph(next)) = &e.edit else {
+            out.edits.push(e);
+            continue;
+        };
+        #[cfg(test)]
+        if s.unguarded {
+            out.edits.push(e);
+            continue;
+        }
+        let p = s.preset.get_or_insert_with(|| {
+            let t = &catalogue::catalogue().tables;
+            preset_of(g, &t.groups, &t.graphs, None)
+        });
+        p.graph = g.clone();
+        if p.apply(&StainEdit::Graph(next.clone())).is_ok() {
+            out.edits.push(SetField {
+                edit: Edit::Render(RenderField::StainGraph(p.graph.clone())),
+                no_history: e.no_history,
+            });
+        }
+    }
+    if let Some(load) = out.select.take() {
+        if load.graph != *g {
+            out.edits.push(SetField {
+                edit: Edit::Render(RenderField::StainGraph(load.graph.clone())),
+                no_history: false,
+            });
+        }
+        s.preset = Some(load);
     }
 }
 
@@ -718,6 +823,7 @@ pub fn show(
         regions.library,
         page.content,
         &mut s.library,
+        s.preset.as_ref(),
         keys,
         clicked,
     );

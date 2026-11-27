@@ -1,6 +1,8 @@
-//! The editor's tables that no graph changes, built once from the registry (`engine::contract::stain::assembled`): the
-//! library's groups and rows, the graph each row loads, and the shaders a node can be given. Every name and group is
-//! its source's own, from its description. A folder's shaders join them ([`Catalogue::with`]), each row after ours.
+//! The editor's tables that no graph changes, built once from the registry (`engine::contract::stain::assembled`) and
+//! the preset files (`engine::contract::stain::preset`): the library's groups and rows, the graph each row loads, and
+//! the shaders a node can be given. A registry row's name and group are its source's own, from its description; a debug
+//! view's group, and every preset's name, group, lock and measure, are the library's (colour_composition §9.6). A
+//! folder's shaders join them ([`Catalogue::with`]), each row after ours.
 
 use std::sync::{Arc, OnceLock};
 
@@ -8,6 +10,7 @@ use engine::contract::render_state::{NodeKind, Occupant, StainGraph};
 use engine::contract::stain::assembled::{library, node_source, source_fields, Entry};
 use engine::contract::stain::describe::{describe, from_source};
 use engine::contract::stain::folder::Folder;
+use engine::contract::stain::preset::{self, group_of, DebugGroup, Section};
 use engine::contract::stain::saved::FIELD_ID;
 
 use super::yours::origin;
@@ -81,6 +84,8 @@ impl Catalogue {
                 place: graphs.len(),
                 name,
                 from: from.clone(),
+                locked: false,
+                measure: None,
             };
             match groups.iter_mut().find(|g| g.title == described.group) {
                 Some(group) => group.rows.push(row),
@@ -177,21 +182,59 @@ fn build() -> Catalogue {
         let occupant = Occupant::Builtin(e.name.clone());
         offer(e.slot, occupant, &e.description.name, &e.id);
     }
-    let (mut groups, mut graphs) = (Vec::new(), Vec::new());
-    for (title, entries) in grouped(entries) {
-        let mut rows = Vec::new();
-        for e in entries {
-            rows.push(Row {
-                place: graphs.len(),
-                name: intern(&e.description.name),
-                from: ours(&e.id),
-            });
-            graphs.push(e.graph);
+    let presets = preset::library().unwrap_or_else(|why| {
+        problems.push(format!("the presets: {why}"));
+        Vec::new()
+    });
+    let (mut groups, mut graphs) = (Vec::new(), Vec::<Option<StainGraph>>::new());
+    let mut push = |title: &str, row: Listed, graphs: &mut Vec<Option<StainGraph>>| {
+        let row_ = Row {
+            place: graphs.len(),
+            name: intern(&row.name),
+            from: row.from,
+            locked: row.locked,
+            measure: row.measure,
+        };
+        graphs.push(row.graph);
+        match groups.iter_mut().find(|g: &&mut Group| g.title == title) {
+            Some(group) => group.rows.push(row_),
+            None => groups.push(Group {
+                title: intern(title),
+                rows: vec![row_],
+            }),
         }
-        groups.push(Group {
-            title: intern(&title),
-            rows,
-        });
+    };
+    let (ours, debug): (Vec<Entry>, Vec<Entry>) = entries.into_iter().partition(|e| !e.debug);
+    for (title, entries) in grouped(ours) {
+        for e in entries {
+            push(&title, Listed::entry(e), &mut graphs);
+        }
+    }
+    // A preset file whose graph a registry row already loads (the outcome palette's) is that row, not listed again.
+    let listed: Vec<StainGraph> = graphs.iter().flatten().cloned().collect();
+    let (production, files): (Vec<_>, Vec<_>) = presets
+        .into_iter()
+        .filter(|p| !listed.contains(&p.graph))
+        .partition(|p| p.section == Section::Production);
+    for p in production {
+        push(PRESETS, Listed::preset(p), &mut graphs);
+    }
+    for group in DebugGroup::ALL {
+        for p in files.iter().filter(|p| p.group == Some(group)) {
+            push(group.name(), Listed::preset(p.clone()), &mut graphs);
+        }
+        let views: Vec<&Entry> = debug
+            .iter()
+            .filter(|e| group_of(&e.id) == Some(group))
+            .collect();
+        for e in &views {
+            let mut row = Listed::entry((*e).clone());
+            let name = &e.description.name;
+            if views.iter().filter(|v| v.description.name == *name).count() > 1 {
+                row.name = told_apart(e);
+            }
+            push(group.name(), row, &mut graphs);
+        }
     }
     Catalogue {
         sources: graphs.iter().map(|g| sources(g.as_ref()?)).collect(),
@@ -202,6 +245,54 @@ fn build() -> Catalogue {
             choices: choices.into(),
         },
         problems,
+    }
+}
+
+/// The heading of the production presets that no registry row loads.
+// The plan is unclear here (a production preset names no group); chose one heading of their own, after the slots' groups
+// and before the debug section, because the bivariate presets are whole stains, not one slot's shader.
+pub const PRESETS: &str = "Presets";
+
+/// The name of a debug view that shares its name with another of its group (the derived `ftle` and the payload's):
+/// the name, then its source's own group, `ftle (derived)`.
+pub fn told_apart(e: &Entry) -> String {
+    let d = &e.description;
+    let from = d.group.strip_prefix("Debug · ").unwrap_or(&d.group);
+    format!("{} ({from})", d.name)
+}
+
+/// A row as the library lists it, before its place is known.
+struct Listed {
+    name: String,
+    from: String,
+    locked: bool,
+    measure: Option<String>,
+    graph: Option<StainGraph>,
+}
+
+impl Listed {
+    fn entry(e: Entry) -> Self {
+        Self {
+            name: e.description.name,
+            from: ours(&e.id),
+            locked: e.locked,
+            measure: None,
+            graph: e.graph,
+        }
+    }
+
+    fn preset(p: preset::Preset) -> Self {
+        let dir = match p.section {
+            Section::Production => "production",
+            Section::Debug => "debug",
+        };
+        Self {
+            locked: p.locked(),
+            from: ours(&format!("presets/{dir}/{}", p.id)),
+            name: p.name,
+            measure: p.measure,
+            graph: Some(p.graph),
+        }
     }
 }
 
