@@ -1,0 +1,111 @@
+S colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]; u_range:vec2<f32>=[0.0, 1.0]
+S brightness: inputs 1; u_range:vec2<f32>=[0.0, 1.0]
+S post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+theta colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+theta brightness: inputs 1; 
+theta post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+mean_y colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+mean_y brightness: inputs 1; 
+mean_y post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+C_ty colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]; u_range:vec2<f32>=[0.0, 1.0]
+C_ty brightness: inputs 1; u_range:vec2<f32>=[0.0, 1.0]
+C_ty post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+E_0 colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+E_0 brightness: inputs 1; 
+E_0 post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+Lz_0 colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+Lz_0 brightness: inputs 1; 
+Lz_0 post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+total_substeps colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+total_substeps brightness: inputs 1; 
+total_substeps post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+closure_min colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+closure_min brightness: inputs 1; 
+closure_min post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+closure_step colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+closure_step brightness: inputs 1; 
+closure_step post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+I_max colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+I_max brightness: inputs 1; 
+I_max post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+d_min colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+d_min brightness: inputs 1; 
+d_min post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+dE_max colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+dE_max brightness: inputs 1; 
+dE_max post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+dLz_max colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+dLz_max brightness: inputs 1; 
+dLz_max post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+floor_hits colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+floor_hits brightness: inputs 1; 
+floor_hits post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+cap_hits colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+cap_hits brightness: inputs 1; 
+cap_hits post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+dE_reg_max colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+dE_reg_max brightness: inputs 1; 
+dE_reg_max post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+t_end_step colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+t_end_step brightness: inputs 1; 
+t_end_step post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+t_dmin_step colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+t_dmin_step brightness: inputs 1; 
+t_dmin_step post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+coll_floor colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+coll_floor brightness: inputs 1; 
+coll_floor post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+ftle colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]; u_range:vec2<f32>=[0.0, 1.0]
+ftle brightness: inputs 1; u_range:vec2<f32>=[0.0, 1.0]
+ftle post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+energy_drift colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+energy_drift brightness: inputs 1; 
+energy_drift post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+Lz_drift colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+Lz_drift brightness: inputs 1; 
+Lz_drift post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+diffusion colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]; u_range:vec2<f32>=[0.0, 1.0]
+diffusion brightness: inputs 1; u_range:vec2<f32>=[0.0, 1.0]
+diffusion post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+m0 colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+m0 brightness: inputs 1; 
+m0 post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+m1 colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+m1 brightness: inputs 1; 
+m1 post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+m2 colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+m2 brightness: inputs 1; 
+m2 post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+q_mass colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+q_mass brightness: inputs 1; 
+q_mass post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+rho_mag colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+rho_mag brightness: inputs 1; 
+rho_mag post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+lambda_mag colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+lambda_mag brightness: inputs 1; 
+lambda_mag post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+rho_ratio colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+rho_ratio brightness: inputs 1; 
+rho_ratio post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+rho_angle colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+rho_angle brightness: inputs 1; 
+rho_angle post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+K_0 colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]; u_range:vec2<f32>=[0.0, 1.0]
+K_0 brightness: inputs 1; u_range:vec2<f32>=[0.0, 1.0]
+K_0 post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+V_0 colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]; u_range:vec2<f32>=[0.0, 1.0]
+V_0 brightness: inputs 1; u_range:vec2<f32>=[0.0, 1.0]
+V_0 post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+virial_ratio colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]; u_range:vec2<f32>=[0.0, 1.0]
+virial_ratio brightness: inputs 1; u_range:vec2<f32>=[0.0, 1.0]
+virial_ratio post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+r_min_pair_0 colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+r_min_pair_0 brightness: inputs 1; 
+r_min_pair_0 post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+payload colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+payload brightness: inputs 1; 
+payload post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+length colour: inputs 1; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
+length brightness: inputs 1; 
+length post: inputs 0; INVALID_OVERRIDE:u32=[0.0] (0.0, 1.0); INVALID_COLOUR:vec3<f32>=[1.0, 0.0, 1.0]
