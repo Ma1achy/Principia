@@ -79,7 +79,7 @@ pub fn spherical(at: [f64; 2], fold: Fold) -> Resolved {
 pub fn exponential(at: [f64; 2], scale: f64, kind: Kind, normal_zero: [bool; 2]) -> Resolved {
     let [u, v] = at;
     let d = [(2.0 * u - 1.0) * scale, (2.0 * v - 1.0) * scale];
-    let r = d[0].hypot(d[1]);
+    let r = libm::hypot(d[0], d[1]);
     if r <= PI {
         return Resolved::own(at);
     }

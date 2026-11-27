@@ -130,12 +130,11 @@ validation::negative_control!(
     check_reversal(KSheet::One)
 );
 
-#[test]
-fn edge_unfold_sheet_one_is_baseline() {
+fn check_baseline(sheet: KSheet) {
     let c = chart();
     for &s in &[0.0, 0.125, 0.5, 1.0] {
-        for &t in &[0.0, 0.5, 1.0] {
-            let a = decode_on_sheet::<Defaults, f64, _>(&c, s, t, KSheet::One).0;
+        for &t in &[0.25, 0.5, 1.0] {
+            let a = decode_on_sheet::<Defaults, f64, _>(&c, s, t, sheet).0;
             assert_eq!(
                 ic_bits(&a),
                 ic_bits(&c.decode::<Defaults, f64>(s, t)),
@@ -144,6 +143,18 @@ fn edge_unfold_sheet_one_is_baseline() {
         }
     }
 }
+
+#[test]
+fn edge_unfold_sheet_one_is_baseline() {
+    check_baseline(KSheet::One);
+}
+
+validation::negative_control!(
+    edge_unfold_sheet_one_is_baseline,
+    "sheet 2 as the default",
+    expected = "baseline at",
+    check_baseline(KSheet::Two)
+);
 
 fn check_period(nz: [bool; 2], alone: bool) {
     for &s in &[-0.375, -0.25, 0.25, 0.75, 1.25, 1.375] {
@@ -189,20 +200,36 @@ validation::negative_control!(
     check_period([true, true], false)
 );
 
-#[test]
-fn edge_unfold_inside_unchanged() {
+fn check_inside(resolve: impl Fn([f64; 2]) -> Resolved) {
     for &s in &[0.0, 0.25, 1.0] {
         for &t in &[0.0, 0.5, 1.0] {
-            let r = go([s, t], Kind::Unfold);
+            let r = resolve([s, t]);
             assert_eq!(
                 [r.at[0].to_bits(), r.at[1].to_bits()],
-                [s.to_bits(), t.to_bits()]
+                [s.to_bits(), t.to_bits()],
+                "inside: moved"
             );
             assert_eq!(
                 (r.sheet, r.count, r.applied),
-                (Sheet::One, Count::System, None)
+                (Sheet::One, Count::System, None),
+                "inside: record"
             );
         }
     }
+}
+
+#[test]
+fn edge_unfold_inside_unchanged() {
+    check_inside(|p| go(p, Kind::Unfold));
     assert_eq!(fold(1.5).1, Sheet::Two);
 }
+
+validation::negative_control!(
+    edge_unfold_inside_unchanged,
+    "a resolver that unfolds inside the square",
+    expected = "inside:",
+    check_inside(|p| Resolved {
+        sheet: Sheet::Two,
+        ..Resolved::own(p)
+    })
+);

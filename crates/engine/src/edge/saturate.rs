@@ -158,8 +158,9 @@ pub fn nu_masses(nu0: f64, at0: [f64; 3], d_nu: f64) -> [f64; 3] {
 /// The acute-angle axis's masses at `θ = θ₀ + dθ`, `t = tan(θ/2)`: `m₂ = t/(1+t)`, `m₁ = (1−t)/2`,
 /// `m₀ = (1+t²)/(2(1+t))`, each its value at `θ₀` plus the increment through `t − t₀ = sin(dθ/2)/(cos(θ/2)cos(θ₀/2))`.
 pub fn theta_masses(theta0: f64, at0: [f64; 3], d_theta: f64) -> [f64; 3] {
-    let t0 = (theta0 / 2.0).tan();
-    let dt = (d_theta / 2.0).sin() / (((theta0 + d_theta) / 2.0).cos() * (theta0 / 2.0).cos());
+    let t0 = libm::tan(theta0 / 2.0);
+    let dt =
+        libm::sin(d_theta / 2.0) / (libm::cos((theta0 + d_theta) / 2.0) * libm::cos(theta0 / 2.0));
     let t = t0 + dt;
     let k = dt / ((1.0 + t0) * (1.0 + t));
     [
