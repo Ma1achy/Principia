@@ -15,6 +15,7 @@ use std::collections::BTreeMap;
 use render::assemble::{self, Declaration, Kind};
 
 pub use render::assemble::declare::{Accepts, Format};
+pub use render::assemble::matters::{Lack, Needs as NodeNeeds};
 pub use render::assemble::{Control, Glyph, UniformType};
 
 use crate::contract::stain::graph::{GraphError, Node, NodeKind, Occupant};
@@ -488,4 +489,60 @@ pub fn needs(
         });
     };
     Ok(render::assemble::matters::shader(kind.into(), &text)?.needs())
+}
+
+/// Where a node's measured range goes and what it is of: the `hidden` control's `vec2` uniform the host writes it into
+/// (the rule [`NodeNeeds::measured_range`] is judged by), and the read-side field it is the range of.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct MeasuredRange {
+    pub uniform: String,
+    /// The one field with a numeric view (`ledger::gen::numeric`) the node reads into its result; none where it reads
+    /// none or several, so that the host cannot tell which to measure.
+    pub field: Option<String>,
+}
+
+/// Where a node of `kind` holding `occupant` takes a measured range, and of which field; none where it needs none.
+// The plan is unclear here; chose the one numeric field the node reads, measured on its view's (compacted) scale,
+// because the range is written for a field's view, as the generated views divide by it, and a node that reads two does
+// not say which its range is of. A node using it against a log field's raw value would want the raw range.
+pub fn measured_range(
+    kind: NodeKind,
+    occupant: &Occupant,
+) -> Result<Option<MeasuredRange>, GraphError> {
+    let Some(text) = assemble::occupant_source(kind.into(), &occupant.into())? else {
+        return Ok(None);
+    };
+    let shader = render::assemble::matters::shader(kind.into(), &text)?;
+    if !shader.needs().measured_range {
+        return Ok(None);
+    }
+    let reach = shader.never();
+    let declaration = shader.declaration();
+    let uniform = declaration
+        .described
+        .controls
+        .iter()
+        .filter(|c| c.control == Control::Hidden)
+        .find(|c| {
+            declaration
+                .uniforms
+                .iter()
+                .zip(&reach.uniforms)
+                .any(|(u, &live)| live && u.name == c.uniform && u.ty == UniformType::Vec2)
+        });
+    let Some(uniform) = uniform else {
+        return Ok(None);
+    };
+    let mut numeric = reach
+        .fields
+        .iter()
+        .filter(|f| crate::field::measured::has_view(f));
+    let field = match (numeric.next(), numeric.next()) {
+        (Some(one), None) => Some(one.clone()),
+        _ => None,
+    };
+    Ok(Some(MeasuredRange {
+        uniform: uniform.uniform.clone(),
+        field,
+    }))
 }

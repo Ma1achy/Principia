@@ -53,6 +53,7 @@ use crate::decode_dispatch::decode_only_with;
 use crate::first_slice::{narrow, uniforms, Quad};
 
 pub mod ensemble;
+pub mod measured;
 pub mod record;
 
 pub use ensemble::Supersampled;

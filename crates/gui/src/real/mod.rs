@@ -7,17 +7,21 @@
 
 pub mod stain;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use engine::contract::canvas::{Canvas, CanvasContext};
 use engine::contract::render_state::{NodeId, StainGraph};
 use engine::contract::sim_config::SimConfig;
+use engine::contract::stain::assembled::Tier;
 use engine::contract::stain::view::{self, CompileError, FrameInputs, Records, Stain, StainView};
 use engine::field::{Field, FieldBackend, RecordBytes, Stored};
 
+use crate::stain::needs::Run;
+
 use crate::layout::Placement;
+use crate::real::stain::ReadsOf;
 
 /// The state the real app starts on: the mock's (`crate::mock::state`), the chart "z_α × z_β" at 01_main.png's `z₀`,
 /// the horizon 50, the kernel's default, the playhead at `t = 0`, so both engines open on the same slice. The plan is
@@ -64,6 +68,10 @@ pub struct Payload {
     pub inputs: FrameInputs,
     /// What the records do not hold, for the Problems pane; none where they are the field's own.
     pub note: Option<String>,
+    /// What the records provide a node.
+    pub run: Run,
+    /// The records as stored, to measure a field's range over; none where they hold the outcomes alone.
+    pub stored: Option<Arc<Stored>>,
 }
 
 /// The note on records that hold an outcome alone.
@@ -99,15 +107,25 @@ impl Payload {
     pub fn stored(stored: Stored) -> Self {
         let bytes = stored.bytes();
         let r = stored.read;
+        let inputs = inputs(
+            &[r.dt_macro, r.delta_0],
+            [r.n_renorm, r.horizon_steps],
+            &bytes.ic,
+        );
         Self {
-            inputs: inputs(
-                &[r.dt_macro, r.delta_0],
-                [r.n_renorm, r.horizon_steps],
-                &bytes.ic,
-            ),
-            field: stored.field,
+            // The records' own tier, not their layout's (the full tier's): the CPU march keeps no shadow.
+            run: Run {
+                tier: Tier {
+                    has_ftle: false,
+                    has_word: true,
+                },
+                ensemble: inputs.ensemble != 0,
+            },
+            inputs,
+            field: stored.field.clone(),
             bytes,
             note: Some(NO_FTLE.to_owned()),
+            stored: Some(Arc::new(stored)),
         }
     }
 
@@ -131,6 +149,14 @@ impl Payload {
             field,
             bytes,
             note: Some(OUTCOMES_ONLY.to_owned()),
+            run: Run {
+                tier: Tier {
+                    has_ftle: false,
+                    has_word: false,
+                },
+                ensemble: false,
+            },
+            stored: None,
         })
     }
 }
@@ -167,13 +193,38 @@ struct View {
     key: Option<u64>,
     /// The current pipeline's WGSL, with the cache's generation it was taken at.
     source: Option<(u64, Arc<str>)>,
+    /// The reads the graph shown was written with.
+    reads: Option<ReadsOf>,
+    /// Each field's measured range over the records, once measured.
+    measured: HashMap<String, Option<[f64; 2]>>,
+    /// The measured range written into each node that takes one.
+    ranges: BTreeMap<NodeId, [f64; 2]>,
+}
+
+/// What a test breaks of the measured ranges' writes.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(crate) enum RangesBroken {
+    #[default]
+    Nothing,
+    /// No range is written.
+    WritesNone,
+    /// A range is written by the uniform's name, `u_range`, into every node declaring one, whatever the node needs.
+    ByName,
 }
 
 impl View {
     /// Shows `g`: asks for its stain where its nodes, occupants or wires changed, and sets each param that did. Nothing
     /// where `g` is the graph shown.
-    fn show(&mut self, g: &StainGraph) -> Result<(), String> {
-        if self.graph.as_ref() == Some(g) {
+    fn show(
+        &mut self,
+        g: &StainGraph,
+        reads: &ReadsOf,
+        stored: Option<&Stored>,
+        #[cfg(test)] broken: RangesBroken,
+    ) -> Result<(), String> {
+        let same_reads = self.reads.as_ref().is_some_and(|r| Arc::ptr_eq(r, reads));
+        if self.graph.as_ref() == Some(g) && same_reads {
             return Ok(());
         }
         self.key = crate::stain::catalogue::key(g);
@@ -196,9 +247,62 @@ impl View {
                 self.waiting.insert((n.id, u.name), value);
             }
         }
+        self.ranges.clear();
+        for n in g.nodes() {
+            let Some(Some(read)) = reads.get(&(n.kind, n.occupant.clone())) else {
+                continue;
+            };
+            let Some(target) = &read.range else { continue };
+            let Some(field) = &target.field else { continue };
+            let measured = self
+                .measured
+                .entry(field.clone())
+                .or_insert_with(|| stored.and_then(|s| s.measured(field)));
+            if let Some(range) = *measured {
+                self.waiting
+                    .insert((n.id, target.uniform.clone()), range.to_vec());
+                self.ranges.insert(n.id, range);
+            }
+        }
+        #[cfg(test)]
+        self.break_ranges(g, broken);
+        self.reads = Some(Arc::clone(reads));
         self.graph = Some(g.clone());
         self.settle();
         Ok(())
+    }
+
+    /// The ranges' writes broken as `broken` says.
+    #[cfg(test)]
+    fn break_ranges(&mut self, g: &StainGraph, broken: RangesBroken) {
+        use engine::contract::stain::describe::UniformType;
+        match broken {
+            RangesBroken::Nothing => {}
+            RangesBroken::WritesNone => {
+                for (id, _) in std::mem::take(&mut self.ranges) {
+                    let held = g.uniforms(id).unwrap_or_default();
+                    for u in held {
+                        if let Some(n) = g.node(id) {
+                            let value = n.params.get(&u.name).unwrap_or(&u.default).clone();
+                            self.waiting.insert((id, u.name), value);
+                        }
+                    }
+                }
+            }
+            RangesBroken::ByName => {
+                let Some(&range) = self.ranges.values().next() else {
+                    return;
+                };
+                for n in g.nodes() {
+                    for u in g.uniforms(n.id).unwrap_or_default() {
+                        if u.ty == UniformType::Vec2 && u.name == "u_range" {
+                            self.waiting.insert((n.id, u.name), range.to_vec());
+                            self.ranges.insert(n.id, range);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// The WGSL the current pipeline was compiled from, the very text: taken again only when the pipeline changes.
@@ -265,6 +369,8 @@ pub struct RealCanvas {
     view: Mutex<Option<(wgpu::TextureFormat, View)>>,
     /// The graph the next draws show.
     stain: Mutex<StainGraph>,
+    /// What its shaders read, as the compiler last read them.
+    reads: Mutex<ReadsOf>,
     /// The placement of the placed figure's next draw.
     placement: Mutex<Placement>,
     /// The canvas background, 8-bit sRGB: the colour the window is cleared to.
@@ -277,6 +383,9 @@ pub struct RealCanvas {
     /// The control's: every compile waited for and drawn, whatever was asked since.
     #[cfg(test)]
     pub(crate) completion_order: AtomicBool,
+    /// The control's: the measured ranges' writes broken.
+    #[cfg(test)]
+    pub(crate) ranges_broken: Mutex<RangesBroken>,
 }
 
 impl RealCanvas {
@@ -300,12 +409,15 @@ impl RealCanvas {
             payload,
             view: Mutex::new(None),
             stain: Mutex::new(start().1.stain_graph),
+            reads: Mutex::default(),
             placement: Mutex::new(Placement::IDENTITY),
             background: Mutex::new(crate::mock::canvas::default_background()),
             drawn: Mutex::default(),
             drew_compiling: AtomicBool::new(false),
             #[cfg(test)]
             completion_order: Default::default(),
+            #[cfg(test)]
+            ranges_broken: Mutex::default(),
         }
     }
 
@@ -317,6 +429,24 @@ impl RealCanvas {
             self.drew_compiling.store(true, Ordering::SeqCst);
             *stain = g;
         }
+    }
+
+    /// The next draws write each measured range by `reads`.
+    pub fn set_reads(&self, reads: ReadsOf) {
+        *self.reads.lock().expect("the reads lock") = reads;
+    }
+
+    /// What the records provide a node.
+    pub fn run(&self) -> Run {
+        self.payload.run
+    }
+
+    /// The value the view holds of node `id`'s param `name`: the tests'.
+    #[cfg(test)]
+    pub(crate) fn held(&self, id: NodeId, name: &str) -> Option<Vec<f64>> {
+        let view = self.view.lock().expect("the view lock");
+        let (_, v) = view.as_ref()?;
+        v.params.get(&(id, name.to_owned())).cloned()
     }
 
     /// The placed figure's next draw puts the field at `placement` in its viewport.
@@ -389,6 +519,9 @@ impl RealCanvas {
             waiting: BTreeMap::new(),
             key: None,
             source: None,
+            reads: None,
+            measured: HashMap::new(),
+            ranges: BTreeMap::new(),
         })
     }
 
@@ -418,12 +551,25 @@ impl RealCanvas {
     ) -> Result<(), String> {
         let mut slot = self.view.lock().expect("the view lock");
         let graph = self.stain.lock().expect("the stain lock").clone();
+        let reads = self.reads.lock().expect("the reads lock").clone();
+        let stored = self.payload.stored.as_deref();
+        #[cfg(test)]
+        let broken = *self.ranges_broken.lock().expect("the broken lock");
+        let show = |v: &mut View| {
+            v.show(
+                &graph,
+                &reads,
+                stored,
+                #[cfg(test)]
+                broken,
+            )
+        };
         let (_, v) = match slot.take() {
             Some(kept) if kept.0 == format => slot.insert(kept),
             _ => {
                 let mut v = self.build(format)?;
                 // The first draw has no last picture to keep, so it waits for its first compile.
-                v.show(&graph)?;
+                show(&mut v)?;
                 v.view.wait();
                 slot.insert((format, v))
             }
@@ -434,7 +580,7 @@ impl RealCanvas {
         }
         // Asked for before a finished compile is taken, so one this graph supersedes is never drawn. A graph that cannot
         // be asked for leaves the last picture.
-        if let Err(why) = v.show(&graph) {
+        if let Err(why) = show(v) {
             report.problems.push(why);
         }
         v.view.cache().poll();
@@ -455,6 +601,7 @@ impl RealCanvas {
         };
         v.view.paint(pass, placement);
         report.key = v.key;
+        report.ranges = v.ranges.clone();
         report.compiling = v.compiling();
         let errors = v.view.errors();
         report
