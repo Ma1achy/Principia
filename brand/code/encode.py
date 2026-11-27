@@ -1,7 +1,7 @@
 """Turns a folder of transparent PNG frames (f00000.png ...) into MP4, WebM and GIF with ffmpeg.
 
 The committed MP4s record libx264 crf 15 (x264 core 164, veryfast-class options) from ffmpeg 6.1;
-the other settings were not recorded, so these are chosen (see README-build.md):
+the other settings were not recorded, so these are chosen (see brand/README.md, Rebuilding):
   MP4   frames composited on the page colour, libx264 -preset veryfast -crf 15, yuv420p
   WebM  libvpx-vp9 with an alpha plane (yuva420p), constant quality: -crf 28 -b:v 0
   GIF   composited on the page colour, scaled with Lanczos, a 256-colour palette per frame
