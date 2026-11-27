@@ -12,6 +12,8 @@ pub mod circle;
 pub mod decode;
 pub mod detect;
 pub mod driver;
+#[cfg(not(target_arch = "spirv"))]
+pub mod dual;
 pub mod encode;
 pub mod generated;
 pub mod occupant;
@@ -20,6 +22,8 @@ pub mod physics;
 pub mod real;
 pub mod regularisation;
 pub mod shape;
+#[cfg(not(target_arch = "spirv"))]
+pub mod slope;
 pub mod stage;
 pub mod toolchain;
 pub mod trig;
