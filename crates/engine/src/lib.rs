@@ -169,6 +169,9 @@ pub mod chart_validate;
 // validator, before resolution (chart_decoder_contract Part 5; TASK-M2-14): documented in the module itself.
 pub mod chart_authoring;
 
+/// Chart edges in the CPU evaluator: unfold, clamp, saturate and wrap resolve a pixel past an edge before `Φ`.
+pub mod edge;
+
 // Navigation's geometry, the plane's frame and the direction library (chart_decoder_contract Part 4; TASK-M2-22):
 // documented in the module itself, whose links resolve there.
 pub mod nav;
