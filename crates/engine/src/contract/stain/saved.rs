@@ -243,14 +243,17 @@ struct NodeForm {
     fields: BTreeMap<String, String>,
 }
 
-/// The uniforms of node `n`'s code that are fields.
-fn field_uniforms(kind: NodeKind, occupant: &Occupant) -> Vec<String> {
+/// The uniforms of node `n`'s code that are fields, each with the fields it chooses among.
+fn field_uniforms(kind: NodeKind, occupant: &Occupant) -> Vec<(String, Vec<String>)> {
     assemble::declaration(kind.into(), &occupant.into())
         .map(|d| {
             d.uniforms
                 .into_iter()
                 .filter(|u| u.ty == assemble::UniformType::Field)
-                .map(|u| u.name)
+                .map(|u| {
+                    let names = u.field_names().unwrap_or_default();
+                    (u.name, names)
+                })
                 .collect()
         })
         .unwrap_or_default()
@@ -261,17 +264,15 @@ impl Serialize for Node {
         let occupant = write(self.kind, &self.occupant).map_err(S::Error::custom)?;
         let mut params = self.params.clone();
         let mut fields = self.lost_fields.clone();
-        if let Ok(names) = assemble::source_fields() {
-            for u in field_uniforms(self.kind, &self.occupant) {
-                let name = params
-                    .remove(&u)
-                    .and_then(|v| v.first().and_then(|&i| names.get(i as usize).cloned()))
-                    .or_else(|| match &self.occupant {
-                        Occupant::Field(f) => Some(f.clone()),
-                        _ => None,
-                    });
-                fields.extend(name.map(|n| (u, n)));
-            }
+        for (u, names) in field_uniforms(self.kind, &self.occupant) {
+            let name = params
+                .remove(&u)
+                .and_then(|v| v.first().and_then(|&i| names.get(i as usize).cloned()))
+                .or_else(|| match &self.occupant {
+                    Occupant::Field(f) => Some(f.clone()),
+                    _ => None,
+                });
+            fields.extend(name.map(|n| (u, n)));
         }
         NodeForm {
             id: self.id,
@@ -303,8 +304,12 @@ impl<'de> Deserialize<'de> for Node {
         // would cost the whole stain for one source; a stain saved with the index form still reads as an index into
         // this build's order, which no stain on main holds.
         let names = assemble::source_fields().unwrap_or_default();
+        let chooses: BTreeMap<String, Vec<String>> = field_uniforms(node.kind, &node.occupant)
+            .into_iter()
+            .collect();
         for (u, name) in n.fields {
-            match names.iter().position(|f| *f == name) {
+            let among = chooses.get(&u).unwrap_or(&names);
+            match among.iter().position(|f| *f == name) {
                 Some(i) => {
                     node.params.insert(u, vec![i as f64]);
                 }

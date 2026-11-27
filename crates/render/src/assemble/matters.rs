@@ -1399,11 +1399,11 @@ impl Shader {
     }
 
     /// Each choice and toggle's value, as `value` gives it, but the uniform `free`'s, which is left free.
-    /// The member of the uniform block that declared uniform `k` is: a `field` has none, so those before it are not counted.
+    /// The member of the uniform block that declared uniform `k` is: a baked uniform has none, so those before it are not counted.
     fn member(&self, k: usize) -> u32 {
         self.declaration.uniforms[..k]
             .iter()
-            .filter(|u| u.ty != UniformType::Field)
+            .filter(|u| !u.is_baked())
             .count() as u32
     }
 
@@ -1446,9 +1446,9 @@ impl Shader {
             .uniforms
             .iter()
             .enumerate()
-            .map(|(k, u)| match u.ty {
-                UniformType::Field => self.read[k],
-                _ => !block.part(self.member(k)).is_nothing(),
+            .map(|(k, u)| match u.is_baked() {
+                true => self.read[k],
+                false => !block.part(self.member(k)).is_nothing(),
             })
             .collect();
         let ctx = Ctx::of(&self.compiled.module);
@@ -1605,7 +1605,13 @@ const KEPT_MOST: usize = 256;
 /// read from `text` each time, since the code key leaves the descriptive lines out.
 pub fn shader(kind: Kind, text: &str) -> Result<Shader, AssembleError> {
     static KEPT: OnceLock<Mutex<Kept>> = OnceLock::new();
-    let declaration = declaration_text(kind, text)?;
+    // The declaration of the text made at its defaults: a line a `//? when` hid declares nothing, and has no member.
+    let template = declaration_text(kind, text)?;
+    let baked: Vec<&Uniform> = template.uniforms.iter().filter(|u| u.is_baked()).collect();
+    let declaration = declaration_text(
+        kind,
+        &super::params::specialise(text, &baked, &|u| u.default.clone())?,
+    )?;
     let key = (kind, ledger::version::fnv1a64(key_text(text).as_bytes()));
     let kept = KEPT.get_or_init(Mutex::default);
     let found = kept
@@ -1620,18 +1626,13 @@ pub fn shader(kind: Kind, text: &str) -> Result<Shader, AssembleError> {
             let fields: Vec<&str> = fields.iter().map(String::as_str).collect();
             let mut source = head(Tier::FULL, &fields)?;
             let mut extra = Vec::new();
-            // A `field` is read as the field it defaults to, as the assembler reads it.
-            let chosen: Vec<&Uniform> = declaration
-                .uniforms
-                .iter()
-                .filter(|u| u.ty == UniformType::Field)
-                .collect();
+            // A baked uniform is read as it defaults, as the assembler reads it.
             let code =
-                super::params::specialise(&code_text(text), &chosen, &|u| u.default[0] as usize)?;
+                super::params::specialise(&code_text(text), &baked, &|u| u.default.clone())?;
             let block: Vec<&Uniform> = declaration
                 .uniforms
                 .iter()
-                .filter(|u| u.ty != UniformType::Field)
+                .filter(|u| !u.is_baked())
                 .collect();
             if !block.is_empty() {
                 let types: Vec<UniformType> = block.iter().map(|u| u.ty).collect();
@@ -1782,10 +1783,10 @@ pub(super) fn dropped(
         if !gone && without_uniforms(&text, &[], "").is_none() {
             continue;
         }
-        // A `field` has no member in an assembled block: it is read as the field, in the code.
+        // A baked uniform has no member in an assembled block: it is written into the code.
         for (member, u) in uniforms
             .iter()
-            .filter(|u| u.ty != UniformType::Field)
+            .filter(|u| !u.is_baked())
             .enumerate()
         {
             if gone || block.part(member as u32).is_nothing() {

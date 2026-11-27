@@ -993,3 +993,297 @@ impl FieldRamp {
         }
     }
 }
+
+// ── The shipped node: a field ramp as parameters ─────────────────────────────────────────────────────────────────
+
+/// The curves a field ramp node offers, in the order its `curve` parameter counts them.
+pub const CURVES: [&str; 5] = ["lin", "log", "cyclic", "diverging", "flag"];
+
+/// The ramps a field ramp node offers, in the order its `ramp` parameter counts them: the prelude's lookup tables, then
+/// the node's own `colours` gradient.
+pub const RAMPS: [&str; 6] = ["viridis", "magma", "twilight", "coolwarm", "grey", "gradient"];
+
+/// What an end of a `lin` range is, in the order the `low_end` and `high_end` parameters count them.
+pub const ENDS: [&str; 3] = ["value", "measured", "horizon"];
+
+/// The node's gradient, the stops of [`Ramp::as_gradient`] at most.
+pub const GRADIENT_STOPS: u8 = 8;
+
+/// The parameter names a field ramp node declares, each baked into its code, and what each is.
+pub const PARAMS: [&str; 9] = [
+    "field", "curve", "scale", "range", "low_end", "high_end", "symmetric", "polarity", "ramp",
+];
+
+impl Compaction {
+    /// The compaction the parameters `curve`, `low_end`, `high_end`, `symmetric`, `range` and `scale` name: the `lin`
+    /// curve over `range`, an end that is not a `value` read at run time; `scale` the `ε`, period or `x₀` of the others.
+    pub fn from_values(
+        curve: usize,
+        ends: [usize; 2],
+        symmetric: bool,
+        range: [f64; 2],
+        scale: f64,
+    ) -> Result<Compaction, String> {
+        let end = |kind: usize, value: f64| match kind {
+            0 => Ok(End::Fixed(value)),
+            1 => Ok(End::Measured),
+            2 => Ok(End::Horizon),
+            _ => Err(format!("an end is one of {}", ENDS.join(", "))),
+        };
+        Ok(match curve {
+            0 => Compaction::LinRead {
+                lo: end(ends[0], range[0])?,
+                hi: end(ends[1], range[1])?,
+                symmetric,
+            },
+            1 => Compaction::Log { eps: scale },
+            2 => Compaction::Cyclic { period: scale },
+            3 => Compaction::Diverging { x0: scale },
+            4 => Compaction::Flag,
+            _ => return Err(format!("a curve is one of {}", CURVES.join(", "))),
+        })
+    }
+
+    /// The parameters of [`Compaction::from_values`] this compaction is: `curve`, `scale`, `range`, `low_end`,
+    /// `high_end` and `symmetric`.
+    pub fn values(&self) -> Vec<(&'static str, Vec<f64>)> {
+        let kind = |e: End| match e {
+            End::Fixed(_) => 0.0,
+            End::Measured => 1.0,
+            End::Horizon => 2.0,
+        };
+        let value = |e: End| match e {
+            End::Fixed(v) => v,
+            _ => 0.0,
+        };
+        let (curve, scale, range, ends, symmetric) = match *self {
+            Compaction::Lin { lo, hi } => (0.0, 1.0, [lo, hi], [0.0, 0.0], 0.0),
+            Compaction::LinRead { lo, hi, symmetric } => (
+                0.0,
+                1.0,
+                [value(lo), value(hi)],
+                [kind(lo), kind(hi)],
+                f64::from(u8::from(symmetric)),
+            ),
+            Compaction::Log { eps } => (1.0, eps, [0.0, 1.0], [0.0, 0.0], 0.0),
+            Compaction::Cyclic { period } => (2.0, period, [0.0, 1.0], [0.0, 0.0], 0.0),
+            Compaction::Diverging { x0 } => (3.0, x0, [0.0, 1.0], [0.0, 0.0], 0.0),
+            Compaction::Flag => (4.0, 1.0, [0.0, 1.0], [0.0, 0.0], 0.0),
+        };
+        vec![
+            ("curve", vec![curve]),
+            ("scale", vec![scale]),
+            ("range", range.to_vec()),
+            ("low_end", vec![ends[0]]),
+            ("high_end", vec![ends[1]]),
+            ("symmetric", vec![symmetric]),
+        ]
+    }
+}
+
+/// The scalar field `name`, read as a field ramp reads it, kept: it is asked for at every assembly of a node.
+fn scalar(name: &str) -> Result<ScalarField, String> {
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock, PoisonError};
+    static KEPT: OnceLock<Mutex<HashMap<String, Result<ScalarField, String>>>> = OnceLock::new();
+    let mut kept = KEPT
+        .get_or_init(Mutex::default)
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    kept.entry(name.to_owned())
+        .or_insert_with(|| ScalarField::payload(name))
+        .clone()
+}
+
+/// The words a field ramp node reads its parameters through, `uniforms.<parameter>.<word>`, for the parameter `param`:
+/// whether `word` is one of them.
+pub fn knows(param: &str, word: &str) -> bool {
+    matches!(
+        (param, word),
+        ("field", "read" | "valid" | "unset" | "non_finite")
+            | ("curve", "invalid" | "place" | "measured")
+            | ("ramp", "colour" | "gradient")
+    )
+}
+
+/// The parameters the word `uniforms.<param>.<word>` reads: a parameter nothing reads can never matter.
+pub fn uses(param: &str, word: &str) -> &'static [&'static str] {
+    const PLACE: [&str; 8] = [
+        "field", "curve", "scale", "range", "low_end", "high_end", "symmetric", "polarity",
+    ];
+    match (param, word) {
+        ("field", _) => &["field"],
+        ("curve", "invalid") => &["field", "curve"],
+        ("curve", "measured") => &["curve", "low_end", "high_end"],
+        ("curve", "place") => &PLACE,
+        ("ramp", "gradient") => &["ramp"],
+        ("ramp", "colour") => &[
+            "field", "curve", "scale", "range", "low_end", "high_end", "symmetric", "polarity",
+            "ramp", "colours",
+        ],
+        _ => &[],
+    }
+}
+
+/// The code the word `uniforms.<param>.<word>` of a field ramp node is, where `value` gives each parameter's value, or
+/// `None` where the word has none (a field with no unset value has no `unset`): the field's read and tests, the curve
+/// placed with the polarity applied, the invalid test, and the ramp of that. Each is the text the shader of the same
+/// ramp was written with, so a ramp drawn through the node is the ramp as it was.
+pub fn word(
+    value: &dyn Fn(&str) -> Option<Vec<f64>>,
+    param: &str,
+    word: &str,
+) -> Result<Option<String>, String> {
+    let get = |name: &str| value(name).ok_or_else(|| format!("the node declares no `{name}`"));
+    let one = |name: &str| -> Result<f64, String> {
+        get(name)?
+            .first()
+            .copied()
+            .ok_or_else(|| format!("`{name}` holds no value"))
+    };
+    let field = || -> Result<ScalarField, String> {
+        let names = crate::assemble::ramp_fields().map_err(|e| e.to_string())?;
+        let at = one("field")? as usize;
+        let name = names
+            .get(at)
+            .ok_or_else(|| format!("`field` names no field a source reads: {at}"))?;
+        scalar(name)
+    };
+    let curve = || -> Result<Compaction, String> {
+        let range = get("range")?;
+        Compaction::from_values(
+            one("curve")? as usize,
+            [one("low_end")? as usize, one("high_end")? as usize],
+            one("symmetric")? != 0.0,
+            [
+                range.first().copied().unwrap_or(0.0),
+                range.get(1).copied().unwrap_or(1.0),
+            ],
+            one("scale")?,
+        )
+    };
+    // The curve of the field's value with the polarity applied, `b`, as the shader of the ramp wrote it.
+    let place = || -> Result<String, String> {
+        let (f, c) = (field()?, curve()?);
+        let banded = match (c, f.band) {
+            (Compaction::Diverging { .. }, Some(band)) => format!("dbg_drift_banded(v, {band})"),
+            _ => "v".to_owned(),
+        };
+        let polarity = match one("polarity")? as usize {
+            0 => Polarity::High,
+            1 => Polarity::Low,
+            _ => return Err("a polarity is high or low".into()),
+        };
+        Ok(polarity.wgsl(&c.wgsl(&banded)))
+    };
+    Ok(match (param, word) {
+        ("field", "read") => Some(field()?.value),
+        ("field", "unset") => field()?.unset,
+        ("field", "non_finite") => field()?.non_finite,
+        ("field", "valid") => Some(field()?.valid),
+        ("curve", "invalid") => {
+            // The post declares no range: only `log` styles a value, its negative sentinel, so the curve's kind is all
+            // this needs.
+            let mut terms = vec![format!("!({})", field()?.valid)];
+            if one("curve")? as usize == 1 {
+                terms.push("v < 0.0".to_owned());
+            }
+            Some(terms.join(" || "))
+        }
+        ("curve", "place") => Some(place()?),
+        ("curve", "measured") => {
+            let c = curve()?;
+            (!c.uniforms().is_empty()).then(String::new)
+        }
+        ("ramp", "gradient") => (one("ramp")? as usize == RAMPS.len() - 1).then(String::new),
+        ("ramp", "colour") => {
+            let b = place()?;
+            Some(match one("ramp")? as usize {
+                k if k + 1 == RAMPS.len() => {
+                    format!("gradient{GRADIENT_STOPS}_at(uniforms.colours, {b})")
+                }
+                k if k < RAMPS.len() => format!("ramp_{}({b})", RAMPS[k]),
+                _ => return Err(format!("a ramp is one of {}", RAMPS.join(", "))),
+            })
+        }
+        _ => return Err(format!("`uniforms.{param}.{word}` is no word of a field ramp")),
+    })
+}
+
+impl FieldRamp {
+    /// The parameters of the shipped field ramp node that make it this ramp, by name: its field, curve and range, its
+    /// polarity and its ramp, a lookup table by its place in [`RAMPS`] or, for a `lerp` or a `diverging` ramp, the
+    /// gradient of its stops with the `colours` it is drawn from. A `bands` ramp is no setting of the node: it is none
+    /// of its ramps.
+    pub fn params(&self) -> Result<Vec<(&'static str, Vec<f64>)>, String> {
+        let names = crate::assemble::ramp_fields().map_err(|e| e.to_string())?;
+        let at = names
+            .iter()
+            .position(|f| f == self.field.field)
+            .ok_or_else(|| format!("`{}` is no field a source reads", self.field.field))?;
+        let mut out = vec![("field", vec![at as f64])];
+        out.extend(self.compaction.values());
+        out.push((
+            "polarity",
+            vec![match self.polarity {
+                Polarity::High => 0.0,
+                Polarity::Low => 1.0,
+            }],
+        ));
+        let ramp = match &self.map {
+            Map::Lightness => None,
+            Map::Ramp(r) => Some(r),
+        };
+        if let Some(r) = ramp {
+            match **r {
+                Ramp::Lut(l) => {
+                    let k = RAMPS.iter().position(|n| *n == l.name());
+                    out.push(("ramp", vec![k.ok_or("a lookup table the node has not")? as f64]));
+                }
+                Ramp::Lerp { .. } | Ramp::Diverging { .. } => {
+                    out.push(("ramp", vec![(RAMPS.len() - 1) as f64]));
+                    out.push(("colours", r.as_gradient().ok_or("a gradient")?));
+                }
+                Ramp::Bands { .. } => return Err("a `bands` ramp is no ramp of the node".into()),
+            }
+        }
+        Ok(out)
+    }
+
+    /// The text of the shipped field ramp node of `kind` (colour, brightness or post) made as this ramp: the source the
+    /// registry holds, its parameters written into it ([`crate::assemble::params::specialise`]), a gradient's stops
+    /// its `colours` default.
+    pub fn node_text(&self, kind: Kind) -> Result<String, String> {
+        let shipped = crate::registry::named(kind, NODE).map_err(|e| e.to_string())?;
+        let params = self.params()?;
+        let d = crate::assemble::Declaration::parse(&shipped.source).map_err(|e| e.to_string())?;
+        let baked: Vec<&crate::assemble::Uniform> =
+            d.uniforms.iter().filter(|u| u.is_baked()).collect();
+        let value = |u: &crate::assemble::Uniform| {
+            params
+                .iter()
+                .find(|(n, _)| *n == u.name)
+                .map_or_else(|| u.default.clone(), |(_, v)| v.clone())
+        };
+        let mut text = crate::assemble::params::specialise(&shipped.source, &baked, &value)
+            .map_err(|e| e.to_string())?;
+        if let Some((_, g)) = params.iter().find(|(n, _)| *n == "colours") {
+            let line = text
+                .lines()
+                .find(|l| l.starts_with("// @uniform colours:"))
+                .ok_or("the node has no `colours`")?
+                .to_owned();
+            text = text.replace(
+                &line,
+                &format!(
+                    "// @uniform colours: gradient<{GRADIENT_STOPS}> = {}",
+                    crate::assemble::params::gradient_text(g)
+                ),
+            );
+        }
+        Ok(text)
+    }
+}
+
+/// The name of the shipped field ramp, in each of the colour, brightness and post slots.
+pub const NODE: &str = "field_ramp";

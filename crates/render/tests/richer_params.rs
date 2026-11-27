@@ -796,7 +796,7 @@ fn chosen(text: &str, field: &str) -> String {
     let fields = assemble::source_fields().unwrap_or_else(|e| panic!("{e}"));
     let at = fields.iter().position(|f| f == field).expect("a field");
     let src: Vec<&Uniform> = d.uniforms.iter().filter(|u| u.name == "src").collect();
-    params::specialise(text, &src, &|_| at).unwrap_or_else(|e| panic!("{e}"))
+    params::specialise(text, &src, &|_| vec![at as f64]).unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn check_field(a: &str, b: &str) {

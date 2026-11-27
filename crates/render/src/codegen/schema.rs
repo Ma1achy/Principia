@@ -80,6 +80,8 @@ impl MapParam {
             default: vec![self.clamp(value)?],
             range: Some(self.range()),
             any_kind: false,
+            scalars: false,
+            baked: false,
         })
     }
 }

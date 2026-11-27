@@ -239,8 +239,8 @@ impl View {
         self.waiting.clear();
         for n in g.nodes() {
             for u in g.uniforms(n.id).map_err(|e| e.to_string())? {
-                // A field is part of the code, so the key says it, and there is no buffer to write.
-                if u.ty == engine::contract::stain::describe::UniformType::Field {
+                // A baked uniform is part of the code, so the key says it, and there is no buffer to write.
+                if u.is_baked() {
                     continue;
                 }
                 let value = n.params.get(&u.name).unwrap_or(&u.default).clone();

@@ -330,11 +330,38 @@ pub struct Uniform {
     /// A `field` that may be swapped for a field of the other kind, a vector for a scalar: its code reads it with
     /// `as_field`, which fits either. Written `= <field> any`.
     pub any_kind: bool,
+    /// A `field` chosen among every scalar field a ramp reads ([`ramp_fields`]), with its validity, not among the fields
+    /// a source reads. Written `= <field> scalar`.
+    pub scalars: bool,
+    /// Written into the code where the node is made, never bound: a `field` always is, and any other uniform written
+    /// `= <default> baked`. Its value reaches the code only through the words of [`params::specialise`], so choosing
+    /// another is another code.
+    pub baked: bool,
 }
 
 impl Uniform {
+    /// Whether the uniform is written into the code rather than bound in the node's block.
+    pub fn is_baked(&self) -> bool {
+        self.baked || self.ty == UniformType::Field
+    }
+
+    /// The fields a `field` uniform chooses among, by their place in its value.
+    pub fn field_names(&self) -> Result<Vec<String>, AssembleError> {
+        if self.scalars {
+            ramp_fields()
+        } else {
+            source_fields()
+        }
+    }
+
     /// Whether `value` is a value of this uniform: one number per component, each of the type, within the range.
     pub fn admits(&self, value: &[f64]) -> bool {
+        if self.scalars {
+            return value.len() == 1
+                && value[0].fract() == 0.0
+                && value[0] >= 0.0
+                && ramp_fields().is_ok_and(|f| (value[0] as usize) < f.len());
+        }
         if let Some(ok) = params::admits(self.ty, value) {
             // A field is swapped for one of its default's kind, a vector for a vector and a scalar for a scalar: the
             // code that reads it does not change with it.
@@ -448,7 +475,7 @@ impl Declaration {
             let block: Vec<Uniform> = out
                 .uniforms
                 .iter()
-                .filter(|u| u.ty != UniformType::Field)
+                .filter(|u| !u.is_baked())
                 .cloned()
                 .collect();
             let size = crate::pipeline_cache::block_layout(&block).1;
@@ -480,6 +507,10 @@ fn is_param(rest: &str) -> bool {
 /// `<name>: <type> = <default>` then an optional `[<lo>, <hi>]`; the new types of grammar version 2 ([`params`]) read
 /// their default as their own text, and take no range.
 fn uniform(rest: &str, version: u32) -> Result<Uniform, String> {
+    let (rest, baked) = match rest.trim_end().strip_suffix(" baked") {
+        Some(r) => (r, true),
+        None => (rest, false),
+    };
     let (name, rest) = rest.split_once(':').ok_or("no `:` after the name")?;
     let name = identifier(name)?;
     if let Some(ty) = params::parse_type(rest.split_once('=').map_or(rest, |(t, _)| t))? {
@@ -491,17 +522,33 @@ fn uniform(rest: &str, version: u32) -> Result<Uniform, String> {
         }
         let (_, default) = rest.split_once('=').ok_or("no `=` before the default")?;
         let any_kind = ty == UniformType::Field && default.trim_end().ends_with(" any");
+        let scalars = ty == UniformType::Field && default.trim_end().ends_with(" scalar");
         let default = if any_kind {
             default.trim_end().trim_end_matches("any")
+        } else if scalars {
+            default.trim_end().trim_end_matches("scalar")
         } else {
             default
+        };
+        let default = if scalars {
+            let name = default.trim();
+            let at = ramp_fields()
+                .map_err(|e| e.to_string())?
+                .iter()
+                .position(|f| f == name)
+                .ok_or_else(|| format!("`{name}` is no scalar field a ramp reads"))?;
+            vec![at as f64]
+        } else {
+            params::parse_default(ty, default)?
         };
         let u = Uniform {
             name,
             ty,
-            default: params::parse_default(ty, default)?,
+            default,
             range: None,
             any_kind,
+            scalars,
+            baked,
         };
         if !u.admits(&u.default) {
             return Err(format!(
@@ -532,6 +579,8 @@ fn uniform(rest: &str, version: u32) -> Result<Uniform, String> {
         default,
         range,
         any_kind: false,
+        scalars: false,
+        baked,
     };
     if u.range.is_some() && ty.components() > 1 {
         return Err("a range is for a scalar uniform".into());
@@ -618,6 +667,22 @@ pub fn source_fields() -> Result<Vec<String>, AssembleError> {
         .collect())
 }
 
+/// Every scalar field a field ramp reads, in the ledger's order: the members of the read side and of the initial
+/// conditions and the word, each as [`crate::colour::field_ramp::ScalarField`] reads it with its validity.
+pub fn ramp_fields() -> Result<Vec<String>, AssembleError> {
+    static KEPT: OnceLock<Vec<String>> = OnceLock::new();
+    if let Some(k) = KEPT.get() {
+        return Ok(k.clone());
+    }
+    let (_, entries) = ledger()?;
+    let names: Vec<String> = entries
+        .iter()
+        .filter(|e| crate::colour::field_ramp::ScalarField::payload(e.name).is_ok())
+        .map(|e| e.name.to_owned())
+        .collect();
+    Ok(KEPT.get_or_init(|| names).clone())
+}
+
 /// The subtype of a built-in source's field (render_gui_spec Part II §5: "picking the field sets the out-port's
 /// subtype"): vector for a `vec3<f32>`; categorical for a `bool` or a field the ledger scales as categorical or as a
 /// flag (dd_generation_root §3.8 `scale`); scalar otherwise; or the field is none.
@@ -673,18 +738,14 @@ pub fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>
 const FIELD_SOURCE: &str = "field";
 const FIELD_DEFAULT: &str = "// @uniform field: field = state any";
 
-/// `text` of a node with the declaration `d`, each `field` uniform written into its code as the field it defaults to,
-/// the only field a node can read where nothing chose another ([`params::specialise`]).
+/// `text` of a node with the declaration `d`, each baked uniform written into its code as it defaults, the only value a
+/// node can have where nothing chose another ([`params::specialise`]).
 fn at_defaults(text: String, d: &Declaration) -> Result<String, AssembleError> {
-    let fields: Vec<&Uniform> = d
-        .uniforms
-        .iter()
-        .filter(|u| u.ty == UniformType::Field)
-        .collect();
-    if fields.is_empty() {
+    let baked: Vec<&Uniform> = d.uniforms.iter().filter(|u| u.is_baked()).collect();
+    if baked.is_empty() {
         return Ok(text);
     }
-    params::specialise(&text, &fields, &|u| u.default[0] as usize)
+    params::specialise(&text, &baked, &|u| u.default.clone())
 }
 
 /// The code `occupant` runs in a node of `kind` where no stain chose a field: [`occupant_source`] with each `field`
@@ -875,7 +936,15 @@ impl Stain {
                 }
                 check_wire(nodes[j].kind, n.kind, port)?;
             }
-            texts.push(text.map(|t| at_defaults(t, &d)).transpose()?);
+            // The text made at the defaults declares what its block holds: a line a `//? when` hid declares nothing.
+            let made = text.clone().map(|t| at_defaults(t, &d)).transpose()?;
+            let d = if made == text {
+                d
+            } else {
+                declaration_of(n.kind, made.as_deref())?
+            };
+            let text = made;
+            texts.push(text);
             declarations.push(d);
         }
         for kind in [Kind::Combiner, Kind::Out] {
@@ -1497,10 +1566,10 @@ fn source(
         let defaults: Vec<&Uniform> = stain.declarations[i]
             .uniforms
             .iter()
-            .filter(|u| u.ty == UniformType::Field)
+            .filter(|u| u.is_baked())
             .collect();
         let text = std::borrow::Cow::Owned(params::specialise(&text, &defaults, &|u| {
-            u.default[0] as usize
+            u.default.clone()
         })?);
         let text = match gone.is_empty() {
             true => text,
@@ -1526,11 +1595,11 @@ fn source(
                 )?)
             }
         };
-        // A `field` is read as the field in the node's code, so it has no member.
+        // A baked uniform is written into the node's code, so it has no member.
         let schema: Vec<Uniform> = stain.declarations[i]
             .uniforms
             .iter()
-            .filter(|u| !gone.contains(u) && u.ty != UniformType::Field)
+            .filter(|u| !gone.contains(u) && !u.is_baked())
             .cloned()
             .collect();
         let schema = &schema;

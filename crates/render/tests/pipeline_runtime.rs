@@ -752,6 +752,8 @@ fn check_layout(vec3_align: u64) {
         default: vec![0.0; ty.components()],
         range: None,
         any_kind: false,
+        scalars: false,
+        baked: false,
     };
     let schema = [
         u("a", UniformType::F32),

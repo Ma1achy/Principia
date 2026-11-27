@@ -139,6 +139,8 @@ impl Param {
                 default: self.value.clone(),
                 range: None,
                 any_kind: false,
+                scalars: false,
+                baked: false,
             },
         };
         if u.admits(&u.default) {
