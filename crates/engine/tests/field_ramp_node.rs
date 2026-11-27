@@ -14,7 +14,7 @@
 
 use std::collections::BTreeMap;
 
-use engine::contract::stain::assembled::library;
+use engine::contract::stain::assembled::{self, library};
 use engine::contract::stain::describe;
 use engine::contract::stain::graph::{NodeId, NodeKind, Occupant, StainGraph};
 use render::assemble::{self, View};
@@ -55,23 +55,15 @@ fn code(source: &str) -> String {
         .collect()
 }
 
-/// The ramp as the shipped node, with its parameters set.
+/// The default ramp of `ramp`'s field as the shipped node of `kind`, with its parameters set as the window sets them.
 fn node(g: &mut StainGraph, kind: NodeKind, ramp: &FieldRamp) -> NodeId {
     let id = g
         .add(kind, Occupant::Builtin("field_ramp".into()))
         .unwrap_or_else(|e| panic!("{e}"));
-    // The post declares the field and the curve only: it draws no ramp and places nothing.
-    let declared: Vec<String> = g
-        .uniforms(id)
-        .unwrap_or_else(|e| panic!("{e}"))
-        .into_iter()
-        .map(|u| u.name)
-        .collect();
-    for (name, value) in ramp.params().unwrap_or_else(|e| panic!("{e}")) {
-        if !declared.iter().any(|d| d == name) {
-            continue;
-        }
-        g.set_param(id, name, value)
+    let params = assembled::field_ramp_params(kind, ramp.field.field, &sim_key)
+        .unwrap_or_else(|e| panic!("{e}"));
+    for (name, value) in params {
+        g.set_param(id, &name, value)
             .unwrap_or_else(|e| panic!("{name}: {e}"));
     }
     id

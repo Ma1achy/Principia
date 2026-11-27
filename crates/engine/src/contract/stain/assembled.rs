@@ -54,6 +54,56 @@ pub fn source_fields() -> Result<Vec<String>, GraphError> {
     Ok(assemble::source_fields()?)
 }
 
+/// The scalar fields a field ramp node chooses among, in the order its `field` parameter counts them.
+pub fn ramp_fields() -> Result<Vec<String>, GraphError> {
+    Ok(assemble::ramp_fields()?)
+}
+
+/// The parameters that make the shipped `field_ramp` node of `kind` (a colour, a brightness, or the post of a
+/// brightness ramp) the default ramp of `field`, by name: its curve and range from the ledger (`sim_key` gives the
+/// parameters a floor is, `eps_E` and `eps_L`), its polarity and its ramp from the field's role. Only the parameters the
+/// node of `kind` declares are given: a post places nothing and draws no ramp. The window sets them on a new
+/// `Occupant::Builtin("field_ramp")` node to offer the ramp of a field.
+pub fn field_ramp_params(
+    kind: NodeKind,
+    field: &str,
+    sim_key: &dyn Fn(&str) -> Option<f64>,
+) -> Result<std::collections::BTreeMap<String, Vec<f64>>, GraphError> {
+    use render::codegen::Slot;
+    let slot = match kind {
+        NodeKind::Colour => Slot::Colour,
+        NodeKind::Brightness | NodeKind::Post => Slot::Brightness,
+        _ => return Err(GraphError(format!("a {kind:?} node is no field ramp"))),
+    };
+    let ledger = ledger::payload::ledger();
+    let entry = ledger::gen::validate(&ledger)
+        .map_err(|e| GraphError(e.to_string()))?
+        .into_iter()
+        .find(|e| e.name == field)
+        .ok_or_else(|| GraphError(format!("`{field}` is no ledger field")))?;
+    let ramp = render::colour::defaults::field_ramp(
+        &entry,
+        slot,
+        &render::colour::defaults::Resolve { sim_key },
+    )
+    .map_err(GraphError)?;
+    let declared: Vec<String> = assemble::declaration(
+        kind.into(),
+        &assemble::Occupant::BuiltIn("field_ramp".into()),
+    )?
+    .uniforms
+    .into_iter()
+    .map(|u| u.name)
+    .collect();
+    Ok(ramp
+        .params()
+        .map_err(GraphError)?
+        .into_iter()
+        .filter(|(name, _)| declared.iter().any(|d| d == name))
+        .map(|(name, value)| (name.to_owned(), value))
+        .collect())
+}
+
 /// One entry of the library: an occupant of the registry.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Entry {
