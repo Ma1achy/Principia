@@ -1,5 +1,5 @@
 # Pinned for the brand rebuild (python3 brand/code/build.py). Versions of the machine that ran
-# the verification are in brand/code/README-build.md.
+# the verification are in brand/README.md (Rebuilding).
 numpy==2.5.3
 scipy==1.18.1
 matplotlib==3.11.2
