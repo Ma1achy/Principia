@@ -11,6 +11,11 @@
 //!   parameters are in no block.
 //! - Every generated-ramp code digest in `tests/data/declared_code.txt` stays as it was: that file is not touched by
 //!   this change, and `declared_code.rs` builds those rows through the node.
+//! - On a GPU (where there is an adapter): for every row, the picture of the shipped node made as the field's default
+//!   ramp equals, bit for bit in all four channels of every pixel, the picture of the generated text it replaces,
+//!   over a row of samples holding the field's NaN, both infinities, the −1 sentinel, zero, a tiny and a huge value,
+//!   a decode_failed, a sim_failed and two reserved states, a pixel the chart forbids, and the fresh sample's unset
+//!   d_min. Zero pixels differ. Control: the node of the next field differs in some pixel.
 //! - Controls: the node taken as another field, another curve, the other polarity or another ramp is another code, and
 //!   the comparison says so.
 
@@ -20,8 +25,12 @@ use render::assemble::{self, Kind, Occupant};
 use render::codegen::Slot;
 use render::colour::defaults::{self, Resolve};
 use render::colour::field_ramp::{Compaction, FieldRamp, Lut, Map, Polarity, Ramp};
+use render::registry::ZERO_SOURCE;
+use validation::golden_scene::{render_stain, row_scene, Colouring};
+use validation::gpu::GpuHarness;
 use validation::negative_control;
 
+/// The generated ramps' code, one block a row, with the `// @uniform` lines they declared (`code` leaves them out).
 const CODE: &str = include_str!("data/field_ramps_before.txt");
 const UNIFORMS: &str = include_str!("data/field_ramp_uniforms.txt");
 
@@ -119,7 +128,7 @@ fn check(how: &dyn Fn(&FieldRamp) -> FieldRamp) {
                     .unwrap_or_else(|e| panic!("{row}: {e}"));
                 assert_eq!(
                     code(&text),
-                    code_before[&row],
+                    code(&code_before[&row]),
                     "{row}: the node's code is not the generated ramp's"
                 );
                 assert_eq!(
@@ -295,4 +304,149 @@ negative_control!(
             "{field}: the ramp did not change the code"
         );
     }
+);
+
+// ── Pictures ──────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The samples a row holds: each value, then the states a pixel can be in whatever its value.
+const VALUES: [f32; 8] = [
+    f32::NAN,
+    f32::INFINITY,
+    f32::NEG_INFINITY,
+    -1.0,
+    0.0,
+    1e-30,
+    0.5,
+    1e30,
+];
+const SAMPLES: u32 = 14;
+
+/// The stain of the zero source into `colour` and `brightness` through Replace-L, with the post before `OUT`.
+fn drawn(kind: Kind, ramp: &str, post: Option<&str>) -> render::assemble::Stain {
+    use render::assemble::Node;
+    let node = |kind, occupant, inputs: Vec<Option<usize>>| Node {
+        kind,
+        occupant,
+        inputs,
+    };
+    let (colour, brightness) = match kind {
+        Kind::Colour => (Occupant::Custom(ramp.to_owned()), Occupant::None),
+        _ => (Occupant::None, Occupant::Custom(ramp.to_owned())),
+    };
+    let mut nodes = vec![
+        node(
+            Kind::Source,
+            Occupant::Custom(ZERO_SOURCE.to_owned()),
+            vec![],
+        ),
+        node(Kind::Colour, colour, vec![Some(0)]),
+        node(Kind::Brightness, brightness, vec![Some(0)]),
+        node(
+            Kind::Combiner,
+            Occupant::BuiltIn("replace_l".into()),
+            vec![Some(1), Some(2)],
+        ),
+    ];
+    let last = match post {
+        Some(p) => {
+            nodes.push(node(
+                Kind::Post,
+                Occupant::Custom(p.to_owned()),
+                vec![Some(3)],
+            ));
+            4
+        }
+        None => 3,
+    };
+    nodes.push(node(Kind::Out, Occupant::None, vec![Some(last)]));
+    render::assemble::Stain::new(nodes).unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// The picture of `ramp` (and `post`) over the row of [`VALUES`] written to `field`, as every pixel's four channels.
+fn picture(
+    h: &GpuHarness,
+    field: &str,
+    kind: Kind,
+    ramp: &str,
+    post: Option<&str>,
+) -> Vec<[u32; 4]> {
+    let mut scene = row_scene("field_ramp_node", SAMPLES, Colouring::View("state"))
+        .unwrap_or_else(|e| panic!("{e}"));
+    for (i, v) in (0u32..).zip(VALUES) {
+        // The fields a sample's setters write; any other is left as a fresh sample has it, and is drawn by the states
+        // below.
+        let mut sample = scene.set.sample(i);
+        match field {
+            "S" => sample.S(v),
+            "theta" => sample.theta(v),
+            "mean_y" => sample.mean_y(v),
+            "C_ty" => sample.C_ty(v),
+            "E_0" => sample.E_0(v),
+            "Lz_0" => sample.Lz_0(v),
+            "closure_min" => sample.closure_min(v),
+            "d_min" => sample.d_min(v),
+            "dE_max" => sample.drift_max(v, 0.0),
+            "dLz_max" => sample.drift_max(0.0, v),
+            "dE_reg_max" => sample.reg_drift(0.0, v),
+            _ => &mut sample,
+        };
+    }
+    for (i, state) in [(8u32, 7u32), (9, 1), (10, 6), (11, 7)] {
+        scene.set.sample(i).state(state);
+    }
+    scene.set.set_forbidden(12, true);
+    let image = render_stain(
+        h.device(),
+        h.queue(),
+        &drawn(kind, ramp, post),
+        &scene.set,
+        &scene.context,
+        &|_, name| (name == "u_range").then(|| vec![-1.0, 1.0]),
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    image.iter().map(|p| p.map(f32::to_bits)).collect()
+}
+
+/// Whether, for every row, the node's picture is the generated text's, bit for bit; `how` makes the ramp the node is.
+fn check_pictures(how: &dyn Fn(&FieldRamp) -> FieldRamp) {
+    let h = GpuHarness::new().expect("a GPU device");
+    let old = before();
+    let mut rows = 0;
+    for slot in [Slot::Colour, Slot::Brightness] {
+        for (field, ramp) in ramps(slot) {
+            let kind = slot.kind();
+            let node = how(&ramp);
+            let was = &old[&format!("{field} {}", kind.name())];
+            let now = node.node_text(kind).unwrap_or_else(|e| panic!("{e}"));
+            let post = (slot == Slot::Brightness).then(|| {
+                (
+                    old[&format!("{field} post")].clone(),
+                    node.node_text(Kind::Post).unwrap_or_else(|e| panic!("{e}")),
+                )
+            });
+            let a = picture(&h, &field, kind, was, post.as_ref().map(|p| p.0.as_str()));
+            let b = picture(&h, &field, kind, &now, post.as_ref().map(|p| p.1.as_str()));
+            let n = a.iter().zip(&b).filter(|(x, y)| x != y).count();
+            assert_eq!(
+                n,
+                0,
+                "{field} {}: {n} pixel(s) differ from the generated ramp's",
+                kind.name()
+            );
+            rows += 1;
+        }
+    }
+    println!("rows drawn, none with a differing pixel: {rows}");
+}
+
+#[test]
+fn every_ramp_draws_the_picture_it_drew() {
+    check_pictures(&|r| r.clone());
+}
+
+negative_control!(
+    every_ramp_draws_the_picture_it_drew,
+    "the node made as the next field",
+    expected = "pixel(s) differ from the generated ramp's",
+    check_pictures(&next_field)
 );

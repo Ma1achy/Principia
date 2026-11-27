@@ -1,4 +1,7 @@
 === S colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.S;
@@ -11,6 +14,7 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     return ramp_coolwarm(range_norm(v, -max(abs(uniforms.u_range.x), abs(uniforms.u_range.y)), max(abs(uniforms.u_range.x), abs(uniforms.u_range.y)), false, vec2<f32>(0.0, 0.0)));
 }
 === S brightness
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn brightness(ctx: Ctx) -> f32 {
     handles_validity();
     let v = ctx.sample.S;
@@ -23,6 +27,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, -max(abs(uniforms.u_range.x), abs(uniforms.u_range.y)), max(abs(uniforms.u_range.x), abs(uniforms.u_range.y)), false, vec2<f32>(0.0, 0.0));
 }
 === S post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.S;
@@ -35,6 +41,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === theta colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.theta;
@@ -59,6 +67,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_cyclic(v, 6.2831855);
 }
 === theta post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.theta;
@@ -71,6 +81,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === mean_y colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.mean_y;
@@ -95,6 +107,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 4.0, false, vec2<f32>(0.0, 0.0));
 }
 === mean_y post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.mean_y;
@@ -107,6 +121,9 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === C_ty colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.C_ty;
@@ -119,6 +136,7 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     return ramp_coolwarm(range_norm(v, -max(abs(uniforms.u_range.x), abs(uniforms.u_range.y)), max(abs(uniforms.u_range.x), abs(uniforms.u_range.y)), false, vec2<f32>(0.0, 0.0)));
 }
 === C_ty brightness
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn brightness(ctx: Ctx) -> f32 {
     handles_validity();
     let v = ctx.sample.C_ty;
@@ -131,6 +149,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, -max(abs(uniforms.u_range.x), abs(uniforms.u_range.y)), max(abs(uniforms.u_range.x), abs(uniforms.u_range.y)), false, vec2<f32>(0.0, 0.0));
 }
 === C_ty post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.C_ty;
@@ -143,6 +163,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === E_0 colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.E_0;
@@ -167,6 +189,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_symlog(v, 1.0);
 }
 === E_0 post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.E_0;
@@ -179,6 +203,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === Lz_0 colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.Lz_0;
@@ -203,6 +229,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_symlog(v, 1.0);
 }
 === Lz_0 post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.Lz_0;
@@ -215,6 +243,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === total_substeps colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.total_substeps);
@@ -237,6 +267,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 4294967300.0, false, vec2<f32>(0.0, 0.0));
 }
 === total_substeps post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.total_substeps);
@@ -248,6 +280,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === closure_min colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.closure_min;
@@ -274,6 +308,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_log(v, 1.1920929e-7);
 }
 === closure_min post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.closure_min;
@@ -287,6 +323,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === closure_step colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.closure_step);
@@ -309,6 +347,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, f32(ctx.params.horizon_steps), false, vec2<f32>(0.0, 0.0));
 }
 === closure_step post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.closure_step);
@@ -320,6 +360,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === I_max colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.I_max);
@@ -342,6 +384,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 31.0, false, vec2<f32>(0.0, 0.0));
 }
 === I_max post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.I_max);
@@ -353,6 +397,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === d_min colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.d_min;
@@ -379,6 +425,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_log(v, 6.1035156e-5);
 }
 === d_min post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.d_min;
@@ -392,6 +440,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === dE_max colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.dE_max;
@@ -416,6 +466,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_log(v, 9.536743e-7);
 }
 === dE_max post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.dE_max;
@@ -428,6 +480,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === dLz_max colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.dLz_max;
@@ -452,6 +506,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_log(v, 9.536743e-7);
 }
 === dLz_max post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.dLz_max;
@@ -464,6 +520,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === floor_hits colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.floor_hits);
@@ -486,6 +544,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 32767.0, false, vec2<f32>(0.0, 0.0));
 }
 === floor_hits post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.floor_hits);
@@ -497,6 +557,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === cap_hits colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.cap_hits);
@@ -519,6 +581,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 32767.0, false, vec2<f32>(0.0, 0.0));
 }
 === cap_hits post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.cap_hits);
@@ -530,6 +594,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === dE_reg_max colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.dE_reg_max;
@@ -554,6 +620,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_log(v, 9.536743e-7);
 }
 === dE_reg_max post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.dE_reg_max;
@@ -566,6 +634,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === t_end_step colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.t_end_step);
@@ -588,6 +658,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return 1.0 - range_norm(v, 0.0, f32(ctx.params.horizon_steps), false, vec2<f32>(0.0, 0.0));
 }
 === t_end_step post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.t_end_step);
@@ -599,6 +671,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === t_dmin_step colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.t_dmin_step);
@@ -621,6 +695,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, f32(ctx.params.horizon_steps), false, vec2<f32>(0.0, 0.0));
 }
 === t_dmin_step post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.t_dmin_step);
@@ -632,6 +708,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === coll_floor colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.coll_floor);
@@ -654,6 +732,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 145.0, false, vec2<f32>(0.0, 0.0));
 }
 === coll_floor post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(ctx.sample.coll_floor);
@@ -665,6 +745,9 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === ftle colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.ftle;
@@ -677,6 +760,7 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     return ramp_grey(range_norm(v, uniforms.u_range.x, uniforms.u_range.y, false, vec2<f32>(0.0, 0.0)));
 }
 === ftle brightness
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn brightness(ctx: Ctx) -> f32 {
     handles_validity();
     let v = ctx.sample.ftle;
@@ -689,6 +773,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, uniforms.u_range.x, uniforms.u_range.y, false, vec2<f32>(0.0, 0.0));
 }
 === ftle post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.ftle;
@@ -701,6 +787,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === energy_drift colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.energy_drift;
@@ -725,6 +813,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_symlog(dbg_drift_banded(v, dbg_drift_band_energy(ctx.sample.r, ctx.sample.p, vec3<f32>(ctx.ic.m0, ctx.ic.m1, ctx.ic.m2))), 9.536743e-7);
 }
 === energy_drift post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.energy_drift;
@@ -737,6 +827,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === Lz_drift colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.Lz_drift;
@@ -761,6 +853,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_symlog(dbg_drift_banded(v, dbg_drift_band_lz(ctx.sample.r, ctx.sample.p)), 9.536743e-7);
 }
 === Lz_drift post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.Lz_drift;
@@ -773,6 +867,9 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === diffusion colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.diffusion;
@@ -785,6 +882,7 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     return ramp_grey(range_norm(v, uniforms.u_range.x, uniforms.u_range.y, false, vec2<f32>(0.0, 0.0)));
 }
 === diffusion brightness
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn brightness(ctx: Ctx) -> f32 {
     handles_validity();
     let v = ctx.sample.diffusion;
@@ -797,6 +895,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, uniforms.u_range.x, uniforms.u_range.y, false, vec2<f32>(0.0, 0.0));
 }
 === diffusion post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.sample.diffusion;
@@ -809,6 +909,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === m0 colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.m0;
@@ -833,6 +935,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 1.0, false, vec2<f32>(0.0, 0.0));
 }
 === m0 post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.m0;
@@ -845,6 +949,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === m1 colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.m1;
@@ -869,6 +975,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 1.0, false, vec2<f32>(0.0, 0.0));
 }
 === m1 post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.m1;
@@ -881,6 +989,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === m2 colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.m2;
@@ -905,6 +1015,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 1.0, false, vec2<f32>(0.0, 0.0));
 }
 === m2 post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.m2;
@@ -917,6 +1029,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === q_mass colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.q_mass;
@@ -941,6 +1055,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 1.0, false, vec2<f32>(0.0, 0.0));
 }
 === q_mass post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.q_mass;
@@ -953,6 +1069,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === rho_mag colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.rho_mag;
@@ -977,6 +1095,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 1.0, false, vec2<f32>(0.0, 0.0));
 }
 === rho_mag post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.rho_mag;
@@ -989,6 +1109,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === lambda_mag colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.lambda_mag;
@@ -1013,6 +1135,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 1.0, false, vec2<f32>(0.0, 0.0));
 }
 === lambda_mag post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.lambda_mag;
@@ -1025,6 +1149,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === rho_ratio colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.rho_ratio;
@@ -1049,6 +1175,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_log(v, 1.1920929e-7);
 }
 === rho_ratio post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.rho_ratio;
@@ -1061,6 +1189,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === rho_angle colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.rho_angle;
@@ -1085,6 +1215,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_cyclic(v, 6.2831855);
 }
 === rho_angle post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.rho_angle;
@@ -1097,6 +1229,9 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === K_0 colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.K_0;
@@ -1109,6 +1244,7 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     return ramp_viridis(range_norm(v, 0.0, uniforms.u_range.y, false, vec2<f32>(0.0, 0.0)));
 }
 === K_0 brightness
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn brightness(ctx: Ctx) -> f32 {
     handles_validity();
     let v = ctx.ic.K_0;
@@ -1121,6 +1257,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, uniforms.u_range.y, false, vec2<f32>(0.0, 0.0));
 }
 === K_0 post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.K_0;
@@ -1133,6 +1271,9 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === V_0 colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.V_0;
@@ -1145,6 +1286,7 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     return ramp_viridis(range_norm(v, uniforms.u_range.x, 0.0, false, vec2<f32>(0.0, 0.0)));
 }
 === V_0 brightness
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn brightness(ctx: Ctx) -> f32 {
     handles_validity();
     let v = ctx.ic.V_0;
@@ -1157,6 +1299,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, uniforms.u_range.x, 0.0, false, vec2<f32>(0.0, 0.0));
 }
 === V_0 post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.V_0;
@@ -1169,6 +1313,9 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === virial_ratio colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.virial_ratio;
@@ -1181,6 +1328,7 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     return ramp_viridis(range_norm(v, 0.0, uniforms.u_range.y, false, vec2<f32>(0.0, 0.0)));
 }
 === virial_ratio brightness
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn brightness(ctx: Ctx) -> f32 {
     handles_validity();
     let v = ctx.ic.virial_ratio;
@@ -1193,6 +1341,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, uniforms.u_range.y, false, vec2<f32>(0.0, 0.0));
 }
 === virial_ratio post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.virial_ratio;
@@ -1205,6 +1355,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === r_min_pair_0 colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.r_min_pair_0;
@@ -1229,6 +1381,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return compact_log(v, 6.1035156e-5);
 }
 === r_min_pair_0 post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = ctx.ic.r_min_pair_0;
@@ -1241,6 +1395,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === payload colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(fgw_payload(ctx.sample.word));
@@ -1263,6 +1419,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 33554432.0, false, vec2<f32>(0.0, 0.0));
 }
 === payload post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(fgw_payload(ctx.sample.word));
@@ -1274,6 +1432,8 @@ fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     return rgb;
 }
 === length colour
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     handles_validity();
     let v = f32(fgw_length_raw(ctx.sample.word));
@@ -1296,6 +1456,8 @@ fn brightness(ctx: Ctx) -> f32 {
     return range_norm(v, 0.0, 76.0, false, vec2<f32>(0.0, 0.0));
 }
 === length post
+// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]
+// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)
 fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
     handles_validity();
     let v = f32(fgw_length_raw(ctx.sample.word));
