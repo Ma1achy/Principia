@@ -1,0 +1,139 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "kind": "combiner",
+      "occupant": {
+        "shader": {
+          "id": "combiner/multiply",
+          "version": null,
+          "hash": "88422f261425dd03",
+          "source": "// Multiply, a built-in occupant of the `combiner` slot (dd_colouring §3.5): rgb·b in linear space, so the base keeps its\n// own L structure (the combiner for monotone-L LUTs, render contract Part 4). The CPU mirror is\n// `crates/render/src/colour/combine.rs`.\n// @name Multiply\n// @group Combiner\n// @about The colour times half the brightness plus a half, in linear RGB.\n// @maps colour · brightness\n// @glyph dropdown\nfn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * (0.5 + 0.5 * b); }\n"
+        }
+      },
+      "params": {}
+    },
+    {
+      "id": 1,
+      "kind": "out",
+      "occupant": "none",
+      "params": {}
+    },
+    {
+      "id": 2,
+      "kind": "source",
+      "occupant": {
+        "shader": {
+          "id": "source/field",
+          "version": null,
+          "hash": "83a5d55c4e042017",
+          "source": "// @version 2\n// A read-side field as a source: a scalar in the field's x, a vector in its xyz. `as_field` is written into the code\n// as the chosen field's own read, so the field is what the proof, the field set and the code key see.\n// @name ctx.{field}\n// @group Source\n// @about A read-side field of the system, chosen by the Field setting; the out-port's kind follows it.\n// @maps ctx.{field}\n// @glyph dropdown\n// @uniform field: field = state any\n// @control field field \"Field\"\nfn source(ctx: Ctx) -> Field { return as_field(uniforms.field); }\n"
+        }
+      },
+      "params": {},
+      "fields": {
+        "field": "E_0"
+      }
+    },
+    {
+      "id": 3,
+      "kind": "source",
+      "occupant": {
+        "shader": {
+          "id": "source/field",
+          "version": null,
+          "hash": "83a5d55c4e042017",
+          "source": "// @version 2\n// A read-side field as a source: a scalar in the field's x, a vector in its xyz. `as_field` is written into the code\n// as the chosen field's own read, so the field is what the proof, the field set and the code key see.\n// @name ctx.{field}\n// @group Source\n// @about A read-side field of the system, chosen by the Field setting; the out-port's kind follows it.\n// @maps ctx.{field}\n// @glyph dropdown\n// @uniform field: field = state any\n// @control field field \"Field\"\nfn source(ctx: Ctx) -> Field { return as_field(uniforms.field); }\n"
+        }
+      },
+      "params": {},
+      "fields": {
+        "field": "state"
+      }
+    },
+    {
+      "id": 4,
+      "kind": "colour",
+      "occupant": {
+        "shader": {
+          "id": "colour/margin",
+          "version": null,
+          "hash": "a39aa86c91f82553",
+          "source": "// The margin, a built-in occupant of the `colour` slot (render_gui_spec Part II §5, §3.1, §15 item 6; R-813;\n// TASK-M7-12): a multi-source mapping. It declares two field inputs, `top1` and `top2`, so its node has two `field`\n// in-ports, each taking one wire, never two wires on one port (§6), and shows the margin `top1 − top2`, each input's\n// value its field's `.x`. A source keeps no input (§3.1): the two fields reach the margin as two wires from two\n// sources, or from one (§5: fan-out is free).\n//\n// **The map is R-962's** (colour_composition §1.2, \"Default ramps by field role\"): the margin is drawn on the\n// greyscale ramp, `ramp_grey`, OKLab L equal to `top1 − top2` clamped to [0, 1], white where `top1` is far above\n// `top2`, so a margin below 0 draws the ramp's black (a swapped pair of wires is all black) and one above 1 its white.\n// The last line below is that map; the two inputs and the guard before it are the node's.\n//\n// A pixel the chart classifies as not a system, a `decode_failed` sample, a `sim_failed` sample and a reserved `state`\n// code are the standard treatment's, which the assembler puts around every colour that does not handle validity\n// itself, so the inputs are read only for a sample that has them. A margin that is not finite has no value: it is\n// noted for the debug view (`note_non_finite()`) and draws `PRESENT_INVALID`, #141418. Not finite is an input that\n// is not finite or a difference that is not (two finite inputs may overflow), each by its bits: the inputs are\n// tested themselves because a backend's fast-math may fold `x − x` to 0 where one source feeds both ports, and ∞ − ∞\n// must not draw the map's zero on one backend and #141418 on another.\n// @name Margin\n// @group Colour\n// @about The margin top1 − top2 on the grey ramp, white where top1 is far above top2.\n// @maps top1 − top2 [lin, 0 to 1]\n// @glyph name\n// @input top1\n// @input top2\n// Whether `x` is ±∞ or a NaN, by its bits: every exponent bit set.\nfn margin_non_finite(x: f32) -> bool {\n    return (bitcast<u32>(x) & 0x7f800000u) == 0x7f800000u;\n}\n\nfn colour(ctx: Ctx) -> vec3<f32> {\n    let top1 = ctx.inputs[0].x;\n    let top2 = ctx.inputs[1].x;\n    let margin = top1 - top2;\n    if (margin_non_finite(top1) || margin_non_finite(top2) || margin_non_finite(margin)) {\n        note_non_finite();\n        return PRESENT_INVALID;\n    }\n    return ramp_grey(margin); // the map R-962 rules\n}\n"
+        }
+      },
+      "params": {}
+    },
+    {
+      "id": 5,
+      "kind": "brightness",
+      "occupant": {
+        "shader": {
+          "id": null,
+          "version": null,
+          "hash": "b512849efa258a9f",
+          "source": "// A brightness of its field.\n// @uniform gain: f32 = 0.5 [0.0, 1.0]\nfn brightness(ctx: Ctx) -> f32 { return clamp(ctx.inputs[0].x * uniforms.gain, 0.0, 1.0); }\n"
+        }
+      },
+      "params": {
+        "gain": [
+          0.25
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "kind": "post",
+      "occupant": {
+        "shader": {
+          "id": "post/edge_line",
+          "version": null,
+          "hash": "f83c289c92032505",
+          "source": "// The Tier-1 boundary overlay (render_gui_spec §12.1; REQ-RENDER-024; TASK-M1-13): an ordinary post node, drawn from\n// the address alone, `ctx.quad.uv` for quad boundaries and `ctx.tile.uv` for tile boundaries, with no buffer and no\n// pass of its own. `edge_line` gives the line's coverage at a pixel from its distance, in pixels, to the nearest edge\n// of its cell, so a line is the same width in pixels at any quad size, depth and zoom, and antialiased.\n//\n// `width` and `opacity` style the quad boundaries, `tile_width` and `tile_opacity` the tile boundaries, `colour`\n// (linear RGB) both; `level` picks what is drawn: 0 the quad boundaries, 1 the tile boundaries, 2 both, composited by\n// the larger coverage, so an edge both cells share is drawn once. A width is the line's full width across the edge, in\n// pixels, at half coverage. The leaf outlines are the quad boundaries of the quads drawn (debug_tooling_plan §F).\n// @name Boundary lines\n// @group Post\n// @about Lines along the quad and tile boundaries, the same width in pixels at any zoom.\n// @maps the quad and tile boundaries\n// @glyph name\n// @uniform width: f32 = 2.0 [0.25, 16.0]\n// @control width slider \"Width\" in \"Quad lines\" order 1\n// @uniform opacity: f32 = 1.0 [0.0, 1.0]\n// @control opacity slider \"Opacity\" in \"Quad lines\" order 2\n// @uniform tile_width: f32 = 1.0 [0.25, 16.0]\n// @control tile_width slider \"Width\" in \"Tile lines\" order 3\n// @uniform tile_opacity: f32 = 0.5 [0.0, 1.0]\n// @control tile_opacity slider \"Opacity\" in \"Tile lines\" order 4\n// @uniform colour: vec3<f32> = (1.0, 1.0, 1.0)\n// @control colour colour \"Line colour\" order 5\n// @uniform level: u32 = 0 [0, 2]\n// @control level choice(\"quads\", \"tiles\", \"both\") \"Draw\" order 0\n\n// One pixel's size in the cell coordinate `uv`, per axis: `fwidth(uv)`, each derivative taken modulo the cell, so that\n// a 2 × 2 pixel block straddling a cell edge, where `uv` jumps from near 1 to near 0, still reads the step within a\n// cell, `1 / (cell size in px)`, not the jump (TASK-M1-13; applied per R-369). §12.1's `fwidth(d)` of the edge distance\n// reads 0 there, the distance being equal on both sides of the edge, and at a cell's corner, where the nearer axis\n// changes; this reads the pixel's size wherever the cell is at least 2 px wide.\nfn cell_fwidth(uv: vec2<f32>) -> vec2<f32> {\n    let dx = dpdx(uv);\n    let dy = dpdy(uv);\n    return abs(dx - round(dx)) + abs(dy - round(dy));\n}\n\n// render_gui_spec §12.1's `edge_line`: the distance to the nearest edge of the cell, cell-local, converted to pixels by\n// the pixel's size in `uv`, then `1 − smoothstep(0, width_px, d)`: constant pixel width, antialiased.\nfn edge_line(uv: vec2<f32>, width_px: f32) -> f32 {\n    let e = min(uv, vec2<f32>(1.0) - uv);\n    let px = e / cell_fwidth(uv);\n    let d = min(px.x, px.y);\n    return 1.0 - smoothstep(0.0, width_px, d);\n}\n\nfn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {\n    // Both lines are evaluated whatever `level` is: the derivatives need uniform control flow.\n    let quad = uniforms.opacity * edge_line(ctx.quad.uv, uniforms.width);\n    let tile = uniforms.tile_opacity * edge_line(ctx.tile.uv, uniforms.tile_width);\n    // A lane the raster did not place (`shade_sample`) holds the absence NaN: no line there.\n    let q = select(quad, 0.0, uniforms.level == 1u || is_absent_nan(ctx.quad.uv.x));\n    let t = select(tile, 0.0, uniforms.level == 0u || is_absent_nan(ctx.tile.uv.x));\n    return mix(rgb, uniforms.colour, max(q, t));\n}\n"
+        }
+      },
+      "params": {
+        "width": [
+          3.0
+        ]
+      }
+    }
+  ],
+  "wires": [
+    {
+      "from": 4,
+      "to": 0,
+      "port": 0
+    },
+    {
+      "from": 5,
+      "to": 0,
+      "port": 1
+    },
+    {
+      "from": 6,
+      "to": 1,
+      "port": 0
+    },
+    {
+      "from": 2,
+      "to": 4,
+      "port": 0
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "port": 1
+    },
+    {
+      "from": 2,
+      "to": 5,
+      "port": 0
+    },
+    {
+      "from": 0,
+      "to": 6,
+      "port": 0
+    }
+  ]
+}

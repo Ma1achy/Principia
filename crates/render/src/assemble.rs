@@ -327,6 +327,9 @@ pub struct Uniform {
     pub default: Vec<f64>,
     /// The control's range, scalar types only.
     pub range: Option<(f64, f64)>,
+    /// A `field` that may be swapped for a field of the other kind, a vector for a scalar: its code reads it with
+    /// `as_field`, which fits either. Written `= <field> any`.
+    pub any_kind: bool,
 }
 
 impl Uniform {
@@ -337,6 +340,7 @@ impl Uniform {
             // code that reads it does not change with it.
             return ok
                 && (self.ty != UniformType::Field
+                    || self.any_kind
                     || self
                         .default
                         .first()
@@ -486,11 +490,18 @@ fn uniform(rest: &str, version: u32) -> Result<Uniform, String> {
             ));
         }
         let (_, default) = rest.split_once('=').ok_or("no `=` before the default")?;
+        let any_kind = ty == UniformType::Field && default.trim_end().ends_with(" any");
+        let default = if any_kind {
+            default.trim_end().trim_end_matches("any")
+        } else {
+            default
+        };
         let u = Uniform {
             name,
             ty,
             default: params::parse_default(ty, default)?,
             range: None,
+            any_kind,
         };
         if !u.admits(&u.default) {
             return Err(format!(
@@ -520,6 +531,7 @@ fn uniform(rest: &str, version: u32) -> Result<Uniform, String> {
         ty,
         default,
         range,
+        any_kind: false,
     };
     if u.range.is_some() && ty.components() > 1 {
         return Err("a range is for a scalar uniform".into());
@@ -636,28 +648,18 @@ pub fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>
         (Kind::Combiner, Occupant::None) => refuse("None: the combiner is required"),
         (_, Occupant::None) => Ok(None),
         (Kind::Source, Occupant::Field(f)) => {
-            let ty = field_type(f)?;
-            let declared = |about: &str| {
-                format!(
-                    "// @name ctx.{f}\n// @group Source\n// @about {about}\n// @maps ctx.{f}\n// @glyph dropdown\n"
-                )
-            };
-            if ty == "vec3<f32>" {
-                return Ok(Some(format!(
-                    "// The built-in source of `{f}`: the vector field in `.xyz` (render_gui_spec Part II §3.1, §5).\n\
-                     {}fn source(ctx: Ctx) -> Field {{ return Field(ctx.sample.{f}, 0.0); }}\n",
-                    declared(&format!("The read-side vector field {f}, in the field's xyz."))
-                )));
-            }
-            let value = match ty {
-                "bool" => format!("select(0.0, 1.0, ctx.sample.{f})"),
-                _ => format!("f32(ctx.sample.{f})"),
-            };
-            Ok(Some(format!(
-                "// The built-in source of `{f}`: the field in `.x` (render_gui_spec Part II §3.1).\n\
-                 {}fn source(ctx: Ctx) -> Field {{ return Field({value}, 0.0, 0.0, 0.0); }}\n",
-                declared(&format!("The read-side field {f}, in the field's x."))
-            )))
+            field_type(f)?;
+            let shipped = crate::registry::named(Kind::Source, FIELD_SOURCE)
+                .map_err(|e| AssembleError::Occupant(e.to_string()))?;
+            let at = shipped.source.find(FIELD_DEFAULT).ok_or_else(|| {
+                AssembleError::Occupant(format!("`{FIELD_SOURCE}` declares no `{FIELD_DEFAULT}`"))
+            })?;
+            let mut text = shipped.source.clone();
+            text.replace_range(
+                at..at + FIELD_DEFAULT.len(),
+                &format!("// @uniform field: field = {f} any"),
+            );
+            Ok(Some(text))
         }
         (_, Occupant::Field(_)) => refuse("a field: only a source does"),
         (_, Occupant::BuiltIn(id)) => crate::registry::named(kind, id)
@@ -665,6 +667,50 @@ pub fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>
             .map_err(|e| AssembleError::Occupant(e.to_string())),
         (_, Occupant::Custom(text)) => Ok(Some(text.clone())),
     }
+}
+
+/// The shipped source of a read-side field, and the line of it that holds the field it defaults to.
+const FIELD_SOURCE: &str = "field";
+const FIELD_DEFAULT: &str = "// @uniform field: field = state any";
+
+/// `text` of a node with the declaration `d`, each `field` uniform written into its code as the field it defaults to,
+/// the only field a node can read where nothing chose another ([`params::specialise`]).
+fn at_defaults(text: String, d: &Declaration) -> Result<String, AssembleError> {
+    let fields: Vec<&Uniform> = d
+        .uniforms
+        .iter()
+        .filter(|u| u.ty == UniformType::Field)
+        .collect();
+    if fields.is_empty() {
+        return Ok(text);
+    }
+    params::specialise(&text, &fields, &|u| u.default[0] as usize)
+}
+
+/// The code `occupant` runs in a node of `kind` where no stain chose a field: [`occupant_source`] with each `field`
+/// uniform written in as its default.
+pub fn occupant_code(kind: Kind, occupant: &Occupant) -> Result<Option<String>, AssembleError> {
+    let Some(text) = occupant_source(kind, occupant)? else {
+        return Ok(None);
+    };
+    let d = declaration_of(kind, Some(&text))?;
+    at_defaults(text, &d).map(Some)
+}
+
+/// Whether `a` and `b` are the same code: the same tokens, comments and white space aside, so one that differs only
+/// in a label draws the same picture.
+pub fn same_code(a: &str, b: &str) -> bool {
+    let words = |s: &str| -> Option<Vec<String>> {
+        Some(
+            lex(s)
+                .ok()?
+                .into_iter()
+                .filter(|t| !matches!(t.0, Tok::Comment | Tok::Space))
+                .map(|(_, x, y)| s[x..y].to_owned())
+                .collect(),
+        )
+    };
+    matches!((words(a), words(b)), (Some(x), Some(y)) if x == y)
 }
 
 /// A built-in source's field's WGSL type, or the field is none.
@@ -829,8 +875,8 @@ impl Stain {
                 }
                 check_wire(nodes[j].kind, n.kind, port)?;
             }
+            texts.push(text.map(|t| at_defaults(t, &d)).transpose()?);
             declarations.push(d);
-            texts.push(text);
         }
         for kind in [Kind::Combiner, Kind::Out] {
             let count = nodes.iter().filter(|n| n.kind == kind).count();

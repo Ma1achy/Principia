@@ -51,6 +51,7 @@ fn hand_list() -> BTreeMap<&'static str, &'static [&'static str]> {
         "combiner/multiply",
         "combiner/pass_through",
         "combiner/replace_l",
+        "source/field",
         "source/zero",
         "debug/derived/retrograde",
         "debug/derived/total_substeps_log2",

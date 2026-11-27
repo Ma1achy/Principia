@@ -543,7 +543,7 @@ fn check_keys(g: &StainGraph) {
     let c = g.canonical().expect("a canonical form");
     let text = c.text();
     assert!(
-        text.starts_with(r#"{"nodes":[{"inputs":[],"kind":"source","occupant":{"code":"// The built-in source of `ftle`"#),
+        text.starts_with(r#"{"nodes":[{"inputs":[],"kind":"source","occupant":{"code":"// A read-side field as a source"#),
         "{text}"
     );
     for kind in ["colour", "brightness", "combiner", "post", "out"] {
@@ -576,7 +576,15 @@ fn check_keys(g: &StainGraph) {
     assert_eq!(stain.nodes()[6].kind, render::assemble::Kind::Out);
     assert_eq!(
         stain.nodes()[0].occupant,
-        render::assemble::Occupant::Field("ftle".into())
+        render::assemble::Occupant::Custom(
+            render::assemble::occupant_code(
+                render::assemble::Kind::Source,
+                &render::assemble::Occupant::Field("ftle".into())
+            )
+            .expect("the field's code")
+            .expect("its text")
+        ),
+        "a field source reaches the assembler as the code of its field"
     );
     assert_eq!(stain.nodes()[3].inputs, [Some(1), Some(2)]);
     let mut builtin = g.clone();
@@ -675,8 +683,10 @@ fn check_jcs(colour: &str, written: &str) {
     let c = g.add(NodeKind::Colour, custom(colour)).expect("a colour");
     g.connect(s, c, 0).expect("source → colour");
     g.connect(c, COMBINER, 0).expect("colour → combiner");
-    let code = |kind, o: Occupant| {
-        let text = node_source(kind, &o).expect("a source").expect("its text");
+    let code = |kind: NodeKind, o: Occupant| {
+        let text = render::assemble::occupant_code(kind.into(), &(&o).into())
+            .expect("a source")
+            .expect("its text");
         render::assemble::key_text(&text).into_owned()
     };
     let want = engine::contract::canonical::json_to_string(&serde_json::json!({ "nodes": [

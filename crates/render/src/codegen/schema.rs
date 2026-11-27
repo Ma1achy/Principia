@@ -79,6 +79,7 @@ impl MapParam {
             ty: UniformType::F32,
             default: vec![self.clamp(value)?],
             range: Some(self.range()),
+            any_kind: false,
         })
     }
 }

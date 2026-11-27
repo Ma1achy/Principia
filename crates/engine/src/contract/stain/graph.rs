@@ -623,15 +623,23 @@ impl StainGraph {
         Ok(Ports { inputs, outputs })
     }
 
-    /// The subtype a source's out-port carries: a built-in source's field's (render_gui_spec Part II §5); `None` for
-    /// any other node, and for a source whose occupant states none.
+    /// The subtype a source's out-port carries: that of the field its `field` parameter holds (render_gui_spec Part II
+    /// §5); `None` for any other node, and for a source with no such parameter.
     fn source_subtype(&self, n: &Node) -> Option<Subtype> {
-        match (&n.kind, &n.occupant) {
-            (NodeKind::Source, Occupant::Field(f)) => {
-                assemble::field_subtype(f).ok().map(Into::into)
-            }
-            _ => None,
+        if n.kind != NodeKind::Source {
+            return None;
         }
+        let d = assemble::declaration(n.kind.into(), &(&n.occupant).into()).ok()?;
+        let u = d
+            .uniforms
+            .iter()
+            .find(|u| u.ty == assemble::UniformType::Field)?;
+        let at = n.params.get(&u.name).and_then(|v| v.first()).copied();
+        let name = assemble::source_fields()
+            .ok()?
+            .into_iter()
+            .nth(at.unwrap_or(u.default[0]) as usize)?;
+        assemble::field_subtype(&name).ok().map(Into::into)
     }
 
     /// Applies `f` to a copy and keeps it only if it passes [`StainGraph::check`].

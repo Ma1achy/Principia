@@ -805,7 +805,9 @@ fn check_code(code: &[(&str, String)]) {
     let ids: Vec<String> = library()
         .expect("the library")
         .into_iter()
+        // `field` is also the name of a port's type, which the canvas writes as a string; the source's whole id stays.
         .flat_map(|e| [e.id, e.name])
+        .filter(|id| id != "field")
         .collect();
     for (file, text) in code {
         let lines = text.lines().filter(|l| !l.trim_start().starts_with("//"));

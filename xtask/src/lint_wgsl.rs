@@ -543,6 +543,7 @@ fn lint_lib(root: &Path, accessors: &BTreeSet<String>) -> Result<Vec<FileReport>
         }) {
             view_context(root).and_then(|context| {
                 let context = format!("{context}{}", uniform_block(&source)?);
+                let source = at_default_fields(&source);
                 check_occupant_after(&context, &source, occupancy, accessors)
             })
         } else if let Some(occupancy) = occupancy {
@@ -622,7 +623,10 @@ pub fn uniform_block(source: &str) -> Result<String, String> {
                 line.trim()
             ));
         };
-        members.push(format!("    {name}: {ty},\n"));
+        // A `field` uniform has no place in the block: the assembler writes the chosen field into the code instead.
+        if ty != "field" {
+            members.push(format!("    {name}: {ty},\n"));
+        }
     }
     if members.is_empty() {
         return Ok(String::new());
@@ -670,6 +674,36 @@ fn lint_frag(root: &Path, accessors: &BTreeSet<String>) -> Result<Vec<FileReport
         });
     }
     Ok(reports)
+}
+
+/// `source` with each `field` uniform read as the field it defaults to, as the assembler writes it into the code:
+/// `as_field(uniforms.<name>)` as a scalar source's `Field`, `uniforms.<name>` as the field's value. A vector field's
+/// default is read as a scalar here; the lint's float rules see the same expression shape.
+fn at_default_fields(source: &str) -> String {
+    let mut out = source.to_owned();
+    for line in source.lines() {
+        let Some(rest) = line.trim_start().strip_prefix("// @uniform") else {
+            continue;
+        };
+        let Some((name, rest)) = rest.split_once(':') else {
+            continue;
+        };
+        let Some((ty, default)) = rest.split_once('=') else {
+            continue;
+        };
+        let (name, field) = (name.trim(), default.split_whitespace().next().unwrap_or(""));
+        if ty.trim() != "field" || field.is_empty() {
+            continue;
+        }
+        let value = format!("f32(ctx.sample.{field})");
+        out = out
+            .replace(
+                &format!("as_field(uniforms.{name})"),
+                &format!("Field({value}, 0.0, 0.0, 0.0)"),
+            )
+            .replace(&format!("uniforms.{name}"), &value);
+    }
+    out
 }
 
 /// Each `.wgsl` file under `dir`, recursively, into `out`.

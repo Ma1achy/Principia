@@ -970,7 +970,7 @@ fn check_text(want: &str) {
 
 /// A shipped source's or a field's code as the key writes it: its text, descriptive lines removed, as a JSON string.
 fn code_json(kind: Kind, occupant: &Occupant) -> String {
-    let text = assemble::occupant_source(kind, occupant)
+    let text = assemble::occupant_code(kind, occupant)
         .unwrap()
         .expect("an occupant with code");
     serde_json::to_string(&assemble::key_text(&text)).unwrap()

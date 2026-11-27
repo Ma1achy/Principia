@@ -590,3 +590,28 @@ negative_control!(
     expected = "is not reported unchecked",
     check_const_tier("", "has_ftle")
 );
+
+/// A `field` uniform is written into the code by the assembler, so it is not a member of the uniform block.
+fn check_field_uniform_absent(ty: &str) {
+    let block = uniform_block(&format!(
+        "// @uniform pick: {ty} = state\n// @uniform gain: f32 = 1.0\n"
+    ))
+    .unwrap_or_else(|e| panic!("{e}"));
+    assert!(block.contains("gain: f32"), "{block}");
+    assert!(
+        !block.contains("pick"),
+        "a field uniform is in the block: {block}"
+    );
+}
+
+#[test]
+fn a_field_uniform_is_not_in_the_block() {
+    check_field_uniform_absent("field");
+}
+
+negative_control!(
+    a_field_uniform_is_not_in_the_block,
+    "a uniform of another type is in the block",
+    expected = "is in the block",
+    check_field_uniform_absent("u32")
+);

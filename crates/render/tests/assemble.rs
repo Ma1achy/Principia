@@ -1714,7 +1714,7 @@ fn check_text(g: &[Node], want: &str) {
 
 /// The code `occupant` runs in a node of `kind`, as the key writes it: descriptive lines removed, a JSON string.
 fn code_json(kind: Kind, occupant: &Occupant) -> String {
-    let text = render::assemble::occupant_source(kind, occupant)
+    let text = render::assemble::occupant_code(kind, occupant)
         .unwrap_or_else(|e| panic!("{e}"))
         .expect("an occupant with code");
     serde_json::to_string(&render::assemble::key_text(&text)).unwrap_or_else(|e| panic!("{e}"))
