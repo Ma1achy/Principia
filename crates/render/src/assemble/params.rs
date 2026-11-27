@@ -565,6 +565,15 @@ pub fn field_read(field: &str) -> Result<String, super::AssembleError> {
     })
 }
 
+/// `field` as a source's `Field` value, as `as_field(uniforms.<name>)` is written into the code.
+fn as_field(field: &str) -> Result<String, super::AssembleError> {
+    Ok(match super::field_type(field)? {
+        "vec3<f32>" => format!("Field(ctx.sample.{field}, 0.0)"),
+        "bool" => format!("Field(select(0.0, 1.0, ctx.sample.{field}), 0.0, 0.0, 0.0)"),
+        _ => format!("Field(f32(ctx.sample.{field}), 0.0, 0.0, 0.0)"),
+    })
+}
+
 /// Whether the fields at indices `a` and `b` of [`super::source_fields`] are both vectors or both scalars.
 pub fn same_field_kind(a: f64, b: f64) -> bool {
     let Ok(names) = super::source_fields() else {
@@ -632,6 +641,13 @@ pub fn specialise(
                 u.name
             )));
         };
+        // `as_field(uniforms.<name>)` is a source's whole `Field` value: the vector in `.xyz`, a scalar in `.x`.
+        if k >= 2 && at(k - 1) == "(" && at(k - 2) == "as_field" && at(k + 3) == ")" {
+            out.push_str(&text[from..toks[sig[k - 2]].1]);
+            out.push_str(&as_field(name)?);
+            from = toks[sig[k + 3]].2;
+            continue;
+        }
         out.push_str(&text[from..toks[sig[k]].1]);
         out.push_str(&field_read(name)?);
         from = toks[sig[k + 2]].2;

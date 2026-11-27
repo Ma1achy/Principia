@@ -8,7 +8,7 @@ use std::sync::{Arc, OnceLock};
 
 use engine::contract::render_state::{NodeKind, Occupant, StainGraph};
 use engine::contract::stain::assembled::{library, node_source, source_fields, Entry};
-use engine::contract::stain::describe::{describe, from_source};
+use engine::contract::stain::describe::from_source;
 use engine::contract::stain::folder::Folder;
 use engine::contract::stain::preset::{self, group_of, DebugGroup, Section};
 use engine::contract::stain::saved::FIELD_ID;
@@ -172,8 +172,9 @@ fn build() -> Catalogue {
     for f in fields {
         let id = format!("{FIELD_ID}{f}");
         let occupant = Occupant::Field(f.clone());
-        let name = describe(NodeKind::Source, &occupant, &Default::default())
-            .map_or(f, |described| described.name);
+        // The plan is unclear here; chose to keep one choice per field, named `ctx.<field>`, until the window shows the
+        // one `field` source with its Field setting, because the node's own title is now "Field" for all of them.
+        let name = format!("ctx.{f}");
         offer(NodeKind::Source, occupant, &name, &id);
     }
     // The plan is unclear here; chose to offer a node every shader of its kind but the debug views, because those are

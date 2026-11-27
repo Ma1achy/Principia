@@ -138,6 +138,7 @@ impl Param {
                 ty: self.ty,
                 default: self.value.clone(),
                 range: None,
+                any_kind: false,
             },
         };
         if u.admits(&u.default) {

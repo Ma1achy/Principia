@@ -24,11 +24,12 @@ use validation::negative_control;
 
 const FIXTURES: [&str; 3] = ["outcome", "debug_view", "mixed"];
 
-/// The FNV-1a digest of the code each old fixture assembled to when it was saved, before the saved form changed.
+/// The FNV-1a digest, comments dropped, of the code each old fixture assembled to before the field sources became one
+/// shipped file (measured on the commit before it).
 const DREW: [(&str, &str); 3] = [
-    ("outcome", "5609c03c0747c713"),
-    ("debug_view", "475809b73bd20d8b"),
-    ("mixed", "28265f1f88e85ece"),
+    ("outcome", "ec323f892ad15b9d"),
+    ("debug_view", "0693b23155375b3a"),
+    ("mixed", "f1fbabdfd2c59c8f"),
 ];
 
 fn dir() -> PathBuf {
@@ -54,7 +55,15 @@ fn save(g: &StainGraph) -> String {
 /// The FNV-1a digest of the graph's own assembled code, as sixteen hex digits.
 fn code(name: &str, g: &StainGraph) -> String {
     let a = assemble(g, Tier::FULL).unwrap_or_else(|e| panic!("{name}: {e}"));
-    format!("{:016x}", ledger::version::fnv1a64(a.code.as_bytes()))
+    // Comments are dropped: a per-field source's own comment is not code, and its code is what the picture is.
+    let code: String = a
+        .code
+        .lines()
+        .map(|l| l.split_once("//").map_or(l, |(c, _)| c).trim_end())
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| format!("{l}\n"))
+        .collect();
+    format!("{:016x}", ledger::version::fnv1a64(code.as_bytes()))
 }
 
 /// Each old fixture, read by `text`: it draws what it drew, its new form is `<name>.saved.json`, and that form opens to
@@ -227,9 +236,14 @@ fn check_before_change(load: &dyn Fn() -> StainGraph) {
     );
     assert!(updated.update(COMBINER).is_err(), "an update applied twice");
     // Saving keeps it pinned: the saved code survives a save and a reopen, in the fixture's own bytes.
+    // Its per-field sources, saved as the old generated text, open as the field and save as the shipped source.
+    let path = dir().join("before_change.saved.json");
+    if bless() {
+        std::fs::write(&path, save(&g)).unwrap_or_else(|e| panic!("{e}"));
+    }
     assert_eq!(
         save(&g),
-        read("before_change"),
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{e}")),
         "a pinned node saves other bytes"
     );
     assert_eq!(

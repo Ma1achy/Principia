@@ -9,7 +9,7 @@
 //!
 //! `source` is the whole text the node runs, its declarations included; `hash` is its 64-bit FNV-1a, sixteen lowercase
 //! hex digits ([`hash`]), so a damaged text is refused, never drawn. `id` names where the code came from: a shipped
-//! source's registry id, [`FIELD_ID`]`<field>` for a field's generated source, a shader of your folder's `@id`, `null`
+//! source's registry id (a field's source is `source/field`, its field saved beside it by name), a shader of your folder's `@id`, `null`
 //! for a custom. `version` is the node's own version where its source declares one (`@node_version`), else `null`.
 //! `"edited": "<hash>"`, written only for code edited in this stain and saved to no file, is the [`hash`] of the text
 //! the edit was made from: such a node is never offered an update, only a revert, and its save over a file is refused
@@ -38,10 +38,14 @@ use crate::contract::stain::folder::Folder;
 use crate::contract::stain::graph::{GraphError, Node, NodeId, NodeKind, Occupant, StainGraph};
 use crate::contract::stain::ramp::Ramp;
 
-/// The id prefix of a field's generated source: `source/ctx.E_0` is the source of `ctx.E_0`.
+/// The id prefix of the per-field sources old stains saved: `source/ctx.E_0` is the shipped `field` source set to `E_0`.
 // The plan is unclear here; chose `source/ctx.<field>` as a field source's id because it sits in the source slot's
 // directory beside `source/zero` and is the name the editor shows, `ctx.<field>`, and no shipped file can be named so.
 pub const FIELD_ID: &str = "source/ctx.";
+
+/// The name of the one shipped source that reads a field: every [`Occupant::Field`] is this source with its `field`
+/// parameter set.
+pub const FIELD_SOURCE: &str = "field";
 
 /// A node's code held by value with the id of the source it came from: a shader of your folder, a shipped source
 /// whose file in this build differs from it (or this build has none), or code edited in this stain ([`Pinned::edited`]).
@@ -127,10 +131,19 @@ fn shipped(kind: NodeKind, id: &str) -> Option<(Occupant, String)> {
 
 /// `occupant` in a node of `kind` in the new form.
 pub fn write(kind: NodeKind, occupant: &Occupant) -> Result<Form, GraphError> {
+    // A field's source is the shipped `field` source with its field set; the field is saved in the node's `fields`.
+    let shipped_field;
+    let occupant = match occupant {
+        Occupant::Field(_) => {
+            shipped_field = Occupant::Builtin(FIELD_SOURCE.into());
+            &shipped_field
+        }
+        o => o,
+    };
     let (id, version) = match occupant {
         Occupant::None => return Ok(Form::None),
         Occupant::Custom(_) => (None, None),
-        Occupant::Field(f) => (Some(format!("{FIELD_ID}{f}")), None),
+        Occupant::Field(_) => unreachable!("replaced by the shipped source above"),
         Occupant::Builtin(name) => {
             let entry =
                 registry::named(Kind::from(kind), name).map_err(|e| GraphError(e.to_string()))?;
@@ -190,6 +203,14 @@ pub fn read(kind: NodeKind, form: Form) -> Result<Occupant, GraphError> {
         }
         return Ok(Occupant::Custom(s.source));
     };
+    // The old per-field source, saved as its own generated text: where its code is what the shipped `field` source
+    // gives that field, it is that node, and saves as one; any other text stays as saved.
+    if let Some((occupant @ Occupant::Field(_), now)) = current(kind, &id) {
+        let now = assemble::occupant_code(kind.into(), &(&occupant).into())?.unwrap_or(now);
+        if s.edited.is_none() && assemble::same_code(&s.source, &now) {
+            return Ok(occupant);
+        }
+    }
     if probe::by_id() {
         if let Some((occupant, _)) = current_in(kind, &id, probe::folder().as_ref()) {
             return Ok(occupant);
@@ -244,7 +265,11 @@ impl Serialize for Node {
             for u in field_uniforms(self.kind, &self.occupant) {
                 let name = params
                     .remove(&u)
-                    .and_then(|v| v.first().and_then(|&i| names.get(i as usize).cloned()));
+                    .and_then(|v| v.first().and_then(|&i| names.get(i as usize).cloned()))
+                    .or_else(|| match &self.occupant {
+                        Occupant::Field(f) => Some(f.clone()),
+                        _ => None,
+                    });
                 fields.extend(name.map(|n| (u, n)));
             }
         }
@@ -286,6 +311,20 @@ impl<'de> Deserialize<'de> for Node {
                 None => {
                     node.lost_fields.insert(u, name);
                 }
+            }
+        }
+        // The shipped `field` source with its field chosen is the field's source, as it is built and edited: one
+        // spelling, so a stain reads back as it was written.
+        if node.kind == NodeKind::Source && node.occupant == Occupant::Builtin(FIELD_SOURCE.into())
+        {
+            if let Some(f) = node
+                .params
+                .get(FIELD_SOURCE)
+                .and_then(|v| v.first())
+                .and_then(|&i| names.get(i as usize))
+            {
+                node.occupant = Occupant::Field(f.clone());
+                node.params.remove(FIELD_SOURCE);
             }
         }
         // A ramp saved beside the params of a node whose code now declares a gradient is that gradient's value.

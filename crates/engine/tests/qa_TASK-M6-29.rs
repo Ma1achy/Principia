@@ -143,8 +143,10 @@ fn check_shape(g: &Value) {
     let ids: Vec<u64> = nodes
         .iter()
         .map(|n| {
+            // `fields` is a field source's field, by name, beside its params.
+            let own: Vec<String> = keys(n).into_iter().filter(|k| k != "fields").collect();
             assert_eq!(
-                keys(n),
+                own,
                 ["id", "kind", "occupant", "params"],
                 "a node is not {{ id, kind, occupant, params }}: {n}"
             );

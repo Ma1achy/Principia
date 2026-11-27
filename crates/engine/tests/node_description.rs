@@ -135,7 +135,10 @@ fn literals(text: &str) -> Vec<String> {
 fn ids() -> Vec<String> {
     let mut out = Vec::new();
     for e in registry::registry().unwrap_or_else(|e| panic!("{e}")) {
-        out.push(e.id.rsplit('/').next().unwrap_or(&e.id).to_owned());
+        // `field` is also the name of a grammar type, which the description's code writes as a string.
+        if e.id != "source/field" {
+            out.push(e.id.rsplit('/').next().unwrap_or(&e.id).to_owned());
+        }
         out.push(e.id);
     }
     out.extend(assemble::source_fields().unwrap_or_else(|e| panic!("{e}")));

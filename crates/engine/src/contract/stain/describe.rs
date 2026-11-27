@@ -113,6 +113,35 @@ pub fn describe(
     from_source(kind, source.as_deref(), params)
 }
 
+/// `line`, a `@name` or `@maps` text, with each `{<name>}` written as the field the `field` uniform `<name>` holds, so a
+/// source of a chosen field is titled by it (`ctx.{field}`).
+fn fields_named(
+    declaration: &Declaration,
+    params: &BTreeMap<String, Vec<f64>>,
+    line: &str,
+) -> String {
+    let mut out = line.to_owned();
+    let Ok(fields) = assemble::source_fields() else {
+        return out;
+    };
+    for u in declaration
+        .uniforms
+        .iter()
+        .filter(|u| u.ty == assemble::UniformType::Field)
+    {
+        let at = params
+            .get(&u.name)
+            .and_then(|v| v.first())
+            .or(u.default.first())
+            .copied()
+            .unwrap_or(0.0);
+        if let Some(name) = fields.get(at as usize) {
+            out = out.replace(&format!("{{{}}}", u.name), name);
+        }
+    }
+    out
+}
+
 /// [`describe`] of node `n`.
 pub fn describe_node(n: &Node) -> Result<Description, GraphError> {
     describe(n.kind, &n.occupant, &n.params)
@@ -147,11 +176,16 @@ pub fn from_source(
     let declaration = Declaration::parse(text)?;
     let d = &declaration.described;
     let controls = controls(&declaration, params);
+    let named = |line: &str| fields_named(&declaration, params, line);
     Ok(Description {
-        name: d.name.clone().unwrap_or_else(|| function_name(kind, text)),
+        name: d
+            .name
+            .as_deref()
+            .map(named)
+            .unwrap_or_else(|| function_name(kind, text)),
         group: d.group.clone().unwrap_or_else(|| "Custom".to_owned()),
         about: d.about.clone().unwrap_or_default(),
-        maps: maps(kind, d.maps.as_deref()),
+        maps: maps(kind, d.maps.as_deref().map(named).as_deref()),
         glyph: shown(kind, d.glyph.as_ref().map(|(g, _)| g), &controls),
         controls,
         ports: declaration

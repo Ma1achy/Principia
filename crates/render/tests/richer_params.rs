@@ -868,7 +868,8 @@ negative_control!(
 );
 
 fn check_no_new_words(extra: Option<&str>) {
-    // Pass criterion: no shipped source declares a version 2 type or a `@port`, so the pinned code is untouched.
+    // Pass criterion: no shipped source declares a version 2 type or a `@port`, so the pinned code is untouched; but
+    // `source/field`, whose one uniform is a `field`.
     let mut sources: Vec<(String, String)> = render::registry::registry()
         .unwrap_or_else(|e| panic!("{e}"))
         .into_iter()
@@ -877,6 +878,17 @@ fn check_no_new_words(extra: Option<&str>) {
     sources.extend(extra.map(|t| ("planted".to_owned(), t.to_owned())));
     for (id, source) in sources {
         let d = Declaration::parse(&source).unwrap_or_else(|x| panic!("{id}: {x}"));
+        if id == "source/field" {
+            assert!(
+                d.described.ports.is_empty()
+                    && matches!(
+                        d.uniforms.iter().map(|u| u.ty).collect::<Vec<_>>()[..],
+                        [UniformType::Field]
+                    ),
+                "{id} uses a version 2 word other than its one field"
+            );
+            continue;
+        }
         assert!(
             d.described.ports.is_empty()
                 && d.uniforms.iter().all(|u| !matches!(
