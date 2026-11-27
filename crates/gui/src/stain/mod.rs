@@ -25,6 +25,7 @@ pub mod catalogue;
 pub mod code_view;
 pub mod controls;
 pub mod library;
+pub mod needs;
 pub mod preview;
 pub mod problems;
 pub mod standing;
@@ -85,6 +86,12 @@ pub struct Content {
     pub graphs: Arc<[Option<StainGraph>]>,
     /// Your shaders' folder and what the nodes hold of it.
     pub yours: yours::Shelf,
+    /// What each node reads from the run, of the nodes the engine has read the source of.
+    pub reads: BTreeMap<NodeId, needs::Reads>,
+    /// What the run provides; none where the engine side has no records.
+    pub run: Option<needs::Run>,
+    /// The measured range the window wrote into each node that takes one.
+    pub ranges: BTreeMap<NodeId, [f64; 2]>,
 }
 
 /// One group of the library.

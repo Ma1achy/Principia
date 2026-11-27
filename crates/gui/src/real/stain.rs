@@ -2,17 +2,19 @@
 //! the registry. [`Compiler`] holds the stain as last compiled; a graph that differs from it only in params is the same
 //! code, so it is never assembled again, and one that does not compile leaves the last that did in place.
 
+use std::collections::{BTreeMap, HashMap};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
 use std::sync::Arc;
 
-use engine::contract::render_state::StainGraph;
+use engine::contract::render_state::{NodeId, NodeKind, Occupant, StainGraph};
 use engine::contract::stain::assembled::{assemble, Assembled, Tier};
 use engine::contract::stain::custom::Status;
 use engine::contract::stain::view::CompileError;
 
 use crate::clock::time::Instant;
 use crate::stain::catalogue::{catalogue, key};
+use crate::stain::needs::{reads, Reads};
 use crate::stain::problems::located;
 use crate::stain::{described, node_code, Content};
 
@@ -58,7 +60,18 @@ pub struct Drawn {
     pub source: Option<Arc<str>>,
     /// The notes.
     pub notes: Vec<String>,
+    /// The measured range written into each node that takes one.
+    pub ranges: BTreeMap<NodeId, [f64; 2]>,
 }
+
+/// What a node's reads follow from: its kind and its shader.
+pub type ReadKey = (NodeKind, Occupant);
+
+/// What each shader asked of reads, by [`ReadKey`]; none where its source cannot be read.
+pub type ReadsOf = Arc<HashMap<ReadKey, Option<Reads>>>;
+
+/// The most shaders whose reads are kept; past it they start again.
+const READS_KEPT: usize = 256;
 
 /// What assembles a graph: the assembler, but in a test.
 pub type Assembler = Arc<dyn Fn(&StainGraph) -> Result<Assembled, String> + Send + Sync>;
@@ -74,6 +87,8 @@ struct Job {
 struct Done {
     ticket: u64,
     result: Result<(Assembled, f64), String>,
+    /// What each of the graph's nodes reads, read off the frame as the graph is.
+    reads: Vec<(ReadKey, Option<Reads>)>,
 }
 
 impl Job {
@@ -82,9 +97,19 @@ impl Job {
         let begun = Instant::now();
         let result = catch_unwind(AssertUnwindSafe(|| (self.assembler)(&self.graph)))
             .unwrap_or_else(|_| Err("the assembler panicked".to_owned()));
+        let ms = begun.elapsed().as_secs_f64() * 1e3;
+        let reads = self
+            .graph
+            .nodes()
+            .map(|n| {
+                let read = catch_unwind(AssertUnwindSafe(|| reads(n.kind, &n.occupant)));
+                ((n.kind, n.occupant.clone()), read.ok().flatten())
+            })
+            .collect();
         Done {
             ticket: self.ticket,
-            result: result.map(|code| (code, begun.elapsed().as_secs_f64() * 1e3)),
+            result: result.map(|code| (code, ms)),
+            reads,
         }
     }
 }
@@ -134,6 +159,8 @@ pub struct Compiler {
     /// The outcomes the worker has answered since they were last taken.
     finished: Vec<Outcome>,
     assemblies: u64,
+    /// What each shader asked of reads.
+    reads: ReadsOf,
     /// The control's: every result taken as it completes, whatever was asked since.
     #[cfg(test)]
     pub(crate) completion_order: bool,
@@ -159,6 +186,7 @@ impl Compiler {
             content: None,
             finished: Vec::new(),
             assemblies: 0,
+            reads: Default::default(),
             #[cfg(test)]
             completion_order: false,
         }
@@ -220,6 +248,11 @@ impl Compiler {
             .map_or(Outcome::Compiling, |a| a.outcome.clone())
     }
 
+    /// What each shader asked of reads, for the canvas to write measured ranges with.
+    pub fn reads(&self) -> ReadsOf {
+        Arc::clone(&self.reads)
+    }
+
     /// Whether the last graph asked for is still with the worker.
     pub fn compiling(&self) -> bool {
         self.asked
@@ -256,6 +289,15 @@ impl Compiler {
 
     /// Takes the worker's answer to the last graph asked for; one to a graph superseded since is dropped.
     fn take(&mut self, done: Done) {
+        if done.reads.iter().any(|(k, r)| self.reads.get(k) != Some(r)) {
+            let mut all = (*self.reads).clone();
+            if all.len() >= READS_KEPT {
+                all.clear();
+            }
+            all.extend(done.reads);
+            self.reads = Arc::new(all);
+            self.content = None;
+        }
         let newest = self.asked.as_ref().is_some_and(|a| a.ticket == done.ticket);
         #[cfg(test)]
         let newest = newest || self.completion_order;
@@ -411,6 +453,15 @@ impl Compiler {
             choices: tables.choices.clone(),
             graphs: tables.graphs.clone(),
             yours: Default::default(),
+            reads: g
+                .nodes()
+                .filter_map(|n| {
+                    let read = self.reads.get(&(n.kind, n.occupant.clone()))?;
+                    Some((n.id, read.clone()?))
+                })
+                .collect(),
+            run: None,
+            ranges: drawn.ranges.clone(),
         }
     }
 }

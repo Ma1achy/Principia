@@ -175,8 +175,15 @@ impl RealSide {
     /// The canvas, told the stain to draw first: the store's graph as last compiled.
     fn stained(&self) -> Option<Arc<crate::real::RealCanvas>> {
         let canvas = self.canvas.clone()?;
-        let graph = self.compiler().drawn(&self.store.render().stain_graph);
+        let (graph, reads) = {
+            let compiler = self.compiler();
+            (
+                compiler.drawn(&self.store.render().stain_graph),
+                compiler.reads(),
+            )
+        };
         canvas.set_stain(graph);
+        canvas.set_reads(reads);
         Some(canvas)
     }
 
@@ -273,7 +280,9 @@ impl EngineSide for RealSide {
             .map(|c| c.reported())
             .unwrap_or_default();
         let graph = &self.store.render().stain_graph;
-        Some(self.compiler().content(graph, &drawn))
+        let mut content = self.compiler().content(graph, &drawn);
+        content.run = self.canvas.as_ref().map(|c| c.run());
+        Some(content)
     }
 
     /// The canvas, the field over the preview's whole rect, in the stain as last compiled: the figure's own picture.

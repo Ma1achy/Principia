@@ -3,7 +3,7 @@
 //! figure is, live: it is redrawn from the graph as it stands, so an edit shows at once. It keeps the viewport's aspect
 //! (§G1: "Every preview of the slice keeps the viewport's aspect ratio — square for the slice"), the Explore figure's
 //! rect, fitted into its area, never stretched or cropped. Under it the inspector shows the selected node from its
-//! description: its title, what it is and maps, the shaders of its kind, its controls ([`controls`]) and its shader's
+//! description: its title, what it is and maps, what it needs from the run and what the run lacks of it ([`needs`]), the shaders of its kind, its controls ([`controls`]) and its shader's
 //! actions, each edit one `SetField` of the graph (a slider's drag applied every frame its value changes, one history
 //! entry); with no node selected, the graph's.
 
@@ -17,7 +17,7 @@ use engine::contract::render_state::NodeKind;
 use engine::contract::stain::describe::{Description, Standing};
 
 use super::{
-    canvas, choices, chosen, controls, description, duplicable, standing, yours, Out, Page,
+    canvas, choices, chosen, controls, description, duplicable, needs, standing, yours, Out, Page,
     Scratch, CHOICE_IDS, DUPLICATE, EDIT_WGSL, REVERT,
 };
 use crate::keyboard::scopes::ScopeId;
@@ -149,6 +149,9 @@ fn inspector(
         ui.label(&d.about);
     }
     ui.label(RichText::new(&d.maps).weak());
+    if let Some(c) = page.content {
+        needs::show(ui, c, n);
+    }
     ui.add_space(6.0);
     if let Some(c) = page.content {
         yours::offer(ui, &c.yours, n.id, keys, clicked);

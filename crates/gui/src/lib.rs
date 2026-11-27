@@ -112,6 +112,7 @@ mod tests {
     mod mock_windows_open;
     mod mock_windows_remembered;
     mod node_editor;
+    mod node_needs_window;
     mod present_fills_window_mock;
     mod preset_window;
     mod reachability;
