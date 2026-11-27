@@ -7,6 +7,7 @@
 // @about The direction cosines of the vector field n.
 // @maps n [direction cosines]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_dircos3(ctx.sample.n, ctx.frag_xy);
 }

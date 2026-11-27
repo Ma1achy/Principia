@@ -26,7 +26,8 @@ fn fed(kind: Kind, occupant: Occupant, colour: Option<usize>) -> Node {
     node(kind, occupant, &inputs)
 }
 
-const SHOW: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }";
+const SHOW: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x); }";
 
 fn pass_through() -> Occupant {
     Occupant::BuiltIn("pass_through".into())

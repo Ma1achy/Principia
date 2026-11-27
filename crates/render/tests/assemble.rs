@@ -56,7 +56,8 @@ const NO_WORD: Tier = Tier {
 const QNAN: u32 = 0x7fc0_0000;
 
 /// A colour occupant that shows its first input.
-const SHOW_INPUT: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }";
+const SHOW_INPUT: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x); }";
 
 /// A post occupant that passes its colour on.
 const PASS_POST: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb; }";
@@ -316,7 +317,8 @@ negative_control!(
 );
 
 /// The brightness of the full graph: its input.
-const BRIGHTNESS: &str = "fn brightness(ctx: Ctx) -> f32 { return ctx.inputs[0].x; }";
+const BRIGHTNESS: &str =
+    "fn brightness(ctx: Ctx) -> f32 { handles_validity(); return ctx.inputs[0].x; }";
 /// The full graph's combiner, posts in order.
 const COMBINE: &str = "fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * b; }";
 const POST_1: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb * 0.5; }";
@@ -503,7 +505,7 @@ negative_control!(
 /// The custom colour of REQ-RENDER-012: `ftle`, `ensemble_spread` and the whole word, by plain member access.
 const READS_ANY_TIER: &str = r"
 // Reads three fields at any tier, by plain member access (lowering Part 3a).
-fn colour(ctx: Ctx) -> vec3<f32> {
+fn colour(ctx: Ctx) -> vec3<f32> { handles_validity();
     let w = ctx.sample.word;
     return vec3<f32>(ctx.sample.ftle, ctx.sample.ensemble_spread, bitcast<f32>(w.x ^ w.y ^ w.z ^ w.w));
 }
@@ -640,7 +642,7 @@ negative_control!(
 
 /// A colour that returns `ftle` and `ftle_valid` (1 or 0) as the assembled read side fills them.
 const READS_FTLE_VALIDITY: &str = r"
-fn colour(ctx: Ctx) -> vec3<f32> {
+fn colour(ctx: Ctx) -> vec3<f32> { handles_validity();
     return vec3<f32>(ctx.sample.ftle, select(0.0, 1.0, ctx.sample.ftle_valid), 0.0);
 }
 ";
@@ -1364,19 +1366,19 @@ fn check_unicode_comments(cases: &[(&str, &str)]) {
 fn unicode_comment_cases() -> Vec<(&'static str, &'static str)> {
     vec![
         (
-            "/* é */ fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }",
+            "/* é */ fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x); }",
             "/* é */ fn n1_colour(",
         ),
         (
-            "/* ü /* 色 */ ∂ */ fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }",
+            "/* ü /* 色 */ ∂ */ fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x); }",
             "/* ü /* 色 */ ∂ */ fn n1_colour(",
         ),
         (
-            "/*é*//*∂*/fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }",
+            "/*é*//*∂*/fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x); }",
             "/*é*//*∂*/fn n1_colour(",
         ),
         (
-            "// é, 色\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); } // ∂",
+            "// é, 色\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x); } // ∂",
             "// é, 色\nfn n1_colour(",
         ),
     ]
@@ -1427,7 +1429,7 @@ const K: f32 = 0.25;
 alias Scalar = f32;
 struct Pair { colour: Scalar, k: f32 }
 fn helper(p: Pair) -> f32 { return p.colour + p.k * K; }
-fn colour(ctx: Ctx) -> vec3<f32> {
+fn colour(ctx: Ctx) -> vec3<f32> { handles_validity();
     let colour = Pair(ctx.inputs[0].x, 1e-2);
     return vec3<f32>(helper(colour), 0x1p-3, 1.5e+1).xyz;
 }
@@ -1468,7 +1470,7 @@ const _h: f32 = 0.5;
 const group: f32 = 1.0;
 const K: f32 = 0.25;
 struct Pair { colour: f32, K: f32 }
-fn colour(ctx: Ctx) -> vec3<f32> {
+fn colour(ctx: Ctx) -> vec3<f32> { handles_validity();
     var acc = 0x1e-K;
     const q: f32 = 2.0;
     let K: f32 = 1e5f;
@@ -1483,7 +1485,7 @@ const n1__h: f32 = 0.5;
 const n1_group: f32 = 1.0;
 const n1_K: f32 = 0.25;
 struct n1_Pair { colour: f32, K: f32 }
-fn n1_colour(ctx: Ctx) -> vec3<f32> {
+fn n1_colour(ctx: Ctx) -> vec3<f32> { handles_validity();
     var acc = 0x1e-n1_K;
     const q: f32 = 2.0;
     let n1_K: f32 = 1e5f;
@@ -1529,7 +1531,7 @@ fn check_stain_declarations(g: &[Node]) {
 }
 
 /// A colour with a uniform and a declared input.
-const DECLARING: &str = "// @uniform gain: f32 = 1.0 [0.0, 2.0]\n// @input a [0.0, 1.0]\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(uniforms.gain); }";
+const DECLARING: &str = "// @uniform gain: f32 = 1.0 [0.0, 2.0]\n// @input a [0.0, 1.0]\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(uniforms.gain); }";
 
 #[test]
 fn declaration_a_stain_holds_each_nodes_declarations() {
@@ -1813,7 +1815,7 @@ const DECLARATIONS: [(&str, &str); 4] = [
         "a:vec2<f32>=[1.0, 2.0]None b:vec4<f32>=[1.0, 2.0, 3.0, 4.0]None c:f32=[250.0]None",
     ),
     (
-        "// a comment, not a declaration: @uniform\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(1e-3); }",
+        "// a comment, not a declaration: @uniform\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(1e-3); }",
         "",
     ),
 ];
@@ -2010,12 +2012,12 @@ negative_control!(
 );
 
 /// A colour with two uniforms, a range on the first.
-const GAIN_TINT: &str = "// @uniform gain: f32 = 1.0 [0.0, 4.0]\n// @uniform tint: vec3<f32> = (1.0, 0.5, 0.25)\nfn colour(ctx: Ctx) -> vec3<f32> { return uniforms.tint * ctx.inputs[0].x * uniforms.gain; }";
+const GAIN_TINT: &str = "// @uniform gain: f32 = 1.0 [0.0, 4.0]\n// @uniform tint: vec3<f32> = (1.0, 0.5, 0.25)\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return uniforms.tint * ctx.inputs[0].x * uniforms.gain; }";
 
 /// A node with a schema gets its uniform block, at the binding after the prelude's, read as `uniforms.<name>`; a
 /// value is the schema's when it is `value`.
 fn check_uniforms(value: Vec<f64>) {
-    let lift = "// @uniform lift: f32 = 0.0\nfn brightness(ctx: Ctx) -> f32 { return ctx.inputs[0].x + uniforms.lift; }";
+    let lift = "// @uniform lift: f32 = 0.0\nfn brightness(ctx: Ctx) -> f32 { handles_validity(); return ctx.inputs[0].x + uniforms.lift; }";
     let g = vec![
         wired(Kind::Source, Occupant::Field("d_min".into()), &[]),
         wired(Kind::Brightness, custom(lift), &[Some(0)]),
@@ -2088,7 +2090,7 @@ fn declaration_a_schema_is_the_nodes_uniforms() {
     // An occupant that declares `uniforms` itself collides with the assembler's.
     let g = graph(
         Occupant::Field("d_min".into()),
-        "// @uniform gain: f32 = 1.0\nconst uniforms: f32 = 1.0;\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(uniforms); }",
+        "// @uniform gain: f32 = 1.0\nconst uniforms: f32 = 1.0;\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(uniforms); }",
     );
     let got = assemble::assemble(&stain(&g), Tier::FULL);
     assert!(got.is_err_and(|e| e.to_string().contains("is the assembler's")));
@@ -2230,7 +2232,7 @@ negative_control!(
 fn ic_colour(members: &[&str]) -> String {
     let sum: Vec<String> = members.iter().map(|m| format!("ctx.ic.{m}")).collect();
     format!(
-        "fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>(ctx.inputs[0].x + {}); }}",
+        "fn colour(ctx: Ctx) -> vec3<f32> {{ handles_validity(); return vec3<f32>(ctx.inputs[0].x + {}); }}",
         sum.join(" + ")
     )
 }
@@ -2306,7 +2308,7 @@ fn check_ic_names(cases: &[(&str, bool)]) {
     for &(name, refused) in cases {
         let text = format!(
             "fn {name}(i: u32) -> f32 {{ return f32(i); }}\n\
-             fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>(ctx.inputs[0].x); }}"
+             fn colour(ctx: Ctx) -> vec3<f32> {{ handles_validity(); return vec3<f32>(ctx.inputs[0].x); }}"
         );
         let g = graph(Occupant::Field("d_min".into()), &text);
         let got = assemble::assemble(&stain(&g), Tier::FULL);

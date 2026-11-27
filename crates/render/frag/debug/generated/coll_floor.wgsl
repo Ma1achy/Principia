@@ -14,6 +14,7 @@
 // @uniform u_range: vec2<f32> = (0.0, 145.0)
 // @control RANGE_AUTO toggle "Auto range"
 // @control u_range hidden "Measured range"
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     let raw = f32(ctx.sample.coll_floor);
     if (raw == 0.0) { return dbg_sentinel(raw, ctx.frag_xy); }

@@ -9,6 +9,7 @@
 // @about The masses m0, m1 and m2 as one ternary colour; equal masses draw white.
 // @maps m0, m1, m2 [ternary]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_ternary(vec3<f32>(ctx.ic.m0, ctx.ic.m1, ctx.ic.m2), ctx.frag_xy);
 }

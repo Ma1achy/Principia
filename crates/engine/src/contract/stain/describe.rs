@@ -438,3 +438,20 @@ pub fn standing(
         })
         .collect())
 }
+
+/// What a node of `kind` holding `occupant` needs from the run, read from its source: the FTLE, the ensemble's spread,
+/// the word, a measured range, step times, the quad, and whether its picture is a function of n̂ alone (render's
+/// [`render::assemble::matters::Needs`]). The identity needs nothing and is pure. The editor says what a run lacks with
+/// [`render::assemble::matters::Needs::lacks`].
+pub fn needs(
+    kind: NodeKind,
+    occupant: &Occupant,
+) -> Result<render::assemble::matters::Needs, GraphError> {
+    let Some(text) = assemble::occupant_source(kind.into(), &occupant.into())? else {
+        return Ok(render::assemble::matters::Needs {
+            pure_in_n: true,
+            ..Default::default()
+        });
+    };
+    Ok(render::assemble::matters::shader(kind.into(), &text)?.needs())
+}

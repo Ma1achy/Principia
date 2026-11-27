@@ -17,6 +17,7 @@
 // @about The debug view of the payload field detail: `packed_a` bits 3–4, u-bits.
 // @maps detail [categorical(4), [0, 3]]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     let s = ctx.sample.state;
     let d = ctx.sample.detail;

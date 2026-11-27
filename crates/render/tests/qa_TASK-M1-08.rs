@@ -261,9 +261,11 @@ fn scan_of(files: &[(&str, &str)]) -> Result<Vec<Entry>, RegistryError> {
 
 const HAND_DEBUG: &str =
     "// A hand-written debug view (gui_state_contract §3: quad-depth heatmap and the like).\n\
-fn brightness(ctx: Ctx) -> f32 { return ctx.sample.d_min; }\n";
-const GENERATED: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.ic.m0); }\n";
-const PLAIN: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }\n";
+fn brightness(ctx: Ctx) -> f32 { handles_validity(); return ctx.sample.d_min; }\n";
+const GENERATED: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.ic.m0); }\n";
+const PLAIN: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x); }\n";
 
 /// A hand-written debug brightness (at `debug_dir`), a plain colour and a generated view surface through one scan,
 /// each with its slot and category.
@@ -493,7 +495,7 @@ fn stain_of(colour: &str) -> Result<Stain, AssembleError> {
 /// it; a stain reading `ctx.ic.K_0` or the shadow is refused at a field set missing it, and assembles at one holding it.
 fn check_ic_refusals(named: &[(&str, &str)]) {
     for (name, body) in named {
-        let colour = format!("fn colour(ctx: Ctx) -> vec3<f32> {{ {body} }}");
+        let colour = format!("fn colour(ctx: Ctx) -> vec3<f32> {{ handles_validity(); {body} }}");
         let got = stain_of(&colour).and_then(|s| assemble::assemble(&s, Tier::FULL));
         match got {
             Ok(_) => panic!("a colour naming `{name}` was not refused"),
@@ -503,8 +505,10 @@ fn check_ic_refusals(named: &[(&str, &str)]) {
             ),
         }
     }
-    let k0 = stain_of("fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.ic.K_0); }")
-        .unwrap_or_else(|e| panic!("{e}"));
+    let k0 = stain_of(
+        "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.ic.K_0); }",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
     for fields in [&["d_min"][..], &["d_min", "ic.V_0"]] {
         assert_eq!(
             assemble::assemble_reading(&k0, Tier::FULL, fields).err(),
@@ -515,7 +519,7 @@ fn check_ic_refusals(named: &[(&str, &str)]) {
     assemble::assemble_reading(&k0, Tier::FULL, &["d_min", "ic.K_0"])
         .unwrap_or_else(|e| panic!("the stain at its own fields: {e}"));
     let sh =
-        stain_of("fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.sample.r_sh[1].y); }")
+        stain_of("fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.sample.r_sh[1].y); }")
             .unwrap_or_else(|e| panic!("{e}"));
     for tier in [Tier::FULL, BASE] {
         assert_eq!(
@@ -563,7 +567,7 @@ fn qa_draw(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {
 ";
 
 const DRAW_COLOUR: &str =
-    "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.ic.rho_angle, ctx.ic.K_0, ctx.sample.r_sh[1].y); }";
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.ic.rho_angle, ctx.ic.K_0, ctx.sample.r_sh[1].y); }";
 
 /// The named struct's size in words and member word offsets, from naga's layout of `source`.
 fn layout(source: &str, name: &str) -> (usize, Vec<(String, usize)>) {

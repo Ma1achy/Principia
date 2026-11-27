@@ -368,7 +368,8 @@ negative_control!(
 /// after the pass-through combiner of a plain colour.
 pub fn showing(kind: Kind, occupant: Occupant) -> Vec<Node> {
     let show = Occupant::Custom(
-        "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }".into(),
+        "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x); }"
+            .into(),
     );
     let fed = |kind: Kind, occupant: Occupant, colour: Option<usize>| {
         let d = assemble::declaration(kind, &occupant).unwrap_or_else(|e| panic!("{e}"));
@@ -1146,4 +1147,161 @@ negative_control!(
         false,
         false
     )])
+);
+
+// ── The standard treatment of invalid pixels, on the GPU ──────────────────────────────────────────────────────────
+
+/// A colour with no validity code: the sample's `d_min` as grey, whatever the sample is.
+const PLAIN: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.sample.d_min); }";
+
+/// The same colour saying it handles validity itself, with none: bad pixels drawn as data.
+const BARE: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.sample.d_min); }";
+
+/// The same colour with the standard treatment written by hand, as a source that handles validity itself writes it.
+const BY_HAND: &str = "fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
+    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return canvas_background(); }
+    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) { return PRESENT_INVALID; }
+    return vec3<f32>(ctx.sample.d_min);
+}";
+
+/// The margin as it was written before the assembler gave it its guards: both guards in its own code.
+const MARGIN_OWN: &str = include_str!("data/margin_own_validity.wgsl");
+
+/// `colour` as the colour node over two sources, `d_min` and `S`, through the pass-through combiner.
+fn over_two_fields(colour: &str) -> Vec<Node> {
+    let pass = Occupant::BuiltIn("pass_through".into());
+    vec![
+        node(Kind::Source, Occupant::Field("d_min".into()), &[]),
+        node(Kind::Source, Occupant::Field("S".into()), &[]),
+        node(
+            Kind::Colour,
+            Occupant::Custom(colour.into()),
+            &[Some(0), Some(1)],
+        ),
+        node(Kind::Combiner, pass, &[Some(2), None]),
+        node(Kind::Out, Occupant::None, &[Some(3)]),
+    ]
+}
+
+/// Every payload's picture of `g` in the presentation view, the nodes' blocks at their defaults.
+fn pictures(h: &GpuHarness, g: Vec<Node>) -> Vec<Vec<u32>> {
+    let stain = Stain::new(g).unwrap_or_else(|e| panic!("{e}"));
+    let fragment = assemble::assemble(&stain, Tier::FULL).unwrap_or_else(|e| panic!("{e}"));
+    payloads()
+        .iter()
+        .map(|scene| draw(h, &fragment, &fragment.source, scene, &|_, _| None))
+        .collect()
+}
+
+fn check_plain_colour_is_treated() {
+    // Pass criterion, written before the first run: over both payloads, which hold samples that are `sim_failed`,
+    // `decode_failed` and not a system, the picture of a colour with no validity code is bit for bit the picture of the
+    // same colour with the treatment written by hand; and the colour, drawn with no wrapper, is not (so the payloads
+    // hold pixels the treatment changes).
+    let h = gpu();
+    let wrapped = pictures(&h, showing(Kind::Colour, Occupant::Custom(PLAIN.into())));
+    let by_hand = pictures(&h, showing(Kind::Colour, Occupant::Custom(BY_HAND.into())));
+    assert_eq!(wrapped, by_hand, "a plain colour is not drawn as treated");
+    let bare = pictures(&h, showing(Kind::Colour, Occupant::Custom(BARE.into())));
+    assert_ne!(
+        bare, by_hand,
+        "the payloads hold no pixel the standard treatment changes"
+    );
+}
+
+#[test]
+fn a_custom_with_no_validity_code_draws_an_invalid_pixel_as_invalid() {
+    check_plain_colour_is_treated();
+}
+
+negative_control!(
+    a_custom_with_no_validity_code_draws_an_invalid_pixel_as_invalid,
+    "the same check with the wrapper removed: the plain colour draws bad pixels as data",
+    expected = "a plain colour is not drawn as treated",
+    assemble::probe::without_standard_treatment(check_plain_colour_is_treated)
+);
+
+fn check_margin_is_as_it_was() {
+    // Pass criterion, written before the first run: the shipped margin, which no longer guards itself, draws every
+    // pixel of both payloads bit for bit as the margin with both guards in its own code did.
+    let h = gpu();
+    let shipped = registry::registry()
+        .unwrap_or_else(|e| panic!("{e}"))
+        .into_iter()
+        .find(|e| e.id == "colour/margin")
+        .unwrap_or_else(|| panic!("no margin"))
+        .source;
+    assert!(
+        !shipped.contains("STATE_SIM_FAILED") && !shipped.contains("ctx.validity"),
+        "the shipped margin still guards itself"
+    );
+    let new = pictures(&h, over_two_fields(&shipped));
+    let old = pictures(&h, over_two_fields(MARGIN_OWN));
+    assert_eq!(new, old, "the margin draws differently from before");
+}
+
+#[test]
+fn the_margin_without_its_own_guards_draws_as_before() {
+    check_margin_is_as_it_was();
+}
+
+negative_control!(
+    the_margin_without_its_own_guards_draws_as_before,
+    "the same check with the wrapper removed: the margin is drawn unguarded",
+    expected = "the margin draws differently from before",
+    assemble::probe::without_standard_treatment(check_margin_is_as_it_was)
+);
+
+fn check_marked_builtins_are_untouched() {
+    // Pass criterion, written before the first run: every shipped colour and brightness that says it handles validity
+    // itself assembles with no standard treatment around it, so its picture is the one its own code draws; at least 60
+    // are checked, and the margin, which does not say it, is wrapped.
+    let mut checked = 0;
+    for (name, kind, text) in shipped() {
+        if !matches!(kind, Kind::Colour | Kind::Brightness) {
+            continue;
+        }
+        let marked =
+            text.contains("handles_validity();") || text.contains("const HANDLES_VALIDITY");
+        let source = pictured_source(kind, text);
+        let wrapped = source.contains("_standard(c");
+        if marked {
+            assert!(
+                !wrapped,
+                "{name} is wrapped though it handles validity itself"
+            );
+            checked += 1;
+        } else {
+            assert!(
+                wrapped,
+                "{name} is not wrapped though it does not say it handles validity"
+            );
+        }
+    }
+    assert!(
+        checked >= 60,
+        "only {checked} marked built-ins were checked"
+    );
+}
+
+/// The source `showing(kind, text)` assembles to, kept whole.
+fn pictured_source(kind: Kind, text: String) -> String {
+    let stain = Stain::new(showing(kind, Occupant::Custom(text))).unwrap_or_else(|e| panic!("{e}"));
+    assemble::assemble_kept(&stain, Tier::FULL, View::Presentation)
+        .unwrap_or_else(|e| panic!("{e}"))
+        .source
+}
+
+#[test]
+fn built_ins_that_handle_validity_are_not_wrapped() {
+    check_marked_builtins_are_untouched();
+}
+
+negative_control!(
+    built_ins_that_handle_validity_are_not_wrapped,
+    "a wrapper that ignores the marker changes the pictures of the built-ins that handle validity",
+    expected = "is wrapped though it handles validity itself",
+    assemble::probe::ignoring_the_marker(check_marked_builtins_are_untouched)
 );

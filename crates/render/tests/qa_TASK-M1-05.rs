@@ -44,7 +44,7 @@ const INPUTS: FrameInputs = FrameInputs {
 
 fn colour_flat(rgb: [f32; 3]) -> String {
     format!(
-        "fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>({:?}, {:?}, {:?}); }}",
+        "fn colour(ctx: Ctx) -> vec3<f32> {{ handles_validity(); return vec3<f32>({:?}, {:?}, {:?}); }}",
         rgb[0], rgb[1], rgb[2]
     )
 }
@@ -58,7 +58,8 @@ fn post_add(o: f32) -> String {
 }
 
 /// Syntax errors: a missing comma, a missing operand.
-const BAD_COLOUR: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.1, 0.2 0.3); }";
+const BAD_COLOUR: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(0.1, 0.2 0.3); }";
 const BAD_POST: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb + ; }";
 
 fn n(kind: Kind, occupant: Occupant, inputs: &[Option<usize>]) -> Node {
@@ -293,7 +294,7 @@ enum SimFault {
 fn check_runtime_snippet(fault: SimFault) {
     let mut r = rig();
     let before = r.sim();
-    let reads = "fn colour(ctx: Ctx) -> vec3<f32> { let f = ctx.inputs[0]; \
+    let reads = "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); let f = ctx.inputs[0]; \
                  return vec3<f32>(fract(abs(f.x)), fract(abs(ctx.sample.ftle)), 0.5); }";
     let mut g = chain("ftle", reads, &[]);
     let keys = seq_keys(&g, 1);
@@ -603,7 +604,7 @@ negative_control!(
 fn view(field: &str) -> Option<Vec<Node>> {
     Some(chain(
         field,
-        "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(fract(abs(ctx.inputs[0].x))); }",
+        "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(fract(abs(ctx.inputs[0].x))); }",
         &[],
     ))
 }

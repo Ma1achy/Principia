@@ -760,7 +760,10 @@ impl FieldRamp {
     /// lane's, which notes a non-finite value for the debug view (`note_non_finite()`, REQ-COL-109) and returns
     /// `invalid`.
     fn guards(&self, blank: &str, unset: &str, invalid: &str) -> String {
-        let mut out = format!("    let v = {};\n", self.field.value);
+        let mut out = format!(
+            "    handles_validity();\n    let v = {};\n",
+            self.field.value
+        );
         let _ = writeln!(
             out,
             "    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {{ {blank} }}"

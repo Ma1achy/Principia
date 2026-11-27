@@ -9,6 +9,7 @@
 // @about The debug view of the payload field budget_exhausted: `budget_bits` bits 0–0, u-bits.
 // @maps budget_exhausted [flag, [0, 1]]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_flag(ctx.sample.budget_exhausted);
 }

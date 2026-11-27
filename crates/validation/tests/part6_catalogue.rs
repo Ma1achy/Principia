@@ -393,7 +393,7 @@ fn hatched(image: &[[f32; 4]], width: u32, (x, y): (u32, u32)) -> bool {
 
 /// The probe of `has_ensemble()`: 1 in red where the prelude's uniform reads true.
 const HAS_ENSEMBLE_PROBE: &str =
-    "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(select(0.0, 1.0, has_ensemble()), 0.0, 0.0); }\n";
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(select(0.0, 1.0, has_ensemble()), 0.0, 0.0); }\n";
 
 /// The registry entry `id`'s WGSL.
 fn source(id: &str) -> String {
@@ -466,7 +466,7 @@ const NO_FTLE: Tier = Tier {
 
 /// The probe of contains-FTLE: `has_ftle` in red, the sample's `ftle` in green, its `theta` in blue (a stored member
 /// past the shadow, so a buffer in the other variant's layout reads it wrong).
-const HAS_FTLE_PROBE: &str = "fn colour(ctx: Ctx) -> vec3<f32> {\n    \
+const HAS_FTLE_PROBE: &str = "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity();\n    \
      return vec3<f32>(select(0.0, 1.0, has_ftle), ctx.sample.ftle, ctx.sample.theta);\n}\n";
 
 /// Checks contains-FTLE on the showcase set (its unstepped and failed samples' `ftle` invalid, the rest valid) at each
@@ -548,7 +548,7 @@ negative_control!(
 fn version_probe(k: u32) -> String {
     let (half, shift) = (if k < 2 { "x" } else { "y" }, 16 * (k % 2));
     format!(
-        "fn colour(ctx: Ctx) -> vec3<f32> {{ \
+        "fn colour(ctx: Ctx) -> vec3<f32> {{ handles_validity(); \
          return vec3<f32>(f32((PAYLOAD_SCHEMA_VERSION.{half} >> {shift}u) & 0xffffu), 0.0, 0.0); }}\n"
     )
 }

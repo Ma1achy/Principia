@@ -48,10 +48,13 @@ fn src_const(v: f32) -> Occupant {
     ))
 }
 
-const COLOUR_CONST: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.2, 0.4, 0.6); }";
-const COLOUR_SHOW: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }";
-const BRIGHT_HALF: &str = "fn brightness(ctx: Ctx) -> f32 { return 0.5; }";
-const BRIGHT_SHOW: &str = "fn brightness(ctx: Ctx) -> f32 { return ctx.inputs[0].x; }";
+const COLOUR_CONST: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(0.2, 0.4, 0.6); }";
+const COLOUR_SHOW: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x); }";
+const BRIGHT_HALF: &str = "fn brightness(ctx: Ctx) -> f32 { handles_validity(); return 0.5; }";
+const BRIGHT_SHOW: &str =
+    "fn brightness(ctx: Ctx) -> f32 { handles_validity(); return ctx.inputs[0].x; }";
 const COMBINE_MUL: &str = "fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb * b; }";
 const POST_ADD: &str =
     "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb + vec3<f32>(0.1); }";
@@ -389,7 +392,7 @@ negative_control!(
 
 /// Field inputs arrive by port: the colour's two inputs show which source feeds which port.
 fn check_ports(first: usize, second: usize) {
-    const TWO: &str = "// @input a\n// @input b\nfn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x, ctx.inputs[1].x, 0.0); }";
+    const TWO: &str = "// @input a\n// @input b\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(ctx.inputs[0].x, ctx.inputs[1].x, 0.0); }";
     let g = vec![
         n(Kind::Source, src_const(0.25), &[]),
         n(Kind::Source, src_const(0.75), &[]),
@@ -482,7 +485,7 @@ negative_control!(
 
 /// Plain member access to the three fields of REQ-RENDER-012's verify.
 const READS_THREE: &str = r"
-fn colour(ctx: Ctx) -> vec3<f32> {
+fn colour(ctx: Ctx) -> vec3<f32> { handles_validity();
     let w = ctx.sample.word;
     return vec3<f32>(ctx.sample.ftle, ctx.sample.ensemble_spread, bitcast<f32>(w.x ^ w.w));
 }
@@ -765,7 +768,7 @@ fn qa_slot_colour_is_vec3_and_brightness_is_f32() {
         ),
         (
             Kind::Colour,
-            "fn brightness(ctx: Ctx) -> f32 { return 1.0; }",
+            "fn brightness(ctx: Ctx) -> f32 { handles_validity(); return 1.0; }",
         ),
         (
             Kind::Brightness,
@@ -777,7 +780,7 @@ fn qa_slot_colour_is_vec3_and_brightness_is_f32() {
         ),
         (
             Kind::Brightness,
-            "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(1.0); }",
+            "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(1.0); }",
         ),
     ]);
 }
@@ -978,7 +981,7 @@ fn smallest_text() -> String {
         concat!(
             r#"{{"nodes":["#,
             r#"{{"inputs":[],"kind":"source","occupant":{{"code":{}}}}},"#,
-            r#"{{"inputs":[0],"kind":"colour","occupant":{{"code":"fn colour(ctx: Ctx) -> vec3<f32> {{ return vec3<f32>(ctx.inputs[0].x); }}"}}}},"#,
+            r#"{{"inputs":[0],"kind":"colour","occupant":{{"code":"fn colour(ctx: Ctx) -> vec3<f32> {{ handles_validity(); return vec3<f32>(ctx.inputs[0].x); }}"}}}},"#,
             r#"{{"inputs":[1,null],"kind":"combiner","occupant":{{"code":{}}}}},"#,
             r#"{{"inputs":[2],"kind":"out","occupant":null}}"#,
             r#"]}}"#
@@ -1010,7 +1013,7 @@ fn check_parses() {
          // @input a [0.0, 6.5]\n\
          // @input b\n\
          // an ordinary comment is not a declaration\n\
-         fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.0); }",
+         fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(0.0); }",
     )
     .unwrap_or_else(|e| panic!("the worked format is refused: {e}"));
     assert_eq!(d.uniforms.len(), 3);
@@ -1073,8 +1076,10 @@ negative_control!(
 fn input_count_ok(kind: Kind, count: usize) -> bool {
     let decls: String = (0..count).map(|k| format!("// @input i{k}\n")).collect();
     let body = match kind {
-        Kind::Colour => "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(0.0); }",
-        Kind::Brightness => "fn brightness(ctx: Ctx) -> f32 { return 0.0; }",
+        Kind::Colour => {
+            "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(0.0); }"
+        }
+        Kind::Brightness => "fn brightness(ctx: Ctx) -> f32 { handles_validity(); return 0.0; }",
         Kind::Post => "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> { return rgb; }",
         Kind::Source => "fn source(ctx: Ctx) -> Field { return Field(0.0); }",
         Kind::Combiner => "fn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb; }",
@@ -1104,7 +1109,7 @@ fn check_input_bounds(colour_most: usize) {
     // A colour or brightness that declares no input has one, `field`, inherited.
     let d = assemble::declaration(
         Kind::Brightness,
-        &custom("fn brightness(ctx: Ctx) -> f32 { return 0.0; }"),
+        &custom("fn brightness(ctx: Ctx) -> f32 { handles_validity(); return 0.0; }"),
     )
     .unwrap();
     assert_eq!(d.inputs.len(), 1);
@@ -1127,7 +1132,7 @@ negative_control!(
 /// A declared uniform, read as `uniforms.<name>`, reaches the GPU from the block the assembler declares, in group 0 at
 /// the binding after the prelude's.
 fn check_uniform(value: f32, want: f32) {
-    let colour = "// @uniform gain: f32 = 0.5 [0.0, 1.0]\n// @uniform tint: vec3<f32> = (1.0, 1.0, 1.0)\nfn colour(ctx: Ctx) -> vec3<f32> { return uniforms.tint * uniforms.gain; }";
+    let colour = "// @uniform gain: f32 = 0.5 [0.0, 1.0]\n// @uniform tint: vec3<f32> = (1.0, 1.0, 1.0)\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return uniforms.tint * uniforms.gain; }";
     let g = vec![
         n(Kind::Source, src_const(0.0), &[]),
         n(Kind::Colour, custom(colour), &[Some(0)]),

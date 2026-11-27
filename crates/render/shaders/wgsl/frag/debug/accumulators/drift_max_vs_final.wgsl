@@ -20,6 +20,7 @@ fn value(ctx: Ctx) -> f32 {
 }
 
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     let v = value(ctx);
     if (is_absent_nan(v)) {
         return debug_invalid(ctx.frag_xy);

@@ -9,6 +9,7 @@
 // @about The debug view of the payload field state: `packed_a` bits 0–2, u-bits.
 // @maps state [categorical(6), [0, 5]]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_cat(ctx.sample.state, 6u);
 }

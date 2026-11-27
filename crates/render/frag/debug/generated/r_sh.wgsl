@@ -10,6 +10,7 @@
 // @about The debug view of the payload field r_sh: scalar index 12, vector(·, 6).
 // @maps r_sh [lin, (−∞, ∞)]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     let v = ctx.sample.r_sh;
     return dbg_sentinel(sqrt(dot(v[0], v[0]) + dot(v[1], v[1]) + dot(v[2], v[2])), ctx.frag_xy);

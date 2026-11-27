@@ -8,6 +8,7 @@
 // @about The debug view of the payload field departed: `packed_a` bits 15–15, u-bits.
 // @maps departed [flag, [0, 1]]
 // @glyph name
+const HANDLES_VALIDITY: bool = true;
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_flag(ctx.sample.departed);
 }

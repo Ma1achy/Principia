@@ -366,7 +366,7 @@ pub fn reductions(words: &[Word], entries: &[Entry]) -> Vec<Reduction> {
             Some(Reduction {
                 path: PathBuf::from(format!("{REDUCTIONS_DIR}/{name}.wgsl")),
                 wgsl: format!(
-                    "{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    return {helper}({}, ctx.frag_xy);\n}}\n",
+                    "{}{}const HANDLES_VALIDITY: bool = true;\nfn colour(ctx: Ctx) -> vec3<f32> {{\n    return {helper}({}, ctx.frag_xy);\n}}\n",
                     generated_comment(&text),
                     declared(
                         &name,
@@ -402,7 +402,7 @@ pub fn reductions(words: &[Word], entries: &[Entry]) -> Vec<Reduction> {
             fields: MASSES.to_vec(),
             path: PathBuf::from(format!("{REDUCTIONS_DIR}/{MASSES_TERNARY}.wgsl")),
             wgsl: format!(
-                "{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    return dbg_ternary(vec3<f32>({}), ctx.frag_xy);\n}}\n",
+                "{}{}const HANDLES_VALIDITY: bool = true;\nfn colour(ctx: Ctx) -> vec3<f32> {{\n    return dbg_ternary(vec3<f32>({}), ctx.frag_xy);\n}}\n",
                 generated_comment(&text),
                 declared(
                     MASSES_TERNARY,
@@ -666,7 +666,7 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
          `SUSPECT_LZ`. `LIN_R`'s default is the constants register's (REQ-TOOL-150)."
     );
     format!(
-        "{}{uniforms}fn colour(ctx: Ctx) -> vec3<f32> {{\n    \
+        "{}{uniforms}const HANDLES_VALIDITY: bool = true;\nfn colour(ctx: Ctx) -> vec3<f32> {{\n    \
          if (sd_is_failed(ctx.sample.state)) {{ return debug_invalid(ctx.frag_xy); }}\n    \
          if (dbg_drift_non_finite(ctx.sample.{reference})) {{ return debug_invalid(ctx.frag_xy); }}\n    \
          let x = {value};\n    \
@@ -819,7 +819,7 @@ fn union_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> Option<
         no_detail()
     );
     Some(format!(
-        "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{body}}}\n",
+        "{}const HANDLES_VALIDITY: bool = true;\nfn colour(ctx: Ctx) -> vec3<f32> {{\n{body}}}\n",
         header(e, r, &colouring)
     ))
 }
@@ -889,7 +889,7 @@ fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
         "The colouring is a placeholder (`ledger::gen::catalogue`).".to_owned()
     };
     format!(
-        "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    {body}\n}}\n",
+        "{}const HANDLES_VALIDITY: bool = true;\nfn colour(ctx: Ctx) -> vec3<f32> {{\n    {body}\n}}\n",
         header(e, r, &colouring)
     )
 }

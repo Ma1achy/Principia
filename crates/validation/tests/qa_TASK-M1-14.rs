@@ -364,7 +364,7 @@ negative_control!(
         check_states(
             &h,
             &named("set_state"),
-            Some("fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(f32(min(ctx.sample.state, 4u)) / 8.0, 0.25, 0.5); }\n"),
+            Some("fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return vec3<f32>(f32(min(ctx.sample.state, 4u)) / 8.0, 0.25, 0.5); }\n"),
         );
     }
 );

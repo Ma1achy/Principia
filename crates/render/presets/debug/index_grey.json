@@ -27,7 +27,7 @@
         "id": 3,
         "kind": "colour",
         "occupant": {
-          "custom": "// The index's low byte as one grey, (index mod 256) / 255 on all three channels.\nfn colour(ctx: Ctx) -> vec3<f32> { let g = f32(u32(ctx.inputs[0].x) & 255u) / 255.0; return vec3<f32>(g, g, g); }\n"
+          "custom": "// The index's low byte as one grey, (index mod 256) / 255 on all three channels.\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); let g = f32(u32(ctx.inputs[0].x) & 255u) / 255.0; return vec3<f32>(g, g, g); }\n"
         },
         "params": {}
       }

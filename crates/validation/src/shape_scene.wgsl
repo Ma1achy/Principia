@@ -26,7 +26,7 @@ const OCTANT: array<vec3<u32>, 8> = array<vec3<u32>, 8>(
     vec3<u32>(30u, 120u, 255u),
 );
 
-fn colour(ctx: Ctx) -> vec3<f32> {
+fn colour(ctx: Ctx) -> vec3<f32> { handles_validity();
     if (uniforms.u_ellipse == 1u) {
         let tile = vec2<u32>(ctx.quad.index % uniforms.u_cols, ctx.quad.index / uniforms.u_cols);
         let c = (vec2<f32>(tile) + vec2<f32>(0.5)) / vec2<f32>(f32(uniforms.u_cols), f32(uniforms.u_rows));

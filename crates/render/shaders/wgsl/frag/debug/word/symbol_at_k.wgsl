@@ -19,6 +19,7 @@ fn value(ctx: Ctx) -> f32 {
 }
 
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     let w = ctx.sample.word;
     let s = fgw_symbol(w, uniforms.u_k);
     if (!fgw_reduced_length_valid(w) || s == FGW_NO_SYMBOL) {

@@ -161,8 +161,10 @@ fn field(name: &str) -> Occupant {
 }
 
 /// A colour of its field's three lanes, and a brightness of its field's first.
-const COLOUR: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return ctx.inputs[0].xyz; }";
-const BRIGHTNESS: &str = "fn brightness(ctx: Ctx) -> f32 { return ctx.inputs[0].x; }";
+const COLOUR: &str =
+    "fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return ctx.inputs[0].xyz; }";
+const BRIGHTNESS: &str =
+    "fn brightness(ctx: Ctx) -> f32 { handles_validity(); return ctx.inputs[0].x; }";
 
 /// Three posts no two of which commute.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -741,7 +743,7 @@ negative_control!(
     "a margin drawn on the hue wheel, a hue that turns with the margin, is not on R-962's grey ramp",
     expected = "not R-962's map",
     check_margin_map(&custom(
-        "// @input top1\n// @input top2\nfn colour(ctx: Ctx) -> vec3<f32> { return hue_wheel(ctx.inputs[0].x - \
+        "// @input top1\n// @input top2\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return hue_wheel(ctx.inputs[0].x - \
          ctx.inputs[1].x); }"
     ))
 );
@@ -756,7 +758,7 @@ mod margin_map_diverging {
          R-962's grey ramp",
         expected = "not R-962's map",
         check_margin_map(&custom(
-            "// @input top1\n// @input top2\nfn colour(ctx: Ctx) -> vec3<f32> { let m = clamp(ctx.inputs[0].x - \
+            "// @input top1\n// @input top2\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); let m = clamp(ctx.inputs[0].x - \
              ctx.inputs[1].x, -1.0, 1.0); return oklab_to_linear(vec3<f32>(0.5, 0.0, 0.0) + m * vec3<f32>(0.0, \
              0.1, -0.1)); }"
         ))
@@ -772,7 +774,7 @@ mod margin_map_unclamped {
         "a margin drawn on the grey ramp not clamped at 1 draws a margin above 1 past white",
         expected = "a margin above 1, top1 − top2 = 1.875, draws OKLab",
         check_margin_map(&custom(
-            "// @input top1\n// @input top2\nfn colour(ctx: Ctx) -> vec3<f32> { return oklab_to_linear(vec3<f32>(\
+            "// @input top1\n// @input top2\nfn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return oklab_to_linear(vec3<f32>(\
              max(ctx.inputs[0].x - ctx.inputs[1].x, 0.0), 0.0, 0.0)); }"
         ))
     );
@@ -848,7 +850,7 @@ negative_control!(
     check_margin_blank(&custom(
         "// @input top1
 // @input top2
-fn colour(ctx: Ctx) -> vec3<f32> { return ramp_grey(ctx.inputs[0].x - ctx.inputs[1].x); }"
+fn colour(ctx: Ctx) -> vec3<f32> { handles_validity(); return ramp_grey(ctx.inputs[0].x - ctx.inputs[1].x); }"
     ))
 );
 
@@ -908,7 +910,7 @@ negative_control!(
     check_margin_invalid(&custom(
         "// @input top1
 // @input top2
-fn colour(ctx: Ctx) -> vec3<f32> {
+fn colour(ctx: Ctx) -> vec3<f32> { handles_validity();
     if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return canvas_background(); }
     return ramp_grey(ctx.inputs[0].x - ctx.inputs[1].x);
 }"

@@ -22,6 +22,7 @@ fn live_shape_nonfinite(x: f32) -> bool {
 }
 
 fn colour(ctx: Ctx) -> vec3<f32> {
+    handles_validity();
     let n = ctx.sample.n;
     if (uniforms.u_mode == 0u) {
         return dbg_dircos3(n, ctx.frag_xy);
