@@ -52,25 +52,8 @@ What is left over (icon-light 0.36, title-light 0.13) is the render, not the enc
 within 1 level in 2 entries, so the frames the original was made from differ from this machine's by a few pixels
 (a palette is sensitive to that), while icon-dark and title-dark come out identical.
 
-## Settings recovered (not applied to `encode.py`)
+## Settings recovered (applied in `encode.py`)
 
 `overlay` on the page colour, `fps`, `scale=W:-1:flags=lanczos`, `palettegen` with `max_colors=192` for the icons and
 the default 256 for the titles (stats_mode full, one palette for the whole loop), `paletteuse` with its defaults,
-`-loop 0`. These were fixed by measuring against the originals before the proof was rerun.
-
-## What `gif_proof.py` said with them (all four GIFs rebuilt, criterion and `compare.py` unchanged)
-
-| GIF | (a) | (b) rebuilt <= committed: mean / p99 / block | (c) mean vs committed GIF (limit 2.0) | verdict |
-|---|---|---|---|---|
-| icon-dark | pass | 2.07 <= 2.07; 23 <= 23; **30.94 > 30.77** FAIL | 0.22 pass | not proven |
-| icon-light | pass | 1.96 <= 1.96; 26 <= 26; **49.10 > 49.03** FAIL | 0.91 pass | not proven |
-| title-2d-dark | pass | 1.23 <= 1.23; 10 <= 10; 17.15 <= 17.48 pass | 0.05 pass | proven |
-| title-2d-light | pass | 1.15 <= 1.15; 13 <= 13; 40.01 <= 41.20 pass | 0.24 pass | proven |
-
-All eight controls (32-colour palette, one-frame shift, on each GIF) fail (b), and the icons' also fail (c).
-
-With these settings the rebuilt icon GIF is the original GIF to within 0.2 levels, so (b) reduces to whether the
-rebuilt MP4 sits at least as close to that GIF as the committed MP4 does, with no margin. The rebuilt MP4 differs from the
-committed one (mean 0.77 for icon-dark), and that tips the worst 16 px block by 0.17 levels (icon-dark) and 0.07
-(icon-light). The result is the same for two separate renders. Icon-light passed (b) with the old settings, so these
-settings are not applied: `encode.py` is unchanged, and no GIF is removed from git.
+`-loop 0`. Fixed by measuring against the originals. The proof run with them is in `gif-proof-results.md`.

@@ -4,9 +4,8 @@ The committed MP4s record libx264 crf 15 (x264 core 164, veryfast-class options)
 the other settings were not recorded, so these are chosen (see brand/README.md, Rebuilding):
   MP4   frames composited on the page colour, libx264 -preset veryfast -crf 15, yuv420p
   WebM  libvpx-vp9 with an alpha plane (yuva420p), constant quality: -crf 28 -b:v 0
-  GIF   composited on the page colour, scaled with Lanczos, a 256-colour palette per frame
-        (palettegen stats_mode=single, paletteuse new=1; of the settings tried it came closest to the
-        committed GIFs), looping forever
+  GIF   composited on the page colour, scaled with Lanczos, one palette for the whole loop (palettegen
+        stats_mode full, 192 colours for the icons and 256 for the titles, paletteuse defaults), looping forever
   WebP  animated, lossy, with an alpha plane, scaled with Lanczos, looping forever; quality is set per file
         by webp() to the highest that fits the size limit
 """
@@ -33,9 +32,15 @@ def webm(frames, fps, out):
           '-crf', '28', '-b:v', '0', '-auto-alt-ref', '0', '-row-mt', '1', out])
 
 
-def gif(frames, fps, w, h, theme, gif_fps, gif_w, out):
-    flt = (f'[1][0]overlay=shortest=1,fps={gif_fps},scale={gif_w}:-1:flags=lanczos,split[a][b];'
-           f'[a]palettegen=stats_mode=single[p];[b][p]paletteuse=new=1')
+def gif_filter(gif_fps, gif_w, max_colors, pre=''):
+    """Filter chain after the overlay. Don't change max_colors, stats_mode or the paletteuse options: the
+    originals are reproduced to the pixel only with these (icons 192, titles 256, one global palette)."""
+    return (f'{pre}fps={gif_fps},scale={gif_w}:-1:flags=lanczos,split[a][b];'
+            f'[a]palettegen=max_colors={max_colors}[p];[b][p]paletteuse')
+
+
+def gif(frames, fps, w, h, theme, gif_fps, gif_w, out, max_colors=256):
+    flt = '[1][0]overlay=shortest=1,' + gif_filter(gif_fps, gif_w, max_colors)
     _run(_inputs(frames, fps, w, h, BG[theme]) + ['-filter_complex', flt, '-loop', '0', out])
 
 
