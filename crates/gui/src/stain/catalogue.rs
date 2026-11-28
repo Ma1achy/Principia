@@ -59,7 +59,8 @@ pub struct Catalogue {
 }
 
 impl Catalogue {
-    /// The row whose graph is `g`, its params aside, whether `g` names its shaders or holds their texts.
+    /// The row whose graph is `g`, its params aside but a field they pick, whether `g` names its shaders or holds their
+    /// texts.
     pub fn loaded(&self, g: &StainGraph) -> Option<usize> {
         let g = sources(g)?;
         self.sources.iter().position(|of| of.as_ref() == Some(&g))
@@ -112,14 +113,18 @@ impl Catalogue {
     }
 }
 
-/// A graph's live nodes, each its kind, its source and the nodes that feed it.
+/// A graph's live nodes, each its kind, its source with any field it picks ([`super::needs::read_as`]) and the nodes
+/// that feed it.
 type Sources = Vec<(NodeKind, Option<String>, Vec<Option<usize>>)>;
 
 fn sources(g: &StainGraph) -> Option<Sources> {
     let nodes = g.canonical().ok()?.nodes;
     nodes
         .into_iter()
-        .map(|n| Some((n.kind, node_source(n.kind, &n.occupant).ok()?, n.inputs)))
+        .map(|n| {
+            let read_as = super::needs::read_as(n.kind, &n.occupant, &n.params);
+            Some((n.kind, node_source(n.kind, &read_as).ok()?, n.inputs))
+        })
         .collect()
 }
 

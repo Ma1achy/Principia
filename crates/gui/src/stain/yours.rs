@@ -16,7 +16,7 @@ use engine::contract::stain::assembled::node_source;
 use engine::contract::stain::custom::{self, reconcile, Note, Reconciled, Remembered};
 use engine::contract::stain::edit::Refusal;
 use engine::contract::stain::folder::{self, Duplicate, Folder, Problem, Shader};
-use engine::contract::stain::saved::{self, Update, FIELD_ID};
+use engine::contract::stain::saved::{self, Update};
 
 use super::{catalogue, code_view, intern, Content, Out, REVERT};
 use crate::keyboard::scopes::{Scope, ScopeId};
@@ -189,13 +189,8 @@ pub fn held(n: &Node, folder: &Folder) -> Option<Held> {
     let current = |id: &str| saved::current_in(n.kind, id, Some(folder));
     let (from, unsaved, revert, file) = match &n.occupant {
         Occupant::None => return None,
-        Occupant::Field(f) => (
-            catalogue::ours(&format!("{FIELD_ID}{f}")),
-            false,
-            false,
-            false,
-        ),
-        Occupant::Builtin(_) => {
+        // A field's source is the shipped `field` source, whatever field it reads.
+        Occupant::Field(_) | Occupant::Builtin(_) => {
             let id = match saved::write(n.kind, &n.occupant) {
                 Ok(saved::Form::Shader(s)) => s.id.unwrap_or_default(),
                 _ => String::new(),

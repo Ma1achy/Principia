@@ -20,6 +20,7 @@ use crate::keyboard::scopes::ScopeId;
 use crate::real::RealCanvas;
 use crate::side::{EngineSide, RealSide};
 use crate::stain::catalogue::{catalogue, Choice, FIELD};
+use crate::stain::needs::reads;
 use crate::stain::{choices, controls, CHOICE_IDS};
 
 /// The source of the start graph, the mock's and the real one's: the field `state`.
@@ -200,8 +201,8 @@ fn shown(app: &mut App<RealSide>, h: &mut Headless, canvas: &RealCanvas) -> Vec<
     picture(app, h, canvas, Mode::Stain)
 }
 
-/// Sets the graph `g` as a stain opened from outside the editor is, and recompiles it, as an edit outside the editor
-/// waits for Recompile.
+/// Sets the graph `g` from outside the editor, then presses Recompile: on the real side such a graph was drawn only once
+/// something recompiled it.
 fn open_graph(app: &mut App<RealSide>, h: &mut Headless, g: StainGraph) {
     app.set_field(SetField {
         edit: Edit::Render(RenderField::StainGraph(g)),
@@ -240,7 +241,11 @@ fn a_picked_field_is_one_edit_that_changes_the_picture() {
     assert!(code.contains("ctx.sample.detail"), "{code}");
     let after = shown(&mut app, &mut h, &canvas);
     assert_eq!(before.len(), after.len());
-    assert_ne!(before, after, "the picked field did not change the picture");
+    let changed = |a: &[[u8; 3]], b: &[[u8; 3]]| {
+        assert_ne!(a, b, "the picked field did not change the picture")
+    };
+    changed(&before, &after);
+    rejects("the picture unchanged", || changed(&before, &before));
     assert_eq!(
         backend.0.load(Ordering::SeqCst),
         opened,
@@ -279,5 +284,65 @@ fn old_per_field_sources_open_as_the_field_source() {
     check_picked(&mut app, &mut h, NodeId(3), "state");
     rejects("another field", || {
         check_picked(&mut app, &mut h, NodeId(2), "state")
+    });
+}
+
+/// Asserts that node `node` of the editor's content is said to read what a source of `field` reads.
+fn check_reads<S: EngineSide>(app: &mut App<S>, node: NodeId, field: &str) {
+    let c = app.side().stain_content().expect("the stain content");
+    let want = reads(NodeKind::Source, &Occupant::Field(field.into()));
+    assert!(want.is_some(), "`{field}` has no reads");
+    assert_eq!(c.reads.get(&node), want.as_ref(), "what the node reads");
+}
+
+#[test]
+fn a_picked_field_is_what_the_node_reads() {
+    let (mut app, mut h) = on_stain(mock_app());
+    app.stain.canvas.selection = [SOURCE].into();
+    let _ = h.frame(&mut app, Vec::new());
+    check_reads(&mut app, SOURCE, "state");
+    let ftle = picker(&mut app, SOURCE, "ftle");
+    click_scope(&mut h, &mut app, ftle);
+    let _ = h.frame(&mut app, Vec::new());
+    assert_eq!(picked(graph(&app), SOURCE).as_deref(), Some("ftle"));
+    check_reads(&mut app, SOURCE, "ftle");
+    // The FTLE is a need `state` is not: the inspector says so.
+    let texts = frame_texts(&mut h, &mut app);
+    assert!(
+        texts
+            .iter()
+            .any(|t| t.starts_with("Needs from the run") && t.contains("FTLE")),
+        "{texts:?}"
+    );
+    rejects("the field it started on", || {
+        check_reads(&mut app, SOURCE, "state")
+    });
+}
+
+/// Asserts that the library lights the row of `g` where its source reads `field`, the field the row's graph reads.
+fn check_loaded(g: &StainGraph, source: NodeId, field: &str) {
+    let mut picked = g.clone();
+    let j = controls::field_names()
+        .iter()
+        .position(|f| f == field)
+        .expect("the field");
+    picked
+        .set_param(source, "field", vec![j as f64])
+        .expect("a field");
+    assert_eq!(catalogue().loaded(&picked), catalogue().loaded(g));
+}
+
+#[test]
+fn a_library_row_is_lit_only_for_the_field_it_reads() {
+    let outcome = engine::presets::outcome().expect("the outcome stain");
+    assert!(catalogue().loaded(&outcome).is_some(), "the outcome row");
+    let source = outcome
+        .nodes()
+        .find(|n| matches!(n.occupant, Occupant::Field(_)))
+        .map(|n| n.id)
+        .expect("its source");
+    check_loaded(&outcome, source, "state");
+    rejects("another field picked", || {
+        check_loaded(&outcome, source, "ftle")
     });
 }

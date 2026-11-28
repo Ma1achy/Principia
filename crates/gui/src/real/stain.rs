@@ -7,14 +7,14 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
 use std::sync::Arc;
 
-use engine::contract::render_state::{NodeId, NodeKind, Occupant, StainGraph};
+use engine::contract::render_state::{Node, NodeId, NodeKind, Occupant, StainGraph};
 use engine::contract::stain::assembled::{assemble, Assembled, Tier};
 use engine::contract::stain::custom::Status;
 use engine::contract::stain::view::CompileError;
 
 use crate::clock::time::Instant;
 use crate::stain::catalogue::{catalogue, key};
-use crate::stain::needs::{reads, Reads};
+use crate::stain::needs::{read_as, reads, Reads};
 use crate::stain::problems::located;
 use crate::stain::{described, node_code, Content};
 
@@ -67,6 +67,11 @@ pub struct Drawn {
 /// What a node's reads follow from: its kind and its shader.
 pub type ReadKey = (NodeKind, Occupant);
 
+/// The [`ReadKey`] of node `n`: its kind and what it reads as ([`read_as`]).
+pub fn read_key(n: &Node) -> ReadKey {
+    (n.kind, read_as(n.kind, &n.occupant, &n.params))
+}
+
 /// What each shader asked of reads, by [`ReadKey`]; none where its source cannot be read.
 pub type ReadsOf = Arc<HashMap<ReadKey, Option<Reads>>>;
 
@@ -102,8 +107,9 @@ impl Job {
             .graph
             .nodes()
             .map(|n| {
-                let read = catch_unwind(AssertUnwindSafe(|| reads(n.kind, &n.occupant)));
-                ((n.kind, n.occupant.clone()), read.ok().flatten())
+                let key = read_key(n);
+                let read = catch_unwind(AssertUnwindSafe(|| reads(key.0, &key.1)));
+                (key, read.ok().flatten())
             })
             .collect();
         Done {
@@ -456,7 +462,7 @@ impl Compiler {
             reads: g
                 .nodes()
                 .filter_map(|n| {
-                    let read = self.reads.get(&(n.kind, n.occupant.clone()))?;
+                    let read = self.reads.get(&read_key(n))?;
                     Some((n.id, read.clone()?))
                 })
                 .collect(),

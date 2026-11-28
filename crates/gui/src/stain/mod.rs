@@ -453,24 +453,32 @@ pub fn chosen(n: &Node, choice: &Choice, content: &Content) -> bool {
 /// `text` with the default of each `field` parameter it declares left out: `// @uniform f: field = state any` reads
 /// `// @uniform f: field any`.
 fn fields_aside(text: &str) -> String {
-    let line = |l: &str| {
-        let declared = l.trim_start().strip_prefix("// @uniform ");
-        let Some((name, rest)) = declared.and_then(|d| d.split_once(':')) else {
-            return l.to_owned();
-        };
-        match rest.trim_start().strip_prefix("field") {
-            Some(default) if default.trim_start().starts_with('=') => {
-                let any = if default.trim_end().ends_with(" any") {
-                    " any"
-                } else {
-                    ""
-                };
-                format!("// @uniform {name}: field{any}")
-            }
-            _ => l.to_owned(),
+    let line = |l: &str| match field_uniform(l) {
+        Some((name, _, any)) => {
+            format!("// @uniform {name}: field{}", if any { " any" } else { "" })
         }
+        None => l.to_owned(),
     };
     text.lines().map(line).collect::<Vec<_>>().join("\n")
+}
+
+/// The `field` parameter line `l` declares, `// @uniform <name>: field = <default>[ any]`: its name, its default and
+/// whether it takes a field of either kind.
+pub(crate) fn field_uniform(l: &str) -> Option<(&str, &str, bool)> {
+    let (name, rest) = l
+        .trim_start()
+        .strip_prefix("// @uniform ")?
+        .split_once(':')?;
+    let default = rest
+        .trim_start()
+        .strip_prefix("field")?
+        .trim_start()
+        .strip_prefix('=')?
+        .trim();
+    match default.strip_suffix(" any") {
+        Some(default) => Some((name.trim(), default.trim(), true)),
+        None => Some((name.trim(), default, false)),
+    }
 }
 
 /// Whether node `n` can be duplicated: it holds code, and is not one of the graph's fixed singletons.

@@ -235,7 +235,8 @@ pub fn content(g: &StainGraph) -> Content {
     content
 }
 
-/// [`crate::stain::needs::reads`], kept by shader: a param's drag changes the graph every frame, never what it reads.
+/// [`crate::stain::needs::reads`], kept by shader: a param's drag changes the graph every frame, and what it reads only
+/// where it picks a field ([`crate::stain::needs::read_as`]).
 fn kept_reads(kind: NodeKind, occupant: &Occupant) -> Option<crate::stain::needs::Reads> {
     type Kept = std::collections::HashMap<(NodeKind, Occupant), Option<crate::stain::needs::Reads>>;
     static KEPT: Mutex<Option<Kept>> = Mutex::new(None);
@@ -279,7 +280,10 @@ fn made(g: &StainGraph) -> Content {
         // The mock assembles on the frame already; its run holds no records, so nothing is said missing.
         reads: g
             .nodes()
-            .filter_map(|n| Some((n.id, kept_reads(n.kind, &n.occupant)?)))
+            .filter_map(|n| {
+                let read_as = crate::stain::needs::read_as(n.kind, &n.occupant, &n.params);
+                Some((n.id, kept_reads(n.kind, &read_as)?))
+            })
             .collect(),
         run: None,
         ranges: Default::default(),
