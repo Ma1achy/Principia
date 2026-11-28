@@ -197,6 +197,9 @@ pub mod decode_dispatch;
 // module itself, whose links resolve there.
 pub mod first_slice;
 
+// The FTLE of one chart pixel, in physical phase space: documented in the module itself.
+pub mod ftle;
+
 // The per-quad forward-table builder on the CPU, threaded f64 evaluation narrowed once (R-926 item 6; TASK-M2-89):
 // documented in the module itself, whose links resolve there.
 pub mod forward_table;
