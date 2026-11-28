@@ -159,7 +159,7 @@ fn inspector(
         if !options.is_empty() {
             ui.label(
                 RichText::new(if n.kind == NodeKind::Source {
-                    "▾ Field"
+                    "▾ Source shader"
                 } else {
                     "▾ Mode"
                 })

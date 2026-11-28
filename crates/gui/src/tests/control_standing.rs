@@ -158,8 +158,7 @@ fn read(drawing: &Drawing, d: &Description) -> Vec<Drawn> {
         .controls
         .iter()
         .enumerate()
-        // The field picker is not drawn yet (`stain::controls`), so the source `field` shows no control.
-        .filter(|(_, c)| !matches!(c.control, Control::Hidden | Control::FieldPicker))
+        .filter(|(_, c)| c.control != Control::Hidden)
         .map(|(k, c)| {
             let place = drawing.keyboard.place_of(controls::scope(k));
             (
@@ -260,11 +259,7 @@ fn check_dimmed(
     };
     let mut dimmed = BTreeSet::new();
     assert_eq!(drawn.len(), plain.len());
-    for c in d
-        .controls
-        .iter()
-        .filter(|c| !matches!(c.control, Control::Hidden | Control::FieldPicker))
-    {
+    for c in d.controls.iter().filter(|c| c.control != Control::Hidden) {
         let uniforms = || {
             let stops = c.stops.iter().map(|s| s.uniform.as_str());
             std::iter::once(c.uniform.as_str()).chain(stops)

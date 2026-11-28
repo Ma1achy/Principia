@@ -441,9 +441,44 @@ pub fn choices<'a>(n: &Node, content: &'a Content) -> Vec<&'a Choice> {
         .collect()
 }
 
-/// Whether node `n` is `choice`: its source is.
+/// Whether node `n` is `choice`: its source is, the fields its `field` parameters start on aside, since a node of one
+/// shader with another field picked is still that shader.
 pub fn chosen(n: &Node, choice: &Choice, content: &Content) -> bool {
-    content.node_code.get(&n.id) == Some(&choice.source)
+    let Some(code) = content.node_code.get(&n.id) else {
+        return false;
+    };
+    *code == choice.source || fields_aside(code) == fields_aside(&choice.source)
+}
+
+/// `text` with the default of each `field` parameter it declares left out: `// @uniform f: field = state any` reads
+/// `// @uniform f: field any`.
+fn fields_aside(text: &str) -> String {
+    let line = |l: &str| match field_uniform(l) {
+        Some((name, _, any)) => {
+            format!("// @uniform {name}: field{}", if any { " any" } else { "" })
+        }
+        None => l.to_owned(),
+    };
+    text.lines().map(line).collect::<Vec<_>>().join("\n")
+}
+
+/// The `field` parameter line `l` declares, `// @uniform <name>: field = <default>[ any]`: its name, its default and
+/// whether it takes a field of either kind.
+pub(crate) fn field_uniform(l: &str) -> Option<(&str, &str, bool)> {
+    let (name, rest) = l
+        .trim_start()
+        .strip_prefix("// @uniform ")?
+        .split_once(':')?;
+    let default = rest
+        .trim_start()
+        .strip_prefix("field")?
+        .trim_start()
+        .strip_prefix('=')?
+        .trim();
+    match default.strip_suffix(" any") {
+        Some(default) => Some((name.trim(), default.trim(), true)),
+        None => Some((name.trim(), default, false)),
+    }
 }
 
 /// Whether node `n` can be duplicated: it holds code, and is not one of the graph's fixed singletons.

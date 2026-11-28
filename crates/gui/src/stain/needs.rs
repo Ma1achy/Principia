@@ -3,9 +3,11 @@
 //! saying what the node reads instead and what its pixels show. A node needing a measured range is told what the window
 //! wrote into it ([`Content::ranges`]), or why it is drawn at its default. Built-in and custom nodes are read alike.
 
+use std::collections::BTreeMap;
+
 use eframe::egui::{RichText, Ui};
 use engine::contract::render_state::{Node, NodeKind, Occupant};
-use engine::contract::stain::assembled::Tier;
+use engine::contract::stain::assembled::{node_source, Tier};
 use engine::contract::stain::describe::{self, Lack, MeasuredRange, NodeNeeds};
 
 use super::Content;
@@ -25,6 +27,49 @@ pub fn reads(kind: NodeKind, occupant: &Occupant) -> Option<Reads> {
         needs: describe::needs(kind, occupant).ok()?,
         range: describe::measured_range(kind, occupant).ok()?,
     })
+}
+
+/// The occupant whose reads are those of a node of `kind` holding `occupant` with `params`: its own, or, where a
+/// `field` setting picks another field than its code starts on, its code starting on the field picked, since what a
+/// node reads is that field. Don't read the occupant alone: a picked field is a setting, not part of it.
+pub fn read_as(
+    kind: NodeKind,
+    occupant: &Occupant,
+    params: &BTreeMap<String, Vec<f64>>,
+) -> Occupant {
+    let Ok(Some(text)) = node_source(kind, occupant) else {
+        return occupant.clone();
+    };
+    let picked = |name: &str| {
+        let at = *params.get(name)?.first()?;
+        super::controls::field_names().get(at as usize)
+    };
+    let mut moved = false;
+    let lines: Vec<String> = text
+        .lines()
+        .map(|l| match super::field_uniform(l) {
+            Some((name, default, any)) => match picked(name).filter(|f| *f != default) {
+                Some(f) => {
+                    moved = true;
+                    format!(
+                        "// @uniform {name}: field = {f}{}",
+                        if any { " any" } else { "" }
+                    )
+                }
+                None => l.to_owned(),
+            },
+            None => l.to_owned(),
+        })
+        .collect();
+    if !moved {
+        return occupant.clone();
+    }
+    Occupant::Custom(lines.join("\n") + "\n")
+}
+
+/// [`reads`] of node `n`, its field settings in it ([`read_as`]).
+pub fn node_reads(n: &Node) -> Option<Reads> {
+    reads(n.kind, &read_as(n.kind, &n.occupant, &n.params))
 }
 
 /// What a run provides a node: the tier its records hold, and whether it has an ensemble.

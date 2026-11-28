@@ -249,7 +249,7 @@ impl View {
         }
         self.ranges.clear();
         for n in g.nodes() {
-            let Some(Some(read)) = reads.get(&(n.kind, n.occupant.clone())) else {
+            let Some(Some(read)) = reads.get(&stain::read_key(n)) else {
                 continue;
             };
             let Some(target) = &read.range else { continue };
