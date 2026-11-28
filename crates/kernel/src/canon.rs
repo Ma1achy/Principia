@@ -804,7 +804,8 @@ fn smooth_slopes<R: LinkReal + IeeeBits>(ic: &Ic<R>, out: Canonical<R>) -> Canon
     let rho = [centred[1][0] - centred[0][0], centred[1][1] - centred[0][1]];
     let norm = Real::hypotenuse(rho[0], rho[1]);
     // A coincident pair or a zero `I` has no smooth form; they are the decode's own poles.
-    if out.clamped || !(inertia > zero) || !(norm > zero) || !Float::is_finite(inertia) {
+    let usable = inertia > zero && norm > zero && Float::is_finite(inertia);
+    if out.clamped || !usable {
         return out;
     }
     let root = Float::sqrt(inertia);
