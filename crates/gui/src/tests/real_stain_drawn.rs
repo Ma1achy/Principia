@@ -222,7 +222,7 @@ fn every_graph_the_library_loads_draws() {
 /// A backend of one 4 × 4 field, every class in it, that counts what it is asked for: its fields, and its records,
 /// which it has none of.
 #[derive(Default)]
-pub(super) struct Counting(AtomicU64);
+pub(super) struct Counting(pub(super) AtomicU64);
 
 impl FieldBackend for Counting {
     fn field(
@@ -261,7 +261,7 @@ pub(super) fn app(backend: &Counting) -> (App<RealSide>, Headless, Arc<RealCanva
 
 /// The app's picture in `mode`, once the stain asked for has compiled: the preview's pixels on the Stain page, the
 /// figure's square on Explore.
-fn picture(
+pub(super) fn picture(
     app: &mut App<RealSide>,
     h: &mut Headless,
     canvas: &RealCanvas,

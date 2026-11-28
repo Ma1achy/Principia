@@ -5,10 +5,12 @@
 
 use engine::contract::render_state::{NodeId, NodeKind, Occupant, StainGraph};
 use engine::contract::set_field::{Edit, RenderField, SetField};
-use engine::contract::stain::assembled::{assemble, library, node_source, source_fields};
+use engine::contract::stain::assembled::{assemble, library, node_source};
 use engine::contract::stain::preset::{self, group_of, DebugGroup, Section};
+use engine::contract::stain::saved::FIELD_SOURCE;
 use engine::presets;
 
+use super::field_source_window::{picked, picker};
 use super::mock_stain_preview::{check_one_edit, depth, graph, logged, on_stain, select};
 use super::support::{click, click_scope, frame_texts, rejects, FORMAT};
 use crate::app::App;
@@ -16,7 +18,7 @@ use crate::headless::Headless;
 use crate::real::stain::TIER;
 use crate::real::start;
 use crate::side::{EngineSide, RealSide};
-use crate::stain::catalogue::{grouped, told_apart, PRESETS};
+use crate::stain::catalogue::{grouped, told_apart, FIELD, PRESETS};
 use crate::stain::{library as drawer, Content, CHOICE_IDS, GROUP_IDS, ROW_IDS};
 
 /// The start graph's nodes: the combiner, the source of `state` and the outcome palette.
@@ -85,7 +87,7 @@ fn the_content_is_the_assemblers_and_the_registrys() {
     rejects("the code of another graph", || {
         check_content(frozen, &other)
     });
-    // The shaders offered are the registry's, each kind's, the fields before them, by their descriptions' names.
+    // The shaders offered are the registry's, each kind's, by their descriptions' names, the field source first as "Field".
     let c = content(&mut app);
     let offered = |kind: NodeKind| -> Vec<(Occupant, &str)> {
         c.choices
@@ -94,7 +96,6 @@ fn the_content_is_the_assemblers_and_the_registrys() {
             .map(|choice| (choice.occupant.clone(), choice.name))
             .collect()
     };
-    let fields = source_fields().expect("the fields");
     let entries = library().expect("the library");
     for kind in [
         NodeKind::Source,
@@ -104,16 +105,12 @@ fn the_content_is_the_assemblers_and_the_registrys() {
     ] {
         let mut want: Vec<(Occupant, String)> = Vec::new();
         if kind == NodeKind::Source {
-            want.extend(
-                fields
-                    .iter()
-                    .map(|f| (Occupant::Field(f.clone()), format!("ctx.{f}"))),
-            );
+            want.push((Occupant::Field("state".into()), FIELD.to_owned()));
         }
         want.extend(
             entries
                 .iter()
-                .filter(|e| e.slot == kind && !e.debug)
+                .filter(|e| e.slot == kind && !e.debug && e.name != FIELD_SOURCE)
                 .map(|e| {
                     (
                         Occupant::Builtin(e.name.clone()),
@@ -138,7 +135,7 @@ fn the_content_is_the_assemblers_and_the_registrys() {
 type Listed = (String, Vec<(String, Option<StainGraph>)>);
 
 /// The library as it is listed: each heading with its rows' names and graphs. The registry's slots' entries by their
-/// descriptions' groups; then the production presets no registry row loads, under one heading; then the debug section,
+/// descriptions' groups, the field source named "Field"; then the production presets no registry row loads, under one heading; then the debug section,
 /// each group's preset files and then the registry's debug views `group_of` files there, two of one name told apart.
 fn listing() -> Vec<Listed> {
     let entries = library().expect("the library");
@@ -149,7 +146,10 @@ fn listing() -> Vec<Listed> {
             (
                 t,
                 es.into_iter()
-                    .map(|e| (e.description.name, e.graph))
+                    .map(|e| match e.name == FIELD_SOURCE {
+                        true => (FIELD.to_owned(), e.graph),
+                        false => (e.description.name, e.graph),
+                    })
                     .collect(),
             )
         })
@@ -357,19 +357,12 @@ fn a_library_row_loads_its_whole_graph_and_a_source_takes_a_field() {
     assert_eq!((graph(&app), depth(&app)), (&g0, d));
     let selected = app.stain.library.selected.expect("a row selected");
     assert_eq!(drawer::row(&c, selected), Some("Multiply"));
-    // A source's field, past the eight choices the mock has.
+    // A source's field, picked in its inspector.
     select(&mut app, &mut h, SOURCE);
-    let k = source_fields()
-        .expect("the fields")
-        .iter()
-        .position(|f| f == "energy_drift")
-        .expect("energy_drift");
-    click_scope(&mut h, &mut app, CHOICE_IDS[k]);
+    let energy_drift = picker(&mut app, SOURCE, "energy_drift");
+    click_scope(&mut h, &mut app, energy_drift);
     let _ = h.frame(&mut app, Vec::new());
-    assert_eq!(
-        graph(&app).node(SOURCE).map(|n| &n.occupant),
-        Some(&Occupant::Field("energy_drift".into()))
-    );
+    assert_eq!(picked(graph(&app), SOURCE).as_deref(), Some("energy_drift"));
     let c = content(&mut app);
     assert!(c.code.contains("ctx.sample.energy_drift"), "{}", c.code);
 }

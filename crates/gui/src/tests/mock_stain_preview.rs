@@ -11,6 +11,7 @@ use eframe::egui::{
 };
 use engine::contract::render_state::{NodeId, Occupant, StainGraph};
 
+use super::field_source_window::{picked, picker};
 use super::support::{click, frame_texts, headless, mock_app, nodes, rejects, FORMAT};
 use crate::app::App;
 use crate::capture::{render_frame, Shot, PIXELS_PER_POINT};
@@ -129,11 +130,12 @@ fn mock_stain_preview_a_source_field_shifts_the_look() {
     let (mut app, mut h) = on_stain(mock_app());
     select(&mut app, &mut h, OUTCOME);
     let (g0, d0, rows) = (graph(&app).clone(), depth(&app), app.console().len());
-    click(&mut h, &mut app, "ctx.ftle");
+    let ftle = picker(&mut app, OUTCOME, "ftle");
+    super::support::click_scope(&mut h, &mut app, ftle);
     let _ = h.frame(&mut app, Vec::new());
-    check_one_edit((&g0, d0, rows), &app, |g| {
-        g.node(OUTCOME).map(|n| &n.occupant) == Some(&Occupant::Field("ftle".into()))
-    });
+    let reads =
+        |field: &'static str| move |g: &StainGraph| picked(g, OUTCOME).as_deref() == Some(field);
+    check_one_edit((&g0, d0, rows), &app, reads("ftle"));
     assert_ne!(
         look(graph(&app))[3],
         look(&g0)[3],
@@ -146,9 +148,7 @@ fn mock_stain_preview_a_source_field_shifts_the_look() {
         .code
         .contains("colour(ctx.ftle)"));
     rejects("the field unchanged", || {
-        check_one_edit((&g0, d0, rows), &app, |g| {
-            g.node(OUTCOME).map(|n| &n.occupant) == Some(&Occupant::Field("state".into()))
-        })
+        check_one_edit((&g0, d0, rows), &app, reads("state"))
     });
 }
 
@@ -461,18 +461,18 @@ fn mock_stain_preview_pipeline_is_cached() {
     });
 }
 
-/// The inspector's sections follow the node: a source's "Field", the combiner's "Mode" with its occupant selected,
+/// The inspector's sections follow the node: a source's "Source shader", the combiner's "Mode" with its occupant selected,
 /// no shader actions on OUT; and the Problems pane's heading counts the problems.
 #[test]
 fn mock_stain_preview_inspector_sections() {
     let (mut app, mut h) = on_stain(mock_app());
     select(&mut app, &mut h, OUTCOME);
     let texts = frame_texts(&mut h, &mut app);
-    assert!(texts.iter().any(|t| t == "▾ Field") && !texts.iter().any(|t| t == "▾ Mode"));
+    assert!(texts.iter().any(|t| t == "▾ Source shader") && !texts.iter().any(|t| t == "▾ Mode"));
     assert!(texts.iter().any(|t| t == "Edit this node's WGSL"));
     select(&mut app, &mut h, COMBINER);
     let texts = frame_texts(&mut h, &mut app);
-    assert!(texts.iter().any(|t| t == "▾ Mode") && !texts.iter().any(|t| t == "▾ Field"));
+    assert!(texts.iter().any(|t| t == "▾ Mode") && !texts.iter().any(|t| t == "▾ Source shader"));
     // The combiner's occupant, Multiply, is the choice shown selected.
     let all = nodes(&mut h, &mut app);
     let rect = |t: &str| all.iter().find(|n| n.text == t).map(|n| n.rect).unwrap();

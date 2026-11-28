@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
-use engine::contract::render_state::{NodeId, NodeKind, Occupant, StainGraph};
+use engine::contract::render_state::{Node, NodeId, NodeKind, Occupant, StainGraph};
 
 use crate::stain::catalogue::catalogue;
 use crate::stain::{described, node_code, Content};
@@ -96,10 +96,8 @@ pub fn look(g: &StainGraph) -> Look {
     let field = colour
         .and_then(|n| feeding(n.id, 0))
         .and_then(|id| g.node(id))
-        .and_then(|n| match &n.occupant {
-            Occupant::Field(f) => SOURCE_FIELDS.iter().position(|s| s == f),
-            _ => None,
-        });
+        .and_then(source_field)
+        .and_then(|f| SOURCE_FIELDS.iter().position(|s| *s == f));
     let darkest = live(feeding(COMBINER, 1)).map_or(1.0, |n| {
         let declared = g
             .uniforms(n.id)
@@ -138,8 +136,19 @@ fn field_into(g: &StainGraph, to: Option<NodeId>) -> String {
         .and_then(|w| g.node(w.from))
         .map_or_else(
             || "none".to_owned(),
-            |n| occupant_name(&n.occupant).to_owned(),
+            |n| source_field(n).unwrap_or_else(|| occupant_name(&n.occupant).to_owned()),
         )
+}
+
+/// The field source node `n` reads: the one its field setting picked, else its occupant's.
+fn source_field(n: &Node) -> Option<String> {
+    let picked = n.params.get("field").and_then(|v| v.first());
+    let picked = picked.and_then(|&j| crate::stain::controls::field_names().get(j as usize));
+    match (picked, &n.occupant) {
+        (Some(f), _) => Some(f.clone()),
+        (None, Occupant::Field(f)) => Some(f.clone()),
+        _ => None,
+    }
 }
 
 /// The assembled code the Stain page shows under the canvas (placeholder content in 02_stain.png's form): it reads

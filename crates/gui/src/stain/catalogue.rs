@@ -11,7 +11,7 @@ use engine::contract::stain::assembled::{library, node_source, source_fields, En
 use engine::contract::stain::describe::from_source;
 use engine::contract::stain::folder::Folder;
 use engine::contract::stain::preset::{self, group_of, DebugGroup, Section};
-use engine::contract::stain::saved::FIELD_ID;
+use engine::contract::stain::saved::FIELD_SOURCE;
 
 use super::yours::origin;
 use super::{intern, Group, Row};
@@ -40,7 +40,7 @@ pub struct Tables {
     pub modes: u32,
     /// Each row's graph, by its place in the library.
     pub graphs: Arc<[Option<StainGraph>]>,
-    /// The shaders a node can be given, each kind's in the library's order, a source's fields first.
+    /// The shaders a node can be given, each kind's in the library's order, the field source first.
     pub choices: Arc<[Choice]>,
 }
 
@@ -169,20 +169,36 @@ fn build() -> Catalogue {
         }),
         Err(why) => problems.push(format!("{name}: {why}")),
     };
-    for f in fields {
-        let id = format!("{FIELD_ID}{f}");
-        let occupant = Occupant::Field(f.clone());
-        // The plan is unclear here; chose to keep one choice per field, named `ctx.<field>`, until the window shows the
-        // one `field` source with its Field setting, because the node's own title is now "Field" for all of them.
-        let name = format!("ctx.{f}");
-        offer(NodeKind::Source, occupant, &name, &id);
-    }
+    // The one field source, offered as "Field" in its own spelling, `Occupant::Field`, at the field it defaults to; the
+    // field is then chosen with its picker. Its registry entry is not offered again below.
+    let field_source = entries.iter().find(|e| is_field_source(e.slot, &e.name));
+    let default = field_source.and_then(|e| {
+        let c = e
+            .description
+            .controls
+            .iter()
+            .find(|c| c.uniform == FIELD_SOURCE)?;
+        fields.get(*c.default.first()? as usize).cloned()
+    });
+    let unoffered = match (field_source, default) {
+        (Some(e), Some(f)) => {
+            offer(NodeKind::Source, Occupant::Field(f), FIELD, &e.id);
+            None
+        }
+        _ => Some(format!(
+            "{FIELD}: no shipped `{FIELD_SOURCE}` source with a default field"
+        )),
+    };
     // The plan is unclear here; chose to offer a node every shader of its kind but the debug views, because those are
     // whole stains the library loads.
-    for e in entries.iter().filter(|e| !e.debug) {
+    for e in entries
+        .iter()
+        .filter(|e| !e.debug && !is_field_source(e.slot, &e.name))
+    {
         let occupant = Occupant::Builtin(e.name.clone());
         offer(e.slot, occupant, &e.description.name, &e.id);
     }
+    problems.extend(unoffered);
     let presets = preset::library().unwrap_or_else(|why| {
         problems.push(format!("the presets: {why}"));
         Vec::new()
@@ -208,7 +224,13 @@ fn build() -> Catalogue {
     let (ours, debug): (Vec<Entry>, Vec<Entry>) = entries.into_iter().partition(|e| !e.debug);
     for (title, entries) in grouped(ours) {
         for e in entries {
-            push(&title, Listed::entry(e), &mut graphs);
+            let field = is_field_source(e.slot, &e.name);
+            let mut row = Listed::entry(e);
+            // Named as the menu names it, not by the field it starts on.
+            if field {
+                row.name = FIELD.to_owned();
+            }
+            push(&title, row, &mut graphs);
         }
     }
     // A preset file whose graph a registry row already loads (the outcome palette's) is that row, not listed again.
@@ -247,6 +269,14 @@ fn build() -> Catalogue {
         },
         problems,
     }
+}
+
+/// The name of the one source that reads a field of the run, chosen with its picker.
+pub const FIELD: &str = "Field";
+
+/// Whether the shipped shader `name` of `slot` is the field source.
+fn is_field_source(slot: NodeKind, name: &str) -> bool {
+    slot == NodeKind::Source && name == FIELD_SOURCE
 }
 
 /// The heading of the production presets that no registry row loads.

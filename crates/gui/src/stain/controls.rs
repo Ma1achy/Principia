@@ -13,11 +13,13 @@
 //! every control there shares them ([`standing`]), and acts as it always does.
 
 use std::collections::BTreeSet;
+use std::sync::OnceLock;
 
 use eframe::egui::{
     self, vec2, Button, Color32, DragValue, Rect, RichText, Sense, Slider, Stroke, Ui, WidgetInfo,
     WidgetType,
 };
+use engine::contract::stain::assembled::source_fields;
 use engine::contract::stain::describe::{Control, ControlView, Description, Standing, UniformType};
 
 use super::{intern, standing};
@@ -184,13 +186,12 @@ fn part(k: usize, c: &ControlView) -> Option<Part> {
             .collect::<Vec<_>>()
     };
     Some(match &c.control {
-        // The editors of version 2's types (a gradient with its own stops, a list, a lut, a field and an image) are
-        // not drawn yet: their value is more than a few numbers, and the editor for each is its own piece of work.
-        Control::Hidden
-        | Control::List
-        | Control::Curve
-        | Control::FieldPicker
-        | Control::ImagePicker => return None,
+        // The editors of version 2's types (a gradient with its own stops, a list, a lut and an image) are not drawn
+        // yet: their value is more than a few numbers, and the editor for each is its own piece of work.
+        Control::Hidden | Control::List | Control::Curve | Control::ImagePicker => return None,
+        // The plan is unclear here; chose to list every field, though a `field` declared without `any` takes only its
+        // default's kind, because the description does not say which: the graph refuses the others, and nothing changes.
+        Control::FieldPicker => group(sets(field_names(), &|j| j as f64)),
         Control::Gradient(stops) if stops.is_empty() => return None,
         Control::Slider => value(StepKind::Bounded, By::Share),
         Control::LogSlider => value(StepKind::Bounded, By::Log),
@@ -232,6 +233,12 @@ fn part(k: usize, c: &ControlView) -> Option<Part> {
                 .collect(),
         ),
     })
+}
+
+/// The fields a field picker lists, in the order its value counts them: a field's value is its place here.
+pub fn field_names() -> &'static [String] {
+    static NAMES: OnceLock<Vec<String>> = OnceLock::new();
+    NAMES.get_or_init(|| source_fields().unwrap_or_default())
 }
 
 /// A vector's components' names.
@@ -432,11 +439,13 @@ pub fn show(ui: &mut Ui, c: &ControlView, part: &Part, draw: &mut Draw<'_, '_>) 
 
 fn control(ui: &mut Ui, c: &ControlView, part: &Part, draw: &mut Draw<'_, '_>) {
     match &c.control {
-        Control::Hidden
-        | Control::List
-        | Control::Curve
-        | Control::FieldPicker
-        | Control::ImagePicker => {}
+        Control::Hidden | Control::List | Control::Curve | Control::ImagePicker => {}
+        Control::FieldPicker => named(ui, c, part, draw, |ui, j| {
+            ui.add(Button::selectable(
+                first(&c.value) == j as f64,
+                field_names()[j].as_str(),
+            ))
+        }),
         Control::Gradient(stops) if stops.is_empty() => {}
         Control::Slider | Control::LogSlider => slider(ui, c, part, draw),
         Control::Stepper => stepper(ui, c, part, draw),

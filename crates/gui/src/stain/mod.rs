@@ -441,9 +441,36 @@ pub fn choices<'a>(n: &Node, content: &'a Content) -> Vec<&'a Choice> {
         .collect()
 }
 
-/// Whether node `n` is `choice`: its source is.
+/// Whether node `n` is `choice`: its source is, the fields its `field` parameters start on aside, since a node of one
+/// shader with another field picked is still that shader.
 pub fn chosen(n: &Node, choice: &Choice, content: &Content) -> bool {
-    content.node_code.get(&n.id) == Some(&choice.source)
+    let Some(code) = content.node_code.get(&n.id) else {
+        return false;
+    };
+    *code == choice.source || fields_aside(code) == fields_aside(&choice.source)
+}
+
+/// `text` with the default of each `field` parameter it declares left out: `// @uniform f: field = state any` reads
+/// `// @uniform f: field any`.
+fn fields_aside(text: &str) -> String {
+    let line = |l: &str| {
+        let declared = l.trim_start().strip_prefix("// @uniform ");
+        let Some((name, rest)) = declared.and_then(|d| d.split_once(':')) else {
+            return l.to_owned();
+        };
+        match rest.trim_start().strip_prefix("field") {
+            Some(default) if default.trim_start().starts_with('=') => {
+                let any = if default.trim_end().ends_with(" any") {
+                    " any"
+                } else {
+                    ""
+                };
+                format!("// @uniform {name}: field{any}")
+            }
+            _ => l.to_owned(),
+        }
+    };
+    text.lines().map(line).collect::<Vec<_>>().join("\n")
 }
 
 /// Whether node `n` can be duplicated: it holds code, and is not one of the graph's fixed singletons.

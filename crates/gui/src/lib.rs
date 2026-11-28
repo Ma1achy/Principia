@@ -52,6 +52,7 @@ mod tests {
     mod f3_fill_modes;
     mod f3_fills_window_mock;
     mod f3_toggle_mock;
+    mod field_source_window;
     mod frame_window_stats;
     mod layout_least_window;
     mod lock_moves_no_view;
