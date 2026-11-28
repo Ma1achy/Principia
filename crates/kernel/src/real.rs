@@ -606,6 +606,17 @@ pub trait IeeeBits: Real + crate::chart::invariant::WarpReal {
     /// generator writes as each width's exact value (`TAU_I_F32`, `TAU_I_F64`). A constant, so every backend compares
     /// against the same bits.
     const TAU_I: Self;
+
+    /// Whether the type carries a slope beside its value (`crate::dual::Dual`): then `C` takes the slope from its
+    /// smooth form, which always centres, scales and rotates, and not from the `Wide` branches that skip those steps where
+    /// they are no-ops. False for every float type, so no float path reads anything else.
+    const CARRIES_SLOPE: bool = false;
+
+    /// `self` with the slope of `smooth`, a type that carries one; `self` for every float type.
+    #[inline]
+    fn slope_from(self, _smooth: Self) -> Self {
+        self
+    }
 }
 
 impl IeeeBits for f32 {

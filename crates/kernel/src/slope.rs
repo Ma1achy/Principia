@@ -11,12 +11,14 @@
 //! tier-2 chart lists its sites in [`Declaration::kinks`], and [`flag`] reads a footprint: it returns the site the
 //! footprint meets, so a consumer need not ask whether a point lies exactly on one.
 //!
-//! The plan is unclear here: it gives the kink sites by name and no geometry. [`flag`] takes a site to be met where, in
-//! the footprint's nine points (corners, edge midpoints and centre), the chart's own `validate` leaves `Valid`, the
-//! decode is `degenerate`, an exact slope is not finite, or a slope is larger than `1/h`, because each of those is a
-//! branch change or a division by the quantity that is zero at the site (a slope grows like 1 over the distance to a
-//! pole, so one above `1/h` puts the pole within about `h`). Sites that move the slope without any of those signs are
-//! not seen.
+//! The plan is unclear here: it gives the kink sites by name and no geometry. A chart's [`Site`] gives one where it has
+//! it, and [`flag`] reads those first, so a kink whose slope jumps and stays finite is found. Otherwise [`flag`] takes a
+//! site to be met where, in the footprint's nine points (corners, edge midpoints and centre), the chart's own `validate`
+//! leaves `Valid`, the decode is `degenerate`, an exact slope is not finite, or a slope is larger than `1/h` (a slope
+//! grows like 1 over the distance to a pole). A kink with finite slopes on both sides and no [`Site`] is not seen.
+//!
+//! The encode's canonical-form shortcuts (the scale step skipped within `τ_I` of `I = 1`, a zero centre of mass or `ρ_y`)
+//! are not kinks: a dual takes its slope through the smooth form (`crate::canon::canonicalise`).
 //!
 //! Host-only: the SPIR-V build does not take this module.
 
@@ -52,17 +54,24 @@ pub enum Kink {
     Pole,
     /// A switch between two seeds of a construction.
     SeedSwitch,
-    /// A branch of the encode's canonicalisation: the scale step skipped within `τ_I` of `I = 1`, `ρ_y` or the centre
-    /// of mass an exact zero, or a term truncated below `2⁻⁶⁰` of the sum it joins. A decoded state sits on every one.
-    CanonBranch,
     /// A `min` or `max` of two values, where they tie.
     OrderSwitch,
     /// A clamp's edge.
     ClampEdge,
 }
 
+/// A kink site's own geometry, in the chart's `(u, v)`: whether the footprint of half-width `h` about `(u, v)` meets it.
+/// Where a chart has one, [`flag`] reads it first, so a kink whose slope jumps and stays finite is flagged too.
+#[derive(Clone, Copy, Debug)]
+pub struct Site {
+    /// Which kink this is.
+    pub kink: Kink,
+    /// Whether the square `[u − h, u + h] × [v − h, v + h]` meets the site.
+    pub meets: fn(f64, f64, f64) -> bool,
+}
+
 /// What a chart declares: its tier and the kink sites it flags. `tier` is `None` until a chart declares one.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug)]
 pub struct Declaration {
     /// The chart's registry name ([`REGISTRY`]).
     pub chart: &'static str,
@@ -70,6 +79,14 @@ pub struct Declaration {
     pub tier: Option<Tier>,
     /// The kink sites it flags; empty for a tier-3 chart.
     pub kinks: &'static [Kink],
+    /// The geometry of those of `kinks` that have one.
+    pub sites: &'static [Site],
+}
+
+/// The shape sphere's pole and the exponential map's `r = 0`, one point `(½, ½)` of the chart's square: `n = −n₀` on the
+/// spherical map, `n = n₀` on the exponential one.
+fn sphere_centre(u: f64, v: f64, h: f64) -> bool {
+    (u - 0.5).abs() <= h && (v - 0.5).abs() <= h
 }
 
 use Kink::*;
@@ -80,56 +97,76 @@ pub const DECLARATIONS: [Declaration; 11] = [
         chart: "Latent",
         tier: Some(Tier::Exact),
         kinks: &[],
+        sites: &[],
     },
     Declaration {
         chart: "ShapeSphere",
         tier: Some(Tier::Exact),
         kinks: &[Pole, ExpMapRZero],
+        sites: &[
+            Site {
+                kink: Pole,
+                meets: sphere_centre,
+            },
+            Site {
+                kink: ExpMapRZero,
+                meets: sphere_centre,
+            },
+        ],
     },
     Declaration {
         chart: "Burrau",
         tier: Some(Tier::Exact),
         kinks: &[FeasibilityBoundary, KZero, SeedSwitch],
+        sites: &[],
     },
     Declaration {
         chart: "EuclidPlane",
         tier: Some(Tier::Exact),
         kinks: &[SeedSwitch, FeasibilityBoundary],
+        sites: &[],
     },
     Declaration {
         chart: "BurrauThetaK",
         tier: Some(Tier::Exact),
         kinks: &[FeasibilityBoundary, KZero, SeedSwitch],
+        sites: &[],
     },
     Declaration {
         chart: "BurrauThetaLz",
         tier: Some(Tier::Exact),
         kinks: &[FeasibilityBoundary, SeedSwitch],
+        sites: &[],
     },
     Declaration {
         chart: "BurrauThetaDeltaM",
         tier: Some(Tier::Exact),
         kinks: &[FeasibilityBoundary, SeedSwitch],
+        sites: &[],
     },
     Declaration {
         chart: "InvariantLE",
         tier: Some(Tier::Exact),
         kinks: &[FeasibilityBoundary, NormaliseEdge, WarpedKAtZeroD],
+        sites: &[],
     },
     Declaration {
         chart: "InvariantLK",
         tier: Some(Tier::Exact),
         kinks: &[FeasibilityBoundary, KZero, WarpedKAtZeroD],
+        sites: &[],
     },
     Declaration {
         chart: "MassSimplex",
         tier: Some(Tier::Exact),
         kinks: &[FeasibilityBoundary],
+        sites: &[],
     },
     Declaration {
         chart: "Mixed",
         tier: Some(Tier::Exact),
         kinks: &[Pole, KZero, NormaliseEdge],
+        sites: &[],
     },
 ];
 
@@ -189,15 +226,20 @@ where
     (cu.map(|c| c.v), cu.map(|c| c.d), cv.map(|c| c.d))
 }
 
-/// The kink site the footprint of half-width `h` about `(u, v)` meets, if any (the module's note). A branch change
+/// The kink site the footprint of half-width `h` about `(u, v)` meets, if any (the module's note). A declared site's own
+/// geometry is read first, so a kink whose slope jumps and stays finite is flagged. Past those, a branch change
 /// (`validate` leaves `Valid`, or the decode is degenerate) is the feasibility boundary where the chart lists it; a slope
-/// that is not finite is the first of the chart's listed sites that divides by a quantity going to zero.
-pub fn flag<S, C>(chart: &C, declared: &[Kink], u: f64, v: f64, h: f64) -> Option<Kink>
+/// that is not finite or above `1/h` is the first of the chart's listed sites that divides by a quantity going to zero.
+pub fn flag<S, C>(chart: &C, declared: &Declaration, u: f64, v: f64, h: f64) -> Option<Kink>
 where
     S: Selection,
     C: Chart<Param = f64>,
 {
-    let listed = |k: Kink| declared.contains(&k).then_some(k);
+    if let Some(site) = declared.sites.iter().find(|s| (s.meets)(u, v, h)) {
+        return Some(site.kink);
+    }
+    let kinks = declared.kinks;
+    let listed = |k: Kink| kinks.contains(&k).then_some(k);
     let mut hit = None;
     for du in [-h, 0.0, h] {
         for dv in [-h, 0.0, h] {
@@ -206,7 +248,7 @@ where
             if left || chart.decode::<S, f64>(pu, pv).degenerate.is_some() {
                 hit = hit
                     .or(listed(FeasibilityBoundary))
-                    .or(declared.first().copied());
+                    .or(kinks.first().copied());
             }
             let (_, su, sv) = exact::<S, C>(chart, pu, pv);
             if su
@@ -219,7 +261,7 @@ where
                     .or(listed(Pole))
                     .or(listed(KZero))
                     .or(listed(WarpedKAtZeroD))
-                    .or(declared.first().copied());
+                    .or(kinks.first().copied());
             }
         }
     }

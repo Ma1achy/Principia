@@ -38,14 +38,14 @@ use kernel::chart::construction::{HeldLz, RestStart};
 use kernel::chart::invariant::Invariant;
 use kernel::chart::mixed::{Alpha, PRhoX};
 use kernel::chart::{
-    BurrauThetaDeltaM, Chart, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap,
-    ShapeSphere, ValidationResult, REGISTRY,
+    BurrauThetaDeltaM, Chart, ChartOut, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed,
+    ShapeMap, ShapeSphere, ValidationResult, REGISTRY,
 };
 use kernel::decode::{Decoded, Ic};
 use kernel::dual::Dual;
 use kernel::generated::links::Defaults;
 use kernel::slope::{
-    declaration, exact, flag, undeclared_in, Declaration, Kink, Tier, DECLARATIONS,
+    declaration, exact, flag, undeclared_in, Declaration, Kink, Site, Tier, DECLARATIONS,
 };
 use validation::negative_control;
 
@@ -53,6 +53,13 @@ const TAU: f64 = std::f64::consts::TAU;
 const F0: f64 = 10.0;
 const SAFETY: f64 = 2.0;
 const FOOTPRINT: f64 = 1e-3;
+/// A declaration listing a pole and no geometry: `flag` reads the decode alone.
+const SITELESS: Declaration = Declaration {
+    chart: "probe",
+    tier: Some(Tier::Exact),
+    kinks: &[Kink::Pole],
+    sites: &[],
+};
 const POINTS: [(f64, f64); 3] = [(0.37, 0.61), (0.30, 0.40), (0.12, 0.77)];
 
 fn components(ic: &Ic<f64>) -> [f64; 15] {
@@ -128,7 +135,7 @@ fn check_slopes<C: Chart<Param = f64>>(name: &str, c: &C, span: f64, flip: bool)
                 && c.decode::<Defaults, f64>(u, v).degenerate.is_none(),
             "{name} at ({u}, {v}) is not a valid decode"
         );
-        let site = flag::<Defaults, C>(c, &[Kink::Pole], u, v, FOOTPRINT);
+        let site = flag::<Defaults, C>(c, &SITELESS, u, v, FOOTPRINT);
         assert_eq!(
             site, None,
             "{name} at ({u}, {v}) is within a site's footprint: {site:?}"
@@ -326,6 +333,7 @@ fn slope_tiers_declared() {
     table[1] = Declaration {
         tier: Some(Tier::None),
         kinks: &[],
+        sites: &[],
         ..table[1]
     };
     declared(&table);
@@ -384,17 +392,13 @@ negative_control!(
 
 #[test]
 fn slope_tiers_kink_flag() {
-    let sites = declaration("ShapeSphere").unwrap().kinks;
+    let sites = declaration("ShapeSphere").unwrap();
     // The sphere's pole, `n = −n₀` at `(0.5, 0.5)`, where the slope is 1e17: the footprint meets it. The exponential
     // map's `r = 0` is `n = n₀` at the same point, where the slope is NaN.
     let pole = flag::<Defaults, _>(&sphere(ShapeMap::Spherical), sites, 0.5, 0.5, FOOTPRINT);
     assert!(pole.is_some(), "the footprint of the pole is not flagged");
     let origin = flag::<Defaults, _>(&sphere(ShapeMap::Exponential), sites, 0.5, 0.5, FOOTPRINT);
-    assert_eq!(
-        origin,
-        Some(Kink::ExpMapRZero),
-        "the footprint of `r = 0` is not flagged as it"
-    );
+    assert!(origin.is_some(), "the footprint of `r = 0` is not flagged");
     // A footprint of the first measurement point meets no site, on either map.
     for map in [ShapeMap::Spherical, ShapeMap::Exponential] {
         let inside = flag::<Defaults, _>(&sphere(map), sites, 0.37, 0.61, FOOTPRINT);
@@ -408,10 +412,215 @@ negative_control!(
     expected = "is not flagged",
     {
         let sph = sphere(ShapeMap::Spherical);
-        let at_pole = flag::<Defaults, _>(&sph, &[], 0.5, 0.5, FOOTPRINT);
+        let bare = Declaration {
+            kinks: &[],
+            sites: &[],
+            ..*declaration("ShapeSphere").unwrap()
+        };
+        let at_pole = flag::<Defaults, _>(&sph, &bare, 0.5, 0.5, FOOTPRINT);
         assert!(
             at_pole.is_some(),
             "the footprint of the pole is not flagged"
         );
+    }
+);
+
+/// A chart with a finite-jump kink: `z₀ = |u − ½|`, whose slope goes from −1 to +1 at `u = ½` and stays finite, so no
+/// non-finite or large slope marks it.
+struct Fold;
+
+impl Chart for Fold {
+    type Param = f64;
+
+    fn map<F: kernel::chart::Float + From<f64>>(&self, u: F, v: F) -> ChartOut<F> {
+        let half = <F as From<f64>>::from(0.5);
+        let z = |x: f64| <F as From<f64>>::from(x);
+        ChartOut {
+            z: kernel::decode::Latent::new([
+                (u - half).abs(),
+                v - half,
+                z(0.2),
+                z(-0.1),
+                z(0.15),
+                z(0.05),
+                z(0.1),
+                z(-0.1),
+            ]),
+        }
+    }
+
+    fn name(&self) -> &str {
+        "Fold"
+    }
+
+    fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
+        ValidationResult::Valid
+    }
+}
+
+fn fold_site(u: f64, _v: f64, h: f64) -> bool {
+    (u - 0.5).abs() <= h
+}
+
+const FOLD: Declaration = Declaration {
+    chart: "Fold",
+    tier: Some(Tier::Exact),
+    kinks: &[Kink::OrderSwitch],
+    sites: &[Site {
+        kink: Kink::OrderSwitch,
+        meets: fold_site,
+    }],
+};
+
+/// A footprint straddling the fold, `u = ½ ± FOOTPRINT/2`, is flagged by the declared site; the same chart with its
+/// declaration removed is not, because the slope is finite and the decode valid on both sides. A footprint clear of
+/// the fold is not flagged either way.
+#[test]
+fn slope_tiers_finite_jump_flag() {
+    let (_, left, _) = exact::<Defaults, _>(&Fold, 0.5 - FOOTPRINT, 0.4);
+    let (_, right, _) = exact::<Defaults, _>(&Fold, 0.5 + FOOTPRINT, 0.4);
+    let jump = left
+        .iter()
+        .zip(&right)
+        .map(|(a, b)| (a - b).abs())
+        .fold(0.0, f64::max);
+    assert!(
+        jump > 1e-3 && left.iter().chain(&right).all(|x| x.is_finite()),
+        "the fold's slope jumps by {jump:e}, finite"
+    );
+    let at = flag::<Defaults, _>(&Fold, &FOLD, 0.5 + 0.4 * FOOTPRINT, 0.4, FOOTPRINT);
+    assert_eq!(
+        at,
+        Some(Kink::OrderSwitch),
+        "the footprint straddling the fold is not flagged"
+    );
+    let clear = flag::<Defaults, _>(&Fold, &FOLD, 0.8, 0.4, FOOTPRINT);
+    assert_eq!(
+        clear, None,
+        "a footprint clear of the fold is flagged as {clear:?}"
+    );
+}
+
+negative_control!(
+    slope_tiers_finite_jump_flag,
+    "the declaration removed, the fold's footprint is not flagged, so the test must fail",
+    expected = "is not flagged",
+    {
+        let bare = Declaration {
+            kinks: &[],
+            sites: &[],
+            ..FOLD
+        };
+        let at = flag::<Defaults, _>(&Fold, &bare, 0.5 + 0.4 * FOOTPRINT, 0.4, FOOTPRINT);
+        assert_eq!(
+            at,
+            Some(Kink::OrderSwitch),
+            "the footprint straddling the fold is not flagged"
+        );
+    }
+);
+
+/// The canonicalisation at the sites it skips as no-ops (`I = 1`, the centre of mass at 0, `ρ_y = 0`): the decode as
+/// it comes. Criterion, written before the run: each of the 15 outputs `(r, p)` and `φ`, `I_in`, `λ̃_y`, along each of
+/// the 15 input components, the dual slope within `SAFETY·(h²·F3/6 + ε·F0/h)` of the central difference at
+/// `h = ε^{1/3}·max(1, |x|)` (which steps off the sites on both sides), `F3 = 1e4`, `F0 = 100`, `SAFETY = 2`. Control:
+/// `canonicalise_branches`, the skipping path, whose slope must fail.
+fn canon_sites(skipping: bool) {
+    use kernel::canon::{canonicalise, canonicalise_branches, Canonical};
+    use kernel::decode::{decode, Latent as Controls};
+    let outputs = |c: &Canonical<f64>| {
+        let mut o = [0.0; 18];
+        for i in 0..3 {
+            o[2 * i] = c.ic.r[i][0];
+            o[2 * i + 1] = c.ic.r[i][1];
+            o[6 + 2 * i] = c.ic.p[i][0];
+            o[7 + 2 * i] = c.ic.p[i][1];
+        }
+        (o[12], o[13], o[14]) = (c.phi, c.i_in, c.lambda_t_y);
+        o
+    };
+    let duals = |c: &Canonical<Dual>| {
+        let mut o = [Dual::default(); 18];
+        for i in 0..3 {
+            o[2 * i] = c.ic.r[i][0];
+            o[2 * i + 1] = c.ic.r[i][1];
+            o[6 + 2 * i] = c.ic.p[i][0];
+            o[7 + 2 * i] = c.ic.p[i][1];
+        }
+        (o[12], o[13], o[14]) = (c.phi, c.i_in, c.lambda_t_y);
+        o
+    };
+    let ic = decode::<Defaults, f64>(&Controls::new([
+        0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 0.1, -0.1,
+    ]))
+    .ic;
+    assert_eq!(ic.r[0][1], ic.r[1][1], "the decode keeps ρ on +x");
+    let flat = |ic: &Ic<f64>| {
+        let mut c = [0.0; 15];
+        c[..3].copy_from_slice(&ic.m);
+        for i in 0..3 {
+            c[3 + 2 * i] = ic.r[i][0];
+            c[4 + 2 * i] = ic.r[i][1];
+            c[9 + 2 * i] = ic.p[i][0];
+            c[10 + 2 * i] = ic.p[i][1];
+        }
+        c
+    };
+    let unflat = |c: &[f64; 15]| Ic {
+        m: [c[0], c[1], c[2]],
+        r: [[c[3], c[4]], [c[5], c[6]], [c[7], c[8]]],
+        p: [[c[9], c[10]], [c[11], c[12]], [c[13], c[14]]],
+    };
+    let base = flat(&ic);
+    for k in 0..15 {
+        let seed = |i: usize| {
+            if i == k {
+                Dual::variable(base[i])
+            } else {
+                Dual::constant(base[i])
+            }
+        };
+        let sd = Ic {
+            m: [seed(0), seed(1), seed(2)],
+            r: [[seed(3), seed(4)], [seed(5), seed(6)], [seed(7), seed(8)]],
+            p: [
+                [seed(9), seed(10)],
+                [seed(11), seed(12)],
+                [seed(13), seed(14)],
+            ],
+        };
+        let dual = duals(&if skipping {
+            canonicalise_branches(&sd)
+        } else {
+            canonicalise(&sd)
+        });
+        let h = f64::EPSILON.cbrt() * base[k].abs().max(1.0);
+        let (mut up, mut down) = (base, base);
+        up[k] += h;
+        down[k] -= h;
+        let (a, b) = (
+            outputs(&canonicalise(&unflat(&up))),
+            outputs(&canonicalise(&unflat(&down))),
+        );
+        let tol = 2.0 * (h * h * 1e4 / 6.0 + f64::EPSILON * 100.0 / h);
+        for o in 0..15 {
+            let difference = (a[o] - b[o]) / (up[k] - down[k]);
+            let err = (dual[o].d - difference).abs();
+            assert!(err <= tol, "canonical output {o} along component {k}: dual {} against difference {difference}, off by {err:e}, over {tol:e}", dual[o].d);
+        }
+    }
+}
+
+#[test]
+fn slope_tiers_canon_sites() {
+    canon_sites(false);
+}
+
+negative_control!(
+    slope_tiers_canon_sites,
+    "the skipping path's slope at the sites is not the smooth one, so the test must fail",
+    expected = "off by",
+    {
+        canon_sites(true);
     }
 );

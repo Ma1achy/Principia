@@ -14,14 +14,9 @@
 //!   criterion needs no bound: a central difference is second order, so its error against the exact slope falls by 100
 //!   (within a factor 2) from `h = 1e-3` to `1e-4`, for every component whose error at `1e-3` is over `1e-6`. Control:
 //!   the slope of a component whose norm is at least 100 times the tolerance, sign flipped, fails.
-//!   The probes are decodes moved off every site of the encode's canonicalisation (`generic`): a decode has `I = 1`
-//!   (step 0 is skipped, within `τ_I`), its centre of mass at the origin (a sum the encode truncates below `2⁻⁶⁰` of its
-//!   terms, so the slope of a term that cancels to nothing is lost) and `ρ` on `+x` (`ρ_y` an exact zero), and the dual
-//!   follows the branch the state is on where the difference, at its step, leaves it: the slope of an encode row
-//!   there is not the smooth one (`slope_tier_kink_site`).
-//! - `slope_tier_kink_site`: at a decode as it comes, with `ρ_y = 0`, the dual slope of `β` along `r₀`'s `y` is
-//!   not the central difference's (the encode's zero test, a kink site the row flags as a pole): the slope there is
-//!   `|dual − difference| > 100·tol`, and the row flags a site. Control: the row with its flag removed fails.
+//!   The probes are decodes moved off the encode's canonical-form sites (`generic`), so the difference is not the
+//!   check of a site.
+//! - `slope_tier_canon_sites`: at the decodes as they come, the encode rows' slopes are the smooth ones (below).
 
 use engine::chart_authoring::registry::{Registry, Row, Slope};
 use kernel::decode::{decode, Ic, Latent};
@@ -264,55 +259,53 @@ negative_control!(
     }
 );
 
-/// `row`'s slope along `r₀`'s `y` at a decode as it comes, against the central difference: how far the gap is over
-/// `100·tol`, and whether the row flags a site.
-fn kink_gap(row: &Row) -> (f64, bool) {
-    let Some(Slope::Exact(dual)) = row.slope else {
-        panic!("{} is exact", row.name)
-    };
-    let ic = decode::<Defaults, f64>(&Latent::new(PROBES[0])).ic;
-    assert_eq!(ic.r[0][1], ic.r[1][1], "the decode keeps ρ on +x: ρ_y = 0");
-    let k = 4;
-    let exact = dual(&seeded(&ic, k)).d;
-    let base = flat(&ic);
-    let f = row.forward.unwrap();
-    let h = f64::EPSILON.cbrt();
-    let (mut up, mut down) = (base, base);
-    up[k] += h;
-    down[k] -= h;
-    let difference = (f(&unflat(&up)) - f(&unflat(&down))) / (up[k] - down[k]);
-    (
-        (exact - difference).abs() - 100.0 * tolerance(row.name, h),
-        !row.kinks.is_empty(),
-    )
+/// Each encode row's slope at the decodes as they come, every component, against the central difference: the largest
+/// excess over the row's tolerance (negative where every slope agrees). `flip` flips the dual's sign.
+fn canon_sites(flip: bool) -> f64 {
+    let registry = Registry::standard();
+    let mut worst = f64::NEG_INFINITY;
+    for name in ["z_α", "z_β", "z_q0", "z_q1", "z_q2", "z_q3", "α", "β"] {
+        let row = registry.row(name).unwrap();
+        let Some(Slope::Exact(dual)) = row.slope else {
+            panic!("{name} is exact")
+        };
+        let f = row.forward.unwrap();
+        for z in PROBES {
+            let ic = decode::<Defaults, f64>(&Latent::new(z)).ic;
+            let base = flat(&ic);
+            for k in 0..15 {
+                let slope = dual(&seeded(&ic, k)).d * if flip { -1.0 } else { 1.0 };
+                let h = f64::EPSILON.cbrt() * base[k].abs().max(1.0);
+                let (mut up, mut down) = (base, base);
+                up[k] += h;
+                down[k] -= h;
+                let difference = (f(&unflat(&up)) - f(&unflat(&down))) / (up[k] - down[k]);
+                worst = worst.max((slope - difference).abs() - tolerance(name, h));
+            }
+        }
+    }
+    worst
 }
 
-fn kink_site(row: &Row) {
-    let (excess, flagged) = kink_gap(row);
-    assert!(
-        excess > 0.0,
-        "the slope at the axis agrees with the difference, so the site is not one"
-    );
-    assert!(
-        flagged,
-        "{} is not flagged where its slope is wrong",
-        row.name
-    );
-}
-
+/// The decode puts `I = 1`, the centre of mass at 0 and `ρ_y = 0`: the encode's canonical-form sites, which are
+/// bookkeeping shortcuts and not kinks, so the slope there is the smooth one. Criterion, written before the run: every
+/// encode row, along every one of the 15 components, within `tolerance(row, h)` of the central difference at
+/// `h = ε^{1/3}·max(1, |x|)`, which steps off the sites on both sides. Control: the dual's sign flipped.
 #[test]
-fn slope_tier_kink_site() {
-    kink_site(Registry::standard().row("β").unwrap());
+fn slope_tier_canon_sites() {
+    let worst = canon_sites(false);
+    assert!(
+        worst <= 0.0,
+        "a slope at a canonical-form site is off the difference by {worst:e} over its tolerance"
+    );
 }
 
 negative_control!(
-    slope_tier_kink_site,
-    "a row with its flag removed is a wrong slope with no warning, so the test must fail",
-    expected = "is not flagged",
+    slope_tier_canon_sites,
+    "slopes of the opposite sign are off the difference, so the test must fail",
+    expected = "off the difference",
     {
-        kink_site(&Row {
-            kinks: &[],
-            ..*Registry::standard().row("β").unwrap()
-        });
+        let worst = canon_sites(true);
+        assert!(worst <= 0.0, "a slope at a canonical-form site is off the difference by {worst:e} over its tolerance");
     }
 );

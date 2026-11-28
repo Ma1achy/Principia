@@ -576,6 +576,13 @@ impl IeeeBits for Dual {
             d: self.d * b.v + self.v * b.d,
         }
     }
+    const CARRIES_SLOPE: bool = true;
+    fn slope_from(self, smooth: Dual) -> Dual {
+        Dual {
+            v: self.v,
+            d: smooth.d,
+        }
+    }
     const INV_PHI: Dual = Dual::constant(<f64 as IeeeBits>::INV_PHI);
     const TAU_I: Dual = Dual::constant(<f64 as IeeeBits>::TAU_I);
 }

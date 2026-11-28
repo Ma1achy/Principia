@@ -780,6 +780,70 @@ pub fn reflect<R: LinkReal>(ic: &Ic<R>, flip: bool) -> Ic<R> {
 /// and recorded, the state not moved for them. `ic.m` is positive with `Σmᵢ = 1`.
 #[inline]
 pub fn canonicalise<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
+    let out = canonicalise_branches(ic);
+    if R::CARRIES_SLOPE {
+        smooth_slopes(ic, out)
+    } else {
+        out
+    }
+}
+
+/// `out` with the slopes of `C`'s smooth form: the CoM frame, `I = 1` and `ρ̃` on `+x`, always applied. The branches
+/// of [`canonicalise_branches`] skip a step where it is a no-op in value (`I_in` within `τ_I` of 1, a zero CoM or `ρ_y`),
+/// and a slope through a skipped step is not the slope of the step: don't restore the skip for a type that carries a
+/// slope, since the rotation to `ρ_y = 0` has angle 0 there and a derivative that is not. The values are `out`'s.
+fn smooth_slopes<R: LinkReal + IeeeBits>(ic: &Ic<R>, out: Canonical<R>) -> Canonical<R> {
+    let [m0, m1, m2] = ic.m;
+    let (zero, one) = (R::zero(), R::one());
+    let com = |k: usize| m0 * ic.r[0][k] + m1 * ic.r[1][k] + m2 * ic.r[2][k];
+    let c = [com(0), com(1)];
+    let centred = ic.r.map(|v| [v[0] - c[0], v[1] - c[1]]);
+    let inertia = m0 * (centred[0][0] * centred[0][0] + centred[0][1] * centred[0][1])
+        + m1 * (centred[1][0] * centred[1][0] + centred[1][1] * centred[1][1])
+        + m2 * (centred[2][0] * centred[2][0] + centred[2][1] * centred[2][1]);
+    let rho = [centred[1][0] - centred[0][0], centred[1][1] - centred[0][1]];
+    let norm = Real::hypotenuse(rho[0], rho[1]);
+    // A coincident pair or a zero `I` has no smooth form; they are the decode's own poles.
+    if out.clamped || !(inertia > zero) || !(norm > zero) || !Float::is_finite(inertia) {
+        return out;
+    }
+    let root = Float::sqrt(inertia);
+    let quarter = Float::sqrt(root);
+    let scaled = centred.map(|v| [v[0] / root, v[1] / root]);
+    let momenta = ic.p.map(|v| [v[0] * quarter, v[1] * quarter]);
+    let total = [
+        momenta[0][0] + momenta[1][0] + momenta[2][0],
+        momenta[0][1] + momenta[1][1] + momenta[2][1],
+    ];
+    let boosted = [
+        [momenta[0][0] - m0 * total[0], momenta[0][1] - m0 * total[1]],
+        [momenta[1][0] - m1 * total[0], momenta[1][1] - m1 * total[1]],
+        [momenta[2][0] - m2 * total[0], momenta[2][1] - m2 * total[1]],
+    ];
+    let (cos, sin) = (rho[0] / norm, rho[1] / norm);
+    let r = scaled.map(|v| rotate(v, cos, sin));
+    let p = boosted.map(|v| rotate(v, cos, sin));
+    let from = |a: [[R; 2]; 3], b: [[R; 2]; 3]| {
+        [0, 1, 2].map(|i| [a[i][0].slope_from(b[i][0]), a[i][1].slope_from(b[i][1])])
+    };
+    Canonical {
+        ic: Ic {
+            m: out.ic.m,
+            r: from(out.ic.r, r),
+            p: from(out.ic.p, p),
+        },
+        i_in: out.i_in.slope_from(inertia),
+        lambda: out.lambda.slope_from(one / root),
+        phi: out.phi.slope_from(Real::arctangent2(rho[1], rho[0])),
+        lambda_t_y: out.lambda_t_y.slope_from(lambda_t_y(ic.m, r)),
+        ..out
+    }
+}
+
+/// `C` by the branches the module's note describes, with their skips: the values [`canonicalise`] returns, and at a
+/// type that carries a slope not its slopes.
+#[inline]
+pub fn canonicalise_branches<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
     let m = ic.m;
     let (mass, x) = wide_state(m, ic.r);
     // The pair differences every branch reads (the module's note): step 2's guard and angle, step 0's coincidence and

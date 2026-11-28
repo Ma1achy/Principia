@@ -1060,33 +1060,13 @@ pub static ROWS: [Row; 39] = [
     exact(
         latent("z_α", Block::Config, z_alpha, set_z_alpha),
         dz_0,
-        &[Kink::CanonBranch],
+        &[],
     ),
-    exact(
-        latent("z_β", Block::Config, z_beta, set_z_beta),
-        dz_1,
-        &[Kink::CanonBranch],
-    ),
-    exact(
-        latent("z_q0", Block::Momentum, z_q0, set_z_q0),
-        dz_2,
-        &[Kink::CanonBranch],
-    ),
-    exact(
-        latent("z_q1", Block::Momentum, z_q1, set_z_q1),
-        dz_3,
-        &[Kink::CanonBranch],
-    ),
-    exact(
-        latent("z_q2", Block::Momentum, z_q2, set_z_q2),
-        dz_4,
-        &[Kink::CanonBranch],
-    ),
-    exact(
-        latent("z_q3", Block::Momentum, z_q3, set_z_q3),
-        dz_5,
-        &[Kink::CanonBranch],
-    ),
+    exact(latent("z_β", Block::Config, z_beta, set_z_beta), dz_1, &[]),
+    exact(latent("z_q0", Block::Momentum, z_q0, set_z_q0), dz_2, &[]),
+    exact(latent("z_q1", Block::Momentum, z_q1, set_z_q1), dz_3, &[]),
+    exact(latent("z_q2", Block::Momentum, z_q2, set_z_q2), dz_4, &[]),
+    exact(latent("z_q3", Block::Momentum, z_q3, set_z_q3), dz_5, &[]),
     exact(latent("z_μ1", Block::Mass, z_mu1, set_z_mu1), dz_6, &[]),
     exact(latent("z_μ2", Block::Mass, z_mu2, set_z_mu2), dz_7, &[]),
     exact(
@@ -1096,7 +1076,7 @@ pub static ROWS: [Row; 39] = [
             ..derived("α", CONFIG, alpha, set_alpha)
         },
         dalpha,
-        &[Kink::CanonBranch],
+        &[],
     ),
     exact(
         Row {
@@ -1106,7 +1086,7 @@ pub static ROWS: [Row; 39] = [
             ..derived("β", CONFIG, beta, set_beta)
         },
         dbeta,
-        &[Kink::CanonBranch],
+        &[],
     ),
     exact(
         Row {
