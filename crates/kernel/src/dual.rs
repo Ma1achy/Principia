@@ -57,6 +57,15 @@ impl Dual {
         }
     }
 
+    /// `atan2(y, x)` and its slope, the value the pinned libm's.
+    fn atan2_of(y: Dual, x: Dual) -> Dual {
+        let n = y.v * y.v + x.v * x.v;
+        Dual {
+            v: Real::arctan2(y.v, x.v),
+            d: (x.v * y.d - y.v * x.d) / n,
+        }
+    }
+
     /// `f(self)` with value `v` and slope `df·self.d`, the chain rule's one step.
     #[inline]
     fn chain(self, v: f64, df: f64) -> Dual {
@@ -304,24 +313,24 @@ impl Float for Dual {
         self.chain(e, e)
     }
     fn exp2(self) -> Dual {
-        let e = Float::exp2(self.v);
+        let e = Real::power(2.0, self.v);
         self.chain(e, e * core::f64::consts::LN_2)
     }
     fn ln(self) -> Dual {
         self.chain(Real::logarithm(self.v), 1.0 / self.v)
     }
     fn log(self, base: Dual) -> Dual {
-        self.ln() / base.ln()
+        Real::logarithm(self) / Real::logarithm(base)
     }
     fn log2(self) -> Dual {
         self.chain(
-            Float::log2(self.v),
+            Real::logarithm(self.v) / core::f64::consts::LN_2,
             1.0 / (self.v * core::f64::consts::LN_2),
         )
     }
     fn log10(self) -> Dual {
         self.chain(
-            Float::log10(self.v),
+            Real::logarithm(self.v) / core::f64::consts::LN_10,
             1.0 / (self.v * core::f64::consts::LN_10),
         )
     }
@@ -380,17 +389,13 @@ impl Float for Dual {
         )
     }
     fn atan(self) -> Dual {
-        self.chain(Float::atan(self.v), 1.0 / (1.0 + self.v * self.v))
+        self.chain(Real::arctan2(self.v, 1.0), 1.0 / (1.0 + self.v * self.v))
     }
     fn atan2(self, x: Dual) -> Dual {
-        let n = self.v * self.v + x.v * x.v;
-        Dual {
-            v: Real::arctan2(self.v, x.v),
-            d: (x.v * self.d - self.v * x.d) / n,
-        }
+        Dual::atan2_of(self, x)
     }
     fn sin_cos(self) -> (Dual, Dual) {
-        (Float::sin(self), Float::cos(self))
+        (Real::sine(self), Real::cosine(self))
     }
     fn exp_m1(self) -> Dual {
         self.chain(Real::exp_minus_one(self.v), Real::exponential(self.v))
@@ -415,16 +420,12 @@ impl Float for Dual {
         self.chain(t, 1.0 - t * t)
     }
     fn asinh(self) -> Dual {
-        self.chain(
-            Float::asinh(self.v),
-            1.0 / Float::sqrt(self.v * self.v + 1.0),
-        )
+        let root = Float::sqrt(self.v * self.v + 1.0);
+        self.chain(Real::logarithm(self.v + root), 1.0 / root)
     }
     fn acosh(self) -> Dual {
-        self.chain(
-            Float::acosh(self.v),
-            1.0 / Float::sqrt(self.v * self.v - 1.0),
-        )
+        let root = Float::sqrt(self.v * self.v - 1.0);
+        self.chain(Real::logarithm(self.v + root), 1.0 / root)
     }
     fn atanh(self) -> Dual {
         self.chain(Real::arctanh(self.v), 1.0 / (1.0 - self.v * self.v))
@@ -445,10 +446,10 @@ impl Real for Dual {
 
     // A dual stays on the host's f64 maths, so these route to the f64 path's own functions.
     fn arctan2(self, x: Dual) -> Dual {
-        Float::atan2(self, x)
+        Dual::atan2_of(self, x)
     }
     fn arctangent2(self, x: Dual) -> Dual {
-        Float::atan2(self, x)
+        Dual::atan2_of(self, x)
     }
 }
 

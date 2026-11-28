@@ -45,7 +45,7 @@ use kernel::decode::{Decoded, Ic};
 use kernel::dual::Dual;
 use kernel::generated::links::Defaults;
 use kernel::slope::{
-    declaration, exact, flag, undeclared_in, Declaration, Kink, Tier, COMPONENTS, DECLARATIONS,
+    declaration, exact, flag, undeclared_in, Declaration, Kink, Tier, DECLARATIONS,
 };
 use validation::negative_control;
 
@@ -55,8 +55,8 @@ const SAFETY: f64 = 2.0;
 const FOOTPRINT: f64 = 1e-3;
 const POINTS: [(f64, f64); 3] = [(0.37, 0.61), (0.30, 0.40), (0.12, 0.77)];
 
-fn components(ic: &Ic<f64>) -> [f64; COMPONENTS] {
-    let mut c = [0.0; COMPONENTS];
+fn components(ic: &Ic<f64>) -> [f64; 15] {
+    let mut c = [0.0; 15];
     c[..3].copy_from_slice(&ic.m);
     for i in 0..3 {
         c[3 + 2 * i] = ic.r[i][0];
@@ -67,17 +67,12 @@ fn components(ic: &Ic<f64>) -> [f64; COMPONENTS] {
     c
 }
 
-fn decoded<C: Chart<Param = f64>>(c: &C, u: f64, v: f64) -> [f64; COMPONENTS] {
+fn decoded<C: Chart<Param = f64>>(c: &C, u: f64, v: f64) -> [f64; 15] {
     components(&c.decode::<Defaults, f64>(u, v).ic)
 }
 
 /// The central difference of the decode along `u` (`axis` 0) or `v` (1), the step as the criterion states it.
-fn difference<C: Chart<Param = f64>>(
-    c: &C,
-    u: f64,
-    v: f64,
-    axis: usize,
-) -> ([f64; COMPONENTS], f64) {
+fn difference<C: Chart<Param = f64>>(c: &C, u: f64, v: f64, axis: usize) -> ([f64; 15], f64) {
     let x = if axis == 0 { u } else { v };
     let h = f64::EPSILON.cbrt() * x.abs().max(1.0);
     let at = |x: f64| {
@@ -90,8 +85,8 @@ fn difference<C: Chart<Param = f64>>(
     let (up, down) = (x + h, x - h);
     let (a, b) = (at(up), at(down));
     let span = up - down;
-    let mut col = [0.0; COMPONENTS];
-    for k in 0..COMPONENTS {
+    let mut col = [0.0; 15];
+    for k in 0..15 {
         col[k] = (a[k] - b[k]) / span;
     }
     (col, h)
@@ -108,8 +103,8 @@ fn error_at<C: Chart<Param = f64>>(
     (u, v): (f64, f64),
     axis: usize,
     h: f64,
-    slope: &[f64; COMPONENTS],
-) -> [f64; COMPONENTS] {
+    slope: &[f64; 15],
+) -> [f64; 15] {
     let at = |s: f64| {
         if axis == 0 {
             decoded(c, u + s, v)
@@ -118,8 +113,8 @@ fn error_at<C: Chart<Param = f64>>(
         }
     };
     let (a, b) = (at(h), at(-h));
-    let mut e = [0.0; COMPONENTS];
-    for k in 0..COMPONENTS {
+    let mut e = [0.0; 15];
+    for k in 0..15 {
         e[k] = ((a[k] - b[k]) / (2.0 * h) - slope[k]).abs();
     }
     e
@@ -145,7 +140,7 @@ fn check_slopes<C: Chart<Param = f64>>(name: &str, c: &C, span: f64, flip: bool)
         for (axis, slope) in [(0, su), (1, sv)] {
             let (diff, h) = difference(c, u, v, axis);
             let tol = tolerance(h, span);
-            for k in 0..COMPONENTS {
+            for k in 0..15 {
                 let err = (slope[k] - diff[k]).abs();
                 assert!(
                     err <= tol,
@@ -157,7 +152,7 @@ fn check_slopes<C: Chart<Param = f64>>(name: &str, c: &C, span: f64, flip: bool)
             if !flip {
                 let coarse = error_at(c, (u, v), axis, 1e-3, &slope);
                 let fine = error_at(c, (u, v), axis, 1e-4, &slope);
-                for k in 0..COMPONENTS {
+                for k in 0..15 {
                     if coarse[k] > 1e-6 {
                         let ratio = coarse[k] / fine[k];
                         assert!(

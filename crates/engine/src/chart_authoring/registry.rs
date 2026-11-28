@@ -44,6 +44,7 @@ use kernel::stage::decode::{
     DecodeVariant, EuclidPlaneDefaults, InvariantLEDefaults, InvariantLKDefaults,
     MassSimplexDefaults, MixedAlphaVirialDefaults, MixedMu1AlphaDefaults, ShapeSphereDefaults,
 };
+use kernel::Real;
 
 use super::axis::{AxisKind, Block};
 use crate::contract::sim_config::Latent;
@@ -734,6 +735,38 @@ fn dz<const K: usize>(ic: &Ic<Dual>) -> Dual {
     encode::<Defaults, Dual>(ic).z.z[K]
 }
 
+fn dz_0(ic: &Ic<Dual>) -> Dual {
+    dz::<0>(ic)
+}
+
+fn dz_1(ic: &Ic<Dual>) -> Dual {
+    dz::<1>(ic)
+}
+
+fn dz_2(ic: &Ic<Dual>) -> Dual {
+    dz::<2>(ic)
+}
+
+fn dz_3(ic: &Ic<Dual>) -> Dual {
+    dz::<3>(ic)
+}
+
+fn dz_4(ic: &Ic<Dual>) -> Dual {
+    dz::<4>(ic)
+}
+
+fn dz_5(ic: &Ic<Dual>) -> Dual {
+    dz::<5>(ic)
+}
+
+fn dz_6(ic: &Ic<Dual>) -> Dual {
+    dz::<6>(ic)
+}
+
+fn dz_7(ic: &Ic<Dual>) -> Dual {
+    dz::<7>(ic)
+}
+
 fn dalpha(ic: &Ic<Dual>) -> Dual {
     encode::<Defaults, Dual>(ic).blocks.alpha
 }
@@ -743,7 +776,7 @@ fn dbeta(ic: &Ic<Dual>) -> Dual {
 }
 
 fn dnorm(v: [Dual; 2]) -> Dual {
-    Float::hypot(v[0], v[1])
+    Real::hypotenuse(v[0], v[1])
 }
 
 fn djacobi(ic: &Ic<Dual>) -> ([Dual; 2], [Dual; 2]) {
@@ -772,7 +805,7 @@ fn dshape(ic: &Ic<Dual>) -> [Dual; 3] {
 /// `θ`'s branch cut at `θ = 0` is `rem_euclid`'s; its slope is the angle's on either side.
 fn dshape_theta(ic: &Ic<Dual>) -> Dual {
     let n = dshape(ic);
-    let t = Float::atan2(n[2], n[1]);
+    let t = Real::arctan2(n[2], n[1]);
     if t.v < 0.0 {
         t + Dual::constant(TAU)
     } else {
@@ -783,7 +816,7 @@ fn dshape_theta(ic: &Ic<Dual>) -> Dual {
 fn dshape_phi(ic: &Ic<Dual>) -> Dual {
     let x = dshape(ic)[0];
     let one = Dual::constant(1.0);
-    Float::acos(Float::max(Float::min(x, one), -one))
+    Real::arccosine(Float::max(Float::min(x, one), -one))
 }
 
 fn dm1_over_m0(ic: &Ic<Dual>) -> Dual {
@@ -1026,36 +1059,36 @@ const fn no_slope(row: Row) -> Row {
 pub static ROWS: [Row; 39] = [
     exact(
         latent("z_α", Block::Config, z_alpha, set_z_alpha),
-        dz::<0>,
+        dz_0,
         &[Kink::CanonBranch],
     ),
     exact(
         latent("z_β", Block::Config, z_beta, set_z_beta),
-        dz::<1>,
+        dz_1,
         &[Kink::CanonBranch],
     ),
     exact(
         latent("z_q0", Block::Momentum, z_q0, set_z_q0),
-        dz::<2>,
+        dz_2,
         &[Kink::CanonBranch],
     ),
     exact(
         latent("z_q1", Block::Momentum, z_q1, set_z_q1),
-        dz::<3>,
+        dz_3,
         &[Kink::CanonBranch],
     ),
     exact(
         latent("z_q2", Block::Momentum, z_q2, set_z_q2),
-        dz::<4>,
+        dz_4,
         &[Kink::CanonBranch],
     ),
     exact(
         latent("z_q3", Block::Momentum, z_q3, set_z_q3),
-        dz::<5>,
+        dz_5,
         &[Kink::CanonBranch],
     ),
-    exact(latent("z_μ1", Block::Mass, z_mu1, set_z_mu1), dz::<6>, &[]),
-    exact(latent("z_μ2", Block::Mass, z_mu2, set_z_mu2), dz::<7>, &[]),
+    exact(latent("z_μ1", Block::Mass, z_mu1, set_z_mu1), dz_6, &[]),
+    exact(latent("z_μ2", Block::Mass, z_mu2, set_z_mu2), dz_7, &[]),
     exact(
         Row {
             angle_like: true,

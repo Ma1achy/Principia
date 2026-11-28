@@ -150,11 +150,11 @@ pub fn undeclared_in(table: &[Declaration]) -> impl Iterator<Item = &'static str
 }
 
 /// `(m, r, p)` of a decode as 15 numbers: the masses, the positions, the momenta.
-pub const COMPONENTS: usize = 15;
+pub type Components = [f64; 15];
 
 /// The 15 components of a decoded `(m, r, p)`.
-fn components(ic: &crate::decode::Ic<Dual>) -> [Dual; COMPONENTS] {
-    let mut c = [Dual::default(); COMPONENTS];
+fn components(ic: &crate::decode::Ic<Dual>) -> [Dual; 15] {
+    let mut c = [Dual::default(); 15];
     for (i, m) in ic.m.iter().enumerate() {
         c[i] = *m;
     }
@@ -171,11 +171,7 @@ fn components(ic: &crate::decode::Ic<Dual>) -> [Dual; COMPONENTS] {
 
 /// The decode's value and exact slopes at `(u, v)`: `(value, ∂/∂u, ∂/∂v)`, each of the 15 components, the decode run
 /// twice at [`Dual`], one seed per column.
-pub fn exact<S, C>(
-    chart: &C,
-    u: f64,
-    v: f64,
-) -> ([f64; COMPONENTS], [f64; COMPONENTS], [f64; COMPONENTS])
+pub fn exact<S, C>(chart: &C, u: f64, v: f64) -> (Components, Components, Components)
 where
     S: Selection,
     C: Chart<Param = f64>,
