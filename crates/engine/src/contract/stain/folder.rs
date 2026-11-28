@@ -890,6 +890,33 @@ fn uniform_line(rest: &str, value: &[f64]) -> Option<String> {
         None => &after[after.find(['[', ' ']).unwrap_or(after.len())..],
     };
     let num = |x: &f64| format!("{x}");
+    // A gradient's default is its stops as written, not a list of numbers.
+    if head
+        .split_once(':')
+        .is_some_and(|(_, t)| t.trim().starts_with("gradient"))
+    {
+        return Some(format!(
+            "{}= {}",
+            head,
+            render::assemble::params::gradient_text(value)
+        ));
+    }
+    // A field's default is its name, by the list its uniform chooses among, never its place in it.
+    if head
+        .split_once(':')
+        .is_some_and(|(_, t)| t.trim() == "field")
+    {
+        let scalar = after.trim_end().ends_with(" scalar");
+        let names = if scalar {
+            render::assemble::ramp_fields()
+        } else {
+            render::assemble::source_fields()
+        }
+        .ok()?;
+        let name = names.get(*value.first()? as usize)?;
+        let rest = &after[after.find(' ').unwrap_or(after.len())..];
+        return Some(format!("{}= {name}{rest}", head));
+    }
     let default = match value {
         [one] => num(one),
         many => format!("({})", many.iter().map(num).collect::<Vec<_>>().join(", ")),

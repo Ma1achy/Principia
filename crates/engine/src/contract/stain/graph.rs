@@ -793,7 +793,7 @@ impl StainGraph {
     /// other node's occupant as it is.
     pub fn made(&self, id: NodeId) -> Result<Occupant, GraphError> {
         let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
-        if !matches!(n.occupant, Occupant::Builtin(_)) {
+        if matches!(n.occupant, Occupant::Field(_) | Occupant::None) {
             return Ok(n.occupant.clone());
         }
         match self.read_fields(n)? {
