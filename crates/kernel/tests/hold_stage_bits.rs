@@ -219,7 +219,8 @@ fn check(nudge: bool) {
     }
     assert!(
         n64 == 0 && n32 == 0,
-        "the held decodes' bits moved: {n64} cases at f64, {n32} at f32; first {:?}",
+        "the held decodes' bits moved{}: {n64} cases at f64, {n32} at f32; first {:?}",
+        if nudge { " under the L* nudge" } else { "" },
         first64.or(first32)
     );
 }
@@ -232,6 +233,6 @@ fn hold_stage_bits_fixed() {
 negative_control!(
     hold_stage_bits_fixed,
     "a 2⁻²⁰ relative change in L* moves the step's bits",
-    expected = "the held decodes' bits moved",
+    expected = "the held decodes' bits moved under the L* nudge",
     check(true)
 );
