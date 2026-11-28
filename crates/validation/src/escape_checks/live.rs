@@ -63,7 +63,7 @@
 //! pooled over every case (the three fixtures, Burrau, the periodic orbits, the stable triples and the positive-energy
 //! slice), wrong body included; of those, the smallest pooled median time to a label that stays correct, **an escape
 //! truth with none by `T_eval` counted as `+∞`**; a tie (equal medians, both infinite included) to the most labels that
-//! stay correct by `T_eval`. With none at zero wrong commits, the current default (closure) stays.
+//! stay correct by `T_eval`. With none at zero wrong commits, the current default stays.
 //!
 //! **Amended before the run of record, after the 8 × 8 smoke run** (its harness check), and said so on the PR: the pick
 //! first took the median over the trajectories that reached a staying label alone, which the smoke showed ranks a rule
