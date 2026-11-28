@@ -65,14 +65,22 @@ jobs:
       - name: List open PRs
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh pr list --state open --limit 500 --json headRefName,isCrossRepository > "$RUNNER_TEMP/open-prs.json"
+        run: gh pr list --state open --limit 500 --json headRefName,title,isCrossRepository > "$RUNNER_TEMP/open-prs.json"
+      # The generator's own tests, from the same commit as the script that draws.
+      - name: Test the generator
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pbtest"
+          git show "$GITHUB_SHA:scripts/progress_banner.py" > "$RUNNER_TEMP/pbtest/progress_banner.py"
+          git show "$GITHUB_SHA:scripts/test_progress_banner.py" > "$RUNNER_TEMP/pbtest/test_progress_banner.py"
+          python3 "$RUNNER_TEMP/pbtest/test_progress_banner.py"
       # The script from the commit this run is for (main's head on a push; the dispatched branch's otherwise), run on
       # main's tasks.yaml, MILESTONES.md and merge history; on a push to main the two are the same commit.
       - name: Draw the grid, light and dark
         run: |
           set -euo pipefail
           git show "$GITHUB_SHA:scripts/progress_banner.py" > "$RUNNER_TEMP/progress_banner.py"
-          git log --merges --format=%s > "$RUNNER_TEMP/merges.txt"
+          git log --merges --format=%s%x09%b > "$RUNNER_TEMP/merges.txt"
           for theme in light dark; do
             python3 "$RUNNER_TEMP/progress_banner.py" -o "$RUNNER_TEMP/progress-$theme.svg" --theme "$theme" \
               --tasks plan/tasks.yaml --milestones plan/PLAN.md --merges "$RUNNER_TEMP/merges.txt" \

@@ -7,14 +7,14 @@ picks between with a <picture> as it does the title and signature. A merged task
 square of ochre wash, one not started a pencil outline.
 
 Each task in plan/tasks.yaml is in one of three states:
-  done         its status is `done` in tasks.yaml, or main's history has the merge commit
-               "Merge pull request #N from <owner>/task/<TASK-id>": the subject GitHub gives the merge of the PR
-               whose head is that task's branch. A branch that only starts with the task id
-               (`task/TASK-C1-01-retry`) and a merge of main into a task branch do not count;
-  in review    an open PR from this repository (not a fork) has head branch `task/<TASK-id>` (only with
-               --open-prs, the JSON `gh pr list --state open --json headRefName,isCrossRepository` prints; a PR
-               without `"isCrossRepository": false` is skipped, since anyone can open one from a fork's
-               `task/...` branch);
+  done         its status is `done` in tasks.yaml, or main's history has a PR merge commit ("Merge pull request
+               #N from <owner>/<branch>") whose head was `task/<TASK-id>` or whose PR title ends with the task's
+               id in brackets, `TASK-` optional: "(TASK-M7-85)", "(M7-89)", "(TASK-M2-101 to 104)", "(TASK-M7-76, TASK-M7-83)". GitHub puts the
+               PR title in the merge commit's body. A merge of main into a task branch does not count;
+  in review    an open PR from this repository (not a fork) has head branch `task/<TASK-id>` or a title ending
+               with the id in brackets (only with --open-prs, the JSON `gh pr list --state open --json
+               headRefName,title,isCrossRepository` prints; a PR without `"isCrossRepository": false` is skipped,
+               since anyone can open one from a fork);
   not started  otherwise.
 
 Progress is counted by task, not by size: each task weighs the same.
@@ -23,8 +23,8 @@ Usage:
   python3 scripts/progress_banner.py -o progress.svg [--open-prs open.json]
       [--merges subjects.txt] [--commit SHA] [--generated-at TEXT] [--theme light|dark]
 
---merges reads the merge-commit subjects from a file (one per line) instead of `git log --merges --format=%s`; a
-shallow clone has no history to read. --commit and --generated-at fix the footer's commit and time (the defaults are
+--merges reads the merge commits from a file, one "subject<TAB>body" per line, instead of
+`git log --merges --format=%s%x09%b`; a shallow clone has no history to read. --commit and --generated-at fix the footer's commit and time (the defaults are
 `git rev-parse --short HEAD` and the current UTC time). Needs Python 3 and PyYAML only.
 """
 
@@ -41,7 +41,11 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
-MERGE_RE = re.compile(r"^Merge pull request #\d+ from [^/\s]+/task/(TASK-[CM]\d+-\d+)\s*$")
+MERGE_RE = re.compile(r"^Merge pull request #\d+ from [^/\s]+/(\S+)\s*$")
+# Cloud sessions push to `claude/...` branches, so the head alone misses most merges: the title's ids count too. A task
+# split over several PRs counts as done at the first that names it (the plan gives no per-PR share).
+TITLE_IDS_RE = re.compile(r"\(([^()]*\b(?:TASK-)?[CM]\d+-\d+[^()]*)\)\s*$")
+ID_RUN_RE = re.compile(r"\b(?:TASK-)?([CM]\d+)-(\d+)(?:\s+to\s+(?:(?:TASK-)?[CM]\d+-)?(\d+))?")
 HEAD_RE = re.compile(r"^task/(TASK-[CM]\d+-\d+)$")
 MILESTONE_RE = re.compile(r"^## (C\d+) [—-] (.+?)\s*$")
 TASK_ID_RE = re.compile(r"^TASK-[CM](\d+)-(\d+)$")
@@ -115,7 +119,31 @@ def milestone_names(path):
 
 def merged_ids(subjects):
     """The task ids whose PR merge commit is among `subjects`."""
-    return {m.group(1) for s in subjects for m in [MERGE_RE.match(s.strip())] if m}
+    out = set()
+    for line in subjects:
+        subject, _, body = line.partition("\t")
+        m = MERGE_RE.match(subject.strip())
+        if not m:
+            continue
+        h = HEAD_RE.match(m.group(1))
+        if h:
+            out.add(h.group(1))
+        out |= title_ids(body.strip())
+    return out
+
+
+def title_ids(title):
+    """The task ids in the brackets a title ends with; "TASK-M2-101 to 104" is the run 101..104."""
+    m = TITLE_IDS_RE.search(title)
+    if not m:
+        return set()
+    out = set()
+    for r in ID_RUN_RE.finditer(m.group(1)):
+        lo, hi = int(r.group(2)), int(r.group(3) or r.group(2))
+        if hi < lo or hi - lo > 50:
+            hi = lo
+        out |= {f"TASK-{r.group(1)}-{i:0{len(r.group(2))}d}" for i in range(lo, hi + 1)}
+    return out
 
 
 def git(*args):
@@ -129,13 +157,15 @@ def open_pr_ids(path):
     headRefName,isCrossRepository` output. A PR from a fork, or one the list doesn't mark as from this repository,
     is skipped."""
     prs = json.loads(Path(path).read_text(encoding="utf-8"))
-    return {
-        m.group(1)
-        for pr in prs
-        if pr.get("isCrossRepository") is False
-        for m in [HEAD_RE.match(pr.get("headRefName", ""))]
-        if m
-    }
+    out = set()
+    for pr in prs:
+        if pr.get("isCrossRepository") is not False:
+            continue
+        h = HEAD_RE.match(pr.get("headRefName", ""))
+        if h:
+            out.add(h.group(1))
+        out |= title_ids(pr.get("title", ""))
+    return out
 
 
 def states(tasks, merged, in_review):
@@ -279,7 +309,7 @@ def main(argv=None):
     p.add_argument("--tasks", default=str(ROOT / "plan/tasks.yaml"))
     p.add_argument("--milestones", default=str(ROOT / "plan/PLAN.md"))
     p.add_argument("--open-prs", help="JSON from `gh pr list --state open --json headRefName`")
-    p.add_argument("--merges", help="merge-commit subjects, one per line, in place of git log")
+    p.add_argument("--merges", help="merge commits, one \"subject<TAB>body\" per line, in place of git log")
     p.add_argument("--commit", help="the commit the banner reflects (default: git rev-parse --short HEAD)")
     p.add_argument("--generated-at", help="the footer's time (default: now, UTC)")
     p.add_argument(
@@ -294,7 +324,7 @@ def main(argv=None):
     if a.merges:
         subjects = Path(a.merges).read_text(encoding="utf-8").splitlines()
     else:
-        subjects = git("log", "--merges", "--format=%s").splitlines()
+        subjects = git("log", "--merges", "--format=%s%x09%b").splitlines()
     in_review = open_pr_ids(a.open_prs) if a.open_prs else set()
     state = states(tasks, merged_ids(subjects), in_review)
     commit = a.commit or git("rev-parse", "--short", "HEAD").strip()
