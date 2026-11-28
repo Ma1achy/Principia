@@ -18,6 +18,13 @@
 //! § 3.1's and § 3.2's further rows are TASK-M2-74's and TASK-M2-76's with their round trips, so they are left to
 //! those tasks rather than registered with no case.
 //!
+//! **Slopes.** Every row declares a slope tier ([`Slope`]): exact, its forward written once more over
+//! `kernel::dual::Dual` (the `d…` functions), so its slope along any of the state's 15 components is the dual's; or none,
+//! for a row with no forward of its own (the rows closed only on a chart's pair, whose slope is that chart's), a functional
+//! and an unclassified row. A row flags the kink sites of its forward in [`Row::kinks`]. The tier is `None` in `base`, so a
+//! row added without one is reported by `slope_tier_declared`. The implicit tier (a slope by the implicit-function rule
+//! on a numerical inverse) has no row today and no variant here.
+//!
 //! **The shape sphere's `θ` and `φ`** are read in the chart's home frame, `n₀ = (1, 0, 0)`, `e₁ = (0, 1, 0)`,
 //! `e₂ = (0, 0, 1)` (chart_reference § 3.1): `φ = acos n·n₀`, `θ = atan2(n·e₂, n·e₁)`. In that frame `φ = 2α` and
 //! `θ = β`, which the pair table records.
@@ -25,15 +32,19 @@
 use std::f64::consts::TAU;
 
 use kernel::chart::BlockTouch;
+use kernel::chart::Float;
 use kernel::decode::{decode, Ic, Latent as Controls};
+use kernel::dual::Dual;
 use kernel::encode::encode;
 use kernel::generated::links::{Defaults, Link, Selection};
 use kernel::shape::{shape_vec, weighted_jacobi};
+use kernel::slope::{Kink, Tier};
 use kernel::stage::decode::{
     BurrauDefaults, BurrauThetaDeltaMDefaults, BurrauThetaKDefaults, BurrauThetaLzDefaults,
     DecodeVariant, EuclidPlaneDefaults, InvariantLEDefaults, InvariantLKDefaults,
     MassSimplexDefaults, MixedAlphaVirialDefaults, MixedMu1AlphaDefaults, ShapeSphereDefaults,
 };
+use kernel::Real;
 
 use super::axis::{AxisKind, Block};
 use crate::contract::sim_config::Latent;
@@ -136,6 +147,28 @@ pub type Forward = fn(&Ic<f64>) -> f64;
 /// has no state there.
 pub type Invert = fn(&Ic<f64>, f64) -> Option<Ic<f64>>;
 
+/// A row's forward on the dual numbers: the same value as [`Forward`], with its slope along the seeded state component.
+pub type DualForward = fn(&Ic<Dual>) -> Dual;
+
+/// A row's declared slope (design § 3; the module's note): its tier, and for the exact tier the forward that gives it.
+#[derive(Clone, Copy, Debug)]
+pub enum Slope {
+    /// Tier 1: the row's slope along each state component is its [`DualForward`]'s.
+    Exact(DualForward),
+    /// Tier 3: no slope; each sample is evaluated on the CPU, and the row is still a valid axis.
+    None,
+}
+
+impl Slope {
+    /// The tier this declares.
+    pub fn tier(self) -> Tier {
+        match self {
+            Slope::Exact(_) => Tier::Exact,
+            Slope::None => Tier::None,
+        }
+    }
+}
+
 /// One row of the registry (the module's note).
 #[derive(Clone, Copy, Debug)]
 pub struct Row {
@@ -168,6 +201,11 @@ pub struct Row {
     pub invert: Option<Invert>,
     /// Its definition as a combination of other rows, for a row a typed expression can match.
     pub definition: Option<fn() -> Expr>,
+    /// Its slope declaration. `None` is a row that has declared nothing, which `slope_tier_declared` reports: a row a
+    /// later task adds is caught with no wiring of its own.
+    pub slope: Option<Slope>,
+    /// The kink sites it flags: where its forward changes branch. Empty for a tier-3 row.
+    pub kinks: &'static [Kink],
 }
 
 /// An expression over rows, in the stain's expression syntax's subset (§ 3, "Combinations"; R-509).
@@ -686,6 +724,195 @@ fn virial_definition() -> Expr {
     )
 }
 
+// ── Forwards on the dual numbers ──────────────────────────────────────────────────────────────────────────────────
+
+// Each is the f64 forward above written once more over `Dual`, the same formula, so its value is the forward's (a test
+// holds it to that) and its slope is the exact one. Don't call the f64 forward's `libm` or `f64::clamp`: a dual has
+// neither, and a clamp's slope is the kink the row flags.
+
+/// The controls' coordinate `K`, the encode at `Dual`.
+fn dz<const K: usize>(ic: &Ic<Dual>) -> Dual {
+    encode::<Defaults, Dual>(ic).z.z[K]
+}
+
+fn dz_0(ic: &Ic<Dual>) -> Dual {
+    dz::<0>(ic)
+}
+
+fn dz_1(ic: &Ic<Dual>) -> Dual {
+    dz::<1>(ic)
+}
+
+fn dz_2(ic: &Ic<Dual>) -> Dual {
+    dz::<2>(ic)
+}
+
+fn dz_3(ic: &Ic<Dual>) -> Dual {
+    dz::<3>(ic)
+}
+
+fn dz_4(ic: &Ic<Dual>) -> Dual {
+    dz::<4>(ic)
+}
+
+fn dz_5(ic: &Ic<Dual>) -> Dual {
+    dz::<5>(ic)
+}
+
+fn dz_6(ic: &Ic<Dual>) -> Dual {
+    dz::<6>(ic)
+}
+
+fn dz_7(ic: &Ic<Dual>) -> Dual {
+    dz::<7>(ic)
+}
+
+fn dalpha(ic: &Ic<Dual>) -> Dual {
+    encode::<Defaults, Dual>(ic).blocks.alpha
+}
+
+fn dbeta(ic: &Ic<Dual>) -> Dual {
+    encode::<Defaults, Dual>(ic).blocks.beta
+}
+
+fn dnorm(v: [Dual; 2]) -> Dual {
+    Real::hypotenuse(v[0], v[1])
+}
+
+fn djacobi(ic: &Ic<Dual>) -> ([Dual; 2], [Dual; 2]) {
+    let [m0, m1, _] = ic.m;
+    let r = ic.r;
+    let r01 = [
+        (m0 * r[0][0] + m1 * r[1][0]) / (m0 + m1),
+        (m0 * r[0][1] + m1 * r[1][1]) / (m0 + m1),
+    ];
+    (
+        [r[1][0] - r[0][0], r[1][1] - r[0][1]],
+        [r[2][0] - r01[0], r[2][1] - r01[1]],
+    )
+}
+
+fn djacobi_ratio(ic: &Ic<Dual>) -> Dual {
+    let (rho, lambda) = djacobi(ic);
+    dnorm(lambda) / dnorm(rho)
+}
+
+fn dshape(ic: &Ic<Dual>) -> [Dual; 3] {
+    let (rho_t, lambda_t) = weighted_jacobi(ic.r, ic.m);
+    shape_vec(rho_t, lambda_t)
+}
+
+/// `θ`'s branch cut at `θ = 0` is `rem_euclid`'s; its slope is the angle's on either side.
+fn dshape_theta(ic: &Ic<Dual>) -> Dual {
+    let n = dshape(ic);
+    let t = Real::arctan2(n[2], n[1]);
+    if t.v < 0.0 {
+        t + Dual::constant(TAU)
+    } else {
+        t
+    }
+}
+
+fn dshape_phi(ic: &Ic<Dual>) -> Dual {
+    let x = dshape(ic)[0];
+    let one = Dual::constant(1.0);
+    Real::arccosine(Float::max(Float::min(x, one), -one))
+}
+
+fn dm1_over_m0(ic: &Ic<Dual>) -> Dual {
+    ic.m[1] / ic.m[0]
+}
+
+fn dm0_over_m1(ic: &Ic<Dual>) -> Dual {
+    ic.m[0] / ic.m[1]
+}
+
+fn dm2_over_m0(ic: &Ic<Dual>) -> Dual {
+    ic.m[2] / ic.m[0]
+}
+
+fn dseparation(ic: &Ic<Dual>, i: usize, j: usize) -> Dual {
+    dnorm([ic.r[i][0] - ic.r[j][0], ic.r[i][1] - ic.r[j][1]])
+}
+
+fn dkinetic(ic: &Ic<Dual>) -> Dual {
+    let two = Dual::constant(2.0);
+    (0..3)
+        .map(|i| (ic.p[i][0] * ic.p[i][0] + ic.p[i][1] * ic.p[i][1]) / (two * ic.m[i]))
+        .fold(Dual::constant(0.0), |a, b| a + b)
+}
+
+fn dpotential(ic: &Ic<Dual>) -> Dual {
+    let m = ic.m;
+    -(m[0] * m[1] / dseparation(ic, 0, 1)
+        + m[0] * m[2] / dseparation(ic, 0, 2)
+        + m[1] * m[2] / dseparation(ic, 1, 2))
+}
+
+fn denergy(ic: &Ic<Dual>) -> Dual {
+    dkinetic(ic) + dpotential(ic)
+}
+
+fn dangular_momentum(ic: &Ic<Dual>) -> Dual {
+    (0..3)
+        .map(|i| ic.r[i][0] * ic.p[i][1] - ic.r[i][1] * ic.p[i][0])
+        .fold(Dual::constant(0.0), |a, b| a + b)
+}
+
+fn dvirial(ic: &Ic<Dual>) -> Dual {
+    Dual::constant(2.0) * dkinetic(ic) / -dpotential(ic)
+}
+
+fn dinertia(ic: &Ic<Dual>) -> Dual {
+    (0..3)
+        .map(|i| ic.m[i] * (ic.r[i][0] * ic.r[i][0] + ic.r[i][1] * ic.r[i][1]))
+        .fold(Dual::constant(0.0), |a, b| a + b)
+}
+
+fn dsize(ic: &Ic<Dual>) -> Dual {
+    Float::sqrt(dinertia(ic))
+}
+
+/// `min/max`: the slope is that of the smallest over the largest separation, switching where two separations tie.
+fn dseparation_ratio(ic: &Ic<Dual>) -> Dual {
+    let s = [
+        dseparation(ic, 0, 1),
+        dseparation(ic, 0, 2),
+        dseparation(ic, 1, 2),
+    ];
+    let (lo, hi) = (
+        Float::min(Float::min(s[0], s[1]), s[2]),
+        Float::max(Float::max(s[0], s[1]), s[2]),
+    );
+    lo / hi
+}
+
+fn dvelocity01(ic: &Ic<Dual>) -> [Dual; 2] {
+    let v = |i: usize| [ic.p[i][0] / ic.m[i], ic.p[i][1] / ic.m[i]];
+    let (v0, v1) = (v(0), v(1));
+    [v1[0] - v0[0], v1[1] - v0[1]]
+}
+
+fn dbinding01(ic: &Ic<Dual>) -> Dual {
+    let [m0, m1, _] = ic.m;
+    let mu = m0 * m1 / (m0 + m1);
+    let v = dvelocity01(ic);
+    Dual::constant(0.5) * mu * (v[0] * v[0] + v[1] * v[1]) - m0 * m1 / dseparation(ic, 0, 1)
+}
+
+fn deccentricity01(ic: &Ic<Dual>) -> Dual {
+    let total = ic.m[0] + ic.m[1];
+    let (rho, _) = djacobi(ic);
+    let v = dvelocity01(ic);
+    let eps = Dual::constant(0.5) * (v[0] * v[0] + v[1] * v[1]) - total / dnorm(rho);
+    let h = rho[0] * v[1] - rho[1] * v[0];
+    let under = Float::max(
+        Dual::constant(1.0) + Dual::constant(2.0) * eps * h * h / (total * total),
+        Dual::constant(0.0),
+    );
+    Float::sqrt(under)
+}
+
 // ── The table ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 const CONFIG: BlockTouch = BlockTouch {
@@ -731,6 +958,8 @@ const fn base(name: &'static str, writes: BlockTouch) -> Row {
         forward: None,
         invert: None,
         definition: None,
+        slope: None,
+        kinks: &[],
     }
 }
 
@@ -809,106 +1038,179 @@ const DIRECTION: &str = "the momenta's direction";
 /// What a mass ratio holds.
 const THIRD_MASS: &str = "the third mass, and the configuration and momentum controls";
 
+/// `row` with its slope declared exact, by `f`, and the kink sites it flags.
+const fn exact(row: Row, f: DualForward, kinks: &'static [Kink]) -> Row {
+    Row {
+        slope: Some(Slope::Exact(f)),
+        kinks,
+        ..row
+    }
+}
+
+/// `row` with its slope declared tier 3: none, each sample evaluated on the CPU.
+const fn no_slope(row: Row) -> Row {
+    Row {
+        slope: Some(Slope::None),
+        ..row
+    }
+}
+
 /// The registry's rows (the module's note).
 pub static ROWS: [Row; 39] = [
-    latent("z_α", Block::Config, z_alpha, set_z_alpha),
-    latent("z_β", Block::Config, z_beta, set_z_beta),
-    latent("z_q0", Block::Momentum, z_q0, set_z_q0),
-    latent("z_q1", Block::Momentum, z_q1, set_z_q1),
-    latent("z_q2", Block::Momentum, z_q2, set_z_q2),
-    latent("z_q3", Block::Momentum, z_q3, set_z_q3),
-    latent("z_μ1", Block::Mass, z_mu1, set_z_mu1),
-    latent("z_μ2", Block::Mass, z_mu2, set_z_mu2),
-    Row {
-        angle_like: true,
-        holds: "β, the masses and the momentum controls",
-        ..derived("α", CONFIG, alpha, set_alpha)
-    },
-    Row {
-        angle_like: true,
-        extension: Extension::Periodic,
-        holds: "α, the masses and the momentum controls",
-        ..derived("β", CONFIG, beta, set_beta)
-    },
-    Row {
-        holds: "β, the masses and the momentum controls",
-        ..derived("‖λ‖/‖ρ‖", CONFIG, jacobi_ratio, set_jacobi_ratio)
-    },
-    Row {
-        angle_like: true,
-        extension: Extension::Periodic,
-        forward: Some(shape_theta),
-        ..on_pair(
-            "θ",
-            AxisKind::DerivedInBlock,
-            CONFIG,
-            "ShapeSphere",
-            "the masses and the momenta",
-        )
-    },
-    Row {
-        angle_like: true,
-        forward: Some(shape_phi),
-        ..on_pair(
-            "φ",
-            AxisKind::DerivedInBlock,
-            CONFIG,
-            "ShapeSphere",
-            "the masses and the momenta",
-        )
-    },
-    Row {
-        class: Class::Conserved(Exactness::Exact),
-        holds: THIRD_MASS,
-        ..derived("m₁/m₀", MASS, m1_over_m0, set_m1_over_m0)
-    },
-    Row {
-        class: Class::Conserved(Exactness::Exact),
-        holds: THIRD_MASS,
-        ..derived("m₀/m₁", MASS, m0_over_m1, set_m0_over_m1)
-    },
-    Row {
-        class: Class::Conserved(Exactness::Exact),
-        holds: THIRD_MASS,
-        ..derived("m₂/m₀", MASS, m2_over_m0, set_m2_over_m0)
-    },
-    Row {
-        class: Class::Conserved(Exactness::Exact),
-        fixed_by: Some(Hold::E),
-        ..invariant("E", energy, set_energy, DIRECTION)
-    },
-    Row {
-        fixed_by: Some(Hold::E),
-        ..invariant("K", kinetic, set_kinetic, DIRECTION)
-    },
-    Row {
-        fixed_by: Some(Hold::E),
-        ..invariant("KE", kinetic, set_kinetic, DIRECTION)
-    },
-    Row {
-        class: Class::Conserved(Exactness::Exact),
-        fixed_by: Some(Hold::Lz),
-        ..invariant(
-            "L_z",
-            angular_momentum,
-            set_angular_momentum,
-            "the momenta's part orthogonal to Jr in ⟨·,·⟩_m",
-        )
-    },
-    Row {
-        scale: Scale::Free,
-        fixed_by: Some(Hold::E),
-        definition: Some(virial_definition),
-        ..invariant("Q", virial, set_virial, DIRECTION)
-    },
-    on_pair(
+    exact(
+        latent("z_α", Block::Config, z_alpha, set_z_alpha),
+        dz_0,
+        &[],
+    ),
+    exact(latent("z_β", Block::Config, z_beta, set_z_beta), dz_1, &[]),
+    exact(latent("z_q0", Block::Momentum, z_q0, set_z_q0), dz_2, &[]),
+    exact(latent("z_q1", Block::Momentum, z_q1, set_z_q1), dz_3, &[]),
+    exact(latent("z_q2", Block::Momentum, z_q2, set_z_q2), dz_4, &[]),
+    exact(latent("z_q3", Block::Momentum, z_q3, set_z_q3), dz_5, &[]),
+    exact(latent("z_μ1", Block::Mass, z_mu1, set_z_mu1), dz_6, &[]),
+    exact(latent("z_μ2", Block::Mass, z_mu2, set_z_mu2), dz_7, &[]),
+    exact(
+        Row {
+            angle_like: true,
+            holds: "β, the masses and the momentum controls",
+            ..derived("α", CONFIG, alpha, set_alpha)
+        },
+        dalpha,
+        &[],
+    ),
+    exact(
+        Row {
+            angle_like: true,
+            extension: Extension::Periodic,
+            holds: "α, the masses and the momentum controls",
+            ..derived("β", CONFIG, beta, set_beta)
+        },
+        dbeta,
+        &[],
+    ),
+    exact(
+        Row {
+            holds: "β, the masses and the momentum controls",
+            ..derived("‖λ‖/‖ρ‖", CONFIG, jacobi_ratio, set_jacobi_ratio)
+        },
+        djacobi_ratio,
+        &[Kink::Pole],
+    ),
+    exact(
+        Row {
+            angle_like: true,
+            extension: Extension::Periodic,
+            forward: Some(shape_theta),
+            ..on_pair(
+                "θ",
+                AxisKind::DerivedInBlock,
+                CONFIG,
+                "ShapeSphere",
+                "the masses and the momenta",
+            )
+        },
+        dshape_theta,
+        &[Kink::Pole],
+    ),
+    exact(
+        Row {
+            angle_like: true,
+            forward: Some(shape_phi),
+            ..on_pair(
+                "φ",
+                AxisKind::DerivedInBlock,
+                CONFIG,
+                "ShapeSphere",
+                "the masses and the momenta",
+            )
+        },
+        dshape_phi,
+        &[Kink::Pole],
+    ),
+    exact(
+        Row {
+            class: Class::Conserved(Exactness::Exact),
+            holds: THIRD_MASS,
+            ..derived("m₁/m₀", MASS, m1_over_m0, set_m1_over_m0)
+        },
+        dm1_over_m0,
+        &[],
+    ),
+    exact(
+        Row {
+            class: Class::Conserved(Exactness::Exact),
+            holds: THIRD_MASS,
+            ..derived("m₀/m₁", MASS, m0_over_m1, set_m0_over_m1)
+        },
+        dm0_over_m1,
+        &[],
+    ),
+    exact(
+        Row {
+            class: Class::Conserved(Exactness::Exact),
+            holds: THIRD_MASS,
+            ..derived("m₂/m₀", MASS, m2_over_m0, set_m2_over_m0)
+        },
+        dm2_over_m0,
+        &[],
+    ),
+    exact(
+        Row {
+            class: Class::Conserved(Exactness::Exact),
+            fixed_by: Some(Hold::E),
+            ..invariant("E", energy, set_energy, DIRECTION)
+        },
+        denergy,
+        &[],
+    ),
+    exact(
+        Row {
+            fixed_by: Some(Hold::E),
+            ..invariant("K", kinetic, set_kinetic, DIRECTION)
+        },
+        dkinetic,
+        &[],
+    ),
+    exact(
+        Row {
+            fixed_by: Some(Hold::E),
+            ..invariant("KE", kinetic, set_kinetic, DIRECTION)
+        },
+        dkinetic,
+        &[],
+    ),
+    exact(
+        Row {
+            class: Class::Conserved(Exactness::Exact),
+            fixed_by: Some(Hold::Lz),
+            ..invariant(
+                "L_z",
+                angular_momentum,
+                set_angular_momentum,
+                "the momenta's part orthogonal to Jr in ⟨·,·⟩_m",
+            )
+        },
+        dangular_momentum,
+        &[],
+    ),
+    exact(
+        Row {
+            scale: Scale::Free,
+            fixed_by: Some(Hold::E),
+            definition: Some(virial_definition),
+            ..invariant("Q", virial, set_virial, DIRECTION)
+        },
+        dvirial,
+        &[],
+    ),
+    no_slope(on_pair(
         "ν",
         AxisKind::CoupledCurve,
         CONFIG_MASS,
         "Burrau",
         "the momenta: the construction's",
-    ),
-    Row {
+    )),
+    no_slope(Row {
         angle_like: true,
         ..on_pair(
             "θ_B",
@@ -917,94 +1219,122 @@ pub static ROWS: [Row; 39] = [
             "BurrauThetaK",
             "the momenta: the construction's",
         )
-    },
-    on_pair(
+    }),
+    no_slope(on_pair(
         "δm",
         AxisKind::DerivedInBlock,
         MASS,
         "BurrauThetaDeltaM",
         "the curve's point",
-    ),
-    on_pair(
+    )),
+    no_slope(on_pair(
         "m",
         AxisKind::DerivedInBlock,
         MASS,
         "EuclidPlane",
         "the Burrau triangle at ν",
-    ),
-    on_pair(
+    )),
+    no_slope(on_pair(
         "m₁ = x",
         AxisKind::DerivedInBlock,
         MASS,
         "MassSimplex",
         "the Burrau triangle at ν₀, at rest",
-    ),
-    on_pair(
+    )),
+    no_slope(on_pair(
         "y = (1 − x)·v",
         AxisKind::DerivedInBlock,
         MASS,
         "MassSimplex",
         "the Burrau triangle at ν₀, at rest",
+    )),
+    exact(
+        Row {
+            kind: Some(AxisKind::CrossBlockInvariant),
+            scale: Scale::Gauge,
+            warp_written: false,
+            forward: Some(potential),
+            ..base("PE", MOMENTUM)
+        },
+        dpotential,
+        &[],
     ),
-    Row {
-        kind: Some(AxisKind::CrossBlockInvariant),
-        scale: Scale::Gauge,
-        warp_written: false,
-        forward: Some(potential),
-        ..base("PE", MOMENTUM)
-    },
-    Row {
-        forward: Some(separation_ratio),
-        ..base("min(r_ij)/max(r_ij)", CONFIG)
-    },
-    Row {
-        scale: Scale::Gauge,
-        forward: Some(binding01),
-        ..base("pair binding energy (0, 1)", NONE)
-    },
-    Row {
-        class: Class::Conserved(Exactness::Approximate),
-        forward: Some(eccentricity01),
-        ..base("inner eccentricity e (0, 1)", NONE)
-    },
-    Row {
-        scale: Scale::SizeOnly,
-        forward: Some(inertia),
-        ..base("I", NONE)
-    },
-    Row {
-        scale: Scale::SizeOnly,
-        forward: Some(size),
-        ..base("R", NONE)
-    },
-    Row {
-        scale: Scale::SizeOnly,
-        forward: Some(size),
-        ..base("ℓ", NONE)
-    },
+    exact(
+        Row {
+            forward: Some(separation_ratio),
+            ..base("min(r_ij)/max(r_ij)", CONFIG)
+        },
+        dseparation_ratio,
+        &[Kink::OrderSwitch],
+    ),
+    exact(
+        Row {
+            scale: Scale::Gauge,
+            forward: Some(binding01),
+            ..base("pair binding energy (0, 1)", NONE)
+        },
+        dbinding01,
+        &[],
+    ),
+    exact(
+        Row {
+            class: Class::Conserved(Exactness::Approximate),
+            forward: Some(eccentricity01),
+            ..base("inner eccentricity e (0, 1)", NONE)
+        },
+        deccentricity01,
+        &[Kink::ClampEdge],
+    ),
+    exact(
+        Row {
+            scale: Scale::SizeOnly,
+            forward: Some(inertia),
+            ..base("I", NONE)
+        },
+        dinertia,
+        &[],
+    ),
+    exact(
+        Row {
+            scale: Scale::SizeOnly,
+            forward: Some(size),
+            ..base("R", NONE)
+        },
+        dsize,
+        &[],
+    ),
+    exact(
+        Row {
+            scale: Scale::SizeOnly,
+            forward: Some(size),
+            ..base("ℓ", NONE)
+        },
+        dsize,
+        &[],
+    ),
     // The plan is unclear here: § 3.3 says a functional has "no row in the registry, and none may be added", and § 12's
     // `primitive_class` asks that one be refused as an axis by name; chose to register two, classed functional, with
     // no kind, forward or inverse, so that picking one is refused `Functional` by name and nothing else reads them.
-    Row {
+    no_slope(Row {
         class: Class::Functional,
         ..base("minimum separation over the run", NONE)
-    },
-    Row {
+    }),
+    no_slope(Row {
         class: Class::Functional,
         ..base("escape time t_end", NONE)
-    },
-    Row {
+    }),
+    no_slope(Row {
         class: Class::Unclassified,
         ..base("isosceles family with matched velocities", NONE)
-    },
-    Row {
+    }),
+    no_slope(Row {
         class: Class::Unclassified,
         ..base("BHH (a, c; L)", NONE)
-    },
-    Row {
+    }),
+    no_slope(Row {
         class: Class::Unclassified,
         ..base("Mikkola–Hietarinta (R, θ)", NONE)
-    },
+    }),
 ];
 
 /// The registry: [`ROWS`], and any rows a caller adds (a test's own).
