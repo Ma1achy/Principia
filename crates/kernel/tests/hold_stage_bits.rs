@@ -1,7 +1,6 @@
-//! The decode stage's hold step (`kernel::decode::hold::apply_shared`) on a fixed set of decodes, at f64 and f32: its
-//! outputs' bits equal, case by case, those of the step as it was when it computed both arms and selected
-//! ([`selected`], a frozen copy over the same `hold`), so running the hold only where the switch is on changed no
-//! result (`hold_stage_bits_fixed`).
+//! The decode stage's hold step (`kernel::decode::hold::apply_shared`), which runs the hold only where the `L_z` switch
+//! is on, equals bit for bit, case by case over the set below at f64 and f32, a reference step that runs `hold` and
+//! `η_E` both and selects on the switch ([`selected`]) (`hold_stage_bits_fixed`).
 //!
 //! The two are compared in one process, not against digests recorded on one machine: the set's f64 decodes differ
 //! between aarch64 and x86_64, so a recorded digest holds on one platform only.
@@ -13,10 +12,9 @@
 //! needs `E* = E₀` exactly.
 //!
 //! The momenta are compared as bits; the descriptor and the tag by their printed forms, which hide a NaN's sign and
-//! payload, but the descriptor is formed from those momenta by code the change left alone.
+//! payload; both steps form the descriptor from the momenta with the same `describe_decoded`.
 //!
-//! **Pass criterion, written before the run**: every case's outputs equal the frozen step's, exactly, at both
-//! precisions. The control scales `L*` by `1 + 2⁻²⁰` in the step under test alone and must make them differ.
+//! The control scales `L*` by `1 + 2⁻²⁰` in the step under test alone, which must make the outputs differ.
 
 mod decode_support;
 mod hold_support;
@@ -36,9 +34,9 @@ use kernel::generated::links::Defaults;
 use kernel::payload::PayloadReal;
 use validation::negative_control;
 
-/// The decode stage's step as it was before it branched: [`hold`] on a decode and `η_E` alone both computed, the
-/// switch selecting the momenta, the tag and the outcome, the descriptor formed from the chosen IC. Frozen here as the
-/// reference the branched step must equal bit for bit; don't update it to follow the kernel.
+/// The reference step: [`hold`] on a decode and `η_E` alone both computed, the switch selecting the momenta, the tag and
+/// the outcome, the descriptor formed from the chosen IC. The branched step must equal it bit for bit; don't update it
+/// to follow the kernel.
 fn selected<R: ExactSign + PayloadReal>(
     decoded: Decoded<R>,
     e_star: Option<R>,
@@ -148,7 +146,7 @@ where
     out
 }
 
-/// The cases at `R` where the step differs from the frozen one, the step's `L*` scaled by `1 + 2⁻²⁰` where `nudge`,
+/// The cases at `R` where the step differs from the reference [`selected`], the step's `L*` scaled by `1 + 2⁻²⁰` where `nudge`,
 /// with the first such case, and the outcomes the step reached.
 fn differ<R>(nudge: bool) -> (usize, Option<String>, BTreeSet<String>)
 where
@@ -196,7 +194,7 @@ where
     (count, first, seen)
 }
 
-/// The step against the frozen one at both precisions, the step's `L*` nudged where `nudge`.
+/// The step against the reference at both precisions, the step's `L*` nudged where `nudge`.
 fn check(nudge: bool) {
     let (n64, first64, seen64) = differ::<f64>(nudge);
     let (n32, first32, seen32) = differ::<f32>(nudge);

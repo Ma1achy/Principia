@@ -66,6 +66,7 @@ fn at<T: Copy, const N: usize>(a: &[T; N], i: usize) -> T {
     }
     #[cfg(not(target_arch = "spirv"))]
     {
+        debug_assert!(i < N);
         a[i]
     }
 }
@@ -81,6 +82,7 @@ fn put<T, const N: usize>(a: &mut [T; N], i: usize, x: T) {
     }
     #[cfg(not(target_arch = "spirv"))]
     {
+        debug_assert!(i < N);
         a[i] = x;
     }
 }
