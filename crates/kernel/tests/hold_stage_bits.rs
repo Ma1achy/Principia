@@ -1,18 +1,22 @@
 //! The decode stage's hold step (`kernel::decode::hold::apply_shared`) on a fixed set of decodes, at f64 and f32: its
-//! outputs' bits, digested, equal those the step gave when it computed both arms and selected
-//! (`hold_stage_bits_fixed`), so running the hold only where the switch is on changed no result.
+//! outputs' bits equal, case by case, those of the step as it was when it computed both arms and selected
+//! ([`selected`], a frozen copy over the same `hold`), so running the hold only where the switch is on changed no
+//! result (`hold_stage_bits_fixed`).
+//!
+//! The two are compared in one process, not against digests recorded on one machine: the set's f64 decodes differ
+//! between aarch64 and x86_64, so a recorded digest holds on one platform only.
 //!
 //! **The set**: 24 seeded states, each with four velocities (moving, near rigid, exactly rigid, rest) and one with two
-//! bodies coincident (the collision pole), each untagged and tagged; under every `E*` row (off, above `E₀`, below `U`, `U + ½`),
-//! every `L*` row (off, 0, near the state's own, far above the floor, 1) and every chart flag (`E` forbidden or not; `L_z`
-//! free, an axis, or held by construction). The census must reach every outcome but `AtTarget`, which needs `E* = E₀`
-//! exactly.
+//! bodies coincident (the collision pole), each untagged and tagged; under every `E*` row (off, above `E₀`, below `U`,
+//! `U + ½`), every `L*` row (off, 0, near the state's own, far above the floor, 1) and every chart flag (`E` forbidden
+//! or not; `L_z` free, an axis, or held by construction). The census must reach every outcome but `AtTarget`, which
+//! needs `E* = E₀` exactly.
 //!
-//! The momenta enter the digest as bits; the descriptor and the tag by their printed forms, which hide a NaN's sign and
+//! The momenta are compared as bits; the descriptor and the tag by their printed forms, which hide a NaN's sign and
 //! payload, but the descriptor is formed from those momenta by code the change left alone.
 //!
-//! **Pass criterion, written before the run**: each precision's digest equals the one recorded from the step before
-//! the change, exactly. The control scales `L*` by `1 + 2⁻²⁰` and must move the digest.
+//! **Pass criterion, written before the run**: every case's outputs equal the frozen step's, exactly, at both
+//! precisions. The control scales `L*` by `1 + 2⁻²⁰` in the step under test alone and must make them differ.
 
 mod decode_support;
 mod hold_support;
@@ -24,23 +28,78 @@ use hold_support::*;
 use kernel::chart::invariant::WarpReal;
 use kernel::chart::{ChartDecode, Latent, LzHold};
 use kernel::decode::descriptor::describe_decoded;
-use kernel::decode::hold::apply_shared;
+use kernel::decode::energy_norm::{self, Outcome};
+use kernel::decode::hold::{apply_shared, hold};
 use kernel::decode::invariant::ExactSign;
 use kernel::decode::{Decoded, Degenerate, Ic};
 use kernel::generated::links::Defaults;
+use kernel::payload::PayloadReal;
 use validation::negative_control;
 
-/// The digests of the step's outputs over the set, recorded from the step that computed both arms and selected.
-const F64_DIGEST: u64 = 0xd392_efcf_4095_7c54;
-const F32_DIGEST: u64 = 0xc19a_e0a6_67cd_9728;
+/// The decode stage's step as it was before it branched: [`hold`] on a decode and `η_E` alone both computed, the
+/// switch selecting the momenta, the tag and the outcome, the descriptor formed from the chosen IC. Frozen here as the
+/// reference the branched step must equal bit for bit; don't update it to follow the kernel.
+fn selected<R: ExactSign + PayloadReal>(
+    decoded: Decoded<R>,
+    e_star: Option<R>,
+    forbids_energy_normalisation: bool,
+    lz_star: Option<R>,
+    lz_hold: LzHold,
+) -> (Decoded<R>, Outcome) {
+    let (on, lz) = match lz_star {
+        Some(l) => (lz_hold == LzHold::Free, l),
+        None => (false, R::zero()),
+    };
+    let base = energy_norm::apply_shared(decoded, e_star, forbids_energy_normalisation);
+    let (e_on, target) = match e_star {
+        Some(e) => (!forbids_energy_normalisation, e),
+        None => (false, R::zero()),
+    };
+    let ic = decoded.ic;
+    let velocity = |i: usize| [ic.p[i][0] / ic.m[i], ic.p[i][1] / ic.m[i]];
+    let v = [velocity(0), velocity(1), velocity(2)];
+    let d = &decoded.descriptor;
+    let h = hold(ic.m, &ic.r, &v, d.V_0, d.r_min_pair_0, lz, e_on, target);
+    let moved = (h.outcome == Outcome::Held) | (h.outcome == Outcome::OnFloor);
+    let momentum = |i: usize| {
+        [
+            if moved {
+                ic.m[i] * h.v[i][0]
+            } else {
+                ic.p[i][0]
+            },
+            if moved {
+                ic.m[i] * h.v[i][1]
+            } else {
+                ic.p[i][1]
+            },
+        ]
+    };
+    let held_p = [momentum(0), momentum(1), momentum(2)];
+    let held_tag = decoded.degenerate.or(h.outcome.tag());
+    let ic = Ic {
+        p: if on { held_p } else { base.0.ic.p },
+        ..decoded.ic
+    };
+    (
+        Decoded {
+            ic,
+            descriptor: describe_decoded(&ic, &decoded.config),
+            degenerate: if on { held_tag } else { base.0.degenerate },
+            ..decoded
+        },
+        if on { h.outcome } else { base.1 },
+    )
+}
 
-/// FNV-1a over `bytes`, continuing from `h`.
-fn fnv(mut h: u64, bytes: &[u8]) -> u64 {
-    for b in bytes {
-        h ^= u64::from(*b);
-        h = h.wrapping_mul(0x0000_0100_0000_01B3);
-    }
-    h
+/// A step's outputs, printed: the momenta's bits, the descriptor, the tag and the outcome.
+fn printed<R: P>(out: &Decoded<R>, outcome: Outcome) -> String {
+    format!(
+        "{:?}|{:?}|{:?}|{outcome:?}",
+        out.ic.p.map(|b| b.map(|x| x.bits())),
+        out.descriptor,
+        out.degenerate
+    )
 }
 
 /// The decodes of the set at `R`: a latent decode's blocks with the IC replaced by each state and the descriptor
@@ -89,15 +148,16 @@ where
     out
 }
 
-/// The digest of the step over the set at `R`, every `L*` scaled by `1 + 2⁻²⁰` where `nudge`, and the outcomes it
-/// reached.
-fn digest<R>(nudge: bool) -> (u64, BTreeSet<String>)
+/// The cases at `R` where the step differs from the frozen one, the step's `L*` scaled by `1 + 2⁻²⁰` where `nudge`,
+/// with the first such case, and the outcomes the step reached.
+fn differ<R>(nudge: bool) -> (usize, Option<String>, BTreeSet<String>)
 where
     R: P + WarpReal + ExactSign,
     Latent<R>: ChartDecode<Param = R>,
 {
     let scale = if nudge { 1.0 + 1.0 / 1_048_576.0 } else { 1.0 };
-    let mut h = 0xCBF2_9CE4_8422_2325;
+    let mut count = 0;
+    let mut first = None;
     let mut seen = BTreeSet::new();
     for d in decodes::<R>() {
         let e0 = d.descriptor.K_0.f() + d.descriptor.V_0.f();
@@ -117,28 +177,29 @@ where
             for l in [None, Some(0.0), Some(l0 + 0.3), Some(40.0), Some(1.0)] {
                 for forbids in [false, true] {
                     for class in [LzHold::Free, LzHold::Axis, LzHold::Construction] {
-                        let l = l.map(|l| R::of(l * scale));
-                        let (out, outcome) = apply_shared(d, e, forbids, l, class);
+                        let (want, want_outcome) = selected(d, e, forbids, l.map(R::of), class);
+                        let (got, outcome) =
+                            apply_shared(d, e, forbids, l.map(|l| R::of(l * scale)), class);
                         seen.insert(format!("{outcome:?}"));
-                        let text = format!(
-                            "{:?}|{:?}|{:?}|{outcome:?}",
-                            out.ic.p.map(|b| b.map(|x| x.bits())),
-                            out.descriptor,
-                            out.degenerate
-                        );
-                        h = fnv(h, text.as_bytes());
+                        let (got, want) = (printed(&got, outcome), printed(&want, want_outcome));
+                        if got != want {
+                            count += 1;
+                            first.get_or_insert(format!(
+                                "{e:?} {l:?} {forbids} {class:?}: {got} against {want}"
+                            ));
+                        }
                     }
                 }
             }
         }
     }
-    (h, seen)
+    (count, first, seen)
 }
 
-/// The step's digest at both precisions, against the recorded ones, `L*` nudged where `nudge`.
+/// The step against the frozen one at both precisions, the step's `L*` nudged where `nudge`.
 fn check(nudge: bool) {
-    let (d64, seen64) = digest::<f64>(nudge);
-    let (d32, seen32) = digest::<f32>(nudge);
+    let (n64, first64, seen64) = differ::<f64>(nudge);
+    let (n32, first32, seen32) = differ::<f32>(nudge);
     // The nudge takes the floor rows off the floor, so the census is the unnudged set's.
     for seen in [&seen64, &seen32].into_iter().filter(|_| !nudge) {
         for want in [
@@ -156,10 +217,10 @@ fn check(nudge: bool) {
             );
         }
     }
-    assert_eq!(
-        (d64, d32),
-        (F64_DIGEST, F32_DIGEST),
-        "the held decodes' bits moved: digests {d64:#x} (f64), {d32:#x} (f32)"
+    assert!(
+        n64 == 0 && n32 == 0,
+        "the held decodes' bits moved: {n64} cases at f64, {n32} at f32; first {:?}",
+        first64.or(first32)
     );
 }
 
@@ -170,7 +231,7 @@ fn hold_stage_bits_fixed() {
 
 negative_control!(
     hold_stage_bits_fixed,
-    "a 2⁻²⁰ relative change in L* moves the digest",
+    "a 2⁻²⁰ relative change in L* moves the step's bits",
     expected = "the held decodes' bits moved",
     check(true)
 );
