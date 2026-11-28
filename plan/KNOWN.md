@@ -94,3 +94,13 @@ delete its line when it's done.
   one file each, and which §9.6's six groups file all as diagnostic; the other bivariate presets (the shape-sphere n̂ ×
   FTLE, × diffusion, × ensemble spread and × t_end); the `fuzziness` and `map_gradient` post nodes (a post sees one
   fragment, so the map gradient needs a pass over the colour buffer); the OKLab-uniform swatch set listing.
+- **The GPU's held decode and the CPU's give different tags.** On main and after PR #147, the decode stage's held
+  decode on the GPU (Metal) under `E* = 5`, `L* = 0.3` on the latent chart gives a different `DEGENERATE` tag from the
+  CPU's f32 `sample_held` at 2,935 of 4,096 points, though the hold's tags are meant to be exact. The 1-ulp GPU/CPU
+  differences of the decode feed the exact tests, so some flips are expected, but not that many. Nothing dispatches a
+  held GPU decode yet; fix it before the GPU hold is wired into the app. Measured with a scratch diagnostic (PR #147's
+  `zz_hold_diag`, not committed). To reproduce, use the chart `z₀ = (0.1, −0.2, 0.3, 0.05, −0.1, 0.2, 0.15, −0.25)`,
+  `q₁ = 0.3·e₀` and `q₂ = 0.3·e₁`, and a 64 × 64 grid of `(u, v)` over `[−0.9, 0.9)²`. Dispatch
+  `DecodeStage::<LatentDefaults>::dispatch_uniforms` with the energy row `stage::decode::hold(Some(5.0), Some(0.3))`,
+  then compare its tag words with `stage::decode::tag(sample_held::<Latent<f32>, Defaults, f32>(…).degenerate)` at
+  each point.

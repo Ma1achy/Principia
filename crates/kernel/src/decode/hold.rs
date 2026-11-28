@@ -41,7 +41,7 @@ use crate::chart::LzHold;
 use crate::decode::descriptor::describe_decoded;
 use crate::decode::energy_norm::{self, largest, Outcome};
 use crate::decode::invariant::{feasibility_input, ExactSign};
-use crate::decode::{Decoded, Ic};
+use crate::decode::{Decoded, Degenerate, Ic};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
@@ -51,6 +51,39 @@ fn select<T: Copy>(c: bool, t: T, f: T) -> T {
         t
     } else {
         f
+    }
+}
+
+/// `a[i]`, `i` a loop's index, already below `N`. Don't index such an `i` directly in the GPU's code: its bounds check is
+/// a panic path, and rust-gpu inlines every function that may panic, so [`rigid`] would be copied into each decode entry.
+#[inline]
+fn at<T: Copy, const N: usize>(a: &[T; N], i: usize) -> T {
+    #[cfg(target_arch = "spirv")]
+    {
+        use spirv_std::arch::IndexUnchecked;
+        // SAFETY: every caller's `i` is a loop index bounded by `N`.
+        unsafe { *a.index_unchecked(i) }
+    }
+    #[cfg(not(target_arch = "spirv"))]
+    {
+        debug_assert!(i < N);
+        a[i]
+    }
+}
+
+/// `a[i] = x`, as [`at`] reads.
+#[inline]
+fn put<T, const N: usize>(a: &mut [T; N], i: usize, x: T) {
+    #[cfg(target_arch = "spirv")]
+    {
+        use spirv_std::arch::IndexUnchecked;
+        // SAFETY: every caller's `i` is a loop index bounded by `N`.
+        unsafe { *a.index_unchecked_mut(i) = x }
+    }
+    #[cfg(not(target_arch = "spirv"))]
+    {
+        debug_assert!(i < N);
+        a[i] = x;
     }
 }
 
@@ -70,21 +103,22 @@ fn sum_sign<R: ExactSign>(add: &[R; 27]) -> i32 {
     let mut e = [zero; 27];
     let mut k = 0;
     while k < 27 {
-        let mut q = add[k];
+        let mut q = at(add, k);
         let mut i = 0;
         while i < k {
-            let (s, h) = two_sum(q, e[i]);
-            e[i] = h;
+            let (s, h) = two_sum(q, at(&e, i));
+            put(&mut e, i, h);
             q = s;
             i += 1;
         }
-        e[k] = q;
+        put(&mut e, k, q);
         k += 1;
     }
     let mut sign = 0;
     let mut i = 0;
     while i < 27 {
-        sign = select(e[i] > zero, 1, select(e[i] < zero, -1, sign));
+        let x = at(&e, i);
+        sign = select(x > zero, 1, select(x < zero, -1, sign));
         i += 1;
     }
     sign
@@ -122,12 +156,13 @@ fn within<R: ExactSign>(v_b: R, w_p: R, v_p: R, w_b: R, big_v: R, w_p_abs: R) ->
     let mut plus = [R::zero(); 27];
     let mut i = 0;
     while i < 9 {
-        minus[i] = t[i];
-        minus[i + 9] = -a[i];
-        minus[i + 18] = b[i];
-        plus[i] = t[i];
-        plus[i + 9] = a[i];
-        plus[i + 18] = -b[i];
+        let (t, a, b) = (at(&t, i), at(&a, i), at(&b, i));
+        put(&mut minus, i, t);
+        put(&mut minus, i + 9, -a);
+        put(&mut minus, i + 18, b);
+        put(&mut plus, i, t);
+        put(&mut plus, i + 9, a);
+        put(&mut plus, i + 18, -b);
         i += 1;
     }
     (sum_sign(&minus) >= 0) & (sum_sign(&plus) >= 0)
@@ -151,8 +186,8 @@ pub fn rigid<R: ExactSign>(v: &[[R; 2]; 3], w: &[[R; 2]; 3]) -> bool {
     let mut big_w = zero;
     let mut i = 0;
     while i < 6 {
-        big_v = Float::max(big_v, Float::abs(v[i]));
-        big_w = Float::max(big_w, Float::abs(w[i]));
+        big_v = Float::max(big_v, Float::abs(at(&v, i)));
+        big_w = Float::max(big_w, Float::abs(at(&w, i)));
         i += 1;
     }
     // The first index of the largest, by walking down so the lowest wins.
@@ -160,16 +195,34 @@ pub fn rigid<R: ExactSign>(v: &[[R; 2]; 3], w: &[[R; 2]; 3]) -> bool {
     let mut i = 6;
     while i > 0 {
         i -= 1;
-        p = select(Float::abs(w[i]) == big_w, i, p);
+        p = select(Float::abs(at(&w, i)) == big_w, i, p);
     }
-    let (w_p, v_p) = (w[p], v[p]);
+    let (w_p, v_p) = (at(&w, p), at(&v, p));
     let mut all = true;
     let mut b = 0;
     while b < 6 {
-        all &= within(v[b], w_p, v_p, w[b], big_v, big_w);
+        all &= within(at(&v, b), w_p, v_p, at(&w, b), big_v, big_w);
         b += 1;
     }
     all
+}
+
+/// [`rigid`] with its arrays by value, out of line on the GPU, so the module holds one copy of its loops, not one per
+/// decode entry: every pipeline parses the whole module. By value, since rust-gpu inlines a call whose pointer
+/// argument is not a local variable. Only the exact tests go out of line: they read no rounding, so the boundary moves
+/// no bit, where the hold's float steps out of line round differently on Metal (a call boundary changes what its
+/// compiler fuses).
+#[cfg_attr(not(target_arch = "spirv"), inline)]
+#[cfg_attr(target_arch = "spirv", inline(never))]
+fn rigid_by_value<R: ExactSign>(v: [[R; 2]; 3], w: [[R; 2]; 3]) -> bool {
+    rigid(&v, &w)
+}
+
+/// [`floor_order`] out of line on the GPU, as [`rigid_by_value`] is.
+#[cfg_attr(not(target_arch = "spirv"), inline)]
+#[cfg_attr(target_arch = "spirv", inline(never))]
+fn floor_order_out_of_line<R: ExactSign>(k: R, l: R) -> i32 {
+    floor_order(k, l)
 }
 
 /// The sign of `2K* − L*²` at `I = 1` (−1, 0, 1), exact: [`crate::decode::invariant::infeasible`]'s test, whose `< 0`
@@ -263,8 +316,8 @@ pub fn hold<R: ExactSign>(
     );
     let both = axpy(&rotation, eta, &unit);
 
-    let order = floor_order(k_star, lz);
-    let is_rigid = rigid(v, &w);
+    let order = floor_order_out_of_line(k_star, lz);
+    let is_rigid = rigid_by_value(*v, w);
     let step = select(
         is_rigid,
         select(order == 0, Outcome::OnFloor, Outcome::Unscalable),
@@ -285,48 +338,56 @@ pub fn hold<R: ExactSign>(
     }
 }
 
-/// [`hold`] on a decode: the momenta as `m·v`, the decode's descriptor rewritten from the result, and the outcome's tag
-/// added where the decode has none. A tagged decode keeps its momenta bit for bit.
+/// [`hold`] on a decode's `ic`, with its descriptor's `v0` and `r_min` and its tag `degenerate`: the momenta as
+/// `m·v`, the decode's tag or else the outcome's, and the outcome. A tagged decode keeps its momenta bit for bit.
 #[inline]
+#[allow(clippy::too_many_arguments)] // Reason: the kernel passes values one by one, never a struct across the SPIR-V seam.
 fn held<R: ExactSign + PayloadReal>(
-    decoded: Decoded<R>,
+    ic: Ic<R>,
+    v0: R,
+    r_min: R,
+    degenerate: Option<Degenerate>,
     e_star: Option<R>,
     forbids_energy_normalisation: bool,
     lz: R,
-) -> (Decoded<R>, Outcome) {
+) -> ([[R; 2]; 3], Option<Degenerate>, Outcome) {
     let (e_on, target) = match e_star {
         Some(e) => (!forbids_energy_normalisation, e),
         None => (false, R::zero()),
     };
-    let ic = decoded.ic;
-    let velocity = |i: usize| [ic.p[i][0] / ic.m[i], ic.p[i][1] / ic.m[i]];
-    let v = [velocity(0), velocity(1), velocity(2)];
-    let d: &ICDescriptorOf<R> = &decoded.descriptor;
-    let h = hold(ic.m, &ic.r, &v, d.V_0, d.r_min_pair_0, lz, e_on, target);
+    let (m, p) = (ic.m, ic.p);
+    let v = [
+        [p[0][0] / m[0], p[0][1] / m[0]],
+        [p[1][0] / m[1], p[1][1] / m[1]],
+        [p[2][0] / m[2], p[2][1] / m[2]],
+    ];
+    let h = hold(m, &ic.r, &v, v0, r_min, lz, e_on, target);
     let moved = (h.outcome == Outcome::Held) | (h.outcome == Outcome::OnFloor);
-    let momentum = |i: usize| {
-        [
-            select(moved, ic.m[i] * h.v[i][0], ic.p[i][0]),
-            select(moved, ic.m[i] * h.v[i][1], ic.p[i][1]),
-        ]
-    };
-    let p = [momentum(0), momentum(1), momentum(2)];
-    let ic = crate::decode::Ic { p, ..ic };
+    let hv = h.v;
     (
-        crate::decode::Decoded {
-            ic,
-            descriptor: describe_decoded(&ic, &decoded.config),
-            degenerate: decoded.degenerate.or(h.outcome.tag()),
-            ..decoded
-        },
+        [
+            [
+                select(moved, m[0] * hv[0][0], p[0][0]),
+                select(moved, m[0] * hv[0][1], p[0][1]),
+            ],
+            [
+                select(moved, m[1] * hv[1][0], p[1][0]),
+                select(moved, m[1] * hv[1][1], p[1][1]),
+            ],
+            [
+                select(moved, m[2] * hv[2][0], p[2][0]),
+                select(moved, m[2] * hv[2][1], p[2][1]),
+            ],
+        ],
+        degenerate.or(h.outcome.tag()),
         h.outcome,
     )
 }
 
 /// The decode stage's step under both switches (the module's note): `η_E` alone, [`energy_norm::apply_shared`],
 /// where `lz_star` is `None` or the chart's `L_z` is not free (`lz_hold`); else [`hold`], alone or with `E` where
-/// `e_star` is `Some` and the chart allows it. Both are computed and the switch selects, as `apply_shared` does, so
-/// the SPIR-V carries no decode as a value across a branch; with `L_z` off the result is `apply_shared`'s, bit for bit.
+/// `e_star` is `Some` and the chart allows it. [`hold`] runs only where the switch is on; with `L_z` off the result is
+/// `apply_shared`'s, bit for bit.
 #[inline]
 pub fn apply_shared<R: ExactSign + PayloadReal>(
     decoded: Decoded<R>,
@@ -340,21 +401,35 @@ pub fn apply_shared<R: ExactSign + PayloadReal>(
         None => (false, R::zero()),
     };
     let base = energy_norm::apply_shared(decoded, e_star, forbids_energy_normalisation);
-    let (moved, outcome) = held(decoded, e_star, forbids_energy_normalisation, lz);
-    // Only the momenta and the tag are selected: the descriptor's tail is a zero-length array, which SPIR-V cannot
-    // carry through a select, so the descriptor is formed from the chosen IC as `energy_norm::apply_shared` forms it.
-    let ic = Ic {
-        p: select(on, moved.ic.p, base.0.ic.p),
-        ..decoded.ic
+    // A branch, not a select of both as `energy_norm::apply_shared` makes: `hold`'s exact tests cost many decodes, and
+    // a select runs them on every sample with `L_z` off. `on` is a uniform's, so the branch never diverges. Only plain
+    // values cross it, never a decode: the descriptor's tail is a zero-length array, which naga refuses as an empty
+    // struct, so the descriptor is formed after from the chosen IC as `energy_norm::apply_shared` forms it.
+    let (base_p, base_tag, base_outcome) = (base.0.ic.p, base.0.degenerate, base.1);
+    let d: &ICDescriptorOf<R> = &decoded.descriptor;
+    let (ic0, v0, r_min, tag0) = (decoded.ic, d.V_0, d.r_min_pair_0, decoded.degenerate);
+    let (p, degenerate, outcome) = if on {
+        held(
+            ic0,
+            v0,
+            r_min,
+            tag0,
+            e_star,
+            forbids_energy_normalisation,
+            lz,
+        )
+    } else {
+        (base_p, base_tag, base_outcome)
     };
+    let ic = Ic { p, ..decoded.ic };
     (
         Decoded {
             ic,
             descriptor: describe_decoded(&ic, &decoded.config),
-            degenerate: select(on, moved.degenerate, base.0.degenerate),
+            degenerate,
             ..decoded
         },
-        select(on, outcome, base.1),
+        outcome,
     )
 }
 
