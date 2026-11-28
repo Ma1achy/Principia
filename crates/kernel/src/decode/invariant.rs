@@ -348,6 +348,16 @@ pub enum Seed {
     Expansion,
 }
 
+/// Which sheet of the construction a pixel is on: sheet 1 builds `vᵢ = vᵢ^(L) + a·wᵢ`, sheet 2 the time-reversed
+/// system `vᵢ = vᵢ^(L) − a·wᵢ`, `a` formed by the same expression (chart_reference §2.2 (iv)).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Sheet {
+    /// The construction as written.
+    One,
+    /// `a` negated.
+    Two,
+}
+
 /// Which seed rule the construction runs under: the seed in force, or the largest-norm rule, kept as a named option
 /// with its seam declared (the module's note).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -600,8 +610,8 @@ fn finish<R: ExactSign>(
     (w, n2): ([[R; 2]; 3], R),
     norms: [R; 4],
     seed: Option<Seed>,
-    lz: R,
-    k_star: R,
+    (lz, k_star): (R, R),
+    sheet: Sheet,
 ) -> Construction<R> {
     let m = masses.m;
     let r = config.r;
@@ -630,11 +640,13 @@ fn finish<R: ExactSign>(
         Float::sqrt(Float::max(a2, zero)),
         zero,
     );
+    // Sheet 2 negates `a` in the same expression: don't build it as sheet 1 mirrored in `s`, which repeats a state.
+    let a_on = select(sheet == Sheet::Two, -a, a);
     let body = |mi: R, ri: [R; 2], wi: [R; 2]| {
         let jr = j(ri);
         [
-            mi * (spin * jr[0] + a * wi[0]),
-            mi * (spin * jr[1] + a * wi[1]),
+            mi * (spin * jr[0] + a_on * wi[0]),
+            mi * (spin * jr[1] + a_on * wi[1]),
         ]
     };
     Construction {
@@ -669,7 +681,7 @@ fn legacy<R: ExactSign>(
         Some(Seed::JLambda) => (fields[3], norms[3]),
         _ => (fields[0], norms[0]),
     };
-    finish(masses, config, taken, norms, seed, lz, k_star)
+    finish(masses, config, taken, norms, seed, (lz, k_star), Sheet::One)
 }
 
 /// The invariant-momentum construction (chart_reference §2.2) under the seed in force: the momenta realising
@@ -682,6 +694,19 @@ pub fn construct_expansion<R: ExactSign>(
     lz: R,
     k_star: R,
 ) -> Construction<R> {
+    construct_expansion_on(masses, config, lz, k_star, Sheet::One)
+}
+
+/// [`construct_expansion`] on `sheet`: sheet 1 is its bits, sheet 2 has `a` negated, so at `L_z` its positions equal
+/// sheet 1's at `−L_z` and its momenta are the negation of sheet 1's there.
+#[inline]
+pub fn construct_expansion_on<R: ExactSign>(
+    masses: &Masses<R>,
+    config: &Config<R>,
+    lz: R,
+    k_star: R,
+    sheet: Sheet,
+) -> Construction<R> {
     let (w, n2) = expansion(masses.m, &config.r);
     let zero = R::zero();
     let seed = select(n2 > zero, Some(Seed::Expansion), None);
@@ -691,8 +716,8 @@ pub fn construct_expansion<R: ExactSign>(
         (w, n2),
         [n2, zero, zero, zero],
         seed,
-        lz,
-        k_star,
+        (lz, k_star),
+        sheet,
     )
 }
 

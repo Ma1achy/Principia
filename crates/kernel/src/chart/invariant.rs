@@ -83,7 +83,9 @@ use super::burrau_acute::decoded_sanity;
 use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{Chart, ChartOut, Constraint, ValidationResult};
 use crate::decode::config::{self, Config};
-use crate::decode::invariant::{self as construction, infeasible, ExactSign, Outcome, Seeding};
+use crate::decode::invariant::{
+    self as construction, infeasible, ExactSign, Outcome, Seeding, Sheet,
+};
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::Momentum;
 use crate::decode::{self, descriptor, Blocks, Decoded, Degenerate, Ic};
@@ -480,6 +482,8 @@ pub struct InvariantBlocks<S, R> {
     z_alpha: R,
     /// The seed rule the construction runs under.
     seeding: Seeding,
+    /// The sheet the construction builds: sheet 2 only under the seed in force.
+    sheet: Sheet,
     /// What the construction did.
     outcome: Outcome,
     /// The tunable parameters the mass block reads.
@@ -504,6 +508,7 @@ impl<S, R: Float> InvariantBlocks<S, R> {
             k_star,
             z_alpha: R::zero(),
             seeding: Seeding::Expansion,
+            sheet: Sheet::One,
             outcome: Outcome::Feasible,
             params,
             links: PhantomData,
@@ -514,6 +519,13 @@ impl<S, R: Float> InvariantBlocks<S, R> {
     #[inline]
     pub fn seeded(self, seeding: Seeding) -> Self {
         InvariantBlocks { seeding, ..self }
+    }
+
+    /// This decoder with the construction on `sheet` ([`Sheet::Two`] is the time-reversed system; the legacy
+    /// largest-norm rule has no second sheet and ignores it).
+    #[inline]
+    pub fn on_sheet(self, sheet: Sheet) -> Self {
+        InvariantBlocks { sheet, ..self }
     }
 
     /// What the construction did, once the momentum block has run.
@@ -554,14 +566,23 @@ impl<S: Selection, R: LinkReal + PayloadReal + ExactSign> Blocks<R> for Invarian
     /// momenta `(p_ρ, p_λ)`, not decoded controls.
     #[inline]
     fn momentum(&mut self, _z_mom: [R; 4], masses: &Masses<R>, config: &Config<R>) -> Momentum<R> {
-        let c = construction::construct_with(
-            masses,
-            config,
-            self.seeding,
-            self.z_alpha,
-            self.lz,
-            self.k_star,
-        );
+        let c = match self.seeding {
+            Seeding::Expansion => construction::construct_expansion_on(
+                masses,
+                config,
+                self.lz,
+                self.k_star,
+                self.sheet,
+            ),
+            Seeding::LargestNorm => construction::construct_with(
+                masses,
+                config,
+                self.seeding,
+                self.z_alpha,
+                self.lz,
+                self.k_star,
+            ),
+        };
         self.outcome = c.outcome;
         jacobi(masses, c.p)
     }
@@ -639,6 +660,23 @@ where
     let t = chart.invariant().targets(u, v);
     let mut blocks = InvariantBlocks::<S, R>::new_at(t.lz, t.k, *p).seeded(seeding);
     let decoded = decode::decode_with(&mut blocks, z);
+    (decoded, blocks.outcome())
+}
+
+/// [`decode()`] on `sheet`: the chart's targets at `(u, v)`, the construction on the given sheet. Sheet 1 is
+/// [`decode()`]'s bits.
+#[inline]
+pub fn decode_on_sheet<S, R, C>(chart: &C, u: R, v: R, sheet: Sheet) -> (Decoded<R>, Outcome)
+where
+    S: Selection,
+    R: LinkReal + PayloadReal + WarpReal + From<C::Param>,
+    C: InvariantChart,
+{
+    let t = chart.invariant().targets(u, v);
+    let z = chart.map(u, v).z;
+    let mut blocks =
+        InvariantBlocks::<S, R>::new_at(t.lz, t.k, LinkParams::DEFAULT).on_sheet(sheet);
+    let decoded = decode::decode_with(&mut blocks, &z);
     (decoded, blocks.outcome())
 }
 
