@@ -918,8 +918,7 @@ pub fn uses(param: &str, word: &str) -> &'static [&'static str] {
 
 /// The code the word `uniforms.<param>.<word>` of a field ramp node is, where `value` gives each parameter's value, or
 /// `None` where the word has none (a field with no unset value has no `unset`): the field's read and tests, the curve
-/// placed with the polarity applied, the invalid test, and the ramp of that. Each is the text the shader of the same
-/// ramp was written with, so a ramp drawn through the node is the ramp as it was.
+/// placed with the polarity applied, the invalid test, and the ramp of that, each as WGSL text.
 pub fn word(
     value: &dyn Fn(&str) -> Option<Vec<f64>>,
     param: &str,

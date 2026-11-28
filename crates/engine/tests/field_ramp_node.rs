@@ -190,7 +190,7 @@ negative_control!(
 
 // ── Saved stains ──────────────────────────────────────────────────────────────────────────────────────────────
 
-/// An old stain: the field's source and `ramp` as custom text, which is how a ramp was held, saved before the node.
+/// An old stain: the field's source and `ramp` as custom text, with its code by value.
 fn saved_before(field: &str, ramp_text: &str) -> String {
     let mut g = StainGraph::new();
     g.set_occupant(NodeId(0), Occupant::Builtin("pass_through".into()))
