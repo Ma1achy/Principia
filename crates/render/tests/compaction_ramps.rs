@@ -14,6 +14,9 @@
 //!
 //! Each test registers its negative control (R-176).
 
+#[path = "support/old_ramp.rs"]
+mod old_ramp;
+
 use ledger::constants::{DIVERGING_X0, LOG_FLOORS};
 use ledger::gen::numeric::{cyclic_period, End};
 use ledger::schema::{Bound, Declaration, Entry, Range, Scale};
@@ -1180,8 +1183,24 @@ negative_control!(
 /// The stain of `ramp` in its slot: the zero source → the ramp → Replace-L → its style post, if a brightness ramp
 /// and `post`, → `OUT`.
 fn ramp_stain(ramp: &FieldRamp, post: bool) -> Stain {
-    let (kind, occupant) = ramp.occupant();
-    let post = (post && ramp.slot() == Slot::Brightness).then(|| ramp.style_post());
+    // A ramp of the lookup tables and a lightness are the shipped node; `lerp`, `diverging` and `bands` by their
+    // uniforms are the ramp functions' own, which the node has no setting for.
+    let node = !matches!(
+        &ramp.map,
+        Map::Ramp(r) if !matches!(**r, Ramp::Lut(_))
+    );
+    let (kind, occupant) = if node {
+        ramp.occupant()
+    } else {
+        old_ramp::occupant(ramp)
+    };
+    let post = (post && ramp.slot() == Slot::Brightness).then(|| {
+        if node {
+            ramp.style_post()
+        } else {
+            old_ramp::style_post(ramp)
+        }
+    });
     custom_stain(kind, occupant, post)
 }
 
@@ -1801,7 +1820,7 @@ fn check_ramp_uniforms(h: &GpuHarness, write: bool) {
     let u_range = reads(&s).u_range.to_vec();
     for (ramp, name, value, twin) in cases {
         let a = FieldRamp::new(field.clone(), lin, Map::ramp(ramp));
-        let text = a.wgsl();
+        let text = old_ramp::wgsl(&a);
         let d = render::assemble::Declaration::parse(&text).unwrap_or_else(|e| panic!("{e}"));
         let declared = d
             .uniforms
@@ -1902,7 +1921,7 @@ fn check_every_kind(edit: impl Fn(String) -> String) {
         for map in &maps {
             for p in [Polarity::High, Polarity::Low] {
                 let ramp = closure_ramp(c, map.clone(), p);
-                let text = ramp.wgsl();
+                let text = old_ramp::wgsl(&ramp);
                 let head: String = text.lines().take(2).collect::<Vec<_>>().join("\n");
                 let polarity = if p == Polarity::High { "high" } else { "low" };
                 assert!(
@@ -1918,12 +1937,12 @@ fn check_every_kind(edit: impl Fn(String) -> String) {
                         r.name()
                     );
                 }
-                let (kind, _) = ramp.occupant();
+                let (kind, _) = old_ramp::occupant(&ramp);
                 let occupant = Occupant::Custom(edit(text));
                 let stain = custom_stain(
                     kind,
                     occupant,
-                    (kind == Kind::Brightness).then(|| ramp.style_post()),
+                    (kind == Kind::Brightness).then(|| old_ramp::style_post(&ramp)),
                 );
                 render::assemble::assemble(&stain, Tier::FULL).unwrap_or_else(|e| {
                     panic!(

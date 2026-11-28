@@ -122,14 +122,14 @@ fn fields_named(
     line: &str,
 ) -> String {
     let mut out = line.to_owned();
-    let Ok(fields) = assemble::source_fields() else {
-        return out;
-    };
     for u in declaration
         .uniforms
         .iter()
         .filter(|u| u.ty == assemble::UniformType::Field)
     {
+        let Ok(fields) = u.field_names() else {
+            continue;
+        };
         let at = params
             .get(&u.name)
             .and_then(|v| v.first())

@@ -1,0 +1,110 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "kind": "combiner",
+      "occupant": {
+        "shader": {
+          "id": "combiner/pass_through",
+          "version": null,
+          "hash": "0a75ae53d7b05152",
+          "source": "// The pass-through combiner, a built-in occupant of the `combiner` slot (render contract Part 2): the colour, unchanged;\n// the brightness is not read. It is M1's combiner, for the single-colour debug stains; Replace-L and Multiply come with\n// the colour maths (colour_composition §4.1). It reaches the assembler as a user's custom text would, through the one\n// entry point (render contract Part 2). Under it a brightness-only stain renders flat white: the colour None gives the\n// combiner white (colour_composition §4.1), and the brightness is not read.\n// @name Pass-through\n// @group Combiner\n// @about The colour unchanged; the brightness is not read.\n// @maps colour · brightness\n// @glyph dropdown\nfn combine(rgb: vec3<f32>, b: f32) -> vec3<f32> { return rgb; }\n"
+        }
+      },
+      "params": {}
+    },
+    {
+      "id": 1,
+      "kind": "out",
+      "occupant": "none",
+      "params": {}
+    },
+    {
+      "id": 2,
+      "kind": "source",
+      "occupant": {
+        "shader": {
+          "id": "source/field",
+          "version": null,
+          "hash": "83a5d55c4e042017",
+          "source": "// @version 2\n// A read-side field as a source: a scalar in the field's x, a vector in its xyz. `as_field` is written into the code\n// as the chosen field's own read, so the field is what the proof, the field set and the code key see.\n// @name ctx.{field}\n// @group Source\n// @about A read-side field of the system, chosen by the Field setting; the out-port's kind follows it.\n// @maps ctx.{field}\n// @glyph dropdown\n// @uniform field: field = state any\n// @control field field \"Field\"\nfn source(ctx: Ctx) -> Field { return as_field(uniforms.field); }\n"
+        }
+      },
+      "params": {},
+      "fields": {
+        "field": "state"
+      }
+    },
+    {
+      "id": 3,
+      "kind": "colour",
+      "occupant": {
+        "shader": {
+          "id": null,
+          "version": null,
+          "hash": "ba961ab9848445d8",
+          "source": "// A field ramp of `ftle` (colour_composition §1.2; render::colour::field_ramp): the `lin` compaction, polarity high,\n// then `lut(grey)`, with the invalid lane, #141418 unless INVALID_OVERRIDE is 1, and the canvas background\n// for a pixel that is not a system (REQ-COL-001, REQ-COL-108; R-467, R-511).\n// @name ftle ramp\n// @group Field ramp\n// @about ftle on the lut(grey) ramp.\n// @maps ftle [lin, polarity high]\n// @glyph name\n// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]\n// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)\n// @control INVALID_OVERRIDE toggle \"Override the invalid colour\" in \"Invalid\"\n// @control INVALID_COLOUR colour \"Invalid colour\" in \"Invalid\"\n// @uniform u_range: vec2<f32> = (0.0, 1.0)\n// @control u_range hidden \"Measured range\"\nfn colour(ctx: Ctx) -> vec3<f32> {\n    handles_validity();\n    let v = ctx.sample.ftle;\n    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return canvas_background(); }\n    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) { return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u); }\n    if (!(has_ftle && ctx.sample.ftle_valid && (bitcast<u32>(v) & 0x7f800000u) != 0x7f800000u)) {\n        if ((has_ftle && ctx.sample.ftle_valid) && (bitcast<u32>(v) & 0x7f800000u) == 0x7f800000u) { note_non_finite(); }\n        return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);\n    }\n    return ramp_grey(range_norm(v, uniforms.u_range.x, uniforms.u_range.y, false, vec2<f32>(0.0, 0.0)));\n}\n"
+        }
+      },
+      "params": {}
+    },
+    {
+      "id": 4,
+      "kind": "brightness",
+      "occupant": {
+        "shader": {
+          "id": null,
+          "version": null,
+          "hash": "f70737924ccd7837",
+          "source": "// A field ramp of `d_min` as a lightness (colour_composition §1.2, §4.1; render::colour::field_ramp): the `log`\n// compaction, polarity high. A blank, unset or invalid sample returns 0: its style is drawn by the ramp's post.\n// @name d_min lightness\n// @group Brightness\n// @about d_min as a lightness; its post draws its styles.\n// @maps d_min [log, polarity high]\n// @glyph ramp\nfn brightness(ctx: Ctx) -> f32 {\n    handles_validity();\n    let v = ctx.sample.d_min;\n    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return 0.0; }\n    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) { return 0.0; }\n    if (bitcast<u32>(v) == 0x7f800000u) { return 0.0; }\n    if (!(bitcast<u32>(ctx.sample.d_min) != 0x7f800000u && (bitcast<u32>(v) & 0x7f800000u) != 0x7f800000u) || v < 0.0) {\n        if ((bitcast<u32>(ctx.sample.d_min) != 0x7f800000u) && (bitcast<u32>(v) & 0x7f800000u) == 0x7f800000u) { note_non_finite(); }\n        return 0.0;\n    }\n    return compact_log(v, 6.1035156e-5);\n}\n"
+        }
+      },
+      "params": {}
+    },
+    {
+      "id": 5,
+      "kind": "post",
+      "occupant": {
+        "shader": {
+          "id": null,
+          "version": null,
+          "hash": "d7a08ce5c02c2b8a",
+          "source": "// The styles of the field ramp of `d_min` (colour_composition §4.1; render::colour::field_ramp): the background, \"not yet\"\n// and the invalid lane over the combiner's output, #141418 unless INVALID_OVERRIDE is 1; every other colour as it is.\n// @name d_min styles\n// @group Post\n// @about The background, not-yet and invalid styles of the d_min lightness, over the combiner's colour.\n// @maps d_min [log, polarity high]\n// @glyph name\n// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]\n// @uniform INVALID_COLOUR: vec3<f32> = (1.0, 0.0, 1.0)\n// @control INVALID_OVERRIDE toggle \"Override the invalid colour\" in \"Invalid\"\n// @control INVALID_COLOUR colour \"Invalid colour\" in \"Invalid\"\nfn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {\n    handles_validity();\n    let v = ctx.sample.d_min;\n    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return canvas_background(); }\n    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) { return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u); }\n    if (bitcast<u32>(v) == 0x7f800000u) { return debug_not_yet(ctx.frag_xy); }\n    if (!(bitcast<u32>(ctx.sample.d_min) != 0x7f800000u && (bitcast<u32>(v) & 0x7f800000u) != 0x7f800000u) || v < 0.0) {\n        if ((bitcast<u32>(ctx.sample.d_min) != 0x7f800000u) && (bitcast<u32>(v) & 0x7f800000u) == 0x7f800000u) { note_non_finite(); }\n        return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);\n    }\n    return rgb;\n}\n"
+        }
+      },
+      "params": {}
+    }
+  ],
+  "wires": [
+    {
+      "from": 3,
+      "to": 0,
+      "port": 0
+    },
+    {
+      "from": 4,
+      "to": 0,
+      "port": 1
+    },
+    {
+      "from": 5,
+      "to": 1,
+      "port": 0
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "port": 0
+    },
+    {
+      "from": 2,
+      "to": 4,
+      "port": 0
+    },
+    {
+      "from": 0,
+      "to": 5,
+      "port": 0
+    }
+  ]
+}

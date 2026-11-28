@@ -1,3 +1,7 @@
+Presentation registry brightness/field_ramp: db87e18e470f5721
+Debug registry brightness/field_ramp: c0a2d0373519a062
+Presentation registry colour/field_ramp: 170190932a2faed4
+Debug registry colour/field_ramp: 0daa85d240b718b5
 Presentation registry colour/margin: b7b0fd7870998ce5
 Debug registry colour/margin: af29c2d2ce35ef93
 Presentation registry colour/outcome_state: 90ce2755a55ae6c1
@@ -168,6 +172,8 @@ Presentation registry post/edge_line: 628262061dbc81d7
 Debug registry post/edge_line: a883c0cb5a90777b
 Presentation registry post/fallback_tint: 8a08bff81d60cc94
 Debug registry post/fallback_tint: 119f72871f1e5fae
+Presentation registry post/field_ramp: 2762dff7f590e2ae
+Debug registry post/field_ramp: f58d33a2872a4534
 Presentation registry post/pending_hatch: bdfd504916ea3549
 Debug registry post/pending_hatch: a2891947f0753a99
 Presentation registry source/field: 0ba7c9001ef55b4a

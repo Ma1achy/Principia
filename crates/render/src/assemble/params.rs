@@ -7,8 +7,11 @@
 //! | `gradient<N>` | `[space, cyclic, (x, y, z, position) × count]`, `2 ≤ count ≤ N`; `space` 0 is linear RGB, 1 OKLab | `GradientN` |
 //! | `list<T, N>` (`T` is `f32` or `vec2/3/4<f32>`) | `count × width` numbers, `count ≤ N` | `ListWxN` |
 //! | `lut<N>` | `N` numbers, sampled over `[0, 1]` | `LutN` |
-//! | `field` | the index of a read-side field in [`super::source_fields`] | nothing: read as the field, in the code |
+//! | `field` | the index of a read-side field in [`super::source_fields`], or with `scalar`, in [`super::ramp_fields`] | nothing: read as the field, in the code |
 //! | `image` | an image's handle, a whole number | a `u32` |
+//!
+//! A uniform of any type may end its default with `baked`: it has no member either, and the code reads it only through
+//! the words of [`specialise`] (`uniforms.<name>.<word>`).
 //!
 //! A gradient, list and lut are WGSL structs the assembler declares once per type, with the function that reads one
 //! (`gradientN_at`, `lutN_at`). Their elements are `vec4<f32>`, 16 bytes, because a uniform array's stride is 16: a
@@ -323,6 +326,28 @@ pub fn parse_default(ty: UniformType, text: &str) -> Result<Vec<f64>, String> {
     }
 }
 
+/// The default text of the gradient `value`, as [`parse_default`] reads it.
+pub fn gradient_text(value: &[f64]) -> String {
+    let [space, cyclic, stops @ ..] = value else {
+        return String::new();
+    };
+    let mut out = String::from(if *space == 0.0 { "linear" } else { "oklab" });
+    if *cyclic != 0.0 {
+        out.push_str(" cyclic");
+    }
+    for s in stops.chunks_exact(4) {
+        let _ = write!(
+            out,
+            " {}:({}, {}, {})",
+            ledger::gen::numeric::float(s[3]),
+            ledger::gen::numeric::float(s[0]),
+            ledger::gen::numeric::float(s[1]),
+            ledger::gen::numeric::float(s[2])
+        );
+    }
+    out
+}
+
 fn parse_gradient(text: &str) -> Result<Vec<f64>, String> {
     let mut space = 0.0;
     let mut cyclic = 0.0;
@@ -587,7 +612,7 @@ pub fn same_field_kind(a: f64, b: f64) -> bool {
     vector(a) == vector(b)
 }
 
-/// Whether `text` reads `uniforms.<name>` anywhere.
+/// Whether `text` reads `uniforms.<name>` anywhere, or reads a word (`uniforms.<param>.<word>`) that reads it.
 pub fn reads(text: &str, name: &str) -> bool {
     use crate::lex::Tok;
     let Ok(toks) = super::lex(text) else {
@@ -600,24 +625,59 @@ pub fn reads(text: &str, name: &str) -> bool {
         .collect();
     sig.windows(3)
         .any(|w| w[0] == "uniforms" && w[1] == "." && w[2] == name)
+        || sig.windows(5).any(|w| {
+            w[0] == "uniforms"
+                && w[1] == "."
+                && w[3] == "."
+                && crate::colour::field_ramp::uses(w[2], w[4]).contains(&name)
+        })
 }
 
-/// `text` with each read `uniforms.<name>` of a `field` uniform given by `chosen(name)`, the index of a field in
-/// [`super::source_fields`], written as that field's read ([`field_read`]). It is how a field parameter reaches the
-/// shader: the code reads the field, so the picture's proof, its field set and its code key all see it, and
-/// choosing another field is a different code.
+/// `text` with each baked uniform in `baked` written into it as `chosen(uniform)` gives it ([`super::Uniform::is_baked`]):
+/// a `field` read as the field, and any other read through a word, `uniforms.<name>.<word>`, which a ramp's
+/// [`crate::colour::field_ramp::word`] writes as code; and the line after each `//? when uniforms.<name>.<word>` kept
+/// only where the word has a value. It is how a parameter reaches the shader: the code reads the field, the curve and
+/// the polarity, so the picture's proof, its field set and its code key all see them, and choosing another is a
+/// different code.
 // The plan is unclear here; chose to write the field into the code, because a stored field is read by name, and a
-// runtime index would make every field read and the proof of what a stain needs useless.
+// runtime index would make every field read and the proof of what a stain needs useless. A curve, a polarity and a
+// range are written in for the same reason: a literal is what the picture was drawn with.
 pub fn specialise(
     text: &str,
-    fields: &[&super::Uniform],
-    chosen: &dyn Fn(&super::Uniform) -> usize,
+    baked: &[&super::Uniform],
+    chosen: &dyn Fn(&super::Uniform) -> Vec<f64>,
 ) -> Result<String, super::AssembleError> {
     use crate::lex::Tok;
-    if fields.is_empty() {
+    if baked.is_empty() {
         return Ok(text.to_owned());
     }
-    let names = super::source_fields()?;
+    let value = |name: &str| baked.iter().find(|u| u.name == name).map(|u| chosen(u));
+    let say = |e: String| super::AssembleError::Occupant(e);
+    // A line that a `//? when` says is not there, and the line itself.
+    let mut kept = String::with_capacity(text.len());
+    let mut hide = false;
+    for line in text.split_inclusive('\n') {
+        if let Some(cond) = line.trim().strip_prefix("//? when ") {
+            let word = cond
+                .trim()
+                .strip_prefix("uniforms.")
+                .and_then(|c| c.split_once('.'))
+                .ok_or_else(|| {
+                    say(format!(
+                        "`//? when {}` is `uniforms.<name>.<word>`",
+                        cond.trim()
+                    ))
+                })?;
+            hide = crate::colour::field_ramp::word(&value, word.0, word.1)
+                .map_err(&say)?
+                .is_none();
+            continue;
+        }
+        if !std::mem::take(&mut hide) {
+            kept.push_str(line);
+        }
+    }
+    let text = kept.as_str();
     let toks = super::lex(text)?;
     let sig: Vec<usize> = (0..toks.len())
         .filter(|&k| !matches!(toks[k].0, Tok::Comment | Tok::Space))
@@ -629,17 +689,37 @@ pub fn specialise(
         if at(k) != "uniforms" || toks[sig[k]].0 != Tok::Ident || (k > 0 && at(k - 1) == ".") {
             continue;
         }
-        let Some(u) = fields.iter().find(|u| u.name == at(k + 2)) else {
+        let Some(u) = baked.iter().find(|u| u.name == at(k + 2)) else {
             continue;
         };
         if at(k + 1) != "." {
             continue;
         }
-        let Some(name) = names.get(chosen(u)) else {
-            return Err(super::AssembleError::Occupant(format!(
-                "`{}` names no field a source reads",
-                u.name
+        let is_word = at(k + 3) == "." && crate::colour::field_ramp::knows(&u.name, at(k + 4));
+        if is_word {
+            let written = crate::colour::field_ramp::word(&value, &u.name, at(k + 4))
+                .map_err(&say)?
+                .ok_or_else(|| {
+                    say(format!(
+                        "`uniforms.{}.{}` has no value here",
+                        u.name,
+                        at(k + 4)
+                    ))
+                })?;
+            out.push_str(&text[from..toks[sig[k]].1]);
+            out.push_str(&written);
+            from = toks[sig[k + 4]].2;
+            continue;
+        }
+        if u.ty != super::UniformType::Field {
+            return Err(say(format!(
+                "`{}` is baked into the code: read it as `uniforms.{}.<word>`",
+                u.name, u.name
             )));
+        }
+        let names = u.field_names()?;
+        let Some(name) = chosen(u).first().and_then(|&i| names.get(i as usize)) else {
+            return Err(say(format!("`{}` names no field a source reads", u.name)));
         };
         // `as_field(uniforms.<name>)` is a source's whole `Field` value: the vector in `.xyz`, a scalar in `.x`.
         if k >= 2 && at(k - 1) == "(" && at(k - 2) == "as_field" && at(k + 3) == ")" {

@@ -31,7 +31,7 @@ its picture come out the same. Its control arm is a branch on the id.
   `// @input` lines (gui_state_contract §3).
 - **Description, shared (TASK-M7-76).** `render::assemble::declare`: `@name`, `@group`, `@about`, `@maps`,
   `@glyph`, `@control`, `@version`; every built-in declares itself, the generated ones through their generators (the
-  debug catalogue, the field ramps, a field's source); declaration lines are outside the fragment and render keys, so
+  debug catalogue; a field's source is the shipped one's text); declaration lines are outside the fragment and render keys, so
   a label edit changes no picture and compiles nothing. `engine::contract::stain::describe::describe` gives the editor
   one description, and each library entry carries its own. The occupant algebra's expression trees
   (`render::codegen`) do not declare yet: they come with gap 2.
@@ -167,7 +167,7 @@ and what moves it.
 | The registry's 87 sources | Scanned from folders, and the only table: a graph names any of them by its id (`registry::named`), a file under a slot's directory by its name there (`pass_through`), any other by its whole id (`debug/generated/state`). The zero source the debug views read is a shipped file, `source/zero`. | Done. | M7-83 |
 | Keys and saved stains | Keyed by code, whoever wrote it. Saved as id, version and hash, plus the text (`engine::contract::stain::saved`); a node whose shipped file has changed draws its saved text and is offered the update. | Done. | M7-84 |
 | Source nodes (`ctx.<field>`) | Done: one shipped source, `source/field`, with a `field` parameter; its out-port's subtype follows the parameter. Old per-field sources open as it. | Done. | M7-85 |
-| Field ramps | Built by Rust (`colour/field_ramp.rs`), one shader per field, 42 of them, each handling its own invalid pixels, with a CPU mirror the goldens check. Placed in graphs as custom text, and not in the app's library at all. | One shipped source, `field_ramp`, with input, gradient, curve, polarity and range as parameters, so the ramps appear in the app. The generator goes; the CPU mirror stays as the check. | M7-86 |
+| Field ramps | Done: one shipped source in each slot (`colour`, `brightness` and, for a lightness's styles, `post`), `field_ramp`, with its field, curve, range, polarity and ramp as parameters. A parameter marked `baked` is written into the code by a word, `uniforms.<parameter>.<word>`, so a ramp is the code its settings choose, to the byte the generated ramp was; a measured range and a gradient's colours stay run-time uniforms. Old stains hold a ramp's text by value and open as it was. The generator is gone; the CPU mirror stays as the check. | M7-86 |
 | The outcome palette | Its colours are its source's declared defaults: `SWATCHES`, the sets, the field's image and the legend read them there (`render::colour::outcome::Palette`), and the source is found by its `@maps outcome class` line, never by its id. | Done. | M7-87 |
 | Combiners, margin, boundary lines, fallback tint, pending hatch | Plain source files, named by id from the registry. | Done. | M7-83 |
 | Generated debug views | Generated from the field ledger, which is right: one source of truth. They carry declarations, and the library names them by id. | Done. | M7-76, M7-83 |

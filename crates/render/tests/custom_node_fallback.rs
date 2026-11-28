@@ -459,6 +459,8 @@ fn uniform(name: &str, ty: UniformType, default: &[f64], range: Option<(f64, f64
         default: default.to_vec(),
         range,
         any_kind: false,
+        scalars: false,
+        baked: false,
     }
 }
 

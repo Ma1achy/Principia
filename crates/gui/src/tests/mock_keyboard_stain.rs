@@ -285,8 +285,9 @@ fn on_the_fade() -> (App<MockSide>, Headless) {
     walk(&mut h, &mut app, 3, 6);
     press(&mut h, &mut app, Key::Enter, NONE);
     assert_eq!(app.stain.selected(), Some(LATE_FADE));
-    // Past its section's heading.
-    let into = [Key::Tab, Key::Enter, Key::ArrowRight].map(|k| (k, NONE));
+    // Past the node's shader choice, which a brightness slot has now that a shipped brightness source exists, and its
+    // section's heading.
+    let into = [Key::Tab, Key::Enter, Key::ArrowRight, Key::ArrowRight].map(|k| (k, NONE));
     keys(&mut h, &mut app, &into);
     assert_eq!(
         at(&app),

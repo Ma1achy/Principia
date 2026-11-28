@@ -764,33 +764,54 @@ impl StainGraph {
         Ok(order)
     }
 
-    /// Node `n`'s occupant as the assembler takes it: a node with a `field` parameter has the field it holds written
-    /// into its code (`render::assemble::params::specialise`), so the field it reads is what the proof, the field set
-    /// and the code key see; a node with none is its occupant as it is.
+    /// Node `n`'s occupant as the assembler takes it: a node with a baked parameter has the value it holds written into
+    /// its code (`render::assemble::params::specialise`), so the field it reads is what the proof, the field set and the
+    /// code key see; a node with none is its occupant as it is.
     fn read_fields(&self, n: &Node) -> Result<assemble::Occupant, GraphError> {
         let occupant: assemble::Occupant = (&n.occupant).into();
         let d = assemble::declaration(n.kind.into(), &occupant)?;
-        let fields: Vec<&Uniform> = d
-            .uniforms
-            .iter()
-            .filter(|u| u.ty == assemble::UniformType::Field)
-            .collect();
+        let baked: Vec<&Uniform> = d.uniforms.iter().filter(|u| u.is_baked()).collect();
         let Some(text) = assemble::occupant_source(n.kind.into(), &occupant)? else {
             return Ok(occupant);
         };
-        if fields.is_empty() {
+        if baked.is_empty() {
             return Ok(occupant);
         }
         let at = |u: &Uniform| {
             n.params
                 .get(&u.name)
-                .and_then(|v| v.first())
-                .copied()
-                .unwrap_or(u.default[0]) as usize
+                .cloned()
+                .unwrap_or_else(|| u.default.clone())
         };
         Ok(assemble::Occupant::Custom(assemble::params::specialise(
-            &text, &fields, &at,
+            &text, &baked, &at,
         )?))
+    }
+
+    /// The occupant node `id` is assembled as: a shipped source with parameters baked into its code (a field ramp)
+    /// is its made text, what its needs and its measured range are read from, since they follow the parameters; any
+    /// other node's occupant as it is.
+    pub fn made(&self, id: NodeId) -> Result<Occupant, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        if matches!(n.occupant, Occupant::Field(_) | Occupant::None) {
+            return Ok(n.occupant.clone());
+        }
+        match self.read_fields(n)? {
+            assemble::Occupant::Custom(text) => Ok(Occupant::Custom(text)),
+            _ => Ok(n.occupant.clone()),
+        }
+    }
+
+    /// The uniforms node `id`'s block holds as the node is made: [`StainGraph::uniforms`] less the baked ones and the
+    /// ones a setting of the node leaves out (a measured range its curve does not read).
+    pub fn block(&self, id: NodeId) -> Result<Vec<Uniform>, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        let made = self.read_fields(n)?;
+        Ok(assemble::declaration(n.kind.into(), &made)?
+            .uniforms
+            .into_iter()
+            .filter(|u| !u.is_baked())
+            .collect())
     }
 
     /// The graph as the assembler takes it, every node in [`StainGraph::order`], each in-port its feeder's position,

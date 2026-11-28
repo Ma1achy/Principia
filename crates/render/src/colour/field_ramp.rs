@@ -1,67 +1,57 @@
-//! The field ramp, colour_composition §1.2's Family B: `FieldRamp { field: ScalarField, ramp | compaction }`, a scalar
-//! field compacted to `[0, 1]` (dd_colouring §3.6), then either a [`Ramp`] to a colour, for the `colour` slot, or
-//! nothing more, the compacted value being a lightness, for the `brightness` slot ([`Map`]); with the invalid-pixel
-//! lane every ramp and compaction carries (colour_composition §3, §1.2; R-132; REQ-COL-001). TASK-M1-09 built it
-//! minimal (one `ScalarField`, `lin`, viridis; RQ-232); TASK-M7-05 extends it to every compaction form and ramp kind
-//! and either slot, and the default ramp per field role is [`super::defaults`]'. TASK-M7-09 adds the other sources.
+//! The field ramp (colour_composition §1.2, Family B): a scalar field compacted to `[0, 1]` (dd_colouring §3.6), then
+//! either a [`Ramp`] to a colour, for the `colour` slot, or nothing more, the compacted value being a lightness, for
+//! the `brightness` slot ([`Map`]), with the invalid-pixel lane every ramp carries.
+//!
+//! **The shipped node.** A field ramp is the shipped `field_ramp` source of its slot (`colour`, `brightness` and, for a
+//! lightness's styles, `post`), with its field, curve, range, polarity and ramp as parameters; nothing here writes a
+//! shader. The node's text reads each parameter through a word, `uniforms.<parameter>.<word>` ([`word`]), which the
+//! assembler writes into the code where the node is made ([`crate::assemble::params::specialise`]), so a ramp's code
+//! is the code its field, curve and ramp choose. A parameter is code, not a uniform: a measured range and a gradient's
+//! stops are the run-time values, `u_range` and `colours`. [`FieldRamp`] is the CPU mirror, which the node's pictures
+//! are checked against, and [`FieldRamp::params`] and [`FieldRamp::node_text`] give a ramp as the node.
 //!
 //! **ScalarField** ([`ScalarField`]): a payload field read through `ctx` with its validity predicate, returning
-//! `(value, valid)` (colour_composition §3: "Every `ScalarField` returns `(value, valid)`"). The predicate is the
-//! validity lane's `<field>_valid`, taken from its one source, `render::bind::validity_over`, over `ctx` (the word's
-//! for a field of the word, as the word `length`): the entry's tier gate (`ftle_valid`), the read side's own
-//! (`diffusion`'s `n ≥ 2`, R-245; `last_symbol`'s), a stored sentinel (`dmin_pair`'s 3; the word's truncation, its
-//! `length` 127), and, for an `f32` value, a non-finite value by its bits, an exponent field of all ones: the absence
-//! NaN (lowering Part 3a) and every stored `±∞` that is no unset value (R-436, extending R-79; tested on the bits before
-//! any arithmetic, never by `isinf` or an infinite literal, gpu_determinism_note rule 4). A field the lane gives no
-//! validity is refused. `d_min`'s f16 +∞ is no invalid value but its unset one
-//! (R-271), tested by its bits as the validity lane tests it (R-343 item 5; RQ-233), which the ramp draws in the
-//! "not yet" style of running samples, `debug_not_yet(frag_xy)`, never the invalid pattern (R-280, R-399).
+//! `(value, valid)`. The predicate is the validity lane's `<field>_valid`, from its one source,
+//! `render::bind::validity_over`, over `ctx` (the word's for a field of the word, as the word `length`): the entry's
+//! tier gate (`ftle_valid`), the read side's own (`diffusion`'s `n ≥ 2`, `last_symbol`'s), a stored sentinel
+//! (`dmin_pair`'s 3; the word's truncation, its `length` 127), and, for an `f32` value, a non-finite value by its
+//! bits, an exponent field of all ones: the absence NaN and every stored `±∞` that is no unset value. It is tested on
+//! the bits before any arithmetic, never by `isinf` or an infinite literal (gpu_determinism_note rule 4). A field the
+//! lane gives no validity is refused. `d_min`'s f16 +∞ is no invalid value but its unset one, tested by its bits as the
+//! validity lane tests it, which the ramp draws in the "not yet" style of running samples, `debug_not_yet(frag_xy)`,
+//! never the invalid pattern.
 //!
-//! **The compactions** ([`Compaction`]; dd_colouring §3.6, one form per ledger `scale`, R-411): `lin`, the prelude's
-//! `range_norm` on a fixed range, an end the ledger leaves open read at run time ([`Reads`]); `log`, `1 − 1/(1 + ln(1 + |x|/ε_f))`, with `x < 0`, the −1.0 sentinel, styled and
-//! never ramped; `cyclic`, `fract(x/period)`; `diverging`, the symlog `½ + ½·sign(x)·(1 − 1/(1 + ln(1 + |x|/x₀)))`, with
-//! no range and no `x_max`; and `flag`, `b ∈ {0, 1}`. Their WGSL is `shaders/wgsl/lib/compaction.wgsl`
-//! ([`COMPACTION_WGSL`]), which the assembler places after the prelude. **A current drift's neutral band** (render
-//! contract Part 5; R-928, R-929): a ramp on `energy_drift` or `Lz_drift` under `diverging` compacts the drift through
-//! the drift views' band, `dbg_drift_banded(v, band)` ([`ScalarField::band`]), so a fresh sample's rounding reads as
-//! the ramp's neutral; `compact_symlog` itself has no band. **The ramps** ([`Ramp`]): `lut(name)`, the
-//! prelude's `ramp_<name>`; `lerp(c0, c1)`; `diverging(c−, c0, c+)` through a neutral; `bands(field, n, line_col,
-//! base)`, a band-mask, each band the first `width` of its period (applied per R-369: §1.2 gives the band no width, so
-//! the node carries it). Their WGSL is `shaders/wgsl/lib/ramp.wgsl` ([`RAMP_WGSL`]). **Run time, not source**
-//! (lowering contract Part 3, Part 4: no gesture reaches a compiler): a ramp's settings (its colours, the bands' `n`
-//! and `width`) and a `lin` end measured or a step index's horizon are header uniforms or `ctx.params` reads; only
-//! the ledger's and the register's constants (declared ends, `ε`, `x₀`, the period) are literals. **Polarity** ([`Polarity`]) is
-//! per field: `low` reverses the compacted value, `1 − b`, so the field's low end is bright (colour_composition §1.2).
+//! **The compactions** ([`Compaction`]; dd_colouring §3.6, one form per ledger `scale`): `lin`, the prelude's
+//! `range_norm` on a range, an end the ledger leaves open read at run time ([`Reads`]); `log`,
+//! `1 − 1/(1 + ln(1 + |x|/ε_f))`, with `x < 0`, the −1.0 sentinel, styled and never ramped; `cyclic`, `fract(x/period)`;
+//! `diverging`, the symlog `½ + ½·sign(x)·(1 − 1/(1 + ln(1 + |x|/x₀)))`, with no range and no `x_max`; and `flag`,
+//! `b ∈ {0, 1}`. Their WGSL is `shaders/wgsl/lib/compaction.wgsl` ([`COMPACTION_WGSL`]), which the assembler places
+//! after the prelude. **A current drift's neutral band**: a ramp on `energy_drift` or `Lz_drift` under `diverging`
+//! compacts the drift through the drift views' band, `dbg_drift_banded(v, band)` ([`ScalarField::band`]), so a fresh
+//! sample's rounding reads as the ramp's neutral; `compact_symlog` itself has no band. **The ramps** ([`Ramp`]):
+//! `lut(name)`, the prelude's `ramp_<name>`; `lerp(c0, c1)`; `diverging(c−, c0, c+)` through a neutral; `bands(field,
+//! n, line_col, base)`, a band-mask, each band the first `width` of its period. Their WGSL is `shaders/wgsl/lib/ramp.wgsl`
+//! ([`RAMP_WGSL`]). **Polarity** ([`Polarity`]) is per field: `low` reverses the compacted value, `1 − b`, so the
+//! field's low end is bright.
 //!
-//! **The order of the tests** (render_gui_spec §10.1's, R-436): first the sample itself, a pixel that is not a system
-//! (`ctx.validity.forbidden`, REQ-COL-102) or a `decode_failed` sample, which draws the canvas background (R-467, R-511),
-//! and a `sim_failed` sample or a reserved state (6, 7), which takes the invalid treatment whatever its payload holds
-//! (R-467, R-511); then the unset value's own bit test (`d_min`'s `+∞`, "not yet"), then the invalid lane: the field's validity, a
-//! stored sentinel's own test among it, then the non-finite guard, both in [`ScalarField`]'s predicate, then the
-//! compaction's styled values (`log`'s `x < 0`); then the compaction and the ramp. So no compaction and no comparison
-//! ever takes a non-finite value.
+//! **The order of the tests**: first the sample itself, a pixel that is not a system (`ctx.validity.forbidden`) or a
+//! `decode_failed` sample, which draws the canvas background, and a `sim_failed` sample or a reserved state (6, 7),
+//! which takes the invalid treatment whatever its payload holds; then the unset value's own bit test (`d_min`'s `+∞`,
+//! "not yet"), then the invalid lane: the field's validity, a stored sentinel's own test among it, then the non-finite
+//! guard, both in [`ScalarField`]'s predicate, then the compaction's styled values (`log`'s `x < 0`); then the
+//! compaction and the ramp. So no compaction and no comparison ever takes a non-finite value.
 //!
-//! **A field ramp is a presentation view and draws no hatch (R-467; REQ-COL-108).** It masks (render_gui_spec §13,
-//! validity first): a pixel that is not a system and a `decode_failed` sample draw the canvas background,
-//! `canvas_background()`, the uniform its caller sets to the colour its window is cleared to (R-467 D2, R-511); a
-//! `sim_failed` sample, a reserved state, an invalid pixel, NaN, a stored sentinel, `log`'s negative sentinel or a non-finite value (R-436), takes the ramp's
-//! invalid treatment, by default the presentation views' invalid colour, bounded / nothing yet's `#141418`
-//! (`PRESENT_INVALID`, R-467 D4), overridable per node: the node's `INVALID_OVERRIDE` param, 1 to draw its
-//! `INVALID_COLOUR` instead, both declared in the occupant's header (gui_state_contract §3), so an override is a uniform
-//! edit that recompiles nothing (lowering Part 3). `INVALID_COLOUR` defaults to R-16's plain magenta, `#FF00FF`, as
-//! linear RGB. A non-finite value is also noted, `note_non_finite()`, the assembler's hook, which only the debug view's
-//! variant reads (REQ-COL-109): it draws that sample in the NaN / Inf style.
-//!
-//! **Either slot** (colour_composition §4.1; gui_state_contract §4: the only constraint is the output signature). Its
-//! WGSL ([`FieldRamp::wgsl`]) is a colour occupant, `fn colour(ctx: Ctx) -> vec3<f32>`, for a [`Map::Ramp`], and a
-//! brightness occupant, `fn brightness(ctx: Ctx) -> f32`, for [`Map::Lightness`]; each goes through the one
-//! assembler like any. A lightness can draw neither style, so, as colour_composition §4.1's greyscale mode does, a
-//! brightness ramp's styles are drawn by its post ([`FieldRamp::style_post`]), which draws the "not yet" style and the
-//! invalid treatment at those samples over the combiner's output and passes every other colour on unchanged; the
-//! brightness itself returns 0 there (applied per R-369). [`FieldRamp::shown`] and [`FieldRamp::colour_at`] are the
-//! CPU twins.
-
-use std::fmt::Write as _;
+//! **A field ramp is a presentation view and draws no hatch.** A pixel that is not a system and a `decode_failed`
+//! sample draw the canvas background, `canvas_background()`; a `sim_failed` sample, a reserved state, an invalid pixel,
+//! NaN, a stored sentinel, `log`'s negative sentinel or a non-finite value takes the ramp's invalid treatment, by
+//! default the presentation views' invalid colour, `#141418` (`PRESENT_INVALID`), overridable per node: the node's
+//! `INVALID_OVERRIDE` param, 1 to draw its `INVALID_COLOUR` instead, a uniform edit that recompiles nothing.
+//! `INVALID_COLOUR` defaults to plain magenta, `#FF00FF`, as linear RGB. A non-finite value is also noted,
+//! `note_non_finite()`, the assembler's hook, which only the debug view's variant reads: it draws that sample in the
+//! NaN / Inf style. A lightness can draw neither style, so a brightness ramp's styles are drawn by its post, which
+//! draws the "not yet" style and the invalid treatment at those samples over the combiner's output and passes every
+//! other colour on unchanged; the brightness itself returns 0 there. [`FieldRamp::shown`] and
+//! [`FieldRamp::colour_at`] are the CPU twins.
 
 use ledger::display::State;
 use ledger::gen::numeric::{float, half_width, half_width_wgsl, non_finite, End, NON_FINITE};
@@ -372,11 +362,6 @@ impl Compaction {
     pub fn styles(&self, x: f64) -> bool {
         matches!(self, Compaction::Log { .. }) && x < 0.0
     }
-
-    /// [`Compaction::styles`] as a WGSL `bool` over `x`, if the form styles any value.
-    fn styles_wgsl(&self, x: &str) -> Option<String> {
-        matches!(self, Compaction::Log { .. }).then(|| format!("{x} < 0.0"))
-    }
 }
 
 /// A LUT the prelude holds (render_gui_spec §10.1): `lut(name)`.
@@ -434,16 +419,6 @@ pub enum Ramp {
     },
 }
 
-/// The header declaration of the `vec3<f32>` uniform `name`, defaulting to `c`.
-fn vec3_uniform(name: &str, c: Rgb) -> String {
-    format!(
-        "// @uniform {name}: vec3<f32> = ({}, {}, {})\n",
-        float(c[0]),
-        float(c[1]),
-        float(c[2])
-    )
-}
-
 impl Ramp {
     /// The ramp's name, as §1.2 writes it.
     pub fn name(&self) -> String {
@@ -452,42 +427,6 @@ impl Ramp {
             Ramp::Lerp { .. } => "lerp".to_owned(),
             Ramp::Diverging { .. } => "diverging".to_owned(),
             Ramp::Bands { .. } => "bands".to_owned(),
-        }
-    }
-
-    /// The ramp's settings as header uniforms, each defaulting to the ramp's own value: slot parameters, written by
-    /// a uniform write, never compiled in (lowering contract Part 3, the fragment side's swatches; Part 4). A LUT has
-    /// none.
-    pub fn uniforms(&self) -> String {
-        match *self {
-            Ramp::Lut(_) => String::new(),
-            Ramp::Lerp { c0, c1 } => {
-                vec3_uniform("RAMP_C0", c0)
-                    + &vec3_uniform("RAMP_C1", c1)
-                    + "// @control RAMP_C0 gradient(RAMP_C1) \"Ramp\"\n"
-            }
-            Ramp::Diverging { lo, mid, hi } => {
-                vec3_uniform("RAMP_LO", lo)
-                    + &vec3_uniform("RAMP_MID", mid)
-                    + &vec3_uniform("RAMP_HI", hi)
-                    + "// @control RAMP_LO gradient(RAMP_MID, RAMP_HI) \"Ramp\"\n"
-            }
-            Ramp::Bands {
-                n,
-                width,
-                line,
-                base,
-            } => format!(
-                "// @uniform RAMP_N: f32 = {}\n// @uniform RAMP_WIDTH: f32 = {} [0, 1]\n{}{}\
-                 // @control RAMP_N fields \"Bands\" in \"Ramp\"\n\
-                 // @control RAMP_WIDTH slider \"Band width\" in \"Ramp\"\n\
-                 // @control RAMP_LINE colour \"Line colour\" in \"Ramp\"\n\
-                 // @control RAMP_BASE colour \"Base colour\" in \"Ramp\"\n",
-                float(n),
-                float(width),
-                vec3_uniform("RAMP_LINE", line),
-                vec3_uniform("RAMP_BASE", base)
-            ),
         }
     }
 
@@ -508,20 +447,6 @@ impl Ramp {
                 .chain(stops.into_iter().flatten())
                 .collect(),
         )
-    }
-
-    /// The ramp at the WGSL `f32` expression `t`, its settings read from its uniforms ([`Ramp::uniforms`]).
-    pub fn wgsl(&self, t: &str) -> String {
-        match *self {
-            Ramp::Lut(l) => format!("ramp_{}({t})", l.name()),
-            Ramp::Lerp { .. } => format!("ramp_lerp({t}, uniforms.RAMP_C0, uniforms.RAMP_C1)"),
-            Ramp::Diverging { .. } => format!(
-                "ramp_diverging({t}, uniforms.RAMP_LO, uniforms.RAMP_MID, uniforms.RAMP_HI)"
-            ),
-            Ramp::Bands { .. } => format!(
-                "ramp_bands({t}, uniforms.RAMP_N, uniforms.RAMP_WIDTH, uniforms.RAMP_LINE, uniforms.RAMP_BASE)"
-            ),
-        }
     }
 
     /// The ramp at `t`, linear RGB, its settings its uniforms' defaults: the CPU twin of [`Ramp::wgsl`], as `ramp.wgsl`
@@ -689,189 +614,26 @@ impl FieldRamp {
         self.map.slot()
     }
 
-    /// The ramp as a stain node's kind and occupant, its WGSL ([`FieldRamp::wgsl`]).
+    /// The ramp as a stain node's kind and occupant: the shipped field ramp node of its slot, made as this ramp
+    /// ([`FieldRamp::node_text`]).
     pub fn occupant(&self) -> (Kind, Occupant) {
-        (self.slot().kind(), Occupant::Custom(self.wgsl()))
+        let kind = self.slot().kind();
+        (kind, Occupant::Custom(self.wgsl()))
     }
 
-    /// The WGSL `bool` that is true where the value `v` takes the invalid treatment: the field's validity first, its
-    /// non-finite guard among it ([`ScalarField`]; R-436), so that, short-circuited, nothing else reads a value its
-    /// tier gate excludes (`has_ftle && ftle_valid`, REQ-RENDER-015) and no comparison takes a non-finite value; then
-    /// the compaction's styled values.
-    fn invalid_wgsl(&self) -> String {
-        let mut terms = vec![format!("!({})", self.field.valid)];
-        terms.extend(self.compaction.styles_wgsl("v"));
-        terms.join(" || ")
-    }
-
-    /// The value the compaction takes, a WGSL `f32` over `v` and `ctx`: under the `diverging` compaction, the symlog,
-    /// a current drift through its neutral band, `dbg_drift_banded(v, band)` (R-928, R-929), past the guards, so
-    /// that `v` is finite there; else `v`. `lin`, `log` and the other forms have no band.
-    fn banded_wgsl(&self) -> String {
-        match (self.compaction, self.field.band) {
-            (Compaction::Diverging { .. }, Some(band)) => format!("dbg_drift_banded(v, {band})"),
-            _ => "v".to_owned(),
-        }
-    }
-
-    /// The header's two declarations of the invalid lane: `INVALID_OVERRIDE`, 0 for the pattern, and
-    /// `INVALID_COLOUR`, the override's colour.
-    fn invalid_uniforms() -> String {
-        let [r, g, b] = override_default();
-        format!(
-            "// @uniform INVALID_OVERRIDE: u32 = 0 [0, 1]\n// @uniform INVALID_COLOUR: vec3<f32> = ({}, {}, {})\n\
-             // @control INVALID_OVERRIDE toggle \"Override the invalid colour\" in \"Invalid\"\n\
-             // @control INVALID_COLOUR colour \"Invalid colour\" in \"Invalid\"\n",
-            float(r),
-            float(g),
-            float(b)
-        )
-    }
-
-    /// The polarity's name.
-    fn polarity_name(&self) -> &'static str {
-        match self.polarity {
-            Polarity::High => "high",
-            Polarity::Low => "low",
-        }
-    }
-
-    /// The ramp's descriptive declarations ([`crate::assemble::declare`]): `name`, `group`, `about` and `glyph`, and
-    /// what it maps, its field with its compaction and polarity.
-    fn declared(&self, name: &str, group: &str, about: &str, glyph: &str) -> String {
-        format!(
-            "// @name {name}\n// @group {group}\n// @about {about}\n// @maps {} [{}, polarity {}]\n// @glyph {glyph}\n",
-            self.field.field,
-            self.compaction.name(),
-            self.polarity_name()
-        )
-    }
-
-    /// The invalid treatment's `return`, the presentation views' `#141418` unless `INVALID_OVERRIDE` is 1 (R-467 D4).
-    const INVALID_RETURN: &'static str =
-        "return select(PRESENT_INVALID, uniforms.INVALID_COLOUR, uniforms.INVALID_OVERRIDE != 0u);";
-
-    /// The blank test's `return` in a colour occupant and a post: the canvas background (R-467, R-511).
-    const BLANK_RETURN: &'static str = "return canvas_background();";
-
-    /// The body's first lines: `v` read; then the sample's own tests, a pixel that is not a system or a `decode_failed`
-    /// sample, returning `blank` (R-467, R-511), and a `sim_failed` sample or a reserved state (6, 7), returning
-    /// `invalid` whatever its payload holds (R-467, R-511); the unset value's, returning `unset`; and the invalid
-    /// lane's, which notes a non-finite value for the debug view (`note_non_finite()`, REQ-COL-109) and returns
-    /// `invalid`.
-    fn guards(&self, blank: &str, unset: &str, invalid: &str) -> String {
-        let mut out = format!(
-            "    handles_validity();\n    let v = {};\n",
-            self.field.value
-        );
-        let _ = writeln!(
-            out,
-            "    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {{ {blank} }}"
-        );
-        let _ = writeln!(
-            out,
-            "    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) {{ {invalid} }}"
-        );
-        if let Some(u) = &self.field.unset {
-            let _ = writeln!(out, "    if ({u}) {{ {unset} }}");
-        }
-        let note = self
-            .field
-            .non_finite
-            .as_ref()
-            .map(|n| format!("if ({n}) {{ note_non_finite(); }}\n        "))
-            .unwrap_or_default();
-        let _ = write!(
-            out,
-            "    if ({}) {{\n        {note}{invalid}\n    }}\n",
-            self.invalid_wgsl()
-        );
-        out
-    }
-
-    /// The ramp as an occupant of its slot: for a [`Map::Ramp`], a colour occupant, its invalid lane's uniforms in the
-    /// header, then `colour`: the unset value's "not yet" style where the field has one, the invalid treatment where
-    /// the value is invalid, else the ramp of the compacted value; for [`Map::Lightness`], a brightness occupant,
-    /// returning 0 at those samples, whose styles its post draws ([`FieldRamp::style_post`]), else the compacted value.
+    /// The text of the ramp's own slot: the colour node for a ramp, the brightness node for a lightness. A ramp the
+    /// node cannot be set to (`bands`) has none.
     pub fn wgsl(&self) -> String {
-        let b = self
-            .polarity
-            .wgsl(&self.compaction.wgsl(&self.banded_wgsl()));
-        let polarity = self.polarity_name();
-        match &self.map {
-            Map::Ramp(ramp) => format!(
-                "// A field ramp of `{}` (colour_composition §1.2; render::colour::field_ramp): the `{}` compaction, \
-                 polarity {polarity},\n// then `{}`, with the invalid lane, #141418 unless INVALID_OVERRIDE is 1, and \
-                 the canvas background\n// for a pixel that is not a system (REQ-COL-001, REQ-COL-108; R-467, R-511).\n\
-                 {}{}{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{}    return {};\n}}\n",
-                self.field.field,
-                self.compaction.name(),
-                ramp.name(),
-                self.declared(
-                    &format!("{} ramp", self.field.field),
-                    "Field ramp",
-                    &format!("{} on the {} ramp.", self.field.field, ramp.name()),
-                    match **ramp {
-                        Ramp::Lerp { .. } | Ramp::Diverging { .. } => "gradient",
-                        Ramp::Lut(_) | Ramp::Bands { .. } => "name",
-                    }
-                ),
-                Self::invalid_uniforms(),
-                self.compaction.uniforms(),
-                ramp.uniforms(),
-                self.guards(
-                    Self::BLANK_RETURN,
-                    "return debug_not_yet(ctx.frag_xy);",
-                    Self::INVALID_RETURN
-                ),
-                ramp.wgsl(&b)
-            ),
-            Map::Lightness => format!(
-                "// A field ramp of `{}` as a lightness (colour_composition §1.2, §4.1; render::colour::field_ramp): the \
-                 `{}`\n// compaction, polarity {polarity}. A blank, unset or invalid sample returns 0: its style is \
-                 drawn by the ramp's post.\n{}{}fn brightness(ctx: Ctx) -> f32 {{\n{}    return {b};\n}}\n",
-                self.field.field,
-                self.compaction.name(),
-                self.declared(
-                    &format!("{} lightness", self.field.field),
-                    "Brightness",
-                    &format!("{} as a lightness; its post draws its styles.", self.field.field),
-                    "ramp"
-                ),
-                self.compaction.uniforms(),
-                self.guards("return 0.0;", "return 0.0;", "return 0.0;"),
-            ),
-        }
+        self.node_text(self.slot().kind())
+            .unwrap_or_else(|why| panic!("{why}"))
     }
 
-    /// The post that draws the ramp's styles over the combiner's output (colour_composition §4.1, greyscale mode's
-    /// closing post): the canvas background for a pixel that is not a system and a `decode_failed` sample (R-467,
-    /// R-511), the "not yet" style at the field's unset value, the invalid treatment, `#141418` unless
-    /// `INVALID_OVERRIDE` is 1, where the value is invalid, and every other sample's colour passed on unchanged. A
-    /// brightness ramp needs it, since a lightness can draw neither style; a colour ramp draws its own.
+    /// The text of the post that draws the lightness's styles over the combiner's output, the same field and curve:
+    /// the canvas background for a pixel that is not a system and a failed decode, the "not yet" style at the field's
+    /// unset value, the invalid treatment where the value is invalid, and every other colour as it is.
     pub fn style_post(&self) -> String {
-        format!(
-            "// The styles of the field ramp of `{}` (colour_composition §4.1; render::colour::field_ramp): the \
-             background, \"not yet\"\n// and the invalid lane over the combiner's output, #141418 unless \
-             INVALID_OVERRIDE is 1; every other colour as it is.\n{}{}fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> \
-             {{\n{}    return rgb;\n}}\n",
-            self.field.field,
-            self.declared(
-                &format!("{} styles", self.field.field),
-                "Post",
-                &format!(
-                    "The background, not-yet and invalid styles of the {} lightness, over the combiner's colour.",
-                    self.field.field
-                ),
-                "name"
-            ),
-            Self::invalid_uniforms(),
-            self.guards(
-                Self::BLANK_RETURN,
-                "return debug_not_yet(ctx.frag_xy);",
-                Self::INVALID_RETURN
-            )
-        )
+        self.node_text(Kind::Post)
+            .unwrap_or_else(|why| panic!("{why}"))
     }
 
     /// [`FieldRamp::shown_at`] at the header's [`Reads::HEADER`].
@@ -993,3 +755,340 @@ impl FieldRamp {
         }
     }
 }
+
+// ── The shipped node: a field ramp as parameters ─────────────────────────────────────────────────────────────────
+
+/// The curves a field ramp node offers, in the order its `curve` parameter counts them.
+pub const CURVES: [&str; 5] = ["lin", "log", "cyclic", "diverging", "flag"];
+
+/// The ramps a field ramp node offers, in the order its `ramp` parameter counts them: the prelude's lookup tables, then
+/// the node's own `colours` gradient.
+pub const RAMPS: [&str; 6] = [
+    "viridis", "magma", "twilight", "coolwarm", "grey", "gradient",
+];
+
+/// What an end of a `lin` range is, in the order the `low_end` and `high_end` parameters count them.
+pub const ENDS: [&str; 3] = ["value", "measured", "horizon"];
+
+/// The node's gradient, the stops of [`Ramp::as_gradient`] at most.
+pub const GRADIENT_STOPS: u8 = 8;
+
+/// The parameter names a field ramp node declares, each baked into its code, and what each is.
+pub const PARAMS: [&str; 9] = [
+    "field",
+    "curve",
+    "scale",
+    "range",
+    "low_end",
+    "high_end",
+    "symmetric",
+    "polarity",
+    "ramp",
+];
+
+impl Compaction {
+    // The plan is unclear here; chose a range as `range` (a pair of values), `low_end` and `high_end` (each a value, the
+    // measured range or the horizon), `symmetric` and `scale` (the `ε`, period or `x₀` of the other curves), because a
+    // fixed, a measured and a horizon end, a symmetric range and a curve's one constant are the forms the ledger's
+    // fields take, and each is a setting of its own that a stain can keep and an editor can show.
+    /// The compaction the parameters `curve`, `low_end`, `high_end`, `symmetric`, `range` and `scale` name: the `lin`
+    /// curve over `range`, an end that is not a `value` read at run time; `scale` the `ε`, period or `x₀` of the others.
+    pub fn from_values(
+        curve: usize,
+        ends: [usize; 2],
+        symmetric: bool,
+        range: [f64; 2],
+        scale: f64,
+    ) -> Result<Compaction, String> {
+        let end = |kind: usize, value: f64| match kind {
+            0 => Ok(End::Fixed(value)),
+            1 => Ok(End::Measured),
+            2 => Ok(End::Horizon),
+            _ => Err(format!("an end is one of {}", ENDS.join(", "))),
+        };
+        Ok(match curve {
+            0 => Compaction::LinRead {
+                lo: end(ends[0], range[0])?,
+                hi: end(ends[1], range[1])?,
+                symmetric,
+            },
+            1 => Compaction::Log { eps: scale },
+            2 => Compaction::Cyclic { period: scale },
+            3 => Compaction::Diverging { x0: scale },
+            4 => Compaction::Flag,
+            _ => return Err(format!("a curve is one of {}", CURVES.join(", "))),
+        })
+    }
+
+    /// The parameters of [`Compaction::from_values`] this compaction is: `curve`, `scale`, `range`, `low_end`,
+    /// `high_end` and `symmetric`.
+    pub fn values(&self) -> Vec<(&'static str, Vec<f64>)> {
+        let kind = |e: End| match e {
+            End::Fixed(_) => 0.0,
+            End::Measured => 1.0,
+            End::Horizon => 2.0,
+        };
+        let value = |e: End| match e {
+            End::Fixed(v) => v,
+            _ => 0.0,
+        };
+        let (curve, scale, range, ends, symmetric) = match *self {
+            Compaction::Lin { lo, hi } => (0.0, 1.0, [lo, hi], [0.0, 0.0], 0.0),
+            Compaction::LinRead { lo, hi, symmetric } => (
+                0.0,
+                1.0,
+                [value(lo), value(hi)],
+                [kind(lo), kind(hi)],
+                f64::from(u8::from(symmetric)),
+            ),
+            Compaction::Log { eps } => (1.0, eps, [0.0, 1.0], [0.0, 0.0], 0.0),
+            Compaction::Cyclic { period } => (2.0, period, [0.0, 1.0], [0.0, 0.0], 0.0),
+            Compaction::Diverging { x0 } => (3.0, x0, [0.0, 1.0], [0.0, 0.0], 0.0),
+            Compaction::Flag => (4.0, 1.0, [0.0, 1.0], [0.0, 0.0], 0.0),
+        };
+        vec![
+            ("curve", vec![curve]),
+            ("scale", vec![scale]),
+            ("range", range.to_vec()),
+            ("low_end", vec![ends[0]]),
+            ("high_end", vec![ends[1]]),
+            ("symmetric", vec![symmetric]),
+        ]
+    }
+}
+
+/// The scalar field `name`, read as a field ramp reads it, kept: it is asked for at every assembly of a node.
+fn scalar(name: &str) -> Result<ScalarField, String> {
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock, PoisonError};
+    static KEPT: OnceLock<Mutex<HashMap<String, Result<ScalarField, String>>>> = OnceLock::new();
+    let mut kept = KEPT
+        .get_or_init(Mutex::default)
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    kept.entry(name.to_owned())
+        .or_insert_with(|| ScalarField::payload(name))
+        .clone()
+}
+
+/// The words a field ramp node reads its parameters through, `uniforms.<parameter>.<word>`, for the parameter `param`:
+/// whether `word` is one of them.
+pub fn knows(param: &str, word: &str) -> bool {
+    matches!(
+        (param, word),
+        ("field", "read" | "valid" | "unset" | "non_finite")
+            | ("curve", "invalid" | "place" | "measured")
+            | ("ramp", "colour" | "gradient")
+    )
+}
+
+/// The parameters the word `uniforms.<param>.<word>` reads: a parameter nothing reads can never matter.
+pub fn uses(param: &str, word: &str) -> &'static [&'static str] {
+    const PLACE: [&str; 8] = [
+        "field",
+        "curve",
+        "scale",
+        "range",
+        "low_end",
+        "high_end",
+        "symmetric",
+        "polarity",
+    ];
+    match (param, word) {
+        ("field", _) => &["field"],
+        ("curve", "invalid") => &["field", "curve"],
+        ("curve", "measured") => &["curve", "low_end", "high_end"],
+        ("curve", "place") => &PLACE,
+        ("ramp", "gradient") => &["ramp"],
+        ("ramp", "colour") => &[
+            "field",
+            "curve",
+            "scale",
+            "range",
+            "low_end",
+            "high_end",
+            "symmetric",
+            "polarity",
+            "ramp",
+            "colours",
+        ],
+        _ => &[],
+    }
+}
+
+/// The code the word `uniforms.<param>.<word>` of a field ramp node is, where `value` gives each parameter's value, or
+/// `None` where the word has none (a field with no unset value has no `unset`): the field's read and tests, the curve
+/// placed with the polarity applied, the invalid test, and the ramp of that, each as WGSL text.
+pub fn word(
+    value: &dyn Fn(&str) -> Option<Vec<f64>>,
+    param: &str,
+    word: &str,
+) -> Result<Option<String>, String> {
+    let get = |name: &str| value(name).ok_or_else(|| format!("the node declares no `{name}`"));
+    let one = |name: &str| -> Result<f64, String> {
+        get(name)?
+            .first()
+            .copied()
+            .ok_or_else(|| format!("`{name}` holds no value"))
+    };
+    let field = || -> Result<ScalarField, String> {
+        let names = crate::assemble::ramp_fields().map_err(|e| e.to_string())?;
+        let at = one("field")? as usize;
+        let name = names
+            .get(at)
+            .ok_or_else(|| format!("`field` names no field a source reads: {at}"))?;
+        scalar(name)
+    };
+    let curve = || -> Result<Compaction, String> {
+        let range = get("range")?;
+        Compaction::from_values(
+            one("curve")? as usize,
+            [one("low_end")? as usize, one("high_end")? as usize],
+            one("symmetric")? != 0.0,
+            [
+                range.first().copied().unwrap_or(0.0),
+                range.get(1).copied().unwrap_or(1.0),
+            ],
+            one("scale")?,
+        )
+    };
+    // The curve of the field's value with the polarity applied, `b`, as the shader of the ramp wrote it.
+    let place = || -> Result<String, String> {
+        let (f, c) = (field()?, curve()?);
+        let banded = match (c, f.band) {
+            (Compaction::Diverging { .. }, Some(band)) => format!("dbg_drift_banded(v, {band})"),
+            _ => "v".to_owned(),
+        };
+        let polarity = match one("polarity")? as usize {
+            0 => Polarity::High,
+            1 => Polarity::Low,
+            _ => return Err("a polarity is high or low".into()),
+        };
+        Ok(polarity.wgsl(&c.wgsl(&banded)))
+    };
+    Ok(match (param, word) {
+        ("field", "read") => Some(field()?.value),
+        ("field", "unset") => field()?.unset,
+        ("field", "non_finite") => field()?.non_finite,
+        ("field", "valid") => Some(field()?.valid),
+        ("curve", "invalid") => {
+            // The post declares no range: only `log` styles a value, its negative sentinel, so the curve's kind is all
+            // this needs.
+            let mut terms = vec![format!("!({})", field()?.valid)];
+            if one("curve")? as usize == 1 {
+                terms.push("v < 0.0".to_owned());
+            }
+            Some(terms.join(" || "))
+        }
+        ("curve", "place") => Some(place()?),
+        ("curve", "measured") => {
+            let c = curve()?;
+            (!c.uniforms().is_empty()).then(String::new)
+        }
+        ("ramp", "gradient") => (one("ramp")? as usize == RAMPS.len() - 1).then(String::new),
+        ("ramp", "colour") => {
+            let b = place()?;
+            Some(match one("ramp")? as usize {
+                k if k + 1 == RAMPS.len() => {
+                    format!("gradient{GRADIENT_STOPS}_at(uniforms.colours, {b})")
+                }
+                k if k < RAMPS.len() => format!("ramp_{}({b})", RAMPS[k]),
+                _ => return Err(format!("a ramp is one of {}", RAMPS.join(", "))),
+            })
+        }
+        _ => {
+            return Err(format!(
+                "`uniforms.{param}.{word}` is no word of a field ramp"
+            ))
+        }
+    })
+}
+
+impl FieldRamp {
+    // The plan is unclear here; chose to leave `bands`, and `lerp` and `diverging` drawn from uniforms of their
+    // colours, out of the node, because a gradient parameter holds the last two to the same bits and a band mask is no
+    // ramp a field's role chooses; the CPU mirror keeps all three, as a library check of the ramp functions.
+    /// The parameters of the shipped field ramp node that make it this ramp, by name: its field, curve and range, its
+    /// polarity and its ramp, a lookup table by its place in [`RAMPS`] or, for a `lerp` or a `diverging` ramp, the
+    /// gradient of its stops with the `colours` it is drawn from. A `bands` ramp is no setting of the node: it is none
+    /// of its ramps.
+    pub fn params(&self) -> Result<Vec<(&'static str, Vec<f64>)>, String> {
+        let names = crate::assemble::ramp_fields().map_err(|e| e.to_string())?;
+        let at = names
+            .iter()
+            .position(|f| f == self.field.field)
+            .ok_or_else(|| format!("`{}` is no field a source reads", self.field.field))?;
+        let mut out = vec![("field", vec![at as f64])];
+        out.extend(self.compaction.values());
+        out.push((
+            "polarity",
+            vec![match self.polarity {
+                Polarity::High => 0.0,
+                Polarity::Low => 1.0,
+            }],
+        ));
+        let ramp = match &self.map {
+            Map::Lightness => None,
+            Map::Ramp(r) => Some(r),
+        };
+        if let Some(r) = ramp {
+            match **r {
+                Ramp::Lut(l) => {
+                    let k = RAMPS.iter().position(|n| *n == l.name());
+                    out.push((
+                        "ramp",
+                        vec![k.ok_or("a lookup table the node has not")? as f64],
+                    ));
+                }
+                Ramp::Lerp { .. } | Ramp::Diverging { .. } => {
+                    out.push(("ramp", vec![(RAMPS.len() - 1) as f64]));
+                    out.push(("colours", r.as_gradient().ok_or("a gradient")?));
+                }
+                Ramp::Bands { .. } => return Err("a `bands` ramp is no ramp of the node".into()),
+            }
+        }
+        Ok(out)
+    }
+
+    /// The text of the shipped field ramp node of `kind` (colour, brightness or post) made as this ramp: the source the
+    /// registry holds, its parameters written into it ([`crate::assemble::params::specialise`]), a gradient's stops
+    /// its `colours` default.
+    pub fn node_text(&self, kind: Kind) -> Result<String, String> {
+        let shipped = crate::registry::named(kind, NODE).map_err(|e| e.to_string())?;
+        let params = self.params()?;
+        let d = crate::assemble::Declaration::parse(&shipped.source).map_err(|e| e.to_string())?;
+        let baked: Vec<&crate::assemble::Uniform> =
+            d.uniforms.iter().filter(|u| u.is_baked()).collect();
+        let value = |u: &crate::assemble::Uniform| {
+            params
+                .iter()
+                .find(|(n, _)| *n == u.name)
+                .map_or_else(|| u.default.clone(), |(_, v)| v.clone())
+        };
+        let mut text = crate::assemble::params::specialise(&shipped.source, &baked, &value)
+            .map_err(|e| e.to_string())?;
+        if let Some((_, g)) = params.iter().find(|(n, _)| *n == "colours") {
+            let line = text
+                .lines()
+                .find(|l| l.starts_with("// @uniform colours:"))
+                .ok_or("the node has no `colours`")?
+                .to_owned();
+            text = text.replace(
+                &line,
+                &format!(
+                    "// @uniform colours: gradient<{GRADIENT_STOPS}> = {}",
+                    crate::assemble::params::gradient_text(g)
+                ),
+            );
+        }
+        Ok(text)
+    }
+}
+
+/// The name of the shipped field ramp, in each of the colour, brightness and post slots.
+// The plan is unclear here; chose the FTLE, on the grey ramp over its measured range, for what a new ramp node holds
+// until a field is chosen, because it is the field colour_composition §1.2 names a ramp for first.
+// The plan is unclear here; chose one file in each of the three slots for the one node, because a node's slot is its
+// function's signature and the brightness ramp's styles are drawn by a post, so three signatures are three files, each
+// declaring only the parameters its code reads.
+pub const NODE: &str = "field_ramp";

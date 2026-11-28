@@ -151,6 +151,13 @@ struct Drawn {
     group: Option<String>,
 }
 
+/// Whether the inspector draws `c`. The field picker and a gradient with no stops are not drawn yet
+/// (`stain::controls`), so the source `field` and a ramp's colours show no control.
+fn is_drawn(c: &ControlView) -> bool {
+    !matches!(c.control, Control::Hidden | Control::FieldPicker)
+        && !matches!(&c.control, Control::Gradient(stops) if stops.is_empty())
+}
+
 /// The controls of `d` in `drawing`, down the panel, and every line there.
 fn read(drawing: &Drawing, d: &Description) -> Vec<Drawn> {
     let all = texts(&drawing.shapes);
@@ -158,8 +165,7 @@ fn read(drawing: &Drawing, d: &Description) -> Vec<Drawn> {
         .controls
         .iter()
         .enumerate()
-        // The field picker is not drawn yet (`stain::controls`), so the source `field` shows no control.
-        .filter(|(_, c)| !matches!(c.control, Control::Hidden | Control::FieldPicker))
+        .filter(|(_, c)| is_drawn(c))
         .map(|(k, c)| {
             let place = drawing.keyboard.place_of(controls::scope(k));
             (
@@ -260,11 +266,7 @@ fn check_dimmed(
     };
     let mut dimmed = BTreeSet::new();
     assert_eq!(drawn.len(), plain.len());
-    for c in d
-        .controls
-        .iter()
-        .filter(|c| !matches!(c.control, Control::Hidden | Control::FieldPicker))
-    {
+    for c in d.controls.iter().filter(|c| is_drawn(c)) {
         let uniforms = || {
             let stops = c.stops.iter().map(|s| s.uniform.as_str());
             std::iter::once(c.uniform.as_str()).chain(stops)

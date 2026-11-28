@@ -4,7 +4,9 @@
 //!   colour and a combiner by their names in their slots and reads a field (`builtin`, `field`); `debug_view` holds its
 //!   zero source and colour as custom text (`custom`); `mixed` holds all three with params and a post. Each opens,
 //!   draws the code it drew when it was saved ([`DREW`]), and is written in the new form, the bytes of
-//!   `<name>.saved.json`, which open to the same graph and write themselves again.
+//!   `<name>.saved.json`, which open to the same graph and write themselves again. `field_ramp.json` holds a colour
+//!   ramp, a lightness ramp and its post as the generator wrote them, as custom text: how a saved stain names a
+//!   per-field ramp, and it keeps opening.
 //! - `before_change.json` is `mixed` saved in the new form when the shipped `combiner/multiply` was other code. It draws
 //!   that code, as it did when saved, and is offered the update; applying it draws today's file.
 //! - A saved node whose hash is not its text's is refused.
@@ -22,14 +24,17 @@ use engine::contract::stain::graph::{NodeId, NodeKind, Occupant, StainGraph};
 use engine::contract::stain::saved::{self, hash};
 use validation::negative_control;
 
-const FIXTURES: [&str; 3] = ["outcome", "debug_view", "mixed"];
+const FIXTURES: [&str; 4] = ["outcome", "debug_view", "mixed", "field_ramp"];
 
 /// The FNV-1a digest, comments dropped, of the code each old fixture assembled to before the field sources became one
 /// shipped file (measured on the commit before it).
-const DREW: [(&str, &str); 3] = [
+const DREW: [(&str, &str); 4] = [
     ("outcome", "ec323f892ad15b9d"),
     ("debug_view", "0693b23155375b3a"),
     ("mixed", "f1fbabdfd2c59c8f"),
+    // A colour, a lightness and its post as the per-field ramp generator wrote them, held as custom text: the form every
+    // saved ramp has, which still opens as it is. Measured on the commit before the one-node change.
+    ("field_ramp", "fb639f9daca45119"),
 ];
 
 fn dir() -> PathBuf {
